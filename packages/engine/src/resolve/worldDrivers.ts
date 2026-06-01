@@ -1,6 +1,7 @@
 import {
   IMoticaAimDriver,
   IMoticaDriver,
+  IMoticaIKDriver,
   IMoticaNode,
   IMoticaParentDriver,
   IMoticaQuaternion,
@@ -19,11 +20,12 @@ import { Vector3 } from "../math/Vector3";
  * world transform, and recomposes the owner's subtree so descendants follow.
  *
  * This step resolves {@link IMoticaAimDriver} (look-at: orient a node so one of
- * its axes points at a target — eyes, head, a camera) and
+ * its axes points at a target — eyes, head, a camera),
  * {@link IMoticaParentDriver} (Child-Of: make a node inherit another's world
- * frame, per component — a sword following a hand). The remaining world-space
- * drivers (`ik`, `spring`) are returned untouched for their own dedicated
- * steps; nothing is silently dropped.
+ * frame, per component — a sword following a hand), and the analytic two-bone
+ * {@link IMoticaIKDriver} (back-solve a 3-node limb so its tip reaches a goal —
+ * arms, legs). Iterative IK (`ccd`/`fabrik`) and `spring` are returned
+ * untouched for their own dedicated steps; nothing is silently dropped.
  *
  * @author Samchon
  */
@@ -38,6 +40,8 @@ export const resolveWorldDrivers = (
     if (d.type === "aim") applyAim(d, world, localById, childrenById);
     else if (d.type === "parent")
       applyParent(d, world, localById, childrenById);
+    else if (d.type === "ik" && d.solver === "twoBone" && d.chain.length === 3)
+      applyTwoBoneIK(d, world, localById, childrenById);
     else deferred.push(d);
   return deferred;
 };
@@ -93,6 +97,132 @@ const applyParent = (
     ),
   );
   recompose(d.owner, world, localById, childrenById);
+};
+
+/**
+ * Analytic two-bone IK: rotate a 3-node limb (`root → mid → tip`) so the tip
+ * reaches `goal`, bending in the plane the pole picks (or the limb's current
+ * plane). The interior angles come from the law of cosines over the two bone
+ * lengths and the (reach-clamped) root→goal distance; the tip lands on the goal
+ * exactly when the goal is reachable. Bone lengths are preserved, the result is
+ * blended by `influence`, and the tip's subtree recomposes.
+ *
+ * Operates directly on the chain's world matrices (the renderer consumes world
+ * transforms), so it needs no world→local round-trip.
+ */
+const applyTwoBoneIK = (
+  d: IMoticaIKDriver,
+  world: Map<string, number[]>,
+  localById: Map<string, IMoticaTransform>,
+  childrenById: Map<string, string[]>,
+): void => {
+  const rootId = d.chain[0]!;
+  const midId = d.chain[1]!;
+  const tipId = d.chain[2]!;
+  const rootM = world.get(rootId)!;
+  const midM = world.get(midId)!;
+  const tipM = world.get(tipId)!;
+  const rootP = Matrix4.position(rootM);
+  const midP = Matrix4.position(midM);
+  const tipP = Matrix4.position(tipM);
+  const goalP = Matrix4.position(world.get(d.goal)!);
+
+  const upper = Vector3.subtract(midP, rootP);
+  const lower = Vector3.subtract(tipP, midP);
+  const l1 = Vector3.length(upper);
+  const l2 = Vector3.length(lower);
+
+  const toGoal = Vector3.subtract(goalP, rootP);
+  const goalLen = Vector3.length(toGoal);
+  const reach = clamp(goalLen, Math.abs(l1 - l2) + 1e-5, l1 + l2 - 1e-5);
+  const dir =
+    goalLen < 1e-8
+      ? Vector3.normalize(upper)
+      : Vector3.scale(toGoal, 1 / goalLen);
+
+  // Bend plane: from the pole (when one is wired) else the limb's current bend.
+  const poleRef =
+    d.pole !== null && d.pole.node !== null
+      ? Vector3.subtract(Matrix4.position(world.get(d.pole.node)!), rootP)
+      : upper;
+  let axis = Vector3.cross(dir, poleRef);
+  if (Vector3.length(axis) < 1e-8) axis = anyPerp(dir);
+  axis = Vector3.normalize(axis);
+
+  const cosRoot = clamp(
+    (l1 * l1 + reach * reach - l2 * l2) / (2 * l1 * reach),
+    -1,
+    1,
+  );
+  const bend = Quaternion.fromAxisAngle(
+    axis,
+    (Math.acos(cosRoot) * 180) / Math.PI,
+  );
+  const newMid = Vector3.add(
+    rootP,
+    Vector3.scale(Quaternion.rotateVector(bend, dir), l1),
+  );
+  const newTip = Vector3.add(rootP, Vector3.scale(dir, reach));
+
+  const rootDelta = quatFromTo(
+    Vector3.normalize(upper),
+    Vector3.normalize(Vector3.subtract(newMid, rootP)),
+  );
+  const midDelta = quatFromTo(
+    Vector3.normalize(lower),
+    Vector3.normalize(Vector3.subtract(newTip, newMid)),
+  );
+  const rootDec = Matrix4.decompose(rootM);
+  const midDec = Matrix4.decompose(midM);
+  const tipDec = Matrix4.decompose(tipM);
+  const t = d.influence;
+
+  world.set(
+    rootId,
+    Matrix4.compose(
+      rootP,
+      Quaternion.slerp(
+        rootDec.rotation,
+        Quaternion.multiply(rootDelta, rootDec.rotation),
+        t,
+      ),
+      rootDec.scale,
+    ),
+  );
+  world.set(
+    midId,
+    Matrix4.compose(
+      blendVec(midP, newMid, t),
+      Quaternion.slerp(
+        midDec.rotation,
+        Quaternion.multiply(midDelta, midDec.rotation),
+        t,
+      ),
+      midDec.scale,
+    ),
+  );
+  world.set(
+    tipId,
+    Matrix4.compose(blendVec(tipP, newTip, t), tipDec.rotation, tipDec.scale),
+  );
+  recompose(tipId, world, localById, childrenById);
+};
+
+const clamp = (x: number, lo: number, hi: number): number =>
+  Math.min(hi, Math.max(lo, x));
+
+const blendVec = (
+  a: IMoticaVector3,
+  b: IMoticaVector3,
+  t: number,
+): IMoticaVector3 => Vector3.add(a, Vector3.scale(Vector3.subtract(b, a), t));
+
+/** Some unit vector perpendicular to `v` (for a straight limb's free bend). */
+const anyPerp = (v: IMoticaVector3): IMoticaVector3 => {
+  const c = Vector3.cross(v, { x: 0, y: 1, z: 0 });
+  return Vector3.length(c) > 1e-6
+    ? Vector3.normalize(c)
+    : Vector3.normalize(Vector3.cross(v, { x: 1, y: 0, z: 0 }));
 };
 
 /** Recompute every descendant's world matrix from a node's updated world. */
