@@ -1,4 +1,9 @@
-import { VRM, VRMHumanBoneName, VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+import {
+  VRM,
+  VRMHumanBoneName,
+  VRMLoaderPlugin,
+  VRMUtils,
+} from "@pixiv/three-vrm";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -49,21 +54,86 @@ const TRACKS: Track[] = [
   { target: "leftLowerArm.z", keys: [[0, 0.1]] },
   {
     target: "rightUpperArm.z",
-    keys: [[0, -0.95], [1.1, 0.65], [3.7, 0.65], [4.5, -0.95], [5, -0.95]],
+    keys: [
+      [0, -0.95],
+      [1.1, 0.65],
+      [3.7, 0.65],
+      [4.5, -0.95],
+      [5, -0.95],
+    ],
   },
-  { target: "rightUpperArm.x", keys: [[0, 0], [1.1, -0.25], [4.5, 0]] },
+  {
+    target: "rightUpperArm.x",
+    keys: [
+      [0, 0],
+      [1.1, -0.25],
+      [4.5, 0],
+    ],
+  },
   {
     target: "rightLowerArm.z",
-    keys: [[1.1, 0.2], [1.7, 0.7], [2.2, -0.2], [2.7, 0.7], [3.2, -0.2], [3.7, 0.3]],
+    keys: [
+      [1.1, 0.2],
+      [1.7, 0.7],
+      [2.2, -0.2],
+      [2.7, 0.7],
+      [3.2, -0.2],
+      [3.7, 0.3],
+    ],
   },
-  { target: "head.y", keys: [[0, 0.16], [1.0, -0.04], [3.6, -0.04], [5, 0.16]] },
-  { target: "head.x", keys: [[0, 0.02], [2.5, -0.06], [5, 0.02]] },
-  { target: "head.z", keys: [[0, 0], [1.4, 0.06], [3.4, -0.04], [5, 0]] },
-  { target: "spine.y", keys: [[0, 0], [2.5, 0.07], [5, 0]] },
-  { target: "chest.x", keys: [[0, 0], [1.2, 0.045], [2.4, 0], [3.6, 0.045], [5, 0]] },
+  {
+    target: "head.y",
+    keys: [
+      [0, 0.16],
+      [1.0, -0.04],
+      [3.6, -0.04],
+      [5, 0.16],
+    ],
+  },
+  {
+    target: "head.x",
+    keys: [
+      [0, 0.02],
+      [2.5, -0.06],
+      [5, 0.02],
+    ],
+  },
+  {
+    target: "head.z",
+    keys: [
+      [0, 0],
+      [1.4, 0.06],
+      [3.4, -0.04],
+      [5, 0],
+    ],
+  },
+  {
+    target: "spine.y",
+    keys: [
+      [0, 0],
+      [2.5, 0.07],
+      [5, 0],
+    ],
+  },
+  {
+    target: "chest.x",
+    keys: [
+      [0, 0],
+      [1.2, 0.045],
+      [2.4, 0],
+      [3.6, 0.045],
+      [5, 0],
+    ],
+  },
   {
     target: "expr.happy",
-    keys: [[0, 0.06], [1.1, 0.85], [3.9, 0.85], [4.6, 0.18], [5, 0.06]],
+    keys: [
+      [0, 0.06],
+      [1.1, 0.85],
+      [3.9, 0.85],
+      [4.6, 0.18],
+      [5, 0.06],
+    ],
   },
   { target: "expr.relaxed", keys: [[0, 0.22]] },
 ];
