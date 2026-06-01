@@ -18,7 +18,7 @@ const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 100);
 camera.position.set(0, 0.95, 3.4);
 camera.lookAt(0, 0.9, 0);
 
-let mesh: THREE.Mesh | null = null;
+let morphMesh: THREE.Mesh | null = null;
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
@@ -38,7 +38,7 @@ app.innerHTML = `
   <div id="stage">
     <canvas id="view"></canvas>
     <div id="panel">
-      <h1>motica · body editor</h1>
+      <h1>motica · hero base</h1>
       <div class="sub" id="status">loading…</div>
       <div id="morphs"></div>
     </div>
@@ -105,23 +105,40 @@ const slider = (
   document.querySelector("#morphs")!.appendChild(row);
 };
 
-// ── load the baked MakeHuman GLB ─────────────────────────────────────────────
+// ── load the baked reference hero-base GLB ───────────────────────────────────
 new GLTFLoader().load(
   "/models/human.glb",
   (gltf) => {
+    const box = new THREE.Box3().setFromObject(gltf.scene);
+    const size = box.getSize(new THREE.Vector3());
+    if (size.y > 0) {
+      gltf.scene.scale.setScalar(1.72 / size.y);
+      gltf.scene.updateMatrixWorld(true);
+      const normalized = new THREE.Box3().setFromObject(gltf.scene);
+      const center = normalized.getCenter(new THREE.Vector3());
+      gltf.scene.position.add(
+        new THREE.Vector3(-center.x, -normalized.min.y, -center.z),
+      );
+    }
+
+    let meshCount = 0;
     gltf.scene.traverse((o) => {
       const m = o as THREE.Mesh;
-      // the body primitive carries the morphs; keep its baked textured-skin
-      // material (eyes/brows/lashes/hair primitives keep theirs too).
-      if (m.isMesh && m.morphTargetInfluences) mesh = m;
+      if (!m.isMesh) return;
+      meshCount += 1;
+      if (m.morphTargetInfluences) morphMesh = m;
     });
     scene.add(gltf.scene);
-    if (mesh === null) {
-      status.textContent = "no morph mesh found";
+    if (morphMesh === null) {
+      status.textContent = `Hybrid reference base · ${meshCount} mesh`;
+      (window as unknown as { __motica: Record<string, unknown> }).__motica = {
+        ready: true,
+        morphs: 0,
+      };
       return;
     }
-    const dict = mesh.morphTargetDictionary ?? {};
-    const infl = mesh.morphTargetInfluences!;
+    const dict = morphMesh.morphTargetDictionary ?? {};
+    const infl = morphMesh.morphTargetInfluences!;
 
     // group decr/incr pairs into one signed slider; singles get a 0..1 slider
     const groups: Record<
@@ -147,7 +164,7 @@ new GLTFLoader().load(
         slider(prettify(base), 0, 1, (v) => (infl[idx] = v));
       }
     }
-    status.textContent = `MakeHuman base · CC0 · ${Object.keys(groups).length} body morphs`;
+    status.textContent = `Reference hero base · CC0 · ${Object.keys(groups).length} morphs`;
     (window as unknown as { __motica: Record<string, unknown> }).__motica = {
       ready: true,
       morphs: Object.keys(dict).length,
