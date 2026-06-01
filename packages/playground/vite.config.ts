@@ -13,6 +13,7 @@ export default defineConfig({
         main: resolve(__dirname, "index.html"),
         drivers: resolve(__dirname, "drivers.html"),
         human: resolve(__dirname, "human.html"),
+        body: resolve(__dirname, "body.html"),
       },
     },
   },

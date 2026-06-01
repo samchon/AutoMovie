@@ -22,6 +22,13 @@ draws it.
 - **`index.html`** — the procedural blockman character editor (above).
 - **`drivers.html`** — an engine-drivers demo: a 3-joint arm whose two-bone IK
   (the core resolver) tracks a moving goal every frame.
+- **`body.html`** — a **parametric body editor** over MakeHuman's CC0 base mesh:
+  a baked glTF whose morph targets (bust / under-bust / hips / thigh / calf /
+  shoulder / neck circumferences, fore-arm & lower-leg lengths, breast, buttocks,
+  and body types like hourglass / apple / triangle) are driven live by sliders —
+  real anatomy, the body-shape freedom a fixed import can't give. Build the glTF
+  first: `pnpm --filter @motica/playground build:human` (fetches the CC0 assets
+  and bakes `public/models/human.glb`).
 - **`human.html`** — a **real humanoid editor** over a VRM avatar
   (`@pixiv/three-vrm`): live facial **expressions** (happy / angry / sad /
   relaxed / surprised), **gaze** that tracks the viewer, **auto-blink**, and arm
