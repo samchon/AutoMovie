@@ -25,6 +25,9 @@
     "type": "git",
     "url": "https://github.com/samchon/motica"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "prettier": "^3.5.3",

@@ -1,0 +1,25 @@
+{
+  "private": true,
+  "name": "@motica/playground",
+  "version": "0.1.0",
+  "description": "motica playground — a usable web UI: viewer viewport + humanoid character editor",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 4173 --strictPort"
+  },
+  "author": "Samchon",
+  "license": "MIT",
+  "dependencies": {
+    "@motica/engine": "workspace:^",
+    "@motica/interface": "workspace:^",
+    "@motica/viewer": "workspace:^",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.169.0",
+    "typescript": "catalog:typescript",
+    "vite": "^5.4.10"
+  }
+}
