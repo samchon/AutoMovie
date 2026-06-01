@@ -1,10 +1,10 @@
 /**
  * A parametric primitive shape — the **LLM-authored** path to geometry.
  *
- * Where a raw {@link "./IMoticaMesh"} is bulk vertex data (imported, not
- * emittable by a model), a primitive is a handful of named, bounded dimensions
- * an LLM _can_ emit: "a 0.4 m sphere", "a 1.8 m tall capsule". Assembling a
- * character or prop from primitives is how motica generates geometry inside the
+ * Where a raw {@link IMoticaMesh} is bulk vertex data (imported, not emittable
+ * by a model), a primitive is a handful of named, bounded dimensions an LLM
+ * _can_ emit: "a 0.4 m sphere", "a 1.8 m tall capsule". Assembling a character
+ * or prop from primitives is how motica generates geometry inside the
  * dimensionality where structured output is reliable — the same "named scalar"
  * bet the skeleton and expression layers make.
  *

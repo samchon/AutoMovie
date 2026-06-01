@@ -5,10 +5,10 @@ import { MoticaHumanoidBone } from "../skeleton/MoticaHumanoidBone";
  *
  * This is the **LLM-facing** rotation primitive — the one thing the model
  * actually emits to move a body. It deliberately mirrors the axis decomposition
- * of {@link "../skeleton/IMoticaJointConstraint"} (flexion / abduction / twist)
- * so a generated angle can be validated against the joint's ROM by a direct,
- * per-axis comparison. The engine composes these three angles, about the bone's
- * local axes and on top of its rest transform, into the quaternion the renderer
+ * of {@link IMoticaJointConstraint} (flexion / abduction / twist) so a generated
+ * angle can be validated against the joint's ROM by a direct, per-axis
+ * comparison. The engine composes these three angles, about the bone's local
+ * axes and on top of its rest transform, into the quaternion the renderer
  * consumes.
  *
  * Exposing degrees-per-named-axis (instead of a quaternion) is the core reason

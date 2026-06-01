@@ -2,9 +2,9 @@
  * A rotation expressed as intrinsic Euler angles in degrees.
  *
  * A middle ground between LLM-friendly single-axis semantic angles
- * ({@link "../pose/IMoticaJointPose"}) and the engine's quaternions
- * ({@link "./IMoticaQuaternion"}). It is occasionally useful for free 3D objects
- * (a prop tilted on three axes) where there is no anatomical joint to attach
+ * ({@link IMoticaJointPose}) and the engine's quaternions
+ * ({@link IMoticaQuaternion}). It is occasionally useful for free 3D objects (a
+ * prop tilted on three axes) where there is no anatomical joint to attach
  * semantic flexion/abduction names to.
  *
  * `order` records the intrinsic rotation order so the engine can compose the

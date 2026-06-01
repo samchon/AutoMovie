@@ -1,6 +1,6 @@
 /**
- * The value shape a {@link "./IMoticaChannel".IMoticaChannel} resolves to,
- * mirroring the element types glTF / KHR_animation_pointer animate.
+ * The value shape a {@link IMoticaChannel} resolves to, mirroring the element
+ * types glTF / KHR_animation_pointer animate.
  *
  * A channel is a typed, addressable value (an "lvalue"): the engine samples a
  * track, runs drivers, and clamps constraints all against a channel whose width

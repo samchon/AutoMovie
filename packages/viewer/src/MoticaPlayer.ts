@@ -15,8 +15,7 @@ import { IMoticaModelObject } from "./buildModel";
  *
  * The player is pure with respect to time — call {@link update} with seconds
  * elapsed and it renders nothing itself; the host owns the animation loop (see
- * {@link "./mount".mountViewer}). This keeps playback deterministic and
- * testable.
+ * {@link mountViewer}). This keeps playback deterministic and testable.
  *
  * Expression output is sampled and exposed via {@link lastExpression} but not
  * applied to geometry: blendshape application needs morph targets, which the

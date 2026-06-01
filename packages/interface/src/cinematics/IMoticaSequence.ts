@@ -26,7 +26,7 @@ export interface IMoticaSequence {
 
 /** One shot's placement in a sequence: an optional trim and incoming transition. */
 export interface IMoticaSequenceEntry {
-  /** Id of the {@link "./IMoticaShot".IMoticaShot} played here. */
+  /** Id of the {@link IMoticaShot} played here. */
   shot: string;
 
   /**

@@ -11,8 +11,8 @@ import { IMoticaChannel } from "./IMoticaChannel";
  *
  * Discriminated on `type`. The taxonomy is reduced from the established DCC
  * constraint/driver set (Blender/Maya): copy, aim, ik, parent, driven, spring.
- * (A pure value limit is a {@link "./IMoticaChannelLimit".IMoticaChannelLimit},
- * not a driver — computation and restriction are kept separate.)
+ * (A pure value limit is a {@link IMoticaChannelLimit}, not a driver —
+ * computation and restriction are kept separate.)
  *
  * @author Samchon
  */

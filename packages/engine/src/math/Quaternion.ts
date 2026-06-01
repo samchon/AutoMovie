@@ -5,9 +5,9 @@ import { IMoticaQuaternion, IMoticaVector3 } from "@motica/interface";
  * glTF order).
  *
  * Quaternions are the engine's internal rotation representation: the LLM emits
- * semantic degrees, {@link "../kinematics/jointToQuaternion".jointToQuaternion}
- * turns those into quaternions, and the renderer consumes them. All helpers are
- * stateless and return fresh objects.
+ * semantic degrees, {@link jointToQuaternion} turns those into quaternions, and
+ * the renderer consumes them. All helpers are stateless and return fresh
+ * objects.
  *
  * @author Samchon
  */

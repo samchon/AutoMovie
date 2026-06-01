@@ -6,10 +6,10 @@ import { MoticaEasing } from "./MoticaEasing";
  * A single keyframe: a pose (and optional expression) pinned at a timestamp,
  * plus the easing into the _next_ keyframe.
  *
- * A keyframe is just a static {@link "../pose/IMoticaPose"} stamped with a
- * `time` and a blend curve — so everything that validates a pose (ROM, joint
- * conflicts) validates a keyframe for free, and the temporal layer only adds
- * ordering and rate checks on top.
+ * A keyframe is just a static {@link IMoticaPose} stamped with a `time` and a
+ * blend curve — so everything that validates a pose (ROM, joint conflicts)
+ * validates a keyframe for free, and the temporal layer only adds ordering and
+ * rate checks on top.
  *
  * @author Samchon
  */

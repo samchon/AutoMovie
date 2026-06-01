@@ -3,8 +3,8 @@ import { IMoticaJointConstraint } from "./IMoticaJointConstraint";
 import { MoticaHumanoidBone } from "./MoticaHumanoidBone";
 
 /**
- * One bone in a {@link "./IMoticaSkeleton"}: its identity, parent, rest pose,
- * and anatomical range of motion.
+ * One bone in a {@link IMoticaSkeleton}: its identity, parent, rest pose, and
+ * anatomical range of motion.
  *
  * A bone binds together (a) the normalized humanoid slot it fills (`bone`), (b)
  * where it sits in the hierarchy (`parent`), (c) its neutral local transform
@@ -26,8 +26,8 @@ export interface IMoticaBone {
 
   /**
    * Rest-pose local transform relative to `parent` — the bone at 0
-   * articulation. Semantic joint angles ({@link "../pose/IMoticaJointPose"}) are
-   * applied _on top of_ this by the engine.
+   * articulation. Semantic joint angles ({@link IMoticaJointPose}) are applied
+   * _on top of_ this by the engine.
    */
   rest: IMoticaTransform;
 

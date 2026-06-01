@@ -10,7 +10,7 @@ import { MoticaPrimitiveShape } from "./MoticaPrimitiveShape";
  * dimensions a model can reliably produce), `mesh` is what ingest yields from a
  * user's uploaded asset. Both render to the same triangles downstream; the
  * union keeps "generated vs imported" honest at the geometry level, mirroring
- * {@link "./MoticaAssetOrigin"} at the model level.
+ * {@link MoticaAssetOrigin} at the model level.
  *
  * @author Samchon
  */

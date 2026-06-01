@@ -34,7 +34,7 @@ export const applyTransform = (
  * Skinned-mesh deformation is a future refinement — for now skinned/static
  * parts render at the root.
  *
- * The returned `bones` map is what {@link "./applyPose".applyPose} drives.
+ * The returned `bones` map is what {@link applyPose} drives.
  *
  * @author Samchon
  */

@@ -7,10 +7,10 @@ import { IMoticaVector3 } from "./IMoticaVector3";
  *
  * Mirrors glTF node transform semantics so it maps 1:1 onto `three.js`,
  * `@pixiv/three-vrm`, and glTF export. Used for scene-node placement
- * ({@link "../scene/IMoticaSceneNode"}) and the root transform of a pose
- * ({@link "../pose/IMoticaPose"}). Per-joint articulation does NOT use this —
- * joints use semantic angles ({@link "../pose/IMoticaJointPose"}); a full TRS
- * per joint would hand the LLM quaternions it cannot emit reliably.
+ * ({@link IMoticaSceneNode}) and the root transform of a pose
+ * ({@link IMoticaPose}). Per-joint articulation does NOT use this — joints use
+ * semantic angles ({@link IMoticaJointPose}); a full TRS per joint would hand
+ * the LLM quaternions it cannot emit reliably.
  *
  * @author Samchon
  */

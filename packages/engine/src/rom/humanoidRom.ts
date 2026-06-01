@@ -31,8 +31,8 @@ const FINGER = constraint(range(-20, 100), null, null);
  *
  * A bone absent from this table (or an axis set to `null`) is treated as
  * unconstrained / immobile on that axis. A skeleton may override any of these
- * per-bone via {@link "@motica/interface".IMoticaBone.constraint} (a
- * contortionist, a stylized non-human rig); this table is only the fallback.
+ * per-bone via {@link IMoticaBone.constraint} (a contortionist, a stylized
+ * non-human rig); this table is only the fallback.
  *
  * These numbers are a deliberate, documented baseline — good enough to reject
  * grossly impossible poses (a backward elbow, a hyper-extended knee). Sourcing

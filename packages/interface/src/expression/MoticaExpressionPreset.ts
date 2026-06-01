@@ -2,7 +2,7 @@
  * The closed set of **VRM 1.0 expression presets** — high-level named emotions
  * and visemes.
  *
- * Where {@link "./MoticaArkitChannel"} is the fine-grained 52-channel control,
+ * Where {@link MoticaArkitChannel} is the fine-grained 52-channel control,
  * presets are the _coarse, semantic_ control surface: a single name an LLM can
  * pick to convey an emotion or a mouth shape, which the runtime expands into
  * the underlying blendshapes. Presets retarget across every VRM avatar
