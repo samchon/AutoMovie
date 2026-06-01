@@ -18,3 +18,6 @@ website/public/playground/**
 .env.*
 # fetched/generated model assets (VRM samples, the baked MakeHuman GLB)
 packages/playground/public/models/*
+
+# local screenshot scratch (not committed)
+.shots/
