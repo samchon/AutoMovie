@@ -1,3 +1,5 @@
+export * from "./core";
+export * from "./cinematics";
 export * from "./geometry";
 export * from "./color";
 export * from "./model";
