@@ -1,0 +1,71 @@
+import { resolveFrame } from "@motica/engine";
+import {
+  IMoticaAimDriver,
+  IMoticaCopyDriver,
+  IMoticaNode,
+  IMoticaTransform,
+} from "@motica/interface";
+import { TestValidator } from "@nestia/e2e";
+
+import { nclose } from "../internal/predicates";
+
+const node = (id: string, x: number): IMoticaNode => ({
+  id,
+  name: null,
+  parent: null,
+  kind: "group",
+  transform: {
+    translation: { x, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    scale: { x: 1, y: 1, z: 1 },
+  } as IMoticaTransform,
+  mesh: null,
+  camera: null,
+  light: null,
+  skin: null,
+});
+
+/**
+ * The DRIVE pass wired through {@link resolveFrame}: channel-space drivers run
+ * between SAMPLE and COMPOSE so their output reaches the world matrix, while
+ * world-space drivers come back in `deferredDrivers`.
+ *
+ * Scenario: with no clip (rest pose), a full-influence `copy` makes node `a`
+ * follow node `b`'s translation; the composed world matrix for `a` shows b's
+ * x=5, and an accompanying `aim` driver is surfaced as deferred (not applied).
+ */
+export const test_resolve_frame_drivers = (): void => {
+  const nodes = [node("a", 1), node("b", 5)];
+  const copy: IMoticaCopyDriver = {
+    type: "copy",
+    owner: "a",
+    source: "b",
+    translation: true,
+    rotation: false,
+    scale: false,
+    influence: 1,
+  };
+  const aim: IMoticaAimDriver = {
+    type: "aim",
+    owner: "a",
+    target: "b",
+    aimAxis: { x: 0, y: 0, z: -1 },
+    upAxis: { x: 0, y: 1, z: 0 },
+    worldUp: { x: 0, y: 1, z: 0 },
+    influence: 1,
+  };
+
+  const out = resolveFrame({
+    nodes,
+    clip: null,
+    limits: [],
+    drivers: [copy, aim],
+    seconds: 0,
+  });
+
+  TestValidator.predicate(
+    "copy driver reaches the world matrix",
+    nclose(out.world.get("a")![12]!, 5),
+  );
+  TestValidator.equals("aim driver deferred", out.deferredDrivers.length, 1);
+};
