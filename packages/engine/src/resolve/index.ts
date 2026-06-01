@@ -4,4 +4,5 @@ export * from "./applyChannelLimit";
 export * from "./composeScene";
 export * from "./resolveDrivers";
 export * from "./worldDrivers";
+export * from "./spring";
 export * from "./resolveFrame";
