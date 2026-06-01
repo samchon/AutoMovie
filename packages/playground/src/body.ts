@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 // ── scene + lighting ─────────────────────────────────────────────────────────
@@ -57,6 +58,26 @@ gl.setPixelRatio(1);
 resize();
 window.addEventListener("resize", resize);
 
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 0.9, 0);
+controls.enableDamping = true;
+controls.update();
+// expose for the headless screenshot harness to frame face / side / etc.
+(window as unknown as { __cam: unknown }).__cam = {
+  set: (
+    px: number,
+    py: number,
+    pz: number,
+    tx: number,
+    ty: number,
+    tz: number,
+  ) => {
+    camera.position.set(px, py, pz);
+    controls.target.set(tx, ty, tz);
+    controls.update();
+  },
+};
+
 const prettify = (base: string): string =>
   base
     .replace(/^measure-/, "")
@@ -90,11 +111,13 @@ new GLTFLoader().load(
   (gltf) => {
     gltf.scene.traverse((o) => {
       const m = o as THREE.Mesh;
+      // the body primitive carries the morphs — give it a soft natural skin;
+      // the eye/lash primitives keep their baked glTF materials.
       if (m.isMesh && m.morphTargetInfluences) {
         mesh = m;
         m.material = new THREE.MeshStandardMaterial({
-          color: 0xe8b89a,
-          roughness: 0.62,
+          color: 0xe7b89c,
+          roughness: 0.66,
           metalness: 0,
         });
       }
@@ -143,6 +166,7 @@ new GLTFLoader().load(
 
 const tick = (): void => {
   requestAnimationFrame(tick);
+  controls.update();
   gl.render(scene, camera);
 };
 tick();
