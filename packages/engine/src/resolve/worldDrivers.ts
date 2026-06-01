@@ -2,6 +2,7 @@ import {
   IMoticaAimDriver,
   IMoticaDriver,
   IMoticaNode,
+  IMoticaParentDriver,
   IMoticaQuaternion,
   IMoticaTransform,
   IMoticaVector3,
@@ -18,9 +19,11 @@ import { Vector3 } from "../math/Vector3";
  * world transform, and recomposes the owner's subtree so descendants follow.
  *
  * This step resolves {@link IMoticaAimDriver} (look-at: orient a node so one of
- * its axes points at a target — eyes, head, a camera). The remaining
- * world-space drivers (`parent`, `ik`, `spring`) are returned untouched for
- * their own dedicated steps; nothing is silently dropped.
+ * its axes points at a target — eyes, head, a camera) and
+ * {@link IMoticaParentDriver} (Child-Of: make a node inherit another's world
+ * frame, per component — a sword following a hand). The remaining world-space
+ * drivers (`ik`, `spring`) are returned untouched for their own dedicated
+ * steps; nothing is silently dropped.
  *
  * @author Samchon
  */
@@ -33,6 +36,8 @@ export const resolveWorldDrivers = (
   const deferred: IMoticaDriver[] = [];
   for (const d of drivers)
     if (d.type === "aim") applyAim(d, world, localById, childrenById);
+    else if (d.type === "parent")
+      applyParent(d, world, localById, childrenById);
     else deferred.push(d);
   return deferred;
 };
@@ -63,6 +68,30 @@ const applyAim = (
   const aimed = aimRotation(dir, d.aimAxis, d.upAxis, d.worldUp);
   const blended = Quaternion.slerp(dec.rotation, aimed, d.influence);
   world.set(d.owner, Matrix4.compose(dec.position, blended, dec.scale));
+  recompose(d.owner, world, localById, childrenById);
+};
+
+/**
+ * Child-Of: the owner inherits the parent node's world frame, component by
+ * component (translation / rotation / scale), keeping its own value for the
+ * components the flags leave off. Then its subtree recomposes.
+ */
+const applyParent = (
+  d: IMoticaParentDriver,
+  world: Map<string, number[]>,
+  localById: Map<string, IMoticaTransform>,
+  childrenById: Map<string, string[]>,
+): void => {
+  const own = Matrix4.decompose(world.get(d.owner)!);
+  const par = Matrix4.decompose(world.get(d.parent)!);
+  world.set(
+    d.owner,
+    Matrix4.compose(
+      d.translation ? par.position : own.position,
+      d.rotation ? par.rotation : own.rotation,
+      d.scale ? par.scale : own.scale,
+    ),
+  );
   recompose(d.owner, world, localById, childrenById);
 };
 
