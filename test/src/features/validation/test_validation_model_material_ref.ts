@@ -5,8 +5,12 @@ import { createModel } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
- * A part that cites a material id absent from the model is a dangling reference
- * — a `type` violation on the part's material.
+ * A part cites its material by id; an id absent from the model's materials is a
+ * dangling reference, reported as a `type` violation. Pins that material wiring
+ * is checked for consistency.
+ *
+ * Scenario: a part whose material id resolves to nothing in the model fails,
+ * with a `type` violation on the part's material.
  */
 export const test_validation_model_material_ref = (): void => {
   const base = createModel();

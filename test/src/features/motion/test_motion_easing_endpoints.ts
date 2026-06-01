@@ -5,8 +5,14 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose } from "../internal/predicates";
 
 /**
- * Every continuous easing curve maps 0→0 and 1→1, and clamps inputs outside
- * [0,1]. Pins that interpolation never overshoots the keyframe endpoints.
+ * Every continuous easing curve must map 0→0 and 1→1 and clamp inputs outside
+ * [0,1]. This pins that keyframe interpolation lands exactly on each keyframe's
+ * pose at the segment boundaries and never overshoots, whatever curve shape is
+ * chosen between them.
+ *
+ * Scenario: across linear, easeIn, easeOut, and easeInOut, each curve returns 0
+ * at t=0 and 1 at t=1, and clamps a below-range input (−1) to 0 and an
+ * above-range input (2) to 1.
  */
 export const test_motion_easing_endpoints = (): void => {
   const curves: MoticaEasing[] = ["linear", "easeIn", "easeOut", "easeInOut"];

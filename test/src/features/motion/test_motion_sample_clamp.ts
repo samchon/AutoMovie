@@ -15,8 +15,13 @@ const elbow = (m: IMoticaMotion, t: number): number => {
 };
 
 /**
- * For a non-looping clip, sampling before the first keyframe returns the first
- * pose and after the last returns the last (no extrapolation).
+ * A non-looping clip does not extrapolate beyond its keyframes: sampling before
+ * the first returns the first pose, and after the last returns the last. Pins
+ * that a clip "holds" at its ends rather than flying off when the playhead runs
+ * past it.
+ *
+ * Scenario (the 0°→120° elbow clip over 1s): sampling at t=−0.5 returns the
+ * start (0°) and at t=2 returns the end (120°).
  */
 export const test_motion_sample_clamp = (): void => {
   const clip = createValidMotion();

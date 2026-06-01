@@ -32,9 +32,8 @@ const MAX_ANGULAR_SPEED_DEG_PER_S = 900;
 export const validateMotion = (props: {
   motion: IMoticaMotion;
   skeleton: IMoticaSkeleton;
-  path?: string;
 }): IMoticaValidation => {
-  const path = props.path ?? "$input";
+  const path = "$input";
   const collector = new ViolationCollector();
   const { motion, skeleton } = props;
 

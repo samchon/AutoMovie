@@ -10,7 +10,14 @@ import {
 } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
-/** A keyframe time beyond the clip duration is a `temporal` violation. */
+/**
+ * Every keyframe must fall within the clip's declared duration; a keyframe
+ * timed past the end is a `temporal` violation. Pins that duration and keyframe
+ * times stay consistent.
+ *
+ * Scenario: a 1s clip with a keyframe at t=2 fails, with a `temporal` violation
+ * on the time.
+ */
 export const test_validation_motion_time_duration = (): void => {
   const motion = makeMotion(
     [

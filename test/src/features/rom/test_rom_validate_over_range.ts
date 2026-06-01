@@ -19,8 +19,16 @@ const romPaths = (axes: Parameters<typeof joint>[1]): string[] => {
 };
 
 /**
- * An angle past the max or below the min is flagged on the offending axis.
- * Scenario: elbow flexion 175° (> 150 max) and knee-style extension below 0.
+ * An angle outside a joint's `[min, max]` is flagged on exactly the offending
+ * axis — the verifier catching the "physically impossible" poses raw LLM
+ * emission produces, which is the heart of motica's differentiator.
+ *
+ * Scenarios:
+ *
+ * 1. An elbow at 175° flexion exceeds the 150° maximum: one violation, reported on
+ *    the flexion axis.
+ * 2. An elbow at −10° flexion falls below the 0° minimum (a hyperextension the
+ *    joint cannot do): one violation.
  */
 export const test_rom_validate_over_range = (): void => {
   const over = romPaths({ flexion: 175 });

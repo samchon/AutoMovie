@@ -2,10 +2,18 @@ import { DEFAULT_HUMANOID_ROM } from "@motica/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * The default humanoid ROM table encodes the key anatomical facts: a hinge
- * elbow (flexion only, no hyperextension), a hinge knee (no abduction/twist),
- * and a ball shoulder (all three axes). Pins the values the ROM verifier
- * enforces.
+ * The default humanoid ROM table is where motica's core differentiator lives —
+ * it encodes the anatomical limits the pose verifier checks every joint
+ * against. This pins the key joint archetypes so a regression in the table is
+ * caught immediately.
+ *
+ * Scenarios:
+ *
+ * 1. The elbow is a hinge: flexion [0, 150]° (no hyperextension below 0), and no
+ *    abduction axis at all.
+ * 2. The knee is a hinge too: no hyperextension (flexion min 0), and neither an
+ *    abduction nor a twist axis.
+ * 3. The shoulder is a ball joint: it has an abduction axis (unlike the hinges).
  */
 export const test_rom_table_values = (): void => {
   const elbow = DEFAULT_HUMANOID_ROM.leftLowerArm!;

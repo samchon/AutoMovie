@@ -4,8 +4,19 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose, vclose } from "../internal/predicates";
 
 /**
- * `Vector3.length` returns the Euclidean norm; `normalize` returns a unit
- * vector (and leaves the zero vector at zero rather than dividing by zero).
+ * `Vector3.length` returns the Euclidean norm and `normalize` returns a unit
+ * vector pointing the same way, degrading gracefully on the zero vector rather
+ * than dividing by zero. These underpin every distance check and direction
+ * computation in the engine.
+ *
+ * Scenarios:
+ *
+ * 1. The 3–4–5 right triangle pins the norm: length (3,4,0) → 5; and the zero
+ *    vector has length 0.
+ * 2. Normalizing (3,4,0) yields a vector of length 1.
+ * 3. Normalization preserves direction: (5,0,0) → (1,0,0).
+ * 4. The degenerate zero vector normalizes back to zero (the divide-by-zero guard)
+ *    instead of producing NaNs.
  */
 export const test_math_vector3_length_normalize = (): void => {
   TestValidator.equals("3-4-5 length", Vector3.length({ x: 3, y: 4, z: 0 }), 5);

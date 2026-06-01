@@ -11,8 +11,12 @@ import {
 import { hasViolation } from "../internal/predicates";
 
 /**
- * Keyframe times must strictly increase; a non-increasing time is a `temporal`
- * violation.
+ * Keyframe times must strictly increase, so a clip is an unambiguous timeline;
+ * a non-increasing time is a `temporal` violation. Pins that the sampler's
+ * "strictly increasing" precondition is enforced at the validation gate.
+ *
+ * Scenario: a clip with keyframes at 0, 0.5, and again 0.5 fails, with a
+ * `temporal` violation on the time.
  */
 export const test_validation_motion_time_order = (): void => {
   const motion = makeMotion(

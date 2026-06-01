@@ -4,9 +4,18 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose } from "../internal/predicates";
 
 /**
- * The curves have the expected shape: linear is the identity, easeInOut is
- * symmetric at 0.5 and monotonic, easeIn lags / easeOut leads early, and step
- * holds at 0 until the very end.
+ * Beyond their endpoints, the easing curves must have their characteristic
+ * shapes — this is what makes motion feel linear, eased, or snapped rather than
+ * merely landing in the right place. Pins the qualitative behaviour of each
+ * named curve.
+ *
+ * Scenarios:
+ *
+ * 1. Linear is the identity (0.37 → 0.37).
+ * 2. EaseInOut is symmetric about its midpoint (0.5 → 0.5) and never decreases.
+ * 3. EaseIn lags behind linear early (0.25 → < 0.25) while easeOut leads it (0.25
+ *    → > 0.25).
+ * 4. Step holds at 0 until the very end, reaching 1 only at t=1.
  */
 export const test_motion_easing_shape = (): void => {
   TestValidator.predicate(

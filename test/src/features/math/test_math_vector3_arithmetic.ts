@@ -2,8 +2,18 @@ import { Vector3 } from "@motica/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * `Vector3` add / subtract / scale / dot must be the textbook component-wise
- * operations. Values are exact integers, so equality is checked directly.
+ * `Vector3` add / subtract / scale / dot are the textbook component-wise
+ * operations, and form the arithmetic the rest of the engine's geometry is
+ * built on. All inputs are chosen so the results are exact integers, so each is
+ * checked with direct equality rather than a tolerance.
+ *
+ * Scenarios:
+ *
+ * 1. Add (1,2,3)+(4,5,6) → (5,7,9), the per-component sum.
+ * 2. Subtract (4,5,6)−(1,2,3) → (3,3,3).
+ * 3. Scale (1,2,3)·2 → (2,4,6).
+ * 4. Dot (1,2,3)·(4,5,6) → 32, and the dot of two perpendicular axes is 0 —
+ *    pinning the orthogonality the projection and lighting math rely on.
  */
 export const test_math_vector3_arithmetic = (): void => {
   const a = Vector3.create(1, 2, 3);

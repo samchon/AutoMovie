@@ -15,9 +15,16 @@ const at = (
 };
 
 /**
- * At rest (no articulation) `resolvePose` accumulates each bone's local offset
- * down the hierarchy into world positions, and every local rotation is
- * identity. Scenario: hips(0,1,0) → +0.2 per spine bone, arm offsets along +X.
+ * With no articulation, `resolvePose` is pure rest-pose forward kinematics: it
+ * walks the bone hierarchy parent-before-child, accumulating each bone's local
+ * rest offset into a world position, and every bone's local rotation stays the
+ * identity. Pins that the hierarchy walk and offset accumulation are correct
+ * before any rotation enters the picture.
+ *
+ * Scenario (the test skeleton's rest offsets): hips sits at (0,1,0); each spine
+ * bone adds +0.2 on Y (spine 1.2, chest 1.4, head 1.7); the left arm chains out
+ * along +X (lower arm reaching 0.5). Every bone is resolved, and the chest's
+ * local rotation is the identity.
  */
 export const test_kinematics_resolve_rest = (): void => {
   const skeleton = createSkeleton();

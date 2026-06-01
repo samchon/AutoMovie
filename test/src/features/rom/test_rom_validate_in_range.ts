@@ -8,8 +8,13 @@ import { TestValidator } from "@nestia/e2e";
 import { joint } from "../internal/fixtures";
 
 /**
- * Angles inside a joint's range — and the value 0 / null on an immobile axis —
- * produce no ROM violations.
+ * A joint articulated within its anatomical range produces no violations. This
+ * is the "valid pose passes cleanly" baseline for the ROM verifier — as
+ * important as the failure cases, since a verifier that flagged everything
+ * would be useless.
+ *
+ * Scenario: an elbow at 90° flexion (inside [0, 150]) with 0 on its immobile
+ * abduction axis yields an empty violation list.
  */
 export const test_rom_validate_in_range = (): void => {
   const collector = new ViolationCollector();

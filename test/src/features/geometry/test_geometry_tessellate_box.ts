@@ -2,8 +2,13 @@ import { tessellate } from "@motica/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * A box tessellates to 6 quads = 24 vertices and 12 triangles = 36 indices,
- * with every vertex inside the half-extents. Pins the exact box topology.
+ * The box has an exact, known topology, so it is pinned precisely: six quad
+ * faces, each with its own four vertices (so per-face normals stay crisp rather
+ * than being averaged at shared corners), giving 24 vertices and 12 triangles.
+ * Every vertex sits on the surface, within the half-extents.
+ *
+ * Scenario: a 0.4×0.6×0.2 box tessellates to 24 vertices and 36 indices, and no
+ * vertex lies outside ±(0.2, 0.3, 0.1) — its half-extents.
  */
 export const test_geometry_tessellate_box = (): void => {
   const box = tessellate({ type: "box", width: 0.4, height: 0.6, depth: 0.2 });

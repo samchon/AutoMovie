@@ -11,9 +11,13 @@ import {
 import { hasViolation } from "../internal/predicates";
 
 /**
- * Per-keyframe pose validation runs inside motion validation: an impossible
- * elbow angle in a keyframe surfaces as a `rom` violation under that keyframe's
- * path.
+ * Motion validation folds full pose validation into each keyframe, so an
+ * anatomically impossible pose buried in a clip is caught and reported under
+ * that keyframe's path, not just at the clip level. Pins that the ROM verifier
+ * reaches inside motion.
+ *
+ * Scenario: a clip whose second keyframe bends the elbow to 175° fails, with a
+ * `rom` violation under the `keyframes[...]` path.
  */
 export const test_validation_motion_keyframe_rom = (): void => {
   const motion = makeMotion(

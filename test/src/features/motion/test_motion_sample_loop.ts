@@ -15,8 +15,12 @@ const elbow = (m: IMoticaMotion, t: number): number => {
 };
 
 /**
- * A looping clip wraps the sample time modulo its duration, so t=1.5 on a 1s
- * loop is the same as t=0.5.
+ * A looping clip wraps the sample time modulo its duration, so playback repeats
+ * seamlessly instead of clamping at the end. Pins that the playhead folds back
+ * into [0, duration).
+ *
+ * Scenario (the 0°→120° elbow clip, 1s, looping): t=1.5 wraps to 0.5 → 60°, and
+ * t=2.25 wraps to 0.25 → 30°.
  */
 export const test_motion_sample_loop = (): void => {
   const looped = makeMotion(

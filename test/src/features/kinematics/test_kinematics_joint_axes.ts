@@ -4,8 +4,17 @@ import { TestValidator } from "@nestia/e2e";
 import { qclose } from "../internal/predicates";
 
 /**
- * `jointToQuaternion` maps each clinical axis to its documented local axis:
- * flexion→X, abduction→Z, twist→Y. With no articulation it is the identity.
+ * `jointToQuaternion` turns the semantic angles an LLM emits (flexion /
+ * abduction / twist) into a bone-local quaternion, mapping each clinical axis
+ * to its documented local rotation axis. Getting this mapping right is what
+ * makes a generated pose render in the direction it was meant to.
+ *
+ * Scenarios:
+ *
+ * 1. No articulation — all axes null, or all zero — yields the identity.
+ * 2. Flexion rotates about local X.
+ * 3. Abduction rotates about local Z.
+ * 4. Twist rotates about local Y.
  */
 export const test_kinematics_joint_axes = (): void => {
   const id = Quaternion.identity();

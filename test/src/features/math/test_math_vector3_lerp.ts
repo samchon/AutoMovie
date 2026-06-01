@@ -2,9 +2,15 @@ import { Vector3 } from "@motica/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * `Vector3.lerp` interpolates component-wise: at t=0 it returns `a`, at t=1 it
- * returns `b`, and at t=0.5 the midpoint. Underpins motion translation
- * blending.
+ * `Vector3.lerp` blends two vectors component-wise. It is the primitive the
+ * motion sampler uses to interpolate a model's root translation between
+ * keyframes, so its endpoints and midpoint must be exact.
+ *
+ * Scenarios (interpolating (0,0,0) → (2,4,6)):
+ *
+ * 1. T=0 returns the start vector exactly.
+ * 2. T=1 returns the end vector exactly.
+ * 3. T=0.5 returns the midpoint (1,2,3).
  */
 export const test_math_vector3_lerp = (): void => {
   const a = Vector3.create(0, 0, 0);

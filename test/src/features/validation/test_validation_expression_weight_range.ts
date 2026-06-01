@@ -5,8 +5,12 @@ import { makeExpression } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
- * A blendshape weight outside [0,1] is a `range` violation — the runtime check
- * the rough numeric type intentionally does not encode.
+ * Blendshape weights are kept as rough plain numbers, so their [0,1] bound is
+ * enforced at runtime by the engine rather than by the type. A weight outside
+ * the range is a `range` violation.
+ *
+ * Scenario: a `jawOpen` channel at weight 1.5 fails, with a `range` violation
+ * on the weight.
  */
 export const test_validation_expression_weight_range = (): void => {
   const result = validateExpressionResult(

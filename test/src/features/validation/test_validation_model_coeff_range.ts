@@ -4,7 +4,14 @@ import { TestValidator } from "@nestia/e2e";
 import { createModel } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
-/** A PBR coefficient outside [0,1] (metallic = 2) is a `range` violation. */
+/**
+ * PBR material coefficients are rough plain numbers, so their [0,1] bound is an
+ * engine runtime check rather than a type constraint. A coefficient outside the
+ * range is a `range` violation.
+ *
+ * Scenario: a material with metallic = 2 fails, with a `range` violation on
+ * `metallic`.
+ */
 export const test_validation_model_coeff_range = (): void => {
   const base = createModel();
   const model = {

@@ -15,9 +15,14 @@ const at = (
 };
 
 /**
- * Articulating a parent bone rotates its descendants. Scenario: twist the chest
- * 90° about +Y; the leftUpperArm's local +X offset (0.2,0,0) swings to −Z, so
- * its world position moves from (0.2,1.4,0) to (0,1.4,−0.2).
+ * Articulating a bone must rotate its whole subtree, not just itself — the
+ * defining property of forward kinematics. This pins that a parent's rotation
+ * propagates into its children's world positions.
+ *
+ * Scenario: twist the chest 90° about +Y. The chest's own local rotation
+ * becomes Y90, and its child the leftUpperArm — whose rest offset is the local
+ * +X vector (0.2,0,0) — swings a quarter turn to −Z, so its world position
+ * moves from (0.2,1.4,0) at rest to (0,1.4,−0.2).
  */
 export const test_kinematics_resolve_articulation = (): void => {
   const skeleton = createSkeleton();

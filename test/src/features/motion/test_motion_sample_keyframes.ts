@@ -15,8 +15,14 @@ const elbow = (m: IMoticaMotion, t: number): number => {
 };
 
 /**
- * Sampling returns exact poses at keyframe times and linearly interpolates
- * between them. Scenario: elbow flexion 0°→120° over 1s with linear easing.
+ * Sampling is the bridge from sparse keyframes to per-frame state: it returns
+ * each keyframe's pose exactly at that keyframe's time and interpolates between
+ * them per the segment's easing. With linear easing the blend is a straight
+ * line.
+ *
+ * Scenario (elbow flexion 0°→120° over 1s, linear easing): t=0 → 0°, t=1 →
+ * 120°, t=0.5 → 60°, t=0.25 → 30°; and the sampled pose carries the clip's
+ * target skeleton id so it can be applied to the right rig.
  */
 export const test_motion_sample_keyframes = (): void => {
   const clip = createValidMotion();

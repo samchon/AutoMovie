@@ -11,9 +11,14 @@ import {
 import { hasViolation } from "../internal/predicates";
 
 /**
- * Two adjacent keyframes whose shared joint swings too fast (here 170° in 0.1s
- * = 1700°/s, over the engine's bound) are a `temporal` violation — caught even
- * though both poses are individually within ROM.
+ * Per-keyframe ROM is not enough — two individually valid poses can still imply
+ * an impossibly fast motion between them. The temporal verifier flags a shared
+ * joint that swings faster than the engine's bound, catching teleporting limbs
+ * that frame-by-frame validation would miss.
+ *
+ * Scenario: a shoulder swinging 0°→170° in 0.1s (1700°/s, over the bound)
+ * fails, with a `temporal` violation on the pose — even though 0° and 170° are
+ * each within the shoulder's ROM.
  */
 export const test_validation_motion_angular_speed = (): void => {
   const motion = makeMotion(
