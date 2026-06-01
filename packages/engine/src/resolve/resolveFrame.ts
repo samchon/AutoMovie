@@ -11,6 +11,7 @@ import { channelKey } from "./channel";
 import { composeScene } from "./composeScene";
 import { resolveDrivers } from "./resolveDrivers";
 import { IMoticaSampledChannel, sampleClip } from "./sampleClip";
+import { childrenIndex, resolveWorldDrivers } from "./worldDrivers";
 
 /** Everything needed to resolve one instant of a scene. */
 export interface IMoticaResolveInput {
@@ -79,10 +80,10 @@ export const resolveFrame = (
   const sampled: Map<string, IMoticaSampledChannel> =
     input.clip === null ? new Map() : sampleClip(input.clip, input.seconds);
 
-  // DRIVE: resolve channel-space drivers into the sampled map; collect the
-  // world-space ones the next pass owns.
+  // DRIVE (channel-space): resolve copy/driven into the sampled map; collect the
+  // world-space drivers the post-compose pass owns.
   const nodesById = new Map(input.nodes.map((n) => [n.id, n]));
-  const deferredDrivers =
+  const worldSpaceDrivers =
     input.drivers !== undefined
       ? resolveDrivers(input.drivers, sampled, nodesById)
       : [];
@@ -115,12 +116,20 @@ export const resolveFrame = (
     if (w !== undefined) weights.set(node.id, w.value);
   }
 
-  return {
-    world: composeScene(input.nodes, overrides),
-    weights,
-    violations,
-    deferredDrivers,
-  };
+  // COMPOSE, then the WORLD-SPACE DRIVE pass (aim/look-at) over the composed
+  // hierarchy; `parent`/`ik`/`spring` remain deferred for their own steps.
+  const world = composeScene(input.nodes, overrides);
+  const localById = new Map<string, IMoticaTransform>();
+  for (const node of input.nodes)
+    localById.set(node.id, overrides.get(node.id) ?? node.transform);
+  const deferredDrivers = resolveWorldDrivers(
+    worldSpaceDrivers,
+    world,
+    localById,
+    childrenIndex(input.nodes),
+  );
+
+  return { world, weights, violations, deferredDrivers };
 };
 
 const toVec3 = (a: number[]) => ({ x: a[0]!, y: a[1]!, z: a[2]! });
