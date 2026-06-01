@@ -1,0 +1,24 @@
+import { Vector3 } from "@motica/engine";
+import { TestValidator } from "@nestia/e2e";
+
+/**
+ * `Vector3` add / subtract / scale / dot must be the textbook component-wise
+ * operations. Values are exact integers, so equality is checked directly.
+ */
+export const test_math_vector3_arithmetic = (): void => {
+  const a = Vector3.create(1, 2, 3);
+  const b = Vector3.create(4, 5, 6);
+  TestValidator.equals("add", Vector3.add(a, b), { x: 5, y: 7, z: 9 });
+  TestValidator.equals("subtract", Vector3.subtract(b, a), {
+    x: 3,
+    y: 3,
+    z: 3,
+  });
+  TestValidator.equals("scale", Vector3.scale(a, 2), { x: 2, y: 4, z: 6 });
+  TestValidator.equals("dot", Vector3.dot(a, b), 32);
+  TestValidator.equals(
+    "dot orthogonal is zero",
+    Vector3.dot({ x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }),
+    0,
+  );
+};

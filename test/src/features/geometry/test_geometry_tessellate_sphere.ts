@@ -1,0 +1,31 @@
+import { tessellate } from "@motica/engine";
+import { TestValidator } from "@nestia/e2e";
+
+import { nclose } from "../internal/predicates";
+
+/**
+ * A tessellated sphere places every vertex on its radius and every normal at
+ * unit length. Pins that the sphere is round to floating-point tolerance.
+ */
+export const test_geometry_tessellate_sphere = (): void => {
+  const r = 0.5;
+  const sphere = tessellate({ type: "sphere", radius: r });
+
+  let onRadius = true;
+  for (let i = 0; i < sphere.positions.length; i += 3) {
+    const x = sphere.positions[i]!;
+    const y = sphere.positions[i + 1]!;
+    const z = sphere.positions[i + 2]!;
+    if (!nclose(Math.sqrt(x * x + y * y + z * z), r, 1e-6)) onRadius = false;
+  }
+  TestValidator.predicate("every vertex on the radius", onRadius);
+
+  let unitNormals = true;
+  for (let i = 0; i < sphere.normals.length; i += 3) {
+    const x = sphere.normals[i]!;
+    const y = sphere.normals[i + 1]!;
+    const z = sphere.normals[i + 2]!;
+    if (!nclose(Math.sqrt(x * x + y * y + z * z), 1, 1e-6)) unitNormals = false;
+  }
+  TestValidator.predicate("every normal is unit", unitNormals);
+};

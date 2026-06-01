@@ -6,6 +6,7 @@
   "packageManager": "pnpm@10.6.4",
   "scripts": {
     "build": "pnpm --filter=./packages/** -r build",
+    "test": "pnpm --filter @motica/test build && pnpm --filter @motica/test start",
     "format": "prettier --write \"**/*.ts\"",
     "format:check": "prettier --check \"**/*.ts\"",
     "prepare": "ts-patch install"

@@ -1,0 +1,24 @@
+{
+  "private": true,
+  "name": "@motica/test",
+  "version": "0.1.0",
+  "description": "motica test program — exhaustive deterministic engine validation",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "start": "ts-node --transpile-only -P tsconfig.json src/index.ts"
+  },
+  "author": "Samchon",
+  "license": "MIT",
+  "dependencies": {
+    "@motica/engine": "workspace:^",
+    "@motica/interface": "workspace:^",
+    "@nestia/e2e": "catalog:samchon"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.17",
+    "chalk": "4.1.2",
+    "ts-node": "catalog:typescript",
+    "typescript": "catalog:typescript"
+  }
+}
