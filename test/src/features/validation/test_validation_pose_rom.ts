@@ -5,9 +5,12 @@ import { createSkeleton, joint, makePose } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
- * A pose that bends the elbow past its anatomical limit fails with a `rom`
- * violation on the flexion axis — the engine's core differentiator surfacing
- * through pose validation.
+ * Pose validation runs the ROM verifier over every joint, so an anatomically
+ * impossible pose is rejected — the engine's core differentiator surfacing at
+ * the whole-pose level, not just the bare-joint level.
+ *
+ * Scenario: an elbow bent to 175° flexion (past its 150° limit) fails, with a
+ * `rom` violation on the flexion axis.
  */
 export const test_validation_pose_rom = (): void => {
   const result = validatePoseResult(

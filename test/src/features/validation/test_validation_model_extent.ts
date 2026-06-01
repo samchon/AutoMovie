@@ -5,8 +5,11 @@ import { createModel } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
- * A primitive with a non-positive dimension is a `range` violation — the
- * runtime positivity check the rough numeric type does not encode.
+ * Primitive dimensions are rough plain numbers, so their positivity is enforced
+ * at runtime by the engine, not by the type. A non-positive extent is a `range`
+ * violation.
+ *
+ * Scenario: a box with width 0 fails, with a `range` violation on the width.
  */
 export const test_validation_model_extent = (): void => {
   const base = createModel();

@@ -1,4 +1,5 @@
 import {
+  IMoticaBone,
   IMoticaPose,
   IMoticaQuaternion,
   IMoticaSkeleton,
@@ -41,7 +42,8 @@ export interface IMoticaResolvedBone {
  *   contact, centre of mass).
  *
  * Bones are processed parent-before-child via a topological walk from the root,
- * so a parent's world transform is always available when a child is resolved.
+ * so a parent's world transform is always available when a child is resolved. A
+ * skeleton with no root bone (every bone parented) resolves to an empty array.
  *
  * @author Samchon
  */
@@ -52,11 +54,7 @@ export const resolvePose = (
   const articulation = new Map<MoticaHumanoidBone, IMoticaQuaternion>();
   for (const j of pose.joints) articulation.set(j.bone, jointToQuaternion(j));
 
-  const byBone = new Map(skeleton.bones.map((b) => [b.bone, b]));
-  const children = new Map<
-    MoticaHumanoidBone | "__root__",
-    typeof skeleton.bones
-  >();
+  const children = new Map<MoticaHumanoidBone | "__root__", IMoticaBone[]>();
   for (const b of skeleton.bones) {
     const key = b.parent ?? "__root__";
     const list = children.get(key) ?? [];
@@ -65,40 +63,33 @@ export const resolvePose = (
   }
 
   const resolved: IMoticaResolvedBone[] = [];
-  const worldRotOf = new Map<MoticaHumanoidBone, IMoticaQuaternion>();
-  const worldPosOf = new Map<MoticaHumanoidBone, IMoticaVector3>();
 
+  // The walk receives the bone object directly (the children map already holds
+  // it), so there is no name→bone lookup and no unreachable "missing bone" guard.
   const walk = (
-    boneName: MoticaHumanoidBone,
+    bone: IMoticaBone,
     parentWorldRot: IMoticaQuaternion,
     parentWorldPos: IMoticaVector3,
   ): void => {
-    const bone = byBone.get(boneName);
-    if (bone === undefined) return;
+    const art = articulation.get(bone.bone) ?? Quaternion.identity();
+    const localRotation = Quaternion.multiply(bone.rest.rotation, art);
 
-    const restRot = bone.rest.rotation;
-    const art = articulation.get(boneName) ?? Quaternion.identity();
-    const localRotation = Quaternion.multiply(restRot, art);
-
-    // world rotation/position of this bone's origin
     const worldRot = Quaternion.multiply(parentWorldRot, localRotation);
     const worldPos = Vector3.add(
       parentWorldPos,
       Quaternion.rotateVector(parentWorldRot, bone.rest.translation),
     );
-    worldRotOf.set(boneName, worldRot);
-    worldPosOf.set(boneName, worldPos);
 
-    resolved.push({ bone: boneName, localRotation, worldPosition: worldPos });
+    resolved.push({ bone: bone.bone, localRotation, worldPosition: worldPos });
 
-    for (const child of children.get(boneName) ?? [])
-      walk(child.bone, worldRot, worldPos);
+    for (const child of children.get(bone.bone) ?? [])
+      walk(child, worldRot, worldPos);
   };
 
   const rootTranslation = pose.root?.translation ?? Vector3.create(0, 0, 0);
   const rootRotation = pose.root?.rotation ?? Quaternion.identity();
   for (const root of children.get("__root__") ?? [])
-    walk(root.bone, rootRotation, rootTranslation);
+    walk(root, rootRotation, rootTranslation);
 
   return resolved;
 };

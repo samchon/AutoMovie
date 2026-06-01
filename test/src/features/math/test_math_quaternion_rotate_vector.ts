@@ -4,10 +4,15 @@ import { TestValidator } from "@nestia/e2e";
 import { vclose } from "../internal/predicates";
 
 /**
- * `Quaternion.rotateVector` applies the rotation: a +90° turn about +Y sends +X
- * to −Z (right-handed), a +180° turn sends +X to −X, and the identity leaves
- * the vector unchanged. Pins the rotation direction the kinematics layer relies
- * on.
+ * `Quaternion.rotateVector` applies a rotation to a vector. The _direction_ it
+ * turns is the convention the entire kinematics layer depends on, so it is
+ * pinned against known right-handed results.
+ *
+ * Scenarios:
+ *
+ * 1. A +90° turn about +Y sends +X to −Z (the right-hand rule).
+ * 2. A +180° turn about +Y sends +X to −X.
+ * 3. The identity rotation leaves the vector unchanged.
  */
 export const test_math_quaternion_rotate_vector = (): void => {
   const X = { x: 1, y: 0, z: 0 };

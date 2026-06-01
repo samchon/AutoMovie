@@ -5,8 +5,12 @@ import { createModel } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
- * A part attached to a bone the model's skeleton lacks is a dangling reference
- * — a `type` violation on `attachedBone` (the test skeleton has no `jaw`).
+ * A rigid part may be attached to a bone; naming a bone the model's skeleton
+ * lacks is a dangling reference, reported as a `type` violation. Pins that
+ * part-to-bone wiring is checked.
+ *
+ * Scenario: a part attached to `jaw` — absent from the test skeleton — fails,
+ * with a `type` violation on `attachedBone`.
  */
 export const test_validation_model_bone_ref = (): void => {
   const base = createModel();

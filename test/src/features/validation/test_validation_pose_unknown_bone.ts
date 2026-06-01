@@ -5,8 +5,13 @@ import { createSkeleton, joint, makePose } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
- * A pose that articulates a bone the target skeleton does not have fails with a
- * `type` violation (the test skeleton has no `jaw`).
+ * A pose may only articulate bones the target skeleton actually has; citing a
+ * missing bone is a dangling reference, reported as a `type` violation. Pins
+ * that a pose authored against the wrong rig is caught rather than silently
+ * ignored.
+ *
+ * Scenario: a pose articulating `jaw` — a bone the test skeleton lacks — fails,
+ * with a `type` violation on the bone.
  */
 export const test_validation_pose_unknown_bone = (): void => {
   const result = validatePoseResult(

@@ -12,10 +12,20 @@ const SHAPES: MoticaPrimitiveShape[] = [
 ];
 
 /**
- * Every primitive tessellation must be well-formed mesh data: positions in xyz
- * triples, one normal per position, triangle index list, all positions finite,
- * and every index within the vertex range. These are the invariants a renderer
- * relies on to upload geometry safely.
+ * Whatever primitive it tessellates, the engine must emit well-formed mesh data
+ * — the structural invariants a renderer relies on to upload geometry to the
+ * GPU without crashing or drawing garbage. This sweeps all six primitive types
+ * through the same battery of checks.
+ *
+ * Scenarios (asserted for box, sphere, cylinder, cone, plane, and capsule):
+ *
+ * 1. Positions come in xyz triples (length divisible by 3).
+ * 2. There is exactly one normal per position.
+ * 3. Indices come in triangles (length divisible by 3).
+ * 4. The mesh is non-empty (it has both vertices and triangles).
+ * 5. Every position is finite (no NaN / Infinity).
+ * 6. Every index is an integer inside the vertex range — no out-of-bounds
+ *    reference that would read past the vertex buffer.
  */
 export const test_geometry_tessellate_invariants = (): void => {
   for (const shape of SHAPES) {

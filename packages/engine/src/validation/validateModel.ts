@@ -18,9 +18,8 @@ import { ViolationCollector } from "./violation";
  */
 export const validateModel = (props: {
   model: IMoticaModel;
-  path?: string;
 }): IMoticaValidation => {
-  const path = props.path ?? "$input";
+  const path = "$input";
   const collector = new ViolationCollector();
   const { model } = props;
 

@@ -2,9 +2,17 @@ import { ViolationCollector } from "@motica/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * `ViolationCollector` is the shared violation sink: `range` pushes only when a
- * value is outside the bound, and `toValidation` reports success iff nothing
- * was collected.
+ * `ViolationCollector` is the shared sink every validator pushes into, and the
+ * bridge to the harness: its `range` helper records a violation only when a
+ * value is actually outside its bound, and `toValidation` reports success
+ * exactly when nothing was collected. Pins both halves of that contract.
+ *
+ * Scenarios:
+ *
+ * 1. An in-range value (0.5 in [0,1]) pushes nothing, and an empty collector
+ *    yields a successful validation.
+ * 2. An out-of-range value (2 in [0,1]) pushes one violation, and a non-empty
+ *    collector yields a failed validation.
  */
 export const test_validation_collector = (): void => {
   const empty = new ViolationCollector();

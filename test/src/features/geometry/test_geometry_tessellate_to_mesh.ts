@@ -2,8 +2,13 @@ import { tessellateToMesh } from "@motica/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * `tessellateToMesh` wraps a tessellation into a full `IMoticaMesh` — positions
- * and indices populated, no skinning (generated primitives are not skinned).
+ * `tessellateToMesh` adapts a raw tessellation into a full `IMoticaMesh`, so a
+ * generated primitive can flow through the same code paths as imported mesh
+ * geometry. It carries positions and indices through and leaves skinning null,
+ * since generated primitives are not skinned.
+ *
+ * Scenario: a unit box yields 72 position floats (24 vertices × 3), 36 indices,
+ * and a null `skin`.
  */
 export const test_geometry_tessellate_to_mesh = (): void => {
   const mesh = tessellateToMesh({ type: "box", width: 1, height: 1, depth: 1 });

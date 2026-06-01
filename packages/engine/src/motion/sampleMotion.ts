@@ -61,8 +61,10 @@ export const sampleMotion = (
       break;
     }
 
+  // Precondition: the clip has strictly increasing keyframe times (the contract
+  // validateMotion enforces), so the selected segment always has a positive span.
   const span = hi.time - lo.time;
-  const linearT = span <= 0 ? 0 : (time - lo.time) / span;
+  const linearT = (time - lo.time) / span;
   const t =
     lo.easing === "cubicBezier" && lo.bezier !== null
       ? cubicBezierEasing(lo.bezier, linearT)

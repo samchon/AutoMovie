@@ -24,10 +24,9 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
-      - name: Type-check Test Program
-        run: pnpm run build
-        working-directory: test
-
-      - name: Run Tests
-        run: pnpm start
+      # The test program runs straight through ts-node (no compile step). The
+      # coverage run executes every scenario and fails if engine coverage drops
+      # below 100% on any metric.
+      - name: Run Tests with 100% Coverage Gate
+        run: pnpm coverage
         working-directory: test

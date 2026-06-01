@@ -13,8 +13,16 @@ import { nclose } from "../internal/predicates";
 const rest = makePose([joint("leftLowerArm", { flexion: 0 })]);
 
 /**
- * Expression sampling blends intensity when both keyframes share a preset, and
- * switches preset at the midpoint when they differ.
+ * Expression sampling interpolates the _face_ alongside the body. When adjacent
+ * keyframes share a preset it blends intensity smoothly; when the presets
+ * differ — there is no meaningful blend between, say, happy and angry — it
+ * switches at the segment midpoint.
+ *
+ * Scenarios:
+ *
+ * 1. Same preset (happy 0 → happy 1): intensity blends to 0.5 at t=0.5.
+ * 2. Different presets (happy → angry): the first holds before the midpoint (t=0.4
+ *    → happy) and the second takes over after it (t=0.6 → angry).
  */
 export const test_motion_sample_expression = (): void => {
   const blend = makeMotion(
