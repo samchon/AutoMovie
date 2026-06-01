@@ -45,18 +45,22 @@ const skinTexturePNG = (size = 512) => {
 const BASE =
   "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data";
 
+// Beauty defaults tuned toward a generalised East-Asian "미인상" (NOT any real
+// person): V-line jaw, small high-bridged nose, large almond eyes + aegyo-sal,
+// high cheekbones over a slim lower face, a small face and mouth.
 const MORPHS = [
-  { n: "eye-size", f: ["eyes/l-eye-scale-incr", "eyes/r-eye-scale-incr"], bake: 0.6 },
-  { n: "eye-height", f: ["eyes/l-eye-height2-incr", "eyes/r-eye-height2-incr"], bake: 0.35 },
-  { n: "nose-size", f: ["nose/nose-scale-vert-incr", "nose/nose-scale-depth-incr"], bake: -0.5 },
-  { n: "nose-width", f: ["nose/nose-width1-incr", "nose/nose-width2-incr"], bake: -0.45 },
-  { n: "lips", f: ["mouth/mouth-upperlip-height-incr", "mouth/mouth-lowerlip-height-incr"], bake: 0.5 },
-  { n: "mouth-width", f: ["mouth/mouth-scale-horiz-incr"], bake: -0.2 },
-  { n: "chin", f: ["chin/chin-width-incr", "chin/chin-height-incr"], bake: -0.35 },
-  { n: "jaw-drop", f: ["chin/chin-jaw-drop-incr"], bake: -0.2 },
-  { n: "cheekbones", f: ["cheek/l-cheek-bones-incr", "cheek/r-cheek-bones-incr"], bake: 0.4 },
-  { n: "cheek-volume", f: ["cheek/l-cheek-volume-incr", "cheek/r-cheek-volume-incr"], bake: 0.25 },
-  { n: "head-width", f: ["head/head-scale-horiz-incr"], bake: -0.12 },
+  { n: "eye-size", f: ["eyes/l-eye-scale-incr", "eyes/r-eye-scale-incr"], bake: 0.7 },
+  { n: "eye-height", f: ["eyes/l-eye-height2-incr", "eyes/r-eye-height2-incr"], bake: 0.5 },
+  { n: "aegyo-sal", f: ["eyes/l-eye-bag-incr", "eyes/r-eye-bag-incr"], bake: 0.28 },
+  { n: "nose-size", f: ["nose/nose-scale-vert-incr", "nose/nose-scale-depth-incr"], bake: -0.6 },
+  { n: "nose-width", f: ["nose/nose-width1-incr", "nose/nose-width2-incr"], bake: -0.6 },
+  { n: "lips", f: ["mouth/mouth-upperlip-height-incr", "mouth/mouth-lowerlip-height-incr"], bake: 0.4 },
+  { n: "mouth-width", f: ["mouth/mouth-scale-horiz-incr"], bake: -0.32 },
+  { n: "chin", f: ["chin/chin-width-incr", "chin/chin-height-incr"], bake: -0.55 },
+  { n: "jaw-drop", f: ["chin/chin-jaw-drop-incr"], bake: -0.3 },
+  { n: "cheekbones", f: ["cheek/l-cheek-bones-incr", "cheek/r-cheek-bones-incr"], bake: 0.55 },
+  { n: "cheek-volume", f: ["cheek/l-cheek-volume-incr", "cheek/r-cheek-volume-incr"], bake: 0.22 },
+  { n: "head-width", f: ["head/head-scale-horiz-incr"], bake: -0.2 },
   { n: "body-hourglass", f: ["bodyshapes/bodyshapes-elvs-fem-neat-hourglass"], bake: 0.4 },
   { n: "bust", f: ["measure/measure-bust-circ-incr"], bake: 0.15 },
   { n: "underbust", f: ["measure/measure-underbust-circ-incr"], bake: -0.2 },
