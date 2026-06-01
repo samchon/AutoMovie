@@ -52,11 +52,17 @@ console.log("fetching MakeHuman base mesh (CC0)…");
 const obj = await text(`${BASE}/3dobjs/base.obj`);
 const verts = [];
 const tris = [];
+// Keep all vertices (target deltas index the full mesh) but only the `body`
+// group's faces — MakeHuman's base.obj also carries helper-* proxy geometry
+// (eyes, teeth, genital, hair, tights) and joint-* marker cubes we don't render.
+let group = "";
 for (const line of obj.split("\n")) {
   if (line.startsWith("v ")) {
     const p = line.split(/\s+/);
     verts.push([+p[1], +p[2], +p[3]]);
-  } else if (line.startsWith("f ")) {
+  } else if (line.startsWith("g ")) {
+    group = line.slice(2).trim();
+  } else if (line.startsWith("f ") && group === "body") {
     const idx = line
       .trim()
       .split(/\s+/)
