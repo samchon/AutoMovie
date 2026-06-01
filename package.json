@@ -1,0 +1,35 @@
+{
+  "private": true,
+  "name": "@motica/station",
+  "version": "0.1.0",
+  "description": "motica monorepo — LLM structured-output engine for character/object motion",
+  "packageManager": "pnpm@10.6.4",
+  "scripts": {
+    "build": "pnpm --filter=./packages/** -r build",
+    "format": "prettier --write \"**/*.ts\"",
+    "format:check": "prettier --check \"**/*.ts\"",
+    "prepare": "ts-patch install"
+  },
+  "keywords": [
+    "llm",
+    "function-calling",
+    "structured-output",
+    "animation",
+    "motion",
+    "typia"
+  ],
+  "author": "Samchon",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samchon/motica"
+  },
+  "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "prettier": "^3.5.3",
+    "prettier-plugin-jsdoc": "^1.3.2",
+    "rimraf": "^6.0.1",
+    "ts-patch": "catalog:typescript",
+    "typescript": "catalog:typescript"
+  }
+}
