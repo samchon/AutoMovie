@@ -1,6 +1,6 @@
 /**
- * What a {@link "./IMoticaNode".IMoticaNode} is. Every node is a transform with
- * an optional payload; the kind tags which payload (if any) it carries.
+ * What a {@link IMoticaNode} is. Every node is a transform with an optional
+ * payload; the kind tags which payload (if any) it carries.
  *
  * `group` is the load-bearing one: a group is just a node with children, so
  * moving or rotating the group moves the whole subtree, its local frame is the

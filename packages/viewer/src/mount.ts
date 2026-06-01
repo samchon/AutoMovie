@@ -15,9 +15,8 @@ export interface IMoticaViewerHandle {
  * `camera`.
  *
  * This is the one browser-only entry point. `onFrame` is where a
- * {@link "./MoticaPlayer".MoticaPlayer} advances — the viewer stays a thin shell
- * around the deterministic engine. `elapsedSeconds` is measured from the first
- * frame.
+ * {@link MoticaPlayer} advances — the viewer stays a thin shell around the
+ * deterministic engine. `elapsedSeconds` is measured from the first frame.
  *
  * @author Samchon
  */

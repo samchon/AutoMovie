@@ -10,9 +10,9 @@
  * structurally rejected" real, rather than hoping the LLM emits plausible
  * numbers.
  *
- * Sign convention is per-axis and documented on
- * {@link "./IMoticaJointConstraint"}. `min <= max` is required; the engine
- * treats `min > max` as a malformed constraint.
+ * Sign convention is per-axis and documented on {@link IMoticaJointConstraint}.
+ * `min <= max` is required; the engine treats `min > max` as a malformed
+ * constraint.
  *
  * @author Samchon
  */

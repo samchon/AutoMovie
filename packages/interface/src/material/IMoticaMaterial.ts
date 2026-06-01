@@ -7,10 +7,10 @@ import { IMoticaColor } from "../color/IMoticaColor";
  * Fields mirror the glTF 2.0 metallic-roughness model so a generated material
  * maps 1:1 onto `three.js` `MeshStandardMaterial`, VRM/MToon inputs, and glTF
  * export. Every coefficient is a scalar documented to `[0, 1]` or an
- * {@link "../color/IMoticaColor"} — the whole material is a small numeric
- * record, which is exactly why an LLM can author or tweak it ("make it more
- * metallic", "rougher", "warmer base color") through structured output; the
- * engine range-checks the coefficients.
+ * {@link IMoticaColor} — the whole material is a small numeric record, which is
+ * exactly why an LLM can author or tweak it ("make it more metallic",
+ * "rougher", "warmer base color") through structured output; the engine
+ * range-checks the coefficients.
  *
  * Texture _maps_ (image-based base color / normal / roughness) are referenced
  * by id rather than embedded — the pixel payload is an asset the engine

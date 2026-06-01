@@ -12,8 +12,7 @@ import { IMoticaChannel } from "./IMoticaChannel";
  * or a `null` component within a side, means that direction is unconstrained.
  *
  * This is the general form. Humanoid anatomical ROM keeps its dedicated
- * semantic representation
- * ({@link "../skeleton/IMoticaJointConstraint".IMoticaJointConstraint},
+ * semantic representation ({@link IMoticaJointConstraint},
  * flexion/abduction/twist) as the humanoid profile's specialization; this
  * channel limit covers scalar rig DOFs, group/node rotations, weights, and
  * generic object channels.

@@ -11,8 +11,8 @@ import { IMoticaJointPose } from "./IMoticaJointPose";
  * structured-output unit that the engine validates against the target
  * skeleton's ROM before anything renders.
  *
- * A pose is also the building block of motion: a
- * {@link "../motion/IMoticaKeyframe"} is a pose plus a timestamp.
+ * A pose is also the building block of motion: a {@link IMoticaKeyframe} is a
+ * pose plus a timestamp.
  *
  * @author Samchon
  */

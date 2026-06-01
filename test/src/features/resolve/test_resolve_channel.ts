@@ -1,0 +1,61 @@
+import { channelIsRotation, channelKey } from "@motica/engine";
+import { IMoticaChannel } from "@motica/interface";
+import { TestValidator } from "@nestia/e2e";
+
+const node = (
+  id: string,
+  path: "translation" | "rotation" | "scale" | "weights",
+): IMoticaChannel => ({ kind: "node", node: id, path });
+
+const pointer = (
+  ptr: string,
+  valueType: "scalar" | "vec2" | "vec3" | "vec4" | "quaternion" | "weights",
+): IMoticaChannel => ({ kind: "pointer", pointer: ptr, valueType });
+
+/**
+ * Canonical channel keys and the rotation test that decides slerp vs lerp.
+ *
+ * Scenarios:
+ *
+ * 1. A node channel keys to `node:{id}:{path}`; a pointer channel keys to
+ *    `ptr:{pointer}`. The two namespaces are disjoint, so a node and a pointer
+ *    can never collide.
+ * 2. `channelIsRotation` is true exactly for a node `rotation` path and a pointer
+ *    whose `valueType` is `quaternion`; every other node path and pointer type
+ *    is false — both sides of each discriminator.
+ */
+export const test_resolve_channel = (): void => {
+  // 1. keys
+  TestValidator.equals(
+    "node key",
+    channelKey(node("hips", "rotation")),
+    "node:hips:rotation",
+  );
+  TestValidator.equals(
+    "pointer key",
+    channelKey(pointer("/cameras/0/fovY", "scalar")),
+    "ptr:/cameras/0/fovY",
+  );
+
+  // 2. rotation discrimination — both kinds, both outcomes
+  TestValidator.equals(
+    "node rotation is rotation",
+    channelIsRotation(node("hips", "rotation")),
+    true,
+  );
+  TestValidator.equals(
+    "node translation is not rotation",
+    channelIsRotation(node("hips", "translation")),
+    false,
+  );
+  TestValidator.equals(
+    "pointer quaternion is rotation",
+    channelIsRotation(pointer("/nodes/0/rotation", "quaternion")),
+    true,
+  );
+  TestValidator.equals(
+    "pointer scalar is not rotation",
+    channelIsRotation(pointer("/materials/0/metallic", "scalar")),
+    false,
+  );
+};

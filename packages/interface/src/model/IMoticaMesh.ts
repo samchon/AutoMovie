@@ -3,10 +3,10 @@ import { MoticaHumanoidBone } from "../skeleton/MoticaHumanoidBone";
 /**
  * Raw triangle-mesh geometry — the **imported / baked** path.
  *
- * Unlike a {@link "./MoticaPrimitiveShape"} (a few LLM-emittable dimensions), a
- * mesh is bulk vertex data: it is produced by the ingest package when a user
- * imports a glTF/VRM/FBX, or baked by the engine, and consumed by the renderer.
- * A language model never authors these arrays — they live in the interface so
+ * Unlike a {@link MoticaPrimitiveShape} (a few LLM-emittable dimensions), a mesh
+ * is bulk vertex data: it is produced by the ingest package when a user imports
+ * a glTF/VRM/FBX, or baked by the engine, and consumed by the renderer. A
+ * language model never authors these arrays — they live in the interface so
  * imported geometry has a typed home, the same way bone rest transforms do.
  *
  * Attributes follow the glTF convention of parallel flat arrays indexed by

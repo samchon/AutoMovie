@@ -11,14 +11,13 @@ import { MoticaNodeKind } from "./MoticaNodeKind";
  * hierarchy is by `parent` reference; the engine derives children and walks
  * parent-before-child. **A group is simply a node with children**
  * ({@link MoticaNodeKind} `group`): its TRS moves the subtree, its local frame
- * is the rotation pivot, and a
- * {@link "./IMoticaChannelLimit".IMoticaChannelLimit} on its rotation is a
+ * is the rotation pivot, and a {@link IMoticaChannelLimit} on its rotation is a
  * group-level ROM — no separate grouping concept exists.
  *
  * Transform is parent-local TRS (never a matrix, so it stays animatable and
  * decomposed). Cross-node relationships (a sword following a hand) are
- * expressed as {@link "./IMoticaDriver".IMoticaDriver}s, not multi-parenting,
- * since the graph is a strict tree on export.
+ * expressed as {@link IMoticaDriver}s, not multi-parenting, since the graph is a
+ * strict tree on export.
  *
  * @author Samchon
  */

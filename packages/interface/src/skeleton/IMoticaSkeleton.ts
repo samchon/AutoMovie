@@ -5,7 +5,7 @@ import { IMoticaBone } from "./IMoticaBone";
  *
  * The skeleton is the contract between _what exists_ (which bones, their
  * hierarchy, their ROM) and _what an animation does_ (which bones it rotates).
- * Because bones are keyed by the closed {@link "./MoticaHumanoidBone"} enum, a
+ * Because bones are keyed by the closed {@link MoticaHumanoidBone} enum, a
  * motion authored against one skeleton retargets onto any other that shares the
  * humanoid convention — the basis of motica's "author once, play on any VRM"
  * portability.

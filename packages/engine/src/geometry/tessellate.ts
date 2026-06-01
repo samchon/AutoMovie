@@ -3,8 +3,8 @@ import { IMoticaMesh, MoticaPrimitiveShape } from "@motica/interface";
 /**
  * Flat-array triangle mesh produced by tessellation: parallel `positions` /
  * `normals` (xyz triples) and triangle `indices`. This is the render-ready form
- * a renderer uploads to the GPU, and matches the shape of
- * {@link "@motica/interface".IMoticaMesh} (minus skinning).
+ * a renderer uploads to the GPU, and matches the shape of {@link IMoticaMesh}
+ * (minus skinning).
  */
 export interface ITessellation {
   positions: number[];

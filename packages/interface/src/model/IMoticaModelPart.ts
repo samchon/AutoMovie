@@ -10,9 +10,9 @@ import { IMoticaGeometry } from "./IMoticaGeometry";
  * torso here, an imported mesh head there — and so each surface can carry its
  * own material. How a part follows the skeleton is captured by two mutually
  * informing fields: a _skinned_ part deforms via its mesh's
- * {@link "./IMoticaMesh".IMoticaMeshSkin} (`attachedBone` is `null`); a _rigid_
- * part (a prop, a sword, a primitive limb) is parented wholesale to one bone
- * via `attachedBone` and rides its transform.
+ * {@link IMoticaMeshSkin} (`attachedBone` is `null`); a _rigid_ part (a prop, a
+ * sword, a primitive limb) is parented wholesale to one bone via `attachedBone`
+ * and rides its transform.
  *
  * @author Samchon
  */
