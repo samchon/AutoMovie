@@ -8,6 +8,39 @@
 // Run: node scripts/build-human.mjs  →  public/models/human.glb (+ skin matcap, eye texture)
 import { Document, NodeIO } from "@gltf-transform/core";
 import { mkdirSync, writeFileSync } from "fs";
+import { PNG } from "pngjs";
+
+// A procedural skin diffuse — base tone + low-frequency colour variation + fine
+// pore noise — so the skin isn't a flat plastic fill (the CC0 skin-texture
+// servers are unreachable here, so generate one). Mapped through the base UVs.
+const skinTexturePNG = (size = 512) => {
+  const img = new PNG({ width: size, height: size });
+  const G = 24; // coarse tone grid
+  const grid = Array.from({ length: G + 1 }, () =>
+    Array.from({ length: G + 1 }, () => Math.random()),
+  );
+  const lerp = (a, b, t) => a + (b - a) * t;
+  for (let y = 0; y < size; ++y)
+    for (let x = 0; x < size; ++x) {
+      const gx = (x / size) * G, gy = (y / size) * G;
+      const x0 = Math.floor(gx), y0 = Math.floor(gy);
+      const tx = gx - x0, ty = gy - y0;
+      const low =
+        lerp(
+          lerp(grid[y0][x0], grid[y0][x0 + 1], tx),
+          lerp(grid[y0 + 1][x0], grid[y0 + 1][x0 + 1], tx),
+          ty,
+        ) - 0.5; // [-0.5,0.5]
+      const pore = (Math.random() - 0.5) * 0.06;
+      const v = 1 + low * 0.1 + pore;
+      const i = (y * size + x) << 2;
+      img.data[i] = Math.min(255, 232 * v + low * 14); // R (slightly warmer in dark spots)
+      img.data[i + 1] = Math.min(255, 198 * v);
+      img.data[i + 2] = Math.min(255, 178 * v);
+      img.data[i + 3] = 255;
+    }
+  return PNG.sync.write(img);
+};
 
 const BASE =
   "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data";
@@ -173,10 +206,15 @@ const acc = (type, arr) =>
   doc.createAccessor().setType(type).setArray(arr).setBuffer(buf);
 const uvAcc = () => acc("VEC2", uv);
 
+const skinTex = doc
+  .createTexture("skin")
+  .setImage(new Uint8Array(skinTexturePNG()))
+  .setMimeType("image/png");
 const skin = doc
   .createMaterial("skin")
-  .setBaseColorFactor([0.95, 0.8, 0.72, 1])
-  .setRoughnessFactor(0.55)
+  .setBaseColorFactor([1, 1, 1, 1])
+  .setBaseColorTexture(skinTex)
+  .setRoughnessFactor(0.58)
   .setMetallicFactor(0);
 const body = doc
   .createPrimitive()
@@ -193,24 +231,82 @@ const mesh = doc.createMesh("human");
 mesh.addPrimitive(body);
 mesh.setExtras({ targetNames: morphs.map((m) => m.name) });
 
-// eyes — solid dark iris (the proxy UVs don't line up with the iris texture,
-// and a uniform deep-brown eyeball reads far cleaner than a washed-out map)
+// eyes — the proxy eyeball becomes the white sclera; readable iris + pupil
+// spheres are placed in front of each eye centre (a textured iris won't map
+// cleanly to the proxy UVs, and a uniform dark ball looks like a monster).
 void eyeTex;
+const sphere = (cx, cy, cz, r, seg = 16) => {
+  const p = [];
+  const idx = [];
+  for (let i = 0; i <= seg; ++i) {
+    const v = (i / seg) * Math.PI;
+    for (let j = 0; j <= seg; ++j) {
+      const u = (j / seg) * 2 * Math.PI;
+      p.push(cx + r * Math.sin(v) * Math.cos(u), cy + r * Math.cos(v), cz + r * Math.sin(v) * Math.sin(u));
+    }
+  }
+  const row = seg + 1;
+  for (let i = 0; i < seg; ++i)
+    for (let j = 0; j < seg; ++j) {
+      const a = i * row + j;
+      idx.push(a, a + 1, a + row, a + 1, a + row + 1, a + row);
+    }
+  return { p: new Float32Array(p), idx: Uint16Array.from(idx) };
+};
+const solidPrim = (geom, color) => {
+  const nm = new Float32Array(geom.p.length);
+  // smooth normals = direction from local centre is fine for spheres; recompute
+  for (let t = 0; t < geom.idx.length; t += 3) {
+    const a = geom.idx[t], b = geom.idx[t + 1], c = geom.idx[t + 2];
+    const ux = geom.p[3 * b] - geom.p[3 * a], uy = geom.p[3 * b + 1] - geom.p[3 * a + 1], uz = geom.p[3 * b + 2] - geom.p[3 * a + 2];
+    const vx = geom.p[3 * c] - geom.p[3 * a], vy = geom.p[3 * c + 1] - geom.p[3 * a + 1], vz = geom.p[3 * c + 2] - geom.p[3 * a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    for (const i of [a, b, c]) { nm[3 * i] += nx; nm[3 * i + 1] += ny; nm[3 * i + 2] += nz; }
+  }
+  for (let i = 0; i < nm.length; i += 3) { const l = Math.hypot(nm[i], nm[i + 1], nm[i + 2]) || 1; nm[i] /= l; nm[i + 1] /= l; nm[i + 2] /= l; }
+  return doc
+    .createPrimitive()
+    .setMaterial(doc.createMaterial().setBaseColorFactor(color).setRoughnessFactor(0.18).setMetallicFactor(0))
+    .setAttribute("POSITION", acc("VEC3", geom.p))
+    .setAttribute("NORMAL", acc("VEC3", nm))
+    .setIndices(acc("SCALAR", geom.idx));
+};
 if (tri.eye.length) {
-  const eyeMat = doc
-    .createMaterial("eye")
-    .setBaseColorFactor([0.16, 0.1, 0.07, 1])
-    .setRoughnessFactor(0.12)
-    .setMetallicFactor(0);
+  // white sclera (the proxy geometry)
   mesh.addPrimitive(
     doc
       .createPrimitive()
-      .setMaterial(eyeMat)
+      .setMaterial(doc.createMaterial("sclera").setBaseColorFactor([0.92, 0.9, 0.88, 1]).setRoughnessFactor(0.25))
       .setAttribute("POSITION", acc("VEC3", pos))
       .setAttribute("NORMAL", acc("VEC3", normalsOf(tri.eye)))
-      .setAttribute("TEXCOORD_0", uvAcc())
       .setIndices(acc("SCALAR", Uint16Array.from(tri.eye))),
   );
+  // per-eye centre + radius from the proxy verts, split left/right by x
+  const used = new Set(tri.eye);
+  const side = { l: [], r: [] };
+  for (const i of used) (pos[3 * i] >= 0 ? side.l : side.r).push(i);
+  for (const s of [side.l, side.r]) {
+    if (!s.length) continue;
+    let cx = 0, cy = 0, cz = 0, maxZ = -Infinity;
+    for (const i of s) { cx += pos[3 * i]; cy += pos[3 * i + 1]; cz += pos[3 * i + 2]; maxZ = Math.max(maxZ, pos[3 * i + 2]); }
+    cx /= s.length; cy /= s.length; cz /= s.length;
+    let r = 0;
+    for (const i of s) r = Math.max(r, Math.hypot(pos[3 * i] - cx, pos[3 * i + 1] - cy, pos[3 * i + 2] - cz));
+    const fz = cz + r * 0.62; // iris sits toward the front of the eyeball
+    mesh.addPrimitive(solidPrim(sphere(cx, cy, fz, r * 0.62), [0.32, 0.2, 0.12, 1])); // iris
+    mesh.addPrimitive(solidPrim(sphere(cx, cy, cz + r * 0.92, r * 0.3), [0.04, 0.03, 0.03, 1])); // pupil
+    // eyebrow — a flattened dark arch above the eye (browless reads as uncanny)
+    const by = cy + r * 1.35;
+    const bz = cz + r * 1.0;
+    const brow = sphere(cx, by, bz, r, 14);
+    for (let i = 0; i < brow.p.length; i += 3) {
+      brow.p[i] = cx + (brow.p[i] - cx) * 1.6;
+      brow.p[i + 1] = by + (brow.p[i + 1] - by) * 0.24;
+      brow.p[i + 2] = bz + (brow.p[i + 2] - bz) * 0.4;
+    }
+    mesh.addPrimitive(solidPrim(brow, [0.22, 0.15, 0.11, 1]));
+    void maxZ;
+  }
 }
 // eyelashes — dark
 if (tri.lash.length) {
@@ -226,6 +322,52 @@ if (tri.lash.length) {
       .setAttribute("NORMAL", acc("VEC3", normalsOf(tri.lash)))
       .setIndices(acc("SCALAR", Uint16Array.from(tri.lash))),
   );
+}
+
+// hair — a stylised cap over the scalp (bald reads as a mannequin). Head centre
+// + radius from the upper verts; the face opening (front-lower) is left bare and
+// the back is lengthened into a short bob.
+{
+  const HEAD = 1.585; // head only (above the neck), in metres
+  let hx = 0, hy = 0, hz = 0, hn = 0, top = -Infinity;
+  for (let i = 0; i < N; ++i)
+    if (pos[3 * i + 1] > HEAD) {
+      hx += pos[3 * i]; hy += pos[3 * i + 1]; hz += pos[3 * i + 2]; hn++;
+      top = Math.max(top, pos[3 * i + 1]);
+    }
+  if (hn) {
+    hx /= hn; hy /= hn; hz /= hn;
+    let hr = 0;
+    for (let i = 0; i < N; ++i)
+      if (pos[3 * i + 1] > HEAD)
+        hr = Math.max(hr, Math.hypot(pos[3 * i] - hx, pos[3 * i + 1] - hy, pos[3 * i + 2] - hz));
+    hr = Math.min(hr, 0.105);
+    const seg = 26, P = [], rowMap = [];
+    for (let i = 0; i <= seg; ++i) {
+      const v = (i / seg) * Math.PI, row = [];
+      for (let j = 0; j <= seg; ++j) {
+        const u = (j / seg) * 2 * Math.PI;
+        const sx = Math.sin(v) * Math.cos(u), sy = Math.cos(v), sz = Math.sin(v) * Math.sin(u);
+        if (sz > 0.2 && sy < 0.5) { row.push(-1); continue; } // bare the face
+        const rr = hr * 1.06;
+        let py = hy + rr * sy;
+        if (sz < 0.1) py -= Math.max(0, 0.55 - sy) * hr * 1.6; // longer at the back
+        row.push(P.length / 3);
+        P.push(hx + rr * sx * 1.04, py, hz + rr * sz * 1.06);
+      }
+      rowMap.push(row);
+    }
+    const idx = [];
+    for (let i = 0; i < seg; ++i)
+      for (let j = 0; j < seg; ++j) {
+        const a = rowMap[i][j], b = rowMap[i][j + 1], c = rowMap[i + 1][j], d = rowMap[i + 1][j + 1];
+        if (a >= 0 && b >= 0 && c >= 0 && d >= 0) idx.push(a, c, b, b, c, d);
+      }
+    const hairPrim = solidPrim({ p: new Float32Array(P), idx: Uint16Array.from(idx) }, [0.14, 0.09, 0.07, 1]);
+    hairPrim.getMaterial().setDoubleSided(true).setRoughnessFactor(0.55);
+    mesh.addPrimitive(hairPrim);
+    void top;
+  }
 }
 
 doc.createScene().addChild(doc.createNode("human").setMesh(mesh));

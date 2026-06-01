@@ -111,16 +111,9 @@ new GLTFLoader().load(
   (gltf) => {
     gltf.scene.traverse((o) => {
       const m = o as THREE.Mesh;
-      // the body primitive carries the morphs — give it a soft natural skin;
-      // the eye/lash primitives keep their baked glTF materials.
-      if (m.isMesh && m.morphTargetInfluences) {
-        mesh = m;
-        m.material = new THREE.MeshStandardMaterial({
-          color: 0xe7b89c,
-          roughness: 0.66,
-          metalness: 0,
-        });
-      }
+      // the body primitive carries the morphs; keep its baked textured-skin
+      // material (eyes/brows/lashes/hair primitives keep theirs too).
+      if (m.isMesh && m.morphTargetInfluences) mesh = m;
     });
     scene.add(gltf.scene);
     if (mesh === null) {
