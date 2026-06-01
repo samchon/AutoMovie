@@ -1,7 +1,7 @@
 import { resolveFrame } from "@motica/engine";
 import {
-  IMoticaAimDriver,
   IMoticaCopyDriver,
+  IMoticaIKDriver,
   IMoticaNode,
   IMoticaTransform,
 } from "@motica/interface";
@@ -32,7 +32,8 @@ const node = (id: string, x: number): IMoticaNode => ({
  *
  * Scenario: with no clip (rest pose), a full-influence `copy` makes node `a`
  * follow node `b`'s translation; the composed world matrix for `a` shows b's
- * x=5, and an accompanying `aim` driver is surfaced as deferred (not applied).
+ * x=5, and an accompanying `ik` driver (not yet handled) is surfaced as
+ * deferred.
  */
 export const test_resolve_frame_drivers = (): void => {
   const nodes = [node("a", 1), node("b", 5)];
@@ -45,13 +46,13 @@ export const test_resolve_frame_drivers = (): void => {
     scale: false,
     influence: 1,
   };
-  const aim: IMoticaAimDriver = {
-    type: "aim",
-    owner: "a",
-    target: "b",
-    aimAxis: { x: 0, y: 0, z: -1 },
-    upAxis: { x: 0, y: 1, z: 0 },
-    worldUp: { x: 0, y: 1, z: 0 },
+  const ik: IMoticaIKDriver = {
+    type: "ik",
+    chain: ["a", "b"],
+    goal: "b",
+    pole: null,
+    solver: "twoBone",
+    iterations: null,
     influence: 1,
   };
 
@@ -59,7 +60,7 @@ export const test_resolve_frame_drivers = (): void => {
     nodes,
     clip: null,
     limits: [],
-    drivers: [copy, aim],
+    drivers: [copy, ik],
     seconds: 0,
   });
 
@@ -67,5 +68,5 @@ export const test_resolve_frame_drivers = (): void => {
     "copy driver reaches the world matrix",
     nclose(out.world.get("a")![12]!, 5),
   );
-  TestValidator.equals("aim driver deferred", out.deferredDrivers.length, 1);
+  TestValidator.equals("ik driver deferred", out.deferredDrivers.length, 1);
 };

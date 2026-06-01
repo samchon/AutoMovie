@@ -72,4 +72,81 @@ export namespace Matrix4 {
       }
     return out;
   };
+
+  /** The translation column of a matrix. */
+  export const position = (m: number[]): IMoticaVector3 => ({
+    x: m[12]!,
+    y: m[13]!,
+    z: m[14]!,
+  });
+
+  /**
+   * Split a transform matrix back into its TRS triple (the inverse of
+   * {@link compose}), matching `three.js` `Matrix4.decompose`. Scale is taken as
+   * the basis-column lengths (assumed positive — the engine never mirrors); the
+   * rotation is read from the scale-normalized basis via the standard
+   * largest-diagonal quaternion extraction.
+   *
+   * The world-space driver pass needs this: a driver reads a node's _world_
+   * orientation/position out of its composed matrix, recomputes it (aim,
+   * parent, IK), and recomposes.
+   */
+  export const decompose = (
+    m: number[],
+  ): {
+    position: IMoticaVector3;
+    rotation: IMoticaQuaternion;
+    scale: IMoticaVector3;
+  } => {
+    const sx = Math.hypot(m[0]!, m[1]!, m[2]!);
+    const sy = Math.hypot(m[4]!, m[5]!, m[6]!);
+    const sz = Math.hypot(m[8]!, m[9]!, m[10]!);
+
+    // scale-normalized rotation basis, r[row][col]
+    const r00 = m[0]! / sx;
+    const r10 = m[1]! / sx;
+    const r20 = m[2]! / sx;
+    const r01 = m[4]! / sy;
+    const r11 = m[5]! / sy;
+    const r21 = m[6]! / sy;
+    const r02 = m[8]! / sz;
+    const r12 = m[9]! / sz;
+    const r22 = m[10]! / sz;
+
+    const trace = r00 + r11 + r22;
+    let x: number;
+    let y: number;
+    let z: number;
+    let w: number;
+    if (trace > 0) {
+      const s = 0.5 / Math.sqrt(trace + 1);
+      w = 0.25 / s;
+      x = (r21 - r12) * s;
+      y = (r02 - r20) * s;
+      z = (r10 - r01) * s;
+    } else if (r00 > r11 && r00 > r22) {
+      const s = 2 * Math.sqrt(1 + r00 - r11 - r22);
+      w = (r21 - r12) / s;
+      x = 0.25 * s;
+      y = (r01 + r10) / s;
+      z = (r02 + r20) / s;
+    } else if (r11 > r22) {
+      const s = 2 * Math.sqrt(1 + r11 - r00 - r22);
+      w = (r02 - r20) / s;
+      x = (r01 + r10) / s;
+      y = 0.25 * s;
+      z = (r12 + r21) / s;
+    } else {
+      const s = 2 * Math.sqrt(1 + r22 - r00 - r11);
+      w = (r10 - r01) / s;
+      x = (r02 + r20) / s;
+      y = (r12 + r21) / s;
+      z = 0.25 * s;
+    }
+    return {
+      position: { x: m[12]!, y: m[13]!, z: m[14]! },
+      rotation: { x, y, z, w },
+      scale: { x: sx, y: sy, z: sz },
+    };
+  };
 }
