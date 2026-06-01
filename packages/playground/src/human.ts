@@ -71,10 +71,13 @@ window.addEventListener("resize", resize);
 
 // expression sliders
 const exprState: Record<string, number> = {};
-const EXPRESSIONS = ["happy", "angry", "sad", "relaxed", "Surprised"];
+const EXPRESSIONS = ["happy", "angry", "sad", "relaxed", "surprised"];
 const mountExpr = (): void => {
   const host = document.querySelector("#expr")!;
-  for (const name of EXPRESSIONS) {
+  const present = EXPRESSIONS.filter((n) =>
+    vrm?.expressionManager?.getExpression(n),
+  );
+  for (const name of present) {
     exprState[name] = 0;
     const row = document.createElement("div");
     row.className = "row";
@@ -140,7 +143,7 @@ const gazeTarget = new THREE.Object3D();
 scene.add(gazeTarget);
 
 loader.load(
-  "/models/AvatarSample_A.vrm",
+  "/models/Vita.vrm",
   (gltf) => {
     const loaded = gltf.userData.vrm as VRM;
     VRMUtils.removeUnnecessaryVertices(gltf.scene);
@@ -150,7 +153,10 @@ loader.load(
     scene.add(loaded.scene);
     if (loaded.lookAt) loaded.lookAt.target = gazeTarget;
     vrm = loaded;
-    status.textContent = "AvatarSample_A · VRoid";
+    // Model "Vita" — VRoid sample, released CC0 (public domain): no usage,
+    // redistribution, or attribution restriction, so it is fully compatible with
+    // an MIT-licensed project.
+    status.textContent = "Model: Vita · CC0 (public domain)";
     mountExpr();
     mountPose();
     (window as unknown as { __motica: Record<string, unknown> }).__motica = {

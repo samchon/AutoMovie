@@ -22,17 +22,25 @@ draws it.
 - **`index.html`** — the procedural blockman character editor (above).
 - **`drivers.html`** — an engine-drivers demo: a 3-joint arm whose two-bone IK
   (the core resolver) tracks a moving goal every frame.
-- **`human.html`** — a **real humanoid editor** over a VRoid `AvatarSample` VRM
+- **`human.html`** — a **real humanoid editor** over a VRM avatar
   (`@pixiv/three-vrm`): live facial **expressions** (happy / angry / sad /
   relaxed / surprised), **gaze** that tracks the viewer, **auto-blink**, and arm
   / head **pose** — the attractive-character path that the procedural blockman
   bootstraps toward.
 
-The VRM sample avatars (~15 MB each, free) are not committed; fetch them first:
+The model (~14 MB) is not committed; fetch it first:
 
 ```bash
-packages/playground/scripts/fetch-models.sh   # → public/models/*.vrm
+packages/playground/scripts/fetch-models.sh   # → public/models/Vita.vrm
 ```
+
+### Model license
+
+The human editor uses **"Vita"**, a VRoid sample avatar released **CC0 (public
+domain)** — no usage, redistribution, or attribution restriction — so it is
+fully compatible with this MIT-licensed project. The `.vrm` is fetched on demand,
+not committed. To use a different avatar, drop any `.vrm` into `public/models/`
+and point `src/human.ts` at it (mind that model's own license).
 
 ## Run
 
