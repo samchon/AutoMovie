@@ -1,7 +1,7 @@
+.claude/
 .discussions/
 .wiki/
-.codex
-.claude
+.references/
 
 node_modules/
 lib/
