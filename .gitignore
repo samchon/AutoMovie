@@ -16,3 +16,5 @@ website/public/playground/**
 *.tsbuildinfo
 .env
 .env.*
+# downloaded VRM sample assets (fetched at runtime / dev only)
+packages/playground/public/models/*.vrm

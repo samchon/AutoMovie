@@ -15,6 +15,7 @@
     "@motica/engine": "workspace:^",
     "@motica/interface": "workspace:^",
     "@motica/viewer": "workspace:^",
+    "@pixiv/three-vrm": "^3",
     "three": "^0.169.0"
   },
   "devDependencies": {

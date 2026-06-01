@@ -17,10 +17,27 @@ Nothing here is AI: the editor authors plain `@motica/interface` data, the
 deterministic `@motica/engine` resolves it, and `@motica/viewer` (three.js)
 draws it.
 
+## Pages
+
+- **`index.html`** — the procedural blockman character editor (above).
+- **`drivers.html`** — an engine-drivers demo: a 3-joint arm whose two-bone IK
+  (the core resolver) tracks a moving goal every frame.
+- **`human.html`** — a **real humanoid editor** over a VRoid `AvatarSample` VRM
+  (`@pixiv/three-vrm`): live facial **expressions** (happy / angry / sad /
+  relaxed / surprised), **gaze** that tracks the viewer, **auto-blink**, and arm
+  / head **pose** — the attractive-character path that the procedural blockman
+  bootstraps toward.
+
+The VRM sample avatars (~15 MB each, free) are not committed; fetch them first:
+
+```bash
+packages/playground/scripts/fetch-models.sh   # → public/models/*.vrm
+```
+
 ## Run
 
 ```bash
-pnpm --filter @motica/playground dev      # http://127.0.0.1:5173
+pnpm --filter @motica/playground dev      # http://127.0.0.1:5173 (+ /drivers.html, /human.html)
 pnpm --filter @motica/playground build    # typecheck + production bundle
 pnpm --filter @motica/playground preview   # serve the build on :4173
 ```
