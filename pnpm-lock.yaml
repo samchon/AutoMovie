@@ -106,6 +106,9 @@ importers:
         specifier: ^0.169.0
         version: 0.169.0
     devDependencies:
+      '@gltf-transform/core':
+        specifier: ^4
+        version: 4.3.0
       '@types/three':
         specifier: ^0.169.0
         version: 0.169.0
