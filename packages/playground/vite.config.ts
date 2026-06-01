@@ -12,6 +12,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, "index.html"),
         drivers: resolve(__dirname, "drivers.html"),
+        human: resolve(__dirname, "human.html"),
       },
     },
   },
