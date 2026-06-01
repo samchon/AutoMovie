@@ -1,6 +1,7 @@
 import {
   IMoticaChannelLimit,
   IMoticaClip,
+  IMoticaDriver,
   IMoticaNode,
   IMoticaTransform,
 } from "@motica/interface";
@@ -8,6 +9,7 @@ import {
 import { IMoticaClampViolation, applyChannelLimit } from "./applyChannelLimit";
 import { channelKey } from "./channel";
 import { composeScene } from "./composeScene";
+import { resolveDrivers } from "./resolveDrivers";
 import { IMoticaSampledChannel, sampleClip } from "./sampleClip";
 
 /** Everything needed to resolve one instant of a scene. */
@@ -20,6 +22,13 @@ export interface IMoticaResolveInput {
 
   /** Channel limits to clamp sampled values against (generalized ROM). */
   limits: IMoticaChannelLimit[];
+
+  /**
+   * Drivers computing channels from other channels. Channel-space drivers
+   * (`copy`, `driven`) are resolved this frame; world-space/stateful ones are
+   * returned in {@link IMoticaResolveOutput.deferredDrivers}. Omit for none.
+   */
+  drivers?: IMoticaDriver[];
 
   /** The instant to resolve, in clip-local seconds. */
   seconds: number;
@@ -41,19 +50,26 @@ export interface IMoticaResolveOutput {
 
   /** Every constraint breach that was clamped, in channel/component order. */
   violations: IMoticaResolveViolation[];
+
+  /**
+   * World-space / stateful drivers (`parent`/`aim`/`ik`/`spring`) this pass did
+   * not resolve — surfaced (not dropped) for the world-space driver pass.
+   */
+  deferredDrivers: IMoticaDriver[];
 }
 
 /**
- * Resolve one frame of a scene: SAMPLE the clip, CONSTRAIN the sampled values
- * to their channel limits, then COMPOSE the node hierarchy into world
- * matrices.
+ * Resolve one frame of a scene: SAMPLE the clip, DRIVE the channel-space
+ * drivers, CONSTRAIN the values to their channel limits, then COMPOSE the node
+ * hierarchy into world matrices.
  *
  * This is the engine's per-frame entry point and the deterministic core of
- * motica: given the same scene, clip, limits, and time it always yields the
- * same matrices — the property that makes the renderer a reproducible diffusion
- * alternative. The DRIVE pass (copy/aim/ik/spring) slots between sample and
- * constrain in a later step; with no drivers this is already a complete
- * clip-driven resolver.
+ * motica: given the same scene, clip, limits, drivers, and time it always
+ * yields the same matrices — the property that makes the renderer a
+ * reproducible diffusion alternative. World-space/stateful drivers
+ * (`parent`/`aim`/`ik`/`spring`) are not applied here; they are surfaced in
+ * `deferredDrivers` for the world-space pass that runs after an initial
+ * compose.
  *
  * @author Samchon
  */
@@ -62,6 +78,14 @@ export const resolveFrame = (
 ): IMoticaResolveOutput => {
   const sampled: Map<string, IMoticaSampledChannel> =
     input.clip === null ? new Map() : sampleClip(input.clip, input.seconds);
+
+  // DRIVE: resolve channel-space drivers into the sampled map; collect the
+  // world-space ones the next pass owns.
+  const nodesById = new Map(input.nodes.map((n) => [n.id, n]));
+  const deferredDrivers =
+    input.drivers !== undefined
+      ? resolveDrivers(input.drivers, sampled, nodesById)
+      : [];
 
   // CONSTRAIN: clamp each sampled channel that carries a limit, in place.
   const violations: IMoticaResolveViolation[] = [];
@@ -95,6 +119,7 @@ export const resolveFrame = (
     world: composeScene(input.nodes, overrides),
     weights,
     violations,
+    deferredDrivers,
   };
 };
 
