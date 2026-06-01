@@ -1,0 +1,28 @@
+name: build
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/build.yml'
+      - 'packages/*/src/**'
+      - 'packages/*/package.json'
+      - 'packages/*/tsconfig.json'
+      - 'internals/config/**'
+      - 'test/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+jobs:
+  Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build Packages
+        run: pnpm run build

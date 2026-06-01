@@ -1,0 +1,14 @@
+packages:
+  - packages/*
+  - website
+  - test
+catalogs:
+  samchon:
+    typia: ^12.0.1
+    tstl: ^3.0.0
+  typescript:
+    typescript: ~5.9.3
+    ts-patch: ^3.3.0
+    ts-node: ^10.9.2
+    typescript-transform-paths: ^3.5.5
+useNodeVersion: 22.15.0
