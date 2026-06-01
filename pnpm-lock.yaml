@@ -113,6 +113,19 @@ importers:
         specifier: ^5.4.10
         version: 5.4.21(@types/node@22.19.19)
 
+  packages/render:
+    dependencies:
+      '@motica/interface':
+        specifier: workspace:^
+        version: link:../interface
+    devDependencies:
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.1.3
+      typescript:
+        specifier: catalog:typescript
+        version: 5.9.3
+
   packages/viewer:
     dependencies:
       '@motica/engine':
@@ -149,6 +162,9 @@ importers:
       '@motica/interface':
         specifier: workspace:^
         version: link:../packages/interface
+      '@motica/render':
+        specifier: workspace:^
+        version: link:../packages/render
       '@nestia/e2e':
         specifier: catalog:samchon
         version: 11.0.2

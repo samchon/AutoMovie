@@ -1,0 +1,54 @@
+import { IMoticaRenderSpec } from "@motica/interface";
+import { IMoticaRenderAdapters, renderVideo } from "@motica/render";
+import { TestValidator } from "@nestia/e2e";
+
+const SPEC: IMoticaRenderSpec = {
+  target: "shot-1",
+  fps: 24,
+  width: 640,
+  height: 480,
+  toneMapping: "acesFilmic",
+  codec: "h264",
+  pixelFormat: "yuv420p",
+  crf: 18,
+};
+
+/**
+ * The render orchestration over injected I/O: it captures one frame per
+ * scheduled instant in order, then encodes the sequence — pure control flow, so
+ * a fake capture/encode pair drives it deterministically.
+ *
+ * Scenario: a 1 s clip at 24 fps captures 24 frames (each adapter call recorded
+ * with its time and index, in order) and encodes once to the requested output;
+ * the result reports the frame count, the schedule, and the output path.
+ */
+export const test_render_video = async (): Promise<void> => {
+  const captured: Array<{ t: number; i: number }> = [];
+  let encodeArgs: string[] | null = null;
+
+  const adapters: IMoticaRenderAdapters = {
+    captureFrame: async (timeSeconds, index, dir) => {
+      captured.push({ t: timeSeconds, i: index });
+      return `${dir}/frame_${index}.png`;
+    },
+    encode: async (args, outputPath) => {
+      encodeArgs = args;
+      return outputPath;
+    },
+  };
+
+  const result = await renderVideo(SPEC, 1, "/tmp/x", "/tmp/out.mp4", adapters);
+
+  TestValidator.equals("24 frames captured", result.frameCount, 24);
+  TestValidator.equals("schedule length", result.times.length, 24);
+  TestValidator.equals("output path returned", result.output, "/tmp/out.mp4");
+  TestValidator.equals("captured every frame in order", captured.length, 24);
+  TestValidator.equals("first capture index 0", captured[0]!.i, 0);
+  TestValidator.equals("last capture index 23", captured[23]!.i, 23);
+  TestValidator.predicate(
+    "encode received the ffmpeg args",
+    encodeArgs !== null &&
+      encodeArgs[0] === "-y" &&
+      encodeArgs.includes("libx264"),
+  );
+};
