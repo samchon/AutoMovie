@@ -105,13 +105,15 @@ export const wave = (sk: string): IAutoFilmMotion => {
 
 /** A walk cycle in place — legs stride fore/aft, arms counter-swing. */
 export const walk = (sk: string): IAutoFilmMotion => {
-  // Arms hang down-and-out (abduction) and swing fore/aft via `twist`; `s` is
-  // the swing phase in [−1, 1] (+1 = left arm back, opposing the left leg).
-  // Specified in EVERY keyframe so they swing smoothly instead of snapping back
-  // to the rest T-pose.
+  // Arms hang down-and-out (abduction) and swing fore/aft via `flexion` (the
+  // anatomical sagittal axis under HUMANOID_JOINT_AXES); `s` is the swing phase
+  // in [−1, 1] (+1 = left arm back, right arm forward — opposing the legs).
+  // Mirrored rest makes the same +flexion swing the left arm back and the right
+  // arm forward. Specified in EVERY keyframe so they swing smoothly instead of
+  // snapping back to the rest T-pose.
   const arms = (s: number): IAutoFilmJointPose[] => [
-    j("leftUpperArm", { abduction: -58, twist: 30 * s }),
-    j("rightUpperArm", { abduction: 58, twist: -30 * s }),
+    j("leftUpperArm", { abduction: -58, flexion: 30 * s }),
+    j("rightUpperArm", { abduction: 58, flexion: 30 * s }),
   ];
   // contact: `lead` leg forward (flexion −), `trail` leg back (flexion +).
   const contact = (lead: "left" | "right"): IAutoFilmPose => {
@@ -167,8 +169,8 @@ export const hop = (sk: string): IAutoFilmMotion => {
       j("rightUpperLeg", { flexion: -26 }),
       j("leftLowerLeg", { flexion: 46 }),
       j("rightLowerLeg", { flexion: 46 }),
-      j("leftUpperArm", { abduction: -40, twist: 40 }),
-      j("rightUpperArm", { abduction: 40, twist: -40 }),
+      j("leftUpperArm", { abduction: -40, flexion: 38 }),
+      j("rightUpperArm", { abduction: 40, flexion: 38 }),
     ],
     root(0, -0.12, 0, 0),
   );

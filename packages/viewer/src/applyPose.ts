@@ -1,5 +1,9 @@
-import { resolvePose } from "@autofilm/engine";
-import { IAutoFilmPose, IAutoFilmSkeleton } from "@autofilm/interface";
+import { IAutoFilmJointAxes, resolvePose } from "@autofilm/engine";
+import {
+  AutoFilmHumanoidBone,
+  IAutoFilmPose,
+  IAutoFilmSkeleton,
+} from "@autofilm/interface";
 
 import { IAutoFilmModelObject, applyTransform } from "./buildModel";
 
@@ -19,8 +23,9 @@ export const applyPose = (
   target: IAutoFilmModelObject,
   pose: IAutoFilmPose,
   skeleton: IAutoFilmSkeleton,
+  jointAxes?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>,
 ): void => {
-  for (const r of resolvePose(pose, skeleton)) {
+  for (const r of resolvePose(pose, skeleton, jointAxes)) {
     const bone = target.bones.get(r.bone);
     if (bone !== undefined)
       bone.quaternion.set(

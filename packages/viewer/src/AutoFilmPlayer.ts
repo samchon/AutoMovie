@@ -1,5 +1,10 @@
-import { IAutoFilmMotionSample, sampleMotion } from "@autofilm/engine";
 import {
+  IAutoFilmJointAxes,
+  IAutoFilmMotionSample,
+  sampleMotion,
+} from "@autofilm/engine";
+import {
+  AutoFilmHumanoidBone,
   IAutoFilmExpression,
   IAutoFilmMotion,
   IAutoFilmSkeleton,
@@ -31,6 +36,9 @@ export class AutoFilmPlayer {
     private readonly target: IAutoFilmModelObject,
     private readonly skeleton: IAutoFilmSkeleton,
     private motion: IAutoFilmMotion,
+    private readonly jointAxes?: Partial<
+      Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>
+    >,
   ) {}
 
   /** Swap the clip being played (e.g. transition to a new motion). */
@@ -42,7 +50,7 @@ export class AutoFilmPlayer {
   public update(seconds: number): void {
     const sample = sampleMotion(this.motion, seconds);
     this.lastSample = sample;
-    applyPose(this.target, sample.pose, this.skeleton);
+    applyPose(this.target, sample.pose, this.skeleton, this.jointAxes);
   }
 
   /** The most recently sampled facial expression, or `null`. */

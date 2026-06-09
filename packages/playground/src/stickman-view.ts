@@ -1,3 +1,4 @@
+import { HUMANOID_JOINT_AXES } from "@autofilm/engine";
 import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
 import * as THREE from "three";
 
@@ -14,7 +15,12 @@ const clipName =
   params.get("clip") !== null && params.get("clip")! in clips
     ? params.get("clip")!
     : "jumpingJack";
-const player = new AutoFilmPlayer(object, skeleton, clips[clipName]!);
+const player = new AutoFilmPlayer(
+  object,
+  skeleton,
+  clips[clipName]!,
+  HUMANOID_JOINT_AXES,
+);
 
 // `?t=<seconds>` freezes one sampled frame (deterministic capture); otherwise
 // the clip plays live off the render loop.
