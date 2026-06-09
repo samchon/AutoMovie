@@ -1,4 +1,9 @@
-import { DEFAULT_HUMANOID_ROM, aimRotation } from "@autofilm/engine";
+import {
+  DEFAULT_HUMANOID_ROM,
+  HUMANOID_REST_FRAME,
+  aimRotation,
+  restRelativeConstraint,
+} from "@autofilm/engine";
 import {
   AutoFilmHumanoidBone,
   AutoFilmPrimitiveShape,
@@ -88,14 +93,22 @@ const bone = (
   name: AutoFilmHumanoidBone,
   parent: AutoFilmHumanoidBone | null,
   rest: IAutoFilmTransform,
-): IAutoFilmBone => ({
-  bone: name,
-  parent,
-  rest,
-  // each joint carries its anatomical range of motion (the engine validates
-  // poses/clips against it — autofilm's core differentiator)
-  constraint: DEFAULT_HUMANOID_ROM[name] ?? null,
-});
+): IAutoFilmBone => {
+  // each joint carries its anatomical ROM (the engine validates/clamps against
+  // it — the core differentiator), reconciled to the T-pose rest where the
+  // shoulders need it so the gamut is symmetric per side
+  const rom = DEFAULT_HUMANOID_ROM[name] ?? null;
+  const frame = HUMANOID_REST_FRAME[name];
+  return {
+    bone: name,
+    parent,
+    rest,
+    constraint:
+      rom !== null && frame !== undefined
+        ? restRelativeConstraint(rom, frame)
+        : rom,
+  };
+};
 
 /** Shortest-arc rotation taking the local +Y axis onto a target direction. */
 const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion =>
