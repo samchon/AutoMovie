@@ -254,7 +254,8 @@ export const buildCat = (
     rod("hlLowerL", "leftLowerLeg", down(p.lowerLeg), r),
     rod("hlUpperR", "rightUpperLeg", down(p.upperLeg), r),
     rod("hlLowerR", "rightLowerLeg", down(p.lowerLeg), r),
-    // tail
+    // tail — base rod joins the hips to the first tail segment (no gap)
+    rod("tailBase", "hips", v(0, 0.05, -0.1), r * 0.9),
     rod("tail1", "leftLittleProximal", v(0, 0.03, -0.09), r * 0.85),
     rod("tail2", "leftLittleIntermediate", v(0, 0.015, -0.08), r * 0.75),
     rod("tail3", "leftLittleDistal", v(0, 0.005, -0.07), r * 0.65),
