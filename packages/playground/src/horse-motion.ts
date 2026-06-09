@@ -33,6 +33,13 @@ const root = (y: number, pitch = 0): IAutoFilmTransform => ({
   scale: { x: 1, y: 1, z: 1 },
 });
 
+/** A root placement with a heading change (yaw about +Y, degrees). */
+const rootYaw = (y: number, yawDeg: number): IAutoFilmTransform => ({
+  translation: { x: 0, y, z: 0 },
+  rotation: Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, yawDeg),
+  scale: { x: 1, y: 1, z: 1 },
+});
+
 const pose = (
   sk: string,
   joints: IAutoFilmJointPose[],
@@ -222,19 +229,160 @@ export const horseRear = (sk: string): IAutoFilmMotion => {
   };
 };
 
-/** A performance: gallop a few strides in place, then rear up and neigh. */
+/** Walk — a slow, even diagonal-pair gait (in place), head nodding. */
+export const horseWalk = (sk: string): IAutoFilmMotion => {
+  const step = (d: number): IAutoFilmPose =>
+    pose(
+      sk,
+      [
+        j("leftUpperArm", { flexion: -16 * d }),
+        j("leftLowerArm", { flexion: d > 0 ? 28 : 14 }),
+        j("rightUpperArm", { flexion: 16 * d }),
+        j("rightLowerArm", { flexion: d > 0 ? 14 : 28 }),
+        j("leftUpperLeg", { flexion: 16 * d }),
+        j("leftLowerLeg", { flexion: d > 0 ? 14 : 26 }),
+        j("rightUpperLeg", { flexion: -16 * d }),
+        j("rightLowerLeg", { flexion: d > 0 ? 26 : 14 }),
+        j("neck", { flexion: 6 + 4 * d }),
+        j("head", { flexion: -6 }),
+        ...tail(0.4 * d),
+      ],
+      root(0.01 * d),
+    );
+  return {
+    id: "walk",
+    skeleton: sk,
+    duration: 1.2,
+    loop: true,
+    keyframes: [key(0, step(1)), key(0.6, step(-1)), key(1.2, step(1))],
+  };
+};
+
+/** Trot — a brisk two-beat diagonal gait with a touch of suspension. */
+export const horseTrot = (sk: string): IAutoFilmMotion => {
+  const beat2 = (d: number): IAutoFilmPose =>
+    pose(
+      sk,
+      [
+        j("leftUpperArm", { flexion: -30 * d }),
+        j("leftLowerArm", { flexion: d > 0 ? 40 : 18 }),
+        j("rightUpperArm", { flexion: 30 * d }),
+        j("rightLowerArm", { flexion: d > 0 ? 18 : 40 }),
+        j("leftUpperLeg", { flexion: 30 * d }),
+        j("leftLowerLeg", { flexion: d > 0 ? 18 : 46 }),
+        j("rightUpperLeg", { flexion: -30 * d }),
+        j("rightLowerLeg", { flexion: d > 0 ? 46 : 18 }),
+        j("neck", { flexion: 2 }),
+        ...tail(0.6 * d, -2),
+      ],
+      root(0.05),
+    );
+  const suspend = pose(
+    sk,
+    [
+      j("leftLowerArm", { flexion: 30 }),
+      j("rightLowerArm", { flexion: 30 }),
+      j("leftLowerLeg", { flexion: 32 }),
+      j("rightLowerLeg", { flexion: 32 }),
+      ...tail(0, -4),
+    ],
+    root(0.1),
+  );
+  return {
+    id: "trot",
+    skeleton: sk,
+    duration: 0.72,
+    loop: true,
+    keyframes: [
+      key(0, beat2(1)),
+      key(0.18, suspend),
+      key(0.36, beat2(-1)),
+      key(0.54, suspend),
+      key(0.72, beat2(1)),
+    ],
+  };
+};
+
+/** Turn — a prancing pivot, heading swinging left then right, legs marching. */
+export const horseTurn = (sk: string): IAutoFilmMotion => {
+  const prance = (yaw: number, lift: "left" | "right"): IAutoFilmPose =>
+    pose(
+      sk,
+      [
+        j("leftUpperArm", { flexion: lift === "left" ? -40 : -8 }),
+        j("leftLowerArm", { flexion: lift === "left" ? 70 : 20 }),
+        j("rightUpperArm", { flexion: lift === "right" ? -40 : -8 }),
+        j("rightLowerArm", { flexion: lift === "right" ? 70 : 20 }),
+        j("leftUpperLeg", { flexion: 8 }),
+        j("rightUpperLeg", { flexion: 8 }),
+        j("neck", { flexion: -8 }),
+        j("head", { flexion: -10, twist: yaw > 0 ? 16 : -16 }),
+        ...tail(yaw > 0 ? 0.8 : -0.8),
+      ],
+      rootYaw(0.02, yaw),
+    );
+  return {
+    id: "turn",
+    skeleton: sk,
+    duration: 2.2,
+    loop: true,
+    keyframes: [
+      key(0, prance(-28, "left")),
+      key(0.55, prance(-8, "right")),
+      key(1.1, prance(0, "left")),
+      key(1.65, prance(24, "right")),
+      key(2.2, prance(-28, "left")),
+    ],
+  };
+};
+
+/** A short gallop-in-place burst that ends back at the gather pose. */
+const gallopBurst = (sk: string): IAutoFilmMotion =>
+  sequenceMotion("burst", [horseGallop(sk), horseGallop(sk)], false);
+
+/**
+ * A ~30 s mounted scenario: settle, walk on, trot up, break into a gallop, rear
+ * and neigh, charge again, spin on the spot, trot, a second short rear, gallop,
+ * and halt. The saddled rider rides every beat — leaning back through the rears
+ * and turning with the spins.
+ */
 export const horsePerformance = (sk: string): IAutoFilmMotion =>
   sequenceMotion(
     "performance",
-    [horseGallop(sk), horseGallop(sk), horseGallop(sk), horseRear(sk)],
+    [
+      horseIdle(sk), // 2.4  settle
+      horseWalk(sk), // 1.2  walk on
+      horseWalk(sk), // 1.2
+      horseTrot(sk), // 0.72 trot up
+      horseTrot(sk), // 0.72
+      horseTrot(sk), // 0.72
+      gallopBurst(sk), // 1.24 break into gallop
+      gallopBurst(sk), // 1.24
+      horseRear(sk), // 2.6  rear + neigh
+      gallopBurst(sk), // 1.24 charge on
+      gallopBurst(sk), // 1.24
+      horseTurn(sk), // 2.2  spin on the spot
+      horseTrot(sk), // 0.72
+      horseTrot(sk), // 0.72
+      gallopBurst(sk), // 1.24
+      horseRear(sk), // 2.6  second rear + neigh
+      gallopBurst(sk), // 1.24
+      gallopBurst(sk), // 1.24
+      horseTrot(sk), // 0.72
+      horseWalk(sk), // 1.2  ease to a walk
+      horseIdle(sk), // 2.4  halt
+    ],
     true,
   );
 
 /** All horse clips, keyed by id. */
 export const HORSE_CLIPS = (sk: string): Record<string, IAutoFilmMotion> => ({
   idle: horseIdle(sk),
+  walk: horseWalk(sk),
+  trot: horseTrot(sk),
   gallop: horseGallop(sk),
   gallopTravel: horseGallopTravel(sk),
+  turn: horseTurn(sk),
   rear: horseRear(sk),
   performance: horsePerformance(sk),
 });
