@@ -249,15 +249,30 @@ const reach = (elapsed: number): void => {
   lower.quaternion.copy(upperWorldQ.invert().multiply(lowerWorld));
 };
 
-const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
-mountViewer(canvas, scene, camera, (elapsed) => {
+// One frame of animation at `elapsed` seconds — shared by the live render loop
+// and the deterministic capture hook below.
+const frame = (elapsed: number): void => {
   if (reachMode) reach(elapsed);
   else if (lookMode) aimHead(elapsed);
-  else if (!showRom && freezeAt === null) {
+  else if (!showRom) {
     player.update(elapsed);
     if (followMode) followCamera();
   }
+};
+
+const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
+// `?cap=1` hands frame timing to the capturer (window.__afSeek) instead of the
+// wall clock, so a recorder can step through deterministically in one session.
+const capMode = params.get("cap") === "1";
+const handle = mountViewer(canvas, scene, camera, (elapsed) => {
+  if (!capMode && freezeAt === null) frame(elapsed);
 });
+(window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
+  t: number,
+): void => {
+  frame(t);
+  handle.renderer.render(scene, camera);
+};
 
 // ── clip selector (live switching) ──────────────────────────────────────────
 const bar = document.querySelector<HTMLDivElement>("#clips");

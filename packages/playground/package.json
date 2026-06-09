@@ -10,6 +10,10 @@
     "build:human": "node scripts/build-human.mjs",
     "build:stickman": "node scripts/build-stickman.cjs",
     "build:cat": "node scripts/build-cat.cjs",
+    "build:horse": "node scripts/build-horse.cjs",
+    "build:knight": "node scripts/build-knight.cjs",
+    "build:models": "npm run build:stickman && npm run build:cat && npm run build:horse && npm run build:knight",
+    "shots": "node scripts/capture-shots.mjs",
     "preview": "vite preview --port 4173 --strictPort"
   },
   "author": "Samchon",
@@ -27,6 +31,8 @@
     "@types/three": "^0.169.0",
     "esbuild": "^0.21.5",
     "gifenc": "^1.0.3",
+    "h264-mp4-encoder": "^1.0.12",
+    "playwright-core": "^1.60.0",
     "pngjs": "^7.0.0",
     "typescript": "catalog:typescript",
     "vite": "^5.4.10"
