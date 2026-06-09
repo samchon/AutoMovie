@@ -17,6 +17,7 @@ export default defineConfig({
         stickman: resolve(__dirname, "stickman.html"),
         knight: resolve(__dirname, "knight.html"),
         spar: resolve(__dirname, "spar.html"),
+        archery: resolve(__dirname, "archery.html"),
       },
     },
   },

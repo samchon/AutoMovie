@@ -42,10 +42,13 @@ const mat = (
   baseColorTexture: null,
 });
 
-export const buildKnight = (): {
+export const buildKnight = (
+  opts: { lance?: boolean } = {},
+): {
   skeleton: IAutoFilmSkeleton;
   model: IAutoFilmModel;
 } => {
+  const withLance = opts.lance !== false;
   const { skeleton, model } = buildStickman(DEFAULT_STICKMAN);
   const hr = DEFAULT_STICKMAN.headRadius;
   const lower = DEFAULT_STICKMAN.lowerArm;
@@ -162,7 +165,13 @@ export const buildKnight = (): {
       ...model,
       id: "knight",
       name: "knight",
-      parts: [...model.parts, ...extras],
+      parts: [
+        ...model.parts,
+        ...extras.filter(
+          (p) =>
+            withLance || !["lance", "lanceTip", "lanceGrip"].includes(p.id),
+        ),
+      ],
       materials,
     },
   };

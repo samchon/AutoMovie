@@ -96,68 +96,74 @@ export const horseIdle = (sk: string): IAutoFilmMotion => ({
 });
 
 /**
- * Gallop — a rocking four-beat cycle: gather (airborne, legs tucked), front
- * legs reach and land, hind legs push off, repeat. Authored in place; wrap with
- * `travelMotion` to actually charge forward.
+ * One side's legs (front + hind of the same side) — `lead` swings that pair
+ * forward and plants while the opposite pair drives back. A horse coordinates
+ * by side/diagonal, not both-front-then-both-hind like a bounding cat.
+ */
+const gaitSide = (
+  sk: string,
+  lead: "left" | "right",
+  reach: number,
+  bend: number,
+  y: number,
+): IAutoFilmPose => {
+  const lf = lead === "left" ? -reach : reach; // forward = negative flexion
+  const rf = lead === "left" ? reach : -reach;
+  const lk = lead === "left" ? bend : bend * 0.4; // the swinging side lifts more
+  const rk = lead === "left" ? bend * 0.4 : bend;
+  return pose(
+    sk,
+    [
+      j("leftUpperArm", { flexion: lf }),
+      j("rightUpperArm", { flexion: rf }),
+      j("leftLowerArm", { flexion: lk }),
+      j("rightLowerArm", { flexion: rk }),
+      j("leftUpperLeg", { flexion: lf }),
+      j("rightUpperLeg", { flexion: rf }),
+      j("leftLowerLeg", { flexion: lk }),
+      j("rightLowerLeg", { flexion: rk }),
+      j("spine", { flexion: 4 }),
+      j("neck", { flexion: 6 }),
+      ...tail(0, 2),
+    ],
+    root(y),
+  );
+};
+
+/**
+ * Gallop — a lateral-pair bound: the left side then the right side reach and
+ * drive, with a brief gathered suspension between, the back held near level (no
+ * nose-dive). Authored in place; wrap with `travelMotion` to charge forward.
  */
 export const horseGallop = (sk: string): IAutoFilmMotion => {
-  const front = (up: number, knee: number): IAutoFilmJointPose[] => [
-    j("leftUpperArm", { flexion: up }),
-    j("rightUpperArm", { flexion: up }),
-    j("leftLowerArm", { flexion: knee }),
-    j("rightLowerArm", { flexion: knee }),
-  ];
-  const hind = (up: number, hock: number): IAutoFilmJointPose[] => [
-    j("leftUpperLeg", { flexion: up }),
-    j("rightUpperLeg", { flexion: up }),
-    j("leftLowerLeg", { flexion: hock }),
-    j("rightLowerLeg", { flexion: hock }),
-  ];
   const gather = pose(
     sk,
     [
-      ...front(-12, 78),
-      ...hind(-22, 86),
-      j("spine", { flexion: 14 }),
-      j("chest", { flexion: 8 }),
-      j("neck", { flexion: 10 }),
+      j("leftUpperArm", { flexion: -14 }),
+      j("rightUpperArm", { flexion: -14 }),
+      j("leftLowerArm", { flexion: 70 }),
+      j("rightLowerArm", { flexion: 70 }),
+      j("leftUpperLeg", { flexion: -16 }),
+      j("rightUpperLeg", { flexion: -16 }),
+      j("leftLowerLeg", { flexion: 74 }),
+      j("rightLowerLeg", { flexion: 74 }),
+      j("spine", { flexion: 8 }),
+      j("neck", { flexion: 8 }),
       ...tail(0, -6),
     ],
     root(0.16),
   );
-  const reach = pose(
-    sk,
-    [
-      ...front(-46, 12),
-      ...hind(-34, 64),
-      j("spine", { flexion: -6 }),
-      j("neck", { flexion: 2 }),
-      ...tail(0, -2),
-    ],
-    root(0.02),
-  );
-  const push = pose(
-    sk,
-    [
-      ...front(34, 22),
-      ...hind(46, 12),
-      j("spine", { flexion: -12 }),
-      j("chest", { flexion: -6 }),
-      j("neck", { flexion: -4 }),
-      ...tail(0, 4),
-    ],
-    root(-0.02),
-  );
   return {
     id: "gallop",
     skeleton: sk,
-    duration: 0.62,
+    duration: 0.6,
     loop: true,
     keyframes: [
       key(0, gather),
-      key(0.2, reach),
-      key(0.42, push),
-      key(0.62, gather),
+      key(0.16, gaitSide(sk, "left", 46, 30, 0.03)),
+      key(0.3, gather),
+      key(0.46, gaitSide(sk, "right", 46, 30, 0.03)),
+      key(0.6, gather),
     ],
   };
 };
@@ -229,64 +235,36 @@ export const horseRear = (sk: string): IAutoFilmMotion => {
   };
 };
 
-/** Walk — a slow, even diagonal-pair gait (in place), head nodding. */
-export const horseWalk = (sk: string): IAutoFilmMotion => {
-  const step = (d: number): IAutoFilmPose =>
-    pose(
-      sk,
-      [
-        j("leftUpperArm", { flexion: -16 * d }),
-        j("leftLowerArm", { flexion: d > 0 ? 28 : 14 }),
-        j("rightUpperArm", { flexion: 16 * d }),
-        j("rightLowerArm", { flexion: d > 0 ? 14 : 28 }),
-        j("leftUpperLeg", { flexion: 16 * d }),
-        j("leftLowerLeg", { flexion: d > 0 ? 14 : 26 }),
-        j("rightUpperLeg", { flexion: -16 * d }),
-        j("rightLowerLeg", { flexion: d > 0 ? 26 : 14 }),
-        j("neck", { flexion: 6 + 4 * d }),
-        j("head", { flexion: -6 }),
-        ...tail(0.4 * d),
-      ],
-      root(0.01 * d),
-    );
-  return {
-    id: "walk",
-    skeleton: sk,
-    duration: 1.2,
-    loop: true,
-    keyframes: [key(0, step(1)), key(0.6, step(-1)), key(1.2, step(1))],
-  };
-};
+/** Walk — an even lateral-pair gait: left side, then right side step forward. */
+export const horseWalk = (sk: string): IAutoFilmMotion => ({
+  id: "walk",
+  skeleton: sk,
+  duration: 1.0,
+  loop: true,
+  keyframes: [
+    key(0, gaitSide(sk, "left", 16, 22, 0.01)),
+    key(0.5, gaitSide(sk, "right", 16, 22, 0.01)),
+    key(1.0, gaitSide(sk, "left", 16, 22, 0.01)),
+  ],
+});
 
-/** Trot — a brisk two-beat diagonal gait with a touch of suspension. */
+/** Trot — a brisker lateral pace with a touch of suspension between beats. */
 export const horseTrot = (sk: string): IAutoFilmMotion => {
-  const beat2 = (d: number): IAutoFilmPose =>
-    pose(
-      sk,
-      [
-        j("leftUpperArm", { flexion: -30 * d }),
-        j("leftLowerArm", { flexion: d > 0 ? 40 : 18 }),
-        j("rightUpperArm", { flexion: 30 * d }),
-        j("rightLowerArm", { flexion: d > 0 ? 18 : 40 }),
-        j("leftUpperLeg", { flexion: 30 * d }),
-        j("leftLowerLeg", { flexion: d > 0 ? 18 : 46 }),
-        j("rightUpperLeg", { flexion: -30 * d }),
-        j("rightLowerLeg", { flexion: d > 0 ? 46 : 18 }),
-        j("neck", { flexion: 2 }),
-        ...tail(0.6 * d, -2),
-      ],
-      root(0.05),
-    );
-  const suspend = pose(
+  const air = pose(
     sk,
     [
-      j("leftLowerArm", { flexion: 30 }),
-      j("rightLowerArm", { flexion: 30 }),
+      j("leftUpperArm", { flexion: -8 }),
+      j("rightUpperArm", { flexion: -8 }),
+      j("leftLowerArm", { flexion: 32 }),
+      j("rightLowerArm", { flexion: 32 }),
+      j("leftUpperLeg", { flexion: -8 }),
+      j("rightUpperLeg", { flexion: -8 }),
       j("leftLowerLeg", { flexion: 32 }),
       j("rightLowerLeg", { flexion: 32 }),
-      ...tail(0, -4),
+      j("spine", { flexion: 4 }),
+      ...tail(0, -2),
     ],
-    root(0.1),
+    root(0.09),
   );
   return {
     id: "trot",
@@ -294,11 +272,11 @@ export const horseTrot = (sk: string): IAutoFilmMotion => {
     duration: 0.72,
     loop: true,
     keyframes: [
-      key(0, beat2(1)),
-      key(0.18, suspend),
-      key(0.36, beat2(-1)),
-      key(0.54, suspend),
-      key(0.72, beat2(1)),
+      key(0, gaitSide(sk, "left", 28, 40, 0.05)),
+      key(0.18, air),
+      key(0.36, gaitSide(sk, "right", 28, 40, 0.05)),
+      key(0.54, air),
+      key(0.72, gaitSide(sk, "left", 28, 40, 0.05)),
     ],
   };
 };
