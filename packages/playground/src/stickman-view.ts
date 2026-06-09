@@ -30,13 +30,27 @@ const clipName =
   params.get("clip") !== null && params.get("clip")! in clips
     ? params.get("clip")!
     : defaultClip;
-// `?clamp=1` enforces ROM: every sampled pose is clamped to each joint's limits.
+// `?clamp=1` enforces ROM; the cat's tail gets spring follow-through so it
+// trails and overshoots the body instead of snapping (turn off with ?spring=0).
+const catTailSpring =
+  isCat && params.get("spring") !== "0"
+    ? {
+        joints: [
+          "leftLittleProximal",
+          "leftLittleIntermediate",
+          "leftLittleDistal",
+        ] as AutoFilmHumanoidBone[],
+        stiffness: 90,
+        damping: 9,
+      }
+    : undefined;
 const player = new AutoFilmPlayer(
   object,
   skeleton,
   clips[clipName]!,
   jointAxes,
   params.get("clamp") === "1",
+  catTailSpring,
 );
 
 // `?t=<seconds>` freezes one sampled frame (deterministic capture); otherwise
