@@ -354,11 +354,15 @@ export const stroll = (sk: string): IAutoFilmMotion =>
 export const sprint = (sk: string): IAutoFilmMotion =>
   travelMotion("sprint", run(sk), 9, { x: 0, y: 0, z: 2.0 });
 
-// ── shadow boxing — a ~15 s combination performance ─────────────────────────
-// A bladed guard stance (hands up, knees soft, slight lean) is the base; every
-// punch/kick merges its overrides over the guard and snaps back, then the beats
-// are stitched with sequenceMotion. Arms use the humanoid axes (flexion swings
-// fore/aft, abduction up/down), legs the default sagittal flexion.
+// ── shadow boxing — a ~30 s precision kickboxing round ───────────────────────
+// A bladed guard stance (hands up, knees soft, slight lean) is the base pose;
+// every technique merges its overrides over the guard and snaps back, and the
+// beats are stitched with sequenceMotion into one round. Arms use the humanoid
+// axes (flexion swings fore/aft, abduction up/down), legs the default sagittal
+// flexion. Footwork rides the root (step in/out, lateral), returning to centre
+// inside each beat so the fighter stays framed. The aim is a light, crisp,
+// real-fighter feel: jabs/crosses/hooks/uppercuts, slips/weaves/ducks, push
+// kicks, knees, and high round/axe kicks woven together.
 const GUARD: IAutoFilmJointPose[] = [
   j("spine", { flexion: 9 }),
   j("chest", { flexion: 6 }),
@@ -379,8 +383,12 @@ export const shadowbox = (sk: string): IAutoFilmMotion => {
     return pose(sk, [...m.values()]);
   };
   const guard = merge([]);
+  // a step: the same pose carried on a translated root (footwork)
+  const at = (p: IAutoFilmPose, x: number, z: number): IAutoFilmPose => ({
+    ...p,
+    root: root(x, 0, z, 0),
+  });
 
-  // each beat returns to guard; durations sum to ~15 s
   const beat = (
     dur: number,
     frames: [number, IAutoFilmPose][],
@@ -392,157 +400,264 @@ export const shadowbox = (sk: string): IAutoFilmMotion => {
     keyframes: frames.map(([t, p]) => key(t, p)),
   });
 
+  // ── hands ──────────────────────────────────────────────────────────────
   const jab = merge([
-    j("leftUpperArm", { flexion: -92, abduction: 8 }),
-    j("leftLowerArm", { flexion: -12 }),
-    j("spine", { flexion: 9, twist: -10 }),
+    j("leftUpperArm", { flexion: -94, abduction: 6 }),
+    j("leftLowerArm", { flexion: -8 }),
+    j("spine", { flexion: 9, twist: -12 }),
     j("chest", { flexion: 6, twist: -8 }),
   ]);
   const cross = merge([
-    j("rightUpperArm", { flexion: 92, abduction: -8 }),
-    j("rightLowerArm", { flexion: 14 }),
-    j("spine", { flexion: 9, twist: 24 }),
+    j("rightUpperArm", { flexion: 94, abduction: -6 }),
+    j("rightLowerArm", { flexion: 10 }),
+    j("spine", { flexion: 9, twist: 26 }),
+    j("chest", { flexion: 6, twist: 18 }),
+    j("rightUpperLeg", { abduction: -9, flexion: 4 }),
+  ]);
+  const leadHook = merge([
+    j("leftUpperArm", { flexion: -54, abduction: 8 }),
+    j("leftLowerArm", { flexion: -94 }),
+    j("spine", { flexion: 9, twist: 22 }),
     j("chest", { flexion: 6, twist: 16 }),
-    j("rightUpperLeg", { abduction: -9, flexion: 2 }),
   ]);
-  const leftHook = merge([
-    j("leftUpperArm", { flexion: -56, abduction: 6 }),
-    j("leftLowerArm", { flexion: -96 }),
-    j("spine", { flexion: 9, twist: 20 }),
-    j("chest", { flexion: 6, twist: 14 }),
+  const rearHook = merge([
+    j("rightUpperArm", { flexion: 54, abduction: -8 }),
+    j("rightLowerArm", { flexion: 94 }),
+    j("spine", { flexion: 9, twist: -18 }),
+    j("chest", { flexion: 6, twist: -12 }),
   ]);
-  const uppercut = merge([
-    j("rightUpperArm", { flexion: 58, abduction: -52 }),
-    j("rightLowerArm", { flexion: 128 }),
+  const leadUpper = merge([
+    j("leftUpperArm", { flexion: -52, abduction: 42 }),
+    j("leftLowerArm", { flexion: -126 }),
+    j("spine", { flexion: 4, twist: 12 }),
+    j("chest", { flexion: 2, twist: 8 }),
+  ]);
+  const rearUpper = merge([
+    j("rightUpperArm", { flexion: 56, abduction: -48 }),
+    j("rightLowerArm", { flexion: 126 }),
     j("spine", { flexion: 2, twist: 16 }),
     j("chest", { flexion: 0, twist: 12 }),
   ]);
+
+  // ── defence ────────────────────────────────────────────────────────────
   const slip = (d: number): IAutoFilmPose =>
     merge([
       j("spine", { flexion: 12, abduction: 16 * d, twist: 6 * d }),
       j("chest", { flexion: 8, abduction: 12 * d }),
     ]);
-  // right front kick: chamber the knee, then snap the shin out and up
-  const chamberK = merge([
+  // weave: a deep bob to one side, knees bending and the head dropping under
+  const weave = (d: number): IAutoFilmPose => ({
+    ...merge([
+      j("spine", { flexion: 16, abduction: 22 * d, twist: 10 * d }),
+      j("chest", { flexion: 10, abduction: 16 * d }),
+      j("leftUpperLeg", { abduction: 9, flexion: -18 }),
+      j("rightUpperLeg", { abduction: -9, flexion: -16 }),
+      j("leftLowerLeg", { flexion: 34 }),
+      j("rightLowerLeg", { flexion: 40 }),
+    ]),
+    root: root(0, -0.1, 0, 0),
+  });
+  // duck: drop straight down, knees deep, spine folding forward
+  const duck = (): IAutoFilmPose => ({
+    ...merge([
+      j("spine", { flexion: 24 }),
+      j("chest", { flexion: 14 }),
+      j("leftUpperLeg", { abduction: 9, flexion: -24 }),
+      j("rightUpperLeg", { abduction: -9, flexion: -22 }),
+      j("leftLowerLeg", { flexion: 48 }),
+      j("rightLowerLeg", { flexion: 52 }),
+    ]),
+    root: root(0, -0.16, 0, 0),
+  });
+
+  // ── legs: chamber → strike pairs ─────────────────────────────────────────
+  // rear (right) front push kick (teep)
+  const chamberFront = merge([
     j("rightUpperLeg", { flexion: -42 }),
     j("rightLowerLeg", { flexion: 86 }),
     j("spine", { flexion: -4 }),
   ]);
-  const frontKick = merge([
-    j("rightUpperLeg", { flexion: -88 }),
-    j("rightLowerLeg", { flexion: 8 }),
-    j("leftLowerLeg", { flexion: 8 }),
-    j("spine", { flexion: -14 }),
-    j("leftUpperArm", { flexion: -30, abduction: 36 }),
+  const teep = merge([
+    j("rightUpperLeg", { flexion: -86 }),
+    j("rightLowerLeg", { flexion: 10 }),
+    j("leftLowerLeg", { flexion: 10 }),
+    j("spine", { flexion: -16 }),
+    j("leftUpperArm", { flexion: -28, abduction: 34 }),
   ]);
-  // right roundhouse: chamber across, swing high to the side
-  const chamberR = merge([
+  // right knee strike (니킥): drive the knee up, crunch down, hands clinch
+  const chamberKnee = merge([
+    j("rightUpperLeg", { flexion: -64 }),
+    j("rightLowerLeg", { flexion: 104 }),
+    j("spine", { flexion: 6 }),
+    j("leftUpperArm", { flexion: -28, abduction: -44 }),
+    j("leftLowerArm", { flexion: -72 }),
+    j("rightUpperArm", { flexion: 28, abduction: 44 }),
+    j("rightLowerArm", { flexion: 72 }),
+  ]);
+  const kneeStrike = merge([
+    j("rightUpperLeg", { flexion: -106 }),
+    j("rightLowerLeg", { flexion: 128 }),
+    j("spine", { flexion: 18 }),
+    j("chest", { flexion: 12 }),
+    j("leftUpperArm", { flexion: -26, abduction: -48 }),
+    j("leftLowerArm", { flexion: -64 }),
+    j("rightUpperArm", { flexion: 26, abduction: 48 }),
+    j("rightLowerArm", { flexion: 64 }),
+  ]);
+  // right roundhouse high kick: chamber across, swing high to the side
+  const chamberRound = merge([
     j("rightUpperLeg", { flexion: -36, abduction: -34 }),
     j("rightLowerLeg", { flexion: 78 }),
     j("spine", { twist: 14, flexion: 4 }),
   ]);
   const roundhouse = merge([
-    j("rightUpperLeg", { flexion: -52, abduction: -40, twist: -30 }),
-    j("rightLowerLeg", { flexion: 18 }),
-    j("spine", { twist: 30, abduction: -10, flexion: 6 }),
-    j("chest", { twist: 18 }),
-    j("leftUpperArm", { flexion: -20, abduction: 40 }),
+    j("rightUpperLeg", { flexion: -58, abduction: -46, twist: -34 }),
+    j("rightLowerLeg", { flexion: 16 }),
+    j("spine", { twist: 34, abduction: -12, flexion: 8 }),
+    j("chest", { twist: 20 }),
+    j("leftUpperArm", { flexion: -18, abduction: 44 }),
   ]);
+  // lead (left) high axe/front kick — straight up high
+  const chamberHigh = merge([
+    j("leftUpperLeg", { flexion: -64 }),
+    j("leftLowerLeg", { flexion: 70 }),
+    j("spine", { flexion: -4 }),
+  ]);
+  const highKick = merge([
+    j("leftUpperLeg", { flexion: -120 }),
+    j("leftLowerLeg", { flexion: 8 }),
+    j("rightLowerLeg", { flexion: 18 }),
+    j("spine", { flexion: -8 }),
+    j("rightUpperArm", { flexion: 22, abduction: -40 }),
+  ]);
+
+  // ── beat builders ────────────────────────────────────────────────────────
+  const punch = (
+    dur: number,
+    p: IAutoFilmPose,
+    hit = dur * 0.42,
+  ): IAutoFilmMotion =>
+    beat(dur, [
+      [0, guard],
+      [hit, p],
+      [dur, guard],
+    ]);
+  const combo2 = (
+    dur: number,
+    a: IAutoFilmPose,
+    b: IAutoFilmPose,
+  ): IAutoFilmMotion =>
+    beat(dur, [
+      [0, guard],
+      [dur * 0.3, a],
+      [dur * 0.6, b],
+      [dur, guard],
+    ]);
+  const defend = (dur: number, p: IAutoFilmPose): IAutoFilmMotion =>
+    beat(dur, [
+      [0, guard],
+      [dur * 0.5, p],
+      [dur, guard],
+    ]);
+  const kick = (
+    dur: number,
+    chamber: IAutoFilmPose,
+    strike: IAutoFilmPose,
+  ): IAutoFilmMotion =>
+    beat(dur, [
+      [0, guard],
+      [dur * 0.28, chamber],
+      [dur * 0.52, strike],
+      [dur * 0.76, chamber],
+      [dur, guard],
+    ]);
+  // a strike thrown while stepping in, then footing back to centre
+  const stepStrike = (
+    dur: number,
+    p: IAutoFilmPose,
+    x: number,
+    z: number,
+  ): IAutoFilmMotion =>
+    beat(dur, [
+      [0, guard],
+      [dur * 0.45, at(p, x, z)],
+      [dur, guard],
+    ]);
+  // light footwork: shift the stance out and back
+  const stepStep = (dur: number, x: number, z: number): IAutoFilmMotion =>
+    beat(dur, [
+      [0, guard],
+      [dur * 0.5, at(guard, x, z)],
+      [dur, guard],
+    ]);
 
   return sequenceMotion(
     "shadowbox",
     [
-      beat(0.7, [
+      beat(0.6, [
         [0, guard],
-        [0.7, guard],
+        [0.6, guard],
       ]), // settle
-      beat(0.45, [
+      // round 1 — find the range behind the jab + footwork
+      punch(0.34, jab),
+      punch(0.34, jab),
+      combo2(0.62, jab, cross),
+      defend(0.44, slip(-1)),
+      defend(0.44, slip(1)),
+      stepStrike(0.42, jab, 0, 0.16),
+      stepStep(0.34, 0, -0.16),
+      punch(0.42, cross),
+      // round 2 — hooks, uppercuts, weaving
+      punch(0.3, jab),
+      punch(0.42, leadHook),
+      punch(0.42, rearHook),
+      defend(0.5, weave(-1)),
+      defend(0.5, weave(1)),
+      punch(0.42, leadUpper),
+      punch(0.42, rearUpper),
+      defend(0.5, duck()),
+      combo2(0.62, cross, leadHook),
+      // round 3 — fast footwork flurry
+      stepStep(0.3, 0.16, 0),
+      punch(0.28, jab),
+      punch(0.28, jab),
+      combo2(0.66, cross, leadHook),
+      punch(0.42, rearUpper),
+      stepStep(0.34, -0.16, 0),
+      defend(0.42, slip(-1)),
+      defend(0.5, weave(1)),
+      // round 4 — kicks
+      kick(1.0, chamberFront, teep),
+      kick(1.2, chamberFront, teep),
+      kick(0.85, chamberKnee, kneeStrike),
+      kick(0.85, chamberKnee, kneeStrike),
+      kick(1.4, chamberRound, roundhouse),
+      // round 5 — boxing combination + defence
+      punch(0.3, jab),
+      combo2(0.7, cross, leadHook),
+      punch(0.42, rearHook),
+      defend(0.5, weave(-1)),
+      punch(0.42, leadUpper),
+      punch(0.42, cross),
+      defend(0.5, duck()),
+      stepStrike(0.42, jab, 0, 0.16),
+      stepStep(0.34, 0, -0.16),
+      // round 6 — knees + high kicks
+      kick(0.8, chamberKnee, kneeStrike),
+      kick(0.95, chamberFront, teep),
+      kick(1.4, chamberRound, roundhouse),
+      kick(1.3, chamberHigh, highKick),
+      kick(1.2, chamberFront, teep),
+      // round 7 — finishing flurry
+      punch(0.28, jab),
+      punch(0.28, jab),
+      punch(0.4, cross),
+      punch(0.42, leadHook),
+      punch(0.42, rearHook),
+      kick(1.4, chamberRound, roundhouse), // finish
+      beat(0.8, [
         [0, guard],
-        [0.18, jab],
-        [0.45, guard],
-      ]), // jab
-      beat(0.45, [
-        [0, guard],
-        [0.18, jab],
-        [0.45, guard],
-      ]), // double jab
-      beat(0.6, [
-        [0, guard],
-        [0.28, cross],
-        [0.6, guard],
-      ]), // cross
-      beat(0.6, [
-        [0, guard],
-        [0.3, leftHook],
-        [0.6, guard],
-      ]), // hook
-      beat(1.0, [
-        [0, guard],
-        [0.5, slip(-1)],
-        [1.0, guard],
-      ]), // slip
-      beat(0.5, [
-        [0, guard],
-        [0.2, jab],
-        [0.5, guard],
-      ]), // jab
-      beat(0.65, [
-        [0, guard],
-        [0.3, cross],
-        [0.65, guard],
-      ]), // cross
-      beat(1.4, [
-        [0, guard],
-        [0.4, chamberK],
-        [0.7, frontKick],
-        [1.0, chamberK],
-        [1.4, guard],
-      ]), // front kick
-      beat(1.0, [
-        [0, guard],
-        [0.5, slip(1)],
-        [1.0, guard],
-      ]), // slip other way
-      beat(0.6, [
-        [0, guard],
-        [0.28, uppercut],
-        [0.6, guard],
-      ]), // uppercut
-      beat(0.5, [
-        [0, guard],
-        [0.2, jab],
-        [0.5, guard],
-      ]), // jab
-      beat(0.65, [
-        [0, guard],
-        [0.3, cross],
-        [0.65, guard],
-      ]), // cross
-      beat(1.6, [
-        [0, guard],
-        [0.45, chamberR],
-        [0.78, roundhouse],
-        [1.1, chamberR],
-        [1.6, guard],
-      ]), // roundhouse high kick
-      beat(0.45, [
-        [0, guard],
-        [0.18, jab],
-        [0.45, guard],
-      ]), // jab
-      beat(0.6, [
-        [0, guard],
-        [0.28, cross],
-        [0.6, guard],
-      ]), // cross
-      beat(0.5, [
-        [0, guard],
-        [0.22, leftHook],
-        [0.5, guard],
-      ]), // hook
-      beat(0.9, [
-        [0, guard],
-        [0.9, guard],
+        [0.8, guard],
       ]), // reset
     ],
     true,
