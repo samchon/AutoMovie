@@ -1,25 +1,38 @@
-import { HUMANOID_JOINT_AXES } from "@autofilm/engine";
+import { HUMANOID_JOINT_AXES, IAutoFilmJointAxes } from "@autofilm/engine";
+import { AutoFilmHumanoidBone } from "@autofilm/interface";
 import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
 import * as THREE from "three";
 
+import { DEFAULT_CAT, buildCat } from "./cat";
+import { CAT_CLIPS } from "./cat-motion";
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 import { STICKMAN_CLIPS } from "./stickman-motion";
 
-// ── build the stick figure + its motion clips ───────────────────────────────
-const { model, skeleton } = buildStickman(DEFAULT_STICKMAN);
-const object = buildModel(model);
-const clips = STICKMAN_CLIPS(skeleton.id);
-
 const params = new URLSearchParams(location.search);
+const isCat = params.get("char") === "cat";
+
+// ── build the chosen character + its clips ──────────────────────────────────
+// The cat is a quadruped (legs point down at rest) so it uses the default
+// clinical axes; the human T-pose rig opts into HUMANOID_JOINT_AXES.
+const { model, skeleton } = isCat
+  ? buildCat(DEFAULT_CAT)
+  : buildStickman(DEFAULT_STICKMAN);
+const object = buildModel(model);
+const clips = isCat ? CAT_CLIPS(skeleton.id) : STICKMAN_CLIPS(skeleton.id);
+const jointAxes:
+  | Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>
+  | undefined = isCat ? undefined : HUMANOID_JOINT_AXES;
+const defaultClip = isCat ? "idle" : "jumpingJack";
+
 const clipName =
   params.get("clip") !== null && params.get("clip")! in clips
     ? params.get("clip")!
-    : "jumpingJack";
+    : defaultClip;
 const player = new AutoFilmPlayer(
   object,
   skeleton,
   clips[clipName]!,
-  HUMANOID_JOINT_AXES,
+  jointAxes,
 );
 
 // `?t=<seconds>` freezes one sampled frame (deterministic capture); otherwise
@@ -46,8 +59,15 @@ scene.add(sun);
 // like walk/hop can be inspected from the side.
 const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 100);
 const az = (Number(params.get("az") ?? 0) * Math.PI) / 180;
-camera.position.set(3.8 * Math.sin(az), 1.0, 3.8 * Math.cos(az));
-camera.lookAt(0, 0.92, 0);
+const target = isCat ? 0.26 : 0.92;
+const dist = isCat ? 1.7 : 3.8;
+const ctr = isCat ? 0.12 : 0; // cat trunk centre is forward of the hips
+camera.position.set(
+  dist * Math.sin(az),
+  target + (isCat ? 0.22 : 0.1),
+  ctr + dist * Math.cos(az),
+);
+camera.lookAt(0, target, ctr);
 
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 mountViewer(canvas, scene, camera, (elapsed) => {
