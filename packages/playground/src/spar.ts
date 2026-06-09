@@ -128,26 +128,31 @@ const P = {
     ]),
   slip: (d: number): IAutoFilmJointPose[] =>
     merge([
-      j("spine", { flexion: 12, abduction: 16 * d, twist: 6 * d }),
-      j("chest", { flexion: 8, abduction: 12 * d }),
+      j("spine", { flexion: 14, abduction: 18 * d, twist: 8 * d }),
+      j("chest", { flexion: 9, abduction: 14 * d }),
+      j("leftUpperLeg", { abduction: 9, flexion: -12 }),
+      j("rightUpperLeg", { abduction: -9, flexion: -10 }),
+      j("leftLowerLeg", { flexion: 26 }),
+      j("rightLowerLeg", { flexion: 32 }),
     ]),
+  // waist AND knees fold together, the body sinking low under the punch
   weave: (d: number): IAutoFilmJointPose[] =>
     merge([
-      j("spine", { flexion: 16, abduction: 22 * d, twist: 10 * d }),
-      j("chest", { flexion: 10, abduction: 16 * d }),
-      j("leftUpperLeg", { abduction: 9, flexion: -18 }),
-      j("rightUpperLeg", { abduction: -9, flexion: -16 }),
-      j("leftLowerLeg", { flexion: 34 }),
-      j("rightLowerLeg", { flexion: 40 }),
+      j("spine", { flexion: 20, abduction: 26 * d, twist: 12 * d }),
+      j("chest", { flexion: 12, abduction: 18 * d }),
+      j("leftUpperLeg", { abduction: 11, flexion: -32 }),
+      j("rightUpperLeg", { abduction: -11, flexion: -30 }),
+      j("leftLowerLeg", { flexion: 60 }),
+      j("rightLowerLeg", { flexion: 64 }),
     ]),
   duck: (): IAutoFilmJointPose[] =>
     merge([
-      j("spine", { flexion: 24 }),
-      j("chest", { flexion: 14 }),
-      j("leftUpperLeg", { abduction: 9, flexion: -24 }),
-      j("rightUpperLeg", { abduction: -9, flexion: -22 }),
-      j("leftLowerLeg", { flexion: 48 }),
-      j("rightLowerLeg", { flexion: 52 }),
+      j("spine", { flexion: 28 }),
+      j("chest", { flexion: 16 }),
+      j("leftUpperLeg", { abduction: 11, flexion: -40 }),
+      j("rightUpperLeg", { abduction: -11, flexion: -38 }),
+      j("leftLowerLeg", { flexion: 78 }),
+      j("rightLowerLeg", { flexion: 82 }),
     ]),
   block: (): IAutoFilmJointPose[] =>
     merge([
@@ -214,8 +219,8 @@ const koDown: IAutoFilmJointPose[] = merge([
 
 // ── the shared choreography ───────────────────────────────────────────────
 // Each moment names both boxers' poses at one instant; the clips are built by
-// projecting the moment list onto red / blue. `r`/`b` optionally carry a root
-// (the KO fall). Red is the aggressor who lands the finishing one-two.
+// projecting the moment list onto red / blue, each with an optional root (a
+// weave/duck sinks the body, a punch can step in, the KO falls).
 interface Moment {
   t: number;
   red: IAutoFilmJointPose[];
@@ -224,35 +229,161 @@ interface Moment {
   blueRoot?: IAutoFilmTransform;
 }
 
-const MOMENTS: Moment[] = [
-  { t: 0.0, red: P.guard(), blue: P.guard() },
-  { t: 0.5, red: P.jab(), blue: P.slip(-1) }, // red jab, blue slips out
-  { t: 1.0, red: P.guard(), blue: P.guard() },
-  { t: 1.45, red: P.slip(1), blue: P.jab() }, // blue jab, red slips
-  { t: 1.95, red: P.guard(), blue: P.guard() },
-  { t: 2.4, red: P.jab(), blue: P.weave(-1) }, // red jab, blue weaves under
-  { t: 2.9, red: P.cross(), blue: P.duck() }, // red cross, blue ducks
-  { t: 3.45, red: P.leanBack(), blue: P.leadHook() }, // blue hooks, red leans back
-  { t: 3.95, red: P.guard(), blue: P.guard() },
-  { t: 4.4, red: P.leadHook(), blue: P.block() }, // red hook, blue blocks
-  { t: 4.95, red: P.guard(), blue: P.guard() },
-  { t: 5.4, red: P.weave(1), blue: P.jab() }, // blue jab, red weaves
-  { t: 5.9, red: P.jab(), blue: P.guard() }, // red jab
-  { t: 6.35, red: P.cross(), blue: P.slip(-1) }, // red cross, blue slips
-  { t: 6.85, red: P.leanBack(), blue: P.rearUpper() }, // blue uppercut, red leans
-  { t: 7.4, red: P.guard(), blue: P.guard() },
-  { t: 7.85, red: P.jab(), blue: P.guard() },
-  { t: 8.3, red: P.leadHook(), blue: P.duck() }, // red hook, blue ducks
-  { t: 8.8, red: P.guard(), blue: P.guard() }, // reset, both breathe
-  { t: 9.4, red: P.guard(), blue: P.guard() },
-  // the finish — red's one-two lands clean
-  { t: 9.75, red: P.jab(), blue: P.recoil() }, // 1) jab snaps blue's head
-  { t: 10.1, red: P.cross(), blue: koStart, blueRoot: fall(-0.04, -0.02, -12) }, // 2) the KO cross
-  { t: 10.5, red: P.cross(), blue: koStart, blueRoot: fall(-0.12, -0.04, -28) },
-  { t: 11.1, red: P.guard(), blue: koMid, blueRoot: fall(-0.4, -0.09, -62) }, // toppling
-  { t: 11.9, red: P.guard(), blue: koDown, blueRoot: fall(-0.62, -0.14, -86) }, // canvas
-  { t: 13.2, red: P.guard(), blue: koDown, blueRoot: fall(-0.62, -0.14, -86) }, // held
+// a pure vertical sink (weave/duck drop) and a step toward the opponent (+Z
+// local, which for either boxer points at the other once placed)
+const sink = (y: number): IAutoFilmTransform => ({
+  translation: { x: 0, y, z: 0 },
+  rotation: { x: 0, y: 0, z: 0, w: 1 },
+  scale: { x: 1, y: 1, z: 1 },
+});
+const stepIn = (z: number): IAutoFilmTransform => ({
+  translation: { x: 0, y: 0, z },
+  rotation: { x: 0, y: 0, z: 0, w: 1 },
+  scale: { x: 1, y: 1, z: 1 },
+});
+
+// one exchange: the attacker (`who`) throws `atk`, the defender answers with
+// `def`; roots optionally step the attacker in or sink the defender.
+interface Ex {
+  dur: number;
+  who: "R" | "B";
+  atk: IAutoFilmJointPose[];
+  def: IAutoFilmJointPose[];
+  atkRoot?: IAutoFilmTransform;
+  defRoot?: IAutoFilmTransform;
+}
+
+// a round of crisp give-and-take; repeated (with the lead alternating) to fill
+// the bout. Defences that drop (weave/duck/slip) carry a sink so the body
+// folds at the knees and waist, not a stiff lean.
+const ROUND: Ex[] = [
+  {
+    dur: 0.55,
+    who: "R",
+    atk: P.jab(),
+    def: P.slip(-1),
+    atkRoot: stepIn(0.1),
+    defRoot: sink(-0.07),
+  },
+  { dur: 0.5, who: "R", atk: P.jab(), def: P.slip(1), defRoot: sink(-0.07) },
+  {
+    dur: 0.64,
+    who: "R",
+    atk: P.cross(),
+    def: P.leanBack(),
+    atkRoot: stepIn(0.12),
+  },
+  { dur: 0.56, who: "B", atk: P.jab(), def: P.slip(-1), defRoot: sink(-0.07) },
+  {
+    dur: 0.66,
+    who: "B",
+    atk: P.cross(),
+    def: P.weave(-1),
+    defRoot: sink(-0.22),
+  },
+  { dur: 0.6, who: "R", atk: P.leadHook(), def: P.block() },
+  {
+    dur: 0.64,
+    who: "R",
+    atk: P.cross(),
+    def: P.duck(),
+    atkRoot: stepIn(0.12),
+    defRoot: sink(-0.3),
+  },
+  { dur: 0.66, who: "B", atk: P.rearUpper(), def: P.leanBack() },
+  { dur: 0.5, who: "R", atk: P.jab(), def: P.slip(1), defRoot: sink(-0.07) },
+  { dur: 0.66, who: "R", atk: P.jab(), def: P.weave(1), defRoot: sink(-0.22) },
+  { dur: 0.6, who: "B", atk: P.leadHook(), def: P.block() },
+  {
+    dur: 0.66,
+    who: "B",
+    atk: P.cross(),
+    def: P.duck(),
+    atkRoot: stepIn(0.12),
+    defRoot: sink(-0.3),
+  },
+  {
+    dur: 0.6,
+    who: "R",
+    atk: P.leadHook(),
+    def: P.weave(-1),
+    defRoot: sink(-0.22),
+  },
+  {
+    dur: 0.62,
+    who: "R",
+    atk: P.cross(),
+    def: P.leanBack(),
+    atkRoot: stepIn(0.12),
+  },
 ];
+
+const flip = (e: Ex): Ex => ({ ...e, who: e.who === "R" ? "B" : "R" });
+
+const MOMENTS: Moment[] = (() => {
+  const out: Moment[] = [{ t: 0, red: P.guard(), blue: P.guard() }];
+  // three rounds; the lead alternates each round for variety
+  const bout: Ex[] = [...ROUND, ...ROUND.map(flip), ...ROUND];
+  let t = 0;
+  for (const e of bout) {
+    const hit = Math.round((t + e.dur * 0.42) * 1000) / 1000;
+    const end = Math.round((t + e.dur) * 1000) / 1000;
+    const atkRed = e.who === "R";
+    out.push({
+      t: hit,
+      red: atkRed ? e.atk : e.def,
+      blue: atkRed ? e.def : e.atk,
+      redRoot: atkRed ? e.atkRoot : e.defRoot,
+      blueRoot: atkRed ? e.defRoot : e.atkRoot,
+    });
+    out.push({ t: end, red: P.guard(), blue: P.guard() });
+    t = end;
+  }
+  // the finish — red steps in behind a one-two and blue is knocked out
+  const z = t;
+  const at = (dt: number): number => Math.round((z + dt) * 1000) / 1000;
+  out.push({
+    t: at(0.35),
+    red: P.jab(),
+    blue: P.recoil(),
+    redRoot: stepIn(0.12),
+  });
+  out.push({
+    t: at(0.72),
+    red: P.cross(),
+    blue: koStart,
+    redRoot: stepIn(0.15),
+    blueRoot: fall(-0.04, -0.02, -12),
+  });
+  out.push({
+    t: at(1.15),
+    red: P.cross(),
+    blue: koStart,
+    redRoot: stepIn(0.12),
+    blueRoot: fall(-0.12, -0.04, -28),
+  });
+  out.push({
+    t: at(1.9),
+    red: P.guard(),
+    blue: koMid,
+    blueRoot: fall(-0.4, -0.09, -62),
+  });
+  out.push({
+    t: at(2.9),
+    red: P.guard(),
+    blue: koDown,
+    blueRoot: fall(-0.62, -0.14, -86),
+  });
+  out.push({
+    t: at(4.2),
+    red: P.guard(),
+    blue: koDown,
+    blueRoot: fall(-0.62, -0.14, -86),
+  });
+  return out;
+})();
+
+const DURATION = MOMENTS[MOMENTS.length - 1]!.t;
 
 const key = (
   time: number,
@@ -266,8 +397,6 @@ const key = (
   easing: "easeInOut",
   bezier: null,
 });
-
-const DURATION = 13.2;
 
 export const redClip = (sk: string): IAutoFilmMotion => ({
   id: "spar-red",

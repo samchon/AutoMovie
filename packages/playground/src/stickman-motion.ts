@@ -440,34 +440,43 @@ export const shadowbox = (sk: string): IAutoFilmMotion => {
   ]);
 
   // ── defence ────────────────────────────────────────────────────────────
-  const slip = (d: number): IAutoFilmPose =>
-    merge([
-      j("spine", { flexion: 12, abduction: 16 * d, twist: 6 * d }),
-      j("chest", { flexion: 8, abduction: 12 * d }),
-    ]);
-  // weave: a deep bob to one side, knees bending and the head dropping under
+  // slip: ride the head off-line, sitting into the knees a little (not a stiff
+  // waist-only lean) so it loads like a real fighter
+  const slip = (d: number): IAutoFilmPose => ({
+    ...merge([
+      j("spine", { flexion: 14, abduction: 18 * d, twist: 8 * d }),
+      j("chest", { flexion: 9, abduction: 14 * d }),
+      j("leftUpperLeg", { abduction: 9, flexion: -12 }),
+      j("rightUpperLeg", { abduction: -9, flexion: -10 }),
+      j("leftLowerLeg", { flexion: 26 }),
+      j("rightLowerLeg", { flexion: 32 }),
+    ]),
+    root: root(0, -0.08, 0, 0),
+  });
+  // weave: a deep bob to one side — waist AND both knees fold together and the
+  // whole body sinks low under the imagined punch, then comes up the far side
   const weave = (d: number): IAutoFilmPose => ({
     ...merge([
-      j("spine", { flexion: 16, abduction: 22 * d, twist: 10 * d }),
-      j("chest", { flexion: 10, abduction: 16 * d }),
-      j("leftUpperLeg", { abduction: 9, flexion: -18 }),
-      j("rightUpperLeg", { abduction: -9, flexion: -16 }),
-      j("leftLowerLeg", { flexion: 34 }),
-      j("rightLowerLeg", { flexion: 40 }),
+      j("spine", { flexion: 20, abduction: 26 * d, twist: 12 * d }),
+      j("chest", { flexion: 12, abduction: 18 * d }),
+      j("leftUpperLeg", { abduction: 11, flexion: -32 }),
+      j("rightUpperLeg", { abduction: -11, flexion: -30 }),
+      j("leftLowerLeg", { flexion: 60 }),
+      j("rightLowerLeg", { flexion: 64 }),
     ]),
-    root: root(0, -0.1, 0, 0),
+    root: root(0, -0.24, 0, 0),
   });
-  // duck: drop straight down, knees deep, spine folding forward
+  // duck: drop straight down into a deep knee bend, waist folding over it
   const duck = (): IAutoFilmPose => ({
     ...merge([
-      j("spine", { flexion: 24 }),
-      j("chest", { flexion: 14 }),
-      j("leftUpperLeg", { abduction: 9, flexion: -24 }),
-      j("rightUpperLeg", { abduction: -9, flexion: -22 }),
-      j("leftLowerLeg", { flexion: 48 }),
-      j("rightLowerLeg", { flexion: 52 }),
+      j("spine", { flexion: 28 }),
+      j("chest", { flexion: 16 }),
+      j("leftUpperLeg", { abduction: 11, flexion: -40 }),
+      j("rightUpperLeg", { abduction: -11, flexion: -38 }),
+      j("leftLowerLeg", { flexion: 78 }),
+      j("rightLowerLeg", { flexion: 82 }),
     ]),
-    root: root(0, -0.16, 0, 0),
+    root: root(0, -0.32, 0, 0),
   });
 
   // ── legs: chamber → strike pairs ─────────────────────────────────────────
