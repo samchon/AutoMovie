@@ -221,6 +221,116 @@ export const turn = (sk: string): IAutoFilmMotion => {
   };
 };
 
+/** A run — bigger strides than the walk with an airborne flight phase. */
+export const run = (sk: string): IAutoFilmMotion => {
+  const lean = [j("spine", { flexion: 14 }), j("chest", { flexion: 8 })];
+  const arms = (s: number): IAutoFilmJointPose[] => [
+    j("leftUpperArm", { abduction: -45, flexion: 55 * s }),
+    j("rightUpperArm", { abduction: 45, flexion: 55 * s }),
+  ];
+  const contact = (lead: "left" | "right"): IAutoFilmPose => {
+    const s = lead === "left" ? 1 : -1;
+    return pose(
+      sk,
+      [
+        ...lean,
+        j("leftUpperLeg", { flexion: -45 * s }),
+        j("rightUpperLeg", { flexion: 45 * s }),
+        j("leftLowerLeg", { flexion: lead === "left" ? 20 : 58 }),
+        j("rightLowerLeg", { flexion: lead === "left" ? 58 : 20 }),
+        ...arms(s),
+      ],
+      root(0, -0.03, 0, 0),
+    );
+  };
+  const flight = (swing: "left" | "right"): IAutoFilmPose =>
+    pose(
+      sk,
+      [
+        ...lean,
+        j("leftUpperLeg", { flexion: swing === "left" ? -35 : 10 }),
+        j("rightUpperLeg", { flexion: swing === "right" ? -35 : 10 }),
+        j("leftLowerLeg", { flexion: swing === "left" ? 85 : 25 }),
+        j("rightLowerLeg", { flexion: swing === "right" ? 85 : 25 }),
+        ...arms(0),
+      ],
+      root(0, 0.14, 0, 0),
+    );
+  return {
+    id: "run",
+    skeleton: sk,
+    duration: 0.6,
+    loop: true,
+    keyframes: [
+      key(0, contact("left")),
+      key(0.15, flight("right")),
+      key(0.3, contact("right")),
+      key(0.45, flight("left")),
+      key(0.6, contact("left")),
+    ],
+  };
+};
+
+/** A dance — hip sway, a twisting spine, and arms raised on alternating beats. */
+export const dance = (sk: string): IAutoFilmMotion => {
+  const beat = (d: number): IAutoFilmPose =>
+    pose(
+      sk,
+      [
+        j("spine", { twist: 18 * d }),
+        j("chest", { twist: 12 * d }),
+        j("leftUpperArm", { abduction: d > 0 ? 120 : 30 }),
+        j("rightUpperArm", { abduction: d > 0 ? -30 : -120 }),
+        j("leftLowerLeg", { flexion: 14 }),
+        j("rightLowerLeg", { flexion: 14 }),
+      ],
+      root(0.06 * d, 0, 0, 14 * d),
+    );
+  return {
+    id: "dance",
+    skeleton: sk,
+    duration: 1.4,
+    loop: true,
+    keyframes: [key(0, beat(-1)), key(0.7, beat(1)), key(1.4, beat(-1))],
+  };
+};
+
+/** A high front kick with the right leg, arms thrown back for balance. */
+export const kick = (sk: string): IAutoFilmMotion => {
+  const stand = pose(sk, [
+    j("leftUpperArm", { abduction: -60 }),
+    j("rightUpperArm", { abduction: 60 }),
+  ]);
+  const windup = pose(sk, [
+    j("rightUpperLeg", { flexion: 25 }),
+    j("rightLowerLeg", { flexion: 32 }),
+    j("spine", { flexion: -8 }),
+    j("leftUpperArm", { abduction: -50, flexion: 22 }),
+    j("rightUpperArm", { abduction: 50, flexion: 22 }),
+  ]);
+  const strike = pose(sk, [
+    j("rightUpperLeg", { flexion: -88 }),
+    j("rightLowerLeg", { flexion: 6 }),
+    j("leftLowerLeg", { flexion: 6 }),
+    j("spine", { flexion: -14 }),
+    j("leftUpperArm", { abduction: -45, flexion: 38 }),
+    j("rightUpperArm", { abduction: 45, flexion: 38 }),
+  ]);
+  return {
+    id: "kick",
+    skeleton: sk,
+    duration: 1.0,
+    loop: true,
+    keyframes: [
+      key(0, stand),
+      key(0.25, windup),
+      key(0.5, strike),
+      key(0.72, windup),
+      key(1.0, stand),
+    ],
+  };
+};
+
 /** All clips, keyed by id — the demo's selectable set. */
 export const STICKMAN_CLIPS = (
   sk: string,
@@ -228,6 +338,9 @@ export const STICKMAN_CLIPS = (
   jumpingJack: jumpingJack(sk),
   wave: wave(sk),
   walk: walk(sk),
+  run: run(sk),
   hop: hop(sk),
+  kick: kick(sk),
+  dance: dance(sk),
   turn: turn(sk),
 });
