@@ -14,6 +14,7 @@ export default defineConfig({
         drivers: resolve(__dirname, "drivers.html"),
         human: resolve(__dirname, "human.html"),
         body: resolve(__dirname, "body.html"),
+        stickman: resolve(__dirname, "stickman.html"),
       },
     },
   },

@@ -96,6 +96,9 @@ importers:
       '@autofilm/interface':
         specifier: workspace:^
         version: link:../interface
+      '@autofilm/render':
+        specifier: workspace:^
+        version: link:../render
       '@autofilm/viewer':
         specifier: workspace:^
         version: link:../viewer
@@ -112,6 +115,12 @@ importers:
       '@types/three':
         specifier: ^0.169.0
         version: 0.169.0
+      esbuild:
+        specifier: ^0.21.5
+        version: 0.21.5
+      gifenc:
+        specifier: ^1.0.3
+        version: 1.0.3
       pngjs:
         specifier: ^7.0.0
         version: 7.0.0
@@ -124,9 +133,15 @@ importers:
 
   packages/render:
     dependencies:
+      '@autofilm/engine':
+        specifier: workspace:^
+        version: link:../engine
       '@autofilm/interface':
         specifier: workspace:^
         version: link:../interface
+      '@gltf-transform/core':
+        specifier: ^4.1.1
+        version: 4.4.0
     devDependencies:
       rimraf:
         specifier: ^6.0.1
@@ -899,6 +914,9 @@ packages:
   get-caller-file@2.0.5:
     resolution: {integrity: sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==}
     engines: {node: 6.* || 8.* || >= 10.*}
+
+  gifenc@1.0.3:
+    resolution: {integrity: sha512-xdr6AdrfGBcfzncONUOlXMBuc5wJDtOueE3c5rdG0oNgtINLD+f2iFZltrBRZYzACRbKr+mSVU/x98zv2u3jmw==}
 
   glob@10.5.0:
     resolution: {integrity: sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==}
@@ -2007,6 +2025,8 @@ snapshots:
   function-bind@1.1.2: {}
 
   get-caller-file@2.0.5: {}
+
+  gifenc@1.0.3: {}
 
   glob@10.5.0:
     dependencies:
