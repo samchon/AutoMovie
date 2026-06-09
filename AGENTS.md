@@ -55,7 +55,7 @@ Update only for repository-contract changes: a new skill area, a renamed or merg
 
 ### Skills
 
-- **Location.** `.codex/skills/<kebab-name>/SKILL.md`. No numeric prefix, no frontmatter: Claude Code only auto-discovers `.claude/skills/` and Codex has no native skills system, so SKILL.md is plain markdown committed to the repo.
+- **Location.** `.codex/skills/<kebab-name>/SKILL.md`. No numeric prefix. Each file opens with YAML frontmatter (`---` delimited) carrying `name` and `description`, which Codex requires to load the skill; the body is plain markdown committed to the repo. Claude Code only auto-discovers `.claude/skills/`, so it reads these via the AGENTS.md pointers rather than the frontmatter.
 - **AGENTS.md pointer.** Each skill gets a `### Title` entry under `## Skills` in AGENTS.md with a one-paragraph pointer to the SKILL.md path.
 - **Create or merge.** Add a new skill when a substantial repository concern would otherwise inflate AGENTS.md beyond an index. Merge sibling concerns into one multi-section skill when they share most of their structure.
 - **Headings are plain.** No chapter numbers in skill or AGENTS.md headings. Use descriptive titles.

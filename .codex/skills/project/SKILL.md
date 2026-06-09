@@ -1,3 +1,8 @@
+---
+name: project
+description: What autofilm is, the long-haul mission, the workspace layout, and the canonical commands.
+---
+
 # Project Outline
 
 ## Product Contract
