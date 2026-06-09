@@ -1,3 +1,8 @@
+---
+name: documentation
+description: The .wiki/ working knowledge base, package READMEs, code JSDoc. Read before writing or modifying docs, and revise the wiki as the work proceeds.
+---
+
 # Documentation
 
 ## The `.wiki/` knowledge base

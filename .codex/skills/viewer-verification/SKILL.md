@@ -1,3 +1,8 @@
+---
+name: viewer-verification
+description: Driving the viewer/playground through Playwright MCP to inspect renders, poses, and motion against expectation. Read before claiming a viewer or render change works.
+---
+
 # Viewer Verification
 
 Unit tests pin the engine's numbers; they cannot tell you the character renders right. Any change to `viewer`, to the render path, or to a pose/motion/expression that is meant to look a certain way is verified visually by driving the viewer through **Playwright MCP**, not by a green test run alone.

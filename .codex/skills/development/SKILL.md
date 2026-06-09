@@ -1,3 +1,8 @@
+---
+name: development
+description: Work rules, testing, the always-100% coverage mandate, validation, change integrity. Read before writing or modifying code.
+---
+
 # Development
 
 ## Work Rules
