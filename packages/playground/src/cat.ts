@@ -234,6 +234,29 @@ export const buildCat = (
     // ears
     cone("earL", "head", v(0.04, p.headRadius * 0.9, 0.0), 0.05),
     cone("earR", "head", v(-0.04, p.headRadius * 0.9, 0.0), 0.05),
+    // eyes on the front (+Z) of the head
+    {
+      id: "eyeL",
+      name: "eyeL",
+      geometry: {
+        type: "primitive",
+        shape: { type: "sphere", radius: p.headRadius * 0.26 },
+      },
+      material: "eye",
+      attachedBone: "head",
+      transform: at(v(0.03, 0.03, p.headRadius * 0.95)),
+    },
+    {
+      id: "eyeR",
+      name: "eyeR",
+      geometry: {
+        type: "primitive",
+        shape: { type: "sphere", radius: p.headRadius * 0.26 },
+      },
+      material: "eye",
+      attachedBone: "head",
+      transform: at(v(-0.03, 0.03, p.headRadius * 0.95)),
+    },
     // front legs
     rod("flUpperL", "leftUpperArm", down(p.upperLeg), r),
     rod("flLowerL", "leftLowerArm", down(p.lowerLeg), r),
@@ -274,6 +297,16 @@ export const buildCat = (
         baseColor: { r: 0.14, g: 0.12, b: 0.13, a: 1, hex: null },
         metallic: 0,
         roughness: 0.7,
+        emissive: null,
+        opacity: 1,
+        baseColorTexture: null,
+      },
+      {
+        id: "eye",
+        name: "eye",
+        baseColor: { r: 0.95, g: 0.96, b: 0.98, a: 1, hex: null },
+        metallic: 0,
+        roughness: 0.35,
         emissive: null,
         opacity: 1,
         baseColorTexture: null,

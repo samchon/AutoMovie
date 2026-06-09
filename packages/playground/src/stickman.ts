@@ -200,6 +200,33 @@ export const buildStickman = (
       attachedBone: "head",
       transform: at(v(0, p.headRadius, 0)),
     },
+    // eyes on the front (+Z) of the head — make the facing direction legible
+    {
+      id: "eyeL",
+      name: "eyeL",
+      geometry: {
+        type: "primitive",
+        shape: { type: "sphere", radius: p.headRadius * 0.28 },
+      },
+      material: "eye",
+      attachedBone: "head",
+      transform: at(
+        v(p.headRadius * 0.42, p.headRadius * 1.18, p.headRadius * 0.82),
+      ),
+    },
+    {
+      id: "eyeR",
+      name: "eyeR",
+      geometry: {
+        type: "primitive",
+        shape: { type: "sphere", radius: p.headRadius * 0.28 },
+      },
+      material: "eye",
+      attachedBone: "head",
+      transform: at(
+        v(-p.headRadius * 0.42, p.headRadius * 1.18, p.headRadius * 0.82),
+      ),
+    },
     // clavicles — connect the spine column to each shoulder socket
     rod("clavicleL", "chest", v(p.shoulderHalf, p.shoulderRise, 0), r, "ink"),
     rod("clavicleR", "chest", v(-p.shoulderHalf, p.shoulderRise, 0), r, "ink"),
@@ -239,6 +266,16 @@ export const buildStickman = (
         baseColor: { r: 0.09, g: 0.1, b: 0.12, a: 1, hex: null },
         metallic: 0,
         roughness: 0.6,
+        emissive: null,
+        opacity: 1,
+        baseColorTexture: null,
+      },
+      {
+        id: "eye",
+        name: "eye",
+        baseColor: { r: 0.95, g: 0.96, b: 0.98, a: 1, hex: null },
+        metallic: 0,
+        roughness: 0.35,
         emissive: null,
         opacity: 1,
         baseColorTexture: null,
