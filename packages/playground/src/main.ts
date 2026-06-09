@@ -1,17 +1,17 @@
 import {
-  IMoticaJointPose,
-  IMoticaMotion,
-  IMoticaPose,
-  IMoticaSkeleton,
-  MoticaHumanoidBone,
-} from "@motica/interface";
+  AutoFilmHumanoidBone,
+  IAutoFilmJointPose,
+  IAutoFilmMotion,
+  IAutoFilmPose,
+  IAutoFilmSkeleton,
+} from "@autofilm/interface";
 import {
-  IMoticaModelObject,
-  MoticaPlayer,
+  AutoFilmPlayer,
+  IAutoFilmModelObject,
   applyPose,
   buildModel,
   mountViewer,
-} from "@motica/viewer";
+} from "@autofilm/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_PARAMS, IHumanoidParams, buildHumanoid } from "./humanoid";
@@ -24,26 +24,28 @@ interface JointState {
   abduction: number;
   twist: number;
 }
-const pose: Partial<Record<MoticaHumanoidBone, JointState>> = {};
+const pose: Partial<Record<AutoFilmHumanoidBone, JointState>> = {};
 
-let object: IMoticaModelObject;
-let skeleton: IMoticaSkeleton;
-let player: MoticaPlayer | null = null;
+let object: IAutoFilmModelObject;
+let skeleton: IAutoFilmSkeleton;
+let player: AutoFilmPlayer | null = null;
 let playing = false;
 
-const currentPose = (): IMoticaPose => {
-  const joints: IMoticaJointPose[] = Object.entries(pose).map(([bone, s]) => ({
-    bone: bone as MoticaHumanoidBone,
-    flexion: s!.flexion,
-    abduction: s!.abduction,
-    twist: s!.twist,
-  }));
+const currentPose = (): IAutoFilmPose => {
+  const joints: IAutoFilmJointPose[] = Object.entries(pose).map(
+    ([bone, s]) => ({
+      bone: bone as AutoFilmHumanoidBone,
+      flexion: s!.flexion,
+      abduction: s!.abduction,
+      twist: s!.twist,
+    }),
+  );
   return { skeleton: "humanoid", root: null, joints };
 };
 
 // ── a small procedural "wave" clip, so Play does something visible ──────────
-const waveMotion = (): IMoticaMotion => {
-  const arm = (flexion: number, abduction: number): IMoticaPose => ({
+const waveMotion = (): IAutoFilmMotion => {
+  const arm = (flexion: number, abduction: number): IAutoFilmPose => ({
     skeleton: "humanoid",
     root: null,
     joints: [
@@ -108,7 +110,7 @@ const rebuild = (): void => {
   figure.clear();
   object = buildModel(built.model);
   figure.add(object.object);
-  player = new MoticaPlayer(object, skeleton, waveMotion());
+  player = new AutoFilmPlayer(object, skeleton, waveMotion());
   if (!playing) applyPose(object, currentPose(), skeleton);
 };
 
@@ -156,7 +158,7 @@ function prop(
 
 const poseSlider = (
   label: string,
-  bone: MoticaHumanoidBone,
+  bone: AutoFilmHumanoidBone,
   axis: keyof JointState,
   min: number,
   max: number,
@@ -206,7 +208,7 @@ app.innerHTML = `
   <div id="stage">
     <canvas id="view"></canvas>
     <div id="panel">
-      <h1>motica · character editor</h1>
+      <h1>autofilm · character editor</h1>
       <div class="sub">Procedural humanoid — adjust body, pose, or play a clip.</div>
       <button id="play">▶ Play wave</button>
       <h2>Proportions</h2>
@@ -256,7 +258,7 @@ mountViewer(canvas, scene, camera, (elapsed) => {
 });
 
 // expose for headless verification (screenshot harness reads this)
-(window as unknown as { __motica: unknown }).__motica = {
+(window as unknown as { __autofilm: unknown }).__autofilm = {
   ready: true,
   boneCount: () => object.bones.size,
 };

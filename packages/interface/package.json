@@ -1,7 +1,7 @@
 {
-  "name": "@motica/interface",
+  "name": "@autofilm/interface",
   "version": "0.1.0",
-  "description": "motica type definitions — skeleton, pose, motion, expression, material, scene AST",
+  "description": "autofilm type definitions — skeleton, pose, motion, expression, material, scene AST",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/samchon/motica"
+    "url": "https://github.com/samchon/autofilm"
   },
   "files": [
     "lib",

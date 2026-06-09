@@ -1,11 +1,11 @@
 import {
-  IMoticaBone,
-  IMoticaPose,
-  IMoticaQuaternion,
-  IMoticaSkeleton,
-  IMoticaVector3,
-  MoticaHumanoidBone,
-} from "@motica/interface";
+  AutoFilmHumanoidBone,
+  IAutoFilmBone,
+  IAutoFilmPose,
+  IAutoFilmQuaternion,
+  IAutoFilmSkeleton,
+  IAutoFilmVector3,
+} from "@autofilm/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
@@ -15,21 +15,21 @@ import { jointToQuaternion } from "./jointToQuaternion";
  * A resolved bone transform after forward kinematics: the bone's local rotation
  * (rest ∘ articulation) and its world position.
  */
-export interface IMoticaResolvedBone {
+export interface IAutoFilmResolvedBone {
   /** The bone this transform belongs to. */
-  bone: MoticaHumanoidBone;
+  bone: AutoFilmHumanoidBone;
   /**
    * Local rotation to set on the bone (rest rotation composed with
    * articulation).
    */
-  localRotation: IMoticaQuaternion;
+  localRotation: IAutoFilmQuaternion;
   /** Bone origin in world/model space, after walking the hierarchy. */
-  worldPosition: IMoticaVector3;
+  worldPosition: IAutoFilmVector3;
 }
 
 /**
- * Resolve a {@link IMoticaPose} against its {@link IMoticaSkeleton} into per-bone
- * transforms (forward kinematics).
+ * Resolve a {@link IAutoFilmPose} against its {@link IAutoFilmSkeleton} into
+ * per-bone transforms (forward kinematics).
  *
  * For each bone it composes the rest-pose local rotation with the pose's
  * articulation ({@link jointToQuaternion}), then walks the parent hierarchy to
@@ -48,13 +48,16 @@ export interface IMoticaResolvedBone {
  * @author Samchon
  */
 export const resolvePose = (
-  pose: IMoticaPose,
-  skeleton: IMoticaSkeleton,
-): IMoticaResolvedBone[] => {
-  const articulation = new Map<MoticaHumanoidBone, IMoticaQuaternion>();
+  pose: IAutoFilmPose,
+  skeleton: IAutoFilmSkeleton,
+): IAutoFilmResolvedBone[] => {
+  const articulation = new Map<AutoFilmHumanoidBone, IAutoFilmQuaternion>();
   for (const j of pose.joints) articulation.set(j.bone, jointToQuaternion(j));
 
-  const children = new Map<MoticaHumanoidBone | "__root__", IMoticaBone[]>();
+  const children = new Map<
+    AutoFilmHumanoidBone | "__root__",
+    IAutoFilmBone[]
+  >();
   for (const b of skeleton.bones) {
     const key = b.parent ?? "__root__";
     const list = children.get(key) ?? [];
@@ -62,14 +65,14 @@ export const resolvePose = (
     children.set(key, list);
   }
 
-  const resolved: IMoticaResolvedBone[] = [];
+  const resolved: IAutoFilmResolvedBone[] = [];
 
   // The walk receives the bone object directly (the children map already holds
   // it), so there is no name→bone lookup and no unreachable "missing bone" guard.
   const walk = (
-    bone: IMoticaBone,
-    parentWorldRot: IMoticaQuaternion,
-    parentWorldPos: IMoticaVector3,
+    bone: IAutoFilmBone,
+    parentWorldRot: IAutoFilmQuaternion,
+    parentWorldPos: IAutoFilmVector3,
   ): void => {
     const art = articulation.get(bone.bone) ?? Quaternion.identity();
     const localRotation = Quaternion.multiply(bone.rest.rotation, art);

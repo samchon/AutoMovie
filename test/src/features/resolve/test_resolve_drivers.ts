@@ -1,18 +1,18 @@
-import { IMoticaSampledChannel, resolveDrivers } from "@motica/engine";
+import { IAutoFilmSampledChannel, resolveDrivers } from "@autofilm/engine";
 import {
-  IMoticaAimDriver,
-  IMoticaChannel,
-  IMoticaCopyDriver,
-  IMoticaDrivenDriver,
-  IMoticaDriver,
-  IMoticaNode,
-  IMoticaTransform,
-} from "@motica/interface";
+  IAutoFilmAimDriver,
+  IAutoFilmChannel,
+  IAutoFilmCopyDriver,
+  IAutoFilmDrivenDriver,
+  IAutoFilmDriver,
+  IAutoFilmNode,
+  IAutoFilmTransform,
+} from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const IDENTITY: IMoticaTransform = {
+const IDENTITY: IAutoFilmTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -20,8 +20,8 @@ const IDENTITY: IMoticaTransform = {
 
 const node = (
   id: string,
-  transform: IMoticaTransform = IDENTITY,
-): IMoticaNode => ({
+  transform: IAutoFilmTransform = IDENTITY,
+): IAutoFilmNode => ({
   id,
   name: null,
   parent: null,
@@ -33,21 +33,21 @@ const node = (
   skin: null,
 });
 
-const byId = (...nodes: IMoticaNode[]): Map<string, IMoticaNode> =>
+const byId = (...nodes: IAutoFilmNode[]): Map<string, IAutoFilmNode> =>
   new Map(nodes.map((n) => [n.id, n]));
 
-const ptr = (p: string): IMoticaChannel => ({
+const ptr = (p: string): IAutoFilmChannel => ({
   kind: "pointer",
   pointer: p,
   valueType: "scalar",
 });
 
 const seed = (
-  entries: [string, IMoticaChannel, number[]][],
-): Map<string, IMoticaSampledChannel> =>
+  entries: [string, IAutoFilmChannel, number[]][],
+): Map<string, IAutoFilmSampledChannel> =>
   new Map(entries.map(([k, channel, value]) => [k, { channel, value }]));
 
-const copy = (over: Partial<IMoticaCopyDriver>): IMoticaCopyDriver => ({
+const copy = (over: Partial<IAutoFilmCopyDriver>): IAutoFilmCopyDriver => ({
   type: "copy",
   owner: "o",
   source: "s",
@@ -58,7 +58,9 @@ const copy = (over: Partial<IMoticaCopyDriver>): IMoticaCopyDriver => ({
   ...over,
 });
 
-const driven = (over: Partial<IMoticaDrivenDriver>): IMoticaDrivenDriver => ({
+const driven = (
+  over: Partial<IAutoFilmDrivenDriver>,
+): IAutoFilmDrivenDriver => ({
   type: "driven",
   output: ptr("/out"),
   source: ptr("/in"),
@@ -163,7 +165,7 @@ export const test_resolve_drivers_copy = (): void => {
  *    by zero.
  */
 export const test_resolve_drivers_driven = (): void => {
-  const run = (d: IMoticaDrivenDriver, src?: number): number[] => {
+  const run = (d: IAutoFilmDrivenDriver, src?: number): number[] => {
     const sampled =
       src === undefined ? seed([]) : seed([["ptr:/in", ptr("/in"), [src]]]);
     resolveDrivers([d], sampled, new Map());
@@ -249,7 +251,7 @@ export const test_resolve_drivers_order = (): void => {
     outRange: [0, 2],
   });
   const sampled2 = seed([["ptr:/x", ptr("/x"), [1]]]);
-  const aim: IMoticaAimDriver = {
+  const aim: IAutoFilmAimDriver = {
     type: "aim",
     owner: "o",
     target: "t",
@@ -272,7 +274,7 @@ export const test_resolve_drivers_order = (): void => {
   TestValidator.equals("aim driver deferred", deferred.length, 1);
   TestValidator.equals(
     "aim is the deferred one",
-    (deferred[0] as IMoticaDriver).type,
+    (deferred[0] as IAutoFilmDriver).type,
     "aim",
   );
 };
@@ -286,7 +288,7 @@ export const test_resolve_drivers_order = (): void => {
  */
 export const test_resolve_drivers_cycle = (): void => {
   const nodes = byId(node("o"), node("s"));
-  const cyclic: IMoticaDriver[] = [
+  const cyclic: IAutoFilmDriver[] = [
     copy({ owner: "o", source: "s", rotation: true }),
     copy({ owner: "s", source: "o", rotation: true }),
   ];

@@ -1,4 +1,4 @@
-import { IMoticaRenderSpec } from "@motica/interface";
+import { IAutoFilmRenderSpec } from "@autofilm/interface";
 
 /**
  * The deterministic frame schedule for a clip of `durationSeconds` at `fps`: `N
@@ -6,8 +6,9 @@ import { IMoticaRenderSpec } from "@motica/interface";
  *
  * The times are computed as exact rationals (`i / fps`), never accumulated, so
  * the same spec yields the same sample instants on every machine — the property
- * that makes a motica render reproducible (the whole point versus a stochastic
- * diffusion video). A non-positive fps or duration yields no frames.
+ * that makes a autofilm render reproducible (the whole point versus a
+ * stochastic diffusion video). A non-positive fps or duration yields no
+ * frames.
  *
  * @author Samchon
  */
@@ -30,13 +31,13 @@ export const framePattern = (ext = "png", pad = 5): string =>
  * spec's video. Pinned for reproducible, broadly-playable output: H.264
  * (`libx264`) at the spec's `pixelFormat` and `crf`, with the input/output
  * frame rate fixed to `fps` and `+faststart` for progressive playback. Tone
- * mapping is applied upstream in the renderer (per {@link IMoticaRenderSpec}),
+ * mapping is applied upstream in the renderer (per {@link IAutoFilmRenderSpec}),
  * not here.
  *
  * @author Samchon
  */
 export const ffmpegArgs = (
-  spec: IMoticaRenderSpec,
+  spec: IAutoFilmRenderSpec,
   inputPattern: string,
   outputPath: string,
 ): string[] => [

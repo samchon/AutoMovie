@@ -1,11 +1,17 @@
-import { validateModel } from "@motica/engine";
-import { IMoticaModelPart, MoticaPrimitiveShape } from "@motica/interface";
+import { validateModel } from "@autofilm/engine";
+import {
+  AutoFilmPrimitiveShape,
+  IAutoFilmModelPart,
+} from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
-const part = (id: string, shape: MoticaPrimitiveShape): IMoticaModelPart => ({
+const part = (
+  id: string,
+  shape: AutoFilmPrimitiveShape,
+): IAutoFilmModelPart => ({
   id,
   name: id,
   geometry: { type: "primitive", shape },

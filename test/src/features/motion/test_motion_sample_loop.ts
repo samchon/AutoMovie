@@ -1,11 +1,11 @@
-import { sampleMotion } from "@motica/engine";
-import { IMoticaMotion } from "@motica/interface";
+import { sampleMotion } from "@autofilm/engine";
+import { IAutoFilmMotion } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const elbow = (m: IMoticaMotion, t: number): number => {
+const elbow = (m: IAutoFilmMotion, t: number): number => {
   const j = sampleMotion(m, t).pose.joints.find(
     (x) => x.bone === "leftLowerArm",
   );

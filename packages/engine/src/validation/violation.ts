@@ -1,21 +1,21 @@
 import {
-  IMoticaConstraintViolation,
-  IMoticaValidation,
-  MoticaViolationKind,
-} from "@motica/interface";
+  AutoFilmViolationKind,
+  IAutoFilmConstraintViolation,
+  IAutoFilmValidation,
+} from "@autofilm/interface";
 
-/** Build one {@link IMoticaConstraintViolation}. */
+/** Build one {@link IAutoFilmConstraintViolation}. */
 export const violation = (
-  kind: MoticaViolationKind,
+  kind: AutoFilmViolationKind,
   path: string,
   expected: string,
   value: unknown,
-): IMoticaConstraintViolation => ({ kind, path, expected, value });
+): IAutoFilmConstraintViolation => ({ kind, path, expected, value });
 
-/** Wrap a violation list into an {@link IMoticaValidation} (success iff empty). */
+/** Wrap a violation list into an {@link IAutoFilmValidation} (success iff empty). */
 export const toValidation = (
-  violations: IMoticaConstraintViolation[],
-): IMoticaValidation =>
+  violations: IAutoFilmConstraintViolation[],
+): IAutoFilmValidation =>
   violations.length === 0 ? { success: true } : { success: false, violations };
 
 /**
@@ -23,10 +23,10 @@ export const toValidation = (
  * stable path prefix without threading arrays through every call.
  */
 export class ViolationCollector {
-  public readonly items: IMoticaConstraintViolation[] = [];
+  public readonly items: IAutoFilmConstraintViolation[] = [];
 
   public push(
-    kind: MoticaViolationKind,
+    kind: AutoFilmViolationKind,
     path: string,
     expected: string,
     value: unknown,
@@ -51,7 +51,7 @@ export class ViolationCollector {
       );
   }
 
-  public toValidation(): IMoticaValidation {
+  public toValidation(): IAutoFilmValidation {
     return toValidation(this.items);
   }
 }

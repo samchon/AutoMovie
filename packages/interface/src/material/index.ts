@@ -1,1 +1,1 @@
-export * from "./IMoticaMaterial";
+export * from "./IAutoFilmMaterial";

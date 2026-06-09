@@ -1,1 +1,1 @@
-export * from "./IMoticaColor";
+export * from "./IAutoFilmColor";

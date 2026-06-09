@@ -1,7 +1,7 @@
 {
-  "name": "@motica/ingest",
+  "name": "@autofilm/ingest",
   "version": "0.1.0",
-  "description": "motica ingest — load glTF/GLB into the core node graph and clips (headless, no three.js)",
+  "description": "autofilm ingest — load glTF/GLB into the core node graph and clips (headless, no three.js)",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/samchon/motica"
+    "url": "https://github.com/samchon/autofilm"
   },
   "files": ["lib", "src", "package.json", "LICENSE", "README.md"],
   "publishConfig": {
@@ -33,7 +33,7 @@
     }
   },
   "dependencies": {
-    "@motica/interface": "workspace:^",
+    "@autofilm/interface": "workspace:^",
     "@gltf-transform/core": "^4.1.1"
   },
   "devDependencies": {

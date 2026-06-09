@@ -1,3 +1,3 @@
-export * from "./IMoticaShot";
-export * from "./IMoticaSequence";
-export * from "./IMoticaRenderSpec";
+export * from "./IAutoFilmShot";
+export * from "./IAutoFilmSequence";
+export * from "./IAutoFilmRenderSpec";

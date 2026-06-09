@@ -1,33 +1,33 @@
 import {
-  IMoticaBone,
-  IMoticaExpression,
-  IMoticaJointPose,
-  IMoticaKeyframe,
-  IMoticaModel,
-  IMoticaMotion,
-  IMoticaPose,
-  IMoticaSkeleton,
-  IMoticaTransform,
-  MoticaHumanoidBone,
-} from "@motica/interface";
+  AutoFilmHumanoidBone,
+  IAutoFilmBone,
+  IAutoFilmExpression,
+  IAutoFilmJointPose,
+  IAutoFilmKeyframe,
+  IAutoFilmModel,
+  IAutoFilmMotion,
+  IAutoFilmPose,
+  IAutoFilmSkeleton,
+  IAutoFilmTransform,
+} from "@autofilm/interface";
 
-export const IDENTITY_TRANSFORM: IMoticaTransform = {
+export const IDENTITY_TRANSFORM: IAutoFilmTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 
-const restAt = (x: number, y: number, z: number): IMoticaTransform => ({
+const restAt = (x: number, y: number, z: number): IAutoFilmTransform => ({
   translation: { x, y, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 
 const bone = (
-  name: MoticaHumanoidBone,
-  parent: MoticaHumanoidBone | null,
-  rest: IMoticaTransform,
-): IMoticaBone => ({ bone: name, parent, rest, constraint: null });
+  name: AutoFilmHumanoidBone,
+  parent: AutoFilmHumanoidBone | null,
+  rest: IAutoFilmTransform,
+): IAutoFilmBone => ({ bone: name, parent, rest, constraint: null });
 
 /**
  * A small but realistic humanoid: a hips→spine→chest→neck→head spine plus
@@ -35,7 +35,7 @@ const bone = (
  * rotations are identity. Every `constraint` is null, so validation falls back
  * to the engine's default ROM table.
  */
-export const createSkeleton = (): IMoticaSkeleton => ({
+export const createSkeleton = (): IAutoFilmSkeleton => ({
   id: "skeleton-1",
   bones: [
     bone("hips", null, restAt(0, 1, 0)),
@@ -54,9 +54,11 @@ export const createSkeleton = (): IMoticaSkeleton => ({
 });
 
 export const joint = (
-  name: MoticaHumanoidBone,
-  axes: Partial<Pick<IMoticaJointPose, "flexion" | "abduction" | "twist">> = {},
-): IMoticaJointPose => ({
+  name: AutoFilmHumanoidBone,
+  axes: Partial<
+    Pick<IAutoFilmJointPose, "flexion" | "abduction" | "twist">
+  > = {},
+): IAutoFilmJointPose => ({
   bone: name,
   flexion: axes.flexion ?? null,
   abduction: axes.abduction ?? null,
@@ -64,12 +66,12 @@ export const joint = (
 });
 
 export const makePose = (
-  joints: IMoticaJointPose[],
-  root: IMoticaTransform | null = null,
-): IMoticaPose => ({ skeleton: "skeleton-1", root, joints });
+  joints: IAutoFilmJointPose[],
+  root: IAutoFilmTransform | null = null,
+): IAutoFilmPose => ({ skeleton: "skeleton-1", root, joints });
 
 /** A pose whose every articulated joint sits well inside its ROM. */
-export const createValidPose = (): IMoticaPose =>
+export const createValidPose = (): IAutoFilmPose =>
   makePose([
     joint("leftUpperArm", { flexion: 30, abduction: 45 }),
     joint("leftLowerArm", { flexion: 90 }),
@@ -77,23 +79,23 @@ export const createValidPose = (): IMoticaPose =>
   ]);
 
 export const makeExpression = (
-  preset: IMoticaExpression["preset"],
+  preset: IAutoFilmExpression["preset"],
   intensity: number,
-  blendshapes: IMoticaExpression["blendshapes"] = null,
-): IMoticaExpression => ({ preset, intensity, blendshapes });
+  blendshapes: IAutoFilmExpression["blendshapes"] = null,
+): IAutoFilmExpression => ({ preset, intensity, blendshapes });
 
 export const keyframe = (
   time: number,
-  pose: IMoticaPose,
-  easing: IMoticaKeyframe["easing"] = "linear",
-  expression: IMoticaExpression | null = null,
-): IMoticaKeyframe => ({ time, pose, expression, easing, bezier: null });
+  pose: IAutoFilmPose,
+  easing: IAutoFilmKeyframe["easing"] = "linear",
+  expression: IAutoFilmExpression | null = null,
+): IAutoFilmKeyframe => ({ time, pose, expression, easing, bezier: null });
 
 export const makeMotion = (
-  keyframes: IMoticaKeyframe[],
+  keyframes: IAutoFilmKeyframe[],
   duration: number,
   loop = false,
-): IMoticaMotion => ({
+): IAutoFilmMotion => ({
   id: "motion-1",
   skeleton: "skeleton-1",
   duration,
@@ -102,7 +104,7 @@ export const makeMotion = (
 });
 
 /** A valid two-keyframe elbow flexion clip. */
-export const createValidMotion = (): IMoticaMotion =>
+export const createValidMotion = (): IAutoFilmMotion =>
   makeMotion(
     [
       keyframe(0, makePose([joint("leftLowerArm", { flexion: 0 })])),
@@ -113,8 +115,8 @@ export const createValidMotion = (): IMoticaMotion =>
 
 /** A valid one-part generated model with a skeleton. */
 export const createModel = (
-  skeleton: IMoticaSkeleton | null = createSkeleton(),
-): IMoticaModel => ({
+  skeleton: IAutoFilmSkeleton | null = createSkeleton(),
+): IAutoFilmModel => ({
   id: "model-1",
   name: "test model",
   origin: "generated",

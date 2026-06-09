@@ -1,5 +1,5 @@
-import { sampleMotion } from "@motica/engine";
-import { IMoticaTransform } from "@motica/interface";
+import { sampleMotion } from "@autofilm/engine";
+import { IAutoFilmTransform } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -11,7 +11,7 @@ import {
 } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const shift = (x: number): IMoticaTransform => ({
+const shift = (x: number): IAutoFilmTransform => ({
   translation: { x, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },

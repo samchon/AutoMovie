@@ -1,15 +1,15 @@
-import { Quaternion } from "@motica/engine";
+import { Quaternion } from "@autofilm/engine";
 import {
-  IMoticaBone,
-  IMoticaModel,
-  IMoticaModelPart,
-  IMoticaQuaternion,
-  IMoticaSkeleton,
-  IMoticaTransform,
-  IMoticaVector3,
-  MoticaHumanoidBone,
-  MoticaPrimitiveShape,
-} from "@motica/interface";
+  AutoFilmHumanoidBone,
+  AutoFilmPrimitiveShape,
+  IAutoFilmBone,
+  IAutoFilmModel,
+  IAutoFilmModelPart,
+  IAutoFilmQuaternion,
+  IAutoFilmSkeleton,
+  IAutoFilmTransform,
+  IAutoFilmVector3,
+} from "@autofilm/interface";
 
 /**
  * The tunable proportions of the procedural humanoid — the parameters the
@@ -61,22 +61,25 @@ export const DEFAULT_PARAMS: IHumanoidParams = {
   headRadius: 0.12,
 };
 
-const v = (x: number, y: number, z: number): IMoticaVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
 
-const at = (t: IMoticaVector3, r?: IMoticaQuaternion): IMoticaTransform => ({
+const at = (
+  t: IAutoFilmVector3,
+  r?: IAutoFilmQuaternion,
+): IAutoFilmTransform => ({
   translation: t,
   rotation: r ?? { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 
 const bone = (
-  name: MoticaHumanoidBone,
-  parent: MoticaHumanoidBone | null,
-  rest: IMoticaTransform,
-): IMoticaBone => ({ bone: name, parent, rest, constraint: null });
+  name: AutoFilmHumanoidBone,
+  parent: AutoFilmHumanoidBone | null,
+  rest: IAutoFilmTransform,
+): IAutoFilmBone => ({ bone: name, parent, rest, constraint: null });
 
 /** Shortest-arc rotation taking the local +Y axis onto a target direction. */
-const yToDir = (dir: IMoticaVector3): IMoticaQuaternion => {
+const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion => {
   const len = Math.hypot(dir.x, dir.y, dir.z);
   if (len === 0) return { x: 0, y: 0, z: 0, w: 1 };
   const n = v(dir.x / len, dir.y / len, dir.z / len);
@@ -91,7 +94,7 @@ const yToDir = (dir: IMoticaVector3): IMoticaQuaternion => {
   );
 };
 
-const capsule = (radius: number, height: number): MoticaPrimitiveShape => ({
+const capsule = (radius: number, height: number): AutoFilmPrimitiveShape => ({
   type: "capsule",
   radius,
   height: Math.max(0.01, height - 2 * radius),
@@ -104,11 +107,11 @@ const capsule = (radius: number, height: number): MoticaPrimitiveShape => ({
  */
 const segment = (
   id: string,
-  boneName: MoticaHumanoidBone,
-  seg: IMoticaVector3,
+  boneName: AutoFilmHumanoidBone,
+  seg: IAutoFilmVector3,
   radius: number,
   material: string,
-): IMoticaModelPart => {
+): IAutoFilmModelPart => {
   const length = Math.hypot(seg.x, seg.y, seg.z);
   return {
     id,
@@ -122,11 +125,11 @@ const segment = (
 
 const blob = (
   id: string,
-  boneName: MoticaHumanoidBone,
-  shape: MoticaPrimitiveShape,
-  offset: IMoticaVector3,
+  boneName: AutoFilmHumanoidBone,
+  shape: AutoFilmPrimitiveShape,
+  offset: IAutoFilmVector3,
   material: string,
-): IMoticaModelPart => ({
+): IAutoFilmModelPart => ({
   id,
   name: id,
   geometry: { type: "primitive", shape },
@@ -139,24 +142,25 @@ const blob = (
  * Build the procedural humanoid — a normalized VRM skeleton plus a primitive
  * "blockman" skin — from a set of editor proportions.
  *
- * This is motica's bootstrap **base 3D model**: fully generated (no external
- * asset), deterministic, and rigged on the same {@link MoticaHumanoidBone} slots
- * every imported VRM uses, so a pose or motion authored here replays on a real
- * avatar once ingest lands. The editor calls this on every proportion change to
- * rebuild the figure; the engine's FK then articulates the very same bones.
+ * This is autofilm's bootstrap **base 3D model**: fully generated (no external
+ * asset), deterministic, and rigged on the same {@link AutoFilmHumanoidBone}
+ * slots every imported VRM uses, so a pose or motion authored here replays on a
+ * real avatar once ingest lands. The editor calls this on every proportion
+ * change to rebuild the figure; the engine's FK then articulates the very same
+ * bones.
  *
  * @author Samchon
  */
 export const buildHumanoid = (
   p: IHumanoidParams,
-): { skeleton: IMoticaSkeleton; model: IMoticaModel } => {
+): { skeleton: IAutoFilmSkeleton; model: IAutoFilmModel } => {
   const spineLen = p.torsoLength * 0.4;
   const chestLen = p.torsoLength * 0.35;
   const armY = p.torsoLength * 0.25; // shoulder height above chest origin
   const sx = p.shoulderWidth / 2;
   const hx = p.hipWidth / 2;
 
-  const bones: IMoticaBone[] = [
+  const bones: IAutoFilmBone[] = [
     bone("hips", null, at(v(0, p.hipHeight, 0))),
     bone("spine", "hips", at(v(0, spineLen * 0.5, 0))),
     bone("chest", "spine", at(v(0, spineLen, 0))),
@@ -179,13 +183,13 @@ export const buildHumanoid = (
   ];
 
   const r = p.limbRadius;
-  const foot: MoticaPrimitiveShape = {
+  const foot: AutoFilmPrimitiveShape = {
     type: "box",
     width: r * 1.6,
     height: r * 0.8,
     depth: r * 3,
   };
-  const parts: IMoticaModelPart[] = [
+  const parts: IAutoFilmModelPart[] = [
     blob(
       "torso",
       "chest",
@@ -248,8 +252,8 @@ export const buildHumanoid = (
     blob("footR", "rightFoot", foot, v(0, -r * 0.4, r), "skin"),
   ];
 
-  const skeleton: IMoticaSkeleton = { id: "humanoid", bones };
-  const model: IMoticaModel = {
+  const skeleton: IAutoFilmSkeleton = { id: "humanoid", bones };
+  const model: IAutoFilmModel = {
     id: "humanoid",
     name: "procedural humanoid",
     origin: "generated",

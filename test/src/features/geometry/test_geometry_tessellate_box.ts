@@ -1,4 +1,4 @@
-import { tessellate } from "@motica/engine";
+import { tessellate } from "@autofilm/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**

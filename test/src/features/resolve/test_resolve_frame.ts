@@ -1,23 +1,23 @@
-import { resolveFrame } from "@motica/engine";
+import { resolveFrame } from "@autofilm/engine";
 import {
-  IMoticaChannel,
-  IMoticaChannelLimit,
-  IMoticaClip,
-  IMoticaNode,
-  IMoticaTrack,
-  IMoticaTransform,
-} from "@motica/interface";
+  IAutoFilmChannel,
+  IAutoFilmChannelLimit,
+  IAutoFilmClip,
+  IAutoFilmNode,
+  IAutoFilmTrack,
+  IAutoFilmTransform,
+} from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const IDENTITY: IMoticaTransform = {
+const IDENTITY: IAutoFilmTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 
-const node = (id: string): IMoticaNode => ({
+const node = (id: string): IAutoFilmNode => ({
   id,
   name: null,
   parent: null,
@@ -32,13 +32,13 @@ const node = (id: string): IMoticaNode => ({
 const nodeChannel = (
   id: string,
   path: "translation" | "rotation" | "scale" | "weights",
-): IMoticaChannel => ({ kind: "node", node: id, path });
+): IAutoFilmChannel => ({ kind: "node", node: id, path });
 
 const track = (
-  channel: IMoticaChannel,
+  channel: IAutoFilmChannel,
   times: number[],
   values: number[],
-): IMoticaTrack => ({ channel, times, values, interpolation: "linear" });
+): IAutoFilmTrack => ({ channel, times, values, interpolation: "linear" });
 
 const tx = (m: number[]): number => m[12]!;
 
@@ -76,7 +76,7 @@ export const test_resolve_frame = (): void => {
     node("morph"),
     node("static"),
   ];
-  const clip: IMoticaClip = {
+  const clip: IAutoFilmClip = {
     id: "c",
     name: null,
     duration: 1,
@@ -89,7 +89,7 @@ export const test_resolve_frame = (): void => {
       track(nodeChannel("morph", "weights"), [0, 1], [0, 1]),
     ],
   };
-  const limits: IMoticaChannelLimit[] = [
+  const limits: IAutoFilmChannelLimit[] = [
     {
       channel: nodeChannel("trs", "translation"),
       min: null,

@@ -19,7 +19,7 @@ const parseArg = (type: string): string[] => {
 
 async function main(): Promise<void> {
   console.log("---------------------------------------------------");
-  console.log("Motica Test Program");
+  console.log("AutoFilm Test Program");
   console.log("Start", new Date().toLocaleString("en-US"));
   console.log("---------------------------------------------------");
 

@@ -19,7 +19,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { inflateRawSync } from "zlib";
 
-const CACHE_DIR = "/tmp/motica-makehuman-cache";
+const CACHE_DIR = "/tmp/autofilm-makehuman-cache";
 const BODY_STL =
   "https://upload.wikimedia.org/wikipedia/commons/6/64/Body_female_realistic_by_Dan_Ulrich_%28CC0%29.stl";
 const HAIR_PACK =
@@ -61,8 +61,8 @@ const HERO_HAIRS = {
   },
 };
 
-const HERO_HAIR = HERO_HAIRS[process.env.MOTICA_HERO_HAIR ?? "bluntBangBob"];
-if (!HERO_HAIR) throw new Error("Unknown MOTICA_HERO_HAIR");
+const HERO_HAIR = HERO_HAIRS[process.env.AUTOFILM_HERO_HAIR ?? "bluntBangBob"];
+if (!HERO_HAIR) throw new Error("Unknown AUTOFILM_HERO_HAIR");
 
 const MH_BASE_BAKES = [
   {

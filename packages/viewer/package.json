@@ -1,8 +1,8 @@
 {
   "private": true,
-  "name": "@motica/viewer",
+  "name": "@autofilm/viewer",
   "version": "0.1.0",
-  "description": "motica viewer — three.js renderer that plays motica models, poses, and motion (not an editor)",
+  "description": "autofilm viewer — three.js renderer that plays autofilm models, poses, and motion (not an editor)",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -17,11 +17,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/samchon/motica"
+    "url": "https://github.com/samchon/autofilm"
   },
   "dependencies": {
-    "@motica/engine": "workspace:^",
-    "@motica/interface": "workspace:^",
+    "@autofilm/engine": "workspace:^",
+    "@autofilm/interface": "workspace:^",
     "three": "^0.169.0"
   },
   "devDependencies": {

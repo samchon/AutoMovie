@@ -1,8 +1,8 @@
 import {
-  IMoticaAngleRange,
-  IMoticaJointConstraint,
-  IMoticaJointPose,
-} from "@motica/interface";
+  IAutoFilmAngleRange,
+  IAutoFilmJointConstraint,
+  IAutoFilmJointPose,
+} from "@autofilm/interface";
 
 import { ViolationCollector } from "../validation/violation";
 
@@ -24,15 +24,15 @@ const AXES = ["flexion", "abduction", "twist"] as const;
  * @author Samchon
  */
 export const validateJointRom = (props: {
-  joint: IMoticaJointPose;
-  constraint: IMoticaJointConstraint;
+  joint: IAutoFilmJointPose;
+  constraint: IAutoFilmJointConstraint;
   path: string;
   collector: ViolationCollector;
 }): void => {
   const { joint, constraint, path, collector } = props;
   for (const axis of AXES) {
     const angle: number | null = joint[axis];
-    const allowed: IMoticaAngleRange | null = constraint[axis];
+    const allowed: IAutoFilmAngleRange | null = constraint[axis];
     if (angle === null || angle === 0) continue;
     if (allowed === null) {
       collector.push(

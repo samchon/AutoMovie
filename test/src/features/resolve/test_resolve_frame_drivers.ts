@@ -1,15 +1,15 @@
-import { resolveFrame } from "@motica/engine";
+import { resolveFrame } from "@autofilm/engine";
 import {
-  IMoticaCopyDriver,
-  IMoticaIKDriver,
-  IMoticaNode,
-  IMoticaTransform,
-} from "@motica/interface";
+  IAutoFilmCopyDriver,
+  IAutoFilmIKDriver,
+  IAutoFilmNode,
+  IAutoFilmTransform,
+} from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const node = (id: string, x: number): IMoticaNode => ({
+const node = (id: string, x: number): IAutoFilmNode => ({
   id,
   name: null,
   parent: null,
@@ -18,7 +18,7 @@ const node = (id: string, x: number): IMoticaNode => ({
     translation: { x, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 1, y: 1, z: 1 },
-  } as IMoticaTransform,
+  } as IAutoFilmTransform,
   mesh: null,
   camera: null,
   light: null,
@@ -37,7 +37,7 @@ const node = (id: string, x: number): IMoticaNode => ({
  */
 export const test_resolve_frame_drivers = (): void => {
   const nodes = [node("a", 1), node("b", 5)];
-  const copy: IMoticaCopyDriver = {
+  const copy: IAutoFilmCopyDriver = {
     type: "copy",
     owner: "a",
     source: "b",
@@ -46,7 +46,7 @@ export const test_resolve_frame_drivers = (): void => {
     scale: false,
     influence: 1,
   };
-  const ik: IMoticaIKDriver = {
+  const ik: IAutoFilmIKDriver = {
     type: "ik",
     chain: ["a", "b"],
     goal: "b",

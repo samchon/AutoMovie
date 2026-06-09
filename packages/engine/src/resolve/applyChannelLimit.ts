@@ -1,7 +1,7 @@
-import { IMoticaChannelLimit } from "@motica/interface";
+import { IAutoFilmChannelLimit } from "@autofilm/interface";
 
 /** One component of a channel value that exceeded its bound and was clamped. */
-export interface IMoticaClampViolation {
+export interface IAutoFilmClampViolation {
   /** Index of the offending component within the channel value vector. */
   component: number;
 
@@ -16,12 +16,12 @@ export interface IMoticaClampViolation {
 }
 
 /** The clamped value plus the list of bounds it crossed (empty if in range). */
-export interface IMoticaClampOutcome {
+export interface IAutoFilmClampOutcome {
   /** The value after clamping, same length as the input. */
   value: number[];
 
   /** Every component/bound that was exceeded, in component order. */
-  violations: IMoticaClampViolation[];
+  violations: IAutoFilmClampViolation[];
 }
 
 /**
@@ -32,16 +32,16 @@ export interface IMoticaClampOutcome {
  * max]` that pins a runaway pose back into range is the `[min, max]` whose
  * breach the LLM harness surfaces as a correction. A `null` side (or a
  * `null`/absent component within a side) leaves that direction free; bounds are
- * one-per-component matching the channel width ({@link IMoticaChannelLimit}).
+ * one-per-component matching the channel width ({@link IAutoFilmChannelLimit}).
  *
  * @author Samchon
  */
 export const applyChannelLimit = (
   value: number[],
-  limit: IMoticaChannelLimit,
-): IMoticaClampOutcome => {
+  limit: IAutoFilmChannelLimit,
+): IAutoFilmClampOutcome => {
   const out = value.slice();
-  const violations: IMoticaClampViolation[] = [];
+  const violations: IAutoFilmClampViolation[] = [];
   for (let i = 0; i < out.length; ++i) {
     const lo = limit.min === null ? null : (limit.min[i] ?? null);
     if (lo !== null && out[i]! < lo) {

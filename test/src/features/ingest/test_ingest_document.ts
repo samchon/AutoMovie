@@ -1,11 +1,11 @@
+import { ingestDocument } from "@autofilm/ingest";
+import { IAutoFilmNode } from "@autofilm/interface";
 import { Document } from "@gltf-transform/core";
-import { ingestDocument } from "@motica/ingest";
-import { IMoticaNode } from "@motica/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const byName = (nodes: IMoticaNode[], name: string): IMoticaNode => {
+const byName = (nodes: IAutoFilmNode[], name: string): IAutoFilmNode => {
   const n = nodes.find((x) => x.name === name);
   if (n === undefined) throw new Error(`node "${name}" missing`);
   return n;
@@ -197,10 +197,10 @@ export const test_ingest_document = (): void => {
     path("scale").interpolation,
     "cubicspline",
   );
+  const translationChannel = path("translation").channel;
   TestValidator.equals(
     "track targets node by id",
-    path("translation").channel.kind === "node" &&
-      path("translation").channel.node,
+    translationChannel.kind === "node" && translationChannel.node,
     mn.id,
   );
   TestValidator.equals(
