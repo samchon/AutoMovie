@@ -1,4 +1,4 @@
-import { Quaternion } from "@autofilm/engine";
+import { aimRotation } from "@autofilm/engine";
 import {
   AutoFilmHumanoidBone,
   AutoFilmPrimitiveShape,
@@ -118,18 +118,8 @@ const bone = (
 });
 
 /** Shortest-arc rotation taking the local +Y axis onto a target direction. */
-const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion => {
-  const len = Math.hypot(dir.x, dir.y, dir.z);
-  if (len === 0) return { x: 0, y: 0, z: 0, w: 1 };
-  const n = v(dir.x / len, dir.y / len, dir.z / len);
-  const dot = n.y;
-  if (dot > 0.999999) return { x: 0, y: 0, z: 0, w: 1 };
-  if (dot < -0.999999) return { x: 0, y: 0, z: 1, w: 0 };
-  const axis = v(n.z, 0, -n.x);
-  return Quaternion.normalize(
-    Quaternion.fromAxisAngle(axis, (Math.acos(dot) * 180) / Math.PI),
-  );
-};
+const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion =>
+  aimRotation({ x: 0, y: 1, z: 0 }, dir);
 
 const capsule = (radius: number, length: number): AutoFilmPrimitiveShape => ({
   type: "capsule",
