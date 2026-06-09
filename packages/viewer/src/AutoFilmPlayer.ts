@@ -1,12 +1,38 @@
-import { IAutoFilmMotionSample, sampleMotion } from "@autofilm/engine";
 import {
+  IAutoFilmJointAxes,
+  IAutoFilmMotionSample,
+  ISpringStep,
+  clampPose,
+  dampedSpring,
+  sampleMotion,
+} from "@autofilm/engine";
+import {
+  AutoFilmHumanoidBone,
   IAutoFilmExpression,
+  IAutoFilmJointPose,
   IAutoFilmMotion,
+  IAutoFilmPose,
   IAutoFilmSkeleton,
 } from "@autofilm/interface";
 
 import { applyPose } from "./applyPose";
 import { IAutoFilmModelObject } from "./buildModel";
+
+/**
+ * Secondary-motion config: the joints that should lag/overshoot the animated
+ * target (a tail, ears) and the spring that drives them.
+ */
+export interface IAutoFilmSpringConfig {
+  joints: AutoFilmHumanoidBone[];
+  stiffness: number;
+  damping: number;
+}
+
+interface IAxisSprings {
+  flexion: ISpringStep;
+  abduction: ISpringStep;
+  twist: ISpringStep;
+}
 
 /**
  * Drives a motion clip onto a built model: given an elapsed time it samples the
@@ -26,11 +52,23 @@ import { IAutoFilmModelObject } from "./buildModel";
  */
 export class AutoFilmPlayer {
   private lastSample: IAutoFilmMotionSample | null = null;
+  private readonly springs = new Map<AutoFilmHumanoidBone, IAxisSprings>();
+  private lastSeconds: number | null = null;
 
   public constructor(
     private readonly target: IAutoFilmModelObject,
     private readonly skeleton: IAutoFilmSkeleton,
     private motion: IAutoFilmMotion,
+    private readonly jointAxes?: Partial<
+      Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>
+    >,
+    /**
+     * When true, clamp each sampled pose into the skeleton's ROM before it is
+     * applied — joints can no longer exceed their anatomical limits.
+     */
+    private readonly clampToRom = false,
+    /** Secondary-motion joints (tail, ears) driven with follow-through. */
+    private readonly spring?: IAutoFilmSpringConfig,
   ) {}
 
   /** Swap the clip being played (e.g. transition to a new motion). */
@@ -42,7 +80,60 @@ export class AutoFilmPlayer {
   public update(seconds: number): void {
     const sample = sampleMotion(this.motion, seconds);
     this.lastSample = sample;
-    applyPose(this.target, sample.pose, this.skeleton);
+    let pose = this.clampToRom
+      ? clampPose(sample.pose, this.skeleton)
+      : sample.pose;
+    if (this.spring !== undefined) pose = this.applySpring(pose, seconds);
+    applyPose(this.target, pose, this.skeleton, this.jointAxes);
+  }
+
+  /**
+   * Replace the spring joints' angles with a damped lag toward the animated
+   * target, so a tail/ears trail and overshoot the body's motion instead of
+   * snapping. Stateful across frames (velocity per axis); `dt` is clamped so a
+   * stall or tab-switch can't explode the integrator.
+   */
+  private applySpring(pose: IAutoFilmPose, seconds: number): IAutoFilmPose {
+    const cfg = this.spring!;
+    const dt =
+      this.lastSeconds === null
+        ? 0
+        : Math.min(Math.max(seconds - this.lastSeconds, 0), 1 / 15);
+    this.lastSeconds = seconds;
+    const targets = new Set(cfg.joints);
+    const params = { stiffness: cfg.stiffness, damping: cfg.damping };
+
+    const axis = (
+      state: ISpringStep | undefined,
+      target: number | null,
+    ): { angle: number | null; next: ISpringStep } => {
+      if (target === null)
+        return { angle: null, next: { value: 0, velocity: 0 } };
+      if (dt === 0 || state === undefined)
+        return { angle: target, next: { value: target, velocity: 0 } };
+      const r = dampedSpring(state.value, state.velocity, target, params, dt);
+      return { angle: r.value, next: r };
+    };
+
+    const joints: IAutoFilmJointPose[] = pose.joints.map((j) => {
+      if (!targets.has(j.bone)) return j;
+      const prev = this.springs.get(j.bone);
+      const f = axis(prev?.flexion, j.flexion);
+      const a = axis(prev?.abduction, j.abduction);
+      const t = axis(prev?.twist, j.twist);
+      this.springs.set(j.bone, {
+        flexion: f.next,
+        abduction: a.next,
+        twist: t.next,
+      });
+      return {
+        bone: j.bone,
+        flexion: f.angle,
+        abduction: a.angle,
+        twist: t.angle,
+      };
+    });
+    return { skeleton: pose.skeleton, root: pose.root, joints };
   }
 
   /** The most recently sampled facial expression, or `null`. */

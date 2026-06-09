@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "build:human": "node scripts/build-human.mjs",
+    "build:stickman": "node scripts/build-stickman.cjs",
+    "build:cat": "node scripts/build-cat.cjs",
     "preview": "vite preview --port 4173 --strictPort"
   },
   "author": "Samchon",
@@ -15,6 +17,7 @@
   "dependencies": {
     "@autofilm/engine": "workspace:^",
     "@autofilm/interface": "workspace:^",
+    "@autofilm/render": "workspace:^",
     "@autofilm/viewer": "workspace:^",
     "@pixiv/three-vrm": "^3",
     "three": "^0.169.0"
@@ -22,6 +25,8 @@
   "devDependencies": {
     "@gltf-transform/core": "^4",
     "@types/three": "^0.169.0",
+    "esbuild": "^0.21.5",
+    "gifenc": "^1.0.3",
     "pngjs": "^7.0.0",
     "typescript": "catalog:typescript",
     "vite": "^5.4.10"

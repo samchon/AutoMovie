@@ -9,7 +9,7 @@ import {
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
-import { jointToQuaternion } from "./jointToQuaternion";
+import { IAutoFilmJointAxes, jointToQuaternion } from "./jointToQuaternion";
 
 /**
  * A resolved bone transform after forward kinematics: the bone's local rotation
@@ -45,14 +45,21 @@ export interface IAutoFilmResolvedBone {
  * so a parent's world transform is always available when a child is resolved. A
  * skeleton with no root bone (every bone parented) resolves to an empty array.
  *
+ * `jointAxes` optionally remaps the clinical axes per bone (e.g.
+ * `HUMANOID_JOINT_AXES`, so a T-pose arm's flexion swings it sagittally); a
+ * bone absent from it uses the default clinical basis, so omitting it preserves
+ * the baseline behavior exactly.
+ *
  * @author Samchon
  */
 export const resolvePose = (
   pose: IAutoFilmPose,
   skeleton: IAutoFilmSkeleton,
+  jointAxes?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>,
 ): IAutoFilmResolvedBone[] => {
   const articulation = new Map<AutoFilmHumanoidBone, IAutoFilmQuaternion>();
-  for (const j of pose.joints) articulation.set(j.bone, jointToQuaternion(j));
+  for (const j of pose.joints)
+    articulation.set(j.bone, jointToQuaternion(j, jointAxes?.[j.bone]));
 
   const children = new Map<
     AutoFilmHumanoidBone | "__root__",
