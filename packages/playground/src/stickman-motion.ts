@@ -339,6 +339,201 @@ export const combo = (sk: string): IAutoFilmMotion =>
     true,
   );
 
+// ── shadow boxing — a ~15 s combination performance ─────────────────────────
+// A bladed guard stance (hands up, knees soft, slight lean) is the base; every
+// punch/kick merges its overrides over the guard and snaps back, then the beats
+// are stitched with sequenceMotion. Arms use the humanoid axes (flexion swings
+// fore/aft, abduction up/down), legs the default sagittal flexion.
+const GUARD: IAutoFilmJointPose[] = [
+  j("spine", { flexion: 9 }),
+  j("chest", { flexion: 6 }),
+  j("leftUpperArm", { flexion: -46, abduction: 28 }),
+  j("leftLowerArm", { flexion: -108 }),
+  j("rightUpperArm", { flexion: 46, abduction: -28 }),
+  j("rightLowerArm", { flexion: 108 }),
+  j("leftUpperLeg", { abduction: 9, flexion: -12 }),
+  j("rightUpperLeg", { abduction: -9, flexion: 14 }),
+  j("leftLowerLeg", { flexion: 14 }),
+  j("rightLowerLeg", { flexion: 22 }),
+];
+
+export const shadowbox = (sk: string): IAutoFilmMotion => {
+  const merge = (over: IAutoFilmJointPose[]): IAutoFilmPose => {
+    const m = new Map(GUARD.map((x) => [x.bone, x] as const));
+    for (const o of over) m.set(o.bone, o);
+    return pose(sk, [...m.values()]);
+  };
+  const guard = merge([]);
+
+  // each beat returns to guard; durations sum to ~15 s
+  const beat = (
+    dur: number,
+    frames: [number, IAutoFilmPose][],
+  ): IAutoFilmMotion => ({
+    id: "beat",
+    skeleton: sk,
+    duration: dur,
+    loop: false,
+    keyframes: frames.map(([t, p]) => key(t, p)),
+  });
+
+  const jab = merge([
+    j("leftUpperArm", { flexion: -92, abduction: 8 }),
+    j("leftLowerArm", { flexion: -12 }),
+    j("spine", { flexion: 9, twist: -10 }),
+    j("chest", { flexion: 6, twist: -8 }),
+  ]);
+  const cross = merge([
+    j("rightUpperArm", { flexion: 92, abduction: -8 }),
+    j("rightLowerArm", { flexion: 14 }),
+    j("spine", { flexion: 9, twist: 24 }),
+    j("chest", { flexion: 6, twist: 16 }),
+    j("rightUpperLeg", { abduction: -9, flexion: 2 }),
+  ]);
+  const leftHook = merge([
+    j("leftUpperArm", { flexion: -56, abduction: 6 }),
+    j("leftLowerArm", { flexion: -96 }),
+    j("spine", { flexion: 9, twist: 20 }),
+    j("chest", { flexion: 6, twist: 14 }),
+  ]);
+  const uppercut = merge([
+    j("rightUpperArm", { flexion: 58, abduction: -52 }),
+    j("rightLowerArm", { flexion: 128 }),
+    j("spine", { flexion: 2, twist: 16 }),
+    j("chest", { flexion: 0, twist: 12 }),
+  ]);
+  const slip = (d: number): IAutoFilmPose =>
+    merge([
+      j("spine", { flexion: 12, abduction: 16 * d, twist: 6 * d }),
+      j("chest", { flexion: 8, abduction: 12 * d }),
+    ]);
+  // right front kick: chamber the knee, then snap the shin out and up
+  const chamberK = merge([
+    j("rightUpperLeg", { flexion: -42 }),
+    j("rightLowerLeg", { flexion: 86 }),
+    j("spine", { flexion: -4 }),
+  ]);
+  const frontKick = merge([
+    j("rightUpperLeg", { flexion: -88 }),
+    j("rightLowerLeg", { flexion: 8 }),
+    j("leftLowerLeg", { flexion: 8 }),
+    j("spine", { flexion: -14 }),
+    j("leftUpperArm", { flexion: -30, abduction: 36 }),
+  ]);
+  // right roundhouse: chamber across, swing high to the side
+  const chamberR = merge([
+    j("rightUpperLeg", { flexion: -36, abduction: -34 }),
+    j("rightLowerLeg", { flexion: 78 }),
+    j("spine", { twist: 14, flexion: 4 }),
+  ]);
+  const roundhouse = merge([
+    j("rightUpperLeg", { flexion: -52, abduction: -40, twist: -30 }),
+    j("rightLowerLeg", { flexion: 18 }),
+    j("spine", { twist: 30, abduction: -10, flexion: 6 }),
+    j("chest", { twist: 18 }),
+    j("leftUpperArm", { flexion: -20, abduction: 40 }),
+  ]);
+
+  return sequenceMotion(
+    "shadowbox",
+    [
+      beat(0.7, [
+        [0, guard],
+        [0.7, guard],
+      ]), // settle
+      beat(0.45, [
+        [0, guard],
+        [0.18, jab],
+        [0.45, guard],
+      ]), // jab
+      beat(0.45, [
+        [0, guard],
+        [0.18, jab],
+        [0.45, guard],
+      ]), // double jab
+      beat(0.6, [
+        [0, guard],
+        [0.28, cross],
+        [0.6, guard],
+      ]), // cross
+      beat(0.6, [
+        [0, guard],
+        [0.3, leftHook],
+        [0.6, guard],
+      ]), // hook
+      beat(1.0, [
+        [0, guard],
+        [0.5, slip(-1)],
+        [1.0, guard],
+      ]), // slip
+      beat(0.5, [
+        [0, guard],
+        [0.2, jab],
+        [0.5, guard],
+      ]), // jab
+      beat(0.65, [
+        [0, guard],
+        [0.3, cross],
+        [0.65, guard],
+      ]), // cross
+      beat(1.4, [
+        [0, guard],
+        [0.4, chamberK],
+        [0.7, frontKick],
+        [1.0, chamberK],
+        [1.4, guard],
+      ]), // front kick
+      beat(1.0, [
+        [0, guard],
+        [0.5, slip(1)],
+        [1.0, guard],
+      ]), // slip other way
+      beat(0.6, [
+        [0, guard],
+        [0.28, uppercut],
+        [0.6, guard],
+      ]), // uppercut
+      beat(0.5, [
+        [0, guard],
+        [0.2, jab],
+        [0.5, guard],
+      ]), // jab
+      beat(0.65, [
+        [0, guard],
+        [0.3, cross],
+        [0.65, guard],
+      ]), // cross
+      beat(1.6, [
+        [0, guard],
+        [0.45, chamberR],
+        [0.78, roundhouse],
+        [1.1, chamberR],
+        [1.6, guard],
+      ]), // roundhouse high kick
+      beat(0.45, [
+        [0, guard],
+        [0.18, jab],
+        [0.45, guard],
+      ]), // jab
+      beat(0.6, [
+        [0, guard],
+        [0.28, cross],
+        [0.6, guard],
+      ]), // cross
+      beat(0.5, [
+        [0, guard],
+        [0.22, leftHook],
+        [0.5, guard],
+      ]), // hook
+      beat(0.9, [
+        [0, guard],
+        [0.9, guard],
+      ]), // reset
+    ],
+    true,
+  );
+};
+
 /** All clips, keyed by id — the demo's selectable set. */
 export const STICKMAN_CLIPS = (
   sk: string,
@@ -352,4 +547,5 @@ export const STICKMAN_CLIPS = (
   dance: dance(sk),
   turn: turn(sk),
   combo: combo(sk),
+  shadowbox: shadowbox(sk),
 });
