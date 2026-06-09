@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "build:human": "node scripts/build-human.mjs",
     "build:stickman": "node scripts/build-stickman.cjs",
+    "build:cat": "node scripts/build-cat.cjs",
     "preview": "vite preview --port 4173 --strictPort"
   },
   "author": "Samchon",

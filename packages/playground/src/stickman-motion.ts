@@ -224,9 +224,13 @@ export const turn = (sk: string): IAutoFilmMotion => {
 /** A run — bigger strides than the walk with an airborne flight phase. */
 export const run = (sk: string): IAutoFilmMotion => {
   const lean = [j("spine", { flexion: 14 }), j("chest", { flexion: 8 })];
+  // a runner pumps with the elbows held bent ~90° (forearms up), swinging
+  // fore/aft from the shoulder — not straight arms windmilling
   const arms = (s: number): IAutoFilmJointPose[] => [
-    j("leftUpperArm", { abduction: -45, flexion: 55 * s }),
-    j("rightUpperArm", { abduction: 45, flexion: 55 * s }),
+    j("leftUpperArm", { abduction: -42, flexion: 48 * s }),
+    j("leftLowerArm", { flexion: -88 }),
+    j("rightUpperArm", { abduction: 42, flexion: 48 * s }),
+    j("rightLowerArm", { flexion: 88 }),
   ];
   const contact = (lead: "left" | "right"): IAutoFilmPose => {
     const s = lead === "left" ? 1 : -1;

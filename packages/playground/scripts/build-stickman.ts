@@ -20,7 +20,7 @@ export const main = async (): Promise<void> => {
   const glb = await exportModelToGLB(model);
   // The glb is a derived artifact — the viewer renders from the AST, so this is
   // regenerable scratch (like the screenshots), not committed source.
-  const dir = resolve(__dirname, "../../../.shots");
+  const dir = resolve(__dirname, "../../../.shots/human");
   mkdirSync(dir, { recursive: true });
   const out = resolve(dir, "stickman.glb");
   writeFileSync(out, glb);
