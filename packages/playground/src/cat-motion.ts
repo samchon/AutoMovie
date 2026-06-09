@@ -1,4 +1,4 @@
-import { Quaternion } from "@autofilm/engine";
+import { Quaternion, sequenceMotion } from "@autofilm/engine";
 import {
   AutoFilmHumanoidBone,
   IAutoFilmJointPose,
@@ -225,6 +225,14 @@ export const catTailFlick = (sk: string): IAutoFilmMotion => {
   };
 };
 
+/** A stitched performance: trot a couple of strides, leap, stretch, then sit. */
+export const catCombo = (sk: string): IAutoFilmMotion =>
+  sequenceMotion(
+    "combo",
+    [catWalk(sk), catWalk(sk), catLeap(sk), catStretch(sk), catSit(sk)],
+    true,
+  );
+
 /** All cat clips, keyed by id. */
 export const CAT_CLIPS = (sk: string): Record<string, IAutoFilmMotion> => ({
   idle: catIdle(sk),
@@ -233,4 +241,5 @@ export const CAT_CLIPS = (sk: string): Record<string, IAutoFilmMotion> => ({
   sit: catSit(sk),
   stretch: catStretch(sk),
   tailFlick: catTailFlick(sk),
+  combo: catCombo(sk),
 });

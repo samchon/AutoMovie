@@ -1,4 +1,4 @@
-import { Quaternion } from "@autofilm/engine";
+import { Quaternion, sequenceMotion } from "@autofilm/engine";
 import {
   AutoFilmHumanoidBone,
   IAutoFilmJointPose,
@@ -331,6 +331,14 @@ export const kick = (sk: string): IAutoFilmMotion => {
   };
 };
 
+/** A stitched routine: walk in, break into a run, jumping jacks, then a kick. */
+export const combo = (sk: string): IAutoFilmMotion =>
+  sequenceMotion(
+    "combo",
+    [walk(sk), walk(sk), run(sk), run(sk), jumpingJack(sk), kick(sk)],
+    true,
+  );
+
 /** All clips, keyed by id — the demo's selectable set. */
 export const STICKMAN_CLIPS = (
   sk: string,
@@ -343,4 +351,5 @@ export const STICKMAN_CLIPS = (
   kick: kick(sk),
   dance: dance(sk),
   turn: turn(sk),
+  combo: combo(sk),
 });
