@@ -54,13 +54,21 @@ export interface IStickmanParams {
   thigh: number;
   /** Shin (knee → ankle) length. */
   shin: number;
-  /** Radius of every limb / torso rod — the "line thickness". */
+  /** Radius of an arm / leg rod — the limb "thickness". */
   rodRadius: number;
+  /** Radius of a torso (spine/chest) rod — a touch heftier than the limbs. */
+  torsoRadius: number;
+  /** Radius of the fist spheres capping the wrists. */
+  fistRadius: number;
   /** Head sphere radius. */
   headRadius: number;
 }
 
-/** A legible, well-proportioned stick figure ≈ 1.72 m tall. */
+/**
+ * A legible stick figure ≈ 1.72 m tall — no longer hairline-thin: arms/legs and
+ * torso carry a believable thickness (the head and fists stay simple spheres)
+ * so it reads like a body, not a wire diagram.
+ */
 export const DEFAULT_STICKMAN: IStickmanParams = {
   hipHeight: 0.92,
   pelvisToSpine: 0.2,
@@ -74,7 +82,9 @@ export const DEFAULT_STICKMAN: IStickmanParams = {
   lowerArm: 0.26,
   thigh: 0.47,
   shin: 0.45,
-  rodRadius: 0.02,
+  rodRadius: 0.045,
+  torsoRadius: 0.07,
+  fistRadius: 0.055,
   headRadius: 0.12,
 };
 
@@ -180,6 +190,22 @@ export const buildStickman = (
   ];
 
   const r = p.rodRadius;
+  const tr = p.torsoRadius;
+  /** A sphere of arbitrary radius attached at a bone's origin (fists, etc.). */
+  const knob = (
+    id: string,
+    boneName: AutoFilmHumanoidBone,
+    radius: number,
+    material = "ink",
+    offset: IAutoFilmVector3 = v(0, 0, 0),
+  ): IAutoFilmModelPart => ({
+    id,
+    name: id,
+    geometry: { type: "primitive", shape: { type: "sphere", radius } },
+    material,
+    attachedBone: boneName,
+    transform: at(offset),
+  });
   /** A ball joint: a sphere at a bone's origin, hiding the gap between rods. */
   const ball = (
     id: string,
@@ -197,11 +223,12 @@ export const buildStickman = (
   });
 
   const parts: IAutoFilmModelPart[] = [
-    // torso column — one thin rod per spine bone so it bends with the back
-    rod("spineRod", "hips", v(0, p.pelvisToSpine, 0), r, "ink"),
-    rod("chestRod", "spine", v(0, p.spineToChest, 0), r, "ink"),
-    rod("neckBase", "chest", v(0, p.chestToNeck, 0), r, "ink"),
-    rod("neckRod", "neck", v(0, p.neckLength, 0), r * 0.8, "ink"),
+    // torso column — one rod per spine bone so it bends with the back (thicker
+    // than the limbs, tapering up the neck)
+    rod("spineRod", "hips", v(0, p.pelvisToSpine, 0), tr, "ink"),
+    rod("chestRod", "spine", v(0, p.spineToChest, 0), tr, "ink"),
+    rod("neckBase", "chest", v(0, p.chestToNeck, 0), tr * 0.7, "ink"),
+    rod("neckRod", "neck", v(0, p.neckLength, 0), tr * 0.55, "ink"),
     {
       id: "head",
       name: "head",
@@ -213,33 +240,43 @@ export const buildStickman = (
       attachedBone: "head",
       transform: at(v(0, p.headRadius, 0)),
     },
-    // eyes on the front (+Z) of the head — make the facing direction legible
-    {
-      id: "eyeL",
-      name: "eyeL",
-      geometry: {
-        type: "primitive",
-        shape: { type: "sphere", radius: p.headRadius * 0.28 },
-      },
-      material: "eye",
-      attachedBone: "head",
-      transform: at(
-        v(p.headRadius * 0.42, p.headRadius * 1.18, p.headRadius * 0.82),
-      ),
-    },
-    {
-      id: "eyeR",
-      name: "eyeR",
-      geometry: {
-        type: "primitive",
-        shape: { type: "sphere", radius: p.headRadius * 0.28 },
-      },
-      material: "eye",
-      attachedBone: "head",
-      transform: at(
-        v(-p.headRadius * 0.42, p.headRadius * 1.18, p.headRadius * 0.82),
-      ),
-    },
+    // a face on the front (+Z) of the head so its facing direction is never
+    // ambiguous: two big eyes, dark pupils inside them, and a small nose nub
+    knob(
+      "eyeL",
+      "head",
+      p.headRadius * 0.34,
+      "eye",
+      v(p.headRadius * 0.4, p.headRadius * 1.08, p.headRadius * 0.86),
+    ),
+    knob(
+      "eyeR",
+      "head",
+      p.headRadius * 0.34,
+      "eye",
+      v(-p.headRadius * 0.4, p.headRadius * 1.08, p.headRadius * 0.86),
+    ),
+    knob(
+      "pupilL",
+      "head",
+      p.headRadius * 0.15,
+      "pupil",
+      v(p.headRadius * 0.42, p.headRadius * 1.06, p.headRadius * 1.12),
+    ),
+    knob(
+      "pupilR",
+      "head",
+      p.headRadius * 0.15,
+      "pupil",
+      v(-p.headRadius * 0.42, p.headRadius * 1.06, p.headRadius * 1.12),
+    ),
+    knob(
+      "nose",
+      "head",
+      p.headRadius * 0.2,
+      "ink",
+      v(0, p.headRadius * 0.8, p.headRadius * 1.12),
+    ),
     // clavicles — connect the spine column to each shoulder socket
     rod("clavicleL", "chest", v(p.shoulderHalf, p.shoulderRise, 0), r, "ink"),
     rod("clavicleR", "chest", v(-p.shoulderHalf, p.shoulderRise, 0), r, "ink"),
@@ -263,6 +300,13 @@ export const buildStickman = (
     ball("jointHipR", "rightUpperLeg"),
     ball("jointKneeL", "leftLowerLeg"),
     ball("jointKneeR", "rightLowerLeg"),
+    // fists — round caps at the wrists (so punches land with a visible hand)
+    knob("fistL", "leftHand", p.fistRadius),
+    knob("fistR", "rightHand", p.fistRadius),
+    // feet — short rods off each ankle pointing forward (+Z) so the figure
+    // stands on something instead of tapering to a point
+    rod("footL", "leftFoot", v(0, 0, p.headRadius * 1.1), r * 1.1, "ink"),
+    rod("footR", "rightFoot", v(0, 0, p.headRadius * 1.1), r * 1.1, "ink"),
   ];
 
   const skeleton: IAutoFilmSkeleton = { id: "stickman", bones };
@@ -289,6 +333,16 @@ export const buildStickman = (
         baseColor: { r: 0.95, g: 0.96, b: 0.98, a: 1, hex: null },
         metallic: 0,
         roughness: 0.35,
+        emissive: null,
+        opacity: 1,
+        baseColorTexture: null,
+      },
+      {
+        id: "pupil",
+        name: "pupil",
+        baseColor: { r: 0.05, g: 0.06, b: 0.09, a: 1, hex: null },
+        metallic: 0,
+        roughness: 0.4,
         emissive: null,
         opacity: 1,
         baseColorTexture: null,

@@ -44,11 +44,13 @@ export interface ICatParams {
   neckLength: number;
   /** Head sphere radius. */
   headRadius: number;
-  /** Radius of every limb / spine rod. */
+  /** Radius of a leg rod — the limb "thickness". */
   rodRadius: number;
+  /** Radius of the trunk (spine) rods — a chunkier body. */
+  trunkRadius: number;
 }
 
-/** A lithe house-cat ≈ 0.35 m at the shoulder. */
+/** A house-cat ≈ 0.35 m at the shoulder — legs and trunk fleshed, not wiry. */
 export const DEFAULT_CAT: ICatParams = {
   backHeight: 0.34,
   trunkLength: 0.28,
@@ -56,8 +58,9 @@ export const DEFAULT_CAT: ICatParams = {
   upperLeg: 0.16,
   lowerLeg: 0.16,
   neckLength: 0.1,
-  headRadius: 0.075,
-  rodRadius: 0.017,
+  headRadius: 0.078,
+  rodRadius: 0.03,
+  trunkRadius: 0.05,
 };
 
 const range = (min: number, max: number) => ({ min, max });
@@ -186,6 +189,7 @@ export const buildCat = (
   ];
 
   const r = p.rodRadius;
+  const tr = p.trunkRadius;
   const ball = (
     id: string,
     boneName: AutoFilmHumanoidBone,
@@ -196,6 +200,21 @@ export const buildCat = (
     material: "fur",
     attachedBone: boneName,
     transform: at(v(0, 0, 0)),
+  });
+  /** A sphere of arbitrary radius/material at an offset from a bone origin. */
+  const knob = (
+    id: string,
+    boneName: AutoFilmHumanoidBone,
+    radius: number,
+    material: string,
+    offset: IAutoFilmVector3,
+  ): IAutoFilmModelPart => ({
+    id,
+    name: id,
+    geometry: { type: "primitive", shape: { type: "sphere", radius } },
+    material,
+    attachedBone: boneName,
+    transform: at(offset),
   });
   const cone = (
     id: string,
@@ -215,11 +234,11 @@ export const buildCat = (
   });
 
   const parts: IAutoFilmModelPart[] = [
-    // horizontal spine
-    rod("trunkRear", "hips", v(0, 0, t1), r),
-    rod("trunkFront", "spine", v(0, 0, t1), r),
-    rod("neckRod", "chest", v(0, 0.05, 0.09), r),
-    rod("headStalk", "neck", v(0, 0.03, 0.08), r),
+    // horizontal spine — a chunky trunk tapering up the neck
+    rod("trunkRear", "hips", v(0, 0, t1), tr),
+    rod("trunkFront", "spine", v(0, 0, t1), tr),
+    rod("neckRod", "chest", v(0, 0.05, 0.09), tr * 0.8),
+    rod("headStalk", "neck", v(0, 0.03, 0.08), tr * 0.7),
     {
       id: "head",
       name: "head",
@@ -234,29 +253,42 @@ export const buildCat = (
     // ears
     cone("earL", "head", v(0.04, p.headRadius * 0.9, 0.0), 0.05),
     cone("earR", "head", v(-0.04, p.headRadius * 0.9, 0.0), 0.05),
-    // eyes on the front (+Z) of the head
-    {
-      id: "eyeL",
-      name: "eyeL",
-      geometry: {
-        type: "primitive",
-        shape: { type: "sphere", radius: p.headRadius * 0.26 },
-      },
-      material: "eye",
-      attachedBone: "head",
-      transform: at(v(0.03, 0.03, p.headRadius * 0.95)),
-    },
-    {
-      id: "eyeR",
-      name: "eyeR",
-      geometry: {
-        type: "primitive",
-        shape: { type: "sphere", radius: p.headRadius * 0.26 },
-      },
-      material: "eye",
-      attachedBone: "head",
-      transform: at(v(-0.03, 0.03, p.headRadius * 0.95)),
-    },
+    // a face on the front (+Z): two eyes with dark pupils and a small nose
+    knob(
+      "eyeL",
+      "head",
+      p.headRadius * 0.3,
+      "eye",
+      v(0.032, 0.032, p.headRadius * 0.92),
+    ),
+    knob(
+      "eyeR",
+      "head",
+      p.headRadius * 0.3,
+      "eye",
+      v(-0.032, 0.032, p.headRadius * 0.92),
+    ),
+    knob(
+      "pupilL",
+      "head",
+      p.headRadius * 0.13,
+      "pupil",
+      v(0.034, 0.03, p.headRadius * 1.12),
+    ),
+    knob(
+      "pupilR",
+      "head",
+      p.headRadius * 0.13,
+      "pupil",
+      v(-0.034, 0.03, p.headRadius * 1.12),
+    ),
+    knob(
+      "nose",
+      "head",
+      p.headRadius * 0.16,
+      "pupil",
+      v(0, -0.004, p.headRadius * 1.12),
+    ),
     // front legs
     rod("flUpperL", "leftUpperArm", down(p.upperLeg), r),
     rod("flLowerL", "leftLowerArm", down(p.lowerLeg), r),
@@ -304,9 +336,19 @@ export const buildCat = (
       {
         id: "eye",
         name: "eye",
-        baseColor: { r: 0.95, g: 0.96, b: 0.98, a: 1, hex: null },
+        baseColor: { r: 0.93, g: 0.85, b: 0.4, a: 1, hex: null },
         metallic: 0,
-        roughness: 0.35,
+        roughness: 0.3,
+        emissive: null,
+        opacity: 1,
+        baseColorTexture: null,
+      },
+      {
+        id: "pupil",
+        name: "pupil",
+        baseColor: { r: 0.04, g: 0.04, b: 0.05, a: 1, hex: null },
+        metallic: 0,
+        roughness: 0.4,
         emissive: null,
         opacity: 1,
         baseColorTexture: null,
