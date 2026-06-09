@@ -25,6 +25,13 @@ export interface IAutoFilmResolvedBone {
   localRotation: IAutoFilmQuaternion;
   /** Bone origin in world/model space, after walking the hierarchy. */
   worldPosition: IAutoFilmVector3;
+  /**
+   * Bone orientation in world/model space (parent world rotation ∘ local). This
+   * is what an **attachment** rides — fixing a child body's frame in this
+   * bone's frame (e.g. a rider in a horse's saddle) parents the two the way a
+   * physics joint does.
+   */
+  worldRotation: IAutoFilmQuaternion;
 }
 
 /**
@@ -90,7 +97,12 @@ export const resolvePose = (
       Quaternion.rotateVector(parentWorldRot, bone.rest.translation),
     );
 
-    resolved.push({ bone: bone.bone, localRotation, worldPosition: worldPos });
+    resolved.push({
+      bone: bone.bone,
+      localRotation,
+      worldPosition: worldPos,
+      worldRotation: worldRot,
+    });
 
     for (const child of children.get(bone.bone) ?? [])
       walk(child, worldRot, worldPos);
