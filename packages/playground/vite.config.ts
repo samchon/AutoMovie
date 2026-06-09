@@ -18,6 +18,7 @@ export default defineConfig({
         knight: resolve(__dirname, "knight.html"),
         spar: resolve(__dirname, "spar.html"),
         archery: resolve(__dirname, "archery.html"),
+        impact: resolve(__dirname, "impact.html"),
       },
     },
   },
