@@ -21,7 +21,9 @@ const blueObj = buildModel(blue.model);
 // Each boxer sits in a positioned group; the clip's root (identity, or the KO
 // fall) is applied to the model inside that group, so the figures stand at
 // their corners and the loser topples within his own frame.
-const gap = 0.6;
+// arm reach ≈ upperArm+lowerArm ≈ 0.55 m; put the boxers within that so a jab
+// actually lands on the opponent's head (heads ~0.7 m apart) instead of miming
+const gap = 0.35;
 const redGroup = new THREE.Group();
 redGroup.position.set(0, 0, gap);
 redGroup.rotation.y = Math.PI; // red faces −Z (toward blue)
@@ -62,8 +64,8 @@ scene.add(sun);
 // orbits (90 = straight side), `?t` freezes a deterministic frame.
 const camera = new THREE.PerspectiveCamera(42, 1, 0.05, 100);
 const az = (Number(params.get("az") ?? 86) * Math.PI) / 180;
-const target = 0.6;
-const dist = Number(params.get("dist") ?? 5.0);
+const target = 0.7;
+const dist = Number(params.get("dist") ?? 4.2);
 camera.position.set(dist * Math.sin(az), target + 0.5, dist * Math.cos(az));
 camera.lookAt(0, target, 0);
 
