@@ -30,11 +30,13 @@ const clipName =
   params.get("clip") !== null && params.get("clip")! in clips
     ? params.get("clip")!
     : defaultClip;
+// `?clamp=1` enforces ROM: every sampled pose is clamped to each joint's limits.
 const player = new AutoFilmPlayer(
   object,
   skeleton,
   clips[clipName]!,
   jointAxes,
+  params.get("clamp") === "1",
 );
 
 // `?t=<seconds>` freezes one sampled frame (deterministic capture); otherwise

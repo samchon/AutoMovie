@@ -1,6 +1,7 @@
 import {
   IAutoFilmJointAxes,
   IAutoFilmMotionSample,
+  clampPose,
   sampleMotion,
 } from "@autofilm/engine";
 import {
@@ -39,6 +40,11 @@ export class AutoFilmPlayer {
     private readonly jointAxes?: Partial<
       Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>
     >,
+    /**
+     * When true, clamp each sampled pose into the skeleton's ROM before it is
+     * applied — joints can no longer exceed their anatomical limits.
+     */
+    private readonly clampToRom = false,
   ) {}
 
   /** Swap the clip being played (e.g. transition to a new motion). */
@@ -50,7 +56,10 @@ export class AutoFilmPlayer {
   public update(seconds: number): void {
     const sample = sampleMotion(this.motion, seconds);
     this.lastSample = sample;
-    applyPose(this.target, sample.pose, this.skeleton, this.jointAxes);
+    const pose = this.clampToRom
+      ? clampPose(sample.pose, this.skeleton)
+      : sample.pose;
+    applyPose(this.target, pose, this.skeleton, this.jointAxes);
   }
 
   /** The most recently sampled facial expression, or `null`. */
