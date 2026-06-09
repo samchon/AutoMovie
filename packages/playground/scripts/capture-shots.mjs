@@ -65,6 +65,7 @@ const SHOTS = [
     30,
   ],
   ["spar.html", "", 29.55, 470, 760, 620, "spar/ko.mp4", 30],
+  ["archery.html", "az=62", 3.8, 115, 720, 600, "knight/archery.mp4", 30],
   [
     "stickman.html",
     "char=human&clip=walk&az=80",
@@ -204,6 +205,9 @@ const capture = async ([page, q, dur, n, w, h, out, fps]) => {
   const sep = q ? "&" : "";
   await pg.goto(`${BASE}/${page}?${q}${sep}cap=1`, { waitUntil: "load" });
   await pg.waitForFunction(() => typeof window.__afSeek === "function");
+  // frame only the 3D — hide any UI overlay (clip-selector bar) that would
+  // otherwise overlap the canvas in the element screenshot
+  await pg.addStyleTag({ content: "#clips{display:none!important}" });
   const view = pg.locator("#view");
 
   const enc = await HME.createH264MP4Encoder();
