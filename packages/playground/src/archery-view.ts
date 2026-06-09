@@ -11,7 +11,6 @@ import {
   AutoFilmHumanoidBone,
   IAutoFilmAttachment,
   IAutoFilmJointPose,
-  IAutoFilmPose,
   IAutoFilmTransform,
   IAutoFilmVector3,
 } from "@autofilm/interface";
@@ -19,13 +18,14 @@ import { applyPose, buildModel, mountViewer } from "@autofilm/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_HORSE, buildHorse } from "./horse";
-import { horseIdle } from "./horse-motion";
+import { horseGallop } from "./horse-motion";
 import { buildKnight } from "./knight";
 
-// ── the Parthian shot: a mounted archer twists back in the saddle, looses an
-// arrow, and the arrow (a real ballistic projectile) is tested for collision
-// against a second rider's torso — a detected hit, not a timed cue, unhorses
-// him. ────────────────────────────────────────────────────────────────────────
+// ── Parthian shot, at the gallop: two knights charge across the field (camera
+// tracking), the lead archer twists back in the saddle and looses an arrow at
+// his pursuer. The arrow is a real ballistic projectile; the hit is DETECTED
+// (in the moving target's frame), and the detected contact unhorses him — his
+// horse gallops on while he tumbles to the turf and recedes. ~10s. ────────────
 const params = new URLSearchParams(location.search);
 
 const j = (
@@ -38,129 +38,141 @@ const j = (
   twist: a.twist ?? 0,
 });
 const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
-const tf = (
-  t: IAutoFilmVector3,
-  r: { x: number; y: number; z: number; w: number } = {
-    x: 0,
-    y: 0,
-    z: 0,
-    w: 1,
-  },
-): IAutoFilmTransform => ({
+const tf = (t: IAutoFilmVector3): IAutoFilmTransform => ({
   translation: t,
-  rotation: r,
+  rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
+const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
+const blend = (
+  a: IAutoFilmJointPose[],
+  b: IAutoFilmJointPose[],
+  t: number,
+): IAutoFilmJointPose[] => {
+  const bones = new Set([...a, ...b].map((x) => x.bone));
+  const at = (arr: IAutoFilmJointPose[], bone: AutoFilmHumanoidBone) =>
+    arr.find((x) => x.bone === bone);
+  return [...bones].map((bone) => {
+    const pa = at(a, bone);
+    const pb = at(b, bone);
+    return {
+      bone,
+      flexion: lerp(pa?.flexion ?? 0, pb?.flexion ?? 0, t),
+      abduction: lerp(pa?.abduction ?? 0, pb?.abduction ?? 0, t),
+      twist: lerp(pa?.twist ?? 0, pb?.twist ?? 0, t),
+    };
+  });
+};
 
-// ── two mounts + two riders ──────────────────────────────────────────────────
+// ── two mounts + riders (face +Z, the charge direction) ──────────────────────
 const horseA = buildHorse(DEFAULT_HORSE);
 const horseB = buildHorse(DEFAULT_HORSE);
-const archer = buildKnight({ lance: false }); // bow, not lance
-const target = buildKnight({ lance: false });
+const archer = buildKnight({ lance: false }); // flees with a bow
+const target = buildKnight(); // pursues couching a lance
 const horseAObj = buildModel(horseA.model);
 const horseBObj = buildModel(horseB.model);
 const archerObj = buildModel(archer.model);
 const targetObj = buildModel(target.model);
 
-// Both horses face −Z (yaw π). Archer's mount at the origin is "fleeing" toward
-// −Z; the target pursues from +Z. So the archer must shoot *backward* (+Z).
-const group = (x: number, z: number): THREE.Group => {
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  g.rotation.y = Math.PI;
-  return g;
-};
-// Each mount + its rider share one group; the rider's LOCAL transform is the
-// saddle frame (horse-local, from resolveAttachment), so the group's placement
-// and yaw carry both together.
-const aGroup = group(0, 0);
-const bGroup = group(0, 2.6);
-aGroup.add(horseAObj.object);
-aGroup.add(archerObj.object);
-bGroup.add(horseBObj.object);
-bGroup.add(targetObj.object);
+const aRig = new THREE.Group(); // archer (leading)
+const bRig = new THREE.Group(); // target (pursuing, behind)
+aRig.add(horseAObj.object, archerObj.object);
+bRig.add(horseBObj.object, targetObj.object);
 
-const idleA = horseIdle(horseA.skeleton.id);
-const idleB = horseIdle(horseB.skeleton.id);
+const gallopA = horseGallop(horseA.skeleton.id);
+const gallopB = horseGallop(horseB.skeleton.id);
 const saddle: IAutoFilmAttachment = {
   parentBone: "spine",
   offset: tf(v(0, -0.72, -0.04)),
 };
 
+// charge kinematics: both travel +Z at V; archer leads by gap G
+const V = 6.0;
+const G = 3.8;
+const DUR = 9;
+const aZ = (t: number): number => V * t + G; // archer (front)
+const bZ = (t: number): number => V * t; // target (behind)
+
 // ── rider poses ──────────────────────────────────────────────────────────────
-// archer twisted back over the croup, bow arm (left) reaching toward the target,
-// draw hand (right) pulled to the cheek — held as the loose frame
-const archerDraw: IAutoFilmJointPose[] = [
-  j("spine", { flexion: 4, twist: 64 }),
-  j("chest", { flexion: 2, twist: 58 }),
-  j("neck", { twist: 30 }),
-  j("head", { twist: 24 }),
-  j("leftUpperLeg", { flexion: -52, abduction: 24 }),
-  j("rightUpperLeg", { flexion: -52, abduction: -24 }),
-  j("leftLowerLeg", { flexion: 74 }),
-  j("rightLowerLeg", { flexion: 74 }),
-  // bow arm out toward +Z (in the twisted torso frame), draw arm pulled back
-  j("leftUpperArm", { flexion: -96, abduction: 10 }),
-  j("leftLowerArm", { flexion: -6 }),
-  j("rightUpperArm", { flexion: 38, abduction: -30 }),
-  j("rightLowerArm", { flexion: 116 }),
-];
 const ride: IAutoFilmJointPose[] = [
-  j("spine", { flexion: 6 }),
-  j("chest", { flexion: 4 }),
-  j("leftUpperLeg", { flexion: -52, abduction: 24 }),
-  j("rightUpperLeg", { flexion: -52, abduction: -24 }),
-  j("leftLowerLeg", { flexion: 74 }),
-  j("rightLowerLeg", { flexion: 74 }),
-  j("rightUpperArm", { flexion: 52, abduction: 8 }),
-  j("rightLowerArm", { flexion: 22 }),
-  j("leftUpperArm", { flexion: -34, abduction: -30 }),
-  j("leftLowerArm", { flexion: -86 }),
+  j("spine", { flexion: 8 }),
+  j("chest", { flexion: 5 }),
+  j("leftUpperLeg", { flexion: -54, abduction: 24 }),
+  j("rightUpperLeg", { flexion: -54, abduction: -24 }),
+  j("leftLowerLeg", { flexion: 76 }),
+  j("rightLowerLeg", { flexion: 76 }),
+  j("rightUpperArm", { flexion: 48, abduction: 8 }),
+  j("rightLowerArm", { flexion: 26 }),
+  j("leftUpperArm", { flexion: -30, abduction: -28 }),
+  j("leftLowerArm", { flexion: -88 }),
 ];
-// target's reaction once struck: thrown back off the horse
+// twisted back over the croup (facing −Z, at the pursuer), bow arm out, draw hand back
+const drawBack: IAutoFilmJointPose[] = [
+  j("spine", { flexion: 2, twist: -82 }),
+  j("chest", { flexion: 0, twist: -68 }),
+  j("neck", { twist: -34 }),
+  j("head", { twist: -28 }),
+  j("leftUpperLeg", { flexion: -54, abduction: 24 }),
+  j("rightUpperLeg", { flexion: -54, abduction: -24 }),
+  j("leftLowerLeg", { flexion: 76 }),
+  j("rightLowerLeg", { flexion: 76 }),
+  j("leftUpperArm", { flexion: -98, abduction: 10 }),
+  j("leftLowerArm", { flexion: -6 }),
+  j("rightUpperArm", { flexion: 40, abduction: -34 }),
+  j("rightLowerArm", { flexion: 120 }),
+];
 const struck: IAutoFilmJointPose[] = [
-  j("spine", { flexion: -26, twist: -18 }),
+  j("spine", { flexion: -28, twist: -16 }),
   j("chest", { flexion: -16 }),
-  j("head", { flexion: -22 }),
-  j("leftUpperArm", { flexion: -10, abduction: -90 }),
-  j("rightUpperArm", { flexion: 10, abduction: 90 }),
-  j("leftUpperLeg", { flexion: 10, abduction: 30 }),
-  j("rightUpperLeg", { flexion: 14, abduction: -20 }),
-  j("leftLowerLeg", { flexion: 40 }),
-  j("rightLowerLeg", { flexion: 30 }),
+  j("head", { flexion: -24 }),
+  j("leftUpperArm", { flexion: -10, abduction: -96 }),
+  j("rightUpperArm", { flexion: 10, abduction: 96 }),
+  j("leftUpperLeg", { flexion: 12, abduction: 30 }),
+  j("rightUpperLeg", { flexion: 16, abduction: -22 }),
+  j("leftLowerLeg", { flexion: 38 }),
+  j("rightLowerLeg", { flexion: 28 }),
 ];
 
-// ── the arrow as a projectile ────────────────────────────────────────────────
-// launch from near the archer's bow toward the target's torso; gravity gives a
-// slight arc. The collision is computed against a sphere on the target.
-const bowOrigin = v(0, 1.55, 0.3); // world-ish (groups are axis-aligned in X/Y)
-const targetTorso = { center: v(0, 1.55, 2.35), radius: 0.5 };
-const launch = {
-  origin: bowOrigin,
-  velocity: v(0, 0.6, 12.5),
-  gravity: v(0, -3.2, 0),
-};
-const hit = projectileSphereHit(launch, targetTorso, 2.0);
-const RELEASE = 1.6; // seconds into the clip the arrow leaves the bow
-const FLIGHT = hit ? hit.time : 0.3; // detected time of flight to contact
+// ── timing + the arrow (lead the moving target; detect in the target frame) ──
+// the archer flees, then SNAPS around to loose — a fast twist just before release
+const DRAW_START = 4.9;
+const RELEASE = 5.4;
+const g = v(0, -3.4, 0);
+// positions frozen at release
+const A0 = v(0, 1.55, aZ(RELEASE) + 0.15); // bow muzzle, just ahead of the archer
+const B0 = v(0, 1.5, bZ(RELEASE)); // target torso at release
+// aim in the TARGET's frame: arrow must cover −Z by ~(G) plus a little arc
+const TAU = 0.42; // intended time of flight
+const relVel = v(0, 1.4, -(A0.z - B0.z + 0.05) / TAU);
+const targetTorso = { center: B0, radius: 0.55 };
+const hit = projectileSphereHit(
+  { origin: A0, velocity: relVel, gravity: g },
+  targetTorso,
+  1.5,
+);
+const FLIGHT = hit ? hit.time : TAU;
 const HIT_AT = RELEASE + FLIGHT;
+const hitWorldZ = B0.z + V * FLIGHT; // where the (moving) target is struck
+// world launch velocity = relative aim + the rider's forward carry
+const arrowVel = v(relVel.x, relVel.y, relVel.z + V);
 // eslint-disable-next-line no-console
-console.log(`[archery] hit=${hit ? "yes" : "NO"} flight=${FLIGHT.toFixed(3)}s`);
+console.log(
+  `[archery] hit=${hit ? "yes" : "NO"} flight=${FLIGHT.toFixed(3)} hitZ=${hitWorldZ.toFixed(2)}`,
+);
 
-// arrow mesh (shaft + head) and a bow on the archer's left hand
 const arrow = new THREE.Group();
 const shaft = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.012, 0.012, 0.7, 8),
+  new THREE.CylinderGeometry(0.013, 0.013, 0.72, 8),
   new THREE.MeshStandardMaterial({ color: 0x6b4a2b }),
 );
-shaft.rotation.x = Math.PI / 2; // lie along +Z
-const head = new THREE.Mesh(
-  new THREE.ConeGeometry(0.03, 0.1, 8),
+shaft.rotation.x = Math.PI / 2;
+const ahead = new THREE.Mesh(
+  new THREE.ConeGeometry(0.032, 0.11, 8),
   new THREE.MeshStandardMaterial({ color: 0xcfd3da, metalness: 0.4 }),
 );
-head.rotation.x = Math.PI / 2;
-head.position.z = 0.4;
-arrow.add(shaft, head);
+ahead.rotation.x = Math.PI / 2;
+ahead.position.z = 0.41;
+arrow.add(shaft, ahead);
 arrow.visible = false;
 const bow = new THREE.Mesh(
   new THREE.TorusGeometry(0.28, 0.02, 8, 24, Math.PI * 1.2),
@@ -169,91 +181,118 @@ const bow = new THREE.Mesh(
 
 // ── scene ────────────────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xeef1f6);
-scene.add(aGroup, bGroup, arrow);
+scene.background = new THREE.Color(0xeaf0f7);
+scene.add(aRig, bRig, arrow);
 const bowHand = archerObj.bones.get("leftHand");
 if (bowHand) {
   bow.rotation.y = Math.PI / 2;
   bowHand.add(bow);
 }
-scene.add(new THREE.GridHelper(40, 80, 0xb8c0cc, 0xd5dbe4));
+scene.add(new THREE.GridHelper(160, 320, 0xb8c0cc, 0xd5dbe4));
 scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa3b2, 1.1));
 const sun = new THREE.DirectionalLight(0xffffff, 1.4);
 sun.position.set(4, 6, 2);
 scene.add(sun);
 
-const camera = new THREE.PerspectiveCamera(44, 1, 0.05, 200);
-const az = (Number(params.get("az") ?? 62) * Math.PI) / 180;
-const dist = Number(params.get("dist") ?? 6.0);
-const ctrZ = 1.3;
-camera.position.set(dist * Math.sin(az), 1.8, ctrZ + dist * Math.cos(az));
-camera.lookAt(0, 1.1, ctrZ);
+const camera = new THREE.PerspectiveCamera(46, 1, 0.05, 400);
+const az = (Number(params.get("az") ?? 58) * Math.PI) / 180;
+const dist = Number(params.get("dist") ?? 7.5);
 
-const seatOf = (
-  idle: ReturnType<typeof horseIdle>,
-  sk: typeof horseA.skeleton,
-  t: number,
-): IAutoFilmTransform =>
-  resolveAttachment(sampleMotion(idle, t).pose, sk, saddle);
-
-const placeRider = (
+const setRider = (
   riderObj: typeof archerObj,
   sk: typeof archer.skeleton,
   joints: IAutoFilmJointPose[],
   seat: IAutoFilmTransform,
 ): void => {
-  const pose: IAutoFilmPose = { skeleton: sk.id, root: seat, joints };
-  applyPose(riderObj, pose, sk, HUMANOID_JOINT_AXES);
+  applyPose(
+    riderObj,
+    { skeleton: sk.id, root: seat, joints },
+    sk,
+    HUMANOID_JOINT_AXES,
+  );
 };
 
 const step = (t: number): void => {
-  // horses idle; sample for the saddle frames
-  applyPose(horseAObj, sampleMotion(idleA, t).pose, horseA.skeleton, undefined);
-  applyPose(horseBObj, sampleMotion(idleB, t).pose, horseB.skeleton, undefined);
-  const seatA = seatOf(idleA, horseA.skeleton, t);
-  const seatB = seatOf(idleB, horseB.skeleton, t);
+  // gallop cycles (in place); rigs carry the forward travel
+  applyPose(
+    horseAObj,
+    sampleMotion(gallopA, t).pose,
+    horseA.skeleton,
+    undefined,
+  );
+  applyPose(
+    horseBObj,
+    sampleMotion(gallopB, t).pose,
+    horseB.skeleton,
+    undefined,
+  );
+  aRig.position.z = aZ(t);
+  bRig.position.z = bZ(t);
 
-  // archer: ride, then draw as the loose approaches
-  const drawing = t > 0.7 ? archerDraw : ride;
-  placeRider(archerObj, archer.skeleton, drawing, seatA);
+  const seatA = resolveAttachment(
+    sampleMotion(gallopA, t).pose,
+    horseA.skeleton,
+    saddle,
+  );
+  const seatB = resolveAttachment(
+    sampleMotion(gallopB, t).pose,
+    horseB.skeleton,
+    saddle,
+  );
 
-  // target: seated until struck, then thrown off and down
+  // archer: ride → twist into the draw between DRAW_START and RELEASE, hold
+  const dw = Math.min(
+    Math.max((t - DRAW_START) / (RELEASE - DRAW_START), 0),
+    1,
+  );
+  setRider(archerObj, archer.skeleton, blend(ride, drawBack, dw), seatA);
+
+  // target: seated until struck; then thrown off — stays in the world where he
+  // was hit (counter the rig's ongoing travel) and tumbles down as the horse runs on
   if (t < HIT_AT) {
-    placeRider(targetObj, target.skeleton, ride, seatB);
+    setRider(targetObj, target.skeleton, ride, seatB);
   } else {
-    const p = Math.min((t - HIT_AT) / 1.3, 1);
-    // topple off the far side (+X) and down to the ground, pitching back
-    const fallRoot: IAutoFilmTransform = {
+    const p = Math.min((t - HIT_AT) / 1.4, 1);
+    const localZ = hitWorldZ - bRig.position.z - 0.3 * p; // hold world z, drift back a touch
+    const fall: IAutoFilmTransform = {
       translation: {
-        x: seatB.translation.x + 0.6 * p,
-        y: seatB.translation.y - 1.5 * p,
-        z: seatB.translation.z + 0.2 * p,
+        x: seatB.translation.x + 0.5 * p,
+        y: seatB.translation.y - 1.55 * p,
+        z: localZ,
       },
-      rotation: Quaternion.multiply(
-        seatB.rotation,
-        Quaternion.fromAxisAngle({ x: 1, y: 0, z: 0 }, -90 * p),
-      ),
+      rotation: Quaternion.fromAxisAngle({ x: 1, y: 0, z: 0 }, -95 * p),
       scale: { x: 1, y: 1, z: 1 },
     };
-    const pose: IAutoFilmPose = {
-      skeleton: target.skeleton.id,
-      root: fallRoot,
-      joints: struck,
-    };
-    applyPose(targetObj, pose, target.skeleton, HUMANOID_JOINT_AXES);
+    setRider(targetObj, target.skeleton, struck, fall);
   }
 
-  // arrow flight
-  if (t >= RELEASE && t <= HIT_AT + 0.05) {
-    const s = projectileAt(launch, t - RELEASE);
+  // arrow flight (world)
+  if (t >= RELEASE && t <= HIT_AT + 0.04) {
+    const s = projectileAt(
+      { origin: A0, velocity: arrowVel, gravity: g },
+      t - RELEASE,
+    );
     arrow.visible = true;
     arrow.position.set(s.position.x, s.position.y, s.position.z);
-    const d = s.velocity;
-    const q = aimRotation({ x: 0, y: 0, z: 1 }, d);
+    const q = aimRotation({ x: 0, y: 0, z: 1 }, s.velocity);
     arrow.quaternion.set(q.x, q.y, q.z, q.w);
   } else {
     arrow.visible = false;
   }
+
+  // camera tracks the chase (midpoint of the two riders), then on impact eases
+  // down onto the fallen knight while the riderless horse gallops out of frame
+  const post = Math.min(Math.max((t - HIT_AT) / 0.7, 0), 1);
+  const chaseZ = bZ(Math.min(t, HIT_AT)) + G * 0.5;
+  const followZ = chaseZ - post * (G * 0.5); // ease from midpoint to the fallen knight
+  const camD = dist - post * 1.6; // dolly in a touch
+  const lookY = 1.1 - post * 0.65;
+  camera.position.set(
+    camD * Math.sin(az),
+    2.0 - post * 0.7,
+    followZ + camD * Math.cos(az),
+  );
+  camera.lookAt(0, lookY, followZ);
 };
 
 const frozen = params.get("t");
@@ -262,9 +301,8 @@ if (freezeAt !== null && Number.isFinite(freezeAt)) step(freezeAt);
 
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 const capMode = params.get("cap") === "1";
-const LOOP = HIT_AT + 2.0;
 const handle = mountViewer(canvas, scene, camera, (elapsed) => {
-  if (!capMode && freezeAt === null) step(elapsed % LOOP);
+  if (!capMode && freezeAt === null) step(elapsed % DUR);
 });
 (window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
   t: number,
@@ -277,5 +315,5 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   ready: true,
   hit: hit !== null,
   flight: FLIGHT,
-  duration: LOOP,
+  duration: DUR,
 };

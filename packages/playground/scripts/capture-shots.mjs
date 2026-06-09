@@ -65,7 +65,7 @@ const SHOTS = [
     30,
   ],
   ["spar.html", "", 29.55, 470, 760, 620, "spar/ko.mp4", 30],
-  ["archery.html", "az=62", 3.8, 115, 720, 600, "knight/archery.mp4", 30],
+  ["archery.html", "", 9.0, 270, 760, 600, "knight/archery.mp4", 30],
   [
     "stickman.html",
     "char=human&clip=walk&az=80",
