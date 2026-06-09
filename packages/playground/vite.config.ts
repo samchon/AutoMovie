@@ -19,6 +19,7 @@ export default defineConfig({
         spar: resolve(__dirname, "spar.html"),
         archery: resolve(__dirname, "archery.html"),
         impact: resolve(__dirname, "impact.html"),
+        trampoline: resolve(__dirname, "trampoline.html"),
       },
     },
   },
