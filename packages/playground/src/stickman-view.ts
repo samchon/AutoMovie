@@ -70,7 +70,9 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf2f4f8);
 scene.add(object.object);
 
-const grid = new THREE.GridHelper(6, 12, 0xb8c0cc, 0xd5dbe4);
+// a large floor so a traveling clip (followed by the camera) always has ground
+// scrolling beneath it instead of walking off the edge of a small grid
+const grid = new THREE.GridHelper(40, 80, 0xb8c0cc, 0xd5dbe4);
 scene.add(grid);
 
 const hemi = new THREE.HemisphereLight(0xffffff, 0x9aa3b2, 1.1);
@@ -86,12 +88,28 @@ const az = (Number(params.get("az") ?? 0) * Math.PI) / 180;
 const target = isCat ? 0.26 : 0.92;
 const dist = isCat ? 1.7 : 3.8;
 const ctr = isCat ? 0.12 : 0; // cat trunk centre is forward of the hips
-camera.position.set(
-  dist * Math.sin(az),
-  target + (isCat ? 0.22 : 0.1),
-  ctr + dist * Math.cos(az),
-);
+const camY = target + (isCat ? 0.22 : 0.1);
+
+// `?follow=1` makes the camera ride along with the character's root as a
+// traveling clip (stroll/sprint/prowl/bound) carries it across the floor —
+// holding the same orbit offset but re-centred on the moving body, so the
+// figure stays framed while the ground scrolls past (a tracking shot). The
+// root translation the engine bakes via travelMotion lands on `object.object`,
+// so we just read its world position each frame.
+const followMode = params.get("follow") === "1";
+const followCamera = (): void => {
+  const px = object.object.position.x;
+  const pz = object.object.position.z;
+  camera.position.set(
+    px + dist * Math.sin(az),
+    camY,
+    pz + ctr + dist * Math.cos(az),
+  );
+  camera.lookAt(px, target, pz + ctr);
+};
+camera.position.set(dist * Math.sin(az), camY, ctr + dist * Math.cos(az));
 camera.lookAt(0, target, ctr);
+if (followMode) followCamera();
 
 // ── ROM overlay: a flexion-gamut fan at every constrained joint ─────────────
 // Each joint's `constraint.flexion` [min,max] swept about its flexion axis (the
@@ -235,7 +253,10 @@ const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 mountViewer(canvas, scene, camera, (elapsed) => {
   if (reachMode) reach(elapsed);
   else if (lookMode) aimHead(elapsed);
-  else if (!showRom && freezeAt === null) player.update(elapsed);
+  else if (!showRom && freezeAt === null) {
+    player.update(elapsed);
+    if (followMode) followCamera();
+  }
 });
 
 // ── clip selector (live switching) ──────────────────────────────────────────

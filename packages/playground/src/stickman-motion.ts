@@ -1,4 +1,4 @@
-import { Quaternion, sequenceMotion } from "@autofilm/engine";
+import { Quaternion, sequenceMotion, travelMotion } from "@autofilm/engine";
 import {
   AutoFilmHumanoidBone,
   IAutoFilmJointPose,
@@ -339,6 +339,17 @@ export const combo = (sk: string): IAutoFilmMotion =>
     true,
   );
 
+/**
+ * Traveling clips — the in-place locomotion cycles baked to actually cross the
+ * floor (so a follow camera has something to track). `stroll` is the walk at
+ * ~0.6 m/s, `sprint` the run at ~2 m/s, both forward (+Z, the way the figure
+ * faces).
+ */
+export const stroll = (sk: string): IAutoFilmMotion =>
+  travelMotion("stroll", walk(sk), 6, { x: 0, y: 0, z: 0.62 });
+export const sprint = (sk: string): IAutoFilmMotion =>
+  travelMotion("sprint", run(sk), 9, { x: 0, y: 0, z: 2.0 });
+
 // ── shadow boxing — a ~15 s combination performance ─────────────────────────
 // A bladed guard stance (hands up, knees soft, slight lean) is the base; every
 // punch/kick merges its overrides over the guard and snaps back, then the beats
@@ -548,4 +559,6 @@ export const STICKMAN_CLIPS = (
   turn: turn(sk),
   combo: combo(sk),
   shadowbox: shadowbox(sk),
+  stroll: stroll(sk),
+  sprint: sprint(sk),
 });

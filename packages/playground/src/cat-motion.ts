@@ -1,4 +1,4 @@
-import { Quaternion, sequenceMotion } from "@autofilm/engine";
+import { Quaternion, sequenceMotion, travelMotion } from "@autofilm/engine";
 import {
   AutoFilmHumanoidBone,
   IAutoFilmJointPose,
@@ -233,6 +233,16 @@ export const catCombo = (sk: string): IAutoFilmMotion =>
     true,
   );
 
+/**
+ * Traveling clips — locomotion baked to cross the floor for a follow camera.
+ * `prowl` is the walk gait carried forward at ~0.45 m/s; `bound` chains leaps
+ * into a forward-traveling pronk.
+ */
+export const catProwl = (sk: string): IAutoFilmMotion =>
+  travelMotion("prowl", catWalk(sk), 8, { x: 0, y: 0, z: 0.45 });
+export const catBound = (sk: string): IAutoFilmMotion =>
+  travelMotion("bound", catLeap(sk), 5, { x: 0, y: 0, z: 0.95 });
+
 /** All cat clips, keyed by id. */
 export const CAT_CLIPS = (sk: string): Record<string, IAutoFilmMotion> => ({
   idle: catIdle(sk),
@@ -242,4 +252,6 @@ export const CAT_CLIPS = (sk: string): Record<string, IAutoFilmMotion> => ({
   stretch: catStretch(sk),
   tailFlick: catTailFlick(sk),
   combo: catCombo(sk),
+  prowl: catProwl(sk),
+  bound: catBound(sk),
 });
