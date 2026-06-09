@@ -1,21 +1,23 @@
-import { Matrix4, resolveWorldDrivers } from "@motica/engine";
+import { Matrix4, resolveWorldDrivers } from "@autofilm/engine";
 import {
-  IMoticaParentDriver,
-  IMoticaQuaternion,
-  IMoticaTransform,
-  IMoticaVector3,
-} from "@motica/interface";
+  IAutoFilmParentDriver,
+  IAutoFilmQuaternion,
+  IAutoFilmTransform,
+  IAutoFilmVector3,
+} from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { qclose, vclose } from "../internal/predicates";
 
 const W = (
-  pos: IMoticaVector3,
-  rot: IMoticaQuaternion = { x: 0, y: 0, z: 0, w: 1 },
-  scl: IMoticaVector3 = { x: 1, y: 1, z: 1 },
+  pos: IAutoFilmVector3,
+  rot: IAutoFilmQuaternion = { x: 0, y: 0, z: 0, w: 1 },
+  scl: IAutoFilmVector3 = { x: 1, y: 1, z: 1 },
 ): number[] => Matrix4.compose(pos, rot, scl);
 
-const parent = (over: Partial<IMoticaParentDriver>): IMoticaParentDriver => ({
+const parent = (
+  over: Partial<IAutoFilmParentDriver>,
+): IAutoFilmParentDriver => ({
   type: "parent",
   owner: "o",
   parent: "p",
@@ -25,7 +27,7 @@ const parent = (over: Partial<IMoticaParentDriver>): IMoticaParentDriver => ({
   ...over,
 });
 
-const trs = (x: number, y: number, z: number): IMoticaTransform => ({
+const trs = (x: number, y: number, z: number): IAutoFilmTransform => ({
   translation: { x, y, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -55,7 +57,7 @@ export const test_resolve_parent_driver = (): void => {
     ["c", W({ x: 0, y: 1, z: 0 })],
     ["p", W({ x: 10, y: 0, z: 0 }, parentRot, parentScale)],
   ]);
-  const localById = new Map<string, IMoticaTransform>([["c", trs(0, 1, 0)]]);
+  const localById = new Map<string, IAutoFilmTransform>([["c", trs(0, 1, 0)]]);
   const children = new Map<string, string[]>([["o", ["c"]]]);
   resolveWorldDrivers(
     [parent({ translation: true, rotation: true, scale: true })],

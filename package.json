@@ -1,12 +1,12 @@
 {
   "private": true,
-  "name": "@motica/station",
+  "name": "@autofilm/station",
   "version": "0.1.0",
-  "description": "motica monorepo — LLM structured-output engine for character/object motion",
+  "description": "autofilm monorepo — LLM structured-output engine for character/object motion",
   "packageManager": "pnpm@10.6.4",
   "scripts": {
     "build": "pnpm --filter=./packages/** -r build",
-    "test": "pnpm --filter @motica/test build && pnpm --filter @motica/test start",
+    "test": "pnpm --filter @autofilm/test build && pnpm --filter @autofilm/test start",
     "format": "prettier --write \"**/*.ts\"",
     "format:check": "prettier --check \"**/*.ts\"",
     "prepare": "ts-patch install"
@@ -23,7 +23,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/samchon/motica"
+    "url": "https://github.com/samchon/autofilm"
   },
   "pnpm": {
     "onlyBuiltDependencies": ["esbuild"]

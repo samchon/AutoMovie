@@ -1,34 +1,34 @@
 import {
-  IMoticaBlendshapeChannel,
-  IMoticaExpression,
-  IMoticaJointPose,
-  IMoticaKeyframe,
-  IMoticaMotion,
-  IMoticaPose,
-  IMoticaTransform,
-  MoticaArkitChannel,
-  MoticaHumanoidBone,
-} from "@motica/interface";
+  AutoFilmArkitChannel,
+  AutoFilmHumanoidBone,
+  IAutoFilmBlendshapeChannel,
+  IAutoFilmExpression,
+  IAutoFilmJointPose,
+  IAutoFilmKeyframe,
+  IAutoFilmMotion,
+  IAutoFilmPose,
+  IAutoFilmTransform,
+} from "@autofilm/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { cubicBezierEasing, ease } from "./easing";
 
 /** A pose plus optional expression sampled at one instant of a clip. */
-export interface IMoticaMotionSample {
-  pose: IMoticaPose;
-  expression: IMoticaExpression | null;
+export interface IAutoFilmMotionSample {
+  pose: IAutoFilmPose;
+  expression: IAutoFilmExpression | null;
 }
 
-const IDENTITY_TRANSFORM: IMoticaTransform = {
+const IDENTITY_TRANSFORM: IAutoFilmTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 
 /**
- * Sample an {@link IMoticaMotion} clip at time `seconds`, interpolating between
- * the surrounding keyframes with that segment's easing.
+ * Sample an {@link IAutoFilmMotion} clip at time `seconds`, interpolating
+ * between the surrounding keyframes with that segment's easing.
  *
  * This is the bridge from the LLM's sparse keyframes to the dense, per-frame
  * state a renderer consumes: the engine owns interpolation so the same clip
@@ -42,9 +42,9 @@ const IDENTITY_TRANSFORM: IMoticaTransform = {
  * @author Samchon
  */
 export const sampleMotion = (
-  motion: IMoticaMotion,
+  motion: IAutoFilmMotion,
   seconds: number,
-): IMoticaMotionSample => {
+): IAutoFilmMotionSample => {
   const frames = motion.keyframes;
   const time = normalizeTime(seconds, motion.duration, motion.loop);
 
@@ -90,27 +90,27 @@ const normalizeTime = (
 };
 
 const toSample = (
-  motion: IMoticaMotion,
-  frame: IMoticaKeyframe,
-): IMoticaMotionSample => ({
+  motion: IAutoFilmMotion,
+  frame: IAutoFilmKeyframe,
+): IAutoFilmMotionSample => ({
   pose: { ...frame.pose, skeleton: motion.skeleton },
   expression: frame.expression,
 });
 
 const interpolatePose = (
   skeleton: string,
-  a: IMoticaPose,
-  b: IMoticaPose,
+  a: IAutoFilmPose,
+  b: IAutoFilmPose,
   t: number,
-): IMoticaPose => {
+): IAutoFilmPose => {
   const aJoints = new Map(a.joints.map((j) => [j.bone, j]));
   const bJoints = new Map(b.joints.map((j) => [j.bone, j]));
-  const bones = new Set<MoticaHumanoidBone>([
+  const bones = new Set<AutoFilmHumanoidBone>([
     ...aJoints.keys(),
     ...bJoints.keys(),
   ]);
 
-  const joints: IMoticaJointPose[] = [];
+  const joints: IAutoFilmJointPose[] = [];
   for (const bone of bones) {
     const ja = aJoints.get(bone);
     const jb = bJoints.get(bone);
@@ -143,10 +143,10 @@ const lerpAxis = (
 };
 
 const lerpTransform = (
-  a: IMoticaTransform | null,
-  b: IMoticaTransform | null,
+  a: IAutoFilmTransform | null,
+  b: IAutoFilmTransform | null,
   t: number,
-): IMoticaTransform | null => {
+): IAutoFilmTransform | null => {
   if (a === null && b === null) return null;
   const ta = a ?? IDENTITY_TRANSFORM;
   const tb = b ?? IDENTITY_TRANSFORM;
@@ -158,10 +158,10 @@ const lerpTransform = (
 };
 
 const interpolateExpression = (
-  a: IMoticaExpression | null,
-  b: IMoticaExpression | null,
+  a: IAutoFilmExpression | null,
+  b: IAutoFilmExpression | null,
   t: number,
-): IMoticaExpression | null => {
+): IAutoFilmExpression | null => {
   if (a === null && b === null) return null;
   if (a === null) return b;
   if (b === null) return a;
@@ -175,12 +175,12 @@ const interpolateExpression = (
 };
 
 const blendChannels = (
-  a: IMoticaExpression,
-  b: IMoticaExpression,
+  a: IAutoFilmExpression,
+  b: IAutoFilmExpression,
   t: number,
-): IMoticaBlendshapeChannel[] | null => {
+): IAutoFilmBlendshapeChannel[] | null => {
   if (a.blendshapes === null && b.blendshapes === null) return null;
-  const weights = new Map<MoticaArkitChannel, number>();
+  const weights = new Map<AutoFilmArkitChannel, number>();
   for (const c of a.blendshapes ?? [])
     weights.set(c.channel, c.weight * (1 - t));
   for (const c of b.blendshapes ?? [])

@@ -64,7 +64,7 @@ app.innerHTML = `
   <div id="stage">
     <canvas id="view"></canvas>
     <div id="panel">
-      <h1>motica · human editor</h1>
+      <h1>autofilm · human editor</h1>
       <div class="sub" id="status">loading model…</div>
       <div class="tog"><input type="checkbox" id="clothes" checked/><label for="clothes">Clothes</label></div>
       <div class="tog"><input type="checkbox" id="look" checked/><label for="look">Look at viewer</label></div>
@@ -323,9 +323,10 @@ loader.load(
     // Model "Vita" — VRoid sample, CC0 (public domain): fully MIT-compatible.
     status.textContent = "Model: Vita · CC0 (public domain)";
     mountEditor();
-    (window as unknown as { __motica: Record<string, unknown> }).__motica = {
-      ready: true,
-    };
+    (window as unknown as { __autofilm: Record<string, unknown> }).__autofilm =
+      {
+        ready: true,
+      };
   },
   undefined,
   (err) => (status.textContent = "load error: " + String(err)),

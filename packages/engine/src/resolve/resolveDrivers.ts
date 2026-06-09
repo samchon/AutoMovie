@@ -1,16 +1,16 @@
 import {
-  IMoticaCopyDriver,
-  IMoticaDrivenDriver,
-  IMoticaDriver,
-  IMoticaNode,
-} from "@motica/interface";
+  IAutoFilmCopyDriver,
+  IAutoFilmDrivenDriver,
+  IAutoFilmDriver,
+  IAutoFilmNode,
+} from "@autofilm/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { channelKey } from "./channel";
-import { IMoticaSampledChannel } from "./sampleClip";
+import { IAutoFilmSampledChannel } from "./sampleClip";
 
 /** The two channel-space drivers this pass resolves (no world transform needed). */
-type ValueDriver = IMoticaCopyDriver | IMoticaDrivenDriver;
+type ValueDriver = IAutoFilmCopyDriver | IAutoFilmDrivenDriver;
 
 /**
  * The DRIVE pass for **channel-space** drivers — relationships that compute one
@@ -32,12 +32,12 @@ type ValueDriver = IMoticaCopyDriver | IMoticaDrivenDriver;
  * @author Samchon
  */
 export const resolveDrivers = (
-  drivers: IMoticaDriver[],
-  sampled: Map<string, IMoticaSampledChannel>,
-  nodesById: Map<string, IMoticaNode>,
-): IMoticaDriver[] => {
+  drivers: IAutoFilmDriver[],
+  sampled: Map<string, IAutoFilmSampledChannel>,
+  nodesById: Map<string, IAutoFilmNode>,
+): IAutoFilmDriver[] => {
   const value: ValueDriver[] = [];
-  const deferred: IMoticaDriver[] = [];
+  const deferred: IAutoFilmDriver[] = [];
   for (const d of drivers)
     if (d.type === "copy" || d.type === "driven") value.push(d);
     else deferred.push(d);
@@ -99,9 +99,9 @@ const topoSort = (drivers: ValueDriver[]): ValueDriver[] => {
 // ── copy ─────────────────────────────────────────────────────────────────────
 
 const applyCopy = (
-  d: IMoticaCopyDriver,
-  sampled: Map<string, IMoticaSampledChannel>,
-  nodesById: Map<string, IMoticaNode>,
+  d: IAutoFilmCopyDriver,
+  sampled: Map<string, IAutoFilmSampledChannel>,
+  nodesById: Map<string, IAutoFilmNode>,
 ): void => {
   if (d.translation) writeBlend(d, "translation", false, sampled, nodesById);
   if (d.rotation) writeBlend(d, "rotation", true, sampled, nodesById);
@@ -109,11 +109,11 @@ const applyCopy = (
 };
 
 const writeBlend = (
-  d: IMoticaCopyDriver,
+  d: IAutoFilmCopyDriver,
   path: "translation" | "rotation" | "scale",
   isRotation: boolean,
-  sampled: Map<string, IMoticaSampledChannel>,
-  nodesById: Map<string, IMoticaNode>,
+  sampled: Map<string, IAutoFilmSampledChannel>,
+  nodesById: Map<string, IAutoFilmNode>,
 ): void => {
   const owner = readTRS(d.owner, path, sampled, nodesById);
   const source = readTRS(d.source, path, sampled, nodesById);
@@ -132,8 +132,8 @@ const writeBlend = (
 const readTRS = (
   node: string,
   path: "translation" | "rotation" | "scale",
-  sampled: Map<string, IMoticaSampledChannel>,
-  nodesById: Map<string, IMoticaNode>,
+  sampled: Map<string, IAutoFilmSampledChannel>,
+  nodesById: Map<string, IAutoFilmNode>,
 ): number[] => {
   const hit = sampled.get(`node:${node}:${path}`);
   if (hit !== undefined) return hit.value;
@@ -148,8 +148,8 @@ const readTRS = (
 // ── driven ───────────────────────────────────────────────────────────────────
 
 const applyDriven = (
-  d: IMoticaDrivenDriver,
-  sampled: Map<string, IMoticaSampledChannel>,
+  d: IAutoFilmDrivenDriver,
+  sampled: Map<string, IAutoFilmSampledChannel>,
 ): void => {
   const src = sampled.get(channelKey(d.source));
   const x = src !== undefined ? src.value[0]! : d.inRange[0];
@@ -172,9 +172,9 @@ const remap = (
 // ── shared ───────────────────────────────────────────────────────────────────
 
 const setChannel = (
-  sampled: Map<string, IMoticaSampledChannel>,
+  sampled: Map<string, IAutoFilmSampledChannel>,
   key: string,
-  channel: IMoticaSampledChannel["channel"],
+  channel: IAutoFilmSampledChannel["channel"],
   value: number[],
 ): void => {
   const existing = sampled.get(key);

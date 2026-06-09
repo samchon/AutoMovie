@@ -1,8 +1,8 @@
 import {
-  IMoticaMotion,
-  IMoticaSkeleton,
-  IMoticaValidation,
-} from "@motica/interface";
+  IAutoFilmMotion,
+  IAutoFilmSkeleton,
+  IAutoFilmValidation,
+} from "@autofilm/interface";
 
 import { validateExpression } from "./validateExpression";
 import { validatePose } from "./validatePose";
@@ -16,7 +16,7 @@ import { ViolationCollector } from "./violation";
 const MAX_ANGULAR_SPEED_DEG_PER_S = 900;
 
 /**
- * Validate an {@link IMoticaMotion} clip — Tier-4 temporal coherence plus the
+ * Validate an {@link IAutoFilmMotion} clip — Tier-4 temporal coherence plus the
  * per-keyframe Tier-1/Tier-2 checks (every keyframe pose is validated against
  * the skeleton, every keyframe expression range-checked).
  *
@@ -30,9 +30,9 @@ const MAX_ANGULAR_SPEED_DEG_PER_S = 900;
  * @author Samchon
  */
 export const validateMotion = (props: {
-  motion: IMoticaMotion;
-  skeleton: IMoticaSkeleton;
-}): IMoticaValidation => {
+  motion: IAutoFilmMotion;
+  skeleton: IAutoFilmSkeleton;
+}): IAutoFilmValidation => {
   const path = "$input";
   const collector = new ViolationCollector();
   const { motion, skeleton } = props;
@@ -73,7 +73,7 @@ export const validateMotion = (props: {
 
 /** Flag adjacent keyframes whose shared joints swing too fast. */
 const checkAngularSpeed = (
-  motion: IMoticaMotion,
+  motion: IAutoFilmMotion,
   i: number,
   kp: string,
   collector: ViolationCollector,

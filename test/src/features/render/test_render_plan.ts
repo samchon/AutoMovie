@@ -1,15 +1,15 @@
-import { IMoticaRenderSpec } from "@motica/interface";
+import { IAutoFilmRenderSpec } from "@autofilm/interface";
 import {
   ffmpegArgs,
   frameName,
   framePattern,
   frameTimes,
-} from "@motica/render";
+} from "@autofilm/render";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const SPEC: IMoticaRenderSpec = {
+const SPEC: IAutoFilmRenderSpec = {
   target: "shot-1",
   fps: 30,
   width: 1920,

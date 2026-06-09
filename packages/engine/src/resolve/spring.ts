@@ -1,8 +1,8 @@
 import {
-  IMoticaSpringDriver,
-  IMoticaTransform,
-  IMoticaVector3,
-} from "@motica/interface";
+  IAutoFilmSpringDriver,
+  IAutoFilmTransform,
+  IAutoFilmVector3,
+} from "@autofilm/interface";
 
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
@@ -17,18 +17,18 @@ import { Vector3 } from "../math/Vector3";
  *
  * @author Samchon
  */
-export interface IMoticaSpringState {
+export interface IAutoFilmSpringState {
   /** Joint id → its world position last step (empty on the first step). */
-  prev: Map<string, IMoticaVector3>;
+  prev: Map<string, IAutoFilmVector3>;
 }
 
 /** A fresh, empty spring state. */
-export const createSpringState = (): IMoticaSpringState => ({
+export const createSpringState = (): IAutoFilmSpringState => ({
   prev: new Map(),
 });
 
 /**
- * Advance one spring ({@link IMoticaSpringDriver}) by a fixed timestep with
+ * Advance one spring ({@link IAutoFilmSpringDriver}) by a fixed timestep with
  * Verlet integration — the deterministic secondary-motion driver (hair, skirt,
  * tail), modelled on VRM SpringBone.
  *
@@ -46,11 +46,11 @@ export const createSpringState = (): IMoticaSpringState => ({
  * @author Samchon
  */
 export const stepSpring = (
-  d: IMoticaSpringDriver,
+  d: IAutoFilmSpringDriver,
   world: Map<string, number[]>,
-  state: IMoticaSpringState,
+  state: IAutoFilmSpringState,
   dt: number,
-  localById: Map<string, IMoticaTransform>,
+  localById: Map<string, IAutoFilmTransform>,
 ): void => {
   const gravity = Vector3.scale(
     Vector3.normalize(d.gravityDir),

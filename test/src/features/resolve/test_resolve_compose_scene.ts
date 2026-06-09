@@ -1,16 +1,20 @@
-import { composeScene } from "@motica/engine";
-import { IMoticaNode, IMoticaTransform } from "@motica/interface";
+import { composeScene } from "@autofilm/engine";
+import { IAutoFilmNode, IAutoFilmTransform } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const IDENTITY: IMoticaTransform = {
+const IDENTITY: IAutoFilmTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 
-const node = (id: string, parent: string | null, tx: number): IMoticaNode => ({
+const node = (
+  id: string,
+  parent: string | null,
+  tx: number,
+): IAutoFilmNode => ({
   id,
   name: null,
   parent,
@@ -48,7 +52,7 @@ export const test_resolve_compose_scene = (): void => {
   );
 
   // 2. child-before-parent ordering + override on child only
-  const overrides = new Map<string, IMoticaTransform>([
+  const overrides = new Map<string, IAutoFilmTransform>([
     ["c", { ...IDENTITY, translation: { x: 2, y: 0, z: 0 } }],
   ]);
   const world = composeScene(

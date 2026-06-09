@@ -1,12 +1,16 @@
-import { IMoticaChannel, IMoticaClip, IMoticaTrack } from "@motica/interface";
+import {
+  IAutoFilmChannel,
+  IAutoFilmClip,
+  IAutoFilmTrack,
+} from "@autofilm/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { channelIsRotation, channelKey } from "./channel";
 
 /** One channel's value sampled at an instant, with the channel it targets. */
-export interface IMoticaSampledChannel {
+export interface IAutoFilmSampledChannel {
   /** The channel this value belongs to. */
-  channel: IMoticaChannel;
+  channel: IAutoFilmChannel;
 
   /** The sampled value, one number per channel component. */
   value: number[];
@@ -30,11 +34,11 @@ export interface IMoticaSampledChannel {
  * @author Samchon
  */
 export const sampleClip = (
-  clip: IMoticaClip,
+  clip: IAutoFilmClip,
   seconds: number,
-): Map<string, IMoticaSampledChannel> => {
+): Map<string, IAutoFilmSampledChannel> => {
   const time = normalizeTime(seconds, clip.duration, clip.loop);
-  const out = new Map<string, IMoticaSampledChannel>();
+  const out = new Map<string, IAutoFilmSampledChannel>();
   for (const track of clip.tracks)
     out.set(channelKey(track.channel), {
       channel: track.channel,
@@ -49,7 +53,7 @@ export const sampleClip = (
  * `cubicspline` evaluates the glTF cubic Hermite spline from the keyframes'
  * tangents.
  */
-const sampleTrack = (track: IMoticaTrack, time: number): number[] => {
+const sampleTrack = (track: IAutoFilmTrack, time: number): number[] => {
   const { times, values, interpolation, channel } = track;
   const cubic = interpolation === "cubicspline";
   // Stored stride per keyframe; cubicspline stores in-tangent/value/out-tangent.
@@ -91,7 +95,7 @@ const sampleTrack = (track: IMoticaTrack, time: number): number[] => {
  * sphere).
  */
 const cubicHermite = (
-  track: IMoticaTrack,
+  track: IAutoFilmTrack,
   lo: number,
   hi: number,
   span: number,

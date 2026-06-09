@@ -1,11 +1,11 @@
+import { humanoidSkeleton } from "@autofilm/ingest";
+import { IAutoFilmBone } from "@autofilm/interface";
 import { Document } from "@gltf-transform/core";
-import { humanoidSkeleton } from "@motica/ingest";
-import { IMoticaBone } from "@motica/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const find = (bones: IMoticaBone[], bone: string): IMoticaBone => {
+const find = (bones: IAutoFilmBone[], bone: string): IAutoFilmBone => {
   const b = bones.find((x) => x.bone === bone);
   if (b === undefined) throw new Error(`bone ${bone} missing`);
   return b;

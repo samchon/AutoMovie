@@ -4,7 +4,7 @@ import * as THREE from "three";
  * Handle returned by {@link mountViewer}; call `stop()` to end the loop and
  * release the renderer.
  */
-export interface IMoticaViewerHandle {
+export interface IAutoFilmViewerHandle {
   renderer: THREE.WebGLRenderer;
   stop: () => void;
 }
@@ -15,7 +15,7 @@ export interface IMoticaViewerHandle {
  * `camera`.
  *
  * This is the one browser-only entry point. `onFrame` is where a
- * {@link MoticaPlayer} advances — the viewer stays a thin shell around the
+ * {@link AutoFilmPlayer} advances — the viewer stays a thin shell around the
  * deterministic engine. `elapsedSeconds` is measured from the first frame.
  *
  * @author Samchon
@@ -25,7 +25,7 @@ export const mountViewer = (
   scene: THREE.Scene,
   camera: THREE.PerspectiveCamera,
   onFrame: (elapsedSeconds: number) => void,
-): IMoticaViewerHandle => {
+): IAutoFilmViewerHandle => {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   const resize = (): void => {
     const w = canvas.clientWidth || 1;

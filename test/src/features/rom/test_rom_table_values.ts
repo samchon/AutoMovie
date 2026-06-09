@@ -1,9 +1,9 @@
-import { DEFAULT_HUMANOID_ROM } from "@motica/engine";
+import { DEFAULT_HUMANOID_ROM } from "@autofilm/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * The default humanoid ROM table is where motica's core differentiator lives —
- * it encodes the anatomical limits the pose verifier checks every joint
+ * The default humanoid ROM table is where autofilm's core differentiator lives
+ * — it encodes the anatomical limits the pose verifier checks every joint
  * against. This pins the key joint archetypes so a regression in the table is
  * caught immediately.
  *

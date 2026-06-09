@@ -1,9 +1,9 @@
-import { IMoticaExpression, IMoticaValidation } from "@motica/interface";
+import { IAutoFilmExpression, IAutoFilmValidation } from "@autofilm/interface";
 
 import { ViolationCollector } from "./violation";
 
 /**
- * Validate an {@link IMoticaExpression} — Tier-1 range checks the rough types
+ * Validate an {@link IAutoFilmExpression} — Tier-1 range checks the rough types
  * intentionally do not encode.
  *
  * Preset and channel _names_ are already constrained by their closed unions, so
@@ -14,7 +14,7 @@ import { ViolationCollector } from "./violation";
  * @author Samchon
  */
 export const validateExpression = (props: {
-  expression: IMoticaExpression;
+  expression: IAutoFilmExpression;
   path?: string;
   collector?: ViolationCollector;
 }): ViolationCollector => {
@@ -41,7 +41,7 @@ export const validateExpression = (props: {
   return collector;
 };
 
-/** Convenience wrapper returning a finished {@link IMoticaValidation}. */
+/** Convenience wrapper returning a finished {@link IAutoFilmValidation}. */
 export const validateExpressionResult = (
-  expression: IMoticaExpression,
-): IMoticaValidation => validateExpression({ expression }).toValidation();
+  expression: IAutoFilmExpression,
+): IAutoFilmValidation => validateExpression({ expression }).toValidation();

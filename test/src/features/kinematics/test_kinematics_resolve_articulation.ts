@@ -1,14 +1,18 @@
-import { IMoticaResolvedBone, Quaternion, resolvePose } from "@motica/engine";
-import { MoticaHumanoidBone } from "@motica/interface";
+import {
+  IAutoFilmResolvedBone,
+  Quaternion,
+  resolvePose,
+} from "@autofilm/engine";
+import { AutoFilmHumanoidBone } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
 import { qclose, vclose } from "../internal/predicates";
 
 const at = (
-  rs: IMoticaResolvedBone[],
-  b: MoticaHumanoidBone,
-): IMoticaResolvedBone => {
+  rs: IAutoFilmResolvedBone[],
+  b: AutoFilmHumanoidBone,
+): IAutoFilmResolvedBone => {
   const r = rs.find((x) => x.bone === b);
   if (r === undefined) throw new Error(`bone ${b} not resolved`);
   return r;

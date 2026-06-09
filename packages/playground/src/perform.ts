@@ -9,7 +9,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 // A short authored performance — a beautiful character actually moving and
 // emoting — rendered deterministically (renderAt(t)) so the same clip captures
-// frame-for-frame to video. This is motica's whole point: structured motion data
+// frame-for-frame to video. This is autofilm's whole point: structured motion data
 // → a deterministic engine → a reproducible render, here on a VRoid (CC0) face.
 
 const scene = new THREE.Scene();
@@ -194,7 +194,7 @@ loader.load("/models/Vita.vrm", (gltf) => {
   scene.add(v.scene);
   vrm = v;
   renderAt(0);
-  (window as unknown as { __motica: Record<string, unknown> }).__motica = {
+  (window as unknown as { __autofilm: Record<string, unknown> }).__autofilm = {
     ready: true,
     duration: DURATION,
   };

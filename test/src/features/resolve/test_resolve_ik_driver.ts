@@ -1,17 +1,17 @@
-import { Matrix4, resolveWorldDrivers } from "@motica/engine";
+import { Matrix4, resolveWorldDrivers } from "@autofilm/engine";
 import {
-  IMoticaIKDriver,
-  IMoticaSpringDriver,
-  IMoticaVector3,
-} from "@motica/interface";
+  IAutoFilmIKDriver,
+  IAutoFilmSpringDriver,
+  IAutoFilmVector3,
+} from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
-const W = (p: IMoticaVector3): number[] =>
+const W = (p: IAutoFilmVector3): number[] =>
   Matrix4.compose(p, { x: 0, y: 0, z: 0, w: 1 }, { x: 1, y: 1, z: 1 });
 
-const ik = (over: Partial<IMoticaIKDriver>): IMoticaIKDriver => ({
+const ik = (over: Partial<IAutoFilmIKDriver>): IAutoFilmIKDriver => ({
   type: "ik",
   chain: ["r", "m", "t"],
   goal: "g",
@@ -22,16 +22,16 @@ const ik = (over: Partial<IMoticaIKDriver>): IMoticaIKDriver => ({
   ...over,
 });
 
-const dist = (a: IMoticaVector3, b: IMoticaVector3): number =>
+const dist = (a: IAutoFilmVector3, b: IAutoFilmVector3): number =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 const solve = (
-  d: IMoticaIKDriver,
-  root: IMoticaVector3,
-  mid: IMoticaVector3,
-  tip: IMoticaVector3,
-  goal: IMoticaVector3,
-  pole?: IMoticaVector3,
+  d: IAutoFilmIKDriver,
+  root: IAutoFilmVector3,
+  mid: IAutoFilmVector3,
+  tip: IAutoFilmVector3,
+  goal: IAutoFilmVector3,
+  pole?: IAutoFilmVector3,
 ): Map<string, number[]> => {
   const world = new Map<string, number[]>([
     ["r", W(root)],
@@ -44,7 +44,7 @@ const solve = (
   return world;
 };
 
-const at = (world: Map<string, number[]>, id: string): IMoticaVector3 =>
+const at = (world: Map<string, number[]>, id: string): IAutoFilmVector3 =>
   Matrix4.position(world.get(id)!);
 
 /**
@@ -142,7 +142,7 @@ export const test_resolve_ik_driver = (): void => {
   );
 
   // 6. deferred: ccd solver, wrong-length chain, spring
-  const spring: IMoticaSpringDriver = {
+  const spring: IAutoFilmSpringDriver = {
     type: "spring",
     chain: ["a", "b"],
     stiffness: 1,

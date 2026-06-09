@@ -2,7 +2,7 @@ import {
   ViolationCollector,
   getConstraint,
   validateJointRom,
-} from "@motica/engine";
+} from "@autofilm/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint } from "../internal/fixtures";

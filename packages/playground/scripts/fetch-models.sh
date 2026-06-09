@@ -7,7 +7,7 @@
 # VRM license is "Other" with no terms URL). The file (~14 MB) is fetched on
 # demand rather than committed.
 #
-# Run before `pnpm --filter @motica/playground dev`.
+# Run before `pnpm --filter @autofilm/playground dev`.
 set -euo pipefail
 dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/public/models"
 mkdir -p "$dir"

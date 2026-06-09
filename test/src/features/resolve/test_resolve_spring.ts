@@ -1,23 +1,23 @@
-import { Matrix4, createSpringState, stepSpring } from "@motica/engine";
+import { Matrix4, createSpringState, stepSpring } from "@autofilm/engine";
 import {
-  IMoticaSpringDriver,
-  IMoticaTransform,
-  IMoticaVector3,
-} from "@motica/interface";
+  IAutoFilmSpringDriver,
+  IAutoFilmTransform,
+  IAutoFilmVector3,
+} from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
-const W = (p: IMoticaVector3): number[] =>
+const W = (p: IAutoFilmVector3): number[] =>
   Matrix4.compose(p, { x: 0, y: 0, z: 0, w: 1 }, { x: 1, y: 1, z: 1 });
 
-const trs = (x: number, y: number, z: number): IMoticaTransform => ({
+const trs = (x: number, y: number, z: number): IAutoFilmTransform => ({
   translation: { x, y, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 
-const spring: IMoticaSpringDriver = {
+const spring: IAutoFilmSpringDriver = {
   type: "spring",
   chain: ["root", "j1", "j2"],
   stiffness: 0.3,
@@ -28,15 +28,15 @@ const spring: IMoticaSpringDriver = {
   center: null,
 };
 
-const local = new Map<string, IMoticaTransform>([
+const local = new Map<string, IAutoFilmTransform>([
   ["j1", trs(1, 0, 0)],
   ["j2", trs(1, 0, 0)],
 ]);
 
-const at = (world: Map<string, number[]>, id: string): IMoticaVector3 =>
+const at = (world: Map<string, number[]>, id: string): IAutoFilmVector3 =>
   Matrix4.position(world.get(id)!);
 
-const dist = (a: IMoticaVector3, b: IMoticaVector3): number =>
+const dist = (a: IAutoFilmVector3, b: IAutoFilmVector3): number =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 /** Run `steps` of the spring from a fresh rest chain laid out along +X. */

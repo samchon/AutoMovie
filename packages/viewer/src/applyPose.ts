@@ -1,10 +1,10 @@
-import { resolvePose } from "@motica/engine";
-import { IMoticaPose, IMoticaSkeleton } from "@motica/interface";
+import { resolvePose } from "@autofilm/engine";
+import { IAutoFilmPose, IAutoFilmSkeleton } from "@autofilm/interface";
 
-import { IMoticaModelObject, applyTransform } from "./buildModel";
+import { IAutoFilmModelObject, applyTransform } from "./buildModel";
 
 /**
- * Apply a {@link IMoticaPose} to a built model by running the engine's forward
+ * Apply a {@link IAutoFilmPose} to a built model by running the engine's forward
  * kinematics and writing each bone's local rotation onto the corresponding
  * `THREE.Bone`. The pose's root transform (if any) is applied to the model
  * root.
@@ -16,9 +16,9 @@ import { IMoticaModelObject, applyTransform } from "./buildModel";
  * @author Samchon
  */
 export const applyPose = (
-  target: IMoticaModelObject,
-  pose: IMoticaPose,
-  skeleton: IMoticaSkeleton,
+  target: IAutoFilmModelObject,
+  pose: IAutoFilmPose,
+  skeleton: IAutoFilmSkeleton,
 ): void => {
   for (const r of resolvePose(pose, skeleton)) {
     const bone = target.bones.get(r.bone);

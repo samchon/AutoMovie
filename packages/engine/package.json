@@ -1,7 +1,7 @@
 {
-  "name": "@motica/engine",
+  "name": "@autofilm/engine",
   "version": "0.1.0",
-  "description": "motica deterministic engine — kinematics, ROM validation, motion sampling, tessellation",
+  "description": "autofilm deterministic engine — kinematics, ROM validation, motion sampling, tessellation",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/samchon/motica"
+    "url": "https://github.com/samchon/autofilm"
   },
   "files": [
     "lib",
@@ -39,7 +39,7 @@
     }
   },
   "dependencies": {
-    "@motica/interface": "workspace:^"
+    "@autofilm/interface": "workspace:^"
   },
   "devDependencies": {
     "rimraf": "^6.0.1",

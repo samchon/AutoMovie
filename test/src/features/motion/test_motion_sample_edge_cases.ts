@@ -1,5 +1,5 @@
-import { sampleMotion } from "@motica/engine";
-import { IMoticaMotion } from "@motica/interface";
+import { sampleMotion } from "@autofilm/engine";
+import { IAutoFilmMotion } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -11,7 +11,7 @@ import {
 } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const flex = (m: IMoticaMotion, t: number, bone = "leftLowerArm"): number => {
+const flex = (m: IAutoFilmMotion, t: number, bone = "leftLowerArm"): number => {
   const j = sampleMotion(m, t).pose.joints.find((x) => x.bone === bone);
   if (j === undefined) throw new Error(`${bone} missing from sampled pose`);
   return j.flexion ?? 0;

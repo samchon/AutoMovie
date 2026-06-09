@@ -1,8 +1,8 @@
-import { applyChannelLimit } from "@motica/engine";
-import { IMoticaChannel, IMoticaChannelLimit } from "@motica/interface";
+import { applyChannelLimit } from "@autofilm/engine";
+import { IAutoFilmChannel, IAutoFilmChannelLimit } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
-const CHANNEL: IMoticaChannel = {
+const CHANNEL: IAutoFilmChannel = {
   kind: "node",
   node: "n",
   path: "translation",
@@ -11,7 +11,7 @@ const CHANNEL: IMoticaChannel = {
 const limit = (
   min: (number | null)[] | null,
   max: (number | null)[] | null,
-): IMoticaChannelLimit => ({ channel: CHANNEL, min, max });
+): IAutoFilmChannelLimit => ({ channel: CHANNEL, min, max });
 
 /**
  * The CONSTRAIN pass: clamp a value to a channel limit and report every bound

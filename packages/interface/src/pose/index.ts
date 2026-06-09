@@ -1,2 +1,2 @@
-export * from "./IMoticaJointPose";
-export * from "./IMoticaPose";
+export * from "./IAutoFilmJointPose";
+export * from "./IAutoFilmPose";

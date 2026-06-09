@@ -1,9 +1,9 @@
-import type { Document, Node as GLTFNode } from "@gltf-transform/core";
 import {
-  IMoticaBone,
-  IMoticaSkeleton,
-  MoticaHumanoidBone,
-} from "@motica/interface";
+  AutoFilmHumanoidBone,
+  IAutoFilmBone,
+  IAutoFilmSkeleton,
+} from "@autofilm/interface";
+import type { Document, Node as GLTFNode } from "@gltf-transform/core";
 
 /**
  * Bone-name aliases → normalized humanoid slots, covering the common rig naming
@@ -12,7 +12,7 @@ import {
  * Keys are already {@link normalize}d (lowercased, separators and a `mixamorig`
  * prefix stripped). Fingers/eyes/jaw are out of scope for this first mapping.
  */
-const HUMANOID_ALIASES: Record<string, MoticaHumanoidBone> = {
+const HUMANOID_ALIASES: Record<string, AutoFilmHumanoidBone> = {
   hips: "hips",
   pelvis: "hips",
   spine: "spine",
@@ -60,10 +60,10 @@ const normalize = (name: string): string =>
 
 /**
  * Retarget an imported glTF's skin onto a normalized humanoid
- * {@link IMoticaSkeleton} by matching each skin joint's name to a
- * {@link MoticaHumanoidBone} slot — the bridge that turns a real rigged glTF/VRM
- * into a motica character (poses and motions authored on the slots then replay
- * on it).
+ * {@link IAutoFilmSkeleton} by matching each skin joint's name to a
+ * {@link AutoFilmHumanoidBone} slot — the bridge that turns a real rigged
+ * glTF/VRM into a autofilm character (poses and motions authored on the slots
+ * then replay on it).
  *
  * The skeleton's hierarchy is rebuilt over the mapped joints only: a bone's
  * parent is its nearest _mapped_ ancestor in the glTF node tree, so
@@ -77,13 +77,13 @@ const normalize = (name: string): string =>
 export const humanoidSkeleton = (
   doc: Document,
   skeletonId = "skeleton",
-): IMoticaSkeleton | null => {
+): IAutoFilmSkeleton | null => {
   const skins = doc.getRoot().listSkins();
   if (skins.length === 0) return null;
 
   // First-wins mapping of joint node → humanoid slot.
-  const slotByNode = new Map<GLTFNode, MoticaHumanoidBone>();
-  const used = new Set<MoticaHumanoidBone>();
+  const slotByNode = new Map<GLTFNode, AutoFilmHumanoidBone>();
+  const used = new Set<AutoFilmHumanoidBone>();
   for (const joint of skins[0]!.listJoints()) {
     const slot = HUMANOID_ALIASES[normalize(joint.getName())];
     if (slot !== undefined && !used.has(slot)) {
@@ -97,10 +97,10 @@ export const humanoidSkeleton = (
   for (const n of doc.getRoot().listNodes())
     for (const child of n.listChildren()) parentNode.set(child, n);
 
-  const bones: IMoticaBone[] = [];
+  const bones: IAutoFilmBone[] = [];
   for (const [node, slot] of slotByNode) {
     let ancestor = parentNode.get(node);
-    let parent: MoticaHumanoidBone | null = null;
+    let parent: AutoFilmHumanoidBone | null = null;
     while (ancestor !== undefined) {
       const mapped = slotByNode.get(ancestor);
       if (mapped !== undefined) {

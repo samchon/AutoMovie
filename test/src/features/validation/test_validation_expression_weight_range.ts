@@ -1,4 +1,4 @@
-import { validateExpressionResult } from "@motica/engine";
+import { validateExpressionResult } from "@autofilm/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeExpression } from "../internal/fixtures";

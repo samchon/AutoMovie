@@ -1,7 +1,7 @@
 {
-  "name": "@motica/render",
+  "name": "@autofilm/render",
   "version": "0.1.0",
-  "description": "motica render — deterministic frame schedule + encode plan from a render spec",
+  "description": "autofilm render — deterministic frame schedule + encode plan from a render spec",
   "main": "src/index.ts",
   "exports": { ".": "./src/index.ts", "./package.json": "./package.json" },
   "scripts": {
@@ -11,7 +11,7 @@
   },
   "author": "Samchon",
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/samchon/motica" },
+  "repository": { "type": "git", "url": "https://github.com/samchon/autofilm" },
   "files": ["lib", "src", "package.json", "LICENSE", "README.md"],
   "publishConfig": {
     "access": "public",
@@ -19,6 +19,6 @@
     "types": "lib/index.d.ts",
     "exports": { ".": { "types": "./lib/index.d.ts", "default": "./lib/index.js" }, "./package.json": "./package.json" }
   },
-  "dependencies": { "@motica/interface": "workspace:^" },
+  "dependencies": { "@autofilm/interface": "workspace:^" },
   "devDependencies": { "rimraf": "^6.0.1", "typescript": "catalog:typescript" }
 }

@@ -13,7 +13,7 @@ All conventions and workflows live as skills under `.codex/skills/`. Read the li
 
 ### Project Outline
 
-What `motica` is, the long-haul mission, the workspace layout, and the canonical commands, `.codex/skills/project/SKILL.md`.
+What `autofilm` is, the long-haul mission, the workspace layout, and the canonical commands, `.codex/skills/project/SKILL.md`.
 
 ### Development
 

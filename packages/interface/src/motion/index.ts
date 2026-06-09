@@ -1,3 +1,3 @@
-export * from "./MoticaEasing";
-export * from "./IMoticaKeyframe";
-export * from "./IMoticaMotion";
+export * from "./AutoFilmEasing";
+export * from "./IAutoFilmKeyframe";
+export * from "./IAutoFilmMotion";

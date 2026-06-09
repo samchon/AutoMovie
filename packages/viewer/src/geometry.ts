@@ -1,15 +1,15 @@
-import { tessellate } from "@motica/engine";
-import { IMoticaGeometry, IMoticaMaterial } from "@motica/interface";
+import { tessellate } from "@autofilm/engine";
+import { IAutoFilmGeometry, IAutoFilmMaterial } from "@autofilm/interface";
 import * as THREE from "three";
 
 /**
- * Build a `three.js` geometry from a motica geometry node — tessellating a
+ * Build a `three.js` geometry from a autofilm geometry node — tessellating a
  * parametric primitive (via the engine) or uploading raw mesh arrays.
  *
  * @author Samchon
  */
 export const buildGeometry = (
-  geometry: IMoticaGeometry,
+  geometry: IAutoFilmGeometry,
 ): THREE.BufferGeometry => {
   const geo = new THREE.BufferGeometry();
   if (geometry.type === "primitive") {
@@ -39,9 +39,9 @@ export const buildGeometry = (
   return geo;
 };
 
-/** Build a `three.js` standard (PBR) material from a motica material. */
+/** Build a `three.js` standard (PBR) material from a autofilm material. */
 export const buildMaterial = (
-  material: IMoticaMaterial,
+  material: IAutoFilmMaterial,
 ): THREE.MeshStandardMaterial => {
   const c = material.baseColor;
   const std = new THREE.MeshStandardMaterial({

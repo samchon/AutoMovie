@@ -1,9 +1,9 @@
-import { IMoticaChannel } from "@motica/interface";
+import { IAutoFilmChannel } from "@autofilm/interface";
 
 /**
  * Channel addressing helpers shared by the resolve passes.
  *
- * A channel ({@link IMoticaChannel}) is the universal animatable lvalue; the
+ * A channel ({@link IAutoFilmChannel}) is the universal animatable lvalue; the
  * sample / constrain passes key their results by a canonical string so a
  * track's value, a limit's bounds, and (later) a driver's output all collide on
  * the same channel.
@@ -16,7 +16,7 @@ import { IMoticaChannel } from "@motica/interface";
  * disjoint namespaces (`node:…` vs `ptr:…`) so they can never alias even if a
  * pointer string happened to look like a node path.
  */
-export const channelKey = (channel: IMoticaChannel): string =>
+export const channelKey = (channel: IAutoFilmChannel): string =>
   channel.kind === "node"
     ? `node:${channel.node}:${channel.path}`
     : `ptr:${channel.pointer}`;
@@ -26,7 +26,7 @@ export const channelKey = (channel: IMoticaChannel): string =>
  * must interpolate with slerp rather than component-wise lerp — the glTF rule
  * for LINEAR rotation tracks.
  */
-export const channelIsRotation = (channel: IMoticaChannel): boolean =>
+export const channelIsRotation = (channel: IAutoFilmChannel): boolean =>
   channel.kind === "node"
     ? channel.path === "rotation"
     : channel.valueType === "quaternion";

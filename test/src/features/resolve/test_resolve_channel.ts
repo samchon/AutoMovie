@@ -1,16 +1,16 @@
-import { channelIsRotation, channelKey } from "@motica/engine";
-import { IMoticaChannel } from "@motica/interface";
+import { channelIsRotation, channelKey } from "@autofilm/engine";
+import { IAutoFilmChannel } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 const node = (
   id: string,
   path: "translation" | "rotation" | "scale" | "weights",
-): IMoticaChannel => ({ kind: "node", node: id, path });
+): IAutoFilmChannel => ({ kind: "node", node: id, path });
 
 const pointer = (
   ptr: string,
   valueType: "scalar" | "vec2" | "vec3" | "vec4" | "quaternion" | "weights",
-): IMoticaChannel => ({ kind: "pointer", pointer: ptr, valueType });
+): IAutoFilmChannel => ({ kind: "pointer", pointer: ptr, valueType });
 
 /**
  * Canonical channel keys and the rotation test that decides slerp vs lerp.

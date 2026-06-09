@@ -1,4 +1,4 @@
-import { IMoticaJointPose, IMoticaQuaternion } from "@motica/interface";
+import { IAutoFilmJointPose, IAutoFilmQuaternion } from "@autofilm/interface";
 
 import { Quaternion } from "../math/Quaternion";
 
@@ -27,8 +27,8 @@ import { Quaternion } from "../math/Quaternion";
  * @author Samchon
  */
 export const jointToQuaternion = (
-  joint: Pick<IMoticaJointPose, "flexion" | "abduction" | "twist">,
-): IMoticaQuaternion => {
+  joint: Pick<IAutoFilmJointPose, "flexion" | "abduction" | "twist">,
+): IAutoFilmQuaternion => {
   const qFlexion = Quaternion.fromAxisAngle(
     { x: 1, y: 0, z: 0 },
     joint.flexion ?? 0,

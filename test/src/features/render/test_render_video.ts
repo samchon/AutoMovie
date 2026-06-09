@@ -1,8 +1,8 @@
-import { IMoticaRenderSpec } from "@motica/interface";
-import { IMoticaRenderAdapters, renderVideo } from "@motica/render";
+import { IAutoFilmRenderSpec } from "@autofilm/interface";
+import { IAutoFilmRenderAdapters, renderVideo } from "@autofilm/render";
 import { TestValidator } from "@nestia/e2e";
 
-const SPEC: IMoticaRenderSpec = {
+const SPEC: IAutoFilmRenderSpec = {
   target: "shot-1",
   fps: 24,
   width: 640,
@@ -26,7 +26,7 @@ export const test_render_video = async (): Promise<void> => {
   const captured: Array<{ t: number; i: number }> = [];
   let encodeArgs: string[] | null = null;
 
-  const adapters: IMoticaRenderAdapters = {
+  const adapters: IAutoFilmRenderAdapters = {
     captureFrame: async (timeSeconds, index, dir) => {
       captured.push({ t: timeSeconds, i: index });
       return `${dir}/frame_${index}.png`;
@@ -45,10 +45,10 @@ export const test_render_video = async (): Promise<void> => {
   TestValidator.equals("captured every frame in order", captured.length, 24);
   TestValidator.equals("first capture index 0", captured[0]!.i, 0);
   TestValidator.equals("last capture index 23", captured[23]!.i, 23);
+  const matchesFfmpegInvocation = (args: string[] | null): boolean =>
+    args !== null && args[0] === "-y" && args.includes("libx264");
   TestValidator.predicate(
     "encode received the ffmpeg args",
-    encodeArgs !== null &&
-      encodeArgs[0] === "-y" &&
-      encodeArgs.includes("libx264"),
+    matchesFfmpegInvocation(encodeArgs),
   );
 };

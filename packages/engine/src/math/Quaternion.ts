@@ -1,8 +1,8 @@
-import { IMoticaQuaternion, IMoticaVector3 } from "@motica/interface";
+import { IAutoFilmQuaternion, IAutoFilmVector3 } from "@autofilm/interface";
 
 /**
- * Pure-function quaternion math over {@link IMoticaQuaternion} (`(x, y, z, w)`,
- * glTF order).
+ * Pure-function quaternion math over {@link IAutoFilmQuaternion} (`(x, y, z,
+ * w)`, glTF order).
  *
  * Quaternions are the engine's internal rotation representation: the LLM emits
  * semantic degrees, {@link jointToQuaternion} turns those into quaternions, and
@@ -12,22 +12,27 @@ import { IMoticaQuaternion, IMoticaVector3 } from "@motica/interface";
  * @author Samchon
  */
 export namespace Quaternion {
-  export const identity = (): IMoticaQuaternion => ({ x: 0, y: 0, z: 0, w: 1 });
+  export const identity = (): IAutoFilmQuaternion => ({
+    x: 0,
+    y: 0,
+    z: 0,
+    w: 1,
+  });
 
   export const DEG2RAD = Math.PI / 180;
 
   /** Hamilton product `a * b` (apply `b` first, then `a`). */
   export const multiply = (
-    a: IMoticaQuaternion,
-    b: IMoticaQuaternion,
-  ): IMoticaQuaternion => ({
+    a: IAutoFilmQuaternion,
+    b: IAutoFilmQuaternion,
+  ): IAutoFilmQuaternion => ({
     x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
     y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
     z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
     w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
   });
 
-  export const normalize = (q: IMoticaQuaternion): IMoticaQuaternion => {
+  export const normalize = (q: IAutoFilmQuaternion): IAutoFilmQuaternion => {
     const len = Math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
     if (len === 0) return identity();
     const inv = 1 / len;
@@ -36,9 +41,9 @@ export namespace Quaternion {
 
   /** Rotation of `angleDeg` degrees about a (not necessarily unit) `axis`. */
   export const fromAxisAngle = (
-    axis: IMoticaVector3,
+    axis: IAutoFilmVector3,
     angleDeg: number,
-  ): IMoticaQuaternion => {
+  ): IAutoFilmQuaternion => {
     const len = Math.sqrt(axis.x * axis.x + axis.y * axis.y + axis.z * axis.z);
     if (len === 0) return identity();
     const half = (angleDeg * DEG2RAD) / 2;
@@ -48,9 +53,9 @@ export namespace Quaternion {
 
   /** Rotate a vector by a quaternion: `q * v * q⁻¹`. */
   export const rotateVector = (
-    q: IMoticaQuaternion,
-    v: IMoticaVector3,
-  ): IMoticaVector3 => {
+    q: IAutoFilmQuaternion,
+    v: IAutoFilmVector3,
+  ): IAutoFilmVector3 => {
     // t = 2 * cross(q.xyz, v); v' = v + q.w * t + cross(q.xyz, t)
     const tx = 2 * (q.y * v.z - q.z * v.y);
     const ty = 2 * (q.z * v.x - q.x * v.z);
@@ -64,10 +69,10 @@ export namespace Quaternion {
 
   /** Spherical linear interpolation, `t` in `[0, 1]`. */
   export const slerp = (
-    a: IMoticaQuaternion,
-    b: IMoticaQuaternion,
+    a: IAutoFilmQuaternion,
+    b: IAutoFilmQuaternion,
     t: number,
-  ): IMoticaQuaternion => {
+  ): IAutoFilmQuaternion => {
     let cos = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
     let bx = b.x;
     let by = b.y;

@@ -1,4 +1,4 @@
-import { sampleMotion } from "@motica/engine";
+import { sampleMotion } from "@autofilm/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {

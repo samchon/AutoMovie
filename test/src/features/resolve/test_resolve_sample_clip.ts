@@ -1,33 +1,37 @@
-import { sampleClip } from "@motica/engine";
-import { IMoticaChannel, IMoticaClip, IMoticaTrack } from "@motica/interface";
+import { sampleClip } from "@autofilm/engine";
+import {
+  IAutoFilmChannel,
+  IAutoFilmClip,
+  IAutoFilmTrack,
+} from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, qclose } from "../internal/predicates";
 
 const NODE = (
   path: "translation" | "rotation" | "scale" | "weights",
-): IMoticaChannel => ({ kind: "node", node: "n", path });
+): IAutoFilmChannel => ({ kind: "node", node: "n", path });
 
-const PTR: IMoticaChannel = {
+const PTR: IAutoFilmChannel = {
   kind: "pointer",
   pointer: "/x",
   valueType: "scalar",
 };
 
 const track = (
-  channel: IMoticaChannel,
+  channel: IAutoFilmChannel,
   times: number[],
   values: number[],
-  interpolation: IMoticaTrack["interpolation"],
-): IMoticaTrack => ({ channel, times, values, interpolation });
+  interpolation: IAutoFilmTrack["interpolation"],
+): IAutoFilmTrack => ({ channel, times, values, interpolation });
 
 const clip = (
-  tracks: IMoticaTrack[],
+  tracks: IAutoFilmTrack[],
   duration: number,
   loop = false,
-): IMoticaClip => ({ id: "c", name: null, duration, loop, tracks });
+): IAutoFilmClip => ({ id: "c", name: null, duration, loop, tracks });
 
-const val = (c: IMoticaClip, t: number, key: string): number[] => {
+const val = (c: IAutoFilmClip, t: number, key: string): number[] => {
   const hit = sampleClip(c, t).get(key);
   if (hit === undefined) throw new Error(`${key} missing`);
   return hit.value;

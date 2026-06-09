@@ -1,4 +1,4 @@
-import { validateModel } from "@motica/engine";
+import { validateModel } from "@autofilm/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";

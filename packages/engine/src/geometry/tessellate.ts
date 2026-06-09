@@ -1,9 +1,9 @@
-import { IMoticaMesh, MoticaPrimitiveShape } from "@motica/interface";
+import { AutoFilmPrimitiveShape, IAutoFilmMesh } from "@autofilm/interface";
 
 /**
  * Flat-array triangle mesh produced by tessellation: parallel `positions` /
  * `normals` (xyz triples) and triangle `indices`. This is the render-ready form
- * a renderer uploads to the GPU, and matches the shape of {@link IMoticaMesh}
+ * a renderer uploads to the GPU, and matches the shape of {@link IAutoFilmMesh}
  * (minus skinning).
  */
 export interface ITessellation {
@@ -13,7 +13,7 @@ export interface ITessellation {
 }
 
 /**
- * Tessellate a {@link MoticaPrimitiveShape} into a triangle mesh.
+ * Tessellate a {@link AutoFilmPrimitiveShape} into a triangle mesh.
  *
  * Lets the LLM-authored "named dimensions" path (a 0.4 m sphere, a capsule)
  * become concrete geometry a renderer can draw, without the model ever emitting
@@ -22,7 +22,7 @@ export interface ITessellation {
  *
  * @author Samchon
  */
-export const tessellate = (shape: MoticaPrimitiveShape): ITessellation => {
+export const tessellate = (shape: AutoFilmPrimitiveShape): ITessellation => {
   switch (shape.type) {
     case "box":
       return box(shape.width, shape.height, shape.depth);
@@ -46,8 +46,10 @@ export const tessellate = (shape: MoticaPrimitiveShape): ITessellation => {
   }
 };
 
-/** Tessellate, then wrap as a full {@link IMoticaMesh} (no skinning). */
-export const tessellateToMesh = (shape: MoticaPrimitiveShape): IMoticaMesh => {
+/** Tessellate, then wrap as a full {@link IAutoFilmMesh} (no skinning). */
+export const tessellateToMesh = (
+  shape: AutoFilmPrimitiveShape,
+): IAutoFilmMesh => {
   const t = tessellate(shape);
   return {
     positions: t.positions,

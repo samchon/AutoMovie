@@ -1,8 +1,8 @@
-import { tessellate } from "@motica/engine";
-import { MoticaPrimitiveShape } from "@motica/interface";
+import { tessellate } from "@autofilm/engine";
+import { AutoFilmPrimitiveShape } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
-const SHAPES: MoticaPrimitiveShape[] = [
+const SHAPES: AutoFilmPrimitiveShape[] = [
   { type: "box", width: 0.4, height: 0.6, depth: 0.2 },
   { type: "sphere", radius: 0.5 },
   { type: "cylinder", radius: 0.3, height: 1 },

@@ -1,8 +1,8 @@
 {
   "private": true,
-  "name": "@motica/playground",
+  "name": "@autofilm/playground",
   "version": "0.1.0",
-  "description": "motica playground — a usable web UI: viewer viewport + humanoid character editor",
+  "description": "autofilm playground — a usable web UI: viewer viewport + humanoid character editor",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,9 +13,9 @@
   "author": "Samchon",
   "license": "MIT",
   "dependencies": {
-    "@motica/engine": "workspace:^",
-    "@motica/interface": "workspace:^",
-    "@motica/viewer": "workspace:^",
+    "@autofilm/engine": "workspace:^",
+    "@autofilm/interface": "workspace:^",
+    "@autofilm/viewer": "workspace:^",
     "@pixiv/three-vrm": "^3",
     "three": "^0.169.0"
   },
