@@ -23,14 +23,19 @@ pnpm build:knight      # → .shots/knight/knight.glb
 
 No browser needed — these run headless in Node.
 
-## Demo clips (`.gif`)
+## Demo clips (`.mp4`)
 
-The GIFs are deterministic screen captures of the viewer pages. They need two
-things present:
+The clips are deterministic captures of the viewer pages, encoded straight to
+H.264 MP4 in-process (no ffmpeg). One **persistent** headless-Chromium session
+(Playwright) loads each page once, then `window.__afSeek(t)` (the `?cap=1` hook
+in every view) steps it to each frame and the canvas is screenshotted — so it
+takes seconds per clip, not a browser relaunch per frame.
+
+Needs:
 
 1. **The dev server running** (separate terminal): `pnpm dev` (serves
    `http://localhost:5173`).
-2. **Google Chrome** installed.
+2. **Google Chrome** installed (driven via `executablePath`).
 
 Then:
 
@@ -42,7 +47,4 @@ pnpm shots shadowbox   # only shots whose output path matches "shadowbox"
 Overrides via env: `CHROME=/path/to/chrome` (binary), `BASE=http://host:port`
 (server). The shot list lives at the top of `capture-shots.mjs` — add a row
 `[page, query, durationSeconds, frameCount, width, height, outPath, fps]` to
-capture a new clip.
-
-Each frame is a frozen `?t=<seconds>` sample, so re-running yields identical
-output. Encoding uses `gifenc` + `pngjs` (already dev-dependencies).
+capture a new clip. Encoding uses `h264-mp4-encoder` (wasm) + `pngjs`.

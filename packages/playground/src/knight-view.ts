@@ -187,9 +187,17 @@ const step = (elapsed: number): void => {
 if (freezeAt !== null && Number.isFinite(freezeAt)) step(freezeAt);
 
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
-mountViewer(canvas, scene, camera, (elapsed) => {
-  if (freezeAt === null) step(elapsed);
+// `?cap=1` lets a recorder drive frame timing via window.__afSeek.
+const capMode = params.get("cap") === "1";
+const handle = mountViewer(canvas, scene, camera, (elapsed) => {
+  if (!capMode && freezeAt === null) step(elapsed);
 });
+(window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
+  t: number,
+): void => {
+  step(t);
+  handle.renderer.render(scene, camera);
+};
 
 // ── clip selector ────────────────────────────────────────────────────────────
 const bar = document.querySelector<HTMLDivElement>("#clips");

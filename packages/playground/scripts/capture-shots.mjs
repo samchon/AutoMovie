@@ -1,28 +1,26 @@
 /* eslint-disable */
-// Regenerate the .shots/*.gif demo clips by driving headless Chrome over the
-// playground viewer pages and encoding the frames to animated GIFs.
+// Regenerate the .shots/*.mp4 demo clips. Drives the playground viewer pages in
+// ONE persistent headless-Chromium session (Playwright): the page is loaded
+// once per clip, then `window.__afSeek(t)` steps it to each frame deterministi-
+// cally and the canvas is screenshotted — no per-frame browser relaunch. Frames
+// are encoded straight to H.264 MP4 in-process (wasm), so no ffmpeg needed.
 //
 // Prerequisites:
-//   1. The dev server must be running:  pnpm --filter @autofilm/playground dev
-//      (serves the pages at http://localhost:5173)
-//   2. Google Chrome must be installed. Override the binary with CHROME=/path,
-//      and the server with BASE=http://host:port, if they differ.
+//   1. Dev server running:  pnpm --filter @autofilm/playground dev   (:5173)
+//   2. Google Chrome installed (Playwright drives it via executablePath).
+// Overrides: CHROME=/path/to/chrome, BASE=http://host:port.
 //
 // Usage:
 //   node scripts/capture-shots.mjs            # all shots
-//   node scripts/capture-shots.mjs shadowbox  # only shots whose out-path matches
-//
-// Each frame is a deterministic freeze (?t=<seconds>) so the output is stable.
-// GIFs land under <repo>/.shots (gitignored scratch — derived from the AST, not
-// committed source).
-import { GIFEncoder, applyPalette, quantize } from "gifenc";
-import { execFileSync } from "node:child_process";
+//   node scripts/capture-shots.mjs shadowbox  # only outputs matching the arg
+import HMEmod from "h264-mp4-encoder";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
+const HME = HMEmod.default ?? HMEmod;
 const here = path.dirname(fileURLToPath(import.meta.url));
 const shotsDir = path.resolve(here, "../../../.shots");
 const BASE = process.env.BASE ?? "http://localhost:5173";
@@ -34,161 +32,148 @@ const CHROME =
     linux: "google-chrome",
   }[process.platform];
 
-// page, query (without t), duration s, frame count, width, height, out, fps
+// [page, query (no t/cap), durationSeconds, frames, width, height, out, fps]
 const SHOTS = [
-  // headliners
   [
     "stickman.html",
     "char=human&clip=shadowbox&az=28",
     30.2,
-    240,
     480,
-    560,
-    "human/shadowbox.gif",
-    8,
+    600,
+    720,
+    "human/shadowbox.mp4",
+    30,
   ],
   [
     "knight.html",
     "clip=performance&az=38",
     28.8,
-    200,
-    600,
-    600,
-    "knight/scenario.gif",
-    8,
+    460,
+    720,
+    720,
+    "knight/scenario.mp4",
+    30,
   ],
   [
     "knight.html",
     "clip=gallopTravel&follow=1&az=42",
     4.96,
-    48,
-    600,
-    600,
-    "knight/charge.gif",
-    9,
+    150,
+    720,
+    720,
+    "knight/charge.mp4",
+    30,
   ],
-  ["spar.html", "", 29.55, 200, 640, 520, "spar/ko.gif", 8],
-  // human clip library
+  ["spar.html", "", 29.55, 470, 760, 620, "spar/ko.mp4", 30],
   [
     "stickman.html",
     "char=human&clip=walk&az=80",
     1.0,
-    26,
-    480,
+    30,
     560,
-    "human/walk.gif",
-    26,
+    660,
+    "human/walk.mp4",
+    30,
   ],
   [
     "stickman.html",
     "char=human&clip=run&az=80",
     0.6,
-    20,
-    480,
+    36,
     560,
-    "human/run.gif",
-    24,
+    660,
+    "human/run.mp4",
+    60,
   ],
   [
     "stickman.html",
     "char=human&clip=kick&az=35",
     1.0,
-    26,
-    480,
+    40,
     560,
-    "human/kick.gif",
-    16,
-  ],
-  [
-    "stickman.html",
-    "char=human&clip=dance&az=20",
-    1.4,
-    30,
-    480,
-    560,
-    "human/dance.gif",
-    18,
+    660,
+    "human/kick.mp4",
+    40,
   ],
   [
     "stickman.html",
     "char=human&clip=combo&az=30",
     5.2,
-    42,
-    480,
+    160,
     560,
-    "human/combo.gif",
-    8,
+    660,
+    "human/combo.mp4",
+    30,
   ],
   [
     "stickman.html",
     "char=human&clip=stroll&follow=1&az=70",
     6.0,
-    48,
-    560,
-    560,
-    "human/stroll.gif",
-    8,
+    180,
+    640,
+    640,
+    "human/stroll.mp4",
+    30,
   ],
   [
     "stickman.html",
     "char=human&clip=sprint&follow=1&az=70",
     5.4,
-    44,
-    560,
-    560,
-    "human/sprint.gif",
-    8,
+    162,
+    640,
+    640,
+    "human/sprint.mp4",
+    30,
   ],
-  // cat clip library
   [
     "stickman.html",
     "char=cat&clip=walk&az=70",
     0.8,
-    24,
-    520,
-    560,
-    "cat/walk.gif",
-    24,
+    32,
+    600,
+    620,
+    "cat/walk.mp4",
+    40,
   ],
   [
     "stickman.html",
     "char=cat&clip=leap&az=70",
     1.0,
-    26,
-    520,
-    560,
-    "cat/leap.gif",
-    16,
+    40,
+    600,
+    620,
+    "cat/leap.mp4",
+    40,
   ],
   [
     "stickman.html",
     "char=cat&clip=combo&az=40",
     6.6,
-    44,
-    520,
-    560,
-    "cat/combo.gif",
-    8,
+    198,
+    600,
+    620,
+    "cat/combo.mp4",
+    30,
   ],
   [
     "stickman.html",
     "char=cat&clip=prowl&follow=1&az=65",
     6.4,
-    50,
-    560,
-    560,
-    "cat/prowl.gif",
-    8,
+    192,
+    640,
+    640,
+    "cat/prowl.mp4",
+    30,
   ],
   [
     "stickman.html",
     "char=cat&clip=bound&follow=1&az=65",
     5.0,
-    42,
-    560,
-    560,
-    "cat/bound.gif",
-    8,
+    150,
+    640,
+    640,
+    "cat/bound.mp4",
+    30,
   ],
 ];
 
@@ -199,45 +184,52 @@ if (shots.length === 0) {
   process.exit(1);
 }
 
-const frameDir = fs.mkdtempSync(path.join(os.tmpdir(), "autofilm-shot-"));
+const even = (n) => n - (n % 2);
 
-const capture = ([page, q, dur, n, w, h, out, fps]) => {
+const browser = await chromium.launch({
+  executablePath: CHROME,
+  headless: true,
+});
+
+const capture = async ([page, q, dur, n, w, h, out, fps]) => {
+  const W = even(w);
+  const H = even(h);
   const dest = path.join(shotsDir, out);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  const gif = GIFEncoder();
-  const delay = Math.round(1000 / fps);
+
+  const pg = await browser.newPage({
+    viewport: { width: W, height: H },
+    deviceScaleFactor: 1,
+  });
+  const sep = q ? "&" : "";
+  await pg.goto(`${BASE}/${page}?${q}${sep}cap=1`, { waitUntil: "load" });
+  await pg.waitForFunction(() => typeof window.__afSeek === "function");
+  const view = pg.locator("#view");
+
+  const enc = await HME.createH264MP4Encoder();
+  enc.width = W;
+  enc.height = H;
+  enc.frameRate = fps;
+  enc.quantizationParameter = 20; // lower = higher quality
+  enc.initialize();
+
+  const t0 = Date.now();
   for (let i = 0; i < n; i++) {
-    const t = ((dur * i) / (n - 1)).toFixed(3);
-    const frame = path.join(frameDir, `f${String(i).padStart(3, "0")}.png`);
-    const sep = q ? "&" : "";
-    execFileSync(
-      CHROME,
-      [
-        "--headless=new",
-        "--disable-gpu",
-        "--hide-scrollbars",
-        `--window-size=${w},${h}`,
-        "--force-device-scale-factor=1",
-        "--virtual-time-budget=2200",
-        `--user-data-dir=${path.join(frameDir, `profile-${i}`)}`,
-        `--screenshot=${frame}`,
-        `${BASE}/${page}?${q}${sep}t=${t}`,
-      ],
-      { stdio: "ignore" },
-    );
-    const { data, width, height } = PNG.sync.read(fs.readFileSync(frame));
-    const rgba = new Uint8Array(data.buffer, data.byteOffset, data.length);
-    const palette = quantize(rgba, 256);
-    gif.writeFrame(applyPalette(rgba, palette), width, height, {
-      palette,
-      delay,
-    });
+    const t = (dur * i) / (n - 1);
+    await pg.evaluate((tt) => window.__afSeek(tt), t);
+    const buf = await view.screenshot({ type: "png" });
+    const png = PNG.sync.read(buf);
+    enc.addFrameRgba(new Uint8Array(png.data));
   }
-  gif.finish();
-  fs.writeFileSync(dest, Buffer.from(gif.bytes()));
-  console.log(`wrote ${out} (${n} frames @ ${fps}fps)`);
+  enc.finalize();
+  fs.writeFileSync(dest, Buffer.from(enc.FS.readFile(enc.outputFilename)));
+  enc.delete();
+  await pg.close();
+  console.log(
+    `wrote ${out} (${n} frames @ ${fps}fps, ${((Date.now() - t0) / 1000).toFixed(1)}s)`,
+  );
 };
 
-for (const shot of shots) capture(shot);
-fs.rmSync(frameDir, { recursive: true, force: true });
+for (const shot of shots) await capture(shot);
+await browser.close();
 console.log("done");
