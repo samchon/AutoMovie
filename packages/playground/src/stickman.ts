@@ -1,4 +1,4 @@
-import { Quaternion } from "@autofilm/engine";
+import { DEFAULT_HUMANOID_ROM, Quaternion } from "@autofilm/engine";
 import {
   AutoFilmHumanoidBone,
   AutoFilmPrimitiveShape,
@@ -88,7 +88,14 @@ const bone = (
   name: AutoFilmHumanoidBone,
   parent: AutoFilmHumanoidBone | null,
   rest: IAutoFilmTransform,
-): IAutoFilmBone => ({ bone: name, parent, rest, constraint: null });
+): IAutoFilmBone => ({
+  bone: name,
+  parent,
+  rest,
+  // each joint carries its anatomical range of motion (the engine validates
+  // poses/clips against it — autofilm's core differentiator)
+  constraint: DEFAULT_HUMANOID_ROM[name] ?? null,
+});
 
 /** Shortest-arc rotation taking the local +Y axis onto a target direction. */
 const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion => {
