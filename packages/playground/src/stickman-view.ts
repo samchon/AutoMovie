@@ -2,6 +2,7 @@ import {
   HUMANOID_JOINT_AXES,
   IAutoFilmJointAxes,
   aimRotation,
+  solveTwoBoneIK,
 } from "@autofilm/engine";
 import { AutoFilmHumanoidBone } from "@autofilm/interface";
 import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
@@ -166,9 +167,74 @@ const aimHead = (elapsed: number): void => {
   headBone.quaternion.copy(parentQ.invert().multiply(world));
 };
 
+// ── two-bone IK reach driver (?reach=1) ─────────────────────────────────────
+// The right arm reaches a moving target: aim the upper arm off the shoulder→goal
+// line by the engine's solveTwoBoneIK `lift`, then point the forearm at the goal
+// — the hand lands on the target, the elbow bending as it moves in and out.
+const reachMode = params.get("reach") === "1";
+const segLen = (b: string): number => {
+  const t = skeleton.bones.find((x) => x.bone === b)?.rest.translation;
+  return t ? Math.hypot(t.x, t.y, t.z) : 0.25;
+};
+const L1 = segLen("rightLowerArm"); // shoulder → elbow
+const L2 = segLen("rightHand"); // elbow → wrist
+const reachTarget = new THREE.Mesh(
+  new THREE.SphereGeometry(0.04, 16, 12),
+  new THREE.MeshStandardMaterial({ color: 0xe5484d }),
+);
+if (reachMode) scene.add(reachTarget);
+const FWD = { x: -1, y: 0, z: 0 }; // right-arm rest points down its −X local axis
+const toThree = (q: { x: number; y: number; z: number; w: number }) =>
+  new THREE.Quaternion(q.x, q.y, q.z, q.w);
+
+const reach = (elapsed: number): void => {
+  const upper = object.bones.get("rightUpperArm");
+  const lower = object.bones.get("rightLowerArm");
+  if (upper === undefined || lower === undefined) return;
+  scene.updateMatrixWorld(true);
+  const root = new THREE.Vector3().setFromMatrixPosition(upper.matrixWorld);
+  // target circles in front of and beside the right shoulder, in and out
+  const goal = root
+    .clone()
+    .add(
+      new THREE.Vector3(
+        -0.15 + 0.2 * Math.sin(elapsed * 1.1),
+        0.15 * Math.sin(elapsed * 1.7),
+        0.18 + (L1 + L2) * (0.55 + 0.4 * Math.sin(elapsed * 0.9)),
+      ),
+    );
+  reachTarget.position.copy(goal);
+
+  const toGoal = goal.clone().sub(root);
+  const dir = toGoal.clone().normalize();
+  const { lift } = solveTwoBoneIK(L1, L2, toGoal.length());
+  const pole = new THREE.Vector3(0, -1, -0.4).normalize();
+  const bendAxis = new THREE.Vector3().crossVectors(dir, pole).normalize();
+  const upperDir = dir
+    .clone()
+    .applyQuaternion(
+      new THREE.Quaternion().setFromAxisAngle(bendAxis, (lift * Math.PI) / 180),
+    );
+  const elbow = root.clone().add(upperDir.clone().multiplyScalar(L1));
+  const handDir = goal.clone().sub(elbow).normalize();
+
+  const parentQ = new THREE.Quaternion();
+  upper.parent!.getWorldQuaternion(parentQ);
+  const upperWorld = toThree(aimRotation(FWD, upperDir));
+  upper.quaternion.copy(parentQ.clone().invert().multiply(upperWorld));
+  upper.updateWorldMatrix(true, false);
+  const upperWorldQ = new THREE.Quaternion();
+  upper.getWorldQuaternion(upperWorldQ);
+  const lowerWorld = toThree(
+    aimRotation(FWD, { x: handDir.x, y: handDir.y, z: handDir.z }),
+  );
+  lower.quaternion.copy(upperWorldQ.invert().multiply(lowerWorld));
+};
+
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 mountViewer(canvas, scene, camera, (elapsed) => {
-  if (lookMode) aimHead(elapsed);
+  if (reachMode) reach(elapsed);
+  else if (lookMode) aimHead(elapsed);
   else if (!showRom && freezeAt === null) player.update(elapsed);
 });
 
