@@ -10,6 +10,8 @@ import { STICKMAN_CLIPS } from "./stickman-motion";
 
 const params = new URLSearchParams(location.search);
 const isCat = params.get("char") === "cat";
+// `?rom=1` freezes the figure at rest and draws each joint's flexion gamut.
+const showRom = params.get("rom") === "1";
 
 // ── build the chosen character + its clips ──────────────────────────────────
 // The cat is a quadruped (legs point down at rest) so it uses the default
@@ -39,7 +41,8 @@ const player = new AutoFilmPlayer(
 // the clip plays live off the render loop.
 const frozen = params.get("t");
 const freezeAt = frozen !== null ? Number(frozen) : null;
-if (freezeAt !== null && Number.isFinite(freezeAt)) player.update(freezeAt);
+if (!showRom && freezeAt !== null && Number.isFinite(freezeAt))
+  player.update(freezeAt);
 
 // ── scene scaffolding ───────────────────────────────────────────────────────
 const scene = new THREE.Scene();
@@ -69,9 +72,61 @@ camera.position.set(
 );
 camera.lookAt(0, target, ctr);
 
+// ── ROM overlay: a flexion-gamut fan at every constrained joint ─────────────
+// Each joint's `constraint.flexion` [min,max] swept about its flexion axis (the
+// same axis the engine validates against), drawn at rest so the figure's whole
+// range of motion is visible at once — the joint-limit idea made tangible.
+const buildRomFans = (): void => {
+  scene.updateMatrixWorld(true);
+  const pos = new THREE.Vector3();
+  const quat = new THREE.Quaternion();
+  const scl = new THREE.Vector3();
+  for (const b of skeleton.bones) {
+    const flex = b.constraint?.flexion;
+    if (flex == null) continue;
+    const child = skeleton.bones.find((x) => x.parent === b.bone);
+    const tb = object.bones.get(b.bone);
+    if (child === undefined || tb === undefined) continue;
+    tb.matrixWorld.decompose(pos, quat, scl);
+    const childDir = new THREE.Vector3(
+      child.rest.translation.x,
+      child.rest.translation.y,
+      child.rest.translation.z,
+    );
+    const a = jointAxes?.[b.bone]?.flexion ?? { x: 1, y: 0, z: 0 };
+    const axis = new THREE.Vector3(a.x, a.y, a.z);
+    const arc: THREE.Vector3[] = [];
+    const N = 28;
+    for (let i = 0; i <= N; ++i) {
+      const deg = flex.min + ((flex.max - flex.min) * i) / N;
+      const q = new THREE.Quaternion().setFromAxisAngle(
+        axis,
+        (deg * Math.PI) / 180,
+      );
+      arc.push(
+        pos
+          .clone()
+          .add(childDir.clone().applyQuaternion(q).applyQuaternion(quat)),
+      );
+    }
+    const outline = [pos.clone(), ...arc, pos.clone()];
+    scene.add(
+      new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(outline),
+        new THREE.LineBasicMaterial({
+          color: 0xff7a2f,
+          transparent: true,
+          opacity: 0.9,
+        }),
+      ),
+    );
+  }
+};
+if (showRom) buildRomFans();
+
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 mountViewer(canvas, scene, camera, (elapsed) => {
-  if (freezeAt === null) player.update(elapsed);
+  if (!showRom && freezeAt === null) player.update(elapsed);
 });
 
 // ── clip selector (live switching) ──────────────────────────────────────────
