@@ -1,4 +1,8 @@
-import { HUMANOID_JOINT_AXES, IAutoFilmJointAxes } from "@autofilm/engine";
+import {
+  HUMANOID_JOINT_AXES,
+  IAutoFilmJointAxes,
+  aimRotation,
+} from "@autofilm/engine";
 import { AutoFilmHumanoidBone } from "@autofilm/interface";
 import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
 import * as THREE from "three";
@@ -140,9 +144,32 @@ const buildRomFans = (): void => {
 };
 if (showRom) buildRomFans();
 
+// ── aim / look-at driver (?look=1) ──────────────────────────────────────────
+// The head's forward (+Z, where the eyes are) tracks a target orbiting in front
+// of the face: each frame compute the world look direction and convert it to the
+// head bone's local rotation via the engine's aimRotation.
+const lookMode = params.get("look") === "1";
+const headBone = object.bones.get("head");
+const aimHead = (elapsed: number): void => {
+  if (headBone === undefined) return;
+  scene.updateMatrixWorld(true);
+  const parentQ = new THREE.Quaternion();
+  headBone.parent!.getWorldQuaternion(parentQ);
+  // a target circling in front of the head (forward +Z, sweeping x/y)
+  const dir = new THREE.Vector3(
+    0.6 * Math.cos(elapsed * 1.5),
+    0.45 * Math.sin(elapsed * 1.5),
+    0.9,
+  ).normalize();
+  const a = aimRotation({ x: 0, y: 0, z: 1 }, { x: dir.x, y: dir.y, z: dir.z });
+  const world = new THREE.Quaternion(a.x, a.y, a.z, a.w);
+  headBone.quaternion.copy(parentQ.invert().multiply(world));
+};
+
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 mountViewer(canvas, scene, camera, (elapsed) => {
-  if (!showRom && freezeAt === null) player.update(elapsed);
+  if (lookMode) aimHead(elapsed);
+  else if (!showRom && freezeAt === null) player.update(elapsed);
 });
 
 // ── clip selector (live switching) ──────────────────────────────────────────
