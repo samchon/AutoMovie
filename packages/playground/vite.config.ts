@@ -15,6 +15,7 @@ export default defineConfig({
         human: resolve(__dirname, "human.html"),
         body: resolve(__dirname, "body.html"),
         stickman: resolve(__dirname, "stickman.html"),
+        knight: resolve(__dirname, "knight.html"),
       },
     },
   },

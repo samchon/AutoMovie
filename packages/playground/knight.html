@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>autofilm — mounted knight</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      #view {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+      }
+      #clips {
+        position: fixed;
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 6px;
+        font: 13px/1 system-ui, sans-serif;
+      }
+      #clips button {
+        padding: 7px 13px;
+        border: 1px solid #c4ccd6;
+        border-radius: 999px;
+        background: #fff;
+        color: #2a3340;
+        cursor: pointer;
+      }
+      #clips button.on {
+        background: #2f6fd6;
+        border-color: #2f6fd6;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="clips"></div>
+    <script type="module" src="/src/knight-view.ts"></script>
+  </body>
+</html>
