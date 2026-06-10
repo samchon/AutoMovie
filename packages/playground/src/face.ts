@@ -5,9 +5,11 @@ import {
   CANONICAL_FACE_UVS,
   IForgeHairParameters,
   IForgeSkullParameters,
+  IForgeTailParameters,
   buildEyeShells,
   buildFaceMorphs,
   buildHairShell,
+  buildHairTails,
   buildSkullShell,
 } from "@autofilm/forge";
 import {
@@ -76,6 +78,8 @@ app.innerHTML = `
       <div id="skull"></div>
       <h2>hair</h2>
       <div id="hair"></div>
+      <h2>tails</h2>
+      <div id="tails"></div>
       <h2>colors</h2>
       <div class="colors">
         <label>skin<input type="color" id="cSkin" value="#e8c4ae" /></label>
@@ -333,6 +337,36 @@ const rebuildHair = (): void => {
 };
 rebuildHair();
 
+const tailParams: IForgeTailParameters = {
+  length: 0,
+  height: 0.4,
+  spread: 0.4,
+  width: 0.5,
+};
+let tailMeshes: THREE.Mesh[] = [];
+const rebuildTails = (): void => {
+  for (const m of tailMeshes) {
+    scene.remove(m);
+    m.geometry.dispose();
+  }
+  tailMeshes = [];
+  const { right, left } = buildHairTails(tailParams, skullParams);
+  for (const part of [right, left]) {
+    if (part.positions.length === 0) continue;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(part.positions, 3),
+    );
+    g.setIndex(part.indices);
+    g.computeVertexNormals();
+    const mesh = new THREE.Mesh(g, hairMaterial);
+    scene.add(mesh);
+    tailMeshes.push(mesh);
+  }
+};
+rebuildTails();
+
 // ── eyeballs (follow the morphed face; iris colored by frontness) ───────────
 const eyeMaterial = new THREE.MeshStandardMaterial({
   vertexColors: true,
@@ -404,7 +438,13 @@ const refresh = (): void => {
     ? `valid IAutoFilmFace — ${parameters.length} parameter(s) set`
     : `INVALID: ${result.violations[0]!.expected}`;
   docOut.textContent = JSON.stringify(
-    { face: { parameters }, skull: skullParams, hair: hairParams, colors },
+    {
+      face: { parameters },
+      skull: skullParams,
+      hair: hairParams,
+      tails: tailParams,
+      colors,
+    },
     null,
     1,
   );
@@ -458,6 +498,7 @@ const skullSliders = (
     skullParams[k] = v;
     rebuildSkull();
     rebuildHair();
+    rebuildTails();
   }),
 );
 const hairSliders = (
@@ -466,6 +507,15 @@ const hairSliders = (
   slider("#hair", k, 0, 1, hairParams[k], (v) => {
     hairParams[k] = v;
     rebuildHair();
+  }),
+);
+
+const tailSliders = (
+  Object.keys(tailParams) as (keyof IForgeTailParameters)[]
+).map((k) =>
+  slider("#tails", k, 0, 1, tailParams[k], (v) => {
+    tailParams[k] = v;
+    rebuildTails();
   }),
 );
 
@@ -490,6 +540,7 @@ interface IPreset {
   face: Partial<Record<AutoFilmFaceParameterName, number>>;
   skull: IForgeSkullParameters;
   hair: IForgeHairParameters;
+  tails: IForgeTailParameters;
   colors: typeof colors;
 }
 const PRESETS: Record<string, IPreset> = {
@@ -497,6 +548,7 @@ const PRESETS: Record<string, IPreset> = {
     face: {},
     skull: { width: 0, crown: 0, depth: 0 },
     hair: { length: 0.4, volume: 0.4, bangs: 0.5, curtain: 0.5 },
+    tails: { length: 0, height: 0.4, spread: 0.4, width: 0.5 },
     colors: {
       skin: "#e8c4ae",
       hair: "#3a3027",
@@ -527,7 +579,8 @@ const PRESETS: Record<string, IPreset> = {
       mouthHeight: -1.08,
     },
     skull: { width: 0.1, crown: 0.15, depth: 0.05 },
-    hair: { length: 0.5, volume: 0.5, bangs: 0.95, curtain: 0.55 },
+    hair: { length: 0.3, volume: 0.55, bangs: 1, curtain: 0.35 },
+    tails: { length: 0.75, height: 0.3, spread: 0.45, width: 0.65 },
     colors: {
       skin: "#f2d3c2",
       hair: "#231a15",
@@ -561,6 +614,13 @@ const applyPreset = (p: IPreset): void => {
       p.hair[k].toFixed(2);
   });
   rebuildHair();
+  (Object.keys(p.tails) as (keyof IForgeTailParameters)[]).forEach((k, i) => {
+    tailParams[k] = p.tails[k];
+    tailSliders[i]!.value = String(p.tails[k]);
+    tailSliders[i]!.closest(".row")!.querySelector(".v")!.textContent =
+      p.tails[k].toFixed(2);
+  });
+  rebuildTails();
   rebuildEyes();
   colors.skin = p.colors.skin;
   colors.hair = p.colors.hair;
