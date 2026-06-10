@@ -1,4 +1,5 @@
 import { IAutoFilmActionCall } from "./IAutoFilmActionCall";
+import { IAutoFilmContextRequest } from "./IAutoFilmContextRequest";
 
 /**
  * Stage 4 — **PERFORMANCE** (micro, per shot). Compile the blocked intent into
@@ -24,7 +25,11 @@ export namespace IAutoFilmPerformanceApplication {
      * the target reacts only once the hit lands)?
      */
     thinking: string;
-    request: IWrite;
+    /**
+     * Perform the shot, or pull context (the scene/blocking/a sibling shot)
+     * first.
+     */
+    request: IWrite | IAutoFilmContextRequest;
   }
 
   export interface IWrite {
@@ -49,9 +54,19 @@ export namespace IAutoFilmPerformanceApplication {
 
   export interface IRevise {
     /**
-     * Critique the draft: do strikes land at real range, do reactions fire only
-     * after their cause, does anything skate or overlap badly, does the camera
-     * frame the key moment? Name concrete fixes.
+     * Critique the draft against the failure modes that recur in parallel runs,
+     * and name a concrete fix for each that applies:
+     *
+     * - **Range:** does a strike's actor stand within reach of its target, so it
+     *   _lands_ rather than mimes at air? (Stage distance from the rig, not
+     *   hope.)
+     * - **Causality:** does every `react` follow its cause — and is a projectile
+     *   hit left to `launch.onHit` rather than hand-timed?
+     * - **Continuity:** no foot-skating (locomotion distance matches the travel),
+     *   no two actions fighting for the same joints at once, no gaps the actor
+     *   freezes through unintentionally.
+     * - **Camera:** does the move frame the key moment (the landing, the fall)?
+     * - **Timing:** do the actions fill the beat and sum to its `duration`?
      */
     review: string;
     /**

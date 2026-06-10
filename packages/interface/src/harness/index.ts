@@ -1,4 +1,5 @@
 export * from "./IAutoFilmActionCall";
+export * from "./IAutoFilmContextRequest";
 export * from "./IAutoFilmSlate";
 export * from "./IAutoFilmScriptApplication";
 export * from "./IAutoFilmStagingApplication";
