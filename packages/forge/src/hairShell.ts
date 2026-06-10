@@ -151,7 +151,9 @@ export const buildHairShell = (
   const offset = 0.004 + 0.018 * params.volume;
   const aH = a + offset;
   const cBackH = cBack + offset;
-  const cFrontH = cFront + offset;
+  // extra front reach: the drape must clear the face temples or its rim
+  // pokes through painted bangs as bare wedges
+  const cFrontH = cFront + offset + 0.006;
 
   // tip height per yaw: back/sides fall by `length`, the front sector is the
   // fringe ruled by `bangs`; the opening half-angle shrinks with `curtain`
