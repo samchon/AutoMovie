@@ -302,12 +302,49 @@ const skinCache = new Map<string, THREE.Texture>();
 const loadSkin = (url: string): THREE.Texture => {
   let t = skinCache.get(url);
   if (!t) {
-    t = new THREE.TextureLoader().load(url);
+    t = new THREE.TextureLoader().load(url, matchSkullTone);
     t.colorSpace = THREE.SRGBColorSpace;
     t.flipY = false;
     skinCache.set(url, t);
-  }
+  } else if (t.image) matchSkullTone(t);
   return t;
+};
+// the parametric skull/neck must wear the photographed person's skin tone or
+// the face plate reads as a pasted mask — sample the skin texture's mean
+// color (the canonical-UV bake is mostly facial skin) on load and apply it
+// whenever photo-skin mode is on
+let photoTone: THREE.Color | null = null;
+let skinModeOn = false;
+const applySkullTone = (): void => {
+  skullMaterial.color.set(
+    skinModeOn && photoTone ? photoTone : new THREE.Color(colors.skin),
+  );
+};
+const matchSkullTone = (tex: THREE.Texture): void => {
+  const im = tex.image as HTMLImageElement | undefined;
+  if (!im || !im.width) return;
+  const cv = document.createElement("canvas");
+  const W = (cv.width = 64);
+  const H = (cv.height = 64);
+  const ctx = cv.getContext("2d")!;
+  ctx.drawImage(im, 0, 0, W, H);
+  const d = ctx.getImageData(0, 0, W, H).data;
+  let r = 0,
+    g = 0,
+    b = 0,
+    n = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3]! < 128) continue;
+    r += d[i]!;
+    g += d[i + 1]!;
+    b += d[i + 2]!;
+    n++;
+  }
+  if (n === 0) return;
+  photoTone = new THREE.Color()
+    .setRGB(r / n / 255, g / n / 255, b / n / 255)
+    .convertSRGBToLinear();
+  applySkullTone();
 };
 (window as unknown as { __loadSkin: unknown }).__loadSkin = (url: string) => {
   if (!photoMaterialRef) return;
@@ -330,6 +367,8 @@ new THREE.TextureLoader().load("/models/hero1-face.png", (tex) => {
     // sphere eyeballs; sculpt mode cuts the covers and brings them back
     faceGeometry.setIndex(on ? [...CANONICAL_FACE_INDICES] : faceIndices);
     for (const m of eyeMeshes) m.visible = !on;
+    skinModeOn = on;
+    applySkullTone();
   };
 });
 faceMesh.morphTargetInfluences = [...NAMES.map(() => 0), 0];
@@ -369,10 +408,44 @@ const hairParams: IForgeHairParameters = {
 };
 const hairMaterial = new THREE.MeshStandardMaterial({
   color: colors.hair,
-  roughness: 0.6,
+  roughness: 0.38,
   metalness: 0.05,
   side: THREE.DoubleSide,
+  vertexColors: true, // strand-wise light variation breaks the plastic look
 });
+// Paint per-strand lightness onto the hair shell so it reads as hair, not a
+// molded helmet: clumps of strands vary in tone, a soft "angel ring"
+// highlight bands the upper dome, and tips fall into shadow. The shell is a
+// strand grid (yaw columns × descent rows); strand boundaries are where the
+// vertex y jumps back UP (each strand descends monotonically from the crown).
+const paintHairStrands = (g: THREE.BufferGeometry): void => {
+  const pos = g.getAttribute("position");
+  const starts: number[] = [0];
+  for (let i = 1; i < pos.count; i++)
+    if (pos.getY(i) > pos.getY(i - 1) + 1e-6) starts.push(i);
+  starts.push(pos.count);
+  const hash = (n: number): number => {
+    const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  const color = new Float32Array(pos.count * 3);
+  for (let s = 0; s < starts.length - 1; s++) {
+    const a = starts[s]!;
+    const b = starts[s + 1]!;
+    const clump = hash(Math.floor(s / 4));
+    const fine = hash(s);
+    for (let i = a; i < b; i++) {
+      const v = b - a > 1 ? (i - a) / (b - a - 1) : 0;
+      let L = 0.52 + 0.42 * clump + 0.5 * fine;
+      L += 0.85 * Math.exp(-(((v - 0.22) / 0.12) ** 2)); // angel-ring band
+      L *= 1 - 0.3 * Math.min(1, Math.max(0, (v - 0.68) / 0.32)); // tip shade
+      color[i * 3] = L;
+      color[i * 3 + 1] = L;
+      color[i * 3 + 2] = L;
+    }
+  }
+  g.setAttribute("color", new THREE.Float32BufferAttribute(color, 3));
+};
 let hairMesh: THREE.Mesh | null = null;
 const rebuildHair = (): void => {
   if (hairMesh) {
@@ -387,6 +460,7 @@ const rebuildHair = (): void => {
   );
   g.setIndex(hair.indices);
   g.computeVertexNormals();
+  paintHairStrands(g);
   hairMesh = new THREE.Mesh(g, hairMaterial);
   scene.add(hairMesh);
 };
@@ -607,7 +681,7 @@ const colorInput = (id: string, key: keyof typeof colors): void => {
   el.addEventListener("input", () => {
     colors[key] = el.value;
     paintFace();
-    skullMaterial.color.set(colors.skin);
+    applySkullTone();
     hairMaterial.color.set(colors.hair);
     rebuildEyes();
     refresh();
@@ -801,7 +875,7 @@ const applyPreset = (p: IPreset): void => {
   document.querySelector<HTMLInputElement>("#cHair")!.value = colors.hair;
   document.querySelector<HTMLInputElement>("#cLips")!.value = colors.lips;
   paintFace();
-  skullMaterial.color.set(colors.skin);
+  applySkullTone();
   hairMaterial.color.set(colors.hair);
   refresh();
 };
