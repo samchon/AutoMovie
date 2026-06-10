@@ -30,18 +30,22 @@ export namespace IAutoFilmScriptApplication {
 
   export interface IWrite {
     type: "write";
+
     /** One sentence: the whole film. */
     logline: string;
+
     /**
      * The intent/mood every shot should serve (the through-line for later
      * self-critique).
      */
     theme: string;
+
     /**
      * Everyone who appears. Give each a `node` id you will place in staging and
      * a `character` description specific enough to block their action from.
      */
     cast: IAutoFilmCastMember[];
+
     /**
      * The ordered beats — each becomes one shot. Keep each beat a single clear
      * action ("the knight charges", "he is unhorsed"); do not pack a whole
@@ -57,6 +61,7 @@ export namespace IAutoFilmScriptApplication {
    */
   export interface IDecline {
     type: "decline";
+
     reason: string;
   }
 }

@@ -88,13 +88,16 @@ export interface IAutoFilmActionBase {
    * actor (fewer tokens, no drift across parallel runs).
    */
   actor: string | string[];
+
   /** Seconds into the shot when it begins. */
   start: number;
+
   /**
    * Length in seconds, or `"auto"` to let the engine pick a natural duration (a
    * stride cadence, a punch's snap, a projectile's flight time).
    */
   duration: number | "auto";
+
   /**
    * Loop the action's motion this many times within its span (default 1) — a
    * step repeated on the count, an idle sway. Cheaper than N near-identical
@@ -106,9 +109,12 @@ export interface IAutoFilmActionBase {
 /** Travel across the floor on a gait — engine: locomotion + `travelMotion`. */
 export interface IAutoFilmLocomoteAction extends IAutoFilmActionBase {
   verb: "locomote";
+
   gait: "walk" | "run" | "sprint" | "sneak" | "march";
+
   /** Where to go (the engine sizes the gait cycles to cover the distance). */
   to: IAutoFilmActionTarget;
+
   /** Face the travel direction (false keeps facing a separate look target). */
   faceTravel?: boolean;
 }
@@ -120,12 +126,15 @@ export interface IAutoFilmLocomoteAction extends IAutoFilmActionBase {
  */
 export interface IAutoFilmGestureAction extends IAutoFilmActionBase {
   verb: "gesture";
+
   kind: AutoFilmGestureKind;
+
   /**
    * Specialise the family ("jab" for `strike`, "roundhouse" for `kick`) or
    * describe a `custom` one.
    */
   note?: string;
+
   /** What the gesture is directed at (a strike's target, a wave's recipient). */
   at?: IAutoFilmActionTarget;
 }
@@ -133,13 +142,16 @@ export interface IAutoFilmGestureAction extends IAutoFilmActionBase {
 /** Reach a hand to a target — engine: two-bone IK (`solveTwoBoneIK`). */
 export interface IAutoFilmReachAction extends IAutoFilmActionBase {
   verb: "reach";
+
   hand: "left" | "right";
+
   to: IAutoFilmActionTarget;
 }
 
 /** Turn the head/eyes to track a target — engine: `aimRotation` look-at. */
 export interface IAutoFilmLookAtAction extends IAutoFilmActionBase {
   verb: "lookAt";
+
   to: IAutoFilmActionTarget;
 }
 
@@ -151,7 +163,9 @@ export interface IAutoFilmLookAtAction extends IAutoFilmActionBase {
  */
 export interface IAutoFilmAttachAction extends IAutoFilmActionBase {
   verb: "attachTo";
+
   parent: string;
+
   bone: AutoFilmHumanoidBone;
 }
 
@@ -165,12 +179,16 @@ export interface IAutoFilmAttachAction extends IAutoFilmActionBase {
  */
 export interface IAutoFilmLaunchAction extends IAutoFilmActionBase {
   verb: "launch";
+
   /** What is thrown (a scene-node prop, or a named projectile). */
   projectile: string;
+
   /** Who/what it is aimed at. */
   at: IAutoFilmActionTarget;
+
   /** Launch speed (m/s). */
   speed: number;
+
   /** The reaction the engine applies to the struck target at the detected hit. */
   onHit?: { force: number; unbalance?: boolean };
 }
@@ -183,10 +201,13 @@ export interface IAutoFilmLaunchAction extends IAutoFilmActionBase {
  */
 export interface IAutoFilmReactAction extends IAutoFilmActionBase {
   verb: "react";
+
   /** Where the blow comes from. */
   from: IAutoFilmActionTarget;
+
   /** Force `[0,1]` (a graze vs. a knockout); the engine scales the impulse. */
   force: number;
+
   /** If it unseats/floors the actor (drives a fall within ROM + balance). */
   unbalance?: boolean;
 }
@@ -194,7 +215,9 @@ export interface IAutoFilmReactAction extends IAutoFilmActionBase {
 /** Play a facial expression — engine: blendshape/expression channels. */
 export interface IAutoFilmEmoteAction extends IAutoFilmActionBase {
   verb: "emote";
+
   preset: AutoFilmExpressionPreset;
+
   /** Strength `[0,1]`. */
   intensity: number;
 }
@@ -202,6 +225,7 @@ export interface IAutoFilmEmoteAction extends IAutoFilmActionBase {
 /** Hold the current pose (a beat of stillness) for the duration. */
 export interface IAutoFilmHoldAction extends IAutoFilmActionBase {
   verb: "hold";
+
   duration: number;
 }
 
@@ -213,10 +237,13 @@ export interface IAutoFilmHoldAction extends IAutoFilmActionBase {
  */
 export interface IAutoFilmCameraAction extends IAutoFilmActionBase {
   verb: "frame";
+
   /** How tight the framing is. */
   framing: "wide" | "full" | "medium" | "close";
+
   /** How the camera behaves over this span. */
   move: "static" | "follow" | "orbit" | "push-in" | "whip";
+
   /** What it frames/tracks. */
   on: IAutoFilmActionTarget;
 }

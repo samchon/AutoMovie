@@ -23,29 +23,36 @@ export namespace IAutoFilmBlockingApplication {
      * catch (the strike landing, the fall). Resolve timing conflicts.
      */
     thinking: string;
+
     /** Block the beat, or pull context (the scene/script/a sibling shot) first. */
     request: IWrite | IAutoFilmContextRequest;
   }
 
   export interface IWrite {
     type: "write";
+
     /** Which beat (id from the script) this blocks. */
     beat: string;
+
     /**
      * What this beat is _for_ dramatically and what the viewer must read from
      * it — the yardstick the visual review will judge against.
      */
     analysis: string;
+
     /**
      * Why this blocking serves the beat: why these actor intents, this camera
      * choice, this timing. (The slot that catches retrofit — a plan with no
      * rationale is suspect.)
      */
     rationale: string;
+
     /** Each actor's intent during the beat, on the shot-local timeline. */
     actors: IActorIntent[];
+
     /** How the camera covers the beat. */
     camera: ICameraIntent;
+
     /** Beat length in seconds. */
     duration: number;
   }
@@ -54,6 +61,7 @@ export namespace IAutoFilmBlockingApplication {
   export interface IActorIntent {
     /** Scene node id. */
     node: string;
+
     /**
      * What this actor does over the beat, in order, in words ("flees on the
      * gallop, then twists back and looses an arrow at the pursuer"). The
@@ -66,8 +74,10 @@ export namespace IAutoFilmBlockingApplication {
   export interface ICameraIntent {
     /** Framing of the action. */
     framing: "wide" | "full" | "medium" | "close";
+
     /** How the camera behaves. */
     move: "static" | "follow" | "orbit" | "push-in" | "whip";
+
     /** What it favours (a node id or a point). */
     on:
       | { kind: "node"; node: string }

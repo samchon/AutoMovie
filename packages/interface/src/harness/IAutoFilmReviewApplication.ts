@@ -35,20 +35,25 @@ export namespace IAutoFilmReviewApplication {
      *   should be revised.
      */
     thinking: string;
+
     request: IWrite;
   }
 
   export interface IWrite {
     type: "write";
+
     /** Which beat/shot was reviewed. */
     beat: string;
+
     /**
      * What you observed in the render, good and bad — the evidence for the
      * verdict.
      */
     observations: string;
+
     /** Does the shot pass, or must it be revised? */
     verdict: "pass" | "revise";
+
     /**
      * The fixes, when revising — each located as concretely as possible and
      * tier-tagged. Empty only when `verdict` is `pass`.
