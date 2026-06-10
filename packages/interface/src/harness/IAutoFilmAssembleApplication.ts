@@ -1,3 +1,6 @@
+import { IAutoFilmTransition } from "../cinematics/IAutoFilmTransition";
+import { IAutoFilmTrim } from "../cinematics/IAutoFilmTrim";
+import { IAutoFilmNamedId } from "../core/IAutoFilmNamedId";
 import { IAutoFilmContextRequest } from "./IAutoFilmContextRequest";
 
 /**
@@ -35,7 +38,7 @@ export namespace IAutoFilmAssembleApplication {
     type: "write";
 
     /** Stable id + name for the assembled film. */
-    sequence: { id: string; name: string };
+    sequence: IAutoFilmNamedId;
 
     /** Playback frame rate. */
     fps: number;
@@ -66,9 +69,9 @@ export namespace IAutoFilmAssembleApplication {
     shot: string;
 
     /** Trim into the shot (seconds), or null to play it whole. */
-    trim: { start: number; duration: number } | null;
+    trim: IAutoFilmTrim | null;
 
     /** Blend in from the previous entry, or null for a hard cut (the default). */
-    transition: { kind: "crossDissolve" | "fade"; duration: number } | null;
+    transition: IAutoFilmTransition | null;
   }
 }

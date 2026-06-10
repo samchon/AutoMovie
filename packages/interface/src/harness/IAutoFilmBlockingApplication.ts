@@ -1,5 +1,6 @@
-import { IAutoFilmVector3 } from "../geometry/IAutoFilmVector3";
 import { IAutoFilmContextRequest } from "./IAutoFilmContextRequest";
+import { IAutoFilmNodeTarget } from "./IAutoFilmNodeTarget";
+import { IAutoFilmPointTarget } from "./IAutoFilmPointTarget";
 import { IAutoFilmTimingAnchor } from "./IAutoFilmTimingAnchor";
 
 /**
@@ -92,8 +93,6 @@ export namespace IAutoFilmBlockingApplication {
     move: "static" | "follow" | "orbit" | "push-in" | "whip";
 
     /** What it favours (a node id or a point). */
-    on:
-      | { kind: "node"; node: string }
-      | { kind: "point"; point: IAutoFilmVector3 };
+    on: IAutoFilmNodeTarget | IAutoFilmPointTarget;
   }
 }

@@ -1,3 +1,6 @@
+import { IAutoFilmTransition } from "./IAutoFilmTransition";
+import { IAutoFilmTrim } from "./IAutoFilmTrim";
+
 /**
  * A sequence: an ordered cut-list of shots — the editorial timeline, modelled
  * on OpenTimelineIO. Shots play back to back; a hard cut is the default (two
@@ -33,11 +36,11 @@ export interface IAutoFilmSequenceEntry {
    * Trim into the shot (seconds), the OTIO `source_range` analogue, or `null`
    * to play the whole shot.
    */
-  trim: { start: number; duration: number } | null;
+  trim: IAutoFilmTrim | null;
 
   /**
    * Blend into this entry from the previous one, or `null` for a hard cut (the
    * default).
    */
-  transition: { kind: "crossDissolve" | "fade"; duration: number } | null;
+  transition: IAutoFilmTransition | null;
 }

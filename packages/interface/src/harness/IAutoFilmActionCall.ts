@@ -1,31 +1,28 @@
 import { AutoFilmExpressionPreset } from "../expression/AutoFilmExpressionPreset";
-import { IAutoFilmVector3 } from "../geometry/IAutoFilmVector3";
 import { AutoFilmBodyRegion } from "../skeleton/AutoFilmBodyRegion";
 import { AutoFilmHumanoidBone } from "../skeleton/AutoFilmHumanoidBone";
+import { IAutoFilmDirectionTarget } from "./IAutoFilmDirectionTarget";
+import { IAutoFilmGroupTarget } from "./IAutoFilmGroupTarget";
+import { IAutoFilmNodeTarget } from "./IAutoFilmNodeTarget";
+import { IAutoFilmOffscreenTarget } from "./IAutoFilmOffscreenTarget";
+import { IAutoFilmOnHitReaction } from "./IAutoFilmOnHitReaction";
+import { IAutoFilmPointTarget } from "./IAutoFilmPointTarget";
 
 /**
- * Where an action points. Prefer a `node` (so the engine resolves live world
- * positions of moving actors) over a literal `point`; use `direction` /
- * `offscreen` for relative goals ("walk off to the left") so the model never
- * has to invent world coordinates.
+ * Where an action points. Prefer a {@link IAutoFilmNodeTarget} (so the engine
+ * resolves live world positions of moving actors) over a literal
+ * {@link IAutoFilmPointTarget}; use {@link IAutoFilmDirectionTarget} /
+ * {@link IAutoFilmOffscreenTarget} for relative goals ("walk off to the left")
+ * so the model never has to invent world coordinates.
  *
  * @author Samchon
  */
 export type IAutoFilmActionTarget =
-  | { kind: "node"; node: string }
-  | { kind: "point"; point: IAutoFilmVector3 }
-  /**
-   * Several nodes at once — a camera frames their collective extent (a
-   * two-shot, a crowd).
-   */
-  | { kind: "group"; nodes: string[] }
-  /**
-   * A heading relative to the actor's current facing (0 = ahead, +90 = its
-   * left).
-   */
-  | { kind: "direction"; headingDeg: number }
-  /** Exit/aim toward a frame edge ("off-screen left"). */
-  | { kind: "offscreen"; edge: "left" | "right" | "forward" | "back" };
+  | IAutoFilmNodeTarget
+  | IAutoFilmPointTarget
+  | IAutoFilmGroupTarget
+  | IAutoFilmDirectionTarget
+  | IAutoFilmOffscreenTarget;
 
 /**
  * A closed set of **gesture families** the engine has motion for. A closed enum
@@ -226,7 +223,7 @@ export interface IAutoFilmLaunchAction extends IAutoFilmActionBase {
   speed: number;
 
   /** The reaction the engine applies to the struck target at the detected hit. */
-  onHit?: { force: number; unbalance?: boolean };
+  onHit?: IAutoFilmOnHitReaction;
 }
 
 /**
