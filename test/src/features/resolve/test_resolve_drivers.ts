@@ -163,6 +163,9 @@ export const test_resolve_drivers_copy = (): void => {
  *    100); without clamp it would extrapolate.
  * 4. A degenerate input range (`[5,5]`) maps to `outRange[0]` rather than dividing
  *    by zero.
+ * 5. A `curve` supersedes the linear remap with a piecewise-linear mapping:
+ *    interpolating within a segment, and holding flat below the first point and
+ *    above the last.
  */
 export const test_resolve_drivers_driven = (): void => {
   const run = (d: IAutoFilmDrivenDriver, src?: number): number[] => {
@@ -187,6 +190,30 @@ export const test_resolve_drivers_driven = (): void => {
     "degenerate input range maps to outRange[0]",
     run(driven({ inRange: [5, 5], outRange: [3, 9] }), 5),
     [3],
+  );
+
+  // 5. nonlinear curve: slow-then-snap finger curl, ends held
+  const curl = driven({
+    curve: [
+      [0, 0],
+      [7, 10],
+      [10, 100],
+    ],
+  });
+  TestValidator.equals(
+    "curve interpolates within the steep last segment (8.5 → 55)",
+    run(curl, 8.5),
+    [55],
+  );
+  TestValidator.equals(
+    "curve holds flat below the first point",
+    run(curl, -3),
+    [0],
+  );
+  TestValidator.equals(
+    "curve holds flat above the last point",
+    run(curl, 20),
+    [100],
   );
 };
 
