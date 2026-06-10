@@ -6,4 +6,5 @@ export * from "./AutoFilmInterpolation";
 export * from "./IAutoFilmTrack";
 export * from "./IAutoFilmChannelLimit";
 export * from "./IAutoFilmDriver";
+export * from "./IAutoFilmNamedId";
 export * from "./IAutoFilmProfile";

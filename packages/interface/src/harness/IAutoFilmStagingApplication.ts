@@ -1,5 +1,8 @@
+import { IAutoFilmNamedId } from "../core/IAutoFilmNamedId";
 import { IAutoFilmVector3 } from "../geometry/IAutoFilmVector3";
-import { AutoFilmHumanoidBone } from "../skeleton/AutoFilmHumanoidBone";
+import { IAutoFilmMountBinding } from "./IAutoFilmMountBinding";
+import { IAutoFilmNodeTarget } from "./IAutoFilmNodeTarget";
+import { IAutoFilmPointTarget } from "./IAutoFilmPointTarget";
 
 /**
  * Stage 2 — **STAGING** (set up). Realise the script's cast as placed scene
@@ -36,7 +39,7 @@ export namespace IAutoFilmStagingApplication {
     type: "write";
 
     /** Stable id + name for the scene the shots will reference. */
-    scene: { id: string; name: string };
+    scene: IAutoFilmNamedId;
 
     /**
      * A compact plan: the ground layout, who stands where facing where (with
@@ -73,7 +76,7 @@ export namespace IAutoFilmStagingApplication {
      * passenger in a cart. The node rides `parent`'s `bone` (e.g. a horse's
      * `spine` saddle). Declare it here rather than re-attaching every shot.
      */
-    attach?: { parent: string; bone: AutoFilmHumanoidBone };
+    attach?: IAutoFilmMountBinding;
   }
 
   export interface ICameraPlacement {
@@ -83,9 +86,7 @@ export namespace IAutoFilmStagingApplication {
     position: IAutoFilmVector3;
 
     /** What the camera initially looks at. */
-    lookAt:
-      | { kind: "node"; node: string }
-      | { kind: "point"; point: IAutoFilmVector3 };
+    lookAt: IAutoFilmNodeTarget | IAutoFilmPointTarget;
 
     /** Vertical field of view (degrees). */
     fovDeg: number;
