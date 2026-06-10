@@ -23,8 +23,8 @@ export namespace IAutoFilmPerformanceApplication {
      * Think before you act. Which engine verbs realise each actor's intent?
      * What must be timed against what (the arrow leaves as the archer twists;
      * the target reacts only once the hit lands)? On a **revise pass**, pull
-     * `getNotes` and treat each open note as a required fix to the action
-     * list — re-performing without reading the correction repeats the fault.
+     * `getNotes` and treat each open note as a required fix to the action list
+     * — re-performing without reading the correction repeats the fault.
      */
     thinking: string;
 
@@ -71,8 +71,10 @@ export namespace IAutoFilmPerformanceApplication {
      * - **Causality:** does every `react` follow its cause — and is a projectile
      *   hit left to `launch.onHit` rather than hand-timed?
      * - **Continuity:** no foot-skating (locomotion distance matches the travel),
-     *   no two actions fighting for the same joints at once, no gaps the actor
-     *   freezes through unintentionally.
+     *   no gaps the actor freezes through unintentionally. Concurrent actions
+     *   on one actor must own **disjoint** `region`s (walk + wave + look-at is
+     *   fine; two `upperBody` gestures at once is not) — set `region` so the
+     *   composition is conflict-free by construction, not by hope.
      * - **Camera:** does the move frame the key moment (the landing, the fall)?
      * - **Timing:** do the actions fill the beat and sum to its `duration`?
      */
