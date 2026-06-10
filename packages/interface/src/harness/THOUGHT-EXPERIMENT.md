@@ -31,3 +31,31 @@
 7. **Prescriptive CoT prompts.** Every `thinking` / `plan` / `review` / `rationale` JSDoc now names *what to check and the common failure modes to avoid* (strikes landing at real range, reactions firing only after their cause, no foot-skating, durations summing to the beat, stable id reuse) — the comments are the prompt, tuned for parallel reliability.
 
 These are first-pass refinements; the next trace (a multi-actor crowd, a dialogue two-shot) will surface more. Keep tracing → revising; the schema matures empirically (the "backtest the schema against cases" idea).
+
+---
+
+## Round 2 — contrasting cases: a dialogue two-shot, and a synchronised dance
+
+Tracing cases that stress *different* parts than the action set-pieces of round 1.
+
+### Film C — "a tense exchange" (two characters, one shot, no locomotion)
+
+- **STAGING** — A and B face each other a conversational distance apart; a camera on **both** (a two-shot). ✗ **a camera `on` target is a single node/point** — a two-shot must frame *both*. Need to frame a **group** (or their midpoint).
+- **BLOCKING / PERFORMANCE** — A: `lookAt(B)`, `emote(angry)`, `gesture(point at B)`; then B: `lookAt(A)`, `emote(afraid)`, `gesture(shake)`. Turn-taking is authored timing — ✔. Eye contact via `node` targets — ✔. Subtlety via `emote.intensity` — ✔. (No audio/lip-sync; performance carries the beat. Acceptable for now.)
+
+### Film D — "four dancers, in unison, to a count" (multi-actor, rhythmic, repetitive)
+
+- **STAGING** — four dancers in a line/diamond; placements cover it — ✔.
+- **PERFORMANCE** — all four do the **same** step, **repeatedly**, **in time**. ✗✗ three pain points:
+  1. **Unison** — authoring the identical action four times (once per actor) is wasteful and drifts across parallel runs. One verb should apply to **several actors**.
+  2. **Repetition** — a step repeated on the count is many near-identical actions. A `repeat` count is cleaner than N copies.
+  3. **Tempo** — placing beats by absolute seconds is fragile for music-synced motion; a beat grid (bpm) the actions snap to would be sturdier. (Noted as future — not implemented yet to avoid over-building before it is needed.)
+
+## Round-2 findings → refinements applied
+
+1. **Group framing.** `IAutoFilmActionTarget` gains `group` (frame/track several nodes — a two-shot, a crowd) and the camera frames their collective extent. (Film C.)
+2. **Unison actors.** An action's `actor` is now `string | string[]` — one verb performed by several (a chorus line, a crowd, synchronised dancers), cutting tokens and drift across parallel runs. (Film D.)
+3. **Repeat.** `IAutoFilmActionBase.repeat` (default 1) loops the action's motion within its span — a step on the count, an idle sway. (Film D.)
+4. **Tempo grid** — deferred: a `bpm`/beat-snapped timing for music-synced shots, when a musical scene actually needs it (avoid speculative complexity).
+
+The schema keeps maturing per traced case; the next round (a long multi-shot sequence, a vehicle, a transformation) will surface the next gaps.

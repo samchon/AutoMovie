@@ -14,6 +14,11 @@ export type IAutoFilmActionTarget =
   | { kind: "node"; node: string }
   | { kind: "point"; point: IAutoFilmVector3 }
   /**
+   * Several nodes at once — a camera frames their collective extent (a
+   * two-shot, a crowd).
+   */
+  | { kind: "group"; nodes: string[] }
+  /**
    * A heading relative to the actor's current facing (0 = ahead, +90 = its
    * left).
    */
@@ -76,8 +81,13 @@ export type IAutoFilmActionCall =
 
 /** Fields every action shares. */
 export interface IAutoFilmActionBase {
-  /** The scene-node id performing this action (reuse the id from staging). */
-  actor: string;
+  /**
+   * The scene-node id(s) performing this action (reuse ids from staging). A
+   * list applies the **same** verb to several actors in **unison** — a chorus
+   * line, a crowd, synchronised dancers — instead of repeating the action per
+   * actor (fewer tokens, no drift across parallel runs).
+   */
+  actor: string | string[];
   /** Seconds into the shot when it begins. */
   start: number;
   /**
@@ -85,6 +95,12 @@ export interface IAutoFilmActionBase {
    * stride cadence, a punch's snap, a projectile's flight time).
    */
   duration: number | "auto";
+  /**
+   * Loop the action's motion this many times within its span (default 1) — a
+   * step repeated on the count, an idle sway. Cheaper than N near-identical
+   * copies.
+   */
+  repeat?: number;
 }
 
 /** Travel across the floor on a gait — engine: locomotion + `travelMotion`. */
