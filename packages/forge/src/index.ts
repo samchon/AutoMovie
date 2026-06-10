@@ -1,3 +1,4 @@
+export * from "./eyeShells";
 export * from "./hairShell";
 export * from "./canonicalFace";
 export * from "./faceMorphs";
