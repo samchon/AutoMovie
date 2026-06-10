@@ -9,16 +9,16 @@ import { makeFace } from "../internal/fixtures";
  * is a `range` violation — the negative twin of the valid case's `+2`, and the
  * violation path names the offending field.
  *
- * Scenario: `eyeSize: 2.1` fails with a `range` violation on `.eyeSize`.
+ * Scenario: `eyes.size: 2.1` fails with a `range` violation on `.eyes.size`.
  */
 export const test_validation_face_weight_range = (): void => {
-  const result = validateFaceResult(makeFace({ eyeSize: 2.1 }));
+  const result = validateFaceResult(makeFace({ eyes: { size: 2.1 } }));
   TestValidator.equals("out-of-range weight fails", result.success, false);
   TestValidator.predicate(
     "range violation on the field",
     result.success === false &&
       result.violations.some(
-        (v) => v.kind === "range" && v.path.includes(".eyeSize"),
+        (v) => v.kind === "range" && v.path.includes(".eyes.size"),
       ),
   );
 };

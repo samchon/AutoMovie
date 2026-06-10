@@ -9,7 +9,7 @@ import { makeFace } from "../internal/fixtures";
  * against a richer template. morphFace throws instead of silently skipping, so
  * an asset/parameter mismatch can never produce a half-applied face.
  *
- * Scenario: a template with only `eyeSize` morphed by `jawWidth` throws.
+ * Scenario: a template with only `eyeSize` morphed by `jaw.width` throws.
  */
 export const test_face_morph_unknown_target = (): void => {
   const template: IAutoFilmFaceTemplate = {
@@ -19,7 +19,7 @@ export const test_face_morph_unknown_target = (): void => {
   TestValidator.error("missing morph target throws", () =>
     morphFace({
       template,
-      face: makeFace({ jawWidth: 1 }),
+      face: makeFace({ jaw: { width: 1 } }),
     }),
   );
 };

@@ -1,5 +1,7 @@
 import { IAutoFilmFace, IAutoFilmFaceTemplate } from "@autofilm/interface";
 
+import { flattenFace } from "./flattenFace";
+
 // The template type moved to @autofilm/interface (ingest produces it, the
 // engine consumes it); re-exported here so engine consumers keep working.
 export type { IAutoFilmFaceTemplate };
@@ -23,7 +25,7 @@ export const morphFace = (props: {
 }): number[] => {
   const { template, face } = props;
   const out = template.positions.slice();
-  for (const [parameter, weight] of Object.entries(face)) {
+  for (const { parameter, weight } of flattenFace(face)) {
     const delta = template.targets[parameter];
     if (delta === undefined)
       throw new Error(`face template has no morph target "${parameter}"`);
