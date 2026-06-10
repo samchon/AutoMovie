@@ -845,6 +845,10 @@ const loadPhotoHead = (url: string): void => {
         m.material = new THREE.MeshBasicMaterial({
           map: std.map,
           side: THREE.DoubleSide,
+          // the face plate carries a vertex-alpha feather at its rim — keep
+          // the asset's blend mode when swapping to the unlit material
+          vertexColors: m.geometry.hasAttribute("color"),
+          transparent: std.transparent,
         });
       }
     });
@@ -870,6 +874,7 @@ loadPhotoHead("/models/hero1-head.glb");
   influences: [...faceMesh.morphTargetInfluences!],
   names: NAMES,
 });
+(window as unknown as { __scene: unknown }).__scene = scene;
 (window as unknown as { __setPreset: unknown }).__setPreset = (
   name: string,
 ): void => applyPreset(PRESETS[name]!);
