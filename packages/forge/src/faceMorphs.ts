@@ -103,8 +103,15 @@ export const buildFaceMorphs = (
         const g = gauss(i, c, 1.7 * eyeR);
         if (g > 1e-3) {
           const p = P(i);
-          return [0.28 * (p[0] - c[0]) * g, 0.28 * (p[1] - c[1]) * g, 0];
+          return [0.36 * (p[0] - c[0]) * g, 0.36 * (p[1] - c[1]) * g, 0];
         }
+      }
+      return [0, 0, 0];
+    },
+    eyeWidth: (i) => {
+      for (const c of [eyeCR, eyeCL]) {
+        const g = gauss(i, c, 1.7 * eyeR);
+        if (g > 1e-3) return [0.36 * (P(i)[0] - c[0]) * g, 0, 0];
       }
       return [0, 0, 0];
     },
@@ -136,7 +143,7 @@ export const buildFaceMorphs = (
         1,
         gauss(i, browCR, 1.6 * eyeR) + gauss(i, browCL, 1.6 * eyeR),
       );
-      return [0, 0.8 * U * g, 0];
+      return [0, 1.4 * U * g, 0];
     },
     noseLength: (i) => [0, -1.0 * U * gauss(i, noseMid, 2.0 * U), 0],
     noseWidth: (i) => [0.22 * P(i)[0] * gauss(i, alarC, 1.8 * U), 0, 0],
