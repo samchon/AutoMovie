@@ -27,6 +27,10 @@ The `.wiki/` working knowledge base, package READMEs, code JSDoc, `.codex/skills
 
 Review Cycle, Discussion, Research Review Round, `.codex/skills/multi-agent/SKILL.md`. Read the Briefing subagents rule before delegating to any subagent; read in full only when the user asks for a named mode. The reference study that precedes each major interface/engine push runs as a Research Review Round or Discussion.
 
+### 3D Modeling
+
+Working rules for parametric head/face modeling — verification discipline, anthropometric fitting, derived-data cascades, texture/morph craft, `.codex/skills/3d-modeling/SKILL.md`. Read before any 3D model, likeness, or pipeline work.
+
 ### Viewer Verification
 
 Driving the viewer/playground through Playwright MCP to inspect renders, poses, and motion against expectation, `.codex/skills/viewer-verification/SKILL.md`. Read before claiming a viewer or render change works.

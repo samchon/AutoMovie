@@ -5,9 +5,17 @@
  * @author Samchon
  */
 export interface IAutoFilmChin {
-  /** Vertical reach of the chin tip: `+` a longer chin, `-` a short one. */
+  /**
+   * Vertical reach of the chin tip: `+` a longer chin, `-` a short one.
+   *
+   * @default 0
+   */
   length?: number;
 
-  /** Forward projection of the chin: `+` protrudes, `-` recedes. */
+  /**
+   * Forward projection of the chin: `+` protrudes, `-` recedes.
+   *
+   * @default 0
+   */
   protrusion?: number;
 }

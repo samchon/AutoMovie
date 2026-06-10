@@ -8,6 +8,8 @@ export interface IAutoFilmBrows {
   /**
    * Vertical position of the brows: `+` raises them off the eyes (an open,
    * surprised look), `-` settles them low and heavy.
+   *
+   * @default 0
    */
   height?: number;
 }

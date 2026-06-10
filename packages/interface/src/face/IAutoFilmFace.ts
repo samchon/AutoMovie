@@ -29,12 +29,18 @@ import { IAutoFilmNose } from "./IAutoFilmNose";
  * @author Samchon
  */
 export interface IAutoFilmFace {
-  /** Lateral width of the whole face: `+` wider, `-` narrower. */
+  /**
+   * Lateral width of the whole face: `+` wider, `-` narrower.
+   *
+   * @default 0
+   */
   width?: number;
 
   /**
    * Vertical stretch about the eye line: `+` longer (lower jaw drops, brow
    * rises), `-` shorter and rounder — childlike faces sit negative.
+   *
+   * @default 0
    */
   length?: number;
 

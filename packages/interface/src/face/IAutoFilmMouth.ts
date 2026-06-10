@@ -7,10 +7,18 @@ import { IAutoFilmLips } from "./IAutoFilmLips";
  * @author Samchon
  */
 export interface IAutoFilmMouth {
-  /** Width of the mouth: `+` a wider smile line. */
+  /**
+   * Width of the mouth: `+` a wider smile line.
+   *
+   * @default 0
+   */
   width?: number;
 
-  /** Vertical position of the whole mouth: `+` higher toward the nose. */
+  /**
+   * Vertical position of the whole mouth: `+` higher toward the nose.
+   *
+   * @default 0
+   */
   height?: number;
 
   /** The lips themselves — see {@link IAutoFilmLips}. */

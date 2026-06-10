@@ -5,6 +5,10 @@
  * @author Samchon
  */
 export interface IAutoFilmCheeks {
-  /** Cheek volume around the cheekbones: `+` full and round, `-` gaunt. */
+  /**
+   * Cheek volume around the cheekbones: `+` full and round, `-` gaunt.
+   *
+   * @default 0
+   */
   fullness?: number;
 }
