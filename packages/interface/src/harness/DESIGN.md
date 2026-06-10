@@ -47,7 +47,9 @@ Net: the LLM directs; the engine animates; validators (structural → physical/R
         └──────── all beats done ─────────────┘
                         │
                         ▼
-            ASSEMBLE → IAutoFilmSequence (the film)
+   ┌─────────────────────────────────────────┐
+   │ 6. ASSEMBLE    IAutoFilmAssembleApplication│  edit: order, trims, transitions, fps → IAutoFilmSequence (the film)
+   └─────────────────────────────────────────┘
 ```
 
 - **State** threads through an `IAutoFilmSlate` (the production state, AutoBe's `AutoBeState` analogue): the script, the cast, the scene, the shots built so far, and the review history. Each stage reads upstream Slate and writes its slice.

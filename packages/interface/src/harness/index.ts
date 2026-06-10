@@ -6,3 +6,4 @@ export * from "./IAutoFilmStagingApplication";
 export * from "./IAutoFilmBlockingApplication";
 export * from "./IAutoFilmPerformanceApplication";
 export * from "./IAutoFilmReviewApplication";
+export * from "./IAutoFilmAssembleApplication";
