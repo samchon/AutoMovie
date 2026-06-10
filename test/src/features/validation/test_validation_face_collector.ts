@@ -10,14 +10,15 @@ import { makeFace } from "../internal/fixtures";
  *
  * Scenario: an out-of-range weight validated under path "$doc.face" into a
  * pre-seeded collector — the new violation lands in the same collector after
- * the existing entry, and its path carries the caller's prefix.
+ * the existing entry, and its path carries the caller's prefix and the field
+ * name.
  */
 export const test_validation_face_collector = (): void => {
   const collector = new ViolationCollector();
   collector.push("type", "$doc.id", "pre-existing entry", null);
 
   const returned = validateFace({
-    face: makeFace([{ parameter: "eyeSize", weight: 9 }]),
+    face: makeFace({ eyeSize: 9 }),
     path: "$doc.face",
     collector,
   });
@@ -27,6 +28,6 @@ export const test_validation_face_collector = (): void => {
   TestValidator.equals(
     "caller's path prefix",
     collector.items[1]!.path,
-    "$doc.face.parameters[0].weight",
+    "$doc.face.eyeSize",
   );
 };

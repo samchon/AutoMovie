@@ -19,7 +19,7 @@ export const test_face_morph_unknown_target = (): void => {
   TestValidator.error("missing morph target throws", () =>
     morphFace({
       template,
-      face: makeFace([{ parameter: "jawWidth", weight: 1 }]),
+      face: makeFace({ jawWidth: 1 }),
     }),
   );
 };

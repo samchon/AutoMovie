@@ -12,7 +12,7 @@ export type { IAutoFilmFaceTemplate };
  * engine so every renderer and every run produces identical vertices from the
  * same document. The face is assumed validated (`validateFace`); structural
  * mismatches against the _template_ are not a validation concern but a broken
- * asset, so they throw: a parameter without a matching target, or a target
+ * asset, so they throw: a present trait without a matching target, or a target
  * whose delta length disagrees with the template.
  *
  * @author Samchon
@@ -23,7 +23,7 @@ export const morphFace = (props: {
 }): number[] => {
   const { template, face } = props;
   const out = template.positions.slice();
-  for (const { parameter, weight } of face.parameters) {
+  for (const [parameter, weight] of Object.entries(face)) {
     const delta = template.targets[parameter];
     if (delta === undefined)
       throw new Error(`face template has no morph target "${parameter}"`);

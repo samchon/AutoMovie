@@ -12,10 +12,7 @@ import {
   buildHairTails,
   buildSkullShell,
 } from "@autofilm/forge";
-import {
-  AutoFilmFaceParameterName,
-  IAutoFilmFaceParameter,
-} from "@autofilm/interface";
+import { AutoFilmFaceParameterName, IAutoFilmFace } from "@autofilm/interface";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -488,16 +485,16 @@ paintFace();
 // ── document panel ───────────────────────────────────────────────────────────
 const weights = new Map<AutoFilmFaceParameterName, number>();
 const refresh = (): void => {
-  const parameters: IAutoFilmFaceParameter[] = [...weights.entries()]
-    .filter(([, w]) => w !== 0)
-    .map(([parameter, weight]) => ({ parameter, weight }));
-  const result = validateFaceResult({ parameters });
+  const face: IAutoFilmFace = {};
+  for (const [parameter, weight] of weights.entries())
+    if (weight !== 0) face[parameter] = weight;
+  const result = validateFaceResult(face);
   status.textContent = result.success
-    ? `valid IAutoFilmFace — ${parameters.length} parameter(s) set`
+    ? `valid IAutoFilmFace — ${Object.keys(face).length} trait(s) set`
     : `INVALID: ${result.violations[0]!.expected}`;
   docOut.textContent = JSON.stringify(
     {
-      face: { parameters },
+      face,
       skull: skullParams,
       hair: hairParams,
       tails: tailParams,

@@ -22,10 +22,7 @@ export const test_face_morph_apply = (): void => {
   };
   const result = morphFace({
     template,
-    face: makeFace([
-      { parameter: "eyeSize", weight: 0.5 },
-      { parameter: "jawWidth", weight: -1 },
-    ]),
+    face: makeFace({ eyeSize: 0.5, jawWidth: -1 }),
   });
   TestValidator.equals(
     "accumulated signed morph",
