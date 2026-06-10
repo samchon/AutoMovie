@@ -20,7 +20,10 @@ export namespace IAutoFilmBlockingApplication {
     /**
      * Think before you act. Read the beat against the staged geometry: who is
      * where, what must change by the end of the beat, what the camera must
-     * catch (the strike landing, the fall). Resolve timing conflicts.
+     * catch (the strike landing, the fall). Resolve timing conflicts. If this is
+     * a **revise pass** (the shot came back from review), pull `getNotes` first
+     * and make every open note a concrete change to the blocking — never
+     * re-block blind to the correction.
      */
     thinking: string;
 
