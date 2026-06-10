@@ -11,6 +11,8 @@ export interface IAutoFilmJaw {
   /**
    * Width of the jaw below the cheekbones: `+` square and strong, `-` a slim
    * V-line.
+   *
+   * @default 0
    */
   width?: number;
 

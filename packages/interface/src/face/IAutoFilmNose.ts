@@ -5,12 +5,24 @@
  * @author Samchon
  */
 export interface IAutoFilmNose {
-  /** Vertical length of the nose: `+` longer (the tip drops). */
+  /**
+   * Vertical length of the nose: `+` longer (the tip drops).
+   *
+   * @default 0
+   */
   length?: number;
 
-  /** Width of the nostrils / alar base: `+` broader. */
+  /**
+   * Width of the nostrils / alar base: `+` broader.
+   *
+   * @default 0
+   */
   width?: number;
 
-  /** Forward projection of the nose tip: `+` more prominent in profile. */
+  /**
+   * Forward projection of the nose tip: `+` more prominent in profile.
+   *
+   * @default 0
+   */
   projection?: number;
 }

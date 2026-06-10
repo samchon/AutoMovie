@@ -5,6 +5,10 @@
  * @author Samchon
  */
 export interface IAutoFilmLips {
-  /** Vertical thickness of the lips about the lip seam: `+` fuller, `-` thinner. */
+  /**
+   * Vertical thickness of the lips about the lip seam: `+` fuller, `-` thinner.
+   *
+   * @default 0
+   */
   fullness?: number;
 }

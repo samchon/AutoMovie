@@ -8,21 +8,39 @@
  * @author Samchon
  */
 export interface IAutoFilmEyes {
-  /** Uniform scale of each eye about its own center: `+` larger eyes. */
+  /**
+   * Uniform scale of each eye about its own center: `+` larger eyes.
+   *
+   * @default 0
+   */
   size?: number;
 
   /**
    * Horizontal-only scale of the eye fissure: widens the opening without
    * lifting the lids — use with `size` to control the aspect ratio.
+   *
+   * @default 0
    */
   width?: number;
 
-  /** Distance between the eyes: `+` wide-set, `-` close-set. */
+  /**
+   * Distance between the eyes: `+` wide-set, `-` close-set.
+   *
+   * @default 0
+   */
   spacing?: number;
 
-  /** Vertical position of the eyes on the face: `+` higher. */
+  /**
+   * Vertical position of the eyes on the face: `+` higher.
+   *
+   * @default 0
+   */
   height?: number;
 
-  /** Outer-corner slant: `+` lifts the outer corners (upturned eyes). */
+  /**
+   * Outer-corner slant: `+` lifts the outer corners (upturned eyes).
+   *
+   * @default 0
+   */
   tilt?: number;
 }
