@@ -19,7 +19,13 @@
     "type": "git",
     "url": "https://github.com/samchon/autofilm"
   },
-  "files": ["lib", "src", "package.json", "LICENSE", "README.md"],
+  "files": [
+    "lib",
+    "src",
+    "package.json",
+    "LICENSE",
+    "README.md"
+  ],
   "publishConfig": {
     "access": "public",
     "main": "lib/index.js",
@@ -35,5 +41,8 @@
   "devDependencies": {
     "rimraf": "^6.0.1",
     "typescript": "catalog:typescript"
+  },
+  "dependencies": {
+    "@autofilm/interface": "workspace:^"
   }
 }

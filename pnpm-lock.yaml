@@ -60,6 +60,10 @@ importers:
         version: 5.9.3
 
   packages/forge:
+    dependencies:
+      '@autofilm/interface':
+        specifier: workspace:^
+        version: link:../interface
     devDependencies:
       rimraf:
         specifier: ^6.0.1
