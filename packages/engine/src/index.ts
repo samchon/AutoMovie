@@ -3,6 +3,7 @@ export * from "./kinematics";
 export * from "./rom";
 export * from "./face";
 export * from "./motion";
+export * from "./perform";
 export * from "./physics";
 export * from "./resolve";
 export * from "./geometry";
