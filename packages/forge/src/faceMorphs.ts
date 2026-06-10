@@ -98,22 +98,24 @@ export const buildFaceMorphs = (
       const g = gauss(i, cheekCR, 2.4 * U) + gauss(i, cheekCL, 2.4 * U);
       return [Math.sign(P(i)[0]) * 0.7 * U * g, 0, 0.4 * U * g];
     },
+    // each eye scales about its OWN center — the centers sit close enough
+    // that the off-eye gaussian is not negligible, so the vertex must bind
+    // to the nearer center (first-match-over-a-threshold once bound every
+    // left-eye vertex to the right eye's center: only one eye responded)
     eyeSize: (i) => {
-      for (const c of [eyeCR, eyeCL]) {
-        const g = gauss(i, c, 1.7 * eyeR);
-        if (g > 1e-3) {
-          const p = P(i);
-          return [0.36 * (p[0] - c[0]) * g, 0.36 * (p[1] - c[1]) * g, 0];
-        }
-      }
-      return [0, 0, 0];
+      const gR = gauss(i, eyeCR, 1.7 * eyeR);
+      const gL = gauss(i, eyeCL, 1.7 * eyeR);
+      const [c, g] = gR >= gL ? [eyeCR, gR] : [eyeCL, gL];
+      if (g < 1e-3) return [0, 0, 0];
+      const p = P(i);
+      return [0.36 * (p[0] - c[0]) * g, 0.36 * (p[1] - c[1]) * g, 0];
     },
     eyeWidth: (i) => {
-      for (const c of [eyeCR, eyeCL]) {
-        const g = gauss(i, c, 1.7 * eyeR);
-        if (g > 1e-3) return [0.36 * (P(i)[0] - c[0]) * g, 0, 0];
-      }
-      return [0, 0, 0];
+      const gR = gauss(i, eyeCR, 1.7 * eyeR);
+      const gL = gauss(i, eyeCL, 1.7 * eyeR);
+      const [c, g] = gR >= gL ? [eyeCR, gR] : [eyeCL, gL];
+      if (g < 1e-3) return [0, 0, 0];
+      return [0.36 * (P(i)[0] - c[0]) * g, 0, 0];
     },
     eyeSpacing: (i) => {
       const g =
