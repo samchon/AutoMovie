@@ -30,10 +30,19 @@ export type IAutoFilmActionTarget =
  * A closed set of **gesture families** the engine has motion for. A closed enum
  * (not a free string) is deliberate: across many parallel generations, free
  * names drift ("wave"/"waving"/"hand-wave"); a fixed set converges. Use `note`
- * to specialise within a family ("strike" + note "jab", or with `custom` to
- * describe a one-off the engine should approximate).
+ * to specialise within a family ("strike" + note "jab"), or `custom` to
+ * describe a one-off the engine should approximate.
+ *
+ * The set spans **both humanoid and creature** actors — the project rigs horses
+ * and cats on the same {@link AutoFilmHumanoidBone} skeleton (spine = barrel,
+ * the limbs retargeted), so the engine dispatches each kind to the actor's rig
+ * vocabulary: `kick` is a leg snap on a fighter and a hind-leg lash on a horse;
+ * `rear`/`buck`/`paw` only resolve on a quadruped rig. Idle creature poses with
+ * no directed target (a cat's stretch/sit, a tail flick) are a `hold` plus an
+ * `emote`, or a `custom` gesture.
  */
 export type AutoFilmGestureKind =
+  // humanoid
   | "strike"
   | "kick"
   | "guard"
@@ -48,6 +57,11 @@ export type AutoFilmGestureKind =
   | "draw"
   | "throw"
   | "celebrate"
+  // creature (quadruped rig)
+  | "rear"
+  | "buck"
+  | "paw"
+  // escape
   | "custom";
 
 /**
@@ -106,7 +120,12 @@ export interface IAutoFilmActionBase {
   repeat?: number;
 }
 
-/** Travel across the floor on a gait — engine: locomotion + `travelMotion`. */
+/**
+ * Travel across the floor on a gait — engine: locomotion + `travelMotion`. The
+ * gait names are bipedal, but the engine maps them onto the actor's rig: on a
+ * quadruped `run`/`sprint` become a gallop, `sneak` a stalk/prowl, `walk` the
+ * four-beat walk.
+ */
 export interface IAutoFilmLocomoteAction extends IAutoFilmActionBase {
   verb: "locomote";
 
@@ -139,7 +158,11 @@ export interface IAutoFilmGestureAction extends IAutoFilmActionBase {
   at?: IAutoFilmActionTarget;
 }
 
-/** Reach a hand to a target — engine: two-bone IK (`solveTwoBoneIK`). */
+/**
+ * Reach a hand to a target — engine: two-bone IK (`solveTwoBoneIK`). A
+ * humanoid-rig verb (left/right arm); a quadruped pawing at something uses
+ * `gesture` (`paw`) instead.
+ */
 export interface IAutoFilmReachAction extends IAutoFilmActionBase {
   verb: "reach";
 
