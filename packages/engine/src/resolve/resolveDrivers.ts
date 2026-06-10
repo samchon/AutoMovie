@@ -153,9 +153,11 @@ const applyDriven = (
 ): void => {
   const src = sampled.get(channelKey(d.source));
   const x = src !== undefined ? src.value[0]! : d.inRange[0];
-  setChannel(sampled, channelKey(d.output), d.output, [
-    remap(x, d.inRange, d.outRange, d.clamp),
-  ]);
+  const y =
+    d.curve != null
+      ? evalCurve(x, d.curve)
+      : remap(x, d.inRange, d.outRange, d.clamp);
+  setChannel(sampled, channelKey(d.output), d.output, [y]);
 };
 
 const remap = (
@@ -167,6 +169,23 @@ const remap = (
   const t = i1 === i0 ? 0 : (x - i0) / (i1 - i0);
   const tc = clamp ? Math.min(1, Math.max(0, t)) : t;
   return o0 + (o1 - o0) * tc;
+};
+
+/**
+ * Piecewise-linear evaluation of a driven `curve` (points sorted by source
+ * `x`): the output is interpolated within a segment and held flat before the
+ * first point and after the last — the nonlinear driven-key mapping.
+ */
+const evalCurve = (x: number, pts: [number, number][]): number => {
+  if (x <= pts[0]![0]) return pts[0]![1];
+  for (let i = 1; i < pts.length; ++i) {
+    const [x1, y1] = pts[i]!;
+    if (x <= x1) {
+      const [x0, y0] = pts[i - 1]!;
+      return y0 + (y1 - y0) * ((x - x0) / (x1 - x0));
+    }
+  }
+  return pts[pts.length - 1]![1];
 };
 
 // ── shared ───────────────────────────────────────────────────────────────────
