@@ -5,6 +5,7 @@ import {
 } from "@autofilm/interface";
 
 import { ViolationCollector } from "../validation/violation";
+import { swingConeAngle } from "./swingCone";
 
 const AXES = ["flexion", "abduction", "twist"] as const;
 
@@ -54,6 +55,25 @@ export const validateJointRom = (props: {
         `${path}.${axis}`,
         `${joint.bone} ${axis} must be within [${allowed.min}, ${allowed.max}]° (anatomical ROM), but was ${angle} (${overshoot}° past limit)`,
         angle,
+        overshoot,
+      );
+    }
+  }
+
+  // combined swing cone (ball joints): caps the corner the per-axis boxes miss
+  if (
+    constraint.swingDeg != null &&
+    joint.flexion !== null &&
+    joint.abduction !== null
+  ) {
+    const swing = swingConeAngle(joint.flexion, joint.abduction);
+    if (swing > constraint.swingDeg) {
+      const overshoot = swing - constraint.swingDeg;
+      collector.push(
+        "rom",
+        `${path}.swing`,
+        `${joint.bone} combined flexion+abduction swing must be within ${constraint.swingDeg}° of neutral (the joint's reachable cone), but was ${swing.toFixed(1)}° (${overshoot.toFixed(1)}° past the cone)`,
+        swing,
         overshoot,
       );
     }
