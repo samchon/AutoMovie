@@ -1,3 +1,4 @@
+export * from "./AutoFilmBodyRegion";
 export * from "./AutoFilmHumanoidBone";
 export * from "./IAutoFilmAngleRange";
 export * from "./IAutoFilmAttachment";

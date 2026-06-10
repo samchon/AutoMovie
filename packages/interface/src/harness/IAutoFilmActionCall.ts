@@ -1,5 +1,6 @@
 import { AutoFilmExpressionPreset } from "../expression/AutoFilmExpressionPreset";
 import { IAutoFilmVector3 } from "../geometry/IAutoFilmVector3";
+import { AutoFilmBodyRegion } from "../skeleton/AutoFilmBodyRegion";
 import { AutoFilmHumanoidBone } from "../skeleton/AutoFilmHumanoidBone";
 
 /**
@@ -118,6 +119,18 @@ export interface IAutoFilmActionBase {
    * copies.
    */
   repeat?: number;
+
+  /**
+   * The body-region this action drives ({@link AutoFilmBodyRegion}). Actions on
+   * **disjoint** regions compose concurrently (walk while waving while
+   * looking); actions sharing a region sequence. Omit to let the engine infer
+   * the natural mask from the verb — a `locomote` is `lowerBody`, a
+   * `wave`/`reach` is `upperBody`, a `lookAt` is `head`, an `emote` is `face`.
+   * Override only when the natural mask is wrong: a roundhouse `kick` is
+   * `lowerBody` though it is a `gesture`; a `jump` or a knockdown `react` is
+   * `fullBody`. Camera (`frame`) and `attachTo` actions ignore it.
+   */
+  region?: AutoFilmBodyRegion;
 }
 
 /**
