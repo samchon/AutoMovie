@@ -369,6 +369,7 @@ new THREE.TextureLoader().load("/models/hero1-face.png", (tex) => {
     for (const m of eyeMeshes) m.visible = !on;
     skinModeOn = on;
     applySkullTone();
+    applyShellLighting();
   };
 });
 faceMesh.morphTargetInfluences = [...NAMES.map(() => 0), 0];
@@ -381,6 +382,7 @@ const skullMaterial = new THREE.MeshStandardMaterial({
   roughness: 0.8,
   metalness: 0,
 });
+const skullUnlit = new THREE.MeshBasicMaterial({ color: colors.skin });
 let skullMesh: THREE.Mesh | null = null;
 const rebuildSkull = (): void => {
   if (skullMesh) {
@@ -395,7 +397,7 @@ const rebuildSkull = (): void => {
   );
   g.setIndex(skull.indices);
   g.computeVertexNormals();
-  skullMesh = new THREE.Mesh(g, skullMaterial);
+  skullMesh = new THREE.Mesh(g, skinModeOn ? skullUnlit : skullMaterial);
   scene.add(skullMesh);
 };
 rebuildSkull();
@@ -418,8 +420,10 @@ const hairMaterial = new THREE.MeshStandardMaterial({
 // highlight bands the upper dome, and tips fall into shadow. The shell is a
 // strand grid (yaw columns × descent rows); strand boundaries are where the
 // vertex y jumps back UP (each strand descends monotonically from the crown).
+const KEY_DIR = new THREE.Vector3(0.6, 0.5, 1.4).normalize();
 const paintHairStrands = (g: THREE.BufferGeometry): void => {
   const pos = g.getAttribute("position");
+  const nor = g.getAttribute("normal");
   const starts: number[] = [0];
   for (let i = 1; i < pos.count; i++)
     if (pos.getY(i) > pos.getY(i - 1) + 1e-6) starts.push(i);
@@ -439,12 +443,33 @@ const paintHairStrands = (g: THREE.BufferGeometry): void => {
       let L = 0.52 + 0.42 * clump + 0.5 * fine;
       L += 0.85 * Math.exp(-(((v - 0.22) / 0.12) ** 2)); // angel-ring band
       L *= 1 - 0.3 * Math.min(1, Math.max(0, (v - 0.68) / 0.32)); // tip shade
+      // baked key-light lambert: keeps the dome's form when the shell goes
+      // unlit in photo mode (mild enough not to double-shade the lit mode)
+      const ndl =
+        nor.getX(i) * KEY_DIR.x +
+        nor.getY(i) * KEY_DIR.y +
+        nor.getZ(i) * KEY_DIR.z;
+      L *= 0.62 + 0.38 * Math.max(0, ndl);
       color[i * 3] = L;
       color[i * 3 + 1] = L;
       color[i * 3 + 2] = L;
     }
   }
   g.setAttribute("color", new THREE.Float32BufferAttribute(color, 3));
+};
+const hairUnlit = new THREE.MeshBasicMaterial({
+  color: colors.hair,
+  side: THREE.DoubleSide,
+  vertexColors: true,
+});
+// the photo-skin face is unlit (re-shading photographed pixels distorts), so
+// in photo mode the skull/hair go unlit too — one exposure system, no
+// glowing-mask contrast; the strand vertex colors carry the shading
+const applyShellLighting = (): void => {
+  skullUnlit.color.copy(skullMaterial.color);
+  hairUnlit.color.copy(hairMaterial.color);
+  if (skullMesh) skullMesh.material = skinModeOn ? skullUnlit : skullMaterial;
+  if (hairMesh) hairMesh.material = skinModeOn ? hairUnlit : hairMaterial;
 };
 let hairMesh: THREE.Mesh | null = null;
 const rebuildHair = (): void => {
@@ -461,7 +486,7 @@ const rebuildHair = (): void => {
   g.setIndex(hair.indices);
   g.computeVertexNormals();
   paintHairStrands(g);
-  hairMesh = new THREE.Mesh(g, hairMaterial);
+  hairMesh = new THREE.Mesh(g, skinModeOn ? hairUnlit : hairMaterial);
   scene.add(hairMesh);
 };
 rebuildHair();
@@ -683,6 +708,7 @@ const colorInput = (id: string, key: keyof typeof colors): void => {
     paintFace();
     applySkullTone();
     hairMaterial.color.set(colors.hair);
+    applyShellLighting();
     rebuildEyes();
     refresh();
   });
@@ -877,6 +903,7 @@ const applyPreset = (p: IPreset): void => {
   paintFace();
   applySkullTone();
   hairMaterial.color.set(colors.hair);
+  applyShellLighting();
   refresh();
 };
 document
