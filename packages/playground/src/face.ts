@@ -91,7 +91,9 @@ app.innerHTML = `
       <h2>preset</h2>
       <select id="preset">
         <option value="neutral">neutral</option>
-        <option value="hero1">hero/1 (fitted)</option>
+        <option value="hero1">hero/1</option>
+        <option value="hero2">hero/2</option>
+        <option value="hero3">hero/3</option>
       </select>
       <h2>face shape</h2>
       <div id="morphs"></div>
@@ -192,17 +194,32 @@ faceGeometry.morphAttributes.position = [
 const IDENTITY = NAMES.length; // morph slot of the per-character likeness
 // likeness deltas are character DATA (not in the repo): loaded when present
 let identityLoaded = false;
-void fetch("/models/hero1-identity.json")
-  .then((r) => (r.ok ? r.json() : null))
-  .then((j: { identity: number[] } | null) => {
-    if (!j) return;
-    identityDelta.set(j.identity);
+let identityUrl = "";
+const loadIdentity = (url: string): Promise<void> => {
+  if (url === identityUrl) return Promise.resolve();
+  identityUrl = url;
+  identityLoaded = false;
+  identityDelta.fill(0);
+  const done = (): void => {
     (
       faceGeometry.morphAttributes.position[IDENTITY] as THREE.BufferAttribute
     ).needsUpdate = true;
-    identityLoaded = true;
-  })
-  .catch(() => undefined);
+  };
+  if (!url) {
+    done();
+    return Promise.resolve();
+  }
+  return fetch(url)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j: { identity: number[] } | null) => {
+      if (!j || identityUrl !== url) return;
+      identityDelta.set(j.identity);
+      identityLoaded = true;
+    })
+    .catch(() => undefined)
+    .then(done);
+};
+void loadIdentity("/models/hero1-identity.json");
 faceGeometry.computeVertexNormals();
 
 // region weights for coloring: lips / brows / eye openings, gaussian-feathered
@@ -283,6 +300,23 @@ const faceMesh = new THREE.Mesh<
 >(faceGeometry, faceMaterial);
 // per-character photo skin baked into the canonical UV layout (character
 // data, not in the repo): swaps in when present
+let photoMaterialRef: THREE.MeshBasicMaterial | null = null;
+const skinCache = new Map<string, THREE.Texture>();
+const loadSkin = (url: string): THREE.Texture => {
+  let t = skinCache.get(url);
+  if (!t) {
+    t = new THREE.TextureLoader().load(url);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.flipY = false;
+    skinCache.set(url, t);
+  }
+  return t;
+};
+(window as unknown as { __loadSkin: unknown }).__loadSkin = (url: string) => {
+  if (!photoMaterialRef) return;
+  photoMaterialRef.map = loadSkin(url);
+  photoMaterialRef.needsUpdate = true;
+};
 new THREE.TextureLoader().load("/models/hero1-face.png", (tex) => {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.flipY = false; // the bake uses the glTF top-left UV convention
@@ -292,6 +326,7 @@ new THREE.TextureLoader().load("/models/hero1-face.png", (tex) => {
     map: tex,
     side: THREE.DoubleSide,
   });
+  photoMaterialRef = photoMaterial;
   (window as unknown as { __setSkin: unknown }).__setSkin = (on: boolean) => {
     faceMesh.material = on ? photoMaterial : faceMaterial;
     // photo skin carries painted eyes: restore the lid covers, park the
@@ -561,6 +596,7 @@ colorInput("#cIris", "iris");
 // ── presets: a character is ONE pure-parameter document ─────────────────────
 interface IPreset {
   face: Partial<Record<AutoFilmFaceParameterName, number>>;
+  data?: { identity: string; skin: string };
   skull: IForgeSkullParameters;
   hair: IForgeHairParameters;
   tails: IForgeTailParameters;
@@ -579,27 +615,32 @@ const PRESETS: Record<string, IPreset> = {
       iris: "#3a2a20",
     },
   },
-  // hero/1: the 17-parameter least-squares fit of the photographed face
-  // (profile-calibrated depth), hair/colors read off the reference sheet
+  // hero/1: anthropometric index fit — the 18 sliders matched to HER OWN
+  // measured Farkas-style indices (13/15 within ~2%; see fit-indices.js)
   hero1: {
     face: {
-      faceWidth: -0.8,
-      faceLength: -1.12,
-      jawWidth: -0.36,
-      chinLength: 0.85,
-      chinProtrusion: -1.64,
-      cheekFullness: 1.58,
-      eyeSize: 0.09,
-      eyeSpacing: 0.13,
-      eyeHeight: -0.07,
-      eyeTilt: 0.18,
-      browHeight: 1.01,
-      noseLength: -0.32,
-      noseWidth: -0.37,
-      noseProjection: -1.46,
-      mouthWidth: 0.16,
-      lipFullness: -1.46,
-      mouthHeight: -1.08,
+      faceWidth: -0.852,
+      faceLength: 0.065,
+      jawWidth: -0.415,
+      chinLength: -1.056,
+      chinProtrusion: -0.75,
+      cheekFullness: 0.288,
+      eyeSize: 2,
+      eyeWidth: -1.904,
+      eyeSpacing: 0.288,
+      eyeHeight: -0.123,
+      eyeTilt: 1.237,
+      browHeight: 0.18,
+      noseLength: 0.203,
+      noseWidth: 0.239,
+      noseProjection: -1.171,
+      mouthWidth: 0.929,
+      lipFullness: 0.207,
+      mouthHeight: -0.832,
+    },
+    data: {
+      identity: "/models/hero1-identity.json",
+      skin: "/models/hero1-face.png",
     },
     skull: { width: 0.1, crown: 0.15, depth: 0.05 },
     hair: { length: 0.3, volume: 0.55, bangs: 1, curtain: 0.35 },
@@ -609,6 +650,76 @@ const PRESETS: Record<string, IPreset> = {
       hair: "#231a15",
       lips: "#cf7e76",
       iris: "#33231b",
+    },
+  },
+  hero2: {
+    face: {
+      faceWidth: -0.812,
+      faceLength: 0.153,
+      jawWidth: -0.627,
+      chinLength: -1.085,
+      chinProtrusion: -0.743,
+      cheekFullness: 0.404,
+      eyeSize: 1.809,
+      eyeWidth: -1.224,
+      eyeSpacing: 0.249,
+      eyeHeight: 0.02,
+      eyeTilt: 1.041,
+      browHeight: -0.045,
+      noseLength: -0.276,
+      noseWidth: 0.822,
+      noseProjection: -1.073,
+      mouthWidth: 0.344,
+      lipFullness: -0.106,
+      mouthHeight: -1.099,
+    },
+    data: {
+      identity: "/models/hero2-identity.json",
+      skin: "/models/hero2-face.png",
+    },
+    skull: { width: 0.05, crown: 0.1, depth: 0.1 },
+    hair: { length: 0.15, volume: 0.5, bangs: 0.15, curtain: 0.25 },
+    tails: { length: 0, height: 0.4, spread: 0.4, width: 0.5 },
+    colors: {
+      skin: "#f0cdb9",
+      hair: "#2e2018",
+      lips: "#c97a72",
+      iris: "#33231b",
+    },
+  },
+  hero3: {
+    face: {
+      faceWidth: -1.311,
+      faceLength: 0.103,
+      jawWidth: -0.418,
+      chinLength: -0.811,
+      chinProtrusion: -2,
+      cheekFullness: 0.539,
+      eyeSize: 1.751,
+      eyeWidth: -1.3,
+      eyeSpacing: 0.263,
+      eyeHeight: 0.077,
+      eyeTilt: 0.997,
+      browHeight: -0.124,
+      noseLength: -0.05,
+      noseWidth: 0.568,
+      noseProjection: -1.316,
+      mouthWidth: 0.725,
+      lipFullness: -0.466,
+      mouthHeight: -0.927,
+    },
+    data: {
+      identity: "/models/hero3-identity.json",
+      skin: "/models/hero3-face.png",
+    },
+    skull: { width: 0, crown: 0.1, depth: 0.05 },
+    hair: { length: 1, volume: 0.45, bangs: 0.25, curtain: 0.55 },
+    tails: { length: 0, height: 0.4, spread: 0.4, width: 0.5 },
+    colors: {
+      skin: "#efcab5",
+      hair: "#241a14",
+      lips: "#c3736d",
+      iris: "#2e211a",
     },
   },
 };
@@ -644,6 +755,13 @@ const applyPreset = (p: IPreset): void => {
       p.tails[k].toFixed(2);
   });
   rebuildTails();
+  void loadIdentity(p.data?.identity ?? "").then(() => {
+    setIdentity(p.data ? 1 : 0);
+  });
+  if (p.data)
+    (window as unknown as { __loadSkin?: (u: string) => void }).__loadSkin?.(
+      p.data.skin,
+    );
   rebuildEyes();
   colors.skin = p.colors.skin;
   colors.hair = p.colors.hair;
