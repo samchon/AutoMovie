@@ -10,3 +10,4 @@ export * from "./motion";
 export * from "./material";
 export * from "./scene";
 export * from "./validation";
+export * from "./harness";
