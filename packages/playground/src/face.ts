@@ -596,7 +596,7 @@ colorInput("#cIris", "iris");
 // ── presets: a character is ONE pure-parameter document ─────────────────────
 interface IPreset {
   face: Partial<Record<AutoFilmFaceParameterName, number>>;
-  data?: { identity: string; skin: string };
+  data?: { identity: string; skin: string; head: string };
   skull: IForgeSkullParameters;
   hair: IForgeHairParameters;
   tails: IForgeTailParameters;
@@ -641,6 +641,7 @@ const PRESETS: Record<string, IPreset> = {
     data: {
       identity: "/models/hero1-identity.json",
       skin: "/models/hero1-face.png",
+      head: "/models/hero1-head.glb",
     },
     skull: { width: 0.1, crown: 0.15, depth: 0.05 },
     hair: { length: 0.3, volume: 0.55, bangs: 1, curtain: 0.35 },
@@ -676,6 +677,7 @@ const PRESETS: Record<string, IPreset> = {
     data: {
       identity: "/models/hero2-identity.json",
       skin: "/models/hero2-face.png",
+      head: "/models/hero2-head.glb",
     },
     skull: { width: 0.05, crown: 0.1, depth: 0.1 },
     hair: { length: 0.15, volume: 0.5, bangs: 0.15, curtain: 0.25 },
@@ -711,6 +713,7 @@ const PRESETS: Record<string, IPreset> = {
     data: {
       identity: "/models/hero3-identity.json",
       skin: "/models/hero3-face.png",
+      head: "/models/hero3-head.glb",
     },
     skull: { width: 0, crown: 0.1, depth: 0.05 },
     hair: { length: 1, volume: 0.45, bangs: 0.25, curtain: 0.55 },
@@ -758,10 +761,12 @@ const applyPreset = (p: IPreset): void => {
   void loadIdentity(p.data?.identity ?? "").then(() => {
     setIdentity(p.data ? 1 : 0);
   });
-  if (p.data)
+  if (p.data) {
     (window as unknown as { __loadSkin?: (u: string) => void }).__loadSkin?.(
       p.data.skin,
     );
+    loadPhotoHead(p.data.head);
+  }
   rebuildEyes();
   colors.skin = p.colors.skin;
   colors.hair = p.colors.hair;
@@ -794,31 +799,48 @@ const setIdentity = (w: number): void => {
 // carries the true silhouette — the face plate's landmark-oval edge is NOT
 // her face contour, which is exactly what reads as a different outline
 let photoHead: THREE.Group | null = null;
-new GLTFLoader().load("/models/hero1-head.glb", (gltf) => {
-  gltf.scene.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (m.isMesh) {
-      const std = m.material as THREE.MeshStandardMaterial;
-      m.material = new THREE.MeshBasicMaterial({
-        map: std.map,
-        side: THREE.DoubleSide,
-      });
-    }
-  });
-  photoHead = gltf.scene;
-  photoHead.visible = false;
-  scene.add(photoHead);
-  (window as unknown as { __setPhotoHead: unknown }).__setPhotoHead = (
-    on: boolean,
-  ) => {
-    photoHead!.visible = on;
-    faceMesh.visible = !on;
-    if (skullMesh) skullMesh.visible = !on;
-    if (hairMesh) hairMesh.visible = !on;
-    for (const m of tailMeshes) m.visible = !on;
-    for (const m of eyeMeshes) m.visible = false;
+let photoHeadOn = false;
+const headCache = new Map<string, THREE.Group>();
+const loadPhotoHead = (url: string): void => {
+  const place = (g: THREE.Group): void => {
+    if (photoHead) photoHead.visible = false;
+    photoHead = g;
+    photoHead.visible = photoHeadOn;
   };
-});
+  const hit = headCache.get(url);
+  if (hit) {
+    place(hit);
+    return;
+  }
+  new GLTFLoader().load(url, (gltf) => {
+    gltf.scene.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) {
+        const std = m.material as THREE.MeshStandardMaterial;
+        m.material = new THREE.MeshBasicMaterial({
+          map: std.map,
+          side: THREE.DoubleSide,
+        });
+      }
+    });
+    gltf.scene.visible = false;
+    scene.add(gltf.scene);
+    headCache.set(url, gltf.scene);
+    place(gltf.scene);
+  });
+};
+loadPhotoHead("/models/hero1-head.glb");
+(window as unknown as { __setPhotoHead: unknown }).__setPhotoHead = (
+  on: boolean,
+) => {
+  photoHeadOn = on;
+  if (photoHead) photoHead.visible = on;
+  faceMesh.visible = !on;
+  if (skullMesh) skullMesh.visible = !on;
+  if (hairMesh) hairMesh.visible = !on;
+  for (const m of tailMeshes) m.visible = !on;
+  for (const m of eyeMeshes) m.visible = false;
+};
 (window as unknown as { __dump: unknown }).__dump = () => ({
   influences: [...faceMesh.morphTargetInfluences!],
   names: NAMES,
