@@ -20,10 +20,19 @@ export interface IAutoFilmReviewApplication {
 export namespace IAutoFilmReviewApplication {
   export interface IProps {
     /**
-     * Think before you judge. Walk the rendered shot against the beat's intent:
-     * does the key action read, do interactions actually connect (the strike
-     * lands, the coupling holds), is the timing and framing right? Weigh the
-     * automatic violations you were handed.
+     * Think before you judge. Walk the rendered shot against the beat's intent,
+     * in order:
+     *
+     * - Does the **key action read** at a glance (a stranger would see "he is
+     *   shot off his horse")?
+     * - Do **interactions connect** — the strike lands on the body, the rider
+     *   stays coupled through the rear, the hit precedes the fall?
+     * - Is the **motion plausible** — no skating, no limbs through bodies, ROM
+     *   not visibly violated (and weigh the automatic structural/physical
+     *   violations you were handed)?
+     * - Is the **camera** framing the moment that matters, and the **timing** /
+     *   energy right for the theme? Be strict: a shot that only "roughly" reads
+     *   should be revised.
      */
     thinking: string;
     request: IWrite;

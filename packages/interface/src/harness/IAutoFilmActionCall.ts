@@ -3,13 +3,47 @@ import { IAutoFilmVector3 } from "../geometry/IAutoFilmVector3";
 import { AutoFilmHumanoidBone } from "../skeleton/AutoFilmHumanoidBone";
 
 /**
- * Where an action points: a placed scene node (by id) or a world point. Most
- * verbs accept a target so the model can say "walk **to the door**" or "look
- * **at the other knight**" without computing coordinates.
+ * Where an action points. Prefer a `node` (so the engine resolves live world
+ * positions of moving actors) over a literal `point`; use `direction` /
+ * `offscreen` for relative goals ("walk off to the left") so the model never
+ * has to invent world coordinates.
+ *
+ * @author Samchon
  */
 export type IAutoFilmActionTarget =
   | { kind: "node"; node: string }
-  | { kind: "point"; point: IAutoFilmVector3 };
+  | { kind: "point"; point: IAutoFilmVector3 }
+  /**
+   * A heading relative to the actor's current facing (0 = ahead, +90 = its
+   * left).
+   */
+  | { kind: "direction"; headingDeg: number }
+  /** Exit/aim toward a frame edge ("off-screen left"). */
+  | { kind: "offscreen"; edge: "left" | "right" | "forward" | "back" };
+
+/**
+ * A closed set of **gesture families** the engine has motion for. A closed enum
+ * (not a free string) is deliberate: across many parallel generations, free
+ * names drift ("wave"/"waving"/"hand-wave"); a fixed set converges. Use `note`
+ * to specialise within a family ("strike" + note "jab", or with `custom` to
+ * describe a one-off the engine should approximate).
+ */
+export type AutoFilmGestureKind =
+  | "strike"
+  | "kick"
+  | "guard"
+  | "wave"
+  | "bow"
+  | "nod"
+  | "shake"
+  | "point"
+  | "crouch"
+  | "jump"
+  | "stagger"
+  | "draw"
+  | "throw"
+  | "celebrate"
+  | "custom";
 
 /**
  * A single **action verb** an actor performs — the _thin_ unit the model emits
@@ -21,8 +55,10 @@ export type IAutoFilmActionTarget =
  *
  * Discriminated on `verb`. Every action carries an actor and a placement on the
  * shot's local timeline (`start`, and a `duration` or `"auto"` to let the
- * engine choose a natural length). The list of an actor's actions in a shot
- * composes — via `sequenceMotion` — into that actor's performance clip.
+ * engine choose a natural length). The engine composes an actor's actions into
+ * its performance clip (`arrangeMotion`, holding the last pose across gaps).
+ * The camera is an actor too — its {@link IAutoFilmCameraAction}s are how it
+ * moves.
  *
  * @author Samchon
  */
@@ -35,45 +71,46 @@ export type IAutoFilmActionCall =
   | IAutoFilmLaunchAction
   | IAutoFilmReactAction
   | IAutoFilmEmoteAction
-  | IAutoFilmHoldAction;
+  | IAutoFilmHoldAction
+  | IAutoFilmCameraAction;
 
 /** Fields every action shares. */
 export interface IAutoFilmActionBase {
-  /** The scene node performing this action. */
+  /** The scene-node id performing this action (reuse the id from staging). */
   actor: string;
   /** Seconds into the shot when it begins. */
   start: number;
   /**
    * Length in seconds, or `"auto"` to let the engine pick a natural duration (a
-   * stride cadence, a punch's snap, the flight time of a projectile).
+   * stride cadence, a punch's snap, a projectile's flight time).
    */
   duration: number | "auto";
 }
 
-/** Travel across the floor on a chosen gait — engine: locomotion + travelMotion. */
+/** Travel across the floor on a gait — engine: locomotion + `travelMotion`. */
 export interface IAutoFilmLocomoteAction extends IAutoFilmActionBase {
   verb: "locomote";
-  /** The gait. */
   gait: "walk" | "run" | "sprint" | "sneak" | "march";
-  /** Where to go (the engine paces the cycle to cover the distance). */
+  /** Where to go (the engine sizes the gait cycles to cover the distance). */
   to: IAutoFilmActionTarget;
-  /** Face the travel direction (false to keep facing a separate target). */
+  /** Face the travel direction (false keeps facing a separate look target). */
   faceTravel?: boolean;
 }
 
 /**
- * A whole-body gesture from the motion vocabulary — a punch, a kick, a wave, a
- * bow. The engine maps the named gesture (optionally aimed at a target) to a
- * pose/clip. Keep the name descriptive; the engine owns the keyframes.
+ * A whole-body gesture from the engine's motion vocabulary. Pick the closest
+ * `kind`; refine with `note`. The engine owns the keyframes — keep this intent,
+ * not animation.
  */
 export interface IAutoFilmGestureAction extends IAutoFilmActionBase {
   verb: "gesture";
-  /** E.g. "jab", "cross", "roundhouse", "wave", "bow", "draw-bow". */
-  name: string;
+  kind: AutoFilmGestureKind;
   /**
-   * Optional thing the gesture is directed at (a strike's target, a wave's
-   * recipient).
+   * Specialise the family ("jab" for `strike`, "roundhouse" for `kick`) or
+   * describe a `custom` one.
    */
+  note?: string;
+  /** What the gesture is directed at (a strike's target, a wave's recipient). */
   at?: IAutoFilmActionTarget;
 }
 
@@ -92,47 +129,49 @@ export interface IAutoFilmLookAtAction extends IAutoFilmActionBase {
 
 /**
  * Rigidly couple this actor to another node's bone for the action's span — a
- * rider on a saddle, a sword in a hand. Engine: `resolveAttachment`.
+ * sword in a hand, a prop carried. Engine: `resolveAttachment`. (A _persistent_
+ * mount, e.g. a rider on a horse, is better declared once in staging than
+ * repeated as an action every shot.)
  */
 export interface IAutoFilmAttachAction extends IAutoFilmActionBase {
   verb: "attachTo";
-  /** The parent node to ride. */
   parent: string;
-  /** The parent bone (e.g. a horse's `spine` saddle). */
   bone: AutoFilmHumanoidBone;
 }
 
 /**
- * Loose a projectile (arrow, ball, spear) from the actor toward a target —
- * engine: `projectileAt` + `projectileSphereHit`. A hit detected against the
- * target may emit a {@link IAutoFilmReactAction} on it (the reactive event).
+ * Loose a projectile toward a target — engine: `projectileAt` +
+ * `projectileSphereHit` (it leads a moving target). Because the **contact time
+ * is computed by the engine**, the model cannot hand-time the target's
+ * reaction; instead give `onHit`, and the engine schedules the target's `react`
+ * at the **detected** moment of impact (the reactive event — "shoot him off his
+ * horse" without knowing when the arrow lands).
  */
 export interface IAutoFilmLaunchAction extends IAutoFilmActionBase {
   verb: "launch";
-  /** What is thrown (a scene node prop, or a named projectile). */
+  /** What is thrown (a scene-node prop, or a named projectile). */
   projectile: string;
   /** Who/what it is aimed at. */
   at: IAutoFilmActionTarget;
-  /** Launch speed (m/s); the engine leads a moving target. */
+  /** Launch speed (m/s). */
   speed: number;
+  /** The reaction the engine applies to the struck target at the detected hit. */
+  onHit?: { force: number; unbalance?: boolean };
 }
 
 /**
  * React to being struck — the engine resolves the impact (`resolveImpact`) and
- * the ROM-bounded flinch/knock-back (`impactRecoil`). The model only says "I
- * get hit, hard, from there"; the engine decides bounce/embed/knock-back and
- * how far the body yields.
+ * the ROM-bounded flinch/knock-back (`impactRecoil`). Usually emitted by the
+ * engine from a {@link IAutoFilmLaunchAction}'s `onHit`; author it directly for
+ * a melee blow whose timing you control.
  */
 export interface IAutoFilmReactAction extends IAutoFilmActionBase {
   verb: "react";
   /** Where the blow comes from. */
   from: IAutoFilmActionTarget;
-  /**
-   * Rough force `[0,1]` (a graze vs. a knockout); the engine scales the
-   * impulse.
-   */
+  /** Force `[0,1]` (a graze vs. a knockout); the engine scales the impulse. */
   force: number;
-  /** If the reaction unseats/floors the actor (drives a fall). */
+  /** If it unseats/floors the actor (drives a fall within ROM + balance). */
   unbalance?: boolean;
 }
 
@@ -148,4 +187,20 @@ export interface IAutoFilmEmoteAction extends IAutoFilmActionBase {
 export interface IAutoFilmHoldAction extends IAutoFilmActionBase {
   verb: "hold";
   duration: number;
+}
+
+/**
+ * The camera is an actor; this is how it moves. A _list_ of camera actions
+ * composes a move that changes mid-shot ("follow the charge, then hold static
+ * on the fall"). The engine realises the framing/move against the target as a
+ * camera-node clip (`cameraMotion` on the shot).
+ */
+export interface IAutoFilmCameraAction extends IAutoFilmActionBase {
+  verb: "frame";
+  /** How tight the framing is. */
+  framing: "wide" | "full" | "medium" | "close";
+  /** How the camera behaves over this span. */
+  move: "static" | "follow" | "orbit" | "push-in" | "whip";
+  /** What it frames/tracks. */
+  on: IAutoFilmActionTarget;
 }

@@ -1,4 +1,5 @@
 import { IAutoFilmVector3 } from "../geometry/IAutoFilmVector3";
+import { IAutoFilmContextRequest } from "./IAutoFilmContextRequest";
 
 /**
  * Stage 3 — **BLOCKING** (meso, per beat). Turn one beat's prose into a
@@ -22,7 +23,8 @@ export namespace IAutoFilmBlockingApplication {
      * catch (the strike landing, the fall). Resolve timing conflicts.
      */
     thinking: string;
-    request: IWrite;
+    /** Block the beat, or pull context (the scene/script/a sibling shot) first. */
+    request: IWrite | IAutoFilmContextRequest;
   }
 
   export interface IWrite {
