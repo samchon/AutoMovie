@@ -22,7 +22,9 @@ export namespace IAutoFilmPerformanceApplication {
     /**
      * Think before you act. Which engine verbs realise each actor's intent?
      * What must be timed against what (the arrow leaves as the archer twists;
-     * the target reacts only once the hit lands)?
+     * the target reacts only once the hit lands)? On a **revise pass**, pull
+     * `getNotes` and treat each open note as a required fix to the action
+     * list — re-performing without reading the correction repeats the fault.
      */
     thinking: string;
 
