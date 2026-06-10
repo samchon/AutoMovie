@@ -1,5 +1,6 @@
 import {
   IAutoFilmActionCall,
+  IAutoFilmKeyframe,
   IAutoFilmMotion,
   IAutoFilmVector3,
 } from "@autofilm/interface";
@@ -73,6 +74,29 @@ export const makeActorSynthesizer = (
         ctx.restPose,
         action.duration,
       );
+    if (action.verb === "emote") {
+      // a face-region clip: only the expression, no body joints to merge
+      const duration = action.duration === "auto" ? 1 : action.duration;
+      const expression = {
+        preset: action.preset,
+        intensity: action.intensity,
+        blendshapes: null,
+      };
+      const frame = (time: number): IAutoFilmKeyframe => ({
+        time,
+        pose: { skeleton: ctx.skeleton, root: null, joints: [] },
+        expression,
+        easing: "linear",
+        bezier: null,
+      });
+      return {
+        id: `${actor}:emote`,
+        skeleton: ctx.skeleton,
+        duration,
+        loop: false,
+        keyframes: [frame(0), frame(duration)],
+      };
+    }
     return null;
   };
 };
