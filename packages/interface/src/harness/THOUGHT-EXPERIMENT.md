@@ -59,3 +59,17 @@ Tracing cases that stress *different* parts than the action set-pieces of round 
 4. **Tempo grid** — deferred: a `bpm`/beat-snapped timing for music-synced shots, when a musical scene actually needs it (avoid speculative complexity).
 
 The schema keeps maturing per traced case; the next round (a long multi-shot sequence, a vehicle, a transformation) will surface the next gaps.
+
+---
+
+## Round 3 — a multi-shot sequence (continuity, pacing, the cut-list)
+
+### Film E — "the joust, cut together" (4 shots: establishing wide → the charge → the strike (close) → the aftermath)
+
+- **SCRIPT / BLOCKING / PERFORMANCE** produce four shots — ✔ (round 1–2 cover the within-shot work).
+- **ASSEMBLE** the four into one film: order, trims, transitions (a hard cut into the strike, a slow dissolve into the aftermath), and the rhythm (the strike shot short and sharp; the aftermath held). ✗✗ **there was no ASSEMBLE stage schema** — the design graph ends in "Assemble → IAutoFilmSequence" but no Application produced it. A genuine structural gap, found only by tracing past a single shot.
+- **Continuity** across cuts: the charge shot must end where the strike shot begins (a match cut); energy must carry. The `getShot` context request lets the model pull a sibling shot's end; the assemble stage must *check* the flow.
+
+## Round-3 findings → refinements applied
+
+1. **Assemble stage.** Added `IAutoFilmAssembleApplication` — the editorial stage that emits the `IAutoFilmSequence` cut-list (ordered shots, trims, transitions, fps) with CoT slots for **pacing** (the rhythm rationale) and **continuity** (how the shots match across cuts). The pipeline now has a schema for every node in the design graph.
