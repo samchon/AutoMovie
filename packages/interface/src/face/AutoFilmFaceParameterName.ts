@@ -28,6 +28,7 @@ export type AutoFilmFaceParameterName =
   | "cheekFullness"
   // ── eyes / brows ──
   | "eyeSize"
+  | "eyeWidth"
   | "eyeSpacing"
   | "eyeHeight"
   | "eyeTilt"

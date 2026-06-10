@@ -8,7 +8,7 @@ import { TestValidator } from "@nestia/e2e";
  * so a face asset baked from it answers every legal parameter document and
  * nothing else.
  *
- * Scenario: default (canonical) build yields the 17 expected keys with
+ * Scenario: default (canonical) build yields the 18 expected keys with
  * 468·3-long deltas.
  */
 export const test_forge_face_morphs_complete = (): void => {
@@ -22,6 +22,7 @@ export const test_forge_face_morphs_complete = (): void => {
     "eyeSize",
     "eyeSpacing",
     "eyeTilt",
+    "eyeWidth",
     "faceLength",
     "faceWidth",
     "jawWidth",
