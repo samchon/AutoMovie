@@ -27,6 +27,15 @@ export interface IAutoFilmActorContext {
   /** Locomotion speed (m/s) — how fast a `locomote` carries it. */
   speed: number;
 
+  /** Heading the actor faces, degrees about +Y (0 = +Z) — for a `lookAt`'s yaw. */
+  facingDeg: number;
+
+  /**
+   * Eye height above the actor's position (meters) — where a `lookAt` aims
+   * from.
+   */
+  eyeHeight: number;
+
   /** The pose the actor settles into for a `hold`. */
   restPose: IAutoFilmPose;
 }
