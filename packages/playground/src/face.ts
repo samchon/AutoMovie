@@ -70,6 +70,8 @@ app.innerHTML = `
       </select>
       <h2>face shape</h2>
       <div id="morphs"></div>
+      <h2>identity (character data)</h2>
+      <div id="identity"></div>
       <h2>skull</h2>
       <div id="skull"></div>
       <h2>hair</h2>
@@ -152,12 +154,28 @@ for (let t = 0; t < CANONICAL_FACE_INDICES.length; t += 3) {
   if (EYE_SETS.some((set) => tri.every((v) => set.has(v)))) continue;
   faceIndices.push(...tri);
 }
-faceGeometry.setIndex(faceIndices);
+faceGeometry.setIndex(faceIndices); // cut by default; photo mode restores covers
 // glTF-style DELTA morph targets (three defaults to absolute ones)
 faceGeometry.morphTargetsRelative = true;
-faceGeometry.morphAttributes.position = NAMES.map(
-  (name) => new THREE.Float32BufferAttribute(morphs[name], 3),
-);
+const identityDelta = new Float32Array(CANONICAL_FACE_POSITIONS.length);
+faceGeometry.morphAttributes.position = [
+  ...NAMES.map((name) => new THREE.Float32BufferAttribute(morphs[name], 3)),
+  new THREE.Float32BufferAttribute(identityDelta, 3),
+];
+const IDENTITY = NAMES.length; // morph slot of the per-character likeness
+// likeness deltas are character DATA (not in the repo): loaded when present
+let identityLoaded = false;
+void fetch("/models/hero1-identity.json")
+  .then((r) => (r.ok ? r.json() : null))
+  .then((j: { identity: number[] } | null) => {
+    if (!j) return;
+    identityDelta.set(j.identity);
+    (
+      faceGeometry.morphAttributes.position[IDENTITY] as THREE.BufferAttribute
+    ).needsUpdate = true;
+    identityLoaded = true;
+  })
+  .catch(() => undefined);
 faceGeometry.computeVertexNormals();
 
 // region weights for coloring: lips / brows / eye openings, gaussian-feathered
@@ -175,27 +193,25 @@ const EYES = [
   362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384,
   398,
 ];
-const regionWeight = (seeds: number[], sigma: number): Float32Array => {
+const regionWeight = (
+  pos: number[],
+  seeds: number[],
+  sigma: number,
+): Float32Array => {
   const w = new Float32Array(468);
   for (let i = 0; i < 468; i++) {
     let best = Infinity;
-    const x = CANONICAL_FACE_POSITIONS[i * 3]!;
-    const y = CANONICAL_FACE_POSITIONS[i * 3 + 1]!;
-    const z = CANONICAL_FACE_POSITIONS[i * 3 + 2]!;
-    for (const s of seeds) {
+    for (const sd of seeds) {
       const d2 =
-        (x - CANONICAL_FACE_POSITIONS[s * 3]!) ** 2 +
-        (y - CANONICAL_FACE_POSITIONS[s * 3 + 1]!) ** 2 +
-        (z - CANONICAL_FACE_POSITIONS[s * 3 + 2]!) ** 2;
+        (pos[i * 3]! - pos[sd * 3]!) ** 2 +
+        (pos[i * 3 + 1]! - pos[sd * 3 + 1]!) ** 2 +
+        (pos[i * 3 + 2]! - pos[sd * 3 + 2]!) ** 2;
       if (d2 < best) best = d2;
     }
     w[i] = Math.exp(-best / (2 * sigma * sigma));
   }
   return w;
 };
-const lipW = regionWeight(LIPS, 0.004);
-const browW = regionWeight(BROWS, 0.004);
-const eyeW = regionWeight(EYES, 0.0022);
 
 const colors = {
   skin: "#e8c4ae",
@@ -209,6 +225,10 @@ const colorAttr = new THREE.Float32BufferAttribute(
 );
 faceGeometry.setAttribute("color", colorAttr);
 const paintFace = (): void => {
+  const pos = morphedFacePositions();
+  const lipW = regionWeight(pos, LIPS, 0.004);
+  const browW = regionWeight(pos, BROWS, 0.004);
+  const eyeW = regionWeight(pos, EYES, 0.0022);
   const skin = new THREE.Color(colors.skin);
   const lips = new THREE.Color(colors.lips);
   const brow = new THREE.Color(colors.hair).multiplyScalar(0.7);
@@ -223,18 +243,30 @@ const paintFace = (): void => {
   }
   colorAttr.needsUpdate = true;
 };
-paintFace();
 
-const faceMesh = new THREE.Mesh(
-  faceGeometry,
-  new THREE.MeshStandardMaterial({
-    vertexColors: true,
-    roughness: 0.75,
-    metalness: 0,
-    side: THREE.DoubleSide,
-  }),
-);
-faceMesh.morphTargetInfluences = NAMES.map(() => 0);
+const faceMaterial = new THREE.MeshStandardMaterial({
+  vertexColors: true,
+  roughness: 0.75,
+  metalness: 0,
+  side: THREE.DoubleSide,
+});
+const faceMesh = new THREE.Mesh(faceGeometry, faceMaterial);
+// per-character photo skin baked into the canonical UV layout (character
+// data, not in the repo): swaps in when present
+new THREE.TextureLoader().load("/models/hero1-face.png", (tex) => {
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.flipY = false; // the bake uses the glTF top-left UV convention
+  (window as unknown as { __setSkin: unknown }).__setSkin = (on: boolean) => {
+    faceMaterial.map = on ? tex : null;
+    faceMaterial.vertexColors = !on;
+    faceMaterial.needsUpdate = true;
+    // photo skin carries painted eyes: restore the lid covers, park the
+    // sphere eyeballs; sculpt mode cuts the covers and brings them back
+    faceGeometry.setIndex(on ? [...CANONICAL_FACE_INDICES] : faceIndices);
+    for (const m of eyeMeshes) m.visible = !on;
+  };
+});
+faceMesh.morphTargetInfluences = [...NAMES.map(() => 0), 0];
 scene.add(faceMesh);
 
 // ── parametric skull + hair ──────────────────────────────────────────────────
@@ -309,6 +341,9 @@ const morphedFacePositions = (): number[] => {
     const d = morphs[name];
     for (let k = 0; k < out.length; k++) out[k]! += w * d[k]!;
   });
+  const wi = faceMesh.morphTargetInfluences![IDENTITY]!;
+  if (wi)
+    for (let k = 0; k < out.length; k++) out[k]! += wi * identityDelta[k]!;
   return out;
 };
 const rebuildEyes = (): void => {
@@ -349,6 +384,7 @@ const rebuildEyes = (): void => {
   }
 };
 rebuildEyes();
+paintFace();
 
 // ── document panel ───────────────────────────────────────────────────────────
 const weights = new Map<AutoFilmFaceParameterName, number>();
@@ -399,8 +435,15 @@ const faceSliders = NAMES.map((name, idx) =>
     weights.set(name, w);
     faceGeometry.computeVertexNormals();
     rebuildEyes();
+    paintFace();
   }),
 );
+const identitySlider = slider("#identity", "hero/1 likeness", 0, 1, 0, (w) => {
+  faceMesh.morphTargetInfluences![IDENTITY] = identityLoaded ? w : 0;
+  faceGeometry.computeVertexNormals();
+  rebuildEyes();
+  paintFace();
+});
 const skullSliders = (
   Object.keys(skullParams) as (keyof IForgeSkullParameters)[]
 ).map((k) =>
@@ -529,6 +572,16 @@ document
   .addEventListener("change", (e) =>
     applyPreset(PRESETS[(e.target as HTMLSelectElement).value]!),
   );
+const setIdentity = (w: number): void => {
+  faceMesh.morphTargetInfluences![IDENTITY] = identityLoaded ? w : 0;
+  identitySlider.value = String(w);
+  identitySlider.closest(".row")!.querySelector(".v")!.textContent =
+    w.toFixed(2);
+  faceGeometry.computeVertexNormals();
+  rebuildEyes();
+  paintFace();
+};
+(window as unknown as { __setIdentity: unknown }).__setIdentity = setIdentity;
 (window as unknown as { __setPreset: unknown }).__setPreset = (
   name: string,
 ): void => applyPreset(PRESETS[name]!);
