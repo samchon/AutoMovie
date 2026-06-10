@@ -38,6 +38,11 @@ export const test_rom_validate_immobile_axis = (): void => {
     "flagged on abduction axis",
     items[0]!.path.endsWith(".abduction"),
   );
+  TestValidator.equals(
+    "overshoot is the full distance from 0",
+    items[0]!.overshoot,
+    20,
+  );
 
   TestValidator.equals(
     "zero on immobile axis is fine",

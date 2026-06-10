@@ -39,4 +39,13 @@ export interface IAutoFilmConstraintViolation {
    * deliberate `unknown` at the validation boundary.
    */
   value: unknown;
+
+  /**
+   * Signed magnitude by which the value missed the bound, in the channel's own
+   * unit (degrees for ROM): how far _past_ the limit it sat (an elbow at 175°
+   * against a 150° max → `25`). Present only for numeric overshoots; lets a
+   * corrector judge severity (a 2° graze vs a 90° break) and the `// ❌` comment
+   * quote the gap. Absent for non-numeric or non-magnitude violations.
+   */
+  overshoot?: number;
 }

@@ -7,7 +7,7 @@ import { TestValidator } from "@nestia/e2e";
 
 import { joint } from "../internal/fixtures";
 
-const romPaths = (axes: Parameters<typeof joint>[1]): string[] => {
+const romItems = (axes: Parameters<typeof joint>[1]) => {
   const collector = new ViolationCollector();
   validateJointRom({
     joint: joint("leftLowerArm", axes),
@@ -15,7 +15,7 @@ const romPaths = (axes: Parameters<typeof joint>[1]): string[] => {
     path: "$input",
     collector,
   });
-  return collector.items.map((v) => v.path);
+  return collector.items;
 };
 
 /**
@@ -31,13 +31,23 @@ const romPaths = (axes: Parameters<typeof joint>[1]): string[] => {
  *    joint cannot do): one violation.
  */
 export const test_rom_validate_over_range = (): void => {
-  const over = romPaths({ flexion: 175 });
+  const over = romItems({ flexion: 175 });
   TestValidator.equals("one violation for 175° flexion", over.length, 1);
   TestValidator.predicate(
     "flagged on flexion axis",
-    over[0]!.endsWith(".flexion"),
+    over[0]!.path.endsWith(".flexion"),
+  );
+  TestValidator.equals(
+    "overshoot is degrees past the max (175 − 150)",
+    over[0]!.overshoot,
+    25,
   );
 
-  const under = romPaths({ flexion: -10 });
+  const under = romItems({ flexion: -10 });
   TestValidator.equals("one violation for -10° (below min 0)", under.length, 1);
+  TestValidator.equals(
+    "overshoot is degrees below the min (0 − (−10))",
+    under[0]!.overshoot,
+    10,
+  );
 };
