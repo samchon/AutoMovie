@@ -250,16 +250,23 @@ const faceMaterial = new THREE.MeshStandardMaterial({
   metalness: 0,
   side: THREE.DoubleSide,
 });
-const faceMesh = new THREE.Mesh(faceGeometry, faceMaterial);
+const faceMesh = new THREE.Mesh<
+  THREE.BufferGeometry,
+  THREE.MeshStandardMaterial | THREE.MeshBasicMaterial
+>(faceGeometry, faceMaterial);
 // per-character photo skin baked into the canonical UV layout (character
 // data, not in the repo): swaps in when present
 new THREE.TextureLoader().load("/models/hero1-face.png", (tex) => {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.flipY = false; // the bake uses the glTF top-left UV convention
+  // UNLIT in photo mode: re-shading photographed pixels shifts how features
+  // read (the detector-free overlay proved the data itself is pixel-exact)
+  const photoMaterial = new THREE.MeshBasicMaterial({
+    map: tex,
+    side: THREE.DoubleSide,
+  });
   (window as unknown as { __setSkin: unknown }).__setSkin = (on: boolean) => {
-    faceMaterial.map = on ? tex : null;
-    faceMaterial.vertexColors = !on;
-    faceMaterial.needsUpdate = true;
+    faceMesh.material = on ? photoMaterial : faceMaterial;
     // photo skin carries painted eyes: restore the lid covers, park the
     // sphere eyeballs; sculpt mode cuts the covers and brings them back
     faceGeometry.setIndex(on ? [...CANONICAL_FACE_INDICES] : faceIndices);
