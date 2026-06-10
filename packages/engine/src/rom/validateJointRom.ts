@@ -35,20 +35,27 @@ export const validateJointRom = (props: {
     const allowed: IAutoFilmAngleRange | null = constraint[axis];
     if (angle === null || angle === 0) continue;
     if (allowed === null) {
+      // immobile axis: the gap is the whole distance from the required 0
+      const overshoot = Math.abs(angle);
       collector.push(
         "rom",
         `${path}.${axis}`,
-        `${joint.bone} does not move in ${axis}; this axis must be null or 0, but was ${angle}`,
+        `${joint.bone} does not move in ${axis}; this axis must be null or 0, but was ${angle} (${overshoot}° off)`,
         angle,
+        overshoot,
       );
       continue;
     }
-    if (angle < allowed.min || angle > allowed.max)
+    if (angle < allowed.min || angle > allowed.max) {
+      const overshoot =
+        angle < allowed.min ? allowed.min - angle : angle - allowed.max;
       collector.push(
         "rom",
         `${path}.${axis}`,
-        `${joint.bone} ${axis} must be within [${allowed.min}, ${allowed.max}]° (anatomical ROM), but was ${angle}`,
+        `${joint.bone} ${axis} must be within [${allowed.min}, ${allowed.max}]° (anatomical ROM), but was ${angle} (${overshoot}° past limit)`,
         angle,
+        overshoot,
       );
+    }
   }
 };

@@ -10,7 +10,11 @@ export const violation = (
   path: string,
   expected: string,
   value: unknown,
-): IAutoFilmConstraintViolation => ({ kind, path, expected, value });
+  overshoot?: number,
+): IAutoFilmConstraintViolation =>
+  overshoot === undefined
+    ? { kind, path, expected, value }
+    : { kind, path, expected, value, overshoot };
 
 /** Wrap a violation list into an {@link IAutoFilmValidation} (success iff empty). */
 export const toValidation = (
@@ -30,8 +34,9 @@ export class ViolationCollector {
     path: string,
     expected: string,
     value: unknown,
+    overshoot?: number,
   ): void {
-    this.items.push(violation(kind, path, expected, value));
+    this.items.push(violation(kind, path, expected, value, overshoot));
   }
 
   /** Range check `[min, max]`; pushes a `range` violation if outside. */
