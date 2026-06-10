@@ -9,8 +9,9 @@ import { makeFace } from "../internal/fixtures";
  * equality is exact, no float tolerance needed), pinning that multiple
  * parameters accumulate and that a signed weight subtracts.
  *
- * Scenario: a 2-vertex template with `eyeSize` at +0.5 and `jawWidth` at -1:
- * vertex math gives [1 + .5·.25 - 1·.5, …] = [0.625, 2.125, 0, -1, 1, 0.25].
+ * Scenario: a 2-vertex template with `eyes.size` at +0.5 and `jaw.width` at -1
+ * (flattened onto the `eyeSize`/`jawWidth` targets): vertex math gives [1 +
+ * .5·.25 - 1·.5, …] = [0.625, 2.125, 0, -1, 1, 0.25].
  */
 export const test_face_morph_apply = (): void => {
   const template: IAutoFilmFaceTemplate = {
@@ -22,10 +23,7 @@ export const test_face_morph_apply = (): void => {
   };
   const result = morphFace({
     template,
-    face: makeFace([
-      { parameter: "eyeSize", weight: 0.5 },
-      { parameter: "jawWidth", weight: -1 },
-    ]),
+    face: makeFace({ eyes: { size: 0.5 }, jaw: { width: -1 } }),
   });
   TestValidator.equals(
     "accumulated signed morph",

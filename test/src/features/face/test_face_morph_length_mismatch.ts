@@ -18,7 +18,7 @@ export const test_face_morph_length_mismatch = (): void => {
   TestValidator.error("mismatched delta length throws", () =>
     morphFace({
       template,
-      face: makeFace([{ parameter: "eyeSize", weight: 1 }]),
+      face: makeFace({ eyes: { size: 1 } }),
     }),
   );
 };

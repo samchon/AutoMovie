@@ -150,7 +150,5 @@ export const createModel = (
   asset: null,
 });
 
-/** A face document from (parameter, weight) pairs. */
-export const makeFace = (
-  parameters: IAutoFilmFace["parameters"] = [],
-): IAutoFilmFace => ({ parameters });
+/** A face document — optional trait fields, omitted means neutral. */
+export const makeFace = (face: IAutoFilmFace = {}): IAutoFilmFace => face;

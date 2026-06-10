@@ -12,10 +12,7 @@ import {
   buildHairTails,
   buildSkullShell,
 } from "@autofilm/forge";
-import {
-  AutoFilmFaceParameterName,
-  IAutoFilmFaceParameter,
-} from "@autofilm/interface";
+import { AutoFilmFaceParameterName, IAutoFilmFace } from "@autofilm/interface";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -487,17 +484,45 @@ paintFace();
 
 // ── document panel ───────────────────────────────────────────────────────────
 const weights = new Map<AutoFilmFaceParameterName, number>();
+// slider (morph target) name → its leaf in the anatomy-shaped document
+const NEST: Record<
+  AutoFilmFaceParameterName,
+  (f: IAutoFilmFace, w: number) => void
+> = {
+  faceWidth: (f, w) => (f.width = w),
+  faceLength: (f, w) => (f.length = w),
+  cheekFullness: (f, w) => ((f.cheeks ??= {}).fullness = w),
+  jawWidth: (f, w) => ((f.jaw ??= {}).width = w),
+  chinLength: (f, w) => (((f.jaw ??= {}).chin ??= {}).length = w),
+  chinProtrusion: (f, w) => (((f.jaw ??= {}).chin ??= {}).protrusion = w),
+  eyeSize: (f, w) => ((f.eyes ??= {}).size = w),
+  eyeWidth: (f, w) => ((f.eyes ??= {}).width = w),
+  eyeSpacing: (f, w) => ((f.eyes ??= {}).spacing = w),
+  eyeHeight: (f, w) => ((f.eyes ??= {}).height = w),
+  eyeTilt: (f, w) => ((f.eyes ??= {}).tilt = w),
+  browHeight: (f, w) => ((f.brows ??= {}).height = w),
+  noseLength: (f, w) => ((f.nose ??= {}).length = w),
+  noseWidth: (f, w) => ((f.nose ??= {}).width = w),
+  noseProjection: (f, w) => ((f.nose ??= {}).projection = w),
+  mouthWidth: (f, w) => ((f.mouth ??= {}).width = w),
+  mouthHeight: (f, w) => ((f.mouth ??= {}).height = w),
+  lipFullness: (f, w) => (((f.mouth ??= {}).lips ??= {}).fullness = w),
+};
 const refresh = (): void => {
-  const parameters: IAutoFilmFaceParameter[] = [...weights.entries()]
-    .filter(([, w]) => w !== 0)
-    .map(([parameter, weight]) => ({ parameter, weight }));
-  const result = validateFaceResult({ parameters });
+  const face: IAutoFilmFace = {};
+  let count = 0;
+  for (const [parameter, weight] of weights.entries())
+    if (weight !== 0) {
+      NEST[parameter](face, weight);
+      count++;
+    }
+  const result = validateFaceResult(face);
   status.textContent = result.success
-    ? `valid IAutoFilmFace — ${parameters.length} parameter(s) set`
+    ? `valid IAutoFilmFace — ${count} trait(s) set`
     : `INVALID: ${result.violations[0]!.expected}`;
   docOut.textContent = JSON.stringify(
     {
-      face: { parameters },
+      face,
       skull: skullParams,
       hair: hairParams,
       tails: tailParams,
