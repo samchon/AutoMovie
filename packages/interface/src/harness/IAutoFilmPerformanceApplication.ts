@@ -43,7 +43,10 @@ export namespace IAutoFilmPerformanceApplication {
 
     /**
      * The approach: how the intent decomposes into verbs and how they line up
-     * on the timeline (the plan the draft must follow).
+     * on the timeline (the plan the draft must follow). Align the verbs to the
+     * blocking's timing anchors when it set any — a verb's key instant lands on
+     * its anchor `t`, and anchored order fixes causality (the loose before the
+     * hit).
      */
     plan: string;
 
