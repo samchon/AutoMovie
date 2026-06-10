@@ -73,3 +73,33 @@ The schema keeps maturing per traced case; the next round (a long multi-shot seq
 ## Round-3 findings → refinements applied
 
 1. **Assemble stage.** Added `IAutoFilmAssembleApplication` — the editorial stage that emits the `IAutoFilmSequence` cut-list (ordered shots, trims, transitions, fps) with CoT slots for **pacing** (the rhythm rationale) and **continuity** (how the shots match across cuts). The pipeline now has a schema for every node in the design graph.
+
+---
+
+## Round 4 — the cases the prior rounds assumed away: a non-human lead, and the revise loop closing
+
+Rounds 1–3 traced humanoid set-pieces and a multi-shot cut. Two assumptions went untested: that every actor is a humanoid, and that REVIEW's "fail → notes → loop" actually re-feeds the loop. The repo already animates horses and cats (on the humanoid bone rig, retargeted) and the design's headline feature is the correct-loop, so both deserve a trace.
+
+### Film F — "the riderless horse" (a quadruped lead: rears, then bolts)
+
+- **STAGING** — place one `horse`, a camera, a key light. The horse rig reuses {@link AutoFilmHumanoidBone} (spine = the saddle/barrel, the four legs retargeted onto the arm/leg bones), so its placement + any `attach` (a fallen rider's empty saddle) types fine. ✔ — the bone enum already spans creatures; no staging gap.
+- **PERFORMANCE "the rear"** — horse: `gesture(rear)`, a `neigh`. ✗ **the gesture set is humanoid-only** (`wave|bow|nod|...`) — a horse's *rear*/*buck*, a cat's *paw* have no family and would each fall to `custom`, which is exactly the free-text drift the closed set exists to prevent (and the repo invests heavily in animal motion: `horseRear`, `catLeap`, `catProwl`, ...). A creature subset earns its place in the closed set.
+- **PERFORMANCE "it bolts"** — horse: `locomote(sprint, offscreen)`. ✔ — gaits map onto the rig (sprint → gallop), but the JSDoc said "stride/biped" and never said so; a parallel run could wrongly think locomote is humanoid-only. Document the mapping.
+- **A cat pawing a toy** — `reach(hand, toy)` is two-bone arm IK, wrong for a foreleg dab. The right abstraction is `gesture(paw, at: toy)`; `reach` is a humanoid-arm verb and should say so.
+
+### Film G — "the loop actually loops" (REVIEW returns revise; what re-enters?)
+
+- **REVIEW** returns `verdict: "revise"` with notes (`tier`, `beat`, `issue`, `suggestion`) — written to `Slate.notes`. The design graph says "fail → notes → back to BLOCKING/PERFORMANCE with feedback." ✗✗ **but no stage can *read* those notes** — the context-request union is `getScript | getScene | getShot`; there is no `getNotes`. On the revise pass the performance stage would rebuild **blind to the reviewer's correction**, re-committing the same fault. A genuine loop-closure gap: the backlog exists in state but is unreachable through the schema.
+
+### Film H — "the ball on the trampoline" (an actorless physics body) — *deferred*
+
+- A prop that just **falls under gravity and bounces** (`resolveImpact`, the built trampoline demo) has **no actor and no thrower** — `launch` needs an actor to loose it. Expressing a free physics body would need a new top-level concept (a non-cast prop with mass + restitution, dropped). Whether *films* (vs. demos) need passive bodies is unproven, so — like the tempo grid — **defer**, and reach for it when a scene actually calls for it rather than speculatively widening the action set.
+
+## Round-4 findings → refinements applied
+
+1. **Creature gestures.** `AutoFilmGestureKind` gains `rear | buck | paw` (grouped *humanoid / creature / escape*), and its JSDoc now states the set spans humanoid **and** quadruped rigs — the engine dispatches each kind to the actor's rig vocabulary. Idle creature poses (a cat's stretch/sit, a tail flick) stay `hold` + `emote` or `custom`. (Film F.)
+2. **Rig-aware locomotion / reach.** `IAutoFilmLocomoteAction` documents the gait→rig mapping (sprint → gallop, sneak → stalk); `IAutoFilmReachAction` states it is a humanoid-arm verb and points a pawing quadruped to `gesture(paw)`. (Film F.)
+3. **Loop closure — `getNotes`.** `IAutoFilmContextRequest` gains `{ type: "getNotes"; beat? }` so a revise pass pulls the open correction backlog and fixes *what the reviewer flagged* instead of rebuilding blind. The review→revise loop the design promised is now reachable through the schema. (Film G.)
+4. **Free physics body** — deferred (Film H): a non-cast prop dropped under gravity that bounces, added only when a real scene needs it.
+
+Four rounds in, the schema covers humanoid + creature leads, the within-shot set-pieces, the multi-shot cut, and a closed correction loop. The next pressure will come not from another traced film but from **backtesting the schema against a live model** — the AutoBe lesson that the shape matures empirically once real generations run through it.
