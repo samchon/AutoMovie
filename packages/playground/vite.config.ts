@@ -20,6 +20,7 @@ export default defineConfig({
         archery: resolve(__dirname, "archery.html"),
         impact: resolve(__dirname, "impact.html"),
         trampoline: resolve(__dirname, "trampoline.html"),
+        face: resolve(__dirname, "face.html"),
       },
     },
   },

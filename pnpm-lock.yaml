@@ -106,6 +106,9 @@ importers:
       '@autofilm/engine':
         specifier: workspace:^
         version: link:../engine
+      '@autofilm/forge':
+        specifier: workspace:^
+        version: link:../forge
       '@autofilm/interface':
         specifier: workspace:^
         version: link:../interface

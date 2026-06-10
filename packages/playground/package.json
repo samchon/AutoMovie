@@ -24,7 +24,8 @@
     "@autofilm/render": "workspace:^",
     "@autofilm/viewer": "workspace:^",
     "@pixiv/three-vrm": "^3",
-    "three": "^0.169.0"
+    "three": "^0.169.0",
+    "@autofilm/forge": "workspace:^"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4",
