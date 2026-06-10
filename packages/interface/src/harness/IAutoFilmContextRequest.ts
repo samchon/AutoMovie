@@ -4,10 +4,11 @@ import { IAutoFilmActionTarget } from "./IAutoFilmActionCall";
  * A **query tool**: the agent reads instead of writing this turn, and the
  * engine answers. Two families share this union:
  *
- * - **Stored context** (`getScript` / `getScene` / `getShot` / `getNotes`) —
- *   AutoBe's "preliminary" pattern: pull a slice of the production state
- *   (script, staged scene, a sibling shot, the open review notes) rather than
- *   guessing or inventing it.
+ * - **Stored context** (`getScript` / `getScene` / `getShot` / `getNotes` /
+ *   `getBeatEnd`) — AutoBe's "preliminary" pattern: pull a slice of the
+ *   production state (script, staged scene, a sibling shot, the open review
+ *   notes, where a prior beat left everyone) rather than guessing or inventing
+ *   it.
  * - **Engine queries** (`getReach` / `getResolvedPose` / `measureDistance`) —
  *   interrogate the engine's _resolved geometry_ so the agent grounds its next
  *   move in fact, not hope. This is the harness's "the engine is the strong
@@ -39,6 +40,16 @@ export type IAutoFilmContextRequest =
    * than rebuilding blind. Scope to one `beat`, or omit for all open notes.
    */
   | { type: "getNotes"; beat?: string }
+
+  /**
+   * The **resolved end-state** of an already-built beat — where it left every
+   * actor (final world position, facing, last pose). The forward-state a later
+   * beat blocks against (HTN's "effects update the running world"), so a
+   * sibling beat starts from where the previous one actually ended rather than
+   * from the original staging. (`getShot` returns the built motion; this
+   * returns the tidy per-actor end-state precondition.)
+   */
+  | { type: "getBeatEnd"; beat: string }
 
   /**
    * Can `actor`, from where it stands, **reach** `target`? The engine answers
