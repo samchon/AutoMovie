@@ -62,6 +62,15 @@ const gesture: IAutoFilmActionCall = {
   duration: "auto",
 };
 
+const emote = (duration: number | "auto"): IAutoFilmActionCall => ({
+  verb: "emote",
+  preset: "happy",
+  intensity: 0.8,
+  actor: "hero",
+  start: 0,
+  duration,
+});
+
 const door: IAutoFilmActionTarget = { kind: "node", node: "door" };
 
 /**
@@ -130,6 +139,24 @@ export const test_perform_actor_synthesizer = (): void => {
   const held = synth(hold(0), "hero");
   TestValidator.predicate("hold spans its duration", nclose(held!.duration, 1));
   TestValidator.equals("hold targets the skeleton", held!.skeleton, "h");
+
+  // 5. emote → an expression-only face clip (explicit duration and "auto")
+  const face = synth(emote(2), "hero")!;
+  TestValidator.predicate("emote spans its duration", nclose(face.duration, 2));
+  TestValidator.equals(
+    "emote carries no body joints",
+    face.keyframes[0]!.pose.joints.length,
+    0,
+  );
+  TestValidator.predicate(
+    "emote carries the expression",
+    face.keyframes[0]!.expression !== null &&
+      face.keyframes[0]!.expression.preset === "happy",
+  );
+  TestValidator.predicate(
+    "emote auto-duration falls back to 1s",
+    nclose(synth(emote("auto"), "hero")!.duration, 1),
+  );
 
   const performances = compilePerformance(
     [locomote("walk", door), hold(6)],
