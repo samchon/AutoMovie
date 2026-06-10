@@ -59,6 +59,15 @@ importers:
         specifier: catalog:typescript
         version: 5.9.3
 
+  packages/forge:
+    devDependencies:
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.1.3
+      typescript:
+        specifier: catalog:typescript
+        version: 5.9.3
+
   packages/ingest:
     dependencies:
       '@autofilm/interface':
@@ -183,6 +192,9 @@ importers:
       '@autofilm/engine':
         specifier: workspace:^
         version: link:../packages/engine
+      '@autofilm/forge':
+        specifier: workspace:^
+        version: link:../packages/forge
       '@autofilm/ingest':
         specifier: workspace:^
         version: link:../packages/ingest
