@@ -28,26 +28,32 @@ export namespace IAutoFilmStagingApplication {
      * camera see? State the geometry and your reasoning before the placements.
      */
     thinking: string;
+
     request: IWrite;
   }
 
   export interface IWrite {
     type: "write";
+
     /** Stable id + name for the scene the shots will reference. */
     scene: { id: string; name: string };
+
     /**
      * A compact plan: the ground layout, who stands where facing where (with
      * the distances), the persistent couplings, and how the cameras cover it —
      * written before the placements so they can be checked against it.
      */
     plan: string;
+
     /** Where each cast node starts (reuse the cast `node` ids from the script). */
     actors: IPlacement[];
+
     /**
      * Camera placements; each becomes a camera node, its move authored in
      * performance.
      */
     cameras: ICameraPlacement[];
+
     /** Scene lights. */
     lights: ILightPlacement[];
   }
@@ -55,10 +61,13 @@ export namespace IAutoFilmStagingApplication {
   export interface IPlacement {
     /** Cast node id. */
     node: string;
+
     /** Start position (world meters). */
     position: IAutoFilmVector3;
+
     /** Heading in degrees about +Y (0 = facing +Z). */
     facingDeg: number;
+
     /**
      * A persistent coupling fixed for the whole film — a rider on a mount, a
      * passenger in a cart. The node rides `parent`'s `bone` (e.g. a horse's
@@ -70,11 +79,14 @@ export namespace IAutoFilmStagingApplication {
   export interface ICameraPlacement {
     /** Camera node id (reused by camera actions in performance). */
     node: string;
+
     position: IAutoFilmVector3;
+
     /** What the camera initially looks at. */
     lookAt:
       | { kind: "node"; node: string }
       | { kind: "point"; point: IAutoFilmVector3 };
+
     /** Vertical field of view (degrees). */
     fovDeg: number;
   }
@@ -82,10 +94,13 @@ export namespace IAutoFilmStagingApplication {
   export interface ILightPlacement {
     /** Light node id. */
     node: string;
+
     /** The role this light plays. */
     role: "key" | "fill" | "rim" | "ambient" | "sun";
+
     /** Direction the light points (world; for sun/key/rim). */
     direction: IAutoFilmVector3;
+
     /** Relative brightness `[0, ~2]`. */
     intensity: number;
   }

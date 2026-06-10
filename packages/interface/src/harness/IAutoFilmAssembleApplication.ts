@@ -26,27 +26,33 @@ export namespace IAutoFilmAssembleApplication {
      * mismatch you are resolving.
      */
     thinking: string;
+
     /** Cut the film, or pull a shot/the script to check continuity first. */
     request: IWrite | IAutoFilmContextRequest;
   }
 
   export interface IWrite {
     type: "write";
+
     /** Stable id + name for the assembled film. */
     sequence: { id: string; name: string };
+
     /** Playback frame rate. */
     fps: number;
+
     /**
      * The shots in playback order, each with an optional trim + incoming
      * transition.
      */
     entries: IEntry[];
+
     /**
      * Why this rhythm serves the theme — which shots are held and which are cut
      * tight, and why. (Pacing has no cheap deterministic verifier, so the
      * rationale is the quality signal.)
      */
     pacing: string;
+
     /**
      * How the shots flow across the cuts — match-cuts, energy carried, no
      * jarring jump unless intended. The continuity you checked.
@@ -58,8 +64,10 @@ export namespace IAutoFilmAssembleApplication {
   export interface IEntry {
     /** Id of the shot played here. */
     shot: string;
+
     /** Trim into the shot (seconds), or null to play it whole. */
     trim: { start: number; duration: number } | null;
+
     /** Blend in from the previous entry, or null for a hard cut (the default). */
     transition: { kind: "crossDissolve" | "fade"; duration: number } | null;
   }

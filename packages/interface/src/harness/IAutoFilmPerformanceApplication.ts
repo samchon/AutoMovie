@@ -25,6 +25,7 @@ export namespace IAutoFilmPerformanceApplication {
      * the target reacts only once the hit lands)?
      */
     thinking: string;
+
     /**
      * Perform the shot, or pull context (the scene/blocking/a sibling shot)
      * first.
@@ -34,20 +35,25 @@ export namespace IAutoFilmPerformanceApplication {
 
   export interface IWrite {
     type: "write";
+
     /** Which beat/shot this performs. */
     beat: string;
+
     /**
      * The approach: how the intent decomposes into verbs and how they line up
      * on the timeline (the plan the draft must follow).
      */
     plan: string;
+
     /**
      * First full action list (every actor + the camera), placed on the shot
      * timeline.
      */
     draft: IAutoFilmActionCall[];
+
     /** Self-review and the finalised list. */
     revise: IRevise;
+
     /** Shot length in seconds. */
     duration: number;
   }
@@ -69,6 +75,7 @@ export namespace IAutoFilmPerformanceApplication {
      * - **Timing:** do the actions fill the beat and sum to its `duration`?
      */
     review: string;
+
     /**
      * The corrected action list, or `null` if the draft already stands. Making
      * "no change" explicit keeps the decision auditable.
