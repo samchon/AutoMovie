@@ -7,6 +7,7 @@ import {
 } from "@autofilm/interface";
 
 import { getConstraint } from "./humanoidRom";
+import { swingConeScale } from "./swingCone";
 
 const clampAxis = (
   angle: number | null,
@@ -36,12 +37,23 @@ const clampAxis = (
 export const clampJointRom = (
   joint: IAutoFilmJointPose,
   constraint: IAutoFilmJointConstraint,
-): IAutoFilmJointPose => ({
-  bone: joint.bone,
-  flexion: clampAxis(joint.flexion, constraint.flexion),
-  abduction: clampAxis(joint.abduction, constraint.abduction),
-  twist: clampAxis(joint.twist, constraint.twist),
-});
+): IAutoFilmJointPose => {
+  const flexion = clampAxis(joint.flexion, constraint.flexion);
+  const abduction = clampAxis(joint.abduction, constraint.abduction);
+  const twist = clampAxis(joint.twist, constraint.twist);
+  // ball-joint swing cone: pull a corner pose straight back onto the cone,
+  // preserving the flexion:abduction ratio (the swing direction)
+  if (constraint.swingDeg != null && flexion !== null && abduction !== null) {
+    const k = swingConeScale(flexion, abduction, constraint.swingDeg);
+    return {
+      bone: joint.bone,
+      flexion: flexion * k,
+      abduction: abduction * k,
+      twist,
+    };
+  }
+  return { bone: joint.bone, flexion, abduction, twist };
+};
 
 /**
  * Clamp every joint of a pose into its skeleton's ROM, returning a new pose
