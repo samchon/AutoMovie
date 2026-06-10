@@ -71,7 +71,7 @@ const skullAxes = (face: number[], skull: IForgeSkullParameters) => {
     a: halfW * 1.06 * (1 + 0.2 * skull.width),
     b,
     cBack: halfW * 1.25 * (1 + 0.2 * skull.depth),
-    cFront: halfW * 0.55,
+    cFront: halfW * 0.34, // behind the eyelid plane: eyeballs must own the openings
   };
 };
 

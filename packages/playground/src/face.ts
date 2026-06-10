@@ -5,6 +5,7 @@ import {
   CANONICAL_FACE_UVS,
   IForgeHairParameters,
   IForgeSkullParameters,
+  buildEyeShells,
   buildFaceMorphs,
   buildHairShell,
   buildSkullShell,
@@ -78,6 +79,7 @@ app.innerHTML = `
         <label>skin<input type="color" id="cSkin" value="#e8c4ae" /></label>
         <label>hair<input type="color" id="cHair" value="#3a3027" /></label>
         <label>lips<input type="color" id="cLips" value="#c97a72" /></label>
+        <label>iris<input type="color" id="cIris" value="#3a2a20" /></label>
       </div>
       <div id="doc"></div>
     </div>
@@ -130,7 +132,27 @@ faceGeometry.setAttribute(
   "uv",
   new THREE.Float32BufferAttribute(CANONICAL_FACE_UVS, 2),
 );
-faceGeometry.setIndex(CANONICAL_FACE_INDICES);
+// cut the eyelid-cover triangles so the eyeballs read through the openings
+const EYE_SETS = [
+  new Set([
+    33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246,
+  ]),
+  new Set([
+    362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384,
+    398,
+  ]),
+];
+const faceIndices: number[] = [];
+for (let t = 0; t < CANONICAL_FACE_INDICES.length; t += 3) {
+  const tri = [
+    CANONICAL_FACE_INDICES[t]!,
+    CANONICAL_FACE_INDICES[t + 1]!,
+    CANONICAL_FACE_INDICES[t + 2]!,
+  ];
+  if (EYE_SETS.some((set) => tri.every((v) => set.has(v)))) continue;
+  faceIndices.push(...tri);
+}
+faceGeometry.setIndex(faceIndices);
 // glTF-style DELTA morph targets (three defaults to absolute ones)
 faceGeometry.morphTargetsRelative = true;
 faceGeometry.morphAttributes.position = NAMES.map(
@@ -175,7 +197,12 @@ const lipW = regionWeight(LIPS, 0.004);
 const browW = regionWeight(BROWS, 0.004);
 const eyeW = regionWeight(EYES, 0.0022);
 
-const colors = { skin: "#e8c4ae", hair: "#3a3027", lips: "#c97a72" };
+const colors = {
+  skin: "#e8c4ae",
+  hair: "#3a3027",
+  lips: "#c97a72",
+  iris: "#3a2a20",
+};
 const colorAttr = new THREE.Float32BufferAttribute(
   new Float32Array(468 * 3),
   3,
@@ -191,7 +218,7 @@ const paintFace = (): void => {
     c.copy(skin)
       .lerp(lips, lipW[i]!)
       .lerp(brow, browW[i]!)
-      .lerp(eye, 0.85 * eyeW[i]!);
+      .lerp(eye, 0.45 * eyeW[i]!);
     colorAttr.setXYZ(i, c.r, c.g, c.b);
   }
   colorAttr.needsUpdate = true;
@@ -267,6 +294,62 @@ const rebuildHair = (): void => {
 };
 rebuildHair();
 
+// ── eyeballs (follow the morphed face; iris colored by frontness) ───────────
+const eyeMaterial = new THREE.MeshStandardMaterial({
+  vertexColors: true,
+  roughness: 0.25,
+  metalness: 0,
+});
+let eyeMeshes: THREE.Mesh[] = [];
+const morphedFacePositions = (): number[] => {
+  const out = [...CANONICAL_FACE_POSITIONS];
+  NAMES.forEach((name, m) => {
+    const w = faceMesh.morphTargetInfluences![m]!;
+    if (!w) return;
+    const d = morphs[name];
+    for (let k = 0; k < out.length; k++) out[k]! += w * d[k]!;
+  });
+  return out;
+};
+const rebuildEyes = (): void => {
+  for (const m of eyeMeshes) {
+    scene.remove(m);
+    m.geometry.dispose();
+  }
+  eyeMeshes = [];
+  const shells = buildEyeShells(morphedFacePositions());
+  const sclera = new THREE.Color("#f3eee9");
+  const iris = new THREE.Color(colors.iris);
+  const pupil = new THREE.Color("#16100c");
+  for (const eye of [shells.right, shells.left]) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(eye.positions, 3),
+    );
+    g.setIndex(eye.indices);
+    g.computeVertexNormals();
+    const n = eye.positions.length / 3;
+    const col = new Float32Array(n * 3);
+    const scz = eye.center[2] - eye.radius;
+    const c = new THREE.Color();
+    for (let i = 0; i < n; i++) {
+      const f = (eye.positions[i * 3 + 2]! - scz) / eye.radius;
+      c.copy(sclera);
+      if (f > 0.906) c.copy(iris);
+      if (f > 0.985) c.copy(pupil);
+      col[i * 3] = c.r;
+      col[i * 3 + 1] = c.g;
+      col[i * 3 + 2] = c.b;
+    }
+    g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+    const mesh = new THREE.Mesh(g, eyeMaterial);
+    scene.add(mesh);
+    eyeMeshes.push(mesh);
+  }
+};
+rebuildEyes();
+
 // ── document panel ───────────────────────────────────────────────────────────
 const weights = new Map<AutoFilmFaceParameterName, number>();
 const refresh = (): void => {
@@ -315,6 +398,7 @@ const faceSliders = NAMES.map((name, idx) =>
     faceMesh.morphTargetInfluences![idx] = w;
     weights.set(name, w);
     faceGeometry.computeVertexNormals();
+    rebuildEyes();
   }),
 );
 const skullSliders = (
@@ -342,12 +426,14 @@ const colorInput = (id: string, key: keyof typeof colors): void => {
     paintFace();
     skullMaterial.color.set(colors.skin);
     hairMaterial.color.set(colors.hair);
+    rebuildEyes();
     refresh();
   });
 };
 colorInput("#cSkin", "skin");
 colorInput("#cHair", "hair");
 colorInput("#cLips", "lips");
+colorInput("#cIris", "iris");
 
 // ── presets: a character is ONE pure-parameter document ─────────────────────
 interface IPreset {
@@ -361,7 +447,12 @@ const PRESETS: Record<string, IPreset> = {
     face: {},
     skull: { width: 0, crown: 0, depth: 0 },
     hair: { length: 0.4, volume: 0.4, bangs: 0.5, curtain: 0.5 },
-    colors: { skin: "#e8c4ae", hair: "#3a3027", lips: "#c97a72" },
+    colors: {
+      skin: "#e8c4ae",
+      hair: "#3a3027",
+      lips: "#c97a72",
+      iris: "#3a2a20",
+    },
   },
   // hero/1: the 17-parameter least-squares fit of the photographed face
   // (profile-calibrated depth), hair/colors read off the reference sheet
@@ -387,7 +478,12 @@ const PRESETS: Record<string, IPreset> = {
     },
     skull: { width: 0.1, crown: 0.15, depth: 0.05 },
     hair: { length: 0.5, volume: 0.5, bangs: 0.95, curtain: 0.55 },
-    colors: { skin: "#f2d3c2", hair: "#231a15", lips: "#cf7e76" },
+    colors: {
+      skin: "#f2d3c2",
+      hair: "#231a15",
+      lips: "#cf7e76",
+      iris: "#33231b",
+    },
   },
 };
 
@@ -415,9 +511,11 @@ const applyPreset = (p: IPreset): void => {
       p.hair[k].toFixed(2);
   });
   rebuildHair();
+  rebuildEyes();
   colors.skin = p.colors.skin;
   colors.hair = p.colors.hair;
   colors.lips = p.colors.lips;
+  colors.iris = p.colors.iris;
   document.querySelector<HTMLInputElement>("#cSkin")!.value = colors.skin;
   document.querySelector<HTMLInputElement>("#cHair")!.value = colors.hair;
   document.querySelector<HTMLInputElement>("#cLips")!.value = colors.lips;
@@ -447,6 +545,16 @@ document
 };
 
 // ── loop ─────────────────────────────────────────────────────────────────────
+(window as unknown as { __debug: unknown }).__debug = () => ({
+  meshes: scene.children.filter((c) => (c as THREE.Mesh).isMesh).length,
+  eyes: eyeMeshes.map((m) => {
+    const col = m.geometry.getAttribute("color") as THREE.BufferAttribute;
+    let dark = 0;
+    for (let i = 0; i < col.count; i++) if (col.getX(i) < 0.5) dark++;
+    return { verts: col.count, darkVerts: dark };
+  }),
+});
+
 const tick = (): void => {
   controls.update();
   gl.render(scene, camera);

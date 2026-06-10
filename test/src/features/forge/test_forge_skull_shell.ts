@@ -1,4 +1,4 @@
-import { buildSkullShell } from "@autofilm/forge";
+import { CANONICAL_FACE_POSITIONS, buildSkullShell } from "@autofilm/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**
@@ -20,5 +20,10 @@ export const test_forge_skull_shell = (): void => {
     maxZ = Math.max(maxZ, skull.positions[i + 2]!);
   }
   TestValidator.predicate("laterally centered", Math.abs(meanX) < 1e-6);
-  TestValidator.predicate("stays behind the face shell", maxZ < 0.05);
+  const RING_R = [
+    33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246,
+  ];
+  let lidZ = 0;
+  for (const i of RING_R) lidZ += CANONICAL_FACE_POSITIONS[i * 3 + 2]! / 16;
+  TestValidator.predicate("stays behind the eyelid plane", maxZ < lidZ);
 };
