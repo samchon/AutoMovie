@@ -18,6 +18,7 @@ import {
 } from "@autofilm/interface";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 // The character-head editor end to end, no asset files: face geometry + the
 // 17 morph sliders, the parametric skull/hair shells, and the region colors
@@ -55,16 +56,38 @@ app.innerHTML = `
     .row input[type=range] { width: 100%; accent-color: #6f9dff; }
     .colors { display: flex; gap: 10px; }
     .colors label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #9aa3b2; }
+    button { background:#222a36; color:#e6e9ef; border:1px solid #2a2f37; border-radius:4px; padding:3px 10px; margin-right:4px; cursor:pointer; }
     select { width: 100%; background: #0e1014; color: #e6e9ef; border: 1px solid #2a2f37;
              border-radius: 4px; padding: 4px; }
     #doc { margin-top: 10px; padding: 8px; background: #0e1014; border-radius: 6px;
            color: #9aa3b2; font: 10px/1.45 ui-monospace, monospace; white-space: pre-wrap; }
   </style>
   <div id="stage">
-    <canvas id="view"></canvas>
+    <div style="position:relative">
+      <canvas id="view"></canvas>
+      <img id="ref" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;pointer-events:none" />
+    </div>
     <div id="panel">
       <h1>autofilm · face editor</h1>
       <div class="sub" id="status">pure-parameter character head</div>
+      <h2>workbench</h2>
+      <div class="row"><label><span>camera</span></label>
+        <button data-cam="front">front</button>
+        <button data-cam="q34">3/4</button>
+        <button data-cam="side">side</button>
+      </div>
+      <div class="row"><label><span>reference overlay</span><span class="v" id="refv">off</span></label>
+        <select id="refsel">
+          <option value="">none</option>
+          <option value="/models/hero1-ref-front.png">hero1 front</option>
+          <option value="/models/hero1-ref-34.png">hero1 3/4</option>
+          <option value="/models/hero1-ref-side.png">hero1 side</option>
+        </select>
+        <input id="refop" type="range" min="0" max="1" step="0.05" value="0.5" />
+      </div>
+      <div class="row"><label><span>photographed head</span></label>
+        <input id="photohead" type="checkbox" /> show multi-view textured head
+      </div>
       <h2>preset</h2>
       <select id="preset">
         <option value="neutral">neutral</option>
@@ -649,6 +672,39 @@ const setIdentity = (w: number): void => {
   paintFace();
 };
 (window as unknown as { __setIdentity: unknown }).__setIdentity = setIdentity;
+// the photographed FULL head (multi-view textured shell): in photo mode it
+// carries the true silhouette — the face plate's landmark-oval edge is NOT
+// her face contour, which is exactly what reads as a different outline
+let photoHead: THREE.Group | null = null;
+new GLTFLoader().load("/models/hero1-head.glb", (gltf) => {
+  gltf.scene.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.isMesh) {
+      const std = m.material as THREE.MeshStandardMaterial;
+      m.material = new THREE.MeshBasicMaterial({
+        map: std.map,
+        side: THREE.DoubleSide,
+      });
+    }
+  });
+  photoHead = gltf.scene;
+  photoHead.visible = false;
+  scene.add(photoHead);
+  (window as unknown as { __setPhotoHead: unknown }).__setPhotoHead = (
+    on: boolean,
+  ) => {
+    photoHead!.visible = on;
+    faceMesh.visible = !on;
+    if (skullMesh) skullMesh.visible = !on;
+    if (hairMesh) hairMesh.visible = !on;
+    for (const m of tailMeshes) m.visible = !on;
+    for (const m of eyeMeshes) m.visible = false;
+  };
+});
+(window as unknown as { __dump: unknown }).__dump = () => ({
+  influences: [...faceMesh.morphTargetInfluences!],
+  names: NAMES,
+});
 (window as unknown as { __setPreset: unknown }).__setPreset = (
   name: string,
 ): void => applyPreset(PRESETS[name]!);
@@ -663,6 +719,41 @@ const setIdentity = (w: number): void => {
   faceGeometry.computeVertexNormals();
   refresh();
 };
+
+// ── workbench wiring ─────────────────────────────────────────────────────────
+const CAMS: Record<string, [number, number, number, number, number, number]> = {
+  front: [0, 0, 1.35, 0, -0.01, 0],
+  q34: [0.62, 0.02, 1.2, 0, -0.01, 0],
+  side: [1.3, 0.01, 0.15, 0, -0.01, 0],
+};
+document.querySelectorAll<HTMLButtonElement>("[data-cam]").forEach((b) =>
+  b.addEventListener("click", () => {
+    const c = CAMS[b.dataset.cam!]!;
+    camera.position.set(c[0], c[1], c[2]);
+    controls.target.set(c[3], c[4], c[5]);
+    controls.update();
+  }),
+);
+const refImg = document.querySelector<HTMLImageElement>("#ref")!;
+const refSel = document.querySelector<HTMLSelectElement>("#refsel")!;
+const refOp = document.querySelector<HTMLInputElement>("#refop")!;
+const refApply = (): void => {
+  const url = refSel.value;
+  refImg.src = url;
+  refImg.style.opacity = url ? refOp.value : "0";
+  document.querySelector("#refv")!.textContent = url
+    ? Number(refOp.value).toFixed(2)
+    : "off";
+};
+refSel.addEventListener("change", refApply);
+refOp.addEventListener("input", refApply);
+document
+  .querySelector<HTMLInputElement>("#photohead")!
+  .addEventListener("change", (e) =>
+    (
+      window as unknown as { __setPhotoHead?: (on: boolean) => void }
+    ).__setPhotoHead?.((e.target as HTMLInputElement).checked),
+  );
 
 // ── loop ─────────────────────────────────────────────────────────────────────
 (window as unknown as { __debug: unknown }).__debug = () => ({
