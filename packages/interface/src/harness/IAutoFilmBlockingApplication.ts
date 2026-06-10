@@ -2,6 +2,28 @@ import { IAutoFilmVector3 } from "../geometry/IAutoFilmVector3";
 import { IAutoFilmContextRequest } from "./IAutoFilmContextRequest";
 
 /**
+ * A **timing anchor** — a key moment pinned on the beat's local timeline. A
+ * sparse list of these is the coarse temporal skeleton (in-betweening's stage
+ * one) the performance stage aligns its verbs to, so the dense action timing
+ * follows a committed structure instead of being invented per-verb. Anchors are
+ * also where **causality** is fixed: the "looses the arrow" anchor must precede
+ * the "is struck" anchor, and the performance stage honours that order.
+ *
+ * @author Samchon
+ */
+export interface IAutoFilmTimingAnchor {
+  /** Seconds into the beat this moment lands. */
+  t: number;
+
+  /**
+   * What happens at this instant, in a few words ("twists back in the saddle",
+   * "looses the arrow", "the fist connects", "weight lands on the front
+   * foot").
+   */
+  cue: string;
+}
+
+/**
  * Stage 3 — **BLOCKING** (meso, per beat). Turn one beat's prose into a
  * structured **shot plan**: what each actor is trying to do, the camera's
  * coverage, and the timing — but still as _intent_, not motion. The performance
@@ -20,9 +42,9 @@ export namespace IAutoFilmBlockingApplication {
     /**
      * Think before you act. Read the beat against the staged geometry: who is
      * where, what must change by the end of the beat, what the camera must
-     * catch (the strike landing, the fall). Resolve timing conflicts. If this is
-     * a **revise pass** (the shot came back from review), pull `getNotes` first
-     * and make every open note a concrete change to the blocking — never
+     * catch (the strike landing, the fall). Resolve timing conflicts. If this
+     * is a **revise pass** (the shot came back from review), pull `getNotes`
+     * first and make every open note a concrete change to the blocking — never
      * re-block blind to the correction.
      */
     thinking: string;
@@ -71,6 +93,15 @@ export namespace IAutoFilmBlockingApplication {
      * performance stage maps this to {@link IAutoFilmActionCall}s.
      */
     beats: string;
+
+    /**
+     * Optional sparse {@link IAutoFilmTimingAnchor}s pinning this actor's key
+     * moments on the beat timeline — the temporal skeleton the performance
+     * stage aligns its verbs to (and the order that fixes causality). Pin only
+     * the moments that matter (the loose, the connect, the landing); leave the
+     * fill to the engine. Omit for a beat with no critical timing.
+     */
+    anchors?: IAutoFilmTimingAnchor[];
   }
 
   /** Camera coverage for the beat (compiled to a camera move in performance). */
