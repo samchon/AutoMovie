@@ -1,3 +1,4 @@
+import { IAutoFilmGait } from "../motion/IAutoFilmGait";
 import { IAutoFilmChannel } from "./IAutoFilmChannel";
 import { IAutoFilmChannelLimit } from "./IAutoFilmChannelLimit";
 import { IAutoFilmDriver } from "./IAutoFilmDriver";
@@ -37,6 +38,16 @@ export interface IAutoFilmProfile {
 
   /** Standard value constraints (the profile's default ROM / limits). */
   limits: IAutoFilmChannelLimit[];
+
+  /**
+   * The characteristic gaits this profile's body performs
+   * ({@link IAutoFilmGait}) — a horse profile's walk/trot/canter/gallop, a
+   * humanoid's walk/run. The engine binds them onto a concrete skeleton to
+   * synthesise locomotion, so the same abstract "move" resolves to each body's
+   * own gait. Omitted/empty for a profile that does not locomote (a door, a
+   * prop).
+   */
+  gaits?: IAutoFilmGait[];
 }
 
 /**

@@ -3,6 +3,7 @@ import {
   IAutoFilmGaitLimb,
   IAutoFilmKeyframe,
   IAutoFilmMotion,
+  IAutoFilmProfile,
 } from "@autofilm/interface";
 
 /** Wrap a cycle position into `[0, 1)`. */
@@ -70,4 +71,30 @@ export const gaitMotion = (
     });
   }
   return { id, skeleton, duration: gait.period, loop: true, keyframes };
+};
+
+/**
+ * Bind a profile's gait set ({@link IAutoFilmProfile.gaits}) onto a concrete
+ * skeleton — synthesising each named gait into a clip for **this** body. The
+ * point of a profile binding: the _same_ profile applied to a horse skeleton
+ * and a pony skeleton yields each its own gait clips, so one declarative gait
+ * set drives many bodies. Returns the clips keyed by gait name (empty when the
+ * profile declares no gaits).
+ *
+ * @author Samchon
+ */
+export const bindProfileGaits = (
+  profile: IAutoFilmProfile,
+  skeleton: string,
+  samples: number,
+): Record<string, IAutoFilmMotion> => {
+  const clips: Record<string, IAutoFilmMotion> = {};
+  for (const gait of profile.gaits ?? [])
+    clips[gait.name] = gaitMotion(
+      `${profile.id}:${gait.name}`,
+      skeleton,
+      gait,
+      samples,
+    );
+  return clips;
 };
