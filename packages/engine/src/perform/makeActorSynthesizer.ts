@@ -2,9 +2,11 @@ import {
   IAutoFilmActionCall,
   IAutoFilmKeyframe,
   IAutoFilmMotion,
+  IAutoFilmPose,
   IAutoFilmVector3,
 } from "@autofilm/interface";
 
+import { aimYawPitch } from "../kinematics/aimYawPitch";
 import { holdMotion } from "../motion/arrange";
 import { gaitMotion } from "../motion/gait";
 import { locomoteMotion } from "../motion/locomote";
@@ -74,6 +76,39 @@ export const makeActorSynthesizer = (
         ctx.restPose,
         action.duration,
       );
+    if (action.verb === "lookAt") {
+      const target = resolveTargetPoint(action.to, nodes);
+      if (target === null) return null; // relative target — no aim point yet
+      const eye = {
+        x: ctx.position.x,
+        y: ctx.position.y + ctx.eyeHeight,
+        z: ctx.position.z,
+      };
+      const { yawDeg, pitchDeg } = aimYawPitch(eye, target, ctx.facingDeg);
+      const duration = action.duration === "auto" ? 1 : action.duration;
+      // turn the head: twist toward the target, flexion to tilt (up = extension)
+      const headPose: IAutoFilmPose = {
+        skeleton: ctx.skeleton,
+        root: null,
+        joints: [
+          { bone: "head", flexion: -pitchDeg, abduction: null, twist: yawDeg },
+        ],
+      };
+      const frame = (time: number): IAutoFilmKeyframe => ({
+        time,
+        pose: headPose,
+        expression: null,
+        easing: "linear",
+        bezier: null,
+      });
+      return {
+        id: `${actor}:lookAt`,
+        skeleton: ctx.skeleton,
+        duration,
+        loop: false,
+        keyframes: [frame(0), frame(duration)],
+      };
+    }
     if (action.verb === "emote") {
       // a face-region clip: only the expression, no body joints to merge
       const duration = action.duration === "auto" ? 1 : action.duration;

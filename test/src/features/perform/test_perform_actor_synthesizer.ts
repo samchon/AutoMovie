@@ -25,6 +25,8 @@ const ctx: IAutoFilmActorContext = {
   gaits: [WALK],
   position: { x: 0, y: 0, z: 0 },
   speed: 1,
+  facingDeg: 0,
+  eyeHeight: 1.6,
   restPose: makePose([joint("spine", { flexion: 0 })]),
 };
 
@@ -66,6 +68,17 @@ const emote = (duration: number | "auto"): IAutoFilmActionCall => ({
   verb: "emote",
   preset: "happy",
   intensity: 0.8,
+  actor: "hero",
+  start: 0,
+  duration,
+});
+
+const lookAt = (
+  to: IAutoFilmActionTarget,
+  duration: number | "auto",
+): IAutoFilmActionCall => ({
+  verb: "lookAt",
+  to,
   actor: "hero",
   start: 0,
   duration,
@@ -156,6 +169,30 @@ export const test_perform_actor_synthesizer = (): void => {
   TestValidator.predicate(
     "emote auto-duration falls back to 1s",
     nclose(synth(emote("auto"), "hero")!.duration, 1),
+  );
+
+  // 6. lookAt → the head turned toward the target
+  const look = synth(lookAt(door, 1), "hero")!;
+  const headJoint = look.keyframes[0]!.pose.joints.find(
+    (j) => j.bone === "head",
+  )!;
+  const expectedFlex = (-Math.atan2(-1.6, 5) * 180) / Math.PI;
+  TestValidator.predicate(
+    "lookAt tilts the head down toward the lower target",
+    nclose(headJoint.flexion!, expectedFlex),
+  );
+  TestValidator.predicate(
+    "a target dead ahead needs no head yaw",
+    nclose(headJoint.twist!, 0),
+  );
+  TestValidator.equals(
+    "a relative lookAt target → null",
+    synth(lookAt({ kind: "direction", headingDeg: 90 }, 1), "hero"),
+    null,
+  );
+  TestValidator.predicate(
+    "lookAt auto-duration falls back to 1s",
+    nclose(synth(lookAt(door, "auto"), "hero")!.duration, 1),
   );
 
   const performances = compilePerformance(
