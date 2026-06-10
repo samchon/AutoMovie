@@ -93,7 +93,7 @@ export const buildSkullShell = (
   skull: IForgeSkullParameters = NEUTRAL_SKULL,
   face: number[] = CANONICAL_FACE_POSITIONS,
 ): IForgeMeshPart => {
-  const { cy, a, b, cBack, cFront } = skullAxes(face, skull);
+  const { cy, a, b, cBack, cFront, chinY } = skullAxes(face, skull);
   const SEG = 48;
   const RING = 24;
   const positions: number[] = [];
@@ -107,7 +107,9 @@ export const buildSkullShell = (
       const depth = z >= 0 ? cFront : cBack;
       positions.push(
         a * Math.sin(th) * sin,
-        cy + b * Math.cos(phi),
+        // the dome ends at the chin line — a full ellipsoid's lower half
+        // reads as a second chin under the face
+        Math.max(cy + b * Math.cos(phi), chinY + 0.008),
         depth * z - 0.004,
       );
     }
@@ -167,6 +169,14 @@ export const buildHairShell = (
     const t = (ax - openHalf) / (openHalf * 0.35);
     return bangTip + (backTip - bangTip) * t;
   };
+  // fringe hug: 0 outside the fringe sector, 1 inside — fringe strands taper
+  // back onto the forehead instead of floating in front of it
+  const fringeness = (yaw: number): number => {
+    const ax = Math.abs(yaw);
+    if (ax <= openHalf) return 1;
+    if (ax >= openHalf * 1.35) return 0;
+    return 1 - (ax - openHalf) / (openHalf * 0.35);
+  };
 
   const SEG = 64;
   const ROWS = 30;
@@ -183,8 +193,12 @@ export const buildHairShell = (
       const y = crownY - (crownY - tip) * v;
       const yc = Math.min(1, Math.max(-1, (y - cy) / b));
       const ring = y > cy ? Math.sqrt(1 - yc * yc) : 1;
-      const taper =
-        y > cy ? 1 : 1 - 0.12 * ((cy - y) / Math.max(1e-6, cy - tip));
+      const fall = y > cy ? 0 : (cy - y) / Math.max(1e-6, cy - tip);
+      const fr = fringeness(yaw);
+      // fringe hugs the forehead; side/back strands FLARE outward as they
+      // fall (twin-tail / A-line reading), scaled by volume
+      let taper = 1 + (1 - fr) * fall * (0.04 + 0.3 * params.volume);
+      taper *= 1 - fr * v * (offset / (cFront + offset)) * 0.9;
       const depth = Math.cos(yaw) >= 0 ? cFrontH : cBackH;
       positions.push(
         aH * Math.sin(yaw) * ring * taper,
