@@ -1,22 +1,8 @@
-import { IAutoFilmFace } from "@autofilm/interface";
+import { IAutoFilmFace, IAutoFilmFaceTemplate } from "@autofilm/interface";
 
-/**
- * A face template in render-ready flat-array form — the geometry side of the
- * face editor that an {@link IAutoFilmFace} morphs.
- *
- * `positions` is the template's resting face (the canonical neutral, or a
- * character with its `identity` morph already baked in), and `targets` maps
- * each morph-target name to per-vertex xyz deltas of the same length. This
- * matches what a glTF face asset carries (POSITION + named morph targets), so
- * an importer can fill it straight from the file.
- */
-export interface IAutoFilmFaceTemplate {
-  /** Resting vertex positions, xyz triples. */
-  positions: number[];
-
-  /** Morph-target deltas by parameter name, each `positions.length` long. */
-  targets: Record<string, number[]>;
-}
+// The template type moved to @autofilm/interface (ingest produces it, the
+// engine consumes it); re-exported here so engine consumers keep working.
+export type { IAutoFilmFaceTemplate };
 
 /**
  * Apply an {@link IAutoFilmFace}'s parameter weights to a face template — the
