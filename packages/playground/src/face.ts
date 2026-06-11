@@ -1403,6 +1403,33 @@ document
     ).__setPhotoHead?.((e.target as HTMLInputElement).checked),
   );
 
+// debug: pure facial FORM — close the lid cuts, hide eyeballs/hair/bun/bust/
+// skull/photo-head, and show only the facial mask in flat skin clay (or normal
+// map). The marble-bust test: form alone, no texture/AO, must read beautiful.
+(window as unknown as { __formAudit: unknown }).__formAudit = (
+  mode: "clay" | "normal" = "clay",
+): void => {
+  faceGeometry.setIndex([...CANONICAL_FACE_INDICES]); // close the lid cuts
+  faceGeometry.computeVertexNormals();
+  for (const m of eyeMeshes) m.visible = false;
+  if (skullMesh) skullMesh.visible = false;
+  if (hairMesh) hairMesh.visible = false;
+  if (bunMesh) bunMesh.visible = false;
+  if (bustMesh) bustMesh.visible = false;
+  for (const m of tailMeshes) m.visible = false;
+  if (photoHead) photoHead.visible = false;
+  faceMesh.visible = true;
+  faceMesh.material =
+    mode === "normal"
+      ? new THREE.MeshNormalMaterial({ side: THREE.DoubleSide })
+      : new THREE.MeshStandardMaterial({
+          color: colors.skin,
+          roughness: 0.7,
+          metalness: 0,
+          side: THREE.DoubleSide,
+        });
+};
+
 // ── loop ─────────────────────────────────────────────────────────────────────
 (window as unknown as { __debug: unknown }).__debug = () => ({
   meshes: scene.children.filter((c) => (c as THREE.Mesh).isMesh).length,
