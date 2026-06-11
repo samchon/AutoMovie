@@ -22,3 +22,10 @@ packages/playground/public/models/*
 
 # local screenshot scratch (not committed)
 .shots/
+
+# scratch face-probe pages (head.html is the kept editor)
+packages/playground/mh.html
+packages/playground/cf.html
+packages/playground/montage-three.png
+# keep the parametric head model data (generated, but the editor needs it)
+!packages/playground/public/models/head-model.json

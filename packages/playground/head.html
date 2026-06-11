@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>autofilm — parametric head (MakeHuman base)</title>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font:12px/1.35 system-ui,sans-serif;color:#e6e9ef}
+    #stage{display:grid;grid-template-columns:1fr 300px;height:100vh}
+    #view{width:100%;height:100%;display:block;background:#1c2027}
+    #panel{background:#14171c;border-left:1px solid #2a2f37;padding:10px 12px;overflow-y:auto}
+    #panel h2{font-size:12px;margin:10px 0 4px;color:#aab3c5}
+    .row{margin:5px 0}.row label{display:flex;justify-content:space-between}
+    .row label .v{color:#9aa3b2;font-variant-numeric:tabular-nums}
+    .row input[type=range]{width:100%;accent-color:#6f9dff}
+    button{background:#222a36;color:#e6e9ef;border:1px solid #2a2f37;border-radius:4px;padding:3px 8px;margin:2px;cursor:pointer}
+  </style></head>
+  <body>
+    <div id="stage">
+      <canvas id="view"></canvas>
+      <div id="panel">
+        <h2>view</h2>
+        <button data-cam="front">front</button><button data-cam="q34">3/4</button><button data-cam="side">side</button>
+        <button id="bMat">normals</button><button id="bHair">hair</button><button id="bReset">reset</button>
+        <h2>preset</h2>
+        <button id="bDump">dump</button><button id="bApply">apply</button>
+        <input id="preset" style="width:100%;background:#0e1014;color:#e6e9ef;border:1px solid #2a2f37;border-radius:4px;padding:3px;margin-top:4px" placeholder='{"eyeSize":0.5,...}' />
+        <h2>parameters</h2><div id="params"></div>
+      </div>
+    </div>
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+      const canvas = document.getElementById("view");
+      const gl = new THREE.WebGLRenderer({ canvas, antialias: true });
+      const resize = () => { const w=canvas.clientWidth||1,h=canvas.clientHeight||1; gl.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); };
+      const scene = new THREE.Scene(); scene.background = new THREE.Color(0x1c2027);
+      const cam = new THREE.PerspectiveCamera(32, 1, 0.01, 200);
+      // directional lights aim at the head (y≈7.3), not the origin
+      const HEADC = new THREE.Vector3(0, 7.3, 0.6);
+      const mkKey=(int,x,y,z)=>{ const L=new THREE.DirectionalLight(0xffffff,int); L.position.set(HEADC.x+x,HEADC.y+y,HEADC.z+z); L.target.position.copy(HEADC); scene.add(L); scene.add(L.target); return L; };
+      mkKey(3.0, 0.6, 0.7, 1.2);   // key, upper front-right
+      mkKey(1.3, -1.0, 0.2, 0.7);  // fill, front-left
+      mkKey(0.8, -0.3, 0.6, -1.2); // rim, behind
+      scene.add(new THREE.AmbientLight(0xffffff,0.55));
+      const controls = new OrbitControls(cam, canvas); controls.enableDamping = false;
+      gl.setPixelRatio(1); resize(); addEventListener("resize", resize);
+
+      const SKIN = 0xe8c4ae, HAIR = 0x2a211b;
+      const clay = new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.62, metalness:0, side:THREE.DoubleSide });
+      const normalMat = new THREE.MeshNormalMaterial({ side:THREE.DoubleSide });
+      let model, base, geo, mesh, hairMesh, eyeballs=[], params={}, values={}, hairOn=true, normalsOn=false;
+      window.__ready = false;
+
+      // smooth hair coverage weight (0..1) — feathered hairline, no jagged edge.
+      // front (face, z>1.0): bare below forehead-top; back/sides: covered low.
+      const smooth01 = (a,b,t) => { const u=Math.max(0,Math.min(1,(t-a)/(b-a))); return u*u*(3-2*u); };
+      const hairWeight = (x,y,z) => {
+        const line = z > 1.0 ? 8.05 : 6.7;        // hairline height (front high)
+        return smooth01(line-0.15, line+0.35, y); // feather across the hairline
+      };
+      const hairCovered = (x,y,z) => hairWeight(x,y,z) > 0.5;
+
+      function recompute() {
+        const P = base.slice();
+        for (const [name, v] of Object.entries(values)) {
+          if (!v) continue; const side = v>0 ? params[name].plus : params[name].minus; const w = Math.abs(v);
+          for (const [li,dx,dy,dz] of side) { P[li*3]+=dx*w; P[li*3+1]+=dy*w; P[li*3+2]+=dz*w; }
+        }
+        geo.getAttribute("position").array.set(P);
+        geo.getAttribute("position").needsUpdate = true;
+        geo.computeVertexNormals();
+        if (hairMesh) rebuildHair(P);
+        // eyeballs follow eyeSize (scale) + eyeSpacing (x-shift), matching sockets
+        const sz=1+0.30*(values.eyeSize||0), sx=0.085*(values.eyeSpacing||0);
+        for (const e of eyeballs) {
+          const a=e.mesh.geometry.getAttribute("position").array, c=e.ctr;
+          for (let i=0;i<e.base.length/3;i++){
+            a[i*3]  = c[0]+(e.base[i*3]  -c[0])*sz + e.side*sx;
+            a[i*3+1]= c[1]+(e.base[i*3+1]-c[1])*sz;
+            a[i*3+2]= c[2]+(e.base[i*3+2]-c[2])*sz;
+          }
+          e.mesh.geometry.getAttribute("position").needsUpdate=true;
+        }
+      }
+      let hairAdj = null;
+      function rebuildHair(P) {
+        // feathered offset along normal (volume grows with coverage), then a
+        // couple of Laplacian smoothing passes for a soft, non-helmet shell.
+        geo.computeVertexNormals(); const N = geo.getAttribute("normal").array;
+        const hp = hairMesh.geometry.getAttribute("position").array;
+        const n = P.length/3, T = 0.30;
+        for (let i=0;i<n;i++){ const x=P[i*3],y=P[i*3+1],z=P[i*3+2];
+          const w = hairWeight(x,y,z); const t = T*Math.sqrt(w); // feather
+          hp[i*3]=x+N[i*3]*t; hp[i*3+1]=y+N[i*3+1]*t; hp[i*3+2]=z+N[i*3+2]*t; }
+        // Laplacian smooth the hair shell (only the covered verts) ×2
+        if (hairAdj) for (let pass=0;pass<3;pass++){ const src=hp.slice();
+          for (const i of hairAdj.verts){ const nb=hairAdj.adj[i]; if(nb.length<2)continue;
+            let ax=0,ay=0,az=0; for(const j of nb){ax+=src[j*3];ay+=src[j*3+1];az+=src[j*3+2];}
+            const k=0.5/1; ax/=nb.length;ay/=nb.length;az/=nb.length;
+            hp[i*3]+=k*(ax-hp[i*3]); hp[i*3+1]+=k*(ay-hp[i*3+1]); hp[i*3+2]+=k*(az-hp[i*3+2]); } }
+        hairMesh.geometry.getAttribute("position").needsUpdate = true;
+        hairMesh.geometry.computeVertexNormals();
+      }
+      // faces where any vert has hair coverage (feathered boundary)
+      function hairFaceIndex() {
+        const idx = model.indices, out = [], used=new Set();
+        const w = (li)=>hairWeight(base[li*3],base[li*3+1],base[li*3+2]);
+        for (let t=0;t<idx.length;t+=3){ const a=idx[t],b=idx[t+1],c=idx[t+2];
+          if ((w(a)+w(b)+w(c))/3 > 0.35){ out.push(a,b,c); used.add(a);used.add(b);used.add(c); } }
+        // adjacency over hair faces for smoothing
+        const adj={}; for(const i of used)adj[i]=[];
+        for(let t=0;t<out.length;t+=3){const tri=[out[t],out[t+1],out[t+2]];
+          for(let e=0;e<3;e++){const x=tri[e],y=tri[(e+1)%3];if(!adj[x].includes(y))adj[x].push(y);if(!adj[y].includes(x))adj[y].push(x);}}
+        hairAdj={verts:[...used],adj};
+        return out;
+      }
+      function setColors() {
+        const col = new Float32Array(base.length); const c1=new THREE.Color(SKIN), c2=new THREE.Color(HAIR).convertSRGBToLinear?new THREE.Color(HAIR):new THREE.Color(HAIR);
+        const s=new THREE.Color(SKIN).convertSRGBToLinear(), h=new THREE.Color(HAIR).convertSRGBToLinear();
+        for (let i=0;i<base.length/3;i++){ const x=base[i*3],y=base[i*3+1],z=base[i*3+2];
+          const c = hairCovered(x,y,z)?h:s; col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b; }
+        geo.setAttribute("color", new THREE.BufferAttribute(col,3));
+      }
+
+      fetch("/models/head-model.json").then(r=>r.json()).then(m=>{
+        model=m; params=m.params; base=Float32Array.from(m.positions);
+        for (const k of Object.keys(params)) values[k]=0;
+        geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.BufferAttribute(Float32Array.from(m.positions),3));
+        geo.setIndex(m.indices); geo.computeVertexNormals(); setColors();
+        mesh = new THREE.Mesh(geo, clay); scene.add(mesh);
+        // hair shell: ONLY hair-region faces (offset outward), dark material
+        const hgeo = new THREE.BufferGeometry();
+        hgeo.setAttribute("position", new THREE.BufferAttribute(Float32Array.from(m.positions),3));
+        hgeo.setIndex(hairFaceIndex());
+        const hairColMat = new THREE.MeshStandardMaterial({ color:HAIR, roughness:0.85, metalness:0, side:THREE.DoubleSide });
+        hairMesh = new THREE.Mesh(hgeo, hairColMat); scene.add(hairMesh);
+        rebuildHair(base);
+        // eyeballs (MakeHuman eye helpers — correctly seated): white sclera + dark iris
+        eyeballs = [];
+        const mkEye = (e) => {
+          const base = Float32Array.from(e.positions); const n=e.positions.length/3;
+          const g = new THREE.BufferGeometry();
+          g.setAttribute("position", new THREE.BufferAttribute(base.slice(),3));
+          g.setIndex(e.indices); g.computeVertexNormals();
+          const ctr=[0,0,0];
+          for(let i=0;i<n;i++){ctr[0]+=base[i*3]/n;ctr[1]+=base[i*3+1]/n;ctr[2]+=base[i*3+2]/n;}
+          let rad=0; for(let i=0;i<n;i++)rad=Math.max(rad,Math.hypot(base[i*3]-ctr[0],base[i*3+1]-ctr[1],base[i*3+2]-ctr[2]));
+          const col=new Float32Array(n*3); const w=new THREE.Color(0xf2efe9).convertSRGBToLinear(), ir=new THREE.Color(0x3a2a20).convertSRGBToLinear();
+          for(let i=0;i<n;i++){ const fz=(base[i*3+2]-ctr[2])/rad; const c2=fz>0.55?ir:w; col[i*3]=c2.r;col[i*3+1]=c2.g;col[i*3+2]=c2.b; }
+          g.setAttribute("color", new THREE.BufferAttribute(col,3));
+          const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.25,metalness:0,side:THREE.DoubleSide}));
+          scene.add(mesh); eyeballs.push({ mesh, base, ctr, side: Math.sign(ctr[0]) });
+        };
+        if (m.eyeL) mkEye(m.eyeL); if (m.eyeR) mkEye(m.eyeR);
+        // frame
+        geo.computeBoundingBox(); const bb=geo.boundingBox; const c=bb.getCenter(new THREE.Vector3());
+        window.__center=[c.x,c.y,c.z]; window.__box={min:bb.min.toArray(),max:bb.max.toArray()};
+        camFront(); buildSliders();
+        window.__ready = true;
+      });
+
+      const sliderEls = {};
+      function buildSliders(){ const host=document.getElementById("params");
+        const groups = model.groups || { all: Object.keys(params) };
+        for (const [region, names] of Object.entries(groups)){
+          const h=document.createElement("h2"); h.textContent=region; host.appendChild(h);
+          for (const name of names){ if(!params[name]) continue;
+            const row=document.createElement("div"); row.className="row";
+            row.innerHTML=`<label><span>${name}</span><span class="v">0.00</span></label><input type="range" min="-1.5" max="1.5" step="0.05" value="0">`;
+            const inp=row.querySelector("input"), out=row.querySelector(".v");
+            inp.addEventListener("input",()=>{ values[name]=+inp.value; out.textContent=(+inp.value).toFixed(2); recompute(); });
+            sliderEls[name]={inp,out}; host.appendChild(row); }
+        }
+      }
+      function syncSliders(){ for (const [name,{inp,out}] of Object.entries(sliderEls)){ inp.value=values[name]||0; out.textContent=(values[name]||0).toFixed(2); } }
+      const camAt=(px,py,pz)=>{ const c=window.__center; cam.position.set(c[0]+px,c[1]+py,c[2]+pz); controls.target.set(...c); controls.update(); };
+      const D=()=>{ const b=window.__box; return (b.max[1]-b.min[1])*1.7; };
+      const camFront=()=>camAt(0,0,D()), camQ=()=>camAt(D()*0.6,D()*0.04,D()*0.8), camS=()=>camAt(D()*0.98,0,D()*0.12);
+      document.querySelectorAll("[data-cam]").forEach(b=>b.addEventListener("click",()=>({front:camFront,q34:camQ,side:camS})[b.dataset.cam]()));
+      document.getElementById("bMat").onclick=()=>{ normalsOn=!normalsOn; mesh.material=normalsOn?normalMat:clay; if(hairMesh)hairMesh.visible=!normalsOn; };
+      document.getElementById("bHair").onclick=()=>{ hairOn=!hairOn; hairMesh.visible=hairOn; };
+      document.getElementById("bReset").onclick=()=>{ for(const k of Object.keys(values))values[k]=0; syncSliders(); recompute(); };
+      document.getElementById("bDump").onclick=()=>{ const o={}; for(const[k,v]of Object.entries(values))if(v)o[k]=+v.toFixed(2); document.getElementById("preset").value=JSON.stringify(o); };
+      document.getElementById("bApply").onclick=()=>{ try{ window.__setParams(JSON.parse(document.getElementById("preset").value||"{}")); }catch(e){ alert("bad JSON"); } };
+
+      // headless hooks
+      window.__setParam=(name,v)=>{ values[name]=v; if(sliderEls[name]){sliderEls[name].inp.value=v;sliderEls[name].out.textContent=v.toFixed(2);} recompute(); };
+      window.__setParams=(obj)=>{ for(const k of Object.keys(values))values[k]=0; for(const[k,v]of Object.entries(obj))values[k]=v; if(Object.keys(sliderEls).length)syncSliders(); recompute(); };
+      window.__camObj=cam;
+      window.__resize=(w,h)=>{ const p=document.getElementById("panel"); if(p)p.style.display="none";
+        canvas.style.position="fixed"; canvas.style.inset="0"; canvas.style.width=w+"px"; canvas.style.height=h+"px"; canvas.style.zIndex="9999";
+        gl.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); };
+      window.__cam=(px,py,pz,tx,ty,tz)=>{ cam.position.set(px,py,pz); controls.target.set(tx,ty,tz); cam.lookAt(tx,ty,tz); cam.updateProjectionMatrix(); };
+      window.__mat=(mode)=>{ normalsOn=mode==="normal"; mesh.material=normalsOn?normalMat:clay; if(hairMesh)hairMesh.visible=!normalsOn||false; };
+      window.__hair=(on)=>{ hairMesh.visible=on; };
+      window.__probe=()=>{ const A=geo.getAttribute("position").array, L=model.landmarks;
+        const g=(k)=>[+A[L[k]*3].toFixed(4),+A[L[k]*3+1].toFixed(4),+A[L[k]*3+2].toFixed(4)];
+        return { values:{...values}, outerEyeR:g("outerEyeR"), innerEyeR:g("innerEyeR"), mouthR:g("mouthR"), lowerLip:g("lowerLip"), chinFront:g("chinFront") }; };
+      const tick=()=>{ controls.update(); gl.render(scene,cam); requestAnimationFrame(tick); }; tick();
+    </script>
+  </body>
+</html>
