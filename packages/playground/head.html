@@ -20,6 +20,7 @@
         <button data-cam="front">front</button><button data-cam="q34">3/4</button><button data-cam="side">side</button>
         <button id="bMat">normals</button><button id="bHair">hair</button><button id="bReset">reset</button>
         <h2>preset</h2>
+        <select id="presetSel" style="width:100%;background:#0e1014;color:#e6e9ef;border:1px solid #2a2f37;border-radius:4px;padding:4px;margin-bottom:4px"></select>
         <button id="bDump">dump</button><button id="bApply">apply</button>
         <input id="preset" style="width:100%;background:#0e1014;color:#e6e9ef;border:1px solid #2a2f37;border-radius:4px;padding:3px;margin-top:4px" placeholder='{"eyeSize":0.5,...}' />
         <h2>parameters</h2><div id="params"></div>
@@ -36,10 +37,12 @@
       // directional lights aim at the head (y≈7.3), not the origin
       const HEADC = new THREE.Vector3(0, 7.3, 0.6);
       const mkKey=(int,x,y,z)=>{ const L=new THREE.DirectionalLight(0xffffff,int); L.position.set(HEADC.x+x,HEADC.y+y,HEADC.z+z); L.target.position.copy(HEADC); scene.add(L); scene.add(L.target); return L; };
-      mkKey(3.0, 0.6, 0.7, 1.2);   // key, upper front-right
-      mkKey(1.3, -1.0, 0.2, 0.7);  // fill, front-left
-      mkKey(0.8, -0.3, 0.6, -1.2); // rim, behind
-      scene.add(new THREE.AmbientLight(0xffffff,0.55));
+      // sculptural portrait rig: a strong warm key reveals the planes, a soft
+      // cool fill keeps shadows readable, a rim separates from the background.
+      const keyL = mkKey(3.4, 0.55, 0.75, 1.0); keyL.color.setHex(0xfff3e6);
+      const fillL = mkKey(0.7, -1.1, 0.1, 0.6); fillL.color.setHex(0xdfe8ff);
+      const rimL = mkKey(1.6, -0.5, 0.55, -1.1); rimL.color.setHex(0xffffff);
+      scene.add(new THREE.AmbientLight(0xffffff,0.32));
       const controls = new OrbitControls(cam, canvas); controls.enableDamping = false;
       gl.setPixelRatio(1); resize(); addEventListener("resize", resize);
 
@@ -145,7 +148,7 @@
           for(let i=0;i<n;i++){ctr[0]+=base[i*3]/n;ctr[1]+=base[i*3+1]/n;ctr[2]+=base[i*3+2]/n;}
           let rad=0; for(let i=0;i<n;i++)rad=Math.max(rad,Math.hypot(base[i*3]-ctr[0],base[i*3+1]-ctr[1],base[i*3+2]-ctr[2]));
           const col=new Float32Array(n*3);
-          const sclera=new THREE.Color(0xf4f1ec).convertSRGBToLinear();
+          const sclera=new THREE.Color(0xfbfaf6).convertSRGBToLinear();
           const iris=new THREE.Color(0x7c5a38).convertSRGBToLinear();   // warm brown
           const pupil=new THREE.Color(0x16100c).convertSRGBToLinear();
           const lim=new THREE.Color(0x3a2a1c).convertSRGBToLinear();     // limbal ring
@@ -153,8 +156,15 @@
             // smaller iris → more white sclera shows → brighter, open eye
             const c2 = fz>0.90 ? pupil : fz>0.76 ? iris : fz>0.72 ? lim : sclera;
             col[i*3]=c2.r;col[i*3+1]=c2.g;col[i*3+2]=c2.b; }
+          // catchlight: brightest the upper-front cornea vert (toward the key) → a spark of life
+          let cl=-1,best=-1e9;
+          for(let i=0;i<n;i++){ const fz=(base[i*3+2]-ctr[2])/rad; if(fz<0.6)continue;
+            const score=(base[i*3+1]-ctr[1])+0.4*(base[i*3]-ctr[0])*Math.sign(ctr[0]); // upper + key side
+            if(score>best){best=score;cl=i;} }
+          if(cl>=0){ col[cl*3]=1.6;col[cl*3+1]=1.6;col[cl*3+2]=1.55; } // bright (HDR-ish) spark
           g.setAttribute("color", new THREE.BufferAttribute(col,3));
-          const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.25,metalness:0,side:THREE.DoubleSide}));
+          // glossy cornea → the key light leaves a catchlight that reads "alive"
+          const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.08,metalness:0,side:THREE.DoubleSide}));
           scene.add(mesh); eyeballs.push({ mesh, base, ctr, side: Math.sign(ctr[0]) });
         };
         if (m.eyeL) mkEye(m.eyeL); if (m.eyeR) mkEye(m.eyeR);
@@ -162,6 +172,12 @@
         geo.computeBoundingBox(); const bb=geo.boundingBox; const c=bb.getCenter(new THREE.Vector3());
         window.__center=[c.x,c.y,c.z]; window.__box={min:bb.min.toArray(),max:bb.max.toArray()};
         camFront(); buildSliders();
+        // preset dropdown (neutral + hero1/2/3 + beauty), baked into the model
+        const psel = document.getElementById("presetSel");
+        for (const name of Object.keys(model.presets || { neutral: {} })) {
+          const o = document.createElement("option"); o.value = name; o.textContent = name; psel.appendChild(o);
+        }
+        psel.addEventListener("change", () => window.__setParams(model.presets[psel.value] || {}));
         window.__ready = true;
       });
 
