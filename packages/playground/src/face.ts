@@ -938,6 +938,16 @@ const refresh = (): void => {
 };
 refresh();
 
+// debug: recolor visible meshes by surface normal to judge FORM alone
+(window as unknown as { __normalsDebug: unknown }).__normalsDebug =
+  (): void => {
+    scene.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh && m.visible)
+        m.material = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+    });
+  };
+
 // ── controls ─────────────────────────────────────────────────────────────────
 const slider = (
   host: string,
