@@ -1,8 +1,7 @@
 /**
  * Traits of ONE cheek — signed morph weights in `[-2, 2]`, `0`/omitted meaning
- * unchanged. Under {@link IAutoFilmFaceCheekSet.both} the traits drive BOTH
- * cheeks; under `left`/`right` they ADD to that base on one side. Sides are the
- * subject's left/right.
+ * unchanged. Lives under {@link IAutoFilmFaceCheekSet.left} / `right`; when it
+ * is the only side defined, it applies to BOTH cheeks.
  *
  * @author Samchon
  */

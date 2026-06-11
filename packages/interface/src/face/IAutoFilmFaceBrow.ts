@@ -1,8 +1,7 @@
 /**
  * Traits of ONE eyebrow — signed morph weights in `[-2, 2]`, `0`/omitted
- * meaning unchanged. Under {@link IAutoFilmFaceBrowSet.both} the traits drive
- * BOTH brows; under `left`/`right` they ADD to that base on one side (a raised
- * single brow). Sides are the subject's left/right.
+ * meaning unchanged. Lives under {@link IAutoFilmFaceBrowSet.left} / `right`;
+ * when it is the only side defined, it applies to BOTH brows.
  *
  * @author Samchon
  */

@@ -1,19 +1,18 @@
 import { IAutoFilmFaceBrow } from "./IAutoFilmFaceBrow";
 
 /**
- * The eyebrow PAIR of an {@link IAutoFilmFace} — `both` carries the symmetric
- * base, `left`/`right` add per-side asymmetry on top
- * ({@link IAutoFilmFaceBrow}).
+ * The eyebrow PAIR of an {@link IAutoFilmFace}.
+ *
+ * **Side rule:** when only ONE of `left`/`right` is defined, it applies to BOTH
+ * brows (the symmetric shorthand); when both are defined, each side stands
+ * alone (a raised single brow).
  *
  * @author Samchon
  */
 export interface IAutoFilmFaceBrowSet {
-  /** Traits applied to BOTH brows — see {@link IAutoFilmFaceBrow}. */
-  both?: IAutoFilmFaceBrow;
-
-  /** Extra traits on the subject's LEFT brow only, added to `both`. */
+  /** The subject's LEFT brow — applies to BOTH brows when `right` is omitted. */
   left?: IAutoFilmFaceBrow;
 
-  /** Extra traits on the subject's RIGHT brow only, added to `both`. */
+  /** The subject's RIGHT brow — applies to BOTH brows when `left` is omitted. */
   right?: IAutoFilmFaceBrow;
 }
