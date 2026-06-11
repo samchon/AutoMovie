@@ -26,14 +26,22 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 // all come from pure parameters — a character preset is one JSON document.
 
 // ── scene + lighting ─────────────────────────────────────────────────────────
+// Soft three-point portrait rig. A single hard key over flat matte clay is
+// what made the head read as a plastic mannequin: strong cast shadows
+// caricature every facet. A gentler key + a warm sky/ground hemisphere fill +
+// a soft opposite fill + a cool back rim wraps the form the way studio
+// portrait light does, so the same geometry reads as skin, not putty.
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1c2027);
-scene.add(new THREE.HemisphereLight(0xffffff, 0x47506a, 1.2));
-const key = new THREE.DirectionalLight(0xfff2e2, 1.6);
-key.position.set(0.6, 0.5, 1.4);
+scene.add(new THREE.HemisphereLight(0xfff4e6, 0x55504a, 1.05));
+const key = new THREE.DirectionalLight(0xfff0dc, 0.95);
+key.position.set(0.55, 0.45, 1.4);
 scene.add(key);
-const rim = new THREE.DirectionalLight(0xbcd2ff, 0.7);
-rim.position.set(-0.8, 0.4, -1.0);
+const fill = new THREE.DirectionalLight(0xdfeaff, 0.45);
+fill.position.set(-1.1, 0.1, 0.9);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0xbcd2ff, 0.5);
+rim.position.set(-0.6, 0.5, -1.2);
 scene.add(rim);
 
 const camera = new THREE.PerspectiveCamera(28, 1, 0.01, 10);
@@ -306,7 +314,7 @@ const paintFace = (): void => {
 
 const faceMaterial = new THREE.MeshStandardMaterial({
   vertexColors: true,
-  roughness: 0.75,
+  roughness: 0.62, // a faint sheen reads as skin; full-matte reads as clay
   metalness: 0,
   side: THREE.DoubleSide,
 });
@@ -398,7 +406,7 @@ scene.add(faceMesh);
 const skullParams: IForgeSkullParameters = { width: 0, crown: 0, depth: 0 };
 const skullMaterial = new THREE.MeshStandardMaterial({
   color: colors.skin,
-  roughness: 0.8,
+  roughness: 0.62,
   metalness: 0,
 });
 const skullUnlit = new THREE.MeshBasicMaterial({ color: colors.skin });
