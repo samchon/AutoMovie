@@ -70,6 +70,7 @@
         geo.getAttribute("position").array.set(P);
         geo.getAttribute("position").needsUpdate = true;
         geo.computeVertexNormals();
+        setColors(P); // re-bake concavity AO for the morphed surface
         if (hairMesh) rebuildHair(P);
         // eyeballs follow eyeSize (scale) + eyeSpacing (x-shift), matching sockets
         const sz=1+0.30*(values.eyeSize||0), sx=0.085*(values.eyeSpacing||0);
@@ -117,12 +118,37 @@
         hairAdj={verts:[...used],adj};
         return out;
       }
-      function setColors() {
-        const col = new Float32Array(base.length); const c1=new THREE.Color(SKIN), c2=new THREE.Color(HAIR).convertSRGBToLinear?new THREE.Color(HAIR):new THREE.Color(HAIR);
-        const s=new THREE.Color(SKIN).convertSRGBToLinear(), h=new THREE.Color(HAIR).convertSRGBToLinear();
-        for (let i=0;i<base.length/3;i++){ const x=base[i*3],y=base[i*3+1],z=base[i*3+2];
-          const c = hairCovered(x,y,z)?h:s; col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b; }
-        geo.setAttribute("color", new THREE.BufferAttribute(col,3));
+      // full-mesh 1-ring adjacency (built once; topology is fixed)
+      let headAdj = null;
+      function buildHeadAdj(){ const idx=model.indices, n=base.length/3;
+        const sets=Array.from({length:n},()=>new Set());
+        for(let t=0;t<idx.length;t+=3){const a=idx[t],b=idx[t+1],c=idx[t+2];
+          sets[a].add(b);sets[a].add(c);sets[b].add(a);sets[b].add(c);sets[c].add(a);sets[c].add(b);}
+        headAdj=sets.map(s=>[...s]);
+      }
+      const SKIN_L=new THREE.Color(SKIN).convertSRGBToLinear();
+      const HAIR_L=new THREE.Color(HAIR).convertSRGBToLinear();
+      // skin colour + geometry-driven concavity AO (valleys — eye sockets,
+      // nasolabial, under-nose — darken so flat clay reads its depth; pure form,
+      // no texture). Recomputed per morph from the current positions+normals.
+      function setColors(P){
+        P = P || base; const n = P.length/3;
+        const col = geo.getAttribute("color") ? geo.getAttribute("color").array : new Float32Array(P.length);
+        const N = geo.getAttribute("normal").array;
+        for (let i=0;i<n;i++){
+          const x=P[i*3],y=P[i*3+1],z=P[i*3+2];
+          const hair = hairCovered(x,y,z);
+          let r=hair?HAIR_L.r:SKIN_L.r, g=hair?HAIR_L.g:SKIN_L.g, b=hair?HAIR_L.b:SKIN_L.b;
+          if(!hair && headAdj){ const nb=headAdj[i];
+            if(nb && nb.length>1){ let mx=0,my=0,mz=0; for(const j of nb){mx+=P[j*3];my+=P[j*3+1];mz+=P[j*3+2];}
+              mx=mx/nb.length-x; my=my/nb.length-y; mz=mz/nb.length-z;        // Laplacian
+              const along=mx*N[i*3]+my*N[i*3+1]+mz*N[i*3+2];                   // >0 = concave valley
+              const ao=Math.max(0.62, 1-22*Math.max(0,along));                // darken valleys
+              r*=ao; g*=ao; b*=ao; } }
+          col[i*3]=r;col[i*3+1]=g;col[i*3+2]=b;
+        }
+        if(!geo.getAttribute("color")) geo.setAttribute("color", new THREE.BufferAttribute(col,3));
+        else geo.getAttribute("color").needsUpdate=true;
       }
 
       fetch("/models/head-model.json").then(r=>r.json()).then(m=>{
@@ -130,7 +156,7 @@
         for (const k of Object.keys(params)) values[k]=0;
         geo = new THREE.BufferGeometry();
         geo.setAttribute("position", new THREE.BufferAttribute(Float32Array.from(m.positions),3));
-        geo.setIndex(m.indices); geo.computeVertexNormals(); setColors();
+        geo.setIndex(m.indices); geo.computeVertexNormals(); buildHeadAdj(); setColors();
         mesh = new THREE.Mesh(geo, clay); scene.add(mesh);
         // hair shell: ONLY hair-region faces (offset outward), dark material
         const hgeo = new THREE.BufferGeometry();
