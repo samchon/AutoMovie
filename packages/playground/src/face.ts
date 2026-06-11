@@ -1419,7 +1419,7 @@ document
   for (const m of tailMeshes) m.visible = false;
   if (photoHead) photoHead.visible = false;
   faceMesh.visible = true;
-  faceMesh.material =
+  const auditMat: THREE.Material =
     mode === "normal"
       ? new THREE.MeshNormalMaterial({ side: THREE.DoubleSide })
       : new THREE.MeshStandardMaterial({
@@ -1428,6 +1428,9 @@ document
           metalness: 0,
           side: THREE.DoubleSide,
         });
+  faceMesh.material = auditMat as
+    | THREE.MeshStandardMaterial
+    | THREE.MeshBasicMaterial;
 };
 
 // ── loop ─────────────────────────────────────────────────────────────────────
