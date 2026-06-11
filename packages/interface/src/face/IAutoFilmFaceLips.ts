@@ -1,3 +1,5 @@
+import { AutoFilmFaceWeight } from "./AutoFilmFaceWeight";
+
 /**
  * Lip traits of an {@link IAutoFilmFace}'s mouth — signed morph weights in `[-2,
  * 2]`, `0`/omitted meaning the template's lips unchanged.
@@ -5,10 +7,6 @@
  * @author Samchon
  */
 export interface IAutoFilmFaceLips {
-  /**
-   * Vertical thickness of the lips about the lip seam: `+` fuller, `-` thinner.
-   *
-   * @default 0
-   */
-  fullness?: number;
+  /** Vertical thickness of the lips about the lip seam: `+` fuller, `-` thinner. */
+  fullness?: AutoFilmFaceWeight;
 }

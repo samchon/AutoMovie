@@ -1,3 +1,4 @@
+import { AutoFilmFaceWeight } from "./AutoFilmFaceWeight";
 import { IAutoFilmFaceEye } from "./IAutoFilmFaceEye";
 
 /**
@@ -16,12 +17,8 @@ import { IAutoFilmFaceEye } from "./IAutoFilmFaceEye";
  * @author Samchon
  */
 export interface IAutoFilmFaceEyeSet {
-  /**
-   * Distance between the eyes: `+` wide-set, `-` close-set.
-   *
-   * @default 0
-   */
-  spacing?: number;
+  /** Distance between the eyes: `+` wide-set, `-` close-set. */
+  spacing?: AutoFilmFaceWeight;
 
   /** The subject's LEFT eye — applies to BOTH eyes when `right` is omitted. */
   left?: IAutoFilmFaceEye;

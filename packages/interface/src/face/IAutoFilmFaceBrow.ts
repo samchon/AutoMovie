@@ -1,3 +1,5 @@
+import { AutoFilmFaceWeight } from "./AutoFilmFaceWeight";
+
 /**
  * Traits of ONE eyebrow — signed morph weights in `[-2, 2]`, `0`/omitted
  * meaning unchanged. Lives under {@link IAutoFilmFaceBrowSet.left} / `right`;
@@ -9,8 +11,6 @@ export interface IAutoFilmFaceBrow {
   /**
    * Vertical position of the brow: `+` raises it off the eye (open, surprised),
    * `-` settles it low and heavy.
-   *
-   * @default 0
    */
-  height?: number;
+  height?: AutoFilmFaceWeight;
 }
