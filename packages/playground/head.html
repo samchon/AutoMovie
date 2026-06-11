@@ -81,6 +81,8 @@
             a[i*3+2]= c[2]+(e.base[i*3+2]-c[2])*sz;
           }
           e.mesh.geometry.getAttribute("position").needsUpdate=true;
+          if (e.catch) { const r=e.rad*sz; // upper-front of the cornea, key side
+            e.catch.position.set(c[0]+e.side*sx - e.side*0.18*r, c[1]+0.30*r, c[2]+0.93*r); }
         }
       }
       let hairAdj = null;
@@ -156,16 +158,17 @@
             // smaller iris → more white sclera shows → brighter, open eye
             const c2 = fz>0.90 ? pupil : fz>0.76 ? iris : fz>0.72 ? lim : sclera;
             col[i*3]=c2.r;col[i*3+1]=c2.g;col[i*3+2]=c2.b; }
-          // catchlight: brightest the upper-front cornea vert (toward the key) → a spark of life
-          let cl=-1,best=-1e9;
-          for(let i=0;i<n;i++){ const fz=(base[i*3+2]-ctr[2])/rad; if(fz<0.6)continue;
-            const score=(base[i*3+1]-ctr[1])+0.4*(base[i*3]-ctr[0])*Math.sign(ctr[0]); // upper + key side
-            if(score>best){best=score;cl=i;} }
-          if(cl>=0){ col[cl*3]=1.6;col[cl*3+1]=1.6;col[cl*3+2]=1.55; } // bright (HDR-ish) spark
           g.setAttribute("color", new THREE.BufferAttribute(col,3));
           // glossy cornea → the key light leaves a catchlight that reads "alive"
           const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.08,metalness:0,side:THREE.DoubleSide}));
-          scene.add(mesh); eyeballs.push({ mesh, base, ctr, side: Math.sign(ctr[0]) });
+          scene.add(mesh);
+          // catchlight: a tiny unlit-bright bead on the upper cornea → the spark
+          // that reads as a living eye (standard CG trick, not vertex colour).
+          const cl = new THREE.Mesh(
+            new THREE.SphereGeometry(rad*0.16, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xffffff }));
+          eyeballs.push({ mesh, base, ctr, rad, side: Math.sign(ctr[0]), catch: cl });
+          scene.add(cl);
         };
         if (m.eyeL) mkEye(m.eyeL); if (m.eyeR) mkEye(m.eyeR);
         // frame
