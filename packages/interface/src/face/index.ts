@@ -1,5 +1,7 @@
 export * from "./AutoFilmFaceWeight";
 export * from "./AutoFilmFaceParameterName";
+export * from "./AutoFilmHeadParameterName";
+export * from "./IAutoFilmHead";
 export * from "./IAutoFilmFaceBrow";
 export * from "./IAutoFilmFaceBrowSet";
 export * from "./IAutoFilmFaceCheek";
