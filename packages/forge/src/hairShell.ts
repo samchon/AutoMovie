@@ -97,7 +97,11 @@ const skullAxes = (face: number[], skull: IForgeSkullParameters) => {
     crownY: cy + b,
     a: halfW * 1.06 * (1 + 0.2 * skull.width),
     b,
-    cBack: halfW * 1.25 * (1 + 0.2 * skull.depth),
+    // occiput depth: a real head fills ~a square in profile (front-back depth
+    // ≈ crown-chin height) and its cephalic index sits 75–85, never the 133
+    // a shallow dome gives — so the back of the skull must project well past
+    // the ear. cFront+cBack ≈ 2.0·halfW lands depth ≈ 0.9·height.
+    cBack: halfW * 1.7 * (1 + 0.2 * skull.depth),
     cFront: halfW * 0.34, // behind the eyelid plane: eyeballs must own the openings
   };
 };

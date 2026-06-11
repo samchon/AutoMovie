@@ -18,10 +18,25 @@ Rules earned through real failures in the hero head pipeline. Each one cost a co
 
 ## Proportions Are the Product
 
-- Fit the subject's own measured indices (Farkas-style), not idealized canons. Golden ratios are vocabulary for reporting, not optimization targets.
+Beauty in faces and heads is measured, not eyeballed. The full study with sources and numbers is `.wiki/04-domain-research/face-head-anthropometry.md` — read it before tuning ranges. The load-bearing rules:
+
+- Fit the subject's own measured indices (Farkas-style), not idealized canons. Calibrate a slider so ±1 ≈ ±1 SD of real human variation for that measure and ±2 ≈ the edge of believable (Farkas norms: face height 111/102 mm M/F SD~6, bizygomatic 131/124, bigonial 97/91, facial index 85±5). Clamp there; beyond is stylization, never gain>1 extrapolation — add a target instead.
+- The neoclassical canons mostly fail in real faces — treat them as weak attractors, not constraints. Default the lower face slightly largest (equal vertical thirds is the canon people violate most); let the eye fissure run wider than the intercanthal and the nose wider than the intercanthal. Only the horizontal canons (nose ≈ face/4, interorbital ≈ nose) roughly hold.
+- The golden ratio does NOT drive beauty — averageness, symmetry, and sexual dimorphism do. Build the neutral default toward the population average + bilateral symmetry; expose dimorphism (brow-ridge bossing, jaw width/angle, face length, chin, lip fullness) and age as the strong axes. The empirically preferred placements are eyes-to-mouth ≈ 36% of face length, interocular ≈ 46% of face width — these coincide with the average face, not φ.
+- Model the WHOLE head, not the frontal face. The cephalic index (breadth/length×100, mean ~76 SD~5: dolicho <75 / meso 75–80 / brachy 80–85) is the master head-shape axis; in profile the head fills ~a square (depth ≈ height), demanding real occiput projection; the ear spans brow→nose-base vertically and sits behind the head's vertical midline. A flattened-sphere cranium + jaw block dropped ~⅓ radius below (Loomis) is the rig model.
 - Constrain or regularize every visually-salient dimension the optimizer can move. An unmeasured dimension rails to its bound and produces a villain face.
 - Distrust depth from a single frontal detection: FaceMesh z is ~1.7× exaggerated, systematically across subjects. Calibrate absolute depth against a profile view by whole-curve fit — point anchors break per chin shape.
 - Two-view triangulation needs pose↔depth alternation over several rounds; a single pass has a bas-relief ambiguity that squashes lateral relief.
+
+## Parameter Taxonomy (MakeHuman conventions, CC0)
+
+MakeHuman exposes 146 head/face sliders to autofilm's ~25; the gap is systematic axis decomposition, not exotic features. Adopt:
+
+- Bipolar parameters resolve to TWO independently-authored targets (`…-decr`/`-incr`), each blended one-sided on a signed [-1,1] axis — a hump nose is not the negative of a saddle nose, so never force one delta through ±gain.
+- Per region, separate size from placement: a `scale-{depth,horiz,vert}` + `trans-{in/out,down/up,backward/forward}` kit (our faceWidth/faceLength currently conflate these). Decompose features into bands (eye height = lid/aperture/lid; nose width = root/bridge/base) and per-part lips.
+- Whole-head coverage means these specific DOFs: mixable (not exclusive) silhouette presets (oval/round/square/rectangular/triangular/inverted-triangular/diamond as independent [0,1] morphs), `head-back-scale-depth` (occiput/parietal), `forehead-nubian` (cranial-vault slope), `forehead-temple`, brow-ridge projection, and jaw-as-chin-region (`chin-bones`=gonial, `chin-prognathism`, `chin-jaw-drop`).
+- Global macros (gender/age/weight) are scalar variables expanded by piecewise-linear tents into a simplex blend of a few whole-head extreme sculpts, weighted by the product of filename-declared factors — not one morph per slider. Keep detail morphs macro-independent and additive.
+- Symmetry is a naming convention (`l-`/`r-` + mechanical mirror name), asymmetry comes free; matches our side rule. Tie a slider to a real measurement via a landmark polyline + numeric inversion (bisection / Gauss-Newton), so morph gain only needs to bracket the human range.
 
 ## Derived Data and Cascades
 
