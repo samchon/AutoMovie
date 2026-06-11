@@ -421,8 +421,46 @@ const paintFace = (): void => {
   colorAttr.needsUpdate = true;
 };
 
+// A procedural skin micro-texture: a near-white noise map (mean ~0.97, fine
+// grain + soft mottling) MULTIPLIED onto the vertex colour. At 468 verts the
+// vertex colour can only ever be a smooth gradient — the uniform fill is what
+// reads as plastic; this breaks it with sub-millimetre tonal variation the way
+// real skin scatters light. Colour stays in the vertex attribute; the map only
+// modulates value, so it composes with the region paint and the curvature AO.
+const skinDetailTexture = (): THREE.CanvasTexture => {
+  const S = 512;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = S;
+  const ctx = cv.getContext("2d")!;
+  const img = ctx.createImageData(S, S);
+  // a few smooth low-frequency mottles
+  const blobs = Array.from({ length: 26 }, () => ({
+    x: Math.random() * S,
+    y: Math.random() * S,
+    r: 50 + Math.random() * 110,
+    a: (Math.random() - 0.5) * 0.03,
+  }));
+  for (let y = 0; y < S; y++)
+    for (let x = 0; x < S; x++) {
+      let v = 0.99 + (Math.random() - 0.5) * 0.035; // fine grain
+      for (const b of blobs) {
+        const d2 = (x - b.x) ** 2 + (y - b.y) ** 2;
+        v += b.a * Math.exp(-d2 / (2 * b.r * b.r));
+      }
+      v = Math.max(0.9, Math.min(1, v));
+      const o = (y * S + x) * 4;
+      const g = (v * 255) | 0;
+      img.data[o] = img.data[o + 1] = img.data[o + 2] = g;
+      img.data[o + 3] = 255;
+    }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+};
 const faceMaterial = new THREE.MeshStandardMaterial({
   vertexColors: true,
+  map: skinDetailTexture(),
   roughness: 0.62, // a faint sheen reads as skin; full-matte reads as clay
   metalness: 0,
   side: THREE.DoubleSide,
