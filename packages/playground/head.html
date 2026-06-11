@@ -55,8 +55,11 @@
       // front (face, z>1.0): bare below forehead-top; back/sides: covered low.
       const smooth01 = (a,b,t) => { const u=Math.max(0,Math.min(1,(t-a)/(b-a))); return u*u*(3-2*u); };
       const hairWeight = (x,y,z) => {
-        const line = z > 1.0 ? 8.05 : 6.7;        // hairline height (front high)
-        return smooth01(line-0.15, line+0.35, y); // feather across the hairline
+        // hairline height rises SMOOTHLY toward the face (high z) so the forehead
+        // is bare and the crown/sides/back are covered — no z-step → no jagged
+        // temple edge. Sides (|x| large) also pulled down a little (sideburn).
+        const line = 6.7 + 1.5*smooth01(0.2, 1.25, z);
+        return smooth01(line-0.20, line+0.45, y);  // wide feather across the hairline
       };
       const hairCovered = (x,y,z) => hairWeight(x,y,z) > 0.5;
 
@@ -105,12 +108,13 @@
         // couple of Laplacian smoothing passes for a soft, non-helmet shell.
         geo.computeVertexNormals(); const N = geo.getAttribute("normal").array;
         const hp = hairMesh.geometry.getAttribute("position").array;
-        const n = P.length/3, T = 0.30;
+        const n = P.length/3, T = 0.42;
         for (let i=0;i<n;i++){ const x=P[i*3],y=P[i*3+1],z=P[i*3+2];
           const w = hairWeight(x,y,z); const t = T*Math.sqrt(w); // feather
           hp[i*3]=x+N[i*3]*t; hp[i*3+1]=y+N[i*3+1]*t; hp[i*3+2]=z+N[i*3+2]*t; }
-        // Laplacian smooth the hair shell (only the covered verts) ×2
-        if (hairAdj) for (let pass=0;pass<3;pass++){ const src=hp.slice();
+        // Laplacian smooth the hair shell (only the covered verts) — more passes
+        // on the fine mesh for a soft continuous mass, not a patchy cap
+        if (hairAdj) for (let pass=0;pass<14;pass++){ const src=hp.slice();
           for (const i of hairAdj.verts){ const nb=hairAdj.adj[i]; if(nb.length<2)continue;
             let ax=0,ay=0,az=0; for(const j of nb){ax+=src[j*3];ay+=src[j*3+1];az+=src[j*3+2];}
             const k=0.5/1; ax/=nb.length;ay/=nb.length;az/=nb.length;
@@ -123,7 +127,7 @@
         const idx = model.indices, out = [], used=new Set();
         const w = (li)=>hairWeight(base[li*3],base[li*3+1],base[li*3+2]);
         for (let t=0;t<idx.length;t+=3){ const a=idx[t],b=idx[t+1],c=idx[t+2];
-          if ((w(a)+w(b)+w(c))/3 > 0.35){ out.push(a,b,c); used.add(a);used.add(b);used.add(c); } }
+          if ((w(a)+w(b)+w(c))/3 > 0.20){ out.push(a,b,c); used.add(a);used.add(b);used.add(c); } }
         // adjacency over hair faces for smoothing
         const adj={}; for(const i of used)adj[i]=[];
         for(let t=0;t<out.length;t+=3){const tri=[out[t],out[t+1],out[t+2]];
