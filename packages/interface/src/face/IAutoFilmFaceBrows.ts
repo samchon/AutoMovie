@@ -4,7 +4,7 @@
  *
  * @author Samchon
  */
-export interface IAutoFilmBrows {
+export interface IAutoFilmFaceBrows {
   /**
    * Vertical position of the brows: `+` raises them off the eyes (an open,
    * surprised look), `-` settles them low and heavy.

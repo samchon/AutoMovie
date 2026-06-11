@@ -4,7 +4,7 @@
  *
  * @author Samchon
  */
-export interface IAutoFilmChin {
+export interface IAutoFilmFaceChin {
   /**
    * Vertical reach of the chin tip: `+` a longer chin, `-` a short one.
    *
