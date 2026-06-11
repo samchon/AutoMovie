@@ -144,8 +144,15 @@
           const ctr=[0,0,0];
           for(let i=0;i<n;i++){ctr[0]+=base[i*3]/n;ctr[1]+=base[i*3+1]/n;ctr[2]+=base[i*3+2]/n;}
           let rad=0; for(let i=0;i<n;i++)rad=Math.max(rad,Math.hypot(base[i*3]-ctr[0],base[i*3+1]-ctr[1],base[i*3+2]-ctr[2]));
-          const col=new Float32Array(n*3); const w=new THREE.Color(0xf2efe9).convertSRGBToLinear(), ir=new THREE.Color(0x3a2a20).convertSRGBToLinear();
-          for(let i=0;i<n;i++){ const fz=(base[i*3+2]-ctr[2])/rad; const c2=fz>0.55?ir:w; col[i*3]=c2.r;col[i*3+1]=c2.g;col[i*3+2]=c2.b; }
+          const col=new Float32Array(n*3);
+          const sclera=new THREE.Color(0xf4f1ec).convertSRGBToLinear();
+          const iris=new THREE.Color(0x7c5a38).convertSRGBToLinear();   // warm brown
+          const pupil=new THREE.Color(0x16100c).convertSRGBToLinear();
+          const lim=new THREE.Color(0x3a2a1c).convertSRGBToLinear();     // limbal ring
+          for(let i=0;i<n;i++){ const fz=(base[i*3+2]-ctr[2])/rad;
+            // smaller iris → more white sclera shows → brighter, open eye
+            const c2 = fz>0.90 ? pupil : fz>0.76 ? iris : fz>0.72 ? lim : sclera;
+            col[i*3]=c2.r;col[i*3+1]=c2.g;col[i*3+2]=c2.b; }
           g.setAttribute("color", new THREE.BufferAttribute(col,3));
           const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.25,metalness:0,side:THREE.DoubleSide}));
           scene.add(mesh); eyeballs.push({ mesh, base, ctr, side: Math.sign(ctr[0]) });
