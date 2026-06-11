@@ -92,11 +92,11 @@
           const ctr=[(sock.inner[0]+sock.outer[0])/2,(sock.inner[1]+sock.outer[1])/2,(sock.inner[2]+sock.outer[2])/2];
           const eyeW=Math.hypot(sock.inner[0]-sock.outer[0],sock.inner[1]-sock.outer[1],sock.inner[2]-sock.outer[2]);
           const rad=eyeW*0.40, lidZ=Math.max(sock.inner[2],sock.outer[2]);
-          // smooth sphere, dome front ≈ flush with the lid plane so it catches
-          // light as a bright open eye (the sculpted orbital rim frames it).
-          // Front-back flattened so the cornea sits naturally, not bulging.
-          e.mesh.scale.set(rad, rad, rad*0.82);
-          e.mesh.position.set(ctr[0], ctr[1], lidZ-0.02-rad*0.82);
+          // almond dome: wider than tall, front ≈ flush so it catches light as a
+          // bright open eye (the sculpted orbital rim frames it). The flattened
+          // height reads as an almond aperture rather than a round marble.
+          e.mesh.scale.set(rad*1.06, rad*0.68, rad*0.66);
+          e.mesh.position.set(ctr[0], ctr[1], lidZ-0.015-rad*0.66);
         });
       }
       let hairAdj = null;
