@@ -1,4 +1,4 @@
-import { IAutoFilmChin } from "./IAutoFilmChin";
+import { IAutoFilmFaceChin } from "./IAutoFilmFaceChin";
 
 /**
  * Jaw traits of an {@link IAutoFilmFace} — signed morph weights in `[-2, 2]`,
@@ -7,7 +7,7 @@ import { IAutoFilmChin } from "./IAutoFilmChin";
  *
  * @author Samchon
  */
-export interface IAutoFilmJaw {
+export interface IAutoFilmFaceJaw {
   /**
    * Width of the jaw below the cheekbones: `+` square and strong, `-` a slim
    * V-line.
@@ -16,6 +16,6 @@ export interface IAutoFilmJaw {
    */
   width?: number;
 
-  /** The chin at the jaw's tip — see {@link IAutoFilmChin}. */
-  chin?: IAutoFilmChin;
+  /** The chin at the jaw's tip — see {@link IAutoFilmFaceChin}. */
+  chin?: IAutoFilmFaceChin;
 }

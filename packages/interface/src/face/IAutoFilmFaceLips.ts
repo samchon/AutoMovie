@@ -4,7 +4,7 @@
  *
  * @author Samchon
  */
-export interface IAutoFilmLips {
+export interface IAutoFilmFaceLips {
   /**
    * Vertical thickness of the lips about the lip seam: `+` fuller, `-` thinner.
    *

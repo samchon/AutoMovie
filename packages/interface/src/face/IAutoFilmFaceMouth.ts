@@ -1,4 +1,4 @@
-import { IAutoFilmLips } from "./IAutoFilmLips";
+import { IAutoFilmFaceLips } from "./IAutoFilmFaceLips";
 
 /**
  * Mouth traits of an {@link IAutoFilmFace} — signed morph weights in `[-2, 2]`,
@@ -6,7 +6,7 @@ import { IAutoFilmLips } from "./IAutoFilmLips";
  *
  * @author Samchon
  */
-export interface IAutoFilmMouth {
+export interface IAutoFilmFaceMouth {
   /**
    * Width of the mouth: `+` a wider smile line.
    *
@@ -21,6 +21,6 @@ export interface IAutoFilmMouth {
    */
   height?: number;
 
-  /** The lips themselves — see {@link IAutoFilmLips}. */
-  lips?: IAutoFilmLips;
+  /** The lips themselves — see {@link IAutoFilmFaceLips}. */
+  lips?: IAutoFilmFaceLips;
 }

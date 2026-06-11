@@ -7,7 +7,7 @@
  *
  * @author Samchon
  */
-export interface IAutoFilmEyes {
+export interface IAutoFilmFaceEyes {
   /**
    * Uniform scale of each eye about its own center: `+` larger eyes.
    *

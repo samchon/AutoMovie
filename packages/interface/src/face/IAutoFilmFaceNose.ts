@@ -4,7 +4,7 @@
  *
  * @author Samchon
  */
-export interface IAutoFilmNose {
+export interface IAutoFilmFaceNose {
   /**
    * Vertical length of the nose: `+` longer (the tip drops).
    *

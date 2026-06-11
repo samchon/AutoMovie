@@ -4,7 +4,7 @@
  *
  * @author Samchon
  */
-export interface IAutoFilmCheeks {
+export interface IAutoFilmFaceCheeks {
   /**
    * Cheek volume around the cheekbones: `+` full and round, `-` gaunt.
    *
