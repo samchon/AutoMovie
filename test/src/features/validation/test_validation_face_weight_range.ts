@@ -5,20 +5,25 @@ import { makeFace } from "../internal/fixtures";
 
 /**
  * Weights are rough plain numbers, so the [-2, 2] bound is enforced at runtime
- * by the engine rather than by the type. A weight just past the positive limit
- * is a `range` violation — the negative twin of the valid case's `+2`, and the
- * violation path names the offending field.
+ * by the engine rather than by the type — on the EFFECTIVE per-side weight,
+ * since a legal base plus a legal override can still overshoot together. The
+ * violation path names the most specific contributor.
  *
- * Scenario: `eyes.size: 2.1` fails with a `range` violation on `.eyes.size`.
+ * Scenario: `eyes.both.size: 1.8` plus `eyes.left.size: 0.4` puts the left eye
+ * at 2.2 — a `range` violation on `.eyes.left.size` while the right eye (1.8)
+ * stays legal.
  */
 export const test_validation_face_weight_range = (): void => {
-  const result = validateFaceResult(makeFace({ eyes: { size: 2.1 } }));
+  const result = validateFaceResult(
+    makeFace({ eyes: { both: { size: 1.8 }, left: { size: 0.4 } } }),
+  );
   TestValidator.equals("out-of-range weight fails", result.success, false);
   TestValidator.predicate(
-    "range violation on the field",
+    "range violation on the overridden side only",
     result.success === false &&
+      result.violations.length === 1 &&
       result.violations.some(
-        (v) => v.kind === "range" && v.path.includes(".eyes.size"),
+        (v) => v.kind === "range" && v.path.includes(".eyes.left.size"),
       ),
   );
 };

@@ -80,6 +80,9 @@ export const buildFaceMorphs = (
   const yEye = (eyeCR[1] + eyeCL[1]) / 2;
   const yLip = (P(13)[1] + P(14)[1]) / 2;
   const U = 0.01; // 1 cm
+  /** This side's gaussian when it owns the vertex (nearer side), else 0. */
+  const gate = (mine: number, other: number): number =>
+    mine >= other && mine > 1e-3 ? mine : 0;
 
   /** Each entry: vertex index -> [dx, dy, dz] at weight +1 */
   const recipes: Record<
@@ -94,58 +97,80 @@ export const buildFaceMorphs = (
     },
     chinLength: (i) => [0, -1.2 * U * gauss(i, chinC, 2.2 * U), 0],
     chinProtrusion: (i) => [0, 0, 0.9 * U * gauss(i, chinC, 2.0 * U)],
-    cheekFullness: (i) => {
-      const g = gauss(i, cheekCR, 2.4 * U) + gauss(i, cheekCL, 2.4 * U);
+    // paired features carry one target per side; a vertex binds to the
+    // NEARER side's centers and the other side's target leaves it untouched
+    // (overlapping gaussians once bound the whole left eye to the right
+    // center — only one eye responded). gate() returns this side's gaussian
+    // when it owns the vertex, else 0.
+    cheekFullnessR: (i) => {
+      const g = gate(gauss(i, cheekCR, 2.4 * U), gauss(i, cheekCL, 2.4 * U));
       return [Math.sign(P(i)[0]) * 0.7 * U * g, 0, 0.4 * U * g];
     },
-    // each eye scales about its OWN center — the centers sit close enough
-    // that the off-eye gaussian is not negligible, so the vertex must bind
-    // to the nearer center (first-match-over-a-threshold once bound every
-    // left-eye vertex to the right eye's center: only one eye responded)
-    eyeSize: (i) => {
-      const gR = gauss(i, eyeCR, 1.7 * eyeR);
-      const gL = gauss(i, eyeCL, 1.7 * eyeR);
-      const [c, g] = gR >= gL ? [eyeCR, gR] : [eyeCL, gL];
-      if (g < 1e-3) return [0, 0, 0];
+    cheekFullnessL: (i) => {
+      const g = gate(gauss(i, cheekCL, 2.4 * U), gauss(i, cheekCR, 2.4 * U));
+      return [Math.sign(P(i)[0]) * 0.7 * U * g, 0, 0.4 * U * g];
+    },
+    eyeSizeR: (i) => {
+      const g = gate(gauss(i, eyeCR, 1.7 * eyeR), gauss(i, eyeCL, 1.7 * eyeR));
       const p = P(i);
-      return [0.36 * (p[0] - c[0]) * g, 0.36 * (p[1] - c[1]) * g, 0];
+      return [0.36 * (p[0] - eyeCR[0]) * g, 0.36 * (p[1] - eyeCR[1]) * g, 0];
     },
-    eyeWidth: (i) => {
-      const gR = gauss(i, eyeCR, 1.7 * eyeR);
-      const gL = gauss(i, eyeCL, 1.7 * eyeR);
-      const [c, g] = gR >= gL ? [eyeCR, gR] : [eyeCL, gL];
-      if (g < 1e-3) return [0, 0, 0];
-      return [0.36 * (P(i)[0] - c[0]) * g, 0, 0];
+    eyeSizeL: (i) => {
+      const g = gate(gauss(i, eyeCL, 1.7 * eyeR), gauss(i, eyeCR, 1.7 * eyeR));
+      const p = P(i);
+      return [0.36 * (p[0] - eyeCL[0]) * g, 0.36 * (p[1] - eyeCL[1]) * g, 0];
     },
-    eyeSpacing: (i) => {
-      const g =
-        gauss(i, eyeCR, 2.2 * eyeR) +
-        gauss(i, browCR, 2.0 * eyeR) +
-        gauss(i, eyeCL, 2.2 * eyeR) +
-        gauss(i, browCL, 2.0 * eyeR);
+    eyeWidthR: (i) => {
+      const g = gate(gauss(i, eyeCR, 1.7 * eyeR), gauss(i, eyeCL, 1.7 * eyeR));
+      return [0.36 * (P(i)[0] - eyeCR[0]) * g, 0, 0];
+    },
+    eyeWidthL: (i) => {
+      const g = gate(gauss(i, eyeCL, 1.7 * eyeR), gauss(i, eyeCR, 1.7 * eyeR));
+      return [0.36 * (P(i)[0] - eyeCL[0]) * g, 0, 0];
+    },
+    eyeSpacingR: (i) => {
+      const g = gate(
+        gauss(i, eyeCR, 2.2 * eyeR) + gauss(i, browCR, 2.0 * eyeR),
+        gauss(i, eyeCL, 2.2 * eyeR) + gauss(i, browCL, 2.0 * eyeR),
+      );
       return [Math.sign(P(i)[0]) * 0.7 * U * Math.min(1, g), 0, 0];
     },
-    eyeHeight: (i) => {
-      const g = Math.min(
-        1,
-        gauss(i, eyeCR, 2.0 * eyeR) + gauss(i, eyeCL, 2.0 * eyeR),
+    eyeSpacingL: (i) => {
+      const g = gate(
+        gauss(i, eyeCL, 2.2 * eyeR) + gauss(i, browCL, 2.0 * eyeR),
+        gauss(i, eyeCR, 2.2 * eyeR) + gauss(i, browCR, 2.0 * eyeR),
       );
-      return [0, 0.7 * U * g, 0];
+      return [Math.sign(P(i)[0]) * 0.7 * U * Math.min(1, g), 0, 0];
     },
-    eyeTilt: (i) => {
-      for (const c of [eyeCR, eyeCL]) {
-        const g = gauss(i, c, 2.0 * eyeR);
-        if (g > 1e-3)
-          return [0, 0.12 * (P(i)[0] - c[0]) * Math.sign(c[0]) * g, 0];
-      }
-      return [0, 0, 0];
+    eyeHeightR: (i) => {
+      const g = gate(gauss(i, eyeCR, 2.0 * eyeR), gauss(i, eyeCL, 2.0 * eyeR));
+      return [0, 0.7 * U * Math.min(1, g), 0];
     },
-    browHeight: (i) => {
-      const g = Math.min(
-        1,
-        gauss(i, browCR, 1.6 * eyeR) + gauss(i, browCL, 1.6 * eyeR),
+    eyeHeightL: (i) => {
+      const g = gate(gauss(i, eyeCL, 2.0 * eyeR), gauss(i, eyeCR, 2.0 * eyeR));
+      return [0, 0.7 * U * Math.min(1, g), 0];
+    },
+    eyeTiltR: (i) => {
+      const g = gate(gauss(i, eyeCR, 2.0 * eyeR), gauss(i, eyeCL, 2.0 * eyeR));
+      return [0, 0.12 * (P(i)[0] - eyeCR[0]) * Math.sign(eyeCR[0]) * g, 0];
+    },
+    eyeTiltL: (i) => {
+      const g = gate(gauss(i, eyeCL, 2.0 * eyeR), gauss(i, eyeCR, 2.0 * eyeR));
+      return [0, 0.12 * (P(i)[0] - eyeCL[0]) * Math.sign(eyeCL[0]) * g, 0];
+    },
+    browHeightR: (i) => {
+      const g = gate(
+        gauss(i, browCR, 1.6 * eyeR),
+        gauss(i, browCL, 1.6 * eyeR),
       );
-      return [0, 1.4 * U * g, 0];
+      return [0, 1.4 * U * Math.min(1, g), 0];
+    },
+    browHeightL: (i) => {
+      const g = gate(
+        gauss(i, browCL, 1.6 * eyeR),
+        gauss(i, browCR, 1.6 * eyeR),
+      );
+      return [0, 1.4 * U * Math.min(1, g), 0];
     },
     noseLength: (i) => [0, -1.0 * U * gauss(i, noseMid, 2.0 * U), 0],
     noseWidth: (i) => [0.22 * P(i)[0] * gauss(i, alarC, 1.8 * U), 0, 0],

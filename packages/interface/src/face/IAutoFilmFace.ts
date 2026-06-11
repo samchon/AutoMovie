@@ -1,6 +1,6 @@
-import { IAutoFilmFaceBrows } from "./IAutoFilmFaceBrows";
-import { IAutoFilmFaceCheeks } from "./IAutoFilmFaceCheeks";
-import { IAutoFilmFaceEyes } from "./IAutoFilmFaceEyes";
+import { IAutoFilmFaceBrowSet } from "./IAutoFilmFaceBrowSet";
+import { IAutoFilmFaceCheekSet } from "./IAutoFilmFaceCheekSet";
+import { IAutoFilmFaceEyeSet } from "./IAutoFilmFaceEyeSet";
 import { IAutoFilmFaceJaw } from "./IAutoFilmFaceJaw";
 import { IAutoFilmFaceMouth } from "./IAutoFilmFaceMouth";
 import { IAutoFilmFaceNose } from "./IAutoFilmFaceNose";
@@ -10,7 +10,7 @@ import { IAutoFilmFaceNose } from "./IAutoFilmFaceNose";
  * emits and the engine morphs deterministically.
  *
  * The document mirrors facial anatomy: overall head form at the top level, then
- * one named group per feature ({@link IAutoFilmFaceEyes eyes},
+ * one named group per feature ({@link IAutoFilmFaceEyeSet eyes},
  * {@link IAutoFilmFaceNose nose}, {@link IAutoFilmFaceJaw jaw}…), each group an
  * interface of its own so an LLM reads the schema the way a person reads a
  * face. Every leaf is a signed morph weight in `[-2, 2]` over a face template
@@ -44,17 +44,26 @@ export interface IAutoFilmFace {
    */
   length?: number;
 
-  /** The cheeks — see {@link IAutoFilmFaceCheeks}. */
-  cheeks?: IAutoFilmFaceCheeks;
+  /**
+   * The cheeks (left/right asymmetry inside) — see
+   * {@link IAutoFilmFaceCheekSet}.
+   */
+  cheeks?: IAutoFilmFaceCheekSet;
 
   /** The jaw, with the chin nested at its tip — see {@link IAutoFilmFaceJaw}. */
   jaw?: IAutoFilmFaceJaw;
 
-  /** The eyes (always both together) — see {@link IAutoFilmFaceEyes}. */
-  eyes?: IAutoFilmFaceEyes;
+  /**
+   * The eyes, shared fields + left/right asymmetry — see
+   * {@link IAutoFilmFaceEyeSet}.
+   */
+  eyes?: IAutoFilmFaceEyeSet;
 
-  /** The eyebrows — see {@link IAutoFilmFaceBrows}. */
-  brows?: IAutoFilmFaceBrows;
+  /**
+   * The eyebrows (left/right asymmetry inside) — see
+   * {@link IAutoFilmFaceBrowSet}.
+   */
+  brows?: IAutoFilmFaceBrowSet;
 
   /** The nose — see {@link IAutoFilmFaceNose}. */
   nose?: IAutoFilmFaceNose;
