@@ -4,9 +4,11 @@ import {
   CANONICAL_FACE_POSITIONS,
   CANONICAL_FACE_UVS,
   IForgeBunParameters,
+  IForgeBustParameters,
   IForgeHairParameters,
   IForgeSkullParameters,
   IForgeTailParameters,
+  buildBust,
   buildEyeShells,
   buildFaceMorphs,
   buildHairBun,
@@ -106,6 +108,8 @@ app.innerHTML = `
       <div id="bun"></div>
       <h2>tails</h2>
       <div id="tails"></div>
+      <h2>bust</h2>
+      <div id="bust"></div>
       <h2>colors</h2>
       <div class="colors">
         <label>skin<input type="color" id="cSkin" value="#e8c4ae" /></label>
@@ -482,6 +486,7 @@ const applyShellLighting = (): void => {
   if (bunMesh) bunMesh.material = skinModeOn ? hairUnlit : hairMaterial;
   for (const m of tailMeshes)
     m.material = skinModeOn ? hairUnlit : hairMaterial;
+  if (bustMesh) bustMesh.material = skinModeOn ? skullUnlit : skullMaterial;
 };
 let hairMesh: THREE.Mesh | null = null;
 const rebuildHair = (): void => {
@@ -561,6 +566,26 @@ const rebuildTails = (): void => {
   }
 };
 rebuildTails();
+
+const bustParams: IForgeBustParameters = { neck: 0.35, shoulders: 0.45 };
+let bustMesh: THREE.Mesh | null = null;
+const rebuildBust = (): void => {
+  if (bustMesh) {
+    scene.remove(bustMesh);
+    bustMesh.geometry.dispose();
+  }
+  const part = buildBust(bustParams);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(part.positions, 3),
+  );
+  g.setIndex(part.indices);
+  g.computeVertexNormals();
+  bustMesh = new THREE.Mesh(g, skinModeOn ? skullUnlit : skullMaterial);
+  scene.add(bustMesh);
+};
+rebuildBust();
 
 // ── eyeballs (follow the morphed face; iris colored by frontness) ───────────
 const eyeMaterial = new THREE.MeshStandardMaterial({
@@ -699,6 +724,7 @@ const refresh = (): void => {
       skull: skullParams,
       hair: hairParams,
       bun: bunParams,
+      bust: bustParams,
       tails: tailParams,
       colors,
     },
@@ -784,6 +810,16 @@ const tailSliders = (
     rebuildTails();
   }),
 );
+
+const bustSliders = (
+  Object.keys(bustParams) as (keyof IForgeBustParameters)[]
+).map((k) =>
+  slider("#bust", k, 0, 1, bustParams[k], (v) => {
+    bustParams[k] = v;
+    rebuildBust();
+  }),
+);
+void bustSliders;
 
 const colorInput = (id: string, key: keyof typeof colors): void => {
   const el = document.querySelector<HTMLInputElement>(id)!;
@@ -1094,6 +1130,7 @@ loadPhotoHead("/models/hero1-head.glb");
   if (skullMesh) skullMesh.visible = !on;
   if (hairMesh) hairMesh.visible = !on;
   if (bunMesh) bunMesh.visible = !on;
+  if (bustMesh) bustMesh.visible = !on;
   for (const m of tailMeshes) m.visible = !on;
   for (const m of eyeMeshes) m.visible = false;
 };
