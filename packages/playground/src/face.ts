@@ -111,7 +111,8 @@ app.innerHTML = `
         <label>skin<input type="color" id="cSkin" value="#e8c4ae" /></label>
         <label>hair<input type="color" id="cHair" value="#3a3027" /></label>
         <label>lips<input type="color" id="cLips" value="#c97a72" /></label>
-        <label>iris<input type="color" id="cIris" value="#3a2a20" /></label>
+        <label>iris R<input type="color" id="cIrisR" value="#3a2a20" /></label>
+        <label>iris L<input type="color" id="cIrisL" value="#3a2a20" /></label>
       </div>
       <div id="doc"></div>
     </div>
@@ -262,7 +263,10 @@ const colors = {
   skin: "#e8c4ae",
   hair: "#3a3027",
   lips: "#c97a72",
-  iris: "#3a2a20",
+  // per-side iris colors — heterochromia (오드아이) is color data, not
+  // geometry; keep them equal for ordinary eyes
+  irisRight: "#3a2a20",
+  irisLeft: "#3a2a20",
 };
 const colorAttr = new THREE.Float32BufferAttribute(
   new Float32Array(468 * 3),
@@ -476,6 +480,8 @@ const applyShellLighting = (): void => {
   if (skullMesh) skullMesh.material = skinModeOn ? skullUnlit : skullMaterial;
   if (hairMesh) hairMesh.material = skinModeOn ? hairUnlit : hairMaterial;
   if (bunMesh) bunMesh.material = skinModeOn ? hairUnlit : hairMaterial;
+  for (const m of tailMeshes)
+    m.material = skinModeOn ? hairUnlit : hairMaterial;
 };
 let hairMesh: THREE.Mesh | null = null;
 const rebuildHair = (): void => {
@@ -547,7 +553,9 @@ const rebuildTails = (): void => {
     );
     g.setIndex(part.indices);
     g.computeVertexNormals();
-    const mesh = new THREE.Mesh(g, hairMaterial);
+    // both materials read vertex colors — an unpainted geometry renders BLACK
+    paintHairStrands(g);
+    const mesh = new THREE.Mesh(g, skinModeOn ? hairUnlit : hairMaterial);
     scene.add(mesh);
     tailMeshes.push(mesh);
   }
@@ -582,9 +590,11 @@ const rebuildEyes = (): void => {
   eyeMeshes = [];
   const shells = buildEyeShells(morphedFacePositions());
   const sclera = new THREE.Color("#f3eee9");
-  const iris = new THREE.Color(colors.iris);
   const pupil = new THREE.Color("#16100c");
-  for (const eye of [shells.right, shells.left]) {
+  for (const [side, eye] of [shells.right, shells.left].entries()) {
+    const iris = new THREE.Color(
+      side === 0 ? colors.irisRight : colors.irisLeft,
+    );
     const g = new THREE.BufferGeometry();
     g.setAttribute(
       "position",
@@ -790,7 +800,8 @@ const colorInput = (id: string, key: keyof typeof colors): void => {
 colorInput("#cSkin", "skin");
 colorInput("#cHair", "hair");
 colorInput("#cLips", "lips");
-colorInput("#cIris", "iris");
+colorInput("#cIrisR", "irisRight");
+colorInput("#cIrisL", "irisLeft");
 
 // ── presets: a character is ONE pure-parameter document ─────────────────────
 interface IPreset {
@@ -813,7 +824,8 @@ const PRESETS: Record<string, IPreset> = {
       skin: "#e8c4ae",
       hair: "#3a3027",
       lips: "#c97a72",
-      iris: "#3a2a20",
+      irisRight: "#3a2a20",
+      irisLeft: "#3a2a20",
     },
   },
   // hero/1: anthropometric index fit — the 18 sliders matched to HER OWN
@@ -859,7 +871,8 @@ const PRESETS: Record<string, IPreset> = {
       skin: "#f2d3c2",
       hair: "#231a15",
       lips: "#cf7e76",
-      iris: "#33231b",
+      irisRight: "#33231b",
+      irisLeft: "#33231b",
     },
   },
   hero2: {
@@ -903,7 +916,8 @@ const PRESETS: Record<string, IPreset> = {
       skin: "#f0cdb9",
       hair: "#2e2018",
       lips: "#c97a72",
-      iris: "#33231b",
+      irisRight: "#33231b",
+      irisLeft: "#33231b",
     },
   },
   hero3: {
@@ -947,7 +961,8 @@ const PRESETS: Record<string, IPreset> = {
       skin: "#efcab5",
       hair: "#241a14",
       lips: "#c3736d",
-      iris: "#2e211a",
+      irisRight: "#2e211a",
+      irisLeft: "#2e211a",
     },
   },
 };
@@ -1003,10 +1018,13 @@ const applyPreset = (p: IPreset): void => {
   colors.skin = p.colors.skin;
   colors.hair = p.colors.hair;
   colors.lips = p.colors.lips;
-  colors.iris = p.colors.iris;
+  colors.irisRight = p.colors.irisRight;
+  colors.irisLeft = p.colors.irisLeft;
   document.querySelector<HTMLInputElement>("#cSkin")!.value = colors.skin;
   document.querySelector<HTMLInputElement>("#cHair")!.value = colors.hair;
   document.querySelector<HTMLInputElement>("#cLips")!.value = colors.lips;
+  document.querySelector<HTMLInputElement>("#cIrisR")!.value = colors.irisRight;
+  document.querySelector<HTMLInputElement>("#cIrisL")!.value = colors.irisLeft;
   paintFace();
   applySkullTone();
   hairMaterial.color.set(colors.hair);
