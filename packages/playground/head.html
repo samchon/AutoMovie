@@ -264,6 +264,10 @@
       // headless hooks
       window.__setParam=(name,v)=>{ values[name]=v; if(sliderEls[name]){sliderEls[name].inp.value=v;sliderEls[name].out.textContent=v.toFixed(2);} recompute(); };
       window.__setParams=(obj)=>{ for(const k of Object.keys(values))values[k]=0; for(const[k,v]of Object.entries(obj))values[k]=v; if(Object.keys(sliderEls).length)syncSliders(); recompute(); };
+      // consume an IAutoFilmHead nested document (the LLM tool-calling schema) —
+      // same projection as engine.flattenHead (the canonical, tested version).
+      const HEAD_MAP={shape:{width:"faceWidth",length:"faceLength",oval:"faceOval",round:"headRound",foreheadSlope:"foreheadSlope",foreheadHeight:"foreheadHeight",foreheadBulge:"foreheadBulge",templeWidth:"templeWidth",occiputDepth:"occiputDepth"},brow:{height:"browHeight",angle:"browAngle"},eyes:{size:"eyeSize",openness:"eyeHeight",spacing:"eyeSpacing",tilt:"eyeAngle",depth:"eyeDepth",epicanthus:"epicanthus",fold:"eyeFold"},nose:{width:"noseWidth",length:"noseLength",projection:"noseProject",hump:"noseHump",tipAngle:"nosePoint",nostrilWidth:"nostrilWidth",baseHeight:"noseBaseH",bridge:"noseBridge"},mouth:{width:"mouthWidth",lipFullness:"lipFull",upperLipHeight:"upperLipH",lowerLipHeight:"lowerLipH",cupidsBow:"cupidsBow",philtrum:"philtrum",height:"mouthHeight",smile:"mouthSmile"},cheek:{fullness:"cheekFull",bones:"cheekBones"},jaw:{width:"jawWidth",drop:"jawDrop",chinLength:"chinLength",chinWidth:"chinWidth",chinProjection:"chinProject"}};
+      window.__setHead=(doc)=>{ const flat={}; for(const g in HEAD_MAP){ const grp=doc[g]; if(!grp)continue; for(const f in HEAD_MAP[g]) if(grp[f]!==undefined) flat[HEAD_MAP[g][f]]=grp[f]; } window.__setParams(flat); };
       window.__camObj=cam;
       window.__resize=(w,h)=>{ const p=document.getElementById("panel"); if(p)p.style.display="none";
         canvas.style.position="fixed"; canvas.style.inset="0"; canvas.style.width=w+"px"; canvas.style.height=h+"px"; canvas.style.zIndex="9999";
