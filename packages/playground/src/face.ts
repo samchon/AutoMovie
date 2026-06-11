@@ -358,15 +358,12 @@ const colors = {
   irisRight: "#3a2a20",
   irisLeft: "#3a2a20",
 };
-// RGBA: the alpha channel feathers the face-plate's upper/lateral boundary so
-// its edge DISSOLVES into the skull behind it instead of ending as a hard
-// wall ("mask on a dome"). The same proven trick the photographed head uses.
 const colorAttr = new THREE.Float32BufferAttribute(
-  new Float32Array(468 * 4),
-  4,
+  new Float32Array(468 * 3),
+  3,
 );
 faceGeometry.setAttribute("color", colorAttr);
-// face-oval boundary ring (MediaPipe) — the plate edge to feather/weld
+// face-oval boundary ring (MediaPipe) — used by the skull conform
 const FACE_OVAL = [
   10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378,
   400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21,
@@ -375,11 +372,6 @@ const FACE_OVAL = [
 const paintFace = (): void => {
   const pos = morphedFacePositions();
   const lipW = regionWeight(pos, LIPS, 0.004);
-  // feather band along the oval boundary, gated OFF near the chin/jaw bottom
-  // (nothing behind it but neck/bust — fading there would show background)
-  const ovalW = regionWeight(pos, FACE_OVAL, 0.006);
-  const chinY = pos[152 * 3 + 1]!;
-  const halfWFace = Math.abs(pos[454 * 3]! - pos[234 * 3]!) / 2 || 0.0766;
   // tighter brow band (was 0.004 → a thick dark caterpillar that merged
   // across the bridge into a unibrow); narrower sigma + a capped, partly
   // transparent max keeps skin showing through so it reads as hair on skin
@@ -401,22 +393,17 @@ const paintFace = (): void => {
   for (let i = 0; i < 468; i++) {
     c.copy(skin)
       .lerp(lips, lipW[i]!)
-      .lerp(brow, Math.min(0.8, browW[i]!))
-      .lerp(eye, 0.45 * eyeW[i]!);
+      .lerp(brow, Math.min(0.5, browW[i]!))
+      .lerp(eye, 0.3 * eyeW[i]!);
     // valleys occlude (darken), ridges catch light (brighten) — clay → skin
     const k = ao[i]!;
-    c.multiplyScalar(k >= 0 ? 1 - 0.32 * k : 1 - 0.12 * k);
-    const y = pos[i * 3 + 1]!;
-    // feather the LATERAL boundary (temples/cheeks/jaw-sides — where the flat
-    // plate edge meets the skull at a steep angle and shows as a ledge), but
-    // NOT the forehead-top centre (|x| small): fading there only revealed the
-    // skull as a lighter patch in front view, and the default hair covers that
-    // seam anyway. Also gated off near the chin (neck/bust behind it).
-    const x = pos[i * 3]!;
-    const lat = Math.min(1, Math.abs(x) / (0.55 * halfWFace));
-    const gate = Math.max(0, Math.min(1, (y - (chinY + 0.03)) / 0.04)) * lat;
-    const alpha = 1 - 0.92 * ovalW[i]! * gate;
-    colorAttr.setXYZW(i, c.r, c.g, c.b, alpha);
+    c.multiplyScalar(k >= 0 ? 1 - 0.13 * k : 1 - 0.05 * k);
+    // The face plate is OPAQUE. An earlier alpha feather of the oval boundary
+    // dissolved the temple ledge but revealed the conformed skull's flat front
+    // plateau as a lit rectangular patch on the forehead — worse than the
+    // ledge it fixed. The skull conform (just behind the face) keeps the
+    // remaining side step tiny, and hair frames it.
+    colorAttr.setXYZ(i, c.r, c.g, c.b);
   }
   colorAttr.needsUpdate = true;
 };
@@ -464,7 +451,6 @@ const faceMaterial = new THREE.MeshStandardMaterial({
   roughness: 0.62, // a faint sheen reads as skin; full-matte reads as clay
   metalness: 0,
   side: THREE.DoubleSide,
-  transparent: true, // the RGBA alpha feathers the plate edge into the skull
 });
 const faceMesh = new THREE.Mesh<
   THREE.BufferGeometry,
