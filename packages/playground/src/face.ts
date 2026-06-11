@@ -301,6 +301,7 @@ const paintFace = (): void => {
   // (nothing behind it but neck/bust — fading there would show background)
   const ovalW = regionWeight(pos, FACE_OVAL, 0.006);
   const chinY = pos[152 * 3 + 1]!;
+  const halfWFace = Math.abs(pos[454 * 3]! - pos[234 * 3]!) / 2 || 0.0766;
   // tighter brow band (was 0.004 → a thick dark caterpillar that merged
   // across the bridge into a unibrow); narrower sigma + a capped, partly
   // transparent max keeps skin showing through so it reads as hair on skin
@@ -321,7 +322,14 @@ const paintFace = (): void => {
       .lerp(brow, Math.min(0.8, browW[i]!))
       .lerp(eye, 0.45 * eyeW[i]!);
     const y = pos[i * 3 + 1]!;
-    const gate = Math.max(0, Math.min(1, (y - (chinY + 0.03)) / 0.04));
+    // feather the LATERAL boundary (temples/cheeks/jaw-sides — where the flat
+    // plate edge meets the skull at a steep angle and shows as a ledge), but
+    // NOT the forehead-top centre (|x| small): fading there only revealed the
+    // skull as a lighter patch in front view, and the default hair covers that
+    // seam anyway. Also gated off near the chin (neck/bust behind it).
+    const x = pos[i * 3]!;
+    const lat = Math.min(1, Math.abs(x) / (0.55 * halfWFace));
+    const gate = Math.max(0, Math.min(1, (y - (chinY + 0.03)) / 0.04)) * lat;
     const alpha = 1 - 0.92 * ovalW[i]! * gate;
     colorAttr.setXYZW(i, c.r, c.g, c.b, alpha);
   }
