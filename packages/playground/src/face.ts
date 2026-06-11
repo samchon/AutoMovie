@@ -703,6 +703,11 @@ const rebuildEyes = (): void => {
     const col = new Float32Array(n * 3);
     const scz = eye.center[2] - eye.radius;
     const c = new THREE.Color();
+    // catchlight: a single bright reflection of the key light. Both eyes
+    // reflect the same source, so the spot sits at the same eye-local
+    // direction on both — up/forward, biased toward the key. Without it the
+    // iris reads as a flat dead disc; with it the eye looks wet and alive.
+    const cd = [0.3, 0.46, 0.84]; // normalized up-right-forward
     for (let i = 0; i < n; i++) {
       const f = (eye.positions[i * 3 + 2]! - scz) / eye.radius;
       // iris cap (f>0.84, slightly larger than the old 0.906 so it fills the
@@ -712,6 +717,12 @@ const rebuildEyes = (): void => {
       if (f > 0.84) c.copy(iris).multiplyScalar(0.62); // limbus
       if (f > 0.9) c.copy(iris);
       if (f > 0.985) c.copy(pupil);
+      const dx = eye.positions[i * 3]! - eye.center[0];
+      const dy = eye.positions[i * 3 + 1]! - eye.center[1];
+      const dz = eye.positions[i * 3 + 2]! - eye.center[2];
+      const dl = Math.hypot(dx, dy, dz) || 1;
+      if ((dx * cd[0]! + dy * cd[1]! + dz * cd[2]!) / dl > 0.95)
+        c.setRGB(0.96, 0.96, 0.92); // catchlight overrides iris/pupil here
       col[i * 3] = c.r;
       col[i * 3 + 1] = c.g;
       col[i * 3 + 2] = c.b;
