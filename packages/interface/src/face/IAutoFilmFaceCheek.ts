@@ -1,3 +1,5 @@
+import { AutoFilmFaceWeight } from "./AutoFilmFaceWeight";
+
 /**
  * Traits of ONE cheek — signed morph weights in `[-2, 2]`, `0`/omitted meaning
  * unchanged. Lives under {@link IAutoFilmFaceCheekSet.left} / `right`; when it
@@ -6,10 +8,6 @@
  * @author Samchon
  */
 export interface IAutoFilmFaceCheek {
-  /**
-   * Volume of the cheek around the cheekbone: `+` full and round, `-` gaunt.
-   *
-   * @default 0
-   */
-  fullness?: number;
+  /** Volume of the cheek around the cheekbone: `+` full and round, `-` gaunt. */
+  fullness?: AutoFilmFaceWeight;
 }

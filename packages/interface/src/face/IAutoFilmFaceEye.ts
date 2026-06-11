@@ -1,3 +1,5 @@
+import { AutoFilmFaceWeight } from "./AutoFilmFaceWeight";
+
 /**
  * Traits of ONE eye — signed morph weights in `[-2, 2]`, `0`/omitted meaning
  * unchanged.
@@ -11,41 +13,25 @@
  * @author Samchon
  */
 export interface IAutoFilmFaceEye {
-  /**
-   * Uniform scale of the eye about its own center: `+` larger.
-   *
-   * @default 0
-   */
-  size?: number;
+  /** Uniform scale of the eye about its own center: `+` larger. */
+  size?: AutoFilmFaceWeight;
 
   /**
    * Horizontal-only scale of the eye fissure: widens the opening without
    * lifting the lids — use with `size` to control the aspect ratio.
-   *
-   * @default 0
    */
-  width?: number;
+  width?: AutoFilmFaceWeight;
 
-  /**
-   * Vertical position of the eye on the face: `+` higher.
-   *
-   * @default 0
-   */
-  height?: number;
+  /** Vertical position of the eye on the face: `+` higher. */
+  height?: AutoFilmFaceWeight;
 
-  /**
-   * Outer-corner slant: `+` lifts the outer corner (upturned eye).
-   *
-   * @default 0
-   */
-  tilt?: number;
+  /** Outer-corner slant: `+` lifts the outer corner (upturned eye). */
+  tilt?: AutoFilmFaceWeight;
 
   /**
    * Outward shift of the eye, away from the nose: `+` toward the temple. Adds
    * to the pair-level {@link IAutoFilmFaceEyeSet.spacing}; use this for one eye,
    * `spacing` for the pair.
-   *
-   * @default 0
    */
-  offset?: number;
+  offset?: AutoFilmFaceWeight;
 }

@@ -1,3 +1,4 @@
+import { AutoFilmFaceWeight } from "./AutoFilmFaceWeight";
 import { IAutoFilmFaceBrowSet } from "./IAutoFilmFaceBrowSet";
 import { IAutoFilmFaceCheekSet } from "./IAutoFilmFaceCheekSet";
 import { IAutoFilmFaceEyeSet } from "./IAutoFilmFaceEyeSet";
@@ -29,20 +30,14 @@ import { IAutoFilmFaceNose } from "./IAutoFilmFaceNose";
  * @author Samchon
  */
 export interface IAutoFilmFace {
-  /**
-   * Lateral width of the whole face: `+` wider, `-` narrower.
-   *
-   * @default 0
-   */
-  width?: number;
+  /** Lateral width of the whole face: `+` wider, `-` narrower. */
+  width?: AutoFilmFaceWeight;
 
   /**
    * Vertical stretch about the eye line: `+` longer (lower jaw drops, brow
    * rises), `-` shorter and rounder — childlike faces sit negative.
-   *
-   * @default 0
    */
-  length?: number;
+  length?: AutoFilmFaceWeight;
 
   /**
    * The cheeks (left/right asymmetry inside) — see
