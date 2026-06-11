@@ -10,8 +10,8 @@
  * (https://github.com/google-ai-edge/mediapipe).
  */
 
-/** Resting vertex positions (xyz triples, meters), 468 vertices. */
-export const CANONICAL_FACE_POSITIONS: number[] = [
+/** Raw MediaPipe resting positions (xyz triples, meters), 468 vertices. */
+const CANONICAL_FACE_POSITIONS_RAW: number[] = [
   0, -0.034064, 0.059795, 0, -0.011269, 0.074756, 0, -0.02089, 0.060583,
   -0.004639, 0.009554, 0.066336, 0, -0.004632, 0.075866, 0, 0.003657, 0.072429,
   0, 0.024733, 0.057886, -0.042531, 0.025776, 0.032797, 0, 0.04019, 0.052848, 0,
@@ -206,6 +206,76 @@ export const CANONICAL_FACE_POSITIONS: number[] = [
   0.025563, 0.038637, 0.012556, 0.024671, 0.042038, 0.010314, 0.023827,
   0.046158, 0.042531, 0.027723, 0.033153, 0.0453, 0.0291, 0.033397,
 ];
+
+const EYE_R_RING = [
+  33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246,
+];
+const EYE_L_RING = [
+  362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384,
+  398,
+];
+
+/**
+ * The raw MediaPipe canonical has small, wide-set eyes — measured fissure /
+ * intercanthal 0.70 and fissure / face-width 0.169, well under the
+ * attractive-average ~0.9 and the rule-of-fifths 0.20 (every fitted hero rails
+ * `eyeSize` to its +2 limit, the optimizer screaming the base is undersized).
+ * The neutral (all-params-zero) face should BE the balanced average — the most
+ * beautiful by the averageness principle — so a one-time corrective enlarges
+ * each eye about its own center (gaussian-feathered into the socket, the same
+ * radial form as the `eyeSize` morph). At weight 0.6 this lands fissure /
+ * intercanthal ≈ 0.94 and fissure / face-width ≈ 0.20, the measured
+ * attractive-average targets. Baked into the base, not exposed, so `0` itself
+ * is the ideal and parameters deviate from it.
+ */
+const averageBeautyBase = (raw: number[]): number[] => {
+  const out = raw.slice();
+  const centroid = (ring: number[]): [number, number, number] => {
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    for (const i of ring) {
+      x += raw[i * 3]!;
+      y += raw[i * 3 + 1]!;
+      z += raw[i * 3 + 2]!;
+    }
+    return [x / ring.length, y / ring.length, z / ring.length];
+  };
+  const cR = centroid(EYE_R_RING);
+  const cL = centroid(EYE_L_RING);
+  const eyeR =
+    Math.hypot(
+      raw[33 * 3]! - raw[133 * 3]!,
+      raw[33 * 3 + 1]! - raw[133 * 3 + 1]!,
+    ) / 2;
+  const sigma = 1.7 * eyeR;
+  const W = 0.6; // calibrated to the attractive-average eye proportions
+  const g = (i: number, c: [number, number, number]): number => {
+    const dx = raw[i * 3]! - c[0];
+    const dy = raw[i * 3 + 1]! - c[1];
+    const dz = raw[i * 3 + 2]! - c[2];
+    return Math.exp(-(dx * dx + dy * dy + dz * dz) / (2 * sigma * sigma));
+  };
+  for (let i = 0; i < raw.length / 3; i++) {
+    const gR = g(i, cR);
+    const gL = g(i, cL);
+    const [c, gv] = gR >= gL ? [cR, gR] : [cL, gL];
+    if (gv < 1e-3) continue;
+    out[i * 3]! += W * 0.36 * (raw[i * 3]! - c[0]) * gv;
+    out[i * 3 + 1]! += W * 0.36 * (raw[i * 3 + 1]! - c[1]) * gv;
+  }
+  return out;
+};
+
+/**
+ * Resting vertex positions (xyz triples, meters), 468 vertices — the raw
+ * MediaPipe base corrected to the attractive average (see
+ * {@link averageBeautyBase}). This is the neutral the editor's `0` resolves to
+ * and the base every morph and identity residual is computed against.
+ */
+export const CANONICAL_FACE_POSITIONS: number[] = averageBeautyBase(
+  CANONICAL_FACE_POSITIONS_RAW,
+);
 
 /** Texture coordinates (uv pairs, top-left origin), aligned to positions. */
 export const CANONICAL_FACE_UVS: number[] = [
