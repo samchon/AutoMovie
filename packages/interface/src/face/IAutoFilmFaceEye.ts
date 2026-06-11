@@ -2,11 +2,11 @@
  * Traits of ONE eye — signed morph weights in `[-2, 2]`, `0`/omitted meaning
  * unchanged.
  *
- * Where the document uses it decides the scope: under
- * {@link IAutoFilmFaceEyeSet.both} the traits drive BOTH eyes (the symmetric
- * base), under `left`/`right` they ADD to that base on one side only (uneven
- * eyes). Sides are the SUBJECT's left/right — her left eye is on the viewer's
- * right. Heterochromia is an iris-color concern, not geometry.
+ * Lives under {@link IAutoFilmFaceEyeSet.left} / `right`. **Side rule:** when it
+ * is the only side defined on the set, these traits apply to BOTH eyes; when
+ * both sides are defined, each applies to its own eye only. Sides are the
+ * SUBJECT's left/right — her left eye is on the viewer's right. Heterochromia
+ * is an iris-color concern, not geometry.
  *
  * @author Samchon
  */
@@ -41,9 +41,9 @@ export interface IAutoFilmFaceEye {
   tilt?: number;
 
   /**
-   * Outward shift of the eye, away from the nose: `+` toward the temple. The
-   * pair-level distance lives at {@link IAutoFilmFaceEyeSet.spacing}; this moves
-   * one eye only.
+   * Outward shift of the eye, away from the nose: `+` toward the temple. Adds
+   * to the pair-level {@link IAutoFilmFaceEyeSet.spacing}; use this for one eye,
+   * `spacing` for the pair.
    *
    * @default 0
    */

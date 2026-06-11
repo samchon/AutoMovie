@@ -655,32 +655,29 @@ const refresh = (): void => {
       NEST[parameter](face, weight);
       count++;
     }
-  // equal left/right leaves fold into the symmetric base ('both', or the
-  // pair-level 'spacing' for the eye offsets) so symmetric edits emit the
-  // document an LLM would naturally write
-  for (const [set, pairLeaf] of [
-    [face.eyes, "spacing"],
-    [face.brows, null],
-    [face.cheeks, null],
-  ] as const) {
+  // SIDE RULE folding: a lone side applies to BOTH sides, so when the
+  // sliders produce identical left/right objects the document keeps only
+  // one — the shorthand an LLM would naturally write. Equal eye offsets
+  // fold into the pair-level spacing first.
+  for (const set of [face.eyes, face.brows, face.cheeks]) {
     if (!set?.left || !set.right) continue;
     const L = set.left as Record<string, number | undefined>;
     const R = set.right as Record<string, number | undefined>;
-    for (const leaf of Object.keys(L))
-      if (L[leaf] !== undefined && L[leaf] === R[leaf]) {
-        if (leaf === "offset" && pairLeaf) {
-          (set as Record<string, unknown>)[pairLeaf] = L[leaf];
-        } else {
-          const both = ((
-            set as { both?: Record<string, number | undefined> }
-          ).both ??= {});
-          both[leaf] = L[leaf];
-        }
-        delete L[leaf];
-        delete R[leaf];
-      }
+    if (
+      "offset" in L &&
+      L.offset !== undefined &&
+      L.offset === (R as { offset?: number }).offset
+    ) {
+      (set as { spacing?: number }).spacing =
+        ((set as { spacing?: number }).spacing ?? 0) + L.offset;
+      delete L.offset;
+      delete (R as { offset?: number }).offset;
+    }
+    const keys = new Set([...Object.keys(L), ...Object.keys(R)]);
+    const equal = [...keys].every((k) => L[k] === (R as typeof L)[k]);
+    if (equal) delete set.right; // lone left = symmetric shorthand
     if (Object.keys(L).length === 0) delete set.left;
-    if (Object.keys(R).length === 0) delete set.right;
+    if (set.right && Object.keys(set.right).length === 0) delete set.right;
   }
   const result = validateFaceResult(face);
   status.textContent = result.success
