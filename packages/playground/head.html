@@ -48,7 +48,7 @@
       const SKIN = 0xf2dccb, HAIR = 0x241c17;
       const clay = new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.62, metalness:0, side:THREE.DoubleSide });
       const normalMat = new THREE.MeshNormalMaterial({ side:THREE.DoubleSide });
-      let model, base, geo, mesh, hairMesh, eyeballs=[], params={}, values={}, hairOn=true, normalsOn=false;
+      let model, base, geo, mesh, hairMesh, hairDrape, eyeballs=[], params={}, values={}, hairOn=true, normalsOn=false;
       window.__ready = false;
 
       // smooth hair coverage weight (0..1) — feathered hairline, no jagged edge.
@@ -135,6 +135,37 @@
         hairAdj={verts:[...used],adj};
         return out;
       }
+      // procedural long-hair drape: a smooth sculptural mass hanging from the
+      // hairline down the back and sides (θ = around the head, s = down-length).
+      // Front ~130° is left open for the face. Subtle vertical locks + a flare.
+      function makeHairDrape(){
+        const zc=0.55, r0=0.97;            // head vertical axis z, hair radius
+        const Nth=64, Ns=30, row=Ns+1;
+        const th0=-2.0, th1=2.0;            // ±115° → ~130° face opening (hair sits beside/behind the cheeks)
+        const botY=4.4;                     // hair tip (well below the neck)
+        const pos=[], idx=[];
+        for(let i=0;i<=Nth;i++){ const th=th0+(th1-th0)*i/Nth;
+          const sideT=Math.min(1,Math.abs(th)/2.25);        // 0 back … 1 sides
+          const topY=6.95+0.55*sideT;                        // hairline higher at the sides
+          const lock=1+0.04*Math.cos(th*8.0);                // vertical lock ridges (symmetric → no one-sided intrusion)
+          for(let j=0;j<=Ns;j++){ const s=j/Ns;
+            const y=topY-s*(topY-botY);
+            const flare=1+0.20*s*s;                          // widen toward the tip
+            const end=1-0.55*Math.pow(Math.max(0,(s-0.82)/0.18),2); // round the bottom corners
+            const r=r0*flare*lock;
+            const x=r*Math.sin(th)*end;
+            const z=zc - r*Math.cos(th) - 0.35*s*s;           // θ=0 is the BACK; sweep further back as it falls
+            pos.push(x,y,z);
+          }
+        }
+        for(let i=0;i<Nth;i++)for(let j=0;j<Ns;j++){ const a=i*row+j,b=a+row,c=a+1,d=b+1;
+          idx.push(a,b,c, c,b,d); }
+        const g=new THREE.BufferGeometry();
+        g.setAttribute("position",new THREE.BufferAttribute(Float32Array.from(pos),3));
+        g.setIndex(idx); g.computeVertexNormals();
+        // a couple of Laplacian passes over the grid for a soft mass
+        return new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:HAIR,roughness:0.88,metalness:0,side:THREE.DoubleSide}));
+      }
       // full-mesh 1-ring adjacency (built once; topology is fixed)
       let headAdj = null;
       function buildHeadAdj(){ const idx=model.indices, n=base.length/3;
@@ -215,6 +246,11 @@
         const hairColMat = new THREE.MeshStandardMaterial({ color:HAIR, roughness:0.85, metalness:0, side:THREE.DoubleSide });
         hairMesh = new THREE.Mesh(hgeo, hairColMat); scene.add(hairMesh);
         rebuildHair(base);
+        // long-hair drape: a sculptural hair MASS (Roman-bust style — smooth
+        // carved locks, not strands) draping from the hairline down the back and
+        // sides past the shoulders, so the silhouette matches the long-haired
+        // references. Procedural surface grid (θ around the back, s down-length).
+        hairDrape = makeHairDrape(); scene.add(hairDrape);
         // eyeballs — SKIN-coloured MATTE smooth domes (Roman-bust style: blank
         // eyeball, no iris/gloss/catchlight). High-poly spheres positioned by
         // reseatEyes() from the eye landmarks (index 0 = R socket, 1 = L).
@@ -262,8 +298,8 @@
       const D=()=>{ const b=window.__box; return (b.max[1]-b.min[1])*1.7; };
       const camFront=()=>camAt(0,0,D()), camQ=()=>camAt(D()*0.6,D()*0.04,D()*0.8), camS=()=>camAt(D()*0.98,0,D()*0.12);
       document.querySelectorAll("[data-cam]").forEach(b=>b.addEventListener("click",()=>({front:camFront,q34:camQ,side:camS})[b.dataset.cam]()));
-      document.getElementById("bMat").onclick=()=>{ normalsOn=!normalsOn; mesh.material=normalsOn?normalMat:clay; if(hairMesh)hairMesh.visible=!normalsOn; };
-      document.getElementById("bHair").onclick=()=>{ hairOn=!hairOn; hairMesh.visible=hairOn; };
+      document.getElementById("bMat").onclick=()=>{ normalsOn=!normalsOn; mesh.material=normalsOn?normalMat:clay; if(hairMesh)hairMesh.visible=!normalsOn&&hairOn; if(hairDrape)hairDrape.visible=!normalsOn&&hairOn; };
+      document.getElementById("bHair").onclick=()=>{ hairOn=!hairOn; hairMesh.visible=hairOn; if(hairDrape)hairDrape.visible=hairOn; };
       document.getElementById("bReset").onclick=()=>{ for(const k of Object.keys(values))values[k]=0; syncSliders(); recompute(); };
       document.getElementById("bDump").onclick=()=>{ const o={}; for(const[k,v]of Object.entries(values))if(v)o[k]=+v.toFixed(2); document.getElementById("preset").value=JSON.stringify(o); };
       document.getElementById("bApply").onclick=()=>{ try{ window.__setParams(JSON.parse(document.getElementById("preset").value||"{}")); }catch(e){ alert("bad JSON"); } };
@@ -280,8 +316,8 @@
         canvas.style.position="fixed"; canvas.style.inset="0"; canvas.style.width=w+"px"; canvas.style.height=h+"px"; canvas.style.zIndex="9999";
         gl.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); };
       window.__cam=(px,py,pz,tx,ty,tz)=>{ cam.position.set(px,py,pz); controls.target.set(tx,ty,tz); cam.lookAt(tx,ty,tz); cam.updateProjectionMatrix(); };
-      window.__mat=(mode)=>{ normalsOn=mode==="normal"; mesh.material=normalsOn?normalMat:clay; if(hairMesh)hairMesh.visible=!normalsOn||false; };
-      window.__hair=(on)=>{ hairOn=on; hairMesh.visible=on; setColors(geo.getAttribute("position").array); };
+      window.__mat=(mode)=>{ normalsOn=mode==="normal"; mesh.material=normalsOn?normalMat:clay; if(hairMesh)hairMesh.visible=!normalsOn&&hairOn; if(hairDrape)hairDrape.visible=!normalsOn&&hairOn; };
+      window.__hair=(on)=>{ hairOn=on; hairMesh.visible=on; if(hairDrape)hairDrape.visible=on; setColors(geo.getAttribute("position").array); };
       window.__probe=()=>{ const A=geo.getAttribute("position").array, L=model.landmarks;
         const g=(k)=>[+A[L[k]*3].toFixed(4),+A[L[k]*3+1].toFixed(4),+A[L[k]*3+2].toFixed(4)];
         return { values:{...values}, outerEyeR:g("outerEyeR"), innerEyeR:g("innerEyeR"), mouthR:g("mouthR"), lowerLip:g("lowerLip"), chinFront:g("chinFront") }; };
