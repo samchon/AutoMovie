@@ -25,6 +25,24 @@ export interface IForgeHairParameters {
 
   /** Side-curtain closure: `0` face fully open, `1` curtains hug the cheeks. */
   curtain: number;
+
+  /**
+   * Gathered-up styling: `0` the back/sides fall by `length`, `1` the drape
+   * lifts to the nape and hugs the skull (bound or braided-up hair). Pair with
+   * {@link buildHairBun} for a chignon.
+   *
+   * @default 0
+   */
+  updo?: number;
+}
+
+/** The chignon controls — preset data like every other hair parameter. */
+export interface IForgeBunParameters {
+  /** Bun size: `0` none (empty part), `1` a full chignon. */
+  size: number;
+
+  /** Height on the occiput: `0` at the nape, `1` near the crown. */
+  height: number;
 }
 
 /**
@@ -158,9 +176,13 @@ export const buildHairShell = (
   const cFrontH = cFront + offset + 0.006;
 
   // tip height per yaw: back/sides fall by `length`, the front sector is the
-  // fringe ruled by `bangs`; the opening half-angle shrinks with `curtain`
+  // fringe ruled by `bangs`; the opening half-angle shrinks with `curtain`;
+  // `updo` lifts the back/side fall toward the nape (gathered-up hair)
   const openHalf = (Math.PI / 180) * (70 - 38 * params.curtain);
-  const backTip = chinY - (0.02 + 0.33 * params.length);
+  const lift = params.updo ?? 0;
+  const napeY = cy - 0.95 * b;
+  const fallTip = chinY - (0.02 + 0.33 * params.length);
+  const backTip = fallTip + (Math.max(napeY, fallTip) - fallTip) * lift;
   const bangTip = topY - (0.004 + (topY - browY) * params.bangs);
   const tipY = (yaw: number): number => {
     const ax = Math.abs(yaw);
@@ -195,15 +217,26 @@ export const buildHairShell = (
       const ring = y > cy ? Math.sqrt(1 - yc * yc) : 1;
       const fall = y > cy ? 0 : (cy - y) / Math.max(1e-6, cy - tip);
       const fr = fringeness(yaw);
-      // fringe hugs the forehead; side/back strands FLARE outward as they
-      // fall (twin-tail / A-line reading), scaled by volume
-      let taper = 1 + (1 - fr) * fall * (0.04 + 0.3 * params.volume);
-      taper *= 1 - fr * v * (offset / (cFront + offset)) * 0.9;
+      // side/back strands FLARE outward as they fall (twin-tail / A-line
+      // reading), scaled by volume — bound hair doesn't flare, so `updo`
+      // suppresses it
+      const flare =
+        1 + (1 - fr) * fall * (0.04 + 0.3 * params.volume) * (1 - 0.85 * lift);
+      // fringe hug pulls tips onto the forehead — but at temple yaws the
+      // tuck must never dive inside the skull (bare-scalp patches): clamp it
+      // to the dome radius there, while the center forehead (face-plate
+      // territory, skull safely behind) keeps the full hug
+      const tuckRaw = 1 - fr * v * (offset / (cFront + offset)) * 0.9;
+      const guard = (a + 0.003) / (aH * flare);
+      const tuck =
+        Math.abs(Math.sin(yaw)) > 0.3 || y > topY
+          ? Math.max(tuckRaw, guard)
+          : tuckRaw;
       const depth = Math.cos(yaw) >= 0 ? cFrontH : cBackH;
       positions.push(
-        aH * Math.sin(yaw) * ring * taper,
+        aH * Math.sin(yaw) * ring * flare * tuck,
         y,
-        depth * Math.cos(yaw) * ring * taper,
+        depth * Math.cos(yaw) * ring * flare * tuck,
       );
     }
   }
@@ -212,6 +245,53 @@ export const buildHairShell = (
     for (let r = 0; r < ROWS; r++) {
       const i0 = s * col + r;
       indices.push(i0, i0 + 1, i0 + col, i0 + 1, i0 + col + 1, i0 + col);
+    }
+  return { positions, indices };
+};
+
+/**
+ * A chignon lobe on the occiput — the gathered mass an `updo` drape ties into,
+ * which a closed loft cannot express (same reasoning as the twin tails).
+ *
+ * A head-flattened spheroid whose center rides the occiput surface at `height`
+ * between the nape and the crown, sunk slightly into the dome so the seam stays
+ * hidden. `size` `0` yields empty parts, so the same preset schema covers
+ * bunless styles.
+ *
+ * @author Samchon
+ */
+export const buildHairBun = (
+  params: IForgeBunParameters,
+  skull: IForgeSkullParameters = NEUTRAL_SKULL,
+  face: number[] = CANONICAL_FACE_POSITIONS,
+): IForgeMeshPart => {
+  if (params.size <= 0) return { positions: [], indices: [] };
+  const { cy, b, cBack } = skullAxes(face, skull);
+  const r0 = 0.016 + 0.038 * params.size;
+  const yC = cy - 0.6 * b + 1.25 * b * params.height;
+  const yn = Math.min(1, Math.max(-1, (yC - cy) / b));
+  // center sits just inside the occiput surface at that height
+  const zC = -cBack * Math.sqrt(1 - yn * yn) - r0 * 0.15;
+  const SEG = 24;
+  const RING = 12;
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (let r = 0; r <= RING; r++) {
+    const phi = (Math.PI * r) / RING;
+    for (let s = 0; s <= SEG; s++) {
+      const th = -Math.PI + (2 * Math.PI * s) / SEG;
+      positions.push(
+        r0 * Math.sin(phi) * Math.sin(th),
+        yC + r0 * Math.cos(phi),
+        zC - 0.8 * r0 * Math.sin(phi) * Math.cos(th), // flattened toward the head
+      );
+    }
+  }
+  const col = SEG + 1;
+  for (let r = 0; r < RING; r++)
+    for (let s = 0; s < SEG; s++) {
+      const i0 = r * col + s;
+      indices.push(i0, i0 + col, i0 + 1, i0 + 1, i0 + col, i0 + col + 1);
     }
   return { positions, indices };
 };

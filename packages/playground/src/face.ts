@@ -3,11 +3,13 @@ import {
   CANONICAL_FACE_INDICES,
   CANONICAL_FACE_POSITIONS,
   CANONICAL_FACE_UVS,
+  IForgeBunParameters,
   IForgeHairParameters,
   IForgeSkullParameters,
   IForgeTailParameters,
   buildEyeShells,
   buildFaceMorphs,
+  buildHairBun,
   buildHairShell,
   buildHairTails,
   buildSkullShell,
@@ -100,6 +102,8 @@ app.innerHTML = `
       <div id="skull"></div>
       <h2>hair</h2>
       <div id="hair"></div>
+      <h2>bun</h2>
+      <div id="bun"></div>
       <h2>tails</h2>
       <div id="tails"></div>
       <h2>colors</h2>
@@ -402,11 +406,12 @@ const rebuildSkull = (): void => {
 };
 rebuildSkull();
 
-const hairParams: IForgeHairParameters = {
+const hairParams: Required<IForgeHairParameters> = {
   length: 0.4,
   volume: 0.4,
   bangs: 0.5,
   curtain: 0.5,
+  updo: 0,
 };
 const hairMaterial = new THREE.MeshStandardMaterial({
   color: colors.hair,
@@ -470,6 +475,7 @@ const applyShellLighting = (): void => {
   hairUnlit.color.copy(hairMaterial.color);
   if (skullMesh) skullMesh.material = skinModeOn ? skullUnlit : skullMaterial;
   if (hairMesh) hairMesh.material = skinModeOn ? hairUnlit : hairMaterial;
+  if (bunMesh) bunMesh.material = skinModeOn ? hairUnlit : hairMaterial;
 };
 let hairMesh: THREE.Mesh | null = null;
 const rebuildHair = (): void => {
@@ -497,6 +503,33 @@ const tailParams: IForgeTailParameters = {
   spread: 0.4,
   width: 0.5,
 };
+const bunParams: IForgeBunParameters = { size: 0, height: 0.5 };
+let bunMesh: THREE.Mesh | null = null;
+const rebuildBun = (): void => {
+  if (bunMesh) {
+    scene.remove(bunMesh);
+    bunMesh.geometry.dispose();
+    bunMesh = null;
+  }
+  const part = buildHairBun(bunParams, skullParams);
+  if (part.positions.length === 0) return;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(part.positions, 3),
+  );
+  g.setIndex(part.indices);
+  g.computeVertexNormals();
+  paintHairStrands(g);
+  // brighten the lobe a touch so it separates from the shell back-on
+  {
+    const c = g.getAttribute("color");
+    for (let i = 0; i < c.count * 3; i++) c.array[i] = c.array[i] * 2.0 + 0.12;
+  }
+  bunMesh = new THREE.Mesh(g, skinModeOn ? hairUnlit : hairMaterial);
+  scene.add(bunMesh);
+};
+rebuildBun();
 let tailMeshes: THREE.Mesh[] = [];
 const rebuildTails = (): void => {
   for (const m of tailMeshes) {
@@ -624,6 +657,7 @@ const refresh = (): void => {
       face,
       skull: skullParams,
       hair: hairParams,
+      bun: bunParams,
       tails: tailParams,
       colors,
     },
@@ -692,6 +726,15 @@ const hairSliders = (
   }),
 );
 
+const bunSliders = (
+  Object.keys(bunParams) as (keyof IForgeBunParameters)[]
+).map((k) =>
+  slider("#bun", k, 0, 1, bunParams[k], (v) => {
+    bunParams[k] = v;
+    rebuildBun();
+  }),
+);
+
 const tailSliders = (
   Object.keys(tailParams) as (keyof IForgeTailParameters)[]
 ).map((k) =>
@@ -723,7 +766,8 @@ interface IPreset {
   face: Partial<Record<AutoFilmFaceParameterName, number>>;
   data?: { identity: string; skin: string; head: string };
   skull: IForgeSkullParameters;
-  hair: IForgeHairParameters;
+  hair: Required<IForgeHairParameters>;
+  bun: IForgeBunParameters;
   tails: IForgeTailParameters;
   colors: typeof colors;
 }
@@ -731,7 +775,8 @@ const PRESETS: Record<string, IPreset> = {
   neutral: {
     face: {},
     skull: { width: 0, crown: 0, depth: 0 },
-    hair: { length: 0.4, volume: 0.4, bangs: 0.5, curtain: 0.5 },
+    hair: { length: 0.4, volume: 0.4, bangs: 0.5, curtain: 0.5, updo: 0 },
+    bun: { size: 0, height: 0.5 },
     tails: { length: 0, height: 0.4, spread: 0.4, width: 0.5 },
     colors: {
       skin: "#e8c4ae",
@@ -769,7 +814,8 @@ const PRESETS: Record<string, IPreset> = {
       head: "/models/hero1-head.glb",
     },
     skull: { width: 0.1, crown: 0.15, depth: 0.05 },
-    hair: { length: 0.3, volume: 0.55, bangs: 1, curtain: 0.35 },
+    hair: { length: 0.3, volume: 0.55, bangs: 1, curtain: 0.35, updo: 0 },
+    bun: { size: 0, height: 0.5 },
     tails: { length: 0.75, height: 0.3, spread: 0.45, width: 0.65 },
     colors: {
       skin: "#f2d3c2",
@@ -805,7 +851,8 @@ const PRESETS: Record<string, IPreset> = {
       head: "/models/hero2-head.glb",
     },
     skull: { width: 0.05, crown: 0.1, depth: 0.1 },
-    hair: { length: 0.15, volume: 0.5, bangs: 0.15, curtain: 0.25 },
+    hair: { length: 0.35, volume: 0.6, bangs: 0.2, curtain: 0.3, updo: 1 },
+    bun: { size: 0.9, height: 0.3 },
     tails: { length: 0, height: 0.4, spread: 0.4, width: 0.5 },
     colors: {
       skin: "#f0cdb9",
@@ -841,7 +888,8 @@ const PRESETS: Record<string, IPreset> = {
       head: "/models/hero3-head.glb",
     },
     skull: { width: 0, crown: 0.1, depth: 0.05 },
-    hair: { length: 1, volume: 0.45, bangs: 0.25, curtain: 0.55 },
+    hair: { length: 1, volume: 0.45, bangs: 0.25, curtain: 0.55, updo: 0 },
+    bun: { size: 0, height: 0.5 },
     tails: { length: 0, height: 0.4, spread: 0.4, width: 0.5 },
     colors: {
       skin: "#efcab5",
@@ -876,6 +924,13 @@ const applyPreset = (p: IPreset): void => {
       p.hair[k].toFixed(2);
   });
   rebuildHair();
+  (Object.keys(p.bun) as (keyof IForgeBunParameters)[]).forEach((k, i) => {
+    bunParams[k] = p.bun[k];
+    bunSliders[i]!.value = String(p.bun[k]);
+    bunSliders[i]!.closest(".row")!.querySelector(".v")!.textContent =
+      p.bun[k].toFixed(2);
+  });
+  rebuildBun();
   (Object.keys(p.tails) as (keyof IForgeTailParameters)[]).forEach((k, i) => {
     tailParams[k] = p.tails[k];
     tailSliders[i]!.value = String(p.tails[k]);
@@ -968,6 +1023,7 @@ loadPhotoHead("/models/hero1-head.glb");
   faceMesh.visible = !on;
   if (skullMesh) skullMesh.visible = !on;
   if (hairMesh) hairMesh.visible = !on;
+  if (bunMesh) bunMesh.visible = !on;
   for (const m of tailMeshes) m.visible = !on;
   for (const m of eyeMeshes) m.visible = false;
 };
