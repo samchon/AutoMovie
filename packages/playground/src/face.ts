@@ -623,16 +623,23 @@ const NEST: Record<
 > = {
   faceWidth: (f, w) => (f.width = w),
   faceLength: (f, w) => (f.length = w),
-  cheekFullness: (f, w) => ((f.cheeks ??= {}).fullness = w),
+  cheekFullnessR: (f, w) => (((f.cheeks ??= {}).right ??= {}).fullness = w),
+  cheekFullnessL: (f, w) => (((f.cheeks ??= {}).left ??= {}).fullness = w),
   jawWidth: (f, w) => ((f.jaw ??= {}).width = w),
   chinLength: (f, w) => (((f.jaw ??= {}).chin ??= {}).length = w),
   chinProtrusion: (f, w) => (((f.jaw ??= {}).chin ??= {}).protrusion = w),
-  eyeSize: (f, w) => ((f.eyes ??= {}).size = w),
-  eyeWidth: (f, w) => ((f.eyes ??= {}).width = w),
-  eyeSpacing: (f, w) => ((f.eyes ??= {}).spacing = w),
-  eyeHeight: (f, w) => ((f.eyes ??= {}).height = w),
-  eyeTilt: (f, w) => ((f.eyes ??= {}).tilt = w),
-  browHeight: (f, w) => ((f.brows ??= {}).height = w),
+  eyeSizeR: (f, w) => (((f.eyes ??= {}).right ??= {}).size = w),
+  eyeSizeL: (f, w) => (((f.eyes ??= {}).left ??= {}).size = w),
+  eyeWidthR: (f, w) => (((f.eyes ??= {}).right ??= {}).width = w),
+  eyeWidthL: (f, w) => (((f.eyes ??= {}).left ??= {}).width = w),
+  eyeSpacingR: (f, w) => (((f.eyes ??= {}).right ??= {}).offset = w),
+  eyeSpacingL: (f, w) => (((f.eyes ??= {}).left ??= {}).offset = w),
+  eyeHeightR: (f, w) => (((f.eyes ??= {}).right ??= {}).height = w),
+  eyeHeightL: (f, w) => (((f.eyes ??= {}).left ??= {}).height = w),
+  eyeTiltR: (f, w) => (((f.eyes ??= {}).right ??= {}).tilt = w),
+  eyeTiltL: (f, w) => (((f.eyes ??= {}).left ??= {}).tilt = w),
+  browHeightR: (f, w) => (((f.brows ??= {}).right ??= {}).height = w),
+  browHeightL: (f, w) => (((f.brows ??= {}).left ??= {}).height = w),
   noseLength: (f, w) => ((f.nose ??= {}).length = w),
   noseWidth: (f, w) => ((f.nose ??= {}).width = w),
   noseProjection: (f, w) => ((f.nose ??= {}).projection = w),
@@ -648,6 +655,33 @@ const refresh = (): void => {
       NEST[parameter](face, weight);
       count++;
     }
+  // equal left/right leaves fold into the symmetric base ('both', or the
+  // pair-level 'spacing' for the eye offsets) so symmetric edits emit the
+  // document an LLM would naturally write
+  for (const [set, pairLeaf] of [
+    [face.eyes, "spacing"],
+    [face.brows, null],
+    [face.cheeks, null],
+  ] as const) {
+    if (!set?.left || !set.right) continue;
+    const L = set.left as Record<string, number | undefined>;
+    const R = set.right as Record<string, number | undefined>;
+    for (const leaf of Object.keys(L))
+      if (L[leaf] !== undefined && L[leaf] === R[leaf]) {
+        if (leaf === "offset" && pairLeaf) {
+          (set as Record<string, unknown>)[pairLeaf] = L[leaf];
+        } else {
+          const both = ((
+            set as { both?: Record<string, number | undefined> }
+          ).both ??= {});
+          both[leaf] = L[leaf];
+        }
+        delete L[leaf];
+        delete R[leaf];
+      }
+    if (Object.keys(L).length === 0) delete set.left;
+    if (Object.keys(R).length === 0) delete set.right;
+  }
   const result = validateFaceResult(face);
   status.textContent = result.success
     ? `valid IAutoFilmFace — ${count} trait(s) set`
@@ -794,13 +828,20 @@ const PRESETS: Record<string, IPreset> = {
       jawWidth: -0.415,
       chinLength: -1.056,
       chinProtrusion: -0.75,
-      cheekFullness: 0.288,
-      eyeSize: 2,
-      eyeWidth: -1.904,
-      eyeSpacing: 0.288,
-      eyeHeight: -0.123,
-      eyeTilt: 1.237,
-      browHeight: 0.18,
+      cheekFullnessR: 0.288,
+      cheekFullnessL: 0.288,
+      eyeSizeR: 2,
+      eyeSizeL: 2,
+      eyeWidthR: -1.904,
+      eyeWidthL: -1.904,
+      eyeSpacingR: 0.288,
+      eyeSpacingL: 0.288,
+      eyeHeightR: -0.123,
+      eyeHeightL: -0.123,
+      eyeTiltR: 1.237,
+      eyeTiltL: 1.237,
+      browHeightR: 0.18,
+      browHeightL: 0.18,
       noseLength: 0.203,
       noseWidth: 0.239,
       noseProjection: -1.171,
@@ -831,13 +872,20 @@ const PRESETS: Record<string, IPreset> = {
       jawWidth: -0.627,
       chinLength: -1.085,
       chinProtrusion: -0.743,
-      cheekFullness: 0.404,
-      eyeSize: 1.809,
-      eyeWidth: -1.224,
-      eyeSpacing: 0.249,
-      eyeHeight: 0.02,
-      eyeTilt: 1.041,
-      browHeight: -0.045,
+      cheekFullnessR: 0.404,
+      cheekFullnessL: 0.404,
+      eyeSizeR: 1.809,
+      eyeSizeL: 1.809,
+      eyeWidthR: -1.224,
+      eyeWidthL: -1.224,
+      eyeSpacingR: 0.249,
+      eyeSpacingL: 0.249,
+      eyeHeightR: 0.02,
+      eyeHeightL: 0.02,
+      eyeTiltR: 1.041,
+      eyeTiltL: 1.041,
+      browHeightR: -0.045,
+      browHeightL: -0.045,
       noseLength: -0.276,
       noseWidth: 0.822,
       noseProjection: -1.073,
@@ -868,13 +916,20 @@ const PRESETS: Record<string, IPreset> = {
       jawWidth: -0.418,
       chinLength: -0.811,
       chinProtrusion: -2,
-      cheekFullness: 0.539,
-      eyeSize: 1.751,
-      eyeWidth: -1.3,
-      eyeSpacing: 0.263,
-      eyeHeight: 0.077,
-      eyeTilt: 0.997,
-      browHeight: -0.124,
+      cheekFullnessR: 0.539,
+      cheekFullnessL: 0.539,
+      eyeSizeR: 1.751,
+      eyeSizeL: 1.751,
+      eyeWidthR: -1.3,
+      eyeWidthL: -1.3,
+      eyeSpacingR: 0.263,
+      eyeSpacingL: 0.263,
+      eyeHeightR: 0.077,
+      eyeHeightL: 0.077,
+      eyeTiltR: 0.997,
+      eyeTiltL: 0.997,
+      browHeightR: -0.124,
+      browHeightL: -0.124,
       noseLength: -0.05,
       noseWidth: 0.568,
       noseProjection: -1.316,
