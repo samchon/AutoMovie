@@ -307,6 +307,12 @@ const paintFace = (): void => {
   // transparent max keeps skin showing through so it reads as hair on skin
   const browW = regionWeight(pos, BROWS, 0.0026);
   const eyeW = regionWeight(pos, EYES, 0.0022);
+  // upper-lid / orbital socket shadow: real eyes sit in a recess that the
+  // flat clay misses entirely. A soft darkening along the upper lid line
+  // gives the eye depth (fake AO) — kept subtle so it reads as shadow, not
+  // makeup.
+  const SOCKET = [159, 160, 158, 157, 386, 385, 387, 388];
+  const socketW = regionWeight(pos, SOCKET, 0.0028);
   const skin = new THREE.Color(colors.skin);
   const lips = new THREE.Color(colors.lips);
   // brow = hair tinted toward a warm brown, not near-black hair·0.7
@@ -321,6 +327,7 @@ const paintFace = (): void => {
       .lerp(lips, lipW[i]!)
       .lerp(brow, Math.min(0.8, browW[i]!))
       .lerp(eye, 0.45 * eyeW[i]!);
+    if (socketW[i]! > 0.02) c.multiplyScalar(1 - 0.28 * socketW[i]!); // socket AO
     const y = pos[i * 3 + 1]!;
     // feather the LATERAL boundary (temples/cheeks/jaw-sides — where the flat
     // plate edge meets the skull at a steep angle and shows as a ledge), but
