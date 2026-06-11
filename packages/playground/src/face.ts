@@ -198,6 +198,82 @@ for (let t = 0; t < CANONICAL_FACE_INDICES.length; t += 3) {
   faceIndices.push(...tri);
 }
 faceGeometry.setIndex(faceIndices); // cut by default; photo mode restores covers
+
+// 1-ring adjacency over the FULL triangulation (for the concavity AO below) —
+// built once; the topology never changes, only the morphed positions do.
+const ADJ: number[][] = Array.from({ length: 468 }, () => []);
+{
+  const seen = new Set<number>();
+  for (let t = 0; t < CANONICAL_FACE_INDICES.length; t += 3) {
+    const tri = [
+      CANONICAL_FACE_INDICES[t]!,
+      CANONICAL_FACE_INDICES[t + 1]!,
+      CANONICAL_FACE_INDICES[t + 2]!,
+    ];
+    for (let a = 0; a < 3; a++)
+      for (let b = 0; b < 3; b++) {
+        if (a === b) continue;
+        const key = tri[a]! * 468 + tri[b]!;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        ADJ[tri[a]!]!.push(tri[b]!);
+      }
+  }
+}
+/**
+ * Cheap geometry-driven ambient occlusion: a concave vertex (a valley — the
+ * alar crease, nasolabial fold, under-nose, mentolabial groove, eye socket)
+ * sits below the average of its neighbours along the outward normal, so light
+ * is partly blocked there. Darkening those vertices is what turns flat clay
+ * into a face that reads as having recesses. Adapts to morphs automatically.
+ */
+const concavityAO = (pos: number[]): Float32Array => {
+  // per-vertex normal from the cut triangulation
+  const nx = new Float32Array(468);
+  const ny = new Float32Array(468);
+  const nz = new Float32Array(468);
+  for (let t = 0; t < faceIndices.length; t += 3) {
+    const a = faceIndices[t]!;
+    const b = faceIndices[t + 1]!;
+    const c = faceIndices[t + 2]!;
+    const ux = pos[b * 3]! - pos[a * 3]!;
+    const uy = pos[b * 3 + 1]! - pos[a * 3 + 1]!;
+    const uz = pos[b * 3 + 2]! - pos[a * 3 + 2]!;
+    const vx = pos[c * 3]! - pos[a * 3]!;
+    const vy = pos[c * 3 + 1]! - pos[a * 3 + 1]!;
+    const vz = pos[c * 3 + 2]! - pos[a * 3 + 2]!;
+    const fx = uy * vz - uz * vy;
+    const fy = uz * vx - ux * vz;
+    const fz = ux * vy - uy * vx;
+    for (const i of [a, b, c]) {
+      nx[i]! += fx;
+      ny[i]! += fy;
+      nz[i]! += fz;
+    }
+  }
+  const ao = new Float32Array(468);
+  for (let i = 0; i < 468; i++) {
+    const nb = ADJ[i]!;
+    if (nb.length === 0) continue;
+    let mx = 0;
+    let my = 0;
+    let mz = 0;
+    for (const j of nb) {
+      mx += pos[j * 3]!;
+      my += pos[j * 3 + 1]!;
+      mz += pos[j * 3 + 2]!;
+    }
+    // Laplacian: mean-neighbour minus vertex
+    const lx = mx / nb.length - pos[i * 3]!;
+    const ly = my / nb.length - pos[i * 3 + 1]!;
+    const lz = mz / nb.length - pos[i * 3 + 2]!;
+    const nl = Math.hypot(nx[i]!, ny[i]!, nz[i]!) || 1;
+    // concave when the Laplacian points along the outward normal
+    const concav = (lx * nx[i]! + ly * ny[i]! + lz * nz[i]!) / nl;
+    ao[i] = Math.max(0, Math.min(1, concav / 0.0012));
+  }
+  return ao;
+};
 // glTF-style DELTA morph targets (three defaults to absolute ones)
 faceGeometry.morphTargetsRelative = true;
 const identityDelta = new Float32Array(CANONICAL_FACE_POSITIONS.length);
@@ -307,12 +383,10 @@ const paintFace = (): void => {
   // transparent max keeps skin showing through so it reads as hair on skin
   const browW = regionWeight(pos, BROWS, 0.0026);
   const eyeW = regionWeight(pos, EYES, 0.0022);
-  // upper-lid / orbital socket shadow: real eyes sit in a recess that the
-  // flat clay misses entirely. A soft darkening along the upper lid line
-  // gives the eye depth (fake AO) — kept subtle so it reads as shadow, not
-  // makeup.
-  const SOCKET = [159, 160, 158, 157, 386, 385, 387, 388];
-  const socketW = regionWeight(pos, SOCKET, 0.0028);
+  // geometry-driven concavity AO: darkens every recess (alar crease,
+  // nasolabial, under-nose, mentolabial, eye socket) so the flat clay reads
+  // as a face with depth, instead of hand-picking each fold.
+  const ao = concavityAO(pos);
   const skin = new THREE.Color(colors.skin);
   const lips = new THREE.Color(colors.lips);
   // brow = hair tinted toward a warm brown, not near-black hair·0.7
@@ -327,7 +401,7 @@ const paintFace = (): void => {
       .lerp(lips, lipW[i]!)
       .lerp(brow, Math.min(0.8, browW[i]!))
       .lerp(eye, 0.45 * eyeW[i]!);
-    if (socketW[i]! > 0.02) c.multiplyScalar(1 - 0.28 * socketW[i]!); // socket AO
+    c.multiplyScalar(1 - 0.32 * ao[i]!); // concavity ambient occlusion
     const y = pos[i * 3 + 1]!;
     // feather the LATERAL boundary (temples/cheeks/jaw-sides — where the flat
     // plate edge meets the skull at a steep angle and shows as a ledge), but
