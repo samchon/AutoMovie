@@ -268,9 +268,11 @@ const concavityAO = (pos: number[]): Float32Array => {
     const ly = my / nb.length - pos[i * 3 + 1]!;
     const lz = mz / nb.length - pos[i * 3 + 2]!;
     const nl = Math.hypot(nx[i]!, ny[i]!, nz[i]!) || 1;
-    // concave when the Laplacian points along the outward normal
+    // SIGNED curvature: Laplacian along the outward normal — positive in a
+    // valley (concave, occluded → darken), negative on a ridge (convex,
+    // catches light → brighten). Full curvature shading, not just AO.
     const concav = (lx * nx[i]! + ly * ny[i]! + lz * nz[i]!) / nl;
-    ao[i] = Math.max(0, Math.min(1, concav / 0.0012));
+    ao[i] = Math.max(-1, Math.min(1, concav / 0.0012));
   }
   return ao;
 };
@@ -401,7 +403,9 @@ const paintFace = (): void => {
       .lerp(lips, lipW[i]!)
       .lerp(brow, Math.min(0.8, browW[i]!))
       .lerp(eye, 0.45 * eyeW[i]!);
-    c.multiplyScalar(1 - 0.32 * ao[i]!); // concavity ambient occlusion
+    // valleys occlude (darken), ridges catch light (brighten) — clay → skin
+    const k = ao[i]!;
+    c.multiplyScalar(k >= 0 ? 1 - 0.32 * k : 1 - 0.12 * k);
     const y = pos[i * 3 + 1]!;
     // feather the LATERAL boundary (temples/cheeks/jaw-sides — where the flat
     // plate edge meets the skull at a steep angle and shows as a ledge), but
