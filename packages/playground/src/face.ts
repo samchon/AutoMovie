@@ -375,7 +375,7 @@ const paintFace = (): void => {
   // tighter brow band (was 0.004 → a thick dark caterpillar that merged
   // across the bridge into a unibrow); narrower sigma + a capped, partly
   // transparent max keeps skin showing through so it reads as hair on skin
-  const browW = regionWeight(pos, BROWS, 0.0026);
+  const browW = regionWeight(pos, BROWS, 0.0022);
   const eyeW = regionWeight(pos, EYES, 0.0022);
   // geometry-driven concavity AO: darkens every recess (alar crease,
   // nasolabial, under-nose, mentolabial, eye socket) so the flat clay reads
@@ -385,19 +385,19 @@ const paintFace = (): void => {
   const lips = new THREE.Color(colors.lips);
   // brow = hair tinted toward a warm brown, not near-black hair·0.7
   const brow = new THREE.Color(colors.hair).lerp(
-    new THREE.Color("#6b4a32"),
-    0.4,
+    new THREE.Color("#7a5740"),
+    0.55,
   );
   const eye = new THREE.Color("#4a3a30");
   const c = new THREE.Color();
   for (let i = 0; i < 468; i++) {
     c.copy(skin)
       .lerp(lips, lipW[i]!)
-      .lerp(brow, Math.min(0.5, browW[i]!))
+      .lerp(brow, Math.min(0.38, browW[i]!))
       .lerp(eye, 0.3 * eyeW[i]!);
     // valleys occlude (darken), ridges catch light (brighten) — clay → skin
     const k = ao[i]!;
-    c.multiplyScalar(k >= 0 ? 1 - 0.13 * k : 1 - 0.05 * k);
+    c.multiplyScalar(k >= 0 ? 1 - 0.1 * k : 1);
     // The face plate is OPAQUE. An earlier alpha feather of the oval boundary
     // dissolved the temple ledge but revealed the conformed skull's flat front
     // plateau as a lit rectangular patch on the forehead — worse than the

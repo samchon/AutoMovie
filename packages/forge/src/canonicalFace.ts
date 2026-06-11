@@ -264,6 +264,57 @@ const averageBeautyBase = (raw: number[]): number[] => {
     out[i * 3]! += W * 0.36 * (raw[i * 3]! - c[0]) * gv;
     out[i * 3 + 1]! += W * 0.36 * (raw[i * 3 + 1]! - c[1]) * gv;
   }
+
+  // The raw MediaPipe canonical carries a furrowed glabella — a vertical
+  // procerus ridge between the brows that reads as a permanent scowl, the
+  // opposite of a relaxed attractive average. Laplacian-smooth the
+  // glabella/inner-brow/nose-root region (gaussian-weighted toward each
+  // vertex's 1-ring mean) to relax the furrow into a smooth brow.
+  const GLABELLA = [8, 9, 168, 6, 197, 195, 5, 107, 336, 55, 285, 9];
+  const adj: number[][] = Array.from({ length: 468 }, () => []);
+  for (let t = 0; t < CANONICAL_FACE_INDICES.length; t += 3) {
+    const tri = [
+      CANONICAL_FACE_INDICES[t]!,
+      CANONICAL_FACE_INDICES[t + 1]!,
+      CANONICAL_FACE_INDICES[t + 2]!,
+    ];
+    for (let a = 0; a < 3; a++)
+      for (let bb = 0; bb < 3; bb++)
+        if (a !== bb && !adj[tri[a]!]!.includes(tri[bb]!))
+          adj[tri[a]!]!.push(tri[bb]!);
+  }
+  const gw = new Float32Array(468); // smoothing weight per vertex
+  const gs = 0.018; // glabella region radius (m)
+  for (let i = 0; i < 468; i++) {
+    let best = Infinity;
+    for (const sd of GLABELLA) {
+      const d2 =
+        (raw[i * 3]! - raw[sd * 3]!) ** 2 +
+        (raw[i * 3 + 1]! - raw[sd * 3 + 1]!) ** 2 +
+        (raw[i * 3 + 2]! - raw[sd * 3 + 2]!) ** 2;
+      if (d2 < best) best = d2;
+    }
+    gw[i] = Math.exp(-best / (2 * gs * gs));
+  }
+  for (let iter = 0; iter < 6; iter++) {
+    const src = out.slice();
+    for (let i = 0; i < 468; i++) {
+      if (gw[i]! < 0.02 || adj[i]!.length === 0) continue;
+      let mx = 0,
+        my = 0,
+        mz = 0;
+      for (const j of adj[i]!) {
+        mx += src[j * 3]!;
+        my += src[j * 3 + 1]!;
+        mz += src[j * 3 + 2]!;
+      }
+      const n = adj[i]!.length;
+      const w = 0.5 * gw[i]!; // blend toward neighbour mean
+      out[i * 3]! += w * (mx / n - src[i * 3]!);
+      out[i * 3 + 1]! += w * (my / n - src[i * 3 + 1]!);
+      out[i * 3 + 2]! += w * (mz / n - src[i * 3 + 2]!);
+    }
+  }
   return out;
 };
 
@@ -272,10 +323,11 @@ const averageBeautyBase = (raw: number[]): number[] => {
  * MediaPipe base corrected to the attractive average (see
  * {@link averageBeautyBase}). This is the neutral the editor's `0` resolves to
  * and the base every morph and identity residual is computed against.
+ *
+ * Initialised at the END of this module (after CANONICAL_FACE_INDICES, which
+ * averageBeautyBase needs for the glabella smoothing) to avoid a TDZ.
  */
-export const CANONICAL_FACE_POSITIONS: number[] = averageBeautyBase(
-  CANONICAL_FACE_POSITIONS_RAW,
-);
+export let CANONICAL_FACE_POSITIONS: number[] = [];
 
 /** Texture coordinates (uv pairs, top-left origin), aligned to positions. */
 export const CANONICAL_FACE_UVS: number[] = [
@@ -574,3 +626,8 @@ export const CANONICAL_FACE_INDICES: number[] = [
   402, 318, 311, 178, 81, 88, 310, 311, 318, 80, 88, 81, 318, 324, 310, 88, 80,
   95, 415, 310, 324, 191, 95, 80,
 ];
+
+// Computed last: averageBeautyBase reads CANONICAL_FACE_INDICES (above) for
+// the glabella smoothing, so the base is assembled only once all source
+// arrays exist.
+CANONICAL_FACE_POSITIONS = averageBeautyBase(CANONICAL_FACE_POSITIONS_RAW);
