@@ -95,8 +95,8 @@
           // almond dome: wider than tall, front ≈ flush so it catches light as a
           // bright open eye (the sculpted orbital rim frames it). The flattened
           // height reads as an almond aperture rather than a round marble.
-          e.mesh.scale.set(rad*1.06, rad*0.68, rad*0.66);
-          e.mesh.position.set(ctr[0], ctr[1], lidZ-0.015-rad*0.66);
+          e.mesh.scale.set(rad*1.05, rad*0.74, rad*0.66);
+          e.mesh.position.set(ctr[0], ctr[1], lidZ-0.005-rad*0.66);
         });
       }
       let hairAdj = null;
@@ -177,22 +177,22 @@
         P = P || base; const n = P.length/3;
         const col = geo.getAttribute("color") ? geo.getAttribute("color").array : new Float32Array(P.length);
         const N = geo.getAttribute("normal").array;
-        for (let i=0;i<n;i++){
-          const x=P[i*3],y=P[i*3+1],z=P[i*3+2];
-          const hair = hairOn && hairCovered(x,y,z);
-          // pure form: skin + hair only. Painted brows/lips/lashes read as ugly
-          // smears at this resolution AND violate "살색만으로" — removed; the
-          // geometry-driven AO below is the only shading.
-          const baseC = hair?HAIR_L : SKIN_L;
-          let r=baseC.r, g=baseC.g, b=baseC.b;
-          if(!hair && headAdj){ const nb=headAdj[i];
-            if(nb && nb.length>1){ let mx=0,my=0,mz=0; for(const j of nb){mx+=P[j*3];my+=P[j*3+1];mz+=P[j*3+2];}
-              mx=mx/nb.length-x; my=my/nb.length-y; mz=mz/nb.length-z;        // Laplacian
-              const along=mx*N[i*3]+my*N[i*3+1]+mz*N[i*3+2];                   // >0 = concave valley
-              const ao=Math.max(0.87, 1-8*Math.max(0,along));                 // gentle valley shading (soft, no splotch)
-              r*=ao; g*=ao; b*=ao; } }
-          col[i*3]=r;col[i*3+1]=g;col[i*3+2]=b;
-        }
+        // 1) concavity (valley) term per vertex from the Laplacian along normal
+        const ao = new Float32Array(n).fill(1);
+        if(headAdj) for(let i=0;i<n;i++){ const nb=headAdj[i]; if(!nb||nb.length<2)continue;
+          let mx=0,my=0,mz=0; for(const j of nb){mx+=P[j*3];my+=P[j*3+1];mz+=P[j*3+2];}
+          mx=mx/nb.length-P[i*3]; my=my/nb.length-P[i*3+1]; mz=mz/nb.length-P[i*3+2];
+          const along=mx*N[i*3]+my*N[i*3+1]+mz*N[i*3+2];                       // >0 = concave valley
+          ao[i]=Math.max(0.85, 1-7*Math.max(0,along)); }
+        // 2) smooth the AO field over the 1-ring → gentle form shading, no
+        // tessellation blotches/smears (pure form, not a dirty texture)
+        if(headAdj) for(let pass=0;pass<2;pass++){ const src=ao.slice();
+          for(let i=0;i<n;i++){ const nb=headAdj[i]; if(!nb||nb.length<1)continue;
+            let s=src[i]; for(const j of nb)s+=src[j]; ao[i]=s/(nb.length+1); } }
+        // 3) apply: skin/hair base colour × smoothed AO
+        for(let i=0;i<n;i++){ const hair=hairOn && hairCovered(P[i*3],P[i*3+1],P[i*3+2]);
+          const c=hair?HAIR_L:SKIN_L, a=hair?1:ao[i];
+          col[i*3]=c.r*a; col[i*3+1]=c.g*a; col[i*3+2]=c.b*a; }
         if(!geo.getAttribute("color")) geo.setAttribute("color", new THREE.BufferAttribute(col,3));
         else geo.getAttribute("color").needsUpdate=true;
       }
