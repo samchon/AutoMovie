@@ -280,14 +280,27 @@ const colors = {
   irisRight: "#3a2a20",
   irisLeft: "#3a2a20",
 };
+// RGBA: the alpha channel feathers the face-plate's upper/lateral boundary so
+// its edge DISSOLVES into the skull behind it instead of ending as a hard
+// wall ("mask on a dome"). The same proven trick the photographed head uses.
 const colorAttr = new THREE.Float32BufferAttribute(
-  new Float32Array(468 * 3),
-  3,
+  new Float32Array(468 * 4),
+  4,
 );
 faceGeometry.setAttribute("color", colorAttr);
+// face-oval boundary ring (MediaPipe) — the plate edge to feather/weld
+const FACE_OVAL = [
+  10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378,
+  400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21,
+  54, 103, 67, 109,
+];
 const paintFace = (): void => {
   const pos = morphedFacePositions();
   const lipW = regionWeight(pos, LIPS, 0.004);
+  // feather band along the oval boundary, gated OFF near the chin/jaw bottom
+  // (nothing behind it but neck/bust — fading there would show background)
+  const ovalW = regionWeight(pos, FACE_OVAL, 0.006);
+  const chinY = pos[152 * 3 + 1]!;
   // tighter brow band (was 0.004 → a thick dark caterpillar that merged
   // across the bridge into a unibrow); narrower sigma + a capped, partly
   // transparent max keeps skin showing through so it reads as hair on skin
@@ -307,7 +320,10 @@ const paintFace = (): void => {
       .lerp(lips, lipW[i]!)
       .lerp(brow, Math.min(0.8, browW[i]!))
       .lerp(eye, 0.45 * eyeW[i]!);
-    colorAttr.setXYZ(i, c.r, c.g, c.b);
+    const y = pos[i * 3 + 1]!;
+    const gate = Math.max(0, Math.min(1, (y - (chinY + 0.03)) / 0.04));
+    const alpha = 1 - 0.92 * ovalW[i]! * gate;
+    colorAttr.setXYZW(i, c.r, c.g, c.b, alpha);
   }
   colorAttr.needsUpdate = true;
 };
@@ -317,6 +333,7 @@ const faceMaterial = new THREE.MeshStandardMaterial({
   roughness: 0.62, // a faint sheen reads as skin; full-matte reads as clay
   metalness: 0,
   side: THREE.DoubleSide,
+  transparent: true, // the RGBA alpha feathers the plate edge into the skull
 });
 const faceMesh = new THREE.Mesh<
   THREE.BufferGeometry,
@@ -411,12 +428,51 @@ const skullMaterial = new THREE.MeshStandardMaterial({
 });
 const skullUnlit = new THREE.MeshBasicMaterial({ color: colors.skin });
 let skullMesh: THREE.Mesh | null = null;
-const rebuildSkull = (): void => {
+/**
+ * Pull the skull's front-hemisphere vertices that fall inside the face-oval
+ * footprint up to just behind the face surface, so the feathered face plate
+ * dissolves onto skin (the cranium) rather than into a gap. IDW over the oval
+ * ring; outside the rim it eases back to the bare ellipsoid.
+ */
+const conformSkullFront = (positions: number[], facePos: number[]): void => {
+  const oval = FACE_OVAL.map((i) => [
+    facePos[i * 3]!,
+    facePos[i * 3 + 1]!,
+    facePos[i * 3 + 2]!,
+  ]);
+  const inside = (x: number, y: number): boolean => {
+    let hit = false;
+    for (let i = 0, j = oval.length - 1; i < oval.length; j = i++) {
+      const yi = oval[i]![1]!;
+      const yj = oval[j]![1]!;
+      const xi = oval[i]![0]!;
+      const xj = oval[j]![0]!;
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi)
+        hit = !hit;
+    }
+    return hit;
+  };
+  for (let v = 0; v < positions.length; v += 3) {
+    const x = positions[v]!;
+    const y = positions[v + 1]!;
+    if (positions[v + 2]! <= 0 || !inside(x, y)) continue;
+    let wSum = 0;
+    let zSum = 0;
+    for (const [ox, oy, oz] of oval) {
+      const w = 1 / (((ox! - x) ** 2 + (oy! - y) ** 2) ** 2 + 1e-12);
+      wSum += w;
+      zSum += w * oz!;
+    }
+    positions[v + 2] = Math.max(positions[v + 2]!, zSum / wSum - 0.004);
+  }
+};
+const rebuildSkull = (facePos: number[] = CANONICAL_FACE_POSITIONS): void => {
   if (skullMesh) {
     scene.remove(skullMesh);
     skullMesh.geometry.dispose();
   }
   const skull = buildSkullShell(skullParams);
+  conformSkullFront(skull.positions, facePos);
   const g = new THREE.BufferGeometry();
   g.setAttribute(
     "position",
@@ -799,7 +855,7 @@ const skullSliders = (
 ).map((k) =>
   slider("#skull", k, -1, 1, skullParams[k], (v) => {
     skullParams[k] = v;
-    rebuildSkull();
+    rebuildSkull(morphedFacePositions());
     rebuildHair();
     rebuildTails();
   }),
@@ -1039,7 +1095,7 @@ const applyPreset = (p: IPreset): void => {
     skullSliders[i]!.closest(".row")!.querySelector(".v")!.textContent =
       p.skull[k].toFixed(2);
   });
-  rebuildSkull();
+  rebuildSkull(morphedFacePositions());
   (Object.keys(p.hair) as (keyof IForgeHairParameters)[]).forEach((k, i) => {
     hairParams[k] = p.hair[k];
     hairSliders[i]!.value = String(p.hair[k]);
