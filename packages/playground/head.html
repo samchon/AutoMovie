@@ -37,16 +37,15 @@
       // directional lights aim at the head (y≈7.3), not the origin
       const HEADC = new THREE.Vector3(0, 7.3, 0.6);
       const mkKey=(int,x,y,z)=>{ const L=new THREE.DirectionalLight(0xffffff,int); L.position.set(HEADC.x+x,HEADC.y+y,HEADC.z+z); L.target.position.copy(HEADC); scene.add(L); scene.add(L.target); return L; };
-      // sculptural portrait rig: a strong warm key reveals the planes, a soft
-      // cool fill keeps shadows readable, a rim separates from the background.
-      const keyL = mkKey(3.4, 0.55, 0.75, 1.0); keyL.color.setHex(0xfff3e6);
-      const fillL = mkKey(0.7, -1.1, 0.1, 0.6); fillL.color.setHex(0xdfe8ff);
-      const rimL = mkKey(1.6, -0.5, 0.55, -1.1); rimL.color.setHex(0xffffff);
-      scene.add(new THREE.AmbientLight(0xffffff,0.32));
+      // pure-form rig: even neutral light to read the SCULPTURE, no dramatic
+      // key/rim "lighting effects" (the user judges form by math/ratios).
+      mkKey(1.1, 0.3, 0.5, 1.0); mkKey(1.1, -0.3, 0.5, 1.0);
+      mkKey(0.6, 0, 0.2, -1.0);
+      scene.add(new THREE.AmbientLight(0xffffff,0.85));
       const controls = new OrbitControls(cam, canvas); controls.enableDamping = false;
       gl.setPixelRatio(1); resize(); addEventListener("resize", resize);
 
-      const SKIN = 0xe8c4ae, HAIR = 0x2a211b;
+      const SKIN = 0xf2dccb, HAIR = 0x241c17;
       const clay = new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.62, metalness:0, side:THREE.DoubleSide });
       const normalMat = new THREE.MeshNormalMaterial({ side:THREE.DoubleSide });
       let model, base, geo, mesh, hairMesh, eyeballs=[], params={}, values={}, hairOn=true, normalsOn=false;
@@ -67,24 +66,38 @@
           if (!v) continue; const side = v>0 ? params[name].plus : params[name].minus; const w = Math.abs(v);
           for (const [li,dx,dy,dz] of side) { P[li*3]+=dx*w; P[li*3+1]+=dy*w; P[li*3+2]+=dz*w; }
         }
+        // Taubin λ|μ smooth: remove the local bumps strong morphs leave at their
+        // falloff edges, keeping overall form (no shrink). 2 passes.
+        if (headAdj) for (let pass=0; pass<4; pass++){ const f=pass%2===0?0.5:-0.53; const src=P.slice();
+          for (let i=0;i<P.length/3;i++){ const nb=headAdj[i]; if(!nb||nb.length<2)continue;
+            let ax=0,ay=0,az=0; for(const j of nb){ax+=src[j*3];ay+=src[j*3+1];az+=src[j*3+2];}
+            ax/=nb.length;ay/=nb.length;az/=nb.length;
+            P[i*3]+=f*(ax-P[i*3]); P[i*3+1]+=f*(ay-P[i*3+1]); P[i*3+2]+=f*(az-P[i*3+2]); } }
         geo.getAttribute("position").array.set(P);
         geo.getAttribute("position").needsUpdate = true;
         geo.computeVertexNormals();
         setColors(P); // re-bake concavity AO for the morphed surface
         if (hairMesh) rebuildHair(P);
-        // eyeballs follow eyeSize (scale) + eyeSpacing (x-shift), matching sockets
-        const sz=1+0.30*(values.eyeSize||0), sx=0.085*(values.eyeSpacing||0);
-        for (const e of eyeballs) {
-          const a=e.mesh.geometry.getAttribute("position").array, c=e.ctr;
-          for (let i=0;i<e.base.length/3;i++){
-            a[i*3]  = c[0]+(e.base[i*3]  -c[0])*sz + e.side*sx;
-            a[i*3+1]= c[1]+(e.base[i*3+1]-c[1])*sz;
-            a[i*3+2]= c[2]+(e.base[i*3+2]-c[2])*sz;
-          }
-          e.mesh.geometry.getAttribute("position").needsUpdate=true;
-          if (e.catch) { const r=e.rad*sz; // upper-front of the cornea, key side
-            e.catch.position.set(c[0]+e.side*sx - e.side*0.18*r, c[1]+0.30*r, c[2]+0.93*r); }
-        }
+        reseatEyes(P);   // eyeballs follow the morphed eye landmarks
+      }
+      // Seat each eyeball helper at the socket centre derived from the eye
+      // landmarks (robust to morphs/bake — the helper's own centroid drifts),
+      // sized to fill the lid aperture so the dome reads as a sculpted eye.
+      function reseatEyes(P){
+        if(eyeballs.length<2 || !model.landmarks) return;
+        const Lm=model.landmarks, lp=(k)=>[P[Lm[k]*3],P[Lm[k]*3+1],P[Lm[k]*3+2]];
+        const socks=[ {inner:lp("innerEyeR"),outer:lp("outerEyeR")}, {inner:lp("innerEyeL"),outer:lp("outerEyeL")} ];
+        eyeballs.forEach((e,k)=>{
+          const sock=socks[k];
+          const ctr=[(sock.inner[0]+sock.outer[0])/2,(sock.inner[1]+sock.outer[1])/2,(sock.inner[2]+sock.outer[2])/2];
+          const eyeW=Math.hypot(sock.inner[0]-sock.outer[0],sock.inner[1]-sock.outer[1],sock.inner[2]-sock.outer[2]);
+          const rad=eyeW*0.40, lidZ=Math.max(sock.inner[2],sock.outer[2]);
+          // smooth sphere, dome front ≈ flush with the lid plane so it catches
+          // light as a bright open eye (the sculpted orbital rim frames it).
+          // Front-back flattened so the cornea sits naturally, not bulging.
+          e.mesh.scale.set(rad, rad, rad*0.82);
+          e.mesh.position.set(ctr[0], ctr[1], lidZ-0.02-rad*0.82);
+        });
       }
       let hairAdj = null;
       function rebuildHair(P) {
@@ -139,11 +152,15 @@
         // brows + lash line: per eye, above (brow) and at the upper rim (lash)
         for(const [inn,out] of [["innerEyeR","outerEyeR"],["innerEyeL","outerEyeL"]]){
           const a=lp(inn),b=lp(out); const ey=(a[1]+b[1])/2, ez=Math.max(a[2],b[2]);
-          const xlo=Math.min(a[0],b[0])-0.02, xhi=Math.max(a[0],b[0])+0.03;
+          const xi=a[0], xo=b[0];
+          const lo=Math.min(xi,xo)-0.012, hi=Math.max(xi,xo)+0.022;
           for(let i=0;i<base.length/3;i++){ const x=base[i*3],y=base[i*3+1],z=base[i*3+2];
-            if(x<xlo||x>xhi||z<ez-0.06) continue;
-            if(y>=ey+0.05&&y<=ey+0.20) browVerts.add(i);          // brow band
-            else if(y>=ey+0.01&&y<ey+0.045) lashVerts.add(i);      // upper-lid lash line
+            if(x<lo||x>hi||z<ez-0.06) continue;
+            const t=Math.max(0,Math.min(1,(x-xi)/(xo-xi)));     // 0 inner .. 1 outer
+            const browY=ey+0.085+0.032*Math.sin(t*Math.PI);     // gentle arch
+            const thick=0.05-0.026*t;                            // thicker inner, taper to the tail
+            if(Math.abs(y-browY)<thick) browVerts.add(i);        // arched, tapered brow
+            else if(y>=ey+0.008&&y<ey+0.038) lashVerts.add(i);   // upper-lid lash line
           }
         }
         // lips: vermilion band around the mouth landmarks
@@ -162,15 +179,17 @@
         const N = geo.getAttribute("normal").array;
         for (let i=0;i<n;i++){
           const x=P[i*3],y=P[i*3+1],z=P[i*3+2];
-          const hair = hairCovered(x,y,z);
-          const baseC = hair?HAIR_L : (browVerts&&browVerts.has(i))?BROW_L
-            : (lashVerts&&lashVerts.has(i))?BROW_L : (lipVerts&&lipVerts.has(i))?LIP_L : SKIN_L;
+          const hair = hairOn && hairCovered(x,y,z);
+          // pure form: skin + hair only. Painted brows/lips/lashes read as ugly
+          // smears at this resolution AND violate "살색만으로" — removed; the
+          // geometry-driven AO below is the only shading.
+          const baseC = hair?HAIR_L : SKIN_L;
           let r=baseC.r, g=baseC.g, b=baseC.b;
           if(!hair && headAdj){ const nb=headAdj[i];
             if(nb && nb.length>1){ let mx=0,my=0,mz=0; for(const j of nb){mx+=P[j*3];my+=P[j*3+1];mz+=P[j*3+2];}
               mx=mx/nb.length-x; my=my/nb.length-y; mz=mz/nb.length-z;        // Laplacian
               const along=mx*N[i*3]+my*N[i*3+1]+mz*N[i*3+2];                   // >0 = concave valley
-              const ao=Math.max(0.62, 1-22*Math.max(0,along));                // darken valleys
+              const ao=Math.max(0.87, 1-8*Math.max(0,along));                 // gentle valley shading (soft, no splotch)
               r*=ao; g*=ao; b*=ao; } }
           col[i*3]=r;col[i*3+1]=g;col[i*3+2]=b;
         }
@@ -192,38 +211,22 @@
         const hairColMat = new THREE.MeshStandardMaterial({ color:HAIR, roughness:0.85, metalness:0, side:THREE.DoubleSide });
         hairMesh = new THREE.Mesh(hgeo, hairColMat); scene.add(hairMesh);
         rebuildHair(base);
-        // eyeballs (MakeHuman eye helpers — correctly seated): white sclera + dark iris
+        // eyeballs — SKIN-coloured MATTE smooth domes (Roman-bust style: blank
+        // eyeball, no iris/gloss/catchlight). High-poly spheres positioned by
+        // reseatEyes() from the eye landmarks (index 0 = R socket, 1 = L).
         eyeballs = [];
-        const mkEye = (e) => {
-          const base = Float32Array.from(e.positions); const n=e.positions.length/3;
-          const g = new THREE.BufferGeometry();
-          g.setAttribute("position", new THREE.BufferAttribute(base.slice(),3));
-          g.setIndex(e.indices); g.computeVertexNormals();
-          const ctr=[0,0,0];
-          for(let i=0;i<n;i++){ctr[0]+=base[i*3]/n;ctr[1]+=base[i*3+1]/n;ctr[2]+=base[i*3+2]/n;}
-          let rad=0; for(let i=0;i<n;i++)rad=Math.max(rad,Math.hypot(base[i*3]-ctr[0],base[i*3+1]-ctr[1],base[i*3+2]-ctr[2]));
-          const col=new Float32Array(n*3);
-          const sclera=new THREE.Color(0xfbfaf6).convertSRGBToLinear();
-          const iris=new THREE.Color(0x7c5a38).convertSRGBToLinear();   // warm brown
-          const pupil=new THREE.Color(0x16100c).convertSRGBToLinear();
-          const lim=new THREE.Color(0x3a2a1c).convertSRGBToLinear();     // limbal ring
-          for(let i=0;i<n;i++){ const fz=(base[i*3+2]-ctr[2])/rad;
-            // smaller iris → more white sclera shows → brighter, open eye
-            const c2 = fz>0.90 ? pupil : fz>0.76 ? iris : fz>0.72 ? lim : sclera;
-            col[i*3]=c2.r;col[i*3+1]=c2.g;col[i*3+2]=c2.b; }
+        const eyeGeo = new THREE.SphereGeometry(1, 28, 20);
+        const mkEye = () => {
+          const g = eyeGeo.clone();
+          const cnt = g.getAttribute("position").count, col=new Float32Array(cnt*3);
+          for(let i=0;i<cnt;i++){ col[i*3]=SKIN_L.r;col[i*3+1]=SKIN_L.g;col[i*3+2]=SKIN_L.b; }
           g.setAttribute("color", new THREE.BufferAttribute(col,3));
-          // glossy cornea → the key light leaves a catchlight that reads "alive"
-          const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.08,metalness:0,side:THREE.DoubleSide}));
+          const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.62,metalness:0}));
           scene.add(mesh);
-          // catchlight: a tiny unlit-bright bead on the upper cornea → the spark
-          // that reads as a living eye (standard CG trick, not vertex colour).
-          const cl = new THREE.Mesh(
-            new THREE.SphereGeometry(rad*0.16, 8, 8),
-            new THREE.MeshBasicMaterial({ color: 0xffffff }));
-          eyeballs.push({ mesh, base, ctr, rad, side: Math.sign(ctr[0]), catch: cl });
-          scene.add(cl);
+          eyeballs.push({ mesh });
         };
-        if (m.eyeL) mkEye(m.eyeL); if (m.eyeR) mkEye(m.eyeR);
+        mkEye(); mkEye();
+        reseatEyes(base);
         // frame
         geo.computeBoundingBox(); const bb=geo.boundingBox; const c=bb.getCenter(new THREE.Vector3());
         window.__center=[c.x,c.y,c.z]; window.__box={min:bb.min.toArray(),max:bb.max.toArray()};
@@ -274,7 +277,7 @@
         gl.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); };
       window.__cam=(px,py,pz,tx,ty,tz)=>{ cam.position.set(px,py,pz); controls.target.set(tx,ty,tz); cam.lookAt(tx,ty,tz); cam.updateProjectionMatrix(); };
       window.__mat=(mode)=>{ normalsOn=mode==="normal"; mesh.material=normalsOn?normalMat:clay; if(hairMesh)hairMesh.visible=!normalsOn||false; };
-      window.__hair=(on)=>{ hairMesh.visible=on; };
+      window.__hair=(on)=>{ hairOn=on; hairMesh.visible=on; setColors(geo.getAttribute("position").array); };
       window.__probe=()=>{ const A=geo.getAttribute("position").array, L=model.landmarks;
         const g=(k)=>[+A[L[k]*3].toFixed(4),+A[L[k]*3+1].toFixed(4),+A[L[k]*3+2].toFixed(4)];
         return { values:{...values}, outerEyeR:g("outerEyeR"), innerEyeR:g("innerEyeR"), mouthR:g("mouthR"), lowerLip:g("lowerLip"), chinFront:g("chinFront") }; };
