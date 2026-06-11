@@ -36,6 +36,15 @@ export interface IForgeHairParameters {
   updo?: number;
 }
 
+/** The neck/shoulder bust controls — preset data like every other parameter. */
+export interface IForgeBustParameters {
+  /** Neck thickness: `0` slender, `1` thick. */
+  neck: number;
+
+  /** Shoulder span: `0` narrow, `1` broad. */
+  shoulders: number;
+}
+
 /** The chignon controls — preset data like every other hair parameter. */
 export interface IForgeBunParameters {
   /** Bun size: `0` none (empty part), `1` a full chignon. */
@@ -293,5 +302,58 @@ export const buildHairBun = (
       const i0 = r * col + s;
       indices.push(i0, i0 + col, i0 + 1, i0 + 1, i0 + col, i0 + col + 1);
     }
+  return { positions, indices };
+};
+
+/**
+ * A neck-and-shoulders bust under the head — without it every render reads as a
+ * severed mask floating in space. Proportions derive from the face: the neck
+ * spans a fraction of the jaw width and drops from just above the chin line (so
+ * the jaw overlaps it, no gap at any chin length), flaring into a shoulder slab
+ * below. A mannequin-grade base for portraits, not anatomy.
+ *
+ * @author Samchon
+ */
+export const buildBust = (
+  params: IForgeBustParameters,
+  face: number[] = CANONICAL_FACE_POSITIONS,
+): IForgeMeshPart => {
+  const { chinY, topY, halfW } = anchors(face);
+  const faceH = topY - chinY;
+  const rxNeck = halfW * (0.42 + 0.22 * params.neck);
+  const rzNeck = rxNeck * 0.92;
+  const yTop = chinY + 0.015; // tucked behind the jaw
+  const neckLen = 0.32 * faceH;
+  const slabLen = 0.3 * faceH;
+  const rxShoulder = halfW * (1.7 + 1.1 * params.shoulders);
+  const rzShoulder = rzNeck * 1.5;
+  const SEG = 32;
+  const RING = 14;
+  const positions: number[] = [];
+  const indices: number[] = [];
+  const smooth = (t: number): number => t * t * (3 - 2 * t);
+  for (let r = 0; r <= RING; r++) {
+    const t = r / RING;
+    const y = yTop - (neckLen + slabLen) * t;
+    // the neck holds its radius, then eases into the shoulder span
+    const flare = smooth(Math.max(0, (t - 0.45) / 0.55));
+    const rx = rxNeck + (rxShoulder - rxNeck) * flare;
+    const rz = rzNeck + (rzShoulder - rzNeck) * flare;
+    for (let s = 0; s <= SEG; s++) {
+      const th = -Math.PI + (2 * Math.PI * s) / SEG;
+      positions.push(rx * Math.sin(th), y, rz * Math.cos(th) - 0.012);
+    }
+  }
+  const col = SEG + 1;
+  for (let r = 0; r < RING; r++)
+    for (let s = 0; s < SEG; s++) {
+      const i0 = r * col + s;
+      indices.push(i0, i0 + col, i0 + 1, i0 + 1, i0 + col, i0 + col + 1);
+    }
+  // bottom cap so the bust reads solid from low angles
+  const center = positions.length / 3;
+  positions.push(0, yTop - (neckLen + slabLen), -0.012);
+  const base = RING * col;
+  for (let s = 0; s < SEG; s++) indices.push(center, base + s, base + s + 1);
   return { positions, indices };
 };
