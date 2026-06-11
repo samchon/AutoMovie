@@ -280,17 +280,24 @@ faceGeometry.setAttribute("color", colorAttr);
 const paintFace = (): void => {
   const pos = morphedFacePositions();
   const lipW = regionWeight(pos, LIPS, 0.004);
-  const browW = regionWeight(pos, BROWS, 0.004);
+  // tighter brow band (was 0.004 → a thick dark caterpillar that merged
+  // across the bridge into a unibrow); narrower sigma + a capped, partly
+  // transparent max keeps skin showing through so it reads as hair on skin
+  const browW = regionWeight(pos, BROWS, 0.0026);
   const eyeW = regionWeight(pos, EYES, 0.0022);
   const skin = new THREE.Color(colors.skin);
   const lips = new THREE.Color(colors.lips);
-  const brow = new THREE.Color(colors.hair).multiplyScalar(0.7);
+  // brow = hair tinted toward a warm brown, not near-black hair·0.7
+  const brow = new THREE.Color(colors.hair).lerp(
+    new THREE.Color("#6b4a32"),
+    0.4,
+  );
   const eye = new THREE.Color("#4a3a30");
   const c = new THREE.Color();
   for (let i = 0; i < 468; i++) {
     c.copy(skin)
       .lerp(lips, lipW[i]!)
-      .lerp(brow, browW[i]!)
+      .lerp(brow, Math.min(0.8, browW[i]!))
       .lerp(eye, 0.45 * eyeW[i]!);
     colorAttr.setXYZ(i, c.r, c.g, c.b);
   }
@@ -614,8 +621,9 @@ const rebuildEyes = (): void => {
   }
   eyeMeshes = [];
   const shells = buildEyeShells(morphedFacePositions());
-  const sclera = new THREE.Color("#f3eee9");
-  const pupil = new THREE.Color("#16100c");
+  // dimmer than paper-white so the eye doesn't read as a dead ping-pong ball
+  const sclera = new THREE.Color("#e7ddd0");
+  const pupil = new THREE.Color("#120c08");
   for (const [side, eye] of [shells.right, shells.left].entries()) {
     const iris = new THREE.Color(
       side === 0 ? colors.irisRight : colors.irisLeft,
@@ -633,8 +641,12 @@ const rebuildEyes = (): void => {
     const c = new THREE.Color();
     for (let i = 0; i < n; i++) {
       const f = (eye.positions[i * 3 + 2]! - scz) / eye.radius;
+      // iris cap (f>0.84, slightly larger than the old 0.906 so it fills the
+      // aperture instead of leaving a wall-eyed ring of bare sclera), rimmed
+      // by a darker limbus, pupil at the front pole
       c.copy(sclera);
-      if (f > 0.906) c.copy(iris);
+      if (f > 0.84) c.copy(iris).multiplyScalar(0.62); // limbus
+      if (f > 0.9) c.copy(iris);
       if (f > 0.985) c.copy(pupil);
       col[i * 3] = c.r;
       col[i * 3 + 1] = c.g;
