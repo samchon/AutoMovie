@@ -27,13 +27,21 @@
         text.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
       const viewCamera = {
         front: [0, 0.03, 5.4],
+        frontClose: [0, 0.02, 3.65],
         rightThreeQuarter: [3.3, 0.03, 4.2],
+        rightThreeQuarterClose: [2.35, 0.03, 3.35],
         rightProfile: [5.4, 0.03, 0],
+        rightProfileClose: [3.65, 0.03, 0],
         top: [0, 5.6, 0.01],
         bottom: [0, -5.6, 0.01],
         back: [0, 0.03, -5.4],
+        backRightThreeQuarter: [2.75, 0.03, -3.35],
+        backLeftThreeQuarter: [-2.75, 0.03, -3.35],
         leftThreeQuarter: [-3.3, 0.03, 4.2],
+        leftThreeQuarterClose: [-2.35, 0.03, 3.35],
         leftProfile: [-5.4, 0.03, 0],
+        leftProfileClose: [-3.65, 0.03, 0],
+        eyeClose: [0, 0.11, 2.25],
       };
       const baselineMetrics = {
         facialIndex: 1.36,
@@ -594,6 +602,8 @@
         const right = lm.eyeTargetRight ?? lm.eyeRight;
         const leftUpper = lm.upperLidLeft ?? left;
         const rightUpper = lm.upperLidRight ?? right;
+        const leftLower = lm.lowerLidLeft ?? left;
+        const rightLower = lm.lowerLidRight ?? right;
         const spacing =
           left && right ? Math.abs(right[0] - left[0]) : facts.eyeSpacing + facts.eyeWidth;
         const eyeBaseY =
@@ -602,29 +612,78 @@
           left && right ? (left[2] + right[2]) / 2 : 0.64;
         for (const sideSign of [-1, 1]) {
           const socket = sideSign < 0 ? left : right;
+          const lidUpper = sideSign < 0 ? leftUpper : rightUpper;
+          const lidLower = sideSign < 0 ? leftLower : rightLower;
           const socketY = socket ? socket[1] : eyeBaseY;
           const socketZ = socket ? socket[2] : eyeBaseZ;
           const eyeX = socket ? socket[0] : sideSign * spacing * 0.5;
-          const eyeY = socketY + get("eyeHeightPosition") * 0.01;
-          const eyeZ = socketZ - 0.035 - get("eyeDepth") * 0.01;
+          const lidY =
+            lidUpper && lidLower ? (lidUpper[1] + lidLower[1]) / 2 : socketY;
+          const eyeY = lidY - facts.eyeHeight * 0.025 + get("eyeHeightPosition") * 0.006;
+          const eyeZ = socketZ - Math.max(0.05, facts.eyeHeight * 0.35) - get("eyeDepth") * 0.015;
           const eye = ellipsoid(
             `makehuman-eye-${sideSign}`,
-            facts.eyeWidth * 0.28,
-            facts.eyeHeight * 0.38,
-            0.018,
+            facts.eyeWidth * 0.21,
+            facts.eyeHeight * 0.28,
+            0.012,
             whiteMat,
             32,
           );
           eye.position.set(eyeX, eyeY, eyeZ);
           const iris = ellipsoid(
             `makehuman-iris-${sideSign}`,
-            facts.eyeHeight * 0.22,
-            facts.eyeHeight * 0.22,
+            facts.eyeHeight * 0.18,
+            facts.eyeHeight * 0.18,
             0.004,
             irisMat,
             20,
           );
-          iris.position.set(eyeX, eyeY - facts.eyeHeight * 0.015, eyeZ + 0.014);
+          iris.position.set(eyeX, eyeY - facts.eyeHeight * 0.01, eyeZ + 0.006);
+          const eyeWidth = facts.eyeWidth * (0.9 + get("outerCanthus") * 0.05);
+          const eyeHeight = facts.eyeHeight * (0.95 + get("eyeHeight") * 0.04);
+          const inner = eyeX - sideSign * eyeWidth * (0.54 + get("epicanthus") * 0.04);
+          const outer = eyeX + sideSign * eyeWidth * (0.76 + get("outerCanthus") * 0.04);
+          const creaseY = eyeY + eyeHeight * (0.95 + get("eyelidFold") * 0.08);
+          makeCapsuleLine(
+            `upper-lid-${sideSign}`,
+            [
+              new THREE.Vector3(inner, eyeY + eyeHeight * 0.24, eyeZ + 0.008),
+              new THREE.Vector3(eyeX, eyeY + eyeHeight * 0.75, eyeZ + 0.014),
+              new THREE.Vector3(outer, eyeY + eyeHeight * 0.28, eyeZ + 0.008),
+            ],
+            0x2d231f,
+            0.0046,
+          );
+          makeCapsuleLine(
+            `socket-rim-${sideSign}`,
+            [
+              new THREE.Vector3(inner * 0.996, eyeY + eyeHeight * 0.18, eyeZ + 0.003),
+              new THREE.Vector3(eyeX, eyeY + eyeHeight * 0.92, eyeZ + 0.01),
+              new THREE.Vector3(outer * 0.996, eyeY + eyeHeight * 0.22, eyeZ + 0.003),
+            ],
+            0x1f1815,
+            0.0052,
+          );
+          makeCapsuleLine(
+            `lower-lid-${sideSign}`,
+            [
+              new THREE.Vector3(inner, eyeY - eyeHeight * 0.2, eyeZ + 0.006),
+              new THREE.Vector3(eyeX, eyeY - eyeHeight * 0.48, eyeZ + 0.01),
+              new THREE.Vector3(outer, eyeY - eyeHeight * 0.18, eyeZ + 0.006),
+            ],
+            0x8f6c62,
+            0.0035,
+          );
+          makeCapsuleLine(
+            `crease-${sideSign}`,
+            [
+              new THREE.Vector3(inner * 0.992, creaseY, eyeZ + 0.004),
+              new THREE.Vector3(eyeX, creaseY + eyeHeight * 0.32, eyeZ + 0.01),
+              new THREE.Vector3(outer * 0.992, creaseY + get("eyeTilt") * sideSign * 0.015, eyeZ + 0.004),
+            ],
+            0x7d5f57,
+            0.0026,
+          );
         }
       };
       const buildHeadGeometry = () => {

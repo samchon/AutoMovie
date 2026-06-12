@@ -29,15 +29,18 @@ const readObj = () => {
       if (!groups.has(group)) groups.set(group, new Set());
       continue;
     }
-    if (!line.startsWith("f ") || group !== "body") continue;
+    if (!line.startsWith("f ")) continue;
     const face = line
       .slice(2)
       .trim()
       .split(/\s+/)
       .map((part) => Number(part.split("/")[0]) - 1);
     if (face.length >= 3) faces.push(face);
-    const bucket = groups.get(group);
-    for (const index of face) bucket.add(index);
+    if (group) {
+      const bucket = groups.get(group) ?? new Set();
+      for (const index of face) bucket.add(index);
+      groups.set(group, bucket);
+    }
   }
   return { vertices, faces, groups };
 };
