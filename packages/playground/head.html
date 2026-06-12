@@ -81,27 +81,8 @@
         geo.computeVertexNormals();
         setColors(P); // re-bake concavity AO for the morphed surface
         if (hairMesh) rebuildHair(P);
-        reseatEyes(P);   // eyeballs follow the morphed eye landmarks
       }
-      // Seat each eyeball helper at the socket centre derived from the eye
-      // landmarks (robust to morphs/bake — the helper's own centroid drifts),
-      // sized to fill the lid aperture so the dome reads as a sculpted eye.
-      function reseatEyes(P){
-        if(eyeballs.length<2 || !model.landmarks) return;
-        const Lm=model.landmarks, lp=(k)=>[P[Lm[k]*3],P[Lm[k]*3+1],P[Lm[k]*3+2]];
-        const socks=[ {inner:lp("innerEyeR"),outer:lp("outerEyeR")}, {inner:lp("innerEyeL"),outer:lp("outerEyeL")} ];
-        eyeballs.forEach((e,k)=>{
-          const sock=socks[k];
-          const ctr=[(sock.inner[0]+sock.outer[0])/2,(sock.inner[1]+sock.outer[1])/2,(sock.inner[2]+sock.outer[2])/2];
-          const eyeW=Math.hypot(sock.inner[0]-sock.outer[0],sock.inner[1]-sock.outer[1],sock.inner[2]-sock.outer[2]);
-          const rad=eyeW*0.34, lidZ=Math.max(sock.inner[2],sock.outer[2]);
-          // almond dome: wide, flattened in height, and recessed so the sculpted
-          // upper lid (lash-line + fold grooves) overhangs its top → the eye
-          // reads OPEN (a curved eyeball framed by lids), not a round marble.
-          e.mesh.scale.set(rad*1.05, rad*0.62, rad*0.5);
-          e.mesh.position.set(ctr[0], ctr[1]-rad*0.04, lidZ-0.14-rad*0.5);  // recess deep → serene almond, not a protruding ball
-        });
-      }
+      function reseatEyes(){ /* native eyeballs are fixed at their socket positions */ }
       let hairAdj = null;
       function rebuildHair(P) {
         // feathered offset along normal (volume grows with coverage), then a
@@ -251,22 +232,19 @@
         // sides past the shoulders, so the silhouette matches the long-haired
         // references. Procedural surface grid (θ around the back, s down-length).
         hairDrape = makeHairDrape(); scene.add(hairDrape);
-        // eyeballs — SKIN-coloured MATTE smooth domes (Roman-bust style: blank
-        // eyeball, no iris/gloss/catchlight). High-poly spheres positioned by
-        // reseatEyes() from the eye landmarks (index 0 = R socket, 1 = L).
+        // NATIVE eyeballs: the MakeHuman eye helpers at their actual macro'd
+        // socket positions (no custom reseating). The eyelids of the head mesh
+        // frame them — this is how MakeHuman gets a real open eye.
         eyeballs = [];
-        const eyeGeo = new THREE.SphereGeometry(1, 28, 20);
-        const mkEye = () => {
-          const g = eyeGeo.clone();
-          const cnt = g.getAttribute("position").count, col=new Float32Array(cnt*3);
-          for(let i=0;i<cnt;i++){ col[i*3]=SKIN_L.r;col[i*3+1]=SKIN_L.g;col[i*3+2]=SKIN_L.b; }
-          g.setAttribute("color", new THREE.BufferAttribute(col,3));
-          const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.62,metalness:0}));
-          scene.add(mesh);
-          eyeballs.push({ mesh });
+        const mkEyeball = (e) => {
+          const g = new THREE.BufferGeometry();
+          g.setAttribute("position", new THREE.BufferAttribute(Float32Array.from(e.positions),3));
+          g.setIndex(e.indices); g.computeVertexNormals();
+          const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:0x4a3a2e, roughness:0.3, metalness:0, side:THREE.DoubleSide}));
+          scene.add(mesh); eyeballs.push({ mesh });
         };
-        mkEye(); mkEye();
-        reseatEyes(base);
+        if (m.eyeR) mkEyeball(m.eyeR);
+        if (m.eyeL) mkEyeball(m.eyeL);
         // frame
         geo.computeBoundingBox(); const bb=geo.boundingBox; const c=bb.getCenter(new THREE.Vector3());
         window.__center=[c.x,c.y,c.z]; window.__box={min:bb.min.toArray(),max:bb.max.toArray()};
