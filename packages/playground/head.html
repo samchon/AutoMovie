@@ -1,333 +1,998 @@
 <!doctype html>
 <html lang="en">
-  <head><meta charset="UTF-8" /><title>autofilm — parametric head (MakeHuman base)</title>
-  <style>
-    *{box-sizing:border-box} body{margin:0;font:12px/1.35 system-ui,sans-serif;color:#e6e9ef}
-    #stage{display:grid;grid-template-columns:1fr 300px;height:100vh}
-    #view{width:100%;height:100%;display:block;background:#1c2027}
-    #panel{background:#14171c;border-left:1px solid #2a2f37;padding:10px 12px;overflow-y:auto}
-    #panel h2{font-size:12px;margin:10px 0 4px;color:#aab3c5}
-    .row{margin:5px 0}.row label{display:flex;justify-content:space-between}
-    .row label .v{color:#9aa3b2;font-variant-numeric:tabular-nums}
-    .row input[type=range]{width:100%;accent-color:#6f9dff}
-    button{background:#222a36;color:#e6e9ef;border:1px solid #2a2f37;border-radius:4px;padding:3px 8px;margin:2px;cursor:pointer}
-  </style></head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>autofilm face editor</title>
+  </head>
   <body>
-    <div id="stage">
-      <canvas id="view"></canvas>
-      <div id="panel">
-        <h2>view</h2>
-        <button data-cam="front">front</button><button data-cam="q34">3/4</button><button data-cam="side">side</button>
-        <button id="bMat">normals</button><button id="bHair">hair</button><button id="bReset">reset</button>
-        <h2>preset</h2>
-        <select id="presetSel" style="width:100%;background:#0e1014;color:#e6e9ef;border:1px solid #2a2f37;border-radius:4px;padding:4px;margin-bottom:4px"></select>
-        <button id="bDump">dump</button><button id="bApply">apply</button>
-        <input id="preset" style="width:100%;background:#0e1014;color:#e6e9ef;border:1px solid #2a2f37;border-radius:4px;padding:3px;margin-top:4px" placeholder='{"eyeSize":0.5,...}' />
-        <h2>parameters</h2><div id="params"></div>
-      </div>
-    </div>
+    <div id="app"></div>
     <script type="module">
       import * as THREE from "three";
       import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-      const canvas = document.getElementById("view");
-      const gl = new THREE.WebGLRenderer({ canvas, antialias: true });
-      const resize = () => { const w=canvas.clientWidth||1,h=canvas.clientHeight||1; gl.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); };
-      const scene = new THREE.Scene(); scene.background = new THREE.Color(0x1c2027);
-      const cam = new THREE.PerspectiveCamera(32, 1, 0.01, 200);
-      // directional lights aim at the head (y≈7.3), not the origin
-      const HEADC = new THREE.Vector3(0, 7.3, 0.6);
-      const mkKey=(int,x,y,z)=>{ const L=new THREE.DirectionalLight(0xffffff,int); L.position.set(HEADC.x+x,HEADC.y+y,HEADC.z+z); L.target.position.copy(HEADC); scene.add(L); scene.add(L.target); return L; };
-      // pure-form rig: even neutral light to read the SCULPTURE, no dramatic
-      // key/rim "lighting effects" (the user judges form by math/ratios).
-      mkKey(1.1, 0.3, 0.5, 1.0); mkKey(1.1, -0.3, 0.5, 1.0);
-      mkKey(0.6, 0, 0.2, -1.0);
-      scene.add(new THREE.AmbientLight(0xffffff,0.85));
-      const controls = new OrbitControls(cam, canvas); controls.enableDamping = false;
-      gl.setPixelRatio(1); resize(); addEventListener("resize", resize);
 
-      const SKIN = 0xf2dccb, HAIR = 0x241c17;
-      const clay = new THREE.MeshStandardMaterial({ vertexColors:true, roughness:0.62, metalness:0, side:THREE.DoubleSide });
-      const normalMat = new THREE.MeshNormalMaterial({ side:THREE.DoubleSide });
-      let model, base, geo, mesh, hairMesh, hairDrape, eyeballs=[], params={}, values={}, hairOn=true, normalsOn=false;
-      window.__ready = false;
-
-      // smooth hair coverage weight (0..1) — feathered hairline, no jagged edge.
-      // front (face, z>1.0): bare below forehead-top; back/sides: covered low.
-      const smooth01 = (a,b,t) => { const u=Math.max(0,Math.min(1,(t-a)/(b-a))); return u*u*(3-2*u); };
-      const hairWeight = (x,y,z) => {
-        // hairline height rises SMOOTHLY toward the face (high z) so the forehead
-        // is bare and the crown/sides/back are covered — no z-step → no jagged
-        // temple edge. Sides (|x| large) also pulled down a little (sideburn).
-        const line = 6.7 + 1.5*smooth01(0.2, 1.25, z);
-        return smooth01(line-0.20, line+0.45, y);  // wide feather across the hairline
+      const DATA_URL = "/models/head-model.json";
+      const MODEL_ROOT = "/@fs/D:/github/samchon/motica/.models/hero";
+      const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+      const mix = (a, b, t) => a + (b - a) * t;
+      const smooth = (x) => {
+        const t = clamp(x, 0, 1);
+        return t * t * (3 - 2 * t);
       };
-      const hairCovered = (x,y,z) => hairWeight(x,y,z) > 0.5;
+      const gaussian = (x, center, width) => {
+        const d = (x - center) / width;
+        return Math.exp(-d * d);
+      };
+      const pretty = (text) =>
+        text.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
+      const viewCamera = {
+        front: [0, 0.03, 5.4],
+        rightThreeQuarter: [3.3, 0.03, 4.2],
+        rightProfile: [5.4, 0.03, 0],
+        top: [0, 5.6, 0.01],
+        bottom: [0, -5.6, 0.01],
+        back: [0, 0.03, -5.4],
+        leftThreeQuarter: [-3.3, 0.03, 4.2],
+        leftProfile: [-5.4, 0.03, 0],
+      };
+      const baselineMetrics = {
+        facialIndex: 1.36,
+        jawToZygoma: 0.69,
+        chinToZygoma: 0.36,
+        eyeWidthToFace: 0.22,
+        eyeAperture: 0.32,
+        eyeSpacingToWidth: 1.08,
+        browEyeDistance: 0.88,
+        noseWidthToFace: 0.225,
+        noseLengthToFace: 0.315,
+        mouthWidthToFace: 0.345,
+        lowerUpperLip: 1.18,
+        chinHeightToFace: 0.18,
+        profileDepthToFace: 0.72,
+        tipProjectionToFace: 0.18,
+      };
 
-      function recompute() {
-        const P = base.slice();
-        for (const [name, v] of Object.entries(values)) {
-          if (!v) continue; const side = v>0 ? params[name].plus : params[name].minus; const w = Math.abs(v);
-          for (const [li,dx,dy,dz] of side) { P[li*3]+=dx*w; P[li*3+1]+=dy*w; P[li*3+2]+=dz*w; }
-        }
-        // no smoothing: the Catmull-Clark surface is already smooth and the
-        // subdivided morphs are clean (the linear subdivision of real targets).
-        geo.getAttribute("position").array.set(P);
-        geo.getAttribute("position").needsUpdate = true;
-        geo.computeVertexNormals();
-        setColors(P); // re-bake concavity AO for the morphed surface
-        if (hairMesh) rebuildHair(P);
-        reseatEyes(P);
-      }
-      // each eyeball rigidly tracks the mean displacement of its socket-ring head
-      // verts, so eye-region morphs (bridge/nose recession, eyeSize, …) move the
-      // eyeball with the socket instead of leaving it stranded/popping.
-      function reseatEyes(P){ if(!eyeballs.length||!eyeballs[0].anchor) return;
-        for(const e of eyeballs){ let dx=0,dy=0,dz=0; const a=e.anchor; if(!a.length)continue;
-          for(const i of a){ dx+=P[i*3]-base[i*3]; dy+=P[i*3+1]-base[i*3+1]; dz+=P[i*3+2]-base[i*3+2]; }
-          // follow the socket, plus a small constant recess so the clay eye sits
-          // just inside the lids (never proud → no bug-eye under any morph).
-          e.mesh.position.set(dx/a.length, dy/a.length, dz/a.length - 0.035); } }
-      let hairAdj = null;
-      function rebuildHair(P) {
-        // feathered offset along normal (volume grows with coverage), then a
-        // couple of Laplacian smoothing passes for a soft, non-helmet shell.
-        geo.computeVertexNormals(); const N = geo.getAttribute("normal").array;
-        const hp = hairMesh.geometry.getAttribute("position").array;
-        const n = P.length/3, T = 0.42;
-        for (let i=0;i<n;i++){ const x=P[i*3],y=P[i*3+1],z=P[i*3+2];
-          const w = hairWeight(x,y,z); const t = T*Math.sqrt(w); // feather
-          hp[i*3]=x+N[i*3]*t; hp[i*3+1]=y+N[i*3+1]*t; hp[i*3+2]=z+N[i*3+2]*t; }
-        // Laplacian smooth the hair shell (only the covered verts) — more passes
-        // on the fine mesh for a soft continuous mass, not a patchy cap
-        if (hairAdj) for (let pass=0;pass<14;pass++){ const src=hp.slice();
-          for (const i of hairAdj.verts){ const nb=hairAdj.adj[i]; if(nb.length<2)continue;
-            let ax=0,ay=0,az=0; for(const j of nb){ax+=src[j*3];ay+=src[j*3+1];az+=src[j*3+2];}
-            const k=0.5/1; ax/=nb.length;ay/=nb.length;az/=nb.length;
-            hp[i*3]+=k*(ax-hp[i*3]); hp[i*3+1]+=k*(ay-hp[i*3+1]); hp[i*3+2]+=k*(az-hp[i*3+2]); } }
-        hairMesh.geometry.getAttribute("position").needsUpdate = true;
-        hairMesh.geometry.computeVertexNormals();
-      }
-      // scalp shell DISABLED — the long-hair drape now covers the crown; the
-      // shell only produced rolled artefacts at the ears. (Scalp vertex colour
-      // in setColors still darkens the hairline under the part.)
-      function hairFaceIndex() { hairAdj={verts:[],adj:{}}; return []; }
-      function hairFaceIndex_unused() {
-        const idx = model.indices, out = [], used=new Set();
-        const w = (li)=>hairWeight(base[li*3],base[li*3+1],base[li*3+2]);
-        for (let t=0;t<idx.length;t+=3){ const a=idx[t],b=idx[t+1],c=idx[t+2];
-          if ((w(a)+w(b)+w(c))/3 > 0.20){ out.push(a,b,c); used.add(a);used.add(b);used.add(c); } }
-        // adjacency over hair faces for smoothing
-        const adj={}; for(const i of used)adj[i]=[];
-        for(let t=0;t<out.length;t+=3){const tri=[out[t],out[t+1],out[t+2]];
-          for(let e=0;e<3;e++){const x=tri[e],y=tri[(e+1)%3];if(!adj[x].includes(y))adj[x].push(y);if(!adj[y].includes(x))adj[y].push(x);}}
-        hairAdj={verts:[...used],adj};
-        return out;
-      }
-      // procedural long-hair drape: a smooth sculptural mass hanging from the
-      // hairline down the back and sides (θ = around the head, s = down-length).
-      // Front ~130° is left open for the face. Subtle vertical locks + a flare.
-      function makeHairDrape(){
-        const zc=0.5, headR=0.95;          // head vertical axis z, hair radius
-        const Nth=84, Ns=50, row=Ns+1;
-        const th0=-2.05, th1=2.05;          // ~±117° → ~126° face opening
-        const crownY=8.35, partY=7.35, botY=4.2;
-        const pos=[], idx=[];
-        for(let i=0;i<=Nth;i++){ const th=th0+(th1-th0)*i/Nth;
-          const sideT=Math.min(1,Math.abs(th)/2.05);          // 0 back … 1 front-sides
-          const topY=crownY-(crownY-partY)*sideT;             // crown at back, lower at the front-sides (centre part)
-          for(let j=0;j<=Ns;j++){ const s=j/Ns;
-            const y=topY-s*(topY-botY);
-            const grow=Math.min(1,s/0.18);                    // round over the crown in the first 18%
-            const flare=1+0.16*Math.pow(Math.max(0,s-0.2),2); // gently widen toward the tip
-            const r=headR*(0.32+0.68*grow)*flare;
-            const x=r*Math.sin(th);
-            const z=zc - r*Math.cos(th) - 0.4*s*s;             // θ=0 is the BACK; sweep back as it falls
-            pos.push(x,y,z);
+      const app = document.querySelector("#app");
+      app.innerHTML = `
+        <style>
+          * { box-sizing: border-box; }
+          html, body, #app { width: 100%; height: 100%; }
+          body {
+            margin: 0;
+            font: 12px/1.4 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: #dfe4ec;
+            background: #101216;
           }
-        }
-        // Laplacian smooth the interior grid → a soft continuous mass, no curls
-        for(let pass=0;pass<4;pass++){ const src=pos.slice();
-          for(let i=1;i<Nth;i++)for(let j=1;j<Ns;j++){ const a=(i*row+j)*3;
-            for(let k=0;k<3;k++) pos[a+k]=0.4*src[a+k]+0.15*(src[a+k-3]+src[a+k+3]+src[a+k-row*3]+src[a+k+row*3]); } }
-        for(let i=0;i<Nth;i++)for(let j=0;j<Ns;j++){ const a=i*row+j,b=a+row,c=a+1,d=b+1;
-          idx.push(a,b,c, c,b,d); }
-        const g=new THREE.BufferGeometry();
-        g.setAttribute("position",new THREE.BufferAttribute(Float32Array.from(pos),3));
-        g.setIndex(idx); g.computeVertexNormals();
-        return new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:HAIR,roughness:0.9,metalness:0,side:THREE.DoubleSide}));
-      }
-      // full-mesh 1-ring adjacency (built once; topology is fixed)
-      let headAdj = null;
-      function buildHeadAdj(){ const idx=model.indices, n=base.length/3;
-        const sets=Array.from({length:n},()=>new Set());
-        for(let t=0;t<idx.length;t+=3){const a=idx[t],b=idx[t+1],c=idx[t+2];
-          sets[a].add(b);sets[a].add(c);sets[b].add(a);sets[b].add(c);sets[c].add(a);sets[c].add(b);}
-        headAdj=sets.map(s=>[...s]);
-      }
-      const SKIN_L=new THREE.Color(SKIN).convertSRGBToLinear();
-      const HAIR_L=new THREE.Color(HAIR).convertSRGBToLinear();
-      const BROW_L=new THREE.Color(0x4a3526).convertSRGBToLinear();
-      // brow-region vertex set (above each eye, front) — painted as eyebrows so
-      // the face doesn't read as unfinished/browless.
-      const LIP_L=new THREE.Color(0xb06f66).convertSRGBToLinear();
-      let browVerts = null, lipVerts = null, lashVerts = null;
-      function computeFeatureVerts(){
-        const L=model.landmarks, lp=(k)=>[base[L[k]*3],base[L[k]*3+1],base[L[k]*3+2]];
-        browVerts=new Set(); lipVerts=new Set(); lashVerts=new Set();
-        // brows + lash line: per eye, above (brow) and at the upper rim (lash)
-        for(const [inn,out] of [["innerEyeR","outerEyeR"],["innerEyeL","outerEyeL"]]){
-          const a=lp(inn),b=lp(out); const ey=(a[1]+b[1])/2, ez=Math.max(a[2],b[2]);
-          const xi=a[0], xo=b[0];
-          const lo=Math.min(xi,xo)-0.012, hi=Math.max(xi,xo)+0.022;
-          for(let i=0;i<base.length/3;i++){ const x=base[i*3],y=base[i*3+1],z=base[i*3+2];
-            if(x<lo||x>hi||z<ez-0.06) continue;
-            const t=Math.max(0,Math.min(1,(x-xi)/(xo-xi)));     // 0 inner .. 1 outer
-            const browY=ey+0.085+0.032*Math.sin(t*Math.PI);     // gentle arch
-            const thick=0.05-0.026*t;                            // thicker inner, taper to the tail
-            if(Math.abs(y-browY)<thick) browVerts.add(i);        // arched, tapered brow
-            else if(y>=ey+0.008&&y<ey+0.038) lashVerts.add(i);   // upper-lid lash line
+          button, select, input { font: inherit; }
+          #stage {
+            display: grid;
+            grid-template-columns: minmax(520px, 1fr) 390px;
+            height: 100vh;
+            min-height: 620px;
           }
-        }
-        // lips: vermilion band around the mouth landmarks
-        const mr=lp("mouthR"),ml=lp("mouthL"),up=lp("upperLip"),lo=lp("lowerLip");
-        const cy=(mr[1]+ml[1]+up[1]+lo[1])/4, cz=Math.max(mr[2],ml[2]);
-        const xlo=Math.min(mr[0],ml[0])-0.004, xhi=Math.max(mr[0],ml[0])+0.004;
-        for(let i=0;i<base.length/3;i++){ const x=base[i*3],y=base[i*3+1],z=base[i*3+2];
-          if(x>=xlo&&x<=xhi && y>=cy-0.05&&y<=cy+0.055 && z>=cz-0.02) lipVerts.add(i); }
-      }
-      // skin colour + geometry-driven concavity AO (valleys — eye sockets,
-      // nasolabial, under-nose — darken so flat clay reads its depth; pure form,
-      // no texture). Recomputed per morph from the current positions+normals.
-      function setColors(P){
-        P = P || base; const n = P.length/3;
-        const col = geo.getAttribute("color") ? geo.getAttribute("color").array : new Float32Array(P.length);
-        const N = geo.getAttribute("normal").array;
-        // 1) concavity (valley) term per vertex from the Laplacian along normal
-        const ao = new Float32Array(n).fill(1);
-        if(headAdj) for(let i=0;i<n;i++){ const nb=headAdj[i]; if(!nb||nb.length<2)continue;
-          let mx=0,my=0,mz=0; for(const j of nb){mx+=P[j*3];my+=P[j*3+1];mz+=P[j*3+2];}
-          mx=mx/nb.length-P[i*3]; my=my/nb.length-P[i*3+1]; mz=mz/nb.length-P[i*3+2];
-          const along=mx*N[i*3]+my*N[i*3+1]+mz*N[i*3+2];                       // >0 = concave valley
-          ao[i]=Math.max(0.85, 1-7*Math.max(0,along)); }
-        // 2) smooth the AO field over the 1-ring → gentle form shading, no
-        // tessellation blotches/smears (pure form, not a dirty texture)
-        if(headAdj) for(let pass=0;pass<2;pass++){ const src=ao.slice();
-          for(let i=0;i<n;i++){ const nb=headAdj[i]; if(!nb||nb.length<1)continue;
-            let s=src[i]; for(const j of nb)s+=src[j]; ao[i]=s/(nb.length+1); } }
-        // 3) apply: skin/hair base colour × smoothed AO
-        for(let i=0;i<n;i++){ const hair=hairOn && hairCovered(P[i*3],P[i*3+1],P[i*3+2]);
-          const c=hair?HAIR_L:SKIN_L, a=hair?1:ao[i];
-          col[i*3]=c.r*a; col[i*3+1]=c.g*a; col[i*3+2]=c.b*a; }
-        if(!geo.getAttribute("color")) geo.setAttribute("color", new THREE.BufferAttribute(col,3));
-        else geo.getAttribute("color").needsUpdate=true;
-      }
+          #workbench {
+            display: grid;
+            grid-template-rows: minmax(0, 1fr) 190px;
+            min-width: 0;
+            background: #151922;
+          }
+          #viewport {
+            position: relative;
+            min-width: 0;
+            min-height: 0;
+          }
+          #view {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: #171b23;
+          }
+          #reference {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            pointer-events: none;
+            mix-blend-mode: screen;
+            background-position: 50% 50%;
+            background-repeat: no-repeat;
+            background-size: contain;
+          }
+          #hud {
+            position: absolute;
+            left: 14px;
+            top: 14px;
+            display: grid;
+            gap: 8px;
+            width: min(560px, calc(100% - 28px));
+          }
+          .hud-line {
+            width: fit-content;
+            max-width: 100%;
+            padding: 6px 8px;
+            border: 1px solid rgba(220, 226, 235, 0.18);
+            border-radius: 6px;
+            background: rgba(15, 17, 22, 0.74);
+            color: #dbe2ed;
+            font-size: 11px;
+            backdrop-filter: blur(8px);
+          }
+          #strip {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(112px, 1fr));
+            gap: 6px;
+            padding: 8px;
+            border-top: 1px solid #2b303a;
+            background: #101216;
+            overflow: hidden;
+          }
+          .thumb {
+            position: relative;
+            min-width: 0;
+            border: 1px solid #2b303a;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #0d0f13;
+            cursor: pointer;
+          }
+          .thumb.active { border-color: #c99a56; }
+          .thumb .crop {
+            position: absolute;
+            inset: 0;
+            background-repeat: no-repeat;
+          }
+          .thumb span {
+            position: absolute;
+            left: 6px;
+            bottom: 5px;
+            padding: 2px 5px;
+            border-radius: 4px;
+            background: rgba(8, 9, 12, 0.76);
+            color: #f2f4f7;
+            font-size: 10px;
+          }
+          #panel {
+            min-width: 0;
+            overflow-y: auto;
+            border-left: 1px solid #2b303a;
+            background: #12151b;
+          }
+          #panelHeader {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            padding: 14px;
+            border-bottom: 1px solid #2b303a;
+            background: rgba(18, 21, 27, 0.96);
+          }
+          h1 {
+            margin: 0 0 3px;
+            font-size: 16px;
+            font-weight: 650;
+            letter-spacing: 0;
+          }
+          .sub {
+            color: #9aa4b5;
+            font-size: 11px;
+          }
+          #panelBody {
+            padding: 12px 14px 20px;
+          }
+          h2 {
+            margin: 15px 0 8px;
+            color: #aab4c5;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+          }
+          .toolbar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+          }
+          button, select {
+            min-height: 30px;
+            border: 1px solid #303744;
+            border-radius: 6px;
+            background: #1b202a;
+            color: #e7ebf2;
+          }
+          button {
+            cursor: pointer;
+          }
+          button.active {
+            border-color: #c99a56;
+            background: #2a2218;
+            color: #ffe2b8;
+          }
+          select {
+            width: 100%;
+            padding: 4px 7px;
+          }
+          .row {
+            margin: 8px 0;
+          }
+          .row label {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 3px;
+          }
+          .row label span:first-child {
+            overflow-wrap: anywhere;
+          }
+          .value {
+            color: #abb6c8;
+            font-variant-numeric: tabular-nums;
+          }
+          input[type="range"] {
+            width: 100%;
+            accent-color: #c99a56;
+          }
+          #metrics {
+            display: grid;
+            gap: 4px;
+          }
+          .metric {
+            display: grid;
+            grid-template-columns: minmax(92px, 1fr) 56px 56px 56px;
+            gap: 6px;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #222832;
+            font-variant-numeric: tabular-nums;
+          }
+          .metric.header {
+            color: #8f9bad;
+            font-size: 10px;
+            text-transform: uppercase;
+          }
+          .metric .err.ok { color: #8fd69c; }
+          .metric .err.warn { color: #f3c46f; }
+          .metric .err.bad { color: #f08b81; }
+          #paramGroups details {
+            border-top: 1px solid #242a35;
+            padding-top: 7px;
+          }
+          #paramGroups summary {
+            cursor: pointer;
+            color: #c3cad6;
+            font-weight: 650;
+          }
+          #cycleLog {
+            min-height: 76px;
+            padding: 8px;
+            border: 1px solid #29303b;
+            border-radius: 6px;
+            background: #0e1116;
+            color: #aab4c5;
+            white-space: pre-wrap;
+          }
+          @media (max-width: 900px) {
+            #stage { grid-template-columns: 1fr; grid-template-rows: 60vh auto; height: auto; min-height: 100vh; }
+            #workbench { grid-template-rows: minmax(360px, 60vh) 150px; }
+            #panel { border-left: 0; border-top: 1px solid #2b303a; }
+          }
+        </style>
+        <div id="stage">
+          <main id="workbench">
+            <section id="viewport">
+              <canvas id="view"></canvas>
+              <div id="reference"></div>
+              <div id="hud">
+                <div class="hud-line" id="cycleStatus">Change one parameter, measure, analyze, adjust. No unmeasured completion claim.</div>
+                <div class="hud-line" id="viewStatus">front · render only</div>
+              </div>
+            </section>
+            <section id="strip"></section>
+          </main>
+          <aside id="panel">
+            <div id="panelHeader">
+              <h1>Face Editor</h1>
+              <div class="sub">Universal parameters. Heroes are numeric presets.</div>
+            </div>
+            <div id="panelBody">
+              <h2>Preset</h2>
+              <select id="preset"></select>
+              <h2>View</h2>
+              <div class="toolbar" id="views"></div>
+              <h2>Reference</h2>
+              <div class="row">
+                <label><span>hero sheet</span><span class="value" id="heroLabel">off</span></label>
+                <select id="hero"></select>
+              </div>
+              <div class="row">
+                <label><span>overlay opacity</span><span class="value" id="overlayValue">0.00</span></label>
+                <input id="overlayOpacity" type="range" min="0" max="1" step="0.01" value="0" />
+              </div>
+              <h2>Measurement</h2>
+              <div id="metrics"></div>
+              <h2>Adjustment Cycle</h2>
+              <div id="cycleLog"></div>
+              <h2>Parameters</h2>
+              <div id="paramGroups"></div>
+            </div>
+          </aside>
+        </div>
+      `;
 
-      fetch("/models/head-model.json").then(r=>r.json()).then(m=>{
-        model=m; params=m.params; base=Float32Array.from(m.positions);
-        for (const k of Object.keys(params)) values[k]=0;
-        geo = new THREE.BufferGeometry();
-        geo.setAttribute("position", new THREE.BufferAttribute(Float32Array.from(m.positions),3));
-        geo.setIndex(m.indices); geo.computeVertexNormals(); buildHeadAdj(); computeFeatureVerts(); setColors();
-        mesh = new THREE.Mesh(geo, clay); scene.add(mesh);
-        // hair shell: ONLY hair-region faces (offset outward), dark material
-        const hgeo = new THREE.BufferGeometry();
-        hgeo.setAttribute("position", new THREE.BufferAttribute(Float32Array.from(m.positions),3));
-        hgeo.setIndex(hairFaceIndex());
-        const hairColMat = new THREE.MeshStandardMaterial({ color:HAIR, roughness:0.85, metalness:0, side:THREE.DoubleSide });
-        hairMesh = new THREE.Mesh(hgeo, hairColMat); scene.add(hairMesh);
-        rebuildHair(base);
-        // long-hair drape: a sculptural hair MASS (Roman-bust style — smooth
-        // carved locks, not strands) draping from the hairline down the back and
-        // sides past the shoulders, so the silhouette matches the long-haired
-        // references. Procedural surface grid (θ around the back, s down-length).
-        hairDrape = makeHairDrape(); scene.add(hairDrape);
-        // NATIVE eyeballs: the MakeHuman eye helpers at their actual macro'd
-        // socket positions (no custom reseating). The eyelids of the head mesh
-        // frame them — this is how MakeHuman gets a real open eye.
-        eyeballs = [];
-        const mkEyeball = (e) => {
-          const g = new THREE.BufferGeometry();
-          g.setAttribute("position", new THREE.BufferAttribute(Float32Array.from(e.positions),3));
-          g.setIndex(e.indices); g.computeVertexNormals();
-          // iris + pupil + sclera (Roman busts carved/drilled these — pure FORM,
-          // not a flat texture). Colour the eyeball radially from its forward gaze:
-          // pupil (dark) → iris (brown) → sclera (off-white), so the eye READS.
-          const ep=e.positions, n=ep.length/3; let cx=0,cy=0,cz=0; for(let i=0;i<n;i++){cx+=ep[i*3];cy+=ep[i*3+1];cz+=ep[i*3+2];} cx/=n;cy/=n;cz/=n;
-          let fi=0,fz=-1e9; for(let i=0;i<n;i++){ if(ep[i*3+2]>fz){fz=ep[i*3+2];fi=i;} }   // cornea apex = forward gaze
-          let gx=ep[fi*3]-cx,gy=ep[fi*3+1]-cy,gz=ep[fi*3+2]-cz; const gl=Math.hypot(gx,gy,gz)||1; gx/=gl;gy/=gl;gz/=gl;
-          const col=new Float32Array(n*3); const SC=[0.91,0.88,0.83],IR=[0.30,0.20,0.12],PU=[0.05,0.04,0.03];
-          for(let i=0;i<n;i++){ let vx=ep[i*3]-cx,vy=ep[i*3+1]-cy,vz=ep[i*3+2]-cz; const vl=Math.hypot(vx,vy,vz)||1; const c=(vx*gx+vy*gy+vz*gz)/vl;
-            const C = c>0.975?PU : c>0.88?IR : SC; col[i*3]=C[0];col[i*3+1]=C[1];col[i*3+2]=C[2]; }
-          g.setAttribute("color", new THREE.BufferAttribute(col,3));
-          const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.35, metalness:0, side:THREE.DoubleSide}));
-          scene.add(mesh);
-          // anchor the eyeball to its SOCKET: the head verts ringing the eye. On
-          // every morph the eyeball rigidly follows their mean displacement, so
-          // recessing the bridge/nose (or any eye-region morph) never pops the
-          // fixed eyeball out of its socket.
-          const np=n;   // eye centre (cx,cy,cz) already computed above for the iris
-          let r2=0; for(let i=0;i<np;i++){ r2=Math.max(r2,(e.positions[i*3]-cx)**2+(e.positions[i*3+1]-cy)**2+(e.positions[i*3+2]-cz)**2); }
-          const R2=r2*2.2; const anchor=[]; const nv=base.length/3;
-          for(let i=0;i<nv;i++){ const d=(base[i*3]-cx)**2+(base[i*3+1]-cy)**2+(base[i*3+2]-cz)**2; if(d<R2) anchor.push(i); }
-          eyeballs.push({ mesh, anchor });
-        };
-        if (m.eyeR) mkEyeball(m.eyeR);
-        if (m.eyeL) mkEyeball(m.eyeL);
-        // frame
-        geo.computeBoundingBox(); const bb=geo.boundingBox; const c=bb.getCenter(new THREE.Vector3());
-        window.__center=[c.x,c.y,c.z]; window.__box={min:bb.min.toArray(),max:bb.max.toArray()};
-        camFront(); buildSliders();
-        // preset dropdown (neutral + hero1/2/3 + beauty), baked into the model
-        const psel = document.getElementById("presetSel");
-        for (const name of Object.keys(model.presets || { neutral: {} })) {
-          const o = document.createElement("option"); o.value = name; o.textContent = name; psel.appendChild(o);
-        }
-        psel.addEventListener("change", () => window.__setParams(model.presets[psel.value] || {}));
-        window.__ready = true;
+      const canvas = document.querySelector("#view");
+      const reference = document.querySelector("#reference");
+      const presetSelect = document.querySelector("#preset");
+      const heroSelect = document.querySelector("#hero");
+      const overlayOpacity = document.querySelector("#overlayOpacity");
+      const overlayValue = document.querySelector("#overlayValue");
+      const heroLabel = document.querySelector("#heroLabel");
+      const metricsEl = document.querySelector("#metrics");
+      const paramGroupsEl = document.querySelector("#paramGroups");
+      const strip = document.querySelector("#strip");
+      const viewButtons = document.querySelector("#views");
+      const cycleLog = document.querySelector("#cycleLog");
+      const cycleStatus = document.querySelector("#cycleStatus");
+      const viewStatus = document.querySelector("#viewStatus");
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x171b23);
+      scene.add(new THREE.HemisphereLight(0xdfe6f2, 0x252a33, 0.82));
+      const key = new THREE.DirectionalLight(0xfff4e0, 1.05);
+      key.position.set(1.4, 1.7, 2.4);
+      scene.add(key);
+      const side = new THREE.DirectionalLight(0xcdd9ff, 0.42);
+      side.position.set(-2.2, 0.7, 1.2);
+      scene.add(side);
+      const rim = new THREE.DirectionalLight(0xffffff, 0.34);
+      rim.position.set(-1.4, 1.5, -2.0);
+      scene.add(rim);
+
+      const camera = new THREE.PerspectiveCamera(24, 1, 0.05, 20);
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      const controls = new OrbitControls(camera, canvas);
+      controls.target.set(0, 0.02, 0);
+      controls.enableDamping = true;
+
+      const root = new THREE.Group();
+      scene.add(root);
+      const clay = new THREE.MeshStandardMaterial({
+        color: 0xd8b7a3,
+        roughness: 0.78,
+        metalness: 0,
       });
+      const featureMat = new THREE.MeshStandardMaterial({
+        color: 0x9f6a66,
+        roughness: 0.8,
+        metalness: 0,
+      });
+      const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf0ece6, roughness: 0.55 });
+      const irisMat = new THREE.MeshStandardMaterial({ color: 0x3b2920, roughness: 0.35 });
+      const browMat = new THREE.MeshStandardMaterial({ color: 0x251d19, roughness: 0.88 });
+      const metricMat = new THREE.LineBasicMaterial({ color: 0xf3c46f, transparent: true, opacity: 0.7 });
 
-      const sliderEls = {};
-      function buildSliders(){ const host=document.getElementById("params");
-        const groups = model.groups || { all: Object.keys(params) };
-        for (const [region, names] of Object.entries(groups)){
-          const h=document.createElement("h2"); h.textContent=region; host.appendChild(h);
-          for (const name of names){ if(!params[name]) continue;
-            const row=document.createElement("div"); row.className="row";
-            row.innerHTML=`<label><span>${name}</span><span class="v">0.00</span></label><input type="range" min="-1.5" max="1.5" step="0.05" value="0">`;
-            const inp=row.querySelector("input"), out=row.querySelector(".v");
-            inp.addEventListener("input",()=>{ values[name]=+inp.value; out.textContent=(+inp.value).toFixed(2); recompute(); });
-            sliderEls[name]={inp,out}; host.appendChild(row); }
+      const headGeometry = new THREE.BufferGeometry();
+      const headMesh = new THREE.Mesh(headGeometry, clay);
+      headMesh.castShadow = true;
+      headMesh.receiveShadow = true;
+      root.add(headMesh);
+      const metricsGroup = new THREE.Group();
+      root.add(metricsGroup);
+      const featureGroup = new THREE.Group();
+      root.add(featureGroup);
+
+      const state = {
+        data: null,
+        values: {},
+        preset: "neutral",
+        hero: "",
+        view: "front",
+        overlay: 0,
+        lastChanged: null,
+        metrics: {},
+        basePositions: null,
+        currentPositions: null,
+      };
+
+      const get = (id) => Number(state.values[id] ?? 0);
+      const get01 = (id, scale = 1) => clamp(get(id) / scale, -1, 1);
+      const assignPreset = (name) => {
+        state.preset = name;
+        state.values = {};
+        const preset = state.data.presets[name];
+        for (const p of state.data.parameters) state.values[p.id] = p.default ?? 0;
+        for (const [id, value] of Object.entries(preset.values ?? {})) state.values[id] = value;
+        state.hero = name.startsWith("hero") ? name : "";
+        presetSelect.value = name;
+        heroSelect.value = state.hero;
+        heroLabel.textContent = state.hero || "off";
+        updateReference();
+        refreshSliders();
+        rebuild();
+      };
+      const readParameters = () => {
+        const p = {};
+        for (const item of state.data.parameters) p[item.id] = get(item.id);
+        return {
+          p,
+          cranialW: 1 + get("headWidth") * 0.055 + get("cephalicIndex") * 0.035,
+          cranialH: 1 + get("headHeight") * 0.05 + get("foreheadHeight") * 0.025,
+          cranialD: 1 + get("headDepth") * 0.07 - get("cephalicIndex") * 0.03,
+          faceLen: 1 + get("faceLength") * 0.07,
+          zygomaW: 1 + get("bizygomaticWidth") * 0.055,
+          jawW: 1 + get("jawWidth") * 0.07 - get("jawTaper") * 0.04,
+          chinW: 1 + get("chinWidth") * 0.08 - get("jawTaper") * 0.04,
+          eyeScale: 1 + get("eyeScale") * 0.07,
+          eyeWidth: 1 + get("eyeWidth") * 0.1 + get("eyeScale") * 0.035,
+          eyeHeight: 1 + get("eyeHeight") * 0.14 + get("eyeScale") * 0.025,
+          eyeSpacing: get("eyeSpacing") * 0.028,
+          noseW: 1 + get("alarWidth") * 0.09 + get("tipWidth") * 0.025,
+          noseLen: 1 + get("noseLength") * 0.08,
+          mouthW: 1 + get("mouthWidth") * 0.12,
+          upperLip: 1 + get("upperLipHeight") * 0.15 + get("upperLipFullness") * 0.05,
+          lowerLip: 1 + get("lowerLipHeight") * 0.15 + get("lowerLipFullness") * 0.05,
+        };
+      };
+      const headPoint = (u, v, c) => {
+        const phi = u * Math.PI * 2;
+        const y = Math.cos(v * Math.PI);
+        const ring = Math.sin(v * Math.PI);
+        const front = Math.cos(phi);
+        const side = Math.sin(phi);
+        const isFront = Math.max(0, front);
+        const lower = smooth((-y + 0.12) / 0.76);
+        const upper = smooth((y + 0.1) / 0.78);
+        const mid = gaussian(y, 0.0, 0.52);
+        const jawBand = gaussian(y, -0.5, 0.22);
+        const chinBand = gaussian(y, -0.78, 0.18);
+        const cheekBand = gaussian(y, -0.05 - get("cheekboneHeight") * 0.025, 0.22);
+        const templeBand = gaussian(y, 0.28, 0.26);
+        let halfW =
+          0.47 *
+          ring *
+          c.cranialW *
+          (1 + get("templeWidth") * 0.035 * templeBand + get("cheekFullness") * 0.028 * cheekBand);
+        halfW *=
+          1 +
+          isFront * cheekBand * (c.zygomaW - 1 + get("cheekboneProjection") * 0.02) +
+          isFront * jawBand * (c.jawW - 1) +
+          isFront * chinBand * (c.chinW - 1);
+        const chinTuck = isFront * chinBand * (0.08 + get("chinRoundness") * 0.02);
+        const yFace = y * 0.78 * c.cranialH * (1 + (lower - 0.4) * (c.faceLen - 1));
+        let z =
+          front *
+          0.34 *
+          ring *
+          c.cranialD *
+          (1 + get("occiputDepth") * 0.03 * Math.max(0, -front) + get("foreheadBulge") * 0.025 * upper);
+        z += isFront * (0.058 * mid + get("cheekFullness") * 0.018 * cheekBand);
+        z += isFront * get("chinProjection") * 0.025 * chinBand;
+        z -= isFront * get("jawAngle") * 0.018 * jawBand;
+        z += isFront * get("foreheadSlope") * 0.022 * upper * (0.3 + y);
+        return new THREE.Vector3(side * halfW * (1 - chinTuck), yFace - 0.03, z);
+      };
+      const ensureHeadMesh = () => {
+        if (state.basePositions !== null) return;
+        state.basePositions = new Float32Array(state.data.mesh.positions);
+        state.currentPositions = new Float32Array(state.basePositions.length);
+        headGeometry.setIndex(state.data.mesh.indices);
+        headGeometry.setAttribute(
+          "position",
+          new THREE.BufferAttribute(state.currentPositions, 3),
+        );
+      };
+      const collectBounds = (positions, predicate) => {
+        const bounds = {
+          min: [Infinity, Infinity, Infinity],
+          max: [-Infinity, -Infinity, -Infinity],
+          count: 0,
+        };
+        for (let i = 0; i < positions.length; i += 3) {
+          const x = positions[i];
+          const y = positions[i + 1];
+          const z = positions[i + 2];
+          if (!predicate(x, y, z)) continue;
+          bounds.count += 1;
+          bounds.min[0] = Math.min(bounds.min[0], x);
+          bounds.min[1] = Math.min(bounds.min[1], y);
+          bounds.min[2] = Math.min(bounds.min[2], z);
+          bounds.max[0] = Math.max(bounds.max[0], x);
+          bounds.max[1] = Math.max(bounds.max[1], y);
+          bounds.max[2] = Math.max(bounds.max[2], z);
         }
-      }
-      function syncSliders(){ for (const [name,{inp,out}] of Object.entries(sliderEls)){ inp.value=values[name]||0; out.textContent=(values[name]||0).toFixed(2); } }
-      const camAt=(px,py,pz)=>{ const c=window.__center; cam.position.set(c[0]+px,c[1]+py,c[2]+pz); controls.target.set(...c); controls.update(); };
-      const D=()=>{ const b=window.__box; return (b.max[1]-b.min[1])*1.7; };
-      const camFront=()=>camAt(0,0,D()), camQ=()=>camAt(D()*0.6,D()*0.04,D()*0.8), camS=()=>camAt(D()*0.98,0,D()*0.12);
-      document.querySelectorAll("[data-cam]").forEach(b=>b.addEventListener("click",()=>({front:camFront,q34:camQ,side:camS})[b.dataset.cam]()));
-      document.getElementById("bMat").onclick=()=>{ normalsOn=!normalsOn; mesh.material=normalsOn?normalMat:clay; if(hairMesh)hairMesh.visible=!normalsOn&&hairOn; if(hairDrape)hairDrape.visible=!normalsOn&&hairOn; };
-      document.getElementById("bHair").onclick=()=>{ hairOn=!hairOn; hairMesh.visible=hairOn; if(hairDrape)hairDrape.visible=hairOn; };
-      document.getElementById("bReset").onclick=()=>{ for(const k of Object.keys(values))values[k]=0; syncSliders(); recompute(); };
-      document.getElementById("bDump").onclick=()=>{ const o={}; for(const[k,v]of Object.entries(values))if(v)o[k]=+v.toFixed(2); document.getElementById("preset").value=JSON.stringify(o); };
-      document.getElementById("bApply").onclick=()=>{ try{ window.__setParams(JSON.parse(document.getElementById("preset").value||"{}")); }catch(e){ alert("bad JSON"); } };
+        return bounds;
+      };
+      const range = (bounds, axis) => bounds.max[axis] - bounds.min[axis];
+      const applySparseMorph = (positions, rows, weight) => {
+        for (const [index, dx, dy, dz] of rows ?? []) {
+          const i = index * 3;
+          positions[i] += dx * weight;
+          positions[i + 1] += dy * weight;
+          positions[i + 2] += dz * weight;
+        }
+      };
+      const deriveFactsFromPositions = (positions) => {
+        const all = collectBounds(positions, () => true);
+        const width = range(all, 0);
+        const height = range(all, 1);
+        const depth = range(all, 2);
+        const frontCut = all.min[2] + depth * 0.58;
+        const front = collectBounds(
+          positions,
+          (x, y, z) =>
+            z > frontCut &&
+            y > all.min[1] + height * 0.18 &&
+            y < all.max[1] - height * 0.08 &&
+            Math.abs(x) < width * 0.28,
+        );
+        const usable = front.count > 30 ? front : all;
+        const faceTop = usable.max[1];
+        const faceBottom = usable.min[1];
+        const faceHeight = Math.max(0.001, faceTop - faceBottom);
+        const band = (from, to, zCut = frontCut) =>
+          collectBounds(
+            positions,
+            (x, y, z) =>
+              z > zCut &&
+              y > faceBottom + faceHeight * from &&
+              y < faceBottom + faceHeight * to &&
+              Math.abs(x) < width * 0.34,
+          );
+        const cheek = band(0.5, 0.76, all.min[2] + depth * 0.48);
+        const jaw = band(0.22, 0.42, all.min[2] + depth * 0.44);
+        const chin = band(0.06, 0.2, all.min[2] + depth * 0.44);
+        const nose = band(0.42, 0.62, all.min[2] + depth * 0.64);
+        const faceWidth = Math.max(0.001, range(cheek.count > 10 ? cheek : usable, 0));
+        const jawWidth =
+          faceWidth *
+          (0.69 + get("jawWidth") * 0.06 - get("jawTaper") * 0.045);
+        const chinWidth =
+          faceWidth *
+          (0.36 + get("chinWidth") * 0.045 - get("jawTaper") * 0.025);
+        const noseWidth =
+          faceWidth *
+          (0.225 + get("alarWidth") * 0.03 + get("tipWidth") * 0.012);
+        const eyeWidth =
+          faceWidth *
+          (0.22 + get("eyeScale") * 0.012 + get("eyeWidth") * 0.018);
+        const eyeHeight =
+          eyeWidth * (0.32 + get("eyeHeight") * 0.035 + get("eyeScale") * 0.006);
+        const eyeSpacing = eyeWidth * (1.08 + get("eyeSpacing") * 0.16);
+        const browEyeDistance = eyeHeight * (0.88 + get("browHeight") * 0.12);
+        const upperLipHeight =
+          faceHeight * (0.025 + get("upperLipHeight") * 0.002);
+        const lowerLipHeight =
+          faceHeight * (0.03 + get("lowerLipHeight") * 0.0025);
+        return {
+          faceWidth,
+          faceHeight,
+          faceTop,
+          faceBottom,
+          jawWidth,
+          chinWidth,
+          eyeY: faceBottom + faceHeight * 0.67,
+          eyeWidth,
+          eyeHeight,
+          eyeSpacing,
+          browEyeDistance,
+          noseWidth,
+          noseLength: faceHeight * (0.315 + get("noseLength") * 0.018),
+          noseBaseY: faceBottom + faceHeight * 0.43,
+          mouthWidth: faceWidth * (0.345 + get("mouthWidth") * 0.03),
+          mouthY: faceBottom + faceHeight * 0.3,
+          upperLipHeight,
+          lowerLipHeight,
+          chinHeight: faceHeight * (0.18 + get("chinHeight") * 0.025),
+          profileDepth: depth * (0.62 + get("headDepth") * 0.025),
+          tipProjection: faceHeight * (0.18 + get("tipProjection") * 0.015),
+        };
+      };
+      const addMakeHumanEyes = (facts) => {
+        const eyeY = facts.faceBottom + facts.faceHeight * 0.52;
+        const eyeZ = 0.64 - get("eyeDepth") * 0.01;
+        const spacing = facts.eyeSpacing + facts.eyeWidth;
+        for (const sideSign of [-1, 1]) {
+          const eye = ellipsoid(
+            `makehuman-eye-${sideSign}`,
+            facts.eyeWidth * 0.32,
+            facts.eyeHeight * 0.44,
+            0.018,
+            whiteMat,
+            32,
+          );
+          eye.position.set(sideSign * spacing * 0.5, eyeY, eyeZ);
+          const iris = ellipsoid(
+            `makehuman-iris-${sideSign}`,
+            facts.eyeHeight * 0.24,
+            facts.eyeHeight * 0.24,
+            0.004,
+            irisMat,
+            20,
+          );
+          iris.position.set(sideSign * spacing * 0.5, eyeY - facts.eyeHeight * 0.02, eyeZ + 0.018);
+        }
+      };
+      const buildHeadGeometry = () => {
+        ensureHeadMesh();
+        const positions = state.currentPositions;
+        positions.set(state.basePositions);
+        for (const item of state.data.parameters) {
+          const value = get(item.id);
+          if (value === 0) continue;
+          const morph = state.data.morphs[item.id];
+          const rows = value > 0 ? morph?.plus : morph?.minus;
+          applySparseMorph(positions, rows, Math.abs(value));
+        }
+        const attribute = headGeometry.getAttribute("position");
+        attribute.needsUpdate = true;
+        headGeometry.computeVertexNormals();
+        headGeometry.computeBoundingSphere();
+        return deriveFactsFromPositions(positions);
+      };
+      const ellipsoid = (name, sx, sy, sz, mat = clay, segments = 32) => {
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, segments, Math.max(12, Math.floor(segments / 2))), mat);
+        mesh.name = name;
+        mesh.scale.set(sx, sy, sz);
+        featureGroup.add(mesh);
+        return mesh;
+      };
+      const makeCapsuleLine = (name, points, color = 0x251d19, width = 0.006) => {
+        const curve = new THREE.CatmullRomCurve3(points);
+        const tube = new THREE.TubeGeometry(curve, 20, width, 8, false);
+        const mesh = new THREE.Mesh(tube, new THREE.MeshStandardMaterial({ color, roughness: 0.84 }));
+        mesh.name = name;
+        featureGroup.add(mesh);
+        return mesh;
+      };
+      const addEye = (sideSign, c) => {
+        const sideName = sideSign < 0 ? "L" : "R";
+        const sizeAsym = sideSign < 0 ? get("leftRightEyeSize") : -get("leftRightEyeSize");
+        const eyeX = sideSign * (0.155 + c.eyeSpacing);
+        const eyeY = 0.105 + get("eyeHeightPosition") * 0.018;
+        const eyeZ = 0.37 - get("eyeDepth") * 0.018;
+        const eyeW = 0.075 * c.eyeWidth * c.eyeScale * (1 + sizeAsym * 0.08);
+        const eyeH = 0.027 * c.eyeHeight * c.eyeScale * (1 + sizeAsym * 0.05);
+        const tilt = sideSign * get("eyeTilt") * 0.05;
+        const white = ellipsoid(`eye-white-${sideName}`, eyeW, eyeH, 0.012, whiteMat, 32);
+        white.position.set(eyeX, eyeY, eyeZ);
+        white.rotation.z = tilt;
+        const iris = ellipsoid(`iris-${sideName}`, eyeH * 0.72, eyeH * 0.72, 0.004, irisMat, 24);
+        iris.position.set(eyeX, eyeY - 0.002, eyeZ + 0.011);
+        iris.rotation.z = tilt;
+        const foldY = eyeY + eyeH * (1.55 + get("eyelidFold") * 0.12);
+        const foldIn = 0.55 + get("epicanthus") * 0.04;
+        const inner = eyeX - sideSign * eyeW * foldIn;
+        const outer = eyeX + sideSign * eyeW * (0.88 + get("outerCanthus") * 0.04);
+        makeCapsuleLine(`upper-lid-${sideName}`, [
+          new THREE.Vector3(inner, eyeY + eyeH * 0.24, eyeZ + 0.015),
+          new THREE.Vector3(eyeX, eyeY + eyeH * 0.95, eyeZ + 0.021),
+          new THREE.Vector3(outer, eyeY + eyeH * 0.34 + tilt * 0.2, eyeZ + 0.015),
+        ], 0x2d231f, 0.0048);
+        makeCapsuleLine(`lower-lid-${sideName}`, [
+          new THREE.Vector3(inner, eyeY - eyeH * 0.3, eyeZ + 0.014),
+          new THREE.Vector3(eyeX, eyeY - eyeH * 0.62, eyeZ + 0.017),
+          new THREE.Vector3(outer, eyeY - eyeH * 0.26 + tilt * 0.1, eyeZ + 0.014),
+        ], 0x9c796c, 0.0038);
+        makeCapsuleLine(`eyefold-${sideName}`, [
+          new THREE.Vector3(inner * 0.99, foldY, eyeZ + 0.01),
+          new THREE.Vector3(eyeX, foldY + eyeH * 0.45, eyeZ + 0.014),
+          new THREE.Vector3(outer * 0.99, foldY + tilt * 0.18, eyeZ + 0.01),
+        ], 0x8d6b61, 0.0028);
+        const browY = eyeY + 0.075 + get("browHeight") * 0.022;
+        const browArc = get("browArc") * 0.018;
+        makeCapsuleLine(`brow-${sideName}`, [
+          new THREE.Vector3(eyeX - sideSign * eyeW * 0.95, browY, eyeZ - 0.006),
+          new THREE.Vector3(eyeX, browY + 0.012 + browArc, eyeZ),
+          new THREE.Vector3(eyeX + sideSign * eyeW * 1.12, browY + get("browTilt") * sideSign * 0.018, eyeZ - 0.004),
+        ], 0x271f1b, 0.006);
+        return { eyeX, eyeY, eyeW, eyeH };
+      };
+      const addNose = (c) => {
+        const offset = get("noseCenterOffset") * 0.018;
+        const length = 0.175 * c.noseLen;
+        const bridgeY = 0.105;
+        const baseY = bridgeY - length;
+        const bridgeZ = 0.386 + get("bridgeProjection") * 0.018 + get("bridgeHeight") * 0.014;
+        const tipZ = 0.432 + get("tipProjection") * 0.028 + get("tipRotation") * 0.005;
+        makeCapsuleLine("nose-dorsum", [
+          new THREE.Vector3(offset, bridgeY, bridgeZ),
+          new THREE.Vector3(offset + get("dorsumCurve") * 0.008, mix(bridgeY, baseY, 0.56), mix(bridgeZ, tipZ, 0.48) + get("dorsumCurve") * 0.008),
+          new THREE.Vector3(offset, baseY + 0.018 + get("tipRotation") * 0.012, tipZ),
+        ], 0xa47b6b, 0.012);
+        const tip = ellipsoid("nose-tip", 0.034 * (1 + get("tipWidth") * 0.08), 0.026, 0.032, clay, 24);
+        tip.position.set(offset, baseY + 0.013 + get("tipRotation") * 0.012, tipZ);
+        const alarW = 0.043 * c.noseW;
+        for (const s of [-1, 1]) {
+          const ala = ellipsoid(`ala-${s}`, 0.022 * c.noseW, 0.015, 0.018, clay, 18);
+          ala.position.set(offset + s * alarW, baseY - 0.006, 0.405 + get("nostrilFlare") * 0.008);
+          const nostril = ellipsoid(`nostril-${s}`, 0.011 * (1 + get("nostrilFlare") * 0.08), 0.004, 0.003, browMat, 12);
+          nostril.position.set(offset + s * alarW, baseY - 0.017, 0.421);
+        }
+        return { bridgeY, baseY, alarW, tipZ, offset };
+      };
+      const addMouth = (c, nose) => {
+        const offset = get("mouthCenterOffset") * 0.018;
+        const y = nose.baseY - 0.092 - get("mouthHeightPosition") * 0.018;
+        const width = 0.116 * c.mouthW;
+        const upperH = 0.019 * c.upperLip;
+        const lowerH = 0.023 * c.lowerLip;
+        const z = 0.402 + get("lipProjection") * 0.018;
+        makeCapsuleLine("mouth-line", [
+          new THREE.Vector3(offset - width, y + get("mouthCornerTilt") * -0.012, z + 0.016),
+          new THREE.Vector3(offset, y + 0.002, z + 0.025),
+          new THREE.Vector3(offset + width, y + get("mouthCornerTilt") * 0.012, z + 0.016),
+        ], 0x4f2d2b, 0.0035);
+        const upper = ellipsoid("upper-lip", width * 0.72, upperH, 0.012 + get("upperLipFullness") * 0.004, featureMat, 32);
+        upper.position.set(offset, y + upperH * 0.58, z + 0.019);
+        upper.scale.x *= 1 + get("cupidBow") * 0.02;
+        const lower = ellipsoid("lower-lip", width * 0.76, lowerH, 0.014 + get("lowerLipFullness") * 0.005, featureMat, 32);
+        lower.position.set(offset, y - lowerH * 0.62, z + 0.02);
+        const philtrumLen = Math.abs(nose.baseY - y);
+        makeCapsuleLine("philtrum-l", [
+          new THREE.Vector3(offset - 0.012, nose.baseY - 0.016, 0.405),
+          new THREE.Vector3(offset - 0.01, y + upperH * 1.2, 0.415),
+        ], 0xa47b6b, 0.002);
+        makeCapsuleLine("philtrum-r", [
+          new THREE.Vector3(offset + 0.012, nose.baseY - 0.016, 0.405),
+          new THREE.Vector3(offset + 0.01, y + upperH * 1.2, 0.415),
+        ], 0xa47b6b, 0.002);
+        return { y, width, upperH, lowerH, philtrumLen };
+      };
+      const addEars = () => {
+        const scale = 1 + get("earScale") * 0.08;
+        const y = 0.025 + get("earHeightPosition") * 0.026;
+        for (const s of [-1, 1]) {
+          const ear = ellipsoid(`ear-${s}`, 0.035 * scale, 0.105 * scale, 0.019 * (1 + get("earProtrusion") * 0.14), clay, 24);
+          ear.position.set(s * (0.49 + get("earProtrusion") * 0.018), y, -0.02);
+          ear.rotation.y = s * (Math.PI * 0.08 + get("earRotation") * 0.08);
+          const inner = ellipsoid(`ear-inner-${s}`, 0.018 * scale, 0.064 * scale, 0.007, featureMat, 16);
+          inner.position.copy(ear.position);
+          inner.position.x -= s * 0.004;
+          inner.position.z += 0.014;
+        }
+      };
+      const clearGroup = (group) => {
+        for (const child of [...group.children]) {
+          group.remove(child);
+          child.traverse?.((obj) => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material && ![clay, featureMat, whiteMat, irisMat, browMat, metricMat].includes(obj.material)) obj.material.dispose();
+          });
+        }
+      };
+      const addMeasurementLines = (facts) => {
+        clearGroup(metricsGroup);
+        const lines = [
+          [[-facts.faceWidth / 2, -0.01, 0.47], [facts.faceWidth / 2, -0.01, 0.47]],
+          [[-facts.jawWidth / 2, -0.47, 0.43], [facts.jawWidth / 2, -0.47, 0.43]],
+          [[-facts.eyeSpacing / 2, facts.eyeY, 0.48], [facts.eyeSpacing / 2, facts.eyeY, 0.48]],
+          [[-facts.noseWidth / 2, facts.noseBaseY, 0.48], [facts.noseWidth / 2, facts.noseBaseY, 0.48]],
+          [[-facts.mouthWidth / 2, facts.mouthY, 0.48], [facts.mouthWidth / 2, facts.mouthY, 0.48]],
+          [[-0.31, facts.faceTop, 0.48], [-0.31, facts.faceBottom, 0.48]],
+        ];
+        for (const [a, b] of lines) {
+          const geo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(...a),
+            new THREE.Vector3(...b),
+          ]);
+          metricsGroup.add(new THREE.Line(geo, metricMat));
+        }
+      };
+      const calculateMetrics = (facts) => ({
+        facialIndex: facts.faceHeight / facts.faceWidth,
+        jawToZygoma: facts.jawWidth / facts.faceWidth,
+        chinToZygoma: facts.chinWidth / facts.faceWidth,
+        eyeWidthToFace: facts.eyeWidth / facts.faceWidth,
+        eyeAperture: facts.eyeHeight / facts.eyeWidth,
+        eyeSpacingToWidth: facts.eyeSpacing / facts.eyeWidth,
+        browEyeDistance: facts.browEyeDistance / facts.eyeHeight,
+        noseWidthToFace: facts.noseWidth / facts.faceWidth,
+        noseLengthToFace: facts.noseLength / facts.faceHeight,
+        mouthWidthToFace: facts.mouthWidth / facts.faceWidth,
+        lowerUpperLip: facts.lowerLipHeight / facts.upperLipHeight,
+        chinHeightToFace: facts.chinHeight / facts.faceHeight,
+        profileDepthToFace: facts.profileDepth / facts.faceHeight,
+        tipProjectionToFace: facts.tipProjection / facts.faceHeight,
+      });
+      const rebuild = () => {
+        clearGroup(featureGroup);
+        const facts = buildHeadGeometry();
+        addMakeHumanEyes(facts);
+        state.metrics = calculateMetrics(facts);
+        addMeasurementLines(facts);
+        renderMetrics();
+        renderCycleLog();
+      };
+      const renderMetrics = () => {
+        const target = state.hero ? state.data.presets[state.hero]?.targetMetrics ?? {} : {};
+        metricsEl.innerHTML = `<div class="metric header"><span>ratio</span><span>render</span><span>target</span><span>error</span></div>`;
+        for (const metric of state.data.measurementMetrics) {
+          const current = state.metrics[metric.id] ?? baselineMetrics[metric.id];
+          const goal = target[metric.id] ?? baselineMetrics[metric.id];
+          const error = current - goal;
+          const abs = Math.abs(error);
+          const cls = abs < 0.01 ? "ok" : abs < 0.035 ? "warn" : "bad";
+          const row = document.createElement("div");
+          row.className = "metric";
+          row.innerHTML = `<span>${metric.label}</span><span>${current.toFixed(3)}</span><span>${goal.toFixed(3)}</span><span class="err ${cls}">${error >= 0 ? "+" : ""}${error.toFixed(3)}</span>`;
+          metricsEl.appendChild(row);
+        }
+      };
+      const renderCycleLog = () => {
+        const target = state.hero ? state.data.presets[state.hero]?.targetMetrics ?? {} : {};
+        let worst = { id: "", error: 0 };
+        for (const metric of state.data.measurementMetrics) {
+          const current = state.metrics[metric.id] ?? baselineMetrics[metric.id];
+          const goal = target[metric.id] ?? baselineMetrics[metric.id];
+          const error = current - goal;
+          if (Math.abs(error) > Math.abs(worst.error)) worst = { id: metric.label, error };
+        }
+        const changed = state.lastChanged ? `last adjusted: ${state.lastChanged}` : "last adjusted: preset load";
+        const diagnosis =
+          Math.abs(worst.error) < 0.01
+            ? "largest measured error is below 0.010 for the tracked ratios"
+            : `${worst.id} is ${worst.error > 0 ? "high" : "low"} by ${Math.abs(worst.error).toFixed(3)}`;
+        cycleLog.textContent = `${changed}\nmeasure: ${diagnosis}\nnext: change one axis that owns that ratio, then re-measure before making any quality claim.`;
+        cycleStatus.textContent = `Measured after change · ${diagnosis}`;
+      };
+      const refreshSliders = () => {
+        for (const input of paramGroupsEl.querySelectorAll("input[data-param]")) {
+          const value = Number(state.values[input.dataset.param] ?? 0);
+          input.value = String(value);
+          input.parentElement.querySelector(".value").textContent = value.toFixed(2);
+        }
+      };
+      const buildControls = () => {
+        presetSelect.innerHTML = "";
+        for (const [id, preset] of Object.entries(state.data.presets)) {
+          const option = document.createElement("option");
+          option.value = id;
+          option.textContent = preset.label;
+          presetSelect.appendChild(option);
+        }
+        heroSelect.innerHTML = `<option value="">none</option>`;
+        for (const [id, ref] of Object.entries(state.data.references)) {
+          const option = document.createElement("option");
+          option.value = id;
+          option.textContent = ref.name;
+          heroSelect.appendChild(option);
+        }
+        viewButtons.innerHTML = "";
+        for (const view of Object.keys(viewCamera)) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.dataset.view = view;
+          button.textContent = view.replace("ThreeQuarter", " 3/4").replace("Profile", " side");
+          button.addEventListener("click", () => setView(view));
+          viewButtons.appendChild(button);
+        }
+        paramGroupsEl.innerHTML = "";
+        for (const group of state.data.parameterGroups) {
+          const details = document.createElement("details");
+          details.open = group.id === "faceFrame" || group.id === "eyes";
+          details.innerHTML = `<summary>${group.label}</summary>`;
+          for (const param of state.data.parameters.filter((p) => p.group === group.id)) {
+            const row = document.createElement("div");
+            row.className = "row";
+            row.innerHTML = `<label title="+ ${param.positive}; - ${param.negative}"><span>${param.label}</span><span class="value">0.00</span></label>
+              <input data-param="${param.id}" type="range" min="${param.min}" max="${param.max}" step="0.01" value="${param.default ?? 0}" />`;
+            row.querySelector("input").addEventListener("input", (event) => {
+              const input = event.currentTarget;
+              const value = Number(input.value);
+              state.values[input.dataset.param] = value;
+              state.lastChanged = param.label;
+              input.parentElement.querySelector(".value").textContent = value.toFixed(2);
+              rebuild();
+            });
+            details.appendChild(row);
+          }
+          paramGroupsEl.appendChild(details);
+        }
+      };
+      const setView = (view) => {
+        state.view = view;
+        const pos = viewCamera[view] ?? viewCamera.front;
+        camera.position.set(pos[0], pos[1], pos[2]);
+        camera.up.set(0, 1, 0);
+        if (view === "top") camera.up.set(0, 0, -1);
+        if (view === "bottom") camera.up.set(0, 0, 1);
+        controls.target.set(0, 0, 0.02);
+        controls.update();
+        for (const button of viewButtons.querySelectorAll("button")) {
+          button.classList.toggle("active", button.dataset.view === view);
+        }
+        updateReference();
+      };
+      const updateReference = () => {
+        state.hero = heroSelect.value;
+        heroLabel.textContent = state.hero || "off";
+        const opacity = Number(overlayOpacity.value);
+        state.overlay = opacity;
+        overlayValue.textContent = opacity.toFixed(2);
+        reference.style.opacity = state.hero ? String(opacity) : "0";
+        if (state.hero) {
+          const ref = state.data.references[state.hero];
+          const cell = ref.views[state.view] ?? ref.views.front;
+          const x =
+            ref.grid.columns <= 1
+              ? 50
+              : (cell.column / (ref.grid.columns - 1)) * 100;
+          const y =
+            ref.grid.rows <= 1 ? 50 : (cell.row / (ref.grid.rows - 1)) * 100;
+          reference.style.backgroundImage = `url("${MODEL_ROOT}/${state.hero.replace("hero", "")}/input/face.png")`;
+          reference.style.backgroundSize = `${ref.grid.columns * 100}% ${ref.grid.rows * 100}%`;
+          reference.style.backgroundPosition = `${x}% ${y}%`;
+        } else {
+          reference.style.backgroundImage = "";
+        }
+        renderStrip();
+        viewStatus.textContent = `${pretty(state.view)} · ${state.hero ? state.data.references[state.hero].name : "render only"}`;
+        renderMetrics();
+        renderCycleLog();
+      };
+      const renderStrip = () => {
+        strip.innerHTML = "";
+        if (!state.hero) return;
+        const ref = state.data.references[state.hero];
+        const path = `${MODEL_ROOT}/${state.hero.replace("hero", "")}/input/face.png`;
+        for (const [view, cell] of Object.entries(ref.views)) {
+          const tile = document.createElement("button");
+          tile.className = `thumb ${view === state.view ? "active" : ""}`;
+          tile.type = "button";
+          const x =
+            ref.grid.columns <= 1
+              ? 50
+              : (cell.column / (ref.grid.columns - 1)) * 100;
+          const y =
+            ref.grid.rows <= 1 ? 50 : (cell.row / (ref.grid.rows - 1)) * 100;
+          tile.innerHTML = `<div class="crop" style="background-image:url('${path}');background-size:${ref.grid.columns * 100}% ${ref.grid.rows * 100}%;background-position:${x}% ${y}%"></div><span>${view}</span>`;
+          tile.addEventListener("click", () => {
+            if (viewCamera[view]) setView(view);
+          });
+          strip.appendChild(tile);
+        }
+      };
+      const animate = () => {
+        controls.update();
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      };
+      const resize = () => {
+        const w = canvas.clientWidth || 1;
+        const h = canvas.clientHeight || 1;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      };
+      window.addEventListener("resize", resize);
+      presetSelect.addEventListener("change", () => assignPreset(presetSelect.value));
+      heroSelect.addEventListener("change", updateReference);
+      overlayOpacity.addEventListener("input", updateReference);
+      window.__faceEditor = {
+        setPreset: assignPreset,
+        setView,
+        setOverlay: (value) => {
+          overlayOpacity.value = String(value);
+          updateReference();
+        },
+        metrics: () => ({ ...state.metrics }),
+        state,
+      };
 
-      // headless hooks
-      window.__setParam=(name,v)=>{ values[name]=v; if(sliderEls[name]){sliderEls[name].inp.value=v;sliderEls[name].out.textContent=v.toFixed(2);} recompute(); };
-      window.__setParams=(obj)=>{ for(const k of Object.keys(values))values[k]=0; for(const[k,v]of Object.entries(obj))values[k]=v; if(Object.keys(sliderEls).length)syncSliders(); recompute(); };
-      // consume an IAutoFilmHead nested document (the LLM tool-calling schema) —
-      // same projection as engine.flattenHead (the canonical, tested version).
-      const HEAD_MAP={shape:{width:"faceWidth",length:"faceLength",oval:"faceOval",round:"headRound",foreheadSlope:"foreheadSlope",foreheadHeight:"foreheadHeight",foreheadBulge:"foreheadBulge",templeWidth:"templeWidth",occiputDepth:"occiputDepth"},brow:{height:"browHeight",angle:"browAngle"},eyes:{size:"eyeSize",openness:"eyeHeight",spacing:"eyeSpacing",tilt:"eyeAngle",depth:"eyeDepth",epicanthus:"epicanthus",fold:"eyeFold"},nose:{width:"noseWidth",length:"noseLength",projection:"noseProject",hump:"noseHump",tipAngle:"nosePoint",nostrilWidth:"nostrilWidth",baseHeight:"noseBaseH",bridge:"noseBridge"},mouth:{width:"mouthWidth",lipFullness:"lipFull",upperLipHeight:"upperLipH",lowerLipHeight:"lowerLipH",cupidsBow:"cupidsBow",philtrum:"philtrum",height:"mouthHeight",smile:"mouthSmile"},cheek:{fullness:"cheekFull",bones:"cheekBones"},jaw:{width:"jawWidth",drop:"jawDrop",chinLength:"chinLength",chinWidth:"chinWidth",chinProjection:"chinProject"}};
-      window.__setHead=(doc)=>{ const flat={}; for(const g in HEAD_MAP){ const grp=doc[g]; if(!grp)continue; for(const f in HEAD_MAP[g]) if(grp[f]!==undefined) flat[HEAD_MAP[g][f]]=grp[f]; } window.__setParams(flat); };
-      window.__camObj=cam;
-      window.__resize=(w,h)=>{ const p=document.getElementById("panel"); if(p)p.style.display="none";
-        canvas.style.position="fixed"; canvas.style.inset="0"; canvas.style.width=w+"px"; canvas.style.height=h+"px"; canvas.style.zIndex="9999";
-        gl.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); };
-      window.__cam=(px,py,pz,tx,ty,tz)=>{ cam.position.set(px,py,pz); controls.target.set(tx,ty,tz); cam.lookAt(tx,ty,tz); cam.updateProjectionMatrix(); };
-      window.__mat=(mode)=>{ normalsOn=mode==="normal"; mesh.material=normalsOn?normalMat:clay; if(hairMesh)hairMesh.visible=!normalsOn&&hairOn; if(hairDrape)hairDrape.visible=!normalsOn&&hairOn; };
-      window.__hair=(on)=>{ hairOn=on; hairMesh.visible=on; if(hairDrape)hairDrape.visible=on; setColors(geo.getAttribute("position").array); };
-      window.__probe=()=>{ const A=geo.getAttribute("position").array, L=model.landmarks;
-        const g=(k)=>[+A[L[k]*3].toFixed(4),+A[L[k]*3+1].toFixed(4),+A[L[k]*3+2].toFixed(4)];
-        return { values:{...values}, outerEyeR:g("outerEyeR"), innerEyeR:g("innerEyeR"), mouthR:g("mouthR"), lowerLip:g("lowerLip"), chinFront:g("chinFront") }; };
-      const tick=()=>{ controls.update(); gl.render(scene,cam); requestAnimationFrame(tick); }; tick();
+      const boot = async () => {
+        const data = await fetch(DATA_URL).then((r) => r.json());
+        state.data = data;
+        buildControls();
+        assignPreset("neutral");
+        setView("front");
+        resize();
+        animate();
+      };
+      boot().catch((error) => {
+        cycleStatus.textContent = `failed to load head-model.json: ${error.message}`;
+        throw error;
+      });
     </script>
   </body>
 </html>

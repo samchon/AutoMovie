@@ -5,7 +5,12 @@ import { defineConfig } from "vite";
 // package "main" points at src/*.ts), so Vite must transpile them too. Two
 // pages: the character editor (index) and the engine-drivers demo (drivers).
 export default defineConfig({
-  server: { host: "127.0.0.1", port: 5173, strictPort: true },
+  server: {
+    host: "127.0.0.1",
+    port: 5173,
+    strictPort: true,
+    fs: { allow: [resolve(__dirname, "../..")] },
+  },
   preview: { host: "127.0.0.1", port: 4173, strictPort: true },
   build: {
     rollupOptions: {
@@ -21,6 +26,7 @@ export default defineConfig({
         impact: resolve(__dirname, "impact.html"),
         trampoline: resolve(__dirname, "trampoline.html"),
         face: resolve(__dirname, "face.html"),
+        head: resolve(__dirname, "head.html"),
       },
     },
   },
