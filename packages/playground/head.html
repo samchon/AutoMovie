@@ -76,8 +76,17 @@
         geo.computeVertexNormals();
         setColors(P); // re-bake concavity AO for the morphed surface
         if (hairMesh) rebuildHair(P);
+        reseatEyes(P);
       }
-      function reseatEyes(){ /* native eyeballs are fixed at their socket positions */ }
+      // each eyeball rigidly tracks the mean displacement of its socket-ring head
+      // verts, so eye-region morphs (bridge/nose recession, eyeSize, …) move the
+      // eyeball with the socket instead of leaving it stranded/popping.
+      function reseatEyes(P){ if(!eyeballs.length||!eyeballs[0].anchor) return;
+        for(const e of eyeballs){ let dx=0,dy=0,dz=0; const a=e.anchor; if(!a.length)continue;
+          for(const i of a){ dx+=P[i*3]-base[i*3]; dy+=P[i*3+1]-base[i*3+1]; dz+=P[i*3+2]-base[i*3+2]; }
+          // follow the socket, plus a small constant recess so the clay eye sits
+          // just inside the lids (never proud → no bug-eye under any morph).
+          e.mesh.position.set(dx/a.length, dy/a.length, dz/a.length - 0.035); } }
       let hairAdj = null;
       function rebuildHair(P) {
         // feathered offset along normal (volume grows with coverage), then a
@@ -244,7 +253,16 @@
           // read it as recessed), not a dark glass eyeball — keeps the head one
           // monochrome sculpture (Roman-bust blank eyes), no hollow black sockets.
           const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:0x9c8a78, roughness:0.7, metalness:0, side:THREE.DoubleSide}));
-          scene.add(mesh); eyeballs.push({ mesh });
+          scene.add(mesh);
+          // anchor the eyeball to its SOCKET: the head verts ringing the eye. On
+          // every morph the eyeball rigidly follows their mean displacement, so
+          // recessing the bridge/nose (or any eye-region morph) never pops the
+          // fixed eyeball out of its socket.
+          let cx=0,cy=0,cz=0; const np=e.positions.length/3; for(let i=0;i<np;i++){cx+=e.positions[i*3];cy+=e.positions[i*3+1];cz+=e.positions[i*3+2];} cx/=np;cy/=np;cz/=np;
+          let r2=0; for(let i=0;i<np;i++){ r2=Math.max(r2,(e.positions[i*3]-cx)**2+(e.positions[i*3+1]-cy)**2+(e.positions[i*3+2]-cz)**2); }
+          const R2=r2*2.2; const anchor=[]; const nv=base.length/3;
+          for(let i=0;i<nv;i++){ const d=(base[i*3]-cx)**2+(base[i*3+1]-cy)**2+(base[i*3+2]-cz)**2; if(d<R2) anchor.push(i); }
+          eyeballs.push({ mesh, anchor });
         };
         if (m.eyeR) mkEyeball(m.eyeR);
         if (m.eyeL) mkEyeball(m.eyeL);
