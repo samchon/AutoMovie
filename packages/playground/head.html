@@ -94,12 +94,12 @@
           const sock=socks[k];
           const ctr=[(sock.inner[0]+sock.outer[0])/2,(sock.inner[1]+sock.outer[1])/2,(sock.inner[2]+sock.outer[2])/2];
           const eyeW=Math.hypot(sock.inner[0]-sock.outer[0],sock.inner[1]-sock.outer[1],sock.inner[2]-sock.outer[2]);
-          const rad=eyeW*0.40, lidZ=Math.max(sock.inner[2],sock.outer[2]);
+          const rad=eyeW*0.34, lidZ=Math.max(sock.inner[2],sock.outer[2]);
           // almond dome: wide, flattened in height, and recessed so the sculpted
           // upper lid (lash-line + fold grooves) overhangs its top → the eye
           // reads OPEN (a curved eyeball framed by lids), not a round marble.
-          e.mesh.scale.set(rad*1.05, rad*0.58, rad*0.55);
-          e.mesh.position.set(ctr[0], ctr[1]-rad*0.04, lidZ-0.05-rad*0.55);
+          e.mesh.scale.set(rad*1.05, rad*0.62, rad*0.5);
+          e.mesh.position.set(ctr[0], ctr[1]-rad*0.04, lidZ-0.14-rad*0.5);  // recess deep → serene almond, not a protruding ball
         });
       }
       let hairAdj = null;
