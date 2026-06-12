@@ -69,13 +69,8 @@
           if (!v) continue; const side = v>0 ? params[name].plus : params[name].minus; const w = Math.abs(v);
           for (const [li,dx,dy,dz] of side) { P[li*3]+=dx*w; P[li*3+1]+=dy*w; P[li*3+2]+=dz*w; }
         }
-        // Taubin λ|μ smooth: remove the local bumps strong morphs leave at their
-        // falloff edges, keeping overall form (no shrink). 2 passes.
-        if (headAdj) for (let pass=0; pass<4; pass++){ const f=pass%2===0?0.5:-0.53; const src=P.slice();
-          for (let i=0;i<P.length/3;i++){ const nb=headAdj[i]; if(!nb||nb.length<2)continue;
-            let ax=0,ay=0,az=0; for(const j of nb){ax+=src[j*3];ay+=src[j*3+1];az+=src[j*3+2];}
-            ax/=nb.length;ay/=nb.length;az/=nb.length;
-            P[i*3]+=f*(ax-P[i*3]); P[i*3+1]+=f*(ay-P[i*3+1]); P[i*3+2]+=f*(az-P[i*3+2]); } }
+        // no smoothing: the Catmull-Clark surface is already smooth and the
+        // subdivided morphs are clean (the linear subdivision of real targets).
         geo.getAttribute("position").array.set(P);
         geo.getAttribute("position").needsUpdate = true;
         geo.computeVertexNormals();
