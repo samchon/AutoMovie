@@ -249,16 +249,23 @@
           const g = new THREE.BufferGeometry();
           g.setAttribute("position", new THREE.BufferAttribute(Float32Array.from(e.positions),3));
           g.setIndex(e.indices); g.computeVertexNormals();
-          // pure-form clay eye: a skin-toned dome (slightly darkened so the lids
-          // read it as recessed), not a dark glass eyeball — keeps the head one
-          // monochrome sculpture (Roman-bust blank eyes), no hollow black sockets.
-          const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:0x9c8a78, roughness:0.7, metalness:0, side:THREE.DoubleSide}));
+          // iris + pupil + sclera (Roman busts carved/drilled these — pure FORM,
+          // not a flat texture). Colour the eyeball radially from its forward gaze:
+          // pupil (dark) → iris (brown) → sclera (off-white), so the eye READS.
+          const ep=e.positions, n=ep.length/3; let cx=0,cy=0,cz=0; for(let i=0;i<n;i++){cx+=ep[i*3];cy+=ep[i*3+1];cz+=ep[i*3+2];} cx/=n;cy/=n;cz/=n;
+          let fi=0,fz=-1e9; for(let i=0;i<n;i++){ if(ep[i*3+2]>fz){fz=ep[i*3+2];fi=i;} }   // cornea apex = forward gaze
+          let gx=ep[fi*3]-cx,gy=ep[fi*3+1]-cy,gz=ep[fi*3+2]-cz; const gl=Math.hypot(gx,gy,gz)||1; gx/=gl;gy/=gl;gz/=gl;
+          const col=new Float32Array(n*3); const SC=[0.91,0.88,0.83],IR=[0.30,0.20,0.12],PU=[0.05,0.04,0.03];
+          for(let i=0;i<n;i++){ let vx=ep[i*3]-cx,vy=ep[i*3+1]-cy,vz=ep[i*3+2]-cz; const vl=Math.hypot(vx,vy,vz)||1; const c=(vx*gx+vy*gy+vz*gz)/vl;
+            const C = c>0.975?PU : c>0.88?IR : SC; col[i*3]=C[0];col[i*3+1]=C[1];col[i*3+2]=C[2]; }
+          g.setAttribute("color", new THREE.BufferAttribute(col,3));
+          const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.35, metalness:0, side:THREE.DoubleSide}));
           scene.add(mesh);
           // anchor the eyeball to its SOCKET: the head verts ringing the eye. On
           // every morph the eyeball rigidly follows their mean displacement, so
           // recessing the bridge/nose (or any eye-region morph) never pops the
           // fixed eyeball out of its socket.
-          let cx=0,cy=0,cz=0; const np=e.positions.length/3; for(let i=0;i<np;i++){cx+=e.positions[i*3];cy+=e.positions[i*3+1];cz+=e.positions[i*3+2];} cx/=np;cy/=np;cz/=np;
+          const np=n;   // eye centre (cx,cy,cz) already computed above for the iris
           let r2=0; for(let i=0;i<np;i++){ r2=Math.max(r2,(e.positions[i*3]-cx)**2+(e.positions[i*3+1]-cy)**2+(e.positions[i*3+2]-cz)**2); }
           const R2=r2*2.2; const anchor=[]; const nv=base.length/3;
           for(let i=0;i<nv;i++){ const d=(base[i*3]-cx)**2+(base[i*3+1]-cy)**2+(base[i*3+2]-cz)**2; if(d<R2) anchor.push(i); }
