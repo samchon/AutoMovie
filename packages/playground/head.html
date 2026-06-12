@@ -98,8 +98,11 @@
         hairMesh.geometry.getAttribute("position").needsUpdate = true;
         hairMesh.geometry.computeVertexNormals();
       }
-      // faces where any vert has hair coverage (feathered boundary)
-      function hairFaceIndex() {
+      // scalp shell DISABLED — the long-hair drape now covers the crown; the
+      // shell only produced rolled artefacts at the ears. (Scalp vertex colour
+      // in setColors still darkens the hairline under the part.)
+      function hairFaceIndex() { hairAdj={verts:[],adj:{}}; return []; }
+      function hairFaceIndex_unused() {
         const idx = model.indices, out = [], used=new Set();
         const w = (li)=>hairWeight(base[li*3],base[li*3+1],base[li*3+2]);
         for (let t=0;t<idx.length;t+=3){ const a=idx[t],b=idx[t+1],c=idx[t+2];
@@ -115,32 +118,34 @@
       // hairline down the back and sides (θ = around the head, s = down-length).
       // Front ~130° is left open for the face. Subtle vertical locks + a flare.
       function makeHairDrape(){
-        const zc=0.55, r0=0.97;            // head vertical axis z, hair radius
-        const Nth=64, Ns=30, row=Ns+1;
-        const th0=-2.0, th1=2.0;            // ±115° → ~130° face opening (hair sits beside/behind the cheeks)
-        const botY=4.4;                     // hair tip (well below the neck)
+        const zc=0.5, headR=0.95;          // head vertical axis z, hair radius
+        const Nth=84, Ns=50, row=Ns+1;
+        const th0=-2.05, th1=2.05;          // ~±117° → ~126° face opening
+        const crownY=8.35, partY=7.35, botY=4.2;
         const pos=[], idx=[];
         for(let i=0;i<=Nth;i++){ const th=th0+(th1-th0)*i/Nth;
-          const sideT=Math.min(1,Math.abs(th)/2.25);        // 0 back … 1 sides
-          const topY=6.95+0.55*sideT;                        // hairline higher at the sides
-          const lock=1+0.04*Math.cos(th*8.0);                // vertical lock ridges (symmetric → no one-sided intrusion)
+          const sideT=Math.min(1,Math.abs(th)/2.05);          // 0 back … 1 front-sides
+          const topY=crownY-(crownY-partY)*sideT;             // crown at back, lower at the front-sides (centre part)
           for(let j=0;j<=Ns;j++){ const s=j/Ns;
             const y=topY-s*(topY-botY);
-            const flare=1+0.20*s*s;                          // widen toward the tip
-            const end=1-0.55*Math.pow(Math.max(0,(s-0.82)/0.18),2); // round the bottom corners
-            const r=r0*flare*lock;
-            const x=r*Math.sin(th)*end;
-            const z=zc - r*Math.cos(th) - 0.35*s*s;           // θ=0 is the BACK; sweep further back as it falls
+            const grow=Math.min(1,s/0.18);                    // round over the crown in the first 18%
+            const flare=1+0.16*Math.pow(Math.max(0,s-0.2),2); // gently widen toward the tip
+            const r=headR*(0.32+0.68*grow)*flare;
+            const x=r*Math.sin(th);
+            const z=zc - r*Math.cos(th) - 0.4*s*s;             // θ=0 is the BACK; sweep back as it falls
             pos.push(x,y,z);
           }
         }
+        // Laplacian smooth the interior grid → a soft continuous mass, no curls
+        for(let pass=0;pass<4;pass++){ const src=pos.slice();
+          for(let i=1;i<Nth;i++)for(let j=1;j<Ns;j++){ const a=(i*row+j)*3;
+            for(let k=0;k<3;k++) pos[a+k]=0.4*src[a+k]+0.15*(src[a+k-3]+src[a+k+3]+src[a+k-row*3]+src[a+k+row*3]); } }
         for(let i=0;i<Nth;i++)for(let j=0;j<Ns;j++){ const a=i*row+j,b=a+row,c=a+1,d=b+1;
           idx.push(a,b,c, c,b,d); }
         const g=new THREE.BufferGeometry();
         g.setAttribute("position",new THREE.BufferAttribute(Float32Array.from(pos),3));
         g.setIndex(idx); g.computeVertexNormals();
-        // a couple of Laplacian passes over the grid for a soft mass
-        return new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:HAIR,roughness:0.88,metalness:0,side:THREE.DoubleSide}));
+        return new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:HAIR,roughness:0.9,metalness:0,side:THREE.DoubleSide}));
       }
       // full-mesh 1-ring adjacency (built once; topology is fixed)
       let headAdj = null;
