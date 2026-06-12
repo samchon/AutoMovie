@@ -589,28 +589,42 @@
         };
       };
       const addMakeHumanEyes = (facts) => {
-        const eyeY = facts.faceBottom + facts.faceHeight * 0.52;
-        const eyeZ = 0.64 - get("eyeDepth") * 0.01;
-        const spacing = facts.eyeSpacing + facts.eyeWidth;
+        const lm = state.data.landmarks ?? {};
+        const left = lm.eyeTargetLeft ?? lm.eyeLeft;
+        const right = lm.eyeTargetRight ?? lm.eyeRight;
+        const leftUpper = lm.upperLidLeft ?? left;
+        const rightUpper = lm.upperLidRight ?? right;
+        const spacing =
+          left && right ? Math.abs(right[0] - left[0]) : facts.eyeSpacing + facts.eyeWidth;
+        const eyeBaseY =
+          leftUpper && rightUpper ? (leftUpper[1] + rightUpper[1]) / 2 : facts.faceBottom + facts.faceHeight * 0.52;
+        const eyeBaseZ =
+          left && right ? (left[2] + right[2]) / 2 : 0.64;
         for (const sideSign of [-1, 1]) {
+          const socket = sideSign < 0 ? left : right;
+          const socketY = socket ? socket[1] : eyeBaseY;
+          const socketZ = socket ? socket[2] : eyeBaseZ;
+          const eyeX = socket ? socket[0] : sideSign * spacing * 0.5;
+          const eyeY = socketY + get("eyeHeightPosition") * 0.01;
+          const eyeZ = socketZ - 0.035 - get("eyeDepth") * 0.01;
           const eye = ellipsoid(
             `makehuman-eye-${sideSign}`,
-            facts.eyeWidth * 0.32,
-            facts.eyeHeight * 0.44,
+            facts.eyeWidth * 0.28,
+            facts.eyeHeight * 0.38,
             0.018,
             whiteMat,
             32,
           );
-          eye.position.set(sideSign * spacing * 0.5, eyeY, eyeZ);
+          eye.position.set(eyeX, eyeY, eyeZ);
           const iris = ellipsoid(
             `makehuman-iris-${sideSign}`,
-            facts.eyeHeight * 0.24,
-            facts.eyeHeight * 0.24,
+            facts.eyeHeight * 0.22,
+            facts.eyeHeight * 0.22,
             0.004,
             irisMat,
             20,
           );
-          iris.position.set(sideSign * spacing * 0.5, eyeY - facts.eyeHeight * 0.02, eyeZ + 0.018);
+          iris.position.set(eyeX, eyeY - facts.eyeHeight * 0.015, eyeZ + 0.014);
         }
       };
       const buildHeadGeometry = () => {

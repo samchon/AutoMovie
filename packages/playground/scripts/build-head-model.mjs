@@ -16,6 +16,7 @@ const INCLUDE_FACE_Y = 5.62;
 const readObj = () => {
   const vertices = [];
   const faces = [];
+  const groups = new Map();
   let group = "";
   for (const line of fs.readFileSync(baseObj, "utf8").split(/\r?\n/)) {
     if (line.startsWith("v ")) {
@@ -25,6 +26,7 @@ const readObj = () => {
     }
     if (line.startsWith("g ")) {
       group = line.slice(2).trim();
+      if (!groups.has(group)) groups.set(group, new Set());
       continue;
     }
     if (!line.startsWith("f ") || group !== "body") continue;
@@ -34,8 +36,25 @@ const readObj = () => {
       .split(/\s+/)
       .map((part) => Number(part.split("/")[0]) - 1);
     if (face.length >= 3) faces.push(face);
+    const bucket = groups.get(group);
+    for (const index of face) bucket.add(index);
   }
-  return { vertices, faces };
+  return { vertices, faces, groups };
+};
+
+const centroid = (vertices, indices) => {
+  if (!indices?.size) return null;
+  const point = [0, 0, 0];
+  for (const index of indices) {
+    const v = vertices[index];
+    point[0] += v[0];
+    point[1] += v[1];
+    point[2] += v[2];
+  }
+  point[0] /= indices.size;
+  point[1] /= indices.size;
+  point[2] /= indices.size;
+  return point.map((value) => Number(value.toFixed(6)));
 };
 
 const parseTarget = (relative) => {
@@ -1266,7 +1285,7 @@ const measurementMetrics = [
 ];
 
 const build = () => {
-  const { vertices, faces } = readObj();
+  const { vertices, faces, groups } = readObj();
   const selected = new Set();
   for (const face of faces) {
     if (face.some((index) => vertices[index][1] >= MIN_HEAD_Y)) {
@@ -1304,6 +1323,16 @@ const build = () => {
       Number(((v[2] - center[2]) * SCALE).toFixed(6)),
     ];
   });
+  const landmarks = {
+    eyeLeft: centroid(vertices, groups.get("joint-l-eye")),
+    eyeRight: centroid(vertices, groups.get("joint-r-eye")),
+    eyeTargetLeft: centroid(vertices, groups.get("joint-l-eye-target")),
+    eyeTargetRight: centroid(vertices, groups.get("joint-r-eye-target")),
+    upperLidLeft: centroid(vertices, groups.get("joint-l-upperlid")),
+    upperLidRight: centroid(vertices, groups.get("joint-r-upperlid")),
+    lowerLidLeft: centroid(vertices, groups.get("joint-l-lowerlid")),
+    lowerLidRight: centroid(vertices, groups.get("joint-r-lowerlid")),
+  };
   const indices = [];
   for (const face of faces) {
     if (!face.every((index) => remap.has(index))) continue;
@@ -1342,6 +1371,7 @@ const build = () => {
       indices,
       sourceVertexIndices: source,
     },
+    landmarks,
     references,
     parameterGroups,
     parameters,
