@@ -1128,6 +1128,11 @@
       overlayOpacity.addEventListener("input", updateReference);
       window.__faceEditor = {
         setPreset: assignPreset,
+        setValues: (obj) => {
+          Object.assign(state.values, obj);
+          refreshSliders();
+          rebuild();
+        },
         setView,
         setOverlay: (value) => {
           overlayOpacity.value = String(value);
