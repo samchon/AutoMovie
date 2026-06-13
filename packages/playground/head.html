@@ -706,10 +706,12 @@
           const ball = ellipsoid(`eye-ball-${side}`, r, r, r, whiteMat, 28);
           ball.position.set(cx, cy, cz);
           const irisR = apHalfH * 0.82;
-          const iris = ellipsoid(`eye-iris-${side}`, irisR, irisR, 0.009, irisMat, 28);
-          iris.position.set(cx, cy, poleZ - 0.003);
-          const pupil = ellipsoid(`eye-pupil-${side}`, irisR * 0.46, irisR * 0.46, 0.006, browMat, 20);
-          pupil.position.set(cx, cy, poleZ);
+          // domed (convex) iris so the key light catches a rounded cornea
+          // instead of a flat dark disc — reads as a 3D eye, not a sticker.
+          const iris = ellipsoid(`eye-iris-${side}`, irisR, irisR, irisR * 0.55, irisMat, 28);
+          iris.position.set(cx, cy, poleZ - irisR * 0.5);
+          const pupil = ellipsoid(`eye-pupil-${side}`, irisR * 0.42, irisR * 0.42, irisR * 0.3, browMat, 20);
+          pupil.position.set(cx, cy, poleZ - irisR * 0.05);
           const tilt = side * get("eyeTilt") * 0.04;
           const inner = cx - side * apHalfW * (1.0 + get("epicanthus") * 0.05);
           const outer = cx + side * apHalfW * (1.05 + get("outerCanthus") * 0.05);
