@@ -380,8 +380,9 @@
       const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf0ece6, roughness: 0.55 });
       const irisMat = new THREE.MeshStandardMaterial({ color: 0x3b2920, roughness: 0.35 });
       const browMat = new THREE.MeshStandardMaterial({ color: 0x251d19, roughness: 0.88 });
+      const hairMat = new THREE.MeshStandardMaterial({ color: 0x161210, roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
       const metricMat = new THREE.LineBasicMaterial({ color: 0xf3c46f, transparent: true, opacity: 0.7 });
-      const managedMaterials = new Set([clay, featureMat, whiteMat, irisMat, browMat, metricMat]);
+      const managedMaterials = new Set([clay, featureMat, whiteMat, irisMat, browMat, hairMat, metricMat]);
       let cutawayPlanes = [];
       const applyCutawayToMaterial = (material) => {
         material.clippingPlanes = cutawayPlanes;
@@ -405,6 +406,10 @@
       headMesh.castShadow = true;
       headMesh.receiveShadow = true;
       root.add(headMesh);
+      const hairGeometry = new THREE.BufferGeometry();
+      const hairMesh = new THREE.Mesh(hairGeometry, hairMat);
+      hairMesh.visible = false;
+      root.add(hairMesh);
       const metricsGroup = new THREE.Group();
       root.add(metricsGroup);
       const featureGroup = new THREE.Group();
@@ -510,6 +515,15 @@
           "position",
           new THREE.BufferAttribute(state.currentPositions, 3),
         );
+        if (state.data.hair?.positions?.length) {
+          hairGeometry.setIndex(state.data.hair.indices);
+          hairGeometry.setAttribute(
+            "position",
+            new THREE.BufferAttribute(new Float32Array(state.data.hair.positions), 3),
+          );
+          hairGeometry.computeVertexNormals();
+          hairMesh.visible = true;
+        }
       };
       const collectBounds = (positions, predicate) => {
         const bounds = {
