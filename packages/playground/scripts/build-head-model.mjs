@@ -1155,7 +1155,7 @@ const presets = {
       alarWidth: 0,
       nostrilFlare: -0.16,
       mouthWidth: -0.5,
-      mouthHeightPosition: 0.5,
+      mouthHeightPosition: 0.85,
       philtrumLength: -0.22,
       upperLipHeight: 0.2,
       lowerLipHeight: 0.24,
