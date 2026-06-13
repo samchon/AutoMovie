@@ -672,6 +672,33 @@
           positions[i + 1] -= orbit * socketDepth * 0.24 * lower;
         }
       };
+      // Procedural profile-depth sculpt: smooth z-ONLY displacements so the
+      // converged front (x/y) is untouched while the profile silhouette is
+      // shaped beyond what the coarse MakeHuman depth morphs allow. Driven by
+      // the chinSetbackZ / midfaceProjectZ parameters (per-hero preset values).
+      const applyProfileSculpt = (positions, facts) => {
+        const chinSet = get("chinSetbackZ");
+        const midPro = get("midfaceProjectZ");
+        if (chinSet === 0 && midPro === 0) return;
+        const fh = Math.max(0.001, facts.faceHeight);
+        const fb = facts.faceBottom;
+        const fw = Math.max(0.001, facts.faceWidth);
+        const chinY = fb + fh * 0.1;
+        const chinBand = fh * 0.13;
+        const midY = fb + fh * 0.4;
+        const midBand = fh * 0.2;
+        const xBand = fw * 0.38;
+        for (let i = 0; i < positions.length; i += 3) {
+          const x = positions[i];
+          const y = positions[i + 1];
+          if (positions[i + 2] <= 0) continue; // front hemisphere only
+          const lat = gaussian(x, 0, xBand);
+          if (chinSet !== 0)
+            positions[i + 2] -= chinSet * 0.05 * gaussian(y, chinY, chinBand) * lat;
+          if (midPro !== 0)
+            positions[i + 2] += midPro * 0.05 * gaussian(y, midY, midBand) * lat;
+        }
+      };
       const deriveFactsFromPositions = (positions) => {
         const all = collectBounds(positions, () => true);
         const width = range(all, 0);
@@ -918,7 +945,9 @@
           const rows = value > 0 ? morph?.plus : morph?.minus;
           applySparseMorph(positions, rows, Math.abs(value));
         }
-        applyOrbitalSculpt(positions, deriveFactsFromPositions(positions));
+        const sculptFacts = deriveFactsFromPositions(positions);
+        applyOrbitalSculpt(positions, sculptFacts);
+        applyProfileSculpt(positions, sculptFacts);
         const attribute = headGeometry.getAttribute("position");
         attribute.needsUpdate = true;
         headGeometry.computeVertexNormals();

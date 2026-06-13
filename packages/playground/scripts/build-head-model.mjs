@@ -719,6 +719,24 @@ const parameters = [
     "pointed chin transition",
     ["chinCurvature"],
   ),
+  // Procedural profile-depth controls (no MakeHuman target — applied as smooth
+  // z-only deformations in head.html's applyProfileSculpt). These give the fine
+  // profile DOF the coarse MakeHuman depth morphs lack, WITHOUT touching x/y so
+  // the converged front view is preserved.
+  param(
+    "chinSetbackZ",
+    "faceFrame",
+    "chin set-back (profile)",
+    "chin tucked back in profile",
+    "chin pushed forward in profile",
+  ),
+  param(
+    "midfaceProjectZ",
+    "faceFrame",
+    "mid-face projection (profile)",
+    "fuller forward mid-face in profile",
+    "flatter mid-face in profile",
+  ),
   param(
     "eyeScale",
     "eyes",
@@ -1135,6 +1153,7 @@ const presets = {
       chinWidth: -0.42,
       chinHeight: -0.5,
       chinProjection: -0.12,
+      chinSetbackZ: 1.6,
       chinRoundness: 0.5,
       eyeScale: 0.4,
       eyeWidth: -0.9,
