@@ -1285,6 +1285,7 @@ const presets = {
       jawAngle: 0.34,
       jawTaper: 0.2,
       chinWidth: -0.18,
+      midfaceProjectZ: -0.7,
       chinRoundness: 0.22,
       eyeScale: 0.08,
       eyeWidth: -0.9,
