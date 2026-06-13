@@ -764,8 +764,15 @@
           // lids / lashes / brow that frame it.
           // upper-lid hood: a skin-toned cap over the top of the eyeball so the
           // eye reads as hooded/recessed under a lid, not a flat disc on skin.
-          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.06, apHalfH * 0.55, r * 0.62, clay, 24);
-          lid.position.set(cx, cy + apHalfH * 1.0, poleZ + 0.003);
+          // Lid coverage scales with eyeHeight so the aperture is per-hero:
+          // big round eyes (hero1, high eyeHeight) open wide; smaller eyes
+          // (hero3) close to a narrow iris-dominant almond.
+          // Upper-lid hood only (no heavy lower pad — that made the eyes
+          // sleepy). Hood height scales with eyeHeight so big eyes (hero1) stay
+          // open and round while smaller eyes hood a touch more.
+          const open = get("eyeHeight");
+          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.06, apHalfH * 0.62, r * 0.64, clay, 24);
+          lid.position.set(cx, cy + apHalfH * (0.92 + open * 0.35), poleZ + 0.004);
           const tilt = side * get("eyeTilt") * 0.04;
           const inner = cx - side * apHalfW * (1.0 + get("epicanthus") * 0.05);
           const outer = cx + side * apHalfW * (1.05 + get("outerCanthus") * 0.05);
