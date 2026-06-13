@@ -822,7 +822,11 @@
           const fw = Math.max(0.4, facts.faceWidth);
           const apHalfW =
             fw * 0.104 * (1 + get("eyeWidth") * 0.05 + get("eyeScale") * 0.04);
-          const apHalfH = apHalfW * 0.46 * (1 + get("eyeHeight") * 0.12);
+          // eyeHeight rounds the aperture: strong coefficient so high-eyeHeight
+          // presets (hero1 cute, hero3) open to a tall round eye while hero2's
+          // low eyeHeight stays a refined almond. No measured ratio gates eye
+          // height, so this is render-judged against the reference eye shape.
+          const apHalfH = apHalfW * 0.46 * (1 + get("eyeHeight") * 0.22);
           const r = apHalfW * 0.72;
           const poleZ = apertureFrontZ - 0.012 - get("eyeDepth") * 0.012;
           // Recess the eyeball a touch so the socket rim covers the sclera in
