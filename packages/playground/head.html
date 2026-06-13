@@ -592,7 +592,11 @@
             new THREE.SphereGeometry(1, 40, 22, 0, Math.PI * 2, 0, Math.PI * 0.62),
             hairMat,
           );
-          cap.scale.set((mxx - mnx) * 0.53, (mxy - hairlineY) * 1.15, (mxz - mnz) * 0.53);
+          // Slightly oversized in plan (x/z) so the dark cap overlaps the lofted
+          // hair backing at the upper crown — closes the thin specks that showed
+          // between the two shells. Bottom edge stays at hairlineY (in the hair
+          // zone), so it does not overhang the forehead.
+          cap.scale.set((mxx - mnx) * 0.6, (mxy - hairlineY) * 1.15, (mxz - mnz) * 0.62);
           cap.position.set((mnx + mxx) / 2, hairlineY, (mnz + mxz) / 2 - 0.02);
           root.add(cap);
         }
