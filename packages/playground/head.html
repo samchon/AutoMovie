@@ -712,6 +712,10 @@
           iris.position.set(cx, cy, poleZ - irisR * 0.5);
           const pupil = ellipsoid(`eye-pupil-${side}`, irisR * 0.42, irisR * 0.42, irisR * 0.3, browMat, 20);
           pupil.position.set(cx, cy, poleZ - irisR * 0.05);
+          // upper-lid hood: a skin-toned cap over the top of the eyeball so the
+          // eye reads as hooded/recessed under a lid, not a flat disc on skin.
+          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.06, apHalfH * 0.55, r * 0.62, clay, 24);
+          lid.position.set(cx, cy + apHalfH * 1.0, poleZ + 0.003);
           const tilt = side * get("eyeTilt") * 0.04;
           const inner = cx - side * apHalfW * (1.0 + get("epicanthus") * 0.05);
           const outer = cx + side * apHalfW * (1.05 + get("outerCanthus") * 0.05);
