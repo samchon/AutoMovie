@@ -105,6 +105,12 @@ const aggregateTargets = (entries, remap) => {
     ]);
 };
 
+const remapIndices = (indices, remap) =>
+  [...(indices ?? [])]
+    .map((index) => remap.get(index))
+    .filter((index) => index !== undefined)
+    .sort((a, b) => a - b);
+
 const pair = (left, right) => [{ file: left }, { file: right }];
 
 const target = {
@@ -1336,6 +1342,16 @@ const build = () => {
     lowerLidLeft: centroid(vertices, groups.get("joint-l-lowerlid")),
     lowerLidRight: centroid(vertices, groups.get("joint-r-lowerlid")),
   };
+  const featureGroups = {
+    eyeLeft: remapIndices(groups.get("joint-l-eye"), remap),
+    eyeRight: remapIndices(groups.get("joint-r-eye"), remap),
+    eyeTargetLeft: remapIndices(groups.get("joint-l-eye-target"), remap),
+    eyeTargetRight: remapIndices(groups.get("joint-r-eye-target"), remap),
+    upperLidLeft: remapIndices(groups.get("joint-l-upperlid"), remap),
+    upperLidRight: remapIndices(groups.get("joint-r-upperlid"), remap),
+    lowerLidLeft: remapIndices(groups.get("joint-l-lowerlid"), remap),
+    lowerLidRight: remapIndices(groups.get("joint-r-lowerlid"), remap),
+  };
   const indices = [];
   for (const face of faces) {
     if (!face.every((index) => remap.has(index))) continue;
@@ -1375,6 +1391,7 @@ const build = () => {
       sourceVertexIndices: source,
     },
     landmarks,
+    featureGroups,
     references,
     parameterGroups,
     parameters,

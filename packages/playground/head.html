@@ -32,6 +32,7 @@
         rightThreeQuarterClose: [2.35, 0.03, 3.35],
         rightProfile: [5.4, 0.03, 0],
         rightProfileClose: [3.65, 0.03, 0],
+        rightSocketClose: [2.1, 0.5, 2.65],
         top: [0, 5.6, 0.01],
         bottom: [0, -5.6, 0.01],
         back: [0, 0.03, -5.4],
@@ -39,6 +40,7 @@
         backLeftThreeQuarter: [-2.75, 0.03, -3.35],
         leftThreeQuarter: [-3.3, 0.03, 4.2],
         leftThreeQuarterClose: [-2.35, 0.03, 3.35],
+        leftSocketClose: [-2.1, 0.5, 2.65],
         leftProfile: [-5.4, 0.03, 0],
         leftProfileClose: [-3.65, 0.03, 0],
         eyeClose: [0, 0.11, 2.25],
@@ -520,6 +522,47 @@
           positions[i + 2] += dz * weight;
         }
       };
+      const applyOrbitalSculpt = (positions, facts) => {
+        const groups = state.data.featureGroups ?? {};
+        const eyeX = Math.max(0.001, facts.faceWidth * 0.18);
+        const eyeY = facts.eyeY + facts.faceBottom;
+        const eyeBandY = Math.max(0.001, facts.faceHeight * 0.1);
+        const eyeBandX = Math.max(0.001, facts.faceWidth * 0.11);
+        const frontCut = facts.faceBottom + facts.faceHeight * 0.5;
+        const depth = Math.max(0.001, facts.profileDepth);
+        const socketDepth = 0.022 + get("eyeDepth") * 0.016 + get("eyeScale") * 0.006;
+        const browLift = 0.004 + get("browHeight") * 0.005;
+        const pushGroup = (indices, scale, lift = 0) => {
+          for (const index of indices ?? []) {
+            const i = index * 3;
+            positions[i + 2] -= scale;
+            positions[i + 1] += lift;
+          }
+        };
+        pushGroup(groups.eyeTargetLeft, socketDepth * 0.8, browLift * 0.05);
+        pushGroup(groups.eyeTargetRight, socketDepth * 0.8, browLift * 0.05);
+        pushGroup(groups.upperLidLeft, socketDepth * 0.45, browLift * 0.08);
+        pushGroup(groups.upperLidRight, socketDepth * 0.45, browLift * 0.08);
+        pushGroup(groups.lowerLidLeft, socketDepth * 0.3, -socketDepth * 0.02);
+        pushGroup(groups.lowerLidRight, socketDepth * 0.3, -socketDepth * 0.02);
+        pushGroup(groups.eyeLeft, socketDepth * 0.22);
+        pushGroup(groups.eyeRight, socketDepth * 0.22);
+        for (let i = 0; i < positions.length; i += 3) {
+          const x = positions[i];
+          const y = positions[i + 1];
+          const z = positions[i + 2];
+          if (z < frontCut) continue;
+          const left = gaussian(x, -eyeX, eyeBandX) * gaussian(y, eyeY, eyeBandY);
+          const right = gaussian(x, eyeX, eyeBandX) * gaussian(y, eyeY, eyeBandY);
+          const orbit = Math.max(left, right);
+          if (orbit <= 0.0001) continue;
+          const upper = gaussian(y, eyeY + eyeBandY * 0.8, eyeBandY * 0.55);
+          const lower = gaussian(y, eyeY - eyeBandY * 0.55, eyeBandY * 0.6);
+          positions[i + 2] -= orbit * socketDepth * (0.8 + 0.35 * upper) * depth;
+          positions[i + 1] += orbit * browLift * upper;
+          positions[i + 1] -= orbit * socketDepth * 0.2 * lower;
+        }
+      };
       const deriveFactsFromPositions = (positions) => {
         const all = collectBounds(positions, () => true);
         const width = range(all, 0);
@@ -620,25 +663,25 @@
           const lidY =
             lidUpper && lidLower ? (lidUpper[1] + lidLower[1]) / 2 : socketY;
           const eyeY = lidY - facts.eyeHeight * 0.025 + get("eyeHeightPosition") * 0.006;
-          const eyeZ = socketZ - Math.max(0.05, facts.eyeHeight * 0.35) - get("eyeDepth") * 0.015;
+          const eyeZ = socketZ - Math.max(0.034, facts.eyeHeight * 0.25) - get("eyeDepth") * 0.012;
           const eye = ellipsoid(
             `makehuman-eye-${sideSign}`,
-            facts.eyeWidth * 0.21,
-            facts.eyeHeight * 0.28,
-            0.012,
+            facts.eyeWidth * 0.24,
+            facts.eyeHeight * 0.32,
+            0.016,
             whiteMat,
             32,
           );
           eye.position.set(eyeX, eyeY, eyeZ);
           const iris = ellipsoid(
             `makehuman-iris-${sideSign}`,
-            facts.eyeHeight * 0.18,
-            facts.eyeHeight * 0.18,
+            facts.eyeHeight * 0.2,
+            facts.eyeHeight * 0.2,
             0.004,
             irisMat,
             20,
           );
-          iris.position.set(eyeX, eyeY - facts.eyeHeight * 0.01, eyeZ + 0.006);
+          iris.position.set(eyeX, eyeY - facts.eyeHeight * 0.009, eyeZ + 0.008);
           const eyeWidth = facts.eyeWidth * (0.9 + get("outerCanthus") * 0.05);
           const eyeHeight = facts.eyeHeight * (0.95 + get("eyeHeight") * 0.04);
           const inner = eyeX - sideSign * eyeWidth * (0.54 + get("epicanthus") * 0.04);
@@ -697,6 +740,7 @@
           const rows = value > 0 ? morph?.plus : morph?.minus;
           applySparseMorph(positions, rows, Math.abs(value));
         }
+        applyOrbitalSculpt(positions, deriveFactsFromPositions(positions));
         const attribute = headGeometry.getAttribute("position");
         attribute.needsUpdate = true;
         headGeometry.computeVertexNormals();
