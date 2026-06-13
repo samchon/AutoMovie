@@ -556,6 +556,12 @@
           hairBackMesh.visible = true;
         }
         if (state.data.eyeballs?.positions?.length) {
+          // Keep the pristine baked positions: the eyeball mesh is static, but
+          // each preset's lids move (eyeSpacing/height/depth), so on every
+          // rebuild we re-seat the eyeballs onto the live lid centres. Without
+          // this the eyeball and lids diverge and the cornea pokes past the lid
+          // as a crescent for presets whose eyeSpacing differs from the bake.
+          state.eyeballBase = new Float32Array(state.data.eyeballs.positions);
           eyeballGeometry.setAttribute(
             "position",
             new THREE.BufferAttribute(new Float32Array(state.data.eyeballs.positions), 3),
@@ -752,6 +758,7 @@
         ];
         const scale = 1 + get("eyeScale") * 0.08;
         const positions = state.currentPositions;
+        const eyeAim = {}; // per-side live lid centre, used to re-seat the eyeball
         // The eye-target landmark sits ~0.18 in front of the face skin, so it
         // must NOT seat the eyeball. Measure the frontmost lid-skin z near each
         // eye from the live mesh and seat the cornea just behind it.
@@ -782,6 +789,7 @@
           const apHalfH = apHalfW * 0.46 * (1 + get("eyeHeight") * 0.12);
           const r = apHalfW * 0.72;
           const poleZ = apertureFrontZ - 0.012 - get("eyeDepth") * 0.012;
+          eyeAim[side] = { cx, cy, dz: -get("eyeDepth") * 0.012 };
           // The eyeball itself is now the real MakeHuman eye mesh (static,
           // textured with brown_eye.png) added separately; here we only add the
           // lids / lashes / brow that frame it.
@@ -845,6 +853,51 @@
             0x241c18,
             0.0056,
           );
+        }
+        // Re-seat the static eyeball mesh onto the live lid centres so the
+        // cornea stays framed by the lids for every preset (not just the one
+        // the mesh was baked for). Each eye's verts (split by x sign) translate
+        // by the offset from their baked centre to the lid centre.
+        if (state.eyeballBase && (eyeAim[1] || eyeAim[-1])) {
+          const base = state.eyeballBase;
+          const arr = eyeballGeometry.getAttribute("position").array;
+          let pcx = 0, pcy = 0, pn = 0, ncx = 0, ncy = 0, nn = 0;
+          for (let i = 0; i < base.length; i += 3) {
+            if (base[i] >= 0) { pcx += base[i]; pcy += base[i + 1]; pn++; }
+            else { ncx += base[i]; ncy += base[i + 1]; nn++; }
+          }
+          if (pn) { pcx /= pn; pcy /= pn; }
+          if (nn) { ncx /= nn; ncy /= nn; }
+          // per-side baked centre z, to build smooth analytic normals
+          let pcz = 0, ncz = 0;
+          for (let i = 0; i < base.length; i += 3)
+            if (base[i] >= 0) pcz += base[i + 2]; else ncz += base[i + 2];
+          if (pn) pcz /= pn;
+          if (nn) ncz /= nn;
+          let normAttr = eyeballGeometry.getAttribute("normal");
+          if (!normAttr) {
+            normAttr = new THREE.BufferAttribute(new Float32Array(base.length), 3);
+            eyeballGeometry.setAttribute("normal", normAttr);
+          }
+          const nrm = normAttr.array;
+          for (let i = 0; i < base.length; i += 3) {
+            const aim = base[i] >= 0 ? eyeAim[1] : eyeAim[-1];
+            if (!aim) { arr[i] = base[i]; arr[i + 1] = base[i + 1]; arr[i + 2] = base[i + 2]; continue; }
+            const bcx = base[i] >= 0 ? pcx : ncx;
+            const bcy = base[i] >= 0 ? pcy : ncy;
+            const cz = base[i] >= 0 ? pcz : ncz;
+            const x = base[i] + (aim.cx - bcx);
+            const y = base[i + 1] + (aim.cy - bcy);
+            const z = base[i + 2] + aim.dz;
+            arr[i] = x; arr[i + 1] = y; arr[i + 2] = z;
+            // smooth (radial) normal from the eye centre — the mesh is non-indexed
+            // so computeVertexNormals would face-facet it into a banded specular.
+            const nx = x - aim.cx, ny = y - aim.cy, nz = z - (cz + aim.dz);
+            const len = Math.hypot(nx, ny, nz) || 1;
+            nrm[i] = nx / len; nrm[i + 1] = ny / len; nrm[i + 2] = nz / len;
+          }
+          eyeballGeometry.getAttribute("position").needsUpdate = true;
+          normAttr.needsUpdate = true;
         }
       };
       const buildHeadGeometry = () => {
