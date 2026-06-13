@@ -5,7 +5,14 @@
 // diagnostic, hair-free, fully-extractable curve we have — no landmark library
 // needed. We segment skin/hair from the light studio background, take the
 // face-front edge per row, and compare it (normalized by the nose-tip..chin
-// span) against the same curve pulled from the clay render.
+// span) against the same curve pulled from the model.
+//
+// MODEL curve = the clay MESH midline (morphs + the ported applyProfileSculpt,
+// so it matches the render's z-only chin/midface sculpt). CAVEAT: the rendered
+// nose-tip and lips are separate ellipsoids NOT in model.mesh, so the lip band
+// (v ~= -0.4..-0.7) reads too RECEDED vs the photo — treat those samples as
+// measurement artifacts. The forehead (v>0), broad chin (v ~= -0.85..-1), and
+// midface ARE clay and reliable; fit chinSetbackZ/midfaceProjectZ against them.
 //
 // Usage: node scripts/measure-profile.mjs <hero> <side>   e.g. hero3 left
 // Step 1 mode (--debug): only extract the PHOTO curve and draw it, so the
@@ -173,12 +180,14 @@ for (let y = chinTop; y <= Math.min(chinBot, bandEnd); y++)
 const spanPhoto = chinRow - noseRow; // px (image y, downward)
 
 // ===== MODEL profile curve (exact, from mesh geometry) =====
-const applyPreset = (name) => {
+// OVR={"chinSetbackZ":1.2,...} lets the fit loop sweep parameter values against
+// the live model.mesh + morphs + procedural sculpt WITHOUT regenerating
+// head-model.json.
+const values = { ...(model.presets[hero]?.values ?? {}) };
+if (process.env.OVR) Object.assign(values, JSON.parse(process.env.OVR));
+const get = (id) => values[id] ?? 0;
+const applyPreset = () => {
   const pos = Float32Array.from(model.mesh.positions);
-  // OVR={"tipProjection":-0.5,...} lets the fit loop sweep parameter values
-  // against the live model.mesh + morphs WITHOUT regenerating head-model.json.
-  const values = { ...(model.presets[name]?.values ?? {}) };
-  if (process.env.OVR) Object.assign(values, JSON.parse(process.env.OVR));
   for (const [id, val] of Object.entries(values)) {
     const m = model.morphs[id];
     const rows = val > 0 ? m?.plus : m?.minus;
@@ -191,7 +200,63 @@ const applyPreset = (name) => {
   }
   return pos;
 };
-const pos = applyPreset(hero);
+const pos = applyPreset();
+
+// Replicate head.html's applyProfileSculpt so the measured profile matches the
+// RENDER (the mesh alone is blind to the z-only chin/midface sculpt). Ported
+// verbatim from head.html: facts (faceWidth/Height/Bottom) then the Gaussian
+// z-displacement on the front hemisphere.
+const gaussian = (x, c, w) => {
+  const d = (x - c) / w;
+  return Math.exp(-d * d);
+};
+const collectBounds = (p, pred) => {
+  const b = { min: [1e9, 1e9, 1e9], max: [-1e9, -1e9, -1e9], count: 0 };
+  for (let i = 0; i < p.length; i += 3) {
+    const x = p[i], y = p[i + 1], z = p[i + 2];
+    if (!pred(x, y, z)) continue;
+    b.count++;
+    for (let a = 0; a < 3; a++) {
+      b.min[a] = Math.min(b.min[a], p[i + a]);
+      b.max[a] = Math.max(b.max[a], p[i + a]);
+    }
+  }
+  return b;
+};
+const rangeOf = (b, a) => b.max[a] - b.min[a];
+const deriveFacts = (p) => {
+  const all = collectBounds(p, () => true);
+  const width = rangeOf(all, 0), height = rangeOf(all, 1), depth = rangeOf(all, 2);
+  const frontCut = all.min[2] + depth * 0.58;
+  const front = collectBounds(p, (x, y, z) =>
+    z > frontCut && y > all.min[1] + height * 0.18 &&
+    y < all.max[1] - height * 0.08 && Math.abs(x) < width * 0.28);
+  const usable = front.count > 30 ? front : all;
+  const faceTop = usable.max[1], faceBottom = usable.min[1];
+  const faceHeight = Math.max(0.001, faceTop - faceBottom);
+  const cheek = collectBounds(p, (x, y, z) =>
+    z > all.min[2] + depth * 0.48 &&
+    y > faceBottom + faceHeight * 0.5 && y < faceBottom + faceHeight * 0.76 &&
+    Math.abs(x) < width * 0.34);
+  const faceWidth = Math.max(0.001, rangeOf(cheek.count > 10 ? cheek : usable, 0));
+  return { faceWidth, faceHeight, faceBottom };
+};
+const applyProfileSculpt = (p, f) => {
+  const chinSet = get("chinSetbackZ"), midPro = get("midfaceProjectZ");
+  if (chinSet === 0 && midPro === 0) return;
+  const fh = Math.max(0.001, f.faceHeight), fb = f.faceBottom;
+  const fw = Math.max(0.001, f.faceWidth);
+  const chinY = fb + fh * 0.1, chinBand = fh * 0.13;
+  const midY = fb + fh * 0.4, midBand = fh * 0.2, xBand = fw * 0.38;
+  for (let i = 0; i < p.length; i += 3) {
+    const x = p[i], y = p[i + 1];
+    if (p[i + 2] <= 0) continue;
+    const lat = gaussian(x, 0, xBand);
+    if (chinSet !== 0) p[i + 2] -= chinSet * 0.05 * gaussian(y, chinY, chinBand) * lat;
+    if (midPro !== 0) p[i + 2] += midPro * 0.05 * gaussian(y, midY, midBand) * lat;
+  }
+};
+applyProfileSculpt(pos, deriveFacts(pos));
 const BINS = 72;
 const YLO = -0.7,
   YHI = 0.75; // face band in model units (exclude neck/shoulders)
