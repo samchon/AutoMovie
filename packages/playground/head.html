@@ -839,7 +839,11 @@
           // Recess the eyeball a touch so the socket rim covers the sclera in
           // profile (only the cornea peeks through the fissure), not just frame
           // it in front.
-          eyeAim[side] = { cx, cy, dz: -0.011 - get("eyeDepth") * 0.012 };
+          // targetR: scale the baked eyeball to the per-hero aperture so it fills
+          // the opening as a proud globe (the fixed baked size read as a small
+          // flat disc inside the enlarged apertures). cz of the globe front sits
+          // ~at the aperture so the lids drape over a visible spherical bulge.
+          eyeAim[side] = { cx, cy, dz: -0.009 - get("eyeDepth") * 0.012, targetR: apHalfW * 0.92 };
           // The eyeball itself is now the real MakeHuman eye mesh (static,
           // textured with brown_eye.png) added separately; here we only add the
           // lids / lashes / brow that frame it.
@@ -941,12 +945,21 @@
           }
           if (pn) { pcx /= pn; pcy /= pn; }
           if (nn) { ncx /= nn; ncy /= nn; }
-          // per-side baked centre z, to build smooth analytic normals
+          // per-side baked centre z + horizontal radius, so the globe can be
+          // SCALED to the per-hero aperture (fixed baked size read as a small flat
+          // disc inside the enlarged eye openings).
           let pcz = 0, ncz = 0;
           for (let i = 0; i < base.length; i += 3)
             if (base[i] >= 0) pcz += base[i + 2]; else ncz += base[i + 2];
           if (pn) pcz /= pn;
           if (nn) ncz /= nn;
+          let pRad = 1e-6, nRad = 1e-6;
+          for (let i = 0; i < base.length; i += 3) {
+            if (base[i] >= 0) { const d = Math.hypot(base[i] - pcx, base[i + 1] - pcy); if (d > pRad) pRad = d; }
+            else { const d = Math.hypot(base[i] - ncx, base[i + 1] - ncy); if (d > nRad) nRad = d; }
+          }
+          const pScale = eyeAim[1] ? eyeAim[1].targetR / pRad : 1;
+          const nScale = eyeAim[-1] ? eyeAim[-1].targetR / nRad : 1;
           let normAttr = eyeballGeometry.getAttribute("normal");
           if (!normAttr) {
             normAttr = new THREE.BufferAttribute(new Float32Array(base.length), 3);
@@ -959,9 +972,10 @@
             const bcx = base[i] >= 0 ? pcx : ncx;
             const bcy = base[i] >= 0 ? pcy : ncy;
             const cz = base[i] >= 0 ? pcz : ncz;
-            const x = base[i] + (aim.cx - bcx);
-            const y = base[i + 1] + (aim.cy - bcy);
-            const z = base[i + 2] + aim.dz;
+            const s = base[i] >= 0 ? pScale : nScale;
+            const x = aim.cx + s * (base[i] - bcx);
+            const y = aim.cy + s * (base[i + 1] - bcy);
+            const z = (cz + aim.dz) + s * (base[i + 2] - cz);
             arr[i] = x; arr[i + 1] = y; arr[i + 2] = z;
             // smooth (radial) normal from the eye centre — the mesh is non-indexed
             // so computeVertexNormals would face-facet it into a banded specular.
