@@ -1141,6 +1141,14 @@
           rebuild();
         },
         setView,
+        setCameraYaw: (deg) => {
+          const r = 5.4;
+          const th = (deg * Math.PI) / 180;
+          camera.position.set(r * Math.sin(th), 0.03, 0.02 + r * Math.cos(th));
+          camera.up.set(0, 1, 0);
+          controls.target.set(0, 0, 0.02);
+          controls.update();
+        },
         setOverlay: (value) => {
           overlayOpacity.value = String(value);
           updateReference();
