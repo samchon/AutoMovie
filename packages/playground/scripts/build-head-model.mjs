@@ -1215,7 +1215,7 @@ const presets = {
       faceLength: -0.55,
       cheekboneHeight: 0.2,
       cheekboneProjection: 0.25,
-      cheekFullness: 0.2,
+      cheekFullness: 0.38,
       jawWidth: -0.55,
       jawAngle: 0.42,
       jawTaper: 0.62,
