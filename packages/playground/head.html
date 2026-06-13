@@ -892,7 +892,12 @@
               0.0022,
             );
           }
-          const browY = cy + apHalfH * 1.62 + get("browHeight") * 0.05;
+          // Anchor the brow to faceHeight, NOT apHalfH: apHalfH scales with each
+          // hero's eye-opening, so small-aperture heroes (hero2) got too little
+          // brow lift and read brow-too-low at every angle. faceHeight anchoring
+          // gives a consistent brow-eye gap; 0.098 calibrated so browToEye matches
+          // the references (~0.156) across all heroes. (Multi-angle dissect-view.)
+          const browY = cy + facts.faceHeight * 0.098 + get("browHeight") * 0.05;
           const browArc = get("browArc") * 0.012;
           makeCapsuleLine(
             `eye-brow-${side}`,
