@@ -1436,24 +1436,9 @@ const build = () => {
   // Hair shell from MakeHuman's CC0 helper-hair proxy (a long-hair volume guide
   // baked into base.obj), transformed into the same normalized head space so it
   // sits on the scalp and drapes down the back/sides.
-  const hairCentroid = (f) => {
-    const c = [0, 0, 0];
-    for (const idx of f.indices) {
-      const p = toModel(vertices[idx]);
-      c[0] += p[0];
-      c[1] += p[1];
-      c[2] += p[2];
-    }
-    return c.map((v) => v / f.indices.length);
-  };
-  // The proxy is a hair VOLUME (it also drapes over the face). Carve out the
-  // front face window so the hair frames the face (top/sides/back + long drape)
-  // instead of covering the eyes/nose/mouth.
-  const hairFaces = faces.filter((f) => {
-    if (f.group !== "helper-hair") return false;
-    const [cx, cy, cz] = hairCentroid(f);
-    return !(cz > 0.4 && Math.abs(cx) < 0.45 && cy > -0.5 && cy < 0.78);
-  });
+  // Emit the FULL hair proxy (uncarved). head.html carves the front face window
+  // per preset at runtime, so each hero can keep or drop forehead hair (bangs).
+  const hairFaces = faces.filter((f) => f.group === "helper-hair");
   const hairSet = new Set();
   for (const f of hairFaces) for (const idx of f.indices) hairSet.add(idx);
   const hairSrc = [...hairSet].sort((a, b) => a - b);

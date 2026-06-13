@@ -453,6 +453,7 @@
         updateReference();
         refreshSliders();
         rebuild();
+        applyHair(name);
       };
       const readParameters = () => {
         const p = {};
@@ -525,12 +526,10 @@
           new THREE.BufferAttribute(state.currentPositions, 3),
         );
         if (state.data.hair?.positions?.length) {
-          hairGeometry.setIndex(state.data.hair.indices);
           hairGeometry.setAttribute(
             "position",
             new THREE.BufferAttribute(new Float32Array(state.data.hair.positions), 3),
           );
-          hairGeometry.computeVertexNormals();
           hairMesh.visible = true;
         }
         if (state.data.eyeballs?.positions?.length) {
@@ -1002,6 +1001,34 @@
         profileDepthToFace: facts.profileDepth / facts.faceHeight,
         tipProjectionToFace: facts.tipProjection / facts.faceHeight,
       });
+      // Per-preset hair carve: drop the proxy triangles over the front face so
+      // the hair frames the face. carveTop is the highest y still cut — a lower
+      // value keeps forehead hair (bangs). hero1 (cute) keeps bangs; the others
+      // open the forehead (centre part).
+      const hairCarveTop = { hero1: 0.46 };
+      const applyHair = (presetName) => {
+        const h = state.data.hair;
+        if (!h?.positions?.length) return;
+        const pos = h.positions;
+        const idx = h.indices;
+        const top = hairCarveTop[presetName] ?? 0.78;
+        // coarse proxy tris are large, so test ALL THREE verts (not the
+        // centroid): drop the tri if any vertex falls in the front face window,
+        // so big panels that merely overlap the face are removed and the face
+        // opens cleanly.
+        const inWin = (v) => {
+          const x = pos[v], y = pos[v + 1], z = pos[v + 2];
+          return z > 0.4 && Math.abs(x) < 0.46 && y > -0.5 && y < top;
+        };
+        const kept = [];
+        for (let t = 0; t < idx.length; t += 3) {
+          if (inWin(idx[t] * 3) || inWin(idx[t + 1] * 3) || inWin(idx[t + 2] * 3))
+            continue;
+          kept.push(idx[t], idx[t + 1], idx[t + 2]);
+        }
+        hairGeometry.setIndex(kept);
+        hairGeometry.computeVertexNormals();
+      };
       const rebuild = () => {
         clearGroup(featureGroup);
         const facts = buildHeadGeometry();
