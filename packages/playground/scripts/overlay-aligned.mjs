@@ -19,6 +19,10 @@ import { PNG } from "pngjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../..");
 const hero = process.argv[2] ?? "hero3";
+// view: front | leftThreeQuarter | rightThreeQuarter (3/4 alignment is
+// approximate — if the photo yaw differs from the model camera yaw, the
+// iris-similarity overlay shows that yaw gap, not a shape error).
+const view = process.argv[3] ?? "front";
 const CHROME =
   process.env.CHROME ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
 const BASE = process.env.BASE ?? "http://localhost:5173";
@@ -39,7 +43,7 @@ const sheet = PNG.sync.read(
 );
 const cw = sheet.width / ref.grid.columns;
 const ch = sheet.height / ref.grid.rows;
-const cell = ref.views.front;
+const cell = ref.views[view] ?? ref.views.front;
 const cx0 = Math.round(cell.column * cw),
   cy0 = Math.round(cell.row * ch);
 const cwi = Math.round(cw),
@@ -107,10 +111,13 @@ const photoLm = await page.evaluate(
     sh: chi,
   },
 );
-await page.evaluate((h) => {
-  window.__faceEditor.setPreset(h);
-  window.__faceEditor.setView("front");
-}, hero);
+await page.evaluate(
+  ([h, v]) => {
+    window.__faceEditor.setPreset(h);
+    window.__faceEditor.setView(v);
+  },
+  [hero, view],
+);
 await page.evaluate(
   () =>
     new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
@@ -180,7 +187,8 @@ for (let my = 0; my < mImg.height; my++)
       mImg.data[di + 2] * (1 - ALPHA) + cellPng.data[si + 2] * ALPHA,
     );
   }
-const outPath = path.join(outDir, `overlay-aligned-${hero}.png`);
+const suffix = view === "front" ? "" : `-${view}`;
+const outPath = path.join(outDir, `overlay-aligned-${hero}${suffix}.png`);
 fs.writeFileSync(outPath, PNG.sync.write(mImg));
 console.log(
   JSON.stringify(
