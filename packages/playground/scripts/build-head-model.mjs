@@ -1223,7 +1223,7 @@ const presets = {
       chinHeight: -0.5,
       chinProjection: 0.08,
       chinSetbackZ: 0.8,
-      midfaceProjectZ: -1.5,
+      midfaceProjectZ: -0.7,
       eyeScale: 0.33,
       eyeWidth: -0.9,
       eyeHeight: 0.4,
