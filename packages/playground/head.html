@@ -643,8 +643,11 @@
         const eyeBandX = Math.max(0.001, facts.faceWidth * 0.125);
         const frontCut = facts.faceBottom + facts.faceHeight * 0.5;
         const depth = Math.max(0.001, facts.profileDepth);
-        const socketDepth = 0.03 + get("eyeDepth") * 0.02 + get("eyeScale") * 0.01;
-        const browLift = 0.005 + get("browHeight") * 0.006;
+        // Shallower socket + softer brow ridge: the deep socket made the eyes
+        // read sunken and the lift built a heavy bony supraorbital bossing —
+        // both read ADULT/masculine and the references are soft young faces.
+        const socketDepth = 0.017 + get("eyeDepth") * 0.016 + get("eyeScale") * 0.008;
+        const browLift = 0.0025 + get("browHeight") * 0.004;
         const pushGroup = (indices, scale, lift = 0) => {
           for (const index of indices ?? []) {
             const i = index * 3;
@@ -676,7 +679,7 @@
           // with a furrow that reads as a frown. Sum (capped) keeps the ridge over
           // each eye while raising the midline so the glabella stays smooth.
           const browFill = Math.min(1, left + right);
-          positions[i + 2] -= orbit * socketDepth * (0.92 + 0.42 * upper) * (depth * 1.08);
+          positions[i + 2] -= orbit * socketDepth * (0.92 + 0.42 * upper) * (depth * 0.78);
           positions[i + 1] += browFill * browLift * upper;
           positions[i + 1] -= orbit * socketDepth * 0.24 * lower;
         }
@@ -832,11 +835,11 @@
           // height, so this is render-judged against the reference eye shape.
           const apHalfH = apHalfW * 0.46 * (1 + get("eyeHeight") * 0.22);
           const r = apHalfW * 0.72;
-          const poleZ = apertureFrontZ - 0.012 - get("eyeDepth") * 0.012;
+          const poleZ = apertureFrontZ - 0.006 - get("eyeDepth") * 0.012;
           // Recess the eyeball a touch so the socket rim covers the sclera in
           // profile (only the cornea peeks through the fissure), not just frame
           // it in front.
-          eyeAim[side] = { cx, cy, dz: -0.02 - get("eyeDepth") * 0.012 };
+          eyeAim[side] = { cx, cy, dz: -0.011 - get("eyeDepth") * 0.012 };
           // The eyeball itself is now the real MakeHuman eye mesh (static,
           // textured with brown_eye.png) added separately; here we only add the
           // lids / lashes / brow that frame it.
