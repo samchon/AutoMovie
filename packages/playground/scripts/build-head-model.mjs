@@ -1248,7 +1248,7 @@ const presets = {
       nostrilFlare: -0.35,
       columellaShow: 0.12,
       mouthWidth: -0.7,
-      mouthHeightPosition: 0.1,
+      mouthHeightPosition: 0.6,
       upperLipHeight: 0.12,
       lowerLipHeight: 0.14,
       upperLipFullness: 0.16,
