@@ -853,8 +853,13 @@
           // (~0.92*apHalfH) or it covers the top of the aperture and the eye
           // reads sleepy. Thinner half + higher, eyeHeight-scaled center: big
           // eyes (hero1/hero3) open to the lash line, small eyes (hero2) hood.
-          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.06, apHalfH * 0.52, r * 0.64, clay, 24);
-          lid.position.set(cx, cy + apHalfH * (1.08 + open * 0.34), poleZ + 0.004);
+          // FLAT + skin-flush: a deep hood pokes ~0.04 proud of the face and reads
+          // as a puffy pad at 3/4. Thin its depth and seat it just behind the skin
+          // front at the lid's own position so it's lid-SKIN curving over the eye.
+          const lidY = cy + apHalfH * (1.08 + open * 0.34);
+          const lidSkinZ = skinFrontZ(cx, lidY, 0.05);
+          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.06, apHalfH * 0.52, r * 0.3, clay, 24);
+          lid.position.set(cx, lidY, lidSkinZ - r * 0.3 + 0.004);
           const tilt = side * get("eyeTilt") * 0.04;
           const inner = cx - side * apHalfW * (1.0 + get("epicanthus") * 0.05);
           const outer = cx + side * apHalfW * (1.05 + get("outerCanthus") * 0.05);
@@ -899,12 +904,21 @@
           // the references (~0.156) across all heroes. (Multi-angle dissect-view.)
           const browY = cy + facts.faceHeight * 0.098 + get("browHeight") * 0.05;
           const browArc = get("browArc") * 0.012;
+          // Hug the forehead/brow-ridge SURFACE: the brow sits high above the eye
+          // where the skin z differs from the eye aperture, so anchoring it to
+          // apertureFrontZ made it float as a detached stick at 3/4. Sample the
+          // live skin front at each brow point and sit the tube just proud of it.
+          const browZ = (x, y) => skinFrontZ(x, y, 0.045) + 0.004;
+          const bIn = cx - side * apHalfW * 0.95;
+          const bMidY = browY + 0.01 + browArc;
+          const bOut = cx + side * apHalfW * 1.2;
+          const bOutY = browY + get("browTilt") * side * 0.012;
           makeCapsuleLine(
             `eye-brow-${side}`,
             [
-              new THREE.Vector3(cx - side * apHalfW * 0.95, browY, apertureFrontZ - 0.012),
-              new THREE.Vector3(cx, browY + 0.01 + browArc, apertureFrontZ - 0.002),
-              new THREE.Vector3(cx + side * apHalfW * 1.2, browY + get("browTilt") * side * 0.012, apertureFrontZ - 0.016),
+              new THREE.Vector3(bIn, browY, browZ(bIn, browY)),
+              new THREE.Vector3(cx, bMidY, browZ(cx, bMidY)),
+              new THREE.Vector3(bOut, bOutY, browZ(bOut, bOutY)),
             ],
             0x241c18,
             0.0076,
