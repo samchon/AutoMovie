@@ -39,13 +39,13 @@ const cell = ref.views.front;
 // lower-face axes the front ratios can't constrain (jaw/chin) — including those
 // only invites degenerate overfits. eyeToNose/eyeToMouth are vertical, so they
 // are driven by noseBaseHeight / mouthHeightPosition, NOT by depth length.
+// Only axes that OWN a hair-robust lower-face metric. Dropped: eyeSpacing
+// (eye metrics unreliable on clay), faceLength/bizygomaticWidth (facialIndex is
+// hairline-biased on a bald clay vs haired photo). No span-gaming axis.
 const FIT = [
-  "eyeSpacing",
   "alarWidth",
   "tipWidth",
   "mouthWidth",
-  "faceLength",
-  "bizygomaticWidth",
   "noseBaseHeight",
   "mouthHeightPosition",
 ];
@@ -72,17 +72,14 @@ const ratios = (lm, w, h) => {
   const P = (i) => [lm[i][0] * w, lm[i][1] * h];
   const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
   const faceWidth = d(P(234), P(454));
-  const faceHeight = d(P(10), P(152));
-  const irisSpacing = d(P(468), P(473)); // iris centres
   const noseWidth = d(P(129), P(358));
   const mouthWidth = d(P(61), P(291));
-  const eyeY = (P(468)[1] + P(473)[1]) / 2;
+  const eyeY = (P(468)[1] + P(473)[1]) / 2; // iris centres = eye line (reliable y)
   const noseTipY = P(1)[1];
   const mouthY = (P(61)[1] + P(291)[1]) / 2;
   const chinY = P(152)[1];
+  // hair-robust lower-face ratios only (no eye-size, no hairline-biased height)
   return {
-    facialIndex: faceHeight / faceWidth,
-    irisSpacingToFace: irisSpacing / faceWidth,
     noseWidthToFace: noseWidth / faceWidth,
     mouthWidthToFace: mouthWidth / faceWidth,
     eyeToNose: (noseTipY - eyeY) / (chinY - eyeY),
