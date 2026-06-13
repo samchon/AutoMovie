@@ -1244,11 +1244,12 @@ const presets = {
       epicanthus: 0.18,
       noseLength: 0.04,
       bridgeWidth: -0.04,
-      tipProjection: -0.04,
+      tipProjection: -0.5,
       alarWidth: -0.05,
       mouthWidth: -0.08,
       lowerLipHeight: 0.02,
       lowerLipFullness: 0.04,
+      lipProjection: 0.3,
       earScale: 0.04,
     },
     targetMetrics: {
