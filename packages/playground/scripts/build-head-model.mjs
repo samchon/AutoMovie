@@ -1334,11 +1334,22 @@ const build = () => {
   // helper-tongue, helper-tights, and the joint-* cubes) is proxy/helper
   // geometry that would weld into the clay mesh as ribbons, bars, and floating
   // boxes — it must never enter the rendered head.
+  // Trim the wide, low trapezius/shoulder flaps (the ragged shelves below the
+  // neck) so the bust ends in a clean neck + narrow shoulder line instead of
+  // jagged wings. Keep head + neck + inner shoulder; drop low & wide verts.
+  const SHOULDER_TRIM_Y = 6.3;
+  const SHOULDER_TRIM_X = 0.85;
   for (const face of faces) {
     if (face.group !== "body") continue;
     if (face.indices.some((index) => vertices[index][1] >= MIN_HEAD_Y)) {
       for (const index of face.indices) {
-        if (vertices[index][1] >= INCLUDE_FACE_Y) selected.add(index);
+        const vx0 = vertices[index][0];
+        const vy0 = vertices[index][1];
+        if (
+          vy0 >= INCLUDE_FACE_Y &&
+          !(vy0 < SHOULDER_TRIM_Y && Math.abs(vx0) > SHOULDER_TRIM_X)
+        )
+          selected.add(index);
       }
     }
   }
