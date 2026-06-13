@@ -1039,7 +1039,7 @@
         const alarW = 0.043 * c.noseW;
         for (const s of [-1, 1]) {
           const ala = ellipsoid(`ala-${s}`, 0.022 * c.noseW, 0.015, 0.018, clay, 18);
-          ala.position.set(offset + s * alarW, baseY - 0.006, 0.405 + get("nostrilFlare") * 0.008);
+          ala.position.set(offset + s * alarW, baseY - 0.011, 0.398 + get("nostrilFlare") * 0.008);
           const nostril = ellipsoid(`nostril-${s}`, 0.011 * (1 + get("nostrilFlare") * 0.08), 0.004, 0.003, browMat, 12);
           nostril.position.set(offset + s * alarW, baseY - 0.017, 0.421);
         }
