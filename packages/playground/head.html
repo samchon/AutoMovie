@@ -1108,7 +1108,13 @@
         // opens cleanly.
         const inWin = (v) => {
           const x = pos[v], y = pos[v + 1], z = pos[v + 2];
-          return z > 0.4 && Math.abs(x) < 0.46 && y > -0.5 && y < top;
+          // (1) the front face window (forehead/centre), carved up to `top`.
+          if (z > 0.4 && Math.abs(x) < 0.46 && y > -0.5 && y < top) return true;
+          // (2) strips that drape over the cheek/jaw skin: hair sitting clearly
+          // proud of the face (high z) across the wider cheek span reads as a
+          // flat panel stuck on the face — drop it so the hair falls behind.
+          if (z > 0.5 && Math.abs(x) < 0.62 && y > -0.55 && y < 0.42) return true;
+          return false;
         };
         const kept = [];
         for (let t = 0; t < idx.length; t += 3) {

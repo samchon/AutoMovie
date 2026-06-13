@@ -1506,7 +1506,65 @@ const build = () => {
         hairRemap.get(f.indices[i + 1]),
       );
   }
-  const hair = { positions: hairPositions, indices: hairIndices };
+  // The proxy ribbons are a handful of large flat triangles, so they render as
+  // hard-edged cardboard panels (very visible at 3/4). Subdivide once (4x tris,
+  // shared-edge midpoints) then Laplacian-smooth so the panels round into a
+  // softer hair mass. The backing is lofted from the smoothed result too.
+  const subdivideMesh = (pos, idx) => {
+    const P = pos.slice();
+    const mid = new Map();
+    const ekey = (a, b) => (a < b ? a * 1e7 + b : b * 1e7 + a);
+    const getMid = (a, b) => {
+      const k = ekey(a, b);
+      if (mid.has(k)) return mid.get(k);
+      const i = P.length / 3;
+      P.push(
+        (pos[a * 3] + pos[b * 3]) / 2,
+        (pos[a * 3 + 1] + pos[b * 3 + 1]) / 2,
+        (pos[a * 3 + 2] + pos[b * 3 + 2]) / 2,
+      );
+      mid.set(k, i);
+      return i;
+    };
+    const NI = [];
+    for (let t = 0; t < idx.length; t += 3) {
+      const a = idx[t], b = idx[t + 1], c = idx[t + 2];
+      const ab = getMid(a, b), bc = getMid(b, c), ca = getMid(c, a);
+      NI.push(a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca);
+    }
+    return { positions: P, indices: NI };
+  };
+  // Taubin smoothing: alternate a positive (smooth) and slightly larger negative
+  // (inflate) pass so the surface rounds WITHOUT the volume loss that collapses
+  // thin ribbons into slivers under plain Laplacian smoothing.
+  const taubinSmooth = (pos, idx, passes, lambda, mu) => {
+    const n = pos.length / 3;
+    const nbr = Array.from({ length: n }, () => new Set());
+    for (let t = 0; t < idx.length; t += 3) {
+      const a = idx[t], b = idx[t + 1], c = idx[t + 2];
+      nbr[a].add(b); nbr[a].add(c); nbr[b].add(a);
+      nbr[b].add(c); nbr[c].add(a); nbr[c].add(b);
+    }
+    let p = pos.slice();
+    const step = (w) => {
+      const q = p.slice();
+      for (let i = 0; i < n; i++) {
+        const ns = [...nbr[i]];
+        if (!ns.length) continue;
+        let mx = 0, my = 0, mz = 0;
+        for (const j of ns) { mx += p[j * 3]; my += p[j * 3 + 1]; mz += p[j * 3 + 2]; }
+        q[i * 3] = p[i * 3] + (mx / ns.length - p[i * 3]) * w;
+        q[i * 3 + 1] = p[i * 3 + 1] + (my / ns.length - p[i * 3 + 1]) * w;
+        q[i * 3 + 2] = p[i * 3 + 2] + (mz / ns.length - p[i * 3 + 2]) * w;
+      }
+      p = q;
+    };
+    for (let it = 0; it < passes; it++) { step(lambda); step(mu); }
+    return p;
+  };
+  const hairSub = subdivideMesh(hairPositions, hairIndices);
+  const hairSmoothPos = taubinSmooth(hairSub.positions, hairSub.indices, 2, 0.5, -0.53);
+  const hair = { positions: hairSmoothPos, indices: hairSub.indices };
   // Continuous dark backing shell behind the coarse hair ribbons. The proxy is a
   // handful of vertical ribbons separated by thin seams; from behind, those seams
   // reveal skin/background as bright vertical lines. We loft a smooth silhouette
@@ -1602,7 +1660,7 @@ const build = () => {
       }
     return { positions: backPositions, indices: backIndices };
   };
-  const hairBacking = buildHairBacking(hairPositions);
+  const hairBacking = buildHairBacking(hairSmoothPos);
   // Real MakeHuman eyeball mesh, transformed into head space (non-indexed so
   // each corner carries its own UV into brown_eye.png).
   const eyeObj = readEyeObj();
