@@ -841,8 +841,12 @@
           // sleepy). Hood height scales with eyeHeight so big eyes (hero1) stay
           // open and round while smaller eyes hood a touch more.
           const open = get("eyeHeight");
-          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.06, apHalfH * 0.62, r * 0.64, clay, 24);
-          lid.position.set(cx, cy + apHalfH * (0.92 + open * 0.35), poleZ + 0.004);
+          // Hood bottom (= center - halfH) must sit at/above the upper lash line
+          // (~0.92*apHalfH) or it covers the top of the aperture and the eye
+          // reads sleepy. Thinner half + higher, eyeHeight-scaled center: big
+          // eyes (hero1/hero3) open to the lash line, small eyes (hero2) hood.
+          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.06, apHalfH * 0.52, r * 0.64, clay, 24);
+          lid.position.set(cx, cy + apHalfH * (1.08 + open * 0.34), poleZ + 0.004);
           const tilt = side * get("eyeTilt") * 0.04;
           const inner = cx - side * apHalfW * (1.0 + get("epicanthus") * 0.05);
           const outer = cx + side * apHalfW * (1.05 + get("outerCanthus") * 0.05);
@@ -880,7 +884,7 @@
               0.0022,
             );
           }
-          const browY = cy + apHalfH * 2.0 + get("browHeight") * 0.05;
+          const browY = cy + apHalfH * 1.62 + get("browHeight") * 0.05;
           const browArc = get("browArc") * 0.012;
           makeCapsuleLine(
             `eye-brow-${side}`,
