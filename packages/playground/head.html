@@ -381,8 +381,13 @@
       const irisMat = new THREE.MeshStandardMaterial({ color: 0x3b2920, roughness: 0.35 });
       const browMat = new THREE.MeshStandardMaterial({ color: 0x251d19, roughness: 0.88 });
       const hairMat = new THREE.MeshStandardMaterial({ color: 0x161210, roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
+      const eyeTex = new THREE.TextureLoader().load(
+        "/@fs/D:/github/samchon/motica/.references/makehuman/makehuman/data/eyes/materials/brown_eye.png",
+      );
+      eyeTex.colorSpace = THREE.SRGBColorSpace;
+      const eyeballMat = new THREE.MeshStandardMaterial({ map: eyeTex, roughness: 0.3, metalness: 0 });
       const metricMat = new THREE.LineBasicMaterial({ color: 0xf3c46f, transparent: true, opacity: 0.7 });
-      const managedMaterials = new Set([clay, featureMat, whiteMat, irisMat, browMat, hairMat, metricMat]);
+      const managedMaterials = new Set([clay, featureMat, whiteMat, irisMat, browMat, hairMat, eyeballMat, metricMat]);
       let cutawayPlanes = [];
       const applyCutawayToMaterial = (material) => {
         material.clippingPlanes = cutawayPlanes;
@@ -410,6 +415,10 @@
       const hairMesh = new THREE.Mesh(hairGeometry, hairMat);
       hairMesh.visible = false;
       root.add(hairMesh);
+      const eyeballGeometry = new THREE.BufferGeometry();
+      const eyeballMesh = new THREE.Mesh(eyeballGeometry, eyeballMat);
+      eyeballMesh.visible = false;
+      root.add(eyeballMesh);
       const metricsGroup = new THREE.Group();
       root.add(metricsGroup);
       const featureGroup = new THREE.Group();
@@ -523,6 +532,18 @@
           );
           hairGeometry.computeVertexNormals();
           hairMesh.visible = true;
+        }
+        if (state.data.eyeballs?.positions?.length) {
+          eyeballGeometry.setAttribute(
+            "position",
+            new THREE.BufferAttribute(new Float32Array(state.data.eyeballs.positions), 3),
+          );
+          eyeballGeometry.setAttribute(
+            "uv",
+            new THREE.BufferAttribute(new Float32Array(state.data.eyeballs.uvs), 2),
+          );
+          eyeballGeometry.computeVertexNormals();
+          eyeballMesh.visible = true;
         }
       };
       const collectBounds = (positions, predicate) => {
@@ -716,16 +737,9 @@
           const apHalfH = apHalfW * 0.46 * (1 + get("eyeHeight") * 0.12);
           const r = apHalfW * 0.72;
           const poleZ = apertureFrontZ - 0.012 - get("eyeDepth") * 0.012;
-          const cz = poleZ - r;
-          const ball = ellipsoid(`eye-ball-${side}`, r, r, r, whiteMat, 28);
-          ball.position.set(cx, cy, cz);
-          const irisR = apHalfH * 0.82;
-          // domed (convex) iris so the key light catches a rounded cornea
-          // instead of a flat dark disc — reads as a 3D eye, not a sticker.
-          const iris = ellipsoid(`eye-iris-${side}`, irisR, irisR, irisR * 0.55, irisMat, 28);
-          iris.position.set(cx, cy, poleZ - irisR * 0.5);
-          const pupil = ellipsoid(`eye-pupil-${side}`, irisR * 0.42, irisR * 0.42, irisR * 0.3, browMat, 20);
-          pupil.position.set(cx, cy, poleZ - irisR * 0.05);
+          // The eyeball itself is now the real MakeHuman eye mesh (static,
+          // textured with brown_eye.png) added separately; here we only add the
+          // lids / lashes / brow that frame it.
           // upper-lid hood: a skin-toned cap over the top of the eyeball so the
           // eye reads as hooded/recessed under a lid, not a flat disc on skin.
           const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.06, apHalfH * 0.55, r * 0.62, clay, 24);

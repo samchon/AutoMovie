@@ -46,6 +46,32 @@ const readObj = () => {
   return { vertices, faces, groups };
 };
 
+// MakeHuman CC0 eyeball mesh (both eyes), with iris/sclera UVs -> brown_eye.png
+const readEyeObj = () => {
+  const file = path.join(makeHuman, "data/eyes/low-poly/low-poly.obj");
+  const verts = [];
+  const uvs = [];
+  const faces = [];
+  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+    if (line.startsWith("v ")) {
+      const [, x, y, z] = line.split(/\s+/);
+      verts.push([Number(x), Number(y), Number(z)]);
+    } else if (line.startsWith("vt ")) {
+      const [, u, v] = line.split(/\s+/);
+      uvs.push([Number(u), Number(v)]);
+    } else if (line.startsWith("f ")) {
+      faces.push(
+        line
+          .slice(2)
+          .trim()
+          .split(/\s+/)
+          .map((p) => p.split("/").map((n) => Number(n) - 1)),
+      );
+    }
+  }
+  return { verts, uvs, faces };
+};
+
 const centroid = (vertices, indices) => {
   if (!indices?.size) return null;
   const point = [0, 0, 0];
@@ -1433,6 +1459,22 @@ const build = () => {
       );
   }
   const hair = { positions: hairPositions, indices: hairIndices };
+  // Real MakeHuman eyeball mesh, transformed into head space (non-indexed so
+  // each corner carries its own UV into brown_eye.png).
+  const eyeObj = readEyeObj();
+  const eyePos = [];
+  const eyeUv = [];
+  for (const f of eyeObj.faces) {
+    for (let i = 1; i < f.length - 1; i++) {
+      for (const corner of [f[0], f[i], f[i + 1]]) {
+        const p = toModel(eyeObj.verts[corner[0]]);
+        eyePos.push(p[0], p[1], p[2]);
+        const uv = eyeObj.uvs[corner[1]];
+        eyeUv.push(uv[0], uv[1]);
+      }
+    }
+  }
+  const eyeballs = { positions: eyePos, uvs: eyeUv };
   const model = {
     schema: "autofilm.parametric-head.makehuman.v1",
     source: {
@@ -1460,6 +1502,7 @@ const build = () => {
     parameters,
     morphs,
     hair,
+    eyeballs,
     presets,
     measurementMetrics,
   };
