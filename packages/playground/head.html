@@ -667,8 +667,13 @@
           if (orbit <= 0.0001) continue;
           const upper = gaussian(y, eyeY + eyeBandY * 0.8, eyeBandY * 0.55);
           const lower = gaussian(y, eyeY - eyeBandY * 0.55, eyeBandY * 0.6);
+          // Socket depth is per-eye (max), but the brow-ridge LIFT must fill the
+          // glabella: max() valleys to ~0.37 between the eyes, leaving two mounds
+          // with a furrow that reads as a frown. Sum (capped) keeps the ridge over
+          // each eye while raising the midline so the glabella stays smooth.
+          const browFill = Math.min(1, left + right);
           positions[i + 2] -= orbit * socketDepth * (0.92 + 0.42 * upper) * (depth * 1.08);
-          positions[i + 1] += orbit * browLift * upper;
+          positions[i + 1] += browFill * browLift * upper;
           positions[i + 1] -= orbit * socketDepth * 0.24 * lower;
         }
       };
