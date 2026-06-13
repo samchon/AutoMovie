@@ -1113,7 +1113,7 @@
           // (2) strips that drape over the cheek/jaw skin: hair sitting clearly
           // proud of the face (high z) across the wider cheek span reads as a
           // flat panel stuck on the face — drop it so the hair falls behind.
-          if (z > 0.5 && Math.abs(x) < 0.62 && y > -0.55 && y < 0.42) return true;
+          if (z > 0.32 && Math.abs(x) < 0.64 && y > -0.6 && y < top) return true;
           return false;
         };
         const kept = [];
