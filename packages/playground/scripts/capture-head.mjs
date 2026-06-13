@@ -6,7 +6,14 @@ import { chromium } from "playwright-core";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../..");
 const shotsDir = path.join(root, ".shots");
-const outDir = path.join(shotsDir, "head");
+// PRESET selects which stored preset to render (default the neutral base).
+// A hero preset also drives its reference sheet into the overlay mode so the
+// clay form can be compared against the photo at matching angles.
+const PRESET = process.env.PRESET ?? "neutral";
+const outDir = path.join(
+  shotsDir,
+  PRESET === "neutral" ? "head" : `head-${PRESET}`,
+);
 const BASE = process.env.BASE ?? "http://localhost:5173";
 const CHROME =
   process.env.CHROME ??
@@ -42,26 +49,30 @@ const modes = [
     name: "model",
     overlay: 0,
     cutaway: "none",
-    screenshot: async (page) => page.locator("#view").screenshot({ type: "png" }),
+    screenshot: async (page) =>
+      page.locator("#view").screenshot({ type: "png" }),
   },
   {
     name: "cutaway",
     overlay: 0,
     cutaway: "view",
-    screenshot: async (page) => page.locator("#view").screenshot({ type: "png" }),
+    screenshot: async (page) =>
+      page.locator("#view").screenshot({ type: "png" }),
   },
   {
     name: "overlay",
     overlay: 0.42,
     cutaway: "none",
-    screenshot: async (page) => page.locator("#viewport").screenshot({ type: "png" }),
+    screenshot: async (page) =>
+      page.locator("#viewport").screenshot({ type: "png" }),
   },
 ];
 
 const cutawayForView = (view) => {
   if (view.startsWith("left")) return "frontLeft";
   if (view.startsWith("right")) return "frontRight";
-  if (view === "front" || view === "frontClose" || view === "eyeClose") return "front";
+  if (view === "front" || view === "frontClose" || view === "eyeClose")
+    return "front";
   return "none";
 };
 
@@ -83,7 +94,12 @@ const page = await browser.newPage({
 });
 
 await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
-await page.waitForFunction(() => window.__faceEditor?.setView && window.__faceEditor?.setOverlay && window.__faceEditor?.setCutaway);
+await page.waitForFunction(
+  () =>
+    window.__faceEditor?.setView &&
+    window.__faceEditor?.setOverlay &&
+    window.__faceEditor?.setCutaway,
+);
 await page.addStyleTag({
   content: `
     #panel, #strip, #hud { display: none !important; }
@@ -93,10 +109,15 @@ await page.addStyleTag({
 });
 
 const settle = async () => {
-  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
 };
 
-await page.evaluate(() => window.__faceEditor.setPreset("neutral"));
+await page.evaluate((preset) => window.__faceEditor.setPreset(preset), PRESET);
 await settle();
 
 for (const mode of modes) {
@@ -110,7 +131,11 @@ for (const mode of modes) {
         window.__faceEditor.setView(nextView);
         window.__faceEditor.setCutaway(cutaway);
       },
-      [view, mode.overlay, mode.cutaway === "view" ? cutawayForView(view) : mode.cutaway],
+      [
+        view,
+        mode.overlay,
+        mode.cutaway === "view" ? cutawayForView(view) : mode.cutaway,
+      ],
     );
     await settle();
     const buf = await mode.screenshot(page);
@@ -123,8 +148,13 @@ await page.evaluate(() => {
   window.__faceEditor.setView("front");
 });
 await settle();
-fs.writeFileSync(path.join(shotsDir, "head-latest.png"), await page.locator("#view").screenshot({ type: "png" }));
+fs.writeFileSync(
+  path.join(shotsDir, "head-latest.png"),
+  await page.locator("#view").screenshot({ type: "png" }),
+);
 
 await page.close();
 await browser.close();
-console.log(`wrote ${path.relative(root, outDir)} and ${path.relative(root, path.join(shotsDir, "head-latest.png"))}`);
+console.log(
+  `wrote ${path.relative(root, outDir)} and ${path.relative(root, path.join(shotsDir, "head-latest.png"))}`,
+);

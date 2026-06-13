@@ -36,7 +36,7 @@ const readObj = () => {
       .trim()
       .split(/\s+/)
       .map((part) => Number(part.split("/")[0]) - 1);
-    if (face.length >= 3) faces.push(face);
+    if (face.length >= 3) faces.push({ indices: face, group });
     if (group) {
       const bucket = groups.get(group) ?? new Set();
       for (const index of face) bucket.add(index);
@@ -1298,9 +1298,15 @@ const measurementMetrics = [
 const build = () => {
   const { vertices, faces, groups } = readObj();
   const selected = new Set();
+  // Only the MakeHuman `body` skin group is the head. Every other group above
+  // the head cut (helper-hair, helper-*-teeth, helper-*-eye, helper-eyelashes,
+  // helper-tongue, helper-tights, and the joint-* cubes) is proxy/helper
+  // geometry that would weld into the clay mesh as ribbons, bars, and floating
+  // boxes — it must never enter the rendered head.
   for (const face of faces) {
-    if (face.some((index) => vertices[index][1] >= MIN_HEAD_Y)) {
-      for (const index of face) {
+    if (face.group !== "body") continue;
+    if (face.indices.some((index) => vertices[index][1] >= MIN_HEAD_Y)) {
+      for (const index of face.indices) {
         if (vertices[index][1] >= INCLUDE_FACE_Y) selected.add(index);
       }
     }
@@ -1345,8 +1351,12 @@ const build = () => {
   const landmarks = {
     eyeLeft: toModel(centroid(vertices, groups.get("joint-l-eye"))),
     eyeRight: toModel(centroid(vertices, groups.get("joint-r-eye"))),
-    eyeTargetLeft: toModel(centroid(vertices, groups.get("joint-l-eye-target"))),
-    eyeTargetRight: toModel(centroid(vertices, groups.get("joint-r-eye-target"))),
+    eyeTargetLeft: toModel(
+      centroid(vertices, groups.get("joint-l-eye-target")),
+    ),
+    eyeTargetRight: toModel(
+      centroid(vertices, groups.get("joint-r-eye-target")),
+    ),
     upperLidLeft: toModel(centroid(vertices, groups.get("joint-l-upperlid"))),
     upperLidRight: toModel(centroid(vertices, groups.get("joint-r-upperlid"))),
     lowerLidLeft: toModel(centroid(vertices, groups.get("joint-l-lowerlid"))),
@@ -1364,12 +1374,13 @@ const build = () => {
   };
   const indices = [];
   for (const face of faces) {
-    if (!face.every((index) => remap.has(index))) continue;
-    for (let i = 1; i < face.length - 1; i++) {
+    if (face.group !== "body") continue;
+    if (!face.indices.every((index) => remap.has(index))) continue;
+    for (let i = 1; i < face.indices.length - 1; i++) {
       indices.push(
-        remap.get(face[0]),
-        remap.get(face[i]),
-        remap.get(face[i + 1]),
+        remap.get(face.indices[0]),
+        remap.get(face.indices[i]),
+        remap.get(face.indices[i + 1]),
       );
     }
   }

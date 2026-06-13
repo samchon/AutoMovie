@@ -660,91 +660,99 @@
       };
       const addMakeHumanEyes = (facts) => {
         const lm = state.data.landmarks ?? {};
-        const left = lm.eyeTargetLeft ?? lm.eyeLeft;
-        const right = lm.eyeTargetRight ?? lm.eyeRight;
-        const leftUpper = lm.upperLidLeft ?? left;
-        const rightUpper = lm.upperLidRight ?? right;
-        const leftLower = lm.lowerLidLeft ?? left;
-        const rightLower = lm.lowerLidRight ?? right;
-        const spacing =
-          left && right ? Math.abs(right[0] - left[0]) : facts.eyeSpacing + facts.eyeWidth;
-        const eyeBaseY =
-          leftUpper && rightUpper ? (leftUpper[1] + rightUpper[1]) / 2 : facts.faceBottom + facts.faceHeight * 0.52;
-        const eyeBaseZ =
-          left && right ? (left[2] + right[2]) / 2 : 0.64;
-        for (const sideSign of [-1, 1]) {
-          const socket = sideSign < 0 ? left : right;
-          const lidUpper = sideSign < 0 ? leftUpper : rightUpper;
-          const lidLower = sideSign < 0 ? leftLower : rightLower;
-          const socketY = socket ? socket[1] : eyeBaseY;
-          const socketZ = socket ? socket[2] : eyeBaseZ;
-          const eyeX = socket ? socket[0] : sideSign * spacing * 0.5;
-          const lidY =
-            lidUpper && lidLower ? (lidUpper[1] + lidLower[1]) / 2 : socketY;
-          const eyeY = lidY - facts.eyeHeight * 0.025 + get("eyeHeightPosition") * 0.006;
-          const eyeZ = socketZ - Math.max(0.042, facts.eyeHeight * 0.32) - get("eyeDepth") * 0.016;
-          const eye = ellipsoid(
-            `makehuman-eye-${sideSign}`,
-            facts.eyeWidth * 0.24,
-            facts.eyeHeight * 0.32,
-            0.016,
-            whiteMat,
-            32,
-          );
-          eye.position.set(eyeX, eyeY, eyeZ);
-          const iris = ellipsoid(
-            `makehuman-iris-${sideSign}`,
-            facts.eyeHeight * 0.2,
-            facts.eyeHeight * 0.2,
-            0.004,
-            irisMat,
-            20,
-          );
-          iris.position.set(eyeX, eyeY - facts.eyeHeight * 0.009, eyeZ + 0.008);
-          const eyeWidth = facts.eyeWidth * (0.9 + get("outerCanthus") * 0.05);
-          const eyeHeight = facts.eyeHeight * (0.95 + get("eyeHeight") * 0.04);
-          const inner = eyeX - sideSign * eyeWidth * (0.54 + get("epicanthus") * 0.04);
-          const outer = eyeX + sideSign * eyeWidth * (0.76 + get("outerCanthus") * 0.04);
-          const creaseY = eyeY + eyeHeight * (0.95 + get("eyelidFold") * 0.08);
+        // Each eye is seated on the MakeHuman socket landmarks: a white sphere
+        // recessed so its front pole sits just BEHIND the skin aperture (the
+        // cornea peeks through the lid hole — it never bulges proud of the
+        // lids), a large dark iris + pupil on that pole, and lid/lash/brow
+        // strokes hugging the measured aperture. Asian-neutral: dark iris fills
+        // most of the visible aperture, leaving only sclera slivers.
+        const eyes = [
+          { c: lm.eyeTargetLeft ?? lm.eyeLeft, up: lm.upperLidLeft, lo: lm.lowerLidLeft, side: 1 },
+          { c: lm.eyeTargetRight ?? lm.eyeRight, up: lm.upperLidRight, lo: lm.lowerLidRight, side: -1 },
+        ];
+        const scale = 1 + get("eyeScale") * 0.08;
+        const positions = state.currentPositions;
+        // The eye-target landmark sits ~0.18 in front of the face skin, so it
+        // must NOT seat the eyeball. Measure the frontmost lid-skin z near each
+        // eye from the live mesh and seat the cornea just behind it.
+        const skinFrontZ = (x, y, radius = 0.05) => {
+          let best = -1e9;
+          const r2 = radius * radius;
+          for (let i = 0; i < positions.length; i += 3) {
+            const dx = positions[i] - x;
+            const dy = positions[i + 1] - y;
+            if (dx * dx + dy * dy < r2 && positions[i + 2] > best) best = positions[i + 2];
+          }
+          return best > -1e8 ? best : 0.65;
+        };
+        for (const { c, up, lo, side } of eyes) {
+          if (!c) continue;
+          const cx = c[0] + side * get("eyeSpacing") * 0.018;
+          const lidMidY = up && lo ? (up[1] + lo[1]) / 2 : c[1];
+          const cy = lidMidY + get("eyeHeightPosition") * 0.012;
+          const apertureFrontZ = skinFrontZ(cx, cy);
+          const r = 0.052 * scale;
+          const poleZ = apertureFrontZ - 0.012 - get("eyeDepth") * 0.012;
+          const cz = poleZ - r;
+          const ball = ellipsoid(`eye-ball-${side}`, r, r, r, whiteMat, 28);
+          ball.position.set(cx, cy, cz);
+          const irisR = 0.04 * scale;
+          const iris = ellipsoid(`eye-iris-${side}`, irisR, irisR, 0.009, irisMat, 28);
+          iris.position.set(cx, cy, poleZ - 0.003);
+          const pupil = ellipsoid(`eye-pupil-${side}`, irisR * 0.46, irisR * 0.46, 0.006, browMat, 20);
+          pupil.position.set(cx, cy, poleZ);
+          const apHalfH =
+            (up && lo ? Math.max(0.028, (up[1] - lo[1]) * 0.4) : 0.045) *
+            (1 + get("eyeHeight") * 0.08);
+          const apHalfW = (0.06 + get("eyeWidth") * 0.012) * scale;
+          const tilt = side * get("eyeTilt") * 0.04;
+          const inner = cx - side * apHalfW * (1.0 + get("epicanthus") * 0.05);
+          const outer = cx + side * apHalfW * (1.05 + get("outerCanthus") * 0.05);
+          const lashZ = apertureFrontZ + 0.004;
           makeCapsuleLine(
-            `upper-lid-${sideSign}`,
+            `eye-upper-${side}`,
             [
-              new THREE.Vector3(inner, eyeY + eyeHeight * 0.24, eyeZ + 0.008),
-              new THREE.Vector3(eyeX, eyeY + eyeHeight * 0.75, eyeZ + 0.014),
-              new THREE.Vector3(outer, eyeY + eyeHeight * 0.28, eyeZ + 0.008),
+              new THREE.Vector3(inner, cy + apHalfH * 0.45, lashZ),
+              new THREE.Vector3(cx, cy + apHalfH * 1.02, lashZ + 0.006),
+              new THREE.Vector3(outer, cy + apHalfH * 0.52 + tilt, lashZ),
             ],
-            0x2d231f,
-            0.0046,
-          );
-          makeCapsuleLine(
-            `socket-rim-${sideSign}`,
-            [
-              new THREE.Vector3(inner * 0.996, eyeY + eyeHeight * 0.18, eyeZ + 0.003),
-              new THREE.Vector3(eyeX, eyeY + eyeHeight * 0.92, eyeZ + 0.01),
-              new THREE.Vector3(outer * 0.996, eyeY + eyeHeight * 0.22, eyeZ + 0.003),
-            ],
-            0x1f1815,
-            0.0052,
+            0x2a201c,
+            0.005,
           );
           makeCapsuleLine(
-            `lower-lid-${sideSign}`,
+            `eye-lower-${side}`,
             [
-              new THREE.Vector3(inner, eyeY - eyeHeight * 0.2, eyeZ + 0.006),
-              new THREE.Vector3(eyeX, eyeY - eyeHeight * 0.48, eyeZ + 0.01),
-              new THREE.Vector3(outer, eyeY - eyeHeight * 0.18, eyeZ + 0.006),
+              new THREE.Vector3(inner, cy - apHalfH * 0.4, lashZ),
+              new THREE.Vector3(cx, cy - apHalfH * 0.6, lashZ + 0.004),
+              new THREE.Vector3(outer, cy - apHalfH * 0.34 + tilt, lashZ),
             ],
-            0x8f6c62,
-            0.0035,
-          );
-          makeCapsuleLine(
-            `crease-${sideSign}`,
-            [
-              new THREE.Vector3(inner * 0.992, creaseY, eyeZ + 0.004),
-              new THREE.Vector3(eyeX, creaseY + eyeHeight * 0.32, eyeZ + 0.01),
-              new THREE.Vector3(outer * 0.992, creaseY + get("eyeTilt") * sideSign * 0.015, eyeZ + 0.004),
-            ],
-            0x7d5f57,
+            0x77544a,
             0.0026,
+          );
+          if (get("eyelidFold") >= 0) {
+            const foldY = cy + apHalfH * (1.3 + get("eyelidFold") * 0.25);
+            makeCapsuleLine(
+              `eye-fold-${side}`,
+              [
+                new THREE.Vector3(inner * 0.98, foldY, lashZ - 0.002),
+                new THREE.Vector3(cx, foldY + apHalfH * 0.22, lashZ + 0.002),
+                new THREE.Vector3(outer * 0.98, foldY + tilt, lashZ - 0.002),
+              ],
+              0x8a6a60,
+              0.0022,
+            );
+          }
+          const browY = cy + apHalfH * 2.2 + get("browHeight") * 0.02;
+          const browArc = get("browArc") * 0.012;
+          makeCapsuleLine(
+            `eye-brow-${side}`,
+            [
+              new THREE.Vector3(cx - side * apHalfW * 0.95, browY, apertureFrontZ - 0.012),
+              new THREE.Vector3(cx, browY + 0.01 + browArc, apertureFrontZ - 0.002),
+              new THREE.Vector3(cx + side * apHalfW * 1.2, browY + get("browTilt") * side * 0.012, apertureFrontZ - 0.016),
+            ],
+            0x241c18,
+            0.0056,
           );
         }
       };
