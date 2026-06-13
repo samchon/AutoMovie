@@ -41,14 +41,29 @@ const modes = [
   {
     name: "model",
     overlay: 0,
+    cutaway: "none",
+    screenshot: async (page) => page.locator("#view").screenshot({ type: "png" }),
+  },
+  {
+    name: "cutaway",
+    overlay: 0,
+    cutaway: "view",
     screenshot: async (page) => page.locator("#view").screenshot({ type: "png" }),
   },
   {
     name: "overlay",
     overlay: 0.42,
+    cutaway: "none",
     screenshot: async (page) => page.locator("#viewport").screenshot({ type: "png" }),
   },
 ];
+
+const cutawayForView = (view) => {
+  if (view.startsWith("left")) return "frontLeft";
+  if (view.startsWith("right")) return "frontRight";
+  if (view === "front" || view === "frontClose" || view === "eyeClose") return "front";
+  return "none";
+};
 
 const browser = await chromium.launch({
   executablePath: CHROME,
@@ -68,7 +83,7 @@ const page = await browser.newPage({
 });
 
 await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
-await page.waitForFunction(() => window.__faceEditor?.setView && window.__faceEditor?.setOverlay);
+await page.waitForFunction(() => window.__faceEditor?.setView && window.__faceEditor?.setOverlay && window.__faceEditor?.setCutaway);
 await page.addStyleTag({
   content: `
     #panel, #strip, #hud { display: none !important; }
@@ -90,11 +105,12 @@ for (const mode of modes) {
 
   for (const view of views) {
     await page.evaluate(
-      ([nextView, overlay]) => {
+      ([nextView, overlay, cutaway]) => {
         window.__faceEditor.setOverlay(overlay);
         window.__faceEditor.setView(nextView);
+        window.__faceEditor.setCutaway(cutaway);
       },
-      [view, mode.overlay],
+      [view, mode.overlay, mode.cutaway === "view" ? cutawayForView(view) : mode.cutaway],
     );
     await settle();
     const buf = await mode.screenshot(page);

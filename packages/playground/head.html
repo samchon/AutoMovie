@@ -381,6 +381,24 @@
       const irisMat = new THREE.MeshStandardMaterial({ color: 0x3b2920, roughness: 0.35 });
       const browMat = new THREE.MeshStandardMaterial({ color: 0x251d19, roughness: 0.88 });
       const metricMat = new THREE.LineBasicMaterial({ color: 0xf3c46f, transparent: true, opacity: 0.7 });
+      const managedMaterials = new Set([clay, featureMat, whiteMat, irisMat, browMat, metricMat]);
+      let cutawayPlanes = [];
+      const applyCutawayToMaterial = (material) => {
+        material.clippingPlanes = cutawayPlanes;
+        material.clipIntersection = false;
+        material.needsUpdate = true;
+      };
+      const setCutawayPlanes = (planes) => {
+        cutawayPlanes = planes;
+        renderer.localClippingEnabled = planes.length > 0;
+        for (const material of managedMaterials) applyCutawayToMaterial(material);
+      };
+      const registerMaterial = (material) => {
+        managedMaterials.add(material);
+        applyCutawayToMaterial(material);
+        return material;
+      };
+      setCutawayPlanes([]);
 
       const headGeometry = new THREE.BufferGeometry();
       const headMesh = new THREE.Mesh(headGeometry, clay);
@@ -403,6 +421,7 @@
         metrics: {},
         basePositions: null,
         currentPositions: null,
+        cutaway: "none",
       };
 
       const get = (id) => Number(state.values[id] ?? 0);
@@ -472,14 +491,14 @@
         const yFace = y * 0.78 * c.cranialH * (1 + (lower - 0.4) * (c.faceLen - 1));
         let z =
           front *
-          0.34 *
+          0.38 *
           ring *
           c.cranialD *
           (1 + get("occiputDepth") * 0.03 * Math.max(0, -front) + get("foreheadBulge") * 0.025 * upper);
-        z += isFront * (0.058 * mid + get("cheekFullness") * 0.018 * cheekBand);
-        z += isFront * get("chinProjection") * 0.025 * chinBand;
+        z += isFront * (0.07 * mid + get("cheekFullness") * 0.02 * cheekBand);
+        z += isFront * get("chinProjection") * 0.032 * chinBand;
         z -= isFront * get("jawAngle") * 0.018 * jawBand;
-        z += isFront * get("foreheadSlope") * 0.022 * upper * (0.3 + y);
+        z += isFront * get("foreheadSlope") * 0.026 * upper * (0.3 + y);
         return new THREE.Vector3(side * halfW * (1 - chinTuck), yFace - 0.03, z);
       };
       const ensureHeadMesh = () => {
@@ -524,14 +543,14 @@
       };
       const applyOrbitalSculpt = (positions, facts) => {
         const groups = state.data.featureGroups ?? {};
-        const eyeX = Math.max(0.001, facts.faceWidth * 0.18);
+        const eyeX = Math.max(0.001, facts.faceWidth * 0.176);
         const eyeY = facts.eyeY + facts.faceBottom;
-        const eyeBandY = Math.max(0.001, facts.faceHeight * 0.1);
-        const eyeBandX = Math.max(0.001, facts.faceWidth * 0.11);
+        const eyeBandY = Math.max(0.001, facts.faceHeight * 0.11);
+        const eyeBandX = Math.max(0.001, facts.faceWidth * 0.125);
         const frontCut = facts.faceBottom + facts.faceHeight * 0.5;
         const depth = Math.max(0.001, facts.profileDepth);
-        const socketDepth = 0.022 + get("eyeDepth") * 0.016 + get("eyeScale") * 0.006;
-        const browLift = 0.004 + get("browHeight") * 0.005;
+        const socketDepth = 0.03 + get("eyeDepth") * 0.02 + get("eyeScale") * 0.01;
+        const browLift = 0.005 + get("browHeight") * 0.006;
         const pushGroup = (indices, scale, lift = 0) => {
           for (const index of indices ?? []) {
             const i = index * 3;
@@ -558,9 +577,9 @@
           if (orbit <= 0.0001) continue;
           const upper = gaussian(y, eyeY + eyeBandY * 0.8, eyeBandY * 0.55);
           const lower = gaussian(y, eyeY - eyeBandY * 0.55, eyeBandY * 0.6);
-          positions[i + 2] -= orbit * socketDepth * (0.8 + 0.35 * upper) * depth;
+          positions[i + 2] -= orbit * socketDepth * (0.92 + 0.42 * upper) * (depth * 1.08);
           positions[i + 1] += orbit * browLift * upper;
-          positions[i + 1] -= orbit * socketDepth * 0.2 * lower;
+          positions[i + 1] -= orbit * socketDepth * 0.24 * lower;
         }
       };
       const deriveFactsFromPositions = (positions) => {
@@ -663,7 +682,7 @@
           const lidY =
             lidUpper && lidLower ? (lidUpper[1] + lidLower[1]) / 2 : socketY;
           const eyeY = lidY - facts.eyeHeight * 0.025 + get("eyeHeightPosition") * 0.006;
-          const eyeZ = socketZ - Math.max(0.034, facts.eyeHeight * 0.25) - get("eyeDepth") * 0.012;
+          const eyeZ = socketZ - Math.max(0.042, facts.eyeHeight * 0.32) - get("eyeDepth") * 0.016;
           const eye = ellipsoid(
             `makehuman-eye-${sideSign}`,
             facts.eyeWidth * 0.24,
@@ -758,6 +777,7 @@
         const curve = new THREE.CatmullRomCurve3(points);
         const tube = new THREE.TubeGeometry(curve, 20, width, 8, false);
         const mesh = new THREE.Mesh(tube, new THREE.MeshStandardMaterial({ color, roughness: 0.84 }));
+        registerMaterial(mesh.material);
         mesh.name = name;
         featureGroup.add(mesh);
         return mesh;
@@ -1021,6 +1041,18 @@
         }
         updateReference();
       };
+      const makeCutawayPlanes = (mode) => {
+        if (mode === "front") return [new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.22)];
+        if (mode === "frontLeft") return [new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.22), new THREE.Plane(new THREE.Vector3(1, 0, 0), 0.02)];
+        if (mode === "frontRight") return [new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.22), new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0.02)];
+        if (mode === "left") return [new THREE.Plane(new THREE.Vector3(1, 0, 0), 0.02)];
+        if (mode === "right") return [new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0.02)];
+        return [];
+      };
+      const setCutaway = (mode) => {
+        state.cutaway = mode;
+        setCutawayPlanes(makeCutawayPlanes(mode));
+      };
       const updateReference = () => {
         state.hero = heroSelect.value;
         heroLabel.textContent = state.hero || "off";
@@ -1093,7 +1125,13 @@
           overlayOpacity.value = String(value);
           updateReference();
         },
+        setCutaway,
         metrics: () => ({ ...state.metrics }),
+        debugNodes: () =>
+          featureGroup.children.map((child) => ({
+            name: child.name,
+            position: [child.position.x, child.position.y, child.position.z],
+          })),
         state,
       };
 
@@ -1103,6 +1141,7 @@
         buildControls();
         assignPreset("neutral");
         setView("front");
+        setCutaway("none");
         resize();
         animate();
       };

@@ -1332,15 +1332,23 @@ const build = () => {
       Number(((v[2] - center[2]) * SCALE).toFixed(6)),
     ];
   });
+  const toModel = (point) =>
+    point
+      ? [
+          Number(((point[0] - center[0]) * SCALE).toFixed(6)),
+          Number(((point[1] - center[1]) * SCALE).toFixed(6)),
+          Number(((point[2] - center[2]) * SCALE).toFixed(6)),
+        ]
+      : null;
   const landmarks = {
-    eyeLeft: centroid(vertices, groups.get("joint-l-eye")),
-    eyeRight: centroid(vertices, groups.get("joint-r-eye")),
-    eyeTargetLeft: centroid(vertices, groups.get("joint-l-eye-target")),
-    eyeTargetRight: centroid(vertices, groups.get("joint-r-eye-target")),
-    upperLidLeft: centroid(vertices, groups.get("joint-l-upperlid")),
-    upperLidRight: centroid(vertices, groups.get("joint-r-upperlid")),
-    lowerLidLeft: centroid(vertices, groups.get("joint-l-lowerlid")),
-    lowerLidRight: centroid(vertices, groups.get("joint-r-lowerlid")),
+    eyeLeft: toModel(centroid(vertices, groups.get("joint-l-eye"))),
+    eyeRight: toModel(centroid(vertices, groups.get("joint-r-eye"))),
+    eyeTargetLeft: toModel(centroid(vertices, groups.get("joint-l-eye-target"))),
+    eyeTargetRight: toModel(centroid(vertices, groups.get("joint-r-eye-target"))),
+    upperLidLeft: toModel(centroid(vertices, groups.get("joint-l-upperlid"))),
+    upperLidRight: toModel(centroid(vertices, groups.get("joint-r-upperlid"))),
+    lowerLidLeft: toModel(centroid(vertices, groups.get("joint-l-lowerlid"))),
+    lowerLidRight: toModel(centroid(vertices, groups.get("joint-r-lowerlid"))),
   };
   const featureGroups = {
     eyeLeft: remapIndices(groups.get("joint-l-eye"), remap),
