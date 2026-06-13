@@ -691,20 +691,25 @@
           const lidMidY = up && lo ? (up[1] + lo[1]) / 2 : c[1];
           const cy = lidMidY + get("eyeHeightPosition") * 0.012;
           const apertureFrontZ = skinFrontZ(cx, cy);
-          const r = 0.052 * scale;
+          // Size the eye to the MEASURED reference fissure: eyeWidth/faceWidth
+          // ~= 0.206 (the clay eyes were ~0.13 — far too small). Aperture, iris
+          // and eyeball all scale off the face width so the eye stays in
+          // proportion as the head morphs, and the iris fills the aperture
+          // (Asian-neutral: only sclera slivers at the corners).
+          const fw = Math.max(0.4, facts.faceWidth);
+          const apHalfW =
+            fw * 0.104 * (1 + get("eyeWidth") * 0.05 + get("eyeScale") * 0.04);
+          const apHalfH = apHalfW * 0.46 * (1 + get("eyeHeight") * 0.12);
+          const r = apHalfW * 0.72;
           const poleZ = apertureFrontZ - 0.012 - get("eyeDepth") * 0.012;
           const cz = poleZ - r;
           const ball = ellipsoid(`eye-ball-${side}`, r, r, r, whiteMat, 28);
           ball.position.set(cx, cy, cz);
-          const irisR = 0.04 * scale;
+          const irisR = apHalfH * 0.82;
           const iris = ellipsoid(`eye-iris-${side}`, irisR, irisR, 0.009, irisMat, 28);
           iris.position.set(cx, cy, poleZ - 0.003);
           const pupil = ellipsoid(`eye-pupil-${side}`, irisR * 0.46, irisR * 0.46, 0.006, browMat, 20);
           pupil.position.set(cx, cy, poleZ);
-          const apHalfH =
-            (up && lo ? Math.max(0.028, (up[1] - lo[1]) * 0.4) : 0.045) *
-            (1 + get("eyeHeight") * 0.08);
-          const apHalfW = (0.06 + get("eyeWidth") * 0.012) * scale;
           const tilt = side * get("eyeTilt") * 0.04;
           const inner = cx - side * apHalfW * (1.0 + get("epicanthus") * 0.05);
           const outer = cx + side * apHalfW * (1.05 + get("outerCanthus") * 0.05);
@@ -712,9 +717,9 @@
           makeCapsuleLine(
             `eye-upper-${side}`,
             [
-              new THREE.Vector3(inner, cy + apHalfH * 0.45, lashZ),
-              new THREE.Vector3(cx, cy + apHalfH * 1.02, lashZ + 0.006),
-              new THREE.Vector3(outer, cy + apHalfH * 0.52 + tilt, lashZ),
+              new THREE.Vector3(inner, cy + apHalfH * 0.62, lashZ),
+              new THREE.Vector3(cx, cy + apHalfH * 0.92, lashZ + 0.006),
+              new THREE.Vector3(outer, cy + apHalfH * 0.66 + tilt, lashZ),
             ],
             0x2a201c,
             0.005,
