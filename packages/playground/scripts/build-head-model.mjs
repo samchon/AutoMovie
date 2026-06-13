@@ -1165,7 +1165,7 @@ const presets = {
       epicanthus: -1.3,
       browHeight: 0.15,
       browArc: 0.0,
-      noseLength: -0.46,
+      noseLength: -0.25,
       bridgeHeight: 0.08,
       bridgeWidth: -0.08,
       bridgeProjection: -0.2,
