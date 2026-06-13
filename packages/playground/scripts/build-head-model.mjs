@@ -1139,7 +1139,7 @@ const presets = {
       eyeScale: 0.4,
       eyeWidth: -0.9,
       eyeHeight: 0.95,
-      eyeSpacing: -0.81,
+      eyeSpacing: -0.1,
       eyeTilt: 0.04,
       eyelidFold: 0.2,
       epicanthus: -1.3,
