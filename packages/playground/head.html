@@ -385,7 +385,17 @@
         "/@fs/D:/github/samchon/motica/.references/makehuman/makehuman/data/eyes/materials/brown_eye.png",
       );
       eyeTex.colorSpace = THREE.SRGBColorSpace;
-      const eyeballMat = new THREE.MeshStandardMaterial({ map: eyeTex, roughness: 0.3, metalness: 0 });
+      // The eyeball seats recessed in the socket, so scene light barely reaches
+      // the cornea and the brown iris darkens to a muddy red. A low self-emissive
+      // of the same texture keeps the iris its true mid-brown in socket shadow.
+      const eyeballMat = new THREE.MeshStandardMaterial({
+        map: eyeTex,
+        emissiveMap: eyeTex,
+        emissive: 0xffffff,
+        emissiveIntensity: 0.8,
+        roughness: 0.32,
+        metalness: 0,
+      });
       const metricMat = new THREE.LineBasicMaterial({ color: 0xf3c46f, transparent: true, opacity: 0.7 });
       const managedMaterials = new Set([clay, featureMat, whiteMat, irisMat, browMat, hairMat, eyeballMat, metricMat]);
       let cutawayPlanes = [];
@@ -415,6 +425,10 @@
       const hairMesh = new THREE.Mesh(hairGeometry, hairMat);
       hairMesh.visible = false;
       root.add(hairMesh);
+      const hairBackGeometry = new THREE.BufferGeometry();
+      const hairBackMesh = new THREE.Mesh(hairBackGeometry, hairMat);
+      hairBackMesh.visible = false;
+      root.add(hairBackMesh);
       const eyeballGeometry = new THREE.BufferGeometry();
       const eyeballMesh = new THREE.Mesh(eyeballGeometry, eyeballMat);
       eyeballMesh.visible = false;
@@ -531,6 +545,15 @@
             new THREE.BufferAttribute(new Float32Array(state.data.hair.positions), 3),
           );
           hairMesh.visible = true;
+        }
+        if (state.data.hairBacking?.positions?.length) {
+          hairBackGeometry.setIndex(state.data.hairBacking.indices);
+          hairBackGeometry.setAttribute(
+            "position",
+            new THREE.BufferAttribute(new Float32Array(state.data.hairBacking.positions), 3),
+          );
+          hairBackGeometry.computeVertexNormals();
+          hairBackMesh.visible = true;
         }
         if (state.data.eyeballs?.positions?.length) {
           eyeballGeometry.setAttribute(

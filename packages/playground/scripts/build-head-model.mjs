@@ -1426,6 +1426,57 @@ const build = () => {
       );
     }
   }
+  // Cap the open neck boundary. The head subset is cut at the neck, leaving a
+  // hollow tube whose lit front rim reads as an odd flat trapezoid and whose
+  // interior renders as a black hole from below. Find the boundary edges (used
+  // by exactly one triangle), walk them into loops, and fan-triangulate the
+  // lowest loop (the neck cut) from its own rim vertices, so the cap morphs with
+  // the mesh and seats the rim with no gaps.
+  {
+    const ekey = (a, b) => (a < b ? a * 1e7 + b : b * 1e7 + a);
+    const edgeCount = new Map();
+    for (let i = 0; i < indices.length; i += 3) {
+      const t = [indices[i], indices[i + 1], indices[i + 2]];
+      for (const [a, b] of [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]])
+        edgeCount.set(ekey(a, b), (edgeCount.get(ekey(a, b)) || 0) + 1);
+    }
+    const adj = new Map(); // directed boundary edge a->b in triangle winding
+    for (let i = 0; i < indices.length; i += 3) {
+      const t = [indices[i], indices[i + 1], indices[i + 2]];
+      for (const [a, b] of [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]])
+        if (edgeCount.get(ekey(a, b)) === 1) adj.set(a, b);
+    }
+    const visited = new Set();
+    const loops = [];
+    for (const start of adj.keys()) {
+      if (visited.has(start)) continue;
+      const loop = [];
+      let cur = start;
+      while (cur !== undefined && !visited.has(cur)) {
+        visited.add(cur);
+        loop.push(cur);
+        cur = adj.get(cur);
+      }
+      if (loop.length >= 3) loops.push(loop);
+    }
+    const loopY = (loop) =>
+      loop.reduce((s, v) => s + positions[v * 3 + 1], 0) / loop.length;
+    let neck = null;
+    for (const loop of loops) if (!neck || loopY(loop) < loopY(neck)) neck = loop;
+    if (neck) {
+      // Newell normal to orient the fan so the cap faces down/out (-Y).
+      let ny = 0;
+      for (let i = 0; i < neck.length; i++) {
+        const a = neck[i], b = neck[(i + 1) % neck.length];
+        ny += (positions[a * 3 + 2] - positions[b * 3 + 2]) *
+          (positions[a * 3] + positions[b * 3]);
+      }
+      for (let i = 1; i < neck.length - 1; i++) {
+        if (ny > 0) indices.push(neck[0], neck[i + 1], neck[i]);
+        else indices.push(neck[0], neck[i], neck[i + 1]);
+      }
+    }
+  }
   const morphs = {};
   for (const item of parameters) {
     morphs[item.id] = {
@@ -1455,6 +1506,102 @@ const build = () => {
       );
   }
   const hair = { positions: hairPositions, indices: hairIndices };
+  // Continuous dark backing shell behind the coarse hair ribbons. The proxy is a
+  // handful of vertical ribbons separated by thin seams; from behind, those seams
+  // reveal skin/background as bright vertical lines. We loft a smooth silhouette
+  // surface just inside the ribbon envelope so the seams read as solid dark hair.
+  // The front face sector is forced open (no backing over the face), so the hair
+  // still frames the face and the runtime front-carve is never occluded.
+  const buildHairBacking = (pos) => {
+    const n = pos.length / 3;
+    let cx = 0, cz = 0, minY = 1e9, maxY = -1e9;
+    for (let i = 0; i < pos.length; i += 3) {
+      cx += pos[i];
+      cz += pos[i + 2];
+      if (pos[i + 1] < minY) minY = pos[i + 1];
+      if (pos[i + 1] > maxY) maxY = pos[i + 1];
+    }
+    cx /= n;
+    cz /= n;
+    const NB = 18;
+    const NA = 36;
+    const TAU = Math.PI * 2;
+    const FRONT_OPEN = (55 * Math.PI) / 180; // half-angle of the open face sector
+    const bandH = (maxY - minY) / NB;
+    const rad = Array.from({ length: NB }, () => new Float64Array(NA).fill(-1));
+    for (let i = 0; i < pos.length; i += 3) {
+      const dx = pos[i] - cx;
+      const dz = pos[i + 2] - cz;
+      const r = Math.hypot(dx, dz);
+      let theta = Math.atan2(dx, dz); // 0 == +z (face front)
+      if (theta < 0) theta += TAU;
+      const bin = Math.min(NA - 1, Math.floor((theta / TAU) * NA));
+      const bf = (pos[i + 1] - minY) / bandH - 0.5;
+      for (const bb of [Math.floor(bf), Math.floor(bf) + 1]) {
+        if (bb < 0 || bb >= NB) continue;
+        if (r > rad[bb][bin]) rad[bb][bin] = r;
+      }
+    }
+    const blocked = (a) => {
+      const th = ((a + 0.5) / NA) * TAU;
+      const d = Math.min(th, TAU - th); // angular distance to front-center
+      return d < FRONT_OPEN;
+    };
+    // Within each band, fill the back+side mantle: any non-front empty bin gets a
+    // radius linearly interpolated from the nearest filled bins on either side.
+    for (let b = 0; b < NB; b++) {
+      const row = rad[b];
+      const filled = [];
+      for (let a = 0; a < NA; a++) if (!blocked(a) && row[a] > 0) filled.push(a);
+      if (filled.length < 2) {
+        for (let a = 0; a < NA; a++) if (blocked(a)) row[a] = -1;
+        continue;
+      }
+      for (let a = 0; a < NA; a++) {
+        if (blocked(a)) {
+          row[a] = -1;
+          continue;
+        }
+        if (row[a] > 0) continue;
+        let lo = null;
+        let hi = null;
+        for (const f of filled) {
+          if (f < a) lo = f;
+          if (f > a && hi === null) hi = f;
+        }
+        if (lo !== null && hi !== null) {
+          const t = (a - lo) / (hi - lo);
+          row[a] = rad[b][lo] * (1 - t) + rad[b][hi] * t;
+        } else {
+          row[a] = rad[b][lo ?? hi];
+        }
+      }
+    }
+    const backPositions = [];
+    const backIndices = [];
+    const vid = Array.from({ length: NB }, () => new Int32Array(NA).fill(-1));
+    for (let b = 0; b < NB; b++)
+      for (let a = 0; a < NA; a++) {
+        if (rad[b][a] <= 0) continue;
+        const r = rad[b][a] * 0.92; // inset just inside the ribbon surface
+        const th = ((a + 0.5) / NA) * TAU;
+        const y = minY + (b + 0.5) * bandH;
+        vid[b][a] = backPositions.length / 3;
+        backPositions.push(cx + r * Math.sin(th), y, cz + r * Math.cos(th));
+      }
+    for (let b = 0; b < NB - 1; b++)
+      for (let a = 0; a < NA; a++) {
+        const a2 = (a + 1) % NA;
+        const v00 = vid[b][a];
+        const v01 = vid[b][a2];
+        const v10 = vid[b + 1][a];
+        const v11 = vid[b + 1][a2];
+        if (v00 < 0 || v01 < 0 || v10 < 0 || v11 < 0) continue;
+        backIndices.push(v00, v10, v11, v00, v11, v01);
+      }
+    return { positions: backPositions, indices: backIndices };
+  };
+  const hairBacking = buildHairBacking(hairPositions);
   // Real MakeHuman eyeball mesh, transformed into head space (non-indexed so
   // each corner carries its own UV into brown_eye.png).
   const eyeObj = readEyeObj();
@@ -1498,6 +1645,7 @@ const build = () => {
     parameters,
     morphs,
     hair,
+    hairBacking,
     eyeballs,
     presets,
     measurementMetrics,
