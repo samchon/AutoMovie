@@ -491,14 +491,14 @@
         const yFace = y * 0.78 * c.cranialH * (1 + (lower - 0.4) * (c.faceLen - 1));
         let z =
           front *
-          0.38 *
+          0.45 *
           ring *
           c.cranialD *
           (1 + get("occiputDepth") * 0.03 * Math.max(0, -front) + get("foreheadBulge") * 0.025 * upper);
-        z += isFront * (0.07 * mid + get("cheekFullness") * 0.02 * cheekBand);
-        z += isFront * get("chinProjection") * 0.032 * chinBand;
+        z += isFront * (0.076 * mid + get("cheekFullness") * 0.022 * cheekBand);
+        z += isFront * get("chinProjection") * 0.036 * chinBand;
         z -= isFront * get("jawAngle") * 0.018 * jawBand;
-        z += isFront * get("foreheadSlope") * 0.026 * upper * (0.3 + y);
+        z += isFront * get("foreheadSlope") * 0.03 * upper * (0.3 + y);
         return new THREE.Vector3(side * halfW * (1 - chinTuck), yFace - 0.03, z);
       };
       const ensureHeadMesh = () => {

@@ -9,7 +9,8 @@ const baseObj = path.join(makeHuman, "data/3dobjs/base.obj");
 const targetRoot = path.join(makeHuman, "data/targets");
 const outPath = path.join(here, "../public/models/head-model.json");
 
-const SCALE = 0.72;
+const SCALE_XY = 0.72;
+const SCALE_Z = 0.84;
 const MIN_HEAD_Y = 5.72;
 const INCLUDE_FACE_Y = 5.62;
 
@@ -70,9 +71,9 @@ const parseTarget = (relative) => {
     if (idx === undefined || dz === undefined) continue;
     rows.push([
       Number(idx),
-      Number(dx) * SCALE,
-      Number(dy) * SCALE,
-      Number(dz) * SCALE,
+      Number(dx) * SCALE_XY,
+      Number(dy) * SCALE_XY,
+      Number(dz) * SCALE_Z,
     ]);
   }
   return rows;
@@ -262,10 +263,10 @@ const target = {
   },
   eyeSpacing: {
     plus: pair("l-eye-trans-out.target", "r-eye-trans-out.target").map(
-      (item) => ({ file: `eyes/${item.file}` }),
+      (item) => ({ file: `eyes/${item.file}`, weight: 5.5 }),
     ),
     minus: pair("l-eye-trans-in.target", "r-eye-trans-in.target").map(
-      (item) => ({ file: `eyes/${item.file}` }),
+      (item) => ({ file: `eyes/${item.file}`, weight: 5.5 }),
     ),
   },
   eyeHeightPosition: {
@@ -1112,7 +1113,7 @@ const presets = {
       eyeScale: 0.72,
       eyeWidth: 0.35,
       eyeHeight: 0.58,
-      eyeSpacing: -0.18,
+      eyeSpacing: -0.81,
       eyeTilt: 0.04,
       eyelidFold: 0.2,
       epicanthus: 0.32,
@@ -1178,6 +1179,7 @@ const presets = {
       eyeWidth: 0.32,
       eyeHeight: -0.12,
       eyeDepth: 0.18,
+      eyeSpacing: 0.125,
       eyeTilt: 0.3,
       outerCanthus: 0.35,
       innerCanthus: 0.2,
@@ -1236,7 +1238,7 @@ const presets = {
       eyeScale: 0.08,
       eyeWidth: 0.05,
       eyeHeight: 0.04,
-      eyeSpacing: 0.08,
+      eyeSpacing: 0.63,
       eyeTilt: 0.08,
       eyelidFold: 0.1,
       epicanthus: 0.18,
@@ -1327,17 +1329,17 @@ const build = () => {
   const positions = source.flatMap((index) => {
     const v = vertices[index];
     return [
-      Number(((v[0] - center[0]) * SCALE).toFixed(6)),
-      Number(((v[1] - center[1]) * SCALE).toFixed(6)),
-      Number(((v[2] - center[2]) * SCALE).toFixed(6)),
+      Number(((v[0] - center[0]) * SCALE_XY).toFixed(6)),
+      Number(((v[1] - center[1]) * SCALE_XY).toFixed(6)),
+      Number(((v[2] - center[2]) * SCALE_Z).toFixed(6)),
     ];
   });
   const toModel = (point) =>
     point
       ? [
-          Number(((point[0] - center[0]) * SCALE).toFixed(6)),
-          Number(((point[1] - center[1]) * SCALE).toFixed(6)),
-          Number(((point[2] - center[2]) * SCALE).toFixed(6)),
+          Number(((point[0] - center[0]) * SCALE_XY).toFixed(6)),
+          Number(((point[1] - center[1]) * SCALE_XY).toFixed(6)),
+          Number(((point[2] - center[2]) * SCALE_Z).toFixed(6)),
         ]
       : null;
   const landmarks = {
