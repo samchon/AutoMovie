@@ -1266,7 +1266,7 @@ const presets = {
       chinRoundness: 0.22,
       eyeScale: 0.08,
       eyeWidth: -0.9,
-      eyeHeight: 0.04,
+      eyeHeight: 0.9,
       eyeSpacing: -0.23,
       eyeTilt: 0.08,
       eyelidFold: 0.1,
