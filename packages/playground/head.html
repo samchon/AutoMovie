@@ -1078,7 +1078,7 @@
           new THREE.Vector3(offset + get("dorsumCurve") * 0.008, mix(bridgeY, baseY, 0.56), mix(bridgeZ, tipZ, 0.48) + get("dorsumCurve") * 0.008),
           new THREE.Vector3(offset, baseY + 0.018 + get("tipRotation") * 0.012, tipZ),
         ], 0xa47b6b, 0.012);
-        const tip = ellipsoid("nose-tip", 0.034 * (1 + get("tipWidth") * 0.08), 0.026, 0.032, clay, 24);
+        const tip = ellipsoid("nose-tip", 0.028 * (1 + get("tipWidth") * 0.08), 0.021, 0.027, clay, 24);
         tip.position.set(offset, baseY + 0.013 + get("tipRotation") * 0.012, tipZ);
         const alarW = 0.043 * c.noseW;
         for (const s of [-1, 1]) {
