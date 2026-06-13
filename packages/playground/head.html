@@ -392,7 +392,7 @@
         map: eyeTex,
         emissiveMap: eyeTex,
         emissive: 0xffffff,
-        emissiveIntensity: 0.8,
+        emissiveIntensity: 0.5,
         roughness: 0.32,
         metalness: 0,
       });
@@ -789,7 +789,10 @@
           const apHalfH = apHalfW * 0.46 * (1 + get("eyeHeight") * 0.12);
           const r = apHalfW * 0.72;
           const poleZ = apertureFrontZ - 0.012 - get("eyeDepth") * 0.012;
-          eyeAim[side] = { cx, cy, dz: -get("eyeDepth") * 0.012 };
+          // Recess the eyeball a touch so the socket rim covers the sclera in
+          // profile (only the cornea peeks through the fissure), not just frame
+          // it in front.
+          eyeAim[side] = { cx, cy, dz: -0.02 - get("eyeDepth") * 0.012 };
           // The eyeball itself is now the real MakeHuman eye mesh (static,
           // textured with brown_eye.png) added separately; here we only add the
           // lids / lashes / brow that frame it.
