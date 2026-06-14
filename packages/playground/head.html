@@ -1150,7 +1150,10 @@
           if (value === 0) continue;
           const morph = state.data.morphs[item.id];
           const rows = value > 0 ? morph?.plus : morph?.minus;
-          applySparseMorph(positions, rows, Math.abs(value));
+          // Clamp to MakeHuman's [-1,1] modifier gamut: beyond a target's authored
+          // range the linear delta extrapolates verts through each other (pinched
+          // alae, collapsed nostrils, blobs). MakeHuman clamps every modifier.
+          applySparseMorph(positions, rows, Math.min(1, Math.abs(value)));
         }
         // Procedural Z-sculpts (applyOrbitalSculpt / applyProfileSculpt) REMOVED:
         // they carved step-creases/dents into the coarse mesh. With the MakeHuman
