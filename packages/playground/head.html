@@ -892,7 +892,7 @@
           // extra recess.
           // Shrink the globe (0.92->0.80) so the lid hood fully occludes it (no
           // rectangular sclera billboard corners) + deepen recess (-0.004->-0.010).
-          eyeAim[side] = { cx, cy, apFrontZ: apertureFrontZ, dz: -0.010 - get("eyeDepth") * 0.008, targetR: apHalfW * 0.80 };
+          eyeAim[side] = { cx, cy, apFrontZ: apertureFrontZ, dz: -0.010 - get("eyeDepth") * 0.008, targetR: apHalfW * 0.9 };
           // The eyeball itself is now the real MakeHuman eye mesh (static,
           // textured with brown_eye.png) added separately; here we only add the
           // lids / lashes / brow that frame it.
@@ -980,7 +980,7 @@
               new THREE.Vector3(bOut, bOutY, browZ(bOut, bOutY)),
             ],
             0x241c18,
-            0.0076,
+            0.006,
           );
         }
         // Re-seat the static eyeball mesh onto the live lid centres so the
