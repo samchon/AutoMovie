@@ -117,6 +117,7 @@ const settle = async () => {
   );
 };
 
+if (process.env.NOSCULPT) await page.evaluate(() => { window.__noSculpt = true; });
 await page.evaluate((preset) => window.__faceEditor.setPreset(preset), PRESET);
 await settle();
 

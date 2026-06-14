@@ -640,14 +640,21 @@
         const eyeX = Math.max(0.001, facts.faceWidth * 0.176);
         const eyeY = facts.eyeY + facts.faceBottom;
         const eyeBandY = Math.max(0.001, facts.faceHeight * 0.11);
-        const eyeBandX = Math.max(0.001, facts.faceWidth * 0.125);
+        // Narrower socket band (0.125 -> 0.103): the old width reached ~37% carve
+        // strength at the nose midline, gouging a hard saddle/ridge at the nasal
+        // root. Pulling it in keeps the glabella-to-nasal-root flow smooth.
+        const eyeBandX = Math.max(0.001, facts.faceWidth * 0.103);
         const frontCut = facts.faceBottom + facts.faceHeight * 0.5;
         const depth = Math.max(0.001, facts.profileDepth);
         // Shallower socket + softer brow ridge: the deep socket made the eyes
         // read sunken and the lift built a heavy bony supraorbital bossing —
         // both read ADULT/masculine and the references are soft young faces.
-        const socketDepth = 0.017 + get("eyeDepth") * 0.016 + get("eyeScale") * 0.008;
+        const socketDepth = 0.013 + get("eyeDepth") * 0.014 + get("eyeScale") * 0.007;
         const browLift = 0.0025 + get("browHeight") * 0.004;
+        // Discrete per-group pushes have NO spatial falloff, so they cut hard
+        // step-creases into the smooth mesh (the source of the eye-area "각짐").
+        // Cut them to ~40% — just enough to seat the eyeball — and let the smooth
+        // Gaussian carve below own the visible socket.
         const pushGroup = (indices, scale, lift = 0) => {
           for (const index of indices ?? []) {
             const i = index * 3;
@@ -655,14 +662,14 @@
             positions[i + 1] += lift;
           }
         };
-        pushGroup(groups.eyeTargetLeft, socketDepth * 0.8, browLift * 0.05);
-        pushGroup(groups.eyeTargetRight, socketDepth * 0.8, browLift * 0.05);
-        pushGroup(groups.upperLidLeft, socketDepth * 0.45, browLift * 0.08);
-        pushGroup(groups.upperLidRight, socketDepth * 0.45, browLift * 0.08);
-        pushGroup(groups.lowerLidLeft, socketDepth * 0.3, -socketDepth * 0.02);
-        pushGroup(groups.lowerLidRight, socketDepth * 0.3, -socketDepth * 0.02);
-        pushGroup(groups.eyeLeft, socketDepth * 0.22);
-        pushGroup(groups.eyeRight, socketDepth * 0.22);
+        pushGroup(groups.eyeTargetLeft, socketDepth * 0.34, browLift * 0.05);
+        pushGroup(groups.eyeTargetRight, socketDepth * 0.34, browLift * 0.05);
+        pushGroup(groups.upperLidLeft, socketDepth * 0.2, browLift * 0.08);
+        pushGroup(groups.upperLidRight, socketDepth * 0.2, browLift * 0.08);
+        pushGroup(groups.lowerLidLeft, socketDepth * 0.13, -socketDepth * 0.02);
+        pushGroup(groups.lowerLidRight, socketDepth * 0.13, -socketDepth * 0.02);
+        pushGroup(groups.eyeLeft, socketDepth * 0.1);
+        pushGroup(groups.eyeRight, socketDepth * 0.1);
         for (let i = 0; i < positions.length; i += 3) {
           const x = positions[i];
           const y = positions[i + 1];
@@ -1101,8 +1108,10 @@
           applySparseMorph(positions, rows, Math.abs(value));
         }
         const sculptFacts = deriveFactsFromPositions(positions);
-        applyOrbitalSculpt(positions, sculptFacts);
-        applyProfileSculpt(positions, sculptFacts);
+        if (!window.__noSculpt) {
+          applyOrbitalSculpt(positions, sculptFacts);
+          applyProfileSculpt(positions, sculptFacts);
+        }
         // Refine the DISPLAYED surface (subdivide + Taubin-smooth) so the coarse
         // base + sculpts read organic, not faceted. `positions` stays coarse for
         // facts + eye seating below.
