@@ -441,6 +441,9 @@
       eyeballMesh.visible = false;
       root.add(eyeballMesh);
       const metricsGroup = new THREE.Group();
+      // Hidden by default — the yellow measurement guide lines should not pollute
+      // renders / future MediaPipe passes. (__faceEditor can toggle if needed.)
+      metricsGroup.visible = false;
       root.add(metricsGroup);
       const featureGroup = new THREE.Group();
       root.add(featureGroup);
