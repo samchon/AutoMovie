@@ -33,7 +33,7 @@ const MAP = {
   browToEye:          { browRaise: true, sign: +1 },  // raise the eyebrow PROXY (geometry)
   irisSpacingToFace:  { keys: E("eye-trans-in|out"), sign: +1 },
 };
-const GAIN = 1.3, MAXSTEP = 0.25, CLAMP = 1.0, DEADBAND = 0.03;
+const GAIN = +(process.env.GAIN || 1.3), MAXSTEP = +(process.env.MAXSTEP || 0.25), CLAMP = 1.0, DEADBAND = 0.03;
 const clamp = (v) => Math.max(-CLAMP, Math.min(CLAMP, v));
 
 const run = (cmd) => execSync(cmd, { cwd: root, stdio: ["ignore", "pipe", "pipe"] }).toString();
