@@ -884,7 +884,7 @@
           // Recess the globe more (-0.009 -> -0.015) and shrink it slightly
           // (0.92 -> 0.88) so the lids WRAP the eyeball instead of a round ball
           // bulging proud of them (the "buggy stuck-on eye" the reviewers flagged).
-          eyeAim[side] = { cx, cy, dz: -0.019 - get("eyeDepth") * 0.012, targetR: apHalfW * 0.88 };
+          eyeAim[side] = { cx, cy, dz: -0.032 - get("eyeDepth") * 0.012, targetR: apHalfW * 0.72 };
           // The eyeball itself is now the real MakeHuman eye mesh (static,
           // textured with brown_eye.png) added separately; here we only add the
           // lids / lashes / brow that frame it.
@@ -907,10 +907,9 @@
           // Lower the hood onto the lid line (1.20 -> 1.0) and make it wider +
           // flatter so it drapes over the globe top as an upper lid, not a
           // detached bead floating high above the eye.
-          const lidY = cy + apHalfH * (0.86 + open * 0.10);
-          const lidSkinZ = skinFrontZ(cx, lidY, 0.05);
-          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.1, apHalfH * 0.46, r * 0.22, clay, 24);
-          lid.position.set(cx, lidY, lidSkinZ - r * 0.22 - 0.002);
+          // Clay lid-hood REMOVED: the MakeHuman macro base now provides a real
+          // upper-lid/socket, so the stuck-on hood bead just clashed with it.
+          // Recess + shrink the globe a touch more so the real socket lids wrap it.
           const tilt = side * get("eyeTilt") * 0.04;
           const inner = cx - side * apHalfW * (1.0 + get("epicanthus") * 0.05);
           const outer = cx + side * apHalfW * (1.05 + get("outerCanthus") * 0.05);
