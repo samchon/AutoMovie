@@ -38,8 +38,10 @@ const hero1 = {
       "chin/chin-prominent-decr|incr": -0.42, // R3: recess forward chin more
       "chin/chin-bones-decr|incr": -0.28,
       "mouth/mouth-trans-down|up": 0.18, // R3: raise low mouth (shorten midface)
-      "mouth/mouth-upperlip-volume-decr|incr": 0.25,
-      "mouth/mouth-lowerlip-volume-decr|incr": 0.28,
+      "mouth/mouth-upperlip-volume-decr|incr": 0.0, // R4: drop unjustified lip bias
+      "mouth/mouth-lowerlip-volume-decr|incr": 0.0,
+      "mouth/mouth-upperlip-height-decr|incr": -0.2, // R4: thinner lips
+      "mouth/mouth-lowerlip-height-decr|incr": -0.2,
       "mouth/mouth-scale-horiz-decr|incr": -0.1,
       "eyebrows/eyebrows-trans-down|up": 0.08,
     },
@@ -70,8 +72,10 @@ const hero2 = {
       "chin/chin-jaw-drop-decr|incr": -0.15, // taper full jaw
       "chin/chin-height-decr|incr": 0.1,
       "chin/chin-bones-decr|incr": 0.2,
-      "mouth/mouth-upperlip-volume-decr|incr": 0.1, // R3: crisper lip (less heavy)
-      "mouth/mouth-lowerlip-volume-decr|incr": 0.1,
+      "mouth/mouth-upperlip-volume-decr|incr": 0.0, // R4: drop unjustified lip bias
+      "mouth/mouth-lowerlip-volume-decr|incr": 0.0,
+      "mouth/mouth-upperlip-height-decr|incr": -0.2, // R4: thinner refined lips
+      "mouth/mouth-lowerlip-height-decr|incr": -0.2,
       "mouth/mouth-cupidsbow-decr|incr": 0.2,
       "eyebrows/eyebrows-angle-down|up": 0.25,
       "eyebrows/eyebrows-trans-down|up": 0.25, // R3: lift brow (shrink heavy gap)
@@ -105,8 +109,10 @@ const hero3 = {
       "chin/chin-jaw-drop-decr|incr": -0.15,
       "chin/chin-bones-decr|incr": 0.1,
       "mouth/mouth-trans-down|up": 0.1,  // raise low mouth
-      "mouth/mouth-upperlip-volume-decr|incr": 0.2,
-      "mouth/mouth-lowerlip-volume-decr|incr": 0.0, // R3: lighter lower lip
+      "mouth/mouth-upperlip-volume-decr|incr": 0.0, // R4: drop unjustified lip bias
+      "mouth/mouth-lowerlip-volume-decr|incr": 0.0,
+      "mouth/mouth-upperlip-height-decr|incr": -0.3, // R4: thinner lips (ref has small mouth)
+      "mouth/mouth-lowerlip-height-decr|incr": -0.3,
       "eyebrows/eyebrows-angle-down|up": 0.15,
     },
   ),

@@ -34,8 +34,10 @@
   "chin/chin-jaw-drop-decr|incr": -0.15,
   "chin/chin-height-decr|incr": 0.1,
   "chin/chin-bones-decr|incr": 0.2,
-  "mouth/mouth-upperlip-volume-decr|incr": 0.1,
-  "mouth/mouth-lowerlip-volume-decr|incr": 0.1,
+  "mouth/mouth-upperlip-volume-decr|incr": 0,
+  "mouth/mouth-lowerlip-volume-decr|incr": 0,
+  "mouth/mouth-upperlip-height-decr|incr": -0.2,
+  "mouth/mouth-lowerlip-height-decr|incr": -0.2,
   "mouth/mouth-cupidsbow-decr|incr": 0.2,
   "eyebrows/eyebrows-angle-down|up": 0.25,
   "eyebrows/eyebrows-trans-down|up": 0.25
