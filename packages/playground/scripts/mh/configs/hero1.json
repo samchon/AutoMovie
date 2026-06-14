@@ -41,5 +41,7 @@
   "eyebrows/eyebrows-trans-down|up": 0.93,
   "mouth/mouth-scale-vert-decr|incr": 0.326,
   "nose/nose-scale-horiz-decr|incr": 0.47
- }
+ },
+ "brow": "eyebrow007",
+ "browRaise": 0
 }

@@ -62,6 +62,13 @@
           c.geometry.computeVertexNormals();
           const name = (c.material && c.material.name) || "skin";
           const dmap = c.material && c.material.map;
+          if (name === "brow") { // alpha-cut eyebrow strip
+            if (dmap) { dmap.colorSpace = THREE.SRGBColorSpace; }
+            c.material = new THREE.MeshBasicMaterial({ map: dmap, color: 0x140e0b,
+              transparent: true, alphaTest: 0.45, depthWrite: false, side: THREE.DoubleSide });
+            c.renderOrder = 2;
+            return;
+          }
           const which = name === "hair" ? "hair" : name === "eye" ? "eye" : "skin";
           const A = which === "eye" ? 0.5 : 0.0;
           if (dmap) c.material = litMat(dmap, which, A);

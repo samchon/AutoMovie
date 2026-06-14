@@ -19,12 +19,16 @@ mkdir -p "$PUB"
 if [ ! -d "$ASSETS/.git" ]; then
   GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --filter=blob:none --sparse \
     https://github.com/makehumancommunity/makehuman-assets.git "$ASSETS"
-  ( cd "$ASSETS" && git sparse-checkout set base/hair base/skins base/eyes )
 fi
+( cd "$ASSETS" && GIT_LFS_SKIP_SMUDGE=1 git sparse-checkout set base/hair base/skins base/eyes base/eyebrows base/litspheres )
 
-# 2. copy hair + skin metas into MakeHuman's data tree
+# 2. copy hair + skin + eyebrow metas into MakeHuman's data tree
 for h in long01 bob01 bob02 ponytail01 braid01 short01 afro01; do
   mkdir -p "$DATA/hair/$h"; cp "$ASSETS/base/hair/$h/"* "$DATA/hair/$h/" 2>/dev/null || true
+done
+for e in eyebrow006 eyebrow007 eyebrow010; do
+  mkdir -p "$DATA/eyebrows/$e"; cp "$ASSETS/base/eyebrows/$e/"* "$DATA/eyebrows/$e/" 2>/dev/null || true
+  curl -sL "$M/eyebrows/$e/$e.png" -o "$DATA/eyebrows/$e/$e.png" 2>/dev/null || true
 done
 mkdir -p "$DATA/skins/young_asian_female" "$DATA/skins/textures"
 cp "$ASSETS/base/skins/young_asian_female/"* "$DATA/skins/young_asian_female/" 2>/dev/null || true
@@ -36,7 +40,9 @@ for h in long01 bob01 bob02 ponytail01 braid01 short01 afro01; do
   curl -sL "$M/hair/$h/${h}_diffuse.png" -o "$DATA/hair/$h/${h}_diffuse.png" 2>/dev/null || true
 done
 
-# 4. textures the standalone mhhead.html viewer uses (matcap probes + eye)
+# 4. litspheres the mhfull.html viewer uses for MakeHuman-identical render
+curl -sL "$M/litspheres/lit_standard_skin.png" -o "$PUB/lit_standard_skin.png" 2>/dev/null || true
+curl -sL "$M/litspheres/lit_hair.png" -o "$PUB/lit_hair.png" 2>/dev/null || true
 cp "$REF/makehuman/makehuman/data/litspheres/skinmat_asian.png" "$PUB/skinmat_asian.png" 2>/dev/null || true
 cp "$REF/makehuman/makehuman/data/litspheres/skinmat_eye.png"   "$PUB/skinmat_eye.png" 2>/dev/null || true
 cp "$REF/makehuman/makehuman/data/eyes/materials/brown_eye.png" "$PUB/brown_eye.png" 2>/dev/null || true

@@ -30,7 +30,7 @@ const MAP = {
   noseWidthToFace:    { keys: ["nose/nose-scale-horiz-decr|incr"], sign: +1 },
   mouthWidthToFace:   { keys: ["mouth/mouth-scale-horiz-decr|incr"], sign: +1 },
   eyeToMouth:         { keys: ["mouth/mouth-trans-down|up"], sign: -1 },
-  browToEye:          { keys: ["eyebrows/eyebrows-trans-down|up"], sign: +1 },
+  browToEye:          { browRaise: true, sign: +1 },  // raise the eyebrow PROXY (geometry)
   irisSpacingToFace:  { keys: E("eye-trans-in|out"), sign: +1 },
 };
 const GAIN = 1.3, MAXSTEP = 0.25, CLAMP = 1.0, DEADBAND = 0.03;
@@ -39,7 +39,9 @@ const clamp = (v) => Math.max(-CLAMP, Math.min(CLAMP, v));
 const run = (cmd) => execSync(cmd, { cwd: root, stdio: ["ignore", "pipe", "pipe"] }).toString();
 const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
 cfg.modifiers = cfg.modifiers || {};
-let best = { rms: Infinity, mods: null };
+cfg.brow = cfg.brow || "eyebrow007";
+if (cfg.browRaise == null) cfg.browRaise = 0.0;
+let best = { rms: Infinity, mods: null, browRaise: cfg.browRaise };
 
 for (let it = 0; it <= iters; it++) {
   fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 1));
@@ -53,17 +55,21 @@ for (let it = 0; it <= iters; it++) {
   const rms = Math.sqrt(d.metrics.reduce((s, m) => s + m.relErr * m.relErr, 0) / d.metrics.length);
   console.log(`iter ${it}: RMS ${(rms * 100).toFixed(1)}%  | ` +
     Object.keys(MAP).map((k) => `${k.slice(0, 6)} ${((err[k] || 0) * 100).toFixed(0)}`).join("  "));
-  if (rms < best.rms) best = { rms, mods: JSON.parse(JSON.stringify(cfg.modifiers)) };
+  if (rms < best.rms) best = { rms, mods: JSON.parse(JSON.stringify(cfg.modifiers)), browRaise: cfg.browRaise };
   if (it === iters) break;
-  for (const [metric, { keys, sign }] of Object.entries(MAP)) {
+  for (const [metric, m] of Object.entries(MAP)) {
     const re = err[metric];
     if (re == null || Math.abs(re) < DEADBAND) continue;
-    let delta = -GAIN * re * sign;
+    let delta = -GAIN * re * m.sign;
     delta = Math.max(-MAXSTEP, Math.min(MAXSTEP, delta));
-    for (const k of keys) cfg.modifiers[k] = +clamp((cfg.modifiers[k] || 0) + delta).toFixed(3);
+    if (m.browRaise) {  // brow geometry raise (units, not a modifier); smaller gain
+      cfg.browRaise = +Math.max(-0.04, Math.min(0.14, cfg.browRaise + delta * 0.12)).toFixed(4);
+    } else {
+      for (const k of m.keys) cfg.modifiers[k] = +clamp((cfg.modifiers[k] || 0) + delta).toFixed(3);
+    }
   }
 }
 
-cfg.modifiers = best.mods;
+cfg.modifiers = best.mods; cfg.browRaise = best.browRaise;
 fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 1));
 console.log(`\nBEST RMS ${(best.rms * 100).toFixed(1)}% saved to ${path.relative(root, cfgPath)}`);

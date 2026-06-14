@@ -9,22 +9,22 @@
   "proportions": 0.5
  },
  "modifiers": {
-  "eyes/l-eye-scale-decr|incr": 0.7,
-  "eyes/r-eye-scale-decr|incr": 0.7,
-  "eyes/l-eye-height1-decr|incr": 0.65,
-  "eyes/r-eye-height1-decr|incr": 0.65,
+  "eyes/l-eye-scale-decr|incr": 0.592,
+  "eyes/r-eye-scale-decr|incr": 0.592,
+  "eyes/l-eye-height1-decr|incr": 0.885,
+  "eyes/r-eye-height1-decr|incr": 0.885,
   "eyes/l-eye-corner2-down|up": 0.32,
   "eyes/r-eye-corner2-down|up": 0.32,
   "eyes/l-eye-eyefold-angle-down|up": 0.15,
   "eyes/r-eye-eyefold-angle-down|up": 0.15,
-  "eyes/l-eye-trans-in|out": -0.05,
-  "eyes/r-eye-trans-in|out": -0.05,
+  "eyes/l-eye-trans-in|out": 0.128,
+  "eyes/r-eye-trans-in|out": 0.128,
   "cheek/l-cheek-bones-decr|incr": 0.55,
   "cheek/r-cheek-bones-decr|incr": 0.55,
   "cheek/l-cheek-volume-decr|incr": -0.2,
   "cheek/r-cheek-volume-decr|incr": -0.2,
   "head/head-oval": 0.7,
-  "head/head-scale-vert-decr|incr": 0.55,
+  "head/head-scale-vert-decr|incr": 0.381,
   "nose/nose-scale-horiz-decr|incr": -0.5,
   "nose/nose-nostrils-width-decr|incr": -0.35,
   "nose/nose-point-width-decr|incr": -0.4,
@@ -40,6 +40,9 @@
   "mouth/mouth-lowerlip-height-decr|incr": -0.5,
   "mouth/mouth-cupidsbow-decr|incr": 0.2,
   "eyebrows/eyebrows-angle-down|up": 0.25,
-  "eyebrows/eyebrows-trans-down|up": 0.5
- }
+  "eyebrows/eyebrows-trans-down|up": 0.5,
+  "mouth/mouth-scale-vert-decr|incr": -0.133
+ },
+ "brow": "eyebrow007",
+ "browRaise": 0.0649
 }
