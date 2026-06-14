@@ -8,8 +8,9 @@ import { chromium } from "playwright-core";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const MODEL = process.env.MODEL ?? "base";
+const PAGE = process.env.PAGE ?? "mhhead.html";
 const BASE = process.env.BASE ?? "http://127.0.0.1:5173";
-const outDir = path.join(root, ".shots", "mh-render", MODEL);
+const outDir = path.join(root, ".shots", PAGE === "mhfull.html" ? "mh-full" : "mh-render", MODEL);
 const CHROME = process.env.CHROME ?? {
   win32: "C:/Program Files/Google/Chrome/Application/chrome.exe",
   darwin: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -28,7 +29,7 @@ const errs = [];
 page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
 page.on("pageerror", (e) => errs.push(String(e)));
 
-await page.goto(`${BASE}/mhhead.html?model=${MODEL}`, { waitUntil: "load" });
+await page.goto(`${BASE}/${PAGE}?model=${MODEL}`, { waitUntil: "load" });
 await page.waitForFunction(() => window.__mhReady === true, { timeout: 20000 }).catch(() => {});
 const settle = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 
