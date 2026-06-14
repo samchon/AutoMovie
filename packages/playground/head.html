@@ -650,7 +650,7 @@
         // read sunken and the lift built a heavy bony supraorbital bossing —
         // both read ADULT/masculine and the references are soft young faces.
         const socketDepth = 0.013 + get("eyeDepth") * 0.014 + get("eyeScale") * 0.007;
-        const browLift = 0.0025 + get("browHeight") * 0.004;
+        const browLift = 0.0012 + get("browHeight") * 0.004;
         // Discrete per-group pushes have NO spatial falloff, so they cut hard
         // step-creases into the smooth mesh (the source of the eye-area "각짐").
         // Cut them to ~40% — just enough to seat the eyeball — and let the smooth
@@ -685,8 +685,13 @@
           // glabella: max() valleys to ~0.37 between the eyes, leaving two mounds
           // with a furrow that reads as a frown. Sum (capped) keeps the ridge over
           // each eye while raising the midline so the glabella stays smooth.
-          const browFill = Math.min(1, left + right);
-          positions[i + 2] -= orbit * socketDepth * (0.92 + 0.42 * upper) * (depth * 0.78);
+          // Protect the midline (nasion): release the socket carve toward x=0 so
+          // it doesn't gouge canthal pockets that leave the nasion proud as a ridge.
+          const medial = 1 - gaussian(x, 0, eyeX * 0.55);
+          // max (valleys at the midline) instead of sum, so the brow lift can't
+          // mound the glabella into a central bump between the eyes.
+          const browFill = Math.max(left, right);
+          positions[i + 2] -= orbit * socketDepth * (0.92 + 0.42 * upper) * (depth * 0.78) * medial;
           positions[i + 1] += browFill * browLift * upper;
           positions[i + 1] -= orbit * socketDepth * 0.24 * lower;
         }
@@ -704,8 +709,8 @@
         const fw = Math.max(0.001, facts.faceWidth);
         const chinY = fb + fh * 0.1;
         const chinBand = fh * 0.13;
-        const midY = fb + fh * 0.4;
-        const midBand = fh * 0.2;
+        const midY = fb + fh * 0.33;
+        const midBand = fh * 0.16;
         const xBand = fw * 0.38;
         for (let i = 0; i < positions.length; i += 3) {
           const x = positions[i];
@@ -876,10 +881,10 @@
           // Lower the hood onto the lid line (1.20 -> 1.0) and make it wider +
           // flatter so it drapes over the globe top as an upper lid, not a
           // detached bead floating high above the eye.
-          const lidY = cy + apHalfH * (1.0 + open * 0.34);
+          const lidY = cy + apHalfH * (0.86 + open * 0.10);
           const lidSkinZ = skinFrontZ(cx, lidY, 0.05);
-          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.1, apHalfH * 0.46, r * 0.32, clay, 24);
-          lid.position.set(cx, lidY, lidSkinZ - r * 0.32 + 0.004);
+          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.1, apHalfH * 0.46, r * 0.22, clay, 24);
+          lid.position.set(cx, lidY, lidSkinZ - r * 0.22 - 0.002);
           const tilt = side * get("eyeTilt") * 0.04;
           const inner = cx - side * apHalfW * (1.0 + get("epicanthus") * 0.05);
           const outer = cx + side * apHalfW * (1.05 + get("outerCanthus") * 0.05);
