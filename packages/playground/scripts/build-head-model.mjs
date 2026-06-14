@@ -105,6 +105,40 @@ const parseTarget = (relative) => {
   return rows;
 };
 
+// The MakeHuman MACRO BASE: a young + female + asian near-full-mesh delta,
+// applied at weight 1.0 to the raw base vertices BEFORE head selection. This is
+// the "step zero" we were missing — MakeHuman's smooth, full-cheeked, youthful
+// head shape comes from this macro layer, not the sparse feature sliders (those
+// are small refinements on top). Applied in RAW base.obj units; the per-vertex
+// centering/scaling happens downstream. NEVER load a *-old target — that is the
+// literal source of the nasolabial/perioral/mentolabial AGING creases.
+const applyMacroBase = (vertices) => {
+  const macros = [
+    "macrodetails/asian-female-young.target",
+    "macrodetails/universal-female-young-averagemuscle-averageweight.target",
+  ];
+  let moved = 0;
+  for (const rel of macros) {
+    const file = path.join(targetRoot, rel);
+    if (!fs.existsSync(file)) {
+      console.warn("macro base target missing:", rel);
+      continue;
+    }
+    for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+      if (!line || line.startsWith("#")) continue;
+      const [idx, dx, dy, dz] = line.trim().split(/\s+/);
+      if (idx === undefined || dz === undefined) continue;
+      const v = vertices[Number(idx)];
+      if (!v) continue;
+      v[0] += Number(dx);
+      v[1] += Number(dy);
+      v[2] += Number(dz);
+      moved++;
+    }
+  }
+  console.log(`macro base applied: ${moved} vertex deltas`);
+};
+
 const aggregateTargets = (entries, remap) => {
   const deltas = new Map();
   for (const entry of entries ?? []) {
@@ -1393,6 +1427,11 @@ const build = () => {
   }
   const source = [...selected].sort((a, b) => a - b);
   const remap = new Map(source.map((index, i) => [index, i]));
+  // Apply the macro base AFTER head selection: the selection y-thresholds are
+  // tuned to the ORIGINAL mesh, but the young-female macro shifts y and would
+  // mis-select. Vertex indices are topological, so the head SET is unchanged; we
+  // then shape those same verts to the young-female-asian foundation.
+  applyMacroBase(vertices);
   const bounds = source.reduce(
     (acc, index) => {
       const v = vertices[index];
