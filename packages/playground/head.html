@@ -1136,8 +1136,9 @@
         // pure-Laplacian (positive-only) passes are mean-curvature flow — they melt
         // high-curvature grooves fastest, filling the dents into flowing skin. The
         // central face (orbital/paranasal/perioral) still read dented at 3 passes,
-        // so push to 6 to melt them. Watch the nose/lip projection survives.
-        for (let it = 0; it < 6; it++) { step(0.42); }
+        // so push to 8 to melt them — the residual nasolabial/perioral creases
+        // read as AGING WRINKLES (a young face has none). Watch nose/lip survive.
+        for (let it = 0; it < 8; it++) { step(0.42); }
         return { positions: p, indices: t2.indices };
       };
       const buildHeadGeometry = () => {
@@ -1151,14 +1152,10 @@
           const rows = value > 0 ? morph?.plus : morph?.minus;
           applySparseMorph(positions, rows, Math.abs(value));
         }
-        const sculptFacts = deriveFactsFromPositions(positions);
-        if (!window.__noSculpt) {
-          applyOrbitalSculpt(positions, sculptFacts);
-          applyProfileSculpt(positions, sculptFacts);
-        }
-        // Refine the DISPLAYED surface (subdivide + Taubin-smooth) so the coarse
-        // base + sculpts read organic, not faceted. `positions` stays coarse for
-        // facts + eye seating below.
+        // Procedural Z-sculpts (applyOrbitalSculpt / applyProfileSculpt) REMOVED:
+        // they carved step-creases/dents into the coarse mesh. With the MakeHuman
+        // young-female macro base the real socket/profile shape is already there;
+        // socket/profile refinements belong in real MakeHuman targets, not sculpts.
         const refined = refineHeadSurface(positions);
         if (!headGeometry.index || headGeometry.index.count !== refined.indices.length) {
           headGeometry.setIndex(refined.indices);
