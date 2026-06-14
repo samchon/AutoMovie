@@ -48,15 +48,25 @@
       rim.position.set(-0.3, 0.7, -1.4);
       scene.add(rim);
 
+      // MakeHuman's base ships no diffuse skin texture (only a reddish litsphere
+      // meant to be ADDED to diffuse), so a warm physical skin tone reads truer
+      // than the raw litsphere. The eye, however, has a real texture (brown_eye).
+      const texLoader = new THREE.TextureLoader();
+      const loadTex = (u) => { const t = texLoader.load(u); t.colorSpace = THREE.SRGBColorSpace; return t; };
       const skinMat = new THREE.MeshPhysicalMaterial({
-        color: 0xe6b291, roughness: 0.62, metalness: 0.0,
-        clearcoat: 0.12, clearcoatRoughness: 0.5, sheen: 0.3, sheenColor: 0xff9d7a,
+        color: 0xe9b59a, roughness: 0.6, metalness: 0.0,
+        clearcoat: 0.1, clearcoatRoughness: 0.5, sheen: 0.3, sheenColor: 0xff9d7a,
       });
       const scleraMat = new THREE.MeshPhysicalMaterial({
-        color: 0xf3efe9, roughness: 0.28, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.15,
+        color: 0xf3efe9, roughness: 0.3, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.2,
       });
-      const irisMat = new THREE.MeshStandardMaterial({ color: 0x5a3b22, roughness: 0.35 });
+      const eyeTex = loadTex("/mh/brown_eye.png");
+      // textured iris disc sampling one eye from brown_eye.png (iris centred)
+      const irisMat = new THREE.MeshBasicMaterial({ map: eyeTex });
       const pupilMat = new THREE.MeshBasicMaterial({ color: 0x140d07 });
+      const hairMat = new THREE.MeshStandardMaterial({
+        color: 0x241c20, roughness: 0.86, metalness: 0.0, side: THREE.DoubleSide,
+      });
 
       let meta = null;
       const headCenter = new THREE.Vector3(0, 5.55, 0.9);
@@ -68,7 +78,7 @@
         obj.traverse((c) => {
           if (!c.isMesh) return;
           const mtl = (c.material && c.material.name) || "";
-          c.material = mtl === "eye" ? scleraMat : skinMat;
+          c.material = mtl === "hair" ? hairMat : mtl === "eye" ? scleraMat : skinMat;
           if (!c.geometry.getAttribute("normal")) c.geometry.computeVertexNormals();
         });
         scene.add(obj);
@@ -78,25 +88,30 @@
         headSize = Math.max(mx.x - mn.x, mx.y - mn.y, mx.z - mn.z);
         headCenter.set((mn.x + mx.x) * 0.5, (mn.y + mx.y) * 0.5 + (mx.y - mn.y) * 0.12, (mn.z + mx.z) * 0.5);
 
-        const limbalMat = new THREE.MeshStandardMaterial({ color: 0x2a1c11, roughness: 0.4 });
-        const catchMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        // Textured iris disc sampling the upper-left eye in brown_eye.png. The disc
+        // is remapped to a texture patch centred on that eye's iris (THREE flipY).
+        // iris-only disc (the white sclera comes from the helper eyeball sphere).
+        const IRIS_U = 0.704, IRIS_V = 0.81, IRIS_RAD = 0.072; // measured iris patch
+        const makeIrisGeo = (r) => {
+          const g = new THREE.CircleGeometry(r, 48);
+          const uv = g.attributes.uv;
+          for (let i = 0; i < uv.count; i++) {
+            uv.setXY(i, IRIS_U + (uv.getX(i) - 0.5) * 2 * IRIS_RAD,
+                        IRIS_V + (uv.getY(i) - 0.5) * 2 * IRIS_RAD);
+          }
+          uv.needsUpdate = true;
+          return g;
+        };
         for (const side of ["l", "r"]) {
           const ctr = new THREE.Vector3().fromArray(meta[side + "EyeCenter"]);
           const r = meta[side + "EyeR"];
-          // limbal ring (dark outer edge of the iris) for definition
-          const limbal = new THREE.Mesh(new THREE.CircleGeometry(r * 0.64, 36), limbalMat);
-          limbal.position.copy(ctr).add(new THREE.Vector3(0, 0, r * 0.9));
-          scene.add(limbal);
-          const iris = new THREE.Mesh(new THREE.CircleGeometry(r * 0.58, 36), irisMat);
-          iris.position.copy(ctr).add(new THREE.Vector3(0, 0, r * 0.93));
+          const iris = new THREE.Mesh(makeIrisGeo(r * 0.52), irisMat);
+          iris.position.copy(ctr).add(new THREE.Vector3(0, 0, r * 0.94));
           scene.add(iris);
-          const pupil = new THREE.Mesh(new THREE.CircleGeometry(r * 0.26, 28), pupilMat);
-          pupil.position.copy(ctr).add(new THREE.Vector3(0, 0, r * 0.96));
-          scene.add(pupil);
-          // catchlight (gives the eye life) — small bright dot, same world side
-          // on both eyes (single key light), upper-left from the viewer.
-          const catch_ = new THREE.Mesh(new THREE.CircleGeometry(r * 0.07, 16), catchMat);
-          catch_.position.copy(ctr).add(new THREE.Vector3(r * 0.16, r * 0.16, r * 1.0));
+          // tiny catchlight for life
+          const catch_ = new THREE.Mesh(new THREE.CircleGeometry(r * 0.08, 16),
+            new THREE.MeshBasicMaterial({ color: 0xffffff }));
+          catch_.position.copy(ctr).add(new THREE.Vector3(r * 0.15, r * 0.16, r * 0.97));
           scene.add(catch_);
         }
         setView("front");

@@ -67,32 +67,71 @@ def main():
     eyeY = float(coord[eye_verts, 1].mean())
     if "--cropY" not in sys.argv:
         cropY = eyeY - 1.5
-    skin_mask = group_face_mask(sub, {"body"})
+    body_all = group_face_mask(sub, {"body"})
     yv = coord[:, 1]
     face_minY = yv[fvert].min(axis=1)
-    skin_mask = skin_mask & (face_minY > cropY)
+    skin_mask = body_all & (face_minY > cropY)
+
+    # --- hair shell ----------------------------------------------------------
+    # MakeHuman base ships no hair geometry, so grow a hair shell from the scalp:
+    # vertices above the hairline (crown/top) OR on the back/occiput (normal facing
+    # away), pushed out along the normal. Covers crown+back+sides, leaves the face.
+    body_verts_all = np.unique(fvert[body_all])
+    headMaxY = float(coord[body_verts_all, 1].max())
+    hairlineY = headMaxY - 0.62 * (headMaxY - eyeY)   # forehead-top hairline
+    napeY = eyeY - 0.3
+    headCtrZ = float(coord[np.unique(fvert[body_all & np.all((coord[:, 1] > eyeY)[fvert], axis=1)]), 2].mean())
+    # hair = crown/top (above hairline) OR back/occiput + sides BEHIND the face plane
+    # (z < head centre), so facial features (nose/forehead) are never covered.
+    behind = coord[:, 2] < headCtrZ + 0.15
+    side_back = (coord[:, 1] > napeY) & behind & ((vnorm[:, 2] < -0.05) | (np.abs(vnorm[:, 0]) > 0.5))
+    hairV = (coord[:, 1] > hairlineY) | side_back
+    hair_face_mask = body_all & np.all(hairV[fvert], axis=1)
+    HAIR_OFFSET = 0.09
+
+    # hair offset vertices (computed up front so ALL v/vn precede every face —
+    # THREE's OBJLoader is unreliable when vertices are defined after faces).
+    # Push RADIALLY outward from the head centre (robust vs per-vertex normal noise).
+    hv_idx = np.unique(fvert[hair_face_mask])
+    remap = {int(o): i for i, o in enumerate(hv_idx)}
+    head_verts = np.unique(fvert[body_all & np.all((coord[:, 1] > eyeY - 0.5)[fvert], axis=1)])
+    headCtr = coord[head_verts].mean(0)
+    radial = coord[hv_idx] - headCtr
+    radial /= (np.linalg.norm(radial, axis=1, keepdims=True) + 1e-9)
+    hair_pos = coord[hv_idx] + radial * HAIR_OFFSET
+    hair_nrm = radial
+    v_base = len(coord)     # hair verts appended after these
+    vn_base = len(vnorm)
 
     out = os.path.abspath(out)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w") as f:
-        f.write("# MakeHuman head render export (subdivided, with normals)\n")
+        f.write("# MakeHuman head render export (subdivided, with normals + hair)\n")
         for v in coord:
+            f.write("v %.6f %.6f %.6f\n" % (v[0], v[1], v[2]))
+        for v in hair_pos:
             f.write("v %.6f %.6f %.6f\n" % (v[0], v[1], v[2]))
         for t in texco:
             f.write("vt %.6f %.6f\n" % (t[0], t[1]))
         for n in vnorm:
             f.write("vn %.5f %.5f %.5f\n" % (n[0], n[1], n[2]))
+        for n in hair_nrm:
+            f.write("vn %.5f %.5f %.5f\n" % (n[0], n[1], n[2]))
 
         def emit(mask, mtl):
-            f.write("usemtl %s\n" % mtl)
-            fv = fvert[mask]
-            fu = fuvs[mask]
-            for i in range(len(fv)):
-                face, uv = fv[i], fu[i]
-                f.write("f " + " ".join("%d/%d/%d" % (face[k] + 1, uv[k] + 1, face[k] + 1) for k in range(len(face))) + "\n")
+            f.write("o %s\nusemtl %s\n" % (mtl, mtl))  # separate object per material
+            for face, uv in zip(fvert[mask], fuvs[mask]):
+                f.write("f " + " ".join("%d/%d/%d" % (face[k] + 1, uv[k] + 1, face[k] + 1)
+                                        for k in range(len(face))) + "\n")
 
         emit(skin_mask, "skin")
         emit(eye_mask, "eye")
+
+        f.write("o hair\nusemtl hair\n")
+        for face in fvert[hair_face_mask]:
+            parts = ["%d/1/%d" % (v_base + remap[int(face[k])] + 1,
+                                  vn_base + remap[int(face[k])] + 1) for k in range(len(face))]
+            f.write("f " + " ".join(parts) + "\n")
 
     # eye centers (for iris placement in the viewer)
     meta = {"cropY": cropY}
