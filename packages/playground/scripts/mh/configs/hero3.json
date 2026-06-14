@@ -1,0 +1,30 @@
+{
+ "macro": {
+  "gender": 0,
+  "age": 0.5,
+  "asian": 1,
+  "muscle": 0.5,
+  "weight": 0.5,
+  "height": 0.5,
+  "proportions": 0.5
+ },
+ "modifiers": {
+  "eyes/l-eye-scale-decr|incr": 0.3,
+  "eyes/r-eye-scale-decr|incr": 0.3,
+  "eyes/l-eye-height1-decr|incr": 0.2,
+  "eyes/r-eye-height1-decr|incr": 0.2,
+  "eyes/l-eye-corner2-down|up": 0.12,
+  "eyes/r-eye-corner2-down|up": 0.12,
+  "cheek/l-cheek-bones-decr|incr": 0.25,
+  "cheek/r-cheek-bones-decr|incr": 0.25,
+  "head/head-oval": 0.3,
+  "nose/nose-nostrils-width-decr|incr": -0.25,
+  "nose/nose-scale-horiz-decr|incr": -0.2,
+  "nose/nose-scale-depth-decr|incr": 0.05,
+  "chin/chin-width-decr|incr": -0.2,
+  "chin/chin-bones-decr|incr": 0.1,
+  "mouth/mouth-upperlip-volume-decr|incr": 0.2,
+  "mouth/mouth-lowerlip-volume-decr|incr": 0.2,
+  "eyebrows/eyebrows-angle-down|up": 0.15
+ }
+}

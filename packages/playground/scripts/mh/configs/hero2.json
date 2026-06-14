@@ -1,0 +1,42 @@
+{
+ "macro": {
+  "gender": 0,
+  "age": 0.5,
+  "asian": 1,
+  "muscle": 0.5,
+  "weight": 0.5,
+  "height": 0.5,
+  "proportions": 0.5
+ },
+ "modifiers": {
+  "eyes/l-eye-scale-decr|incr": 0.36,
+  "eyes/r-eye-scale-decr|incr": 0.36,
+  "eyes/l-eye-height1-decr|incr": 0.2,
+  "eyes/r-eye-height1-decr|incr": 0.2,
+  "eyes/l-eye-corner2-down|up": 0.2,
+  "eyes/r-eye-corner2-down|up": 0.2,
+  "eyes/l-eye-eyefold-angle-down|up": 0.15,
+  "eyes/r-eye-eyefold-angle-down|up": 0.15,
+  "eyes/l-eye-trans-in|out": -0.14,
+  "eyes/r-eye-trans-in|out": -0.14,
+  "cheek/l-cheek-bones-decr|incr": 0.4,
+  "cheek/r-cheek-bones-decr|incr": 0.4,
+  "cheek/l-cheek-volume-decr|incr": -0.1,
+  "cheek/r-cheek-volume-decr|incr": -0.1,
+  "head/head-oval": 0.4,
+  "head/head-scale-vert-decr|incr": 0.18,
+  "nose/nose-scale-horiz-decr|incr": -0.25,
+  "nose/nose-nostrils-width-decr|incr": -0.3,
+  "nose/nose-point-width-decr|incr": -0.25,
+  "nose/nose-scale-depth-decr|incr": 0.1,
+  "chin/chin-width-decr|incr": -0.3,
+  "chin/chin-prominent-decr|incr": 0.15,
+  "chin/chin-height-decr|incr": 0.1,
+  "chin/chin-bones-decr|incr": 0.2,
+  "mouth/mouth-upperlip-volume-decr|incr": 0.2,
+  "mouth/mouth-lowerlip-volume-decr|incr": 0.2,
+  "mouth/mouth-cupidsbow-decr|incr": 0.2,
+  "eyebrows/eyebrows-angle-down|up": 0.25,
+  "eyebrows/eyebrows-trans-down|up": 0.15
+ }
+}

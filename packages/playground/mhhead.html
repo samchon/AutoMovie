@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MakeHuman Head — true geometry</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #d9dde2; }
+      #view { width: 100vw; height: 100vh; display: block; }
+      #tag { position: fixed; left: 12px; top: 10px; font: 13px monospace; color: #333; }
+    </style>
+    <script type="module">
+      import * as THREE from "three";
+      import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
+      import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+
+      const params = new URLSearchParams(location.search);
+      const model = params.get("model") || "base";
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.05;
+      const canvas = renderer.domElement;
+      canvas.id = "view";
+      document.body.appendChild(canvas);
+      const tag = document.createElement("div");
+      tag.id = "tag";
+      document.body.appendChild(tag);
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xd9dde2);
+
+      const camera = new THREE.PerspectiveCamera(28, window.innerWidth / window.innerHeight, 0.01, 100);
+      const controls = new OrbitControls(camera, canvas);
+
+      // Lighting: soft studio 3-point + hemisphere for clean skin read.
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f99, 0.55));
+      const key = new THREE.DirectionalLight(0xfff4e8, 1.15);
+      key.position.set(0.6, 1.0, 1.4);
+      scene.add(key);
+      const fill = new THREE.DirectionalLight(0xdfe8ff, 0.45);
+      fill.position.set(-1.1, 0.2, 0.7);
+      scene.add(fill);
+      const rim = new THREE.DirectionalLight(0xffffff, 0.6);
+      rim.position.set(-0.3, 0.7, -1.4);
+      scene.add(rim);
+
+      const skinMat = new THREE.MeshPhysicalMaterial({
+        color: 0xe6b291, roughness: 0.62, metalness: 0.0,
+        clearcoat: 0.12, clearcoatRoughness: 0.5, sheen: 0.3, sheenColor: 0xff9d7a,
+      });
+      const scleraMat = new THREE.MeshPhysicalMaterial({
+        color: 0xf3efe9, roughness: 0.28, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.15,
+      });
+      const irisMat = new THREE.MeshStandardMaterial({ color: 0x5a3b22, roughness: 0.35 });
+      const pupilMat = new THREE.MeshBasicMaterial({ color: 0x140d07 });
+
+      let meta = null;
+      const headCenter = new THREE.Vector3(0, 5.55, 0.9);
+      let headSize = 2.2;
+
+      async function load() {
+        meta = await (await fetch(`/mh/${model}_head.meta.json`)).json();
+        const obj = await new OBJLoader().loadAsync(`/mh/${model}_head.obj`);
+        obj.traverse((c) => {
+          if (!c.isMesh) return;
+          const mtl = (c.material && c.material.name) || "";
+          c.material = mtl === "eye" ? scleraMat : skinMat;
+          if (!c.geometry.getAttribute("normal")) c.geometry.computeVertexNormals();
+        });
+        scene.add(obj);
+
+        const mn = new THREE.Vector3().fromArray(meta.headMin);
+        const mx = new THREE.Vector3().fromArray(meta.headMax);
+        headSize = Math.max(mx.x - mn.x, mx.y - mn.y, mx.z - mn.z);
+        headCenter.set((mn.x + mx.x) * 0.5, (mn.y + mx.y) * 0.5 + (mx.y - mn.y) * 0.12, (mn.z + mx.z) * 0.5);
+
+        for (const side of ["l", "r"]) {
+          const ctr = new THREE.Vector3().fromArray(meta[side + "EyeCenter"]);
+          const r = meta[side + "EyeR"];
+          const iris = new THREE.Mesh(new THREE.CircleGeometry(r * 0.55, 32), irisMat);
+          iris.position.copy(ctr).add(new THREE.Vector3(0, 0, r * 0.92));
+          scene.add(iris);
+          const pupil = new THREE.Mesh(new THREE.CircleGeometry(r * 0.24, 24), pupilMat);
+          pupil.position.copy(ctr).add(new THREE.Vector3(0, 0, r * 0.95));
+          scene.add(pupil);
+        }
+        setView("front");
+        window.__mhReady = true;
+      }
+
+      const VIEWS = {
+        front: [0, 0, 1], frontClose: [0, 0, 0.62],
+        leftThreeQuarter: [-37, 0, 1], rightThreeQuarter: [37, 0, 1],
+        leftProfile: [-90, 0, 1], rightProfile: [90, 0, 1],
+        top: [0, 78, 1], bottom: [0, -55, 1], back: [180, 0, 1],
+        eyeClose: [0, 4, 0.42],
+      };
+
+      window.setView = (name) => {
+        const [yaw, pitch, zoom = 1] = VIEWS[name] || VIEWS.front;
+        const dist = headSize * 2.4 * zoom;
+        const ry = (yaw * Math.PI) / 180, rp = (pitch * Math.PI) / 180;
+        const x = dist * Math.cos(rp) * Math.sin(ry);
+        const y = dist * Math.sin(rp);
+        const z = dist * Math.cos(rp) * Math.cos(ry);
+        camera.position.set(headCenter.x + x, headCenter.y + y, headCenter.z + z);
+        camera.lookAt(headCenter);
+        controls.target.copy(headCenter);
+        controls.update();
+        tag.textContent = `MakeHuman ${model} — ${name}`;
+      };
+
+      function tick() { controls.update(); renderer.render(scene, camera); requestAnimationFrame(tick); }
+      addEventListener("resize", () => {
+        camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+      });
+      tick();
+      load();
+    </script>
+  </head>
+  <body></body>
+</html>
