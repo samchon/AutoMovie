@@ -17,24 +17,27 @@ const MACRO = { gender: 0.0, age: 0.5, asian: 1.0, muscle: 0.5, weight: 0.5, hei
 // hero1 — cute young girl (neoteny): big low-set wide eyes, round short face,
 // small nose+chin, full cheeks & lips, high forehead, soft jaw.
 const hero1 = {
-  macro: { ...MACRO, age: 0.24 }, // R2: ~11yo child (was 0.3, read too teen)
+  macro: { ...MACRO, age: 0.21 }, // R3: younger child (midface too tall at 0.24)
   modifiers: merge(
-    eye("eye-scale-decr|incr", 0.55),    // R2: bigger child eyes (cap 0.55)
-    eye("eye-height1-decr|incr", 0.53),  // R2: round the aperture
-    eye("eye-trans-in|out", 0.0),        // R2: neutral close-set
+    eye("eye-scale-decr|incr", 0.7),     // R3: child-dominant eyes (ceiling)
+    eye("eye-height1-decr|incr", 0.66),  // R3: round taller aperture
+    eye("eye-trans-in|out", -0.1),       // R3: tighten too-wide intercanthal
     eye("eye-trans-down|up", -0.18),     // low-set childlike eyes
     eye("eye-epicanthus-in|out", -0.15), // gentle epicanthic fold
-    cheek("cheek-volume-decr|incr", 0.42), // R2: baby-fat hides jaw (cap 0.42)
+    cheek("cheek-volume-decr|incr", 0.52), // R3: fuller baby-fat apple cheeks
     {
       "head/head-round": 0.27,           // de-dome the balloon crown
-      "head/head-scale-vert-decr|incr": -0.06,
+      "head/head-scale-vert-decr|incr": -0.12, // R3: shorten tall midface
       "forehead/forehead-scale-vert-decr|incr": 0.2,
       "nose/nose-scale-vert-decr|incr": -0.22,
-      "nose/nose-nostrils-width-decr|incr": -0.42, // R2: narrow small child nose
+      "nose/nose-nostrils-width-decr|incr": -0.58, // R3: narrow small child nose
+      "nose/nose-width1-decr|incr": -0.15, // R3: slim whole nose body
+      "nose/nose-width2-decr|incr": -0.15,
       "nose/nose-scale-depth-decr|incr": -0.15,
-      "chin/chin-height-decr|incr": -0.38, // R2: shorten lower third
-      "chin/chin-prominent-decr|incr": -0.28, // R2: recess forward chin
-      "chin/chin-bones-decr|incr": -0.28,  // R2: soften gonial/jaw
+      "chin/chin-height-decr|incr": -0.38,
+      "chin/chin-prominent-decr|incr": -0.42, // R3: recess forward chin more
+      "chin/chin-bones-decr|incr": -0.28,
+      "mouth/mouth-trans-down|up": 0.18, // R3: raise low mouth (shorten midface)
       "mouth/mouth-upperlip-volume-decr|incr": 0.25,
       "mouth/mouth-lowerlip-volume-decr|incr": 0.28,
       "mouth/mouth-scale-horiz-decr|incr": -0.1,
@@ -48,30 +51,30 @@ const hero1 = {
 const hero2 = {
   macro: { ...MACRO },
   modifiers: merge(
-    eye("eye-scale-decr|incr", 0.66),    // R2.2: signature large eyes (cap 0.66)
-    eye("eye-height1-decr|incr", 0.5),   // R2.2: open aperture vertically
-    eye("eye-corner2-down|up", 0.2),     // outer corner up (almond upturn)
+    eye("eye-scale-decr|incr", 0.7),     // R3: signature large eyes (ceiling)
+    eye("eye-height1-decr|incr", 0.65),  // R3: open aperture taller
+    eye("eye-corner2-down|up", 0.32),    // R3: stronger almond upturn
     eye("eye-eyefold-angle-down|up", 0.15),
     eye("eye-trans-in|out", -0.14),      // narrower set
-    cheek("cheek-bones-decr|incr", 0.4),
-    cheek("cheek-volume-decr|incr", -0.2), // R2.2: carve sub-cheekbone hollow
+    cheek("cheek-bones-decr|incr", 0.55), // R3: high defined cheekbones
+    cheek("cheek-volume-decr|incr", -0.2), // carve sub-cheekbone hollow
     {
-      "head/head-oval": 0.7,             // R2.2: reinforce tall oval
-      "head/head-scale-vert-decr|incr": 0.43, // R2.2: lengthen face (facialIndex -13%)
-      "nose/nose-scale-horiz-decr|incr": -0.5, // R2.2: narrow refined nose
+      "head/head-oval": 0.7,             // tall oval
+      "head/head-scale-vert-decr|incr": 0.55, // R3: lengthen toward long oval
+      "nose/nose-scale-horiz-decr|incr": -0.65, // R3: narrow refined nose
       "nose/nose-nostrils-width-decr|incr": -0.4,
-      "nose/nose-point-width-decr|incr": -0.25,
+      "nose/nose-point-width-decr|incr": -0.42, // R3: delicate tip
       "nose/nose-scale-depth-decr|incr": 0.1,
-      "chin/chin-width-decr|incr": -0.45, // slim jaw for V-taper
-      "chin/chin-prominent-decr|incr": 0.45, // R2.2: forward pointed chin
-      "chin/chin-jaw-drop-decr|incr": -0.15, // R2.2: taper full jaw
+      "chin/chin-width-decr|incr": -0.62, // R3: slim jaw for V-taper
+      "chin/chin-prominent-decr|incr": 0.6, // R3: forward pointed chin
+      "chin/chin-jaw-drop-decr|incr": -0.15, // taper full jaw
       "chin/chin-height-decr|incr": 0.1,
       "chin/chin-bones-decr|incr": 0.2,
-      "mouth/mouth-upperlip-volume-decr|incr": 0.2,
-      "mouth/mouth-lowerlip-volume-decr|incr": 0.2,
+      "mouth/mouth-upperlip-volume-decr|incr": 0.1, // R3: crisper lip (less heavy)
+      "mouth/mouth-lowerlip-volume-decr|incr": 0.1,
       "mouth/mouth-cupidsbow-decr|incr": 0.2,
       "eyebrows/eyebrows-angle-down|up": 0.25,
-      "eyebrows/eyebrows-trans-down|up": 0.05, // R2.2: shrink heavy upper-lid gap
+      "eyebrows/eyebrows-trans-down|up": 0.25, // R3: lift brow (shrink heavy gap)
     },
   ),
 };
@@ -83,26 +86,27 @@ const hero3 = {
   modifiers: merge(
     eye("eye-scale-decr|incr", 0.42),    // bigger softer teen eyes
     eye("eye-height1-decr|incr", 0.2),
-    eye("eye-corner2-down|up", 0.18),    // slight outer-canthus lift
-    eye("eye-trans-down|up", 0.12),      // R2.2: raise eyes, tighten brow gap
-    cheek("cheek-bones-decr|incr", 0.15), // R2.2: slim fuller-than-teen lower face
+    eye("eye-corner2-down|up", 0.28),    // R3: gentle outer-canthus lift
+    eye("eye-trans-down|up", 0.2),       // R3: raise eyes (shorten brow gap, lengthen eye-nose)
+    eye("eye-trans-in|out", -0.1),       // R3: tighten slightly-wide eyes
+    cheek("cheek-bones-decr|incr", 0.15), // slim fuller-than-teen lower face
     cheek("cheek-inner-decr|incr", 0.15), // juvenile apple-cheek fullness
     {
-      "head/head-oval": 0.3,
-      "head/head-age-decr|incr": -0.1,   // R2.2: juvenile cranial proportions
-      "nose/nose-nostrils-width-decr|incr": -0.5, // R2.2: narrow alar base
-      "nose/nose-scale-horiz-decr|incr": -0.32,
+      "head/head-oval": 0.4,             // R3: slimmer oval, narrower jaw
+      "head/head-age-decr|incr": -0.3,   // R3: juvenile cranial/soft-tissue
+      "nose/nose-nostrils-width-decr|incr": -0.65, // R3: narrow alar base
+      "nose/nose-scale-horiz-decr|incr": -0.45, // R3: narrow whole nose
       "nose/nose-scale-depth-decr|incr": 0.05,
       "nose/nose-base-down|up": 0.12,    // soft juvenile upturn
-      "nose/nose-trans-backward|forward": 0.08, // R2.2: restore tip projection
+      "nose/nose-trans-backward|forward": 0.08, // restore tip projection
       "chin/chin-width-decr|incr": -0.2,
-      "chin/chin-height-decr|incr": -0.35,   // R2.2: shorten long lower face
+      "chin/chin-height-decr|incr": -0.45,   // R3: shorten long lower face
       "chin/chin-prominent-decr|incr": -0.15,
       "chin/chin-jaw-drop-decr|incr": -0.15,
       "chin/chin-bones-decr|incr": 0.1,
-      "mouth/mouth-trans-down|up": 0.1,  // R2.2: raise low mouth
+      "mouth/mouth-trans-down|up": 0.1,  // raise low mouth
       "mouth/mouth-upperlip-volume-decr|incr": 0.2,
-      "mouth/mouth-lowerlip-volume-decr|incr": 0.1, // R2.2: lighter lower lip
+      "mouth/mouth-lowerlip-volume-decr|incr": 0.0, // R3: lighter lower lip
       "eyebrows/eyebrows-angle-down|up": 0.15,
     },
   ),
