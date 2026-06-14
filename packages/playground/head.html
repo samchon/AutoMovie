@@ -884,7 +884,13 @@
           // Recess the globe more (-0.009 -> -0.015) and shrink it slightly
           // (0.92 -> 0.88) so the lids WRAP the eyeball instead of a round ball
           // bulging proud of them (the "buggy stuck-on eye" the reviewers flagged).
-          eyeAim[side] = { cx, cy, dz: -0.019 - get("eyeDepth") * 0.012, targetR: apHalfW * 0.88 };
+          // Anchor the globe's FRONT POLE to the live aperture skin (apertureFrontZ)
+          // rather than the baked eyeball z. The old seating anchored to the baked
+          // center, so on the deeper macro socket the globe sat too far forward and
+          // poked through the nasal-side profile (the grey ball = the "monster").
+          // Now the front pole sits just behind the lids on ANY base; dz is a small
+          // extra recess.
+          eyeAim[side] = { cx, cy, apFrontZ: apertureFrontZ, dz: -0.004 - get("eyeDepth") * 0.008, targetR: apHalfW * 0.82 };
           // The eyeball itself is now the real MakeHuman eye mesh (static,
           // textured with brown_eye.png) added separately; here we only add the
           // lids / lashes / brow that frame it.
@@ -1019,11 +1025,13 @@
             const s = base[i] >= 0 ? pScale : nScale;
             const x = aim.cx + s * (base[i] - bcx);
             const y = aim.cy + s * (base[i + 1] - bcy);
-            const z = (cz + aim.dz) + s * (base[i + 2] - cz);
+            // Eye-centre z anchored to the aperture skin: front pole = apFrontZ + dz.
+            const ceZ = aim.apFrontZ - aim.targetR + aim.dz;
+            const z = ceZ + s * (base[i + 2] - cz);
             arr[i] = x; arr[i + 1] = y; arr[i + 2] = z;
             // smooth (radial) normal from the eye centre — the mesh is non-indexed
             // so computeVertexNormals would face-facet it into a banded specular.
-            const nx = x - aim.cx, ny = y - aim.cy, nz = z - (cz + aim.dz);
+            const nx = x - aim.cx, ny = y - aim.cy, nz = z - ceZ;
             const len = Math.hypot(nx, ny, nz) || 1;
             nrm[i] = nx / len; nrm[i + 1] = ny / len; nrm[i + 2] = nz / len;
           }
