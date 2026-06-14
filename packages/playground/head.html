@@ -872,7 +872,7 @@
           // low eyeHeight stays a refined almond. No measured ratio gates eye
           // height, so this is render-judged against the reference eye shape.
           const apHalfH = apHalfW * 0.46 * (1 + get("eyeHeight") * 0.22);
-          const r = apHalfW * 0.72;
+          const r = apHalfW * 0.62;
           const poleZ = apertureFrontZ - 0.006 - get("eyeDepth") * 0.012;
           // Recess the eyeball a touch so the socket rim covers the sclera in
           // profile (only the cornea peeks through the fissure), not just frame
@@ -890,7 +890,9 @@
           // poked through the nasal-side profile (the grey ball = the "monster").
           // Now the front pole sits just behind the lids on ANY base; dz is a small
           // extra recess.
-          eyeAim[side] = { cx, cy, apFrontZ: apertureFrontZ, dz: -0.004 - get("eyeDepth") * 0.008, targetR: apHalfW * 0.92 };
+          // Shrink the globe (0.92->0.80) so the lid hood fully occludes it (no
+          // rectangular sclera billboard corners) + deepen recess (-0.004->-0.010).
+          eyeAim[side] = { cx, cy, apFrontZ: apertureFrontZ, dz: -0.010 - get("eyeDepth") * 0.008, targetR: apHalfW * 0.80 };
           // The eyeball itself is now the real MakeHuman eye mesh (static,
           // textured with brown_eye.png) added separately; here we only add the
           // lids / lashes / brow that frame it.
@@ -917,7 +919,7 @@
           const lidSkinZ = skinFrontZ(cx, lidY, 0.05);
           const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.1, apHalfH * 0.46, r * 0.22, clay, 24);
           lid.position.set(cx, lidY, lidSkinZ - r * 0.22 - 0.002);
-          const tilt = side * get("eyeTilt") * 0.04;
+          const tilt = side * get("eyeTilt") * 0.05;
           const inner = cx - side * apHalfW * (1.0 + get("epicanthus") * 0.05);
           const outer = cx + side * apHalfW * (1.05 + get("outerCanthus") * 0.05);
           const lashZ = apertureFrontZ + 0.004;
@@ -926,7 +928,7 @@
             [
               new THREE.Vector3(inner, cy + apHalfH * 0.72, lashZ),
               new THREE.Vector3(cx, cy + apHalfH * 1.04, lashZ + 0.006),
-              new THREE.Vector3(outer, cy + apHalfH * 0.84 + tilt, lashZ),
+              new THREE.Vector3(outer, cy + apHalfH * 0.9 + tilt, lashZ),
             ],
             0x2a201c,
             0.005,
@@ -936,7 +938,7 @@
             [
               new THREE.Vector3(inner, cy - apHalfH * 0.46, lashZ),
               new THREE.Vector3(cx, cy - apHalfH * 0.66, lashZ + 0.004),
-              new THREE.Vector3(outer, cy - apHalfH * 0.28 + tilt, lashZ),
+              new THREE.Vector3(outer, cy - apHalfH * 0.2 + tilt, lashZ),
             ],
             0x77544a,
             0.0026,
