@@ -858,7 +858,7 @@
           // Recess the globe more (-0.009 -> -0.015) and shrink it slightly
           // (0.92 -> 0.88) so the lids WRAP the eyeball instead of a round ball
           // bulging proud of them (the "buggy stuck-on eye" the reviewers flagged).
-          eyeAim[side] = { cx, cy, dz: -0.015 - get("eyeDepth") * 0.012, targetR: apHalfW * 0.88 };
+          eyeAim[side] = { cx, cy, dz: -0.019 - get("eyeDepth") * 0.012, targetR: apHalfW * 0.88 };
           // The eyeball itself is now the real MakeHuman eye mesh (static,
           // textured with brown_eye.png) added separately; here we only add the
           // lids / lashes / brow that frame it.
