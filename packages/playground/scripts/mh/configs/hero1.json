@@ -1,7 +1,7 @@
 {
  "macro": {
   "gender": 0,
-  "age": 0.46,
+  "age": 0.3,
   "asian": 1,
   "muscle": 0.5,
   "weight": 0.5,
@@ -11,21 +11,21 @@
  "modifiers": {
   "eyes/l-eye-scale-decr|incr": 0.45,
   "eyes/r-eye-scale-decr|incr": 0.45,
-  "eyes/l-eye-height1-decr|incr": 0.3,
-  "eyes/r-eye-height1-decr|incr": 0.3,
-  "eyes/l-eye-trans-in|out": 0.22,
-  "eyes/r-eye-trans-in|out": 0.22,
-  "eyes/l-eye-trans-down|up": -0.12,
-  "eyes/r-eye-trans-down|up": -0.12,
+  "eyes/l-eye-height1-decr|incr": 0.45,
+  "eyes/r-eye-height1-decr|incr": 0.45,
+  "eyes/l-eye-trans-in|out": 0.1,
+  "eyes/r-eye-trans-in|out": 0.1,
+  "eyes/l-eye-trans-down|up": -0.18,
+  "eyes/r-eye-trans-down|up": -0.18,
   "eyes/l-eye-epicanthus-in|out": -0.15,
   "eyes/r-eye-epicanthus-in|out": -0.15,
   "cheek/l-cheek-volume-decr|incr": 0.32,
   "cheek/r-cheek-volume-decr|incr": 0.32,
-  "head/head-round": 0.42,
-  "head/head-scale-vert-decr|incr": -0.18,
+  "head/head-round": 0.27,
+  "head/head-scale-vert-decr|incr": -0.06,
   "forehead/forehead-scale-vert-decr|incr": 0.2,
   "nose/nose-scale-vert-decr|incr": -0.22,
-  "nose/nose-nostrils-width-decr|incr": -0.2,
+  "nose/nose-nostrils-width-decr|incr": -0.32,
   "nose/nose-scale-depth-decr|incr": -0.15,
   "chin/chin-height-decr|incr": -0.28,
   "chin/chin-prominent-decr|incr": -0.18,
@@ -33,6 +33,6 @@
   "mouth/mouth-upperlip-volume-decr|incr": 0.25,
   "mouth/mouth-lowerlip-volume-decr|incr": 0.28,
   "mouth/mouth-scale-horiz-decr|incr": -0.1,
-  "eyebrows/eyebrows-trans-down|up": 0.2
+  "eyebrows/eyebrows-trans-down|up": 0.08
  }
 }

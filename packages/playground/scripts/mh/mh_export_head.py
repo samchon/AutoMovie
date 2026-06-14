@@ -59,12 +59,18 @@ def main():
     fvert = np.asarray(sub.fvert)
     fuvs = np.asarray(sub.fuvs)
 
+    eye_mask = group_face_mask(sub, {"helper-l-eye", "helper-r-eye"})
+    # Derive an adaptive crop from the eye height so it works for any body size
+    # (a child's head sits lower in absolute y than an adult's). cropY defaults to
+    # ~1.5 units below the eye centre (covers chin + a little neck); --cropY overrides.
+    eye_verts = np.unique(fvert[eye_mask])
+    eyeY = float(coord[eye_verts, 1].mean())
+    if "--cropY" not in sys.argv:
+        cropY = eyeY - 1.5
     skin_mask = group_face_mask(sub, {"body"})
-    # crop body to head/neck: keep faces whose every vertex is above cropY
     yv = coord[:, 1]
     face_minY = yv[fvert].min(axis=1)
     skin_mask = skin_mask & (face_minY > cropY)
-    eye_mask = group_face_mask(sub, {"helper-l-eye", "helper-r-eye"})
 
     out = os.path.abspath(out)
     os.makedirs(os.path.dirname(out), exist_ok=True)
