@@ -14,17 +14,18 @@
       const model = new URLSearchParams(location.search).get("model") || "hero3_full";
       const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
       renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-      renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.1;
+      renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NoToneMapping;
+      renderer.toneMappingExposure = 1.0;
       renderer.domElement.id = "view"; document.body.appendChild(renderer.domElement);
       const tag = document.createElement("div"); tag.id="tag"; document.body.appendChild(tag);
-      const scene = new THREE.Scene(); scene.background = new THREE.Color(0xd9dde2);
+      const scene = new THREE.Scene(); scene.background = new THREE.Color(0xeef0f3);
       const camera = new THREE.PerspectiveCamera(26, innerWidth/innerHeight, 0.01, 100);
       const controls = new OrbitControls(camera, renderer.domElement);
-      scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f99, 0.7));
-      const key = new THREE.DirectionalLight(0xfff4e8, 1.05); key.position.set(0.6,1.0,1.4); scene.add(key);
-      const fill = new THREE.DirectionalLight(0xdfe8ff, 0.4); fill.position.set(-1.1,0.2,0.7); scene.add(fill);
-      const rim = new THREE.DirectionalLight(0xffffff, 0.5); rim.position.set(-0.3,0.7,-1.4); scene.add(rim);
+      // neutral bright studio light so the fair skin texture reads true (not ruddy)
+      scene.add(new THREE.HemisphereLight(0xffffff, 0xbfc4cc, 0.95));
+      const key = new THREE.DirectionalLight(0xffffff, 0.85); key.position.set(0.5,1.0,1.4); scene.add(key);
+      const fill = new THREE.DirectionalLight(0xffffff, 0.5); fill.position.set(-1.1,0.2,0.7); scene.add(fill);
+      const rim = new THREE.DirectionalLight(0xffffff, 0.4); rim.position.set(-0.3,0.7,-1.4); scene.add(rim);
 
       const headCenter = new THREE.Vector3(0,5.5,0.9); let headSize = 2.2;
       async function load() {

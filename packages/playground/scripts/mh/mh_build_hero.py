@@ -138,8 +138,8 @@ def main():
             if tex:
                 f.write("map_Kd %s\n" % tex)
             f.write("\n")
-        mat("skin", skin_tex, "1 0.95 0.85")
-        mat("hair", hair_tex, "0.12 0.09 0.1")
+        mat("skin", skin_tex, "1 1 1")
+        mat("hair", hair_tex, "0.18 0.14 0.13")
         mat("eye", eye_tex, "1 1 1")
 
     # meta for framing
