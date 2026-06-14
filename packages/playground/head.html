@@ -850,7 +850,10 @@
           // the opening as a proud globe (the fixed baked size read as a small
           // flat disc inside the enlarged apertures). cz of the globe front sits
           // ~at the aperture so the lids drape over a visible spherical bulge.
-          eyeAim[side] = { cx, cy, dz: -0.009 - get("eyeDepth") * 0.012, targetR: apHalfW * 0.92 };
+          // Recess the globe more (-0.009 -> -0.015) and shrink it slightly
+          // (0.92 -> 0.88) so the lids WRAP the eyeball instead of a round ball
+          // bulging proud of them (the "buggy stuck-on eye" the reviewers flagged).
+          eyeAim[side] = { cx, cy, dz: -0.015 - get("eyeDepth") * 0.012, targetR: apHalfW * 0.88 };
           // The eyeball itself is now the real MakeHuman eye mesh (static,
           // textured with brown_eye.png) added separately; here we only add the
           // lids / lashes / brow that frame it.
@@ -870,10 +873,13 @@
           // FLAT + skin-flush: a deep hood pokes ~0.04 proud of the face and reads
           // as a puffy pad at 3/4. Thin its depth and seat it just behind the skin
           // front at the lid's own position so it's lid-SKIN curving over the eye.
-          const lidY = cy + apHalfH * (1.20 + open * 0.34);
+          // Lower the hood onto the lid line (1.20 -> 1.0) and make it wider +
+          // flatter so it drapes over the globe top as an upper lid, not a
+          // detached bead floating high above the eye.
+          const lidY = cy + apHalfH * (1.0 + open * 0.34);
           const lidSkinZ = skinFrontZ(cx, lidY, 0.05);
-          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.06, apHalfH * 0.52, r * 0.3, clay, 24);
-          lid.position.set(cx, lidY, lidSkinZ - r * 0.3 + 0.004);
+          const lid = ellipsoid(`eye-lid-${side}`, apHalfW * 1.1, apHalfH * 0.46, r * 0.32, clay, 24);
+          lid.position.set(cx, lidY, lidSkinZ - r * 0.32 + 0.004);
           const tilt = side * get("eyeTilt") * 0.04;
           const inner = cx - side * apHalfW * (1.0 + get("epicanthus") * 0.05);
           const outer = cx + side * apHalfW * (1.05 + get("outerCanthus") * 0.05);
@@ -881,9 +887,9 @@
           makeCapsuleLine(
             `eye-upper-${side}`,
             [
-              new THREE.Vector3(inner, cy + apHalfH * 0.62, lashZ),
-              new THREE.Vector3(cx, cy + apHalfH * 0.92, lashZ + 0.006),
-              new THREE.Vector3(outer, cy + apHalfH * 0.66 + tilt, lashZ),
+              new THREE.Vector3(inner, cy + apHalfH * 0.72, lashZ),
+              new THREE.Vector3(cx, cy + apHalfH * 1.04, lashZ + 0.006),
+              new THREE.Vector3(outer, cy + apHalfH * 0.84 + tilt, lashZ),
             ],
             0x2a201c,
             0.005,
@@ -891,9 +897,9 @@
           makeCapsuleLine(
             `eye-lower-${side}`,
             [
-              new THREE.Vector3(inner, cy - apHalfH * 0.4, lashZ),
-              new THREE.Vector3(cx, cy - apHalfH * 0.6, lashZ + 0.004),
-              new THREE.Vector3(outer, cy - apHalfH * 0.34 + tilt, lashZ),
+              new THREE.Vector3(inner, cy - apHalfH * 0.46, lashZ),
+              new THREE.Vector3(cx, cy - apHalfH * 0.66, lashZ + 0.004),
+              new THREE.Vector3(outer, cy - apHalfH * 0.28 + tilt, lashZ),
             ],
             0x77544a,
             0.0026,
@@ -916,7 +922,7 @@
           // brow lift and read brow-too-low at every angle. faceHeight anchoring
           // gives a consistent brow-eye gap; 0.098 calibrated so browToEye matches
           // the references (~0.156) across all heroes. (Multi-angle dissect-view.)
-          const browY = cy + facts.faceHeight * 0.098 + get("browHeight") * 0.05;
+          const browY = cy + facts.faceHeight * 0.090 + get("browHeight") * 0.05;
           const browArc = get("browArc") * 0.012;
           // Hug the forehead/brow-ridge SURFACE: the brow sits high above the eye
           // where the skin z differs from the eye aperture, so anchoring it to
