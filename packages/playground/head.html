@@ -1022,25 +1022,31 @@
         }
         return nbr;
       };
-      const refineHeadSurface = (basePos) => {
-        if (!state.subTopo) {
-          const baseCount = state.basePositions.length / 3;
-          state.subTopo = buildSubTopology(state.data.mesh.indices, baseCount);
-          state.subNbr = buildNbr(state.subTopo.indices, state.subTopo.count);
-        }
-        const topo = state.subTopo;
-        const n = topo.count;
-        const P = new Float32Array(n * 3);
-        P.set(basePos);
+      const applyMidpoints = (src, topo) => {
+        const out = new Float32Array(topo.count * 3);
+        out.set(src);
         const mp = topo.midParents;
         for (let i = 0, v = topo.baseCount; i < mp.length; i += 2, v++) {
           const a = mp[i] * 3, b = mp[i + 1] * 3, o = v * 3;
-          P[o] = (basePos[a] + basePos[b]) * 0.5;
-          P[o + 1] = (basePos[a + 1] + basePos[b + 1]) * 0.5;
-          P[o + 2] = (basePos[a + 2] + basePos[b + 2]) * 0.5;
+          out[o] = (src[a] + src[b]) * 0.5;
+          out[o + 1] = (src[a + 1] + src[b + 1]) * 0.5;
+          out[o + 2] = (src[a + 2] + src[b + 2]) * 0.5;
         }
-        const nbr = state.subNbr;
-        let p = P;
+        return out;
+      };
+      const refineHeadSurface = (basePos) => {
+        if (!state.subLevels) {
+          const baseCount = state.basePositions.length / 3;
+          const t1 = buildSubTopology(state.data.mesh.indices, baseCount);
+          const t2 = buildSubTopology(t1.indices, t1.count);
+          state.subLevels = [t1, t2];
+          state.subNbr = buildNbr(t2.indices, t2.count);
+        }
+        const [t1, t2] = state.subLevels;
+        // 2 subdivision levels so the SILHOUETTE/outline (not just shading)
+        // smooths, then several Taubin passes to round the form organically.
+        let p = applyMidpoints(applyMidpoints(basePos, t1), t2);
+        const nbr = state.subNbr, n = t2.count;
         const step = (w) => {
           const q = p.slice();
           for (let i = 0; i < n; i++) {
@@ -1054,9 +1060,11 @@
           }
           p = q;
         };
-        // Taubin: smooth (lambda) then inflate (mu) to round without shrinking.
-        for (let it = 0; it < 2; it++) { step(0.5); step(-0.53); }
-        return { positions: p, indices: topo.indices };
+        // The user's mandate: beauty is in flowing curves, angularity is ugly.
+        // Push the volume-preserving Taubin pass hard (8 iters) so the whole form
+        // — silhouette, jaw, cheek, neck — reads as continuous curve, not facet.
+        for (let it = 0; it < 8; it++) { step(0.5); step(-0.53); }
+        return { positions: p, indices: t2.indices };
       };
       const buildHeadGeometry = () => {
         ensureHeadMesh();
@@ -1156,19 +1164,26 @@
         const baseY = bridgeY - length;
         const bridgeZ = 0.386 + get("bridgeProjection") * 0.018 + get("bridgeHeight") * 0.014;
         const tipZ = 0.432 + get("tipProjection") * 0.028 + get("tipRotation") * 0.005;
+        // Fuller dorsum (0.012 -> 0.015) so the bridge flows continuously into the
+        // tip instead of reading as a thin wire that then balls up. Add a low
+        // supratip node so the ridge tapers into the tip rather than jumping.
         makeCapsuleLine("nose-dorsum", [
           new THREE.Vector3(offset, bridgeY, bridgeZ),
-          new THREE.Vector3(offset + get("dorsumCurve") * 0.008, mix(bridgeY, baseY, 0.56), mix(bridgeZ, tipZ, 0.48) + get("dorsumCurve") * 0.008),
-          new THREE.Vector3(offset, baseY + 0.018 + get("tipRotation") * 0.012, tipZ),
-        ], 0xa47b6b, 0.012);
-        const tip = ellipsoid("nose-tip", 0.028 * (1 + get("tipWidth") * 0.08), 0.021, 0.027, clay, 24);
-        tip.position.set(offset, baseY + 0.013 + get("tipRotation") * 0.012, tipZ);
+          new THREE.Vector3(offset + get("dorsumCurve") * 0.008, mix(bridgeY, baseY, 0.56), mix(bridgeZ, tipZ, 0.5) + get("dorsumCurve") * 0.008),
+          new THREE.Vector3(offset, baseY + 0.024 + get("tipRotation") * 0.012, mix(bridgeZ, tipZ, 0.86)),
+          new THREE.Vector3(offset, baseY + 0.012 + get("tipRotation") * 0.012, tipZ),
+        ], 0xa47b6b, 0.015);
+        // Refine the tip: narrower (0.028 -> 0.023) and shorter (0.021 -> 0.018)
+        // but keep the depth (0.027) so projection is unchanged — a delicate tip,
+        // not a flattened one.
+        const tip = ellipsoid("nose-tip", 0.023 * (1 + get("tipWidth") * 0.08), 0.018, 0.027, clay, 24);
+        tip.position.set(offset, baseY + 0.012 + get("tipRotation") * 0.012, tipZ);
         const alarW = 0.043 * c.noseW;
         for (const s of [-1, 1]) {
-          const ala = ellipsoid(`ala-${s}`, 0.022 * c.noseW, 0.015, 0.018, clay, 18);
-          ala.position.set(offset + s * alarW, baseY - 0.011, 0.398 + get("nostrilFlare") * 0.008);
-          const nostril = ellipsoid(`nostril-${s}`, 0.011 * (1 + get("nostrilFlare") * 0.08), 0.004, 0.003, browMat, 12);
-          nostril.position.set(offset + s * alarW, baseY - 0.017, 0.421);
+          const ala = ellipsoid(`ala-${s}`, 0.0185 * c.noseW, 0.013, 0.016, clay, 18);
+          ala.position.set(offset + s * alarW, baseY - 0.010, 0.398 + get("nostrilFlare") * 0.008);
+          const nostril = ellipsoid(`nostril-${s}`, 0.010 * (1 + get("nostrilFlare") * 0.08), 0.004, 0.003, browMat, 12);
+          nostril.position.set(offset + s * alarW, baseY - 0.016, 0.421);
         }
         return { bridgeY, baseY, alarW, tipZ, offset };
       };
@@ -1179,16 +1194,19 @@
         const upperH = 0.019 * c.upperLip;
         const lowerH = 0.023 * c.lowerLip;
         const z = 0.402 + get("lipProjection") * 0.018;
+        // Seat the mouth-line flush (was +0.016/+0.025 proud — a hard seam that
+        // split the mouth into two stacked pads). A near-flush line + tightened
+        // vertical overlap reads as one continuous mouth, not two ellipsoids.
         makeCapsuleLine("mouth-line", [
-          new THREE.Vector3(offset - width, y + get("mouthCornerTilt") * -0.012, z + 0.016),
-          new THREE.Vector3(offset, y + 0.002, z + 0.025),
-          new THREE.Vector3(offset + width, y + get("mouthCornerTilt") * 0.012, z + 0.016),
+          new THREE.Vector3(offset - width, y + get("mouthCornerTilt") * -0.012, z + 0.009),
+          new THREE.Vector3(offset, y + 0.002, z + 0.014),
+          new THREE.Vector3(offset + width, y + get("mouthCornerTilt") * 0.012, z + 0.009),
         ], 0x4f2d2b, 0.0035);
-        const upper = ellipsoid("upper-lip", width * 0.72, upperH, 0.012 + get("upperLipFullness") * 0.004, featureMat, 32);
-        upper.position.set(offset, y + upperH * 0.58, z + 0.012);
+        const upper = ellipsoid("upper-lip", width * 0.72, upperH, 0.010 + get("upperLipFullness") * 0.004, featureMat, 32);
+        upper.position.set(offset, y + upperH * 0.5, z + 0.008);
         upper.scale.x *= 1 + get("cupidBow") * 0.02;
-        const lower = ellipsoid("lower-lip", width * 0.76, lowerH, 0.014 + get("lowerLipFullness") * 0.005, featureMat, 32);
-        lower.position.set(offset, y - lowerH * 0.62, z + 0.013);
+        const lower = ellipsoid("lower-lip", width * 0.76, lowerH, 0.012 + get("lowerLipFullness") * 0.005, featureMat, 32);
+        lower.position.set(offset, y - lowerH * 0.55, z + 0.009);
         const philtrumLen = Math.abs(nose.baseY - y);
         makeCapsuleLine("philtrum-l", [
           new THREE.Vector3(offset - 0.012, nose.baseY - 0.016, 0.405),
@@ -1278,7 +1296,9 @@
           // (2) strips that drape over the cheek/jaw skin: hair sitting clearly
           // proud of the face (high z) across the wider cheek span reads as a
           // flat panel stuck on the face — drop it so the hair falls behind.
-          if (z > 0.32 && Math.abs(x) < 0.64 && y > -0.6 && y < top) return true;
+          // Lowered z (0.32->0.27) and widened x (0.64->0.72) to also catch the
+          // dark shards that hang proud of the jaw and break the jaw-neck flow.
+          if (z > 0.27 && Math.abs(x) < 0.72 && y > -0.7 && y < top) return true;
           return false;
         };
         const kept = [];
