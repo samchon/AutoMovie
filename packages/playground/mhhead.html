@@ -78,15 +78,26 @@
         headSize = Math.max(mx.x - mn.x, mx.y - mn.y, mx.z - mn.z);
         headCenter.set((mn.x + mx.x) * 0.5, (mn.y + mx.y) * 0.5 + (mx.y - mn.y) * 0.12, (mn.z + mx.z) * 0.5);
 
+        const limbalMat = new THREE.MeshStandardMaterial({ color: 0x2a1c11, roughness: 0.4 });
+        const catchMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
         for (const side of ["l", "r"]) {
           const ctr = new THREE.Vector3().fromArray(meta[side + "EyeCenter"]);
           const r = meta[side + "EyeR"];
-          const iris = new THREE.Mesh(new THREE.CircleGeometry(r * 0.55, 32), irisMat);
-          iris.position.copy(ctr).add(new THREE.Vector3(0, 0, r * 0.92));
+          // limbal ring (dark outer edge of the iris) for definition
+          const limbal = new THREE.Mesh(new THREE.CircleGeometry(r * 0.64, 36), limbalMat);
+          limbal.position.copy(ctr).add(new THREE.Vector3(0, 0, r * 0.9));
+          scene.add(limbal);
+          const iris = new THREE.Mesh(new THREE.CircleGeometry(r * 0.58, 36), irisMat);
+          iris.position.copy(ctr).add(new THREE.Vector3(0, 0, r * 0.93));
           scene.add(iris);
-          const pupil = new THREE.Mesh(new THREE.CircleGeometry(r * 0.24, 24), pupilMat);
-          pupil.position.copy(ctr).add(new THREE.Vector3(0, 0, r * 0.95));
+          const pupil = new THREE.Mesh(new THREE.CircleGeometry(r * 0.26, 28), pupilMat);
+          pupil.position.copy(ctr).add(new THREE.Vector3(0, 0, r * 0.96));
           scene.add(pupil);
+          // catchlight (gives the eye life) — small bright dot, same world side
+          // on both eyes (single key light), upper-left from the viewer.
+          const catch_ = new THREE.Mesh(new THREE.CircleGeometry(r * 0.07, 16), catchMat);
+          catch_.position.copy(ctr).add(new THREE.Vector3(r * 0.16, r * 0.16, r * 1.0));
+          scene.add(catch_);
         }
         setView("front");
         window.__mhReady = true;
