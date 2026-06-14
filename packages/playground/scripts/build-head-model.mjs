@@ -1301,7 +1301,7 @@ const presets = {
       eyeTilt: 0.08,
       eyelidFold: -0.17,
       epicanthus: -0.95,
-      browHeight: -0.55,
+      browHeight: -0.2,
       browArc: -0.3,
       noseLength: 0.6,
       bridgeWidth: -0.65,

@@ -396,8 +396,11 @@
         map: eyeTex,
         emissiveMap: eyeTex,
         emissive: 0xffffff,
-        emissiveIntensity: 0.72,
-        roughness: 0.32,
+        // Low emissive (0.72 made the brown iris GLOW bright red like a demon
+        // bead); just enough to lift the iris out of socket shadow. Higher
+        // roughness kills the glassy highlight that read as a googly bead.
+        emissiveIntensity: 0.22,
+        roughness: 0.5,
         metalness: 0,
       });
       const metricMat = new THREE.LineBasicMaterial({ color: 0xf3c46f, transparent: true, opacity: 0.7 });
@@ -827,11 +830,21 @@
           }
           return best > -1e8 ? best : 0.65;
         };
+        // Force L/R symmetry: the MakeHuman eye landmarks are slightly
+        // asymmetric, which rendered as googly mismatched eyes (one bigger/
+        // higher). Derive ONE centre (avg |x|, avg y) and mirror it per side.
+        let symX = 0, symY = 0, nSym = 0;
+        for (const { c, up, lo } of eyes) {
+          if (!c) continue;
+          symX += Math.abs(c[0]);
+          symY += up && lo ? (up[1] + lo[1]) / 2 : c[1];
+          nSym++;
+        }
+        if (nSym) { symX /= nSym; symY /= nSym; }
         for (const { c, up, lo, side } of eyes) {
           if (!c) continue;
-          const cx = c[0] + side * get("eyeSpacing") * 0.018;
-          const lidMidY = up && lo ? (up[1] + lo[1]) / 2 : c[1];
-          const cy = lidMidY + get("eyeHeightPosition") * 0.012;
+          const cx = side * symX + side * get("eyeSpacing") * 0.018;
+          const cy = symY + get("eyeHeightPosition") * 0.012;
           const apertureFrontZ = skinFrontZ(cx, cy);
           // Size the eye to the MEASURED reference fissure: eyeWidth/faceWidth
           // ~= 0.206 (the clay eyes were ~0.13 — far too small). Aperture, iris
@@ -934,9 +947,9 @@
           // apertureFrontZ made it float as a detached stick at 3/4. Sample the
           // live skin front at each brow point and sit the tube just proud of it.
           const browZ = (x, y) => skinFrontZ(x, y, 0.045) + 0.004;
-          const bIn = cx - side * apHalfW * 0.95;
+          const bIn = cx - side * apHalfW * 1.05;
           const bMidY = browY + 0.01 + browArc;
-          const bOut = cx + side * apHalfW * 1.2;
+          const bOut = cx + side * apHalfW * 1.5;
           const bOutY = browY + get("browTilt") * side * 0.012;
           makeCapsuleLine(
             `eye-brow-${side}`,
