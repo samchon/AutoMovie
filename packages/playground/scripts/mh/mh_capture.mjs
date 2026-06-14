@@ -17,8 +17,9 @@ const CHROME = process.env.CHROME ?? {
   linux: "google-chrome",
 }[process.platform];
 
-const views = ["front", "frontClose", "leftThreeQuarter", "rightThreeQuarter",
-  "leftProfile", "rightProfile", "eyeClose", "top", "bottom", "back"];
+const views = (process.env.VIEWS ? process.env.VIEWS.split(",") :
+  ["front", "frontClose", "leftThreeQuarter", "rightThreeQuarter",
+   "leftProfile", "rightProfile", "eyeClose", "top", "bottom", "back"]);
 
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });
