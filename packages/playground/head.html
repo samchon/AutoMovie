@@ -673,11 +673,24 @@
         pushGroup(groups.lowerLidRight, socketDepth * 0.13, -socketDepth * 0.02);
         pushGroup(groups.eyeLeft, socketDepth * 0.1);
         pushGroup(groups.eyeRight, socketDepth * 0.1);
+        // 애교살 (aegyo-sal): sculpt a SOFT convex roll into the clay just below
+        // each eye (a forward z-bulge), the signature pretty/young Korean lid.
+        // A capsule line read as a drawn stripe/bag; a broad mesh bulge survives
+        // the Taubin/Laplacian smoothing as real lit fullness. Thin band, hugging
+        // the lash, modest amplitude so it's a roll not a bag.
+        // Anchor the roll HIGH, hugging the lash (eyeBandY*0.55 below the eye,
+        // not 0.82 which sits in the bag/tear-trough zone), and keep it very
+        // subtle — the reference's lower lid is nearly flat.
+        const aegyoY = eyeY - eyeBandY * 0.55;
         for (let i = 0; i < positions.length; i += 3) {
           const x = positions[i];
           const y = positions[i + 1];
           const z = positions[i + 2];
           if (z < frontCut) continue;
+          const aegyo =
+            Math.max(gaussian(x, -eyeX, eyeBandX * 0.95), gaussian(x, eyeX, eyeBandX * 0.95)) *
+            gaussian(y, aegyoY, eyeBandY * 0.26);
+          if (aegyo > 0.0001) positions[i + 2] += aegyo * 0.0035;
           const left = gaussian(x, -eyeX, eyeBandX) * gaussian(y, eyeY, eyeBandY);
           const right = gaussian(x, eyeX, eyeBandX) * gaussian(y, eyeY, eyeBandY);
           const orbit = Math.max(left, right);
