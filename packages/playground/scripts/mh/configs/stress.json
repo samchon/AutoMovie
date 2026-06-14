@@ -1,0 +1,13 @@
+{ "macro": { "gender":0.15, "age":0.35, "asian":0.7, "caucasian":0.3, "african":0.0, "muscle":0.3, "weight":0.65, "height":0.6, "proportions":0.7 },
+  "modifiers": {
+    "nose/nose-nostrils-width-decr|incr": -0.4,
+    "nose/nose-point-width-decr|incr": -0.3,
+    "nose/nose-scale-vert-decr|incr": 0.2,
+    "eyes/l-eye-scale-decr|incr": 0.5,
+    "eyes/r-eye-scale-decr|incr": 0.5,
+    "mouth/mouth-scale-horiz-decr|incr": 0.25,
+    "chin/chin-prominent-decr|incr": -0.2,
+    "chin/chin-jaw-drop-decr|incr": 0.15,
+    "cheek/l-cheek-volume-decr|incr": -0.3,
+    "eyes/r-eye-height1-decr|incr": 0.3
+  } }
