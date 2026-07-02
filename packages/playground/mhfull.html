@@ -2,7 +2,7 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MakeHuman hero — real assets</title>
+    <title>MakeHuman hero — litsphere render (identical to MakeHuman)</title>
     <style>html,body{margin:0;height:100%;background:#d9dde2}#view{width:100vw;height:100vh;display:block}
       #tag{position:fixed;left:12px;top:10px;font:13px monospace;color:#333}</style>
     <script type="module">
@@ -14,27 +14,65 @@
       const model = new URLSearchParams(location.search).get("model") || "hero3_full";
       const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
       renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-      renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NoToneMapping;
-      renderer.toneMappingExposure = 1.0;
+      // MakeHuman does no colour management (GL1.2, raw sRGB bytes in/out). Match it:
+      renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+      renderer.toneMapping = THREE.NoToneMapping;
       renderer.domElement.id = "view"; document.body.appendChild(renderer.domElement);
       const tag = document.createElement("div"); tag.id="tag"; document.body.appendChild(tag);
-      const scene = new THREE.Scene(); scene.background = new THREE.Color(0xeef0f3);
+      const scene = new THREE.Scene(); scene.background = new THREE.Color(0xd9dde2);
       const camera = new THREE.PerspectiveCamera(26, innerWidth/innerHeight, 0.01, 100);
       const controls = new OrbitControls(camera, renderer.domElement);
-      // neutral bright studio light so the fair skin texture reads true (not ruddy)
-      scene.add(new THREE.HemisphereLight(0xffffff, 0xbfc4cc, 0.95));
-      const key = new THREE.DirectionalLight(0xffffff, 0.85); key.position.set(0.5,1.0,1.4); scene.add(key);
-      const fill = new THREE.DirectionalLight(0xffffff, 0.5); fill.position.set(-1.1,0.2,0.7); scene.add(fill);
-      const rim = new THREE.DirectionalLight(0xffffff, 0.4); rim.position.set(-0.3,0.7,-1.4); scene.add(rim);
+
+      // ---- MakeHuman litsphere shader (ports data/shaders/glsl/litsphere_*) ----
+      // shading = litsphere[ viewNormal.xy*0.495 + 0.5 ];
+      // out = (1-A)*shading*diffuse*(2 - avg(shading)) + A*(shading + diffuse)
+      const raw = (t) => { t.colorSpace = THREE.NoColorSpace; t.flipY = true; return t; };
+      const texLoader = new THREE.TextureLoader();
+      const lit = {
+        skin: raw(texLoader.load("/mh/lit_standard_skin.png")),
+        hair: raw(texLoader.load("/mh/lit_hair.png")),
+        eye:  raw(texLoader.load("/mh/skinmat_eye.png")),
+      };
+      const VERT = `
+        varying vec3 vN; varying vec2 vUv;
+        void main(){ vN = normalize(normalMatrix * normal); vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`;
+      const FRAG = `
+        uniform sampler2D litTex; uniform sampler2D diffTex; uniform float additive;
+        varying vec3 vN; varying vec2 vUv;
+        void main(){
+          vec3 shading = texture2D(litTex, vN.xy*0.495 + 0.5).rgb;
+          vec4 d = texture2D(diffTex, vUv);
+          vec3 o = (1.0-additive)*shading*d.rgb*(2.0-(shading.r+shading.g+shading.b)/3.0)
+                 + additive*(shading + d.rgb);
+          gl_FragColor = vec4(o, 1.0); }`;
+      const litMat = (diffuseMap, which, additive) => {
+        raw(diffuseMap);
+        return new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG,
+          uniforms: { litTex: { value: lit[which] }, diffTex: { value: diffuseMap }, additive: { value: additive } },
+          side: THREE.DoubleSide });
+      };
 
       const headCenter = new THREE.Vector3(0,5.5,0.9); let headSize = 2.2;
       async function load() {
         const meta = await (await fetch(`/mh/${model}.meta.json`)).json();
-        const mtl = await new MTLLoader().loadAsync(`/mh/${model}.mtl`);
-        mtl.preload();
-        for (const k in mtl.materials) { const m = mtl.materials[k]; if (m.map) m.map.colorSpace = THREE.SRGBColorSpace; m.side = THREE.DoubleSide; }
+        const mtl = await new MTLLoader().loadAsync(`/mh/${model}.mtl`); mtl.preload();
         const obj = await new OBJLoader().setMaterials(mtl).loadAsync(`/mh/${model}.obj`);
-        obj.traverse((c)=>{ if(c.isMesh) c.geometry.computeVertexNormals(); });
+        obj.traverse((c)=>{ if(!c.isMesh) return;
+          c.geometry.computeVertexNormals();
+          const name = (c.material && c.material.name) || "skin";
+          const dmap = c.material && c.material.map;
+          if (name === "brow") { // alpha-cut eyebrow strip
+            if (dmap) { dmap.colorSpace = THREE.SRGBColorSpace; }
+            c.material = new THREE.MeshBasicMaterial({ map: dmap, color: 0x140e0b,
+              transparent: true, alphaTest: 0.45, depthWrite: false, side: THREE.DoubleSide });
+            c.renderOrder = 2;
+            return;
+          }
+          const which = name === "hair" ? "hair" : name === "eye" ? "eye" : "skin";
+          const A = which === "eye" ? 0.5 : 0.0;
+          if (dmap) c.material = litMat(dmap, which, A);
+        });
         scene.add(obj);
         const mn = new THREE.Vector3().fromArray(meta.headMin), mx = new THREE.Vector3().fromArray(meta.headMax);
         headSize = Math.max(mx.x-mn.x, mx.y-mn.y, mx.z-mn.z);
@@ -42,7 +80,7 @@
         setView("front"); window.__mhReady = true;
       }
       const VIEWS = { front:[0,0,1], frontClose:[0,0,0.62], leftThreeQuarter:[-37,0,1], rightThreeQuarter:[37,0,1],
-        leftProfile:[-90,0,1], rightProfile:[90,0,1], back:[180,0,1], top:[0,70,1], eyeClose:[0,3,0.45] };
+        leftProfile:[-90,0,1], rightProfile:[90,0,1], back:[180,0,1], top:[0,70,1], bottom:[0,-55,1], eyeClose:[0,3,0.45] };
       window.setView = (name)=>{ const [yaw,pitch,zoom=1]=VIEWS[name]||VIEWS.front; const d=headSize*2.5*zoom;
         const ry=yaw*Math.PI/180, rp=pitch*Math.PI/180;
         camera.position.set(headCenter.x+d*Math.cos(rp)*Math.sin(ry), headCenter.y+d*Math.sin(rp), headCenter.z+d*Math.cos(rp)*Math.cos(ry));

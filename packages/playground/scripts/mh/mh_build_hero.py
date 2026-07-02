@@ -82,7 +82,15 @@ def main():
     eyes_mhclo = getpath.getSysDataPath("eyes/low-poly/low-poly.mhclo")
     hairfit = fit_proxy(human, hair_mhclo, "Hair") if os.path.isfile(hair_mhclo) else None
     eyesfit = fit_proxy(human, eyes_mhclo, "Eyes") if os.path.isfile(eyes_mhclo) else None
-    print("hair fitted:", hairfit is not None, "| eyes fitted:", eyesfit is not None)
+    brow = cfg.get("brow", "eyebrow007")
+    if "--brow" in sys.argv:
+        brow = sys.argv[sys.argv.index("--brow") + 1]
+    brow_raise = float(cfg.get("browRaise", 0.0))
+    brow_mhclo = getpath.getSysDataPath("eyebrows/%s/%s.mhclo" % (brow, brow))
+    browfit = fit_proxy(human, brow_mhclo, "Eyebrows") if (brow and os.path.isfile(brow_mhclo)) else None
+    if browfit and brow_raise:
+        browfit = (browfit[0] + np.array([0.0, brow_raise, 0.0]), browfit[1], browfit[2], browfit[3])
+    print("hair fitted:", hairfit is not None, "| eyes fitted:", eyesfit is not None, "| brow:", browfit is not None)
 
     out = os.path.abspath(out)
     outdir = os.path.dirname(out)
@@ -98,6 +106,7 @@ def main():
     skin_tex = copytex(getpath.getSysDataPath("skins/textures/young_lightskinned_female_diffuse3.png"), "skin.png")
     hair_tex = copytex(getpath.getSysDataPath("hair/%s/%s_diffuse.png" % (hair, hair)), "hair.png")
     eye_tex = copytex(getpath.getSysDataPath("eyes/materials/brown_eye.png"), "eye.png")
+    brow_tex = copytex(getpath.getSysDataPath("eyebrows/%s/%s.png" % (brow, brow)), "brow.png") if browfit else None
 
     base_obj = os.path.basename(out)
     mtl_name = base_obj.replace(".obj", ".mtl")
@@ -131,16 +140,21 @@ def main():
         if eyesfit:
             ec, ef, et, efu = eyesfit
             emit_block("eyes", ec, ef, efu, et, "eye")
+        if browfit:
+            bc, bf, bt, bfu = browfit
+            emit_block("brow", bc, bf, bfu, bt, "brow")
 
     with open(os.path.join(outdir, mtl_name), "w") as f:
         def mat(name, tex, col="0.8 0.8 0.8"):
             f.write("newmtl %s\nKd %s\n" % (name, col))
             if tex:
-                f.write("map_Kd %s\n" % tex)
+                f.write("map_Kd %s\nmap_d %s\n" % (tex, tex))  # alpha from same RGBA
             f.write("\n")
         mat("skin", skin_tex, "1 1 1")
         mat("hair", hair_tex, "0.18 0.14 0.13")
         mat("eye", eye_tex, "1 1 1")
+        if brow_tex:
+            mat("brow", brow_tex, "0.1 0.07 0.06")
 
     # meta for framing
     hv = np.unique(fvert[skin_mask]); hcoord = coord[hv]
