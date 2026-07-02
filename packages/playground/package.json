@@ -10,10 +10,12 @@
     "build:human": "node scripts/build-human.mjs",
     "build:stickman": "node scripts/build-stickman.cjs",
     "build:cat": "node scripts/build-cat.cjs",
+    "build:head": "node scripts/build-head-model.mjs",
     "build:horse": "node scripts/build-horse.cjs",
     "build:knight": "node scripts/build-knight.cjs",
     "build:models": "npm run build:stickman && npm run build:cat && npm run build:horse && npm run build:knight",
     "shots": "node scripts/capture-shots.mjs",
+    "shots:head": "node scripts/capture-head.mjs",
     "preview": "vite preview --port 4173 --strictPort"
   },
   "author": "Samchon",

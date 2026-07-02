@@ -1,5 +1,6 @@
 export * from "./hairTails";
 export * from "./eyeShells";
+export * from "./headMorph";
 export * from "./hairShell";
 export * from "./canonicalFace";
 export * from "./faceMorphs";

@@ -48,3 +48,19 @@ Overrides via env: `CHROME=/path/to/chrome` (binary), `BASE=http://host:port`
 (server). The shot list lives at the top of `capture-shots.mjs` — add a row
 `[page, query, durationSeconds, frameCount, width, height, outPath, fps]` to
 capture a new clip. Encoding uses `h264-mp4-encoder` (wasm) + `pngjs`.
+
+## Head screenshots (`.png`)
+
+The head editor needs two capture modes across many angles:
+
+- `model`: canvas only, with the UI hidden, for socket and form inspection.
+- `overlay`: viewport capture with the reference sheet alpha blended over it.
+
+Run:
+
+```bash
+pnpm shots:head
+```
+
+Outputs overwrite the current cycle in `.shots/head/model/`,
+`.shots/head/overlay/`, and `.shots/head-latest.png`.

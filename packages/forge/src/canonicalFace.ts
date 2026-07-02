@@ -207,127 +207,19 @@ const CANONICAL_FACE_POSITIONS_RAW: number[] = [
   0.046158, 0.042531, 0.027723, 0.033153, 0.0453, 0.0291, 0.033397,
 ];
 
-const EYE_R_RING = [
-  33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246,
-];
-const EYE_L_RING = [
-  362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384,
-  398,
-];
-
-/**
- * The raw MediaPipe canonical has small, wide-set eyes — measured fissure /
- * intercanthal 0.70 and fissure / face-width 0.169, well under the
- * attractive-average ~0.9 and the rule-of-fifths 0.20 (every fitted hero rails
- * `eyeSize` to its +2 limit, the optimizer screaming the base is undersized).
- * The neutral (all-params-zero) face should BE the balanced average — the most
- * beautiful by the averageness principle — so a one-time corrective enlarges
- * each eye about its own center (gaussian-feathered into the socket, the same
- * radial form as the `eyeSize` morph). At weight 0.6 this lands fissure /
- * intercanthal ≈ 0.94 and fissure / face-width ≈ 0.20, the measured
- * attractive-average targets. Baked into the base, not exposed, so `0` itself
- * is the ideal and parameters deviate from it.
- */
-const averageBeautyBase = (raw: number[]): number[] => {
-  const out = raw.slice();
-  const centroid = (ring: number[]): [number, number, number] => {
-    let x = 0;
-    let y = 0;
-    let z = 0;
-    for (const i of ring) {
-      x += raw[i * 3]!;
-      y += raw[i * 3 + 1]!;
-      z += raw[i * 3 + 2]!;
-    }
-    return [x / ring.length, y / ring.length, z / ring.length];
-  };
-  const cR = centroid(EYE_R_RING);
-  const cL = centroid(EYE_L_RING);
-  const eyeR =
-    Math.hypot(
-      raw[33 * 3]! - raw[133 * 3]!,
-      raw[33 * 3 + 1]! - raw[133 * 3 + 1]!,
-    ) / 2;
-  const sigma = 1.7 * eyeR;
-  const W = 0.6; // calibrated to the attractive-average eye proportions
-  const g = (i: number, c: [number, number, number]): number => {
-    const dx = raw[i * 3]! - c[0];
-    const dy = raw[i * 3 + 1]! - c[1];
-    const dz = raw[i * 3 + 2]! - c[2];
-    return Math.exp(-(dx * dx + dy * dy + dz * dz) / (2 * sigma * sigma));
-  };
-  for (let i = 0; i < raw.length / 3; i++) {
-    const gR = g(i, cR);
-    const gL = g(i, cL);
-    const [c, gv] = gR >= gL ? [cR, gR] : [cL, gL];
-    if (gv < 1e-3) continue;
-    out[i * 3]! += W * 0.36 * (raw[i * 3]! - c[0]) * gv;
-    out[i * 3 + 1]! += W * 0.36 * (raw[i * 3 + 1]! - c[1]) * gv;
-  }
-
-  // The raw MediaPipe canonical carries a furrowed glabella — a vertical
-  // procerus ridge between the brows that reads as a permanent scowl, the
-  // opposite of a relaxed attractive average. Laplacian-smooth the
-  // glabella/inner-brow/nose-root region (gaussian-weighted toward each
-  // vertex's 1-ring mean) to relax the furrow into a smooth brow.
-  const GLABELLA = [8, 9, 168, 6, 197, 195, 5, 107, 336, 55, 285, 9];
-  const adj: number[][] = Array.from({ length: 468 }, () => []);
-  for (let t = 0; t < CANONICAL_FACE_INDICES.length; t += 3) {
-    const tri = [
-      CANONICAL_FACE_INDICES[t]!,
-      CANONICAL_FACE_INDICES[t + 1]!,
-      CANONICAL_FACE_INDICES[t + 2]!,
-    ];
-    for (let a = 0; a < 3; a++)
-      for (let bb = 0; bb < 3; bb++)
-        if (a !== bb && !adj[tri[a]!]!.includes(tri[bb]!))
-          adj[tri[a]!]!.push(tri[bb]!);
-  }
-  const gw = new Float32Array(468); // smoothing weight per vertex
-  const gs = 0.018; // glabella region radius (m)
-  for (let i = 0; i < 468; i++) {
-    let best = Infinity;
-    for (const sd of GLABELLA) {
-      const d2 =
-        (raw[i * 3]! - raw[sd * 3]!) ** 2 +
-        (raw[i * 3 + 1]! - raw[sd * 3 + 1]!) ** 2 +
-        (raw[i * 3 + 2]! - raw[sd * 3 + 2]!) ** 2;
-      if (d2 < best) best = d2;
-    }
-    gw[i] = Math.exp(-best / (2 * gs * gs));
-  }
-  for (let iter = 0; iter < 6; iter++) {
-    const src = out.slice();
-    for (let i = 0; i < 468; i++) {
-      if (gw[i]! < 0.02 || adj[i]!.length === 0) continue;
-      let mx = 0,
-        my = 0,
-        mz = 0;
-      for (const j of adj[i]!) {
-        mx += src[j * 3]!;
-        my += src[j * 3 + 1]!;
-        mz += src[j * 3 + 2]!;
-      }
-      const n = adj[i]!.length;
-      const w = 0.5 * gw[i]!; // blend toward neighbour mean
-      out[i * 3]! += w * (mx / n - src[i * 3]!);
-      out[i * 3 + 1]! += w * (my / n - src[i * 3 + 1]!);
-      out[i * 3 + 2]! += w * (mz / n - src[i * 3 + 2]!);
-    }
-  }
-  return out;
-};
-
 /**
  * Resting vertex positions (xyz triples, meters), 468 vertices — the raw
- * MediaPipe base corrected to the attractive average (see
- * {@link averageBeautyBase}). This is the neutral the editor's `0` resolves to
- * and the base every morph and identity residual is computed against.
+ * MediaPipe canonical, the neutral the editor's `0` resolves to and the base
+ * every morph and identity residual is computed against.
  *
- * Initialised at the END of this module (after CANONICAL_FACE_INDICES, which
- * averageBeautyBase needs for the glabella smoothing) to avoid a TDZ.
+ * NOTE: an earlier "average-beauty" corrective (eye enlargement + glabella
+ * smoothing) was reverted — measured A/B renders proved it made the neutral
+ * WORSE (the eye enlargement puffed the lids and the glabella smooth reached
+ * the upper lids, both drooping the eyes into a sleepy/monster look). The raw
+ * canonical reads as a plain but natural face; any beauty corrective must be
+ * verified by render before it lands here.
  */
-export let CANONICAL_FACE_POSITIONS: number[] = [];
+export const CANONICAL_FACE_POSITIONS: number[] = CANONICAL_FACE_POSITIONS_RAW;
 
 /** Texture coordinates (uv pairs, top-left origin), aligned to positions. */
 export const CANONICAL_FACE_UVS: number[] = [
@@ -626,8 +518,3 @@ export const CANONICAL_FACE_INDICES: number[] = [
   402, 318, 311, 178, 81, 88, 310, 311, 318, 80, 88, 81, 318, 324, 310, 88, 80,
   95, 415, 310, 324, 191, 95, 80,
 ];
-
-// Computed last: averageBeautyBase reads CANONICAL_FACE_INDICES (above) for
-// the glabella smoothing, so the base is assembled only once all source
-// arrays exist.
-CANONICAL_FACE_POSITIONS = averageBeautyBase(CANONICAL_FACE_POSITIONS_RAW);
