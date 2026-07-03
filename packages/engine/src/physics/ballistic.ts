@@ -83,3 +83,41 @@ export const solveBallisticLaunch = (
   );
   return { velocity, hitTime: d / (speed * cosTheta) };
 };
+
+/**
+ * Solve the launch that **leads a moving target** — the aim that lands the
+ * projectile where the target _will be_, not where it is. `targetAt(t)` gives
+ * the target's world position at flight-time `t` (e.g. its animated base plus
+ * root travel). This is the reactive event the `launch` verb promises against a
+ * mover ("shoot him off his galloping horse") without the model timing it.
+ *
+ * A fixed-point iteration on the time of flight: guess `t` from the target's
+ * current distance, {@link solveBallisticLaunch aim} at `targetAt(t)`, take that
+ * solve's `hitTime` as the next `t`, and repeat until it settles. It converges
+ * when the target is slower than the projectile (each aim overshoots the last
+ * miss by less); a target that outruns the shot never settles, so the loop is
+ * capped at `iterations` and returns the closest solve found. Returns `null`
+ * when the intercept is out of range at that speed (or the speed is
+ * non-positive).
+ *
+ * @author Samchon
+ */
+export const solveMovingLaunch = (
+  origin: IAutoFilmVector3,
+  targetAt: (t: number) => IAutoFilmVector3,
+  speed: number,
+  gravity: IAutoFilmVector3 = { x: 0, y: -9.81, z: 0 },
+  arc: "direct" | "high" = "direct",
+  iterations = 8,
+): IAutoFilmBallisticSolution | null => {
+  if (!(speed > 0)) return null;
+  let t = Vector3.length(Vector3.subtract(targetAt(0), origin)) / speed;
+  let solution: IAutoFilmBallisticSolution | null = null;
+  for (let i = 0; i < iterations; ++i) {
+    solution = solveBallisticLaunch(origin, targetAt(t), speed, gravity, arc);
+    if (solution === null) return null; // out of range at this iterate
+    if (Math.abs(solution.hitTime - t) < 1e-6) return solution; // settled
+    t = solution.hitTime;
+  }
+  return solution;
+};
