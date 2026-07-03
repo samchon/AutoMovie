@@ -1,0 +1,20 @@
+# Normalize every text file to LF in the repo AND in the working tree.
+# This overrides core.autocrlf on contributors' machines: Windows checkouts
+# had CRLF working copies while prettier writes LF, which made untouched
+# files show up as phantom modifications after every format run.
+* text=auto eol=lf
+
+# Binary assets — never normalize.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.glb binary
+*.gltf binary
+*.vrm binary
+*.woff binary
+*.woff2 binary
+*.mp3 binary
+*.mp4 binary
