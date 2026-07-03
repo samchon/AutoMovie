@@ -25,6 +25,7 @@ export default defineConfig({
         film: resolve(__dirname, "film.html"),
         launch: resolve(__dirname, "launch.html"),
         attach: resolve(__dirname, "attach.html"),
+        gesture: resolve(__dirname, "gesture.html"),
         archery: resolve(__dirname, "archery.html"),
         impact: resolve(__dirname, "impact.html"),
         trampoline: resolve(__dirname, "trampoline.html"),

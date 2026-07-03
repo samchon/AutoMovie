@@ -68,6 +68,7 @@ const SHOTS = [
   ["film.html", "", 5.5, 165, 960, 540, "film/pursuit.mp4", 30],
   ["launch.html", "", 3.0, 90, 960, 540, "film/launch.mp4", 30],
   ["attach.html", "", 4.0, 120, 960, 540, "film/attach.mp4", 30],
+  ["gesture.html", "", 3.0, 90, 720, 560, "film/jump.mp4", 30],
   ["archery.html", "", 9.0, 270, 760, 600, "knight/archery.mp4", 30],
   ["impact.html", "az=62", 9.0, 270, 720, 640, "impact/reactions.mp4", 30],
   ["trampoline.html", "az=30", 9.0, 270, 640, 720, "impact/trampoline.mp4", 30],
