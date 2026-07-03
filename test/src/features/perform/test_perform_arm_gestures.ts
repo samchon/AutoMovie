@@ -173,8 +173,8 @@ export const test_perform_arm_gestures = (): void => {
     null,
   );
   TestValidator.equals(
-    "an unhandled arm gesture (draw) → null",
-    synth(gesture("draw"), "hero"),
+    "an unhandled arm gesture (guard) → null",
+    synth(gesture("guard"), "hero"),
     null,
   );
   // a rig whose right arm is incomplete cannot point (reachPose returns null)
