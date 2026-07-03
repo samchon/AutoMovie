@@ -22,6 +22,7 @@ export default defineConfig({
         stickman: resolve(__dirname, "stickman.html"),
         knight: resolve(__dirname, "knight.html"),
         spar: resolve(__dirname, "spar.html"),
+        film: resolve(__dirname, "film.html"),
         archery: resolve(__dirname, "archery.html"),
         impact: resolve(__dirname, "impact.html"),
         trampoline: resolve(__dirname, "trampoline.html"),
