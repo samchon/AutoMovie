@@ -133,36 +133,36 @@ const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
       [0.75, [j("spine", { flexion: 8, abduction: 6 })]],
       [1, []],
     ],
-    // A one-arm wave: raise the right arm overhead (+abduction) and swing the
-    // forearm side to side at the elbow.
+    // A one-arm wave: raise the right arm (clinical +abduction, read up through
+    // the rest frame) and swing the forearm side to side at the elbow.
     wave: [
       [0, []],
-      [0.15, [j("rightUpperArm", { abduction: 112, flexion: 6 })]],
+      [0.15, [j("rightUpperArm", { abduction: 132, flexion: 6 })]],
       [
         0.4,
         [
-          j("rightUpperArm", { abduction: 112, flexion: 6 }),
+          j("rightUpperArm", { abduction: 132, flexion: 6 }),
           j("rightLowerArm", { flexion: 55 }),
         ],
       ],
       [
         0.65,
         [
-          j("rightUpperArm", { abduction: 112, flexion: 6 }),
+          j("rightUpperArm", { abduction: 132, flexion: 6 }),
           j("rightLowerArm", { flexion: 12 }),
         ],
       ],
       [
         0.85,
         [
-          j("rightUpperArm", { abduction: 112, flexion: 6 }),
+          j("rightUpperArm", { abduction: 132, flexion: 6 }),
           j("rightLowerArm", { flexion: 55 }),
         ],
       ],
       [1, []],
     ],
-    // A two-arm celebration: both arms thrown up in a V and pumped. The raise is
-    // −abduction on the left, +abduction on the right (mirrored per side).
+    // A two-arm celebration: both arms thrown up in a V and pumped. In clinical
+    // space the raise is +abduction on both arms alike — no per-side mirror.
     celebrate: [
       [0, []],
       [0.22, celebratePose(1)],
@@ -172,11 +172,15 @@ const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
     ],
   };
 
-/** Both arms thrown up in a V, scaled by `s` (a pump raises them higher). */
+/**
+ * Both arms thrown up in a V, scaled by `s` (a pump raises them higher). The
+ * clinical abduction raises either arm alike, so both sides carry the same
+ * positive angle — no per-side mirror.
+ */
 function celebratePose(s: number): IAutoFilmJointPose[] {
   return [
-    j("leftUpperArm", { abduction: -106 * s, flexion: 10 }),
-    j("rightUpperArm", { abduction: 106 * s, flexion: 10 }),
+    j("leftUpperArm", { abduction: 150 * s, flexion: 10 }),
+    j("rightUpperArm", { abduction: 150 * s, flexion: 10 }),
   ];
 }
 

@@ -6,28 +6,17 @@ import {
 import {
   AutoFilmHumanoidBone,
   IAutoFilmBone,
-  IAutoFilmJointConstraint,
   IAutoFilmSkeleton,
 } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-// The arms carry the stickman rig's **mirrored** abduction ROM — a raise is
-// −abduction on the left, +abduction on the right (the shared joint axis, gated
-// per side) — so the arm gestures validate against the same override the real
-// rig applies. Every other bone uses the default anatomical table (a knee that
-// only flexes 0–150°, a hip −30–120°), so "ROM-legal" is the real pipeline gate.
-const arm = (abduction: IAutoFilmJointConstraint["abduction"]) => ({
-  flexion: { min: -60, max: 180 },
-  abduction,
-  twist: { min: -90, max: 90 },
-});
-const ARM_ROM: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointConstraint>> =
-  {
-    leftUpperArm: arm({ min: -120, max: 90 }),
-    rightUpperArm: arm({ min: -90, max: 120 }),
-  };
+// Every bone validates against the default anatomical table — including the
+// arms, now that gestures are authored in **clinical** space (abduction 180
+// raises either arm alike; the per-side rest-frame remap lives in the render,
+// not in the gesture values). So "ROM-legal" here is the real pipeline gate: a
+// knee that only flexes 0–150°, a shoulder abduction −30–180°.
 const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
   bone: b,
   parent: null,
@@ -36,7 +25,7 @@ const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
     rotation: { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 1, y: 1, z: 1 },
   },
-  constraint: ARM_ROM[b] ?? DEFAULT_HUMANOID_ROM[b] ?? null,
+  constraint: DEFAULT_HUMANOID_ROM[b] ?? null,
 });
 
 const RIG: IAutoFilmSkeleton = {
@@ -98,9 +87,9 @@ const maxAbs = (
  * 4. `jump` is a whole-body coil-and-leap: it folds the knees, arcs the root up to
  *    a positive apex (and dips into a coil first), opens/closes grounded, and
  *    stays ROM-legal — no arm abduction, so no left/right mirror needed.
- * 5. The arm gestures abduct: `wave` raises the right arm (abduction) and swings
- *    the forearm; `celebrate` throws both arms up (abduction, −left/+right —
- *    mirrored per side to match the rig).
+ * 5. The arm gestures abduct in clinical space: `wave` raises the right arm
+ *    (+abduction) and swings the forearm; `celebrate` throws both arms up with
+ *    the same positive abduction on each side — no per-side mirror.
  * 6. The remaining combat kinds (`strike`, `draw`, `throw`) and any unknown kind
  *    return null — the compiler skips them.
  */
@@ -178,23 +167,39 @@ export const test_motion_gesture = (): void => {
       maxAbs(stagger, "rightUpperLeg", "flexion") > 15,
   );
 
-  // wave — the right arm raised (abduction) and the elbow swinging.
+  // The clinical raise is a positive abduction on either side (a rig-space
+  // mirror would flip the sign) — take the signed peak, not the magnitude.
+  const peakAbd = (
+    motion: NonNullable<ReturnType<typeof gestureMotion>>,
+    b: AutoFilmHumanoidBone,
+  ): number =>
+    Math.max(
+      ...motion.keyframes.map(
+        (k) => k.pose.joints.find((jj) => jj.bone === b)?.abduction ?? 0,
+      ),
+    );
+
+  // wave — the right arm raised (clinical +abduction) and the elbow swinging.
   const wave = gestureMotion("w", RIG.id, "wave", 1)!;
   TestValidator.predicate(
-    "wave raises the right arm (abduction)",
-    maxAbs(wave, "rightUpperArm", "abduction") > 90,
+    "wave raises the right arm (clinical +abduction, read up through the frame)",
+    peakAbd(wave, "rightUpperArm") > 120,
   );
   TestValidator.predicate(
     "wave swings the forearm at the elbow",
     maxAbs(wave, "rightLowerArm", "flexion") > 30,
   );
 
-  // celebrate — both arms thrown up by abduction (mirror signs across sides).
+  // celebrate — both arms thrown up by clinical abduction, the SAME positive
+  // angle on each side (no per-side mirror; the rest frame reads it up).
   const celebrate = gestureMotion("c2", RIG.id, "celebrate", 1)!;
   TestValidator.predicate(
-    "celebrate throws both arms up (abduction, mirrored signs)",
-    maxAbs(celebrate, "leftUpperArm", "abduction") > 90 &&
-      maxAbs(celebrate, "rightUpperArm", "abduction") > 90,
+    "celebrate throws both arms up with the same positive clinical abduction",
+    peakAbd(celebrate, "leftUpperArm") > 120 &&
+      nclose(
+        peakAbd(celebrate, "leftUpperArm"),
+        peakAbd(celebrate, "rightUpperArm"),
+      ),
   );
 
   const long = gestureMotion("bow", RIG.id, "bow", 2)!;
