@@ -199,15 +199,31 @@ const walkerRig = buildStickman(DEFAULT_STICKMAN);
 const waiterRig = buildStickman(DEFAULT_STICKMAN);
 const rigOf = { walker: walkerRig, waiter: waiterRig } as const;
 
-// No knee limbs: the gait's swing is symmetric about zero and a knee cannot
-// hyperextend (ROM [0, 150]°) — the engine's ROM gate rejected the first
-// draft of this gait exactly there, so the stickman walks straight-legged.
+// The knees swing about a bent `neutral` so they stay inside the [0, 150]°
+// ROM instead of hyperextending through zero — the first draft (symmetric
+// swing, no neutral) was rejected by the engine's ROM gate exactly there.
+// The knee leads its hip by a quarter cycle so the shin tucks as the thigh
+// swings forward and the foot clears the floor mid-stride.
 const WALK: IAutoFilmGait = {
   name: "walk",
   period: 0.9,
   limbs: [
     { bone: "leftUpperLeg", phase: 0, duty: 0.55, amplitude: 32 },
     { bone: "rightUpperLeg", phase: 0.5, duty: 0.55, amplitude: 32 },
+    {
+      bone: "leftLowerLeg",
+      phase: 0.25,
+      duty: 0.5,
+      amplitude: 17,
+      neutral: 19,
+    },
+    {
+      bone: "rightLowerLeg",
+      phase: 0.75,
+      duty: 0.5,
+      amplitude: 17,
+      neutral: 19,
+    },
     { bone: "leftUpperArm", phase: 0.5, duty: 0.5, amplitude: 18 },
     { bone: "rightUpperArm", phase: 0, duty: 0.5, amplitude: 18 },
   ],
