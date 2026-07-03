@@ -138,8 +138,39 @@ export const test_perform_actor_synthesizer = (): void => {
     null,
   );
   TestValidator.equals(
-    "a non-synthesised verb → null",
+    "an arm/combat gesture → null (left to a richer synthesiser)",
     synth(gesture, "hero"),
+    null,
+  );
+  const bow = synth(
+    { verb: "gesture", kind: "bow", actor: "hero", start: 0, duration: "auto" },
+    "hero",
+  );
+  TestValidator.predicate(
+    "a postural gesture (bow, auto duration) synthesises a 1 s clip",
+    bow !== null && nclose(bow.duration, 1),
+  );
+  const nod = synth(
+    { verb: "gesture", kind: "nod", actor: "hero", start: 0, duration: 2 },
+    "hero",
+  );
+  TestValidator.predicate(
+    "an explicit gesture duration is honoured (a 2 s nod)",
+    nod !== null && nclose(nod.duration, 2),
+  );
+  TestValidator.equals(
+    "a verb with no reference synthesis (attachTo) → null",
+    synth(
+      {
+        verb: "attachTo",
+        actor: "hero",
+        start: 0,
+        duration: 1,
+        parent: "cart",
+        bone: "hips",
+      },
+      "hero",
+    ),
     null,
   );
   TestValidator.equals(

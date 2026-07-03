@@ -1,6 +1,7 @@
 export * from "./dampedSpring";
 export * from "./easing";
 export * from "./gait";
+export * from "./gesture";
 export * from "./humanoidGaits";
 export * from "./sampleMotion";
 export * from "./arrange";
