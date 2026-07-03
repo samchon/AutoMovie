@@ -7,7 +7,6 @@ import {
   makeActorSynthesizer,
   performShot,
   resolveSequencePlayback,
-  sampleClip,
   stageScene,
 } from "@autofilm/engine";
 import {
@@ -19,7 +18,12 @@ import {
   IAutoFilmStagingApplication,
   IAutoFilmVector3,
 } from "@autofilm/interface";
-import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
+import {
+  AutoFilmPlayer,
+  applyObjectMotion,
+  buildModel,
+  mountViewer,
+} from "@autofilm/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
@@ -274,6 +278,9 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.4);
 sun.position.set(2.4, 3.4, -1);
 scene.add(sun);
 
+// node id → its scene group, so a shot's objectMotions (a projectile/prop's
+// baked clip) can drive the object's world transform each frame.
+const groupsById = new Map<string, THREE.Group>();
 const built = Object.fromEntries(
   staged.scene.nodes.map((node) => {
     const rig = rigOf[node.id as keyof typeof rigOf];
@@ -285,6 +292,7 @@ const built = Object.fromEntries(
     group.quaternion.set(r.x, r.y, r.z, r.w);
     group.add(obj.object);
     scene.add(group);
+    groupsById.set(node.id, group);
     return [node.id, obj] as const;
   }),
 );
@@ -328,18 +336,12 @@ const renderAt = (seconds: number): void => {
   for (const { player } of playersByShot.get(sample.shot)!)
     player.update(sample.time);
   const live = shotById.get(sample.shot)!;
+  // objectMotions: any projectile/prop the shot bakes rides its world-space clip
+  // (none in the pursuit today, but the read path is general for cut-in shots).
+  for (const clip of live.objectMotions)
+    applyObjectMotion(clip, sample.time, (node) => groupsById.get(node));
   if (live.cameraMotion === null) applyStagedCamera();
-  else
-    for (const { channel, value } of sampleClip(
-      live.cameraMotion,
-      sample.time,
-    ).values()) {
-      if (channel.kind !== "node") continue;
-      if (channel.path === "translation")
-        camera.position.set(value[0]!, value[1]!, value[2]!);
-      else if (channel.path === "rotation")
-        camera.quaternion.set(value[0]!, value[1]!, value[2]!, value[3]!);
-    }
+  else applyObjectMotion(live.cameraMotion, sample.time, () => camera);
 };
 
 // ── mount + deterministic seek contract (capture-shots.mjs) ──────────────────
