@@ -1,8 +1,9 @@
-import { gaitMotion } from "@autofilm/engine";
+import { gaitMotion, validateMotion } from "@autofilm/engine";
 import { AutoFilmHumanoidBone, IAutoFilmGait } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { createSkeleton } from "../internal/fixtures";
+import { hasViolation, nclose } from "../internal/predicates";
 
 const GAIT: IAutoFilmGait = {
   name: "walk",
@@ -34,6 +35,9 @@ const flexionSeq = (
  *    (planted push, then recovery), the closing frame matching the first.
  * 3. A phase-0.5 limb runs exactly half a cycle out of step — the per-limb phase
  *    offset that makes one gait a walk and another a trot.
+ * 4. `neutral` centers the swing: a knee swung symmetrically about zero crosses
+ *    into hyperextension and the ROM validator rejects it, while the same swing
+ *    centered on `neutral: 25` stays inside `[0, 150]°` and passes.
  */
 export const test_motion_gait = (): void => {
   const motion = gaitMotion("g", "sk", GAIT, 4);
@@ -60,5 +64,41 @@ export const test_motion_gait = (): void => {
   TestValidator.predicate(
     "phase-0.5 limb is half a cycle out of step",
     right.every((v, i) => nclose(v, -left[i]!)),
+  );
+
+  // 4. neutral centers the swing — the knee's negative twin
+  const sk = createSkeleton();
+  const kneeGait = (neutral: number | undefined): IAutoFilmGait => ({
+    name: "step",
+    period: 1,
+    limbs: [
+      { bone: "leftLowerLeg", phase: 0, duty: 0.5, amplitude: 22, neutral },
+    ],
+  });
+  const hyperextended = validateMotion({
+    motion: gaitMotion("bare", sk.id, kneeGait(undefined), 4),
+    skeleton: sk,
+  });
+  TestValidator.predicate(
+    "a knee swung about zero hyperextends (ROM rejects it)",
+    hasViolation(hyperextended, "rom", "leftLowerLeg") ||
+      hasViolation(hyperextended, "rom", "flexion"),
+  );
+  const centered = validateMotion({
+    motion: gaitMotion("bent", sk.id, kneeGait(25), 4),
+    skeleton: sk,
+  });
+  TestValidator.equals(
+    "the same swing centered on neutral 25 stays in ROM",
+    centered.success,
+    true,
+  );
+  const knee = flexionSeq(
+    gaitMotion("bent", sk.id, kneeGait(25), 4),
+    "leftLowerLeg",
+  );
+  TestValidator.predicate(
+    "the centered swing is 25 ± 22 (every sample positive)",
+    knee.every((v) => v >= 0) && nclose(Math.max(...knee), 47),
   );
 };

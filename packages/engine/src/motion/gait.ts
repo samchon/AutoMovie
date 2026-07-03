@@ -14,7 +14,9 @@ const wrap01 = (x: number): number => ((x % 1) + 1) % 1;
  * (`duty`) the limb sweeps from `+amplitude` (forward-planted) to `−amplitude`
  * (pushed back), driving the body; over the remaining **swing** fraction it
  * lifts and recovers from `−amplitude` back to `+amplitude`. The `phase` offset
- * slides the whole cycle so limbs fall in sequence.
+ * slides the whole cycle so limbs fall in sequence, and the swing is centered
+ * on the limb's `neutral` (default 0) so a one-way joint like a knee stays on
+ * its anatomical side of zero.
  *
  * @author Samchon
  */
@@ -25,9 +27,11 @@ export const gaitLimbFlexion = (
 ): number => {
   const u = wrap01(t / period + limb.phase);
   const a = limb.amplitude;
-  return u < limb.duty
-    ? a * (1 - (2 * u) / limb.duty) // stance: +a → −a
-    : -a + (2 * a * (u - limb.duty)) / (1 - limb.duty); // swing: −a → +a
+  const swing =
+    u < limb.duty
+      ? a * (1 - (2 * u) / limb.duty) // stance: +a → −a
+      : -a + (2 * a * (u - limb.duty)) / (1 - limb.duty); // swing: −a → +a
+  return (limb.neutral ?? 0) + swing;
 };
 
 /**
