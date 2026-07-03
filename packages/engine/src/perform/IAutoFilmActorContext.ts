@@ -1,9 +1,12 @@
 import {
+  AutoFilmHumanoidBone,
   IAutoFilmGait,
   IAutoFilmPose,
   IAutoFilmSkeleton,
   IAutoFilmVector3,
 } from "@autofilm/interface";
+
+import { IAutoFilmRestFrame } from "../rom/restFrame";
 
 /**
  * The per-actor context the reference {@link makeActorSynthesizer} needs to
@@ -49,4 +52,15 @@ export interface IAutoFilmActorContext {
    * synthesises nothing.
    */
   rig?: IAutoFilmSkeleton;
+
+  /**
+   * Per-bone rest frames that let the IK/arm verbs (`reach`/`point`/`strike`)
+   * emit their arm angles in **clinical** space — lifted by `sign·r + neutral`
+   * so a downstream renderer reads them up through the same frames (abduction
+   * 180 raises either arm overhead regardless of side). Omit to have those
+   * verbs output raw rig-space angles, the historical behaviour; when supplied
+   * it must be paired with the same frames on the player ({@link
+   * IAutoFilmActorContext} feeds `AutoFilmPlayer`'s `restFrames`).
+   */
+  restFrames?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmRestFrame>>;
 }
