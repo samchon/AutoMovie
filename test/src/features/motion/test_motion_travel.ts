@@ -22,6 +22,8 @@ import { nclose } from "../internal/predicates";
  * 3. Travel is purely a function of global time, so the duplicate-seam frame of
  *    cycle n and the first frame of cycle n+1 would have landed at the same
  *    place — confirming continuity (no per-cycle reset / snap-back).
+ * 4. A `facing` rotation composes onto the base root rotation: travelling the
+ *    45°-yaw base with a further 90° yaw lands the root at 135° yaw.
  */
 export const test_motion_travel = (): void => {
   // 1. in-place base (root null) → linear travel, seams dropped
@@ -110,6 +112,17 @@ export const test_motion_travel = (): void => {
         i === 0 ||
         k.pose.root!.translation.z >
           travelled.keyframes[i - 1]!.pose.root!.translation.z,
+    ),
+  );
+
+  // 4. facing composes onto the base root rotation (45° yaw + 90° yaw = 135°)
+  const yaw90 = { x: 0, y: Math.SQRT1_2, z: 0, w: Math.SQRT1_2 };
+  const faced = travelMotion("turn", withRoot, 2, { x: 1, y: 0, z: 0 }, yaw90);
+  TestValidator.predicate(
+    "facing ∘ base yaw = 135° (w = cos 67.5°)",
+    nclose(
+      faced.keyframes[1]!.pose.root!.rotation.w,
+      Math.cos((67.5 * Math.PI) / 180),
     ),
   );
 };

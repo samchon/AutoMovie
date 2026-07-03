@@ -1,5 +1,6 @@
 import { IAutoFilmMotion, IAutoFilmVector3 } from "@autofilm/interface";
 
+import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { travelMotion } from "./travel";
 
@@ -11,6 +12,11 @@ import { travelMotion } from "./travel";
  * door") becomes real traveling motion without the model computing cycles or
  * m/s. At least one cycle always plays.
  *
+ * `faceTravel` turns the body to face where it is going: the root is oriented
+ * so the model's forward (`+Z`) points down the travel direction, so a figure
+ * sent sideways walks facing its path instead of strafing. Omit it (the
+ * default) to keep the rest facing — a strafe or a backpedal.
+ *
  * @author Samchon
  */
 export const locomoteMotion = (
@@ -19,8 +25,16 @@ export const locomoteMotion = (
   distance: number,
   speed: number,
   direction: IAutoFilmVector3,
+  faceTravel = false,
 ): IAutoFilmMotion => {
   const cycles = Math.max(1, Math.round(distance / (speed * gait.duration)));
-  const velocity = Vector3.scale(Vector3.normalize(direction), speed);
-  return travelMotion(id, gait, cycles, velocity);
+  const heading = Vector3.normalize(direction);
+  const velocity = Vector3.scale(heading, speed);
+  const facing = faceTravel
+    ? Quaternion.fromAxisAngle(
+        { x: 0, y: 1, z: 0 },
+        (Math.atan2(heading.x, heading.z) * 180) / Math.PI,
+      )
+    : undefined;
+  return travelMotion(id, gait, cycles, velocity, facing);
 };

@@ -5,6 +5,8 @@ import {
   IAutoFilmVector3,
 } from "@autofilm/interface";
 
+import { Quaternion } from "../math/Quaternion";
+
 const IDENTITY_ROT: IAutoFilmQuaternion = { x: 0, y: 0, z: 0, w: 1 };
 const IDENTITY_SCALE: IAutoFilmVector3 = { x: 1, y: 1, z: 1 };
 
@@ -27,6 +29,10 @@ const IDENTITY_SCALE: IAutoFilmVector3 = { x: 1, y: 1, z: 1 };
  * extent in space), sampled like any other clip — and a camera can follow its
  * root to keep the moving character in frame.
  *
+ * `facing`, when given, orients the root by that rotation (composed onto any
+ * rotation the base root already carries) — so a walk that travels sideways can
+ * turn the body to face where it is going instead of strafing.
+ *
  * @author Samchon
  */
 export const travelMotion = (
@@ -34,6 +40,7 @@ export const travelMotion = (
   base: IAutoFilmMotion,
   cycles: number,
   velocity: IAutoFilmVector3,
+  facing?: IAutoFilmQuaternion,
 ): IAutoFilmMotion => {
   const keyframes: IAutoFilmKeyframe[] = [];
   for (let c = 0; c < cycles; ++c) {
@@ -54,7 +61,13 @@ export const travelMotion = (
               y: (baseRoot?.translation.y ?? 0) + velocity.y * globalT,
               z: (baseRoot?.translation.z ?? 0) + velocity.z * globalT,
             },
-            rotation: baseRoot?.rotation ?? IDENTITY_ROT,
+            rotation:
+              facing === undefined
+                ? (baseRoot?.rotation ?? IDENTITY_ROT)
+                : Quaternion.multiply(
+                    facing,
+                    baseRoot?.rotation ?? IDENTITY_ROT,
+                  ),
             scale: baseRoot?.scale ?? IDENTITY_SCALE,
           },
         },
