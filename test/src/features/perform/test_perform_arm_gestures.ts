@@ -1,5 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   IAutoFilmActorContext,
   makeActorSynthesizer,
   resolvePose,
@@ -99,6 +100,10 @@ const boneWorld = (
  *    it — rest → strike → rest.
  * 3. `point`/`strike` with no `at`, a rig-less context, and an unhandled combat
  *    kind (`draw`) all synthesise nothing.
+ * 4. Rest frames on the context lift the IK verbs into **clinical** space: the
+ *    same point solve comes out with its arm abduction lifted by the frame
+ *    (`rightUpperArm` sign −1, neutral 90 → clinical = 90 − rig), so a player
+ *    reading through the same frames raises the arm correctly.
  */
 export const test_perform_arm_gestures = (): void => {
   const synth = makeActorSynthesizer(new Map([["hero", ctx]]), nodes);
@@ -192,5 +197,26 @@ export const test_perform_arm_gestures = (): void => {
       "hero",
     ),
     null,
+  );
+
+  // rest frames lift the same point solve into clinical space: the held pose's
+  // right-upper-arm abduction comes out at 90 − rig (the frame's sign −1,
+  // neutral 90), the value a matching player reads back up.
+  const abdOf = (clip: ReturnType<typeof synth>): number | null =>
+    clip === null
+      ? null
+      : (clip.keyframes[clip.keyframes.length - 1]!.pose.joints.find(
+          (j) => j.bone === "rightUpperArm",
+        )?.abduction ?? null);
+  const clinical = makeActorSynthesizer(
+    new Map([["hero", { ...ctx, restFrames: HUMANOID_REST_FRAME }]]),
+    nodes,
+  );
+  const pointAt = gesture("point", { at: { kind: "node", node: "exit" } });
+  const rigAbd = abdOf(synth(pointAt, "hero"));
+  const clinAbd = abdOf(clinical(pointAt, "hero"));
+  TestValidator.predicate(
+    "rest frames lift the point's arm abduction to clinical (90 − rig)",
+    rigAbd !== null && clinAbd !== null && nclose(clinAbd, 90 - rigAbd, 1e-6),
   );
 };

@@ -250,6 +250,7 @@ export const makeActorSynthesizer = (
           ctx.rig,
           "right",
           toModelSpace(world, ctx.position, ctx.facingDeg),
+          ctx.restFrames,
         );
         return pose === null
           ? null
@@ -266,6 +267,7 @@ export const makeActorSynthesizer = (
           ctx.rig,
           "right",
           toModelSpace(world, ctx.position, ctx.facingDeg),
+          ctx.restFrames,
         );
         return pose === null
           ? null
@@ -293,6 +295,7 @@ export const makeActorSynthesizer = (
         ctx.rig,
         action.hand,
         toModelSpace(world, ctx.position, ctx.facingDeg),
+        ctx.restFrames,
       );
       if (reach === null) return null;
       const duration = action.duration === "auto" ? 0.6 : action.duration;
