@@ -1,5 +1,6 @@
 export * from "./blockBeat";
 export * from "./cameraMove";
+export * from "./compileLaunch";
 export * from "./cutSequence";
 export * from "./forgeCast";
 export * from "./performShot";
