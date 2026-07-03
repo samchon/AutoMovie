@@ -2,6 +2,7 @@ import {
   IAutoFilmActionCall,
   IAutoFilmBlockingApplication,
   IAutoFilmCameraAction,
+  IAutoFilmClip,
   IAutoFilmConstraintViolation,
   IAutoFilmMotion,
   IAutoFilmPerformanceApplication,
@@ -26,6 +27,7 @@ import {
   compileCameraMove,
   computeRestHeight,
 } from "./cameraMove";
+import { compileLaunch } from "./compileLaunch";
 import { IAutoFilmStagedSet } from "./stageScene";
 
 /**
@@ -81,6 +83,14 @@ export namespace IAutoFilmPerformedShot {
  * (`cameraMotion: null`); a scene with no cameras at all cannot be framed and
  * fails.
  *
+ * `launch` actions are compiled through {@link compileLaunch}: the projectile (a
+ * staged scene node) gets its baked flight as a shot `objectMotion`, and — for
+ * a node aim carrying `onHit` — the struck actor's recoil is folded into the
+ * action list at the **engine-computed** contact, so it rides the same
+ * synthesis and ROM gate as an authored `react`. The projectile must be staged,
+ * the aim must resolve to a point, and the shot must reach the target at the
+ * given speed — each an input violation otherwise.
+ *
  * @param props.skeleton Rig lookup for ROM validation; return null for a node
  *   that has no skeleton (its clip skips ROM).
  */
@@ -132,6 +142,16 @@ export const performShot = (props: {
   let liveCamera: string | null = null;
   const stageActions: IAutoFilmActionCall[] = [];
   const frames: { action: IAutoFilmCameraAction; index: number }[] = [];
+  // Launch jobs collected while validating — the projectile must be a staged
+  // node and the target must resolve to a point; compiled after the input
+  // gate (below) into the projectile's flight and the target's scheduled react.
+  const launches: {
+    action: IAutoFilmActionCall & { verb: "launch" };
+    index: number;
+    origin: IAutoFilmVector3;
+    target: IAutoFilmVector3;
+    targetNode: string | null;
+  }[] = [];
   actions.forEach((action, i) => {
     const actors =
       typeof action.actor === "string" ? [action.actor] : action.actor;
@@ -176,7 +196,40 @@ export const performShot = (props: {
           action.on,
         );
       frames.push({ action, index: i });
-    } else stageActions.push(action);
+    } else {
+      stageActions.push(action);
+      if (action.verb === "launch") {
+        // The projectile is a scene object, so it must be staged (its placed
+        // position is where the flight begins), and the aim must resolve to a
+        // point. A node aim also names the actor the hit recoils; a point/group
+        // aim flies but recoils no one (no single actor). Out-of-range is
+        // caught below, once the aim is solved.
+        const stagedProjectile = nodeIds.has(action.projectile);
+        if (!stagedProjectile)
+          out.push(
+            "type",
+            `${base}[${i}].projectile`,
+            `a launch's projectile "${action.projectile}" must be a staged scene node`,
+            action.projectile,
+          );
+        const target = resolveTargetPoint(action.at, nodePositions);
+        if (target === null)
+          out.push(
+            "type",
+            `${base}[${i}].at`,
+            `a launch target must resolve to a point — a node/point/group of placed actors, not "${action.at.kind}"`,
+            action.at,
+          );
+        if (stagedProjectile && target !== null)
+          launches.push({
+            action,
+            index: i,
+            origin: nodePositions.get(action.projectile)!,
+            target,
+            targetNode: action.at.kind === "node" ? action.at.node : null,
+          });
+      }
+    }
   });
 
   // Frame moves on the one live camera must not overlap. An "auto" duration
@@ -283,6 +336,33 @@ export const performShot = (props: {
 
   if (out.items.length > 0) return { success: false, violations: out.items };
 
+  // Launch: solve each aim, bake the projectile's flight into an object clip,
+  // and fold the target's engine-timed recoil into the action list so the
+  // performance compiles it. Do this before `compilePerformance` — the injected
+  // reacts must ride the same synthesis and ROM gate as authored ones. A launch
+  // that cannot reach its target at the given speed is a range violation.
+  const objectMotions: IAutoFilmClip[] = [];
+  for (const job of launches) {
+    const result = compileLaunch({
+      action: job.action,
+      origin: job.origin,
+      target: job.target,
+      targetNode: job.targetNode,
+    });
+    if (result === null) {
+      out.push(
+        "range",
+        `${base}[${job.index}].speed`,
+        `the launch cannot reach its target at ${job.action.speed} m/s — raise the speed or move the shooter closer`,
+        job.action.speed,
+      );
+      continue;
+    }
+    objectMotions.push(result.clip);
+    if (result.react !== null) stageActions.push(result.react);
+  }
+  if (out.items.length > 0) return { success: false, violations: out.items };
+
   const motions = compilePerformance(stageActions, synthesize);
   for (const [node, motion] of Object.entries(motions)) {
     const rig = skeleton(node);
@@ -349,6 +429,7 @@ export const performShot = (props: {
         motion: motion.id,
         startOffset: 0,
       })),
+      objectMotions,
       duration: performance.duration,
     },
     motions,

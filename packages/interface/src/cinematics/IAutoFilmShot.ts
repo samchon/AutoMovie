@@ -35,6 +35,17 @@ export interface IAutoFilmShot {
   /** Per scene-node performances for this shot. */
   performances: IAutoFilmShotPerformance[];
 
+  /**
+   * Node-transform clips for **non-skeletal scene objects** the shot animates —
+   * a launched projectile's baked flight, a prop carried along a path — each an
+   * ordinary {@link IAutoFilmClip} keyed to its object's scene node. Distinct
+   * from `performances` (skeletal pose motions played through a rig) and from
+   * `cameraMotion` (the one live camera): a projectile has no skeleton, so it
+   * moves the same way the camera does — a clip of transform tracks. Empty when
+   * the shot animates no such object.
+   */
+  objectMotions: IAutoFilmClip[];
+
   /** Shot length in seconds (local time origin = 0). */
   duration: number;
 }

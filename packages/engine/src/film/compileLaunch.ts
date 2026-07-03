@@ -20,10 +20,11 @@ export interface IAutoFilmLaunchResult {
   /**
    * The target's recoil, scheduled at the **computed** contact — a synthetic
    * {@link IAutoFilmReactAction} to fold into the action list, or `null` when
-   * the launch carried no `onHit`. Its `start` is the shot-local instant the
-   * projectile lands, and its `from` sits upstream along the arrow's incoming
-   * velocity, so the reference synthesiser recoils the body **along the shot's
-   * travel** (an arrow flying `+x` knocks the target `+x`), lobbed or flat.
+   * the launch carried no `onHit` (or aimed at a point/group with no single
+   * actor to recoil). Its `start` is the shot-local instant the projectile
+   * lands, and its `from` sits upstream along the arrow's incoming velocity, so
+   * the reference synthesiser recoils the body **along the shot's travel** (an
+   * arrow flying `+x` knocks the target `+x`), lobbed or flat.
    */
   react: IAutoFilmReactAction | null;
 
@@ -69,8 +70,12 @@ export const compileLaunch = (props: {
   origin: IAutoFilmVector3;
   /** The struck target's world point (the solved flight lands here). */
   target: IAutoFilmVector3;
-  /** The struck scene node — the emitted `react`'s actor. */
-  targetNode: string;
+  /**
+   * The struck scene node — the emitted `react`'s actor — or `null` when the
+   * aim is a point/group with no single actor to recoil (the flight still
+   * bakes; only the reaction is withheld).
+   */
+  targetNode: string | null;
   /** Constant fall; defaults to Earth gravity along world −Y. */
   gravity?: IAutoFilmVector3;
   /** Flat `direct` shot (default) or lobbed `high` arc. */
@@ -101,7 +106,7 @@ export const compileLaunch = (props: {
   const landing = projectileAt(projectile, solution.hitTime);
 
   let react: IAutoFilmReactAction | null = null;
-  if (action.onHit !== undefined) {
+  if (action.onHit !== undefined && targetNode !== null) {
     // Where the blow comes from: one meter upstream along the incoming
     // velocity, so `target − from` points down the arrow's travel and the
     // synthesiser recoils the body that way (up-and-back for a lobbed shot,
