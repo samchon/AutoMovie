@@ -9,6 +9,7 @@ import {
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { IAutoFilmRestFrame } from "../rom/restFrame";
 import { IAutoFilmJointAxes, jointToQuaternion } from "./jointToQuaternion";
 
 /**
@@ -57,16 +58,26 @@ export interface IAutoFilmResolvedBone {
  * bone absent from it uses the default clinical basis, so omitting it preserves
  * the baseline behavior exactly.
  *
+ * `restFrames` optionally reads each joint's angles as **clinical** and maps
+ * them into that bone's rest-relative space (e.g. `HUMANOID_REST_FRAME`, so
+ * `+abduction` raises either arm despite the shared axis); a bone absent from
+ * it, or an omitted table, is the identity — the angles are taken as the rig's
+ * own.
+ *
  * @author Samchon
  */
 export const resolvePose = (
   pose: IAutoFilmPose,
   skeleton: IAutoFilmSkeleton,
   jointAxes?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>,
+  restFrames?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmRestFrame>>,
 ): IAutoFilmResolvedBone[] => {
   const articulation = new Map<AutoFilmHumanoidBone, IAutoFilmQuaternion>();
   for (const j of pose.joints)
-    articulation.set(j.bone, jointToQuaternion(j, jointAxes?.[j.bone]));
+    articulation.set(
+      j.bone,
+      jointToQuaternion(j, jointAxes?.[j.bone], restFrames?.[j.bone]),
+    );
 
   const children = new Map<
     AutoFilmHumanoidBone | "__root__",

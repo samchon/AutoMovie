@@ -1,14 +1,19 @@
 import {
   DEFAULT_JOINT_AXES,
+  HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   IAutoFilmRestFrame,
   decomposeJointRotation,
   jointToQuaternion,
+  reachPose,
+  resolvePose,
   toClinicalAngle,
   toRigAngle,
 } from "@autofilm/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, qclose } from "../internal/predicates";
+import { createSkeleton, joint, makePose } from "../internal/fixtures";
+import { nclose, qclose, vclose } from "../internal/predicates";
 
 /**
  * The rest-frame angle maps that let a pose be authored in one **clinical**
@@ -113,4 +118,47 @@ export const test_kinematics_rest_frame_angles = (): void => {
     "and the gimbal rotation round-trips",
     qclose(jointToQuaternion(gBack, DEFAULT_JOINT_AXES, frame), gimbal),
   );
+
+  // 4. resolvePose threads the frame: a clinical pose resolved with the humanoid
+  // rest frames matches the pre-converted rig pose resolved without them. The
+  // left arm's frame is sign +1, neutral 90, so clinical 120 → rig 30.
+  const skel = createSkeleton();
+  const handClinical = resolvePose(
+    makePose([joint("leftUpperArm", { abduction: 120 })]),
+    skel,
+    HUMANOID_JOINT_AXES,
+    HUMANOID_REST_FRAME,
+  ).find((b) => b.bone === "leftHand")!.worldPosition;
+  const handRig = resolvePose(
+    makePose([joint("leftUpperArm", { abduction: 30 })]),
+    skel,
+    HUMANOID_JOINT_AXES,
+  ).find((b) => b.bone === "leftHand")!.worldPosition;
+  TestValidator.predicate(
+    "resolvePose(clinical, frames) == resolvePose(pre-converted rig)",
+    vclose(handClinical, handRig, 1e-9),
+  );
+
+  // 5. reachPose threads the frame: its output arm angles come out clinical
+  // (lifted by sign·r + neutral); left arm sign +1, neutral 90 → clinical =
+  // rig + 90.
+  const target = { x: 0.45, y: 1.3, z: 0.3 };
+  const reachClinical = reachPose(skel, "left", target, HUMANOID_REST_FRAME);
+  const reachRig = reachPose(skel, "left", target);
+  TestValidator.predicate(
+    "reachPose returns a pose both ways",
+    reachClinical !== null && reachRig !== null,
+  );
+  if (reachClinical !== null && reachRig !== null) {
+    const cAbd = reachClinical.joints.find(
+      (j) => j.bone === "leftUpperArm",
+    )!.abduction!;
+    const rAbd = reachRig.joints.find(
+      (j) => j.bone === "leftUpperArm",
+    )!.abduction!;
+    TestValidator.predicate(
+      "the reach's upper-arm abduction is lifted to clinical (rig + 90)",
+      nclose(cAbd, rAbd + 90, 1e-6),
+    );
+  }
 };
