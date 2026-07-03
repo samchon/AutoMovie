@@ -1,5 +1,6 @@
 import { IAutoFilmActionSynthesizer } from "@autofilm/engine";
 import {
+  IAutoFilmBlockingApplication,
   IAutoFilmForgeApplication,
   IAutoFilmPerformanceApplication,
   IAutoFilmScriptApplication,
@@ -63,6 +64,36 @@ export const makePerformanceWrite = (
   revise: {
     review: "range ok; strike lands after the step; camera holds.",
     final: null,
+  },
+  duration: 2,
+  ...partial,
+});
+
+/**
+ * A blocking for `beat-1` that the duel performance fixture realizes exactly:
+ * knightA's strike anchored at t = 1 (the gesture's span), a medium static
+ * camera on knightA (the fixture's frame action). Scenarios override fields to
+ * inject each intent/realization mismatch.
+ */
+export const makeBlockingWrite = (
+  partial: Partial<IAutoFilmBlockingApplication.IWrite> = {},
+): IAutoFilmBlockingApplication.IWrite => ({
+  type: "write",
+  beat: "beat-1",
+  analysis: "the charge must read as decisive — one step, one strike.",
+  rationale: "medium static keeps both knights readable at striking range.",
+  actors: [
+    {
+      node: "knightA",
+      beats: "advances a step, then strikes at the top of the walk",
+      anchors: [{ t: 1, cue: "the strike lands" }],
+    },
+    { node: "knightB", beats: "holds ground, eyes locked on the challenger" },
+  ],
+  camera: {
+    framing: "medium",
+    move: "static",
+    on: { kind: "node", node: "knightA" },
   },
   duration: 2,
   ...partial,
