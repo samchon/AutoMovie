@@ -12,19 +12,30 @@ export type AutoFilmGenericGesture =
   | "nod"
   | "shake"
   | "crouch"
-  | "kick";
+  | "kick"
+  | "wave"
+  | "celebrate";
 
-const GENERIC = new Set<string>(["bow", "nod", "shake", "crouch", "kick"]);
+const GENERIC = new Set<string>([
+  "bow",
+  "nod",
+  "shake",
+  "crouch",
+  "kick",
+  "wave",
+  "celebrate",
+]);
 
-// The postural gestures are single-axis (spine/head flexion, head twist, knee
-// flexion) — none abduct — so the helper carries only the two axes they use.
+// A joint stop across the three articulation axes (unset axes stay null). The
+// arm gestures (wave/celebrate) abduct; raising an arm overhead is −abduction on
+// the left and +abduction on the right (the shared axis, mirrored ROM per side).
 const j = (
   bone: AutoFilmHumanoidBone,
-  axes: Partial<Pick<IAutoFilmJointPose, "flexion" | "twist">>,
+  axes: Partial<Pick<IAutoFilmJointPose, "flexion" | "abduction" | "twist">>,
 ): IAutoFilmJointPose => ({
   bone,
   flexion: axes.flexion ?? null,
-  abduction: null,
+  abduction: axes.abduction ?? null,
   twist: axes.twist ?? null,
 });
 
@@ -95,7 +106,52 @@ const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
       ],
       [1, []],
     ],
+    // A one-arm wave: raise the right arm overhead (+abduction) and swing the
+    // forearm side to side at the elbow.
+    wave: [
+      [0, []],
+      [0.15, [j("rightUpperArm", { abduction: 112, flexion: 6 })]],
+      [
+        0.4,
+        [
+          j("rightUpperArm", { abduction: 112, flexion: 6 }),
+          j("rightLowerArm", { flexion: 55 }),
+        ],
+      ],
+      [
+        0.65,
+        [
+          j("rightUpperArm", { abduction: 112, flexion: 6 }),
+          j("rightLowerArm", { flexion: 12 }),
+        ],
+      ],
+      [
+        0.85,
+        [
+          j("rightUpperArm", { abduction: 112, flexion: 6 }),
+          j("rightLowerArm", { flexion: 55 }),
+        ],
+      ],
+      [1, []],
+    ],
+    // A two-arm celebration: both arms thrown up in a V and pumped. The raise is
+    // −abduction on the left, +abduction on the right (mirrored per side).
+    celebrate: [
+      [0, []],
+      [0.22, celebratePose(1)],
+      [0.45, celebratePose(1.1)],
+      [0.7, celebratePose(1)],
+      [1, []],
+    ],
   };
+
+/** Both arms thrown up in a V, scaled by `s` (a pump raises them higher). */
+function celebratePose(s: number): IAutoFilmJointPose[] {
+  return [
+    j("leftUpperArm", { abduction: -106 * s, flexion: 10 }),
+    j("rightUpperArm", { abduction: 106 * s, flexion: 10 }),
+  ];
+}
 
 function crouchPose(depth: number): IAutoFilmJointPose[] {
   return [
@@ -152,11 +208,12 @@ function jumpPose(
  * Synthesise a **postural or whole-body gesture** — the trunk/leg half of the
  * harness `gesture` verb — into a short ROM-safe clip. `bow`/`nod`/`shake`/
  * `crouch` are single-axis trunk/head oscillations, `kick` is a right-leg front
- * snap, and `jump` is a whole-body coil-and-leap that carries root translation
- * (the ballistic rise); all are authored from any humanoid rig with no arm
- * abduction, so none need a left/right mirror. The arm/combat gestures
- * (`strike`, `wave`, `celebrate`, …) need reach or rig-specific content and
- * return `null`, left to a richer synthesiser.
+ * snap, `wave` raises the right arm and swings the forearm, `celebrate` throws
+ * both arms up in a V, and `jump` is a whole-body coil-and-leap carrying root
+ * translation. The arm gestures abduct (the raise is −abduction on the left,
+ * +abduction on the right — the shared axis, mirrored ROM per side). The
+ * remaining combat gestures (`strike`, `draw`, `throw`, …) need reach or
+ * rig-specific content and return `null`, left to a richer synthesiser.
  *
  * @author Samchon
  */

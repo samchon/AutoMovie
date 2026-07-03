@@ -6,16 +6,28 @@ import {
 import {
   AutoFilmHumanoidBone,
   IAutoFilmBone,
+  IAutoFilmJointConstraint,
   IAutoFilmSkeleton,
 } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-// Carry the real anatomical ROM so "ROM-legal" validates against the actual
-// humanoid ranges (a knee that only flexes 0–150°, a hip −30–120°), not a
-// permissive stub — every authored gesture must survive the same gate the
-// pipeline applies.
+// The arms carry the stickman rig's **mirrored** abduction ROM — a raise is
+// −abduction on the left, +abduction on the right (the shared joint axis, gated
+// per side) — so the arm gestures validate against the same override the real
+// rig applies. Every other bone uses the default anatomical table (a knee that
+// only flexes 0–150°, a hip −30–120°), so "ROM-legal" is the real pipeline gate.
+const arm = (abduction: IAutoFilmJointConstraint["abduction"]) => ({
+  flexion: { min: -60, max: 180 },
+  abduction,
+  twist: { min: -90, max: 90 },
+});
+const ARM_ROM: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointConstraint>> =
+  {
+    leftUpperArm: arm({ min: -120, max: 90 }),
+    rightUpperArm: arm({ min: -90, max: 120 }),
+  };
 const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
   bone: b,
   parent: null,
@@ -24,7 +36,7 @@ const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
     rotation: { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 1, y: 1, z: 1 },
   },
-  constraint: DEFAULT_HUMANOID_ROM[b] ?? null,
+  constraint: ARM_ROM[b] ?? DEFAULT_HUMANOID_ROM[b] ?? null,
 });
 
 const RIG: IAutoFilmSkeleton = {
@@ -32,6 +44,10 @@ const RIG: IAutoFilmSkeleton = {
   bones: [
     "spine",
     "head",
+    "leftUpperArm",
+    "rightUpperArm",
+    "leftLowerArm",
+    "rightLowerArm",
     "leftUpperLeg",
     "rightUpperLeg",
     "leftLowerLeg",
@@ -39,12 +55,20 @@ const RIG: IAutoFilmSkeleton = {
   ].map((b) => bone(b as AutoFilmHumanoidBone)),
 };
 
-const GENERIC = ["bow", "nod", "shake", "crouch", "kick"] as const;
+const GENERIC = [
+  "bow",
+  "nod",
+  "shake",
+  "crouch",
+  "kick",
+  "wave",
+  "celebrate",
+] as const;
 
 const maxAbs = (
   motion: NonNullable<ReturnType<typeof gestureMotion>>,
   b: AutoFilmHumanoidBone,
-  axis: "flexion" | "twist",
+  axis: "flexion" | "abduction" | "twist",
 ): number =>
   Math.max(
     ...motion.keyframes.map((k) =>
@@ -60,9 +84,10 @@ const maxAbs = (
  *
  * Scenarios:
  *
- * 1. Each of bow/nod/shake/crouch/kick synthesises a non-empty clip that opens and
- *    closes on the neutral pose (returns to rest) and validates against the
- *    real humanoid ROM (the rig carries `DEFAULT_HUMANOID_ROM`).
+ * 1. Each of bow/nod/shake/crouch/kick/wave/celebrate synthesises a non-empty clip
+ *    that opens and closes on the neutral pose (returns to rest) and validates
+ *    against the real ROM — the arms carry the stickman's mirrored abduction
+ *    override, every other bone the default anatomical table.
  * 2. The gestures move the right joint: bow flexes the spine, nod dips the head
  *    (flexion), shake turns it (twist), crouch folds the knees, kick raises the
  *    leg (hip flexion) and snaps the knee from folded to near-straight.
@@ -71,7 +96,10 @@ const maxAbs = (
  * 4. `jump` is a whole-body coil-and-leap: it folds the knees, arcs the root up to
  *    a positive apex (and dips into a coil first), opens/closes grounded, and
  *    stays ROM-legal — no arm abduction, so no left/right mirror needed.
- * 5. An arm/combat kind (`strike`, `wave`, `celebrate`) and any unknown kind
+ * 5. The arm gestures abduct: `wave` raises the right arm (abduction) and swings
+ *    the forearm; `celebrate` throws both arms up (abduction, −left/+right —
+ *    mirrored per side to match the rig).
+ * 6. The remaining combat kinds (`strike`, `draw`, `throw`) and any unknown kind
  *    return null — the compiler skips them.
  */
 export const test_motion_gesture = (): void => {
@@ -139,6 +167,25 @@ export const test_motion_gesture = (): void => {
     Math.max(...kneeFlex) > 60 && Math.min(...kneeFlex) < 15,
   );
 
+  // wave — the right arm raised (abduction) and the elbow swinging.
+  const wave = gestureMotion("w", RIG.id, "wave", 1)!;
+  TestValidator.predicate(
+    "wave raises the right arm (abduction)",
+    maxAbs(wave, "rightUpperArm", "abduction") > 90,
+  );
+  TestValidator.predicate(
+    "wave swings the forearm at the elbow",
+    maxAbs(wave, "rightLowerArm", "flexion") > 30,
+  );
+
+  // celebrate — both arms thrown up by abduction (mirror signs across sides).
+  const celebrate = gestureMotion("c2", RIG.id, "celebrate", 1)!;
+  TestValidator.predicate(
+    "celebrate throws both arms up (abduction, mirrored signs)",
+    maxAbs(celebrate, "leftUpperArm", "abduction") > 90 &&
+      maxAbs(celebrate, "rightUpperArm", "abduction") > 90,
+  );
+
   const long = gestureMotion("bow", RIG.id, "bow", 2)!;
   TestValidator.equals(
     "stretches to the duration",
@@ -174,7 +221,7 @@ export const test_motion_gesture = (): void => {
     Math.min(...rootYs) < 0,
   );
 
-  for (const kind of ["strike", "wave", "celebrate", "somersault"])
+  for (const kind of ["strike", "draw", "throw", "somersault"])
     TestValidator.equals(
       `${kind} is not engine-authored (null)`,
       gestureMotion("x", RIG.id, kind, 1),
