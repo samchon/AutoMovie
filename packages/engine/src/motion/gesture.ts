@@ -7,9 +7,14 @@ import {
 } from "@autofilm/interface";
 
 /** The postural/expressive gestures the reference synthesiser can author. */
-export type AutoFilmGenericGesture = "bow" | "nod" | "shake" | "crouch";
+export type AutoFilmGenericGesture =
+  | "bow"
+  | "nod"
+  | "shake"
+  | "crouch"
+  | "kick";
 
-const GENERIC = new Set<string>(["bow", "nod", "shake", "crouch"]);
+const GENERIC = new Set<string>(["bow", "nod", "shake", "crouch", "kick"]);
 
 // The postural gestures are single-axis (spine/head flexion, head twist, knee
 // flexion) — none abduct — so the helper carries only the two axes they use.
@@ -57,6 +62,38 @@ const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
       [0.3, crouchPose(1)],
       [0.7, crouchPose(1)],
       [1, crouchPose(0)],
+    ],
+    // A front kick with the right leg: chamber the knee up, snap the shin out,
+    // re-chamber, lower. Hip flexion raises the leg (no abduction, so no mirror
+    // issue); the small spine extension counter-balances. All within humanoid
+    // ROM (upperLeg flexion ≤120, knee ≤150, spine ≥−30).
+    kick: [
+      [0, []],
+      [
+        0.22,
+        [
+          j("rightUpperLeg", { flexion: 55 }),
+          j("rightLowerLeg", { flexion: 75 }),
+          j("spine", { flexion: -6 }),
+        ],
+      ],
+      [
+        0.42,
+        [
+          j("rightUpperLeg", { flexion: 68 }),
+          j("rightLowerLeg", { flexion: 6 }),
+          j("spine", { flexion: -8 }),
+        ],
+      ],
+      [
+        0.62,
+        [
+          j("rightUpperLeg", { flexion: 52 }),
+          j("rightLowerLeg", { flexion: 72 }),
+          j("spine", { flexion: -5 }),
+        ],
+      ],
+      [1, []],
     ],
   };
 
@@ -114,12 +151,12 @@ function jumpPose(
 /**
  * Synthesise a **postural or whole-body gesture** — the trunk/leg half of the
  * harness `gesture` verb — into a short ROM-safe clip. `bow`/`nod`/`shake`/
- * `crouch` are single-axis trunk/head oscillations, and `jump` is a whole-body
- * coil-and-leap that carries root translation (the ballistic rise); all are
- * authored from any humanoid rig with no arm abduction, so none need a left/
- * right mirror. The arm/combat gestures (`strike`, `wave`, `celebrate`, …) need
- * reach or rig-specific content and return `null`, left to a richer
- * synthesiser.
+ * `crouch` are single-axis trunk/head oscillations, `kick` is a right-leg front
+ * snap, and `jump` is a whole-body coil-and-leap that carries root translation
+ * (the ballistic rise); all are authored from any humanoid rig with no arm
+ * abduction, so none need a left/right mirror. The arm/combat gestures
+ * (`strike`, `wave`, `celebrate`, …) need reach or rig-specific content and
+ * return `null`, left to a richer synthesiser.
  *
  * @author Samchon
  */
