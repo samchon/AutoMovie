@@ -36,6 +36,18 @@ const performance = (frame: IAutoFilmCameraAction) =>
     revise: { review: "unchanged.", final: null },
   });
 
+/** A pose marching the root `x` m along **model** +X (arm poses along too). */
+const march = (x: number) =>
+  makePose([joint("leftLowerArm", { flexion: 10 + x * 10 })], {
+    translation: { x, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    scale: { x: 1, y: 1, z: 1 },
+  });
+
+/** A clip whose root marches 1 m along model +X over 1 s. */
+const marchSynth = () =>
+  makeMotion([keyframe(0, march(0)), keyframe(1, march(1))], 1);
+
 /**
  * Pins the follow seam between the shot compiler and the camera grammar: the
  * subject's animated base is its placement plus the compiled clip's root
@@ -52,6 +64,8 @@ const performance = (frame: IAutoFilmCameraAction) =>
  *    elbow) → the animated base never moves, so first and last keys coincide.
  * 3. A `static` frame on a point target (no node, no motion, default height) → a
  *    single-key locked camera clip.
+ * 4. A followed actor staged turned (+90°): its node-local root (a model +X march)
+ *    renders as a world −Z path, and the camera follows that world path.
  */
 export const test_film_perform_shot_camera_follow = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -61,28 +75,7 @@ export const test_film_perform_shot_camera_follow = (): void => {
     script: makeScriptWrite(),
     staged,
     performance: performance(followFrame),
-    synthesize: () =>
-      makeMotion(
-        [
-          keyframe(
-            0,
-            makePose([joint("leftLowerArm", { flexion: 10 })], {
-              translation: { x: 0, y: 0, z: 0 },
-              rotation: { x: 0, y: 0, z: 0, w: 1 },
-              scale: { x: 1, y: 1, z: 1 },
-            }),
-          ),
-          keyframe(
-            1,
-            makePose([joint("leftLowerArm", { flexion: 20 })], {
-              translation: { x: 1, y: 0, z: 0 },
-              rotation: { x: 0, y: 0, z: 0, w: 1 },
-              scale: { x: 1, y: 1, z: 1 },
-            }),
-          ),
-        ],
-        1,
-      ),
+    synthesize: marchSynth,
     skeleton: () => null,
   });
   TestValidator.equals("marching succeeds", marching.success, true);
@@ -129,4 +122,35 @@ export const test_film_perform_shot_camera_follow = (): void => {
       pointed.shot.cameraMotion!.tracks[0]!.times.length,
       1,
     );
+
+  // 4. the followed actor is staged turned (+90°): its root is node-local, so a
+  // model +X march renders as a world −Z path. The camera must follow that
+  // world path (no X drift, ≈−1 in Z), not the un-rotated model root.
+  const turnedStaged = stageScene(
+    makeScriptWrite(),
+    makeStagingWrite({
+      actors: [
+        { node: "knightA", position: { x: 0, y: 0, z: 0 }, facingDeg: 90 },
+        { node: "knightB", position: { x: 0, y: 0, z: 0.7 }, facingDeg: 180 },
+      ],
+    }),
+  );
+  if (turnedStaged.success !== true) throw new Error("staging must succeed");
+  const turned = performShot({
+    script: makeScriptWrite(),
+    staged: turnedStaged,
+    performance: performance(followFrame),
+    synthesize: marchSynth,
+    skeleton: () => null,
+  });
+  TestValidator.equals("turned follow succeeds", turned.success, true);
+  if (turned.success === true) {
+    const tr = turned.shot.cameraMotion!.tracks[0]!;
+    const n = tr.values.length;
+    TestValidator.predicate(
+      "a +X model march under +90° facing renders as a world −Z follow",
+      nclose(tr.values[n - 3]! - tr.values[0]!, 0, 1e-6) &&
+        nclose(tr.values[n - 1]! - tr.values[2]!, -1, 1e-6),
+    );
+  }
 };

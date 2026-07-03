@@ -13,6 +13,7 @@ import {
 } from "@autofilm/interface";
 
 import { HUMANOID_JOINT_AXES } from "../kinematics/humanoidJointAxes";
+import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
 import {
@@ -145,6 +146,9 @@ export const performShot = (props: {
 
   const nodePositions = new Map<string, IAutoFilmVector3>(
     staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
+  );
+  const nodeRotations = new Map(
+    staged.scene.nodes.map((n) => [n.id, n.transform.rotation]),
   );
 
   let liveCamera: string | null = null;
@@ -489,13 +493,20 @@ export const performShot = (props: {
           motion === undefined
             ? null
             : (seconds: number) =>
+                // The subject's animated root is node-local (the renderer
+                // applies it under the actor's staged facing), so rotate it by
+                // that facing before adding to the world base — otherwise the
+                // camera follows a path turned off the actor's real heading.
                 Vector3.add(
                   point,
-                  sampleMotion(motion, seconds).pose.root?.translation ?? {
-                    x: 0,
-                    y: 0,
-                    z: 0,
-                  },
+                  Quaternion.rotateVector(
+                    nodeRotations.get(node!)!,
+                    sampleMotion(motion, seconds).pose.root?.translation ?? {
+                      x: 0,
+                      y: 0,
+                      z: 0,
+                    },
+                  ),
                 ),
       },
     };
