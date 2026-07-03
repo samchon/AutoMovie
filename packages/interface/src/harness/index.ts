@@ -18,6 +18,7 @@ export * from "./IAutoFilmGetBeatEndRequest";
 export * from "./IAutoFilmTimingAnchor";
 export * from "./IAutoFilmSlate";
 export * from "./IAutoFilmScriptApplication";
+export * from "./IAutoFilmForgeApplication";
 export * from "./IAutoFilmStagingApplication";
 export * from "./IAutoFilmBlockingApplication";
 export * from "./IAutoFilmPerformanceApplication";
