@@ -72,6 +72,38 @@ const extendHoldClip = (
   };
 };
 
+/** A rest → strike → rest jab: snap out to `pose` early, then retract. */
+const jabClip = (
+  id: string,
+  skeleton: string,
+  pose: IAutoFilmPose,
+  duration: number,
+): IAutoFilmMotion => {
+  const rest: IAutoFilmPose = { skeleton, root: null, joints: [] };
+  const key = (
+    time: number,
+    p: IAutoFilmPose,
+    easing: IAutoFilmKeyframe["easing"],
+  ): IAutoFilmKeyframe => ({
+    time,
+    pose: p,
+    expression: null,
+    easing,
+    bezier: null,
+  });
+  return {
+    id,
+    skeleton,
+    duration,
+    loop: false,
+    keyframes: [
+      key(0, rest, "easeIn"),
+      key(duration * 0.4, pose, "easeOut"),
+      key(duration, rest, "easeInOut"),
+    ],
+  };
+};
+
 /**
  * Build a reference {@link IAutoFilmActionSynthesizer} — the content seam
  * {@link compilePerformance} injects — for the verbs the engine can fatten
@@ -85,9 +117,10 @@ const extendHoldClip = (
  * - `hold` → the actor's rest pose held for the duration ({@link holdMotion});
  * - `lookAt` → the head turned to aim at a resolved target;
  * - `emote` → a face-region expression clip;
- * - `gesture` → the postural gestures (bow/nod/shake/crouch) as ROM-safe trunk
- *   and head clips ({@link gestureMotion}), plus `point` (an arm extended toward
- *   `at`) via {@link reachPose}; the remaining arm/combat kinds return null;
+ * - `gesture` → the postural/whole-body gestures (bow/nod/shake/crouch/kick/
+ *   stagger/wave/celebrate/jump) via {@link gestureMotion}, plus the reachPose
+ *   arm gestures: `point` (arm extended toward `at`, held) and `strike` (a jab
+ *   thrown at `at`, then retracted); the remaining combat kinds return null;
  * - `reach` → analytic two-bone arm IK to a resolved target ({@link reachPose}),
  *   the target dropped into the actor's model space; needs the context's `rig`
  *   and is left unclamped so an impossible reach fails the shot's ROM gate;
@@ -221,6 +254,22 @@ export const makeActorSynthesizer = (
         return pose === null
           ? null
           : extendHoldClip(`${actor}:point`, ctx.skeleton, pose, duration);
+      }
+      // `strike` (a jab) also rides reachPose — the fist thrown toward the
+      // target — but snaps out and retracts (jabClip) instead of holding, so it
+      // reads as a punch. Same rig + resolvable-target requirement as point.
+      if (action.kind === "strike" && ctx.rig !== undefined) {
+        const world =
+          action.at === undefined ? null : resolveTargetPoint(action.at, nodes);
+        if (world === null) return null;
+        const pose = reachPose(
+          ctx.rig,
+          "right",
+          toModelSpace(world, ctx.position, ctx.facingDeg),
+        );
+        return pose === null
+          ? null
+          : jabClip(`${actor}:strike`, ctx.skeleton, pose, duration);
       }
       // The postural gestures (bow/nod/shake/crouch) are engine-authored; the
       // remaining arm/combat kinds return null (rig-specific or reach-dependent).
