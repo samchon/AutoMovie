@@ -1,11 +1,11 @@
 ---
 name: pull-request
-description: PR submission flow. Read only when the user explicitly asks for a pull request; never open, push, propose, or merge a PR on your own initiative.
+description: PR submission flow. Standing instruction (2026-07-03) — every topic-unit of work ships as its own PR and merges once CI is green.
 ---
 
 # Pull Request Submission
 
-Only act on this skill when the user explicitly asks for a pull request. Never open, propose, or push a new PR on your own initiative, not as a "helpful" follow-up to a finished change, not because the work looks done. (This bounds PR creation only; it does not change how you commit to a branch.) When the user does ask, follow this flow.
+Standing instruction (user, 2026-07-03): work proceeds in **topic-unit PRs** — one coherent topic per PR, opened when the topic's changes are green locally, merged once CI passes. This replaces the earlier ask-per-PR/ask-per-merge rule. Never commit to `master` directly.
 
 ## Branch from the target
 
@@ -23,6 +23,6 @@ Write the PR body at open: intent, scope, deferred items, test plan (including t
 
 After every push, watch `gh pr checks <PR>` until each check settles. On failure, fetch the job log, diagnose, fix in place, push a new commit, and let the checks resume. Both `build` and `test` (the 100% coverage gate) must pass.
 
-## Never merge without an explicit instruction
+## Merge on green
 
-The agent does not merge, squash-merge, or rebase the target branch. When all checks pass, hand the PR back to the user for review. Merge **only** when the user gives an explicit, separate instruction to merge (a green CI is not that instruction). Auto-merging a passing PR is a hard violation.
+When every check passes, squash-merge the PR (matching the repo's linear history) and delete the branch. A red or pending check is an absolute merge blocker — fix in place and wait for green; never bypass or force-merge. If CI cannot be made green within the topic's scope, stop and hand the PR back to the user with the diagnosis.

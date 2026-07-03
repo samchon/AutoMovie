@@ -5,7 +5,7 @@ Follow the literal request; it is the contract, not a hint at what the user "rea
 - **Scope is the user's to widen.** Reinterpret the goal, weigh alternatives, or expand the task only on an explicit hand-off ("figure it out", "you decide"). Take a confident, specific ask as given.
 - **Fidelity binds the goal, not the effort.** Within that goal, act with full initiative: do the substeps it needs, verify your work, surface what you notice. Literal scope is no excuse for passive execution.
 - **Default over ask.** On an ambiguous detail, pick the sensible default and say what you chose; reserve questions for forks only the user can settle.
-- **Never merge, push, or open a PR on your own initiative.** Branch and commit freely; opening a PR needs an explicit ask, and merging needs an explicit, separate instruction even after CI is green. See `.codex/skills/pull-request/SKILL.md`.
+- **Ship each topic as a PR: open, pass CI, merge.** Standing instruction (user, 2026-07-03): every topic-unit of work is submitted as its own PR and merged once CI is green — no separate per-PR merge approval. Never commit to `master` directly. Flow details in `.codex/skills/pull-request/SKILL.md`.
 
 ## Skills
 
