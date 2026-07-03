@@ -11,6 +11,7 @@ const SHOT: IAutoFilmShot = {
   camera: "cam-main",
   cameraMotion: null,
   performances: [],
+  objectMotions: [],
   duration: 3,
 };
 

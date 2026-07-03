@@ -11,6 +11,7 @@ const shot = (id: string, duration: number): IAutoFilmShot => ({
   camera: "cam-main",
   cameraMotion: null,
   performances: [],
+  objectMotions: [],
   duration,
 });
 const SHOTS = [shot("shot:beat-1", 3), shot("shot:beat-2", 4)];

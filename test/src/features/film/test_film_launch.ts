@@ -140,6 +140,21 @@ export const test_film_launch = (): void => {
   })!;
   TestValidator.equals("no onHit → no react", quiet.react, null);
 
+  // 4b. an onHit aimed at a point (no single actor) still flies, but schedules
+  // no reaction — there is no node to recoil.
+  const pointed = compileLaunch({
+    action: launch({ onHit: { force: 0.9 } }),
+    origin,
+    target,
+    targetNode: null,
+  })!;
+  TestValidator.equals("a nodeless target → no react", pointed.react, null);
+  TestValidator.predicate(
+    "but the flight still bakes",
+    pointed.clip.id === "trajectory:arrow" &&
+      vclose(pointed.hitPoint, target, 2e-3),
+  );
+
   // 5. the high arc flies longer than the direct arc to the same target
   const direct = compileLaunch({
     action: launch(),
