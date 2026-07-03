@@ -23,6 +23,7 @@ export default defineConfig({
         knight: resolve(__dirname, "knight.html"),
         spar: resolve(__dirname, "spar.html"),
         film: resolve(__dirname, "film.html"),
+        launch: resolve(__dirname, "launch.html"),
         archery: resolve(__dirname, "archery.html"),
         impact: resolve(__dirname, "impact.html"),
         trampoline: resolve(__dirname, "trampoline.html"),
