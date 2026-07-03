@@ -30,6 +30,48 @@ const REACT_UNBALANCE_GAIN = 1.5;
 /** The chain a torso/head blow ripples down — head whips most, hips least. */
 const REACT_CHAIN = ["head", "neck", "chest", "spine"] as const;
 
+/** Drop a world point into an actor's model space (undo its placement). */
+const toModelSpace = (
+  world: IAutoFilmVector3,
+  position: IAutoFilmVector3,
+  facingDeg: number,
+): IAutoFilmVector3 => {
+  const f = (facingDeg * Math.PI) / 180;
+  const cos = Math.cos(f);
+  const sin = Math.sin(f);
+  const dx = world.x - position.x;
+  const dz = world.z - position.z;
+  return {
+    x: dx * cos - dz * sin,
+    y: world.y - position.y,
+    z: dx * sin + dz * cos,
+  };
+};
+
+/** A rest → hold-pose → hold clip: ease into `pose` over half the span, hold. */
+const extendHoldClip = (
+  id: string,
+  skeleton: string,
+  pose: IAutoFilmPose,
+  duration: number,
+): IAutoFilmMotion => {
+  const rest: IAutoFilmPose = { skeleton, root: null, joints: [] };
+  const key = (time: number, p: IAutoFilmPose): IAutoFilmKeyframe => ({
+    time,
+    pose: p,
+    expression: null,
+    easing: "easeInOut",
+    bezier: null,
+  });
+  return {
+    id,
+    skeleton,
+    duration,
+    loop: false,
+    keyframes: [key(0, rest), key(duration * 0.5, pose), key(duration, pose)],
+  };
+};
+
 /**
  * Build a reference {@link IAutoFilmActionSynthesizer} — the content seam
  * {@link compilePerformance} injects — for the verbs the engine can fatten
@@ -44,7 +86,8 @@ const REACT_CHAIN = ["head", "neck", "chest", "spine"] as const;
  * - `lookAt` → the head turned to aim at a resolved target;
  * - `emote` → a face-region expression clip;
  * - `gesture` → the postural gestures (bow/nod/shake/crouch) as ROM-safe trunk
- *   and head clips ({@link gestureMotion}); the arm/combat kinds return null;
+ *   and head clips ({@link gestureMotion}), plus `point` (an arm extended toward
+ *   `at`) via {@link reachPose}; the remaining arm/combat kinds return null;
  * - `reach` → analytic two-bone arm IK to a resolved target ({@link reachPose}),
  *   the target dropped into the actor's model space; needs the context's `rig`
  *   and is left unclamped so an impossible reach fails the shot's ROM gate;
@@ -158,9 +201,26 @@ export const makeActorSynthesizer = (
       };
     }
     if (action.verb === "gesture") {
-      // The postural gestures (bow/nod/shake/crouch) are engine-authored;
-      // the arm/combat ones return null (rig-specific or reach-dependent).
       const duration = action.duration === "auto" ? 1 : action.duration;
+      // `point` rides reachPose (an arm extended toward `at` — reachPose
+      // clamps a far target onto the reach shell, which is exactly a pointing
+      // arm). Left unclamped like `reach`, so an impossible point fails the
+      // shot's ROM gate. Needs the rig and a resolvable target.
+      if (action.kind === "point" && ctx.rig !== undefined) {
+        const world =
+          action.at === undefined ? null : resolveTargetPoint(action.at, nodes);
+        if (world === null) return null;
+        const pose = reachPose(
+          ctx.rig,
+          "right",
+          toModelSpace(world, ctx.position, ctx.facingDeg),
+        );
+        return pose === null
+          ? null
+          : extendHoldClip(`${actor}:point`, ctx.skeleton, pose, duration);
+      }
+      // The postural gestures (bow/nod/shake/crouch) are engine-authored; the
+      // remaining arm/combat kinds return null (rig-specific or reach-dependent).
       return gestureMotion(
         `${actor}:${action.kind}`,
         ctx.skeleton,
@@ -177,40 +237,14 @@ export const makeActorSynthesizer = (
       if (ctx.rig === undefined) return null;
       const world = resolveTargetPoint(action.to, nodes);
       if (world === null) return null; // relative target — no point to reach
-      const f = (ctx.facingDeg * Math.PI) / 180;
-      const cos = Math.cos(f);
-      const sin = Math.sin(f);
-      const dx = world.x - ctx.position.x;
-      const dy = world.y - ctx.position.y;
-      const dz = world.z - ctx.position.z;
-      const local = { x: dx * cos - dz * sin, y: dy, z: dx * sin + dz * cos };
-      const reach = reachPose(ctx.rig, action.hand, local);
+      const reach = reachPose(
+        ctx.rig,
+        action.hand,
+        toModelSpace(world, ctx.position, ctx.facingDeg),
+      );
       if (reach === null) return null;
       const duration = action.duration === "auto" ? 0.6 : action.duration;
-      const rest: IAutoFilmPose = {
-        skeleton: ctx.skeleton,
-        root: null,
-        joints: [],
-      };
-      const key = (time: number, pose: IAutoFilmPose): IAutoFilmKeyframe => ({
-        time,
-        pose,
-        expression: null,
-        easing: "easeInOut",
-        bezier: null,
-      });
-      // Extend to the target and hold it there.
-      return {
-        id: `${actor}:reach`,
-        skeleton: ctx.skeleton,
-        duration,
-        loop: false,
-        keyframes: [
-          key(0, rest),
-          key(duration * 0.5, reach),
-          key(duration, reach),
-        ],
-      };
+      return extendHoldClip(`${actor}:reach`, ctx.skeleton, reach, duration);
     }
     if (action.verb === "react") {
       // A physics verb: the flinch is clamped to each joint's ROM, so it needs
