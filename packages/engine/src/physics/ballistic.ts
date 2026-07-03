@@ -22,9 +22,11 @@ export interface IAutoFilmBallisticSolution {
  * Under downward gravity a target has two firing arcs — a flat **direct** shot
  * and a lobbed **high** one — selected by `arc`; the direct arc is the default.
  * With zero gravity it degenerates to a straight shot along the sightline. The
- * horizontal solve uses the standard range equation `tanθ = (s² ± √(s⁴ − g(g·d²
- * + 2h·s²))) / (g·d)`; a purely vertical target is handled on its own (no
- * horizontal direction to aim along).
+ * horizontal solve uses the standard range equation `tanθ = (s² ± √(s⁴ −
+ * g(g·d²
+ *
+ * - 2h·s²))) / (g·d)`; a purely vertical target is handled on its own (no
+ *   horizontal direction to aim along).
  *
  * @author Samchon
  */
