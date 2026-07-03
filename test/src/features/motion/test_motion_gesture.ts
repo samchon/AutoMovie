@@ -61,6 +61,7 @@ const GENERIC = [
   "shake",
   "crouch",
   "kick",
+  "stagger",
   "wave",
   "celebrate",
 ] as const;
@@ -90,7 +91,8 @@ const maxAbs = (
  *    override, every other bone the default anatomical table.
  * 2. The gestures move the right joint: bow flexes the spine, nod dips the head
  *    (flexion), shake turns it (twist), crouch folds the knees, kick raises the
- *    leg (hip flexion) and snaps the knee from folded to near-straight.
+ *    leg (hip flexion) and snaps the knee, stagger leans the trunk (spine
+ *    abduction) and braces a leg.
  * 3. A gesture stretches to the action's duration (a 2 s bow's last key lands at 2
  *    s).
  * 4. `jump` is a whole-body coil-and-leap: it folds the knees, arcs the root up to
@@ -165,6 +167,15 @@ export const test_motion_gesture = (): void => {
   TestValidator.predicate(
     "kick chambers then snaps the knee (folded → near-straight)",
     Math.max(...kneeFlex) > 60 && Math.min(...kneeFlex) < 15,
+  );
+
+  // stagger — the trunk lurches off balance: the spine leans (abduction) and
+  // a leg braces.
+  const stagger = gestureMotion("st", RIG.id, "stagger", 1)!;
+  TestValidator.predicate(
+    "stagger leans the trunk (spine abduction) and braces a leg",
+    maxAbs(stagger, "spine", "abduction") > 15 &&
+      maxAbs(stagger, "rightUpperLeg", "flexion") > 15,
   );
 
   // wave — the right arm raised (abduction) and the elbow swinging.
