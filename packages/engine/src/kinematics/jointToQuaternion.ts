@@ -5,6 +5,7 @@ import {
 } from "@autofilm/interface";
 
 import { Quaternion } from "../math/Quaternion";
+import { IAutoFilmRestFrame, toRigAngle } from "../rom/restFrame";
 
 /**
  * The bone-local axes the three clinical angles rotate about. Lets a rig whose
@@ -49,17 +50,31 @@ export const DEFAULT_JOINT_AXES: IAutoFilmJointAxes = {
  *
  * A `null` angle means "no rotation on that axis" and contributes identity.
  *
+ * When a `frame` ({@link IAutoFilmRestFrame}) is given, the joint's angles are
+ * read as **clinical** and mapped into the rig's rest-relative space first (`r
+ * = (clinical − neutral) / sign`, per {@link toRigAngle}) — so a pose can be
+ * authored in one intuitive clinical convention (e.g. +abduction raises either
+ * arm) and the per-side rest frame reconciles it. Omit it for angles already in
+ * the rig's own space.
+ *
  * @author Samchon
  */
 export const jointToQuaternion = (
   joint: Pick<IAutoFilmJointPose, "flexion" | "abduction" | "twist">,
   axes: IAutoFilmJointAxes = DEFAULT_JOINT_AXES,
+  frame?: IAutoFilmRestFrame,
 ): IAutoFilmQuaternion => {
-  const qFlexion = Quaternion.fromAxisAngle(axes.flexion, joint.flexion ?? 0);
+  const qFlexion = Quaternion.fromAxisAngle(
+    axes.flexion,
+    toRigAngle(joint.flexion, frame?.flexion) ?? 0,
+  );
   const qAbduction = Quaternion.fromAxisAngle(
     axes.abduction,
-    joint.abduction ?? 0,
+    toRigAngle(joint.abduction, frame?.abduction) ?? 0,
   );
-  const qTwist = Quaternion.fromAxisAngle(axes.twist, joint.twist ?? 0);
+  const qTwist = Quaternion.fromAxisAngle(
+    axes.twist,
+    toRigAngle(joint.twist, frame?.twist) ?? 0,
+  );
   return Quaternion.multiply(qTwist, Quaternion.multiply(qAbduction, qFlexion));
 };

@@ -2,6 +2,7 @@ import { IAutoFilmQuaternion } from "@autofilm/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { IAutoFilmRestFrame, toClinicalAngle } from "../rom/restFrame";
 import { DEFAULT_JOINT_AXES, IAutoFilmJointAxes } from "./jointToQuaternion";
 
 const RAD2DEG = 180 / Math.PI;
@@ -27,12 +28,30 @@ const RAD2DEG = 180 / Math.PI;
  * handedness and corrects it, so `jointToQuaternion(decompose(q))` round-trips
  * for any orthonormal basis, right- or left-handed.
  *
+ * A `frame` ({@link IAutoFilmRestFrame}) lifts the recovered rest-relative
+ * angles into **clinical** ones (`clinical = sign · r + neutral`), the inverse
+ * of `jointToQuaternion`'s `frame` map — so `jointToQuaternion(decompose(q,
+ * axes, f), axes, f)` still round-trips.
+ *
  * @author Samchon
  */
 export const decomposeJointRotation = (
   q: IAutoFilmQuaternion,
   axes: IAutoFilmJointAxes = DEFAULT_JOINT_AXES,
+  frame?: IAutoFilmRestFrame,
 ): { flexion: number; abduction: number; twist: number } => {
+  // Lift a rig-relative extraction into clinical angles (the inverse of
+  // jointToQuaternion's `frame` map); the identity when no frame is given.
+  const lift = (rig: {
+    flexion: number;
+    abduction: number;
+    twist: number;
+  }): { flexion: number; abduction: number; twist: number } => ({
+    // toClinicalAngle only returns null for a null input; these are numbers.
+    flexion: toClinicalAngle(rig.flexion, frame?.flexion)!,
+    abduction: toClinicalAngle(rig.abduction, frame?.abduction)!,
+    twist: toClinicalAngle(rig.twist, frame?.twist)!,
+  });
   // Right-handedness of the basis: +1 when flex × abd = +twist. A left-handed
   // triple is made right-handed by extracting against −twist, then negating the
   // recovered twist (a rotation about −t by θ is one about t by −θ).
@@ -61,12 +80,12 @@ export const decomposeJointRotation = (
     // to 0, twist = −atan2(R'[0][1], R'[1][1]) reconstructs the rotation.
     const abduction = m20 < 0 ? 90 : -90;
     const twist = -Math.atan2(m01, m11) * RAD2DEG;
-    return { flexion: 0, abduction, twist: handed * twist };
+    return lift({ flexion: 0, abduction, twist: handed * twist });
   }
 
-  return {
+  return lift({
     flexion: Math.atan2(m21, m22) * RAD2DEG,
     abduction: Math.asin(Math.max(-1, Math.min(1, -m20))) * RAD2DEG,
     twist: handed * Math.atan2(m10, m00) * RAD2DEG,
-  };
+  });
 };
