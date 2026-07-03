@@ -5,7 +5,6 @@ import {
   makeActorSynthesizer,
   performShot,
   resolveSequencePlayback,
-  sampleClip,
   stageScene,
 } from "@autofilm/engine";
 import {
@@ -17,7 +16,12 @@ import {
   IAutoFilmStagingApplication,
   IAutoFilmVector3,
 } from "@autofilm/interface";
-import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
+import {
+  AutoFilmPlayer,
+  applyObjectMotion,
+  buildModel,
+  mountViewer,
+} from "@autofilm/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
@@ -279,27 +283,9 @@ const renderAt = (seconds: number): void => {
   // object's group transform straight from the sampled clip — the read side of
   // compileLaunch/projectileTrajectory.
   for (const clip of live.objectMotions)
-    for (const { channel, value } of sampleClip(clip, sample.time).values()) {
-      if (channel.kind !== "node") continue;
-      const group = groupsById.get(channel.node);
-      if (group === undefined) continue;
-      if (channel.path === "translation")
-        group.position.set(value[0]!, value[1]!, value[2]!);
-      else if (channel.path === "rotation")
-        group.quaternion.set(value[0]!, value[1]!, value[2]!, value[3]!);
-    }
+    applyObjectMotion(clip, sample.time, (node) => groupsById.get(node));
   if (live.cameraMotion === null) applyStagedCamera();
-  else
-    for (const { channel, value } of sampleClip(
-      live.cameraMotion,
-      sample.time,
-    ).values()) {
-      if (channel.kind !== "node") continue;
-      if (channel.path === "translation")
-        camera.position.set(value[0]!, value[1]!, value[2]!);
-      else if (channel.path === "rotation")
-        camera.quaternion.set(value[0]!, value[1]!, value[2]!, value[3]!);
-    }
+  else applyObjectMotion(live.cameraMotion, sample.time, () => camera);
 };
 
 // ── mount + deterministic seek contract (capture) ────────────────────────────
