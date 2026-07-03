@@ -1,3 +1,4 @@
+export * from "./cameraMove";
 export * from "./cutSequence";
 export * from "./forgeCast";
 export * from "./performShot";

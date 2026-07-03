@@ -46,12 +46,18 @@ export const test_film_perform_shot_camera_fallback = (): void => {
     skeleton: () => createSkeleton(),
   });
   TestValidator.equals("falls back", performed.success, true);
-  if (performed.success === true)
+  if (performed.success === true) {
     TestValidator.equals(
       "first scene camera live",
       performed.shot.camera,
       "cam-main",
     );
+    TestValidator.equals(
+      "no frame action, locked-off camera",
+      performed.shot.cameraMotion,
+      null,
+    );
+  }
 
   const bare = stageScene(makeScriptWrite(), makeStagingWrite({ cameras: [] }));
   if (bare.success !== true) throw new Error("bare staging must succeed");
