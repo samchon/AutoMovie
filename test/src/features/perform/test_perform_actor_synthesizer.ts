@@ -60,7 +60,7 @@ const hold = (start: number): IAutoFilmActionCall => ({
 
 const gesture: IAutoFilmActionCall = {
   verb: "gesture",
-  kind: "wave",
+  kind: "strike",
   actor: "hero",
   start: 0,
   duration: "auto",
