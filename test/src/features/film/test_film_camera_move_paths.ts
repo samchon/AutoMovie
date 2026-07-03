@@ -38,7 +38,8 @@ const frame = (
  * Scenarios:
  *
  * 1. `orbit` → 9 keys sweeping 45°, every position at distance `d` from the aim,
- *    and the last bearing swung off the initial +Z.
+ *    the last bearing swung off the initial +Z, and the swept angle **eased** in
+ *    and out (the mid-arc segments turn faster than the end ones).
  * 2. `follow` with an animated base marching down +X → 5 keys over one second (4
  *    Hz + endpoints) whose X tracks the subject.
  * 3. `follow` with a static subject (`at: null`) degenerates to one static key.
@@ -71,6 +72,19 @@ export const test_film_camera_move_paths = (): void => {
   TestValidator.predicate(
     "orbit swings off the initial bearing",
     Math.abs(orbit.tracks[0]!.values[24]!) > 0.5,
+  );
+
+  // the swept angle eases in/out: consecutive keys turn slowly at the ends and
+  // faster through the mid-arc (a reveal orbit, not a constant-rate turntable).
+  const ang = (k: number): number =>
+    Math.atan2(
+      orbit.tracks[0]!.values[k * 3]! - aim.x,
+      orbit.tracks[0]!.values[k * 3 + 2]! - aim.z,
+    );
+  const step = (a: number, b: number): number => Math.abs(ang(b) - ang(a));
+  TestValidator.predicate(
+    "orbit eases: the mid-arc turns faster than either end",
+    step(3, 4) > step(0, 1) + 1e-6 && step(3, 4) > step(7, 8) + 1e-6,
   );
 
   const marching = {
