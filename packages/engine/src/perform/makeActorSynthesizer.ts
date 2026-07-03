@@ -7,6 +7,7 @@ import {
 } from "@autofilm/interface";
 
 import { aimYawPitch } from "../kinematics/aimYawPitch";
+import { reachPose } from "../kinematics/reachPose";
 import { Vector3 } from "../math/Vector3";
 import { holdMotion } from "../motion/arrange";
 import { gaitMotion } from "../motion/gait";
@@ -44,6 +45,9 @@ const REACT_CHAIN = ["head", "neck", "chest", "spine"] as const;
  * - `emote` → a face-region expression clip;
  * - `gesture` → the postural gestures (bow/nod/shake/crouch) as ROM-safe trunk
  *   and head clips ({@link gestureMotion}); the arm/combat kinds return null;
+ * - `reach` → analytic two-bone arm IK to a resolved target ({@link reachPose}),
+ *   the target dropped into the actor's model space; needs the context's `rig`
+ *   and is left unclamped so an impossible reach fails the shot's ROM gate;
  * - `react` → a ROM-clamped flinch away from the blow ({@link reactMotion}),
  *   decomposed into the actor's frame so a front hit snaps the torso back and a
  *   side hit leans it; needs the context's `rig` (the flinch is bounded by
@@ -163,6 +167,50 @@ export const makeActorSynthesizer = (
         action.kind,
         duration,
       );
+    }
+    if (action.verb === "reach") {
+      // An IK verb: needs the rig geometry (arm lengths, rest FK). Resolve the
+      // target to a world point, drop it into the actor's model space (undo the
+      // placement), and solve the arm. reachPose does not clamp to ROM, so a
+      // reach to an impossible spot yields an out-of-ROM pose the shot's ROM
+      // gate rejects — the model must reposition, not the engine hide it.
+      if (ctx.rig === undefined) return null;
+      const world = resolveTargetPoint(action.to, nodes);
+      if (world === null) return null; // relative target — no point to reach
+      const f = (ctx.facingDeg * Math.PI) / 180;
+      const cos = Math.cos(f);
+      const sin = Math.sin(f);
+      const dx = world.x - ctx.position.x;
+      const dy = world.y - ctx.position.y;
+      const dz = world.z - ctx.position.z;
+      const local = { x: dx * cos - dz * sin, y: dy, z: dx * sin + dz * cos };
+      const reach = reachPose(ctx.rig, action.hand, local);
+      if (reach === null) return null;
+      const duration = action.duration === "auto" ? 0.6 : action.duration;
+      const rest: IAutoFilmPose = {
+        skeleton: ctx.skeleton,
+        root: null,
+        joints: [],
+      };
+      const key = (time: number, pose: IAutoFilmPose): IAutoFilmKeyframe => ({
+        time,
+        pose,
+        expression: null,
+        easing: "easeInOut",
+        bezier: null,
+      });
+      // Extend to the target and hold it there.
+      return {
+        id: `${actor}:reach`,
+        skeleton: ctx.skeleton,
+        duration,
+        loop: false,
+        keyframes: [
+          key(0, rest),
+          key(duration * 0.5, reach),
+          key(duration, reach),
+        ],
+      };
     }
     if (action.verb === "react") {
       // A physics verb: the flinch is clamped to each joint's ROM, so it needs
