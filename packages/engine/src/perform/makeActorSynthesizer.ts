@@ -7,15 +7,26 @@ import {
 } from "@autofilm/interface";
 
 import { aimYawPitch } from "../kinematics/aimYawPitch";
+import { Vector3 } from "../math/Vector3";
 import { holdMotion } from "../motion/arrange";
 import { gaitMotion } from "../motion/gait";
 import { locomoteMotion } from "../motion/locomote";
+import { reactMotion } from "../motion/react";
 import { IAutoFilmActorContext } from "./IAutoFilmActorContext";
 import { IAutoFilmActionSynthesizer } from "./compilePerformance";
 import { resolveTargetPoint } from "./resolveTargetPoint";
 
 /** Keyframes per gait cycle the reference synthesiser bakes. */
 const GAIT_SAMPLES = 8;
+
+/** Peak flinch deflection (degrees) a full-force (1.0) blow drives. */
+const REACT_MAX_DEFLECTION = 32;
+
+/** An unbalancing blow flinches this much harder (a floored reaction). */
+const REACT_UNBALANCE_GAIN = 1.5;
+
+/** The chain a torso/head blow ripples down — head whips most, hips least. */
+const REACT_CHAIN = ["head", "neck", "chest", "spine"] as const;
 
 /**
  * Build a reference {@link IAutoFilmActionSynthesizer} — the content seam
@@ -27,7 +38,13 @@ const GAIT_SAMPLES = 8;
  *   gait is carried that far at the actor's speed ({@link locomoteMotion}),
  *   otherwise it steps in place (a relative target — "off to the left" — has no
  *   positional point yet);
- * - `hold` → the actor's rest pose held for the duration ({@link holdMotion}).
+ * - `hold` → the actor's rest pose held for the duration ({@link holdMotion});
+ * - `lookAt` → the head turned to aim at a resolved target;
+ * - `emote` → a face-region expression clip;
+ * - `react` → a ROM-clamped flinch away from the blow ({@link reactMotion}),
+ *   decomposed into the actor's frame so a front hit snaps the torso back and a
+ *   side hit leans it; needs the context's `rig` (the flinch is bounded by
+ *   joint ROM), so a rig-less context synthesises nothing for it.
  *
  * Every other verb returns `null` (the host supplies its rig-specific content,
  * or a richer synthesiser does), and an unknown actor returns `null`. This is
@@ -131,6 +148,48 @@ export const makeActorSynthesizer = (
         loop: false,
         keyframes: [frame(0), frame(duration)],
       };
+    }
+    if (action.verb === "react") {
+      // A physics verb: the flinch is clamped to each joint's ROM, so it needs
+      // the rig geometry. Without it (a context built only for gait/hold), the
+      // reference synthesiser produces nothing.
+      if (ctx.rig === undefined) return null;
+      const duration = action.duration === "auto" ? 0.5 : action.duration;
+      const magnitude =
+        REACT_MAX_DEFLECTION *
+        Math.max(0, Math.min(1, action.force)) *
+        (action.unbalance === true ? REACT_UNBALANCE_GAIN : 1);
+
+      // Decompose the blow into the actor's own frame so a front hit snaps the
+      // torso back (extension, −flexion) and a side hit leans it (abduction).
+      // `from` is where the blow comes from; the body recoils away from it.
+      const source = resolveTargetPoint(action.from, nodes);
+      const facing = (ctx.facingDeg * Math.PI) / 180;
+      const forward = { x: Math.sin(facing), y: 0, z: Math.cos(facing) };
+      const right = { x: Math.cos(facing), y: 0, z: -Math.sin(facing) };
+      let push;
+      if (source === null)
+        push = { flexion: -magnitude }; // unknown → snap back
+      else {
+        const away = {
+          x: ctx.position.x - source.x,
+          y: 0,
+          z: ctx.position.z - source.z,
+        };
+        const dir =
+          Vector3.length(away) < 1e-6 ? forward : Vector3.normalize(away);
+        push = {
+          flexion: Vector3.dot(dir, forward) * magnitude,
+          abduction: Vector3.dot(dir, right) * magnitude,
+        };
+      }
+      return reactMotion(
+        `${actor}:react`,
+        ctx.rig,
+        push,
+        [...REACT_CHAIN],
+        duration,
+      );
     }
     return null;
   };
