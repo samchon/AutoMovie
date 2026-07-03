@@ -1,4 +1,5 @@
 import {
+  HUMANOID_GAITS,
   HUMANOID_JOINT_AXES,
   IAutoFilmActorContext,
   blockBeat,
@@ -11,7 +12,6 @@ import {
 } from "@autofilm/engine";
 import {
   IAutoFilmBlockingApplication,
-  IAutoFilmGait,
   IAutoFilmMotion,
   IAutoFilmPerformanceApplication,
   IAutoFilmScriptApplication,
@@ -199,35 +199,10 @@ const walkerRig = buildStickman(DEFAULT_STICKMAN);
 const waiterRig = buildStickman(DEFAULT_STICKMAN);
 const rigOf = { walker: walkerRig, waiter: waiterRig } as const;
 
-// The knees swing about a bent `neutral` so they stay inside the [0, 150]°
-// ROM instead of hyperextending through zero — the first draft (symmetric
-// swing, no neutral) was rejected by the engine's ROM gate exactly there.
-// The knee leads its hip by a quarter cycle so the shin tucks as the thigh
-// swings forward and the foot clears the floor mid-stride.
-const WALK: IAutoFilmGait = {
-  name: "walk",
-  period: 0.9,
-  limbs: [
-    { bone: "leftUpperLeg", phase: 0, duty: 0.55, amplitude: 32 },
-    { bone: "rightUpperLeg", phase: 0.5, duty: 0.55, amplitude: 32 },
-    {
-      bone: "leftLowerLeg",
-      phase: 0.25,
-      duty: 0.5,
-      amplitude: 17,
-      neutral: 19,
-    },
-    {
-      bone: "rightLowerLeg",
-      phase: 0.75,
-      duty: 0.5,
-      amplitude: 17,
-      neutral: 19,
-    },
-    { bone: "leftUpperArm", phase: 0.5, duty: 0.5, amplitude: 18 },
-    { bone: "rightUpperArm", phase: 0, duty: 0.5, amplitude: 18 },
-  ],
-};
+// The canonical humanoid walk from the engine's gait library — bent knees
+// (neutral-centered so they stay in ROM), contralateral arm swing, already
+// tuned. The demo drops it straight into the actor context; no hand-authoring.
+const WALK = HUMANOID_GAITS.walk;
 
 const staged = stageScene(script, staging);
 if (staged.success !== true) throw new Error("staging failed");
