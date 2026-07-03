@@ -9,6 +9,7 @@ import {
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { ease } from "../motion/easing";
 
 /** World up — the horizon a camera keeps level. */
 const UP: IAutoFilmVector3 = { x: 0, y: 1, z: 0 };
@@ -94,6 +95,9 @@ const ORBIT_SEGMENTS = 8;
 /** A push-in dollies from this to this multiple of the framed distance. */
 const PUSH_IN_FROM = 1.25;
 const PUSH_IN_TO = 0.8;
+
+/** A push-in eases in/out over this many segments (a smooth dolly, not a ramp). */
+const PUSH_IN_SEGMENTS = 8;
 
 /** Follow moves sample the subject's animated base at this rate (Hz). */
 const FOLLOW_HZ = 4;
@@ -212,10 +216,16 @@ export const compileCameraMove = (props: {
         break;
       }
       case "push-in": {
-        const from = framedAt(subject.base, distance * PUSH_IN_FROM);
-        const to = framedAt(subject.base, distance * PUSH_IN_TO);
-        push(t0, from.pos, from.rot);
-        push(t1, to.pos, to.rot);
+        // Ease the dolly in and out instead of ramping at constant speed: the
+        // distance eases from 1.25× to 0.8× of framed, so the camera creeps in,
+        // accelerates, and settles — a cinematic push, not a mechanical slide.
+        for (let k = 0; k <= PUSH_IN_SEGMENTS; ++k) {
+          const p = k / PUSH_IN_SEGMENTS;
+          const scale =
+            PUSH_IN_FROM + (PUSH_IN_TO - PUSH_IN_FROM) * ease("easeInOut", p);
+          const f = framedAt(subject.base, distance * scale);
+          push(t0 + (t1 - t0) * p, f.pos, f.rot);
+        }
         break;
       }
       case "orbit": {
