@@ -1,11 +1,25 @@
 import { IAutoFilmActionSynthesizer } from "@autofilm/engine";
 import {
+  IAutoFilmForgeApplication,
   IAutoFilmPerformanceApplication,
   IAutoFilmScriptApplication,
   IAutoFilmStagingApplication,
 } from "@autofilm/interface";
 
-import { joint, keyframe, makeMotion, makePose } from "./fixtures";
+import { createModel, joint, keyframe, makeMotion, makePose } from "./fixtures";
+
+/**
+ * One forge entry: the shared one-part test model re-idified so its `id` equals
+ * the cast node — the join contract `forgeCast` enforces and the staged scene's
+ * `modelRef ?? node` fallback resolves against.
+ */
+export const forgeEntry = (
+  node: string,
+  model: Partial<IAutoFilmForgeApplication.IEntry["model"]> = {},
+): IAutoFilmForgeApplication.IEntry => ({
+  node,
+  model: { ...createModel(), id: node, ...model },
+});
 
 /**
  * A performance for `beat-1`: both knights advance in unison (one action, two
