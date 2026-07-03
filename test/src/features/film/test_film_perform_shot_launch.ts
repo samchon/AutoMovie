@@ -1,6 +1,7 @@
 import {
   IAutoFilmActionSynthesizer,
   performShot,
+  sampleClip,
   stageScene,
 } from "@autofilm/engine";
 import { IAutoFilmActionCall } from "@autofilm/interface";
@@ -13,6 +14,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
+import { nclose, vclose } from "../internal/predicates";
 
 /**
  * Like the shared content seam, but a `launch` produces no actor motion — it
@@ -143,6 +145,28 @@ export const test_film_perform_shot_launch = (): void => {
       vals[vals.length - 2]! - 0,
       vals[vals.length - 1]! - 0,
     ) < 5e-3,
+  );
+  // The flight is placed on the shot clock: it launches at the action's start
+  // (0.2 s), spans the shot, and — via sampleClip's clamp — holds at the arrow's
+  // staged origin before the loose rather than starting mid-air at shot t = 0.
+  const times = flight.tracks[0]!.times;
+  TestValidator.equals("the flight spans the shot", flight.duration, 2);
+  TestValidator.predicate(
+    "the flight launches at the action's start",
+    nclose(times[0]!, 0.2),
+  );
+  TestValidator.predicate(
+    "and lands within the shot",
+    times[times.length - 1]! > 0.2 && times[times.length - 1]! < 2,
+  );
+  const preLaunch = sampleClip(flight, 0).get("node:arrow:translation")!.value;
+  TestValidator.predicate(
+    "before the loose the arrow holds at its staged origin",
+    vclose(
+      { x: preLaunch[0]!, y: preLaunch[1]!, z: preLaunch[2]! },
+      { x: 0, y: 1.4, z: 0 },
+      1e-9,
+    ),
   );
   TestValidator.equals(
     "only the struck foe performs — the engine-scheduled react",
