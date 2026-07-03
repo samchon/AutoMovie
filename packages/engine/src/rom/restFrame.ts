@@ -24,6 +24,30 @@ export interface IAutoFilmRestFrame {
   twist?: IAutoFilmAxisFrame;
 }
 
+/**
+ * A **clinical** angle (what the ROM table and pose authors write) → the
+ * **rest-relative** angle the rig actually rotates by: `r = (clinical −
+ * neutral) / sign`. The inverse of {@link toClinicalAngle}. An undefined frame
+ * (or a `null` angle) is the identity, so non-mirrored axes pass through.
+ */
+export const toRigAngle = (
+  clinical: number | null,
+  frame: IAutoFilmAxisFrame | undefined,
+): number | null =>
+  clinical === null || frame === undefined
+    ? clinical
+    : (clinical - frame.neutral) / frame.sign;
+
+/**
+ * The **rest-relative** angle the rig rotates by → the **clinical** angle:
+ * `clinical = sign · r + neutral`. The inverse of {@link toRigAngle}.
+ */
+export const toClinicalAngle = (
+  rig: number | null,
+  frame: IAutoFilmAxisFrame | undefined,
+): number | null =>
+  rig === null || frame === undefined ? rig : frame.sign * rig + frame.neutral;
+
 const shift = (
   range: IAutoFilmAngleRange | null,
   frame: IAutoFilmAxisFrame | undefined,
