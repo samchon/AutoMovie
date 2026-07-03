@@ -1,6 +1,7 @@
 import {
   IAutoFilmJointAxes,
   IAutoFilmMotionSample,
+  IAutoFilmRestFrame,
   ISpringStep,
   clampPose,
   dampedSpring,
@@ -69,6 +70,15 @@ export class AutoFilmPlayer {
     private readonly clampToRom = false,
     /** Secondary-motion joints (tail, ears) driven with follow-through. */
     private readonly spring?: IAutoFilmSpringConfig,
+    /**
+     * Per-bone rest frames: read each sampled joint angle as **clinical** and
+     * map it into the rig's rest-relative space before articulating (e.g.
+     * abduction 180 raises either arm overhead regardless of side). Omit to
+     * treat angles as raw rig-space, the historical behaviour.
+     */
+    private readonly restFrames?: Partial<
+      Record<AutoFilmHumanoidBone, IAutoFilmRestFrame>
+    >,
   ) {}
 
   /** Swap the clip being played (e.g. transition to a new motion). */
@@ -84,7 +94,7 @@ export class AutoFilmPlayer {
       ? clampPose(sample.pose, this.skeleton)
       : sample.pose;
     if (this.spring !== undefined) pose = this.applySpring(pose, seconds);
-    applyPose(this.target, pose, this.skeleton, this.jointAxes);
+    applyPose(this.target, pose, this.skeleton, this.jointAxes, this.restFrames);
   }
 
   /**

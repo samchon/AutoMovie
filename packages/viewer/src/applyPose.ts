@@ -1,4 +1,8 @@
-import { IAutoFilmJointAxes, resolvePose } from "@autofilm/engine";
+import {
+  IAutoFilmJointAxes,
+  IAutoFilmRestFrame,
+  resolvePose,
+} from "@autofilm/engine";
 import {
   AutoFilmHumanoidBone,
   IAutoFilmPose,
@@ -17,6 +21,11 @@ import { IAutoFilmModelObject, applyTransform } from "./buildModel";
  * copies results onto `three.js` objects — keeping rendering a thin, swappable
  * layer over the deterministic core.
  *
+ * `restFrames` optionally reads each joint angle as **clinical** and maps it
+ * into the rig's rest-relative space before articulating (e.g. abduction 180
+ * raises either arm overhead regardless of side); omit it to treat the pose's
+ * angles as raw rig-space, the historical behaviour.
+ *
  * @author Samchon
  */
 export const applyPose = (
@@ -24,8 +33,9 @@ export const applyPose = (
   pose: IAutoFilmPose,
   skeleton: IAutoFilmSkeleton,
   jointAxes?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>,
+  restFrames?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmRestFrame>>,
 ): void => {
-  for (const r of resolvePose(pose, skeleton, jointAxes)) {
+  for (const r of resolvePose(pose, skeleton, jointAxes, restFrames)) {
     const bone = target.bones.get(r.bone);
     if (bone !== undefined)
       bone.quaternion.set(
