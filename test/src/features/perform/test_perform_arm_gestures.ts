@@ -15,6 +15,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, makePose } from "../internal/fixtures";
+import { nclose } from "../internal/predicates";
 
 const bone = (
   b: AutoFilmHumanoidBone,
@@ -83,18 +84,21 @@ const boneWorld = (
     .worldPosition;
 
 /**
- * `point` — the arm gesture the synthesiser rides `reachPose` for: an arm
- * extended toward the `at` target (reachPose clamps a far target onto the reach
- * shell, which is exactly a pointing arm). Left unclamped like `reach`, so an
- * impossible point fails the shot's ROM gate rather than the engine faking it.
+ * The reachPose arm gestures the synthesiser rides: `point` (an arm extended
+ * toward the `at` target and held) and `strike` (a jab thrown at `at`, then
+ * retracted). Both drop the world target into model space and solve the arm
+ * unclamped like `reach`, so an impossible reach fails the shot's ROM gate
+ * rather than the engine faking it.
  *
  * Scenarios:
  *
  * 1. `point at: exit` extends the right arm toward the far target: the right hand
  *    ends up markedly further along the shoulder→target direction than at rest,
  *    and the clip is a rest → extend → hold.
- * 2. `point` with no `at`, a rig-less context, and an unhandled arm/combat kind
- *    (`draw`) all synthesise nothing.
+ * 2. `strike at: exit` snaps the right fist toward the target (a jab) and retracts
+ *    it — rest → strike → rest.
+ * 3. `point`/`strike` with no `at`, a rig-less context, and an unhandled combat
+ *    kind (`draw`) all synthesise nothing.
  */
 export const test_perform_arm_gestures = (): void => {
   const synth = makeActorSynthesizer(new Map([["hero", ctx]]), nodes);
@@ -111,6 +115,42 @@ export const test_perform_arm_gestures = (): void => {
   TestValidator.predicate(
     "the right hand extends toward the target (+x)",
     pointedHand.x > restHand.x + 0.1,
+  );
+
+  // strike at the target: a jab — the right fist snaps toward it, then retracts.
+  const strike = synth(
+    gesture("strike", { at: { kind: "node", node: "exit" } }),
+    "hero",
+  );
+  TestValidator.predicate("strike produces a jab clip", strike !== null);
+  if (strike !== null) {
+    TestValidator.equals(
+      "rest → strike → rest (a jab)",
+      strike.keyframes.length,
+      3,
+    );
+    const restFist = boneWorld(sampleMotion(strike, 0).pose, "rightHand");
+    const peakFist = boneWorld(
+      sampleMotion(strike, strike.duration * 0.4).pose,
+      "rightHand",
+    );
+    const endFist = boneWorld(
+      sampleMotion(strike, strike.duration).pose,
+      "rightHand",
+    );
+    TestValidator.predicate(
+      "the fist snaps toward the target (+x)",
+      peakFist.x > restFist.x + 0.1,
+    );
+    TestValidator.predicate(
+      "and retracts to rest by the end",
+      nclose(endFist.x, restFist.x, 1e-6),
+    );
+  }
+  TestValidator.equals(
+    "strike with nothing to hit → null",
+    synth(gesture("strike"), "hero"),
+    null,
   );
 
   TestValidator.equals(
@@ -141,6 +181,14 @@ export const test_perform_arm_gestures = (): void => {
     "point with no right-arm chain → null",
     noRightArm(
       gesture("point", { at: { kind: "node", node: "exit" } }),
+      "hero",
+    ),
+    null,
+  );
+  TestValidator.equals(
+    "strike with no right-arm chain → null",
+    noRightArm(
+      gesture("strike", { at: { kind: "node", node: "exit" } }),
       "hero",
     ),
     null,
