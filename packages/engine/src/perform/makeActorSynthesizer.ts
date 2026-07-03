@@ -84,6 +84,7 @@ export const makeActorSynthesizer = (
         distance,
         ctx.speed,
         { x: dx, y: 0, z: dz },
+        action.faceTravel === true,
       );
     }
     if (action.verb === "hold")
