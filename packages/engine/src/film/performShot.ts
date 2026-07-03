@@ -1,5 +1,6 @@
 import {
   IAutoFilmActionCall,
+  IAutoFilmBlockingApplication,
   IAutoFilmCameraAction,
   IAutoFilmConstraintViolation,
   IAutoFilmMotion,
@@ -89,8 +90,15 @@ export const performShot = (props: {
   performance: IAutoFilmPerformanceApplication.IWrite;
   synthesize: IAutoFilmActionSynthesizer;
   skeleton: (node: string) => IAutoFilmSkeleton | null;
+  /**
+   * The beat's validated blocking (from `blockBeat`), when the pipeline runs
+   * the full stage ladder. Supplying it arms the coherence gates between intent
+   * and realization: matching beat and duration, every timing anchor covered by
+   * an action of its actor, and the camera intent honoured.
+   */
+  blocking?: IAutoFilmBlockingApplication.IWrite;
 }): IAutoFilmPerformedShot => {
-  const { script, staged, performance, synthesize, skeleton } = props;
+  const { script, staged, performance, synthesize, skeleton, blocking } = props;
   const out = new ViolationCollector();
 
   const beat = script.beats.find((b) => b.id === performance.beat);
@@ -186,6 +194,79 @@ export const performShot = (props: {
         `frame moves overlap — the previous move runs until ${end}s, but this one starts at ${frames[i + 1]!.action.start}s`,
         frames[i + 1]!.action.start,
       );
+  }
+
+  // Blocking coherence: when the beat was blocked, the performance must
+  // realize that plan, not another one. The beat and duration must match,
+  // every timing anchor must be covered by some action of its actor (an
+  // anchored key moment nobody performs is a dropped beat), and the camera
+  // intent must be honoured by the first frame move — or, for a static
+  // intent, a locked-off camera will do.
+  if (blocking !== undefined) {
+    if (blocking.beat !== performance.beat)
+      out.push(
+        "type",
+        "$input.beat",
+        `the performance realizes beat "${performance.beat}" but the blocking plans "${blocking.beat}"`,
+        performance.beat,
+      );
+    if (Math.abs(blocking.duration - performance.duration) > 1e-6)
+      out.push(
+        "range",
+        "$input.duration",
+        `the blocking fixed this beat at ${blocking.duration}s, but the performance runs ${performance.duration}s`,
+        performance.duration,
+      );
+
+    const spanOf = (action: IAutoFilmActionCall): [number, number] => [
+      action.start,
+      action.duration === "auto"
+        ? performance.duration
+        : Math.min(action.start + action.duration, performance.duration),
+    ];
+    for (const intent of blocking.actors)
+      for (const anchor of intent.anchors ?? []) {
+        const covered = stageActions.some((action) => {
+          const actors =
+            typeof action.actor === "string" ? [action.actor] : action.actor;
+          if (!actors.includes(intent.node)) return false;
+          const [from, to] = spanOf(action);
+          return anchor.t >= from - 1e-9 && anchor.t <= to + 1e-9;
+        });
+        if (!covered)
+          out.push(
+            "range",
+            base,
+            `anchor "${anchor.cue}" pins ${intent.node} at t=${anchor.t}s, but no action of that actor covers the instant`,
+            anchor.t,
+          );
+      }
+
+    const lead = frames[0];
+    if (lead === undefined) {
+      if (blocking.camera.move !== "static")
+        out.push(
+          "type",
+          base,
+          `the blocking asks for a "${blocking.camera.move}" camera, but no frame action authors it`,
+          blocking.camera.move,
+        );
+    } else {
+      if (lead.action.framing !== blocking.camera.framing)
+        out.push(
+          "type",
+          `${base}[${lead.index}].framing`,
+          `the blocking frames this beat "${blocking.camera.framing}", but the performance frames "${lead.action.framing}"`,
+          lead.action.framing,
+        );
+      if (lead.action.move !== blocking.camera.move)
+        out.push(
+          "type",
+          `${base}[${lead.index}].move`,
+          `the blocking moves the camera "${blocking.camera.move}", but the performance moves "${lead.action.move}"`,
+          lead.action.move,
+        );
+    }
   }
 
   if (liveCamera === null) {
