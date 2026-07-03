@@ -1,6 +1,7 @@
 import {
   IAutoFilmGait,
   IAutoFilmPose,
+  IAutoFilmSkeleton,
   IAutoFilmVector3,
 } from "@autofilm/interface";
 
@@ -38,4 +39,14 @@ export interface IAutoFilmActorContext {
 
   /** The pose the actor settles into for a `hold`. */
   restPose: IAutoFilmPose;
+
+  /**
+   * The actor's resolved skeleton geometry — the rig bones and their ROM
+   * constraints. Required only by the physics/IK verbs that measure or clamp
+   * against the body (`react` folds a flinch bounded by each joint's ROM); the
+   * gait/hold/lookAt/emote verbs need only the `skeleton` id, so a context
+   * built for those alone may omit it, and a physics verb with no `rig`
+   * synthesises nothing.
+   */
+  rig?: IAutoFilmSkeleton;
 }
