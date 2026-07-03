@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
     "start": "ts-node --transpile-only -P tsconfig.json src/index.ts",
-    "coverage": "cd .. && c8 --src packages/engine/src --src packages/forge/src --src packages/ingest/src --src packages/render/src --include 'packages/engine/src/**' --include 'packages/forge/src/**' --include 'packages/ingest/src/**' --include 'packages/render/src/**' --extension .ts --temp-directory /tmp/autofilm-c8 --reports-dir /tmp/autofilm-c8-report --reporter=text-summary --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 ts-node --transpile-only -P test/tsconfig.json test/src/index.ts"
+    "coverage": "cd .. && c8 --src packages/engine/src --src packages/forge/src --src packages/ingest/src --src packages/render/src --include \"packages/engine/src/**\" --include \"packages/forge/src/**\" --include \"packages/ingest/src/**\" --include \"packages/render/src/**\" --extension .ts --temp-directory node_modules/.cache/autofilm-c8 --reports-dir node_modules/.cache/autofilm-c8-report --reporter=text-summary --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 ts-node --transpile-only -P test/tsconfig.json test/src/index.ts"
   },
   "author": "Samchon",
   "license": "MIT",
