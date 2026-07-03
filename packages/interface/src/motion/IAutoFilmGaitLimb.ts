@@ -27,4 +27,15 @@ export interface IAutoFilmGaitLimb {
 
   /** Peak flexion swing (degrees) about the limb's neutral. */
   amplitude: number;
+
+  /**
+   * Center the swing oscillates around (degrees), default `0`. A symmetric limb
+   * (a hip, a shoulder) leaves this unset and swings `±amplitude` about zero; a
+   * limb that only bends one way needs a nonzero center to keep the whole swing
+   * on the anatomical side. A knee, whose flexion ROM is `[0, 150]°` and cannot
+   * hyperextend, walks with e.g. `{ neutral: 25, amplitude: 18 }` so its swing
+   * stays in `[7, 43]°` instead of crossing zero — the offset the ROM validator
+   * forces once you try to bend a knee at all.
+   */
+  neutral?: number;
 }
