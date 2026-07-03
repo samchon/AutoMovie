@@ -13,6 +13,7 @@ import { aimRotation } from "../kinematics/aimRotation";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { ViolationCollector } from "../validation/violation";
+import { lookRotation } from "./cameraMove";
 
 /**
  * Camera frustum bounds the staging schema does not ask the model for — the LLM
@@ -200,10 +201,7 @@ export const stageScene = (
       id: camera.node,
       transform: {
         translation: camera.position,
-        rotation: aimRotation(
-          FORWARD,
-          Vector3.subtract(target, camera.position),
-        ),
+        rotation: lookRotation(Vector3.subtract(target, camera.position)),
         scale: { x: 1, y: 1, z: 1 },
       },
       fovY: camera.fovDeg,

@@ -7,12 +7,60 @@ import {
   IAutoFilmVector3,
 } from "@autofilm/interface";
 
-import { aimRotation } from "../kinematics/aimRotation";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 
-/** Cameras look down local −Z (glTF convention). */
-const FORWARD: IAutoFilmVector3 = { x: 0, y: 0, z: -1 };
+/** World up — the horizon a camera keeps level. */
+const UP: IAutoFilmVector3 = { x: 0, y: 1, z: 0 };
+
+/**
+ * The rotation that points a camera's −Z down `direction` while keeping its
+ * horizon level (world-up stabilized) — what a shortest-arc `aimRotation`
+ * cannot do: the shortest arc from −Z rolls the frame on off-axis aims, which
+ * the demo's orbit shot exposed as a tilted horizon. Standard look-at basis (x
+ * = up × z, y = z × x) converted to a quaternion; aiming straight up/down
+ * degenerates the cross product, so +Z steps in as the reference.
+ */
+export const lookRotation = (
+  direction: IAutoFilmVector3,
+): IAutoFilmQuaternion => {
+  const z = Vector3.scale(Vector3.normalize(direction), -1); // camera +Z = back
+  let x = Vector3.cross(UP, z);
+  if (Vector3.length(x) < 1e-6) x = Vector3.cross({ x: 0, y: 0, z: 1 }, z);
+  x = Vector3.normalize(x);
+  const y = Vector3.cross(z, x);
+  // Basis → quaternion (Shepperd's method, w-branch first). The usual
+  // x-major branch is provably unreachable here: this basis keeps x
+  // horizontal, so x.x = z.z/h and y.y = h ≥ 0 (h = |(z.x, z.z)|), and
+  // x.x > y.y forces trace = x.x + y.y + z.z > 0 — the w-branch already
+  // took it. Only w / y-major / z-major remain.
+  const trace = x.x + y.y + z.z;
+  if (trace > 0) {
+    const s = Math.sqrt(trace + 1) * 2;
+    return Quaternion.normalize({
+      w: s / 4,
+      x: (y.z - z.y) / s,
+      y: (z.x - x.z) / s,
+      z: (x.y - y.x) / s,
+    });
+  }
+  if (y.y > z.z) {
+    const s = Math.sqrt(1 + y.y - x.x - z.z) * 2;
+    return Quaternion.normalize({
+      w: (z.x - x.z) / s,
+      x: (y.x + x.y) / s,
+      y: s / 4,
+      z: (z.y + y.z) / s,
+    });
+  }
+  const s = Math.sqrt(1 + z.z - x.x - y.y) * 2;
+  return Quaternion.normalize({
+    w: (x.y - y.x) / s,
+    x: (z.x + x.z) / s,
+    y: (z.y + y.z) / s,
+    z: s / 4,
+  });
+};
 
 /**
  * The framing grammar: how much vertical world-space the frame shows, as a
@@ -22,7 +70,7 @@ const FORWARD: IAutoFilmVector3 = { x: 0, y: 0, z: -1 };
 export const FRAMING_HEIGHT_FRACTION: Record<
   IAutoFilmCameraAction["framing"],
   number
-> = { wide: 4, full: 1.15, medium: 0.55, close: 0.28 };
+> = { wide: 4, full: 1.15, medium: 0.62, close: 0.28 };
 
 /**
  * Where on the subject the camera aims, as a fraction of its height: a close
@@ -31,7 +79,7 @@ export const FRAMING_HEIGHT_FRACTION: Record<
 export const FRAMING_AIM_FRACTION: Record<
   IAutoFilmCameraAction["framing"],
   number
-> = { wide: 0.5, full: 0.5, medium: 0.65, close: 0.85 };
+> = { wide: 0.5, full: 0.5, medium: 0.72, close: 0.85 };
 
 /** Stand-in height when the subject has no skeleton to measure. */
 export const DEFAULT_SUBJECT_HEIGHT = 1.7;
@@ -154,7 +202,7 @@ export const compileCameraMove = (props: {
     ): { pos: IAutoFilmVector3; rot: IAutoFilmQuaternion } => {
       const aim = aimOf(base);
       const pos = Vector3.add(aim, Vector3.scale(bearing, d));
-      return { pos, rot: aimRotation(FORWARD, Vector3.subtract(aim, pos)) };
+      return { pos, rot: lookRotation(Vector3.subtract(aim, pos)) };
     };
 
     switch (action.move) {
@@ -181,7 +229,7 @@ export const compileCameraMove = (props: {
           push(
             t0 + ((t1 - t0) * k) / ORBIT_SEGMENTS,
             pos,
-            aimRotation(FORWARD, Vector3.subtract(aim0, pos)),
+            lookRotation(Vector3.subtract(aim0, pos)),
           );
         }
         break;
@@ -206,10 +254,7 @@ export const compileCameraMove = (props: {
         push(
           Math.min(t0 + WHIP_SECONDS, t1),
           camera.transform.translation,
-          aimRotation(
-            FORWARD,
-            Vector3.subtract(aim0, camera.transform.translation),
-          ),
+          lookRotation(Vector3.subtract(aim0, camera.transform.translation)),
         );
         // Whip pans in place — the framed distance is not honored; `k` exists
         // only to keep the framing math total for future dolly-after-whip.
