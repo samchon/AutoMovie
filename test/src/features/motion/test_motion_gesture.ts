@@ -6,6 +6,8 @@ import {
 } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { nclose } from "../internal/predicates";
+
 const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
   bone: b,
   parent: null,
@@ -57,7 +59,10 @@ const maxAbs = (
  *    (flexion), shake turns it (twist), crouch folds the knees.
  * 3. A gesture stretches to the action's duration (a 2 s bow's last key lands at 2
  *    s).
- * 4. An arm/combat kind (`strike`, `wave`, `celebrate`) and any unknown kind
+ * 4. `jump` is a whole-body coil-and-leap: it folds the knees, arcs the root up to
+ *    a positive apex (and dips into a coil first), opens/closes grounded, and
+ *    stays ROM-legal — no arm abduction, so no left/right mirror needed.
+ * 5. An arm/combat kind (`strike`, `wave`, `celebrate`) and any unknown kind
  *    return null — the compiler skips them.
  */
 export const test_motion_gesture = (): void => {
@@ -113,6 +118,34 @@ export const test_motion_gesture = (): void => {
     "stretches to the duration",
     long.keyframes[long.keyframes.length - 1]!.time,
     2,
+  );
+
+  // jump — a whole-body coil-and-leap. Unlike the postural gestures it carries
+  // root translation (the ballistic rise), folds the knees on the coil/landing,
+  // opens and closes grounded, and stays ROM-legal.
+  const jump = gestureMotion("j", RIG.id, "jump", 1)!;
+  TestValidator.predicate("jump synthesises a clip", jump !== null);
+  TestValidator.equals(
+    "jump is ROM-legal",
+    validateMotion({ motion: jump, skeleton: RIG }).success,
+    true,
+  );
+  TestValidator.predicate(
+    "jump folds the knees on coil/landing",
+    maxAbs(jump, "leftLowerLeg", "flexion") > 30,
+  );
+  const rootYs = jump.keyframes.map((k) => k.pose.root?.translation.y ?? 0);
+  TestValidator.predicate(
+    "jump opens and closes grounded (root y = 0)",
+    nclose(rootYs[0]!, 0) && nclose(rootYs[rootYs.length - 1]!, 0),
+  );
+  TestValidator.predicate(
+    "jump arcs the root up to a positive apex",
+    Math.max(...rootYs) > 0.2,
+  );
+  TestValidator.predicate(
+    "jump dips into a coil before the leap",
+    Math.min(...rootYs) < 0,
   );
 
   for (const kind of ["strike", "wave", "celebrate", "somersault"])
