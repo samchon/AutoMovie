@@ -10,6 +10,7 @@ import { aimYawPitch } from "../kinematics/aimYawPitch";
 import { Vector3 } from "../math/Vector3";
 import { holdMotion } from "../motion/arrange";
 import { gaitMotion } from "../motion/gait";
+import { gestureMotion } from "../motion/gesture";
 import { locomoteMotion } from "../motion/locomote";
 import { reactMotion } from "../motion/react";
 import { IAutoFilmActorContext } from "./IAutoFilmActorContext";
@@ -41,6 +42,8 @@ const REACT_CHAIN = ["head", "neck", "chest", "spine"] as const;
  * - `hold` → the actor's rest pose held for the duration ({@link holdMotion});
  * - `lookAt` → the head turned to aim at a resolved target;
  * - `emote` → a face-region expression clip;
+ * - `gesture` → the postural gestures (bow/nod/shake/crouch) as ROM-safe trunk
+ *   and head clips ({@link gestureMotion}); the arm/combat kinds return null;
  * - `react` → a ROM-clamped flinch away from the blow ({@link reactMotion}),
  *   decomposed into the actor's frame so a front hit snaps the torso back and a
  *   side hit leans it; needs the context's `rig` (the flinch is bounded by
@@ -149,6 +152,17 @@ export const makeActorSynthesizer = (
         loop: false,
         keyframes: [frame(0), frame(duration)],
       };
+    }
+    if (action.verb === "gesture") {
+      // The postural gestures (bow/nod/shake/crouch) are engine-authored;
+      // the arm/combat ones return null (rig-specific or reach-dependent).
+      const duration = action.duration === "auto" ? 1 : action.duration;
+      return gestureMotion(
+        `${actor}:${action.kind}`,
+        ctx.skeleton,
+        action.kind,
+        duration,
+      );
     }
     if (action.verb === "react") {
       // A physics verb: the flinch is clamped to each joint's ROM, so it needs
