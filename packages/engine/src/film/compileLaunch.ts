@@ -6,7 +6,10 @@ import {
 } from "@autofilm/interface";
 
 import { Vector3 } from "../math/Vector3";
-import { solveBallisticLaunch } from "../physics/ballistic";
+import {
+  solveBallisticLaunch,
+  solveMovingLaunch,
+} from "../physics/ballistic";
 import { projectileAt, projectileTrajectory } from "../physics/projectile";
 
 /** The default fall the launch solves against — Earth gravity, world −Y. */
@@ -56,10 +59,12 @@ export interface IAutoFilmLaunchResult {
  * authored. Returns `null` when the target is out of range at that speed
  * (nothing to fly, nothing to hit).
  *
- * `target` is resolved to a single point by the caller; a static intercept
- * (leading a moving target is a follow-up on `projectileSphereHit`). Feed the
- * returned `clip` to the projectile node and fold `react` into the target's
- * action list before the performance compiles.
+ * `target` is the target's world point resolved by the caller. Pass `targetAt`
+ * as well to **lead a moving target** — the aim then solves against where the
+ * mover _will be_ (via {@link solveMovingLaunch}) rather than its start point,
+ * and `target` is only the fallback origin of the sightline. Feed the returned
+ * `clip` to the projectile node and fold `react` into the target's action list
+ * before the performance compiles.
  *
  * @author Samchon
  */
@@ -76,6 +81,13 @@ export const compileLaunch = (props: {
    * bakes; only the reaction is withheld).
    */
   targetNode: string | null;
+  /**
+   * The target's world position at flight-time `t`, when it moves during the
+   * shot (its animated base plus root travel). Supplied, the aim **leads** the
+   * mover to the intercept ({@link solveMovingLaunch}); omitted, the launch is
+   * a static intercept on `target`.
+   */
+  targetAt?: (t: number) => IAutoFilmVector3;
   /** Constant fall; defaults to Earth gravity along world −Y. */
   gravity?: IAutoFilmVector3;
   /** Flat `direct` shot (default) or lobbed `high` arc. */
@@ -87,13 +99,10 @@ export const compileLaunch = (props: {
   const gravity = props.gravity ?? DEFAULT_GRAVITY;
   const arc = props.arc ?? "direct";
 
-  const solution = solveBallisticLaunch(
-    origin,
-    target,
-    action.speed,
-    gravity,
-    arc,
-  );
+  const solution =
+    props.targetAt !== undefined
+      ? solveMovingLaunch(origin, props.targetAt, action.speed, gravity, arc)
+      : solveBallisticLaunch(origin, target, action.speed, gravity, arc);
   if (solution === null) return null; // out of range at this speed
 
   const projectile = { origin, velocity: solution.velocity, gravity };
@@ -110,10 +119,12 @@ export const compileLaunch = (props: {
     // Where the blow comes from: one meter upstream along the incoming
     // velocity, so `target − from` points down the arrow's travel and the
     // synthesiser recoils the body that way (up-and-back for a lobbed shot,
-    // straight back for a flat one). Degenerate velocity → aim from the origin.
+    // straight back for a flat one). Degenerate velocity → aim from the origin
+    // to the impact point (the met point when leading a mover, else the target).
+    const aimRef = props.targetAt !== undefined ? landing.position : target;
     const incoming =
       Vector3.length(landing.velocity) < 1e-9
-        ? Vector3.normalize(Vector3.subtract(target, origin))
+        ? Vector3.normalize(Vector3.subtract(aimRef, origin))
         : Vector3.normalize(landing.velocity);
     react = {
       verb: "react",

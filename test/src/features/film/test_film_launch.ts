@@ -42,6 +42,9 @@ const launch = (
  * 7. A vertical lob to exactly its apex (under a custom gravity) arrives with zero
  *    speed — the degenerate case where the incoming direction falls back to the
  *    sightline, so the reaction still has a well-formed `from`.
+ * 8. With `targetAt`, the aim **leads a moving target**: against a foe sliding
+ *    downrange, the baked flight lands where the target will be — past its start
+ *    point — and the react is still timed to the computed contact.
  */
 export const test_film_launch = (): void => {
   const origin: IAutoFilmVector3 = { x: 0, y: 1.6, z: 0 };
@@ -214,5 +217,35 @@ export const test_film_launch = (): void => {
     "onHit without unbalance carries undefined through",
     apex.react!.unbalance,
     undefined,
+  );
+
+  // 8. leading a MOVING target: with `targetAt` sampling a foe sliding downrange
+  // (+x at 4 m/s from x = 10), the aim leads it — the baked flight lands where
+  // the target WILL be (targetAt(hitTime)), past its start point, and the react
+  // is still timed to the computed contact.
+  const startAt: IAutoFilmVector3 = { x: 10, y: 1.4, z: 0 };
+  const slide = (t: number): IAutoFilmVector3 => ({
+    x: startAt.x + 4 * t,
+    y: startAt.y,
+    z: startAt.z,
+  });
+  const led = compileLaunch({
+    action: launch({ speed: 24, onHit: { force: 0.6 } }),
+    origin,
+    target: startAt,
+    targetNode: "foe",
+    targetAt: slide,
+  })!;
+  TestValidator.predicate(
+    "the led flight lands where the moving target will be",
+    vclose(led.hitPoint, slide(led.hitTime), 2e-3),
+  );
+  TestValidator.predicate(
+    "leading a +x mover aims past its start point",
+    led.hitPoint.x > startAt.x + 1e-3,
+  );
+  TestValidator.predicate(
+    "the moving-target react is timed to the computed contact",
+    led.react !== null && nclose(led.react.start, 0.5 + led.hitTime),
   );
 };
