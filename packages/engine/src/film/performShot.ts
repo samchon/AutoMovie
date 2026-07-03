@@ -12,6 +12,7 @@ import {
   IAutoFilmVector3,
 } from "@autofilm/interface";
 
+import { HUMANOID_JOINT_AXES } from "../kinematics/humanoidJointAxes";
 import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
 import {
@@ -27,6 +28,7 @@ import {
   compileCameraMove,
   computeRestHeight,
 } from "./cameraMove";
+import { compileAttach } from "./compileAttach";
 import { compileLaunch } from "./compileLaunch";
 import { IAutoFilmStagedSet } from "./stageScene";
 
@@ -91,6 +93,12 @@ export namespace IAutoFilmPerformedShot {
  * the aim must resolve to a point, and the shot must reach the target at the
  * given speed — each an input violation otherwise.
  *
+ * `attachTo` actions are compiled through {@link compileAttach} once the parent
+ * pose is known: the coupled child (a prop, not a rig) gets a shot
+ * `objectMotion` that rides the parent's bone in scene space each frame. The
+ * parent must be a staged, rigged node carrying the named bone — each an input
+ * violation otherwise.
+ *
  * @param props.skeleton Rig lookup for ROM validation; return null for a node
  *   that has no skeleton (its clip skips ROM).
  */
@@ -151,6 +159,12 @@ export const performShot = (props: {
     origin: IAutoFilmVector3;
     target: IAutoFilmVector3;
     targetNode: string | null;
+  }[] = [];
+  // Attach jobs — the parent must be a staged, rigged node carrying the target
+  // bone; the child's follow-clip is baked after the parent's pose compiles.
+  const attachments: {
+    action: IAutoFilmActionCall & { verb: "attachTo" };
+    index: number;
   }[] = [];
   actions.forEach((action, i) => {
     const actors =
@@ -228,6 +242,35 @@ export const performShot = (props: {
             target,
             targetNode: action.at.kind === "node" ? action.at.node : null,
           });
+      } else if (action.verb === "attachTo") {
+        // The child rides a bone of the parent, so the parent must be a staged,
+        // rigged node carrying that bone. The child's follow-clip is baked
+        // after the parent's pose compiles (it samples that motion).
+        const parentRig = nodeIds.has(action.parent)
+          ? skeleton(action.parent)
+          : null;
+        if (!nodeIds.has(action.parent))
+          out.push(
+            "type",
+            `${base}[${i}].parent`,
+            `an attachTo parent "${action.parent}" must be a staged scene node`,
+            action.parent,
+          );
+        else if (parentRig === null)
+          out.push(
+            "type",
+            `${base}[${i}].parent`,
+            `an attachTo parent "${action.parent}" must have a rig to attach a bone of`,
+            action.parent,
+          );
+        else if (!parentRig.bones.some((b) => b.bone === action.bone))
+          out.push(
+            "type",
+            `${base}[${i}].bone`,
+            `bone "${action.bone}" is not on ${action.parent}'s skeleton`,
+            action.bone,
+          );
+        else attachments.push({ action, index: i });
       }
     }
   });
@@ -388,6 +431,42 @@ export const performShot = (props: {
         });
   }
   if (out.items.length > 0) return { success: false, violations: out.items };
+
+  // Attach: bake each coupled child's follow-clip now that the parent's pose
+  // has compiled. The child rides the parent's bone in scene space (staged
+  // placement ∘ per-frame FK), resolved with the same joint axes the renderer
+  // poses the parent by; a parent that only holds rest yields a static child.
+  for (const job of attachments) {
+    const parentNode = staged.scene.nodes.find(
+      (n) => n.id === job.action.parent,
+    )!;
+    const parentRig = skeleton(job.action.parent)!;
+    const end =
+      job.action.duration === "auto"
+        ? performance.duration
+        : Math.min(
+            job.action.start + job.action.duration,
+            performance.duration,
+          );
+    const children =
+      typeof job.action.actor === "string"
+        ? [job.action.actor]
+        : job.action.actor;
+    for (const child of children)
+      objectMotions.push(
+        compileAttach({
+          child,
+          bone: job.action.bone,
+          parentTransform: parentNode.transform,
+          parentSkeleton: parentRig,
+          parentMotion: motions[job.action.parent],
+          start: job.action.start,
+          duration: end - job.action.start,
+          shotDuration: performance.duration,
+          jointAxes: HUMANOID_JOINT_AXES,
+        }),
+      );
+  }
 
   // Compile the live camera's move from its frame actions. Subjects resolve
   // against the staged placements; a node subject's height is measured from
