@@ -229,15 +229,19 @@ export const compileCameraMove = (props: {
         break;
       }
       case "orbit": {
+        // Ease the swept angle in and out (not the radius or the endpoints): the
+        // orbit creeps off its mark, accelerates through the mid-arc, and settles
+        // onto the far bearing — a reveal orbit, not a turntable at constant rate.
         for (let k = 0; k <= ORBIT_SEGMENTS; ++k) {
+          const p = k / ORBIT_SEGMENTS;
           const swing = Quaternion.fromAxisAngle(
             { x: 0, y: 1, z: 0 },
-            (ORBIT_DEGREES * k) / ORBIT_SEGMENTS,
+            ORBIT_DEGREES * ease("easeInOut", p),
           );
           const u = Quaternion.rotateVector(swing, bearing);
           const pos = Vector3.add(aim0, Vector3.scale(u, distance));
           push(
-            t0 + ((t1 - t0) * k) / ORBIT_SEGMENTS,
+            t0 + (t1 - t0) * p,
             pos,
             lookRotation(Vector3.subtract(aim0, pos)),
           );
