@@ -1,4 +1,5 @@
 import {
+  AutoFilmHumanoidBone,
   IAutoFilmPose,
   IAutoFilmQuaternion,
   IAutoFilmSkeleton,
@@ -7,6 +8,7 @@ import {
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { IAutoFilmRestFrame } from "../rom/restFrame";
 import { aimRotation } from "./aimRotation";
 import { decomposeJointRotation } from "./decomposeJointRotation";
 import { HUMANOID_JOINT_AXES } from "./humanoidJointAxes";
@@ -44,6 +46,7 @@ export const reachPose = (
   skeleton: IAutoFilmSkeleton,
   side: "left" | "right",
   target: IAutoFilmVector3,
+  restFrames?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmRestFrame>>,
 ): IAutoFilmPose | null => {
   const upperName = side === "left" ? "leftUpperArm" : "rightUpperArm";
   const lowerName = side === "left" ? "leftLowerArm" : "rightLowerArm";
@@ -121,11 +124,19 @@ export const reachPose = (
     joints: [
       {
         bone: upperName,
-        ...decomposeJointRotation(articU, HUMANOID_JOINT_AXES[upperName]),
+        ...decomposeJointRotation(
+          articU,
+          HUMANOID_JOINT_AXES[upperName],
+          restFrames?.[upperName],
+        ),
       },
       {
         bone: lowerName,
-        ...decomposeJointRotation(articL, HUMANOID_JOINT_AXES[lowerName]),
+        ...decomposeJointRotation(
+          articL,
+          HUMANOID_JOINT_AXES[lowerName],
+          restFrames?.[lowerName],
+        ),
       },
     ],
   };
