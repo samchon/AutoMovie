@@ -15,7 +15,9 @@ export type AutoFilmGenericGesture =
   | "kick"
   | "stagger"
   | "wave"
-  | "celebrate";
+  | "celebrate"
+  | "draw"
+  | "throw";
 
 const GENERIC = new Set<string>([
   "bow",
@@ -26,11 +28,14 @@ const GENERIC = new Set<string>([
   "stagger",
   "wave",
   "celebrate",
+  "draw",
+  "throw",
 ]);
 
 // A joint stop across the three articulation axes (unset axes stay null). The
-// arm gestures (wave/celebrate) abduct; raising an arm overhead is −abduction on
-// the left and +abduction on the right (the shared axis, mirrored ROM per side).
+// arm gestures are authored in **clinical** space (abduction 0 = arm down, 90 =
+// horizontal, 180 = overhead — the same value raises either arm); the per-side
+// rest-frame remap that fits it to a rig lives in the render, not these angles.
 const j = (
   bone: AutoFilmHumanoidBone,
   axes: Partial<Pick<IAutoFilmJointPose, "flexion" | "abduction" | "twist">>,
@@ -170,6 +175,63 @@ const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
       [0.7, celebratePose(1)],
       [1, []],
     ],
+    // Draw a bow (right-handed): the left arm reaches forward to hold the bow
+    // (clinical flexion raises it to the horizontal, elbow near-straight), the
+    // right hand draws the string back to the cheek (shoulder abducted to
+    // shoulder height, elbow folded hard) and holds, then the loose springs the
+    // draw hand forward.
+    draw: [
+      [0, []],
+      [0.3, drawPose()],
+      [0.62, drawPose()],
+      [
+        0.82,
+        [
+          j("leftUpperArm", { flexion: 86, abduction: 8 }),
+          j("rightUpperArm", { abduction: 70, flexion: 34 }),
+          j("rightLowerArm", { flexion: 30 }),
+        ],
+      ],
+      [1, []],
+    ],
+    // An overhand throw (right-handed): the throwing arm cocks up-and-back with
+    // the elbow loaded while the trunk coils away and the lead (left) arm points
+    // out for aim; then the arm whips forward and down as the trunk uncoils and
+    // the lead arm pulls in. A stylised sagittal throw, all inside the humanoid
+    // ROM. Both arms are posed so the off arm never hangs in the T-pose rest.
+    throw: [
+      [0, []],
+      [
+        0.3,
+        [
+          j("rightUpperArm", { abduction: 92, flexion: -46 }),
+          j("rightLowerArm", { flexion: 108 }),
+          j("leftUpperArm", { abduction: 18, flexion: 62 }),
+          j("leftLowerArm", { flexion: 16 }),
+          j("spine", { flexion: -8, twist: -22 }),
+        ],
+      ],
+      [
+        0.52,
+        [
+          j("rightUpperArm", { abduction: 104, flexion: 60 }),
+          j("rightLowerArm", { flexion: 16 }),
+          j("leftUpperArm", { abduction: 24, flexion: -22 }),
+          j("leftLowerArm", { flexion: 24 }),
+          j("spine", { flexion: 16, twist: 16 }),
+        ],
+      ],
+      [
+        0.74,
+        [
+          j("rightUpperArm", { abduction: 62, flexion: 30 }),
+          j("rightLowerArm", { flexion: 36 }),
+          j("leftUpperArm", { abduction: 20, flexion: -10 }),
+          j("spine", { flexion: 12, twist: 4 }),
+        ],
+      ],
+      [1, []],
+    ],
   };
 
 /**
@@ -181,6 +243,17 @@ function celebratePose(s: number): IAutoFilmJointPose[] {
   return [
     j("leftUpperArm", { abduction: 150 * s, flexion: 10 }),
     j("rightUpperArm", { abduction: 150 * s, flexion: 10 }),
+  ];
+}
+
+/** The held draw stance: bow arm forward, string hand back at the cheek. */
+function drawPose(): IAutoFilmJointPose[] {
+  return [
+    j("leftUpperArm", { flexion: 88, abduction: 8 }),
+    j("leftLowerArm", { flexion: 8 }),
+    j("rightUpperArm", { abduction: 84, flexion: 24 }),
+    j("rightLowerArm", { flexion: 118 }),
+    j("head", { twist: 12 }),
   ];
 }
 
@@ -241,11 +314,12 @@ function jumpPose(
  * `crouch` are single-axis trunk/head oscillations, `kick` is a right-leg front
  * snap, `stagger` lurches the trunk off balance and catches it, `wave` raises
  * the right arm and swings the forearm, `celebrate` throws both arms up in a V,
- * and `jump` is a whole-body coil-and-leap carrying root translation. The arm
- * gestures abduct (the raise is −abduction on the left, +abduction on the right
- * — the shared axis, mirrored ROM per side). The remaining combat gestures
- * (`strike`, `draw`, `throw`, …) need reach or rig-specific content and return
- * `null`, left to a richer synthesiser.
+ * `draw` pulls a bow, `throw` whips an overhand throw, and `jump` is a
+ * whole-body coil-and-leap carrying root translation. The arm gestures are
+ * authored in clinical space (abduction 0 = down, 90 = horizontal, 180 =
+ * overhead — the same value raises either arm), read up through the rig's rest
+ * frame at render. `strike` (a targeted jab) needs reach content and returns
+ * `null` here, left to the richer synthesiser.
  *
  * @author Samchon
  */

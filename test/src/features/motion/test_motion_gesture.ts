@@ -53,6 +53,8 @@ const GENERIC = [
   "stagger",
   "wave",
   "celebrate",
+  "draw",
+  "throw",
 ] as const;
 
 const maxAbs = (
@@ -67,17 +69,18 @@ const maxAbs = (
   );
 
 /**
- * `gestureMotion` — the postural half of the harness `gesture` verb. The four
- * trunk-and-head gestures are engine-authored, single-axis, and hand-kept
- * inside the humanoid ROM; the arm/combat kinds are left to a richer
+ * `gestureMotion` — the postural/whole-body half of the harness `gesture` verb.
+ * The trunk/head/leg gestures are single-axis oscillations; the arm gestures
+ * (wave/celebrate/draw/throw) are authored in clinical space and read up through
+ * the rig's rest frame at render. All are engine-authored and hand-kept inside
+ * the humanoid ROM; only the targeted `strike` jab is left to a richer
  * synthesiser.
  *
  * Scenarios:
  *
- * 1. Each of bow/nod/shake/crouch/kick/wave/celebrate synthesises a non-empty clip
- *    that opens and closes on the neutral pose (returns to rest) and validates
- *    against the real ROM — the arms carry the stickman's mirrored abduction
- *    override, every other bone the default anatomical table.
+ * 1. Each generic kind synthesises a non-empty clip that opens and closes on the
+ *    neutral pose (returns to rest) and validates against the default anatomical
+ *    ROM — the arms too, since the clinical angles live inside that table.
  * 2. The gestures move the right joint: bow flexes the spine, nod dips the head
  *    (flexion), shake turns it (twist), crouch folds the knees, kick raises the
  *    leg (hip flexion) and snaps the knee, stagger leans the trunk (spine
@@ -89,9 +92,11 @@ const maxAbs = (
  *    stays ROM-legal — no arm abduction, so no left/right mirror needed.
  * 5. The arm gestures abduct in clinical space: `wave` raises the right arm
  *    (+abduction) and swings the forearm; `celebrate` throws both arms up with
- *    the same positive abduction on each side — no per-side mirror.
- * 6. The remaining combat kinds (`strike`, `draw`, `throw`) and any unknown kind
- *    return null — the compiler skips them.
+ *    the same positive abduction on each side — no per-side mirror. `draw` reaches
+ *    the bow arm forward and folds the string arm back; `throw` winds the arm
+ *    back then whips it forward while the trunk coils.
+ * 6. Only `strike` (a targeted jab) and unknown kinds return null — the compiler
+ *    skips them for the reach-based synthesiser.
  */
 export const test_motion_gesture = (): void => {
   for (const kind of GENERIC) {
@@ -202,6 +207,30 @@ export const test_motion_gesture = (): void => {
       ),
   );
 
+  // draw — the bow arm reaches forward (left-arm flexion) and the string hand
+  // folds back to the cheek (right forearm flexion).
+  const draw = gestureMotion("d", RIG.id, "draw", 1)!;
+  TestValidator.predicate(
+    "draw reaches the bow arm forward and folds the string arm",
+    maxAbs(draw, "leftUpperArm", "flexion") > 60 &&
+      maxAbs(draw, "rightLowerArm", "flexion") > 90,
+  );
+
+  // throw — the right arm cocks back (negative upper-arm flexion) then whips
+  // forward (positive), and the trunk coils on its twist.
+  const thrown = gestureMotion("t", RIG.id, "throw", 1)!;
+  const throwArmFlex = thrown.keyframes.map(
+    (k) => k.pose.joints.find((jj) => jj.bone === "rightUpperArm")?.flexion ?? 0,
+  );
+  TestValidator.predicate(
+    "throw winds the arm back then whips it forward",
+    Math.min(...throwArmFlex) < -20 && Math.max(...throwArmFlex) > 40,
+  );
+  TestValidator.predicate(
+    "throw coils the trunk on its twist",
+    maxAbs(thrown, "spine", "twist") > 15,
+  );
+
   const long = gestureMotion("bow", RIG.id, "bow", 2)!;
   TestValidator.equals(
     "stretches to the duration",
@@ -237,7 +266,7 @@ export const test_motion_gesture = (): void => {
     Math.min(...rootYs) < 0,
   );
 
-  for (const kind of ["strike", "draw", "throw", "somersault"])
+  for (const kind of ["strike", "somersault"])
     TestValidator.equals(
       `${kind} is not engine-authored (null)`,
       gestureMotion("x", RIG.id, kind, 1),
