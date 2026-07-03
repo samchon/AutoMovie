@@ -1,5 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   IAutoFilmActorContext,
   cutSequence,
   makeActorSynthesizer,
@@ -22,19 +23,22 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
 // The whole-body `jump` gesture on screen: a figure coils, leaps (the pose
 // root arcs up on Y), tucks its legs at the apex, and absorbs the landing —
-// engine-authored, ROM-safe, no arm abduction. Deterministic via renderAt(t).
+// then throws both arms overhead in a celebration. The celebrate gesture is
+// authored in clinical space (abduction 180 = straight up, no per-side mirror);
+// the player is handed HUMANOID_REST_FRAME so it reads those angles up. Engine-
+// authored, ROM-safe, deterministic via renderAt(t).
 
 const script: IAutoFilmScriptApplication.IWrite = {
   type: "write",
-  logline: "A figure jumps.",
-  theme: "a coil and a leap",
+  logline: "A figure jumps, then celebrates.",
+  theme: "a coil, a leap, and a cheer",
   cast: [{ node: "jumper", character: "the jumper", modelRef: "stickman" }],
   beats: [
     {
       id: "leap",
       name: "the leap",
-      summary: "the figure coils and jumps twice",
-      durationHint: 3,
+      summary: "the figure jumps twice, then throws its arms up",
+      durationHint: 5,
     },
   ],
 };
@@ -65,7 +69,7 @@ const staging: IAutoFilmStagingApplication.IWrite = {
 const performance: IAutoFilmPerformanceApplication.IWrite = {
   type: "write",
   beat: "leap",
-  plan: "two jumps back to back, whole-body.",
+  plan: "two jumps back to back, then both arms thrown up in a cheer.",
   draft: [
     {
       verb: "gesture",
@@ -83,9 +87,17 @@ const performance: IAutoFilmPerformanceApplication.IWrite = {
       kind: "jump",
       region: "fullBody",
     },
+    {
+      verb: "gesture",
+      actor: "jumper",
+      start: 3.1,
+      duration: 1.4,
+      kind: "celebrate",
+      region: "upperBody",
+    },
   ],
-  revise: { review: "two clean leaps.", final: null },
-  duration: 3,
+  revise: { review: "two clean leaps into a cheer.", final: null },
+  duration: 4.6,
 };
 
 // ── rigs + the content seam ──────────────────────────────────────────────────
@@ -183,6 +195,9 @@ const playersByShot = new Map(
         rigOf[p.node as keyof typeof rigOf].skeleton,
         motionsByShot.get(shot.id)![p.node]!,
         HUMANOID_JOINT_AXES,
+        false,
+        undefined,
+        HUMANOID_REST_FRAME,
       ),
     })),
   ]),
