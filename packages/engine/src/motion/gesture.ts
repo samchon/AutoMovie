@@ -13,6 +13,7 @@ export type AutoFilmGenericGesture =
   | "shake"
   | "crouch"
   | "kick"
+  | "stagger"
   | "wave"
   | "celebrate";
 
@@ -22,6 +23,7 @@ const GENERIC = new Set<string>([
   "shake",
   "crouch",
   "kick",
+  "stagger",
   "wave",
   "celebrate",
 ]);
@@ -104,6 +106,31 @@ const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
           j("spine", { flexion: -5 }),
         ],
       ],
+      [1, []],
+    ],
+    // A stagger: the trunk lurches off balance (spine bends and leans to one
+    // side), a leg braces, then overcorrects the other way and settles — a
+    // trunk/leg loss of balance, no arm abduction. All within humanoid ROM
+    // (spine flexion ≤80/extension ≥−30, abduction ±35).
+    stagger: [
+      [0, []],
+      [
+        0.2,
+        [
+          j("spine", { flexion: 18, abduction: 24 }),
+          j("rightUpperLeg", { flexion: 30 }),
+          j("rightLowerLeg", { flexion: 22 }),
+        ],
+      ],
+      [
+        0.5,
+        [
+          j("spine", { flexion: 6, abduction: -20 }),
+          j("leftUpperLeg", { flexion: 24 }),
+          j("leftLowerLeg", { flexion: 16 }),
+        ],
+      ],
+      [0.75, [j("spine", { flexion: 8, abduction: 6 })]],
       [1, []],
     ],
     // A one-arm wave: raise the right arm overhead (+abduction) and swing the
@@ -208,12 +235,13 @@ function jumpPose(
  * Synthesise a **postural or whole-body gesture** — the trunk/leg half of the
  * harness `gesture` verb — into a short ROM-safe clip. `bow`/`nod`/`shake`/
  * `crouch` are single-axis trunk/head oscillations, `kick` is a right-leg front
- * snap, `wave` raises the right arm and swings the forearm, `celebrate` throws
- * both arms up in a V, and `jump` is a whole-body coil-and-leap carrying root
- * translation. The arm gestures abduct (the raise is −abduction on the left,
- * +abduction on the right — the shared axis, mirrored ROM per side). The
- * remaining combat gestures (`strike`, `draw`, `throw`, …) need reach or
- * rig-specific content and return `null`, left to a richer synthesiser.
+ * snap, `stagger` lurches the trunk off balance and catches it, `wave` raises
+ * the right arm and swings the forearm, `celebrate` throws both arms up in a V,
+ * and `jump` is a whole-body coil-and-leap carrying root translation. The arm
+ * gestures abduct (the raise is −abduction on the left, +abduction on the right
+ * — the shared axis, mirrored ROM per side). The remaining combat gestures
+ * (`strike`, `draw`, `throw`, …) need reach or rig-specific content and return
+ * `null`, left to a richer synthesiser.
  *
  * @author Samchon
  */
