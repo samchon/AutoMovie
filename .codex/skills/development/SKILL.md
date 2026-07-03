@@ -23,7 +23,7 @@ Run with `pnpm --filter @autofilm/test start`; type-check with `pnpm --filter @a
 
 ## Coverage is always 100%
 
-Engine coverage is held at **100% on statements, branches, functions, and lines** at all times. Measure with `pnpm --filter @autofilm/test coverage` (c8 writes only to `/tmp`; never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). The `test` CI workflow gates this — a drop fails the build.
+Engine coverage is held at **100% on statements, branches, functions, and lines** at all times. Measure with `pnpm --filter @autofilm/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). The `test` CI workflow gates this — a drop fails the build.
 
 **100% is earned by testing, not by hiding code.** A suite of happy paths that reaches every line is not 100% correctness:
 
