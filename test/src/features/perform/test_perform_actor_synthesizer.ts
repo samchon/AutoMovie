@@ -1,7 +1,9 @@
 import {
   IAutoFilmActorContext,
+  Quaternion,
   compilePerformance,
   makeActorSynthesizer,
+  sampleMotion,
 } from "@autofilm/engine";
 import {
   IAutoFilmActionCall,
@@ -12,7 +14,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { nclose, vclose } from "../internal/predicates";
 
 const WALK: IAutoFilmGait = {
   name: "walk",
@@ -93,7 +95,9 @@ const door: IAutoFilmActionTarget = { kind: "node", node: "door" };
  * Scenarios:
  *
  * 1. `locomote` to a resolvable point travels the gait that far at the actor's
- *    speed (a non-looping clip whose length is the covered cycles).
+ *    speed (a non-looping clip whose length is the covered cycles); a turned
+ *    actor's travel is baked in model space so it reaches the world destination
+ *    once the renderer applies its staged facing.
  * 2. `locomote` to a relative target (no positional point) — or to its own spot —
  *    steps in place: the looping one-cycle gait.
  * 3. An unmatched gait, a non-synthesised verb, and an unknown actor → null.
@@ -113,6 +117,32 @@ export const test_perform_actor_synthesizer = (): void => {
   TestValidator.predicate(
     "travel length covers the 5m at 1 m/s (5 cycles of period 1)",
     nclose(trip!.duration, 5),
+  );
+
+  // 1b. a turned actor's travel is baked in *model* space: the renderer applies
+  // the pose root under the node's staged facing, so composing that facing with
+  // the baked root must reach the world destination — not a path rotated off
+  // the heading. Facing +90°, walking to a point 5 m along world +X.
+  const turned = makeActorSynthesizer(
+    new Map<string, IAutoFilmActorContext>([
+      ["hero", { ...ctx, facingDeg: 90 }],
+    ]),
+    nodes,
+  );
+  const worldDest: IAutoFilmVector3 = { x: 5, y: 0, z: 0 };
+  const turnedTrip = turned(
+    locomote("walk", { kind: "point", point: worldDest }),
+    "hero",
+  )!;
+  const finalRoot = sampleMotion(turnedTrip, turnedTrip.duration).pose.root!
+    .translation;
+  const rendered = Quaternion.rotateVector(
+    Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, 90),
+    finalRoot,
+  );
+  TestValidator.predicate(
+    "a turned actor's baked travel, under its facing, reaches the world destination",
+    vclose(rendered, worldDest, 1e-9),
   );
 
   // 2a. relative target → step in place (looping one-cycle gait)

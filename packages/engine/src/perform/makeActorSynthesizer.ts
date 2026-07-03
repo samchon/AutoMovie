@@ -124,16 +124,19 @@ export const makeActorSynthesizer = (
       );
       const dest = resolveTargetPoint(action.to, nodes);
       if (dest === null) return cycle; // relative/unresolved → step in place
-      const dx = dest.x - ctx.position.x;
-      const dz = dest.z - ctx.position.z;
-      const distance = Math.hypot(dx, dz);
+      // Travel is baked onto the pose root, which the renderer applies in the
+      // actor's model frame (under its staged facing). So aim it in model space
+      // — undo the facing — and the composed render carries it to the world
+      // destination; a turned actor would otherwise walk off its heading.
+      const local = toModelSpace(dest, ctx.position, ctx.facingDeg);
+      const distance = Math.hypot(local.x, local.z);
       if (distance < 1e-6) return cycle; // already there → step in place
       return locomoteMotion(
         `${actor}:${action.gait}:travel`,
         cycle,
         distance,
         ctx.speed,
-        { x: dx, y: 0, z: dz },
+        { x: local.x, y: 0, z: local.z },
         action.faceTravel === true,
       );
     }
