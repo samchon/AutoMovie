@@ -1,9 +1,4 @@
-import {
-  DEFAULT_HUMANOID_ROM,
-  HUMANOID_REST_FRAME,
-  aimRotation,
-  restRelativeConstraint,
-} from "@autofilm/engine";
+import { DEFAULT_HUMANOID_ROM, aimRotation } from "@autofilm/engine";
 import {
   AutoFilmHumanoidBone,
   AutoFilmPrimitiveShape,
@@ -104,19 +99,17 @@ const bone = (
   parent: AutoFilmHumanoidBone | null,
   rest: IAutoFilmTransform,
 ): IAutoFilmBone => {
-  // each joint carries its anatomical ROM (the engine validates/clamps against
-  // it — the core differentiator), reconciled to the T-pose rest where the
-  // shoulders need it so the gamut is symmetric per side
+  // each joint carries its anatomical ROM in **clinical** space (abduction 0 =
+  // arm down, 90 = horizontal, 180 = overhead — the engine validates/clamps
+  // against it, the core differentiator). The per-side rest-frame remap that
+  // reconciles clinical to this T-pose rig lives in the render (the player's
+  // HUMANOID_REST_FRAME), not baked into the constraint.
   const rom = DEFAULT_HUMANOID_ROM[name] ?? null;
-  const frame = HUMANOID_REST_FRAME[name];
   return {
     bone: name,
     parent,
     rest,
-    constraint:
-      rom !== null && frame !== undefined
-        ? restRelativeConstraint(rom, frame)
-        : rom,
+    constraint: rom,
   };
 };
 
