@@ -41,8 +41,31 @@ export const test_film_perform_shot_valid = (): void => {
   TestValidator.equals("shot name", performed.shot.name, "the charge");
   TestValidator.equals("shot scene", performed.shot.scene, "scene-duel");
   TestValidator.equals("live camera", performed.shot.camera, "cam-main");
-  TestValidator.equals("locked-off camera", performed.shot.cameraMotion, null);
   TestValidator.equals("shot duration", performed.shot.duration, 2);
+
+  TestValidator.predicate(
+    "frame action compiled into a camera clip",
+    performed.shot.cameraMotion !== null,
+  );
+  if (performed.shot.cameraMotion !== null) {
+    TestValidator.equals(
+      "camera clip id",
+      performed.shot.cameraMotion.id,
+      "cam:beat-1",
+    );
+    TestValidator.equals(
+      "camera clip drives the live camera",
+      performed.shot.cameraMotion.tracks.map((t) =>
+        t.channel.kind === "node" ? t.channel.node : "",
+      ),
+      ["cam-main", "cam-main"],
+    );
+    TestValidator.equals(
+      "camera clip spans the shot",
+      performed.shot.cameraMotion.duration,
+      2,
+    );
+  }
 
   TestValidator.equals(
     "one performance per knight",
