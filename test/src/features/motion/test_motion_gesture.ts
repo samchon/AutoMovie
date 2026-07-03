@@ -1,4 +1,8 @@
-import { gestureMotion, validateMotion } from "@autofilm/engine";
+import {
+  DEFAULT_HUMANOID_ROM,
+  gestureMotion,
+  validateMotion,
+} from "@autofilm/engine";
 import {
   AutoFilmHumanoidBone,
   IAutoFilmBone,
@@ -8,6 +12,10 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
+// Carry the real anatomical ROM so "ROM-legal" validates against the actual
+// humanoid ranges (a knee that only flexes 0–150°, a hip −30–120°), not a
+// permissive stub — every authored gesture must survive the same gate the
+// pipeline applies.
 const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
   bone: b,
   parent: null,
@@ -16,7 +24,7 @@ const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
     rotation: { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 1, y: 1, z: 1 },
   },
-  constraint: null,
+  constraint: DEFAULT_HUMANOID_ROM[b] ?? null,
 });
 
 const RIG: IAutoFilmSkeleton = {
@@ -31,7 +39,7 @@ const RIG: IAutoFilmSkeleton = {
   ].map((b) => bone(b as AutoFilmHumanoidBone)),
 };
 
-const GENERIC = ["bow", "nod", "shake", "crouch"] as const;
+const GENERIC = ["bow", "nod", "shake", "crouch", "kick"] as const;
 
 const maxAbs = (
   motion: NonNullable<ReturnType<typeof gestureMotion>>,
@@ -52,11 +60,12 @@ const maxAbs = (
  *
  * Scenarios:
  *
- * 1. Each of bow/nod/shake/crouch synthesises a non-empty clip that opens and
+ * 1. Each of bow/nod/shake/crouch/kick synthesises a non-empty clip that opens and
  *    closes on the neutral pose (returns to rest) and validates against the
- *    humanoid ROM.
+ *    real humanoid ROM (the rig carries `DEFAULT_HUMANOID_ROM`).
  * 2. The gestures move the right joint: bow flexes the spine, nod dips the head
- *    (flexion), shake turns it (twist), crouch folds the knees.
+ *    (flexion), shake turns it (twist), crouch folds the knees, kick raises the
+ *    leg (hip flexion) and snaps the knee from folded to near-straight.
  * 3. A gesture stretches to the action's duration (a 2 s bow's last key lands at 2
  *    s).
  * 4. `jump` is a whole-body coil-and-leap: it folds the knees, arcs the root up to
@@ -111,6 +120,23 @@ export const test_motion_gesture = (): void => {
       "leftLowerLeg",
       "flexion",
     ) > 30,
+  );
+
+  // kick — a right-leg front snap: the hip flexes to raise the leg, and the knee
+  // chambers folded then snaps near-straight.
+  const kick = gestureMotion("k", RIG.id, "kick", 1)!;
+  TestValidator.predicate(
+    "kick raises the leg (hip flexion)",
+    maxAbs(kick, "rightUpperLeg", "flexion") > 40,
+  );
+  const kneeFlex = kick.keyframes
+    .map(
+      (kf) => kf.pose.joints.find((jj) => jj.bone === "rightLowerLeg")?.flexion,
+    )
+    .filter((v): v is number => v !== undefined);
+  TestValidator.predicate(
+    "kick chambers then snaps the knee (folded → near-straight)",
+    Math.max(...kneeFlex) > 60 && Math.min(...kneeFlex) < 15,
   );
 
   const long = gestureMotion("bow", RIG.id, "bow", 2)!;
