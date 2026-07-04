@@ -373,6 +373,16 @@ export const performShot = (props: {
           `reaction force must be within [0, 1], but was ${action.force}`,
           action.force,
         );
+      } else if (
+        action.verb === "emote" &&
+        !(action.intensity >= 0 && action.intensity <= 1)
+      ) {
+        out.push(
+          "range",
+          `${base}[${i}].intensity`,
+          `emote intensity must be within [0, 1], but was ${action.intensity}`,
+          action.intensity,
+        );
       } else if (action.verb === "attachTo") {
         // The child rides a bone of the parent, so the parent must be a staged,
         // rigged node carrying that bone. The child's follow-clip is baked

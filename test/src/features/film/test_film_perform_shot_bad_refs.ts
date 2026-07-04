@@ -37,6 +37,8 @@ import { hasViolation } from "../internal/predicates";
  *     item.
  * 11. A staged `react` with force outside `[0,1]` yields `range` on
  *     `$input.draft[0].force`.
+ * 12. A staged `emote` with intensity outside `[0,1]` yields `range` on
+ *     `$input.draft[0].intensity`.
  */
 export const test_film_perform_shot_bad_refs = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -253,5 +255,30 @@ export const test_film_perform_shot_bad_refs = (): void => {
     "oversized react force rejected",
     oversizedReact.success === false &&
       hasViolation(oversizedReact, "range", "$input.draft[0].force"),
+  );
+
+  const oversizedEmote = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "emote",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          preset: "happy",
+          intensity: 1.2,
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "oversized emote intensity rejected",
+    oversizedEmote.success === false &&
+      hasViolation(oversizedEmote, "range", "$input.draft[0].intensity"),
   );
 };
