@@ -88,6 +88,8 @@ const stagingOf = () =>
  *    (a `locomote` carrying root travel), performShot resolves its animated
  *    position and aims where it will be, so the baked flight lands short of the
  *    foe's start point — and the foe still reacts, at the led contact.
+ * 9. A launch fired too late to land before the shot ends yields a `range`
+ *    violation on `.speed`.
  */
 export const test_film_perform_shot_launch = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -322,6 +324,28 @@ export const test_film_perform_shot_launch = (): void => {
       0,
     );
   }
+
+  // 9. the computed hit must still land inside the shot window
+  const late = perform([
+    {
+      verb: "launch",
+      actor: "archer",
+      start: 1.9,
+      duration: "auto",
+      projectile: "arrow",
+      at: { kind: "node", node: "foe" },
+      speed: 22,
+      onHit: { force: 0.6 },
+    },
+  ]);
+  TestValidator.equals("a late landing launch fails", late.success, false);
+  if (late.success === false)
+    TestValidator.predicate(
+      "the violation names the speed/timing",
+      late.violations.some(
+        (v) => v.kind === "range" && v.path.includes(".speed"),
+      ),
+    );
 
   // 8. a moving target is led. The foe strides (a locomote whose baked motion
   // carries root travel); performShot resolves its animated world position and
