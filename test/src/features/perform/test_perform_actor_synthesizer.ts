@@ -102,6 +102,10 @@ const door: IAutoMovieActionTarget = { kind: "node", node: "door" };
  *    steps in place: the looping one-cycle gait.
  * 3. An unmatched gait, a non-synthesised verb, and an unknown actor → null.
  * 4. `hold` holds the rest pose; and a locomote+hold beat compiles end to end.
+ * 5. `emote` produces an expression-only clip.
+ * 6. `lookAt` turns the head toward a resolvable target.
+ * 7. Duplicate actor-context gait names are rejected before locomotion lookup can
+ *    silently pick one.
  */
 export const test_perform_actor_synthesizer = (): void => {
   const synth = makeActorSynthesizer(contexts, nodes);
@@ -266,5 +270,27 @@ export const test_perform_actor_synthesizer = (): void => {
   TestValidator.predicate(
     "the performance runs through the travel and the held beat",
     nclose(performances.hero!.duration, 7),
+  );
+
+  // 7. actor gait names are lookup keys, so duplicates are ambiguous
+  TestValidator.error("duplicate actor-context gait names throw", () =>
+    makeActorSynthesizer(
+      new Map<string, IAutoMovieActorContext>([
+        [
+          "hero",
+          {
+            ...ctx,
+            gaits: [
+              WALK,
+              {
+                ...WALK,
+                period: 0.75,
+              },
+            ],
+          },
+        ],
+      ]),
+      nodes,
+    ),
   );
 };
