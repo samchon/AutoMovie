@@ -1,5 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   IAutoMovieBody,
   IAutoMovieImpact,
   impactRecoil,
@@ -44,9 +45,11 @@ const BRACE: IAutoMovieJointPose[] = [
   j("rightUpperLeg", { flexion: -10, abduction: -10 }),
   j("leftLowerLeg", { flexion: 24 }),
   j("rightLowerLeg", { flexion: 24 }),
-  j("leftUpperArm", { flexion: -40, abduction: -50 }),
+  // Clinical arm abduction: both sides share one anatomical value; the rig's
+  // mirrored signs are recovered by HUMANOID_REST_FRAME at render time.
+  j("leftUpperArm", { flexion: -40, abduction: 40 }),
   j("leftLowerArm", { flexion: -110 }),
-  j("rightUpperArm", { flexion: 40, abduction: 50 }),
+  j("rightUpperArm", { flexion: 40, abduction: 40 }),
   j("rightLowerArm", { flexion: 110 }),
 ];
 
@@ -216,7 +219,7 @@ const step = (t: number): void => {
     },
     joints: [...joints.values()],
   };
-  applyPose(object, pose, skeleton, HUMANOID_JOINT_AXES);
+  applyPose(object, pose, skeleton, HUMANOID_JOINT_AXES, HUMANOID_REST_FRAME);
 
   // balls
   resolved.forEach((r, i) => {
