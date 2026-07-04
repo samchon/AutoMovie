@@ -1,5 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   resolveAttachment,
   sampleMotion,
 } from "@automovie/engine";
@@ -72,10 +73,12 @@ const ridePose = (lean: number): IAutoMoviePose => ({
     j("leftLowerLeg", { flexion: 74 }),
     j("rightLowerLeg", { flexion: 74 }),
     // right arm couches the lance forward
-    j("rightUpperArm", { flexion: 52, abduction: 8 }),
+    // Rider arms are authored in clinical abduction. The horse clip remains
+    // rig-space because its front legs reuse upper-arm names on a quadruped.
+    j("rightUpperArm", { flexion: 52, abduction: 82 }),
     j("rightLowerArm", { flexion: 22 }),
     // left arm holds the shield up in front
-    j("leftUpperArm", { flexion: -34, abduction: -30 }),
+    j("leftUpperArm", { flexion: -34, abduction: 60 }),
     j("leftLowerArm", { flexion: -86 }),
   ],
 });
@@ -113,6 +116,9 @@ const knightPlayer = new AutoMoviePlayer(
   knight.skeleton,
   rideClip,
   HUMANOID_JOINT_AXES,
+  false,
+  undefined,
+  HUMANOID_REST_FRAME,
 );
 
 // ── the saddle attachment: fix the rider's root into the horse's spine bone ──
