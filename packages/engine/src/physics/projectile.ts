@@ -5,6 +5,15 @@ import { Vector3 } from "../math/Vector3";
 
 /** A projectile model faces +Z; its trajectory rotates that onto the flight. */
 const PROJECTILE_FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: 1 };
+const VECTOR_AXES = ["x", "y", "z"] as const;
+
+const assertFiniteVector = (name: string, vector: IAutoMovieVector3): void => {
+  for (const axis of VECTOR_AXES)
+    if (!Number.isFinite(vector[axis]))
+      throw new RangeError(
+        `projectile ${name}.${axis} must be finite, but was ${vector[axis]}`,
+      );
+};
 
 /**
  * A ballistic **projectile** launch: an origin, an initial velocity, and a
@@ -40,13 +49,21 @@ export interface IAutoMovieProjectileState {
 export const projectileAt = (
   p: IAutoMovieProjectile,
   t: number,
-): IAutoMovieProjectileState => ({
-  position: Vector3.add(
-    Vector3.add(p.origin, Vector3.scale(p.velocity, t)),
-    Vector3.scale(p.gravity, 0.5 * t * t),
-  ),
-  velocity: Vector3.add(p.velocity, Vector3.scale(p.gravity, t)),
-});
+): IAutoMovieProjectileState => {
+  if (!Number.isFinite(t))
+    throw new RangeError(`projectile time must be finite, but was ${t}`);
+  assertFiniteVector("origin", p.origin);
+  assertFiniteVector("velocity", p.velocity);
+  assertFiniteVector("gravity", p.gravity);
+
+  return {
+    position: Vector3.add(
+      Vector3.add(p.origin, Vector3.scale(p.velocity, t)),
+      Vector3.scale(p.gravity, 0.5 * t * t),
+    ),
+    velocity: Vector3.add(p.velocity, Vector3.scale(p.gravity, t)),
+  };
+};
 
 /**
  * Bake a projectile's flight into an {@link IAutoMovieClip} for its scene node —
