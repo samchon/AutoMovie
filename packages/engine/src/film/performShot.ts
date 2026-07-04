@@ -431,6 +431,14 @@ export const performShot = (props: {
         // The child rides a bone of the parent, so the parent must be a staged,
         // rigged node carrying that bone. The child's follow-clip is baked
         // after the parent's pose compiles (it samples that motion).
+        for (const child of actors)
+          if (child === action.parent)
+            out.push(
+              "type",
+              `${base}[${i}].actor`,
+              `an attachTo child "${child}" cannot attach to itself`,
+              child,
+            );
         const parentRig = nodeIds.has(action.parent)
           ? skeleton(action.parent)
           : null;
