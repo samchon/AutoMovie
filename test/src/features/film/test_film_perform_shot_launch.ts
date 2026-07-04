@@ -92,6 +92,7 @@ const stagingOf = () =>
  *    violation on `.speed`.
  * 10. A launch whose actor is also the projectile yields `type` on `.projectile`.
  * 11. A launch aimed at its own projectile node yields `type` on `.at`.
+ * 12. A moving target is still led when its locomote action uses an actor list.
  */
 export const test_film_perform_shot_launch = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -462,6 +463,56 @@ export const test_film_perform_shot_launch = (): void => {
     TestValidator.predicate(
       "the struck foe still reacts at the led contact",
       led.shot.performances.some((p) => p.node === "foe"),
+    );
+  }
+
+  // 12. actor-list locomotion is still that actor's motion, so launch leading
+  // must use the same membership semantics as compilePerformance.
+  const listedTarget = performShot({
+    script: scriptOf(),
+    staged,
+    performance: makePerformanceWrite({
+      beat: "beat-1",
+      draft: [
+        {
+          verb: "locomote",
+          actor: ["foe"],
+          start: 0,
+          duration: 2,
+          gait: "walk",
+          to: { kind: "point", point: { x: 2, y: 0, z: 0 } },
+        },
+        {
+          verb: "launch",
+          actor: "archer",
+          start: 0.1,
+          duration: "auto",
+          projectile: "arrow",
+          at: { kind: "node", node: "foe" },
+          speed: 22,
+          onHit: { force: 0.6, unbalance: true },
+        },
+      ],
+      revise: {
+        review: "the loose leads the listed striding foe.",
+        final: null,
+      },
+      duration: 2,
+    }),
+    synthesize: movingSynth,
+    skeleton: (node) => (node === "arrow" ? null : createSkeleton()),
+  });
+  TestValidator.equals(
+    "actor-list moving target launch performs",
+    listedTarget.success,
+    true,
+  );
+  if (listedTarget.success === true) {
+    const lead = listedTarget.shot.objectMotions[0]!;
+    const lv = lead.tracks[0]!.values;
+    TestValidator.predicate(
+      "the actor-list target is led too",
+      lv[lv.length - 3]! < 6 - 0.1,
     );
   }
 };

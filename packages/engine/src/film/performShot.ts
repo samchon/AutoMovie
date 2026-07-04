@@ -64,6 +64,9 @@ const animatedBaseAt =
       ),
     );
 
+const actionActors = (action: IAutoMovieActionCall): string[] =>
+  typeof action.actor === "string" ? [action.actor] : action.actor;
+
 /**
  * A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion
  * clips the compiler synthesised for it. The clips travel alongside the shot
@@ -647,10 +650,12 @@ export const performShot = (props: {
     // lead window, so it does not perturb the pre-hit path. A static target
     // keeps the plain intercept.
     let targetAt: ((t: number) => IAutoMovieVector3) | undefined;
+    const targetsNode = (action: IAutoMovieActionCall): boolean =>
+      job.targetNode !== null && actionActors(action).includes(job.targetNode);
     if (
       job.targetNode !== null &&
       stageActions.some(
-        (a) => a.actor === job.targetNode && a.verb === "locomote",
+        (action) => action.verb === "locomote" && targetsNode(action),
       )
     )
       targetAt = animatedBaseAt(
@@ -659,7 +664,7 @@ export const performShot = (props: {
         // just this node's own motion — its recoil fires at impact, past the
         // lead window, so it never perturbs the pre-hit path being sampled.
         compilePerformance(
-          stageActions.filter((a) => a.actor === job.targetNode),
+          stageActions.filter((action) => targetsNode(action)),
           synthesize,
         )[job.targetNode]!,
       );
