@@ -14,6 +14,10 @@ export interface ISpringParams {
   damping: number;
 }
 
+const assertFinite = (label: string, value: number): void => {
+  if (!Number.isFinite(value)) throw new Error(`${label} must be finite`);
+};
+
 /**
  * Advance a one-dimensional damped spring one fixed timestep (semi-implicit
  * Euler): a generic numeric integrator for **secondary motion** — a value that
@@ -37,6 +41,18 @@ export const dampedSpring = (
   params: ISpringParams,
   dt: number,
 ): ISpringStep => {
+  assertFinite("spring current", current);
+  assertFinite("spring velocity", velocity);
+  assertFinite("spring target", target);
+  assertFinite("spring stiffness", params.stiffness);
+  assertFinite("spring damping", params.damping);
+  assertFinite("spring dt", dt);
+  if (params.stiffness < 0)
+    throw new Error("spring stiffness must be non-negative");
+  if (params.damping < 0)
+    throw new Error("spring damping must be non-negative");
+  if (dt <= 0) throw new Error("spring dt must be positive");
+
   const force =
     params.stiffness * (target - current) - params.damping * velocity;
   const nextVelocity = velocity + force * dt;
