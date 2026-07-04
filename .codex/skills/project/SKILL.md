@@ -16,9 +16,12 @@ This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.w
 ## Layout
 
 - `packages/interface` (`@autofilm/interface`): the type hub — the AST the LLM emits against (geometry, skeleton/rig, pose, expression, motion, material, model, scene, validation). Depends on `typia` only; pure types, no runtime.
-- `packages/engine` (`@autofilm/engine`): the deterministic engine — math, kinematics (FK), ROM and other constraint validators, motion sampling, tessellation. Pure TypeScript, no `three.js`.
+- `packages/engine` (`@autofilm/engine`): the deterministic engine — math, kinematics (FK), ROM and other constraint validators, motion sampling, tessellation, the film pipeline (stage/block/perform/cut). Pure TypeScript, no `three.js`.
+- `packages/forge` (`@autofilm/forge`): parametric model building (head/body meshes, hair, morphs) from forge specs.
+- `packages/ingest` (`@autofilm/ingest`): glTF/model ingestion via `@gltf-transform/core`.
 - `packages/viewer` (`@autofilm/viewer`): the render/playback surface over `three.js` (the only package that imports `three`). A viewer, not an editor.
-- Later packages (`agent`, `ingest`, `compiler`) are planned in the wiki, not yet built. `@agentica/core` (the LLM layer) will be imported only inside `agent`.
+- `packages/playground`: Vite demo pages exercising the pipeline end to end; capture-verified via headless Chrome (see `.codex/skills/viewer-verification/SKILL.md`).
+- `packages/mcp` (`@autofilm/mcp`): the deterministic engine exposed as an MCP server — `AutoFilmApplication`'s methods (`stage`/`block`/`cut`/`forge`) become validated MCP tools via `typia.llm.controller` + `@typia/mcp`, for an external agent (Codex, Claude) to drive instead of an in-repo LLM workflow.
 - `test/` (`@autofilm/test`): the `@nestia/e2e` `DynamicExecutor` program; one scenario per file under `test/src/features/<domain>/`, builders under `features/internal/`.
 - `internals/config`: shared base `tsconfig.json` and `assertBuild.js`.
 - `.wiki/` (gitignored): the working knowledge base — research, design, decisions, worklog. The first thing to read at session start.
@@ -27,10 +30,10 @@ This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.w
 ## Commands
 
 ```bash
-pnpm install                              # workspace install + ts-patch via prepare
-pnpm run build                            # recursive tsc + assertBuild over packages
+pnpm install                              # workspace install (native TypeScript 7 / tsgo via ttsc)
+pnpm run build                            # recursive ttsc + assertBuild over packages
 pnpm run format                           # prettier write
-pnpm --filter @autofilm/test start          # run the test suite
+pnpm --filter @autofilm/test start          # run the test suite (ttsx, no separate compile step)
 pnpm --filter @autofilm/test coverage       # run tests under the c8 100% gate
 ```
 
