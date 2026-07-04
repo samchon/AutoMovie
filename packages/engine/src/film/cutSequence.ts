@@ -74,6 +74,7 @@ export const cutSequence = (
 
   let runtime = 0;
   let previousPlayed: number | null = null;
+  let previousIncomingTransition = 0;
   assemble.entries.forEach((entry, i) => {
     const shot = byId.get(entry.shot);
     if (shot === undefined) {
@@ -84,10 +85,12 @@ export const cutSequence = (
         entry.shot,
       );
       previousPlayed = null;
+      previousIncomingTransition = 0;
       return;
     }
     let played = shot.duration;
     let validPlayedSpan = true;
+    let incomingTransition = 0;
     if (entry.trim !== null) {
       const { start, duration } = entry.trim;
       if (!(duration > 0)) {
@@ -143,10 +146,27 @@ export const cutSequence = (
           entry.transition.duration,
           entry.transition.duration - previousPlayed,
         );
-      else runtime -= entry.transition.duration;
+      else if (
+        previousPlayed !== null &&
+        previousIncomingTransition + entry.transition.duration > previousPlayed
+      )
+        out.push(
+          "range",
+          `$input.entries[${i}].transition.duration`,
+          `adjacent transitions (${previousIncomingTransition}s + ${entry.transition.duration}s) must not overlap inside the previous entry's played span (${previousPlayed}s)`,
+          entry.transition.duration,
+          previousIncomingTransition +
+            entry.transition.duration -
+            previousPlayed,
+        );
+      else {
+        runtime -= entry.transition.duration;
+        incomingTransition = entry.transition.duration;
+      }
     }
     runtime += played;
     previousPlayed = validPlayedSpan ? played : null;
+    previousIncomingTransition = validPlayedSpan ? incomingTransition : 0;
   });
 
   if (out.items.length > 0) return { success: false, violations: out.items };

@@ -30,6 +30,8 @@ const SHOT: IAutoMovieShot = {
  * 6. A 2-second fade over a 1-second played span → `range` with overshoot 1.
  * 7. A 2-second dissolve out of a 1-second previous entry yields `range` on its
  *    `transition.duration`.
+ * 8. Adjacent transitions whose durations overlap inside the middle entry yield
+ *    `range` on the second transition's duration.
  */
 export const test_film_cut_sequence_invalid_entries = (): void => {
   const cut = cutSequence(
@@ -141,6 +143,44 @@ export const test_film_cut_sequence_invalid_entries = (): void => {
         overPrevious,
         "range",
         "$input.entries[1].transition.duration",
+      ),
+  );
+
+  const overlappingAdjacent = cutSequence(
+    {
+      type: "write",
+      sequence: { id: "seq-bad-overlap", name: "the nested dissolve" },
+      fps: 24,
+      entries: [
+        { shot: "shot:beat-1", trim: null, transition: null },
+        {
+          shot: "shot:beat-1",
+          trim: null,
+          transition: { kind: "crossDissolve", duration: 2 },
+        },
+        {
+          shot: "shot:beat-1",
+          trim: null,
+          transition: { kind: "crossDissolve", duration: 2 },
+        },
+      ],
+      pacing: "n/a",
+      continuity: "n/a",
+    },
+    [SHOT],
+  );
+  TestValidator.equals(
+    "adjacent transition overlap fails",
+    overlappingAdjacent.success,
+    false,
+  );
+  TestValidator.predicate(
+    "nested transition overlap rejected",
+    overlappingAdjacent.success === false &&
+      hasViolation(
+        overlappingAdjacent,
+        "range",
+        "$input.entries[2].transition.duration",
       ),
   );
 };
