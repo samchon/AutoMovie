@@ -2,6 +2,7 @@ import {
   AutoMoviePrimitiveShape,
   IAutoMovieAngleRange,
   IAutoMovieJointConstraint,
+  IAutoMovieMesh,
   IAutoMovieModel,
   IAutoMovieValidation,
 } from "@automovie/interface";
@@ -55,6 +56,8 @@ export const validateModel = (props: {
       );
     if (part.geometry.type === "primitive")
       validateExtents(part.geometry.shape, `${pp}.geometry.shape`, collector);
+    if (part.geometry.type === "mesh")
+      validateMesh(part.geometry.mesh, `${pp}.geometry.mesh`, collector);
     if (part.transform !== null)
       validateTransformScalars({
         transform: part.transform,
@@ -123,6 +126,93 @@ const validateExtents = (
         `${name} must be a finite number > 0, but was ${value}`,
         value,
       );
+};
+
+const validateMesh = (
+  mesh: IAutoMovieMesh,
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  validateTupleBuffer(mesh.positions, 3, `${path}.positions`, collector);
+  const vertexCount = mesh.positions.length / 3;
+
+  if (mesh.normals !== null) {
+    validateTupleBuffer(mesh.normals, 3, `${path}.normals`, collector);
+    validateBufferLength(
+      mesh.normals,
+      vertexCount * 3,
+      `${path}.normals`,
+      "normals must contain one xyz triple per position vertex",
+      collector,
+    );
+  }
+
+  if (mesh.uvs !== null) {
+    validateTupleBuffer(mesh.uvs, 2, `${path}.uvs`, collector);
+    validateBufferLength(
+      mesh.uvs,
+      vertexCount * 2,
+      `${path}.uvs`,
+      "uvs must contain one uv pair per position vertex",
+      collector,
+    );
+  }
+
+  if (mesh.indices !== null) {
+    validateTupleBuffer(mesh.indices, 3, `${path}.indices`, collector);
+    mesh.indices.forEach((index, i) => {
+      const valid =
+        Number.isInteger(index) && index >= 0 && index < vertexCount;
+      if (!valid)
+        collector.push(
+          "range",
+          `${path}.indices[${i}]`,
+          `index must be an integer vertex reference in [0, ${vertexCount - 1}], but was ${index}`,
+          index,
+        );
+    });
+  }
+};
+
+const validateTupleBuffer = (
+  buffer: number[],
+  tupleSize: number,
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  if (buffer.length % tupleSize !== 0)
+    collector.push(
+      "type",
+      path,
+      `buffer length must be a multiple of ${tupleSize}, but was ${buffer.length}`,
+      buffer.length,
+    );
+
+  buffer.forEach((value, i) => {
+    if (!Number.isFinite(value))
+      collector.push(
+        "range",
+        `${path}[${i}]`,
+        `value must be finite, but was ${value}`,
+        value,
+      );
+  });
+};
+
+const validateBufferLength = (
+  buffer: number[],
+  expected: number,
+  path: string,
+  message: string,
+  collector: ViolationCollector,
+): void => {
+  if (buffer.length !== expected)
+    collector.push(
+      "type",
+      path,
+      `${message}; expected length ${expected}, but was ${buffer.length}`,
+      buffer.length,
+    );
 };
 
 const CONSTRAINT_AXES = ["flexion", "abduction", "twist"] as const;
