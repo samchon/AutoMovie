@@ -45,6 +45,13 @@ export const validateMotion = (props: {
       `motion duration must be a finite number > 0 seconds, but was ${motion.duration}`,
       motion.duration,
     );
+  if (motion.keyframes.length < 2)
+    collector.push(
+      "temporal",
+      `${path}.keyframes`,
+      `motion must have at least two keyframes, but had ${motion.keyframes.length}`,
+      motion.keyframes.length,
+    );
 
   let previousTime = -Infinity;
   motion.keyframes.forEach((kf, i) => {
