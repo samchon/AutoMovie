@@ -1,4 +1,5 @@
 import { CANONICAL_FACE_POSITIONS } from "./canonicalFace";
+import { clampSignedParameter, clampUnitParameter } from "./parameters";
 
 /** A self-contained triangle mesh part (flat xyz triples + indices). */
 export interface IForgeMeshPart {
@@ -82,12 +83,41 @@ const anchors = (face: number[]) => {
   return { chinY, topY, browY, halfW };
 };
 
+const normalizeSkull = (
+  skull: IForgeSkullParameters,
+): IForgeSkullParameters => ({
+  width: clampSignedParameter(skull.width),
+  crown: clampSignedParameter(skull.crown),
+  depth: clampSignedParameter(skull.depth),
+});
+
+const normalizeHair = (
+  params: IForgeHairParameters,
+): Required<IForgeHairParameters> => ({
+  length: clampUnitParameter(params.length),
+  volume: clampUnitParameter(params.volume),
+  bangs: clampUnitParameter(params.bangs),
+  curtain: clampUnitParameter(params.curtain),
+  updo: clampUnitParameter(params.updo),
+});
+
+const normalizeBun = (params: IForgeBunParameters): IForgeBunParameters => ({
+  size: clampUnitParameter(params.size),
+  height: clampUnitParameter(params.height),
+});
+
+const normalizeBust = (params: IForgeBustParameters): IForgeBustParameters => ({
+  neck: clampUnitParameter(params.neck),
+  shoulders: clampUnitParameter(params.shoulders),
+});
+
 /** Shared ellipsoid axes both the skull and the hair drape derive from. */
 const skullAxes = (face: number[], skull: IForgeSkullParameters) => {
+  const s = normalizeSkull(skull);
   const { chinY, topY, browY, halfW } = anchors(face);
   const faceH = topY - chinY;
   const cy = topY - 0.1 * faceH;
-  const b = (topY + 0.38 * faceH - cy) * (1 + 0.2 * skull.crown);
+  const b = (topY + 0.38 * faceH - cy) * (1 + 0.2 * s.crown);
   return {
     chinY,
     topY,
@@ -95,13 +125,13 @@ const skullAxes = (face: number[], skull: IForgeSkullParameters) => {
     halfW,
     cy,
     crownY: cy + b,
-    a: halfW * 1.06 * (1 + 0.2 * skull.width),
+    a: halfW * 1.06 * (1 + 0.2 * s.width),
     b,
     // occiput depth: a real head fills ~a square in profile (front-back depth
     // ≈ crown-chin height) and its cephalic index sits 75–85, never the 133
     // a shallow dome gives — so the back of the skull must project well past
     // the ear. cFront+cBack ≈ 2.0·halfW lands depth ≈ 0.9·height.
-    cBack: halfW * 1.7 * (1 + 0.2 * skull.depth),
+    cBack: halfW * 1.7 * (1 + 0.2 * s.depth),
     cFront: halfW * 0.34, // behind the eyelid plane: eyeballs must own the openings
   };
 };
@@ -177,11 +207,12 @@ export const buildHairShell = (
   skull: IForgeSkullParameters = NEUTRAL_SKULL,
   face: number[] = CANONICAL_FACE_POSITIONS,
 ): IForgeMeshPart => {
+  const p = normalizeHair(params);
   const { chinY, topY, browY, cy, crownY, b, a, cBack, cFront } = skullAxes(
     face,
     skull,
   );
-  const offset = 0.004 + 0.018 * params.volume;
+  const offset = 0.004 + 0.018 * p.volume;
   const aH = a + offset;
   const cBackH = cBack + offset;
   // extra front reach: the drape must clear the face temples or its rim
@@ -191,12 +222,12 @@ export const buildHairShell = (
   // tip height per yaw: back/sides fall by `length`, the front sector is the
   // fringe ruled by `bangs`; the opening half-angle shrinks with `curtain`;
   // `updo` lifts the back/side fall toward the nape (gathered-up hair)
-  const openHalf = (Math.PI / 180) * (70 - 38 * params.curtain);
-  const lift = params.updo ?? 0;
+  const openHalf = (Math.PI / 180) * (70 - 38 * p.curtain);
+  const lift = p.updo;
   const napeY = cy - 0.95 * b;
-  const fallTip = chinY - (0.02 + 0.33 * params.length);
+  const fallTip = chinY - (0.02 + 0.33 * p.length);
   const backTip = fallTip + (Math.max(napeY, fallTip) - fallTip) * lift;
-  const bangTip = topY - (0.004 + (topY - browY) * params.bangs);
+  const bangTip = topY - (0.004 + (topY - browY) * p.bangs);
   const tipY = (yaw: number): number => {
     const ax = Math.abs(yaw);
     if (ax >= openHalf * 1.35) return backTip;
@@ -234,7 +265,7 @@ export const buildHairShell = (
       // reading), scaled by volume — bound hair doesn't flare, so `updo`
       // suppresses it
       const flare =
-        1 + (1 - fr) * fall * (0.04 + 0.3 * params.volume) * (1 - 0.85 * lift);
+        1 + (1 - fr) * fall * (0.04 + 0.3 * p.volume) * (1 - 0.85 * lift);
       // fringe hug pulls tips onto the forehead — but at temple yaws the
       // tuck must never dive inside the skull (bare-scalp patches): clamp it
       // to the dome radius there, while the center forehead (face-plate
@@ -278,10 +309,11 @@ export const buildHairBun = (
   skull: IForgeSkullParameters = NEUTRAL_SKULL,
   face: number[] = CANONICAL_FACE_POSITIONS,
 ): IForgeMeshPart => {
-  if (params.size <= 0) return { positions: [], indices: [] };
+  const p = normalizeBun(params);
+  if (p.size <= 0) return { positions: [], indices: [] };
   const { cy, b, cBack } = skullAxes(face, skull);
-  const r0 = 0.016 + 0.038 * params.size;
-  const yC = cy - 0.6 * b + 1.25 * b * params.height;
+  const r0 = 0.016 + 0.038 * p.size;
+  const yC = cy - 0.6 * b + 1.25 * b * p.height;
   const yn = Math.min(1, Math.max(-1, (yC - cy) / b));
   // center sits just inside the occiput surface at that height
   const zC = -cBack * Math.sqrt(1 - yn * yn) - r0 * 0.15;
@@ -322,14 +354,15 @@ export const buildBust = (
   params: IForgeBustParameters,
   face: number[] = CANONICAL_FACE_POSITIONS,
 ): IForgeMeshPart => {
+  const p = normalizeBust(params);
   const { chinY, topY, halfW } = anchors(face);
   const faceH = topY - chinY;
-  const rxNeck = halfW * (0.42 + 0.22 * params.neck);
+  const rxNeck = halfW * (0.42 + 0.22 * p.neck);
   const rzNeck = rxNeck * 0.92;
   const yTop = chinY + 0.015; // tucked behind the jaw
   const neckLen = 0.32 * faceH;
   const slabLen = 0.3 * faceH;
-  const rxShoulder = halfW * (1.7 + 1.1 * params.shoulders);
+  const rxShoulder = halfW * (1.7 + 1.1 * p.shoulders);
   const rzShoulder = rzNeck * 1.5;
   const SEG = 32;
   const RING = 14;
