@@ -239,11 +239,20 @@ export const performShot = (props: {
       });
     }
     actors.forEach((actor) => {
-      if (!nodeIds.has(actor) && !cameraIds.has(actor))
+      const isNode = nodeIds.has(actor);
+      const isCamera = cameraIds.has(actor);
+      if (!isNode && !isCamera)
         out.push(
           "type",
           `${base}[${i}].actor`,
           `actor "${actor}" must be a staged scene node or camera`,
+          actor,
+        );
+      else if (action.verb !== "frame" && isCamera)
+        out.push(
+          "type",
+          `${base}[${i}].actor`,
+          `a ${action.verb} action's actor must be a staged scene node, but "${actor}" is a camera`,
           actor,
         );
     });
