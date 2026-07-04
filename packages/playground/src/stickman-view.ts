@@ -1,5 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   IAutoMovieJointAxes,
   aimRotation,
   solveTwoBoneIK,
@@ -35,6 +36,8 @@ const clipName =
   params.get("clip") !== null && params.get("clip")! in clips
     ? params.get("clip")!
     : defaultClip;
+const restFrames =
+  !isCat && clipName === "shadowbox" ? HUMANOID_REST_FRAME : undefined;
 // `?clamp=1` enforces ROM; the cat's tail gets spring follow-through so it
 // trails and overshoots the body instead of snapping (turn off with ?spring=0).
 const catTailSpring =
@@ -56,6 +59,7 @@ const player = new AutoMoviePlayer(
   jointAxes,
   params.get("clamp") === "1",
   catTailSpring,
+  restFrames,
 );
 
 // `?t=<seconds>` freezes one sampled frame (deterministic capture); otherwise

@@ -363,12 +363,14 @@ export const sprint = (sk: string): IAutoMovieMotion =>
 // inside each beat so the fighter stays framed. The aim is a light, crisp,
 // real-fighter feel: jabs/crosses/hooks/uppercuts, slips/weaves/ducks, push
 // kicks, knees, and high round/axe kicks woven together.
+// Upper-arm abduction is authored in clinical space; stickman-view supplies
+// HUMANOID_REST_FRAME for this clip so the mirrored rig signs are recovered.
 const GUARD: IAutoMovieJointPose[] = [
   j("spine", { flexion: 9 }),
   j("chest", { flexion: 6 }),
-  j("leftUpperArm", { flexion: -38, abduction: -58 }),
+  j("leftUpperArm", { flexion: -38, abduction: 32 }),
   j("leftLowerArm", { flexion: -122 }),
-  j("rightUpperArm", { flexion: 38, abduction: 58 }),
+  j("rightUpperArm", { flexion: 38, abduction: 32 }),
   j("rightLowerArm", { flexion: 122 }),
   j("leftUpperLeg", { abduction: 9, flexion: -12 }),
   j("rightUpperLeg", { abduction: -9, flexion: 14 }),
@@ -402,38 +404,38 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
 
   // ── hands ──────────────────────────────────────────────────────────────
   const jab = merge([
-    j("leftUpperArm", { flexion: -94, abduction: 6 }),
+    j("leftUpperArm", { flexion: -94, abduction: 96 }),
     j("leftLowerArm", { flexion: -8 }),
     j("spine", { flexion: 9, twist: -12 }),
     j("chest", { flexion: 6, twist: -8 }),
   ]);
   const cross = merge([
-    j("rightUpperArm", { flexion: 94, abduction: -6 }),
+    j("rightUpperArm", { flexion: 94, abduction: 96 }),
     j("rightLowerArm", { flexion: 10 }),
     j("spine", { flexion: 9, twist: 26 }),
     j("chest", { flexion: 6, twist: 18 }),
     j("rightUpperLeg", { abduction: -9, flexion: 4 }),
   ]);
   const leadHook = merge([
-    j("leftUpperArm", { flexion: -54, abduction: 8 }),
+    j("leftUpperArm", { flexion: -54, abduction: 98 }),
     j("leftLowerArm", { flexion: -94 }),
     j("spine", { flexion: 9, twist: 22 }),
     j("chest", { flexion: 6, twist: 16 }),
   ]);
   const rearHook = merge([
-    j("rightUpperArm", { flexion: 54, abduction: -8 }),
+    j("rightUpperArm", { flexion: 54, abduction: 98 }),
     j("rightLowerArm", { flexion: 94 }),
     j("spine", { flexion: 9, twist: -18 }),
     j("chest", { flexion: 6, twist: -12 }),
   ]);
   const leadUpper = merge([
-    j("leftUpperArm", { flexion: -52, abduction: 42 }),
+    j("leftUpperArm", { flexion: -52, abduction: 132 }),
     j("leftLowerArm", { flexion: -126 }),
     j("spine", { flexion: 4, twist: 12 }),
     j("chest", { flexion: 2, twist: 8 }),
   ]);
   const rearUpper = merge([
-    j("rightUpperArm", { flexion: 56, abduction: -48 }),
+    j("rightUpperArm", { flexion: 56, abduction: 138 }),
     j("rightLowerArm", { flexion: 126 }),
     j("spine", { flexion: 2, twist: 16 }),
     j("chest", { flexion: 0, twist: 12 }),
@@ -491,16 +493,16 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
     j("rightLowerLeg", { flexion: 10 }),
     j("leftLowerLeg", { flexion: 10 }),
     j("spine", { flexion: -16 }),
-    j("leftUpperArm", { flexion: -28, abduction: 34 }),
+    j("leftUpperArm", { flexion: -28, abduction: 124 }),
   ]);
   // right knee strike (니킥): drive the knee up, crunch down, hands clinch
   const chamberKnee = merge([
     j("rightUpperLeg", { flexion: -64 }),
     j("rightLowerLeg", { flexion: 104 }),
     j("spine", { flexion: 6 }),
-    j("leftUpperArm", { flexion: -28, abduction: -44 }),
+    j("leftUpperArm", { flexion: -28, abduction: 46 }),
     j("leftLowerArm", { flexion: -72 }),
-    j("rightUpperArm", { flexion: 28, abduction: 44 }),
+    j("rightUpperArm", { flexion: 28, abduction: 46 }),
     j("rightLowerArm", { flexion: 72 }),
   ]);
   const kneeStrike = merge([
@@ -508,9 +510,9 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
     j("rightLowerLeg", { flexion: 128 }),
     j("spine", { flexion: 18 }),
     j("chest", { flexion: 12 }),
-    j("leftUpperArm", { flexion: -26, abduction: -48 }),
+    j("leftUpperArm", { flexion: -26, abduction: 42 }),
     j("leftLowerArm", { flexion: -64 }),
-    j("rightUpperArm", { flexion: 26, abduction: 48 }),
+    j("rightUpperArm", { flexion: 26, abduction: 42 }),
     j("rightLowerArm", { flexion: 64 }),
   ]);
   // right roundhouse high kick: chamber across, swing high to the side
@@ -524,7 +526,7 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
     j("rightLowerLeg", { flexion: 16 }),
     j("spine", { twist: 34, abduction: -12, flexion: 8 }),
     j("chest", { twist: 20 }),
-    j("leftUpperArm", { flexion: -18, abduction: 44 }),
+    j("leftUpperArm", { flexion: -18, abduction: 134 }),
   ]);
   // lead (left) high axe/front kick — straight up high
   const chamberHigh = merge([
@@ -537,7 +539,7 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
     j("leftLowerLeg", { flexion: 8 }),
     j("rightLowerLeg", { flexion: 18 }),
     j("spine", { flexion: -8 }),
-    j("rightUpperArm", { flexion: 22, abduction: -40 }),
+    j("rightUpperArm", { flexion: 22, abduction: 130 }),
   ]);
 
   // ── beat builders ────────────────────────────────────────────────────────
