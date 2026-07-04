@@ -57,6 +57,19 @@ const THROUGH_SPEED = 14; // m/s above which a very soft body is passed clean th
 const THROUGH_TRANSFER = 0.3; // fraction of momentum a pass-through still imparts
 
 type ImpactCoefficient = "restitution" | "hardness" | "penetrability";
+const VECTOR_AXES = ["x", "y", "z"] as const;
+
+const assertImpactVector = (
+  label: "a" | "b",
+  name: "velocity",
+  vector: IAutoMovieVector3,
+): void => {
+  for (const axis of VECTOR_AXES)
+    if (!Number.isFinite(vector[axis]))
+      throw new RangeError(
+        `impact body ${label} ${name}.${axis} must be finite, but was ${vector[axis]}`,
+      );
+};
 
 const assertImpactMass = (label: "a" | "b", mass: number): void => {
   if (!Number.isFinite(mass))
@@ -86,6 +99,7 @@ const assertImpactCoefficient = (
 
 const assertImpactBody = (label: "a" | "b", body: IAutoMovieBody): void => {
   assertImpactMass(label, body.mass);
+  assertImpactVector(label, "velocity", body.velocity);
   assertImpactCoefficient(label, "restitution", body.restitution);
   assertImpactCoefficient(label, "hardness", body.hardness);
   assertImpactCoefficient(label, "penetrability", body.penetrability);
