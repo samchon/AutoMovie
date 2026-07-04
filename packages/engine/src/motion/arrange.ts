@@ -25,6 +25,11 @@ export const holdMotion = (
   pose: IAutoMoviePose,
   duration: number,
 ): IAutoMovieMotion => {
+  if (!Number.isFinite(duration))
+    throw new Error("hold duration must be finite and positive");
+  if (duration <= 0)
+    throw new Error("hold duration must be finite and positive");
+
   const frame = (time: number): IAutoMovieKeyframe => ({
     time,
     pose: { ...pose, skeleton },
@@ -60,6 +65,13 @@ export const arrangeMotion = (
   id: string,
   placements: IAutoMoviePlacement[],
 ): IAutoMovieMotion => {
+  for (const placement of placements) {
+    if (!Number.isFinite(placement.start))
+      throw new Error("motion placement start must be finite");
+    if (placement.start < 0)
+      throw new Error("motion placement start must be non-negative");
+  }
+
   const sorted = [...placements].sort((a, b) => a.start - b.start);
   const keyframes: IAutoMovieKeyframe[] = [];
   const push = (k: IAutoMovieKeyframe): void => {
