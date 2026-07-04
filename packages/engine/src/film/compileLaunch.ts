@@ -1,35 +1,32 @@
 import {
-  IAutoFilmClip,
-  IAutoFilmLaunchAction,
-  IAutoFilmReactAction,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieClip,
+  IAutoMovieLaunchAction,
+  IAutoMovieReactAction,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 import { Vector3 } from "../math/Vector3";
-import {
-  solveBallisticLaunch,
-  solveMovingLaunch,
-} from "../physics/ballistic";
+import { solveBallisticLaunch, solveMovingLaunch } from "../physics/ballistic";
 import { projectileAt, projectileTrajectory } from "../physics/projectile";
 
 /** The default fall the launch solves against — Earth gravity, world −Y. */
-const DEFAULT_GRAVITY: IAutoFilmVector3 = { x: 0, y: -9.81, z: 0 };
+const DEFAULT_GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
 
 /** What compiling a `launch` yields: the flight, and the hit it schedules. */
-export interface IAutoFilmLaunchResult {
+export interface IAutoMovieLaunchResult {
   /** The projectile node's baked flight clip (translation + aim rotation). */
-  clip: IAutoFilmClip;
+  clip: IAutoMovieClip;
 
   /**
    * The target's recoil, scheduled at the **computed** contact — a synthetic
-   * {@link IAutoFilmReactAction} to fold into the action list, or `null` when
+   * {@link IAutoMovieReactAction} to fold into the action list, or `null` when
    * the launch carried no `onHit` (or aimed at a point/group with no single
    * actor to recoil). Its `start` is the shot-local instant the projectile
    * lands, and its `from` sits upstream along the arrow's incoming velocity, so
    * the reference synthesiser recoils the body **along the shot's travel** (an
    * arrow flying `+x` knocks the target `+x`), lobbed or flat.
    */
-  react: IAutoFilmReactAction | null;
+  react: IAutoMovieReactAction | null;
 
   /**
    * Seconds from the launch to impact (shot-local hit = `action.start +
@@ -38,10 +35,10 @@ export interface IAutoFilmLaunchResult {
   hitTime: number;
 
   /** World point of impact (where the solved flight lands). */
-  hitPoint: IAutoFilmVector3;
+  hitPoint: IAutoMovieVector3;
 
   /** The solved launch velocity (magnitude = `action.speed`). */
-  velocity: IAutoFilmVector3;
+  velocity: IAutoMovieVector3;
 }
 
 /**
@@ -70,11 +67,11 @@ export interface IAutoFilmLaunchResult {
  */
 export const compileLaunch = (props: {
   /** The launch to compile (its `projectile`, `speed`, `onHit`, `start`). */
-  action: IAutoFilmLaunchAction;
+  action: IAutoMovieLaunchAction;
   /** Where the projectile launches from (world meters). */
-  origin: IAutoFilmVector3;
+  origin: IAutoMovieVector3;
   /** The struck target's world point (the solved flight lands here). */
-  target: IAutoFilmVector3;
+  target: IAutoMovieVector3;
   /**
    * The struck scene node — the emitted `react`'s actor — or `null` when the
    * aim is a point/group with no single actor to recoil (the flight still
@@ -84,17 +81,17 @@ export const compileLaunch = (props: {
   /**
    * The target's world position at flight-time `t`, when it moves during the
    * shot (its animated base plus root travel). Supplied, the aim **leads** the
-   * mover to the intercept ({@link solveMovingLaunch}); omitted, the launch is
-   * a static intercept on `target`.
+   * mover to the intercept ({@link solveMovingLaunch}); omitted, the launch is a
+   * static intercept on `target`.
    */
-  targetAt?: (t: number) => IAutoFilmVector3;
+  targetAt?: (t: number) => IAutoMovieVector3;
   /** Constant fall; defaults to Earth gravity along world −Y. */
-  gravity?: IAutoFilmVector3;
+  gravity?: IAutoMovieVector3;
   /** Flat `direct` shot (default) or lobbed `high` arc. */
   arc?: "direct" | "high";
   /** Sample rate of the baked flight clip (default 30). */
   fps?: number;
-}): IAutoFilmLaunchResult | null => {
+}): IAutoMovieLaunchResult | null => {
   const { action, origin, target, targetNode } = props;
   const gravity = props.gravity ?? DEFAULT_GRAVITY;
   const arc = props.arc ?? "direct";
@@ -114,7 +111,7 @@ export const compileLaunch = (props: {
   );
   const landing = projectileAt(projectile, solution.hitTime);
 
-  let react: IAutoFilmReactAction | null = null;
+  let react: IAutoMovieReactAction | null = null;
   if (action.onHit !== undefined && targetNode !== null) {
     // Where the blow comes from: one meter upstream along the incoming
     // velocity, so `target − from` points down the arrow's travel and the

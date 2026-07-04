@@ -2,7 +2,7 @@ import {
   CANONICAL_FACE_INDICES,
   CANONICAL_FACE_POSITIONS,
   CANONICAL_FACE_UVS,
-} from "@autofilm/forge";
+} from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**

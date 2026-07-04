@@ -3,19 +3,19 @@ import {
   Quaternion,
   childrenIndex,
   resolveWorldDrivers,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmAimDriver,
-  IAutoFilmIKDriver,
-  IAutoFilmNode,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieAimDriver,
+  IAutoMovieIKDriver,
+  IAutoMovieNode,
+  IAutoMovieTransform,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
-const IDENTITY: IAutoFilmTransform = {
+const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -28,7 +28,7 @@ const W = (x: number, y: number, z: number): number[] =>
     { x: 1, y: 1, z: 1 },
   );
 
-const aim = (over: Partial<IAutoFilmAimDriver>): IAutoFilmAimDriver => ({
+const aim = (over: Partial<IAutoMovieAimDriver>): IAutoMovieAimDriver => ({
   type: "aim",
   owner: "o",
   target: "t",
@@ -42,14 +42,14 @@ const aim = (over: Partial<IAutoFilmAimDriver>): IAutoFilmAimDriver => ({
 /** Where the owner's aim axis points after the driver runs. */
 const aimedDir = (
   world: Map<string, number[]>,
-  aimAxis: IAutoFilmVector3,
-): IAutoFilmVector3 =>
+  aimAxis: IAutoMovieVector3,
+): IAutoMovieVector3 =>
   Quaternion.rotateVector(Matrix4.decompose(world.get("o")!).rotation, aimAxis);
 
 const runAim = (
-  d: IAutoFilmAimDriver,
-  ownerPos: IAutoFilmVector3,
-  targetPos: IAutoFilmVector3,
+  d: IAutoMovieAimDriver,
+  ownerPos: IAutoMovieVector3,
+  targetPos: IAutoMovieVector3,
 ): Map<string, number[]> => {
   const world = new Map<string, number[]>([
     ["o", W(ownerPos.x, ownerPos.y, ownerPos.z)],
@@ -145,7 +145,7 @@ export const test_resolve_world_drivers = (): void => {
   // 6. subtree recompose: child follows the rotated owner. Aiming −Z up at a
   // target on +Y rotates the owner about X, so the child at local +Y swings to
   // world +Z.
-  const nodes: IAutoFilmNode[] = [
+  const nodes: IAutoMovieNode[] = [
     { ...node("o"), parent: null },
     { ...node("c"), parent: "o", transform: trs(0, 2, 0) },
   ];
@@ -154,7 +154,7 @@ export const test_resolve_world_drivers = (): void => {
     ["c", W(0, 2, 0)],
     ["t", W(0, 5, 0)],
   ]);
-  const localById = new Map<string, IAutoFilmTransform>([["c", trs(0, 2, 0)]]);
+  const localById = new Map<string, IAutoMovieTransform>([["c", trs(0, 2, 0)]]);
   resolveWorldDrivers([aim({})], world, localById, childrenIndex(nodes));
   const childPos = Matrix4.position(world.get("c")!);
   TestValidator.predicate(
@@ -163,7 +163,7 @@ export const test_resolve_world_drivers = (): void => {
   );
 
   // 7. ik driver deferred
-  const ik: IAutoFilmIKDriver = {
+  const ik: IAutoMovieIKDriver = {
     type: "ik",
     chain: ["a", "b"],
     goal: "g",
@@ -199,7 +199,7 @@ export const test_resolve_world_drivers = (): void => {
   TestValidator.predicate("nclose available", nclose(1, 1));
 };
 
-const node = (id: string): IAutoFilmNode => ({
+const node = (id: string): IAutoMovieNode => ({
   id,
   name: null,
   parent: null,
@@ -211,7 +211,7 @@ const node = (id: string): IAutoFilmNode => ({
   skin: null,
 });
 
-const trs = (x: number, y: number, z: number): IAutoFilmTransform => ({
+const trs = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },

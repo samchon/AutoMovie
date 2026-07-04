@@ -1,4 +1,4 @@
-import { fitSimilarity2 } from "@autofilm/forge";
+import { fitSimilarity2 } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";

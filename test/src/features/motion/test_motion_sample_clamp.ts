@@ -1,11 +1,11 @@
-import { sampleMotion } from "@autofilm/engine";
-import { IAutoFilmMotion } from "@autofilm/interface";
+import { sampleMotion } from "@automovie/engine";
+import { IAutoMovieMotion } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createValidMotion } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const elbow = (m: IAutoFilmMotion, t: number): number => {
+const elbow = (m: IAutoMovieMotion, t: number): number => {
   const j = sampleMotion(m, t).pose.joints.find(
     (x) => x.bone === "leftLowerArm",
   );

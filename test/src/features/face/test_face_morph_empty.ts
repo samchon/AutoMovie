@@ -1,4 +1,4 @@
-import { IAutoFilmFaceTemplate, morphFace } from "@autofilm/engine";
+import { IAutoMovieFaceTemplate, morphFace } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeFace } from "../internal/fixtures";
@@ -12,7 +12,7 @@ import { makeFace } from "../internal/fixtures";
  * `result !== template.positions` (a copy, not the original).
  */
 export const test_face_morph_empty = (): void => {
-  const template: IAutoFilmFaceTemplate = {
+  const template: IAutoMovieFaceTemplate = {
     positions: [1, 2, 3],
     targets: {},
   };

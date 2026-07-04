@@ -1,10 +1,10 @@
-import { clampPose } from "@autofilm/engine";
+import { clampPose } from "@automovie/engine";
 import {
-  IAutoFilmBone,
-  IAutoFilmJointConstraint,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  IAutoMovieBone,
+  IAutoMovieJointConstraint,
+  IAutoMoviePose,
+  IAutoMovieSkeleton,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 const REST = {
@@ -13,13 +13,13 @@ const REST = {
   scale: { x: 1, y: 1, z: 1 },
 };
 const bone = (
-  name: IAutoFilmBone["bone"],
-  constraint: IAutoFilmJointConstraint | null,
-): IAutoFilmBone => ({ bone: name, parent: null, rest: REST, constraint });
+  name: IAutoMovieBone["bone"],
+  constraint: IAutoMovieJointConstraint | null,
+): IAutoMovieBone => ({ bone: name, parent: null, rest: REST, constraint });
 
 // leftLowerArm carries an explicit override; leftUpperArm falls back to the
 // default table; hips has no constraint anywhere (pass-through).
-const SKELETON: IAutoFilmSkeleton = {
+const SKELETON: IAutoMovieSkeleton = {
   id: "s",
   bones: [
     bone("leftLowerArm", {
@@ -50,7 +50,7 @@ const SKELETON: IAutoFilmSkeleton = {
  *    root transform is preserved.
  */
 export const test_rom_clamp_pose = (): void => {
-  const pose: IAutoFilmPose = {
+  const pose: IAutoMoviePose = {
     skeleton: "s",
     root: REST,
     joints: [

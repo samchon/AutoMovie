@@ -1,4 +1,4 @@
-import { validatePoseResult } from "@autofilm/engine";
+import { validatePoseResult } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";

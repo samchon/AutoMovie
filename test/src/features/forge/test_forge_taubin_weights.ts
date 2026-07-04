@@ -1,4 +1,4 @@
-import { meshAdjacency, taubinSmooth } from "@autofilm/forge";
+import { meshAdjacency, taubinSmooth } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**

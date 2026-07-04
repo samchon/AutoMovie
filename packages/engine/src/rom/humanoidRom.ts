@@ -1,16 +1,19 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmAngleRange,
-  IAutoFilmJointConstraint,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieAngleRange,
+  IAutoMovieJointConstraint,
+} from "@automovie/interface";
 
-const range = (min: number, max: number): IAutoFilmAngleRange => ({ min, max });
+const range = (min: number, max: number): IAutoMovieAngleRange => ({
+  min,
+  max,
+});
 
 const constraint = (
-  flexion: IAutoFilmAngleRange | null,
-  abduction: IAutoFilmAngleRange | null,
-  twist: IAutoFilmAngleRange | null,
-): IAutoFilmJointConstraint => ({ flexion, abduction, twist });
+  flexion: IAutoMovieAngleRange | null,
+  abduction: IAutoMovieAngleRange | null,
+  twist: IAutoMovieAngleRange | null,
+): IAutoMovieJointConstraint => ({ flexion, abduction, twist });
 
 /**
  * Generic finger phalanx: flexes forward, slight hyperextension, no
@@ -20,10 +23,10 @@ const FINGER = constraint(range(-20, 100), null, null);
 
 /**
  * Default anatomical range-of-motion table for the normalized humanoid, keyed
- * by {@link AutoFilmHumanoidBone}.
+ * by {@link AutoMovieHumanoidBone}.
  *
  * These are **approximate clinical norms** (goniometry), in degrees, under the
- * sign convention documented on {@link IAutoFilmJointConstraint}: flexion (+) /
+ * sign convention documented on {@link IAutoMovieJointConstraint}: flexion (+) /
  * extension (−) about the sagittal axis, abduction (+) / adduction (−) about
  * the frontal axis, external (+) / internal (−) about the limb's long axis.
  * Left and right limbs share magnitudes here; mirroring the abduction _sign_
@@ -31,7 +34,7 @@ const FINGER = constraint(range(-20, 100), null, null);
  *
  * A bone absent from this table (or an axis set to `null`) is treated as
  * unconstrained / immobile on that axis. A skeleton may override any of these
- * per-bone via {@link IAutoFilmBone.constraint} (a contortionist, a stylized
+ * per-bone via {@link IAutoMovieBone.constraint} (a contortionist, a stylized
  * non-human rig); this table is only the fallback.
  *
  * These numbers are a deliberate, documented baseline — good enough to reject
@@ -41,7 +44,7 @@ const FINGER = constraint(range(-20, 100), null, null);
  * @author Samchon
  */
 export const DEFAULT_HUMANOID_ROM: Partial<
-  Record<AutoFilmHumanoidBone, IAutoFilmJointConstraint>
+  Record<AutoMovieHumanoidBone, IAutoMovieJointConstraint>
 > = {
   // ── spine / head ──
   spine: constraint(range(-30, 80), range(-35, 35), range(-45, 45)),
@@ -112,7 +115,7 @@ export const DEFAULT_HUMANOID_ROM: Partial<
  * (unconstrained).
  */
 export const getConstraint = (
-  bone: AutoFilmHumanoidBone,
-  override: IAutoFilmJointConstraint | null,
-): IAutoFilmJointConstraint | null =>
+  bone: AutoMovieHumanoidBone,
+  override: IAutoMovieJointConstraint | null,
+): IAutoMovieJointConstraint | null =>
   override ?? DEFAULT_HUMANOID_ROM[bone] ?? null;

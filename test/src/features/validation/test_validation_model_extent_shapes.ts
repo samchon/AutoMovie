@@ -1,8 +1,8 @@
-import { validateModel } from "@autofilm/engine";
+import { validateModel } from "@automovie/engine";
 import {
-  AutoFilmPrimitiveShape,
-  IAutoFilmModelPart,
-} from "@autofilm/interface";
+  AutoMoviePrimitiveShape,
+  IAutoMovieModelPart,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
@@ -10,8 +10,8 @@ import { hasViolation } from "../internal/predicates";
 
 const part = (
   id: string,
-  shape: AutoFilmPrimitiveShape,
-): IAutoFilmModelPart => ({
+  shape: AutoMoviePrimitiveShape,
+): IAutoMovieModelPart => ({
   id,
   name: id,
   geometry: { type: "primitive", shape },

@@ -1,6 +1,6 @@
-# `@autofilm/mcp`
+# `@automovie/mcp`
 
-AutoFilm's deterministic film engine, exposed as **Model Context Protocol (MCP)**
+AutoMovie's deterministic film engine, exposed as **Model Context Protocol (MCP)**
 tools.
 
 Instead of the repository hosting its own LLM orchestration, the engine is a
@@ -11,7 +11,7 @@ that make the **engine, not the model, the arbiter of physical truth** ("engine
 enforces, model creates").
 
 Every tool's JSON schema is derived at compile time from
-[`AutoFilmApplication`](./src/AutoFilmApplication.ts)'s method signatures and
+[`AutoMovieApplication`](./src/AutoMovieApplication.ts)'s method signatures and
 JSDoc via `typia.llm.controller` (+ `@typia/mcp`), and calls are validated in and
 out.
 
@@ -29,10 +29,10 @@ with.
 
 ```bash
 # dev (in-workspace, transpiled by ttsx)
-pnpm --filter @autofilm/mcp start        # = ttsx src/bin.ts
+pnpm --filter @automovie/mcp start        # = ttsx src/bin.ts
 
 # built (published): the bin runs the compiled server
-npx @autofilm/mcp                        # = node lib/bin.js
+npx @automovie/mcp                        # = node lib/bin.js
 ```
 
 ## Configure an MCP client
@@ -40,9 +40,9 @@ npx @autofilm/mcp                        # = node lib/bin.js
 ```jsonc
 {
   "mcpServers": {
-    "autofilm": {
+    "automovie": {
       "command": "npx",
-      "args": ["@autofilm/mcp"]
+      "args": ["@automovie/mcp"]
     }
   }
 }

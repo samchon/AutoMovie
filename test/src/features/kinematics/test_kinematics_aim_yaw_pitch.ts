@@ -1,11 +1,15 @@
-import { aimYawPitch } from "@autofilm/engine";
-import { IAutoFilmVector3 } from "@autofilm/interface";
+import { aimYawPitch } from "@automovie/engine";
+import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const O: IAutoFilmVector3 = { x: 0, y: 0, z: 0 };
-const at = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const O: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
+const at = (x: number, y: number, z: number): IAutoMovieVector3 => ({
+  x,
+  y,
+  z,
+});
 
 /**
  * `aimYawPitch` — the yaw/pitch that aims from a point at a target in a frame

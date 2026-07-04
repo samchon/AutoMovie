@@ -1,6 +1,6 @@
-import { Matrix4, resolveFrame } from "@autofilm/engine";
-import { IAutoFilmIKDriver, IAutoFilmNode } from "@autofilm/interface";
-import { mountViewer } from "@autofilm/viewer";
+import { Matrix4, resolveFrame } from "@automovie/engine";
+import { IAutoMovieIKDriver, IAutoMovieNode } from "@automovie/interface";
+import { mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 // ── a core-node scene: a 3-bone arm (shoulder → elbow → wrist) + a goal ──────
@@ -15,7 +15,7 @@ const node = (
   x: number,
   y: number,
   z: number,
-): IAutoFilmNode => ({
+): IAutoMovieNode => ({
   id,
   name: null,
   parent,
@@ -28,14 +28,14 @@ const node = (
 });
 
 const target = node("target", null, 1.6, 0.8, 0.6);
-const nodes: IAutoFilmNode[] = [
+const nodes: IAutoMovieNode[] = [
   node("shoulder", null, 0, 0.9, 0),
   node("elbow", "shoulder", 1.2, 0, 0), // upper-arm length 1.2
   node("wrist", "elbow", 1.0, 0, 0), // forearm length 1.0
   target,
 ];
 
-const ik: IAutoFilmIKDriver = {
+const ik: IAutoMovieIKDriver = {
   type: "ik",
   chain: ["shoulder", "elbow", "wrist"],
   goal: "target",
@@ -93,7 +93,7 @@ app.innerHTML = `
   </style>
   <canvas id="view"></canvas>
   <div id="cap">
-    <h1>autofilm · engine drivers</h1>
+    <h1>automovie · engine drivers</h1>
     <p>Two-bone IK (the core resolver) bends a 3-joint arm so its wrist tracks
        the red goal, recomputed every frame. No AI — just resolveFrame.</p>
   </div>
@@ -136,7 +136,7 @@ mountViewer(canvas, scene, camera, (elapsed) => {
 });
 
 // headless-verification hook
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   frames: () => frame,
 };

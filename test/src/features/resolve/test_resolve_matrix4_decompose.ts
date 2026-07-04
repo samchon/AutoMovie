@@ -1,14 +1,14 @@
-import { Matrix4 } from "@autofilm/engine";
-import { IAutoFilmQuaternion, IAutoFilmVector3 } from "@autofilm/interface";
+import { Matrix4 } from "@automovie/engine";
+import { IAutoMovieQuaternion, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, qclose, vclose } from "../internal/predicates";
 
 const roundTrip = (
   title: string,
-  t: IAutoFilmVector3,
-  r: IAutoFilmQuaternion,
-  s: IAutoFilmVector3,
+  t: IAutoMovieVector3,
+  r: IAutoMovieQuaternion,
+  s: IAutoMovieVector3,
 ): void => {
   const d = Matrix4.decompose(Matrix4.compose(t, r, s));
   TestValidator.predicate(`${title}: position`, vclose(d.position, t));

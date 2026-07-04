@@ -1,42 +1,42 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmBone,
-  IAutoFilmPose,
-  IAutoFilmQuaternion,
-  IAutoFilmSkeleton,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieBone,
+  IAutoMoviePose,
+  IAutoMovieQuaternion,
+  IAutoMovieSkeleton,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
-import { IAutoFilmRestFrame } from "../rom/restFrame";
-import { IAutoFilmJointAxes, jointToQuaternion } from "./jointToQuaternion";
+import { IAutoMovieRestFrame } from "../rom/restFrame";
+import { IAutoMovieJointAxes, jointToQuaternion } from "./jointToQuaternion";
 
 /**
  * A resolved bone transform after forward kinematics: the bone's local rotation
  * (rest ∘ articulation) and its world position.
  */
-export interface IAutoFilmResolvedBone {
+export interface IAutoMovieResolvedBone {
   /** The bone this transform belongs to. */
-  bone: AutoFilmHumanoidBone;
+  bone: AutoMovieHumanoidBone;
   /**
    * Local rotation to set on the bone (rest rotation composed with
    * articulation).
    */
-  localRotation: IAutoFilmQuaternion;
+  localRotation: IAutoMovieQuaternion;
   /** Bone origin in world/model space, after walking the hierarchy. */
-  worldPosition: IAutoFilmVector3;
+  worldPosition: IAutoMovieVector3;
   /**
    * Bone orientation in world/model space (parent world rotation ∘ local). This
    * is what an **attachment** rides — fixing a child body's frame in this
    * bone's frame (e.g. a rider in a horse's saddle) parents the two the way a
    * physics joint does.
    */
-  worldRotation: IAutoFilmQuaternion;
+  worldRotation: IAutoMovieQuaternion;
 }
 
 /**
- * Resolve a {@link IAutoFilmPose} against its {@link IAutoFilmSkeleton} into
+ * Resolve a {@link IAutoMoviePose} against its {@link IAutoMovieSkeleton} into
  * per-bone transforms (forward kinematics).
  *
  * For each bone it composes the rest-pose local rotation with the pose's
@@ -67,12 +67,12 @@ export interface IAutoFilmResolvedBone {
  * @author Samchon
  */
 export const resolvePose = (
-  pose: IAutoFilmPose,
-  skeleton: IAutoFilmSkeleton,
-  jointAxes?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>,
-  restFrames?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmRestFrame>>,
-): IAutoFilmResolvedBone[] => {
-  const articulation = new Map<AutoFilmHumanoidBone, IAutoFilmQuaternion>();
+  pose: IAutoMoviePose,
+  skeleton: IAutoMovieSkeleton,
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>,
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>,
+): IAutoMovieResolvedBone[] => {
+  const articulation = new Map<AutoMovieHumanoidBone, IAutoMovieQuaternion>();
   for (const j of pose.joints)
     articulation.set(
       j.bone,
@@ -80,8 +80,8 @@ export const resolvePose = (
     );
 
   const children = new Map<
-    AutoFilmHumanoidBone | "__root__",
-    IAutoFilmBone[]
+    AutoMovieHumanoidBone | "__root__",
+    IAutoMovieBone[]
   >();
   for (const b of skeleton.bones) {
     const key = b.parent ?? "__root__";
@@ -90,14 +90,14 @@ export const resolvePose = (
     children.set(key, list);
   }
 
-  const resolved: IAutoFilmResolvedBone[] = [];
+  const resolved: IAutoMovieResolvedBone[] = [];
 
   // The walk receives the bone object directly (the children map already holds
   // it), so there is no name→bone lookup and no unreachable "missing bone" guard.
   const walk = (
-    bone: IAutoFilmBone,
-    parentWorldRot: IAutoFilmQuaternion,
-    parentWorldPos: IAutoFilmVector3,
+    bone: IAutoMovieBone,
+    parentWorldRot: IAutoMovieQuaternion,
+    parentWorldPos: IAutoMovieVector3,
   ): void => {
     const art = articulation.get(bone.bone) ?? Quaternion.identity();
     const localRotation = Quaternion.multiply(bone.rest.rotation, art);

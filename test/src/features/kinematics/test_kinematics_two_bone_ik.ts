@@ -1,4 +1,4 @@
-import { solveTwoBoneIK } from "@autofilm/engine";
+import { solveTwoBoneIK } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";

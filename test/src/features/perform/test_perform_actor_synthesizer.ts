@@ -1,28 +1,28 @@
 import {
-  IAutoFilmActorContext,
+  IAutoMovieActorContext,
   Quaternion,
   compilePerformance,
   makeActorSynthesizer,
   sampleMotion,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmActionCall,
-  IAutoFilmActionTarget,
-  IAutoFilmGait,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieActionCall,
+  IAutoMovieActionTarget,
+  IAutoMovieGait,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
 import { nclose, vclose } from "../internal/predicates";
 
-const WALK: IAutoFilmGait = {
+const WALK: IAutoMovieGait = {
   name: "walk",
   period: 1,
   limbs: [{ bone: "leftUpperLeg", phase: 0, duty: 0.5, amplitude: 25 }],
 };
 
-const ctx: IAutoFilmActorContext = {
+const ctx: IAutoMovieActorContext = {
   skeleton: "h",
   gaits: [WALK],
   position: { x: 0, y: 0, z: 0 },
@@ -32,17 +32,17 @@ const ctx: IAutoFilmActorContext = {
   restPose: makePose([joint("spine", { flexion: 0 })]),
 };
 
-const contexts = new Map<string, IAutoFilmActorContext>([["hero", ctx]]);
+const contexts = new Map<string, IAutoMovieActorContext>([["hero", ctx]]);
 
-const nodes = new Map<string, IAutoFilmVector3>([
+const nodes = new Map<string, IAutoMovieVector3>([
   ["door", { x: 0, y: 0, z: 5 }],
   ["here", { x: 0, y: 0, z: 0 }],
 ]);
 
 const locomote = (
   gait: "walk" | "run" | "sprint" | "sneak" | "march",
-  to: IAutoFilmActionTarget,
-): IAutoFilmActionCall => ({
+  to: IAutoMovieActionTarget,
+): IAutoMovieActionCall => ({
   verb: "locomote",
   gait,
   to,
@@ -51,14 +51,14 @@ const locomote = (
   duration: "auto",
 });
 
-const hold = (start: number): IAutoFilmActionCall => ({
+const hold = (start: number): IAutoMovieActionCall => ({
   verb: "hold",
   actor: "hero",
   start,
   duration: 1,
 });
 
-const gesture: IAutoFilmActionCall = {
+const gesture: IAutoMovieActionCall = {
   verb: "gesture",
   kind: "strike",
   actor: "hero",
@@ -66,7 +66,7 @@ const gesture: IAutoFilmActionCall = {
   duration: "auto",
 };
 
-const emote = (duration: number | "auto"): IAutoFilmActionCall => ({
+const emote = (duration: number | "auto"): IAutoMovieActionCall => ({
   verb: "emote",
   preset: "happy",
   intensity: 0.8,
@@ -76,9 +76,9 @@ const emote = (duration: number | "auto"): IAutoFilmActionCall => ({
 });
 
 const lookAt = (
-  to: IAutoFilmActionTarget,
+  to: IAutoMovieActionTarget,
   duration: number | "auto",
-): IAutoFilmActionCall => ({
+): IAutoMovieActionCall => ({
   verb: "lookAt",
   to,
   actor: "hero",
@@ -86,7 +86,7 @@ const lookAt = (
   duration,
 });
 
-const door: IAutoFilmActionTarget = { kind: "node", node: "door" };
+const door: IAutoMovieActionTarget = { kind: "node", node: "door" };
 
 /**
  * `makeActorSynthesizer` — the reference content seam that lets the action
@@ -124,12 +124,12 @@ export const test_perform_actor_synthesizer = (): void => {
   // the baked root must reach the world destination — not a path rotated off
   // the heading. Facing +90°, walking to a point 5 m along world +X.
   const turned = makeActorSynthesizer(
-    new Map<string, IAutoFilmActorContext>([
+    new Map<string, IAutoMovieActorContext>([
       ["hero", { ...ctx, facingDeg: 90 }],
     ]),
     nodes,
   );
-  const worldDest: IAutoFilmVector3 = { x: 5, y: 0, z: 0 };
+  const worldDest: IAutoMovieVector3 = { x: 5, y: 0, z: 0 };
   const turnedTrip = turned(
     locomote("walk", { kind: "point", point: worldDest }),
     "hero",

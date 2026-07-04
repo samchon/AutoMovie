@@ -1,5 +1,5 @@
-import { travelMotion } from "@autofilm/engine";
-import { IAutoFilmTransform } from "@autofilm/interface";
+import { travelMotion } from "@automovie/engine";
+import { IAutoMovieTransform } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
@@ -75,7 +75,7 @@ export const test_motion_travel = (): void => {
   );
 
   // 2. base root preserved, travel added on top
-  const bob: IAutoFilmTransform = {
+  const bob: IAutoMovieTransform = {
     translation: { x: 0, y: 0.1, z: 0 },
     rotation: { x: 0, y: 0.3826834, z: 0, w: 0.9238795 }, // ~45° yaw
     scale: { x: 1, y: 1, z: 1 },

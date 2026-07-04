@@ -1,4 +1,4 @@
-import { IAutoFilmFaceTemplate, morphFace } from "@autofilm/engine";
+import { IAutoMovieFaceTemplate, morphFace } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeFace } from "../internal/fixtures";
@@ -12,7 +12,7 @@ import { makeFace } from "../internal/fixtures";
  * Scenario: a template with only `eyeSize` morphed by `jaw.width` throws.
  */
 export const test_face_morph_unknown_target = (): void => {
-  const template: IAutoFilmFaceTemplate = {
+  const template: IAutoMovieFaceTemplate = {
     positions: [0, 0, 0],
     targets: { eyeSize: [1, 0, 0] },
   };

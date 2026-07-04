@@ -1,5 +1,5 @@
-import { HUMANOID_JOINT_AXES } from "@autofilm/engine";
-import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
+import { HUMANOID_JOINT_AXES } from "@automovie/engine";
+import { AutoMoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import {
@@ -32,13 +32,13 @@ const blueGroup = new THREE.Group();
 blueGroup.position.set(0, 0, -gap); // blue faces +Z (toward red) at rest
 blueGroup.add(blueObj.object);
 
-const redPlayer = new AutoFilmPlayer(
+const redPlayer = new AutoMoviePlayer(
   redObj,
   red.skeleton,
   redClip(red.skeleton.id),
   HUMANOID_JOINT_AXES,
 );
-const bluePlayer = new AutoFilmPlayer(
+const bluePlayer = new AutoMoviePlayer(
   blueObj,
   blue.skeleton,
   blueClip(blue.skeleton.id),
@@ -90,7 +90,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   handle.renderer.render(scene, camera);
 };
 
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   duration: SPAR_DURATION,
   redBones: () => redObj.bones.size,

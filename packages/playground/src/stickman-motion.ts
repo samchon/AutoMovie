@@ -1,18 +1,18 @@
-import { Quaternion, sequenceMotion, travelMotion } from "@autofilm/engine";
+import { Quaternion, sequenceMotion, travelMotion } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieJointPose,
+  IAutoMovieKeyframe,
+  IAutoMovieMotion,
+  IAutoMoviePose,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 
 /**
  * A small library of motion clips for the stick figure — the deliberate
- * exercise of autofilm's motion AST against the simplest possible body.
+ * exercise of automovie's motion AST against the simplest possible body.
  *
- * Each clip is an {@link IAutoFilmMotion}: sparse keyframes the engine
+ * Each clip is an {@link IAutoMovieMotion}: sparse keyframes the engine
  * interpolates (per-axis joint angles + an optional whole-body `root`
  * transform) with easing. Together they cover every degree of freedom the
  * motion layer offers — frontal-plane `abduction`, sagittal `flexion`, axial
@@ -27,9 +27,9 @@ import {
 
 /** A joint articulation (unset axes default to 0 = rest). */
 const j = (
-  bone: AutoFilmHumanoidBone,
+  bone: AutoMovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
-): IAutoFilmJointPose => ({
+): IAutoMovieJointPose => ({
   bone,
   flexion: a.flexion ?? 0,
   abduction: a.abduction ?? 0,
@@ -42,7 +42,7 @@ const root = (
   y: number,
   z: number,
   yawDeg: number,
-): IAutoFilmTransform => ({
+): IAutoMovieTransform => ({
   translation: { x, y, z },
   rotation: Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, yawDeg),
   scale: { x: 1, y: 1, z: 1 },
@@ -50,11 +50,11 @@ const root = (
 
 const pose = (
   skeleton: string,
-  joints: IAutoFilmJointPose[],
-  r: IAutoFilmTransform | null = null,
-): IAutoFilmPose => ({ skeleton, root: r, joints });
+  joints: IAutoMovieJointPose[],
+  r: IAutoMovieTransform | null = null,
+): IAutoMoviePose => ({ skeleton, root: r, joints });
 
-const key = (time: number, p: IAutoFilmPose): IAutoFilmKeyframe => ({
+const key = (time: number, p: IAutoMoviePose): IAutoMovieKeyframe => ({
   time,
   pose: p,
   expression: null,
@@ -63,7 +63,7 @@ const key = (time: number, p: IAutoFilmPose): IAutoFilmKeyframe => ({
 });
 
 /** Jumping jacks — arms sweep overhead and legs splay in the frontal plane. */
-export const jumpingJack = (sk: string): IAutoFilmMotion => {
+export const jumpingJack = (sk: string): IAutoMovieMotion => {
   const closed = pose(sk, [
     j("leftUpperArm", { abduction: -72 }),
     j("rightUpperArm", { abduction: 72 }),
@@ -84,9 +84,9 @@ export const jumpingJack = (sk: string): IAutoFilmMotion => {
 };
 
 /** A friendly wave — right arm held overhead, forearm swinging side to side. */
-export const wave = (sk: string): IAutoFilmMotion => {
+export const wave = (sk: string): IAutoMovieMotion => {
   const stanceArm = j("leftUpperArm", { abduction: -64 });
-  const up = (fore: number): IAutoFilmPose =>
+  const up = (fore: number): IAutoMoviePose =>
     pose(sk, [
       stanceArm,
       j("rightUpperArm", { abduction: -150 }),
@@ -104,19 +104,19 @@ export const wave = (sk: string): IAutoFilmMotion => {
 };
 
 /** A walk cycle in place — legs stride fore/aft, arms counter-swing. */
-export const walk = (sk: string): IAutoFilmMotion => {
+export const walk = (sk: string): IAutoMovieMotion => {
   // Arms hang down-and-out (abduction) and swing fore/aft via `flexion` (the
   // anatomical sagittal axis under HUMANOID_JOINT_AXES); `s` is the swing phase
   // in [−1, 1] (+1 = left arm back, right arm forward — opposing the legs).
   // Mirrored rest makes the same +flexion swing the left arm back and the right
   // arm forward. Specified in EVERY keyframe so they swing smoothly instead of
   // snapping back to the rest T-pose.
-  const arms = (s: number): IAutoFilmJointPose[] => [
+  const arms = (s: number): IAutoMovieJointPose[] => [
     j("leftUpperArm", { abduction: -58, flexion: 30 * s }),
     j("rightUpperArm", { abduction: 58, flexion: 30 * s }),
   ];
   // contact: `lead` leg forward (flexion −), `trail` leg back (flexion +).
-  const contact = (lead: "left" | "right"): IAutoFilmPose => {
+  const contact = (lead: "left" | "right"): IAutoMoviePose => {
     const s = lead === "left" ? 1 : -1;
     return pose(sk, [
       j("leftUpperLeg", { flexion: -30 * s }),
@@ -127,7 +127,7 @@ export const walk = (sk: string): IAutoFilmMotion => {
     ]);
   };
   // passing: the swinging leg lifts (knee up) as it crosses under the body.
-  const passing = (swing: "left" | "right"): IAutoFilmPose =>
+  const passing = (swing: "left" | "right"): IAutoMoviePose =>
     pose(sk, [
       j("leftUpperLeg", { flexion: swing === "left" ? -16 : -2 }),
       j("rightUpperLeg", { flexion: swing === "right" ? -16 : -2 }),
@@ -151,7 +151,7 @@ export const walk = (sk: string): IAutoFilmMotion => {
 };
 
 /** A hop — the whole body launches up (root translation) with a leg tuck. */
-export const hop = (sk: string): IAutoFilmMotion => {
+export const hop = (sk: string): IAutoMovieMotion => {
   // Arms specified in every keyframe (no rest-T-pose snap): down at rest, swept
   // back in the crouch, thrown up at the apex.
   const stand = pose(
@@ -202,8 +202,8 @@ export const hop = (sk: string): IAutoFilmMotion => {
 };
 
 /** A turn — the whole character yaws back and forth about its vertical axis. */
-export const turn = (sk: string): IAutoFilmMotion => {
-  const at = (yaw: number): IAutoFilmPose =>
+export const turn = (sk: string): IAutoMovieMotion => {
+  const at = (yaw: number): IAutoMoviePose =>
     pose(
       sk,
       [
@@ -222,17 +222,17 @@ export const turn = (sk: string): IAutoFilmMotion => {
 };
 
 /** A run — bigger strides than the walk with an airborne flight phase. */
-export const run = (sk: string): IAutoFilmMotion => {
+export const run = (sk: string): IAutoMovieMotion => {
   const lean = [j("spine", { flexion: 14 }), j("chest", { flexion: 8 })];
   // a runner pumps with the elbows held bent ~90° (forearms up), swinging
   // fore/aft from the shoulder — not straight arms windmilling
-  const arms = (s: number): IAutoFilmJointPose[] => [
+  const arms = (s: number): IAutoMovieJointPose[] => [
     j("leftUpperArm", { abduction: -42, flexion: 48 * s }),
     j("leftLowerArm", { flexion: -88 }),
     j("rightUpperArm", { abduction: 42, flexion: 48 * s }),
     j("rightLowerArm", { flexion: 88 }),
   ];
-  const contact = (lead: "left" | "right"): IAutoFilmPose => {
+  const contact = (lead: "left" | "right"): IAutoMoviePose => {
     const s = lead === "left" ? 1 : -1;
     return pose(
       sk,
@@ -247,7 +247,7 @@ export const run = (sk: string): IAutoFilmMotion => {
       root(0, -0.03, 0, 0),
     );
   };
-  const flight = (swing: "left" | "right"): IAutoFilmPose =>
+  const flight = (swing: "left" | "right"): IAutoMoviePose =>
     pose(
       sk,
       [
@@ -276,8 +276,8 @@ export const run = (sk: string): IAutoFilmMotion => {
 };
 
 /** A dance — hip sway, a twisting spine, and arms raised on alternating beats. */
-export const dance = (sk: string): IAutoFilmMotion => {
-  const beat = (d: number): IAutoFilmPose =>
+export const dance = (sk: string): IAutoMovieMotion => {
+  const beat = (d: number): IAutoMoviePose =>
     pose(
       sk,
       [
@@ -300,7 +300,7 @@ export const dance = (sk: string): IAutoFilmMotion => {
 };
 
 /** A high front kick with the right leg, arms thrown back for balance. */
-export const kick = (sk: string): IAutoFilmMotion => {
+export const kick = (sk: string): IAutoMovieMotion => {
   const stand = pose(sk, [
     j("leftUpperArm", { abduction: -60 }),
     j("rightUpperArm", { abduction: 60 }),
@@ -336,7 +336,7 @@ export const kick = (sk: string): IAutoFilmMotion => {
 };
 
 /** A stitched routine: walk in, break into a run, jumping jacks, then a kick. */
-export const combo = (sk: string): IAutoFilmMotion =>
+export const combo = (sk: string): IAutoMovieMotion =>
   sequenceMotion(
     "combo",
     [walk(sk), walk(sk), run(sk), run(sk), jumpingJack(sk), kick(sk)],
@@ -349,9 +349,9 @@ export const combo = (sk: string): IAutoFilmMotion =>
  * ~0.6 m/s, `sprint` the run at ~2 m/s, both forward (+Z, the way the figure
  * faces).
  */
-export const stroll = (sk: string): IAutoFilmMotion =>
+export const stroll = (sk: string): IAutoMovieMotion =>
   travelMotion("stroll", walk(sk), 6, { x: 0, y: 0, z: 0.62 });
-export const sprint = (sk: string): IAutoFilmMotion =>
+export const sprint = (sk: string): IAutoMovieMotion =>
   travelMotion("sprint", run(sk), 9, { x: 0, y: 0, z: 2.0 });
 
 // ── shadow boxing — a ~30 s precision kickboxing round ───────────────────────
@@ -363,7 +363,7 @@ export const sprint = (sk: string): IAutoFilmMotion =>
 // inside each beat so the fighter stays framed. The aim is a light, crisp,
 // real-fighter feel: jabs/crosses/hooks/uppercuts, slips/weaves/ducks, push
 // kicks, knees, and high round/axe kicks woven together.
-const GUARD: IAutoFilmJointPose[] = [
+const GUARD: IAutoMovieJointPose[] = [
   j("spine", { flexion: 9 }),
   j("chest", { flexion: 6 }),
   j("leftUpperArm", { flexion: -38, abduction: -58 }),
@@ -376,23 +376,23 @@ const GUARD: IAutoFilmJointPose[] = [
   j("rightLowerLeg", { flexion: 22 }),
 ];
 
-export const shadowbox = (sk: string): IAutoFilmMotion => {
-  const merge = (over: IAutoFilmJointPose[]): IAutoFilmPose => {
+export const shadowbox = (sk: string): IAutoMovieMotion => {
+  const merge = (over: IAutoMovieJointPose[]): IAutoMoviePose => {
     const m = new Map(GUARD.map((x) => [x.bone, x] as const));
     for (const o of over) m.set(o.bone, o);
     return pose(sk, [...m.values()]);
   };
   const guard = merge([]);
   // a step: the same pose carried on a translated root (footwork)
-  const at = (p: IAutoFilmPose, x: number, z: number): IAutoFilmPose => ({
+  const at = (p: IAutoMoviePose, x: number, z: number): IAutoMoviePose => ({
     ...p,
     root: root(x, 0, z, 0),
   });
 
   const beat = (
     dur: number,
-    frames: [number, IAutoFilmPose][],
-  ): IAutoFilmMotion => ({
+    frames: [number, IAutoMoviePose][],
+  ): IAutoMovieMotion => ({
     id: "beat",
     skeleton: sk,
     duration: dur,
@@ -442,7 +442,7 @@ export const shadowbox = (sk: string): IAutoFilmMotion => {
   // ── defence ────────────────────────────────────────────────────────────
   // slip: ride the head off-line, sitting into the knees a little (not a stiff
   // waist-only lean) so it loads like a real fighter
-  const slip = (d: number): IAutoFilmPose => ({
+  const slip = (d: number): IAutoMoviePose => ({
     ...merge([
       j("spine", { flexion: 14, abduction: 18 * d, twist: 8 * d }),
       j("chest", { flexion: 9, abduction: 14 * d }),
@@ -455,7 +455,7 @@ export const shadowbox = (sk: string): IAutoFilmMotion => {
   });
   // weave: a deep bob to one side — waist AND both knees fold together and the
   // whole body sinks low under the imagined punch, then comes up the far side
-  const weave = (d: number): IAutoFilmPose => ({
+  const weave = (d: number): IAutoMoviePose => ({
     ...merge([
       j("spine", { flexion: 20, abduction: 26 * d, twist: 12 * d }),
       j("chest", { flexion: 12, abduction: 18 * d }),
@@ -467,7 +467,7 @@ export const shadowbox = (sk: string): IAutoFilmMotion => {
     root: root(0, -0.24, 0, 0),
   });
   // duck: drop straight down into a deep knee bend, waist folding over it
-  const duck = (): IAutoFilmPose => ({
+  const duck = (): IAutoMoviePose => ({
     ...merge([
       j("spine", { flexion: 28 }),
       j("chest", { flexion: 16 }),
@@ -543,9 +543,9 @@ export const shadowbox = (sk: string): IAutoFilmMotion => {
   // ── beat builders ────────────────────────────────────────────────────────
   const punch = (
     dur: number,
-    p: IAutoFilmPose,
+    p: IAutoMoviePose,
     hit = dur * 0.42,
-  ): IAutoFilmMotion =>
+  ): IAutoMovieMotion =>
     beat(dur, [
       [0, guard],
       [hit, p],
@@ -553,16 +553,16 @@ export const shadowbox = (sk: string): IAutoFilmMotion => {
     ]);
   const combo2 = (
     dur: number,
-    a: IAutoFilmPose,
-    b: IAutoFilmPose,
-  ): IAutoFilmMotion =>
+    a: IAutoMoviePose,
+    b: IAutoMoviePose,
+  ): IAutoMovieMotion =>
     beat(dur, [
       [0, guard],
       [dur * 0.3, a],
       [dur * 0.6, b],
       [dur, guard],
     ]);
-  const defend = (dur: number, p: IAutoFilmPose): IAutoFilmMotion =>
+  const defend = (dur: number, p: IAutoMoviePose): IAutoMovieMotion =>
     beat(dur, [
       [0, guard],
       [dur * 0.5, p],
@@ -570,9 +570,9 @@ export const shadowbox = (sk: string): IAutoFilmMotion => {
     ]);
   const kick = (
     dur: number,
-    chamber: IAutoFilmPose,
-    strike: IAutoFilmPose,
-  ): IAutoFilmMotion =>
+    chamber: IAutoMoviePose,
+    strike: IAutoMoviePose,
+  ): IAutoMovieMotion =>
     beat(dur, [
       [0, guard],
       [dur * 0.28, chamber],
@@ -583,17 +583,17 @@ export const shadowbox = (sk: string): IAutoFilmMotion => {
   // a strike thrown while stepping in, then footing back to centre
   const stepStrike = (
     dur: number,
-    p: IAutoFilmPose,
+    p: IAutoMoviePose,
     x: number,
     z: number,
-  ): IAutoFilmMotion =>
+  ): IAutoMovieMotion =>
     beat(dur, [
       [0, guard],
       [dur * 0.45, at(p, x, z)],
       [dur, guard],
     ]);
   // light footwork: shift the stance out and back
-  const stepStep = (dur: number, x: number, z: number): IAutoFilmMotion =>
+  const stepStep = (dur: number, x: number, z: number): IAutoMovieMotion =>
     beat(dur, [
       [0, guard],
       [dur * 0.5, at(guard, x, z)],
@@ -676,7 +676,7 @@ export const shadowbox = (sk: string): IAutoFilmMotion => {
 /** All clips, keyed by id — the demo's selectable set. */
 export const STICKMAN_CLIPS = (
   sk: string,
-): Record<string, IAutoFilmMotion> => ({
+): Record<string, IAutoMovieMotion> => ({
   jumpingJack: jumpingJack(sk),
   wave: wave(sk),
   walk: walk(sk),

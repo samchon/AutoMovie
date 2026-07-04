@@ -1,9 +1,9 @@
 import {
-  AutoFilmViolationKind,
-  IAutoFilmQuaternion,
-  IAutoFilmValidation,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  AutoMovieViolationKind,
+  IAutoMovieQuaternion,
+  IAutoMovieValidation,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 /**
  * Boolean closeness/violation predicates used inside `TestValidator.predicate`.
@@ -17,34 +17,34 @@ export const nclose = (a: number, b: number, eps = 1e-6): boolean =>
   Number.isFinite(a) && Math.abs(a - b) <= eps;
 
 export const vclose = (
-  v: IAutoFilmVector3,
-  e: IAutoFilmVector3,
+  v: IAutoMovieVector3,
+  e: IAutoMovieVector3,
   eps = 1e-6,
 ): boolean =>
   nclose(v.x, e.x, eps) && nclose(v.y, e.y, eps) && nclose(v.z, e.z, eps);
 
 /** True when two quaternions describe the same rotation (equal up to sign). */
 export const qclose = (
-  q: IAutoFilmQuaternion,
-  e: IAutoFilmQuaternion,
+  q: IAutoMovieQuaternion,
+  e: IAutoMovieQuaternion,
   eps = 1e-6,
 ): boolean => {
   const dot = q.x * e.x + q.y * e.y + q.z * e.z + q.w * e.w;
   return Math.abs(Math.abs(dot) - 1) <= eps;
 };
 
-export const qunit = (q: IAutoFilmQuaternion, eps = 1e-6): boolean =>
+export const qunit = (q: IAutoMovieQuaternion, eps = 1e-6): boolean =>
   nclose(Math.hypot(q.x, q.y, q.z, q.w), 1, eps);
 
 /** True when the validation failed with at least one matching violation. */
 export const hasViolation = (
-  v: IAutoFilmValidation,
-  kind: AutoFilmViolationKind,
+  v: IAutoMovieValidation,
+  kind: AutoMovieViolationKind,
   pathIncludes: string,
 ): boolean =>
   v.success === false &&
   v.violations.some((x) => x.kind === kind && x.path.includes(pathIncludes));
 
 /** Number of violations in a validation result (0 when it succeeded). */
-export const violationCount = (v: IAutoFilmValidation): number =>
+export const violationCount = (v: IAutoMovieValidation): number =>
   v.success === true ? 0 : v.violations.length;

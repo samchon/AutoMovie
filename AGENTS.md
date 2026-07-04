@@ -13,7 +13,7 @@ All conventions and workflows live as skills under `.codex/skills/`. Read the li
 
 ### Project Outline
 
-What `autofilm` is, the long-haul mission, the workspace layout, and the canonical commands, `.codex/skills/project/SKILL.md`.
+What `automovie` is, the long-haul mission, the workspace layout, and the canonical commands, `.codex/skills/project/SKILL.md`.
 
 ### Development
 

@@ -1,15 +1,15 @@
-import { IAutoFilmRenderSpec } from "@autofilm/interface";
+import { IAutoMovieRenderSpec } from "@automovie/interface";
 import {
   ffmpegArgs,
   frameName,
   framePattern,
   frameTimes,
-} from "@autofilm/render";
+} from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const SPEC: IAutoFilmRenderSpec = {
+const SPEC: IAutoMovieRenderSpec = {
   target: "shot-1",
   fps: 30,
   width: 1920,

@@ -1,8 +1,8 @@
-import { HUMANOID_REST_FRAME, restRelativeConstraint } from "@autofilm/engine";
-import { IAutoFilmJointConstraint } from "@autofilm/interface";
+import { HUMANOID_REST_FRAME, restRelativeConstraint } from "@automovie/engine";
+import { IAutoMovieJointConstraint } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-const CLINICAL: IAutoFilmJointConstraint = {
+const CLINICAL: IAutoMovieJointConstraint = {
   flexion: { min: -60, max: 180 },
   abduction: { min: -30, max: 180 },
   twist: null,

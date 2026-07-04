@@ -1,4 +1,4 @@
-import { IAutoFilmSequence, IAutoFilmShot } from "@autofilm/interface";
+import { IAutoMovieSequence, IAutoMovieShot } from "@automovie/interface";
 
 /**
  * One entry's placement on the output timeline: where it starts globally, how
@@ -7,7 +7,7 @@ import { IAutoFilmSequence, IAutoFilmShot } from "@autofilm/interface";
  *
  * @author Samchon
  */
-export interface IAutoFilmPlaybackEntry {
+export interface IAutoMoviePlaybackEntry {
   /** Index into `sequence.shots`. */
   entry: number;
 
@@ -25,8 +25,8 @@ export interface IAutoFilmPlaybackEntry {
 }
 
 /** The resolved output timeline: entry placements and the total runtime. */
-export interface IAutoFilmPlaybackTimeline {
-  entries: IAutoFilmPlaybackEntry[];
+export interface IAutoMoviePlaybackTimeline {
+  entries: IAutoMoviePlaybackEntry[];
 
   /** Total output seconds (transition overlaps subtracted). */
   runtime: number;
@@ -37,7 +37,7 @@ export interface IAutoFilmPlaybackTimeline {
  * plus — inside an incoming transition — the outgoing entry's tail and the
  * incoming shot's weight ramping 0 → 1 across the transition.
  */
-export interface IAutoFilmPlaybackSample {
+export interface IAutoMoviePlaybackSample {
   /** Live (incoming) shot id. */
   shot: string;
 
@@ -56,11 +56,11 @@ export interface IAutoFilmPlaybackSample {
  * references a shot, every trim fits), so this resolver is total.
  */
 export const sequenceTimeline = (
-  sequence: IAutoFilmSequence,
-  shots: IAutoFilmShot[],
-): IAutoFilmPlaybackTimeline => {
+  sequence: IAutoMovieSequence,
+  shots: IAutoMovieShot[],
+): IAutoMoviePlaybackTimeline => {
   const byId = new Map(shots.map((s) => [s.id, s]));
-  const entries: IAutoFilmPlaybackEntry[] = [];
+  const entries: IAutoMoviePlaybackEntry[] = [];
   let cursor = 0;
   sequence.shots.forEach((entry, i) => {
     const shot = byId.get(entry.shot)!;
@@ -86,10 +86,10 @@ export const sequenceTimeline = (
  * outside `[0, runtime)` — there is no frame there to draw.
  */
 export const resolveSequencePlayback = (
-  sequence: IAutoFilmSequence,
-  shots: IAutoFilmShot[],
+  sequence: IAutoMovieSequence,
+  shots: IAutoMovieShot[],
   seconds: number,
-): IAutoFilmPlaybackSample | null => {
+): IAutoMoviePlaybackSample | null => {
   const timeline = sequenceTimeline(sequence, shots);
   if (seconds < 0 || seconds >= timeline.runtime) return null;
 
@@ -100,7 +100,7 @@ export const resolveSequencePlayback = (
 
   const transition = sequence.shots[live.entry]!.transition;
   const elapsed = seconds - live.start;
-  let blend: IAutoFilmPlaybackSample["blend"] = null;
+  let blend: IAutoMoviePlaybackSample["blend"] = null;
   if (transition !== null && elapsed < transition.duration) {
     const outgoing = timeline.entries[live.entry - 1]!;
     blend = {
@@ -120,9 +120,9 @@ export const resolveSequencePlayback = (
  * outgoing tail when a dissolve is in flight, write the frame.
  */
 export const playbackFrameSamples = (
-  sequence: IAutoFilmSequence,
-  shots: IAutoFilmShot[],
-): IAutoFilmPlaybackSample[] => {
+  sequence: IAutoMovieSequence,
+  shots: IAutoMovieShot[],
+): IAutoMoviePlaybackSample[] => {
   const { runtime } = sequenceTimeline(sequence, shots);
   const count = Math.round(runtime * sequence.fps);
   return Array.from(

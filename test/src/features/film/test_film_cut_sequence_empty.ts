@@ -1,4 +1,4 @@
-import { cutSequence } from "@autofilm/engine";
+import { cutSequence } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { hasViolation } from "../internal/predicates";

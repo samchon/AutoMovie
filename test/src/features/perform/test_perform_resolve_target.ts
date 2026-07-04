@@ -1,19 +1,22 @@
-import { resolveTargetPoint } from "@autofilm/engine";
-import { IAutoFilmActionTarget, IAutoFilmVector3 } from "@autofilm/interface";
+import { resolveTargetPoint } from "@automovie/engine";
+import {
+  IAutoMovieActionTarget,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const nodes = new Map<string, IAutoFilmVector3>([
+const nodes = new Map<string, IAutoMovieVector3>([
   ["a", { x: 1, y: 0, z: 0 }],
   ["b", { x: 3, y: 0, z: 0 }],
 ]);
 
-const at = (target: IAutoFilmActionTarget): IAutoFilmVector3 | null =>
+const at = (target: IAutoMovieActionTarget): IAutoMovieVector3 | null =>
   resolveTargetPoint(target, nodes);
 
 const isPoint = (
-  p: IAutoFilmVector3 | null,
+  p: IAutoMovieVector3 | null,
   x: number,
   y: number,
   z: number,

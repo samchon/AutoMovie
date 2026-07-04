@@ -1,10 +1,10 @@
-import { Vector3, compileCameraMove } from "@autofilm/engine";
-import { IAutoFilmCamera, IAutoFilmCameraAction } from "@autofilm/interface";
+import { Vector3, compileCameraMove } from "@automovie/engine";
+import { IAutoMovieCamera, IAutoMovieCameraAction } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
-const CAMERA: IAutoFilmCamera = {
+const CAMERA: IAutoMovieCamera = {
   id: "cam",
   transform: {
     translation: { x: 0, y: 1, z: 4 },
@@ -17,10 +17,10 @@ const CAMERA: IAutoFilmCamera = {
 };
 
 const frame = (
-  move: IAutoFilmCameraAction["move"],
+  move: IAutoMovieCameraAction["move"],
   start = 0,
   duration: number | "auto" = "auto",
-): IAutoFilmCameraAction => ({
+): IAutoMovieCameraAction => ({
   verb: "frame",
   actor: "cam",
   start,
@@ -38,8 +38,8 @@ const frame = (
  * Scenarios:
  *
  * 1. `orbit` → 9 keys sweeping 45°, every position at distance `d` from the aim,
- *    the last bearing swung off the initial +Z, and the swept angle **eased** in
- *    and out (the mid-arc segments turn faster than the end ones).
+ *    the last bearing swung off the initial +Z, and the swept angle **eased**
+ *    in and out (the mid-arc segments turn faster than the end ones).
  * 2. `follow` with an animated base marching down +X → 5 keys over one second (4
  *    Hz + endpoints) whose X tracks the subject.
  * 3. `follow` with a static subject (`at: null`) degenerates to one static key.

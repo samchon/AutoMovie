@@ -1,25 +1,28 @@
 import {
-  AutoFilmViolationKind,
-  IAutoFilmConstraintViolation,
-  IAutoFilmValidation,
-} from "@autofilm/interface";
+  AutoMovieViolationKind,
+  IAutoMovieConstraintViolation,
+  IAutoMovieValidation,
+} from "@automovie/interface";
 
-/** Build one {@link IAutoFilmConstraintViolation}. */
+/** Build one {@link IAutoMovieConstraintViolation}. */
 export const violation = (
-  kind: AutoFilmViolationKind,
+  kind: AutoMovieViolationKind,
   path: string,
   expected: string,
   value: unknown,
   overshoot?: number,
-): IAutoFilmConstraintViolation =>
+): IAutoMovieConstraintViolation =>
   overshoot === undefined
     ? { kind, path, expected, value }
     : { kind, path, expected, value, overshoot };
 
-/** Wrap a violation list into an {@link IAutoFilmValidation} (success iff empty). */
+/**
+ * Wrap a violation list into an {@link IAutoMovieValidation} (success iff
+ * empty).
+ */
 export const toValidation = (
-  violations: IAutoFilmConstraintViolation[],
-): IAutoFilmValidation =>
+  violations: IAutoMovieConstraintViolation[],
+): IAutoMovieValidation =>
   violations.length === 0 ? { success: true } : { success: false, violations };
 
 /**
@@ -27,10 +30,10 @@ export const toValidation = (
  * stable path prefix without threading arrays through every call.
  */
 export class ViolationCollector {
-  public readonly items: IAutoFilmConstraintViolation[] = [];
+  public readonly items: IAutoMovieConstraintViolation[] = [];
 
   public push(
-    kind: AutoFilmViolationKind,
+    kind: AutoMovieViolationKind,
     path: string,
     expected: string,
     value: unknown,
@@ -56,7 +59,7 @@ export class ViolationCollector {
       );
   }
 
-  public toValidation(): IAutoFilmValidation {
+  public toValidation(): IAutoMovieValidation {
     return toValidation(this.items);
   }
 }

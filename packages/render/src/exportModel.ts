@@ -1,10 +1,10 @@
-import { tessellate } from "@autofilm/engine";
-import { IAutoFilmModel, IAutoFilmTransform } from "@autofilm/interface";
+import { tessellate } from "@automovie/engine";
+import { IAutoMovieModel, IAutoMovieTransform } from "@automovie/interface";
 import { Document, Material, Node, NodeIO } from "@gltf-transform/core";
 
 /**
- * Serialize an {@link IAutoFilmModel} AST into a binary glTF (`.glb`) byte
- * buffer — the **export** half of autofilm's glTF round-trip (ingest is the
+ * Serialize an {@link IAutoMovieModel} AST into a binary glTF (`.glb`) byte
+ * buffer — the **export** half of automovie's glTF round-trip (ingest is the
  * import half).
  *
  * The model's skeleton becomes a glTF node hierarchy (one node per bone, parent
@@ -13,17 +13,17 @@ import { Document, Material, Node, NodeIO } from "@gltf-transform/core";
  * attached as a mesh node: a rigid part is parented to its `attachedBone` node
  * so the exported file articulates by rotating those bone nodes (no skinning
  * needed), everything else sits at the scene root. Materials map onto glTF's
- * metallic-roughness model, which {@link IAutoFilmMaterial} already mirrors.
+ * metallic-roughness model, which {@link IAutoMovieMaterial} already mirrors.
  *
  * The result is a self-contained `.glb` (geometry embedded in one buffer) that
- * any glTF viewer — or autofilm's own ingest — can load. Geometry that the
+ * any glTF viewer — or automovie's own ingest — can load. Geometry that the
  * engine only approximates (a capsule tessellates to its bounding cylinder)
  * exports at that fidelity.
  *
  * @author Samchon
  */
 export const exportModelToGLB = async (
-  model: IAutoFilmModel,
+  model: IAutoMovieModel,
 ): Promise<Uint8Array> => {
   const doc = new Document();
   const buffer = doc.createBuffer();
@@ -114,8 +114,8 @@ export const exportModelToGLB = async (
   return new NodeIO().writeBinary(doc);
 };
 
-/** Apply an autofilm TRS transform onto a glTF node (no-op for `null`). */
-const setTRS = (node: Node, t: IAutoFilmTransform | null): Node => {
+/** Apply an automovie TRS transform onto a glTF node (no-op for `null`). */
+const setTRS = (node: Node, t: IAutoMovieTransform | null): Node => {
   if (t === null) return node;
   return node
     .setTranslation([t.translation.x, t.translation.y, t.translation.z])

@@ -1,8 +1,8 @@
 import {
-  IAutoFilmSpringDriver,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieSpringDriver,
+  IAutoMovieTransform,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
@@ -17,18 +17,18 @@ import { Vector3 } from "../math/Vector3";
  *
  * @author Samchon
  */
-export interface IAutoFilmSpringState {
+export interface IAutoMovieSpringState {
   /** Joint id → its world position last step (empty on the first step). */
-  prev: Map<string, IAutoFilmVector3>;
+  prev: Map<string, IAutoMovieVector3>;
 }
 
 /** A fresh, empty spring state. */
-export const createSpringState = (): IAutoFilmSpringState => ({
+export const createSpringState = (): IAutoMovieSpringState => ({
   prev: new Map(),
 });
 
 /**
- * Advance one spring ({@link IAutoFilmSpringDriver}) by a fixed timestep with
+ * Advance one spring ({@link IAutoMovieSpringDriver}) by a fixed timestep with
  * Verlet integration — the deterministic secondary-motion driver (hair, skirt,
  * tail), modelled on VRM SpringBone.
  *
@@ -46,11 +46,11 @@ export const createSpringState = (): IAutoFilmSpringState => ({
  * @author Samchon
  */
 export const stepSpring = (
-  d: IAutoFilmSpringDriver,
+  d: IAutoMovieSpringDriver,
   world: Map<string, number[]>,
-  state: IAutoFilmSpringState,
+  state: IAutoMovieSpringState,
   dt: number,
-  localById: Map<string, IAutoFilmTransform>,
+  localById: Map<string, IAutoMovieTransform>,
 ): void => {
   const gravity = Vector3.scale(
     Vector3.normalize(d.gravityDir),

@@ -1,27 +1,27 @@
 import {
   HUMANOID_JOINT_AXES,
-  IAutoFilmActorContext,
+  IAutoMovieActorContext,
   cutSequence,
   makeActorSynthesizer,
   performShot,
   resolveSequencePlayback,
   stageScene,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmModel,
-  IAutoFilmMotion,
-  IAutoFilmPerformanceApplication,
-  IAutoFilmScriptApplication,
-  IAutoFilmShot,
-  IAutoFilmStagingApplication,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieModel,
+  IAutoMovieMotion,
+  IAutoMoviePerformanceApplication,
+  IAutoMovieScriptApplication,
+  IAutoMovieShot,
+  IAutoMovieStagingApplication,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import {
-  AutoFilmPlayer,
+  AutoMoviePlayer,
   applyObjectMotion,
   buildModel,
   mountViewer,
-} from "@autofilm/viewer";
+} from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
@@ -34,7 +34,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 // launch arc. Deterministic via renderAt(t) for capture.
 
 // ── the arrow prop: a thin shaft, no rig (driven wholly by its objectMotion) ──
-const arrowModel: IAutoFilmModel = {
+const arrowModel: IAutoMovieModel = {
   id: "arrow",
   name: "arrow",
   origin: "generated",
@@ -68,7 +68,7 @@ const arrowModel: IAutoFilmModel = {
 };
 
 // ── the stage payloads (what the LLM will author; fixtures here) ─────────────
-const script: IAutoFilmScriptApplication.IWrite = {
+const script: IAutoMovieScriptApplication.IWrite = {
   type: "write",
   logline: "An archer looses; the shaft finds its mark across the field.",
   theme: "a computed arc",
@@ -88,7 +88,7 @@ const script: IAutoFilmScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoFilmStagingApplication.IWrite = {
+const staging: IAutoMovieStagingApplication.IWrite = {
   type: "write",
   scene: { id: "scene-range", name: "the range" },
   plan: "archer at the near mark facing downrange (+Z); the mark 6.5 m away; the arrow nocked at bow height; camera side-on to read the whole arc.",
@@ -115,7 +115,7 @@ const staging: IAutoFilmStagingApplication.IWrite = {
   ],
 };
 
-const performance: IAutoFilmPerformanceApplication.IWrite = {
+const performance: IAutoMoviePerformanceApplication.IWrite = {
   type: "write",
   beat: "loose",
   plan: "the archer tracks the mark and looses; the engine flies the arrow and recoils the mark on the hit.",
@@ -162,10 +162,10 @@ const staged = stageScene(script, staging);
 if (staged.success !== true)
   throw new Error(`staging failed: ${JSON.stringify(staged)}`);
 
-const nodePositions = new Map<string, IAutoFilmVector3>(
+const nodePositions = new Map<string, IAutoMovieVector3>(
   staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
 );
-const contexts = new Map<string, IAutoFilmActorContext>(
+const contexts = new Map<string, IAutoMovieActorContext>(
   staged.scene.nodes
     .filter((n) => isActor(n.id))
     .map((n) => {
@@ -197,8 +197,8 @@ const performed = performShot({
 });
 if (performed.success !== true)
   throw new Error(`perform failed: ${JSON.stringify(performed.violations)}`);
-const shots: IAutoFilmShot[] = [performed.shot];
-const motionsByShot = new Map<string, Record<string, IAutoFilmMotion>>([
+const shots: IAutoMovieShot[] = [performed.shot];
+const motionsByShot = new Map<string, Record<string, IAutoMovieMotion>>([
   [performed.shot.id, performed.motions],
 ]);
 
@@ -249,7 +249,7 @@ const playersByShot = new Map(
       .filter((p) => isActor(p.node))
       .map((p) => ({
         node: p.node,
-        player: new AutoFilmPlayer(
+        player: new AutoMoviePlayer(
           built[p.node]!,
           rigOf[p.node as keyof typeof rigOf].skeleton,
           motionsByShot.get(shot.id)![p.node]!,
@@ -305,7 +305,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   renderAt(t);
   handle.renderer.render(scene, camera);
 };
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   duration: FILM_DURATION,
   shots: shots.map((s) => s.id),

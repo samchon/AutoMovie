@@ -1,6 +1,6 @@
-# @autofilm/playground
+# @automovie/playground
 
-A usable web UI over the autofilm viewer + engine: a **3D viewport** beside a
+A usable web UI over the automovie viewer + engine: a **3D viewport** beside a
 **humanoid character editor**.
 
 It boots a fully procedural humanoid — a primitive "blockman" rigged on the
@@ -13,8 +13,8 @@ lets you:
   — driven through the engine's forward kinematics;
 - **Play** a looping wave clip — sampled by the engine each frame.
 
-Nothing here is AI: the editor authors plain `@autofilm/interface` data, the
-deterministic `@autofilm/engine` resolves it, and `@autofilm/viewer` (three.js)
+Nothing here is AI: the editor authors plain `@automovie/interface` data, the
+deterministic `@automovie/engine` resolves it, and `@automovie/viewer` (three.js)
 draws it.
 
 ## Pages
@@ -27,7 +27,7 @@ draws it.
   body STL, MakeHuman's CC0 head topology / eye proxy, a real MakeHuman skin
   diffuse, and textured MakeHuman bob hair. It is an intermediate base for
   visual iteration, not the final hero-quality character. Build the glTF first:
-  `pnpm --filter @autofilm/playground build:human` (fetches/caches the CC0 assets
+  `pnpm --filter @automovie/playground build:human` (fetches/caches the CC0 assets
   and bakes `public/models/human.glb`).
 - **`human.html`** — a **real humanoid editor** over a VRM avatar
   (`@pixiv/three-vrm`): live facial **expressions** (happy / angry / sad /
@@ -52,7 +52,7 @@ and point `src/human.ts` at it (mind that model's own license).
 ## Run
 
 ```bash
-pnpm --filter @autofilm/playground dev      # http://127.0.0.1:5173 (+ /drivers.html, /human.html)
-pnpm --filter @autofilm/playground build    # typecheck + production bundle
-pnpm --filter @autofilm/playground preview   # serve the build on :4173
+pnpm --filter @automovie/playground dev      # http://127.0.0.1:5173 (+ /drivers.html, /human.html)
+pnpm --filter @automovie/playground build    # typecheck + production bundle
+pnpm --filter @automovie/playground preview   # serve the build on :4173
 ```

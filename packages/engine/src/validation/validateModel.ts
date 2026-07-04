@@ -1,13 +1,13 @@
 import {
-  AutoFilmPrimitiveShape,
-  IAutoFilmModel,
-  IAutoFilmValidation,
-} from "@autofilm/interface";
+  AutoMoviePrimitiveShape,
+  IAutoMovieModel,
+  IAutoMovieValidation,
+} from "@automovie/interface";
 
 import { ViolationCollector } from "./violation";
 
 /**
- * Validate an {@link IAutoFilmModel} — Tier-1 structural/range checks over its
+ * Validate an {@link IAutoMovieModel} — Tier-1 structural/range checks over its
  * geometry and material wiring, the constraints the rough types don't encode.
  *
  * Checks: at least one part; primitive extents are strictly positive; material
@@ -17,8 +17,8 @@ import { ViolationCollector } from "./violation";
  * @author Samchon
  */
 export const validateModel = (props: {
-  model: IAutoFilmModel;
-}): IAutoFilmValidation => {
+  model: IAutoMovieModel;
+}): IAutoMovieValidation => {
   const path = "$input";
   const collector = new ViolationCollector();
   const { model } = props;
@@ -68,7 +68,7 @@ export const validateModel = (props: {
 
 /** Push a `range` violation for any non-positive dimension of a primitive shape. */
 const validateExtents = (
-  shape: AutoFilmPrimitiveShape,
+  shape: AutoMoviePrimitiveShape,
   path: string,
   collector: ViolationCollector,
 ): void => {

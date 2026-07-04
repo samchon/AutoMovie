@@ -1,5 +1,8 @@
-import { Quaternion, resolveAttachment, resolvePose } from "@autofilm/engine";
-import { IAutoFilmAttachment, IAutoFilmTransform } from "@autofilm/interface";
+import { Quaternion, resolveAttachment, resolvePose } from "@automovie/engine";
+import {
+  IAutoMovieAttachment,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
@@ -30,12 +33,12 @@ export const test_kinematics_attachment = (): void => {
   const restPose = makePose([]);
 
   // 1. rest + identity offset → sits on the chest, scale carried
-  const idOffset: IAutoFilmTransform = {
+  const idOffset: IAutoMovieTransform = {
     translation: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 2, y: 2, z: 2 },
   };
-  const att1: IAutoFilmAttachment = { parentBone: "chest", offset: idOffset };
+  const att1: IAutoMovieAttachment = { parentBone: "chest", offset: idOffset };
   const r1 = resolveAttachment(restPose, skeleton, att1);
   TestValidator.predicate(
     "child sits on chest world pos (0,1.4,0)",
@@ -50,7 +53,7 @@ export const test_kinematics_attachment = (): void => {
   TestValidator.predicate("offset scale passed through", nclose(r1.scale.x, 2));
 
   // 2. offset translation added in the (rest = world) frame
-  const att2: IAutoFilmAttachment = {
+  const att2: IAutoMovieAttachment = {
     parentBone: "chest",
     offset: {
       translation: { x: 0, y: 0.05, z: 0.1 },

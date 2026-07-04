@@ -1,4 +1,4 @@
-import { computeRestHeight } from "@autofilm/engine";
+import { computeRestHeight } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton } from "../internal/fixtures";

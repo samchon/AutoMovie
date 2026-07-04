@@ -1,4 +1,4 @@
-import { dampedSpring } from "@autofilm/engine";
+import { dampedSpring } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";

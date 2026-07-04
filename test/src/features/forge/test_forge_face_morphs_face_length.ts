@@ -1,4 +1,4 @@
-import { CANONICAL_FACE_POSITIONS, buildFaceMorphs } from "@autofilm/forge";
+import { CANONICAL_FACE_POSITIONS, buildFaceMorphs } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**

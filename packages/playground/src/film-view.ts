@@ -1,30 +1,30 @@
 import {
   HUMANOID_GAITS,
   HUMANOID_JOINT_AXES,
-  IAutoFilmActorContext,
+  IAutoMovieActorContext,
   blockBeat,
   cutSequence,
   makeActorSynthesizer,
   performShot,
   resolveSequencePlayback,
   stageScene,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmBlockingApplication,
-  IAutoFilmMotion,
-  IAutoFilmPerformanceApplication,
-  IAutoFilmScriptApplication,
-  IAutoFilmShot,
-  IAutoFilmStagingApplication,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieBlockingApplication,
+  IAutoMovieMotion,
+  IAutoMoviePerformanceApplication,
+  IAutoMovieScriptApplication,
+  IAutoMovieShot,
+  IAutoMovieStagingApplication,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import {
-  AutoFilmPlayer,
+  AutoMoviePlayer,
   applyObjectMotion,
   buildModel,
   mountViewer,
   renderCrossDissolve,
-} from "@autofilm/viewer";
+} from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
@@ -37,7 +37,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 // capture-shots.mjs bakes the identical film every run.
 
 // ── the stage payloads (what the LLM will author; fixtures here) ─────────────
-const script: IAutoFilmScriptApplication.IWrite = {
+const script: IAutoMovieScriptApplication.IWrite = {
   type: "write",
   logline: "A pursuer closes the distance; the one waiting never turns.",
   theme: "inevitability at walking pace",
@@ -61,7 +61,7 @@ const script: IAutoFilmScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoFilmStagingApplication.IWrite = {
+const staging: IAutoMovieStagingApplication.IWrite = {
   type: "write",
   scene: { id: "scene-pursuit", name: "the pursuit" },
   plan: "walker starts 2.95 m behind the waiter, both facing +Z; the camera stands side-on and follows the walker in.",
@@ -87,7 +87,7 @@ const staging: IAutoFilmStagingApplication.IWrite = {
   ],
 };
 
-const blockings: IAutoFilmBlockingApplication.IWrite[] = [
+const blockings: IAutoMovieBlockingApplication.IWrite[] = [
   {
     type: "write",
     beat: "approach",
@@ -128,7 +128,7 @@ const blockings: IAutoFilmBlockingApplication.IWrite[] = [
   },
 ];
 
-const performances: IAutoFilmPerformanceApplication.IWrite[] = [
+const performances: IAutoMoviePerformanceApplication.IWrite[] = [
   {
     type: "write",
     beat: "approach",
@@ -212,10 +212,10 @@ const WALK = HUMANOID_GAITS.walk;
 const staged = stageScene(script, staging);
 if (staged.success !== true) throw new Error("staging failed");
 
-const nodePositions = new Map<string, IAutoFilmVector3>(
+const nodePositions = new Map<string, IAutoMovieVector3>(
   staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
 );
-const contexts = new Map<string, IAutoFilmActorContext>(
+const contexts = new Map<string, IAutoMovieActorContext>(
   staged.scene.nodes.map((n) => [
     n.id,
     {
@@ -236,8 +236,8 @@ const contexts = new Map<string, IAutoFilmActorContext>(
 const synthesize = makeActorSynthesizer(contexts, nodePositions);
 
 // ── the ladder: block → perform → cut ────────────────────────────────────────
-const shots: IAutoFilmShot[] = [];
-const motionsByShot = new Map<string, Record<string, IAutoFilmMotion>>();
+const shots: IAutoMovieShot[] = [];
+const motionsByShot = new Map<string, Record<string, IAutoMovieMotion>>();
 performances.forEach((performance, i) => {
   const blocked = blockBeat(script, staged, blockings[i]!);
   if (blocked.success !== true)
@@ -308,13 +308,13 @@ const built = Object.fromEntries(
 // One player per (shot, performing node); seeking a shot drives its players.
 const playersByShot = new Map<
   string,
-  { node: string; player: AutoFilmPlayer }[]
+  { node: string; player: AutoMoviePlayer }[]
 >(
   shots.map((shot) => [
     shot.id,
     shot.performances.map((p) => ({
       node: p.node,
-      player: new AutoFilmPlayer(
+      player: new AutoMoviePlayer(
         built[p.node]!,
         rigOf[p.node as keyof typeof rigOf].skeleton,
         motionsByShot.get(shot.id)![p.node]!,
@@ -344,7 +344,7 @@ let renderer!: THREE.WebGLRenderer;
 // each player, ride any objectMotions, and set the camera (its motion or the
 // staged default). The read side used both for a plain frame and for each half
 // of a cross-dissolve.
-const poseShot = (shot: IAutoFilmShot, time: number): void => {
+const poseShot = (shot: IAutoMovieShot, time: number): void => {
   for (const { player } of playersByShot.get(shot.id)!) player.update(time);
   for (const clip of shot.objectMotions)
     applyObjectMotion(clip, time, (node) => groupsById.get(node));
@@ -397,7 +397,7 @@ if (freezeAt !== null && Number.isFinite(freezeAt)) draw(freezeAt);
 (window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
   t: number,
 ): void => draw(t);
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   duration: FILM_DURATION,
   shots: shots.map((s) => s.id),

@@ -1,5 +1,5 @@
-import { ease } from "@autofilm/engine";
-import { AutoFilmEasing } from "@autofilm/interface";
+import { ease } from "@automovie/engine";
+import { AutoMovieEasing } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
@@ -15,7 +15,12 @@ import { nclose } from "../internal/predicates";
  * above-range input (2) to 1.
  */
 export const test_motion_easing_endpoints = (): void => {
-  const curves: AutoFilmEasing[] = ["linear", "easeIn", "easeOut", "easeInOut"];
+  const curves: AutoMovieEasing[] = [
+    "linear",
+    "easeIn",
+    "easeOut",
+    "easeInOut",
+  ];
   for (const c of curves) {
     TestValidator.predicate(`${c} at 0 = 0`, nclose(ease(c, 0), 0));
     TestValidator.predicate(`${c} at 1 = 1`, nclose(ease(c, 1), 1));

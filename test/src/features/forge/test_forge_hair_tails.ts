@@ -1,4 +1,4 @@
-import { buildHairTails } from "@autofilm/forge";
+import { buildHairTails } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";

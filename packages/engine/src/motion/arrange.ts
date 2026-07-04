@@ -1,15 +1,15 @@
 import {
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-} from "@autofilm/interface";
+  IAutoMovieKeyframe,
+  IAutoMovieMotion,
+  IAutoMoviePose,
+} from "@automovie/interface";
 
 /** A motion clip placed at a start time on an actor's shot timeline. */
-export interface IAutoFilmPlacement {
+export interface IAutoMoviePlacement {
   /** Seconds into the shot this clip begins. */
   start: number;
   /** The clip (its own local time starts at 0). */
-  motion: IAutoFilmMotion;
+  motion: IAutoMovieMotion;
 }
 
 /**
@@ -22,10 +22,10 @@ export interface IAutoFilmPlacement {
 export const holdMotion = (
   id: string,
   skeleton: string,
-  pose: IAutoFilmPose,
+  pose: IAutoMoviePose,
   duration: number,
-): IAutoFilmMotion => {
-  const frame = (time: number): IAutoFilmKeyframe => ({
+): IAutoMovieMotion => {
+  const frame = (time: number): IAutoMovieKeyframe => ({
     time,
     pose: { ...pose, skeleton },
     expression: null,
@@ -45,7 +45,7 @@ export const holdMotion = (
  * Lay several timed clips onto **one actor's** shot timeline, holding the last
  * pose across any gap between them — the composer the harness PERFORMANCE stage
  * uses to turn an actor's ordered action calls (each synthesised to a clip by
- * the engine) into a single performance {@link IAutoFilmMotion}.
+ * the engine) into a single performance {@link IAutoMovieMotion}.
  *
  * Each placement's keyframes are shifted to its `start`; where a gap precedes
  * the next placement, the previous clip's final pose is repeated at the next
@@ -58,11 +58,11 @@ export const holdMotion = (
  */
 export const arrangeMotion = (
   id: string,
-  placements: IAutoFilmPlacement[],
-): IAutoFilmMotion => {
+  placements: IAutoMoviePlacement[],
+): IAutoMovieMotion => {
   const sorted = [...placements].sort((a, b) => a.start - b.start);
-  const keyframes: IAutoFilmKeyframe[] = [];
-  const push = (k: IAutoFilmKeyframe): void => {
+  const keyframes: IAutoMovieKeyframe[] = [];
+  const push = (k: IAutoMovieKeyframe): void => {
     const last = keyframes[keyframes.length - 1];
     if (last !== undefined && k.time <= last.time) return; // keep strictly increasing
     keyframes.push(k);

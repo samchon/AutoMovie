@@ -1,10 +1,10 @@
-import { bodyRegionBones } from "@autofilm/engine";
-import { AutoFilmHumanoidBone } from "@autofilm/interface";
+import { bodyRegionBones } from "@automovie/engine";
+import { AutoMovieHumanoidBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 const disjoint = (
-  a: AutoFilmHumanoidBone[],
-  b: AutoFilmHumanoidBone[],
+  a: AutoMovieHumanoidBone[],
+  b: AutoMovieHumanoidBone[],
 ): boolean => {
   const set = new Set(a);
   return b.every((x) => !set.has(x));

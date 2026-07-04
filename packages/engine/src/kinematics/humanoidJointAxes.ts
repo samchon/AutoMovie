@@ -1,6 +1,6 @@
-import { AutoFilmHumanoidBone } from "@autofilm/interface";
+import { AutoMovieHumanoidBone } from "@automovie/interface";
 
-import { IAutoFilmJointAxes } from "./jointToQuaternion";
+import { IAutoMovieJointAxes } from "./jointToQuaternion";
 
 /**
  * Per-bone clinical axes for the **canonical humanoid rest pose** (VRM T-pose:
@@ -20,14 +20,14 @@ import { IAutoFilmJointAxes } from "./jointToQuaternion";
  * @author Samchon
  */
 export const HUMANOID_JOINT_AXES: Partial<
-  Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>
+  Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>
 > = (() => {
-  const arm: IAutoFilmJointAxes = {
+  const arm: IAutoMovieJointAxes = {
     flexion: { x: 0, y: 1, z: 0 },
     abduction: { x: 0, y: 0, z: 1 },
     twist: { x: 1, y: 0, z: 0 },
   };
-  const slots: AutoFilmHumanoidBone[] = [
+  const slots: AutoMovieHumanoidBone[] = [
     "leftShoulder",
     "leftUpperArm",
     "leftLowerArm",
@@ -37,7 +37,7 @@ export const HUMANOID_JOINT_AXES: Partial<
     "rightLowerArm",
     "rightHand",
   ];
-  const table: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>> = {};
+  const table: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>> = {};
   for (const s of slots) table[s] = arm;
   return table;
 })();

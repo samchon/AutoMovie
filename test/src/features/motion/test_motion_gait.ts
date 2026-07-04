@@ -1,11 +1,11 @@
-import { gaitMotion, validateMotion } from "@autofilm/engine";
-import { AutoFilmHumanoidBone, IAutoFilmGait } from "@autofilm/interface";
+import { gaitMotion, validateMotion } from "@automovie/engine";
+import { AutoMovieHumanoidBone, IAutoMovieGait } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton } from "../internal/fixtures";
 import { hasViolation, nclose } from "../internal/predicates";
 
-const GAIT: IAutoFilmGait = {
+const GAIT: IAutoMovieGait = {
   name: "walk",
   period: 1,
   limbs: [
@@ -16,14 +16,14 @@ const GAIT: IAutoFilmGait = {
 
 const flexionSeq = (
   motion: ReturnType<typeof gaitMotion>,
-  bone: AutoFilmHumanoidBone,
+  bone: AutoMovieHumanoidBone,
 ): number[] =>
   motion.keyframes.map(
     (k) => k.pose.joints.find((j) => j.bone === bone)!.flexion!,
   );
 
 /**
- * `gaitMotion` — synthesise a declarative {@link IAutoFilmGait} into a looping
+ * `gaitMotion` — synthesise a declarative {@link IAutoMovieGait} into a looping
  * clip. The difference between a creature's gaits lives entirely in the
  * per-limb phase / duty / amplitude data, not the code.
  *
@@ -68,7 +68,7 @@ export const test_motion_gait = (): void => {
 
   // 4. neutral centers the swing — the knee's negative twin
   const sk = createSkeleton();
-  const kneeGait = (neutral: number | undefined): IAutoFilmGait => ({
+  const kneeGait = (neutral: number | undefined): IAutoMovieGait => ({
     name: "step",
     period: 1,
     limbs: [

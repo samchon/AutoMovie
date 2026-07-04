@@ -1,4 +1,4 @@
-import { IAutoFilmKeyframe, IAutoFilmMotion } from "@autofilm/interface";
+import { IAutoMovieKeyframe, IAutoMovieMotion } from "@automovie/interface";
 
 /**
  * Concatenate several clips end-to-end into one timeline — the smallest step
@@ -8,7 +8,7 @@ import { IAutoFilmKeyframe, IAutoFilmMotion } from "@autofilm/interface";
  * 0`) is dropped so the merged times stay strictly increasing, leaving the
  * engine to interpolate across the seam.
  *
- * The result is an ordinary {@link IAutoFilmMotion} the player samples like any
+ * The result is an ordinary {@link IAutoMovieMotion} the player samples like any
  * other (so a sequence can itself be sequenced). All parts must target the same
  * skeleton; the first part's skeleton id is used.
  *
@@ -16,10 +16,10 @@ import { IAutoFilmKeyframe, IAutoFilmMotion } from "@autofilm/interface";
  */
 export const sequenceMotion = (
   id: string,
-  parts: IAutoFilmMotion[],
+  parts: IAutoMovieMotion[],
   loop = false,
-): IAutoFilmMotion => {
-  const keyframes: IAutoFilmKeyframe[] = [];
+): IAutoMovieMotion => {
+  const keyframes: IAutoMovieKeyframe[] = [];
   let offset = 0;
   for (let p = 0; p < parts.length; ++p) {
     const part = parts[p]!;

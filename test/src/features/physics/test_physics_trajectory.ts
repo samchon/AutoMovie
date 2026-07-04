@@ -1,12 +1,12 @@
 import {
-  IAutoFilmProjectile,
+  IAutoMovieProjectile,
   Quaternion,
   projectileAt,
   projectileTrajectory,
   sampleClip,
   solveBallisticLaunch,
-} from "@autofilm/engine";
-import { IAutoFilmVector3 } from "@autofilm/interface";
+} from "@automovie/engine";
+import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
@@ -29,7 +29,7 @@ import { nclose, vclose } from "../internal/predicates";
  *    the clip's last position sits on the target.
  */
 export const test_physics_trajectory = (): void => {
-  const p: IAutoFilmProjectile = {
+  const p: IAutoMovieProjectile = {
     origin: { x: 0, y: 1, z: 0 },
     velocity: { x: 5, y: 8, z: 2 },
     gravity: { x: 0, y: -9.81, z: 0 },
@@ -66,7 +66,7 @@ export const test_physics_trajectory = (): void => {
     );
   }
 
-  const rotAt = (t: number): IAutoFilmVector3 => {
+  const rotAt = (t: number): IAutoMovieVector3 => {
     const v = sampleClip(clip, t).get("node:arrow:rotation")!.value;
     return Quaternion.rotateVector(
       { x: v[0]!, y: v[1]!, z: v[2]!, w: v[3]! },
@@ -84,8 +84,8 @@ export const test_physics_trajectory = (): void => {
   );
 
   // 4. end to end with the aim
-  const origin: IAutoFilmVector3 = { x: 0, y: 1.6, z: 0 };
-  const target: IAutoFilmVector3 = { x: 12, y: 1.2, z: 4 };
+  const origin: IAutoMovieVector3 = { x: 0, y: 1.6, z: 0 };
+  const target: IAutoMovieVector3 = { x: 12, y: 1.2, z: 4 };
   const sol = solveBallisticLaunch(origin, target, 16)!;
   const flight = projectileTrajectory(
     "bolt",

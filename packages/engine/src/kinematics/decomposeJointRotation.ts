@@ -1,9 +1,9 @@
-import { IAutoFilmQuaternion } from "@autofilm/interface";
+import { IAutoMovieQuaternion } from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
-import { IAutoFilmRestFrame, toClinicalAngle } from "../rom/restFrame";
-import { DEFAULT_JOINT_AXES, IAutoFilmJointAxes } from "./jointToQuaternion";
+import { IAutoMovieRestFrame, toClinicalAngle } from "../rom/restFrame";
+import { DEFAULT_JOINT_AXES, IAutoMovieJointAxes } from "./jointToQuaternion";
 
 const RAD2DEG = 180 / Math.PI;
 
@@ -28,7 +28,7 @@ const RAD2DEG = 180 / Math.PI;
  * handedness and corrects it, so `jointToQuaternion(decompose(q))` round-trips
  * for any orthonormal basis, right- or left-handed.
  *
- * A `frame` ({@link IAutoFilmRestFrame}) lifts the recovered rest-relative
+ * A `frame` ({@link IAutoMovieRestFrame}) lifts the recovered rest-relative
  * angles into **clinical** ones (`clinical = sign · r + neutral`), the inverse
  * of `jointToQuaternion`'s `frame` map — so `jointToQuaternion(decompose(q,
  * axes, f), axes, f)` still round-trips.
@@ -36,9 +36,9 @@ const RAD2DEG = 180 / Math.PI;
  * @author Samchon
  */
 export const decomposeJointRotation = (
-  q: IAutoFilmQuaternion,
-  axes: IAutoFilmJointAxes = DEFAULT_JOINT_AXES,
-  frame?: IAutoFilmRestFrame,
+  q: IAutoMovieQuaternion,
+  axes: IAutoMovieJointAxes = DEFAULT_JOINT_AXES,
+  frame?: IAutoMovieRestFrame,
 ): { flexion: number; abduction: number; twist: number } => {
   // Lift a rig-relative extraction into clinical angles (the inverse of
   // jointToQuaternion's `frame` map); the identity when no frame is given.

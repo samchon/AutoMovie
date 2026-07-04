@@ -1,23 +1,23 @@
-import { resolveFrame } from "@autofilm/engine";
+import { resolveFrame } from "@automovie/engine";
 import {
-  IAutoFilmChannel,
-  IAutoFilmChannelLimit,
-  IAutoFilmClip,
-  IAutoFilmNode,
-  IAutoFilmTrack,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  IAutoMovieChannel,
+  IAutoMovieChannelLimit,
+  IAutoMovieClip,
+  IAutoMovieNode,
+  IAutoMovieTrack,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const IDENTITY: IAutoFilmTransform = {
+const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 
-const node = (id: string): IAutoFilmNode => ({
+const node = (id: string): IAutoMovieNode => ({
   id,
   name: null,
   parent: null,
@@ -32,13 +32,13 @@ const node = (id: string): IAutoFilmNode => ({
 const nodeChannel = (
   id: string,
   path: "translation" | "rotation" | "scale" | "weights",
-): IAutoFilmChannel => ({ kind: "node", node: id, path });
+): IAutoMovieChannel => ({ kind: "node", node: id, path });
 
 const track = (
-  channel: IAutoFilmChannel,
+  channel: IAutoMovieChannel,
   times: number[],
   values: number[],
-): IAutoFilmTrack => ({ channel, times, values, interpolation: "linear" });
+): IAutoMovieTrack => ({ channel, times, values, interpolation: "linear" });
 
 const tx = (m: number[]): number => m[12]!;
 
@@ -76,7 +76,7 @@ export const test_resolve_frame = (): void => {
     node("morph"),
     node("static"),
   ];
-  const clip: IAutoFilmClip = {
+  const clip: IAutoMovieClip = {
     id: "c",
     name: null,
     duration: 1,
@@ -89,7 +89,7 @@ export const test_resolve_frame = (): void => {
       track(nodeChannel("morph", "weights"), [0, 1], [0, 1]),
     ],
   };
-  const limits: IAutoFilmChannelLimit[] = [
+  const limits: IAutoMovieChannelLimit[] = [
     {
       channel: nodeChannel("trs", "translation"),
       min: null,

@@ -1,4 +1,4 @@
-import { Quaternion, jointToQuaternion } from "@autofilm/engine";
+import { Quaternion, jointToQuaternion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { qclose, qunit } from "../internal/predicates";

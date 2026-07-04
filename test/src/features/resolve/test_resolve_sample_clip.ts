@@ -1,37 +1,37 @@
-import { sampleClip } from "@autofilm/engine";
+import { sampleClip } from "@automovie/engine";
 import {
-  IAutoFilmChannel,
-  IAutoFilmClip,
-  IAutoFilmTrack,
-} from "@autofilm/interface";
+  IAutoMovieChannel,
+  IAutoMovieClip,
+  IAutoMovieTrack,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, qclose } from "../internal/predicates";
 
 const NODE = (
   path: "translation" | "rotation" | "scale" | "weights",
-): IAutoFilmChannel => ({ kind: "node", node: "n", path });
+): IAutoMovieChannel => ({ kind: "node", node: "n", path });
 
-const PTR: IAutoFilmChannel = {
+const PTR: IAutoMovieChannel = {
   kind: "pointer",
   pointer: "/x",
   valueType: "scalar",
 };
 
 const track = (
-  channel: IAutoFilmChannel,
+  channel: IAutoMovieChannel,
   times: number[],
   values: number[],
-  interpolation: IAutoFilmTrack["interpolation"],
-): IAutoFilmTrack => ({ channel, times, values, interpolation });
+  interpolation: IAutoMovieTrack["interpolation"],
+): IAutoMovieTrack => ({ channel, times, values, interpolation });
 
 const clip = (
-  tracks: IAutoFilmTrack[],
+  tracks: IAutoMovieTrack[],
   duration: number,
   loop = false,
-): IAutoFilmClip => ({ id: "c", name: null, duration, loop, tracks });
+): IAutoMovieClip => ({ id: "c", name: null, duration, loop, tracks });
 
-const val = (c: IAutoFilmClip, t: number, key: string): number[] => {
+const val = (c: IAutoMovieClip, t: number, key: string): number[] => {
   const hit = sampleClip(c, t).get(key);
   if (hit === undefined) throw new Error(`${key} missing`);
   return hit.value;

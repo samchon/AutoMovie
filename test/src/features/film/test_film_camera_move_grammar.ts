@@ -1,17 +1,17 @@
-import { Quaternion, compileCameraMove } from "@autofilm/engine";
+import { Quaternion, compileCameraMove } from "@automovie/engine";
 import {
-  IAutoFilmCamera,
-  IAutoFilmCameraAction,
-  IAutoFilmQuaternion,
-} from "@autofilm/interface";
+  IAutoMovieCamera,
+  IAutoMovieCameraAction,
+  IAutoMovieQuaternion,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
 const camera = (
   translation = { x: 0, y: 1.44, z: 5 },
-  rotation: IAutoFilmQuaternion = { x: 0, y: 0, z: 0, w: 1 },
-): IAutoFilmCamera => ({
+  rotation: IAutoMovieQuaternion = { x: 0, y: 0, z: 0, w: 1 },
+): IAutoMovieCamera => ({
   id: "cam",
   transform: { translation, rotation, scale: { x: 1, y: 1, z: 1 } },
   fovY: 90,
@@ -20,11 +20,11 @@ const camera = (
 });
 
 const frame = (
-  move: IAutoFilmCameraAction["move"],
-  framing: IAutoFilmCameraAction["framing"],
+  move: IAutoMovieCameraAction["move"],
+  framing: IAutoMovieCameraAction["framing"],
   start = 0,
   duration: number | "auto" = "auto",
-): IAutoFilmCameraAction => ({
+): IAutoMovieCameraAction => ({
   verb: "frame",
   actor: "cam",
   start,

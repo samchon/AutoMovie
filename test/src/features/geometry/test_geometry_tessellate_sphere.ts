@@ -1,4 +1,4 @@
-import { tessellate } from "@autofilm/engine";
+import { tessellate } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";

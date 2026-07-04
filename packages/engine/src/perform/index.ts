@@ -1,6 +1,6 @@
 export * from "./bodyRegionBones";
 export * from "./compilePerformance";
-export * from "./IAutoFilmActorContext";
+export * from "./IAutoMovieActorContext";
 export * from "./makeActorSynthesizer";
 export * from "./mergePoses";
 export * from "./resolveTargetPoint";

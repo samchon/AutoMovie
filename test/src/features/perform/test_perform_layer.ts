@@ -1,25 +1,25 @@
 import {
-  IAutoFilmActionSynthesizer,
+  IAutoMovieActionSynthesizer,
   compilePerformance,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmActionCall,
-  IAutoFilmExpression,
-  IAutoFilmMotion,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieActionCall,
+  IAutoMovieExpression,
+  IAutoMovieMotion,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const HAPPY: IAutoFilmExpression = {
+const HAPPY: IAutoMovieExpression = {
   preset: "happy",
   intensity: 0.8,
   blendshapes: null,
 };
 
-const jointClip = (bone: AutoFilmHumanoidBone): IAutoFilmMotion =>
+const jointClip = (bone: AutoMovieHumanoidBone): IAutoMovieMotion =>
   makeMotion(
     [
       keyframe(0, makePose([joint(bone, { flexion: 0 })])),
@@ -28,7 +28,7 @@ const jointClip = (bone: AutoFilmHumanoidBone): IAutoFilmMotion =>
     1,
   );
 
-const emoteClip = (): IAutoFilmMotion =>
+const emoteClip = (): IAutoMovieMotion =>
   makeMotion(
     [
       keyframe(0, makePose([]), "linear", HAPPY),
@@ -38,16 +38,16 @@ const emoteClip = (): IAutoFilmMotion =>
   );
 
 /** A region-appropriate clip per verb; null for anything else. */
-const synth: IAutoFilmActionSynthesizer = (
-  action: IAutoFilmActionCall,
-): IAutoFilmMotion | null => {
+const synth: IAutoMovieActionSynthesizer = (
+  action: IAutoMovieActionCall,
+): IAutoMovieMotion | null => {
   if (action.verb === "locomote") return jointClip("leftUpperLeg");
   if (action.verb === "gesture") return jointClip("leftUpperArm");
   if (action.verb === "emote") return emoteClip();
   return null;
 };
 
-const frameAt = (motion: IAutoFilmMotion, time: number) =>
+const frameAt = (motion: IAutoMovieMotion, time: number) =>
   motion.keyframes.find((k) => nclose(k.time, time))!;
 
 /**
@@ -60,7 +60,7 @@ const frameAt = (motion: IAutoFilmMotion, time: number) =>
  * drives both the leg and the arm, and the face's expression rides along.
  */
 export const test_perform_layer = (): void => {
-  const locomote: IAutoFilmActionCall = {
+  const locomote: IAutoMovieActionCall = {
     verb: "locomote",
     gait: "walk",
     to: { kind: "node", node: "x" },
@@ -68,7 +68,7 @@ export const test_perform_layer = (): void => {
     start: 0,
     duration: "auto",
   };
-  const gesture: IAutoFilmActionCall = {
+  const gesture: IAutoMovieActionCall = {
     verb: "gesture",
     kind: "wave",
     region: "upperBody",
@@ -76,7 +76,7 @@ export const test_perform_layer = (): void => {
     start: 0,
     duration: "auto",
   };
-  const emote: IAutoFilmActionCall = {
+  const emote: IAutoMovieActionCall = {
     verb: "emote",
     preset: "happy",
     intensity: 0.8,

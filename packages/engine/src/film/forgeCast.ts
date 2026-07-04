@@ -1,10 +1,10 @@
 import {
-  IAutoFilmConstraintViolation,
-  IAutoFilmForgeApplication,
-  IAutoFilmModel,
-  IAutoFilmScriptApplication,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  IAutoMovieConstraintViolation,
+  IAutoMovieForgeApplication,
+  IAutoMovieModel,
+  IAutoMovieScriptApplication,
+  IAutoMovieSkeleton,
+} from "@automovie/interface";
 
 import { validateModel } from "../validation/validateModel";
 import { ViolationCollector } from "../validation/violation";
@@ -15,17 +15,17 @@ import { ViolationCollector } from "../validation/violation";
  *
  * @author Samchon
  */
-export type IAutoFilmForgedCast =
-  | IAutoFilmForgedCast.ISuccess
-  | IAutoFilmForgedCast.IFailure;
-export namespace IAutoFilmForgedCast {
+export type IAutoMovieForgedCast =
+  | IAutoMovieForgedCast.ISuccess
+  | IAutoMovieForgedCast.IFailure;
+export namespace IAutoMovieForgedCast {
   /** Every stand-in exists, joins its cast member, and passed validation. */
   export interface ISuccess {
     /** Discriminator. */
     success: true;
 
     /** Validated stand-ins, keyed by cast node id. */
-    models: Record<string, IAutoFilmModel>;
+    models: Record<string, IAutoMovieModel>;
   }
 
   /** The forge contradicted the script or a rig failed validation. */
@@ -34,7 +34,7 @@ export namespace IAutoFilmForgedCast {
     success: false;
 
     /** Every violation found, for the correction round. */
-    violations: IAutoFilmConstraintViolation[];
+    violations: IAutoMovieConstraintViolation[];
   }
 }
 
@@ -56,9 +56,9 @@ export namespace IAutoFilmForgedCast {
  * satisfy all the local checks and still be unposable).
  */
 export const forgeCast = (
-  script: IAutoFilmScriptApplication.IWrite,
-  forge: IAutoFilmForgeApplication.IWrite,
-): IAutoFilmForgedCast => {
+  script: IAutoMovieScriptApplication.IWrite,
+  forge: IAutoMovieForgeApplication.IWrite,
+): IAutoMovieForgedCast => {
   const out = new ViolationCollector();
   const cast = new Map(script.cast.map((c) => [c.node, c]));
 
@@ -137,7 +137,7 @@ export const forgeCast = (
 
   if (out.items.length > 0) return { success: false, violations: out.items };
 
-  const models: Record<string, IAutoFilmModel> = {};
+  const models: Record<string, IAutoMovieModel> = {};
   for (const entry of forge.entries) models[entry.node] = entry.model;
   return { success: true, models };
 };
@@ -148,7 +148,7 @@ export const forgeCast = (
  * validity (rest transforms, constraints) is the pose/ROM validators' concern.
  */
 const validateSkeletonGraph = (
-  skeleton: IAutoFilmSkeleton,
+  skeleton: IAutoMovieSkeleton,
   path: string,
   out: ViolationCollector,
 ): void => {

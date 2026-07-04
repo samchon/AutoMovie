@@ -1,16 +1,16 @@
 import {
-  IAutoFilmActorContext,
+  IAutoMovieActorContext,
   makeActorSynthesizer,
   sampleMotion,
   validateMotion,
-} from "@autofilm/engine";
-import { IAutoFilmReactAction, IAutoFilmVector3 } from "@autofilm/interface";
+} from "@automovie/engine";
+import { IAutoMovieReactAction, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const baseCtx: IAutoFilmActorContext = {
+const baseCtx: IAutoMovieActorContext = {
   skeleton: "skeleton-1",
   gaits: [],
   position: { x: 0, y: 0, z: 0 },
@@ -21,14 +21,14 @@ const baseCtx: IAutoFilmActorContext = {
   rig: createSkeleton(),
 };
 
-const nodes = new Map<string, IAutoFilmVector3>([
+const nodes = new Map<string, IAutoMovieVector3>([
   ["attacker", { x: 0, y: 0, z: 2 }], // dead ahead of the actor (+Z)
 ]);
 
 const react = (
   force: number,
-  overrides: Partial<IAutoFilmReactAction> = {},
-): IAutoFilmReactAction => ({
+  overrides: Partial<IAutoMovieReactAction> = {},
+): IAutoMovieReactAction => ({
   verb: "react",
   actor: "hero",
   start: 0,

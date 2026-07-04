@@ -1,8 +1,11 @@
-import { applyChannelLimit } from "@autofilm/engine";
-import { IAutoFilmChannel, IAutoFilmChannelLimit } from "@autofilm/interface";
+import { applyChannelLimit } from "@automovie/engine";
+import {
+  IAutoMovieChannel,
+  IAutoMovieChannelLimit,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-const CHANNEL: IAutoFilmChannel = {
+const CHANNEL: IAutoMovieChannel = {
   kind: "node",
   node: "n",
   path: "translation",
@@ -11,7 +14,7 @@ const CHANNEL: IAutoFilmChannel = {
 const limit = (
   min: (number | null)[] | null,
   max: (number | null)[] | null,
-): IAutoFilmChannelLimit => ({ channel: CHANNEL, min, max });
+): IAutoMovieChannelLimit => ({ channel: CHANNEL, min, max });
 
 /**
  * The CONSTRAIN pass: clamp a value to a channel limit and report every bound

@@ -1,4 +1,4 @@
-import { IAutoFilmVector3, IAutoFilmYawPitch } from "@autofilm/interface";
+import { IAutoMovieVector3, IAutoMovieYawPitch } from "@automovie/interface";
 
 /**
  * The **yaw and pitch** (degrees) that aim from `from` at `to`, expressed in a
@@ -17,10 +17,10 @@ import { IAutoFilmVector3, IAutoFilmYawPitch } from "@autofilm/interface";
  * @author Samchon
  */
 export const aimYawPitch = (
-  from: IAutoFilmVector3,
-  to: IAutoFilmVector3,
+  from: IAutoMovieVector3,
+  to: IAutoMovieVector3,
   facingDeg: number,
-): IAutoFilmYawPitch => {
+): IAutoMovieYawPitch => {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const dz = to.z - from.z;

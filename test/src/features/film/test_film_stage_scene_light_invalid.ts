@@ -1,4 +1,4 @@
-import { stageScene } from "@autofilm/engine";
+import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";

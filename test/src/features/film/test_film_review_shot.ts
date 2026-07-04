@@ -1,11 +1,11 @@
-import { reviewShot } from "@autofilm/engine";
-import { IAutoFilmReviewNote } from "@autofilm/interface";
+import { reviewShot } from "@automovie/engine";
+import { IAutoMovieReviewNote } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
-const NOTE: IAutoFilmReviewNote = {
+const NOTE: IAutoMovieReviewNote = {
   beat: "beat-1",
   tier: "physical",
   issue: "left foot skates at t=1.2s during the strike",

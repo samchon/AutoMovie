@@ -1,5 +1,5 @@
-import { sampleMotion } from "@autofilm/engine";
-import { IAutoFilmTransform } from "@autofilm/interface";
+import { sampleMotion } from "@automovie/engine";
+import { IAutoMovieTransform } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -11,7 +11,7 @@ import {
 } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const shift = (x: number): IAutoFilmTransform => ({
+const shift = (x: number): IAutoMovieTransform => ({
   translation: { x, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },

@@ -1,4 +1,4 @@
-import { ViolationCollector } from "@autofilm/engine";
+import { ViolationCollector } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**

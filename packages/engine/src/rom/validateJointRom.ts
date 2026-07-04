@@ -1,8 +1,8 @@
 import {
-  IAutoFilmAngleRange,
-  IAutoFilmJointConstraint,
-  IAutoFilmJointPose,
-} from "@autofilm/interface";
+  IAutoMovieAngleRange,
+  IAutoMovieJointConstraint,
+  IAutoMovieJointPose,
+} from "@automovie/interface";
 
 import { ViolationCollector } from "../validation/violation";
 import { swingConeAngle } from "./swingCone";
@@ -25,15 +25,15 @@ const AXES = ["flexion", "abduction", "twist"] as const;
  * @author Samchon
  */
 export const validateJointRom = (props: {
-  joint: IAutoFilmJointPose;
-  constraint: IAutoFilmJointConstraint;
+  joint: IAutoMovieJointPose;
+  constraint: IAutoMovieJointConstraint;
   path: string;
   collector: ViolationCollector;
 }): void => {
   const { joint, constraint, path, collector } = props;
   for (const axis of AXES) {
     const angle: number | null = joint[axis];
-    const allowed: IAutoFilmAngleRange | null = constraint[axis];
+    const allowed: IAutoMovieAngleRange | null = constraint[axis];
     if (angle === null || angle === 0) continue;
     if (allowed === null) {
       // immobile axis: the gap is the whole distance from the required 0

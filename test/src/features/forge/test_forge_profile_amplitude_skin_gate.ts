@@ -1,4 +1,4 @@
-import { fitProfileAmplitude } from "@autofilm/forge";
+import { fitProfileAmplitude } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";

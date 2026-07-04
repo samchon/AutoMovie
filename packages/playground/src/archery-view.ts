@@ -6,15 +6,15 @@ import {
   projectileSphereHit,
   resolveAttachment,
   sampleMotion,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmAttachment,
-  IAutoFilmJointPose,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
-import { applyPose, buildModel, mountViewer } from "@autofilm/viewer";
+  AutoMovieHumanoidBone,
+  IAutoMovieAttachment,
+  IAutoMovieJointPose,
+  IAutoMovieTransform,
+  IAutoMovieVector3,
+} from "@automovie/interface";
+import { applyPose, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_HORSE, buildHorse } from "./horse";
@@ -29,28 +29,28 @@ import { buildKnight } from "./knight";
 const params = new URLSearchParams(location.search);
 
 const j = (
-  bone: AutoFilmHumanoidBone,
+  bone: AutoMovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
-): IAutoFilmJointPose => ({
+): IAutoMovieJointPose => ({
   bone,
   flexion: a.flexion ?? 0,
   abduction: a.abduction ?? 0,
   twist: a.twist ?? 0,
 });
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
-const tf = (t: IAutoFilmVector3): IAutoFilmTransform => ({
+const v = (x: number, y: number, z: number): IAutoMovieVector3 => ({ x, y, z });
+const tf = (t: IAutoMovieVector3): IAutoMovieTransform => ({
   translation: t,
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const blend = (
-  a: IAutoFilmJointPose[],
-  b: IAutoFilmJointPose[],
+  a: IAutoMovieJointPose[],
+  b: IAutoMovieJointPose[],
   t: number,
-): IAutoFilmJointPose[] => {
+): IAutoMovieJointPose[] => {
   const bones = new Set([...a, ...b].map((x) => x.bone));
-  const at = (arr: IAutoFilmJointPose[], bone: AutoFilmHumanoidBone) =>
+  const at = (arr: IAutoMovieJointPose[], bone: AutoMovieHumanoidBone) =>
     arr.find((x) => x.bone === bone);
   return [...bones].map((bone) => {
     const pa = at(a, bone);
@@ -81,7 +81,7 @@ bRig.add(horseBObj.object, targetObj.object);
 
 const gallopA = horseGallop(horseA.skeleton.id);
 const gallopB = horseGallop(horseB.skeleton.id);
-const saddle: IAutoFilmAttachment = {
+const saddle: IAutoMovieAttachment = {
   parentBone: "spine",
   offset: tf(v(0, -0.72, -0.04)),
 };
@@ -94,7 +94,7 @@ const aZ = (t: number): number => V * t + G; // archer (front)
 const bZ = (t: number): number => V * t; // target (behind)
 
 // ── rider poses ──────────────────────────────────────────────────────────────
-const ride: IAutoFilmJointPose[] = [
+const ride: IAutoMovieJointPose[] = [
   j("spine", { flexion: 8 }),
   j("chest", { flexion: 5 }),
   j("leftUpperLeg", { flexion: -54, abduction: 24 }),
@@ -107,7 +107,7 @@ const ride: IAutoFilmJointPose[] = [
   j("leftLowerArm", { flexion: -88 }),
 ];
 // twisted back over the croup (facing −Z, at the pursuer), bow arm out, draw hand back
-const drawBack: IAutoFilmJointPose[] = [
+const drawBack: IAutoMovieJointPose[] = [
   j("spine", { flexion: 2, twist: -82 }),
   j("chest", { flexion: 0, twist: -68 }),
   j("neck", { twist: -34 }),
@@ -121,7 +121,7 @@ const drawBack: IAutoFilmJointPose[] = [
   j("rightUpperArm", { flexion: 40, abduction: -34 }),
   j("rightLowerArm", { flexion: 120 }),
 ];
-const struck: IAutoFilmJointPose[] = [
+const struck: IAutoMovieJointPose[] = [
   j("spine", { flexion: -28, twist: -16 }),
   j("chest", { flexion: -16 }),
   j("head", { flexion: -24 }),
@@ -201,8 +201,8 @@ const dist = Number(params.get("dist") ?? 7.5);
 const setRider = (
   riderObj: typeof archerObj,
   sk: typeof archer.skeleton,
-  joints: IAutoFilmJointPose[],
-  seat: IAutoFilmTransform,
+  joints: IAutoMovieJointPose[],
+  seat: IAutoMovieTransform,
 ): void => {
   applyPose(
     riderObj,
@@ -254,7 +254,7 @@ const step = (t: number): void => {
   } else {
     const p = Math.min((t - HIT_AT) / 1.4, 1);
     const localZ = hitWorldZ - bRig.position.z - 0.3 * p; // hold world z, drift back a touch
-    const fall: IAutoFilmTransform = {
+    const fall: IAutoMovieTransform = {
       translation: {
         x: seatB.translation.x + 0.5 * p,
         y: seatB.translation.y - 1.55 * p,
@@ -311,7 +311,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   handle.renderer.render(scene, camera);
 };
 
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   hit: hit !== null,
   flight: FLIGHT,

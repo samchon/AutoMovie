@@ -1,7 +1,10 @@
-import { AutoFilmBodyRegion, AutoFilmHumanoidBone } from "@autofilm/interface";
+import {
+  AutoMovieBodyRegion,
+  AutoMovieHumanoidBone,
+} from "@automovie/interface";
 
 /** Hips + both legs (the locomotion / stance region). */
-const LOWER: AutoFilmHumanoidBone[] = [
+const LOWER: AutoMovieHumanoidBone[] = [
   "hips",
   "leftUpperLeg",
   "leftLowerLeg",
@@ -14,7 +17,7 @@ const LOWER: AutoFilmHumanoidBone[] = [
 ];
 
 /** Spine/chest + both arms + every finger (the gesture / reach region). */
-const UPPER: AutoFilmHumanoidBone[] = [
+const UPPER: AutoMovieHumanoidBone[] = [
   "spine",
   "chest",
   "upperChest",
@@ -59,7 +62,7 @@ const UPPER: AutoFilmHumanoidBone[] = [
 ];
 
 /** Neck/head + eyes + jaw (the look-at region). */
-const HEAD: AutoFilmHumanoidBone[] = [
+const HEAD: AutoMovieHumanoidBone[] = [
   "neck",
   "head",
   "leftEye",
@@ -68,7 +71,7 @@ const HEAD: AutoFilmHumanoidBone[] = [
 ];
 
 /**
- * The humanoid bones a {@link AutoFilmBodyRegion} owns. The regions partition
+ * The humanoid bones a {@link AutoMovieBodyRegion} owns. The regions partition
  * the skeleton **disjointly and completely** (`lowerBody ∪ upperBody ∪ head` =
  * all 55 VRM bones; `face` owns no bones, being expression/morph channels;
  * `fullBody` owns every bone). This is what lets the performance compiler
@@ -79,8 +82,8 @@ const HEAD: AutoFilmHumanoidBone[] = [
  * @author Samchon
  */
 export const bodyRegionBones = (
-  region: AutoFilmBodyRegion,
-): AutoFilmHumanoidBone[] => {
+  region: AutoMovieBodyRegion,
+): AutoMovieHumanoidBone[] => {
   if (region === "lowerBody") return LOWER;
   if (region === "upperBody") return UPPER;
   if (region === "head") return HEAD;

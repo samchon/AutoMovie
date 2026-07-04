@@ -1,19 +1,19 @@
 import {
-  IAutoFilmActorContext,
+  IAutoMovieActorContext,
   compilePerformance,
   makeActorSynthesizer,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmActionCall,
-  IAutoFilmGait,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieActionCall,
+  IAutoMovieGait,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const WALK: IAutoFilmGait = {
+const WALK: IAutoMovieGait = {
   name: "walk",
   period: 1,
   limbs: [{ bone: "leftUpperLeg", phase: 0, duty: 0.5, amplitude: 25 }],
@@ -21,9 +21,9 @@ const WALK: IAutoFilmGait = {
 
 const actorAt = (
   skeleton: string,
-  position: IAutoFilmVector3,
+  position: IAutoMovieVector3,
   facingDeg: number,
-): IAutoFilmActorContext => ({
+): IAutoMovieActorContext => ({
   skeleton,
   gaits: [WALK],
   position,
@@ -54,17 +54,17 @@ const hasExpression = (motion: {
  * concurrency, gait travel, and aim — composed, not in isolation.
  */
 export const test_perform_scene = (): void => {
-  const contexts = new Map<string, IAutoFilmActorContext>([
+  const contexts = new Map<string, IAutoMovieActorContext>([
     ["hero", actorAt("hero-rig", { x: 0, y: 0, z: 0 }, 0)],
     ["guard", actorAt("guard-rig", { x: 0, y: 0, z: 5 }, 180)],
   ]);
-  const nodes = new Map<string, IAutoFilmVector3>([
+  const nodes = new Map<string, IAutoMovieVector3>([
     ["hero", { x: 0, y: 0, z: 0 }],
     ["guard", { x: 0, y: 0, z: 5 }],
   ]);
   const synth = makeActorSynthesizer(contexts, nodes);
 
-  const actions: IAutoFilmActionCall[] = [
+  const actions: IAutoMovieActionCall[] = [
     {
       verb: "locomote",
       gait: "walk",

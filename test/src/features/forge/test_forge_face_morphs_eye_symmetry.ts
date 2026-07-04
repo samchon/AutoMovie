@@ -1,4 +1,4 @@
-import { buildFaceMorphs } from "@autofilm/forge";
+import { buildFaceMorphs } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**

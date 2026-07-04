@@ -1,16 +1,16 @@
-import { IAutoFilmModel, IAutoFilmTransform } from "@autofilm/interface";
-import { exportModelToGLB } from "@autofilm/render";
+import { IAutoMovieModel, IAutoMovieTransform } from "@automovie/interface";
+import { exportModelToGLB } from "@automovie/render";
 import { NodeIO } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
-const T = (): IAutoFilmTransform => ({
+const T = (): IAutoMovieTransform => ({
   translation: { x: 0, y: 1, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 
 /** A rigged character: skeleton (root + child) + primitive parts + a material. */
-const CHARACTER: IAutoFilmModel = {
+const CHARACTER: IAutoMovieModel = {
   id: "char",
   name: "character",
   origin: "generated",
@@ -58,7 +58,7 @@ const CHARACTER: IAutoFilmModel = {
 };
 
 /** A skeletonless object: a raw mesh part (no normals/indices), no material. */
-const OBJECT: IAutoFilmModel = {
+const OBJECT: IAutoMovieModel = {
   id: "obj",
   name: null,
   origin: "imported",

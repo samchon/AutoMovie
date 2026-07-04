@@ -4,5 +4,5 @@ export * from "./applyPose";
 export * from "./applyObjectMotion";
 export * from "./applyDissolve";
 export * from "./buildScene";
-export * from "./AutoFilmPlayer";
+export * from "./AutoMoviePlayer";
 export * from "./mount";

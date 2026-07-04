@@ -1,9 +1,9 @@
-import { IAutoFilmGait } from "@autofilm/interface";
+import { IAutoMovieGait } from "@automovie/interface";
 
 /**
  * The five canonical humanoid gaits — the locomotion the `locomote` verb's
  * `gait` enum names (`walk`/`run`/`sprint`/`sneak`/`march`), as ready
- * {@link IAutoFilmGait} data a host drops into an actor context. Same role as
+ * {@link IAutoMovieGait} data a host drops into an actor context. Same role as
  * the engine's other canonical humanoid tables (ROM, joint axes): the shapes
  * are fixed, a body is what varies.
  *
@@ -23,7 +23,7 @@ import { IAutoFilmGait } from "@autofilm/interface";
  */
 export const HUMANOID_GAITS: Record<
   "walk" | "run" | "sprint" | "sneak" | "march",
-  IAutoFilmGait
+  IAutoMovieGait
 > = {
   walk: {
     name: "walk",

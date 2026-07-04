@@ -1,33 +1,33 @@
 import {
-  AutoFilmArkitChannel,
-  AutoFilmHumanoidBone,
-  IAutoFilmBlendshapeChannel,
-  IAutoFilmExpression,
-  IAutoFilmJointPose,
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  AutoMovieArkitChannel,
+  AutoMovieHumanoidBone,
+  IAutoMovieBlendshapeChannel,
+  IAutoMovieExpression,
+  IAutoMovieJointPose,
+  IAutoMovieKeyframe,
+  IAutoMovieMotion,
+  IAutoMoviePose,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { cubicBezierEasing, ease } from "./easing";
 
 /** A pose plus optional expression sampled at one instant of a clip. */
-export interface IAutoFilmMotionSample {
-  pose: IAutoFilmPose;
-  expression: IAutoFilmExpression | null;
+export interface IAutoMovieMotionSample {
+  pose: IAutoMoviePose;
+  expression: IAutoMovieExpression | null;
 }
 
-const IDENTITY_TRANSFORM: IAutoFilmTransform = {
+const IDENTITY_TRANSFORM: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 
 /**
- * Sample an {@link IAutoFilmMotion} clip at time `seconds`, interpolating
+ * Sample an {@link IAutoMovieMotion} clip at time `seconds`, interpolating
  * between the surrounding keyframes with that segment's easing.
  *
  * This is the bridge from the LLM's sparse keyframes to the dense, per-frame
@@ -42,9 +42,9 @@ const IDENTITY_TRANSFORM: IAutoFilmTransform = {
  * @author Samchon
  */
 export const sampleMotion = (
-  motion: IAutoFilmMotion,
+  motion: IAutoMovieMotion,
   seconds: number,
-): IAutoFilmMotionSample => {
+): IAutoMovieMotionSample => {
   const frames = motion.keyframes;
   const time = normalizeTime(seconds, motion.duration, motion.loop);
 
@@ -90,27 +90,27 @@ const normalizeTime = (
 };
 
 const toSample = (
-  motion: IAutoFilmMotion,
-  frame: IAutoFilmKeyframe,
-): IAutoFilmMotionSample => ({
+  motion: IAutoMovieMotion,
+  frame: IAutoMovieKeyframe,
+): IAutoMovieMotionSample => ({
   pose: { ...frame.pose, skeleton: motion.skeleton },
   expression: frame.expression,
 });
 
 const interpolatePose = (
   skeleton: string,
-  a: IAutoFilmPose,
-  b: IAutoFilmPose,
+  a: IAutoMoviePose,
+  b: IAutoMoviePose,
   t: number,
-): IAutoFilmPose => {
+): IAutoMoviePose => {
   const aJoints = new Map(a.joints.map((j) => [j.bone, j]));
   const bJoints = new Map(b.joints.map((j) => [j.bone, j]));
-  const bones = new Set<AutoFilmHumanoidBone>([
+  const bones = new Set<AutoMovieHumanoidBone>([
     ...aJoints.keys(),
     ...bJoints.keys(),
   ]);
 
-  const joints: IAutoFilmJointPose[] = [];
+  const joints: IAutoMovieJointPose[] = [];
   for (const bone of bones) {
     const ja = aJoints.get(bone);
     const jb = bJoints.get(bone);
@@ -143,10 +143,10 @@ const lerpAxis = (
 };
 
 const lerpTransform = (
-  a: IAutoFilmTransform | null,
-  b: IAutoFilmTransform | null,
+  a: IAutoMovieTransform | null,
+  b: IAutoMovieTransform | null,
   t: number,
-): IAutoFilmTransform | null => {
+): IAutoMovieTransform | null => {
   if (a === null && b === null) return null;
   const ta = a ?? IDENTITY_TRANSFORM;
   const tb = b ?? IDENTITY_TRANSFORM;
@@ -158,10 +158,10 @@ const lerpTransform = (
 };
 
 const interpolateExpression = (
-  a: IAutoFilmExpression | null,
-  b: IAutoFilmExpression | null,
+  a: IAutoMovieExpression | null,
+  b: IAutoMovieExpression | null,
   t: number,
-): IAutoFilmExpression | null => {
+): IAutoMovieExpression | null => {
   if (a === null && b === null) return null;
   if (a === null) return b;
   if (b === null) return a;
@@ -175,12 +175,12 @@ const interpolateExpression = (
 };
 
 const blendChannels = (
-  a: IAutoFilmExpression,
-  b: IAutoFilmExpression,
+  a: IAutoMovieExpression,
+  b: IAutoMovieExpression,
   t: number,
-): IAutoFilmBlendshapeChannel[] | null => {
+): IAutoMovieBlendshapeChannel[] | null => {
   if (a.blendshapes === null && b.blendshapes === null) return null;
-  const weights = new Map<AutoFilmArkitChannel, number>();
+  const weights = new Map<AutoMovieArkitChannel, number>();
   for (const c of a.blendshapes ?? [])
     weights.set(c.channel, c.weight * (1 - t));
   for (const c of b.blendshapes ?? [])

@@ -1,13 +1,13 @@
 import {
-  IAutoFilmConstraintViolation,
-  IAutoFilmLight,
-  IAutoFilmMountBinding,
-  IAutoFilmScene,
-  IAutoFilmSceneNode,
-  IAutoFilmScriptApplication,
-  IAutoFilmStagingApplication,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieConstraintViolation,
+  IAutoMovieLight,
+  IAutoMovieMountBinding,
+  IAutoMovieScene,
+  IAutoMovieSceneNode,
+  IAutoMovieScriptApplication,
+  IAutoMovieStagingApplication,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 import { aimRotation } from "../kinematics/aimRotation";
 import { Quaternion } from "../math/Quaternion";
@@ -23,10 +23,10 @@ const CAMERA_NEAR = 0.1;
 const CAMERA_FAR = 1000;
 
 /** Cameras look down local −Z (glTF convention); lights shine down −Z too. */
-const FORWARD: IAutoFilmVector3 = { x: 0, y: 0, z: -1 };
+const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: -1 };
 
 /**
- * A staged film set: the composed {@link IAutoFilmScene} plus the persistent
+ * A staged film set: the composed {@link IAutoMovieScene} plus the persistent
  * mount couplings staging declared. Mounts stay alongside rather than inside
  * the scene because a scene node is a flat world placement — the per-frame
  * world transform of a mounted rider comes from `resolveAttachment` against the
@@ -34,17 +34,17 @@ const FORWARD: IAutoFilmVector3 = { x: 0, y: 0, z: -1 };
  *
  * @author Samchon
  */
-export type IAutoFilmStagedSet =
-  | IAutoFilmStagedSet.ISuccess
-  | IAutoFilmStagedSet.IFailure;
-export namespace IAutoFilmStagedSet {
+export type IAutoMovieStagedSet =
+  | IAutoMovieStagedSet.ISuccess
+  | IAutoMovieStagedSet.IFailure;
+export namespace IAutoMovieStagedSet {
   /** Staging was coherent; the set is ready for blocking/performance. */
   export interface ISuccess {
     /** Discriminator. */
     success: true;
 
     /** The composed scene (actors at rest, cameras aimed, lights rigged). */
-    scene: IAutoFilmScene;
+    scene: IAutoMovieScene;
 
     /** Validated persistent couplings, one per mounted rider. */
     mounts: IMount[];
@@ -56,7 +56,7 @@ export namespace IAutoFilmStagedSet {
     success: false;
 
     /** Every contradiction found, for the correction round. */
-    violations: IAutoFilmConstraintViolation[];
+    violations: IAutoMovieConstraintViolation[];
   }
 
   /** One rider→parent-bone coupling, resolved per frame by the host. */
@@ -65,13 +65,13 @@ export namespace IAutoFilmStagedSet {
     node: string;
 
     /** The coupling it rides. */
-    binding: IAutoFilmMountBinding;
+    binding: IAutoMovieMountBinding;
   }
 }
 
 /**
  * The STAGING consumer — fold the script's cast and the staging stage's
- * placements into the {@link IAutoFilmScene} every later stage performs into.
+ * placements into the {@link IAutoMovieScene} every later stage performs into.
  * This is the first rung of the film pipeline (the workflow spine): LLM stage
  * payloads in, a validated engine artifact or a violation list out.
  *
@@ -88,9 +88,9 @@ export namespace IAutoFilmStagedSet {
  * the staging schema gives lights a direction and no position.
  */
 export const stageScene = (
-  script: IAutoFilmScriptApplication.IWrite,
-  staging: IAutoFilmStagingApplication.IWrite,
-): IAutoFilmStagedSet => {
+  script: IAutoMovieScriptApplication.IWrite,
+  staging: IAutoMovieStagingApplication.IWrite,
+): IAutoMovieStagedSet => {
   const out = new ViolationCollector();
   const cast = new Map(script.cast.map((c) => [c.node, c]));
   const placed = new Map(staging.actors.map((a) => [a.node, a]));
@@ -177,7 +177,7 @@ export const stageScene = (
 
   if (out.items.length > 0) return { success: false, violations: out.items };
 
-  const nodes: IAutoFilmSceneNode[] = staging.actors.map((placement) => ({
+  const nodes: IAutoMovieSceneNode[] = staging.actors.map((placement) => ({
     id: placement.node,
     model: cast.get(placement.node)!.modelRef ?? placement.node,
     transform: {
@@ -193,7 +193,7 @@ export const stageScene = (
   }));
 
   const cameras = staging.cameras.map((camera) => {
-    const target: IAutoFilmVector3 =
+    const target: IAutoMovieVector3 =
       camera.lookAt.kind === "node"
         ? placed.get(camera.lookAt.node)!.position
         : camera.lookAt.point;
@@ -210,7 +210,7 @@ export const stageScene = (
     };
   });
 
-  const lights: IAutoFilmLight[] = staging.lights.map((light) => ({
+  const lights: IAutoMovieLight[] = staging.lights.map((light) => ({
     id: light.node,
     type: "directional",
     transform: {
@@ -222,7 +222,7 @@ export const stageScene = (
     intensity: light.intensity,
   }));
 
-  const mounts: IAutoFilmStagedSet.IMount[] = staging.actors
+  const mounts: IAutoMovieStagedSet.IMount[] = staging.actors
     .filter((placement) => placement.attach !== undefined)
     .map((placement) => ({ node: placement.node, binding: placement.attach! }));
 

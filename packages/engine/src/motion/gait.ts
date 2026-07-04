@@ -1,10 +1,10 @@
 import {
-  IAutoFilmGait,
-  IAutoFilmGaitLimb,
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmProfile,
-} from "@autofilm/interface";
+  IAutoMovieGait,
+  IAutoMovieGaitLimb,
+  IAutoMovieKeyframe,
+  IAutoMovieMotion,
+  IAutoMovieProfile,
+} from "@automovie/interface";
 
 /** Wrap a cycle position into `[0, 1)`. */
 const wrap01 = (x: number): number => ((x % 1) + 1) % 1;
@@ -21,7 +21,7 @@ const wrap01 = (x: number): number => ((x % 1) + 1) % 1;
  * @author Samchon
  */
 export const gaitLimbFlexion = (
-  limb: IAutoFilmGaitLimb,
+  limb: IAutoMovieGaitLimb,
   t: number,
   period: number,
 ): number => {
@@ -35,8 +35,8 @@ export const gaitLimbFlexion = (
 };
 
 /**
- * Synthesise a **declarative gait** ({@link IAutoFilmGait}) into a looping
- * {@link IAutoFilmMotion} — the engine fattening a creature's characteristic
+ * Synthesise a **declarative gait** ({@link IAutoMovieGait}) into a looping
+ * {@link IAutoMovieMotion} — the engine fattening a creature's characteristic
  * locomotion (per-limb phase / duty / amplitude) into per-frame flexion. The
  * result is an ordinary one-cycle clip (sampled at `samples` even steps, the
  * closing keyframe repeating the first for a seamless loop) that
@@ -51,10 +51,10 @@ export const gaitLimbFlexion = (
 export const gaitMotion = (
   id: string,
   skeleton: string,
-  gait: IAutoFilmGait,
+  gait: IAutoMovieGait,
   samples: number,
-): IAutoFilmMotion => {
-  const keyframes: IAutoFilmKeyframe[] = [];
+): IAutoMovieMotion => {
+  const keyframes: IAutoMovieKeyframe[] = [];
   for (let i = 0; i <= samples; ++i) {
     const time = (i / samples) * gait.period;
     keyframes.push({
@@ -78,7 +78,7 @@ export const gaitMotion = (
 };
 
 /**
- * Bind a profile's gait set ({@link IAutoFilmProfile.gaits}) onto a concrete
+ * Bind a profile's gait set ({@link IAutoMovieProfile.gaits}) onto a concrete
  * skeleton — synthesising each named gait into a clip for **this** body. The
  * point of a profile binding: the _same_ profile applied to a horse skeleton
  * and a pony skeleton yields each its own gait clips, so one declarative gait
@@ -88,11 +88,11 @@ export const gaitMotion = (
  * @author Samchon
  */
 export const bindProfileGaits = (
-  profile: IAutoFilmProfile,
+  profile: IAutoMovieProfile,
   skeleton: string,
   samples: number,
-): Record<string, IAutoFilmMotion> => {
-  const clips: Record<string, IAutoFilmMotion> = {};
+): Record<string, IAutoMovieMotion> => {
+  const clips: Record<string, IAutoMovieMotion> = {};
   for (const gait of profile.gaits ?? [])
     clips[gait.name] = gaitMotion(
       `${profile.id}:${gait.name}`,

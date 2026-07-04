@@ -1,4 +1,4 @@
-import { cubicBezierEasing, ease } from "@autofilm/engine";
+import { cubicBezierEasing, ease } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";

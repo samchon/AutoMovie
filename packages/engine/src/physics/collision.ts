@@ -1,7 +1,7 @@
-import { IAutoFilmVector3 } from "@autofilm/interface";
+import { IAutoMovieVector3 } from "@automovie/interface";
 
 import { Vector3 } from "../math/Vector3";
-import { IAutoFilmProjectile, projectileAt } from "./projectile";
+import { IAutoMovieProjectile, projectileAt } from "./projectile";
 
 /**
  * A world-space sphere collider — the simplest body to test a hit against (an
@@ -10,17 +10,17 @@ import { IAutoFilmProjectile, projectileAt } from "./projectile";
  *
  * @author Samchon
  */
-export interface IAutoFilmSphere {
-  center: IAutoFilmVector3;
+export interface IAutoMovieSphere {
+  center: IAutoMovieVector3;
   radius: number;
 }
 
 /** A detected hit: the parameter/time of first contact and the contact point. */
-export interface IAutoFilmHit {
+export interface IAutoMovieHit {
   /** Time (or segment parameter) of first contact. */
   time: number;
   /** World point of first contact. */
-  point: IAutoFilmVector3;
+  point: IAutoMovieVector3;
 }
 
 /**
@@ -35,9 +35,9 @@ export interface IAutoFilmHit {
  * @author Samchon
  */
 export const segmentSphere = (
-  a: IAutoFilmVector3,
-  b: IAutoFilmVector3,
-  c: IAutoFilmVector3,
+  a: IAutoMovieVector3,
+  b: IAutoMovieVector3,
+  c: IAutoMovieVector3,
   radius: number,
 ): number | null => {
   const d = Vector3.subtract(b, a);
@@ -57,7 +57,7 @@ export const segmentSphere = (
 };
 
 /**
- * March a {@link IAutoFilmProjectile} over `[0, tMax]` in `steps` straight
+ * March a {@link IAutoMovieProjectile} over `[0, tMax]` in `steps` straight
  * segments and return the first time/point its path enters `sphere`, or `null`
  * if it never does within the window. Sampling the arc as segments keeps the
  * test exact per segment (the projectile is smooth, so a modest `steps`
@@ -66,11 +66,11 @@ export const segmentSphere = (
  * @author Samchon
  */
 export const projectileSphereHit = (
-  projectile: IAutoFilmProjectile,
-  sphere: IAutoFilmSphere,
+  projectile: IAutoMovieProjectile,
+  sphere: IAutoMovieSphere,
   tMax: number,
   steps = 120,
-): IAutoFilmHit | null => {
+): IAutoMovieHit | null => {
   const dt = tMax / steps;
   let prev = projectileAt(projectile, 0).position;
   for (let i = 1; i <= steps; ++i) {

@@ -1,10 +1,10 @@
 {
-  "name": "@autofilm/mcp",
+  "name": "@automovie/mcp",
   "version": "0.1.0",
-  "description": "autofilm MCP server — the deterministic film engine as Model Context Protocol tools",
+  "description": "automovie MCP server — the deterministic film engine as Model Context Protocol tools",
   "main": "src/index.ts",
   "bin": {
-    "autofilm-mcp": "lib/bin.js"
+    "automovie-mcp": "lib/bin.js"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -21,7 +21,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/samchon/autofilm"
+    "url": "https://github.com/samchon/automovie"
   },
   "files": ["lib", "src", "package.json", "LICENSE", "README.md"],
   "publishConfig": {
@@ -29,12 +29,12 @@
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "bin": {
-      "autofilm-mcp": "lib/bin.js"
+      "automovie-mcp": "lib/bin.js"
     }
   },
   "dependencies": {
-    "@autofilm/engine": "workspace:^",
-    "@autofilm/interface": "workspace:^",
+    "@automovie/engine": "workspace:^",
+    "@automovie/interface": "workspace:^",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@typia/mcp": "catalog:samchon",
     "typia": "catalog:samchon"

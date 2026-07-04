@@ -1,15 +1,15 @@
-import { tessellate } from "@autofilm/engine";
-import { IAutoFilmGeometry, IAutoFilmMaterial } from "@autofilm/interface";
+import { tessellate } from "@automovie/engine";
+import { IAutoMovieGeometry, IAutoMovieMaterial } from "@automovie/interface";
 import * as THREE from "three";
 
 /**
- * Build a `three.js` geometry from a autofilm geometry node — tessellating a
+ * Build a `three.js` geometry from a automovie geometry node — tessellating a
  * parametric primitive (via the engine) or uploading raw mesh arrays.
  *
  * @author Samchon
  */
 export const buildGeometry = (
-  geometry: IAutoFilmGeometry,
+  geometry: IAutoMovieGeometry,
 ): THREE.BufferGeometry => {
   const geo = new THREE.BufferGeometry();
   if (geometry.type === "primitive") {
@@ -39,9 +39,9 @@ export const buildGeometry = (
   return geo;
 };
 
-/** Build a `three.js` standard (PBR) material from a autofilm material. */
+/** Build a `three.js` standard (PBR) material from a automovie material. */
 export const buildMaterial = (
-  material: IAutoFilmMaterial,
+  material: IAutoMovieMaterial,
 ): THREE.MeshStandardMaterial => {
   const c = material.baseColor;
   const std = new THREE.MeshStandardMaterial({

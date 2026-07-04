@@ -1,11 +1,11 @@
 import {
-  AutoFilmBodyRegion,
-  IAutoFilmActionCall,
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-} from "@autofilm/interface";
+  AutoMovieBodyRegion,
+  IAutoMovieActionCall,
+  IAutoMovieKeyframe,
+  IAutoMovieMotion,
+} from "@automovie/interface";
 
-import { IAutoFilmPlacement, arrangeMotion } from "../motion/arrange";
+import { IAutoMoviePlacement, arrangeMotion } from "../motion/arrange";
 import { sampleMotion } from "../motion/sampleMotion";
 import { sequenceMotion } from "../motion/sequence";
 import { mergePoses } from "./mergePoses";
@@ -21,19 +21,20 @@ import { mergePoses } from "./mergePoses";
  * them. The compiler stays generic — it owns the **timeline assembly** (which
  * actor, when, repeated how often, held across gaps, layered by region), never
  * the keyframes. This is the harness's "thin verb in, dense motion out" split
- * made concrete: the model emits {@link IAutoFilmActionCall}s, this seam fattens
- * each into a clip, and {@link compilePerformance} composes them into the shot.
+ * made concrete: the model emits {@link IAutoMovieActionCall}s, this seam
+ * fattens each into a clip, and {@link compilePerformance} composes them into
+ * the shot.
  *
  * @author Samchon
  */
-export type IAutoFilmActionSynthesizer = (
-  action: IAutoFilmActionCall,
+export type IAutoMovieActionSynthesizer = (
+  action: IAutoMovieActionCall,
   actor: string,
-) => IAutoFilmMotion | null;
+) => IAutoMovieMotion | null;
 
 /** The body region a verb drives by default, when an action sets none. */
 const REGION_BY_VERB: Partial<
-  Record<IAutoFilmActionCall["verb"], AutoFilmBodyRegion>
+  Record<IAutoMovieActionCall["verb"], AutoMovieBodyRegion>
 > = {
   locomote: "lowerBody",
   gesture: "upperBody",
@@ -43,7 +44,7 @@ const REGION_BY_VERB: Partial<
 };
 
 /** Which region an action owns — its explicit `region`, else the verb default. */
-const regionOf = (action: IAutoFilmActionCall): AutoFilmBodyRegion =>
+const regionOf = (action: IAutoMovieActionCall): AutoMovieBodyRegion =>
   action.region ?? REGION_BY_VERB[action.verb] ?? "fullBody";
 
 /**
@@ -52,11 +53,14 @@ const regionOf = (action: IAutoFilmActionCall): AutoFilmBodyRegion =>
  * so disjoint regions play _concurrently_ (legs walk while arms wave while the
  * head tracks). A face clip's expression rides along.
  */
-const layerClips = (id: string, clips: IAutoFilmMotion[]): IAutoFilmMotion => {
+const layerClips = (
+  id: string,
+  clips: IAutoMovieMotion[],
+): IAutoMovieMotion => {
   const times = [
     ...new Set(clips.flatMap((c) => c.keyframes.map((k) => k.time))),
   ].sort((a, b) => a - b);
-  const keyframes: IAutoFilmKeyframe[] = times.map((time) => {
+  const keyframes: IAutoMovieKeyframe[] = times.map((time) => {
     const samples = clips.map((c) => sampleMotion(c, time));
     let expression = null;
     for (const s of samples)
@@ -79,7 +83,7 @@ const layerClips = (id: string, clips: IAutoFilmMotion[]): IAutoFilmMotion => {
 };
 
 /**
- * Compile a shot's flat {@link IAutoFilmActionCall} list into **one performance
+ * Compile a shot's flat {@link IAutoMovieActionCall} list into **one performance
  * clip per actor**, keyed by node id.
  *
  * The compiler does the orchestration the PERFORMANCE stage needs and the
@@ -100,13 +104,13 @@ const layerClips = (id: string, clips: IAutoFilmMotion[]): IAutoFilmMotion => {
  * @returns Per-actor performance motion, keyed by actor node id.
  */
 export const compilePerformance = (
-  actions: IAutoFilmActionCall[],
-  synthesize: IAutoFilmActionSynthesizer,
-): Record<string, IAutoFilmMotion> => {
+  actions: IAutoMovieActionCall[],
+  synthesize: IAutoMovieActionSynthesizer,
+): Record<string, IAutoMovieMotion> => {
   // 1. fan each action to every actor that performs it, grouped by body region
   const byActor = new Map<
     string,
-    Map<AutoFilmBodyRegion, IAutoFilmPlacement[]>
+    Map<AutoMovieBodyRegion, IAutoMoviePlacement[]>
   >();
   for (const action of actions) {
     const actors =
@@ -129,7 +133,7 @@ export const compilePerformance = (
       const region = regionOf(action);
       const regions =
         byActor.get(actor) ??
-        new Map<AutoFilmBodyRegion, IAutoFilmPlacement[]>();
+        new Map<AutoMovieBodyRegion, IAutoMoviePlacement[]>();
       const placements = regions.get(region) ?? [];
       placements.push({ start: action.start, motion });
       regions.set(region, placements);
@@ -138,7 +142,7 @@ export const compilePerformance = (
   }
 
   // 3. per actor: arrange each region, then layer the regions (or pass one through)
-  const performances: Record<string, IAutoFilmMotion> = {};
+  const performances: Record<string, IAutoMovieMotion> = {};
   for (const [actor, regions] of byActor) {
     const regionClips = [...regions.entries()].map(([region, placements]) =>
       arrangeMotion(`perform:${actor}:${region}`, placements),

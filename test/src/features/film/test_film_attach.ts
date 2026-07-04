@@ -6,21 +6,21 @@ import {
   resolveAttachment,
   sampleClip,
   sampleMotion,
-} from "@autofilm/engine";
-import { IAutoFilmTransform, IAutoFilmVector3 } from "@autofilm/interface";
+} from "@automovie/engine";
+import { IAutoMovieTransform, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, createValidMotion } from "../internal/fixtures";
 import { nclose, qclose, vclose } from "../internal/predicates";
 
-const IDENTITY_OFFSET: IAutoFilmTransform = {
+const IDENTITY_OFFSET: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 
 /** The parent placed off the origin and turned 90° about +Y. */
-const parentTransform: IAutoFilmTransform = {
+const parentTransform: IAutoMovieTransform = {
   translation: { x: 1, y: 0, z: 2 },
   rotation: Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, 90),
   scale: { x: 1, y: 1, z: 1 },
@@ -29,7 +29,7 @@ const parentTransform: IAutoFilmTransform = {
 const posAt = (
   clip: ReturnType<typeof compileAttach>,
   t: number,
-): IAutoFilmVector3 => {
+): IAutoMovieVector3 => {
   const v = sampleClip(clip, t).get("node:sword:translation")!.value;
   return { x: v[0]!, y: v[1]!, z: v[2]! };
 };
@@ -74,7 +74,7 @@ export const test_film_attach = (): void => {
 
   // leftHand rest model position: hips(0,1,0) → chest(0,1.4,0) → arm chain
   // +0.2 +0.3 +0.25 along x → (0.75, 1.4, 0). Compose onto the placement.
-  const handModel: IAutoFilmVector3 = { x: 0.75, y: 1.4, z: 0 };
+  const handModel: IAutoMovieVector3 = { x: 0.75, y: 1.4, z: 0 };
   const expected = Vector3.add(
     parentTransform.translation,
     Quaternion.rotateVector(parentTransform.rotation, handModel),

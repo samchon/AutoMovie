@@ -1,26 +1,26 @@
-import { impactRecoil } from "@autofilm/engine";
+import { impactRecoil } from "@automovie/engine";
 import {
-  IAutoFilmBone,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  IAutoMovieBone,
+  IAutoMovieSkeleton,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const rest: IAutoFilmTransform = {
+const rest: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 const bone = (
-  name: IAutoFilmBone["bone"],
-  parent: IAutoFilmBone["parent"],
-  constraint: IAutoFilmBone["constraint"],
-): IAutoFilmBone => ({ bone: name, parent, rest, constraint });
+  name: IAutoMovieBone["bone"],
+  parent: IAutoMovieBone["parent"],
+  constraint: IAutoMovieBone["constraint"],
+): IAutoMovieBone => ({ bone: name, parent, rest, constraint });
 
 // spine has a flexion ROM (and a twist limit); chest is unconstrained
-const skeleton: IAutoFilmSkeleton = {
+const skeleton: IAutoMovieSkeleton = {
   id: "recoil-rig",
   bones: [
     bone("spine", null, {

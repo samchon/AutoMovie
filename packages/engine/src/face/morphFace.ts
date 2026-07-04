@@ -1,13 +1,13 @@
-import { IAutoFilmFace, IAutoFilmFaceTemplate } from "@autofilm/interface";
+import { IAutoMovieFace, IAutoMovieFaceTemplate } from "@automovie/interface";
 
 import { flattenFace } from "./flattenFace";
 
-// The template type moved to @autofilm/interface (ingest produces it, the
+// The template type moved to @automovie/interface (ingest produces it, the
 // engine consumes it); re-exported here so engine consumers keep working.
-export type { IAutoFilmFaceTemplate };
+export type { IAutoMovieFaceTemplate };
 
 /**
- * Apply an {@link IAutoFilmFace}'s parameter weights to a face template — the
+ * Apply an {@link IAutoMovieFace}'s parameter weights to a face template — the
  * deterministic core of the face editor.
  *
  * Plain linear blendshape math, `positions + Σ weight·delta`, evaluated by the
@@ -20,8 +20,8 @@ export type { IAutoFilmFaceTemplate };
  * @author Samchon
  */
 export const morphFace = (props: {
-  template: IAutoFilmFaceTemplate;
-  face: IAutoFilmFace;
+  template: IAutoMovieFaceTemplate;
+  face: IAutoMovieFace;
 }): number[] => {
   const { template, face } = props;
   const out = template.positions.slice();

@@ -2,7 +2,7 @@ import {
   ViolationCollector,
   getConstraint,
   validateJointRom,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint } from "../internal/fixtures";
@@ -21,7 +21,7 @@ const romItems = (axes: Parameters<typeof joint>[1]) => {
 /**
  * An angle outside a joint's `[min, max]` is flagged on exactly the offending
  * axis — the verifier catching the "physically impossible" poses raw LLM
- * emission produces, which is the heart of autofilm's differentiator.
+ * emission produces, which is the heart of automovie's differentiator.
  *
  * Scenarios:
  *

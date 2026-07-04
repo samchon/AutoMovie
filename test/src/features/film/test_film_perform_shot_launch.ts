@@ -1,10 +1,13 @@
 import {
-  IAutoFilmActionSynthesizer,
+  IAutoMovieActionSynthesizer,
   performShot,
   sampleClip,
   stageScene,
-} from "@autofilm/engine";
-import { IAutoFilmActionCall, IAutoFilmTransform } from "@autofilm/interface";
+} from "@automovie/engine";
+import {
+  IAutoMovieActionCall,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -25,7 +28,7 @@ import { nclose, vclose } from "../internal/predicates";
  * Like the shared content seam, but a `launch` produces no actor motion — it
  * animates the projectile object and schedules a react, not the shooter.
  */
-const synth: IAutoFilmActionSynthesizer = (action, actor) =>
+const synth: IAutoMovieActionSynthesizer = (action, actor) =>
   action.verb === "launch" ? null : validSynthesizer(action, actor);
 
 const scriptOf = () =>
@@ -79,8 +82,8 @@ const stagingOf = () =>
  * 4. A launch that cannot reach its target at the given speed → a range violation.
  * 5. A launch aimed at a bare point (no actor to recoil) still flies, but
  *    schedules no reaction — nobody performs.
- * 6. A launch at a **moving** target is led: when the foe strides during the
- *    shot (a `locomote` carrying root travel), performShot resolves its animated
+ * 6. A launch at a **moving** target is led: when the foe strides during the shot
+ *    (a `locomote` carrying root travel), performShot resolves its animated
  *    position and aims where it will be, so the baked flight lands short of the
  *    foe's start point — and the foe still reacts, at the led contact.
  */
@@ -88,7 +91,7 @@ export const test_film_perform_shot_launch = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
   if (staged.success !== true) throw new Error("staging must succeed");
 
-  const perform = (draft: IAutoFilmActionCall[]) =>
+  const perform = (draft: IAutoMovieActionCall[]) =>
     performShot({
       script: scriptOf(),
       staged,
@@ -275,12 +278,12 @@ export const test_film_perform_shot_launch = (): void => {
   // carries root travel); performShot resolves its animated world position and
   // leads the aim, so the flight lands short of the foe's staged x = 6 (the foe
   // — facing 180 — advances toward the archer as the arrow flies).
-  const rootAt = (x: number): IAutoFilmTransform => ({
+  const rootAt = (x: number): IAutoMovieTransform => ({
     translation: { x, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 1, y: 1, z: 1 },
   });
-  const movingSynth: IAutoFilmActionSynthesizer = (action, actor) =>
+  const movingSynth: IAutoMovieActionSynthesizer = (action, actor) =>
     action.verb === "launch"
       ? null
       : action.verb === "locomote" && actor === "foe"

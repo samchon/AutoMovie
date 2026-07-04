@@ -1,4 +1,4 @@
-import { IAutoFilmMotion, IAutoFilmVector3 } from "@autofilm/interface";
+import { IAutoMovieMotion, IAutoMovieVector3 } from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
@@ -21,12 +21,12 @@ import { travelMotion } from "./travel";
  */
 export const locomoteMotion = (
   id: string,
-  gait: IAutoFilmMotion,
+  gait: IAutoMovieMotion,
   distance: number,
   speed: number,
-  direction: IAutoFilmVector3,
+  direction: IAutoMovieVector3,
   faceTravel = false,
-): IAutoFilmMotion => {
+): IAutoMovieMotion => {
   const cycles = Math.max(1, Math.round(distance / (speed * gait.duration)));
   const heading = Vector3.normalize(direction);
   const velocity = Vector3.scale(heading, speed);

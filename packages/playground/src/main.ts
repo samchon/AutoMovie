@@ -1,17 +1,17 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieJointPose,
+  IAutoMovieMotion,
+  IAutoMoviePose,
+  IAutoMovieSkeleton,
+} from "@automovie/interface";
 import {
-  AutoFilmPlayer,
-  IAutoFilmModelObject,
+  AutoMoviePlayer,
+  IAutoMovieModelObject,
   applyPose,
   buildModel,
   mountViewer,
-} from "@autofilm/viewer";
+} from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_PARAMS, IHumanoidParams, buildHumanoid } from "./humanoid";
@@ -24,17 +24,17 @@ interface JointState {
   abduction: number;
   twist: number;
 }
-const pose: Partial<Record<AutoFilmHumanoidBone, JointState>> = {};
+const pose: Partial<Record<AutoMovieHumanoidBone, JointState>> = {};
 
-let object: IAutoFilmModelObject;
-let skeleton: IAutoFilmSkeleton;
-let player: AutoFilmPlayer | null = null;
+let object: IAutoMovieModelObject;
+let skeleton: IAutoMovieSkeleton;
+let player: AutoMoviePlayer | null = null;
 let playing = false;
 
-const currentPose = (): IAutoFilmPose => {
-  const joints: IAutoFilmJointPose[] = Object.entries(pose).map(
+const currentPose = (): IAutoMoviePose => {
+  const joints: IAutoMovieJointPose[] = Object.entries(pose).map(
     ([bone, s]) => ({
-      bone: bone as AutoFilmHumanoidBone,
+      bone: bone as AutoMovieHumanoidBone,
       flexion: s!.flexion,
       abduction: s!.abduction,
       twist: s!.twist,
@@ -44,8 +44,8 @@ const currentPose = (): IAutoFilmPose => {
 };
 
 // ── a small procedural "wave" clip, so Play does something visible ──────────
-const waveMotion = (): IAutoFilmMotion => {
-  const arm = (flexion: number, abduction: number): IAutoFilmPose => ({
+const waveMotion = (): IAutoMovieMotion => {
+  const arm = (flexion: number, abduction: number): IAutoMoviePose => ({
     skeleton: "humanoid",
     root: null,
     joints: [
@@ -110,7 +110,7 @@ const rebuild = (): void => {
   figure.clear();
   object = buildModel(built.model);
   figure.add(object.object);
-  player = new AutoFilmPlayer(object, skeleton, waveMotion());
+  player = new AutoMoviePlayer(object, skeleton, waveMotion());
   if (!playing) applyPose(object, currentPose(), skeleton);
 };
 
@@ -158,7 +158,7 @@ function prop(
 
 const poseSlider = (
   label: string,
-  bone: AutoFilmHumanoidBone,
+  bone: AutoMovieHumanoidBone,
   axis: keyof JointState,
   min: number,
   max: number,
@@ -208,7 +208,7 @@ app.innerHTML = `
   <div id="stage">
     <canvas id="view"></canvas>
     <div id="panel">
-      <h1>autofilm · character editor</h1>
+      <h1>automovie · character editor</h1>
       <div class="sub">Procedural humanoid — adjust body, pose, or play a clip.</div>
       <button id="play">▶ Play wave</button>
       <h2>Proportions</h2>
@@ -258,7 +258,7 @@ mountViewer(canvas, scene, camera, (elapsed) => {
 });
 
 // expose for headless verification (screenshot harness reads this)
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   boneCount: () => object.bones.size,
 };

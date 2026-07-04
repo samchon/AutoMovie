@@ -1,4 +1,4 @@
-import { validateFaceResult } from "@autofilm/engine";
+import { validateFaceResult } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeFace } from "../internal/fixtures";

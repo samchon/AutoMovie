@@ -1,51 +1,51 @@
 import {
-  IAutoFilmChannelLimit,
-  IAutoFilmClip,
-  IAutoFilmDriver,
-  IAutoFilmNode,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  IAutoMovieChannelLimit,
+  IAutoMovieClip,
+  IAutoMovieDriver,
+  IAutoMovieNode,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 
 import {
-  IAutoFilmClampViolation,
+  IAutoMovieClampViolation,
   applyChannelLimit,
 } from "./applyChannelLimit";
 import { channelKey } from "./channel";
 import { composeScene } from "./composeScene";
 import { resolveDrivers } from "./resolveDrivers";
-import { IAutoFilmSampledChannel, sampleClip } from "./sampleClip";
+import { IAutoMovieSampledChannel, sampleClip } from "./sampleClip";
 import { childrenIndex, resolveWorldDrivers } from "./worldDrivers";
 
 /** Everything needed to resolve one instant of a scene. */
-export interface IAutoFilmResolveInput {
+export interface IAutoMovieResolveInput {
   /** The scene graph: nodes with parent-local rest transforms. */
-  nodes: IAutoFilmNode[];
+  nodes: IAutoMovieNode[];
 
   /** The clip animating the scene this frame, or `null` for the rest pose. */
-  clip: IAutoFilmClip | null;
+  clip: IAutoMovieClip | null;
 
   /** Channel limits to clamp sampled values against (generalized ROM). */
-  limits: IAutoFilmChannelLimit[];
+  limits: IAutoMovieChannelLimit[];
 
   /**
    * Drivers computing channels from other channels. Channel-space drivers
    * (`copy`, `driven`) are resolved this frame; world-space/stateful ones are
-   * returned in {@link IAutoFilmResolveOutput.deferredDrivers}. Omit for none.
+   * returned in {@link IAutoMovieResolveOutput.deferredDrivers}. Omit for none.
    */
-  drivers?: IAutoFilmDriver[];
+  drivers?: IAutoMovieDriver[];
 
   /** The instant to resolve, in clip-local seconds. */
   seconds: number;
 }
 
 /** A clamp that fired this frame, tagged with the channel it constrained. */
-export interface IAutoFilmResolveViolation extends IAutoFilmClampViolation {
+export interface IAutoMovieResolveViolation extends IAutoMovieClampViolation {
   /** The {@link channelKey} of the channel that was clamped. */
   channel: string;
 }
 
 /** The resolved frame: world matrices, morph weights, and any clamps fired. */
-export interface IAutoFilmResolveOutput {
+export interface IAutoMovieResolveOutput {
   /** Node id → world matrix (`number[16]`, column-major). */
   world: Map<string, number[]>;
 
@@ -53,13 +53,13 @@ export interface IAutoFilmResolveOutput {
   weights: Map<string, number[]>;
 
   /** Every constraint breach that was clamped, in channel/component order. */
-  violations: IAutoFilmResolveViolation[];
+  violations: IAutoMovieResolveViolation[];
 
   /**
    * World-space / stateful drivers (`parent`/`aim`/`ik`/`spring`) this pass did
    * not resolve — surfaced (not dropped) for the world-space driver pass.
    */
-  deferredDrivers: IAutoFilmDriver[];
+  deferredDrivers: IAutoMovieDriver[];
 }
 
 /**
@@ -68,7 +68,7 @@ export interface IAutoFilmResolveOutput {
  * hierarchy into world matrices.
  *
  * This is the engine's per-frame entry point and the deterministic core of
- * autofilm: given the same scene, clip, limits, drivers, and time it always
+ * automovie: given the same scene, clip, limits, drivers, and time it always
  * yields the same matrices — the property that makes the renderer a
  * reproducible diffusion alternative. World-space/stateful drivers
  * (`parent`/`aim`/`ik`/`spring`) are not applied here; they are surfaced in
@@ -78,9 +78,9 @@ export interface IAutoFilmResolveOutput {
  * @author Samchon
  */
 export const resolveFrame = (
-  input: IAutoFilmResolveInput,
-): IAutoFilmResolveOutput => {
-  const sampled: Map<string, IAutoFilmSampledChannel> =
+  input: IAutoMovieResolveInput,
+): IAutoMovieResolveOutput => {
+  const sampled: Map<string, IAutoMovieSampledChannel> =
     input.clip === null ? new Map() : sampleClip(input.clip, input.seconds);
 
   // DRIVE (channel-space): resolve copy/driven into the sampled map; collect the
@@ -92,7 +92,7 @@ export const resolveFrame = (
       : [];
 
   // CONSTRAIN: clamp each sampled channel that carries a limit, in place.
-  const violations: IAutoFilmResolveViolation[] = [];
+  const violations: IAutoMovieResolveViolation[] = [];
   for (const limit of input.limits) {
     const key = channelKey(limit.channel);
     const hit = sampled.get(key);
@@ -103,7 +103,7 @@ export const resolveFrame = (
   }
 
   // Fold node-targeting samples into per-node transform overrides + weights.
-  const overrides = new Map<string, IAutoFilmTransform>();
+  const overrides = new Map<string, IAutoMovieTransform>();
   const weights = new Map<string, number[]>();
   for (const node of input.nodes) {
     const t = sampled.get(`node:${node.id}:translation`);
@@ -122,7 +122,7 @@ export const resolveFrame = (
   // COMPOSE, then the WORLD-SPACE DRIVE pass (aim/look-at) over the composed
   // hierarchy; `parent`/`ik`/`spring` remain deferred for their own steps.
   const world = composeScene(input.nodes, overrides);
-  const localById = new Map<string, IAutoFilmTransform>();
+  const localById = new Map<string, IAutoMovieTransform>();
   for (const node of input.nodes)
     localById.set(node.id, overrides.get(node.id) ?? node.transform);
   const deferredDrivers = resolveWorldDrivers(

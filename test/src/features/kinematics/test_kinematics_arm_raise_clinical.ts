@@ -2,13 +2,13 @@ import {
   HUMANOID_JOINT_AXES,
   HUMANOID_REST_FRAME,
   resolvePose,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmBone,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieBone,
+  IAutoMoviePose,
+  IAutoMovieSkeleton,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
@@ -18,24 +18,25 @@ import { nclose } from "../internal/predicates";
  * real rig — the ground truth the `celebrate`/`wave`/reach flip depends on, and
  * the calibration that mislabelled its own signs twice before being measured.
  *
- * The stickman arm rests in a T-pose: the upper arm carries an **identity** rest
- * rotation and points down its parent's +x (a horizontal arm), the forearm and
- * hand continue along +x. Under that geometry the humanoid abduction axis swings
- * the +x arm through the vertical plane, so rig `+90` lifts the **left** hand
- * overhead while rig `−90` drops it — and the mirror holds on the right. The
- * whole point of {@link HUMANOID_REST_FRAME} (left `sign +1 neutral 90`, right
- * `sign −1 neutral 90`) is to erase that per-side sign: in **clinical** space a
- * single `abduction 180` raises _either_ arm overhead, `0` lets it hang.
+ * The stickman arm rests in a T-pose: the upper arm carries an **identity**
+ * rest rotation and points down its parent's +x (a horizontal arm), the forearm
+ * and hand continue along +x. Under that geometry the humanoid abduction axis
+ * swings the +x arm through the vertical plane, so rig `+90` lifts the **left**
+ * hand overhead while rig `−90` drops it — and the mirror holds on the right.
+ * The whole point of {@link HUMANOID_REST_FRAME} (left `sign +1 neutral 90`,
+ * right `sign −1 neutral 90`) is to erase that per-side sign: in **clinical**
+ * space a single `abduction 180` raises _either_ arm overhead, `0` lets it
+ * hang.
  *
  * Scenarios:
  *
  * 1. At rest each hand sits at shoulder height (the arm is horizontal).
  * 2. Read as clinical through the rest frames, `abduction 180` lifts **both**
- *    hands above the shoulders with the _same_ value (no left/right mirror), and
- *    `abduction 0` drops both below — the semantic the flip promises.
+ *    hands above the shoulders with the _same_ value (no left/right mirror),
+ *    and `abduction 0` drops both below — the semantic the flip promises.
  * 3. A clinical pose resolved with the frames equals the pre-converted rig pose
- *    resolved without them (left clinical 180 ≡ rig 90; right clinical 180 ≡ rig
- *    −90), tying the semantics back to the raw rig articulation.
+ *    resolved without them (left clinical 180 ≡ rig 90; right clinical 180 ≡
+ *    rig −90), tying the semantics back to the raw rig articulation.
  */
 export const test_kinematics_arm_raise_clinical = (): void => {
   // A minimal T-pose-arm rig matching the stickman's arm geometry: identity rest
@@ -44,9 +45,9 @@ export const test_kinematics_arm_raise_clinical = (): void => {
     b: string,
     parent: string | null,
     t: [number, number, number],
-  ): IAutoFilmBone => ({
-    bone: b as AutoFilmHumanoidBone,
-    parent: parent as AutoFilmHumanoidBone | null,
+  ): IAutoMovieBone => ({
+    bone: b as AutoMovieHumanoidBone,
+    parent: parent as AutoMovieHumanoidBone | null,
     rest: {
       translation: { x: t[0], y: t[1], z: t[2] },
       rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -54,7 +55,7 @@ export const test_kinematics_arm_raise_clinical = (): void => {
     },
     constraint: null,
   });
-  const skeleton: IAutoFilmSkeleton = {
+  const skeleton: IAutoMovieSkeleton = {
     id: "tpose-arms",
     bones: [
       bone("hips", null, [0, 0.92, 0]),
@@ -69,7 +70,7 @@ export const test_kinematics_arm_raise_clinical = (): void => {
     ],
   };
 
-  const pose = (joints: IAutoFilmPose["joints"]): IAutoFilmPose => ({
+  const pose = (joints: IAutoMoviePose["joints"]): IAutoMoviePose => ({
     skeleton: skeleton.id,
     root: null,
     joints,
@@ -77,15 +78,15 @@ export const test_kinematics_arm_raise_clinical = (): void => {
   const arm = (
     bone: "leftUpperArm" | "rightUpperArm",
     abduction: number,
-  ): IAutoFilmPose["joints"][number] => ({
+  ): IAutoMoviePose["joints"][number] => ({
     bone,
     flexion: null,
     abduction,
     twist: null,
   });
   const yOf = (
-    p: IAutoFilmPose,
-    b: AutoFilmHumanoidBone,
+    p: IAutoMoviePose,
+    b: AutoMovieHumanoidBone,
     frames = false,
   ): number =>
     resolvePose(

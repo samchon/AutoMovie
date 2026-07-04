@@ -2,13 +2,13 @@ import {
   projectileAt,
   solveBallisticLaunch,
   solveMovingLaunch,
-} from "@autofilm/engine";
-import { IAutoFilmVector3 } from "@autofilm/interface";
+} from "@automovie/engine";
+import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
-const GRAVITY: IAutoFilmVector3 = { x: 0, y: -9.81, z: 0 };
+const GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
 
 /**
  * `solveMovingLaunch` — the aim that leads a **moving** target, fixed-point on
@@ -30,10 +30,10 @@ const GRAVITY: IAutoFilmVector3 = { x: 0, y: -9.81, z: 0 };
  * 5. A non-positive speed → null.
  */
 export const test_physics_moving_launch = (): void => {
-  const origin: IAutoFilmVector3 = { x: 0, y: 1.6, z: 0 };
+  const origin: IAutoMovieVector3 = { x: 0, y: 1.6, z: 0 };
 
   // 1. stationary → the static solve
-  const still: IAutoFilmVector3 = { x: 7, y: 1, z: 2 };
+  const still: IAutoMovieVector3 = { x: 7, y: 1, z: 2 };
   const moving = solveMovingLaunch(origin, () => still, 16)!;
   const staticSol = solveBallisticLaunch(origin, still, 16)!;
   TestValidator.predicate(
@@ -43,7 +43,11 @@ export const test_physics_moving_launch = (): void => {
   );
 
   // 2. a target sliding downrange (+x at 3 m/s) is led onto the meeting point
-  const slide = (t: number): IAutoFilmVector3 => ({ x: 6 + 3 * t, y: 1, z: 0 });
+  const slide = (t: number): IAutoMovieVector3 => ({
+    x: 6 + 3 * t,
+    y: 1,
+    z: 0,
+  });
   const lead = solveMovingLaunch(origin, slide, 20)!;
   const meet = projectileAt(
     { origin, velocity: lead.velocity, gravity: GRAVITY },
@@ -70,7 +74,7 @@ export const test_physics_moving_launch = (): void => {
   );
 
   // 4. a target that outruns the shot → out of range → null
-  const flee = (t: number): IAutoFilmVector3 => ({
+  const flee = (t: number): IAutoMovieVector3 => ({
     x: 40 + 30 * t,
     y: 1,
     z: 0,

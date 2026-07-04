@@ -1,7 +1,7 @@
 {
-  "name": "@autofilm/engine",
+  "name": "@automovie/engine",
   "version": "0.1.0",
-  "description": "autofilm deterministic engine — kinematics, ROM validation, motion sampling, tessellation",
+  "description": "automovie deterministic engine — kinematics, ROM validation, motion sampling, tessellation",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/samchon/autofilm"
+    "url": "https://github.com/samchon/automovie"
   },
   "files": [
     "lib",
@@ -39,7 +39,7 @@
     }
   },
   "dependencies": {
-    "@autofilm/interface": "workspace:^"
+    "@automovie/interface": "workspace:^"
   },
   "devDependencies": {
     "rimraf": "^6.0.1",

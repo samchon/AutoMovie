@@ -1,18 +1,18 @@
-import { IAutoFilmSampledChannel, resolveDrivers } from "@autofilm/engine";
+import { IAutoMovieSampledChannel, resolveDrivers } from "@automovie/engine";
 import {
-  IAutoFilmAimDriver,
-  IAutoFilmChannel,
-  IAutoFilmCopyDriver,
-  IAutoFilmDrivenDriver,
-  IAutoFilmDriver,
-  IAutoFilmNode,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  IAutoMovieAimDriver,
+  IAutoMovieChannel,
+  IAutoMovieCopyDriver,
+  IAutoMovieDrivenDriver,
+  IAutoMovieDriver,
+  IAutoMovieNode,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const IDENTITY: IAutoFilmTransform = {
+const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -20,8 +20,8 @@ const IDENTITY: IAutoFilmTransform = {
 
 const node = (
   id: string,
-  transform: IAutoFilmTransform = IDENTITY,
-): IAutoFilmNode => ({
+  transform: IAutoMovieTransform = IDENTITY,
+): IAutoMovieNode => ({
   id,
   name: null,
   parent: null,
@@ -33,21 +33,21 @@ const node = (
   skin: null,
 });
 
-const byId = (...nodes: IAutoFilmNode[]): Map<string, IAutoFilmNode> =>
+const byId = (...nodes: IAutoMovieNode[]): Map<string, IAutoMovieNode> =>
   new Map(nodes.map((n) => [n.id, n]));
 
-const ptr = (p: string): IAutoFilmChannel => ({
+const ptr = (p: string): IAutoMovieChannel => ({
   kind: "pointer",
   pointer: p,
   valueType: "scalar",
 });
 
 const seed = (
-  entries: [string, IAutoFilmChannel, number[]][],
-): Map<string, IAutoFilmSampledChannel> =>
+  entries: [string, IAutoMovieChannel, number[]][],
+): Map<string, IAutoMovieSampledChannel> =>
   new Map(entries.map(([k, channel, value]) => [k, { channel, value }]));
 
-const copy = (over: Partial<IAutoFilmCopyDriver>): IAutoFilmCopyDriver => ({
+const copy = (over: Partial<IAutoMovieCopyDriver>): IAutoMovieCopyDriver => ({
   type: "copy",
   owner: "o",
   source: "s",
@@ -59,8 +59,8 @@ const copy = (over: Partial<IAutoFilmCopyDriver>): IAutoFilmCopyDriver => ({
 });
 
 const driven = (
-  over: Partial<IAutoFilmDrivenDriver>,
-): IAutoFilmDrivenDriver => ({
+  over: Partial<IAutoMovieDrivenDriver>,
+): IAutoMovieDrivenDriver => ({
   type: "driven",
   output: ptr("/out"),
   source: ptr("/in"),
@@ -168,7 +168,7 @@ export const test_resolve_drivers_copy = (): void => {
  *    above the last.
  */
 export const test_resolve_drivers_driven = (): void => {
-  const run = (d: IAutoFilmDrivenDriver, src?: number): number[] => {
+  const run = (d: IAutoMovieDrivenDriver, src?: number): number[] => {
     const sampled =
       src === undefined ? seed([]) : seed([["ptr:/in", ptr("/in"), [src]]]);
     resolveDrivers([d], sampled, new Map());
@@ -278,7 +278,7 @@ export const test_resolve_drivers_order = (): void => {
     outRange: [0, 2],
   });
   const sampled2 = seed([["ptr:/x", ptr("/x"), [1]]]);
-  const aim: IAutoFilmAimDriver = {
+  const aim: IAutoMovieAimDriver = {
     type: "aim",
     owner: "o",
     target: "t",
@@ -301,7 +301,7 @@ export const test_resolve_drivers_order = (): void => {
   TestValidator.equals("aim driver deferred", deferred.length, 1);
   TestValidator.equals(
     "aim is the deferred one",
-    (deferred[0] as IAutoFilmDriver).type,
+    (deferred[0] as IAutoMovieDriver).type,
     "aim",
   );
 };
@@ -315,7 +315,7 @@ export const test_resolve_drivers_order = (): void => {
  */
 export const test_resolve_drivers_cycle = (): void => {
   const nodes = byId(node("o"), node("s"));
-  const cyclic: IAutoFilmDriver[] = [
+  const cyclic: IAutoMovieDriver[] = [
     copy({ owner: "o", source: "s", rotation: true }),
     copy({ owner: "s", source: "o", rotation: true }),
   ];

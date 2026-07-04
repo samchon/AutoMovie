@@ -1,8 +1,8 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmPose,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieJointPose,
+  IAutoMoviePose,
+} from "@automovie/interface";
 
 /**
  * Merge several poses — each driving a (usually disjoint) set of bones, e.g.
@@ -18,8 +18,8 @@ import {
  *
  * @author Samchon
  */
-export const mergePoses = (poses: IAutoFilmPose[]): IAutoFilmPose => {
-  const joints = new Map<AutoFilmHumanoidBone, IAutoFilmJointPose>();
+export const mergePoses = (poses: IAutoMoviePose[]): IAutoMoviePose => {
+  const joints = new Map<AutoMovieHumanoidBone, IAutoMovieJointPose>();
   let root = poses[0]!.root;
   for (const pose of poses) {
     if (pose.root !== null) root = pose.root;

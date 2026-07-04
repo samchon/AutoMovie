@@ -5,11 +5,11 @@ description: Designing packages/mcp — server/tool arrangement as an ongoing ex
 
 # MCP Server Design
 
-`packages/mcp` (`@autofilm/mcp`) exposes the deterministic film engine as Model Context Protocol tools: an external agent (Codex, Claude, any MCP client) drives the pipeline directly instead of the repo hosting its own LLM orchestration — "engine enforces, model creates" turned inside out. Each class (a `typia.llm.controller`) is one MCP server; each public method is one validated tool, its JSON schema and validation derived from the method's TypeScript signature and JSDoc via `@typia/mcp`.
+`packages/mcp` (`@automovie/mcp`) exposes the deterministic film engine as Model Context Protocol tools: an external agent (Codex, Claude, any MCP client) drives the pipeline directly instead of the repo hosting its own LLM orchestration — "engine enforces, model creates" turned inside out. Each class (a `typia.llm.controller`) is one MCP server; each public method is one validated tool, its JSON schema and validation derived from the method's TypeScript signature and JSDoc via `@typia/mcp`.
 
 ## Server/tool arrangement is not settled
 
-How many servers, and how tools group across them, is a **standing design question, not a one-time decision**. Today `AutoFilmApplication` holds the four wired stages (`stage`/`block`/`cut`/`forge`) in one class; `perform` (rig-dependent, not plain JSON) isn't wired yet. Whenever this surface changes:
+How many servers, and how tools group across them, is a **standing design question, not a one-time decision**. Today `AutoMovieApplication` holds the four wired stages (`stage`/`block`/`cut`/`forge`) in one class; `perform` (rig-dependent, not plain JSON) isn't wired yet. Whenever this surface changes:
 
 - Think deeply about the split before coding — one server vs. several, one tool per engine call vs. coarser/finer groupings — and write down the reasoning (a `.wiki/07-decisions/` entry or PR description).
 - Then **experiment**: build it, verify with a live MCP client handshake (see `packages/mcp/README.md`), and keep iterating. Don't treat the current shape as final; revisit it as more of the pipeline (`perform`, review, multi-shot orchestration) gets wired.
@@ -25,5 +25,5 @@ When adding or rewriting either, count the actual rendered description length ra
 
 ## Other conventions
 
-- An MCP tool's return must be a single object type, never a bare union. The engine's success/violations unions (`IAutoFilmStagedSet`, …) are each wrapped (`IAutoFilmStageOutput { staged: IAutoFilmStagedSet }`) rather than returned directly.
-- The old per-stage `typia.llm.application<IAutoFilm*Application>()` interfaces are retired as the integration surface (see decision in `.wiki/07-decisions/`); the `IAutoFilm*Application.IWrite`/`IProps` types stay as the plain data shapes the class methods consume.
+- An MCP tool's return must be a single object type, never a bare union. The engine's success/violations unions (`IAutoMovieStagedSet`, …) are each wrapped (`IAutoMovieStageOutput { staged: IAutoMovieStagedSet }`) rather than returned directly.
+- The old per-stage `typia.llm.application<IAutoMovie*Application>()` interfaces are retired as the integration surface (see decision in `.wiki/07-decisions/`); the `IAutoMovie*Application.IWrite`/`IProps` types stay as the plain data shapes the class methods consume.

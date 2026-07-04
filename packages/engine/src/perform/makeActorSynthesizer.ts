@@ -1,10 +1,10 @@
 import {
-  IAutoFilmActionCall,
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieActionCall,
+  IAutoMovieKeyframe,
+  IAutoMovieMotion,
+  IAutoMoviePose,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 import { aimYawPitch } from "../kinematics/aimYawPitch";
 import { reachPose } from "../kinematics/reachPose";
@@ -14,8 +14,8 @@ import { gaitMotion } from "../motion/gait";
 import { gestureMotion } from "../motion/gesture";
 import { locomoteMotion } from "../motion/locomote";
 import { reactMotion } from "../motion/react";
-import { IAutoFilmActorContext } from "./IAutoFilmActorContext";
-import { IAutoFilmActionSynthesizer } from "./compilePerformance";
+import { IAutoMovieActorContext } from "./IAutoMovieActorContext";
+import { IAutoMovieActionSynthesizer } from "./compilePerformance";
 import { resolveTargetPoint } from "./resolveTargetPoint";
 
 /** Keyframes per gait cycle the reference synthesiser bakes. */
@@ -32,10 +32,10 @@ const REACT_CHAIN = ["head", "neck", "chest", "spine"] as const;
 
 /** Drop a world point into an actor's model space (undo its placement). */
 const toModelSpace = (
-  world: IAutoFilmVector3,
-  position: IAutoFilmVector3,
+  world: IAutoMovieVector3,
+  position: IAutoMovieVector3,
   facingDeg: number,
-): IAutoFilmVector3 => {
+): IAutoMovieVector3 => {
   const f = (facingDeg * Math.PI) / 180;
   const cos = Math.cos(f);
   const sin = Math.sin(f);
@@ -52,11 +52,11 @@ const toModelSpace = (
 const extendHoldClip = (
   id: string,
   skeleton: string,
-  pose: IAutoFilmPose,
+  pose: IAutoMoviePose,
   duration: number,
-): IAutoFilmMotion => {
-  const rest: IAutoFilmPose = { skeleton, root: null, joints: [] };
-  const key = (time: number, p: IAutoFilmPose): IAutoFilmKeyframe => ({
+): IAutoMovieMotion => {
+  const rest: IAutoMoviePose = { skeleton, root: null, joints: [] };
+  const key = (time: number, p: IAutoMoviePose): IAutoMovieKeyframe => ({
     time,
     pose: p,
     expression: null,
@@ -76,15 +76,15 @@ const extendHoldClip = (
 const jabClip = (
   id: string,
   skeleton: string,
-  pose: IAutoFilmPose,
+  pose: IAutoMoviePose,
   duration: number,
-): IAutoFilmMotion => {
-  const rest: IAutoFilmPose = { skeleton, root: null, joints: [] };
+): IAutoMovieMotion => {
+  const rest: IAutoMoviePose = { skeleton, root: null, joints: [] };
   const key = (
     time: number,
-    p: IAutoFilmPose,
-    easing: IAutoFilmKeyframe["easing"],
-  ): IAutoFilmKeyframe => ({
+    p: IAutoMoviePose,
+    easing: IAutoMovieKeyframe["easing"],
+  ): IAutoMovieKeyframe => ({
     time,
     pose: p,
     expression: null,
@@ -105,11 +105,11 @@ const jabClip = (
 };
 
 /**
- * Build a reference {@link IAutoFilmActionSynthesizer} — the content seam
+ * Build a reference {@link IAutoMovieActionSynthesizer} — the content seam
  * {@link compilePerformance} injects — for the verbs the engine can fatten
  * **deterministically** from an actor's context:
  *
- * - `locomote` → the actor's matching {@link IAutoFilmGait}; if its target
+ * - `locomote` → the actor's matching {@link IAutoMovieGait}; if its target
  *   resolves to a world point ({@link resolveTargetPoint}, against `nodes`), the
  *   gait is carried that far at the actor's speed ({@link locomoteMotion}),
  *   otherwise it steps in place (a relative target — "off to the left" — has no
@@ -137,13 +137,13 @@ const jabClip = (
  * @author Samchon
  */
 export const makeActorSynthesizer = (
-  contexts: Map<string, IAutoFilmActorContext>,
-  nodes: Map<string, IAutoFilmVector3>,
-): IAutoFilmActionSynthesizer => {
+  contexts: Map<string, IAutoMovieActorContext>,
+  nodes: Map<string, IAutoMovieVector3>,
+): IAutoMovieActionSynthesizer => {
   return (
-    action: IAutoFilmActionCall,
+    action: IAutoMovieActionCall,
     actor: string,
-  ): IAutoFilmMotion | null => {
+  ): IAutoMovieMotion | null => {
     const ctx = contexts.get(actor);
     if (ctx === undefined) return null;
     if (action.verb === "locomote") {
@@ -191,14 +191,14 @@ export const makeActorSynthesizer = (
       const { yawDeg, pitchDeg } = aimYawPitch(eye, target, ctx.facingDeg);
       const duration = action.duration === "auto" ? 1 : action.duration;
       // turn the head: twist toward the target, flexion to tilt (up = extension)
-      const headPose: IAutoFilmPose = {
+      const headPose: IAutoMoviePose = {
         skeleton: ctx.skeleton,
         root: null,
         joints: [
           { bone: "head", flexion: -pitchDeg, abduction: null, twist: yawDeg },
         ],
       };
-      const frame = (time: number): IAutoFilmKeyframe => ({
+      const frame = (time: number): IAutoMovieKeyframe => ({
         time,
         pose: headPose,
         expression: null,
@@ -221,7 +221,7 @@ export const makeActorSynthesizer = (
         intensity: action.intensity,
         blendshapes: null,
       };
-      const frame = (time: number): IAutoFilmKeyframe => ({
+      const frame = (time: number): IAutoMovieKeyframe => ({
         time,
         pose: { skeleton: ctx.skeleton, root: null, joints: [] },
         expression,
