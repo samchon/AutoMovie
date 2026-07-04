@@ -3,7 +3,6 @@ import {
   IAutoMovieForgeApplication,
   IAutoMovieModel,
   IAutoMovieScriptApplication,
-  IAutoMovieSkeleton,
 } from "@automovie/interface";
 
 import { validateModel } from "../validation/validateModel";
@@ -48,12 +47,10 @@ export namespace IAutoMovieForgedCast {
  * equal its cast `node` — that id is the join the staged scene's `modelRef ??
  * node` fallback resolves against.
  *
- * The **rig contract**: `validateModel` covers parts/materials/extents (its
- * violations are remapped onto the entry's path); on top of it a performer
- * needs a skeleton whose graph actually hangs together — every parent named
- * exists, no bone is declared twice, exactly one root, and every bone is
- * reachable from that root (a two-bone cycle floating off the hierarchy would
- * satisfy all the local checks and still be unposable).
+ * The **rig contract**: `validateModel` covers parts/materials/extents and the
+ * skeleton graph (its violations are remapped onto the entry's path). Forge
+ * adds only the performer-specific rule that generated stand-ins must have a
+ * skeleton at all; boneless models are props, not castable actors.
  */
 export const forgeCast = (
   script: IAutoMovieScriptApplication.IWrite,
@@ -113,8 +110,6 @@ export const forgeCast = (
         "a stand-in performer needs a skeleton — a boneless model cannot be posed",
         entry.model.skeleton,
       );
-    else
-      validateSkeletonGraph(entry.model.skeleton, `${ep}.model.skeleton`, out);
 
     const validated = validateModel({ model: entry.model });
     if (validated.success === false)
@@ -140,72 +135,4 @@ export const forgeCast = (
   const models: Record<string, IAutoMovieModel> = {};
   for (const entry of forge.entries) models[entry.node] = entry.model;
   return { success: true, models };
-};
-
-/**
- * Structural integrity of a skeleton as a graph: unique bone names, resolvable
- * parents, exactly one root, and full reachability from that root. Local field
- * validity (rest transforms, constraints) is the pose/ROM validators' concern.
- */
-const validateSkeletonGraph = (
-  skeleton: IAutoMovieSkeleton,
-  path: string,
-  out: ViolationCollector,
-): void => {
-  const names = new Set<string>();
-  const roots: string[] = [];
-  skeleton.bones.forEach((bone, i) => {
-    if (names.has(bone.bone))
-      out.push(
-        "type",
-        `${path}.bones[${i}].bone`,
-        `bone "${bone.bone}" is declared more than once`,
-        bone.bone,
-      );
-    names.add(bone.bone);
-    if (bone.parent === null) roots.push(bone.bone);
-  });
-  skeleton.bones.forEach((bone, i) => {
-    if (bone.parent !== null && !names.has(bone.parent))
-      out.push(
-        "type",
-        `${path}.bones[${i}].parent`,
-        `parent "${bone.parent}" is not a bone of this skeleton`,
-        bone.parent,
-      );
-  });
-  if (roots.length !== 1) {
-    out.push(
-      "type",
-      `${path}.bones`,
-      `a skeleton needs exactly one root bone (parent: null), but found ${roots.length}`,
-      roots,
-    );
-    return; // reachability is meaningless without a single root
-  }
-
-  const children = new Map<string, string[]>();
-  for (const bone of skeleton.bones) {
-    if (bone.parent === null) continue;
-    const list = children.get(bone.parent) ?? [];
-    list.push(bone.bone);
-    children.set(bone.parent, list);
-  }
-  const reached = new Set<string>();
-  const queue = [roots[0]!];
-  while (queue.length > 0) {
-    const name = queue.pop()!;
-    if (reached.has(name)) continue;
-    reached.add(name);
-    queue.push(...(children.get(name) ?? []));
-  }
-  skeleton.bones.forEach((bone, i) => {
-    if (!reached.has(bone.bone))
-      out.push(
-        "type",
-        `${path}.bones[${i}]`,
-        `bone "${bone.bone}" is not reachable from the root "${roots[0]}" (a detached cycle cannot be posed)`,
-        bone.bone,
-      );
-  });
 };
