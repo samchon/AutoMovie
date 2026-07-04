@@ -39,9 +39,11 @@ const flexionSeq = (
  *    into hyperextension and the ROM validator rejects it, while the same swing
  *    centered on `neutral: 25` stays inside `[0, 150]°` and passes.
  * 5. A limb can target `abduction` instead of the default `flexion`.
- * 6. Stance and swing can use different easing curves while keeping the same
+ * 6. Stance and swing can use different named easing curves while keeping the same
  *    endpoints.
- * 7. `rootBob` adds a vertical identity-TRS root curve while plain gaits keep
+ * 7. `cubicBezier` stance/swing phases use their own control points instead of
+ *    falling back to linear.
+ * 8. `rootBob` adds a vertical identity-TRS root curve while plain gaits keep
  *    `root: null`.
  */
 export const test_motion_gait = (): void => {
@@ -148,7 +150,7 @@ export const test_motion_gait = (): void => {
     true,
   );
 
-  // 6. per-phase easing curves
+  // 6. per-phase named easing curves
   const eased = flexionSeq(
     gaitMotion(
       "eased",
@@ -178,7 +180,39 @@ export const test_motion_gait = (): void => {
     ),
   );
 
-  // 7. optional vertical root bob
+  // 7. cubic-bezier phase controls
+  const bezier = flexionSeq(
+    gaitMotion(
+      "bezier",
+      sk.id,
+      {
+        name: "bezier",
+        period: 1,
+        limbs: [
+          {
+            bone: "leftUpperLeg",
+            phase: 0,
+            duty: 0.5,
+            amplitude: 30,
+            stanceEasing: "cubicBezier",
+            stanceBezier: [0.42, 0, 1, 1],
+            swingEasing: "cubicBezier",
+            swingBezier: [0, 0, 0.58, 1],
+          },
+        ],
+      },
+      8,
+    ),
+    "leftUpperLeg",
+  );
+  TestValidator.predicate(
+    "cubicBezier stance and swing use phase control points",
+    [30, 24.392, 11.079, -7.312, -30, -7.312, 11.079, 24.392, 30].every(
+      (v, i) => nclose(bezier[i]!, v, 1e-3),
+    ),
+  );
+
+  // 8. optional vertical root bob
   const bobbing = gaitMotion(
     "bob",
     sk.id,
