@@ -146,6 +146,9 @@ export const gaitMotion = (
   gait: IAutoMovieGait,
   samples: number,
 ): IAutoMovieMotion => {
+  if (!Number.isInteger(samples))
+    throw new Error("gait samples must be a positive integer");
+  if (samples < 1) throw new Error("gait samples must be a positive integer");
   assertUniqueGaitAxes(gait.limbs);
   const keyframes: IAutoMovieKeyframe[] = [];
   for (let i = 0; i <= samples; ++i) {
