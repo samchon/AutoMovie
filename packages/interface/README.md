@@ -32,6 +32,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `skeleton/` | 휴머노이드 본 열거형, 스켈레톤·본·관절 제약(ROM) 타입 |
 | `pose/` | 정적 포즈 — 휴머노이드 의미 각도 |
 | `expression/` | 표정 — ARKit 52 채널, VRM expression preset |
+| `face/` | **Dormant boundary** — 결정 001 이후 보존만 하는 face/head 파라미터 문서. 현재 motion-first 하니스의 주 저작 표면은 아니며, face editor 재개 시 호환 자산으로 쓴다. |
 | `motion/` | 시간 모션 — 키프레임 + 이징 |
 | `material/` | PBR 머티리얼 |
 | `scene/` | 씬그래프 — 모델/카메라/조명 배치 |

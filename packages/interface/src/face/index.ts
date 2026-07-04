@@ -1,3 +1,10 @@
+/**
+ * Dormant face/head document boundary retained after Decision 001.
+ *
+ * The current product path is motion-first, but these interfaces stay exported
+ * so stored face assets and future face-editor revival work keep a stable
+ * schema surface.
+ */
 export * from "./AutoMovieFaceWeight";
 export * from "./AutoMovieFaceParameterName";
 export * from "./AutoMovieHeadParameterName";

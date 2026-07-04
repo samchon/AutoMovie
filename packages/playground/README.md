@@ -34,6 +34,9 @@ draws it.
   relaxed / surprised), **gaze** that tracks the viewer, **auto-blink**, and arm
   / head **pose** — the attractive-character path that the procedural blockman
   bootstraps toward.
+- **`face.html`**, **`head.html`**, **`mhhead.html`** — dormant face/head
+  research surfaces retained after Decision 001. They are preserved for a future
+  face-editor revival, not the current motion-first product path.
 
 The model (~14 MB) is not committed; fetch it first:
 
