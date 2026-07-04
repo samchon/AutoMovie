@@ -13,6 +13,8 @@ import { TestValidator } from "@nestia/e2e";
  *    yields a successful validation.
  * 2. An out-of-range value (2 in [0,1]) pushes one violation, and a non-empty
  *    collector yields a failed validation.
+ * 3. A non-finite value (`NaN`) pushes one violation; bounded ranges are finite
+ *    numeric domains.
  */
 export const test_validation_collector = (): void => {
   const empty = new ViolationCollector();
@@ -32,5 +34,15 @@ export const test_validation_collector = (): void => {
     "non-empty collector → failure",
     validation.success,
     false,
+  );
+
+  const nonFinite = new ViolationCollector();
+  nonFinite.range("$input.c", Number.NaN, 0, 1);
+  TestValidator.equals("non-finite pushes one", nonFinite.items.length, 1);
+  TestValidator.predicate(
+    "non-finite range mentions finite",
+    nonFinite.items.some(
+      (v) => v.path === "$input.c" && v.expected.includes("finite"),
+    ),
   );
 };
