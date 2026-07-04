@@ -384,6 +384,16 @@ export const performShot = (props: {
           action.intensity,
         );
       } else if (
+        action.verb === "lookAt" &&
+        resolveTargetPoint(action.to, nodePositions) === null
+      ) {
+        out.push(
+          "type",
+          `${base}[${i}].to`,
+          `a lookAt target must resolve to a point — a node/point/group of placed actors, not "${action.to.kind}"`,
+          action.to,
+        );
+      } else if (
         action.verb === "reach" &&
         resolveTargetPoint(action.to, nodePositions) === null
       ) {
