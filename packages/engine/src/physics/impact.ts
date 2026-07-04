@@ -56,6 +56,17 @@ const EMBED_SPEED = 6; // m/s above which a penetrable body is pierced, not boun
 const THROUGH_SPEED = 14; // m/s above which a very soft body is passed clean through
 const THROUGH_TRANSFER = 0.3; // fraction of momentum a pass-through still imparts
 
+const assertImpactMass = (label: "a" | "b", mass: number): void => {
+  if (!Number.isFinite(mass))
+    throw new RangeError(
+      `impact body ${label} mass must be finite, but was ${mass}`,
+    );
+  if (!(mass > 0))
+    throw new RangeError(
+      `impact body ${label} mass must be > 0, but was ${mass}`,
+    );
+};
+
 /**
  * Resolve a collision between bodies `a` and `b` across unit contact `normal`
  * (pointing from `a` to `b`) into an abstracted {@link IAutoMovieImpact}.
@@ -75,6 +86,9 @@ export const resolveImpact = (
   b: IAutoMovieBody,
   normal: IAutoMovieVector3,
 ): IAutoMovieImpact => {
+  assertImpactMass("a", a.mass);
+  assertImpactMass("b", b.mass);
+
   const normalLengthSq = Vector3.dot(normal, normal);
   if (!Number.isFinite(normalLengthSq))
     throw new RangeError(
