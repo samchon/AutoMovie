@@ -36,8 +36,7 @@ const clipName =
   params.get("clip") !== null && params.get("clip")! in clips
     ? params.get("clip")!
     : defaultClip;
-const restFrames =
-  !isCat && clipName === "shadowbox" ? HUMANOID_REST_FRAME : undefined;
+const restFrames = isCat ? undefined : HUMANOID_REST_FRAME;
 // `?clamp=1` enforces ROM; the cat's tail gets spring follow-through so it
 // trails and overshoots the body instead of snapping (turn off with ?spring=0).
 const catTailSpring =

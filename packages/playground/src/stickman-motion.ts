@@ -22,6 +22,11 @@ import {
  * Because the rig is the normalized humanoid, any clip here replays unchanged
  * on a fleshed-out humanoid or an imported VRM.
  *
+ * Upper-arm abduction is authored in clinical space and resolved through
+ * HUMANOID_REST_FRAME by stickman-view: 0 = down, 90 = horizontal, 180 =
+ * overhead, with the same sign convention for both arms. Some display clips
+ * keep legacy overshoot beyond 180 so their unclamped render stays identical.
+ *
  * @author Samchon
  */
 
@@ -65,12 +70,12 @@ const key = (time: number, p: IAutoMoviePose): IAutoMovieKeyframe => ({
 /** Jumping jacks — arms sweep overhead and legs splay in the frontal plane. */
 export const jumpingJack = (sk: string): IAutoMovieMotion => {
   const closed = pose(sk, [
-    j("leftUpperArm", { abduction: -72 }),
-    j("rightUpperArm", { abduction: 72 }),
+    j("leftUpperArm", { abduction: 18 }),
+    j("rightUpperArm", { abduction: 18 }),
   ]);
   const open = pose(sk, [
-    j("leftUpperArm", { abduction: 95 }),
-    j("rightUpperArm", { abduction: -95 }),
+    j("leftUpperArm", { abduction: 185 }),
+    j("rightUpperArm", { abduction: 185 }),
     j("leftUpperLeg", { abduction: 18 }),
     j("rightUpperLeg", { abduction: -18 }),
   ]);
@@ -85,11 +90,11 @@ export const jumpingJack = (sk: string): IAutoMovieMotion => {
 
 /** A friendly wave — right arm held overhead, forearm swinging side to side. */
 export const wave = (sk: string): IAutoMovieMotion => {
-  const stanceArm = j("leftUpperArm", { abduction: -64 });
+  const stanceArm = j("leftUpperArm", { abduction: 26 });
   const up = (fore: number): IAutoMoviePose =>
     pose(sk, [
       stanceArm,
-      j("rightUpperArm", { abduction: -150 }),
+      j("rightUpperArm", { abduction: 240 }),
       j("rightLowerArm", { abduction: fore }),
       j("leftUpperLeg", { abduction: 6 }),
       j("rightUpperLeg", { abduction: -6 }),
@@ -108,12 +113,12 @@ export const walk = (sk: string): IAutoMovieMotion => {
   // Arms hang down-and-out (abduction) and swing fore/aft via `flexion` (the
   // anatomical sagittal axis under HUMANOID_JOINT_AXES); `s` is the swing phase
   // in [−1, 1] (+1 = left arm back, right arm forward — opposing the legs).
-  // Mirrored rest makes the same +flexion swing the left arm back and the right
-  // arm forward. Specified in EVERY keyframe so they swing smoothly instead of
-  // snapping back to the rest T-pose.
+  // HUMANOID_REST_FRAME recovers the mirrored rig signs at render time.
+  // Specified in EVERY keyframe so they swing smoothly instead of snapping back
+  // to the rest T-pose.
   const arms = (s: number): IAutoMovieJointPose[] => [
-    j("leftUpperArm", { abduction: -58, flexion: 30 * s }),
-    j("rightUpperArm", { abduction: 58, flexion: 30 * s }),
+    j("leftUpperArm", { abduction: 32, flexion: 30 * s }),
+    j("rightUpperArm", { abduction: 32, flexion: 30 * s }),
   ];
   // contact: `lead` leg forward (flexion −), `trail` leg back (flexion +).
   const contact = (lead: "left" | "right"): IAutoMoviePose => {
@@ -157,8 +162,8 @@ export const hop = (sk: string): IAutoMovieMotion => {
   const stand = pose(
     sk,
     [
-      j("leftUpperArm", { abduction: -62 }),
-      j("rightUpperArm", { abduction: 62 }),
+      j("leftUpperArm", { abduction: 28 }),
+      j("rightUpperArm", { abduction: 28 }),
     ],
     root(0, 0, 0, 0),
   );
@@ -169,8 +174,8 @@ export const hop = (sk: string): IAutoMovieMotion => {
       j("rightUpperLeg", { flexion: -26 }),
       j("leftLowerLeg", { flexion: 46 }),
       j("rightLowerLeg", { flexion: 46 }),
-      j("leftUpperArm", { abduction: -40, flexion: 38 }),
-      j("rightUpperArm", { abduction: 40, flexion: 38 }),
+      j("leftUpperArm", { abduction: 50, flexion: 38 }),
+      j("rightUpperArm", { abduction: 50, flexion: 38 }),
     ],
     root(0, -0.12, 0, 0),
   );
@@ -181,8 +186,8 @@ export const hop = (sk: string): IAutoMovieMotion => {
       j("rightUpperLeg", { flexion: -12 }),
       j("leftLowerLeg", { flexion: 22 }),
       j("rightLowerLeg", { flexion: 22 }),
-      j("leftUpperArm", { abduction: 120 }),
-      j("rightUpperArm", { abduction: -120 }),
+      j("leftUpperArm", { abduction: 210 }),
+      j("rightUpperArm", { abduction: 210 }),
     ],
     root(0, 0.26, 0, 0),
   );
@@ -207,8 +212,8 @@ export const turn = (sk: string): IAutoMovieMotion => {
     pose(
       sk,
       [
-        j("leftUpperArm", { abduction: 35 }),
-        j("rightUpperArm", { abduction: -35 }),
+        j("leftUpperArm", { abduction: 125 }),
+        j("rightUpperArm", { abduction: 125 }),
       ],
       root(0, 0, 0, yaw),
     );
@@ -227,9 +232,9 @@ export const run = (sk: string): IAutoMovieMotion => {
   // a runner pumps with the elbows held bent ~90° (forearms up), swinging
   // fore/aft from the shoulder — not straight arms windmilling
   const arms = (s: number): IAutoMovieJointPose[] => [
-    j("leftUpperArm", { abduction: -42, flexion: 48 * s }),
+    j("leftUpperArm", { abduction: 48, flexion: 48 * s }),
     j("leftLowerArm", { flexion: -88 }),
-    j("rightUpperArm", { abduction: 42, flexion: 48 * s }),
+    j("rightUpperArm", { abduction: 48, flexion: 48 * s }),
     j("rightLowerArm", { flexion: 88 }),
   ];
   const contact = (lead: "left" | "right"): IAutoMoviePose => {
@@ -283,8 +288,8 @@ export const dance = (sk: string): IAutoMovieMotion => {
       [
         j("spine", { twist: 18 * d }),
         j("chest", { twist: 12 * d }),
-        j("leftUpperArm", { abduction: d > 0 ? 120 : 30 }),
-        j("rightUpperArm", { abduction: d > 0 ? -30 : -120 }),
+        j("leftUpperArm", { abduction: d > 0 ? 210 : 120 }),
+        j("rightUpperArm", { abduction: d > 0 ? 120 : 210 }),
         j("leftLowerLeg", { flexion: 14 }),
         j("rightLowerLeg", { flexion: 14 }),
       ],
@@ -302,22 +307,22 @@ export const dance = (sk: string): IAutoMovieMotion => {
 /** A high front kick with the right leg, arms thrown back for balance. */
 export const kick = (sk: string): IAutoMovieMotion => {
   const stand = pose(sk, [
-    j("leftUpperArm", { abduction: -60 }),
-    j("rightUpperArm", { abduction: 60 }),
+    j("leftUpperArm", { abduction: 30 }),
+    j("rightUpperArm", { abduction: 30 }),
   ]);
   const windup = pose(sk, [
     j("rightUpperLeg", { flexion: 25 }),
     j("rightLowerLeg", { flexion: 32 }),
     j("spine", { flexion: -8 }),
-    j("leftUpperArm", { abduction: -50, flexion: 22 }),
-    j("rightUpperArm", { abduction: 50, flexion: 22 }),
+    j("leftUpperArm", { abduction: 40, flexion: 22 }),
+    j("rightUpperArm", { abduction: 40, flexion: 22 }),
   ]);
   const strike = pose(sk, [
     j("rightUpperLeg", { flexion: -88 }),
     j("rightLowerLeg", { flexion: 6 }),
     j("leftLowerLeg", { flexion: 6 }),
     j("spine", { flexion: -14 }),
-    j("leftUpperArm", { abduction: -45, flexion: 38 }),
+    j("leftUpperArm", { abduction: 45, flexion: 38 }),
     j("rightUpperArm", { abduction: 45, flexion: 38 }),
   ]);
   return {
