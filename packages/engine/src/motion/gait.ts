@@ -104,6 +104,17 @@ const gaitJoints = (
   return [...joints.values()];
 };
 
+const assertUniqueGaitAxes = (limbs: readonly IAutoMovieGaitLimb[]): void => {
+  const seen = new Set<string>();
+  for (const limb of limbs) {
+    const axis = limb.axis ?? "flexion";
+    const key = `${limb.bone}:${axis}`;
+    if (seen.has(key))
+      throw new Error(`duplicate gait row for ${limb.bone}.${axis}`);
+    seen.add(key);
+  }
+};
+
 /**
  * Synthesise a **declarative gait** ({@link IAutoMovieGait}) into a looping
  * {@link IAutoMovieMotion} — the engine fattening a creature's characteristic
@@ -124,6 +135,7 @@ export const gaitMotion = (
   gait: IAutoMovieGait,
   samples: number,
 ): IAutoMovieMotion => {
+  assertUniqueGaitAxes(gait.limbs);
   const keyframes: IAutoMovieKeyframe[] = [];
   for (let i = 0; i <= samples; ++i) {
     const time = (i / samples) * gait.period;

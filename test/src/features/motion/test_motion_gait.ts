@@ -46,6 +46,8 @@ const flexionSeq = (
  *    falling back to linear.
  * 9. `rootBob` adds a vertical identity-TRS root curve while plain gaits keep
  *    `root: null`.
+ * 10. Duplicate same-bone/same-axis rows are rejected instead of silently
+ *     overwriting earlier profile data.
  */
 export const test_motion_gait = (): void => {
   const motion = gaitMotion("g", "sk", GAIT, 4);
@@ -292,5 +294,28 @@ export const test_motion_gait = (): void => {
     "root bob still validates against the skeleton",
     validateMotion({ motion: bobbing, skeleton: sk }).success,
     true,
+  );
+
+  // 10. duplicate same-bone/same-axis rows are an authoring error
+  TestValidator.error("duplicate gait rows for one bone axis throw", () =>
+    gaitMotion(
+      "duplicate",
+      sk.id,
+      {
+        name: "duplicate",
+        period: 1,
+        limbs: [
+          { bone: "leftUpperArm", phase: 0, duty: 0.5, amplitude: 10 },
+          {
+            bone: "leftUpperArm",
+            axis: "flexion",
+            phase: 0.25,
+            duty: 0.5,
+            amplitude: 12,
+          },
+        ],
+      },
+      4,
+    ),
   );
 };
