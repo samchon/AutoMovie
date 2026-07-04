@@ -1,9 +1,9 @@
 import {
-  IAutoFilmConstraintViolation,
-  IAutoFilmReviewApplication,
-  IAutoFilmReviewNote,
-  IAutoFilmScriptApplication,
-} from "@autofilm/interface";
+  IautomovieConstraintViolation,
+  IautomovieReviewApplication,
+  IautomovieReviewNote,
+  IautomovieScriptApplication,
+} from "@automovie/interface";
 
 import { ViolationCollector } from "../validation/violation";
 
@@ -13,10 +13,10 @@ import { ViolationCollector } from "../validation/violation";
  *
  * @author Samchon
  */
-export type IAutoFilmShotReview =
-  | IAutoFilmShotReview.ISuccess
-  | IAutoFilmShotReview.IFailure;
-export namespace IAutoFilmShotReview {
+export type IautomovieShotReview =
+  | IautomovieShotReview.ISuccess
+  | IautomovieShotReview.IFailure;
+export namespace IautomovieShotReview {
   /** The review is coherent; act on its verdict. */
   export interface ISuccess {
     /** Discriminator. */
@@ -29,10 +29,10 @@ export namespace IAutoFilmShotReview {
     verdict: "pass" | "revise";
 
     /**
-     * The correction backlog for a revise (empty on a pass) — what the next
+     * The correction backlog for a revise (empty on a pass) ??what the next
      * blocking/performance round must read via `getNotes` and fix.
      */
-    notes: IAutoFilmReviewNote[];
+    notes: IautomovieReviewNote[];
   }
 
   /** The review contradicted itself or the script. */
@@ -41,23 +41,23 @@ export namespace IAutoFilmShotReview {
     success: false;
 
     /** Every contradiction found, for the correction round. */
-    violations: IAutoFilmConstraintViolation[];
+    violations: IautomovieConstraintViolation[];
   }
 }
 
 /**
- * The REVIEW consumer — normalize a reviewer's write into the verdict the
+ * The REVIEW consumer ??normalize a reviewer's write into the verdict the
  * re-perform loop runs on. The gates keep the loop closed: a `revise` with no
  * notes gives the next round nothing to fix (the loop would spin), a `pass`
  * that still carries notes contradicts itself (notes are the open backlog, and
  * passing declares it empty), and every note must be filed on the beat this
- * review judges — a misfiled note would be pulled by the wrong beat's revise
+ * review judges ??a misfiled note would be pulled by the wrong beat's revise
  * pass and silently starve the right one.
  */
 export const reviewShot = (
-  script: IAutoFilmScriptApplication.IWrite,
-  review: IAutoFilmReviewApplication.IWrite,
-): IAutoFilmShotReview => {
+  script: IautomovieScriptApplication.IWrite,
+  review: IautomovieReviewApplication.IWrite,
+): IautomovieShotReview => {
   const out = new ViolationCollector();
 
   if (!script.beats.some((b) => b.id === review.beat))
@@ -72,14 +72,14 @@ export const reviewShot = (
     out.push(
       "type",
       "$input.notes",
-      "a revise verdict must carry at least one note — the next round needs something to fix",
+      "a revise verdict must carry at least one note ??the next round needs something to fix",
       review.notes,
     );
   if (review.verdict === "pass" && review.notes.length > 0)
     out.push(
       "type",
       "$input.notes",
-      "a pass verdict must carry no open notes — passing declares the backlog empty",
+      "a pass verdict must carry no open notes ??passing declares the backlog empty",
       review.notes,
     );
 

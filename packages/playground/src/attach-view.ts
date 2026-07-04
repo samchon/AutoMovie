@@ -1,41 +1,41 @@
 import {
   HUMANOID_GAITS,
   HUMANOID_JOINT_AXES,
-  IAutoFilmActorContext,
+  IautomovieActorContext,
   cutSequence,
   makeActorSynthesizer,
   performShot,
   resolveSequencePlayback,
   stageScene,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmModel,
-  IAutoFilmMotion,
-  IAutoFilmPerformanceApplication,
-  IAutoFilmScriptApplication,
-  IAutoFilmShot,
-  IAutoFilmStagingApplication,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieModel,
+  IautomovieMotion,
+  IautomoviePerformanceApplication,
+  IautomovieScriptApplication,
+  IautomovieShot,
+  IautomovieStagingApplication,
+  IautomovieVector3,
+} from "@automovie/interface";
 import {
-  AutoFilmPlayer,
+  automoviePlayer,
   applyObjectMotion,
   buildModel,
   mountViewer,
-} from "@autofilm/viewer";
+} from "@automovie/viewer";
 import * as THREE from "three";
 
-import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
+import { DEFAULT_STICKMAN, buildStickman } from "./Stickman";
 
 // The `attachTo` verb on screen: a figure walks the floor with a blade coupled
 // to its left hand. The engine bakes the coupling into the shot's objectMotions
-// — a world-space node clip that, each frame, is the hand's frame (the walker's
-// FK) composed onto the walker's placement — so the blade rides the hand across
+// ??a world-space node clip that, each frame, is the hand's frame (the walker's
+// FK) composed onto the walker's placement ??so the blade rides the hand across
 // the shot. The viewer drives the blade's group from that clip: the read side
 // of compileAttach. Deterministic via renderAt(t) for capture.
 
-// ── the blade prop: grip at origin, blade rising +Y; no rig ──────────────────
-const bladeModel: IAutoFilmModel = {
+// ?? the blade prop: grip at origin, blade rising +Y; no rig ??????????????????
+const bladeModel: IautomovieModel = {
   id: "blade",
   name: "blade",
   origin: "generated",
@@ -73,8 +73,8 @@ const bladeModel: IAutoFilmModel = {
   asset: null,
 };
 
-// ── the stage payloads ───────────────────────────────────────────────────────
-const script: IAutoFilmScriptApplication.IWrite = {
+// ?? the stage payloads ???????????????????????????????????????????????????????
+const script: IautomovieScriptApplication.IWrite = {
   type: "write",
   logline: "A figure walks the floor, blade in hand.",
   theme: "a prop rides the hand",
@@ -92,7 +92,7 @@ const script: IAutoFilmScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoFilmStagingApplication.IWrite = {
+const staging: IautomovieStagingApplication.IWrite = {
   type: "write",
   scene: { id: "scene-carry", name: "the carry" },
   plan: "the walker starts near and crosses to far along +Z, facing +Z; the blade is nocked in the left hand; a side-on camera reads the crossing.",
@@ -118,7 +118,7 @@ const staging: IAutoFilmStagingApplication.IWrite = {
   ],
 };
 
-const performance: IAutoFilmPerformanceApplication.IWrite = {
+const performance: IautomoviePerformanceApplication.IWrite = {
   type: "write",
   beat: "carry",
   plan: "the walker crosses the floor; the blade is attached to its left hand for the whole shot.",
@@ -147,7 +147,7 @@ const performance: IAutoFilmPerformanceApplication.IWrite = {
   duration: 4,
 };
 
-// ── rigs + the content seam ──────────────────────────────────────────────────
+// ?? rigs + the content seam ??????????????????????????????????????????????????
 const walkerRig = buildStickman(DEFAULT_STICKMAN);
 const rigOf = { walker: walkerRig } as const;
 const isActor = (node: string): node is keyof typeof rigOf => node in rigOf;
@@ -156,10 +156,10 @@ const staged = stageScene(script, staging);
 if (staged.success !== true)
   throw new Error(`staging failed: ${JSON.stringify(staged)}`);
 
-const nodePositions = new Map<string, IAutoFilmVector3>(
+const nodePositions = new Map<string, IautomovieVector3>(
   staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
 );
-const contexts = new Map<string, IAutoFilmActorContext>(
+const contexts = new Map<string, IautomovieActorContext>(
   staged.scene.nodes
     .filter((n) => isActor(n.id))
     .map((n) => {
@@ -181,7 +181,7 @@ const contexts = new Map<string, IAutoFilmActorContext>(
 );
 const synthesize = makeActorSynthesizer(contexts, nodePositions);
 
-// ── the ladder: perform → cut ────────────────────────────────────────────────
+// ?? the ladder: perform ??cut ????????????????????????????????????????????????
 const performed = performShot({
   script,
   staged,
@@ -191,8 +191,8 @@ const performed = performShot({
 });
 if (performed.success !== true)
   throw new Error(`perform failed: ${JSON.stringify(performed.violations)}`);
-const shots: IAutoFilmShot[] = [performed.shot];
-const motionsByShot = new Map<string, Record<string, IAutoFilmMotion>>([
+const shots: IautomovieShot[] = [performed.shot];
+const motionsByShot = new Map<string, Record<string, IautomovieMotion>>([
   [performed.shot.id, performed.motions],
 ]);
 
@@ -210,7 +210,7 @@ const cut = cutSequence(
 if (cut.success !== true) throw new Error("cut failed");
 export const FILM_DURATION = cut.runtime;
 
-// ── the set: scene nodes → three.js (groups tracked by id) ───────────────────
+// ?? the set: scene nodes ??three.js (groups tracked by id) ???????????????????
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xeef1f6);
 scene.add(new THREE.GridHelper(16, 32, 0xb8c0cc, 0xd5dbe4));
@@ -241,7 +241,7 @@ const playersByShot = new Map(
       .filter((p) => isActor(p.node))
       .map((p) => ({
         node: p.node,
-        player: new AutoFilmPlayer(
+        player: new automoviePlayer(
           built[p.node]!,
           rigOf[p.node as keyof typeof rigOf].skeleton,
           motionsByShot.get(shot.id)![p.node]!,
@@ -251,7 +251,7 @@ const playersByShot = new Map(
   ]),
 );
 
-// ── the projector: global seconds → posed walker + carried blade + camera ────
+// ?? the projector: global seconds ??posed walker + carried blade + camera ????
 const camera = new THREE.PerspectiveCamera(46, 16 / 9, 0.05, 100);
 const stagedCam = staged.scene.cameras[0]!;
 const applyStagedCamera = (): void => {
@@ -278,7 +278,7 @@ const renderAt = (seconds: number): void => {
   else applyObjectMotion(live.cameraMotion, sample.time, () => camera);
 };
 
-// ── mount + deterministic seek contract (capture) ────────────────────────────
+// ?? mount + deterministic seek contract (capture) ????????????????????????????
 const params = new URLSearchParams(location.search);
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 const capMode = params.get("cap") === "1";
@@ -295,7 +295,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   renderAt(t);
   handle.renderer.render(scene, camera);
 };
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   duration: FILM_DURATION,
   shots: shots.map((s) => s.id),

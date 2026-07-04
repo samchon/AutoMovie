@@ -1,24 +1,24 @@
-import { reactMotion } from "@autofilm/engine";
+import { reactMotion } from "@automovie/engine";
 import {
-  IAutoFilmBone,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  IautomovieBone,
+  IautomovieSkeleton,
+  IautomovieTransform,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const rest: IAutoFilmTransform = {
+const rest: IautomovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 const bone = (
-  name: IAutoFilmBone["bone"],
-  constraint: IAutoFilmBone["constraint"],
-): IAutoFilmBone => ({ bone: name, parent: null, rest, constraint });
+  name: IautomovieBone["bone"],
+  constraint: IautomovieBone["constraint"],
+): IautomovieBone => ({ bone: name, parent: null, rest, constraint });
 
-const skeleton: IAutoFilmSkeleton = {
+const skeleton: IautomovieSkeleton = {
   id: "react-rig",
   bones: [
     bone("spine", {
@@ -34,15 +34,15 @@ const sp = (p: { joints: { bone: string; flexion: number | null }[] }) =>
   p.joints.find((x) => x.bone === "spine")!;
 
 /**
- * `reactMotion` — the harness `react` verb as a flinch clip: rest → ROM-clamped
- * recoil (`impactRecoil`) → rest.
+ * `reactMotion` ??the harness `react` verb as a flinch clip: rest ??ROM-clamped
+ * recoil (`impactRecoil`) ??rest.
  *
  * Scenarios:
  *
  * 1. Three keyframes at 0, peak, duration; the skeleton id is carried.
- * 2. The flinch keyframe is the ROM-clamped recoil (a −200° push at the spine
- *    clamps to its −30° minimum), and an unconstrained bone (chest) takes the
- *    full attenuated push (−200 × 0.6).
+ * 2. The flinch keyframe is the ROM-clamped recoil (a ??00째 push at the spine
+ *    clamps to its ??0째 minimum), and an unconstrained bone (chest) takes the
+ *    full attenuated push (??00 횞 0.6).
  * 3. The clip starts and ends at the neutral rest pose.
  */
 export const test_motion_react = (): void => {
@@ -67,7 +67,7 @@ export const test_motion_react = (): void => {
 
   // 2. flinch is ROM-clamped
   TestValidator.predicate(
-    "spine flinch clamped to ROM min −30",
+    "spine flinch clamped to ROM min ??0",
     nclose(sp(clip.keyframes[1]!.pose).flexion!, -30),
   );
   TestValidator.predicate(

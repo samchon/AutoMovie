@@ -1,28 +1,28 @@
 import {
   HUMANOID_JOINT_AXES,
   HUMANOID_REST_FRAME,
-  IAutoFilmActorContext,
+  IautomovieActorContext,
   makeActorSynthesizer,
   resolvePose,
   sampleMotion,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmBone,
-  IAutoFilmGestureAction,
-  IAutoFilmSkeleton,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  IautomovieBone,
+  IautomovieGestureAction,
+  IautomovieSkeleton,
+  IautomovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
 const bone = (
-  b: AutoFilmHumanoidBone,
-  parent: AutoFilmHumanoidBone | null,
-  t: IAutoFilmVector3,
-): IAutoFilmBone => ({
+  b: automovieHumanoidBone,
+  parent: automovieHumanoidBone | null,
+  t: IautomovieVector3,
+): IautomovieBone => ({
   bone: b,
   parent,
   rest: {
@@ -35,7 +35,7 @@ const bone = (
 
 // A rig with BOTH arms complete (the shared fixture omits the right hand),
 // so celebrate and a right-handed point have a full chain to solve.
-const RIG: IAutoFilmSkeleton = {
+const RIG: IautomovieSkeleton = {
   id: "twoArms",
   bones: [
     bone("hips", null, { x: 0, y: 1, z: 0 }),
@@ -50,7 +50,7 @@ const RIG: IAutoFilmSkeleton = {
   ],
 };
 
-const ctx: IAutoFilmActorContext = {
+const ctx: IautomovieActorContext = {
   skeleton: RIG.id,
   gaits: [],
   position: { x: 0, y: 0, z: 0 },
@@ -61,14 +61,14 @@ const ctx: IAutoFilmActorContext = {
   rig: RIG,
 };
 
-const nodes = new Map<string, IAutoFilmVector3>([
-  ["exit", { x: 3, y: 1.2, z: 1 }], // far — a point extends the arm toward it
+const nodes = new Map<string, IautomovieVector3>([
+  ["exit", { x: 3, y: 1.2, z: 1 }], // far ??a point extends the arm toward it
 ]);
 
 const gesture = (
-  kind: IAutoFilmGestureAction["kind"],
-  overrides: Partial<IAutoFilmGestureAction> = {},
-): IAutoFilmGestureAction => ({
+  kind: IautomovieGestureAction["kind"],
+  overrides: Partial<IautomovieGestureAction> = {},
+): IautomovieGestureAction => ({
   verb: "gesture",
   actor: "hero",
   start: 0,
@@ -79,8 +79,8 @@ const gesture = (
 
 const boneWorld = (
   pose: ReturnType<typeof sampleMotion>["pose"],
-  b: AutoFilmHumanoidBone,
-): IAutoFilmVector3 =>
+  b: automovieHumanoidBone,
+): IautomovieVector3 =>
   resolvePose(pose, RIG, HUMANOID_JOINT_AXES).find((x) => x.bone === b)!
     .worldPosition;
 
@@ -94,15 +94,15 @@ const boneWorld = (
  * Scenarios:
  *
  * 1. `point at: exit` extends the right arm toward the far target: the right hand
- *    ends up markedly further along the shoulder→target direction than at rest,
- *    and the clip is a rest → extend → hold.
+ *    ends up markedly further along the shoulder?뭪arget direction than at rest,
+ *    and the clip is a rest ??extend ??hold.
  * 2. `strike at: exit` snaps the right fist toward the target (a jab) and retracts
- *    it — rest → strike → rest.
+ *    it ??rest ??strike ??rest.
  * 3. `point`/`strike` with no `at`, a rig-less context, and an unhandled combat
  *    kind (`draw`) all synthesise nothing.
  * 4. Rest frames on the context lift the IK verbs into **clinical** space: the
  *    same point solve comes out with its arm abduction lifted by the frame
- *    (`rightUpperArm` sign −1, neutral 90 → clinical = 90 − rig), so a player
+ *    (`rightUpperArm` sign ??, neutral 90 ??clinical = 90 ??rig), so a player
  *    reading through the same frames raises the arm correctly.
  */
 export const test_perform_arm_gestures = (): void => {
@@ -114,7 +114,7 @@ export const test_perform_arm_gestures = (): void => {
   );
   TestValidator.predicate("point produced a clip", point !== null);
   if (point === null) return;
-  TestValidator.equals("rest → extend → hold", point.keyframes.length, 3);
+  TestValidator.equals("rest ??extend ??hold", point.keyframes.length, 3);
   const restHand = boneWorld(sampleMotion(point, 0).pose, "rightHand");
   const pointedHand = boneWorld(sampleMotion(point, 1).pose, "rightHand");
   TestValidator.predicate(
@@ -122,7 +122,7 @@ export const test_perform_arm_gestures = (): void => {
     pointedHand.x > restHand.x + 0.1,
   );
 
-  // strike at the target: a jab — the right fist snaps toward it, then retracts.
+  // strike at the target: a jab ??the right fist snaps toward it, then retracts.
   const strike = synth(
     gesture("strike", { at: { kind: "node", node: "exit" } }),
     "hero",
@@ -130,7 +130,7 @@ export const test_perform_arm_gestures = (): void => {
   TestValidator.predicate("strike produces a jab clip", strike !== null);
   if (strike !== null) {
     TestValidator.equals(
-      "rest → strike → rest (a jab)",
+      "rest ??strike ??rest (a jab)",
       strike.keyframes.length,
       3,
     );
@@ -153,13 +153,13 @@ export const test_perform_arm_gestures = (): void => {
     );
   }
   TestValidator.equals(
-    "strike with nothing to hit → null",
+    "strike with nothing to hit ??null",
     synth(gesture("strike"), "hero"),
     null,
   );
 
   TestValidator.equals(
-    "point with nothing to point at → null",
+    "point with nothing to point at ??null",
     synth(gesture("point"), "hero"),
     null,
   );
@@ -168,12 +168,12 @@ export const test_perform_arm_gestures = (): void => {
     nodes,
   );
   TestValidator.equals(
-    "point with no rig → null",
+    "point with no rig ??null",
     rigless(gesture("point", { at: { kind: "node", node: "exit" } }), "hero"),
     null,
   );
   TestValidator.equals(
-    "an unhandled arm gesture (guard) → null",
+    "an unhandled arm gesture (guard) ??null",
     synth(gesture("guard"), "hero"),
     null,
   );
@@ -183,7 +183,7 @@ export const test_perform_arm_gestures = (): void => {
     nodes,
   );
   TestValidator.equals(
-    "point with no right-arm chain → null",
+    "point with no right-arm chain ??null",
     noRightArm(
       gesture("point", { at: { kind: "node", node: "exit" } }),
       "hero",
@@ -191,7 +191,7 @@ export const test_perform_arm_gestures = (): void => {
     null,
   );
   TestValidator.equals(
-    "strike with no right-arm chain → null",
+    "strike with no right-arm chain ??null",
     noRightArm(
       gesture("strike", { at: { kind: "node", node: "exit" } }),
       "hero",
@@ -200,7 +200,7 @@ export const test_perform_arm_gestures = (): void => {
   );
 
   // rest frames lift the same point solve into clinical space: the held pose's
-  // right-upper-arm abduction comes out at 90 − rig (the frame's sign −1,
+  // right-upper-arm abduction comes out at 90 ??rig (the frame's sign ??,
   // neutral 90), the value a matching player reads back up.
   const abdOf = (clip: ReturnType<typeof synth>): number | null =>
     clip === null
@@ -216,7 +216,7 @@ export const test_perform_arm_gestures = (): void => {
   const rigAbd = abdOf(synth(pointAt, "hero"));
   const clinAbd = abdOf(clinical(pointAt, "hero"));
   TestValidator.predicate(
-    "rest frames lift the point's arm abduction to clinical (90 − rig)",
+    "rest frames lift the point's arm abduction to clinical (90 ??rig)",
     rigAbd !== null && clinAbd !== null && nclose(clinAbd, 90 - rigAbd, 1e-6),
   );
 };

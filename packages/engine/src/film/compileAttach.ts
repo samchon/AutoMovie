@@ -1,41 +1,40 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmClip,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  IautomovieClip,
+  IautomovieMotion,
+  IautomoviePose,
+  IautomovieSkeleton,
+  IautomovieTransform,
+} from "@automovie/interface";
 
-import { IAutoFilmJointAxes } from "../kinematics/jointToQuaternion";
+import { IautomovieJointAxes } from "../kinematics/jointToQuaternion";
 import { resolveAttachment } from "../kinematics/resolveAttachment";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
 
-/** The child rides the bone directly — origin on the bone, no extra offset. */
-const IDENTITY_OFFSET: IAutoFilmTransform = {
+/** The child rides the bone directly ??origin on the bone, no extra offset. */
+const IDENTITY_OFFSET: IautomovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 
 /**
- * Bake the `attachTo` verb into the **child object's** flight-follow clip — the
+ * Bake the `attachTo` verb into the **child object's** flight-follow clip ??the
  * per-frame realisation of a rigid coupling to a parent's bone (a sword in a
- * hand, a prop on a saddle). The child is not a rig, so — like a projectile —
- * it moves by a node clip of transform tracks, not a pose motion.
+ * hand, a prop on a saddle). The child is not a rig, so ??like a projectile ?? * it moves by a node clip of transform tracks, not a pose motion.
  *
  * Each sample resolves the parent's posed skeleton at that instant
  * ({@link resolveAttachment}, which runs the parent's FK) to find the bone's
  * frame in the parent's **model space**, then composes that onto the parent's
  * **staged world placement** so the child lands in scene space:
  *
- * - `translation = parentPos + parentRot · boneLocal.translation`
- * - `rotation = parentRot ∘ boneLocal.rotation`
+ * - `translation = parentPos + parentRot 쨌 boneLocal.translation`
+ * - `rotation = parentRot ??boneLocal.rotation`
  *
  * So as the parent walks, turns, or swings the limb, the child rides with it,
- * position and orientation together — what a physics fixed-joint does. Pass the
+ * position and orientation together ??what a physics fixed-joint does. Pass the
  * same `jointAxes` the renderer poses the parent with (`HUMANOID_JOINT_AXES`),
  * or the child follows a bone that sits where the renderer does not draw it.
  * When the parent has no motion, it holds its rest pose and the child is
@@ -49,27 +48,27 @@ const IDENTITY_OFFSET: IAutoFilmTransform = {
  * @author Samchon
  */
 export const compileAttach = (props: {
-  /** The coupled child's scene node — the clip's target. */
+  /** The coupled child's scene node ??the clip's target. */
   child: string;
   /** The parent bone the child rides. */
-  bone: AutoFilmHumanoidBone;
+  bone: automovieHumanoidBone;
   /** The parent's staged world placement (staging fixes it). */
-  parentTransform: IAutoFilmTransform;
+  parentTransform: IautomovieTransform;
   /** The parent's rig, for the per-frame FK. */
-  parentSkeleton: IAutoFilmSkeleton;
-  /** The parent's compiled pose motion; absent ⇒ it holds its rest pose. */
-  parentMotion?: IAutoFilmMotion;
+  parentSkeleton: IautomovieSkeleton;
+  /** The parent's compiled pose motion; absent ??it holds its rest pose. */
+  parentMotion?: IautomovieMotion;
   /** Shot-local second the coupling begins. */
   start: number;
   /** Length of the coupling in seconds. */
   duration: number;
-  /** The shot's length — the clip spans it (shot-local time). */
+  /** The shot's length ??the clip spans it (shot-local time). */
   shotDuration: number;
   /** Samples per second of the baked follow (default 30). */
   fps?: number;
   /** Clinical-axis remap for the parent's FK (pass `HUMANOID_JOINT_AXES`). */
-  jointAxes?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>;
-}): IAutoFilmClip => {
+  jointAxes?: Partial<Record<automovieHumanoidBone, IautomovieJointAxes>>;
+}): IautomovieClip => {
   const {
     child,
     bone,
@@ -81,7 +80,7 @@ export const compileAttach = (props: {
     shotDuration,
   } = props;
   const fps = props.fps ?? 30;
-  const restPose: IAutoFilmPose = {
+  const restPose: IautomoviePose = {
     skeleton: parentSkeleton.id,
     root: null,
     joints: [],

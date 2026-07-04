@@ -1,4 +1,4 @@
-import { Quaternion, Vector3, stageScene } from "@autofilm/engine";
+import { Quaternion, Vector3, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
@@ -6,21 +6,21 @@ import { vclose } from "../internal/predicates";
 
 /**
  * Pins the happy path of the STAGING consumer: a coherent script + staging pair
- * composes an {@link IAutoFilmScene} whose geometry is the placements' — facing
- * degrees become Y rotations, cameras aim their −Z at the resolved target,
+ * composes an {@link IautomovieScene} whose geometry is the placements' ??facing
+ * degrees become Y rotations, cameras aim their ?뭒 at the resolved target,
  * lights are realised as directional, and mount couplings surface as validated
  * `mounts` rather than scene-graph edges.
  *
  * Scenarios:
  *
- * 1. Two placed knights → success with two nodes; `knightA` keeps its cast
+ * 1. Two placed knights ??success with two nodes; `knightA` keeps its cast
  *    `modelRef` ("stickman"), `knightB` (null ref) falls back to its node id.
  * 2. `facingDeg` 0 leaves +Z forward (identity rotation); 180 turns the node to
- *    face −Z — checked by rotating +Z through each node's rotation.
- * 3. A node-target camera's −Z axis points from its position at `knightA`'s
+ *    face ?뭒 ??checked by rotating +Z through each node's rotation.
+ * 3. A node-target camera's ?뭒 axis points from its position at `knightA`'s
  *    position; a point-target camera aims at the literal point (both `lookAt`
  *    kinds exercised in one staging).
- * 4. The sun light is directional with its −Z rotated onto the declared direction,
+ * 4. The sun light is directional with its ?뭒 rotated onto the declared direction,
  *    and `knightB`'s `attach` becomes `mounts[0]` (parent `knightA`, bone
  *    `chest`).
  */
@@ -80,7 +80,7 @@ export const test_film_stage_scene_valid = (): void => {
     w: number;
   }) => Quaternion.rotateVector(rotation, { x: 0, y: 0, z: 1 });
   TestValidator.predicate(
-    "facing 0° keeps +Z",
+    "facing 0째 keeps +Z",
     vclose(forwardOf(staged.scene.nodes[0]!.transform.rotation), {
       x: 0,
       y: 0,
@@ -88,7 +88,7 @@ export const test_film_stage_scene_valid = (): void => {
     }),
   );
   TestValidator.predicate(
-    "facing 180° turns to −Z",
+    "facing 180째 turns to ?뭒",
     vclose(forwardOf(staged.scene.nodes[1]!.transform.rotation), {
       x: 0,
       y: 0,
@@ -123,7 +123,7 @@ export const test_film_stage_scene_valid = (): void => {
     "directional",
   );
   TestValidator.predicate(
-    "sun −Z shines down the declared direction",
+    "sun ?뭒 shines down the declared direction",
     vclose(
       Quaternion.rotateVector(staged.scene.lights[0]!.transform.rotation, {
         x: 0,

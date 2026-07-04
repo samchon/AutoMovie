@@ -1,4 +1,4 @@
-import { performShot, stageScene } from "@autofilm/engine";
+import { performShot, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -17,12 +17,12 @@ import { hasViolation } from "../internal/predicates";
  *
  * Scenarios:
  *
- * 1. The performance names a beat the script never planned → `type` on
+ * 1. The performance names a beat the script never planned ??`type` on
  *    `$input.beat`.
- * 2. Its duration is 0 → `range` on `$input.duration`.
- * 3. Its only action is performed by an unstaged `ghost` → `type` on
+ * 2. Its duration is 0 ??`range` on `$input.duration`.
+ * 3. Its only action is performed by an unstaged `ghost` ??`type` on
  *    `$input.draft[0].actor`.
- * 4. That action starts at t = 5 s, outside the shot's [0, 0] span → `range` on
+ * 4. That action starts at t = 5 s, outside the shot's [0, 0] span ??`range` on
  *    `$input.draft[0].start`.
  */
 export const test_film_perform_shot_bad_refs = (): void => {

@@ -1,4 +1,4 @@
-import { CANONICAL_FACE_POSITIONS } from "./canonicalFace";
+import { CANONICAL_FACE_POSITIONS } from "./CanonicalFace";
 
 /** A self-contained triangle mesh part (flat xyz triples + indices). */
 export interface IForgeMeshPart {

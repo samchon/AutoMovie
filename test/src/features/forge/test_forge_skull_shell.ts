@@ -1,13 +1,13 @@
-import { CANONICAL_FACE_POSITIONS, buildSkullShell } from "@autofilm/forge";
+import { CANONICAL_FACE_POSITIONS, buildSkullShell } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**
  * The default skull is a laterally centered dome that stays behind the face
- * shell: 49×25 grid vertices, near-zero mean x (the ellipsoid is symmetric),
+ * shell: 49횞25 grid vertices, near-zero mean x (the ellipsoid is symmetric),
  * and a front surface well behind the canonical nose tip (z 0.075) so the two
  * never z-fight.
  *
- * Scenario: default build — vertex count (SEG+1)·(RING+1), |mean x| < 1e-6, max
+ * Scenario: default build ??vertex count (SEG+1)쨌(RING+1), |mean x| < 1e-6, max
  * z < 0.05.
  */
 export const test_forge_skull_shell = (): void => {

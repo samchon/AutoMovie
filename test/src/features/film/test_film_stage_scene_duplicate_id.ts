@@ -1,4 +1,4 @@
-import { stageScene } from "@autofilm/engine";
+import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
@@ -11,7 +11,7 @@ import { hasViolation } from "../internal/predicates";
  *
  * Scenarios:
  *
- * 1. The camera node is renamed to `knightA`, colliding with the placed actor → a
+ * 1. The camera node is renamed to `knightA`, colliding with the placed actor ??a
  *    `type` violation on `$input.cameras[0].node`.
  */
 export const test_film_stage_scene_duplicate_id = (): void => {

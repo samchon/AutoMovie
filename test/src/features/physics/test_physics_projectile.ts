@@ -1,23 +1,23 @@
-import { projectileAt } from "@autofilm/engine";
+import { projectileAt } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
 /**
- * `projectileAt` — closed-form ballistic evaluation: `p = origin + v·t +
- * ½·g·t²`, `v(t) = v + g·t`.
+ * `projectileAt` ??closed-form ballistic evaluation: `p = origin + v쨌t +
+ * 쩍쨌g쨌t짼`, `v(t) = v + g쨌t`.
  *
  * Scenarios:
  *
  * 1. At t=0 the state is the launch state.
- * 2. Under gravity (0,−10,0) with launch (0,10,0) and velocity (5,0,0): at t=1 the
- *    body has fallen ½·10·1²=5 → position (5,5,0), velocity (5,−10,0).
+ * 2. Under gravity (0,??0,0) with launch (0,10,0) and velocity (5,0,0): at t=1 the
+ *    body has fallen 쩍쨌10쨌1짼=5 ??position (5,5,0), velocity (5,??0,0).
  * 3. At the apex of a straight-up throw the vertical velocity is zero.
  */
 export const test_physics_projectile = (): void => {
   const g = { x: 0, y: -10, z: 0 };
 
-  // 1. t=0 → launch
+  // 1. t=0 ??launch
   const s0 = projectileAt(
     {
       origin: { x: 1, y: 2, z: 3 },
@@ -68,7 +68,7 @@ export const test_physics_projectile = (): void => {
     nclose(apex.velocity.y, 0),
   );
   TestValidator.predicate(
-    "apex height = v0²/2g = 5",
+    "apex height = v0짼/2g = 5",
     nclose(apex.position.y, 5),
   );
 };

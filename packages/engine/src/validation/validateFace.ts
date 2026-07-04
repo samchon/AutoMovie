@@ -1,7 +1,7 @@
-import { IAutoFilmFace, IAutoFilmValidation } from "@autofilm/interface";
+import { IautomovieFace, IautomovieValidation } from "@automovie/interface";
 
 import { flattenFace } from "../face/flattenFace";
-import { ViolationCollector } from "./violation";
+import { ViolationCollector } from "./Violation";
 
 /**
  * Face parameter weights live in `[-FACE_PARAMETER_LIMIT,
@@ -10,21 +10,21 @@ import { ViolationCollector } from "./violation";
 export const FACE_PARAMETER_LIMIT = 2;
 
 /**
- * Validate an {@link IAutoFilmFace} — Tier-1 range checks the rough types
+ * Validate an {@link IautomovieFace} ??Tier-1 range checks the rough types
  * intentionally do not encode.
  *
  * The document is a nested object of optional trait fields, so the field
  * _names_ are already constrained by the type itself (and duplicates are
  * impossible by construction); what remains at runtime is the magnitudes: every
- * present leaf weight must sit in `[-2, 2]` — signed, unlike expression's `[0,
+ * present leaf weight must sit in `[-2, 2]` ??signed, unlike expression's `[0,
  * 1]`, because face edits go both ways. Violations are reported at the leaf's
- * document path (`….jaw.chin.length`), through the same {@link flattenFace}
+ * document path (`??jaw.chin.length`), through the same {@link flattenFace}
  * mapping `morphFace` applies.
  *
  * @author Samchon
  */
 export const validateFace = (props: {
-  face: IAutoFilmFace;
+  face: IautomovieFace;
   path?: string;
   collector?: ViolationCollector;
 }): ViolationCollector => {
@@ -43,6 +43,6 @@ export const validateFace = (props: {
   return collector;
 };
 
-/** Convenience wrapper returning a finished {@link IAutoFilmValidation}. */
-export const validateFaceResult = (face: IAutoFilmFace): IAutoFilmValidation =>
+/** Convenience wrapper returning a finished {@link IautomovieValidation}. */
+export const validateFaceResult = (face: IautomovieFace): IautomovieValidation =>
   validateFace({ face }).toValidation();

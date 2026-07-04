@@ -1,55 +1,55 @@
-import { IAutoFilmVector3 } from "@autofilm/interface";
+import { IautomovieVector3 } from "@automovie/interface";
 
 import { Vector3 } from "../math/Vector3";
 
 /**
  * A colliding body, reduced to what a collision _response_ needs: how heavy it
  * is, how fast it is going, and the material traits that decide whether a hit
- * bounces, embeds, or passes through. This is deliberately abstract — the point
+ * bounces, embeds, or passes through. This is deliberately abstract ??the point
  * (per the project's direction) is to compute a high-level, deterministic
  * _result_ an AI can be handed as a hint, not to run a full rigid-body sim.
  *
  * @author Samchon
  */
-export interface IAutoFilmBody {
+export interface IautomovieBody {
   /** Mass (kg); larger = harder to move. */
   mass: number;
   /** Linear velocity (world m/s). */
-  velocity: IAutoFilmVector3;
-  /** Bounciness `[0,1]` — how much closing speed is returned. */
+  velocity: IautomovieVector3;
+  /** Bounciness `[0,1]` ??how much closing speed is returned. */
   restitution: number;
-  /** Rigidity `[0,1]` — 1 a hard shell, 0 soft flesh. */
+  /** Rigidity `[0,1]` ??1 a hard shell, 0 soft flesh. */
   hardness: number;
   /**
-   * How easily this body is pierced `[0,1]` — 1 a soft target an arrow sinks
+   * How easily this body is pierced `[0,1]` ??1 a soft target an arrow sinks
    * into.
    */
   penetrability: number;
 }
 
-/** How a collision resolves — the qualitative outcome. */
-export type AutoFilmImpactKind = "bounce" | "embed" | "through" | "deflect";
+/** How a collision resolves ??the qualitative outcome. */
+export type automovieImpactKind = "bounce" | "embed" | "through" | "deflect";
 
 /**
  * The abstracted result of one collision: the contact normal, the impulse
  * delivered, the closing speed, both bodies' post-impact velocities, and a
- * qualitative {@link AutoFilmImpactKind}. One value serves both consumers — an
+ * qualitative {@link automovieImpactKind}. One value serves both consumers ??an
  * AI hint ("recoil this hard, this way; it embeds") and a deterministic driver
  * for auto-played aftermath.
  */
-export interface IAutoFilmImpact {
+export interface IautomovieImpact {
   /** Unit contact normal, from `a` toward `b`. */
-  normal: IAutoFilmVector3;
+  normal: IautomovieVector3;
   /** Closing speed along the normal at contact (0 if not approaching). */
   speed: number;
   /** Impulse delivered to `b` (the equal and opposite acts on `a`). */
-  impulse: IAutoFilmVector3;
+  impulse: IautomovieVector3;
   /** `a`'s velocity after the impact. */
-  velocityA: IAutoFilmVector3;
+  velocityA: IautomovieVector3;
   /** `b`'s velocity after the impact. */
-  velocityB: IAutoFilmVector3;
+  velocityB: IautomovieVector3;
   /** What happened. */
-  kind: AutoFilmImpactKind;
+  kind: automovieImpactKind;
 }
 
 const EMBED_SPEED = 6; // m/s above which a penetrable body is pierced, not bounced
@@ -58,10 +58,10 @@ const THROUGH_TRANSFER = 0.3; // fraction of momentum a pass-through still impar
 
 /**
  * Resolve a collision between bodies `a` and `b` across unit contact `normal`
- * (pointing from `a` to `b`) into an abstracted {@link IAutoFilmImpact}.
+ * (pointing from `a` to `b`) into an abstracted {@link IautomovieImpact}.
  *
- * Impulse is the textbook normal response — `jn = (1+e)·closing / (1/mₐ +
- * 1/m_b)` — but the **effective restitution and a qualitative kind** come from
+ * Impulse is the textbook normal response ??`jn = (1+e)쨌closing / (1/m??+
+ * 1/m_b)` ??but the **effective restitution and a qualitative kind** come from
  * a cheap, deterministic material heuristic rather than a contact solver: a
  * fast strike into a soft, penetrable body **embeds** (no rebound) or, if very
  * fast and very soft, passes **through** (only a fraction of the momentum
@@ -71,10 +71,10 @@ const THROUGH_TRANSFER = 0.3; // fraction of momentum a pass-through still impar
  * @author Samchon
  */
 export const resolveImpact = (
-  a: IAutoFilmBody,
-  b: IAutoFilmBody,
-  normal: IAutoFilmVector3,
-): IAutoFilmImpact => {
+  a: IautomovieBody,
+  b: IautomovieBody,
+  normal: IautomovieVector3,
+): IautomovieImpact => {
   const n = Vector3.normalize(normal);
   const vRel = Vector3.subtract(b.velocity, a.velocity); // b relative to a
   const vRelN = Vector3.dot(vRel, n);
@@ -91,7 +91,7 @@ export const resolveImpact = (
     };
 
   const e = a.restitution * b.restitution;
-  let kind: AutoFilmImpactKind;
+  let kind: automovieImpactKind;
   if (b.penetrability >= 0.6 && closing >= EMBED_SPEED)
     kind =
       b.penetrability >= 0.85 && closing >= THROUGH_SPEED ? "through" : "embed";

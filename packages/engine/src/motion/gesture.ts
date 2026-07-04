@@ -1,13 +1,13 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  IautomovieJointPose,
+  IautomovieKeyframe,
+  IautomovieMotion,
+  IautomoviePose,
+} from "@automovie/interface";
 
 /** The postural/expressive gestures the reference synthesiser can author. */
-export type AutoFilmGenericGesture =
+export type automovieGenericGesture =
   | "bow"
   | "nod"
   | "shake"
@@ -34,12 +34,12 @@ const GENERIC = new Set<string>([
 
 // A joint stop across the three articulation axes (unset axes stay null). The
 // arm gestures are authored in **clinical** space (abduction 0 = arm down, 90 =
-// horizontal, 180 = overhead — the same value raises either arm); the per-side
+// horizontal, 180 = overhead ??the same value raises either arm); the per-side
 // rest-frame remap that fits it to a rig lives in the render, not these angles.
 const j = (
-  bone: AutoFilmHumanoidBone,
-  axes: Partial<Pick<IAutoFilmJointPose, "flexion" | "abduction" | "twist">>,
-): IAutoFilmJointPose => ({
+  bone: automovieHumanoidBone,
+  axes: Partial<Pick<IautomovieJointPose, "flexion" | "abduction" | "twist">>,
+): IautomovieJointPose => ({
   bone,
   flexion: axes.flexion ?? null,
   abduction: axes.abduction ?? null,
@@ -47,13 +47,12 @@ const j = (
 });
 
 /**
- * Each generic gesture as a list of `[fraction, joints]` stops over the beat —
- * every angle hand-kept inside the humanoid ROM (bow bends the spine forward, a
+ * Each generic gesture as a list of `[fraction, joints]` stops over the beat ?? * every angle hand-kept inside the humanoid ROM (bow bends the spine forward, a
  * nod dips the head, a shake twists it, a crouch folds hips and knees). The
  * fractions are of the action's `duration`, so the same shape stretches to
  * whatever length the beat asks for.
  */
-const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
+const SHAPES: Record<automovieGenericGesture, [number, IautomovieJointPose[]][]> =
   {
     bow: [
       [0, [j("spine", { flexion: 0 }), j("head", { flexion: 0 })]],
@@ -84,7 +83,7 @@ const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
     // A front kick with the right leg: chamber the knee up, snap the shin out,
     // re-chamber, lower. Hip flexion raises the leg (no abduction, so no mirror
     // issue); the small spine extension counter-balances. All within humanoid
-    // ROM (upperLeg flexion ≤120, knee ≤150, spine ≥−30).
+    // ROM (upperLeg flexion ??20, knee ??50, spine ?β닋30).
     kick: [
       [0, []],
       [
@@ -114,9 +113,9 @@ const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
       [1, []],
     ],
     // A stagger: the trunk lurches off balance (spine bends and leans to one
-    // side), a leg braces, then overcorrects the other way and settles — a
+    // side), a leg braces, then overcorrects the other way and settles ??a
     // trunk/leg loss of balance, no arm abduction. All within humanoid ROM
-    // (spine flexion ≤80/extension ≥−30, abduction ±35).
+    // (spine flexion ??0/extension ?β닋30, abduction 짹35).
     stagger: [
       [0, []],
       [
@@ -150,7 +149,7 @@ const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
       [1, []],
     ],
     // A two-arm celebration: both arms thrown up in a V and pumped. In clinical
-    // space the raise is +abduction on both arms alike — no per-side mirror.
+    // space the raise is +abduction on both arms alike ??no per-side mirror.
     celebrate: [
       [0, []],
       [0.22, celebratePose(1)],
@@ -220,9 +219,9 @@ const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
 /**
  * Both arms thrown up in a V, scaled by `s` (a pump raises them higher). The
  * clinical abduction raises either arm alike, so both sides carry the same
- * positive angle — no per-side mirror.
+ * positive angle ??no per-side mirror.
  */
-function celebratePose(s: number): IAutoFilmJointPose[] {
+function celebratePose(s: number): IautomovieJointPose[] {
   return [
     j("leftUpperArm", { abduction: 150 * s, flexion: 10 }),
     j("rightUpperArm", { abduction: 150 * s, flexion: 10 }),
@@ -230,7 +229,7 @@ function celebratePose(s: number): IAutoFilmJointPose[] {
 }
 
 /** The held draw stance: bow arm forward, string hand back at the cheek. */
-function drawPose(): IAutoFilmJointPose[] {
+function drawPose(): IautomovieJointPose[] {
   return [
     j("leftUpperArm", { flexion: 88, abduction: 8 }),
     j("leftLowerArm", { flexion: 8 }),
@@ -241,7 +240,7 @@ function drawPose(): IAutoFilmJointPose[] {
 }
 
 /** A raised right arm with the forearm at `fore`; the idle left arm hangs down. */
-function wavePose(fore: number): IAutoFilmJointPose[] {
+function wavePose(fore: number): IautomovieJointPose[] {
   return [
     j("rightUpperArm", { abduction: 132, flexion: 6 }),
     j("rightLowerArm", { flexion: fore }),
@@ -249,7 +248,7 @@ function wavePose(fore: number): IAutoFilmJointPose[] {
   ];
 }
 
-function crouchPose(depth: number): IAutoFilmJointPose[] {
+function crouchPose(depth: number): IautomovieJointPose[] {
   return [
     j("leftUpperLeg", { flexion: 55 * depth }),
     j("rightUpperLeg", { flexion: 55 * depth }),
@@ -262,17 +261,17 @@ function crouchPose(depth: number): IAutoFilmJointPose[] {
 /**
  * A **jump** as `[fraction, rootY, legFlex]` stops: the body coils (knees bend,
  * hips dip), pushes off, arcs up with the legs tucked, and absorbs the landing
- * — a whole-body verb, so unlike the postural gestures it carries **root**
+ * ??a whole-body verb, so unlike the postural gestures it carries **root**
  * translation (the ballistic rise on Y). Every leg angle stays inside the same
  * ROM the crouch uses, so no arm/abduction is involved and it needs no
  * left/right mirror.
  */
 const JUMP_STOPS: [number, number, number][] = [
   [0, 0, 0], // rest
-  [0.2, -0.05, 40], // coil — dip and bend
-  [0.36, 0.03, 6], // push off — extend
-  [0.58, 0.34, 24], // apex — peak, legs tucked
-  [0.8, 0, 46], // land — absorb
+  [0.2, -0.05, 40], // coil ??dip and bend
+  [0.36, 0.03, 6], // push off ??extend
+  [0.58, 0.34, 24], // apex ??peak, legs tucked
+  [0.8, 0, 46], // land ??absorb
   [1, 0, 0], // recover
 ];
 
@@ -281,7 +280,7 @@ function jumpPose(
   skeleton: string,
   rootY: number,
   legFlex: number,
-): IAutoFilmPose {
+): IautomoviePose {
   const knee = Math.min(legFlex * 1.4, 62);
   return {
     skeleton,
@@ -301,15 +300,15 @@ function jumpPose(
 }
 
 /**
- * Synthesise a **postural or whole-body gesture** — the trunk/leg half of the
- * harness `gesture` verb — into a short ROM-safe clip. `bow`/`nod`/`shake`/
+ * Synthesise a **postural or whole-body gesture** ??the trunk/leg half of the
+ * harness `gesture` verb ??into a short ROM-safe clip. `bow`/`nod`/`shake`/
  * `crouch` are single-axis trunk/head oscillations, `kick` is a right-leg front
  * snap, `stagger` lurches the trunk off balance and catches it, `wave` raises
  * the right arm and swings the forearm, `celebrate` throws both arms up in a V,
  * `draw` pulls a bow, `throw` whips an overhand throw, and `jump` is a
  * whole-body coil-and-leap carrying root translation. The arm gestures are
  * authored in clinical space (abduction 0 = down, 90 = horizontal, 180 =
- * overhead — the same value raises either arm), read up through the rig's rest
+ * overhead ??the same value raises either arm), read up through the rig's rest
  * frame at render. `strike` (a targeted jab) needs reach content and returns
  * `null` here, left to the richer synthesiser.
  *
@@ -320,9 +319,9 @@ export const gestureMotion = (
   skeleton: string,
   kind: string,
   duration: number,
-): IAutoFilmMotion | null => {
+): IautomovieMotion | null => {
   if (kind === "jump") {
-    const keyframes: IAutoFilmKeyframe[] = JUMP_STOPS.map(
+    const keyframes: IautomovieKeyframe[] = JUMP_STOPS.map(
       ([fraction, rootY, legFlex]) => ({
         time: fraction * duration,
         pose: jumpPose(skeleton, rootY, legFlex),
@@ -334,9 +333,9 @@ export const gestureMotion = (
     return { id, skeleton, duration, loop: false, keyframes };
   }
   if (!GENERIC.has(kind)) return null;
-  const shape = SHAPES[kind as AutoFilmGenericGesture];
-  const keyframes: IAutoFilmKeyframe[] = shape.map(([fraction, joints]) => {
-    const pose: IAutoFilmPose = { skeleton, root: null, joints };
+  const shape = SHAPES[kind as automovieGenericGesture];
+  const keyframes: IautomovieKeyframe[] = shape.map(([fraction, joints]) => {
+    const pose: IautomoviePose = { skeleton, root: null, joints };
     return {
       time: fraction * duration,
       pose,

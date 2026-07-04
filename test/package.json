@@ -1,22 +1,22 @@
 {
   "private": true,
-  "name": "@autofilm/test",
+  "name": "@automovie/test",
   "version": "0.1.0",
-  "description": "autofilm test program — exhaustive deterministic engine validation",
+  "description": "automovie test program ??exhaustive deterministic engine validation",
   "main": "src/index.ts",
   "scripts": {
     "build": "ttsc -p tsconfig.json --noEmit",
     "start": "ttsx -P tsconfig.json src/index.ts",
-    "coverage": "cd .. && c8 --src packages/engine/src --src packages/forge/src --src packages/ingest/src --src packages/render/src --include \"packages/engine/src/**\" --include \"packages/forge/src/**\" --include \"packages/ingest/src/**\" --include \"packages/render/src/**\" --exclude \"**/index.ts\" --extension .ts --temp-directory node_modules/.cache/autofilm-c8 --reports-dir node_modules/.cache/autofilm-c8-report --reporter=text-summary --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 ttsx -P test/tsconfig.json test/src/index.ts"
+    "coverage": "cd .. && c8 --src packages/engine/src --src packages/forge/src --src packages/ingest/src --src packages/render/src --include \"packages/engine/src/**\" --include \"packages/forge/src/**\" --include \"packages/ingest/src/**\" --include \"packages/render/src/**\" --exclude \"**/index.ts\" --extension .ts --temp-directory node_modules/.cache/automovie-c8 --reports-dir node_modules/.cache/automovie-c8-report --reporter=text-summary --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 ttsx -P test/tsconfig.json test/src/index.ts"
   },
   "author": "Samchon",
   "license": "MIT",
   "dependencies": {
-    "@autofilm/engine": "workspace:^",
-    "@autofilm/forge": "workspace:^",
-    "@autofilm/ingest": "workspace:^",
-    "@autofilm/interface": "workspace:^",
-    "@autofilm/render": "workspace:^",
+    "@automovie/engine": "workspace:^",
+    "@automovie/forge": "workspace:^",
+    "@automovie/ingest": "workspace:^",
+    "@automovie/interface": "workspace:^",
+    "@automovie/render": "workspace:^",
     "@gltf-transform/core": "^4.1.1",
     "@nestia/e2e": "catalog:samchon"
   },

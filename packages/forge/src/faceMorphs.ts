@@ -1,8 +1,8 @@
-import { AutoFilmFaceParameterName } from "@autofilm/interface";
+import { automovieFaceParameterName } from "@automovie/interface";
 
-import { CANONICAL_FACE_POSITIONS } from "./canonicalFace";
+import { CANONICAL_FACE_POSITIONS } from "./CanonicalFace";
 
-// FaceMesh landmark feature groups (eyelid rings, brows, lips) — the anchors
+// FaceMesh landmark feature groups (eyelid rings, brows, lips) ??the anchors
 // every morph's gaussian falloff is centered on.
 const EYE_R = [
   33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246,
@@ -21,25 +21,25 @@ const LIPS = [
 
 /**
  * Build the 17 semantic face-shape morph targets over a face's resting
- * positions — the slider basis of the face editor.
+ * positions ??the slider basis of the face editor.
  *
- * Each {@link AutoFilmFaceParameterName} becomes per-vertex xyz deltas at weight
+ * Each {@link automovieFaceParameterName} becomes per-vertex xyz deltas at weight
  * +1: gaussian-falloff deformations anchored on the landmark feature groups
  * (eyelid rings, brows, lips, nose, chin, cheeks), so one nameable trait moves
  * while identity stays put. Positions default to the canonical neutral but any
- * same-topology face (e.g. with its `identity` delta baked) works — anchors are
+ * same-topology face (e.g. with its `identity` delta baked) works ??anchors are
  * recomputed from the given geometry, keeping the falloffs centered on that
  * face's own features.
  *
  * Magnitudes are tuned so the documented `[-2, 2]` weight range spans
  * subtle-to-caricature; the deltas drop into a glTF primitive's morph targets
- * (or an `IAutoFilmFaceTemplate.targets`) as-is.
+ * (or an `IautomovieFaceTemplate.targets`) as-is.
  *
  * @author Samchon
  */
 export const buildFaceMorphs = (
   positions: number[] = CANONICAL_FACE_POSITIONS,
-): Record<AutoFilmFaceParameterName, number[]> => {
+): Record<automovieFaceParameterName, number[]> => {
   const n = positions.length / 3;
   const P = (i: number): [number, number, number] => [
     positions[i * 3]!,
@@ -86,7 +86,7 @@ export const buildFaceMorphs = (
 
   /** Each entry: vertex index -> [dx, dy, dz] at weight +1 */
   const recipes: Record<
-    AutoFilmFaceParameterName,
+    automovieFaceParameterName,
     (i: number) => [number, number, number]
   > = {
     faceWidth: (i) => [0.07 * P(i)[0], 0, 0],
@@ -100,7 +100,7 @@ export const buildFaceMorphs = (
     // paired features carry one target per side; a vertex binds to the
     // NEARER side's centers and the other side's target leaves it untouched
     // (overlapping gaussians once bound the whole left eye to the right
-    // center — only one eye responded). gate() returns this side's gaussian
+    // center ??only one eye responded). gate() returns this side's gaussian
     // when it owns the vertex, else 0.
     cheekFullnessR: (i) => {
       const g = gate(gauss(i, cheekCR, 2.4 * U), gauss(i, cheekCL, 2.4 * U));
@@ -187,8 +187,8 @@ export const buildFaceMorphs = (
     mouthHeight: (i) => [0, 0.7 * U * gauss(i, mouthC, 1.6 * mouthHalf), 0],
   };
 
-  const out = {} as Record<AutoFilmFaceParameterName, number[]>;
-  for (const name of Object.keys(recipes) as AutoFilmFaceParameterName[]) {
+  const out = {} as Record<automovieFaceParameterName, number[]>;
+  for (const name of Object.keys(recipes) as automovieFaceParameterName[]) {
     const delta = new Array<number>(n * 3);
     for (let i = 0; i < n; i++) {
       const [dx, dy, dz] = recipes[name](i);

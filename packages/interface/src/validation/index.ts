@@ -1,3 +1,3 @@
-export * from "./AutoFilmViolationKind";
-export * from "./IAutoFilmConstraintViolation";
-export * from "./IAutoFilmValidation";
+export * from "./AutomovieViolationKind";
+export * from "./IautomovieConstraintViolation";
+export * from "./IautomovieValidation";

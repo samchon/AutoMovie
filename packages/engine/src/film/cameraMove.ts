@@ -1,39 +1,39 @@
 import {
-  IAutoFilmCamera,
-  IAutoFilmCameraAction,
-  IAutoFilmClip,
-  IAutoFilmQuaternion,
-  IAutoFilmSkeleton,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieCamera,
+  IautomovieCameraAction,
+  IautomovieClip,
+  IautomovieQuaternion,
+  IautomovieSkeleton,
+  IautomovieVector3,
+} from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { ease } from "../motion/easing";
 
-/** World up — the horizon a camera keeps level. */
-const UP: IAutoFilmVector3 = { x: 0, y: 1, z: 0 };
+/** World up ??the horizon a camera keeps level. */
+const UP: IautomovieVector3 = { x: 0, y: 1, z: 0 };
 
 /**
- * The rotation that points a camera's −Z down `direction` while keeping its
- * horizon level (world-up stabilized) — what a shortest-arc `aimRotation`
- * cannot do: the shortest arc from −Z rolls the frame on off-axis aims, which
+ * The rotation that points a camera's ?뭒 down `direction` while keeping its
+ * horizon level (world-up stabilized) ??what a shortest-arc `aimRotation`
+ * cannot do: the shortest arc from ?뭒 rolls the frame on off-axis aims, which
  * the demo's orbit shot exposed as a tilted horizon. Standard look-at basis (x
- * = up × z, y = z × x) converted to a quaternion; aiming straight up/down
+ * = up 횞 z, y = z 횞 x) converted to a quaternion; aiming straight up/down
  * degenerates the cross product, so +Z steps in as the reference.
  */
 export const lookRotation = (
-  direction: IAutoFilmVector3,
-): IAutoFilmQuaternion => {
+  direction: IautomovieVector3,
+): IautomovieQuaternion => {
   const z = Vector3.scale(Vector3.normalize(direction), -1); // camera +Z = back
   let x = Vector3.cross(UP, z);
   if (Vector3.length(x) < 1e-6) x = Vector3.cross({ x: 0, y: 0, z: 1 }, z);
   x = Vector3.normalize(x);
   const y = Vector3.cross(z, x);
-  // Basis → quaternion (Shepperd's method, w-branch first). The usual
+  // Basis ??quaternion (Shepperd's method, w-branch first). The usual
   // x-major branch is provably unreachable here: this basis keeps x
-  // horizontal, so x.x = z.z/h and y.y = h ≥ 0 (h = |(z.x, z.z)|), and
-  // x.x > y.y forces trace = x.x + y.y + z.z > 0 — the w-branch already
+  // horizontal, so x.x = z.z/h and y.y = h ??0 (h = |(z.x, z.z)|), and
+  // x.x > y.y forces trace = x.x + y.y + z.z > 0 ??the w-branch already
   // took it. Only w / y-major / z-major remain.
   const trace = x.x + y.y + z.z;
   if (trace > 0) {
@@ -69,7 +69,7 @@ export const lookRotation = (
  * shoulders; `wide` shows the subject small in its surroundings.
  */
 export const FRAMING_HEIGHT_FRACTION: Record<
-  IAutoFilmCameraAction["framing"],
+  IautomovieCameraAction["framing"],
   number
 > = { wide: 4, full: 1.15, medium: 0.62, close: 0.28 };
 
@@ -78,7 +78,7 @@ export const FRAMING_HEIGHT_FRACTION: Record<
  * shot looks at the head, a full shot at the middle of the body.
  */
 export const FRAMING_AIM_FRACTION: Record<
-  IAutoFilmCameraAction["framing"],
+  IautomovieCameraAction["framing"],
   number
 > = { wide: 0.5, full: 0.5, medium: 0.72, close: 0.85 };
 
@@ -104,42 +104,42 @@ const FOLLOW_HZ = 4;
 
 /**
  * What a `frame` action points the camera at, resolved by the caller: the
- * subject's base (ground) point, its measured height, and — when the subject is
- * an actor with compiled motion — its animated base over shot time (base plus
+ * subject's base (ground) point, its measured height, and ??when the subject is
+ * an actor with compiled motion ??its animated base over shot time (base plus
  * the clip's root displacement). `at: null` means the subject holds still; a
  * `follow` move on it degenerates to a static framing.
  *
  * @author Samchon
  */
-export interface IAutoFilmFramedSubject {
+export interface IautomovieFramedSubject {
   /** Base (ground) point at the move's start. */
-  base: IAutoFilmVector3;
+  base: IautomovieVector3;
 
   /** Subject height in meters (drives framing distance and aim height). */
   height: number;
 
   /** Animated base over shot-local seconds, or null when static. */
-  at: ((seconds: number) => IAutoFilmVector3) | null;
+  at: ((seconds: number) => IautomovieVector3) | null;
 }
 
 /** One `frame` action paired with its resolved subject. */
-export interface IAutoFilmCameraFrameEntry {
-  action: IAutoFilmCameraAction;
-  subject: IAutoFilmFramedSubject;
+export interface IautomovieCameraFrameEntry {
+  action: IautomovieCameraAction;
+  subject: IautomovieFramedSubject;
 }
 
 /**
- * Compile a shot's `frame` actions into the live camera's motion clip — the
+ * Compile a shot's `frame` actions into the live camera's motion clip ??the
  * deterministic shot grammar: **framing** picks the distance (the fraction of
  * the subject's height the frame shows, fitted to the camera's vertical FOV by
  * `d = (visible/2) / tan(fovY/2)`) and the aim height; **move** picks the path
- * — `static` locks the framed position, `push-in` dollies from 1.25× to 0.8× of
- * the framed distance, `orbit` sweeps 45° around the subject, `follow`
+ * ??`static` locks the framed position, `push-in` dollies from 1.25횞 to 0.8횞 of
+ * the framed distance, `orbit` sweeps 45째 around the subject, `follow`
  * re-frames against the subject's animated base, and `whip` pans in place from
  * the staged orientation onto the subject.
  *
- * The camera approaches along its **staged bearing** — the direction from the
- * subject's aim point to where staging placed the camera — so the side the
+ * The camera approaches along its **staged bearing** ??the direction from the
+ * subject's aim point to where staging placed the camera ??so the side the
  * director chose is preserved; only the distance is solved. Consecutive entries
  * are keyed back to back, so the sampler's linear interpolation plays the gap
  * between two framings as a deliberate re-frame move.
@@ -149,19 +149,19 @@ export interface IAutoFilmCameraFrameEntry {
  */
 export const compileCameraMove = (props: {
   clipId: string;
-  camera: IAutoFilmCamera;
-  entries: IAutoFilmCameraFrameEntry[];
+  camera: IautomovieCamera;
+  entries: IautomovieCameraFrameEntry[];
   shotDuration: number;
-}): IAutoFilmClip | null => {
+}): IautomovieClip | null => {
   const { clipId, camera, entries, shotDuration } = props;
   if (entries.length === 0) return null;
 
-  const keys: { t: number; pos: IAutoFilmVector3; rot: IAutoFilmQuaternion }[] =
+  const keys: { t: number; pos: IautomovieVector3; rot: IautomovieQuaternion }[] =
     [];
   const push = (
     t: number,
-    pos: IAutoFilmVector3,
-    rot: IAutoFilmQuaternion,
+    pos: IautomovieVector3,
+    rot: IautomovieQuaternion,
   ): void => {
     const last = keys[keys.length - 1];
     // Two moves may abut on the same instant; the later framing wins the key
@@ -181,7 +181,7 @@ export const compileCameraMove = (props: {
 
     const aimFraction = FRAMING_AIM_FRACTION[action.framing];
     const aimOffset = subject.height * aimFraction;
-    const aimOf = (base: IAutoFilmVector3): IAutoFilmVector3 => ({
+    const aimOf = (base: IautomovieVector3): IautomovieVector3 => ({
       x: base.x,
       y: base.y + aimOffset,
       z: base.z,
@@ -192,7 +192,7 @@ export const compileCameraMove = (props: {
     const distance =
       visible / 2 / Math.tan(((camera.fovY / 2) * Math.PI) / 180);
 
-    // The staged bearing: subject → staged camera. A camera staged exactly on
+    // The staged bearing: subject ??staged camera. A camera staged exactly on
     // the aim point has no bearing; fall back to +Z so the solve stays total.
     const toCamera = Vector3.subtract(camera.transform.translation, aim0);
     const bearing =
@@ -201,9 +201,9 @@ export const compileCameraMove = (props: {
         : Vector3.normalize(toCamera);
 
     const framedAt = (
-      base: IAutoFilmVector3,
+      base: IautomovieVector3,
       d: number,
-    ): { pos: IAutoFilmVector3; rot: IAutoFilmQuaternion } => {
+    ): { pos: IautomovieVector3; rot: IautomovieQuaternion } => {
       const aim = aimOf(base);
       const pos = Vector3.add(aim, Vector3.scale(bearing, d));
       return { pos, rot: lookRotation(Vector3.subtract(aim, pos)) };
@@ -217,8 +217,8 @@ export const compileCameraMove = (props: {
       }
       case "push-in": {
         // Ease the dolly in and out instead of ramping at constant speed: the
-        // distance eases from 1.25× to 0.8× of framed, so the camera creeps in,
-        // accelerates, and settles — a cinematic push, not a mechanical slide.
+        // distance eases from 1.25횞 to 0.8횞 of framed, so the camera creeps in,
+        // accelerates, and settles ??a cinematic push, not a mechanical slide.
         for (let k = 0; k <= PUSH_IN_SEGMENTS; ++k) {
           const p = k / PUSH_IN_SEGMENTS;
           const scale =
@@ -231,7 +231,7 @@ export const compileCameraMove = (props: {
       case "orbit": {
         // Ease the swept angle in and out (not the radius or the endpoints): the
         // orbit creeps off its mark, accelerates through the mid-arc, and settles
-        // onto the far bearing — a reveal orbit, not a turntable at constant rate.
+        // onto the far bearing ??a reveal orbit, not a turntable at constant rate.
         for (let k = 0; k <= ORBIT_SEGMENTS; ++k) {
           const p = k / ORBIT_SEGMENTS;
           const swing = Quaternion.fromAxisAngle(
@@ -270,7 +270,7 @@ export const compileCameraMove = (props: {
           camera.transform.translation,
           lookRotation(Vector3.subtract(aim0, camera.transform.translation)),
         );
-        // Whip pans in place — the framed distance is not honored; `k` exists
+        // Whip pans in place ??the framed distance is not honored; `k` exists
         // only to keep the framing math total for future dolly-after-whip.
         void k;
         break;
@@ -304,18 +304,18 @@ export const compileCameraMove = (props: {
  * A skeleton's rest-pose height: compose each bone's rest transform down the
  * parent chain (rotation and translation; rigs keep unit scale) and take the
  * world-Y extent. This is the subject height the framing grammar measures
- * distance from — the same "measure from the rig, not hope" doctrine as
+ * distance from ??the same "measure from the rig, not hope" doctrine as
  * staging's reach/stride.
  */
-export const computeRestHeight = (skeleton: IAutoFilmSkeleton): number => {
+export const computeRestHeight = (skeleton: IautomovieSkeleton): number => {
   const byName = new Map(skeleton.bones.map((b) => [b.bone, b]));
   const world = new Map<
     string,
-    { pos: IAutoFilmVector3; rot: IAutoFilmQuaternion }
+    { pos: IautomovieVector3; rot: IautomovieQuaternion }
   >();
   const resolve = (
     name: (typeof skeleton.bones)[number]["bone"],
-  ): { pos: IAutoFilmVector3; rot: IAutoFilmQuaternion } => {
+  ): { pos: IautomovieVector3; rot: IautomovieQuaternion } => {
     const cached = world.get(name);
     if (cached !== undefined) return cached;
     const bone = byName.get(name)!;

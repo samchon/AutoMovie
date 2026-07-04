@@ -1,4 +1,4 @@
-import { IAutoFilmFaceTemplate, morphFace } from "@autofilm/engine";
+import { IautomovieFaceTemplate, morphFace } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeFace } from "../internal/fixtures";
@@ -11,7 +11,7 @@ import { makeFace } from "../internal/fixtures";
  * Scenario: a 3-component template with a 6-component `eyeSizeR` delta throws.
  */
 export const test_face_morph_length_mismatch = (): void => {
-  const template: IAutoFilmFaceTemplate = {
+  const template: IautomovieFaceTemplate = {
     positions: [0, 0, 0],
     targets: { eyeSizeR: [1, 0, 0, 0, 0, 0], eyeSizeL: [1, 0, 0] },
   };

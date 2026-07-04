@@ -1,33 +1,33 @@
-# `@autofilm/viewer`
+# `@automovie/viewer`
 
-autofilm의 **재생·검수 표면**. `@autofilm/interface`의 모델·포즈·모션·씬을 `three.js`로 렌더하고, `@autofilm/engine`의 FK·보간으로 모션을 재생한다.
+automovie??**?ъ깮쨌寃???쒕㈃**. `@automovie/interface`??紐⑤뜽쨌?ъ쫰쨌紐⑥뀡쨌?ъ쓣 `three.js`濡??뚮뜑?섍퀬, `@automovie/engine`??FK쨌蹂닿컙?쇰줈 紐⑥뀡???ъ깮?쒕떎.
 
-**viewer지 editor가 아니다.** AI가 structured output으로 만든 산출물을 보여주고·재생하고·스냅샷할 뿐, Blender식 수작업 저작 UI는 만들지 않는다. 모노리포에서 `three.js`를 직접 import하는 패키지는 이 viewer 하나뿐이다.
+**viewer吏 editor媛 ?꾨땲??** AI媛 structured output?쇰줈 留뚮뱺 ?곗텧臾쇱쓣 蹂댁뿬二쇨퀬쨌?ъ깮?섍퀬쨌?ㅻ깄?룻븷 肉? Blender???섏옉?????UI??留뚮뱾吏 ?딅뒗?? 紐⑤끂由ы룷?먯꽌 `three.js`瑜?吏곸젒 import?섎뒗 ?⑦궎吏????viewer ?섎굹肉먯씠??
 
-## 공개 표면
+## 怨듦컻 ?쒕㈃
 
-| 함수/클래스 | 역할 |
+| ?⑥닔/?대옒??| ??븷 |
 |---|---|
-| `buildModel(model)` | `IAutoFilmModel` → `THREE.Group` + 본 맵 (프리미티브 테셀레이션·메쉬·스켈레톤·머티리얼) |
-| `buildGeometry` / `buildMaterial` | 개별 형상·머티리얼 → three 객체 |
-| `applyPose(modelObject, pose, skeleton)` | 엔진 FK로 본 쿼터니언 적용 |
-| `buildScene(scene, getModelObject)` | `IAutoFilmScene` → `THREE.Scene` + 카메라·조명 |
-| `AutoFilmPlayer` | 모션 클립을 시각 t에 샘플링(엔진)해 포즈 적용 — `update(seconds)` |
-| `mountViewer(canvas, scene, camera, onFrame)` | `WebGLRenderer` + RAF 루프 (브라우저) |
+| `buildModel(model)` | `IautomovieModel` ??`THREE.Group` + 蹂?留?(?꾨━誘명떚釉??뚯??덉씠?샕룸찓??룹뒪耳덈젅?ㅒ룸㉧?곕━?? |
+| `buildGeometry` / `buildMaterial` | 媛쒕퀎 ?뺤긽쨌癒명떚由ъ뼹 ??three 媛앹껜 |
+| `applyPose(modelObject, pose, skeleton)` | ?붿쭊 FK濡?蹂?荑쇳꽣?덉뼵 ?곸슜 |
+| `buildScene(scene, getModelObject)` | `IautomovieScene` ??`THREE.Scene` + 移대찓?셋룹“紐?|
+| `automoviePlayer` | 紐⑥뀡 ?대┰???쒓컖 t???섑뵆留??붿쭊)???ъ쫰 ?곸슜 ??`update(seconds)` |
+| `mountViewer(canvas, scene, camera, onFrame)` | `WebGLRenderer` + RAF 猷⑦봽 (釉뚮씪?곗?) |
 
-## 사용 흐름
+## ?ъ슜 ?먮쫫
 
 ```ts
 const modelObject = buildModel(character);       // THREE.Group + bones
-const player = new AutoFilmPlayer(modelObject, character.skeleton!, waveClip);
+const player = new automoviePlayer(modelObject, character.skeleton!, waveClip);
 const scene = new THREE.Scene();
 scene.add(modelObject.object);
 mountViewer(canvas, scene, camera, (t) => player.update(t));
 ```
 
-## 현재 한계
+## ?꾩옱 ?쒓퀎
 
-- 스킨드 메쉬 변형(스킨 가중치 기반)은 후속 — 현재는 본에 파트를 부착(rigid)하거나 모델 루트에 둔다.
-- 표정(blendshape) 적용은 모프 타깃이 있는 모델(VRM import)에서만 의미가 있어 현재 미적용 — 샘플된 표정은 노출만 한다.
-- VRM/glTF 파일 import 렌더(`@pixiv/three-vrm`)는 ingest 단계와 함께 후속.
-- headless 스냅샷은 후속.
+- ?ㅽ궓??硫붿돩 蹂???ㅽ궓 媛以묒튂 湲곕컲)? ?꾩냽 ???꾩옱??蹂몄뿉 ?뚰듃瑜?遺李?rigid)?섍굅??紐⑤뜽 猷⑦듃???붾떎.
+- ?쒖젙(blendshape) ?곸슜? 紐⑦봽 ?源껋씠 ?덈뒗 紐⑤뜽(VRM import)?먯꽌留??섎?媛 ?덉뼱 ?꾩옱 誘몄쟻?????섑뵆???쒖젙? ?몄텧留??쒕떎.
+- VRM/glTF ?뚯씪 import ?뚮뜑(`@pixiv/three-vrm`)??ingest ?④퀎? ?④퍡 ?꾩냽.
+- headless ?ㅻ깄?룹? ?꾩냽.

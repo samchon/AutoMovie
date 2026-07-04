@@ -1,11 +1,11 @@
-import { humanoidSkeleton } from "@autofilm/ingest";
-import { IAutoFilmBone } from "@autofilm/interface";
+import { humanoidSkeleton } from "@automovie/ingest";
+import { IautomovieBone } from "@automovie/interface";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const find = (bones: IAutoFilmBone[], bone: string): IAutoFilmBone => {
+const find = (bones: IautomovieBone[], bone: string): IautomovieBone => {
   const b = bones.find((x) => x.bone === bone);
   if (b === undefined) throw new Error(`bone ${bone} missing`);
   return b;
@@ -15,15 +15,14 @@ const find = (bones: IAutoFilmBone[], bone: string): IAutoFilmBone => {
  * Retarget an imported skin's joints onto the humanoid slots by name,
  * rebuilding the hierarchy over the mapped bones only.
  *
- * The synthetic rig (Mixamo-style names): `Hips → HelperBone → Spine →
- * LeftArm`, plus a duplicate `Spine` and an unmapped `RandomThing`, all in the
+ * The synthetic rig (Mixamo-style names): `Hips ??HelperBone ??Spine ?? * LeftArm`, plus a duplicate `Spine` and an unmapped `RandomThing`, all in the
  * skin.
  *
  * Scenarios:
  *
  * 1. A document with no skin yields `null`.
  * 2. A skin without a hips joint yields `null` (no humanoid root).
- * 3. The full rig maps `Hips→hips`, `Spine→spine`, `LeftArm→leftUpperArm`; the
+ * 3. The full rig maps `Hips?뭜ips`, `Spine?뭩pine`, `LeftArm?뭠eftUpperArm`; the
  *    `mixamorig:` prefix and separators are normalized away.
  * 4. The unmapped `HelperBone` is skipped, but `Spine`'s parent resolves to `hips`
  *    through it (nearest mapped ancestor), and `LeftArm`'s parent is `spine`;
@@ -36,14 +35,14 @@ export const test_ingest_humanoid_skeleton = (): void => {
   // 1. no skin
   const noSkin = new Document();
   noSkin.createScene().addChild(noSkin.createNode("mixamorig:Hips"));
-  TestValidator.equals("no skin → null", humanoidSkeleton(noSkin), null);
+  TestValidator.equals("no skin ??null", humanoidSkeleton(noSkin), null);
 
   // 2. skin without hips
   const noHips = new Document();
   const spineOnly = noHips.createNode("mixamorig:Spine");
   noHips.createSkin("s").addJoint(spineOnly);
   noHips.createScene().addChild(spineOnly);
-  TestValidator.equals("no hips → null", humanoidSkeleton(noHips), null);
+  TestValidator.equals("no hips ??null", humanoidSkeleton(noHips), null);
 
   // 3-5. full rig
   const doc = new Document();

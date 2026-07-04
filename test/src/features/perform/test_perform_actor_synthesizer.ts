@@ -1,28 +1,28 @@
 import {
-  IAutoFilmActorContext,
+  IautomovieActorContext,
   Quaternion,
   compilePerformance,
   makeActorSynthesizer,
   sampleMotion,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmActionCall,
-  IAutoFilmActionTarget,
-  IAutoFilmGait,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieActionCall,
+  IautomovieActionTarget,
+  IautomovieGait,
+  IautomovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
 import { nclose, vclose } from "../internal/predicates";
 
-const WALK: IAutoFilmGait = {
+const WALK: IautomovieGait = {
   name: "walk",
   period: 1,
   limbs: [{ bone: "leftUpperLeg", phase: 0, duty: 0.5, amplitude: 25 }],
 };
 
-const ctx: IAutoFilmActorContext = {
+const ctx: IautomovieActorContext = {
   skeleton: "h",
   gaits: [WALK],
   position: { x: 0, y: 0, z: 0 },
@@ -32,17 +32,17 @@ const ctx: IAutoFilmActorContext = {
   restPose: makePose([joint("spine", { flexion: 0 })]),
 };
 
-const contexts = new Map<string, IAutoFilmActorContext>([["hero", ctx]]);
+const contexts = new Map<string, IautomovieActorContext>([["hero", ctx]]);
 
-const nodes = new Map<string, IAutoFilmVector3>([
+const nodes = new Map<string, IautomovieVector3>([
   ["door", { x: 0, y: 0, z: 5 }],
   ["here", { x: 0, y: 0, z: 0 }],
 ]);
 
 const locomote = (
   gait: "walk" | "run" | "sprint" | "sneak" | "march",
-  to: IAutoFilmActionTarget,
-): IAutoFilmActionCall => ({
+  to: IautomovieActionTarget,
+): IautomovieActionCall => ({
   verb: "locomote",
   gait,
   to,
@@ -51,14 +51,14 @@ const locomote = (
   duration: "auto",
 });
 
-const hold = (start: number): IAutoFilmActionCall => ({
+const hold = (start: number): IautomovieActionCall => ({
   verb: "hold",
   actor: "hero",
   start,
   duration: 1,
 });
 
-const gesture: IAutoFilmActionCall = {
+const gesture: IautomovieActionCall = {
   verb: "gesture",
   kind: "strike",
   actor: "hero",
@@ -66,7 +66,7 @@ const gesture: IAutoFilmActionCall = {
   duration: "auto",
 };
 
-const emote = (duration: number | "auto"): IAutoFilmActionCall => ({
+const emote = (duration: number | "auto"): IautomovieActionCall => ({
   verb: "emote",
   preset: "happy",
   intensity: 0.8,
@@ -76,9 +76,9 @@ const emote = (duration: number | "auto"): IAutoFilmActionCall => ({
 });
 
 const lookAt = (
-  to: IAutoFilmActionTarget,
+  to: IautomovieActionTarget,
   duration: number | "auto",
-): IAutoFilmActionCall => ({
+): IautomovieActionCall => ({
   verb: "lookAt",
   to,
   actor: "hero",
@@ -86,10 +86,10 @@ const lookAt = (
   duration,
 });
 
-const door: IAutoFilmActionTarget = { kind: "node", node: "door" };
+const door: IautomovieActionTarget = { kind: "node", node: "door" };
 
 /**
- * `makeActorSynthesizer` — the reference content seam that lets the action
+ * `makeActorSynthesizer` ??the reference content seam that lets the action
  * compiler fatten verbs from declarative gait/profile data.
  *
  * Scenarios:
@@ -98,9 +98,8 @@ const door: IAutoFilmActionTarget = { kind: "node", node: "door" };
  *    speed (a non-looping clip whose length is the covered cycles); a turned
  *    actor's travel is baked in model space so it reaches the world destination
  *    once the renderer applies its staged facing.
- * 2. `locomote` to a relative target (no positional point) — or to its own spot —
- *    steps in place: the looping one-cycle gait.
- * 3. An unmatched gait, a non-synthesised verb, and an unknown actor → null.
+ * 2. `locomote` to a relative target (no positional point) ??or to its own spot ?? *    steps in place: the looping one-cycle gait.
+ * 3. An unmatched gait, a non-synthesised verb, and an unknown actor ??null.
  * 4. `hold` holds the rest pose; and a locomote+hold beat compiles end to end.
  */
 export const test_perform_actor_synthesizer = (): void => {
@@ -121,15 +120,15 @@ export const test_perform_actor_synthesizer = (): void => {
 
   // 1b. a turned actor's travel is baked in *model* space: the renderer applies
   // the pose root under the node's staged facing, so composing that facing with
-  // the baked root must reach the world destination — not a path rotated off
-  // the heading. Facing +90°, walking to a point 5 m along world +X.
+  // the baked root must reach the world destination ??not a path rotated off
+  // the heading. Facing +90째, walking to a point 5 m along world +X.
   const turned = makeActorSynthesizer(
-    new Map<string, IAutoFilmActorContext>([
+    new Map<string, IautomovieActorContext>([
       ["hero", { ...ctx, facingDeg: 90 }],
     ]),
     nodes,
   );
-  const worldDest: IAutoFilmVector3 = { x: 5, y: 0, z: 0 };
+  const worldDest: IautomovieVector3 = { x: 5, y: 0, z: 0 };
   const turnedTrip = turned(
     locomote("walk", { kind: "point", point: worldDest }),
     "hero",
@@ -145,7 +144,7 @@ export const test_perform_actor_synthesizer = (): void => {
     vclose(rendered, worldDest, 1e-9),
   );
 
-  // 2a. relative target → step in place (looping one-cycle gait)
+  // 2a. relative target ??step in place (looping one-cycle gait)
   const inPlace = synth(
     locomote("walk", { kind: "direction", headingDeg: 90 }),
     "hero",
@@ -157,18 +156,18 @@ export const test_perform_actor_synthesizer = (): void => {
   );
   TestValidator.equals("in-place is gait-keyed", inPlace!.id, "hero:walk");
 
-  // 2b. destination at the actor's own spot → also steps in place
+  // 2b. destination at the actor's own spot ??also steps in place
   const here = synth(locomote("walk", { kind: "node", node: "here" }), "hero");
   TestValidator.equals("already-there steps in place", here!.id, "hero:walk");
 
   // 3. null branches
   TestValidator.equals(
-    "an unmatched gait → null",
+    "an unmatched gait ??null",
     synth(locomote("run", door), "hero"),
     null,
   );
   TestValidator.equals(
-    "an arm/combat gesture → null (left to a richer synthesiser)",
+    "an arm/combat gesture ??null (left to a richer synthesiser)",
     synth(gesture, "hero"),
     null,
   );
@@ -189,7 +188,7 @@ export const test_perform_actor_synthesizer = (): void => {
     nod !== null && nclose(nod.duration, 2),
   );
   TestValidator.equals(
-    "a verb with no reference synthesis (attachTo) → null",
+    "a verb with no reference synthesis (attachTo) ??null",
     synth(
       {
         verb: "attachTo",
@@ -204,7 +203,7 @@ export const test_perform_actor_synthesizer = (): void => {
     null,
   );
   TestValidator.equals(
-    "an unknown actor → null",
+    "an unknown actor ??null",
     synth(locomote("walk", door), "ghost"),
     null,
   );
@@ -214,7 +213,7 @@ export const test_perform_actor_synthesizer = (): void => {
   TestValidator.predicate("hold spans its duration", nclose(held!.duration, 1));
   TestValidator.equals("hold targets the skeleton", held!.skeleton, "h");
 
-  // 5. emote → an expression-only face clip (explicit duration and "auto")
+  // 5. emote ??an expression-only face clip (explicit duration and "auto")
   const face = synth(emote(2), "hero")!;
   TestValidator.predicate("emote spans its duration", nclose(face.duration, 2));
   TestValidator.equals(
@@ -232,7 +231,7 @@ export const test_perform_actor_synthesizer = (): void => {
     nclose(synth(emote("auto"), "hero")!.duration, 1),
   );
 
-  // 6. lookAt → the head turned toward the target
+  // 6. lookAt ??the head turned toward the target
   const look = synth(lookAt(door, 1), "hero")!;
   const headJoint = look.keyframes[0]!.pose.joints.find(
     (j) => j.bone === "head",
@@ -247,7 +246,7 @@ export const test_perform_actor_synthesizer = (): void => {
     nclose(headJoint.twist!, 0),
   );
   TestValidator.equals(
-    "a relative lookAt target → null",
+    "a relative lookAt target ??null",
     synth(lookAt({ kind: "direction", headingDeg: 90 }, 1), "hero"),
     null,
   );

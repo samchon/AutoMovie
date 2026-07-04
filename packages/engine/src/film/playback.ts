@@ -1,4 +1,4 @@
-import { IAutoFilmSequence, IAutoFilmShot } from "@autofilm/interface";
+import { IautomovieSequence, IautomovieShot } from "@automovie/interface";
 
 /**
  * One entry's placement on the output timeline: where it starts globally, how
@@ -7,7 +7,7 @@ import { IAutoFilmSequence, IAutoFilmShot } from "@autofilm/interface";
  *
  * @author Samchon
  */
-export interface IAutoFilmPlaybackEntry {
+export interface IautomoviePlaybackEntry {
   /** Index into `sequence.shots`. */
   entry: number;
 
@@ -25,8 +25,8 @@ export interface IAutoFilmPlaybackEntry {
 }
 
 /** The resolved output timeline: entry placements and the total runtime. */
-export interface IAutoFilmPlaybackTimeline {
-  entries: IAutoFilmPlaybackEntry[];
+export interface IautomoviePlaybackTimeline {
+  entries: IautomoviePlaybackEntry[];
 
   /** Total output seconds (transition overlaps subtracted). */
   runtime: number;
@@ -34,10 +34,10 @@ export interface IAutoFilmPlaybackTimeline {
 
 /**
  * What plays at one output instant: the live entry's shot at its local time,
- * plus — inside an incoming transition — the outgoing entry's tail and the
- * incoming shot's weight ramping 0 → 1 across the transition.
+ * plus ??inside an incoming transition ??the outgoing entry's tail and the
+ * incoming shot's weight ramping 0 ??1 across the transition.
  */
-export interface IAutoFilmPlaybackSample {
+export interface IautomoviePlaybackSample {
   /** Live (incoming) shot id. */
   shot: string;
 
@@ -49,18 +49,18 @@ export interface IAutoFilmPlaybackSample {
 }
 
 /**
- * Lay the cut onto the output clock — the playback mirror of `cutSequence`'s
+ * Lay the cut onto the output clock ??the playback mirror of `cutSequence`'s
  * runtime arithmetic: each entry plays its trimmed span, and a transition pulls
  * its entry forward to overlap the previous tail by the transition's duration.
  * Precondition: the sequence already passed `cutSequence` (every entry
  * references a shot, every trim fits), so this resolver is total.
  */
 export const sequenceTimeline = (
-  sequence: IAutoFilmSequence,
-  shots: IAutoFilmShot[],
-): IAutoFilmPlaybackTimeline => {
+  sequence: IautomovieSequence,
+  shots: IautomovieShot[],
+): IautomoviePlaybackTimeline => {
   const byId = new Map(shots.map((s) => [s.id, s]));
-  const entries: IAutoFilmPlaybackEntry[] = [];
+  const entries: IautomoviePlaybackEntry[] = [];
   let cursor = 0;
   sequence.shots.forEach((entry, i) => {
     const shot = byId.get(entry.shot)!;
@@ -83,13 +83,13 @@ export const sequenceTimeline = (
  * contains the instant is live; while the instant still sits inside that
  * entry's incoming transition, the previous entry's tail rides along as the
  * `blend` with the incoming weight `alpha = elapsed / transition`. Returns null
- * outside `[0, runtime)` — there is no frame there to draw.
+ * outside `[0, runtime)` ??there is no frame there to draw.
  */
 export const resolveSequencePlayback = (
-  sequence: IAutoFilmSequence,
-  shots: IAutoFilmShot[],
+  sequence: IautomovieSequence,
+  shots: IautomovieShot[],
   seconds: number,
-): IAutoFilmPlaybackSample | null => {
+): IautomoviePlaybackSample | null => {
   const timeline = sequenceTimeline(sequence, shots);
   if (seconds < 0 || seconds >= timeline.runtime) return null;
 
@@ -100,7 +100,7 @@ export const resolveSequencePlayback = (
 
   const transition = sequence.shots[live.entry]!.transition;
   const elapsed = seconds - live.start;
-  let blend: IAutoFilmPlaybackSample["blend"] = null;
+  let blend: IautomoviePlaybackSample["blend"] = null;
   if (transition !== null && elapsed < transition.duration) {
     const outgoing = timeline.entries[live.entry - 1]!;
     blend = {
@@ -113,16 +113,16 @@ export const resolveSequencePlayback = (
 };
 
 /**
- * The whole film as frame sample points: `runtime × fps` output frames (the
+ * The whole film as frame sample points: `runtime 횞 fps` output frames (the
  * same `round` policy as the render plan's `frameTimes`), each resolved to its
  * on-screen sample. This is the deterministic seam a render host drives its
- * per-frame capture from — pose the live shot's scene at `time`, blend the
+ * per-frame capture from ??pose the live shot's scene at `time`, blend the
  * outgoing tail when a dissolve is in flight, write the frame.
  */
 export const playbackFrameSamples = (
-  sequence: IAutoFilmSequence,
-  shots: IAutoFilmShot[],
-): IAutoFilmPlaybackSample[] => {
+  sequence: IautomovieSequence,
+  shots: IautomovieShot[],
+): IautomoviePlaybackSample[] => {
   const { runtime } = sequenceTimeline(sequence, shots);
   const count = Math.round(runtime * sequence.fps);
   return Array.from(

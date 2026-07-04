@@ -1,16 +1,16 @@
-import { channelIsRotation, channelKey } from "@autofilm/engine";
-import { IAutoFilmChannel } from "@autofilm/interface";
+import { channelIsRotation, channelKey } from "@automovie/engine";
+import { IautomovieChannel } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 const node = (
   id: string,
   path: "translation" | "rotation" | "scale" | "weights",
-): IAutoFilmChannel => ({ kind: "node", node: id, path });
+): IautomovieChannel => ({ kind: "node", node: id, path });
 
 const pointer = (
   ptr: string,
   valueType: "scalar" | "vec2" | "vec3" | "vec4" | "quaternion" | "weights",
-): IAutoFilmChannel => ({ kind: "pointer", pointer: ptr, valueType });
+): IautomovieChannel => ({ kind: "pointer", pointer: ptr, valueType });
 
 /**
  * Canonical channel keys and the rotation test that decides slerp vs lerp.
@@ -22,7 +22,7 @@ const pointer = (
  *    can never collide.
  * 2. `channelIsRotation` is true exactly for a node `rotation` path and a pointer
  *    whose `valueType` is `quaternion`; every other node path and pointer type
- *    is false — both sides of each discriminator.
+ *    is false ??both sides of each discriminator.
  */
 export const test_resolve_channel = (): void => {
   // 1. keys
@@ -37,7 +37,7 @@ export const test_resolve_channel = (): void => {
     "ptr:/cameras/0/fovY",
   );
 
-  // 2. rotation discrimination — both kinds, both outcomes
+  // 2. rotation discrimination ??both kinds, both outcomes
   TestValidator.equals(
     "node rotation is rotation",
     channelIsRotation(node("hips", "rotation")),

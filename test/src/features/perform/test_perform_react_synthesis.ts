@@ -1,16 +1,16 @@
 import {
-  IAutoFilmActorContext,
+  IautomovieActorContext,
   makeActorSynthesizer,
   sampleMotion,
   validateMotion,
-} from "@autofilm/engine";
-import { IAutoFilmReactAction, IAutoFilmVector3 } from "@autofilm/interface";
+} from "@automovie/engine";
+import { IautomovieReactAction, IautomovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const baseCtx: IAutoFilmActorContext = {
+const baseCtx: IautomovieActorContext = {
   skeleton: "skeleton-1",
   gaits: [],
   position: { x: 0, y: 0, z: 0 },
@@ -21,14 +21,14 @@ const baseCtx: IAutoFilmActorContext = {
   rig: createSkeleton(),
 };
 
-const nodes = new Map<string, IAutoFilmVector3>([
+const nodes = new Map<string, IautomovieVector3>([
   ["attacker", { x: 0, y: 0, z: 2 }], // dead ahead of the actor (+Z)
 ]);
 
 const react = (
   force: number,
-  overrides: Partial<IAutoFilmReactAction> = {},
-): IAutoFilmReactAction => ({
+  overrides: Partial<IautomovieReactAction> = {},
+): IautomovieReactAction => ({
   verb: "react",
   actor: "hero",
   start: 0,
@@ -56,20 +56,20 @@ const peakFlexion = (
 
 /**
  * The reference synthesiser fattening the `react` verb into a ROM-clamped
- * flinch. The verb is a physics verb — its deflection is bounded by each
- * joint's ROM — so it needs the context's `rig`; the mapping snaps the body
+ * flinch. The verb is a physics verb ??its deflection is bounded by each
+ * joint's ROM ??so it needs the context's `rig`; the mapping snaps the body
  * away from where the blow comes from, scaled by `force`, and the whole flinch
  * validates against the same ROM table the engine gates on.
  *
  * Scenarios:
  *
- * 1. A blow from dead ahead at force 0.7 → a three-keyframe flinch (rest → flinch
- *    → rest) that snaps the torso back (the head, chain head, deflects most);
+ * 1. A blow from dead ahead at force 0.7 ??a three-keyframe flinch (rest ??flinch
+ *    ??rest) that snaps the torso back (the head, chain head, deflects most);
  *    the clip is not looped and lasts the action's duration.
  * 2. Force is monotone: a 0.9 blow flinches harder than a 0.3 blow, and both stay
  *    inside ROM (validateMotion passes) because impactRecoil clamps.
  * 3. `unbalance: true` flinches harder still than the same force upright.
- * 4. A context with no `rig` synthesises nothing (null) — the physics verb can't
+ * 4. A context with no `rig` synthesises nothing (null) ??the physics verb can't
  *    clamp without the body.
  * 5. Totality of the direction decomposition: a `duration: "auto"` react runs the
  *    default 0.5 s; a blow from an unresolvable target (a direction, not a
@@ -84,7 +84,7 @@ export const test_perform_react_synthesis = (): void => {
   const hit = synth(react(0.7), "hero");
   TestValidator.predicate("react produced a clip", hit !== null);
   if (hit === null) return;
-  TestValidator.equals("rest → flinch → rest", hit.keyframes.length, 3);
+  TestValidator.equals("rest ??flinch ??rest", hit.keyframes.length, 3);
   TestValidator.equals("not looped", hit.loop, false);
   TestValidator.predicate("lasts the duration", nclose(hit.duration, 0.5));
   TestValidator.predicate("the flinch actually deflects", peakFlexion(hit) > 1);

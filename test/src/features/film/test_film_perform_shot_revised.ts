@@ -1,4 +1,4 @@
-import { performShot, stageScene } from "@autofilm/engine";
+import { performShot, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -16,11 +16,11 @@ import {
  *
  * Scenarios:
  *
- * 1. The draft is a single action by a stranger (`ghost`) — unusable — but
+ * 1. The draft is a single action by a stranger (`ghost`) ??unusable ??but
  *    `revise.final` replaces it with `knightA` waving plus two `frame` calls on
- *    the same `cam-main` → success, proving the final list performed (a
+ *    the same `cam-main` ??success, proving the final list performed (a
  *    draft-path run would have failed on `ghost`).
- * 2. Only `knightA` performs, and the skeleton lookup returns null for it → the
+ * 2. Only `knightA` performs, and the skeleton lookup returns null for it ??the
  *    clip is accepted without ROM validation (the skeleton-less branch).
  */
 export const test_film_perform_shot_revised = (): void => {

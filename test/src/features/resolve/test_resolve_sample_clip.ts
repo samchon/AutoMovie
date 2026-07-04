@@ -1,37 +1,37 @@
-import { sampleClip } from "@autofilm/engine";
+import { sampleClip } from "@automovie/engine";
 import {
-  IAutoFilmChannel,
-  IAutoFilmClip,
-  IAutoFilmTrack,
-} from "@autofilm/interface";
+  IautomovieChannel,
+  IautomovieClip,
+  IautomovieTrack,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, qclose } from "../internal/predicates";
 
 const NODE = (
   path: "translation" | "rotation" | "scale" | "weights",
-): IAutoFilmChannel => ({ kind: "node", node: "n", path });
+): IautomovieChannel => ({ kind: "node", node: "n", path });
 
-const PTR: IAutoFilmChannel = {
+const PTR: IautomovieChannel = {
   kind: "pointer",
   pointer: "/x",
   valueType: "scalar",
 };
 
 const track = (
-  channel: IAutoFilmChannel,
+  channel: IautomovieChannel,
   times: number[],
   values: number[],
-  interpolation: IAutoFilmTrack["interpolation"],
-): IAutoFilmTrack => ({ channel, times, values, interpolation });
+  interpolation: IautomovieTrack["interpolation"],
+): IautomovieTrack => ({ channel, times, values, interpolation });
 
 const clip = (
-  tracks: IAutoFilmTrack[],
+  tracks: IautomovieTrack[],
   duration: number,
   loop = false,
-): IAutoFilmClip => ({ id: "c", name: null, duration, loop, tracks });
+): IautomovieClip => ({ id: "c", name: null, duration, loop, tracks });
 
-const val = (c: IAutoFilmClip, t: number, key: string): number[] => {
+const val = (c: IautomovieClip, t: number, key: string): number[] => {
   const hit = sampleClip(c, t).get(key);
   if (hit === undefined) throw new Error(`${key} missing`);
   return hit.value;
@@ -46,14 +46,14 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  *
  * Scenarios:
  *
- * 1. Linear interpolation of a vec3 translation: 0→(10,20,30) at t=0.5 is
+ * 1. Linear interpolation of a vec3 translation: 0??10,20,30) at t=0.5 is
  *    (5,10,15); the result keys to `node:n:translation`.
  * 2. Step interpolation holds the left keyframe: the same span at t=0.5 stays at
  *    the start value (0,0,0).
- * 3. A linear rotation track slerps (not lerps): identity→90°-about-Y at t=0.5 is
- *    the 45° quaternion, and stays unit length.
+ * 3. A linear rotation track slerps (not lerps): identity??0째-about-Y at t=0.5 is
+ *    the 45째 quaternion, and stays unit length.
  * 4. Cubicspline with zero tangents reduces to the Hermite blend of the values:
- *    0→10 at t=0.5 is 5 (the `[in,value,out]` triplet layout is read
+ *    0??0 at t=0.5 is 5 (the `[in,value,out]` triplet layout is read
  *    correctly).
  * 5. Cubicspline on a rotation renormalizes the drifted result to a unit
  *    quaternion.
@@ -61,10 +61,10 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  *    value; sampling at/after the last returns the last.
  * 7. A single-keyframe track returns that key at any time.
  * 8. A three-keyframe track samples the _interior_ segment (selecting [1,2], not
- *    [0,1]) — the segment search advances past the first pair.
- * 9. A looping clip wraps the query time into `[0, duration)`: t=1.25 → 0.25 and a
- *    negative t=−0.25 → 0.75.
- * 10. A non-looping clip clamps past the end (t=5 on a 1s clip → the last value),
+ *    [0,1]) ??the segment search advances past the first pair.
+ * 9. A looping clip wraps the query time into `[0, duration)`: t=1.25 ??0.25 and a
+ *    negative t=??.25 ??0.75.
+ * 10. A non-looping clip clamps past the end (t=5 on a 1s clip ??the last value),
  *     and a zero-duration clip normalizes any time to 0.
  */
 export const test_resolve_sample_clip = (): void => {
@@ -98,14 +98,14 @@ export const test_resolve_sample_clip = (): void => {
   const c225 = Math.cos(Math.PI / 8);
   const s225 = Math.sin(Math.PI / 8);
   TestValidator.predicate(
-    "linear rotation slerps to the 45° quaternion",
+    "linear rotation slerps to the 45째 quaternion",
     qclose(
       { x: half[0]!, y: half[1]!, z: half[2]!, w: half[3]! },
       { x: 0, y: s225, z: 0, w: c225 },
     ),
   );
 
-  // 4. cubicspline scalar, zero tangents → Hermite blend
+  // 4. cubicspline scalar, zero tangents ??Hermite blend
   const cubic = clip(
     [track(PTR, [0, 1], [0, 0, 0, 0, 10, 0], "cubicspline")],
     1,
@@ -196,7 +196,7 @@ export const test_resolve_sample_clip = (): void => {
     close(val(loop, 1.25, "ptr:/x"), [2.5]),
   );
   TestValidator.predicate(
-    "loop wraps negative t=−0.25 to 0.75",
+    "loop wraps negative t=??.25 to 0.75",
     close(val(loop, -0.25, "ptr:/x"), [7.5]),
   );
 

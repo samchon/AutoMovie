@@ -1,5 +1,5 @@
-import { IAutoFilmResolvedBone, resolvePose } from "@autofilm/engine";
-import { AutoFilmHumanoidBone } from "@autofilm/interface";
+import { IautomovieResolvedBone, resolvePose } from "@automovie/engine";
+import { automovieHumanoidBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -10,22 +10,22 @@ import {
 import { vclose } from "../internal/predicates";
 
 const at = (
-  rs: IAutoFilmResolvedBone[],
-  b: AutoFilmHumanoidBone,
-): IAutoFilmResolvedBone => {
+  rs: IautomovieResolvedBone[],
+  b: automovieHumanoidBone,
+): IautomovieResolvedBone => {
   const r = rs.find((x) => x.bone === b);
   if (r === undefined) throw new Error(`bone ${b} not resolved`);
   return r;
 };
 
 /**
- * A pose's optional root transform places the whole character in the world — it
+ * A pose's optional root transform places the whole character in the world ??it
  * seeds the hierarchy walk, so it offsets every resolved bone uniformly. Pins
  * that planting or translating the model root moves the entire skeleton
  * together.
  *
  * Scenario: a root translation of (+1,0,0) shifts every bone's world position
- * by +1 on X — hips from (0,1,0) to (1,1,0), and the leftLowerArm from
+ * by +1 on X ??hips from (0,1,0) to (1,1,0), and the leftLowerArm from
  * (0.5,1.4,0) to (1.5,1.4,0).
  */
 export const test_kinematics_resolve_root = (): void => {

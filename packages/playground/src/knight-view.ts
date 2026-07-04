@@ -2,24 +2,24 @@ import {
   HUMANOID_JOINT_AXES,
   resolveAttachment,
   sampleMotion,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmAttachment,
-  IAutoFilmJointPose,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-} from "@autofilm/interface";
-import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
+  automovieHumanoidBone,
+  IautomovieAttachment,
+  IautomovieJointPose,
+  IautomovieMotion,
+  IautomoviePose,
+} from "@automovie/interface";
+import { automoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
-import { DEFAULT_HORSE, buildHorse } from "./horse";
-import { HORSE_CLIPS } from "./horse-motion";
-import { buildKnight } from "./knight";
+import { DEFAULT_HORSE, buildHorse } from "./Horse";
+import { HORSE_CLIPS } from "./Horse-motion";
+import { buildKnight } from "./Knight";
 
 const params = new URLSearchParams(location.search);
 
-// ── build the horse (mount) and the knight (rider) ──────────────────────────
+// ?? build the horse (mount) and the knight (rider) ??????????????????????????
 const horse = buildHorse(DEFAULT_HORSE);
 const knight = buildKnight();
 const horseObj = buildModel(horse.model);
@@ -30,9 +30,9 @@ const clipName =
   params.get("clip") !== null && params.get("clip")! in horseClips
     ? params.get("clip")!
     : "performance";
-let horseClip: IAutoFilmMotion = horseClips[clipName]!;
+let horseClip: IautomovieMotion = horseClips[clipName]!;
 
-const horsePlayer = new AutoFilmPlayer(
+const horsePlayer = new automoviePlayer(
   horseObj,
   horse.skeleton,
   horseClip,
@@ -44,29 +44,29 @@ const horsePlayer = new AutoFilmPlayer(
       "leftLittleProximal",
       "leftLittleIntermediate",
       "leftLittleDistal",
-    ] as AutoFilmHumanoidBone[],
+    ] as automovieHumanoidBone[],
     stiffness: 70,
     damping: 8,
   },
 );
 
-// ── the rider's body pose — sitting astride, lance couched, shield up ────────
+// ?? the rider's body pose ??sitting astride, lance couched, shield up ????????
 const j = (
-  bone: AutoFilmHumanoidBone,
+  bone: automovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
-): IAutoFilmJointPose => ({
+): IautomovieJointPose => ({
   bone,
   flexion: a.flexion ?? 0,
   abduction: a.abduction ?? 0,
   twist: a.twist ?? 0,
 });
-const ridePose = (lean: number): IAutoFilmPose => ({
+const ridePose = (lean: number): IautomoviePose => ({
   skeleton: knight.skeleton.id,
   root: null,
   joints: [
     j("spine", { flexion: 6 + lean }),
     j("chest", { flexion: 4 }),
-    // legs straddle the barrel and grip — thighs forward-and-out, knees bent
+    // legs straddle the barrel and grip ??thighs forward-and-out, knees bent
     j("leftUpperLeg", { flexion: -52, abduction: 24 }),
     j("rightUpperLeg", { flexion: -52, abduction: -24 }),
     j("leftLowerLeg", { flexion: 74 }),
@@ -79,7 +79,7 @@ const ridePose = (lean: number): IAutoFilmPose => ({
     j("leftLowerArm", { flexion: -86 }),
   ],
 });
-const rideClip: IAutoFilmMotion = {
+const rideClip: IautomovieMotion = {
   id: "ride",
   skeleton: knight.skeleton.id,
   duration: 0.62,
@@ -108,20 +108,20 @@ const rideClip: IAutoFilmMotion = {
     },
   ],
 };
-const knightPlayer = new AutoFilmPlayer(
+const knightPlayer = new automoviePlayer(
   knightObj,
   knight.skeleton,
   rideClip,
   HUMANOID_JOINT_AXES,
 );
 
-// ── the saddle attachment: fix the rider's root into the horse's spine bone ──
+// ?? the saddle attachment: fix the rider's root into the horse's spine bone ??
 // The seat offset drops the rider's root so its pelvis lands on the back, a
 // touch behind the withers; the rider rides the bone's world frame, so when the
 // horse rears (spine pitches up) the knight is carried back with it.
 const seatY = Number(params.get("seatY") ?? -0.72);
 const seatZ = Number(params.get("seatZ") ?? -0.04);
-const attachment: IAutoFilmAttachment = {
+const attachment: IautomovieAttachment = {
   parentBone: "spine",
   offset: {
     translation: { x: 0, y: seatY, z: seatZ },
@@ -145,7 +145,7 @@ const placeRider = (seconds: number): void => {
   );
 };
 
-// ── scene ────────────────────────────────────────────────────────────────────
+// ?? scene ????????????????????????????????????????????????????????????????????
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xeef1f6);
 scene.add(horseObj.object);
@@ -199,7 +199,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   handle.renderer.render(scene, camera);
 };
 
-// ── clip selector ────────────────────────────────────────────────────────────
+// ?? clip selector ????????????????????????????????????????????????????????????
 const bar = document.querySelector<HTMLDivElement>("#clips");
 if (bar !== null) {
   for (const name of Object.keys(horseClips)) {
@@ -216,7 +216,7 @@ if (bar !== null) {
   }
 }
 
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   clip: clipName,
   horseBones: () => horseObj.bones.size,

@@ -2,28 +2,28 @@ import {
   HUMANOID_JOINT_AXES,
   projectileAt,
   resolveImpact,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmPose,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
-import { applyPose, buildModel, mountViewer } from "@autofilm/viewer";
+  automovieHumanoidBone,
+  IautomovieJointPose,
+  IautomoviePose,
+  IautomovieVector3,
+} from "@automovie/interface";
+import { applyPose, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
-import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
+import { DEFAULT_STICKMAN, buildStickman } from "./Stickman";
 
-// ── trampoline bounce: the figure falls, the engine's resolveImpact returns the
+// ?? trampoline bounce: the figure falls, the engine's resolveImpact returns the
 // rebound velocity off a springy trampoline, and a projectile arc carries it up
-// again — tucking at the apex, extending to land. The bounce heights come from
-// the physics, not a hand-keyed sine. ─────────────────────────────────────────
+// again ??tucking at the apex, extending to land. The bounce heights come from
+// the physics, not a hand-keyed sine. ?????????????????????????????????????????
 const params = new URLSearchParams(location.search);
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IautomovieVector3 => ({ x, y, z });
 const j = (
-  bone: AutoFilmHumanoidBone,
+  bone: automovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
-): IAutoFilmJointPose => ({
+): IautomovieJointPose => ({
   bone,
   flexion: a.flexion ?? 0,
   abduction: a.abduction ?? 0,
@@ -79,18 +79,18 @@ const arcAt = (t: number): { y: number; phase: number } => {
     arcs.find((s) => t >= s.start && t < s.end) ?? arcs[arcs.length - 1]!;
   const dt = Math.min(Math.max(t - a.start, 0), a.end - a.start);
   const y = a.v0 * dt + 0.5 * G * dt * dt; // height above the bed
-  const phase = a.end - a.start > 0 ? dt / (a.end - a.start) : 0; // 0 launch → 1 land
+  const phase = a.end - a.start > 0 ? dt / (a.end - a.start) : 0; // 0 launch ??1 land
   return { y: Math.max(0, y), phase };
 };
 
 // pose: tuck the knees and throw the arms up near the apex, extend to land,
 // and squash slightly at the bed
-const poseAt = (phase: number, y: number): IAutoFilmJointPose[] => {
+const poseAt = (phase: number, y: number): IautomovieJointPose[] => {
   const air = Math.sin(Math.PI * phase); // 0 at bed, 1 at apex
   const squash = y < 0.12 ? 1 - y / 0.12 : 0; // compress when near the bed
   const tuck = 60 * air;
   const knee = 24 + 90 * air + 28 * squash;
-  const armRaise = 30 + 150 * air; // arms sweep overhead at the apex (+left / −right = up)
+  const armRaise = 30 + 150 * air; // arms sweep overhead at the apex (+left / ?뭨ight = up)
   return [
     j("leftUpperLeg", { flexion: -tuck - 14 * squash, abduction: 10 }),
     j("rightUpperLeg", { flexion: -tuck - 14 * squash, abduction: -10 }),
@@ -104,7 +104,7 @@ const poseAt = (phase: number, y: number): IAutoFilmJointPose[] => {
 
 const step = (t: number): void => {
   const { y, phase } = arcAt(t);
-  const pose: IAutoFilmPose = {
+  const pose: IautomoviePose = {
     skeleton: skeleton.id,
     root: {
       translation: { x: 0, y: SURFACE + y, z: 0 },
@@ -176,7 +176,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   handle.renderer.render(scene, camera);
 };
 
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   bounces: arcs.length,
   duration: DUR,

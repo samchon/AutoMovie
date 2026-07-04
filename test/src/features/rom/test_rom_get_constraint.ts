@@ -1,5 +1,5 @@
-import { DEFAULT_HUMANOID_ROM, getConstraint } from "@autofilm/engine";
-import { IAutoFilmJointConstraint } from "@autofilm/interface";
+import { DEFAULT_HUMANOID_ROM, getConstraint } from "@automovie/engine";
+import { IautomovieJointConstraint } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 /**
@@ -14,10 +14,10 @@ import { TestValidator } from "@nestia/e2e";
  * 2. With no override, the default humanoid table entry is returned (the elbow's
  *    own entry, checked by identity).
  * 3. A bone with neither an override nor a table entry (the hips) resolves to null
- *    — unconstrained.
+ *    ??unconstrained.
  */
 export const test_rom_get_constraint = (): void => {
-  const override: IAutoFilmJointConstraint = {
+  const override: IautomovieJointConstraint = {
     flexion: { min: -200, max: 200 },
     abduction: null,
     twist: null,
@@ -32,7 +32,7 @@ export const test_rom_get_constraint = (): void => {
     getConstraint("leftLowerArm", null) === DEFAULT_HUMANOID_ROM.leftLowerArm,
   );
   TestValidator.equals(
-    "unconstrained bone → null",
+    "unconstrained bone ??null",
     getConstraint("hips", null),
     null,
   );

@@ -2,7 +2,7 @@ import {
   CANONICAL_FACE_POSITIONS,
   buildBust,
   buildSkullShell,
-} from "@autofilm/forge";
+} from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**

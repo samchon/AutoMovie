@@ -1,26 +1,26 @@
-import { impactRecoil } from "@autofilm/engine";
+import { impactRecoil } from "@automovie/engine";
 import {
-  IAutoFilmBone,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  IautomovieBone,
+  IautomovieSkeleton,
+  IautomovieTransform,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const rest: IAutoFilmTransform = {
+const rest: IautomovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 const bone = (
-  name: IAutoFilmBone["bone"],
-  parent: IAutoFilmBone["parent"],
-  constraint: IAutoFilmBone["constraint"],
-): IAutoFilmBone => ({ bone: name, parent, rest, constraint });
+  name: IautomovieBone["bone"],
+  parent: IautomovieBone["parent"],
+  constraint: IautomovieBone["constraint"],
+): IautomovieBone => ({ bone: name, parent, rest, constraint });
 
 // spine has a flexion ROM (and a twist limit); chest is unconstrained
-const skeleton: IAutoFilmSkeleton = {
+const skeleton: IautomovieSkeleton = {
   id: "recoil-rig",
   bones: [
     bone("spine", null, {
@@ -33,12 +33,12 @@ const skeleton: IAutoFilmSkeleton = {
 };
 
 /**
- * `impactRecoil` — the reactive `push` propagates down a bone chain (losing
+ * `impactRecoil` ??the reactive `push` propagates down a bone chain (losing
  * strength by `falloff` per link), and each joint yields only within its ROM.
  *
  * Scenarios:
  *
- * 1. A huge flexion push is clamped to the contact bone's ROM max (40°), while a
+ * 1. A huge flexion push is clamped to the contact bone's ROM max (40째), while a
  *    twist push within range passes; an axis with no ROM (spine abduction) is
  *    unclamped.
  * 2. `falloff` weakens the push down the chain, and an unconstrained bone (chest)
@@ -71,14 +71,14 @@ export const test_physics_impact_recoil = (): void => {
 
   // 2. falloff down the chain; unconstrained chest yields the full attenuated push
   TestValidator.predicate(
-    "chest flexion = 200 × 0.6 (no ROM → unclamped)",
+    "chest flexion = 200 횞 0.6 (no ROM ??unclamped)",
     nclose(chest.flexion!, 120),
   );
 
   // 2b. a push past the lower ROM bound clamps to the joint minimum
   const back = impactRecoil({ flexion: -200 }, ["spine"], skeleton, 1);
   TestValidator.predicate(
-    "spine flexion clamped to ROM min −30",
+    "spine flexion clamped to ROM min ??0",
     nclose(back.joints[0]!.flexion!, -30),
   );
 

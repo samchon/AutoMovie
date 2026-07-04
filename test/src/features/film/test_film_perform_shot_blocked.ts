@@ -1,4 +1,4 @@
-import { performShot, stageScene } from "@autofilm/engine";
+import { performShot, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -29,27 +29,26 @@ const run = (
   });
 
 /**
- * Pins the intent→realization gates that arm when a validated blocking rides
+ * Pins the intent?뭨ealization gates that arm when a validated blocking rides
  * along with the performance: matching beat and duration, anchors covered by
  * their actor's actions, and the camera intent honoured by the lead frame.
  *
  * Scenarios:
  *
  * 1. The duel blocking against the duel performance (strike anchor t = 1 inside
- *    the gesture's [1, 2] span; medium static frame) → success. An
+ *    the gesture's [1, 2] span; medium static frame) ??success. An
  *    "auto"-duration action also covers a late anchor (knightB watched through
  *    the whole beat).
- * 2. Blocking for another beat → `type` on `$input.beat`.
- * 3. Blocking fixed at 3 s against a 2-second performance → `range` on
+ * 2. Blocking for another beat ??`type` on `$input.beat`.
+ * 3. Blocking fixed at 3 s against a 2-second performance ??`range` on
  *    `$input.duration`.
- * 4. An anchor at t = 0.2 for knightA — before any of knightA's actions (locomote
+ * 4. An anchor at t = 0.2 for knightA ??before any of knightA's actions (locomote
  *    starts at 0 but... it does cover 0.2; use knightB at t = 1.9 with no
- *    knightB action past the unison locomote's [0, 1] span) → `range` naming
+ *    knightB action past the unison locomote's [0, 1] span) ??`range` naming
  *    the dropped cue.
- * 5. Blocking asks close/push-in; the performance frames medium/static → `type` on
+ * 5. Blocking asks close/push-in; the performance frames medium/static ??`type` on
  *    the lead frame's `framing` and `move`.
- * 6. Blocking asks a follow camera; the performance authors no frame at all →
- *    `type` (a locked-off camera cannot follow).
+ * 6. Blocking asks a follow camera; the performance authors no frame at all ?? *    `type` (a locked-off camera cannot follow).
  */
 export const test_film_perform_shot_blocked = (): void => {
   const aligned = run(

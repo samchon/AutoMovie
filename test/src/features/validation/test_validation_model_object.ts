@@ -1,11 +1,11 @@
-import { validateModel } from "@autofilm/engine";
+import { validateModel } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
 
 /**
  * A model may be a skeletonless object/prop (`skeleton: null`). Model
- * validation must accept it — there are no bones to resolve `attachedBone`
+ * validation must accept it ??there are no bones to resolve `attachedBone`
  * references against, but the parts and materials are still checked. Pins the
  * null-skeleton branch the character-model tests never take.
  *

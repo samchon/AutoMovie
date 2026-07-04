@@ -1,4 +1,4 @@
-import { tessellate } from "@autofilm/engine";
+import { tessellate } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
@@ -7,8 +7,8 @@ import { TestValidator } from "@nestia/e2e";
  * than being averaged at shared corners), giving 24 vertices and 12 triangles.
  * Every vertex sits on the surface, within the half-extents.
  *
- * Scenario: a 0.4×0.6×0.2 box tessellates to 24 vertices and 36 indices, and no
- * vertex lies outside ±(0.2, 0.3, 0.1) — its half-extents.
+ * Scenario: a 0.4횞0.6횞0.2 box tessellates to 24 vertices and 36 indices, and no
+ * vertex lies outside 짹(0.2, 0.3, 0.1) ??its half-extents.
  */
 export const test_geometry_tessellate_box = (): void => {
   const box = tessellate({ type: "box", width: 0.4, height: 0.6, depth: 0.2 });

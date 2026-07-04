@@ -1,4 +1,4 @@
-import { validateMotion } from "@autofilm/engine";
+import { validateMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, createValidMotion } from "../internal/fixtures";
@@ -8,7 +8,7 @@ import { createSkeleton, createValidMotion } from "../internal/fixtures";
  * duration, and every keyframe pose is inside ROM. The "valid clip passes"
  * baseline above the temporal and per-keyframe failure cases.
  *
- * Scenario: the standard two-keyframe elbow clip (0°→120° over 1s) succeeds.
+ * Scenario: the standard two-keyframe elbow clip (0째??20째 over 1s) succeeds.
  */
 export const test_validation_motion_valid = (): void => {
   const result = validateMotion({

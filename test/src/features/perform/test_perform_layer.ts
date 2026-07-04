@@ -1,25 +1,25 @@
 import {
-  IAutoFilmActionSynthesizer,
+  IautomovieActionSynthesizer,
   compilePerformance,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmActionCall,
-  IAutoFilmExpression,
-  IAutoFilmMotion,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  IautomovieActionCall,
+  IautomovieExpression,
+  IautomovieMotion,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const HAPPY: IAutoFilmExpression = {
+const HAPPY: IautomovieExpression = {
   preset: "happy",
   intensity: 0.8,
   blendshapes: null,
 };
 
-const jointClip = (bone: AutoFilmHumanoidBone): IAutoFilmMotion =>
+const jointClip = (bone: automovieHumanoidBone): IautomovieMotion =>
   makeMotion(
     [
       keyframe(0, makePose([joint(bone, { flexion: 0 })])),
@@ -28,7 +28,7 @@ const jointClip = (bone: AutoFilmHumanoidBone): IAutoFilmMotion =>
     1,
   );
 
-const emoteClip = (): IAutoFilmMotion =>
+const emoteClip = (): IautomovieMotion =>
   makeMotion(
     [
       keyframe(0, makePose([]), "linear", HAPPY),
@@ -38,20 +38,20 @@ const emoteClip = (): IAutoFilmMotion =>
   );
 
 /** A region-appropriate clip per verb; null for anything else. */
-const synth: IAutoFilmActionSynthesizer = (
-  action: IAutoFilmActionCall,
-): IAutoFilmMotion | null => {
+const synth: IautomovieActionSynthesizer = (
+  action: IautomovieActionCall,
+): IautomovieMotion | null => {
   if (action.verb === "locomote") return jointClip("leftUpperLeg");
   if (action.verb === "gesture") return jointClip("leftUpperArm");
   if (action.verb === "emote") return emoteClip();
   return null;
 };
 
-const frameAt = (motion: IAutoFilmMotion, time: number) =>
+const frameAt = (motion: IautomovieMotion, time: number) =>
   motion.keyframes.find((k) => nclose(k.time, time))!;
 
 /**
- * `compilePerformance` layering — actions on disjoint body regions play
+ * `compilePerformance` layering ??actions on disjoint body regions play
  * concurrently rather than taking turns.
  *
  * Scenario: a `locomote` (lowerBody), a `gesture` (upperBody, region set
@@ -60,7 +60,7 @@ const frameAt = (motion: IAutoFilmMotion, time: number) =>
  * drives both the leg and the arm, and the face's expression rides along.
  */
 export const test_perform_layer = (): void => {
-  const locomote: IAutoFilmActionCall = {
+  const locomote: IautomovieActionCall = {
     verb: "locomote",
     gait: "walk",
     to: { kind: "node", node: "x" },
@@ -68,7 +68,7 @@ export const test_perform_layer = (): void => {
     start: 0,
     duration: "auto",
   };
-  const gesture: IAutoFilmActionCall = {
+  const gesture: IautomovieActionCall = {
     verb: "gesture",
     kind: "wave",
     region: "upperBody",
@@ -76,7 +76,7 @@ export const test_perform_layer = (): void => {
     start: 0,
     duration: "auto",
   };
-  const emote: IAutoFilmActionCall = {
+  const emote: IautomovieActionCall = {
     verb: "emote",
     preset: "happy",
     intensity: 0.8,

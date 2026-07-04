@@ -1,4 +1,4 @@
-import { Vector3 } from "@autofilm/engine";
+import { Vector3 } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
@@ -6,7 +6,7 @@ import { TestValidator } from "@nestia/e2e";
  * motion sampler uses to interpolate a model's root translation between
  * keyframes, so its endpoints and midpoint must be exact.
  *
- * Scenarios (interpolating (0,0,0) → (2,4,6)):
+ * Scenarios (interpolating (0,0,0) ??(2,4,6)):
  *
  * 1. T=0 returns the start vector exactly.
  * 2. T=1 returns the end vector exactly.

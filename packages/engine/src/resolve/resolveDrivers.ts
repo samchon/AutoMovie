@@ -1,19 +1,19 @@
 import {
-  IAutoFilmCopyDriver,
-  IAutoFilmDrivenDriver,
-  IAutoFilmDriver,
-  IAutoFilmNode,
-} from "@autofilm/interface";
+  IautomovieCopyDriver,
+  IautomovieDrivenDriver,
+  IautomovieDriver,
+  IautomovieNode,
+} from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
-import { channelKey } from "./channel";
-import { IAutoFilmSampledChannel } from "./sampleClip";
+import { channelKey } from "./Channel";
+import { IautomovieSampledChannel } from "./SampleClip";
 
 /** The two channel-space drivers this pass resolves (no world transform needed). */
-type ValueDriver = IAutoFilmCopyDriver | IAutoFilmDrivenDriver;
+type ValueDriver = IautomovieCopyDriver | IautomovieDrivenDriver;
 
 /**
- * The DRIVE pass for **channel-space** drivers — relationships that compute one
+ * The DRIVE pass for **channel-space** drivers ??relationships that compute one
  * channel purely from other channels, with no world-transform dependency:
  * `copy` (mirror/follow a node's local TRS) and `driven` (range-remap one
  * channel onto another). They are resolved in dependency order over a
@@ -22,22 +22,21 @@ type ValueDriver = IAutoFilmCopyDriver | IAutoFilmDrivenDriver;
  * CONSTRAIN.
  *
  * The world-space / stateful drivers (`parent`, `aim`, `ik`, `spring`) need the
- * composed hierarchy or cross-frame state, so they are **not** resolved here —
- * they are returned as `deferred` (never silently dropped) for the world-space
+ * composed hierarchy or cross-frame state, so they are **not** resolved here ?? * they are returned as `deferred` (never silently dropped) for the world-space
  * driver pass that runs after an initial compose.
  *
  * A dependency cycle among the value drivers (A copies from B while B copies
- * from A) throws rather than looping — the rig is ill-formed.
+ * from A) throws rather than looping ??the rig is ill-formed.
  *
  * @author Samchon
  */
 export const resolveDrivers = (
-  drivers: IAutoFilmDriver[],
-  sampled: Map<string, IAutoFilmSampledChannel>,
-  nodesById: Map<string, IAutoFilmNode>,
-): IAutoFilmDriver[] => {
+  drivers: IautomovieDriver[],
+  sampled: Map<string, IautomovieSampledChannel>,
+  nodesById: Map<string, IautomovieNode>,
+): IautomovieDriver[] => {
   const value: ValueDriver[] = [];
-  const deferred: IAutoFilmDriver[] = [];
+  const deferred: IautomovieDriver[] = [];
   for (const d of drivers)
     if (d.type === "copy" || d.type === "driven") value.push(d);
     else deferred.push(d);
@@ -49,7 +48,7 @@ export const resolveDrivers = (
   return deferred;
 };
 
-// ── dependency ordering ──────────────────────────────────────────────────────
+// ?? dependency ordering ??????????????????????????????????????????????????????
 
 const trsKeys = (
   node: string,
@@ -96,12 +95,12 @@ const topoSort = (drivers: ValueDriver[]): ValueDriver[] => {
   return order;
 };
 
-// ── copy ─────────────────────────────────────────────────────────────────────
+// ?? copy ?????????????????????????????????????????????????????????????????????
 
 const applyCopy = (
-  d: IAutoFilmCopyDriver,
-  sampled: Map<string, IAutoFilmSampledChannel>,
-  nodesById: Map<string, IAutoFilmNode>,
+  d: IautomovieCopyDriver,
+  sampled: Map<string, IautomovieSampledChannel>,
+  nodesById: Map<string, IautomovieNode>,
 ): void => {
   if (d.translation) writeBlend(d, "translation", false, sampled, nodesById);
   if (d.rotation) writeBlend(d, "rotation", true, sampled, nodesById);
@@ -109,11 +108,11 @@ const applyCopy = (
 };
 
 const writeBlend = (
-  d: IAutoFilmCopyDriver,
+  d: IautomovieCopyDriver,
   path: "translation" | "rotation" | "scale",
   isRotation: boolean,
-  sampled: Map<string, IAutoFilmSampledChannel>,
-  nodesById: Map<string, IAutoFilmNode>,
+  sampled: Map<string, IautomovieSampledChannel>,
+  nodesById: Map<string, IautomovieNode>,
 ): void => {
   const owner = readTRS(d.owner, path, sampled, nodesById);
   const source = readTRS(d.source, path, sampled, nodesById);
@@ -132,8 +131,8 @@ const writeBlend = (
 const readTRS = (
   node: string,
   path: "translation" | "rotation" | "scale",
-  sampled: Map<string, IAutoFilmSampledChannel>,
-  nodesById: Map<string, IAutoFilmNode>,
+  sampled: Map<string, IautomovieSampledChannel>,
+  nodesById: Map<string, IautomovieNode>,
 ): number[] => {
   const hit = sampled.get(`node:${node}:${path}`);
   if (hit !== undefined) return hit.value;
@@ -145,11 +144,11 @@ const readTRS = (
   return [t.scale.x, t.scale.y, t.scale.z];
 };
 
-// ── driven ───────────────────────────────────────────────────────────────────
+// ?? driven ???????????????????????????????????????????????????????????????????
 
 const applyDriven = (
-  d: IAutoFilmDrivenDriver,
-  sampled: Map<string, IAutoFilmSampledChannel>,
+  d: IautomovieDrivenDriver,
+  sampled: Map<string, IautomovieSampledChannel>,
 ): void => {
   const src = sampled.get(channelKey(d.source));
   const x = src !== undefined ? src.value[0]! : d.inRange[0];
@@ -174,7 +173,7 @@ const remap = (
 /**
  * Piecewise-linear evaluation of a driven `curve` (points sorted by source
  * `x`): the output is interpolated within a segment and held flat before the
- * first point and after the last — the nonlinear driven-key mapping.
+ * first point and after the last ??the nonlinear driven-key mapping.
  */
 const evalCurve = (x: number, pts: [number, number][]): number => {
   if (x <= pts[0]![0]) return pts[0]![1];
@@ -188,12 +187,12 @@ const evalCurve = (x: number, pts: [number, number][]): number => {
   return pts[pts.length - 1]![1];
 };
 
-// ── shared ───────────────────────────────────────────────────────────────────
+// ?? shared ???????????????????????????????????????????????????????????????????
 
 const setChannel = (
-  sampled: Map<string, IAutoFilmSampledChannel>,
+  sampled: Map<string, IautomovieSampledChannel>,
   key: string,
-  channel: IAutoFilmSampledChannel["channel"],
+  channel: IautomovieSampledChannel["channel"],
   value: number[],
 ): void => {
   const existing = sampled.get(key);

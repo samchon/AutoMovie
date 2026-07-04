@@ -1,11 +1,11 @@
-import { ingestDocument } from "@autofilm/ingest";
-import { IAutoFilmNode } from "@autofilm/interface";
+import { ingestDocument } from "@automovie/ingest";
+import { IautomovieNode } from "@automovie/interface";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const byName = (nodes: IAutoFilmNode[], name: string): IAutoFilmNode => {
+const byName = (nodes: IautomovieNode[], name: string): IautomovieNode => {
   const n = nodes.find((x) => x.name === name);
   if (n === undefined) throw new Error(`node "${name}" missing`);
   return n;
@@ -18,7 +18,7 @@ const byName = (nodes: IAutoFilmNode[], name: string): IAutoFilmNode => {
  *
  * The document: a `root` group with a `meshNode` (mesh) and `camNode` (camera)
  * child, plus a `bone` (skin joint), a `skinned` mesh+skin node, and an unnamed
- * node — all under the scene. One named animation drives three channels
+ * node ??all under the scene. One named animation drives three channels
  * (translation LINEAR, rotation STEP, scale CUBICSPLINE) and a second, unnamed,
  * empty animation.
  *
@@ -27,15 +27,14 @@ const byName = (nodes: IAutoFilmNode[], name: string): IAutoFilmNode => {
  * 1. Every glTF node maps to a core node (six in, six out); each keeps a stable
  *    index id and resolves its `parent` by reference (the mesh/camera nodes
  *    name `root`; `root` and the scene-level nodes are parentless).
- * 2. Kind inference covers all four reachable kinds: a skin joint → `bone` (even
- *    though a mesh would otherwise win), a mesh node → `mesh`, a camera node →
- *    `camera`, everything else → `group`.
+ * 2. Kind inference covers all four reachable kinds: a skin joint ??`bone` (even
+ *    though a mesh would otherwise win), a mesh node ??`mesh`, a camera node ?? *    `camera`, everything else ??`group`.
  * 3. The mesh / camera / skin id fields are populated when present and `null` when
  *    absent; an unnamed glTF node yields `name: null`; TRS is carried through
  *    verbatim.
  * 4. Each glTF animation becomes a clip; its channels become tracks whose channel
  *    targets the node by id with the right path, and whose interpolation maps
- *    LINEAR→linear, STEP→step, CUBICSPLINE→cubicspline. Clip duration is the
+ *    LINEAR?뭠inear, STEP?뭩tep, CUBICSPLINE?뭖ubicspline. Clip duration is the
  *    latest keyframe time; the empty unnamed animation yields a null-named,
  *    zero-duration, trackless clip.
  */
@@ -154,7 +153,7 @@ export const test_ingest_document = (): void => {
   );
   TestValidator.equals("root is group", byName(nodes, "root").kind, "group");
 
-  // 3. payload ids, unnamed → null, TRS carried
+  // 3. payload ids, unnamed ??null, TRS carried
   const mn = byName(nodes, "meshNode");
   TestValidator.equals("mesh id present", mn.mesh !== null, true);
   TestValidator.equals("mesh node has no camera", mn.camera, null);

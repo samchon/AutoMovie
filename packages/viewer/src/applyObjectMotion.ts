@@ -1,9 +1,9 @@
-import { sampleClip } from "@autofilm/engine";
-import { IAutoFilmClip } from "@autofilm/interface";
+import { sampleClip } from "@automovie/engine";
+import { IautomovieClip } from "@automovie/interface";
 import * as THREE from "three";
 
 /**
- * Drive scene objects from a **world-space node clip** — a shot's `objectMotion`
+ * Drive scene objects from a **world-space node clip** ??a shot's `objectMotion`
  * (a projectile's baked flight, a prop following a bone) or its `cameraMotion`.
  * Sample the clip at `seconds` and write each node channel's translation /
  * rotation straight onto the `THREE.Object3D` that `resolve` returns for that
@@ -17,7 +17,7 @@ import * as THREE from "three";
  * @author Samchon
  */
 export const applyObjectMotion = (
-  clip: IAutoFilmClip,
+  clip: IautomovieClip,
   seconds: number,
   resolve: (node: string) => THREE.Object3D | undefined,
 ): void => {

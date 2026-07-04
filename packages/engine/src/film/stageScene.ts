@@ -1,50 +1,50 @@
 import {
-  IAutoFilmConstraintViolation,
-  IAutoFilmLight,
-  IAutoFilmMountBinding,
-  IAutoFilmScene,
-  IAutoFilmSceneNode,
-  IAutoFilmScriptApplication,
-  IAutoFilmStagingApplication,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieConstraintViolation,
+  IautomovieLight,
+  IautomovieMountBinding,
+  IautomovieScene,
+  IautomovieSceneNode,
+  IautomovieScriptApplication,
+  IautomovieStagingApplication,
+  IautomovieVector3,
+} from "@automovie/interface";
 
 import { aimRotation } from "../kinematics/aimRotation";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { ViolationCollector } from "../validation/violation";
-import { lookRotation } from "./cameraMove";
+import { lookRotation } from "./CameraMove";
 
 /**
- * Camera frustum bounds the staging schema does not ask the model for — the LLM
+ * Camera frustum bounds the staging schema does not ask the model for ??the LLM
  * decides placement and field of view, the engine owns the clip planes.
  */
 const CAMERA_NEAR = 0.1;
 const CAMERA_FAR = 1000;
 
-/** Cameras look down local −Z (glTF convention); lights shine down −Z too. */
-const FORWARD: IAutoFilmVector3 = { x: 0, y: 0, z: -1 };
+/** Cameras look down local ?뭒 (glTF convention); lights shine down ?뭒 too. */
+const FORWARD: IautomovieVector3 = { x: 0, y: 0, z: -1 };
 
 /**
- * A staged film set: the composed {@link IAutoFilmScene} plus the persistent
+ * A staged film set: the composed {@link IautomovieScene} plus the persistent
  * mount couplings staging declared. Mounts stay alongside rather than inside
- * the scene because a scene node is a flat world placement — the per-frame
+ * the scene because a scene node is a flat world placement ??the per-frame
  * world transform of a mounted rider comes from `resolveAttachment` against the
  * parent's posed skeleton, not from the scene graph.
  *
  * @author Samchon
  */
-export type IAutoFilmStagedSet =
-  | IAutoFilmStagedSet.ISuccess
-  | IAutoFilmStagedSet.IFailure;
-export namespace IAutoFilmStagedSet {
+export type IautomovieStagedSet =
+  | IautomovieStagedSet.ISuccess
+  | IautomovieStagedSet.IFailure;
+export namespace IautomovieStagedSet {
   /** Staging was coherent; the set is ready for blocking/performance. */
   export interface ISuccess {
     /** Discriminator. */
     success: true;
 
     /** The composed scene (actors at rest, cameras aimed, lights rigged). */
-    scene: IAutoFilmScene;
+    scene: IautomovieScene;
 
     /** Validated persistent couplings, one per mounted rider. */
     mounts: IMount[];
@@ -56,22 +56,22 @@ export namespace IAutoFilmStagedSet {
     success: false;
 
     /** Every contradiction found, for the correction round. */
-    violations: IAutoFilmConstraintViolation[];
+    violations: IautomovieConstraintViolation[];
   }
 
-  /** One rider→parent-bone coupling, resolved per frame by the host. */
+  /** One rider?뭦arent-bone coupling, resolved per frame by the host. */
   export interface IMount {
     /** The mounted (riding) scene node. */
     node: string;
 
     /** The coupling it rides. */
-    binding: IAutoFilmMountBinding;
+    binding: IautomovieMountBinding;
   }
 }
 
 /**
- * The STAGING consumer — fold the script's cast and the staging stage's
- * placements into the {@link IAutoFilmScene} every later stage performs into.
+ * The STAGING consumer ??fold the script's cast and the staging stage's
+ * placements into the {@link IautomovieScene} every later stage performs into.
  * This is the first rung of the film pipeline (the workflow spine): LLM stage
  * payloads in, a validated engine artifact or a violation list out.
  *
@@ -79,18 +79,18 @@ export namespace IAutoFilmStagedSet {
  * member, every cast member must be placed (an unplaced character can never
  * appear on screen), ids must not collide, and a camera aimed at a node or a
  * mount riding a parent must point at something that exists. Geometry is
- * converted, not judged — whether 0.7 m is striking range is the reviewer's
+ * converted, not judged ??whether 0.7 m is striking range is the reviewer's
  * business, not a constraint.
  *
  * Conversions: `facingDeg` (about +Y, 0 = facing +Z) becomes the node's
  * rotation; a camera's `lookAt` resolves to a point and the shortest-arc
- * rotation aims its −Z there; every light is realised as directional, because
+ * rotation aims its ?뭒 there; every light is realised as directional, because
  * the staging schema gives lights a direction and no position.
  */
 export const stageScene = (
-  script: IAutoFilmScriptApplication.IWrite,
-  staging: IAutoFilmStagingApplication.IWrite,
-): IAutoFilmStagedSet => {
+  script: IautomovieScriptApplication.IWrite,
+  staging: IautomovieStagingApplication.IWrite,
+): IautomovieStagedSet => {
   const out = new ViolationCollector();
   const cast = new Map(script.cast.map((c) => [c.node, c]));
   const placed = new Map(staging.actors.map((a) => [a.node, a]));
@@ -145,7 +145,7 @@ export const stageScene = (
       out.push(
         "range",
         `$input.cameras[${i}].fovDeg`,
-        `vertical field of view must be within (0, 180)°, but was ${camera.fovDeg}`,
+        `vertical field of view must be within (0, 180)째, but was ${camera.fovDeg}`,
         camera.fovDeg,
       );
     if (camera.lookAt.kind === "node" && !placed.has(camera.lookAt.node))
@@ -177,7 +177,7 @@ export const stageScene = (
 
   if (out.items.length > 0) return { success: false, violations: out.items };
 
-  const nodes: IAutoFilmSceneNode[] = staging.actors.map((placement) => ({
+  const nodes: IautomovieSceneNode[] = staging.actors.map((placement) => ({
     id: placement.node,
     model: cast.get(placement.node)!.modelRef ?? placement.node,
     transform: {
@@ -193,7 +193,7 @@ export const stageScene = (
   }));
 
   const cameras = staging.cameras.map((camera) => {
-    const target: IAutoFilmVector3 =
+    const target: IautomovieVector3 =
       camera.lookAt.kind === "node"
         ? placed.get(camera.lookAt.node)!.position
         : camera.lookAt.point;
@@ -210,7 +210,7 @@ export const stageScene = (
     };
   });
 
-  const lights: IAutoFilmLight[] = staging.lights.map((light) => ({
+  const lights: IautomovieLight[] = staging.lights.map((light) => ({
     id: light.node,
     type: "directional",
     transform: {
@@ -222,7 +222,7 @@ export const stageScene = (
     intensity: light.intensity,
   }));
 
-  const mounts: IAutoFilmStagedSet.IMount[] = staging.actors
+  const mounts: IautomovieStagedSet.IMount[] = staging.actors
     .filter((placement) => placement.attach !== undefined)
     .map((placement) => ({ node: placement.node, binding: placement.attach! }));
 

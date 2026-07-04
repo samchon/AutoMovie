@@ -1,7 +1,7 @@
-import { IAutoFilmQuaternion, IAutoFilmVector3 } from "@autofilm/interface";
+import { IautomovieQuaternion, IautomovieVector3 } from "@automovie/interface";
 
 /**
- * Pure-function quaternion math over {@link IAutoFilmQuaternion} (`(x, y, z,
+ * Pure-function quaternion math over {@link IautomovieQuaternion} (`(x, y, z,
  * w)`, glTF order).
  *
  * Quaternions are the engine's internal rotation representation: the LLM emits
@@ -12,7 +12,7 @@ import { IAutoFilmQuaternion, IAutoFilmVector3 } from "@autofilm/interface";
  * @author Samchon
  */
 export namespace Quaternion {
-  export const identity = (): IAutoFilmQuaternion => ({
+  export const identity = (): IautomovieQuaternion => ({
     x: 0,
     y: 0,
     z: 0,
@@ -23,16 +23,16 @@ export namespace Quaternion {
 
   /** Hamilton product `a * b` (apply `b` first, then `a`). */
   export const multiply = (
-    a: IAutoFilmQuaternion,
-    b: IAutoFilmQuaternion,
-  ): IAutoFilmQuaternion => ({
+    a: IautomovieQuaternion,
+    b: IautomovieQuaternion,
+  ): IautomovieQuaternion => ({
     x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
     y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
     z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
     w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
   });
 
-  export const normalize = (q: IAutoFilmQuaternion): IAutoFilmQuaternion => {
+  export const normalize = (q: IautomovieQuaternion): IautomovieQuaternion => {
     const len = Math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
     if (len === 0) return identity();
     const inv = 1 / len;
@@ -41,9 +41,9 @@ export namespace Quaternion {
 
   /** Rotation of `angleDeg` degrees about a (not necessarily unit) `axis`. */
   export const fromAxisAngle = (
-    axis: IAutoFilmVector3,
+    axis: IautomovieVector3,
     angleDeg: number,
-  ): IAutoFilmQuaternion => {
+  ): IautomovieQuaternion => {
     const len = Math.sqrt(axis.x * axis.x + axis.y * axis.y + axis.z * axis.z);
     if (len === 0) return identity();
     const half = (angleDeg * DEG2RAD) / 2;
@@ -51,11 +51,11 @@ export namespace Quaternion {
     return { x: axis.x * s, y: axis.y * s, z: axis.z * s, w: Math.cos(half) };
   };
 
-  /** Rotate a vector by a quaternion: `q * v * q⁻¹`. */
+  /** Rotate a vector by a quaternion: `q * v * q?뼘?. */
   export const rotateVector = (
-    q: IAutoFilmQuaternion,
-    v: IAutoFilmVector3,
-  ): IAutoFilmVector3 => {
+    q: IautomovieQuaternion,
+    v: IautomovieVector3,
+  ): IautomovieVector3 => {
     // t = 2 * cross(q.xyz, v); v' = v + q.w * t + cross(q.xyz, t)
     const tx = 2 * (q.y * v.z - q.z * v.y);
     const ty = 2 * (q.z * v.x - q.x * v.z);
@@ -69,10 +69,10 @@ export namespace Quaternion {
 
   /** Spherical linear interpolation, `t` in `[0, 1]`. */
   export const slerp = (
-    a: IAutoFilmQuaternion,
-    b: IAutoFilmQuaternion,
+    a: IautomovieQuaternion,
+    b: IautomovieQuaternion,
     t: number,
-  ): IAutoFilmQuaternion => {
+  ): IautomovieQuaternion => {
     let cos = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
     let bx = b.x;
     let by = b.y;
@@ -87,7 +87,7 @@ export namespace Quaternion {
       bw = -bw;
     }
     if (cos > 0.9995) {
-      // nearly parallel — fall back to normalized lerp
+      // nearly parallel ??fall back to normalized lerp
       return normalize({
         x: a.x + (bx - a.x) * t,
         y: a.y + (by - a.y) * t,

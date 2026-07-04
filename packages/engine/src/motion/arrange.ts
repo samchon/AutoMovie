@@ -1,19 +1,19 @@
 import {
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-} from "@autofilm/interface";
+  IautomovieKeyframe,
+  IautomovieMotion,
+  IautomoviePose,
+} from "@automovie/interface";
 
 /** A motion clip placed at a start time on an actor's shot timeline. */
-export interface IAutoFilmPlacement {
+export interface IautomoviePlacement {
   /** Seconds into the shot this clip begins. */
   start: number;
   /** The clip (its own local time starts at 0). */
-  motion: IAutoFilmMotion;
+  motion: IautomovieMotion;
 }
 
 /**
- * Hold a single pose for `duration` seconds — the simplest "action" an actor
+ * Hold a single pose for `duration` seconds ??the simplest "action" an actor
  * can perform (a beat of stillness), and the filler the timeline composer uses
  * across gaps. A two-keyframe clip with the same pose at both ends.
  *
@@ -22,10 +22,10 @@ export interface IAutoFilmPlacement {
 export const holdMotion = (
   id: string,
   skeleton: string,
-  pose: IAutoFilmPose,
+  pose: IautomoviePose,
   duration: number,
-): IAutoFilmMotion => {
-  const frame = (time: number): IAutoFilmKeyframe => ({
+): IautomovieMotion => {
+  const frame = (time: number): IautomovieKeyframe => ({
     time,
     pose: { ...pose, skeleton },
     expression: null,
@@ -43,26 +43,26 @@ export const holdMotion = (
 
 /**
  * Lay several timed clips onto **one actor's** shot timeline, holding the last
- * pose across any gap between them — the composer the harness PERFORMANCE stage
+ * pose across any gap between them ??the composer the harness PERFORMANCE stage
  * uses to turn an actor's ordered action calls (each synthesised to a clip by
- * the engine) into a single performance {@link IAutoFilmMotion}.
+ * the engine) into a single performance {@link IautomovieMotion}.
  *
  * Each placement's keyframes are shifted to its `start`; where a gap precedes
  * the next placement, the previous clip's final pose is repeated at the next
  * start so the actor holds rather than slowly morphing across the gap. Keyframe
  * times are kept strictly increasing (an overlapping or coincident later frame
- * is dropped — v1 sequences rather than layers concurrent actions). The result
+ * is dropped ??v1 sequences rather than layers concurrent actions). The result
  * is a plain non-looping clip sampled like any other.
  *
  * @author Samchon
  */
 export const arrangeMotion = (
   id: string,
-  placements: IAutoFilmPlacement[],
-): IAutoFilmMotion => {
+  placements: IautomoviePlacement[],
+): IautomovieMotion => {
   const sorted = [...placements].sort((a, b) => a.start - b.start);
-  const keyframes: IAutoFilmKeyframe[] = [];
-  const push = (k: IAutoFilmKeyframe): void => {
+  const keyframes: IautomovieKeyframe[] = [];
+  const push = (k: IautomovieKeyframe): void => {
     const last = keyframes[keyframes.length - 1];
     if (last !== undefined && k.time <= last.time) return; // keep strictly increasing
     keyframes.push(k);

@@ -1,35 +1,35 @@
-import { tessellate } from "@autofilm/engine";
-import { IAutoFilmModel, IAutoFilmTransform } from "@autofilm/interface";
+import { tessellate } from "@automovie/engine";
+import { IautomovieModel, IautomovieTransform } from "@automovie/interface";
 import { Document, Material, Node, NodeIO } from "@gltf-transform/core";
 
 /**
- * Serialize an {@link IAutoFilmModel} AST into a binary glTF (`.glb`) byte
- * buffer — the **export** half of autofilm's glTF round-trip (ingest is the
+ * Serialize an {@link IautomovieModel} AST into a binary glTF (`.glb`) byte
+ * buffer ??the **export** half of automovie's glTF round-trip (ingest is the
  * import half).
  *
  * The model's skeleton becomes a glTF node hierarchy (one node per bone, parent
- * links preserved, rest transforms intact). Each part is tessellated — a
- * primitive through the engine's {@link tessellate}, a mesh passed through — and
+ * links preserved, rest transforms intact). Each part is tessellated ??a
+ * primitive through the engine's {@link tessellate}, a mesh passed through ??and
  * attached as a mesh node: a rigid part is parented to its `attachedBone` node
  * so the exported file articulates by rotating those bone nodes (no skinning
  * needed), everything else sits at the scene root. Materials map onto glTF's
- * metallic-roughness model, which {@link IAutoFilmMaterial} already mirrors.
+ * metallic-roughness model, which {@link IautomovieMaterial} already mirrors.
  *
  * The result is a self-contained `.glb` (geometry embedded in one buffer) that
- * any glTF viewer — or autofilm's own ingest — can load. Geometry that the
+ * any glTF viewer ??or automovie's own ingest ??can load. Geometry that the
  * engine only approximates (a capsule tessellates to its bounding cylinder)
  * exports at that fidelity.
  *
  * @author Samchon
  */
 export const exportModelToGLB = async (
-  model: IAutoFilmModel,
+  model: IautomovieModel,
 ): Promise<Uint8Array> => {
   const doc = new Document();
   const buffer = doc.createBuffer();
   const scene = doc.createScene(model.name ?? model.id);
 
-  // ── materials → glTF metallic-roughness ──
+  // ?? materials ??glTF metallic-roughness ??
   const materials = new Map<string, Material>();
   for (const m of model.materials) {
     const mat = doc
@@ -48,7 +48,7 @@ export const exportModelToGLB = async (
     materials.set(m.id, mat);
   }
 
-  // ── skeleton → node hierarchy ──
+  // ?? skeleton ??node hierarchy ??
   const boneNodes = new Map<string, Node>();
   if (model.skeleton !== null) {
     for (const b of model.skeleton.bones)
@@ -59,7 +59,7 @@ export const exportModelToGLB = async (
     }
   }
 
-  // ── parts → mesh nodes ──
+  // ?? parts ??mesh nodes ??
   for (const part of model.parts) {
     const t =
       part.geometry.type === "primitive"
@@ -114,8 +114,8 @@ export const exportModelToGLB = async (
   return new NodeIO().writeBinary(doc);
 };
 
-/** Apply an autofilm TRS transform onto a glTF node (no-op for `null`). */
-const setTRS = (node: Node, t: IAutoFilmTransform | null): Node => {
+/** Apply an automovie TRS transform onto a glTF node (no-op for `null`). */
+const setTRS = (node: Node, t: IautomovieTransform | null): Node => {
   if (t === null) return node;
   return node
     .setTranslation([t.translation.x, t.translation.y, t.translation.z])

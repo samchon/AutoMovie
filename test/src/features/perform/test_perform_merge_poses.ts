@@ -1,11 +1,11 @@
-import { mergePoses } from "@autofilm/engine";
-import { IAutoFilmTransform } from "@autofilm/interface";
+import { mergePoses } from "@automovie/engine";
+import { IautomovieTransform } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const rootAt = (x: number): IAutoFilmTransform => ({
+const rootAt = (x: number): IautomovieTransform => ({
   translation: { x, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -17,14 +17,14 @@ const flexionOf = (
 ): number => pose.joints.find((j) => j.bone === bone)!.flexion!;
 
 /**
- * `mergePoses` — compose several per-region poses into one (the per-frame
+ * `mergePoses` ??compose several per-region poses into one (the per-frame
  * operation behind layering).
  *
  * Scenarios:
  *
  * 1. Disjoint poses combine their joints; the root comes from the rooted pose (a
  *    null-root pose does not clear it).
- * 2. Two poses touching the same bone → the later one wins.
+ * 2. Two poses touching the same bone ??the later one wins.
  * 3. With two rooted poses, the last root wins.
  */
 export const test_perform_merge_poses = (): void => {
@@ -52,7 +52,7 @@ export const test_perform_merge_poses = (): void => {
     "skeleton-1",
   );
 
-  // 2. same bone → later wins
+  // 2. same bone ??later wins
   const overridden = mergePoses([
     makePose([joint("spine", { flexion: 10 })]),
     makePose([joint("spine", { flexion: 50 })]),
@@ -67,7 +67,7 @@ export const test_perform_merge_poses = (): void => {
     nclose(flexionOf(overridden, "spine"), 50),
   );
 
-  // 3. two roots → last wins
+  // 3. two roots ??last wins
   const twoRoots = mergePoses([
     makePose([joint("hips")], rootAt(2)),
     makePose([joint("chest")], rootAt(9)),

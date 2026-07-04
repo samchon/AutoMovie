@@ -1,10 +1,10 @@
-import { cutSequence } from "@autofilm/engine";
-import { IAutoFilmShot } from "@autofilm/interface";
+import { cutSequence } from "@automovie/engine";
+import { IautomovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const shot = (id: string, duration: number): IAutoFilmShot => ({
+const shot = (id: string, duration: number): IautomovieShot => ({
   id,
   name: null,
   scene: "scene-duel",
@@ -22,11 +22,11 @@ const shot = (id: string, duration: number): IAutoFilmShot => ({
  *
  * Scenarios:
  *
- * 1. Three entries over two built shots — the first played whole (3 s), the second
+ * 1. Three entries over two built shots ??the first played whole (3 s), the second
  *    trimmed to [0.5, 2.5] (2 s), the first reused with a 0.5 s cross-dissolve
- *    in — → success; the sequence carries id/name/fps and the entries in
+ *    in ????success; the sequence carries id/name/fps and the entries in
  *    order.
- * 2. Runtime = 3 + 2 + 3 − 0.5 = 7.5 s (a reused shot plays again; the dissolve
+ * 2. Runtime = 3 + 2 + 3 ??0.5 = 7.5 s (a reused shot plays again; the dissolve
  *    overlaps the previous tail).
  */
 export const test_film_cut_sequence_valid = (): void => {

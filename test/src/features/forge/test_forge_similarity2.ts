@@ -1,17 +1,17 @@
-import { fitSimilarity2 } from "@autofilm/forge";
+import { fitSimilarity2 } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
 /**
  * The 2D similarity fit recovers a known transform exactly when the
- * correspondence is exact: destination points are the sources rotated 30°,
+ * correspondence is exact: destination points are the sources rotated 30째,
  * scaled 2x, and translated, with z scaled by the same factor about the
- * centroid — the oracle is the constructed transform itself, not the fit's own
+ * centroid ??the oracle is the constructed transform itself, not the fit's own
  * output.
  *
- * Scenario: a 4-point square mapped by (s=2, θ=30°, t=(5, -3), z 2x) yields
- * scale 2, rotation π/6, and `apply` reproduces every destination point.
+ * Scenario: a 4-point square mapped by (s=2, 罐=30째, t=(5, -3), z 2x) yields
+ * scale 2, rotation ?/6, and `apply` reproduces every destination point.
  */
 export const test_forge_similarity2 = (): void => {
   const s = 2;

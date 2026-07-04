@@ -9,7 +9,7 @@ Unit tests pin the engine's numbers; they cannot tell you the character renders 
 
 ## When to verify visually
 
-- A `@autofilm/viewer` change (model/scene builder, pose application, material, camera, lights, the player loop).
+- A `@automovie/viewer` change (model/scene builder, pose application, material, camera, lights, the player loop).
 - A new or changed pose, motion clip, or expression whose correctness is "it looks like X".
 - A render-output or headless-snapshot change.
 - Before reporting any of the above as working.

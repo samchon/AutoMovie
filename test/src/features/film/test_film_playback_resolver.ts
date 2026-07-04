@@ -1,10 +1,10 @@
-import { resolveSequencePlayback, sequenceTimeline } from "@autofilm/engine";
-import { IAutoFilmSequence, IAutoFilmShot } from "@autofilm/interface";
+import { resolveSequencePlayback, sequenceTimeline } from "@automovie/engine";
+import { IautomovieSequence, IautomovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const shot = (id: string, duration: number): IAutoFilmShot => ({
+const shot = (id: string, duration: number): IautomovieShot => ({
   id,
   name: null,
   scene: "scene-duel",
@@ -16,7 +16,7 @@ const shot = (id: string, duration: number): IAutoFilmShot => ({
 });
 const SHOTS = [shot("shot:beat-1", 3), shot("shot:beat-2", 4)];
 
-const SEQUENCE: IAutoFilmSequence = {
+const SEQUENCE: IautomovieSequence = {
   id: "seq",
   name: null,
   fps: 24,
@@ -40,19 +40,19 @@ const SEQUENCE: IAutoFilmSequence = {
  * the two arithmetics (gate-side runtime, playback-side timeline) can never
  * drift apart silently. Hand-laid timeline: entry 0 spans [0, 3), entry 1 (trim
  * [0.5, 2.5]) spans [3, 5), entry 2 dissolves in 0.5 s early, spanning [4.5,
- * 7.5) — runtime 7.5.
+ * 7.5) ??runtime 7.5.
  *
  * Scenarios:
  *
  * 1. `sequenceTimeline` lays entries at starts 0 / 3 / 4.5 with runtime 7.5.
- * 2. T = 1 → entry 0 at local 1, hard cut (no blend).
- * 3. T = 3.2 → entry 1 at local 0.5 + 0.2 = 0.7 (the trim offsets local time), no
+ * 2. T = 1 ??entry 0 at local 1, hard cut (no blend).
+ * 3. T = 3.2 ??entry 1 at local 0.5 + 0.2 = 0.7 (the trim offsets local time), no
  *    blend.
- * 4. T = 4.7 → inside the dissolve: live entry 2 at local 0.2, blending from the
+ * 4. T = 4.7 ??inside the dissolve: live entry 2 at local 0.2, blending from the
  *    outgoing entry 1 tail at local 0.5 + 1.7 = 2.2, incoming weight 0.2 / 0.5
  *    = 0.4.
- * 5. T = 4.99…+0.5 = 5.1 (past the dissolve) → entry 2 alone, no blend.
- * 6. T = −1 and T = 7.5 (the exclusive end) → null; T = 0 → entry 0 at 0.
+ * 5. T = 4.99??0.5 = 5.1 (past the dissolve) ??entry 2 alone, no blend.
+ * 6. T = ?? and T = 7.5 (the exclusive end) ??null; T = 0 ??entry 0 at 0.
  */
 export const test_film_playback_resolver = (): void => {
   const timeline = sequenceTimeline(SEQUENCE, SHOTS);

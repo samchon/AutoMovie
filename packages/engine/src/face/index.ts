@@ -1,3 +1,3 @@
-export * from "./flattenFace";
-export * from "./flattenHead";
-export * from "./morphFace";
+export * from "./FlattenFace";
+export * from "./FlattenHead";
+export * from "./MorphFace";

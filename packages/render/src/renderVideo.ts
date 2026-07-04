@@ -1,15 +1,15 @@
-import { IAutoFilmRenderSpec } from "@autofilm/interface";
+import { IautomovieRenderSpec } from "@automovie/interface";
 
-import { ffmpegArgs, frameName, framePattern, frameTimes } from "./plan";
+import { ffmpegArgs, frameName, framePattern, frameTimes } from "./Plan";
 
 /**
  * The host-supplied I/O a render needs. Kept as injected dependencies so the
  * orchestration ({@link renderVideo}) stays a pure, deterministic, testable
- * function while the environment-specific halves — a headless browser
- * screenshot and an ffmpeg spawn — live in the caller (the engine is
+ * function while the environment-specific halves ??a headless browser
+ * screenshot and an ffmpeg spawn ??live in the caller (the engine is
  * renderer-agnostic; this keeps the render pipeline the same way).
  */
-export interface IAutoFilmRenderAdapters {
+export interface IautomovieRenderAdapters {
   /**
    * Render the scene at clip-local `timeSeconds` and write frame `index` into
    * `dir` under its {@link frameName}. Returns the written path.
@@ -25,7 +25,7 @@ export interface IAutoFilmRenderAdapters {
 }
 
 /** The outcome of a render: the encoded file and how many frames went into it. */
-export interface IAutoFilmRenderResult {
+export interface IautomovieRenderResult {
   /** Path to the encoded video (the adapter's `encode` output). */
   output: string;
 
@@ -41,19 +41,19 @@ export interface IAutoFilmRenderResult {
  * the frame schedule, capture each frame through the host adapter at its exact
  * `t = i / fps`, then encode the sequence with the pinned ffmpeg args.
  *
- * This is the spine of autofilm's "frames → video" path and its reproducibility
- * guarantee — pure control flow over injected I/O, so the same spec drives the
+ * This is the spine of automovie's "frames ??video" path and its reproducibility
+ * guarantee ??pure control flow over injected I/O, so the same spec drives the
  * same frames in the same order every time.
  *
  * @author Samchon
  */
 export const renderVideo = async (
-  spec: IAutoFilmRenderSpec,
+  spec: IautomovieRenderSpec,
   durationSeconds: number,
   dir: string,
   outputPath: string,
-  adapters: IAutoFilmRenderAdapters,
-): Promise<IAutoFilmRenderResult> => {
+  adapters: IautomovieRenderAdapters,
+): Promise<IautomovieRenderResult> => {
   const times = frameTimes(spec.fps, durationSeconds);
   const frames: string[] = [];
   for (let i = 0; i < times.length; ++i)

@@ -1,14 +1,14 @@
-import { buildHairBun, buildSkullShell } from "@autofilm/forge";
+import { buildHairBun, buildSkullShell } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**
  * The chignon lobe rides the occiput: size `0` must yield empty parts (the
  * preset schema covers bunless styles), a real bun sits wholly BEHIND the
  * head's center plane, and `height` moves it up the occiput. The lobe must also
- * stay inside the skull's vertical span — a bun floating off the head is the
+ * stay inside the skull's vertical span ??a bun floating off the head is the
  * failure this pins.
  *
- * Scenario: size 0 → empty; size 0.8 at two heights → both behind (mean z < 0),
+ * Scenario: size 0 ??empty; size 0.8 at two heights ??both behind (mean z < 0),
  * the higher one strictly higher, both within the dome's y range.
  */
 export const test_forge_hair_bun = (): void => {

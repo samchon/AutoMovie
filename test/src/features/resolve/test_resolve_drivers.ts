@@ -1,18 +1,18 @@
-import { IAutoFilmSampledChannel, resolveDrivers } from "@autofilm/engine";
+import { IautomovieSampledChannel, resolveDrivers } from "@automovie/engine";
 import {
-  IAutoFilmAimDriver,
-  IAutoFilmChannel,
-  IAutoFilmCopyDriver,
-  IAutoFilmDrivenDriver,
-  IAutoFilmDriver,
-  IAutoFilmNode,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  IautomovieAimDriver,
+  IautomovieChannel,
+  IautomovieCopyDriver,
+  IautomovieDrivenDriver,
+  IautomovieDriver,
+  IautomovieNode,
+  IautomovieTransform,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const IDENTITY: IAutoFilmTransform = {
+const IDENTITY: IautomovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -20,8 +20,8 @@ const IDENTITY: IAutoFilmTransform = {
 
 const node = (
   id: string,
-  transform: IAutoFilmTransform = IDENTITY,
-): IAutoFilmNode => ({
+  transform: IautomovieTransform = IDENTITY,
+): IautomovieNode => ({
   id,
   name: null,
   parent: null,
@@ -33,21 +33,21 @@ const node = (
   skin: null,
 });
 
-const byId = (...nodes: IAutoFilmNode[]): Map<string, IAutoFilmNode> =>
+const byId = (...nodes: IautomovieNode[]): Map<string, IautomovieNode> =>
   new Map(nodes.map((n) => [n.id, n]));
 
-const ptr = (p: string): IAutoFilmChannel => ({
+const ptr = (p: string): IautomovieChannel => ({
   kind: "pointer",
   pointer: p,
   valueType: "scalar",
 });
 
 const seed = (
-  entries: [string, IAutoFilmChannel, number[]][],
-): Map<string, IAutoFilmSampledChannel> =>
+  entries: [string, IautomovieChannel, number[]][],
+): Map<string, IautomovieSampledChannel> =>
   new Map(entries.map(([k, channel, value]) => [k, { channel, value }]));
 
-const copy = (over: Partial<IAutoFilmCopyDriver>): IAutoFilmCopyDriver => ({
+const copy = (over: Partial<IautomovieCopyDriver>): IautomovieCopyDriver => ({
   type: "copy",
   owner: "o",
   source: "s",
@@ -59,8 +59,8 @@ const copy = (over: Partial<IAutoFilmCopyDriver>): IAutoFilmCopyDriver => ({
 });
 
 const driven = (
-  over: Partial<IAutoFilmDrivenDriver>,
-): IAutoFilmDrivenDriver => ({
+  over: Partial<IautomovieDrivenDriver>,
+): IautomovieDrivenDriver => ({
   type: "driven",
   output: ptr("/out"),
   source: ptr("/in"),
@@ -82,7 +82,7 @@ const driven = (
  *    source's rest values, written as fresh sampled channels.
  * 2. A translation-only copy at influence 0.5 between two _animated_ nodes reads
  *    both sides from the sampled map and overwrites the owner's existing sample
- *    — proving the rest-vs-sample and new-vs-existing branches both ways, and
+ *    ??proving the rest-vs-sample and new-vs-existing branches both ways, and
  *    that the disabled rotation/scale components are left untouched.
  */
 export const test_resolve_drivers_copy = (): void => {
@@ -157,10 +157,9 @@ export const test_resolve_drivers_copy = (): void => {
  *
  * Scenarios:
  *
- * 1. A present source remaps linearly: 5 on `[0,10]→[0,100]` is 50.
+ * 1. A present source remaps linearly: 5 on `[0,10]??0,100]` is 50.
  * 2. An absent source falls back to `inRange[0]`, mapping to `outRange[0]`.
- * 3. With `clamp`, a source past the input range pins to the output bound (20 →
- *    100); without clamp it would extrapolate.
+ * 3. With `clamp`, a source past the input range pins to the output bound (20 ?? *    100); without clamp it would extrapolate.
  * 4. A degenerate input range (`[5,5]`) maps to `outRange[0]` rather than dividing
  *    by zero.
  * 5. A `curve` supersedes the linear remap with a piecewise-linear mapping:
@@ -168,7 +167,7 @@ export const test_resolve_drivers_copy = (): void => {
  *    above the last.
  */
 export const test_resolve_drivers_driven = (): void => {
-  const run = (d: IAutoFilmDrivenDriver, src?: number): number[] => {
+  const run = (d: IautomovieDrivenDriver, src?: number): number[] => {
     const sampled =
       src === undefined ? seed([]) : seed([["ptr:/in", ptr("/in"), [src]]]);
     resolveDrivers([d], sampled, new Map());
@@ -201,7 +200,7 @@ export const test_resolve_drivers_driven = (): void => {
     ],
   });
   TestValidator.equals(
-    "curve interpolates within the steep last segment (8.5 → 55)",
+    "curve interpolates within the steep last segment (8.5 ??55)",
     run(curl, 8.5),
     [55],
   );
@@ -224,8 +223,8 @@ export const test_resolve_drivers_driven = (): void => {
  *
  * Scenarios:
  *
- * 1. Chained driven keys `/x → /y → /z` submitted out of order ([B, A]) still
- *    resolve A before B, so `/z` sees A's computed `/y` (1 → 2 → 4) rather than
+ * 1. Chained driven keys `/x ??/y ??/z` submitted out of order ([B, A]) still
+ *    resolve A before B, so `/z` sees A's computed `/y` (1 ??2 ??4) rather than
  *    an absent source.
  * 2. A driver `A` feeding two dependents `B` and `C` ([B, C, A]) resolves once;
  *    both dependents see its output.
@@ -278,7 +277,7 @@ export const test_resolve_drivers_order = (): void => {
     outRange: [0, 2],
   });
   const sampled2 = seed([["ptr:/x", ptr("/x"), [1]]]);
-  const aim: IAutoFilmAimDriver = {
+  const aim: IautomovieAimDriver = {
     type: "aim",
     owner: "o",
     target: "t",
@@ -301,7 +300,7 @@ export const test_resolve_drivers_order = (): void => {
   TestValidator.equals("aim driver deferred", deferred.length, 1);
   TestValidator.equals(
     "aim is the deferred one",
-    (deferred[0] as IAutoFilmDriver).type,
+    (deferred[0] as IautomovieDriver).type,
     "aim",
   );
 };
@@ -310,12 +309,12 @@ export const test_resolve_drivers_order = (): void => {
  * A dependency cycle among value drivers throws rather than looping.
  *
  * Scenario: `o`'s rotation copies from `s` while `s`'s rotation copies from `o`
- * — a back edge onto a driver still on the stack — so resolution rejects the
+ * ??a back edge onto a driver still on the stack ??so resolution rejects the
  * ill-formed rig.
  */
 export const test_resolve_drivers_cycle = (): void => {
   const nodes = byId(node("o"), node("s"));
-  const cyclic: IAutoFilmDriver[] = [
+  const cyclic: IautomovieDriver[] = [
     copy({ owner: "o", source: "s", rotation: true }),
     copy({ owner: "s", source: "o", rotation: true }),
   ];

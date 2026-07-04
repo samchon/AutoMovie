@@ -1,4 +1,4 @@
-import { sampleMotion } from "@autofilm/engine";
+import { sampleMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -20,8 +20,8 @@ const rest = makePose([joint("leftLowerArm", { flexion: 0 })]);
  *
  * Scenario: a 1s clip from `happy` with `jawOpen`=1.0, `mouthSmileLeft`=0.4 to
  * `happy` with `jawOpen`=0.0 (no `mouthSmileLeft`). At t=0.5: `jawOpen` blends
- * 1.0→0.0 to 0.5, and `mouthSmileLeft` (present only at the start) decays
- * 0.4·(1−0.5) = 0.2.
+ * 1.0??.0 to 0.5, and `mouthSmileLeft` (present only at the start) decays
+ * 0.4쨌(1??.5) = 0.2.
  */
 export const test_motion_sample_expression_blendshapes = (): void => {
   const clip = makeMotion(

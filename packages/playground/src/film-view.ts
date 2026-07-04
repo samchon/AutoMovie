@@ -1,43 +1,43 @@
 import {
   HUMANOID_GAITS,
   HUMANOID_JOINT_AXES,
-  IAutoFilmActorContext,
+  IautomovieActorContext,
   blockBeat,
   cutSequence,
   makeActorSynthesizer,
   performShot,
   resolveSequencePlayback,
   stageScene,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmBlockingApplication,
-  IAutoFilmMotion,
-  IAutoFilmPerformanceApplication,
-  IAutoFilmScriptApplication,
-  IAutoFilmShot,
-  IAutoFilmStagingApplication,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieBlockingApplication,
+  IautomovieMotion,
+  IautomoviePerformanceApplication,
+  IautomovieScriptApplication,
+  IautomovieShot,
+  IautomovieStagingApplication,
+  IautomovieVector3,
+} from "@automovie/interface";
 import {
-  AutoFilmPlayer,
+  automoviePlayer,
   applyObjectMotion,
   buildModel,
   mountViewer,
   renderCrossDissolve,
-} from "@autofilm/viewer";
+} from "@automovie/viewer";
 import * as THREE from "three";
 
-import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
+import { DEFAULT_STICKMAN, buildStickman } from "./Stickman";
 
 // The film pipeline end to end, on screen: the same stage payloads the LLM
-// harness will emit (script → staging → blocking → performance → assemble),
+// harness will emit (script ??staging ??blocking ??performance ??assemble),
 // consumed by the engine's film compilers, played back through the sequence
-// resolver — real gait travel, a follow camera compiled from a `frame` verb,
+// resolver ??real gait travel, a follow camera compiled from a `frame` verb,
 // a hard cut onto an orbiting close-up. Deterministic via `renderAt(t)`, so
 // capture-shots.mjs bakes the identical film every run.
 
-// ── the stage payloads (what the LLM will author; fixtures here) ─────────────
-const script: IAutoFilmScriptApplication.IWrite = {
+// ?? the stage payloads (what the LLM will author; fixtures here) ?????????????
+const script: IautomovieScriptApplication.IWrite = {
   type: "write",
   logline: "A pursuer closes the distance; the one waiting never turns.",
   theme: "inevitability at walking pace",
@@ -61,7 +61,7 @@ const script: IAutoFilmScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoFilmStagingApplication.IWrite = {
+const staging: IautomovieStagingApplication.IWrite = {
   type: "write",
   scene: { id: "scene-pursuit", name: "the pursuit" },
   plan: "walker starts 2.95 m behind the waiter, both facing +Z; the camera stands side-on and follows the walker in.",
@@ -87,11 +87,11 @@ const staging: IAutoFilmStagingApplication.IWrite = {
   ],
 };
 
-const blockings: IAutoFilmBlockingApplication.IWrite[] = [
+const blockings: IautomovieBlockingApplication.IWrite[] = [
   {
     type: "write",
     beat: "approach",
-    analysis: "the distance itself is the drama — the walk must read whole.",
+    analysis: "the distance itself is the drama ??the walk must read whole.",
     rationale:
       "a medium follow keeps the walker's stride and the shrinking gap in one frame.",
     actors: [
@@ -112,7 +112,7 @@ const blockings: IAutoFilmBlockingApplication.IWrite[] = [
   {
     type: "write",
     beat: "face-off",
-    analysis: "stillness after motion — the circle asks who moves first.",
+    analysis: "stillness after motion ??the circle asks who moves first.",
     rationale:
       "an orbiting close-up on the waiter turns his stillness into tension.",
     actors: [
@@ -128,7 +128,7 @@ const blockings: IAutoFilmBlockingApplication.IWrite[] = [
   },
 ];
 
-const performances: IAutoFilmPerformanceApplication.IWrite[] = [
+const performances: IautomoviePerformanceApplication.IWrite[] = [
   {
     type: "write",
     beat: "approach",
@@ -192,19 +192,19 @@ const performances: IAutoFilmPerformanceApplication.IWrite[] = [
       },
     ],
     revise: {
-      review: "nothing moves but the camera — as blocked.",
+      review: "nothing moves but the camera ??as blocked.",
       final: null,
     },
     duration: 2.5,
   },
 ];
 
-// ── rigs + the content seam ──────────────────────────────────────────────────
+// ?? rigs + the content seam ??????????????????????????????????????????????????
 const walkerRig = buildStickman(DEFAULT_STICKMAN);
 const waiterRig = buildStickman(DEFAULT_STICKMAN);
 const rigOf = { walker: walkerRig, waiter: waiterRig } as const;
 
-// The canonical humanoid walk from the engine's gait library — bent knees
+// The canonical humanoid walk from the engine's gait library ??bent knees
 // (neutral-centered so they stay in ROM), contralateral arm swing, already
 // tuned. The demo drops it straight into the actor context; no hand-authoring.
 const WALK = HUMANOID_GAITS.walk;
@@ -212,10 +212,10 @@ const WALK = HUMANOID_GAITS.walk;
 const staged = stageScene(script, staging);
 if (staged.success !== true) throw new Error("staging failed");
 
-const nodePositions = new Map<string, IAutoFilmVector3>(
+const nodePositions = new Map<string, IautomovieVector3>(
   staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
 );
-const contexts = new Map<string, IAutoFilmActorContext>(
+const contexts = new Map<string, IautomovieActorContext>(
   staged.scene.nodes.map((n) => [
     n.id,
     {
@@ -235,9 +235,9 @@ const contexts = new Map<string, IAutoFilmActorContext>(
 );
 const synthesize = makeActorSynthesizer(contexts, nodePositions);
 
-// ── the ladder: block → perform → cut ────────────────────────────────────────
-const shots: IAutoFilmShot[] = [];
-const motionsByShot = new Map<string, Record<string, IAutoFilmMotion>>();
+// ?? the ladder: block ??perform ??cut ????????????????????????????????????????
+const shots: IautomovieShot[] = [];
+const motionsByShot = new Map<string, Record<string, IautomovieMotion>>();
 performances.forEach((performance, i) => {
   const blocked = blockBeat(script, staged, blockings[i]!);
   if (blocked.success !== true)
@@ -277,7 +277,7 @@ const cut = cutSequence(
 if (cut.success !== true) throw new Error("cut failed");
 export const FILM_DURATION = cut.runtime;
 
-// ── the set: scene nodes → three.js ─────────────────────────────────────────
+// ?? the set: scene nodes ??three.js ?????????????????????????????????????????
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf2f4f8);
 scene.add(new THREE.GridHelper(10, 20, 0xb8c0cc, 0xd5dbe4));
@@ -286,7 +286,7 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.4);
 sun.position.set(2.4, 3.4, -1);
 scene.add(sun);
 
-// node id → its scene group, so a shot's objectMotions (a projectile/prop's
+// node id ??its scene group, so a shot's objectMotions (a projectile/prop's
 // baked clip) can drive the object's world transform each frame.
 const groupsById = new Map<string, THREE.Group>();
 const built = Object.fromEntries(
@@ -308,13 +308,13 @@ const built = Object.fromEntries(
 // One player per (shot, performing node); seeking a shot drives its players.
 const playersByShot = new Map<
   string,
-  { node: string; player: AutoFilmPlayer }[]
+  { node: string; player: automoviePlayer }[]
 >(
   shots.map((shot) => [
     shot.id,
     shot.performances.map((p) => ({
       node: p.node,
-      player: new AutoFilmPlayer(
+      player: new automoviePlayer(
         built[p.node]!,
         rigOf[p.node as keyof typeof rigOf].skeleton,
         motionsByShot.get(shot.id)![p.node]!,
@@ -324,7 +324,7 @@ const playersByShot = new Map<
   ]),
 );
 
-// ── the projector: global seconds → posed set + framed camera ────────────────
+// ?? the projector: global seconds ??posed set + framed camera ????????????????
 const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 100);
 const stagedCam = staged.scene.cameras[0]!;
 const applyStagedCamera = (): void => {
@@ -344,7 +344,7 @@ let renderer!: THREE.WebGLRenderer;
 // each player, ride any objectMotions, and set the camera (its motion or the
 // staged default). The read side used both for a plain frame and for each half
 // of a cross-dissolve.
-const poseShot = (shot: IAutoFilmShot, time: number): void => {
+const poseShot = (shot: IautomovieShot, time: number): void => {
   for (const { player } of playersByShot.get(shot.id)!) player.update(time);
   for (const clip of shot.objectMotions)
     applyObjectMotion(clip, time, (node) => groupsById.get(node));
@@ -376,7 +376,7 @@ const drawFrame = (seconds: number): boolean => {
   return true;
 };
 
-// ── mount + deterministic seek contract (capture-shots.mjs) ──────────────────
+// ?? mount + deterministic seek contract (capture-shots.mjs) ??????????????????
 const params = new URLSearchParams(location.search);
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 const capMode = params.get("cap") === "1";
@@ -397,7 +397,7 @@ if (freezeAt !== null && Number.isFinite(freezeAt)) draw(freezeAt);
 (window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
   t: number,
 ): void => draw(t);
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   duration: FILM_DURATION,
   shots: shots.map((s) => s.id),

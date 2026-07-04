@@ -1,13 +1,12 @@
-import { CANONICAL_FACE_POSITIONS, buildFaceMorphs } from "@autofilm/forge";
+import { CANONICAL_FACE_POSITIONS, buildFaceMorphs } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**
  * `faceLength` stretches about the eye line: dy is affine in y with slope 0.09
- * (so dy − 0.09·y is one constant across all vertices) and x/z stay put —
- * checked as a property, without re-deriving the eye-line constant the builder
+ * (so dy ??0.09쨌y is one constant across all vertices) and x/z stay put ?? * checked as a property, without re-deriving the eye-line constant the builder
  * anchors on.
  *
- * Scenario: dy − 0.09·y has near-zero spread; dx = dz = 0 everywhere.
+ * Scenario: dy ??0.09쨌y has near-zero spread; dx = dz = 0 everywhere.
  */
 export const test_forge_face_morphs_face_length = (): void => {
   const delta = buildFaceMorphs().faceLength;

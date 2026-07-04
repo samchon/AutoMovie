@@ -1,10 +1,10 @@
-import { meshAdjacency } from "@autofilm/forge";
+import { meshAdjacency } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**
  * Adjacency and boundary classification on a hexagon fan: ring edges belong to
  * one triangle each (boundary), spokes to two (interior), so the six ring
- * vertices are boundary while the center is interior — and the center's
+ * vertices are boundary while the center is interior ??and the center's
  * neighbors are exactly the ring.
  *
  * Scenario: vertex 0 fanned to ring 1..6; center interior with 6 neighbors,

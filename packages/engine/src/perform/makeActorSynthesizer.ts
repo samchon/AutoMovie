@@ -1,10 +1,10 @@
 import {
-  IAutoFilmActionCall,
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieActionCall,
+  IautomovieKeyframe,
+  IautomovieMotion,
+  IautomoviePose,
+  IautomovieVector3,
+} from "@automovie/interface";
 
 import { aimYawPitch } from "../kinematics/aimYawPitch";
 import { reachPose } from "../kinematics/reachPose";
@@ -14,9 +14,9 @@ import { gaitMotion } from "../motion/gait";
 import { gestureMotion } from "../motion/gesture";
 import { locomoteMotion } from "../motion/locomote";
 import { reactMotion } from "../motion/react";
-import { IAutoFilmActorContext } from "./IAutoFilmActorContext";
-import { IAutoFilmActionSynthesizer } from "./compilePerformance";
-import { resolveTargetPoint } from "./resolveTargetPoint";
+import { IautomovieActorContext } from "./IautomovieActorContext";
+import { IautomovieActionSynthesizer } from "./CompilePerformance";
+import { resolveTargetPoint } from "./ResolveTargetPoint";
 
 /** Keyframes per gait cycle the reference synthesiser bakes. */
 const GAIT_SAMPLES = 8;
@@ -27,15 +27,15 @@ const REACT_MAX_DEFLECTION = 32;
 /** An unbalancing blow flinches this much harder (a floored reaction). */
 const REACT_UNBALANCE_GAIN = 1.5;
 
-/** The chain a torso/head blow ripples down — head whips most, hips least. */
+/** The chain a torso/head blow ripples down ??head whips most, hips least. */
 const REACT_CHAIN = ["head", "neck", "chest", "spine"] as const;
 
 /** Drop a world point into an actor's model space (undo its placement). */
 const toModelSpace = (
-  world: IAutoFilmVector3,
-  position: IAutoFilmVector3,
+  world: IautomovieVector3,
+  position: IautomovieVector3,
   facingDeg: number,
-): IAutoFilmVector3 => {
+): IautomovieVector3 => {
   const f = (facingDeg * Math.PI) / 180;
   const cos = Math.cos(f);
   const sin = Math.sin(f);
@@ -48,15 +48,15 @@ const toModelSpace = (
   };
 };
 
-/** A rest → hold-pose → hold clip: ease into `pose` over half the span, hold. */
+/** A rest ??hold-pose ??hold clip: ease into `pose` over half the span, hold. */
 const extendHoldClip = (
   id: string,
   skeleton: string,
-  pose: IAutoFilmPose,
+  pose: IautomoviePose,
   duration: number,
-): IAutoFilmMotion => {
-  const rest: IAutoFilmPose = { skeleton, root: null, joints: [] };
-  const key = (time: number, p: IAutoFilmPose): IAutoFilmKeyframe => ({
+): IautomovieMotion => {
+  const rest: IautomoviePose = { skeleton, root: null, joints: [] };
+  const key = (time: number, p: IautomoviePose): IautomovieKeyframe => ({
     time,
     pose: p,
     expression: null,
@@ -72,19 +72,19 @@ const extendHoldClip = (
   };
 };
 
-/** A rest → strike → rest jab: snap out to `pose` early, then retract. */
+/** A rest ??strike ??rest jab: snap out to `pose` early, then retract. */
 const jabClip = (
   id: string,
   skeleton: string,
-  pose: IAutoFilmPose,
+  pose: IautomoviePose,
   duration: number,
-): IAutoFilmMotion => {
-  const rest: IAutoFilmPose = { skeleton, root: null, joints: [] };
+): IautomovieMotion => {
+  const rest: IautomoviePose = { skeleton, root: null, joints: [] };
   const key = (
     time: number,
-    p: IAutoFilmPose,
-    easing: IAutoFilmKeyframe["easing"],
-  ): IAutoFilmKeyframe => ({
+    p: IautomoviePose,
+    easing: IautomovieKeyframe["easing"],
+  ): IautomovieKeyframe => ({
     time,
     pose: p,
     expression: null,
@@ -105,26 +105,26 @@ const jabClip = (
 };
 
 /**
- * Build a reference {@link IAutoFilmActionSynthesizer} — the content seam
- * {@link compilePerformance} injects — for the verbs the engine can fatten
+ * Build a reference {@link IautomovieActionSynthesizer} ??the content seam
+ * {@link compilePerformance} injects ??for the verbs the engine can fatten
  * **deterministically** from an actor's context:
  *
- * - `locomote` → the actor's matching {@link IAutoFilmGait}; if its target
+ * - `locomote` ??the actor's matching {@link IautomovieGait}; if its target
  *   resolves to a world point ({@link resolveTargetPoint}, against `nodes`), the
  *   gait is carried that far at the actor's speed ({@link locomoteMotion}),
- *   otherwise it steps in place (a relative target — "off to the left" — has no
+ *   otherwise it steps in place (a relative target ??"off to the left" ??has no
  *   positional point yet);
- * - `hold` → the actor's rest pose held for the duration ({@link holdMotion});
- * - `lookAt` → the head turned to aim at a resolved target;
- * - `emote` → a face-region expression clip;
- * - `gesture` → the postural/whole-body gestures (bow/nod/shake/crouch/kick/
+ * - `hold` ??the actor's rest pose held for the duration ({@link holdMotion});
+ * - `lookAt` ??the head turned to aim at a resolved target;
+ * - `emote` ??a face-region expression clip;
+ * - `gesture` ??the postural/whole-body gestures (bow/nod/shake/crouch/kick/
  *   stagger/wave/celebrate/jump) via {@link gestureMotion}, plus the reachPose
  *   arm gestures: `point` (arm extended toward `at`, held) and `strike` (a jab
  *   thrown at `at`, then retracted); the remaining combat kinds return null;
- * - `reach` → analytic two-bone arm IK to a resolved target ({@link reachPose}),
+ * - `reach` ??analytic two-bone arm IK to a resolved target ({@link reachPose}),
  *   the target dropped into the actor's model space; needs the context's `rig`
  *   and is left unclamped so an impossible reach fails the shot's ROM gate;
- * - `react` → a ROM-clamped flinch away from the blow ({@link reactMotion}),
+ * - `react` ??a ROM-clamped flinch away from the blow ({@link reactMotion}),
  *   decomposed into the actor's frame so a front hit snaps the torso back and a
  *   side hit leans it; needs the context's `rig` (the flinch is bounded by
  *   joint ROM), so a rig-less context synthesises nothing for it.
@@ -132,18 +132,18 @@ const jabClip = (
  * Every other verb returns `null` (the host supplies its rig-specific content,
  * or a richer synthesiser does), and an unknown actor returns `null`. This is
  * the bridge that makes the action compiler actually produce motion from the
- * declarative gait/profile data — the thin verb in, dense motion out.
+ * declarative gait/profile data ??the thin verb in, dense motion out.
  *
  * @author Samchon
  */
 export const makeActorSynthesizer = (
-  contexts: Map<string, IAutoFilmActorContext>,
-  nodes: Map<string, IAutoFilmVector3>,
-): IAutoFilmActionSynthesizer => {
+  contexts: Map<string, IautomovieActorContext>,
+  nodes: Map<string, IautomovieVector3>,
+): IautomovieActionSynthesizer => {
   return (
-    action: IAutoFilmActionCall,
+    action: IautomovieActionCall,
     actor: string,
-  ): IAutoFilmMotion | null => {
+  ): IautomovieMotion | null => {
     const ctx = contexts.get(actor);
     if (ctx === undefined) return null;
     if (action.verb === "locomote") {
@@ -156,14 +156,14 @@ export const makeActorSynthesizer = (
         GAIT_SAMPLES,
       );
       const dest = resolveTargetPoint(action.to, nodes);
-      if (dest === null) return cycle; // relative/unresolved → step in place
+      if (dest === null) return cycle; // relative/unresolved ??step in place
       // Travel is baked onto the pose root, which the renderer applies in the
       // actor's model frame (under its staged facing). So aim it in model space
-      // — undo the facing — and the composed render carries it to the world
+      // ??undo the facing ??and the composed render carries it to the world
       // destination; a turned actor would otherwise walk off its heading.
       const local = toModelSpace(dest, ctx.position, ctx.facingDeg);
       const distance = Math.hypot(local.x, local.z);
-      if (distance < 1e-6) return cycle; // already there → step in place
+      if (distance < 1e-6) return cycle; // already there ??step in place
       return locomoteMotion(
         `${actor}:${action.gait}:travel`,
         cycle,
@@ -182,7 +182,7 @@ export const makeActorSynthesizer = (
       );
     if (action.verb === "lookAt") {
       const target = resolveTargetPoint(action.to, nodes);
-      if (target === null) return null; // relative target — no aim point yet
+      if (target === null) return null; // relative target ??no aim point yet
       const eye = {
         x: ctx.position.x,
         y: ctx.position.y + ctx.eyeHeight,
@@ -191,14 +191,14 @@ export const makeActorSynthesizer = (
       const { yawDeg, pitchDeg } = aimYawPitch(eye, target, ctx.facingDeg);
       const duration = action.duration === "auto" ? 1 : action.duration;
       // turn the head: twist toward the target, flexion to tilt (up = extension)
-      const headPose: IAutoFilmPose = {
+      const headPose: IautomoviePose = {
         skeleton: ctx.skeleton,
         root: null,
         joints: [
           { bone: "head", flexion: -pitchDeg, abduction: null, twist: yawDeg },
         ],
       };
-      const frame = (time: number): IAutoFilmKeyframe => ({
+      const frame = (time: number): IautomovieKeyframe => ({
         time,
         pose: headPose,
         expression: null,
@@ -221,7 +221,7 @@ export const makeActorSynthesizer = (
         intensity: action.intensity,
         blendshapes: null,
       };
-      const frame = (time: number): IAutoFilmKeyframe => ({
+      const frame = (time: number): IautomovieKeyframe => ({
         time,
         pose: { skeleton: ctx.skeleton, root: null, joints: [] },
         expression,
@@ -238,7 +238,7 @@ export const makeActorSynthesizer = (
     }
     if (action.verb === "gesture") {
       const duration = action.duration === "auto" ? 1 : action.duration;
-      // `point` rides reachPose (an arm extended toward `at` — reachPose
+      // `point` rides reachPose (an arm extended toward `at` ??reachPose
       // clamps a far target onto the reach shell, which is exactly a pointing
       // arm). Left unclamped like `reach`, so an impossible point fails the
       // shot's ROM gate. Needs the rig and a resolvable target.
@@ -256,8 +256,8 @@ export const makeActorSynthesizer = (
           ? null
           : extendHoldClip(`${actor}:point`, ctx.skeleton, pose, duration);
       }
-      // `strike` (a jab) also rides reachPose — the fist thrown toward the
-      // target — but snaps out and retracts (jabClip) instead of holding, so it
+      // `strike` (a jab) also rides reachPose ??the fist thrown toward the
+      // target ??but snaps out and retracts (jabClip) instead of holding, so it
       // reads as a punch. Same rig + resolvable-target requirement as point.
       if (action.kind === "strike" && ctx.rig !== undefined) {
         const world =
@@ -287,10 +287,10 @@ export const makeActorSynthesizer = (
       // target to a world point, drop it into the actor's model space (undo the
       // placement), and solve the arm. reachPose does not clamp to ROM, so a
       // reach to an impossible spot yields an out-of-ROM pose the shot's ROM
-      // gate rejects — the model must reposition, not the engine hide it.
+      // gate rejects ??the model must reposition, not the engine hide it.
       if (ctx.rig === undefined) return null;
       const world = resolveTargetPoint(action.to, nodes);
-      if (world === null) return null; // relative target — no point to reach
+      if (world === null) return null; // relative target ??no point to reach
       const reach = reachPose(
         ctx.rig,
         action.hand,
@@ -313,7 +313,7 @@ export const makeActorSynthesizer = (
         (action.unbalance === true ? REACT_UNBALANCE_GAIN : 1);
 
       // Decompose the blow into the actor's own frame so a front hit snaps the
-      // torso back (extension, −flexion) and a side hit leans it (abduction).
+      // torso back (extension, ?뭚lexion) and a side hit leans it (abduction).
       // `from` is where the blow comes from; the body recoils away from it.
       const source = resolveTargetPoint(action.from, nodes);
       const facing = (ctx.facingDeg * Math.PI) / 180;
@@ -321,7 +321,7 @@ export const makeActorSynthesizer = (
       const right = { x: Math.cos(facing), y: 0, z: -Math.sin(facing) };
       let push;
       if (source === null)
-        push = { flexion: -magnitude }; // unknown → snap back
+        push = { flexion: -magnitude }; // unknown ??snap back
       else {
         const away = {
           x: ctx.position.x - source.x,

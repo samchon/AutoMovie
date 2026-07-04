@@ -1,10 +1,10 @@
-import { clampPose } from "@autofilm/engine";
+import { clampPose } from "@automovie/engine";
 import {
-  IAutoFilmBone,
-  IAutoFilmJointConstraint,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  IautomovieBone,
+  IautomovieJointConstraint,
+  IautomoviePose,
+  IautomovieSkeleton,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 const REST = {
@@ -13,13 +13,13 @@ const REST = {
   scale: { x: 1, y: 1, z: 1 },
 };
 const bone = (
-  name: IAutoFilmBone["bone"],
-  constraint: IAutoFilmJointConstraint | null,
-): IAutoFilmBone => ({ bone: name, parent: null, rest: REST, constraint });
+  name: IautomovieBone["bone"],
+  constraint: IautomovieJointConstraint | null,
+): IautomovieBone => ({ bone: name, parent: null, rest: REST, constraint });
 
 // leftLowerArm carries an explicit override; leftUpperArm falls back to the
 // default table; hips has no constraint anywhere (pass-through).
-const SKELETON: IAutoFilmSkeleton = {
+const SKELETON: IautomovieSkeleton = {
   id: "s",
   bones: [
     bone("leftLowerArm", {
@@ -33,24 +33,24 @@ const SKELETON: IAutoFilmSkeleton = {
 };
 
 /**
- * `clampPose` — the enforce face of ROM. Every joint axis is pulled into its
+ * `clampPose` ??the enforce face of ROM. Every joint axis is pulled into its
  * `[min,max]`; an immobile (`null`) axis is forced to 0; an unconstrained bone
  * passes through. Mirrors `validateJointRom`'s bounds, so a clamped pose is one
  * that pose-ROM validation would accept.
  *
  * Scenarios:
  *
- * 1. Per-bone override: leftLowerArm flexion 120 → 90 (above max), its `null`
- *    abduction 30 → 0 (immobile axis), its `null`-angle twist stays `null`.
- * 2. Default-table fallback: leftUpperArm flexion −200 → −60 (below min), and its
+ * 1. Per-bone override: leftLowerArm flexion 120 ??90 (above max), its `null`
+ *    abduction 30 ??0 (immobile axis), its `null`-angle twist stays `null`.
+ * 2. Default-table fallback: leftUpperArm flexion ??00 ????0 (below min), and its
  *    in-range abduction 50 is left untouched.
  * 3. Bone not in the skeleton resolves to the default table (rightLowerArm flexion
- *    200 → 150).
+ *    200 ??150).
  * 4. A bone with no constraint anywhere (hips) passes through unchanged, and the
  *    root transform is preserved.
  */
 export const test_rom_clamp_pose = (): void => {
-  const pose: IAutoFilmPose = {
+  const pose: IautomoviePose = {
     skeleton: "s",
     root: REST,
     joints: [
@@ -70,7 +70,7 @@ export const test_rom_clamp_pose = (): void => {
     90,
   );
   TestValidator.equals(
-    "immobile abduction → 0",
+    "immobile abduction ??0",
     byBone("leftLowerArm").abduction,
     0,
   );
@@ -92,7 +92,7 @@ export const test_rom_clamp_pose = (): void => {
     50,
   );
 
-  // 3. bone absent from the skeleton → default table
+  // 3. bone absent from the skeleton ??default table
   TestValidator.equals(
     "absent bone uses table",
     byBone("rightLowerArm").flexion,

@@ -1,8 +1,8 @@
-import { tessellate } from "@autofilm/engine";
-import { AutoFilmPrimitiveShape } from "@autofilm/interface";
+import { tessellate } from "@automovie/engine";
+import { automoviePrimitiveShape } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-const SHAPES: AutoFilmPrimitiveShape[] = [
+const SHAPES: automoviePrimitiveShape[] = [
   { type: "box", width: 0.4, height: 0.6, depth: 0.2 },
   { type: "sphere", radius: 0.5 },
   { type: "cylinder", radius: 0.3, height: 1 },
@@ -13,7 +13,7 @@ const SHAPES: AutoFilmPrimitiveShape[] = [
 
 /**
  * Whatever primitive it tessellates, the engine must emit well-formed mesh data
- * — the structural invariants a renderer relies on to upload geometry to the
+ * ??the structural invariants a renderer relies on to upload geometry to the
  * GPU without crashing or drawing garbage. This sweeps all six primitive types
  * through the same battery of checks.
  *
@@ -24,7 +24,7 @@ const SHAPES: AutoFilmPrimitiveShape[] = [
  * 3. Indices come in triangles (length divisible by 3).
  * 4. The mesh is non-empty (it has both vertices and triangles).
  * 5. Every position is finite (no NaN / Infinity).
- * 6. Every index is an integer inside the vertex range — no out-of-bounds
+ * 6. Every index is an integer inside the vertex range ??no out-of-bounds
  *    reference that would read past the vertex buffer.
  */
 export const test_geometry_tessellate_invariants = (): void => {

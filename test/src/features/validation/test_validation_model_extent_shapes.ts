@@ -1,8 +1,8 @@
-import { validateModel } from "@autofilm/engine";
+import { validateModel } from "@automovie/engine";
 import {
-  AutoFilmPrimitiveShape,
-  IAutoFilmModelPart,
-} from "@autofilm/interface";
+  automoviePrimitiveShape,
+  IautomovieModelPart,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
@@ -10,8 +10,8 @@ import { hasViolation } from "../internal/predicates";
 
 const part = (
   id: string,
-  shape: AutoFilmPrimitiveShape,
-): IAutoFilmModelPart => ({
+  shape: automoviePrimitiveShape,
+): IautomovieModelPart => ({
   id,
   name: id,
   geometry: { type: "primitive", shape },
@@ -26,7 +26,7 @@ const part = (
  * and a non-positive dimension on any of them is a `range` violation. Pins the
  * sphere / plane / cylinder / cone branches the box-only extent test misses.
  *
- * Scenario: a model with four bad parts — a zero-radius sphere, a zero-width
+ * Scenario: a model with four bad parts ??a zero-radius sphere, a zero-width
  * plane, a zero-height cylinder, and a zero-radius cone. Validation must fail,
  * flagging the offending dimension of each (`radius`, `width`, `height`).
  */

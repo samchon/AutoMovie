@@ -1,19 +1,19 @@
-import { aimRotation } from "@autofilm/engine";
+import { aimRotation } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  AutoFilmPrimitiveShape,
-  IAutoFilmBone,
-  IAutoFilmJointConstraint,
-  IAutoFilmModel,
-  IAutoFilmModelPart,
-  IAutoFilmQuaternion,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  automoviePrimitiveShape,
+  IautomovieBone,
+  IautomovieJointConstraint,
+  IautomovieModel,
+  IautomovieModelPart,
+  IautomovieQuaternion,
+  IautomovieSkeleton,
+  IautomovieTransform,
+  IautomovieVector3,
+} from "@automovie/interface";
 
 /**
- * A stick-figure **horse** — a large quadruped on the normalized humanoid rig,
+ * A stick-figure **horse** ??a large quadruped on the normalized humanoid rig,
  * the mount for the {@link buildKnight} rider. Same reinterpretation as the
  * {@link buildCat}: a horizontal spine (hips at the croup, chest at the
  * withers), the **arm** slots are the front legs and the **leg** slots the hind
@@ -30,13 +30,13 @@ import {
 export interface IHorseParams {
   /** Height of the back line (withers/croup) off the floor. */
   backHeight: number;
-  /** Hips → chest body length (the horizontal barrel). */
+  /** Hips ??chest body length (the horizontal barrel). */
   trunkLength: number;
   /** Half the track width between the left/right legs. */
   legHalf: number;
-  /** Upper-leg (shoulder/hip → knee) length. */
+  /** Upper-leg (shoulder/hip ??knee) length. */
   upperLeg: number;
-  /** Lower-leg (knee → hoof) length. */
+  /** Lower-leg (knee ??hoof) length. */
   lowerLeg: number;
   /** Head sphere radius. */
   headRadius: number;
@@ -46,7 +46,7 @@ export interface IHorseParams {
   trunkRadius: number;
 }
 
-/** A riding horse ≈ 1.5 m at the withers. */
+/** A riding horse ??1.5 m at the withers. */
 export const DEFAULT_HORSE: IHorseParams = {
   backHeight: 1.0,
   trunkLength: 0.92,
@@ -63,7 +63,7 @@ const con = (
   flexion: { min: number; max: number } | null,
   abduction: { min: number; max: number } | null,
   twist: { min: number; max: number } | null,
-): IAutoFilmJointConstraint => ({ flexion, abduction, twist });
+): IautomovieJointConstraint => ({ flexion, abduction, twist });
 
 const legCon = con(range(-80, 90), range(-15, 25), range(-15, 15));
 const kneeCon = con(range(-10, 150), null, null);
@@ -71,7 +71,7 @@ const hoofCon = con(range(-40, 40), null, null);
 
 /** Horse-tuned per-joint ROM. Bones omitted are unconstrained. */
 export const HORSE_ROM: Partial<
-  Record<AutoFilmHumanoidBone, IAutoFilmJointConstraint>
+  Record<automovieHumanoidBone, IautomovieJointConstraint>
 > = {
   spine: con(range(-45, 50), range(-20, 20), range(-25, 25)),
   chest: con(range(-35, 40), range(-15, 15), range(-20, 20)),
@@ -94,20 +94,20 @@ export const HORSE_ROM: Partial<
   leftLittleDistal: con(range(-70, 70), range(-60, 60), null),
 };
 
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IautomovieVector3 => ({ x, y, z });
 const at = (
-  t: IAutoFilmVector3,
-  r?: IAutoFilmQuaternion,
-): IAutoFilmTransform => ({
+  t: IautomovieVector3,
+  r?: IautomovieQuaternion,
+): IautomovieTransform => ({
   translation: t,
   rotation: r ?? { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 const bone = (
-  name: AutoFilmHumanoidBone,
-  parent: AutoFilmHumanoidBone | null,
-  rest: IAutoFilmTransform,
-): IAutoFilmBone => ({
+  name: automovieHumanoidBone,
+  parent: automovieHumanoidBone | null,
+  rest: IautomovieTransform,
+): IautomovieBone => ({
   bone: name,
   parent,
   rest,
@@ -115,10 +115,10 @@ const bone = (
 });
 
 /** Shortest-arc rotation taking the local +Y axis onto a target direction. */
-const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion =>
+const yToDir = (dir: IautomovieVector3): IautomovieQuaternion =>
   aimRotation({ x: 0, y: 1, z: 0 }, dir);
 
-const capsule = (radius: number, length: number): AutoFilmPrimitiveShape => ({
+const capsule = (radius: number, length: number): automoviePrimitiveShape => ({
   type: "capsule",
   radius,
   height: Math.max(0.01, length - 2 * radius),
@@ -126,11 +126,11 @@ const capsule = (radius: number, length: number): AutoFilmPrimitiveShape => ({
 
 const rod = (
   id: string,
-  boneName: AutoFilmHumanoidBone,
-  seg: IAutoFilmVector3,
+  boneName: automovieHumanoidBone,
+  seg: IautomovieVector3,
   radius: number,
   material = "hide",
-): IAutoFilmModelPart => ({
+): IautomovieModelPart => ({
   id,
   name: id,
   geometry: {
@@ -143,24 +143,24 @@ const rod = (
 });
 
 /**
- * Build the stick-figure horse — a big quadruped skeleton, rods, a maned neck,
- * a muzzle, ears, and a long tail — from a set of proportions. The `spine` bone
+ * Build the stick-figure horse ??a big quadruped skeleton, rods, a maned neck,
+ * a muzzle, ears, and a long tail ??from a set of proportions. The `spine` bone
  * is the saddle a rider attaches to.
  *
  * @author Samchon
  */
 export const buildHorse = (
   p: IHorseParams,
-): { skeleton: IAutoFilmSkeleton; model: IAutoFilmModel } => {
+): { skeleton: IautomovieSkeleton; model: IautomovieModel } => {
   const H = p.backHeight;
-  const t1 = p.trunkLength * 0.5; // hips→spine and spine→chest
+  const t1 = p.trunkLength * 0.5; // hips?뭩pine and spine?뭖hest
   const lh = p.legHalf;
-  const down = (len: number): IAutoFilmVector3 => v(0, -len, 0);
+  const down = (len: number): IautomovieVector3 => v(0, -len, 0);
   // neck rises up-and-forward from the chest; head continues that line
   const neckSeg = v(0, 0.34, 0.26);
   const headSeg = v(0, 0.12, 0.2);
 
-  const bones: IAutoFilmBone[] = [
+  const bones: IautomovieBone[] = [
     bone("hips", null, at(v(0, H, 0))),
     bone("spine", "hips", at(v(0, 0, t1))),
     bone("chest", "spine", at(v(0, 0, t1))),
@@ -194,11 +194,11 @@ export const buildHorse = (
   const tr = p.trunkRadius;
   const knob = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
+    boneName: automovieHumanoidBone,
     radius: number,
     material: string,
-    offset: IAutoFilmVector3,
-  ): IAutoFilmModelPart => ({
+    offset: IautomovieVector3,
+  ): IautomovieModelPart => ({
     id,
     name: id,
     geometry: { type: "primitive", shape: { type: "sphere", radius } },
@@ -208,16 +208,16 @@ export const buildHorse = (
   });
   const ball = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
+    boneName: automovieHumanoidBone,
     radius = r * 1.2,
-  ): IAutoFilmModelPart => knob(id, boneName, radius, "hide", v(0, 0, 0));
+  ): IautomovieModelPart => knob(id, boneName, radius, "hide", v(0, 0, 0));
   const cone = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
-    offset: IAutoFilmVector3,
+    boneName: automovieHumanoidBone,
+    offset: IautomovieVector3,
     height: number,
-    rot: IAutoFilmQuaternion,
-  ): IAutoFilmModelPart => ({
+    rot: IautomovieQuaternion,
+  ): IautomovieModelPart => ({
     id,
     name: id,
     geometry: {
@@ -229,14 +229,14 @@ export const buildHorse = (
     transform: at(offset, rot),
   });
 
-  const parts: IAutoFilmModelPart[] = [
+  const parts: IautomovieModelPart[] = [
     // barrel + neck + head stalk
     rod("barrelRear", "hips", v(0, 0, t1), tr),
     rod("barrelFront", "spine", v(0, 0, t1), tr),
     rod("neckRod", "chest", neckSeg, tr * 0.72),
     rod("headStalk", "neck", headSeg, tr * 0.5),
     knob("head", "head", p.headRadius, "hide", v(0, 0.02, 0.04)),
-    // muzzle — a smaller sphere out the front of the head
+    // muzzle ??a smaller sphere out the front of the head
     knob(
       "muzzle",
       "head",
@@ -288,7 +288,7 @@ export const buildHorse = (
       "pupil",
       v(-0.11, 0.05, p.headRadius * 0.78),
     ),
-    // mane — a row of plates riding the neck
+    // mane ??a row of plates riding the neck
     knob(
       "mane1",
       "neck",
@@ -327,12 +327,12 @@ export const buildHorse = (
     rod("hlLowerL", "leftLowerLeg", down(p.lowerLeg), r * 0.82),
     rod("hlUpperR", "rightUpperLeg", down(p.upperLeg), r),
     rod("hlLowerR", "rightLowerLeg", down(p.lowerLeg), r * 0.82),
-    // hooves — dark caps at each lower-leg tip
+    // hooves ??dark caps at each lower-leg tip
     knob("hoofFL", "leftHand", r * 0.95, "hoof", v(0, 0, 0)),
     knob("hoofFR", "rightHand", r * 0.95, "hoof", v(0, 0, 0)),
     knob("hoofHL", "leftFoot", r * 0.95, "hoof", v(0, 0, 0)),
     knob("hoofHR", "rightFoot", r * 0.95, "hoof", v(0, 0, 0)),
-    // tail — base rod joins the hips to the first tail segment (mane-coloured)
+    // tail ??base rod joins the hips to the first tail segment (mane-coloured)
     rod("tailBase", "hips", v(0, 0.04, -0.16), r * 0.8, "mane"),
     rod("tail1", "leftLittleProximal", v(0, -0.06, -0.18), r * 0.7, "mane"),
     rod("tail2", "leftLittleIntermediate", v(0, -0.12, -0.16), r * 0.6, "mane"),
@@ -348,8 +348,8 @@ export const buildHorse = (
     ball("jKneeR", "rightLowerLeg", r * 0.9),
   ];
 
-  const skeleton: IAutoFilmSkeleton = { id: "horse", bones };
-  const model: IAutoFilmModel = {
+  const skeleton: IautomovieSkeleton = { id: "horse", bones };
+  const model: IautomovieModel = {
     id: "horse",
     name: "stick horse",
     origin: "generated",

@@ -1,5 +1,5 @@
-import { HUMANOID_JOINT_AXES, reachPose, resolvePose } from "@autofilm/engine";
-import { IAutoFilmBone, IAutoFilmVector3 } from "@autofilm/interface";
+import { HUMANOID_JOINT_AXES, reachPose, resolvePose } from "@automovie/engine";
+import { IautomovieBone, IautomovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton } from "../internal/fixtures";
@@ -14,40 +14,39 @@ const idTransform = {
 /** Where the hand lands after posing the skeleton with `pose`. */
 const handAt = (
   pose: NonNullable<ReturnType<typeof reachPose>>,
-): IAutoFilmVector3 =>
+): IautomovieVector3 =>
   resolvePose(pose, createSkeleton(), HUMANOID_JOINT_AXES).find(
     (b) => b.bone === "leftHand",
   )!.worldPosition;
 
 /**
- * `reachPose` — analytic two-bone arm IK. The contract is the FK oracle: pose
+ * `reachPose` ??analytic two-bone arm IK. The contract is the FK oracle: pose
  * the skeleton with the returned angles and the hand lands on the target. Any
- * error in the shoulder/elbow solve or the quaternion→clinical lowering shows
+ * error in the shoulder/elbow solve or the quaternion?뭖linical lowering shows
  * up as a hand that misses, so this pins correctness end to end regardless of
  * the convention details.
  *
- * The fixture's left arm runs shoulder (0.2, 1.4, 0) → elbow → hand with
+ * The fixture's left arm runs shoulder (0.2, 1.4, 0) ??elbow ??hand with
  * segments 0.3 + 0.25 = 0.55 m of reach.
  *
  * Scenarios:
  *
- * 1. Several reachable targets around the shoulder (forward, down, across, up) —
- *    the resolved left hand lands on each within tolerance.
+ * 1. Several reachable targets around the shoulder (forward, down, across, up) ?? *    the resolved left hand lands on each within tolerance.
  * 2. A target beyond the 0.55 m reach extends the arm fully toward it: the hand
- *    lands on the shoulder→target ray at exactly reach distance (on the shell,
+ *    lands on the shoulder?뭪arget ray at exactly reach distance (on the shell,
  *    not past it, not failing).
  * 3. A missing arm chain (the fixture has no rightHand) returns null; a target on
  *    the shoulder returns null (degenerate); a zero-length arm bone (a
  *    malformed rig) returns null instead of dividing by zero.
  * 4. A target straight below the shoulder (the reach axis parallel to the
- *    world-down pole) still lands — the bend-plane normal falls back to a
+ *    world-down pole) still lands ??the bend-plane normal falls back to a
  *    second reference so the solve stays total.
  */
 export const test_kinematics_reach = (): void => {
   const skeleton = createSkeleton();
-  const shoulder: IAutoFilmVector3 = { x: 0.2, y: 1.4, z: 0 };
+  const shoulder: IautomovieVector3 = { x: 0.2, y: 1.4, z: 0 };
 
-  const targets: IAutoFilmVector3[] = [
+  const targets: IautomovieVector3[] = [
     { x: 0.4, y: 1.0, z: 0.3 }, // forward and down
     { x: 0.3, y: 1.2, z: -0.35 }, // behind
     { x: 0.5, y: 1.5, z: 0.15 }, // up and out
@@ -66,8 +65,8 @@ export const test_kinematics_reach = (): void => {
     );
   }
 
-  // 2. unreachable → arm fully extended along the ray at reach distance
-  const far: IAutoFilmVector3 = { x: 1.4, y: 1.4, z: 0 };
+  // 2. unreachable ??arm fully extended along the ray at reach distance
+  const far: IautomovieVector3 = { x: 1.4, y: 1.4, z: 0 };
   const farPose = reachPose(skeleton, "left", far)!;
   const handFar = handAt(farPose);
   const dir = {
@@ -88,12 +87,12 @@ export const test_kinematics_reach = (): void => {
 
   // 3. degenerate cases
   TestValidator.equals(
-    "a missing arm chain (rightHand) → null",
+    "a missing arm chain (rightHand) ??null",
     reachPose(skeleton, "right", { x: 0, y: 1, z: 0.3 }),
     null,
   );
   TestValidator.equals(
-    "a target on the shoulder → null",
+    "a target on the shoulder ??null",
     reachPose(skeleton, "left", shoulder),
     null,
   );
@@ -102,16 +101,16 @@ export const test_kinematics_reach = (): void => {
   const degenerate = createSkeleton();
   const forearm = degenerate.bones.find(
     (b) => b.bone === "leftHand",
-  ) as IAutoFilmBone;
-  forearm.rest = idTransform; // hand coincident with the elbow → zero segment
+  ) as IautomovieBone;
+  forearm.rest = idTransform; // hand coincident with the elbow ??zero segment
   TestValidator.equals(
-    "a zero-length arm segment → null",
+    "a zero-length arm segment ??null",
     reachPose(degenerate, "left", { x: 0.4, y: 1.2, z: 0.2 }),
     null,
   );
 
-  // 4. straight-down target: reach axis ∥ world-down pole
-  const below: IAutoFilmVector3 = { x: 0.2, y: 1.0, z: 0 };
+  // 4. straight-down target: reach axis ??world-down pole
+  const below: IautomovieVector3 = { x: 0.2, y: 1.0, z: 0 };
   const belowPose = reachPose(skeleton, "left", below)!;
   TestValidator.predicate(
     "a straight-down reach still lands (pole fallback)",

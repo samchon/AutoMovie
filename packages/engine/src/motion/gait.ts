@@ -1,19 +1,19 @@
 import {
-  IAutoFilmGait,
-  IAutoFilmGaitLimb,
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmProfile,
-} from "@autofilm/interface";
+  IautomovieGait,
+  IautomovieGaitLimb,
+  IautomovieKeyframe,
+  IautomovieMotion,
+  IautomovieProfile,
+} from "@automovie/interface";
 
 /** Wrap a cycle position into `[0, 1)`. */
 const wrap01 = (x: number): number => ((x % 1) + 1) % 1;
 
 /**
  * One limb's flexion (degrees) at cycle time `t`. Over its **stance** fraction
- * (`duty`) the limb sweeps from `+amplitude` (forward-planted) to `−amplitude`
+ * (`duty`) the limb sweeps from `+amplitude` (forward-planted) to `?뭓mplitude`
  * (pushed back), driving the body; over the remaining **swing** fraction it
- * lifts and recovers from `−amplitude` back to `+amplitude`. The `phase` offset
+ * lifts and recovers from `?뭓mplitude` back to `+amplitude`. The `phase` offset
  * slides the whole cycle so limbs fall in sequence, and the swing is centered
  * on the limb's `neutral` (default 0) so a one-way joint like a knee stays on
  * its anatomical side of zero.
@@ -21,7 +21,7 @@ const wrap01 = (x: number): number => ((x % 1) + 1) % 1;
  * @author Samchon
  */
 export const gaitLimbFlexion = (
-  limb: IAutoFilmGaitLimb,
+  limb: IautomovieGaitLimb,
   t: number,
   period: number,
 ): number => {
@@ -29,21 +29,21 @@ export const gaitLimbFlexion = (
   const a = limb.amplitude;
   const swing =
     u < limb.duty
-      ? a * (1 - (2 * u) / limb.duty) // stance: +a → −a
-      : -a + (2 * a * (u - limb.duty)) / (1 - limb.duty); // swing: −a → +a
+      ? a * (1 - (2 * u) / limb.duty) // stance: +a ???뭓
+      : -a + (2 * a * (u - limb.duty)) / (1 - limb.duty); // swing: ?뭓 ??+a
   return (limb.neutral ?? 0) + swing;
 };
 
 /**
- * Synthesise a **declarative gait** ({@link IAutoFilmGait}) into a looping
- * {@link IAutoFilmMotion} — the engine fattening a creature's characteristic
+ * Synthesise a **declarative gait** ({@link IautomovieGait}) into a looping
+ * {@link IautomovieMotion} ??the engine fattening a creature's characteristic
  * locomotion (per-limb phase / duty / amplitude) into per-frame flexion. The
  * result is an ordinary one-cycle clip (sampled at `samples` even steps, the
  * closing keyframe repeating the first for a seamless loop) that
  * `locomoteMotion` / `travelMotion` can drive across the floor.
  *
  * The same synthesiser produces a human walk, a horse's lateral-sequence walk,
- * a cat's stalk — the difference lives entirely in the gait data, not the
+ * a cat's stalk ??the difference lives entirely in the gait data, not the
  * code.
  *
  * @author Samchon
@@ -51,10 +51,10 @@ export const gaitLimbFlexion = (
 export const gaitMotion = (
   id: string,
   skeleton: string,
-  gait: IAutoFilmGait,
+  gait: IautomovieGait,
   samples: number,
-): IAutoFilmMotion => {
-  const keyframes: IAutoFilmKeyframe[] = [];
+): IautomovieMotion => {
+  const keyframes: IautomovieKeyframe[] = [];
   for (let i = 0; i <= samples; ++i) {
     const time = (i / samples) * gait.period;
     keyframes.push({
@@ -78,8 +78,8 @@ export const gaitMotion = (
 };
 
 /**
- * Bind a profile's gait set ({@link IAutoFilmProfile.gaits}) onto a concrete
- * skeleton — synthesising each named gait into a clip for **this** body. The
+ * Bind a profile's gait set ({@link IautomovieProfile.gaits}) onto a concrete
+ * skeleton ??synthesising each named gait into a clip for **this** body. The
  * point of a profile binding: the _same_ profile applied to a horse skeleton
  * and a pony skeleton yields each its own gait clips, so one declarative gait
  * set drives many bodies. Returns the clips keyed by gait name (empty when the
@@ -88,11 +88,11 @@ export const gaitMotion = (
  * @author Samchon
  */
 export const bindProfileGaits = (
-  profile: IAutoFilmProfile,
+  profile: IautomovieProfile,
   skeleton: string,
   samples: number,
-): Record<string, IAutoFilmMotion> => {
-  const clips: Record<string, IAutoFilmMotion> = {};
+): Record<string, IautomovieMotion> => {
+  const clips: Record<string, IautomovieMotion> = {};
   for (const gait of profile.gaits ?? [])
     clips[gait.name] = gaitMotion(
       `${profile.id}:${gait.name}`,

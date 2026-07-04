@@ -1,8 +1,8 @@
-import { fitSimilarity2 } from "@autofilm/forge";
+import { fitSimilarity2 } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * All-coincident source points define no scale or rotation — the fit throws
+ * All-coincident source points define no scale or rotation ??the fit throws
  * rather than emitting NaNs that would silently corrupt every downstream
  * vertex.
  *

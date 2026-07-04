@@ -1,11 +1,11 @@
-import { gaitMotion, validateMotion } from "@autofilm/engine";
-import { AutoFilmHumanoidBone, IAutoFilmGait } from "@autofilm/interface";
+import { gaitMotion, validateMotion } from "@automovie/engine";
+import { automovieHumanoidBone, IautomovieGait } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton } from "../internal/fixtures";
 import { hasViolation, nclose } from "../internal/predicates";
 
-const GAIT: IAutoFilmGait = {
+const GAIT: IautomovieGait = {
   name: "walk",
   period: 1,
   limbs: [
@@ -16,14 +16,14 @@ const GAIT: IAutoFilmGait = {
 
 const flexionSeq = (
   motion: ReturnType<typeof gaitMotion>,
-  bone: AutoFilmHumanoidBone,
+  bone: automovieHumanoidBone,
 ): number[] =>
   motion.keyframes.map(
     (k) => k.pose.joints.find((j) => j.bone === bone)!.flexion!,
   );
 
 /**
- * `gaitMotion` — synthesise a declarative {@link IAutoFilmGait} into a looping
+ * `gaitMotion` ??synthesise a declarative {@link IautomovieGait} into a looping
  * clip. The difference between a creature's gaits lives entirely in the
  * per-limb phase / duty / amplitude data, not the code.
  *
@@ -31,13 +31,13 @@ const flexionSeq = (
  *
  * 1. The clip is a one-period seamless loop: 5 keyframes (the closing one
  *    repeating t=0), duration = period, loop = true.
- * 2. A phase-0 limb sweeps the stance→swing sawtooth +30 → 0 → −30 → 0 → +30
+ * 2. A phase-0 limb sweeps the stance?뭩wing sawtooth +30 ??0 ????0 ??0 ??+30
  *    (planted push, then recovery), the closing frame matching the first.
- * 3. A phase-0.5 limb runs exactly half a cycle out of step — the per-limb phase
+ * 3. A phase-0.5 limb runs exactly half a cycle out of step ??the per-limb phase
  *    offset that makes one gait a walk and another a trot.
  * 4. `neutral` centers the swing: a knee swung symmetrically about zero crosses
  *    into hyperextension and the ROM validator rejects it, while the same swing
- *    centered on `neutral: 25` stays inside `[0, 150]°` and passes.
+ *    centered on `neutral: 25` stays inside `[0, 150]째` and passes.
  */
 export const test_motion_gait = (): void => {
   const motion = gaitMotion("g", "sk", GAIT, 4);
@@ -52,10 +52,10 @@ export const test_motion_gait = (): void => {
   TestValidator.equals("clip loops", motion.loop, true);
   TestValidator.equals("skeleton stamped", motion.skeleton, "sk");
 
-  // 2. phase-0 limb: the stance→swing sawtooth, ends where it began
+  // 2. phase-0 limb: the stance?뭩wing sawtooth, ends where it began
   const left = flexionSeq(motion, "leftUpperLeg");
   TestValidator.predicate(
-    "phase-0 sweeps +30 → 0 → −30 → 0 → +30",
+    "phase-0 sweeps +30 ??0 ????0 ??0 ??+30",
     [30, 0, -30, 0, 30].every((v, i) => nclose(left[i]!, v)),
   );
 
@@ -66,9 +66,9 @@ export const test_motion_gait = (): void => {
     right.every((v, i) => nclose(v, -left[i]!)),
   );
 
-  // 4. neutral centers the swing — the knee's negative twin
+  // 4. neutral centers the swing ??the knee's negative twin
   const sk = createSkeleton();
-  const kneeGait = (neutral: number | undefined): IAutoFilmGait => ({
+  const kneeGait = (neutral: number | undefined): IautomovieGait => ({
     name: "step",
     period: 1,
     limbs: [
@@ -98,7 +98,7 @@ export const test_motion_gait = (): void => {
     "leftLowerLeg",
   );
   TestValidator.predicate(
-    "the centered swing is 25 ± 22 (every sample positive)",
+    "the centered swing is 25 짹 22 (every sample positive)",
     knee.every((v) => v >= 0) && nclose(Math.max(...knee), 47),
   );
 };

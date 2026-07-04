@@ -1,16 +1,16 @@
-import { IAutoFilmModel, IAutoFilmTransform } from "@autofilm/interface";
-import { exportModelToGLB } from "@autofilm/render";
+import { IautomovieModel, IautomovieTransform } from "@automovie/interface";
+import { exportModelToGLB } from "@automovie/render";
 import { NodeIO } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
-const T = (): IAutoFilmTransform => ({
+const T = (): IautomovieTransform => ({
   translation: { x: 0, y: 1, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 
 /** A rigged character: skeleton (root + child) + primitive parts + a material. */
-const CHARACTER: IAutoFilmModel = {
+const CHARACTER: IautomovieModel = {
   id: "char",
   name: "character",
   origin: "generated",
@@ -58,7 +58,7 @@ const CHARACTER: IAutoFilmModel = {
 };
 
 /** A skeletonless object: a raw mesh part (no normals/indices), no material. */
-const OBJECT: IAutoFilmModel = {
+const OBJECT: IautomovieModel = {
   id: "obj",
   name: null,
   origin: "imported",
@@ -116,10 +116,10 @@ const OBJECT: IAutoFilmModel = {
 };
 
 /**
- * The AST → glTF binary export (`exportModelToGLB`), the export half of the
+ * The AST ??glTF binary export (`exportModelToGLB`), the export half of the
  * glTF round-trip. Pins that a model's skeleton becomes a node hierarchy, its
  * parts become mesh nodes (rigid parts parented to their bone), and its
- * materials map onto glTF metallic-roughness — verified by reading the emitted
+ * materials map onto glTF metallic-roughness ??verified by reading the emitted
  * `.glb` back with an independent glTF reader.
  *
  * Scenarios:
@@ -133,7 +133,7 @@ const OBJECT: IAutoFilmModel = {
  *    - NORMAL + indices, and the one material attached.
  * 3. A skeletonless object with a raw, non-indexed, norm-less mesh and no material
  *    exports the bare positions only (no NORMAL, no indices, no material
- *    binding) — the negative twin of the character's every branch.
+ *    binding) ??the negative twin of the character's every branch.
  * 4. The transparent/emissive material on the object becomes a BLEND material with
  *    an emissive factor.
  */
@@ -214,7 +214,7 @@ export const test_render_export_glb = async (): Promise<void> => {
   TestValidator.equals("raw mesh has no material", tri.getMaterial(), null);
   const mat = objRoot.listMaterials()[0]!;
   TestValidator.equals(
-    "emissive/transparent → BLEND",
+    "emissive/transparent ??BLEND",
     mat.getAlphaMode(),
     "BLEND",
   );

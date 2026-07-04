@@ -1,4 +1,4 @@
-import { Quaternion, jointToQuaternion } from "@autofilm/engine";
+import { Quaternion, jointToQuaternion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { qclose } from "../internal/predicates";
@@ -11,7 +11,7 @@ import { qclose } from "../internal/predicates";
  *
  * Scenarios:
  *
- * 1. No articulation — all axes null, or all zero — yields the identity.
+ * 1. No articulation ??all axes null, or all zero ??yields the identity.
  * 2. Flexion rotates about local X.
  * 3. Abduction rotates about local Z.
  * 4. Twist rotates about local Y.
@@ -19,14 +19,14 @@ import { qclose } from "../internal/predicates";
 export const test_kinematics_joint_axes = (): void => {
   const id = Quaternion.identity();
   TestValidator.predicate(
-    "null axes → identity",
+    "null axes ??identity",
     qclose(
       jointToQuaternion({ flexion: null, abduction: null, twist: null }),
       id,
     ),
   );
   TestValidator.predicate(
-    "zero axes → identity",
+    "zero axes ??identity",
     qclose(jointToQuaternion({ flexion: 0, abduction: 0, twist: 0 }), id),
   );
 

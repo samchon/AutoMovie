@@ -1,10 +1,10 @@
-import { bindProfileGaits } from "@autofilm/engine";
-import { IAutoFilmProfile } from "@autofilm/interface";
+import { bindProfileGaits } from "@automovie/engine";
+import { IautomovieProfile } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const horse: IAutoFilmProfile = {
+const horse: IautomovieProfile = {
   id: "equine",
   name: "horse",
   controls: [],
@@ -24,7 +24,7 @@ const horse: IAutoFilmProfile = {
   ],
 };
 
-const doorlike: IAutoFilmProfile = {
+const doorlike: IautomovieProfile = {
   id: "hinge",
   name: "door",
   controls: [],
@@ -33,7 +33,7 @@ const doorlike: IAutoFilmProfile = {
 };
 
 /**
- * `bindProfileGaits` — synthesise a profile's declarative gait set onto a
+ * `bindProfileGaits` ??synthesise a profile's declarative gait set onto a
  * concrete skeleton. The same profile bound to two different bodies yields each
  * its own clips: one gait set, many bodies.
  *
@@ -43,7 +43,7 @@ const doorlike: IAutoFilmProfile = {
  *    name, each targeting that skeleton with its own period and a
  *    profile-scoped id.
  * 2. The same profile bound to a _different_ skeleton retargets every clip onto
- *    the new body — the point of a binding.
+ *    the new body ??the point of a binding.
  * 3. A profile that declares no gaits (a door) binds to nothing.
  */
 export const test_motion_profile_gaits = (): void => {
@@ -82,7 +82,7 @@ export const test_motion_profile_gaits = (): void => {
 
   // 3. a profile with no gaits
   TestValidator.equals(
-    "no gaits → no clips",
+    "no gaits ??no clips",
     Object.keys(bindProfileGaits(doorlike, "door-rig", 4)).length,
     0,
   );

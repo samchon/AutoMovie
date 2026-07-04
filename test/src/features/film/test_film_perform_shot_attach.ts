@@ -1,10 +1,10 @@
 import {
-  IAutoFilmActionSynthesizer,
+  IautomovieActionSynthesizer,
   performShot,
   sampleClip,
   stageScene,
-} from "@autofilm/engine";
-import { IAutoFilmActionCall, IAutoFilmVector3 } from "@autofilm/interface";
+} from "@automovie/engine";
+import { IautomovieActionCall, IautomovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -16,8 +16,8 @@ import {
 import { createSkeleton } from "../internal/fixtures";
 import { vclose } from "../internal/predicates";
 
-/** A launch/attach produces no actor pose — those animate objects, not the rig. */
-const synth: IAutoFilmActionSynthesizer = (action, actor) =>
+/** A launch/attach produces no actor pose ??those animate objects, not the rig. */
+const synth: IautomovieActionSynthesizer = (action, actor) =>
   action.verb === "launch" || action.verb === "attachTo"
     ? null
     : validSynthesizer(action, actor);
@@ -58,23 +58,23 @@ const stagingOf = () =>
 
 /**
  * Wires the `attachTo` verb through the PERFORMANCE consumer: the coupled prop
- * gets a shot `objectMotion` that rides the parent's bone — animated when the
- * parent moves — and the prop, being no rig, gets no pose performance.
+ * gets a shot `objectMotion` that rides the parent's bone ??animated when the
+ * parent moves ??and the prop, being no rig, gets no pose performance.
  *
  * Scenarios:
  *
  * 1. The knight gestures (the arm moves) with the sword attached to its
  *    `leftHand`: the sword gets one `objectMotion` that changes over the shot
  *    (it follows the swinging hand), and only the knight performs.
- * 2. An attachTo parent that is not a staged node → an input violation.
- * 3. An attachTo parent with no rig to attach a bone of → a violation.
- * 4. A bone that is not on the parent's skeleton → a violation.
+ * 2. An attachTo parent that is not a staged node ??an input violation.
+ * 3. An attachTo parent with no rig to attach a bone of ??a violation.
+ * 4. A bone that is not on the parent's skeleton ??a violation.
  */
 export const test_film_perform_shot_attach = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
   if (staged.success !== true) throw new Error("staging must succeed");
 
-  const perform = (draft: IAutoFilmActionCall[]) =>
+  const perform = (draft: IautomovieActionCall[]) =>
     performShot({
       script: scriptOf(),
       staged,
@@ -120,7 +120,7 @@ export const test_film_perform_shot_attach = (): void => {
   if (ok.success !== true) return;
 
   TestValidator.equals(
-    "two object motions — the sword's and the shield's follows",
+    "two object motions ??the sword's and the shield's follows",
     ok.shot.objectMotions.map((c) => c.id).sort((a, b) => a.localeCompare(b)),
     ["attach:shield", "attach:sword"],
   );
@@ -130,7 +130,7 @@ export const test_film_perform_shot_attach = (): void => {
     follow.tracks.map((t) => (t.channel.kind === "node" ? t.channel.node : "")),
     ["sword", "sword"],
   );
-  const posAt = (t: number): IAutoFilmVector3 => {
+  const posAt = (t: number): IautomovieVector3 => {
     const v = sampleClip(follow, t).get("node:sword:translation")!.value;
     return { x: v[0]!, y: v[1]!, z: v[2]! };
   };
@@ -139,7 +139,7 @@ export const test_film_perform_shot_attach = (): void => {
     !vclose(posAt(0), posAt(0.5), 1e-3),
   );
   TestValidator.equals(
-    "the props are no rig — only the knight performs",
+    "the props are no rig ??only the knight performs",
     ok.shot.performances.map((p) => p.node),
     ["knight"],
   );

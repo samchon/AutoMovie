@@ -1,14 +1,14 @@
-import { IAutoFilmVector3, IAutoFilmYawPitch } from "@autofilm/interface";
+import { IautomovieVector3, IautomovieYawPitch } from "@automovie/interface";
 
 /**
  * The **yaw and pitch** (degrees) that aim from `from` at `to`, expressed in a
- * frame facing `facingDeg` about +Y — the angles a head / eye / camera turns
+ * frame facing `facingDeg` about +Y ??the angles a head / eye / camera turns
  * through to look at a target. The world direction is rotated into the actor's
  * local frame (undoing its facing), then:
  *
- * - **yaw** = `atan2(localX, localZ)` — the turn off straight-ahead (0 = dead
+ * - **yaw** = `atan2(localX, localZ)` ??the turn off straight-ahead (0 = dead
  *   ahead, +90 = the actor's left, matching the direction-target convention);
- * - **pitch** = `atan2(localY, horizontal)` — the tilt up (+) / down (−).
+ * - **pitch** = `atan2(localY, horizontal)` ??the tilt up (+) / down (??.
  *
  * Returns `{ yawDeg: 0, pitchDeg: 0 }` for a degenerate zero-length aim (the
  * target sits on `from`). The caller maps yaw/pitch onto a rig's joints (a
@@ -17,10 +17,10 @@ import { IAutoFilmVector3, IAutoFilmYawPitch } from "@autofilm/interface";
  * @author Samchon
  */
 export const aimYawPitch = (
-  from: IAutoFilmVector3,
-  to: IAutoFilmVector3,
+  from: IautomovieVector3,
+  to: IautomovieVector3,
   facingDeg: number,
-): IAutoFilmYawPitch => {
+): IautomovieYawPitch => {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const dz = to.z - from.z;
@@ -29,7 +29,7 @@ export const aimYawPitch = (
   const f = (facingDeg * Math.PI) / 180;
   const cos = Math.cos(f);
   const sin = Math.sin(f);
-  // rotate the world direction by −facing into the actor's local frame
+  // rotate the world direction by ?뭚acing into the actor's local frame
   const localX = dx * cos - dz * sin;
   const localZ = dx * sin + dz * cos;
   const horizontal = Math.hypot(localX, localZ);

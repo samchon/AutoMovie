@@ -1,5 +1,5 @@
-import { forgeCast } from "@autofilm/engine";
-import { AutoFilmHumanoidBone, IAutoFilmBone } from "@autofilm/interface";
+import { forgeCast } from "@automovie/engine";
+import { automovieHumanoidBone, IautomovieBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { forgeEntry, makeScriptWrite } from "../internal/filmFixtures";
@@ -7,9 +7,9 @@ import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 const b = (
-  bone: AutoFilmHumanoidBone,
-  parent: AutoFilmHumanoidBone | null,
-): IAutoFilmBone => ({
+  bone: automovieHumanoidBone,
+  parent: automovieHumanoidBone | null,
+): IautomovieBone => ({
   bone,
   parent,
   rest: IDENTITY_TRANSFORM,
@@ -17,7 +17,7 @@ const b = (
 });
 
 /**
- * Pins the skeleton-graph gates: a rig must be one connected tree — unique bone
+ * Pins the skeleton-graph gates: a rig must be one connected tree ??unique bone
  * names, resolvable parents, exactly one root, and every bone reachable from
  * it. The detached-cycle case is the reason reachability exists at all: it
  * satisfies every local check and is still unposable.
@@ -25,13 +25,12 @@ const b = (
  * Scenarios:
  *
  * 1. A skeleton declaring `hips` twice, `spine` parented to the undeclared `neck`,
- *    and two roots (`hips`, `chest`) → `type` violations on the duplicate bone,
- *    the unresolvable parent, and the root count (and reachability is skipped —
- *    meaningless without a single root).
- * 2. A single-rooted skeleton (`hips` → `spine`) plus a two-bone cycle (`leftHand`
- *    ⇄ `leftLowerArm`) floating off the tree → every local check passes, but
+ *    and two roots (`hips`, `chest`) ??`type` violations on the duplicate bone,
+ *    the unresolvable parent, and the root count (and reachability is skipped ?? *    meaningless without a single root).
+ * 2. A single-rooted skeleton (`hips` ??`spine`) plus a two-bone cycle (`leftHand`
+ *    ??`leftLowerArm`) floating off the tree ??every local check passes, but
  *    both cycle bones raise unreachable violations.
- * 3. A single-rooted skeleton declaring `spine` twice under `hips` → the duplicate
+ * 3. A single-rooted skeleton declaring `spine` twice under `hips` ??the duplicate
  *    is reported AND the reachability walk still terminates (the visited guard
  *    absorbs the doubled child edge instead of re-queueing forever), with no
  *    spurious unreachable findings.

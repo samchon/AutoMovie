@@ -1,8 +1,8 @@
-import { trackSilhouetteBands } from "@autofilm/forge";
+import { trackSilhouetteBands } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * The very first row must offer a run — with nothing to seed from there is no
+ * The very first row must offer a run ??with nothing to seed from there is no
  * defensible band to emit, so tracking throws instead of inventing one.
  *
  * Scenario: a first row with zero runs throws.

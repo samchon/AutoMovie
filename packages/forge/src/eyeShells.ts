@@ -1,5 +1,5 @@
-import { CANONICAL_FACE_POSITIONS } from "./canonicalFace";
-import { IForgeMeshPart } from "./hairShell";
+import { CANONICAL_FACE_POSITIONS } from "./CanonicalFace";
+import { IForgeMeshPart } from "./HairShell";
 
 /** One eyeball: its mesh plus the fit the renderer colors the iris from. */
 export interface IForgeEyeShell extends IForgeMeshPart {

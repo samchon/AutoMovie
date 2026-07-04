@@ -1,20 +1,20 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmModel,
-  IAutoFilmModelPart,
-  IAutoFilmSkeleton,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  IautomovieModel,
+  IautomovieModelPart,
+  IautomovieSkeleton,
+  IautomovieVector3,
+} from "@automovie/interface";
 
-import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
+import { DEFAULT_STICKMAN, buildStickman } from "./Stickman";
 
 /**
- * A **knight** rider — the stick figure dressed for the saddle: the same rig
+ * A **knight** rider ??the stick figure dressed for the saddle: the same rig
  * and proportions as {@link buildStickman}, recoloured to steel, with a helmet
  * and plume on the head, a couched **lance** in the right hand, and a
  * **shield** on the left forearm.
  *
- * It is a plain {@link IAutoFilmModel} like any other; the mounted scene fixes
+ * It is a plain {@link IautomovieModel} like any other; the mounted scene fixes
  * its root to the horse's saddle bone each frame via the engine's
  * `resolveAttachment`, while a riding clip articulates the body (legs gripping
  * the barrel, lance couched). Reuses the stick figure so a rider clip and a
@@ -22,7 +22,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
  *
  * @author Samchon
  */
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IautomovieVector3 => ({ x, y, z });
 
 const mat = (
   id: string,
@@ -45,8 +45,8 @@ const mat = (
 export const buildKnight = (
   opts: { lance?: boolean } = {},
 ): {
-  skeleton: IAutoFilmSkeleton;
-  model: IAutoFilmModel;
+  skeleton: IautomovieSkeleton;
+  model: IautomovieModel;
 } => {
   const withLance = opts.lance !== false;
   const { skeleton, model } = buildStickman(DEFAULT_STICKMAN);
@@ -55,11 +55,11 @@ export const buildKnight = (
 
   const knob = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
+    boneName: automovieHumanoidBone,
     radius: number,
     material: string,
-    offset: IAutoFilmVector3,
-  ): IAutoFilmModelPart => ({
+    offset: IautomovieVector3,
+  ): IautomovieModelPart => ({
     id,
     name: id,
     geometry: { type: "primitive", shape: { type: "sphere", radius } },
@@ -67,16 +67,16 @@ export const buildKnight = (
     attachedBone: boneName,
     transform: at(offset),
   });
-  const at = (t: IAutoFilmVector3, rot?: IAutoFilmModelPart["transform"]) => ({
+  const at = (t: IautomovieVector3, rot?: IautomovieModelPart["transform"]) => ({
     translation: t,
     rotation: rot?.rotation ?? { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 1, y: 1, z: 1 },
   });
 
-  const extras: IAutoFilmModelPart[] = [
-    // helmet — a steel dome capping the crown (eyes stay visible below it)
+  const extras: IautomovieModelPart[] = [
+    // helmet ??a steel dome capping the crown (eyes stay visible below it)
     knob("helmet", "head", hr * 1.04, "steel", v(0, hr * 0.42, -0.01)),
-    // nose guard — a thin steel bar down the front of the face
+    // nose guard ??a thin steel bar down the front of the face
     {
       id: "noseGuard",
       name: "noseGuard",
@@ -93,11 +93,11 @@ export const buildKnight = (
       attachedBone: "head",
       transform: at(v(0, hr * 0.95, hr * 1.02)),
     },
-    // plume — a red crest on top of the helmet
+    // plume ??a red crest on top of the helmet
     knob("plume1", "head", hr * 0.34, "plume", v(0, hr * 1.7, -0.04)),
     knob("plume2", "head", hr * 0.28, "plume", v(0, hr * 1.78, -0.18)),
     knob("plume3", "head", hr * 0.22, "plume", v(0, hr * 1.7, -0.3)),
-    // lance — a long shaft couched along the right hand, pointing forward (+Z)
+    // lance ??a long shaft couched along the right hand, pointing forward (+Z)
     {
       id: "lance",
       name: "lance",
@@ -128,7 +128,7 @@ export const buildKnight = (
       attachedBone: "rightHand",
       transform: at(v(0, 0, -0.14 + lower)),
     },
-    // shield — a rounded plate on the left forearm, facing out (−X / forward)
+    // shield ??a rounded plate on the left forearm, facing out (?뭎 / forward)
     {
       id: "shield",
       name: "shield",
@@ -148,7 +148,7 @@ export const buildKnight = (
     knob("shieldBoss", "leftLowerArm", 0.045, "steel", v(lower * 0.5, 0, 0.12)),
   ];
 
-  // recolour the figure: ink (rods/joints) → steel-blue; keep eye/pupil; add
+  // recolour the figure: ink (rods/joints) ??steel-blue; keep eye/pupil; add
   // the plume / lance / shield palette
   const materials = [
     mat("ink", 0.46, 0.5, 0.56, 0.45, 0.2), // armoured steel-blue body

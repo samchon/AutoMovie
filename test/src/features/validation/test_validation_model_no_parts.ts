@@ -1,11 +1,11 @@
-import { validateModel } from "@autofilm/engine";
+import { validateModel } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
- * A model needs at least one part — there must be something to render. An empty
+ * A model needs at least one part ??there must be something to render. An empty
  * `parts` list is a `type` violation. Pins the minimal structural requirement.
  *
  * Scenario: the standard model with its parts emptied fails, with a `type`

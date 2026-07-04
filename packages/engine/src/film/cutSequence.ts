@@ -1,27 +1,27 @@
 import {
-  IAutoFilmAssembleApplication,
-  IAutoFilmConstraintViolation,
-  IAutoFilmSequence,
-  IAutoFilmShot,
-} from "@autofilm/interface";
+  IautomovieAssembleApplication,
+  IautomovieConstraintViolation,
+  IautomovieSequence,
+  IautomovieShot,
+} from "@automovie/interface";
 
 import { ViolationCollector } from "../validation/violation";
 
 /**
- * An assembled cut: the {@link IAutoFilmSequence} the ASSEMBLE stage edited, or
+ * An assembled cut: the {@link IautomovieSequence} the ASSEMBLE stage edited, or
  * the contradictions that stopped it.
  *
  * @author Samchon
  */
-export type IAutoFilmCut = IAutoFilmCut.ISuccess | IAutoFilmCut.IFailure;
-export namespace IAutoFilmCut {
+export type IautomovieCut = IautomovieCut.ISuccess | IautomovieCut.IFailure;
+export namespace IautomovieCut {
   /** Every entry referenced a built shot and every trim fit inside it. */
   export interface ISuccess {
     /** Discriminator. */
     success: true;
 
     /** The cut-list, ready for the renderer. */
-    sequence: IAutoFilmSequence;
+    sequence: IautomovieSequence;
 
     /** Total running time in seconds (trims applied, transitions overlap-free). */
     runtime: number;
@@ -33,17 +33,17 @@ export namespace IAutoFilmCut {
     success: false;
 
     /** Every violation found, for the correction round. */
-    violations: IAutoFilmConstraintViolation[];
+    violations: IautomovieConstraintViolation[];
   }
 }
 
 /**
- * The ASSEMBLE consumer — fold the editor's cut-list into an
- * {@link IAutoFilmSequence} over the shots the pipeline actually built. The
+ * The ASSEMBLE consumer ??fold the editor's cut-list into an
+ * {@link IautomovieSequence} over the shots the pipeline actually built. The
  * gates are editorial physics: every entry must name a built shot, a trim must
  * select a positive span that lies inside its shot, a transition must not
  * outlast the incoming shot's played span, and the film must play at a positive
- * frame rate. Pacing and continuity stay prose — they have no cheap
+ * frame rate. Pacing and continuity stay prose ??they have no cheap
  * deterministic verifier, so the schema carries the rationale instead.
  *
  * `runtime` sums each entry's played span (its trim's duration, else the whole
@@ -51,9 +51,9 @@ export namespace IAutoFilmCut {
  * subtracts its duration from the straight sum.
  */
 export const cutSequence = (
-  assemble: IAutoFilmAssembleApplication.IWrite,
-  shots: IAutoFilmShot[],
-): IAutoFilmCut => {
+  assemble: IautomovieAssembleApplication.IWrite,
+  shots: IautomovieShot[],
+): IautomovieCut => {
   const out = new ViolationCollector();
   const byId = new Map(shots.map((s) => [s.id, s]));
 

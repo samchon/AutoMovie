@@ -1,15 +1,15 @@
 import {
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-  IAutoFilmValidation,
-} from "@autofilm/interface";
+  IautomoviePose,
+  IautomovieSkeleton,
+  IautomovieValidation,
+} from "@automovie/interface";
 
 import { getConstraint } from "../rom/humanoidRom";
 import { validateJointRom } from "../rom/validateJointRom";
-import { ViolationCollector } from "./violation";
+import { ViolationCollector } from "./Violation";
 
 /**
- * Validate a {@link IAutoFilmPose} against its skeleton.
+ * Validate a {@link IautomoviePose} against its skeleton.
  *
  * Runs Tier-2 anatomical ROM checks (the differentiator) plus structural
  * sanity: each articulated bone must exist in the skeleton and appear at most
@@ -23,8 +23,8 @@ import { ViolationCollector } from "./violation";
  * @author Samchon
  */
 export const validatePose = (props: {
-  pose: IAutoFilmPose;
-  skeleton: IAutoFilmSkeleton;
+  pose: IautomoviePose;
+  skeleton: IautomovieSkeleton;
   path?: string;
   collector?: ViolationCollector;
 }): ViolationCollector => {
@@ -62,8 +62,8 @@ export const validatePose = (props: {
   return collector;
 };
 
-/** Convenience wrapper returning a finished {@link IAutoFilmValidation}. */
+/** Convenience wrapper returning a finished {@link IautomovieValidation}. */
 export const validatePoseResult = (
-  pose: IAutoFilmPose,
-  skeleton: IAutoFilmSkeleton,
-): IAutoFilmValidation => validatePose({ pose, skeleton }).toValidation();
+  pose: IautomoviePose,
+  skeleton: IautomovieSkeleton,
+): IautomovieValidation => validatePose({ pose, skeleton }).toValidation();

@@ -1,4 +1,4 @@
-import { stageScene } from "@autofilm/engine";
+import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
@@ -6,14 +6,14 @@ import { hasViolation } from "../internal/predicates";
 
 /**
  * Pins the light gates: intensity is physical (non-negative) and a directional
- * light needs an actual direction — the zero vector aims a light nowhere and
+ * light needs an actual direction ??the zero vector aims a light nowhere and
  * would degenerate the aim rotation.
  *
  * Scenarios:
  *
- * 1. The sun's intensity is −1 → a `range` violation on
+ * 1. The sun's intensity is ?? ??a `range` violation on
  *    `$input.lights[0].intensity`.
- * 2. A second light declares the zero direction → a `range` violation on
+ * 2. A second light declares the zero direction ??a `range` violation on
  *    `$input.lights[1].direction`.
  */
 export const test_film_stage_scene_light_invalid = (): void => {

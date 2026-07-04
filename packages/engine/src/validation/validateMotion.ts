@@ -1,12 +1,12 @@
 import {
-  IAutoFilmMotion,
-  IAutoFilmSkeleton,
-  IAutoFilmValidation,
-} from "@autofilm/interface";
+  IautomovieMotion,
+  IautomovieSkeleton,
+  IautomovieValidation,
+} from "@automovie/interface";
 
-import { validateExpression } from "./validateExpression";
-import { validatePose } from "./validatePose";
-import { ViolationCollector } from "./violation";
+import { validateExpression } from "./ValidateExpression";
+import { validatePose } from "./ValidatePose";
+import { ViolationCollector } from "./Violation";
 
 /**
  * Maximum per-axis angular speed (degrees per second) the temporal verifier
@@ -16,7 +16,7 @@ import { ViolationCollector } from "./violation";
 const MAX_ANGULAR_SPEED_DEG_PER_S = 900;
 
 /**
- * Validate an {@link IAutoFilmMotion} clip — Tier-4 temporal coherence plus the
+ * Validate an {@link IautomovieMotion} clip ??Tier-4 temporal coherence plus the
  * per-keyframe Tier-1/Tier-2 checks (every keyframe pose is validated against
  * the skeleton, every keyframe expression range-checked).
  *
@@ -30,9 +30,9 @@ const MAX_ANGULAR_SPEED_DEG_PER_S = 900;
  * @author Samchon
  */
 export const validateMotion = (props: {
-  motion: IAutoFilmMotion;
-  skeleton: IAutoFilmSkeleton;
-}): IAutoFilmValidation => {
+  motion: IautomovieMotion;
+  skeleton: IautomovieSkeleton;
+}): IautomovieValidation => {
   const path = "$input";
   const collector = new ViolationCollector();
   const { motion, skeleton } = props;
@@ -73,7 +73,7 @@ export const validateMotion = (props: {
 
 /** Flag adjacent keyframes whose shared joints swing too fast. */
 const checkAngularSpeed = (
-  motion: IAutoFilmMotion,
+  motion: IautomovieMotion,
   i: number,
   kp: string,
   collector: ViolationCollector,
@@ -95,7 +95,7 @@ const checkAngularSpeed = (
         collector.push(
           "temporal",
           `${kp}.pose`,
-          `${j.bone} ${axis} changes ${delta.toFixed(0)}° in ${dt.toFixed(2)}s (${speed.toFixed(0)}°/s), exceeding ${MAX_ANGULAR_SPEED_DEG_PER_S}°/s`,
+          `${j.bone} ${axis} changes ${delta.toFixed(0)}째 in ${dt.toFixed(2)}s (${speed.toFixed(0)}째/s), exceeding ${MAX_ANGULAR_SPEED_DEG_PER_S}째/s`,
           speed,
         );
     }

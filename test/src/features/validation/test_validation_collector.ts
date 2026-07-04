@@ -1,4 +1,4 @@
-import { ViolationCollector } from "@autofilm/engine";
+import { ViolationCollector } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
@@ -19,7 +19,7 @@ export const test_validation_collector = (): void => {
   empty.range("$input.a", 0.5, 0, 1);
   TestValidator.equals("in-range pushes nothing", empty.items.length, 0);
   TestValidator.equals(
-    "empty collector → success",
+    "empty collector ??success",
     empty.toValidation().success,
     true,
   );
@@ -29,7 +29,7 @@ export const test_validation_collector = (): void => {
   TestValidator.equals("out-of-range pushes one", failing.items.length, 1);
   const validation = failing.toValidation();
   TestValidator.equals(
-    "non-empty collector → failure",
+    "non-empty collector ??failure",
     validation.success,
     false,
   );

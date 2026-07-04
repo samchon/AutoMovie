@@ -1,13 +1,13 @@
-import { tessellateToMesh } from "@autofilm/engine";
+import { tessellateToMesh } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * `tessellateToMesh` adapts a raw tessellation into a full `IAutoFilmMesh`, so
+ * `tessellateToMesh` adapts a raw tessellation into a full `IautomovieMesh`, so
  * a generated primitive can flow through the same code paths as imported mesh
  * geometry. It carries positions and indices through and leaves skinning null,
  * since generated primitives are not skinned.
  *
- * Scenario: a unit box yields 72 position floats (24 vertices × 3), 36 indices,
+ * Scenario: a unit box yields 72 position floats (24 vertices 횞 3), 36 indices,
  * and a null `skin`.
  */
 export const test_geometry_tessellate_to_mesh = (): void => {

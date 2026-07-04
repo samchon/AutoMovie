@@ -1,15 +1,15 @@
-import { IAutoFilmRenderSpec } from "@autofilm/interface";
+import { IautomovieRenderSpec } from "@automovie/interface";
 import {
   ffmpegArgs,
   frameName,
   framePattern,
   frameTimes,
-} from "@autofilm/render";
+} from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const SPEC: IAutoFilmRenderSpec = {
+const SPEC: IautomovieRenderSpec = {
   target: "shot-1",
   fps: 30,
   width: 1920,
@@ -27,11 +27,10 @@ const SPEC: IAutoFilmRenderSpec = {
  * Scenarios:
  *
  * 1. A 2 s clip at 30 fps yields 60 frames sampled at exact rationals `i/30`
- *    (first 0, last 59/30) — no accumulation.
+ *    (first 0, last 59/30) ??no accumulation.
  * 2. A non-positive fps and a non-positive duration each yield zero frames (both
  *    sides of the guard).
- * 3. Frame names zero-pad to the input pattern (`frame_00042.png` ↔
- *    `frame_%05d.png`).
+ * 3. Frame names zero-pad to the input pattern (`frame_00042.png` ?? *    `frame_%05d.png`).
  * 4. `ffmpegArgs` encodes the spec into the pinned H.264 / pixel-format / crf /
  *    faststart command.
  */
@@ -44,9 +43,9 @@ export const test_render_plan = (): void => {
   TestValidator.predicate("last frame at 59/30", nclose(t[59]!, 59 / 30));
 
   // 2. guards
-  TestValidator.equals("fps <= 0 → no frames", frameTimes(0, 2).length, 0);
+  TestValidator.equals("fps <= 0 ??no frames", frameTimes(0, 2).length, 0);
   TestValidator.equals(
-    "duration <= 0 → no frames",
+    "duration <= 0 ??no frames",
     frameTimes(30, 0).length,
     0,
   );

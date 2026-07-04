@@ -5,8 +5,8 @@ import {
 } from "@autofilm/interface";
 import * as THREE from "three";
 
-import { applyPose } from "./applyPose";
-import { IAutoFilmModelObject, applyTransform } from "./buildModel";
+import { applyPose } from "./ApplyPose";
+import { IAutoFilmModelObject, applyTransform } from "./BuildModel";
 
 /**
  * Result of building a scene: the `three.js` scene and its cameras (first is

@@ -1,41 +1,41 @@
-import { Quaternion, resolveAttachment, resolvePose } from "@autofilm/engine";
-import { IAutoFilmAttachment, IAutoFilmTransform } from "@autofilm/interface";
+import { Quaternion, resolveAttachment, resolvePose } from "@automovie/engine";
+import { IautomovieAttachment, IautomovieTransform } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
 /**
- * `resolveAttachment` — the cross-skeleton joint that fixes a child model's
+ * `resolveAttachment` ??the cross-skeleton joint that fixes a child model's
  * root into a bone of a posed parent (a rider in a horse's saddle). It runs FK
  * on the parent, reads the attachment bone's world position + orientation, and
  * composes the offset into that frame.
  *
- * The fixture skeleton stacks hips(0,1,0) → spine(0,0.2,0) → chest(0,0.2,0), so
+ * The fixture skeleton stacks hips(0,1,0) ??spine(0,0.2,0) ??chest(0,0.2,0), so
  * at rest `chest` sits at world (0,1.4,0) with identity orientation.
  *
  * Scenarios:
  *
- * 1. Rest parent, identity offset → child root lands exactly on the chest's world
+ * 1. Rest parent, identity offset ??child root lands exactly on the chest's world
  *    position, identity rotation, offset scale passed through.
  * 2. A non-identity offset translation is placed in the bone's frame and added to
  *    the bone world position.
  * 3. Rotating the parent's root yaws the whole rig: the child inherits the bone's
  *    world rotation, and its offset translation is carried (rotated) into that
- *    frame — exactly matching a hand-composed FK result.
+ *    frame ??exactly matching a hand-composed FK result.
  * 4. Attaching to a bone absent from the skeleton throws.
  */
 export const test_kinematics_attachment = (): void => {
   const skeleton = createSkeleton();
   const restPose = makePose([]);
 
-  // 1. rest + identity offset → sits on the chest, scale carried
-  const idOffset: IAutoFilmTransform = {
+  // 1. rest + identity offset ??sits on the chest, scale carried
+  const idOffset: IautomovieTransform = {
     translation: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 2, y: 2, z: 2 },
   };
-  const att1: IAutoFilmAttachment = { parentBone: "chest", offset: idOffset };
+  const att1: IautomovieAttachment = { parentBone: "chest", offset: idOffset };
   const r1 = resolveAttachment(restPose, skeleton, att1);
   TestValidator.predicate(
     "child sits on chest world pos (0,1.4,0)",
@@ -50,7 +50,7 @@ export const test_kinematics_attachment = (): void => {
   TestValidator.predicate("offset scale passed through", nclose(r1.scale.x, 2));
 
   // 2. offset translation added in the (rest = world) frame
-  const att2: IAutoFilmAttachment = {
+  const att2: IautomovieAttachment = {
     parentBone: "chest",
     offset: {
       translation: { x: 0, y: 0.05, z: 0.1 },
@@ -64,7 +64,7 @@ export const test_kinematics_attachment = (): void => {
     nclose(r2.translation.y, 1.45) && nclose(r2.translation.z, 0.1),
   );
 
-  // 3. yaw the whole rig via the pose root — child inherits the bone's world
+  // 3. yaw the whole rig via the pose root ??child inherits the bone's world
   //    rotation and the offset is carried into that frame
   const yaw = Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, 90);
   const yawed = makePose([], {
@@ -82,7 +82,7 @@ export const test_kinematics_attachment = (): void => {
     z: 0.1,
   });
   TestValidator.predicate(
-    "child inherits chest world rotation (90° yaw, w≈cos45)",
+    "child inherits chest world rotation (90째 yaw, w?늓os45)",
     nclose(r3.rotation.w, Math.cos((45 * Math.PI) / 180)),
   );
   TestValidator.predicate(
@@ -92,7 +92,7 @@ export const test_kinematics_attachment = (): void => {
       nclose(r3.translation.z, chest.worldPosition.z + expectedT.z),
   );
 
-  // 4. unknown bone → throws (the fixture skeleton has no rightFoot)
+  // 4. unknown bone ??throws (the fixture skeleton has no rightFoot)
   TestValidator.error("attaching to a missing bone throws", () =>
     resolveAttachment(
       restPose,

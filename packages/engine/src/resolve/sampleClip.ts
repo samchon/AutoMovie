@@ -1,16 +1,16 @@
 import {
-  IAutoFilmChannel,
-  IAutoFilmClip,
-  IAutoFilmTrack,
-} from "@autofilm/interface";
+  IautomovieChannel,
+  IautomovieClip,
+  IautomovieTrack,
+} from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
-import { channelIsRotation, channelKey } from "./channel";
+import { channelIsRotation, channelKey } from "./Channel";
 
 /** One channel's value sampled at an instant, with the channel it targets. */
-export interface IAutoFilmSampledChannel {
+export interface IautomovieSampledChannel {
   /** The channel this value belongs to. */
-  channel: IAutoFilmChannel;
+  channel: IautomovieChannel;
 
   /** The sampled value, one number per channel component. */
   value: number[];
@@ -22,7 +22,7 @@ export interface IAutoFilmSampledChannel {
  *
  * This is the engine's bridge from the sparse keyframes an LLM (or an imported
  * glTF) emits to the dense per-frame channel values the rest of the pipeline
- * (constrain → compose) consumes — the universal generalization of the
+ * (constrain ??compose) consumes ??the universal generalization of the
  * humanoid-only {@link sampleMotion}: a track may drive a node's TRS, morph
  * weights, a camera FOV, or any pointer-addressed property, and they all sample
  * identically.
@@ -34,11 +34,11 @@ export interface IAutoFilmSampledChannel {
  * @author Samchon
  */
 export const sampleClip = (
-  clip: IAutoFilmClip,
+  clip: IautomovieClip,
   seconds: number,
-): Map<string, IAutoFilmSampledChannel> => {
+): Map<string, IautomovieSampledChannel> => {
   const time = normalizeTime(seconds, clip.duration, clip.loop);
-  const out = new Map<string, IAutoFilmSampledChannel>();
+  const out = new Map<string, IautomovieSampledChannel>();
   for (const track of clip.tracks)
     out.set(channelKey(track.channel), {
       channel: track.channel,
@@ -53,7 +53,7 @@ export const sampleClip = (
  * `cubicspline` evaluates the glTF cubic Hermite spline from the keyframes'
  * tangents.
  */
-const sampleTrack = (track: IAutoFilmTrack, time: number): number[] => {
+const sampleTrack = (track: IautomovieTrack, time: number): number[] => {
   const { times, values, interpolation, channel } = track;
   const cubic = interpolation === "cubicspline";
   // Stored stride per keyframe; cubicspline stores in-tangent/value/out-tangent.
@@ -95,7 +95,7 @@ const sampleTrack = (track: IAutoFilmTrack, time: number): number[] => {
  * sphere).
  */
 const cubicHermite = (
-  track: IAutoFilmTrack,
+  track: IautomovieTrack,
   lo: number,
   hi: number,
   span: number,

@@ -1,4 +1,4 @@
-import { validatePoseResult } from "@autofilm/engine";
+import { validatePoseResult } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
@@ -10,7 +10,7 @@ import { hasViolation } from "../internal/predicates";
  * that a pose authored against the wrong rig is caught rather than silently
  * ignored.
  *
- * Scenario: a pose articulating `jaw` — a bone the test skeleton lacks — fails,
+ * Scenario: a pose articulating `jaw` ??a bone the test skeleton lacks ??fails,
  * with a `type` violation on the bone.
  */
 export const test_validation_pose_unknown_bone = (): void => {

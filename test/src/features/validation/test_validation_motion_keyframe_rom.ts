@@ -1,4 +1,4 @@
-import { validateMotion } from "@autofilm/engine";
+import { validateMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -16,7 +16,7 @@ import { hasViolation } from "../internal/predicates";
  * that keyframe's path, not just at the clip level. Pins that the ROM verifier
  * reaches inside motion.
  *
- * Scenario: a clip whose second keyframe bends the elbow to 175° fails, with a
+ * Scenario: a clip whose second keyframe bends the elbow to 175째 fails, with a
  * `rom` violation under the `keyframes[...]` path.
  */
 export const test_validation_motion_keyframe_rom = (): void => {

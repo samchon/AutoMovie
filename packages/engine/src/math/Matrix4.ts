@@ -1,11 +1,11 @@
-import { IAutoFilmQuaternion, IAutoFilmVector3 } from "@autofilm/interface";
+import { IautomovieQuaternion, IautomovieVector3 } from "@automovie/interface";
 
 /**
- * Pure-function 4×4 matrix math, column-major (glTF / `three.js` storage order:
+ * Pure-function 4횞4 matrix math, column-major (glTF / `three.js` storage order:
  * element `m[col * 4 + row]`).
  *
- * The interface never exposes a matrix — nodes carry decomposed TRS so every
- * value stays animatable ({@link IAutoFilmTransform}). But composing a hierarchy
+ * The interface never exposes a matrix ??nodes carry decomposed TRS so every
+ * value stays animatable ({@link IautomovieTransform}). But composing a hierarchy
  * _correctly_ under non-uniform scale needs a real matrix product (TRS-only
  * composition shears wrong when a scaled parent rotates a child), so the engine
  * drops to matrices internally for the compose pass and hands the renderer
@@ -22,12 +22,12 @@ export namespace Matrix4 {
   /**
    * Build the local transform matrix from a TRS triple, matching `three.js`
    * `Matrix4.compose` exactly (so engine and viewer agree bit-for-bit): `M = T
-   * · R · S`.
+   * 쨌 R 쨌 S`.
    */
   export const compose = (
-    t: IAutoFilmVector3,
-    r: IAutoFilmQuaternion,
-    s: IAutoFilmVector3,
+    t: IautomovieVector3,
+    r: IautomovieQuaternion,
+    s: IautomovieVector3,
   ): number[] => {
     const x2 = r.x + r.x;
     const y2 = r.y + r.y;
@@ -61,7 +61,7 @@ export namespace Matrix4 {
     ];
   };
 
-  /** Matrix product `a · b` (apply `b` first, then `a`), column-major. */
+  /** Matrix product `a 쨌 b` (apply `b` first, then `a`), column-major. */
   export const multiply = (a: number[], b: number[]): number[] => {
     const out = new Array<number>(16);
     for (let col = 0; col < 4; ++col)
@@ -74,7 +74,7 @@ export namespace Matrix4 {
   };
 
   /** The translation column of a matrix. */
-  export const position = (m: number[]): IAutoFilmVector3 => ({
+  export const position = (m: number[]): IautomovieVector3 => ({
     x: m[12]!,
     y: m[13]!,
     z: m[14]!,
@@ -83,7 +83,7 @@ export namespace Matrix4 {
   /**
    * Split a transform matrix back into its TRS triple (the inverse of
    * {@link compose}), matching `three.js` `Matrix4.decompose`. Scale is taken as
-   * the basis-column lengths (assumed positive — the engine never mirrors); the
+   * the basis-column lengths (assumed positive ??the engine never mirrors); the
    * rotation is read from the scale-normalized basis via the standard
    * largest-diagonal quaternion extraction.
    *
@@ -94,9 +94,9 @@ export namespace Matrix4 {
   export const decompose = (
     m: number[],
   ): {
-    position: IAutoFilmVector3;
-    rotation: IAutoFilmQuaternion;
-    scale: IAutoFilmVector3;
+    position: IautomovieVector3;
+    rotation: IautomovieQuaternion;
+    scale: IautomovieVector3;
   } => {
     const sx = Math.hypot(m[0]!, m[1]!, m[2]!);
     const sy = Math.hypot(m[4]!, m[5]!, m[6]!);

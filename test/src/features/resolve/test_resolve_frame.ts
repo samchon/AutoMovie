@@ -1,23 +1,23 @@
-import { resolveFrame } from "@autofilm/engine";
+import { resolveFrame } from "@automovie/engine";
 import {
-  IAutoFilmChannel,
-  IAutoFilmChannelLimit,
-  IAutoFilmClip,
-  IAutoFilmNode,
-  IAutoFilmTrack,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  IautomovieChannel,
+  IautomovieChannelLimit,
+  IautomovieClip,
+  IautomovieNode,
+  IautomovieTrack,
+  IautomovieTransform,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const IDENTITY: IAutoFilmTransform = {
+const IDENTITY: IautomovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 
-const node = (id: string): IAutoFilmNode => ({
+const node = (id: string): IautomovieNode => ({
   id,
   name: null,
   parent: null,
@@ -32,22 +32,22 @@ const node = (id: string): IAutoFilmNode => ({
 const nodeChannel = (
   id: string,
   path: "translation" | "rotation" | "scale" | "weights",
-): IAutoFilmChannel => ({ kind: "node", node: id, path });
+): IautomovieChannel => ({ kind: "node", node: id, path });
 
 const track = (
-  channel: IAutoFilmChannel,
+  channel: IautomovieChannel,
   times: number[],
   values: number[],
-): IAutoFilmTrack => ({ channel, times, values, interpolation: "linear" });
+): IautomovieTrack => ({ channel, times, values, interpolation: "linear" });
 
 const tx = (m: number[]): number => m[12]!;
 
 /**
- * The per-frame resolver end to end: SAMPLE → CONSTRAIN → COMPOSE, plus the
+ * The per-frame resolver end to end: SAMPLE ??CONSTRAIN ??COMPOSE, plus the
  * weights side-channel and the rest-pose (null clip) path.
  *
- * The scene has five nodes — one animating translation+rotation, one rotation
- * only, one scale only, one morph weights, and one static — exercising every
+ * The scene has five nodes ??one animating translation+rotation, one rotation
+ * only, one scale only, one morph weights, and one static ??exercising every
  * combination of present/absent TRS channels when folding samples into
  * overrides (in particular a rotation-only node, where the translation channel
  * is absent so the rotation channel is the one that triggers the override).
@@ -57,11 +57,11 @@ const tx = (m: number[]): number => m[12]!;
  * 1. A null clip resolves the rest pose: every node sits at its rest transform, no
  *    weights and no violations are produced.
  * 2. With the clip, the translation+rotation node animates (translation and
- *    rotation channels present, scale absent → kept from rest), the scale node
- *    animates scale only (translation/rotation absent → kept from rest), and
+ *    rotation channels present, scale absent ??kept from rest), the scale node
+ *    animates scale only (translation/rotation absent ??kept from rest), and
  *    the static node (no channels) keeps its rest transform entirely.
  * 3. A channel limit on the translation channel clamps the sampled overshoot
- *    (x=100 → 50) and reports exactly one violation tagged with that channel;
+ *    (x=100 ??50) and reports exactly one violation tagged with that channel;
  *    the clamped value flows through to the composed world matrix.
  * 4. A limit on a channel the clip does not animate is skipped (no sample to
  *    clamp), producing no violation.
@@ -76,7 +76,7 @@ export const test_resolve_frame = (): void => {
     node("morph"),
     node("static"),
   ];
-  const clip: IAutoFilmClip = {
+  const clip: IautomovieClip = {
     id: "c",
     name: null,
     duration: 1,
@@ -89,13 +89,13 @@ export const test_resolve_frame = (): void => {
       track(nodeChannel("morph", "weights"), [0, 1], [0, 1]),
     ],
   };
-  const limits: IAutoFilmChannelLimit[] = [
+  const limits: IautomovieChannelLimit[] = [
     {
       channel: nodeChannel("trs", "translation"),
       min: null,
       max: [50, null, null],
     },
-    // a limit on a channel the clip never animates → skipped
+    // a limit on a channel the clip never animates ??skipped
     {
       channel: nodeChannel("ghost", "translation"),
       min: [0, 0, 0],
@@ -103,7 +103,7 @@ export const test_resolve_frame = (): void => {
     },
   ];
 
-  // 1. null clip → rest pose
+  // 1. null clip ??rest pose
   const rest = resolveFrame({ nodes, clip: null, limits, seconds: 1 });
   TestValidator.predicate(
     "null clip leaves node at rest",

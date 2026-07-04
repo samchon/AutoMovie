@@ -1,24 +1,24 @@
 import {
   HUMANOID_JOINT_AXES,
-  IAutoFilmJointAxes,
+  IautomovieJointAxes,
   aimRotation,
   solveTwoBoneIK,
-} from "@autofilm/engine";
-import { AutoFilmHumanoidBone } from "@autofilm/interface";
-import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
+} from "@automovie/engine";
+import { automovieHumanoidBone } from "@automovie/interface";
+import { automoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
-import { DEFAULT_CAT, buildCat } from "./cat";
-import { CAT_CLIPS } from "./cat-motion";
-import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
-import { STICKMAN_CLIPS } from "./stickman-motion";
+import { DEFAULT_CAT, buildCat } from "./Cat";
+import { CAT_CLIPS } from "./Cat-motion";
+import { DEFAULT_STICKMAN, buildStickman } from "./Stickman";
+import { STICKMAN_CLIPS } from "./Stickman-motion";
 
 const params = new URLSearchParams(location.search);
 const isCat = params.get("char") === "cat";
 // `?rom=1` freezes the figure at rest and draws each joint's flexion gamut.
 const showRom = params.get("rom") === "1";
 
-// ── build the chosen character + its clips ──────────────────────────────────
+// ?? build the chosen character + its clips ??????????????????????????????????
 // The cat is a quadruped (legs point down at rest) so it uses the default
 // clinical axes; the human T-pose rig opts into HUMANOID_JOINT_AXES.
 const { model, skeleton } = isCat
@@ -27,7 +27,7 @@ const { model, skeleton } = isCat
 const object = buildModel(model);
 const clips = isCat ? CAT_CLIPS(skeleton.id) : STICKMAN_CLIPS(skeleton.id);
 const jointAxes:
-  | Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>
+  | Partial<Record<automovieHumanoidBone, IautomovieJointAxes>>
   | undefined = isCat ? undefined : HUMANOID_JOINT_AXES;
 const defaultClip = isCat ? "idle" : "jumpingJack";
 
@@ -44,12 +44,12 @@ const catTailSpring =
           "leftLittleProximal",
           "leftLittleIntermediate",
           "leftLittleDistal",
-        ] as AutoFilmHumanoidBone[],
+        ] as automovieHumanoidBone[],
         stiffness: 90,
         damping: 9,
       }
     : undefined;
-const player = new AutoFilmPlayer(
+const player = new automoviePlayer(
   object,
   skeleton,
   clips[clipName]!,
@@ -65,7 +65,7 @@ const freezeAt = frozen !== null ? Number(frozen) : null;
 if (!showRom && freezeAt !== null && Number.isFinite(freezeAt))
   player.update(freezeAt);
 
-// ── scene scaffolding ───────────────────────────────────────────────────────
+// ?? scene scaffolding ???????????????????????????????????????????????????????
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf2f4f8);
 scene.add(object.object);
@@ -91,8 +91,7 @@ const ctr = isCat ? 0.12 : 0; // cat trunk centre is forward of the hips
 const camY = target + (isCat ? 0.22 : 0.1);
 
 // `?follow=1` makes the camera ride along with the character's root as a
-// traveling clip (stroll/sprint/prowl/bound) carries it across the floor —
-// holding the same orbit offset but re-centred on the moving body, so the
+// traveling clip (stroll/sprint/prowl/bound) carries it across the floor ??// holding the same orbit offset but re-centred on the moving body, so the
 // figure stays framed while the ground scrolls past (a tracking shot). The
 // root translation the engine bakes via travelMotion lands on `object.object`,
 // so we just read its world position each frame.
@@ -111,10 +110,10 @@ camera.position.set(dist * Math.sin(az), camY, ctr + dist * Math.cos(az));
 camera.lookAt(0, target, ctr);
 if (followMode) followCamera();
 
-// ── ROM overlay: a flexion-gamut fan at every constrained joint ─────────────
+// ?? ROM overlay: a flexion-gamut fan at every constrained joint ?????????????
 // Each joint's `constraint.flexion` [min,max] swept about its flexion axis (the
 // same axis the engine validates against), drawn at rest so the figure's whole
-// range of motion is visible at once — the joint-limit idea made tangible.
+// range of motion is visible at once ??the joint-limit idea made tangible.
 const buildRomFans = (): void => {
   scene.updateMatrixWorld(true);
   const pos = new THREE.Vector3();
@@ -163,7 +162,7 @@ const buildRomFans = (): void => {
 };
 if (showRom) buildRomFans();
 
-// ── aim / look-at driver (?look=1) ──────────────────────────────────────────
+// ?? aim / look-at driver (?look=1) ??????????????????????????????????????????
 // The head's forward (+Z, where the eyes are) tracks a target orbiting in front
 // of the face: each frame compute the world look direction and convert it to the
 // head bone's local rotation via the engine's aimRotation.
@@ -185,23 +184,23 @@ const aimHead = (elapsed: number): void => {
   headBone.quaternion.copy(parentQ.invert().multiply(world));
 };
 
-// ── two-bone IK reach driver (?reach=1) ─────────────────────────────────────
-// The right arm reaches a moving target: aim the upper arm off the shoulder→goal
+// ?? two-bone IK reach driver (?reach=1) ?????????????????????????????????????
+// The right arm reaches a moving target: aim the upper arm off the shoulder?뭛oal
 // line by the engine's solveTwoBoneIK `lift`, then point the forearm at the goal
-// — the hand lands on the target, the elbow bending as it moves in and out.
+// ??the hand lands on the target, the elbow bending as it moves in and out.
 const reachMode = params.get("reach") === "1";
 const segLen = (b: string): number => {
   const t = skeleton.bones.find((x) => x.bone === b)?.rest.translation;
   return t ? Math.hypot(t.x, t.y, t.z) : 0.25;
 };
-const L1 = segLen("rightLowerArm"); // shoulder → elbow
-const L2 = segLen("rightHand"); // elbow → wrist
+const L1 = segLen("rightLowerArm"); // shoulder ??elbow
+const L2 = segLen("rightHand"); // elbow ??wrist
 const reachTarget = new THREE.Mesh(
   new THREE.SphereGeometry(0.04, 16, 12),
   new THREE.MeshStandardMaterial({ color: 0xe5484d }),
 );
 if (reachMode) scene.add(reachTarget);
-const FWD = { x: -1, y: 0, z: 0 }; // right-arm rest points down its −X local axis
+const FWD = { x: -1, y: 0, z: 0 }; // right-arm rest points down its ?뭎 local axis
 const toThree = (q: { x: number; y: number; z: number; w: number }) =>
   new THREE.Quaternion(q.x, q.y, q.z, q.w);
 
@@ -249,7 +248,7 @@ const reach = (elapsed: number): void => {
   lower.quaternion.copy(upperWorldQ.invert().multiply(lowerWorld));
 };
 
-// One frame of animation at `elapsed` seconds — shared by the live render loop
+// One frame of animation at `elapsed` seconds ??shared by the live render loop
 // and the deterministic capture hook below.
 const frame = (elapsed: number): void => {
   if (reachMode) reach(elapsed);
@@ -274,7 +273,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   handle.renderer.render(scene, camera);
 };
 
-// ── clip selector (live switching) ──────────────────────────────────────────
+// ?? clip selector (live switching) ??????????????????????????????????????????
 const bar = document.querySelector<HTMLDivElement>("#clips");
 if (bar !== null) {
   let active = clipName;
@@ -293,7 +292,7 @@ if (bar !== null) {
 }
 
 // expose for headless verification (the screenshot harness reads this)
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   clip: clipName,
   boneCount: () => object.bones.size,

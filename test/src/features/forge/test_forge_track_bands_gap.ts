@@ -1,4 +1,4 @@
-import { trackSilhouetteBands } from "@autofilm/forge";
+import { trackSilhouetteBands } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**

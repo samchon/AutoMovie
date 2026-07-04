@@ -1,4 +1,4 @@
-import { validateMotion } from "@autofilm/engine";
+import { validateMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -11,13 +11,13 @@ import {
 import { hasViolation } from "../internal/predicates";
 
 /**
- * Per-keyframe ROM is not enough — two individually valid poses can still imply
+ * Per-keyframe ROM is not enough ??two individually valid poses can still imply
  * an impossibly fast motion between them. The temporal verifier flags a shared
  * joint that swings faster than the engine's bound, catching teleporting limbs
  * that frame-by-frame validation would miss.
  *
- * Scenario: a shoulder swinging 0°→170° in 0.1s (1700°/s, over the bound)
- * fails, with a `temporal` violation on the pose — even though 0° and 170° are
+ * Scenario: a shoulder swinging 0째??70째 in 0.1s (1700째/s, over the bound)
+ * fails, with a `temporal` violation on the pose ??even though 0째 and 170째 are
  * each within the shoulder's ROM.
  */
 export const test_validation_motion_angular_speed = (): void => {

@@ -1,40 +1,40 @@
 import {
   HUMANOID_JOINT_AXES,
-  IAutoFilmActorContext,
+  IautomovieActorContext,
   cutSequence,
   makeActorSynthesizer,
   performShot,
   resolveSequencePlayback,
   stageScene,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmModel,
-  IAutoFilmMotion,
-  IAutoFilmPerformanceApplication,
-  IAutoFilmScriptApplication,
-  IAutoFilmShot,
-  IAutoFilmStagingApplication,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieModel,
+  IautomovieMotion,
+  IautomoviePerformanceApplication,
+  IautomovieScriptApplication,
+  IautomovieShot,
+  IautomovieStagingApplication,
+  IautomovieVector3,
+} from "@automovie/interface";
 import {
-  AutoFilmPlayer,
+  automoviePlayer,
   applyObjectMotion,
   buildModel,
   mountViewer,
-} from "@autofilm/viewer";
+} from "@automovie/viewer";
 import * as THREE from "three";
 
-import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
+import { DEFAULT_STICKMAN, buildStickman } from "./Stickman";
 
 // The `launch` verb on screen: the archer looses, the engine solves the aim and
 // bakes the arrow's flight into the shot's `objectMotions` (a world-space node
-// clip — a projectile has no rig, so it moves the way the camera does), and
+// clip ??a projectile has no rig, so it moves the way the camera does), and
 // schedules the target's recoil at the *computed* contact. The viewer samples
-// that clip onto the arrow's group each frame — the read side of the whole
+// that clip onto the arrow's group each frame ??the read side of the whole
 // launch arc. Deterministic via renderAt(t) for capture.
 
-// ── the arrow prop: a thin shaft, no rig (driven wholly by its objectMotion) ──
-const arrowModel: IAutoFilmModel = {
+// ?? the arrow prop: a thin shaft, no rig (driven wholly by its objectMotion) ??
+const arrowModel: IautomovieModel = {
   id: "arrow",
   name: "arrow",
   origin: "generated",
@@ -67,8 +67,8 @@ const arrowModel: IAutoFilmModel = {
   asset: null,
 };
 
-// ── the stage payloads (what the LLM will author; fixtures here) ─────────────
-const script: IAutoFilmScriptApplication.IWrite = {
+// ?? the stage payloads (what the LLM will author; fixtures here) ?????????????
+const script: IautomovieScriptApplication.IWrite = {
   type: "write",
   logline: "An archer looses; the shaft finds its mark across the field.",
   theme: "a computed arc",
@@ -88,7 +88,7 @@ const script: IAutoFilmScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoFilmStagingApplication.IWrite = {
+const staging: IautomovieStagingApplication.IWrite = {
   type: "write",
   scene: { id: "scene-range", name: "the range" },
   plan: "archer at the near mark facing downrange (+Z); the mark 6.5 m away; the arrow nocked at bow height; camera side-on to read the whole arc.",
@@ -115,7 +115,7 @@ const staging: IAutoFilmStagingApplication.IWrite = {
   ],
 };
 
-const performance: IAutoFilmPerformanceApplication.IWrite = {
+const performance: IautomoviePerformanceApplication.IWrite = {
   type: "write",
   beat: "loose",
   plan: "the archer tracks the mark and looses; the engine flies the arrow and recoils the mark on the hit.",
@@ -152,7 +152,7 @@ const performance: IAutoFilmPerformanceApplication.IWrite = {
   duration: 3,
 };
 
-// ── rigs + the content seam ──────────────────────────────────────────────────
+// ?? rigs + the content seam ??????????????????????????????????????????????????
 const archerRig = buildStickman(DEFAULT_STICKMAN);
 const targetRig = buildStickman(DEFAULT_STICKMAN);
 const rigOf = { archer: archerRig, target: targetRig } as const;
@@ -162,10 +162,10 @@ const staged = stageScene(script, staging);
 if (staged.success !== true)
   throw new Error(`staging failed: ${JSON.stringify(staged)}`);
 
-const nodePositions = new Map<string, IAutoFilmVector3>(
+const nodePositions = new Map<string, IautomovieVector3>(
   staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
 );
-const contexts = new Map<string, IAutoFilmActorContext>(
+const contexts = new Map<string, IautomovieActorContext>(
   staged.scene.nodes
     .filter((n) => isActor(n.id))
     .map((n) => {
@@ -187,7 +187,7 @@ const contexts = new Map<string, IAutoFilmActorContext>(
 );
 const synthesize = makeActorSynthesizer(contexts, nodePositions);
 
-// ── the ladder: perform → cut ────────────────────────────────────────────────
+// ?? the ladder: perform ??cut ????????????????????????????????????????????????
 const performed = performShot({
   script,
   staged,
@@ -197,8 +197,8 @@ const performed = performShot({
 });
 if (performed.success !== true)
   throw new Error(`perform failed: ${JSON.stringify(performed.violations)}`);
-const shots: IAutoFilmShot[] = [performed.shot];
-const motionsByShot = new Map<string, Record<string, IAutoFilmMotion>>([
+const shots: IautomovieShot[] = [performed.shot];
+const motionsByShot = new Map<string, Record<string, IautomovieMotion>>([
   [performed.shot.id, performed.motions],
 ]);
 
@@ -216,7 +216,7 @@ const cut = cutSequence(
 if (cut.success !== true) throw new Error("cut failed");
 export const FILM_DURATION = cut.runtime;
 
-// ── the set: scene nodes → three.js (groups tracked by id) ───────────────────
+// ?? the set: scene nodes ??three.js (groups tracked by id) ???????????????????
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xeef1f6);
 scene.add(new THREE.GridHelper(16, 32, 0xb8c0cc, 0xd5dbe4));
@@ -241,7 +241,7 @@ for (const node of staged.scene.nodes) {
 }
 
 // One player per performing actor (poses ride inside the staged-facing group);
-// the arrow has no performance — its group is driven by the objectMotion.
+// the arrow has no performance ??its group is driven by the objectMotion.
 const playersByShot = new Map(
   shots.map((shot) => [
     shot.id,
@@ -249,7 +249,7 @@ const playersByShot = new Map(
       .filter((p) => isActor(p.node))
       .map((p) => ({
         node: p.node,
-        player: new AutoFilmPlayer(
+        player: new automoviePlayer(
           built[p.node]!,
           rigOf[p.node as keyof typeof rigOf].skeleton,
           motionsByShot.get(shot.id)![p.node]!,
@@ -259,7 +259,7 @@ const playersByShot = new Map(
   ]),
 );
 
-// ── the projector: global seconds → posed actors + flying arrow + camera ─────
+// ?? the projector: global seconds ??posed actors + flying arrow + camera ?????
 const camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.05, 100);
 const stagedCam = staged.scene.cameras[0]!;
 const applyStagedCamera = (): void => {
@@ -280,7 +280,7 @@ const renderAt = (seconds: number): void => {
     player.update(sample.time);
   const live = shotById.get(sample.shot)!;
   // objectMotions: world-space node clips (the arrow's flight). Drive the
-  // object's group transform straight from the sampled clip — the read side of
+  // object's group transform straight from the sampled clip ??the read side of
   // compileLaunch/projectileTrajectory.
   for (const clip of live.objectMotions)
     applyObjectMotion(clip, sample.time, (node) => groupsById.get(node));
@@ -288,7 +288,7 @@ const renderAt = (seconds: number): void => {
   else applyObjectMotion(live.cameraMotion, sample.time, () => camera);
 };
 
-// ── mount + deterministic seek contract (capture) ────────────────────────────
+// ?? mount + deterministic seek contract (capture) ????????????????????????????
 const params = new URLSearchParams(location.search);
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 const capMode = params.get("cap") === "1";
@@ -305,7 +305,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   renderAt(t);
   handle.renderer.render(scene, camera);
 };
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   duration: FILM_DURATION,
   shots: shots.map((s) => s.id),

@@ -1,24 +1,24 @@
 import {
-  IAutoFilmActionCall,
-  IAutoFilmBlockingApplication,
-  IAutoFilmCameraAction,
-  IAutoFilmClip,
-  IAutoFilmConstraintViolation,
-  IAutoFilmMotion,
-  IAutoFilmPerformanceApplication,
-  IAutoFilmQuaternion,
-  IAutoFilmScriptApplication,
-  IAutoFilmShot,
-  IAutoFilmSkeleton,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieActionCall,
+  IautomovieBlockingApplication,
+  IautomovieCameraAction,
+  IautomovieClip,
+  IautomovieConstraintViolation,
+  IautomovieMotion,
+  IautomoviePerformanceApplication,
+  IautomovieQuaternion,
+  IautomovieScriptApplication,
+  IautomovieShot,
+  IautomovieSkeleton,
+  IautomovieVector3,
+} from "@automovie/interface";
 
 import { HUMANOID_JOINT_AXES } from "../kinematics/humanoidJointAxes";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
 import {
-  IAutoFilmActionSynthesizer,
+  IautomovieActionSynthesizer,
   compilePerformance,
 } from "../perform/compilePerformance";
 import { resolveTargetPoint } from "../perform/resolveTargetPoint";
@@ -26,29 +26,29 @@ import { validateMotion } from "../validation/validateMotion";
 import { ViolationCollector } from "../validation/violation";
 import {
   DEFAULT_SUBJECT_HEIGHT,
-  IAutoFilmCameraFrameEntry,
+  IautomovieCameraFrameEntry,
   compileCameraMove,
   computeRestHeight,
-} from "./cameraMove";
-import { compileAttach } from "./compileAttach";
-import { compileLaunch } from "./compileLaunch";
-import { IAutoFilmStagedSet } from "./stageScene";
+} from "./CameraMove";
+import { compileAttach } from "./CompileAttach";
+import { compileLaunch } from "./CompileLaunch";
+import { IautomovieStagedSet } from "./StageScene";
 
 /**
  * A node's animated **world** position over shot time: its staged `base` plus
  * the node-local root displacement of `motion` at that instant, rotated into the
  * world by the node's staged `facing`. The read shared by a `follow` camera
- * tracking a walking actor and a `launch` leading a moving target — one place,
+ * tracking a walking actor and a `launch` leading a moving target ??one place,
  * one convention (the root is node-local; the renderer applies it under the same
  * facing).
  */
 const animatedBaseAt =
   (
-    base: IAutoFilmVector3,
-    facing: IAutoFilmQuaternion,
-    motion: IAutoFilmMotion,
+    base: IautomovieVector3,
+    facing: IautomovieQuaternion,
+    motion: IautomovieMotion,
   ) =>
-  (seconds: number): IAutoFilmVector3 =>
+  (seconds: number): IautomovieVector3 =>
     Vector3.add(
       base,
       Quaternion.rotateVector(
@@ -62,27 +62,27 @@ const animatedBaseAt =
     );
 
 /**
- * A performed shot: the assembled {@link IAutoFilmShot} plus the dense motion
+ * A performed shot: the assembled {@link IautomovieShot} plus the dense motion
  * clips the compiler synthesised for it. The clips travel alongside the shot
- * because the shot references them by id — the host registers them wherever its
+ * because the shot references them by id ??the host registers them wherever its
  * clip store lives.
  *
  * @author Samchon
  */
-export type IAutoFilmPerformedShot =
-  | IAutoFilmPerformedShot.ISuccess
-  | IAutoFilmPerformedShot.IFailure;
-export namespace IAutoFilmPerformedShot {
+export type IautomoviePerformedShot =
+  | IautomoviePerformedShot.ISuccess
+  | IautomoviePerformedShot.IFailure;
+export namespace IautomoviePerformedShot {
   /** The performance compiled and every clip passed validation. */
   export interface ISuccess {
     /** Discriminator. */
     success: true;
 
     /** The shot, ready for the cut. */
-    shot: IAutoFilmShot;
+    shot: IautomovieShot;
 
     /** The synthesised per-actor clips, keyed by scene-node id. */
-    motions: Record<string, IAutoFilmMotion>;
+    motions: Record<string, IautomovieMotion>;
   }
 
   /** The action list contradicted the stage, or a compiled clip broke ROM. */
@@ -91,13 +91,13 @@ export namespace IAutoFilmPerformedShot {
     success: false;
 
     /** Every violation found, for the correction round. */
-    violations: IAutoFilmConstraintViolation[];
+    violations: IautomovieConstraintViolation[];
   }
 }
 
 /**
- * The PERFORMANCE consumer — fold one beat's action calls into an
- * {@link IAutoFilmShot} through {@link compilePerformance}, gating both sides of
+ * The PERFORMANCE consumer ??fold one beat's action calls into an
+ * {@link IautomovieShot} through {@link compilePerformance}, gating both sides of
  * the seam: the calls must reference the staged world (a beat the script
  * planned, actors the stage placed), and the clips the synthesizer fattened
  * them into must survive `validateMotion` against each actor's skeleton. The
@@ -106,7 +106,7 @@ export namespace IAutoFilmPerformedShot {
  *
  * Camera `frame` actions elect the live camera and author its move: the first
  * one names the shot's camera (staging aimed it already), rival `frame` calls
- * on a second camera are a violation — one take, one live camera — and the
+ * on a second camera are a violation ??one take, one live camera ??and the
  * elected camera's frame actions compile into `cameraMotion` through
  * {@link compileCameraMove}'s framing grammar. Frame subjects must resolve to a
  * point (node/point/group), and same-camera moves must not overlap in time. A
@@ -115,36 +115,36 @@ export namespace IAutoFilmPerformedShot {
  * fails.
  *
  * `launch` actions are compiled through {@link compileLaunch}: the projectile (a
- * staged scene node) gets its baked flight as a shot `objectMotion`, and — for
- * a node aim carrying `onHit` — the struck actor's recoil is folded into the
+ * staged scene node) gets its baked flight as a shot `objectMotion`, and ??for
+ * a node aim carrying `onHit` ??the struck actor's recoil is folded into the
  * action list at the **engine-computed** contact, so it rides the same
  * synthesis and ROM gate as an authored `react`. The projectile must be staged,
  * the aim must resolve to a point, and the shot must reach the target at the
- * given speed — each an input violation otherwise.
+ * given speed ??each an input violation otherwise.
  *
  * `attachTo` actions are compiled through {@link compileAttach} once the parent
  * pose is known: the coupled child (a prop, not a rig) gets a shot
  * `objectMotion` that rides the parent's bone in scene space each frame. The
- * parent must be a staged, rigged node carrying the named bone — each an input
+ * parent must be a staged, rigged node carrying the named bone ??each an input
  * violation otherwise.
  *
  * @param props.skeleton Rig lookup for ROM validation; return null for a node
  *   that has no skeleton (its clip skips ROM).
  */
 export const performShot = (props: {
-  script: IAutoFilmScriptApplication.IWrite;
-  staged: IAutoFilmStagedSet.ISuccess;
-  performance: IAutoFilmPerformanceApplication.IWrite;
-  synthesize: IAutoFilmActionSynthesizer;
-  skeleton: (node: string) => IAutoFilmSkeleton | null;
+  script: IautomovieScriptApplication.IWrite;
+  staged: IautomovieStagedSet.ISuccess;
+  performance: IautomoviePerformanceApplication.IWrite;
+  synthesize: IautomovieActionSynthesizer;
+  skeleton: (node: string) => IautomovieSkeleton | null;
   /**
    * The beat's validated blocking (from `blockBeat`), when the pipeline runs
    * the full stage ladder. Supplying it arms the coherence gates between intent
    * and realization: matching beat and duration, every timing anchor covered by
    * an action of its actor, and the camera intent honoured.
    */
-  blocking?: IAutoFilmBlockingApplication.IWrite;
-}): IAutoFilmPerformedShot => {
+  blocking?: IautomovieBlockingApplication.IWrite;
+}): IautomoviePerformedShot => {
   const { script, staged, performance, synthesize, skeleton, blocking } = props;
   const out = new ViolationCollector();
 
@@ -172,7 +172,7 @@ export const performShot = (props: {
   const nodeIds = new Set(staged.scene.nodes.map((n) => n.id));
   const cameraIds = new Set(staged.scene.cameras.map((c) => c.id));
 
-  const nodePositions = new Map<string, IAutoFilmVector3>(
+  const nodePositions = new Map<string, IautomovieVector3>(
     staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
   );
   const nodeRotations = new Map(
@@ -180,22 +180,22 @@ export const performShot = (props: {
   );
 
   let liveCamera: string | null = null;
-  const stageActions: IAutoFilmActionCall[] = [];
-  const frames: { action: IAutoFilmCameraAction; index: number }[] = [];
-  // Launch jobs collected while validating — the projectile must be a staged
+  const stageActions: IautomovieActionCall[] = [];
+  const frames: { action: IautomovieCameraAction; index: number }[] = [];
+  // Launch jobs collected while validating ??the projectile must be a staged
   // node and the target must resolve to a point; compiled after the input
   // gate (below) into the projectile's flight and the target's scheduled react.
   const launches: {
-    action: IAutoFilmActionCall & { verb: "launch" };
+    action: IautomovieActionCall & { verb: "launch" };
     index: number;
-    origin: IAutoFilmVector3;
-    target: IAutoFilmVector3;
+    origin: IautomovieVector3;
+    target: IautomovieVector3;
     targetNode: string | null;
   }[] = [];
-  // Attach jobs — the parent must be a staged, rigged node carrying the target
+  // Attach jobs ??the parent must be a staged, rigged node carrying the target
   // bone; the child's follow-clip is baked after the parent's pose compiles.
   const attachments: {
-    action: IAutoFilmActionCall & { verb: "attachTo" };
+    action: IautomovieActionCall & { verb: "attachTo" };
     index: number;
   }[] = [];
   actions.forEach((action, i) => {
@@ -231,14 +231,14 @@ export const performShot = (props: {
         out.push(
           "type",
           `${base}[${i}].actor`,
-          `one live camera per shot — "${liveCamera}" already frames it`,
+          `one live camera per shot ??"${liveCamera}" already frames it`,
           camera,
         );
       if (resolveTargetPoint(action.on, nodePositions) === null)
         out.push(
           "type",
           `${base}[${i}].on`,
-          `a frame subject must resolve to a point — a node/point/group of placed actors, not "${action.on.kind}"`,
+          `a frame subject must resolve to a point ??a node/point/group of placed actors, not "${action.on.kind}"`,
           action.on,
         );
       frames.push({ action, index: i });
@@ -263,7 +263,7 @@ export const performShot = (props: {
           out.push(
             "type",
             `${base}[${i}].at`,
-            `a launch target must resolve to a point — a node/point/group of placed actors, not "${action.at.kind}"`,
+            `a launch target must resolve to a point ??a node/point/group of placed actors, not "${action.at.kind}"`,
             action.at,
           );
         if (stagedProjectile && target !== null)
@@ -319,7 +319,7 @@ export const performShot = (props: {
       out.push(
         "range",
         `${base}[${frames[i + 1]!.index}].start`,
-        `frame moves overlap — the previous move runs until ${end}s, but this one starts at ${frames[i + 1]!.action.start}s`,
+        `frame moves overlap ??the previous move runs until ${end}s, but this one starts at ${frames[i + 1]!.action.start}s`,
         frames[i + 1]!.action.start,
       );
   }
@@ -328,7 +328,7 @@ export const performShot = (props: {
   // realize that plan, not another one. The beat and duration must match,
   // every timing anchor must be covered by some action of its actor (an
   // anchored key moment nobody performs is a dropped beat), and the camera
-  // intent must be honoured by the first frame move — or, for a static
+  // intent must be honoured by the first frame move ??or, for a static
   // intent, a locked-off camera will do.
   if (blocking !== undefined) {
     if (blocking.beat !== performance.beat)
@@ -346,7 +346,7 @@ export const performShot = (props: {
         performance.duration,
       );
 
-    const spanOf = (action: IAutoFilmActionCall): [number, number] => [
+    const spanOf = (action: IautomovieActionCall): [number, number] => [
       action.start,
       action.duration === "auto"
         ? performance.duration
@@ -413,19 +413,18 @@ export const performShot = (props: {
 
   // Launch: solve each aim, bake the projectile's flight into an object clip,
   // and fold the target's engine-timed recoil into the action list so the
-  // performance compiles it. Do this before `compilePerformance` — the injected
+  // performance compiles it. Do this before `compilePerformance` ??the injected
   // reacts must ride the same synthesis and ROM gate as authored ones. A launch
   // that cannot reach its target at the given speed is a range violation.
-  const objectMotions: IAutoFilmClip[] = [];
+  const objectMotions: IautomovieClip[] = [];
   for (const job of launches) {
     // Lead a moving target: when the struck node travels during the shot (it
     // carries a `locomote`), resolve where it WILL be rather than aiming at its
-    // start. Compile just that node's own motion for the animated position —
-    // node-local root rotated into the world by its staged facing, the same
+    // start. Compile just that node's own motion for the animated position ??    // node-local root rotated into the world by its staged facing, the same
     // read a `follow` camera uses. Its own recoil fires at impact, past the
     // lead window, so it does not perturb the pre-hit path. A static target
     // keeps the plain intercept.
-    let targetAt: ((t: number) => IAutoFilmVector3) | undefined;
+    let targetAt: ((t: number) => IautomovieVector3) | undefined;
     if (
       job.targetNode !== null &&
       stageActions.some(
@@ -435,7 +434,7 @@ export const performShot = (props: {
       targetAt = animatedBaseAt(
         nodePositions.get(job.targetNode)!,
         nodeRotations.get(job.targetNode)!,
-        // just this node's own motion — its recoil fires at impact, past the
+        // just this node's own motion ??its recoil fires at impact, past the
         // lead window, so it never perturbs the pre-hit path being sampled.
         compilePerformance(
           stageActions.filter((a) => a.actor === job.targetNode),
@@ -453,16 +452,16 @@ export const performShot = (props: {
       out.push(
         "range",
         `${base}[${job.index}].speed`,
-        `the launch cannot reach its target at ${job.action.speed} m/s — raise the speed or move the shooter closer`,
+        `the launch cannot reach its target at ${job.action.speed} m/s ??raise the speed or move the shooter closer`,
         job.action.speed,
       );
       continue;
     }
-    // The baked flight is clip-local (0 → hitTime); place it on the shot clock
+    // The baked flight is clip-local (0 ??hitTime); place it on the shot clock
     // so it launches at the action's start and lands exactly when the react
     // fires (start + hitTime). Times shift by start; the clip spans the shot,
     // holding at the origin before launch and at the target after (sampleClip
-    // clamps) — the same shot-local convention as `cameraMotion`.
+    // clamps) ??the same shot-local convention as `cameraMotion`.
     objectMotions.push({
       ...result.clip,
       duration: performance.duration,
@@ -491,7 +490,7 @@ export const performShot = (props: {
 
   // Attach: bake each coupled child's follow-clip now that the parent's pose
   // has compiled. The child rides the parent's bone in scene space (staged
-  // placement ∘ per-frame FK), resolved with the same joint axes the renderer
+  // placement ??per-frame FK), resolved with the same joint axes the renderer
   // poses the parent by; a parent that only holds rest yields a static child.
   for (const job of attachments) {
     const parentNode = staged.scene.nodes.find(
@@ -531,7 +530,7 @@ export const performShot = (props: {
   // animated base rides the compiled clip's root displacement so `follow`
   // tracks a walking actor.
   const cameraObject = staged.scene.cameras.find((c) => c.id === liveCamera)!;
-  const entries: IAutoFilmCameraFrameEntry[] = frames.map(({ action }) => {
+  const entries: IautomovieCameraFrameEntry[] = frames.map(({ action }) => {
     const point = resolveTargetPoint(action.on, nodePositions)!;
     const node = action.on.kind === "node" ? action.on.node : null;
     const rig = node === null ? null : skeleton(node);

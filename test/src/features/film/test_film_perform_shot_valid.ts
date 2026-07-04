@@ -1,4 +1,4 @@
-import { performShot, stageScene } from "@autofilm/engine";
+import { performShot, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -17,7 +17,7 @@ import { createSkeleton } from "../internal/fixtures";
  * Scenarios:
  *
  * 1. The duel performance (unison locomote for both knights + a strike + one
- *    `frame` on `cam-main`, `final: null` so the draft performs) → success; the
+ *    `frame` on `cam-main`, `final: null` so the draft performs) ??success; the
  *    shot is `shot:beat-1`, named after the beat, on the staged scene, with
  *    `cam-main` live and a locked-off (`null`) camera motion.
  * 2. Both knights get a performance entry whose `motion` id matches the compiled

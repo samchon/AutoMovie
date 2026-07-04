@@ -1,10 +1,10 @@
-import { buildHairShell } from "@autofilm/forge";
+import { buildHairShell } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**
  * `length` rules the back fall: a longer style must reach strictly lower than a
  * cropped one, and a wider skull (explicit skull parameters) must widen the
- * drape with it — the hair always drapes over the skull it is given.
+ * drape with it ??the hair always drapes over the skull it is given.
  *
  * Scenario: min y at length 1 < min y at length 0; max |x| grows with skull
  * width +1 at equal hair parameters.

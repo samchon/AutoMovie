@@ -1,17 +1,17 @@
-import { Quaternion, sequenceMotion, travelMotion } from "@autofilm/engine";
+import { Quaternion, sequenceMotion, travelMotion } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  IautomovieJointPose,
+  IautomovieKeyframe,
+  IautomovieMotion,
+  IautomoviePose,
+  IautomovieTransform,
+} from "@automovie/interface";
 
 /**
  * Motion clips for the stick cat. The cat rig keeps all four legs pointing down
  * at rest, so the engine's default clinical axes already swing them sagittally
- * (no HUMANOID_JOINT_AXES) — `flexion` strides a leg, `abduction` splays it,
+ * (no HUMANOID_JOINT_AXES) ??`flexion` strides a leg, `abduction` splays it,
  * and spine `flexion` arches the back. The tail rides the repurposed finger
  * chain.
  *
@@ -19,9 +19,9 @@ import {
  */
 
 const j = (
-  bone: AutoFilmHumanoidBone,
+  bone: automovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
-): IAutoFilmJointPose => ({
+): IautomovieJointPose => ({
   bone,
   flexion: a.flexion ?? 0,
   abduction: a.abduction ?? 0,
@@ -33,7 +33,7 @@ const root = (
   y: number,
   z: number,
   yawDeg: number,
-): IAutoFilmTransform => ({
+): IautomovieTransform => ({
   translation: { x, y, z },
   rotation: Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, yawDeg),
   scale: { x: 1, y: 1, z: 1 },
@@ -41,11 +41,11 @@ const root = (
 
 const pose = (
   skeleton: string,
-  joints: IAutoFilmJointPose[],
-  r: IAutoFilmTransform | null = null,
-): IAutoFilmPose => ({ skeleton, root: r, joints });
+  joints: IautomovieJointPose[],
+  r: IautomovieTransform | null = null,
+): IautomoviePose => ({ skeleton, root: r, joints });
 
-const key = (time: number, p: IAutoFilmPose): IAutoFilmKeyframe => ({
+const key = (time: number, p: IautomoviePose): IautomovieKeyframe => ({
   time,
   pose: p,
   expression: null,
@@ -53,15 +53,15 @@ const key = (time: number, p: IAutoFilmPose): IAutoFilmKeyframe => ({
   bezier: null,
 });
 
-/** The tail as an S-curve: `sway` ∈ [−1, 1] side to side, `curl` raises/drops. */
-const tail = (sway: number, curl = 0): IAutoFilmJointPose[] => [
+/** The tail as an S-curve: `sway` ??[??, 1] side to side, `curl` raises/drops. */
+const tail = (sway: number, curl = 0): IautomovieJointPose[] => [
   j("leftLittleProximal", { abduction: 22 * sway, flexion: -18 + curl }),
   j("leftLittleIntermediate", { abduction: 26 * sway, flexion: -14 + curl }),
   j("leftLittleDistal", { abduction: 30 * sway, flexion: -10 + curl }),
 ];
 
-/** Idle — a standing cat with a slowly swaying tail and a breathing head. */
-export const catIdle = (sk: string): IAutoFilmMotion => ({
+/** Idle ??a standing cat with a slowly swaying tail and a breathing head. */
+export const catIdle = (sk: string): IautomovieMotion => ({
   id: "idle",
   skeleton: sk,
   duration: 2.0,
@@ -73,11 +73,11 @@ export const catIdle = (sk: string): IAutoFilmMotion => ({
   ],
 });
 
-/** Walk — a diagonal-pair gait (front-left swings with hind-right, then swap). */
-export const catWalk = (sk: string): IAutoFilmMotion => {
-  // d=+1: front-left + hind-right swing forward (flexion −), the other diagonal
+/** Walk ??a diagonal-pair gait (front-left swings with hind-right, then swap). */
+export const catWalk = (sk: string): IautomovieMotion => {
+  // d=+1: front-left + hind-right swing forward (flexion ??, the other diagonal
   // pushes back; the forward-swinging legs bend their knee/elbow.
-  const step = (d: number): IAutoFilmPose =>
+  const step = (d: number): IautomoviePose =>
     pose(
       sk,
       [
@@ -103,8 +103,8 @@ export const catWalk = (sk: string): IAutoFilmMotion => {
   };
 };
 
-/** Leap — crouch, spring straight up with legs tucked, land. */
-export const catLeap = (sk: string): IAutoFilmMotion => {
+/** Leap ??crouch, spring straight up with legs tucked, land. */
+export const catLeap = (sk: string): IautomovieMotion => {
   const stand = pose(sk, [...tail(0)], root(0, 0, 0, 0));
   const crouch = pose(
     sk,
@@ -154,9 +154,9 @@ export const catLeap = (sk: string): IAutoFilmMotion => {
   };
 };
 
-/** Sit — hind legs fold under, the front half lifts upright, tail sways. */
-export const catSit = (sk: string): IAutoFilmMotion => {
-  const sitting = (sway: number): IAutoFilmPose =>
+/** Sit ??hind legs fold under, the front half lifts upright, tail sways. */
+export const catSit = (sk: string): IautomovieMotion => {
+  const sitting = (sway: number): IautomoviePose =>
     pose(
       sk,
       [
@@ -184,8 +184,8 @@ export const catSit = (sk: string): IAutoFilmMotion => {
   };
 };
 
-/** Stretch — a play-bow: front end down and forward, hindquarters raised. */
-export const catStretch = (sk: string): IAutoFilmMotion => {
+/** Stretch ??a play-bow: front end down and forward, hindquarters raised. */
+export const catStretch = (sk: string): IautomovieMotion => {
   const neutral = pose(sk, [...tail(0)]);
   const bow = pose(
     sk,
@@ -212,9 +212,9 @@ export const catStretch = (sk: string): IAutoFilmMotion => {
   };
 };
 
-/** Tail flick — body still, the tail whips side to side, head turns to watch. */
-export const catTailFlick = (sk: string): IAutoFilmMotion => {
-  const flick = (sway: number): IAutoFilmPose =>
+/** Tail flick ??body still, the tail whips side to side, head turns to watch. */
+export const catTailFlick = (sk: string): IautomovieMotion => {
+  const flick = (sway: number): IautomoviePose =>
     pose(sk, [...tail(sway), j("head", { twist: 18 * sway })]);
   return {
     id: "tailFlick",
@@ -226,7 +226,7 @@ export const catTailFlick = (sk: string): IAutoFilmMotion => {
 };
 
 /** A stitched performance: trot a couple of strides, leap, stretch, then sit. */
-export const catCombo = (sk: string): IAutoFilmMotion =>
+export const catCombo = (sk: string): IautomovieMotion =>
   sequenceMotion(
     "combo",
     [catWalk(sk), catWalk(sk), catLeap(sk), catStretch(sk), catSit(sk)],
@@ -234,17 +234,17 @@ export const catCombo = (sk: string): IAutoFilmMotion =>
   );
 
 /**
- * Traveling clips — locomotion baked to cross the floor for a follow camera.
+ * Traveling clips ??locomotion baked to cross the floor for a follow camera.
  * `prowl` is the walk gait carried forward at ~0.45 m/s; `bound` chains leaps
  * into a forward-traveling pronk.
  */
-export const catProwl = (sk: string): IAutoFilmMotion =>
+export const catProwl = (sk: string): IautomovieMotion =>
   travelMotion("prowl", catWalk(sk), 8, { x: 0, y: 0, z: 0.45 });
-export const catBound = (sk: string): IAutoFilmMotion =>
+export const catBound = (sk: string): IautomovieMotion =>
   travelMotion("bound", catLeap(sk), 5, { x: 0, y: 0, z: 0.95 });
 
 /** All cat clips, keyed by id. */
-export const CAT_CLIPS = (sk: string): Record<string, IAutoFilmMotion> => ({
+export const CAT_CLIPS = (sk: string): Record<string, IautomovieMotion> => ({
   idle: catIdle(sk),
   walk: catWalk(sk),
   leap: catLeap(sk),

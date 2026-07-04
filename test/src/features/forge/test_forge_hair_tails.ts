@@ -1,4 +1,4 @@
-import { buildHairTails } from "@autofilm/forge";
+import { buildHairTails } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
@@ -9,7 +9,7 @@ import { nclose } from "../internal/predicates";
  * producing empty parts (the preset schema covers tailless styles with the same
  * fields).
  *
- * Scenario: default-skull tails at length .6 — mirror centroids, count
+ * Scenario: default-skull tails at length .6 ??mirror centroids, count
  * equality; length 1 vs .2 minY ordering; length 0 empties.
  */
 export const test_forge_hair_tails = (): void => {

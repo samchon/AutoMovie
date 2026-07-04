@@ -1,4 +1,4 @@
-import { validateFaceResult } from "@autofilm/engine";
+import { validateFaceResult } from "@automovie/engine";
 import {
   CANONICAL_FACE_INDICES,
   CANONICAL_FACE_POSITIONS,
@@ -15,17 +15,17 @@ import {
   buildHairShell,
   buildHairTails,
   buildSkullShell,
-} from "@autofilm/forge";
-import { AutoFilmFaceParameterName, IAutoFilmFace } from "@autofilm/interface";
+} from "@automovie/forge";
+import { automovieFaceParameterName, IautomovieFace } from "@automovie/interface";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 // The character-head editor end to end, no asset files: face geometry + the
 // 17 morph sliders, the parametric skull/hair shells, and the region colors
-// all come from pure parameters — a character preset is one JSON document.
+// all come from pure parameters ??a character preset is one JSON document.
 
-// ── scene + lighting ─────────────────────────────────────────────────────────
+// ?? scene + lighting ?????????????????????????????????????????????????????????
 // Soft three-point portrait rig. A single hard key over flat matte clay is
 // what made the head read as a plastic mannequin: strong cast shadows
 // caricature every facet. A gentler key + a warm sky/ground hemisphere fill +
@@ -77,7 +77,7 @@ app.innerHTML = `
       <img id="ref" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;pointer-events:none" />
     </div>
     <div id="panel">
-      <h1>autofilm · face editor</h1>
+      <h1>automovie 쨌 face editor</h1>
       <div class="sub" id="status">pure-parameter character head</div>
       <h2>workbench</h2>
       <div class="row"><label><span>camera</span></label>
@@ -164,9 +164,9 @@ controls.update();
   },
 };
 
-// ── face mesh (morphable, region-colored) ────────────────────────────────────
+// ?? face mesh (morphable, region-colored) ????????????????????????????????????
 const morphs = buildFaceMorphs();
-const NAMES = Object.keys(morphs) as AutoFilmFaceParameterName[];
+const NAMES = Object.keys(morphs) as automovieFaceParameterName[];
 
 const faceGeometry = new THREE.BufferGeometry();
 faceGeometry.setAttribute(
@@ -199,8 +199,7 @@ for (let t = 0; t < CANONICAL_FACE_INDICES.length; t += 3) {
 }
 faceGeometry.setIndex(faceIndices); // cut by default; photo mode restores covers
 
-// 1-ring adjacency over the FULL triangulation (for the concavity AO below) —
-// built once; the topology never changes, only the morphed positions do.
+// 1-ring adjacency over the FULL triangulation (for the concavity AO below) ??// built once; the topology never changes, only the morphed positions do.
 const ADJ: number[][] = Array.from({ length: 468 }, () => []);
 {
   const seen = new Set<number>();
@@ -221,7 +220,7 @@ const ADJ: number[][] = Array.from({ length: 468 }, () => []);
   }
 }
 /**
- * Cheap geometry-driven ambient occlusion: a concave vertex (a valley — the
+ * Cheap geometry-driven ambient occlusion: a concave vertex (a valley ??the
  * alar crease, nasolabial fold, under-nose, mentolabial groove, eye socket)
  * sits below the average of its neighbours along the outward normal, so light
  * is partly blocked there. Darkening those vertices is what turns flat clay
@@ -268,9 +267,9 @@ const concavityAO = (pos: number[]): Float32Array => {
     const ly = my / nb.length - pos[i * 3 + 1]!;
     const lz = mz / nb.length - pos[i * 3 + 2]!;
     const nl = Math.hypot(nx[i]!, ny[i]!, nz[i]!) || 1;
-    // SIGNED curvature: Laplacian along the outward normal — positive in a
-    // valley (concave, occluded → darken), negative on a ridge (convex,
-    // catches light → brighten). Full curvature shading, not just AO.
+    // SIGNED curvature: Laplacian along the outward normal ??positive in a
+    // valley (concave, occluded ??darken), negative on a ridge (convex,
+    // catches light ??brighten). Full curvature shading, not just AO.
     const concav = (lx * nx[i]! + ly * ny[i]! + lz * nz[i]!) / nl;
     ao[i] = Math.max(-1, Math.min(1, concav / 0.0012));
   }
@@ -353,7 +352,7 @@ const colors = {
   skin: "#e8c4ae",
   hair: "#3a3027",
   lips: "#c97a72",
-  // per-side iris colors — heterochromia (오드아이) is color data, not
+  // per-side iris colors ??heterochromia (?ㅻ뱶?꾩씠) is color data, not
   // geometry; keep them equal for ordinary eyes
   irisRight: "#3a2a20",
   irisLeft: "#3a2a20",
@@ -363,7 +362,7 @@ const colorAttr = new THREE.Float32BufferAttribute(
   3,
 );
 faceGeometry.setAttribute("color", colorAttr);
-// face-oval boundary ring (MediaPipe) — used by the skull conform
+// face-oval boundary ring (MediaPipe) ??used by the skull conform
 const FACE_OVAL = [
   10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378,
   400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21,
@@ -372,7 +371,7 @@ const FACE_OVAL = [
 const paintFace = (): void => {
   const pos = morphedFacePositions();
   const lipW = regionWeight(pos, LIPS, 0.004);
-  // tighter brow band (was 0.004 → a thick dark caterpillar that merged
+  // tighter brow band (was 0.004 ??a thick dark caterpillar that merged
   // across the bridge into a unibrow); narrower sigma + a capped, partly
   // transparent max keeps skin showing through so it reads as hair on skin
   const browW = regionWeight(pos, BROWS, 0.0022);
@@ -383,7 +382,7 @@ const paintFace = (): void => {
   const ao = concavityAO(pos);
   const skin = new THREE.Color(colors.skin);
   const lips = new THREE.Color(colors.lips);
-  // brow = hair tinted toward a warm brown, not near-black hair·0.7
+  // brow = hair tinted toward a warm brown, not near-black hair쨌0.7
   const brow = new THREE.Color(colors.hair).lerp(
     new THREE.Color("#7a5740"),
     0.55,
@@ -395,12 +394,12 @@ const paintFace = (): void => {
       .lerp(lips, lipW[i]!)
       .lerp(brow, Math.min(0.38, browW[i]!))
       .lerp(eye, 0.3 * eyeW[i]!);
-    // valleys occlude (darken), ridges catch light (brighten) — clay → skin
+    // valleys occlude (darken), ridges catch light (brighten) ??clay ??skin
     const k = ao[i]!;
     c.multiplyScalar(k >= 0 ? 1 - 0.1 * k : 1);
     // The face plate is OPAQUE. An earlier alpha feather of the oval boundary
     // dissolved the temple ledge but revealed the conformed skull's flat front
-    // plateau as a lit rectangular patch on the forehead — worse than the
+    // plateau as a lit rectangular patch on the forehead ??worse than the
     // ledge it fixed. The skull conform (just behind the face) keeps the
     // remaining side step tiny, and hair frames it.
     colorAttr.setXYZ(i, c.r, c.g, c.b);
@@ -410,7 +409,7 @@ const paintFace = (): void => {
 
 // A procedural skin micro-texture: a near-white noise map (mean ~0.97, fine
 // grain + soft mottling) MULTIPLIED onto the vertex colour. At 468 verts the
-// vertex colour can only ever be a smooth gradient — the uniform fill is what
+// vertex colour can only ever be a smooth gradient ??the uniform fill is what
 // reads as plastic; this breaks it with sub-millimetre tonal variation the way
 // real skin scatters light. Colour stays in the vertex attribute; the map only
 // modulates value, so it composes with the region paint and the curvature AO.
@@ -471,7 +470,7 @@ const loadSkin = (url: string): THREE.Texture => {
   return t;
 };
 // the parametric skull/neck must wear the photographed person's skin tone or
-// the face plate reads as a pasted mask — sample the skin texture's mean
+// the face plate reads as a pasted mask ??sample the skin texture's mean
 // color (the canonical-UV bake is mostly facial skin) on load and apply it
 // whenever photo-skin mode is on
 let photoTone: THREE.Color | null = null;
@@ -536,7 +535,7 @@ new THREE.TextureLoader().load("/models/hero1-face.png", (tex) => {
 faceMesh.morphTargetInfluences = [...NAMES.map(() => 0), 0];
 scene.add(faceMesh);
 
-// ── parametric skull + hair ──────────────────────────────────────────────────
+// ?? parametric skull + hair ??????????????????????????????????????????????????
 const skullParams: IForgeSkullParameters = { width: 0, crown: 0, depth: 0 };
 const skullMaterial = new THREE.MeshStandardMaterial({
   color: colors.skin,
@@ -619,7 +618,7 @@ const hairMaterial = new THREE.MeshStandardMaterial({
 // Paint per-strand lightness onto the hair shell so it reads as hair, not a
 // molded helmet: clumps of strands vary in tone, a soft "angel ring"
 // highlight bands the upper dome, and tips fall into shadow. The shell is a
-// strand grid (yaw columns × descent rows); strand boundaries are where the
+// strand grid (yaw columns 횞 descent rows); strand boundaries are where the
 // vertex y jumps back UP (each strand descends monotonically from the crown).
 const KEY_DIR = new THREE.Vector3(0.6, 0.5, 1.4).normalize();
 const paintHairStrands = (g: THREE.BufferGeometry): void => {
@@ -664,7 +663,7 @@ const hairUnlit = new THREE.MeshBasicMaterial({
   vertexColors: true,
 });
 // the photo-skin face is unlit (re-shading photographed pixels distorts), so
-// in photo mode the skull/hair go unlit too — one exposure system, no
+// in photo mode the skull/hair go unlit too ??one exposure system, no
 // glowing-mask contrast; the strand vertex colors carry the shading
 const applyShellLighting = (): void => {
   skullUnlit.color.copy(skullMaterial.color);
@@ -746,7 +745,7 @@ const rebuildTails = (): void => {
     );
     g.setIndex(part.indices);
     g.computeVertexNormals();
-    // both materials read vertex colors — an unpainted geometry renders BLACK
+    // both materials read vertex colors ??an unpainted geometry renders BLACK
     paintHairStrands(g);
     const mesh = new THREE.Mesh(g, skinModeOn ? hairUnlit : hairMaterial);
     scene.add(mesh);
@@ -775,7 +774,7 @@ const rebuildBust = (): void => {
 };
 rebuildBust();
 
-// ── eyeballs (follow the morphed face; iris colored by frontness) ───────────
+// ?? eyeballs (follow the morphed face; iris colored by frontness) ???????????
 const eyeMaterial = new THREE.MeshStandardMaterial({
   vertexColors: true,
   roughness: 0.25,
@@ -822,7 +821,7 @@ const rebuildEyes = (): void => {
     const c = new THREE.Color();
     // catchlight: a single bright reflection of the key light. Both eyes
     // reflect the same source, so the spot sits at the same eye-local
-    // direction on both — up/forward, biased toward the key. Without it the
+    // direction on both ??up/forward, biased toward the key. Without it the
     // iris reads as a flat dead disc; with it the eye looks wet and alive.
     const cd = [0.3, 0.46, 0.84]; // normalized up-right-forward
     for (let i = 0; i < n; i++) {
@@ -853,12 +852,12 @@ const rebuildEyes = (): void => {
 rebuildEyes();
 paintFace();
 
-// ── document panel ───────────────────────────────────────────────────────────
-const weights = new Map<AutoFilmFaceParameterName, number>();
-// slider (morph target) name → its leaf in the anatomy-shaped document
+// ?? document panel ???????????????????????????????????????????????????????????
+const weights = new Map<automovieFaceParameterName, number>();
+// slider (morph target) name ??its leaf in the anatomy-shaped document
 const NEST: Record<
-  AutoFilmFaceParameterName,
-  (f: IAutoFilmFace, w: number) => void
+  automovieFaceParameterName,
+  (f: IautomovieFace, w: number) => void
 > = {
   faceWidth: (f, w) => (f.width = w),
   faceLength: (f, w) => (f.length = w),
@@ -887,7 +886,7 @@ const NEST: Record<
   lipFullness: (f, w) => (((f.mouth ??= {}).lips ??= {}).fullness = w),
 };
 const refresh = (): void => {
-  const face: IAutoFilmFace = {};
+  const face: IautomovieFace = {};
   let count = 0;
   for (const [parameter, weight] of weights.entries())
     if (weight !== 0) {
@@ -896,7 +895,7 @@ const refresh = (): void => {
     }
   // SIDE RULE folding: a lone side applies to BOTH sides, so when the
   // sliders produce identical left/right objects the document keeps only
-  // one — the shorthand an LLM would naturally write. Equal eye offsets
+  // one ??the shorthand an LLM would naturally write. Equal eye offsets
   // fold into the pair-level spacing first.
   for (const set of [face.eyes, face.brows, face.cheeks]) {
     if (!set?.left || !set.right) continue;
@@ -920,7 +919,7 @@ const refresh = (): void => {
   }
   const result = validateFaceResult(face);
   status.textContent = result.success
-    ? `valid IAutoFilmFace — ${count} trait(s) set`
+    ? `valid IautomovieFace ??${count} trait(s) set`
     : `INVALID: ${result.violations[0]!.expected}`;
   docOut.textContent = JSON.stringify(
     {
@@ -948,7 +947,7 @@ refresh();
     });
   };
 
-// ── controls ─────────────────────────────────────────────────────────────────
+// ?? controls ?????????????????????????????????????????????????????????????????
 const slider = (
   host: string,
   label: string,
@@ -1053,9 +1052,9 @@ colorInput("#cLips", "lips");
 colorInput("#cIrisR", "irisRight");
 colorInput("#cIrisL", "irisLeft");
 
-// ── presets: a character is ONE pure-parameter document ─────────────────────
+// ?? presets: a character is ONE pure-parameter document ?????????????????????
 interface IPreset {
-  face: Partial<Record<AutoFilmFaceParameterName, number>>;
+  face: Partial<Record<automovieFaceParameterName, number>>;
   data?: { identity: string; skin: string; head: string };
   skull: IForgeSkullParameters;
   hair: Required<IForgeHairParameters>;
@@ -1078,7 +1077,7 @@ const PRESETS: Record<string, IPreset> = {
       irisLeft: "#3a2a20",
     },
   },
-  // hero/1: anthropometric index fit — the 18 sliders matched to HER OWN
+  // hero/1: anthropometric index fit ??the 18 sliders matched to HER OWN
   // measured Farkas-style indices (13/15 within ~2%; see fit-indices.js)
   hero1: {
     face: {
@@ -1297,7 +1296,7 @@ const setIdentity = (w: number): void => {
 };
 (window as unknown as { __setIdentity: unknown }).__setIdentity = setIdentity;
 // the photographed FULL head (multi-view textured shell): in photo mode it
-// carries the true silhouette — the face plate's landmark-oval edge is NOT
+// carries the true silhouette ??the face plate's landmark-oval edge is NOT
 // her face contour, which is exactly what reads as a different outline
 let photoHead: THREE.Group | null = null;
 let photoHeadOn = false;
@@ -1321,7 +1320,7 @@ const loadPhotoHead = (url: string): void => {
         m.material = new THREE.MeshBasicMaterial({
           map: std.map,
           side: THREE.DoubleSide,
-          // the face plate carries a vertex-alpha feather at its rim — keep
+          // the face plate carries a vertex-alpha feather at its rim ??keep
           // the asset's blend mode when swapping to the unlit material
           vertexColors: m.geometry.hasAttribute("color"),
           transparent: std.transparent,
@@ -1357,7 +1356,7 @@ loadPhotoHead("/models/hero1-head.glb");
   name: string,
 ): void => applyPreset(PRESETS[name]!);
 (window as unknown as { __setFace: unknown }).__setFace = (
-  params: Partial<Record<AutoFilmFaceParameterName, number>>,
+  params: Partial<Record<automovieFaceParameterName, number>>,
 ): void => {
   NAMES.forEach((name, idx) => {
     const w = params[name] ?? 0;
@@ -1368,7 +1367,7 @@ loadPhotoHead("/models/hero1-head.glb");
   refresh();
 };
 
-// ── workbench wiring ─────────────────────────────────────────────────────────
+// ?? workbench wiring ?????????????????????????????????????????????????????????
 const CAMS: Record<string, [number, number, number, number, number, number]> = {
   front: [0, 0, 1.35, 0, -0.01, 0],
   q34: [0.62, 0.02, 1.2, 0, -0.01, 0],
@@ -1403,7 +1402,7 @@ document
     ).__setPhotoHead?.((e.target as HTMLInputElement).checked),
   );
 
-// debug: pure facial FORM — close the lid cuts, hide eyeballs/hair/bun/bust/
+// debug: pure facial FORM ??close the lid cuts, hide eyeballs/hair/bun/bust/
 // skull/photo-head, and show only the facial mask in flat skin clay (or normal
 // map). The marble-bust test: form alone, no texture/AO, must read beautiful.
 (window as unknown as { __formAudit: unknown }).__formAudit = (
@@ -1433,7 +1432,7 @@ document
     | THREE.MeshBasicMaterial;
 };
 
-// ── loop ─────────────────────────────────────────────────────────────────────
+// ?? loop ?????????????????????????????????????????????????????????????????????
 (window as unknown as { __debug: unknown }).__debug = () => ({
   meshes: scene.children.filter((c) => (c as THREE.Mesh).isMesh).length,
   eyes: eyeMeshes.map((m) => {

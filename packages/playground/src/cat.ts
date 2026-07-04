@@ -1,30 +1,30 @@
-import { aimRotation } from "@autofilm/engine";
+import { aimRotation } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  AutoFilmPrimitiveShape,
-  IAutoFilmBone,
-  IAutoFilmJointConstraint,
-  IAutoFilmModel,
-  IAutoFilmModelPart,
-  IAutoFilmQuaternion,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  automoviePrimitiveShape,
+  IautomovieBone,
+  IautomovieJointConstraint,
+  IautomovieModel,
+  IautomovieModelPart,
+  IautomovieQuaternion,
+  IautomovieSkeleton,
+  IautomovieTransform,
+  IautomovieVector3,
+} from "@automovie/interface";
 
 /**
- * A stick-figure **cat** — a quadruped mapped onto the normalized humanoid
+ * A stick-figure **cat** ??a quadruped mapped onto the normalized humanoid
  * skeleton, the counterpart to the human {@link buildStickman}.
  *
  * The rig is reinterpreted, not extended: the spine runs horizontal (hips at
  * the rear, chest at the front), the **arm** slots become the front legs and
  * the **leg** slots the hind legs (all four pointing straight down, so the
- * engine's default clinical axes already swing them sagittally — no axis remap
+ * engine's default clinical axes already swing them sagittally ??no axis remap
  * needed), and one finger chain is repurposed as a three-segment articulable
  * **tail**. Cones make the ears; a sphere the head. Each joint carries a
  * cat-tuned ROM ({@link CAT_ROM}) so the rig self-describes its gamut.
  *
- * Everything stays a valid `IAutoFilmModel` on the closed bone enum, so a cat
+ * Everything stays a valid `IautomovieModel` on the closed bone enum, so a cat
  * clip is just another motion AST. All lengths are in meters.
  *
  * @author Samchon
@@ -32,25 +32,25 @@ import {
 export interface ICatParams {
   /** Height of the back (hip/shoulder line) off the floor. */
   backHeight: number;
-  /** Hips → chest body length (the horizontal trunk). */
+  /** Hips ??chest body length (the horizontal trunk). */
   trunkLength: number;
   /** Half the track width between the left/right legs. */
   legHalf: number;
-  /** Upper-leg (shoulder/hip → knee) length, both ends. */
+  /** Upper-leg (shoulder/hip ??knee) length, both ends. */
   upperLeg: number;
-  /** Lower-leg (knee → paw) length. */
+  /** Lower-leg (knee ??paw) length. */
   lowerLeg: number;
-  /** Neck length (chest → head), angled up-forward. */
+  /** Neck length (chest ??head), angled up-forward. */
   neckLength: number;
   /** Head sphere radius. */
   headRadius: number;
-  /** Radius of a leg rod — the limb "thickness". */
+  /** Radius of a leg rod ??the limb "thickness". */
   rodRadius: number;
-  /** Radius of the trunk (spine) rods — a chunkier body. */
+  /** Radius of the trunk (spine) rods ??a chunkier body. */
   trunkRadius: number;
 }
 
-/** A house-cat ≈ 0.35 m at the shoulder — legs and trunk fleshed, not wiry. */
+/** A house-cat ??0.35 m at the shoulder ??legs and trunk fleshed, not wiry. */
 export const DEFAULT_CAT: ICatParams = {
   backHeight: 0.34,
   trunkLength: 0.28,
@@ -68,7 +68,7 @@ const con = (
   flexion: { min: number; max: number } | null,
   abduction: { min: number; max: number } | null,
   twist: { min: number; max: number } | null,
-): IAutoFilmJointConstraint => ({ flexion, abduction, twist });
+): IautomovieJointConstraint => ({ flexion, abduction, twist });
 
 const legCon = con(range(-70, 80), range(-20, 35), range(-20, 20));
 const kneeCon = con(range(0, 150), null, null);
@@ -76,7 +76,7 @@ const pawCon = con(range(-45, 45), null, null);
 
 /** Cat-tuned per-joint ROM (quadruped). Bones omitted are left unconstrained. */
 export const CAT_ROM: Partial<
-  Record<AutoFilmHumanoidBone, IAutoFilmJointConstraint>
+  Record<automovieHumanoidBone, IautomovieJointConstraint>
 > = {
   spine: con(range(-40, 55), range(-25, 25), range(-30, 30)),
   chest: con(range(-30, 45), range(-20, 20), range(-25, 25)),
@@ -100,20 +100,20 @@ export const CAT_ROM: Partial<
   leftLittleDistal: con(range(-80, 80), range(-50, 50), null),
 };
 
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IautomovieVector3 => ({ x, y, z });
 const at = (
-  t: IAutoFilmVector3,
-  r?: IAutoFilmQuaternion,
-): IAutoFilmTransform => ({
+  t: IautomovieVector3,
+  r?: IautomovieQuaternion,
+): IautomovieTransform => ({
   translation: t,
   rotation: r ?? { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 const bone = (
-  name: AutoFilmHumanoidBone,
-  parent: AutoFilmHumanoidBone | null,
-  rest: IAutoFilmTransform,
-): IAutoFilmBone => ({
+  name: automovieHumanoidBone,
+  parent: automovieHumanoidBone | null,
+  rest: IautomovieTransform,
+): IautomovieBone => ({
   bone: name,
   parent,
   rest,
@@ -121,10 +121,10 @@ const bone = (
 });
 
 /** Shortest-arc rotation taking the local +Y axis onto a target direction. */
-const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion =>
+const yToDir = (dir: IautomovieVector3): IautomovieQuaternion =>
   aimRotation({ x: 0, y: 1, z: 0 }, dir);
 
-const capsule = (radius: number, length: number): AutoFilmPrimitiveShape => ({
+const capsule = (radius: number, length: number): automoviePrimitiveShape => ({
   type: "capsule",
   radius,
   height: Math.max(0.01, length - 2 * radius),
@@ -133,10 +133,10 @@ const capsule = (radius: number, length: number): AutoFilmPrimitiveShape => ({
 /** A rigid rod spanning `seg` (a bone-local offset) from `boneName`. */
 const rod = (
   id: string,
-  boneName: AutoFilmHumanoidBone,
-  seg: IAutoFilmVector3,
+  boneName: automovieHumanoidBone,
+  seg: IautomovieVector3,
   radius: number,
-): IAutoFilmModelPart => ({
+): IautomovieModelPart => ({
   id,
   name: id,
   geometry: {
@@ -149,20 +149,20 @@ const rod = (
 });
 
 /**
- * Build the stick-figure cat — a quadruped skeleton, rods, ears, a tail, and a
- * cat-tuned ROM — from a set of proportions.
+ * Build the stick-figure cat ??a quadruped skeleton, rods, ears, a tail, and a
+ * cat-tuned ROM ??from a set of proportions.
  *
  * @author Samchon
  */
 export const buildCat = (
   p: ICatParams,
-): { skeleton: IAutoFilmSkeleton; model: IAutoFilmModel } => {
+): { skeleton: IautomovieSkeleton; model: IautomovieModel } => {
   const H = p.backHeight;
-  const t1 = p.trunkLength * 0.5; // hips→spine and spine→chest
+  const t1 = p.trunkLength * 0.5; // hips?뭩pine and spine?뭖hest
   const lh = p.legHalf;
-  const down = (len: number): IAutoFilmVector3 => v(0, -len, 0);
+  const down = (len: number): IautomovieVector3 => v(0, -len, 0);
 
-  const bones: IAutoFilmBone[] = [
+  const bones: IautomovieBone[] = [
     bone("hips", null, at(v(0, H, 0))),
     bone("spine", "hips", at(v(0, 0, t1))),
     bone("chest", "spine", at(v(0, 0, t1))),
@@ -192,8 +192,8 @@ export const buildCat = (
   const tr = p.trunkRadius;
   const ball = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
-  ): IAutoFilmModelPart => ({
+    boneName: automovieHumanoidBone,
+  ): IautomovieModelPart => ({
     id,
     name: id,
     geometry: { type: "primitive", shape: { type: "sphere", radius: r * 1.3 } },
@@ -204,11 +204,11 @@ export const buildCat = (
   /** A sphere of arbitrary radius/material at an offset from a bone origin. */
   const knob = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
+    boneName: automovieHumanoidBone,
     radius: number,
     material: string,
-    offset: IAutoFilmVector3,
-  ): IAutoFilmModelPart => ({
+    offset: IautomovieVector3,
+  ): IautomovieModelPart => ({
     id,
     name: id,
     geometry: { type: "primitive", shape: { type: "sphere", radius } },
@@ -218,10 +218,10 @@ export const buildCat = (
   });
   const cone = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
-    offset: IAutoFilmVector3,
+    boneName: automovieHumanoidBone,
+    offset: IautomovieVector3,
     height: number,
-  ): IAutoFilmModelPart => ({
+  ): IautomovieModelPart => ({
     id,
     name: id,
     geometry: {
@@ -233,8 +233,8 @@ export const buildCat = (
     transform: at(offset),
   });
 
-  const parts: IAutoFilmModelPart[] = [
-    // horizontal spine — a chunky trunk tapering up the neck
+  const parts: IautomovieModelPart[] = [
+    // horizontal spine ??a chunky trunk tapering up the neck
     rod("trunkRear", "hips", v(0, 0, t1), tr),
     rod("trunkFront", "spine", v(0, 0, t1), tr),
     rod("neckRod", "chest", v(0, 0.05, 0.09), tr * 0.8),
@@ -299,7 +299,7 @@ export const buildCat = (
     rod("hlLowerL", "leftLowerLeg", down(p.lowerLeg), r),
     rod("hlUpperR", "rightUpperLeg", down(p.upperLeg), r),
     rod("hlLowerR", "rightLowerLeg", down(p.lowerLeg), r),
-    // tail — base rod joins the hips to the first tail segment (no gap)
+    // tail ??base rod joins the hips to the first tail segment (no gap)
     rod("tailBase", "hips", v(0, 0.05, -0.1), r * 0.9),
     rod("tail1", "leftLittleProximal", v(0, 0.03, -0.09), r * 0.85),
     rod("tail2", "leftLittleIntermediate", v(0, 0.015, -0.08), r * 0.75),
@@ -315,8 +315,8 @@ export const buildCat = (
     ball("jKneeR", "rightLowerLeg"),
   ];
 
-  const skeleton: IAutoFilmSkeleton = { id: "cat", bones };
-  const model: IAutoFilmModel = {
+  const skeleton: IautomovieSkeleton = { id: "cat", bones };
+  const model: IautomovieModel = {
     id: "cat",
     name: "stick cat",
     origin: "generated",

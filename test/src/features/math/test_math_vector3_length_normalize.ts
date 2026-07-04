@@ -1,4 +1,4 @@
-import { Vector3 } from "@autofilm/engine";
+import { Vector3 } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
@@ -11,10 +11,10 @@ import { nclose, vclose } from "../internal/predicates";
  *
  * Scenarios:
  *
- * 1. The 3–4–5 right triangle pins the norm: length (3,4,0) → 5; and the zero
+ * 1. The 3???? right triangle pins the norm: length (3,4,0) ??5; and the zero
  *    vector has length 0.
  * 2. Normalizing (3,4,0) yields a vector of length 1.
- * 3. Normalization preserves direction: (5,0,0) → (1,0,0).
+ * 3. Normalization preserves direction: (5,0,0) ??(1,0,0).
  * 4. The degenerate zero vector normalizes back to zero (the divide-by-zero guard)
  *    instead of producing NaNs.
  */

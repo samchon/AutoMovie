@@ -2,7 +2,7 @@ import {
   ViolationCollector,
   getConstraint,
   validateJointRom,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint } from "../internal/fixtures";
@@ -19,16 +19,16 @@ const romItems = (axes: Parameters<typeof joint>[1]) => {
 };
 
 /**
- * A joint may simply lack an axis — an elbow does not abduct. Any non-zero
+ * A joint may simply lack an axis ??an elbow does not abduct. Any non-zero
  * angle on such an axis is a ROM violation (the joint physically cannot move
  * that way), while zero on it is fine. Pins the "immobile axis" rejection a
  * plain min/max range check would miss.
  *
  * Scenarios:
  *
- * 1. An elbow given 20° abduction — an axis it does not have — is flagged, on the
+ * 1. An elbow given 20째 abduction ??an axis it does not have ??is flagged, on the
  *    abduction axis.
- * 2. The same elbow with 0° abduction produces no violation (zero is the neutral
+ * 2. The same elbow with 0째 abduction produces no violation (zero is the neutral
  *    value, indistinguishable from "not articulated").
  */
 export const test_rom_validate_immobile_axis = (): void => {

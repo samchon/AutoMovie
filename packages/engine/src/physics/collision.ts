@@ -1,43 +1,42 @@
-import { IAutoFilmVector3 } from "@autofilm/interface";
+import { IautomovieVector3 } from "@automovie/interface";
 
 import { Vector3 } from "../math/Vector3";
-import { IAutoFilmProjectile, projectileAt } from "./projectile";
+import { IautomovieProjectile, projectileAt } from "./Projectile";
 
 /**
- * A world-space sphere collider — the simplest body to test a hit against (an
+ * A world-space sphere collider ??the simplest body to test a hit against (an
  * arrow vs. a rider's torso). Cheap, rotation-free, and enough to answer the
  * one question a strike needs: _did it connect, and when?_
  *
  * @author Samchon
  */
-export interface IAutoFilmSphere {
-  center: IAutoFilmVector3;
+export interface IautomovieSphere {
+  center: IautomovieVector3;
   radius: number;
 }
 
 /** A detected hit: the parameter/time of first contact and the contact point. */
-export interface IAutoFilmHit {
+export interface IautomovieHit {
   /** Time (or segment parameter) of first contact. */
   time: number;
   /** World point of first contact. */
-  point: IAutoFilmVector3;
+  point: IautomovieVector3;
 }
 
 /**
- * First intersection of the segment `a→b` with a sphere, as the parameter `s ∈
- * [0, 1]` where contact begins (`a + s·(b−a)`), or `null` if the segment never
+ * First intersection of the segment `a?뭕` with a sphere, as the parameter `s ?? * [0, 1]` where contact begins (`a + s쨌(b?뭓)`), or `null` if the segment never
  * touches the sphere. If `a` already lies inside, returns `0`.
  *
- * Solves `|a + s·d − c|² = r²` (a quadratic in `s`) and returns the entry root
+ * Solves `|a + s쨌d ??c|짼 = r짼` (a quadratic in `s`) and returns the entry root
  * that falls within the segment. A degenerate segment (`a == b`) reduces to a
  * point-in-sphere test.
  *
  * @author Samchon
  */
 export const segmentSphere = (
-  a: IAutoFilmVector3,
-  b: IAutoFilmVector3,
-  c: IAutoFilmVector3,
+  a: IautomovieVector3,
+  b: IautomovieVector3,
+  c: IautomovieVector3,
   radius: number,
 ): number | null => {
   const d = Vector3.subtract(b, a);
@@ -57,7 +56,7 @@ export const segmentSphere = (
 };
 
 /**
- * March a {@link IAutoFilmProjectile} over `[0, tMax]` in `steps` straight
+ * March a {@link IautomovieProjectile} over `[0, tMax]` in `steps` straight
  * segments and return the first time/point its path enters `sphere`, or `null`
  * if it never does within the window. Sampling the arc as segments keeps the
  * test exact per segment (the projectile is smooth, so a modest `steps`
@@ -66,11 +65,11 @@ export const segmentSphere = (
  * @author Samchon
  */
 export const projectileSphereHit = (
-  projectile: IAutoFilmProjectile,
-  sphere: IAutoFilmSphere,
+  projectile: IautomovieProjectile,
+  sphere: IautomovieSphere,
   tMax: number,
   steps = 120,
-): IAutoFilmHit | null => {
+): IautomovieHit | null => {
   const dt = tMax / steps;
   let prev = projectileAt(projectile, 0).position;
   for (let i = 1; i <= steps; ++i) {

@@ -1,11 +1,11 @@
-import { sampleMotion } from "@autofilm/engine";
-import { IAutoFilmMotion } from "@autofilm/interface";
+import { sampleMotion } from "@automovie/engine";
+import { IautomovieMotion } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const elbow = (m: IAutoFilmMotion, t: number): number => {
+const elbow = (m: IautomovieMotion, t: number): number => {
   const j = sampleMotion(m, t).pose.joints.find(
     (x) => x.bone === "leftLowerArm",
   );
@@ -19,8 +19,8 @@ const elbow = (m: IAutoFilmMotion, t: number): number => {
  * seamlessly instead of clamping at the end. Pins that the playhead folds back
  * into [0, duration).
  *
- * Scenario (the 0°→120° elbow clip, 1s, looping): t=1.5 wraps to 0.5 → 60°, and
- * t=2.25 wraps to 0.25 → 30°.
+ * Scenario (the 0째??20째 elbow clip, 1s, looping): t=1.5 wraps to 0.5 ??60째, and
+ * t=2.25 wraps to 0.25 ??30째.
  */
 export const test_motion_sample_loop = (): void => {
   const looped = makeMotion(
@@ -32,11 +32,11 @@ export const test_motion_sample_loop = (): void => {
     true,
   );
   TestValidator.predicate(
-    "1.5 wraps to 0.5 → 60°",
+    "1.5 wraps to 0.5 ??60째",
     nclose(elbow(looped, 1.5), 60),
   );
   TestValidator.predicate(
-    "2.25 wraps to 0.25 → 30°",
+    "2.25 wraps to 0.25 ??30째",
     nclose(elbow(looped, 2.25), 30),
   );
 };

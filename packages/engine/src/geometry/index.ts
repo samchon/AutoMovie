@@ -1,1 +1,1 @@
-export * from "./tessellate";
+export * from "./Tessellate";

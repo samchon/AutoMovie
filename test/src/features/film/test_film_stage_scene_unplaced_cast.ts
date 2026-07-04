@@ -1,4 +1,4 @@
-import { stageScene } from "@autofilm/engine";
+import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
@@ -11,7 +11,7 @@ import { hasViolation } from "../internal/predicates";
  *
  * Scenarios:
  *
- * 1. Staging places only `knightA` while the script casts two knights → a `type`
+ * 1. Staging places only `knightA` while the script casts two knights ??a `type`
  *    violation on `$input.actors` naming the unplaced `knightB`, and no scene
  *    is composed.
  */

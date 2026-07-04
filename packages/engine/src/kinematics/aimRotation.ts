@@ -1,25 +1,25 @@
-import { IAutoFilmQuaternion, IAutoFilmVector3 } from "@autofilm/interface";
+import { IautomovieQuaternion, IautomovieVector3 } from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 
 /**
- * The shortest-arc rotation that turns the unit vector `from` onto `to` — the
+ * The shortest-arc rotation that turns the unit vector `from` onto `to` ??the
  * core of an **aim / look-at** driver (a head or eye whose forward axis tracks
  * a target, a camera that follows its subject). Feed `from` = the bone's rest
- * forward axis and `to` = `target − bonePosition` and the returned quaternion
+ * forward axis and `to` = `target ??bonePosition` and the returned quaternion
  * orients the bone at the target.
  *
  * Degenerate cases are handled: already-aligned returns identity; antiparallel
- * returns a 180° turn about an arbitrary perpendicular axis (so it never
+ * returns a 180째 turn about an arbitrary perpendicular axis (so it never
  * divides by a zero cross product).
  *
  * @author Samchon
  */
 export const aimRotation = (
-  from: IAutoFilmVector3,
-  to: IAutoFilmVector3,
-): IAutoFilmQuaternion => {
+  from: IautomovieVector3,
+  to: IautomovieVector3,
+): IautomovieQuaternion => {
   const a = Vector3.normalize(from);
   const b = Vector3.normalize(to);
   const d = Vector3.dot(a, b);

@@ -2,18 +2,18 @@ import {
   ViolationCollector,
   getConstraint,
   validateJointRom,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint } from "../internal/fixtures";
 
 /**
  * A joint articulated within its anatomical range produces no violations. This
- * is the "valid pose passes cleanly" baseline for the ROM verifier — as
+ * is the "valid pose passes cleanly" baseline for the ROM verifier ??as
  * important as the failure cases, since a verifier that flagged everything
  * would be useless.
  *
- * Scenario: an elbow at 90° flexion (inside [0, 150]) with 0 on its immobile
+ * Scenario: an elbow at 90째 flexion (inside [0, 150]) with 0 on its immobile
  * abduction axis yields an empty violation list.
  */
 export const test_rom_validate_in_range = (): void => {

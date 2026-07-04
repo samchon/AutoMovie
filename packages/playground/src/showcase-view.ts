@@ -1,25 +1,25 @@
 import {
   HUMANOID_JOINT_AXES,
   HUMANOID_REST_FRAME,
-  IAutoFilmActorContext,
+  IautomovieActorContext,
   cutSequence,
   makeActorSynthesizer,
   performShot,
   resolveSequencePlayback,
   stageScene,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmMotion,
-  IAutoFilmPerformanceApplication,
-  IAutoFilmScriptApplication,
-  IAutoFilmShot,
-  IAutoFilmStagingApplication,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
-import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
+  IautomovieMotion,
+  IautomoviePerformanceApplication,
+  IautomovieScriptApplication,
+  IautomovieShot,
+  IautomovieStagingApplication,
+  IautomovieVector3,
+} from "@automovie/interface";
+import { automoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
-import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
+import { DEFAULT_STICKMAN, buildStickman } from "./Stickman";
 
 // A showcase of the engine-authored **arm** gesture vocabulary, run back to
 // back: a wave, a two-arm celebration, a bow draw, and an overhand throw. All
@@ -28,7 +28,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 // render, so a front-3/4 camera reads the arms cleanly. Deterministic via
 // renderAt(t).
 
-const script: IAutoFilmScriptApplication.IWrite = {
+const script: IautomovieScriptApplication.IWrite = {
   type: "write",
   logline: "A figure runs through its arm gestures.",
   theme: "the gesture vocabulary on parade",
@@ -43,7 +43,7 @@ const script: IAutoFilmScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoFilmStagingApplication.IWrite = {
+const staging: IautomovieStagingApplication.IWrite = {
   type: "write",
   scene: { id: "scene-showcase", name: "the parade" },
   plan: "the mime stands centre, facing +Z; a front-3/4 camera reads the arms.",
@@ -70,7 +70,7 @@ const arm = (
   start: number,
   duration: number,
   kind: "wave" | "celebrate" | "draw" | "throw",
-): IAutoFilmPerformanceApplication.IWrite["draft"][number] => ({
+): IautomoviePerformanceApplication.IWrite["draft"][number] => ({
   verb: "gesture",
   actor: "mime",
   start,
@@ -79,10 +79,10 @@ const arm = (
   region: "upperBody",
 });
 
-const performance: IAutoFilmPerformanceApplication.IWrite = {
+const performance: IautomoviePerformanceApplication.IWrite = {
   type: "write",
   beat: "parade",
-  plan: "wave, celebrate, draw, throw — one after another.",
+  plan: "wave, celebrate, draw, throw ??one after another.",
   draft: [
     arm(0, 1.3, "wave"),
     arm(1.5, 1.3, "celebrate"),
@@ -93,7 +93,7 @@ const performance: IAutoFilmPerformanceApplication.IWrite = {
   duration: 6,
 };
 
-// ── rigs + the content seam ──────────────────────────────────────────────────
+// ?? rigs + the content seam ??????????????????????????????????????????????????
 const mimeRig = buildStickman(DEFAULT_STICKMAN);
 const rigOf = { mime: mimeRig } as const;
 const isActor = (node: string): node is keyof typeof rigOf => node in rigOf;
@@ -102,10 +102,10 @@ const staged = stageScene(script, staging);
 if (staged.success !== true)
   throw new Error(`staging failed: ${JSON.stringify(staged)}`);
 
-const nodePositions = new Map<string, IAutoFilmVector3>(
+const nodePositions = new Map<string, IautomovieVector3>(
   staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
 );
-const contexts = new Map<string, IAutoFilmActorContext>(
+const contexts = new Map<string, IautomovieActorContext>(
   staged.scene.nodes
     .filter((n) => isActor(n.id))
     .map((n) => {
@@ -137,8 +137,8 @@ const performed = performShot({
 });
 if (performed.success !== true)
   throw new Error(`perform failed: ${JSON.stringify(performed.violations)}`);
-const shots: IAutoFilmShot[] = [performed.shot];
-const motionsByShot = new Map<string, Record<string, IAutoFilmMotion>>([
+const shots: IautomovieShot[] = [performed.shot];
+const motionsByShot = new Map<string, Record<string, IautomovieMotion>>([
   [performed.shot.id, performed.motions],
 ]);
 
@@ -156,7 +156,7 @@ const cut = cutSequence(
 if (cut.success !== true) throw new Error("cut failed");
 export const FILM_DURATION = cut.runtime;
 
-// ── the set ──────────────────────────────────────────────────────────────────
+// ?? the set ??????????????????????????????????????????????????????????????????
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xeef1f6);
 scene.add(new THREE.GridHelper(12, 24, 0xb8c0cc, 0xd5dbe4));
@@ -184,7 +184,7 @@ const playersByShot = new Map(
     shot.id,
     shot.performances.map((p) => ({
       node: p.node,
-      player: new AutoFilmPlayer(
+      player: new automoviePlayer(
         built[p.node]!,
         rigOf[p.node as keyof typeof rigOf].skeleton,
         motionsByShot.get(shot.id)![p.node]!,
@@ -197,7 +197,7 @@ const playersByShot = new Map(
   ]),
 );
 
-// ── the projector ────────────────────────────────────────────────────────────
+// ?? the projector ????????????????????????????????????????????????????????????
 const camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.05, 100);
 const stagedCam = staged.scene.cameras[0]!;
 const applyStagedCamera = (): void => {
@@ -220,7 +220,7 @@ const renderAt = (seconds: number): void => {
   if (live.cameraMotion === null) applyStagedCamera();
 };
 
-// ── mount + deterministic seek contract (capture) ────────────────────────────
+// ?? mount + deterministic seek contract (capture) ????????????????????????????
 const params = new URLSearchParams(location.search);
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 const capMode = params.get("cap") === "1";
@@ -237,7 +237,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   renderAt(t);
   handle.renderer.render(scene, camera);
 };
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   duration: FILM_DURATION,
   shots: shots.map((s) => s.id),

@@ -1,8 +1,8 @@
-import { IAutoFilmRenderSpec } from "@autofilm/interface";
-import { IAutoFilmRenderAdapters, renderVideo } from "@autofilm/render";
+import { IautomovieRenderSpec } from "@automovie/interface";
+import { IautomovieRenderAdapters, renderVideo } from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
-const SPEC: IAutoFilmRenderSpec = {
+const SPEC: IautomovieRenderSpec = {
   target: "shot-1",
   fps: 24,
   width: 640,
@@ -15,7 +15,7 @@ const SPEC: IAutoFilmRenderSpec = {
 
 /**
  * The render orchestration over injected I/O: it captures one frame per
- * scheduled instant in order, then encodes the sequence — pure control flow, so
+ * scheduled instant in order, then encodes the sequence ??pure control flow, so
  * a fake capture/encode pair drives it deterministically.
  *
  * Scenario: a 1 s clip at 24 fps captures 24 frames (each adapter call recorded
@@ -26,7 +26,7 @@ export const test_render_video = async (): Promise<void> => {
   const captured: Array<{ t: number; i: number }> = [];
   let encodeArgs: string[] | null = null;
 
-  const adapters: IAutoFilmRenderAdapters = {
+  const adapters: IautomovieRenderAdapters = {
     captureFrame: async (timeSeconds, index, dir) => {
       captured.push({ t: timeSeconds, i: index });
       return `${dir}/frame_${index}.png`;

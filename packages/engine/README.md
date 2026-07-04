@@ -1,29 +1,29 @@
-# `@autofilm/engine`
+# `@automovie/engine`
 
-autofilm의 **결정론적 엔진**. `@autofilm/interface`의 AST를 받아 계산·검증한다. AI도 `three.js`도 없다 — 순수 TypeScript.
+automovie??**寃곗젙濡좎쟻 ?붿쭊**. `@automovie/interface`??AST瑜?諛쏆븘 怨꾩궛쨌寃利앺븳?? AI??`three.js`???녿떎 ???쒖닔 TypeScript.
 
-이 패키지가 autofilm의 "검증 가능하면 수렴한다" 사상을 실제로 구현하는 곳이다. 특히 **관절 가동범위(ROM) 검증**이 여기 산다 — 물리적으로 불가능한 포즈를 결정론적으로 거부하고 `IAutoFilmConstraintViolation[]`을 만들어 하니스의 `// ❌` 피드백 재료를 제공한다.
+???⑦궎吏媛 automovie??"寃利?媛?ν븯硫??섎졃?쒕떎" ?ъ긽???ㅼ젣濡?援ы쁽?섎뒗 怨녹씠?? ?뱁엳 **愿??媛?숇쾾??ROM) 寃利?*???ш린 ?곕떎 ??臾쇰━?곸쑝濡?遺덇??ν븳 ?ъ쫰瑜?寃곗젙濡좎쟻?쇰줈 嫄곕??섍퀬 `IautomovieConstraintViolation[]`??留뚮뱾???섎땲?ㅼ쓽 `// ?? ?쇰뱶諛??щ즺瑜??쒓났?쒕떎.
 
-## 모듈
+## 紐⑤뱢
 
-| 모듈 | 책임 |
+| 紐⑤뱢 | 梨낆엫 |
 |---|---|
-| `math/` | 벡터·쿼터니언 수학 (순수 함수, three.js 비의존) |
-| `kinematics/` | 의미 각도(flexion/abduction/twist) → 본 로컬 쿼터니언(FK), 포즈 해석 |
-| `rom/` | 휴머노이드 ROM 기본 테이블 + 관절별 ROM 검증 |
-| `motion/` | 이징 함수, 키프레임 보간(시각 t의 포즈 샘플링) |
-| `geometry/` | 프리미티브 형상 → 삼각형 메쉬 테셀레이션 |
-| `validation/` | 티어별 검증 오케스트레이터 → `IAutoFilmValidation` |
+| `math/` | 踰≫꽣쨌荑쇳꽣?덉뼵 ?섑븰 (?쒖닔 ?⑥닔, three.js 鍮꾩쓽議? |
+| `kinematics/` | ?섎? 媛곷룄(flexion/abduction/twist) ??蹂?濡쒖뺄 荑쇳꽣?덉뼵(FK), ?ъ쫰 ?댁꽍 |
+| `rom/` | ?대㉧?몄씠??ROM 湲곕낯 ?뚯씠釉?+ 愿?덈퀎 ROM 寃利?|
+| `motion/` | ?댁쭠 ?⑥닔, ?ㅽ봽?덉엫 蹂닿컙(?쒓컖 t???ъ쫰 ?섑뵆留? |
+| `geometry/` | ?꾨━誘명떚釉??뺤긽 ???쇨컖??硫붿돩 ?뚯??덉씠??|
+| `validation/` | ?곗뼱蹂?寃利??ㅼ??ㅽ듃?덉씠????`IautomovieValidation` |
 
-## 검증 티어 (현재 구현)
+## 寃利??곗뼱 (?꾩옱 援ы쁽)
 
-- **Tier 1 (range):** 값 범위 — blendshape·머티리얼 계수 ∈ [0,1], 프리미티브 치수 > 0 등. (인터페이스가 러프 타입이라 엔진이 범위를 강제)
-- **Tier 2 (rom):** 관절 가동범위 — flexion/abduction/twist를 본별 해부학 한계와 대조. **autofilm 차별점.**
-- **Tier 4 (temporal):** 시간 일관성 — 키프레임 시간 단조성·duration 이내·각속도 상한.
-- Tier 3 (physics: 자기교차·접지·균형)와 Tier 5 (mesh 위상)는 후속.
+- **Tier 1 (range):** 媛?踰붿쐞 ??blendshape쨌癒명떚由ъ뼹 怨꾩닔 ??[0,1], ?꾨━誘명떚釉?移섏닔 > 0 ?? (?명꽣?섏씠?ㅺ? ?ы봽 ??낆씠???붿쭊??踰붿쐞瑜?媛뺤젣)
+- **Tier 2 (rom):** 愿??媛?숇쾾????flexion/abduction/twist瑜?蹂몃퀎 ?대????쒓퀎? ?議? **automovie 李⑤퀎??**
+- **Tier 4 (temporal):** ?쒓컙 ?쇨??????ㅽ봽?덉엫 ?쒓컙 ?⑥“?굿톎uration ?대궡쨌媛곸냽???곹븳.
+- Tier 3 (physics: ?먭린援먯감쨌?묒?쨌洹좏삎)? Tier 5 (mesh ?꾩긽)???꾩냽.
 
-검증기는 `IAutoFilmConstraintViolation[]`을 만들고, `IAutoFilmValidation`(success | violations)으로 묶는다. `@autofilm/agent`가 이를 MicroAgentica 피드백 루프에 흘려 `// ❌`로 렌더한다.
+寃利앷린??`IautomovieConstraintViolation[]`??留뚮뱾怨? `IautomovieValidation`(success | violations)?쇰줈 臾띕뒗?? `@automovie/agent`媛 ?대? MicroAgentica ?쇰뱶諛?猷⑦봽???섎젮 `// ??濡??뚮뜑?쒕떎.
 
-## 좌표·각도 규약
+## 醫뚰몴쨌媛곷룄 洹쒖빟
 
-`@autofilm/interface` README의 규약을 따른다(y-up, 미터, 의미 각도). 본 로컬 회전 합성 규약은 `kinematics/jointToQuaternion.ts` JSDoc 참조.
+`@automovie/interface` README??洹쒖빟???곕Ⅸ??y-up, 誘명꽣, ?섎? 媛곷룄). 蹂?濡쒖뺄 ?뚯쟾 ?⑹꽦 洹쒖빟? `kinematics/jointToQuaternion.ts` JSDoc 李몄“.

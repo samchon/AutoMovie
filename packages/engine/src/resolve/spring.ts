@@ -1,8 +1,8 @@
 import {
-  IAutoFilmSpringDriver,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieSpringDriver,
+  IautomovieTransform,
+  IautomovieVector3,
+} from "@automovie/interface";
 
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
@@ -17,40 +17,40 @@ import { Vector3 } from "../math/Vector3";
  *
  * @author Samchon
  */
-export interface IAutoFilmSpringState {
-  /** Joint id → its world position last step (empty on the first step). */
-  prev: Map<string, IAutoFilmVector3>;
+export interface IautomovieSpringState {
+  /** Joint id ??its world position last step (empty on the first step). */
+  prev: Map<string, IautomovieVector3>;
 }
 
 /** A fresh, empty spring state. */
-export const createSpringState = (): IAutoFilmSpringState => ({
+export const createSpringState = (): IautomovieSpringState => ({
   prev: new Map(),
 });
 
 /**
- * Advance one spring ({@link IAutoFilmSpringDriver}) by a fixed timestep with
- * Verlet integration — the deterministic secondary-motion driver (hair, skirt,
+ * Advance one spring ({@link IautomovieSpringDriver}) by a fixed timestep with
+ * Verlet integration ??the deterministic secondary-motion driver (hair, skirt,
  * tail), modelled on VRM SpringBone.
  *
- * For each non-root chain joint: carry inertia from `(current − previous)`
- * damped by `(1 − drag)`, add gravity, pull toward the rest direction by
+ * For each non-root chain joint: carry inertia from `(current ??previous)`
+ * damped by `(1 ??drag)`, add gravity, pull toward the rest direction by
  * `stiffness`, then hard-constrain the bone length so the joint stays a fixed
  * distance from its (already-stepped) parent. The result is written to the
  * joint's world matrix and the previous-position state is rolled forward, so
  * replaying the same inputs reproduces the motion frame-for-frame.
  *
- * The root joint (`chain[0]`) is kinematic — driven by the animation — and left
+ * The root joint (`chain[0]`) is kinematic ??driven by the animation ??and left
  * untouched; orientation of the moved joints is left to the renderer/skin,
  * which derives it from the joint positions.
  *
  * @author Samchon
  */
 export const stepSpring = (
-  d: IAutoFilmSpringDriver,
+  d: IautomovieSpringDriver,
   world: Map<string, number[]>,
-  state: IAutoFilmSpringState,
+  state: IautomovieSpringState,
   dt: number,
-  localById: Map<string, IAutoFilmTransform>,
+  localById: Map<string, IautomovieTransform>,
 ): void => {
   const gravity = Vector3.scale(
     Vector3.normalize(d.gravityDir),

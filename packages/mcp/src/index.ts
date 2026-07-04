@@ -1,2 +1,2 @@
-export * from "./AutoFilmApplication";
-export * from "./createAutoFilmMcpServer";
+export * from "./AutomovieApplication";
+export * from "./CreateautomovieMcpServer";

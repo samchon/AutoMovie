@@ -1,7 +1,7 @@
-import { AutoFilmBodyRegion, AutoFilmHumanoidBone } from "@autofilm/interface";
+import { automovieBodyRegion, automovieHumanoidBone } from "@automovie/interface";
 
 /** Hips + both legs (the locomotion / stance region). */
-const LOWER: AutoFilmHumanoidBone[] = [
+const LOWER: automovieHumanoidBone[] = [
   "hips",
   "leftUpperLeg",
   "leftLowerLeg",
@@ -14,7 +14,7 @@ const LOWER: AutoFilmHumanoidBone[] = [
 ];
 
 /** Spine/chest + both arms + every finger (the gesture / reach region). */
-const UPPER: AutoFilmHumanoidBone[] = [
+const UPPER: automovieHumanoidBone[] = [
   "spine",
   "chest",
   "upperChest",
@@ -59,7 +59,7 @@ const UPPER: AutoFilmHumanoidBone[] = [
 ];
 
 /** Neck/head + eyes + jaw (the look-at region). */
-const HEAD: AutoFilmHumanoidBone[] = [
+const HEAD: automovieHumanoidBone[] = [
   "neck",
   "head",
   "leftEye",
@@ -68,19 +68,19 @@ const HEAD: AutoFilmHumanoidBone[] = [
 ];
 
 /**
- * The humanoid bones a {@link AutoFilmBodyRegion} owns. The regions partition
- * the skeleton **disjointly and completely** (`lowerBody ∪ upperBody ∪ head` =
+ * The humanoid bones a {@link automovieBodyRegion} owns. The regions partition
+ * the skeleton **disjointly and completely** (`lowerBody ??upperBody ??head` =
  * all 55 VRM bones; `face` owns no bones, being expression/morph channels;
  * `fullBody` owns every bone). This is what lets the performance compiler
- * **layer** clips on disjoint regions concurrently — a walk drives `lowerBody`
+ * **layer** clips on disjoint regions concurrently ??a walk drives `lowerBody`
  * while a wave drives `upperBody` and a look-at drives `head`, with no bone
- * claimed twice — instead of forcing them to sequence.
+ * claimed twice ??instead of forcing them to sequence.
  *
  * @author Samchon
  */
 export const bodyRegionBones = (
-  region: AutoFilmBodyRegion,
-): AutoFilmHumanoidBone[] => {
+  region: automovieBodyRegion,
+): automovieHumanoidBone[] => {
   if (region === "lowerBody") return LOWER;
   if (region === "upperBody") return UPPER;
   if (region === "head") return HEAD;

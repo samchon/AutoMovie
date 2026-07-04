@@ -1,9 +1,9 @@
-import { CANONICAL_FACE_POSITIONS } from "./canonicalFace";
+import { CANONICAL_FACE_POSITIONS } from "./CanonicalFace";
 import {
   IForgeMeshPart,
   IForgeSkullParameters,
   buildSkullShell,
-} from "./hairShell";
+} from "./HairShell";
 
 /**
  * The twin-tail controls — pure `[0, 1]` numbers, preset data like every other

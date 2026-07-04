@@ -1,24 +1,24 @@
 import {
-  IAutoFilmJointAxes,
-  IAutoFilmRestFrame,
+  IautomovieJointAxes,
+  IautomovieRestFrame,
   resolvePose,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  IautomoviePose,
+  IautomovieSkeleton,
+} from "@automovie/interface";
 
-import { IAutoFilmModelObject, applyTransform } from "./buildModel";
+import { IautomovieModelObject, applyTransform } from "./BuildModel";
 
 /**
- * Apply a {@link IAutoFilmPose} to a built model by running the engine's forward
+ * Apply a {@link IautomoviePose} to a built model by running the engine's forward
  * kinematics and writing each bone's local rotation onto the corresponding
  * `THREE.Bone`. The pose's root transform (if any) is applied to the model
  * root.
  *
- * The engine owns the math (semantic angles → quaternions), so the viewer only
- * copies results onto `three.js` objects — keeping rendering a thin, swappable
+ * The engine owns the math (semantic angles ??quaternions), so the viewer only
+ * copies results onto `three.js` objects ??keeping rendering a thin, swappable
  * layer over the deterministic core.
  *
  * `restFrames` optionally reads each joint angle as **clinical** and maps it
@@ -29,11 +29,11 @@ import { IAutoFilmModelObject, applyTransform } from "./buildModel";
  * @author Samchon
  */
 export const applyPose = (
-  target: IAutoFilmModelObject,
-  pose: IAutoFilmPose,
-  skeleton: IAutoFilmSkeleton,
-  jointAxes?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>,
-  restFrames?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmRestFrame>>,
+  target: IautomovieModelObject,
+  pose: IautomoviePose,
+  skeleton: IautomovieSkeleton,
+  jointAxes?: Partial<Record<automovieHumanoidBone, IautomovieJointAxes>>,
+  restFrames?: Partial<Record<automovieHumanoidBone, IautomovieRestFrame>>,
 ): void => {
   for (const r of resolvePose(pose, skeleton, jointAxes, restFrames)) {
     const bone = target.bones.get(r.bone);

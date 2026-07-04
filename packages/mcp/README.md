@@ -1,27 +1,27 @@
-# `@autofilm/mcp`
+# `@automovie/mcp`
 
-AutoFilm's deterministic film engine, exposed as **Model Context Protocol (MCP)**
+automovie's deterministic film engine, exposed as **Model Context Protocol (MCP)**
 tools.
 
 Instead of the repository hosting its own LLM orchestration, the engine is a
 **tool surface an external agent drives** (Codex, Claude, any MCP client). The
 agent supplies the structured creative intent; the engine computes the
-deterministic result and returns it — including the placement / ROM violations
+deterministic result and returns it ??including the placement / ROM violations
 that make the **engine, not the model, the arbiter of physical truth** ("engine
 enforces, model creates").
 
 Every tool's JSON schema is derived at compile time from
-[`AutoFilmApplication`](./src/AutoFilmApplication.ts)'s method signatures and
+[`automovieApplication`](./src/automovieApplication.ts)'s method signatures and
 JSDoc via `typia.llm.controller` (+ `@typia/mcp`), and calls are validated in and
 out.
 
 ## Tools
 
-| tool | in → out | engine |
+| tool | in ??out | engine |
 |------|----------|--------|
-| `stage` | script + staging → staged scene (or violations) | `stageScene` |
+| `stage` | script + staging ??staged scene (or violations) | `stageScene` |
 
-More of the pipeline (`block` / `perform` / `cut` / `forge`) follows — the
+More of the pipeline (`block` / `perform` / `cut` / `forge`) follows ??the
 multi-stage, partly rig-dependent shape is the part we're still experimenting
 with.
 
@@ -29,10 +29,10 @@ with.
 
 ```bash
 # dev (in-workspace, transpiled by ttsx)
-pnpm --filter @autofilm/mcp start        # = ttsx src/bin.ts
+pnpm --filter @automovie/mcp start        # = ttsx src/bin.ts
 
 # built (published): the bin runs the compiled server
-npx @autofilm/mcp                        # = node lib/bin.js
+npx @automovie/mcp                        # = node lib/bin.js
 ```
 
 ## Configure an MCP client
@@ -40,9 +40,9 @@ npx @autofilm/mcp                        # = node lib/bin.js
 ```jsonc
 {
   "mcpServers": {
-    "autofilm": {
+    "automovie": {
       "command": "npx",
-      "args": ["@autofilm/mcp"]
+      "args": ["@automovie/mcp"]
     }
   }
 }

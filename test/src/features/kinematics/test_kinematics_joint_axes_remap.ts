@@ -4,7 +4,7 @@ import {
   Quaternion,
   jointToQuaternion,
   resolvePose,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
@@ -23,23 +23,21 @@ const localOf = (
     .localRotation;
 
 /**
- * Per-bone clinical-axis remapping (`IAutoFilmJointAxes` /
+ * Per-bone clinical-axis remapping (`IautomovieJointAxes` /
  * `HUMANOID_JOINT_AXES`) and its opt-in path through `resolvePose`. The default
- * basis must be exactly the historical one (flexion→X, abduction→Z, twist→Y);
+ * basis must be exactly the historical one (flexion?뭎, abduction?뭒, twist?뭑);
  * supplying axes lets a T-pose arm's flexion swing sagittally (about Y) instead
  * of rolling along its length, without disturbing bones the table omits.
  *
  * Scenarios:
  *
  * 1. The default basis is X/Z/Y; `jointToQuaternion` with no axes equals a pure
- *    flexion about X (and is NOT the about-Y rotation — the negative twin).
+ *    flexion about X (and is NOT the about-Y rotation ??the negative twin).
  * 2. Passing an axes override rotates about the given axis: flexion under the
  *    humanoid arm basis is a rotation about Y.
- * 3. `HUMANOID_JOINT_AXES` remaps the whole arm chain (flexion→Y, abduction→Z,
- *    twist→X) and omits legs/spine (which therefore fall back to the default).
- * 4. `resolvePose` with the table remaps an arm joint (leftUpperArm flexion ⇒
- *    about Y) but leaves a leg joint (leftUpperLeg, absent from the table ⇒
- *    about X) on the default basis; omitting the table reproduces the default
+ * 3. `HUMANOID_JOINT_AXES` remaps the whole arm chain (flexion?뭑, abduction?뭒,
+ *    twist?뭎) and omits legs/spine (which therefore fall back to the default).
+ * 4. `resolvePose` with the table remaps an arm joint (leftUpperArm flexion ?? *    about Y) but leaves a leg joint (leftUpperLeg, absent from the table ?? *    about X) on the default basis; omitting the table reproduces the default
  *    for the same arm joint.
  */
 export const test_kinematics_joint_axes_remap = (): void => {
@@ -102,19 +100,19 @@ export const test_kinematics_joint_axes_remap = (): void => {
   // 4. resolvePose opt-in: arm remapped, leg untouched, default reproduced
   const armPose = makePose([joint("leftUpperArm", { flexion: 40 })]);
   TestValidator.predicate(
-    "resolve arm flexion with table ⇒ about Y",
+    "resolve arm flexion with table ??about Y",
     qclose(
       localOf(armPose, "leftUpperArm", HUMANOID_JOINT_AXES),
       Quaternion.fromAxisAngle(Y, 40),
     ),
   );
   TestValidator.predicate(
-    "resolve arm flexion without table ⇒ about X (default)",
+    "resolve arm flexion without table ??about X (default)",
     qclose(localOf(armPose, "leftUpperArm"), Quaternion.fromAxisAngle(X, 40)),
   );
   const legPose = makePose([joint("leftUpperLeg", { flexion: 40 })]);
   TestValidator.predicate(
-    "resolve leg flexion with table ⇒ still about X (omitted)",
+    "resolve leg flexion with table ??still about X (omitted)",
     qclose(
       localOf(legPose, "leftUpperLeg", HUMANOID_JOINT_AXES),
       Quaternion.fromAxisAngle(X, 40),

@@ -1,11 +1,11 @@
-import { sampleMotion } from "@autofilm/engine";
-import { IAutoFilmMotion } from "@autofilm/interface";
+import { sampleMotion } from "@automovie/engine";
+import { IautomovieMotion } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createValidMotion } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const elbow = (m: IAutoFilmMotion, t: number): number => {
+const elbow = (m: IautomovieMotion, t: number): number => {
   const j = sampleMotion(m, t).pose.joints.find(
     (x) => x.bone === "leftLowerArm",
   );
@@ -20,8 +20,8 @@ const elbow = (m: IAutoFilmMotion, t: number): number => {
  * that a clip "holds" at its ends rather than flying off when the playhead runs
  * past it.
  *
- * Scenario (the 0°→120° elbow clip over 1s): sampling at t=−0.5 returns the
- * start (0°) and at t=2 returns the end (120°).
+ * Scenario (the 0째??20째 elbow clip over 1s): sampling at t=??.5 returns the
+ * start (0째) and at t=2 returns the end (120째).
  */
 export const test_motion_sample_clamp = (): void => {
   const clip = createValidMotion();

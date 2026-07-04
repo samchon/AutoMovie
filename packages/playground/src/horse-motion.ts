@@ -1,40 +1,40 @@
-import { Quaternion, sequenceMotion, travelMotion } from "@autofilm/engine";
+import { Quaternion, sequenceMotion, travelMotion } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  IautomovieJointPose,
+  IautomovieKeyframe,
+  IautomovieMotion,
+  IautomoviePose,
+  IautomovieTransform,
+} from "@automovie/interface";
 
 /**
  * Motion clips for the stick horse. The horse keeps all four legs down at rest
  * (default clinical axes), so leg `flexion` strides fore/aft (negative swings a
  * leg forward, positive back) and the lower-limb `flexion` bends the knee/hock;
- * spine `flexion` arches the back (negative pitches the front end **up** — the
+ * spine `flexion` arches the back (negative pitches the front end **up** ??the
  * rear). The tail rides the repurposed finger chain.
  *
  * @author Samchon
  */
 const j = (
-  bone: AutoFilmHumanoidBone,
+  bone: automovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
-): IAutoFilmJointPose => ({
+): IautomovieJointPose => ({
   bone,
   flexion: a.flexion ?? 0,
   abduction: a.abduction ?? 0,
   twist: a.twist ?? 0,
 });
 
-const root = (y: number, pitch = 0): IAutoFilmTransform => ({
+const root = (y: number, pitch = 0): IautomovieTransform => ({
   translation: { x: 0, y, z: 0 },
   rotation: Quaternion.fromAxisAngle({ x: 1, y: 0, z: 0 }, pitch),
   scale: { x: 1, y: 1, z: 1 },
 });
 
 /** A root placement with a heading change (yaw about +Y, degrees). */
-const rootYaw = (y: number, yawDeg: number): IAutoFilmTransform => ({
+const rootYaw = (y: number, yawDeg: number): IautomovieTransform => ({
   translation: { x: 0, y, z: 0 },
   rotation: Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, yawDeg),
   scale: { x: 1, y: 1, z: 1 },
@@ -42,11 +42,11 @@ const rootYaw = (y: number, yawDeg: number): IAutoFilmTransform => ({
 
 const pose = (
   sk: string,
-  joints: IAutoFilmJointPose[],
-  r: IAutoFilmTransform | null = null,
-): IAutoFilmPose => ({ skeleton: sk, root: r, joints });
+  joints: IautomovieJointPose[],
+  r: IautomovieTransform | null = null,
+): IautomoviePose => ({ skeleton: sk, root: r, joints });
 
-const key = (time: number, p: IAutoFilmPose): IAutoFilmKeyframe => ({
+const key = (time: number, p: IautomoviePose): IautomovieKeyframe => ({
   time,
   pose: p,
   expression: null,
@@ -54,15 +54,15 @@ const key = (time: number, p: IAutoFilmPose): IAutoFilmKeyframe => ({
   bezier: null,
 });
 
-/** Tail as a trailing S-curve; `sway` ∈ [−1,1], `lift` raises the whole tail. */
-const tail = (sway: number, lift = 0): IAutoFilmJointPose[] => [
+/** Tail as a trailing S-curve; `sway` ??[??,1], `lift` raises the whole tail. */
+const tail = (sway: number, lift = 0): IautomovieJointPose[] => [
   j("leftLittleProximal", { abduction: 16 * sway, flexion: 10 + lift }),
   j("leftLittleIntermediate", { abduction: 20 * sway, flexion: 14 + lift }),
   j("leftLittleDistal", { abduction: 24 * sway, flexion: 16 + lift }),
 ];
 
-/** Idle — standing square, tail swaying, head and neck breathing gently. */
-export const horseIdle = (sk: string): IAutoFilmMotion => ({
+/** Idle ??standing square, tail swaying, head and neck breathing gently. */
+export const horseIdle = (sk: string): IautomovieMotion => ({
   id: "idle",
   skeleton: sk,
   duration: 2.4,
@@ -96,7 +96,7 @@ export const horseIdle = (sk: string): IAutoFilmMotion => ({
 });
 
 /**
- * One side's legs (front + hind of the same side) — `lead` swings that pair
+ * One side's legs (front + hind of the same side) ??`lead` swings that pair
  * forward and plants while the opposite pair drives back. A horse coordinates
  * by side/diagonal, not both-front-then-both-hind like a bounding cat.
  */
@@ -106,7 +106,7 @@ const gaitSide = (
   reach: number,
   bend: number,
   y: number,
-): IAutoFilmPose => {
+): IautomoviePose => {
   const lf = lead === "left" ? -reach : reach; // forward = negative flexion
   const rf = lead === "left" ? reach : -reach;
   const lk = lead === "left" ? bend : bend * 0.4; // the swinging side lifts more
@@ -131,11 +131,11 @@ const gaitSide = (
 };
 
 /**
- * Gallop — a lateral-pair bound: the left side then the right side reach and
+ * Gallop ??a lateral-pair bound: the left side then the right side reach and
  * drive, with a brief gathered suspension between, the back held near level (no
  * nose-dive). Authored in place; wrap with `travelMotion` to charge forward.
  */
-export const horseGallop = (sk: string): IAutoFilmMotion => {
+export const horseGallop = (sk: string): IautomovieMotion => {
   const gather = pose(
     sk,
     [
@@ -169,16 +169,16 @@ export const horseGallop = (sk: string): IAutoFilmMotion => {
 };
 
 /** Gallop that charges forward (~5 m/s), for a follow camera. */
-export const horseGallopTravel = (sk: string): IAutoFilmMotion =>
+export const horseGallopTravel = (sk: string): IautomovieMotion =>
   travelMotion("gallopTravel", horseGallop(sk), 8, { x: 0, y: 0, z: 5 });
 
 /**
- * Rear — the horse pitches up on its hind legs, front legs pawing the air, head
- * tossing as it neighs ("히히힝"), then drops back down. A one-shot beat (negative
+ * Rear ??the horse pitches up on its hind legs, front legs pawing the air, head
+ * tossing as it neighs ("?덊엳??), then drops back down. A one-shot beat (negative
  * spine flexion pitches the whole front end up, carrying a saddled rider back
  * with it).
  */
-export const horseRear = (sk: string): IAutoFilmMotion => {
+export const horseRear = (sk: string): IautomovieMotion => {
   const stand = pose(sk, [...tail(-0.5), j("neck", { flexion: 4 })], root(0));
   const coil = pose(
     sk,
@@ -194,7 +194,7 @@ export const horseRear = (sk: string): IAutoFilmMotion => {
     ],
     root(-0.04),
   );
-  const rearUp = (toss: number): IAutoFilmPose =>
+  const rearUp = (toss: number): IautomoviePose =>
     pose(
       sk,
       [
@@ -226,8 +226,8 @@ export const horseRear = (sk: string): IAutoFilmMotion => {
       key(0, stand),
       key(0.4, coil),
       key(0.9, rearUp(0)),
-      key(1.25, rearUp(16)), // head toss — "히힝"
-      key(1.6, rearUp(2)), // "히힝"
+      key(1.25, rearUp(16)), // head toss ??"?덊옗"
+      key(1.6, rearUp(2)), // "?덊옗"
       key(1.95, rearUp(14)),
       key(2.3, coil),
       key(2.6, stand),
@@ -235,8 +235,8 @@ export const horseRear = (sk: string): IAutoFilmMotion => {
   };
 };
 
-/** Walk — an even lateral-pair gait: left side, then right side step forward. */
-export const horseWalk = (sk: string): IAutoFilmMotion => ({
+/** Walk ??an even lateral-pair gait: left side, then right side step forward. */
+export const horseWalk = (sk: string): IautomovieMotion => ({
   id: "walk",
   skeleton: sk,
   duration: 1.0,
@@ -248,8 +248,8 @@ export const horseWalk = (sk: string): IAutoFilmMotion => ({
   ],
 });
 
-/** Trot — a brisker lateral pace with a touch of suspension between beats. */
-export const horseTrot = (sk: string): IAutoFilmMotion => {
+/** Trot ??a brisker lateral pace with a touch of suspension between beats. */
+export const horseTrot = (sk: string): IautomovieMotion => {
   const air = pose(
     sk,
     [
@@ -281,9 +281,9 @@ export const horseTrot = (sk: string): IAutoFilmMotion => {
   };
 };
 
-/** Turn — a prancing pivot, heading swinging left then right, legs marching. */
-export const horseTurn = (sk: string): IAutoFilmMotion => {
-  const prance = (yaw: number, lift: "left" | "right"): IAutoFilmPose =>
+/** Turn ??a prancing pivot, heading swinging left then right, legs marching. */
+export const horseTurn = (sk: string): IautomovieMotion => {
+  const prance = (yaw: number, lift: "left" | "right"): IautomoviePose =>
     pose(
       sk,
       [
@@ -315,16 +315,16 @@ export const horseTurn = (sk: string): IAutoFilmMotion => {
 };
 
 /** A short gallop-in-place burst that ends back at the gather pose. */
-const gallopBurst = (sk: string): IAutoFilmMotion =>
+const gallopBurst = (sk: string): IautomovieMotion =>
   sequenceMotion("burst", [horseGallop(sk), horseGallop(sk)], false);
 
 /**
  * A ~30 s mounted scenario: settle, walk on, trot up, break into a gallop, rear
  * and neigh, charge again, spin on the spot, trot, a second short rear, gallop,
- * and halt. The saddled rider rides every beat — leaning back through the rears
+ * and halt. The saddled rider rides every beat ??leaning back through the rears
  * and turning with the spins.
  */
-export const horsePerformance = (sk: string): IAutoFilmMotion =>
+export const horsePerformance = (sk: string): IautomovieMotion =>
   sequenceMotion(
     "performance",
     [
@@ -354,7 +354,7 @@ export const horsePerformance = (sk: string): IAutoFilmMotion =>
   );
 
 /** All horse clips, keyed by id. */
-export const HORSE_CLIPS = (sk: string): Record<string, IAutoFilmMotion> => ({
+export const HORSE_CLIPS = (sk: string): Record<string, IautomovieMotion> => ({
   idle: horseIdle(sk),
   walk: horseWalk(sk),
   trot: horseTrot(sk),

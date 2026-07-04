@@ -1,26 +1,26 @@
-import { resolveTargetPoint } from "@autofilm/engine";
-import { IAutoFilmActionTarget, IAutoFilmVector3 } from "@autofilm/interface";
+import { resolveTargetPoint } from "@automovie/engine";
+import { IautomovieActionTarget, IautomovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const nodes = new Map<string, IAutoFilmVector3>([
+const nodes = new Map<string, IautomovieVector3>([
   ["a", { x: 1, y: 0, z: 0 }],
   ["b", { x: 3, y: 0, z: 0 }],
 ]);
 
-const at = (target: IAutoFilmActionTarget): IAutoFilmVector3 | null =>
+const at = (target: IautomovieActionTarget): IautomovieVector3 | null =>
   resolveTargetPoint(target, nodes);
 
 const isPoint = (
-  p: IAutoFilmVector3 | null,
+  p: IautomovieVector3 | null,
   x: number,
   y: number,
   z: number,
 ): boolean => p !== null && nclose(p.x, x) && nclose(p.y, y) && nclose(p.z, z);
 
 /**
- * `resolveTargetPoint` — turn a positional action target into a world point.
+ * `resolveTargetPoint` ??turn a positional action target into a world point.
  *
  * Scenarios:
  *
@@ -28,7 +28,7 @@ const isPoint = (
  * 2. A `point` target is the literal point.
  * 3. A `group` target is the centroid of its resolvable members (missing members
  *    are dropped); an all-missing group is null.
- * 4. The relative targets (`direction`, `offscreen`) are not positional → null.
+ * 4. The relative targets (`direction`, `offscreen`) are not positional ??null.
  */
 export const test_perform_resolve_target = (): void => {
   // 1. node
@@ -37,7 +37,7 @@ export const test_perform_resolve_target = (): void => {
     isPoint(at({ kind: "node", node: "a" }), 1, 0, 0),
   );
   TestValidator.equals(
-    "absent node → null",
+    "absent node ??null",
     at({ kind: "node", node: "z" }),
     null,
   );
@@ -58,19 +58,19 @@ export const test_perform_resolve_target = (): void => {
     isPoint(at({ kind: "group", nodes: ["a", "z"] }), 1, 0, 0),
   );
   TestValidator.equals(
-    "an all-missing group → null",
+    "an all-missing group ??null",
     at({ kind: "group", nodes: ["z"] }),
     null,
   );
 
   // 4. relative targets are not positional
   TestValidator.equals(
-    "direction → null",
+    "direction ??null",
     at({ kind: "direction", headingDeg: 90 }),
     null,
   );
   TestValidator.equals(
-    "offscreen → null",
+    "offscreen ??null",
     at({ kind: "offscreen", edge: "left" }),
     null,
   );

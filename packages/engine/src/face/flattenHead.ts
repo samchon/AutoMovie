@@ -1,12 +1,12 @@
-import { AutoFilmHeadParameterName, IAutoFilmHead } from "@autofilm/interface";
+import { automovieHeadParameterName, IautomovieHead } from "@automovie/interface";
 
 /**
- * Per-group field → morph-name map: how each anatomy-grouped
- * {@link IAutoFilmHead} leaf projects onto its flat
- * {@link AutoFilmHeadParameterName}. The grouping is for the LLM's benefit; the
+ * Per-group field ??morph-name map: how each anatomy-grouped
+ * {@link IautomovieHead} leaf projects onto its flat
+ * {@link automovieHeadParameterName}. The grouping is for the LLM's benefit; the
  * forge consumes the flat names.
  */
-const MAP: Record<string, Record<string, AutoFilmHeadParameterName>> = {
+const MAP: Record<string, Record<string, automovieHeadParameterName>> = {
   shape: {
     width: "faceWidth",
     length: "faceLength",
@@ -59,8 +59,8 @@ const MAP: Record<string, Record<string, AutoFilmHeadParameterName>> = {
 };
 
 /**
- * Project an anatomy-grouped {@link IAutoFilmHead} document onto the flat morph
- * weights {@link AutoFilmHeadParameterName} the forge `morphHead` applies.
+ * Project an anatomy-grouped {@link IautomovieHead} document onto the flat morph
+ * weights {@link automovieHeadParameterName} the forge `morphHead` applies.
  *
  * Omitted groups and fields are skipped (they stay neutral), so the result
  * carries only the traits the document set. The map covers every leaf exactly
@@ -69,9 +69,9 @@ const MAP: Record<string, Record<string, AutoFilmHeadParameterName>> = {
  * @author Samchon
  */
 export const flattenHead = (
-  doc: IAutoFilmHead,
-): Partial<Record<AutoFilmHeadParameterName, number>> => {
-  const out: Partial<Record<AutoFilmHeadParameterName, number>> = {};
+  doc: IautomovieHead,
+): Partial<Record<automovieHeadParameterName, number>> => {
+  const out: Partial<Record<automovieHeadParameterName, number>> = {};
   for (const group of Object.keys(MAP)) {
     const fields = (doc as Record<string, Record<string, number> | undefined>)[
       group

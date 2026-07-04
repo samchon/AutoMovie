@@ -1,5 +1,5 @@
-import { flattenHead } from "@autofilm/engine";
-import { IAutoFilmHead } from "@autofilm/interface";
+import { flattenHead } from "@automovie/engine";
+import { IautomovieHead } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 /**
@@ -12,7 +12,7 @@ import { TestValidator } from "@nestia/e2e";
  * empty doc confirms the all-omitted path.
  */
 export const test_engine_flatten_head = (): void => {
-  const doc: IAutoFilmHead = {
+  const doc: IautomovieHead = {
     shape: { width: 0.5, oval: -1 },
     eyes: { size: 1, epicanthus: 0.8, fold: -0.5 },
     jaw: { width: -0.7, chinProjection: -0.3 },

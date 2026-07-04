@@ -1,4 +1,4 @@
-import { performShot, stageScene } from "@autofilm/engine";
+import { performShot, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -17,14 +17,13 @@ import {
 /**
  * Pins the ROM gate on the far side of the compile: even a referentially
  * perfect action list fails when the synthesised clip bends a joint past its
- * anatomical range — and the violation's path is remapped from `$input` onto
+ * anatomical range ??and the violation's path is remapped from `$input` onto
  * `$compiled["<node>"]` so the blame lands on the offending actor's clip, not
  * the LLM's own JSON.
  *
  * Scenarios:
  *
- * 1. The synthesizer returns an elbow clip peaking at 200° flexion (max 150°) →
- *    failure with a `rom` violation whose path starts with
+ * 1. The synthesizer returns an elbow clip peaking at 200째 flexion (max 150째) ?? *    failure with a `rom` violation whose path starts with
  *    `$compiled["knightA"]` and carries a positive overshoot.
  */
 export const test_film_perform_shot_rom_gate = (): void => {

@@ -1,22 +1,22 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  IautomovieJointPose,
+  IautomovieMotion,
+  IautomoviePose,
+  IautomovieSkeleton,
+} from "@automovie/interface";
 import {
-  AutoFilmPlayer,
-  IAutoFilmModelObject,
+  automoviePlayer,
+  IautomovieModelObject,
   applyPose,
   buildModel,
   mountViewer,
-} from "@autofilm/viewer";
+} from "@automovie/viewer";
 import * as THREE from "three";
 
-import { DEFAULT_PARAMS, IHumanoidParams, buildHumanoid } from "./humanoid";
+import { DEFAULT_PARAMS, IHumanoidParams, buildHumanoid } from "./Humanoid";
 
-// ── editor state ──────────────────────────────────────────────────────────
+// ?? editor state ??????????????????????????????????????????????????????????
 const params: IHumanoidParams = { ...DEFAULT_PARAMS };
 
 interface JointState {
@@ -24,17 +24,17 @@ interface JointState {
   abduction: number;
   twist: number;
 }
-const pose: Partial<Record<AutoFilmHumanoidBone, JointState>> = {};
+const pose: Partial<Record<automovieHumanoidBone, JointState>> = {};
 
-let object: IAutoFilmModelObject;
-let skeleton: IAutoFilmSkeleton;
-let player: AutoFilmPlayer | null = null;
+let object: IautomovieModelObject;
+let skeleton: IautomovieSkeleton;
+let player: automoviePlayer | null = null;
 let playing = false;
 
-const currentPose = (): IAutoFilmPose => {
-  const joints: IAutoFilmJointPose[] = Object.entries(pose).map(
+const currentPose = (): IautomoviePose => {
+  const joints: IautomovieJointPose[] = Object.entries(pose).map(
     ([bone, s]) => ({
-      bone: bone as AutoFilmHumanoidBone,
+      bone: bone as automovieHumanoidBone,
       flexion: s!.flexion,
       abduction: s!.abduction,
       twist: s!.twist,
@@ -43,9 +43,9 @@ const currentPose = (): IAutoFilmPose => {
   return { skeleton: "humanoid", root: null, joints };
 };
 
-// ── a small procedural "wave" clip, so Play does something visible ──────────
-const waveMotion = (): IAutoFilmMotion => {
-  const arm = (flexion: number, abduction: number): IAutoFilmPose => ({
+// ?? a small procedural "wave" clip, so Play does something visible ??????????
+const waveMotion = (): IautomovieMotion => {
+  const arm = (flexion: number, abduction: number): IautomoviePose => ({
     skeleton: "humanoid",
     root: null,
     joints: [
@@ -84,7 +84,7 @@ const waveMotion = (): IAutoFilmMotion => {
   };
 };
 
-// ── three.js scene scaffolding ──────────────────────────────────────────────
+// ?? three.js scene scaffolding ??????????????????????????????????????????????
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b1e24);
 
@@ -110,11 +110,11 @@ const rebuild = (): void => {
   figure.clear();
   object = buildModel(built.model);
   figure.add(object.object);
-  player = new AutoFilmPlayer(object, skeleton, waveMotion());
+  player = new automoviePlayer(object, skeleton, waveMotion());
   if (!playing) applyPose(object, currentPose(), skeleton);
 };
 
-// ── editor UI ───────────────────────────────────────────────────────────────
+// ?? editor UI ???????????????????????????????????????????????????????????????
 interface SliderSpec {
   label: string;
   min: number;
@@ -158,7 +158,7 @@ function prop(
 
 const poseSlider = (
   label: string,
-  bone: AutoFilmHumanoidBone,
+  bone: automovieHumanoidBone,
   axis: keyof JointState,
   min: number,
   max: number,
@@ -208,9 +208,9 @@ app.innerHTML = `
   <div id="stage">
     <canvas id="view"></canvas>
     <div id="panel">
-      <h1>autofilm · character editor</h1>
-      <div class="sub">Procedural humanoid — adjust body, pose, or play a clip.</div>
-      <button id="play">▶ Play wave</button>
+      <h1>automovie 쨌 character editor</h1>
+      <div class="sub">Procedural humanoid ??adjust body, pose, or play a clip.</div>
+      <button id="play">??Play wave</button>
       <h2>Proportions</h2>
       <div id="proportions"></div>
       <h2>Pose</h2>
@@ -245,11 +245,11 @@ mountSliders(document.querySelector("#poses")!, poseSliders);
 const playBtn = document.querySelector<HTMLButtonElement>("#play")!;
 playBtn.addEventListener("click", () => {
   playing = !playing;
-  playBtn.textContent = playing ? "⏸ Pause" : "▶ Play wave";
+  playBtn.textContent = playing ? "??Pause" : "??Play wave";
   if (!playing) applyPose(object, currentPose(), skeleton);
 });
 
-// ── boot ─────────────────────────────────────────────────────────────────────
+// ?? boot ?????????????????????????????????????????????????????????????????????
 rebuild();
 
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
@@ -258,7 +258,7 @@ mountViewer(canvas, scene, camera, (elapsed) => {
 });
 
 // expose for headless verification (screenshot harness reads this)
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   boneCount: () => object.bones.size,
 };

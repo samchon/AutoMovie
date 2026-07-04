@@ -1,18 +1,18 @@
 import {
-  IAutoFilmResolvedBone,
+  IautomovieResolvedBone,
   Quaternion,
   resolvePose,
-} from "@autofilm/engine";
-import { AutoFilmHumanoidBone } from "@autofilm/interface";
+} from "@automovie/engine";
+import { automovieHumanoidBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, makePose } from "../internal/fixtures";
 import { qclose, vclose } from "../internal/predicates";
 
 const at = (
-  rs: IAutoFilmResolvedBone[],
-  b: AutoFilmHumanoidBone,
-): IAutoFilmResolvedBone => {
+  rs: IautomovieResolvedBone[],
+  b: automovieHumanoidBone,
+): IautomovieResolvedBone => {
   const r = rs.find((x) => x.bone === b);
   if (r === undefined) throw new Error(`bone ${b} not resolved`);
   return r;

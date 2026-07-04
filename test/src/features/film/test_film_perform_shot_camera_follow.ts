@@ -1,5 +1,5 @@
-import { performShot, stageScene } from "@autofilm/engine";
-import { IAutoFilmCameraAction } from "@autofilm/interface";
+import { performShot, stageScene } from "@automovie/engine";
+import { IautomovieCameraAction } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -11,7 +11,7 @@ import {
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const followFrame: IAutoFilmCameraAction = {
+const followFrame: IautomovieCameraAction = {
   verb: "frame",
   actor: "cam-main",
   start: 0,
@@ -21,7 +21,7 @@ const followFrame: IAutoFilmCameraAction = {
   on: { kind: "node", node: "knightA" },
 };
 
-const performance = (frame: IAutoFilmCameraAction) =>
+const performance = (frame: IautomovieCameraAction) =>
   makePerformanceWrite({
     draft: [
       {
@@ -51,21 +51,21 @@ const marchSynth = () =>
 /**
  * Pins the follow seam between the shot compiler and the camera grammar: the
  * subject's animated base is its placement plus the compiled clip's root
- * displacement, so a follow move tracks a traveling actor — and every fallback
+ * displacement, so a follow move tracks a traveling actor ??and every fallback
  * (rootless clip, motionless subject, point subject) stays total.
  *
  * Scenarios:
  *
  * 1. KnightA's synthesized clip carries a root translation marching 1 m down +X; a
- *    `follow` frame (skeleton lookup null → default subject height) → the
- *    camera's first→last translation keys differ by ≈ 1 m in X (the bearing
+ *    `follow` frame (skeleton lookup null ??default subject height) ??the
+ *    camera's first?뭠ast translation keys differ by ??1 m in X (the bearing
  *    offset cancels in the difference).
  * 2. The same follow over a rootless clip (the shared synthesizer poses only an
- *    elbow) → the animated base never moves, so first and last keys coincide.
- * 3. A `static` frame on a point target (no node, no motion, default height) → a
+ *    elbow) ??the animated base never moves, so first and last keys coincide.
+ * 3. A `static` frame on a point target (no node, no motion, default height) ??a
  *    single-key locked camera clip.
- * 4. A followed actor staged turned (+90°): its node-local root (a model +X march)
- *    renders as a world −Z path, and the camera follows that world path.
+ * 4. A followed actor staged turned (+90째): its node-local root (a model +X march)
+ *    renders as a world ?뭒 path, and the camera follows that world path.
  */
 export const test_film_perform_shot_camera_follow = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -123,9 +123,9 @@ export const test_film_perform_shot_camera_follow = (): void => {
       1,
     );
 
-  // 4. the followed actor is staged turned (+90°): its root is node-local, so a
-  // model +X march renders as a world −Z path. The camera must follow that
-  // world path (no X drift, ≈−1 in Z), not the un-rotated model root.
+  // 4. the followed actor is staged turned (+90째): its root is node-local, so a
+  // model +X march renders as a world ?뭒 path. The camera must follow that
+  // world path (no X drift, ?댿닋1 in Z), not the un-rotated model root.
   const turnedStaged = stageScene(
     makeScriptWrite(),
     makeStagingWrite({
@@ -148,7 +148,7 @@ export const test_film_perform_shot_camera_follow = (): void => {
     const tr = turned.shot.cameraMotion!.tracks[0]!;
     const n = tr.values.length;
     TestValidator.predicate(
-      "a +X model march under +90° facing renders as a world −Z follow",
+      "a +X model march under +90째 facing renders as a world ?뭒 follow",
       nclose(tr.values[n - 3]! - tr.values[0]!, 0, 1e-6) &&
         nclose(tr.values[n - 1]! - tr.values[2]!, -1, 1e-6),
     );

@@ -1,34 +1,34 @@
 import {
   HUMANOID_JOINT_AXES,
-  IAutoFilmBody,
-  IAutoFilmImpact,
+  IautomovieBody,
+  IautomovieImpact,
   impactRecoil,
   projectileAt,
   projectileSphereHit,
   resolveImpact,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmPose,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
-import { applyPose, buildModel, mountViewer } from "@autofilm/viewer";
+  automovieHumanoidBone,
+  IautomovieJointPose,
+  IautomoviePose,
+  IautomovieVector3,
+} from "@automovie/interface";
+import { applyPose, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
-import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
+import { DEFAULT_STICKMAN, buildStickman } from "./Stickman";
 
-// ── collision-response demo: projectiles strike a braced stick figure; the
+// ?? collision-response demo: projectiles strike a braced stick figure; the
 // engine's resolveImpact decides bounce / embed / knock-back (and the ball's
-// rebound), and impactRecoil drives the figure's flinch — bounded by joint ROM,
+// rebound), and impactRecoil drives the figure's flinch ??bounded by joint ROM,
 // the overflow becoming a root stagger. The engine computes the reaction; the
-// view just plays it. ─────────────────────────────────────────────────────────
+// view just plays it. ?????????????????????????????????????????????????????????
 const params = new URLSearchParams(location.search);
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IautomovieVector3 => ({ x, y, z });
 const j = (
-  bone: AutoFilmHumanoidBone,
+  bone: automovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
-): IAutoFilmJointPose => ({
+): IautomovieJointPose => ({
   bone,
   flexion: a.flexion ?? 0,
   abduction: a.abduction ?? 0,
@@ -38,8 +38,8 @@ const j = (
 const { skeleton, model } = buildStickman(DEFAULT_STICKMAN);
 const object = buildModel(model);
 
-// a braced stance — knees soft, hands up to take the hit
-const BRACE: IAutoFilmJointPose[] = [
+// a braced stance ??knees soft, hands up to take the hit
+const BRACE: IautomovieJointPose[] = [
   j("leftUpperLeg", { flexion: -10, abduction: 10 }),
   j("rightUpperLeg", { flexion: -10, abduction: -10 }),
   j("leftLowerLeg", { flexion: 24 }),
@@ -51,21 +51,21 @@ const BRACE: IAutoFilmJointPose[] = [
 ];
 
 // torso target (world; the figure stands at the origin facing +Z, hits come
-// from +Z flying −Z into the chest)
+// from +Z flying ?뭒 into the chest)
 const torso = { center: v(0, 1.28, 0), radius: 0.34 };
 const bodyMass = 72;
-const recoilChain: AutoFilmHumanoidBone[] = ["spine", "chest", "neck", "head"];
+const recoilChain: automovieHumanoidBone[] = ["spine", "chest", "neck", "head"];
 
 interface Shot {
   t0: number;
   label: string;
   color: number;
   radius: number;
-  origin: IAutoFilmVector3;
-  velocity: IAutoFilmVector3;
-  gravity: IAutoFilmVector3;
-  ball: Omit<IAutoFilmBody, "velocity">;
-  body: Omit<IAutoFilmBody, "velocity" | "mass">;
+  origin: IautomovieVector3;
+  velocity: IautomovieVector3;
+  gravity: IautomovieVector3;
+  ball: Omit<IautomovieBody, "velocity">;
+  body: Omit<IautomovieBody, "velocity" | "mass">;
 }
 
 // three strikes that exercise the three response kinds
@@ -79,7 +79,7 @@ const SHOTS: Shot[] = [
     velocity: v(0, 0.2, -16),
     gravity: v(0, -2, 0),
     ball: { mass: 0.6, restitution: 0.88, hardness: 0.9, penetrability: 0.1 },
-    body: { restitution: 0.85, hardness: 0.8, penetrability: 0.1 }, // braced shell → bounce
+    body: { restitution: 0.85, hardness: 0.8, penetrability: 0.1 }, // braced shell ??bounce
   },
   {
     t0: 3.4,
@@ -90,7 +90,7 @@ const SHOTS: Shot[] = [
     velocity: v(0, 0.4, -14),
     gravity: v(0, -2, 0),
     ball: { mass: 9, restitution: 0.2, hardness: 0.9, penetrability: 0.1 },
-    body: { restitution: 0.2, hardness: 0.4, penetrability: 0.2 }, // heavy → inelastic knock-back
+    body: { restitution: 0.2, hardness: 0.4, penetrability: 0.2 }, // heavy ??inelastic knock-back
   },
   {
     t0: 6.4,
@@ -101,7 +101,7 @@ const SHOTS: Shot[] = [
     velocity: v(0, 0.5, -34),
     gravity: v(0, -3, 0),
     ball: { mass: 0.09, restitution: 0.1, hardness: 0.9, penetrability: 0.1 },
-    body: { restitution: 0.1, hardness: 0.2, penetrability: 0.8 }, // soft flesh → arrow embeds
+    body: { restitution: 0.1, hardness: 0.2, penetrability: 0.8 }, // soft flesh ??arrow embeds
   },
 ];
 const DUR = 9;
@@ -110,8 +110,8 @@ const DUR = 9;
 interface Resolved {
   shot: Shot;
   hitT: number; // absolute time of contact
-  impact: IAutoFilmImpact;
-  hitPoint: IAutoFilmVector3;
+  impact: IautomovieImpact;
+  hitPoint: IautomovieVector3;
 }
 const resolved: Resolved[] = SHOTS.map((shot) => {
   const proj = {
@@ -122,7 +122,7 @@ const resolved: Resolved[] = SHOTS.map((shot) => {
   const hit = projectileSphereHit(proj, torso, 1.2);
   const flightT = hit ? hit.time : 0.3;
   const ballVel = projectileAt(proj, flightT).velocity;
-  const normal = v(0, 0, -1); // ball (front) → body
+  const normal = v(0, 0, -1); // ball (front) ??body
   const impact = resolveImpact(
     { ...shot.ball, velocity: ballVel },
     { ...shot.body, mass: bodyMass, velocity: v(0, 0, 0) },
@@ -178,14 +178,13 @@ const envelope = (t: number, hitT: number): number => {
 
 const step = (t: number): void => {
   // accumulate the recoil (flinch + stagger) from any strike currently landing
-  let flinch: IAutoFilmJointPose[] = [];
+  let flinch: IautomovieJointPose[] = [];
   let staggerZ = 0;
   let staggerDip = 0;
   for (const r of resolved) {
     const env = envelope(t, r.hitT);
     if (env <= 0) continue;
-    // reactive push from the impulse magnitude (lean away from the hit, −Z ⇒
-    // spine extends back ⇒ negative flexion); impactRecoil clamps it to ROM
+    // reactive push from the impulse magnitude (lean away from the hit, ?뭒 ??    // spine extends back ??negative flexion); impactRecoil clamps it to ROM
     const mag = Math.hypot(
       r.impact.impulse.x,
       r.impact.impulse.y,
@@ -204,10 +203,10 @@ const step = (t: number): void => {
     staggerDip -= Math.min(mag * 0.004, 0.12) * env;
   }
 
-  const joints = new Map<AutoFilmHumanoidBone, IAutoFilmJointPose>();
+  const joints = new Map<automovieHumanoidBone, IautomovieJointPose>();
   for (const b of BRACE) joints.set(b.bone, b);
   for (const f of flinch) joints.set(f.bone, f);
-  const pose: IAutoFilmPose = {
+  const pose: IautomoviePose = {
     skeleton: skeleton.id,
     root: {
       translation: { x: 0, y: staggerDip, z: staggerZ },
@@ -283,7 +282,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   handle.renderer.render(scene, camera);
 };
 
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   kinds: resolved.map((r) => r.impact.kind),
   duration: DUR,

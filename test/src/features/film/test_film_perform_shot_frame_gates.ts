@@ -1,5 +1,5 @@
-import { performShot, stageScene } from "@autofilm/engine";
-import { IAutoFilmCameraAction } from "@autofilm/interface";
+import { performShot, stageScene } from "@automovie/engine";
+import { IautomovieCameraAction } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -12,8 +12,8 @@ import { createSkeleton } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 const frame = (
-  overrides: Partial<IAutoFilmCameraAction>,
-): IAutoFilmCameraAction => ({
+  overrides: Partial<IautomovieCameraAction>,
+): IautomovieCameraAction => ({
   verb: "frame",
   actor: "cam-main",
   start: 0,
@@ -31,10 +31,10 @@ const frame = (
  *
  * Scenarios:
  *
- * 1. A frame aimed at `{kind: "direction"}` (a heading, not a point) → a `type`
+ * 1. A frame aimed at `{kind: "direction"}` (a heading, not a point) ??a `type`
  *    violation on `$input.draft[0].on`.
  * 2. A 1.5-second move starting at 0 followed by another starting at 1.0 on the
- *    same camera → a `range` violation on the second's `start` (the first still
+ *    same camera ??a `range` violation on the second's `start` (the first still
  *    owns the camera until 1.5 s).
  */
 export const test_film_perform_shot_frame_gates = (): void => {

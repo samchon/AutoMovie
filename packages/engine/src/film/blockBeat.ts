@@ -1,11 +1,11 @@
 import {
-  IAutoFilmBlockingApplication,
-  IAutoFilmConstraintViolation,
-  IAutoFilmScriptApplication,
-} from "@autofilm/interface";
+  IautomovieBlockingApplication,
+  IautomovieConstraintViolation,
+  IautomovieScriptApplication,
+} from "@automovie/interface";
 
 import { ViolationCollector } from "../validation/violation";
-import { IAutoFilmStagedSet } from "./stageScene";
+import { IautomovieStagedSet } from "./StageScene";
 
 /**
  * A validated blocking: the beat's shot plan, coherent with the script and the
@@ -13,17 +13,17 @@ import { IAutoFilmStagedSet } from "./stageScene";
  *
  * @author Samchon
  */
-export type IAutoFilmBlockedBeat =
-  | IAutoFilmBlockedBeat.ISuccess
-  | IAutoFilmBlockedBeat.IFailure;
-export namespace IAutoFilmBlockedBeat {
+export type IautomovieBlockedBeat =
+  | IautomovieBlockedBeat.ISuccess
+  | IautomovieBlockedBeat.IFailure;
+export namespace IautomovieBlockedBeat {
   /** The plan holds together; performance can align to it. */
   export interface ISuccess {
     /** Discriminator. */
     success: true;
 
     /** The validated plan, verbatim. */
-    blocking: IAutoFilmBlockingApplication.IWrite;
+    blocking: IautomovieBlockingApplication.IWrite;
   }
 
   /** The plan contradicted the script, the stage, or its own timeline. */
@@ -32,24 +32,24 @@ export namespace IAutoFilmBlockedBeat {
     success: false;
 
     /** Every contradiction found, for the correction round. */
-    violations: IAutoFilmConstraintViolation[];
+    violations: IautomovieConstraintViolation[];
   }
 }
 
 /**
- * The BLOCKING consumer — gate one beat's shot plan before any performance is
+ * The BLOCKING consumer ??gate one beat's shot plan before any performance is
  * compiled from it. The checks are coherence, not craft: the beat must be one
  * the script planned, every intent must belong to a placed actor, the camera
  * must favour something placed, and the timing anchors must sit on the beat's
- * own timeline **in the order they are listed** — the list order is the causal
+ * own timeline **in the order they are listed** ??the list order is the causal
  * order ("the loose before the hit"), so an anchor whose `t` runs backwards
  * contradicts the causality it exists to fix.
  */
 export const blockBeat = (
-  script: IAutoFilmScriptApplication.IWrite,
-  staged: IAutoFilmStagedSet.ISuccess,
-  blocking: IAutoFilmBlockingApplication.IWrite,
-): IAutoFilmBlockedBeat => {
+  script: IautomovieScriptApplication.IWrite,
+  staged: IautomovieStagedSet.ISuccess,
+  blocking: IautomovieBlockingApplication.IWrite,
+): IautomovieBlockedBeat => {
   const out = new ViolationCollector();
 
   if (!script.beats.some((b) => b.id === blocking.beat))
@@ -90,7 +90,7 @@ export const blockBeat = (
         out.push(
           "range",
           `$input.actors[${i}].anchors[${j}].t`,
-          `anchor "${anchor.cue}" (t=${anchor.t}) runs before its predecessor (t=${previous}) — the list order is the causal order`,
+          `anchor "${anchor.cue}" (t=${anchor.t}) runs before its predecessor (t=${previous}) ??the list order is the causal order`,
           anchor.t,
         );
       previous = anchor.t;

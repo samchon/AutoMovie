@@ -1,4 +1,4 @@
-import { ViolationCollector, validateFace } from "@autofilm/engine";
+import { ViolationCollector, validateFace } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeFace } from "../internal/fixtures";
@@ -9,7 +9,7 @@ import { makeFace } from "../internal/fixtures";
  * expressions), instead of the bare-call defaults.
  *
  * Scenario: an out-of-range `mouth.width` (a mouth group with no lips)
- * validated under path "$doc.face" into a pre-seeded collector — the new
+ * validated under path "$doc.face" into a pre-seeded collector ??the new
  * violation lands in the same collector after the existing entry, and its path
  * carries the caller's prefix and the leaf's dotted document path.
  */

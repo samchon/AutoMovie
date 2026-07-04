@@ -1,5 +1,5 @@
-import { HUMANOID_JOINT_AXES } from "@autofilm/engine";
-import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
+import { HUMANOID_JOINT_AXES } from "@automovie/engine";
+import { automoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import {
@@ -8,11 +8,11 @@ import {
   buildBlueBoxer,
   buildRedBoxer,
   redClip,
-} from "./spar";
+} from "./Spar";
 
 const params = new URLSearchParams(location.search);
 
-// ── two boxers, squared off along Z and facing each other ────────────────────
+// ?? two boxers, squared off along Z and facing each other ????????????????????
 const red = buildRedBoxer();
 const blue = buildBlueBoxer();
 const redObj = buildModel(red.model);
@@ -21,31 +21,31 @@ const blueObj = buildModel(blue.model);
 // Each boxer sits in a positioned group; the clip's root (identity, or the KO
 // fall) is applied to the model inside that group, so the figures stand at
 // their corners and the loser topples within his own frame.
-// arm reach ≈ upperArm+lowerArm ≈ 0.55 m; put the boxers within that so a jab
+// arm reach ??upperArm+lowerArm ??0.55 m; put the boxers within that so a jab
 // actually lands on the opponent's head (heads ~0.7 m apart) instead of miming
 const gap = 0.35;
 const redGroup = new THREE.Group();
 redGroup.position.set(0, 0, gap);
-redGroup.rotation.y = Math.PI; // red faces −Z (toward blue)
+redGroup.rotation.y = Math.PI; // red faces ?뭒 (toward blue)
 redGroup.add(redObj.object);
 const blueGroup = new THREE.Group();
 blueGroup.position.set(0, 0, -gap); // blue faces +Z (toward red) at rest
 blueGroup.add(blueObj.object);
 
-const redPlayer = new AutoFilmPlayer(
+const redPlayer = new automoviePlayer(
   redObj,
   red.skeleton,
   redClip(red.skeleton.id),
   HUMANOID_JOINT_AXES,
 );
-const bluePlayer = new AutoFilmPlayer(
+const bluePlayer = new automoviePlayer(
   blueObj,
   blue.skeleton,
   blueClip(blue.skeleton.id),
   HUMANOID_JOINT_AXES,
 );
 
-// ── scene ────────────────────────────────────────────────────────────────────
+// ?? scene ????????????????????????????????????????????????????????????????????
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf2f4f8);
 scene.add(redGroup);
@@ -90,7 +90,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   handle.renderer.render(scene, camera);
 };
 
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   duration: SPAR_DURATION,
   redBones: () => redObj.bones.size,

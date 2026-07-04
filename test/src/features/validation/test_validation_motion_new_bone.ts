@@ -1,4 +1,4 @@
-import { validateMotion } from "@autofilm/engine";
+import { validateMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -16,7 +16,7 @@ import {
  * flag a large first pose as "too fast"). Pins the no-previous-value branch.
  *
  * Scenario: a 1s clip whose first keyframe articulates only the elbow, and
- * whose second adds the shoulder at 20° flexion. The shoulder has no previous
+ * whose second adds the shoulder at 20째 flexion. The shoulder has no previous
  * frame to measure speed against, and the elbow moves slowly, so the clip
  * validates.
  */

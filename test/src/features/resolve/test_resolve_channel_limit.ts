@@ -1,8 +1,8 @@
-import { applyChannelLimit } from "@autofilm/engine";
-import { IAutoFilmChannel, IAutoFilmChannelLimit } from "@autofilm/interface";
+import { applyChannelLimit } from "@automovie/engine";
+import { IautomovieChannel, IautomovieChannelLimit } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-const CHANNEL: IAutoFilmChannel = {
+const CHANNEL: IautomovieChannel = {
   kind: "node",
   node: "n",
   path: "translation",
@@ -11,7 +11,7 @@ const CHANNEL: IAutoFilmChannel = {
 const limit = (
   min: (number | null)[] | null,
   max: (number | null)[] | null,
-): IAutoFilmChannelLimit => ({ channel: CHANNEL, min, max });
+): IautomovieChannelLimit => ({ channel: CHANNEL, min, max });
 
 /**
  * The CONSTRAIN pass: clamp a value to a channel limit and report every bound
@@ -19,7 +19,7 @@ const limit = (
  *
  * Scenarios:
  *
- * 1. A both-sides-null limit clamps nothing and reports no violation — the value
+ * 1. A both-sides-null limit clamps nothing and reports no violation ??the value
  *    passes through untouched.
  * 2. A mixed limit (`min=[0,null,-5]`, `max=[10,null,50]`) on `[-3,99,100]`:
  *    component 0 underflows and clamps up to 0, component 1 is free on both
@@ -30,7 +30,7 @@ const limit = (
  *    (the not-below / not-above sides of both comparisons).
  */
 export const test_resolve_channel_limit = (): void => {
-  // 1. both sides null → untouched
+  // 1. both sides null ??untouched
   const free = applyChannelLimit([1, 2, 3], limit(null, null));
   TestValidator.equals("null limit keeps value", free.value, [1, 2, 3]);
   TestValidator.equals(
@@ -50,7 +50,7 @@ export const test_resolve_channel_limit = (): void => {
     { component: 2, bound: "max", limit: 50, actual: 100 },
   ]);
 
-  // 3. within range → untouched, both comparisons take the "not crossed" side
+  // 3. within range ??untouched, both comparisons take the "not crossed" side
   const inside = applyChannelLimit([5, 5, 5], limit([0, 0, 0], [10, 10, 10]));
   TestValidator.equals("in-range keeps value", inside.value, [5, 5, 5]);
   TestValidator.equals(

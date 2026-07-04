@@ -1,0 +1,77 @@
+import { IautomovieTransition } from "../cinematics/IautomovieTransition";
+import { IautomovieTrim } from "../cinematics/IautomovieTrim";
+import { IautomovieNamedId } from "../core/IautomovieNamedId";
+import { IautomovieContextRequest } from "./IautomovieContextRequest";
+
+/**
+ * Stage 6 ??**ASSEMBLE** (the cut). With every beat's shot built and passed,
+ * edit them into one film: the order, each shot's trim, the transitions, and
+ * the frame rate ??an {@link IautomovieSequence} cut-list. This is the editorial
+ * rung above the shots; the rhythm here (a sharp short strike, a held
+ * aftermath) is where pacing lives.
+ *
+ * The CoT slots make the editor justify the cut: `pacing` (why this rhythm
+ * serves the theme) and `continuity` (how the shots match across each cut ??the
+ * charge ends where the strike begins). Pull a sibling shot via `getContext`
+ * (`getShot`) to check a match-cut rather than guess it.
+ *
+ * @author Samchon
+ */
+export interface IautomovieAssembleApplication {
+  process(props: IautomovieAssembleApplication.IProps): void;
+}
+export namespace IautomovieAssembleApplication {
+  export interface IProps {
+    /**
+     * Think before you cut. In what order do the shots tell the story, where do
+     * you trim dead air, where does a hard cut land harder than a dissolve, and
+     * what is the rhythm ??which shots breathe, which snap? Note any continuity
+     * mismatch you are resolving.
+     */
+    thinking: string;
+
+    /** Cut the film, or pull a shot/the script to check continuity first. */
+    request: IWrite | IautomovieContextRequest;
+  }
+
+  export interface IWrite {
+    type: "write";
+
+    /** Stable id + name for the assembled film. */
+    sequence: IautomovieNamedId;
+
+    /** Playback frame rate. */
+    fps: number;
+
+    /**
+     * The shots in playback order, each with an optional trim + incoming
+     * transition.
+     */
+    entries: IEntry[];
+
+    /**
+     * Why this rhythm serves the theme ??which shots are held and which are cut
+     * tight, and why. (Pacing has no cheap deterministic verifier, so the
+     * rationale is the quality signal.)
+     */
+    pacing: string;
+
+    /**
+     * How the shots flow across the cuts ??match-cuts, energy carried, no
+     * jarring jump unless intended. The continuity you checked.
+     */
+    continuity: string;
+  }
+
+  /** One shot's placement in the cut: an optional trim and incoming transition. */
+  export interface IEntry {
+    /** Id of the shot played here. */
+    shot: string;
+
+    /** Trim into the shot (seconds), or null to play it whole. */
+    trim: IautomovieTrim | null;
+
+    /** Blend in from the previous entry, or null for a hard cut (the default). */
+    transition: IautomovieTransition | null;
+  }
+}

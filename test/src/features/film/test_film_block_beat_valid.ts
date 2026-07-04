@@ -1,4 +1,4 @@
-import { blockBeat, stageScene } from "@autofilm/engine";
+import { blockBeat, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -16,8 +16,8 @@ import {
  * Scenarios:
  *
  * 1. The duel blocking (strike anchored at t = 1 inside a 2-second beat, medium
- *    static camera on knightA) → success carrying the plan unchanged.
- * 2. Multiple anchors in ascending order (0.5 then 1.5) → still coherent.
+ *    static camera on knightA) ??success carrying the plan unchanged.
+ * 2. Multiple anchors in ascending order (0.5 then 1.5) ??still coherent.
  */
 export const test_film_block_beat_valid = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());

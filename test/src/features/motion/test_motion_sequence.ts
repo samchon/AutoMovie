@@ -1,11 +1,11 @@
-import { sequenceMotion } from "@autofilm/engine";
+import { sequenceMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
 /**
- * `sequenceMotion` — concatenating clips into one timeline. Parts are laid
+ * `sequenceMotion` ??concatenating clips into one timeline. Parts are laid
  * end-to-end with their keyframe times offset by the running duration; a later
  * part's `time: 0` boundary keyframe is dropped so the merged times stay
  * strictly increasing.
@@ -39,7 +39,7 @@ export const test_motion_sequence = (): void => {
 
   // 1. merge shape
   TestValidator.equals(
-    "seam keyframe dropped → 3 keyframes",
+    "seam keyframe dropped ??3 keyframes",
     seq.keyframes.length,
     3,
   );

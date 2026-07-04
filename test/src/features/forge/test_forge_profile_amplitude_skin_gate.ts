@@ -1,4 +1,4 @@
-import { fitProfileAmplitude } from "@autofilm/forge";
+import { fitProfileAmplitude } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
@@ -10,7 +10,7 @@ import { nclose } from "../internal/predicates";
  *
  * Scenario: the synthetic curve of the recovery case, with every third row
  * marked non-skin and set to a wild extent and one row's figure removed (ext
- * -1) — alpha still comes out ≈ 0.5.
+ * -1) ??alpha still comes out ??0.5.
  */
 export const test_forge_profile_amplitude_skin_gate = (): void => {
   const noseY = 100;

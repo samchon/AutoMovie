@@ -57,7 +57,7 @@ importers:
 
   packages/engine:
     dependencies:
-      '@autofilm/interface':
+      '@automovie/interface':
         specifier: workspace:^
         version: link:../interface
     devDependencies:
@@ -73,7 +73,7 @@ importers:
 
   packages/forge:
     dependencies:
-      '@autofilm/interface':
+      '@automovie/interface':
         specifier: workspace:^
         version: link:../interface
     devDependencies:
@@ -89,7 +89,7 @@ importers:
 
   packages/ingest:
     dependencies:
-      '@autofilm/interface':
+      '@automovie/interface':
         specifier: workspace:^
         version: link:../interface
       '@gltf-transform/core':
@@ -124,10 +124,10 @@ importers:
 
   packages/mcp:
     dependencies:
-      '@autofilm/engine':
+      '@automovie/engine':
         specifier: workspace:^
         version: link:../engine
-      '@autofilm/interface':
+      '@automovie/interface':
         specifier: workspace:^
         version: link:../interface
       '@modelcontextprotocol/sdk':
@@ -155,19 +155,19 @@ importers:
 
   packages/playground:
     dependencies:
-      '@autofilm/engine':
+      '@automovie/engine':
         specifier: workspace:^
         version: link:../engine
-      '@autofilm/forge':
+      '@automovie/forge':
         specifier: workspace:^
         version: link:../forge
-      '@autofilm/interface':
+      '@automovie/interface':
         specifier: workspace:^
         version: link:../interface
-      '@autofilm/render':
+      '@automovie/render':
         specifier: workspace:^
         version: link:../render
-      '@autofilm/viewer':
+      '@automovie/viewer':
         specifier: workspace:^
         version: link:../viewer
       '@pixiv/three-vrm':
@@ -213,10 +213,10 @@ importers:
 
   packages/render:
     dependencies:
-      '@autofilm/engine':
+      '@automovie/engine':
         specifier: workspace:^
         version: link:../engine
-      '@autofilm/interface':
+      '@automovie/interface':
         specifier: workspace:^
         version: link:../interface
       '@gltf-transform/core':
@@ -235,10 +235,10 @@ importers:
 
   packages/viewer:
     dependencies:
-      '@autofilm/engine':
+      '@automovie/engine':
         specifier: workspace:^
         version: link:../engine
-      '@autofilm/interface':
+      '@automovie/interface':
         specifier: workspace:^
         version: link:../interface
       three:
@@ -260,19 +260,19 @@ importers:
 
   test:
     dependencies:
-      '@autofilm/engine':
+      '@automovie/engine':
         specifier: workspace:^
         version: link:../packages/engine
-      '@autofilm/forge':
+      '@automovie/forge':
         specifier: workspace:^
         version: link:../packages/forge
-      '@autofilm/ingest':
+      '@automovie/ingest':
         specifier: workspace:^
         version: link:../packages/ingest
-      '@autofilm/interface':
+      '@automovie/interface':
         specifier: workspace:^
         version: link:../packages/interface
-      '@autofilm/render':
+      '@automovie/render':
         specifier: workspace:^
         version: link:../packages/render
       '@gltf-transform/core':

@@ -1,4 +1,4 @@
-import { arrangeMotion, holdMotion } from "@autofilm/engine";
+import { arrangeMotion, holdMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
@@ -8,7 +8,7 @@ const spine = (m: ReturnType<typeof makePose>) =>
   m.joints.find((x) => x.bone === "spine");
 
 /**
- * `holdMotion` + `arrangeMotion` — the harness PERFORMANCE composer.
+ * `holdMotion` + `arrangeMotion` ??the harness PERFORMANCE composer.
  *
  * Scenarios:
  *
@@ -49,7 +49,7 @@ export const test_motion_arrange = (): void => {
   TestValidator.predicate("empty is zero-length", nclose(empty.duration, 0));
   TestValidator.equals("empty skeleton falls back to ''", empty.skeleton, "");
 
-  // 3. two clips with a gap → hold across it (input order shuffled)
+  // 3. two clips with a gap ??hold across it (input order shuffled)
   const A = makeMotion(
     [
       keyframe(0, makePose([joint("spine", { flexion: 0 })])),
@@ -88,7 +88,7 @@ export const test_motion_arrange = (): void => {
     "skeleton-1",
   );
 
-  // 4. contiguous → concatenate, seam dropped, no hold inserted
+  // 4. contiguous ??concatenate, seam dropped, no hold inserted
   const back2back = arrangeMotion("c", [
     { start: 0, motion: A },
     { start: 1, motion: B },

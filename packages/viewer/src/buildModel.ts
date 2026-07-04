@@ -5,7 +5,7 @@ import {
 } from "@autofilm/interface";
 import * as THREE from "three";
 
-import { buildGeometry, buildMaterial, defaultMaterial } from "./geometry";
+import { buildGeometry, buildMaterial, defaultMaterial } from "./Geometry";
 
 /** A built model: its `three.js` root object and a lookup of its bones. */
 export interface IAutoFilmModelObject {

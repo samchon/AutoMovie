@@ -1,46 +1,46 @@
-import { Quaternion } from "@autofilm/engine";
+import { Quaternion } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  AutoFilmPrimitiveShape,
-  IAutoFilmBone,
-  IAutoFilmModel,
-  IAutoFilmModelPart,
-  IAutoFilmQuaternion,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  automoviePrimitiveShape,
+  IautomovieBone,
+  IautomovieModel,
+  IautomovieModelPart,
+  IautomovieQuaternion,
+  IautomovieSkeleton,
+  IautomovieTransform,
+  IautomovieVector3,
+} from "@automovie/interface";
 
 /**
- * The tunable proportions of the procedural humanoid — the parameters the
+ * The tunable proportions of the procedural humanoid ??the parameters the
  * character editor exposes. Every value is in meters (or a unitless factor for
  * the radii). This is deliberately the "beginner" tier: a handful of gross body
  * measurements, not a per-vertex morph rig. It is enough to make tall/short,
- * lanky/stocky, big/small-headed figures — the variety a character roster needs
+ * lanky/stocky, big/small-headed figures ??the variety a character roster needs
  * before any finer sculpting.
  *
  * @author Samchon
  */
 export interface IHumanoidParams {
-  /** Pelvis height off the floor (≈ leg length). */
+  /** Pelvis height off the floor (??leg length). */
   hipHeight: number;
-  /** Combined spine length (hips → neck). */
+  /** Combined spine length (hips ??neck). */
   torsoLength: number;
-  /** Neck length (chest top → head). */
+  /** Neck length (chest top ??head). */
   neckLength: number;
   /** Distance between the two shoulder sockets. */
   shoulderWidth: number;
   /** Distance between the two hip sockets. */
   hipWidth: number;
-  /** Upper-arm (shoulder → elbow) length. */
+  /** Upper-arm (shoulder ??elbow) length. */
   upperArmLength: number;
-  /** Forearm (elbow → wrist) length. */
+  /** Forearm (elbow ??wrist) length. */
   lowerArmLength: number;
-  /** Thigh (hip → knee) length. */
+  /** Thigh (hip ??knee) length. */
   thighLength: number;
-  /** Shin (knee → ankle) length. */
+  /** Shin (knee ??ankle) length. */
   shinLength: number;
-  /** Limb (arm/leg) capsule radius — "stockiness". */
+  /** Limb (arm/leg) capsule radius ??"stockiness". */
   limbRadius: number;
   /** Head sphere radius. */
   headRadius: number;
@@ -61,31 +61,31 @@ export const DEFAULT_PARAMS: IHumanoidParams = {
   headRadius: 0.12,
 };
 
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IautomovieVector3 => ({ x, y, z });
 
 const at = (
-  t: IAutoFilmVector3,
-  r?: IAutoFilmQuaternion,
-): IAutoFilmTransform => ({
+  t: IautomovieVector3,
+  r?: IautomovieQuaternion,
+): IautomovieTransform => ({
   translation: t,
   rotation: r ?? { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 
 const bone = (
-  name: AutoFilmHumanoidBone,
-  parent: AutoFilmHumanoidBone | null,
-  rest: IAutoFilmTransform,
-): IAutoFilmBone => ({ bone: name, parent, rest, constraint: null });
+  name: automovieHumanoidBone,
+  parent: automovieHumanoidBone | null,
+  rest: IautomovieTransform,
+): IautomovieBone => ({ bone: name, parent, rest, constraint: null });
 
 /** Shortest-arc rotation taking the local +Y axis onto a target direction. */
-const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion => {
+const yToDir = (dir: IautomovieVector3): IautomovieQuaternion => {
   const len = Math.hypot(dir.x, dir.y, dir.z);
   if (len === 0) return { x: 0, y: 0, z: 0, w: 1 };
   const n = v(dir.x / len, dir.y / len, dir.z / len);
   const dot = n.y; // dot(+Y, n)
   if (dot > 0.999999) return { x: 0, y: 0, z: 0, w: 1 };
-  // Antiparallel: 180° about any axis ⟂ Y — use +Z.
+  // Antiparallel: 180째 about any axis ??Y ??use +Z.
   if (dot < -0.999999) return { x: 0, y: 0, z: 1, w: 0 };
   // axis = cross(+Y, n); angle from dot.
   const axis = v(n.z, 0, -n.x); // cross((0,1,0), n)
@@ -94,7 +94,7 @@ const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion => {
   );
 };
 
-const capsule = (radius: number, height: number): AutoFilmPrimitiveShape => ({
+const capsule = (radius: number, height: number): automoviePrimitiveShape => ({
   type: "capsule",
   radius,
   height: Math.max(0.01, height - 2 * radius),
@@ -107,11 +107,11 @@ const capsule = (radius: number, height: number): AutoFilmPrimitiveShape => ({
  */
 const segment = (
   id: string,
-  boneName: AutoFilmHumanoidBone,
-  seg: IAutoFilmVector3,
+  boneName: automovieHumanoidBone,
+  seg: IautomovieVector3,
   radius: number,
   material: string,
-): IAutoFilmModelPart => {
+): IautomovieModelPart => {
   const length = Math.hypot(seg.x, seg.y, seg.z);
   return {
     id,
@@ -125,11 +125,11 @@ const segment = (
 
 const blob = (
   id: string,
-  boneName: AutoFilmHumanoidBone,
-  shape: AutoFilmPrimitiveShape,
-  offset: IAutoFilmVector3,
+  boneName: automovieHumanoidBone,
+  shape: automoviePrimitiveShape,
+  offset: IautomovieVector3,
   material: string,
-): IAutoFilmModelPart => ({
+): IautomovieModelPart => ({
   id,
   name: id,
   geometry: { type: "primitive", shape },
@@ -139,11 +139,11 @@ const blob = (
 });
 
 /**
- * Build the procedural humanoid — a normalized VRM skeleton plus a primitive
- * "blockman" skin — from a set of editor proportions.
+ * Build the procedural humanoid ??a normalized VRM skeleton plus a primitive
+ * "blockman" skin ??from a set of editor proportions.
  *
- * This is autofilm's bootstrap **base 3D model**: fully generated (no external
- * asset), deterministic, and rigged on the same {@link AutoFilmHumanoidBone}
+ * This is automovie's bootstrap **base 3D model**: fully generated (no external
+ * asset), deterministic, and rigged on the same {@link automovieHumanoidBone}
  * slots every imported VRM uses, so a pose or motion authored here replays on a
  * real avatar once ingest lands. The editor calls this on every proportion
  * change to rebuild the figure; the engine's FK then articulates the very same
@@ -153,27 +153,27 @@ const blob = (
  */
 export const buildHumanoid = (
   p: IHumanoidParams,
-): { skeleton: IAutoFilmSkeleton; model: IAutoFilmModel } => {
+): { skeleton: IautomovieSkeleton; model: IautomovieModel } => {
   const spineLen = p.torsoLength * 0.4;
   const chestLen = p.torsoLength * 0.35;
   const armY = p.torsoLength * 0.25; // shoulder height above chest origin
   const sx = p.shoulderWidth / 2;
   const hx = p.hipWidth / 2;
 
-  const bones: IAutoFilmBone[] = [
+  const bones: IautomovieBone[] = [
     bone("hips", null, at(v(0, p.hipHeight, 0))),
     bone("spine", "hips", at(v(0, spineLen * 0.5, 0))),
     bone("chest", "spine", at(v(0, spineLen, 0))),
     bone("neck", "chest", at(v(0, chestLen, 0))),
     bone("head", "neck", at(v(0, p.neckLength, 0))),
-    // arms (root → tip), extending along ±X
+    // arms (root ??tip), extending along 짹X
     bone("leftUpperArm", "chest", at(v(sx, armY, 0))),
     bone("leftLowerArm", "leftUpperArm", at(v(p.upperArmLength, 0, 0))),
     bone("leftHand", "leftLowerArm", at(v(p.lowerArmLength, 0, 0))),
     bone("rightUpperArm", "chest", at(v(-sx, armY, 0))),
     bone("rightLowerArm", "rightUpperArm", at(v(-p.upperArmLength, 0, 0))),
     bone("rightHand", "rightLowerArm", at(v(-p.lowerArmLength, 0, 0))),
-    // legs (root → tip), extending along −Y
+    // legs (root ??tip), extending along ?뭑
     bone("leftUpperLeg", "hips", at(v(hx, 0, 0))),
     bone("leftLowerLeg", "leftUpperLeg", at(v(0, -p.thighLength, 0))),
     bone("leftFoot", "leftLowerLeg", at(v(0, -p.shinLength, 0))),
@@ -183,13 +183,13 @@ export const buildHumanoid = (
   ];
 
   const r = p.limbRadius;
-  const foot: AutoFilmPrimitiveShape = {
+  const foot: automoviePrimitiveShape = {
     type: "box",
     width: r * 1.6,
     height: r * 0.8,
     depth: r * 3,
   };
-  const parts: IAutoFilmModelPart[] = [
+  const parts: IautomovieModelPart[] = [
     blob(
       "torso",
       "chest",
@@ -252,8 +252,8 @@ export const buildHumanoid = (
     blob("footR", "rightFoot", foot, v(0, -r * 0.4, r), "skin"),
   ];
 
-  const skeleton: IAutoFilmSkeleton = { id: "humanoid", bones };
-  const model: IAutoFilmModel = {
+  const skeleton: IautomovieSkeleton = { id: "humanoid", bones };
+  const model: IautomovieModel = {
     id: "humanoid",
     name: "procedural humanoid",
     origin: "generated",

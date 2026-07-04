@@ -1,11 +1,11 @@
-import { IAutoFilmVector3 } from "@autofilm/interface";
+import { IautomovieVector3 } from "@automovie/interface";
 
 import { Vector3 } from "../math/Vector3";
 
 /** The launch that hits a target: the initial velocity and the time of flight. */
-export interface IAutoFilmBallisticSolution {
+export interface IautomovieBallisticSolution {
   /** Initial velocity to give the projectile (world m/s), magnitude = speed. */
-  velocity: IAutoFilmVector3;
+  velocity: IautomovieVector3;
 
   /** Seconds until it reaches the target. */
   hitTime: number;
@@ -13,30 +13,29 @@ export interface IAutoFilmBallisticSolution {
 
 /**
  * Solve the **launch velocity** that lands a projectile fired from `origin` at
- * fixed `speed` onto `target` under a constant `gravity` — the inverse of the
+ * fixed `speed` onto `target` under a constant `gravity` ??the inverse of the
  * forward {@link projectileAt} simulation, and the missing half of the `launch`
  * verb (the model says "loose the arrow at speed s"; the engine finds the aim
  * that connects). Returns `null` when the target is out of range at that
  * speed.
  *
- * Under downward gravity a target has two firing arcs — a flat **direct** shot
- * and a lobbed **high** one — selected by `arc`; the direct arc is the default.
+ * Under downward gravity a target has two firing arcs ??a flat **direct** shot
+ * and a lobbed **high** one ??selected by `arc`; the direct arc is the default.
  * With zero gravity it degenerates to a straight shot along the sightline. The
- * horizontal solve uses the standard range equation `tanθ = (s² ± √(s⁴ −
- * g(g·d²
+ * horizontal solve uses the standard range equation `tan罐 = (s짼 짹 ??s???? * g(g쨌d짼
  *
- * - 2h·s²))) / (g·d)`; a purely vertical target is handled on its own (no
+ * - 2h쨌s짼))) / (g쨌d)`; a purely vertical target is handled on its own (no
  *   horizontal direction to aim along).
  *
  * @author Samchon
  */
 export const solveBallisticLaunch = (
-  origin: IAutoFilmVector3,
-  target: IAutoFilmVector3,
+  origin: IautomovieVector3,
+  target: IautomovieVector3,
   speed: number,
-  gravity: IAutoFilmVector3 = { x: 0, y: -9.81, z: 0 },
+  gravity: IautomovieVector3 = { x: 0, y: -9.81, z: 0 },
   arc: "direct" | "high" = "direct",
-): IAutoFilmBallisticSolution | null => {
+): IautomovieBallisticSolution | null => {
   const delta = Vector3.subtract(target, origin);
   const g = Vector3.length(gravity);
 
@@ -58,7 +57,7 @@ export const solveBallisticLaunch = (
 
   // Purely vertical target: fire straight up/down; solve when it reaches h.
   if (d < 1e-9) {
-    // origin + v·t + ½·(−g)·t² = h  with v = ±speed along up.
+    // origin + v쨌t + 쩍쨌(?뭛)쨌t짼 = h  with v = 짹speed along up.
     for (const v of [speed, -speed]) {
       const disc = v * v - 2 * g * h;
       if (disc < 0) continue;
@@ -68,7 +67,7 @@ export const solveBallisticLaunch = (
     return null;
   }
 
-  // Range equation for the launch angle θ above the horizontal.
+  // Range equation for the launch angle 罐 above the horizontal.
   const disc = s2 * s2 - g * (g * d * d + 2 * h * s2);
   if (disc < 0) return null; // out of range at this speed
   const root = Math.sqrt(disc);
@@ -85,7 +84,7 @@ export const solveBallisticLaunch = (
 };
 
 /**
- * Solve the launch that **leads a moving target** — the aim that lands the
+ * Solve the launch that **leads a moving target** ??the aim that lands the
  * projectile where the target _will be_, not where it is. `targetAt(t)` gives
  * the target's world position at flight-time `t` (e.g. its animated base plus
  * root travel). This is the reactive event the `launch` verb promises against a
@@ -103,16 +102,16 @@ export const solveBallisticLaunch = (
  * @author Samchon
  */
 export const solveMovingLaunch = (
-  origin: IAutoFilmVector3,
-  targetAt: (t: number) => IAutoFilmVector3,
+  origin: IautomovieVector3,
+  targetAt: (t: number) => IautomovieVector3,
   speed: number,
-  gravity: IAutoFilmVector3 = { x: 0, y: -9.81, z: 0 },
+  gravity: IautomovieVector3 = { x: 0, y: -9.81, z: 0 },
   arc: "direct" | "high" = "direct",
   iterations = 8,
-): IAutoFilmBallisticSolution | null => {
+): IautomovieBallisticSolution | null => {
   if (!(speed > 0)) return null;
   let t = Vector3.length(Vector3.subtract(targetAt(0), origin)) / speed;
-  let solution: IAutoFilmBallisticSolution | null = null;
+  let solution: IautomovieBallisticSolution | null = null;
   for (let i = 0; i < iterations; ++i) {
     solution = solveBallisticLaunch(origin, targetAt(t), speed, gravity, arc);
     if (solution === null) return null; // out of range at this iterate

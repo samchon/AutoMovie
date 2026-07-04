@@ -1,17 +1,17 @@
 import {
-  IAutoFilmAngleRange,
-  IAutoFilmJointConstraint,
-  IAutoFilmJointPose,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  IautomovieAngleRange,
+  IautomovieJointConstraint,
+  IautomovieJointPose,
+  IautomoviePose,
+  IautomovieSkeleton,
+} from "@automovie/interface";
 
-import { getConstraint } from "./humanoidRom";
-import { swingConeScale } from "./swingCone";
+import { getConstraint } from "./HumanoidRom";
+import { swingConeScale } from "./SwingCone";
 
 const clampAxis = (
   angle: number | null,
-  allowed: IAutoFilmAngleRange | null,
+  allowed: IautomovieAngleRange | null,
 ): number | null => {
   if (angle === null) return null;
   if (allowed === null) return 0; // immobile axis: forced back to neutral
@@ -23,7 +23,7 @@ const clampAxis = (
 };
 
 /**
- * Clamp one joint's articulation into its anatomical range of motion — the
+ * Clamp one joint's articulation into its anatomical range of motion ??the
  * **enforce** face of {@link validateJointRom}'s **detect** face (the core
  * model's `ClampOutcome`: clamp and validate are one calculation).
  *
@@ -35,9 +35,9 @@ const clampAxis = (
  * @author Samchon
  */
 export const clampJointRom = (
-  joint: IAutoFilmJointPose,
-  constraint: IAutoFilmJointConstraint,
-): IAutoFilmJointPose => {
+  joint: IautomovieJointPose,
+  constraint: IautomovieJointConstraint,
+): IautomovieJointPose => {
   const flexion = clampAxis(joint.flexion, constraint.flexion);
   const abduction = clampAxis(joint.abduction, constraint.abduction);
   const twist = clampAxis(joint.twist, constraint.twist);
@@ -57,20 +57,19 @@ export const clampJointRom = (
 
 /**
  * Clamp every joint of a pose into its skeleton's ROM, returning a new pose
- * (the root transform is untouched). A joint whose bone has no constraint —
- * neither a per-bone override nor a default-table entry — passes through
+ * (the root transform is untouched). A joint whose bone has no constraint ?? * neither a per-bone override nor a default-table entry ??passes through
  * unchanged.
  *
  * This is what makes a joint behave like a limited physics joint: feed any pose
  * (e.g. raw LLM output) through `clampPose` and it can no longer exceed each
- * joint's gamut, the same bounds {@link validateJointRom} reports `// ❌` for.
+ * joint's gamut, the same bounds {@link validateJointRom} reports `// ?? for.
  *
  * @author Samchon
  */
 export const clampPose = (
-  pose: IAutoFilmPose,
-  skeleton: IAutoFilmSkeleton,
-): IAutoFilmPose => ({
+  pose: IautomoviePose,
+  skeleton: IautomovieSkeleton,
+): IautomoviePose => ({
   skeleton: pose.skeleton,
   root: pose.root,
   joints: pose.joints.map((joint) => {

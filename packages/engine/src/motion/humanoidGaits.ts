@@ -1,16 +1,16 @@
-import { IAutoFilmGait } from "@autofilm/interface";
+import { IautomovieGait } from "@automovie/interface";
 
 /**
- * The five canonical humanoid gaits — the locomotion the `locomote` verb's
+ * The five canonical humanoid gaits ??the locomotion the `locomote` verb's
  * `gait` enum names (`walk`/`run`/`sprint`/`sneak`/`march`), as ready
- * {@link IAutoFilmGait} data a host drops into an actor context. Same role as
+ * {@link IautomovieGait} data a host drops into an actor context. Same role as
  * the engine's other canonical humanoid tables (ROM, joint axes): the shapes
  * are fixed, a body is what varies.
  *
  * Every gait is tuned to sit inside the humanoid ROM, which is the whole reason
- * `neutral` exists. Knees (flexion `[0, 150]°`, no hyperextension) swing about
- * a bent center; and the faster gaits carry the hips forward too — a sprint's
- * `±amplitude` swing would cross the hip's `−30°` floor without a forward
+ * `neutral` exists. Knees (flexion `[0, 150]째`, no hyperextension) swing about
+ * a bent center; and the faster gaits carry the hips forward too ??a sprint's
+ * `짹amplitude` swing would cross the hip's `??0째` floor without a forward
  * `neutral`. Slower is calmer: `sneak` crouches (a high knee center, quiet
  * arms) and holds the ground longer (high `duty`); `march` throws the knees
  * high; `sprint` is all reach and little contact (low `duty`).
@@ -23,7 +23,7 @@ import { IAutoFilmGait } from "@autofilm/interface";
  */
 export const HUMANOID_GAITS: Record<
   "walk" | "run" | "sprint" | "sneak" | "march",
-  IAutoFilmGait
+  IautomovieGait
 > = {
   walk: {
     name: "walk",

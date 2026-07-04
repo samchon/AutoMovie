@@ -1,4 +1,4 @@
-import { performShot, stageScene } from "@autofilm/engine";
+import { performShot, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -17,9 +17,9 @@ import { hasViolation } from "../internal/predicates";
  *
  * Scenarios:
  *
- * 1. A `frame` action performed by `knightA` (an actor, not a camera) → `type` on
+ * 1. A `frame` action performed by `knightA` (an actor, not a camera) ??`type` on
  *    `$input.draft[0].actor`.
- * 2. Two `frame` actions on different cameras (`cam-main`, then `cam-b`) → `type`
+ * 2. Two `frame` actions on different cameras (`cam-main`, then `cam-b`) ??`type`
  *    on the second's actor, naming the camera already live.
  */
 export const test_film_perform_shot_camera_conflict = (): void => {

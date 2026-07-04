@@ -1,9 +1,9 @@
-import { IAutoFilmExpression, IAutoFilmValidation } from "@autofilm/interface";
+import { IautomovieExpression, IautomovieValidation } from "@automovie/interface";
 
-import { ViolationCollector } from "./violation";
+import { ViolationCollector } from "./Violation";
 
 /**
- * Validate an {@link IAutoFilmExpression} — Tier-1 range checks the rough types
+ * Validate an {@link IautomovieExpression} ??Tier-1 range checks the rough types
  * intentionally do not encode.
  *
  * Preset and channel _names_ are already constrained by their closed unions, so
@@ -14,7 +14,7 @@ import { ViolationCollector } from "./violation";
  * @author Samchon
  */
 export const validateExpression = (props: {
-  expression: IAutoFilmExpression;
+  expression: IautomovieExpression;
   path?: string;
   collector?: ViolationCollector;
 }): ViolationCollector => {
@@ -41,7 +41,7 @@ export const validateExpression = (props: {
   return collector;
 };
 
-/** Convenience wrapper returning a finished {@link IAutoFilmValidation}. */
+/** Convenience wrapper returning a finished {@link IautomovieValidation}. */
 export const validateExpressionResult = (
-  expression: IAutoFilmExpression,
-): IAutoFilmValidation => validateExpression({ expression }).toValidation();
+  expression: IautomovieExpression,
+): IautomovieValidation => validateExpression({ expression }).toValidation();

@@ -1,10 +1,10 @@
-import { Vector3, compileCameraMove } from "@autofilm/engine";
-import { IAutoFilmCamera, IAutoFilmCameraAction } from "@autofilm/interface";
+import { Vector3, compileCameraMove } from "@automovie/engine";
+import { IautomovieCamera, IautomovieCameraAction } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
-const CAMERA: IAutoFilmCamera = {
+const CAMERA: IautomovieCamera = {
   id: "cam",
   transform: {
     translation: { x: 0, y: 1, z: 4 },
@@ -17,10 +17,10 @@ const CAMERA: IAutoFilmCamera = {
 };
 
 const frame = (
-  move: IAutoFilmCameraAction["move"],
+  move: IautomovieCameraAction["move"],
   start = 0,
   duration: number | "auto" = "auto",
-): IAutoFilmCameraAction => ({
+): IautomovieCameraAction => ({
   verb: "frame",
   actor: "cam",
   start,
@@ -32,21 +32,20 @@ const frame = (
 
 /**
  * Pins the moving paths and the compiler's edge branches. Subject height 2 at
- * the origin, `full` framing (1.15×, aim at half height y = 1), 90° FOV →
- * framed distance `d = 1.15`.
+ * the origin, `full` framing (1.15횞, aim at half height y = 1), 90째 FOV ?? * framed distance `d = 1.15`.
  *
  * Scenarios:
  *
- * 1. `orbit` → 9 keys sweeping 45°, every position at distance `d` from the aim,
+ * 1. `orbit` ??9 keys sweeping 45째, every position at distance `d` from the aim,
  *    the last bearing swung off the initial +Z, and the swept angle **eased** in
  *    and out (the mid-arc segments turn faster than the end ones).
- * 2. `follow` with an animated base marching down +X → 5 keys over one second (4
+ * 2. `follow` with an animated base marching down +X ??5 keys over one second (4
  *    Hz + endpoints) whose X tracks the subject.
  * 3. `follow` with a static subject (`at: null`) degenerates to one static key.
- * 4. Two moves abutting on the same instant → the later framing replaces the
+ * 4. Two moves abutting on the same instant ??the later framing replaces the
  *    earlier key instead of minting a zero-width span.
  * 5. A camera staged exactly on the aim point falls back to the +Z bearing.
- * 6. No entries → no clip (`null`).
+ * 6. No entries ??no clip (`null`).
  */
 export const test_film_camera_move_paths = (): void => {
   const subject = { base: { x: 0, y: 0, z: 0 }, height: 2, at: null };
@@ -139,7 +138,7 @@ export const test_film_camera_move_paths = (): void => {
   );
   TestValidator.predicate(
     // Height-2 framing sits at y = 1; the height-1 framing aims at y = 0.5
-    // with a slight upward bearing (staged camera at y = 1), landing ≈ 0.57.
+    // with a slight upward bearing (staged camera at y = 1), landing ??0.57.
     "the later (height 1) framing won",
     abutted.tracks[0]!.values[1]! < 0.8,
   );

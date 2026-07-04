@@ -2,14 +2,14 @@ import {
   DEFAULT_JOINT_AXES,
   HUMANOID_JOINT_AXES,
   HUMANOID_REST_FRAME,
-  IAutoFilmRestFrame,
+  IautomovieRestFrame,
   decomposeJointRotation,
   jointToQuaternion,
   reachPose,
   resolvePose,
   toClinicalAngle,
   toRigAngle,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
@@ -19,8 +19,8 @@ import { nclose, qclose, vclose } from "../internal/predicates";
  * The rest-frame angle maps that let a pose be authored in one **clinical**
  * convention (e.g. +abduction raises either arm) while the rig articulates in
  * its own per-side rest-relative space: `jointToQuaternion` reads clinical and
- * maps in (`r = (c − neutral) / sign`), `decomposeJointRotation` lifts the
- * recovered rig angle back out (`c = sign·r + neutral`).
+ * maps in (`r = (c ??neutral) / sign`), `decomposeJointRotation` lifts the
+ * recovered rig angle back out (`c = sign쨌r + neutral`).
  *
  * Scenarios:
  *
@@ -29,23 +29,23 @@ import { nclose, qclose, vclose } from "../internal/predicates";
  * 2. Feeding `jointToQuaternion` a clinical angle with a frame equals feeding it
  *    the pre-converted rig angle with no frame.
  * 3. `decompose(jointToQuaternion(c, axes, f), axes, f)` round-trips the clinical
- *    angles — including the gimbal case (abduction at the rig's ±90°).
+ *    angles ??including the gimbal case (abduction at the rig's 짹90째).
  */
 export const test_kinematics_rest_frame_angles = (): void => {
-  // right-arm-like: abduction mirrors (sign −1) and rests at 90° (a T-pose arm)
-  const frame: IAutoFilmRestFrame = { abduction: { sign: -1, neutral: 90 } };
+  // right-arm-like: abduction mirrors (sign ??) and rests at 90째 (a T-pose arm)
+  const frame: IautomovieRestFrame = { abduction: { sign: -1, neutral: 90 } };
 
   // 1. inverses + identities
   TestValidator.predicate(
-    "clinical → rig maps by (c − neutral)/sign",
+    "clinical ??rig maps by (c ??neutral)/sign",
     nclose(toRigAngle(150, frame.abduction)!, -60),
   );
   TestValidator.predicate(
-    "rig → clinical maps by sign·r + neutral",
+    "rig ??clinical maps by sign쨌r + neutral",
     nclose(toClinicalAngle(-60, frame.abduction)!, 150),
   );
   TestValidator.predicate(
-    "round-trip clinical → rig → clinical",
+    "round-trip clinical ??rig ??clinical",
     nclose(
       toClinicalAngle(toRigAngle(37, frame.abduction), frame.abduction)!,
       37,
@@ -103,7 +103,7 @@ export const test_kinematics_rest_frame_angles = (): void => {
   );
 
   // gimbal: clinical 0 maps to rig abduction +90 (the arm straight along the
-  // frame axis) — decompose pins flexion and lifts abduction back to 0.
+  // frame axis) ??decompose pins flexion and lifts abduction back to 0.
   const gimbal = jointToQuaternion(
     { flexion: 30, abduction: 0, twist: 0 },
     DEFAULT_JOINT_AXES,
@@ -121,7 +121,7 @@ export const test_kinematics_rest_frame_angles = (): void => {
 
   // 4. resolvePose threads the frame: a clinical pose resolved with the humanoid
   // rest frames matches the pre-converted rig pose resolved without them. The
-  // left arm's frame is sign +1, neutral 90, so clinical 120 → rig 30.
+  // left arm's frame is sign +1, neutral 90, so clinical 120 ??rig 30.
   const skel = createSkeleton();
   const handClinical = resolvePose(
     makePose([joint("leftUpperArm", { abduction: 120 })]),
@@ -140,7 +140,7 @@ export const test_kinematics_rest_frame_angles = (): void => {
   );
 
   // 5. reachPose threads the frame: its output arm angles come out clinical
-  // (lifted by sign·r + neutral); left arm sign +1, neutral 90 → clinical =
+  // (lifted by sign쨌r + neutral); left arm sign +1, neutral 90 ??clinical =
   // rig + 90.
   const target = { x: 0.45, y: 1.3, z: 0.3 };
   const reachClinical = reachPose(skel, "left", target, HUMANOID_REST_FRAME);

@@ -1,17 +1,17 @@
-import { Matrix4, resolveWorldDrivers } from "@autofilm/engine";
+import { Matrix4, resolveWorldDrivers } from "@automovie/engine";
 import {
-  IAutoFilmIKDriver,
-  IAutoFilmSpringDriver,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieIKDriver,
+  IautomovieSpringDriver,
+  IautomovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
-const W = (p: IAutoFilmVector3): number[] =>
+const W = (p: IautomovieVector3): number[] =>
   Matrix4.compose(p, { x: 0, y: 0, z: 0, w: 1 }, { x: 1, y: 1, z: 1 });
 
-const ik = (over: Partial<IAutoFilmIKDriver>): IAutoFilmIKDriver => ({
+const ik = (over: Partial<IautomovieIKDriver>): IautomovieIKDriver => ({
   type: "ik",
   chain: ["r", "m", "t"],
   goal: "g",
@@ -22,16 +22,16 @@ const ik = (over: Partial<IAutoFilmIKDriver>): IAutoFilmIKDriver => ({
   ...over,
 });
 
-const dist = (a: IAutoFilmVector3, b: IAutoFilmVector3): number =>
+const dist = (a: IautomovieVector3, b: IautomovieVector3): number =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 const solve = (
-  d: IAutoFilmIKDriver,
-  root: IAutoFilmVector3,
-  mid: IAutoFilmVector3,
-  tip: IAutoFilmVector3,
-  goal: IAutoFilmVector3,
-  pole?: IAutoFilmVector3,
+  d: IautomovieIKDriver,
+  root: IautomovieVector3,
+  mid: IautomovieVector3,
+  tip: IautomovieVector3,
+  goal: IautomovieVector3,
+  pole?: IautomovieVector3,
 ): Map<string, number[]> => {
   const world = new Map<string, number[]>([
     ["r", W(root)],
@@ -44,11 +44,11 @@ const solve = (
   return world;
 };
 
-const at = (world: Map<string, number[]>, id: string): IAutoFilmVector3 =>
+const at = (world: Map<string, number[]>, id: string): IautomovieVector3 =>
   Matrix4.position(world.get(id)!);
 
 /**
- * The analytic two-bone IK driver back-solves a `root → mid → tip` limb so its
+ * The analytic two-bone IK driver back-solves a `root ??mid ??tip` limb so its
  * tip reaches the goal, preserving bone lengths and bending in the pole's
  * plane.
  *
@@ -58,7 +58,7 @@ const at = (world: Map<string, number[]>, id: string): IAutoFilmVector3 =>
  *    (1 and 1) are preserved.
  * 2. A goal at the root (zero direction) degrades gracefully to the limb's own
  *    axis rather than dividing by zero.
- * 3. A straight limb along X with no pole has an undefined bend plane → the
+ * 3. A straight limb along X with no pole has an undefined bend plane ??the
  *    free-perpendicular fallback (`cross` with +Y) picks one and the tip still
  *    reaches the goal.
  * 4. A straight limb along Y exercises the other fallback (`cross` with +X).
@@ -67,7 +67,7 @@ const at = (world: Map<string, number[]>, id: string): IAutoFilmVector3 =>
  *    solved.
  */
 export const test_resolve_ik_driver = (): void => {
-  // 1. reachable + pole → tip on goal, lengths preserved
+  // 1. reachable + pole ??tip on goal, lengths preserved
   const w1 = solve(
     ik({ pole: { node: "p", angle: 0 } }),
     { x: 0, y: 0, z: 0 },
@@ -89,7 +89,7 @@ export const test_resolve_ik_driver = (): void => {
     nclose(dist(at(w1, "m"), at(w1, "t")), 1, 1e-4),
   );
 
-  // 2. goal at root → degenerate direction, no crash
+  // 2. goal at root ??degenerate direction, no crash
   const w2 = solve(
     ik({}),
     { x: 0, y: 0, z: 0 },
@@ -102,7 +102,7 @@ export const test_resolve_ik_driver = (): void => {
     dist(at(w2, "t"), { x: 0, y: 0, z: 0 }) < 0.01,
   );
 
-  // 3. straight along X, no pole → fallback perpendicular (cross +Y)
+  // 3. straight along X, no pole ??fallback perpendicular (cross +Y)
   const w3 = solve(
     ik({}),
     { x: 0, y: 0, z: 0 },
@@ -115,7 +115,7 @@ export const test_resolve_ik_driver = (): void => {
     vclose(at(w3, "t"), { x: 1.5, y: 0, z: 0 }, 1e-4),
   );
 
-  // 4. straight along Y → other fallback (cross +X)
+  // 4. straight along Y ??other fallback (cross +X)
   const w4 = solve(
     ik({}),
     { x: 0, y: 0, z: 0 },
@@ -128,7 +128,7 @@ export const test_resolve_ik_driver = (): void => {
     vclose(at(w4, "t"), { x: 0, y: 1.5, z: 0 }, 1e-4),
   );
 
-  // 5. pole present but node null → current-bend plane
+  // 5. pole present but node null ??current-bend plane
   const w5 = solve(
     ik({ pole: { node: null, angle: 0 } }),
     { x: 0, y: 0, z: 0 },
@@ -142,7 +142,7 @@ export const test_resolve_ik_driver = (): void => {
   );
 
   // 6. deferred: ccd solver, wrong-length chain, spring
-  const spring: IAutoFilmSpringDriver = {
+  const spring: IautomovieSpringDriver = {
     type: "spring",
     chain: ["a", "b"],
     stiffness: 1,

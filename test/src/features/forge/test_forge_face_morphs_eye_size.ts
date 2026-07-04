@@ -1,10 +1,10 @@
-import { CANONICAL_FACE_POSITIONS, buildFaceMorphs } from "@autofilm/forge";
+import { CANONICAL_FACE_POSITIONS, buildFaceMorphs } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**
  * `eyeSizeR` is local and radial: on the right eyelid ring every delta points
- * away from that eye's center (positive dot with the radial direction — the eye
- * ENLARGES at +1), while a far vertex (the chin) stays put — pinning both the
+ * away from that eye's center (positive dot with the radial direction ??the eye
+ * ENLARGES at +1), while a far vertex (the chin) stays put ??pinning both the
  * gaussian locality and the sign convention.
  *
  * Scenario: all 16 right-ring deltas radial-positive; chin delta exactly zero.

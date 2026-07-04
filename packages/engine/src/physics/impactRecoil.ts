@@ -1,43 +1,43 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmAngleRange,
-  IAutoFilmJointPose,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  IautomovieAngleRange,
+  IautomovieJointPose,
+  IautomoviePose,
+  IautomovieSkeleton,
+} from "@automovie/interface";
 
 /** A reactive deflection (degrees) the impact pushes a joint toward. */
-export interface IAutoFilmRecoilPush {
+export interface IautomovieRecoilPush {
   flexion?: number;
   abduction?: number;
   twist?: number;
 }
 
-const clampAxis = (value: number, range: IAutoFilmAngleRange | null): number =>
+const clampAxis = (value: number, range: IautomovieAngleRange | null): number =>
   range === null ? value : Math.max(range.min, Math.min(range.max, value));
 
 /**
  * Build the **flinch** a struck body yields under an impact: the reactive
  * `push` (a deflection driven by the impulse) propagates down a `chain` of
- * bones — from the contact bone toward the body — losing strength by `falloff`
+ * bones ??from the contact bone toward the body ??losing strength by `falloff`
  * each link, and **each joint only yields as far as its ROM allows**
- * ({@link IAutoFilmJointConstraint}). So what the hit _does_ to the body is
+ * ({@link IautomovieJointConstraint}). So what the hit _does_ to the body is
  * bounded by the same joint ranges the engine already validates against: a neck
  * can only snap so far, a spine only bend so much.
  *
- * This is the ROM-aware half of collision response — the reactive force decides
+ * This is the ROM-aware half of collision response ??the reactive force decides
  * how hard the push is, the joint ROM decides how far the body actually goes.
- * The caller maps an {@link IAutoFilmImpact}'s impulse to the `push` magnitude.
+ * The caller maps an {@link IautomovieImpact}'s impulse to the `push` magnitude.
  *
  * @author Samchon
  */
 export const impactRecoil = (
-  push: IAutoFilmRecoilPush,
-  chain: AutoFilmHumanoidBone[],
-  skeleton: IAutoFilmSkeleton,
+  push: IautomovieRecoilPush,
+  chain: automovieHumanoidBone[],
+  skeleton: IautomovieSkeleton,
   falloff = 0.6,
-): IAutoFilmPose => {
-  const joints: IAutoFilmJointPose[] = chain.map((bone, i) => {
+): IautomoviePose => {
+  const joints: IautomovieJointPose[] = chain.map((bone, i) => {
     const constraint =
       skeleton.bones.find((b) => b.bone === bone)?.constraint ?? null;
     const k = Math.pow(falloff, i);

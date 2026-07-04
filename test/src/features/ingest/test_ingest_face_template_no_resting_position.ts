@@ -1,10 +1,10 @@
-import { ingestFaceTemplate } from "@autofilm/ingest";
+import { ingestFaceTemplate } from "@automovie/ingest";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
 /**
  * A morphed primitive without a resting POSITION has deltas but nothing to
- * apply them to — the negative twin of the happy path's POSITION carry-over,
+ * apply them to ??the negative twin of the happy path's POSITION carry-over,
  * one attribute away.
  *
  * Scenario: a primitive carrying only a named morph target (no POSITION)

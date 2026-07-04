@@ -1,4 +1,4 @@
-import { validatePoseResult } from "@autofilm/engine";
+import { validatePoseResult } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
@@ -9,8 +9,8 @@ import { createSkeleton, joint, makePose } from "../internal/fixtures";
  * Pins that the override path actually loosens validation, not just the table
  * lookup.
  *
- * Scenario: with the elbow's constraint widened to flexion [0, 200], a 175°
- * flexion — rejected by the default 150° limit — validates successfully.
+ * Scenario: with the elbow's constraint widened to flexion [0, 200], a 175째
+ * flexion ??rejected by the default 150째 limit ??validates successfully.
  */
 export const test_validation_pose_override = (): void => {
   const base = createSkeleton();
@@ -33,5 +33,5 @@ export const test_validation_pose_override = (): void => {
     makePose([joint("leftLowerArm", { flexion: 175 })]),
     skeleton,
   );
-  TestValidator.equals("override widens ROM → valid", result.success, true);
+  TestValidator.equals("override widens ROM ??valid", result.success, true);
 };

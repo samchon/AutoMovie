@@ -19,7 +19,7 @@ const parseArg = (type: string): string[] => {
 
 async function main(): Promise<void> {
   console.log("---------------------------------------------------");
-  console.log("AutoFilm Test Program");
+  console.log("automovie Test Program");
   console.log("Start", new Date().toLocaleString("en-US"));
   console.log("---------------------------------------------------");
 
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
       const elapsed =
         new Date(exec.completed_at).getTime() -
         new Date(exec.started_at).getTime();
-      const mark = exec.error === null ? chalk.green("  ✓") : chalk.red("  ✗");
+      const mark = exec.error === null ? chalk.green("  ??) : chalk.red("  ??);
       console.log(`${mark} ${exec.name} ${chalk.gray(`(${elapsed} ms)`)}`);
     },
     filter: (name) =>
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   if (failures.length !== 0) {
     console.log(chalk.red(`\n${failures.length} FAILED:`));
     for (const f of failures) {
-      console.log(chalk.red(`\n● ${f.name}`));
+      console.log(chalk.red(`\n??${f.name}`));
       console.log(f.error);
     }
     process.exit(-1);

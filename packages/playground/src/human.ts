@@ -7,7 +7,7 @@ import {
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-// ── scene + lighting (soft 3-point) ──────────────────────────────────────────
+// ?? scene + lighting (soft 3-point) ??????????????????????????????????????????
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1d2129);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x4a4f60, 1.35));
@@ -40,7 +40,7 @@ const setPose = (b: string, axis: "x" | "y" | "z", v: number): void => {
   (poseState[b] ??= { x: 0, y: 0, z: 0 })[axis] = v;
 };
 
-// ── editor UI shell ──────────────────────────────────────────────────────────
+// ?? editor UI shell ??????????????????????????????????????????????????????????
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
   <style>
@@ -64,16 +64,16 @@ app.innerHTML = `
   <div id="stage">
     <canvas id="view"></canvas>
     <div id="panel">
-      <h1>autofilm · human editor</h1>
-      <div class="sub" id="status">loading model…</div>
+      <h1>automovie 쨌 human editor</h1>
+      <div class="sub" id="status">loading model??/div>
       <div class="tog"><input type="checkbox" id="clothes" checked/><label for="clothes">Clothes</label></div>
       <div class="tog"><input type="checkbox" id="look" checked/><label for="look">Look at viewer</label></div>
       <div class="tog"><input type="checkbox" id="blink" checked/><label for="blink">Auto-blink</label></div>
       <details open><summary>Expression</summary><div id="expr" class="grp"></div></details>
       <details open><summary>Proportions (bone scale)</summary><div id="prop" class="grp"></div></details>
-      <details open><summary>Pose — head &amp; torso</summary><div id="pose-core" class="grp"></div></details>
-      <details><summary>Pose — arms</summary><div id="pose-arms" class="grp"></div></details>
-      <details><summary>Pose — legs</summary><div id="pose-legs" class="grp"></div></details>
+      <details open><summary>Pose ??head &amp; torso</summary><div id="pose-core" class="grp"></div></details>
+      <details><summary>Pose ??arms</summary><div id="pose-arms" class="grp"></div></details>
+      <details><summary>Pose ??legs</summary><div id="pose-legs" class="grp"></div></details>
     </div>
   </div>
 `;
@@ -114,7 +114,7 @@ const slider = (
   host.appendChild(row);
 };
 
-// ── control definitions ──────────────────────────────────────────────────────
+// ?? control definitions ??????????????????????????????????????????????????????
 const EXPRESSIONS = [
   "happy",
   "angry",
@@ -239,7 +239,7 @@ const PROPS: ScaleSpec[] = [
   },
 ];
 
-// ── build editor after load ──────────────────────────────────────────────────
+// ?? build editor after load ??????????????????????????????????????????????????
 const mountEditor = (): void => {
   // expressions present on the model
   const em = vrm?.expressionManager;
@@ -294,7 +294,7 @@ const mountEditor = (): void => {
     );
 };
 
-// ── load the VRM ─────────────────────────────────────────────────────────────
+// ?? load the VRM ?????????????????????????????????????????????????????????????
 const loader = new GLTFLoader();
 loader.register((parser) => new VRMLoaderPlugin(parser));
 const gazeTarget = new THREE.Object3D();
@@ -320,10 +320,10 @@ loader.load(
     scene.add(loaded.scene);
     if (loaded.lookAt) loaded.lookAt.target = gazeTarget;
     vrm = loaded;
-    // Model "Vita" — VRoid sample, CC0 (public domain): fully MIT-compatible.
-    status.textContent = "Model: Vita · CC0 (public domain)";
+    // Model "Vita" ??VRoid sample, CC0 (public domain): fully MIT-compatible.
+    status.textContent = "Model: Vita 쨌 CC0 (public domain)";
     mountEditor();
-    (window as unknown as { __autofilm: Record<string, unknown> }).__autofilm =
+    (window as unknown as { __automovie: Record<string, unknown> }).__automovie =
       {
         ready: true,
       };
@@ -332,7 +332,7 @@ loader.load(
   (err) => (status.textContent = "load error: " + String(err)),
 );
 
-// ── render loop ──────────────────────────────────────────────────────────────
+// ?? render loop ??????????????????????????????????????????????????????????????
 const clock = new THREE.Clock();
 let elapsed = 0;
 const tick = (): void => {

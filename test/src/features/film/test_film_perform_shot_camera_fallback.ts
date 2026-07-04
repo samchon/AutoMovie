@@ -1,4 +1,4 @@
-import { performShot, stageScene } from "@autofilm/engine";
+import { performShot, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -17,9 +17,9 @@ import { hasViolation } from "../internal/predicates";
  *
  * Scenarios:
  *
- * 1. The performance has no `frame` action but staging rigged `cam-main` → success
+ * 1. The performance has no `frame` action but staging rigged `cam-main` ??success
  *    with `cam-main` live.
- * 2. Same performance against a staging with zero cameras → a `type` violation on
+ * 2. Same performance against a staging with zero cameras ??a `type` violation on
  *    `$input` (nothing can frame the take).
  */
 export const test_film_perform_shot_camera_fallback = (): void => {

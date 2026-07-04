@@ -1,7 +1,7 @@
 {
-  "name": "@autofilm/interface",
+  "name": "@automovie/interface",
   "version": "0.1.0",
-  "description": "autofilm type definitions — skeleton, pose, motion, expression, material, scene AST",
+  "description": "automovie type definitions ??skeleton, pose, motion, expression, material, scene AST",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/samchon/autofilm"
+    "url": "https://github.com/samchon/automovie"
   },
   "files": [
     "lib",

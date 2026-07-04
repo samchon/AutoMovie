@@ -1,9 +1,9 @@
-import { ingestFaceTemplate } from "@autofilm/ingest";
+import { ingestFaceTemplate } from "@automovie/ingest";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * A document with no morphed primitive cannot become a face template — a silent
+ * A document with no morphed primitive cannot become a face template ??a silent
  * empty template would let the editor "succeed" on a prop or an unrigged head,
  * so the import throws.
  *

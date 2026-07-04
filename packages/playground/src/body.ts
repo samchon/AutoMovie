@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-// ── scene + lighting ─────────────────────────────────────────────────────────
+// ?? scene + lighting ?????????????????????????????????????????????????????????
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1c2027);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x47506a, 1.4));
@@ -38,8 +38,8 @@ app.innerHTML = `
   <div id="stage">
     <canvas id="view"></canvas>
     <div id="panel">
-      <h1>autofilm · hero base</h1>
-      <div class="sub" id="status">loading…</div>
+      <h1>automovie 쨌 hero base</h1>
+      <div class="sub" id="status">loading??/div>
       <div id="morphs"></div>
     </div>
   </div>
@@ -105,7 +105,7 @@ const slider = (
   document.querySelector("#morphs")!.appendChild(row);
 };
 
-// ── load the baked reference hero-base GLB ───────────────────────────────────
+// ?? load the baked reference hero-base GLB ???????????????????????????????????
 new GLTFLoader().load(
   "/models/human.glb",
   (gltf) => {
@@ -130,10 +130,10 @@ new GLTFLoader().load(
     });
     scene.add(gltf.scene);
     if (morphMesh === null) {
-      status.textContent = `Hybrid reference base · ${meshCount} mesh`;
+      status.textContent = `Hybrid reference base 쨌 ${meshCount} mesh`;
       (
-        window as unknown as { __autofilm: Record<string, unknown> }
-      ).__autofilm = {
+        window as unknown as { __automovie: Record<string, unknown> }
+      ).__automovie = {
         ready: true,
         morphs: 0,
       };
@@ -166,8 +166,8 @@ new GLTFLoader().load(
         slider(prettify(base), 0, 1, (v) => (infl[idx] = v));
       }
     }
-    status.textContent = `Reference hero base · CC0 · ${Object.keys(groups).length} morphs`;
-    (window as unknown as { __autofilm: Record<string, unknown> }).__autofilm =
+    status.textContent = `Reference hero base 쨌 CC0 쨌 ${Object.keys(groups).length} morphs`;
+    (window as unknown as { __automovie: Record<string, unknown> }).__automovie =
       {
         ready: true,
         morphs: Object.keys(dict).length,

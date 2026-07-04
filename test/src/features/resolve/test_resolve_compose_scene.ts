@@ -1,10 +1,10 @@
-import { composeScene } from "@autofilm/engine";
-import { IAutoFilmNode, IAutoFilmTransform } from "@autofilm/interface";
+import { composeScene } from "@automovie/engine";
+import { IautomovieNode, IautomovieTransform } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const IDENTITY: IAutoFilmTransform = {
+const IDENTITY: IautomovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -14,7 +14,7 @@ const node = (
   id: string,
   parent: string | null,
   tx: number,
-): IAutoFilmNode => ({
+): IautomovieNode => ({
   id,
   name: null,
   parent,
@@ -30,12 +30,12 @@ const node = (
 const tx = (m: number[]): number => m[12]!;
 
 /**
- * The COMPOSE pass: flat nodes → world matrices, walking parent-before-child
+ * The COMPOSE pass: flat nodes ??world matrices, walking parent-before-child
  * with on-demand parent resolution and memoization.
  *
  * Scenarios:
  *
- * 1. A lone root with no overrides composes from its own rest transform — a +1
+ * 1. A lone root with no overrides composes from its own rest transform ??a +1
  *    translation lands at x=1 in the world matrix.
  * 2. A child listed _before_ its parent still composes correctly: the parent is
  *    pulled in on demand, then the later loop iteration over the parent hits
@@ -52,7 +52,7 @@ export const test_resolve_compose_scene = (): void => {
   );
 
   // 2. child-before-parent ordering + override on child only
-  const overrides = new Map<string, IAutoFilmTransform>([
+  const overrides = new Map<string, IautomovieTransform>([
     ["c", { ...IDENTITY, translation: { x: 2, y: 0, z: 0 } }],
   ]);
   const world = composeScene(

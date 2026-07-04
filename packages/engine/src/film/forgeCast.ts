@@ -1,10 +1,10 @@
 import {
-  IAutoFilmConstraintViolation,
-  IAutoFilmForgeApplication,
-  IAutoFilmModel,
-  IAutoFilmScriptApplication,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  IautomovieConstraintViolation,
+  IautomovieForgeApplication,
+  IautomovieModel,
+  IautomovieScriptApplication,
+  IautomovieSkeleton,
+} from "@automovie/interface";
 
 import { validateModel } from "../validation/validateModel";
 import { ViolationCollector } from "../validation/violation";
@@ -15,17 +15,17 @@ import { ViolationCollector } from "../validation/violation";
  *
  * @author Samchon
  */
-export type IAutoFilmForgedCast =
-  | IAutoFilmForgedCast.ISuccess
-  | IAutoFilmForgedCast.IFailure;
-export namespace IAutoFilmForgedCast {
+export type IautomovieForgedCast =
+  | IautomovieForgedCast.ISuccess
+  | IautomovieForgedCast.IFailure;
+export namespace IautomovieForgedCast {
   /** Every stand-in exists, joins its cast member, and passed validation. */
   export interface ISuccess {
     /** Discriminator. */
     success: true;
 
     /** Validated stand-ins, keyed by cast node id. */
-    models: Record<string, IAutoFilmModel>;
+    models: Record<string, IautomovieModel>;
   }
 
   /** The forge contradicted the script or a rig failed validation. */
@@ -34,31 +34,31 @@ export namespace IAutoFilmForgedCast {
     success: false;
 
     /** Every violation found, for the correction round. */
-    violations: IAutoFilmConstraintViolation[];
+    violations: IautomovieConstraintViolation[];
   }
 }
 
 /**
- * The FORGE consumer — accept the stand-in rigs the forge stage built for the
+ * The FORGE consumer ??accept the stand-in rigs the forge stage built for the
  * script's `modelRef: null` cast members, and gate them on both contracts:
  *
  * The **casting contract**: exactly one entry per stand-in cast member (a
  * missing rig is an actor with no body; a rig for an imported-`modelRef` member
  * or for a stranger contradicts the script), and each entry's model `id` must
- * equal its cast `node` — that id is the join the staged scene's `modelRef ??
+ * equal its cast `node` ??that id is the join the staged scene's `modelRef ??
  * node` fallback resolves against.
  *
  * The **rig contract**: `validateModel` covers parts/materials/extents (its
  * violations are remapped onto the entry's path); on top of it a performer
- * needs a skeleton whose graph actually hangs together — every parent named
+ * needs a skeleton whose graph actually hangs together ??every parent named
  * exists, no bone is declared twice, exactly one root, and every bone is
  * reachable from that root (a two-bone cycle floating off the hierarchy would
  * satisfy all the local checks and still be unposable).
  */
 export const forgeCast = (
-  script: IAutoFilmScriptApplication.IWrite,
-  forge: IAutoFilmForgeApplication.IWrite,
-): IAutoFilmForgedCast => {
+  script: IautomovieScriptApplication.IWrite,
+  forge: IautomovieForgeApplication.IWrite,
+): IautomovieForgedCast => {
   const out = new ViolationCollector();
   const cast = new Map(script.cast.map((c) => [c.node, c]));
 
@@ -110,7 +110,7 @@ export const forgeCast = (
       out.push(
         "type",
         `${ep}.model.skeleton`,
-        "a stand-in performer needs a skeleton — a boneless model cannot be posed",
+        "a stand-in performer needs a skeleton ??a boneless model cannot be posed",
         entry.model.skeleton,
       );
     else
@@ -137,7 +137,7 @@ export const forgeCast = (
 
   if (out.items.length > 0) return { success: false, violations: out.items };
 
-  const models: Record<string, IAutoFilmModel> = {};
+  const models: Record<string, IautomovieModel> = {};
   for (const entry of forge.entries) models[entry.node] = entry.model;
   return { success: true, models };
 };
@@ -148,7 +148,7 @@ export const forgeCast = (
  * validity (rest transforms, constraints) is the pose/ROM validators' concern.
  */
 const validateSkeletonGraph = (
-  skeleton: IAutoFilmSkeleton,
+  skeleton: IautomovieSkeleton,
   path: string,
   out: ViolationCollector,
 ): void => {

@@ -1,4 +1,4 @@
-import { forgeCast } from "@autofilm/engine";
+import { forgeCast } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { forgeEntry, makeScriptWrite } from "../internal/filmFixtures";
@@ -11,10 +11,9 @@ import { hasViolation } from "../internal/predicates";
  *
  * Scenarios:
  *
- * 1. KnightB's stand-in has `skeleton: null` → a `type` violation on
+ * 1. KnightB's stand-in has `skeleton: null` ??a `type` violation on
  *    `$input.entries[0].model.skeleton`.
- * 2. The same model references material "no-such-mat" on its part →
- *    `validateModel`'s violation resurfaces at
+ * 2. The same model references material "no-such-mat" on its part ?? *    `validateModel`'s violation resurfaces at
  *    `$input.entries[0].model.parts[0].material` (remapped from `$input`).
  */
 export const test_film_forge_cast_boneless = (): void => {

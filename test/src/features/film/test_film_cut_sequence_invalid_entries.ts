@@ -1,10 +1,10 @@
-import { cutSequence } from "@autofilm/engine";
-import { IAutoFilmShot } from "@autofilm/interface";
+import { cutSequence } from "@automovie/engine";
+import { IautomovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { hasViolation } from "../internal/predicates";
 
-const SHOT: IAutoFilmShot = {
+const SHOT: IautomovieShot = {
   id: "shot:beat-1",
   name: null,
   scene: "scene-duel",
@@ -21,13 +21,13 @@ const SHOT: IAutoFilmShot = {
  *
  * Scenarios (one entry each, against a single 3-second shot):
  *
- * 1. A transition on the first entry → `type` (nothing to transition from).
- * 2. An entry referencing the never-performed `shot:ghost` → `type`.
- * 3. A trim of duration 0 → `range` on its `trim.duration`.
- * 4. A trim `[2, 4]` poking 1 s past the 3-second shot → `range` on `trim` with
+ * 1. A transition on the first entry ??`type` (nothing to transition from).
+ * 2. An entry referencing the never-performed `shot:ghost` ??`type`.
+ * 3. A trim of duration 0 ??`range` on its `trim.duration`.
+ * 4. A trim `[2, 4]` poking 1 s past the 3-second shot ??`range` on `trim` with
  *    overshoot 1.
- * 5. A 0-second transition → `range` on its `transition.duration`.
- * 6. A 2-second fade over a 1-second played span → `range` with overshoot 1.
+ * 5. A 0-second transition ??`range` on its `transition.duration`.
+ * 6. A 2-second fade over a 1-second played span ??`range` with overshoot 1.
  */
 export const test_film_cut_sequence_invalid_entries = (): void => {
   const cut = cutSequence(

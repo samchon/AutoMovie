@@ -1,4 +1,4 @@
-import { stageScene } from "@autofilm/engine";
+import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
@@ -6,14 +6,14 @@ import { hasViolation } from "../internal/predicates";
 
 /**
  * Pins mount-coupling integrity: a rider must ride a _different, placed_ actor
- * — self-mounts and dangling parents are both contradictions staging must hear
+ * ??self-mounts and dangling parents are both contradictions staging must hear
  * about before any shot is performed.
  *
  * Scenarios:
  *
- * 1. `knightA` declares `attach.parent = "knightA"` → a `type` violation on
+ * 1. `knightA` declares `attach.parent = "knightA"` ??a `type` violation on
  *    `$input.actors[0].attach.parent` (a node cannot ride itself).
- * 2. `knightB` declares `attach.parent = "horse"` which nobody placed → a `type`
+ * 2. `knightB` declares `attach.parent = "horse"` which nobody placed ??a `type`
  *    violation on `$input.actors[1].attach.parent` carrying "horse".
  */
 export const test_film_stage_scene_mount_invalid = (): void => {

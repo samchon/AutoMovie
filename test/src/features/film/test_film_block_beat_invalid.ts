@@ -1,4 +1,4 @@
-import { blockBeat, stageScene } from "@autofilm/engine";
+import { blockBeat, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -15,14 +15,14 @@ import { hasViolation } from "../internal/predicates";
  *
  * Scenarios (one write):
  *
- * 1. Beat "beat-99" the script never planned → `type` on `$input.beat`.
- * 2. Duration 0 → `range` on `$input.duration`.
- * 3. An intent for the unstaged `ghost` → `type` on `$input.actors[0].node`.
- * 4. An anchor at t = 5 outside the beat → `range` on
+ * 1. Beat "beat-99" the script never planned ??`type` on `$input.beat`.
+ * 2. Duration 0 ??`range` on `$input.duration`.
+ * 3. An intent for the unstaged `ghost` ??`type` on `$input.actors[0].node`.
+ * 4. An anchor at t = 5 outside the beat ??`range` on
  *    `$input.actors[0].anchors[0].t`.
- * 5. A later-listed anchor at an earlier t (1.5 → 0.5) → `range` on
+ * 5. A later-listed anchor at an earlier t (1.5 ??0.5) ??`range` on
  *    `$input.actors[1].anchors[1].t` (list order is causal order).
- * 6. The camera favouring the unstaged `nobody` → `type` on
+ * 6. The camera favouring the unstaged `nobody` ??`type` on
  *    `$input.camera.on.node`.
  */
 export const test_film_block_beat_invalid = (): void => {
@@ -43,7 +43,7 @@ export const test_film_block_beat_invalid = (): void => {
         },
         {
           node: "knightA",
-          beats: "strikes before stepping — impossible",
+          beats: "strikes before stepping ??impossible",
           anchors: [
             { t: 1.5, cue: "the strike" },
             { t: 0.5, cue: "the step" },

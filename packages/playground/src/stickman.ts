@@ -1,39 +1,39 @@
-import { DEFAULT_HUMANOID_ROM, aimRotation } from "@autofilm/engine";
+import { DEFAULT_HUMANOID_ROM, aimRotation } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  AutoFilmPrimitiveShape,
-  IAutoFilmBone,
-  IAutoFilmModel,
-  IAutoFilmModelPart,
-  IAutoFilmQuaternion,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  automoviePrimitiveShape,
+  IautomovieBone,
+  IautomovieModel,
+  IautomovieModelPart,
+  IautomovieQuaternion,
+  IautomovieSkeleton,
+  IautomovieTransform,
+  IautomovieVector3,
+} from "@automovie/interface";
 
 /**
- * Proportions of the **stick figure** ("졸라맨") — the deliberately minimal test
+ * Proportions of the **stick figure** ("議몃씪留?) ??the deliberately minimal test
  * character. Where {@link IHumanoidParams} fills the rig with capsule "flesh",
  * the stick figure keeps every segment a thin uniform rod and the head a single
  * sphere: the most legible possible body to read a pose or a motion off of.
  *
- * It is rigged on the same {@link AutoFilmHumanoidBone} slots as every other
- * autofilm character, so a clip authored on the stick figure replays unchanged
+ * It is rigged on the same {@link automovieHumanoidBone} slots as every other
+ * automovie character, so a clip authored on the stick figure replays unchanged
  * on a fully fleshed humanoid (or an imported VRM) later. All lengths are in
  * meters.
  *
  * @author Samchon
  */
 export interface IStickmanParams {
-  /** Pelvis height off the floor (≈ leg length). */
+  /** Pelvis height off the floor (??leg length). */
   hipHeight: number;
-  /** Hips → spine segment length. */
+  /** Hips ??spine segment length. */
   pelvisToSpine: number;
-  /** Spine → chest segment length. */
+  /** Spine ??chest segment length. */
   spineToChest: number;
-  /** Chest → neck segment length. */
+  /** Chest ??neck segment length. */
   chestToNeck: number;
-  /** Neck → head segment length. */
+  /** Neck ??head segment length. */
   neckLength: number;
   /** Half the distance between the two shoulder sockets. */
   shoulderHalf: number;
@@ -41,17 +41,17 @@ export interface IStickmanParams {
   shoulderRise: number;
   /** Half the distance between the two hip sockets. */
   hipHalf: number;
-  /** Upper-arm (shoulder → elbow) length. */
+  /** Upper-arm (shoulder ??elbow) length. */
   upperArm: number;
-  /** Forearm (elbow → wrist) length. */
+  /** Forearm (elbow ??wrist) length. */
   lowerArm: number;
-  /** Thigh (hip → knee) length. */
+  /** Thigh (hip ??knee) length. */
   thigh: number;
-  /** Shin (knee → ankle) length. */
+  /** Shin (knee ??ankle) length. */
   shin: number;
-  /** Radius of an arm / leg rod — the limb "thickness". */
+  /** Radius of an arm / leg rod ??the limb "thickness". */
   rodRadius: number;
-  /** Radius of a torso (spine/chest) rod — a touch heftier than the limbs. */
+  /** Radius of a torso (spine/chest) rod ??a touch heftier than the limbs. */
   torsoRadius: number;
   /** Radius of the fist spheres capping the wrists. */
   fistRadius: number;
@@ -60,7 +60,7 @@ export interface IStickmanParams {
 }
 
 /**
- * A legible stick figure ≈ 1.72 m tall — no longer hairline-thin: arms/legs and
+ * A legible stick figure ??1.72 m tall ??no longer hairline-thin: arms/legs and
  * torso carry a believable thickness (the head and fists stay simple spheres)
  * so it reads like a body, not a wire diagram.
  */
@@ -83,24 +83,24 @@ export const DEFAULT_STICKMAN: IStickmanParams = {
   headRadius: 0.12,
 };
 
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IautomovieVector3 => ({ x, y, z });
 
 const at = (
-  t: IAutoFilmVector3,
-  r?: IAutoFilmQuaternion,
-): IAutoFilmTransform => ({
+  t: IautomovieVector3,
+  r?: IautomovieQuaternion,
+): IautomovieTransform => ({
   translation: t,
   rotation: r ?? { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 
 const bone = (
-  name: AutoFilmHumanoidBone,
-  parent: AutoFilmHumanoidBone | null,
-  rest: IAutoFilmTransform,
-): IAutoFilmBone => {
+  name: automovieHumanoidBone,
+  parent: automovieHumanoidBone | null,
+  rest: IautomovieTransform,
+): IautomovieBone => {
   // each joint carries its anatomical ROM in **clinical** space (abduction 0 =
-  // arm down, 90 = horizontal, 180 = overhead — the engine validates/clamps
+  // arm down, 90 = horizontal, 180 = overhead ??the engine validates/clamps
   // against it, the core differentiator). The per-side rest-frame remap that
   // reconciles clinical to this T-pose rig lives in the render (the player's
   // HUMANOID_REST_FRAME), not baked into the constraint.
@@ -114,10 +114,10 @@ const bone = (
 };
 
 /** Shortest-arc rotation taking the local +Y axis onto a target direction. */
-const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion =>
+const yToDir = (dir: IautomovieVector3): IautomovieQuaternion =>
   aimRotation({ x: 0, y: 1, z: 0 }, dir);
 
-const capsule = (radius: number, length: number): AutoFilmPrimitiveShape => ({
+const capsule = (radius: number, length: number): automoviePrimitiveShape => ({
   type: "capsule",
   radius,
   height: Math.max(0.01, length - 2 * radius),
@@ -130,11 +130,11 @@ const capsule = (radius: number, length: number): AutoFilmPrimitiveShape => ({
  */
 const rod = (
   id: string,
-  boneName: AutoFilmHumanoidBone,
-  seg: IAutoFilmVector3,
+  boneName: automovieHumanoidBone,
+  seg: IautomovieVector3,
   radius: number,
   material: string,
-): IAutoFilmModelPart => {
+): IautomovieModelPart => {
   const length = Math.hypot(seg.x, seg.y, seg.z);
   return {
     id,
@@ -147,33 +147,33 @@ const rod = (
 };
 
 /**
- * Build the stick figure — a normalized VRM skeleton clothed in thin rods and a
- * sphere head — from a set of proportions.
+ * Build the stick figure ??a normalized VRM skeleton clothed in thin rods and a
+ * sphere head ??from a set of proportions.
  *
- * The rig is a T-pose at rest (arms out along ±X, legs straight down −Y); a
+ * The rig is a T-pose at rest (arms out along 짹X, legs straight down ?뭑); a
  * pose or motion articulates it from there. Same bone slots, same FK path, same
- * ROM hooks as the fuller {@link buildHumanoid} blockman — just the most
+ * ROM hooks as the fuller {@link buildHumanoid} blockman ??just the most
  * stripped-down skin so motion is the only thing on screen.
  *
  * @author Samchon
  */
 export const buildStickman = (
   p: IStickmanParams,
-): { skeleton: IAutoFilmSkeleton; model: IAutoFilmModel } => {
-  const bones: IAutoFilmBone[] = [
+): { skeleton: IautomovieSkeleton; model: IautomovieModel } => {
+  const bones: IautomovieBone[] = [
     bone("hips", null, at(v(0, p.hipHeight, 0))),
     bone("spine", "hips", at(v(0, p.pelvisToSpine, 0))),
     bone("chest", "spine", at(v(0, p.spineToChest, 0))),
     bone("neck", "chest", at(v(0, p.chestToNeck, 0))),
     bone("head", "neck", at(v(0, p.neckLength, 0))),
-    // arms (root → tip), extending along ±X (T-pose)
+    // arms (root ??tip), extending along 짹X (T-pose)
     bone("leftUpperArm", "chest", at(v(p.shoulderHalf, p.shoulderRise, 0))),
     bone("leftLowerArm", "leftUpperArm", at(v(p.upperArm, 0, 0))),
     bone("leftHand", "leftLowerArm", at(v(p.lowerArm, 0, 0))),
     bone("rightUpperArm", "chest", at(v(-p.shoulderHalf, p.shoulderRise, 0))),
     bone("rightLowerArm", "rightUpperArm", at(v(-p.upperArm, 0, 0))),
     bone("rightHand", "rightLowerArm", at(v(-p.lowerArm, 0, 0))),
-    // legs (root → tip), extending along −Y
+    // legs (root ??tip), extending along ?뭑
     bone("leftUpperLeg", "hips", at(v(p.hipHalf, 0, 0))),
     bone("leftLowerLeg", "leftUpperLeg", at(v(0, -p.thigh, 0))),
     bone("leftFoot", "leftLowerLeg", at(v(0, -p.shin, 0))),
@@ -187,11 +187,11 @@ export const buildStickman = (
   /** A sphere of arbitrary radius attached at a bone's origin (fists, etc.). */
   const knob = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
+    boneName: automovieHumanoidBone,
     radius: number,
     material = "ink",
-    offset: IAutoFilmVector3 = v(0, 0, 0),
-  ): IAutoFilmModelPart => ({
+    offset: IautomovieVector3 = v(0, 0, 0),
+  ): IautomovieModelPart => ({
     id,
     name: id,
     geometry: { type: "primitive", shape: { type: "sphere", radius } },
@@ -202,8 +202,8 @@ export const buildStickman = (
   /** A ball joint: a sphere at a bone's origin, hiding the gap between rods. */
   const ball = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
-  ): IAutoFilmModelPart => ({
+    boneName: automovieHumanoidBone,
+  ): IautomovieModelPart => ({
     id,
     name: id,
     geometry: {
@@ -215,8 +215,8 @@ export const buildStickman = (
     transform: at(v(0, 0, 0)),
   });
 
-  const parts: IAutoFilmModelPart[] = [
-    // torso column — one rod per spine bone so it bends with the back (thicker
+  const parts: IautomovieModelPart[] = [
+    // torso column ??one rod per spine bone so it bends with the back (thicker
     // than the limbs, tapering up the neck)
     rod("spineRod", "hips", v(0, p.pelvisToSpine, 0), tr, "ink"),
     rod("chestRod", "spine", v(0, p.spineToChest, 0), tr, "ink"),
@@ -270,7 +270,7 @@ export const buildStickman = (
       "ink",
       v(0, p.headRadius * 0.8, p.headRadius * 1.12),
     ),
-    // clavicles — connect the spine column to each shoulder socket
+    // clavicles ??connect the spine column to each shoulder socket
     rod("clavicleL", "chest", v(p.shoulderHalf, p.shoulderRise, 0), r, "ink"),
     rod("clavicleR", "chest", v(-p.shoulderHalf, p.shoulderRise, 0), r, "ink"),
     // arms
@@ -283,7 +283,7 @@ export const buildStickman = (
     rod("legLowerL", "leftLowerLeg", v(0, -p.shin, 0), r, "ink"),
     rod("legUpperR", "rightUpperLeg", v(0, -p.thigh, 0), r, "ink"),
     rod("legLowerR", "rightLowerLeg", v(0, -p.shin, 0), r, "ink"),
-    // ball joints — pelvis, shoulders, elbows, hips, knees
+    // ball joints ??pelvis, shoulders, elbows, hips, knees
     ball("jointHip", "hips"),
     ball("jointShoulderL", "leftUpperArm"),
     ball("jointShoulderR", "rightUpperArm"),
@@ -293,17 +293,17 @@ export const buildStickman = (
     ball("jointHipR", "rightUpperLeg"),
     ball("jointKneeL", "leftLowerLeg"),
     ball("jointKneeR", "rightLowerLeg"),
-    // fists — round caps at the wrists (so punches land with a visible hand)
+    // fists ??round caps at the wrists (so punches land with a visible hand)
     knob("fistL", "leftHand", p.fistRadius),
     knob("fistR", "rightHand", p.fistRadius),
-    // feet — short rods off each ankle pointing forward (+Z) so the figure
+    // feet ??short rods off each ankle pointing forward (+Z) so the figure
     // stands on something instead of tapering to a point
     rod("footL", "leftFoot", v(0, 0, p.headRadius * 1.1), r * 1.1, "ink"),
     rod("footR", "rightFoot", v(0, 0, p.headRadius * 1.1), r * 1.1, "ink"),
   ];
 
-  const skeleton: IAutoFilmSkeleton = { id: "stickman", bones };
-  const model: IAutoFilmModel = {
+  const skeleton: IautomovieSkeleton = { id: "stickman", bones };
+  const model: IautomovieModel = {
     id: "stickman",
     name: "stick figure",
     origin: "generated",

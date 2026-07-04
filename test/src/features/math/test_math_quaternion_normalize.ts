@@ -1,4 +1,4 @@
-import { Quaternion } from "@autofilm/engine";
+import { Quaternion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { qclose, qunit } from "../internal/predicates";
@@ -11,12 +11,12 @@ import { qclose, qunit } from "../internal/predicates";
  *
  * 1. A pure-scale quaternion (0,0,0,2) normalizes onto the identity.
  * 2. An arbitrary non-unit quaternion (1,2,3,4) normalizes to unit length.
- * 3. The zero quaternion (0,0,0,0) — magnitude 0 — returns the identity instead of
+ * 3. The zero quaternion (0,0,0,0) ??magnitude 0 ??returns the identity instead of
  *    NaNs. Exercises the zero-length guard a normal rotation never hits.
  */
 export const test_math_quaternion_normalize = (): void => {
   TestValidator.predicate(
-    "normalize (0,0,0,2) → identity",
+    "normalize (0,0,0,2) ??identity",
     qclose(
       Quaternion.normalize({ x: 0, y: 0, z: 0, w: 2 }),
       Quaternion.identity(),
@@ -27,7 +27,7 @@ export const test_math_quaternion_normalize = (): void => {
     qunit(Quaternion.normalize({ x: 1, y: 2, z: 3, w: 4 })),
   );
   TestValidator.predicate(
-    "normalize of the zero quaternion → identity",
+    "normalize of the zero quaternion ??identity",
     qclose(
       Quaternion.normalize({ x: 0, y: 0, z: 0, w: 0 }),
       Quaternion.identity(),

@@ -1,23 +1,23 @@
-import { IAutoFilmActionSynthesizer } from "@autofilm/engine";
+import { IautomovieActionSynthesizer } from "@automovie/engine";
 import {
-  IAutoFilmBlockingApplication,
-  IAutoFilmForgeApplication,
-  IAutoFilmPerformanceApplication,
-  IAutoFilmScriptApplication,
-  IAutoFilmStagingApplication,
-} from "@autofilm/interface";
+  IautomovieBlockingApplication,
+  IautomovieForgeApplication,
+  IautomoviePerformanceApplication,
+  IautomovieScriptApplication,
+  IautomovieStagingApplication,
+} from "@automovie/interface";
 
 import { createModel, joint, keyframe, makeMotion, makePose } from "./fixtures";
 
 /**
  * One forge entry: the shared one-part test model re-idified so its `id` equals
- * the cast node — the join contract `forgeCast` enforces and the staged scene's
+ * the cast node ??the join contract `forgeCast` enforces and the staged scene's
  * `modelRef ?? node` fallback resolves against.
  */
 export const forgeEntry = (
   node: string,
-  model: Partial<IAutoFilmForgeApplication.IEntry["model"]> = {},
-): IAutoFilmForgeApplication.IEntry => ({
+  model: Partial<IautomovieForgeApplication.IEntry["model"]> = {},
+): IautomovieForgeApplication.IEntry => ({
   node,
   model: { ...createModel(), id: node, ...model },
 });
@@ -29,8 +29,8 @@ export const forgeEntry = (
  * `revise.final ?? draft` rule.
  */
 export const makePerformanceWrite = (
-  partial: Partial<IAutoFilmPerformanceApplication.IWrite> = {},
-): IAutoFilmPerformanceApplication.IWrite => ({
+  partial: Partial<IautomoviePerformanceApplication.IWrite> = {},
+): IautomoviePerformanceApplication.IWrite => ({
   type: "write",
   beat: "beat-1",
   plan: "both advance a step; A strikes at the top of the walk; camera holds.",
@@ -76,11 +76,11 @@ export const makePerformanceWrite = (
  * inject each intent/realization mismatch.
  */
 export const makeBlockingWrite = (
-  partial: Partial<IAutoFilmBlockingApplication.IWrite> = {},
-): IAutoFilmBlockingApplication.IWrite => ({
+  partial: Partial<IautomovieBlockingApplication.IWrite> = {},
+): IautomovieBlockingApplication.IWrite => ({
   type: "write",
   beat: "beat-1",
-  analysis: "the charge must read as decisive — one step, one strike.",
+  analysis: "the charge must read as decisive ??one step, one strike.",
   rationale: "medium static keeps both knights readable at striking range.",
   actors: [
     {
@@ -101,10 +101,10 @@ export const makeBlockingWrite = (
 
 /**
  * The content seam for film scenarios: every action becomes the same valid
- * one-second elbow clip (0° → 120° flexion, well inside ROM), so scenarios
+ * one-second elbow clip (0째 ??120째 flexion, well inside ROM), so scenarios
  * exercise the pipeline's assembly and gating rather than clip content.
  */
-export const validSynthesizer: IAutoFilmActionSynthesizer = () =>
+export const validSynthesizer: IautomovieActionSynthesizer = () =>
   makeMotion(
     [
       keyframe(0, makePose([joint("leftLowerArm", { flexion: 0 })])),
@@ -119,8 +119,8 @@ export const validSynthesizer: IAutoFilmActionSynthesizer = () =>
  * Film-pipeline scenarios override fields as needed.
  */
 export const makeScriptWrite = (
-  partial: Partial<IAutoFilmScriptApplication.IWrite> = {},
-): IAutoFilmScriptApplication.IWrite => ({
+  partial: Partial<IautomovieScriptApplication.IWrite> = {},
+): IautomovieScriptApplication.IWrite => ({
   type: "write",
   logline: "Two knights duel at dawn.",
   theme: "honor answered in steel",
@@ -145,8 +145,8 @@ export const makeScriptWrite = (
  * override fields to inject each contradiction.
  */
 export const makeStagingWrite = (
-  partial: Partial<IAutoFilmStagingApplication.IWrite> = {},
-): IAutoFilmStagingApplication.IWrite => ({
+  partial: Partial<IautomovieStagingApplication.IWrite> = {},
+): IautomovieStagingApplication.IWrite => ({
   type: "write",
   scene: { id: "scene-duel", name: "duel at dawn" },
   plan: "A faces B at 0.7 m; camera side-on covers both; sun from the east.",

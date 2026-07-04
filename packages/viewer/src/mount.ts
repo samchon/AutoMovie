@@ -4,7 +4,7 @@ import * as THREE from "three";
  * Handle returned by {@link mountViewer}; call `stop()` to end the loop and
  * release the renderer.
  */
-export interface IAutoFilmViewerHandle {
+export interface IautomovieViewerHandle {
   renderer: THREE.WebGLRenderer;
   stop: () => void;
 }
@@ -15,7 +15,7 @@ export interface IAutoFilmViewerHandle {
  * `camera`.
  *
  * This is the one browser-only entry point. `onFrame` is where a
- * {@link AutoFilmPlayer} advances — the viewer stays a thin shell around the
+ * {@link automoviePlayer} advances ??the viewer stays a thin shell around the
  * deterministic engine. `elapsedSeconds` is measured from the first frame. If
  * `onFrame` returns `true` it has **already drawn** the frame itself (e.g. a
  * multi-pass cross-dissolve composite), so the loop skips its own default
@@ -28,7 +28,7 @@ export const mountViewer = (
   scene: THREE.Scene,
   camera: THREE.PerspectiveCamera,
   onFrame: (elapsedSeconds: number) => void | boolean,
-): IAutoFilmViewerHandle => {
+): IautomovieViewerHandle => {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   const resize = (): void => {
     const w = canvas.clientWidth || 1;

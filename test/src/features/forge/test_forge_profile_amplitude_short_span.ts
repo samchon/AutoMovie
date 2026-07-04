@@ -1,12 +1,12 @@
-import { fitProfileAmplitude } from "@autofilm/forge";
+import { fitProfileAmplitude } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**
  * Fewer than 15 usable row pairs at every candidate scale is not enough signal
- * to calibrate against — the fit throws rather than returning a coin-flip
+ * to calibrate against ??the fit throws rather than returning a coin-flip
  * amplitude.
  *
- * Scenario: a 5-row nose→chin span throws.
+ * Scenario: a 5-row nose?뭖hin span throws.
  */
 export const test_forge_profile_amplitude_short_span = (): void => {
   const ext = new Array<number>(100).fill(200);

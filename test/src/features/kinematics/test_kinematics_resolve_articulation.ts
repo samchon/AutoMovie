@@ -1,32 +1,32 @@
 import {
-  IAutoFilmResolvedBone,
+  IautomovieResolvedBone,
   Quaternion,
   resolvePose,
-} from "@autofilm/engine";
-import { AutoFilmHumanoidBone } from "@autofilm/interface";
+} from "@automovie/engine";
+import { automovieHumanoidBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
 import { qclose, vclose } from "../internal/predicates";
 
 const at = (
-  rs: IAutoFilmResolvedBone[],
-  b: AutoFilmHumanoidBone,
-): IAutoFilmResolvedBone => {
+  rs: IautomovieResolvedBone[],
+  b: automovieHumanoidBone,
+): IautomovieResolvedBone => {
   const r = rs.find((x) => x.bone === b);
   if (r === undefined) throw new Error(`bone ${b} not resolved`);
   return r;
 };
 
 /**
- * Articulating a bone must rotate its whole subtree, not just itself — the
+ * Articulating a bone must rotate its whole subtree, not just itself ??the
  * defining property of forward kinematics. This pins that a parent's rotation
  * propagates into its children's world positions.
  *
- * Scenario: twist the chest 90° about +Y. The chest's own local rotation
- * becomes Y90, and its child the leftUpperArm — whose rest offset is the local
- * +X vector (0.2,0,0) — swings a quarter turn to −Z, so its world position
- * moves from (0.2,1.4,0) at rest to (0,1.4,−0.2).
+ * Scenario: twist the chest 90째 about +Y. The chest's own local rotation
+ * becomes Y90, and its child the leftUpperArm ??whose rest offset is the local
+ * +X vector (0.2,0,0) ??swings a quarter turn to ?뭒, so its world position
+ * moves from (0.2,1.4,0) at rest to (0,1.4,??.2).
  */
 export const test_kinematics_resolve_articulation = (): void => {
   const skeleton = createSkeleton();

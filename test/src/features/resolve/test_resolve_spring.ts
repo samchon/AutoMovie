@@ -1,23 +1,23 @@
-import { Matrix4, createSpringState, stepSpring } from "@autofilm/engine";
+import { Matrix4, createSpringState, stepSpring } from "@automovie/engine";
 import {
-  IAutoFilmSpringDriver,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieSpringDriver,
+  IautomovieTransform,
+  IautomovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
-const W = (p: IAutoFilmVector3): number[] =>
+const W = (p: IautomovieVector3): number[] =>
   Matrix4.compose(p, { x: 0, y: 0, z: 0, w: 1 }, { x: 1, y: 1, z: 1 });
 
-const trs = (x: number, y: number, z: number): IAutoFilmTransform => ({
+const trs = (x: number, y: number, z: number): IautomovieTransform => ({
   translation: { x, y, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 
-const spring: IAutoFilmSpringDriver = {
+const spring: IautomovieSpringDriver = {
   type: "spring",
   chain: ["root", "j1", "j2"],
   stiffness: 0.3,
@@ -28,15 +28,15 @@ const spring: IAutoFilmSpringDriver = {
   center: null,
 };
 
-const local = new Map<string, IAutoFilmTransform>([
+const local = new Map<string, IautomovieTransform>([
   ["j1", trs(1, 0, 0)],
   ["j2", trs(1, 0, 0)],
 ]);
 
-const at = (world: Map<string, number[]>, id: string): IAutoFilmVector3 =>
+const at = (world: Map<string, number[]>, id: string): IautomovieVector3 =>
   Matrix4.position(world.get(id)!);
 
-const dist = (a: IAutoFilmVector3, b: IAutoFilmVector3): number =>
+const dist = (a: IautomovieVector3, b: IautomovieVector3): number =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 /** Run `steps` of the spring from a fresh rest chain laid out along +X. */
@@ -58,11 +58,11 @@ const run = (steps: number): Map<string, number[]> => {
  *
  * Scenarios:
  *
- * 1. After enough steps the chain laid out along +X has sagged downward — both
+ * 1. After enough steps the chain laid out along +X has sagged downward ??both
  *    joints sit below the rest line, the tip lower than the mid.
  * 2. Each bone keeps its rest length exactly (the hard length constraint), so the
  *    joints ride a unit sphere around their parent.
- * 3. The same inputs replay bit-for-bit (determinism — the property that makes
+ * 3. The same inputs replay bit-for-bit (determinism ??the property that makes
  *    spring usable in a reproducible render).
  */
 export const test_resolve_spring = (): void => {

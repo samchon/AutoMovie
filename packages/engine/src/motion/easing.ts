@@ -1,16 +1,16 @@
-import { AutoFilmEasing } from "@autofilm/interface";
+import { automovieEasing } from "@automovie/interface";
 
 /**
  * Evaluate a normalized easing curve: maps a linear progress `t` in `[0, 1]`
  * between two keyframes to an eased progress in `[0, 1]`.
  *
- * Covers the named {@link AutoFilmEasing} curves. `cubicBezier` is handled
+ * Covers the named {@link automovieEasing} curves. `cubicBezier` is handled
  * separately by {@link cubicBezierEasing} since it needs the keyframe's control
  * points; passing `"cubicBezier"` here falls back to linear.
  *
  * @author Samchon
  */
-export const ease = (curve: AutoFilmEasing, t: number): number => {
+export const ease = (curve: automovieEasing, t: number): number => {
   const x = Math.min(1, Math.max(0, t));
   switch (curve) {
     case "linear":
@@ -24,15 +24,15 @@ export const ease = (curve: AutoFilmEasing, t: number): number => {
     case "step":
       return x < 1 ? 0 : 1;
     case "cubicBezier":
-      return x; // needs control points — see cubicBezierEasing
+      return x; // needs control points ??see cubicBezierEasing
   }
 };
 
 /**
- * Evaluate a CSS-style cubic Bézier easing `[x1, y1, x2, y2]` at progress `t`.
+ * Evaluate a CSS-style cubic B챕zier easing `[x1, y1, x2, y2]` at progress `t`.
  *
  * Solves the parametric x(s) = t for the curve parameter `s` (Newton with a
- * bisection fallback), then returns y(s). Endpoints are fixed at (0,0)–(1,1).
+ * bisection fallback), then returns y(s). Endpoints are fixed at (0,0)??1,1).
  *
  * @author Samchon
  */

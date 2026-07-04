@@ -1,52 +1,52 @@
 import {
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmQuaternion,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieKeyframe,
+  IautomovieMotion,
+  IautomovieQuaternion,
+  IautomovieVector3,
+} from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 
-const IDENTITY_ROT: IAutoFilmQuaternion = { x: 0, y: 0, z: 0, w: 1 };
-const IDENTITY_SCALE: IAutoFilmVector3 = { x: 1, y: 1, z: 1 };
+const IDENTITY_ROT: IautomovieQuaternion = { x: 0, y: 0, z: 0, w: 1 };
+const IDENTITY_SCALE: IautomovieVector3 = { x: 1, y: 1, z: 1 };
 
 /**
- * Bake continuous root **travel** onto an in-place locomotion cycle — turning a
+ * Bake continuous root **travel** onto an in-place locomotion cycle ??turning a
  * walk/run that marches on the spot into one that actually crosses the floor.
  *
  * A locomotion clip (walk, run) is authored looping and stationary so its
  * footwork reads cleanly; to move the character through the world you add root
  * translation. Doing that per keyframe by hand is tedious and snaps back at
  * every loop boundary. `travelMotion` instead repeats `base` `cycles` times and
- * adds a root offset that grows **linearly with elapsed time** (`velocity · t`,
+ * adds a root offset that grows **linearly with elapsed time** (`velocity 쨌 t`,
  * world meters/second). Because the offset is a continuous function of the
- * global time — not reset per cycle — it carries smoothly across every seam, so
+ * global time ??not reset per cycle ??it carries smoothly across every seam, so
  * the figure glides forward while its legs keep cycling. Any root transform the
  * base already carries (e.g. a hop's vertical bob) is preserved and the travel
  * is added on top.
  *
- * The result is an ordinary non-looping {@link IAutoFilmMotion} (it has a finite
- * extent in space), sampled like any other clip — and a camera can follow its
+ * The result is an ordinary non-looping {@link IautomovieMotion} (it has a finite
+ * extent in space), sampled like any other clip ??and a camera can follow its
  * root to keep the moving character in frame.
  *
  * `facing`, when given, orients the root by that rotation (composed onto any
- * rotation the base root already carries) — so a walk that travels sideways can
+ * rotation the base root already carries) ??so a walk that travels sideways can
  * turn the body to face where it is going instead of strafing.
  *
  * @author Samchon
  */
 export const travelMotion = (
   id: string,
-  base: IAutoFilmMotion,
+  base: IautomovieMotion,
   cycles: number,
-  velocity: IAutoFilmVector3,
-  facing?: IAutoFilmQuaternion,
-): IAutoFilmMotion => {
-  const keyframes: IAutoFilmKeyframe[] = [];
+  velocity: IautomovieVector3,
+  facing?: IautomovieQuaternion,
+): IautomovieMotion => {
+  const keyframes: IautomovieKeyframe[] = [];
   for (let c = 0; c < cycles; ++c) {
     for (const k of base.keyframes) {
       // drop the duplicate seam keyframe (a later cycle's time:0) so times stay
-      // strictly increasing — the prior cycle's final frame already covers it
+      // strictly increasing ??the prior cycle's final frame already covers it
       if (c > 0 && k.time === 0) continue;
       const globalT = c * base.duration + k.time;
       const baseRoot = k.pose.root;

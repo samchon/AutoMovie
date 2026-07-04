@@ -1,17 +1,17 @@
-import { Quaternion, compileCameraMove } from "@autofilm/engine";
+import { Quaternion, compileCameraMove } from "@automovie/engine";
 import {
-  IAutoFilmCamera,
-  IAutoFilmCameraAction,
-  IAutoFilmQuaternion,
-} from "@autofilm/interface";
+  IautomovieCamera,
+  IautomovieCameraAction,
+  IautomovieQuaternion,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
 const camera = (
   translation = { x: 0, y: 1.44, z: 5 },
-  rotation: IAutoFilmQuaternion = { x: 0, y: 0, z: 0, w: 1 },
-): IAutoFilmCamera => ({
+  rotation: IautomovieQuaternion = { x: 0, y: 0, z: 0, w: 1 },
+): IautomovieCamera => ({
   id: "cam",
   transform: { translation, rotation, scale: { x: 1, y: 1, z: 1 } },
   fovY: 90,
@@ -20,11 +20,11 @@ const camera = (
 });
 
 const frame = (
-  move: IAutoFilmCameraAction["move"],
-  framing: IAutoFilmCameraAction["framing"],
+  move: IautomovieCameraAction["move"],
+  framing: IautomovieCameraAction["framing"],
   start = 0,
   duration: number | "auto" = "auto",
-): IAutoFilmCameraAction => ({
+): IautomovieCameraAction => ({
   verb: "frame",
   actor: "cam",
   start,
@@ -37,21 +37,21 @@ const frame = (
 const SUBJECT = { base: { x: 0, y: 0, z: 0 }, height: 2, at: null };
 
 /**
- * Pins the framing grammar's arithmetic with hand-computed oracles. With a 90°
+ * Pins the framing grammar's arithmetic with hand-computed oracles. With a 90째
  * vertical FOV, `tan(fovY/2) = 1`, so the framed distance is exactly half the
- * visible height — a subject of height 2 framed `medium` (0.62×) gives `d =
- * 1.24 / 2 = 0.62`, aimed at 0.72 × height = y 1.44.
+ * visible height ??a subject of height 2 framed `medium` (0.62횞) gives `d =
+ * 1.24 / 2 = 0.62`, aimed at 0.72 횞 height = y 1.44.
  *
  * Scenarios:
  *
- * 1. `static medium` → one key at the framed position `(0, 1.44, 0.62)` (the
- *    staged bearing is +Z), rotation identity (−Z already faces the aim),
+ * 1. `static medium` ??one key at the framed position `(0, 1.44, 0.62)` (the
+ *    staged bearing is +Z), rotation identity (?뭒 already faces the aim),
  *    emitted as `translation` + `rotation` node tracks on the camera.
- * 2. `push-in medium` → an eased dolly (9 keys) from `0.62×1.25 = 0.775` to
- *    `0.62×0.8 = 0.496` along the bearing, easeInOut so it starts slow (the
+ * 2. `push-in medium` ??an eased dolly (9 keys) from `0.62횞1.25 = 0.775` to
+ *    `0.62횞0.8 = 0.496` along the bearing, easeInOut so it starts slow (the
  *    quarter-mark key sits at 0.7401, short of a linear 0.705), spanning start
- *    → shot end.
- * 3. `whip` from a 90°-yawed staged orientation → two keys 0.2 s apart, both at
+ *    ??shot end.
+ * 3. `whip` from a 90째-yawed staged orientation ??two keys 0.2 s apart, both at
  *    the STAGED position (a whip pans in place), rotating from the staged
  *    quaternion to the aim.
  */
@@ -82,7 +82,7 @@ export const test_film_camera_move_grammar = (): void => {
     ),
   );
   TestValidator.predicate(
-    "aim already down −Z (identity rotation)",
+    "aim already down ?뭒 (identity rotation)",
     nclose(still.tracks[1]!.values[3]!, 1),
   );
 
@@ -98,21 +98,21 @@ export const test_film_camera_move_grammar = (): void => {
     9,
   );
   TestValidator.predicate(
-    "push-in spans the shot (0 → 2 s)",
+    "push-in spans the shot (0 ??2 s)",
     nclose(dolly.tracks[0]!.times[0]!, 0) &&
       nclose(dolly.tracks[0]!.times[8]!, 2),
   );
   TestValidator.predicate(
-    "dolly from 1.25×d",
+    "dolly from 1.25횞d",
     nclose(dolly.tracks[0]!.values[2]!, 0.775),
   );
   TestValidator.predicate(
-    "dolly to 0.8×d (the last key)",
+    "dolly to 0.8횞d (the last key)",
     nclose(dolly.tracks[0]!.values[26]!, 0.496),
   );
   // Eased, not ramped: at the quarter mark easeInOut(0.25) = 0.125, so the dolly
-  // has crept only 12.5% of the way (d = 0.62 × 1.19375 = 0.7401), well short of
-  // a linear quarter (0.705) — the camera starts slow.
+  // has crept only 12.5% of the way (d = 0.62 횞 1.19375 = 0.7401), well short of
+  // a linear quarter (0.705) ??the camera starts slow.
   TestValidator.predicate(
     "the dolly eases in (slow at the start)",
     nclose(dolly.tracks[0]!.values[8]!, 0.7401, 1e-3),
@@ -153,7 +153,7 @@ export const test_film_camera_move_grammar = (): void => {
     w: whip.tracks[1]!.values[7]!,
   };
   TestValidator.predicate(
-    "whip lands with −Z on the aim",
+    "whip lands with ?뭒 on the aim",
     vclose(Quaternion.rotateVector(landing, { x: 0, y: 0, z: -1 }), {
       x: 0,
       y: 0,

@@ -1,17 +1,17 @@
-import { bodyRegionBones } from "@autofilm/engine";
-import { AutoFilmHumanoidBone } from "@autofilm/interface";
+import { bodyRegionBones } from "@automovie/engine";
+import { automovieHumanoidBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 const disjoint = (
-  a: AutoFilmHumanoidBone[],
-  b: AutoFilmHumanoidBone[],
+  a: automovieHumanoidBone[],
+  b: automovieHumanoidBone[],
 ): boolean => {
   const set = new Set(a);
   return b.every((x) => !set.has(x));
 };
 
 /**
- * `bodyRegionBones` — the disjoint-and-complete partition of the humanoid
+ * `bodyRegionBones` ??the disjoint-and-complete partition of the humanoid
  * skeleton into body regions, the basis for layering clips on non-overlapping
  * regions.
  *
@@ -20,7 +20,7 @@ const disjoint = (
  * 1. Each region owns the expected bones (lower = hips+legs, upper = torso+arms+
  *    fingers, head = neck/head/eyes/jaw, face = none).
  * 2. The three bony regions are pairwise disjoint.
- * 3. They cover the full 55-bone VRM rig exactly — `fullBody` is their union.
+ * 3. They cover the full 55-bone VRM rig exactly ??`fullBody` is their union.
  */
 export const test_perform_body_region_bones = (): void => {
   const lower = bodyRegionBones("lowerBody");
@@ -50,9 +50,9 @@ export const test_perform_body_region_bones = (): void => {
   TestValidator.equals("face owns no bones", face.length, 0);
 
   // 2. pairwise disjoint
-  TestValidator.predicate("lower ∩ upper = ∅", disjoint(lower, upper));
-  TestValidator.predicate("lower ∩ head = ∅", disjoint(lower, head));
-  TestValidator.predicate("upper ∩ head = ∅", disjoint(upper, head));
+  TestValidator.predicate("lower ??upper = ??, disjoint(lower, upper));
+  TestValidator.predicate("lower ??head = ??, disjoint(lower, head));
+  TestValidator.predicate("upper ??head = ??, disjoint(upper, head));
 
   // 3. complete cover
   TestValidator.equals("fullBody is the whole 55-bone rig", full.length, 55);

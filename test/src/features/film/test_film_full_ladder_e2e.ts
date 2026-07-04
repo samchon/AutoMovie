@@ -6,7 +6,7 @@ import {
   playbackFrameSamples,
   reviewShot,
   stageScene,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -21,23 +21,23 @@ import { createSkeleton } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
 /**
- * The whole stage ladder in one take — every harness stage's payload flows
+ * The whole stage ladder in one take ??every harness stage's payload flows
  * through its engine consumer with every gate passing: the script's stand-in is
  * forged, the world staged, the beat blocked, the performance realized against
  * that blocking, the shot reviewed and passed, the film cut, and the cut
  * resolved to render-ready frame samples. This is the pipeline the `agent`
  * package will drive with a real LLM; here the payloads are fixtures, which is
- * the point — everything below the model is deterministic.
+ * the point ??everything below the model is deterministic.
  *
  * Scenarios:
  *
- * 1. Forge → stage: knightB's stand-in validates and its id is what the staged
+ * 1. Forge ??stage: knightB's stand-in validates and its id is what the staged
  *    scene node carries.
- * 2. Block → perform: the duel blocking validates and the performance realizes it
+ * 2. Block ??perform: the duel blocking validates and the performance realizes it
  *    (anchor covered, camera intent honoured) into a shot with a compiled
  *    camera clip.
  * 3. Review: the shot passes with an empty backlog.
- * 4. Cut → playback: a 24 fps one-shot cut runs 2 s → exactly 48 frame samples,
+ * 4. Cut ??playback: a 24 fps one-shot cut runs 2 s ??exactly 48 frame samples,
  *    all on `shot:beat-1` starting at its first instant.
  */
 export const test_film_full_ladder_e2e = (): void => {
@@ -98,7 +98,7 @@ export const test_film_full_ladder_e2e = (): void => {
       sequence: { id: "seq-duel", name: "duel at dawn" },
       fps: 24,
       entries: [{ shot: performed.shot.id, trim: null, transition: null }],
-      pacing: "one held take — the beat is the film.",
+      pacing: "one held take ??the beat is the film.",
       continuity: "n/a (single shot).",
     },
     [performed.shot],

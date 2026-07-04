@@ -1,23 +1,23 @@
-import { Matrix4, resolveWorldDrivers } from "@autofilm/engine";
+import { Matrix4, resolveWorldDrivers } from "@automovie/engine";
 import {
-  IAutoFilmParentDriver,
-  IAutoFilmQuaternion,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieParentDriver,
+  IautomovieQuaternion,
+  IautomovieTransform,
+  IautomovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { qclose, vclose } from "../internal/predicates";
 
 const W = (
-  pos: IAutoFilmVector3,
-  rot: IAutoFilmQuaternion = { x: 0, y: 0, z: 0, w: 1 },
-  scl: IAutoFilmVector3 = { x: 1, y: 1, z: 1 },
+  pos: IautomovieVector3,
+  rot: IautomovieQuaternion = { x: 0, y: 0, z: 0, w: 1 },
+  scl: IautomovieVector3 = { x: 1, y: 1, z: 1 },
 ): number[] => Matrix4.compose(pos, rot, scl);
 
 const parent = (
-  over: Partial<IAutoFilmParentDriver>,
-): IAutoFilmParentDriver => ({
+  over: Partial<IautomovieParentDriver>,
+): IautomovieParentDriver => ({
   type: "parent",
   owner: "o",
   parent: "p",
@@ -27,7 +27,7 @@ const parent = (
   ...over,
 });
 
-const trs = (x: number, y: number, z: number): IAutoFilmTransform => ({
+const trs = (x: number, y: number, z: number): IautomovieTransform => ({
   translation: { x, y, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -40,8 +40,8 @@ const trs = (x: number, y: number, z: number): IAutoFilmTransform => ({
  *
  * Scenarios:
  *
- * 1. All flags on: the owner snaps to the parent's full world frame — position,
- *    rotation (90° about Y), and scale (×2) — and its child recomposes off the
+ * 1. All flags on: the owner snaps to the parent's full world frame ??position,
+ *    rotation (90째 about Y), and scale (횞2) ??and its child recomposes off the
  *    new frame.
  * 2. All flags off: the owner is left exactly as it was (each component takes its
  *    own value), proving the off-side of every flag.
@@ -57,7 +57,7 @@ export const test_resolve_parent_driver = (): void => {
     ["c", W({ x: 0, y: 1, z: 0 })],
     ["p", W({ x: 10, y: 0, z: 0 }, parentRot, parentScale)],
   ]);
-  const localById = new Map<string, IAutoFilmTransform>([["c", trs(0, 1, 0)]]);
+  const localById = new Map<string, IautomovieTransform>([["c", trs(0, 1, 0)]]);
   const children = new Map<string, string[]>([["o", ["c"]]]);
   resolveWorldDrivers(
     [parent({ translation: true, rotation: true, scale: true })],
@@ -83,7 +83,7 @@ export const test_resolve_parent_driver = (): void => {
     !vclose(Matrix4.position(world.get("c")!), { x: 0, y: 1, z: 0 }, 1e-3),
   );
 
-  // 2. all flags off → owner unchanged
+  // 2. all flags off ??owner unchanged
   const world2 = new Map<string, number[]>([
     ["o", W({ x: 3, y: 4, z: 5 })],
     ["p", W({ x: 10, y: 0, z: 0 }, parentRot, parentScale)],

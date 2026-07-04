@@ -1,19 +1,19 @@
 import {
-  IAutoFilmActorContext,
+  IautomovieActorContext,
   compilePerformance,
   makeActorSynthesizer,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmActionCall,
-  IAutoFilmGait,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IautomovieActionCall,
+  IautomovieGait,
+  IautomovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const WALK: IAutoFilmGait = {
+const WALK: IautomovieGait = {
   name: "walk",
   period: 1,
   limbs: [{ bone: "leftUpperLeg", phase: 0, duty: 0.5, amplitude: 25 }],
@@ -21,9 +21,9 @@ const WALK: IAutoFilmGait = {
 
 const actorAt = (
   skeleton: string,
-  position: IAutoFilmVector3,
+  position: IautomovieVector3,
   facingDeg: number,
-): IAutoFilmActorContext => ({
+): IautomovieActorContext => ({
   skeleton,
   gaits: [WALK],
   position,
@@ -44,27 +44,27 @@ const hasExpression = (motion: {
 
 /**
  * End-to-end acceptance: a two-actor beat compiles through the **whole**
- * executable core — the reference synthesizer (gait travel, look-at, emote) and
- * the region-layering compiler — into one performance clip per actor.
+ * executable core ??the reference synthesizer (gait travel, look-at, emote) and
+ * the region-layering compiler ??into one performance clip per actor.
  *
  * The beat: HERO walks over to GUARD while looking at her and smiling; GUARD
  * stands her ground, glaring back and scowling. So HERO layers three disjoint
  * regions (legs travel + head look + face) over a 5 m walk, and GUARD layers
  * two (head + face). This exercises multi-actor fan-out, per-region
- * concurrency, gait travel, and aim — composed, not in isolation.
+ * concurrency, gait travel, and aim ??composed, not in isolation.
  */
 export const test_perform_scene = (): void => {
-  const contexts = new Map<string, IAutoFilmActorContext>([
+  const contexts = new Map<string, IautomovieActorContext>([
     ["hero", actorAt("hero-rig", { x: 0, y: 0, z: 0 }, 0)],
     ["guard", actorAt("guard-rig", { x: 0, y: 0, z: 5 }, 180)],
   ]);
-  const nodes = new Map<string, IAutoFilmVector3>([
+  const nodes = new Map<string, IautomovieVector3>([
     ["hero", { x: 0, y: 0, z: 0 }],
     ["guard", { x: 0, y: 0, z: 5 }],
   ]);
   const synth = makeActorSynthesizer(contexts, nodes);
 
-  const actions: IAutoFilmActionCall[] = [
+  const actions: IautomovieActionCall[] = [
     {
       verb: "locomote",
       gait: "walk",
@@ -123,11 +123,11 @@ export const test_perform_scene = (): void => {
     hasExpression(perf.hero!),
   );
   TestValidator.predicate(
-    "hero's walk carried it the full ~5 m (≈5 one-second cycles)",
+    "hero's walk carried it the full ~5 m (?? one-second cycles)",
     nclose(perf.hero!.duration, 5),
   );
 
-  // GUARD: stands and glares — a turned head + a scowl, no travel
+  // GUARD: stands and glares ??a turned head + a scowl, no travel
   const guardBones = bonesOf(perf.guard!);
   TestValidator.predicate("guard turns her head", guardBones.has("head"));
   TestValidator.predicate(

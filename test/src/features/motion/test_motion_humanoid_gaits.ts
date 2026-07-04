@@ -1,12 +1,12 @@
-import { HUMANOID_GAITS, gaitMotion, validateMotion } from "@autofilm/engine";
+import { HUMANOID_GAITS, gaitMotion, validateMotion } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmBone,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  automovieHumanoidBone,
+  IautomovieBone,
+  IautomovieSkeleton,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
+const bone = (b: automovieHumanoidBone): IautomovieBone => ({
   bone: b,
   parent: null,
   rest: {
@@ -19,7 +19,7 @@ const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
 
 // A rig carrying exactly the bones the gaits drive, all with null constraints
 // so validateMotion falls back to the engine's default humanoid ROM table.
-const RIG: IAutoFilmSkeleton = {
+const RIG: IautomovieSkeleton = {
   id: "humanoid",
   bones: [
     "hips",
@@ -29,18 +29,18 @@ const RIG: IAutoFilmSkeleton = {
     "rightLowerLeg",
     "leftUpperArm",
     "rightUpperArm",
-  ].map((b) => bone(b as AutoFilmHumanoidBone)),
+  ].map((b) => bone(b as automovieHumanoidBone)),
 };
 
 const NAMES = ["walk", "run", "sprint", "sneak", "march"] as const;
 
 const ampOf = (
   gait: (typeof HUMANOID_GAITS)[keyof typeof HUMANOID_GAITS],
-  b: AutoFilmHumanoidBone,
+  b: automovieHumanoidBone,
 ) => gait.limbs.find((l) => l.bone === b)!.amplitude;
 
 /**
- * The canonical humanoid gait library — `locomote`'s whole `gait` enum as ready
+ * The canonical humanoid gait library ??`locomote`'s whole `gait` enum as ready
  * data. The point of the library (and of the `neutral` field it leans on):
  * every gait must sit inside the humanoid ROM, so a host can drop any of the
  * five into an actor context and the compiled clip validates without
@@ -51,8 +51,8 @@ const ampOf = (
  * 1. All five gaits are present under their enum names, each stamping its own
  *    name.
  * 2. Each gait, synthesised densely (24 samples) and validated against the
- *    default-ROM humanoid rig, passes — knees never hyperextend, fast-gait hips
- *    never cross the −30° floor. This is the whole reason `neutral` is tuned
+ *    default-ROM humanoid rig, passes ??knees never hyperextend, fast-gait hips
+ *    never cross the ??0째 floor. This is the whole reason `neutral` is tuned
  *    per gait.
  * 3. The gaits are ordered by energy where it should show: sprint's hip swing
  *    exceeds run's exceeds walk's; sprint bends the knee hardest of the five;
@@ -80,9 +80,9 @@ export const test_motion_humanoid_gaits = (): void => {
     );
   }
 
-  const hip: AutoFilmHumanoidBone = "leftUpperLeg";
-  const knee: AutoFilmHumanoidBone = "leftLowerLeg";
-  const arm: AutoFilmHumanoidBone = "leftUpperArm";
+  const hip: automovieHumanoidBone = "leftUpperLeg";
+  const knee: automovieHumanoidBone = "leftLowerLeg";
+  const arm: automovieHumanoidBone = "leftUpperArm";
   TestValidator.predicate(
     "hip swing grows walk < run < sprint",
     ampOf(HUMANOID_GAITS.walk, hip) < ampOf(HUMANOID_GAITS.run, hip) &&
