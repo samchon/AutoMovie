@@ -32,10 +32,9 @@ const b = (
  *    ⇄ `leftLowerArm`) floating off the tree → every local check passes, but
  *    both cycle bones raise unreachable violations.
  * 3. A single-rooted skeleton declaring `spine` twice under `hips` → only the
- *    duplicate field is reported, even if both the graph and model validators
- *    flag it. The reachability walk still terminates (the visited guard absorbs
- *    the doubled child edge instead of re-queueing forever), with no spurious
- *    unreachable findings.
+ *    duplicate field is reported through model validation. The reachability
+ *    walk still terminates (the visited guard absorbs the doubled child edge
+ *    instead of re-queueing forever), with no spurious unreachable findings.
  */
 export const test_film_forge_cast_skeleton_graph = (): void => {
   const broken = forgeCast(makeScriptWrite(), {
