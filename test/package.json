@@ -5,26 +5,26 @@
   "description": "autofilm test program — exhaustive deterministic engine validation",
   "main": "src/index.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json --noEmit",
-    "start": "ts-node --transpile-only -P tsconfig.json src/index.ts",
-    "coverage": "cd .. && c8 --src packages/engine/src --src packages/forge/src --src packages/ingest/src --src packages/render/src --include \"packages/engine/src/**\" --include \"packages/forge/src/**\" --include \"packages/ingest/src/**\" --include \"packages/render/src/**\" --extension .ts --temp-directory node_modules/.cache/autofilm-c8 --reports-dir node_modules/.cache/autofilm-c8-report --reporter=text-summary --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 ts-node --transpile-only -P test/tsconfig.json test/src/index.ts"
+    "build": "ttsc -p tsconfig.json --noEmit",
+    "start": "ttsx -P tsconfig.json src/index.ts",
+    "coverage": "cd .. && c8 --src packages/engine/src --src packages/forge/src --src packages/ingest/src --src packages/render/src --include \"packages/engine/src/**\" --include \"packages/forge/src/**\" --include \"packages/ingest/src/**\" --include \"packages/render/src/**\" --exclude \"**/index.ts\" --extension .ts --temp-directory node_modules/.cache/autofilm-c8 --reports-dir node_modules/.cache/autofilm-c8-report --reporter=text-summary --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 ttsx -P test/tsconfig.json test/src/index.ts"
   },
   "author": "Samchon",
   "license": "MIT",
   "dependencies": {
-    "@gltf-transform/core": "^4.1.1",
     "@autofilm/engine": "workspace:^",
+    "@autofilm/forge": "workspace:^",
     "@autofilm/ingest": "workspace:^",
     "@autofilm/interface": "workspace:^",
     "@autofilm/render": "workspace:^",
-    "@nestia/e2e": "catalog:samchon",
-    "@autofilm/forge": "workspace:^"
+    "@gltf-transform/core": "^4.1.1",
+    "@nestia/e2e": "catalog:samchon"
   },
   "devDependencies": {
     "@types/node": "^22.19.17",
     "c8": "^10.1.3",
     "chalk": "4.1.2",
-    "ts-node": "catalog:typescript",
+    "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript"
   }
 }

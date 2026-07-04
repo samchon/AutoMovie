@@ -24,9 +24,9 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
-      # The test program runs straight through ts-node (no compile step). The
-      # coverage run executes every scenario and fails if engine coverage drops
-      # below 100% on any metric.
+      # The test program runs straight through ttsx (ttsc's tsgo runner, no
+      # separate compile step). The coverage run executes every scenario and
+      # fails if engine coverage drops below 100% on any metric.
       - name: Run Tests with 100% Coverage Gate
         run: pnpm coverage
         working-directory: test

@@ -4,12 +4,11 @@ packages:
   - test
 catalogs:
   samchon:
-    typia: ^12.0.1
-    tstl: ^3.0.0
-    "@nestia/e2e": 11.0.2
+    typia: 13.0.0-rc.1
+    "@nestia/e2e": 12.0.0-rc.2
   typescript:
-    typescript: ~5.9.3
-    ts-patch: ^3.3.0
-    ts-node: ^10.9.2
-    typescript-transform-paths: ^3.5.5
+    typescript: 7.0.1-rc
+    ttsc: ^0.16.10
+    "@ttsc/lint": ^0.16.10
+    "@ttsc/unplugin": ^0.16.10
 useNodeVersion: 22.15.0
