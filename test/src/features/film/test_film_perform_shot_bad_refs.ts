@@ -33,6 +33,8 @@ import { hasViolation } from "../internal/predicates";
  *    `$input.draft[0].repeat`.
  * 9. A staged action with an empty actor list yields `type` on
  *    `$input.draft[0].actor`.
+ * 10. A staged action with a duplicate actor entry yields `type` on the repeated
+ *     item.
  */
 export const test_film_perform_shot_bad_refs = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -200,5 +202,29 @@ export const test_film_perform_shot_bad_refs = (): void => {
     "empty actor list rejected",
     emptyActorList.success === false &&
       hasViolation(emptyActorList, "type", "$input.draft[0].actor"),
+  );
+
+  const duplicateActor = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: ["knightA", "knightA"],
+          start: 0,
+          duration: 1,
+          kind: "wave",
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "duplicate actor list entry rejected",
+    duplicateActor.success === false &&
+      hasViolation(duplicateActor, "type", "$input.draft[0].actor[1]"),
   );
 };
