@@ -43,10 +43,24 @@ export interface IAutoMovieGaitLimb {
   stanceEasing?: AutoMovieEasing;
 
   /**
+   * Control points for `stanceEasing: "cubicBezier"` as `[x1, y1, x2, y2]` in
+   * the unit square (CSS `cubic-bezier` convention). Omitted or `null` keeps
+   * the named-curve behavior.
+   */
+  stanceBezier?: [number, number, number, number] | null;
+
+  /**
    * Easing used while the limb is in swing (recovering forward). Omitted means
    * `"linear"`, preserving the original sawtooth.
    */
   swingEasing?: AutoMovieEasing;
+
+  /**
+   * Control points for `swingEasing: "cubicBezier"` as `[x1, y1, x2, y2]` in
+   * the unit square (CSS `cubic-bezier` convention). Omitted or `null` keeps
+   * the named-curve behavior.
+   */
+  swingBezier?: [number, number, number, number] | null;
 
   /**
    * Center the swing oscillates around (degrees), default `0`. A symmetric limb

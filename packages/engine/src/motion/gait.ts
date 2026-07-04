@@ -8,7 +8,7 @@ import {
   IAutoMovieTransform,
 } from "@automovie/interface";
 
-import { ease } from "./easing";
+import { cubicBezierEasing, ease } from "./easing";
 
 const IDENTITY_ROOT: Pick<IAutoMovieTransform, "rotation" | "scale"> = {
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -17,6 +17,15 @@ const IDENTITY_ROOT: Pick<IAutoMovieTransform, "rotation" | "scale"> = {
 
 /** Wrap a cycle position into `[0, 1)`. */
 const wrap01 = (x: number): number => ((x % 1) + 1) % 1;
+
+const gaitPhaseEase = (
+  curve: IAutoMovieGaitLimb["stanceEasing"],
+  bezier: IAutoMovieGaitLimb["stanceBezier"],
+  t: number,
+): number =>
+  curve === "cubicBezier" && bezier !== undefined && bezier !== null
+    ? cubicBezierEasing(bezier, t)
+    : ease(curve ?? "linear", t);
 
 /**
  * One limb's flexion (degrees) at cycle time `t`. Over its **stance** fraction
@@ -39,11 +48,18 @@ export const gaitLimbFlexion = (
   const a = limb.amplitude;
   const swing =
     u < limb.duty
-      ? a * (1 - 2 * ease(limb.stanceEasing ?? "linear", u / limb.duty))
+      ? a *
+        (1 -
+          2 *
+            gaitPhaseEase(limb.stanceEasing, limb.stanceBezier, u / limb.duty))
       : -a +
         2 *
           a *
-          ease(limb.swingEasing ?? "linear", (u - limb.duty) / (1 - limb.duty));
+          gaitPhaseEase(
+            limb.swingEasing,
+            limb.swingBezier,
+            (u - limb.duty) / (1 - limb.duty),
+          );
   return (limb.neutral ?? 0) + swing;
 };
 
