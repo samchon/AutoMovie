@@ -1,3 +1,4 @@
+import { HUMANOID_JOINT_AXES, HUMANOID_REST_FRAME } from "@automovie/engine";
 import {
   AutoMovieHumanoidBone,
   IAutoMovieJointPose,
@@ -61,21 +62,21 @@ const waveMotion = (): IAutoMovieMotion => {
     keyframes: [
       {
         time: 0,
-        pose: arm(0, 20),
+        pose: arm(0, 110),
         expression: null,
         easing: "easeInOut",
         bezier: null,
       },
       {
         time: 0.6,
-        pose: arm(-120, 60),
+        pose: arm(-120, 150),
         expression: null,
         easing: "easeInOut",
         bezier: null,
       },
       {
         time: 1.2,
-        pose: arm(0, 20),
+        pose: arm(0, 110),
         expression: null,
         easing: "easeInOut",
         bezier: null,
@@ -110,8 +111,23 @@ const rebuild = (): void => {
   figure.clear();
   object = buildModel(built.model);
   figure.add(object.object);
-  player = new AutoMoviePlayer(object, skeleton, waveMotion());
-  if (!playing) applyPose(object, currentPose(), skeleton);
+  player = new AutoMoviePlayer(
+    object,
+    skeleton,
+    waveMotion(),
+    HUMANOID_JOINT_AXES,
+    false,
+    undefined,
+    HUMANOID_REST_FRAME,
+  );
+  if (!playing)
+    applyPose(
+      object,
+      currentPose(),
+      skeleton,
+      HUMANOID_JOINT_AXES,
+      HUMANOID_REST_FRAME,
+    );
 };
 
 // ── editor UI ───────────────────────────────────────────────────────────────
@@ -171,13 +187,20 @@ const poseSlider = (
   set: (n) => {
     const s = (pose[bone] ??= { flexion: 0, abduction: 0, twist: 0 });
     s[axis] = n;
-    if (!playing) applyPose(object, currentPose(), skeleton);
+    if (!playing)
+      applyPose(
+        object,
+        currentPose(),
+        skeleton,
+        HUMANOID_JOINT_AXES,
+        HUMANOID_REST_FRAME,
+      );
   },
 });
 
 const poseSliders: SliderSpec[] = [
   poseSlider("Head tilt", "head", "flexion", -40, 40),
-  poseSlider("R shoulder raise", "rightUpperArm", "abduction", -90, 10),
+  poseSlider("R shoulder raise", "rightUpperArm", "abduction", 0, 180),
   poseSlider("R elbow bend", "rightLowerArm", "flexion", -140, 0),
   poseSlider("L hip raise", "leftUpperLeg", "flexion", -40, 90),
   poseSlider("L knee bend", "leftLowerLeg", "flexion", 0, 140),
@@ -246,7 +269,14 @@ const playBtn = document.querySelector<HTMLButtonElement>("#play")!;
 playBtn.addEventListener("click", () => {
   playing = !playing;
   playBtn.textContent = playing ? "⏸ Pause" : "▶ Play wave";
-  if (!playing) applyPose(object, currentPose(), skeleton);
+  if (!playing)
+    applyPose(
+      object,
+      currentPose(),
+      skeleton,
+      HUMANOID_JOINT_AXES,
+      HUMANOID_REST_FRAME,
+    );
 });
 
 // ── boot ─────────────────────────────────────────────────────────────────────
