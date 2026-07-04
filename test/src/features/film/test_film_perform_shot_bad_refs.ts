@@ -39,6 +39,7 @@ import { hasViolation } from "../internal/predicates";
  *     `$input.draft[0].force`.
  * 12. A staged `emote` with intensity outside `[0,1]` yields `range` on
  *     `$input.draft[0].intensity`.
+ * 13. A staged `reach` to a relative target yields `type` on `$input.draft[0].to`.
  */
 export const test_film_perform_shot_bad_refs = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -280,5 +281,30 @@ export const test_film_perform_shot_bad_refs = (): void => {
     "oversized emote intensity rejected",
     oversizedEmote.success === false &&
       hasViolation(oversizedEmote, "range", "$input.draft[0].intensity"),
+  );
+
+  const relativeReach = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "reach",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          hand: "right",
+          to: { kind: "direction", headingDeg: 90 },
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "relative reach target rejected",
+    relativeReach.success === false &&
+      hasViolation(relativeReach, "type", "$input.draft[0].to"),
   );
 };

@@ -383,6 +383,16 @@ export const performShot = (props: {
           `emote intensity must be within [0, 1], but was ${action.intensity}`,
           action.intensity,
         );
+      } else if (
+        action.verb === "reach" &&
+        resolveTargetPoint(action.to, nodePositions) === null
+      ) {
+        out.push(
+          "type",
+          `${base}[${i}].to`,
+          `a reach target must resolve to a point — a node/point/group of placed actors, not "${action.to.kind}"`,
+          action.to,
+        );
       } else if (action.verb === "attachTo") {
         // The child rides a bone of the parent, so the parent must be a staged,
         // rigged node carrying that bone. The child's follow-clip is baked
