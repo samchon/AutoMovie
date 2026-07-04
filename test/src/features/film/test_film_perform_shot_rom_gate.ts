@@ -41,7 +41,7 @@ export const test_film_perform_shot_rom_gate = (): void => {
           actor: "knightA",
           start: 0,
           duration: 1,
-          kind: "strike",
+          kind: "wave",
         },
       ],
       revise: { review: "unchanged.", final: null },

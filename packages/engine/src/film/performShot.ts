@@ -403,6 +403,21 @@ export const performShot = (props: {
           `a reach target must resolve to a point — a node/point/group of placed actors, not "${action.to.kind}"`,
           action.to,
         );
+      } else if (
+        action.verb === "gesture" &&
+        (action.kind === "point" || action.kind === "strike")
+      ) {
+        const target =
+          action.at === undefined
+            ? null
+            : resolveTargetPoint(action.at, nodePositions);
+        if (target === null)
+          out.push(
+            "type",
+            `${base}[${i}].at`,
+            `a ${action.kind} gesture target must resolve to a point — a node/point/group of placed actors`,
+            action.at,
+          );
       } else if (action.verb === "attachTo") {
         // The child rides a bone of the parent, so the parent must be a staged,
         // rigged node carrying that bone. The child's follow-clip is baked

@@ -41,6 +41,9 @@ import { hasViolation } from "../internal/predicates";
  *     `$input.draft[0].intensity`.
  * 13. A staged `reach` to a relative target yields `type` on `$input.draft[0].to`.
  * 14. A staged `lookAt` to a relative target yields `type` on `$input.draft[0].to`.
+ * 15. A staged `point` gesture without `at` yields `type` on `$input.draft[0].at`.
+ * 16. A staged `strike` gesture aimed at a relative target yields `type` on
+ *     `$input.draft[0].at`.
  */
 export const test_film_perform_shot_bad_refs = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -331,5 +334,54 @@ export const test_film_perform_shot_bad_refs = (): void => {
     "relative lookAt target rejected",
     relativeLook.success === false &&
       hasViolation(relativeLook, "type", "$input.draft[0].to"),
+  );
+
+  const untargetedPoint = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          kind: "point",
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "untargeted point gesture rejected",
+    untargetedPoint.success === false &&
+      hasViolation(untargetedPoint, "type", "$input.draft[0].at"),
+  );
+
+  const relativeStrike = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          kind: "strike",
+          at: { kind: "direction", headingDeg: 90 },
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "relative strike target rejected",
+    relativeStrike.success === false &&
+      hasViolation(relativeStrike, "type", "$input.draft[0].at"),
   );
 };
