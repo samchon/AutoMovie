@@ -44,6 +44,8 @@ import { hasViolation } from "../internal/predicates";
  * 15. A staged `point` gesture without `at` yields `type` on `$input.draft[0].at`.
  * 16. A staged `strike` gesture aimed at a relative target yields `type` on
  *     `$input.draft[0].at`.
+ * 17. A non-`frame` action assigned to a staged camera yields `type` on
+ *     `$input.draft[0].actor`.
  */
 export const test_film_perform_shot_bad_refs = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -383,5 +385,29 @@ export const test_film_perform_shot_bad_refs = (): void => {
     "relative strike target rejected",
     relativeStrike.success === false &&
       hasViolation(relativeStrike, "type", "$input.draft[0].at"),
+  );
+
+  const cameraGesture = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: "cam-main",
+          start: 0,
+          duration: 1,
+          kind: "wave",
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "non-frame camera actor rejected",
+    cameraGesture.success === false &&
+      hasViolation(cameraGesture, "type", "$input.draft[0].actor"),
   );
 };
