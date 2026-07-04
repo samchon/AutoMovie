@@ -29,6 +29,17 @@ export const reactMotion = (
   duration: number,
   peak = 0.16,
 ): IAutoMovieMotion => {
+  if (!Number.isFinite(duration))
+    throw new Error("react duration must be finite and positive");
+  if (duration <= 0)
+    throw new Error("react duration must be finite and positive");
+  if (!Number.isFinite(peak))
+    throw new Error("react peak must be finite and within duration");
+  if (peak <= 0)
+    throw new Error("react peak must be finite and within duration");
+  if (peak >= duration)
+    throw new Error("react peak must be before react duration");
+
   const neutral: IAutoMovieJointPose[] = chain.map((bone) => ({
     bone,
     flexion: 0,

@@ -33,6 +33,15 @@ const skeleton: IAutoMovieSkeleton = {
 const sp = (p: { joints: { bone: string; flexion: number | null }[] }) =>
   p.joints.find((x) => x.bone === "spine")!;
 
+const throws = (task: () => void): boolean => {
+  try {
+    task();
+    return false;
+  } catch {
+    return true;
+  }
+};
+
 /**
  * `reactMotion` — the harness `react` verb as a flinch clip: rest → ROM-clamped
  * recoil (`impactRecoil`) → rest.
@@ -86,5 +95,34 @@ export const test_motion_react = (): void => {
   TestValidator.predicate(
     "ends at rest",
     nclose(sp(clip.keyframes[2]!.pose).flexion!, 0),
+  );
+  // 4. invalid timing rejects before emitting non-increasing keyframes
+  for (const duration of [Number.NaN, 0, -1])
+    TestValidator.predicate(
+      `rejects invalid duration ${duration}`,
+      throws(() => {
+        reactMotion(
+          "badDuration",
+          skeleton,
+          { flexion: -10 },
+          ["spine"],
+          duration,
+        );
+      }),
+    );
+
+  for (const peak of [Number.NaN, 0, -0.1, 1])
+    TestValidator.predicate(
+      `rejects invalid peak ${peak}`,
+      throws(() => {
+        reactMotion("badPeak", skeleton, { flexion: -10 }, ["spine"], 1, peak);
+      }),
+    );
+
+  TestValidator.predicate(
+    "default peak after short duration rejects",
+    throws(() => {
+      reactMotion("short", skeleton, { flexion: -10 }, ["spine"], 0.1);
+    }),
   );
 };
