@@ -3,6 +3,7 @@ import {
   IAutoMovieAngleRange,
   IAutoMovieJointConstraint,
   IAutoMovieMesh,
+  IAutoMovieMeshSkin,
   IAutoMovieModel,
   IAutoMovieValidation,
 } from "@automovie/interface";
@@ -57,7 +58,12 @@ export const validateModel = (props: {
     if (part.geometry.type === "primitive")
       validateExtents(part.geometry.shape, `${pp}.geometry.shape`, collector);
     if (part.geometry.type === "mesh")
-      validateMesh(part.geometry.mesh, `${pp}.geometry.mesh`, collector);
+      validateMesh(
+        part.geometry.mesh,
+        `${pp}.geometry.mesh`,
+        boneNames,
+        collector,
+      );
     if (part.transform !== null)
       validateTransformScalars({
         transform: part.transform,
@@ -131,6 +137,7 @@ const validateExtents = (
 const validateMesh = (
   mesh: IAutoMovieMesh,
   path: string,
+  boneNames: ReadonlySet<string>,
   collector: ViolationCollector,
 ): void => {
   validateTupleBuffer(mesh.positions, 3, `${path}.positions`, collector);
@@ -172,6 +179,15 @@ const validateMesh = (
         );
     });
   }
+
+  if (mesh.skin !== null)
+    validateMeshSkin(
+      mesh.skin,
+      vertexCount,
+      `${path}.skin`,
+      boneNames,
+      collector,
+    );
 };
 
 const validateTupleBuffer = (
@@ -213,6 +229,80 @@ const validateBufferLength = (
       `${message}; expected length ${expected}, but was ${buffer.length}`,
       buffer.length,
     );
+};
+
+const validateMeshSkin = (
+  skin: IAutoMovieMeshSkin,
+  vertexCount: number,
+  path: string,
+  boneNames: ReadonlySet<string>,
+  collector: ViolationCollector,
+): void => {
+  const expectedInfluences = vertexCount * 4;
+  validateBufferLength(
+    skin.boneIndices,
+    expectedInfluences,
+    `${path}.boneIndices`,
+    "boneIndices must contain four joint references per position vertex",
+    collector,
+  );
+  validateBufferLength(
+    skin.weights,
+    expectedInfluences,
+    `${path}.weights`,
+    "weights must contain four influence values per position vertex",
+    collector,
+  );
+
+  const seen = new Set<string>();
+  skin.joints.forEach((joint, i) => {
+    if (!boneNames.has(joint))
+      collector.push(
+        "type",
+        `${path}.joints[${i}]`,
+        `skin joint "${joint}" is not a bone of this model's skeleton`,
+        joint,
+      );
+    if (seen.has(joint))
+      collector.push(
+        "type",
+        `${path}.joints[${i}]`,
+        `skin joint "${joint}" is duplicated`,
+        joint,
+      );
+    seen.add(joint);
+  });
+
+  skin.boneIndices.forEach((index, i) => {
+    const valid =
+      Number.isInteger(index) && index >= 0 && index < skin.joints.length;
+    if (!valid)
+      collector.push(
+        "range",
+        `${path}.boneIndices[${i}]`,
+        `bone index must be an integer skin joint reference in [0, ${skin.joints.length - 1}], but was ${index}`,
+        index,
+      );
+  });
+
+  skin.weights.forEach((weight, i) =>
+    collector.range(`${path}.weights[${i}]`, weight, 0, 1, "weight"),
+  );
+
+  for (let vertex = 0; vertex < vertexCount; ++vertex) {
+    const offset = vertex * 4;
+    const weights = skin.weights.slice(offset, offset + 4);
+    if (weights.length === 4 && weights.every(Number.isFinite)) {
+      const sum = weights.reduce((a, b) => a + b, 0);
+      if (Math.abs(sum - 1) > 1e-6)
+        collector.push(
+          "range",
+          `${path}.weights[${offset}]`,
+          `vertex ${vertex} skin weights must sum to 1, but summed to ${sum}`,
+          weights,
+        );
+    }
+  }
 };
 
 const CONSTRAINT_AXES = ["flexion", "abduction", "twist"] as const;
