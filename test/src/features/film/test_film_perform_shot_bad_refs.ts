@@ -28,6 +28,9 @@ import { hasViolation } from "../internal/predicates";
  *    `$input.draft[0].duration`.
  * 6. A staged action whose explicit span ends after the shot yields `range` on
  *    `$input.draft[0].duration`.
+ * 7. A staged action with `repeat: 0` yields `range` on `$input.draft[0].repeat`.
+ * 8. A staged action with fractional `repeat` yields `range` on
+ *    `$input.draft[0].repeat`.
  */
 export const test_film_perform_shot_bad_refs = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -121,5 +124,55 @@ export const test_film_perform_shot_bad_refs = (): void => {
     "overrun action duration rejected",
     overrunActionDuration.success === false &&
       hasViolation(overrunActionDuration, "range", "$input.draft[0].duration"),
+  );
+
+  const zeroRepeat = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          repeat: 0,
+          kind: "wave",
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "zero repeat rejected",
+    zeroRepeat.success === false &&
+      hasViolation(zeroRepeat, "range", "$input.draft[0].repeat"),
+  );
+
+  const fractionalRepeat = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          repeat: 1.5,
+          kind: "wave",
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "fractional repeat rejected",
+    fractionalRepeat.success === false &&
+      hasViolation(fractionalRepeat, "range", "$input.draft[0].repeat"),
   );
 };

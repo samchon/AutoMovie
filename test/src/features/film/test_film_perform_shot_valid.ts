@@ -22,6 +22,7 @@ import { createSkeleton } from "../internal/fixtures";
  *    `cam-main` live and a locked-off (`null`) camera motion.
  * 2. Both knights get a performance entry whose `motion` id matches the compiled
  *    clip in `motions`, each starting at offset 0.
+ * 3. A positive integer `repeat` is accepted by the performance gate.
  */
 export const test_film_perform_shot_valid = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -82,4 +83,29 @@ export const test_film_perform_shot_valid = (): void => {
     );
     TestValidator.equals(`start offset of ${p.node}`, p.startOffset, 0);
   }
+
+  const repeated = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: "knightA",
+          start: 0,
+          duration: 2,
+          repeat: 2,
+          kind: "wave",
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.equals(
+    "positive integer repeat accepted",
+    repeated.success,
+    true,
+  );
 };
