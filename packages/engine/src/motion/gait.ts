@@ -44,6 +44,23 @@ export const gaitLimbFlexion = (
   t: number,
   period: number,
 ): number => {
+  if (!Number.isFinite(period))
+    throw new Error("gait period must be finite and positive");
+  if (!(period > 0)) throw new Error("gait period must be finite and positive");
+  if (!Number.isFinite(limb.phase))
+    throw new Error("gait limb phase must be finite");
+  if (!Number.isFinite(limb.duty))
+    throw new Error("gait limb duty must be finite and in (0, 1)");
+  if (!(limb.duty > 0))
+    throw new Error("gait limb duty must be finite and in (0, 1)");
+  if (!(limb.duty < 1))
+    throw new Error("gait limb duty must be finite and in (0, 1)");
+  if (!Number.isFinite(limb.amplitude))
+    throw new Error("gait limb amplitude must be finite");
+  if (limb.neutral !== undefined)
+    if (!Number.isFinite(limb.neutral))
+      throw new Error("gait limb neutral must be finite");
+
   const u = wrap01(t / period + limb.phase);
   const a = limb.amplitude;
   const swing =
