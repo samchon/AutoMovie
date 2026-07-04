@@ -242,7 +242,15 @@ export const performShot = (props: {
         action.duration,
       );
     if (action.verb === "frame") {
-      const camera = actors[0]!;
+      const camera =
+        typeof action.actor === "string" ? action.actor : action.actor[0]!;
+      if (typeof action.actor !== "string")
+        out.push(
+          "type",
+          `${base}[${i}].actor`,
+          `a frame action must name exactly one staged camera, not an actor list`,
+          action.actor,
+        );
       if (!cameraIds.has(camera))
         out.push(
           "type",
