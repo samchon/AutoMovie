@@ -3,6 +3,15 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
+const throws = (task: () => void): boolean => {
+  try {
+    task();
+    return false;
+  } catch {
+    return true;
+  }
+};
+
 /**
  * `cubicBezierEasing` solves the parametric Bézier `x(s)=t` (Newton with
  * safeguards) and returns `y(s)`. This pins its endpoints, its agreement with
@@ -55,5 +64,40 @@ export const test_motion_cubic_bezier = (): void => {
   TestValidator.predicate(
     "ease(cubicBezier) falls back to linear",
     nclose(ease("cubicBezier", 0.5), 0.5),
+  );
+
+  // 5. invalid scalars reject; finite out-of-range progress still clamps
+  TestValidator.predicate(
+    "ease rejects nan progress",
+    throws(() => {
+      ease("linear", Number.NaN);
+    }),
+  );
+  TestValidator.predicate(
+    "bezier rejects nan progress",
+    throws(() => {
+      cubicBezierEasing([0, 0, 1, 1], Number.NaN);
+    }),
+  );
+  const invalidControls: [string, [number, number, number, number]][] = [
+    ["x1", [Number.NaN, 0, 1, 1]],
+    ["y1", [0, Number.NaN, 1, 1]],
+    ["x2", [0, 0, Infinity, 1]],
+    ["y2", [0, 0, 1, -Infinity]],
+  ];
+  for (const [name, control] of invalidControls)
+    TestValidator.predicate(
+      `bezier rejects non-finite ${name}`,
+      throws(() => {
+        cubicBezierEasing(control, 0.5);
+      }),
+    );
+  TestValidator.predicate(
+    "ease clamps finite low",
+    nclose(ease("linear", -1), 0),
+  );
+  TestValidator.predicate(
+    "bezier clamps finite high",
+    nclose(cubicBezierEasing([0, 0, 1, 1], 2), 1, 1e-3),
   );
 };
