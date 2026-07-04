@@ -60,11 +60,11 @@ export const blockBeat = (
       blocking.beat,
     );
 
-  if (!(blocking.duration > 0))
+  if (!Number.isFinite(blocking.duration) || !(blocking.duration > 0))
     out.push(
       "range",
       "$input.duration",
-      `beat duration must be > 0 seconds, but was ${blocking.duration}`,
+      `beat duration must be a finite number > 0 seconds, but was ${blocking.duration}`,
       blocking.duration,
     );
 
@@ -79,21 +79,22 @@ export const blockBeat = (
       );
     let previous = -Infinity;
     (intent.anchors ?? []).forEach((anchor, j) => {
-      if (anchor.t < 0 || anchor.t > blocking.duration)
+      const finiteAnchorTime = Number.isFinite(anchor.t);
+      if (!finiteAnchorTime || anchor.t < 0 || anchor.t > blocking.duration)
         out.push(
           "range",
           `$input.actors[${i}].anchors[${j}].t`,
           `anchor "${anchor.cue}" must land within [0, ${blocking.duration}] (the beat), but was ${anchor.t}`,
           anchor.t,
         );
-      if (anchor.t < previous)
+      if (finiteAnchorTime && anchor.t < previous)
         out.push(
           "range",
           `$input.actors[${i}].anchors[${j}].t`,
           `anchor "${anchor.cue}" (t=${anchor.t}) runs before its predecessor (t=${previous}) — the list order is the causal order`,
           anchor.t,
         );
-      previous = anchor.t;
+      if (finiteAnchorTime) previous = anchor.t;
     });
   });
 
