@@ -13,6 +13,13 @@ export interface IAutoMovieGaitLimb {
   bone: AutoMovieHumanoidBone;
 
   /**
+   * Joint axis this gait channel writes. Omitted means `"flexion"` so existing
+   * gait data keeps the original sagittal swing behavior; set `"abduction"` for
+   * side-to-side sway/spread or `"twist"` for axial gait details.
+   */
+  axis?: "flexion" | "abduction" | "twist";
+
+  /**
    * Where in the stride this limb's cycle starts, in `[0, 1)` — the phase
    * offset that distinguishes one gait's footfall sequence from another's.
    */
@@ -25,7 +32,7 @@ export interface IAutoMovieGaitLimb {
    */
   duty: number;
 
-  /** Peak flexion swing (degrees) about the limb's neutral. */
+  /** Peak swing on `axis` (degrees) about the limb's neutral. */
   amplitude: number;
 
   /**

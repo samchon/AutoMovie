@@ -38,7 +38,8 @@ const flexionSeq = (
  * 4. `neutral` centers the swing: a knee swung symmetrically about zero crosses
  *    into hyperextension and the ROM validator rejects it, while the same swing
  *    centered on `neutral: 25` stays inside `[0, 150]°` and passes.
- * 5. `rootBob` adds a vertical identity-TRS root curve while plain gaits keep
+ * 5. A limb can target `abduction` instead of the default `flexion`.
+ * 6. `rootBob` adds a vertical identity-TRS root curve while plain gaits keep
  *    `root: null`.
  */
 export const test_motion_gait = (): void => {
@@ -108,7 +109,44 @@ export const test_motion_gait = (): void => {
     knee.every((v) => v >= 0) && nclose(Math.max(...knee), 47),
   );
 
-  // 5. optional vertical root bob
+  // 5. non-flexion axis target
+  const sideGait = gaitMotion(
+    "side",
+    sk.id,
+    {
+      name: "side",
+      period: 1,
+      limbs: [
+        {
+          bone: "leftUpperArm",
+          axis: "abduction",
+          phase: 0,
+          duty: 0.5,
+          amplitude: 12,
+        },
+      ],
+    },
+    4,
+  );
+  const sideSeq = sideGait.keyframes.map((k) => k.pose.joints[0]!.abduction!);
+  TestValidator.predicate(
+    "abduction limb writes the sawtooth to abduction",
+    [12, 0, -12, 0, 12].every((v, i) => nclose(sideSeq[i]!, v)),
+  );
+  TestValidator.predicate(
+    "abduction limb leaves the other axes unset",
+    sideGait.keyframes.every((k) => {
+      const joint = k.pose.joints[0]!;
+      return joint.flexion === null && joint.twist === null;
+    }),
+  );
+  TestValidator.equals(
+    "abduction gait validates against the skeleton",
+    validateMotion({ motion: sideGait, skeleton: sk }).success,
+    true,
+  );
+
+  // 6. optional vertical root bob
   const bobbing = gaitMotion(
     "bob",
     sk.id,
