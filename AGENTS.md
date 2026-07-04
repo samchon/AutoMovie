@@ -35,6 +35,10 @@ Working rules for parametric head/face modeling — verification discipline, ant
 
 Driving the viewer/playground through Playwright MCP to inspect renders, poses, and motion against expectation, `.codex/skills/viewer-verification/SKILL.md`. Read before claiming a viewer or render change works.
 
+### MCP Server Design
+
+Designing `packages/mcp` — server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose (the 512-character server-instruction lead, the 1023-character tool-description cap), `.codex/skills/mcp/SKILL.md`. Read before adding or reshaping an MCP tool.
+
 ### Pull Request Submission
 
 PR submission flow, `.codex/skills/pull-request/SKILL.md`. Read only when the user explicitly asks for a pull request; never open, push, propose, or merge a PR on your own initiative.
