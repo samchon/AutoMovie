@@ -4,7 +4,13 @@ import {
   IAutoMovieKeyframe,
   IAutoMovieMotion,
   IAutoMovieProfile,
+  IAutoMovieTransform,
 } from "@automovie/interface";
+
+const IDENTITY_ROOT: Pick<IAutoMovieTransform, "rotation" | "scale"> = {
+  rotation: { x: 0, y: 0, z: 0, w: 1 },
+  scale: { x: 1, y: 1, z: 1 },
+};
 
 /** Wrap a cycle position into `[0, 1)`. */
 const wrap01 = (x: number): number => ((x % 1) + 1) % 1;
@@ -34,6 +40,25 @@ export const gaitLimbFlexion = (
   return (limb.neutral ?? 0) + swing;
 };
 
+const gaitRoot = (
+  gait: IAutoMovieGait,
+  time: number,
+): IAutoMovieTransform | null => {
+  if (gait.rootBob === undefined) return null;
+  const cycle = wrap01(time / gait.period + gait.rootBob.phase);
+  return {
+    translation: {
+      x: 0,
+      y:
+        gait.rootBob.center +
+        gait.rootBob.amplitude * Math.sin(cycle * Math.PI * 2),
+      z: 0,
+    },
+    rotation: IDENTITY_ROOT.rotation,
+    scale: IDENTITY_ROOT.scale,
+  };
+};
+
 /**
  * Synthesise a **declarative gait** ({@link IAutoMovieGait}) into a looping
  * {@link IAutoMovieMotion} — the engine fattening a creature's characteristic
@@ -61,7 +86,7 @@ export const gaitMotion = (
       time,
       pose: {
         skeleton,
-        root: null,
+        root: gaitRoot(gait, time),
         joints: gait.limbs.map((limb) => ({
           bone: limb.bone,
           flexion: gaitLimbFlexion(limb, time, gait.period),

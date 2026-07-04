@@ -19,6 +19,31 @@ export interface IAutoMovieGait {
   /** Stride period — one full cycle — in seconds. */
   period: number;
 
+  /**
+   * Optional vertical root bob for the body mass during the cycle. When
+   * present, the gait synthesiser emits a root transform whose `translation.y`
+   * follows `center + amplitude * sin(2 * PI * (t / period + phase))`. Omit it
+   * for a gait that should leave root placement entirely to `travelMotion` /
+   * staging.
+   */
+  rootBob?: IAutoMovieGaitRootBob;
+
   /** Each limb's contribution to the cycle. */
   limbs: IAutoMovieGaitLimb[];
+}
+
+/**
+ * Vertical body-mass oscillation attached to a gait cycle.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieGaitRootBob {
+  /** Peak displacement from `center`, in meters. */
+  amplitude: number;
+
+  /** Cycle phase offset in `[0, 1)`. */
+  phase: number;
+
+  /** Neutral vertical translation, in meters. */
+  center: number;
 }
