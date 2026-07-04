@@ -126,6 +126,20 @@ export const stageScene = (
         `placement must name a script cast node, but "${placement.node}" is not in the cast`,
         placement.node,
       );
+    if (!isFiniteVector3(placement.position))
+      out.push(
+        "range",
+        `$input.actors[${i}].position`,
+        "actor position must be a finite vector",
+        placement.position,
+      );
+    if (!Number.isFinite(placement.facingDeg))
+      out.push(
+        "range",
+        `$input.actors[${i}].facingDeg`,
+        `actor facingDeg must be finite, but was ${placement.facingDeg}`,
+        placement.facingDeg,
+      );
     if (placement.attach !== undefined) {
       if (placement.attach.parent === placement.node)
         out.push(
