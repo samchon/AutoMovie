@@ -18,6 +18,7 @@ import { HUMANOID_JOINT_AXES } from "../kinematics/humanoidJointAxes";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
+import { actionRegion } from "../perform/actionRegion";
 import {
   IAutoMovieActionSynthesizer,
   compilePerformance,
@@ -323,6 +324,13 @@ export const performShot = (props: {
     }
   });
 
+  const spanOf = (action: IAutoMovieActionCall): [number, number] => [
+    action.start,
+    action.duration === "auto"
+      ? performance.duration
+      : Math.min(action.start + action.duration, performance.duration),
+  ];
+
   // Frame moves on the one live camera must not overlap. An "auto" duration
   // yields to the next move by definition (its span ends where the successor
   // starts), so only an explicit duration can double-book the camera.
@@ -338,6 +346,51 @@ export const performShot = (props: {
         `frame moves overlap — the previous move runs until ${end}s, but this one starts at ${frames[i + 1]!.action.start}s`,
         frames[i + 1]!.action.start,
       );
+  }
+
+  // fullBody owns the whole rig, so it is not disjoint from any partial body
+  // region. Same-region actions still sequence through arrangeMotion, and
+  // partial disjoint regions still layer, but a concurrent fullBody + partial
+  // pair is an authoring contradiction that should be revised.
+  const actorActions = new Map<
+    string,
+    { action: IAutoMovieActionCall; index: number }[]
+  >();
+  actions.forEach((action, index) => {
+    if (action.verb === "frame") return;
+    const actors =
+      typeof action.actor === "string" ? [action.actor] : action.actor;
+    for (const actor of actors) {
+      const list = actorActions.get(actor) ?? [];
+      list.push({ action, index });
+      actorActions.set(actor, list);
+    }
+  });
+  for (const [actor, list] of actorActions) {
+    const sorted = [...list].sort(
+      (a, b) => spanOf(a.action)[0] - spanOf(b.action)[0],
+    );
+    for (let i = 0; i + 1 < sorted.length; ++i) {
+      const a = sorted[i]!;
+      const [a0, a1] = spanOf(a.action);
+      const aRegion = actionRegion(a.action);
+      for (let j = i + 1; j < sorted.length; ++j) {
+        const b = sorted[j]!;
+        const [b0, b1] = spanOf(b.action);
+        if (b0 >= a1 - 1e-9) break;
+        const bRegion = actionRegion(b.action);
+        const fullBodyConflict =
+          aRegion !== bRegion &&
+          (aRegion === "fullBody" || bRegion === "fullBody");
+        if (fullBodyConflict && b1 > a0 + 1e-9)
+          out.push(
+            "range",
+            `${base}[${b.index}].start`,
+            `${actor} has overlapping ${aRegion} and ${bRegion} actions; fullBody cannot layer with a partial body region`,
+            b.action.start,
+          );
+      }
+    }
   }
 
   // Blocking coherence: when the beat was blocked, the performance must
@@ -362,12 +415,6 @@ export const performShot = (props: {
         performance.duration,
       );
 
-    const spanOf = (action: IAutoMovieActionCall): [number, number] => [
-      action.start,
-      action.duration === "auto"
-        ? performance.duration
-        : Math.min(action.start + action.duration, performance.duration),
-    ];
     for (const intent of blocking.actors)
       for (const anchor of intent.anchors ?? []) {
         const covered = stageActions.some((action) => {

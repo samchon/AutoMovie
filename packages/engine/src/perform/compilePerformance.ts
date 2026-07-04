@@ -8,6 +8,7 @@ import {
 import { IAutoMoviePlacement, arrangeMotion } from "../motion/arrange";
 import { sampleMotion } from "../motion/sampleMotion";
 import { sequenceMotion } from "../motion/sequence";
+import { actionRegion } from "./actionRegion";
 import { bodyRegionBones } from "./bodyRegionBones";
 import { mergePoses } from "./mergePoses";
 
@@ -32,21 +33,6 @@ export type IAutoMovieActionSynthesizer = (
   action: IAutoMovieActionCall,
   actor: string,
 ) => IAutoMovieMotion | null;
-
-/** The body region a verb drives by default, when an action sets none. */
-const REGION_BY_VERB: Partial<
-  Record<IAutoMovieActionCall["verb"], AutoMovieBodyRegion>
-> = {
-  locomote: "lowerBody",
-  gesture: "upperBody",
-  reach: "upperBody",
-  lookAt: "head",
-  emote: "face",
-};
-
-/** Which region an action owns — its explicit `region`, else the verb default. */
-const regionOf = (action: IAutoMovieActionCall): AutoMovieBodyRegion =>
-  action.region ?? REGION_BY_VERB[action.verb] ?? "fullBody";
 
 const ROOT_REGIONS = new Set<AutoMovieBodyRegion>(["lowerBody", "fullBody"]);
 
@@ -152,7 +138,7 @@ export const compilePerformance = (
             )
           : base;
 
-      const region = regionOf(action);
+      const region = actionRegion(action);
       const regions =
         byActor.get(actor) ??
         new Map<AutoMovieBodyRegion, IAutoMoviePlacement[]>();
