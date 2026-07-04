@@ -11,6 +11,7 @@ import { AutoMovieEasing } from "@automovie/interface";
  * @author Samchon
  */
 export const ease = (curve: AutoMovieEasing, t: number): number => {
+  if (!Number.isFinite(t)) throw new Error("easing progress must be finite");
   const x = Math.min(1, Math.max(0, t));
   switch (curve) {
     case "linear":
@@ -40,6 +41,11 @@ export const cubicBezierEasing = (
   control: readonly [number, number, number, number],
   t: number,
 ): number => {
+  if (!Number.isFinite(t)) throw new Error("easing progress must be finite");
+  for (const value of control)
+    if (!Number.isFinite(value))
+      throw new Error("cubic bezier control points must be finite");
+
   const [x1, y1, x2, y2] = control;
   const x = Math.min(1, Math.max(0, t));
   const bez = (a: number, b: number, s: number): number => {
