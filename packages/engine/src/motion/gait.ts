@@ -82,19 +82,26 @@ const gaitRoot = (
   };
 };
 
-const gaitJoint = (
-  limb: IAutoMovieGaitLimb,
+const gaitJoints = (
+  limbs: readonly IAutoMovieGaitLimb[],
   time: number,
   period: number,
-): IAutoMovieJointPose => {
-  const joint: IAutoMovieJointPose = {
-    bone: limb.bone,
-    flexion: null,
-    abduction: null,
-    twist: null,
-  };
-  joint[limb.axis ?? "flexion"] = gaitLimbFlexion(limb, time, period);
-  return joint;
+): IAutoMovieJointPose[] => {
+  const joints = new Map<IAutoMovieGaitLimb["bone"], IAutoMovieJointPose>();
+  for (const limb of limbs) {
+    let joint = joints.get(limb.bone);
+    if (joint === undefined) {
+      joint = {
+        bone: limb.bone,
+        flexion: null,
+        abduction: null,
+        twist: null,
+      };
+      joints.set(limb.bone, joint);
+    }
+    joint[limb.axis ?? "flexion"] = gaitLimbFlexion(limb, time, period);
+  }
+  return [...joints.values()];
 };
 
 /**
@@ -125,7 +132,7 @@ export const gaitMotion = (
       pose: {
         skeleton,
         root: gaitRoot(gait, time),
-        joints: gait.limbs.map((limb) => gaitJoint(limb, time, gait.period)),
+        joints: gaitJoints(gait.limbs, time, gait.period),
       },
       expression: null,
       easing: "linear",
