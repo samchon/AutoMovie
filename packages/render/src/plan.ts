@@ -7,13 +7,19 @@ import { IAutoMovieRenderSpec } from "@automovie/interface";
  * The times are computed as exact rationals (`i / fps`), never accumulated, so
  * the same spec yields the same sample instants on every machine — the property
  * that makes a automovie render reproducible (the whole point versus a
- * stochastic diffusion video). A non-positive fps or duration yields no
- * frames.
+ * stochastic diffusion video). A non-finite or non-positive fps/duration yields
+ * no frames.
  *
  * @author Samchon
  */
 export const frameTimes = (fps: number, durationSeconds: number): number[] => {
-  if (fps <= 0 || durationSeconds <= 0) return [];
+  if (
+    !Number.isFinite(fps) ||
+    !Number.isFinite(durationSeconds) ||
+    fps <= 0 ||
+    durationSeconds <= 0
+  )
+    return [];
   const count = Math.round(durationSeconds * fps);
   return Array.from({ length: count }, (_, i) => i / fps);
 };

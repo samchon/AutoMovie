@@ -27,12 +27,13 @@ const SPEC: IAutoMovieRenderSpec = {
  * Scenarios:
  *
  * 1. A 2 s clip at 30 fps yields 60 frames sampled at exact rationals `i/30`
- *    (first 0, last 59/30) — no accumulation.
- * 2. A non-positive fps and a non-positive duration each yield zero frames (both
- *    sides of the guard).
- * 3. Frame names zero-pad to the input pattern (`frame_00042.png` ↔
+ *    (first 0, last 59/30), with no accumulation.
+ * 2. A non-positive fps and a non-positive duration each yield zero frames.
+ * 3. A non-finite fps or duration also yields zero frames; render planning must
+ *    never allocate an unbounded frame array.
+ * 4. Frame names zero-pad to the input pattern (`frame_00042.png` and
  *    `frame_%05d.png`).
- * 4. `ffmpegArgs` encodes the spec into the pinned H.264 / pixel-format / crf /
+ * 5. `ffmpegArgs` encodes the spec into the pinned H.264 / pixel-format / crf /
  *    faststart command.
  */
 export const test_render_plan = (): void => {
@@ -44,18 +45,28 @@ export const test_render_plan = (): void => {
   TestValidator.predicate("last frame at 59/30", nclose(t[59]!, 59 / 30));
 
   // 2. guards
-  TestValidator.equals("fps <= 0 → no frames", frameTimes(0, 2).length, 0);
+  TestValidator.equals("fps <= 0 -> no frames", frameTimes(0, 2).length, 0);
   TestValidator.equals(
-    "duration <= 0 → no frames",
+    "duration <= 0 -> no frames",
     frameTimes(30, 0).length,
     0,
   );
+  TestValidator.equals(
+    "non-finite fps -> no frames",
+    frameTimes(Number.POSITIVE_INFINITY, 2).length,
+    0,
+  );
+  TestValidator.equals(
+    "non-finite duration -> no frames",
+    frameTimes(30, Number.POSITIVE_INFINITY).length,
+    0,
+  );
 
-  // 3. naming
+  // 4. naming
   TestValidator.equals("frame name padded", frameName(42), "frame_00042.png");
   TestValidator.equals("frame pattern", framePattern(), "frame_%05d.png");
 
-  // 4. ffmpeg args
+  // 5. ffmpeg args
   TestValidator.equals(
     "ffmpeg args from spec",
     ffmpegArgs(SPEC, "in/frame_%05d.png", "out.mp4"),
