@@ -5,6 +5,15 @@ import { TestValidator } from "@nestia/e2e";
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
+const throws = (task: () => void): boolean => {
+  try {
+    task();
+    return false;
+  } catch {
+    return true;
+  }
+};
+
 /**
  * `travelMotion` — baking continuous root travel onto an in-place locomotion
  * cycle. A looping clip is repeated `cycles` times and a root offset growing
@@ -125,4 +134,40 @@ export const test_motion_travel = (): void => {
       Math.cos((67.5 * Math.PI) / 180),
     ),
   );
+  // 5. invalid travel inputs reject before producing malformed clips
+  const invalidCycles = [Number.NaN, 0, -1, 1.5];
+  for (const cycles of invalidCycles)
+    TestValidator.predicate(
+      `rejects invalid cycles ${cycles}`,
+      throws(() => {
+        travelMotion("badCycles", base, cycles, { x: 0, y: 0, z: 1 });
+      }),
+    );
+
+  const invalidVelocities = [
+    { x: Number.NaN, y: 0, z: 1 },
+    { x: 0, y: Infinity, z: 1 },
+    { x: 0, y: 0, z: -Infinity },
+  ];
+  for (const velocity of invalidVelocities)
+    TestValidator.predicate(
+      "rejects non-finite velocity",
+      throws(() => {
+        travelMotion("badVelocity", base, 1, velocity);
+      }),
+    );
+
+  const invalidFacings = [
+    { x: Number.NaN, y: 0, z: 0, w: 1 },
+    { x: 0, y: Infinity, z: 0, w: 1 },
+    { x: 0, y: 0, z: -Infinity, w: 1 },
+    { x: 0, y: 0, z: 0, w: Number.NaN },
+  ];
+  for (const facing of invalidFacings)
+    TestValidator.predicate(
+      "rejects non-finite facing",
+      throws(() => {
+        travelMotion("badFacing", base, 1, { x: 0, y: 0, z: 1 }, facing);
+      }),
+    );
 };
