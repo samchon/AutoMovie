@@ -126,6 +126,8 @@ export const solveMovingLaunch = (
   if (!(speed > 0)) return null;
   if (!finiteVector(origin)) return null;
   if (!finiteVector(gravity)) return null;
+  if (!Number.isInteger(iterations)) return null;
+  if (iterations < 1) return null;
 
   const initialTarget = targetAt(0);
   if (!finiteVector(initialTarget)) return null;
