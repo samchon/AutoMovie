@@ -1,12 +1,12 @@
 import {
   IAutoMoviePose,
   IAutoMovieSkeleton,
-  IAutoMovieTransform,
   IAutoMovieValidation,
 } from "@automovie/interface";
 
 import { getConstraint } from "../rom/humanoidRom";
 import { validateJointRom } from "../rom/validateJointRom";
+import { validateTransformScalars } from "./validateTransformScalars";
 import { ViolationCollector } from "./violation";
 
 /**
@@ -42,7 +42,12 @@ export const validatePose = (props: {
       props.pose.skeleton,
     );
   if (props.pose.root !== null)
-    validateRootTransform(props.pose.root, `${path}.root`, collector);
+    validateTransformScalars({
+      transform: props.pose.root,
+      path: `${path}.root`,
+      label: "root transform",
+      collector,
+    });
 
   props.pose.joints.forEach((joint, i) => {
     const jointPath = `${path}.joints[${i}]`;
@@ -71,47 +76,6 @@ export const validatePose = (props: {
   });
 
   return collector;
-};
-
-const validateRootTransform = (
-  root: IAutoMovieTransform,
-  path: string,
-  collector: ViolationCollector,
-): void => {
-  const finiteFields: ReadonlyArray<readonly [string, number]> = [
-    [`${path}.translation.x`, root.translation.x],
-    [`${path}.translation.y`, root.translation.y],
-    [`${path}.translation.z`, root.translation.z],
-    [`${path}.rotation.x`, root.rotation.x],
-    [`${path}.rotation.y`, root.rotation.y],
-    [`${path}.rotation.z`, root.rotation.z],
-    [`${path}.rotation.w`, root.rotation.w],
-    [`${path}.scale.x`, root.scale.x],
-    [`${path}.scale.y`, root.scale.y],
-    [`${path}.scale.z`, root.scale.z],
-  ];
-  for (const [fieldPath, value] of finiteFields)
-    if (!Number.isFinite(value))
-      collector.push(
-        "range",
-        fieldPath,
-        `root transform component must be finite, but was ${value}`,
-        value,
-      );
-
-  const scaleFields: ReadonlyArray<readonly [string, number]> = [
-    [`${path}.scale.x`, root.scale.x],
-    [`${path}.scale.y`, root.scale.y],
-    [`${path}.scale.z`, root.scale.z],
-  ];
-  for (const [fieldPath, value] of scaleFields)
-    if (value <= 0)
-      collector.push(
-        "range",
-        fieldPath,
-        `root scale component must be > 0, but was ${value}`,
-        value,
-      );
 };
 
 /** Convenience wrapper returning a finished {@link IAutoMovieValidation}. */
