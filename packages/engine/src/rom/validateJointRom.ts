@@ -35,6 +35,15 @@ export const validateJointRom = (props: {
     const angle: number | null = joint[axis];
     const allowed: IAutoMovieAngleRange | null = constraint[axis];
     if (angle === null || angle === 0) continue;
+    if (!Number.isFinite(angle)) {
+      collector.push(
+        "range",
+        `${path}.${axis}`,
+        `${joint.bone} ${axis} must be finite or null, but was ${angle}`,
+        angle,
+      );
+      continue;
+    }
     if (allowed === null) {
       // immobile axis: the gap is the whole distance from the required 0
       const overshoot = Math.abs(angle);
