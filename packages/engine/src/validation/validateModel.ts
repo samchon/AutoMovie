@@ -1,5 +1,7 @@
 import {
   AutoMoviePrimitiveShape,
+  IAutoMovieAngleRange,
+  IAutoMovieJointConstraint,
   IAutoMovieModel,
   IAutoMovieValidation,
 } from "@automovie/interface";
@@ -62,14 +64,17 @@ export const validateModel = (props: {
       });
   });
 
-  model.skeleton?.bones.forEach((bone, i) =>
+  model.skeleton?.bones.forEach((bone, i) => {
+    const bp = `${path}.skeleton.bones[${i}]`;
     validateTransformScalars({
       transform: bone.rest,
-      path: `${path}.skeleton.bones[${i}].rest`,
+      path: `${bp}.rest`,
       label: "skeleton bone rest transform",
       collector,
-    }),
-  );
+    });
+    if (bone.constraint !== null)
+      validateJointConstraint(bone.constraint, `${bp}.constraint`, collector);
+  });
 
   model.materials.forEach((m, i) => {
     const mp = `${path}.materials[${i}]`;
@@ -118,4 +123,59 @@ const validateExtents = (
         `${name} must be a finite number > 0, but was ${value}`,
         value,
       );
+};
+
+const CONSTRAINT_AXES = ["flexion", "abduction", "twist"] as const;
+
+const validateJointConstraint = (
+  constraint: IAutoMovieJointConstraint,
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  for (const axis of CONSTRAINT_AXES) {
+    const range = constraint[axis];
+    if (range !== null) validateAngleRange(range, `${path}.${axis}`, collector);
+  }
+
+  if (constraint.swingDeg !== undefined && constraint.swingDeg !== null) {
+    const swingDeg = constraint.swingDeg;
+    if (!Number.isFinite(swingDeg) || swingDeg <= 0)
+      collector.push(
+        "range",
+        `${path}.swingDeg`,
+        `swingDeg must be a finite number > 0, but was ${swingDeg}`,
+        swingDeg,
+      );
+  }
+};
+
+const validateAngleRange = (
+  range: IAutoMovieAngleRange,
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  const fields: ReadonlyArray<readonly [string, number]> = [
+    ["min", range.min],
+    ["max", range.max],
+  ];
+  for (const [field, value] of fields)
+    if (!Number.isFinite(value))
+      collector.push(
+        "range",
+        `${path}.${field}`,
+        `${field} must be finite, but was ${value}`,
+        value,
+      );
+
+  if (
+    Number.isFinite(range.min) &&
+    Number.isFinite(range.max) &&
+    range.min > range.max
+  )
+    collector.push(
+      "range",
+      path,
+      `range min must be <= max, but was [${range.min}, ${range.max}]`,
+      range,
+    );
 };
