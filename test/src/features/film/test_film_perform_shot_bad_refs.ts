@@ -24,6 +24,8 @@ import { hasViolation } from "../internal/predicates";
  *    `$input.draft[0].actor`.
  * 4. That action starts at t = 5 s, outside the shot's [0, 0] span → `range` on
  *    `$input.draft[0].start`.
+ * 5. A staged action with explicit duration 0 — `range` on
+ *    `$input.draft[0].duration`.
  */
 export const test_film_perform_shot_bad_refs = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -69,5 +71,29 @@ export const test_film_perform_shot_bad_refs = (): void => {
     "start out of shot",
     performed.success === false &&
       hasViolation(performed, "range", "$input.draft[0].start"),
+  );
+
+  const zeroActionDuration = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: "knightA",
+          start: 0,
+          duration: 0,
+          kind: "wave",
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "zero action duration rejected",
+    zeroActionDuration.success === false &&
+      hasViolation(zeroActionDuration, "range", "$input.draft[0].duration"),
   );
 };
