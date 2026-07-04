@@ -8,6 +8,8 @@ import {
   IAutoMovieTransform,
 } from "@automovie/interface";
 
+import { ease } from "./easing";
+
 const IDENTITY_ROOT: Pick<IAutoMovieTransform, "rotation" | "scale"> = {
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -23,7 +25,8 @@ const wrap01 = (x: number): number => ((x % 1) + 1) % 1;
  * lifts and recovers from `−amplitude` back to `+amplitude`. The `phase` offset
  * slides the whole cycle so limbs fall in sequence, and the swing is centered
  * on the limb's `neutral` (default 0) so a one-way joint like a knee stays on
- * its anatomical side of zero.
+ * its anatomical side of zero. Optional stance/swing easing curves shape each
+ * half separately while preserving the same endpoints.
  *
  * @author Samchon
  */
@@ -36,8 +39,11 @@ export const gaitLimbFlexion = (
   const a = limb.amplitude;
   const swing =
     u < limb.duty
-      ? a * (1 - (2 * u) / limb.duty) // stance: +a → −a
-      : -a + (2 * a * (u - limb.duty)) / (1 - limb.duty); // swing: −a → +a
+      ? a * (1 - 2 * ease(limb.stanceEasing ?? "linear", u / limb.duty))
+      : -a +
+        2 *
+          a *
+          ease(limb.swingEasing ?? "linear", (u - limb.duty) / (1 - limb.duty));
   return (limb.neutral ?? 0) + swing;
 };
 

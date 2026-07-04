@@ -39,7 +39,9 @@ const flexionSeq = (
  *    into hyperextension and the ROM validator rejects it, while the same swing
  *    centered on `neutral: 25` stays inside `[0, 150]°` and passes.
  * 5. A limb can target `abduction` instead of the default `flexion`.
- * 6. `rootBob` adds a vertical identity-TRS root curve while plain gaits keep
+ * 6. Stance and swing can use different easing curves while keeping the same
+ *    endpoints.
+ * 7. `rootBob` adds a vertical identity-TRS root curve while plain gaits keep
  *    `root: null`.
  */
 export const test_motion_gait = (): void => {
@@ -146,7 +148,37 @@ export const test_motion_gait = (): void => {
     true,
   );
 
-  // 6. optional vertical root bob
+  // 6. per-phase easing curves
+  const eased = flexionSeq(
+    gaitMotion(
+      "eased",
+      sk.id,
+      {
+        name: "eased",
+        period: 1,
+        limbs: [
+          {
+            bone: "leftUpperLeg",
+            phase: 0,
+            duty: 0.5,
+            amplitude: 30,
+            stanceEasing: "easeIn",
+            swingEasing: "easeOut",
+          },
+        ],
+      },
+      8,
+    ),
+    "leftUpperLeg",
+  );
+  TestValidator.predicate(
+    "easeIn stance and easeOut swing shape the sawtooth",
+    [30, 26.25, 15, -3.75, -30, -3.75, 15, 26.25, 30].every((v, i) =>
+      nclose(eased[i]!, v),
+    ),
+  );
+
+  // 7. optional vertical root bob
   const bobbing = gaitMotion(
     "bob",
     sk.id,
