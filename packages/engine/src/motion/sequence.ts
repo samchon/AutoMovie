@@ -19,6 +19,13 @@ export const sequenceMotion = (
   parts: IAutoMovieMotion[],
   loop = false,
 ): IAutoMovieMotion => {
+  if (parts.length === 0) throw new Error("sequence parts must not be empty");
+
+  const skeleton = parts[0]!.skeleton;
+  for (const part of parts)
+    if (part.skeleton !== skeleton)
+      throw new Error("sequence part skeletons must match");
+
   const keyframes: IAutoMovieKeyframe[] = [];
   let offset = 0;
   for (let p = 0; p < parts.length; ++p) {
@@ -31,7 +38,7 @@ export const sequenceMotion = (
   }
   return {
     id,
-    skeleton: parts[0]!.skeleton,
+    skeleton,
     duration: offset,
     loop,
     keyframes,
