@@ -149,6 +149,10 @@ export const gaitMotion = (
   if (!Number.isInteger(samples))
     throw new Error("gait samples must be a positive integer");
   if (samples < 1) throw new Error("gait samples must be a positive integer");
+  if (!Number.isFinite(gait.period))
+    throw new Error("gait period must be finite and positive");
+  if (!(gait.period > 0))
+    throw new Error("gait period must be finite and positive");
   assertUniqueGaitAxes(gait.limbs);
   const keyframes: IAutoMovieKeyframe[] = [];
   for (let i = 0; i <= samples; ++i) {
