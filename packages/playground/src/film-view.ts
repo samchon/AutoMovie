@@ -23,6 +23,7 @@ import {
   applyObjectMotion,
   buildModel,
   mountViewer,
+  renderCrossDissolve,
 } from "@autofilm/viewer";
 import * as THREE from "three";
 
@@ -260,8 +261,15 @@ const cut = cutSequence(
     type: "write",
     sequence: { id: "seq-pursuit", name: "the pursuit" },
     fps: 30,
-    entries: shots.map((s) => ({ shot: s.id, trim: null, transition: null })),
-    pacing: "the walk plays whole; the cut lands on stillness.",
+    entries: shots.map((s, i) => ({
+      shot: s.id,
+      trim: null,
+      // dissolve the approach into the face-off close-up (a soft reveal); the
+      // first entry has nothing to transition from.
+      transition:
+        i === 1 ? { kind: "crossDissolve" as const, duration: 0.6 } : null,
+    })),
+    pacing: "the walk dissolves into the face-off close-up.",
     continuity: "the walker ends where the close-up finds him.",
   },
   shots,
@@ -330,18 +338,42 @@ const applyStagedCamera = (): void => {
 applyStagedCamera();
 
 const shotById = new Map(shots.map((s) => [s.id, s]));
-const renderAt = (seconds: number): void => {
+let renderer!: THREE.WebGLRenderer;
+
+// Pose the scene and aim the camera for one shot at its shot-local time: advance
+// each player, ride any objectMotions, and set the camera (its motion or the
+// staged default). The read side used both for a plain frame and for each half
+// of a cross-dissolve.
+const poseShot = (shot: IAutoFilmShot, time: number): void => {
+  for (const { player } of playersByShot.get(shot.id)!) player.update(time);
+  for (const clip of shot.objectMotions)
+    applyObjectMotion(clip, time, (node) => groupsById.get(node));
+  if (shot.cameraMotion === null) applyStagedCamera();
+  else applyObjectMotion(shot.cameraMotion, time, () => camera);
+};
+
+// Draw one output second. On a hard cut it only poses the live shot and returns
+// false (the caller renders); inside a transition it composites the outgoing
+// tail and the incoming shot into a cross-dissolve itself and returns true.
+const drawFrame = (seconds: number): boolean => {
   const sample = resolveSequencePlayback(cut.sequence, shots, seconds);
-  if (sample === null) return;
-  for (const { player } of playersByShot.get(sample.shot)!)
-    player.update(sample.time);
+  if (sample === null) return false;
   const live = shotById.get(sample.shot)!;
-  // objectMotions: any projectile/prop the shot bakes rides its world-space clip
-  // (none in the pursuit today, but the read path is general for cut-in shots).
-  for (const clip of live.objectMotions)
-    applyObjectMotion(clip, sample.time, (node) => groupsById.get(node));
-  if (live.cameraMotion === null) applyStagedCamera();
-  else applyObjectMotion(live.cameraMotion, sample.time, () => camera);
+  if (sample.blend === null) {
+    poseShot(live, sample.time);
+    return false;
+  }
+  const b = sample.blend;
+  const outgoing = shotById.get(b.shot)!;
+  renderCrossDissolve(
+    renderer,
+    scene,
+    camera,
+    () => poseShot(outgoing, b.time),
+    () => poseShot(live, sample.time),
+    b.alpha,
+  );
+  return true;
 };
 
 // ── mount + deterministic seek contract (capture-shots.mjs) ──────────────────
@@ -350,17 +382,21 @@ const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 const capMode = params.get("cap") === "1";
 const frozen = params.get("t");
 const freezeAt = frozen !== null ? Number(frozen) : null;
-if (freezeAt !== null && Number.isFinite(freezeAt)) renderAt(freezeAt);
-
 const handle = mountViewer(canvas, scene, camera, (elapsed) => {
-  if (!capMode && freezeAt === null) renderAt(elapsed % (FILM_DURATION + 0.8));
+  // In capture/freeze mode the frame is driven by draw() below; returning true
+  // keeps the mount loop from overwriting a composited dissolve with a plain
+  // single-pass render.
+  if (capMode || freezeAt !== null) return true;
+  return drawFrame(elapsed % (FILM_DURATION + 0.8));
 });
+renderer = handle.renderer;
+const draw = (t: number): void => {
+  if (!drawFrame(t)) renderer.render(scene, camera);
+};
+if (freezeAt !== null && Number.isFinite(freezeAt)) draw(freezeAt);
 (window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
   t: number,
-): void => {
-  renderAt(t);
-  handle.renderer.render(scene, camera);
-};
+): void => draw(t);
 (window as unknown as { __autofilm: unknown }).__autofilm = {
   ready: true,
   duration: FILM_DURATION,
