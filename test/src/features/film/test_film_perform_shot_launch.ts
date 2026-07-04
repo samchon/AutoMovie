@@ -4,7 +4,7 @@ import {
   sampleClip,
   stageScene,
 } from "@autofilm/engine";
-import { IAutoFilmActionCall } from "@autofilm/interface";
+import { IAutoFilmActionCall, IAutoFilmTransform } from "@autofilm/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -13,7 +13,12 @@ import {
   makeStagingWrite,
   validSynthesizer,
 } from "../internal/filmFixtures";
-import { createSkeleton } from "../internal/fixtures";
+import {
+  createSkeleton,
+  keyframe,
+  makeMotion,
+  makePose,
+} from "../internal/fixtures";
 import { nclose, vclose } from "../internal/predicates";
 
 /**
@@ -74,6 +79,10 @@ const stagingOf = () =>
  * 4. A launch that cannot reach its target at the given speed → a range violation.
  * 5. A launch aimed at a bare point (no actor to recoil) still flies, but
  *    schedules no reaction — nobody performs.
+ * 6. A launch at a **moving** target is led: when the foe strides during the
+ *    shot (a `locomote` carrying root travel), performShot resolves its animated
+ *    position and aims where it will be, so the baked flight lands short of the
+ *    foe's start point — and the foe still reacts, at the led contact.
  */
 export const test_film_perform_shot_launch = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -259,6 +268,72 @@ export const test_film_perform_shot_launch = (): void => {
       "but nobody is scheduled to react",
       pointed.shot.performances.length,
       0,
+    );
+  }
+
+  // 6. a moving target is led. The foe strides (a locomote whose baked motion
+  // carries root travel); performShot resolves its animated world position and
+  // leads the aim, so the flight lands short of the foe's staged x = 6 (the foe
+  // — facing 180 — advances toward the archer as the arrow flies).
+  const rootAt = (x: number): IAutoFilmTransform => ({
+    translation: { x, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    scale: { x: 1, y: 1, z: 1 },
+  });
+  const movingSynth: IAutoFilmActionSynthesizer = (action, actor) =>
+    action.verb === "launch"
+      ? null
+      : action.verb === "locomote" && actor === "foe"
+        ? makeMotion(
+            [
+              keyframe(0, makePose([], rootAt(0))),
+              keyframe(2, makePose([], rootAt(4))),
+            ],
+            2,
+          )
+        : validSynthesizer(action, actor);
+  const led = performShot({
+    script: scriptOf(),
+    staged,
+    performance: makePerformanceWrite({
+      beat: "beat-1",
+      draft: [
+        {
+          verb: "locomote",
+          actor: "foe",
+          start: 0,
+          duration: 2,
+          gait: "walk",
+          to: { kind: "point", point: { x: 2, y: 0, z: 0 } },
+        },
+        {
+          verb: "launch",
+          actor: "archer",
+          start: 0.1,
+          duration: "auto",
+          projectile: "arrow",
+          at: { kind: "node", node: "foe" },
+          speed: 22,
+          onHit: { force: 0.6, unbalance: true },
+        },
+      ],
+      revise: { review: "the loose leads the striding foe.", final: null },
+      duration: 2,
+    }),
+    synthesize: movingSynth,
+    skeleton: (node) => (node === "arrow" ? null : createSkeleton()),
+  });
+  TestValidator.equals("the leading launch performs", led.success, true);
+  if (led.success === true) {
+    const lead = led.shot.objectMotions[0]!;
+    const lv = lead.tracks[0]!.values;
+    TestValidator.predicate(
+      "the flight leads the approaching foe — lands short of its start (x < 6)",
+      lv[lv.length - 3]! < 6 - 0.1,
+    );
+    TestValidator.predicate(
+      "the struck foe still reacts at the led contact",
+      led.shot.performances.some((p) => p.node === "foe"),
     );
   }
 };

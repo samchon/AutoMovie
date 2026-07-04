@@ -6,6 +6,7 @@ import {
   IAutoFilmConstraintViolation,
   IAutoFilmMotion,
   IAutoFilmPerformanceApplication,
+  IAutoFilmQuaternion,
   IAutoFilmScriptApplication,
   IAutoFilmShot,
   IAutoFilmSkeleton,
@@ -32,6 +33,33 @@ import {
 import { compileAttach } from "./compileAttach";
 import { compileLaunch } from "./compileLaunch";
 import { IAutoFilmStagedSet } from "./stageScene";
+
+/**
+ * A node's animated **world** position over shot time: its staged `base` plus
+ * the node-local root displacement of `motion` at that instant, rotated into the
+ * world by the node's staged `facing`. The read shared by a `follow` camera
+ * tracking a walking actor and a `launch` leading a moving target — one place,
+ * one convention (the root is node-local; the renderer applies it under the same
+ * facing).
+ */
+const animatedBaseAt =
+  (
+    base: IAutoFilmVector3,
+    facing: IAutoFilmQuaternion,
+    motion: IAutoFilmMotion,
+  ) =>
+  (seconds: number): IAutoFilmVector3 =>
+    Vector3.add(
+      base,
+      Quaternion.rotateVector(
+        facing,
+        sampleMotion(motion, seconds).pose.root?.translation ?? {
+          x: 0,
+          y: 0,
+          z: 0,
+        },
+      ),
+    );
 
 /**
  * A performed shot: the assembled {@link IAutoFilmShot} plus the dense motion
@@ -390,11 +418,36 @@ export const performShot = (props: {
   // that cannot reach its target at the given speed is a range violation.
   const objectMotions: IAutoFilmClip[] = [];
   for (const job of launches) {
+    // Lead a moving target: when the struck node travels during the shot (it
+    // carries a `locomote`), resolve where it WILL be rather than aiming at its
+    // start. Compile just that node's own motion for the animated position —
+    // node-local root rotated into the world by its staged facing, the same
+    // read a `follow` camera uses. Its own recoil fires at impact, past the
+    // lead window, so it does not perturb the pre-hit path. A static target
+    // keeps the plain intercept.
+    let targetAt: ((t: number) => IAutoFilmVector3) | undefined;
+    if (
+      job.targetNode !== null &&
+      stageActions.some(
+        (a) => a.actor === job.targetNode && a.verb === "locomote",
+      )
+    )
+      targetAt = animatedBaseAt(
+        nodePositions.get(job.targetNode)!,
+        nodeRotations.get(job.targetNode)!,
+        // just this node's own motion — its recoil fires at impact, past the
+        // lead window, so it never perturbs the pre-hit path being sampled.
+        compilePerformance(
+          stageActions.filter((a) => a.actor === job.targetNode),
+          synthesize,
+        )[job.targetNode]!,
+      );
     const result = compileLaunch({
       action: job.action,
       origin: job.origin,
       target: job.target,
       targetNode: job.targetNode,
+      targetAt,
     });
     if (result === null) {
       out.push(
@@ -489,25 +542,12 @@ export const performShot = (props: {
       subject: {
         base: point,
         height: measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT,
+        // The animated base rides the node-local root under its staged facing,
+        // the same read a leading launch uses (see animatedBaseAt).
         at:
           motion === undefined
             ? null
-            : (seconds: number) =>
-                // The subject's animated root is node-local (the renderer
-                // applies it under the actor's staged facing), so rotate it by
-                // that facing before adding to the world base — otherwise the
-                // camera follows a path turned off the actor's real heading.
-                Vector3.add(
-                  point,
-                  Quaternion.rotateVector(
-                    nodeRotations.get(node!)!,
-                    sampleMotion(motion, seconds).pose.root?.translation ?? {
-                      x: 0,
-                      y: 0,
-                      z: 0,
-                    },
-                  ),
-                ),
+            : animatedBaseAt(point, nodeRotations.get(node!)!, motion),
       },
     };
   });
