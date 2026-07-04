@@ -26,6 +26,8 @@ import { hasViolation } from "../internal/predicates";
  *    `$input.draft[0].start`.
  * 5. A staged action with explicit duration 0 — `range` on
  *    `$input.draft[0].duration`.
+ * 6. A staged action whose explicit span ends after the shot yields `range` on
+ *    `$input.draft[0].duration`.
  */
 export const test_film_perform_shot_bad_refs = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -95,5 +97,29 @@ export const test_film_perform_shot_bad_refs = (): void => {
     "zero action duration rejected",
     zeroActionDuration.success === false &&
       hasViolation(zeroActionDuration, "range", "$input.draft[0].duration"),
+  );
+
+  const overrunActionDuration = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: "knightA",
+          start: 1.5,
+          duration: 1,
+          kind: "wave",
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "overrun action duration rejected",
+    overrunActionDuration.success === false &&
+      hasViolation(overrunActionDuration, "range", "$input.draft[0].duration"),
   );
 };

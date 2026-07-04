@@ -241,6 +241,16 @@ export const performShot = (props: {
         `action duration must be > 0 seconds or "auto", but was ${action.duration}`,
         action.duration,
       );
+    if (
+      action.duration !== "auto" &&
+      action.start + action.duration > performance.duration
+    )
+      out.push(
+        "range",
+        `${base}[${i}].duration`,
+        `action span [${action.start}, ${action.start + action.duration}] must lie inside the shot [0, ${performance.duration}]`,
+        action.duration,
+      );
     if (action.verb === "frame") {
       const camera =
         typeof action.actor === "string" ? action.actor : action.actor[0]!;
