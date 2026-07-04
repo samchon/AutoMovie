@@ -1,5 +1,5 @@
 /**
- * Query tool: the **resolved end-state** of an already-built beat — where it
+ * Query tool: the **resolved end-state** of an already-built beat: where it
  * left every actor (final world position, facing, last pose). The forward-state
  * a later beat blocks against (HTN's "effects update the running world"), so a
  * sibling beat starts from where the previous one actually ended rather than
