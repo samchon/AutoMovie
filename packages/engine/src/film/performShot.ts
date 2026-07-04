@@ -670,6 +670,16 @@ export const performShot = (props: {
     // fires (start + hitTime). Times shift by start; the clip spans the shot,
     // holding at the origin before launch and at the target after (sampleClip
     // clamps) — the same shot-local convention as `cameraMotion`.
+    const hitAt = job.action.start + result.hitTime;
+    if (hitAt > performance.duration + 1e-9) {
+      out.push(
+        "range",
+        `${base}[${job.index}].speed`,
+        `the launch lands at ${hitAt}s, outside the shot ending at ${performance.duration}s — fire earlier, raise the speed, or lengthen the shot`,
+        job.action.speed,
+      );
+      continue;
+    }
     objectMotions.push({
       ...result.clip,
       duration: performance.duration,
