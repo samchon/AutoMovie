@@ -23,6 +23,8 @@ import { createSkeleton } from "../internal/fixtures";
  * 2. Both knights get a performance entry whose `motion` id matches the compiled
  *    clip in `motions`, each starting at offset 0.
  * 3. A positive integer `repeat` is accepted by the performance gate.
+ * 4. A `reach` whose target is a staged node is accepted by the positional target
+ *    gate.
  */
 export const test_film_perform_shot_valid = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -106,6 +108,31 @@ export const test_film_perform_shot_valid = (): void => {
   TestValidator.equals(
     "positive integer repeat accepted",
     repeated.success,
+    true,
+  );
+
+  const reaching = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "reach",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          hand: "right",
+          to: { kind: "node", node: "knightB" },
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.equals(
+    "positional reach target accepted",
+    reaching.success,
     true,
   );
 };
