@@ -30,6 +30,18 @@ const REACT_UNBALANCE_GAIN = 1.5;
 /** The chain a torso/head blow ripples down — head whips most, hips least. */
 const REACT_CHAIN = ["head", "neck", "chest", "spine"] as const;
 
+const assertUniqueActorGaits = (
+  actor: string,
+  gaits: IAutoMovieActorContext["gaits"],
+): void => {
+  const seen = new Set<string>();
+  for (const gait of gaits) {
+    if (seen.has(gait.name))
+      throw new Error(`duplicate actor gait name ${actor}.${gait.name}`);
+    seen.add(gait.name);
+  }
+};
+
 /** Drop a world point into an actor's model space (undo its placement). */
 const toModelSpace = (
   world: IAutoMovieVector3,
@@ -140,6 +152,7 @@ export const makeActorSynthesizer = (
   contexts: Map<string, IAutoMovieActorContext>,
   nodes: Map<string, IAutoMovieVector3>,
 ): IAutoMovieActionSynthesizer => {
+  for (const [actor, ctx] of contexts) assertUniqueActorGaits(actor, ctx.gaits);
   return (
     action: IAutoMovieActionCall,
     actor: string,
