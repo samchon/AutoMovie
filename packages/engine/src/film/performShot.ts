@@ -251,6 +251,16 @@ export const performShot = (props: {
         `action span [${action.start}, ${action.start + action.duration}] must lie inside the shot [0, ${performance.duration}]`,
         action.duration,
       );
+    if (
+      action.repeat !== undefined &&
+      (!Number.isInteger(action.repeat) || action.repeat < 1)
+    )
+      out.push(
+        "range",
+        `${base}[${i}].repeat`,
+        `action repeat must be a positive integer when present, but was ${action.repeat}`,
+        action.repeat,
+      );
     if (action.verb === "frame") {
       const camera =
         typeof action.actor === "string" ? action.actor : action.actor[0]!;
