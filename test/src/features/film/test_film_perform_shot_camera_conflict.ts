@@ -21,6 +21,8 @@ import { hasViolation } from "../internal/predicates";
  *    `$input.draft[0].actor`.
  * 2. Two `frame` actions on different cameras (`cam-main`, then `cam-b`) → `type`
  *    on the second's actor, naming the camera already live.
+ * 3. A `frame` action with an actor list — `type` on its `actor`, because a frame
+ *    move has exactly one live camera.
  */
 export const test_film_perform_shot_camera_conflict = (): void => {
   const base = makeStagingWrite();
@@ -72,5 +74,26 @@ export const test_film_perform_shot_camera_conflict = (): void => {
     performed.success === false &&
       hasViolation(performed, "type", "$input.draft[2].actor") &&
       performed.violations.some((v) => v.value === "cam-b"),
+  );
+
+  const listed = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          ...frame("cam-main", 0),
+          actor: ["cam-main", "cam-b"],
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "frame actor list rejected",
+    listed.success === false &&
+      hasViolation(listed, "type", "$input.draft[0].actor"),
   );
 };
