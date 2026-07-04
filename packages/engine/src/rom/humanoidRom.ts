@@ -15,6 +15,13 @@ const constraint = (
   twist: IAutoMovieAngleRange | null,
 ): IAutoMovieJointConstraint => ({ flexion, abduction, twist });
 
+const ballConstraint = (
+  flexion: IAutoMovieAngleRange | null,
+  abduction: IAutoMovieAngleRange | null,
+  twist: IAutoMovieAngleRange | null,
+  swingDeg: number,
+): IAutoMovieJointConstraint => ({ flexion, abduction, twist, swingDeg });
+
 /**
  * Generic finger phalanx: flexes forward, slight hyperextension, no
  * abduction/twist.
@@ -41,6 +48,11 @@ const FINGER = constraint(range(-20, 100), null, null);
  * grossly impossible poses (a backward elbow, a hyper-extended knee). Sourcing
  * exact per-population norms is tracked as future work.
  *
+ * Ball-joint `swingDeg` caps use AAOS normal pure-plane maxima that must stay
+ * legal on their own: shoulder flexion/abduction 180 degrees, hip flexion 120
+ * degrees. The cone is a conservative combined flexion+abduction cap, not a
+ * population-specific reach envelope.
+ *
  * @author Samchon
  */
 export const DEFAULT_HUMANOID_ROM: Partial<
@@ -59,16 +71,36 @@ export const DEFAULT_HUMANOID_ROM: Partial<
   // ── arms ──
   leftShoulder: constraint(range(-15, 30), range(-30, 30), null),
   rightShoulder: constraint(range(-15, 30), range(-30, 30), null),
-  leftUpperArm: constraint(range(-60, 180), range(-30, 180), range(-90, 90)),
-  rightUpperArm: constraint(range(-60, 180), range(-30, 180), range(-90, 90)),
+  leftUpperArm: ballConstraint(
+    range(-60, 180),
+    range(-30, 180),
+    range(-90, 90),
+    180,
+  ),
+  rightUpperArm: ballConstraint(
+    range(-60, 180),
+    range(-30, 180),
+    range(-90, 90),
+    180,
+  ),
   leftLowerArm: constraint(range(0, 150), null, range(-90, 90)),
   rightLowerArm: constraint(range(0, 150), null, range(-90, 90)),
   leftHand: constraint(range(-80, 70), range(-30, 20), null),
   rightHand: constraint(range(-80, 70), range(-30, 20), null),
 
   // ── legs ──
-  leftUpperLeg: constraint(range(-30, 120), range(-30, 45), range(-45, 45)),
-  rightUpperLeg: constraint(range(-30, 120), range(-30, 45), range(-45, 45)),
+  leftUpperLeg: ballConstraint(
+    range(-30, 120),
+    range(-30, 45),
+    range(-45, 45),
+    120,
+  ),
+  rightUpperLeg: ballConstraint(
+    range(-30, 120),
+    range(-30, 45),
+    range(-45, 45),
+    120,
+  ),
   leftLowerLeg: constraint(range(0, 150), null, null),
   rightLowerLeg: constraint(range(0, 150), null, null),
   leftFoot: constraint(range(-50, 20), range(-25, 25), null),
