@@ -90,6 +90,8 @@ const stagingOf = () =>
  *    foe's start point — and the foe still reacts, at the led contact.
  * 9. A launch fired too late to land before the shot ends yields a `range`
  *    violation on `.speed`.
+ * 10. A launch whose actor is also the projectile yields `type` on `.projectile`.
+ * 11. A launch aimed at its own projectile node yields `type` on `.at`.
  */
 export const test_film_perform_shot_launch = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -344,6 +346,56 @@ export const test_film_perform_shot_launch = (): void => {
       "the violation names the speed/timing",
       late.violations.some(
         (v) => v.kind === "range" && v.path.includes(".speed"),
+      ),
+    );
+
+  // 10. the projectile is the flown object, not the launching actor
+  const projectileActor = perform([
+    {
+      verb: "launch",
+      actor: "arrow",
+      start: 0.2,
+      duration: "auto",
+      projectile: "arrow",
+      at: { kind: "node", node: "foe" },
+      speed: 22,
+    },
+  ]);
+  TestValidator.equals(
+    "projectile-as-actor launch fails",
+    projectileActor.success,
+    false,
+  );
+  if (projectileActor.success === false)
+    TestValidator.predicate(
+      "the violation names the projectile",
+      projectileActor.violations.some(
+        (v) => v.kind === "type" && v.path.includes(".projectile"),
+      ),
+    );
+
+  // 11. a projectile cannot be aimed at its own staged node
+  const selfTarget = perform([
+    {
+      verb: "launch",
+      actor: "archer",
+      start: 0.2,
+      duration: "auto",
+      projectile: "arrow",
+      at: { kind: "node", node: "arrow" },
+      speed: 4,
+    },
+  ]);
+  TestValidator.equals(
+    "projectile self-target launch fails",
+    selfTarget.success,
+    false,
+  );
+  if (selfTarget.success === false)
+    TestValidator.predicate(
+      "the violation names the target",
+      selfTarget.violations.some(
+        (v) => v.kind === "type" && v.path.includes(".at"),
       ),
     );
 

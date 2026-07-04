@@ -356,6 +356,20 @@ export const performShot = (props: {
             `a launch's projectile "${action.projectile}" must be a staged scene node`,
             action.projectile,
           );
+        if (actors.includes(action.projectile))
+          out.push(
+            "type",
+            `${base}[${i}].projectile`,
+            `a launch's projectile "${action.projectile}" cannot also be a launching actor`,
+            action.projectile,
+          );
+        if (action.at.kind === "node" && action.at.node === action.projectile)
+          out.push(
+            "type",
+            `${base}[${i}].at`,
+            `a launch's projectile "${action.projectile}" cannot target itself`,
+            action.at,
+          );
         const target = resolveTargetPoint(action.at, nodePositions);
         if (target === null)
           out.push(
