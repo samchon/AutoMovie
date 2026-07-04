@@ -3,6 +3,15 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
+const throws = (task: () => void): boolean => {
+  try {
+    task();
+    return false;
+  } catch {
+    return true;
+  }
+};
+
 /**
  * The 1-D damped spring used for secondary motion (tail/ear follow-through).
  * Pinned by hand-computed semi-implicit Euler: `v += (k·(target−x) − c·v)·dt; x
@@ -44,4 +53,47 @@ export const test_motion_damped_spring = (): void => {
     );
   TestValidator.predicate("converges to target", nclose(s.value, 1, 1e-3));
   TestValidator.predicate("settles to rest", nclose(s.velocity, 0, 1e-3));
+  // 5. invalid scalar inputs reject before integration
+  const invalidScalars: [string, () => void][] = [
+    [
+      "current",
+      () => dampedSpring(Number.NaN, 0, 1, { stiffness: 10, damping: 2 }, 0.1),
+    ],
+    [
+      "velocity",
+      () => dampedSpring(0, Infinity, 1, { stiffness: 10, damping: 2 }, 0.1),
+    ],
+    [
+      "target",
+      () => dampedSpring(0, 0, -Infinity, { stiffness: 10, damping: 2 }, 0.1),
+    ],
+    [
+      "stiffness",
+      () => dampedSpring(0, 0, 1, { stiffness: Number.NaN, damping: 2 }, 0.1),
+    ],
+    [
+      "damping",
+      () => dampedSpring(0, 0, 1, { stiffness: 10, damping: Infinity }, 0.1),
+    ],
+    [
+      "dt",
+      () => dampedSpring(0, 0, 1, { stiffness: 10, damping: 2 }, Number.NaN),
+    ],
+  ];
+  for (const [name, task] of invalidScalars)
+    TestValidator.predicate(`rejects non-finite ${name}`, throws(task));
+
+  TestValidator.predicate(
+    "rejects negative stiffness",
+    throws(() => dampedSpring(0, 0, 1, { stiffness: -1, damping: 2 }, 0.1)),
+  );
+  TestValidator.predicate(
+    "rejects negative damping",
+    throws(() => dampedSpring(0, 0, 1, { stiffness: 10, damping: -1 }, 0.1)),
+  );
+  for (const dt of [0, -0.1])
+    TestValidator.predicate(
+      `rejects non-positive dt ${dt}`,
+      throws(() => dampedSpring(0, 0, 1, { stiffness: 10, damping: 2 }, dt)),
+    );
 };
