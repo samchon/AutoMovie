@@ -1,8 +1,10 @@
 {
   "extends": "../internals/config/tsconfig.json",
   "compilerOptions": {
+    "rootDir": "src",
     "noEmit": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["node"]
   },
   "include": ["src"]
 }

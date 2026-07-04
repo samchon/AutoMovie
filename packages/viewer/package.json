@@ -9,7 +9,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "rimraf lib && tsc",
+    "build": "rimraf lib && ttsc",
     "postbuild": "node ../../internals/config/assertBuild.js"
   },
   "keywords": [],
@@ -27,6 +27,7 @@
   "devDependencies": {
     "@types/three": "^0.169.0",
     "rimraf": "^6.0.1",
+    "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript"
   }
 }

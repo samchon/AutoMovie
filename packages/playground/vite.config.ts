@@ -1,10 +1,14 @@
+import ttsc from "@ttsc/unplugin/vite";
 import { resolve } from "path";
 import { defineConfig } from "vite";
 
 // The workspace packages are consumed straight from TypeScript source (their
-// package "main" points at src/*.ts), so Vite must transpile them too. Two
-// pages: the character editor (index) and the engine-drivers demo (drivers).
+// package "main" points at src/*.ts), so Vite must transpile them too. The
+// @ttsc/unplugin adapter runs the same ttsc plugin pipeline Vite bundles
+// through, so compiler-powered libraries (typia) transform in the browser build
+// the same way they do under `ttsc`.
 export default defineConfig({
+  plugins: [ttsc()],
   server: {
     host: "127.0.0.1",
     port: 5173,

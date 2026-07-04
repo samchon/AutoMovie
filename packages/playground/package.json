@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "ttsc --noEmit && vite build",
     "build:human": "node scripts/build-human.mjs",
     "build:stickman": "node scripts/build-stickman.cjs",
     "build:cat": "node scripts/build-cat.cjs",
@@ -22,21 +22,23 @@
   "license": "MIT",
   "dependencies": {
     "@autofilm/engine": "workspace:^",
+    "@autofilm/forge": "workspace:^",
     "@autofilm/interface": "workspace:^",
     "@autofilm/render": "workspace:^",
     "@autofilm/viewer": "workspace:^",
     "@pixiv/three-vrm": "^3",
-    "three": "^0.169.0",
-    "@autofilm/forge": "workspace:^"
+    "three": "^0.169.0"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4",
+    "@ttsc/unplugin": "catalog:typescript",
     "@types/three": "^0.169.0",
     "esbuild": "^0.21.5",
     "gifenc": "^1.0.3",
     "h264-mp4-encoder": "^1.0.12",
     "playwright-core": "^1.60.0",
     "pngjs": "^7.0.0",
+    "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript",
     "vite": "^5.4.10"
   }
