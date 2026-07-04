@@ -42,7 +42,7 @@ export class ViolationCollector {
     this.items.push(violation(kind, path, expected, value, overshoot));
   }
 
-  /** Range check `[min, max]`; pushes a `range` violation if outside. */
+  /** Finite range check `[min, max]`; pushes a `range` violation if outside. */
   public range(
     path: string,
     value: number,
@@ -50,11 +50,11 @@ export class ViolationCollector {
     max: number,
     label = "value",
   ): void {
-    if (value < min || value > max)
+    if (!Number.isFinite(value) || value < min || value > max)
       this.push(
         "range",
         path,
-        `${label} must be within [${min}, ${max}], but was ${value}`,
+        `${label} must be a finite number within [${min}, ${max}], but was ${value}`,
         value,
       );
   }

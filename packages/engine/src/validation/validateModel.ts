@@ -66,7 +66,10 @@ export const validateModel = (props: {
   return collector.toValidation();
 };
 
-/** Push a `range` violation for any non-positive dimension of a primitive shape. */
+/**
+ * Push a `range` violation for any non-finite or non-positive primitive
+ * dimension.
+ */
 const validateExtents = (
   shape: AutoMoviePrimitiveShape,
   path: string,
@@ -91,11 +94,11 @@ const validateExtents = (
               ["height", shape.height],
             ];
   for (const [name, value] of dims)
-    if (value <= 0)
+    if (!Number.isFinite(value) || value <= 0)
       collector.push(
         "range",
         `${path}.${name}`,
-        `${name} must be > 0, but was ${value}`,
+        `${name} must be a finite number > 0, but was ${value}`,
         value,
       );
 };
