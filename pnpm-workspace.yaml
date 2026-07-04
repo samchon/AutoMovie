@@ -5,6 +5,7 @@ packages:
 catalogs:
   samchon:
     typia: 13.0.0-rc.1
+    "@typia/mcp": 13.0.0-rc.1
     "@nestia/e2e": 12.0.0-rc.2
   typescript:
     typescript: 7.0.1-rc
