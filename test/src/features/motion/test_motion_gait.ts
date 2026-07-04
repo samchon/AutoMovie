@@ -38,6 +38,8 @@ const flexionSeq = (
  * 4. `neutral` centers the swing: a knee swung symmetrically about zero crosses
  *    into hyperextension and the ROM validator rejects it, while the same swing
  *    centered on `neutral: 25` stays inside `[0, 150]°` and passes.
+ * 5. `rootBob` adds a vertical identity-TRS root curve while plain gaits keep
+ *    `root: null`.
  */
 export const test_motion_gait = (): void => {
   const motion = gaitMotion("g", "sk", GAIT, 4);
@@ -51,6 +53,10 @@ export const test_motion_gait = (): void => {
   TestValidator.predicate("duration is the period", nclose(motion.duration, 1));
   TestValidator.equals("clip loops", motion.loop, true);
   TestValidator.equals("skeleton stamped", motion.skeleton, "sk");
+  TestValidator.predicate(
+    "plain gait keeps root unset",
+    motion.keyframes.every((k) => k.pose.root === null),
+  );
 
   // 2. phase-0 limb: the stance→swing sawtooth, ends where it began
   const left = flexionSeq(motion, "leftUpperLeg");
@@ -100,5 +106,45 @@ export const test_motion_gait = (): void => {
   TestValidator.predicate(
     "the centered swing is 25 ± 22 (every sample positive)",
     knee.every((v) => v >= 0) && nclose(Math.max(...knee), 47),
+  );
+
+  // 5. optional vertical root bob
+  const bobbing = gaitMotion(
+    "bob",
+    sk.id,
+    {
+      name: "bob",
+      period: 1,
+      rootBob: { amplitude: 0.08, phase: 0, center: 1 },
+      limbs: [{ bone: "leftUpperLeg", phase: 0, duty: 0.5, amplitude: 20 }],
+    },
+    4,
+  );
+  const rootY = bobbing.keyframes.map((k) => k.pose.root!.translation.y);
+  TestValidator.predicate(
+    "root bob follows the gait sine",
+    [1, 1.08, 1, 0.92, 1].every((v, i) => nclose(rootY[i]!, v)),
+  );
+  TestValidator.predicate(
+    "root bob is identity TRS except vertical translation",
+    bobbing.keyframes.every((k) => {
+      const root = k.pose.root!;
+      return (
+        nclose(root.translation.x, 0) &&
+        nclose(root.translation.z, 0) &&
+        nclose(root.rotation.x, 0) &&
+        nclose(root.rotation.y, 0) &&
+        nclose(root.rotation.z, 0) &&
+        nclose(root.rotation.w, 1) &&
+        nclose(root.scale.x, 1) &&
+        nclose(root.scale.y, 1) &&
+        nclose(root.scale.z, 1)
+      );
+    }),
+  );
+  TestValidator.equals(
+    "root bob still validates against the skeleton",
+    validateMotion({ motion: bobbing, skeleton: sk }).success,
+    true,
   );
 };
