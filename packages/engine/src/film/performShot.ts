@@ -177,11 +177,11 @@ export const performShot = (props: {
       performance.beat,
     );
 
-  if (!(performance.duration > 0))
+  if (!Number.isFinite(performance.duration) || !(performance.duration > 0))
     out.push(
       "range",
       "$input.duration",
-      `shot duration must be > 0 seconds, but was ${performance.duration}`,
+      `shot duration must be a finite number > 0 seconds, but was ${performance.duration}`,
       performance.duration,
     );
 
@@ -259,22 +259,30 @@ export const performShot = (props: {
           actor,
         );
     });
-    if (action.start < 0 || action.start > performance.duration)
+    const finiteStart = Number.isFinite(action.start);
+    if (!finiteStart || action.start < 0 || action.start > performance.duration)
       out.push(
         "range",
         `${base}[${i}].start`,
         `action start must be within [0, ${performance.duration}] (the shot), but was ${action.start}`,
         action.start,
       );
-    if (action.duration !== "auto" && !(action.duration > 0))
+    const finiteDuration =
+      action.duration === "auto" || Number.isFinite(action.duration);
+    if (
+      action.duration !== "auto" &&
+      (!finiteDuration || !(action.duration > 0))
+    )
       out.push(
         "range",
         `${base}[${i}].duration`,
-        `action duration must be > 0 seconds or "auto", but was ${action.duration}`,
+        `action duration must be a finite number > 0 seconds or "auto", but was ${action.duration}`,
         action.duration,
       );
     if (
       action.duration !== "auto" &&
+      finiteStart &&
+      finiteDuration &&
       action.start + action.duration > performance.duration
     )
       out.push(
