@@ -4,6 +4,7 @@ import {
   IForgeSkullParameters,
   buildSkullShell,
 } from "./hairShell";
+import { clampUnitParameter } from "./parameters";
 
 /**
  * The twin-tail controls — pure `[0, 1]` numbers, preset data like every other
@@ -26,12 +27,20 @@ export interface IForgeTailParameters {
 const SEG = 12;
 const RINGS = 16;
 
+const normalizeTail = (params: IForgeTailParameters): IForgeTailParameters => ({
+  length: clampUnitParameter(params.length),
+  height: clampUnitParameter(params.height),
+  spread: clampUnitParameter(params.spread),
+  width: clampUnitParameter(params.width),
+});
+
 const tailPart = (
   side: 1 | -1,
-  p: IForgeTailParameters,
+  params: IForgeTailParameters,
   skull: IForgeSkullParameters | undefined,
   face: number[],
 ): IForgeMeshPart => {
+  const p = normalizeTail(params);
   if (p.length <= 0) return { positions: [], indices: [] };
   // skull frame from the same axes the dome uses
   const dome = buildSkullShell(skull, face);
