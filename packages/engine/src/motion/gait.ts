@@ -115,6 +115,17 @@ const assertUniqueGaitAxes = (limbs: readonly IAutoMovieGaitLimb[]): void => {
   }
 };
 
+const assertUniqueProfileGaitNames = (
+  gaits: readonly IAutoMovieGait[],
+): void => {
+  const seen = new Set<string>();
+  for (const gait of gaits) {
+    if (seen.has(gait.name))
+      throw new Error(`duplicate profile gait name ${gait.name}`);
+    seen.add(gait.name);
+  }
+};
+
 /**
  * Synthesise a **declarative gait** ({@link IAutoMovieGait}) into a looping
  * {@link IAutoMovieMotion} — the engine fattening a creature's characteristic
@@ -169,8 +180,10 @@ export const bindProfileGaits = (
   skeleton: string,
   samples: number,
 ): Record<string, IAutoMovieMotion> => {
+  const gaits = profile.gaits ?? [];
+  assertUniqueProfileGaitNames(gaits);
   const clips: Record<string, IAutoMovieMotion> = {};
-  for (const gait of profile.gaits ?? [])
+  for (const gait of gaits)
     clips[gait.name] = gaitMotion(
       `${profile.id}:${gait.name}`,
       skeleton,

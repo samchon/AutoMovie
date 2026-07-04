@@ -45,6 +45,8 @@ const doorlike: IAutoMovieProfile = {
  * 2. The same profile bound to a _different_ skeleton retargets every clip onto
  *    the new body — the point of a binding.
  * 3. A profile that declares no gaits (a door) binds to nothing.
+ * 4. Duplicate gait names are rejected before one clip overwrites another under
+ *    the same profile binding key.
  */
 export const test_motion_profile_gaits = (): void => {
   // 1. bind onto one body
@@ -85,5 +87,31 @@ export const test_motion_profile_gaits = (): void => {
     "no gaits → no clips",
     Object.keys(bindProfileGaits(doorlike, "door-rig", 4)).length,
     0,
+  );
+
+  // 4. gait names are binding keys, so duplicates are authoring errors
+  TestValidator.error("duplicate profile gait names throw", () =>
+    bindProfileGaits(
+      {
+        ...horse,
+        gaits: [
+          horse.gaits![0]!,
+          {
+            name: "walk",
+            period: 0.75,
+            limbs: [
+              {
+                bone: "leftUpperArm",
+                phase: 0.25,
+                duty: 0.45,
+                amplitude: 30,
+              },
+            ],
+          },
+        ],
+      },
+      "horse-rig",
+      4,
+    ),
   );
 };
