@@ -19,6 +19,18 @@ const clampAxis = (
 ): number =>
   range === null ? value : Math.max(range.min, Math.min(range.max, value));
 
+const readPushAxis = (
+  axis: keyof IAutoMovieRecoilPush,
+  value: number | undefined,
+): number => {
+  if (value === undefined) return 0;
+  if (!Number.isFinite(value))
+    throw new RangeError(
+      `impact recoil push ${axis} must be finite, but was ${value}`,
+    );
+  return value;
+};
+
 /**
  * Build the **flinch** a struck body yields under an impact: the reactive
  * `push` (a deflection driven by the impulse) propagates down a `chain` of
@@ -50,18 +62,19 @@ export const impactRecoil = (
       `impact recoil falloff must be within [0, 1], but was ${falloff}`,
     );
 
+  const flexion = readPushAxis("flexion", push.flexion);
+  const abduction = readPushAxis("abduction", push.abduction);
+  const twist = readPushAxis("twist", push.twist);
+
   const joints: IAutoMovieJointPose[] = chain.map((bone, i) => {
     const constraint =
       skeleton.bones.find((b) => b.bone === bone)?.constraint ?? null;
     const k = Math.pow(falloff, i);
     return {
       bone,
-      flexion: clampAxis((push.flexion ?? 0) * k, constraint?.flexion ?? null),
-      abduction: clampAxis(
-        (push.abduction ?? 0) * k,
-        constraint?.abduction ?? null,
-      ),
-      twist: clampAxis((push.twist ?? 0) * k, constraint?.twist ?? null),
+      flexion: clampAxis(flexion * k, constraint?.flexion ?? null),
+      abduction: clampAxis(abduction * k, constraint?.abduction ?? null),
+      twist: clampAxis(twist * k, constraint?.twist ?? null),
     };
   });
   return { skeleton: skeleton.id, root: null, joints };
