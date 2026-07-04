@@ -88,6 +88,7 @@ const stagingOf = () =>
  * 3. An attachTo parent that is not a staged node → an input violation.
  * 4. An attachTo parent with no rig to attach a bone of → a violation.
  * 5. A bone that is not on the parent's skeleton → a violation.
+ * 6. A child node cannot attach to one of its own bones.
  */
 export const test_film_perform_shot_attach = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -285,5 +286,23 @@ export const test_film_perform_shot_attach = (): void => {
     TestValidator.predicate(
       "the violation names the bone",
       noBone.violations.some((v) => v.path.includes(".bone")),
+    );
+
+  // 6. the child and parent must be different nodes
+  const selfAttach = perform([
+    {
+      verb: "attachTo",
+      actor: "knight",
+      parent: "knight",
+      bone: "leftHand",
+      start: 0,
+      duration: 2,
+    },
+  ]);
+  TestValidator.equals("self-attachment fails", selfAttach.success, false);
+  if (selfAttach.success === false)
+    TestValidator.predicate(
+      "the violation names the child actor",
+      selfAttach.violations.some((v) => v.path.includes(".actor")),
     );
 };
