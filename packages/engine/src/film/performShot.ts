@@ -218,6 +218,13 @@ export const performShot = (props: {
   actions.forEach((action, i) => {
     const actors =
       typeof action.actor === "string" ? [action.actor] : action.actor;
+    if (Array.isArray(action.actor) && action.actor.length === 0)
+      out.push(
+        "type",
+        `${base}[${i}].actor`,
+        "an action actor list must name at least one staged scene node or camera",
+        action.actor,
+      );
     actors.forEach((actor) => {
       if (!nodeIds.has(actor) && !cameraIds.has(actor))
         out.push(

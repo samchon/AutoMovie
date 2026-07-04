@@ -31,6 +31,8 @@ import { hasViolation } from "../internal/predicates";
  * 7. A staged action with `repeat: 0` yields `range` on `$input.draft[0].repeat`.
  * 8. A staged action with fractional `repeat` yields `range` on
  *    `$input.draft[0].repeat`.
+ * 9. A staged action with an empty actor list yields `type` on
+ *    `$input.draft[0].actor`.
  */
 export const test_film_perform_shot_bad_refs = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -174,5 +176,29 @@ export const test_film_perform_shot_bad_refs = (): void => {
     "fractional repeat rejected",
     fractionalRepeat.success === false &&
       hasViolation(fractionalRepeat, "range", "$input.draft[0].repeat"),
+  );
+
+  const emptyActorList = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: [],
+          start: 0,
+          duration: 1,
+          kind: "wave",
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "empty actor list rejected",
+    emptyActorList.success === false &&
+      hasViolation(emptyActorList, "type", "$input.draft[0].actor"),
   );
 };
