@@ -7,6 +7,15 @@ import { nclose } from "../internal/predicates";
 const spine = (m: ReturnType<typeof makePose>) =>
   m.joints.find((x) => x.bone === "spine");
 
+const throws = (task: () => void): boolean => {
+  try {
+    task();
+    return false;
+  } catch {
+    return true;
+  }
+};
+
 /**
  * `holdMotion` + `arrangeMotion` — the harness PERFORMANCE composer.
  *
@@ -103,4 +112,20 @@ export const test_motion_arrange = (): void => {
     "contiguous duration 2",
     nclose(back2back.duration, 2),
   );
+  // 5. invalid timeline scalars reject before emitting malformed keyframes
+  for (const duration of [Number.NaN, 0, -1])
+    TestValidator.predicate(
+      `hold rejects invalid duration ${duration}`,
+      throws(() => {
+        holdMotion("badHold", "skeleton-1", makePose([]), duration);
+      }),
+    );
+
+  for (const start of [Number.NaN, -1])
+    TestValidator.predicate(
+      `arrange rejects invalid start ${start}`,
+      throws(() => {
+        arrangeMotion("badArrange", [{ start, motion: A }]);
+      }),
+    );
 };
