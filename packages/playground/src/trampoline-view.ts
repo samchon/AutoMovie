@@ -1,5 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   projectileAt,
   resolveImpact,
 } from "@automovie/engine";
@@ -90,14 +91,16 @@ const poseAt = (phase: number, y: number): IAutoMovieJointPose[] => {
   const squash = y < 0.12 ? 1 - y / 0.12 : 0; // compress when near the bed
   const tuck = 60 * air;
   const knee = 24 + 90 * air + 28 * squash;
-  const armRaise = 30 + 150 * air; // arms sweep overhead at the apex (+left / −right = up)
+  // Clinical arm raise: both sides share one anatomical value. 120 starts as a
+  // readable V, 180 reaches overhead at the apex without rig-space overshoot.
+  const clinicalArmRaise = 120 + 60 * air;
   return [
     j("leftUpperLeg", { flexion: -tuck - 14 * squash, abduction: 10 }),
     j("rightUpperLeg", { flexion: -tuck - 14 * squash, abduction: -10 }),
     j("leftLowerLeg", { flexion: knee }),
     j("rightLowerLeg", { flexion: knee }),
-    j("leftUpperArm", { abduction: armRaise }),
-    j("rightUpperArm", { abduction: -armRaise }),
+    j("leftUpperArm", { abduction: clinicalArmRaise }),
+    j("rightUpperArm", { abduction: clinicalArmRaise }),
     j("spine", { flexion: -6 * air }),
   ];
 };
@@ -113,7 +116,7 @@ const step = (t: number): void => {
     },
     joints: poseAt(phase, y),
   };
-  applyPose(object, pose, skeleton, HUMANOID_JOINT_AXES);
+  applyPose(object, pose, skeleton, HUMANOID_JOINT_AXES, HUMANOID_REST_FRAME);
   // the bed dips when the figure lands
   bed.position.y = SURFACE - (y < 0.12 ? (0.12 - y) * 0.6 : 0);
 };
