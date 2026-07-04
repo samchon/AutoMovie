@@ -38,6 +38,13 @@ export const validateMotion = (props: {
   const collector = new ViolationCollector();
   const { motion, skeleton } = props;
 
+  if (motion.skeleton !== skeleton.id)
+    collector.push(
+      "type",
+      `${path}.skeleton`,
+      `motion skeleton "${motion.skeleton}" does not match target skeleton "${skeleton.id}"`,
+      motion.skeleton,
+    );
   if (!Number.isFinite(motion.duration) || !(motion.duration > 0))
     collector.push(
       "temporal",
