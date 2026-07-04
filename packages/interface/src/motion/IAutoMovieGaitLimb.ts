@@ -1,4 +1,5 @@
 import { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
+import { AutoMovieEasing } from "./AutoMovieEasing";
 
 /**
  * One limb's part in a gait cycle ({@link IAutoMovieGait}). The limbs differ
@@ -34,6 +35,18 @@ export interface IAutoMovieGaitLimb {
 
   /** Peak swing on `axis` (degrees) about the limb's neutral. */
   amplitude: number;
+
+  /**
+   * Easing used while the limb is in stance (planted, pushing back). Omitted
+   * means `"linear"`, preserving the original sawtooth.
+   */
+  stanceEasing?: AutoMovieEasing;
+
+  /**
+   * Easing used while the limb is in swing (recovering forward). Omitted means
+   * `"linear"`, preserving the original sawtooth.
+   */
+  swingEasing?: AutoMovieEasing;
 
   /**
    * Center the swing oscillates around (degrees), default `0`. A symmetric limb
