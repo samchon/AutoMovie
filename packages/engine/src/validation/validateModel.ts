@@ -4,6 +4,7 @@ import {
   IAutoMovieValidation,
 } from "@automovie/interface";
 
+import { validateTransformScalars } from "./validateTransformScalars";
 import { ViolationCollector } from "./violation";
 
 /**
@@ -52,6 +53,13 @@ export const validateModel = (props: {
       );
     if (part.geometry.type === "primitive")
       validateExtents(part.geometry.shape, `${pp}.geometry.shape`, collector);
+    if (part.transform !== null)
+      validateTransformScalars({
+        transform: part.transform,
+        path: `${pp}.transform`,
+        label: "model part transform",
+        collector,
+      });
   });
 
   model.materials.forEach((m, i) => {
