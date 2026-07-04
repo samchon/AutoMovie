@@ -4,6 +4,15 @@ import { TestValidator } from "@nestia/e2e";
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
+const errorMessage = (task: () => void): string | null => {
+  try {
+    task();
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+};
+
 /**
  * `sequenceMotion` — concatenating clips into one timeline. Parts are laid
  * end-to-end with their keyframe times offset by the running duration; a later
@@ -18,6 +27,7 @@ import { nclose } from "../internal/predicates";
  *    to 1.8.
  * 2. The merged times are strictly increasing and the skeleton id carries over.
  * 3. `loop` defaults to false and is passed through when set.
+ * 4. Invalid part lists reject before emitting malformed sequence clips.
  */
 export const test_motion_sequence = (): void => {
   const A = makeMotion(
@@ -66,5 +76,19 @@ export const test_motion_sequence = (): void => {
     "loop passes through",
     sequenceMotion("c", [A, B], true).loop,
     true,
+  );
+
+  // 4. invalid part contracts
+  TestValidator.equals(
+    "empty sequence rejects with contract error",
+    errorMessage(() => sequenceMotion("empty", [])),
+    "sequence parts must not be empty",
+  );
+  TestValidator.equals(
+    "mixed skeleton sequence rejects",
+    errorMessage(() =>
+      sequenceMotion("mixed", [A, { ...B, skeleton: "skeleton-2" }]),
+    ),
+    "sequence part skeletons must match",
   );
 };
