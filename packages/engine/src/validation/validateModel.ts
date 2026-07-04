@@ -1,6 +1,7 @@
 import {
   AutoMoviePrimitiveShape,
   IAutoMovieAngleRange,
+  IAutoMovieColor,
   IAutoMovieJointConstraint,
   IAutoMovieMesh,
   IAutoMovieMeshSkin,
@@ -90,8 +91,9 @@ export const validateModel = (props: {
     collector.range(`${mp}.metallic`, m.metallic, 0, 1, "metallic");
     collector.range(`${mp}.roughness`, m.roughness, 0, 1, "roughness");
     collector.range(`${mp}.opacity`, m.opacity, 0, 1, "opacity");
-    for (const ch of ["r", "g", "b"] as const)
-      collector.range(`${mp}.baseColor.${ch}`, m.baseColor[ch], 0, 1, ch);
+    validateColor(m.baseColor, `${mp}.baseColor`, collector);
+    if (m.emissive !== null)
+      validateColor(m.emissive, `${mp}.emissive`, collector);
   });
 
   return collector.toValidation();
@@ -229,6 +231,16 @@ const validateBufferLength = (
       `${message}; expected length ${expected}, but was ${buffer.length}`,
       buffer.length,
     );
+};
+
+const validateColor = (
+  color: IAutoMovieColor,
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  for (const ch of ["r", "g", "b"] as const)
+    collector.range(`${path}.${ch}`, color[ch], 0, 1, ch);
+  if (color.a !== null) collector.range(`${path}.a`, color.a, 0, 1, "a");
 };
 
 const validateMeshSkin = (
