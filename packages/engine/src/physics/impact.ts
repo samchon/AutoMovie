@@ -75,6 +75,14 @@ export const resolveImpact = (
   b: IAutoMovieBody,
   normal: IAutoMovieVector3,
 ): IAutoMovieImpact => {
+  const normalLengthSq = Vector3.dot(normal, normal);
+  if (!Number.isFinite(normalLengthSq))
+    throw new RangeError(
+      `impact normal must be finite, but was (${normal.x}, ${normal.y}, ${normal.z})`,
+    );
+  if (normalLengthSq === 0)
+    throw new RangeError("impact normal must be non-zero");
+
   const n = Vector3.normalize(normal);
   const vRel = Vector3.subtract(b.velocity, a.velocity); // b relative to a
   const vRelN = Vector3.dot(vRel, n);
