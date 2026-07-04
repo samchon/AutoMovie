@@ -173,18 +173,22 @@ export const stageScene = (
 
   staging.lights.forEach((light, i) => {
     claim(light.node, `$input.lights[${i}].node`);
-    if (light.intensity < 0)
+    if (!Number.isFinite(light.intensity) || light.intensity < 0)
       out.push(
         "range",
         `$input.lights[${i}].intensity`,
-        `intensity must be >= 0, but was ${light.intensity}`,
+        `intensity must be a finite number >= 0, but was ${light.intensity}`,
         light.intensity,
       );
-    if (Vector3.length(light.direction) === 0)
+    const direction = [light.direction.x, light.direction.y, light.direction.z];
+    if (
+      direction.some((component) => !Number.isFinite(component)) ||
+      Vector3.length(light.direction) === 0
+    )
       out.push(
         "range",
         `$input.lights[${i}].direction`,
-        `direction must be a non-zero vector`,
+        `direction must be a finite non-zero vector`,
         light.direction,
       );
   });

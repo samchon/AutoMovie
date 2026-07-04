@@ -15,6 +15,10 @@ import { hasViolation } from "../internal/predicates";
  *    `$input.lights[0].intensity`.
  * 2. A second light declares the zero direction → a `range` violation on
  *    `$input.lights[1].direction`.
+ * 3. A third light declares infinite intensity, yielding `range` on
+ *    `$input.lights[2].intensity`.
+ * 4. A fourth light declares a non-finite direction, yielding `range` on
+ *    `$input.lights[3].direction`.
  */
 export const test_film_stage_scene_light_invalid = (): void => {
   const base = makeStagingWrite();
@@ -27,6 +31,18 @@ export const test_film_stage_scene_light_invalid = (): void => {
           node: "void",
           role: "fill",
           direction: { x: 0, y: 0, z: 0 },
+          intensity: 0.5,
+        },
+        {
+          node: "nova",
+          role: "rim",
+          direction: { x: 0, y: -1, z: 0 },
+          intensity: Number.POSITIVE_INFINITY,
+        },
+        {
+          node: "skew",
+          role: "rim",
+          direction: { x: Number.POSITIVE_INFINITY, y: -1, z: 0 },
           intensity: 0.5,
         },
       ],
@@ -42,5 +58,15 @@ export const test_film_stage_scene_light_invalid = (): void => {
     "zero direction rejected",
     staged.success === false &&
       hasViolation(staged, "range", "$input.lights[1].direction"),
+  );
+  TestValidator.predicate(
+    "infinite intensity rejected",
+    staged.success === false &&
+      hasViolation(staged, "range", "$input.lights[2].intensity"),
+  );
+  TestValidator.predicate(
+    "non-finite direction rejected",
+    staged.success === false &&
+      hasViolation(staged, "range", "$input.lights[3].direction"),
   );
 };
