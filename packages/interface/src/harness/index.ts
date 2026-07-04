@@ -15,6 +15,7 @@ export * from "./IAutoMovieGetReachRequest";
 export * from "./IAutoMovieGetResolvedPoseRequest";
 export * from "./IAutoMovieMeasureDistanceRequest";
 export * from "./IAutoMovieGetBeatEndRequest";
+export * from "./IAutoMovieBeatEndState";
 export * from "./IAutoMovieTimingAnchor";
 export * from "./IAutoMovieSlate";
 export * from "./IAutoMovieScriptApplication";

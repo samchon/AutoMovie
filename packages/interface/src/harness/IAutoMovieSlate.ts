@@ -1,6 +1,7 @@
 import { IAutoMovieSequence } from "../cinematics/IAutoMovieSequence";
 import { IAutoMovieShot } from "../cinematics/IAutoMovieShot";
 import { IAutoMovieScene } from "../scene/IAutoMovieScene";
+import { IAutoMovieBeatEndState } from "./IAutoMovieBeatEndState";
 
 /** One planned shot, described in words before it is blocked and performed. */
 export interface IAutoMovieBeat {
@@ -92,6 +93,9 @@ export interface IAutoMovieSlate {
 
   /** Shots built so far, keyed by the beat id they realise. */
   shots: IAutoMovieShot[];
+
+  /** Resolved end-state snapshots for built beats, keyed by beat id. */
+  beatEnds: IAutoMovieBeatEndState[];
 
   /** Open review notes still to be addressed (the correction backlog). */
   notes: IAutoMovieReviewNote[];

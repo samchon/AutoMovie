@@ -7,4 +7,5 @@ export * from "./forgeCast";
 export * from "./performShot";
 export * from "./playback";
 export * from "./reviewShot";
+export * from "./resolveBeatEnd";
 export * from "./stageScene";
