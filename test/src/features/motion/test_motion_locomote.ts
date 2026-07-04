@@ -4,6 +4,15 @@ import { TestValidator } from "@nestia/e2e";
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose, vclose } from "../internal/predicates";
 
+const throws = (task: () => void): boolean => {
+  try {
+    task();
+    return false;
+  } catch {
+    return true;
+  }
+};
+
 /**
  * `locomoteMotion` — the harness `locomote` verb: carry a looping gait across a
  * distance at a speed, the engine sizing the cycles + forward velocity.
@@ -66,4 +75,47 @@ export const test_motion_locomote = (): void => {
       z: 0,
     }),
   );
+  // 5. invalid locomotion inputs reject before travel cycle sizing
+  for (const distance of [Number.NaN, 0, -1])
+    TestValidator.predicate(
+      `rejects invalid distance ${distance}`,
+      throws(() => {
+        locomoteMotion("badDistance", gait, distance, 1, { x: 0, y: 0, z: 1 });
+      }),
+    );
+
+  for (const speed of [Number.NaN, 0, -1])
+    TestValidator.predicate(
+      `rejects invalid speed ${speed}`,
+      throws(() => {
+        locomoteMotion("badSpeed", gait, 1, speed, { x: 0, y: 0, z: 1 });
+      }),
+    );
+
+  for (const duration of [Number.NaN, 0, -1])
+    TestValidator.predicate(
+      `rejects invalid gait duration ${duration}`,
+      throws(() => {
+        locomoteMotion("badGait", { ...gait, duration }, 1, 1, {
+          x: 0,
+          y: 0,
+          z: 1,
+        });
+      }),
+    );
+
+  const invalidDirections = [
+    { x: Number.NaN, y: 0, z: 1 },
+    { x: 0, y: Infinity, z: 1 },
+    { x: 0, y: 0, z: -Infinity },
+    { x: 0, y: 0, z: 0 },
+    { x: Number.MAX_VALUE, y: Number.MAX_VALUE, z: 0 },
+  ];
+  for (const direction of invalidDirections)
+    TestValidator.predicate(
+      "rejects invalid direction",
+      throws(() => {
+        locomoteMotion("badDirection", gait, 1, 1, direction);
+      }),
+    );
 };
