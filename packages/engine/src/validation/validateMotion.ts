@@ -22,8 +22,9 @@ const MAX_ANGULAR_SPEED_DEG_PER_S = 900;
  *
  * Temporal invariants enforced here:
  *
+ * - Clip `duration` is finite and positive,
  * - Keyframe `time` is strictly increasing,
- * - Every keyframe `time` is within `[0, duration]`,
+ * - Every keyframe `time` is finite and within `[0, duration]`,
  * - Per-axis angular speed between adjacent keyframes stays under a sane bound
  *   (catches teleporting limbs that per-frame validation alone would miss).
  *
@@ -37,18 +38,27 @@ export const validateMotion = (props: {
   const collector = new ViolationCollector();
   const { motion, skeleton } = props;
 
+  if (!Number.isFinite(motion.duration) || !(motion.duration > 0))
+    collector.push(
+      "temporal",
+      `${path}.duration`,
+      `motion duration must be a finite number > 0 seconds, but was ${motion.duration}`,
+      motion.duration,
+    );
+
   let previousTime = -Infinity;
   motion.keyframes.forEach((kf, i) => {
     const kp = `${path}.keyframes[${i}]`;
+    const finiteTime = Number.isFinite(kf.time);
 
-    if (kf.time < 0 || kf.time > motion.duration)
+    if (!finiteTime || kf.time < 0 || kf.time > motion.duration)
       collector.push(
         "temporal",
         `${kp}.time`,
-        `keyframe time must be within [0, ${motion.duration}]s, but was ${kf.time}`,
+        `keyframe time must be a finite number within [0, ${motion.duration}]s, but was ${kf.time}`,
         kf.time,
       );
-    if (kf.time <= previousTime)
+    if (finiteTime && kf.time <= previousTime)
       collector.push(
         "temporal",
         `${kp}.time`,
@@ -65,7 +75,7 @@ export const validateMotion = (props: {
       });
 
     if (i > 0) checkAngularSpeed(motion, i, kp, collector);
-    previousTime = kf.time;
+    if (finiteTime) previousTime = kf.time;
   });
 
   return collector.toValidation();
@@ -81,7 +91,7 @@ const checkAngularSpeed = (
   const prev = motion.keyframes[i - 1]!;
   const cur = motion.keyframes[i]!;
   const dt = cur.time - prev.time;
-  if (dt <= 0) return; // ordering already reported above
+  if (!Number.isFinite(dt) || dt <= 0) return; // ordering/range already reported above
 
   const prevByBone = new Map(prev.pose.joints.map((j) => [j.bone, j]));
   for (const j of cur.pose.joints) {
