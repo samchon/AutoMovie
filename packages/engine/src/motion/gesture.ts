@@ -139,31 +139,14 @@ const SHAPES: Record<AutoFilmGenericGesture, [number, IAutoFilmJointPose[]][]> =
       [1, []],
     ],
     // A one-arm wave: raise the right arm (clinical +abduction, read up through
-    // the rest frame) and swing the forearm side to side at the elbow.
+    // the rest frame) and swing the forearm side to side at the elbow, the idle
+    // left arm resting down at the side (not left in the T-pose rest).
     wave: [
       [0, []],
-      [0.15, [j("rightUpperArm", { abduction: 132, flexion: 6 })]],
-      [
-        0.4,
-        [
-          j("rightUpperArm", { abduction: 132, flexion: 6 }),
-          j("rightLowerArm", { flexion: 55 }),
-        ],
-      ],
-      [
-        0.65,
-        [
-          j("rightUpperArm", { abduction: 132, flexion: 6 }),
-          j("rightLowerArm", { flexion: 12 }),
-        ],
-      ],
-      [
-        0.85,
-        [
-          j("rightUpperArm", { abduction: 132, flexion: 6 }),
-          j("rightLowerArm", { flexion: 55 }),
-        ],
-      ],
+      [0.15, wavePose(0)],
+      [0.4, wavePose(55)],
+      [0.65, wavePose(12)],
+      [0.85, wavePose(55)],
       [1, []],
     ],
     // A two-arm celebration: both arms thrown up in a V and pumped. In clinical
@@ -254,6 +237,15 @@ function drawPose(): IAutoFilmJointPose[] {
     j("rightUpperArm", { abduction: 84, flexion: 24 }),
     j("rightLowerArm", { flexion: 118 }),
     j("head", { twist: 12 }),
+  ];
+}
+
+/** A raised right arm with the forearm at `fore`; the idle left arm hangs down. */
+function wavePose(fore: number): IAutoFilmJointPose[] {
+  return [
+    j("rightUpperArm", { abduction: 132, flexion: 6 }),
+    j("rightLowerArm", { flexion: fore }),
+    j("leftUpperArm", { abduction: 14 }),
   ];
 }
 
