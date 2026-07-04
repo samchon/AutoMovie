@@ -33,6 +33,14 @@ export const validatePose = (props: {
   const byBone = new Map(props.skeleton.bones.map((b) => [b.bone, b]));
   const seen = new Set<string>();
 
+  if (props.pose.skeleton !== props.skeleton.id)
+    collector.push(
+      "type",
+      `${path}.skeleton`,
+      `pose skeleton "${props.pose.skeleton}" does not match target skeleton "${props.skeleton.id}"`,
+      props.pose.skeleton,
+    );
+
   props.pose.joints.forEach((joint, i) => {
     const jointPath = `${path}.joints[${i}]`;
     const bone = byBone.get(joint.bone);
