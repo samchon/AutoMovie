@@ -21,6 +21,7 @@ import * as THREE from "three";
 import { DEFAULT_HORSE, buildHorse } from "./horse";
 import { horseGallop } from "./horse-motion";
 import { buildKnight } from "./knight";
+import { QUADRUPED_JOINT_AXES, QUADRUPED_REST_FRAME } from "./quadruped-rig";
 
 // ── Parthian shot, at the gallop: two knights charge across the field (camera
 // tracking), the lead archer twists back in the saddle and looses an arrow at
@@ -222,13 +223,15 @@ const step = (t: number): void => {
     horseAObj,
     sampleMotion(gallopA, t).pose,
     horseA.skeleton,
-    undefined,
+    QUADRUPED_JOINT_AXES,
+    QUADRUPED_REST_FRAME,
   );
   applyPose(
     horseBObj,
     sampleMotion(gallopB, t).pose,
     horseB.skeleton,
-    undefined,
+    QUADRUPED_JOINT_AXES,
+    QUADRUPED_REST_FRAME,
   );
   aRig.position.z = aZ(t);
   bRig.position.z = bZ(t);

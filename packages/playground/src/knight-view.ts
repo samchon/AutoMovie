@@ -17,6 +17,7 @@ import * as THREE from "three";
 import { DEFAULT_HORSE, buildHorse } from "./horse";
 import { HORSE_CLIPS } from "./horse-motion";
 import { buildKnight } from "./knight";
+import { QUADRUPED_JOINT_AXES, QUADRUPED_REST_FRAME } from "./quadruped-rig";
 
 const params = new URLSearchParams(location.search);
 
@@ -37,7 +38,7 @@ const horsePlayer = new AutoMoviePlayer(
   horseObj,
   horse.skeleton,
   horseClip,
-  undefined,
+  QUADRUPED_JOINT_AXES,
   false,
   // the tail trails with damped follow-through
   {
@@ -49,6 +50,7 @@ const horsePlayer = new AutoMoviePlayer(
     stiffness: 70,
     damping: 8,
   },
+  QUADRUPED_REST_FRAME,
 );
 
 // ── the rider's body pose — sitting astride, lance couched, shield up ────────

@@ -1,7 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
   HUMANOID_REST_FRAME,
-  IAutoMovieJointAxes,
   aimRotation,
   solveTwoBoneIK,
 } from "@automovie/engine";
@@ -11,6 +10,7 @@ import * as THREE from "three";
 
 import { DEFAULT_CAT, buildCat } from "./cat";
 import { CAT_CLIPS } from "./cat-motion";
+import { QUADRUPED_JOINT_AXES, QUADRUPED_REST_FRAME } from "./quadruped-rig";
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 import { STICKMAN_CLIPS } from "./stickman-motion";
 
@@ -27,16 +27,14 @@ const { model, skeleton } = isCat
   : buildStickman(DEFAULT_STICKMAN);
 const object = buildModel(model);
 const clips = isCat ? CAT_CLIPS(skeleton.id) : STICKMAN_CLIPS(skeleton.id);
-const jointAxes:
-  | Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>
-  | undefined = isCat ? undefined : HUMANOID_JOINT_AXES;
+const jointAxes = isCat ? QUADRUPED_JOINT_AXES : HUMANOID_JOINT_AXES;
 const defaultClip = isCat ? "idle" : "jumpingJack";
 
 const clipName =
   params.get("clip") !== null && params.get("clip")! in clips
     ? params.get("clip")!
     : defaultClip;
-const restFrames = isCat ? undefined : HUMANOID_REST_FRAME;
+const restFrames = isCat ? QUADRUPED_REST_FRAME : HUMANOID_REST_FRAME;
 // `?clamp=1` enforces ROM; the cat's tail gets spring follow-through so it
 // trails and overshoots the body instead of snapping (turn off with ?spring=0).
 const catTailSpring =
