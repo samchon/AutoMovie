@@ -37,6 +37,9 @@ export const solveBallisticLaunch = (
   gravity: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 },
   arc: "direct" | "high" = "direct",
 ): IAutoMovieBallisticSolution | null => {
+  if (!Number.isFinite(speed)) return null;
+  if (!(speed > 0)) return null;
+
   const delta = Vector3.subtract(target, origin);
   const g = Vector3.length(gravity);
 
@@ -110,6 +113,7 @@ export const solveMovingLaunch = (
   arc: "direct" | "high" = "direct",
   iterations = 8,
 ): IAutoMovieBallisticSolution | null => {
+  if (!Number.isFinite(speed)) return null;
   if (!(speed > 0)) return null;
   let t = Vector3.length(Vector3.subtract(targetAt(0), origin)) / speed;
   let solution: IAutoMovieBallisticSolution | null = null;
