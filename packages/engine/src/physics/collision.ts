@@ -3,6 +3,16 @@ import { IAutoMovieVector3 } from "@automovie/interface";
 import { Vector3 } from "../math/Vector3";
 import { IAutoMovieProjectile, projectileAt } from "./projectile";
 
+const VECTOR_AXES = ["x", "y", "z"] as const;
+
+const assertFiniteVector = (name: string, vector: IAutoMovieVector3): void => {
+  for (const axis of VECTOR_AXES)
+    if (!Number.isFinite(vector[axis]))
+      throw new RangeError(
+        `segment sphere ${name}.${axis} must be finite, but was ${vector[axis]}`,
+      );
+};
+
 /**
  * A world-space sphere collider — the simplest body to test a hit against (an
  * arrow vs. a rider's torso). Cheap, rotation-free, and enough to answer the
@@ -48,6 +58,9 @@ export const segmentSphere = (
     throw new RangeError(
       `segment sphere radius must be > 0, but was ${radius}`,
     );
+  assertFiniteVector("a", a);
+  assertFiniteVector("b", b);
+  assertFiniteVector("center", c);
 
   const d = Vector3.subtract(b, a);
   const m = Vector3.subtract(a, c);
