@@ -62,6 +62,15 @@ export const validateModel = (props: {
       });
   });
 
+  model.skeleton?.bones.forEach((bone, i) =>
+    validateTransformScalars({
+      transform: bone.rest,
+      path: `${path}.skeleton.bones[${i}].rest`,
+      label: "skeleton bone rest transform",
+      collector,
+    }),
+  );
+
   model.materials.forEach((m, i) => {
     const mp = `${path}.materials[${i}]`;
     collector.range(`${mp}.metallic`, m.metallic, 0, 1, "metallic");
