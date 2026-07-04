@@ -56,6 +56,8 @@ const EMBED_SPEED = 6; // m/s above which a penetrable body is pierced, not boun
 const THROUGH_SPEED = 14; // m/s above which a very soft body is passed clean through
 const THROUGH_TRANSFER = 0.3; // fraction of momentum a pass-through still imparts
 
+type ImpactCoefficient = "restitution" | "hardness" | "penetrability";
+
 const assertImpactMass = (label: "a" | "b", mass: number): void => {
   if (!Number.isFinite(mass))
     throw new RangeError(
@@ -65,6 +67,28 @@ const assertImpactMass = (label: "a" | "b", mass: number): void => {
     throw new RangeError(
       `impact body ${label} mass must be > 0, but was ${mass}`,
     );
+};
+
+const assertImpactCoefficient = (
+  label: "a" | "b",
+  name: ImpactCoefficient,
+  value: number,
+): void => {
+  if (!Number.isFinite(value))
+    throw new RangeError(
+      `impact body ${label} ${name} must be finite, but was ${value}`,
+    );
+  if (value < 0 || value > 1)
+    throw new RangeError(
+      `impact body ${label} ${name} must be within [0, 1], but was ${value}`,
+    );
+};
+
+const assertImpactBody = (label: "a" | "b", body: IAutoMovieBody): void => {
+  assertImpactMass(label, body.mass);
+  assertImpactCoefficient(label, "restitution", body.restitution);
+  assertImpactCoefficient(label, "hardness", body.hardness);
+  assertImpactCoefficient(label, "penetrability", body.penetrability);
 };
 
 /**
@@ -86,8 +110,8 @@ export const resolveImpact = (
   b: IAutoMovieBody,
   normal: IAutoMovieVector3,
 ): IAutoMovieImpact => {
-  assertImpactMass("a", a.mass);
-  assertImpactMass("b", b.mass);
+  assertImpactBody("a", a);
+  assertImpactBody("b", b);
 
   const normalLengthSq = Vector3.dot(normal, normal);
   if (!Number.isFinite(normalLengthSq))
