@@ -80,10 +80,11 @@ const stagingOf = () =>
  * 3. A target that does not resolve to a point (a relative direction) → a
  *    violation.
  * 4. A launch with non-positive speed yields a range violation.
- * 5. A launch that cannot reach its target at the given speed → a range violation.
- * 6. A launch aimed at a bare point (no actor to recoil) still flies, but
+ * 5. A launch with `onHit.force` outside `[0,1]` yields a range violation.
+ * 6. A launch that cannot reach its target at the given speed → a range violation.
+ * 7. A launch aimed at a bare point (no actor to recoil) still flies, but
  *    schedules no reaction — nobody performs.
- * 7. A launch at a **moving** target is led: when the foe strides during the shot
+ * 8. A launch at a **moving** target is led: when the foe strides during the shot
  *    (a `locomote` carrying root travel), performShot resolves its animated
  *    position and aims where it will be, so the baked flight lands short of the
  *    foe's start point — and the foe still reacts, at the led contact.
@@ -246,7 +247,33 @@ export const test_film_perform_shot_launch = (): void => {
       ),
     );
 
-  // 5. the shot must reach the target at the given speed
+  // 5. a launch's scheduled reaction force must already be in range
+  const heavyHit = perform([
+    {
+      verb: "launch",
+      actor: "archer",
+      start: 0.2,
+      duration: "auto",
+      projectile: "arrow",
+      at: { kind: "node", node: "foe" },
+      speed: 22,
+      onHit: { force: 1.5 },
+    },
+  ]);
+  TestValidator.equals(
+    "an oversized onHit force fails",
+    heavyHit.success,
+    false,
+  );
+  if (heavyHit.success === false)
+    TestValidator.predicate(
+      "the violation names the onHit force",
+      heavyHit.violations.some(
+        (v) => v.kind === "range" && v.path.includes(".onHit.force"),
+      ),
+    );
+
+  // 6. the shot must reach the target at the given speed
   const short = perform([
     {
       verb: "launch",
@@ -265,7 +292,7 @@ export const test_film_perform_shot_launch = (): void => {
       short.violations.some((v) => v.path.includes(".speed")),
     );
 
-  // 6. a bare-point aim flies but schedules no reaction (no actor to recoil)
+  // 7. a bare-point aim flies but schedules no reaction (no actor to recoil)
   const pointed = perform([
     {
       verb: "launch",
@@ -296,7 +323,7 @@ export const test_film_perform_shot_launch = (): void => {
     );
   }
 
-  // 7. a moving target is led. The foe strides (a locomote whose baked motion
+  // 8. a moving target is led. The foe strides (a locomote whose baked motion
   // carries root travel); performShot resolves its animated world position and
   // leads the aim, so the flight lands short of the foe's staged x = 6 (the foe
   // — facing 180 — advances toward the archer as the arrow flies).

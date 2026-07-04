@@ -35,6 +35,8 @@ import { hasViolation } from "../internal/predicates";
  *    `$input.draft[0].actor`.
  * 10. A staged action with a duplicate actor entry yields `type` on the repeated
  *     item.
+ * 11. A staged `react` with force outside `[0,1]` yields `range` on
+ *     `$input.draft[0].force`.
  */
 export const test_film_perform_shot_bad_refs = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -226,5 +228,30 @@ export const test_film_perform_shot_bad_refs = (): void => {
     "duplicate actor list entry rejected",
     duplicateActor.success === false &&
       hasViolation(duplicateActor, "type", "$input.draft[0].actor[1]"),
+  );
+
+  const oversizedReact = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "react",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          from: { kind: "node", node: "knightB" },
+          force: 1.2,
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "oversized react force rejected",
+    oversizedReact.success === false &&
+      hasViolation(oversizedReact, "range", "$input.draft[0].force"),
   );
 };

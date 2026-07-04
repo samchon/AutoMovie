@@ -329,6 +329,16 @@ export const performShot = (props: {
             `a launch speed must be > 0 m/s, but was ${action.speed}`,
             action.speed,
           );
+        if (
+          action.onHit !== undefined &&
+          !(action.onHit.force >= 0 && action.onHit.force <= 1)
+        )
+          out.push(
+            "range",
+            `${base}[${i}].onHit.force`,
+            `reaction force must be within [0, 1], but was ${action.onHit.force}`,
+            action.onHit.force,
+          );
         const stagedProjectile = nodeIds.has(action.projectile);
         if (!stagedProjectile)
           out.push(
@@ -353,6 +363,16 @@ export const performShot = (props: {
             target,
             targetNode: action.at.kind === "node" ? action.at.node : null,
           });
+      } else if (
+        action.verb === "react" &&
+        !(action.force >= 0 && action.force <= 1)
+      ) {
+        out.push(
+          "range",
+          `${base}[${i}].force`,
+          `reaction force must be within [0, 1], but was ${action.force}`,
+          action.force,
+        );
       } else if (action.verb === "attachTo") {
         // The child rides a bone of the parent, so the parent must be a staged,
         // rigged node carrying that bone. The child's follow-clip is baked
