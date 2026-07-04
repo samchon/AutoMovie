@@ -67,6 +67,23 @@ export const projectileTrajectory = (
   duration: number,
   fps = 30,
 ): IAutoMovieClip => {
+  if (!Number.isFinite(duration))
+    throw new RangeError(
+      `projectile trajectory duration must be finite, but was ${duration}`,
+    );
+  if (!(duration > 0))
+    throw new RangeError(
+      `projectile trajectory duration must be > 0 seconds, but was ${duration}`,
+    );
+  if (!Number.isFinite(fps))
+    throw new RangeError(
+      `projectile trajectory fps must be finite, but was ${fps}`,
+    );
+  if (!(fps > 0))
+    throw new RangeError(
+      `projectile trajectory fps must be > 0, but was ${fps}`,
+    );
+
   const count = Math.max(1, Math.round(duration * fps));
   const times: number[] = [];
   const pos: number[] = [];
