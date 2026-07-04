@@ -25,6 +25,11 @@ const CAMERA_FAR = 1000;
 /** Cameras look down local −Z (glTF convention); lights shine down −Z too. */
 const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: -1 };
 
+const isFiniteVector3 = (vector: IAutoMovieVector3): boolean =>
+  [vector.x, vector.y, vector.z].every((coordinate) =>
+    Number.isFinite(coordinate),
+  );
+
 /**
  * A staged film set: the composed {@link IAutoMovieScene} plus the persistent
  * mount couplings staging declared. Mounts stay alongside rather than inside
@@ -141,6 +146,14 @@ export const stageScene = (
 
   staging.cameras.forEach((camera, i) => {
     claim(camera.node, `$input.cameras[${i}].node`);
+    const positionFinite = isFiniteVector3(camera.position);
+    if (!positionFinite)
+      out.push(
+        "range",
+        `$input.cameras[${i}].position`,
+        "camera position must be a finite vector",
+        camera.position,
+      );
     if (!(camera.fovDeg > 0 && camera.fovDeg < 180))
       out.push(
         "range",
@@ -155,12 +168,21 @@ export const stageScene = (
         `camera target "${camera.lookAt.node}" must be a placed actor`,
         camera.lookAt.node,
       );
+    if (camera.lookAt.kind === "point" && !isFiniteVector3(camera.lookAt.point))
+      out.push(
+        "range",
+        `$input.cameras[${i}].lookAt.point`,
+        "camera point target must be a finite vector",
+        camera.lookAt.point,
+      );
     const target =
       camera.lookAt.kind === "node"
         ? placed.get(camera.lookAt.node)?.position
         : camera.lookAt.point;
     if (
       target !== undefined &&
+      positionFinite &&
+      isFiniteVector3(target) &&
       Vector3.length(Vector3.subtract(target, camera.position)) < 1e-9
     )
       out.push(
