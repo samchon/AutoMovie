@@ -80,19 +80,20 @@ const stagingOf = () =>
  * 3. A target that does not resolve to a point (a relative direction) → a
  *    violation.
  * 4. A launch with non-positive speed yields a range violation.
- * 5. A launch with `onHit.force` outside `[0,1]` yields a range violation.
- * 6. A launch that cannot reach its target at the given speed → a range violation.
- * 7. A launch aimed at a bare point (no actor to recoil) still flies, but
+ * 5. A launch with non-finite speed yields a finite-speed range violation.
+ * 6. A launch with `onHit.force` outside `[0,1]` yields a range violation.
+ * 7. A launch that cannot reach its target at the given speed → a range violation.
+ * 8. A launch aimed at a bare point (no actor to recoil) still flies, but
  *    schedules no reaction — nobody performs.
- * 8. A launch at a **moving** target is led: when the foe strides during the shot
+ * 9. A launch at a **moving** target is led: when the foe strides during the shot
  *    (a `locomote` carrying root travel), performShot resolves its animated
  *    position and aims where it will be, so the baked flight lands short of the
  *    foe's start point — and the foe still reacts, at the led contact.
- * 9. A launch fired too late to land before the shot ends yields a `range`
- *    violation on `.speed`.
- * 10. A launch whose actor is also the projectile yields `type` on `.projectile`.
- * 11. A launch aimed at its own projectile node yields `type` on `.at`.
- * 12. A moving target is still led when its locomote action uses an actor list.
+ * 10. A launch fired too late to land before the shot ends yields a `range`
+ *     violation on `.speed`.
+ * 11. A launch whose actor is also the projectile yields `type` on `.projectile`.
+ * 12. A launch aimed at its own projectile node yields `type` on `.at`.
+ * 13. A moving target is still led when its locomote action uses an actor list.
  */
 export const test_film_perform_shot_launch = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -252,7 +253,35 @@ export const test_film_perform_shot_launch = (): void => {
       ),
     );
 
-  // 5. a launch's scheduled reaction force must already be in range
+  // 5. the speed itself must be finite
+  const infiniteSpeed = perform([
+    {
+      verb: "launch",
+      actor: "archer",
+      start: 0.2,
+      duration: "auto",
+      projectile: "arrow",
+      at: { kind: "node", node: "foe" },
+      speed: Number.POSITIVE_INFINITY,
+    },
+  ]);
+  TestValidator.equals(
+    "an infinite-speed launch fails",
+    infiniteSpeed.success,
+    false,
+  );
+  if (infiniteSpeed.success === false)
+    TestValidator.predicate(
+      "the violation requires finite speed",
+      infiniteSpeed.violations.some(
+        (v) =>
+          v.kind === "range" &&
+          v.path.includes(".speed") &&
+          v.expected.includes("finite"),
+      ),
+    );
+
+  // 6. a launch's scheduled reaction force must already be in range
   const heavyHit = perform([
     {
       verb: "launch",
@@ -278,7 +307,7 @@ export const test_film_perform_shot_launch = (): void => {
       ),
     );
 
-  // 6. the shot must reach the target at the given speed
+  // 7. the shot must reach the target at the given speed
   const short = perform([
     {
       verb: "launch",
@@ -297,7 +326,7 @@ export const test_film_perform_shot_launch = (): void => {
       short.violations.some((v) => v.path.includes(".speed")),
     );
 
-  // 7. a bare-point aim flies but schedules no reaction (no actor to recoil)
+  // 8. a bare-point aim flies but schedules no reaction (no actor to recoil)
   const pointed = perform([
     {
       verb: "launch",
@@ -400,7 +429,7 @@ export const test_film_perform_shot_launch = (): void => {
       ),
     );
 
-  // 8. a moving target is led. The foe strides (a locomote whose baked motion
+  // 13. a moving target is led. The foe strides (a locomote whose baked motion
   // carries root travel); performShot resolves its animated world position and
   // leads the aim, so the flight lands short of the foe's staged x = 6 (the foe
   // — facing 180 — advances toward the archer as the arrow flies).

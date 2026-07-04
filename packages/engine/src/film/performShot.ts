@@ -342,11 +342,11 @@ export const performShot = (props: {
         // point. A node aim also names the actor the hit recoils; a point/group
         // aim flies but recoils no one (no single actor). Out-of-range is
         // caught below, once the aim is solved.
-        if (!(action.speed > 0))
+        if (!Number.isFinite(action.speed) || !(action.speed > 0))
           out.push(
             "range",
             `${base}[${i}].speed`,
-            `a launch speed must be > 0 m/s, but was ${action.speed}`,
+            `a launch speed must be a finite number > 0 m/s, but was ${action.speed}`,
             action.speed,
           );
         if (
