@@ -1,6 +1,7 @@
 import {
   IAutoMovieGait,
   IAutoMovieGaitLimb,
+  IAutoMovieJointPose,
   IAutoMovieKeyframe,
   IAutoMovieMotion,
   IAutoMovieProfile,
@@ -59,6 +60,21 @@ const gaitRoot = (
   };
 };
 
+const gaitJoint = (
+  limb: IAutoMovieGaitLimb,
+  time: number,
+  period: number,
+): IAutoMovieJointPose => {
+  const joint: IAutoMovieJointPose = {
+    bone: limb.bone,
+    flexion: null,
+    abduction: null,
+    twist: null,
+  };
+  joint[limb.axis ?? "flexion"] = gaitLimbFlexion(limb, time, period);
+  return joint;
+};
+
 /**
  * Synthesise a **declarative gait** ({@link IAutoMovieGait}) into a looping
  * {@link IAutoMovieMotion} — the engine fattening a creature's characteristic
@@ -87,12 +103,7 @@ export const gaitMotion = (
       pose: {
         skeleton,
         root: gaitRoot(gait, time),
-        joints: gait.limbs.map((limb) => ({
-          bone: limb.bone,
-          flexion: gaitLimbFlexion(limb, time, gait.period),
-          abduction: null,
-          twist: null,
-        })),
+        joints: gait.limbs.map((limb) => gaitJoint(limb, time, gait.period)),
       },
       expression: null,
       easing: "linear",
