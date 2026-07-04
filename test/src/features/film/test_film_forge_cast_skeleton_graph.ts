@@ -31,10 +31,11 @@ const b = (
  * 2. A single-rooted skeleton (`hips` → `spine`) plus a two-bone cycle (`leftHand`
  *    ⇄ `leftLowerArm`) floating off the tree → every local check passes, but
  *    both cycle bones raise unreachable violations.
- * 3. A single-rooted skeleton declaring `spine` twice under `hips` → the duplicate
- *    is reported AND the reachability walk still terminates (the visited guard
- *    absorbs the doubled child edge instead of re-queueing forever), with no
- *    spurious unreachable findings.
+ * 3. A single-rooted skeleton declaring `spine` twice under `hips` → only the
+ *    duplicate field is reported, even if both the graph and model validators
+ *    flag it. The reachability walk still terminates (the visited guard absorbs
+ *    the doubled child edge instead of re-queueing forever), with no spurious
+ *    unreachable findings.
  */
 export const test_film_forge_cast_skeleton_graph = (): void => {
   const broken = forgeCast(makeScriptWrite(), {
@@ -110,9 +111,11 @@ export const test_film_forge_cast_skeleton_graph = (): void => {
   });
   TestValidator.equals("doubled fails", doubled.success, false);
   TestValidator.predicate(
-    "only the duplicate is reported (walk terminates, nothing unreachable)",
+    "only the duplicate field is reported (walk terminates, nothing unreachable)",
     doubled.success === false &&
       hasViolation(doubled, "type", ".skeleton.bones[2].bone") &&
-      doubled.violations.length === 1,
+      doubled.violations.every((v) =>
+        v.path.endsWith(".skeleton.bones[2].bone"),
+      ),
   );
 };

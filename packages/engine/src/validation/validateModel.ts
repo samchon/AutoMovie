@@ -32,6 +32,25 @@ export const validateModel = (props: {
   const materialIds = new Set(model.materials.map((m) => m.id));
   const boneNames = new Set((model.skeleton?.bones ?? []).map((b) => b.bone));
 
+  validateUniqueValues(
+    model.materials.map((m, i) => [m.id, `${path}.materials[${i}].id`]),
+    "material id",
+    collector,
+  );
+  validateUniqueValues(
+    model.parts.map((p, i) => [p.id, `${path}.parts[${i}].id`]),
+    "part id",
+    collector,
+  );
+  validateUniqueValues(
+    (model.skeleton?.bones ?? []).map((b, i) => [
+      b.bone,
+      `${path}.skeleton.bones[${i}].bone`,
+    ]),
+    "skeleton bone",
+    collector,
+  );
+
   if (model.parts.length === 0)
     collector.push(
       "type",
@@ -134,6 +153,24 @@ const validateExtents = (
         `${name} must be a finite number > 0, but was ${value}`,
         value,
       );
+};
+
+const validateUniqueValues = (
+  entries: ReadonlyArray<readonly [string, string]>,
+  label: string,
+  collector: ViolationCollector,
+): void => {
+  const seen = new Set<string>();
+  for (const [value, entryPath] of entries) {
+    if (seen.has(value))
+      collector.push(
+        "type",
+        entryPath,
+        `${label} "${value}" must be unique within the model`,
+        value,
+      );
+    seen.add(value);
+  }
 };
 
 const validateMesh = (
