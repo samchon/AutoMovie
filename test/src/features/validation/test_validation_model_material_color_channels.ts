@@ -10,9 +10,11 @@ import { hasViolation } from "../internal/predicates";
  *
  * Scenarios:
  *
- * 1. A base color with `a: null` and a finite emissive color validates.
+ * 1. A base color with `a: null`, a valid `#RRGGBB` label, and a finite emissive
+ *    color validates.
  * 2. Non-finite/over-range base alpha is a range violation.
  * 3. Emissive rgb/a channels are range-checked when emissive is present.
+ * 4. Non-null `hex` labels must use six hexadecimal digits.
  */
 export const test_validation_model_material_color_channels = (): void => {
   const base = createModel();
@@ -21,8 +23,8 @@ export const test_validation_model_material_color_channels = (): void => {
       ...base,
       materials: base.materials.map((material) => ({
         ...material,
-        baseColor: { ...material.baseColor, a: null },
-        emissive: { r: 0.1, g: 0.2, b: 0.3, a: null, hex: null },
+        baseColor: { ...material.baseColor, a: null, hex: "#CC1A1A" },
+        emissive: { r: 0.1, g: 0.2, b: 0.3, a: null, hex: "#1A334D" },
       })),
     },
   });
@@ -37,13 +39,13 @@ export const test_validation_model_material_color_channels = (): void => {
       ...base,
       materials: base.materials.map((material) => ({
         ...material,
-        baseColor: { ...material.baseColor, a: Number.NaN },
+        baseColor: { ...material.baseColor, a: Number.NaN, hex: "#fff" },
         emissive: {
           r: -0.1,
           g: Number.POSITIVE_INFINITY,
           b: 0.3,
           a: 1.5,
-          hex: null,
+          hex: "#GG0000",
         },
       })),
     },
@@ -69,5 +71,13 @@ export const test_validation_model_material_color_channels = (): void => {
   TestValidator.predicate(
     "emissive alpha violation",
     hasViolation(invalid, "range", "$input.materials[0].emissive.a"),
+  );
+  TestValidator.predicate(
+    "base hex violation",
+    hasViolation(invalid, "type", "$input.materials[0].baseColor.hex"),
+  );
+  TestValidator.predicate(
+    "emissive hex violation",
+    hasViolation(invalid, "type", "$input.materials[0].emissive.hex"),
   );
 };
