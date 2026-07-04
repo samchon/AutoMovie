@@ -8,6 +8,7 @@ import {
 import { IAutoMoviePlacement, arrangeMotion } from "../motion/arrange";
 import { sampleMotion } from "../motion/sampleMotion";
 import { sequenceMotion } from "../motion/sequence";
+import { bodyRegionBones } from "./bodyRegionBones";
 import { mergePoses } from "./mergePoses";
 
 /**
@@ -46,6 +47,27 @@ const REGION_BY_VERB: Partial<
 /** Which region an action owns — its explicit `region`, else the verb default. */
 const regionOf = (action: IAutoMovieActionCall): AutoMovieBodyRegion =>
   action.region ?? REGION_BY_VERB[action.verb] ?? "fullBody";
+
+const ROOT_REGIONS = new Set<AutoMovieBodyRegion>(["lowerBody", "fullBody"]);
+
+const maskMotionToRegion = (
+  motion: IAutoMovieMotion,
+  region: AutoMovieBodyRegion,
+  keepRoot: boolean,
+): IAutoMovieMotion => {
+  const bones = new Set(bodyRegionBones(region));
+  return {
+    ...motion,
+    keyframes: motion.keyframes.map((keyframe) => ({
+      ...keyframe,
+      pose: {
+        ...keyframe.pose,
+        root: keepRoot ? keyframe.pose.root : null,
+        joints: keyframe.pose.joints.filter((joint) => bones.has(joint.bone)),
+      },
+    })),
+  };
+};
 
 /**
  * Layer several per-region clips into one by **sampling and merging**: at every
@@ -144,9 +166,17 @@ export const compilePerformance = (
   // 3. per actor: arrange each region, then layer the regions (or pass one through)
   const performances: Record<string, IAutoMovieMotion> = {};
   for (const [actor, regions] of byActor) {
-    const regionClips = [...regions.entries()].map(([region, placements]) =>
-      arrangeMotion(`perform:${actor}:${region}`, placements),
-    );
+    const layered = regions.size > 1;
+    const regionClips = [...regions.entries()].map(([region, placements]) => {
+      const keepRoot = !layered || ROOT_REGIONS.has(region);
+      return arrangeMotion(
+        `perform:${actor}:${region}`,
+        placements.map((placement) => ({
+          start: placement.start,
+          motion: maskMotionToRegion(placement.motion, region, keepRoot),
+        })),
+      );
+    });
     performances[actor] =
       regionClips.length === 1
         ? { ...regionClips[0]!, id: `perform:${actor}` }
