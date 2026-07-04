@@ -2,6 +2,12 @@ import { IAutoMovieVector3 } from "@automovie/interface";
 
 import { Vector3 } from "../math/Vector3";
 
+const finiteVector = (v: IAutoMovieVector3): boolean => {
+  if (!Number.isFinite(v.x)) return false;
+  if (!Number.isFinite(v.y)) return false;
+  return Number.isFinite(v.z);
+};
+
 /** The launch that hits a target: the initial velocity and the time of flight. */
 export interface IAutoMovieBallisticSolution {
   /** Initial velocity to give the projectile (world m/s), magnitude = speed. */
@@ -39,6 +45,9 @@ export const solveBallisticLaunch = (
 ): IAutoMovieBallisticSolution | null => {
   if (!Number.isFinite(speed)) return null;
   if (!(speed > 0)) return null;
+  if (!finiteVector(origin)) return null;
+  if (!finiteVector(target)) return null;
+  if (!finiteVector(gravity)) return null;
 
   const delta = Vector3.subtract(target, origin);
   const g = Vector3.length(gravity);
@@ -115,7 +124,13 @@ export const solveMovingLaunch = (
 ): IAutoMovieBallisticSolution | null => {
   if (!Number.isFinite(speed)) return null;
   if (!(speed > 0)) return null;
-  let t = Vector3.length(Vector3.subtract(targetAt(0), origin)) / speed;
+  if (!finiteVector(origin)) return null;
+  if (!finiteVector(gravity)) return null;
+
+  const initialTarget = targetAt(0);
+  if (!finiteVector(initialTarget)) return null;
+
+  let t = Vector3.length(Vector3.subtract(initialTarget, origin)) / speed;
   let solution: IAutoMovieBallisticSolution | null = null;
   for (let i = 0; i < iterations; ++i) {
     solution = solveBallisticLaunch(origin, targetAt(t), speed, gravity, arc);
