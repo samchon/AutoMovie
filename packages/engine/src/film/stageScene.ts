@@ -155,6 +155,20 @@ export const stageScene = (
         `camera target "${camera.lookAt.node}" must be a placed actor`,
         camera.lookAt.node,
       );
+    const target =
+      camera.lookAt.kind === "node"
+        ? placed.get(camera.lookAt.node)?.position
+        : camera.lookAt.point;
+    if (
+      target !== undefined &&
+      Vector3.length(Vector3.subtract(target, camera.position)) < 1e-9
+    )
+      out.push(
+        "range",
+        `$input.cameras[${i}].lookAt`,
+        "camera lookAt must not equal the camera position",
+        camera.lookAt,
+      );
   });
 
   staging.lights.forEach((light, i) => {

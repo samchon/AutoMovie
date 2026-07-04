@@ -15,6 +15,8 @@ import { hasViolation } from "../internal/predicates";
  *    `$input.cameras[0].fovDeg`.
  * 2. A second camera looks at the unplaced node `nobody` → a `type` violation on
  *    `$input.cameras[1].lookAt.node`.
+ * 3. A third camera looks at its own position, yielding `range` on
+ *    `$input.cameras[2].lookAt`.
  */
 export const test_film_stage_scene_camera_invalid = (): void => {
   const base = makeStagingWrite();
@@ -27,6 +29,12 @@ export const test_film_stage_scene_camera_invalid = (): void => {
           node: "cam-lost",
           position: { x: 0, y: 1, z: -2 },
           lookAt: { kind: "node", node: "nobody" },
+          fovDeg: 50,
+        },
+        {
+          node: "cam-zero",
+          position: { x: 1, y: 2, z: 3 },
+          lookAt: { kind: "point", point: { x: 1, y: 2, z: 3 } },
           fovDeg: 50,
         },
       ],
@@ -42,5 +50,10 @@ export const test_film_stage_scene_camera_invalid = (): void => {
     "dangling look-at rejected",
     staged.success === false &&
       hasViolation(staged, "type", "$input.cameras[1].lookAt.node"),
+  );
+  TestValidator.predicate(
+    "zero look vector rejected",
+    staged.success === false &&
+      hasViolation(staged, "range", "$input.cameras[2].lookAt"),
   );
 };
