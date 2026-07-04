@@ -39,11 +39,12 @@ const flexionSeq = (
  *    into hyperextension and the ROM validator rejects it, while the same swing
  *    centered on `neutral: 25` stays inside `[0, 150]°` and passes.
  * 5. A limb can target `abduction` instead of the default `flexion`.
- * 6. Stance and swing can use different named easing curves while keeping the same
+ * 6. Multiple rows for one bone fold into a single multi-axis joint pose.
+ * 7. Stance and swing can use different named easing curves while keeping the same
  *    endpoints.
- * 7. `cubicBezier` stance/swing phases use their own control points instead of
+ * 8. `cubicBezier` stance/swing phases use their own control points instead of
  *    falling back to linear.
- * 8. `rootBob` adds a vertical identity-TRS root curve while plain gaits keep
+ * 9. `rootBob` adds a vertical identity-TRS root curve while plain gaits keep
  *    `root: null`.
  */
 export const test_motion_gait = (): void => {
@@ -150,7 +151,48 @@ export const test_motion_gait = (): void => {
     true,
   );
 
-  // 6. per-phase named easing curves
+  // 6. same-bone limb rows fold into one multi-axis joint
+  const multiAxis = gaitMotion(
+    "multi",
+    sk.id,
+    {
+      name: "multi",
+      period: 1,
+      limbs: [
+        { bone: "leftUpperArm", phase: 0, duty: 0.5, amplitude: 10 },
+        {
+          bone: "leftUpperArm",
+          axis: "abduction",
+          phase: 0,
+          duty: 0.5,
+          amplitude: 12,
+        },
+      ],
+    },
+    4,
+  );
+  TestValidator.predicate(
+    "same-bone gait rows emit one joint per keyframe",
+    multiAxis.keyframes.every((k) => k.pose.joints.length === 1),
+  );
+  TestValidator.predicate(
+    "multi-axis joint carries both flexion and abduction",
+    multiAxis.keyframes.every((k, i) => {
+      const joint = k.pose.joints[0]!;
+      const flexion = [10, 0, -10, 0, 10][i]!;
+      const abduction = [12, 0, -12, 0, 12][i]!;
+      return (
+        nclose(joint.flexion!, flexion) && nclose(joint.abduction!, abduction)
+      );
+    }),
+  );
+  TestValidator.equals(
+    "multi-axis gait validates against the skeleton",
+    validateMotion({ motion: multiAxis, skeleton: sk }).success,
+    true,
+  );
+
+  // 7. per-phase named easing curves
   const eased = flexionSeq(
     gaitMotion(
       "eased",
@@ -180,7 +222,7 @@ export const test_motion_gait = (): void => {
     ),
   );
 
-  // 7. cubic-bezier phase controls
+  // 8. cubic-bezier phase controls
   const bezier = flexionSeq(
     gaitMotion(
       "bezier",
@@ -212,7 +254,7 @@ export const test_motion_gait = (): void => {
     ),
   );
 
-  // 8. optional vertical root bob
+  // 9. optional vertical root bob
   const bobbing = gaitMotion(
     "bob",
     sk.id,
