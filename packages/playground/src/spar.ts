@@ -63,12 +63,14 @@ export const buildRedBoxer = () => tint("boxerRed", [0.66, 0.18, 0.18]);
 export const buildBlueBoxer = () => tint("boxerBlue", [0.2, 0.34, 0.62]);
 
 // ── shared boxing vocabulary (mirrors the shadowbox guard/strike scheme) ─────
+// Boxer arm abduction is authored in clinical space; HUMANOID_REST_FRAME in the
+// view recovers the mirrored rig signs for each shoulder.
 const GUARD: IAutoMovieJointPose[] = [
   j("spine", { flexion: 9 }),
   j("chest", { flexion: 6 }),
-  j("leftUpperArm", { flexion: -38, abduction: -58 }),
+  j("leftUpperArm", { flexion: -38, abduction: 32 }),
   j("leftLowerArm", { flexion: -122 }),
-  j("rightUpperArm", { flexion: 38, abduction: 58 }),
+  j("rightUpperArm", { flexion: 38, abduction: 32 }),
   j("rightLowerArm", { flexion: 122 }),
   j("leftUpperLeg", { abduction: 9, flexion: -12 }),
   j("rightUpperLeg", { abduction: -9, flexion: 14 }),
@@ -100,28 +102,28 @@ const P = {
   guard: (): IAutoMovieJointPose[] => merge([]),
   jab: (): IAutoMovieJointPose[] =>
     merge([
-      j("leftUpperArm", { flexion: -94, abduction: 6 }),
+      j("leftUpperArm", { flexion: -94, abduction: 96 }),
       j("leftLowerArm", { flexion: -8 }),
       j("spine", { flexion: 9, twist: -12 }),
       j("chest", { flexion: 6, twist: -8 }),
     ]),
   cross: (): IAutoMovieJointPose[] =>
     merge([
-      j("rightUpperArm", { flexion: 94, abduction: -6 }),
+      j("rightUpperArm", { flexion: 94, abduction: 96 }),
       j("rightLowerArm", { flexion: 10 }),
       j("spine", { flexion: 9, twist: 26 }),
       j("chest", { flexion: 6, twist: 18 }),
     ]),
   leadHook: (): IAutoMovieJointPose[] =>
     merge([
-      j("leftUpperArm", { flexion: -54, abduction: 8 }),
+      j("leftUpperArm", { flexion: -54, abduction: 98 }),
       j("leftLowerArm", { flexion: -94 }),
       j("spine", { flexion: 9, twist: 22 }),
       j("chest", { flexion: 6, twist: 16 }),
     ]),
   rearUpper: (): IAutoMovieJointPose[] =>
     merge([
-      j("rightUpperArm", { flexion: 56, abduction: -48 }),
+      j("rightUpperArm", { flexion: 56, abduction: 138 }),
       j("rightLowerArm", { flexion: 126 }),
       j("spine", { flexion: 2, twist: 16 }),
       j("chest", { flexion: 0, twist: 12 }),
@@ -157,9 +159,9 @@ const P = {
   block: (): IAutoMovieJointPose[] =>
     merge([
       // high tight guard, both gloves up at the temples
-      j("leftUpperArm", { flexion: -30, abduction: -40 }),
+      j("leftUpperArm", { flexion: -30, abduction: 50 }),
       j("leftLowerArm", { flexion: -132 }),
-      j("rightUpperArm", { flexion: 30, abduction: 40 }),
+      j("rightUpperArm", { flexion: 30, abduction: 50 }),
       j("rightLowerArm", { flexion: 132 }),
       j("spine", { flexion: 12 }),
     ]),
@@ -185,8 +187,8 @@ const koStart: IAutoMovieJointPose[] = merge([
   j("spine", { flexion: -24 }),
   j("chest", { flexion: -14 }),
   j("head", { flexion: -26 }),
-  j("leftUpperArm", { flexion: -10, abduction: -84 }),
-  j("rightUpperArm", { flexion: 10, abduction: 84 }),
+  j("leftUpperArm", { flexion: -10, abduction: 6 }),
+  j("rightUpperArm", { flexion: 10, abduction: 6 }),
   j("leftLowerArm", { flexion: -40 }),
   j("rightLowerArm", { flexion: 40 }),
   j("leftUpperLeg", { abduction: 12, flexion: -8 }),
@@ -198,8 +200,8 @@ const koMid: IAutoMovieJointPose[] = merge([
   j("spine", { flexion: -30 }),
   j("chest", { flexion: -16 }),
   j("head", { flexion: -30 }),
-  j("leftUpperArm", { flexion: -6, abduction: -100 }),
-  j("rightUpperArm", { flexion: 6, abduction: 100 }),
+  j("leftUpperArm", { flexion: -6, abduction: -10 }),
+  j("rightUpperArm", { flexion: 6, abduction: -10 }),
   j("leftUpperLeg", { abduction: 14, flexion: 24 }),
   j("rightUpperLeg", { abduction: -14, flexion: 26 }),
   j("leftLowerLeg", { flexion: 76 }),
@@ -209,8 +211,8 @@ const koDown: IAutoMovieJointPose[] = merge([
   j("spine", { flexion: -18 }),
   j("chest", { flexion: -8 }),
   j("head", { flexion: -20 }),
-  j("leftUpperArm", { flexion: -4, abduction: -120 }),
-  j("rightUpperArm", { flexion: 4, abduction: 120 }),
+  j("leftUpperArm", { flexion: -4, abduction: -30 }),
+  j("rightUpperArm", { flexion: 4, abduction: -30 }),
   j("leftUpperLeg", { abduction: 18, flexion: 40 }),
   j("rightUpperLeg", { abduction: -18, flexion: 44 }),
   j("leftLowerLeg", { flexion: 60 }),

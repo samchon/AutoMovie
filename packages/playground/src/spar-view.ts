@@ -1,4 +1,4 @@
-import { HUMANOID_JOINT_AXES } from "@automovie/engine";
+import { HUMANOID_JOINT_AXES, HUMANOID_REST_FRAME } from "@automovie/engine";
 import { AutoMoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
@@ -37,12 +37,18 @@ const redPlayer = new AutoMoviePlayer(
   red.skeleton,
   redClip(red.skeleton.id),
   HUMANOID_JOINT_AXES,
+  false,
+  undefined,
+  HUMANOID_REST_FRAME,
 );
 const bluePlayer = new AutoMoviePlayer(
   blueObj,
   blue.skeleton,
   blueClip(blue.skeleton.id),
   HUMANOID_JOINT_AXES,
+  false,
+  undefined,
+  HUMANOID_REST_FRAME,
 );
 
 // ── scene ────────────────────────────────────────────────────────────────────
