@@ -85,13 +85,19 @@ const gaitRoot = (
   time: number,
 ): IAutoMovieTransform | null => {
   if (gait.rootBob === undefined) return null;
-  const cycle = wrap01(time / gait.period + gait.rootBob.phase);
+  const rootBob = gait.rootBob;
+  if (!Number.isFinite(rootBob.amplitude))
+    throw new Error("gait root bob amplitude must be finite");
+  if (!Number.isFinite(rootBob.phase))
+    throw new Error("gait root bob phase must be finite");
+  if (!Number.isFinite(rootBob.center))
+    throw new Error("gait root bob center must be finite");
+
+  const cycle = wrap01(time / gait.period + rootBob.phase);
   return {
     translation: {
       x: 0,
-      y:
-        gait.rootBob.center +
-        gait.rootBob.amplitude * Math.sin(cycle * Math.PI * 2),
+      y: rootBob.center + rootBob.amplitude * Math.sin(cycle * Math.PI * 2),
       z: 0,
     },
     rotation: IDENTITY_ROOT.rotation,
