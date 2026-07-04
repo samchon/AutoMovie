@@ -10,6 +10,26 @@ import { Quaternion } from "../math/Quaternion";
 const IDENTITY_ROT: IAutoMovieQuaternion = { x: 0, y: 0, z: 0, w: 1 };
 const IDENTITY_SCALE: IAutoMovieVector3 = { x: 1, y: 1, z: 1 };
 
+const assertFiniteVector = (label: string, vector: IAutoMovieVector3): void => {
+  if (!Number.isFinite(vector.x)) throw new Error(`${label}.x must be finite`);
+  if (!Number.isFinite(vector.y)) throw new Error(`${label}.y must be finite`);
+  if (!Number.isFinite(vector.z)) throw new Error(`${label}.z must be finite`);
+};
+
+const assertFiniteQuaternion = (
+  label: string,
+  quaternion: IAutoMovieQuaternion,
+): void => {
+  if (!Number.isFinite(quaternion.x))
+    throw new Error(`${label}.x must be finite`);
+  if (!Number.isFinite(quaternion.y))
+    throw new Error(`${label}.y must be finite`);
+  if (!Number.isFinite(quaternion.z))
+    throw new Error(`${label}.z must be finite`);
+  if (!Number.isFinite(quaternion.w))
+    throw new Error(`${label}.w must be finite`);
+};
+
 /**
  * Bake continuous root **travel** onto an in-place locomotion cycle — turning a
  * walk/run that marches on the spot into one that actually crosses the floor.
@@ -42,6 +62,12 @@ export const travelMotion = (
   velocity: IAutoMovieVector3,
   facing?: IAutoMovieQuaternion,
 ): IAutoMovieMotion => {
+  if (!Number.isInteger(cycles))
+    throw new Error("travel cycles must be a positive integer");
+  if (cycles < 1) throw new Error("travel cycles must be a positive integer");
+  assertFiniteVector("travel velocity", velocity);
+  if (facing !== undefined) assertFiniteQuaternion("travel facing", facing);
+
   const keyframes: IAutoMovieKeyframe[] = [];
   for (let c = 0; c < cycles; ++c) {
     for (const k of base.keyframes) {
