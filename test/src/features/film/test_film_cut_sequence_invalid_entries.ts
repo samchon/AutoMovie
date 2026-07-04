@@ -28,6 +28,8 @@ const SHOT: IAutoMovieShot = {
  *    overshoot 1.
  * 5. A 0-second transition → `range` on its `transition.duration`.
  * 6. A 2-second fade over a 1-second played span → `range` with overshoot 1.
+ * 7. A 2-second dissolve out of a 1-second previous entry yields `range` on its
+ *    `transition.duration`.
  */
 export const test_film_cut_sequence_invalid_entries = (): void => {
   const cut = cutSequence(
@@ -103,5 +105,42 @@ export const test_film_cut_sequence_invalid_entries = (): void => {
         v.path === "$input.entries[5].transition.duration" &&
         v.overshoot === 1,
     ),
+  );
+
+  const overPrevious = cutSequence(
+    {
+      type: "write",
+      sequence: { id: "seq-bad-prev", name: "the early dissolve" },
+      fps: 24,
+      entries: [
+        {
+          shot: "shot:beat-1",
+          trim: { start: 0, duration: 1 },
+          transition: null,
+        },
+        {
+          shot: "shot:beat-1",
+          trim: null,
+          transition: { kind: "crossDissolve", duration: 2 },
+        },
+      ],
+      pacing: "n/a",
+      continuity: "n/a",
+    },
+    [SHOT],
+  );
+  TestValidator.equals(
+    "transition longer than outgoing span fails",
+    overPrevious.success,
+    false,
+  );
+  TestValidator.predicate(
+    "overlong outgoing transition rejected",
+    overPrevious.success === false &&
+      hasViolation(
+        overPrevious,
+        "range",
+        "$input.entries[1].transition.duration",
+      ),
   );
 };

@@ -73,6 +73,7 @@ export const cutSequence = (
     );
 
   let runtime = 0;
+  let previousPlayed: number | null = null;
   assemble.entries.forEach((entry, i) => {
     const shot = byId.get(entry.shot);
     if (shot === undefined) {
@@ -82,19 +83,23 @@ export const cutSequence = (
         `entry must reference a built shot, but "${entry.shot}" was never performed`,
         entry.shot,
       );
+      previousPlayed = null;
       return;
     }
     let played = shot.duration;
+    let validPlayedSpan = true;
     if (entry.trim !== null) {
       const { start, duration } = entry.trim;
-      if (!(duration > 0))
+      if (!(duration > 0)) {
+        validPlayedSpan = false;
         out.push(
           "range",
           `$input.entries[${i}].trim.duration`,
           `trim duration must be > 0 seconds, but was ${duration}`,
           duration,
         );
-      else if (start < 0 || start + duration > shot.duration)
+      } else if (start < 0 || start + duration > shot.duration) {
+        validPlayedSpan = false;
         out.push(
           "range",
           `$input.entries[${i}].trim`,
@@ -102,7 +107,7 @@ export const cutSequence = (
           entry.trim,
           Math.max(-start, start + duration - shot.duration),
         );
-      else played = duration;
+      } else played = duration;
     }
     if (entry.transition !== null) {
       if (i === 0)
@@ -127,9 +132,21 @@ export const cutSequence = (
           entry.transition.duration,
           entry.transition.duration - played,
         );
+      else if (
+        previousPlayed !== null &&
+        entry.transition.duration > previousPlayed
+      )
+        out.push(
+          "range",
+          `$input.entries[${i}].transition.duration`,
+          `transition (${entry.transition.duration}s) must not outlast the previous entry's played span (${previousPlayed}s)`,
+          entry.transition.duration,
+          entry.transition.duration - previousPlayed,
+        );
       else runtime -= entry.transition.duration;
     }
     runtime += played;
+    previousPlayed = validPlayedSpan ? played : null;
   });
 
   if (out.items.length > 0) return { success: false, violations: out.items };
