@@ -8,6 +8,7 @@ import {
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { IAutoMovieJointAxes } from "./jointToQuaternion";
 import { resolvePose } from "./resolvePose";
 
@@ -31,6 +32,10 @@ import { resolvePose } from "./resolvePose";
  * Throws if the skeleton has no such bone (a mis-wired attachment is a bug, not
  * a silently-skipped frame).
  *
+ * `restFrames` must match the renderer's pose path when the parent motion is
+ * authored in clinical space; otherwise a prop would ride raw rig-space FK
+ * while the visible parent is read through its clinical frame.
+ *
  * @author Samchon
  */
 export const resolveAttachment = (
@@ -38,8 +43,14 @@ export const resolveAttachment = (
   parentSkeleton: IAutoMovieSkeleton,
   attachment: IAutoMovieAttachment,
   jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>,
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>,
 ): IAutoMovieTransform => {
-  const resolved = resolvePose(parentPose, parentSkeleton, jointAxes);
+  const resolved = resolvePose(
+    parentPose,
+    parentSkeleton,
+    jointAxes,
+    restFrames,
+  );
   const seat = resolved.find((r) => r.bone === attachment.parentBone);
   if (seat === undefined)
     throw new Error(
