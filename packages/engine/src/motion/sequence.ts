@@ -22,9 +22,14 @@ export const sequenceMotion = (
   if (parts.length === 0) throw new Error("sequence parts must not be empty");
 
   const skeleton = parts[0]!.skeleton;
-  for (const part of parts)
+  for (const part of parts) {
     if (part.skeleton !== skeleton)
       throw new Error("sequence part skeletons must match");
+    if (!Number.isFinite(part.duration))
+      throw new Error("sequence part duration must be finite and positive");
+    if (part.duration <= 0)
+      throw new Error("sequence part duration must be finite and positive");
+  }
 
   const keyframes: IAutoMovieKeyframe[] = [];
   let offset = 0;
