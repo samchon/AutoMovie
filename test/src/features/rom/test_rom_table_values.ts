@@ -1,5 +1,7 @@
-import { DEFAULT_HUMANOID_ROM } from "@automovie/engine";
+import { DEFAULT_HUMANOID_ROM, swingConeAngle } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
+
+import { nclose } from "../internal/predicates";
 
 /**
  * The default humanoid ROM table is where automovie's core differentiator lives
@@ -13,7 +15,10 @@ import { TestValidator } from "@nestia/e2e";
  *    abduction axis at all.
  * 2. The knee is a hinge too: no hyperextension (flexion min 0), and neither an
  *    abduction nor a twist axis.
- * 3. The shoulder is a ball joint: it has an abduction axis (unlike the hinges).
+ * 3. The shoulder is a ball joint: it has an abduction axis (unlike the hinges)
+ *    and a sourced 180째 swing cone.
+ * 4. The hip is a smaller ball joint: pure 120째 flexion remains legal, while the
+ *    max-flexion + max-abduction corner is now outside its 120째 cone.
  */
 export const test_rom_table_values = (): void => {
   const elbow = DEFAULT_HUMANOID_ROM.leftLowerArm!;
@@ -26,8 +31,31 @@ export const test_rom_table_values = (): void => {
   TestValidator.equals("knee no abduction", knee.abduction, null);
   TestValidator.equals("knee no twist", knee.twist, null);
 
+  const shoulder = DEFAULT_HUMANOID_ROM.leftUpperArm!;
   TestValidator.predicate(
     "shoulder is a ball joint",
-    DEFAULT_HUMANOID_ROM.leftUpperArm!.abduction !== null,
+    shoulder.abduction !== null,
+  );
+  TestValidator.equals("left shoulder swing cone", shoulder.swingDeg, 180);
+  TestValidator.equals(
+    "right shoulder swing cone",
+    DEFAULT_HUMANOID_ROM.rightUpperArm!.swingDeg,
+    180,
+  );
+
+  const hip = DEFAULT_HUMANOID_ROM.leftUpperLeg!;
+  TestValidator.equals("left hip swing cone", hip.swingDeg, 120);
+  TestValidator.equals(
+    "right hip swing cone",
+    DEFAULT_HUMANOID_ROM.rightUpperLeg!.swingDeg,
+    120,
+  );
+  TestValidator.predicate(
+    "pure hip flexion reaches the cone",
+    nclose(swingConeAngle(hip.flexion!.max, 0), hip.swingDeg!),
+  );
+  TestValidator.predicate(
+    "hip max flexion+abduction corner is outside the cone",
+    swingConeAngle(hip.flexion!.max, hip.abduction!.max) > hip.swingDeg!,
   );
 };
