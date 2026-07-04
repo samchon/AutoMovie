@@ -1,4 +1,4 @@
-import { clampPose } from "@automovie/engine";
+import { clampJointRom, clampPose } from "@automovie/engine";
 import {
   IAutoMovieBone,
   IAutoMovieJointConstraint,
@@ -48,6 +48,8 @@ const SKELETON: IAutoMovieSkeleton = {
  *    200 → 150).
  * 4. A bone with no constraint anywhere (hips) passes through unchanged, and the
  *    root transform is preserved.
+ * 5. Non-finite constrained-axis values are neutralized before range clamping, so
+ *    the clamp output remains finite.
  */
 export const test_rom_clamp_pose = (): void => {
   const pose: IAutoMoviePose = {
@@ -106,4 +108,53 @@ export const test_rom_clamp_pose = (): void => {
     999,
   );
   TestValidator.equals("root preserved", out.root, REST);
+
+  // 5. non-finite constrained axes are sanitized before clamping
+  const sanitizedJoint = clampJointRom(
+    {
+      bone: "leftLowerArm",
+      flexion: Number.NaN,
+      abduction: null,
+      twist: null,
+    },
+    SKELETON.bones[0]!.constraint!,
+  );
+  TestValidator.equals(
+    "NaN flexion neutralizes to rest",
+    sanitizedJoint.flexion,
+    0,
+  );
+
+  const sanitizedPose = clampPose(
+    {
+      skeleton: "s",
+      root: REST,
+      joints: [
+        {
+          bone: "leftUpperArm",
+          flexion: Number.NaN,
+          abduction: Number.POSITIVE_INFINITY,
+          twist: 0,
+        },
+      ],
+    },
+    SKELETON,
+  );
+  const sanitizedArm = sanitizedPose.joints[0]!;
+  TestValidator.equals(
+    "pose NaN flexion neutralizes to rest",
+    sanitizedArm.flexion,
+    0,
+  );
+  TestValidator.equals(
+    "pose infinite abduction neutralizes to rest",
+    sanitizedArm.abduction,
+    0,
+  );
+  TestValidator.predicate(
+    "pose clamp output axes are finite",
+    Number.isFinite(sanitizedArm.flexion) &&
+      Number.isFinite(sanitizedArm.abduction) &&
+      Number.isFinite(sanitizedArm.twist),
+  );
 };

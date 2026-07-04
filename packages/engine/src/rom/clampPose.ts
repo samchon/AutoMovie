@@ -15,11 +15,12 @@ const clampAxis = (
 ): number | null => {
   if (angle === null) return null;
   if (allowed === null) return 0; // immobile axis: forced back to neutral
-  return angle < allowed.min
+  const finiteAngle = Number.isFinite(angle) ? angle : 0;
+  return finiteAngle < allowed.min
     ? allowed.min
-    : angle > allowed.max
+    : finiteAngle > allowed.max
       ? allowed.max
-      : angle;
+      : finiteAngle;
 };
 
 /**
