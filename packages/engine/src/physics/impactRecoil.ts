@@ -41,6 +41,15 @@ export const impactRecoil = (
   skeleton: IAutoMovieSkeleton,
   falloff = 0.6,
 ): IAutoMoviePose => {
+  if (!Number.isFinite(falloff))
+    throw new RangeError(
+      `impact recoil falloff must be finite, but was ${falloff}`,
+    );
+  if (falloff < 0 || falloff > 1)
+    throw new RangeError(
+      `impact recoil falloff must be within [0, 1], but was ${falloff}`,
+    );
+
   const joints: IAutoMovieJointPose[] = chain.map((bone, i) => {
     const constraint =
       skeleton.bones.find((b) => b.bone === bone)?.constraint ?? null;
