@@ -1,4 +1,5 @@
 import {
+  AutoMovieHumanoidBone,
   IAutoMovieActionCall,
   IAutoMovieBlockingApplication,
   IAutoMovieCameraAction,
@@ -22,6 +23,7 @@ import {
   compilePerformance,
 } from "../perform/compilePerformance";
 import { resolveTargetPoint } from "../perform/resolveTargetPoint";
+import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { validateMotion } from "../validation/validateMotion";
 import { ViolationCollector } from "../validation/violation";
 import {
@@ -130,6 +132,9 @@ export namespace IAutoMoviePerformedShot {
  *
  * @param props.skeleton Rig lookup for ROM validation; return null for a node
  *   that has no skeleton (its clip skips ROM).
+ * @param props.restFrames Optional per-node clinical rest-frame lookup. Supply
+ *   the same frame table the renderer/player uses so `attachTo` objectMotions
+ *   ride the visible posed bone, not raw rig-space FK.
  */
 export const performShot = (props: {
   script: IAutoMovieScriptApplication.IWrite;
@@ -137,6 +142,9 @@ export const performShot = (props: {
   performance: IAutoMoviePerformanceApplication.IWrite;
   synthesize: IAutoMovieActionSynthesizer;
   skeleton: (node: string) => IAutoMovieSkeleton | null;
+  restFrames?: (
+    node: string,
+  ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>> | undefined;
   /**
    * The beat's validated blocking (from `blockBeat`), when the pipeline runs
    * the full stage ladder. Supplying it arms the coherence gates between intent
@@ -145,7 +153,15 @@ export const performShot = (props: {
    */
   blocking?: IAutoMovieBlockingApplication.IWrite;
 }): IAutoMoviePerformedShot => {
-  const { script, staged, performance, synthesize, skeleton, blocking } = props;
+  const {
+    script,
+    staged,
+    performance,
+    synthesize,
+    skeleton,
+    restFrames,
+    blocking,
+  } = props;
   const out = new ViolationCollector();
 
   const beat = script.beats.find((b) => b.id === performance.beat);
@@ -521,6 +537,7 @@ export const performShot = (props: {
           duration: end - job.action.start,
           shotDuration: performance.duration,
           jointAxes: HUMANOID_JOINT_AXES,
+          restFrames: restFrames?.(job.action.parent),
         }),
       );
   }

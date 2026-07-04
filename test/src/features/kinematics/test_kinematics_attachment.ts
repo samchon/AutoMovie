@@ -1,4 +1,10 @@
-import { Quaternion, resolveAttachment, resolvePose } from "@automovie/engine";
+import {
+  HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
+  Quaternion,
+  resolveAttachment,
+  resolvePose,
+} from "@automovie/engine";
 import {
   IAutoMovieAttachment,
   IAutoMovieTransform,
@@ -6,7 +12,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { nclose, vclose } from "../internal/predicates";
 
 /**
  * `resolveAttachment` — the cross-skeleton joint that fixes a child model's
@@ -27,6 +33,9 @@ import { nclose } from "../internal/predicates";
  *    world rotation, and its offset translation is carried (rotated) into that
  *    frame — exactly matching a hand-composed FK result.
  * 4. Attaching to a bone absent from the skeleton throws.
+ * 5. A clinical-space parent pose resolves through the same rest-frame table as
+ *    the renderer, so an attachment rides the visible hand rather than raw
+ *    rig-space FK.
  */
 export const test_kinematics_attachment = (): void => {
   const skeleton = createSkeleton();
@@ -112,5 +121,35 @@ export const test_kinematics_attachment = (): void => {
   TestValidator.predicate(
     "posed parent still resolves",
     Number.isFinite(r5.translation.y),
+  );
+
+  // 5. clinical parent pose → same FK path as the renderer/player
+  const raised = makePose([joint("leftUpperArm", { abduction: 180 })]);
+  const framed = resolveAttachment(
+    raised,
+    skeleton,
+    { parentBone: "leftHand", offset: idOffset },
+    HUMANOID_JOINT_AXES,
+    HUMANOID_REST_FRAME,
+  );
+  const raw = resolveAttachment(
+    raised,
+    skeleton,
+    { parentBone: "leftHand", offset: idOffset },
+    HUMANOID_JOINT_AXES,
+  );
+  const visibleHand = resolvePose(
+    raised,
+    skeleton,
+    HUMANOID_JOINT_AXES,
+    HUMANOID_REST_FRAME,
+  ).find((r) => r.bone === "leftHand")!;
+  TestValidator.predicate(
+    "rest-framed attachment rides the visible clinical hand",
+    vclose(framed.translation, visibleHand.worldPosition, 1e-9),
+  );
+  TestValidator.predicate(
+    "clinical attachment differs from raw rig-space FK",
+    !vclose(framed.translation, raw.translation, 1e-3),
   );
 };

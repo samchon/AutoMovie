@@ -12,6 +12,7 @@ import { resolveAttachment } from "../kinematics/resolveAttachment";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
+import { IAutoMovieRestFrame } from "../rom/restFrame";
 
 /** The child rides the bone directly — origin on the bone, no extra offset. */
 const IDENTITY_OFFSET: IAutoMovieTransform = {
@@ -37,6 +38,7 @@ const IDENTITY_OFFSET: IAutoMovieTransform = {
  * So as the parent walks, turns, or swings the limb, the child rides with it,
  * position and orientation together — what a physics fixed-joint does. Pass the
  * same `jointAxes` the renderer poses the parent with (`HUMANOID_JOINT_AXES`),
+ * plus the same `restFrames` when parent clips are authored in clinical space,
  * or the child follows a bone that sits where the renderer does not draw it.
  * When the parent has no motion, it holds its rest pose and the child is
  * static.
@@ -69,6 +71,8 @@ export const compileAttach = (props: {
   fps?: number;
   /** Clinical-axis remap for the parent's FK (pass `HUMANOID_JOINT_AXES`). */
   jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
+  /** Per-rig clinical rest-frame remap for the parent's FK. */
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
 }): IAutoMovieClip => {
   const {
     child,
@@ -103,6 +107,7 @@ export const compileAttach = (props: {
       parentSkeleton,
       attachment,
       props.jointAxes,
+      props.restFrames,
     );
     const worldPos = Vector3.add(
       parentTransform.translation,

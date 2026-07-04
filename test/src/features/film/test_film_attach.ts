@@ -1,5 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   Quaternion,
   Vector3,
   compileAttach,
@@ -10,7 +11,14 @@ import {
 import { IAutoMovieTransform, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { createSkeleton, createValidMotion } from "../internal/fixtures";
+import {
+  createSkeleton,
+  createValidMotion,
+  joint,
+  keyframe,
+  makeMotion,
+  makePose,
+} from "../internal/fixtures";
 import { nclose, qclose, vclose } from "../internal/predicates";
 
 const IDENTITY_OFFSET: IAutoMovieTransform = {
@@ -53,6 +61,9 @@ const posAt = (
  *    position changes over the span, and at a frame-aligned instant it equals
  *    the staged placement composed onto `resolveAttachment` of the sampled
  *    pose.
+ * 4. A clinical-space parent motion uses the same rest-frame table as the
+ *    renderer/player, so a prop follows the visible hand rather than raw
+ *    rig-space FK.
  */
 export const test_film_attach = (): void => {
   // 1. a resting parent → a static child at the hand's world point
@@ -142,5 +153,56 @@ export const test_film_attach = (): void => {
   TestValidator.predicate(
     "the child rides the posed bone in scene space",
     vclose(posAt(dyn, t), composed, 1e-9),
+  );
+
+  // 4. clinical parent motion → compileAttach follows the renderer's FK path
+  const raisedMotion = makeMotion(
+    [
+      keyframe(0, makePose([joint("leftUpperArm", { abduction: 180 })])),
+      keyframe(1, makePose([joint("leftUpperArm", { abduction: 180 })])),
+    ],
+    1,
+  );
+  const framed = compileAttach({
+    child: "sword",
+    bone: "leftHand",
+    parentTransform,
+    parentSkeleton: createSkeleton(),
+    parentMotion: raisedMotion,
+    start: 0,
+    duration: 1,
+    shotDuration: 1,
+    jointAxes: HUMANOID_JOINT_AXES,
+    restFrames: HUMANOID_REST_FRAME,
+  });
+  const raw = compileAttach({
+    child: "sword",
+    bone: "leftHand",
+    parentTransform,
+    parentSkeleton: createSkeleton(),
+    parentMotion: raisedMotion,
+    start: 0,
+    duration: 1,
+    shotDuration: 1,
+    jointAxes: HUMANOID_JOINT_AXES,
+  });
+  const framedLocal = resolveAttachment(
+    sampleMotion(raisedMotion, 0.5).pose,
+    createSkeleton(),
+    { parentBone: "leftHand", offset: IDENTITY_OFFSET },
+    HUMANOID_JOINT_AXES,
+    HUMANOID_REST_FRAME,
+  );
+  const framedExpected = Vector3.add(
+    parentTransform.translation,
+    Quaternion.rotateVector(parentTransform.rotation, framedLocal.translation),
+  );
+  TestValidator.predicate(
+    "rest-framed attach follows clinical FK",
+    vclose(posAt(framed, 0.5), framedExpected, 1e-9),
+  );
+  TestValidator.predicate(
+    "rest-framed attach differs from raw rig-space FK",
+    !vclose(posAt(framed, 0.5), posAt(raw, 0.5), 1e-3),
   );
 };

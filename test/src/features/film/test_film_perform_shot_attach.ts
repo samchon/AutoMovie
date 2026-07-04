@@ -1,10 +1,20 @@
 import {
+  HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   IAutoMovieActionSynthesizer,
+  Quaternion,
+  Vector3,
   performShot,
+  resolveAttachment,
   sampleClip,
+  sampleMotion,
   stageScene,
 } from "@automovie/engine";
-import { IAutoMovieActionCall, IAutoMovieVector3 } from "@automovie/interface";
+import {
+  IAutoMovieActionCall,
+  IAutoMovieMotion,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -13,7 +23,14 @@ import {
   makeStagingWrite,
   validSynthesizer,
 } from "../internal/filmFixtures";
-import { createSkeleton } from "../internal/fixtures";
+import {
+  IDENTITY_TRANSFORM,
+  createSkeleton,
+  joint,
+  keyframe,
+  makeMotion,
+  makePose,
+} from "../internal/fixtures";
 import { vclose } from "../internal/predicates";
 
 /** A launch/attach produces no actor pose — those animate objects, not the rig. */
@@ -66,9 +83,11 @@ const stagingOf = () =>
  * 1. The knight gestures (the arm moves) with the sword attached to its
  *    `leftHand`: the sword gets one `objectMotion` that changes over the shot
  *    (it follows the swinging hand), and only the knight performs.
- * 2. An attachTo parent that is not a staged node → an input violation.
- * 3. An attachTo parent with no rig to attach a bone of → a violation.
- * 4. A bone that is not on the parent's skeleton → a violation.
+ * 2. A clinical-space parent clip carries its restFrames into the baked follow
+ *    clip, matching the renderer/player FK path.
+ * 3. An attachTo parent that is not a staged node → an input violation.
+ * 4. An attachTo parent with no rig to attach a bone of → a violation.
+ * 5. A bone that is not on the parent's skeleton → a violation.
  */
 export const test_film_perform_shot_attach = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -144,7 +163,77 @@ export const test_film_perform_shot_attach = (): void => {
     ["knight"],
   );
 
-  // 2. the parent must be a staged node
+  // 2. restFrames are threaded into the baked objectMotion FK.
+  const raisedMotion: IAutoMovieMotion = makeMotion(
+    [
+      keyframe(0, makePose([joint("leftUpperArm", { abduction: 180 })])),
+      keyframe(1, makePose([joint("leftUpperArm", { abduction: 180 })])),
+    ],
+    1,
+  );
+  const clinicalSynth: IAutoMovieActionSynthesizer = (action, actor) =>
+    actor === "knight" && action.verb === "gesture"
+      ? raisedMotion
+      : synth(action, actor);
+  const framed = performShot({
+    script: scriptOf(),
+    staged,
+    performance: makePerformanceWrite({
+      beat: "beat-1",
+      draft: [
+        {
+          verb: "gesture",
+          actor: "knight",
+          start: 0,
+          duration: 1,
+          kind: "celebrate",
+        },
+        {
+          verb: "attachTo",
+          actor: "sword",
+          parent: "knight",
+          bone: "leftHand",
+          start: 0,
+          duration: 1,
+        },
+      ],
+      revise: {
+        review: "the clinical arm raise carries the sword.",
+        final: null,
+      },
+      duration: 1,
+    }),
+    synthesize: clinicalSynth,
+    skeleton: (node) => (node === "knight" ? createSkeleton() : null),
+    restFrames: (node) => (node === "knight" ? HUMANOID_REST_FRAME : undefined),
+  });
+  TestValidator.equals("the rest-framed attach performs", framed.success, true);
+  if (framed.success !== true) return;
+  const framedFollow = framed.shot.objectMotions.find(
+    (c) => c.id === "attach:sword",
+  )!;
+  const framedPos = sampleClip(framedFollow, 0.5).get(
+    "node:sword:translation",
+  )!.value;
+  const framedVec = { x: framedPos[0]!, y: framedPos[1]!, z: framedPos[2]! };
+  const parent = staged.scene.nodes.find((n) => n.id === "knight")!;
+  const local = resolveAttachment(
+    sampleMotion(raisedMotion, 0.5).pose,
+    createSkeleton(),
+    { parentBone: "leftHand", offset: IDENTITY_TRANSFORM },
+    HUMANOID_JOINT_AXES,
+    HUMANOID_REST_FRAME,
+  );
+  const expected = Vector3.add(
+    parent.transform.translation,
+    Quaternion.rotateVector(parent.transform.rotation, local.translation),
+  );
+  TestValidator.predicate(
+    "performShot passes restFrames to attach FK",
+    vclose(framedVec, expected, 1e-9),
+  );
+
+  // 3. the parent must be a staged node
   const noParent = perform([
     {
       verb: "attachTo",
@@ -162,7 +251,7 @@ export const test_film_perform_shot_attach = (): void => {
       noParent.violations.some((v) => v.path.includes(".parent")),
     );
 
-  // 3. the parent must have a rig
+  // 4. the parent must have a rig
   const noRig = perform([
     {
       verb: "attachTo",
@@ -180,7 +269,7 @@ export const test_film_perform_shot_attach = (): void => {
       noRig.violations.some((v) => v.path.includes(".parent")),
     );
 
-  // 4. the bone must be on the parent's skeleton
+  // 5. the bone must be on the parent's skeleton
   const noBone = perform([
     {
       verb: "attachTo",
