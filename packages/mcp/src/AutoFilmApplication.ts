@@ -18,23 +18,24 @@ import {
 } from "@autofilm/interface";
 
 /**
- * AutoFilm's deterministic film engine, exposed as a **Model Context Protocol**
- * surface. Each public method is one validated MCP tool: an MCP client (Codex,
- * Claude, any agent) supplies the structured creative intent, the engine
- * computes the deterministic result, and the tool returns it — including the
- * placement / ROM / continuity violations that make the **engine, not the
- * model, the arbiter of physical truth** ("engine enforces, model creates").
+ * AutoFilm's deterministic 3D film engine, exposed as MCP tools: `stage` places
+ * a cast and rigs a scene, `block` plans a beat's coarse movement, `cut`
+ * assembles shots into a film, and `forge` builds a cast's parametric models.
+ * Each tool takes the model's structured creative intent and returns the
+ * engine's computed result — including the placement, ROM, and continuity
+ * violations that make the engine, not the model, the arbiter of physical truth
+ * ("engine enforces, model creates").
  *
- * This class is the whole harness pulled into one place: `@typia/mcp` wraps it
- * via `typia.llm.controller`, deriving every tool's JSON schema from these
- * method signatures and their JSDoc, so the old per-stage
- * `typia.llm.application<IAutoFilm*Application>()` interfaces are no longer
- * needed — the agent drives the pipeline stage by stage, feeding each tool the
- * output of the previous one.
+ * `@typia/mcp` derives every tool's JSON schema, and validates requests and
+ * responses, straight from this class's method signatures and JSDoc via
+ * `typia.llm.controller` — the old per-stage
+ * `typia.llm.application<IAutoFilm*Application>()` interfaces are retired as
+ * the integration surface. Drive the pipeline stage by stage, feeding each
+ * tool's output into the next.
  *
- * Not here yet: `perform` (a shot) needs a per-actor synthesiser and rig
- * resolver built from the staged rigs, not plain JSON, so wiring it as a tool
- * is the open experiment.
+ * Not yet wired: performing a shot needs a per-actor motion synthesiser and rig
+ * resolver, not plain JSON — surfacing it, and how many servers/tools the whole
+ * pipeline should become, is an ongoing design experiment, not a fixed shape.
  *
  * @author Samchon
  */
