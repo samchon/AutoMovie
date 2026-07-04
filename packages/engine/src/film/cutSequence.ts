@@ -57,11 +57,11 @@ export const cutSequence = (
   const out = new ViolationCollector();
   const byId = new Map(shots.map((s) => [s.id, s]));
 
-  if (!(assemble.fps > 0))
+  if (!Number.isFinite(assemble.fps) || !(assemble.fps > 0))
     out.push(
       "range",
       "$input.fps",
-      `frame rate must be > 0, but was ${assemble.fps}`,
+      `frame rate must be a finite number > 0, but was ${assemble.fps}`,
       assemble.fps,
     );
   if (assemble.entries.length === 0)
@@ -93,13 +93,21 @@ export const cutSequence = (
     let incomingTransition = 0;
     if (entry.trim !== null) {
       const { start, duration } = entry.trim;
-      if (!(duration > 0)) {
+      if (!Number.isFinite(duration) || !(duration > 0)) {
         validPlayedSpan = false;
         out.push(
           "range",
           `$input.entries[${i}].trim.duration`,
-          `trim duration must be > 0 seconds, but was ${duration}`,
+          `trim duration must be a finite number > 0 seconds, but was ${duration}`,
           duration,
+        );
+      } else if (!Number.isFinite(start)) {
+        validPlayedSpan = false;
+        out.push(
+          "range",
+          `$input.entries[${i}].trim.start`,
+          `trim start must be a finite number >= 0 seconds, but was ${start}`,
+          start,
         );
       } else if (start < 0 || start + duration > shot.duration) {
         validPlayedSpan = false;
@@ -120,11 +128,14 @@ export const cutSequence = (
           "the first entry has nothing to transition from",
           entry.transition,
         );
-      else if (!(entry.transition.duration > 0))
+      else if (
+        !Number.isFinite(entry.transition.duration) ||
+        !(entry.transition.duration > 0)
+      )
         out.push(
           "range",
           `$input.entries[${i}].transition.duration`,
-          `transition duration must be > 0 seconds, but was ${entry.transition.duration}`,
+          `transition duration must be a finite number > 0 seconds, but was ${entry.transition.duration}`,
           entry.transition.duration,
         );
       else if (entry.transition.duration > played)
