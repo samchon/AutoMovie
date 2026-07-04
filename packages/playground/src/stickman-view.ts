@@ -1,11 +1,11 @@
 import {
   HUMANOID_JOINT_AXES,
-  IAutoFilmJointAxes,
+  IAutoMovieJointAxes,
   aimRotation,
   solveTwoBoneIK,
-} from "@autofilm/engine";
-import { AutoFilmHumanoidBone } from "@autofilm/interface";
-import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
+} from "@automovie/engine";
+import { AutoMovieHumanoidBone } from "@automovie/interface";
+import { AutoMoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_CAT, buildCat } from "./cat";
@@ -27,7 +27,7 @@ const { model, skeleton } = isCat
 const object = buildModel(model);
 const clips = isCat ? CAT_CLIPS(skeleton.id) : STICKMAN_CLIPS(skeleton.id);
 const jointAxes:
-  | Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>
+  | Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>
   | undefined = isCat ? undefined : HUMANOID_JOINT_AXES;
 const defaultClip = isCat ? "idle" : "jumpingJack";
 
@@ -44,12 +44,12 @@ const catTailSpring =
           "leftLittleProximal",
           "leftLittleIntermediate",
           "leftLittleDistal",
-        ] as AutoFilmHumanoidBone[],
+        ] as AutoMovieHumanoidBone[],
         stiffness: 90,
         damping: 9,
       }
     : undefined;
-const player = new AutoFilmPlayer(
+const player = new AutoMoviePlayer(
   object,
   skeleton,
   clips[clipName]!,
@@ -293,7 +293,7 @@ if (bar !== null) {
 }
 
 // expose for headless verification (the screenshot harness reads this)
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   clip: clipName,
   boneCount: () => object.bones.size,

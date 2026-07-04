@@ -1,4 +1,4 @@
-import { cleanSilhouetteBands } from "@autofilm/forge";
+import { cleanSilhouetteBands } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";

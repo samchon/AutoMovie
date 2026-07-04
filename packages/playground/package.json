@@ -1,8 +1,8 @@
 {
   "private": true,
-  "name": "@autofilm/playground",
+  "name": "@automovie/playground",
   "version": "0.1.0",
-  "description": "autofilm playground — a usable web UI: viewer viewport + humanoid character editor",
+  "description": "automovie playground — a usable web UI: viewer viewport + humanoid character editor",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -21,11 +21,11 @@
   "author": "Samchon",
   "license": "MIT",
   "dependencies": {
-    "@autofilm/engine": "workspace:^",
-    "@autofilm/forge": "workspace:^",
-    "@autofilm/interface": "workspace:^",
-    "@autofilm/render": "workspace:^",
-    "@autofilm/viewer": "workspace:^",
+    "@automovie/engine": "workspace:^",
+    "@automovie/forge": "workspace:^",
+    "@automovie/interface": "workspace:^",
+    "@automovie/render": "workspace:^",
+    "@automovie/viewer": "workspace:^",
     "@pixiv/three-vrm": "^3",
     "three": "^0.169.0"
   },

@@ -1,5 +1,5 @@
-import { forgeCast } from "@autofilm/engine";
-import { AutoFilmHumanoidBone, IAutoFilmBone } from "@autofilm/interface";
+import { forgeCast } from "@automovie/engine";
+import { AutoMovieHumanoidBone, IAutoMovieBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { forgeEntry, makeScriptWrite } from "../internal/filmFixtures";
@@ -7,9 +7,9 @@ import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 const b = (
-  bone: AutoFilmHumanoidBone,
-  parent: AutoFilmHumanoidBone | null,
-): IAutoFilmBone => ({
+  bone: AutoMovieHumanoidBone,
+  parent: AutoMovieHumanoidBone | null,
+): IAutoMovieBone => ({
   bone,
   parent,
   rest: IDENTITY_TRANSFORM,

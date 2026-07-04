@@ -1,4 +1,4 @@
-import { Quaternion, aimRotation } from "@autofilm/engine";
+import { Quaternion, aimRotation } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { qclose, vclose } from "../internal/predicates";

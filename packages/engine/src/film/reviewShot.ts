@@ -1,9 +1,9 @@
 import {
-  IAutoFilmConstraintViolation,
-  IAutoFilmReviewApplication,
-  IAutoFilmReviewNote,
-  IAutoFilmScriptApplication,
-} from "@autofilm/interface";
+  IAutoMovieConstraintViolation,
+  IAutoMovieReviewApplication,
+  IAutoMovieReviewNote,
+  IAutoMovieScriptApplication,
+} from "@automovie/interface";
 
 import { ViolationCollector } from "../validation/violation";
 
@@ -13,10 +13,10 @@ import { ViolationCollector } from "../validation/violation";
  *
  * @author Samchon
  */
-export type IAutoFilmShotReview =
-  | IAutoFilmShotReview.ISuccess
-  | IAutoFilmShotReview.IFailure;
-export namespace IAutoFilmShotReview {
+export type IAutoMovieShotReview =
+  | IAutoMovieShotReview.ISuccess
+  | IAutoMovieShotReview.IFailure;
+export namespace IAutoMovieShotReview {
   /** The review is coherent; act on its verdict. */
   export interface ISuccess {
     /** Discriminator. */
@@ -32,7 +32,7 @@ export namespace IAutoFilmShotReview {
      * The correction backlog for a revise (empty on a pass) — what the next
      * blocking/performance round must read via `getNotes` and fix.
      */
-    notes: IAutoFilmReviewNote[];
+    notes: IAutoMovieReviewNote[];
   }
 
   /** The review contradicted itself or the script. */
@@ -41,7 +41,7 @@ export namespace IAutoFilmShotReview {
     success: false;
 
     /** Every contradiction found, for the correction round. */
-    violations: IAutoFilmConstraintViolation[];
+    violations: IAutoMovieConstraintViolation[];
   }
 }
 
@@ -55,9 +55,9 @@ export namespace IAutoFilmShotReview {
  * pass and silently starve the right one.
  */
 export const reviewShot = (
-  script: IAutoFilmScriptApplication.IWrite,
-  review: IAutoFilmReviewApplication.IWrite,
-): IAutoFilmShotReview => {
+  script: IAutoMovieScriptApplication.IWrite,
+  review: IAutoMovieReviewApplication.IWrite,
+): IAutoMovieShotReview => {
   const out = new ViolationCollector();
 
   if (!script.beats.some((b) => b.id === review.beat))

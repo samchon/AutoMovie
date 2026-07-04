@@ -1,13 +1,16 @@
-import { AutoFilmFaceParameterName, IAutoFilmFace } from "@autofilm/interface";
+import {
+  AutoMovieFaceParameterName,
+  IAutoMovieFace,
+} from "@automovie/interface";
 
 /**
- * One present leaf of an {@link IAutoFilmFace}, projected onto its morph target:
- * the flat `parameter` name the template carries, the dotted `path` the
+ * One present leaf of an {@link IAutoMovieFace}, projected onto its morph
+ * target: the flat `parameter` name the template carries, the dotted `path` the
  * document spells it at (for violation messages), and the weight.
  */
-export interface IAutoFilmFaceTrait {
+export interface IAutoMovieFaceTrait {
   /** Morph-target name the trait drives. */
-  parameter: AutoFilmFaceParameterName;
+  parameter: AutoMovieFaceParameterName;
 
   /** Dotted document path of the leaf, e.g. `"jaw.chin.length"`. */
   path: string;
@@ -18,9 +21,9 @@ export interface IAutoFilmFaceTrait {
 
 /** Traits with one morph target — symmetric features. */
 const SINGLE: {
-  parameter: AutoFilmFaceParameterName;
+  parameter: AutoMovieFaceParameterName;
   path: string;
-  read: (face: IAutoFilmFace) => number | undefined;
+  read: (face: IAutoMovieFace) => number | undefined;
 }[] = [
   { parameter: "faceWidth", path: "width", read: (f) => f.width },
   { parameter: "faceLength", path: "length", read: (f) => f.length },
@@ -60,7 +63,7 @@ const SINGLE: {
  * docs): when only one of `left`/`right` is defined on the pair set, that lone
  * side is the SOURCE for both targets — a single side is the symmetric
  * shorthand; when both are defined, each side drives only its own target.
- * `base` + `R`/`L` must both exist in {@link AutoFilmFaceParameterName}.
+ * `base` + `R`/`L` must both exist in {@link AutoMovieFaceParameterName}.
  */
 interface ISidedSet {
   left?: { [leaf: string]: number | undefined };
@@ -71,7 +74,7 @@ const PAIRED: {
   base: string;
   group: string;
   leaf: string;
-  read: (face: IAutoFilmFace) => ISidedSet | undefined;
+  read: (face: IAutoMovieFace) => ISidedSet | undefined;
 }[] = [
   {
     base: "eyeSize",
@@ -118,7 +121,7 @@ const PAIRED: {
 ];
 
 /**
- * Project an {@link IAutoFilmFace} onto its morph targets — the nested,
+ * Project an {@link IAutoMovieFace} onto its morph targets — the nested,
  * anatomy-shaped document flattened to `(parameter, weight)` pairs in
  * declaration order, omitted leaves and groups skipped.
  *
@@ -136,8 +139,8 @@ const PAIRED: {
  *
  * @author Samchon
  */
-export const flattenFace = (face: IAutoFilmFace): IAutoFilmFaceTrait[] => {
-  const out: IAutoFilmFaceTrait[] = [];
+export const flattenFace = (face: IAutoMovieFace): IAutoMovieFaceTrait[] => {
+  const out: IAutoMovieFaceTrait[] = [];
   for (const { parameter, path, read } of SINGLE) {
     const weight = read(face);
     if (weight !== undefined) out.push({ parameter, path, weight });
@@ -156,7 +159,7 @@ export const flattenFace = (face: IAutoFilmFace): IAutoFilmFaceTrait[] => {
       const value = set[srcSide]?.[leaf];
       if (value === undefined && pairScalar === undefined) continue;
       out.push({
-        parameter: `${base}${suffix}` as AutoFilmFaceParameterName,
+        parameter: `${base}${suffix}` as AutoMovieFaceParameterName,
         path:
           value !== undefined
             ? `${group}.${srcSide}.${leaf}`

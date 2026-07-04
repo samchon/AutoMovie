@@ -1,40 +1,41 @@
 import {
-  AutoFilmInterpolation,
-  AutoFilmNodeKind,
-  IAutoFilmClip,
-  IAutoFilmNode,
-  IAutoFilmTrack,
-} from "@autofilm/interface";
+  AutoMovieInterpolation,
+  AutoMovieNodeKind,
+  IAutoMovieClip,
+  IAutoMovieNode,
+  IAutoMovieTrack,
+} from "@automovie/interface";
 import type {
   AnimationChannel,
   Document,
   Node as GLTFNode,
 } from "@gltf-transform/core";
 
-/** The autofilm-core payload an imported glTF/GLB resolves to. */
-export interface IAutoFilmIngestResult {
+/** The automovie-core payload an imported glTF/GLB resolves to. */
+export interface IAutoMovieIngestResult {
   /** The scene graph as a flat list of core nodes (parent by id reference). */
-  nodes: IAutoFilmNode[];
+  nodes: IAutoMovieNode[];
 
   /** One clip per glTF animation, its tracks targeting node TRS / weights. */
-  clips: IAutoFilmClip[];
+  clips: IAutoMovieClip[];
 }
 
 /**
- * Ingest a parsed glTF/GLB {@link Document} into autofilm's **core** model — the
- * node graph and animation clips — with no three.js and no humanoid
+ * Ingest a parsed glTF/GLB {@link Document} into automovie's **core** model —
+ * the node graph and animation clips — with no three.js and no humanoid
  * assumptions.
  *
  * This is the import side of the pipeline: `@gltf-transform/core` parses the
  * bytes headlessly (so the same loader runs in CI, a worker, or a render farm),
- * and this mapper rewrites glTF's structures onto autofilm's interface. The
+ * and this mapper rewrites glTF's structures onto automovie's interface. The
  * mapping is deliberately structural and lossless-where-it-matters: every glTF
- * node becomes an {@link IAutoFilmNode} (TRS, parent, kind, and the mesh/camera/
- * skin it carries), and every glTF animation becomes an {@link IAutoFilmClip}
- * whose tracks are glTF channel+sampler pairs ({@link IAutoFilmTrack}) — the
- * exact forms the engine's sample pass already consumes. Humanoid retargeting
- * (mapping bones onto the VRM slots) is a later, separate stage; this layer
- * stays generic so props, cameras, and characters all import the same way.
+ * node becomes an {@link IAutoMovieNode} (TRS, parent, kind, and the
+ * mesh/camera/ skin it carries), and every glTF animation becomes an
+ * {@link IAutoMovieClip} whose tracks are glTF channel+sampler pairs
+ * ({@link IAutoMovieTrack}) — the exact forms the engine's sample pass already
+ * consumes. Humanoid retargeting (mapping bones onto the VRM slots) is a later,
+ * separate stage; this layer stays generic so props, cameras, and characters
+ * all import the same way.
  *
  * Node identity: glTF nodes have no stable id, so each is keyed by its index
  * (`node_{i}`) — deterministic and collision-free even when names repeat. All
@@ -42,7 +43,7 @@ export interface IAutoFilmIngestResult {
  *
  * @author Samchon
  */
-export const ingestDocument = (doc: Document): IAutoFilmIngestResult => {
+export const ingestDocument = (doc: Document): IAutoMovieIngestResult => {
   const root = doc.getRoot();
   const gltfNodes = root.listNodes();
 
@@ -65,7 +66,7 @@ export const ingestDocument = (doc: Document): IAutoFilmIngestResult => {
   const cameraIds = indexIds(root.listCameras());
   const skinIds = indexIds(root.listSkins());
 
-  const nodes: IAutoFilmNode[] = gltfNodes.map((n) => {
+  const nodes: IAutoMovieNode[] = gltfNodes.map((n) => {
     const parent = parentByNode.get(n);
     const t = n.getTranslation();
     const r = n.getRotation();
@@ -90,7 +91,7 @@ export const ingestDocument = (doc: Document): IAutoFilmIngestResult => {
     };
   });
 
-  const clips: IAutoFilmClip[] = root.listAnimations().map((anim, i) => {
+  const clips: IAutoMovieClip[] = root.listAnimations().map((anim, i) => {
     const tracks = anim.listChannels().map((ch) => toTrack(ch, idByNode));
     return {
       id: `clip_${i}`,
@@ -114,7 +115,7 @@ const indexIds = <T>(items: T[]): Map<T, string> => {
   return map;
 };
 
-const kindOf = (node: GLTFNode, joints: Set<GLTFNode>): AutoFilmNodeKind =>
+const kindOf = (node: GLTFNode, joints: Set<GLTFNode>): AutoMovieNodeKind =>
   joints.has(node)
     ? "bone"
     : node.getMesh() !== null
@@ -126,7 +127,7 @@ const kindOf = (node: GLTFNode, joints: Set<GLTFNode>): AutoFilmNodeKind =>
 const toTrack = (
   channel: AnimationChannel,
   idByNode: Map<GLTFNode, string>,
-): IAutoFilmTrack => {
+): IAutoMovieTrack => {
   const target = channel.getTargetNode()!;
   const sampler = channel.getSampler()!;
   return {
@@ -145,7 +146,7 @@ const toTrack = (
   };
 };
 
-const toInterpolation = (interp: string): AutoFilmInterpolation =>
+const toInterpolation = (interp: string): AutoMovieInterpolation =>
   interp === "STEP"
     ? "step"
     : interp === "CUBICSPLINE"

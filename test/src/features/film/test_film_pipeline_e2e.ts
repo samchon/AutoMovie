@@ -1,4 +1,4 @@
-import { cutSequence, performShot, stageScene } from "@autofilm/engine";
+import { cutSequence, performShot, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {

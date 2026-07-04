@@ -1,27 +1,27 @@
 import {
-  IAutoFilmCamera,
-  IAutoFilmLight,
-  IAutoFilmScene,
-} from "@autofilm/interface";
+  IAutoMovieCamera,
+  IAutoMovieLight,
+  IAutoMovieScene,
+} from "@automovie/interface";
 import * as THREE from "three";
 
 import { applyPose } from "./applyPose";
-import { IAutoFilmModelObject, applyTransform } from "./buildModel";
+import { IAutoMovieModelObject, applyTransform } from "./buildModel";
 
 /**
  * Result of building a scene: the `three.js` scene and its cameras (first is
  * default).
  */
-export interface IAutoFilmSceneObject {
+export interface IAutoMovieSceneObject {
   scene: THREE.Scene;
   cameras: THREE.PerspectiveCamera[];
 }
 
 /**
- * Build a `three.js` scene from an {@link IAutoFilmScene}.
+ * Build a `three.js` scene from an {@link IAutoMovieScene}.
  *
  * `getModelObject` resolves a node's `model` id to a built
- * {@link IAutoFilmModelObject}. If the same model id appears in multiple nodes
+ * {@link IAutoMovieModelObject}. If the same model id appears in multiple nodes
  * it should return a distinct object each call (a `three.js` object can live in
  * one place only). Each node is wrapped in a group placed at its world
  * transform, so node placement and a pose's own root transform compose
@@ -33,9 +33,9 @@ export interface IAutoFilmSceneObject {
  * @author Samchon
  */
 export const buildScene = (
-  scene: IAutoFilmScene,
-  getModelObject: (modelId: string) => IAutoFilmModelObject | undefined,
-): IAutoFilmSceneObject => {
+  scene: IAutoMovieScene,
+  getModelObject: (modelId: string) => IAutoMovieModelObject | undefined,
+): IAutoMovieSceneObject => {
   const root = new THREE.Scene();
 
   for (const node of scene.nodes) {
@@ -55,13 +55,13 @@ export const buildScene = (
   return { scene: root, cameras };
 };
 
-const buildCamera = (cam: IAutoFilmCamera): THREE.PerspectiveCamera => {
+const buildCamera = (cam: IAutoMovieCamera): THREE.PerspectiveCamera => {
   const camera = new THREE.PerspectiveCamera(cam.fovY, 1, cam.near, cam.far);
   applyTransform(camera, cam.transform);
   return camera;
 };
 
-const buildLight = (light: IAutoFilmLight): THREE.Light => {
+const buildLight = (light: IAutoMovieLight): THREE.Light => {
   const color = new THREE.Color(light.color.r, light.color.g, light.color.b);
   if (light.type === "directional") {
     const l = new THREE.DirectionalLight(color, light.intensity);

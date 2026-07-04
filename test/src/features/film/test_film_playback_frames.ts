@@ -1,10 +1,10 @@
-import { playbackFrameSamples } from "@autofilm/engine";
-import { IAutoFilmSequence, IAutoFilmShot } from "@autofilm/interface";
+import { playbackFrameSamples } from "@automovie/engine";
+import { IAutoMovieSequence, IAutoMovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const shot = (id: string, duration: number): IAutoFilmShot => ({
+const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
   name: null,
   scene: "scene-duel",
@@ -28,7 +28,7 @@ const shot = (id: string, duration: number): IAutoFilmShot => ({
  * 2. The cut lands exactly on frame 4: local time restarts at 0.
  */
 export const test_film_playback_frames = (): void => {
-  const sequence: IAutoFilmSequence = {
+  const sequence: IAutoMovieSequence = {
     id: "seq",
     name: null,
     fps: 4,

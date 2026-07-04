@@ -1,21 +1,21 @@
 import {
-  IAutoFilmJointAxes,
-  IAutoFilmRestFrame,
+  IAutoMovieJointAxes,
+  IAutoMovieRestFrame,
   resolvePose,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMoviePose,
+  IAutoMovieSkeleton,
+} from "@automovie/interface";
 
-import { IAutoFilmModelObject, applyTransform } from "./buildModel";
+import { IAutoMovieModelObject, applyTransform } from "./buildModel";
 
 /**
- * Apply a {@link IAutoFilmPose} to a built model by running the engine's forward
- * kinematics and writing each bone's local rotation onto the corresponding
- * `THREE.Bone`. The pose's root transform (if any) is applied to the model
- * root.
+ * Apply a {@link IAutoMoviePose} to a built model by running the engine's
+ * forward kinematics and writing each bone's local rotation onto the
+ * corresponding `THREE.Bone`. The pose's root transform (if any) is applied to
+ * the model root.
  *
  * The engine owns the math (semantic angles → quaternions), so the viewer only
  * copies results onto `three.js` objects — keeping rendering a thin, swappable
@@ -29,11 +29,11 @@ import { IAutoFilmModelObject, applyTransform } from "./buildModel";
  * @author Samchon
  */
 export const applyPose = (
-  target: IAutoFilmModelObject,
-  pose: IAutoFilmPose,
-  skeleton: IAutoFilmSkeleton,
-  jointAxes?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>,
-  restFrames?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmRestFrame>>,
+  target: IAutoMovieModelObject,
+  pose: IAutoMoviePose,
+  skeleton: IAutoMovieSkeleton,
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>,
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>,
 ): void => {
   for (const r of resolvePose(pose, skeleton, jointAxes, restFrames)) {
     const bone = target.bones.get(r.bone);

@@ -1,10 +1,10 @@
-import { cutSequence } from "@autofilm/engine";
-import { IAutoFilmShot } from "@autofilm/interface";
+import { cutSequence } from "@automovie/engine";
+import { IAutoMovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { hasViolation } from "../internal/predicates";
 
-const SHOT: IAutoFilmShot = {
+const SHOT: IAutoMovieShot = {
   id: "shot:beat-1",
   name: null,
   scene: "scene-duel",

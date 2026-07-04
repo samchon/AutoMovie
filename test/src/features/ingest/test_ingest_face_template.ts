@@ -1,4 +1,4 @@
-import { ingestFaceTemplate } from "@autofilm/ingest";
+import { ingestFaceTemplate } from "@automovie/ingest";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 

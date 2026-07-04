@@ -1,8 +1,8 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmBone,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieBone,
+  IAutoMovieSkeleton,
+} from "@automovie/interface";
 import type { Document, Node as GLTFNode } from "@gltf-transform/core";
 
 /**
@@ -12,7 +12,7 @@ import type { Document, Node as GLTFNode } from "@gltf-transform/core";
  * Keys are already {@link normalize}d (lowercased, separators and a `mixamorig`
  * prefix stripped). Fingers/eyes/jaw are out of scope for this first mapping.
  */
-const HUMANOID_ALIASES: Record<string, AutoFilmHumanoidBone> = {
+const HUMANOID_ALIASES: Record<string, AutoMovieHumanoidBone> = {
   hips: "hips",
   pelvis: "hips",
   spine: "spine",
@@ -60,9 +60,9 @@ const normalize = (name: string): string =>
 
 /**
  * Retarget an imported glTF's skin onto a normalized humanoid
- * {@link IAutoFilmSkeleton} by matching each skin joint's name to a
- * {@link AutoFilmHumanoidBone} slot — the bridge that turns a real rigged
- * glTF/VRM into a autofilm character (poses and motions authored on the slots
+ * {@link IAutoMovieSkeleton} by matching each skin joint's name to a
+ * {@link AutoMovieHumanoidBone} slot — the bridge that turns a real rigged
+ * glTF/VRM into a automovie character (poses and motions authored on the slots
  * then replay on it).
  *
  * The skeleton's hierarchy is rebuilt over the mapped joints only: a bone's
@@ -77,13 +77,13 @@ const normalize = (name: string): string =>
 export const humanoidSkeleton = (
   doc: Document,
   skeletonId = "skeleton",
-): IAutoFilmSkeleton | null => {
+): IAutoMovieSkeleton | null => {
   const skins = doc.getRoot().listSkins();
   if (skins.length === 0) return null;
 
   // First-wins mapping of joint node → humanoid slot.
-  const slotByNode = new Map<GLTFNode, AutoFilmHumanoidBone>();
-  const used = new Set<AutoFilmHumanoidBone>();
+  const slotByNode = new Map<GLTFNode, AutoMovieHumanoidBone>();
+  const used = new Set<AutoMovieHumanoidBone>();
   for (const joint of skins[0]!.listJoints()) {
     const slot = HUMANOID_ALIASES[normalize(joint.getName())];
     if (slot !== undefined && !used.has(slot)) {
@@ -97,10 +97,10 @@ export const humanoidSkeleton = (
   for (const n of doc.getRoot().listNodes())
     for (const child of n.listChildren()) parentNode.set(child, n);
 
-  const bones: IAutoFilmBone[] = [];
+  const bones: IAutoMovieBone[] = [];
   for (const [node, slot] of slotByNode) {
     let ancestor = parentNode.get(node);
-    let parent: AutoFilmHumanoidBone | null = null;
+    let parent: AutoMovieHumanoidBone | null = null;
     while (ancestor !== undefined) {
       const mapped = slotByNode.get(ancestor);
       if (mapped !== undefined) {

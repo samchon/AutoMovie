@@ -1,11 +1,11 @@
-import { Quaternion, Vector3, lookRotation } from "@autofilm/engine";
-import { IAutoFilmVector3 } from "@autofilm/interface";
+import { Quaternion, Vector3, lookRotation } from "@automovie/engine";
+import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, qunit, vclose } from "../internal/predicates";
 
-const FORWARD: IAutoFilmVector3 = { x: 0, y: 0, z: -1 };
-const RIGHT: IAutoFilmVector3 = { x: 1, y: 0, z: 0 };
+const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: -1 };
+const RIGHT: IAutoMovieVector3 = { x: 1, y: 0, z: 0 };
 
 /**
  * Pins the up-stabilized camera aim that replaced the shortest-arc rotation:
@@ -26,7 +26,7 @@ const RIGHT: IAutoFilmVector3 = { x: 1, y: 0, z: 0 };
  *    is pinned).
  */
 export const test_film_camera_look_rotation = (): void => {
-  const level: IAutoFilmVector3[] = [
+  const level: IAutoMovieVector3[] = [
     { x: 0, y: 0, z: -1 },
     { x: 0, y: 0, z: 1 },
     { x: 1, y: 0, z: 0 },

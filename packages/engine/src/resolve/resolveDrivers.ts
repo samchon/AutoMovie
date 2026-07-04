@@ -1,16 +1,16 @@
 import {
-  IAutoFilmCopyDriver,
-  IAutoFilmDrivenDriver,
-  IAutoFilmDriver,
-  IAutoFilmNode,
-} from "@autofilm/interface";
+  IAutoMovieCopyDriver,
+  IAutoMovieDrivenDriver,
+  IAutoMovieDriver,
+  IAutoMovieNode,
+} from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { channelKey } from "./channel";
-import { IAutoFilmSampledChannel } from "./sampleClip";
+import { IAutoMovieSampledChannel } from "./sampleClip";
 
 /** The two channel-space drivers this pass resolves (no world transform needed). */
-type ValueDriver = IAutoFilmCopyDriver | IAutoFilmDrivenDriver;
+type ValueDriver = IAutoMovieCopyDriver | IAutoMovieDrivenDriver;
 
 /**
  * The DRIVE pass for **channel-space** drivers — relationships that compute one
@@ -32,12 +32,12 @@ type ValueDriver = IAutoFilmCopyDriver | IAutoFilmDrivenDriver;
  * @author Samchon
  */
 export const resolveDrivers = (
-  drivers: IAutoFilmDriver[],
-  sampled: Map<string, IAutoFilmSampledChannel>,
-  nodesById: Map<string, IAutoFilmNode>,
-): IAutoFilmDriver[] => {
+  drivers: IAutoMovieDriver[],
+  sampled: Map<string, IAutoMovieSampledChannel>,
+  nodesById: Map<string, IAutoMovieNode>,
+): IAutoMovieDriver[] => {
   const value: ValueDriver[] = [];
-  const deferred: IAutoFilmDriver[] = [];
+  const deferred: IAutoMovieDriver[] = [];
   for (const d of drivers)
     if (d.type === "copy" || d.type === "driven") value.push(d);
     else deferred.push(d);
@@ -99,9 +99,9 @@ const topoSort = (drivers: ValueDriver[]): ValueDriver[] => {
 // ── copy ─────────────────────────────────────────────────────────────────────
 
 const applyCopy = (
-  d: IAutoFilmCopyDriver,
-  sampled: Map<string, IAutoFilmSampledChannel>,
-  nodesById: Map<string, IAutoFilmNode>,
+  d: IAutoMovieCopyDriver,
+  sampled: Map<string, IAutoMovieSampledChannel>,
+  nodesById: Map<string, IAutoMovieNode>,
 ): void => {
   if (d.translation) writeBlend(d, "translation", false, sampled, nodesById);
   if (d.rotation) writeBlend(d, "rotation", true, sampled, nodesById);
@@ -109,11 +109,11 @@ const applyCopy = (
 };
 
 const writeBlend = (
-  d: IAutoFilmCopyDriver,
+  d: IAutoMovieCopyDriver,
   path: "translation" | "rotation" | "scale",
   isRotation: boolean,
-  sampled: Map<string, IAutoFilmSampledChannel>,
-  nodesById: Map<string, IAutoFilmNode>,
+  sampled: Map<string, IAutoMovieSampledChannel>,
+  nodesById: Map<string, IAutoMovieNode>,
 ): void => {
   const owner = readTRS(d.owner, path, sampled, nodesById);
   const source = readTRS(d.source, path, sampled, nodesById);
@@ -132,8 +132,8 @@ const writeBlend = (
 const readTRS = (
   node: string,
   path: "translation" | "rotation" | "scale",
-  sampled: Map<string, IAutoFilmSampledChannel>,
-  nodesById: Map<string, IAutoFilmNode>,
+  sampled: Map<string, IAutoMovieSampledChannel>,
+  nodesById: Map<string, IAutoMovieNode>,
 ): number[] => {
   const hit = sampled.get(`node:${node}:${path}`);
   if (hit !== undefined) return hit.value;
@@ -148,8 +148,8 @@ const readTRS = (
 // ── driven ───────────────────────────────────────────────────────────────────
 
 const applyDriven = (
-  d: IAutoFilmDrivenDriver,
-  sampled: Map<string, IAutoFilmSampledChannel>,
+  d: IAutoMovieDrivenDriver,
+  sampled: Map<string, IAutoMovieSampledChannel>,
 ): void => {
   const src = sampled.get(channelKey(d.source));
   const x = src !== undefined ? src.value[0]! : d.inRange[0];
@@ -191,9 +191,9 @@ const evalCurve = (x: number, pts: [number, number][]): number => {
 // ── shared ───────────────────────────────────────────────────────────────────
 
 const setChannel = (
-  sampled: Map<string, IAutoFilmSampledChannel>,
+  sampled: Map<string, IAutoMovieSampledChannel>,
   key: string,
-  channel: IAutoFilmSampledChannel["channel"],
+  channel: IAutoMovieSampledChannel["channel"],
   value: number[],
 ): void => {
   const existing = sampled.get(key);

@@ -1,5 +1,5 @@
-import { IAutoFilmResolvedBone, resolvePose } from "@autofilm/engine";
-import { AutoFilmHumanoidBone } from "@autofilm/interface";
+import { IAutoMovieResolvedBone, resolvePose } from "@automovie/engine";
+import { AutoMovieHumanoidBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -10,9 +10,9 @@ import {
 import { vclose } from "../internal/predicates";
 
 const at = (
-  rs: IAutoFilmResolvedBone[],
-  b: AutoFilmHumanoidBone,
-): IAutoFilmResolvedBone => {
+  rs: IAutoMovieResolvedBone[],
+  b: AutoMovieHumanoidBone,
+): IAutoMovieResolvedBone => {
   const r = rs.find((x) => x.bone === b);
   if (r === undefined) throw new Error(`bone ${b} not resolved`);
   return r;

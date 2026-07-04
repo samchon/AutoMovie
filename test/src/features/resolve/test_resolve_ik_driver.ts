@@ -1,17 +1,17 @@
-import { Matrix4, resolveWorldDrivers } from "@autofilm/engine";
+import { Matrix4, resolveWorldDrivers } from "@automovie/engine";
 import {
-  IAutoFilmIKDriver,
-  IAutoFilmSpringDriver,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieIKDriver,
+  IAutoMovieSpringDriver,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
-const W = (p: IAutoFilmVector3): number[] =>
+const W = (p: IAutoMovieVector3): number[] =>
   Matrix4.compose(p, { x: 0, y: 0, z: 0, w: 1 }, { x: 1, y: 1, z: 1 });
 
-const ik = (over: Partial<IAutoFilmIKDriver>): IAutoFilmIKDriver => ({
+const ik = (over: Partial<IAutoMovieIKDriver>): IAutoMovieIKDriver => ({
   type: "ik",
   chain: ["r", "m", "t"],
   goal: "g",
@@ -22,16 +22,16 @@ const ik = (over: Partial<IAutoFilmIKDriver>): IAutoFilmIKDriver => ({
   ...over,
 });
 
-const dist = (a: IAutoFilmVector3, b: IAutoFilmVector3): number =>
+const dist = (a: IAutoMovieVector3, b: IAutoMovieVector3): number =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 const solve = (
-  d: IAutoFilmIKDriver,
-  root: IAutoFilmVector3,
-  mid: IAutoFilmVector3,
-  tip: IAutoFilmVector3,
-  goal: IAutoFilmVector3,
-  pole?: IAutoFilmVector3,
+  d: IAutoMovieIKDriver,
+  root: IAutoMovieVector3,
+  mid: IAutoMovieVector3,
+  tip: IAutoMovieVector3,
+  goal: IAutoMovieVector3,
+  pole?: IAutoMovieVector3,
 ): Map<string, number[]> => {
   const world = new Map<string, number[]>([
     ["r", W(root)],
@@ -44,7 +44,7 @@ const solve = (
   return world;
 };
 
-const at = (world: Map<string, number[]>, id: string): IAutoFilmVector3 =>
+const at = (world: Map<string, number[]>, id: string): IAutoMovieVector3 =>
   Matrix4.position(world.get(id)!);
 
 /**
@@ -142,7 +142,7 @@ export const test_resolve_ik_driver = (): void => {
   );
 
   // 6. deferred: ccd solver, wrong-length chain, spring
-  const spring: IAutoFilmSpringDriver = {
+  const spring: IAutoMovieSpringDriver = {
     type: "spring",
     chain: ["a", "b"],
     stiffness: 1,

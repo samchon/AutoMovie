@@ -1,1 +1,1 @@
-export * from "./IAutoFilmColor";
+export * from "./IAutoMovieColor";

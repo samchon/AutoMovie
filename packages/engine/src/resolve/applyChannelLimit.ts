@@ -1,7 +1,7 @@
-import { IAutoFilmChannelLimit } from "@autofilm/interface";
+import { IAutoMovieChannelLimit } from "@automovie/interface";
 
 /** One component of a channel value that exceeded its bound and was clamped. */
-export interface IAutoFilmClampViolation {
+export interface IAutoMovieClampViolation {
   /** Index of the offending component within the channel value vector. */
   component: number;
 
@@ -16,12 +16,12 @@ export interface IAutoFilmClampViolation {
 }
 
 /** The clamped value plus the list of bounds it crossed (empty if in range). */
-export interface IAutoFilmClampOutcome {
+export interface IAutoMovieClampOutcome {
   /** The value after clamping, same length as the input. */
   value: number[];
 
   /** Every component/bound that was exceeded, in component order. */
-  violations: IAutoFilmClampViolation[];
+  violations: IAutoMovieClampViolation[];
 }
 
 /**
@@ -32,16 +32,17 @@ export interface IAutoFilmClampOutcome {
  * max]` that pins a runaway pose back into range is the `[min, max]` whose
  * breach the LLM harness surfaces as a correction. A `null` side (or a
  * `null`/absent component within a side) leaves that direction free; bounds are
- * one-per-component matching the channel width ({@link IAutoFilmChannelLimit}).
+ * one-per-component matching the channel width
+ * ({@link IAutoMovieChannelLimit}).
  *
  * @author Samchon
  */
 export const applyChannelLimit = (
   value: number[],
-  limit: IAutoFilmChannelLimit,
-): IAutoFilmClampOutcome => {
+  limit: IAutoMovieChannelLimit,
+): IAutoMovieClampOutcome => {
   const out = value.slice();
-  const violations: IAutoFilmClampViolation[] = [];
+  const violations: IAutoMovieClampViolation[] = [];
   for (let i = 0; i < out.length; ++i) {
     const lo = limit.min === null ? null : (limit.min[i] ?? null);
     if (lo !== null && out[i]! < lo) {

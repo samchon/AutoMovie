@@ -1,4 +1,4 @@
-import { IAutoFilmFace, IAutoFilmValidation } from "@autofilm/interface";
+import { IAutoMovieFace, IAutoMovieValidation } from "@automovie/interface";
 
 import { flattenFace } from "../face/flattenFace";
 import { ViolationCollector } from "./violation";
@@ -10,7 +10,7 @@ import { ViolationCollector } from "./violation";
 export const FACE_PARAMETER_LIMIT = 2;
 
 /**
- * Validate an {@link IAutoFilmFace} — Tier-1 range checks the rough types
+ * Validate an {@link IAutoMovieFace} — Tier-1 range checks the rough types
  * intentionally do not encode.
  *
  * The document is a nested object of optional trait fields, so the field
@@ -24,7 +24,7 @@ export const FACE_PARAMETER_LIMIT = 2;
  * @author Samchon
  */
 export const validateFace = (props: {
-  face: IAutoFilmFace;
+  face: IAutoMovieFace;
   path?: string;
   collector?: ViolationCollector;
 }): ViolationCollector => {
@@ -43,6 +43,7 @@ export const validateFace = (props: {
   return collector;
 };
 
-/** Convenience wrapper returning a finished {@link IAutoFilmValidation}. */
-export const validateFaceResult = (face: IAutoFilmFace): IAutoFilmValidation =>
-  validateFace({ face }).toValidation();
+/** Convenience wrapper returning a finished {@link IAutoMovieValidation}. */
+export const validateFaceResult = (
+  face: IAutoMovieFace,
+): IAutoMovieValidation => validateFace({ face }).toValidation();

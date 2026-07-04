@@ -1,4 +1,4 @@
-import { validateMotion } from "@autofilm/engine";
+import { validateMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {

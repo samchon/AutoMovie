@@ -1,18 +1,18 @@
 import {
-  IAutoFilmCamera,
-  IAutoFilmCameraAction,
-  IAutoFilmClip,
-  IAutoFilmQuaternion,
-  IAutoFilmSkeleton,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieCamera,
+  IAutoMovieCameraAction,
+  IAutoMovieClip,
+  IAutoMovieQuaternion,
+  IAutoMovieSkeleton,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { ease } from "../motion/easing";
 
 /** World up — the horizon a camera keeps level. */
-const UP: IAutoFilmVector3 = { x: 0, y: 1, z: 0 };
+const UP: IAutoMovieVector3 = { x: 0, y: 1, z: 0 };
 
 /**
  * The rotation that points a camera's −Z down `direction` while keeping its
@@ -23,8 +23,8 @@ const UP: IAutoFilmVector3 = { x: 0, y: 1, z: 0 };
  * degenerates the cross product, so +Z steps in as the reference.
  */
 export const lookRotation = (
-  direction: IAutoFilmVector3,
-): IAutoFilmQuaternion => {
+  direction: IAutoMovieVector3,
+): IAutoMovieQuaternion => {
   const z = Vector3.scale(Vector3.normalize(direction), -1); // camera +Z = back
   let x = Vector3.cross(UP, z);
   if (Vector3.length(x) < 1e-6) x = Vector3.cross({ x: 0, y: 0, z: 1 }, z);
@@ -69,7 +69,7 @@ export const lookRotation = (
  * shoulders; `wide` shows the subject small in its surroundings.
  */
 export const FRAMING_HEIGHT_FRACTION: Record<
-  IAutoFilmCameraAction["framing"],
+  IAutoMovieCameraAction["framing"],
   number
 > = { wide: 4, full: 1.15, medium: 0.62, close: 0.28 };
 
@@ -78,7 +78,7 @@ export const FRAMING_HEIGHT_FRACTION: Record<
  * shot looks at the head, a full shot at the middle of the body.
  */
 export const FRAMING_AIM_FRACTION: Record<
-  IAutoFilmCameraAction["framing"],
+  IAutoMovieCameraAction["framing"],
   number
 > = { wide: 0.5, full: 0.5, medium: 0.72, close: 0.85 };
 
@@ -111,21 +111,21 @@ const FOLLOW_HZ = 4;
  *
  * @author Samchon
  */
-export interface IAutoFilmFramedSubject {
+export interface IAutoMovieFramedSubject {
   /** Base (ground) point at the move's start. */
-  base: IAutoFilmVector3;
+  base: IAutoMovieVector3;
 
   /** Subject height in meters (drives framing distance and aim height). */
   height: number;
 
   /** Animated base over shot-local seconds, or null when static. */
-  at: ((seconds: number) => IAutoFilmVector3) | null;
+  at: ((seconds: number) => IAutoMovieVector3) | null;
 }
 
 /** One `frame` action paired with its resolved subject. */
-export interface IAutoFilmCameraFrameEntry {
-  action: IAutoFilmCameraAction;
-  subject: IAutoFilmFramedSubject;
+export interface IAutoMovieCameraFrameEntry {
+  action: IAutoMovieCameraAction;
+  subject: IAutoMovieFramedSubject;
 }
 
 /**
@@ -149,19 +149,22 @@ export interface IAutoFilmCameraFrameEntry {
  */
 export const compileCameraMove = (props: {
   clipId: string;
-  camera: IAutoFilmCamera;
-  entries: IAutoFilmCameraFrameEntry[];
+  camera: IAutoMovieCamera;
+  entries: IAutoMovieCameraFrameEntry[];
   shotDuration: number;
-}): IAutoFilmClip | null => {
+}): IAutoMovieClip | null => {
   const { clipId, camera, entries, shotDuration } = props;
   if (entries.length === 0) return null;
 
-  const keys: { t: number; pos: IAutoFilmVector3; rot: IAutoFilmQuaternion }[] =
-    [];
+  const keys: {
+    t: number;
+    pos: IAutoMovieVector3;
+    rot: IAutoMovieQuaternion;
+  }[] = [];
   const push = (
     t: number,
-    pos: IAutoFilmVector3,
-    rot: IAutoFilmQuaternion,
+    pos: IAutoMovieVector3,
+    rot: IAutoMovieQuaternion,
   ): void => {
     const last = keys[keys.length - 1];
     // Two moves may abut on the same instant; the later framing wins the key
@@ -181,7 +184,7 @@ export const compileCameraMove = (props: {
 
     const aimFraction = FRAMING_AIM_FRACTION[action.framing];
     const aimOffset = subject.height * aimFraction;
-    const aimOf = (base: IAutoFilmVector3): IAutoFilmVector3 => ({
+    const aimOf = (base: IAutoMovieVector3): IAutoMovieVector3 => ({
       x: base.x,
       y: base.y + aimOffset,
       z: base.z,
@@ -201,9 +204,9 @@ export const compileCameraMove = (props: {
         : Vector3.normalize(toCamera);
 
     const framedAt = (
-      base: IAutoFilmVector3,
+      base: IAutoMovieVector3,
       d: number,
-    ): { pos: IAutoFilmVector3; rot: IAutoFilmQuaternion } => {
+    ): { pos: IAutoMovieVector3; rot: IAutoMovieQuaternion } => {
       const aim = aimOf(base);
       const pos = Vector3.add(aim, Vector3.scale(bearing, d));
       return { pos, rot: lookRotation(Vector3.subtract(aim, pos)) };
@@ -307,15 +310,15 @@ export const compileCameraMove = (props: {
  * distance from — the same "measure from the rig, not hope" doctrine as
  * staging's reach/stride.
  */
-export const computeRestHeight = (skeleton: IAutoFilmSkeleton): number => {
+export const computeRestHeight = (skeleton: IAutoMovieSkeleton): number => {
   const byName = new Map(skeleton.bones.map((b) => [b.bone, b]));
   const world = new Map<
     string,
-    { pos: IAutoFilmVector3; rot: IAutoFilmQuaternion }
+    { pos: IAutoMovieVector3; rot: IAutoMovieQuaternion }
   >();
   const resolve = (
     name: (typeof skeleton.bones)[number]["bone"],
-  ): { pos: IAutoFilmVector3; rot: IAutoFilmQuaternion } => {
+  ): { pos: IAutoMovieVector3; rot: IAutoMovieQuaternion } => {
     const cached = world.get(name);
     if (cached !== undefined) return cached;
     const bone = byName.get(name)!;

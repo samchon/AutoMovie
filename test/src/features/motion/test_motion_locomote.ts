@@ -1,4 +1,4 @@
-import { Quaternion, locomoteMotion } from "@autofilm/engine";
+import { Quaternion, locomoteMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";

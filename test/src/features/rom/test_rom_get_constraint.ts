@@ -1,5 +1,5 @@
-import { DEFAULT_HUMANOID_ROM, getConstraint } from "@autofilm/engine";
-import { IAutoFilmJointConstraint } from "@autofilm/interface";
+import { DEFAULT_HUMANOID_ROM, getConstraint } from "@automovie/engine";
+import { IAutoMovieJointConstraint } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 /**
@@ -17,7 +17,7 @@ import { TestValidator } from "@nestia/e2e";
  *    — unconstrained.
  */
 export const test_rom_get_constraint = (): void => {
-  const override: IAutoFilmJointConstraint = {
+  const override: IAutoMovieJointConstraint = {
     flexion: { min: -200, max: 200 },
     abduction: null,
     twist: null,

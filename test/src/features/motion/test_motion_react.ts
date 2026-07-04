@@ -1,24 +1,24 @@
-import { reactMotion } from "@autofilm/engine";
+import { reactMotion } from "@automovie/engine";
 import {
-  IAutoFilmBone,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  IAutoMovieBone,
+  IAutoMovieSkeleton,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const rest: IAutoFilmTransform = {
+const rest: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
 const bone = (
-  name: IAutoFilmBone["bone"],
-  constraint: IAutoFilmBone["constraint"],
-): IAutoFilmBone => ({ bone: name, parent: null, rest, constraint });
+  name: IAutoMovieBone["bone"],
+  constraint: IAutoMovieBone["constraint"],
+): IAutoMovieBone => ({ bone: name, parent: null, rest, constraint });
 
-const skeleton: IAutoFilmSkeleton = {
+const skeleton: IAutoMovieSkeleton = {
   id: "react-rig",
   bones: [
     bone("spine", {

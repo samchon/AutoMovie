@@ -1,10 +1,10 @@
-import { resolveSequencePlayback, sequenceTimeline } from "@autofilm/engine";
-import { IAutoFilmSequence, IAutoFilmShot } from "@autofilm/interface";
+import { resolveSequencePlayback, sequenceTimeline } from "@automovie/engine";
+import { IAutoMovieSequence, IAutoMovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const shot = (id: string, duration: number): IAutoFilmShot => ({
+const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
   name: null,
   scene: "scene-duel",
@@ -16,7 +16,7 @@ const shot = (id: string, duration: number): IAutoFilmShot => ({
 });
 const SHOTS = [shot("shot:beat-1", 3), shot("shot:beat-2", 4)];
 
-const SEQUENCE: IAutoFilmSequence = {
+const SEQUENCE: IAutoMovieSequence = {
   id: "seq",
   name: null,
   fps: 24,

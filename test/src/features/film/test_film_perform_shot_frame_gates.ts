@@ -1,5 +1,5 @@
-import { performShot, stageScene } from "@autofilm/engine";
-import { IAutoFilmCameraAction } from "@autofilm/interface";
+import { performShot, stageScene } from "@automovie/engine";
+import { IAutoMovieCameraAction } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -12,8 +12,8 @@ import { createSkeleton } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 const frame = (
-  overrides: Partial<IAutoFilmCameraAction>,
-): IAutoFilmCameraAction => ({
+  overrides: Partial<IAutoMovieCameraAction>,
+): IAutoMovieCameraAction => ({
   verb: "frame",
   actor: "cam-main",
   start: 0,

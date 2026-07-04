@@ -1,27 +1,27 @@
 import {
-  IAutoFilmJointAxes,
+  IAutoMovieJointAxes,
   Quaternion,
   decomposeJointRotation,
   jointToQuaternion,
-} from "@autofilm/engine";
-import { IAutoFilmVector3 } from "@autofilm/interface";
+} from "@automovie/engine";
+import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { vclose } from "../internal/predicates";
 
-const DEFAULT_AXES: IAutoFilmJointAxes = {
+const DEFAULT_AXES: IAutoMovieJointAxes = {
   flexion: { x: 1, y: 0, z: 0 },
   abduction: { x: 0, y: 0, z: 1 },
   twist: { x: 0, y: 1, z: 0 },
 };
 // The humanoid arm basis (flexion→Y, abduction→Z, twist→X): right-handed.
-const ARM_AXES: IAutoFilmJointAxes = {
+const ARM_AXES: IAutoMovieJointAxes = {
   flexion: { x: 0, y: 1, z: 0 },
   abduction: { x: 0, y: 0, z: 1 },
   twist: { x: 1, y: 0, z: 0 },
 };
 
-const PROBES: IAutoFilmVector3[] = [
+const PROBES: IAutoMovieVector3[] = [
   { x: 1, y: 0, z: 0 },
   { x: 0, y: 1, z: 0 },
   { x: 0, y: 0, z: 1 },

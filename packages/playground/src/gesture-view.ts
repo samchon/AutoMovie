@@ -1,22 +1,22 @@
 import {
   HUMANOID_JOINT_AXES,
   HUMANOID_REST_FRAME,
-  IAutoFilmActorContext,
+  IAutoMovieActorContext,
   cutSequence,
   makeActorSynthesizer,
   performShot,
   resolveSequencePlayback,
   stageScene,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmMotion,
-  IAutoFilmPerformanceApplication,
-  IAutoFilmScriptApplication,
-  IAutoFilmShot,
-  IAutoFilmStagingApplication,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
-import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
+  IAutoMovieMotion,
+  IAutoMoviePerformanceApplication,
+  IAutoMovieScriptApplication,
+  IAutoMovieShot,
+  IAutoMovieStagingApplication,
+  IAutoMovieVector3,
+} from "@automovie/interface";
+import { AutoMoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
@@ -28,7 +28,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 // the player is handed HUMANOID_REST_FRAME so it reads those angles up. Engine-
 // authored, ROM-safe, deterministic via renderAt(t).
 
-const script: IAutoFilmScriptApplication.IWrite = {
+const script: IAutoMovieScriptApplication.IWrite = {
   type: "write",
   logline: "A figure jumps, then celebrates.",
   theme: "a coil, a leap, and a cheer",
@@ -43,7 +43,7 @@ const script: IAutoFilmScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoFilmStagingApplication.IWrite = {
+const staging: IAutoMovieStagingApplication.IWrite = {
   type: "write",
   scene: { id: "scene-leap", name: "the leap" },
   plan: "the jumper stands centre, facing +Z; a side-on camera reads the vertical arc.",
@@ -66,7 +66,7 @@ const staging: IAutoFilmStagingApplication.IWrite = {
   ],
 };
 
-const performance: IAutoFilmPerformanceApplication.IWrite = {
+const performance: IAutoMoviePerformanceApplication.IWrite = {
   type: "write",
   beat: "leap",
   plan: "two jumps back to back, then both arms thrown up in a cheer.",
@@ -109,10 +109,10 @@ const staged = stageScene(script, staging);
 if (staged.success !== true)
   throw new Error(`staging failed: ${JSON.stringify(staged)}`);
 
-const nodePositions = new Map<string, IAutoFilmVector3>(
+const nodePositions = new Map<string, IAutoMovieVector3>(
   staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
 );
-const contexts = new Map<string, IAutoFilmActorContext>(
+const contexts = new Map<string, IAutoMovieActorContext>(
   staged.scene.nodes
     .filter((n) => isActor(n.id))
     .map((n) => {
@@ -143,8 +143,8 @@ const performed = performShot({
 });
 if (performed.success !== true)
   throw new Error(`perform failed: ${JSON.stringify(performed.violations)}`);
-const shots: IAutoFilmShot[] = [performed.shot];
-const motionsByShot = new Map<string, Record<string, IAutoFilmMotion>>([
+const shots: IAutoMovieShot[] = [performed.shot];
+const motionsByShot = new Map<string, Record<string, IAutoMovieMotion>>([
   [performed.shot.id, performed.motions],
 ]);
 
@@ -190,7 +190,7 @@ const playersByShot = new Map(
     shot.id,
     shot.performances.map((p) => ({
       node: p.node,
-      player: new AutoFilmPlayer(
+      player: new AutoMoviePlayer(
         built[p.node]!,
         rigOf[p.node as keyof typeof rigOf].skeleton,
         motionsByShot.get(shot.id)![p.node]!,
@@ -243,7 +243,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   renderAt(t);
   handle.renderer.render(scene, camera);
 };
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   duration: FILM_DURATION,
   shots: shots.map((s) => s.id),

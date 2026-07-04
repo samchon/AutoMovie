@@ -1,4 +1,4 @@
-import { exportModelToGLB } from "@autofilm/render";
+import { exportModelToGLB } from "@automovie/render";
 import { mkdirSync, writeFileSync } from "fs";
 import { resolve } from "path";
 
@@ -7,9 +7,9 @@ import { DEFAULT_STICKMAN, buildStickman } from "../src/stickman";
 /**
  * Generate the committed `stickman.glb` from the stick-figure AST.
  *
- * The canonical demonstration of `@autofilm/render`'s `exportModelToGLB`
- * round-trip: the same `IAutoFilmModel` the viewer renders is serialized to a
- * standalone binary glTF (rest / T-pose) any glTF tool — or autofilm's own
+ * The canonical demonstration of `@automovie/render`'s `exportModelToGLB`
+ * round-trip: the same `IAutoMovieModel` the viewer renders is serialized to a
+ * standalone binary glTF (rest / T-pose) any glTF tool — or automovie's own
  * ingest — can load. Re-run (`pnpm build:stickman`) after changing the figure's
  * proportions. Bundled and run by `build-stickman.cjs`.
  *

@@ -1,13 +1,13 @@
 import {
-  IAutoFilmAimDriver,
-  IAutoFilmDriver,
-  IAutoFilmIKDriver,
-  IAutoFilmNode,
-  IAutoFilmParentDriver,
-  IAutoFilmQuaternion,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieAimDriver,
+  IAutoMovieDriver,
+  IAutoMovieIKDriver,
+  IAutoMovieNode,
+  IAutoMovieParentDriver,
+  IAutoMovieQuaternion,
+  IAutoMovieTransform,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
@@ -19,23 +19,23 @@ import { Vector3 } from "../math/Vector3";
  * **after** the initial compose, reads world matrices, recomputes the owner's
  * world transform, and recomposes the owner's subtree so descendants follow.
  *
- * This step resolves {@link IAutoFilmAimDriver} (look-at: orient a node so one
+ * This step resolves {@link IAutoMovieAimDriver} (look-at: orient a node so one
  * of its axes points at a target — eyes, head, a camera),
- * {@link IAutoFilmParentDriver} (Child-Of: make a node inherit another's world
+ * {@link IAutoMovieParentDriver} (Child-Of: make a node inherit another's world
  * frame, per component — a sword following a hand), and the analytic two-bone
- * {@link IAutoFilmIKDriver} (back-solve a 3-node limb so its tip reaches a goal
+ * {@link IAutoMovieIKDriver} (back-solve a 3-node limb so its tip reaches a goal
  * — arms, legs). Iterative IK (`ccd`/`fabrik`) and `spring` are returned
  * untouched for their own dedicated steps; nothing is silently dropped.
  *
  * @author Samchon
  */
 export const resolveWorldDrivers = (
-  drivers: IAutoFilmDriver[],
+  drivers: IAutoMovieDriver[],
   world: Map<string, number[]>,
-  localById: Map<string, IAutoFilmTransform>,
+  localById: Map<string, IAutoMovieTransform>,
   childrenById: Map<string, string[]>,
-): IAutoFilmDriver[] => {
-  const deferred: IAutoFilmDriver[] = [];
+): IAutoMovieDriver[] => {
+  const deferred: IAutoMovieDriver[] = [];
   for (const d of drivers)
     if (d.type === "aim") applyAim(d, world, localById, childrenById);
     else if (d.type === "parent")
@@ -48,7 +48,7 @@ export const resolveWorldDrivers = (
 
 /** Build the parent → children adjacency the recompose walk needs. */
 export const childrenIndex = (
-  nodes: IAutoFilmNode[],
+  nodes: IAutoMovieNode[],
 ): Map<string, string[]> => {
   const map = new Map<string, string[]>();
   for (const n of nodes)
@@ -61,9 +61,9 @@ export const childrenIndex = (
 };
 
 const applyAim = (
-  d: IAutoFilmAimDriver,
+  d: IAutoMovieAimDriver,
   world: Map<string, number[]>,
-  localById: Map<string, IAutoFilmTransform>,
+  localById: Map<string, IAutoMovieTransform>,
   childrenById: Map<string, string[]>,
 ): void => {
   const dec = Matrix4.decompose(world.get(d.owner)!);
@@ -83,9 +83,9 @@ const applyAim = (
  * components the flags leave off. Then its subtree recomposes.
  */
 const applyParent = (
-  d: IAutoFilmParentDriver,
+  d: IAutoMovieParentDriver,
   world: Map<string, number[]>,
-  localById: Map<string, IAutoFilmTransform>,
+  localById: Map<string, IAutoMovieTransform>,
   childrenById: Map<string, string[]>,
 ): void => {
   const own = Matrix4.decompose(world.get(d.owner)!);
@@ -113,9 +113,9 @@ const applyParent = (
  * transforms), so it needs no world→local round-trip.
  */
 const applyTwoBoneIK = (
-  d: IAutoFilmIKDriver,
+  d: IAutoMovieIKDriver,
   world: Map<string, number[]>,
-  localById: Map<string, IAutoFilmTransform>,
+  localById: Map<string, IAutoMovieTransform>,
   childrenById: Map<string, string[]>,
 ): void => {
   const rootId = d.chain[0]!;
@@ -214,13 +214,14 @@ const clamp = (x: number, lo: number, hi: number): number =>
   Math.min(hi, Math.max(lo, x));
 
 const blendVec = (
-  a: IAutoFilmVector3,
-  b: IAutoFilmVector3,
+  a: IAutoMovieVector3,
+  b: IAutoMovieVector3,
   t: number,
-): IAutoFilmVector3 => Vector3.add(a, Vector3.scale(Vector3.subtract(b, a), t));
+): IAutoMovieVector3 =>
+  Vector3.add(a, Vector3.scale(Vector3.subtract(b, a), t));
 
 /** Some unit vector perpendicular to `v` (for a straight limb's free bend). */
-const anyPerp = (v: IAutoFilmVector3): IAutoFilmVector3 => {
+const anyPerp = (v: IAutoMovieVector3): IAutoMovieVector3 => {
   const c = Vector3.cross(v, { x: 0, y: 1, z: 0 });
   return Vector3.length(c) > 1e-6
     ? Vector3.normalize(c)
@@ -231,7 +232,7 @@ const anyPerp = (v: IAutoFilmVector3): IAutoFilmVector3 => {
 const recompose = (
   id: string,
   world: Map<string, number[]>,
-  localById: Map<string, IAutoFilmTransform>,
+  localById: Map<string, IAutoMovieTransform>,
   childrenById: Map<string, string[]>,
 ): void => {
   const parentWorld = world.get(id)!;
@@ -250,11 +251,11 @@ const recompose = (
  * vector) is parallel to `dir` the roll is undefined and skipped.
  */
 const aimRotation = (
-  dir: IAutoFilmVector3,
-  aimAxis: IAutoFilmVector3,
-  upAxis: IAutoFilmVector3,
-  worldUp: IAutoFilmVector3,
-): IAutoFilmQuaternion => {
+  dir: IAutoMovieVector3,
+  aimAxis: IAutoMovieVector3,
+  upAxis: IAutoMovieVector3,
+  worldUp: IAutoMovieVector3,
+): IAutoMovieQuaternion => {
   const f = Vector3.normalize(dir);
   const r1 = quatFromTo(Vector3.normalize(aimAxis), f);
 
@@ -277,15 +278,16 @@ const aimRotation = (
 
 /** Component of `v` perpendicular to the unit axis `f`. */
 const projectPerp = (
-  v: IAutoFilmVector3,
-  f: IAutoFilmVector3,
-): IAutoFilmVector3 => Vector3.subtract(v, Vector3.scale(f, Vector3.dot(v, f)));
+  v: IAutoMovieVector3,
+  f: IAutoMovieVector3,
+): IAutoMovieVector3 =>
+  Vector3.subtract(v, Vector3.scale(f, Vector3.dot(v, f)));
 
 /** Shortest-arc rotation from unit vector `a` to unit vector `b`. */
 const quatFromTo = (
-  a: IAutoFilmVector3,
-  b: IAutoFilmVector3,
-): IAutoFilmQuaternion => {
+  a: IAutoMovieVector3,
+  b: IAutoMovieVector3,
+): IAutoMovieQuaternion => {
   const d = Vector3.dot(a, b);
   if (d > 0.999999) return Quaternion.identity();
   if (d < -0.999999) {

@@ -1,4 +1,4 @@
-import { validateFaceResult } from "@autofilm/engine";
+import { validateFaceResult } from "@automovie/engine";
 import {
   CANONICAL_FACE_INDICES,
   CANONICAL_FACE_POSITIONS,
@@ -15,8 +15,11 @@ import {
   buildHairShell,
   buildHairTails,
   buildSkullShell,
-} from "@autofilm/forge";
-import { AutoFilmFaceParameterName, IAutoFilmFace } from "@autofilm/interface";
+} from "@automovie/forge";
+import {
+  AutoMovieFaceParameterName,
+  IAutoMovieFace,
+} from "@automovie/interface";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -77,7 +80,7 @@ app.innerHTML = `
       <img id="ref" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;pointer-events:none" />
     </div>
     <div id="panel">
-      <h1>autofilm · face editor</h1>
+      <h1>automovie · face editor</h1>
       <div class="sub" id="status">pure-parameter character head</div>
       <h2>workbench</h2>
       <div class="row"><label><span>camera</span></label>
@@ -166,7 +169,7 @@ controls.update();
 
 // ── face mesh (morphable, region-colored) ────────────────────────────────────
 const morphs = buildFaceMorphs();
-const NAMES = Object.keys(morphs) as AutoFilmFaceParameterName[];
+const NAMES = Object.keys(morphs) as AutoMovieFaceParameterName[];
 
 const faceGeometry = new THREE.BufferGeometry();
 faceGeometry.setAttribute(
@@ -854,11 +857,11 @@ rebuildEyes();
 paintFace();
 
 // ── document panel ───────────────────────────────────────────────────────────
-const weights = new Map<AutoFilmFaceParameterName, number>();
+const weights = new Map<AutoMovieFaceParameterName, number>();
 // slider (morph target) name → its leaf in the anatomy-shaped document
 const NEST: Record<
-  AutoFilmFaceParameterName,
-  (f: IAutoFilmFace, w: number) => void
+  AutoMovieFaceParameterName,
+  (f: IAutoMovieFace, w: number) => void
 > = {
   faceWidth: (f, w) => (f.width = w),
   faceLength: (f, w) => (f.length = w),
@@ -887,7 +890,7 @@ const NEST: Record<
   lipFullness: (f, w) => (((f.mouth ??= {}).lips ??= {}).fullness = w),
 };
 const refresh = (): void => {
-  const face: IAutoFilmFace = {};
+  const face: IAutoMovieFace = {};
   let count = 0;
   for (const [parameter, weight] of weights.entries())
     if (weight !== 0) {
@@ -920,7 +923,7 @@ const refresh = (): void => {
   }
   const result = validateFaceResult(face);
   status.textContent = result.success
-    ? `valid IAutoFilmFace — ${count} trait(s) set`
+    ? `valid IAutoMovieFace — ${count} trait(s) set`
     : `INVALID: ${result.violations[0]!.expected}`;
   docOut.textContent = JSON.stringify(
     {
@@ -1055,7 +1058,7 @@ colorInput("#cIrisL", "irisLeft");
 
 // ── presets: a character is ONE pure-parameter document ─────────────────────
 interface IPreset {
-  face: Partial<Record<AutoFilmFaceParameterName, number>>;
+  face: Partial<Record<AutoMovieFaceParameterName, number>>;
   data?: { identity: string; skin: string; head: string };
   skull: IForgeSkullParameters;
   hair: Required<IForgeHairParameters>;
@@ -1357,7 +1360,7 @@ loadPhotoHead("/models/hero1-head.glb");
   name: string,
 ): void => applyPreset(PRESETS[name]!);
 (window as unknown as { __setFace: unknown }).__setFace = (
-  params: Partial<Record<AutoFilmFaceParameterName, number>>,
+  params: Partial<Record<AutoMovieFaceParameterName, number>>,
 ): void => {
   NAMES.forEach((name, idx) => {
     const w = params[name] ?? 0;

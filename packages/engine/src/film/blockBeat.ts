@@ -1,11 +1,11 @@
 import {
-  IAutoFilmBlockingApplication,
-  IAutoFilmConstraintViolation,
-  IAutoFilmScriptApplication,
-} from "@autofilm/interface";
+  IAutoMovieBlockingApplication,
+  IAutoMovieConstraintViolation,
+  IAutoMovieScriptApplication,
+} from "@automovie/interface";
 
 import { ViolationCollector } from "../validation/violation";
-import { IAutoFilmStagedSet } from "./stageScene";
+import { IAutoMovieStagedSet } from "./stageScene";
 
 /**
  * A validated blocking: the beat's shot plan, coherent with the script and the
@@ -13,17 +13,17 @@ import { IAutoFilmStagedSet } from "./stageScene";
  *
  * @author Samchon
  */
-export type IAutoFilmBlockedBeat =
-  | IAutoFilmBlockedBeat.ISuccess
-  | IAutoFilmBlockedBeat.IFailure;
-export namespace IAutoFilmBlockedBeat {
+export type IAutoMovieBlockedBeat =
+  | IAutoMovieBlockedBeat.ISuccess
+  | IAutoMovieBlockedBeat.IFailure;
+export namespace IAutoMovieBlockedBeat {
   /** The plan holds together; performance can align to it. */
   export interface ISuccess {
     /** Discriminator. */
     success: true;
 
     /** The validated plan, verbatim. */
-    blocking: IAutoFilmBlockingApplication.IWrite;
+    blocking: IAutoMovieBlockingApplication.IWrite;
   }
 
   /** The plan contradicted the script, the stage, or its own timeline. */
@@ -32,7 +32,7 @@ export namespace IAutoFilmBlockedBeat {
     success: false;
 
     /** Every contradiction found, for the correction round. */
-    violations: IAutoFilmConstraintViolation[];
+    violations: IAutoMovieConstraintViolation[];
   }
 }
 
@@ -46,10 +46,10 @@ export namespace IAutoFilmBlockedBeat {
  * contradicts the causality it exists to fix.
  */
 export const blockBeat = (
-  script: IAutoFilmScriptApplication.IWrite,
-  staged: IAutoFilmStagedSet.ISuccess,
-  blocking: IAutoFilmBlockingApplication.IWrite,
-): IAutoFilmBlockedBeat => {
+  script: IAutoMovieScriptApplication.IWrite,
+  staged: IAutoMovieStagedSet.ISuccess,
+  blocking: IAutoMovieBlockingApplication.IWrite,
+): IAutoMovieBlockedBeat => {
   const out = new ViolationCollector();
 
   if (!script.beats.some((b) => b.id === blocking.beat))

@@ -1,5 +1,5 @@
-import { HUMANOID_JOINT_AXES, reachPose, resolvePose } from "@autofilm/engine";
-import { IAutoFilmBone, IAutoFilmVector3 } from "@autofilm/interface";
+import { HUMANOID_JOINT_AXES, reachPose, resolvePose } from "@automovie/engine";
+import { IAutoMovieBone, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton } from "../internal/fixtures";
@@ -14,7 +14,7 @@ const idTransform = {
 /** Where the hand lands after posing the skeleton with `pose`. */
 const handAt = (
   pose: NonNullable<ReturnType<typeof reachPose>>,
-): IAutoFilmVector3 =>
+): IAutoMovieVector3 =>
   resolvePose(pose, createSkeleton(), HUMANOID_JOINT_AXES).find(
     (b) => b.bone === "leftHand",
   )!.worldPosition;
@@ -45,9 +45,9 @@ const handAt = (
  */
 export const test_kinematics_reach = (): void => {
   const skeleton = createSkeleton();
-  const shoulder: IAutoFilmVector3 = { x: 0.2, y: 1.4, z: 0 };
+  const shoulder: IAutoMovieVector3 = { x: 0.2, y: 1.4, z: 0 };
 
-  const targets: IAutoFilmVector3[] = [
+  const targets: IAutoMovieVector3[] = [
     { x: 0.4, y: 1.0, z: 0.3 }, // forward and down
     { x: 0.3, y: 1.2, z: -0.35 }, // behind
     { x: 0.5, y: 1.5, z: 0.15 }, // up and out
@@ -67,7 +67,7 @@ export const test_kinematics_reach = (): void => {
   }
 
   // 2. unreachable → arm fully extended along the ray at reach distance
-  const far: IAutoFilmVector3 = { x: 1.4, y: 1.4, z: 0 };
+  const far: IAutoMovieVector3 = { x: 1.4, y: 1.4, z: 0 };
   const farPose = reachPose(skeleton, "left", far)!;
   const handFar = handAt(farPose);
   const dir = {
@@ -102,7 +102,7 @@ export const test_kinematics_reach = (): void => {
   const degenerate = createSkeleton();
   const forearm = degenerate.bones.find(
     (b) => b.bone === "leftHand",
-  ) as IAutoFilmBone;
+  ) as IAutoMovieBone;
   forearm.rest = idTransform; // hand coincident with the elbow → zero segment
   TestValidator.equals(
     "a zero-length arm segment → null",
@@ -111,7 +111,7 @@ export const test_kinematics_reach = (): void => {
   );
 
   // 4. straight-down target: reach axis ∥ world-down pole
-  const below: IAutoFilmVector3 = { x: 0.2, y: 1.0, z: 0 };
+  const below: IAutoMovieVector3 = { x: 0.2, y: 1.0, z: 0 };
   const belowPose = reachPose(skeleton, "left", below)!;
   TestValidator.predicate(
     "a straight-down reach still lands (pole fallback)",

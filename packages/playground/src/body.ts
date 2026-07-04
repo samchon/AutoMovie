@@ -38,7 +38,7 @@ app.innerHTML = `
   <div id="stage">
     <canvas id="view"></canvas>
     <div id="panel">
-      <h1>autofilm · hero base</h1>
+      <h1>automovie · hero base</h1>
       <div class="sub" id="status">loading…</div>
       <div id="morphs"></div>
     </div>
@@ -132,8 +132,8 @@ new GLTFLoader().load(
     if (morphMesh === null) {
       status.textContent = `Hybrid reference base · ${meshCount} mesh`;
       (
-        window as unknown as { __autofilm: Record<string, unknown> }
-      ).__autofilm = {
+        window as unknown as { __automovie: Record<string, unknown> }
+      ).__automovie = {
         ready: true,
         morphs: 0,
       };
@@ -167,11 +167,12 @@ new GLTFLoader().load(
       }
     }
     status.textContent = `Reference hero base · CC0 · ${Object.keys(groups).length} morphs`;
-    (window as unknown as { __autofilm: Record<string, unknown> }).__autofilm =
-      {
-        ready: true,
-        morphs: Object.keys(dict).length,
-      };
+    (
+      window as unknown as { __automovie: Record<string, unknown> }
+    ).__automovie = {
+      ready: true,
+      morphs: Object.keys(dict).length,
+    };
   },
   undefined,
   (err) => (status.textContent = "load error: " + String(err)),

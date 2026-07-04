@@ -1,15 +1,15 @@
-import { Quaternion } from "@autofilm/engine";
+import { Quaternion } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  AutoFilmPrimitiveShape,
-  IAutoFilmBone,
-  IAutoFilmModel,
-  IAutoFilmModelPart,
-  IAutoFilmQuaternion,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  AutoMoviePrimitiveShape,
+  IAutoMovieBone,
+  IAutoMovieModel,
+  IAutoMovieModelPart,
+  IAutoMovieQuaternion,
+  IAutoMovieSkeleton,
+  IAutoMovieTransform,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 /**
  * The tunable proportions of the procedural humanoid — the parameters the
@@ -61,25 +61,25 @@ export const DEFAULT_PARAMS: IHumanoidParams = {
   headRadius: 0.12,
 };
 
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IAutoMovieVector3 => ({ x, y, z });
 
 const at = (
-  t: IAutoFilmVector3,
-  r?: IAutoFilmQuaternion,
-): IAutoFilmTransform => ({
+  t: IAutoMovieVector3,
+  r?: IAutoMovieQuaternion,
+): IAutoMovieTransform => ({
   translation: t,
   rotation: r ?? { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 
 const bone = (
-  name: AutoFilmHumanoidBone,
-  parent: AutoFilmHumanoidBone | null,
-  rest: IAutoFilmTransform,
-): IAutoFilmBone => ({ bone: name, parent, rest, constraint: null });
+  name: AutoMovieHumanoidBone,
+  parent: AutoMovieHumanoidBone | null,
+  rest: IAutoMovieTransform,
+): IAutoMovieBone => ({ bone: name, parent, rest, constraint: null });
 
 /** Shortest-arc rotation taking the local +Y axis onto a target direction. */
-const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion => {
+const yToDir = (dir: IAutoMovieVector3): IAutoMovieQuaternion => {
   const len = Math.hypot(dir.x, dir.y, dir.z);
   if (len === 0) return { x: 0, y: 0, z: 0, w: 1 };
   const n = v(dir.x / len, dir.y / len, dir.z / len);
@@ -94,7 +94,7 @@ const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion => {
   );
 };
 
-const capsule = (radius: number, height: number): AutoFilmPrimitiveShape => ({
+const capsule = (radius: number, height: number): AutoMoviePrimitiveShape => ({
   type: "capsule",
   radius,
   height: Math.max(0.01, height - 2 * radius),
@@ -107,11 +107,11 @@ const capsule = (radius: number, height: number): AutoFilmPrimitiveShape => ({
  */
 const segment = (
   id: string,
-  boneName: AutoFilmHumanoidBone,
-  seg: IAutoFilmVector3,
+  boneName: AutoMovieHumanoidBone,
+  seg: IAutoMovieVector3,
   radius: number,
   material: string,
-): IAutoFilmModelPart => {
+): IAutoMovieModelPart => {
   const length = Math.hypot(seg.x, seg.y, seg.z);
   return {
     id,
@@ -125,11 +125,11 @@ const segment = (
 
 const blob = (
   id: string,
-  boneName: AutoFilmHumanoidBone,
-  shape: AutoFilmPrimitiveShape,
-  offset: IAutoFilmVector3,
+  boneName: AutoMovieHumanoidBone,
+  shape: AutoMoviePrimitiveShape,
+  offset: IAutoMovieVector3,
   material: string,
-): IAutoFilmModelPart => ({
+): IAutoMovieModelPart => ({
   id,
   name: id,
   geometry: { type: "primitive", shape },
@@ -142,8 +142,8 @@ const blob = (
  * Build the procedural humanoid — a normalized VRM skeleton plus a primitive
  * "blockman" skin — from a set of editor proportions.
  *
- * This is autofilm's bootstrap **base 3D model**: fully generated (no external
- * asset), deterministic, and rigged on the same {@link AutoFilmHumanoidBone}
+ * This is automovie's bootstrap **base 3D model**: fully generated (no external
+ * asset), deterministic, and rigged on the same {@link AutoMovieHumanoidBone}
  * slots every imported VRM uses, so a pose or motion authored here replays on a
  * real avatar once ingest lands. The editor calls this on every proportion
  * change to rebuild the figure; the engine's FK then articulates the very same
@@ -153,14 +153,14 @@ const blob = (
  */
 export const buildHumanoid = (
   p: IHumanoidParams,
-): { skeleton: IAutoFilmSkeleton; model: IAutoFilmModel } => {
+): { skeleton: IAutoMovieSkeleton; model: IAutoMovieModel } => {
   const spineLen = p.torsoLength * 0.4;
   const chestLen = p.torsoLength * 0.35;
   const armY = p.torsoLength * 0.25; // shoulder height above chest origin
   const sx = p.shoulderWidth / 2;
   const hx = p.hipWidth / 2;
 
-  const bones: IAutoFilmBone[] = [
+  const bones: IAutoMovieBone[] = [
     bone("hips", null, at(v(0, p.hipHeight, 0))),
     bone("spine", "hips", at(v(0, spineLen * 0.5, 0))),
     bone("chest", "spine", at(v(0, spineLen, 0))),
@@ -183,13 +183,13 @@ export const buildHumanoid = (
   ];
 
   const r = p.limbRadius;
-  const foot: AutoFilmPrimitiveShape = {
+  const foot: AutoMoviePrimitiveShape = {
     type: "box",
     width: r * 1.6,
     height: r * 0.8,
     depth: r * 3,
   };
-  const parts: IAutoFilmModelPart[] = [
+  const parts: IAutoMovieModelPart[] = [
     blob(
       "torso",
       "chest",
@@ -252,8 +252,8 @@ export const buildHumanoid = (
     blob("footR", "rightFoot", foot, v(0, -r * 0.4, r), "skin"),
   ];
 
-  const skeleton: IAutoFilmSkeleton = { id: "humanoid", bones };
-  const model: IAutoFilmModel = {
+  const skeleton: IAutoMovieSkeleton = { id: "humanoid", bones };
+  const model: IAutoMovieModel = {
     id: "humanoid",
     name: "procedural humanoid",
     origin: "generated",

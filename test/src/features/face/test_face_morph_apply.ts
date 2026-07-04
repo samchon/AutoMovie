@@ -1,4 +1,4 @@
-import { IAutoFilmFaceTemplate, morphFace } from "@autofilm/engine";
+import { IAutoMovieFaceTemplate, morphFace } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeFace } from "../internal/fixtures";
@@ -15,7 +15,7 @@ import { makeFace } from "../internal/fixtures";
  * .5·.25 + .5·.15 - 1·.5, …] = [0.7, 2.2, 0, -1, 1, 0.3].
  */
 export const test_face_morph_apply = (): void => {
-  const template: IAutoFilmFaceTemplate = {
+  const template: IAutoMovieFaceTemplate = {
     positions: [1, 2, 0, -1, 1, 0],
     targets: {
       eyeSizeR: [0.25, 0.25, 0, 0, 0, 0.5],

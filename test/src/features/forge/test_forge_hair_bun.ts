@@ -1,4 +1,4 @@
-import { buildHairBun, buildSkullShell } from "@autofilm/forge";
+import { buildHairBun, buildSkullShell } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**

@@ -1,24 +1,24 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmModel,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieModel,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 import * as THREE from "three";
 
 import { buildGeometry, buildMaterial, defaultMaterial } from "./geometry";
 
 /** A built model: its `three.js` root object and a lookup of its bones. */
-export interface IAutoFilmModelObject {
+export interface IAutoMovieModelObject {
   /** Root group — add this to a scene (or a node group) to display the model. */
   object: THREE.Group;
   /** Bones by humanoid slot, for posing. Empty for a non-rigged object. */
-  bones: Map<AutoFilmHumanoidBone, THREE.Bone>;
+  bones: Map<AutoMovieHumanoidBone, THREE.Bone>;
 }
 
-/** Apply a autofilm TRS transform onto a `three.js` object. */
+/** Apply a automovie TRS transform onto a `three.js` object. */
 export const applyTransform = (
   obj: THREE.Object3D,
-  t: IAutoFilmTransform,
+  t: IAutoMovieTransform,
 ): void => {
   obj.position.set(t.translation.x, t.translation.y, t.translation.z);
   obj.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
@@ -26,7 +26,7 @@ export const applyTransform = (
 };
 
 /**
- * Build a renderable `three.js` object from an {@link IAutoFilmModel}.
+ * Build a renderable `three.js` object from an {@link IAutoMovieModel}.
  *
  * Constructs the bone hierarchy (each `THREE.Bone` seeded with its rest
  * transform), then attaches each part: a _rigid_ part is parented to its
@@ -38,11 +38,11 @@ export const applyTransform = (
  *
  * @author Samchon
  */
-export const buildModel = (model: IAutoFilmModel): IAutoFilmModelObject => {
+export const buildModel = (model: IAutoMovieModel): IAutoMovieModelObject => {
   const group = new THREE.Group();
   group.name = model.name ?? model.id;
 
-  const bones = new Map<AutoFilmHumanoidBone, THREE.Bone>();
+  const bones = new Map<AutoMovieHumanoidBone, THREE.Bone>();
   if (model.skeleton !== null) {
     for (const b of model.skeleton.bones) {
       const bone = new THREE.Bone();

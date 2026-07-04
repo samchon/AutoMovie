@@ -1,5 +1,5 @@
-import { resolvePose } from "@autofilm/engine";
-import { IAutoFilmSkeleton } from "@autofilm/interface";
+import { resolvePose } from "@automovie/engine";
+import { IAutoMovieSkeleton } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { makePose } from "../internal/fixtures";
@@ -14,7 +14,7 @@ import { makePose } from "../internal/fixtures";
  * with a null parent. With no entry point, nothing is walked.
  */
 export const test_kinematics_resolve_rootless = (): void => {
-  const rootless: IAutoFilmSkeleton = {
+  const rootless: IAutoMovieSkeleton = {
     id: "rootless",
     bones: [
       {

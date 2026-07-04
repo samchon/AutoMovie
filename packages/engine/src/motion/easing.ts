@@ -1,16 +1,16 @@
-import { AutoFilmEasing } from "@autofilm/interface";
+import { AutoMovieEasing } from "@automovie/interface";
 
 /**
  * Evaluate a normalized easing curve: maps a linear progress `t` in `[0, 1]`
  * between two keyframes to an eased progress in `[0, 1]`.
  *
- * Covers the named {@link AutoFilmEasing} curves. `cubicBezier` is handled
+ * Covers the named {@link AutoMovieEasing} curves. `cubicBezier` is handled
  * separately by {@link cubicBezierEasing} since it needs the keyframe's control
  * points; passing `"cubicBezier"` here falls back to linear.
  *
  * @author Samchon
  */
-export const ease = (curve: AutoFilmEasing, t: number): number => {
+export const ease = (curve: AutoMovieEasing, t: number): number => {
   const x = Math.min(1, Math.max(0, t));
   switch (curve) {
     case "linear":

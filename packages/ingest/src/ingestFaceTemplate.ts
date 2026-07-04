@@ -1,8 +1,8 @@
-import { IAutoFilmFaceTemplate } from "@autofilm/interface";
+import { IAutoMovieFaceTemplate } from "@automovie/interface";
 import type { Document, Primitive } from "@gltf-transform/core";
 
 /**
- * Extract an {@link IAutoFilmFaceTemplate} from a parsed glTF/GLB
+ * Extract an {@link IAutoMovieFaceTemplate} from a parsed glTF/GLB
  * {@link Document} — the import side of the face editor.
  *
  * A face asset carries its editable shape as glTF morph targets on one
@@ -21,7 +21,7 @@ import type { Document, Primitive } from "@gltf-transform/core";
  *
  * @author Samchon
  */
-export const ingestFaceTemplate = (doc: Document): IAutoFilmFaceTemplate => {
+export const ingestFaceTemplate = (doc: Document): IAutoMovieFaceTemplate => {
   for (const mesh of doc.getRoot().listMeshes())
     for (const prim of mesh.listPrimitives()) {
       const targetList = prim.listTargets();
@@ -37,7 +37,7 @@ export const ingestFaceTemplate = (doc: Document): IAutoFilmFaceTemplate => {
 const templateOf = (
   prim: Primitive,
   extraNames: unknown,
-): IAutoFilmFaceTemplate => {
+): IAutoMovieFaceTemplate => {
   const posAccessor = prim.getAttribute("POSITION");
   if (posAccessor === null)
     throw new Error("morphed primitive has no POSITION attribute");

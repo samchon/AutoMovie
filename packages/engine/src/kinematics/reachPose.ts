@@ -1,14 +1,14 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmPose,
-  IAutoFilmQuaternion,
-  IAutoFilmSkeleton,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMoviePose,
+  IAutoMovieQuaternion,
+  IAutoMovieSkeleton,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
-import { IAutoFilmRestFrame } from "../rom/restFrame";
+import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { aimRotation } from "./aimRotation";
 import { decomposeJointRotation } from "./decomposeJointRotation";
 import { HUMANOID_JOINT_AXES } from "./humanoidJointAxes";
@@ -16,13 +16,13 @@ import { resolvePose } from "./resolvePose";
 import { solveTwoBoneIK } from "./solveTwoBoneIK";
 
 /** World-down, the pole a natural elbow bends away from. */
-const POLE: IAutoFilmVector3 = { x: 0, y: -1, z: 0 };
+const POLE: IAutoMovieVector3 = { x: 0, y: -1, z: 0 };
 
-const inverse = (q: IAutoFilmQuaternion): IAutoFilmQuaternion =>
+const inverse = (q: IAutoMovieQuaternion): IAutoMovieQuaternion =>
   Quaternion.normalize({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
 
 /**
- * Analytic two-bone IK for an arm: the {@link IAutoFilmPose} (upper-arm +
+ * Analytic two-bone IK for an arm: the {@link IAutoMoviePose} (upper-arm +
  * forearm articulation) that brings the `side` hand onto `target`, in the
  * skeleton's own model space. This is the harness `reach` verb made concrete —
  * the model says "put your right hand on the lever" and the engine solves the
@@ -43,11 +43,11 @@ const inverse = (q: IAutoFilmQuaternion): IAutoFilmQuaternion =>
  * @author Samchon
  */
 export const reachPose = (
-  skeleton: IAutoFilmSkeleton,
+  skeleton: IAutoMovieSkeleton,
   side: "left" | "right",
-  target: IAutoFilmVector3,
-  restFrames?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmRestFrame>>,
-): IAutoFilmPose | null => {
+  target: IAutoMovieVector3,
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>,
+): IAutoMoviePose | null => {
   const upperName = side === "left" ? "leftUpperArm" : "rightUpperArm";
   const lowerName = side === "left" ? "leftLowerArm" : "rightLowerArm";
   const handName = side === "left" ? "leftHand" : "rightHand";

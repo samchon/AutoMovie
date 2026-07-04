@@ -1,10 +1,10 @@
-import { bindProfileGaits } from "@autofilm/engine";
-import { IAutoFilmProfile } from "@autofilm/interface";
+import { bindProfileGaits } from "@automovie/engine";
+import { IAutoMovieProfile } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const horse: IAutoFilmProfile = {
+const horse: IAutoMovieProfile = {
   id: "equine",
   name: "horse",
   controls: [],
@@ -24,7 +24,7 @@ const horse: IAutoFilmProfile = {
   ],
 };
 
-const doorlike: IAutoFilmProfile = {
+const doorlike: IAutoMovieProfile = {
   id: "hinge",
   name: "door",
   controls: [],

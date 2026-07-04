@@ -4,7 +4,7 @@ import {
   Quaternion,
   jointToQuaternion,
   resolvePose,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
@@ -23,7 +23,7 @@ const localOf = (
     .localRotation;
 
 /**
- * Per-bone clinical-axis remapping (`IAutoFilmJointAxes` /
+ * Per-bone clinical-axis remapping (`IAutoMovieJointAxes` /
  * `HUMANOID_JOINT_AXES`) and its opt-in path through `resolvePose`. The default
  * basis must be exactly the historical one (flexion→X, abduction→Z, twist→Y);
  * supplying axes lets a T-pose arm's flexion swing sagittally (about Y) instead

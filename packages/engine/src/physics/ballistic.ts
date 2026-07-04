@@ -1,11 +1,11 @@
-import { IAutoFilmVector3 } from "@autofilm/interface";
+import { IAutoMovieVector3 } from "@automovie/interface";
 
 import { Vector3 } from "../math/Vector3";
 
 /** The launch that hits a target: the initial velocity and the time of flight. */
-export interface IAutoFilmBallisticSolution {
+export interface IAutoMovieBallisticSolution {
   /** Initial velocity to give the projectile (world m/s), magnitude = speed. */
-  velocity: IAutoFilmVector3;
+  velocity: IAutoMovieVector3;
 
   /** Seconds until it reaches the target. */
   hitTime: number;
@@ -31,12 +31,12 @@ export interface IAutoFilmBallisticSolution {
  * @author Samchon
  */
 export const solveBallisticLaunch = (
-  origin: IAutoFilmVector3,
-  target: IAutoFilmVector3,
+  origin: IAutoMovieVector3,
+  target: IAutoMovieVector3,
   speed: number,
-  gravity: IAutoFilmVector3 = { x: 0, y: -9.81, z: 0 },
+  gravity: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 },
   arc: "direct" | "high" = "direct",
-): IAutoFilmBallisticSolution | null => {
+): IAutoMovieBallisticSolution | null => {
   const delta = Vector3.subtract(target, origin);
   const g = Vector3.length(gravity);
 
@@ -103,16 +103,16 @@ export const solveBallisticLaunch = (
  * @author Samchon
  */
 export const solveMovingLaunch = (
-  origin: IAutoFilmVector3,
-  targetAt: (t: number) => IAutoFilmVector3,
+  origin: IAutoMovieVector3,
+  targetAt: (t: number) => IAutoMovieVector3,
   speed: number,
-  gravity: IAutoFilmVector3 = { x: 0, y: -9.81, z: 0 },
+  gravity: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 },
   arc: "direct" | "high" = "direct",
   iterations = 8,
-): IAutoFilmBallisticSolution | null => {
+): IAutoMovieBallisticSolution | null => {
   if (!(speed > 0)) return null;
   let t = Vector3.length(Vector3.subtract(targetAt(0), origin)) / speed;
-  let solution: IAutoFilmBallisticSolution | null = null;
+  let solution: IAutoMovieBallisticSolution | null = null;
   for (let i = 0; i < iterations; ++i) {
     solution = solveBallisticLaunch(origin, targetAt(t), speed, gravity, arc);
     if (solution === null) return null; // out of range at this iterate

@@ -1,10 +1,10 @@
-import { composeScene } from "@autofilm/engine";
-import { IAutoFilmNode, IAutoFilmTransform } from "@autofilm/interface";
+import { composeScene } from "@automovie/engine";
+import { IAutoMovieNode, IAutoMovieTransform } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const IDENTITY: IAutoFilmTransform = {
+const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -14,7 +14,7 @@ const node = (
   id: string,
   parent: string | null,
   tx: number,
-): IAutoFilmNode => ({
+): IAutoMovieNode => ({
   id,
   name: null,
   parent,
@@ -52,7 +52,7 @@ export const test_resolve_compose_scene = (): void => {
   );
 
   // 2. child-before-parent ordering + override on child only
-  const overrides = new Map<string, IAutoFilmTransform>([
+  const overrides = new Map<string, IAutoMovieTransform>([
     ["c", { ...IDENTITY, translation: { x: 2, y: 0, z: 0 } }],
   ]);
   const world = composeScene(

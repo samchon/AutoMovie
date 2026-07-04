@@ -1,8 +1,8 @@
 {
   "private": true,
-  "name": "@autofilm/viewer",
+  "name": "@automovie/viewer",
   "version": "0.1.0",
-  "description": "autofilm viewer — three.js renderer that plays autofilm models, poses, and motion (not an editor)",
+  "description": "automovie viewer — three.js renderer that plays automovie models, poses, and motion (not an editor)",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -17,11 +17,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/samchon/autofilm"
+    "url": "https://github.com/samchon/automovie"
   },
   "dependencies": {
-    "@autofilm/engine": "workspace:^",
-    "@autofilm/interface": "workspace:^",
+    "@automovie/engine": "workspace:^",
+    "@automovie/interface": "workspace:^",
     "three": "^0.169.0"
   },
   "devDependencies": {

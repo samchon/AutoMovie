@@ -1,8 +1,8 @@
-import { IAutoFilmRenderSpec } from "@autofilm/interface";
-import { IAutoFilmRenderAdapters, renderVideo } from "@autofilm/render";
+import { IAutoMovieRenderSpec } from "@automovie/interface";
+import { IAutoMovieRenderAdapters, renderVideo } from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
-const SPEC: IAutoFilmRenderSpec = {
+const SPEC: IAutoMovieRenderSpec = {
   target: "shot-1",
   fps: 24,
   width: 640,
@@ -26,7 +26,7 @@ export const test_render_video = async (): Promise<void> => {
   const captured: Array<{ t: number; i: number }> = [];
   let encodeArgs: string[] | null = null;
 
-  const adapters: IAutoFilmRenderAdapters = {
+  const adapters: IAutoMovieRenderAdapters = {
     captureFrame: async (timeSeconds, index, dir) => {
       captured.push({ t: timeSeconds, i: index });
       return `${dir}/frame_${index}.png`;

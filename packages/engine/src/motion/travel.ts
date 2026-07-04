@@ -1,14 +1,14 @@
 import {
-  IAutoFilmKeyframe,
-  IAutoFilmMotion,
-  IAutoFilmQuaternion,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieKeyframe,
+  IAutoMovieMotion,
+  IAutoMovieQuaternion,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 
-const IDENTITY_ROT: IAutoFilmQuaternion = { x: 0, y: 0, z: 0, w: 1 };
-const IDENTITY_SCALE: IAutoFilmVector3 = { x: 1, y: 1, z: 1 };
+const IDENTITY_ROT: IAutoMovieQuaternion = { x: 0, y: 0, z: 0, w: 1 };
+const IDENTITY_SCALE: IAutoMovieVector3 = { x: 1, y: 1, z: 1 };
 
 /**
  * Bake continuous root **travel** onto an in-place locomotion cycle — turning a
@@ -25,9 +25,9 @@ const IDENTITY_SCALE: IAutoFilmVector3 = { x: 1, y: 1, z: 1 };
  * base already carries (e.g. a hop's vertical bob) is preserved and the travel
  * is added on top.
  *
- * The result is an ordinary non-looping {@link IAutoFilmMotion} (it has a finite
- * extent in space), sampled like any other clip — and a camera can follow its
- * root to keep the moving character in frame.
+ * The result is an ordinary non-looping {@link IAutoMovieMotion} (it has a
+ * finite extent in space), sampled like any other clip — and a camera can
+ * follow its root to keep the moving character in frame.
  *
  * `facing`, when given, orients the root by that rotation (composed onto any
  * rotation the base root already carries) — so a walk that travels sideways can
@@ -37,12 +37,12 @@ const IDENTITY_SCALE: IAutoFilmVector3 = { x: 1, y: 1, z: 1 };
  */
 export const travelMotion = (
   id: string,
-  base: IAutoFilmMotion,
+  base: IAutoMovieMotion,
   cycles: number,
-  velocity: IAutoFilmVector3,
-  facing?: IAutoFilmQuaternion,
-): IAutoFilmMotion => {
-  const keyframes: IAutoFilmKeyframe[] = [];
+  velocity: IAutoMovieVector3,
+  facing?: IAutoMovieQuaternion,
+): IAutoMovieMotion => {
+  const keyframes: IAutoMovieKeyframe[] = [];
   for (let c = 0; c < cycles; ++c) {
     for (const k of base.keyframes) {
       // drop the duplicate seam keyframe (a later cycle's time:0) so times stay

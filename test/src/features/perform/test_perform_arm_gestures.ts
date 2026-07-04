@@ -1,28 +1,28 @@
 import {
   HUMANOID_JOINT_AXES,
   HUMANOID_REST_FRAME,
-  IAutoFilmActorContext,
+  IAutoMovieActorContext,
   makeActorSynthesizer,
   resolvePose,
   sampleMotion,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmBone,
-  IAutoFilmGestureAction,
-  IAutoFilmSkeleton,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieBone,
+  IAutoMovieGestureAction,
+  IAutoMovieSkeleton,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
 const bone = (
-  b: AutoFilmHumanoidBone,
-  parent: AutoFilmHumanoidBone | null,
-  t: IAutoFilmVector3,
-): IAutoFilmBone => ({
+  b: AutoMovieHumanoidBone,
+  parent: AutoMovieHumanoidBone | null,
+  t: IAutoMovieVector3,
+): IAutoMovieBone => ({
   bone: b,
   parent,
   rest: {
@@ -35,7 +35,7 @@ const bone = (
 
 // A rig with BOTH arms complete (the shared fixture omits the right hand),
 // so celebrate and a right-handed point have a full chain to solve.
-const RIG: IAutoFilmSkeleton = {
+const RIG: IAutoMovieSkeleton = {
   id: "twoArms",
   bones: [
     bone("hips", null, { x: 0, y: 1, z: 0 }),
@@ -50,7 +50,7 @@ const RIG: IAutoFilmSkeleton = {
   ],
 };
 
-const ctx: IAutoFilmActorContext = {
+const ctx: IAutoMovieActorContext = {
   skeleton: RIG.id,
   gaits: [],
   position: { x: 0, y: 0, z: 0 },
@@ -61,14 +61,14 @@ const ctx: IAutoFilmActorContext = {
   rig: RIG,
 };
 
-const nodes = new Map<string, IAutoFilmVector3>([
+const nodes = new Map<string, IAutoMovieVector3>([
   ["exit", { x: 3, y: 1.2, z: 1 }], // far — a point extends the arm toward it
 ]);
 
 const gesture = (
-  kind: IAutoFilmGestureAction["kind"],
-  overrides: Partial<IAutoFilmGestureAction> = {},
-): IAutoFilmGestureAction => ({
+  kind: IAutoMovieGestureAction["kind"],
+  overrides: Partial<IAutoMovieGestureAction> = {},
+): IAutoMovieGestureAction => ({
   verb: "gesture",
   actor: "hero",
   start: 0,
@@ -79,8 +79,8 @@ const gesture = (
 
 const boneWorld = (
   pose: ReturnType<typeof sampleMotion>["pose"],
-  b: AutoFilmHumanoidBone,
-): IAutoFilmVector3 =>
+  b: AutoMovieHumanoidBone,
+): IAutoMovieVector3 =>
   resolvePose(pose, RIG, HUMANOID_JOINT_AXES).find((x) => x.bone === b)!
     .worldPosition;
 

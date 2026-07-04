@@ -1,14 +1,14 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmAttachment,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieAttachment,
+  IAutoMoviePose,
+  IAutoMovieSkeleton,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
-import { IAutoFilmJointAxes } from "./jointToQuaternion";
+import { IAutoMovieJointAxes } from "./jointToQuaternion";
 import { resolvePose } from "./resolvePose";
 
 /**
@@ -18,7 +18,7 @@ import { resolvePose } from "./resolvePose";
  *
  * It runs forward kinematics on the parent ({@link resolvePose}), reads the
  * attachment bone's world position + orientation, and composes the
- * {@link IAutoFilmAttachment} offset into that frame:
+ * {@link IAutoMovieAttachment} offset into that frame:
  *
  * - `translation = boneWorldPos + boneWorldRot · offset.translation`
  * - `rotation = boneWorldRot ∘ offset.rotation`
@@ -34,11 +34,11 @@ import { resolvePose } from "./resolvePose";
  * @author Samchon
  */
 export const resolveAttachment = (
-  parentPose: IAutoFilmPose,
-  parentSkeleton: IAutoFilmSkeleton,
-  attachment: IAutoFilmAttachment,
-  jointAxes?: Partial<Record<AutoFilmHumanoidBone, IAutoFilmJointAxes>>,
-): IAutoFilmTransform => {
+  parentPose: IAutoMoviePose,
+  parentSkeleton: IAutoMovieSkeleton,
+  attachment: IAutoMovieAttachment,
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>,
+): IAutoMovieTransform => {
   const resolved = resolvePose(parentPose, parentSkeleton, jointAxes);
   const seat = resolved.find((r) => r.bone === attachment.parentBone);
   if (seat === undefined)

@@ -1,11 +1,11 @@
-import { mergePoses } from "@autofilm/engine";
-import { IAutoFilmTransform } from "@autofilm/interface";
+import { mergePoses } from "@automovie/engine";
+import { IAutoMovieTransform } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const rootAt = (x: number): IAutoFilmTransform => ({
+const rootAt = (x: number): IAutoMovieTransform => ({
   translation: { x, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },

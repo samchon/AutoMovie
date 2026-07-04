@@ -1,12 +1,12 @@
-import { ViolationCollector, validateJointRom } from "@autofilm/engine";
-import { IAutoFilmJointConstraint } from "@autofilm/interface";
+import { ViolationCollector, validateJointRom } from "@automovie/engine";
+import { IAutoMovieJointConstraint } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
 /** A ball-joint constraint: axes wide open, only the combined swing capped. */
-const CONE: IAutoFilmJointConstraint = {
+const CONE: IAutoMovieJointConstraint = {
   flexion: { min: -180, max: 180 },
   abduction: { min: -180, max: 180 },
   twist: null,

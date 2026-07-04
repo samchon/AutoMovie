@@ -1,4 +1,4 @@
-import { IAutoFilmRenderSpec } from "@autofilm/interface";
+import { IAutoMovieRenderSpec } from "@automovie/interface";
 
 /**
  * The deterministic frame schedule for a clip of `durationSeconds` at `fps`: `N
@@ -6,7 +6,7 @@ import { IAutoFilmRenderSpec } from "@autofilm/interface";
  *
  * The times are computed as exact rationals (`i / fps`), never accumulated, so
  * the same spec yields the same sample instants on every machine — the property
- * that makes a autofilm render reproducible (the whole point versus a
+ * that makes a automovie render reproducible (the whole point versus a
  * stochastic diffusion video). A non-positive fps or duration yields no
  * frames.
  *
@@ -31,13 +31,13 @@ export const framePattern = (ext = "png", pad = 5): string =>
  * spec's video. Pinned for reproducible, broadly-playable output: H.264
  * (`libx264`) at the spec's `pixelFormat` and `crf`, with the input/output
  * frame rate fixed to `fps` and `+faststart` for progressive playback. Tone
- * mapping is applied upstream in the renderer (per {@link IAutoFilmRenderSpec}),
- * not here.
+ * mapping is applied upstream in the renderer (per
+ * {@link IAutoMovieRenderSpec}), not here.
  *
  * @author Samchon
  */
 export const ffmpegArgs = (
-  spec: IAutoFilmRenderSpec,
+  spec: IAutoMovieRenderSpec,
   inputPattern: string,
   outputPath: string,
 ): string[] => [

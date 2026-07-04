@@ -1,4 +1,4 @@
-import { ease } from "@autofilm/engine";
+import { ease } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";

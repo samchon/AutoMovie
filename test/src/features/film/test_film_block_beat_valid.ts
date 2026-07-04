@@ -1,4 +1,4 @@
-import { blockBeat, stageScene } from "@autofilm/engine";
+import { blockBeat, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {

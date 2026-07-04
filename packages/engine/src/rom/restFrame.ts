@@ -1,8 +1,8 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmAngleRange,
-  IAutoFilmJointConstraint,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieAngleRange,
+  IAutoMovieJointConstraint,
+} from "@automovie/interface";
 
 /**
  * How one clinical axis relates to a rig's rest pose: a pose angle `r`
@@ -12,16 +12,16 @@ import {
  * negative rotation in the rig); `neutral` is the clinical angle the rig sits
  * at when at rest (a T-pose arm is already ~90° abducted).
  */
-export interface IAutoFilmAxisFrame {
+export interface IAutoMovieAxisFrame {
   sign: 1 | -1;
   neutral: number;
 }
 
 /** A bone's per-axis rest frame; an omitted axis is the identity (sign 1, 0). */
-export interface IAutoFilmRestFrame {
-  flexion?: IAutoFilmAxisFrame;
-  abduction?: IAutoFilmAxisFrame;
-  twist?: IAutoFilmAxisFrame;
+export interface IAutoMovieRestFrame {
+  flexion?: IAutoMovieAxisFrame;
+  abduction?: IAutoMovieAxisFrame;
+  twist?: IAutoMovieAxisFrame;
 }
 
 /**
@@ -32,7 +32,7 @@ export interface IAutoFilmRestFrame {
  */
 export const toRigAngle = (
   clinical: number | null,
-  frame: IAutoFilmAxisFrame | undefined,
+  frame: IAutoMovieAxisFrame | undefined,
 ): number | null =>
   clinical === null || frame === undefined
     ? clinical
@@ -44,14 +44,14 @@ export const toRigAngle = (
  */
 export const toClinicalAngle = (
   rig: number | null,
-  frame: IAutoFilmAxisFrame | undefined,
+  frame: IAutoMovieAxisFrame | undefined,
 ): number | null =>
   rig === null || frame === undefined ? rig : frame.sign * rig + frame.neutral;
 
 const shift = (
-  range: IAutoFilmAngleRange | null,
-  frame: IAutoFilmAxisFrame | undefined,
-): IAutoFilmAngleRange | null => {
+  range: IAutoMovieAngleRange | null,
+  frame: IAutoMovieAxisFrame | undefined,
+): IAutoMovieAngleRange | null => {
   if (range === null) return null;
   if (frame === undefined) return range;
   // r = (clinical − neutral) / sign; a sign of −1 flips the interval, so sort.
@@ -61,8 +61,8 @@ const shift = (
 };
 
 /**
- * Re-express a clinical {@link IAutoFilmJointConstraint} in a rig's
- * rest-relative pose space using its {@link IAutoFilmRestFrame}, so ROM
+ * Re-express a clinical {@link IAutoMovieJointConstraint} in a rig's
+ * rest-relative pose space using its {@link IAutoMovieRestFrame}, so ROM
  * validation/clamping and the ROM overlay line up with how the rig actually
  * articulates — the reconciliation a physics joint does implicitly by defining
  * its limits in the joint's own reference frame.
@@ -70,9 +70,9 @@ const shift = (
  * @author Samchon
  */
 export const restRelativeConstraint = (
-  clinical: IAutoFilmJointConstraint,
-  frame: IAutoFilmRestFrame,
-): IAutoFilmJointConstraint => ({
+  clinical: IAutoMovieJointConstraint,
+  frame: IAutoMovieRestFrame,
+): IAutoMovieJointConstraint => ({
   flexion: shift(clinical.flexion, frame.flexion),
   abduction: shift(clinical.abduction, frame.abduction),
   twist: shift(clinical.twist, frame.twist),
@@ -88,7 +88,7 @@ export const restRelativeConstraint = (
  * @author Samchon
  */
 export const HUMANOID_REST_FRAME: Partial<
-  Record<AutoFilmHumanoidBone, IAutoFilmRestFrame>
+  Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>
 > = {
   leftUpperArm: { abduction: { sign: 1, neutral: 90 } },
   rightUpperArm: { abduction: { sign: -1, neutral: 90 } },

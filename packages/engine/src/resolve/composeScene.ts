@@ -1,4 +1,4 @@
-import { IAutoFilmNode, IAutoFilmTransform } from "@autofilm/interface";
+import { IAutoMovieNode, IAutoMovieTransform } from "@automovie/interface";
 
 import { Matrix4 } from "../math/Matrix4";
 
@@ -8,7 +8,7 @@ import { Matrix4 } from "../math/Matrix4";
  *
  * `localOverrides` carries the transforms the sample/constrain passes produced
  * for animated nodes; a node absent from the map keeps its rest-pose
- * {@link IAutoFilmNode} transform. Resolution is memoized and parent-driven, so
+ * {@link IAutoMovieNode} transform. Resolution is memoized and parent-driven, so
  * the input list may be in any order — a child seen before its parent pulls the
  * parent in on demand.
  *
@@ -19,8 +19,8 @@ import { Matrix4 } from "../math/Matrix4";
  * @author Samchon
  */
 export const composeScene = (
-  nodes: IAutoFilmNode[],
-  localOverrides?: Map<string, IAutoFilmTransform>,
+  nodes: IAutoMovieNode[],
+  localOverrides?: Map<string, IAutoMovieTransform>,
 ): Map<string, number[]> => {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const world = new Map<string, number[]>();

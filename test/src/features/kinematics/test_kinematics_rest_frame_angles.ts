@@ -2,14 +2,14 @@ import {
   DEFAULT_JOINT_AXES,
   HUMANOID_JOINT_AXES,
   HUMANOID_REST_FRAME,
-  IAutoFilmRestFrame,
+  IAutoMovieRestFrame,
   decomposeJointRotation,
   jointToQuaternion,
   reachPose,
   resolvePose,
   toClinicalAngle,
   toRigAngle,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
@@ -33,7 +33,7 @@ import { nclose, qclose, vclose } from "../internal/predicates";
  */
 export const test_kinematics_rest_frame_angles = (): void => {
   // right-arm-like: abduction mirrors (sign −1) and rests at 90° (a T-pose arm)
-  const frame: IAutoFilmRestFrame = { abduction: { sign: -1, neutral: 90 } };
+  const frame: IAutoMovieRestFrame = { abduction: { sign: -1, neutral: 90 } };
 
   // 1. inverses + identities
   TestValidator.predicate(

@@ -1,16 +1,16 @@
-import { channelIsRotation, channelKey } from "@autofilm/engine";
-import { IAutoFilmChannel } from "@autofilm/interface";
+import { channelIsRotation, channelKey } from "@automovie/engine";
+import { IAutoMovieChannel } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 const node = (
   id: string,
   path: "translation" | "rotation" | "scale" | "weights",
-): IAutoFilmChannel => ({ kind: "node", node: id, path });
+): IAutoMovieChannel => ({ kind: "node", node: id, path });
 
 const pointer = (
   ptr: string,
   valueType: "scalar" | "vec2" | "vec3" | "vec4" | "quaternion" | "weights",
-): IAutoFilmChannel => ({ kind: "pointer", pointer: ptr, valueType });
+): IAutoMovieChannel => ({ kind: "pointer", pointer: ptr, valueType });
 
 /**
  * Canonical channel keys and the rotation test that decides slerp vs lerp.

@@ -1,18 +1,18 @@
 import {
   HUMANOID_JOINT_AXES,
-  IAutoFilmActorContext,
+  IAutoMovieActorContext,
   makeActorSynthesizer,
   resolvePose,
   sampleMotion,
-} from "@autofilm/engine";
-import { IAutoFilmReachAction, IAutoFilmVector3 } from "@autofilm/interface";
+} from "@automovie/engine";
+import { IAutoMovieReachAction, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton } from "../internal/fixtures";
 import { makePose } from "../internal/fixtures";
 import { nclose, vclose } from "../internal/predicates";
 
-const ctx = (facingDeg: number): IAutoFilmActorContext => ({
+const ctx = (facingDeg: number): IAutoMovieActorContext => ({
   skeleton: "skeleton-1",
   gaits: [],
   position: { x: 1, y: 0, z: 2 }, // placed away from the origin
@@ -26,14 +26,14 @@ const ctx = (facingDeg: number): IAutoFilmActorContext => ({
 // Each lever is placed so its model-space image (after undoing the actor's
 // facing) sits inside the 0.55 m arm reach for that facing — a fixed world
 // point maps to a different arm distance as the actor turns.
-const nodes = new Map<string, IAutoFilmVector3>([
+const nodes = new Map<string, IAutoMovieVector3>([
   ["lever", { x: 1.35, y: 1.2, z: 2.25 }], // reachable facing 0
   ["lever90", { x: 1.2, y: 1.3, z: 1.7 }], // reachable facing 90
 ]);
 
 const reach = (
-  overrides: Partial<IAutoFilmReachAction> = {},
-): IAutoFilmReachAction => ({
+  overrides: Partial<IAutoMovieReachAction> = {},
+): IAutoMovieReachAction => ({
   verb: "reach",
   actor: "hero",
   start: 0,
@@ -47,8 +47,8 @@ const reach = (
 const worldHand = (
   pose: ReturnType<typeof sampleMotion>["pose"],
   facingDeg: number,
-  position: IAutoFilmVector3,
-): IAutoFilmVector3 => {
+  position: IAutoMovieVector3,
+): IAutoMovieVector3 => {
   const model = resolvePose(pose, createSkeleton(), HUMANOID_JOINT_AXES).find(
     (b) => b.bone === "leftHand",
   )!.worldPosition;

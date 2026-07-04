@@ -1,4 +1,4 @@
-import { Vector3 } from "@autofilm/engine";
+import { Vector3 } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";

@@ -1,4 +1,4 @@
-import { Quaternion, Vector3, stageScene } from "@autofilm/engine";
+import { Quaternion, Vector3, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
@@ -6,7 +6,7 @@ import { vclose } from "../internal/predicates";
 
 /**
  * Pins the happy path of the STAGING consumer: a coherent script + staging pair
- * composes an {@link IAutoFilmScene} whose geometry is the placements' — facing
+ * composes an {@link IAutoMovieScene} whose geometry is the placements' — facing
  * degrees become Y rotations, cameras aim their −Z at the resolved target,
  * lights are realised as directional, and mount couplings surface as validated
  * `mounts` rather than scene-graph edges.

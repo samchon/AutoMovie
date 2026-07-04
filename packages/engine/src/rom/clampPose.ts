@@ -1,17 +1,17 @@
 import {
-  IAutoFilmAngleRange,
-  IAutoFilmJointConstraint,
-  IAutoFilmJointPose,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  IAutoMovieAngleRange,
+  IAutoMovieJointConstraint,
+  IAutoMovieJointPose,
+  IAutoMoviePose,
+  IAutoMovieSkeleton,
+} from "@automovie/interface";
 
 import { getConstraint } from "./humanoidRom";
 import { swingConeScale } from "./swingCone";
 
 const clampAxis = (
   angle: number | null,
-  allowed: IAutoFilmAngleRange | null,
+  allowed: IAutoMovieAngleRange | null,
 ): number | null => {
   if (angle === null) return null;
   if (allowed === null) return 0; // immobile axis: forced back to neutral
@@ -35,9 +35,9 @@ const clampAxis = (
  * @author Samchon
  */
 export const clampJointRom = (
-  joint: IAutoFilmJointPose,
-  constraint: IAutoFilmJointConstraint,
-): IAutoFilmJointPose => {
+  joint: IAutoMovieJointPose,
+  constraint: IAutoMovieJointConstraint,
+): IAutoMovieJointPose => {
   const flexion = clampAxis(joint.flexion, constraint.flexion);
   const abduction = clampAxis(joint.abduction, constraint.abduction);
   const twist = clampAxis(joint.twist, constraint.twist);
@@ -68,9 +68,9 @@ export const clampJointRom = (
  * @author Samchon
  */
 export const clampPose = (
-  pose: IAutoFilmPose,
-  skeleton: IAutoFilmSkeleton,
-): IAutoFilmPose => ({
+  pose: IAutoMoviePose,
+  skeleton: IAutoMovieSkeleton,
+): IAutoMoviePose => ({
   skeleton: pose.skeleton,
   root: pose.root,
   joints: pose.joints.map((joint) => {

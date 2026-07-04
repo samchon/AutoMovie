@@ -1,19 +1,19 @@
 import {
   HUMANOID_JOINT_AXES,
-  IAutoFilmBody,
-  IAutoFilmImpact,
+  IAutoMovieBody,
+  IAutoMovieImpact,
   impactRecoil,
   projectileAt,
   projectileSphereHit,
   resolveImpact,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmPose,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
-import { applyPose, buildModel, mountViewer } from "@autofilm/viewer";
+  AutoMovieHumanoidBone,
+  IAutoMovieJointPose,
+  IAutoMoviePose,
+  IAutoMovieVector3,
+} from "@automovie/interface";
+import { applyPose, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
@@ -24,11 +24,11 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 // the overflow becoming a root stagger. The engine computes the reaction; the
 // view just plays it. ─────────────────────────────────────────────────────────
 const params = new URLSearchParams(location.search);
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IAutoMovieVector3 => ({ x, y, z });
 const j = (
-  bone: AutoFilmHumanoidBone,
+  bone: AutoMovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
-): IAutoFilmJointPose => ({
+): IAutoMovieJointPose => ({
   bone,
   flexion: a.flexion ?? 0,
   abduction: a.abduction ?? 0,
@@ -39,7 +39,7 @@ const { skeleton, model } = buildStickman(DEFAULT_STICKMAN);
 const object = buildModel(model);
 
 // a braced stance — knees soft, hands up to take the hit
-const BRACE: IAutoFilmJointPose[] = [
+const BRACE: IAutoMovieJointPose[] = [
   j("leftUpperLeg", { flexion: -10, abduction: 10 }),
   j("rightUpperLeg", { flexion: -10, abduction: -10 }),
   j("leftLowerLeg", { flexion: 24 }),
@@ -54,18 +54,18 @@ const BRACE: IAutoFilmJointPose[] = [
 // from +Z flying −Z into the chest)
 const torso = { center: v(0, 1.28, 0), radius: 0.34 };
 const bodyMass = 72;
-const recoilChain: AutoFilmHumanoidBone[] = ["spine", "chest", "neck", "head"];
+const recoilChain: AutoMovieHumanoidBone[] = ["spine", "chest", "neck", "head"];
 
 interface Shot {
   t0: number;
   label: string;
   color: number;
   radius: number;
-  origin: IAutoFilmVector3;
-  velocity: IAutoFilmVector3;
-  gravity: IAutoFilmVector3;
-  ball: Omit<IAutoFilmBody, "velocity">;
-  body: Omit<IAutoFilmBody, "velocity" | "mass">;
+  origin: IAutoMovieVector3;
+  velocity: IAutoMovieVector3;
+  gravity: IAutoMovieVector3;
+  ball: Omit<IAutoMovieBody, "velocity">;
+  body: Omit<IAutoMovieBody, "velocity" | "mass">;
 }
 
 // three strikes that exercise the three response kinds
@@ -110,8 +110,8 @@ const DUR = 9;
 interface Resolved {
   shot: Shot;
   hitT: number; // absolute time of contact
-  impact: IAutoFilmImpact;
-  hitPoint: IAutoFilmVector3;
+  impact: IAutoMovieImpact;
+  hitPoint: IAutoMovieVector3;
 }
 const resolved: Resolved[] = SHOTS.map((shot) => {
   const proj = {
@@ -178,7 +178,7 @@ const envelope = (t: number, hitT: number): number => {
 
 const step = (t: number): void => {
   // accumulate the recoil (flinch + stagger) from any strike currently landing
-  let flinch: IAutoFilmJointPose[] = [];
+  let flinch: IAutoMovieJointPose[] = [];
   let staggerZ = 0;
   let staggerDip = 0;
   for (const r of resolved) {
@@ -204,10 +204,10 @@ const step = (t: number): void => {
     staggerDip -= Math.min(mag * 0.004, 0.12) * env;
   }
 
-  const joints = new Map<AutoFilmHumanoidBone, IAutoFilmJointPose>();
+  const joints = new Map<AutoMovieHumanoidBone, IAutoMovieJointPose>();
   for (const b of BRACE) joints.set(b.bone, b);
   for (const f of flinch) joints.set(f.bone, f);
-  const pose: IAutoFilmPose = {
+  const pose: IAutoMoviePose = {
     skeleton: skeleton.id,
     root: {
       translation: { x: 0, y: staggerDip, z: staggerZ },
@@ -283,7 +283,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   handle.renderer.render(scene, camera);
 };
 
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   kinds: resolved.map((r) => r.impact.kind),
   duration: DUR,

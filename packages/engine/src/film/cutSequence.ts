@@ -1,27 +1,27 @@
 import {
-  IAutoFilmAssembleApplication,
-  IAutoFilmConstraintViolation,
-  IAutoFilmSequence,
-  IAutoFilmShot,
-} from "@autofilm/interface";
+  IAutoMovieAssembleApplication,
+  IAutoMovieConstraintViolation,
+  IAutoMovieSequence,
+  IAutoMovieShot,
+} from "@automovie/interface";
 
 import { ViolationCollector } from "../validation/violation";
 
 /**
- * An assembled cut: the {@link IAutoFilmSequence} the ASSEMBLE stage edited, or
+ * An assembled cut: the {@link IAutoMovieSequence} the ASSEMBLE stage edited, or
  * the contradictions that stopped it.
  *
  * @author Samchon
  */
-export type IAutoFilmCut = IAutoFilmCut.ISuccess | IAutoFilmCut.IFailure;
-export namespace IAutoFilmCut {
+export type IAutoMovieCut = IAutoMovieCut.ISuccess | IAutoMovieCut.IFailure;
+export namespace IAutoMovieCut {
   /** Every entry referenced a built shot and every trim fit inside it. */
   export interface ISuccess {
     /** Discriminator. */
     success: true;
 
     /** The cut-list, ready for the renderer. */
-    sequence: IAutoFilmSequence;
+    sequence: IAutoMovieSequence;
 
     /** Total running time in seconds (trims applied, transitions overlap-free). */
     runtime: number;
@@ -33,13 +33,13 @@ export namespace IAutoFilmCut {
     success: false;
 
     /** Every violation found, for the correction round. */
-    violations: IAutoFilmConstraintViolation[];
+    violations: IAutoMovieConstraintViolation[];
   }
 }
 
 /**
  * The ASSEMBLE consumer — fold the editor's cut-list into an
- * {@link IAutoFilmSequence} over the shots the pipeline actually built. The
+ * {@link IAutoMovieSequence} over the shots the pipeline actually built. The
  * gates are editorial physics: every entry must name a built shot, a trim must
  * select a positive span that lies inside its shot, a transition must not
  * outlast the incoming shot's played span, and the film must play at a positive
@@ -51,9 +51,9 @@ export namespace IAutoFilmCut {
  * subtracts its duration from the straight sum.
  */
 export const cutSequence = (
-  assemble: IAutoFilmAssembleApplication.IWrite,
-  shots: IAutoFilmShot[],
-): IAutoFilmCut => {
+  assemble: IAutoMovieAssembleApplication.IWrite,
+  shots: IAutoMovieShot[],
+): IAutoMovieCut => {
   const out = new ViolationCollector();
   const byId = new Map(shots.map((s) => [s.id, s]));
 

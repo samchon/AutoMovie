@@ -3,19 +3,20 @@ import * as THREE from "three";
 /**
  * A **cross-dissolve** between two shots of the same scene — the render side of
  * `resolveSequencePlayback`'s `blend`. The engine says "at this instant the
- * incoming shot is at weight `alpha`, the outgoing tail rides along"; this draws
- * both and cross-fades them so a cut can dissolve instead of hard-switching.
+ * incoming shot is at weight `alpha`, the outgoing tail rides along"; this
+ * draws both and cross-fades them so a cut can dissolve instead of
+ * hard-switching.
  *
  * One pass renders the **outgoing** shot to an offscreen target, a second
- * renders the **incoming** shot to the screen, and a full-screen quad composites
- * the outgoing over it at opacity `1 − alpha` — plain alpha-over yields
- * `outgoing·(1 − alpha) + incoming·alpha`, a true cross-fade. The target and
- * quad are created once and reused (resized with the drawing buffer).
+ * renders the **incoming** shot to the screen, and a full-screen quad
+ * composites the outgoing over it at opacity `1 − alpha` — plain alpha-over
+ * yields `outgoing·(1 − alpha) + incoming·alpha`, a true cross-fade. The target
+ * and quad are created once and reused (resized with the drawing buffer).
  *
  * `poseOutgoing` / `poseIncoming` each pose `scene` and aim `camera` for their
- * shot at its local time; this helper owns only the render orchestration, so the
- * demo keeps its posing logic. Call it from the viewer's frame hook and return
- * `true` so the mount loop skips its own single-pass render.
+ * shot at its local time; this helper owns only the render orchestration, so
+ * the demo keeps its posing logic. Call it from the viewer's frame hook and
+ * return `true` so the mount loop skips its own single-pass render.
  *
  * @author Samchon
  */

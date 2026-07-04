@@ -1,23 +1,23 @@
-import { Matrix4, resolveWorldDrivers } from "@autofilm/engine";
+import { Matrix4, resolveWorldDrivers } from "@automovie/engine";
 import {
-  IAutoFilmParentDriver,
-  IAutoFilmQuaternion,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieParentDriver,
+  IAutoMovieQuaternion,
+  IAutoMovieTransform,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { qclose, vclose } from "../internal/predicates";
 
 const W = (
-  pos: IAutoFilmVector3,
-  rot: IAutoFilmQuaternion = { x: 0, y: 0, z: 0, w: 1 },
-  scl: IAutoFilmVector3 = { x: 1, y: 1, z: 1 },
+  pos: IAutoMovieVector3,
+  rot: IAutoMovieQuaternion = { x: 0, y: 0, z: 0, w: 1 },
+  scl: IAutoMovieVector3 = { x: 1, y: 1, z: 1 },
 ): number[] => Matrix4.compose(pos, rot, scl);
 
 const parent = (
-  over: Partial<IAutoFilmParentDriver>,
-): IAutoFilmParentDriver => ({
+  over: Partial<IAutoMovieParentDriver>,
+): IAutoMovieParentDriver => ({
   type: "parent",
   owner: "o",
   parent: "p",
@@ -27,7 +27,7 @@ const parent = (
   ...over,
 });
 
-const trs = (x: number, y: number, z: number): IAutoFilmTransform => ({
+const trs = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -57,7 +57,7 @@ export const test_resolve_parent_driver = (): void => {
     ["c", W({ x: 0, y: 1, z: 0 })],
     ["p", W({ x: 10, y: 0, z: 0 }, parentRot, parentScale)],
   ]);
-  const localById = new Map<string, IAutoFilmTransform>([["c", trs(0, 1, 0)]]);
+  const localById = new Map<string, IAutoMovieTransform>([["c", trs(0, 1, 0)]]);
   const children = new Map<string, string[]>([["o", ["c"]]]);
   resolveWorldDrivers(
     [parent({ translation: true, rotation: true, scale: true })],

@@ -1,4 +1,4 @@
-import { CANONICAL_FACE_POSITIONS, buildSkullShell } from "@autofilm/forge";
+import { CANONICAL_FACE_POSITIONS, buildSkullShell } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**

@@ -1,4 +1,4 @@
-# AutoFilm function-calling harness — first-pass design
+# AutoMovie function-calling harness — first-pass design
 
 > First-pass design + schemas for the LLM **function-calling harness**: the layer that lets a model author a film through tool calls, with the engine doing the heavy lifting and validators closing the loop. Pattern studied from AutoBe (`wrtnlabs/autobe-private`); adapted to the motion/film domain. This is a thought-experiment draft — names and shapes will move as the JSDoc/CoT is refined. Tracks issue #34 missions M1/M3/M13.
 
@@ -18,29 +18,29 @@ Net: the LLM directs; the engine animates; validators (structural → physical/R
                         │
                         ▼
    ┌─────────────────────────────────────────┐
-   │ 1. SCRIPT      IAutoFilmScriptApplication │  macro: intent → theme → cast list → beat list (shots in words)
+   │ 1. SCRIPT      IAutoMovieScriptApplication │  macro: intent → theme → cast list → beat list (shots in words)
    └─────────────────────────────────────────┘
                         │  Slate.script
                         ▼
    ┌─────────────────────────────────────────┐
-   │ 2. STAGING     IAutoFilmStagingApplication│  set up: pick/define characters, build the scene, place cameras + lights
+   │ 2. STAGING     IAutoMovieStagingApplication│  set up: pick/define characters, build the scene, place cameras + lights
    └─────────────────────────────────────────┘
                         │  Slate.scene, Slate.cast
                         ▼
         ┌──────── per beat (fan-out) ─────────┐
         ▼                                     │
    ┌─────────────────────────────────────────┐│
-   │ 3. BLOCKING    IAutoFilmBlockingApplication│ meso: a ShotPlan — who does what, where, the camera move, timing, beats
+   │ 3. BLOCKING    IAutoMovieBlockingApplication│ meso: a ShotPlan — who does what, where, the camera move, timing, beats
    └─────────────────────────────────────────┘│
                         │  shot plan                │
                         ▼                            │
    ┌─────────────────────────────────────────┐│
-   │ 4. PERFORMANCE IAutoFilmPerformanceApplication│ micro: action verbs + params → engine primitives → clips/motion
+   │ 4. PERFORMANCE IAutoMoviePerformanceApplication│ micro: action verbs + params → engine primitives → clips/motion
    └─────────────────────────────────────────┘│
-                        │  IAutoFilmShot              │
+                        │  IAutoMovieShot              │
                         ▼                            │
    ┌─────────────────────────────────────────┐│
-   │ 5. REVIEW      IAutoFilmReviewApplication │  render (M2) + validate (ROM/physics/timing) → notes → loop ◄┐
+   │ 5. REVIEW      IAutoMovieReviewApplication │  render (M2) + validate (ROM/physics/timing) → notes → loop ◄┐
    └─────────────────────────────────────────┘│                                                            │
                         │  pass? │ fail → notes ─────┘ (back to BLOCKING/PERFORMANCE with feedback)        │
                         ▼ pass                                                                              │
@@ -48,17 +48,17 @@ Net: the LLM directs; the engine animates; validators (structural → physical/R
                         │
                         ▼
    ┌─────────────────────────────────────────┐
-   │ 6. ASSEMBLE    IAutoFilmAssembleApplication│  edit: order, trims, transitions, fps → IAutoFilmSequence (the film)
+   │ 6. ASSEMBLE    IAutoMovieAssembleApplication│  edit: order, trims, transitions, fps → IAutoMovieSequence (the film)
    └─────────────────────────────────────────┘
 ```
 
-- **State** threads through an `IAutoFilmSlate` (the production state, AutoBe's `AutoBeState` analogue): the script, the cast, the scene, the shots built so far, and the review history. Each stage reads upstream Slate and writes its slice.
+- **State** threads through an `IAutoMovieSlate` (the production state, AutoBe's `AutoBeState` analogue): the script, the cast, the scene, the shots built so far, and the review history. Each stage reads upstream Slate and writes its slice.
 - **Spiral within a node:** PERFORMANCE↔REVIEW iterate (write → render → validate → correct) until the shot passes its gates or a retry budget runs out — exactly AutoBe's correct-loop.
 - **Fan-out** across beats: each beat's BLOCKING→PERFORMANCE→REVIEW is independent (a pipeline), so shots can be built/verified in parallel and only ASSEMBLE waits for all.
 
 ## The CoT / schema convention (from AutoBe)
 
-Every stage is a `typia.llm.application<IAutoFilm[Stage]Application>()`. The single method takes `IProps`, and **the schema enforces the reasoning**:
+Every stage is a `typia.llm.application<IAutoMovie[Stage]Application>()`. The single method takes `IProps`, and **the schema enforces the reasoning**:
 
 - `thinking` — a mandatory reasoning slot; its JSDoc tells the model *what to reason about here* (the JSDoc **is** the prompt).
 - `request` — a discriminated union (`IWrite | IGet… | IComplete`) so context-loading requests can be exhausted/removed (AutoBe's preliminary trick), and a multi-call stage can signal completion.
@@ -74,8 +74,8 @@ Feed each tier's failures back as field-located notes into the loop:
 
 ## Naming
 
-- Per-stage tool schemas: **`IAutoFilm[Stage]Application`** — keeps the `typia.llm.application` convention (grep-able across the typia/AutoBe ecosystem; AutoBe uses `IAutoBe[Phase][Task]Application`). The film-domain flavour lives in the *stage* names (Script / Staging / Blocking / Performance / Review), not a renamed suffix.
-- Production state: **`IAutoFilmSlate`** — the clapperboard that heads every take and carries the production's running context (a better-fitting domain name than a generic "State").
-- The micro action vocabulary: **`IAutoFilmActionCall`** — the thin verbs the engine fattens.
+- Per-stage tool schemas: **`IAutoMovie[Stage]Application`** — keeps the `typia.llm.application` convention (grep-able across the typia/AutoBe ecosystem; AutoBe uses `IAutoBe[Phase][Task]Application`). The film-domain flavour lives in the *stage* names (Script / Staging / Blocking / Performance / Review), not a renamed suffix.
+- Production state: **`IAutoMovieSlate`** — the clapperboard that heads every take and carries the production's running context (a better-fitting domain name than a generic "State").
+- The micro action vocabulary: **`IAutoMovieActionCall`** — the thin verbs the engine fattens.
 
 (Alternative considered: renaming `Application` → `Direction`/`Slate`. Rejected for the schema interfaces to stay aligned with `typia.llm.application`; `Slate` is reused for state instead.)

@@ -1,4 +1,4 @@
-import { meshAdjacency } from "@autofilm/forge";
+import { meshAdjacency } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 /**

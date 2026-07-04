@@ -5,12 +5,12 @@ playground's TypeScript AST, so it is regenerated, never committed. On a fresh
 checkout the folder is empty; these scripts rebuild it.
 
 All commands run from `packages/playground` (or via `pnpm --filter
-@autofilm/playground <script>`).
+@automovie/playground <script>`).
 
 ## Models (`.glb`)
 
 Each character is exported straight from its `build*` AST through
-`@autofilm/render`'s `exportModelToGLB`:
+`@automovie/render`'s `exportModelToGLB`:
 
 ```bash
 pnpm build:models      # stickman, cat, horse, knight (all of the below)

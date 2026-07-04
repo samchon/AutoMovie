@@ -1,14 +1,14 @@
-import { Quaternion } from "@autofilm/engine";
+import { Quaternion } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmKeyframe,
-  IAutoFilmModel,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieJointPose,
+  IAutoMovieKeyframe,
+  IAutoMovieModel,
+  IAutoMovieMotion,
+  IAutoMoviePose,
+  IAutoMovieSkeleton,
+  IAutoMovieTransform,
+} from "@automovie/interface";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
@@ -27,9 +27,9 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
  * @author Samchon
  */
 const j = (
-  bone: AutoFilmHumanoidBone,
+  bone: AutoMovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
-): IAutoFilmJointPose => ({
+): IAutoMovieJointPose => ({
   bone,
   flexion: a.flexion ?? 0,
   abduction: a.abduction ?? 0,
@@ -40,7 +40,7 @@ const j = (
 const tint = (
   id: string,
   rgb: [number, number, number],
-): { skeleton: IAutoFilmSkeleton; model: IAutoFilmModel } => {
+): { skeleton: IAutoMovieSkeleton; model: IAutoMovieModel } => {
   const { skeleton, model } = buildStickman(DEFAULT_STICKMAN);
   return {
     skeleton: { ...skeleton, id },
@@ -63,7 +63,7 @@ export const buildRedBoxer = () => tint("boxerRed", [0.66, 0.18, 0.18]);
 export const buildBlueBoxer = () => tint("boxerBlue", [0.2, 0.34, 0.62]);
 
 // ── shared boxing vocabulary (mirrors the shadowbox guard/strike scheme) ─────
-const GUARD: IAutoFilmJointPose[] = [
+const GUARD: IAutoMovieJointPose[] = [
   j("spine", { flexion: 9 }),
   j("chest", { flexion: 6 }),
   j("leftUpperArm", { flexion: -38, abduction: -58 }),
@@ -76,7 +76,7 @@ const GUARD: IAutoFilmJointPose[] = [
   j("rightLowerLeg", { flexion: 22 }),
 ];
 
-const merge = (over: IAutoFilmJointPose[]): IAutoFilmJointPose[] => {
+const merge = (over: IAutoMovieJointPose[]): IAutoMovieJointPose[] => {
   const m = new Map(GUARD.map((x) => [x.bone, x] as const));
   for (const o of over) m.set(o.bone, o);
   return [...m.values()];
@@ -84,12 +84,12 @@ const merge = (over: IAutoFilmJointPose[]): IAutoFilmJointPose[] => {
 
 // root transforms: a clean fall pitches backward about +X (negative tips the
 // crown toward −Z, the way a boxer drops onto his back away from the opponent)
-const upright: IAutoFilmTransform = {
+const upright: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 };
-const fall = (y: number, z: number, pitchDeg: number): IAutoFilmTransform => ({
+const fall = (y: number, z: number, pitchDeg: number): IAutoMovieTransform => ({
   translation: { x: 0, y, z },
   rotation: Quaternion.fromAxisAngle({ x: 1, y: 0, z: 0 }, pitchDeg),
   scale: { x: 1, y: 1, z: 1 },
@@ -97,36 +97,36 @@ const fall = (y: number, z: number, pitchDeg: number): IAutoFilmTransform => ({
 
 // ── pose vocabulary (each returns the full joint set) ────────────────────────
 const P = {
-  guard: (): IAutoFilmJointPose[] => merge([]),
-  jab: (): IAutoFilmJointPose[] =>
+  guard: (): IAutoMovieJointPose[] => merge([]),
+  jab: (): IAutoMovieJointPose[] =>
     merge([
       j("leftUpperArm", { flexion: -94, abduction: 6 }),
       j("leftLowerArm", { flexion: -8 }),
       j("spine", { flexion: 9, twist: -12 }),
       j("chest", { flexion: 6, twist: -8 }),
     ]),
-  cross: (): IAutoFilmJointPose[] =>
+  cross: (): IAutoMovieJointPose[] =>
     merge([
       j("rightUpperArm", { flexion: 94, abduction: -6 }),
       j("rightLowerArm", { flexion: 10 }),
       j("spine", { flexion: 9, twist: 26 }),
       j("chest", { flexion: 6, twist: 18 }),
     ]),
-  leadHook: (): IAutoFilmJointPose[] =>
+  leadHook: (): IAutoMovieJointPose[] =>
     merge([
       j("leftUpperArm", { flexion: -54, abduction: 8 }),
       j("leftLowerArm", { flexion: -94 }),
       j("spine", { flexion: 9, twist: 22 }),
       j("chest", { flexion: 6, twist: 16 }),
     ]),
-  rearUpper: (): IAutoFilmJointPose[] =>
+  rearUpper: (): IAutoMovieJointPose[] =>
     merge([
       j("rightUpperArm", { flexion: 56, abduction: -48 }),
       j("rightLowerArm", { flexion: 126 }),
       j("spine", { flexion: 2, twist: 16 }),
       j("chest", { flexion: 0, twist: 12 }),
     ]),
-  slip: (d: number): IAutoFilmJointPose[] =>
+  slip: (d: number): IAutoMovieJointPose[] =>
     merge([
       j("spine", { flexion: 14, abduction: 18 * d, twist: 8 * d }),
       j("chest", { flexion: 9, abduction: 14 * d }),
@@ -136,7 +136,7 @@ const P = {
       j("rightLowerLeg", { flexion: 32 }),
     ]),
   // waist AND knees fold together, the body sinking low under the punch
-  weave: (d: number): IAutoFilmJointPose[] =>
+  weave: (d: number): IAutoMovieJointPose[] =>
     merge([
       j("spine", { flexion: 20, abduction: 26 * d, twist: 12 * d }),
       j("chest", { flexion: 12, abduction: 18 * d }),
@@ -145,7 +145,7 @@ const P = {
       j("leftLowerLeg", { flexion: 60 }),
       j("rightLowerLeg", { flexion: 64 }),
     ]),
-  duck: (): IAutoFilmJointPose[] =>
+  duck: (): IAutoMovieJointPose[] =>
     merge([
       j("spine", { flexion: 28 }),
       j("chest", { flexion: 16 }),
@@ -154,7 +154,7 @@ const P = {
       j("leftLowerLeg", { flexion: 78 }),
       j("rightLowerLeg", { flexion: 82 }),
     ]),
-  block: (): IAutoFilmJointPose[] =>
+  block: (): IAutoMovieJointPose[] =>
     merge([
       // high tight guard, both gloves up at the temples
       j("leftUpperArm", { flexion: -30, abduction: -40 }),
@@ -163,7 +163,7 @@ const P = {
       j("rightLowerArm", { flexion: 132 }),
       j("spine", { flexion: 12 }),
     ]),
-  leanBack: (): IAutoFilmJointPose[] =>
+  leanBack: (): IAutoMovieJointPose[] =>
     merge([
       j("spine", { flexion: -16 }),
       j("chest", { flexion: -10 }),
@@ -171,7 +171,7 @@ const P = {
       j("rightUpperLeg", { abduction: -9, flexion: 8 }),
     ]),
   // KO progression for the loser (root carries the fall)
-  recoil: (): IAutoFilmJointPose[] =>
+  recoil: (): IAutoMovieJointPose[] =>
     merge([
       j("spine", { flexion: -14, twist: 6 }),
       j("chest", { flexion: -10 }),
@@ -181,7 +181,7 @@ const P = {
     ]),
 };
 
-const koStart: IAutoFilmJointPose[] = merge([
+const koStart: IAutoMovieJointPose[] = merge([
   j("spine", { flexion: -24 }),
   j("chest", { flexion: -14 }),
   j("head", { flexion: -26 }),
@@ -194,7 +194,7 @@ const koStart: IAutoFilmJointPose[] = merge([
   j("leftLowerLeg", { flexion: 30 }),
   j("rightLowerLeg", { flexion: 34 }),
 ]);
-const koMid: IAutoFilmJointPose[] = merge([
+const koMid: IAutoMovieJointPose[] = merge([
   j("spine", { flexion: -30 }),
   j("chest", { flexion: -16 }),
   j("head", { flexion: -30 }),
@@ -205,7 +205,7 @@ const koMid: IAutoFilmJointPose[] = merge([
   j("leftLowerLeg", { flexion: 76 }),
   j("rightLowerLeg", { flexion: 80 }),
 ]);
-const koDown: IAutoFilmJointPose[] = merge([
+const koDown: IAutoMovieJointPose[] = merge([
   j("spine", { flexion: -18 }),
   j("chest", { flexion: -8 }),
   j("head", { flexion: -20 }),
@@ -223,20 +223,20 @@ const koDown: IAutoFilmJointPose[] = merge([
 // weave/duck sinks the body, a punch can step in, the KO falls).
 interface Moment {
   t: number;
-  red: IAutoFilmJointPose[];
-  blue: IAutoFilmJointPose[];
-  redRoot?: IAutoFilmTransform;
-  blueRoot?: IAutoFilmTransform;
+  red: IAutoMovieJointPose[];
+  blue: IAutoMovieJointPose[];
+  redRoot?: IAutoMovieTransform;
+  blueRoot?: IAutoMovieTransform;
 }
 
 // a pure vertical sink (weave/duck drop) and a step toward the opponent (+Z
 // local, which for either boxer points at the other once placed)
-const sink = (y: number): IAutoFilmTransform => ({
+const sink = (y: number): IAutoMovieTransform => ({
   translation: { x: 0, y, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
-const stepIn = (z: number): IAutoFilmTransform => ({
+const stepIn = (z: number): IAutoMovieTransform => ({
   translation: { x: 0, y: 0, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
@@ -247,10 +247,10 @@ const stepIn = (z: number): IAutoFilmTransform => ({
 interface Ex {
   dur: number;
   who: "R" | "B";
-  atk: IAutoFilmJointPose[];
-  def: IAutoFilmJointPose[];
-  atkRoot?: IAutoFilmTransform;
-  defRoot?: IAutoFilmTransform;
+  atk: IAutoMovieJointPose[];
+  def: IAutoMovieJointPose[];
+  atkRoot?: IAutoMovieTransform;
+  defRoot?: IAutoMovieTransform;
 }
 
 // a round of crisp give-and-take; repeated (with the lead alternating) to fill
@@ -387,25 +387,25 @@ const DURATION = MOMENTS[MOMENTS.length - 1]!.t;
 
 const key = (
   time: number,
-  joints: IAutoFilmJointPose[],
+  joints: IAutoMovieJointPose[],
   skeleton: string,
-  rootT: IAutoFilmTransform | null,
-): IAutoFilmKeyframe => ({
+  rootT: IAutoMovieTransform | null,
+): IAutoMovieKeyframe => ({
   time,
-  pose: { skeleton, root: rootT, joints } satisfies IAutoFilmPose,
+  pose: { skeleton, root: rootT, joints } satisfies IAutoMoviePose,
   expression: null,
   easing: "easeInOut",
   bezier: null,
 });
 
-export const redClip = (sk: string): IAutoFilmMotion => ({
+export const redClip = (sk: string): IAutoMovieMotion => ({
   id: "spar-red",
   skeleton: sk,
   duration: DURATION,
   loop: false,
   keyframes: MOMENTS.map((m) => key(m.t, m.red, sk, m.redRoot ?? upright)),
 });
-export const blueClip = (sk: string): IAutoFilmMotion => ({
+export const blueClip = (sk: string): IAutoMovieMotion => ({
   id: "spar-blue",
   skeleton: sk,
   duration: DURATION,

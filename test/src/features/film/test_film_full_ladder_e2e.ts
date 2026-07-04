@@ -6,7 +6,7 @@ import {
   playbackFrameSamples,
   reviewShot,
   stageScene,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {

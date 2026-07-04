@@ -2,12 +2,12 @@ import {
   DEFAULT_HUMANOID_ROM,
   gestureMotion,
   validateMotion,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmBone,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieBone,
+  IAutoMovieSkeleton,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
@@ -17,7 +17,7 @@ import { nclose } from "../internal/predicates";
 // raises either arm alike; the per-side rest-frame remap lives in the render,
 // not in the gesture values). So "ROM-legal" here is the real pipeline gate: a
 // knee that only flexes 0–150°, a shoulder abduction −30–180°.
-const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
+const bone = (b: AutoMovieHumanoidBone): IAutoMovieBone => ({
   bone: b,
   parent: null,
   rest: {
@@ -28,7 +28,7 @@ const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
   constraint: DEFAULT_HUMANOID_ROM[b] ?? null,
 });
 
-const RIG: IAutoFilmSkeleton = {
+const RIG: IAutoMovieSkeleton = {
   id: "humanoid",
   bones: [
     "spine",
@@ -41,7 +41,7 @@ const RIG: IAutoFilmSkeleton = {
     "rightUpperLeg",
     "leftLowerLeg",
     "rightLowerLeg",
-  ].map((b) => bone(b as AutoFilmHumanoidBone)),
+  ].map((b) => bone(b as AutoMovieHumanoidBone)),
 };
 
 const GENERIC = [
@@ -59,7 +59,7 @@ const GENERIC = [
 
 const maxAbs = (
   motion: NonNullable<ReturnType<typeof gestureMotion>>,
-  b: AutoFilmHumanoidBone,
+  b: AutoMovieHumanoidBone,
   axis: "flexion" | "abduction" | "twist",
 ): number =>
   Math.max(
@@ -71,16 +71,17 @@ const maxAbs = (
 /**
  * `gestureMotion` — the postural/whole-body half of the harness `gesture` verb.
  * The trunk/head/leg gestures are single-axis oscillations; the arm gestures
- * (wave/celebrate/draw/throw) are authored in clinical space and read up through
- * the rig's rest frame at render. All are engine-authored and hand-kept inside
- * the humanoid ROM; only the targeted `strike` jab is left to a richer
+ * (wave/celebrate/draw/throw) are authored in clinical space and read up
+ * through the rig's rest frame at render. All are engine-authored and hand-kept
+ * inside the humanoid ROM; only the targeted `strike` jab is left to a richer
  * synthesiser.
  *
  * Scenarios:
  *
  * 1. Each generic kind synthesises a non-empty clip that opens and closes on the
- *    neutral pose (returns to rest) and validates against the default anatomical
- *    ROM — the arms too, since the clinical angles live inside that table.
+ *    neutral pose (returns to rest) and validates against the default
+ *    anatomical ROM — the arms too, since the clinical angles live inside that
+ *    table.
  * 2. The gestures move the right joint: bow flexes the spine, nod dips the head
  *    (flexion), shake turns it (twist), crouch folds the knees, kick raises the
  *    leg (hip flexion) and snaps the knee, stagger leans the trunk (spine
@@ -92,9 +93,9 @@ const maxAbs = (
  *    stays ROM-legal — no arm abduction, so no left/right mirror needed.
  * 5. The arm gestures abduct in clinical space: `wave` raises the right arm
  *    (+abduction) and swings the forearm; `celebrate` throws both arms up with
- *    the same positive abduction on each side — no per-side mirror. `draw` reaches
- *    the bow arm forward and folds the string arm back; `throw` winds the arm
- *    back then whips it forward while the trunk coils.
+ *    the same positive abduction on each side — no per-side mirror. `draw`
+ *    reaches the bow arm forward and folds the string arm back; `throw` winds
+ *    the arm back then whips it forward while the trunk coils.
  * 6. Only `strike` (a targeted jab) and unknown kinds return null — the compiler
  *    skips them for the reach-based synthesiser.
  */
@@ -176,7 +177,7 @@ export const test_motion_gesture = (): void => {
   // mirror would flip the sign) — take the signed peak, not the magnitude.
   const peakAbd = (
     motion: NonNullable<ReturnType<typeof gestureMotion>>,
-    b: AutoFilmHumanoidBone,
+    b: AutoMovieHumanoidBone,
   ): number =>
     Math.max(
       ...motion.keyframes.map(
@@ -220,7 +221,8 @@ export const test_motion_gesture = (): void => {
   // forward (positive), and the trunk coils on its twist.
   const thrown = gestureMotion("t", RIG.id, "throw", 1)!;
   const throwArmFlex = thrown.keyframes.map(
-    (k) => k.pose.joints.find((jj) => jj.bone === "rightUpperArm")?.flexion ?? 0,
+    (k) =>
+      k.pose.joints.find((jj) => jj.bone === "rightUpperArm")?.flexion ?? 0,
   );
   TestValidator.predicate(
     "throw winds the arm back then whips it forward",

@@ -2,14 +2,14 @@ import {
   HUMANOID_JOINT_AXES,
   projectileAt,
   resolveImpact,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmJointPose,
-  IAutoFilmPose,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
-import { applyPose, buildModel, mountViewer } from "@autofilm/viewer";
+  AutoMovieHumanoidBone,
+  IAutoMovieJointPose,
+  IAutoMoviePose,
+  IAutoMovieVector3,
+} from "@automovie/interface";
+import { applyPose, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
@@ -19,11 +19,11 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 // again — tucking at the apex, extending to land. The bounce heights come from
 // the physics, not a hand-keyed sine. ─────────────────────────────────────────
 const params = new URLSearchParams(location.search);
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IAutoMovieVector3 => ({ x, y, z });
 const j = (
-  bone: AutoFilmHumanoidBone,
+  bone: AutoMovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
-): IAutoFilmJointPose => ({
+): IAutoMovieJointPose => ({
   bone,
   flexion: a.flexion ?? 0,
   abduction: a.abduction ?? 0,
@@ -85,7 +85,7 @@ const arcAt = (t: number): { y: number; phase: number } => {
 
 // pose: tuck the knees and throw the arms up near the apex, extend to land,
 // and squash slightly at the bed
-const poseAt = (phase: number, y: number): IAutoFilmJointPose[] => {
+const poseAt = (phase: number, y: number): IAutoMovieJointPose[] => {
   const air = Math.sin(Math.PI * phase); // 0 at bed, 1 at apex
   const squash = y < 0.12 ? 1 - y / 0.12 : 0; // compress when near the bed
   const tuck = 60 * air;
@@ -104,7 +104,7 @@ const poseAt = (phase: number, y: number): IAutoFilmJointPose[] => {
 
 const step = (t: number): void => {
   const { y, phase } = arcAt(t);
-  const pose: IAutoFilmPose = {
+  const pose: IAutoMoviePose = {
     skeleton: skeleton.id,
     root: {
       translation: { x: 0, y: SURFACE + y, z: 0 },
@@ -176,7 +176,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   handle.renderer.render(scene, camera);
 };
 
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   bounces: arcs.length,
   duration: DUR,

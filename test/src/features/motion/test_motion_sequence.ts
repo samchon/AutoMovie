@@ -1,4 +1,4 @@
-import { sequenceMotion } from "@autofilm/engine";
+import { sequenceMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";

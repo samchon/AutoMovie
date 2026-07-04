@@ -1,4 +1,7 @@
-import { IAutoFilmActionTarget, IAutoFilmVector3 } from "@autofilm/interface";
+import {
+  IAutoMovieActionTarget,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 /**
  * Resolve a **positional** action target — `node`, `point`, or `group` — to a
@@ -17,15 +20,15 @@ import { IAutoFilmActionTarget, IAutoFilmVector3 } from "@autofilm/interface";
  * @author Samchon
  */
 export const resolveTargetPoint = (
-  target: IAutoFilmActionTarget,
-  nodes: Map<string, IAutoFilmVector3>,
-): IAutoFilmVector3 | null => {
+  target: IAutoMovieActionTarget,
+  nodes: Map<string, IAutoMovieVector3>,
+): IAutoMovieVector3 | null => {
   if (target.kind === "node") return nodes.get(target.node) ?? null;
   if (target.kind === "point") return target.point;
   if (target.kind === "group") {
     const points = target.nodes
       .map((id) => nodes.get(id))
-      .filter((p): p is IAutoFilmVector3 => p !== undefined);
+      .filter((p): p is IAutoMovieVector3 => p !== undefined);
     if (points.length === 0) return null;
     const sum = points.reduce(
       (a, p) => ({ x: a.x + p.x, y: a.y + p.y, z: a.z + p.z }),

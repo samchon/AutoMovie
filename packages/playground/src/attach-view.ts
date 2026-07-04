@@ -1,28 +1,28 @@
 import {
   HUMANOID_GAITS,
   HUMANOID_JOINT_AXES,
-  IAutoFilmActorContext,
+  IAutoMovieActorContext,
   cutSequence,
   makeActorSynthesizer,
   performShot,
   resolveSequencePlayback,
   stageScene,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  IAutoFilmModel,
-  IAutoFilmMotion,
-  IAutoFilmPerformanceApplication,
-  IAutoFilmScriptApplication,
-  IAutoFilmShot,
-  IAutoFilmStagingApplication,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  IAutoMovieModel,
+  IAutoMovieMotion,
+  IAutoMoviePerformanceApplication,
+  IAutoMovieScriptApplication,
+  IAutoMovieShot,
+  IAutoMovieStagingApplication,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import {
-  AutoFilmPlayer,
+  AutoMoviePlayer,
   applyObjectMotion,
   buildModel,
   mountViewer,
-} from "@autofilm/viewer";
+} from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
@@ -35,7 +35,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 // of compileAttach. Deterministic via renderAt(t) for capture.
 
 // ── the blade prop: grip at origin, blade rising +Y; no rig ──────────────────
-const bladeModel: IAutoFilmModel = {
+const bladeModel: IAutoMovieModel = {
   id: "blade",
   name: "blade",
   origin: "generated",
@@ -74,7 +74,7 @@ const bladeModel: IAutoFilmModel = {
 };
 
 // ── the stage payloads ───────────────────────────────────────────────────────
-const script: IAutoFilmScriptApplication.IWrite = {
+const script: IAutoMovieScriptApplication.IWrite = {
   type: "write",
   logline: "A figure walks the floor, blade in hand.",
   theme: "a prop rides the hand",
@@ -92,7 +92,7 @@ const script: IAutoFilmScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoFilmStagingApplication.IWrite = {
+const staging: IAutoMovieStagingApplication.IWrite = {
   type: "write",
   scene: { id: "scene-carry", name: "the carry" },
   plan: "the walker starts near and crosses to far along +Z, facing +Z; the blade is nocked in the left hand; a side-on camera reads the crossing.",
@@ -118,7 +118,7 @@ const staging: IAutoFilmStagingApplication.IWrite = {
   ],
 };
 
-const performance: IAutoFilmPerformanceApplication.IWrite = {
+const performance: IAutoMoviePerformanceApplication.IWrite = {
   type: "write",
   beat: "carry",
   plan: "the walker crosses the floor; the blade is attached to its left hand for the whole shot.",
@@ -156,10 +156,10 @@ const staged = stageScene(script, staging);
 if (staged.success !== true)
   throw new Error(`staging failed: ${JSON.stringify(staged)}`);
 
-const nodePositions = new Map<string, IAutoFilmVector3>(
+const nodePositions = new Map<string, IAutoMovieVector3>(
   staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
 );
-const contexts = new Map<string, IAutoFilmActorContext>(
+const contexts = new Map<string, IAutoMovieActorContext>(
   staged.scene.nodes
     .filter((n) => isActor(n.id))
     .map((n) => {
@@ -191,8 +191,8 @@ const performed = performShot({
 });
 if (performed.success !== true)
   throw new Error(`perform failed: ${JSON.stringify(performed.violations)}`);
-const shots: IAutoFilmShot[] = [performed.shot];
-const motionsByShot = new Map<string, Record<string, IAutoFilmMotion>>([
+const shots: IAutoMovieShot[] = [performed.shot];
+const motionsByShot = new Map<string, Record<string, IAutoMovieMotion>>([
   [performed.shot.id, performed.motions],
 ]);
 
@@ -241,7 +241,7 @@ const playersByShot = new Map(
       .filter((p) => isActor(p.node))
       .map((p) => ({
         node: p.node,
-        player: new AutoFilmPlayer(
+        player: new AutoMoviePlayer(
           built[p.node]!,
           rigOf[p.node as keyof typeof rigOf].skeleton,
           motionsByShot.get(shot.id)![p.node]!,
@@ -295,7 +295,7 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   renderAt(t);
   handle.renderer.render(scene, camera);
 };
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   duration: FILM_DURATION,
   shots: shots.map((s) => s.id),

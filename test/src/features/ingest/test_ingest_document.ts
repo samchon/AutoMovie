@@ -1,11 +1,11 @@
-import { ingestDocument } from "@autofilm/ingest";
-import { IAutoFilmNode } from "@autofilm/interface";
+import { ingestDocument } from "@automovie/ingest";
+import { IAutoMovieNode } from "@automovie/interface";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-const byName = (nodes: IAutoFilmNode[], name: string): IAutoFilmNode => {
+const byName = (nodes: IAutoMovieNode[], name: string): IAutoMovieNode => {
   const n = nodes.find((x) => x.name === name);
   if (n === undefined) throw new Error(`node "${name}" missing`);
   return n;

@@ -1,12 +1,12 @@
-import { HUMANOID_GAITS, gaitMotion, validateMotion } from "@autofilm/engine";
+import { HUMANOID_GAITS, gaitMotion, validateMotion } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmBone,
-  IAutoFilmSkeleton,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieBone,
+  IAutoMovieSkeleton,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
+const bone = (b: AutoMovieHumanoidBone): IAutoMovieBone => ({
   bone: b,
   parent: null,
   rest: {
@@ -19,7 +19,7 @@ const bone = (b: AutoFilmHumanoidBone): IAutoFilmBone => ({
 
 // A rig carrying exactly the bones the gaits drive, all with null constraints
 // so validateMotion falls back to the engine's default humanoid ROM table.
-const RIG: IAutoFilmSkeleton = {
+const RIG: IAutoMovieSkeleton = {
   id: "humanoid",
   bones: [
     "hips",
@@ -29,14 +29,14 @@ const RIG: IAutoFilmSkeleton = {
     "rightLowerLeg",
     "leftUpperArm",
     "rightUpperArm",
-  ].map((b) => bone(b as AutoFilmHumanoidBone)),
+  ].map((b) => bone(b as AutoMovieHumanoidBone)),
 };
 
 const NAMES = ["walk", "run", "sprint", "sneak", "march"] as const;
 
 const ampOf = (
   gait: (typeof HUMANOID_GAITS)[keyof typeof HUMANOID_GAITS],
-  b: AutoFilmHumanoidBone,
+  b: AutoMovieHumanoidBone,
 ) => gait.limbs.find((l) => l.bone === b)!.amplitude;
 
 /**
@@ -80,9 +80,9 @@ export const test_motion_humanoid_gaits = (): void => {
     );
   }
 
-  const hip: AutoFilmHumanoidBone = "leftUpperLeg";
-  const knee: AutoFilmHumanoidBone = "leftLowerLeg";
-  const arm: AutoFilmHumanoidBone = "leftUpperArm";
+  const hip: AutoMovieHumanoidBone = "leftUpperLeg";
+  const knee: AutoMovieHumanoidBone = "leftLowerLeg";
+  const arm: AutoMovieHumanoidBone = "leftUpperArm";
   TestValidator.predicate(
     "hip swing grows walk < run < sprint",
     ampOf(HUMANOID_GAITS.walk, hip) < ampOf(HUMANOID_GAITS.run, hip) &&

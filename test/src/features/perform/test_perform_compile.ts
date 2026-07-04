@@ -1,8 +1,8 @@
 import {
-  IAutoFilmActionSynthesizer,
+  IAutoMovieActionSynthesizer,
   compilePerformance,
-} from "@autofilm/engine";
-import { IAutoFilmActionCall, IAutoFilmMotion } from "@autofilm/interface";
+} from "@automovie/engine";
+import { IAutoMovieActionCall, IAutoMovieMotion } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
@@ -13,7 +13,7 @@ const gesture = (
   actor: string | string[],
   start: number,
   repeat?: number,
-): IAutoFilmActionCall => ({
+): IAutoMovieActionCall => ({
   verb: "gesture",
   kind: "wave",
   actor,
@@ -23,10 +23,10 @@ const gesture = (
 });
 
 /** A one-cycle base clip (duration 1), or `null` for the actor named `"skip"`. */
-const synth: IAutoFilmActionSynthesizer = (
-  _action: IAutoFilmActionCall,
+const synth: IAutoMovieActionSynthesizer = (
+  _action: IAutoMovieActionCall,
   actor: string,
-): IAutoFilmMotion | null =>
+): IAutoMovieMotion | null =>
   actor === "skip"
     ? null
     : makeMotion(
@@ -37,7 +37,7 @@ const synth: IAutoFilmActionSynthesizer = (
         1,
       );
 
-const times = (m: IAutoFilmMotion): number[] => m.keyframes.map((k) => k.time);
+const times = (m: IAutoMovieMotion): number[] => m.keyframes.map((k) => k.time);
 
 /**
  * `compilePerformance` — the action compiler's timeline assembly (the content

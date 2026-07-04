@@ -1,10 +1,10 @@
 import {
-  IAutoFilmActionSynthesizer,
+  IAutoMovieActionSynthesizer,
   performShot,
   sampleClip,
   stageScene,
-} from "@autofilm/engine";
-import { IAutoFilmActionCall, IAutoFilmVector3 } from "@autofilm/interface";
+} from "@automovie/engine";
+import { IAutoMovieActionCall, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -17,7 +17,7 @@ import { createSkeleton } from "../internal/fixtures";
 import { vclose } from "../internal/predicates";
 
 /** A launch/attach produces no actor pose — those animate objects, not the rig. */
-const synth: IAutoFilmActionSynthesizer = (action, actor) =>
+const synth: IAutoMovieActionSynthesizer = (action, actor) =>
   action.verb === "launch" || action.verb === "attachTo"
     ? null
     : validSynthesizer(action, actor);
@@ -74,7 +74,7 @@ export const test_film_perform_shot_attach = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
   if (staged.success !== true) throw new Error("staging must succeed");
 
-  const perform = (draft: IAutoFilmActionCall[]) =>
+  const perform = (draft: IAutoMovieActionCall[]) =>
     performShot({
       script: scriptOf(),
       staged,
@@ -130,7 +130,7 @@ export const test_film_perform_shot_attach = (): void => {
     follow.tracks.map((t) => (t.channel.kind === "node" ? t.channel.node : "")),
     ["sword", "sword"],
   );
-  const posAt = (t: number): IAutoFilmVector3 => {
+  const posAt = (t: number): IAutoMovieVector3 => {
     const v = sampleClip(follow, t).get("node:sword:translation")!.value;
     return { x: v[0]!, y: v[1]!, z: v[2]! };
   };

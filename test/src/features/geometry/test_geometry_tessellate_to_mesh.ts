@@ -1,8 +1,8 @@
-import { tessellateToMesh } from "@autofilm/engine";
+import { tessellateToMesh } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * `tessellateToMesh` adapts a raw tessellation into a full `IAutoFilmMesh`, so
+ * `tessellateToMesh` adapts a raw tessellation into a full `IAutoMovieMesh`, so
  * a generated primitive can flow through the same code paths as imported mesh
  * geometry. It carries positions and indices through and leaves skinning null,
  * since generated primitives are not skinned.

@@ -1,15 +1,15 @@
-import { DEFAULT_HUMANOID_ROM, aimRotation } from "@autofilm/engine";
+import { DEFAULT_HUMANOID_ROM, aimRotation } from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  AutoFilmPrimitiveShape,
-  IAutoFilmBone,
-  IAutoFilmModel,
-  IAutoFilmModelPart,
-  IAutoFilmQuaternion,
-  IAutoFilmSkeleton,
-  IAutoFilmTransform,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  AutoMoviePrimitiveShape,
+  IAutoMovieBone,
+  IAutoMovieModel,
+  IAutoMovieModelPart,
+  IAutoMovieQuaternion,
+  IAutoMovieSkeleton,
+  IAutoMovieTransform,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 /**
  * Proportions of the **stick figure** ("졸라맨") — the deliberately minimal test
@@ -17,8 +17,8 @@ import {
  * the stick figure keeps every segment a thin uniform rod and the head a single
  * sphere: the most legible possible body to read a pose or a motion off of.
  *
- * It is rigged on the same {@link AutoFilmHumanoidBone} slots as every other
- * autofilm character, so a clip authored on the stick figure replays unchanged
+ * It is rigged on the same {@link AutoMovieHumanoidBone} slots as every other
+ * automovie character, so a clip authored on the stick figure replays unchanged
  * on a fully fleshed humanoid (or an imported VRM) later. All lengths are in
  * meters.
  *
@@ -83,22 +83,22 @@ export const DEFAULT_STICKMAN: IStickmanParams = {
   headRadius: 0.12,
 };
 
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IAutoMovieVector3 => ({ x, y, z });
 
 const at = (
-  t: IAutoFilmVector3,
-  r?: IAutoFilmQuaternion,
-): IAutoFilmTransform => ({
+  t: IAutoMovieVector3,
+  r?: IAutoMovieQuaternion,
+): IAutoMovieTransform => ({
   translation: t,
   rotation: r ?? { x: 0, y: 0, z: 0, w: 1 },
   scale: { x: 1, y: 1, z: 1 },
 });
 
 const bone = (
-  name: AutoFilmHumanoidBone,
-  parent: AutoFilmHumanoidBone | null,
-  rest: IAutoFilmTransform,
-): IAutoFilmBone => {
+  name: AutoMovieHumanoidBone,
+  parent: AutoMovieHumanoidBone | null,
+  rest: IAutoMovieTransform,
+): IAutoMovieBone => {
   // each joint carries its anatomical ROM in **clinical** space (abduction 0 =
   // arm down, 90 = horizontal, 180 = overhead — the engine validates/clamps
   // against it, the core differentiator). The per-side rest-frame remap that
@@ -114,10 +114,10 @@ const bone = (
 };
 
 /** Shortest-arc rotation taking the local +Y axis onto a target direction. */
-const yToDir = (dir: IAutoFilmVector3): IAutoFilmQuaternion =>
+const yToDir = (dir: IAutoMovieVector3): IAutoMovieQuaternion =>
   aimRotation({ x: 0, y: 1, z: 0 }, dir);
 
-const capsule = (radius: number, length: number): AutoFilmPrimitiveShape => ({
+const capsule = (radius: number, length: number): AutoMoviePrimitiveShape => ({
   type: "capsule",
   radius,
   height: Math.max(0.01, length - 2 * radius),
@@ -130,11 +130,11 @@ const capsule = (radius: number, length: number): AutoFilmPrimitiveShape => ({
  */
 const rod = (
   id: string,
-  boneName: AutoFilmHumanoidBone,
-  seg: IAutoFilmVector3,
+  boneName: AutoMovieHumanoidBone,
+  seg: IAutoMovieVector3,
   radius: number,
   material: string,
-): IAutoFilmModelPart => {
+): IAutoMovieModelPart => {
   const length = Math.hypot(seg.x, seg.y, seg.z);
   return {
     id,
@@ -159,8 +159,8 @@ const rod = (
  */
 export const buildStickman = (
   p: IStickmanParams,
-): { skeleton: IAutoFilmSkeleton; model: IAutoFilmModel } => {
-  const bones: IAutoFilmBone[] = [
+): { skeleton: IAutoMovieSkeleton; model: IAutoMovieModel } => {
+  const bones: IAutoMovieBone[] = [
     bone("hips", null, at(v(0, p.hipHeight, 0))),
     bone("spine", "hips", at(v(0, p.pelvisToSpine, 0))),
     bone("chest", "spine", at(v(0, p.spineToChest, 0))),
@@ -187,11 +187,11 @@ export const buildStickman = (
   /** A sphere of arbitrary radius attached at a bone's origin (fists, etc.). */
   const knob = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
+    boneName: AutoMovieHumanoidBone,
     radius: number,
     material = "ink",
-    offset: IAutoFilmVector3 = v(0, 0, 0),
-  ): IAutoFilmModelPart => ({
+    offset: IAutoMovieVector3 = v(0, 0, 0),
+  ): IAutoMovieModelPart => ({
     id,
     name: id,
     geometry: { type: "primitive", shape: { type: "sphere", radius } },
@@ -202,8 +202,8 @@ export const buildStickman = (
   /** A ball joint: a sphere at a bone's origin, hiding the gap between rods. */
   const ball = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
-  ): IAutoFilmModelPart => ({
+    boneName: AutoMovieHumanoidBone,
+  ): IAutoMovieModelPart => ({
     id,
     name: id,
     geometry: {
@@ -215,7 +215,7 @@ export const buildStickman = (
     transform: at(v(0, 0, 0)),
   });
 
-  const parts: IAutoFilmModelPart[] = [
+  const parts: IAutoMovieModelPart[] = [
     // torso column — one rod per spine bone so it bends with the back (thicker
     // than the limbs, tapering up the neck)
     rod("spineRod", "hips", v(0, p.pelvisToSpine, 0), tr, "ink"),
@@ -302,8 +302,8 @@ export const buildStickman = (
     rod("footR", "rightFoot", v(0, 0, p.headRadius * 1.1), r * 1.1, "ink"),
   ];
 
-  const skeleton: IAutoFilmSkeleton = { id: "stickman", bones };
-  const model: IAutoFilmModel = {
+  const skeleton: IAutoMovieSkeleton = { id: "stickman", bones };
+  const model: IAutoMovieModel = {
     id: "stickman",
     name: "stick figure",
     origin: "generated",

@@ -2,15 +2,15 @@ import {
   HUMANOID_JOINT_AXES,
   resolveAttachment,
   sampleMotion,
-} from "@autofilm/engine";
+} from "@automovie/engine";
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmAttachment,
-  IAutoFilmJointPose,
-  IAutoFilmMotion,
-  IAutoFilmPose,
-} from "@autofilm/interface";
-import { AutoFilmPlayer, buildModel, mountViewer } from "@autofilm/viewer";
+  AutoMovieHumanoidBone,
+  IAutoMovieAttachment,
+  IAutoMovieJointPose,
+  IAutoMovieMotion,
+  IAutoMoviePose,
+} from "@automovie/interface";
+import { AutoMoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_HORSE, buildHorse } from "./horse";
@@ -30,9 +30,9 @@ const clipName =
   params.get("clip") !== null && params.get("clip")! in horseClips
     ? params.get("clip")!
     : "performance";
-let horseClip: IAutoFilmMotion = horseClips[clipName]!;
+let horseClip: IAutoMovieMotion = horseClips[clipName]!;
 
-const horsePlayer = new AutoFilmPlayer(
+const horsePlayer = new AutoMoviePlayer(
   horseObj,
   horse.skeleton,
   horseClip,
@@ -44,7 +44,7 @@ const horsePlayer = new AutoFilmPlayer(
       "leftLittleProximal",
       "leftLittleIntermediate",
       "leftLittleDistal",
-    ] as AutoFilmHumanoidBone[],
+    ] as AutoMovieHumanoidBone[],
     stiffness: 70,
     damping: 8,
   },
@@ -52,15 +52,15 @@ const horsePlayer = new AutoFilmPlayer(
 
 // ── the rider's body pose — sitting astride, lance couched, shield up ────────
 const j = (
-  bone: AutoFilmHumanoidBone,
+  bone: AutoMovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
-): IAutoFilmJointPose => ({
+): IAutoMovieJointPose => ({
   bone,
   flexion: a.flexion ?? 0,
   abduction: a.abduction ?? 0,
   twist: a.twist ?? 0,
 });
-const ridePose = (lean: number): IAutoFilmPose => ({
+const ridePose = (lean: number): IAutoMoviePose => ({
   skeleton: knight.skeleton.id,
   root: null,
   joints: [
@@ -79,7 +79,7 @@ const ridePose = (lean: number): IAutoFilmPose => ({
     j("leftLowerArm", { flexion: -86 }),
   ],
 });
-const rideClip: IAutoFilmMotion = {
+const rideClip: IAutoMovieMotion = {
   id: "ride",
   skeleton: knight.skeleton.id,
   duration: 0.62,
@@ -108,7 +108,7 @@ const rideClip: IAutoFilmMotion = {
     },
   ],
 };
-const knightPlayer = new AutoFilmPlayer(
+const knightPlayer = new AutoMoviePlayer(
   knightObj,
   knight.skeleton,
   rideClip,
@@ -121,7 +121,7 @@ const knightPlayer = new AutoFilmPlayer(
 // horse rears (spine pitches up) the knight is carried back with it.
 const seatY = Number(params.get("seatY") ?? -0.72);
 const seatZ = Number(params.get("seatZ") ?? -0.04);
-const attachment: IAutoFilmAttachment = {
+const attachment: IAutoMovieAttachment = {
   parentBone: "spine",
   offset: {
     translation: { x: 0, y: seatY, z: seatZ },
@@ -216,7 +216,7 @@ if (bar !== null) {
   }
 }
 
-(window as unknown as { __autofilm: unknown }).__autofilm = {
+(window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   clip: clipName,
   horseBones: () => horseObj.bones.size,

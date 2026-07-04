@@ -1,10 +1,10 @@
 import {
-  AutoFilmHumanoidBone,
-  IAutoFilmModel,
-  IAutoFilmModelPart,
-  IAutoFilmSkeleton,
-  IAutoFilmVector3,
-} from "@autofilm/interface";
+  AutoMovieHumanoidBone,
+  IAutoMovieModel,
+  IAutoMovieModelPart,
+  IAutoMovieSkeleton,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
@@ -14,7 +14,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
  * and plume on the head, a couched **lance** in the right hand, and a
  * **shield** on the left forearm.
  *
- * It is a plain {@link IAutoFilmModel} like any other; the mounted scene fixes
+ * It is a plain {@link IAutoMovieModel} like any other; the mounted scene fixes
  * its root to the horse's saddle bone each frame via the engine's
  * `resolveAttachment`, while a riding clip articulates the body (legs gripping
  * the barrel, lance couched). Reuses the stick figure so a rider clip and a
@@ -22,7 +22,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
  *
  * @author Samchon
  */
-const v = (x: number, y: number, z: number): IAutoFilmVector3 => ({ x, y, z });
+const v = (x: number, y: number, z: number): IAutoMovieVector3 => ({ x, y, z });
 
 const mat = (
   id: string,
@@ -45,8 +45,8 @@ const mat = (
 export const buildKnight = (
   opts: { lance?: boolean } = {},
 ): {
-  skeleton: IAutoFilmSkeleton;
-  model: IAutoFilmModel;
+  skeleton: IAutoMovieSkeleton;
+  model: IAutoMovieModel;
 } => {
   const withLance = opts.lance !== false;
   const { skeleton, model } = buildStickman(DEFAULT_STICKMAN);
@@ -55,11 +55,11 @@ export const buildKnight = (
 
   const knob = (
     id: string,
-    boneName: AutoFilmHumanoidBone,
+    boneName: AutoMovieHumanoidBone,
     radius: number,
     material: string,
-    offset: IAutoFilmVector3,
-  ): IAutoFilmModelPart => ({
+    offset: IAutoMovieVector3,
+  ): IAutoMovieModelPart => ({
     id,
     name: id,
     geometry: { type: "primitive", shape: { type: "sphere", radius } },
@@ -67,13 +67,16 @@ export const buildKnight = (
     attachedBone: boneName,
     transform: at(offset),
   });
-  const at = (t: IAutoFilmVector3, rot?: IAutoFilmModelPart["transform"]) => ({
+  const at = (
+    t: IAutoMovieVector3,
+    rot?: IAutoMovieModelPart["transform"],
+  ) => ({
     translation: t,
     rotation: rot?.rotation ?? { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 1, y: 1, z: 1 },
   });
 
-  const extras: IAutoFilmModelPart[] = [
+  const extras: IAutoMovieModelPart[] = [
     // helmet — a steel dome capping the crown (eyes stay visible below it)
     knob("helmet", "head", hr * 1.04, "steel", v(0, hr * 0.42, -0.01)),
     // nose guard — a thin steel bar down the front of the face

@@ -1,4 +1,4 @@
-import { IAutoFilmQuaternion, IAutoFilmVector3 } from "@autofilm/interface";
+import { IAutoMovieQuaternion, IAutoMovieVector3 } from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
@@ -17,9 +17,9 @@ import { Vector3 } from "../math/Vector3";
  * @author Samchon
  */
 export const aimRotation = (
-  from: IAutoFilmVector3,
-  to: IAutoFilmVector3,
-): IAutoFilmQuaternion => {
+  from: IAutoMovieVector3,
+  to: IAutoMovieVector3,
+): IAutoMovieQuaternion => {
   const a = Vector3.normalize(from);
   const b = Vector3.normalize(to);
   const d = Vector3.dot(a, b);

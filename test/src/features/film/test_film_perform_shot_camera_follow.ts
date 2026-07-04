@@ -1,5 +1,5 @@
-import { performShot, stageScene } from "@autofilm/engine";
-import { IAutoFilmCameraAction } from "@autofilm/interface";
+import { performShot, stageScene } from "@automovie/engine";
+import { IAutoMovieCameraAction } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -11,7 +11,7 @@ import {
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const followFrame: IAutoFilmCameraAction = {
+const followFrame: IAutoMovieCameraAction = {
   verb: "frame",
   actor: "cam-main",
   start: 0,
@@ -21,7 +21,7 @@ const followFrame: IAutoFilmCameraAction = {
   on: { kind: "node", node: "knightA" },
 };
 
-const performance = (frame: IAutoFilmCameraAction) =>
+const performance = (frame: IAutoMovieCameraAction) =>
   makePerformanceWrite({
     draft: [
       {

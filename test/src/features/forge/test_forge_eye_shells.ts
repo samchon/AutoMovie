@@ -1,4 +1,4 @@
-import { CANONICAL_FACE_POSITIONS, buildEyeShells } from "@autofilm/forge";
+import { CANONICAL_FACE_POSITIONS, buildEyeShells } from "@automovie/forge";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
