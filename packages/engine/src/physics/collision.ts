@@ -40,6 +40,15 @@ export const segmentSphere = (
   c: IAutoMovieVector3,
   radius: number,
 ): number | null => {
+  if (!Number.isFinite(radius))
+    throw new RangeError(
+      `segment sphere radius must be finite, but was ${radius}`,
+    );
+  if (!(radius > 0))
+    throw new RangeError(
+      `segment sphere radius must be > 0, but was ${radius}`,
+    );
+
   const d = Vector3.subtract(b, a);
   const m = Vector3.subtract(a, c);
   const A = Vector3.dot(d, d);
