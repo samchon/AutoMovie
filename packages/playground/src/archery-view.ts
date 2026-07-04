@@ -1,5 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   Quaternion,
   aimRotation,
   projectileAt,
@@ -101,9 +102,11 @@ const ride: IAutoMovieJointPose[] = [
   j("rightUpperLeg", { flexion: -54, abduction: -24 }),
   j("leftLowerLeg", { flexion: 76 }),
   j("rightLowerLeg", { flexion: 76 }),
-  j("rightUpperArm", { flexion: 48, abduction: 8 }),
+  // Rider arms are authored in clinical abduction; horse clips stay rig-space
+  // because their front legs reuse upper-arm names on a quadruped.
+  j("rightUpperArm", { flexion: 48, abduction: 82 }),
   j("rightLowerArm", { flexion: 26 }),
-  j("leftUpperArm", { flexion: -30, abduction: -28 }),
+  j("leftUpperArm", { flexion: -30, abduction: 62 }),
   j("leftLowerArm", { flexion: -88 }),
 ];
 // twisted back over the croup (facing −Z, at the pursuer), bow arm out, draw hand back
@@ -116,17 +119,17 @@ const drawBack: IAutoMovieJointPose[] = [
   j("rightUpperLeg", { flexion: -54, abduction: -24 }),
   j("leftLowerLeg", { flexion: 76 }),
   j("rightLowerLeg", { flexion: 76 }),
-  j("leftUpperArm", { flexion: -98, abduction: 10 }),
+  j("leftUpperArm", { flexion: -98, abduction: 100 }),
   j("leftLowerArm", { flexion: -6 }),
-  j("rightUpperArm", { flexion: 40, abduction: -34 }),
+  j("rightUpperArm", { flexion: 40, abduction: 124 }),
   j("rightLowerArm", { flexion: 120 }),
 ];
 const struck: IAutoMovieJointPose[] = [
   j("spine", { flexion: -28, twist: -16 }),
   j("chest", { flexion: -16 }),
   j("head", { flexion: -24 }),
-  j("leftUpperArm", { flexion: -10, abduction: -96 }),
-  j("rightUpperArm", { flexion: 10, abduction: 96 }),
+  j("leftUpperArm", { flexion: -10, abduction: -6 }),
+  j("rightUpperArm", { flexion: 10, abduction: -6 }),
   j("leftUpperLeg", { flexion: 12, abduction: 30 }),
   j("rightUpperLeg", { flexion: 16, abduction: -22 }),
   j("leftLowerLeg", { flexion: 38 }),
@@ -209,6 +212,7 @@ const setRider = (
     { skeleton: sk.id, root: seat, joints },
     sk,
     HUMANOID_JOINT_AXES,
+    HUMANOID_REST_FRAME,
   );
 };
 
