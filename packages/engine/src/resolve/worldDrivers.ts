@@ -132,13 +132,13 @@ const applyTwoBoneIK = (
   const rootId = d.chain[0]!;
   const midId = d.chain[1]!;
   const tipId = d.chain[2]!;
-  const rootM = world.get(rootId)!;
-  const midM = world.get(midId)!;
-  const tipM = world.get(tipId)!;
+  const rootM = readWorld(world, rootId, "two-bone IK root");
+  const midM = readWorld(world, midId, "two-bone IK mid");
+  const tipM = readWorld(world, tipId, "two-bone IK tip");
   const rootP = Matrix4.position(rootM);
   const midP = Matrix4.position(midM);
   const tipP = Matrix4.position(tipM);
-  const goalP = Matrix4.position(world.get(d.goal)!);
+  const goalP = Matrix4.position(readWorld(world, d.goal, "two-bone IK goal"));
 
   const upper = Vector3.subtract(midP, rootP);
   const lower = Vector3.subtract(tipP, midP);
@@ -156,7 +156,10 @@ const applyTwoBoneIK = (
   // Bend plane: from the pole (when one is wired) else the limb's current bend.
   const poleRef =
     d.pole !== null && d.pole.node !== null
-      ? Vector3.subtract(Matrix4.position(world.get(d.pole.node)!), rootP)
+      ? Vector3.subtract(
+          Matrix4.position(readWorld(world, d.pole.node, "two-bone IK pole")),
+          rootP,
+        )
       : upper;
   let axis = Vector3.cross(dir, poleRef);
   if (Vector3.length(axis) < 1e-8) axis = anyPerp(dir);
