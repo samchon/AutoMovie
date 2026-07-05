@@ -279,6 +279,8 @@ export const compileCameraMove = (props: {
         void k;
         break;
       }
+      default:
+        throw new Error(`unknown camera frame move "${String(action.move)}"`);
     }
   });
 
