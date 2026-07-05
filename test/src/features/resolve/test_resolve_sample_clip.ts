@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, qclose } from "../internal/predicates";
+import { nclose, qclose, throwsError } from "../internal/predicates";
 
 const NODE = (
   path: "translation" | "rotation" | "scale" | "weights",
@@ -209,5 +209,13 @@ export const test_resolve_sample_clip = (): void => {
   TestValidator.predicate(
     "zero-duration normalizes to start",
     close(val(zero, 5, "ptr:/x"), [4]),
+  );
+
+  TestValidator.predicate(
+    "empty track keyframes reject sampling",
+    throwsError(
+      () => sampleClip(clip([track(PTR, [], [], "linear")], 1), 0),
+      'track "ptr:/x" must have keyframes to sample',
+    ),
   );
 };

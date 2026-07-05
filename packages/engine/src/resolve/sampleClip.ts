@@ -55,6 +55,11 @@ export const sampleClip = (
  */
 const sampleTrack = (track: IAutoMovieTrack, time: number): number[] => {
   const { times, values, interpolation, channel } = track;
+  if (times.length === 0)
+    throw new Error(
+      `track "${channelKey(channel)}" must have keyframes to sample`,
+    );
+
   const cubic = interpolation === "cubicspline";
   // Stored stride per keyframe; cubicspline stores in-tangent/value/out-tangent.
   const stride = values.length / times.length;
