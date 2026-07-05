@@ -3,13 +3,14 @@ import {
   IAutoMovieChannel,
   IAutoMovieChannelLimit,
   IAutoMovieClip,
+  IAutoMovieDrivenDriver,
   IAutoMovieNode,
   IAutoMovieTrack,
   IAutoMovieTransform,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -161,5 +162,59 @@ export const test_resolve_frame = (): void => {
     "static node not in weights",
     out.weights.has("static"),
     false,
+  );
+
+  const ghostClip: IAutoMovieClip = {
+    ...clip,
+    tracks: [
+      track(nodeChannel("ghost", "translation"), [0, 1], [0, 0, 0, 1, 0, 0]),
+    ],
+  };
+  TestValidator.predicate(
+    "clip channel rejects missing resolve node",
+    throwsError(
+      () => resolveFrame({ nodes, clip: ghostClip, limits: [], seconds: 0 }),
+      ['sampled channel "node:ghost:translation"', 'missing node "ghost"'],
+    ),
+  );
+
+  const ghostOutput: IAutoMovieDrivenDriver = {
+    type: "driven",
+    source: { kind: "pointer", pointer: "/input", valueType: "scalar" },
+    output: nodeChannel("ghost", "translation"),
+    inRange: [0, 1],
+    outRange: [0, 1],
+    clamp: false,
+  };
+  TestValidator.predicate(
+    "driver output rejects missing resolve node",
+    throwsError(
+      () =>
+        resolveFrame({
+          nodes,
+          clip: null,
+          limits: [],
+          drivers: [ghostOutput],
+          seconds: 0,
+        }),
+      ['sampled channel "node:ghost:translation"', 'missing node "ghost"'],
+    ),
+  );
+
+  const pointerOutput: IAutoMovieDrivenDriver = {
+    ...ghostOutput,
+    output: { kind: "pointer", pointer: "/scratch", valueType: "scalar" },
+  };
+  const pointerOut = resolveFrame({
+    nodes,
+    clip: null,
+    limits: [],
+    drivers: [pointerOutput],
+    seconds: 0,
+  });
+  TestValidator.equals(
+    "pointer driver output does not require a scene node",
+    pointerOut.violations.length,
+    0,
   );
 };
