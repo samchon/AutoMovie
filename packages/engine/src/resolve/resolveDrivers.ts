@@ -103,9 +103,25 @@ const applyCopy = (
   sampled: Map<string, IAutoMovieSampledChannel>,
   nodesById: Map<string, IAutoMovieNode>,
 ): void => {
+  validateCopyInfluence(d.influence);
   if (d.translation) writeBlend(d, "translation", false, sampled, nodesById);
   if (d.rotation) writeBlend(d, "rotation", true, sampled, nodesById);
   if (d.scale) writeBlend(d, "scale", false, sampled, nodesById);
+};
+
+const validateCopyInfluence = (influence: number): void => {
+  if (!Number.isFinite(influence))
+    throw new Error(
+      `copy driver influence must be finite, but was ${influence}`,
+    );
+  if (influence < 0)
+    throw new Error(
+      `copy driver influence must be between 0 and 1, but was ${influence}`,
+    );
+  if (influence > 1)
+    throw new Error(
+      `copy driver influence must be between 0 and 1, but was ${influence}`,
+    );
 };
 
 const writeBlend = (
