@@ -12,7 +12,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
-import { nclose, vclose } from "../internal/predicates";
+import { nclose, throwsError, vclose } from "../internal/predicates";
 
 /**
  * `resolveAttachment` — the cross-skeleton joint that fixes a child model's
@@ -105,12 +105,17 @@ export const test_kinematics_attachment = (): void => {
   );
 
   // 4. unknown bone → throws (the fixture skeleton has no rightFoot)
-  TestValidator.error("attaching to a missing bone throws", () =>
-    resolveAttachment(
-      restPose,
-      skeleton,
-      { parentBone: "rightFoot", offset: idOffset },
-      undefined,
+  TestValidator.predicate(
+    "attaching to a missing bone throws",
+    throwsError(
+      () =>
+        resolveAttachment(
+          restPose,
+          skeleton,
+          { parentBone: "rightFoot", offset: idOffset },
+          undefined,
+        ),
+      'parent bone "rightFoot" is not in the skeleton',
     ),
   );
 

@@ -2,6 +2,8 @@ import { ingestFaceTemplate } from "@automovie/ingest";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * Defective morph geometry throws rather than degrades: a morphed primitive
  * must carry a resting POSITION, and every target must carry POSITION deltas.
@@ -23,7 +25,11 @@ export const test_ingest_face_template_no_position = (): void => {
   prim.addTarget(doc.createPrimitiveTarget("identity"));
   doc.createMesh("face").addPrimitive(prim);
 
-  TestValidator.error("target without deltas throws", () =>
-    ingestFaceTemplate(doc),
+  TestValidator.predicate(
+    "target without deltas throws",
+    throwsError(
+      () => ingestFaceTemplate(doc),
+      'morph target "identity" has no POSITION deltas',
+    ),
   );
 };

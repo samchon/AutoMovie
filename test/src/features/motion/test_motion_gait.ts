@@ -3,7 +3,7 @@ import { AutoMovieHumanoidBone, IAutoMovieGait } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation, nclose } from "../internal/predicates";
+import { hasViolation, nclose, throwsError } from "../internal/predicates";
 
 const GAIT: IAutoMovieGait = {
   name: "walk",
@@ -297,25 +297,30 @@ export const test_motion_gait = (): void => {
   );
 
   // 10. duplicate same-bone/same-axis rows are an authoring error
-  TestValidator.error("duplicate gait rows for one bone axis throw", () =>
-    gaitMotion(
-      "duplicate",
-      sk.id,
-      {
-        name: "duplicate",
-        period: 1,
-        limbs: [
-          { bone: "leftUpperArm", phase: 0, duty: 0.5, amplitude: 10 },
+  TestValidator.predicate(
+    "duplicate gait rows for one bone axis throw",
+    throwsError(
+      () =>
+        gaitMotion(
+          "duplicate",
+          sk.id,
           {
-            bone: "leftUpperArm",
-            axis: "flexion",
-            phase: 0.25,
-            duty: 0.5,
-            amplitude: 12,
+            name: "duplicate",
+            period: 1,
+            limbs: [
+              { bone: "leftUpperArm", phase: 0, duty: 0.5, amplitude: 10 },
+              {
+                bone: "leftUpperArm",
+                axis: "flexion",
+                phase: 0.25,
+                duty: 0.5,
+                amplitude: 12,
+              },
+            ],
           },
-        ],
-      },
-      4,
+          4,
+        ),
+      "duplicate gait row for leftUpperArm.flexion",
     ),
   );
 };

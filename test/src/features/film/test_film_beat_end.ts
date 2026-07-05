@@ -14,7 +14,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { nclose, vclose } from "../internal/predicates";
+import { nclose, throwsError, vclose } from "../internal/predicates";
 
 const transform = (
   translation: IAutoMovieTransform["translation"],
@@ -186,7 +186,12 @@ export const test_film_beat_end = (): void => {
     null,
   );
 
-  TestValidator.error("missing motion throws", () =>
-    resolveBeatEnd({ beat: "beat-1", scene, shot, motions: [idleMotion] }),
+  TestValidator.predicate(
+    "missing motion throws",
+    throwsError(
+      () =>
+        resolveBeatEnd({ beat: "beat-1", scene, shot, motions: [idleMotion] }),
+      'motion "walk" was not provided',
+    ),
   );
 };

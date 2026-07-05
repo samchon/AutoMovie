@@ -2,6 +2,7 @@ import { IAutoMovieFaceTemplate, morphFace } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeFace } from "../internal/fixtures";
+import { throwsError } from "../internal/predicates";
 
 /**
  * A morph target whose delta array disagrees with the template's vertex count
@@ -15,10 +16,15 @@ export const test_face_morph_length_mismatch = (): void => {
     positions: [0, 0, 0],
     targets: { eyeSizeR: [1, 0, 0, 0, 0, 0], eyeSizeL: [1, 0, 0] },
   };
-  TestValidator.error("mismatched delta length throws", () =>
-    morphFace({
-      template,
-      face: makeFace({ eyes: { left: { size: 1 } } }),
-    }),
+  TestValidator.predicate(
+    "mismatched delta length throws",
+    throwsError(
+      () =>
+        morphFace({
+          template,
+          face: makeFace({ eyes: { left: { size: 1 } } }),
+        }),
+      ['morph target "eyeSizeR"', "6 components"],
+    ),
   );
 };

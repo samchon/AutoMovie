@@ -2,6 +2,8 @@ import { ingestFaceTemplate } from "@automovie/ingest";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * A delta array whose length disagrees with the resting face is a corrupt
  * asset; importing it would defer the failure to morph time on some parameters
@@ -27,7 +29,11 @@ export const test_ingest_face_template_length_mismatch = (): void => {
   );
   doc.createMesh("face").addPrimitive(prim);
 
-  TestValidator.error("mismatched delta length throws", () =>
-    ingestFaceTemplate(doc),
+  TestValidator.predicate(
+    "mismatched delta length throws",
+    throwsError(
+      () => ingestFaceTemplate(doc),
+      ['morph target "identity"', "6 components", "expected 3"],
+    ),
   );
 };
