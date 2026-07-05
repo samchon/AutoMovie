@@ -8,6 +8,9 @@ import {
 import { Quaternion } from "../math/Quaternion";
 import { channelIsRotation, channelKey } from "./channel";
 
+type IAutoMovieNodeChannel = Extract<IAutoMovieChannel, { kind: "node" }>;
+type IAutoMoviePointerChannel = Extract<IAutoMovieChannel, { kind: "pointer" }>;
+
 /** One channel's value sampled at an instant, with the channel it targets. */
 export interface IAutoMovieSampledChannel {
   /** The channel this value belongs to. */
@@ -160,7 +163,7 @@ const validateSampleTime = (
 };
 
 const validateTrackShape = (track: IAutoMovieTrack, key: string): void => {
-  const { times, values, interpolation } = track;
+  const { times, values, interpolation, channel } = track;
   if (!TRACK_INTERPOLATIONS.has(interpolation))
     throw new Error(
       `track "${key}" interpolation "${String(interpolation)}" is not supported`,
@@ -192,6 +195,13 @@ const validateTrackShape = (track: IAutoMovieTrack, key: string): void => {
     );
   if (interpolation === "cubicspline" && stride % 3 !== 0)
     throw new Error(`track "${key}" cubicspline stride must be divisible by 3`);
+
+  const width = interpolation === "cubicspline" ? stride / 3 : stride;
+  const expectedWidth = getFixedChannelWidth(channel);
+  if (expectedWidth !== undefined && width !== expectedWidth)
+    throw new Error(
+      `track "${key}" value width must be ${expectedWidth}, but was ${width}`,
+    );
 };
 
 const TRACK_INTERPOLATIONS = new Set<AutoMovieInterpolation>([
@@ -199,6 +209,31 @@ const TRACK_INTERPOLATIONS = new Set<AutoMovieInterpolation>([
   "linear",
   "cubicspline",
 ]);
+
+const getFixedChannelWidth = (
+  channel: IAutoMovieChannel,
+): number | undefined => {
+  if (channel.kind === "node") return NODE_CHANNEL_WIDTHS[channel.path];
+  return CHANNEL_VALUE_WIDTHS[channel.valueType];
+};
+
+const NODE_CHANNEL_WIDTHS: Partial<
+  Record<IAutoMovieNodeChannel["path"], number>
+> = {
+  translation: 3,
+  rotation: 4,
+  scale: 3,
+};
+
+const CHANNEL_VALUE_WIDTHS: Partial<
+  Record<IAutoMoviePointerChannel["valueType"], number>
+> = {
+  scalar: 1,
+  vec2: 2,
+  vec3: 3,
+  vec4: 4,
+  quaternion: 4,
+};
 
 /** Clamp (or wrap, when looping) a query time into the clip's duration. */
 const normalizeTime = (

@@ -69,6 +69,8 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  * 11. A forged non-boolean `loop` flag rejects before JavaScript truthiness can
  *     change wrap/clamp semantics.
  * 12. A forged interpolation mode rejects instead of falling through to linear.
+ * 13. Fixed-width channels reject tracks whose flattened value width does not match
+ *     the channel's declared width, while `weights` remains variable-width.
  */
 export const test_resolve_sample_clip = (): void => {
   // 1. linear vec3
@@ -89,6 +91,15 @@ export const test_resolve_sample_clip = (): void => {
   TestValidator.predicate(
     "step holds left keyframe",
     close(val(stepClip, 0.5, "node:n:translation"), [0, 0, 0]),
+  );
+
+  const weights = clip(
+    [track(NODE("weights"), [0, 1], [0, 0, 1, 1], "linear")],
+    1,
+  );
+  TestValidator.predicate(
+    "weights channel accepts variable width",
+    close(val(weights, 0.5, "node:n:weights"), [0.5, 0.5]),
   );
 
   // 3. linear rotation slerps
@@ -324,6 +335,30 @@ export const test_resolve_sample_clip = (): void => {
     throwsError(
       () => sampleClip(clip([track(PTR, [0], [0, 1], "cubicspline")], 1), 0),
       ['track "ptr:/x"', "cubicspline", "divisible by 3"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "scalar channel rejects vec2-width values",
+    throwsError(
+      () =>
+        sampleClip(clip([track(PTR, [0, 1], [0, 0, 1, 1], "linear")], 1), 0),
+      ['track "ptr:/x"', "value width", "1", "2"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "rotation channel rejects vec3-width values",
+    throwsError(
+      () =>
+        sampleClip(
+          clip(
+            [track(NODE("rotation"), [0, 1], [0, 0, 1, 0, 0, 1], "linear")],
+            1,
+          ),
+          0,
+        ),
+      ['track "node:n:rotation"', "value width", "4", "3"],
     ),
   );
 };
