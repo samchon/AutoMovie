@@ -221,6 +221,8 @@ const validateDrivenRange = (d: IAutoMovieDrivenDriver): void => {
 };
 
 const validateDrivenCurve = (curve: [number, number][]): void => {
+  if (!Array.isArray(curve))
+    throw new Error("driven driver curve must be an array");
   if (curve.length === 0)
     throw new Error("driven driver curve must contain at least one point");
 

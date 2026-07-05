@@ -252,9 +252,10 @@ export const test_resolve_drivers_copy = (): void => {
  * 5. A `curve` supersedes the linear remap with a piecewise-linear mapping:
  *    interpolating within a segment, and holding flat below the first point and
  *    above the last.
- * 6. Malformed numeric inputs reject before the remap can emit `NaN`: non-finite
- *    sampled sources, non-finite linear ranges, empty curves, non-finite curve
- *    coordinates, and non-increasing curve source points.
+ * 6. Malformed curve and numeric inputs reject before the remap can emit `NaN`:
+ *    non-array curves, non-finite sampled sources, non-finite linear ranges,
+ *    empty curves, non-finite curve coordinates, and non-increasing curve
+ *    source points.
  * 7. A malformed `clamp` flag rejects before truthy/falsy coercion can change
  *    extrapolation into clamping.
  */
@@ -338,6 +339,23 @@ export const test_resolve_drivers_driven = (): void => {
     throwsError(
       () => run(driven({ outRange: [0, Infinity] }), 1),
       ["driven driver outRange[1]", "finite", "Infinity"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects non-array curve",
+    throwsError(
+      () =>
+        run(
+          driven({
+            curve: {
+              0: [0, 0],
+              1: [1, 1],
+              length: 2,
+            } as unknown as [number, number][],
+          }),
+          1,
+        ),
+      ["driven driver curve", "array"],
     ),
   );
   TestValidator.predicate(
