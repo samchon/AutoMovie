@@ -168,6 +168,17 @@ export const performShot = (props: {
   } = props;
   const out = new ViolationCollector();
 
+  const validateNonEmptyId = (
+    id: string,
+    path: string,
+    label: string,
+  ): void => {
+    if (id.trim().length === 0)
+      out.push("type", path, `${label} must be a non-empty id`, id);
+  };
+
+  validateNonEmptyId(performance.beat, "$input.beat", "beat id");
+
   const beat = script.beats.find((b) => b.id === performance.beat);
   if (beat === undefined)
     out.push(
@@ -221,6 +232,12 @@ export const performShot = (props: {
   actions.forEach((action, i) => {
     const actors =
       typeof action.actor === "string" ? [action.actor] : action.actor;
+    if (typeof action.actor === "string")
+      validateNonEmptyId(
+        action.actor,
+        `${base}[${i}].actor`,
+        "action actor id",
+      );
     if (Array.isArray(action.actor)) {
       if (action.actor.length === 0)
         out.push(
@@ -231,6 +248,11 @@ export const performShot = (props: {
         );
       const seen = new Set<string>();
       action.actor.forEach((actor, j) => {
+        validateNonEmptyId(
+          actor,
+          `${base}[${i}].actor[${j}]`,
+          "action actor id",
+        );
         if (seen.has(actor))
           out.push(
             "type",
@@ -304,6 +326,12 @@ export const performShot = (props: {
     if (action.verb === "frame") {
       const camera =
         typeof action.actor === "string" ? action.actor : action.actor[0]!;
+      if (action.on.kind === "node")
+        validateNonEmptyId(
+          action.on.node,
+          `${base}[${i}].on.node`,
+          "frame target node id",
+        );
       if (typeof action.actor !== "string")
         out.push(
           "type",
