@@ -84,4 +84,6 @@ export const readSlateContext = (
         path: (index) => `slate.beatEnds[${index}].beat`,
       });
   }
+  const unknown = request as unknown as { type: unknown };
+  throw new Error(`unknown slate context request "${String(unknown.type)}"`);
 };
