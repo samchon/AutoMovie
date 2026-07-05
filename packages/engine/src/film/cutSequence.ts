@@ -55,7 +55,7 @@ export const cutSequence = (
   shots: IAutoMovieShot[],
 ): IAutoMovieCut => {
   const out = new ViolationCollector();
-  const byId = new Map(shots.map((s) => [s.id, s]));
+  const byId = new Map(shots.map((shot, index) => [shot.id, { shot, index }]));
 
   const validateNonEmptyId = (
     id: string,
@@ -88,8 +88,8 @@ export const cutSequence = (
   let previousIncomingTransition = 0;
   assemble.entries.forEach((entry, i) => {
     validateNonEmptyId(entry.shot, `$input.entries[${i}].shot`, "shot id");
-    const shot = byId.get(entry.shot);
-    if (shot === undefined) {
+    const found = byId.get(entry.shot);
+    if (found === undefined) {
       out.push(
         "type",
         `$input.entries[${i}].shot`,
@@ -100,8 +100,18 @@ export const cutSequence = (
       previousIncomingTransition = 0;
       return;
     }
+    const { shot, index: shotIndex } = found;
+    const validShotDuration =
+      Number.isFinite(shot.duration) && shot.duration > 0;
+    if (!validShotDuration)
+      out.push(
+        "range",
+        `$shots[${shotIndex}].duration`,
+        `referenced shot "${shot.id}" duration must be a finite number > 0 seconds, but was ${shot.duration}`,
+        shot.duration,
+      );
     let played = shot.duration;
-    let validPlayedSpan = true;
+    let validPlayedSpan = validShotDuration;
     let incomingTransition = 0;
     if (entry.trim !== null) {
       const { start, duration } = entry.trim;
@@ -121,7 +131,10 @@ export const cutSequence = (
           `trim start must be a finite number >= 0 seconds, but was ${start}`,
           start,
         );
-      } else if (start < 0 || start + duration > shot.duration) {
+      } else if (
+        validShotDuration &&
+        (start < 0 || start + duration > shot.duration)
+      ) {
         validPlayedSpan = false;
         out.push(
           "range",
@@ -150,7 +163,7 @@ export const cutSequence = (
           `transition duration must be a finite number > 0 seconds, but was ${entry.transition.duration}`,
           entry.transition.duration,
         );
-      else if (entry.transition.duration > played)
+      else if (validPlayedSpan && entry.transition.duration > played)
         out.push(
           "range",
           `$input.entries[${i}].transition.duration`,
