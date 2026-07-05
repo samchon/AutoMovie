@@ -7,7 +7,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { qclose, vclose } from "../internal/predicates";
+import { qclose, throwsError, vclose } from "../internal/predicates";
 
 const W = (
   pos: IAutoMovieVector3,
@@ -92,5 +92,31 @@ export const test_resolve_parent_driver = (): void => {
   TestValidator.predicate(
     "all flags off leaves the owner put",
     vclose(Matrix4.position(world2.get("o")!), { x: 3, y: 4, z: 5 }, 1e-5),
+  );
+  TestValidator.predicate(
+    "missing parent-driver owner rejects incomplete world map",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [parent({ owner: "missing", translation: true })],
+          new Map([["p", W({ x: 10, y: 0, z: 0 })]]),
+          new Map(),
+          new Map(),
+        ),
+      'world driver parent owner node "missing" was not provided',
+    ),
+  );
+  TestValidator.predicate(
+    "missing parent-driver parent rejects incomplete world map",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [parent({ parent: "missing", translation: true })],
+          new Map([["o", W({ x: 0, y: 0, z: 0 })]]),
+          new Map(),
+          new Map(),
+        ),
+      'world driver parent parent node "missing" was not provided',
+    ),
   );
 };
