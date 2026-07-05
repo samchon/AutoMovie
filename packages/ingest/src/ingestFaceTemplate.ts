@@ -41,7 +41,10 @@ const templateOf = (
   const posAccessor = prim.getAttribute("POSITION");
   if (posAccessor === null)
     throw new Error("morphed primitive has no POSITION attribute");
-  const positions = Array.from(posAccessor.getArray()!, Number);
+  const positionArray = posAccessor.getArray();
+  if (positionArray === null)
+    throw new Error("morphed primitive POSITION accessor has no array data");
+  const positions = Array.from(positionArray, Number);
 
   const fallback: unknown[] = Array.isArray(extraNames) ? extraNames : [];
   const targets: Record<string, number[]> = {};
@@ -55,7 +58,12 @@ const templateOf = (
     const deltaAccessor = target.getAttribute("POSITION");
     if (deltaAccessor === null)
       throw new Error(`morph target "${name}" has no POSITION deltas`);
-    const delta = Array.from(deltaAccessor.getArray()!, Number);
+    const deltaArray = deltaAccessor.getArray();
+    if (deltaArray === null)
+      throw new Error(
+        `morph target "${name}" POSITION accessor has no array data`,
+      );
+    const delta = Array.from(deltaArray, Number);
     if (delta.length !== positions.length)
       throw new Error(
         `morph target "${name}" has ${delta.length} components, expected ${positions.length}`,

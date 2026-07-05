@@ -9,7 +9,8 @@ import { throwsError } from "../internal/predicates";
  * must carry a resting POSITION, and every target must carry POSITION deltas.
  *
  * Scenario: a named target without POSITION deltas (on a primitive that has
- * resting positions) throws.
+ * resting positions) throws; a target POSITION accessor without backing array
+ * data throws before morphing can defer the failure.
  */
 export const test_ingest_face_template_no_position = (): void => {
   const doc = new Document();
@@ -30,6 +31,37 @@ export const test_ingest_face_template_no_position = (): void => {
     throwsError(
       () => ingestFaceTemplate(doc),
       'morph target "identity" has no POSITION deltas',
+    ),
+  );
+
+  const noDeltaData = new Document();
+  const noDeltaDataBuffer = noDeltaData.createBuffer();
+  const noDeltaDataPrim = noDeltaData.createPrimitive().setAttribute(
+    "POSITION",
+    noDeltaData
+      .createAccessor()
+      .setType("VEC3")
+      .setArray(new Float32Array([0, 0, 0]))
+      .setBuffer(noDeltaDataBuffer),
+  );
+  noDeltaDataPrim.addTarget(
+    noDeltaData
+      .createPrimitiveTarget("identity")
+      .setAttribute(
+        "POSITION",
+        noDeltaData
+          .createAccessor()
+          .setType("VEC3")
+          .setBuffer(noDeltaDataBuffer),
+      ),
+  );
+  noDeltaData.createMesh("face").addPrimitive(noDeltaDataPrim);
+
+  TestValidator.predicate(
+    "target without delta array throws",
+    throwsError(
+      () => ingestFaceTemplate(noDeltaData),
+      ['morph target "identity"', "POSITION accessor", "no array data"],
     ),
   );
 };
