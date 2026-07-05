@@ -60,15 +60,26 @@ export const childrenIndex = (
   return map;
 };
 
+const readWorld = (
+  world: Map<string, number[]>,
+  id: string,
+  role: string,
+): number[] => {
+  const matrix = world.get(id);
+  if (matrix === undefined)
+    throw new Error(`world driver ${role} node "${id}" was not provided`);
+  return matrix;
+};
+
 const applyAim = (
   d: IAutoMovieAimDriver,
   world: Map<string, number[]>,
   localById: Map<string, IAutoMovieTransform>,
   childrenById: Map<string, string[]>,
 ): void => {
-  const dec = Matrix4.decompose(world.get(d.owner)!);
+  const dec = Matrix4.decompose(readWorld(world, d.owner, "aim owner"));
   const dir = Vector3.subtract(
-    Matrix4.position(world.get(d.target)!),
+    Matrix4.position(readWorld(world, d.target, "aim target")),
     dec.position,
   );
   const aimed = aimRotation(dir, d.aimAxis, d.upAxis, d.worldUp);
@@ -88,8 +99,8 @@ const applyParent = (
   localById: Map<string, IAutoMovieTransform>,
   childrenById: Map<string, string[]>,
 ): void => {
-  const own = Matrix4.decompose(world.get(d.owner)!);
-  const par = Matrix4.decompose(world.get(d.parent)!);
+  const own = Matrix4.decompose(readWorld(world, d.owner, "parent owner"));
+  const par = Matrix4.decompose(readWorld(world, d.parent, "parent parent"));
   world.set(
     d.owner,
     Matrix4.compose(

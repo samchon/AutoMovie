@@ -13,7 +13,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose } from "../internal/predicates";
+import { nclose, throwsError, vclose } from "../internal/predicates";
 
 const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -197,6 +197,32 @@ export const test_resolve_world_drivers = (): void => {
   );
   TestValidator.equals("root has no parent entry", idx.has("nope"), false);
   TestValidator.predicate("nclose available", nclose(1, 1));
+  TestValidator.predicate(
+    "missing aim owner rejects incomplete world map",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [aim({ owner: "missing" })],
+          new Map([["t", W(1, 0, 0)]]),
+          new Map(),
+          new Map(),
+        ),
+      'world driver aim owner node "missing" was not provided',
+    ),
+  );
+  TestValidator.predicate(
+    "missing aim target rejects incomplete world map",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [aim({ target: "missing" })],
+          new Map([["o", W(0, 0, 0)]]),
+          new Map(),
+          new Map(),
+        ),
+      'world driver aim target node "missing" was not provided',
+    ),
+  );
 };
 
 const node = (id: string): IAutoMovieNode => ({
