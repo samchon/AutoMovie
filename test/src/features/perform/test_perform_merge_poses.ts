@@ -3,7 +3,7 @@ import { IAutoMovieTransform } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const rootAt = (x: number): IAutoMovieTransform => ({
   translation: { x, y: 0, z: 0 },
@@ -75,5 +75,10 @@ export const test_perform_merge_poses = (): void => {
   TestValidator.predicate(
     "the last non-null root wins",
     twoRoots.root !== null && nclose(twoRoots.root.translation.x, 9),
+  );
+
+  TestValidator.predicate(
+    "empty pose merge rejects missing base pose",
+    throwsError(() => mergePoses([]), "merge poses must not be empty"),
   );
 };
