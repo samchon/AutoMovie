@@ -10,7 +10,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -148,6 +148,36 @@ export const test_resolve_drivers_copy = (): void => {
     "rotation left untouched when disabled",
     sampled2.has("node:o2:rotation"),
     false,
+  );
+
+  const ghostTranslation: [string, IAutoMovieChannel, number[]] = [
+    "node:ghost:translation",
+    { kind: "node", node: "ghost", path: "translation" },
+    [7, 0, 0],
+  ];
+  TestValidator.predicate(
+    "copy driver rejects missing sampled owner node",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [copy({ owner: "ghost", source: "s", translation: true })],
+          seed([ghostTranslation]),
+          byId(node("s")),
+        ),
+      'copy driver owner node "ghost" was not provided',
+    ),
+  );
+  TestValidator.predicate(
+    "copy driver rejects missing sampled source node",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [copy({ owner: "o", source: "ghost", translation: true })],
+          seed([ghostTranslation]),
+          byId(node("o")),
+        ),
+      'copy driver source node "ghost" was not provided',
+    ),
   );
 };
 
