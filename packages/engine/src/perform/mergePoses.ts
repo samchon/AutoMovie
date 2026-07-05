@@ -19,6 +19,8 @@ import {
  * @author Samchon
  */
 export const mergePoses = (poses: IAutoMoviePose[]): IAutoMoviePose => {
+  if (poses.length === 0) throw new Error("merge poses must not be empty");
+
   const joints = new Map<AutoMovieHumanoidBone, IAutoMovieJointPose>();
   let root = poses[0]!.root;
   for (const pose of poses) {
