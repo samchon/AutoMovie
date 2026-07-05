@@ -37,7 +37,7 @@ export const sampleClip = (
   clip: IAutoMovieClip,
   seconds: number,
 ): Map<string, IAutoMovieSampledChannel> => {
-  validateSampleTime(seconds, clip.duration);
+  validateSampleTime(seconds, clip.duration, clip.loop);
   const time = normalizeTime(seconds, clip.duration, clip.loop);
   const out = new Map<string, IAutoMovieSampledChannel>();
   for (const track of clip.tracks)
@@ -143,13 +143,19 @@ const normalizeQuatArray = (q: number[]): number[] => {
   return [n.x, n.y, n.z, n.w];
 };
 
-const validateSampleTime = (seconds: number, duration: number): void => {
+const validateSampleTime = (
+  seconds: number,
+  duration: number,
+  loop: boolean,
+): void => {
   if (!Number.isFinite(seconds))
     throw new Error(`sampleClip seconds must be finite, but was ${seconds}`);
   if (!Number.isFinite(duration))
     throw new Error(
       `sampleClip clip duration must be finite, but was ${duration}`,
     );
+  if (typeof loop !== "boolean")
+    throw new Error(`sampleClip clip loop must be boolean, but was ${loop}`);
 };
 
 const validateTrackShape = (track: IAutoMovieTrack, key: string): void => {
