@@ -1,4 +1,5 @@
 import {
+  AutoMovieInterpolation,
   IAutoMovieChannel,
   IAutoMovieClip,
   IAutoMovieTrack,
@@ -160,6 +161,10 @@ const validateSampleTime = (
 
 const validateTrackShape = (track: IAutoMovieTrack, key: string): void => {
   const { times, values, interpolation } = track;
+  if (!TRACK_INTERPOLATIONS.has(interpolation))
+    throw new Error(
+      `track "${key}" interpolation "${String(interpolation)}" is not supported`,
+    );
   if (times.length === 0)
     throw new Error(`track "${key}" must have keyframes to sample`);
   if (values.length === 0)
@@ -188,6 +193,12 @@ const validateTrackShape = (track: IAutoMovieTrack, key: string): void => {
   if (interpolation === "cubicspline" && stride % 3 !== 0)
     throw new Error(`track "${key}" cubicspline stride must be divisible by 3`);
 };
+
+const TRACK_INTERPOLATIONS = new Set<AutoMovieInterpolation>([
+  "step",
+  "linear",
+  "cubicspline",
+]);
 
 /** Clamp (or wrap, when looping) a query time into the clip's duration. */
 const normalizeTime = (
