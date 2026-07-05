@@ -73,6 +73,8 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  *     the channel's declared width, while `weights` remains variable-width.
  * 14. Negative timeline values reject instead of being normalized into a
  *     zero-duration or pre-roll sample.
+ * 15. Tracks on positive-duration clips reject keyframes after the declared clip
+ *     end.
  */
 export const test_resolve_sample_clip = (): void => {
   // 1. linear vec3
@@ -303,6 +305,14 @@ export const test_resolve_sample_clip = (): void => {
     throwsError(
       () => sampleClip(clip([track(PTR, [-0.5, 0.5], [0, 1], "linear")], 1), 0),
       ['track "ptr:/x"', "keyframe times", "non-negative", "-0.5"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "track keyframe times reject past clip duration",
+    throwsError(
+      () => sampleClip(clip([track(PTR, [0, 2], [0, 1], "linear")], 1), 0),
+      ['track "ptr:/x"', "clip duration", "1", "2"],
     ),
   );
 
