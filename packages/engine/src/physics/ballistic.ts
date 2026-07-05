@@ -8,6 +8,9 @@ const finiteVector = (v: IAutoMovieVector3): boolean => {
   return Number.isFinite(v.z);
 };
 
+const validArc = (arc: string): arc is "direct" | "high" =>
+  arc === "direct" || arc === "high";
+
 /** The launch that hits a target: the initial velocity and the time of flight. */
 export interface IAutoMovieBallisticSolution {
   /** Initial velocity to give the projectile (world m/s), magnitude = speed. */
@@ -48,6 +51,7 @@ export const solveBallisticLaunch = (
   if (!finiteVector(origin)) return null;
   if (!finiteVector(target)) return null;
   if (!finiteVector(gravity)) return null;
+  if (!validArc(arc)) return null;
 
   const delta = Vector3.subtract(target, origin);
   const g = Vector3.length(gravity);
@@ -126,6 +130,7 @@ export const solveMovingLaunch = (
   if (!(speed > 0)) return null;
   if (!finiteVector(origin)) return null;
   if (!finiteVector(gravity)) return null;
+  if (!validArc(arc)) return null;
   if (!Number.isInteger(iterations)) return null;
   if (iterations < 1) return null;
 
