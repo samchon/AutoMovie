@@ -2,7 +2,7 @@ import { resolveSequencePlayback, sequenceTimeline } from "@automovie/engine";
 import { IAutoMovieSequence, IAutoMovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
@@ -94,5 +94,37 @@ export const test_film_playback_resolver = (): void => {
   TestValidator.predicate(
     "first frame",
     t0.shot === "shot:beat-1" && nclose(t0.time, 0),
+  );
+  TestValidator.predicate(
+    "duplicate playback shots reject ambiguous lookup",
+    throwsError(
+      () =>
+        sequenceTimeline(SEQUENCE, [
+          SHOTS[0]!,
+          { ...SHOTS[0]!, duration: 9 },
+          SHOTS[1]!,
+        ]),
+      ['shot id "shot:beat-1"', "shots[1].id"],
+    ),
+  );
+  TestValidator.predicate(
+    "missing trimmed playback shot rejects bad sequence entry",
+    throwsError(
+      () =>
+        sequenceTimeline(
+          {
+            ...SEQUENCE,
+            shots: [
+              {
+                shot: "shot:missing",
+                trim: { start: 0, duration: 1 },
+                transition: null,
+              },
+            ],
+          },
+          SHOTS,
+        ),
+      ['sequence shot "shot:missing"', "sequence.shots[0].shot"],
+    ),
   );
 };
