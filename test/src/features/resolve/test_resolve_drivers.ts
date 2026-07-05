@@ -255,6 +255,8 @@ export const test_resolve_drivers_copy = (): void => {
  * 6. Malformed numeric inputs reject before the remap can emit `NaN`: non-finite
  *    sampled sources, non-finite linear ranges, empty curves, non-finite curve
  *    coordinates, and non-increasing curve source points.
+ * 7. A malformed `clamp` flag rejects before truthy/falsy coercion can change
+ *    extrapolation into clamping.
  */
 export const test_resolve_drivers_driven = (): void => {
   const run = (d: IAutoMovieDrivenDriver, src?: number): number[] => {
@@ -274,6 +276,13 @@ export const test_resolve_drivers_driven = (): void => {
     "clamp pins past the range",
     run(driven({ clamp: true }), 20),
     [100],
+  );
+  TestValidator.predicate(
+    "driven driver rejects non-boolean clamp flag",
+    throwsError(
+      () => run(driven({ clamp: "false" as unknown as boolean }), 20),
+      ["driven driver clamp", "boolean", "false"],
+    ),
   );
   TestValidator.equals(
     "degenerate input range maps to outRange[0]",
