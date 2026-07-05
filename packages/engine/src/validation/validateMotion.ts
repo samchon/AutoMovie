@@ -1,4 +1,5 @@
 import {
+  AutoMovieEasing,
   IAutoMovieMotion,
   IAutoMovieSkeleton,
   IAutoMovieValidation,
@@ -25,6 +26,7 @@ const MAX_ANGULAR_SPEED_DEG_PER_S = 900;
  * - Clip `duration` is finite and positive,
  * - Keyframe `time` is strictly increasing,
  * - Every keyframe `time` is finite and within `[0, duration]`,
+ * - Every keyframe easing name is one of the supported interpolation curves,
  * - Per-axis angular speed between adjacent keyframes stays under a sane bound
  *   (catches teleporting limbs that per-frame validation alone would miss).
  *
@@ -86,6 +88,13 @@ export const validateMotion = (props: {
         `keyframe times must strictly increase; ${kf.time} is not greater than the previous ${previousTime}`,
         kf.time,
       );
+    if (!KEYFRAME_EASINGS.has(kf.easing))
+      collector.push(
+        "type",
+        `${kp}.easing`,
+        `unknown keyframe easing "${String(kf.easing)}"`,
+        kf.easing,
+      );
 
     validatePose({ pose: kf.pose, skeleton, path: `${kp}.pose`, collector });
     if (kf.expression !== null)
@@ -132,3 +141,12 @@ const checkAngularSpeed = (
     }
   }
 };
+
+const KEYFRAME_EASINGS = new Set<AutoMovieEasing>([
+  "linear",
+  "easeIn",
+  "easeOut",
+  "easeInOut",
+  "step",
+  "cubicBezier",
+]);
