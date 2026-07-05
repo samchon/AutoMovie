@@ -114,10 +114,23 @@ const applyCopy = (
   sampled: Map<string, IAutoMovieSampledChannel>,
   nodesById: Map<string, IAutoMovieNode>,
 ): void => {
+  validateCopyFlag(d.translation, "translation");
+  validateCopyFlag(d.rotation, "rotation");
+  validateCopyFlag(d.scale, "scale");
   validateCopyInfluence(d.influence);
   if (d.translation) writeBlend(d, "translation", false, sampled, nodesById);
   if (d.rotation) writeBlend(d, "rotation", true, sampled, nodesById);
   if (d.scale) writeBlend(d, "scale", false, sampled, nodesById);
+};
+
+const validateCopyFlag = (
+  value: boolean,
+  label: "translation" | "rotation" | "scale",
+): void => {
+  if (typeof value !== "boolean")
+    throw new Error(
+      `copy driver ${label} flag must be boolean, but was ${value}`,
+    );
 };
 
 const validateCopyInfluence = (influence: number): void => {
