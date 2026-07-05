@@ -25,6 +25,7 @@ const MAX_ANGULAR_SPEED_DEG_PER_S = 900;
  * Temporal invariants enforced here:
  *
  * - Clip `duration` is finite and positive,
+ * - Clip `loop` is boolean so sampler wrapping semantics are explicit,
  * - Keyframe `time` is strictly increasing,
  * - Every keyframe `time` is finite and within `[0, duration]`,
  * - Every keyframe easing name is one of the supported interpolation curves,
@@ -63,6 +64,13 @@ export const validateMotion = (props: {
       `${path}.duration`,
       `motion duration must be a finite number > 0 seconds, but was ${motion.duration}`,
       motion.duration,
+    );
+  if (typeof motion.loop !== "boolean")
+    collector.push(
+      "type",
+      `${path}.loop`,
+      `motion loop must be boolean, but was ${String(motion.loop)}`,
+      motion.loop,
     );
   if (motion.keyframes.length < 2)
     collector.push(
