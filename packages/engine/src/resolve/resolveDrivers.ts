@@ -171,13 +171,45 @@ const applyDriven = (
   d: IAutoMovieDrivenDriver,
   sampled: Map<string, IAutoMovieSampledChannel>,
 ): void => {
+  if (d.curve == null) validateDrivenRange(d);
+  else validateDrivenCurve(d.curve);
   const src = sampled.get(channelKey(d.source));
   const x = src !== undefined ? src.value[0]! : d.inRange[0];
+  validateDrivenFinite("source value", x);
   const y =
     d.curve != null
       ? evalCurve(x, d.curve)
       : remap(x, d.inRange, d.outRange, d.clamp);
   setChannel(sampled, channelKey(d.output), d.output, [y]);
+};
+
+const validateDrivenRange = (d: IAutoMovieDrivenDriver): void => {
+  validateDrivenFinite("inRange[0]", d.inRange[0]);
+  validateDrivenFinite("inRange[1]", d.inRange[1]);
+  validateDrivenFinite("outRange[0]", d.outRange[0]);
+  validateDrivenFinite("outRange[1]", d.outRange[1]);
+};
+
+const validateDrivenCurve = (curve: [number, number][]): void => {
+  if (curve.length === 0)
+    throw new Error("driven driver curve must contain at least one point");
+
+  let previousX: number | null = null;
+  for (let i = 0; i < curve.length; ++i) {
+    const [x, y] = curve[i]!;
+    validateDrivenFinite(`curve[${i}].x`, x);
+    validateDrivenFinite(`curve[${i}].y`, y);
+    if (previousX !== null && x <= previousX)
+      throw new Error(
+        `driven driver curve x values must be strictly increasing, but point ${i} was ${x} after ${previousX}`,
+      );
+    previousX = x;
+  }
+};
+
+const validateDrivenFinite = (label: string, value: number): void => {
+  if (!Number.isFinite(value))
+    throw new Error(`driven driver ${label} must be finite, but was ${value}`);
 };
 
 const remap = (

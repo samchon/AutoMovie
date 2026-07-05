@@ -234,6 +234,9 @@ export const test_resolve_drivers_copy = (): void => {
  * 5. A `curve` supersedes the linear remap with a piecewise-linear mapping:
  *    interpolating within a segment, and holding flat below the first point and
  *    above the last.
+ * 6. Malformed numeric inputs reject before the remap can emit `NaN`: non-finite
+ *    sampled sources, non-finite linear ranges, empty curves, non-finite curve
+ *    coordinates, and non-increasing curve source points.
  */
 export const test_resolve_drivers_driven = (): void => {
   const run = (d: IAutoMovieDrivenDriver, src?: number): number[] => {
@@ -282,6 +285,72 @@ export const test_resolve_drivers_driven = (): void => {
     "curve holds flat above the last point",
     run(curl, 20),
     [100],
+  );
+
+  TestValidator.predicate(
+    "driven driver rejects NaN source",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [driven({})],
+          seed([["ptr:/in", ptr("/in"), [Number.NaN]]]),
+          new Map(),
+        ),
+      ["driven driver source value", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects NaN input range",
+    throwsError(
+      () => run(driven({ inRange: [Number.NaN, 1] })),
+      ["driven driver inRange[0]", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects infinite output range",
+    throwsError(
+      () => run(driven({ outRange: [0, Infinity] }), 1),
+      ["driven driver outRange[1]", "finite", "Infinity"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects empty curve",
+    throwsError(
+      () => run(driven({ curve: [] }), 1),
+      ["driven driver curve", "at least one"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects non-finite curve coordinate",
+    throwsError(
+      () =>
+        run(
+          driven({
+            curve: [
+              [0, 0],
+              [1, Number.NaN],
+            ],
+          }),
+          1,
+        ),
+      ["driven driver curve[1].y", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects non-increasing curve x",
+    throwsError(
+      () =>
+        run(
+          driven({
+            curve: [
+              [0, 0],
+              [0, 1],
+            ],
+          }),
+          1,
+        ),
+      ["driven driver curve", "strictly increasing", "0"],
+    ),
   );
 };
 
