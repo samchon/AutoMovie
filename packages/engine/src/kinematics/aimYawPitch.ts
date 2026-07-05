@@ -1,5 +1,7 @@
 import { IAutoMovieVector3, IAutoMovieYawPitch } from "@automovie/interface";
 
+const VECTOR_AXES = ["x", "y", "z"] as const;
+
 /**
  * The **yaw and pitch** (degrees) that aim from `from` at `to`, expressed in a
  * frame facing `facingDeg` about +Y — the angles a head / eye / camera turns
@@ -21,6 +23,9 @@ export const aimYawPitch = (
   to: IAutoMovieVector3,
   facingDeg: number,
 ): IAutoMovieYawPitch => {
+  validateVector("from", from);
+  validateVector("to", to);
+  validateFinite("facingDeg", facingDeg);
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const dz = to.z - from.z;
@@ -37,4 +42,17 @@ export const aimYawPitch = (
     yawDeg: (Math.atan2(localX, localZ) * 180) / Math.PI,
     pitchDeg: (Math.atan2(dy, horizontal) * 180) / Math.PI,
   };
+};
+
+const validateVector = (
+  label: "from" | "to",
+  value: IAutoMovieVector3,
+): void => {
+  for (const axis of VECTOR_AXES)
+    validateFinite(`${label}.${axis}`, value[axis]);
+};
+
+const validateFinite = (label: string, value: number): void => {
+  if (!Number.isFinite(value))
+    throw new Error(`aimYawPitch ${label} must be finite, but was ${value}`);
 };

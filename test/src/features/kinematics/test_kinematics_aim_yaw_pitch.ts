@@ -2,7 +2,7 @@ import { aimYawPitch } from "@automovie/engine";
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const O: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
 const at = (x: number, y: number, z: number): IAutoMovieVector3 => ({
@@ -58,5 +58,26 @@ export const test_kinematics_aim_yaw_pitch = (): void => {
   TestValidator.predicate(
     "facing +X, a +Z target is to the right (−90 yaw)",
     nclose(aimYawPitch(O, at(0, 0, 5), 90).yawDeg, -90),
+  );
+  TestValidator.predicate(
+    "NaN aim origin rejects",
+    throwsError(
+      () => aimYawPitch(at(Number.NaN, 0, 0), at(0, 0, 1), 0),
+      ["aimYawPitch from.x", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "infinite aim target rejects",
+    throwsError(
+      () => aimYawPitch(O, at(0, 0, Infinity), 0),
+      ["aimYawPitch to.z", "finite", "Infinity"],
+    ),
+  );
+  TestValidator.predicate(
+    "NaN facing rejects",
+    throwsError(
+      () => aimYawPitch(O, at(0, 0, 1), Number.NaN),
+      ["aimYawPitch facingDeg", "finite", "NaN"],
+    ),
   );
 };
