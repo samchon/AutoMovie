@@ -168,6 +168,26 @@ export const performShot = (props: {
     blocking,
   } = props;
   const out = new ViolationCollector();
+  const beatById = new Map<
+    string,
+    {
+      beat: IAutoMovieScriptApplication.IWrite["beats"][number];
+      index: number;
+    }
+  >();
+  script.beats.forEach((beat, index) => {
+    const existing = beatById.get(beat.id);
+    if (existing !== undefined) {
+      out.push(
+        "type",
+        `$script.beats[${index}].id`,
+        `script beat id "${beat.id}" is duplicated; first declared at $script.beats[${existing.index}].id`,
+        beat.id,
+      );
+      return;
+    }
+    beatById.set(beat.id, { beat, index });
+  });
 
   const validateNonEmptyId = (
     id: string,
@@ -197,14 +217,15 @@ export const performShot = (props: {
 
   validateNonEmptyId(performance.beat, "$input.beat", "beat id");
 
-  const beat = script.beats.find((b) => b.id === performance.beat);
-  if (beat === undefined)
+  const foundBeat = beatById.get(performance.beat);
+  if (foundBeat === undefined)
     out.push(
       "type",
       "$input.beat",
       `beat "${performance.beat}" must be one of the script's beats`,
       performance.beat,
     );
+  const beat = foundBeat?.beat;
 
   if (!Number.isFinite(performance.duration) || !(performance.duration > 0))
     out.push(
