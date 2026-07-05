@@ -254,9 +254,9 @@ export const test_resolve_drivers_copy = (): void => {
  *    above the last.
  * 6. Malformed curve and numeric inputs reject before the remap can emit `NaN`:
  *    non-array curves, non-array curve points, wrong-width curve points,
- *    malformed linear range tuples, non-finite sampled sources, non-finite
- *    linear ranges, empty curves, non-finite curve coordinates, and
- *    non-increasing curve source points.
+ *    malformed linear range tuples, non-finite sampled sources, non-scalar
+ *    sampled sources, non-finite linear ranges, empty curves, non-finite curve
+ *    coordinates, and non-increasing curve source points.
  * 7. A malformed `clamp` flag rejects before truthy/falsy coercion can change
  *    extrapolation into clamping.
  */
@@ -326,6 +326,51 @@ export const test_resolve_drivers_driven = (): void => {
           new Map(),
         ),
       ["driven driver source value", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects non-array source value",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [driven({})],
+          seed([
+            [
+              "ptr:/in",
+              ptr("/in"),
+              {
+                0: 5,
+                length: 1,
+              } as unknown as number[],
+            ],
+          ]),
+          new Map(),
+        ),
+      ["driven driver source value", "array"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects empty source value",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [driven({})],
+          seed([["ptr:/in", ptr("/in"), []]]),
+          new Map(),
+        ),
+      ["driven driver source value", "exactly 1", "0"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects vector source value",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [driven({})],
+          seed([["ptr:/in", ptr("/in"), [5, 99]]]),
+          new Map(),
+        ),
+      ["driven driver source value", "exactly 1", "2"],
     ),
   );
   TestValidator.predicate(

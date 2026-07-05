@@ -199,13 +199,27 @@ const applyDriven = (
   if (d.curve == null) validateDrivenRange(d);
   else validateDrivenCurve(d.curve);
   const src = sampled.get(channelKey(d.source));
-  const x = src !== undefined ? src.value[0]! : d.inRange[0];
+  const x = src !== undefined ? readDrivenSourceValue(src.value) : d.inRange[0];
   validateDrivenFinite("source value", x);
   const y =
     d.curve != null
       ? evalCurve(x, d.curve)
       : remap(x, d.inRange, d.outRange, d.clamp);
   setChannel(sampled, channelKey(d.output), d.output, [y]);
+};
+
+const readDrivenSourceValue = (value: number[]): number => {
+  validateDrivenSourceValue(value);
+  return value[0]!;
+};
+
+const validateDrivenSourceValue = (value: number[]): void => {
+  if (!Array.isArray(value))
+    throw new Error("driven driver source value must be an array");
+  if (value.length !== 1)
+    throw new Error(
+      `driven driver source value must contain exactly 1 entry, but had ${value.length}`,
+    );
 };
 
 const validateDrivenClamp = (clamp: boolean): void => {
