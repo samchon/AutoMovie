@@ -27,6 +27,8 @@ const pointer = (
  *    is false — both sides of each discriminator.
  * 3. Unknown channel discriminator values reject instead of falling through to
  *    pointer behavior.
+ * 4. Unknown node `path` and pointer `valueType` tags reject instead of being
+ *    keyed or treated as non-rotation data.
  */
 export const test_resolve_channel = (): void => {
   // 1. keys
@@ -75,5 +77,42 @@ export const test_resolve_channel = (): void => {
   TestValidator.predicate(
     "unknown channel kind rejects rotation check",
     throwsError(() => channelIsRotation(forged), ["channel kind", "bone"]),
+  );
+
+  const forgedPath = {
+    kind: "node",
+    node: "hips",
+    path: "visibility",
+  } as unknown as IAutoMovieChannel;
+  TestValidator.predicate(
+    "unknown node path rejects keying",
+    throwsError(() => channelKey(forgedPath), ["channel path", "visibility"]),
+  );
+  TestValidator.predicate(
+    "unknown node path rejects rotation check",
+    throwsError(
+      () => channelIsRotation(forgedPath),
+      ["channel path", "visibility"],
+    ),
+  );
+
+  const forgedValueType = {
+    kind: "pointer",
+    pointer: "/nodes/0/rotation",
+    valueType: "matrix",
+  } as unknown as IAutoMovieChannel;
+  TestValidator.predicate(
+    "unknown pointer value type rejects keying",
+    throwsError(
+      () => channelKey(forgedValueType),
+      ["channel valueType", "matrix"],
+    ),
+  );
+  TestValidator.predicate(
+    "unknown pointer value type rejects rotation check",
+    throwsError(
+      () => channelIsRotation(forgedValueType),
+      ["channel valueType", "matrix"],
+    ),
   );
 };
