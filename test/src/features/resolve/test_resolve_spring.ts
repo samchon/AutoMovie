@@ -71,6 +71,7 @@ const run = (steps: number): Map<string, number[]> => {
  *    instead of whipping from the center's world delta.
  * 6. `hitRadius` is a physical collision radius and rejects non-finite or
  *    non-positive values before the integrator reads transform inputs.
+ * 7. Spring force magnitudes allow zero but reject negative values.
  */
 export const test_resolve_spring = (): void => {
   const w = run(180);
@@ -138,6 +139,11 @@ export const test_resolve_spring = (): void => {
     "finite",
     "NaN",
   ]);
+  invalid("spring rejects negative stiffness", { stiffness: -0.1 }, 1 / 60, [
+    "spring driver stiffness",
+    "non-negative",
+    "-0.1",
+  ]);
   invalid("spring rejects NaN drag", { drag: Number.NaN }, 1 / 60, [
     "spring driver drag",
     "finite",
@@ -179,6 +185,12 @@ export const test_resolve_spring = (): void => {
     { gravityPower: Infinity },
     1 / 60,
     ["spring driver gravityPower", "finite", "Infinity"],
+  );
+  invalid(
+    "spring rejects negative gravity power",
+    { gravityPower: -1 },
+    1 / 60,
+    ["spring driver gravityPower", "non-negative", "-1"],
   );
   invalid(
     "spring rejects non-finite gravity direction",
