@@ -97,7 +97,26 @@ export const stageScene = (
   staging: IAutoMovieStagingApplication.IWrite,
 ): IAutoMovieStagedSet => {
   const out = new ViolationCollector();
-  const cast = new Map(script.cast.map((c) => [c.node, c]));
+  const cast = new Map<
+    string,
+    {
+      member: IAutoMovieScriptApplication.IWrite["cast"][number];
+      index: number;
+    }
+  >();
+  script.cast.forEach((member, index) => {
+    const existing = cast.get(member.node);
+    if (existing !== undefined) {
+      out.push(
+        "type",
+        `$script.cast[${index}].node`,
+        `script cast node "${member.node}" is duplicated; first declared at $script.cast[${existing.index}].node`,
+        member.node,
+      );
+      return;
+    }
+    cast.set(member.node, { member, index });
+  });
   const placed = new Map(staging.actors.map((a) => [a.node, a]));
 
   const validateNonEmptyId = (
@@ -251,7 +270,7 @@ export const stageScene = (
 
   const nodes: IAutoMovieSceneNode[] = staging.actors.map((placement) => ({
     id: placement.node,
-    model: cast.get(placement.node)!.modelRef ?? placement.node,
+    model: cast.get(placement.node)!.member.modelRef ?? placement.node,
     transform: {
       translation: placement.position,
       rotation: Quaternion.fromAxisAngle(
