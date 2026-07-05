@@ -254,8 +254,9 @@ export const test_resolve_drivers_copy = (): void => {
  *    above the last.
  * 6. Malformed curve and numeric inputs reject before the remap can emit `NaN`:
  *    non-array curves, non-array curve points, wrong-width curve points,
- *    non-finite sampled sources, non-finite linear ranges, empty curves,
- *    non-finite curve coordinates, and non-increasing curve source points.
+ *    malformed linear range tuples, non-finite sampled sources, non-finite
+ *    linear ranges, empty curves, non-finite curve coordinates, and
+ *    non-increasing curve source points.
  * 7. A malformed `clamp` flag rejects before truthy/falsy coercion can change
  *    extrapolation into clamping.
  */
@@ -325,6 +326,36 @@ export const test_resolve_drivers_driven = (): void => {
           new Map(),
         ),
       ["driven driver source value", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects non-array input range",
+    throwsError(
+      () =>
+        run(
+          driven({
+            inRange: {
+              0: 0,
+              1: 10,
+              length: 2,
+            } as unknown as [number, number],
+          }),
+          5,
+        ),
+      ["driven driver inRange", "array"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects wrong-width output range",
+    throwsError(
+      () =>
+        run(
+          driven({
+            outRange: [0, 100, 999] as unknown as [number, number],
+          }),
+          5,
+        ),
+      ["driven driver outRange", "exactly 2", "3"],
     ),
   );
   TestValidator.predicate(

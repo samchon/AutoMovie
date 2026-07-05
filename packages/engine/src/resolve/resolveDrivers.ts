@@ -214,10 +214,24 @@ const validateDrivenClamp = (clamp: boolean): void => {
 };
 
 const validateDrivenRange = (d: IAutoMovieDrivenDriver): void => {
+  validateDrivenRangeTuple("inRange", d.inRange);
+  validateDrivenRangeTuple("outRange", d.outRange);
   validateDrivenFinite("inRange[0]", d.inRange[0]);
   validateDrivenFinite("inRange[1]", d.inRange[1]);
   validateDrivenFinite("outRange[0]", d.outRange[0]);
   validateDrivenFinite("outRange[1]", d.outRange[1]);
+};
+
+const validateDrivenRangeTuple = (
+  label: "inRange" | "outRange",
+  range: [number, number],
+): void => {
+  if (!Array.isArray(range))
+    throw new Error(`driven driver ${label} must be an array`);
+  if (range.length !== 2)
+    throw new Error(
+      `driven driver ${label} must contain exactly 2 entries, but had ${range.length}`,
+    );
 };
 
 const validateDrivenCurve = (curve: [number, number][]): void => {
