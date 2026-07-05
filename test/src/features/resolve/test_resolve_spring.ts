@@ -66,6 +66,9 @@ const run = (steps: number): Map<string, number[]> => {
  *    spring usable in a reproducible render).
  * 4. Invalid integration parameters reject before the integrator reads world or
  *    local transforms.
+ * 5. A `center` reference subtracts body locomotion from inertia: after the
+ *    center/root/joint translate together, the joint remains on its rest offset
+ *    instead of whipping from the center's world delta.
  */
 export const test_resolve_spring = (): void => {
   const w = run(180);
@@ -165,6 +168,44 @@ export const test_resolve_spring = (): void => {
     { gravityDir: { x: 0, y: 0, z: 0 } },
     1 / 60,
     ["spring driver gravityDir", "non-zero"],
+  );
+
+  const centeredSpring: IAutoMovieSpringDriver = {
+    ...spring,
+    chain: ["root", "j1"],
+    stiffness: 0,
+    drag: 0,
+    gravityPower: 0,
+    center: "center",
+  };
+  const centeredWorld = new Map<string, number[]>([
+    ["center", W({ x: 0, y: 0, z: 0 })],
+    ["root", W({ x: 0, y: 0, z: 0 })],
+    ["j1", W({ x: 1, y: 0, z: 0 })],
+  ]);
+  const centeredState = createSpringState();
+  stepSpring(centeredSpring, centeredWorld, centeredState, 1 / 60, local);
+  centeredWorld.set("center", W({ x: 0, y: 10, z: 0 }));
+  centeredWorld.set("root", W({ x: 0, y: 10, z: 0 }));
+  centeredWorld.set("j1", W({ x: 1, y: 10, z: 0 }));
+  stepSpring(centeredSpring, centeredWorld, centeredState, 1 / 60, local);
+  TestValidator.predicate(
+    "center motion does not become spring inertia",
+    vclose(at(centeredWorld, "j1"), { x: 1, y: 10, z: 0 }, 1e-9),
+  );
+  TestValidator.predicate(
+    "missing spring center rejects incomplete world map",
+    throwsError(
+      () =>
+        stepSpring(
+          { ...spring, center: "missing" },
+          new Map(),
+          createSpringState(),
+          1 / 60,
+          local,
+        ),
+      'spring driver center node "missing" was not provided',
+    ),
   );
 
   TestValidator.predicate(
