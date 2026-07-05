@@ -2,7 +2,7 @@ import { composeScene } from "@automovie/engine";
 import { IAutoMovieNode, IAutoMovieTransform } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -66,5 +66,26 @@ export const test_resolve_compose_scene = (): void => {
   TestValidator.predicate(
     "child world = parent rest + child override",
     nclose(tx(world.get("c")!), 12),
+  );
+  TestValidator.predicate(
+    "duplicate node ids reject ambiguous graph",
+    throwsError(
+      () => composeScene([node("dup", null, 1), node("dup", null, 2)]),
+      ['node id "dup"', "nodes[1].id"],
+    ),
+  );
+  TestValidator.predicate(
+    "missing parent rejects dangling graph",
+    throwsError(
+      () => composeScene([node("child", "missing", 1)]),
+      ['node "child" references missing parent "missing"', "nodes[0].parent"],
+    ),
+  );
+  TestValidator.predicate(
+    "parent cycle rejects recursive graph",
+    throwsError(
+      () => composeScene([node("a", "b", 1), node("b", "a", 2)]),
+      'node parent cycle includes "a"',
+    ),
   );
 };

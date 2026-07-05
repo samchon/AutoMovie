@@ -2,6 +2,27 @@ import { IAutoMovieNode, IAutoMovieTransform } from "@automovie/interface";
 
 import { Matrix4 } from "../math/Matrix4";
 
+const indexNodes = (
+  nodes: readonly IAutoMovieNode[],
+): Map<string, { node: IAutoMovieNode; index: number }> => {
+  const byId = new Map<string, { node: IAutoMovieNode; index: number }>();
+  nodes.forEach((node, index) => {
+    const existing = byId.get(node.id);
+    if (existing !== undefined)
+      throw new Error(
+        `node id "${node.id}" is duplicated at nodes[${index}].id; first declared at nodes[${existing.index}].id`,
+      );
+    byId.set(node.id, { node, index });
+  });
+  nodes.forEach((node, index) => {
+    if (node.parent !== null && !byId.has(node.parent))
+      throw new Error(
+        `node "${node.id}" references missing parent "${node.parent}" at nodes[${index}].parent`,
+      );
+  });
+  return byId;
+};
+
 /**
  * The COMPOSE pass: turn a flat list of nodes — each with a parent-local TRS —
  * into a world matrix per node, walking parent-before-child.
@@ -22,13 +43,17 @@ export const composeScene = (
   nodes: IAutoMovieNode[],
   localOverrides?: Map<string, IAutoMovieTransform>,
 ): Map<string, number[]> => {
-  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const byId = indexNodes(nodes);
   const world = new Map<string, number[]>();
+  const resolving = new Set<string>();
 
   const resolve = (id: string): number[] => {
     const cached = world.get(id);
     if (cached !== undefined) return cached;
-    const node = byId.get(id)!;
+    if (resolving.has(id))
+      throw new Error(`node parent cycle includes "${id}"`);
+    resolving.add(id);
+    const node = byId.get(id)!.node;
     const t = localOverrides?.get(id) ?? node.transform;
     const local = Matrix4.compose(t.translation, t.rotation, t.scale);
     const m =
@@ -36,6 +61,7 @@ export const composeScene = (
         ? local
         : Matrix4.multiply(resolve(node.parent), local);
     world.set(id, m);
+    resolving.delete(id);
     return m;
   };
 
