@@ -38,6 +38,13 @@ export const validateMotion = (props: {
   const collector = new ViolationCollector();
   const { motion, skeleton } = props;
 
+  if (motion.id.trim().length === 0)
+    collector.push(
+      "type",
+      `${path}.id`,
+      "motion id must be a non-empty id",
+      motion.id,
+    );
   if (motion.skeleton !== skeleton.id)
     collector.push(
       "type",
