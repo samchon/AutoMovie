@@ -71,6 +71,18 @@ const readWorld = (
   return matrix;
 };
 
+const readLocal = (
+  localById: Map<string, IAutoMovieTransform>,
+  id: string,
+): IAutoMovieTransform => {
+  const local = localById.get(id);
+  if (local === undefined)
+    throw new Error(
+      `world driver descendant local transform node "${id}" was not provided`,
+    );
+  return local;
+};
+
 const applyAim = (
   d: IAutoMovieAimDriver,
   world: Map<string, number[]>,
@@ -249,9 +261,9 @@ const recompose = (
   localById: Map<string, IAutoMovieTransform>,
   childrenById: Map<string, string[]>,
 ): void => {
-  const parentWorld = world.get(id)!;
+  const parentWorld = readWorld(world, id, "recompose parent");
   for (const child of childrenById.get(id) ?? []) {
-    const t = localById.get(child)!;
+    const t = readLocal(localById, child);
     const local = Matrix4.compose(t.translation, t.rotation, t.scale);
     world.set(child, Matrix4.multiply(parentWorld, local));
     recompose(child, world, localById, childrenById);
