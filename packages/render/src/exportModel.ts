@@ -54,8 +54,17 @@ export const exportModelToGLB = async (
     for (const b of model.skeleton.bones)
       boneNodes.set(b.bone, setTRS(doc.createNode(b.bone), b.rest));
     for (const b of model.skeleton.bones) {
-      const parent = b.parent !== null ? boneNodes.get(b.parent) : undefined;
-      (parent ?? scene).addChild(boneNodes.get(b.bone)!);
+      const node = boneNodes.get(b.bone)!;
+      if (b.parent === null) {
+        scene.addChild(node);
+        continue;
+      }
+      const parent = boneNodes.get(b.parent);
+      if (parent === undefined)
+        throw new Error(
+          `skeleton bone "${b.bone}" references missing parent "${b.parent}"`,
+        );
+      parent.addChild(node);
     }
   }
 
@@ -97,18 +106,30 @@ export const exportModelToGLB = async (
           .setArray(new Uint32Array(t.indices))
           .setBuffer(buffer),
       );
-    const mat =
-      part.material !== null ? materials.get(part.material) : undefined;
-    if (mat !== undefined) prim.setMaterial(mat);
+    if (part.material !== null) {
+      const mat = materials.get(part.material);
+      if (mat === undefined)
+        throw new Error(
+          `part "${part.id}" references missing material "${part.material}"`,
+        );
+      prim.setMaterial(mat);
+    }
 
     const label = part.name ?? part.id;
     const node = setTRS(
       doc.createNode(label).setMesh(doc.createMesh(label).addPrimitive(prim)),
       part.transform,
     );
-    const boneNode =
-      part.attachedBone !== null ? boneNodes.get(part.attachedBone) : undefined;
-    (boneNode ?? scene).addChild(node);
+    if (part.attachedBone === null) {
+      scene.addChild(node);
+      continue;
+    }
+    const boneNode = boneNodes.get(part.attachedBone);
+    if (boneNode === undefined)
+      throw new Error(
+        `part "${part.id}" references missing attachedBone "${part.attachedBone}"`,
+      );
+    boneNode.addChild(node);
   }
 
   return new NodeIO().writeBinary(doc);

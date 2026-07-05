@@ -9,6 +9,18 @@ const T = (): IAutoMovieTransform => ({
   scale: { x: 1, y: 1, z: 1 },
 });
 
+const rejectsError = async (
+  task: () => Promise<unknown>,
+  messageIncludes: string,
+): Promise<boolean> => {
+  try {
+    await task();
+    return false;
+  } catch (error) {
+    return error instanceof Error && error.message.includes(messageIncludes);
+  }
+};
+
 /** A rigged character: skeleton (root + child) + primitive parts + a material. */
 const CHARACTER: IAutoMovieModel = {
   id: "char",
@@ -221,5 +233,50 @@ export const test_render_export_glb = async (): Promise<void> => {
   TestValidator.predicate(
     "emissive factor set",
     mat.getEmissiveFactor()[0] > 0,
+  );
+
+  TestValidator.predicate(
+    "missing skeleton parent rejects",
+    await rejectsError(
+      () =>
+        exportModelToGLB({
+          ...CHARACTER,
+          skeleton: {
+            ...CHARACTER.skeleton!,
+            bones: CHARACTER.skeleton!.bones.map((bone) =>
+              bone.bone === "spine" ? { ...bone, parent: "leftHand" } : bone,
+            ),
+          },
+        }),
+      'skeleton bone "spine" references missing parent "leftHand"',
+    ),
+  );
+
+  TestValidator.predicate(
+    "missing attached bone rejects",
+    await rejectsError(
+      () =>
+        exportModelToGLB({
+          ...CHARACTER,
+          parts: CHARACTER.parts.map((part) =>
+            part.id === "head" ? { ...part, attachedBone: "leftHand" } : part,
+          ),
+        }),
+      'part "head" references missing attachedBone "leftHand"',
+    ),
+  );
+
+  TestValidator.predicate(
+    "missing material rejects",
+    await rejectsError(
+      () =>
+        exportModelToGLB({
+          ...CHARACTER,
+          parts: CHARACTER.parts.map((part) =>
+            part.id === "head" ? { ...part, material: "missing" } : part,
+          ),
+        }),
+      'part "head" references missing material "missing"',
+    ),
   );
 };
