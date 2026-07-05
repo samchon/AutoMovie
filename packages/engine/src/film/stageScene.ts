@@ -100,6 +100,17 @@ export const stageScene = (
   const cast = new Map(script.cast.map((c) => [c.node, c]));
   const placed = new Map(staging.actors.map((a) => [a.node, a]));
 
+  const validateNonEmptyId = (
+    id: string,
+    path: string,
+    label: string,
+  ): void => {
+    if (id.trim().length === 0)
+      out.push("type", path, `${label} must be a non-empty id`, id);
+  };
+
+  validateNonEmptyId(staging.scene.id, `$input.scene.id`, "scene id");
+
   script.cast.forEach((member, i) => {
     if (!placed.has(member.node))
       out.push(
@@ -111,14 +122,15 @@ export const stageScene = (
   });
 
   const ids = new Set<string>();
-  const claim = (id: string, path: string): void => {
+  const claim = (id: string, path: string, label: string): void => {
+    validateNonEmptyId(id, path, label);
     if (ids.has(id))
       out.push("type", path, `id "${id}" must be unique in the scene`, id);
     ids.add(id);
   };
 
   staging.actors.forEach((placement, i) => {
-    claim(placement.node, `$input.actors[${i}].node`);
+    claim(placement.node, `$input.actors[${i}].node`, "actor node id");
     if (!cast.has(placement.node))
       out.push(
         "type",
@@ -159,7 +171,7 @@ export const stageScene = (
   });
 
   staging.cameras.forEach((camera, i) => {
-    claim(camera.node, `$input.cameras[${i}].node`);
+    claim(camera.node, `$input.cameras[${i}].node`, "camera node id");
     const positionFinite = isFiniteVector3(camera.position);
     if (!positionFinite)
       out.push(
@@ -208,7 +220,7 @@ export const stageScene = (
   });
 
   staging.lights.forEach((light, i) => {
-    claim(light.node, `$input.lights[${i}].node`);
+    claim(light.node, `$input.lights[${i}].node`, "light node id");
     if (!Number.isFinite(light.intensity) || light.intensity < 0)
       out.push(
         "range",
