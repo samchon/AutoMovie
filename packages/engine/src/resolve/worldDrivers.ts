@@ -163,6 +163,14 @@ const applyTwoBoneIK = (
   const lower = Vector3.subtract(tipP, midP);
   const l1 = Vector3.length(upper);
   const l2 = Vector3.length(lower);
+  if (!(l1 > 0))
+    throw new Error(
+      `world driver two-bone IK upper bone length must be > 0, but was ${l1}`,
+    );
+  if (!(l2 > 0))
+    throw new Error(
+      `world driver two-bone IK lower bone length must be > 0, but was ${l2}`,
+    );
 
   const toGoal = Vector3.subtract(goalP, rootP);
   const goalLen = Vector3.length(toGoal);
