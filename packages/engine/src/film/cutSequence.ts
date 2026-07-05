@@ -55,7 +55,20 @@ export const cutSequence = (
   shots: IAutoMovieShot[],
 ): IAutoMovieCut => {
   const out = new ViolationCollector();
-  const byId = new Map(shots.map((shot, index) => [shot.id, { shot, index }]));
+  const byId = new Map<string, { shot: IAutoMovieShot; index: number }>();
+  shots.forEach((shot, index) => {
+    const existing = byId.get(shot.id);
+    if (existing !== undefined) {
+      out.push(
+        "type",
+        `$shots[${index}].id`,
+        `shot id "${shot.id}" is duplicated; first declared at $shots[${existing.index}].id`,
+        shot.id,
+      );
+      return;
+    }
+    byId.set(shot.id, { shot, index });
+  });
 
   const validateNonEmptyId = (
     id: string,
