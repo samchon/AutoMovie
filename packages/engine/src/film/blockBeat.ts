@@ -52,6 +52,17 @@ export const blockBeat = (
 ): IAutoMovieBlockedBeat => {
   const out = new ViolationCollector();
 
+  const validateNonEmptyId = (
+    id: string,
+    path: string,
+    label: string,
+  ): void => {
+    if (id.trim().length === 0)
+      out.push("type", path, `${label} must be a non-empty id`, id);
+  };
+
+  validateNonEmptyId(blocking.beat, "$input.beat", "beat id");
+
   if (!script.beats.some((b) => b.id === blocking.beat))
     out.push(
       "type",
@@ -70,6 +81,11 @@ export const blockBeat = (
 
   const nodeIds = new Set(staged.scene.nodes.map((n) => n.id));
   blocking.actors.forEach((intent, i) => {
+    validateNonEmptyId(
+      intent.node,
+      `$input.actors[${i}].node`,
+      "actor node id",
+    );
     if (!nodeIds.has(intent.node))
       out.push(
         "type",
@@ -107,6 +123,12 @@ export const blockBeat = (
       "$input.camera.on.node",
       `the camera must favour a placed actor, but "${blocking.camera.on.node}" is not staged`,
       blocking.camera.on.node,
+    );
+  if (blocking.camera.on.kind === "node")
+    validateNonEmptyId(
+      blocking.camera.on.node,
+      "$input.camera.on.node",
+      "camera target node id",
     );
 
   return out.items.length > 0
