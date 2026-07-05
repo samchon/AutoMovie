@@ -1,8 +1,28 @@
 import { computeRestHeight } from "@automovie/engine";
+import {
+  AutoMovieHumanoidBone,
+  IAutoMovieBone,
+  IAutoMovieSkeleton,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { createSkeleton } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { IDENTITY_TRANSFORM, createSkeleton } from "../internal/fixtures";
+import { nclose, throwsError } from "../internal/predicates";
+
+const bone = (
+  name: AutoMovieHumanoidBone,
+  parent: AutoMovieHumanoidBone | null,
+): IAutoMovieBone => ({
+  bone: name,
+  parent,
+  rest: IDENTITY_TRANSFORM,
+  constraint: null,
+});
+
+const skeleton = (bones: IAutoMovieBone[]): IAutoMovieSkeleton => ({
+  id: "bad-skeleton",
+  bones,
+});
 
 /**
  * Pins the rig-measured subject height the framing grammar depends on. The
@@ -25,5 +45,30 @@ export const test_film_camera_rest_height = (): void => {
     "boneless skeleton measures 0",
     computeRestHeight({ id: "empty", bones: [] }),
     0,
+  );
+  TestValidator.predicate(
+    "duplicate rest-height bone rejects malformed skeleton",
+    throwsError(
+      () =>
+        computeRestHeight(skeleton([bone("hips", null), bone("hips", null)])),
+      'skeleton "bad-skeleton" bone "hips" is duplicated at bones[1].bone; first declared at bones[0].bone',
+    ),
+  );
+  TestValidator.predicate(
+    "missing rest-height parent rejects malformed skeleton",
+    throwsError(
+      () => computeRestHeight(skeleton([bone("spine", "hips")])),
+      'skeleton "bad-skeleton" bone "hips" was not provided',
+    ),
+  );
+  TestValidator.predicate(
+    "rest-height parent cycle rejects malformed skeleton",
+    throwsError(
+      () =>
+        computeRestHeight(
+          skeleton([bone("hips", "spine"), bone("spine", "hips")]),
+        ),
+      'skeleton "bad-skeleton" bone parent cycle includes "hips"',
+    ),
   );
 };

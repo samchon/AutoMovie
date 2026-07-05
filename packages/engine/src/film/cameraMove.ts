@@ -1,4 +1,5 @@
 import {
+  AutoMovieHumanoidBone,
   IAutoMovieCamera,
   IAutoMovieCameraAction,
   IAutoMovieClip,
@@ -311,32 +312,60 @@ export const compileCameraMove = (props: {
  * staging's reach/stride.
  */
 export const computeRestHeight = (skeleton: IAutoMovieSkeleton): number => {
-  const byName = new Map(skeleton.bones.map((b) => [b.bone, b]));
+  if (skeleton.bones.length === 0) return 0;
+
+  const byName = new Map<
+    AutoMovieHumanoidBone,
+    { bone: (typeof skeleton.bones)[number]; index: number }
+  >();
+  skeleton.bones.forEach((bone, index) => {
+    const existing = byName.get(bone.bone);
+    if (existing !== undefined)
+      throw new Error(
+        `skeleton "${skeleton.id}" bone "${bone.bone}" is duplicated at bones[${index}].bone; first declared at bones[${existing.index}].bone`,
+      );
+    byName.set(bone.bone, { bone, index });
+  });
   const world = new Map<
     string,
     { pos: IAutoMovieVector3; rot: IAutoMovieQuaternion }
   >();
+  const resolving = new Set<AutoMovieHumanoidBone>();
   const resolve = (
     name: (typeof skeleton.bones)[number]["bone"],
   ): { pos: IAutoMovieVector3; rot: IAutoMovieQuaternion } => {
     const cached = world.get(name);
     if (cached !== undefined) return cached;
-    const bone = byName.get(name)!;
-    const frame =
-      bone.parent === null
-        ? { pos: bone.rest.translation, rot: bone.rest.rotation }
-        : (() => {
-            const parent = resolve(bone.parent);
-            return {
-              pos: Vector3.add(
-                parent.pos,
-                Quaternion.rotateVector(parent.rot, bone.rest.translation),
-              ),
-              rot: Quaternion.multiply(parent.rot, bone.rest.rotation),
-            };
-          })();
-    world.set(name, frame);
-    return frame;
+    if (resolving.has(name))
+      throw new Error(
+        `skeleton "${skeleton.id}" bone parent cycle includes "${name}"`,
+      );
+    const entry = byName.get(name);
+    if (entry === undefined)
+      throw new Error(
+        `skeleton "${skeleton.id}" bone "${name}" was not provided`,
+      );
+    resolving.add(name);
+    try {
+      const bone = entry.bone;
+      const frame =
+        bone.parent === null
+          ? { pos: bone.rest.translation, rot: bone.rest.rotation }
+          : (() => {
+              const parent = resolve(bone.parent);
+              return {
+                pos: Vector3.add(
+                  parent.pos,
+                  Quaternion.rotateVector(parent.rot, bone.rest.translation),
+                ),
+                rot: Quaternion.multiply(parent.rot, bone.rest.rotation),
+              };
+            })();
+      world.set(name, frame);
+      return frame;
+    } finally {
+      resolving.delete(name);
+    }
   };
   let min = Infinity;
   let max = -Infinity;
@@ -345,5 +374,5 @@ export const computeRestHeight = (skeleton: IAutoMovieSkeleton): number => {
     if (y < min) min = y;
     if (y > max) max = y;
   }
-  return skeleton.bones.length === 0 ? 0 : max - min;
+  return max - min;
 };
