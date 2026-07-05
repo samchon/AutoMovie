@@ -66,6 +66,8 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  *    negative t=−0.25 → 0.75.
  * 10. A non-looping clip clamps past the end (t=5 on a 1s clip → the last value),
  *     and a zero-duration clip normalizes any time to 0.
+ * 11. A forged non-boolean `loop` flag rejects before JavaScript truthiness can
+ *     change wrap/clamp semantics.
  */
 export const test_resolve_sample_clip = (): void => {
   // 1. linear vec3
@@ -232,6 +234,14 @@ export const test_resolve_sample_clip = (): void => {
     throwsError(
       () => sampleClip({ ...lin, duration: Infinity }, 0),
       ["clip duration", "finite"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "non-boolean clip loop rejects",
+    throwsError(
+      () => sampleClip({ ...lin, loop: "false" as unknown as boolean }, 2),
+      ["clip loop", "boolean", "false"],
     ),
   );
 
