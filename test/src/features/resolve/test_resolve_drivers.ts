@@ -150,6 +150,44 @@ export const test_resolve_drivers_copy = (): void => {
     false,
   );
 
+  const validNodes = byId(node("o"), node("s"));
+  TestValidator.predicate(
+    "copy driver rejects NaN influence",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [copy({ translation: true, influence: Number.NaN })],
+          seed([]),
+          validNodes,
+        ),
+      ["copy driver influence", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "copy driver rejects negative influence",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [copy({ translation: true, influence: -0.1 })],
+          seed([]),
+          validNodes,
+        ),
+      ["copy driver influence", "between 0 and 1", "-0.1"],
+    ),
+  );
+  TestValidator.predicate(
+    "copy driver rejects influence above one",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [copy({ translation: true, influence: 1.1 })],
+          seed([]),
+          validNodes,
+        ),
+      ["copy driver influence", "between 0 and 1", "1.1"],
+    ),
+  );
+
   const ghostTranslation: [string, IAutoMovieChannel, number[]] = [
     "node:ghost:translation",
     { kind: "node", node: "ghost", path: "translation" },
