@@ -14,7 +14,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
-import { nclose, vclose } from "../internal/predicates";
+import { nclose, throwsError, vclose } from "../internal/predicates";
 
 const WALK: IAutoMovieGait = {
   name: "walk",
@@ -273,24 +273,29 @@ export const test_perform_actor_synthesizer = (): void => {
   );
 
   // 7. actor gait names are lookup keys, so duplicates are ambiguous
-  TestValidator.error("duplicate actor-context gait names throw", () =>
-    makeActorSynthesizer(
-      new Map<string, IAutoMovieActorContext>([
-        [
-          "hero",
-          {
-            ...ctx,
-            gaits: [
-              WALK,
+  TestValidator.predicate(
+    "duplicate actor-context gait names throw",
+    throwsError(
+      () =>
+        makeActorSynthesizer(
+          new Map<string, IAutoMovieActorContext>([
+            [
+              "hero",
               {
-                ...WALK,
-                period: 0.75,
+                ...ctx,
+                gaits: [
+                  WALK,
+                  {
+                    ...WALK,
+                    period: 0.75,
+                  },
+                ],
               },
             ],
-          },
-        ],
-      ]),
-      nodes,
+          ]),
+          nodes,
+        ),
+      "duplicate actor gait name hero.walk",
     ),
   );
 };

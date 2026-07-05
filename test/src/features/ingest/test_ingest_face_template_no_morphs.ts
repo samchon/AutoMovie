@@ -2,6 +2,8 @@ import { ingestFaceTemplate } from "@automovie/ingest";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * A document with no morphed primitive cannot become a face template — a silent
  * empty template would let the editor "succeed" on a prop or an unrigged head,
@@ -22,7 +24,11 @@ export const test_ingest_face_template_no_morphs = (): void => {
   );
   doc.createMesh("prop").addPrimitive(prim);
 
-  TestValidator.error("no morphed primitive throws", () =>
-    ingestFaceTemplate(doc),
+  TestValidator.predicate(
+    "no morphed primitive throws",
+    throwsError(
+      () => ingestFaceTemplate(doc),
+      "document has no primitive with morph targets",
+    ),
   );
 };

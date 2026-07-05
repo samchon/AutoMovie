@@ -2,6 +2,8 @@ import { ingestFaceTemplate } from "@automovie/ingest";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * A morph target that can be named neither from the target itself nor from
  * `mesh.extras.targetNames` is unreachable by any parameter document, so the
@@ -25,7 +27,8 @@ export const test_ingest_face_template_unnamed_target = (): void => {
   );
   doc.createMesh("face").addPrimitive(prim);
 
-  TestValidator.error("unnameable target throws", () =>
-    ingestFaceTemplate(doc),
+  TestValidator.predicate(
+    "unnameable target throws",
+    throwsError(() => ingestFaceTemplate(doc), "morph target #0 has no name"),
   );
 };

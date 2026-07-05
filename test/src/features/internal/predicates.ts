@@ -36,6 +36,27 @@ export const qclose = (
 export const qunit = (q: IAutoMovieQuaternion, eps = 1e-6): boolean =>
   nclose(Math.hypot(q.x, q.y, q.z, q.w), 1, eps);
 
+/**
+ * True when a synchronous task throws an Error whose message contains every
+ * requested fragment.
+ */
+export const throwsError = (
+  task: () => unknown,
+  messageIncludes: string | readonly string[] = [],
+): boolean => {
+  const fragments =
+    typeof messageIncludes === "string" ? [messageIncludes] : messageIncludes;
+  try {
+    task();
+    return false;
+  } catch (error) {
+    return (
+      error instanceof Error &&
+      fragments.every((fragment) => error.message.includes(fragment))
+    );
+  }
+};
+
 /** True when the validation failed with at least one matching violation. */
 export const hasViolation = (
   v: IAutoMovieValidation,

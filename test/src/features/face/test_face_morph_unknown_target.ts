@@ -2,6 +2,7 @@ import { IAutoMovieFaceTemplate, morphFace } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeFace } from "../internal/fixtures";
+import { throwsError } from "../internal/predicates";
 
 /**
  * A parameter naming a morph target the template does not carry is a broken
@@ -16,10 +17,15 @@ export const test_face_morph_unknown_target = (): void => {
     positions: [0, 0, 0],
     targets: { eyeSize: [1, 0, 0] },
   };
-  TestValidator.error("missing morph target throws", () =>
-    morphFace({
-      template,
-      face: makeFace({ jaw: { width: 1 } }),
-    }),
+  TestValidator.predicate(
+    "missing morph target throws",
+    throwsError(
+      () =>
+        morphFace({
+          template,
+          face: makeFace({ jaw: { width: 1 } }),
+        }),
+      'face template has no morph target "jawWidth"',
+    ),
   );
 };

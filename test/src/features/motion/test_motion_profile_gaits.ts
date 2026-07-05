@@ -2,7 +2,7 @@ import { bindProfileGaits } from "@automovie/engine";
 import { IAutoMovieProfile } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const horse: IAutoMovieProfile = {
   id: "equine",
@@ -90,28 +90,33 @@ export const test_motion_profile_gaits = (): void => {
   );
 
   // 4. gait names are binding keys, so duplicates are authoring errors
-  TestValidator.error("duplicate profile gait names throw", () =>
-    bindProfileGaits(
-      {
-        ...horse,
-        gaits: [
-          horse.gaits![0]!,
+  TestValidator.predicate(
+    "duplicate profile gait names throw",
+    throwsError(
+      () =>
+        bindProfileGaits(
           {
-            name: "walk",
-            period: 0.75,
-            limbs: [
+            ...horse,
+            gaits: [
+              horse.gaits![0]!,
               {
-                bone: "leftUpperArm",
-                phase: 0.25,
-                duty: 0.45,
-                amplitude: 30,
+                name: "walk",
+                period: 0.75,
+                limbs: [
+                  {
+                    bone: "leftUpperArm",
+                    phase: 0.25,
+                    duty: 0.45,
+                    amplitude: 30,
+                  },
+                ],
               },
             ],
           },
-        ],
-      },
-      "horse-rig",
-      4,
+          "horse-rig",
+          4,
+        ),
+      "duplicate profile gait name walk",
     ),
   );
 };

@@ -2,6 +2,8 @@ import { ingestFaceTemplate } from "@automovie/ingest";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * A morphed primitive without a resting POSITION has deltas but nothing to
  * apply them to — the negative twin of the happy path's POSITION carry-over,
@@ -26,7 +28,11 @@ export const test_ingest_face_template_no_resting_position = (): void => {
   );
   doc.createMesh("face").addPrimitive(prim);
 
-  TestValidator.error("primitive without POSITION throws", () =>
-    ingestFaceTemplate(doc),
+  TestValidator.predicate(
+    "primitive without POSITION throws",
+    throwsError(
+      () => ingestFaceTemplate(doc),
+      "morphed primitive has no POSITION attribute",
+    ),
   );
 };
