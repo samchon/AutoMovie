@@ -227,6 +227,24 @@ export const test_ingest_document = (): void => {
     [0, 0, 0, 10, 0, 0],
   );
 
+  const weightsDoc = makeAnimatedDoc();
+  const weightValues = weightsDoc.doc
+    .createAccessor()
+    .setType("SCALAR")
+    .setArray(new Float32Array([0, 0.5, 1, 0.25]));
+  weightsDoc.sampler.setInput(weightsDoc.time).setOutput(weightValues);
+  weightsDoc.channel
+    .setTargetNode(weightsDoc.node)
+    .setTargetPath("weights")
+    .setSampler(weightsDoc.sampler);
+  const weightsClip = ingestDocument(weightsDoc.doc).clips[0]!;
+  TestValidator.equals("weights track count", weightsClip.tracks.length, 1);
+  TestValidator.equals(
+    "weights values keep per-key width",
+    weightsClip.tracks[0]!.values,
+    [0, 0.5, 1, 0.25],
+  );
+
   const empty = clips.find((c) => c.name === null)!;
   TestValidator.equals("empty clip has no tracks", empty.tracks.length, 0);
   TestValidator.equals("empty clip zero duration", empty.duration, 0);
@@ -347,6 +365,67 @@ export const test_ingest_document = (): void => {
     throwsError(
       () => ingestDocument(emptyOutputArray.doc),
       'animation channel for node "node_0" output values must not be empty',
+    ),
+  );
+
+  const shortTranslationOutput = makeAnimatedDoc();
+  shortTranslationOutput.sampler
+    .setInput(shortTranslationOutput.time)
+    .setOutput(
+      shortTranslationOutput.doc
+        .createAccessor()
+        .setType("VEC3")
+        .setArray(new Float32Array([0, 0, 0, 1, 1])),
+    );
+  shortTranslationOutput.channel
+    .setTargetNode(shortTranslationOutput.node)
+    .setSampler(shortTranslationOutput.sampler);
+  TestValidator.predicate(
+    "translation output arity rejects",
+    throwsError(
+      () => ingestDocument(shortTranslationOutput.doc),
+      ["translation output values length", "6", "5"],
+    ),
+  );
+
+  const shortCubicOutput = makeAnimatedDoc();
+  shortCubicOutput.sampler
+    .setInput(shortCubicOutput.time)
+    .setOutput(
+      shortCubicOutput.doc
+        .createAccessor()
+        .setType("VEC3")
+        .setArray(new Float32Array(new Array(6).fill(1))),
+    )
+    .setInterpolation("CUBICSPLINE");
+  shortCubicOutput.channel
+    .setTargetNode(shortCubicOutput.node)
+    .setTargetPath("scale")
+    .setSampler(shortCubicOutput.sampler);
+  TestValidator.predicate(
+    "cubic output arity rejects",
+    throwsError(
+      () => ingestDocument(shortCubicOutput.doc),
+      ["scale output values length", "18", "6"],
+    ),
+  );
+
+  const unevenWeightsOutput = makeAnimatedDoc();
+  unevenWeightsOutput.sampler.setInput(unevenWeightsOutput.time).setOutput(
+    unevenWeightsOutput.doc
+      .createAccessor()
+      .setType("SCALAR")
+      .setArray(new Float32Array([0, 0.5, 1])),
+  );
+  unevenWeightsOutput.channel
+    .setTargetNode(unevenWeightsOutput.node)
+    .setTargetPath("weights")
+    .setSampler(unevenWeightsOutput.sampler);
+  TestValidator.predicate(
+    "weights output arity rejects",
+    throwsError(
+      () => ingestDocument(unevenWeightsOutput.doc),
+      ["weights output values length", "multiple of 2", "3"],
     ),
   );
 };
