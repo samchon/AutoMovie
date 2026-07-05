@@ -103,15 +103,29 @@ export const validateModel = (props: {
         `attachedBone "${part.attachedBone}" is not a bone of this model's skeleton`,
         part.attachedBone,
       );
-    if (part.geometry.type === "primitive")
-      validateExtents(part.geometry.shape, `${pp}.geometry.shape`, collector);
-    if (part.geometry.type === "mesh")
-      validateMesh(
-        part.geometry.mesh,
-        `${pp}.geometry.mesh`,
-        boneNames,
-        collector,
-      );
+    switch (part.geometry.type) {
+      case "primitive":
+        validateExtents(part.geometry.shape, `${pp}.geometry.shape`, collector);
+        break;
+      case "mesh":
+        validateMesh(
+          part.geometry.mesh,
+          `${pp}.geometry.mesh`,
+          boneNames,
+          collector,
+        );
+        break;
+      default: {
+        const unknown = part.geometry as { type: unknown };
+        collector.push(
+          "type",
+          `${pp}.geometry.type`,
+          `unknown geometry type "${String(unknown.type)}"`,
+          unknown.type,
+        );
+        break;
+      }
+    }
     if (part.transform !== null)
       validateTransformScalars({
         transform: part.transform,
