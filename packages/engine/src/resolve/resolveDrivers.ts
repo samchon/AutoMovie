@@ -228,7 +228,9 @@ const validateDrivenCurve = (curve: [number, number][]): void => {
 
   let previousX: number | null = null;
   for (let i = 0; i < curve.length; ++i) {
-    const [x, y] = curve[i]!;
+    const point = curve[i]!;
+    validateDrivenCurvePoint(i, point);
+    const [x, y] = point;
     validateDrivenFinite(`curve[${i}].x`, x);
     validateDrivenFinite(`curve[${i}].y`, y);
     if (previousX !== null && x <= previousX)
@@ -237,6 +239,18 @@ const validateDrivenCurve = (curve: [number, number][]): void => {
       );
     previousX = x;
   }
+};
+
+const validateDrivenCurvePoint = (
+  index: number,
+  point: [number, number],
+): void => {
+  if (!Array.isArray(point))
+    throw new Error(`driven driver curve[${index}] point must be an array`);
+  if (point.length !== 2)
+    throw new Error(
+      `driven driver curve[${index}] point must contain exactly 2 entries, but had ${point.length}`,
+    );
 };
 
 const validateDrivenFinite = (label: string, value: number): void => {
