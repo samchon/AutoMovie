@@ -158,6 +158,11 @@ const validateTrackShape = (track: IAutoMovieTrack, key: string): void => {
     throw new Error(`track "${key}" must have keyframes to sample`);
   if (values.length === 0)
     throw new Error(`track "${key}" values must not be empty`);
+  for (let i = 0; i < values.length; ++i)
+    if (!Number.isFinite(values[i]!))
+      throw new Error(
+        `track "${key}" values[${i}] must be finite, but was ${values[i]!}`,
+      );
 
   for (const time of times)
     if (!Number.isFinite(time))
