@@ -69,6 +69,8 @@ const run = (steps: number): Map<string, number[]> => {
  * 5. A `center` reference subtracts body locomotion from inertia: after the
  *    center/root/joint translate together, the joint remains on its rest offset
  *    instead of whipping from the center's world delta.
+ * 6. `hitRadius` is a physical collision radius and rejects non-finite or
+ *    non-positive values before the integrator reads transform inputs.
  */
 export const test_resolve_spring = (): void => {
   const w = run(180);
@@ -150,6 +152,27 @@ export const test_resolve_spring = (): void => {
     "spring driver drag",
     "between 0 and 1",
     "1.1",
+  ]);
+  invalid("spring rejects NaN hit radius", { hitRadius: Number.NaN }, 1 / 60, [
+    "spring driver hitRadius",
+    "finite",
+    "NaN",
+  ]);
+  invalid(
+    "spring rejects infinite hit radius",
+    { hitRadius: Infinity },
+    1 / 60,
+    ["spring driver hitRadius", "finite", "Infinity"],
+  );
+  invalid("spring rejects zero hit radius", { hitRadius: 0 }, 1 / 60, [
+    "spring driver hitRadius",
+    "> 0",
+    "0",
+  ]);
+  invalid("spring rejects negative hit radius", { hitRadius: -0.1 }, 1 / 60, [
+    "spring driver hitRadius",
+    "> 0",
+    "-0.1",
   ]);
   invalid(
     "spring rejects infinite gravity power",
