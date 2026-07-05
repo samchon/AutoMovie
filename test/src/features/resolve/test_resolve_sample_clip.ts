@@ -218,4 +218,61 @@ export const test_resolve_sample_clip = (): void => {
       'track "ptr:/x" must have keyframes to sample',
     ),
   );
+
+  TestValidator.predicate(
+    "non-finite sample time rejects",
+    throwsError(
+      () => sampleClip(lin, Number.NaN),
+      ["sampleClip seconds", "finite"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "non-finite clip duration rejects",
+    throwsError(
+      () => sampleClip({ ...lin, duration: Infinity }, 0),
+      ["clip duration", "finite"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "track keyframe times reject NaN",
+    throwsError(
+      () =>
+        sampleClip(clip([track(PTR, [0, Number.NaN], [0, 1], "linear")], 1), 0),
+      ['track "ptr:/x"', "keyframe times", "finite"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "track keyframe times reject duplicates",
+    throwsError(
+      () => sampleClip(clip([track(PTR, [0, 0], [0, 1], "linear")], 1), 0),
+      ['track "ptr:/x"', "strictly increasing"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "track values reject empty payload",
+    throwsError(
+      () => sampleClip(clip([track(PTR, [0], [], "linear")], 1), 0),
+      ['track "ptr:/x"', "values", "must not be empty"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "track values reject uneven keyframe stride",
+    throwsError(
+      () => sampleClip(clip([track(PTR, [0, 1], [0, 1, 2], "linear")], 1), 0),
+      ['track "ptr:/x"', "values length", "divide evenly"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "cubicspline values reject non-triplet stride",
+    throwsError(
+      () => sampleClip(clip([track(PTR, [0], [0, 1], "cubicspline")], 1), 0),
+      ['track "ptr:/x"', "cubicspline", "divisible by 3"],
+    ),
+  );
 };

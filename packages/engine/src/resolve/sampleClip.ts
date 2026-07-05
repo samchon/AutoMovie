@@ -37,6 +37,7 @@ export const sampleClip = (
   clip: IAutoMovieClip,
   seconds: number,
 ): Map<string, IAutoMovieSampledChannel> => {
+  validateSampleTime(seconds, clip.duration);
   const time = normalizeTime(seconds, clip.duration, clip.loop);
   const out = new Map<string, IAutoMovieSampledChannel>();
   for (const track of clip.tracks)
@@ -55,10 +56,8 @@ export const sampleClip = (
  */
 const sampleTrack = (track: IAutoMovieTrack, time: number): number[] => {
   const { times, values, interpolation, channel } = track;
-  if (times.length === 0)
-    throw new Error(
-      `track "${channelKey(channel)}" must have keyframes to sample`,
-    );
+  const key = channelKey(channel);
+  validateTrackShape(track, key);
 
   const cubic = interpolation === "cubicspline";
   // Stored stride per keyframe; cubicspline stores in-tangent/value/out-tangent.
@@ -142,6 +141,41 @@ const slerpArray = (a: number[], b: number[], t: number): number[] => {
 const normalizeQuatArray = (q: number[]): number[] => {
   const n = Quaternion.normalize({ x: q[0]!, y: q[1]!, z: q[2]!, w: q[3]! });
   return [n.x, n.y, n.z, n.w];
+};
+
+const validateSampleTime = (seconds: number, duration: number): void => {
+  if (!Number.isFinite(seconds))
+    throw new Error(`sampleClip seconds must be finite, but was ${seconds}`);
+  if (!Number.isFinite(duration))
+    throw new Error(
+      `sampleClip clip duration must be finite, but was ${duration}`,
+    );
+};
+
+const validateTrackShape = (track: IAutoMovieTrack, key: string): void => {
+  const { times, values, interpolation } = track;
+  if (times.length === 0)
+    throw new Error(`track "${key}" must have keyframes to sample`);
+  if (values.length === 0)
+    throw new Error(`track "${key}" values must not be empty`);
+
+  for (const time of times)
+    if (!Number.isFinite(time))
+      throw new Error(`track "${key}" keyframe times must be finite`);
+
+  for (let i = 1; i < times.length; ++i)
+    if (times[i]! <= times[i - 1]!)
+      throw new Error(
+        `track "${key}" keyframe times must be strictly increasing`,
+      );
+
+  const stride = values.length / times.length;
+  if (!Number.isInteger(stride))
+    throw new Error(
+      `track "${key}" values length must divide evenly by keyframe count`,
+    );
+  if (interpolation === "cubicspline" && stride % 3 !== 0)
+    throw new Error(`track "${key}" cubicspline stride must be divisible by 3`);
 };
 
 /** Clamp (or wrap, when looping) a query time into the clip's duration. */
