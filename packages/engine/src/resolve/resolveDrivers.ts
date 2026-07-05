@@ -195,6 +195,7 @@ const applyDriven = (
   d: IAutoMovieDrivenDriver,
   sampled: Map<string, IAutoMovieSampledChannel>,
 ): void => {
+  validateDrivenClamp(d.clamp);
   if (d.curve == null) validateDrivenRange(d);
   else validateDrivenCurve(d.curve);
   const src = sampled.get(channelKey(d.source));
@@ -205,6 +206,11 @@ const applyDriven = (
       ? evalCurve(x, d.curve)
       : remap(x, d.inRange, d.outRange, d.clamp);
   setChannel(sampled, channelKey(d.output), d.output, [y]);
+};
+
+const validateDrivenClamp = (clamp: boolean): void => {
+  if (typeof clamp !== "boolean")
+    throw new Error(`driven driver clamp must be boolean, but was ${clamp}`);
 };
 
 const validateDrivenRange = (d: IAutoMovieDrivenDriver): void => {
