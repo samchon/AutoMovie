@@ -128,20 +128,50 @@ const toTrack = (
   channel: AnimationChannel,
   idByNode: Map<GLTFNode, string>,
 ): IAutoMovieTrack => {
-  const target = channel.getTargetNode()!;
-  const sampler = channel.getSampler()!;
+  const target = channel.getTargetNode();
+  if (target === null) throw new Error("animation channel must target a node");
+  const targetId = idByNode.get(target)!;
+
+  const sampler = channel.getSampler();
+  if (sampler === null)
+    throw new Error(
+      `animation channel for node "${targetId}" must have a sampler`,
+    );
+
+  const input = sampler.getInput();
+  if (input === null)
+    throw new Error(
+      `animation channel for node "${targetId}" must have input times`,
+    );
+  const output = sampler.getOutput();
+  if (output === null)
+    throw new Error(
+      `animation channel for node "${targetId}" must have output values`,
+    );
+
+  const inputArray = input.getArray();
+  if (inputArray === null)
+    throw new Error(
+      `animation channel for node "${targetId}" input times must have data`,
+    );
+  const outputArray = output.getArray();
+  if (outputArray === null)
+    throw new Error(
+      `animation channel for node "${targetId}" output values must have data`,
+    );
+
   return {
     channel: {
       kind: "node",
-      node: idByNode.get(target)!,
+      node: targetId,
       path: channel.getTargetPath() as
         | "translation"
         | "rotation"
         | "scale"
         | "weights",
     },
-    times: Array.from(sampler.getInput()!.getArray()!),
-    values: Array.from(sampler.getOutput()!.getArray()!),
+    times: Array.from(inputArray),
+    values: Array.from(outputArray),
     interpolation: toInterpolation(sampler.getInterpolation()),
   };
 };

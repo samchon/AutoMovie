@@ -3,12 +3,30 @@ import { IAutoMovieNode } from "@automovie/interface";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const byName = (nodes: IAutoMovieNode[], name: string): IAutoMovieNode => {
   const n = nodes.find((x) => x.name === name);
   if (n === undefined) throw new Error(`node "${name}" missing`);
   return n;
+};
+
+const makeAnimatedDoc = () => {
+  const doc = new Document();
+  const node = doc.createNode("target");
+  doc.createScene().addChild(node);
+  const time = doc
+    .createAccessor()
+    .setType("SCALAR")
+    .setArray(new Float32Array([0, 1]));
+  const values = doc
+    .createAccessor()
+    .setType("VEC3")
+    .setArray(new Float32Array([0, 0, 0, 1, 1, 1]));
+  const sampler = doc.createAnimationSampler();
+  const channel = doc.createAnimationChannel().setTargetPath("translation");
+  doc.createAnimation("bad").addSampler(sampler).addChannel(channel);
+  return { doc, node, time, values, sampler, channel };
 };
 
 /**
@@ -212,4 +230,83 @@ export const test_ingest_document = (): void => {
   const empty = clips.find((c) => c.name === null)!;
   TestValidator.equals("empty clip has no tracks", empty.tracks.length, 0);
   TestValidator.equals("empty clip zero duration", empty.duration, 0);
+
+  const missingTarget = makeAnimatedDoc();
+  missingTarget.sampler
+    .setInput(missingTarget.time)
+    .setOutput(missingTarget.values);
+  missingTarget.channel.setSampler(missingTarget.sampler);
+  TestValidator.predicate(
+    "animation channel without target rejects",
+    throwsError(
+      () => ingestDocument(missingTarget.doc),
+      "animation channel must target a node",
+    ),
+  );
+
+  const missingSampler = makeAnimatedDoc();
+  missingSampler.channel.setTargetNode(missingSampler.node);
+  TestValidator.predicate(
+    "animation channel without sampler rejects",
+    throwsError(
+      () => ingestDocument(missingSampler.doc),
+      'animation channel for node "node_0" must have a sampler',
+    ),
+  );
+
+  const missingInput = makeAnimatedDoc();
+  missingInput.sampler.setOutput(missingInput.values);
+  missingInput.channel
+    .setTargetNode(missingInput.node)
+    .setSampler(missingInput.sampler);
+  TestValidator.predicate(
+    "animation sampler without input rejects",
+    throwsError(
+      () => ingestDocument(missingInput.doc),
+      'animation channel for node "node_0" must have input times',
+    ),
+  );
+
+  const missingOutput = makeAnimatedDoc();
+  missingOutput.sampler.setInput(missingOutput.time);
+  missingOutput.channel
+    .setTargetNode(missingOutput.node)
+    .setSampler(missingOutput.sampler);
+  TestValidator.predicate(
+    "animation sampler without output rejects",
+    throwsError(
+      () => ingestDocument(missingOutput.doc),
+      'animation channel for node "node_0" must have output values',
+    ),
+  );
+
+  const emptyInput = makeAnimatedDoc();
+  emptyInput.sampler
+    .setInput(emptyInput.doc.createAccessor().setType("SCALAR"))
+    .setOutput(emptyInput.values);
+  emptyInput.channel
+    .setTargetNode(emptyInput.node)
+    .setSampler(emptyInput.sampler);
+  TestValidator.predicate(
+    "animation input accessor without data rejects",
+    throwsError(
+      () => ingestDocument(emptyInput.doc),
+      'animation channel for node "node_0" input times must have data',
+    ),
+  );
+
+  const emptyOutput = makeAnimatedDoc();
+  emptyOutput.sampler
+    .setInput(emptyOutput.time)
+    .setOutput(emptyOutput.doc.createAccessor().setType("VEC3"));
+  emptyOutput.channel
+    .setTargetNode(emptyOutput.node)
+    .setSampler(emptyOutput.sampler);
+  TestValidator.predicate(
+    "animation output accessor without data rejects",
+    throwsError(
+      () => ingestDocument(emptyOutput.doc),
+      'animation channel for node "node_0" output values must have data',
+    ),
+  );
 };
