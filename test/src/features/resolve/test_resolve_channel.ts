@@ -2,6 +2,8 @@ import { channelIsRotation, channelKey } from "@automovie/engine";
 import { IAutoMovieChannel } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 const node = (
   id: string,
   path: "translation" | "rotation" | "scale" | "weights",
@@ -23,6 +25,8 @@ const pointer = (
  * 2. `channelIsRotation` is true exactly for a node `rotation` path and a pointer
  *    whose `valueType` is `quaternion`; every other node path and pointer type
  *    is false — both sides of each discriminator.
+ * 3. Unknown channel discriminator values reject instead of falling through to
+ *    pointer behavior.
  */
 export const test_resolve_channel = (): void => {
   // 1. keys
@@ -57,5 +61,19 @@ export const test_resolve_channel = (): void => {
     "pointer scalar is not rotation",
     channelIsRotation(pointer("/materials/0/metallic", "scalar")),
     false,
+  );
+
+  const forged = {
+    kind: "bone",
+    pointer: "/bad",
+    valueType: "scalar",
+  } as unknown as IAutoMovieChannel;
+  TestValidator.predicate(
+    "unknown channel kind rejects keying",
+    throwsError(() => channelKey(forged), ["channel kind", "bone"]),
+  );
+  TestValidator.predicate(
+    "unknown channel kind rejects rotation check",
+    throwsError(() => channelIsRotation(forged), ["channel kind", "bone"]),
   );
 };
