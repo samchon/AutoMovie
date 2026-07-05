@@ -46,6 +46,9 @@ export const sampleMotion = (
   seconds: number,
 ): IAutoMovieMotionSample => {
   const frames = motion.keyframes;
+  if (frames.length === 0)
+    throw new Error(`motion "${motion.id}" must have keyframes to sample`);
+
   const time = normalizeTime(seconds, motion.duration, motion.loop);
 
   if (time <= frames[0]!.time) return toSample(motion, frames[0]!);

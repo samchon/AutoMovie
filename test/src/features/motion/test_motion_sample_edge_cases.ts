@@ -9,7 +9,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const flex = (
   m: IAutoMovieMotion,
@@ -171,5 +171,13 @@ export const test_motion_sample_edge_cases = (): void => {
   TestValidator.predicate(
     "blendshapes only at start → jawOpen 0.5",
     nclose(startChannels.get("jawOpen") ?? -1, 0.5),
+  );
+
+  TestValidator.predicate(
+    "empty motion keyframes reject sampling",
+    throwsError(
+      () => sampleMotion(makeMotion([], 1), 0),
+      'motion "motion-1" must have keyframes to sample',
+    ),
   );
 };
