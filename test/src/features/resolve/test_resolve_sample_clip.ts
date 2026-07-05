@@ -71,6 +71,8 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  * 12. A forged interpolation mode rejects instead of falling through to linear.
  * 13. Fixed-width channels reject tracks whose flattened value width does not match
  *     the channel's declared width, while `weights` remains variable-width.
+ * 14. Negative timeline values reject instead of being normalized into a
+ *     zero-duration or pre-roll sample.
  */
 export const test_resolve_sample_clip = (): void => {
   // 1. linear vec3
@@ -250,6 +252,14 @@ export const test_resolve_sample_clip = (): void => {
   );
 
   TestValidator.predicate(
+    "negative clip duration rejects",
+    throwsError(
+      () => sampleClip({ ...lin, duration: -1 }, 0),
+      ["clip duration", "non-negative", "-1"],
+    ),
+  );
+
+  TestValidator.predicate(
     "non-boolean clip loop rejects",
     throwsError(
       () => sampleClip({ ...lin, loop: "false" as unknown as boolean }, 2),
@@ -285,6 +295,14 @@ export const test_resolve_sample_clip = (): void => {
       () =>
         sampleClip(clip([track(PTR, [0, Number.NaN], [0, 1], "linear")], 1), 0),
       ['track "ptr:/x"', "keyframe times", "finite"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "track keyframe times reject negative start",
+    throwsError(
+      () => sampleClip(clip([track(PTR, [-0.5, 0.5], [0, 1], "linear")], 1), 0),
+      ['track "ptr:/x"', "keyframe times", "non-negative", "-0.5"],
     ),
   );
 
