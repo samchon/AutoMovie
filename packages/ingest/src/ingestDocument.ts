@@ -154,10 +154,18 @@ const toTrack = (
     throw new Error(
       `animation channel for node "${targetId}" input times must have data`,
     );
+  if (inputArray.length === 0)
+    throw new Error(
+      `animation channel for node "${targetId}" input times must not be empty`,
+    );
   const outputArray = output.getArray();
   if (outputArray === null)
     throw new Error(
       `animation channel for node "${targetId}" output values must have data`,
+    );
+  if (outputArray.length === 0)
+    throw new Error(
+      `animation channel for node "${targetId}" output values must not be empty`,
     );
 
   return {
