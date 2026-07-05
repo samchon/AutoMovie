@@ -35,7 +35,18 @@ export const resolveBeatEnd = (props: {
   /** Motion clips referenced by scene nodes and shot performances. */
   motions: IAutoMovieMotion[];
 }): IAutoMovieBeatEndState => {
-  const motionById = new Map(props.motions.map((m) => [m.id, m]));
+  const motionById = new Map<
+    string,
+    { motion: IAutoMovieMotion; index: number }
+  >();
+  props.motions.forEach((motion, index) => {
+    const existing = motionById.get(motion.id);
+    if (existing !== undefined)
+      throw new Error(
+        `motion "${motion.id}" is duplicated at props.motions[${index}].id; first declared at props.motions[${existing.index}].id`,
+      );
+    motionById.set(motion.id, { motion, index });
+  });
   const performanceByNode = new Map(
     props.shot.performances.map((p) => [p.node, p]),
   );
@@ -63,7 +74,7 @@ export const resolveBeatEnd = (props: {
         node,
         motionId,
         localTime,
-        sampleMotion(motion, localTime).pose,
+        sampleMotion(motion.motion, localTime).pose,
       );
     }),
   };
