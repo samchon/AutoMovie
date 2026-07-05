@@ -74,10 +74,18 @@ export const sequenceTimeline = (
   sequence: IAutoMovieSequence,
   shots: IAutoMovieShot[],
 ): IAutoMoviePlaybackTimeline => {
+  if (sequence.shots.length === 0)
+    throw new Error(`sequence "${sequence.id}" must contain at least one shot`);
+
   const byId = indexShots(shots);
   const entries: IAutoMoviePlaybackEntry[] = [];
   let cursor = 0;
   sequence.shots.forEach((entry, i) => {
+    if (i === 0 && entry.transition !== null)
+      throw new Error(
+        "sequence.shots[0].transition has nothing to transition from",
+      );
+
     const found = byId.get(entry.shot);
     if (found === undefined)
       throw new Error(
@@ -143,6 +151,11 @@ export const playbackFrameSamples = (
   sequence: IAutoMovieSequence,
   shots: IAutoMovieShot[],
 ): IAutoMoviePlaybackSample[] => {
+  if (!Number.isFinite(sequence.fps) || !(sequence.fps > 0))
+    throw new Error(
+      `sequence fps must be a finite number > 0, but was ${sequence.fps}`,
+    );
+
   const { runtime } = sequenceTimeline(sequence, shots);
   const count = Math.round(runtime * sequence.fps);
   return Array.from(
