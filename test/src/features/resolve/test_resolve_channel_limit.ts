@@ -5,6 +5,8 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
 const CHANNEL: IAutoMovieChannel = {
   kind: "node",
   node: "n",
@@ -60,5 +62,29 @@ export const test_resolve_channel_limit = (): void => {
     "in-range has no violations",
     inside.violations.length,
     0,
+  );
+
+  TestValidator.predicate(
+    "non-finite channel value rejects",
+    throwsError(
+      () => applyChannelLimit([1, Number.NaN, 3], limit(null, null)),
+      ["node:n:translation", "value[1]", "finite", "NaN"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "non-finite min bound rejects",
+    throwsError(
+      () => applyChannelLimit([1, 2, 3], limit([0, Infinity, null], null)),
+      ["node:n:translation", "min[1]", "finite", "Infinity"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "non-finite max bound rejects",
+    throwsError(
+      () => applyChannelLimit([1, 2, 3], limit(null, [10, Number.NaN, null])),
+      ["node:n:translation", "max[1]", "finite", "NaN"],
+    ),
   );
 };

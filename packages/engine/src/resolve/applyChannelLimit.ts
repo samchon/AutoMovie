@@ -1,5 +1,7 @@
 import { IAutoMovieChannelLimit } from "@automovie/interface";
 
+import { channelKey } from "./channel";
+
 /** One component of a channel value that exceeded its bound and was clamped. */
 export interface IAutoMovieClampViolation {
   /** Index of the offending component within the channel value vector. */
@@ -41,6 +43,11 @@ export const applyChannelLimit = (
   value: number[],
   limit: IAutoMovieChannelLimit,
 ): IAutoMovieClampOutcome => {
+  const key = channelKey(limit.channel);
+  validateFiniteValues(value, key);
+  validateFiniteBounds(limit.min, key, "min");
+  validateFiniteBounds(limit.max, key, "max");
+
   const out = value.slice();
   const violations: IAutoMovieClampViolation[] = [];
   for (let i = 0; i < out.length; ++i) {
@@ -66,4 +73,28 @@ export const applyChannelLimit = (
     }
   }
   return { value: out, violations };
+};
+
+const validateFiniteValues = (value: number[], key: string): void => {
+  for (let i = 0; i < value.length; ++i)
+    if (!Number.isFinite(value[i]!))
+      throw new Error(
+        `channel limit "${key}" value[${i}] must be finite, but was ${value[i]!}`,
+      );
+};
+
+const validateFiniteBounds = (
+  bounds: (number | null)[] | null,
+  key: string,
+  side: "min" | "max",
+): void => {
+  if (bounds === null) return;
+  for (let i = 0; i < bounds.length; ++i) {
+    const bound = bounds[i];
+    if (bound === null) continue;
+    if (!Number.isFinite(bound))
+      throw new Error(
+        `channel limit "${key}" ${side}[${i}] must be finite, but was ${bound}`,
+      );
+  }
 };
