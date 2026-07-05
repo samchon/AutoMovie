@@ -13,6 +13,23 @@ const SPEC: IAutoMovieRenderSpec = {
   crf: 18,
 };
 
+const rejectsError = async (
+  task: () => Promise<unknown>,
+  messageIncludes: string | readonly string[] = [],
+): Promise<boolean> => {
+  const fragments =
+    typeof messageIncludes === "string" ? [messageIncludes] : messageIncludes;
+  try {
+    await task();
+    return false;
+  } catch (error) {
+    return (
+      error instanceof Error &&
+      fragments.every((fragment) => error.message.includes(fragment))
+    );
+  }
+};
+
 /**
  * The render orchestration over injected I/O: it captures one frame per
  * scheduled instant in order, then encodes the sequence — pure control flow, so
@@ -51,4 +68,33 @@ export const test_render_video = async (): Promise<void> => {
     "encode received the ffmpeg args",
     matchesFfmpegInvocation(encodeArgs),
   );
+
+  let rejectedCaptures = 0;
+  let rejectedEncodes = 0;
+  const rejectingAdapters: IAutoMovieRenderAdapters = {
+    captureFrame: async () => {
+      ++rejectedCaptures;
+      return "/tmp/unreachable.png";
+    },
+    encode: async () => {
+      ++rejectedEncodes;
+      return "/tmp/unreachable.mp4";
+    },
+  };
+  TestValidator.predicate(
+    "zero-frame render rejects before host io",
+    await rejectsError(
+      () =>
+        renderVideo(
+          { ...SPEC, fps: 0 },
+          1,
+          "/tmp/x",
+          "/tmp/out.mp4",
+          rejectingAdapters,
+        ),
+      ["renderVideo", "at least one frame", "zero frames"],
+    ),
+  );
+  TestValidator.equals("zero-frame render skips capture", rejectedCaptures, 0);
+  TestValidator.equals("zero-frame render skips encode", rejectedEncodes, 0);
 };
