@@ -223,6 +223,22 @@ export const test_resolve_world_drivers = (): void => {
       'world driver aim target node "missing" was not provided',
     ),
   );
+  TestValidator.predicate(
+    "missing child local rejects incomplete recomposition map",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [aim({})],
+          new Map([
+            ["o", W(0, 0, 0)],
+            ["t", W(1, 0, 0)],
+          ]),
+          new Map(),
+          new Map([["o", ["c"]]]),
+        ),
+      'world driver descendant local transform node "c" was not provided',
+    ),
+  );
 };
 
 const node = (id: string): IAutoMovieNode => ({
