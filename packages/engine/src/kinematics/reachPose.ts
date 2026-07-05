@@ -48,6 +48,8 @@ export const reachPose = (
   target: IAutoMovieVector3,
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>,
 ): IAutoMoviePose | null => {
+  if (side !== "left" && side !== "right") return null;
+
   const upperName = side === "left" ? "leftUpperArm" : "rightUpperArm";
   const lowerName = side === "left" ? "leftLowerArm" : "rightLowerArm";
   const handName = side === "left" ? "leftHand" : "rightHand";
