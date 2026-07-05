@@ -115,8 +115,8 @@ const writeBlend = (
   sampled: Map<string, IAutoMovieSampledChannel>,
   nodesById: Map<string, IAutoMovieNode>,
 ): void => {
-  const owner = readTRS(d.owner, path, sampled, nodesById);
-  const source = readTRS(d.source, path, sampled, nodesById);
+  const owner = readTRS(d.owner, "owner", path, sampled, nodesById);
+  const source = readTRS(d.source, "source", path, sampled, nodesById);
   const result = isRotation
     ? slerpArray(owner, source, d.influence)
     : lerpArray(owner, source, d.influence);
@@ -131,13 +131,17 @@ const writeBlend = (
 /** Current value of a node TRS channel: the sampled override, else rest pose. */
 const readTRS = (
   node: string,
+  role: "owner" | "source",
   path: "translation" | "rotation" | "scale",
   sampled: Map<string, IAutoMovieSampledChannel>,
   nodesById: Map<string, IAutoMovieNode>,
 ): number[] => {
+  const nodeDef = nodesById.get(node);
+  if (nodeDef === undefined)
+    throw new Error(`copy driver ${role} node "${node}" was not provided`);
   const hit = sampled.get(`node:${node}:${path}`);
   if (hit !== undefined) return hit.value;
-  const t = nodesById.get(node)!.transform;
+  const t = nodeDef.transform;
   if (path === "translation")
     return [t.translation.x, t.translation.y, t.translation.z];
   if (path === "rotation")
