@@ -158,6 +158,10 @@ const validateSampleTime = (
     throw new Error(
       `sampleClip clip duration must be finite, but was ${duration}`,
     );
+  if (duration < 0)
+    throw new Error(
+      `sampleClip clip duration must be non-negative, but was ${duration}`,
+    );
   if (typeof loop !== "boolean")
     throw new Error(`sampleClip clip loop must be boolean, but was ${loop}`);
 };
@@ -181,6 +185,11 @@ const validateTrackShape = (track: IAutoMovieTrack, key: string): void => {
   for (const time of times)
     if (!Number.isFinite(time))
       throw new Error(`track "${key}" keyframe times must be finite`);
+
+  if (times[0]! < 0)
+    throw new Error(
+      `track "${key}" keyframe times must be non-negative, but first was ${times[0]!}`,
+    );
 
   for (let i = 1; i < times.length; ++i)
     if (times[i]! <= times[i - 1]!)
