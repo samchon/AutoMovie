@@ -1,5 +1,6 @@
 import {
   AutoMovieEasing,
+  IAutoMovieKeyframe,
   IAutoMovieMotion,
   IAutoMovieSkeleton,
   IAutoMovieValidation,
@@ -27,6 +28,8 @@ const MAX_ANGULAR_SPEED_DEG_PER_S = 900;
  * - Keyframe `time` is strictly increasing,
  * - Every keyframe `time` is finite and within `[0, duration]`,
  * - Every keyframe easing name is one of the supported interpolation curves,
+ * - Cubic-bezier keyframes carry finite control points and other keyframes do not
+ *   carry stray control-point data,
  * - Per-axis angular speed between adjacent keyframes stays under a sane bound
  *   (catches teleporting limbs that per-frame validation alone would miss).
  *
@@ -95,6 +98,7 @@ export const validateMotion = (props: {
         `unknown keyframe easing "${String(kf.easing)}"`,
         kf.easing,
       );
+    validateKeyframeBezier(kf, kp, collector);
 
     validatePose({ pose: kf.pose, skeleton, path: `${kp}.pose`, collector });
     if (kf.expression !== null)
@@ -141,6 +145,39 @@ const checkAngularSpeed = (
     }
   }
 };
+
+/** Enforce the easing/control-point pairing documented on IAutoMovieKeyframe. */
+const validateKeyframeBezier = (
+  kf: IAutoMovieKeyframe,
+  kp: string,
+  collector: ViolationCollector,
+): void => {
+  if (kf.easing !== "cubicBezier") {
+    if (kf.bezier !== null)
+      collector.push(
+        "type",
+        `${kp}.bezier`,
+        "keyframe bezier controls are only valid for cubicBezier easing",
+        kf.bezier,
+      );
+    return;
+  }
+
+  if (!isFiniteBezierTuple(kf.bezier))
+    collector.push(
+      "type",
+      `${kp}.bezier`,
+      "cubicBezier keyframes must carry four finite bezier control values",
+      kf.bezier,
+    );
+};
+
+const isFiniteBezierTuple = (
+  value: IAutoMovieKeyframe["bezier"] | unknown,
+): value is [number, number, number, number] =>
+  Array.isArray(value) &&
+  value.length === 4 &&
+  value.every((item) => Number.isFinite(item));
 
 const KEYFRAME_EASINGS = new Set<AutoMovieEasing>([
   "linear",
