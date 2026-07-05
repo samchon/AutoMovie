@@ -45,6 +45,8 @@ const trs = (x: number, y: number, z: number): IAutoMovieTransform => ({
  *    new frame.
  * 2. All flags off: the owner is left exactly as it was (each component takes its
  *    own value), proving the off-side of every flag.
+ * 3. Malformed component flags reject before truthy/falsy coercion can change
+ *    which parent frame components are inherited.
  */
 export const test_resolve_parent_driver = (): void => {
   const s = Math.SQRT1_2;
@@ -93,6 +95,28 @@ export const test_resolve_parent_driver = (): void => {
     "all flags off leaves the owner put",
     vclose(Matrix4.position(world2.get("o")!), { x: 3, y: 4, z: 5 }, 1e-5),
   );
+
+  TestValidator.predicate(
+    "parent driver rejects non-boolean component flag",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [
+            parent({
+              translation: "yes" as unknown as boolean,
+            }),
+          ],
+          new Map([
+            ["o", W({ x: 0, y: 0, z: 0 })],
+            ["p", W({ x: 10, y: 0, z: 0 })],
+          ]),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver parent translation", "boolean", "yes"],
+    ),
+  );
+
   TestValidator.predicate(
     "missing parent-driver owner rejects incomplete world map",
     throwsError(
