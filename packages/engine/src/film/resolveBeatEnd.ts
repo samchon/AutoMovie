@@ -47,15 +47,24 @@ export const resolveBeatEnd = (props: {
       );
     motionById.set(motion.id, { motion, index });
   });
-  const performanceByNode = new Map(
-    props.shot.performances.map((p) => [p.node, p]),
-  );
+  const performanceByNode = new Map<
+    string,
+    { performance: IAutoMovieShot["performances"][number]; index: number }
+  >();
+  props.shot.performances.forEach((performance, index) => {
+    const existing = performanceByNode.get(performance.node);
+    if (existing !== undefined)
+      throw new Error(
+        `performance for node "${performance.node}" is duplicated at props.shot.performances[${index}].node; first declared at props.shot.performances[${existing.index}].node`,
+      );
+    performanceByNode.set(performance.node, { performance, index });
+  });
 
   return {
     beat: props.beat,
     shot: props.shot.id,
     actors: props.scene.nodes.map((node) => {
-      const performance = performanceByNode.get(node.id);
+      const performance = performanceByNode.get(node.id)?.performance;
       const motionId =
         performance === undefined ? node.motion : performance.motion;
       const localTime =
