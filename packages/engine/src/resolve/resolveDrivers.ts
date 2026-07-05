@@ -12,6 +12,14 @@ import { IAutoMovieSampledChannel } from "./sampleClip";
 /** The two channel-space drivers this pass resolves (no world transform needed). */
 type ValueDriver = IAutoMovieCopyDriver | IAutoMovieDrivenDriver;
 
+const VALUE_DRIVER_TYPES = new Set<unknown>(["copy", "driven"]);
+const DEFERRED_DRIVER_TYPES = new Set<unknown>([
+  "aim",
+  "ik",
+  "parent",
+  "spring",
+]);
+
 /**
  * The DRIVE pass for **channel-space** drivers — relationships that compute one
  * channel purely from other channels, with no world-transform dependency:
@@ -38,9 +46,12 @@ export const resolveDrivers = (
 ): IAutoMovieDriver[] => {
   const value: ValueDriver[] = [];
   const deferred: IAutoMovieDriver[] = [];
-  for (const d of drivers)
-    if (d.type === "copy" || d.type === "driven") value.push(d);
-    else deferred.push(d);
+  for (const d of drivers) {
+    const type = (d as { type?: unknown }).type;
+    if (VALUE_DRIVER_TYPES.has(type)) value.push(d as ValueDriver);
+    else if (DEFERRED_DRIVER_TYPES.has(type)) deferred.push(d);
+    else throw new Error(`unknown driver type "${String(type)}"`);
+  }
 
   for (const d of topoSort(value))
     if (d.type === "copy") applyCopy(d, sampled, nodesById);

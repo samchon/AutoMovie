@@ -367,6 +367,7 @@ export const test_resolve_drivers_driven = (): void => {
  * 2. A driver `A` feeding two dependents `B` and `C` ([B, C, A]) resolves once;
  *    both dependents see its output.
  * 3. An `aim` driver is returned in `deferred` and never written.
+ * 4. An unknown driver discriminator rejects instead of being silently deferred.
  */
 export const test_resolve_drivers_order = (): void => {
   // 1. chained, out of order
@@ -440,6 +441,15 @@ export const test_resolve_drivers_order = (): void => {
     "aim is the deferred one",
     (deferred[0] as IAutoMovieDriver).type,
     "aim",
+  );
+
+  const forged = { type: "warp" } as unknown as IAutoMovieDriver;
+  TestValidator.predicate(
+    "unknown driver type rejects",
+    throwsError(
+      () => resolveDrivers([forged], sampled2, new Map()),
+      ["driver type", "warp"],
+    ),
   );
 };
 
