@@ -47,6 +47,7 @@ export const applyChannelLimit = (
   validateFiniteValues(value, key);
   validateFiniteBounds(limit.min, key, "min");
   validateFiniteBounds(limit.max, key, "max");
+  validateOrderedBounds(limit.min, limit.max, key);
 
   const out = value.slice();
   const violations: IAutoMovieClampViolation[] = [];
@@ -95,6 +96,23 @@ const validateFiniteBounds = (
     if (!Number.isFinite(bound))
       throw new Error(
         `channel limit "${key}" ${side}[${i}] must be finite, but was ${bound}`,
+      );
+  }
+};
+
+const validateOrderedBounds = (
+  min: (number | null)[] | null,
+  max: (number | null)[] | null,
+  key: string,
+): void => {
+  if (min === null || max === null) return;
+  const length = Math.max(min.length, max.length);
+  for (let i = 0; i < length; ++i) {
+    const lo = min[i] ?? null;
+    const hi = max[i] ?? null;
+    if (lo !== null && hi !== null && lo > hi)
+      throw new Error(
+        `channel limit "${key}" min[${i}] must be <= max[${i}], but was ${lo} > ${hi}`,
       );
   }
 };

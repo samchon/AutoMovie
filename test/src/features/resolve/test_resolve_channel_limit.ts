@@ -33,6 +33,8 @@ const limit = (
  *    and pre-clamp actual.
  * 3. A value already inside the bounds yields the value verbatim and no violations
  *    (the not-below / not-above sides of both comparisons).
+ * 4. A component with both bounds present rejects when `min > max`, because no
+ *    clamp result can satisfy both sides of that range.
  */
 export const test_resolve_channel_limit = (): void => {
   // 1. both sides null → untouched
@@ -85,6 +87,15 @@ export const test_resolve_channel_limit = (): void => {
     throwsError(
       () => applyChannelLimit([1, 2, 3], limit(null, [10, Number.NaN, null])),
       ["node:n:translation", "max[1]", "finite", "NaN"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "inverted component range rejects",
+    throwsError(
+      () =>
+        applyChannelLimit([7, 2, 3], limit([10, null, null], [5, null, null])),
+      ["node:n:translation", "min[0]", "10", "max[0]", "5"],
     ),
   );
 };
