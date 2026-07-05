@@ -67,6 +67,7 @@ const at = (world: Map<string, number[]>, id: string): IAutoMovieVector3 =>
  *    solved.
  * 7. Invalid influence values reject before the analytic solve reads world
  *    matrices.
+ * 8. Zero-length upper or lower bone segments reject before angle solving.
  */
 export const test_resolve_ik_driver = (): void => {
   // 1. reachable + pole → tip on goal, lengths preserved
@@ -204,6 +205,42 @@ export const test_resolve_ik_driver = (): void => {
           new Map(),
         ),
       ["world driver two-bone IK influence", "between 0 and 1", "1.1"],
+    ),
+  );
+  TestValidator.predicate(
+    "two-bone IK rejects zero upper segment length",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [ik({})],
+          new Map([
+            ["r", W({ x: 0, y: 0, z: 0 })],
+            ["m", W({ x: 0, y: 0, z: 0 })],
+            ["t", W({ x: 0, y: 1, z: 0 })],
+            ["g", W({ x: 0, y: 1, z: 0 })],
+          ]),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver two-bone IK upper bone length", "> 0"],
+    ),
+  );
+  TestValidator.predicate(
+    "two-bone IK rejects zero lower segment length",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [ik({})],
+          new Map([
+            ["r", W({ x: 0, y: 0, z: 0 })],
+            ["m", W({ x: 1, y: 0, z: 0 })],
+            ["t", W({ x: 1, y: 0, z: 0 })],
+            ["g", W({ x: 1, y: 0, z: 0 })],
+          ]),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver two-bone IK lower bone length", "> 0"],
     ),
   );
 
