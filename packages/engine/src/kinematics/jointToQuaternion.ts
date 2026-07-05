@@ -7,6 +7,9 @@ import {
 import { Quaternion } from "../math/Quaternion";
 import { IAutoMovieRestFrame, toRigAngle } from "../rom/restFrame";
 
+const JOINT_AXES = ["flexion", "abduction", "twist"] as const;
+const VECTOR_AXES = ["x", "y", "z"] as const;
+
 /**
  * The bone-local axes the three clinical angles rotate about. Lets a rig whose
  * bone frames are not aligned to the default clinical planes (e.g. a T-pose arm
@@ -28,6 +31,30 @@ export const DEFAULT_JOINT_AXES: IAutoMovieJointAxes = {
   flexion: { x: 1, y: 0, z: 0 },
   abduction: { x: 0, y: 0, z: 1 },
   twist: { x: 0, y: 1, z: 0 },
+};
+
+const readAngle = (
+  joint: Pick<IAutoMovieJointPose, "flexion" | "abduction" | "twist">,
+  axis: (typeof JOINT_AXES)[number],
+  frame: IAutoMovieRestFrame[(typeof JOINT_AXES)[number]] | undefined,
+): number => {
+  const value = joint[axis];
+  if (value !== null && !Number.isFinite(value))
+    throw new Error(
+      `jointToQuaternion ${axis} must be finite or null, but was ${value}`,
+    );
+  return toRigAngle(value, frame) ?? 0;
+};
+
+const assertFiniteAxes = (axes: IAutoMovieJointAxes): void => {
+  for (const jointAxis of JOINT_AXES)
+    for (const vectorAxis of VECTOR_AXES) {
+      const value = axes[jointAxis][vectorAxis];
+      if (!Number.isFinite(value))
+        throw new Error(
+          `jointToQuaternion axes.${jointAxis}.${vectorAxis} must be finite, but was ${value}`,
+        );
+    }
 };
 
 /**
@@ -64,17 +91,18 @@ export const jointToQuaternion = (
   axes: IAutoMovieJointAxes = DEFAULT_JOINT_AXES,
   frame?: IAutoMovieRestFrame,
 ): IAutoMovieQuaternion => {
+  assertFiniteAxes(axes);
   const qFlexion = Quaternion.fromAxisAngle(
     axes.flexion,
-    toRigAngle(joint.flexion, frame?.flexion) ?? 0,
+    readAngle(joint, "flexion", frame?.flexion),
   );
   const qAbduction = Quaternion.fromAxisAngle(
     axes.abduction,
-    toRigAngle(joint.abduction, frame?.abduction) ?? 0,
+    readAngle(joint, "abduction", frame?.abduction),
   );
   const qTwist = Quaternion.fromAxisAngle(
     axes.twist,
-    toRigAngle(joint.twist, frame?.twist) ?? 0,
+    readAngle(joint, "twist", frame?.twist),
   );
   return Quaternion.multiply(qTwist, Quaternion.multiply(qAbduction, qFlexion));
 };
