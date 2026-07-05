@@ -27,6 +27,7 @@ export const ease = (curve: AutoMovieEasing, t: number): number => {
     case "cubicBezier":
       return x; // needs control points — see cubicBezierEasing
   }
+  throw new Error(`unknown easing curve "${String(curve)}"`);
 };
 
 /**
