@@ -1,7 +1,7 @@
 import { solveTwoBoneIK } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 /**
  * Analytic two-bone IK (law of cosines). Pinned against hand geometry.
@@ -46,4 +46,33 @@ export const test_kinematics_two_bone_ik = (): void => {
   const e = solveTwoBoneIK(2, 1, 0.5);
   TestValidator.equals("too near clamped", e.clamped, true);
   TestValidator.predicate("clamped to folded", nclose(e.bend, 0, 1e-4));
+
+  TestValidator.predicate(
+    "NaN upper length rejects",
+    throwsError(
+      () => solveTwoBoneIK(Number.NaN, 1, 1),
+      ["two-bone IK upper length", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "zero lower length rejects",
+    throwsError(
+      () => solveTwoBoneIK(1, 0, 1),
+      ["two-bone IK lower length", "> 0", "0"],
+    ),
+  );
+  TestValidator.predicate(
+    "infinite distance rejects",
+    throwsError(
+      () => solveTwoBoneIK(1, 1, Infinity),
+      ["two-bone IK distance", "finite", "Infinity"],
+    ),
+  );
+  TestValidator.predicate(
+    "negative distance rejects",
+    throwsError(
+      () => solveTwoBoneIK(1, 1, -1),
+      ["two-bone IK distance", "non-negative", "-1"],
+    ),
+  );
 };
