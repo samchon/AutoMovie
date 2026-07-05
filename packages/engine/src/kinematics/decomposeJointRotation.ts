@@ -6,6 +6,30 @@ import { IAutoMovieRestFrame, toClinicalAngle } from "../rom/restFrame";
 import { DEFAULT_JOINT_AXES, IAutoMovieJointAxes } from "./jointToQuaternion";
 
 const RAD2DEG = 180 / Math.PI;
+const QUATERNION_AXES = ["x", "y", "z", "w"] as const;
+const JOINT_AXES = ["flexion", "abduction", "twist"] as const;
+const VECTOR_AXES = ["x", "y", "z"] as const;
+
+const assertFiniteQuaternion = (q: IAutoMovieQuaternion): void => {
+  for (const axis of QUATERNION_AXES) {
+    const value = q[axis];
+    if (!Number.isFinite(value))
+      throw new Error(
+        `decomposeJointRotation quaternion.${axis} must be finite, but was ${value}`,
+      );
+  }
+};
+
+const assertFiniteAxes = (axes: IAutoMovieJointAxes): void => {
+  for (const jointAxis of JOINT_AXES)
+    for (const vectorAxis of VECTOR_AXES) {
+      const value = axes[jointAxis][vectorAxis];
+      if (!Number.isFinite(value))
+        throw new Error(
+          `decomposeJointRotation axes.${jointAxis}.${vectorAxis} must be finite, but was ${value}`,
+        );
+    }
+};
 
 /**
  * The inverse of {@link jointToQuaternion}: recover the clinical angles (flexion
@@ -40,6 +64,9 @@ export const decomposeJointRotation = (
   axes: IAutoMovieJointAxes = DEFAULT_JOINT_AXES,
   frame?: IAutoMovieRestFrame,
 ): { flexion: number; abduction: number; twist: number } => {
+  assertFiniteQuaternion(q);
+  assertFiniteAxes(axes);
+
   // Lift a rig-relative extraction into clinical angles (the inverse of
   // jointToQuaternion's `frame` map); the identity when no frame is given.
   const lift = (rig: {
