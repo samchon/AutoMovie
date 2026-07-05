@@ -3,6 +3,8 @@ import { IAutoMovieQuaternion, IAutoMovieVector3 } from "@automovie/interface";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 
+const VECTOR_AXES = ["x", "y", "z"] as const;
+
 /**
  * The shortest-arc rotation that turns the unit vector `from` onto `to` — the
  * core of an **aim / look-at** driver (a head or eye whose forward axis tracks
@@ -20,6 +22,8 @@ export const aimRotation = (
   from: IAutoMovieVector3,
   to: IAutoMovieVector3,
 ): IAutoMovieQuaternion => {
+  validateVector("from", from);
+  validateVector("to", to);
   const a = Vector3.normalize(from);
   const b = Vector3.normalize(to);
   const d = Vector3.dot(a, b);
@@ -34,4 +38,15 @@ export const aimRotation = (
     Vector3.normalize(Vector3.cross(a, b)),
     (Math.acos(d) * 180) / Math.PI,
   );
+};
+
+const validateVector = (
+  label: "from" | "to",
+  value: IAutoMovieVector3,
+): void => {
+  for (const axis of VECTOR_AXES)
+    if (!Number.isFinite(value[axis]))
+      throw new Error(
+        `aimRotation ${label}.${axis} must be finite, but was ${value[axis]}`,
+      );
 };
