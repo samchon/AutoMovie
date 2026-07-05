@@ -65,6 +65,8 @@ const at = (world: Map<string, number[]>, id: string): IAutoMovieVector3 =>
  * 5. A pole with a null node falls back to the limb's current bend plane.
  * 6. Non-twoBone (`ccd`), wrong-length, and `spring` drivers are deferred, not
  *    solved.
+ * 7. Invalid influence values reject before the analytic solve reads world
+ *    matrices.
  */
 export const test_resolve_ik_driver = (): void => {
   // 1. reachable + pole → tip on goal, lengths preserved
@@ -164,6 +166,46 @@ export const test_resolve_ik_driver = (): void => {
     new Map(),
   );
   TestValidator.equals("ccd / short / spring all deferred", deferred.length, 3);
+
+  TestValidator.predicate(
+    "two-bone IK rejects NaN influence",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [ik({ influence: Number.NaN })],
+          new Map(),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver two-bone IK influence", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "two-bone IK rejects negative influence",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [ik({ influence: -0.1 })],
+          new Map(),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver two-bone IK influence", "between 0 and 1", "-0.1"],
+    ),
+  );
+  TestValidator.predicate(
+    "two-bone IK rejects influence above one",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [ik({ influence: 1.1 })],
+          new Map(),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver two-bone IK influence", "between 0 and 1", "1.1"],
+    ),
+  );
 
   TestValidator.predicate(
     "missing IK root rejects incomplete world map",

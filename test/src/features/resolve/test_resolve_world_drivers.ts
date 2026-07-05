@@ -78,6 +78,7 @@ const runAim = (
  *    target.
  * 6. With a child node, the owner's rotation recomposes the child's world.
  * 7. A non-aim (`ik`) driver is returned deferred, not applied.
+ * 8. Invalid influence values reject before world lookup can run.
  */
 export const test_resolve_world_drivers = (): void => {
   // 1. aim −Z at +X: aim axis → +X, up stays up
@@ -183,6 +184,46 @@ export const test_resolve_world_drivers = (): void => {
   );
   TestValidator.equals("ik deferred", deferred.length, 1);
   TestValidator.equals("ik is the deferred one", deferred[0]!.type, "ik");
+
+  TestValidator.predicate(
+    "aim rejects NaN influence",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [aim({ influence: Number.NaN })],
+          new Map(),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver aim influence", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "aim rejects negative influence",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [aim({ influence: -0.1 })],
+          new Map(),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver aim influence", "between 0 and 1", "-0.1"],
+    ),
+  );
+  TestValidator.predicate(
+    "aim rejects influence above one",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [aim({ influence: 1.1 })],
+          new Map(),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver aim influence", "between 0 and 1", "1.1"],
+    ),
+  );
 
   // childrenIndex: a root is skipped; a second child of one parent appends
   const idx = childrenIndex([
