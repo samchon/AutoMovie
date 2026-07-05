@@ -59,6 +59,20 @@ export const reviewShot = (
   review: IAutoMovieReviewApplication.IWrite,
 ): IAutoMovieShotReview => {
   const out = new ViolationCollector();
+  const beatById = new Map<string, number>();
+  script.beats.forEach((beat, index) => {
+    const existing = beatById.get(beat.id);
+    if (existing !== undefined) {
+      out.push(
+        "type",
+        `$script.beats[${index}].id`,
+        `script beat id "${beat.id}" is duplicated; first declared at $script.beats[${existing}].id`,
+        beat.id,
+      );
+      return;
+    }
+    beatById.set(beat.id, index);
+  });
 
   const validateNonEmptyId = (
     id: string,
@@ -71,7 +85,7 @@ export const reviewShot = (
 
   validateNonEmptyId(review.beat, "$input.beat", "review beat id");
 
-  if (!script.beats.some((b) => b.id === review.beat))
+  if (!beatById.has(review.beat))
     out.push(
       "type",
       "$input.beat",
