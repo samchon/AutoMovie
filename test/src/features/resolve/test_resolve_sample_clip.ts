@@ -68,6 +68,7 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  *     and a zero-duration clip normalizes any time to 0.
  * 11. A forged non-boolean `loop` flag rejects before JavaScript truthiness can
  *     change wrap/clamp semantics.
+ * 12. A forged interpolation mode rejects instead of falling through to linear.
  */
 export const test_resolve_sample_clip = (): void => {
   // 1. linear vec3
@@ -242,6 +243,28 @@ export const test_resolve_sample_clip = (): void => {
     throwsError(
       () => sampleClip({ ...lin, loop: "false" as unknown as boolean }, 2),
       ["clip loop", "boolean", "false"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "unknown interpolation rejects",
+    throwsError(
+      () =>
+        sampleClip(
+          clip(
+            [
+              track(
+                PTR,
+                [0, 1],
+                [0, 1],
+                "bezier" as IAutoMovieTrack["interpolation"],
+              ),
+            ],
+            1,
+          ),
+          0.5,
+        ),
+      ['track "ptr:/x"', "interpolation", "bezier"],
     ),
   );
 
