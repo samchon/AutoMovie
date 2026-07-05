@@ -31,6 +31,22 @@ export const validateModel = (props: {
   const collector = new ViolationCollector();
   const { model } = props;
 
+  validateNonEmptyId(model.id, `${path}.id`, "model id", collector);
+  if (model.asset !== null)
+    validateNonEmptyId(
+      model.asset,
+      `${path}.asset`,
+      "model asset id",
+      collector,
+    );
+  if (model.skeleton !== null)
+    validateNonEmptyId(
+      model.skeleton.id,
+      `${path}.skeleton.id`,
+      "skeleton id",
+      collector,
+    );
+
   const materialIds = new Set(model.materials.map((m) => m.id));
   const boneNames = new Set((model.skeleton?.bones ?? []).map((b) => b.bone));
 
@@ -65,6 +81,14 @@ export const validateModel = (props: {
 
   model.parts.forEach((part, i) => {
     const pp = `${path}.parts[${i}]`;
+    validateNonEmptyId(part.id, `${pp}.id`, "model part id", collector);
+    if (part.material !== null)
+      validateNonEmptyId(
+        part.material,
+        `${pp}.material`,
+        "model part material id",
+        collector,
+      );
     if (part.material !== null && !materialIds.has(part.material))
       collector.push(
         "type",
@@ -111,6 +135,14 @@ export const validateModel = (props: {
 
   model.materials.forEach((m, i) => {
     const mp = `${path}.materials[${i}]`;
+    validateNonEmptyId(m.id, `${mp}.id`, "material id", collector);
+    if (m.baseColorTexture !== null)
+      validateNonEmptyId(
+        m.baseColorTexture,
+        `${mp}.baseColorTexture`,
+        "base color texture id",
+        collector,
+      );
     collector.range(`${mp}.metallic`, m.metallic, 0, 1, "metallic");
     collector.range(`${mp}.roughness`, m.roughness, 0, 1, "roughness");
     collector.range(`${mp}.opacity`, m.opacity, 0, 1, "opacity");
@@ -175,6 +207,16 @@ const validateUniqueValues = (
       );
     seen.add(value);
   }
+};
+
+const validateNonEmptyId = (
+  value: string,
+  path: string,
+  label: string,
+  collector: ViolationCollector,
+): void => {
+  if (value.trim().length === 0)
+    collector.push("type", path, `${label} must be a non-empty id`, value);
 };
 
 const validateSkeletonGraph = (
