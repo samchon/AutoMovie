@@ -89,6 +89,7 @@ const applyAim = (
   localById: Map<string, IAutoMovieTransform>,
   childrenById: Map<string, string[]>,
 ): void => {
+  validateInfluence("aim", d.influence);
   const dec = Matrix4.decompose(readWorld(world, d.owner, "aim owner"));
   const dir = Vector3.subtract(
     Matrix4.position(readWorld(world, d.target, "aim target")),
@@ -141,6 +142,7 @@ const applyTwoBoneIK = (
   localById: Map<string, IAutoMovieTransform>,
   childrenById: Map<string, string[]>,
 ): void => {
+  validateInfluence("two-bone IK", d.influence);
   const rootId = d.chain[0]!;
   const midId = d.chain[1]!;
   const tipId = d.chain[2]!;
@@ -238,6 +240,21 @@ const applyTwoBoneIK = (
 
 const clamp = (x: number, lo: number, hi: number): number =>
   Math.min(hi, Math.max(lo, x));
+
+const validateInfluence = (label: string, influence: number): void => {
+  if (!Number.isFinite(influence))
+    throw new Error(
+      `world driver ${label} influence must be finite, but was ${influence}`,
+    );
+  if (influence < 0)
+    throw new Error(
+      `world driver ${label} influence must be between 0 and 1, but was ${influence}`,
+    );
+  if (influence > 1)
+    throw new Error(
+      `world driver ${label} influence must be between 0 and 1, but was ${influence}`,
+    );
+};
 
 const blendVec = (
   a: IAutoMovieVector3,
