@@ -24,6 +24,19 @@ export interface IAutoMovieRestFrame {
   twist?: IAutoMovieAxisFrame;
 }
 
+const assertAxisFrame = (
+  label: string,
+  frame: IAutoMovieAxisFrame | undefined,
+): void => {
+  if (frame === undefined) return;
+  if (frame.sign !== 1 && frame.sign !== -1)
+    throw new Error(`${label} sign must be 1 or -1, but was ${frame.sign}`);
+  if (!Number.isFinite(frame.neutral))
+    throw new Error(
+      `${label} neutral must be finite, but was ${frame.neutral}`,
+    );
+};
+
 /**
  * A **clinical** angle (what the ROM table and pose authors write) → the
  * **rest-relative** angle the rig actually rotates by: `r = (clinical −
@@ -33,10 +46,13 @@ export interface IAutoMovieRestFrame {
 export const toRigAngle = (
   clinical: number | null,
   frame: IAutoMovieAxisFrame | undefined,
-): number | null =>
-  clinical === null || frame === undefined
+): number | null => {
+  if (clinical === null) return null;
+  assertAxisFrame("rest frame", frame);
+  return frame === undefined
     ? clinical
     : (clinical - frame.neutral) / frame.sign;
+};
 
 /**
  * The **rest-relative** angle the rig rotates by → the **clinical** angle:
@@ -45,13 +61,18 @@ export const toRigAngle = (
 export const toClinicalAngle = (
   rig: number | null,
   frame: IAutoMovieAxisFrame | undefined,
-): number | null =>
-  rig === null || frame === undefined ? rig : frame.sign * rig + frame.neutral;
+): number | null => {
+  if (rig === null) return null;
+  assertAxisFrame("rest frame", frame);
+  return frame === undefined ? rig : frame.sign * rig + frame.neutral;
+};
 
 const shift = (
+  axis: keyof IAutoMovieRestFrame,
   range: IAutoMovieAngleRange | null,
   frame: IAutoMovieAxisFrame | undefined,
 ): IAutoMovieAngleRange | null => {
+  assertAxisFrame(`rest frame ${axis}`, frame);
   if (range === null) return null;
   if (frame === undefined) return range;
   // r = (clinical − neutral) / sign; a sign of −1 flips the interval, so sort.
@@ -73,9 +94,9 @@ export const restRelativeConstraint = (
   clinical: IAutoMovieJointConstraint,
   frame: IAutoMovieRestFrame,
 ): IAutoMovieJointConstraint => ({
-  flexion: shift(clinical.flexion, frame.flexion),
-  abduction: shift(clinical.abduction, frame.abduction),
-  twist: shift(clinical.twist, frame.twist),
+  flexion: shift("flexion", clinical.flexion, frame.flexion),
+  abduction: shift("abduction", clinical.abduction, frame.abduction),
+  twist: shift("twist", clinical.twist, frame.twist),
 });
 
 /**
