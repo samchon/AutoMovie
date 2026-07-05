@@ -79,6 +79,7 @@ const runAim = (
  * 6. With a child node, the owner's rotation recomposes the child's world.
  * 7. A non-aim (`ik`) driver is returned deferred, not applied.
  * 8. Invalid influence values reject before world lookup can run.
+ * 9. Invalid aim basis vectors reject before world lookup can run.
  */
 export const test_resolve_world_drivers = (): void => {
   // 1. aim −Z at +X: aim axis → +X, up stays up
@@ -222,6 +223,58 @@ export const test_resolve_world_drivers = (): void => {
           new Map(),
         ),
       ["world driver aim influence", "between 0 and 1", "1.1"],
+    ),
+  );
+  TestValidator.predicate(
+    "aim rejects non-finite aim axis",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [aim({ aimAxis: { x: Number.NaN, y: 0, z: -1 } })],
+          new Map(),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver aim aimAxis.x", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "aim rejects zero aim axis",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [aim({ aimAxis: { x: 0, y: 0, z: 0 } })],
+          new Map(),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver aim aimAxis", "non-zero"],
+    ),
+  );
+  TestValidator.predicate(
+    "aim rejects zero up axis",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [aim({ upAxis: { x: 0, y: 0, z: 0 } })],
+          new Map(),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver aim upAxis", "non-zero"],
+    ),
+  );
+  TestValidator.predicate(
+    "aim rejects zero world up",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [aim({ worldUp: { x: 0, y: 0, z: 0 } })],
+          new Map(),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver aim worldUp", "non-zero"],
     ),
   );
 
