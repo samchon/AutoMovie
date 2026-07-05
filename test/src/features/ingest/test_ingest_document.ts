@@ -309,4 +309,44 @@ export const test_ingest_document = (): void => {
       'animation channel for node "node_0" output values must have data',
     ),
   );
+
+  const emptyInputArray = makeAnimatedDoc();
+  emptyInputArray.sampler
+    .setInput(
+      emptyInputArray.doc
+        .createAccessor()
+        .setType("SCALAR")
+        .setArray(new Float32Array([])),
+    )
+    .setOutput(emptyInputArray.values);
+  emptyInputArray.channel
+    .setTargetNode(emptyInputArray.node)
+    .setSampler(emptyInputArray.sampler);
+  TestValidator.predicate(
+    "animation input accessor with empty data rejects",
+    throwsError(
+      () => ingestDocument(emptyInputArray.doc),
+      'animation channel for node "node_0" input times must not be empty',
+    ),
+  );
+
+  const emptyOutputArray = makeAnimatedDoc();
+  emptyOutputArray.sampler
+    .setInput(emptyOutputArray.time)
+    .setOutput(
+      emptyOutputArray.doc
+        .createAccessor()
+        .setType("VEC3")
+        .setArray(new Float32Array([])),
+    );
+  emptyOutputArray.channel
+    .setTargetNode(emptyOutputArray.node)
+    .setSampler(emptyOutputArray.sampler);
+  TestValidator.predicate(
+    "animation output accessor with empty data rejects",
+    throwsError(
+      () => ingestDocument(emptyOutputArray.doc),
+      'animation channel for node "node_0" output values must not be empty',
+    ),
+  );
 };
