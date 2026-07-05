@@ -20,11 +20,14 @@ import { Vector3 } from "../math/Vector3";
 export interface IAutoMovieSpringState {
   /** Joint id → its world position last step (empty on the first step). */
   prev: Map<string, IAutoMovieVector3>;
+  /** Center node id -> its world position last step for center-relative inertia. */
+  centers: Map<string, IAutoMovieVector3>;
 }
 
 /** A fresh, empty spring state. */
 export const createSpringState = (): IAutoMovieSpringState => ({
   prev: new Map(),
+  centers: new Map(),
 });
 
 const readWorld = (
@@ -76,6 +79,7 @@ export const stepSpring = (
   localById: Map<string, IAutoMovieTransform>,
 ): void => {
   validateSpringInputs(d, dt);
+  const centerDelta = readCenterDelta(d, world, state);
   const gravity = Vector3.scale(
     Vector3.normalize(d.gravityDir),
     d.gravityPower * dt * dt,
@@ -87,7 +91,7 @@ export const stepSpring = (
     const parentPos = Matrix4.position(parentM);
     const currentM = readWorld(world, id, "joint");
     const cur = Matrix4.position(currentM);
-    const prev = state.prev.get(id) ?? cur;
+    const prev = Vector3.add(state.prev.get(id) ?? cur, centerDelta);
 
     const local = readLocal(localById, id);
     const boneDir = Vector3.normalize(local.translation);
@@ -121,6 +125,19 @@ export const stepSpring = (
     const dec = Matrix4.decompose(currentM);
     world.set(id, Matrix4.compose(next, dec.rotation, dec.scale));
   }
+};
+
+const readCenterDelta = (
+  d: IAutoMovieSpringDriver,
+  world: Map<string, number[]>,
+  state: IAutoMovieSpringState,
+): IAutoMovieVector3 => {
+  if (d.center === null) return Vector3.create();
+
+  const center = Matrix4.position(readWorld(world, d.center, "center"));
+  const prev = state.centers.get(d.center) ?? center;
+  state.centers.set(d.center, center);
+  return Vector3.subtract(center, prev);
 };
 
 const validateSpringInputs = (d: IAutoMovieSpringDriver, dt: number): void => {
