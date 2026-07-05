@@ -47,7 +47,7 @@ export const sampleClip = (
   for (const track of clip.tracks)
     out.set(channelKey(track.channel), {
       channel: track.channel,
-      value: sampleTrack(track, time),
+      value: sampleTrack(track, time, clip.duration),
     });
   return out;
 };
@@ -58,10 +58,14 @@ export const sampleClip = (
  * `cubicspline` evaluates the glTF cubic Hermite spline from the keyframes'
  * tangents.
  */
-const sampleTrack = (track: IAutoMovieTrack, time: number): number[] => {
+const sampleTrack = (
+  track: IAutoMovieTrack,
+  time: number,
+  duration: number,
+): number[] => {
   const { times, values, interpolation, channel } = track;
   const key = channelKey(channel);
-  validateTrackShape(track, key);
+  validateTrackShape(track, key, duration);
 
   const cubic = interpolation === "cubicspline";
   // Stored stride per keyframe; cubicspline stores in-tangent/value/out-tangent.
@@ -166,7 +170,11 @@ const validateSampleTime = (
     throw new Error(`sampleClip clip loop must be boolean, but was ${loop}`);
 };
 
-const validateTrackShape = (track: IAutoMovieTrack, key: string): void => {
+const validateTrackShape = (
+  track: IAutoMovieTrack,
+  key: string,
+  duration: number,
+): void => {
   const { times, values, interpolation, channel } = track;
   if (!TRACK_INTERPOLATIONS.has(interpolation))
     throw new Error(
@@ -196,6 +204,12 @@ const validateTrackShape = (track: IAutoMovieTrack, key: string): void => {
       throw new Error(
         `track "${key}" keyframe times must be strictly increasing`,
       );
+
+  const lastTime = times[times.length - 1]!;
+  if (duration > 0 && lastTime > duration)
+    throw new Error(
+      `track "${key}" keyframe times must be within clip duration ${duration}, but last was ${lastTime}`,
+    );
 
   const stride = values.length / times.length;
   if (!Number.isInteger(stride))
