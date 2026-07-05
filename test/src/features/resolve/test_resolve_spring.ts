@@ -64,6 +64,8 @@ const run = (steps: number): Map<string, number[]> => {
  *    joints ride a unit sphere around their parent.
  * 3. The same inputs replay bit-for-bit (determinism — the property that makes
  *    spring usable in a reproducible render).
+ * 4. Invalid integration parameters reject before the integrator reads world or
+ *    local transforms.
  */
 export const test_resolve_spring = (): void => {
   const w = run(180);
@@ -95,6 +97,76 @@ export const test_resolve_spring = (): void => {
     "deterministic tip",
     vclose(at(w, "j2"), at(w2, "j2"), 0),
   );
+
+  const invalid = (
+    title: string,
+    over: Partial<IAutoMovieSpringDriver>,
+    dt: number,
+    expected: string | string[],
+  ): void =>
+    TestValidator.predicate(
+      title,
+      throwsError(
+        () =>
+          stepSpring(
+            { ...spring, ...over },
+            new Map(),
+            createSpringState(),
+            dt,
+            local,
+          ),
+        expected,
+      ),
+    );
+  invalid("spring rejects NaN time step", {}, Number.NaN, [
+    "spring driver time step",
+    "finite",
+    "NaN",
+  ]);
+  invalid("spring rejects zero time step", {}, 0, [
+    "spring driver time step",
+    "> 0",
+    "0",
+  ]);
+  invalid("spring rejects NaN stiffness", { stiffness: Number.NaN }, 1 / 60, [
+    "spring driver stiffness",
+    "finite",
+    "NaN",
+  ]);
+  invalid("spring rejects NaN drag", { drag: Number.NaN }, 1 / 60, [
+    "spring driver drag",
+    "finite",
+    "NaN",
+  ]);
+  invalid("spring rejects negative drag", { drag: -0.1 }, 1 / 60, [
+    "spring driver drag",
+    "between 0 and 1",
+    "-0.1",
+  ]);
+  invalid("spring rejects drag above one", { drag: 1.1 }, 1 / 60, [
+    "spring driver drag",
+    "between 0 and 1",
+    "1.1",
+  ]);
+  invalid(
+    "spring rejects infinite gravity power",
+    { gravityPower: Infinity },
+    1 / 60,
+    ["spring driver gravityPower", "finite", "Infinity"],
+  );
+  invalid(
+    "spring rejects non-finite gravity direction",
+    { gravityDir: { x: Number.NaN, y: -1, z: 0 } },
+    1 / 60,
+    ["spring driver gravityDir.x", "finite", "NaN"],
+  );
+  invalid(
+    "spring rejects zero gravity direction",
+    { gravityDir: { x: 0, y: 0, z: 0 } },
+    1 / 60,
+    ["spring driver gravityDir", "non-zero"],
+  );
+
   TestValidator.predicate(
     "missing spring parent rejects incomplete world map",
     throwsError(
