@@ -146,6 +146,10 @@ const validateSpringInputs = (d: IAutoMovieSpringDriver, dt: number): void => {
     throw new Error(`spring driver time step must be > 0, but was ${dt}`);
 
   validateSpringFinite("stiffness", d.stiffness);
+  if (d.stiffness < 0)
+    throw new Error(
+      `spring driver stiffness must be non-negative, but was ${d.stiffness}`,
+    );
   validateSpringFinite("drag", d.drag);
   if (d.drag < 0)
     throw new Error(
@@ -161,6 +165,10 @@ const validateSpringInputs = (d: IAutoMovieSpringDriver, dt: number): void => {
       `spring driver hitRadius must be > 0, but was ${d.hitRadius}`,
     );
   validateSpringFinite("gravityPower", d.gravityPower);
+  if (d.gravityPower < 0)
+    throw new Error(
+      `spring driver gravityPower must be non-negative, but was ${d.gravityPower}`,
+    );
   validateSpringVector("gravityDir", d.gravityDir);
   if (Vector3.length(d.gravityDir) === 0)
     throw new Error("spring driver gravityDir must be non-zero");
