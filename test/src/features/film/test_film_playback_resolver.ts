@@ -127,4 +127,32 @@ export const test_film_playback_resolver = (): void => {
       ['sequence shot "shot:missing"', "sequence.shots[0].shot"],
     ),
   );
+  TestValidator.predicate(
+    "empty playback sequence rejects before sampling",
+    throwsError(
+      () => sequenceTimeline({ ...SEQUENCE, shots: [] }, SHOTS),
+      ['sequence "seq"', "at least one shot"],
+    ),
+  );
+  TestValidator.predicate(
+    "first playback transition rejects missing outgoing entry",
+    throwsError(
+      () =>
+        resolveSequencePlayback(
+          {
+            ...SEQUENCE,
+            shots: [
+              {
+                shot: "shot:beat-1",
+                trim: null,
+                transition: { kind: "crossDissolve", duration: 0.5 },
+              },
+            ],
+          },
+          SHOTS,
+          0,
+        ),
+      ["sequence.shots[0].transition", "nothing to transition from"],
+    ),
+  );
 };

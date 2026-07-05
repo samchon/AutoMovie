@@ -2,7 +2,7 @@ import { playbackFrameSamples } from "@automovie/engine";
 import { IAutoMovieSequence, IAutoMovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
@@ -47,5 +47,20 @@ export const test_film_playback_frames = (): void => {
   TestValidator.predicate(
     "local times ride the frame grid",
     samples.every((s, i) => nclose(s.time, (i % 4) / 4)),
+  );
+  TestValidator.predicate(
+    "frame sampling rejects zero fps",
+    throwsError(
+      () => playbackFrameSamples({ ...sequence, fps: 0 }, [shot("a", 1)]),
+      ["sequence fps", "> 0", "0"],
+    ),
+  );
+  TestValidator.predicate(
+    "frame sampling rejects non-finite fps",
+    throwsError(
+      () =>
+        playbackFrameSamples({ ...sequence, fps: Number.NaN }, [shot("a", 1)]),
+      ["sequence fps", "finite", "NaN"],
+    ),
   );
 };
