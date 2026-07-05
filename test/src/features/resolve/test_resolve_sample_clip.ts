@@ -261,6 +261,24 @@ export const test_resolve_sample_clip = (): void => {
   );
 
   TestValidator.predicate(
+    "track values reject NaN",
+    throwsError(
+      () =>
+        sampleClip(clip([track(PTR, [0, 1], [0, Number.NaN], "linear")], 1), 0),
+      ['track "ptr:/x"', "values[1]", "finite", "NaN"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "track values reject infinity",
+    throwsError(
+      () =>
+        sampleClip(clip([track(PTR, [0, 1], [0, Infinity], "linear")], 1), 0),
+      ['track "ptr:/x"', "values[1]", "finite", "Infinity"],
+    ),
+  );
+
+  TestValidator.predicate(
     "track values reject uneven keyframe stride",
     throwsError(
       () => sampleClip(clip([track(PTR, [0, 1], [0, 1, 2], "linear")], 1), 0),
