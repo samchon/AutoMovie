@@ -84,6 +84,8 @@ const driven = (
  *    both sides from the sampled map and overwrites the owner's existing sample
  *    — proving the rest-vs-sample and new-vs-existing branches both ways, and
  *    that the disabled rotation/scale components are left untouched.
+ * 3. Malformed copy flags reject before truthy/falsy coercion can change which
+ *    transform components are copied.
  */
 export const test_resolve_drivers_copy = (): void => {
   // 1. full copy from rest
@@ -185,6 +187,22 @@ export const test_resolve_drivers_copy = (): void => {
           validNodes,
         ),
       ["copy driver influence", "between 0 and 1", "1.1"],
+    ),
+  );
+  TestValidator.predicate(
+    "copy driver rejects non-boolean component flag",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [
+            copy({
+              translation: "yes" as unknown as boolean,
+            }),
+          ],
+          seed([]),
+          validNodes,
+        ),
+      ["copy driver translation", "boolean", "yes"],
     ),
   );
 
