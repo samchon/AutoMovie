@@ -63,11 +63,12 @@ const at = (world: Map<string, number[]>, id: string): IAutoMovieVector3 =>
  *    reaches the goal.
  * 4. A straight limb along Y exercises the other fallback (`cross` with +X).
  * 5. A pole with a null node falls back to the limb's current bend plane.
- * 6. Non-twoBone (`ccd`), wrong-length, and `spring` drivers are deferred, not
+ * 6. A null-node pole with a roll angle twists the bend plane around the goal.
+ * 7. Non-twoBone (`ccd`), wrong-length, and `spring` drivers are deferred, not
  *    solved.
- * 7. Invalid influence values reject before the analytic solve reads world
- *    matrices.
- * 8. Zero-length upper or lower bone segments reject before angle solving.
+ * 8. Invalid influence and pole angle values reject before the analytic solve
+ *    reads world matrices.
+ * 9. Zero-length upper or lower bone segments reject before angle solving.
  */
 export const test_resolve_ik_driver = (): void => {
   // 1. reachable + pole → tip on goal, lengths preserved
@@ -143,8 +144,27 @@ export const test_resolve_ik_driver = (): void => {
     "null-node pole still reaches goal",
     vclose(at(w5, "t"), { x: 1.2, y: 0.5, z: 0 }, 1e-4),
   );
+  const w6 = solve(
+    ik({ pole: { node: null, angle: 90 } }),
+    { x: 0, y: 0, z: 0 },
+    { x: 1, y: 0, z: 0 },
+    { x: 2, y: 0, z: 0 },
+    { x: 1.5, y: 0, z: 0 },
+  );
+  TestValidator.predicate(
+    "pole angle roll reaches goal",
+    vclose(at(w6, "t"), { x: 1.5, y: 0, z: 0 }, 1e-4),
+  );
+  TestValidator.predicate(
+    "pole angle roll preserves upper length",
+    nclose(dist(at(w6, "r"), at(w6, "m")), 1, 1e-4),
+  );
+  TestValidator.predicate(
+    "pole angle roll twists bend plane",
+    vclose(at(w6, "m"), { x: 0.75, y: 0, z: 0.6614378277661477 }, 1e-4),
+  );
 
-  // 6. deferred: ccd solver, wrong-length chain, spring
+  // 7. deferred: ccd solver, wrong-length chain, spring
   const spring: IAutoMovieSpringDriver = {
     type: "spring",
     chain: ["a", "b"],
@@ -205,6 +225,19 @@ export const test_resolve_ik_driver = (): void => {
           new Map(),
         ),
       ["world driver two-bone IK influence", "between 0 and 1", "1.1"],
+    ),
+  );
+  TestValidator.predicate(
+    "two-bone IK rejects NaN pole angle",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [ik({ pole: { node: null, angle: Number.NaN } })],
+          new Map(),
+          new Map(),
+          new Map(),
+        ),
+      ["world driver two-bone IK pole angle", "finite", "NaN"],
     ),
   );
   TestValidator.predicate(

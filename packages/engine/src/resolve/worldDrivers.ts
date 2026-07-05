@@ -148,6 +148,7 @@ const applyTwoBoneIK = (
   childrenById: Map<string, string[]>,
 ): void => {
   validateInfluence("two-bone IK", d.influence);
+  if (d.pole !== null) validatePoleAngle(d.pole.angle);
   const rootId = d.chain[0]!;
   const midId = d.chain[1]!;
   const tipId = d.chain[2]!;
@@ -190,6 +191,11 @@ const applyTwoBoneIK = (
       : upper;
   let axis = Vector3.cross(dir, poleRef);
   if (Vector3.length(axis) < 1e-8) axis = anyPerp(dir);
+  if (d.pole !== null && d.pole.angle !== 0)
+    axis = Quaternion.rotateVector(
+      Quaternion.fromAxisAngle(dir, d.pole.angle),
+      axis,
+    );
   axis = Vector3.normalize(axis);
 
   const cosRoot = clamp(
@@ -266,6 +272,13 @@ const validateInfluence = (label: string, influence: number): void => {
   if (influence > 1)
     throw new Error(
       `world driver ${label} influence must be between 0 and 1, but was ${influence}`,
+    );
+};
+
+const validatePoleAngle = (angle: number): void => {
+  if (!Number.isFinite(angle))
+    throw new Error(
+      `world driver two-bone IK pole angle must be finite, but was ${angle}`,
     );
 };
 
