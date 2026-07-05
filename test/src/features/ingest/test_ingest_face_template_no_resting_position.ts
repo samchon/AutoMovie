@@ -10,7 +10,7 @@ import { throwsError } from "../internal/predicates";
  * one attribute away.
  *
  * Scenario: a primitive carrying only a named morph target (no POSITION)
- * throws.
+ * throws; a POSITION accessor without backing array data also throws.
  */
 export const test_ingest_face_template_no_resting_position = (): void => {
   const doc = new Document();
@@ -33,6 +33,34 @@ export const test_ingest_face_template_no_resting_position = (): void => {
     throwsError(
       () => ingestFaceTemplate(doc),
       "morphed primitive has no POSITION attribute",
+    ),
+  );
+
+  const noRestData = new Document();
+  const noRestDataBuffer = noRestData.createBuffer();
+  const noRestDataPrim = noRestData
+    .createPrimitive()
+    .setAttribute(
+      "POSITION",
+      noRestData.createAccessor().setType("VEC3").setBuffer(noRestDataBuffer),
+    );
+  noRestDataPrim.addTarget(
+    noRestData.createPrimitiveTarget("identity").setAttribute(
+      "POSITION",
+      noRestData
+        .createAccessor()
+        .setType("VEC3")
+        .setArray(new Float32Array([1, 0, 0]))
+        .setBuffer(noRestDataBuffer),
+    ),
+  );
+  noRestData.createMesh("face").addPrimitive(noRestDataPrim);
+
+  TestValidator.predicate(
+    "primitive POSITION without array throws",
+    throwsError(
+      () => ingestFaceTemplate(noRestData),
+      ["morphed primitive POSITION accessor", "no array data"],
     ),
   );
 };
