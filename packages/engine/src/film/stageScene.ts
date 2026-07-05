@@ -112,6 +112,12 @@ export const stageScene = (
   validateNonEmptyId(staging.scene.id, `$input.scene.id`, "scene id");
 
   script.cast.forEach((member, i) => {
+    if (member.modelRef !== null)
+      validateNonEmptyId(
+        member.modelRef,
+        `$script.cast[${i}].modelRef`,
+        "cast model reference",
+      );
     if (!placed.has(member.node))
       out.push(
         "type",
