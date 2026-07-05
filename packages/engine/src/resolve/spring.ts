@@ -75,6 +75,7 @@ export const stepSpring = (
   dt: number,
   localById: Map<string, IAutoMovieTransform>,
 ): void => {
+  validateSpringInputs(d, dt);
   const gravity = Vector3.scale(
     Vector3.normalize(d.gravityDir),
     d.gravityPower * dt * dt,
@@ -120,4 +121,39 @@ export const stepSpring = (
     const dec = Matrix4.decompose(currentM);
     world.set(id, Matrix4.compose(next, dec.rotation, dec.scale));
   }
+};
+
+const validateSpringInputs = (d: IAutoMovieSpringDriver, dt: number): void => {
+  validateSpringFinite("time step", dt);
+  if (dt <= 0)
+    throw new Error(`spring driver time step must be > 0, but was ${dt}`);
+
+  validateSpringFinite("stiffness", d.stiffness);
+  validateSpringFinite("drag", d.drag);
+  if (d.drag < 0)
+    throw new Error(
+      `spring driver drag must be between 0 and 1, but was ${d.drag}`,
+    );
+  if (d.drag > 1)
+    throw new Error(
+      `spring driver drag must be between 0 and 1, but was ${d.drag}`,
+    );
+  validateSpringFinite("gravityPower", d.gravityPower);
+  validateSpringVector("gravityDir", d.gravityDir);
+  if (Vector3.length(d.gravityDir) === 0)
+    throw new Error("spring driver gravityDir must be non-zero");
+};
+
+const validateSpringVector = (
+  label: string,
+  value: IAutoMovieVector3,
+): void => {
+  validateSpringFinite(`${label}.x`, value.x);
+  validateSpringFinite(`${label}.y`, value.y);
+  validateSpringFinite(`${label}.z`, value.z);
+};
+
+const validateSpringFinite = (label: string, value: number): void => {
+  if (!Number.isFinite(value))
+    throw new Error(`spring driver ${label} must be finite, but was ${value}`);
 };
