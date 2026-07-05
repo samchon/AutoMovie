@@ -43,6 +43,10 @@ export const tessellate = (shape: AutoMoviePrimitiveShape): ITessellation => {
         shape.height + 2 * shape.radius,
         16,
       );
+    default: {
+      const unknown = shape as unknown as { type: unknown };
+      throw new Error(`unknown primitive shape "${String(unknown.type)}"`);
+    }
   }
 };
 
