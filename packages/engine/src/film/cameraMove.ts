@@ -183,7 +183,15 @@ export const compileCameraMove = (props: {
         ? (entries[i + 1]?.action.start ?? shotDuration)
         : Math.min(t0 + action.duration, shotDuration);
 
-    const aimFraction = FRAMING_AIM_FRACTION[action.framing];
+    if (
+      !Object.prototype.hasOwnProperty.call(
+        FRAMING_AIM_FRACTION,
+        action.framing,
+      )
+    )
+      throw new Error(`unknown camera framing "${String(action.framing)}"`);
+    const framing = action.framing as keyof typeof FRAMING_AIM_FRACTION;
+    const aimFraction = FRAMING_AIM_FRACTION[framing];
     const aimOffset = subject.height * aimFraction;
     const aimOf = (base: IAutoMovieVector3): IAutoMovieVector3 => ({
       x: base.x,
@@ -192,7 +200,7 @@ export const compileCameraMove = (props: {
     });
     const aim0 = aimOf(subject.base);
 
-    const visible = subject.height * FRAMING_HEIGHT_FRACTION[action.framing];
+    const visible = subject.height * FRAMING_HEIGHT_FRACTION[framing];
     const distance =
       visible / 2 / Math.tan(((camera.fovY / 2) * Math.PI) / 180);
 
