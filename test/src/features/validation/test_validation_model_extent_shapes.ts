@@ -24,11 +24,13 @@ const part = (
  * Primitive extent validation must cover every shape variant, not just the box.
  * Each non-box primitive routes through its own arm of the dimension selector,
  * and a non-positive dimension on any of them is a `range` violation. Pins the
- * sphere / plane / cylinder / cone branches the box-only extent test misses.
+ * sphere / plane / cylinder / cone / capsule branches the box-only extent test
+ * misses.
  *
- * Scenario: a model with four bad parts — a zero-radius sphere, a zero-width
- * plane, a zero-height cylinder, and a zero-radius cone. Validation must fail,
- * flagging the offending dimension of each (`radius`, `width`, `height`).
+ * Scenario: a model with five bad parts: a zero-radius sphere, a zero-width
+ * plane, a zero-height cylinder, a zero-radius cone, and a zero-height capsule.
+ * Validation must fail, flagging the offending dimension of each (`radius`,
+ * `width`, `height`).
  */
 export const test_validation_model_extent_shapes = (): void => {
   const model = {
@@ -39,6 +41,7 @@ export const test_validation_model_extent_shapes = (): void => {
       part("plane", { type: "plane", width: 0, depth: 1 }),
       part("cylinder", { type: "cylinder", radius: 0.2, height: 0 }),
       part("cone", { type: "cone", radius: 0, height: 1 }),
+      part("capsule", { type: "capsule", radius: 0.2, height: 0 }),
     ],
   };
   const result = validateModel({ model });
@@ -52,7 +55,7 @@ export const test_validation_model_extent_shapes = (): void => {
     hasViolation(result, "range", ".width"),
   );
   TestValidator.predicate(
-    "cylinder height flagged",
+    "cylinder/capsule height flagged",
     hasViolation(result, "range", ".height"),
   );
 };

@@ -155,32 +155,51 @@ export const validateModel = (props: {
 };
 
 /**
- * Push a `range` violation for any non-finite or non-positive primitive
- * dimension.
+ * Push a `type` violation for an unknown primitive shape, or a `range`
+ * violation for any non-finite or non-positive primitive dimension.
  */
 const validateExtents = (
   shape: AutoMoviePrimitiveShape,
   path: string,
   collector: ViolationCollector,
 ): void => {
-  const dims: ReadonlyArray<readonly [string, number]> =
-    shape.type === "box"
-      ? [
-          ["width", shape.width],
-          ["height", shape.height],
-          ["depth", shape.depth],
-        ]
-      : shape.type === "sphere"
-        ? [["radius", shape.radius]]
-        : shape.type === "plane"
-          ? [
-              ["width", shape.width],
-              ["depth", shape.depth],
-            ]
-          : [
-              ["radius", shape.radius],
-              ["height", shape.height],
-            ];
+  let dims: ReadonlyArray<readonly [string, number]>;
+  switch (shape.type) {
+    case "box":
+      dims = [
+        ["width", shape.width],
+        ["height", shape.height],
+        ["depth", shape.depth],
+      ];
+      break;
+    case "sphere":
+      dims = [["radius", shape.radius]];
+      break;
+    case "plane":
+      dims = [
+        ["width", shape.width],
+        ["depth", shape.depth],
+      ];
+      break;
+    case "cylinder":
+    case "cone":
+    case "capsule":
+      dims = [
+        ["radius", shape.radius],
+        ["height", shape.height],
+      ];
+      break;
+    default: {
+      const unknown = shape as { type: unknown };
+      collector.push(
+        "type",
+        `${path}.type`,
+        `unknown primitive shape "${String(unknown.type)}"`,
+        unknown.type,
+      );
+      return;
+    }
+  }
   for (const [name, value] of dims)
     if (!Number.isFinite(value) || value <= 0)
       collector.push(
