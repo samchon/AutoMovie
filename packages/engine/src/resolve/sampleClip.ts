@@ -44,11 +44,14 @@ export const sampleClip = (
   validateSampleTime(seconds, clip.duration, clip.loop);
   const time = normalizeTime(seconds, clip.duration, clip.loop);
   const out = new Map<string, IAutoMovieSampledChannel>();
-  for (const track of clip.tracks)
-    out.set(channelKey(track.channel), {
+  for (const track of clip.tracks) {
+    const key = channelKey(track.channel);
+    if (out.has(key)) throw new Error(`duplicate track channel "${key}"`);
+    out.set(key, {
       channel: track.channel,
       value: sampleTrack(track, time, clip.duration),
     });
+  }
   return out;
 };
 
