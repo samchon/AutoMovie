@@ -11,6 +11,8 @@ import type {
   Node as GLTFNode,
 } from "@gltf-transform/core";
 
+type AutoMovieNodeTrackPath = "translation" | "rotation" | "scale" | "weights";
+
 /** The automovie-core payload an imported glTF/GLB resolves to. */
 export interface IAutoMovieIngestResult {
   /** The scene graph as a flat list of core nodes (parent by id reference). */
@@ -168,19 +170,25 @@ const toTrack = (
       `animation channel for node "${targetId}" output values must not be empty`,
     );
 
+  const targetPath = channel.getTargetPath() as AutoMovieNodeTrackPath;
+  const interpolation = toInterpolation(sampler.getInterpolation());
+  validateOutputArity({
+    targetId,
+    targetPath,
+    interpolation,
+    keyframes: inputArray.length,
+    outputValues: outputArray.length,
+  });
+
   return {
     channel: {
       kind: "node",
       node: targetId,
-      path: channel.getTargetPath() as
-        | "translation"
-        | "rotation"
-        | "scale"
-        | "weights",
+      path: targetPath,
     },
     times: Array.from(inputArray),
     values: Array.from(outputArray),
-    interpolation: toInterpolation(sampler.getInterpolation()),
+    interpolation,
   };
 };
 
@@ -190,3 +198,33 @@ const toInterpolation = (interp: string): AutoMovieInterpolation =>
     : interp === "CUBICSPLINE"
       ? "cubicspline"
       : "linear";
+
+const componentCount = (path: AutoMovieNodeTrackPath): number | null =>
+  path === "rotation" ? 4 : path === "weights" ? null : 3;
+
+const validateOutputArity = (props: {
+  targetId: string;
+  targetPath: AutoMovieNodeTrackPath;
+  interpolation: AutoMovieInterpolation;
+  keyframes: number;
+  outputValues: number;
+}): void => {
+  const { targetId, targetPath, interpolation, keyframes, outputValues } =
+    props;
+  const cubicFactor = interpolation === "cubicspline" ? 3 : 1;
+  const perKeyframeGroup = keyframes * cubicFactor;
+  const fixed = componentCount(targetPath);
+  if (fixed !== null) {
+    const expected = perKeyframeGroup * fixed;
+    if (outputValues !== expected)
+      throw new Error(
+        `animation channel for node "${targetId}" ${targetPath} output values length must be ${expected}, but was ${outputValues}`,
+      );
+    return;
+  }
+
+  if (outputValues % perKeyframeGroup !== 0)
+    throw new Error(
+      `animation channel for node "${targetId}" weights output values length must be a multiple of ${perKeyframeGroup}, but was ${outputValues}`,
+    );
+};
