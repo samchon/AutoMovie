@@ -55,6 +55,11 @@ export const renderVideo = async (
   adapters: IAutoMovieRenderAdapters,
 ): Promise<IAutoMovieRenderResult> => {
   const times = frameTimes(spec.fps, durationSeconds);
+  if (times.length === 0)
+    throw new Error(
+      `renderVideo requires at least one frame; fps ${spec.fps} and duration ${durationSeconds} produced zero frames`,
+    );
+
   const frames: string[] = [];
   for (let i = 0; i < times.length; ++i)
     frames.push(await adapters.captureFrame(times[i]!, i, dir));
