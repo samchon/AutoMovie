@@ -60,6 +60,17 @@ export const reviewShot = (
 ): IAutoMovieShotReview => {
   const out = new ViolationCollector();
 
+  const validateNonEmptyId = (
+    id: string,
+    path: string,
+    label: string,
+  ): void => {
+    if (id.trim().length === 0)
+      out.push("type", path, `${label} must be a non-empty id`, id);
+  };
+
+  validateNonEmptyId(review.beat, "$input.beat", "review beat id");
+
   if (!script.beats.some((b) => b.id === review.beat))
     out.push(
       "type",
@@ -84,6 +95,11 @@ export const reviewShot = (
     );
 
   review.notes.forEach((note, i) => {
+    validateNonEmptyId(
+      note.beat,
+      `$input.notes[${i}].beat`,
+      "review note beat id",
+    );
     if (note.beat !== review.beat)
       out.push(
         "type",
