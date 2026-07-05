@@ -90,6 +90,7 @@ export const resolveFrame = (
     input.drivers !== undefined
       ? resolveDrivers(input.drivers, sampled, nodesById)
       : [];
+  validateSampledNodeChannels(sampled, nodesById);
 
   // CONSTRAIN: clamp each sampled channel that carries a limit, in place.
   const violations: IAutoMovieResolveViolation[] = [];
@@ -137,3 +138,16 @@ export const resolveFrame = (
 
 const toVec3 = (a: number[]) => ({ x: a[0]!, y: a[1]!, z: a[2]! });
 const toQuat = (a: number[]) => ({ x: a[0]!, y: a[1]!, z: a[2]!, w: a[3]! });
+
+const validateSampledNodeChannels = (
+  sampled: Map<string, IAutoMovieSampledChannel>,
+  nodesById: Map<string, IAutoMovieNode>,
+): void => {
+  for (const [key, hit] of sampled) {
+    if (hit.channel.kind !== "node") continue;
+    if (!nodesById.has(hit.channel.node))
+      throw new Error(
+        `sampled channel "${key}" references missing node "${hit.channel.node}"`,
+      );
+  }
+};
