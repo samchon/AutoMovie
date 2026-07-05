@@ -1,6 +1,7 @@
 import {
   AutoMovieHumanoidBone,
   IAutoMovieActionCall,
+  IAutoMovieActionTarget,
   IAutoMovieBlockingApplication,
   IAutoMovieCameraAction,
   IAutoMovieClip,
@@ -177,6 +178,23 @@ export const performShot = (props: {
       out.push("type", path, `${label} must be a non-empty id`, id);
   };
 
+  const validateTargetNodeIds = (
+    target: IAutoMovieActionTarget,
+    path: string,
+    label: string,
+  ): void => {
+    if (target.kind === "node")
+      validateNonEmptyId(target.node, `${path}.node`, `${label} node id`);
+    else if (target.kind === "group")
+      target.nodes.forEach((node, j) =>
+        validateNonEmptyId(
+          node,
+          `${path}.nodes[${j}]`,
+          `${label} group node id`,
+        ),
+      );
+  };
+
   validateNonEmptyId(performance.beat, "$input.beat", "beat id");
 
   const beat = script.beats.find((b) => b.id === performance.beat);
@@ -326,12 +344,7 @@ export const performShot = (props: {
     if (action.verb === "frame") {
       const camera =
         typeof action.actor === "string" ? action.actor : action.actor[0]!;
-      if (action.on.kind === "node")
-        validateNonEmptyId(
-          action.on.node,
-          `${base}[${i}].on.node`,
-          "frame target node id",
-        );
+      validateTargetNodeIds(action.on, `${base}[${i}].on`, "frame target");
       if (typeof action.actor !== "string")
         out.push(
           "type",
@@ -387,6 +400,12 @@ export const performShot = (props: {
             `reaction force must be within [0, 1], but was ${action.onHit.force}`,
             action.onHit.force,
           );
+        validateNonEmptyId(
+          action.projectile,
+          `${base}[${i}].projectile`,
+          "launch projectile id",
+        );
+        validateTargetNodeIds(action.at, `${base}[${i}].at`, "launch target");
         const stagedProjectile = nodeIds.has(action.projectile);
         if (!stagedProjectile)
           out.push(
@@ -445,30 +464,34 @@ export const performShot = (props: {
           `emote intensity must be within [0, 1], but was ${action.intensity}`,
           action.intensity,
         );
-      } else if (
-        action.verb === "lookAt" &&
-        resolveTargetPoint(action.to, nodePositions) === null
-      ) {
-        out.push(
-          "type",
-          `${base}[${i}].to`,
-          `a lookAt target must resolve to a point — a node/point/group of placed actors, not "${action.to.kind}"`,
-          action.to,
-        );
-      } else if (
-        action.verb === "reach" &&
-        resolveTargetPoint(action.to, nodePositions) === null
-      ) {
-        out.push(
-          "type",
-          `${base}[${i}].to`,
-          `a reach target must resolve to a point — a node/point/group of placed actors, not "${action.to.kind}"`,
-          action.to,
-        );
+      } else if (action.verb === "lookAt") {
+        validateTargetNodeIds(action.to, `${base}[${i}].to`, "lookAt target");
+        if (resolveTargetPoint(action.to, nodePositions) === null)
+          out.push(
+            "type",
+            `${base}[${i}].to`,
+            `a lookAt target must resolve to a point — a node/point/group of placed actors, not "${action.to.kind}"`,
+            action.to,
+          );
+      } else if (action.verb === "reach") {
+        validateTargetNodeIds(action.to, `${base}[${i}].to`, "reach target");
+        if (resolveTargetPoint(action.to, nodePositions) === null)
+          out.push(
+            "type",
+            `${base}[${i}].to`,
+            `a reach target must resolve to a point — a node/point/group of placed actors, not "${action.to.kind}"`,
+            action.to,
+          );
       } else if (
         action.verb === "gesture" &&
         (action.kind === "point" || action.kind === "strike")
       ) {
+        if (action.at !== undefined)
+          validateTargetNodeIds(
+            action.at,
+            `${base}[${i}].at`,
+            `${action.kind} gesture target`,
+          );
         const target =
           action.at === undefined
             ? null
@@ -492,6 +515,11 @@ export const performShot = (props: {
               `an attachTo child "${child}" cannot attach to itself`,
               child,
             );
+        validateNonEmptyId(
+          action.parent,
+          `${base}[${i}].parent`,
+          "attach parent id",
+        );
         const parentRig = nodeIds.has(action.parent)
           ? skeleton(action.parent)
           : null;
