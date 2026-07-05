@@ -155,6 +155,11 @@ const validateSpringInputs = (d: IAutoMovieSpringDriver, dt: number): void => {
     throw new Error(
       `spring driver drag must be between 0 and 1, but was ${d.drag}`,
     );
+  validateSpringFinite("hitRadius", d.hitRadius);
+  if (d.hitRadius <= 0)
+    throw new Error(
+      `spring driver hitRadius must be > 0, but was ${d.hitRadius}`,
+    );
   validateSpringFinite("gravityPower", d.gravityPower);
   validateSpringVector("gravityDir", d.gravityDir);
   if (Vector3.length(d.gravityDir) === 0)
