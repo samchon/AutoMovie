@@ -13,6 +13,8 @@ import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 
+const VECTOR_AXES = ["x", "y", "z"] as const;
+
 /**
  * The world-space DRIVE pass: drivers that need the composed hierarchy (a
  * node's world position/orientation) rather than just other channels. It runs
@@ -90,6 +92,9 @@ const applyAim = (
   childrenById: Map<string, string[]>,
 ): void => {
   validateInfluence("aim", d.influence);
+  validateAimVector("aimAxis", d.aimAxis);
+  validateAimVector("upAxis", d.upAxis);
+  validateAimVector("worldUp", d.worldUp);
   const dec = Matrix4.decompose(readWorld(world, d.owner, "aim owner"));
   const dir = Vector3.subtract(
     Matrix4.position(readWorld(world, d.target, "aim target")),
@@ -254,6 +259,19 @@ const validateInfluence = (label: string, influence: number): void => {
     throw new Error(
       `world driver ${label} influence must be between 0 and 1, but was ${influence}`,
     );
+};
+
+const validateAimVector = (
+  label: "aimAxis" | "upAxis" | "worldUp",
+  value: IAutoMovieVector3,
+): void => {
+  for (const axis of VECTOR_AXES)
+    if (!Number.isFinite(value[axis]))
+      throw new Error(
+        `world driver aim ${label}.${axis} must be finite, but was ${value[axis]}`,
+      );
+  if (Vector3.length(value) === 0)
+    throw new Error(`world driver aim ${label} must be non-zero`);
 };
 
 const blendVec = (
