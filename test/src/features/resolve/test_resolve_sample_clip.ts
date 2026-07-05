@@ -75,6 +75,8 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  *     zero-duration or pre-roll sample.
  * 15. Tracks on positive-duration clips reject keyframes after the declared clip
  *     end.
+ * 16. Duplicate track channel keys reject instead of silently overwriting the
+ *     earlier sampled value.
  */
 export const test_resolve_sample_clip = (): void => {
   // 1. linear vec3
@@ -85,6 +87,22 @@ export const test_resolve_sample_clip = (): void => {
   TestValidator.predicate(
     "linear vec3 midpoint",
     close(val(lin, 0.5, "node:n:translation"), [5, 10, 15]),
+  );
+
+  const multi = sampleClip(
+    clip(
+      [
+        track(PTR, [0, 1], [0, 1], "linear"),
+        track(NODE("scale"), [0, 1], [1, 1, 1, 2, 2, 2], "linear"),
+      ],
+      1,
+    ),
+    0.5,
+  );
+  TestValidator.predicate(
+    "distinct channels sample together",
+    close(multi.get("ptr:/x")?.value ?? [], [0.5]) &&
+      close(multi.get("node:n:scale")?.value ?? [], [1.5, 1.5, 1.5]),
   );
 
   // 2. step holds left
@@ -313,6 +331,24 @@ export const test_resolve_sample_clip = (): void => {
     throwsError(
       () => sampleClip(clip([track(PTR, [0, 2], [0, 1], "linear")], 1), 0),
       ['track "ptr:/x"', "clip duration", "1", "2"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "duplicate track channels reject sampling",
+    throwsError(
+      () =>
+        sampleClip(
+          clip(
+            [
+              track(PTR, [0, 1], [0, 1], "linear"),
+              track(PTR, [0, 1], [1, 2], "linear"),
+            ],
+            1,
+          ),
+          0.5,
+        ),
+      ["duplicate track channel", "ptr:/x"],
     ),
   );
 
