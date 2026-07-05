@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose } from "../internal/predicates";
+import { nclose, throwsError, vclose } from "../internal/predicates";
 
 const W = (p: IAutoMovieVector3): number[] =>
   Matrix4.compose(p, { x: 0, y: 0, z: 0, w: 1 }, { x: 1, y: 1, z: 1 });
@@ -94,5 +94,50 @@ export const test_resolve_spring = (): void => {
   TestValidator.predicate(
     "deterministic tip",
     vclose(at(w, "j2"), at(w2, "j2"), 0),
+  );
+  TestValidator.predicate(
+    "missing spring parent rejects incomplete world map",
+    throwsError(
+      () =>
+        stepSpring(
+          spring,
+          new Map([["j1", W({ x: 1, y: 0, z: 0 })]]),
+          createSpringState(),
+          1 / 60,
+          local,
+        ),
+      'spring driver parent node "root" was not provided',
+    ),
+  );
+  TestValidator.predicate(
+    "missing spring joint rejects incomplete world map",
+    throwsError(
+      () =>
+        stepSpring(
+          spring,
+          new Map([["root", W({ x: 0, y: 0, z: 0 })]]),
+          createSpringState(),
+          1 / 60,
+          local,
+        ),
+      'spring driver joint node "j1" was not provided',
+    ),
+  );
+  TestValidator.predicate(
+    "missing spring local transform rejects incomplete local map",
+    throwsError(
+      () =>
+        stepSpring(
+          spring,
+          new Map([
+            ["root", W({ x: 0, y: 0, z: 0 })],
+            ["j1", W({ x: 1, y: 0, z: 0 })],
+          ]),
+          createSpringState(),
+          1 / 60,
+          new Map(),
+        ),
+      'spring driver local transform node "j1" was not provided',
+    ),
   );
 };

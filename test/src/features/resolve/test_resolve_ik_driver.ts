@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose } from "../internal/predicates";
+import { nclose, throwsError, vclose } from "../internal/predicates";
 
 const W = (p: IAutoMovieVector3): number[] =>
   Matrix4.compose(p, { x: 0, y: 0, z: 0, w: 1 }, { x: 1, y: 1, z: 1 });
@@ -164,4 +164,91 @@ export const test_resolve_ik_driver = (): void => {
     new Map(),
   );
   TestValidator.equals("ccd / short / spring all deferred", deferred.length, 3);
+
+  TestValidator.predicate(
+    "missing IK root rejects incomplete world map",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [ik({ chain: ["missing", "m", "t"] })],
+          new Map([
+            ["m", W({ x: 1, y: 0, z: 0 })],
+            ["t", W({ x: 2, y: 0, z: 0 })],
+            ["g", W({ x: 1.5, y: 0, z: 0 })],
+          ]),
+          new Map(),
+          new Map(),
+        ),
+      'world driver two-bone IK root node "missing" was not provided',
+    ),
+  );
+  TestValidator.predicate(
+    "missing IK mid rejects incomplete world map",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [ik({ chain: ["r", "missing", "t"] })],
+          new Map([
+            ["r", W({ x: 0, y: 0, z: 0 })],
+            ["t", W({ x: 2, y: 0, z: 0 })],
+            ["g", W({ x: 1.5, y: 0, z: 0 })],
+          ]),
+          new Map(),
+          new Map(),
+        ),
+      'world driver two-bone IK mid node "missing" was not provided',
+    ),
+  );
+  TestValidator.predicate(
+    "missing IK tip rejects incomplete world map",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [ik({ chain: ["r", "m", "missing"] })],
+          new Map([
+            ["r", W({ x: 0, y: 0, z: 0 })],
+            ["m", W({ x: 1, y: 0, z: 0 })],
+            ["g", W({ x: 1.5, y: 0, z: 0 })],
+          ]),
+          new Map(),
+          new Map(),
+        ),
+      'world driver two-bone IK tip node "missing" was not provided',
+    ),
+  );
+  TestValidator.predicate(
+    "missing IK goal rejects incomplete world map",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [ik({ goal: "missing" })],
+          new Map([
+            ["r", W({ x: 0, y: 0, z: 0 })],
+            ["m", W({ x: 1, y: 0, z: 0 })],
+            ["t", W({ x: 2, y: 0, z: 0 })],
+          ]),
+          new Map(),
+          new Map(),
+        ),
+      'world driver two-bone IK goal node "missing" was not provided',
+    ),
+  );
+  TestValidator.predicate(
+    "missing IK pole rejects incomplete world map",
+    throwsError(
+      () =>
+        resolveWorldDrivers(
+          [ik({ pole: { node: "missing", angle: 0 } })],
+          new Map([
+            ["r", W({ x: 0, y: 0, z: 0 })],
+            ["m", W({ x: 1, y: 0, z: 0 })],
+            ["t", W({ x: 2, y: 0, z: 0 })],
+            ["g", W({ x: 1.5, y: 0, z: 0 })],
+          ]),
+          new Map(),
+          new Map(),
+        ),
+      'world driver two-bone IK pole node "missing" was not provided',
+    ),
+  );
 };

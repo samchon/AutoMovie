@@ -27,6 +27,29 @@ export const createSpringState = (): IAutoMovieSpringState => ({
   prev: new Map(),
 });
 
+const readWorld = (
+  world: Map<string, number[]>,
+  id: string,
+  role: string,
+): number[] => {
+  const matrix = world.get(id);
+  if (matrix === undefined)
+    throw new Error(`spring driver ${role} node "${id}" was not provided`);
+  return matrix;
+};
+
+const readLocal = (
+  localById: Map<string, IAutoMovieTransform>,
+  id: string,
+): IAutoMovieTransform => {
+  const local = localById.get(id);
+  if (local === undefined)
+    throw new Error(
+      `spring driver local transform node "${id}" was not provided`,
+    );
+  return local;
+};
+
 /**
  * Advance one spring ({@link IAutoMovieSpringDriver}) by a fixed timestep with
  * Verlet integration — the deterministic secondary-motion driver (hair, skirt,
@@ -59,12 +82,13 @@ export const stepSpring = (
   for (let i = 1; i < d.chain.length; ++i) {
     const id = d.chain[i]!;
     const parentId = d.chain[i - 1]!;
-    const parentM = world.get(parentId)!;
+    const parentM = readWorld(world, parentId, "parent");
     const parentPos = Matrix4.position(parentM);
-    const cur = Matrix4.position(world.get(id)!);
+    const currentM = readWorld(world, id, "joint");
+    const cur = Matrix4.position(currentM);
     const prev = state.prev.get(id) ?? cur;
 
-    const local = localById.get(id)!;
+    const local = readLocal(localById, id);
     const boneDir = Vector3.normalize(local.translation);
     const boneLength = Vector3.length(local.translation);
 
@@ -93,7 +117,7 @@ export const stepSpring = (
     );
 
     state.prev.set(id, cur);
-    const dec = Matrix4.decompose(world.get(id)!);
+    const dec = Matrix4.decompose(currentM);
     world.set(id, Matrix4.compose(next, dec.rotation, dec.scale));
   }
 };
