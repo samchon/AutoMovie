@@ -2,19 +2,10 @@ import { arrangeMotion, holdMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const spine = (m: ReturnType<typeof makePose>) =>
   m.joints.find((x) => x.bone === "spine");
-
-const throws = (task: () => void): boolean => {
-  try {
-    task();
-    return false;
-  } catch {
-    return true;
-  }
-};
 
 /**
  * `holdMotion` + `arrangeMotion` — the harness PERFORMANCE composer.
@@ -116,16 +107,42 @@ export const test_motion_arrange = (): void => {
   for (const duration of [Number.NaN, 0, -1])
     TestValidator.predicate(
       `hold rejects invalid duration ${duration}`,
-      throws(() => {
-        holdMotion("badHold", "skeleton-1", makePose([]), duration);
-      }),
+      throwsError(
+        () => holdMotion("badHold", "skeleton-1", makePose([]), duration),
+        "hold duration must be finite and positive",
+      ),
     );
 
-  for (const start of [Number.NaN, -1])
+  for (const [start, message] of [
+    [Number.NaN, "motion placement start must be finite"],
+    [-1, "motion placement start must be non-negative"],
+  ] as const)
     TestValidator.predicate(
       `arrange rejects invalid start ${start}`,
-      throws(() => {
-        arrangeMotion("badArrange", [{ start, motion: A }]);
-      }),
+      throwsError(
+        () => arrangeMotion("badArrange", [{ start, motion: A }]),
+        message,
+      ),
+    );
+
+  TestValidator.predicate(
+    "arrange rejects empty placement keyframes",
+    throwsError(
+      () =>
+        arrangeMotion("badArrange", [{ start: 0, motion: makeMotion([], 1) }]),
+      'motion placement "motion-1" must have keyframes',
+    ),
+  );
+
+  for (const duration of [Number.NaN, 0, -1])
+    TestValidator.predicate(
+      `arrange rejects invalid placement duration ${duration}`,
+      throwsError(
+        () =>
+          arrangeMotion("badArrange", [
+            { start: 0, motion: { ...A, duration } },
+          ]),
+        'motion placement "motion-1" duration must be finite and positive',
+      ),
     );
 };
