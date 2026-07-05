@@ -35,6 +35,8 @@ const limit = (
  *    (the not-below / not-above sides of both comparisons).
  * 4. A component with both bounds present rejects when `min > max`, because no
  *    clamp result can satisfy both sides of that range.
+ * 5. Non-null bound components beyond the sampled value width reject instead of
+ *    being silently ignored.
  */
 export const test_resolve_channel_limit = (): void => {
   // 1. both sides null → untouched
@@ -96,6 +98,22 @@ export const test_resolve_channel_limit = (): void => {
       () =>
         applyChannelLimit([7, 2, 3], limit([10, null, null], [5, null, null])),
       ["node:n:translation", "min[0]", "10", "max[0]", "5"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "extra min component rejects",
+    throwsError(
+      () => applyChannelLimit([5], limit([0, 10], null)),
+      ["node:n:translation", "min[1]", "value width", "1", "10"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "extra max component rejects",
+    throwsError(
+      () => applyChannelLimit([5], limit(null, [10, 20])),
+      ["node:n:translation", "max[1]", "value width", "1", "20"],
     ),
   );
 };
