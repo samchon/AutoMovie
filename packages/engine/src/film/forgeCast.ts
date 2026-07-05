@@ -57,13 +57,32 @@ export const forgeCast = (
   forge: IAutoMovieForgeApplication.IWrite,
 ): IAutoMovieForgedCast => {
   const out = new ViolationCollector();
-  const cast = new Map(script.cast.map((c) => [c.node, c]));
+  const cast = new Map<
+    string,
+    {
+      member: IAutoMovieScriptApplication.IWrite["cast"][number];
+      index: number;
+    }
+  >();
+  script.cast.forEach((member, index) => {
+    const existing = cast.get(member.node);
+    if (existing !== undefined) {
+      out.push(
+        "type",
+        `$script.cast[${index}].node`,
+        `script cast node "${member.node}" is duplicated; first declared at $script.cast[${existing.index}].node`,
+        member.node,
+      );
+      return;
+    }
+    cast.set(member.node, { member, index });
+  });
 
   const seen = new Set<string>();
   forge.entries.forEach((entry, i) => {
     const ep = `$input.entries[${i}]`;
-    const member = cast.get(entry.node);
-    if (member === undefined) {
+    const found = cast.get(entry.node);
+    if (found === undefined) {
       out.push(
         "type",
         `${ep}.node`,
@@ -72,6 +91,7 @@ export const forgeCast = (
       );
       return;
     }
+    const { member } = found;
     if (member.modelRef !== null)
       out.push(
         "type",
