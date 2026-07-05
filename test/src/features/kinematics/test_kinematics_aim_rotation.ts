@@ -1,7 +1,7 @@
 import { Quaternion, aimRotation } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { qclose, vclose } from "../internal/predicates";
+import { qclose, throwsError, vclose } from "../internal/predicates";
 
 const X = { x: 1, y: 0, z: 0 };
 const Y = { x: 0, y: 1, z: 0 };
@@ -56,6 +56,20 @@ export const test_kinematics_aim_rotation = (): void => {
         X,
       ),
       Y,
+    ),
+  );
+  TestValidator.predicate(
+    "NaN from vector rejects",
+    throwsError(
+      () => aimRotation({ x: Number.NaN, y: 0, z: 0 }, Y),
+      ["aimRotation from.x", "finite", "NaN"],
+    ),
+  );
+  TestValidator.predicate(
+    "infinite to vector rejects",
+    throwsError(
+      () => aimRotation(X, { x: 0, y: Infinity, z: 0 }),
+      ["aimRotation to.y", "finite", "Infinity"],
     ),
   );
 };
