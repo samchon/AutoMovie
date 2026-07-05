@@ -57,6 +57,17 @@ export const cutSequence = (
   const out = new ViolationCollector();
   const byId = new Map(shots.map((s) => [s.id, s]));
 
+  const validateNonEmptyId = (
+    id: string,
+    path: string,
+    label: string,
+  ): void => {
+    if (id.trim().length === 0)
+      out.push("type", path, `${label} must be a non-empty id`, id);
+  };
+
+  validateNonEmptyId(assemble.sequence.id, "$input.sequence.id", "sequence id");
+
   if (!Number.isFinite(assemble.fps) || !(assemble.fps > 0))
     out.push(
       "range",
@@ -76,6 +87,7 @@ export const cutSequence = (
   let previousPlayed: number | null = null;
   let previousIncomingTransition = 0;
   assemble.entries.forEach((entry, i) => {
+    validateNonEmptyId(entry.shot, `$input.entries[${i}].shot`, "shot id");
     const shot = byId.get(entry.shot);
     if (shot === undefined) {
       out.push(
