@@ -51,6 +51,20 @@ export const blockBeat = (
   blocking: IAutoMovieBlockingApplication.IWrite,
 ): IAutoMovieBlockedBeat => {
   const out = new ViolationCollector();
+  const beatIds = new Map<string, number>();
+  script.beats.forEach((beat, index) => {
+    const existing = beatIds.get(beat.id);
+    if (existing !== undefined) {
+      out.push(
+        "type",
+        `$script.beats[${index}].id`,
+        `script beat id "${beat.id}" is duplicated; first declared at $script.beats[${existing}].id`,
+        beat.id,
+      );
+      return;
+    }
+    beatIds.set(beat.id, index);
+  });
 
   const validateNonEmptyId = (
     id: string,
@@ -63,7 +77,7 @@ export const blockBeat = (
 
   validateNonEmptyId(blocking.beat, "$input.beat", "beat id");
 
-  if (!script.beats.some((b) => b.id === blocking.beat))
+  if (!beatIds.has(blocking.beat))
     out.push(
       "type",
       "$input.beat",
