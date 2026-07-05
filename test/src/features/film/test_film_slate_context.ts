@@ -10,6 +10,7 @@ import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite } from "../internal/filmFixtures";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
+import { throwsError } from "../internal/predicates";
 
 const scene: IAutoMovieScene = {
   id: "scene",
@@ -126,5 +127,27 @@ export const test_film_slate_context = (): void => {
     "absent script remains null",
     readSlateContext({ ...slate, script: null }, { type: "getScript" }),
     null,
+  );
+  TestValidator.predicate(
+    "duplicate shot lookup rejects ambiguous beat",
+    throwsError(
+      () =>
+        readSlateContext(
+          { ...slate, shots: [shot, { ...shot, duration: 2 }] },
+          { type: "getShot", beat: "beat-1" },
+        ),
+      ['shot id "shot:beat-1"', "slate.shots[1].id"],
+    ),
+  );
+  TestValidator.predicate(
+    "duplicate beat-end lookup rejects ambiguous beat",
+    throwsError(
+      () =>
+        readSlateContext(
+          { ...slate, beatEnds: [beatEnd, { ...beatEnd, actors: [] }] },
+          { type: "getBeatEnd", beat: "beat-1" },
+        ),
+      ['beat end "beat-1"', "slate.beatEnds[1].beat"],
+    ),
   );
 };
