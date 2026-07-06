@@ -9,6 +9,14 @@
 
 현재 Tier 3 검증기는 자동 보정기가 아니라 hard rejection 신호다. 작은 수치 오차는 `tolerance`나 `margin`으로 모델링하고, root 이동·stance 변경·액션 변경은 호출자나 상위 하니스가 다시 작성한다.
 
+## Imported humanoid retargeting
+
+`retargetHumanoidMotion`은 stickman 등 정규화된 humanoid skeleton에 작성된 clip을 imported VRM/glTF humanoid skeleton으로 묶는다. joint angle은 clinical 값 그대로 보존하고, 결과 `characterization.target.jointAxes/restFrames`를 FK 또는 viewer playback에 넘겨 target rig-space로 변환한다.
+
+Root motion은 기본적으로 `target rest height / source rest height`로 translation을 스케일한다. Facing은 v1에서 authored root rotation을 보존한다. Target ROM은 skeleton bone constraint가 있으면 그것을 우선하고, 없으면 `DEFAULT_HUMANOID_ROM`을 쓴다.
+
+이 API는 VRM/glTF animation export/import 자체가 아니라 그 전 단계의 retarget decision record다. Exporter나 viewer runtime은 반환된 motion, boneMap, jointAxes, restFrames를 사용해 concrete node animation으로 내리면 된다.
+
 automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 계산·검증한다. AI도 `three.js`도 없다 — 순수 TypeScript.
 
 이 패키지가 automovie의 "검증 가능하면 수렴한다" 사상을 실제로 구현하는 곳이다. 특히 **관절 가동범위(ROM) 검증**이 여기 산다 — 물리적으로 불가능한 포즈를 결정론적으로 거부하고 `IAutoMovieConstraintViolation[]`을 만들어 하니스의 `// ❌` 피드백 재료를 제공한다.

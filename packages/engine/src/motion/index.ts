@@ -9,5 +9,6 @@ export * from "./sampleMotion";
 export * from "./arrange";
 export * from "./locomote";
 export * from "./react";
+export * from "./retargetHumanoidMotion";
 export * from "./sequence";
 export * from "./travel";
