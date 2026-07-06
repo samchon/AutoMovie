@@ -171,11 +171,11 @@ const performances: IAutoMoviePerformanceApplication.IWrite[] = [
     type: "write",
     beat: "face-off",
     plan: "both hold; the camera orbits the waiter in close.",
-  draft: [
-    { verb: "hold", actor: "walker", start: 0, duration: 2.5 },
-    {
-      verb: "emote",
-      actor: "waiter",
+    draft: [
+      { verb: "hold", actor: "walker", start: 0, duration: 2.5 },
+      {
+        verb: "emote",
+        actor: "waiter",
         start: 0,
         duration: 2.5,
         preset: "angry",
