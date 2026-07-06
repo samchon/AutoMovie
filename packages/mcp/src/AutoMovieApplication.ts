@@ -10,12 +10,14 @@ import {
   forgeCast,
   makeActorSynthesizer,
   performShot,
+  readSlateContext,
   stageScene,
 } from "@automovie/engine";
 import {
   AutoMovieEasing,
   AutoMovieHumanoidBone,
   IAutoMovieAssembleApplication,
+  IAutoMovieBeatEndState,
   IAutoMovieBlockingApplication,
   IAutoMovieConstraintViolation,
   IAutoMovieExpression,
@@ -26,21 +28,23 @@ import {
   IAutoMovieMotion,
   IAutoMoviePerformanceApplication,
   IAutoMoviePose,
+  IAutoMovieReviewNote,
+  IAutoMovieScene,
+  IAutoMovieScript,
   IAutoMovieScriptApplication,
   IAutoMovieShot,
   IAutoMovieSkeleton,
+  IAutoMovieSlate,
   IAutoMovieStagingApplication,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
 /**
- * AutoMovie's deterministic motion-control engine, exposed as MCP tools:
- * `stage` places a cast and rigs a scene, `block` plans a beat's coarse
- * movement, `perform` compiles shot motion, `cut` assembles shots, and `forge`
- * builds cast models. Each tool takes structured creative intent and returns
- * the engine's computed result, including the placement, ROM, and continuity
- * violations that make the engine, not the model, the arbiter of physical truth
- * ("engine enforces, model creates").
+ * AutoMovie's deterministic motion-control engine, exposed as MCP tools. Query
+ * tools read slate context; `stage`, `block`, `perform`, `cut`, and `forge`
+ * compute the film pipeline. Each tool takes structured creative intent and
+ * returns the engine's result, including violations that make the engine, not
+ * the model, the arbiter of physical truth ("engine enforces, model creates").
  *
  * `@typia/mcp` derives every tool's JSON schema, and validates requests and
  * responses, straight from this class's method signatures and JSDoc via
@@ -57,6 +61,104 @@ import {
  * @author Samchon
  */
 export class AutoMovieApplication {
+  /**
+   * Read the script slice from a slate. It returns `null` until the SCRIPT
+   * stage has committed a script, so agents can ask for context without
+   * inventing it.
+   *
+   * @param props The slate to query.
+   * @returns The script slice, or null when absent.
+   */
+  public getScript(props: {
+    /** The stored slate slices to read. */ slate: IAutoMovieMcpStoredSlate;
+  }): IAutoMovieGetScriptOutput {
+    return {
+      script: readSlateContext(toStoredSlate(props.slate), {
+        type: "getScript",
+      }) as IAutoMovieScript | null,
+    };
+  }
+
+  /**
+   * Read the staged scene slice from a slate. It returns `null` until STAGING
+   * has committed a scene, letting later tools gate on real state.
+   *
+   * @param props The slate to query.
+   * @returns The staged scene slice, or null when absent.
+   */
+  public getScene(props: {
+    /** The stored slate slices to read. */ slate: IAutoMovieMcpStoredSlate;
+  }): IAutoMovieGetSceneOutput {
+    return {
+      scene: readSlateContext(toStoredSlate(props.slate), {
+        type: "getScene",
+      }) as IAutoMovieScene | null,
+    };
+  }
+
+  /**
+   * Read the shot built for one beat. Missing shots return `null`; duplicate
+   * shot ids throw as an ambiguous slate state.
+   *
+   * @param props The slate and beat id to query.
+   * @returns The matching shot, or null when absent.
+   */
+  public getShot(props: {
+    /** The stored slate slices to read. */
+    slate: IAutoMovieMcpStoredSlate;
+    /** Beat id whose shot should be read. */
+    beat: string;
+  }): IAutoMovieGetShotOutput {
+    return {
+      shot: readSlateContext(toStoredSlate(props.slate), {
+        type: "getShot",
+        beat: props.beat,
+      }) as IAutoMovieShot | null,
+    };
+  }
+
+  /**
+   * Read review notes from a slate. Omitting `beat` returns the full open
+   * backlog; providing it scopes the notes to one beat.
+   *
+   * @param props The slate and optional beat filter to query.
+   * @returns The matching review notes.
+   */
+  public getNotes(props: {
+    /** The stored slate slices to read. */
+    slate: IAutoMovieMcpStoredSlate;
+    /** Optional beat id filter. */
+    beat?: string;
+  }): IAutoMovieGetNotesOutput {
+    return {
+      notes: readSlateContext(toStoredSlate(props.slate), {
+        type: "getNotes",
+        beat: props.beat,
+      }) as IAutoMovieReviewNote[],
+    };
+  }
+
+  /**
+   * Read the resolved end-state for one beat. Missing entries return `null`;
+   * duplicates throw as an ambiguous slate state.
+   *
+   * @param props The slate and beat id to query.
+   * @returns The matching beat end state, or null when absent.
+   */
+  public getBeatEnd(props: {
+    /** The stored slate slices to read. */
+    slate: IAutoMovieMcpStoredSlate;
+    /** Beat id whose end state should be read. */
+    beat: string;
+  }): IAutoMovieGetBeatEndOutput {
+    return {
+      beatEnd: readSlateContext(toStoredSlate(props.slate), {
+        type: "getBeatEnd",
+        beat: props.beat,
+      }) as IAutoMovieBeatEndState | null,
+    };
+  }
+
   /**
    * Stage a scene -- the first deterministic step. Place the script's cast on
    * the set per the staging plan, resolve every actor/camera/light to a
@@ -223,6 +325,70 @@ const toMcpBezier = (
         x2: bezier[2],
         y2: bezier[3],
       };
+
+const toStoredSlate = (slate: IAutoMovieMcpStoredSlate): IAutoMovieSlate => ({
+  brief: "",
+  script: slate.script,
+  scene: slate.scene,
+  shots: slate.shots,
+  beatEnds: slate.beatEnds,
+  notes: slate.notes,
+  film: null,
+});
+
+/**
+ * Stored slate slices accepted by MCP query tools.
+ *
+ * This is narrower than the full production slate so query schemas stay small:
+ * film assembly is not needed to read script, scene, shots, notes, or beat-end
+ * state.
+ */
+export interface IAutoMovieMcpStoredSlate {
+  /** Committed script, or null before SCRIPT exists. */
+  script: IAutoMovieScript | null;
+
+  /** Committed staged scene, or null before STAGING exists. */
+  scene: IAutoMovieScene | null;
+
+  /** Shots built so far. */
+  shots: IAutoMovieShot[];
+
+  /** Resolved end-state snapshots for built beats. */
+  beatEnds: IAutoMovieBeatEndState[];
+
+  /** Open review notes. */
+  notes: IAutoMovieReviewNote[];
+}
+
+/** The `getScript` query result. */
+export interface IAutoMovieGetScriptOutput {
+  /** The committed script slice, or null until it exists. */
+  script: IAutoMovieScript | null;
+}
+
+/** The `getScene` query result. */
+export interface IAutoMovieGetSceneOutput {
+  /** The committed staged scene, or null until it exists. */
+  scene: IAutoMovieScene | null;
+}
+
+/** The `getShot` query result. */
+export interface IAutoMovieGetShotOutput {
+  /** The shot for the requested beat, or null until it exists. */
+  shot: IAutoMovieShot | null;
+}
+
+/** The `getNotes` query result. */
+export interface IAutoMovieGetNotesOutput {
+  /** Open review notes, optionally filtered by beat. */
+  notes: IAutoMovieReviewNote[];
+}
+
+/** The `getBeatEnd` query result. */
+export interface IAutoMovieGetBeatEndOutput {
+  /** The end-state for the requested beat, or null until it exists. */
+  beatEnd: IAutoMovieBeatEndState | null;
+}
 
 /** The `stage` tool's result (a single object wrapping the engine's union). */
 export interface IAutoMovieStageOutput {
