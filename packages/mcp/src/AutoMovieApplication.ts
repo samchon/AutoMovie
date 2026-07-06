@@ -18,13 +18,13 @@ import {
 } from "@automovie/interface";
 
 /**
- * AutoMovie's deterministic motion-control engine, exposed as MCP tools:
- * `stage` places a cast and rigs a scene, `block` plans a beat's coarse
- * movement, `cut` assembles shots into a sequence, and `forge` builds simple
- * cast models. Each tool takes the model's structured creative intent and
- * returns the engine's computed result — including the placement, ROM, and
- * continuity violations that make the engine, not the model, the arbiter of
- * physical truth ("engine enforces, model creates").
+ * AutoMovie's deterministic 3D film engine, exposed as MCP tools: `stage`
+ * places a cast and rigs a scene, `block` plans a beat's coarse movement, `cut`
+ * assembles shots into a film, and `forge` builds a cast's parametric models.
+ * Each tool takes the model's structured creative intent and returns the
+ * engine's computed result — including the placement, ROM, and continuity
+ * violations that make the engine, not the model, the arbiter of physical truth
+ * ("engine enforces, model creates").
  *
  * `@typia/mcp` derives every tool's JSON schema, and validates requests and
  * responses, straight from this class's method signatures and JSDoc via
@@ -80,13 +80,13 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Cut shots into a sequence — assemble performed shots on the output clock,
-   * applying trims and transitions (a cross-dissolve overlaps the tail).
-   * Returns the cut with its runtime, or the violations if a trim or transition
-   * does not fit its shot.
+   * Cut shots into a film — assemble a sequence of performed shots on the
+   * output clock, applying trims and transitions (a cross-dissolve overlaps the
+   * tail). Returns the cut with its runtime, or the violations if a trim or
+   * transition does not fit its shot.
    *
    * @param props The assemble plan (the ordered entries) and the shots to cut.
-   * @returns The cut sequence on success, or the violations to fix.
+   * @returns The cut film on success, or the violations to fix.
    */
   public cut(props: {
     /** The assemble plan: the ordered shot entries, trims, and transitions. */
@@ -129,7 +129,7 @@ export interface IAutoMovieBlockOutput {
 
 /** The `cut` tool's result. */
 export interface IAutoMovieCutOutput {
-  /** The cut sequence on success, or the assemble violations on failure. */
+  /** The cut film on success, or the assemble violations on failure. */
   cut: IAutoMovieCut;
 }
 

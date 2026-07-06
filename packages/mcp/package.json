@@ -1,7 +1,7 @@
 {
   "name": "@automovie/mcp",
   "version": "0.1.0",
-  "description": "automovie MCP server — deterministic motion-control tools over Model Context Protocol",
+  "description": "automovie MCP server — the deterministic film engine as Model Context Protocol tools",
   "main": "src/index.ts",
   "bin": {
     "automovie-mcp": "lib/bin.js"
