@@ -180,7 +180,10 @@ const readTRS = (
   if (nodeDef === undefined)
     throw new Error(`copy driver ${role} node "${node}" was not provided`);
   const hit = sampled.get(`node:${node}:${path}`);
-  if (hit !== undefined) return hit.value;
+  if (hit !== undefined) {
+    validateCopySampledValue(role, path, hit.value);
+    return hit.value;
+  }
   const t = nodeDef.transform;
   if (path === "translation")
     return [t.translation.x, t.translation.y, t.translation.z];
@@ -188,6 +191,26 @@ const readTRS = (
     return [t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w];
   return [t.scale.x, t.scale.y, t.scale.z];
 };
+
+const validateCopySampledValue = (
+  role: "owner" | "source",
+  path: "translation" | "rotation" | "scale",
+  value: number[],
+): void => {
+  const expected = COPY_SAMPLE_WIDTHS[path];
+  if (!Array.isArray(value))
+    throw new Error(`copy driver ${role} ${path} value must be an array`);
+  if (value.length !== expected)
+    throw new Error(
+      `copy driver ${role} ${path} value must contain exactly ${expected} entries, but had ${value.length}`,
+    );
+};
+
+const COPY_SAMPLE_WIDTHS = {
+  translation: 3,
+  rotation: 4,
+  scale: 3,
+} as const;
 
 // ── driven ───────────────────────────────────────────────────────────────────
 

@@ -86,6 +86,8 @@ const driven = (
  *    that the disabled rotation/scale components are left untouched.
  * 3. Malformed copy flags reject before truthy/falsy coercion can change which
  *    transform components are copied.
+ * 4. Malformed sampled TRS overrides reject before blend or slerp math can
+ *    consume missing, extra, or array-like components.
  */
 export const test_resolve_drivers_copy = (): void => {
   // 1. full copy from rest
@@ -233,6 +235,60 @@ export const test_resolve_drivers_copy = (): void => {
           byId(node("o")),
         ),
       'copy driver source node "ghost" was not provided',
+    ),
+  );
+  TestValidator.predicate(
+    "copy driver rejects short sampled source translation",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [copy({ translation: true })],
+          seed([["node:s:translation", { kind: "node", node: "s", path: "translation" }, [5, 0]]]),
+          validNodes,
+        ),
+      ["copy driver source translation value", "exactly 3", "2"],
+    ),
+  );
+  TestValidator.predicate(
+    "copy driver rejects array-like sampled owner rotation",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [copy({ rotation: true })],
+          seed([
+            [
+              "node:o:rotation",
+              { kind: "node", node: "o", path: "rotation" },
+              {
+                0: 0,
+                1: 0,
+                2: 0,
+                3: 1,
+                length: 4,
+              } as unknown as number[],
+            ],
+          ]),
+          validNodes,
+        ),
+      ["copy driver owner rotation value", "array"],
+    ),
+  );
+  TestValidator.predicate(
+    "copy driver rejects extra sampled source rotation component",
+    throwsError(
+      () =>
+        resolveDrivers(
+          [copy({ rotation: true })],
+          seed([
+            [
+              "node:s:rotation",
+              { kind: "node", node: "s", path: "rotation" },
+              [0, 0, 0, 1, 99],
+            ],
+          ]),
+          validNodes,
+        ),
+      ["copy driver source rotation value", "exactly 4", "5"],
     ),
   );
 };
