@@ -73,10 +73,11 @@ const assemble = (shot: string): IAutoMovieAssembleApplication.IWrite => ({
  *
  * Scenarios:
  *
- * 1. A real stdio client sees the AutoMovie stage and slate-query tools.
- * 2. The same client calls `stage -> getScene -> forge -> block -> perform ->
- *    cut`, feeding structured outputs forward and receiving a successful final
- *    sequence.
+ * 1. A real stdio client sees the AutoMovie stage, slate-query, and geometry query
+ *    tools.
+ * 2. The same client calls `stage -> getScene/measureDistance -> forge -> block ->
+ *    perform -> cut`, feeding structured outputs forward and receiving a
+ *    successful final sequence.
  */
 export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
   const client = new Client({ name: "automovie-test", version: "0.0.0" });
@@ -96,9 +97,12 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
         "forge",
         "getBeatEnd",
         "getNotes",
+        "getReach",
+        "getResolvedPose",
         "getScene",
         "getScript",
         "getShot",
+        "measureDistance",
         "perform",
         "stage",
       ],
@@ -128,6 +132,21 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
       "getScene returns staged scene",
       queriedScene,
       staged.scene,
+    );
+    const measured = (
+      await call<{ measurement: { distance: number } | null }>(
+        client,
+        "measureDistance",
+        {
+          scene: staged.scene,
+          from: { kind: "node", node: "knightA" },
+          to: { kind: "node", node: "knightB" },
+        },
+      )
+    ).measurement;
+    TestValidator.predicate(
+      "measureDistance resolves staged nodes",
+      measured !== null && measured.distance > 0,
     );
 
     const forged = (
