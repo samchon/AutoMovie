@@ -63,6 +63,8 @@ import {
   frameName,
   framePattern,
   frameTimes,
+  planSequenceRender,
+  renderPathStem,
 } from "@automovie/render";
 
 /**
@@ -1498,6 +1500,31 @@ const buildRenderPlan = (props: {
       plan: null,
     };
 
+  if (target!.target.kind === "sequence" && props.slate.film !== null) {
+    const plan = planSequenceRender({
+      sequence: props.slate.film,
+      shots: props.slate.shots,
+      spec: props.spec,
+      frameDir: props.frameDir,
+      outputPath: props.outputPath,
+    });
+    return {
+      validation: { success: true },
+      plan: {
+        target: plan.target,
+        duration: plan.durationSeconds,
+        frameCount: plan.frameCount,
+        times: plan.times,
+        frameDir: plan.frameDir,
+        firstFrame: plan.firstFrame,
+        lastFrame: plan.lastFrame,
+        inputPattern: plan.inputPattern,
+        outputPath: plan.outputPath,
+        ffmpegArgs: plan.ffmpegArgs,
+      },
+    };
+  }
+
   const stem = renderPathStem(props.spec.target);
   const frameDir = props.frameDir ?? `frames/${stem}`;
   const outputPath = props.outputPath ?? `${stem}.mp4`;
@@ -1678,11 +1705,6 @@ const resolvePreviewFrame = (
     }
   }
   return frame;
-};
-
-const renderPathStem = (target: string): string => {
-  const stem = target.replace(/[^A-Za-z0-9_.-]+/g, "_");
-  return stem.length === 0 ? "render" : stem;
 };
 
 const validateSceneArtifact = (

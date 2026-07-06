@@ -4,6 +4,7 @@ import {
   frameName,
   framePattern,
   frameTimes,
+  renderPathStem,
 } from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
@@ -32,7 +33,7 @@ const SPEC: IAutoMovieRenderSpec = {
  * 3. A non-finite fps or duration also yields zero frames; render planning must
  *    never allocate an unbounded frame array.
  * 4. Frame names zero-pad to the input pattern (`frame_00042.png` and
- *    `frame_%05d.png`).
+ *    `frame_%05d.png`), and render path stems are file-safe.
  * 5. `ffmpegArgs` encodes the spec into the pinned H.264 / pixel-format / crf /
  *    faststart command.
  */
@@ -65,6 +66,16 @@ export const test_render_plan = (): void => {
   // 4. naming
   TestValidator.equals("frame name padded", frameName(42), "frame_00042.png");
   TestValidator.equals("frame pattern", framePattern(), "frame_%05d.png");
+  TestValidator.equals(
+    "path stem sanitizes target",
+    renderPathStem("seq:duel/main"),
+    "seq_duel_main",
+  );
+  TestValidator.equals(
+    "empty path stem fallback",
+    renderPathStem(""),
+    "render",
+  );
 
   // 5. ffmpeg args
   TestValidator.equals(
