@@ -1,3 +1,4 @@
+export * from "./catGaits";
 export * from "./dampedSpring";
 export * from "./easing";
 export * from "./gait";
