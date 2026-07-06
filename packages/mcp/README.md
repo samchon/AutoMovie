@@ -27,6 +27,12 @@ out.
 | `getResolvedPose` | geometry context + actor + time -> world-space bones or null | `sampleMotion` + `resolvePose` |
 | `getReach` | geometry context + actor + target -> arm reach report or null | `reachPose` |
 | `measureDistance` | scene + two targets -> distance report or null | `resolveTargetPoint` |
+| `validatePose` | pose + skeleton -> validation | `validatePose` |
+| `validateMotion` | MCP-safe motion + skeleton -> validation | `validateMotion` |
+| `validateModel` | model -> validation | `validateModel` |
+| `validateScene` | scene + model ids -> validation | MCP scene checks |
+| `validateShot` | shot + scene + optional motions -> validation | MCP shot checks |
+| `validateSequence` | sequence + shots -> validation | MCP sequence checks |
 | `stage` | script + staging -> staged scene (or violations) | `stageScene` |
 | `block` | script + staged scene + blocking -> blocked beat (or violations) | `blockBeat` |
 | `perform` | script + staged scene + performance + actor contexts + optional blocking -> performed shot (or violations) | `performShot` |
@@ -40,6 +46,9 @@ state from memory.
 Geometry query tools use a narrow context: staged scene nodes, model ids with
 their skeletons, MCP-safe motions, and an optional shot. They do not require full
 mesh or material payloads.
+
+Validation tools are read-only guards for commit flows. They return the standard
+`IAutoMovieValidation` envelope with field-located violations.
 
 `perform` keeps the MCP payload JSON-only. Clients provide per-actor motion
 contexts (`gaits`, staged position/facing, rest pose, optional rig/rest frames);

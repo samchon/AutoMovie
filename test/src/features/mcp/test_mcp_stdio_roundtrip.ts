@@ -73,11 +73,11 @@ const assemble = (shot: string): IAutoMovieAssembleApplication.IWrite => ({
  *
  * Scenarios:
  *
- * 1. A real stdio client sees the AutoMovie stage, slate-query, and geometry query
- *    tools.
- * 2. The same client calls `stage -> getScene/measureDistance -> forge -> block ->
- *    perform -> cut`, feeding structured outputs forward and receiving a
- *    successful final sequence.
+ * 1. A real stdio client sees the AutoMovie stage, slate-query, geometry-query,
+ *    and validation tools.
+ * 2. The same client calls `stage -> getScene/measureDistance/validateScene ->
+ *    forge -> block -> perform -> cut`, feeding structured outputs forward and
+ *    receiving a successful final sequence.
  */
 export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
   const client = new Client({ name: "automovie-test", version: "0.0.0" });
@@ -105,6 +105,12 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
         "measureDistance",
         "perform",
         "stage",
+        "validateModel",
+        "validateMotion",
+        "validatePose",
+        "validateScene",
+        "validateSequence",
+        "validateShot",
       ],
     );
 
@@ -147,6 +153,23 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     TestValidator.predicate(
       "measureDistance resolves staged nodes",
       measured !== null && measured.distance > 0,
+    );
+    const sceneValidation = (
+      await call<{ validation: { success: boolean } }>(
+        client,
+        "validateScene",
+        {
+          scene: staged.scene,
+          models: [
+            ...new Set(staged.scene.nodes.map((node) => node.model)),
+          ].map((id) => ({ id, skeleton: null })),
+        },
+      )
+    ).validation;
+    TestValidator.equals(
+      "validateScene succeeds",
+      sceneValidation.success,
+      true,
     );
 
     const forged = (
