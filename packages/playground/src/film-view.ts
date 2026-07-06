@@ -18,6 +18,7 @@ import {
   IAutoMovieStagingApplication,
   IAutoMovieVector3,
 } from "@automovie/interface";
+import { type IAutoMovieSequenceRenderFrame } from "@automovie/render";
 import {
   AutoMoviePlayer,
   applyObjectMotion,
@@ -170,12 +171,11 @@ const performances: IAutoMoviePerformanceApplication.IWrite[] = [
     type: "write",
     beat: "face-off",
     plan: "both hold; the camera orbits the waiter in close.",
-    draft: [
-      { verb: "hold", actor: "walker", start: 0, duration: 2.5 },
-      { verb: "hold", actor: "waiter", start: 0, duration: 2.5 },
-      {
-        verb: "emote",
-        actor: "waiter",
+  draft: [
+    { verb: "hold", actor: "walker", start: 0, duration: 2.5 },
+    {
+      verb: "emote",
+      actor: "waiter",
         start: 0,
         duration: 2.5,
         preset: "angry",
@@ -340,6 +340,16 @@ applyStagedCamera();
 const shotById = new Map(shots.map((s) => [s.id, s]));
 let renderer!: THREE.WebGLRenderer;
 
+type SequenceRenderFrameSample = Pick<
+  IAutoMovieSequenceRenderFrame,
+  "shot" | "shotTimeSeconds" | "blend"
+>;
+
+type SequenceRenderShotSample = {
+  shot: string;
+  shotTimeSeconds: number;
+};
+
 // Pose the scene and aim the camera for one shot at its shot-local time: advance
 // each player, ride any objectMotions, and set the camera (its motion or the
 // staged default). The read side used both for a plain frame and for each half
@@ -352,28 +362,56 @@ const poseShot = (shot: IAutoMovieShot, time: number): void => {
   else applyObjectMotion(shot.cameraMotion, time, () => camera);
 };
 
-// Draw one output second. On a hard cut it only poses the live shot and returns
-// false (the caller renders); inside a transition it composites the outgoing
-// tail and the incoming shot into a cross-dissolve itself and returns true.
-const drawFrame = (seconds: number): boolean => {
-  const sample = resolveSequencePlayback(cut.sequence, shots, seconds);
-  if (sample === null) return false;
-  const live = shotById.get(sample.shot)!;
-  if (sample.blend === null) {
-    poseShot(live, sample.time);
+// Draw one manifest frame sample. On a hard cut it only poses the live shot and
+// returns false (the caller renders); inside a transition it composites the
+// outgoing tail and the incoming shot into a cross-dissolve itself and returns
+// true.
+const drawSequenceFrame = (frame: SequenceRenderFrameSample): boolean => {
+  const live = shotById.get(frame.shot)!;
+  if (frame.blend === null) {
+    poseShot(live, frame.shotTimeSeconds);
     return false;
   }
-  const b = sample.blend;
+  const b = frame.blend;
   const outgoing = shotById.get(b.shot)!;
   renderCrossDissolve(
     renderer,
     scene,
     camera,
-    () => poseShot(outgoing, b.time),
-    () => poseShot(live, sample.time),
+    () => poseShot(outgoing, b.shotTimeSeconds),
+    () => poseShot(live, frame.shotTimeSeconds),
     b.alpha,
   );
   return true;
+};
+
+const drawFrame = (seconds: number): boolean => {
+  const sample = resolveSequencePlayback(cut.sequence, shots, seconds);
+  if (sample === null) return false;
+  return drawSequenceFrame({
+    shot: sample.shot,
+    shotTimeSeconds: sample.time,
+    blend:
+      sample.blend === null
+        ? null
+        : {
+            shot: sample.blend.shot,
+            shotTimeSeconds: sample.blend.time,
+            alpha: sample.blend.alpha,
+          },
+  });
+};
+
+const renderSequenceFrame = (frame: SequenceRenderFrameSample): void => {
+  if (!drawSequenceFrame(frame)) renderer.render(scene, camera);
+};
+
+const renderShotOnly = (sample: SequenceRenderShotSample): void => {
+  const shot = shotById.get(sample.shot);
+  if (shot === undefined)
+    throw new Error(`unknown film shot "${sample.shot}" for sequence probe`);
+  poseShot(shot, sample.shotTimeSeconds);
+  renderer.render(scene, camera);
 };
 
 // ── mount + deterministic seek contract (capture-shots.mjs) ──────────────────
@@ -397,8 +435,20 @@ if (freezeAt !== null && Number.isFinite(freezeAt)) draw(freezeAt);
 (window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
   t: number,
 ): void => draw(t);
+(
+  window as unknown as {
+    __afSeekSequenceFrame: (frame: SequenceRenderFrameSample) => void;
+  }
+).__afSeekSequenceFrame = renderSequenceFrame;
+(
+  window as unknown as {
+    __afSeekSequenceShot: (sample: SequenceRenderShotSample) => void;
+  }
+).__afSeekSequenceShot = renderShotOnly;
 (window as unknown as { __automovie: unknown }).__automovie = {
   ready: true,
   duration: FILM_DURATION,
-  shots: shots.map((s) => s.id),
+  sequence: cut.sequence,
+  shots,
+  shotIds: shots.map((s) => s.id),
 };
