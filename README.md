@@ -1,66 +1,130 @@
 # AutoMovie
 
-**Make characters move with AI — then render them the same way every time.**
+**An MCP server for deterministic motion-control video.**
 
-AutoMovie is an experiment in a different way to generate animation. Instead of asking an AI to paint every pixel of every frame (the way image/video diffusion models do), AutoMovie asks the AI to do something much smaller: **describe how to pose and move a character**. A plain, deterministic engine then turns that description into the actual picture.
+AutoMovie is a Model Context Protocol server that lets an external agent create simple 3D scenes, move them correctly over time, and render long control videos that diffusion systems can use as guidance.
 
-Think of it like a **puppet and a puppeteer**. The puppet (a 3D model with a skeleton) never changes. The AI is the puppeteer — it only decides *"bend this elbow, turn the head, smile, take a step."* Because the puppet stays fixed and only the strings move, the character looks consistent from frame to frame, and you can replay or tweak any moment exactly. That frame-to-frame consistency is the thing diffusion struggles with.
+The output may look like stick figures, blocks, arrows, props, cameras, and rough stages. That is intentional. AutoMovie's job is not to be the final image. Its job is to provide the motion, staging, timing, depth, silhouettes, and camera path that a generative video pass can follow.
 
-## Why this is interesting
+## The Bet
 
-When an AI generates pixels directly, three things hurt:
+Diffusion video is good at appearance.
 
-- 💸 **Cost** — every frame is a full, expensive generation.
-- 🎲 **Consistency** — the character's face subtly changes shot to shot.
-- 🔁 **Reproducibility** — you can't re-render the exact same scene later.
+Extended structure is the weak point. Characters drift, bodies change, props disappear, camera intent decays, and long videos have to be stitched from shorter generations.
 
-AutoMovie trades the pixel-painting for **structured instructions**. The AI outputs data (poses, keyframes, expressions), and a normal rendering engine draws the frames. Cheap, consistent, and reproducible.
+AutoMovie puts the structure outside the diffusion model.
 
-## The clever part: the AI can't draw the impossible
+Instead of asking a model to invent every frame from scratch, AutoMovie creates a deterministic guide video first:
 
-Here's the trick that makes it work. An elbow can only bend so far. A knee doesn't bend backward. So AutoMovie writes those real-world limits down as rules the engine checks.
+- where each actor is,
+- what each body is doing,
+- where props move,
+- when impacts happen,
+- how the camera frames the scene,
+- how long the scene lasts,
+- what depth, masks, outlines, and pose hints should exist per frame.
 
-If the AI ever asks for an impossible pose, the engine **catches it and explains what's wrong** — *"the left elbow is at 175°, but the anatomical max is 150°"* — and the AI tries again with that feedback. The result keeps getting corrected until it's physically valid. This validate-and-retry loop is what turns a fuzzy AI into something dependable.
+Then a diffusion workflow can stylize that guide. The generative model paints over a stable performance instead of hallucinating the performance itself.
 
-## Where it's heading
+## What AutoMovie Is
 
-The long-term dream is bigger than one character. AutoMovie aims to describe **every object and every motion** — bodies, cameras, lights, props, whole scenes over time — well enough to assemble a short film from nothing but those descriptions.
+AutoMovie is an MCP-driven motion generator and control-video engine.
 
-It's an early, work-in-progress project. The foundations come first; the fancy parts get added on top, never by starting over.
+It is designed for simple, code-made 3D objects:
 
-## What's inside
+- stick figures,
+- block characters,
+- primitive props,
+- rough stages,
+- simple lights,
+- deterministic cameras.
 
-AutoMovie is a monorepo. The pieces that work today:
+Those objects can be animated for seconds, minutes, or hours because the source of truth is structured data and math, not a sampled video model. The rendered control video can then be split into shorter diffusion chunks while keeping the same underlying timeline.
 
-| Package | What it does |
+The MCP surface is the product boundary: an agent asks for staged scenes, blocked movement, generated actors, cuts, validation, and renderable guide output; the deterministic engine computes and rejects invalid requests.
+
+## What AutoMovie Is Not
+
+AutoMovie is not a character creator.
+
+It is not trying to solve realistic human modeling, final-quality faces, hair, clothes, or production art. Those remain separate problems.
+
+AutoMovie is also not a replacement for diffusion. It is the layer before diffusion: the low-cost deterministic rehearsal that tells diffusion what should happen.
+
+## How It Works
+
+AutoMovie uses structured scene and motion data instead of pixels as its first language.
+
+An agent can describe a small stage: actors, props, poses, actions, camera moves, timing, and cuts. The engine validates the description, resolves the motion, and renders the result the same way every time.
+
+If a pose asks an elbow or knee to move outside its allowed range, the engine rejects it with a concrete violation. If a prop is attached to a hand, the prop follows the computed hand frame. If an arrow is launched, its path is calculated as motion data, not painted frame by frame.
+
+The important property is reproducibility. A long sequence can be regenerated, inspected, corrected, and used again as a control source.
+
+## Why This Direction Works
+
+The useful version is narrow:
+
+1. Build only simple 3D objects in code.
+2. Generate reliable long-form motion and camera control.
+3. Render guide passes such as pose, depth, masks, outlines, and flat shaded video.
+4. Let diffusion handle final visual style in shorter controlled chunks.
+
+This keeps AutoMovie inside the part of the problem that code can do well.
+
+## Current Status
+
+The deterministic core is working.
+
+AutoMovie already has a broad internal vocabulary for models, skeletons, poses, motion, expressions, scenes, cameras, cuts, validation, and playback. The engine can resolve poses, sample motion, enforce joint limits, move props, calculate projectiles, assemble shots, and render browser demos.
+
+The project is early. The most important unfinished work is completing the MCP motion authoring surface, then exporting the right guide passes for diffusion workflows.
+
+## Packages
+
+| Package | Purpose |
 |---|---|
-| [`@automovie/interface`](./packages/interface) | The shared vocabulary — the data shapes the AI fills in (poses, motion, expressions, scenes). |
-| [`@automovie/engine`](./packages/engine) | The deterministic brain — math, posing, and the rule-checks (like joint limits). No graphics library. |
-| [`@automovie/viewer`](./packages/viewer) | Shows the result on screen with [three.js](https://threejs.org). A *viewer*, not an editor. |
-| [`@automovie/ingest`](./packages/ingest) | Imports your own glTF/VRM 3D models so AutoMovie can animate them. |
-| [`@automovie/render`](./packages/render) | Headless rendering & export. |
-| [`@automovie/playground`](./packages/playground) | A sandbox for trying things out by hand. |
+| [`@automovie/interface`](./packages/interface) | Shared data shapes for scenes, models, skeletons, poses, motion, cameras, cuts, and validation. |
+| [`@automovie/engine`](./packages/engine) | Deterministic math and motion engine: posing, kinematics, constraints, actions, physics, playback, and shot assembly. |
+| [`@automovie/viewer`](./packages/viewer) | Three.js viewer for drawing engine output. It is a viewer, not an editor. |
+| [`@automovie/render`](./packages/render) | Headless render planning, model export, and video export helpers. |
+| [`@automovie/ingest`](./packages/ingest) | glTF/GLB ingestion into AutoMovie's core graph and clip data. |
+| [`@automovie/forge`](./packages/forge) | Procedural model-building experiments kept for simple generated assets. |
+| [`@automovie/mcp`](./packages/mcp) | MCP surface for external agents to drive parts of the deterministic motion engine. |
+| [`@automovie/playground`](./packages/playground) | Browser demos for inspecting motion, props, cameras, and simple characters. |
 
-The AI layer (`agent`) and a friendly character creator (`editor`) are planned but not built yet.
+## Next Work
 
-## Try it
+The next useful version of AutoMovie should focus on:
+
+- making the MCP tools cover the practical motion-generation loop,
+- keeping generated models simple and robust,
+- exporting diffusion-friendly guide passes,
+- supporting long timelines through deterministic chunking,
+- improving camera, staging, and action grammar,
+- keeping visual demos verifiable in the browser.
+
+Studio-grade character creation is not the active product surface.
+
+## Try It
 
 ```bash
-pnpm install      # install everything
-pnpm run build    # build the packages
-pnpm run test     # run the test suite
+pnpm install
+pnpm run build
+pnpm run test
 ```
 
-You'll need [Node.js](https://nodejs.org) 22+ and [pnpm](https://pnpm.io) 10.
+Requirements:
 
-## Status
+- Node.js 22 or newer
+- pnpm 10
 
-The deterministic core is up and running — you can build a character, pose it, check the poses against real joint limits, and view the result. The AI that *generates* those poses is the next big piece.
+For browser demos:
 
-Right now the focus is **motion before models**: we're getting the animation pipeline solid with simple stick-figure rigs first, and saving realistic, good-looking character art for later. Walk before you run.
-
-Curious about the deeper design thinking? Each package has its own README, and [`AGENTS.md`](./AGENTS.md) is the map for contributors.
+```bash
+pnpm --filter @automovie/playground dev
+```
 
 ## License
 
-[MIT](./LICENSE) © Samchon
+[MIT](./LICENSE)

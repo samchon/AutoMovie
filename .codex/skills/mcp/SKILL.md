@@ -5,7 +5,7 @@ description: Designing packages/mcp — server/tool arrangement as an ongoing ex
 
 # MCP Server Design
 
-`packages/mcp` (`@automovie/mcp`) exposes the deterministic film engine as Model Context Protocol tools: an external agent (Codex, Claude, any MCP client) drives the pipeline directly instead of the repo hosting its own LLM orchestration — "engine enforces, model creates" turned inside out. Each class (a `typia.llm.controller`) is one MCP server; each public method is one validated tool, its JSON schema and validation derived from the method's TypeScript signature and JSDoc via `@typia/mcp`.
+`packages/mcp` (`@automovie/mcp`) exposes the deterministic motion-control engine as Model Context Protocol tools: an external agent (Codex, Claude, any MCP client) drives the pipeline directly instead of the repo hosting its own LLM orchestration — "engine enforces, model creates" turned inside out. Each class (a `typia.llm.controller`) is one MCP server; each public method is one validated tool, its JSON schema and validation derived from the method's TypeScript signature and JSDoc via `@typia/mcp`.
 
 ## Server/tool arrangement is not settled
 

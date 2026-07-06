@@ -1,7 +1,7 @@
 # `@automovie/mcp`
 
-AutoMovie's deterministic film engine, exposed as **Model Context Protocol (MCP)**
-tools.
+AutoMovie's deterministic motion-control engine, exposed as **Model Context
+Protocol (MCP)** tools.
 
 Instead of the repository hosting its own LLM orchestration, the engine is a
 **tool surface an external agent drives** (Codex, Claude, any MCP client). The
@@ -20,10 +20,12 @@ out.
 | tool | in → out | engine |
 |------|----------|--------|
 | `stage` | script + staging → staged scene (or violations) | `stageScene` |
+| `block` | script + staged scene + blocking → blocked beat (or violations) | `blockBeat` |
+| `cut` | assemble plan + performed shots → cut sequence (or violations) | `cutSequence` |
+| `forge` | script + forge spec → generated cast models (or violations) | `forgeCast` |
 
-More of the pipeline (`block` / `perform` / `cut` / `forge`) follows — the
-multi-stage, partly rig-dependent shape is the part we're still experimenting
-with.
+`perform` is not exposed yet. It depends on a per-actor motion synthesizer and
+rig resolver, so the exact MCP contract remains under test.
 
 ## Run
 
