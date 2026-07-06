@@ -3,3 +3,4 @@ export * from "./headlessCapture";
 export * from "./plan";
 export * from "./renderAndSee";
 export * from "./renderVideo";
+export * from "./sequenceRenderPlan";

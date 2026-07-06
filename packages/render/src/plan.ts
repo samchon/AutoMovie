@@ -32,6 +32,12 @@ export const frameName = (index: number, ext = "png", pad = 5): string =>
 export const framePattern = (ext = "png", pad = 5): string =>
   `frame_%0${pad}d.${ext}`;
 
+/** File-safe stem used for default frame directories and output video names. */
+export const renderPathStem = (target: string): string => {
+  const stem = target.replace(/[^A-Za-z0-9_.-]+/g, "_");
+  return stem.length === 0 ? "render" : stem;
+};
+
 /**
  * The ffmpeg argument vector that encodes a {@link frameName} sequence into the
  * spec's video. Pinned for reproducible, broadly-playable output: H.264
