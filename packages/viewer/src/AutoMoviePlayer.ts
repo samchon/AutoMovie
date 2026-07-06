@@ -16,6 +16,7 @@ import {
   IAutoMovieSkeleton,
 } from "@automovie/interface";
 
+import { applyExpression } from "./applyExpression";
 import { applyPose } from "./applyPose";
 import { IAutoMovieModelObject } from "./buildModel";
 
@@ -44,10 +45,8 @@ interface IAxisSprings {
  * elapsed and it renders nothing itself; the host owns the animation loop (see
  * {@link mountViewer}). This keeps playback deterministic and testable.
  *
- * Expression output is sampled and exposed via {@link lastExpression} but not
- * applied to geometry: blendshape application needs morph targets, which the
- * generated-primitive models do not have (it arrives with VRM import +
- * three-vrm).
+ * Expression output is sampled on the same frame clock and applied to morph
+ * targets or imported-runtime expression sinks when the target provides them.
  *
  * @author Samchon
  */
@@ -55,6 +54,7 @@ export class AutoMoviePlayer {
   private lastSample: IAutoMovieMotionSample | null = null;
   private readonly springs = new Map<AutoMovieHumanoidBone, IAxisSprings>();
   private lastSeconds: number | null = null;
+  private lastUpdateSeconds: number | null = null;
 
   public constructor(
     private readonly target: IAutoMovieModelObject,
@@ -88,6 +88,11 @@ export class AutoMoviePlayer {
 
   /** Sample the clip at `seconds` and apply the pose to the model. */
   public update(seconds: number): void {
+    const deltaSeconds =
+      this.lastUpdateSeconds === null
+        ? 0
+        : Math.max(0, seconds - this.lastUpdateSeconds);
+    this.lastUpdateSeconds = seconds;
     const sample = sampleMotion(this.motion, seconds);
     this.lastSample = sample;
     let pose = this.clampToRom
@@ -101,6 +106,13 @@ export class AutoMoviePlayer {
       this.jointAxes,
       this.restFrames,
     );
+    applyExpression(this.target, sample.expression);
+    this.target.afterAutoMovieFrame?.({
+      seconds,
+      deltaSeconds,
+      pose,
+      expression: sample.expression,
+    });
   }
 
   /**

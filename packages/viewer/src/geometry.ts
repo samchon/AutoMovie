@@ -35,6 +35,16 @@ export const buildGeometry = (
   if (mesh.uvs !== null)
     geo.setAttribute("uv", new THREE.Float32BufferAttribute(mesh.uvs, 2));
   if (mesh.indices !== null) geo.setIndex(mesh.indices);
+  if (mesh.skin !== null) {
+    geo.setAttribute(
+      "skinIndex",
+      new THREE.Uint16BufferAttribute(mesh.skin.boneIndices, 4),
+    );
+    geo.setAttribute(
+      "skinWeight",
+      new THREE.Float32BufferAttribute(mesh.skin.weights, 4),
+    );
+  }
   if (mesh.normals === null) geo.computeVertexNormals();
   return geo;
 };

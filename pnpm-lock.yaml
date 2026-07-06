@@ -281,6 +281,9 @@ importers:
       '@automovie/render':
         specifier: workspace:^
         version: link:../packages/render
+      '@automovie/viewer':
+        specifier: workspace:^
+        version: link:../packages/viewer
       '@gltf-transform/core':
         specifier: ^4.1.1
         version: 4.4.0
@@ -290,10 +293,16 @@ importers:
       '@nestia/e2e':
         specifier: catalog:samchon
         version: 12.0.0-rc.2
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
     devDependencies:
       '@types/node':
         specifier: ^22.19.17
         version: 22.19.20
+      '@types/three':
+        specifier: ^0.169.0
+        version: 0.169.0
       c8:
         specifier: ^10.1.3
         version: 10.1.3
