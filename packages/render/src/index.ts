@@ -4,3 +4,4 @@ export * from "./plan";
 export * from "./renderAndSee";
 export * from "./renderVideo";
 export * from "./sequenceRenderPlan";
+export * from "./sequenceRenderVideo";
