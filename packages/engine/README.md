@@ -4,6 +4,7 @@
 
 - `validateGroundContact`: 설정한 발 본이 `y` 지면 평면 위에 있어야 하는 클립에서만 호출하는 물리 검증기. 모션을 샘플링하고 FK를 푼 뒤, `$input.samples[i].<bone>.worldPosition.y` 경로에 `physics` 위반을 만든다.
 - `validateFootSkate`: 심어진 발 구간을 명시받아 수평 월드 속도를 검사하는 물리 검증기. 허용 속도를 넘으면 `$input.contacts[i].samples[j].<bone>.horizontalSpeed` 경로에 `physics` 위반을 만든다.
+- `validateSelfIntersection`: 명시한 capsule proxy pair의 중심선 거리를 검사하는 물리 검증기. 반지름 합보다 가까우면 `$input.pairs[i].samples[j].distance` 경로에 `physics` 위반을 만든다.
 
 automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 계산·검증한다. AI도 `three.js`도 없다 — 순수 TypeScript.
 

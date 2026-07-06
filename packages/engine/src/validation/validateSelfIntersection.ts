@@ -1,0 +1,249 @@
+import {
+  AutoMovieHumanoidBone,
+  IAutoMovieMotion,
+  IAutoMovieSkeleton,
+  IAutoMovieValidation,
+  IAutoMovieVector3,
+} from "@automovie/interface";
+
+import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
+import { Vector3 } from "../math/Vector3";
+import { sampleMotion } from "../motion/sampleMotion";
+import { IAutoMovieRestFrame } from "../rom/restFrame";
+import { ViolationCollector } from "./violation";
+
+const DEFAULT_SAMPLE_RATE = 24;
+
+/**
+ * Capsule proxy over two resolved bones.
+ *
+ * This is the first self-intersection primitive: a segment from `from` to `to`
+ * with a radius, enough to catch coarse limb/torso overlap before a mesh-level
+ * topology validator exists.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieCapsuleProxy {
+  /** First endpoint bone. */
+  from: AutoMovieHumanoidBone;
+
+  /** Second endpoint bone. */
+  to: AutoMovieHumanoidBone;
+
+  /** Capsule radius in meters. */
+  radius: number;
+}
+
+/**
+ * Explicit capsule pair to test for overlap.
+ *
+ * Pairing is explicit because adjacent anatomical capsules often share joints
+ * and should not be treated as self-intersections.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieCapsuleProxyPair {
+  /** First capsule in the pair. */
+  first: IAutoMovieCapsuleProxy;
+
+  /** Second capsule in the pair. */
+  second: IAutoMovieCapsuleProxy;
+}
+
+/**
+ * Tier-3 self-intersection check over declared capsule proxy pairs. It samples
+ * the motion, resolves FK, and rejects frames where the two capsule centerlines
+ * are closer than the sum of their radii.
+ *
+ * The validator is intentionally proxy-driven: callers choose non-adjacent body
+ * parts that should not overlap, while mesh topology remains a later Tier-5
+ * concern.
+ *
+ * @author Samchon
+ */
+export const validateSelfIntersection = (props: {
+  /** Motion clip to sample. */
+  motion: IAutoMovieMotion;
+
+  /** Skeleton used for forward kinematics. */
+  skeleton: IAutoMovieSkeleton;
+
+  /** Declared non-adjacent capsule pairs to test. */
+  pairs: readonly IAutoMovieCapsuleProxyPair[];
+
+  /** Samples per second used by the validator. Defaults to `24`. */
+  sampleRate?: number;
+
+  /** JSON path of the proxy annotation being checked. Defaults to `$input`. */
+  path?: string;
+
+  /** Optional clinical-axis remap for rigs authored in semantic axes. */
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
+
+  /** Optional rest-frame remap for clinical authoring. */
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
+}): IAutoMovieValidation => {
+  const collector = new ViolationCollector();
+  const sampleRate =
+    props.sampleRate === undefined ? DEFAULT_SAMPLE_RATE : props.sampleRate;
+  const path = props.path ?? "$input";
+  const skeletonBones = new Set(props.skeleton.bones.map((bone) => bone.bone));
+
+  if (!Number.isFinite(sampleRate))
+    return rejectSampleRate(collector, path, sampleRate);
+  if (sampleRate <= 0) return rejectSampleRate(collector, path, sampleRate);
+
+  props.pairs.forEach((pair, pairIndex) => {
+    const pp = `${path}.pairs[${pairIndex}]`;
+    const firstValid = validateCapsule(
+      pair.first,
+      `${pp}.first`,
+      skeletonBones,
+      collector,
+    );
+    const secondValid = validateCapsule(
+      pair.second,
+      `${pp}.second`,
+      skeletonBones,
+      collector,
+    );
+    if (firstValid && secondValid) {
+      sampleTimes(props.motion.duration, sampleRate).forEach(
+        (time, sampleIndex) => {
+          const resolved = new Map(
+            resolvePose(
+              sampleMotion(props.motion, time).pose,
+              props.skeleton,
+              props.jointAxes,
+              props.restFrames,
+            ).map((bone) => [bone.bone, bone.worldPosition]),
+          );
+          const first = resolveCapsule(pair.first, resolved);
+          const second = resolveCapsule(pair.second, resolved);
+          const distance = segmentSegmentDistance(
+            first.from,
+            first.to,
+            second.from,
+            second.to,
+          );
+          const minimum = pair.first.radius + pair.second.radius;
+          if (distance < minimum)
+            collector.push(
+              "physics",
+              `${pp}.samples[${sampleIndex}].distance`,
+              `capsule centerline distance must stay >= ${round(minimum)}m at t=${round(time)}s`,
+              distance,
+              minimum - distance,
+            );
+        },
+      );
+    }
+  });
+
+  return collector.toValidation();
+};
+
+const rejectSampleRate = (
+  collector: ViolationCollector,
+  path: string,
+  sampleRate: number,
+): IAutoMovieValidation => {
+  collector.push(
+    "range",
+    `${path}.sampleRate`,
+    `sampleRate must be a finite number > 0, but was ${sampleRate}`,
+    sampleRate,
+  );
+  return collector.toValidation();
+};
+
+const validateCapsule = (
+  capsule: IAutoMovieCapsuleProxy,
+  path: string,
+  skeletonBones: ReadonlySet<AutoMovieHumanoidBone>,
+  collector: ViolationCollector,
+): boolean => {
+  let valid = true;
+  if (!skeletonBones.has(capsule.from)) {
+    valid = false;
+    collector.push(
+      "type",
+      `${path}.from`,
+      `capsule endpoint "${capsule.from}" must exist in the target skeleton`,
+      capsule.from,
+    );
+  }
+  if (!skeletonBones.has(capsule.to)) {
+    valid = false;
+    collector.push(
+      "type",
+      `${path}.to`,
+      `capsule endpoint "${capsule.to}" must exist in the target skeleton`,
+      capsule.to,
+    );
+  }
+  if (capsule.from === capsule.to) {
+    valid = false;
+    collector.push(
+      "type",
+      path,
+      "capsule endpoints must be two distinct bones",
+      { from: capsule.from, to: capsule.to },
+    );
+  }
+  if (!Number.isFinite(capsule.radius) || capsule.radius <= 0) {
+    valid = false;
+    collector.push(
+      "range",
+      `${path}.radius`,
+      `capsule radius must be a finite number > 0, but was ${capsule.radius}`,
+      capsule.radius,
+    );
+  }
+  return valid;
+};
+
+const sampleTimes = (duration: number, sampleRate: number): number[] => {
+  const frames = Math.max(1, Math.ceil(duration * sampleRate));
+  return Array.from({ length: frames + 1 }, (_, index) =>
+    Math.min(duration, index / sampleRate),
+  );
+};
+
+const resolveCapsule = (
+  capsule: IAutoMovieCapsuleProxy,
+  resolved: ReadonlyMap<AutoMovieHumanoidBone, IAutoMovieVector3>,
+): { from: IAutoMovieVector3; to: IAutoMovieVector3 } => ({
+  from: resolved.get(capsule.from)!,
+  to: resolved.get(capsule.to)!,
+});
+
+const segmentSegmentDistance = (
+  a: IAutoMovieVector3,
+  b: IAutoMovieVector3,
+  c: IAutoMovieVector3,
+  d: IAutoMovieVector3,
+): number => {
+  const candidates = [
+    pointSegmentDistance(a, c, d),
+    pointSegmentDistance(b, c, d),
+    pointSegmentDistance(c, a, b),
+    pointSegmentDistance(d, a, b),
+  ];
+  return Math.min(...candidates);
+};
+
+const pointSegmentDistance = (
+  point: IAutoMovieVector3,
+  start: IAutoMovieVector3,
+  end: IAutoMovieVector3,
+): number => {
+  const segment = Vector3.subtract(end, start);
+  const span = Vector3.dot(segment, segment);
+  const t = clamp(Vector3.dot(Vector3.subtract(point, start), segment) / span);
+  return Vector3.length(Vector3.subtract(point, Vector3.lerp(start, end, t)));
+};
+
+const clamp = (value: number): number => Math.min(1, Math.max(0, value));
+
+const round = (value: number): number => Math.round(value * 1_000) / 1_000;
