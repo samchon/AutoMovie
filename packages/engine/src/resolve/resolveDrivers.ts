@@ -7,6 +7,7 @@ import {
 
 import { Quaternion } from "../math/Quaternion";
 import { channelKey } from "./channel";
+import { evaluateDrivenCurve } from "./drivenCurve";
 import { IAutoMovieSampledChannel } from "./sampleClip";
 
 /** The two channel-space drivers this pass resolves (no world transform needed). */
@@ -21,7 +22,7 @@ const DEFERRED_DRIVER_TYPES = new Set<unknown>([
 ]);
 
 /**
- * The DRIVE pass for **channel-space** drivers — relationships that compute one
+ * The DRIVE pass for **channel-space** drivers: relationships that compute one
  * channel purely from other channels, with no world-transform dependency:
  * `copy` (mirror/follow a node's local TRS) and `driven` (range-remap one
  * channel onto another). They are resolved in dependency order over a
@@ -30,12 +31,12 @@ const DEFERRED_DRIVER_TYPES = new Set<unknown>([
  * CONSTRAIN.
  *
  * The world-space / stateful drivers (`parent`, `aim`, `ik`, `spring`) need the
- * composed hierarchy or cross-frame state, so they are **not** resolved here —
- * they are returned as `deferred` (never silently dropped) for the world-space
+ * composed hierarchy or cross-frame state, so they are **not** resolved here.
+ * They are returned as `deferred` (never silently dropped) for the world-space
  * driver pass that runs after an initial compose.
  *
  * A dependency cycle among the value drivers (A copies from B while B copies
- * from A) throws rather than looping — the rig is ill-formed.
+ * from A) throws rather than looping; the rig is ill-formed.
  *
  * @author Samchon
  */
@@ -60,7 +61,7 @@ export const resolveDrivers = (
   return deferred;
 };
 
-// ── dependency ordering ──────────────────────────────────────────────────────
+// dependency ordering
 
 const trsKeys = (
   node: string,
@@ -107,7 +108,7 @@ const topoSort = (drivers: ValueDriver[]): ValueDriver[] => {
   return order;
 };
 
-// ── copy ─────────────────────────────────────────────────────────────────────
+// copy
 
 const applyCopy = (
   d: IAutoMovieCopyDriver,
@@ -212,22 +213,21 @@ const COPY_SAMPLE_WIDTHS = {
   scale: 3,
 } as const;
 
-// ── driven ───────────────────────────────────────────────────────────────────
+// driven
 
 const applyDriven = (
   d: IAutoMovieDrivenDriver,
   sampled: Map<string, IAutoMovieSampledChannel>,
 ): void => {
   validateDrivenClamp(d.clamp);
-  if (d.curve == null) validateDrivenRange(d);
-  else validateDrivenCurve(d.curve);
   const src = sampled.get(channelKey(d.source));
-  const x = src !== undefined ? readDrivenSourceValue(src.value) : d.inRange[0];
-  validateDrivenFinite("source value", x);
+  const source =
+    src !== undefined ? readDrivenSourceValue(src.value) : undefined;
+  if (source !== undefined) validateDrivenFinite("source value", source);
   const y =
     d.curve != null
-      ? evalCurve(x, d.curve)
-      : remap(x, d.inRange, d.outRange, d.clamp);
+      ? evaluateDrivenCurve(source, d.curve)
+      : remapDriven(d, source);
   setChannel(sampled, channelKey(d.output), d.output, [y]);
 };
 
@@ -271,42 +271,17 @@ const validateDrivenRangeTuple = (
     );
 };
 
-const validateDrivenCurve = (curve: [number, number][]): void => {
-  if (!Array.isArray(curve))
-    throw new Error("driven driver curve must be an array");
-  if (curve.length === 0)
-    throw new Error("driven driver curve must contain at least one point");
-
-  let previousX: number | null = null;
-  for (let i = 0; i < curve.length; ++i) {
-    const point = curve[i]!;
-    validateDrivenCurvePoint(i, point);
-    const [x, y] = point;
-    validateDrivenFinite(`curve[${i}].x`, x);
-    validateDrivenFinite(`curve[${i}].y`, y);
-    if (previousX !== null && x <= previousX)
-      throw new Error(
-        `driven driver curve x values must be strictly increasing, but point ${i} was ${x} after ${previousX}`,
-      );
-    previousX = x;
-  }
-};
-
-const validateDrivenCurvePoint = (
-  index: number,
-  point: [number, number],
-): void => {
-  if (!Array.isArray(point))
-    throw new Error(`driven driver curve[${index}] point must be an array`);
-  if (point.length !== 2)
-    throw new Error(
-      `driven driver curve[${index}] point must contain exactly 2 entries, but had ${point.length}`,
-    );
-};
-
 const validateDrivenFinite = (label: string, value: number): void => {
   if (!Number.isFinite(value))
     throw new Error(`driven driver ${label} must be finite, but was ${value}`);
+};
+
+const remapDriven = (
+  d: IAutoMovieDrivenDriver,
+  source: number | undefined,
+): number => {
+  validateDrivenRange(d);
+  return remap(source ?? d.inRange[0], d.inRange, d.outRange, d.clamp);
 };
 
 const remap = (
@@ -320,24 +295,7 @@ const remap = (
   return o0 + (o1 - o0) * tc;
 };
 
-/**
- * Piecewise-linear evaluation of a driven `curve` (points sorted by source
- * `x`): the output is interpolated within a segment and held flat before the
- * first point and after the last — the nonlinear driven-key mapping.
- */
-const evalCurve = (x: number, pts: [number, number][]): number => {
-  if (x <= pts[0]![0]) return pts[0]![1];
-  for (let i = 1; i < pts.length; ++i) {
-    const [x1, y1] = pts[i]!;
-    if (x <= x1) {
-      const [x0, y0] = pts[i - 1]!;
-      return y0 + (y1 - y0) * ((x - x0) / (x1 - x0));
-    }
-  }
-  return pts[pts.length - 1]![1];
-};
-
-// ── shared ───────────────────────────────────────────────────────────────────
+// shared
 
 const setChannel = (
   sampled: Map<string, IAutoMovieSampledChannel>,

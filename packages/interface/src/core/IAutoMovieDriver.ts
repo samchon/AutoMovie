@@ -1,5 +1,6 @@
 import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
 import { IAutoMovieChannel } from "./IAutoMovieChannel";
+import { IAutoMovieDrivenCurve } from "./IAutoMovieDrivenCurve";
 
 /**
  * A driver: a relationship that computes channels from other channels — the
@@ -105,16 +106,16 @@ export interface IAutoMovieParentDriver {
 }
 
 /**
- * A driven relationship: one channel computed from another (the driven-key /
- * range-map / mimic-joint archetype). A finger-curl slider driving three
- * phalanx joints is three drivers reading the same source.
+ * A driven relationship: one scalar channel computed from another (the
+ * driven-key / range-map / mimic-joint archetype). A finger-curl slider driving
+ * three phalanx joints is three drivers reading the same source.
  *
- * The default mapping is a **linear** range remap (`inRange → outRange`). Real
- * rigs, though, often need a **nonlinear** coupling — a finger that curls
- * slowly then snaps, a corrective shape that only kicks in past a threshold
- * (Maya Set Driven Key curves, MJCF's `polycoef`). Supply `curve` for that: a
- * sorted set of `(x, y)` control points, piecewise-linear between them, the
- * ends held. When present it **supersedes** `inRange`/`outRange`/`clamp`.
+ * The default mapping is a linear range remap (`inRange` to `outRange`). Real
+ * rigs, though, often need a nonlinear coupling: a finger that curls slowly
+ * then snaps, or a corrective shape that only kicks in past a threshold. Supply
+ * `curve` for that: named source/output control points, piecewise-linear
+ * between them, the ends held. When present it supersedes
+ * `inRange`/`outRange`/`clamp`.
  */
 export interface IAutoMovieDrivenDriver {
   /** Discriminator. */
@@ -127,16 +128,16 @@ export interface IAutoMovieDrivenDriver {
   inRange: [number, number];
   /** Output value range `[out0, out1]`. */
   outRange: [number, number];
-  /** Clamp the output to `outRange` outside `inRange`. */
+  /** Clamp the linear output to `outRange` outside `inRange`. */
   clamp: boolean;
   /**
-   * Optional **nonlinear** mapping: `(source, output)` control points sorted by
-   * source value, with the output interpolated piecewise-linearly between them
-   * and held flat beyond the first/last point. When set it replaces the linear
-   * `inRange`/`outRange` remap — the way a real driven key bends. `null` /
-   * omitted keeps the straight-line default.
+   * Optional nonlinear map: source/output control points sorted by source
+   * value, with output interpolated piecewise-linearly between them and held
+   * flat beyond the first/last point. When set it replaces the linear
+   * `inRange`/`outRange` remap. `null` / omitted keeps the straight-line
+   * default.
    */
-  curve?: [number, number][] | null;
+  curve?: IAutoMovieDrivenCurve | null;
 }
 
 /**

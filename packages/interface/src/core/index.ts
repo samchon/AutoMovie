@@ -5,6 +5,7 @@ export * from "./IAutoMovieNode";
 export * from "./AutoMovieInterpolation";
 export * from "./IAutoMovieTrack";
 export * from "./IAutoMovieChannelLimit";
+export * from "./IAutoMovieDrivenCurve";
 export * from "./IAutoMovieDriver";
 export * from "./IAutoMovieNamedId";
 export * from "./IAutoMovieProfile";
