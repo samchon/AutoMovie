@@ -18,6 +18,7 @@
     "@automovie/interface": "workspace:^",
     "@automovie/mcp": "workspace:^",
     "@automovie/render": "workspace:^",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@gltf-transform/core": "^4.1.1",
     "@nestia/e2e": "catalog:samchon"
   },
