@@ -3,6 +3,8 @@ import {
   IAutoMovieAimDriver,
   IAutoMovieChannel,
   IAutoMovieCopyDriver,
+  IAutoMovieDrivenCurve,
+  IAutoMovieDrivenCurvePoint,
   IAutoMovieDrivenDriver,
   IAutoMovieDriver,
   IAutoMovieNode,
@@ -350,11 +352,13 @@ export const test_resolve_drivers_driven = (): void => {
 
   // 5. nonlinear curve: slow-then-snap finger curl, ends held
   const curl = driven({
-    curve: [
-      [0, 0],
-      [7, 10],
-      [10, 100],
-    ],
+    curve: {
+      points: [
+        { source: 0, output: 0 },
+        { source: 7, output: 10 },
+        { source: 10, output: 100 },
+      ],
+    },
   });
   TestValidator.equals(
     "curve interpolates within the steep last segment (8.5 → 55)",
@@ -474,60 +478,57 @@ export const test_resolve_drivers_driven = (): void => {
     ),
   );
   TestValidator.predicate(
-    "driven driver rejects non-array curve",
-    throwsError(
-      () =>
-        run(
-          driven({
-            curve: {
-              0: [0, 0],
-              1: [1, 1],
-              length: 2,
-            } as unknown as [number, number][],
-          }),
-          1,
-        ),
-      ["driven driver curve", "array"],
-    ),
-  );
-  TestValidator.predicate(
-    "driven driver rejects wrong-width curve point",
-    throwsError(
-      () =>
-        run(
-          driven({
-            curve: [[0, 0], [1, 1, 99] as unknown as [number, number]],
-          }),
-          1,
-        ),
-      ["driven driver curve[1]", "exactly 2", "3"],
-    ),
-  );
-  TestValidator.predicate(
-    "driven driver rejects non-array curve point",
+    "driven driver rejects array curve contract",
     throwsError(
       () =>
         run(
           driven({
             curve: [
-              [0, 0],
-              {
-                0: 1,
-                1: 1,
-                length: 2,
-              } as unknown as [number, number],
-            ],
+              { source: 0, output: 0 },
+              { source: 1, output: 1 },
+            ] as unknown as IAutoMovieDrivenCurve,
           }),
           1,
         ),
-      ["driven driver curve[1]", "array"],
+      ["driven driver curve", "object"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects missing curve points",
+    throwsError(
+      () =>
+        run(
+          driven({
+            curve: {} as unknown as IAutoMovieDrivenCurve,
+          }),
+          1,
+        ),
+      ["driven driver curve.points", "array"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects non-object curve point",
+    throwsError(
+      () =>
+        run(
+          driven({
+            curve: {
+              points: [
+                { source: 0, output: 0 },
+                [1, 1] as unknown as IAutoMovieDrivenCurvePoint,
+              ],
+            },
+          }),
+          1,
+        ),
+      ["driven driver curve.points[1]", "object"],
     ),
   );
   TestValidator.predicate(
     "driven driver rejects empty curve",
     throwsError(
-      () => run(driven({ curve: [] }), 1),
-      ["driven driver curve", "at least one"],
+      () => run(driven({ curve: { points: [] } }), 1),
+      ["driven driver curve.points", "at least one"],
     ),
   );
   TestValidator.predicate(
@@ -536,30 +537,34 @@ export const test_resolve_drivers_driven = (): void => {
       () =>
         run(
           driven({
-            curve: [
-              [0, 0],
-              [1, Number.NaN],
-            ],
+            curve: {
+              points: [
+                { source: 0, output: 0 },
+                { source: 1, output: Number.NaN },
+              ],
+            },
           }),
           1,
         ),
-      ["driven driver curve[1].y", "finite", "NaN"],
+      ["driven driver curve.points[1].output", "finite", "NaN"],
     ),
   );
   TestValidator.predicate(
-    "driven driver rejects non-increasing curve x",
+    "driven driver rejects non-increasing curve source",
     throwsError(
       () =>
         run(
           driven({
-            curve: [
-              [0, 0],
-              [0, 1],
-            ],
+            curve: {
+              points: [
+                { source: 0, output: 0 },
+                { source: 0, output: 1 },
+              ],
+            },
           }),
           1,
         ),
-      ["driven driver curve", "strictly increasing", "0"],
+      ["driven driver curve.points", "strictly increasing", "0"],
     ),
   );
 };
