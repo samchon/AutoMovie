@@ -42,6 +42,7 @@
   "dependencies": {
     "@automovie/engine": "workspace:^",
     "@automovie/interface": "workspace:^",
+    "@automovie/render": "workspace:^",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@typia/mcp": "catalog:samchon",
     "typia": "catalog:samchon"

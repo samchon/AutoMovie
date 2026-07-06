@@ -7,6 +7,7 @@ import {
 import {
   IAutoMovieAssembleApplication,
   IAutoMovieGait,
+  IAutoMovieRenderSpec,
   IAutoMovieScript,
   IAutoMovieVector3,
 } from "@automovie/interface";
@@ -111,6 +112,8 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
         "getShot",
         "measureDistance",
         "perform",
+        "planRender",
+        "seeFrame",
         "stage",
         "validateModel",
         "validateMotion",
@@ -294,6 +297,41 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     if (cut.success !== true) return;
     TestValidator.equals("sequence id", cut.sequence.id, "seq-duel");
     TestValidator.predicate("runtime", nclose(cut.runtime, 1));
+
+    const renderSpec: IAutoMovieRenderSpec = {
+      target: cut.sequence.id,
+      fps: 12,
+      width: 640,
+      height: 360,
+      toneMapping: "none",
+      codec: "h264",
+      pixelFormat: "yuv420p",
+      crf: 20,
+    };
+    const renderSlate = {
+      script: scriptArtifact,
+      scene: staged.scene,
+      shots: [performed.shot],
+      beatEnds: [],
+      notes: [],
+      film: cut.sequence,
+    };
+    const renderPlan = (
+      await call<{ plan: { frameCount: number } | null }>(
+        client,
+        "planRender",
+        { slate: renderSlate, spec: renderSpec },
+      )
+    ).plan;
+    TestValidator.equals("planRender frame count", renderPlan?.frameCount, 12);
+    const preview = (
+      await call<{ preview: { frame: number } | null }>(client, "seeFrame", {
+        slate: renderSlate,
+        spec: renderSpec,
+        frame: 1,
+      })
+    ).preview;
+    TestValidator.equals("seeFrame frame", preview?.frame, 1);
   } finally {
     await client.close();
   }

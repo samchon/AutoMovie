@@ -44,6 +44,7 @@ import {
   IAutoMoviePerformanceApplication,
   IAutoMoviePose,
   IAutoMovieQuaternion,
+  IAutoMovieRenderSpec,
   IAutoMovieReviewNote,
   IAutoMovieScene,
   IAutoMovieScript,
@@ -57,6 +58,12 @@ import {
   IAutoMovieValidation,
   IAutoMovieVector3,
 } from "@automovie/interface";
+import {
+  ffmpegArgs,
+  frameName,
+  framePattern,
+  frameTimes,
+} from "@automovie/render";
 
 /**
  * AutoMovie's deterministic motion-control engine, exposed as MCP tools. Query
@@ -575,6 +582,70 @@ export class AutoMovieApplication {
     if (validation.success === false)
       return failedCommit(props.slate, validation);
     return successfulCommit({ ...props.slate, film: props.film });
+  }
+
+  /**
+   * Plan a deterministic render for a committed shot or film. It returns frame
+   * times, frame paths, and ffmpeg args without doing host I/O.
+   *
+   * @param props The slate, render spec, and optional output paths.
+   * @returns A render plan, or validation diagnostics when the target is not
+   *   ready.
+   */
+  public planRender(props: {
+    /** Slate whose committed shot or film is the render source. */
+    slate: IAutoMovieMcpWritableSlate;
+    /** Render parameters for a committed shot or sequence id. */
+    spec: IAutoMovieRenderSpec;
+    /** Directory where frame files would be written. */
+    frameDir?: string;
+    /** Encoded video output path. */
+    outputPath?: string;
+  }): IAutoMoviePlanRenderOutput {
+    return buildRenderPlan(props);
+  }
+
+  /**
+   * Prepare one preview frame for inspection. This is a render/see placeholder:
+   * it resolves the target frame but does not capture pixels yet.
+   *
+   * @param props The slate, render spec, and optional frame or time.
+   * @returns The preview frame location, or validation diagnostics.
+   */
+  public seeFrame(props: {
+    /** Slate whose committed shot or film is the preview source. */
+    slate: IAutoMovieMcpWritableSlate;
+    /** Render parameters for a committed shot or sequence id. */
+    spec: IAutoMovieRenderSpec;
+    /** Zero-based frame index. Defaults to the first frame. */
+    frame?: number;
+    /** Target time in seconds. Must agree with `frame` when both are present. */
+    time?: number;
+  }): IAutoMovieSeeFrameOutput {
+    const planned = buildRenderPlan({
+      slate: props.slate,
+      spec: props.spec,
+    });
+    if (planned.validation.success === false)
+      return { validation: planned.validation, preview: null };
+    const plan = planned.plan!;
+    const violations: IAutoMovieConstraintViolation[] = [];
+    const frame = resolvePreviewFrame(props, plan, violations);
+    const validation = toValidation(violations);
+    if (validation.success === false) return { validation, preview: null };
+    return {
+      validation,
+      preview: {
+        target: plan.target,
+        frame,
+        time: plan.times[frame]!,
+        framePath: `${plan.frameDir}/${frameName(frame)}`,
+        width: props.spec.width,
+        height: props.spec.height,
+        toneMapping: props.spec.toneMapping,
+        status: "placeholder",
+      },
+    };
   }
 
   /**
@@ -1397,6 +1468,223 @@ const shotBeatId = (shot: string): string | null => {
   return beat.length === 0 ? null : beat;
 };
 
+const buildRenderPlan = (props: {
+  slate: IAutoMovieMcpWritableSlate;
+  spec: IAutoMovieRenderSpec;
+  frameDir?: string;
+  outputPath?: string;
+}): IAutoMoviePlanRenderOutput => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateRenderSpec(props.spec, violations);
+  const target = resolveRenderTarget(
+    props.slate,
+    props.spec.target,
+    violations,
+  );
+  const validation = toValidation(violations);
+  if (validation.success === false) return { validation, plan: null };
+
+  const times = frameTimes(props.spec.fps, target!.duration);
+  if (times.length === 0)
+    return {
+      validation: toValidation([
+        violation(
+          "range",
+          "$input.spec.fps",
+          "render spec and target duration must produce at least one frame",
+          { fps: props.spec.fps, duration: target!.duration },
+        ),
+      ]),
+      plan: null,
+    };
+
+  const stem = renderPathStem(props.spec.target);
+  const frameDir = props.frameDir ?? `frames/${stem}`;
+  const outputPath = props.outputPath ?? `${stem}.mp4`;
+  const inputPattern = `${frameDir}/${framePattern()}`;
+  return {
+    validation: { success: true },
+    plan: {
+      target: target!.target,
+      duration: target!.duration,
+      frameCount: times.length,
+      times,
+      frameDir,
+      firstFrame: `${frameDir}/${frameName(0)}`,
+      lastFrame: `${frameDir}/${frameName(times.length - 1)}`,
+      inputPattern,
+      outputPath,
+      ffmpegArgs: ffmpegArgs(props.spec, inputPattern, outputPath),
+    },
+  };
+};
+
+const validateRenderSpec = (
+  spec: IAutoMovieRenderSpec,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  validateNonEmptyId(
+    spec.target,
+    "$input.spec.target",
+    "render target",
+    violations,
+  );
+  validateRange(
+    spec.fps,
+    "$input.spec.fps",
+    0,
+    Infinity,
+    "render fps",
+    violations,
+    false,
+  );
+  validateRange(
+    spec.width,
+    "$input.spec.width",
+    0,
+    Infinity,
+    "render width",
+    violations,
+    false,
+  );
+  validateRange(
+    spec.height,
+    "$input.spec.height",
+    0,
+    Infinity,
+    "render height",
+    violations,
+    false,
+  );
+  validateRange(spec.crf, "$input.spec.crf", 0, 51, "render crf", violations);
+};
+
+const resolveRenderTarget = (
+  slate: IAutoMovieMcpWritableSlate,
+  target: string,
+  violations: IAutoMovieConstraintViolation[],
+): { target: IAutoMovieMcpRenderTarget; duration: number } | null => {
+  const shots = slate.shots
+    .map((shot, index) => ({ shot, index }))
+    .filter(({ shot }) => shot.id === target);
+  if (shots.length > 1)
+    pushViolation(
+      violations,
+      "type",
+      `$slate.shots[${shots[1]!.index}].id`,
+      `render target shot "${target}" must be unique`,
+      target,
+    );
+  if (shots.length > 0) {
+    const shot = shots[0]!.shot;
+    validateRange(
+      shot.duration,
+      "$target.duration",
+      0,
+      Infinity,
+      "render target duration",
+      violations,
+      false,
+    );
+    return { target: { kind: "shot", id: shot.id }, duration: shot.duration };
+  }
+
+  if (slate.film !== null && slate.film.id === target) {
+    appendValidation(
+      violations,
+      validateSequenceArtifact(slate.film, slate.shots),
+    );
+    const duration = sequenceRuntime(slate.film, slate.shots);
+    validateRange(
+      duration,
+      "$target.duration",
+      0,
+      Infinity,
+      "render target duration",
+      violations,
+      false,
+    );
+    return { target: { kind: "sequence", id: slate.film.id }, duration };
+  }
+
+  pushViolation(
+    violations,
+    "type",
+    "$input.spec.target",
+    `render target "${target}" must match a committed shot or film`,
+    target,
+  );
+  return null;
+};
+
+const sequenceRuntime = (
+  sequence: IAutoMovieSequence,
+  shots: IAutoMovieShot[],
+): number => {
+  const byId = new Map(shots.map((shot) => [shot.id, shot]));
+  return sequence.shots.reduce((sum, entry) => {
+    const shot = byId.get(entry.shot);
+    const duration = entry.trim?.duration ?? shot?.duration ?? 0;
+    return sum + duration - (entry.transition?.duration ?? 0);
+  }, 0);
+};
+
+const resolvePreviewFrame = (
+  props: { frame?: number; time?: number },
+  plan: IAutoMovieMcpRenderPlan,
+  violations: IAutoMovieConstraintViolation[],
+): number => {
+  let frame =
+    props.frame === undefined
+      ? props.time === undefined
+        ? 0
+        : Math.floor(props.time * (plan.frameCount / plan.duration))
+      : props.frame;
+  if (!Number.isInteger(frame) || frame < 0 || frame >= plan.frameCount)
+    pushViolation(
+      violations,
+      "range",
+      "$input.frame",
+      `preview frame must be an integer within [0, ${plan.frameCount - 1}]`,
+      props.frame,
+    );
+
+  if (props.time !== undefined) {
+    if (
+      !Number.isFinite(props.time) ||
+      props.time < 0 ||
+      props.time >= plan.duration
+    )
+      pushViolation(
+        violations,
+        "range",
+        "$input.time",
+        `preview time must be finite and within [0, ${plan.duration})`,
+        props.time,
+      );
+    else {
+      const timeFrame = Math.floor(
+        props.time * (plan.frameCount / plan.duration),
+      );
+      if (props.frame !== undefined && timeFrame !== frame)
+        pushViolation(
+          violations,
+          "temporal",
+          "$input.time",
+          `preview time maps to frame ${timeFrame}, not frame ${frame}`,
+          props.time,
+        );
+      frame = props.frame ?? timeFrame;
+    }
+  }
+  return frame;
+};
+
+const renderPathStem = (target: string): string => {
+  const stem = target.replace(/[^A-Za-z0-9_.-]+/g, "_");
+  return stem.length === 0 ? "render" : stem;
+};
+
 const validateSceneArtifact = (
   scene: IAutoMovieScene,
   models: IAutoMovieMcpGeometryModel[],
@@ -2213,6 +2501,93 @@ export interface IAutoMovieCommitOutput {
 
   /** Success or field-located violations explaining why commit was refused. */
   validation: IAutoMovieValidation;
+}
+
+/** Render planning result. */
+export interface IAutoMoviePlanRenderOutput {
+  /** Success or field-located violations explaining why render cannot start. */
+  validation: IAutoMovieValidation;
+
+  /** Deterministic render plan, or null when validation failed. */
+  plan: IAutoMovieMcpRenderPlan | null;
+}
+
+/** Preview-frame planning result. */
+export interface IAutoMovieSeeFrameOutput {
+  /** Success or field-located violations explaining why preview cannot resolve. */
+  validation: IAutoMovieValidation;
+
+  /** Preview frame contract, or null when validation failed. */
+  preview: IAutoMovieMcpFramePreview | null;
+}
+
+/** Shot or sequence selected for rendering. */
+export interface IAutoMovieMcpRenderTarget {
+  /** Render target kind. */
+  kind: "shot" | "sequence";
+
+  /** Committed shot or sequence id. */
+  id: string;
+}
+
+/** Deterministic render plan exposed through MCP. */
+export interface IAutoMovieMcpRenderPlan {
+  /** Selected committed target. */
+  target: IAutoMovieMcpRenderTarget;
+
+  /** Target duration in seconds. */
+  duration: number;
+
+  /** Number of frames to capture. */
+  frameCount: number;
+
+  /** Clip-local sample instants, seconds. */
+  times: number[];
+
+  /** Directory where frame files would be written. */
+  frameDir: string;
+
+  /** First frame path. */
+  firstFrame: string;
+
+  /** Last frame path. */
+  lastFrame: string;
+
+  /** Ffmpeg input pattern for the frame sequence. */
+  inputPattern: string;
+
+  /** Encoded output path. */
+  outputPath: string;
+
+  /** Ffmpeg argument vector for encoding the frames. */
+  ffmpegArgs: string[];
+}
+
+/** Placeholder preview frame returned by `seeFrame`. */
+export interface IAutoMovieMcpFramePreview {
+  /** Selected committed target. */
+  target: IAutoMovieMcpRenderTarget;
+
+  /** Zero-based frame index. */
+  frame: number;
+
+  /** Clip-local sample time in seconds. */
+  time: number;
+
+  /** Frame path the future capture step should produce. */
+  framePath: string;
+
+  /** Render width in pixels. */
+  width: number;
+
+  /** Render height in pixels. */
+  height: number;
+
+  /** Tone mapping requested by the render spec. */
+  toneMapping: IAutoMovieRenderSpec["toneMapping"];
+
+  /** Placeholder status until headless capture is wired. */
+  status: "placeholder";
 }
 
 /** The `stage` tool's result (a single object wrapping the engine's union). */
