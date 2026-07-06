@@ -33,6 +33,12 @@ out.
 | `validateScene` | scene + model ids -> validation | MCP scene checks |
 | `validateShot` | shot + scene + optional motions -> validation | MCP shot checks |
 | `validateSequence` | sequence + shots -> validation | MCP sequence checks |
+| `commitScript` | slate + script -> updated slate or violations | MCP commit checks |
+| `commitScene` | slate + scene + model ids -> updated slate or violations | MCP commit checks |
+| `commitShot` | slate + shot + optional motions -> updated slate or violations | MCP commit checks |
+| `commitBeatEnd` | slate + beat-end state -> updated slate or violations | MCP commit checks |
+| `commitNotes` | slate + review notes -> updated slate or violations | MCP commit checks |
+| `commitFilm` | slate + sequence -> updated slate or violations | MCP commit checks |
 | `stage` | script + staging -> staged scene (or violations) | `stageScene` |
 | `block` | script + staged scene + blocking -> blocked beat (or violations) | `blockBeat` |
 | `perform` | script + staged scene + performance + actor contexts + optional blocking -> performed shot (or violations) | `performShot` |
@@ -49,6 +55,11 @@ mesh or material payloads.
 
 Validation tools are read-only guards for commit flows. They return the standard
 `IAutoMovieValidation` envelope with field-located violations.
+
+Commit tools are pure slate transforms: they take the current slate and a
+candidate artifact, return a new slate only when preconditions and validation
+pass, and otherwise return the unchanged slate with path-bearing violations.
+Upstream replacements clear downstream slices that would become stale.
 
 `perform` keeps the MCP payload JSON-only. Clients provide per-actor motion
 contexts (`gaits`, staged position/facing, rest pose, optional rig/rest frames);
