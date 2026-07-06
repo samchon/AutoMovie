@@ -1756,7 +1756,7 @@ const build = () => {
   }
   const eyeballs = { positions: eyePos, uvs: eyeUv };
   const model = {
-    schema: "autofilm.parametric-head.makehuman.v1",
+    schema: "automovie.parametric-head.makehuman.v1",
     source: {
       intent:
         "Universal parametric head editor. Hero identities are presets only; no preset owns topology or base geometry.",

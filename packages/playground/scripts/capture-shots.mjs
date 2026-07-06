@@ -6,7 +6,7 @@
 // are encoded straight to H.264 MP4 in-process (wasm), so no ffmpeg needed.
 //
 // Prerequisites:
-//   1. Dev server running:  pnpm --filter @autofilm/playground dev   (:5173)
+//   1. Dev server running:  pnpm --filter @automovie/playground dev   (:5173)
 //   2. Google Chrome installed (Playwright drives it via executablePath).
 // Overrides: CHROME=/path/to/chrome, BASE=http://host:port.
 //
