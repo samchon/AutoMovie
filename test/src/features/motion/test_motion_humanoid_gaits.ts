@@ -1,4 +1,10 @@
-import { HUMANOID_GAITS, gaitMotion, validateMotion } from "@automovie/engine";
+import {
+  HUMANOID_GAITS,
+  HUMANOID_PROFILE,
+  bindProfileGaits,
+  gaitMotion,
+  validateMotion,
+} from "@automovie/engine";
 import {
   AutoMovieHumanoidBone,
   IAutoMovieBone,
@@ -57,6 +63,8 @@ const ampOf = (
  * 3. The gaits are ordered by energy where it should show: sprint's hip swing
  *    exceeds run's exceeds walk's; sprint bends the knee hardest of the five;
  *    sneak is the slowest (longest period) and quietest-armed.
+ * 4. The humanoid profile fixture carries the same gait names and binds them into
+ *    concrete clips with profile-scoped ids.
  */
 export const test_motion_humanoid_gaits = (): void => {
   TestValidator.equals(
@@ -104,4 +112,29 @@ export const test_motion_humanoid_gaits = (): void => {
         (n) => ampOf(HUMANOID_GAITS.sneak, arm) < ampOf(HUMANOID_GAITS[n], arm),
       ),
   );
+
+  const bound = bindProfileGaits(HUMANOID_PROFILE, RIG.id, 24);
+  TestValidator.equals(
+    "humanoid profile carries all gait names",
+    HUMANOID_PROFILE.gaits!.map((g) => g.name).sort((a, b) =>
+      a.localeCompare(b),
+    ),
+    [...NAMES].sort((a, b) => a.localeCompare(b)),
+  );
+  TestValidator.equals(
+    "humanoid profile binds every gait",
+    Object.keys(bound).sort((a, b) => a.localeCompare(b)),
+    [...NAMES].sort((a, b) => a.localeCompare(b)),
+  );
+  TestValidator.equals(
+    "profile-bound walk has a profile-scoped id",
+    bound.walk!.id,
+    "humanoid:walk",
+  );
+  for (const name of NAMES)
+    TestValidator.equals(
+      `profile-bound ${name} stays inside ROM`,
+      validateMotion({ motion: bound[name], skeleton: RIG }).success,
+      true,
+    );
 };

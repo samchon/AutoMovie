@@ -1,4 +1,4 @@
-import { IAutoMovieGait } from "@automovie/interface";
+import { IAutoMovieGait, IAutoMovieProfile } from "@automovie/interface";
 
 /**
  * The five canonical humanoid gaits — the locomotion the `locomote` verb's
@@ -181,4 +181,20 @@ export const HUMANOID_GAITS: Record<
       { bone: "rightUpperArm", phase: 0, duty: 0.5, amplitude: 30 },
     ],
   },
+};
+
+/**
+ * The canonical humanoid profile fixture: the same locomotion vocabulary as
+ * {@link HUMANOID_GAITS}, packaged as reusable profile data so a host can bind
+ * it onto any humanoid skeleton without hand-authored TypeScript clips.
+ *
+ * @author Samchon
+ */
+export const HUMANOID_PROFILE: IAutoMovieProfile = {
+  id: "humanoid",
+  name: "humanoid",
+  controls: [],
+  drivers: [],
+  limits: [],
+  gaits: Object.values(HUMANOID_GAITS),
 };
