@@ -24,6 +24,9 @@ out.
 | `getShot` | slate + beat -> shot or null | `readSlateContext` |
 | `getNotes` | slate + optional beat -> review notes | `readSlateContext` |
 | `getBeatEnd` | slate + beat -> beat end-state or null | `readSlateContext` |
+| `getResolvedPose` | geometry context + actor + time -> world-space bones or null | `sampleMotion` + `resolvePose` |
+| `getReach` | geometry context + actor + target -> arm reach report or null | `reachPose` |
+| `measureDistance` | scene + two targets -> distance report or null | `resolveTargetPoint` |
 | `stage` | script + staging -> staged scene (or violations) | `stageScene` |
 | `block` | script + staged scene + blocking -> blocked beat (or violations) | `blockBeat` |
 | `perform` | script + staged scene + performance + actor contexts + optional blocking -> performed shot (or violations) | `performShot` |
@@ -33,6 +36,10 @@ out.
 The `get*` tools are read-only slate queries. They let an agent ask what has
 already been committed before it writes the next stage, instead of reconstructing
 state from memory.
+
+Geometry query tools use a narrow context: staged scene nodes, model ids with
+their skeletons, MCP-safe motions, and an optional shot. They do not require full
+mesh or material payloads.
 
 `perform` keeps the MCP payload JSON-only. Clients provide per-actor motion
 contexts (`gaits`, staged position/facing, rest pose, optional rig/rest frames);

@@ -1,21 +1,29 @@
 import {
+  HUMANOID_JOINT_AXES,
   IAutoMovieActorContext,
   IAutoMovieBlockedBeat,
   IAutoMovieCut,
   IAutoMovieForgedCast,
   IAutoMoviePerformedShot,
   IAutoMovieStagedSet,
+  Quaternion,
+  Vector3,
   blockBeat,
   cutSequence,
   forgeCast,
   makeActorSynthesizer,
   performShot,
+  reachPose,
   readSlateContext,
+  resolvePose,
+  resolveTargetPoint,
+  sampleMotion,
   stageScene,
 } from "@automovie/engine";
 import {
   AutoMovieEasing,
   AutoMovieHumanoidBone,
+  IAutoMovieActionTarget,
   IAutoMovieAssembleApplication,
   IAutoMovieBeatEndState,
   IAutoMovieBlockingApplication,
@@ -28,6 +36,7 @@ import {
   IAutoMovieMotion,
   IAutoMoviePerformanceApplication,
   IAutoMoviePose,
+  IAutoMovieQuaternion,
   IAutoMovieReviewNote,
   IAutoMovieScene,
   IAutoMovieScript,
@@ -36,6 +45,7 @@ import {
   IAutoMovieSkeleton,
   IAutoMovieSlate,
   IAutoMovieStagingApplication,
+  IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
@@ -156,6 +166,98 @@ export class AutoMovieApplication {
         type: "getBeatEnd",
         beat: props.beat,
       }) as IAutoMovieBeatEndState | null,
+    };
+  }
+
+  /**
+   * Resolve an actor's world-space skeleton pose. With a shot it samples the
+   * actor's performed motion at `t`; without one it reads the staged node
+   * pose.
+   *
+   * @param props The geometry context, actor id, and optional shot time.
+   * @returns The resolved pose, or null when the actor cannot be resolved.
+   */
+  public getResolvedPose(props: {
+    /** Scene, skeletons, optional shot, and compiled motions to query. */
+    context: IAutoMovieMcpGeometryContext;
+    /** Scene-node id of the actor to resolve. */
+    actor: string;
+    /** Shot-local time in seconds. Defaults to 0. */
+    t?: number;
+  }): IAutoMovieGetResolvedPoseOutput {
+    return {
+      resolvedPose: resolveActorGeometry(
+        props.context,
+        props.actor,
+        props.t ?? 0,
+      ),
+    };
+  }
+
+  /**
+   * Measure whether an actor's arms can reach a positional target. It returns
+   * per-arm reach distance, gap, and the IK pose for the closest attempt.
+   *
+   * @param props The geometry context, actor id, and target.
+   * @returns The reach report, or null when actor or target is not positional.
+   */
+  public getReach(props: {
+    /** Scene and skeletons used to resolve the actor and target. */
+    context: IAutoMovieMcpGeometryContext;
+    /** Scene-node id of the reaching actor. */
+    actor: string;
+    /** Node, point, or group target to reach. */
+    target: IAutoMovieActionTarget;
+  }): IAutoMovieGetReachOutput {
+    const actor = findActorRig(props.context, props.actor);
+    if (actor === null) return { reach: null };
+    const target = resolveTargetPoint(
+      props.target,
+      nodePositions(props.context.scene),
+    );
+    if (target === null) return { reach: null };
+    const localTarget = toModelPoint(target, actor.node.transform);
+    if (localTarget === null) return { reach: null };
+    const left = measureArmReach(actor.skeleton, "left", localTarget);
+    const right = measureArmReach(actor.skeleton, "right", localTarget);
+    return {
+      reach: {
+        actor: props.actor,
+        target,
+        left,
+        right,
+        reachable: Boolean(left?.reachable || right?.reachable),
+      },
+    };
+  }
+
+  /**
+   * Measure the world-space distance between two positional targets. Relative
+   * targets return null because they are directions, not points.
+   *
+   * @param props The scene and the two targets to compare.
+   * @returns The resolved endpoints and distance, or null when unresolved.
+   */
+  public measureDistance(props: {
+    /** Scene whose node positions define the target space. */
+    scene: IAutoMovieScene;
+    /** First endpoint. */
+    from: IAutoMovieActionTarget;
+    /** Second endpoint. */
+    to: IAutoMovieActionTarget;
+  }): IAutoMovieMeasureDistanceOutput {
+    const nodes = nodePositions(props.scene);
+    const from = resolveTargetPoint(props.from, nodes);
+    const to = resolveTargetPoint(props.to, nodes);
+    return {
+      measurement:
+        from === null || to === null
+          ? null
+          : {
+              from,
+              to,
+              distance: Vector3.length(Vector3.subtract(to, from)),
+            },
     };
   }
 
@@ -336,6 +438,255 @@ const toStoredSlate = (slate: IAutoMovieMcpStoredSlate): IAutoMovieSlate => ({
   film: null,
 });
 
+type GeometryActor = {
+  node: IAutoMovieScene["nodes"][number];
+  model: IAutoMovieMcpGeometryModel;
+  skeleton: IAutoMovieSkeleton;
+};
+
+type ActorPoseState = {
+  pose: IAutoMoviePose;
+  motion: string | null;
+};
+
+const resolveActorGeometry = (
+  context: IAutoMovieMcpGeometryContext,
+  actor: string,
+  t: number,
+): IAutoMovieMcpResolvedPose | null => {
+  assertFiniteTime(t);
+  const actorRig = findActorRig(context, actor);
+  if (actorRig === null) return null;
+  const state = resolveActorPose(context, actorRig.node, actorRig.skeleton, t);
+  if (state === null) return null;
+  return {
+    node: actor,
+    model: actorRig.model.id,
+    motion: state.motion,
+    t,
+    pose: state.pose,
+    bones: resolvePose(state.pose, actorRig.skeleton, HUMANOID_JOINT_AXES).map(
+      (bone) => ({
+        bone: bone.bone,
+        localRotation: bone.localRotation,
+        worldPosition: applyTransformPoint(
+          actorRig.node.transform,
+          bone.worldPosition,
+        ),
+        worldRotation: Quaternion.multiply(
+          actorRig.node.transform.rotation,
+          bone.worldRotation,
+        ),
+      }),
+    ),
+  };
+};
+
+const resolveActorPose = (
+  context: IAutoMovieMcpGeometryContext,
+  node: IAutoMovieScene["nodes"][number],
+  skeleton: IAutoMovieSkeleton,
+  t: number,
+): ActorPoseState | null => {
+  const performance =
+    context.shot === undefined || context.shot === null
+      ? null
+      : findShotPerformance(context.shot, node.id);
+  const motionId = performance === null ? node.motion : performance.motion;
+  if (motionId !== null) {
+    const motion = findMotion(context, motionId);
+    if (motion === null) return null;
+    return {
+      motion: motionId,
+      pose: sampleMotion(
+        toEngineMotion(motion),
+        t - (performance?.startOffset ?? 0),
+      ).pose,
+    };
+  }
+  return {
+    motion: null,
+    pose: node.pose ?? { skeleton: skeleton.id, root: null, joints: [] },
+  };
+};
+
+const findActorRig = (
+  context: IAutoMovieMcpGeometryContext,
+  actor: string,
+): GeometryActor | null => {
+  const node = findSceneNode(context.scene, actor);
+  if (node === null) return null;
+  const model = findGeometryModel(context.models, node.model);
+  if (model === null || model.skeleton === null) return null;
+  return { node, model, skeleton: model.skeleton };
+};
+
+const findSceneNode = (
+  scene: IAutoMovieScene,
+  id: string,
+): IAutoMovieScene["nodes"][number] | null => {
+  const matches = scene.nodes
+    .map((node, index) => ({ node, index }))
+    .filter(({ node }) => node.id === id);
+  if (matches.length > 1)
+    throw new Error(
+      `scene node "${id}" is duplicated at context.scene.nodes[${matches[1]!.index}].id`,
+    );
+  return matches[0]?.node ?? null;
+};
+
+const findGeometryModel = (
+  models: IAutoMovieMcpGeometryModel[],
+  id: string,
+): IAutoMovieMcpGeometryModel | null => {
+  const matches = models
+    .map((model, index) => ({ model, index }))
+    .filter(({ model }) => model.id === id);
+  if (matches.length > 1)
+    throw new Error(
+      `geometry model "${id}" is duplicated at context.models[${matches[1]!.index}].id`,
+    );
+  return matches[0]?.model ?? null;
+};
+
+const findShotPerformance = (
+  shot: IAutoMovieShot,
+  node: string,
+): IAutoMovieShot["performances"][number] | null => {
+  const matches = shot.performances
+    .map((performance, index) => ({ performance, index }))
+    .filter(({ performance }) => performance.node === node);
+  if (matches.length > 1)
+    throw new Error(
+      `shot performance for "${node}" is duplicated at context.shot.performances[${matches[1]!.index}].node`,
+    );
+  return matches[0]?.performance ?? null;
+};
+
+const findMotion = (
+  context: IAutoMovieMcpGeometryContext,
+  id: string,
+): IAutoMovieMcpMotion | null => {
+  const entries = Object.entries(context.motions)
+    .map(([key, motion]) => ({ key, motion }))
+    .filter(({ motion }) => motion.id === id);
+  if (entries.length > 1)
+    throw new Error(
+      `motion "${id}" is duplicated at context.motions.${entries[1]!.key}.id`,
+    );
+  return entries[0]?.motion ?? null;
+};
+
+const nodePositions = (
+  scene: IAutoMovieScene,
+): Map<string, IAutoMovieVector3> =>
+  new Map(
+    scene.nodes.map((node, index) => {
+      if (scene.nodes.findIndex((other) => other.id === node.id) !== index)
+        throw new Error(
+          `scene node "${node.id}" is duplicated at scene.nodes[${index}].id`,
+        );
+      return [node.id, node.transform.translation];
+    }),
+  );
+
+const measureArmReach = (
+  skeleton: IAutoMovieSkeleton,
+  side: "left" | "right",
+  target: IAutoMovieVector3,
+): IAutoMovieMcpArmReach | null => {
+  const upperName = side === "left" ? "leftUpperArm" : "rightUpperArm";
+  const lowerName = side === "left" ? "leftLowerArm" : "rightLowerArm";
+  const handName = side === "left" ? "leftHand" : "rightHand";
+  const rest = resolvePose(
+    { skeleton: skeleton.id, root: null, joints: [] },
+    skeleton,
+    HUMANOID_JOINT_AXES,
+  );
+  const upper = rest.find((bone) => bone.bone === upperName);
+  const lower = rest.find((bone) => bone.bone === lowerName);
+  const hand = rest.find((bone) => bone.bone === handName);
+  if (upper === undefined || lower === undefined || hand === undefined)
+    return null;
+  const upperLength = Vector3.length(
+    Vector3.subtract(lower.worldPosition, upper.worldPosition),
+  );
+  const lowerLength = Vector3.length(
+    Vector3.subtract(hand.worldPosition, lower.worldPosition),
+  );
+  if (upperLength < 1e-6 || lowerLength < 1e-6) return null;
+  const targetDistance = Vector3.length(
+    Vector3.subtract(target, upper.worldPosition),
+  );
+  const maximumDistance = upperLength + lowerLength;
+  const gap = Math.max(0, targetDistance - maximumDistance);
+  return {
+    side,
+    targetDistance,
+    maximumDistance,
+    gap,
+    reachable: gap <= 1e-6,
+    pose: reachPose(skeleton, side, target),
+  };
+};
+
+const toEngineMotion = (motion: IAutoMovieMcpMotion): IAutoMovieMotion => ({
+  ...motion,
+  keyframes: motion.keyframes.map((keyframe) => ({
+    ...keyframe,
+    bezier:
+      keyframe.bezier === null
+        ? null
+        : ([
+            keyframe.bezier.x1,
+            keyframe.bezier.y1,
+            keyframe.bezier.x2,
+            keyframe.bezier.y2,
+          ] as [number, number, number, number]),
+  })),
+});
+
+const applyTransformPoint = (
+  transform: IAutoMovieTransform,
+  point: IAutoMovieVector3,
+): IAutoMovieVector3 =>
+  Vector3.add(
+    transform.translation,
+    Quaternion.rotateVector(transform.rotation, {
+      x: point.x * transform.scale.x,
+      y: point.y * transform.scale.y,
+      z: point.z * transform.scale.z,
+    }),
+  );
+
+const toModelPoint = (
+  point: IAutoMovieVector3,
+  transform: IAutoMovieTransform,
+): IAutoMovieVector3 | null => {
+  if (
+    Math.abs(transform.scale.x) < 1e-6 ||
+    Math.abs(transform.scale.y) < 1e-6 ||
+    Math.abs(transform.scale.z) < 1e-6
+  )
+    return null;
+  const unrotated = Quaternion.rotateVector(
+    inverse(transform.rotation),
+    Vector3.subtract(point, transform.translation),
+  );
+  return {
+    x: unrotated.x / transform.scale.x,
+    y: unrotated.y / transform.scale.y,
+    z: unrotated.z / transform.scale.z,
+  };
+};
+
+const inverse = (q: IAutoMovieQuaternion): IAutoMovieQuaternion =>
+  Quaternion.normalize({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
+
+const assertFiniteTime = (t: number): void => {
+  if (!Number.isFinite(t)) throw new Error("t must be finite");
+};
+
 /**
  * Stored slate slices accepted by MCP query tools.
  *
@@ -388,6 +739,140 @@ export interface IAutoMovieGetNotesOutput {
 export interface IAutoMovieGetBeatEndOutput {
   /** The end-state for the requested beat, or null until it exists. */
   beatEnd: IAutoMovieBeatEndState | null;
+}
+
+/**
+ * Geometry query context accepted by MCP tools.
+ *
+ * It keeps only the pieces the queries need: staged scene nodes, model
+ * skeletons, compiled MCP-safe motions, and an optional shot to sample.
+ */
+export interface IAutoMovieMcpGeometryContext {
+  /** Staged scene whose node transforms define world space. */
+  scene: IAutoMovieScene;
+
+  /** Model id to skeleton lookup; full mesh/material payloads are not needed. */
+  models: IAutoMovieMcpGeometryModel[];
+
+  /** Compiled motions, usually the `perform` output's `motions` record. */
+  motions: Record<string, IAutoMovieMcpMotion>;
+
+  /** Optional shot whose performances choose which motion each actor samples. */
+  shot?: IAutoMovieShot | null;
+}
+
+/** Minimal model geometry lookup accepted by MCP query tools. */
+export interface IAutoMovieMcpGeometryModel {
+  /** Model id referenced by scene nodes. */
+  id: string;
+
+  /** Skeleton used for FK and reach queries; null for props. */
+  skeleton: IAutoMovieSkeleton | null;
+}
+
+/** The `getResolvedPose` query result. */
+export interface IAutoMovieGetResolvedPoseOutput {
+  /** Actor pose resolved into world-space bone transforms, or null. */
+  resolvedPose: IAutoMovieMcpResolvedPose | null;
+}
+
+/** Actor pose after sampling motion and running forward kinematics. */
+export interface IAutoMovieMcpResolvedPose {
+  /** Scene-node id of the resolved actor. */
+  node: string;
+
+  /** Model id placed by the scene node. */
+  model: string;
+
+  /** Motion id sampled for this query, or null for a held pose. */
+  motion: string | null;
+
+  /** Shot-local time used for sampling, seconds. */
+  t: number;
+
+  /** Sparse pose sampled or held before FK. */
+  pose: IAutoMoviePose;
+
+  /** Bone transforms in scene world space. */
+  bones: IAutoMovieMcpResolvedBone[];
+}
+
+/** A single resolved bone transform in scene world space. */
+export interface IAutoMovieMcpResolvedBone {
+  /** Bone name. */
+  bone: AutoMovieHumanoidBone;
+
+  /** Local bone rotation after rest and articulation compose. */
+  localRotation: IAutoMovieQuaternion;
+
+  /** World-space bone origin. */
+  worldPosition: IAutoMovieVector3;
+
+  /** World-space bone orientation. */
+  worldRotation: IAutoMovieQuaternion;
+}
+
+/** The `getReach` query result. */
+export interface IAutoMovieGetReachOutput {
+  /** Reach report, or null when actor/target cannot resolve to rigged points. */
+  reach: IAutoMovieMcpReachReport | null;
+}
+
+/** Reachability report for one actor against one target. */
+export interface IAutoMovieMcpReachReport {
+  /** Scene-node id of the actor. */
+  actor: string;
+
+  /** Target resolved into world space. */
+  target: IAutoMovieVector3;
+
+  /** Left arm report, or null when the rig lacks that arm chain. */
+  left: IAutoMovieMcpArmReach | null;
+
+  /** Right arm report, or null when the rig lacks that arm chain. */
+  right: IAutoMovieMcpArmReach | null;
+
+  /** True when either arm can reach without a positive gap. */
+  reachable: boolean;
+}
+
+/** Reachability and IK pose for one arm. */
+export interface IAutoMovieMcpArmReach {
+  /** Arm side. */
+  side: "left" | "right";
+
+  /** Distance from shoulder to target in model space. */
+  targetDistance: number;
+
+  /** Shoulder-to-hand reach length in model space. */
+  maximumDistance: number;
+
+  /** Positive miss distance; zero means reachable. */
+  gap: number;
+
+  /** True when the target lies within the arm's reach shell. */
+  reachable: boolean;
+
+  /** IK pose that reaches the target, or extends toward it if out of range. */
+  pose: IAutoMoviePose | null;
+}
+
+/** The `measureDistance` query result. */
+export interface IAutoMovieMeasureDistanceOutput {
+  /** Distance report, or null when either target is not positional. */
+  measurement: IAutoMovieMcpDistanceMeasurement | null;
+}
+
+/** Resolved endpoints and their Euclidean distance. */
+export interface IAutoMovieMcpDistanceMeasurement {
+  /** First endpoint in world space. */
+  from: IAutoMovieVector3;
+
+  /** Second endpoint in world space. */
+  to: IAutoMovieVector3;
+
+  /** Euclidean distance between endpoints, meters. */
+  distance: number;
 }
 
 /** The `stage` tool's result (a single object wrapping the engine's union). */
