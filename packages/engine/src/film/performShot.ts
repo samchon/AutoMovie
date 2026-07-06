@@ -6,6 +6,7 @@ import {
   IAutoMovieCameraAction,
   IAutoMovieClip,
   IAutoMovieConstraintViolation,
+  IAutoMovieInteractionEvent,
   IAutoMovieMotion,
   IAutoMoviePerformanceApplication,
   IAutoMovieQuaternion,
@@ -67,6 +68,28 @@ const animatedBaseAt =
 
 const actionActors = (action: IAutoMovieActionCall): string[] =>
   typeof action.actor === "string" ? [action.actor] : action.actor;
+
+const eventTimeKey = (time: number): string => time.toFixed(6);
+
+const EVENT_KIND_ORDER: Record<IAutoMovieInteractionEvent["kind"], number> = {
+  contact: 0,
+  hit: 1,
+  fall: 2,
+  grab: 3,
+  attach: 4,
+  detach: 5,
+  release: 6,
+};
+
+const orderEvents = (
+  events: readonly IAutoMovieInteractionEvent[],
+): IAutoMovieInteractionEvent[] =>
+  [...events].sort(
+    (a, b) =>
+      a.time - b.time ||
+      EVENT_KIND_ORDER[a.kind] - EVENT_KIND_ORDER[b.kind] ||
+      a.id.localeCompare(b.id),
+  );
 
 /**
  * A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion
@@ -726,6 +749,7 @@ export const performShot = (props: {
   // reacts must ride the same synthesis and ROM gate as authored ones. A launch
   // that cannot reach its target at the given speed is a range violation.
   const objectMotions: IAutoMovieClip[] = [];
+  const events: IAutoMovieInteractionEvent[] = [];
   for (const job of launches) {
     // Lead a moving target: when the struck node travels during the shot (it
     // carries a `locomote`), resolve where it WILL be rather than aiming at its
@@ -792,6 +816,12 @@ export const performShot = (props: {
         times: track.times.map((t) => t + job.action.start),
       })),
     });
+    events.push(
+      ...result.events.map((event) => ({
+        ...event,
+        actionIndex: job.index,
+      })),
+    );
     if (result.react !== null) stageActions.push(result.react);
   }
   if (out.items.length > 0) return { success: false, violations: out.items };
@@ -830,7 +860,57 @@ export const performShot = (props: {
       typeof job.action.actor === "string"
         ? [job.action.actor]
         : job.action.actor;
-    for (const child of children)
+    for (const child of children) {
+      events.push(
+        {
+          id: `grab:${child}:${job.action.parent}:${eventTimeKey(job.action.start)}`,
+          kind: "grab",
+          source: "scriptedCue",
+          time: job.action.start,
+          actor: child,
+          target: job.action.parent,
+          object: child,
+          point: null,
+          actionIndex: job.index,
+          reaction: null,
+        },
+        {
+          id: `attach:${child}:${job.action.parent}:${eventTimeKey(job.action.start)}`,
+          kind: "attach",
+          source: "scriptedCue",
+          time: job.action.start,
+          actor: child,
+          target: job.action.parent,
+          object: child,
+          point: null,
+          actionIndex: job.index,
+          reaction: null,
+        },
+        {
+          id: `detach:${child}:${job.action.parent}:${eventTimeKey(end)}`,
+          kind: "detach",
+          source: "scriptedCue",
+          time: end,
+          actor: child,
+          target: job.action.parent,
+          object: child,
+          point: null,
+          actionIndex: job.index,
+          reaction: null,
+        },
+        {
+          id: `release:${child}:${job.action.parent}:${eventTimeKey(end)}`,
+          kind: "release",
+          source: "scriptedCue",
+          time: end,
+          actor: child,
+          target: job.action.parent,
+          object: child,
+          point: null,
+          actionIndex: job.index,
+          reaction: null,
+        },
+      );
       objectMotions.push(
         compileAttach({
           child,
@@ -845,6 +925,7 @@ export const performShot = (props: {
           restFrames: restFrames?.(job.action.parent),
         }),
       );
+    }
   }
 
   // Compile the live camera's move from its frame actions. Subjects resolve
@@ -894,6 +975,7 @@ export const performShot = (props: {
         startOffset: 0,
       })),
       objectMotions,
+      events: orderEvents(events),
       duration: performance.duration,
     },
     motions,

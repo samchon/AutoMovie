@@ -194,6 +194,60 @@ export const test_film_perform_shot_launch = (): void => {
     ["foe"],
   );
 
+  const launchEvents = ok.shot.events ?? [];
+  TestValidator.equals(
+    "the shot carries contact, hit, and fall events",
+    launchEvents.map((event) => event.kind),
+    ["contact", "hit", "fall"],
+  );
+  TestValidator.predicate(
+    "the contact event lands with the projectile",
+    launchEvents[0]!.source === "collisionSolver" &&
+      launchEvents[0]!.time === times[times.length - 1] &&
+      launchEvents[0]!.actionIndex === 0 &&
+      launchEvents[0]!.target === "foe" &&
+      launchEvents[0]!.object === "arrow",
+  );
+  TestValidator.predicate(
+    "the hit event drives the downstream reaction",
+    launchEvents[1]!.source === "impactOutput" &&
+      launchEvents[1]!.reaction === "foe" &&
+      launchEvents[1]!.actionIndex === 0 &&
+      nclose(launchEvents[1]!.time, times[times.length - 1]!),
+  );
+  TestValidator.predicate(
+    "the fall event records the unbalance response",
+    launchEvents[2]!.kind === "fall" &&
+      launchEvents[2]!.actor === "foe" &&
+      launchEvents[2]!.reaction === "foe",
+  );
+  const faster = perform([
+    {
+      verb: "launch",
+      actor: "archer",
+      start: 0.2,
+      duration: "auto",
+      projectile: "arrow",
+      at: { kind: "node", node: "foe" },
+      speed: 30,
+      onHit: { force: 0.6, unbalance: true },
+    },
+  ]);
+  TestValidator.equals("a faster hit still performs", faster.success, true);
+  if (faster.success === true) {
+    const fastHit = faster.shot.events!.find((event) => event.kind === "hit")!;
+    const okHit = launchEvents.find((event) => event.kind === "hit")!;
+    TestValidator.predicate(
+      "changing hit time moves the reaction event",
+      fastHit.time < okHit.time,
+    );
+    TestValidator.predicate(
+      "the shifted hit still schedules the struck actor",
+      fastHit.reaction === "foe" &&
+        faster.shot.performances.some((p) => p.node === "foe"),
+    );
+  }
+
   // 2. the projectile must be a staged scene object
   const unstaged = perform([
     {
@@ -354,6 +408,16 @@ export const test_film_perform_shot_launch = (): void => {
       "but nobody is scheduled to react",
       pointed.shot.performances.length,
       0,
+    );
+    TestValidator.equals(
+      "the point aim records contact but no hit",
+      (pointed.shot.events ?? []).map((event) => event.kind),
+      ["contact"],
+    );
+    TestValidator.equals(
+      "the point contact has no target actor",
+      pointed.shot.events![0]!.target,
+      null,
     );
   }
 

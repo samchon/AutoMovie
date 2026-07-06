@@ -1,5 +1,16 @@
 # `@automovie/engine`
 
+## Interaction events
+
+`performShot` emits `shot.events` for engine-visible interactions on the
+shot-local clock. Launches record collision-solver `contact`, impact `hit`, and
+unbalancing `fall` events while still injecting the same synthetic `react`
+action for actor motion. `attachTo` records scripted `grab`/`attach` and
+`detach`/`release` handoff events while keeping prop movement in `objectMotions`.
+
+Use `sequenceEventTimeline(sequence, shots)` to map those shot-local events onto
+the sequence output clock after trims and transitions.
+
 ## 현재 Tier 3 표면
 
 - `validateGroundContact`: 설정한 발 본이 `y` 지면 평면 위에 있어야 하는 클립에서만 호출하는 물리 검증기. 모션을 샘플링하고 FK를 푼 뒤, `$input.samples[i].<bone>.worldPosition.y` 경로에 `physics` 위반을 만든다.

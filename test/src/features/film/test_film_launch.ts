@@ -103,6 +103,34 @@ export const test_film_launch = (): void => {
   );
   TestValidator.equals("force carried through", react.force, 0.7);
   TestValidator.equals("unbalance carried through", react.unbalance, true);
+  TestValidator.equals(
+    "the launch emits contact, hit, and fall events",
+    hit.events.map((event) => event.kind),
+    ["contact", "hit", "fall"],
+  );
+  TestValidator.predicate(
+    "the contact event is the collision-solver landing",
+    hit.events[0]!.source === "collisionSolver" &&
+      hit.events[0]!.target === "foe" &&
+      hit.events[0]!.object === "arrow" &&
+      hit.events[0]!.actionIndex === null &&
+      nclose(hit.events[0]!.time, react.start) &&
+      hit.events[0]!.point !== null &&
+      vclose(hit.events[0]!.point, target, 2e-3),
+  );
+  TestValidator.predicate(
+    "the hit event names the downstream reaction",
+    hit.events[1]!.source === "impactOutput" &&
+      hit.events[1]!.reaction === "foe" &&
+      nclose(hit.events[1]!.time, react.start),
+  );
+  TestValidator.predicate(
+    "unbalance emits a fall event",
+    hit.events[2]!.kind === "fall" &&
+      hit.events[2]!.actor === "foe" &&
+      hit.events[2]!.source === "impactOutput" &&
+      hit.events[2]!.reaction === "foe",
+  );
 
   // 3. `from` sits upstream of the incoming velocity — the body is knocked the
   // way the arrow flew, not toward the shooter. `hitPoint − from` reconstructs
@@ -146,6 +174,39 @@ export const test_film_launch = (): void => {
   })!;
   TestValidator.equals("no onHit → no react", quiet.react, null);
 
+  TestValidator.equals(
+    "a hit without onHit still records contact and hit",
+    quiet.events.map((event) => event.kind),
+    ["contact", "hit"],
+  );
+  TestValidator.equals(
+    "but it records no downstream reaction",
+    quiet.events[1]!.reaction,
+    null,
+  );
+  const listedActor = compileLaunch({
+    action: launch({ actor: ["archer", "spotter"] }),
+    origin,
+    target,
+    targetNode: "foe",
+  })!;
+  TestValidator.equals(
+    "actor-list launch events use the first actor",
+    listedActor.events[0]!.actor,
+    "archer",
+  );
+  const emptyActor = compileLaunch({
+    action: launch({ actor: [] }),
+    origin,
+    target,
+    targetNode: "foe",
+  })!;
+  TestValidator.equals(
+    "empty actor-list launch events record no initiator",
+    emptyActor.events[0]!.actor,
+    null,
+  );
+
   // 4b. an onHit aimed at a point (no single actor) still flies, but schedules
   // no reaction — there is no node to recoil.
   const pointed = compileLaunch({
@@ -155,6 +216,16 @@ export const test_film_launch = (): void => {
     targetNode: null,
   })!;
   TestValidator.equals("a nodeless target → no react", pointed.react, null);
+  TestValidator.equals(
+    "a point target records contact but no node hit",
+    pointed.events.map((event) => event.kind),
+    ["contact"],
+  );
+  TestValidator.equals(
+    "the contact has no target node",
+    pointed.events[0]!.target,
+    null,
+  );
   TestValidator.predicate(
     "but the flight still bakes",
     pointed.clip.id === "trajectory:arrow" &&
@@ -250,5 +321,14 @@ export const test_film_launch = (): void => {
   TestValidator.predicate(
     "the moving-target react is timed to the computed contact",
     led.react !== null && nclose(led.react.start, 0.5 + led.hitTime),
+  );
+  TestValidator.predicate(
+    "the moving-target hit event follows the led contact time",
+    led.events.some(
+      (event) =>
+        event.kind === "hit" &&
+        event.target === "foe" &&
+        nclose(event.time, 0.5 + led.hitTime),
+    ),
   );
 };

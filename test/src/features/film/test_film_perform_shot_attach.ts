@@ -164,6 +164,42 @@ export const test_film_perform_shot_attach = (): void => {
     ["knight"],
   );
 
+  const attachEvents = ok.shot.events ?? [];
+  TestValidator.equals(
+    "the attach handoff emits grab/attach/detach/release events",
+    attachEvents.map((event) => event.kind),
+    [
+      "grab",
+      "grab",
+      "attach",
+      "attach",
+      "detach",
+      "detach",
+      "release",
+      "release",
+    ],
+  );
+  const swordAttach = attachEvents.find(
+    (event) => event.kind === "attach" && event.object === "sword",
+  )!;
+  TestValidator.predicate(
+    "the sword attach event points at the parent action",
+    swordAttach.source === "scriptedCue" &&
+      swordAttach.time === 0 &&
+      swordAttach.actor === "sword" &&
+      swordAttach.target === "knight" &&
+      swordAttach.actionIndex === 1,
+  );
+  const shieldRelease = attachEvents.find(
+    (event) => event.kind === "release" && event.object === "shield",
+  )!;
+  TestValidator.predicate(
+    "the shield release event marks the auto-duration handoff end",
+    shieldRelease.time === 2 &&
+      shieldRelease.target === "knight" &&
+      shieldRelease.actionIndex === 2,
+  );
+
   // 2. restFrames are threaded into the baked objectMotion FK.
   const raisedMotion: IAutoMovieMotion = makeMotion(
     [

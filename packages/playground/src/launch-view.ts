@@ -132,6 +132,7 @@ const performance: IAutoMoviePerformanceApplication.IWrite = {
       actor: "archer",
       start: 0.6,
       duration: "auto",
+      region: "upperBody",
       projectile: "arrow",
       at: { kind: "node", node: "target" },
       speed: 9.2,

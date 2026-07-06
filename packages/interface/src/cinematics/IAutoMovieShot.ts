@@ -1,4 +1,5 @@
 import { IAutoMovieClip } from "../core/IAutoMovieTrack";
+import { IAutoMovieInteractionEvent } from "./IAutoMovieInteractionEvent";
 
 /**
  * A shot: one continuous take — a scene, the camera that frames it, the
@@ -45,6 +46,14 @@ export interface IAutoMovieShot {
    * the shot animates no such object.
    */
   objectMotions: IAutoMovieClip[];
+
+  /**
+   * Computed or scripted interactions on this shot's local clock. `performShot`
+   * emits this for contacts, hits, falls, and attach handoffs so downstream
+   * tools can follow the same timing the engine used. Absent means legacy or
+   * no-event data; an empty array means the shot was assembled and had none.
+   */
+  events?: IAutoMovieInteractionEvent[];
 
   /** Shot length in seconds (local time origin = 0). */
   duration: number;
