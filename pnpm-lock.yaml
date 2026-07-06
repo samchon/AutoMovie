@@ -272,6 +272,9 @@ importers:
       '@automovie/interface':
         specifier: workspace:^
         version: link:../packages/interface
+      '@automovie/mcp':
+        specifier: workspace:^
+        version: link:../packages/mcp
       '@automovie/render':
         specifier: workspace:^
         version: link:../packages/render
