@@ -8,7 +8,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "rimraf lib && ttsc",
+    "build": "rimraf lib && ttsc && tsc --emitDeclarationOnly",
     "postbuild": "node ../../internals/config/assertBuild.js",
     "prepack": "pnpm run build"
   },
