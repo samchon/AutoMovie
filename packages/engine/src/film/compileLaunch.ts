@@ -1,5 +1,6 @@
 import {
   IAutoMovieClip,
+  IAutoMovieInteractionEvent,
   IAutoMovieLaunchAction,
   IAutoMovieReactAction,
   IAutoMovieVector3,
@@ -39,7 +40,15 @@ export interface IAutoMovieLaunchResult {
 
   /** The solved launch velocity (magnitude = `action.speed`). */
   velocity: IAutoMovieVector3;
+
+  /** Engine-visible contact/hit/fall events on the shot-local clock. */
+  events: IAutoMovieInteractionEvent[];
 }
+
+const eventTimeKey = (time: number): string => time.toFixed(6);
+
+const firstActor = (action: IAutoMovieLaunchAction): string | null =>
+  typeof action.actor === "string" ? action.actor : (action.actor[0] ?? null);
 
 /**
  * Compose the `launch` verb's engine primitives into one result — the missing
@@ -136,6 +145,50 @@ export const compileLaunch = (props: {
       unbalance: action.onHit.unbalance,
     };
   }
+  const hitAt = action.start + solution.hitTime;
+  const sourceActor = firstActor(action);
+  const targetKey = targetNode ?? "point";
+  const contact: IAutoMovieInteractionEvent = {
+    id: `contact:${action.projectile}:${targetKey}:${eventTimeKey(hitAt)}`,
+    kind: "contact",
+    source: "collisionSolver",
+    time: hitAt,
+    actor: sourceActor,
+    target: targetNode,
+    object: action.projectile,
+    point: landing.position,
+    actionIndex: null,
+    reaction: null,
+  };
+  const events: IAutoMovieInteractionEvent[] = [contact];
+  if (targetNode !== null) {
+    const hit: IAutoMovieInteractionEvent = {
+      id: `hit:${action.projectile}:${targetNode}:${eventTimeKey(hitAt)}`,
+      kind: "hit",
+      source: "impactOutput",
+      time: hitAt,
+      actor: sourceActor,
+      target: targetNode,
+      object: action.projectile,
+      point: landing.position,
+      actionIndex: null,
+      reaction: react === null ? null : targetNode,
+    };
+    events.push(hit);
+    if (react?.unbalance === true)
+      events.push({
+        id: `fall:${targetNode}:${eventTimeKey(hitAt)}`,
+        kind: "fall",
+        source: "impactOutput",
+        time: hitAt,
+        actor: targetNode,
+        target: null,
+        object: action.projectile,
+        point: landing.position,
+        actionIndex: null,
+        reaction: targetNode,
+      });
+  }
 
   return {
     clip,
@@ -143,5 +196,6 @@ export const compileLaunch = (props: {
     hitTime: solution.hitTime,
     hitPoint: landing.position,
     velocity: solution.velocity,
+    events,
   };
 };

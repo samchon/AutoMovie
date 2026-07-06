@@ -1,3 +1,4 @@
+export * from "./IAutoMovieInteractionEvent";
 export * from "./IAutoMovieShot";
 export * from "./IAutoMovieSequence";
 export * from "./IAutoMovieTrim";

@@ -1,4 +1,8 @@
-import { resolveSequencePlayback, sequenceTimeline } from "@automovie/engine";
+import {
+  resolveSequencePlayback,
+  sequenceEventTimeline,
+  sequenceTimeline,
+} from "@automovie/engine";
 import { IAutoMovieSequence, IAutoMovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -15,6 +19,24 @@ const shot = (id: string, duration: number): IAutoMovieShot => ({
   duration,
 });
 const SHOTS = [shot("shot:beat-1", 3), shot("shot:beat-2", 4)];
+type Event = NonNullable<IAutoMovieShot["events"]>[number];
+const event = (
+  id: string,
+  kind: Event["kind"],
+  source: Event["source"],
+  time: number,
+): Event => ({
+  id,
+  kind,
+  source,
+  time,
+  actor: null,
+  target: null,
+  object: null,
+  point: null,
+  actionIndex: null,
+  reaction: null,
+});
 
 const SEQUENCE: IAutoMovieSequence = {
   id: "seq",
@@ -154,5 +176,66 @@ export const test_film_playback_resolver = (): void => {
         ),
       ["sequence.shots[0].transition", "nothing to transition from"],
     ),
+  );
+  const eventShots: IAutoMovieShot[] = [
+    {
+      ...shot("shot:beat-1", 3),
+      events: [
+        event("a-before", "contact", "sampledProximity", 0.5),
+        event("a-in", "hit", "impactOutput", 1.25),
+        event("a-z", "contact", "sampledProximity", 1.25),
+        event("a-after", "fall", "impactOutput", 2.75),
+      ],
+    },
+    {
+      ...shot("shot:beat-2", 4),
+      events: [
+        event("b-in", "attach", "scriptedCue", 1),
+        event("b-after", "release", "scriptedCue", 3),
+      ],
+    },
+  ];
+  const eventSequence: IAutoMovieSequence = {
+    id: "seq-events",
+    name: null,
+    fps: 24,
+    shots: [
+      {
+        shot: "shot:beat-1",
+        trim: { start: 1, duration: 1.5 },
+        transition: null,
+      },
+      {
+        shot: "shot:beat-2",
+        trim: { start: 0.5, duration: 2 },
+        transition: { kind: "crossDissolve", duration: 0.25 },
+      },
+    ],
+  };
+  const events = sequenceEventTimeline(eventSequence, eventShots);
+  TestValidator.equals(
+    "sequence events keep only events inside trims",
+    events.map((e) => e.id),
+    ["a-in", "a-z", "b-in"],
+  );
+  TestValidator.predicate(
+    "shot-local events are placed on the global clock",
+    nclose(events[0]!.shotTime, 1.25) &&
+      nclose(events[0]!.globalTime, 0.25) &&
+      events[0]!.entry === 0 &&
+      events[0]!.shot === "shot:beat-1" &&
+      nclose(events[1]!.shotTime, 1.25) &&
+      nclose(events[1]!.globalTime, 0.25) &&
+      events[1]!.entry === 0 &&
+      events[1]!.shot === "shot:beat-1" &&
+      nclose(events[2]!.shotTime, 1) &&
+      nclose(events[2]!.globalTime, 1.75) &&
+      events[2]!.entry === 1 &&
+      events[2]!.shot === "shot:beat-2",
+  );
+  TestValidator.equals(
+    "shots without interaction metadata produce no sequence events",
+    sequenceEventTimeline(SEQUENCE, SHOTS),
+    [],
   );
 };

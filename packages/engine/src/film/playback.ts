@@ -1,4 +1,8 @@
-import { IAutoMovieSequence, IAutoMovieShot } from "@automovie/interface";
+import {
+  IAutoMovieInteractionEvent,
+  IAutoMovieSequence,
+  IAutoMovieShot,
+} from "@automovie/interface";
 
 /**
  * One entry's placement on the output timeline: where it starts globally, how
@@ -30,6 +34,25 @@ export interface IAutoMoviePlaybackTimeline {
 
   /** Total output seconds (transition overlaps subtracted). */
   runtime: number;
+}
+
+/**
+ * A shot-local interaction event placed on the sequence output clock.
+ *
+ * @author Samchon
+ */
+export interface IAutoMoviePlaybackEvent extends IAutoMovieInteractionEvent {
+  /** Index into `sequence.shots`. */
+  entry: number;
+
+  /** Shot id that owns the source event. */
+  shot: string;
+
+  /** Original shot-local event time. */
+  shotTime: number;
+
+  /** Global output second after trims and transitions. */
+  globalTime: number;
 }
 
 const indexShots = (
@@ -138,6 +161,41 @@ export const resolveSequencePlayback = (
     };
   }
   return { shot: live.shot, time: live.offset + elapsed, blend };
+};
+
+/**
+ * Place every shot interaction event onto the sequence output clock. Events
+ * outside a sequence entry's trimmed source range are omitted; included events
+ * keep their shot-local `time` and also expose `shotTime` plus `globalTime`.
+ */
+export const sequenceEventTimeline = (
+  sequence: IAutoMovieSequence,
+  shots: IAutoMovieShot[],
+): IAutoMoviePlaybackEvent[] => {
+  const timeline = sequenceTimeline(sequence, shots);
+  const byId = indexShots(shots);
+  const events: IAutoMoviePlaybackEvent[] = [];
+  for (const entry of timeline.entries) {
+    const shot = byId.get(entry.shot)!.shot;
+    const from = entry.offset;
+    const to = entry.offset + entry.played;
+    for (const event of shot.events ?? []) {
+      if (event.time < from - 1e-9 || event.time > to + 1e-9) continue;
+      events.push({
+        ...event,
+        entry: entry.entry,
+        shot: entry.shot,
+        shotTime: event.time,
+        globalTime: entry.start + (event.time - entry.offset),
+      });
+    }
+  }
+  return events.sort(
+    (a, b) =>
+      a.globalTime - b.globalTime ||
+      a.entry - b.entry ||
+      a.id.localeCompare(b.id),
+  );
 };
 
 /**
