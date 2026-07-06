@@ -8,6 +8,7 @@
 
 - `frameTimes`, `frameName`, `framePattern`, `ffmpegArgs`: render spec에서 frame schedule과 encode 인자를 만든다.
 - `renderVideo`: `captureFrame`과 `encode` adapter를 받아 프레임 캡처 순서와 비디오 인코딩 순서를 실행한다.
+- `renderAndSee`: `renderVideo` 결과에 spec, duration, frame path, sample time, ffmpeg args를 붙여 agent가 그대로 읽을 수 있는 JSON 산출물로 돌려준다.
 - `createHeadlessCaptureAdapter`: Playwright-like page를 `renderVideo`의 `captureFrame` adapter로 감싼다. route miss, seek hook miss, screenshot failure, empty frame을 구조화된 오류 코드로 구분한다.
 - `exportModelToGLB`: AutoMovie model AST를 glTF binary buffer로 직렬화한다.
 

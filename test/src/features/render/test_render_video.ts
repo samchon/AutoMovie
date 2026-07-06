@@ -59,6 +59,22 @@ export const test_render_video = async (): Promise<void> => {
   TestValidator.equals("24 frames captured", result.frameCount, 24);
   TestValidator.equals("schedule length", result.times.length, 24);
   TestValidator.equals("output path returned", result.output, "/tmp/out.mp4");
+  TestValidator.equals("frame dir reported", result.frameDir, "/tmp/x");
+  TestValidator.equals(
+    "input pattern reported",
+    result.inputPattern,
+    "/tmp/x/frame_%05d.png",
+  );
+  TestValidator.equals("first frame artifact", result.frames[0], {
+    index: 0,
+    timeSeconds: 0,
+    path: "/tmp/x/frame_0.png",
+  });
+  TestValidator.equals("last frame artifact", result.frames[23], {
+    index: 23,
+    timeSeconds: 23 / 24,
+    path: "/tmp/x/frame_23.png",
+  });
   TestValidator.equals("captured every frame in order", captured.length, 24);
   TestValidator.equals("first capture index 0", captured[0]!.i, 0);
   TestValidator.equals("last capture index 23", captured[23]!.i, 23);
@@ -68,6 +84,24 @@ export const test_render_video = async (): Promise<void> => {
     "encode received the ffmpeg args",
     matchesFfmpegInvocation(encodeArgs),
   );
+  TestValidator.equals("result records ffmpeg args", result.ffmpegArgs, [
+    "-y",
+    "-framerate",
+    "24",
+    "-i",
+    "/tmp/x/frame_%05d.png",
+    "-c:v",
+    "libx264",
+    "-pix_fmt",
+    "yuv420p",
+    "-crf",
+    "18",
+    "-r",
+    "24",
+    "-movflags",
+    "+faststart",
+    "/tmp/out.mp4",
+  ]);
 
   let rejectedCaptures = 0;
   let rejectedEncodes = 0;
