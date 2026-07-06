@@ -7,6 +7,7 @@ import {
 import {
   IAutoMovieAssembleApplication,
   IAutoMovieGait,
+  IAutoMovieScript,
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
@@ -93,6 +94,12 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
       tools.tools.map((tool) => tool.name).sort((a, b) => a.localeCompare(b)),
       [
         "block",
+        "commitBeatEnd",
+        "commitFilm",
+        "commitNotes",
+        "commitScene",
+        "commitScript",
+        "commitShot",
         "cut",
         "forge",
         "getBeatEnd",
@@ -115,6 +122,12 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     );
 
     const script = makeScriptWrite();
+    const scriptArtifact: IAutoMovieScript = {
+      logline: script.logline,
+      theme: script.theme,
+      cast: script.cast,
+      beats: script.beats,
+    };
     const staged = (
       await call<{ staged: IAutoMovieStagedSet }>(client, "stage", {
         script,
@@ -123,15 +136,43 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     ).staged;
     TestValidator.equals("stage succeeds", staged.success, true);
     if (staged.success !== true) return;
+    const scriptCommit = await call<{
+      committed: boolean;
+      slate: {
+        script: IAutoMovieScript | null;
+        scene: typeof staged.scene | null;
+        shots: [];
+        beatEnds: [];
+        notes: [];
+        film: null;
+      };
+    }>(client, "commitScript", {
+      slate: {
+        script: null,
+        scene: null,
+        shots: [],
+        beatEnds: [],
+        notes: [],
+        film: null,
+      },
+      script: scriptArtifact,
+    });
+    TestValidator.equals("commitScript succeeds", scriptCommit.committed, true);
+    const modelRefs = [
+      ...new Set(staged.scene.nodes.map((node) => node.model)),
+    ].map((id) => ({ id, skeleton: null }));
+    const sceneCommit = await call<{
+      committed: boolean;
+      slate: typeof scriptCommit.slate;
+    }>(client, "commitScene", {
+      slate: scriptCommit.slate,
+      scene: staged.scene,
+      models: modelRefs,
+    });
+    TestValidator.equals("commitScene succeeds", sceneCommit.committed, true);
     const queriedScene = (
       await call<{ scene: typeof staged.scene }>(client, "getScene", {
-        slate: {
-          script,
-          scene: staged.scene,
-          shots: [],
-          beatEnds: [],
-          notes: [],
-        },
+        slate: sceneCommit.slate,
       })
     ).scene;
     TestValidator.equals(
@@ -160,9 +201,7 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
         "validateScene",
         {
           scene: staged.scene,
-          models: [
-            ...new Set(staged.scene.nodes.map((node) => node.model)),
-          ].map((id) => ({ id, skeleton: null })),
+          models: modelRefs,
         },
       )
     ).validation;
