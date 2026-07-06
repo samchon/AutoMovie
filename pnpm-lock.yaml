@@ -130,6 +130,9 @@ importers:
       '@automovie/interface':
         specifier: workspace:^
         version: link:../interface
+      '@automovie/render':
+        specifier: workspace:^
+        version: link:../render
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@4.4.3)

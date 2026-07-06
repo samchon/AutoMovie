@@ -39,6 +39,8 @@ out.
 | `commitBeatEnd` | slate + beat-end state -> updated slate or violations | MCP commit checks |
 | `commitNotes` | slate + review notes -> updated slate or violations | MCP commit checks |
 | `commitFilm` | slate + sequence -> updated slate or violations | MCP commit checks |
+| `planRender` | slate + render spec -> frame schedule and ffmpeg args | `@automovie/render` planning |
+| `seeFrame` | slate + render spec + frame/time -> preview frame placeholder | `@automovie/render` planning |
 | `stage` | script + staging -> staged scene (or violations) | `stageScene` |
 | `block` | script + staged scene + blocking -> blocked beat (or violations) | `blockBeat` |
 | `perform` | script + staged scene + performance + actor contexts + optional blocking -> performed shot (or violations) | `performShot` |
@@ -60,6 +62,11 @@ Commit tools are pure slate transforms: they take the current slate and a
 candidate artifact, return a new slate only when preconditions and validation
 pass, and otherwise return the unchanged slate with path-bearing violations.
 Upstream replacements clear downstream slices that would become stale.
+
+Render/see tools are placeholders for the capture pipeline. `planRender`
+resolves a committed shot or film into deterministic frame times, frame paths,
+and ffmpeg args; `seeFrame` resolves one preview frame. Neither tool writes
+files or captures pixels yet.
 
 `perform` keeps the MCP payload JSON-only. Clients provide per-actor motion
 contexts (`gaits`, staged position/facing, rest pose, optional rig/rest frames);
