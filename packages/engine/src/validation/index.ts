@@ -2,6 +2,7 @@ export * from "./violation";
 export * from "./validatePose";
 export * from "./validateExpression";
 export * from "./validateFace";
+export * from "./validateBalanceSupport";
 export * from "./validateFootSkate";
 export * from "./validateGroundContact";
 export * from "./validateMotion";
