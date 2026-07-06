@@ -15,6 +15,7 @@
     "build:knight": "node scripts/build-knight.cjs",
     "build:models": "npm run build:stickman && npm run build:cat && npm run build:horse && npm run build:knight",
     "render:see": "node scripts/render-and-see.cjs",
+    "render:sequence": "node scripts/render-sequence-and-see.cjs",
     "shots": "node scripts/capture-shots.mjs",
     "shots:head": "node scripts/capture-head.mjs",
     "preview": "vite preview --port 4173 --strictPort"

@@ -65,6 +65,17 @@ The same `CHROME` and `BASE` environment overrides apply. The default `BASE` is
 `http://127.0.0.1:5173`. Defaults write under `.shots/_render-see/` and capture
 the human walk route from `stickman.html`.
 
+`render:sequence` does the same for the `film.html` sequence path. The page
+exposes its committed `sequence` and `shots`, the script builds a
+`planSequenceRender` manifest, then captures each manifest frame through the
+page's sequence-frame hook. The JSON artifact includes the sequence timeline,
+frame paths, encoded MP4 path, and a pixel probe for sampled dissolve frames.
+
+```bash
+pnpm render:sequence
+pnpm render:sequence -- --fps 12 --out .shots/_render-see/film-sequence.mp4
+```
+
 ## Head screenshots (`.png`)
 
 The head editor needs two capture modes across many angles:
