@@ -19,6 +19,11 @@ import {
   resolveTargetPoint,
   sampleMotion,
   stageScene,
+  toValidation,
+  validateModel as validateEngineModel,
+  validateMotion as validateEngineMotion,
+  validatePose as validateEnginePose,
+  violation,
 } from "@automovie/engine";
 import {
   AutoMovieEasing,
@@ -27,12 +32,14 @@ import {
   IAutoMovieAssembleApplication,
   IAutoMovieBeatEndState,
   IAutoMovieBlockingApplication,
+  IAutoMovieClip,
   IAutoMovieConstraintViolation,
   IAutoMovieExpression,
   IAutoMovieForgeApplication,
   IAutoMovieGait,
   IAutoMovieGaitRootBob,
   IAutoMovieKeyframe,
+  IAutoMovieModel,
   IAutoMovieMotion,
   IAutoMoviePerformanceApplication,
   IAutoMoviePose,
@@ -41,11 +48,13 @@ import {
   IAutoMovieScene,
   IAutoMovieScript,
   IAutoMovieScriptApplication,
+  IAutoMovieSequence,
   IAutoMovieShot,
   IAutoMovieSkeleton,
   IAutoMovieSlate,
   IAutoMovieStagingApplication,
   IAutoMovieTransform,
+  IAutoMovieValidation,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
@@ -258,6 +267,117 @@ export class AutoMovieApplication {
               to,
               distance: Vector3.length(Vector3.subtract(to, from)),
             },
+    };
+  }
+
+  /**
+   * Validate a pose against a skeleton. Returns ROM, duplicate-joint, skeleton
+   * mismatch, and root-transform diagnostics with field paths.
+   *
+   * @param props The pose and target skeleton.
+   * @returns The validation envelope.
+   */
+  public validatePose(props: {
+    /** Pose to validate. */
+    pose: IAutoMoviePose;
+    /** Target skeleton whose ROM and bones constrain the pose. */
+    skeleton: IAutoMovieSkeleton;
+  }): IAutoMovieValidateOutput {
+    return {
+      validation: validateEnginePose({
+        pose: props.pose,
+        skeleton: props.skeleton,
+      }).toValidation(),
+    };
+  }
+
+  /**
+   * Validate an MCP-safe motion against a skeleton. Bezier controls are
+   * converted back to the engine tuple shape before temporal and ROM checks
+   * run.
+   *
+   * @param props The motion and target skeleton.
+   * @returns The validation envelope.
+   */
+  public validateMotion(props: {
+    /** Motion to validate, using MCP-safe bezier objects. */
+    motion: IAutoMovieMcpMotion;
+    /** Target skeleton whose ROM and bones constrain the motion. */
+    skeleton: IAutoMovieSkeleton;
+  }): IAutoMovieValidateOutput {
+    return {
+      validation: validateEngineMotion({
+        motion: toEngineMotion(props.motion),
+        skeleton: props.skeleton,
+      }),
+    };
+  }
+
+  /**
+   * Validate a model. This runs the engine's model validator over geometry,
+   * materials, skeleton graph, skinning, and transform ranges.
+   *
+   * @param props The model to validate.
+   * @returns The validation envelope.
+   */
+  public validateModel(props: {
+    /** Model to validate. */
+    model: IAutoMovieModel;
+  }): IAutoMovieValidateOutput {
+    return { validation: validateEngineModel({ model: props.model }) };
+  }
+
+  /**
+   * Validate a staged scene's local integrity: ids, model references, finite
+   * transforms, camera clip planes, and light ranges.
+   *
+   * @param props The scene and available model ids.
+   * @returns The validation envelope.
+   */
+  public validateScene(props: {
+    /** Scene to validate. */
+    scene: IAutoMovieScene;
+    /** Model ids available to scene nodes. */
+    models: IAutoMovieMcpGeometryModel[];
+  }): IAutoMovieValidateOutput {
+    return { validation: validateSceneArtifact(props.scene, props.models) };
+  }
+
+  /**
+   * Validate a shot against its scene and optional motion table. The result
+   * names missing scene/camera/node/motion refs and invalid clip timing.
+   *
+   * @param props The shot, scene, and optional motions to validate against.
+   * @returns The validation envelope.
+   */
+  public validateShot(props: {
+    /** Shot to validate. */
+    shot: IAutoMovieShot;
+    /** Scene the shot should render. */
+    scene: IAutoMovieScene;
+    /** Optional compiled motions keyed by actor or arbitrary ids. */
+    motions?: Record<string, IAutoMovieMcpMotion>;
+  }): IAutoMovieValidateOutput {
+    return {
+      validation: validateShotArtifact(props.shot, props.scene, props.motions),
+    };
+  }
+
+  /**
+   * Validate an editorial sequence against the shots it references. It checks
+   * fps, shot refs, trim spans, transition placement, and duplicate ids.
+   *
+   * @param props The sequence and available shots.
+   * @returns The validation envelope.
+   */
+  public validateSequence(props: {
+    /** Sequence to validate. */
+    sequence: IAutoMovieSequence;
+    /** Shots available to sequence entries. */
+    shots: IAutoMovieShot[];
+  }): IAutoMovieValidateOutput {
+    return {
+      validation: validateSequenceArtifact(props.sequence, props.shots),
     };
   }
 
@@ -687,6 +807,596 @@ const assertFiniteTime = (t: number): void => {
   if (!Number.isFinite(t)) throw new Error("t must be finite");
 };
 
+const validateSceneArtifact = (
+  scene: IAutoMovieScene,
+  models: IAutoMovieMcpGeometryModel[],
+): IAutoMovieValidation => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateNonEmptyId(scene.id, "$input.id", "scene id", violations);
+  validateUniqueIds(scene.nodes, "$input.nodes", "scene node id", violations);
+  validateUniqueIds(scene.cameras, "$input.cameras", "camera id", violations);
+  validateUniqueIds(scene.lights, "$input.lights", "light id", violations);
+  validateUniqueIds(models, "$models", "model id", violations);
+
+  const modelIds = new Set(models.map((model) => model.id));
+  scene.nodes.forEach((node, i) => {
+    const path = `$input.nodes[${i}]`;
+    validateNonEmptyId(node.id, `${path}.id`, "scene node id", violations);
+    validateNonEmptyId(
+      node.model,
+      `${path}.model`,
+      "scene node model",
+      violations,
+    );
+    if (!modelIds.has(node.model))
+      pushViolation(
+        violations,
+        "type",
+        `${path}.model`,
+        `scene node model "${node.model}" must reference an available model id`,
+        node.model,
+      );
+    validateTransformArtifact(
+      node.transform,
+      `${path}.transform`,
+      "scene node transform",
+      violations,
+    );
+  });
+
+  scene.cameras.forEach((camera, i) => {
+    const path = `$input.cameras[${i}]`;
+    validateNonEmptyId(camera.id, `${path}.id`, "camera id", violations);
+    validateTransformArtifact(
+      camera.transform,
+      `${path}.transform`,
+      "camera transform",
+      violations,
+    );
+    validateRange(
+      camera.fovY,
+      `${path}.fovY`,
+      0,
+      180,
+      "camera fovY",
+      violations,
+      false,
+    );
+    validateRange(
+      camera.near,
+      `${path}.near`,
+      0,
+      Infinity,
+      "camera near",
+      violations,
+      false,
+    );
+    if (!Number.isFinite(camera.far) || camera.far <= camera.near)
+      pushViolation(
+        violations,
+        "range",
+        `${path}.far`,
+        `camera far must be finite and greater than near (${camera.near}), but was ${camera.far}`,
+        camera.far,
+      );
+  });
+
+  scene.lights.forEach((light, i) => {
+    const path = `$input.lights[${i}]`;
+    validateNonEmptyId(light.id, `${path}.id`, "light id", violations);
+    validateTransformArtifact(
+      light.transform,
+      `${path}.transform`,
+      "light transform",
+      violations,
+    );
+    validateColorArtifact(light.color, `${path}.color`, violations);
+    validateRange(
+      light.intensity,
+      `${path}.intensity`,
+      0,
+      Infinity,
+      "light intensity",
+      violations,
+    );
+    if (light.type === "point" || light.type === "spot")
+      validateRange(
+        light.range,
+        `${path}.range`,
+        0,
+        Infinity,
+        "light range",
+        violations,
+      );
+    if (light.type === "spot")
+      validateRange(
+        light.coneAngle,
+        `${path}.coneAngle`,
+        0,
+        90,
+        "spot coneAngle",
+        violations,
+        false,
+      );
+  });
+
+  return toValidation(violations);
+};
+
+const validateShotArtifact = (
+  shot: IAutoMovieShot,
+  scene: IAutoMovieScene,
+  motions: Record<string, IAutoMovieMcpMotion> | undefined,
+): IAutoMovieValidation => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateNonEmptyId(shot.id, "$input.id", "shot id", violations);
+  if (shot.scene !== scene.id)
+    pushViolation(
+      violations,
+      "type",
+      "$input.scene",
+      `shot scene "${shot.scene}" must match scene "${scene.id}"`,
+      shot.scene,
+    );
+  if (!scene.cameras.some((camera) => camera.id === shot.camera))
+    pushViolation(
+      violations,
+      "type",
+      "$input.camera",
+      `shot camera "${shot.camera}" must reference a scene camera`,
+      shot.camera,
+    );
+  validateRange(
+    shot.duration,
+    "$input.duration",
+    0,
+    Infinity,
+    "shot duration",
+    violations,
+    false,
+  );
+
+  const nodeIds = new Set(scene.nodes.map((node) => node.id));
+  const motionIds =
+    motions === undefined
+      ? null
+      : new Set(Object.values(motions).map((motion) => motion.id));
+  validateUniqueBy(
+    shot.performances.map((performance, index) => ({
+      id: performance.node,
+      path: `$input.performances[${index}].node`,
+    })),
+    "shot performance node",
+    violations,
+  );
+  shot.performances.forEach((performance, i) => {
+    const path = `$input.performances[${i}]`;
+    validateNonEmptyId(
+      performance.node,
+      `${path}.node`,
+      "performance node",
+      violations,
+    );
+    if (!nodeIds.has(performance.node))
+      pushViolation(
+        violations,
+        "type",
+        `${path}.node`,
+        `performance node "${performance.node}" must reference a scene node`,
+        performance.node,
+      );
+    validateRange(
+      performance.startOffset,
+      `${path}.startOffset`,
+      0,
+      shot.duration,
+      "performance startOffset",
+      violations,
+    );
+    if (performance.motion !== null) {
+      validateNonEmptyId(
+        performance.motion,
+        `${path}.motion`,
+        "performance motion",
+        violations,
+      );
+      if (motionIds !== null && !motionIds.has(performance.motion))
+        pushViolation(
+          violations,
+          "type",
+          `${path}.motion`,
+          `performance motion "${performance.motion}" must reference a compiled motion`,
+          performance.motion,
+        );
+    }
+  });
+
+  if (shot.cameraMotion !== null)
+    validateClipArtifact(shot.cameraMotion, "$input.cameraMotion", violations);
+  validateUniqueIds(
+    shot.objectMotions,
+    "$input.objectMotions",
+    "object motion clip id",
+    violations,
+  );
+  shot.objectMotions.forEach((clip, i) =>
+    validateClipArtifact(clip, `$input.objectMotions[${i}]`, violations),
+  );
+
+  return toValidation(violations);
+};
+
+const validateSequenceArtifact = (
+  sequence: IAutoMovieSequence,
+  shots: IAutoMovieShot[],
+): IAutoMovieValidation => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateNonEmptyId(sequence.id, "$input.id", "sequence id", violations);
+  validateRange(
+    sequence.fps,
+    "$input.fps",
+    0,
+    Infinity,
+    "sequence fps",
+    violations,
+    false,
+  );
+  validateUniqueIds(shots, "$shots", "shot id", violations);
+  const shotsById = new Map(shots.map((shot) => [shot.id, shot]));
+
+  sequence.shots.forEach((entry, i) => {
+    const path = `$input.shots[${i}]`;
+    validateNonEmptyId(entry.shot, `${path}.shot`, "sequence shot", violations);
+    const shot = shotsById.get(entry.shot);
+    if (shot === undefined)
+      pushViolation(
+        violations,
+        "type",
+        `${path}.shot`,
+        `sequence shot "${entry.shot}" must reference an available shot`,
+        entry.shot,
+      );
+    if (entry.trim !== null)
+      validateTrim(
+        entry.trim,
+        shot?.duration ?? Infinity,
+        `${path}.trim`,
+        violations,
+      );
+    if (entry.transition !== null) {
+      if (i === 0)
+        pushViolation(
+          violations,
+          "temporal",
+          `${path}.transition`,
+          "the first sequence entry cannot have an incoming transition",
+          entry.transition,
+        );
+      validateTransition(entry.transition, `${path}.transition`, violations);
+      const current = entryDuration(entry, shot);
+      const previousEntry = sequence.shots[i - 1];
+      const previous =
+        previousEntry === undefined
+          ? null
+          : entryDuration(previousEntry, shotsById.get(previousEntry.shot));
+      if (
+        previous !== null &&
+        current !== null &&
+        entry.transition.duration > Math.min(previous, current)
+      )
+        pushViolation(
+          violations,
+          "temporal",
+          `${path}.transition.duration`,
+          `transition duration must fit adjacent entries, but was ${entry.transition.duration}`,
+          entry.transition.duration,
+        );
+    }
+  });
+
+  return toValidation(violations);
+};
+
+const validateClipArtifact = (
+  clip: IAutoMovieClip,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  validateNonEmptyId(clip.id, `${path}.id`, "clip id", violations);
+  validateRange(
+    clip.duration,
+    `${path}.duration`,
+    0,
+    Infinity,
+    "clip duration",
+    violations,
+    false,
+  );
+  validateUniqueBy(
+    clip.tracks.map((track, index) => ({
+      id: `${track.channel.kind}:${JSON.stringify(track.channel)}`,
+      path: `${path}.tracks[${index}].channel`,
+    })),
+    "clip track channel",
+    violations,
+  );
+  clip.tracks.forEach((track, i) => {
+    const trackPath = `${path}.tracks[${i}]`;
+    validateIncreasingTimes(
+      track.times,
+      clip.duration,
+      `${trackPath}.times`,
+      violations,
+    );
+    track.values.forEach((value, j) => {
+      if (!Number.isFinite(value))
+        pushViolation(
+          violations,
+          "range",
+          `${trackPath}.values[${j}]`,
+          `track value must be finite, but was ${value}`,
+          value,
+        );
+    });
+  });
+};
+
+const validateTrim = (
+  trim: NonNullable<IAutoMovieSequence["shots"][number]["trim"]>,
+  shotDuration: number,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  validateRange(
+    trim.start,
+    `${path}.start`,
+    0,
+    Infinity,
+    "trim start",
+    violations,
+  );
+  validateRange(
+    trim.duration,
+    `${path}.duration`,
+    0,
+    Infinity,
+    "trim duration",
+    violations,
+    false,
+  );
+  if (
+    Number.isFinite(shotDuration) &&
+    Number.isFinite(trim.start) &&
+    Number.isFinite(trim.duration) &&
+    trim.start + trim.duration > shotDuration
+  )
+    pushViolation(
+      violations,
+      "temporal",
+      path,
+      `trim start + duration must fit within shot duration ${shotDuration}`,
+      trim,
+    );
+};
+
+const validateTransition = (
+  transition: NonNullable<IAutoMovieSequence["shots"][number]["transition"]>,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void =>
+  validateRange(
+    transition.duration,
+    `${path}.duration`,
+    0,
+    Infinity,
+    "transition duration",
+    violations,
+    false,
+  );
+
+const entryDuration = (
+  entry: IAutoMovieSequence["shots"][number],
+  shot: IAutoMovieShot | undefined,
+): number | null => {
+  if (shot === undefined) return null;
+  return entry.trim?.duration ?? shot.duration;
+};
+
+const validateIncreasingTimes = (
+  times: number[],
+  duration: number,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  let previous = -Infinity;
+  times.forEach((time, i) => {
+    if (!Number.isFinite(time) || time < 0 || time > duration)
+      pushViolation(
+        violations,
+        "temporal",
+        `${path}[${i}]`,
+        `track time must be finite and within [0, ${duration}], but was ${time}`,
+        time,
+      );
+    if (Number.isFinite(time) && time <= previous)
+      pushViolation(
+        violations,
+        "temporal",
+        `${path}[${i}]`,
+        `track times must strictly increase; ${time} is not greater than ${previous}`,
+        time,
+      );
+    if (Number.isFinite(time)) previous = time;
+  });
+};
+
+const validateUniqueIds = <T extends { id: string }>(
+  items: T[],
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void =>
+  validateUniqueBy(
+    items.map((item, index) => ({ id: item.id, path: `${path}[${index}].id` })),
+    label,
+    violations,
+  );
+
+const validateUniqueBy = (
+  entries: { id: string; path: string }[],
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    if (seen.has(entry.id))
+      pushViolation(
+        violations,
+        "type",
+        entry.path,
+        `${label} "${entry.id}" must be unique`,
+        entry.id,
+      );
+    seen.add(entry.id);
+  }
+};
+
+const validateNonEmptyId = (
+  id: string,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (id.trim().length === 0)
+    pushViolation(
+      violations,
+      "type",
+      path,
+      `${label} must be a non-empty id`,
+      id,
+    );
+};
+
+const validateTransformArtifact = (
+  transform: IAutoMovieTransform,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  validateVectorArtifact(
+    transform.translation,
+    `${path}.translation`,
+    `${label} translation`,
+    violations,
+  );
+  validateQuaternionArtifact(
+    transform.rotation,
+    `${path}.rotation`,
+    `${label} rotation`,
+    violations,
+  );
+  validateVectorArtifact(
+    transform.scale,
+    `${path}.scale`,
+    `${label} scale`,
+    violations,
+  );
+  for (const axis of ["x", "y", "z"] as const)
+    if (transform.scale[axis] <= 0)
+      pushViolation(
+        violations,
+        "range",
+        `${path}.scale.${axis}`,
+        `${label} scale component must be > 0, but was ${transform.scale[axis]}`,
+        transform.scale[axis],
+      );
+};
+
+const validateVectorArtifact = (
+  vector: IAutoMovieVector3,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  for (const axis of ["x", "y", "z"] as const)
+    if (!Number.isFinite(vector[axis]))
+      pushViolation(
+        violations,
+        "range",
+        `${path}.${axis}`,
+        `${label} component must be finite, but was ${vector[axis]}`,
+        vector[axis],
+      );
+};
+
+const validateQuaternionArtifact = (
+  quaternion: IAutoMovieQuaternion,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  for (const axis of ["x", "y", "z", "w"] as const)
+    if (!Number.isFinite(quaternion[axis]))
+      pushViolation(
+        violations,
+        "range",
+        `${path}.${axis}`,
+        `${label} component must be finite, but was ${quaternion[axis]}`,
+        quaternion[axis],
+      );
+};
+
+const validateColorArtifact = (
+  color: IAutoMovieScene["lights"][number]["color"],
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  for (const channel of ["r", "g", "b"] as const)
+    validateRange(
+      color[channel],
+      `${path}.${channel}`,
+      0,
+      1,
+      channel,
+      violations,
+    );
+  if (color.a !== null)
+    validateRange(color.a, `${path}.a`, 0, 1, "alpha", violations);
+};
+
+const validateRange = (
+  value: number,
+  path: string,
+  min: number,
+  max: number,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+  inclusiveMin = true,
+): void => {
+  const aboveMin = inclusiveMin ? value >= min : value > min;
+  const belowMax = max === Infinity ? true : value <= max;
+  if (!Number.isFinite(value) || !aboveMin || !belowMax)
+    pushViolation(
+      violations,
+      "range",
+      path,
+      max === Infinity
+        ? `${label} must be finite and ${inclusiveMin ? ">=" : ">"} ${min}, but was ${value}`
+        : `${label} must be finite and within ${inclusiveMin ? "[" : "("}${min}, ${max}], but was ${value}`,
+      value,
+    );
+};
+
+const pushViolation = (
+  violations: IAutoMovieConstraintViolation[],
+  kind: IAutoMovieConstraintViolation["kind"],
+  path: string,
+  expected: string,
+  value: unknown,
+): void => {
+  violations.push(violation(kind, path, expected, value));
+};
+
 /**
  * Stored slate slices accepted by MCP query tools.
  *
@@ -873,6 +1583,12 @@ export interface IAutoMovieMcpDistanceMeasurement {
 
   /** Euclidean distance between endpoints, meters. */
   distance: number;
+}
+
+/** Validation tool result. */
+export interface IAutoMovieValidateOutput {
+  /** Success or field-located violations. */
+  validation: IAutoMovieValidation;
 }
 
 /** The `stage` tool's result (a single object wrapping the engine's union). */
