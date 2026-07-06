@@ -49,6 +49,22 @@ Overrides via env: `CHROME=/path/to/chrome` (binary), `BASE=http://host:port`
 `[page, query, durationSeconds, frameCount, width, height, outPath, fps]` to
 capture a new clip. Encoding uses `h264-mp4-encoder` (wasm) + `pngjs`.
 
+## Render-and-see artifact (`.mp4` + `.json` + frames)
+
+`render:see` is the render seam smoke path: it drives one playground route
+through `@automovie/render`'s `createHeadlessCaptureAdapter` and `renderAndSee`,
+then writes PNG frames, an MP4, and a JSON artifact describing frame paths,
+sample times, ffmpeg-equivalent args, route, and encoder.
+
+```bash
+pnpm render:see
+pnpm render:see -- --page stickman.html --query "char=human&clip=walk&az=80"
+```
+
+The same `CHROME` and `BASE` environment overrides apply. The default `BASE` is
+`http://127.0.0.1:5173`. Defaults write under `.shots/_render-see/` and capture
+the human walk route from `stickman.html`.
+
 ## Head screenshots (`.png`)
 
 The head editor needs two capture modes across many angles:
