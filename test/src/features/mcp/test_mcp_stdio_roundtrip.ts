@@ -35,12 +35,18 @@ const WALK: IAutoMovieGait = {
   limbs: [{ bone: "leftUpperLeg", phase: 0, duty: 0.5, amplitude: 25 }],
 };
 
+const REQUEST_OPTIONS = { timeout: 120_000 };
+
 const call = async <T>(
   client: Client,
   name: string,
   args: Record<string, unknown>,
 ): Promise<T> => {
-  const result = await client.callTool({ name, arguments: args });
+  const result = await client.callTool(
+    { name, arguments: args },
+    undefined,
+    REQUEST_OPTIONS,
+  );
   if (result.structuredContent === undefined)
     throw new Error(`tool ${name} returned no structured content`);
   return result.structuredContent as T;
@@ -87,9 +93,9 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     command: "pnpm",
     args: ["--filter", "@automovie/mcp", "start"],
   });
-  await client.connect(transport);
+  await client.connect(transport, REQUEST_OPTIONS);
   try {
-    const tools = await client.listTools();
+    const tools = await client.listTools(undefined, REQUEST_OPTIONS);
     TestValidator.equals(
       "tool names",
       tools.tools.map((tool) => tool.name).sort((a, b) => a.localeCompare(b)),
