@@ -1,3 +1,4 @@
+import { IAutoMoviePose } from "@automovie/interface";
 import {
   VRM,
   VRMHumanBoneName,
@@ -6,6 +7,8 @@ import {
 } from "@pixiv/three-vrm";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+
+import { createVrmModelObject } from "./vrmAdapter";
 
 // A short authored performance — a beautiful character actually moving and
 // emoting — rendered deterministically (renderAt(t)) so the same clip captures
@@ -38,11 +41,17 @@ gl.setSize(W, H, false);
 gl.setPixelRatio(1);
 
 let vrm: VRM | null = null;
+let runtime: ReturnType<typeof createVrmModelObject> | null = null;
 const gaze = new THREE.Object3D();
 scene.add(gaze);
 
 const EXPR = ["happy", "angry", "sad", "relaxed", "surprised"];
 export const DURATION = 5.0;
+const EMPTY_POSE: IAutoMoviePose = {
+  skeleton: "humanoid",
+  root: null,
+  joints: [],
+};
 
 interface Track {
   target: string;
@@ -167,14 +176,21 @@ const renderAt = (t: number, dt = 1 / 30): void => {
     const node = h.getNormalizedBoneNode(bone as VRMHumanBoneName);
     if (node) node.rotation.set(pose[bone]!.x, pose[bone]!.y, pose[bone]!.z);
   }
-  const em = vrm.expressionManager;
-  if (em) {
-    for (const k of EXPR) em.setValue(k, expr[k] ?? 0);
-    em.setValue("blink", Math.max(0, 1 - Math.abs(((t % 2.6) - 0.12) * 14)));
+  if (runtime !== null) {
+    const blink = Math.max(0, 1 - Math.abs(((t % 2.6) - 0.12) * 14));
+    for (const sink of runtime.expressionTargets ?? []) {
+      for (const k of EXPR) sink.setExpressionValue(k, expr[k] ?? 0);
+      sink.setExpressionValue("blink", blink);
+    }
   }
   gaze.position.set(camera.position.x, camera.position.y, camera.position.z);
   if (vrm.lookAt) vrm.lookAt.target = gaze;
-  vrm.update(dt);
+  runtime?.afterAutoMovieFrame?.({
+    seconds: t,
+    deltaSeconds: dt,
+    pose: EMPTY_POSE,
+    expression: null,
+  });
   gl.render(scene, camera);
 };
 
@@ -193,6 +209,7 @@ loader.load("/models/Vita.vrm", (gltf) => {
   v.scene.traverse((o) => (o.frustumCulled = false));
   scene.add(v.scene);
   vrm = v;
+  runtime = createVrmModelObject(v);
   renderAt(0);
   (window as unknown as { __automovie: Record<string, unknown> }).__automovie =
     {
