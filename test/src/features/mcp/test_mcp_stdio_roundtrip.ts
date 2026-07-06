@@ -73,9 +73,10 @@ const assemble = (shot: string): IAutoMovieAssembleApplication.IWrite => ({
  *
  * Scenarios:
  *
- * 1. A real stdio client sees the five AutoMovie tools.
- * 2. The same client calls `stage -> forge -> block -> perform -> cut`, feeding
- *    structured outputs forward and receiving a successful final sequence.
+ * 1. A real stdio client sees the AutoMovie stage and slate-query tools.
+ * 2. The same client calls `stage -> getScene -> forge -> block -> perform ->
+ *    cut`, feeding structured outputs forward and receiving a successful final
+ *    sequence.
  */
 export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
   const client = new Client({ name: "automovie-test", version: "0.0.0" });
@@ -89,7 +90,18 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     TestValidator.equals(
       "tool names",
       tools.tools.map((tool) => tool.name).sort((a, b) => a.localeCompare(b)),
-      ["block", "cut", "forge", "perform", "stage"],
+      [
+        "block",
+        "cut",
+        "forge",
+        "getBeatEnd",
+        "getNotes",
+        "getScene",
+        "getScript",
+        "getShot",
+        "perform",
+        "stage",
+      ],
     );
 
     const script = makeScriptWrite();
@@ -101,6 +113,22 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     ).staged;
     TestValidator.equals("stage succeeds", staged.success, true);
     if (staged.success !== true) return;
+    const queriedScene = (
+      await call<{ scene: typeof staged.scene }>(client, "getScene", {
+        slate: {
+          script,
+          scene: staged.scene,
+          shots: [],
+          beatEnds: [],
+          notes: [],
+        },
+      })
+    ).scene;
+    TestValidator.equals(
+      "getScene returns staged scene",
+      queriedScene,
+      staged.scene,
+    );
 
     const forged = (
       await call<{ forged: IAutoMovieForgedCast }>(client, "forge", {

@@ -19,11 +19,20 @@ out.
 
 | tool | in -> out | engine |
 |------|-----------|--------|
+| `getScript` | slate -> script slice or null | `readSlateContext` |
+| `getScene` | slate -> staged scene slice or null | `readSlateContext` |
+| `getShot` | slate + beat -> shot or null | `readSlateContext` |
+| `getNotes` | slate + optional beat -> review notes | `readSlateContext` |
+| `getBeatEnd` | slate + beat -> beat end-state or null | `readSlateContext` |
 | `stage` | script + staging -> staged scene (or violations) | `stageScene` |
 | `block` | script + staged scene + blocking -> blocked beat (or violations) | `blockBeat` |
 | `perform` | script + staged scene + performance + actor contexts + optional blocking -> performed shot (or violations) | `performShot` |
 | `cut` | assemble plan + performed shots -> cut sequence (or violations) | `cutSequence` |
 | `forge` | script + forge spec -> generated cast models (or violations) | `forgeCast` |
+
+The `get*` tools are read-only slate queries. They let an agent ask what has
+already been committed before it writes the next stage, instead of reconstructing
+state from memory.
 
 `perform` keeps the MCP payload JSON-only. Clients provide per-actor motion
 contexts (`gaits`, staged position/facing, rest pose, optional rig/rest frames);
