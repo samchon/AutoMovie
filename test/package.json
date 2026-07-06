@@ -16,6 +16,7 @@
     "@automovie/forge": "workspace:^",
     "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
+    "@automovie/mcp": "workspace:^",
     "@automovie/render": "workspace:^",
     "@gltf-transform/core": "^4.1.1",
     "@nestia/e2e": "catalog:samchon"
