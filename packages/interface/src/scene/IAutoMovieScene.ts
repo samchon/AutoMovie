@@ -1,6 +1,7 @@
 import { IAutoMovieCamera } from "./IAutoMovieCamera";
 import { IAutoMovieLight } from "./IAutoMovieLight";
 import { IAutoMovieSceneNode } from "./IAutoMovieSceneNode";
+import { IAutoMovieSpace } from "./IAutoMovieSpace";
 
 /**
  * A scene: placed characters, cameras, and lights — the top-level container the
@@ -29,4 +30,13 @@ export interface IAutoMovieScene {
 
   /** Scene lights. */
   lights: IAutoMovieLight[];
+
+  /**
+   * The scene's space — standable surfaces and walkability (#605). Absent or
+   * `null` means no declared space: the engine falls back to the scalar ground
+   * plane it assumed before the space layer existed. Optional (`?`) rather than
+   * required so every pre-space scene stays valid — the evolving-schema pattern
+   * {@link IAutoMovieShot.events} uses.
+   */
+  space?: IAutoMovieSpace | null;
 }
