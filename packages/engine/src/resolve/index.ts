@@ -1,6 +1,7 @@
 export * from "./channel";
 export * from "./sampleClip";
 export * from "./applyChannelLimit";
+export * from "./bindProfile";
 export * from "./composeScene";
 export * from "./drivenCurve";
 export * from "./resolveDrivers";

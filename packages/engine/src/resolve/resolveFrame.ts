@@ -10,6 +10,7 @@ import {
   IAutoMovieClampViolation,
   applyChannelLimit,
 } from "./applyChannelLimit";
+import { IAutoMovieProfileApplication, bindProfile } from "./bindProfile";
 import { channelKey } from "./channel";
 import { composeScene } from "./composeScene";
 import { resolveDrivers } from "./resolveDrivers";
@@ -74,6 +75,17 @@ export interface IAutoMovieResolveInput {
    */
   springs?: IAutoMovieResolveSprings;
 
+  /**
+   * Profiles applied to this scene ({@link bindProfile} per entry). Their bound
+   * limits and drivers merge **before** the directly-passed `limits`/`drivers`:
+   * a profile is the rig's standard baseline, the direct inputs are the
+   * caller's per-scene word — so a direct limit clamps last (its bound is the
+   * final one) and direct world-space drivers apply after profile-bound ones.
+   * Omit for none; absent, behavior is byte-identical to before profiles
+   * existed.
+   */
+  profiles?: IAutoMovieProfileApplication[];
+
   /** The instant to resolve, in clip-local seconds. */
   seconds: number;
 }
@@ -82,6 +94,14 @@ export interface IAutoMovieResolveInput {
 export interface IAutoMovieResolveViolation extends IAutoMovieClampViolation {
   /** The {@link channelKey} of the channel that was clamped. */
   channel: string;
+
+  /**
+   * Id of the profile whose bound limit fired, when the limit arrived through
+   * {@link IAutoMovieResolveInput.profiles}; absent for a directly-passed limit.
+   * Lets a correction round say "the door profile's hinge range did this"
+   * instead of pointing at an anonymous bound.
+   */
+  profile?: string;
 }
 
 /** The resolved frame: world matrices, morph weights, and any clamps fired. */
@@ -126,24 +146,41 @@ export const resolveFrame = (
   const sampled: Map<string, IAutoMovieSampledChannel> =
     input.clip === null ? new Map() : sampleClip(input.clip, input.seconds);
 
+  // Bind applied profiles and merge: profile-bound limits/drivers first, the
+  // caller's direct inputs after (the caller's word is final — a direct limit
+  // clamps last; direct world drivers apply after profile-bound ones).
+  const limitEntries: ILimitEntry[] = [];
+  const drivers: IAutoMovieDriver[] = [];
+  for (const application of input.profiles ?? []) {
+    const bound = bindProfile(application);
+    for (const limit of bound.limits)
+      limitEntries.push({ limit, profile: application.profile.id });
+    drivers.push(...bound.drivers);
+  }
+  for (const limit of input.limits) limitEntries.push({ limit, profile: null });
+  drivers.push(...(input.drivers ?? []));
+
   // DRIVE (channel-space): resolve copy/driven into the sampled map; collect the
   // world-space drivers the post-compose pass owns.
   const nodesById = new Map(input.nodes.map((n) => [n.id, n]));
   const worldSpaceDrivers =
-    input.drivers !== undefined
-      ? resolveDrivers(input.drivers, sampled, nodesById)
-      : [];
+    drivers.length > 0 ? resolveDrivers(drivers, sampled, nodesById) : [];
   validateSampledNodeChannels(sampled, nodesById);
 
   // CONSTRAIN: clamp each sampled channel that carries a limit, in place.
   const violations: IAutoMovieResolveViolation[] = [];
-  for (const limit of input.limits) {
-    const key = channelKey(limit.channel);
+  for (const entry of limitEntries) {
+    const key = channelKey(entry.limit.channel);
     const hit = sampled.get(key);
     if (hit === undefined) continue;
-    const outcome = applyChannelLimit(hit.value, limit);
+    const outcome = applyChannelLimit(hit.value, entry.limit);
     hit.value = outcome.value;
-    for (const v of outcome.violations) violations.push({ ...v, channel: key });
+    for (const v of outcome.violations)
+      violations.push(
+        entry.profile === null
+          ? { ...v, channel: key }
+          : { ...v, channel: key, profile: entry.profile },
+      );
   }
 
   // Fold node-targeting samples into per-node transform overrides + weights.
@@ -230,6 +267,12 @@ const seedSprungPositions = (
     world.set(id, next);
   }
 };
+
+/** One limit to apply, tagged with the profile it came from (null = direct). */
+interface ILimitEntry {
+  limit: IAutoMovieChannelLimit;
+  profile: string | null;
+}
 
 /** Translation column of a column-major world matrix. */
 const positionOf = (m: number[]) => ({ x: m[12]!, y: m[13]!, z: m[14]! });

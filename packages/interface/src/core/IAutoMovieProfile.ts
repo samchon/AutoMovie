@@ -46,6 +46,12 @@ export interface IAutoMovieProfile {
    * synthesise locomotion, so the same abstract "move" resolves to each body's
    * own gait. Omitted/empty for a profile that does not locomote (a door, a
    * prop).
+   *
+   * This field is core's one upward reference (`core → motion`), kept
+   * deliberately: a gait names humanoid bones and easing curves, so moving it
+   * into core would drag `core → skeleton` and a second `core → motion` edge
+   * along — replacing one documented type-only reference on an optional field
+   * with two worse ones. The dependency is acyclic and confined to this field.
    */
   gaits?: IAutoMovieGait[];
 }
