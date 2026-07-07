@@ -2,10 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createMcpServer } from "@typia/mcp";
 import typia from "typia";
 
-import {
-  AutoMovieApplication,
-  AutoMovieMcpFrameCapture,
-} from "./AutoMovieApplication";
+import { AutoMovieApplication } from "./AutoMovieApplication";
+import { AutoMovieMcpFrameCapture } from "./dto";
 
 /**
  * Build the AutoMovie MCP server: wrap {@link AutoMovieApplication} in a
