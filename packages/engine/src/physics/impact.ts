@@ -11,7 +11,7 @@ import { Vector3 } from "../math/Vector3";
  *
  * @author Samchon
  */
-export interface IAutoMovieBody {
+export interface IAutoMovieImpactBody {
   /** Mass (kg); larger = harder to move. */
   mass: number;
   /** Linear velocity (world m/s). */
@@ -97,7 +97,10 @@ const assertImpactCoefficient = (
     );
 };
 
-const assertImpactBody = (label: "a" | "b", body: IAutoMovieBody): void => {
+const assertImpactBody = (
+  label: "a" | "b",
+  body: IAutoMovieImpactBody,
+): void => {
   assertImpactMass(label, body.mass);
   assertImpactVector(label, "velocity", body.velocity);
   assertImpactCoefficient(label, "restitution", body.restitution);
@@ -120,8 +123,8 @@ const assertImpactBody = (label: "a" | "b", body: IAutoMovieBody): void => {
  * @author Samchon
  */
 export const resolveImpact = (
-  a: IAutoMovieBody,
-  b: IAutoMovieBody,
+  a: IAutoMovieImpactBody,
+  b: IAutoMovieImpactBody,
   normal: IAutoMovieVector3,
 ): IAutoMovieImpact => {
   assertImpactBody("a", a);

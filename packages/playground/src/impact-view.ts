@@ -1,8 +1,8 @@
 import {
   HUMANOID_JOINT_AXES,
   HUMANOID_REST_FRAME,
-  IAutoMovieBody,
   IAutoMovieImpact,
+  IAutoMovieImpactBody,
   impactRecoil,
   projectileAt,
   projectileSphereHit,
@@ -67,8 +67,8 @@ interface Shot {
   origin: IAutoMovieVector3;
   velocity: IAutoMovieVector3;
   gravity: IAutoMovieVector3;
-  ball: Omit<IAutoMovieBody, "velocity">;
-  body: Omit<IAutoMovieBody, "velocity" | "mass">;
+  ball: Omit<IAutoMovieImpactBody, "velocity">;
+  body: Omit<IAutoMovieImpactBody, "velocity" | "mass">;
 }
 
 // three strikes that exercise the three response kinds

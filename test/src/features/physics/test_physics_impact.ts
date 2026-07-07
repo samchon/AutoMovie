@@ -1,4 +1,4 @@
-import { IAutoMovieBody, resolveImpact } from "@automovie/engine";
+import { IAutoMovieImpactBody, resolveImpact } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
@@ -6,7 +6,7 @@ import { nclose } from "../internal/predicates";
 const v = (x: number, y: number, z: number) => ({ x, y, z });
 const N = v(0, 0, 1); // contact normal, a → b (b sits ahead on +z)
 
-const body = (over: Partial<IAutoMovieBody>): IAutoMovieBody => ({
+const body = (over: Partial<IAutoMovieImpactBody>): IAutoMovieImpactBody => ({
   mass: 1,
   velocity: v(0, 0, 0),
   restitution: 0.2,
