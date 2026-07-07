@@ -13,18 +13,16 @@ import {
   jointToQuaternion,
 } from "../kinematics/jointToQuaternion";
 import { Quaternion } from "../math/Quaternion";
+import {
+  MOTION_ROOT_NODE_ID,
+  lowerSkeletonNodes,
+} from "../resolve/skeletonNodes";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { sampleMotion } from "./sampleMotion";
 
-const DEFAULT_SAMPLE_RATE = 24;
+export { MOTION_ROOT_NODE_ID };
 
-/**
- * The synthetic node above the lowered bone hierarchy that carries the motion's
- * root transform. `"root"` is not a humanoid bone name (the closed
- * {@link AutoMovieHumanoidBone} union has no such member), so it can never
- * collide with a lowered bone node id.
- */
-export const MOTION_ROOT_NODE_ID = "root";
+const DEFAULT_SAMPLE_RATE = 24;
 
 /**
  * A humanoid motion lowered onto the general node/clip model: the skeleton as a
@@ -85,8 +83,16 @@ export const motionToClip = (props: {
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
   /** Bake samples per second. Defaults to `24`. */
   sampleRate?: number;
+  /**
+   * Node-id prefix applied to every lowered node AND every clip channel ref
+   * (root and bones alike). Defaults to `""` — the bare single-actor naming. A
+   * multi-actor graph (see `sceneToNodes`) passes the placement prefix (e.g.
+   * `"knightA/"`) so each actor's channels drive its own subtree.
+   */
+  nodePrefix?: string;
 }): IAutoMovieMotionClipBridge => {
   const { motion, skeleton } = props;
+  const prefix = props.nodePrefix ?? "";
   const sampleRate = props.sampleRate ?? DEFAULT_SAMPLE_RATE;
   if (!Number.isFinite(sampleRate) || sampleRate <= 0)
     throw new Error(
@@ -115,15 +121,15 @@ export const motionToClip = (props: {
     if (frame.pose.root !== null) hasRoot = true;
   }
 
-  const nodes = lowerSkeleton(skeleton);
+  const nodes = lowerSkeletonNodes({ skeleton, prefix });
   const times = sampleTimes(motion.duration, sampleRate);
   const samples = times.map((time) => sampleMotion(motion, time).pose);
 
   const tracks: IAutoMovieTrack[] = [];
   if (hasRoot) {
     tracks.push(
-      rootTrack(times, samples, "translation"),
-      rootTrack(times, samples, "rotation"),
+      rootTrack(times, samples, "translation", prefix),
+      rootTrack(times, samples, "rotation", prefix),
     );
   }
   // Deterministic track order: skeleton declaration order, articulated only —
@@ -146,7 +152,11 @@ export const motionToClip = (props: {
       values.push(local.x, local.y, local.z, local.w);
     }
     tracks.push({
-      channel: { kind: "node", node: bone.bone, path: "rotation" },
+      channel: {
+        kind: "node",
+        node: `${prefix}${bone.bone}`,
+        path: "rotation",
+      },
       times: [...times],
       values,
       interpolation: "linear",
@@ -165,54 +175,12 @@ export const motionToClip = (props: {
   };
 };
 
-/**
- * Lower a skeleton to the node hierarchy `composeScene` walks: a `group` root
- * carrying the motion's root transform, then one `bone` node per bone with the
- * rest translation/rotation and scale pinned to `1` (mirroring
- * {@link resolvePose}, which never scales bones).
- */
-const lowerSkeleton = (skeleton: IAutoMovieSkeleton): IAutoMovieNode[] => {
-  const nodes: IAutoMovieNode[] = [
-    {
-      id: MOTION_ROOT_NODE_ID,
-      name: null,
-      parent: null,
-      kind: "group",
-      transform: {
-        translation: { x: 0, y: 0, z: 0 },
-        rotation: { x: 0, y: 0, z: 0, w: 1 },
-        scale: { x: 1, y: 1, z: 1 },
-      },
-      mesh: null,
-      camera: null,
-      light: null,
-      skin: null,
-    },
-  ];
-  for (const bone of skeleton.bones)
-    nodes.push({
-      id: bone.bone,
-      name: null,
-      parent: bone.parent ?? MOTION_ROOT_NODE_ID,
-      kind: "bone",
-      transform: {
-        translation: bone.rest.translation,
-        rotation: bone.rest.rotation,
-        scale: { x: 1, y: 1, z: 1 },
-      },
-      mesh: null,
-      camera: null,
-      light: null,
-      skin: null,
-    });
-  return nodes;
-};
-
 /** The root node's translation or rotation track from the sampled root. */
 const rootTrack = (
   times: number[],
   samples: IAutoMoviePose[],
   path: "translation" | "rotation",
+  prefix: string,
 ): IAutoMovieTrack => {
   const values: number[] = [];
   for (const pose of samples) {
@@ -225,7 +193,7 @@ const rootTrack = (
     }
   }
   return {
-    channel: { kind: "node", node: MOTION_ROOT_NODE_ID, path },
+    channel: { kind: "node", node: `${prefix}${MOTION_ROOT_NODE_ID}`, path },
     times: [...times],
     values,
     interpolation: "linear",
