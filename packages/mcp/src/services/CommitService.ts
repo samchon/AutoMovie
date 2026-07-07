@@ -1,4 +1,4 @@
-import { toValidation } from "@automovie/engine";
+import { toValidation, validateScriptTree } from "@automovie/engine";
 import {
   IAutoMovieBeatEndState,
   IAutoMovieConstraintViolation,
@@ -432,6 +432,16 @@ const validateScriptArtifact = (
       false,
     );
   });
+  // The screenplay refinement tree (D013) validates as part of the script
+  // artifact: a script with a malformed tree cannot commit. Absent tree =
+  // legacy flat beats, no extra checks (byte-compatible).
+  if (script.tree !== undefined && script.tree !== null) {
+    const tree = validateScriptTree({
+      tree: script.tree,
+      beats: script.beats,
+    });
+    if (tree.success === false) violations.push(...tree.violations);
+  }
   return toValidation(violations);
 };
 

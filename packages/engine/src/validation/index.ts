@@ -11,4 +11,5 @@ export * from "./validateSelfIntersection";
 export * from "./validateBodyCollision";
 export * from "./validateSupport";
 export * from "./validateFreeFall";
+export * from "./validateScriptTree";
 export * from "./validateSpace";
