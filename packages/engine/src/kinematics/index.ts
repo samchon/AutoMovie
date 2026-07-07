@@ -4,6 +4,7 @@ export * from "./decomposeJointRotation";
 export * from "./humanoidJointAxes";
 export * from "./jointToQuaternion";
 export * from "./reachPose";
+export * from "./resolveAffordanceSeat";
 export * from "./resolveAttachment";
 export * from "./resolvePose";
 export * from "./solveTwoBoneIK";
