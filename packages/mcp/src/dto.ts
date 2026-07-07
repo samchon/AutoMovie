@@ -739,3 +739,15 @@ export interface IAutoMovieOpenProjectOutput {
   /** The activated project's summary. */
   project: IAutoMovieMcpProjectSummary;
 }
+
+/** The `nextSteps` tool's result — the film ladder as data (#615). */
+export interface IAutoMovieNextStepsOutput {
+  /** The resident project's current status. */
+  status: IAutoMovieMcpProjectSummary;
+
+  /** Unmet ladder prerequisites, in ladder order; empty when satisfied. */
+  missing: string[];
+
+  /** Ordered concrete tool calls that advance the film; empty when complete. */
+  nextActions: string[];
+}
