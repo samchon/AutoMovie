@@ -8,15 +8,20 @@ import {
 import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
+import { groundFunction } from "../space/ground";
 import { ViolationCollector } from "./violation";
 
 const DEFAULT_FOOT_BONES = ["leftFoot", "rightFoot"] as const;
 
 /**
  * Tier-3 ground-contact check for clips whose feet are expected to stay on or
- * above a ground plane. It samples the motion on a fixed clock, resolves FK,
- * and reports any configured foot bone whose world-space `y` falls below
- * `groundY - tolerance`.
+ * above the ground. It samples the motion on a fixed clock, resolves FK, and
+ * reports any configured foot bone whose world-space `y` falls below the ground
+ * height at that foot's `(x, z)` minus `tolerance`.
+ *
+ * Ground is a scalar plane or a `(x, z) → y` height source — plug a space in
+ * via {@link spaceGround} (#605) to validate contact over ramps and platforms; a
+ * plain scalar keeps the exact pre-space behavior.
  *
  * This is intentionally opt-in rather than part of `validateMotion`: jumps,
  * mounts, crawling, and non-humanoid rigs need different contact assumptions.
@@ -35,8 +40,8 @@ export const validateGroundContact = (props: {
   /** Bones treated as ground-contact points. Defaults to both humanoid feet. */
   footBones?: readonly AutoMovieHumanoidBone[];
 
-  /** Ground plane height in world/model `y`. Defaults to `0`. */
-  groundY?: number;
+  /** Ground height: plane scalar or `(x, z) → y` source. Defaults to `0`. */
+  groundY?: number | ((x: number, z: number) => number);
 
   /** Allowed penetration depth before violation. Defaults to `0`. */
   tolerance?: number;
@@ -55,11 +60,10 @@ export const validateGroundContact = (props: {
 }): IAutoMovieValidation => {
   const collector = new ViolationCollector();
   const footBones = props.footBones ?? DEFAULT_FOOT_BONES;
-  const groundY = props.groundY ?? 0;
   const tolerance = props.tolerance ?? 0;
   const sampleRate = props.sampleRate ?? 24;
   const path = props.path ?? "$input";
-  const minY = groundY - tolerance;
+  const groundAt = groundFunction(props.groundY ?? 0);
 
   sampleTimes(props.motion.duration, sampleRate).forEach((time, index) => {
     const resolved = new Map(
@@ -74,11 +78,13 @@ export const validateGroundContact = (props: {
       const foot = resolved.get(bone);
       if (foot === undefined) continue;
       const y = foot.worldPosition.y;
+      const ground = groundAt(foot.worldPosition.x, foot.worldPosition.z);
+      const minY = ground - tolerance;
       if (y < minY)
         collector.push(
           "physics",
           `${path}.samples[${index}].${bone}.worldPosition.y`,
-          `${bone} world y must stay >= ${minY} at t=${round(time)}s (ground ${groundY}, tolerance ${tolerance})`,
+          `${bone} world y must stay >= ${minY} at t=${round(time)}s (ground ${ground}, tolerance ${tolerance})`,
           y,
           minY - y,
         );
