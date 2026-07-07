@@ -9,8 +9,8 @@ import { IAutoMoviePlacement, arrangeMotion } from "../motion/arrange";
 import { sampleMotion } from "../motion/sampleMotion";
 import { sequenceMotion } from "../motion/sequence";
 import { actionRegion } from "./actionRegion";
+import { blendPoses } from "./blendPoses";
 import { bodyRegionBones } from "./bodyRegionBones";
-import { mergePoses } from "./mergePoses";
 
 /**
  * The **content seam** of the action compiler. Given one action call (and the
@@ -56,10 +56,11 @@ const maskMotionToRegion = (
 };
 
 /**
- * Layer several per-region clips into one by **sampling and merging**: at every
- * keyframe time across the clips, sample each and {@link mergePoses} the result,
- * so disjoint regions play _concurrently_ (legs walk while arms wave while the
- * head tracks). A face clip's expression rides along.
+ * Layer several per-region clips into one by **sampling and blending**: at
+ * every keyframe time across the clips, sample each and {@link blendPoses} the
+ * result (equal weight — the regions are disjoint here, so the additive blend
+ * equals a union), so disjoint regions play _concurrently_ (legs walk while
+ * arms wave while the head tracks). A face clip's expression rides along.
  */
 const layerClips = (
   id: string,
@@ -75,7 +76,7 @@ const layerClips = (
       if (s.expression !== null) expression = s.expression;
     return {
       time,
-      pose: mergePoses(samples.map((s) => s.pose)),
+      pose: blendPoses(samples.map((s) => ({ pose: s.pose, weight: 1 }))),
       expression,
       easing: "linear",
       bezier: null,
