@@ -7,6 +7,7 @@ import {
 } from "@automovie/interface";
 
 import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
+import { convexHull2D, pointHullDistance } from "../math/hull";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { ViolationCollector } from "./violation";
@@ -167,36 +168,14 @@ export const validateBalanceSupport = (props: {
       );
       for (const bone of pose) resolved.set(bone.bone, bone.worldPosition);
       const centerPosition = resolved.get(centerBone) as IAutoMovieVector3;
-      const [firstSupportBone, ...remainingSupportBones] = support.supportBones;
-      const firstSupport = resolved.get(firstSupportBone!)!;
-      let distance = 0;
-      switch (remainingSupportBones.length) {
-        case 0:
-          distance = pointDistance(centerPosition, firstSupport);
-          break;
-        case 1: {
-          const secondSupport = resolved.get(remainingSupportBones[0]!)!;
-          distance = pointSegmentDistance(
-            centerPosition,
-            firstSupport,
-            secondSupport,
-          );
-          break;
-        }
-        default: {
-          const secondSupport = resolved.get(remainingSupportBones[0]!)!;
-          const hull = [];
-          hull[0] = firstSupport;
-          hull[1] = secondSupport;
-          for (const bone of remainingSupportBones.slice(1)) {
-            const supportPosition = resolved.get(bone)!;
-            hull.push(supportPosition);
-          }
-          if (isInsideConvexPolygon(centerPosition, hull)) distance = 0;
-          else distance = edgeDistances(centerPosition, hull);
-          break;
-        }
-      }
+      // A real convex hull of the support contacts, so a mis-ordered or
+      // non-convex support list can no longer be misclassified. Handles the
+      // 1-/2-/many-point cases uniformly (a lone contact or a collinear pair
+      // collapses to a point/segment inside the hull query).
+      const hull = convexHull2D(
+        support.supportBones.map((bone) => resolved.get(bone)!),
+      );
+      const distance = pointHullDistance(centerPosition, hull);
       if (distance > margin) {
         const roundedMargin = round(margin);
         const roundedTime = round(time);
@@ -212,64 +191,7 @@ export const validateBalanceSupport = (props: {
   return validation;
 };
 
-const isInsideConvexPolygon = (
-  point: IAutoMovieVector3,
-  polygon: readonly IAutoMovieVector3[],
-): boolean => {
-  let sign = 0;
-  for (let index = 0; index < polygon.length; index++) {
-    const start = polygon[index]!;
-    const end = polygon[(index + 1) % polygon.length]!;
-    const cross =
-      (end.x - start.x) * (point.z - start.z) -
-      (end.z - start.z) * (point.x - start.x);
-    const side = sideOf(cross);
-    if (side === 0) continue;
-    if (sign === 0) {
-      sign = side;
-      continue;
-    }
-    if (sign !== side) return false;
-  }
-  return true;
-};
-
-const edgeDistances = (
-  point: IAutoMovieVector3,
-  polygon: readonly IAutoMovieVector3[],
-): number => {
-  const distances = polygon.map((start, index) =>
-    pointSegmentDistance(point, start, polygon[(index + 1) % polygon.length]!),
-  );
-  return Math.min(...distances);
-};
-
-const pointSegmentDistance = (
-  point: IAutoMovieVector3,
-  start: IAutoMovieVector3,
-  end: IAutoMovieVector3,
-): number => {
-  const dx = end.x - start.x;
-  const dz = end.z - start.z;
-  const span = Math.max(dx * dx + dz * dz, Number.EPSILON);
-  const t = clamp(((point.x - start.x) * dx + (point.z - start.z) * dz) / span);
-  const x = start.x + (end.x - start.x) * t;
-  const z = start.z + (end.z - start.z) * t;
-  return Math.hypot(point.x - x, point.z - z);
-};
-
-const pointDistance = (a: IAutoMovieVector3, b: IAutoMovieVector3): number =>
-  Math.hypot(a.x - b.x, a.z - b.z);
-
-const sideOf = (value: number): number => {
-  if (value < 0) return -1;
-  if (value > 0) return 1;
-  return 0;
-};
-
 const isPositiveFinite = (value: number): boolean =>
   Number.isFinite(value) && value > 0;
-
-const clamp = (value: number): number => Math.min(1, Math.max(0, value));
 
 const round = (value: number): number => Math.round(value * 1_000) / 1_000;
