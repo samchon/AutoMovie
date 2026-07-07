@@ -5,6 +5,7 @@ export * from "./gait";
 export * from "./gesture";
 export * from "./horseGaits";
 export * from "./humanoidGaits";
+export * from "./plantFeet";
 export * from "./sampleMotion";
 export * from "./arrange";
 export * from "./locomote";
