@@ -61,4 +61,16 @@ export interface IAutoMovieConstraintViolation {
    * quote the gap. Absent for non-numeric or non-magnitude violations.
    */
   overshoot?: number;
+
+  /**
+   * Id of the screenplay refinement-graph node ({@link IAutoMovieScriptNode})
+   * this feedback locates on — usually the beat node whose work produced it.
+   * With the node in hand, `scriptAncestors` walks the refinement chain up
+   * (beat → scene → act → intent), so a physics warning can cascade past the
+   * motion into the screenplay itself (D013): the correction may target the
+   * pose, the beat's staging, or the scene's intent — the agent decides which
+   * level to fix (D012). Absent when no screenplay tree exists or the feedback
+   * is not beat-scoped.
+   */
+  node?: string;
 }
