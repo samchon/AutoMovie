@@ -128,6 +128,16 @@ export interface IAutoMovieActionBase {
    * `fullBody`. Camera (`frame`) and `attachTo` actions ignore it.
    */
   region?: AutoMovieBodyRegion;
+
+  /**
+   * Acknowledge a deliberate physical implausibility so the engine's
+   * physical-plausibility feedback (`"warning"`-severity, see
+   * {@link IAutoMovieConstraintViolation.severity}) does not re-fire on this
+   * action. A free-text intent — `"defies-gravity"`, `"superhuman-impact"`,
+   * `"intentional-clip"` — that marks "this is on purpose". Omit for ordinary
+   * actions; the engine warns as usual and the correction loop can address it.
+   */
+  physicsIntent?: string;
 }
 
 /**

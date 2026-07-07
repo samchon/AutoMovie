@@ -20,6 +20,19 @@ export interface IAutoMovieConstraintViolation {
   kind: AutoMovieViolationKind;
 
   /**
+   * How binding this feedback is. `"error"` is a rig/render-integrity breach —
+   * a disconnected skeleton, a non-finite quaternion, a negative duration, an
+   * out-of-range coefficient — and fails validation. `"warning"` is
+   * physical-plausibility advice (a body that would topple, an unsupported mass
+   * that would fall): recommended, not forbidden, because a film may be
+   * deliberately unphysical. A `"warning"` never fails validation on its own;
+   * it rides the same envelope so the harness can surface it and the author (or
+   * an action's `physicsIntent` marker) can accept or dismiss it. `"warning"`
+   * is the compiler's word for this level — not "advisory".
+   */
+  severity: "error" | "warning";
+
+  /**
    * JSON path to the offending value, in typia's `$input...` notation (e.g.
    * `$input.joints[3].flexion`). This is the anchor the `// ❌` comment attaches
    * to.
