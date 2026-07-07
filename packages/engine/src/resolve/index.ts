@@ -5,5 +5,6 @@ export * from "./composeScene";
 export * from "./drivenCurve";
 export * from "./resolveDrivers";
 export * from "./worldDrivers";
+export * from "./iterativeIK";
 export * from "./spring";
 export * from "./resolveFrame";

@@ -11,9 +11,11 @@ import { Vector3 } from "../math/Vector3";
 /**
  * Cross-frame state for the spring driver: each chain joint's world position on
  * the previous step, which the Verlet integrator differences against the
- * current position to recover velocity. The host owns one of these per spring
- * and threads it through {@link stepSpring}; it is why spring lives outside the
- * pure per-frame {@link "./resolveFrame".resolveFrame} (which has no memory).
+ * current position to recover velocity. The caller owns one of these per scene
+ * and threads it through {@link stepSpring} — either directly, or by handing it
+ * to {@link "./resolveFrame".resolveFrame} via its `springs` input, which then
+ * steps every spring driver inside the frame pass (S2). Without a state and a
+ * `dt` the per-frame resolve has no memory, so springs defer.
  *
  * @author Samchon
  */
@@ -22,13 +24,37 @@ export interface IAutoMovieSpringState {
   prev: Map<string, IAutoMovieVector3>;
   /** Center node id -> its world position last step for center-relative inertia. */
   centers: Map<string, IAutoMovieVector3>;
+  /**
+   * Joint id → its **post-spring** world position last step — what a host loop
+   * would have left in its carried world map. {@link resolveFrame} composes the
+   * scene fresh every frame, so it seeds each chain joint from here before
+   * stepping; that is what lets the in-frame spring accumulate sag across
+   * frames exactly like the host-loop harness.
+   */
+  sprung: Map<string, IAutoMovieVector3>;
 }
 
 /** A fresh, empty spring state. */
 export const createSpringState = (): IAutoMovieSpringState => ({
   prev: new Map(),
   centers: new Map(),
+  sprung: new Map(),
 });
+
+/**
+ * A world-space collision sphere the spring chain keeps out of — a head, a
+ * torso, a shoulder pad. A chain joint is pushed to the sphere's surface plus
+ * the driver's own `hitRadius` (the joint's physical thickness), completing the
+ * VRM SpringBone collision semantics that `hitRadius` always declared.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieSpringSphere {
+  /** Sphere center in world space. */
+  center: IAutoMovieVector3;
+  /** Sphere radius, meters. Strictly positive. */
+  radius: number;
+}
 
 const readWorld = (
   world: Map<string, number[]>,
@@ -69,6 +95,11 @@ const readLocal = (
  * untouched; orientation of the moved joints is left to the renderer/skin,
  * which derives it from the joint positions.
  *
+ * When `colliders` are given, each stepped joint is pushed out of every sphere
+ * it penetrates (surface + the driver's `hitRadius`) **after** the length
+ * constraint — the VRM SpringBone order — so a collision can stretch the bone
+ * by up to the push distance for that step rather than tunnel through a body.
+ *
  * @author Samchon
  */
 export const stepSpring = (
@@ -77,8 +108,10 @@ export const stepSpring = (
   state: IAutoMovieSpringState,
   dt: number,
   localById: Map<string, IAutoMovieTransform>,
+  colliders: readonly IAutoMovieSpringSphere[] = [],
 ): void => {
   validateSpringInputs(d, dt);
+  validateSpringColliders(colliders);
   const centerDelta = readCenterDelta(d, world, state);
   const gravity = Vector3.scale(
     Vector3.normalize(d.gravityDir),
@@ -121,7 +154,24 @@ export const stepSpring = (
       ),
     );
 
+    // collision: push the joint out of every penetrated sphere (VRM order —
+    // after the length constraint, so a hit stretches rather than tunnels)
+    for (const sphere of colliders) {
+      const minimum = sphere.radius + d.hitRadius;
+      const away = Vector3.subtract(next, sphere.center);
+      const distance = Vector3.length(away);
+      if (distance < minimum)
+        next = Vector3.add(
+          sphere.center,
+          Vector3.scale(
+            distance < 1e-12 ? { x: 0, y: 1, z: 0 } : Vector3.normalize(away),
+            minimum,
+          ),
+        );
+    }
+
     state.prev.set(id, cur);
+    state.sprung.set(id, next);
     const dec = Matrix4.decompose(currentM);
     world.set(id, Matrix4.compose(next, dec.rotation, dec.scale));
   }
@@ -172,6 +222,19 @@ const validateSpringInputs = (d: IAutoMovieSpringDriver, dt: number): void => {
   validateSpringVector("gravityDir", d.gravityDir);
   if (Vector3.length(d.gravityDir) === 0)
     throw new Error("spring driver gravityDir must be non-zero");
+};
+
+const validateSpringColliders = (
+  colliders: readonly IAutoMovieSpringSphere[],
+): void => {
+  colliders.forEach((sphere, i) => {
+    validateSpringVector(`colliders[${i}].center`, sphere.center);
+    validateSpringFinite(`colliders[${i}].radius`, sphere.radius);
+    if (sphere.radius <= 0)
+      throw new Error(
+        `spring driver colliders[${i}].radius must be > 0, but was ${sphere.radius}`,
+      );
+  });
 };
 
 const validateSpringVector = (
