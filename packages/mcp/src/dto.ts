@@ -703,3 +703,39 @@ export interface IAutoMovieForgePropOutput {
   /** The forged prop on success, or the forge violations on failure. */
   forged: IAutoMovieMcpForgedProp;
 }
+
+/**
+ * What a resident project holds — which slate slices exist as files and which
+ * binary assets the manifest tracks (#614: the project folder is the memory).
+ */
+export interface IAutoMovieMcpProjectSummary {
+  /** Absolute project root directory. */
+  root: string;
+
+  /** Whether `script.json` exists. */
+  script: boolean;
+
+  /** Whether `scene.json` exists. */
+  scene: boolean;
+
+  /** Committed shot ids (`shots/<beat>.json`). */
+  shots: string[];
+
+  /** Committed beat-end beats (`beatEnds/<beat>.json`). */
+  beatEnds: string[];
+
+  /** Open review note count. */
+  notes: number;
+
+  /** Whether `film.json` exists. */
+  film: boolean;
+
+  /** Tracked binary asset paths, project-relative, in registration order. */
+  assets: string[];
+}
+
+/** The `openProject` tool's result. */
+export interface IAutoMovieOpenProjectOutput {
+  /** The activated project's summary. */
+  project: IAutoMovieMcpProjectSummary;
+}
