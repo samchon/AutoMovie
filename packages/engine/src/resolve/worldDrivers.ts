@@ -12,6 +12,14 @@ import {
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { applyIterativeIK } from "./iterativeIK";
+import {
+  blendVec,
+  quatFromTo,
+  readWorld,
+  recompose,
+  validateInfluence,
+} from "./worldShared";
 
 const VECTOR_AXES = ["x", "y", "z"] as const;
 
@@ -24,10 +32,13 @@ const VECTOR_AXES = ["x", "y", "z"] as const;
  * This step resolves {@link IAutoMovieAimDriver} (look-at: orient a node so one
  * of its axes points at a target — eyes, head, a camera),
  * {@link IAutoMovieParentDriver} (Child-Of: make a node inherit another's world
- * frame, per component — a sword following a hand), and the analytic two-bone
+ * frame, per component — a sword following a hand), the analytic two-bone
  * {@link IAutoMovieIKDriver} (back-solve a 3-node limb so its tip reaches a goal
- * — arms, legs). Iterative IK (`ccd`/`fabrik`) and `spring` are returned
- * untouched for their own dedicated steps; nothing is silently dropped.
+ * — arms, legs), and the iterative `ccd`/`fabrik` solvers for longer chains
+ * ({@link applyIterativeIK}, fixed budgets — S2 of the core wiring). Only
+ * `spring` still defers here — it is stateful, and steps inside
+ * {@link resolveFrame} when the caller provides `dt` + state, or in the host's
+ * own pass otherwise; nothing is silently dropped.
  *
  * @author Samchon
  */
@@ -44,6 +55,8 @@ export const resolveWorldDrivers = (
       applyParent(d, world, localById, childrenById);
     else if (d.type === "ik" && d.solver === "twoBone" && d.chain.length === 3)
       applyTwoBoneIK(d, world, localById, childrenById);
+    else if (d.type === "ik" && (d.solver === "ccd" || d.solver === "fabrik"))
+      applyIterativeIK(d, world, localById, childrenById);
     else deferred.push(d);
   return deferred;
 };
@@ -60,29 +73,6 @@ export const childrenIndex = (
       else map.set(n.parent, [n.id]);
     }
   return map;
-};
-
-const readWorld = (
-  world: Map<string, number[]>,
-  id: string,
-  role: string,
-): number[] => {
-  const matrix = world.get(id);
-  if (matrix === undefined)
-    throw new Error(`world driver ${role} node "${id}" was not provided`);
-  return matrix;
-};
-
-const readLocal = (
-  localById: Map<string, IAutoMovieTransform>,
-  id: string,
-): IAutoMovieTransform => {
-  const local = localById.get(id);
-  if (local === undefined)
-    throw new Error(
-      `world driver descendant local transform node "${id}" was not provided`,
-    );
-  return local;
 };
 
 const applyAim = (
@@ -273,21 +263,6 @@ const applyTwoBoneIK = (
 const clamp = (x: number, lo: number, hi: number): number =>
   Math.min(hi, Math.max(lo, x));
 
-const validateInfluence = (label: string, influence: number): void => {
-  if (!Number.isFinite(influence))
-    throw new Error(
-      `world driver ${label} influence must be finite, but was ${influence}`,
-    );
-  if (influence < 0)
-    throw new Error(
-      `world driver ${label} influence must be between 0 and 1, but was ${influence}`,
-    );
-  if (influence > 1)
-    throw new Error(
-      `world driver ${label} influence must be between 0 and 1, but was ${influence}`,
-    );
-};
-
 const validatePoleAngle = (angle: number): void => {
   if (!Number.isFinite(angle))
     throw new Error(
@@ -308,35 +283,12 @@ const validateAimVector = (
     throw new Error(`world driver aim ${label} must be non-zero`);
 };
 
-const blendVec = (
-  a: IAutoMovieVector3,
-  b: IAutoMovieVector3,
-  t: number,
-): IAutoMovieVector3 =>
-  Vector3.add(a, Vector3.scale(Vector3.subtract(b, a), t));
-
 /** Some unit vector perpendicular to `v` (for a straight limb's free bend). */
 const anyPerp = (v: IAutoMovieVector3): IAutoMovieVector3 => {
   const c = Vector3.cross(v, { x: 0, y: 1, z: 0 });
   return Vector3.length(c) > 1e-6
     ? Vector3.normalize(c)
     : Vector3.normalize(Vector3.cross(v, { x: 1, y: 0, z: 0 }));
-};
-
-/** Recompute every descendant's world matrix from a node's updated world. */
-const recompose = (
-  id: string,
-  world: Map<string, number[]>,
-  localById: Map<string, IAutoMovieTransform>,
-  childrenById: Map<string, string[]>,
-): void => {
-  const parentWorld = readWorld(world, id, "recompose parent");
-  for (const child of childrenById.get(id) ?? []) {
-    const t = readLocal(localById, child);
-    const local = Matrix4.compose(t.translation, t.rotation, t.scale);
-    world.set(child, Matrix4.multiply(parentWorld, local));
-    recompose(child, world, localById, childrenById);
-  }
 };
 
 /**
@@ -377,23 +329,3 @@ const projectPerp = (
   f: IAutoMovieVector3,
 ): IAutoMovieVector3 =>
   Vector3.subtract(v, Vector3.scale(f, Vector3.dot(v, f)));
-
-/** Shortest-arc rotation from unit vector `a` to unit vector `b`. */
-const quatFromTo = (
-  a: IAutoMovieVector3,
-  b: IAutoMovieVector3,
-): IAutoMovieQuaternion => {
-  const d = Vector3.dot(a, b);
-  if (d > 0.999999) return Quaternion.identity();
-  if (d < -0.999999) {
-    const perp =
-      Math.abs(a.x) < 0.9
-        ? Vector3.cross(a, { x: 1, y: 0, z: 0 })
-        : Vector3.cross(a, { x: 0, y: 1, z: 0 });
-    return Quaternion.fromAxisAngle(perp, 180);
-  }
-  return Quaternion.fromAxisAngle(
-    Vector3.cross(a, b),
-    (Math.acos(d) * 180) / Math.PI,
-  );
-};

@@ -64,8 +64,9 @@ const at = (world: Map<string, number[]>, id: string): IAutoMovieVector3 =>
  * 4. A straight limb along Y exercises the other fallback (`cross` with +X).
  * 5. A pole with a null node falls back to the limb's current bend plane.
  * 6. A null-node pole with a roll angle twists the bend plane around the goal.
- * 7. Non-twoBone (`ccd`), wrong-length, and `spring` drivers are deferred, not
- *    solved.
+ * 7. A `ccd` driver is consumed by the world pass (S2 — iterative IK now runs
+ *    in-engine); only the wrong-length two-bone chain and the stateful `spring`
+ *    remain deferred.
  * 8. Invalid influence and pole angle values reject before the analytic solve
  *    reads world matrices.
  * 9. Zero-length upper or lower bone segments reject before angle solving.
@@ -164,7 +165,7 @@ export const test_resolve_ik_driver = (): void => {
     vclose(at(w6, "m"), { x: 0.75, y: 0, z: 0.6614378277661477 }, 1e-4),
   );
 
-  // 7. deferred: ccd solver, wrong-length chain, spring
+  // 7. ccd consumed in-engine (S2); wrong-length two-bone + spring defer
   const spring: IAutoMovieSpringDriver = {
     type: "spring",
     chain: ["a", "b"],
@@ -186,7 +187,11 @@ export const test_resolve_ik_driver = (): void => {
     new Map(),
     new Map(),
   );
-  TestValidator.equals("ccd / short / spring all deferred", deferred.length, 3);
+  TestValidator.equals("only short + spring deferred", deferred.length, 2);
+  TestValidator.predicate(
+    "ccd is no longer among the deferred",
+    deferred.every((x) => x.type !== "ik" || x.solver !== "ccd"),
+  );
 
   TestValidator.predicate(
     "two-bone IK rejects NaN influence",

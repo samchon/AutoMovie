@@ -14,7 +14,40 @@ import { channelKey } from "./channel";
 import { composeScene } from "./composeScene";
 import { resolveDrivers } from "./resolveDrivers";
 import { IAutoMovieSampledChannel, sampleClip } from "./sampleClip";
+import {
+  IAutoMovieSpringSphere,
+  IAutoMovieSpringState,
+  stepSpring,
+} from "./spring";
 import { childrenIndex, resolveWorldDrivers } from "./worldDrivers";
+import { readWorld } from "./worldShared";
+
+/**
+ * A collision sphere attached to a scene node, for in-frame spring stepping:
+ * the sphere rides the node's composed world position each frame.
+ */
+export interface IAutoMovieSpringCollider {
+  /** Node whose world position centers the sphere. */
+  node: string;
+  /** Sphere radius, meters. Strictly positive. */
+  radius: number;
+}
+
+/**
+ * The cross-frame inputs that let {@link resolveFrame} step spring drivers
+ * inside the frame pass: the previous-step state, the timestep, and optional
+ * node-attached collision spheres. Springs are the one stateful driver — with
+ * this the engine advances them deterministically frame-to-frame; without it
+ * they defer exactly as before.
+ */
+export interface IAutoMovieResolveSprings {
+  /** Cross-frame Verlet state, advanced in place. */
+  state: IAutoMovieSpringState;
+  /** Seconds since the previously resolved frame. Strictly positive. */
+  dt: number;
+  /** Collision spheres riding scene nodes. Omit for none. */
+  colliders?: IAutoMovieSpringCollider[];
+}
 
 /** Everything needed to resolve one instant of a scene. */
 export interface IAutoMovieResolveInput {
@@ -29,10 +62,17 @@ export interface IAutoMovieResolveInput {
 
   /**
    * Drivers computing channels from other channels. Channel-space drivers
-   * (`copy`, `driven`) are resolved this frame; world-space/stateful ones are
-   * returned in {@link IAutoMovieResolveOutput.deferredDrivers}. Omit for none.
+   * (`copy`, `driven`) are resolved this frame; world-space ones apply in the
+   * post-compose pass; only springs without a {@link springs} input are returned
+   * in {@link IAutoMovieResolveOutput.deferredDrivers}. Omit for none.
    */
   drivers?: IAutoMovieDriver[];
+
+  /**
+   * Cross-frame spring stepping (state + dt + colliders). When present every
+   * spring driver advances inside this frame; when absent springs defer.
+   */
+  springs?: IAutoMovieResolveSprings;
 
   /** The instant to resolve, in clip-local seconds. */
   seconds: number;
@@ -56,24 +96,27 @@ export interface IAutoMovieResolveOutput {
   violations: IAutoMovieResolveViolation[];
 
   /**
-   * World-space / stateful drivers (`parent`/`aim`/`ik`/`spring`) this pass did
-   * not resolve — surfaced (not dropped) for the world-space driver pass.
+   * Drivers this pass could not resolve — surfaced, never dropped. After S2
+   * only two things can appear here: springs when no
+   * {@link IAutoMovieResolveInput.springs} input was given (stateful — nothing
+   * to step them with), and malformed two-bone chains (length ≠ 3).
    */
   deferredDrivers: IAutoMovieDriver[];
 }
 
 /**
  * Resolve one frame of a scene: SAMPLE the clip, DRIVE the channel-space
- * drivers, CONSTRAIN the values to their channel limits, then COMPOSE the node
- * hierarchy into world matrices.
+ * drivers, CONSTRAIN the values to their channel limits, COMPOSE the node
+ * hierarchy into world matrices, then run the world-space DRIVE pass
+ * (aim/parent/two-bone and iterative ccd/fabrik IK) and — when the caller
+ * threads `springs` state — STEP every spring driver.
  *
  * This is the engine's per-frame entry point and the deterministic core of
- * automovie: given the same scene, clip, limits, drivers, and time it always
- * yields the same matrices — the property that makes the renderer a
- * reproducible diffusion alternative. World-space/stateful drivers
- * (`parent`/`aim`/`ik`/`spring`) are not applied here; they are surfaced in
- * `deferredDrivers` for the world-space pass that runs after an initial
- * compose.
+ * automovie: given the same scene, clip, limits, drivers, time (and spring
+ * state) it always yields the same matrices — the property that makes the
+ * renderer a reproducible diffusion alternative. Every solver runs on a fixed
+ * budget, so nothing here is host-dependent; springs without a `springs` input
+ * are the one thing still surfaced in `deferredDrivers`.
  *
  * @author Samchon
  */
@@ -120,21 +163,76 @@ export const resolveFrame = (
     if (w !== undefined) weights.set(node.id, w.value);
   }
 
-  // COMPOSE, then the WORLD-SPACE DRIVE pass (aim/look-at) over the composed
-  // hierarchy; `parent`/`ik`/`spring` remain deferred for their own steps.
+  // COMPOSE, then the WORLD-SPACE DRIVE pass (aim/parent/analytic + iterative
+  // IK) over the composed hierarchy; springs step afterward when state+dt are
+  // threaded, and defer otherwise.
   const world = composeScene(input.nodes, overrides);
   const localById = new Map<string, IAutoMovieTransform>();
   for (const node of input.nodes)
     localById.set(node.id, overrides.get(node.id) ?? node.transform);
-  const deferredDrivers = resolveWorldDrivers(
+  const afterWorldPass = resolveWorldDrivers(
     worldSpaceDrivers,
     world,
     localById,
     childrenIndex(input.nodes),
   );
 
+  // STEP springs (the one stateful driver) inside the frame when the caller
+  // provides the cross-frame state; colliders ride their nodes' world matrices.
+  let deferredDrivers = afterWorldPass;
+  if (input.springs !== undefined) {
+    const spheres: IAutoMovieSpringSphere[] = (
+      input.springs.colliders ?? []
+    ).map((c) => ({
+      center: positionOf(readWorld(world, c.node, "spring collider")),
+      radius: c.radius,
+    }));
+    deferredDrivers = [];
+    for (const d of afterWorldPass)
+      if (d.type === "spring") {
+        seedSprungPositions(d.chain, world, input.springs.state);
+        stepSpring(
+          d,
+          world,
+          input.springs.state,
+          input.springs.dt,
+          localById,
+          spheres,
+        );
+      } else deferredDrivers.push(d);
+  }
+
   return { world, weights, violations, deferredDrivers };
 };
+
+/**
+ * Seed a spring chain's non-root joints from the state's post-spring positions
+ * of the previous frame. A host loop carries its mutated world map across
+ * steps; `resolveFrame` composes fresh from the animation every frame, so
+ * without this the spring would restart from the animated pose each time and
+ * never accumulate sag. Rotation/scale stay animated — spring only owns the
+ * position, exactly like {@link stepSpring}'s own write.
+ */
+const seedSprungPositions = (
+  chain: readonly string[],
+  world: Map<string, number[]>,
+  state: IAutoMovieSpringState,
+): void => {
+  for (let i = 1; i < chain.length; ++i) {
+    const id = chain[i]!;
+    const carried = state.sprung.get(id);
+    if (carried === undefined) continue;
+    const m = readWorld(world, id, "spring chain");
+    const next = [...m];
+    next[12] = carried.x;
+    next[13] = carried.y;
+    next[14] = carried.z;
+    world.set(id, next);
+  }
+};
+
+/** Translation column of a column-major world matrix. */
+const positionOf = (m: number[]) => ({ x: m[12]!, y: m[13]!, z: m[14]! });
 
 const toVec3 = (a: number[]) => ({ x: a[0]!, y: a[1]!, z: a[2]! });
 const toQuat = (a: number[]) => ({ x: a[0]!, y: a[1]!, z: a[2]!, w: a[3]! });
