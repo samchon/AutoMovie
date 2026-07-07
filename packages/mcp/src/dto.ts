@@ -740,6 +740,22 @@ export interface IAutoMovieOpenProjectOutput {
   project: IAutoMovieMcpProjectSummary;
 }
 
+/**
+ * An erase tool's result (#617). Erase is a targeted, resident-only removal of
+ * one named artifact — never a reset; `erased` is true only when the named
+ * mistake existed and its files were removed (with the downstream cascade).
+ */
+export interface IAutoMovieEraseOutput {
+  /** True only when the named artifact existed and was removed. */
+  erased: boolean;
+
+  /** The resident slate after the erase (unchanged when refused). */
+  slate: IAutoMovieMcpWritableSlate;
+
+  /** Success, or the violations explaining why the erase was refused. */
+  validation: IAutoMovieValidation;
+}
+
 /** The `nextSteps` tool's result — the film ladder as data (#615). */
 export interface IAutoMovieNextStepsOutput {
   /** The resident project's current status. */

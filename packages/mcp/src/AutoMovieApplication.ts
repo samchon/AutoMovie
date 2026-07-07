@@ -26,6 +26,7 @@ import {
   IAutoMovieBlockOutput,
   IAutoMovieCommitOutput,
   IAutoMovieCutOutput,
+  IAutoMovieEraseOutput,
   IAutoMovieForgeOutput,
   IAutoMovieForgePropOutput,
   IAutoMovieGetBeatEndOutput,
@@ -438,6 +439,8 @@ export class AutoMovieApplication {
   /**
    * Commit one performed shot after script, scene, and optional motion checks.
    * The shot id must be `shot:<beat>` so slate queries can find it.
+   * Re-committing the same beat replaces exactly that beat's shot (the upsert
+   * rule) and leaves sibling beats untouched.
    *
    * @param props The slate, shot, and optional compiled motions.
    * @returns The new slate, or the unchanged slate with violations.
@@ -455,7 +458,8 @@ export class AutoMovieApplication {
 
   /**
    * Commit the resolved end-state for a beat. It must point at a committed shot
-   * and only name actors present in the committed scene.
+   * and only name actors present in the committed scene. Re-committing the same
+   * beat replaces exactly that beat's end-state (the upsert rule).
    *
    * @param props The slate and beat-end state to commit.
    * @returns The new slate, or the unchanged slate with violations.
@@ -499,6 +503,46 @@ export class AutoMovieApplication {
     film: IAutoMovieSequence;
   }): IAutoMovieCommitOutput {
     return this.commit.commitFilm(props);
+  }
+
+  /**
+   * Erase ONE beat's shot from the resident project — a targeted removal of a
+   * named mistake, never a reset. The beat's beat-end and its review notes go
+   * with it (they are stale without their shot) and the assembled film is
+   * cleared. Requires an active project, a non-empty reason (evidence), and an
+   * existing shot — erasing nothing is reported as a violation. Upstream slices
+   * (script, scene) have no erase tool: re-committing upstream already clears
+   * downstream (the commit cascade).
+   *
+   * @param props The beat whose shot to erase and the reason (evidence).
+   * @returns The slate after the erase, or violations when refused.
+   */
+  public eraseShot(props: {
+    /** Beat id whose shot (and dependents) should be erased. */
+    beat: string;
+    /** Why this shot is a mistake — required evidence. */
+    reason: string;
+  }): IAutoMovieEraseOutput {
+    return this.commit.eraseShot(props);
+  }
+
+  /**
+   * Erase ONE beat's review notes from the resident project. Notes carry no
+   * ids; the beat is their identity anchor, so per-beat is the erase
+   * granularity. Requires an active project, a non-empty reason, and existing
+   * notes for the beat — erasing nothing is reported as a violation. The
+   * assembled film is cleared (any notes change invalidates it).
+   *
+   * @param props The beat whose notes to erase and the reason (evidence).
+   * @returns The slate after the erase, or violations when refused.
+   */
+  public eraseNotes(props: {
+    /** Beat id whose review notes should be erased. */
+    beat: string;
+    /** Why these notes should go — required evidence. */
+    reason: string;
+  }): IAutoMovieEraseOutput {
+    return this.commit.eraseNotes(props);
   }
 
   /**
