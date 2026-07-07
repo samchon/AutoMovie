@@ -309,6 +309,7 @@ export const buildStickman = (
     origin: "generated",
     parts,
     skeleton,
+    body: null,
     materials: [
       {
         id: "ink",

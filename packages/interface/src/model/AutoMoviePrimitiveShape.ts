@@ -62,7 +62,7 @@ export interface IAutoMovieCylinderShape {
   height: number;
 }
 
-/** Cone aligned to local Y (apex toward +Y). */
+/** Cone aligned to local Y (wide base at +Y, tapering to the apex at -Y). */
 export interface IAutoMovieConeShape {
   /** Discriminator. */
   type: "cone";

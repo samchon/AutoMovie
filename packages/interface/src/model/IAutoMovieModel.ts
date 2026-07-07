@@ -1,6 +1,7 @@
 import { IAutoMovieMaterial } from "../material/IAutoMovieMaterial";
 import { IAutoMovieSkeleton } from "../skeleton/IAutoMovieSkeleton";
 import { AutoMovieAssetOrigin } from "./AutoMovieAssetOrigin";
+import { IAutoMovieBody } from "./IAutoMovieBody";
 import { IAutoMovieModelPart } from "./IAutoMovieModelPart";
 
 /**
@@ -42,6 +43,13 @@ export interface IAutoMovieModel {
    * one without is an object.
    */
   skeleton: IAutoMovieSkeleton | null;
+
+  /**
+   * The physical body — mass, center of mass, friction, restitution. `null`
+   * when the model has no declared physics (a static prop or set piece);
+   * physical-plausibility feedback is only computed for models with a body.
+   */
+  body: IAutoMovieBody | null;
 
   /** Materials referenced by the parts. */
   materials: IAutoMovieMaterial[];

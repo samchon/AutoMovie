@@ -26,6 +26,7 @@ const CHARACTER: IAutoMovieModel = {
   id: "char",
   name: "character",
   origin: "generated",
+  body: null,
   skeleton: {
     id: "rig",
     bones: [
@@ -74,6 +75,7 @@ const OBJECT: IAutoMovieModel = {
   id: "obj",
   name: null,
   origin: "imported",
+  body: null,
   skeleton: null,
   materials: [
     {

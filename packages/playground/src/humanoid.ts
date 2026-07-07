@@ -259,6 +259,7 @@ export const buildHumanoid = (
     origin: "generated",
     parts,
     skeleton,
+    body: null,
     materials: [
       {
         id: "skin",
