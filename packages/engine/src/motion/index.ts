@@ -9,6 +9,7 @@ export * from "./plantFeet";
 export * from "./sampleMotion";
 export * from "./arrange";
 export * from "./locomote";
+export * from "./motionToClip";
 export * from "./pathLocomotion";
 export * from "./react";
 export * from "./retargetHumanoidMotion";
