@@ -10,3 +10,4 @@ export * from "./validateModel";
 export * from "./validateSelfIntersection";
 export * from "./validateBodyCollision";
 export * from "./validateSupport";
+export * from "./validateFreeFall";
