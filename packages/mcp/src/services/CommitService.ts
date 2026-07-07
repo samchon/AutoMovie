@@ -1,4 +1,8 @@
-import { toValidation, validateScriptTree } from "@automovie/engine";
+import {
+  locateOnBeat,
+  toValidation,
+  validateScriptTree,
+} from "@automovie/engine";
 import {
   IAutoMovieBeatEndState,
   IAutoMovieConstraintViolation,
@@ -156,7 +160,15 @@ export class CommitService {
         violations,
         validateShotArtifact(props.shot, slate.scene, props.motions),
       );
-    const validation = toValidation(violations);
+    // Locate this beat's feedback on the screenplay refinement graph (D013):
+    // when the script carries a tree, every violation of this commit gains the
+    // claiming beat node, so scriptAncestors can cascade it up to the scene,
+    // the act, or the intent.
+    const located =
+      beat === null
+        ? violations
+        : locateOnBeat(violations, slate.script?.tree ?? null, beat);
+    const validation = toValidation(located);
     if (validation.success === false)
       return this.finish(failedCommit(slate, validation), resident);
     return this.finish(
