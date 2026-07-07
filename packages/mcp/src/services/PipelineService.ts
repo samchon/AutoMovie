@@ -5,6 +5,7 @@ import {
   blockBeat,
   cutSequence,
   forgeCast,
+  forgeProp,
   makeActorSynthesizer,
   performShot,
   stageScene,
@@ -20,13 +21,15 @@ import {
   IAutoMovieStagingApplication,
 } from "@automovie/interface";
 
-import { toMcpMotion } from "../convert";
+import { toEnginePropSpec, toMcpMotion } from "../convert";
 import {
   IAutoMovieBlockOutput,
   IAutoMovieCutOutput,
   IAutoMovieForgeOutput,
+  IAutoMovieForgePropOutput,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpPerformedShot,
+  IAutoMovieMcpPropSpec,
   IAutoMoviePerformOutput,
   IAutoMovieStageOutput,
 } from "../dto";
@@ -97,6 +100,16 @@ export class PipelineService {
     forge: IAutoMovieForgeApplication.IWrite;
   }): IAutoMovieForgeOutput {
     return { forged: forgeCast(props.script, props.forge) };
+  }
+
+  public forgeProp(props: {
+    spec: IAutoMovieMcpPropSpec;
+  }): IAutoMovieForgePropOutput {
+    const forged = forgeProp(toEnginePropSpec(props.spec));
+    return {
+      forged:
+        forged.success === true ? { success: true, prop: props.spec } : forged,
+    };
   }
 }
 

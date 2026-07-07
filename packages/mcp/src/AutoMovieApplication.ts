@@ -26,6 +26,7 @@ import {
   IAutoMovieCommitOutput,
   IAutoMovieCutOutput,
   IAutoMovieForgeOutput,
+  IAutoMovieForgePropOutput,
   IAutoMovieGetBeatEndOutput,
   IAutoMovieGetNotesOutput,
   IAutoMovieGetReachOutput,
@@ -37,6 +38,7 @@ import {
   IAutoMovieMcpGeometryContext,
   IAutoMovieMcpGeometryModel,
   IAutoMovieMcpMotion,
+  IAutoMovieMcpPropSpec,
   IAutoMovieMcpStoredSlate,
   IAutoMovieMcpWritableSlate,
   IAutoMovieMeasureDistanceOutput,
@@ -578,5 +580,26 @@ export class AutoMovieApplication {
     forge: IAutoMovieForgeApplication.IWrite;
   }): IAutoMovieForgeOutput {
     return this.pipeline.forge(props);
+  }
+
+  /**
+   * Forge a prop -- author an object as data: a crude primitive model that
+   * carries rich meaning (physical body, contact affordances, self-declared
+   * articulation such as a door's limited hinge with a driver coupling its
+   * parts). The engine gates the model contract (generated, skeleton-less, id
+   * equal to the scene node) and the articulation contract (joint nodes resolve
+   * acyclically, the profile binding maps every referenced key), and returns
+   * the accepted prop or every violation for the correction round. An accepted
+   * articulated prop's profile then constrains and drives its joints
+   * deterministically at resolve time.
+   *
+   * @param props The prop spec: node, model, and optional articulation.
+   * @returns The forged prop on success, or the violations to fix.
+   */
+  public forgeProp(props: {
+    /** The prop spec: scene node, model, and optional articulation. */
+    spec: IAutoMovieMcpPropSpec;
+  }): IAutoMovieForgePropOutput {
+    return this.pipeline.forgeProp(props);
   }
 }

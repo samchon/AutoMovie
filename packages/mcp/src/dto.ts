@@ -9,11 +9,21 @@ import {
   AutoMovieEasing,
   AutoMovieGuidePass,
   AutoMovieHumanoidBone,
+  IAutoMovieAimDriver,
   IAutoMovieBeatEndState,
+  IAutoMovieChannelLimit,
   IAutoMovieConstraintViolation,
+  IAutoMovieCopyDriver,
+  IAutoMovieDrivenDriver,
   IAutoMovieExpression,
   IAutoMovieGaitRootBob,
+  IAutoMovieIKDriver,
+  IAutoMovieModel,
+  IAutoMovieNode,
+  IAutoMovieParentDriver,
   IAutoMoviePose,
+  IAutoMovieProfileBinding,
+  IAutoMovieProfileControl,
   IAutoMovieQuaternion,
   IAutoMovieRenderSpec,
   IAutoMovieReviewNote,
@@ -22,6 +32,7 @@ import {
   IAutoMovieSequence,
   IAutoMovieShot,
   IAutoMovieSkeleton,
+  IAutoMovieSpringDriver,
   IAutoMovieValidation,
   IAutoMovieVector3,
 } from "@automovie/interface";
@@ -573,4 +584,122 @@ export interface IAutoMovieCutOutput {
 export interface IAutoMovieForgeOutput {
   /** The forged cast on success, or the forge violations on failure. */
   forged: IAutoMovieForgedCast;
+}
+
+/** A source-to-output value range, the JSON-safe form of a `[from, to]` pair. */
+export interface IAutoMovieMcpRange {
+  /** Range start. */
+  from: number;
+
+  /** Range end. */
+  to: number;
+}
+
+/**
+ * A driven driver whose tuple-valued `inRange`/`outRange` cross the MCP
+ * boundary as named {@link IAutoMovieMcpRange} objects (the LLM JSON schema
+ * cannot express tuples), converted to the engine's pairs in `convert.ts`.
+ */
+export interface IAutoMovieMcpDrivenDriver extends Omit<
+  IAutoMovieDrivenDriver,
+  "inRange" | "outRange"
+> {
+  /** Source value range mapped onto {@link outRange}. */
+  inRange: IAutoMovieMcpRange;
+
+  /** Output value range. */
+  outRange: IAutoMovieMcpRange;
+}
+
+/** A prop profile driver as the MCP boundary accepts it — tuple-free. */
+export type IAutoMovieMcpPropDriver =
+  | IAutoMovieCopyDriver
+  | IAutoMovieAimDriver
+  | IAutoMovieIKDriver
+  | IAutoMovieParentDriver
+  | IAutoMovieMcpDrivenDriver
+  | IAutoMovieSpringDriver;
+
+/**
+ * A prop's profile as the MCP boundary accepts it: the declared controls,
+ * limits, and (tuple-free) drivers. Gaits are omitted — a prop does not
+ * locomote (`IAutoMovieProfile.gaits` is for bodies); the humanoid gait path
+ * rides the `perform` tool's actor contexts instead.
+ */
+export interface IAutoMovieMcpPropProfile {
+  /** Stable profile id. */
+  id: string;
+
+  /** Profile name (e.g. `"hinge"`). */
+  name: string;
+
+  /** The named controls this profile exposes. */
+  controls: IAutoMovieProfileControl[];
+
+  /** Drivers coupling the prop's joints, tuple-free. */
+  drivers: IAutoMovieMcpPropDriver[];
+
+  /** Value constraints over the prop's joints (the hinge's 0..110°). */
+  limits: IAutoMovieChannelLimit[];
+}
+
+/** A prop's self-declared moving parts as the MCP boundary accepts them. */
+export interface IAutoMovieMcpPropArticulation {
+  /** The prop's internal joint nodes. */
+  nodes: IAutoMovieNode[];
+
+  /** The declared capability over those nodes. */
+  profile: IAutoMovieMcpPropProfile;
+
+  /** The application of the profile onto the nodes (`boneMap`). */
+  binding: IAutoMovieProfileBinding;
+}
+
+/**
+ * A prop spec as the `forgeProp` tool accepts it — a crude primitive proxy with
+ * rich meaning: body, affordances, self-declared articulation (D011).
+ */
+export interface IAutoMovieMcpPropSpec {
+  /** The scene node this prop will occupy (the staging join key). */
+  node: string;
+
+  /** The prop model: generated, skeleton-less, primitive parts. */
+  model: IAutoMovieModel;
+
+  /** Self-declared moving parts, or `null` for a rigid prop. */
+  articulation: IAutoMovieMcpPropArticulation | null;
+}
+
+/**
+ * The engine's forged-prop verdict with the accepted spec echoed in its
+ * MCP-safe form (the engine's echo carries the raw tuple-bearing profile the
+ * LLM schema cannot express).
+ */
+export type IAutoMovieMcpForgedProp =
+  | IAutoMovieMcpForgedProp.ISuccess
+  | IAutoMovieMcpForgedProp.IFailure;
+export namespace IAutoMovieMcpForgedProp {
+  /** The prop passed both contracts. */
+  export interface ISuccess {
+    /** Discriminator. */
+    success: true;
+
+    /** The accepted spec, echoed for the staging join. */
+    prop: IAutoMovieMcpPropSpec;
+  }
+
+  /** The spec broke a contract. */
+  export interface IFailure {
+    /** Discriminator. */
+    success: false;
+
+    /** Every violation found, for the correction round. */
+    violations: IAutoMovieConstraintViolation[];
+  }
+}
+
+/** The `forgeProp` tool's result. */
+export interface IAutoMovieForgePropOutput {
+  /** The forged prop on success, or the forge violations on failure. */
+  forged: IAutoMovieMcpForgedProp;
 }

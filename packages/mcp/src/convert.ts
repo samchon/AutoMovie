@@ -1,6 +1,18 @@
-import { IAutoMovieKeyframe, IAutoMovieMotion } from "@automovie/interface";
+import {
+  IAutoMovieDriver,
+  IAutoMovieKeyframe,
+  IAutoMovieMotion,
+  IAutoMovieProfile,
+  IAutoMoviePropSpec,
+} from "@automovie/interface";
 
-import { IAutoMovieMcpBezier, IAutoMovieMcpMotion } from "./dto";
+import {
+  IAutoMovieMcpBezier,
+  IAutoMovieMcpMotion,
+  IAutoMovieMcpPropDriver,
+  IAutoMovieMcpPropProfile,
+  IAutoMovieMcpPropSpec,
+} from "./dto";
 
 /**
  * The MCP ⇄ engine motion bridge. The LLM JSON schema cannot express tuples, so
@@ -47,3 +59,45 @@ export const toEngineMotion = (
           ] as [number, number, number, number]),
   })),
 });
+
+/**
+ * Lower an MCP prop spec onto the engine's {@link IAutoMoviePropSpec}: the
+ * driven drivers' named `{from, to}` ranges become the engine's `[from, to]`
+ * pairs, and the gait-less MCP profile becomes a plain profile (a prop does not
+ * locomote, so `gaits` is simply absent).
+ */
+export const toEnginePropSpec = (
+  spec: IAutoMovieMcpPropSpec,
+): IAutoMoviePropSpec => ({
+  node: spec.node,
+  model: spec.model,
+  articulation:
+    spec.articulation === null
+      ? null
+      : {
+          nodes: spec.articulation.nodes,
+          profile: toEnginePropProfile(spec.articulation.profile),
+          binding: spec.articulation.binding,
+        },
+});
+
+const toEnginePropProfile = (
+  profile: IAutoMovieMcpPropProfile,
+): IAutoMovieProfile => ({
+  id: profile.id,
+  name: profile.name,
+  controls: profile.controls,
+  drivers: profile.drivers.map(toEnginePropDriver),
+  limits: profile.limits,
+});
+
+const toEnginePropDriver = (
+  driver: IAutoMovieMcpPropDriver,
+): IAutoMovieDriver =>
+  driver.type === "driven"
+    ? {
+        ...driver,
+        inRange: [driver.inRange.from, driver.inRange.to],
+        outRange: [driver.outRange.from, driver.outRange.to],
+      }
+    : driver;
