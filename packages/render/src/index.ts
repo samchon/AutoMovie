@@ -1,3 +1,4 @@
+export * from "./chunkSequenceRender";
 export * from "./exportModel";
 export * from "./headlessCapture";
 export * from "./plan";
