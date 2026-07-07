@@ -1,4 +1,5 @@
 import {
+  IAutoMovieBeatEndState,
   IAutoMovieBlockingApplication,
   IAutoMovieConstraintViolation,
   IAutoMovieScriptApplication,
@@ -24,6 +25,15 @@ export namespace IAutoMovieBlockedBeat {
 
     /** The validated plan, verbatim. */
     blocking: IAutoMovieBlockingApplication.IWrite;
+
+    /**
+     * The validated initial condition from the prior beat, or `null` for the
+     * first beat (or when none was supplied). Surfaced so the performance stage
+     * can seed each actor's start position, facing, gait phase, velocity,
+     * plants, and mount from where the previous beat actually ended; full
+     * seeding into the action synthesizer is a follow-up.
+     */
+    previous: IAutoMovieBeatEndState | null;
   }
 
   /** The plan contradicted the script, the stage, or its own timeline. */
@@ -44,11 +54,18 @@ export namespace IAutoMovieBlockedBeat {
  * own timeline **in the order they are listed** — the list order is the causal
  * order ("the loose before the hit"), so an anchor whose `t` runs backwards
  * contradicts the causality it exists to fix.
+ *
+ * When the prior beat's end-state is supplied it becomes this beat's initial
+ * condition: its actors are gated for referential integrity (every carried
+ * actor must be a staged scene node, exactly once) and the validated state is
+ * surfaced on the success so downstream stages resume from it rather than
+ * resetting the world at the cut.
  */
 export const blockBeat = (
   script: IAutoMovieScriptApplication.IWrite,
   staged: IAutoMovieStagedSet.ISuccess,
   blocking: IAutoMovieBlockingApplication.IWrite,
+  previous?: IAutoMovieBeatEndState,
 ): IAutoMovieBlockedBeat => {
   const out = new ViolationCollector();
   const beatIds = new Map<string, number>();
@@ -145,7 +162,34 @@ export const blockBeat = (
       "camera target node id",
     );
 
+  if (previous !== undefined) {
+    const carried = new Map<string, number>();
+    previous.actors.forEach((actor, i) => {
+      validateNonEmptyId(
+        actor.node,
+        `$previous.actors[${i}].node`,
+        "previous beat-end actor node id",
+      );
+      const first = carried.get(actor.node);
+      if (first !== undefined)
+        out.push(
+          "type",
+          `$previous.actors[${i}].node`,
+          `previous beat-end actor "${actor.node}" is duplicated; first declared at $previous.actors[${first}].node`,
+          actor.node,
+        );
+      else carried.set(actor.node, i);
+      if (!nodeIds.has(actor.node))
+        out.push(
+          "type",
+          `$previous.actors[${i}].node`,
+          `previous beat-end actor "${actor.node}" is not a staged scene node — a carried state must resume placed actors`,
+          actor.node,
+        );
+    });
+  }
+
   return out.items.length > 0
     ? { success: false, violations: out.items }
-    : { success: true, blocking };
+    : { success: true, blocking, previous: previous ?? null };
 };
