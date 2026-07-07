@@ -2,7 +2,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createMcpServer } from "@typia/mcp";
 import typia from "typia";
 
-import { AutoMovieApplication } from "./AutoMovieApplication";
+import {
+  AutoMovieApplication,
+  AutoMovieMcpFrameCapture,
+} from "./AutoMovieApplication";
 
 /**
  * Build the AutoMovie MCP server: wrap {@link AutoMovieApplication} in a
@@ -11,13 +14,20 @@ import { AutoMovieApplication } from "./AutoMovieApplication";
  * returned server to a transport — `StdioServerTransport` for a spawned
  * subprocess (see `bin.ts`).
  *
+ * A host that owns a renderer can inject a `capture` adapter so `seeFrame`
+ * returns real pixels; the plain stdio binary has none and `seeFrame` reports
+ * `no-capture-adapter`.
+ *
  * @author Samchon
  */
-export const createAutoMovieMcpServer = (): McpServer =>
+export const createAutoMovieMcpServer = (props?: {
+  /** Host-owned frame capture used by `seeFrame`. */
+  capture?: AutoMovieMcpFrameCapture;
+}): McpServer =>
   createMcpServer(
     typia.llm.controller<AutoMovieApplication>(
       "automovie",
-      new AutoMovieApplication(),
+      new AutoMovieApplication(props),
     ),
     "0.1.0",
   );

@@ -83,7 +83,7 @@ const assemble = (shot: string): IAutoMovieAssembleApplication.IWrite => ({
  *    scene commit, block, perform, shot commit, cut, film commit, render plan,
  *    and preview-frame planning.
  */
-export const test_mcp_agent_toolbox_smoke = (): void => {
+export const test_mcp_agent_toolbox_smoke = async (): Promise<void> => {
   const script = makeScriptWrite();
   const staged = app.stage({ script, staging: makeStagingWrite() }).staged;
   if (staged.success !== true) throw new Error("stage must succeed");
@@ -212,11 +212,13 @@ export const test_mcp_agent_toolbox_smoke = (): void => {
   });
   TestValidator.equals("render frame count", renderPlan.frameCount, 12);
 
-  const preview = app.seeFrame({
-    slate: filmCommitted.slate,
-    spec,
-    frame: 1,
-  }).preview;
+  const preview = (
+    await app.seeFrame({
+      slate: filmCommitted.slate,
+      spec,
+      frame: 1,
+    })
+  ).preview;
   if (preview === null) throw new Error("preview must succeed");
   TestValidator.equals("preview frame", preview.frame, 1);
 };

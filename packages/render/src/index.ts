@@ -1,5 +1,6 @@
 export * from "./chunkSequenceRender";
 export * from "./exportModel";
+export * from "./guidePasses";
 export * from "./headlessCapture";
 export * from "./plan";
 export * from "./renderAndSee";
