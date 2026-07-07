@@ -18,6 +18,7 @@ export * from "./IAutoMovieGetBeatEndRequest";
 export * from "./IAutoMovieBeatEndState";
 export * from "./IAutoMovieTimingAnchor";
 export * from "./IAutoMoviePropSpec";
+export * from "./IAutoMovieScriptNode";
 export * from "./IAutoMovieSlate";
 export * from "./IAutoMovieScriptApplication";
 export * from "./IAutoMovieForgeApplication";

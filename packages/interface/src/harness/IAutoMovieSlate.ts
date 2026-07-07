@@ -2,6 +2,7 @@ import { IAutoMovieSequence } from "../cinematics/IAutoMovieSequence";
 import { IAutoMovieShot } from "../cinematics/IAutoMovieShot";
 import { IAutoMovieScene } from "../scene/IAutoMovieScene";
 import { IAutoMovieBeatEndState } from "./IAutoMovieBeatEndState";
+import { IAutoMovieScriptNode } from "./IAutoMovieScriptNode";
 
 /** One planned shot, described in words before it is blocked and performed. */
 export interface IAutoMovieBeat {
@@ -49,6 +50,16 @@ export interface IAutoMovieScript {
 
   /** The ordered beats (each becomes a shot). */
   beats: IAutoMovieBeat[];
+
+  /**
+   * The screenplay refinement tree ({@link IAutoMovieScriptNode}, D013): intent
+   * → acts/scenes/groups → beat nodes carrying stage direction, dialogue, and
+   * shot captions. Evolving-schema optional — absent means the flat `beats`
+   * list is the whole authored structure (fully backward-compatible); when
+   * present, beat-kind nodes join `beats` 1:1 and the tree validates on
+   * commit.
+   */
+  tree?: IAutoMovieScriptNode[] | null;
 }
 
 /**
