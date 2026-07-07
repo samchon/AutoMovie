@@ -56,6 +56,10 @@ const beatEnd: IAutoMovieBeatEndState = {
       pose: null,
       motion: null,
       localTime: 1,
+      gaitPhase: null,
+      rootVelocity: null,
+      footPlants: null,
+      mount: null,
     },
   ],
 };
