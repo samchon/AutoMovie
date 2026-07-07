@@ -1,0 +1,121 @@
+import { resolveFrame } from "@automovie/engine";
+import { AutoMovieApplication, IAutoMovieMcpPropSpec } from "@automovie/mcp";
+import { TestValidator } from "@nestia/e2e";
+
+import { createDoorPropSpec } from "../film/test_film_forge_prop";
+
+const app = new AutoMovieApplication();
+
+/** The engine door spec re-expressed as the MCP boundary accepts it. */
+const mcpDoorSpec = (): IAutoMovieMcpPropSpec => {
+  const spec = createDoorPropSpec();
+  const articulation = spec.articulation!;
+  return {
+    node: spec.node,
+    model: spec.model,
+    articulation: {
+      nodes: articulation.nodes,
+      profile: {
+        id: articulation.profile.id,
+        name: articulation.profile.name,
+        controls: articulation.profile.controls,
+        limits: articulation.profile.limits,
+        drivers: [
+          ...articulation.profile.drivers.filter((d) => d.type !== "driven"),
+          {
+            type: "driven",
+            output: { kind: "node", node: "pivot", path: "translation" },
+            source: { kind: "pointer", pointer: "/ajar", valueType: "scalar" },
+            inRange: { from: 0, to: 1 },
+            outRange: { from: 0, to: 0.1 },
+            clamp: true,
+          },
+        ],
+      },
+      binding: articulation.binding,
+    },
+  };
+};
+
+/**
+ * The MCP `forgeProp` tool: a JSON-only prop spec — driven ranges as named
+ * `{from, to}` objects, no tuples — forges through the same engine gates, and
+ * the accepted echo stays MCP-safe.
+ *
+ * Scenarios:
+ *
+ * 1. A valid articulated spec (including a driven driver whose named ranges the
+ *    converter lowers to engine pairs) forges; the success echo is the MCP spec
+ *    itself.
+ * 2. The forged articulation still executes: feeding the ENGINE-side spec's
+ *    profile to resolveFrame clamps the over-swing (sanity that the MCP layer
+ *    changed representation, not semantics).
+ * 3. A violating spec (skeletoned model) surfaces the engine's violations through
+ *    the tool.
+ */
+export const test_mcp_forge_prop = (): void => {
+  const spec = mcpDoorSpec();
+  const output = app.forgeProp({ spec });
+  TestValidator.equals("valid prop forges", output.forged.success, true);
+  TestValidator.equals(
+    "success echoes the MCP spec",
+    output.forged.success === true ? output.forged.prop.node : null,
+    "door",
+  );
+
+  const engineSpec = createDoorPropSpec();
+  const articulation = engineSpec.articulation!;
+  const slammed = resolveFrame({
+    nodes: articulation.nodes,
+    clip: {
+      id: "swing",
+      name: null,
+      duration: 1,
+      loop: false,
+      tracks: [
+        {
+          channel: { kind: "node", node: "hinge", path: "rotation" },
+          times: [0],
+          values: [
+            0,
+            Math.sin(Math.PI * (75 / 180)),
+            0,
+            Math.cos(Math.PI * (75 / 180)),
+          ],
+          interpolation: "linear",
+        },
+      ],
+    },
+    limits: [],
+    profiles: [
+      { profile: articulation.profile, binding: articulation.binding },
+    ],
+    seconds: 0,
+  });
+  TestValidator.predicate(
+    "the same declared limit still clamps at resolve time",
+    slammed.violations.length > 0,
+  );
+
+  const broken = app.forgeProp({
+    spec: {
+      ...spec,
+      model: {
+        ...spec.model,
+        skeleton: { id: "rig", bones: [] },
+      },
+    },
+  });
+  TestValidator.equals(
+    "skeletoned model refused",
+    broken.forged.success,
+    false,
+  );
+  TestValidator.predicate(
+    "violation surfaced through the tool",
+    broken.forged.success === false &&
+      broken.forged.violations.some((v) =>
+        v.path.includes("$input.model.skeleton"),
+      ),
+  );
+};
