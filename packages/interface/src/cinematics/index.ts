@@ -4,3 +4,4 @@ export * from "./IAutoMovieSequence";
 export * from "./IAutoMovieTrim";
 export * from "./IAutoMovieTransition";
 export * from "./IAutoMovieRenderSpec";
+export * from "./AutoMovieGuidePass";

@@ -27,6 +27,7 @@ import {
 } from "@automovie/engine";
 import {
   AutoMovieEasing,
+  AutoMovieGuidePass,
   AutoMovieHumanoidBone,
   IAutoMovieActionTarget,
   IAutoMovieAssembleApplication,
@@ -59,10 +60,14 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
+  IAutoMovieGuidePassOutput,
   ffmpegArgs,
   frameName,
   framePattern,
   frameTimes,
+  guidePassFrameName,
+  isGuidePass,
+  planGuidePassOutputs,
   planSequenceRender,
   renderPathStem,
 } from "@automovie/render";
@@ -89,6 +94,22 @@ import {
  * @author Samchon
  */
 export class AutoMovieApplication {
+  /** Host-injected frame capture, or `undefined` when the host has none. */
+  private readonly capture?: AutoMovieMcpFrameCapture;
+
+  public constructor(props?: {
+    /**
+     * Frame-capture adapter owned by the host (a Playwright page, a render
+     * worker). The MCP layer stays pure planning/validation: `seeFrame` plans
+     * the frame and hands this adapter the request; pixels never flow through
+     * the server itself. Without an adapter `seeFrame` reports
+     * `no-capture-adapter` honestly instead of pretending.
+     */
+    capture?: AutoMovieMcpFrameCapture;
+  }) {
+    this.capture = props?.capture;
+  }
+
   /**
    * Read the script slice from a slate. It returns `null` until the SCRIPT
    * stage has committed a script, so agents can ask for context without
@@ -588,9 +609,10 @@ export class AutoMovieApplication {
 
   /**
    * Plan a deterministic render for a committed shot or film. It returns frame
-   * times, frame paths, and ffmpeg args without doing host I/O.
+   * times, frame paths, per-pass guide outputs, and ffmpeg args without doing
+   * host I/O.
    *
-   * @param props The slate, render spec, and optional output paths.
+   * @param props The slate, render spec, optional guide passes, and paths.
    * @returns A render plan, or validation diagnostics when the target is not
    *   ready.
    */
@@ -599,6 +621,8 @@ export class AutoMovieApplication {
     slate: IAutoMovieMcpWritableSlate;
     /** Render parameters for a committed shot or sequence id. */
     spec: IAutoMovieRenderSpec;
+    /** Guide passes to capture per frame. Defaults to beauty only. */
+    passes?: string[];
     /** Directory where frame files would be written. */
     frameDir?: string;
     /** Encoded video output path. */
@@ -608,13 +632,17 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Prepare one preview frame for inspection. This is a render/see placeholder:
-   * it resolves the target frame but does not capture pixels yet.
+   * Capture one preview frame for inspection — the render/see loop. It plans
+   * the target frame and requested guide pass, then hands the host-injected
+   * capture adapter the request and returns the captured image. Without an
+   * adapter it returns the resolved frame with status `no-capture-adapter`
+   * instead of pixels, so an agent always knows whether it actually saw the
+   * frame.
    *
-   * @param props The slate, render spec, and optional frame or time.
-   * @returns The preview frame location, or validation diagnostics.
+   * @param props The slate, render spec, optional frame/time, and guide pass.
+   * @returns The captured (or planned) preview frame, or diagnostics.
    */
-  public seeFrame(props: {
+  public async seeFrame(props: {
     /** Slate whose committed shot or film is the preview source. */
     slate: IAutoMovieMcpWritableSlate;
     /** Render parameters for a committed shot or sequence id. */
@@ -623,7 +651,9 @@ export class AutoMovieApplication {
     frame?: number;
     /** Target time in seconds. Must agree with `frame` when both are present. */
     time?: number;
-  }): IAutoMovieSeeFrameOutput {
+    /** Guide pass to draw. Defaults to `beauty`. */
+    pass?: string;
+  }): Promise<IAutoMovieSeeFrameOutput> {
     const planned = buildRenderPlan({
       slate: props.slate,
       spec: props.spec,
@@ -633,19 +663,37 @@ export class AutoMovieApplication {
     const plan = planned.plan!;
     const violations: IAutoMovieConstraintViolation[] = [];
     const frame = resolvePreviewFrame(props, plan, violations);
+    const pass = resolveGuidePass(props.pass, violations);
     const validation = toValidation(violations);
     if (validation.success === false) return { validation, preview: null };
+
+    const time = plan.times[frame]!;
+    const framePath = `${plan.frameDir}/${guidePassFrameName(frame, pass!)}`;
+    const request: IAutoMovieMcpCaptureRequest = {
+      target: plan.target,
+      frame,
+      time,
+      pass: pass!,
+      framePath,
+      width: props.spec.width,
+      height: props.spec.height,
+      toneMapping: props.spec.toneMapping,
+    };
+    const image =
+      this.capture === undefined ? null : await this.capture(request);
     return {
       validation,
       preview: {
         target: plan.target,
         frame,
-        time: plan.times[frame]!,
-        framePath: `${plan.frameDir}/${frameName(frame)}`,
+        time,
+        pass: pass!,
+        framePath,
         width: props.spec.width,
         height: props.spec.height,
         toneMapping: props.spec.toneMapping,
-        status: "placeholder",
+        status: image === null ? "no-capture-adapter" : "captured",
+        image,
       },
     };
   }
@@ -1473,11 +1521,13 @@ const shotBeatId = (shot: string): string | null => {
 const buildRenderPlan = (props: {
   slate: IAutoMovieMcpWritableSlate;
   spec: IAutoMovieRenderSpec;
+  passes?: string[];
   frameDir?: string;
   outputPath?: string;
 }): IAutoMoviePlanRenderOutput => {
   const violations: IAutoMovieConstraintViolation[] = [];
   validateRenderSpec(props.spec, violations);
+  const passes = resolveGuidePasses(props.passes, violations);
   const target = resolveRenderTarget(
     props.slate,
     props.spec.target,
@@ -1521,6 +1571,11 @@ const buildRenderPlan = (props: {
         inputPattern: plan.inputPattern,
         outputPath: plan.outputPath,
         ffmpegArgs: plan.ffmpegArgs,
+        passes: planGuidePassOutputs({
+          frameDir: plan.frameDir,
+          frameCount: plan.frameCount,
+          passes: passes!,
+        }),
       },
     };
   }
@@ -1542,8 +1597,57 @@ const buildRenderPlan = (props: {
       inputPattern,
       outputPath,
       ffmpegArgs: ffmpegArgs(props.spec, inputPattern, outputPath),
+      passes: planGuidePassOutputs({
+        frameDir,
+        frameCount: times.length,
+        passes: passes!,
+      }),
     },
   };
+};
+
+/**
+ * Validate a requested guide-pass list against the closed pass union. `null`
+ * when any name is unknown (a violation is pushed); beauty-only when omitted.
+ */
+const resolveGuidePasses = (
+  passes: string[] | undefined,
+  violations: IAutoMovieConstraintViolation[],
+): AutoMovieGuidePass[] | null => {
+  if (passes === undefined) return ["beauty"];
+  const known: AutoMovieGuidePass[] = [];
+  let valid = true;
+  passes.forEach((pass, index) => {
+    if (isGuidePass(pass)) known.push(pass);
+    else {
+      valid = false;
+      pushViolation(
+        violations,
+        "type",
+        `$input.passes[${index}]`,
+        `guide pass "${pass}" must be one of beauty, depth, mask, outline, pose`,
+        pass,
+      );
+    }
+  });
+  return valid ? known : null;
+};
+
+/** Validate one requested guide pass; beauty when omitted, null when unknown. */
+const resolveGuidePass = (
+  pass: string | undefined,
+  violations: IAutoMovieConstraintViolation[],
+): AutoMovieGuidePass | null => {
+  if (pass === undefined) return "beauty";
+  if (isGuidePass(pass)) return pass;
+  pushViolation(
+    violations,
+    "type",
+    "$input.pass",
+    `guide pass "${pass}" must be one of beauty, depth, mask, outline, pose`,
+    pass,
+  );
+  return null;
 };
 
 const validateRenderSpec = (
@@ -2583,9 +2687,65 @@ export interface IAutoMovieMcpRenderPlan {
 
   /** Ffmpeg argument vector for encoding the frames. */
   ffmpegArgs: string[];
+
+  /** Per-pass guide output locations (beauty only unless more requested). */
+  passes: IAutoMovieGuidePassOutput[];
 }
 
-/** Placeholder preview frame returned by `seeFrame`. */
+/**
+ * One frame-capture request the server hands the host-injected adapter: which
+ * committed target, which frame/time, which guide pass, and where the frame
+ * file belongs. The adapter owns the browser/renderer; the server only plans.
+ */
+export interface IAutoMovieMcpCaptureRequest {
+  /** Selected committed target. */
+  target: IAutoMovieMcpRenderTarget;
+
+  /** Zero-based frame index. */
+  frame: number;
+
+  /** Clip-local sample time in seconds. */
+  time: number;
+
+  /** Guide pass to draw. */
+  pass: AutoMovieGuidePass;
+
+  /** Deterministic pass-tagged frame path the capture should produce. */
+  framePath: string;
+
+  /** Render width in pixels. */
+  width: number;
+
+  /** Render height in pixels. */
+  height: number;
+
+  /** Tone mapping requested by the render spec. */
+  toneMapping: IAutoMovieRenderSpec["toneMapping"];
+}
+
+/** The captured image the adapter returns for one request. */
+export interface IAutoMovieMcpCapturedImage {
+  /** Frame path the adapter actually wrote (normally the requested one). */
+  framePath: string;
+
+  /** Image MIME type, or null when the adapter wrote a file only. */
+  mimeType: string | null;
+
+  /** Inline image payload for immediate inspection, or null when file-only. */
+  dataUrl: string | null;
+}
+
+/**
+ * Host-injected frame capture: drives a real renderer (a Playwright page over
+ * the viewer, a render worker) for one planned frame and returns the image.
+ * Failures should throw — a capture error is a host runtime fault, not a
+ * validation issue, and propagates as a tool error.
+ */
+export type AutoMovieMcpFrameCapture = (
+  request: IAutoMovieMcpCaptureRequest,
+) => Promise<IAutoMovieMcpCapturedImage>;
+
+/** Preview frame returned by `seeFrame`. */
 export interface IAutoMovieMcpFramePreview {
   /** Selected committed target. */
   target: IAutoMovieMcpRenderTarget;
@@ -2596,7 +2756,10 @@ export interface IAutoMovieMcpFramePreview {
   /** Clip-local sample time in seconds. */
   time: number;
 
-  /** Frame path the future capture step should produce. */
+  /** Guide pass drawn (or planned, when no adapter is attached). */
+  pass: AutoMovieGuidePass;
+
+  /** Deterministic pass-tagged frame path. */
   framePath: string;
 
   /** Render width in pixels. */
@@ -2608,8 +2771,14 @@ export interface IAutoMovieMcpFramePreview {
   /** Tone mapping requested by the render spec. */
   toneMapping: IAutoMovieRenderSpec["toneMapping"];
 
-  /** Placeholder status until headless capture is wired. */
-  status: "placeholder";
+  /**
+   * `captured` when the host's adapter produced the image; `no-capture-adapter`
+   * when the server has no adapter and only planned the frame.
+   */
+  status: "captured" | "no-capture-adapter";
+
+  /** The captured image, or null when no adapter is attached. */
+  image: IAutoMovieMcpCapturedImage | null;
 }
 
 /** The `stage` tool's result (a single object wrapping the engine's union). */

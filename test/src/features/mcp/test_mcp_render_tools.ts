@@ -88,19 +88,23 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
   validation.violations.some((violation) => violation.path.includes(path));
 
 /**
- * MCP render tools expose a deterministic render/see placeholder without doing
- * host I/O.
+ * MCP render tools plan deterministic renders and preview frames without doing
+ * host I/O; without an injected capture adapter `seeFrame` reports the honest
+ * `no-capture-adapter` status instead of pixels.
  *
  * Scenarios:
  *
  * 1. `planRender` resolves committed shot and sequence targets into frame
- *    schedules, frame paths, and ffmpeg args.
+ *    schedules, frame paths, per-pass guide outputs, and ffmpeg args — beauty
+ *    only by default, pass-tagged paths when more passes are requested, and an
+ *    unknown pass name is a violation.
  * 2. Invalid render specs, missing targets, duplicate shots, invalid sequence
  *    targets, and zero-frame plans return field-located diagnostics.
- * 3. `seeFrame` resolves a preview frame by index or time and rejects conflicts
- *    before any capture step exists.
+ * 3. `seeFrame` resolves a preview frame by index or time, rejects conflicts and
+ *    unknown passes, and reports `no-capture-adapter` on this adapterless
+ *    application.
  */
-export const test_mcp_render_tools = (): void => {
+export const test_mcp_render_tools = async (): Promise<void> => {
   const shotPlan = app.planRender({ slate, spec }).plan;
   if (shotPlan === null) throw new Error("shot render plan must succeed");
   TestValidator.equals("shot render target", shotPlan.target, {
@@ -122,6 +126,35 @@ export const test_mcp_render_tools = (): void => {
     "ffmpeg args use generated pattern",
     shotPlan.ffmpegArgs.includes("frames/shot_beat-1/frame_%05d.png") &&
       shotPlan.ffmpegArgs.includes("shot_beat-1.mp4"),
+  );
+  TestValidator.equals(
+    "default plan carries the beauty pass only",
+    shotPlan.passes.map((p) => p.pass),
+    ["beauty"],
+  );
+
+  const passPlan = app.planRender({
+    slate,
+    spec,
+    passes: ["beauty", "depth", "pose", "depth"],
+  }).plan;
+  if (passPlan === null) throw new Error("pass render plan must succeed");
+  TestValidator.equals(
+    "requested passes fold duplicates in order",
+    passPlan.passes.map((p) => p.pass),
+    ["beauty", "depth", "pose"],
+  );
+  TestValidator.equals(
+    "depth pass path is pass-tagged",
+    passPlan.passes[1]!.firstFrame,
+    "frames/shot_beat-1/frame_00000.depth.png",
+  );
+  TestValidator.predicate(
+    "unknown pass name is a violation",
+    hasPath(
+      app.planRender({ slate, spec, passes: ["beauty", "sketch"] }).validation,
+      "$input.passes[1]",
+    ),
   );
 
   const sequencePlan = app.planRender({
@@ -222,55 +255,76 @@ export const test_mcp_render_tools = (): void => {
     ),
   );
 
-  const defaultPreview = app.seeFrame({ slate, spec }).preview;
+  const defaultPreview = (await app.seeFrame({ slate, spec })).preview;
   if (defaultPreview === null) throw new Error("default preview must succeed");
   TestValidator.equals("default preview frame", defaultPreview.frame, 0);
+  TestValidator.equals("default preview pass", defaultPreview.pass, "beauty");
   TestValidator.equals(
     "default preview path",
     defaultPreview.framePath,
     "frames/shot_beat-1/frame_00000.png",
   );
   TestValidator.equals(
-    "placeholder status",
+    "adapterless status is honest",
     defaultPreview.status,
-    "placeholder",
+    "no-capture-adapter",
+  );
+  TestValidator.equals("adapterless image", defaultPreview.image, null);
+
+  const depthPreview = (await app.seeFrame({ slate, spec, pass: "depth" }))
+    .preview;
+  if (depthPreview === null) throw new Error("depth preview must succeed");
+  TestValidator.equals(
+    "pass-tagged preview path",
+    depthPreview.framePath,
+    "frames/shot_beat-1/frame_00000.depth.png",
   );
 
-  const indexedPreview = app.seeFrame({ slate, spec, frame: 3 }).preview;
+  const indexedPreview = (await app.seeFrame({ slate, spec, frame: 3 }))
+    .preview;
   if (indexedPreview === null) throw new Error("indexed preview must succeed");
   TestValidator.predicate(
     "indexed preview time",
     nclose(indexedPreview.time, 0.3),
   );
 
-  const timedPreview = app.seeFrame({ slate, spec, time: 0.5 }).preview;
+  const timedPreview = (await app.seeFrame({ slate, spec, time: 0.5 })).preview;
   if (timedPreview === null) throw new Error("timed preview must succeed");
   TestValidator.equals("timed preview frame", timedPreview.frame, 5);
 
   TestValidator.predicate(
     "frame/time conflict path",
     hasPath(
-      app.seeFrame({ slate, spec, frame: 1, time: 0.5 }).validation,
+      (await app.seeFrame({ slate, spec, frame: 1, time: 0.5 })).validation,
       "$input.time",
     ),
   );
   TestValidator.predicate(
     "invalid frame path",
     hasPath(
-      app.seeFrame({ slate, spec, frame: 10 }).validation,
+      (await app.seeFrame({ slate, spec, frame: 10 })).validation,
       "$input.frame",
     ),
   );
   TestValidator.predicate(
     "invalid time path",
     hasPath(
-      app.seeFrame({ slate, spec, time: Number.POSITIVE_INFINITY }).validation,
+      (await app.seeFrame({ slate, spec, time: Number.POSITIVE_INFINITY }))
+        .validation,
       "$input.time",
+    ),
+  );
+  TestValidator.predicate(
+    "unknown pass path",
+    hasPath(
+      (await app.seeFrame({ slate, spec, pass: "sketch" })).validation,
+      "$input.pass",
     ),
   );
   TestValidator.equals(
     "missing preview target",
-    app.seeFrame({ slate, spec: { ...spec, target: "missing" } }).preview,
+    (await app.seeFrame({ slate, spec: { ...spec, target: "missing" } }))
+      .preview,
     null,
   );
 };

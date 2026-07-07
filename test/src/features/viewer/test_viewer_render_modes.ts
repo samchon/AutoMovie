@@ -1,0 +1,162 @@
+import {
+  POSE_OVERLAY_NAME,
+  applyRenderMode,
+  buildModel,
+  buildScene,
+  maskColor,
+} from "@automovie/viewer";
+import { TestValidator } from "@nestia/e2e";
+import * as THREE from "three";
+
+import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
+import { throwsError } from "../internal/predicates";
+
+const buildTwoNodeScene = () => {
+  const objects = new Map([
+    ["model-a", buildModel({ ...createModel(), id: "model-a" })],
+    ["model-b", buildModel({ ...createModel(), id: "model-b" })],
+  ]);
+  return buildScene(
+    {
+      id: "scene-1",
+      name: null,
+      nodes: [
+        {
+          id: "node-a",
+          model: "model-a",
+          transform: IDENTITY_TRANSFORM,
+          motion: null,
+          pose: null,
+        },
+        {
+          id: "node-b",
+          model: "model-b",
+          transform: IDENTITY_TRANSFORM,
+          motion: null,
+          pose: null,
+        },
+      ],
+      cameras: [],
+      lights: [],
+    },
+    (id) => objects.get(id),
+  );
+};
+
+const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
+  const meshes: THREE.Mesh[] = [];
+  root.traverse((object) => {
+    if ((object as THREE.Mesh).isMesh === true)
+      meshes.push(object as THREE.Mesh);
+  });
+  return meshes;
+};
+
+/**
+ * Guide-pass render modes are reversible scene overrides applied at snapshot
+ * time: the deterministic engine result is never mutated, only its projection —
+ * `restore()` puts every touched material, visibility flag, background, and
+ * overlay back exactly as it was, so the same built scene captures pass after
+ * pass.
+ *
+ * Scenarios:
+ *
+ * 1. `beauty` is a no-op: materials keep their exact instances.
+ * 2. `depth` swaps every mesh to `MeshDepthMaterial` and restore returns the
+ *    original instances.
+ * 3. `outline` swaps to `MeshNormalMaterial` (the normal-based edge source).
+ * 4. `mask` gives each top-level scene node a distinct deterministic flat color on
+ *    a black background; restore returns materials and background.
+ * 5. `pose` hides meshes and adds one line per bone→child-bone connection in a
+ *    named overlay; restore removes the overlay and unhides.
+ * 6. An unknown mode is a caller bug and throws.
+ */
+export const test_viewer_render_modes = (): void => {
+  const { scene } = buildTwoNodeScene();
+  const meshes = meshesOf(scene);
+  const originals = meshes.map((mesh) => mesh.material);
+
+  const beauty = applyRenderMode(scene, "beauty");
+  TestValidator.predicate(
+    "beauty leaves material instances untouched",
+    meshes.every((mesh, i) => mesh.material === originals[i]),
+  );
+  beauty.restore();
+
+  const depth = applyRenderMode(scene, "depth");
+  TestValidator.predicate(
+    "depth swaps every mesh material",
+    meshes.every((mesh) => mesh.material instanceof THREE.MeshDepthMaterial),
+  );
+  depth.restore();
+  TestValidator.predicate(
+    "depth restore returns the original instances",
+    meshes.every((mesh, i) => mesh.material === originals[i]),
+  );
+
+  const outline = applyRenderMode(scene, "outline");
+  TestValidator.predicate(
+    "outline swaps to the normal-based edge source",
+    meshes.every((mesh) => mesh.material instanceof THREE.MeshNormalMaterial),
+  );
+  outline.restore();
+
+  const background = scene.background;
+  const mask = applyRenderMode(scene, "mask");
+  const maskMaterials = meshes.map(
+    (mesh) => mesh.material as THREE.MeshBasicMaterial,
+  );
+  TestValidator.predicate(
+    "mask uses flat unlit materials",
+    maskMaterials.every(
+      (material) => material instanceof THREE.MeshBasicMaterial,
+    ),
+  );
+  TestValidator.predicate(
+    "mask colors differ between the two nodes",
+    maskMaterials[0]!.color.getHex() !== maskMaterials[1]!.color.getHex(),
+  );
+  TestValidator.equals(
+    "mask palette is deterministic by node index",
+    maskMaterials[0]!.color.getHex(),
+    maskColor(0).getHex(),
+  );
+  TestValidator.equals(
+    "mask blacks out the background",
+    (scene.background as THREE.Color).getHex(),
+    0x000000,
+  );
+  mask.restore();
+  TestValidator.predicate(
+    "mask restore returns materials and background",
+    meshes.every((mesh, i) => mesh.material === originals[i]) &&
+      scene.background === background,
+  );
+
+  const pose = applyRenderMode(scene, "pose");
+  TestValidator.predicate(
+    "pose hides every mesh",
+    meshes.every((mesh) => mesh.visible === false),
+  );
+  const overlay = scene.getObjectByName(POSE_OVERLAY_NAME);
+  if (overlay === undefined) throw new Error("pose overlay must exist");
+  TestValidator.equals(
+    "one line per bone with a bone parent, per node",
+    overlay.children.length,
+    22,
+  );
+  pose.restore();
+  TestValidator.predicate(
+    "pose restore removes the overlay and unhides",
+    scene.getObjectByName(POSE_OVERLAY_NAME) === undefined &&
+      meshes.every((mesh) => mesh.visible === true),
+  );
+
+  TestValidator.predicate(
+    "unknown mode throws",
+    throwsError(
+      () => applyRenderMode(scene, "sketch" as never),
+      'unknown render mode "sketch"',
+    ),
+  );
+};

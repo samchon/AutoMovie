@@ -8,4 +8,5 @@ export * from "./applyDissolve";
 export * from "./buildScene";
 export * from "./AutoMoviePlayer";
 export * from "./mount";
+export * from "./renderMode";
 export * from "./snapshot";
