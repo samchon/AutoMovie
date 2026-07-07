@@ -18,6 +18,10 @@ import {
   IAutoMovieMcpWritableSlate,
 } from "../dto";
 import {
+  AutoMoviePrerequisiteTool,
+  assertPrerequisites,
+} from "../project/AutoMoviePrerequisite";
+import {
   validateSceneArtifact,
   validateSequenceArtifact,
   validateShotArtifact,
@@ -48,16 +52,21 @@ export class CommitService {
    * a pure transform), else the resident project's slate (#614). Resident-based
    * successful commits write through — the project files mirror the returned
    * slate, including the invalidation cascade (cleared slices disappear).
+   *
+   * The resident path is additionally gated by the film-ladder prerequisites
+   * (#615): an out-of-order resident commit throws the actionable "do this
+   * next" prompt before any transform runs. An explicit slate bypasses the gate
+   * — it is a pure transform whose cross-slice preconditions already surface as
+   * violations.
    */
   private base(
     slate: IAutoMovieMcpWritableSlate | undefined,
-    caller: string,
+    caller: AutoMoviePrerequisiteTool,
   ): { slate: IAutoMovieMcpWritableSlate; resident: boolean } {
     if (slate !== undefined) return { slate, resident: false };
-    return {
-      slate: this.context!.requireProject(caller).writableSlate(),
-      resident: true,
-    };
+    const project = this.context!.requireProject(caller);
+    assertPrerequisites(caller, project);
+    return { slate: project.writableSlate(), resident: true };
   }
 
   private finish(

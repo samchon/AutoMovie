@@ -42,6 +42,7 @@ import {
   IAutoMovieMcpStoredSlate,
   IAutoMovieMcpWritableSlate,
   IAutoMovieMeasureDistanceOutput,
+  IAutoMovieNextStepsOutput,
   IAutoMovieOpenProjectOutput,
   IAutoMoviePerformOutput,
   IAutoMoviePlanRenderOutput,
@@ -49,6 +50,7 @@ import {
   IAutoMovieStageOutput,
   IAutoMovieValidateOutput,
 } from "./dto";
+import { nextStepsOf } from "./project/AutoMoviePrerequisite";
 import { CommitService } from "./services/CommitService";
 import { GeometryService } from "./services/GeometryService";
 import { PipelineService } from "./services/PipelineService";
@@ -131,6 +133,19 @@ export class AutoMovieApplication {
     root: string;
   }): IAutoMovieOpenProjectOutput {
     return { project: this.context.activateProject(props.root).summary() };
+  }
+
+  /**
+   * Ask the resident project what to do next. It returns the film ladder's
+   * current status, the unmet prerequisites, and the ordered concrete tool
+   * calls that advance the film -- the same computation the resident commit
+   * gate throws as an actionable prompt, exposed as data so an agent can ask
+   * before trying. Requires an active project (call openProject first).
+   *
+   * @returns The ladder status, missing prerequisites, and next actions.
+   */
+  public nextSteps(): IAutoMovieNextStepsOutput {
+    return nextStepsOf(this.context.requireProject("nextSteps"));
   }
 
   /**
