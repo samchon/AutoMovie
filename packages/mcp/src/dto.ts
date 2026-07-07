@@ -751,3 +751,25 @@ export interface IAutoMovieNextStepsOutput {
   /** Ordered concrete tool calls that advance the film; empty when complete. */
   nextActions: string[];
 }
+
+/**
+ * Every guide document the server ships. Keys match `packages/mcp/prompts/*.md`
+ * filename stems exactly; the runtime content is generated from those markdown
+ * files at build time. Start new work with `"AUTOMOVIE_OVERALL"`, then read the
+ * guide matching the next stage.
+ */
+export type AutoMovieGuideName =
+  | "AUTOMOVIE_OVERALL"
+  | "STAGING"
+  | "BLOCKING"
+  | "PERFORMANCE"
+  | "REVIEW"
+  | "PROPS"
+  | "PROJECT_MEMORY"
+  | "RENDER_GUIDES";
+
+/** The `getGuideDocument` tool's result. */
+export interface IAutoMovieGuideDocumentOutput {
+  /** Markdown guide content for the requested topic. */
+  content: string;
+}

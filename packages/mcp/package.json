@@ -11,7 +11,9 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "rimraf lib && ttsc && tsc --emitDeclarationOnly",
+    "prepare": "pnpm run build:prompt",
+    "build:prompt": "node build/prompt.mjs",
+    "build": "pnpm run build:prompt && rimraf lib && ttsc && tsc --emitDeclarationOnly",
     "postbuild": "node ../../internals/config/assertBuild.js",
     "start": "ttsx src/bin.ts",
     "prepack": "pnpm run build"

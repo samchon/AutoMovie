@@ -21,6 +21,7 @@ import {
 
 import { AutoMovieContext } from "./AutoMovieContext";
 import {
+  AutoMovieGuideName,
   AutoMovieMcpFrameCapture,
   IAutoMovieBlockOutput,
   IAutoMovieCommitOutput,
@@ -34,6 +35,7 @@ import {
   IAutoMovieGetSceneOutput,
   IAutoMovieGetScriptOutput,
   IAutoMovieGetShotOutput,
+  IAutoMovieGuideDocumentOutput,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpGeometryContext,
   IAutoMovieMcpGeometryModel,
@@ -53,17 +55,19 @@ import {
 import { nextStepsOf } from "./project/AutoMoviePrerequisite";
 import { CommitService } from "./services/CommitService";
 import { GeometryService } from "./services/GeometryService";
+import { GuideService } from "./services/GuideService";
 import { PipelineService } from "./services/PipelineService";
 import { RenderService } from "./services/RenderService";
 import { SlateQueryService } from "./services/SlateQueryService";
 import { ValidationService } from "./services/ValidationService";
 
 /**
- * AutoMovie's deterministic motion-control engine, exposed as MCP tools. Query
- * tools read slate context; `stage`, `block`, `perform`, `cut`, and `forge`
- * compute the film pipeline. Each tool takes structured creative intent and
- * returns the engine's result, including violations that make the engine, not
- * the model, the arbiter of physical truth ("engine enforces, model creates").
+ * AutoMovie's deterministic motion-control engine, exposed as MCP tools. Read
+ * `getGuideDocument({ name: "AUTOMOVIE_OVERALL" })` first, then the guide
+ * matching each stage. Query tools read slate context; `stage`, `block`,
+ * `perform`, `cut`, and `forge` compute the film pipeline. Each tool returns
+ * the engine's result, including violations that make the engine, not the
+ * model, the arbiter of physical truth ("engine enforces, model creates").
  *
  * `@typia/mcp` derives every tool's JSON schema, and validates requests and
  * responses, straight from this class's method signatures and JSDoc via
@@ -87,6 +91,7 @@ export class AutoMovieApplication {
   private readonly commit: CommitService;
   private readonly render: RenderService;
   private readonly pipeline: PipelineService;
+  private readonly guide: GuideService;
 
   public constructor(props?: {
     /**
@@ -112,6 +117,7 @@ export class AutoMovieApplication {
     this.commit = new CommitService(this.context);
     this.render = new RenderService(this.context);
     this.pipeline = new PipelineService();
+    this.guide = new GuideService();
   }
 
   /**
@@ -146,6 +152,24 @@ export class AutoMovieApplication {
    */
   public nextSteps(): IAutoMovieNextStepsOutput {
     return nextStepsOf(this.context.requireProject("nextSteps"));
+  }
+
+  /**
+   * Fetch a film-authoring guide document by exact name.
+   *
+   * Start with `AUTOMOVIE_OVERALL` (the operating loop, result semantics, and
+   * the commit ladder), then read the guide matching the next stage: `STAGING`,
+   * `BLOCKING`, `PERFORMANCE`, `REVIEW`, `PROPS`, `PROJECT_MEMORY`, or
+   * `RENDER_GUIDES`. Guides teach the method; tool returns decide correctness.
+   *
+   * @param props Exact guide document name.
+   * @returns Markdown guide content.
+   */
+  public getGuideDocument(props: {
+    /** Exact guide document name. Start with `AUTOMOVIE_OVERALL`. */
+    name: AutoMovieGuideName;
+  }): IAutoMovieGuideDocumentOutput {
+    return this.guide.getGuideDocument(props);
   }
 
   /**

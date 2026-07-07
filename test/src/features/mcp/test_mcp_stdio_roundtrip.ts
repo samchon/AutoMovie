@@ -111,6 +111,7 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
         "forge",
         "forgeProp",
         "getBeatEnd",
+        "getGuideDocument",
         "getNotes",
         "getReach",
         "getResolvedPose",
