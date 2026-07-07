@@ -108,6 +108,8 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
         "commitScript",
         "commitShot",
         "cut",
+        "eraseNotes",
+        "eraseShot",
         "forge",
         "forgeProp",
         "getBeatEnd",

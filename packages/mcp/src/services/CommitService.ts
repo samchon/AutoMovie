@@ -13,6 +13,7 @@ import {
 import { AutoMovieContext } from "../AutoMovieContext";
 import {
   IAutoMovieCommitOutput,
+  IAutoMovieEraseOutput,
   IAutoMovieMcpGeometryModel,
   IAutoMovieMcpMotion,
   IAutoMovieMcpWritableSlate,
@@ -217,6 +218,13 @@ export class CommitService {
     );
   }
 
+  /**
+   * The **upsert rule** (#617, the AutoBe granularity doctrine): `commitShot`
+   * and `commitBeatEnd` replace by their beat key — re-committing the same
+   * beat's artifact swaps exactly that slice (and, resident, exactly that
+   * file), leaving sibling beats untouched. One beat is the stable correction
+   * target; there is no whole-set re-send.
+   */
   public commitFilm(props: {
     slate?: IAutoMovieMcpWritableSlate;
     film: IAutoMovieSequence;
@@ -235,6 +243,101 @@ export class CommitService {
       successfulCommit({ ...slate, film: props.film }),
       resident,
     );
+  }
+
+  /**
+   * Erase ONE beat's shot from the resident project — a targeted removal of a
+   * named mistake, never a reset (#617). The cascade mirrors the commit tools'
+   * invalidation: the beat's beat-end and beat-scoped review notes are stale
+   * without their shot and go with it, and the assembled film (built against
+   * the full shot set) is cleared. Requires evidence (`reason`), and the shot
+   * must exist — erasing nothing is itself a mistake, reported as a violation.
+   * Upstream slices (script/scene) have no erase: re-committing upstream
+   * already owns that path via the commit cascade, and a targeted erase of the
+   * root would be a reset in disguise.
+   */
+  public eraseShot(props: {
+    beat: string;
+    reason: string;
+  }): IAutoMovieEraseOutput {
+    const project = this.context!.requireProject("eraseShot");
+    const slate = project.writableSlate();
+    const violations: IAutoMovieConstraintViolation[] = [];
+    validateNonEmptyId(props.beat, "$input.beat", "beat id", violations);
+    validateNonEmptyText(
+      props.reason,
+      "$input.reason",
+      "erase reason",
+      violations,
+    );
+    const shotId = `shot:${props.beat}`;
+    if (
+      props.beat.trim().length > 0 &&
+      !slate.shots.some((shot) => shot.id === shotId)
+    )
+      pushViolation(
+        violations,
+        "type",
+        "$input.beat",
+        `beat "${props.beat}" has no committed shot to erase`,
+        props.beat,
+      );
+    const validation = toValidation(violations);
+    if (validation.success === false)
+      return { erased: false, slate, validation };
+    const next: IAutoMovieMcpWritableSlate = {
+      ...slate,
+      shots: slate.shots.filter((shot) => shot.id !== shotId),
+      beatEnds: slate.beatEnds.filter((end) => end.beat !== props.beat),
+      notes: slate.notes.filter((note) => note.beat !== props.beat),
+      film: null,
+    };
+    project.saveSlate(next);
+    return { erased: true, slate: next, validation: { success: true } };
+  }
+
+  /**
+   * Erase ONE beat's review notes from the resident project. Per-beat is the
+   * minimal addressable granularity — notes carry no ids; the beat is their
+   * identity anchor. Evidence (`reason`) required; erasing a beat with no notes
+   * is a violation. The assembled film is cleared (any notes change invalidates
+   * it, mirroring `commitNotes`).
+   */
+  public eraseNotes(props: {
+    beat: string;
+    reason: string;
+  }): IAutoMovieEraseOutput {
+    const project = this.context!.requireProject("eraseNotes");
+    const slate = project.writableSlate();
+    const violations: IAutoMovieConstraintViolation[] = [];
+    validateNonEmptyId(props.beat, "$input.beat", "beat id", violations);
+    validateNonEmptyText(
+      props.reason,
+      "$input.reason",
+      "erase reason",
+      violations,
+    );
+    if (
+      props.beat.trim().length > 0 &&
+      !slate.notes.some((note) => note.beat === props.beat)
+    )
+      pushViolation(
+        violations,
+        "type",
+        "$input.beat",
+        `beat "${props.beat}" has no review notes to erase`,
+        props.beat,
+      );
+    const validation = toValidation(violations);
+    if (validation.success === false)
+      return { erased: false, slate, validation };
+    const next: IAutoMovieMcpWritableSlate = {
+      ...slate,
+      notes: slate.notes.filter((note) => note.beat !== props.beat),
+      film: null,
+    };
+    project.saveSlate(next);
+    return { erased: true, slate: next, validation: { success: true } };
   }
 }
 
