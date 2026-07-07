@@ -8,3 +8,4 @@ export * from "./validateGroundContact";
 export * from "./validateMotion";
 export * from "./validateModel";
 export * from "./validateSelfIntersection";
+export * from "./validateBodyCollision";

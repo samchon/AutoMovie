@@ -7,7 +7,7 @@ import {
 } from "@automovie/interface";
 
 import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
-import { Vector3 } from "../math/Vector3";
+import { segmentSegmentDistance } from "../math/segments";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { ViolationCollector } from "./violation";
@@ -217,33 +217,5 @@ const resolveCapsule = (
   from: resolved.get(capsule.from)!,
   to: resolved.get(capsule.to)!,
 });
-
-const segmentSegmentDistance = (
-  a: IAutoMovieVector3,
-  b: IAutoMovieVector3,
-  c: IAutoMovieVector3,
-  d: IAutoMovieVector3,
-): number => {
-  const candidates = [
-    pointSegmentDistance(a, c, d),
-    pointSegmentDistance(b, c, d),
-    pointSegmentDistance(c, a, b),
-    pointSegmentDistance(d, a, b),
-  ];
-  return Math.min(...candidates);
-};
-
-const pointSegmentDistance = (
-  point: IAutoMovieVector3,
-  start: IAutoMovieVector3,
-  end: IAutoMovieVector3,
-): number => {
-  const segment = Vector3.subtract(end, start);
-  const span = Vector3.dot(segment, segment);
-  const t = clamp(Vector3.dot(Vector3.subtract(point, start), segment) / span);
-  return Vector3.length(Vector3.subtract(point, Vector3.lerp(start, end, t)));
-};
-
-const clamp = (value: number): number => Math.min(1, Math.max(0, value));
 
 const round = (value: number): number => Math.round(value * 1_000) / 1_000;
