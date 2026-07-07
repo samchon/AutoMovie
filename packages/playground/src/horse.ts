@@ -355,6 +355,7 @@ export const buildHorse = (
     origin: "generated",
     parts,
     skeleton,
+    body: null,
     materials: [
       mat("hide", 0.35, 0.24, 0.14),
       mat("mane", 0.12, 0.08, 0.05),

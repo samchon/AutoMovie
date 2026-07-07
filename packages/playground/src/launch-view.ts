@@ -39,6 +39,7 @@ const arrowModel: IAutoMovieModel = {
   name: "arrow",
   origin: "generated",
   skeleton: null,
+  body: null,
   materials: [
     {
       id: "shaft-mat",

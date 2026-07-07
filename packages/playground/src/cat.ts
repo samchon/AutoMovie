@@ -322,6 +322,7 @@ export const buildCat = (
     origin: "generated",
     parts,
     skeleton,
+    body: null,
     materials: [
       {
         id: "fur",

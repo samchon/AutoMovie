@@ -1,11 +1,14 @@
 import {
   AutoMovieHumanoidBone,
+  AutoMoviePrimitiveShape,
+  IAutoMovieBody,
   IAutoMovieBone,
   IAutoMovieExpression,
   IAutoMovieFace,
   IAutoMovieJointPose,
   IAutoMovieKeyframe,
   IAutoMovieModel,
+  IAutoMovieModelPart,
   IAutoMovieMotion,
   IAutoMoviePose,
   IAutoMovieSkeleton,
@@ -147,6 +150,36 @@ export const createModel = (
       transform: null,
     },
   ],
+  asset: null,
+  body: null,
+});
+
+/** A single primitive part with no material/bone binding. */
+export const primitivePart = (
+  id: string,
+  shape: AutoMoviePrimitiveShape,
+  transform: IAutoMovieTransform | null = null,
+): IAutoMovieModelPart => ({
+  id,
+  name: null,
+  geometry: { type: "primitive", shape },
+  material: null,
+  attachedBone: null,
+  transform,
+});
+
+/** A skeleton-less object model (a prop) from raw parts and an optional body. */
+export const makeProp = (
+  parts: IAutoMovieModelPart[],
+  body: IAutoMovieBody | null = null,
+): IAutoMovieModel => ({
+  id: "prop-1",
+  name: null,
+  origin: "generated",
+  skeleton: null,
+  body,
+  materials: [],
+  parts,
   asset: null,
 });
 

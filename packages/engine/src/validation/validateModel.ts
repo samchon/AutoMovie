@@ -1,6 +1,7 @@
 import {
   AutoMoviePrimitiveShape,
   IAutoMovieAngleRange,
+  IAutoMovieBody,
   IAutoMovieColor,
   IAutoMovieJointConstraint,
   IAutoMovieMesh,
@@ -147,6 +148,8 @@ export const validateModel = (props: {
       validateJointConstraint(bone.constraint, `${bp}.constraint`, collector);
   });
 
+  if (model.body !== null) validateBody(model.body, `${path}.body`, collector);
+
   model.materials.forEach((m, i) => {
     const mp = `${path}.materials[${i}]`;
     validateNonEmptyId(m.id, `${mp}.id`, "material id", collector);
@@ -166,6 +169,38 @@ export const validateModel = (props: {
   });
 
   return collector.toValidation();
+};
+
+/**
+ * Validate an {@link IAutoMovieBody}'s rough scalars: mass must be finite and
+ * strictly positive, `friction` and `restitution` sit in `[0, 1]`, and an
+ * explicit `centerOfMass` must be finite on every axis.
+ */
+const validateBody = (
+  body: IAutoMovieBody,
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  if (!Number.isFinite(body.mass) || body.mass <= 0)
+    collector.push(
+      "range",
+      `${path}.mass`,
+      `mass must be a finite number > 0, but was ${body.mass}`,
+      body.mass,
+    );
+  collector.range(`${path}.friction`, body.friction, 0, 1, "friction");
+  collector.range(`${path}.restitution`, body.restitution, 0, 1, "restitution");
+  if (body.centerOfMass !== null) {
+    const com = body.centerOfMass;
+    for (const axis of ["x", "y", "z"] as const)
+      if (!Number.isFinite(com[axis]))
+        collector.push(
+          "range",
+          `${path}.centerOfMass.${axis}`,
+          `centerOfMass.${axis} must be finite, but was ${com[axis]}`,
+          com[axis],
+        );
+  }
 };
 
 /**

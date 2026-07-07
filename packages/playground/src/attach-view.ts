@@ -40,6 +40,7 @@ const bladeModel: IAutoMovieModel = {
   name: "blade",
   origin: "generated",
   skeleton: null,
+  body: null,
   materials: [
     {
       id: "steel",
