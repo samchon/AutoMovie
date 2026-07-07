@@ -1,11 +1,11 @@
-import { IAutoMovieBody, resolveImpact } from "@automovie/engine";
+import { IAutoMovieImpactBody, resolveImpact } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
 const v = (x: number, y: number, z: number) => ({ x, y, z });
 
-const BODY: IAutoMovieBody = {
+const BODY: IAutoMovieImpactBody = {
   mass: 1,
   velocity: v(0, 0, 0),
   restitution: 0.2,
@@ -33,7 +33,7 @@ const throws = (task: () => void): boolean => {
  * 2. Finite body velocities keep the existing inelastic impulse behavior.
  */
 export const test_physics_impact_body_velocity = (): void => {
-  const moving: IAutoMovieBody = { ...BODY, velocity: v(0, 0, 10) };
+  const moving: IAutoMovieImpactBody = { ...BODY, velocity: v(0, 0, 10) };
   const normal = v(0, 0, 1);
 
   TestValidator.predicate(

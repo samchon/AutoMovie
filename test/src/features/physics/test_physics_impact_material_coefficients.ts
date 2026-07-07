@@ -1,9 +1,9 @@
-import { IAutoMovieBody, resolveImpact } from "@automovie/engine";
+import { IAutoMovieImpactBody, resolveImpact } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 const v = (x: number, y: number, z: number) => ({ x, y, z });
 
-const BODY: IAutoMovieBody = {
+const BODY: IAutoMovieImpactBody = {
   mass: 1,
   velocity: v(0, 0, 0),
   restitution: 0.2,

@@ -7,7 +7,7 @@ import {
 
 import {
   IAutoMovieImpact,
-  IAutoMovieBody as IAutoMovieImpactBody,
+  IAutoMovieImpactBody,
   resolveImpact,
 } from "./impact";
 import {
