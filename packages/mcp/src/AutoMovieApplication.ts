@@ -1,50 +1,13 @@
+import { IAutoMovieStagedSet } from "@automovie/engine";
 import {
-  HUMANOID_JOINT_AXES,
-  IAutoMovieActorContext,
-  IAutoMovieBlockedBeat,
-  IAutoMovieCut,
-  IAutoMovieForgedCast,
-  IAutoMoviePerformedShot,
-  IAutoMovieStagedSet,
-  Quaternion,
-  Vector3,
-  blockBeat,
-  cutSequence,
-  forgeCast,
-  makeActorSynthesizer,
-  performShot,
-  reachPose,
-  readSlateContext,
-  resolvePose,
-  resolveTargetPoint,
-  sampleMotion,
-  stageScene,
-  toValidation,
-  validateModel as validateEngineModel,
-  validateMotion as validateEngineMotion,
-  validatePose as validateEnginePose,
-  violation,
-} from "@automovie/engine";
-import {
-  AutoMovieEasing,
-  AutoMovieGuidePass,
-  AutoMovieHumanoidBone,
   IAutoMovieActionTarget,
   IAutoMovieAssembleApplication,
   IAutoMovieBeatEndState,
   IAutoMovieBlockingApplication,
-  IAutoMovieClip,
-  IAutoMovieConstraintViolation,
-  IAutoMovieExpression,
   IAutoMovieForgeApplication,
-  IAutoMovieGait,
-  IAutoMovieGaitRootBob,
-  IAutoMovieKeyframe,
   IAutoMovieModel,
-  IAutoMovieMotion,
   IAutoMoviePerformanceApplication,
   IAutoMoviePose,
-  IAutoMovieQuaternion,
   IAutoMovieRenderSpec,
   IAutoMovieReviewNote,
   IAutoMovieScene,
@@ -53,24 +16,42 @@ import {
   IAutoMovieSequence,
   IAutoMovieShot,
   IAutoMovieSkeleton,
-  IAutoMovieSlate,
   IAutoMovieStagingApplication,
-  IAutoMovieTransform,
-  IAutoMovieValidation,
-  IAutoMovieVector3,
 } from "@automovie/interface";
+
+import { AutoMovieContext } from "./AutoMovieContext";
 import {
-  IAutoMovieGuidePassOutput,
-  ffmpegArgs,
-  frameName,
-  framePattern,
-  frameTimes,
-  guidePassFrameName,
-  isGuidePass,
-  planGuidePassOutputs,
-  planSequenceRender,
-  renderPathStem,
-} from "@automovie/render";
+  AutoMovieMcpFrameCapture,
+  IAutoMovieBlockOutput,
+  IAutoMovieCommitOutput,
+  IAutoMovieCutOutput,
+  IAutoMovieForgeOutput,
+  IAutoMovieGetBeatEndOutput,
+  IAutoMovieGetNotesOutput,
+  IAutoMovieGetReachOutput,
+  IAutoMovieGetResolvedPoseOutput,
+  IAutoMovieGetSceneOutput,
+  IAutoMovieGetScriptOutput,
+  IAutoMovieGetShotOutput,
+  IAutoMovieMcpActorContext,
+  IAutoMovieMcpGeometryContext,
+  IAutoMovieMcpGeometryModel,
+  IAutoMovieMcpMotion,
+  IAutoMovieMcpStoredSlate,
+  IAutoMovieMcpWritableSlate,
+  IAutoMovieMeasureDistanceOutput,
+  IAutoMoviePerformOutput,
+  IAutoMoviePlanRenderOutput,
+  IAutoMovieSeeFrameOutput,
+  IAutoMovieStageOutput,
+  IAutoMovieValidateOutput,
+} from "./dto";
+import { CommitService } from "./services/CommitService";
+import { GeometryService } from "./services/GeometryService";
+import { PipelineService } from "./services/PipelineService";
+import { RenderService } from "./services/RenderService";
+import { SlateQueryService } from "./services/SlateQueryService";
+import { ValidationService } from "./services/ValidationService";
 
 /**
  * AutoMovie's deterministic motion-control engine, exposed as MCP tools. Query
@@ -94,8 +75,12 @@ import {
  * @author Samchon
  */
 export class AutoMovieApplication {
-  /** Host-injected frame capture, or `undefined` when the host has none. */
-  private readonly capture?: AutoMovieMcpFrameCapture;
+  private readonly slateQuery: SlateQueryService;
+  private readonly geometry: GeometryService;
+  private readonly validation: ValidationService;
+  private readonly commit: CommitService;
+  private readonly render: RenderService;
+  private readonly pipeline: PipelineService;
 
   public constructor(props?: {
     /**
@@ -107,7 +92,13 @@ export class AutoMovieApplication {
      */
     capture?: AutoMovieMcpFrameCapture;
   }) {
-    this.capture = props?.capture;
+    const context = new AutoMovieContext(props?.capture);
+    this.slateQuery = new SlateQueryService();
+    this.geometry = new GeometryService();
+    this.validation = new ValidationService();
+    this.commit = new CommitService();
+    this.render = new RenderService(context);
+    this.pipeline = new PipelineService();
   }
 
   /**
@@ -121,11 +112,7 @@ export class AutoMovieApplication {
   public getScript(props: {
     /** The stored slate slices to read. */ slate: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetScriptOutput {
-    return {
-      script: readSlateContext(toStoredSlate(props.slate), {
-        type: "getScript",
-      }) as IAutoMovieScript | null,
-    };
+    return this.slateQuery.getScript(props);
   }
 
   /**
@@ -138,11 +125,7 @@ export class AutoMovieApplication {
   public getScene(props: {
     /** The stored slate slices to read. */ slate: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetSceneOutput {
-    return {
-      scene: readSlateContext(toStoredSlate(props.slate), {
-        type: "getScene",
-      }) as IAutoMovieScene | null,
-    };
+    return this.slateQuery.getScene(props);
   }
 
   /**
@@ -158,12 +141,7 @@ export class AutoMovieApplication {
     /** Beat id whose shot should be read. */
     beat: string;
   }): IAutoMovieGetShotOutput {
-    return {
-      shot: readSlateContext(toStoredSlate(props.slate), {
-        type: "getShot",
-        beat: props.beat,
-      }) as IAutoMovieShot | null,
-    };
+    return this.slateQuery.getShot(props);
   }
 
   /**
@@ -179,12 +157,7 @@ export class AutoMovieApplication {
     /** Optional beat id filter. */
     beat?: string;
   }): IAutoMovieGetNotesOutput {
-    return {
-      notes: readSlateContext(toStoredSlate(props.slate), {
-        type: "getNotes",
-        beat: props.beat,
-      }) as IAutoMovieReviewNote[],
-    };
+    return this.slateQuery.getNotes(props);
   }
 
   /**
@@ -200,12 +173,7 @@ export class AutoMovieApplication {
     /** Beat id whose end state should be read. */
     beat: string;
   }): IAutoMovieGetBeatEndOutput {
-    return {
-      beatEnd: readSlateContext(toStoredSlate(props.slate), {
-        type: "getBeatEnd",
-        beat: props.beat,
-      }) as IAutoMovieBeatEndState | null,
-    };
+    return this.slateQuery.getBeatEnd(props);
   }
 
   /**
@@ -224,13 +192,7 @@ export class AutoMovieApplication {
     /** Shot-local time in seconds. Defaults to 0. */
     t?: number;
   }): IAutoMovieGetResolvedPoseOutput {
-    return {
-      resolvedPose: resolveActorGeometry(
-        props.context,
-        props.actor,
-        props.t ?? 0,
-      ),
-    };
+    return this.geometry.getResolvedPose(props);
   }
 
   /**
@@ -248,26 +210,7 @@ export class AutoMovieApplication {
     /** Node, point, or group target to reach. */
     target: IAutoMovieActionTarget;
   }): IAutoMovieGetReachOutput {
-    const actor = findActorRig(props.context, props.actor);
-    if (actor === null) return { reach: null };
-    const target = resolveTargetPoint(
-      props.target,
-      nodePositions(props.context.scene),
-    );
-    if (target === null) return { reach: null };
-    const localTarget = toModelPoint(target, actor.node.transform);
-    if (localTarget === null) return { reach: null };
-    const left = measureArmReach(actor.skeleton, "left", localTarget);
-    const right = measureArmReach(actor.skeleton, "right", localTarget);
-    return {
-      reach: {
-        actor: props.actor,
-        target,
-        left,
-        right,
-        reachable: Boolean(left?.reachable || right?.reachable),
-      },
-    };
+    return this.geometry.getReach(props);
   }
 
   /**
@@ -285,19 +228,7 @@ export class AutoMovieApplication {
     /** Second endpoint. */
     to: IAutoMovieActionTarget;
   }): IAutoMovieMeasureDistanceOutput {
-    const nodes = nodePositions(props.scene);
-    const from = resolveTargetPoint(props.from, nodes);
-    const to = resolveTargetPoint(props.to, nodes);
-    return {
-      measurement:
-        from === null || to === null
-          ? null
-          : {
-              from,
-              to,
-              distance: Vector3.length(Vector3.subtract(to, from)),
-            },
-    };
+    return this.geometry.measureDistance(props);
   }
 
   /**
@@ -313,12 +244,7 @@ export class AutoMovieApplication {
     /** Target skeleton whose ROM and bones constrain the pose. */
     skeleton: IAutoMovieSkeleton;
   }): IAutoMovieValidateOutput {
-    return {
-      validation: validateEnginePose({
-        pose: props.pose,
-        skeleton: props.skeleton,
-      }).toValidation(),
-    };
+    return this.validation.validatePose(props);
   }
 
   /**
@@ -335,12 +261,7 @@ export class AutoMovieApplication {
     /** Target skeleton whose ROM and bones constrain the motion. */
     skeleton: IAutoMovieSkeleton;
   }): IAutoMovieValidateOutput {
-    return {
-      validation: validateEngineMotion({
-        motion: toEngineMotion(props.motion),
-        skeleton: props.skeleton,
-      }),
-    };
+    return this.validation.validateMotion(props);
   }
 
   /**
@@ -354,7 +275,7 @@ export class AutoMovieApplication {
     /** Model to validate. */
     model: IAutoMovieModel;
   }): IAutoMovieValidateOutput {
-    return { validation: validateEngineModel({ model: props.model }) };
+    return this.validation.validateModel(props);
   }
 
   /**
@@ -370,7 +291,7 @@ export class AutoMovieApplication {
     /** Model ids available to scene nodes. */
     models: IAutoMovieMcpGeometryModel[];
   }): IAutoMovieValidateOutput {
-    return { validation: validateSceneArtifact(props.scene, props.models) };
+    return this.validation.validateScene(props);
   }
 
   /**
@@ -388,9 +309,7 @@ export class AutoMovieApplication {
     /** Optional compiled motions keyed by actor or arbitrary ids. */
     motions?: Record<string, IAutoMovieMcpMotion>;
   }): IAutoMovieValidateOutput {
-    return {
-      validation: validateShotArtifact(props.shot, props.scene, props.motions),
-    };
+    return this.validation.validateShot(props);
   }
 
   /**
@@ -406,9 +325,7 @@ export class AutoMovieApplication {
     /** Shots available to sequence entries. */
     shots: IAutoMovieShot[];
   }): IAutoMovieValidateOutput {
-    return {
-      validation: validateSequenceArtifact(props.sequence, props.shots),
-    };
+    return this.validation.validateSequence(props);
   }
 
   /**
@@ -424,18 +341,7 @@ export class AutoMovieApplication {
     /** Script artifact to commit. */
     script: IAutoMovieScript;
   }): IAutoMovieCommitOutput {
-    const validation = validateScriptArtifact(props.script);
-    if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({
-      ...props.slate,
-      script: props.script,
-      scene: null,
-      shots: [],
-      beatEnds: [],
-      notes: [],
-      film: null,
-    });
+    return this.commit.commitScript(props);
   }
 
   /**
@@ -453,32 +359,7 @@ export class AutoMovieApplication {
     /** Model ids available to scene nodes. */
     models: IAutoMovieMcpGeometryModel[];
   }): IAutoMovieCommitOutput {
-    const violations: IAutoMovieConstraintViolation[] = [];
-    appendValidation(
-      violations,
-      validateSceneArtifact(props.scene, props.models),
-    );
-    if (props.slate.script === null)
-      pushViolation(
-        violations,
-        "type",
-        "$slate.script",
-        "a script must be committed before a scene",
-        props.slate.script,
-      );
-    else
-      validateSceneAgainstScript(props.scene, props.slate.script, violations);
-    const validation = toValidation(violations);
-    if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({
-      ...props.slate,
-      scene: props.scene,
-      shots: [],
-      beatEnds: [],
-      notes: [],
-      film: null,
-    });
+    return this.commit.commitScene(props);
   }
 
   /**
@@ -496,32 +377,7 @@ export class AutoMovieApplication {
     /** Optional compiled motions keyed by actor or arbitrary ids. */
     motions?: Record<string, IAutoMovieMcpMotion>;
   }): IAutoMovieCommitOutput {
-    const violations: IAutoMovieConstraintViolation[] = [];
-    validateUniqueIds(
-      props.slate.shots,
-      "$slate.shots",
-      "committed shot id",
-      violations,
-    );
-    const beat = validateShotCommitPreconditions(
-      props.shot,
-      props.slate,
-      violations,
-    );
-    if (props.slate.scene !== null)
-      appendValidation(
-        violations,
-        validateShotArtifact(props.shot, props.slate.scene, props.motions),
-      );
-    const validation = toValidation(violations);
-    if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({
-      ...props.slate,
-      shots: upsertById(props.slate.shots, props.shot),
-      beatEnds: props.slate.beatEnds.filter((end) => end.beat !== beat),
-      film: null,
-    });
+    return this.commit.commitShot(props);
   }
 
   /**
@@ -537,28 +393,7 @@ export class AutoMovieApplication {
     /** Beat-end state to commit. */
     beatEnd: IAutoMovieBeatEndState;
   }): IAutoMovieCommitOutput {
-    const violations: IAutoMovieConstraintViolation[] = [];
-    validateUniqueBy(
-      props.slate.beatEnds.map((end, index) => ({
-        id: end.beat,
-        path: `$slate.beatEnds[${index}].beat`,
-      })),
-      "committed beat end",
-      violations,
-    );
-    validateBeatEndArtifact(props.beatEnd, props.slate, violations);
-    const validation = toValidation(violations);
-    if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({
-      ...props.slate,
-      beatEnds: upsertBy(
-        props.slate.beatEnds,
-        props.beatEnd,
-        (end) => end.beat === props.beatEnd.beat,
-      ),
-      film: null,
-    });
+    return this.commit.commitBeatEnd(props);
   }
 
   /**
@@ -574,12 +409,7 @@ export class AutoMovieApplication {
     /** Complete open review-note backlog. */
     notes: IAutoMovieReviewNote[];
   }): IAutoMovieCommitOutput {
-    const violations: IAutoMovieConstraintViolation[] = [];
-    validateNotesArtifact(props.notes, props.slate, violations);
-    const validation = toValidation(violations);
-    if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({ ...props.slate, notes: props.notes, film: null });
+    return this.commit.commitNotes(props);
   }
 
   /**
@@ -595,16 +425,7 @@ export class AutoMovieApplication {
     /** Sequence artifact to commit. */
     film: IAutoMovieSequence;
   }): IAutoMovieCommitOutput {
-    const violations: IAutoMovieConstraintViolation[] = [];
-    appendValidation(
-      violations,
-      validateSequenceArtifact(props.film, props.slate.shots),
-    );
-    validateFilmPreconditions(props.film, props.slate, violations);
-    const validation = toValidation(violations);
-    if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({ ...props.slate, film: props.film });
+    return this.commit.commitFilm(props);
   }
 
   /**
@@ -628,7 +449,7 @@ export class AutoMovieApplication {
     /** Encoded video output path. */
     outputPath?: string;
   }): IAutoMoviePlanRenderOutput {
-    return buildRenderPlan(props);
+    return this.render.planRender(props);
   }
 
   /**
@@ -654,48 +475,7 @@ export class AutoMovieApplication {
     /** Guide pass to draw. Defaults to `beauty`. */
     pass?: string;
   }): Promise<IAutoMovieSeeFrameOutput> {
-    const planned = buildRenderPlan({
-      slate: props.slate,
-      spec: props.spec,
-    });
-    if (planned.validation.success === false)
-      return { validation: planned.validation, preview: null };
-    const plan = planned.plan!;
-    const violations: IAutoMovieConstraintViolation[] = [];
-    const frame = resolvePreviewFrame(props, plan, violations);
-    const pass = resolveGuidePass(props.pass, violations);
-    const validation = toValidation(violations);
-    if (validation.success === false) return { validation, preview: null };
-
-    const time = plan.times[frame]!;
-    const framePath = `${plan.frameDir}/${guidePassFrameName(frame, pass!)}`;
-    const request: IAutoMovieMcpCaptureRequest = {
-      target: plan.target,
-      frame,
-      time,
-      pass: pass!,
-      framePath,
-      width: props.spec.width,
-      height: props.spec.height,
-      toneMapping: props.spec.toneMapping,
-    };
-    const image =
-      this.capture === undefined ? null : await this.capture(request);
-    return {
-      validation,
-      preview: {
-        target: plan.target,
-        frame,
-        time,
-        pass: pass!,
-        framePath,
-        width: props.spec.width,
-        height: props.spec.height,
-        toneMapping: props.spec.toneMapping,
-        status: image === null ? "no-capture-adapter" : "captured",
-        image,
-      },
-    };
+    return this.render.seeFrame(props);
   }
 
   /**
@@ -714,7 +494,7 @@ export class AutoMovieApplication {
     /** The staging plan: where each actor, camera, and light goes. */
     staging: IAutoMovieStagingApplication.IWrite;
   }): IAutoMovieStageOutput {
-    return { staged: stageScene(props.script, props.staging) };
+    return this.pipeline.stage(props);
   }
 
   /**
@@ -734,7 +514,7 @@ export class AutoMovieApplication {
     /** The blocking plan: the beat's movement intents and timing anchors. */
     blocking: IAutoMovieBlockingApplication.IWrite;
   }): IAutoMovieBlockOutput {
-    return { blocked: blockBeat(props.script, props.staged, props.blocking) };
+    return this.pipeline.block(props);
   }
 
   /**
@@ -762,29 +542,7 @@ export class AutoMovieApplication {
     /** Optional validated blocking, from a successful `block` result. */
     blocking?: IAutoMovieBlockingApplication.IWrite;
   }): IAutoMoviePerformOutput {
-    const contexts = new Map<string, IAutoMovieActorContext>(
-      Object.entries(props.actors).map(([node, context]) => [
-        node,
-        toActorContext(context),
-      ]),
-    );
-    const nodes = new Map(
-      props.staged.scene.nodes.map((node) => [
-        node.id,
-        node.transform.translation,
-      ]),
-    );
-    const synthesize = makeActorSynthesizer(contexts, nodes);
-    const performed = performShot({
-      script: props.script,
-      staged: props.staged,
-      performance: props.performance,
-      synthesize,
-      skeleton: (node) => contexts.get(node)?.rig ?? null,
-      restFrames: (node) => contexts.get(node)?.restFrames,
-      blocking: props.blocking,
-    });
-    return { performed: toMcpPerformedShot(performed) };
+    return this.pipeline.perform(props);
   }
 
   /**
@@ -802,7 +560,7 @@ export class AutoMovieApplication {
     /** The performed shots referenced by the assemble entries. */
     shots: IAutoMovieShot[];
   }): IAutoMovieCutOutput {
-    return { cut: cutSequence(props.assemble, props.shots) };
+    return this.pipeline.cut(props);
   }
 
   /**
@@ -819,2155 +577,6 @@ export class AutoMovieApplication {
     /** The forge specification: the model parameters per cast member. */
     forge: IAutoMovieForgeApplication.IWrite;
   }): IAutoMovieForgeOutput {
-    return { forged: forgeCast(props.script, props.forge) };
+    return this.pipeline.forge(props);
   }
-}
-
-const toActorContext = (
-  context: IAutoMovieMcpActorContext,
-): IAutoMovieActorContext => ({
-  ...context,
-  gaits: context.gaits.map((gait): IAutoMovieGait => ({ ...gait })),
-});
-
-const toMcpPerformedShot = (
-  performed: IAutoMoviePerformedShot,
-): IAutoMovieMcpPerformedShot =>
-  performed.success === false
-    ? performed
-    : {
-        ...performed,
-        motions: Object.fromEntries(
-          Object.entries(performed.motions).map(([node, motion]) => [
-            node,
-            toMcpMotion(motion),
-          ]),
-        ),
-      };
-
-const toMcpMotion = (motion: IAutoMovieMotion): IAutoMovieMcpMotion => ({
-  ...motion,
-  keyframes: motion.keyframes.map((keyframe) => ({
-    ...keyframe,
-    bezier: toMcpBezier(keyframe.bezier),
-  })),
-});
-
-const toMcpBezier = (
-  bezier: IAutoMovieKeyframe["bezier"],
-): IAutoMovieMcpBezier | null =>
-  bezier === null
-    ? null
-    : {
-        x1: bezier[0],
-        y1: bezier[1],
-        x2: bezier[2],
-        y2: bezier[3],
-      };
-
-const toStoredSlate = (slate: IAutoMovieMcpStoredSlate): IAutoMovieSlate => ({
-  brief: "",
-  script: slate.script,
-  scene: slate.scene,
-  shots: slate.shots,
-  beatEnds: slate.beatEnds,
-  notes: slate.notes,
-  film: null,
-});
-
-type GeometryActor = {
-  node: IAutoMovieScene["nodes"][number];
-  model: IAutoMovieMcpGeometryModel;
-  skeleton: IAutoMovieSkeleton;
-};
-
-type ActorPoseState = {
-  pose: IAutoMoviePose;
-  motion: string | null;
-};
-
-const resolveActorGeometry = (
-  context: IAutoMovieMcpGeometryContext,
-  actor: string,
-  t: number,
-): IAutoMovieMcpResolvedPose | null => {
-  assertFiniteTime(t);
-  const actorRig = findActorRig(context, actor);
-  if (actorRig === null) return null;
-  const state = resolveActorPose(context, actorRig.node, actorRig.skeleton, t);
-  if (state === null) return null;
-  return {
-    node: actor,
-    model: actorRig.model.id,
-    motion: state.motion,
-    t,
-    pose: state.pose,
-    bones: resolvePose(state.pose, actorRig.skeleton, HUMANOID_JOINT_AXES).map(
-      (bone) => ({
-        bone: bone.bone,
-        localRotation: bone.localRotation,
-        worldPosition: applyTransformPoint(
-          actorRig.node.transform,
-          bone.worldPosition,
-        ),
-        worldRotation: Quaternion.multiply(
-          actorRig.node.transform.rotation,
-          bone.worldRotation,
-        ),
-      }),
-    ),
-  };
-};
-
-const resolveActorPose = (
-  context: IAutoMovieMcpGeometryContext,
-  node: IAutoMovieScene["nodes"][number],
-  skeleton: IAutoMovieSkeleton,
-  t: number,
-): ActorPoseState | null => {
-  const performance =
-    context.shot === undefined || context.shot === null
-      ? null
-      : findShotPerformance(context.shot, node.id);
-  const motionId = performance === null ? node.motion : performance.motion;
-  if (motionId !== null) {
-    const motion = findMotion(context, motionId);
-    if (motion === null) return null;
-    return {
-      motion: motionId,
-      pose: sampleMotion(
-        toEngineMotion(motion),
-        t - (performance?.startOffset ?? 0),
-      ).pose,
-    };
-  }
-  return {
-    motion: null,
-    pose: node.pose ?? { skeleton: skeleton.id, root: null, joints: [] },
-  };
-};
-
-const findActorRig = (
-  context: IAutoMovieMcpGeometryContext,
-  actor: string,
-): GeometryActor | null => {
-  const node = findSceneNode(context.scene, actor);
-  if (node === null) return null;
-  const model = findGeometryModel(context.models, node.model);
-  if (model === null || model.skeleton === null) return null;
-  return { node, model, skeleton: model.skeleton };
-};
-
-const findSceneNode = (
-  scene: IAutoMovieScene,
-  id: string,
-): IAutoMovieScene["nodes"][number] | null => {
-  const matches = scene.nodes
-    .map((node, index) => ({ node, index }))
-    .filter(({ node }) => node.id === id);
-  if (matches.length > 1)
-    throw new Error(
-      `scene node "${id}" is duplicated at context.scene.nodes[${matches[1]!.index}].id`,
-    );
-  return matches[0]?.node ?? null;
-};
-
-const findGeometryModel = (
-  models: IAutoMovieMcpGeometryModel[],
-  id: string,
-): IAutoMovieMcpGeometryModel | null => {
-  const matches = models
-    .map((model, index) => ({ model, index }))
-    .filter(({ model }) => model.id === id);
-  if (matches.length > 1)
-    throw new Error(
-      `geometry model "${id}" is duplicated at context.models[${matches[1]!.index}].id`,
-    );
-  return matches[0]?.model ?? null;
-};
-
-const findShotPerformance = (
-  shot: IAutoMovieShot,
-  node: string,
-): IAutoMovieShot["performances"][number] | null => {
-  const matches = shot.performances
-    .map((performance, index) => ({ performance, index }))
-    .filter(({ performance }) => performance.node === node);
-  if (matches.length > 1)
-    throw new Error(
-      `shot performance for "${node}" is duplicated at context.shot.performances[${matches[1]!.index}].node`,
-    );
-  return matches[0]?.performance ?? null;
-};
-
-const findMotion = (
-  context: IAutoMovieMcpGeometryContext,
-  id: string,
-): IAutoMovieMcpMotion | null => {
-  const entries = Object.entries(context.motions)
-    .map(([key, motion]) => ({ key, motion }))
-    .filter(({ motion }) => motion.id === id);
-  if (entries.length > 1)
-    throw new Error(
-      `motion "${id}" is duplicated at context.motions.${entries[1]!.key}.id`,
-    );
-  return entries[0]?.motion ?? null;
-};
-
-const nodePositions = (
-  scene: IAutoMovieScene,
-): Map<string, IAutoMovieVector3> =>
-  new Map(
-    scene.nodes.map((node, index) => {
-      if (scene.nodes.findIndex((other) => other.id === node.id) !== index)
-        throw new Error(
-          `scene node "${node.id}" is duplicated at scene.nodes[${index}].id`,
-        );
-      return [node.id, node.transform.translation];
-    }),
-  );
-
-const measureArmReach = (
-  skeleton: IAutoMovieSkeleton,
-  side: "left" | "right",
-  target: IAutoMovieVector3,
-): IAutoMovieMcpArmReach | null => {
-  const upperName = side === "left" ? "leftUpperArm" : "rightUpperArm";
-  const lowerName = side === "left" ? "leftLowerArm" : "rightLowerArm";
-  const handName = side === "left" ? "leftHand" : "rightHand";
-  const rest = resolvePose(
-    { skeleton: skeleton.id, root: null, joints: [] },
-    skeleton,
-    HUMANOID_JOINT_AXES,
-  );
-  const upper = rest.find((bone) => bone.bone === upperName);
-  const lower = rest.find((bone) => bone.bone === lowerName);
-  const hand = rest.find((bone) => bone.bone === handName);
-  if (upper === undefined || lower === undefined || hand === undefined)
-    return null;
-  const upperLength = Vector3.length(
-    Vector3.subtract(lower.worldPosition, upper.worldPosition),
-  );
-  const lowerLength = Vector3.length(
-    Vector3.subtract(hand.worldPosition, lower.worldPosition),
-  );
-  if (upperLength < 1e-6 || lowerLength < 1e-6) return null;
-  const targetDistance = Vector3.length(
-    Vector3.subtract(target, upper.worldPosition),
-  );
-  const maximumDistance = upperLength + lowerLength;
-  const gap = Math.max(0, targetDistance - maximumDistance);
-  return {
-    side,
-    targetDistance,
-    maximumDistance,
-    gap,
-    reachable: gap <= 1e-6,
-    pose: reachPose(skeleton, side, target),
-  };
-};
-
-const toEngineMotion = (motion: IAutoMovieMcpMotion): IAutoMovieMotion => ({
-  ...motion,
-  keyframes: motion.keyframes.map((keyframe) => ({
-    ...keyframe,
-    bezier:
-      keyframe.bezier === null
-        ? null
-        : ([
-            keyframe.bezier.x1,
-            keyframe.bezier.y1,
-            keyframe.bezier.x2,
-            keyframe.bezier.y2,
-          ] as [number, number, number, number]),
-  })),
-});
-
-const applyTransformPoint = (
-  transform: IAutoMovieTransform,
-  point: IAutoMovieVector3,
-): IAutoMovieVector3 =>
-  Vector3.add(
-    transform.translation,
-    Quaternion.rotateVector(transform.rotation, {
-      x: point.x * transform.scale.x,
-      y: point.y * transform.scale.y,
-      z: point.z * transform.scale.z,
-    }),
-  );
-
-const toModelPoint = (
-  point: IAutoMovieVector3,
-  transform: IAutoMovieTransform,
-): IAutoMovieVector3 | null => {
-  if (
-    Math.abs(transform.scale.x) < 1e-6 ||
-    Math.abs(transform.scale.y) < 1e-6 ||
-    Math.abs(transform.scale.z) < 1e-6
-  )
-    return null;
-  const unrotated = Quaternion.rotateVector(
-    inverse(transform.rotation),
-    Vector3.subtract(point, transform.translation),
-  );
-  return {
-    x: unrotated.x / transform.scale.x,
-    y: unrotated.y / transform.scale.y,
-    z: unrotated.z / transform.scale.z,
-  };
-};
-
-const inverse = (q: IAutoMovieQuaternion): IAutoMovieQuaternion =>
-  Quaternion.normalize({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
-
-const assertFiniteTime = (t: number): void => {
-  if (!Number.isFinite(t)) throw new Error("t must be finite");
-};
-
-const failedCommit = (
-  slate: IAutoMovieMcpWritableSlate,
-  validation: IAutoMovieValidation.IFailure,
-): IAutoMovieCommitOutput => ({ committed: false, slate, validation });
-
-const successfulCommit = (
-  slate: IAutoMovieMcpWritableSlate,
-): IAutoMovieCommitOutput => ({
-  committed: true,
-  slate,
-  validation: { success: true },
-});
-
-const appendValidation = (
-  violations: IAutoMovieConstraintViolation[],
-  validation: IAutoMovieValidation,
-): void => {
-  if (validation.success === false) violations.push(...validation.violations);
-};
-
-const upsertById = <T extends { id: string }>(items: T[], item: T): T[] =>
-  upsertBy(items, item, (entry) => entry.id === item.id);
-
-const upsertBy = <T>(
-  items: T[],
-  item: T,
-  matches: (entry: T) => boolean,
-): T[] => {
-  let replaced = false;
-  const next = items.map((entry) => {
-    if (!matches(entry)) return entry;
-    replaced = true;
-    return item;
-  });
-  if (!replaced) next.push(item);
-  return next;
-};
-
-const validateScriptArtifact = (
-  script: IAutoMovieScript,
-): IAutoMovieValidation => {
-  const violations: IAutoMovieConstraintViolation[] = [];
-  validateNonEmptyText(script.logline, "$input.logline", "logline", violations);
-  validateNonEmptyText(script.theme, "$input.theme", "theme", violations);
-  validateUniqueBy(
-    script.cast.map((member, index) => ({
-      id: member.node,
-      path: `$input.cast[${index}].node`,
-    })),
-    "cast node",
-    violations,
-  );
-  validateUniqueIds(script.beats, "$input.beats", "beat id", violations);
-  script.cast.forEach((member, i) => {
-    const path = `$input.cast[${i}]`;
-    validateNonEmptyId(member.node, `${path}.node`, "cast node", violations);
-    validateNonEmptyText(
-      member.character,
-      `${path}.character`,
-      "cast character",
-      violations,
-    );
-    if (member.modelRef !== null)
-      validateNonEmptyText(
-        member.modelRef,
-        `${path}.modelRef`,
-        "cast modelRef",
-        violations,
-      );
-  });
-  if (script.beats.length === 0)
-    pushViolation(
-      violations,
-      "type",
-      "$input.beats",
-      "script must contain at least one beat",
-      script.beats,
-    );
-  script.beats.forEach((beat, i) => {
-    const path = `$input.beats[${i}]`;
-    validateNonEmptyId(beat.id, `${path}.id`, "beat id", violations);
-    validateNonEmptyText(beat.name, `${path}.name`, "beat name", violations);
-    validateNonEmptyText(
-      beat.summary,
-      `${path}.summary`,
-      "beat summary",
-      violations,
-    );
-    validateRange(
-      beat.durationHint,
-      `${path}.durationHint`,
-      0,
-      Infinity,
-      "beat durationHint",
-      violations,
-      false,
-    );
-  });
-  return toValidation(violations);
-};
-
-const validateSceneAgainstScript = (
-  scene: IAutoMovieScene,
-  script: IAutoMovieScript,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  const nodeIds = new Set(scene.nodes.map((node) => node.id));
-  script.cast.forEach((member, i) => {
-    if (!nodeIds.has(member.node))
-      pushViolation(
-        violations,
-        "type",
-        "$input.nodes",
-        `scene must contain cast node "${member.node}" from script cast[${i}]`,
-        member.node,
-      );
-  });
-};
-
-const validateShotCommitPreconditions = (
-  shot: IAutoMovieShot,
-  slate: IAutoMovieMcpWritableSlate,
-  violations: IAutoMovieConstraintViolation[],
-): string | null => {
-  if (slate.script === null)
-    pushViolation(
-      violations,
-      "type",
-      "$slate.script",
-      "a script must be committed before a shot",
-      slate.script,
-    );
-  if (slate.scene === null)
-    pushViolation(
-      violations,
-      "type",
-      "$slate.scene",
-      "a scene must be committed before a shot",
-      slate.scene,
-    );
-
-  const beat = shotBeatId(shot.id);
-  if (beat === null)
-    pushViolation(
-      violations,
-      "type",
-      "$input.id",
-      'shot id must use the "shot:<beat>" form',
-      shot.id,
-    );
-  else if (
-    slate.script !== null &&
-    !slate.script.beats.some((entry) => entry.id === beat)
-  )
-    pushViolation(
-      violations,
-      "type",
-      "$input.id",
-      `shot beat "${beat}" must exist in the committed script`,
-      shot.id,
-    );
-  return beat;
-};
-
-const validateBeatEndArtifact = (
-  beatEnd: IAutoMovieBeatEndState,
-  slate: IAutoMovieMcpWritableSlate,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  validateNonEmptyId(beatEnd.beat, "$input.beat", "beat id", violations);
-  validateNonEmptyId(beatEnd.shot, "$input.shot", "shot id", violations);
-  if (beatEnd.shot !== `shot:${beatEnd.beat}`)
-    pushViolation(
-      violations,
-      "type",
-      "$input.shot",
-      `beat-end shot must equal "shot:${beatEnd.beat}"`,
-      beatEnd.shot,
-    );
-  if (slate.script === null)
-    pushViolation(
-      violations,
-      "type",
-      "$slate.script",
-      "a script must be committed before a beat end",
-      slate.script,
-    );
-  else if (!slate.script.beats.some((beat) => beat.id === beatEnd.beat))
-    pushViolation(
-      violations,
-      "type",
-      "$input.beat",
-      `beat "${beatEnd.beat}" must exist in the committed script`,
-      beatEnd.beat,
-    );
-  const shot = slate.shots.find((entry) => entry.id === beatEnd.shot);
-  if (shot === undefined)
-    pushViolation(
-      violations,
-      "type",
-      "$input.shot",
-      `beat-end shot "${beatEnd.shot}" must be committed first`,
-      beatEnd.shot,
-    );
-  const nodeIds =
-    slate.scene === null
-      ? null
-      : new Set(slate.scene.nodes.map((node) => node.id));
-  if (slate.scene === null)
-    pushViolation(
-      violations,
-      "type",
-      "$slate.scene",
-      "a scene must be committed before a beat end",
-      slate.scene,
-    );
-  validateUniqueBy(
-    beatEnd.actors.map((actor, index) => ({
-      id: actor.node,
-      path: `$input.actors[${index}].node`,
-    })),
-    "beat-end actor",
-    violations,
-  );
-  beatEnd.actors.forEach((actor, i) => {
-    const path = `$input.actors[${i}]`;
-    validateNonEmptyId(actor.node, `${path}.node`, "actor node", violations);
-    if (nodeIds !== null && !nodeIds.has(actor.node))
-      pushViolation(
-        violations,
-        "type",
-        `${path}.node`,
-        `beat-end actor "${actor.node}" must reference a scene node`,
-        actor.node,
-      );
-    validateTransformArtifact(
-      actor.transform,
-      `${path}.transform`,
-      "beat-end actor transform",
-      violations,
-    );
-    validateVectorArtifact(
-      actor.facing,
-      `${path}.facing`,
-      "beat-end actor facing",
-      violations,
-    );
-    validateRange(
-      actor.localTime,
-      `${path}.localTime`,
-      0,
-      shot?.duration ?? Infinity,
-      "beat-end actor localTime",
-      violations,
-    );
-    if (
-      actor.motion !== null &&
-      shot !== undefined &&
-      !shot.performances.some(
-        (performance) => performance.motion === actor.motion,
-      )
-    )
-      pushViolation(
-        violations,
-        "type",
-        `${path}.motion`,
-        `beat-end actor motion "${actor.motion}" must reference the committed shot`,
-        actor.motion,
-      );
-  });
-};
-
-const validateNotesArtifact = (
-  notes: IAutoMovieReviewNote[],
-  slate: IAutoMovieMcpWritableSlate,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  if (slate.script === null)
-    pushViolation(
-      violations,
-      "type",
-      "$slate.script",
-      "a script must be committed before review notes",
-      slate.script,
-    );
-  const beatIds =
-    slate.script === null
-      ? null
-      : new Set(slate.script.beats.map((beat) => beat.id));
-  const shotIds = new Set(slate.shots.map((shot) => shot.id));
-  notes.forEach((note, i) => {
-    const path = `$input.notes[${i}]`;
-    validateNonEmptyId(note.beat, `${path}.beat`, "note beat", violations);
-    validateNonEmptyText(note.issue, `${path}.issue`, "note issue", violations);
-    validateNonEmptyText(
-      note.suggestion,
-      `${path}.suggestion`,
-      "note suggestion",
-      violations,
-    );
-    if (beatIds !== null && !beatIds.has(note.beat))
-      pushViolation(
-        violations,
-        "type",
-        `${path}.beat`,
-        `review note beat "${note.beat}" must exist in the committed script`,
-        note.beat,
-      );
-    if (!shotIds.has(`shot:${note.beat}`))
-      pushViolation(
-        violations,
-        "type",
-        "$slate.shots",
-        `review note beat "${note.beat}" must have a committed shot`,
-        note.beat,
-      );
-  });
-};
-
-const validateFilmPreconditions = (
-  film: IAutoMovieSequence,
-  slate: IAutoMovieMcpWritableSlate,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  validateUniqueIds(
-    slate.shots,
-    "$slate.shots",
-    "committed shot id",
-    violations,
-  );
-  if (slate.script === null)
-    pushViolation(
-      violations,
-      "type",
-      "$slate.script",
-      "a script must be committed before a film",
-      slate.script,
-    );
-  if (slate.scene === null)
-    pushViolation(
-      violations,
-      "type",
-      "$slate.scene",
-      "a scene must be committed before a film",
-      slate.scene,
-    );
-  if (slate.notes.length > 0)
-    pushViolation(
-      violations,
-      "type",
-      "$slate.notes",
-      "open review notes must be cleared before committing a film",
-      slate.notes,
-    );
-  const sequenceShotIds = new Set(film.shots.map((entry) => entry.shot));
-  if (slate.script !== null)
-    slate.script.beats.forEach((beat, i) => {
-      const shot = `shot:${beat.id}`;
-      if (!slate.shots.some((entry) => entry.id === shot))
-        pushViolation(
-          violations,
-          "type",
-          "$slate.shots",
-          `script beat "${beat.id}" must have a committed shot`,
-          beat.id,
-        );
-      if (!sequenceShotIds.has(shot))
-        pushViolation(
-          violations,
-          "type",
-          "$input.shots",
-          `sequence must include shot "${shot}" for script beat[${i}]`,
-          shot,
-        );
-    });
-  if (slate.scene !== null)
-    slate.shots.forEach((shot, i) => {
-      if (shot.scene !== slate.scene?.id)
-        pushViolation(
-          violations,
-          "type",
-          `$slate.shots[${i}].scene`,
-          `committed shot scene must match scene "${slate.scene?.id}"`,
-          shot.scene,
-        );
-    });
-};
-
-const shotBeatId = (shot: string): string | null => {
-  if (!shot.startsWith("shot:")) return null;
-  const beat = shot.slice("shot:".length);
-  return beat.length === 0 ? null : beat;
-};
-
-const buildRenderPlan = (props: {
-  slate: IAutoMovieMcpWritableSlate;
-  spec: IAutoMovieRenderSpec;
-  passes?: string[];
-  frameDir?: string;
-  outputPath?: string;
-}): IAutoMoviePlanRenderOutput => {
-  const violations: IAutoMovieConstraintViolation[] = [];
-  validateRenderSpec(props.spec, violations);
-  const passes = resolveGuidePasses(props.passes, violations);
-  const target = resolveRenderTarget(
-    props.slate,
-    props.spec.target,
-    violations,
-  );
-  const validation = toValidation(violations);
-  if (validation.success === false) return { validation, plan: null };
-
-  const times = frameTimes(props.spec.fps, target!.duration);
-  if (times.length === 0)
-    return {
-      validation: toValidation([
-        violation(
-          "range",
-          "$input.spec.fps",
-          "render spec and target duration must produce at least one frame",
-          { fps: props.spec.fps, duration: target!.duration },
-        ),
-      ]),
-      plan: null,
-    };
-
-  if (target!.target.kind === "sequence" && props.slate.film !== null) {
-    const plan = planSequenceRender({
-      sequence: props.slate.film,
-      shots: props.slate.shots,
-      spec: props.spec,
-      frameDir: props.frameDir,
-      outputPath: props.outputPath,
-    });
-    return {
-      validation: { success: true },
-      plan: {
-        target: plan.target,
-        duration: plan.durationSeconds,
-        frameCount: plan.frameCount,
-        times: plan.times,
-        frameDir: plan.frameDir,
-        firstFrame: plan.firstFrame,
-        lastFrame: plan.lastFrame,
-        inputPattern: plan.inputPattern,
-        outputPath: plan.outputPath,
-        ffmpegArgs: plan.ffmpegArgs,
-        passes: planGuidePassOutputs({
-          frameDir: plan.frameDir,
-          frameCount: plan.frameCount,
-          passes: passes!,
-        }),
-      },
-    };
-  }
-
-  const stem = renderPathStem(props.spec.target);
-  const frameDir = props.frameDir ?? `frames/${stem}`;
-  const outputPath = props.outputPath ?? `${stem}.mp4`;
-  const inputPattern = `${frameDir}/${framePattern()}`;
-  return {
-    validation: { success: true },
-    plan: {
-      target: target!.target,
-      duration: target!.duration,
-      frameCount: times.length,
-      times,
-      frameDir,
-      firstFrame: `${frameDir}/${frameName(0)}`,
-      lastFrame: `${frameDir}/${frameName(times.length - 1)}`,
-      inputPattern,
-      outputPath,
-      ffmpegArgs: ffmpegArgs(props.spec, inputPattern, outputPath),
-      passes: planGuidePassOutputs({
-        frameDir,
-        frameCount: times.length,
-        passes: passes!,
-      }),
-    },
-  };
-};
-
-/**
- * Validate a requested guide-pass list against the closed pass union. `null`
- * when any name is unknown (a violation is pushed); beauty-only when omitted.
- */
-const resolveGuidePasses = (
-  passes: string[] | undefined,
-  violations: IAutoMovieConstraintViolation[],
-): AutoMovieGuidePass[] | null => {
-  if (passes === undefined) return ["beauty"];
-  const known: AutoMovieGuidePass[] = [];
-  let valid = true;
-  passes.forEach((pass, index) => {
-    if (isGuidePass(pass)) known.push(pass);
-    else {
-      valid = false;
-      pushViolation(
-        violations,
-        "type",
-        `$input.passes[${index}]`,
-        `guide pass "${pass}" must be one of beauty, depth, mask, outline, pose`,
-        pass,
-      );
-    }
-  });
-  return valid ? known : null;
-};
-
-/** Validate one requested guide pass; beauty when omitted, null when unknown. */
-const resolveGuidePass = (
-  pass: string | undefined,
-  violations: IAutoMovieConstraintViolation[],
-): AutoMovieGuidePass | null => {
-  if (pass === undefined) return "beauty";
-  if (isGuidePass(pass)) return pass;
-  pushViolation(
-    violations,
-    "type",
-    "$input.pass",
-    `guide pass "${pass}" must be one of beauty, depth, mask, outline, pose`,
-    pass,
-  );
-  return null;
-};
-
-const validateRenderSpec = (
-  spec: IAutoMovieRenderSpec,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  validateNonEmptyId(
-    spec.target,
-    "$input.spec.target",
-    "render target",
-    violations,
-  );
-  validateRange(
-    spec.fps,
-    "$input.spec.fps",
-    0,
-    Infinity,
-    "render fps",
-    violations,
-    false,
-  );
-  validateRange(
-    spec.width,
-    "$input.spec.width",
-    0,
-    Infinity,
-    "render width",
-    violations,
-    false,
-  );
-  validateRange(
-    spec.height,
-    "$input.spec.height",
-    0,
-    Infinity,
-    "render height",
-    violations,
-    false,
-  );
-  validateRange(spec.crf, "$input.spec.crf", 0, 51, "render crf", violations);
-};
-
-const resolveRenderTarget = (
-  slate: IAutoMovieMcpWritableSlate,
-  target: string,
-  violations: IAutoMovieConstraintViolation[],
-): { target: IAutoMovieMcpRenderTarget; duration: number } | null => {
-  const shots = slate.shots
-    .map((shot, index) => ({ shot, index }))
-    .filter(({ shot }) => shot.id === target);
-  if (shots.length > 1)
-    pushViolation(
-      violations,
-      "type",
-      `$slate.shots[${shots[1]!.index}].id`,
-      `render target shot "${target}" must be unique`,
-      target,
-    );
-  if (shots.length > 0) {
-    const shot = shots[0]!.shot;
-    validateRange(
-      shot.duration,
-      "$target.duration",
-      0,
-      Infinity,
-      "render target duration",
-      violations,
-      false,
-    );
-    return { target: { kind: "shot", id: shot.id }, duration: shot.duration };
-  }
-
-  if (slate.film !== null && slate.film.id === target) {
-    appendValidation(
-      violations,
-      validateSequenceArtifact(slate.film, slate.shots),
-    );
-    const duration = sequenceRuntime(slate.film, slate.shots);
-    validateRange(
-      duration,
-      "$target.duration",
-      0,
-      Infinity,
-      "render target duration",
-      violations,
-      false,
-    );
-    return { target: { kind: "sequence", id: slate.film.id }, duration };
-  }
-
-  pushViolation(
-    violations,
-    "type",
-    "$input.spec.target",
-    `render target "${target}" must match a committed shot or film`,
-    target,
-  );
-  return null;
-};
-
-const sequenceRuntime = (
-  sequence: IAutoMovieSequence,
-  shots: IAutoMovieShot[],
-): number => {
-  const byId = new Map(shots.map((shot) => [shot.id, shot]));
-  return sequence.shots.reduce((sum, entry) => {
-    const shot = byId.get(entry.shot);
-    const duration = entry.trim?.duration ?? shot?.duration ?? 0;
-    return sum + duration - (entry.transition?.duration ?? 0);
-  }, 0);
-};
-
-const resolvePreviewFrame = (
-  props: { frame?: number; time?: number },
-  plan: IAutoMovieMcpRenderPlan,
-  violations: IAutoMovieConstraintViolation[],
-): number => {
-  let frame =
-    props.frame === undefined
-      ? props.time === undefined
-        ? 0
-        : Math.floor(props.time * (plan.frameCount / plan.duration))
-      : props.frame;
-  if (!Number.isInteger(frame) || frame < 0 || frame >= plan.frameCount)
-    pushViolation(
-      violations,
-      "range",
-      "$input.frame",
-      `preview frame must be an integer within [0, ${plan.frameCount - 1}]`,
-      props.frame,
-    );
-
-  if (props.time !== undefined) {
-    if (
-      !Number.isFinite(props.time) ||
-      props.time < 0 ||
-      props.time >= plan.duration
-    )
-      pushViolation(
-        violations,
-        "range",
-        "$input.time",
-        `preview time must be finite and within [0, ${plan.duration})`,
-        props.time,
-      );
-    else {
-      const timeFrame = Math.floor(
-        props.time * (plan.frameCount / plan.duration),
-      );
-      if (props.frame !== undefined && timeFrame !== frame)
-        pushViolation(
-          violations,
-          "temporal",
-          "$input.time",
-          `preview time maps to frame ${timeFrame}, not frame ${frame}`,
-          props.time,
-        );
-      frame = props.frame ?? timeFrame;
-    }
-  }
-  return frame;
-};
-
-const validateSceneArtifact = (
-  scene: IAutoMovieScene,
-  models: IAutoMovieMcpGeometryModel[],
-): IAutoMovieValidation => {
-  const violations: IAutoMovieConstraintViolation[] = [];
-  validateNonEmptyId(scene.id, "$input.id", "scene id", violations);
-  validateUniqueIds(scene.nodes, "$input.nodes", "scene node id", violations);
-  validateUniqueIds(scene.cameras, "$input.cameras", "camera id", violations);
-  validateUniqueIds(scene.lights, "$input.lights", "light id", violations);
-  validateUniqueIds(models, "$models", "model id", violations);
-
-  const modelIds = new Set(models.map((model) => model.id));
-  scene.nodes.forEach((node, i) => {
-    const path = `$input.nodes[${i}]`;
-    validateNonEmptyId(node.id, `${path}.id`, "scene node id", violations);
-    validateNonEmptyId(
-      node.model,
-      `${path}.model`,
-      "scene node model",
-      violations,
-    );
-    if (!modelIds.has(node.model))
-      pushViolation(
-        violations,
-        "type",
-        `${path}.model`,
-        `scene node model "${node.model}" must reference an available model id`,
-        node.model,
-      );
-    validateTransformArtifact(
-      node.transform,
-      `${path}.transform`,
-      "scene node transform",
-      violations,
-    );
-  });
-
-  scene.cameras.forEach((camera, i) => {
-    const path = `$input.cameras[${i}]`;
-    validateNonEmptyId(camera.id, `${path}.id`, "camera id", violations);
-    validateTransformArtifact(
-      camera.transform,
-      `${path}.transform`,
-      "camera transform",
-      violations,
-    );
-    validateRange(
-      camera.fovY,
-      `${path}.fovY`,
-      0,
-      180,
-      "camera fovY",
-      violations,
-      false,
-    );
-    validateRange(
-      camera.near,
-      `${path}.near`,
-      0,
-      Infinity,
-      "camera near",
-      violations,
-      false,
-    );
-    if (!Number.isFinite(camera.far) || camera.far <= camera.near)
-      pushViolation(
-        violations,
-        "range",
-        `${path}.far`,
-        `camera far must be finite and greater than near (${camera.near}), but was ${camera.far}`,
-        camera.far,
-      );
-  });
-
-  scene.lights.forEach((light, i) => {
-    const path = `$input.lights[${i}]`;
-    validateNonEmptyId(light.id, `${path}.id`, "light id", violations);
-    validateTransformArtifact(
-      light.transform,
-      `${path}.transform`,
-      "light transform",
-      violations,
-    );
-    validateColorArtifact(light.color, `${path}.color`, violations);
-    validateRange(
-      light.intensity,
-      `${path}.intensity`,
-      0,
-      Infinity,
-      "light intensity",
-      violations,
-    );
-    if (light.type === "point" || light.type === "spot")
-      validateRange(
-        light.range,
-        `${path}.range`,
-        0,
-        Infinity,
-        "light range",
-        violations,
-      );
-    if (light.type === "spot")
-      validateRange(
-        light.coneAngle,
-        `${path}.coneAngle`,
-        0,
-        90,
-        "spot coneAngle",
-        violations,
-        false,
-      );
-  });
-
-  return toValidation(violations);
-};
-
-const validateShotArtifact = (
-  shot: IAutoMovieShot,
-  scene: IAutoMovieScene,
-  motions: Record<string, IAutoMovieMcpMotion> | undefined,
-): IAutoMovieValidation => {
-  const violations: IAutoMovieConstraintViolation[] = [];
-  validateNonEmptyId(shot.id, "$input.id", "shot id", violations);
-  if (shot.scene !== scene.id)
-    pushViolation(
-      violations,
-      "type",
-      "$input.scene",
-      `shot scene "${shot.scene}" must match scene "${scene.id}"`,
-      shot.scene,
-    );
-  if (!scene.cameras.some((camera) => camera.id === shot.camera))
-    pushViolation(
-      violations,
-      "type",
-      "$input.camera",
-      `shot camera "${shot.camera}" must reference a scene camera`,
-      shot.camera,
-    );
-  validateRange(
-    shot.duration,
-    "$input.duration",
-    0,
-    Infinity,
-    "shot duration",
-    violations,
-    false,
-  );
-
-  const nodeIds = new Set(scene.nodes.map((node) => node.id));
-  const motionIds =
-    motions === undefined
-      ? null
-      : new Set(Object.values(motions).map((motion) => motion.id));
-  validateUniqueBy(
-    shot.performances.map((performance, index) => ({
-      id: performance.node,
-      path: `$input.performances[${index}].node`,
-    })),
-    "shot performance node",
-    violations,
-  );
-  shot.performances.forEach((performance, i) => {
-    const path = `$input.performances[${i}]`;
-    validateNonEmptyId(
-      performance.node,
-      `${path}.node`,
-      "performance node",
-      violations,
-    );
-    if (!nodeIds.has(performance.node))
-      pushViolation(
-        violations,
-        "type",
-        `${path}.node`,
-        `performance node "${performance.node}" must reference a scene node`,
-        performance.node,
-      );
-    validateRange(
-      performance.startOffset,
-      `${path}.startOffset`,
-      0,
-      shot.duration,
-      "performance startOffset",
-      violations,
-    );
-    if (performance.motion !== null) {
-      validateNonEmptyId(
-        performance.motion,
-        `${path}.motion`,
-        "performance motion",
-        violations,
-      );
-      if (motionIds !== null && !motionIds.has(performance.motion))
-        pushViolation(
-          violations,
-          "type",
-          `${path}.motion`,
-          `performance motion "${performance.motion}" must reference a compiled motion`,
-          performance.motion,
-        );
-    }
-  });
-
-  if (shot.cameraMotion !== null)
-    validateClipArtifact(shot.cameraMotion, "$input.cameraMotion", violations);
-  validateUniqueIds(
-    shot.objectMotions,
-    "$input.objectMotions",
-    "object motion clip id",
-    violations,
-  );
-  shot.objectMotions.forEach((clip, i) =>
-    validateClipArtifact(clip, `$input.objectMotions[${i}]`, violations),
-  );
-
-  return toValidation(violations);
-};
-
-const validateSequenceArtifact = (
-  sequence: IAutoMovieSequence,
-  shots: IAutoMovieShot[],
-): IAutoMovieValidation => {
-  const violations: IAutoMovieConstraintViolation[] = [];
-  validateNonEmptyId(sequence.id, "$input.id", "sequence id", violations);
-  validateRange(
-    sequence.fps,
-    "$input.fps",
-    0,
-    Infinity,
-    "sequence fps",
-    violations,
-    false,
-  );
-  validateUniqueIds(shots, "$shots", "shot id", violations);
-  const shotsById = new Map(shots.map((shot) => [shot.id, shot]));
-
-  sequence.shots.forEach((entry, i) => {
-    const path = `$input.shots[${i}]`;
-    validateNonEmptyId(entry.shot, `${path}.shot`, "sequence shot", violations);
-    const shot = shotsById.get(entry.shot);
-    if (shot === undefined)
-      pushViolation(
-        violations,
-        "type",
-        `${path}.shot`,
-        `sequence shot "${entry.shot}" must reference an available shot`,
-        entry.shot,
-      );
-    if (entry.trim !== null)
-      validateTrim(
-        entry.trim,
-        shot?.duration ?? Infinity,
-        `${path}.trim`,
-        violations,
-      );
-    if (entry.transition !== null) {
-      if (i === 0)
-        pushViolation(
-          violations,
-          "temporal",
-          `${path}.transition`,
-          "the first sequence entry cannot have an incoming transition",
-          entry.transition,
-        );
-      validateTransition(entry.transition, `${path}.transition`, violations);
-      const current = entryDuration(entry, shot);
-      const previousEntry = sequence.shots[i - 1];
-      const previous =
-        previousEntry === undefined
-          ? null
-          : entryDuration(previousEntry, shotsById.get(previousEntry.shot));
-      if (
-        previous !== null &&
-        current !== null &&
-        entry.transition.duration > Math.min(previous, current)
-      )
-        pushViolation(
-          violations,
-          "temporal",
-          `${path}.transition.duration`,
-          `transition duration must fit adjacent entries, but was ${entry.transition.duration}`,
-          entry.transition.duration,
-        );
-    }
-  });
-
-  return toValidation(violations);
-};
-
-const validateClipArtifact = (
-  clip: IAutoMovieClip,
-  path: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  validateNonEmptyId(clip.id, `${path}.id`, "clip id", violations);
-  validateRange(
-    clip.duration,
-    `${path}.duration`,
-    0,
-    Infinity,
-    "clip duration",
-    violations,
-    false,
-  );
-  validateUniqueBy(
-    clip.tracks.map((track, index) => ({
-      id: `${track.channel.kind}:${JSON.stringify(track.channel)}`,
-      path: `${path}.tracks[${index}].channel`,
-    })),
-    "clip track channel",
-    violations,
-  );
-  clip.tracks.forEach((track, i) => {
-    const trackPath = `${path}.tracks[${i}]`;
-    validateIncreasingTimes(
-      track.times,
-      clip.duration,
-      `${trackPath}.times`,
-      violations,
-    );
-    track.values.forEach((value, j) => {
-      if (!Number.isFinite(value))
-        pushViolation(
-          violations,
-          "range",
-          `${trackPath}.values[${j}]`,
-          `track value must be finite, but was ${value}`,
-          value,
-        );
-    });
-  });
-};
-
-const validateTrim = (
-  trim: NonNullable<IAutoMovieSequence["shots"][number]["trim"]>,
-  shotDuration: number,
-  path: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  validateRange(
-    trim.start,
-    `${path}.start`,
-    0,
-    Infinity,
-    "trim start",
-    violations,
-  );
-  validateRange(
-    trim.duration,
-    `${path}.duration`,
-    0,
-    Infinity,
-    "trim duration",
-    violations,
-    false,
-  );
-  if (
-    Number.isFinite(shotDuration) &&
-    Number.isFinite(trim.start) &&
-    Number.isFinite(trim.duration) &&
-    trim.start + trim.duration > shotDuration
-  )
-    pushViolation(
-      violations,
-      "temporal",
-      path,
-      `trim start + duration must fit within shot duration ${shotDuration}`,
-      trim,
-    );
-};
-
-const validateTransition = (
-  transition: NonNullable<IAutoMovieSequence["shots"][number]["transition"]>,
-  path: string,
-  violations: IAutoMovieConstraintViolation[],
-): void =>
-  validateRange(
-    transition.duration,
-    `${path}.duration`,
-    0,
-    Infinity,
-    "transition duration",
-    violations,
-    false,
-  );
-
-const entryDuration = (
-  entry: IAutoMovieSequence["shots"][number],
-  shot: IAutoMovieShot | undefined,
-): number | null => {
-  if (shot === undefined) return null;
-  return entry.trim?.duration ?? shot.duration;
-};
-
-const validateIncreasingTimes = (
-  times: number[],
-  duration: number,
-  path: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  let previous = -Infinity;
-  times.forEach((time, i) => {
-    if (!Number.isFinite(time) || time < 0 || time > duration)
-      pushViolation(
-        violations,
-        "temporal",
-        `${path}[${i}]`,
-        `track time must be finite and within [0, ${duration}], but was ${time}`,
-        time,
-      );
-    if (Number.isFinite(time) && time <= previous)
-      pushViolation(
-        violations,
-        "temporal",
-        `${path}[${i}]`,
-        `track times must strictly increase; ${time} is not greater than ${previous}`,
-        time,
-      );
-    if (Number.isFinite(time)) previous = time;
-  });
-};
-
-const validateUniqueIds = <T extends { id: string }>(
-  items: T[],
-  path: string,
-  label: string,
-  violations: IAutoMovieConstraintViolation[],
-): void =>
-  validateUniqueBy(
-    items.map((item, index) => ({ id: item.id, path: `${path}[${index}].id` })),
-    label,
-    violations,
-  );
-
-const validateUniqueBy = (
-  entries: { id: string; path: string }[],
-  label: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  const seen = new Set<string>();
-  for (const entry of entries) {
-    if (seen.has(entry.id))
-      pushViolation(
-        violations,
-        "type",
-        entry.path,
-        `${label} "${entry.id}" must be unique`,
-        entry.id,
-      );
-    seen.add(entry.id);
-  }
-};
-
-const validateNonEmptyId = (
-  id: string,
-  path: string,
-  label: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  if (id.trim().length === 0)
-    pushViolation(
-      violations,
-      "type",
-      path,
-      `${label} must be a non-empty id`,
-      id,
-    );
-};
-
-const validateNonEmptyText = (
-  text: string,
-  path: string,
-  label: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  if (text.trim().length === 0)
-    pushViolation(
-      violations,
-      "type",
-      path,
-      `${label} must be non-empty text`,
-      text,
-    );
-};
-
-const validateTransformArtifact = (
-  transform: IAutoMovieTransform,
-  path: string,
-  label: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  validateVectorArtifact(
-    transform.translation,
-    `${path}.translation`,
-    `${label} translation`,
-    violations,
-  );
-  validateQuaternionArtifact(
-    transform.rotation,
-    `${path}.rotation`,
-    `${label} rotation`,
-    violations,
-  );
-  validateVectorArtifact(
-    transform.scale,
-    `${path}.scale`,
-    `${label} scale`,
-    violations,
-  );
-  for (const axis of ["x", "y", "z"] as const)
-    if (transform.scale[axis] <= 0)
-      pushViolation(
-        violations,
-        "range",
-        `${path}.scale.${axis}`,
-        `${label} scale component must be > 0, but was ${transform.scale[axis]}`,
-        transform.scale[axis],
-      );
-};
-
-const validateVectorArtifact = (
-  vector: IAutoMovieVector3,
-  path: string,
-  label: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  for (const axis of ["x", "y", "z"] as const)
-    if (!Number.isFinite(vector[axis]))
-      pushViolation(
-        violations,
-        "range",
-        `${path}.${axis}`,
-        `${label} component must be finite, but was ${vector[axis]}`,
-        vector[axis],
-      );
-};
-
-const validateQuaternionArtifact = (
-  quaternion: IAutoMovieQuaternion,
-  path: string,
-  label: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  for (const axis of ["x", "y", "z", "w"] as const)
-    if (!Number.isFinite(quaternion[axis]))
-      pushViolation(
-        violations,
-        "range",
-        `${path}.${axis}`,
-        `${label} component must be finite, but was ${quaternion[axis]}`,
-        quaternion[axis],
-      );
-};
-
-const validateColorArtifact = (
-  color: IAutoMovieScene["lights"][number]["color"],
-  path: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  for (const channel of ["r", "g", "b"] as const)
-    validateRange(
-      color[channel],
-      `${path}.${channel}`,
-      0,
-      1,
-      channel,
-      violations,
-    );
-  if (color.a !== null)
-    validateRange(color.a, `${path}.a`, 0, 1, "alpha", violations);
-};
-
-const validateRange = (
-  value: number,
-  path: string,
-  min: number,
-  max: number,
-  label: string,
-  violations: IAutoMovieConstraintViolation[],
-  inclusiveMin = true,
-): void => {
-  const aboveMin = inclusiveMin ? value >= min : value > min;
-  const belowMax = max === Infinity ? true : value <= max;
-  if (!Number.isFinite(value) || !aboveMin || !belowMax)
-    pushViolation(
-      violations,
-      "range",
-      path,
-      max === Infinity
-        ? `${label} must be finite and ${inclusiveMin ? ">=" : ">"} ${min}, but was ${value}`
-        : `${label} must be finite and within ${inclusiveMin ? "[" : "("}${min}, ${max}], but was ${value}`,
-      value,
-    );
-};
-
-const pushViolation = (
-  violations: IAutoMovieConstraintViolation[],
-  kind: IAutoMovieConstraintViolation["kind"],
-  path: string,
-  expected: string,
-  value: unknown,
-): void => {
-  violations.push(violation(kind, path, expected, value));
-};
-
-/**
- * Stored slate slices accepted by MCP query tools.
- *
- * This is narrower than the full production slate so query schemas stay small:
- * film assembly is not needed to read script, scene, shots, notes, or beat-end
- * state.
- */
-export interface IAutoMovieMcpStoredSlate {
-  /** Committed script, or null before SCRIPT exists. */
-  script: IAutoMovieScript | null;
-
-  /** Committed staged scene, or null before STAGING exists. */
-  scene: IAutoMovieScene | null;
-
-  /** Shots built so far. */
-  shots: IAutoMovieShot[];
-
-  /** Resolved end-state snapshots for built beats. */
-  beatEnds: IAutoMovieBeatEndState[];
-
-  /** Open review notes. */
-  notes: IAutoMovieReviewNote[];
-}
-
-/** Writable slate accepted and returned by MCP commit tools. */
-export interface IAutoMovieMcpWritableSlate extends IAutoMovieMcpStoredSlate {
-  /** Assembled film, or null before CUT has committed. */
-  film: IAutoMovieSequence | null;
-}
-
-/** The `getScript` query result. */
-export interface IAutoMovieGetScriptOutput {
-  /** The committed script slice, or null until it exists. */
-  script: IAutoMovieScript | null;
-}
-
-/** The `getScene` query result. */
-export interface IAutoMovieGetSceneOutput {
-  /** The committed staged scene, or null until it exists. */
-  scene: IAutoMovieScene | null;
-}
-
-/** The `getShot` query result. */
-export interface IAutoMovieGetShotOutput {
-  /** The shot for the requested beat, or null until it exists. */
-  shot: IAutoMovieShot | null;
-}
-
-/** The `getNotes` query result. */
-export interface IAutoMovieGetNotesOutput {
-  /** Open review notes, optionally filtered by beat. */
-  notes: IAutoMovieReviewNote[];
-}
-
-/** The `getBeatEnd` query result. */
-export interface IAutoMovieGetBeatEndOutput {
-  /** The end-state for the requested beat, or null until it exists. */
-  beatEnd: IAutoMovieBeatEndState | null;
-}
-
-/**
- * Geometry query context accepted by MCP tools.
- *
- * It keeps only the pieces the queries need: staged scene nodes, model
- * skeletons, compiled MCP-safe motions, and an optional shot to sample.
- */
-export interface IAutoMovieMcpGeometryContext {
-  /** Staged scene whose node transforms define world space. */
-  scene: IAutoMovieScene;
-
-  /** Model id to skeleton lookup; full mesh/material payloads are not needed. */
-  models: IAutoMovieMcpGeometryModel[];
-
-  /** Compiled motions, usually the `perform` output's `motions` record. */
-  motions: Record<string, IAutoMovieMcpMotion>;
-
-  /** Optional shot whose performances choose which motion each actor samples. */
-  shot?: IAutoMovieShot | null;
-}
-
-/** Minimal model geometry lookup accepted by MCP query tools. */
-export interface IAutoMovieMcpGeometryModel {
-  /** Model id referenced by scene nodes. */
-  id: string;
-
-  /** Skeleton used for FK and reach queries; null for props. */
-  skeleton: IAutoMovieSkeleton | null;
-}
-
-/** The `getResolvedPose` query result. */
-export interface IAutoMovieGetResolvedPoseOutput {
-  /** Actor pose resolved into world-space bone transforms, or null. */
-  resolvedPose: IAutoMovieMcpResolvedPose | null;
-}
-
-/** Actor pose after sampling motion and running forward kinematics. */
-export interface IAutoMovieMcpResolvedPose {
-  /** Scene-node id of the resolved actor. */
-  node: string;
-
-  /** Model id placed by the scene node. */
-  model: string;
-
-  /** Motion id sampled for this query, or null for a held pose. */
-  motion: string | null;
-
-  /** Shot-local time used for sampling, seconds. */
-  t: number;
-
-  /** Sparse pose sampled or held before FK. */
-  pose: IAutoMoviePose;
-
-  /** Bone transforms in scene world space. */
-  bones: IAutoMovieMcpResolvedBone[];
-}
-
-/** A single resolved bone transform in scene world space. */
-export interface IAutoMovieMcpResolvedBone {
-  /** Bone name. */
-  bone: AutoMovieHumanoidBone;
-
-  /** Local bone rotation after rest and articulation compose. */
-  localRotation: IAutoMovieQuaternion;
-
-  /** World-space bone origin. */
-  worldPosition: IAutoMovieVector3;
-
-  /** World-space bone orientation. */
-  worldRotation: IAutoMovieQuaternion;
-}
-
-/** The `getReach` query result. */
-export interface IAutoMovieGetReachOutput {
-  /** Reach report, or null when actor/target cannot resolve to rigged points. */
-  reach: IAutoMovieMcpReachReport | null;
-}
-
-/** Reachability report for one actor against one target. */
-export interface IAutoMovieMcpReachReport {
-  /** Scene-node id of the actor. */
-  actor: string;
-
-  /** Target resolved into world space. */
-  target: IAutoMovieVector3;
-
-  /** Left arm report, or null when the rig lacks that arm chain. */
-  left: IAutoMovieMcpArmReach | null;
-
-  /** Right arm report, or null when the rig lacks that arm chain. */
-  right: IAutoMovieMcpArmReach | null;
-
-  /** True when either arm can reach without a positive gap. */
-  reachable: boolean;
-}
-
-/** Reachability and IK pose for one arm. */
-export interface IAutoMovieMcpArmReach {
-  /** Arm side. */
-  side: "left" | "right";
-
-  /** Distance from shoulder to target in model space. */
-  targetDistance: number;
-
-  /** Shoulder-to-hand reach length in model space. */
-  maximumDistance: number;
-
-  /** Positive miss distance; zero means reachable. */
-  gap: number;
-
-  /** True when the target lies within the arm's reach shell. */
-  reachable: boolean;
-
-  /** IK pose that reaches the target, or extends toward it if out of range. */
-  pose: IAutoMoviePose | null;
-}
-
-/** The `measureDistance` query result. */
-export interface IAutoMovieMeasureDistanceOutput {
-  /** Distance report, or null when either target is not positional. */
-  measurement: IAutoMovieMcpDistanceMeasurement | null;
-}
-
-/** Resolved endpoints and their Euclidean distance. */
-export interface IAutoMovieMcpDistanceMeasurement {
-  /** First endpoint in world space. */
-  from: IAutoMovieVector3;
-
-  /** Second endpoint in world space. */
-  to: IAutoMovieVector3;
-
-  /** Euclidean distance between endpoints, meters. */
-  distance: number;
-}
-
-/** Validation tool result. */
-export interface IAutoMovieValidateOutput {
-  /** Success or field-located violations. */
-  validation: IAutoMovieValidation;
-}
-
-/** Commit tool result. */
-export interface IAutoMovieCommitOutput {
-  /** True only when the input artifact was written into the returned slate. */
-  committed: boolean;
-
-  /** Updated slate on success; the unchanged input slate on failure. */
-  slate: IAutoMovieMcpWritableSlate;
-
-  /** Success or field-located violations explaining why commit was refused. */
-  validation: IAutoMovieValidation;
-}
-
-/** Render planning result. */
-export interface IAutoMoviePlanRenderOutput {
-  /** Success or field-located violations explaining why render cannot start. */
-  validation: IAutoMovieValidation;
-
-  /** Deterministic render plan, or null when validation failed. */
-  plan: IAutoMovieMcpRenderPlan | null;
-}
-
-/** Preview-frame planning result. */
-export interface IAutoMovieSeeFrameOutput {
-  /** Success or field-located violations explaining why preview cannot resolve. */
-  validation: IAutoMovieValidation;
-
-  /** Preview frame contract, or null when validation failed. */
-  preview: IAutoMovieMcpFramePreview | null;
-}
-
-/** Shot or sequence selected for rendering. */
-export interface IAutoMovieMcpRenderTarget {
-  /** Render target kind. */
-  kind: "shot" | "sequence";
-
-  /** Committed shot or sequence id. */
-  id: string;
-}
-
-/** Deterministic render plan exposed through MCP. */
-export interface IAutoMovieMcpRenderPlan {
-  /** Selected committed target. */
-  target: IAutoMovieMcpRenderTarget;
-
-  /** Target duration in seconds. */
-  duration: number;
-
-  /** Number of frames to capture. */
-  frameCount: number;
-
-  /** Clip-local sample instants, seconds. */
-  times: number[];
-
-  /** Directory where frame files would be written. */
-  frameDir: string;
-
-  /** First frame path. */
-  firstFrame: string;
-
-  /** Last frame path. */
-  lastFrame: string;
-
-  /** Ffmpeg input pattern for the frame sequence. */
-  inputPattern: string;
-
-  /** Encoded output path. */
-  outputPath: string;
-
-  /** Ffmpeg argument vector for encoding the frames. */
-  ffmpegArgs: string[];
-
-  /** Per-pass guide output locations (beauty only unless more requested). */
-  passes: IAutoMovieGuidePassOutput[];
-}
-
-/**
- * One frame-capture request the server hands the host-injected adapter: which
- * committed target, which frame/time, which guide pass, and where the frame
- * file belongs. The adapter owns the browser/renderer; the server only plans.
- */
-export interface IAutoMovieMcpCaptureRequest {
-  /** Selected committed target. */
-  target: IAutoMovieMcpRenderTarget;
-
-  /** Zero-based frame index. */
-  frame: number;
-
-  /** Clip-local sample time in seconds. */
-  time: number;
-
-  /** Guide pass to draw. */
-  pass: AutoMovieGuidePass;
-
-  /** Deterministic pass-tagged frame path the capture should produce. */
-  framePath: string;
-
-  /** Render width in pixels. */
-  width: number;
-
-  /** Render height in pixels. */
-  height: number;
-
-  /** Tone mapping requested by the render spec. */
-  toneMapping: IAutoMovieRenderSpec["toneMapping"];
-}
-
-/** The captured image the adapter returns for one request. */
-export interface IAutoMovieMcpCapturedImage {
-  /** Frame path the adapter actually wrote (normally the requested one). */
-  framePath: string;
-
-  /** Image MIME type, or null when the adapter wrote a file only. */
-  mimeType: string | null;
-
-  /** Inline image payload for immediate inspection, or null when file-only. */
-  dataUrl: string | null;
-}
-
-/**
- * Host-injected frame capture: drives a real renderer (a Playwright page over
- * the viewer, a render worker) for one planned frame and returns the image.
- * Failures should throw — a capture error is a host runtime fault, not a
- * validation issue, and propagates as a tool error.
- */
-export type AutoMovieMcpFrameCapture = (
-  request: IAutoMovieMcpCaptureRequest,
-) => Promise<IAutoMovieMcpCapturedImage>;
-
-/** Preview frame returned by `seeFrame`. */
-export interface IAutoMovieMcpFramePreview {
-  /** Selected committed target. */
-  target: IAutoMovieMcpRenderTarget;
-
-  /** Zero-based frame index. */
-  frame: number;
-
-  /** Clip-local sample time in seconds. */
-  time: number;
-
-  /** Guide pass drawn (or planned, when no adapter is attached). */
-  pass: AutoMovieGuidePass;
-
-  /** Deterministic pass-tagged frame path. */
-  framePath: string;
-
-  /** Render width in pixels. */
-  width: number;
-
-  /** Render height in pixels. */
-  height: number;
-
-  /** Tone mapping requested by the render spec. */
-  toneMapping: IAutoMovieRenderSpec["toneMapping"];
-
-  /**
-   * `captured` when the host's adapter produced the image; `no-capture-adapter`
-   * when the server has no adapter and only planned the frame.
-   */
-  status: "captured" | "no-capture-adapter";
-
-  /** The captured image, or null when no adapter is attached. */
-  image: IAutoMovieMcpCapturedImage | null;
-}
-
-/** The `stage` tool's result (a single object wrapping the engine's union). */
-export interface IAutoMovieStageOutput {
-  /** The staged scene on success, or the staging violations on failure. */
-  staged: IAutoMovieStagedSet;
-}
-
-/** The `block` tool's result. */
-export interface IAutoMovieBlockOutput {
-  /** The blocked beat on success, or the blocking violations on failure. */
-  blocked: IAutoMovieBlockedBeat;
-}
-
-/**
- * Actor context accepted by the MCP `perform` tool.
- *
- * This is the JSON-safe subset of the engine's actor context. Gait cubic-bezier
- * tuple fields are intentionally omitted; use named easing curves for
- * MCP-supplied gait limbs.
- */
-export interface IAutoMovieMcpActorContext {
-  /** Skeleton id every synthesized clip targets. */
-  skeleton: string;
-
-  /** Gaits this actor can perform, without tuple-valued bezier controls. */
-  gaits: IAutoMovieMcpGait[];
-
-  /** Where the actor stands at the start of the shot (world meters). */
-  position: IAutoMovieVector3;
-
-  /** Locomotion speed in meters per second. */
-  speed: number;
-
-  /** Heading the actor faces, degrees about +Y (0 = +Z). */
-  facingDeg: number;
-
-  /** Eye height above the actor position, meters. */
-  eyeHeight: number;
-
-  /** Pose the actor settles into for a `hold`. */
-  restPose: IAutoMoviePose;
-
-  /** Optional rig for ROM validation and IK/physics synthesis. */
-  rig?: IAutoMovieSkeleton;
-
-  /** Optional clinical rest-frame lookup, paired with the renderer/player. */
-  restFrames?: IAutoMovieActorContext["restFrames"];
-}
-
-/** JSON-safe gait definition accepted by the MCP `perform` tool. */
-export interface IAutoMovieMcpGait {
-  /** Stable gait name such as `"walk"` or `"run"`. */
-  name: string;
-
-  /** Stride period in seconds. */
-  period: number;
-
-  /** Optional vertical body-mass oscillation. */
-  rootBob?: IAutoMovieGaitRootBob;
-
-  /** Limb swing channels without tuple-valued bezier controls. */
-  limbs: IAutoMovieMcpGaitLimb[];
-}
-
-/** JSON-safe gait limb channel accepted by the MCP `perform` tool. */
-export interface IAutoMovieMcpGaitLimb {
-  /** The bone this limb swing drives. */
-  bone: AutoMovieHumanoidBone;
-
-  /** Joint axis this gait channel writes. */
-  axis?: "flexion" | "abduction" | "twist";
-
-  /** Cycle phase offset in [0, 1). */
-  phase: number;
-
-  /** Fraction of the stride spent in stance. */
-  duty: number;
-
-  /** Peak swing on the selected axis, degrees. */
-  amplitude: number;
-
-  /** Easing used while the limb is in stance. */
-  stanceEasing?: AutoMovieEasing;
-
-  /** Easing used while the limb is in swing. */
-  swingEasing?: AutoMovieEasing;
-
-  /** Center the swing oscillates around, degrees. */
-  neutral?: number;
-}
-
-/**
- * Performed-shot union returned by the MCP `perform` tool.
- *
- * It mirrors the engine result but rewrites motion keyframe bezier tuples into
- * named object fields so MCP schema generation stays JSON-schema compatible.
- */
-export type IAutoMovieMcpPerformedShot =
-  | IAutoMovieMcpPerformedShot.ISuccess
-  | IAutoMovieMcpPerformedShot.IFailure;
-export namespace IAutoMovieMcpPerformedShot {
-  /** The performance compiled and every clip passed validation. */
-  export interface ISuccess {
-    /** Discriminator. */
-    success: true;
-
-    /** The shot, ready for the cut. */
-    shot: IAutoMovieShot;
-
-    /** The synthesized per-actor clips, keyed by scene-node id. */
-    motions: Record<string, IAutoMovieMcpMotion>;
-  }
-
-  /** The action list contradicted the stage, or a compiled clip broke ROM. */
-  export interface IFailure {
-    /** Discriminator. */
-    success: false;
-
-    /** Every violation found, for the correction round. */
-    violations: IAutoMovieConstraintViolation[];
-  }
-}
-
-/** JSON-safe motion clip returned by the MCP `perform` tool. */
-export interface IAutoMovieMcpMotion {
-  /** Stable id so scenes and exports can cite this clip. */
-  id: string;
-
-  /** Which skeleton this clip animates. */
-  skeleton: string;
-
-  /** Total clip length, seconds. */
-  duration: number;
-
-  /** Whether the clip loops seamlessly. */
-  loop: boolean;
-
-  /** Keyframes in strictly increasing time order. */
-  keyframes: IAutoMovieMcpKeyframe[];
-}
-
-/** JSON-safe keyframe returned by the MCP `perform` tool. */
-export interface IAutoMovieMcpKeyframe {
-  /** Timestamp within the clip, seconds. */
-  time: number;
-
-  /** The body pose held at this instant. */
-  pose: IAutoMoviePose;
-
-  /** Optional facial expression at this instant. */
-  expression: IAutoMovieExpression | null;
-
-  /** How to interpolate from this keyframe toward the next. */
-  easing: AutoMovieEasing;
-
-  /** Cubic-bezier control points as named fields, or null for named easing. */
-  bezier: IAutoMovieMcpBezier | null;
-}
-
-/** Cubic-bezier control points as named fields, not a tuple. */
-export interface IAutoMovieMcpBezier {
-  /** First control point x. */
-  x1: number;
-
-  /** First control point y. */
-  y1: number;
-
-  /** Second control point x. */
-  x2: number;
-
-  /** Second control point y. */
-  y2: number;
-}
-
-/** The `perform` tool's result. */
-export interface IAutoMoviePerformOutput {
-  /** The performed shot on success, or the performance violations on failure. */
-  performed: IAutoMovieMcpPerformedShot;
-}
-
-/** The `cut` tool's result. */
-export interface IAutoMovieCutOutput {
-  /** The cut film on success, or the assemble violations on failure. */
-  cut: IAutoMovieCut;
-}
-
-/** The `forge` tool's result. */
-export interface IAutoMovieForgeOutput {
-  /** The forged cast on success, or the forge violations on failure. */
-  forged: IAutoMovieForgedCast;
 }
