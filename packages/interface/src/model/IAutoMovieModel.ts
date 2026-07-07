@@ -1,6 +1,7 @@
 import { IAutoMovieMaterial } from "../material/IAutoMovieMaterial";
 import { IAutoMovieSkeleton } from "../skeleton/IAutoMovieSkeleton";
 import { AutoMovieAssetOrigin } from "./AutoMovieAssetOrigin";
+import { IAutoMovieAffordance } from "./IAutoMovieAffordance";
 import { IAutoMovieBody } from "./IAutoMovieBody";
 import { IAutoMovieModelPart } from "./IAutoMovieModelPart";
 
@@ -50,6 +51,14 @@ export interface IAutoMovieModel {
    * physical-plausibility feedback is only computed for models with a body.
    */
   body: IAutoMovieBody | null;
+
+  /**
+   * Semantic contact points the object declares — stackable tops, handles,
+   * sockets, hooks ({@link IAutoMovieAffordance}). Optional evolving-schema
+   * field (the `space?` / `events?` pattern): absent or `null` means the model
+   * declares no affordances, and nothing downstream changes.
+   */
+  affordances?: IAutoMovieAffordance[] | null;
 
   /** Materials referenced by the parts. */
   materials: IAutoMovieMaterial[];
