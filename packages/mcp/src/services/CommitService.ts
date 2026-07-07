@@ -10,6 +10,7 @@ import {
   IAutoMovieValidation,
 } from "@automovie/interface";
 
+import { AutoMovieContext } from "../AutoMovieContext";
 import {
   IAutoMovieCommitOutput,
   IAutoMovieMcpGeometryModel,
@@ -40,144 +41,191 @@ import {
  * facade; this service owns the execution.
  */
 export class CommitService {
+  public constructor(private readonly context?: AutoMovieContext) {}
+
+  /**
+   * The slate a commit transforms: the explicit one when given (the tool stays
+   * a pure transform), else the resident project's slate (#614). Resident-based
+   * successful commits write through — the project files mirror the returned
+   * slate, including the invalidation cascade (cleared slices disappear).
+   */
+  private base(
+    slate: IAutoMovieMcpWritableSlate | undefined,
+    caller: string,
+  ): { slate: IAutoMovieMcpWritableSlate; resident: boolean } {
+    if (slate !== undefined) return { slate, resident: false };
+    return {
+      slate: this.context!.requireProject(caller).writableSlate(),
+      resident: true,
+    };
+  }
+
+  private finish(
+    output: IAutoMovieCommitOutput,
+    resident: boolean,
+  ): IAutoMovieCommitOutput {
+    if (resident && output.committed)
+      this.context!.requireProject("commit").saveSlate(output.slate);
+    return output;
+  }
+
   public commitScript(props: {
-    slate: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     script: IAutoMovieScript;
   }): IAutoMovieCommitOutput {
+    const { slate, resident } = this.base(props.slate, "commitScript");
     const validation = validateScriptArtifact(props.script);
     if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({
-      ...props.slate,
-      script: props.script,
-      scene: null,
-      shots: [],
-      beatEnds: [],
-      notes: [],
-      film: null,
-    });
+      return this.finish(failedCommit(slate, validation), resident);
+    return this.finish(
+      successfulCommit({
+        ...slate,
+        script: props.script,
+        scene: null,
+        shots: [],
+        beatEnds: [],
+        notes: [],
+        film: null,
+      }),
+      resident,
+    );
   }
 
   public commitScene(props: {
-    slate: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     scene: IAutoMovieScene;
     models: IAutoMovieMcpGeometryModel[];
   }): IAutoMovieCommitOutput {
+    const { slate, resident } = this.base(props.slate, "commitScene");
     const violations: IAutoMovieConstraintViolation[] = [];
     appendValidation(
       violations,
       validateSceneArtifact(props.scene, props.models),
     );
-    if (props.slate.script === null)
+    if (slate.script === null)
       pushViolation(
         violations,
         "type",
         "$slate.script",
         "a script must be committed before a scene",
-        props.slate.script,
+        slate.script,
       );
-    else
-      validateSceneAgainstScript(props.scene, props.slate.script, violations);
+    else validateSceneAgainstScript(props.scene, slate.script, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({
-      ...props.slate,
-      scene: props.scene,
-      shots: [],
-      beatEnds: [],
-      notes: [],
-      film: null,
-    });
+      return this.finish(failedCommit(slate, validation), resident);
+    return this.finish(
+      successfulCommit({
+        ...slate,
+        scene: props.scene,
+        shots: [],
+        beatEnds: [],
+        notes: [],
+        film: null,
+      }),
+      resident,
+    );
   }
 
   public commitShot(props: {
-    slate: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     shot: IAutoMovieShot;
     motions?: Record<string, IAutoMovieMcpMotion>;
   }): IAutoMovieCommitOutput {
+    const { slate, resident } = this.base(props.slate, "commitShot");
     const violations: IAutoMovieConstraintViolation[] = [];
     validateUniqueIds(
-      props.slate.shots,
+      slate.shots,
       "$slate.shots",
       "committed shot id",
       violations,
     );
-    const beat = validateShotCommitPreconditions(
-      props.shot,
-      props.slate,
-      violations,
-    );
-    if (props.slate.scene !== null)
+    const beat = validateShotCommitPreconditions(props.shot, slate, violations);
+    if (slate.scene !== null)
       appendValidation(
         violations,
-        validateShotArtifact(props.shot, props.slate.scene, props.motions),
+        validateShotArtifact(props.shot, slate.scene, props.motions),
       );
     const validation = toValidation(violations);
     if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({
-      ...props.slate,
-      shots: upsertById(props.slate.shots, props.shot),
-      beatEnds: props.slate.beatEnds.filter((end) => end.beat !== beat),
-      film: null,
-    });
+      return this.finish(failedCommit(slate, validation), resident);
+    return this.finish(
+      successfulCommit({
+        ...slate,
+        shots: upsertById(slate.shots, props.shot),
+        beatEnds: slate.beatEnds.filter((end) => end.beat !== beat),
+        film: null,
+      }),
+      resident,
+    );
   }
 
   public commitBeatEnd(props: {
-    slate: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     beatEnd: IAutoMovieBeatEndState;
   }): IAutoMovieCommitOutput {
+    const { slate, resident } = this.base(props.slate, "commitBeatEnd");
     const violations: IAutoMovieConstraintViolation[] = [];
     validateUniqueBy(
-      props.slate.beatEnds.map((end, index) => ({
+      slate.beatEnds.map((end, index) => ({
         id: end.beat,
         path: `$slate.beatEnds[${index}].beat`,
       })),
       "committed beat end",
       violations,
     );
-    validateBeatEndArtifact(props.beatEnd, props.slate, violations);
+    validateBeatEndArtifact(props.beatEnd, slate, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({
-      ...props.slate,
-      beatEnds: upsertBy(
-        props.slate.beatEnds,
-        props.beatEnd,
-        (end) => end.beat === props.beatEnd.beat,
-      ),
-      film: null,
-    });
+      return this.finish(failedCommit(slate, validation), resident);
+    return this.finish(
+      successfulCommit({
+        ...slate,
+        beatEnds: upsertBy(
+          slate.beatEnds,
+          props.beatEnd,
+          (end) => end.beat === props.beatEnd.beat,
+        ),
+        film: null,
+      }),
+      resident,
+    );
   }
 
   public commitNotes(props: {
-    slate: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     notes: IAutoMovieReviewNote[];
   }): IAutoMovieCommitOutput {
+    const { slate, resident } = this.base(props.slate, "commitNotes");
     const violations: IAutoMovieConstraintViolation[] = [];
-    validateNotesArtifact(props.notes, props.slate, violations);
+    validateNotesArtifact(props.notes, slate, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({ ...props.slate, notes: props.notes, film: null });
+      return this.finish(failedCommit(slate, validation), resident);
+    return this.finish(
+      successfulCommit({ ...slate, notes: props.notes, film: null }),
+      resident,
+    );
   }
 
   public commitFilm(props: {
-    slate: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     film: IAutoMovieSequence;
   }): IAutoMovieCommitOutput {
+    const { slate, resident } = this.base(props.slate, "commitFilm");
     const violations: IAutoMovieConstraintViolation[] = [];
     appendValidation(
       violations,
-      validateSequenceArtifact(props.film, props.slate.shots),
+      validateSequenceArtifact(props.film, slate.shots),
     );
-    validateFilmPreconditions(props.film, props.slate, violations);
+    validateFilmPreconditions(props.film, slate, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
-      return failedCommit(props.slate, validation);
-    return successfulCommit({ ...props.slate, film: props.film });
+      return this.finish(failedCommit(slate, validation), resident);
+    return this.finish(
+      successfulCommit({ ...slate, film: props.film }),
+      resident,
+    );
   }
 }
 

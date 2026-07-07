@@ -8,6 +8,7 @@ import {
   IAutoMovieSlate,
 } from "@automovie/interface";
 
+import { AutoMovieContext } from "../AutoMovieContext";
 import {
   IAutoMovieGetBeatEndOutput,
   IAutoMovieGetNotesOutput,
@@ -23,59 +24,89 @@ import {
  * {@link AutoMovieApplication} facade; this service owns the execution.
  */
 export class SlateQueryService {
+  public constructor(private readonly context?: AutoMovieContext) {}
+
+  /**
+   * The slate a query reads: the explicit one when given, else the resident
+   * project's stored slices (#614) — with the context's actionable error when
+   * neither exists.
+   */
+  private stored(
+    slate: IAutoMovieMcpStoredSlate | undefined,
+    caller: string,
+  ): IAutoMovieMcpStoredSlate {
+    if (slate !== undefined) return slate;
+    return this.context!.requireProject(caller).storedSlate();
+  }
+
   public getScript(props: {
-    slate: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetScriptOutput {
     return {
-      script: readSlateContext(toStoredSlate(props.slate), {
-        type: "getScript",
-      }) as IAutoMovieScript | null,
+      script: readSlateContext(
+        toStoredSlate(this.stored(props.slate, "getScript")),
+        {
+          type: "getScript",
+        },
+      ) as IAutoMovieScript | null,
     };
   }
 
   public getScene(props: {
-    slate: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetSceneOutput {
     return {
-      scene: readSlateContext(toStoredSlate(props.slate), {
-        type: "getScene",
-      }) as IAutoMovieScene | null,
+      scene: readSlateContext(
+        toStoredSlate(this.stored(props.slate, "getScene")),
+        {
+          type: "getScene",
+        },
+      ) as IAutoMovieScene | null,
     };
   }
 
   public getShot(props: {
-    slate: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpStoredSlate;
     beat: string;
   }): IAutoMovieGetShotOutput {
     return {
-      shot: readSlateContext(toStoredSlate(props.slate), {
-        type: "getShot",
-        beat: props.beat,
-      }) as IAutoMovieShot | null,
+      shot: readSlateContext(
+        toStoredSlate(this.stored(props.slate, "getShot")),
+        {
+          type: "getShot",
+          beat: props.beat,
+        },
+      ) as IAutoMovieShot | null,
     };
   }
 
   public getNotes(props: {
-    slate: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpStoredSlate;
     beat?: string;
   }): IAutoMovieGetNotesOutput {
     return {
-      notes: readSlateContext(toStoredSlate(props.slate), {
-        type: "getNotes",
-        beat: props.beat,
-      }) as IAutoMovieReviewNote[],
+      notes: readSlateContext(
+        toStoredSlate(this.stored(props.slate, "getNotes")),
+        {
+          type: "getNotes",
+          beat: props.beat,
+        },
+      ) as IAutoMovieReviewNote[],
     };
   }
 
   public getBeatEnd(props: {
-    slate: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpStoredSlate;
     beat: string;
   }): IAutoMovieGetBeatEndOutput {
     return {
-      beatEnd: readSlateContext(toStoredSlate(props.slate), {
-        type: "getBeatEnd",
-        beat: props.beat,
-      }) as IAutoMovieBeatEndState | null,
+      beatEnd: readSlateContext(
+        toStoredSlate(this.stored(props.slate, "getBeatEnd")),
+        {
+          type: "getBeatEnd",
+          beat: props.beat,
+        },
+      ) as IAutoMovieBeatEndState | null,
     };
   }
 }

@@ -42,6 +42,7 @@ import {
   IAutoMovieMcpStoredSlate,
   IAutoMovieMcpWritableSlate,
   IAutoMovieMeasureDistanceOutput,
+  IAutoMovieOpenProjectOutput,
   IAutoMoviePerformOutput,
   IAutoMoviePlanRenderOutput,
   IAutoMovieSeeFrameOutput,
@@ -77,6 +78,7 @@ import { ValidationService } from "./services/ValidationService";
  * @author Samchon
  */
 export class AutoMovieApplication {
+  private readonly context: AutoMovieContext;
   private readonly slateQuery: SlateQueryService;
   private readonly geometry: GeometryService;
   private readonly validation: ValidationService;
@@ -93,14 +95,42 @@ export class AutoMovieApplication {
      * `no-capture-adapter` honestly instead of pretending.
      */
     capture?: AutoMovieMcpFrameCapture;
+    /**
+     * Project root to activate at startup (#614). The project directory itself
+     * is the resident memory: slate slices as human-readable JSON files plus
+     * tracked binary assets. Tools may then omit their slate to read/commit the
+     * resident project.
+     */
+    projectRoot?: string;
   }) {
-    const context = new AutoMovieContext(props?.capture);
-    this.slateQuery = new SlateQueryService();
+    this.context = new AutoMovieContext(props?.capture, props?.projectRoot);
+    this.slateQuery = new SlateQueryService(this.context);
     this.geometry = new GeometryService();
     this.validation = new ValidationService();
-    this.commit = new CommitService();
-    this.render = new RenderService(context);
+    this.commit = new CommitService(this.context);
+    this.render = new RenderService(this.context);
     this.pipeline = new PipelineService();
+  }
+
+  /**
+   * Open (or create) the resident project at `root` and return what it holds.
+   * The project directory itself is the memory (#614): slate slices live as
+   * human-readable JSON files (`script.json`, `shots/<beat>.json`, ...), and
+   * binary assets (models, textures, rendered frames) are tracked by the
+   * manifest and referenced by path. After opening, every `get*` and `commit*`
+   * tool may omit its `slate` to read from — and write through to — the
+   * project, so a long production never re-sends its whole state per call.
+   * Reopening the same root keeps the live project; a fresh directory is a
+   * valid empty project.
+   *
+   * @param props The project root directory.
+   * @returns The activated project's summary.
+   */
+  public openProject(props: {
+    /** Project root directory (created when missing). */
+    root: string;
+  }): IAutoMovieOpenProjectOutput {
+    return { project: this.context.activateProject(props.root).summary() };
   }
 
   /**
@@ -112,7 +142,8 @@ export class AutoMovieApplication {
    * @returns The script slice, or null when absent.
    */
   public getScript(props: {
-    /** The stored slate slices to read. */ slate: IAutoMovieMcpStoredSlate;
+    /** The slate to read; omit to read the resident project (#614). */
+    slate?: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetScriptOutput {
     return this.slateQuery.getScript(props);
   }
@@ -125,7 +156,8 @@ export class AutoMovieApplication {
    * @returns The staged scene slice, or null when absent.
    */
   public getScene(props: {
-    /** The stored slate slices to read. */ slate: IAutoMovieMcpStoredSlate;
+    /** The slate to read; omit to read the resident project (#614). */
+    slate?: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetSceneOutput {
     return this.slateQuery.getScene(props);
   }
@@ -138,8 +170,8 @@ export class AutoMovieApplication {
    * @returns The matching shot, or null when absent.
    */
   public getShot(props: {
-    /** The stored slate slices to read. */
-    slate: IAutoMovieMcpStoredSlate;
+    /** The slate to read; omit to read the resident project (#614). */
+    slate?: IAutoMovieMcpStoredSlate;
     /** Beat id whose shot should be read. */
     beat: string;
   }): IAutoMovieGetShotOutput {
@@ -154,8 +186,8 @@ export class AutoMovieApplication {
    * @returns The matching review notes.
    */
   public getNotes(props: {
-    /** The stored slate slices to read. */
-    slate: IAutoMovieMcpStoredSlate;
+    /** The slate to read; omit to read the resident project (#614). */
+    slate?: IAutoMovieMcpStoredSlate;
     /** Optional beat id filter. */
     beat?: string;
   }): IAutoMovieGetNotesOutput {
@@ -170,8 +202,8 @@ export class AutoMovieApplication {
    * @returns The matching beat end state, or null when absent.
    */
   public getBeatEnd(props: {
-    /** The stored slate slices to read. */
-    slate: IAutoMovieMcpStoredSlate;
+    /** The slate to read; omit to read the resident project (#614). */
+    slate?: IAutoMovieMcpStoredSlate;
     /** Beat id whose end state should be read. */
     beat: string;
   }): IAutoMovieGetBeatEndOutput {
@@ -338,8 +370,8 @@ export class AutoMovieApplication {
    * @returns The new slate, or the unchanged slate with violations.
    */
   public commitScript(props: {
-    /** Current writable slate. */
-    slate: IAutoMovieMcpWritableSlate;
+    /** The slate to transform; omit to commit into the resident project (#614). */
+    slate?: IAutoMovieMcpWritableSlate;
     /** Script artifact to commit. */
     script: IAutoMovieScript;
   }): IAutoMovieCommitOutput {
@@ -354,8 +386,8 @@ export class AutoMovieApplication {
    * @returns The new slate, or the unchanged slate with violations.
    */
   public commitScene(props: {
-    /** Current writable slate. */
-    slate: IAutoMovieMcpWritableSlate;
+    /** The slate to transform; omit to commit into the resident project (#614). */
+    slate?: IAutoMovieMcpWritableSlate;
     /** Scene artifact to commit. */
     scene: IAutoMovieScene;
     /** Model ids available to scene nodes. */
@@ -372,8 +404,8 @@ export class AutoMovieApplication {
    * @returns The new slate, or the unchanged slate with violations.
    */
   public commitShot(props: {
-    /** Current writable slate. */
-    slate: IAutoMovieMcpWritableSlate;
+    /** The slate to transform; omit to commit into the resident project (#614). */
+    slate?: IAutoMovieMcpWritableSlate;
     /** Shot artifact to commit. */
     shot: IAutoMovieShot;
     /** Optional compiled motions keyed by actor or arbitrary ids. */
@@ -390,8 +422,8 @@ export class AutoMovieApplication {
    * @returns The new slate, or the unchanged slate with violations.
    */
   public commitBeatEnd(props: {
-    /** Current writable slate. */
-    slate: IAutoMovieMcpWritableSlate;
+    /** The slate to transform; omit to commit into the resident project (#614). */
+    slate?: IAutoMovieMcpWritableSlate;
     /** Beat-end state to commit. */
     beatEnd: IAutoMovieBeatEndState;
   }): IAutoMovieCommitOutput {
@@ -406,8 +438,8 @@ export class AutoMovieApplication {
    * @returns The new slate, or the unchanged slate with violations.
    */
   public commitNotes(props: {
-    /** Current writable slate. */
-    slate: IAutoMovieMcpWritableSlate;
+    /** The slate to transform; omit to commit into the resident project (#614). */
+    slate?: IAutoMovieMcpWritableSlate;
     /** Complete open review-note backlog. */
     notes: IAutoMovieReviewNote[];
   }): IAutoMovieCommitOutput {
@@ -422,8 +454,8 @@ export class AutoMovieApplication {
    * @returns The new slate, or the unchanged slate with violations.
    */
   public commitFilm(props: {
-    /** Current writable slate. */
-    slate: IAutoMovieMcpWritableSlate;
+    /** The slate to transform; omit to commit into the resident project (#614). */
+    slate?: IAutoMovieMcpWritableSlate;
     /** Sequence artifact to commit. */
     film: IAutoMovieSequence;
   }): IAutoMovieCommitOutput {

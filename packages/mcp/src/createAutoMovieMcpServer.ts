@@ -21,6 +21,8 @@ import { AutoMovieMcpFrameCapture } from "./dto";
 export const createAutoMovieMcpServer = (props?: {
   /** Host-owned frame capture used by `seeFrame`. */
   capture?: AutoMovieMcpFrameCapture;
+  /** Project root to activate at startup (#614); tools may also openProject. */
+  projectRoot?: string;
 }): McpServer =>
   createMcpServer(
     typia.llm.controller<AutoMovieApplication>(
