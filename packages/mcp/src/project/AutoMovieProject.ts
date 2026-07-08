@@ -370,6 +370,10 @@ export const checkAssetPath = (
   relativePath: string,
 ): { path: string } | { fault: string } => {
   const forward = relativePath.replace(/\\/g, "/");
+  if (forward.trim().length === 0)
+    return {
+      fault: `asset path must be non-empty text, but was "${relativePath}"`,
+    };
   if (
     path.isAbsolute(relativePath) ||
     /^[A-Za-z]:/.test(relativePath) ||
@@ -471,7 +475,16 @@ const validateManifest = (file: string, value: unknown): IManifest => {
       file,
       "manifest assets must be an array of strings",
     );
-  return value as unknown as IManifest;
+  const assets = value.assets.map((asset, index) => {
+    const checked = checkAssetPath(asset);
+    if ("fault" in checked)
+      throw new AutoMovieProjectShapeError(
+        file,
+        `manifest assets[${index}] invalid: ${checked.fault}`,
+      );
+    return checked.path;
+  });
+  return { ...value, assets } as unknown as IManifest;
 };
 
 const validateScriptSlice = (
