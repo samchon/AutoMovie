@@ -44,6 +44,7 @@ import {
   appendValidation,
   isRecord,
   pushViolation,
+  validateArrayArtifact,
   validateNonEmptyId,
   validateNonEmptyText,
   validateObjectArtifact,
@@ -802,19 +803,46 @@ const validateScriptArtifact = (
   script: IAutoMovieScript,
 ): IAutoMovieValidation => {
   const violations: IAutoMovieConstraintViolation[] = [];
+  if (!validateObjectArtifact(script, "$input", "script", violations))
+    return toValidation(violations);
   validateNonEmptyText(script.logline, "$input.logline", "logline", violations);
   validateNonEmptyText(script.theme, "$input.theme", "theme", violations);
+  const cast = validateArrayArtifact(
+    script.cast,
+    "$input.cast",
+    "script cast",
+    violations,
+  )
+    ? script.cast
+    : [];
+  const beats = validateArrayArtifact(
+    script.beats,
+    "$input.beats",
+    "script beats",
+    violations,
+  )
+    ? script.beats
+    : [];
   validateUniqueBy(
-    script.cast.map((member, index) => ({
-      id: member.node,
+    cast.map((member, index) => ({
+      id: isRecord(member) ? member.node : undefined,
       path: `$input.cast[${index}].node`,
     })),
     "cast node",
     violations,
   );
-  validateUniqueIds(script.beats, "$input.beats", "beat id", violations);
-  script.cast.forEach((member, i) => {
+  validateUniqueBy(
+    beats.map((beat, index) => ({
+      id: isRecord(beat) ? beat.id : undefined,
+      path: `$input.beats[${index}].id`,
+    })),
+    "beat id",
+    violations,
+  );
+  cast.forEach((member, i) => {
     const path = `$input.cast[${i}]`;
+    if (!validateObjectArtifact(member, path, "cast member", violations))
+      return;
     validateNonEmptyId(member.node, `${path}.node`, "cast node", violations);
     validateNonEmptyText(
       member.character,
@@ -830,16 +858,17 @@ const validateScriptArtifact = (
         violations,
       );
   });
-  if (script.beats.length === 0)
+  if (Array.isArray(script.beats) && beats.length === 0)
     pushViolation(
       violations,
       "type",
       "$input.beats",
       "script must contain at least one beat",
-      script.beats,
+      beats,
     );
-  script.beats.forEach((beat, i) => {
+  beats.forEach((beat, i) => {
     const path = `$input.beats[${i}]`;
+    if (!validateObjectArtifact(beat, path, "script beat", violations)) return;
     validateNonEmptyId(beat.id, `${path}.id`, "beat id", violations);
     validateNonEmptyText(beat.name, `${path}.name`, "beat name", violations);
     validateNonEmptyText(
@@ -862,11 +891,30 @@ const validateScriptArtifact = (
   // artifact: a script with a malformed tree cannot commit. Absent tree =
   // legacy flat beats, no extra checks (byte-compatible).
   if (script.tree !== undefined && script.tree !== null) {
-    const tree = validateScriptTree({
-      tree: script.tree,
-      beats: script.beats,
-    });
-    if (tree.success === false) violations.push(...tree.violations);
+    if (
+      validateArrayArtifact(
+        script.tree,
+        "$input.tree",
+        "script tree",
+        violations,
+      )
+    ) {
+      try {
+        const tree = validateScriptTree({
+          tree: script.tree,
+          beats,
+        });
+        if (tree.success === false) violations.push(...tree.violations);
+      } catch {
+        pushViolation(
+          violations,
+          "type",
+          "$input.tree",
+          "script tree must match the screenplay refinement schema",
+          script.tree,
+        );
+      }
+    }
   }
   return toValidation(violations);
 };

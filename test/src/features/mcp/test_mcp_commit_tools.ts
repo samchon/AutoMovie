@@ -126,6 +126,81 @@ export const test_mcp_commit_tools = (): void => {
     "$input.beats",
     emptySlate,
   );
+  expectRefused(
+    "malformed script root",
+    app.commitScript({
+      slate: emptySlate,
+      script: null as unknown as IAutoMovieScript,
+    }),
+    "$input",
+    emptySlate,
+  );
+  expectRefused(
+    "malformed script cast array",
+    app.commitScript({
+      slate: emptySlate,
+      script: {
+        ...script,
+        cast: null as unknown as IAutoMovieScript["cast"],
+      },
+    }),
+    "$input.cast",
+    emptySlate,
+  );
+  expectRefused(
+    "malformed script beats array",
+    app.commitScript({
+      slate: emptySlate,
+      script: {
+        ...script,
+        beats: null as unknown as IAutoMovieScript["beats"],
+      },
+    }),
+    "$input.beats",
+    emptySlate,
+  );
+  TestValidator.predicate(
+    "malformed script entries return validation",
+    (() => {
+      const output = app.commitScript({
+        slate: emptySlate,
+        script: {
+          ...script,
+          cast: [null as unknown as IAutoMovieScript["cast"][number]],
+          beats: [null as unknown as IAutoMovieScript["beats"][number]],
+        },
+      });
+      return (
+        !output.committed &&
+        hasPath(output.validation, "$input.cast[0]") &&
+        hasPath(output.validation, "$input.beats[0]")
+      );
+    })(),
+  );
+  expectRefused(
+    "malformed script tree array",
+    app.commitScript({
+      slate: emptySlate,
+      script: {
+        ...script,
+        tree: {} as unknown as NonNullable<IAutoMovieScript["tree"]>,
+      },
+    }),
+    "$input.tree",
+    emptySlate,
+  );
+  expectRefused(
+    "malformed script tree entry",
+    app.commitScript({
+      slate: emptySlate,
+      script: {
+        ...script,
+        tree: [null] as unknown as NonNullable<IAutoMovieScript["tree"]>,
+      },
+    }),
+    "$input.tree",
+    emptySlate,
+  );
   TestValidator.predicate(
     "invalid script paths",
     (() => {
