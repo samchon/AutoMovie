@@ -23,25 +23,62 @@ export const appendValidation = (
   if (validation.success === false) violations.push(...validation.violations);
 };
 
-export const validateUniqueIds = <T extends { id: string }>(
-  items: T[],
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+export const validateObjectArtifact = (
+  value: unknown,
   path: string,
   label: string,
   violations: IAutoMovieConstraintViolation[],
-): void =>
+): value is Record<string, unknown> => {
+  if (isRecord(value)) return true;
+  pushViolation(
+    violations,
+    "type",
+    path,
+    `${label} must be a JSON object`,
+    value,
+  );
+  return false;
+};
+
+export const validateArrayArtifact = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): value is unknown[] => {
+  if (Array.isArray(value)) return true;
+  pushViolation(violations, "type", path, `${label} must be an array`, value);
+  return false;
+};
+
+export const validateUniqueIds = <T extends { id: string }>(
+  items: T[] | unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateArrayArtifact(items, path, label, violations)) return;
   validateUniqueBy(
-    items.map((item, index) => ({ id: item.id, path: `${path}[${index}].id` })),
+    items.map((item, index) => ({
+      id: isRecord(item) ? item.id : undefined,
+      path: `${path}[${index}].id`,
+    })),
     label,
     violations,
   );
+};
 
 export const validateUniqueBy = (
-  entries: { id: string; path: string }[],
+  entries: { id: unknown; path: string }[],
   label: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
   const seen = new Set<string>();
   for (const entry of entries) {
+    if (typeof entry.id !== "string") continue;
     if (seen.has(entry.id))
       pushViolation(
         violations,
@@ -55,11 +92,15 @@ export const validateUniqueBy = (
 };
 
 export const validateNonEmptyId = (
-  id: string,
+  id: unknown,
   path: string,
   label: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
+  if (typeof id !== "string") {
+    pushViolation(violations, "type", path, `${label} must be a string`, id);
+    return;
+  }
   if (id.trim().length === 0)
     pushViolation(
       violations,
@@ -71,11 +112,15 @@ export const validateNonEmptyId = (
 };
 
 export const validateNonEmptyText = (
-  text: string,
+  text: unknown,
   path: string,
   label: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
+  if (typeof text !== "string") {
+    pushViolation(violations, "type", path, `${label} must be a string`, text);
+    return;
+  }
   if (text.trim().length === 0)
     pushViolation(
       violations,
@@ -87,11 +132,12 @@ export const validateNonEmptyText = (
 };
 
 export const validateTransformArtifact = (
-  transform: IAutoMovieTransform,
+  transform: IAutoMovieTransform | unknown,
   path: string,
   label: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
+  if (!validateObjectArtifact(transform, path, label, violations)) return;
   validateVectorArtifact(
     transform.translation,
     `${path}.translation`,
@@ -110,23 +156,28 @@ export const validateTransformArtifact = (
     `${label} scale`,
     violations,
   );
-  for (const axis of ["x", "y", "z"] as const)
-    if (transform.scale[axis] <= 0)
+  const scale = transform.scale;
+  if (!isRecord(scale)) return;
+  for (const axis of ["x", "y", "z"] as const) {
+    const value = scale[axis];
+    if (typeof value === "number" && value <= 0)
       pushViolation(
         violations,
         "range",
         `${path}.scale.${axis}`,
-        `${label} scale component must be > 0, but was ${transform.scale[axis]}`,
-        transform.scale[axis],
+        `${label} scale component must be > 0, but was ${value}`,
+        value,
       );
+  }
 };
 
 export const validateVectorArtifact = (
-  vector: IAutoMovieVector3,
+  vector: IAutoMovieVector3 | unknown,
   path: string,
   label: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
+  if (!validateObjectArtifact(vector, path, label, violations)) return;
   for (const axis of ["x", "y", "z"] as const)
     if (!Number.isFinite(vector[axis]))
       pushViolation(
@@ -139,11 +190,12 @@ export const validateVectorArtifact = (
 };
 
 export const validateQuaternionArtifact = (
-  quaternion: IAutoMovieQuaternion,
+  quaternion: IAutoMovieQuaternion | unknown,
   path: string,
   label: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
+  if (!validateObjectArtifact(quaternion, path, label, violations)) return;
   for (const axis of ["x", "y", "z", "w"] as const)
     if (!Number.isFinite(quaternion[axis]))
       pushViolation(
@@ -153,12 +205,11 @@ export const validateQuaternionArtifact = (
         `${label} component must be finite, but was ${quaternion[axis]}`,
         quaternion[axis],
       );
-  const length = Math.hypot(
-    quaternion.x,
-    quaternion.y,
-    quaternion.z,
-    quaternion.w,
-  );
+  const x = typeof quaternion.x === "number" ? quaternion.x : NaN;
+  const y = typeof quaternion.y === "number" ? quaternion.y : NaN;
+  const z = typeof quaternion.z === "number" ? quaternion.z : NaN;
+  const w = typeof quaternion.w === "number" ? quaternion.w : NaN;
+  const length = Math.hypot(x, y, z, w);
   if (Number.isFinite(length) && Math.abs(length - 1) > UNIT_QUATERNION_EPSILON)
     pushViolation(
       violations,
@@ -170,10 +221,11 @@ export const validateQuaternionArtifact = (
 };
 
 export const validateColorArtifact = (
-  color: IAutoMovieScene["lights"][number]["color"],
+  color: IAutoMovieScene["lights"][number]["color"] | unknown,
   path: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
+  if (!validateObjectArtifact(color, path, "color", violations)) return;
   for (const channel of ["r", "g", "b"] as const)
     validateRange(
       color[channel],
@@ -188,7 +240,7 @@ export const validateColorArtifact = (
 };
 
 export const validateRange = (
-  value: number,
+  value: unknown,
   path: string,
   min: number,
   max: number,
@@ -196,9 +248,10 @@ export const validateRange = (
   violations: IAutoMovieConstraintViolation[],
   inclusiveMin = true,
 ): void => {
-  const aboveMin = inclusiveMin ? value >= min : value > min;
-  const belowMax = max === Infinity ? true : value <= max;
-  if (!Number.isFinite(value) || !aboveMin || !belowMax)
+  const numeric = typeof value === "number" ? value : NaN;
+  const aboveMin = inclusiveMin ? numeric >= min : numeric > min;
+  const belowMax = max === Infinity ? true : numeric <= max;
+  if (!Number.isFinite(numeric) || !aboveMin || !belowMax)
     pushViolation(
       violations,
       "range",
