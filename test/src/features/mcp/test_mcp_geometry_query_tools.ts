@@ -133,6 +133,8 @@ const residentShot: IAutoMovieShot = {
  *    project-state repair error naming the file before geometry helpers run.
  * 6. Ambiguous duplicate geometry state rejects before the agent can trust the
  *    wrong node or model.
+ * 7. Malformed geometry motion registries reject with `context.motions...` paths
+ *    instead of leaking wrapper TypeErrors.
  */
 export const test_mcp_geometry_query_tools = (): void => {
   const nodeDistance = app.measureDistance({
@@ -345,6 +347,36 @@ export const test_mcp_geometry_query_tools = (): void => {
           actor: "actor",
         }),
       ['geometry model "actor-model"', "context.models[2].id"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed motion registry rejects",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            motions: null as unknown as Record<string, IAutoMovieMcpMotion>,
+          },
+          actor: "actor",
+        }),
+      ["motion registry", "context.motions"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed motion registry entry rejects",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            motions: {
+              actor: undefined,
+            } as unknown as Record<string, IAutoMovieMcpMotion>,
+          },
+          actor: "actor",
+        }),
+      ["motion registry entry", "context.motions.actor"],
     ),
   );
 };
