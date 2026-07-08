@@ -278,6 +278,21 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed motion id returns validation",
+    (() => {
+      const validation = app.validateMotion({
+        motion: {
+          skeleton: skeleton.id,
+          duration: 1,
+          loop: false,
+          keyframes: [],
+        } as unknown as IAutoMovieMcpMotion,
+        skeleton,
+      }).validation;
+      return hasPath(validation, "$input.id");
+    })(),
+  );
+  TestValidator.predicate(
     "malformed motion keyframe pose returns validation",
     (() => {
       const validation = app.validateMotion({

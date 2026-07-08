@@ -28,6 +28,7 @@ import {
 } from "../validators/artifacts";
 import {
   validateArrayArtifact,
+  validateNonEmptyId,
   validateObjectArtifact,
   validateTransformArtifact,
 } from "../validators/primitives";
@@ -131,7 +132,11 @@ const validateMcpMotionShape = (
   motion: IAutoMovieMcpMotion,
 ): IAutoMovieValidation => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  const keyframes = (motion as Partial<IAutoMovieMcpMotion>).keyframes;
+  if (!validateObjectArtifact(motion, "$input", "motion", violations))
+    return toValidation(violations);
+  const shape = motion as Partial<IAutoMovieMcpMotion>;
+  validateNonEmptyId(shape.id, "$input.id", "motion id", violations);
+  const keyframes = shape.keyframes;
   if (
     validateArrayArtifact(
       keyframes,
