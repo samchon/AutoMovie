@@ -101,7 +101,9 @@ export class AutoMovieProject {
    * empty slate — a fresh directory is a valid empty project.
    */
   public static open(rootDir: string): AutoMovieProject {
-    return new AutoMovieProject(path.resolve(rootDir));
+    const root = path.resolve(rootDir);
+    assertProjectRootDirectory(root);
+    return new AutoMovieProject(root);
   }
 
   /** The stored slate assembled from the slice files (film excluded). */
@@ -462,6 +464,35 @@ class AutoMovieProjectShapeError extends Error {
     this.name = "AutoMovieProjectShapeError";
   }
 }
+
+class AutoMovieProjectRootError extends Error {
+  public constructor(root: string, detail: string) {
+    super(
+      `AutoMovie project root "${root}" is not a usable directory. ` +
+        `Fix or remove this path, then call openProject again. ` +
+        `Detail: ${detail}`,
+    );
+    this.name = "AutoMovieProjectRootError";
+  }
+}
+
+const assertProjectRootDirectory = (root: string): void => {
+  try {
+    if (fs.existsSync(root)) {
+      if (!fs.statSync(root).isDirectory())
+        throw new AutoMovieProjectRootError(
+          root,
+          "project root must be a directory",
+        );
+      return;
+    }
+    fs.mkdirSync(root, { recursive: true });
+  } catch (error) {
+    if (error instanceof AutoMovieProjectRootError) throw error;
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new AutoMovieProjectRootError(root, detail);
+  }
+};
 
 const validateManifest = (file: string, value: unknown): IManifest => {
   if (!isRecord(value))
