@@ -11,6 +11,8 @@ import {
   IAutoMovieScript,
   IAutoMovieSequence,
   IAutoMovieShot,
+  IAutoMovieShotPerformance,
+  IAutoMovieTransform,
   IAutoMovieValidation,
 } from "@automovie/interface";
 
@@ -21,6 +23,7 @@ import {
   IAutoMovieMcpGeometryModel,
   IAutoMovieMcpMotion,
   IAutoMovieMcpWritableSlate,
+  IAutoMovieSetOutput,
 } from "../dto";
 import {
   AutoMoviePrerequisiteTool,
@@ -350,6 +353,196 @@ export class CommitService {
     };
     project.saveSlate(next);
     return { erased: true, slate: next, validation: { success: true } };
+  }
+
+  /**
+   * Replace ONE actor's performance in a beat's resident shot — the AutoBe
+   * one-artifact-per-call granularity taken below the beat (#654). Sibling
+   * performances and every other beat stay byte-unchanged; the beat's beat-end
+   * is stale without the performance it sampled and is removed, and the
+   * assembled film is cleared (the commit cascade's spirit, scoped to one
+   * beat).
+   *
+   * **Replacement-only.** The node must already perform in that shot:
+   * introducing a NEW performer changes the shot's dramatic content and belongs
+   * to `perform` + `commitShot`, not a surgical splice. Validation mirrors
+   * `commitShot`'s registry semantics — startOffset within the shot, and when a
+   * `motions` registry is supplied the performance's motion must reference it;
+   * full ROM/physics validation stays `perform`'s job, because this tool
+   * splices artifacts that a perform already produced.
+   */
+  public setActorPerformance(props: {
+    beat: string;
+    performance: IAutoMovieShotPerformance;
+    motions?: Record<string, IAutoMovieMcpMotion>;
+    reason: string;
+  }): IAutoMovieSetOutput {
+    const project = this.context!.requireProject("setActorPerformance");
+    const slate = project.writableSlate();
+    const violations: IAutoMovieConstraintViolation[] = [];
+    validateNonEmptyId(props.beat, "$input.beat", "beat id", violations);
+    validateNonEmptyText(
+      props.reason,
+      "$input.reason",
+      "set reason",
+      violations,
+    );
+    validateNonEmptyId(
+      props.performance.node,
+      "$input.performance.node",
+      "performance node",
+      violations,
+    );
+    const shotId = `shot:${props.beat}`;
+    const shot = slate.shots.find((entry) => entry.id === shotId);
+    if (props.beat.trim().length > 0 && shot === undefined)
+      pushViolation(
+        violations,
+        "type",
+        "$input.beat",
+        `beat "${props.beat}" has no committed shot to edit`,
+        props.beat,
+      );
+    if (
+      shot !== undefined &&
+      props.performance.node.trim().length > 0 &&
+      !shot.performances.some(
+        (performance) => performance.node === props.performance.node,
+      )
+    )
+      pushViolation(
+        violations,
+        "type",
+        "$input.performance.node",
+        `node "${props.performance.node}" does not perform in shot "${shotId}" — a new performer is perform + commitShot's job`,
+        props.performance.node,
+      );
+    validateRange(
+      props.performance.startOffset,
+      "$input.performance.startOffset",
+      0,
+      shot?.duration ?? Infinity,
+      "performance startOffset",
+      violations,
+    );
+    if (props.performance.motion !== null) {
+      validateNonEmptyId(
+        props.performance.motion,
+        "$input.performance.motion",
+        "performance motion",
+        violations,
+      );
+      if (
+        props.motions !== undefined &&
+        !Object.values(props.motions).some(
+          (motion) => motion.id === props.performance.motion,
+        )
+      )
+        pushViolation(
+          violations,
+          "type",
+          "$input.performance.motion",
+          `performance motion "${props.performance.motion}" must reference a supplied motion`,
+          props.performance.motion,
+        );
+    }
+    const validation = toValidation(violations);
+    if (validation.success === false)
+      return { updated: false, slate, validation };
+    const next: IAutoMovieMcpWritableSlate = {
+      ...slate,
+      shots: slate.shots.map((entry) =>
+        entry.id !== shotId
+          ? entry
+          : {
+              ...entry,
+              performances: entry.performances.map((performance) =>
+                performance.node === props.performance.node
+                  ? props.performance
+                  : performance,
+              ),
+            },
+      ),
+      beatEnds: slate.beatEnds.filter((end) => end.beat !== props.beat),
+      film: null,
+    };
+    project.saveSlate(next);
+    return { updated: true, slate: next, validation: { success: true } };
+  }
+
+  /**
+   * Move ONE placement in the resident scene — replace that scene node's
+   * transform, leaving sibling placements byte-unchanged (#654).
+   *
+   * **The cascade mirrors `commitScene`, deliberately.** A placement move
+   * changes the world coordinates every committed shot was performed against:
+   * keeping those shots would be silently stale geometry — worse than
+   * re-performing — so shots, beat-ends, and review notes clear and the film
+   * nulls, exactly as a scene re-commit would. The gain over re-staging is
+   * precision (one node moves, the rest of the staging is untouched), not a
+   * shortcut around re-performing.
+   */
+  public setPlacement(props: {
+    node: string;
+    transform: IAutoMovieTransform;
+    reason: string;
+  }): IAutoMovieSetOutput {
+    const project = this.context!.requireProject("setPlacement");
+    const slate = project.writableSlate();
+    const violations: IAutoMovieConstraintViolation[] = [];
+    validateNonEmptyId(props.node, "$input.node", "placement node", violations);
+    validateNonEmptyText(
+      props.reason,
+      "$input.reason",
+      "set reason",
+      violations,
+    );
+    validateTransformArtifact(
+      props.transform,
+      "$input.transform",
+      "placement transform",
+      violations,
+    );
+    if (slate.scene === null)
+      pushViolation(
+        violations,
+        "type",
+        "$slate.scene",
+        "a scene must be committed before a placement move",
+        slate.scene,
+      );
+    else if (
+      props.node.trim().length > 0 &&
+      !slate.scene.nodes.some((node) => node.id === props.node)
+    )
+      pushViolation(
+        violations,
+        "type",
+        "$input.node",
+        `scene has no placement "${props.node}" to move`,
+        props.node,
+      );
+    const validation = toValidation(violations);
+    if (validation.success === false)
+      return { updated: false, slate, validation };
+    const scene = slate.scene!;
+    const next: IAutoMovieMcpWritableSlate = {
+      ...slate,
+      scene: {
+        ...scene,
+        nodes: scene.nodes.map((node) =>
+          node.id !== props.node
+            ? node
+            : { ...node, transform: props.transform },
+        ),
+      },
+      shots: [],
+      beatEnds: [],
+      notes: [],
+      film: null,
+    };
+    project.saveSlate(next);
+    return { updated: true, slate: next, validation: { success: true } };
   }
 }
 

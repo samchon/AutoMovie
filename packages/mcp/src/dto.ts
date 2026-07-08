@@ -764,6 +764,23 @@ export interface IAutoMovieEraseOutput {
   validation: IAutoMovieValidation;
 }
 
+/**
+ * A `set*` tool's result (#654). Set is a targeted, resident-only replacement
+ * of one artifact inside a committed slice — the granularity below the beat;
+ * `updated` is true only when the named target existed and was replaced (with
+ * the documented downstream cascade).
+ */
+export interface IAutoMovieSetOutput {
+  /** True only when the named target existed and was replaced. */
+  updated: boolean;
+
+  /** The resident slate after the set (unchanged when refused). */
+  slate: IAutoMovieMcpWritableSlate;
+
+  /** Success, or the violations explaining why the set was refused. */
+  validation: IAutoMovieValidation;
+}
+
 /** The `nextSteps` tool's result — the film ladder as data (#615). */
 export interface IAutoMovieNextStepsOutput {
   /** The resident project's current status. */

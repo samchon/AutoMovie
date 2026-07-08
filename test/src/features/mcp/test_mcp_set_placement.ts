@@ -1,0 +1,234 @@
+import { IAutoMovieScript, IAutoMovieShot } from "@automovie/interface";
+import { AutoMovieApplication } from "@automovie/mcp";
+import { TestValidator } from "@nestia/e2e";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
+import { hasViolation, throwsError } from "../internal/predicates";
+
+const scriptWrite = makeScriptWrite();
+const script: IAutoMovieScript = {
+  logline: scriptWrite.logline,
+  theme: scriptWrite.theme,
+  cast: scriptWrite.cast,
+  beats: scriptWrite.beats,
+};
+
+const makeShot = (beat: string, scene: string): IAutoMovieShot => ({
+  id: `shot:${beat}`,
+  name: null,
+  scene,
+  camera: "cam-main",
+  cameraMotion: null,
+  performances: [],
+  objectMotions: [],
+  duration: 1,
+});
+
+const identityRotation = { x: 0, y: 0, z: 0, w: 1 };
+const unitScale = { x: 1, y: 1, z: 1 };
+
+/**
+ * SetPlacement (#654): move ONE placement in the resident scene without
+ * re-staging — sibling placements stay byte-unchanged. The cascade mirrors
+ * `commitScene` deliberately: a moved placement changes the world coordinates
+ * every committed shot was performed against, so keeping those shots would be
+ * silently stale geometry; the gain is staging precision, not a shortcut around
+ * re-performing.
+ *
+ * Scenarios:
+ *
+ * 1. Moving knightB swaps exactly that node's transform: knightA's node is
+ *    deep-equal to before, `scene.json` carries the new transform
+ *    (write-through), and the commitScene-mirror cascade runs — the committed
+ *    shot and its file clear, beat-ends and notes clear, the film nulls.
+ * 2. The ladder reflects the cascade: nextSteps flips `shots` back into the
+ *    missing list and names commitShot as the re-do (the #615 interplay).
+ * 3. A ghost placement violates at `$input.node` — a set names a thing that
+ *    exists.
+ * 4. An empty reason violates (evidence discipline); a non-finite transform
+ *    violates at `$input.transform`; a project with no committed scene violates
+ *    at `$slate.scene`. Nothing is written in any refused case.
+ * 5. Without an active project the tool throws the actionable openProject guidance
+ *    (set is resident-only).
+ */
+export const test_mcp_set_placement = (): void => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-setplace-"));
+  try {
+    const app = new AutoMovieApplication();
+    app.openProject({ root });
+    app.commitScript({ script });
+
+    const staged = app.stage({
+      script: scriptWrite,
+      staging: makeStagingWrite(),
+    }).staged;
+    if (staged.success !== true)
+      throw new Error("staging fixture must succeed");
+    const models = [
+      ...new Set(staged.scene.nodes.map((node) => node.model)),
+    ].map((id) => ({ id, skeleton: null }));
+    app.commitScene({ scene: staged.scene, models });
+    app.commitShot({ shot: makeShot("beat-1", staged.scene.id) });
+    app.commitBeatEnd({
+      beatEnd: { beat: "beat-1", shot: "shot:beat-1", actors: [] },
+    });
+    app.commitNotes({
+      notes: [
+        {
+          beat: "beat-1",
+          tier: "visual",
+          issue: "the champion crowds the frame",
+          suggestion: "move knightB back",
+        },
+      ],
+    });
+
+    const knightABefore = app
+      .getScene({})
+      .scene?.nodes.find((node) => node.id === "knightA");
+
+    // 1. The surgical move + the deliberate commitScene-mirror cascade.
+    const moved = app.setPlacement({
+      node: "knightB",
+      transform: {
+        translation: { x: 0, y: 0, z: 1.4 },
+        rotation: identityRotation,
+        scale: unitScale,
+      },
+      reason: "give the challenger room to charge",
+    });
+    TestValidator.equals("set applies", moved.updated, true);
+    const scene = moved.slate.scene!;
+    TestValidator.equals(
+      "knightB moved",
+      scene.nodes.find((node) => node.id === "knightB")?.transform.translation,
+      { x: 0, y: 0, z: 1.4 },
+    );
+    TestValidator.equals(
+      "knightA untouched",
+      scene.nodes.find((node) => node.id === "knightA"),
+      knightABefore,
+    );
+    TestValidator.equals(
+      "scene.json carries the move (write-through)",
+      fs
+        .readFileSync(path.join(root, "scene.json"), "utf8")
+        .includes('"z": 1.4'),
+      true,
+    );
+    TestValidator.equals("shots cleared", moved.slate.shots, []);
+    TestValidator.equals(
+      "the shot file cleared with them",
+      fs.existsSync(path.join(root, "shots", "beat-1.json")),
+      false,
+    );
+    TestValidator.equals("beat-ends cleared", moved.slate.beatEnds, []);
+    TestValidator.equals("notes cleared", moved.slate.notes, []);
+    TestValidator.equals("film cleared", moved.slate.film, null);
+
+    // 2. The ladder re-locks and names the re-do.
+    const steps = app.nextSteps();
+    TestValidator.predicate(
+      "shots rung re-locked",
+      steps.missing.some((line) => line.startsWith("shots:")),
+    );
+    TestValidator.predicate(
+      "nextSteps names the re-do",
+      steps.nextActions.some((line) => line.includes("commitShot")),
+    );
+
+    // 3. A ghost placement.
+    const ghost = app.setPlacement({
+      node: "knightC",
+      transform: {
+        translation: { x: 0, y: 0, z: 0 },
+        rotation: identityRotation,
+        scale: unitScale,
+      },
+      reason: "move a knight that was never staged",
+    });
+    TestValidator.equals("ghost placement refuses", ghost.updated, false);
+    TestValidator.predicate(
+      "ghost located at the node",
+      hasViolation(ghost.validation, "type", "$input.node"),
+    );
+
+    // 4. Evidence + artifact twins.
+    const noReason = app.setPlacement({
+      node: "knightB",
+      transform: {
+        translation: { x: 0, y: 0, z: 0.7 },
+        rotation: identityRotation,
+        scale: unitScale,
+      },
+      reason: "",
+    });
+    TestValidator.equals("empty reason refuses", noReason.updated, false);
+    TestValidator.predicate(
+      "reason located",
+      hasViolation(noReason.validation, "type", "$input.reason"),
+    );
+    const badTransform = app.setPlacement({
+      node: "knightB",
+      transform: {
+        translation: { x: Number.NaN, y: 0, z: 0 },
+        rotation: identityRotation,
+        scale: unitScale,
+      },
+      reason: "place the champion at NaN",
+    });
+    TestValidator.equals("bad transform refuses", badTransform.updated, false);
+    TestValidator.predicate(
+      "transform located",
+      hasViolation(badTransform.validation, "range", "$input.transform"),
+    );
+
+    const bare = new AutoMovieApplication();
+    const bareRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-setplace-bare-"),
+    );
+    try {
+      bare.openProject({ root: bareRoot });
+      bare.commitScript({ script });
+      const noScene = bare.setPlacement({
+        node: "knightB",
+        transform: {
+          translation: { x: 0, y: 0, z: 0 },
+          rotation: identityRotation,
+          scale: unitScale,
+        },
+        reason: "move before any staging exists",
+      });
+      TestValidator.equals("no scene refuses", noScene.updated, false);
+      TestValidator.predicate(
+        "scene precondition located",
+        hasViolation(noScene.validation, "type", "$slate.scene"),
+      );
+    } finally {
+      fs.rmSync(bareRoot, { recursive: true, force: true });
+    }
+
+    // 5. Resident-only.
+    TestValidator.predicate(
+      "no project throws the openProject guidance",
+      throwsError(
+        () =>
+          new AutoMovieApplication().setPlacement({
+            node: "knightB",
+            transform: {
+              translation: { x: 0, y: 0, z: 0 },
+              rotation: identityRotation,
+              scale: unitScale,
+            },
+            reason: "no project is active",
+          }),
+        "openProject",
+      ),
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+};
