@@ -53,6 +53,11 @@ type PerformProps = {
   blocking?: IAutoMovieBlockingApplication.IWrite;
 };
 
+type RuntimeSafeTarget = Extract<
+  IAutoMovieActionTarget,
+  { kind: "node" | "point" | "group" | "direction" | "offscreen" }
+>;
+
 /**
  * The film pipeline compute — the stage/block/perform/cut/forge ladder over the
  * engine's deterministic consumers. `perform` assembles the default synthesizer
@@ -285,10 +290,57 @@ const actorPath = (
   return index === -1 ? `${actionPath}.actor` : `${actionPath}.actor[${index}]`;
 };
 
+const isFiniteVector3 = (value: unknown): value is IAutoMovieVector3 =>
+  isRecord(value) &&
+  Number.isFinite(value.x) &&
+  Number.isFinite(value.y) &&
+  Number.isFinite(value.z);
+
+const isRuntimeSafeTarget = (target: unknown): target is RuntimeSafeTarget => {
+  if (!isRecord(target)) return false;
+  if (target.kind === "node") return typeof target.node === "string";
+  if (target.kind === "point") return isFiniteVector3(target.point);
+  if (target.kind === "group")
+    return (
+      Array.isArray(target.nodes) &&
+      target.nodes.every((node) => typeof node === "string")
+    );
+  if (target.kind === "direction") return Number.isFinite(target.headingDeg);
+  if (target.kind === "offscreen")
+    return (
+      target.edge === "left" ||
+      target.edge === "right" ||
+      target.edge === "forward" ||
+      target.edge === "back"
+    );
+  return false;
+};
+
 const targetResolves = (
-  target: IAutoMovieActionTarget,
+  target: unknown,
   nodes: Map<string, IAutoMovieVector3>,
-): boolean => resolveTargetPoint(target, nodes) !== null;
+): boolean =>
+  isRuntimeSafeTarget(target) && resolveTargetPoint(target, nodes) !== null;
+
+const targetNodeId = (target: unknown): string | null =>
+  isRecord(target) && target.kind === "node" && typeof target.node === "string"
+    ? target.node
+    : null;
+
+const canRunDefaultSynthesisPrecheck = (
+  action: IAutoMovieActionCall,
+): boolean => {
+  if (action.verb === "locomote") return isRuntimeSafeTarget(action.to);
+  if (action.verb === "lookAt") return isRuntimeSafeTarget(action.to);
+  if (action.verb === "reach") return isRuntimeSafeTarget(action.to);
+  if (action.verb === "react") return isRuntimeSafeTarget(action.from);
+  if (
+    action.verb === "gesture" &&
+    (action.kind === "point" || action.kind === "strike")
+  )
+    return action.at === undefined || isRuntimeSafeTarget(action.at);
+  return true;
+};
 
 const collectDefaultSynthesisViolations = (
   props: PerformProps,
@@ -310,6 +362,7 @@ const collectDefaultSynthesisViolations = (
       return;
     }
     if (action.verb === "frame" || action.verb === "attachTo") return;
+    if (!canRunDefaultSynthesisPrecheck(action)) return;
 
     for (const actor of actorList(action))
       if (synthesize(action, actor) === null) {
@@ -332,25 +385,22 @@ const describeLaunchOnHitGap = (
   contexts: ReadonlyMap<string, IAutoMovieActorContext>,
   nodes: Map<string, IAutoMovieVector3>,
 ): IAutoMovieConstraintViolation | null => {
-  if (
-    action.onHit === undefined ||
-    action.at.kind !== "node" ||
-    !nodes.has(action.at.node)
-  )
+  const node = targetNodeId(action.at);
+  if (action.onHit === undefined || node === null || !nodes.has(node))
     return null;
-  const context = contexts.get(action.at.node);
+  const context = contexts.get(node);
   if (context === undefined)
     return violation(
       "type",
       `${actionPath}.onHit`,
-      `launch onHit for target "${action.at.node}" requires that actor's MCP context so the default performer can synthesize the generated react`,
+      `launch onHit for target "${node}" requires that actor's MCP context so the default performer can synthesize the generated react`,
       action.onHit,
     );
   if (context.rig === undefined)
     return violation(
       "type",
       `${actionPath}.onHit`,
-      `launch onHit for target "${action.at.node}" requires a rig in that actor's MCP context so the default performer can synthesize the generated react`,
+      `launch onHit for target "${node}" requires a rig in that actor's MCP context so the default performer can synthesize the generated react`,
       action.onHit,
     );
   return null;

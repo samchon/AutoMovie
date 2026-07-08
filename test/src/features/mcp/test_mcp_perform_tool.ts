@@ -63,6 +63,8 @@ const riglessContext = (
  *    instead of leaking wrapper TypeErrors.
  * 6. Malformed performance action actors fail as engine validation data even
  *    though the MCP default-synthesis precheck runs first.
+ * 7. Malformed performance action targets fail as engine validation data instead
+ *    of leaking default-synthesis target reads.
  */
 export const test_mcp_perform_tool = (): void => {
   const app = new AutoMovieApplication();
@@ -277,6 +279,101 @@ export const test_mcp_perform_tool = (): void => {
         (violation) =>
           violation.kind === "type" &&
           violation.path === "$input.revise.final[0].actor",
+      ),
+  );
+
+  const malformedDraftTarget = app.perform({
+    script,
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "reach",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          hand: "right",
+          to: null as never,
+        },
+      ],
+      duration: 1,
+      revise: { review: "unchanged.", final: null },
+    }),
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "malformed draft target returns violations",
+    malformedDraftTarget.success === false &&
+      malformedDraftTarget.violations.some(
+        (violation) =>
+          violation.kind === "type" && violation.path === "$input.draft[0].to",
+      ),
+  );
+
+  const malformedFinalTarget = app.perform({
+    script,
+    staged,
+    performance: makePerformanceWrite({
+      draft: [],
+      duration: 1,
+      revise: {
+        review: "use the revised malformed target.",
+        final: [
+          {
+            verb: "lookAt",
+            actor: "knightA",
+            start: 0,
+            duration: 1,
+            to: { kind: "group", nodes: null } as never,
+          },
+        ],
+      },
+    }),
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "malformed final target returns violations",
+    malformedFinalTarget.success === false &&
+      malformedFinalTarget.violations.some(
+        (violation) =>
+          violation.kind === "type" &&
+          violation.path === "$input.revise.final[0].to.nodes",
+      ),
+  );
+
+  const malformedLaunchTarget = app.perform({
+    script,
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "launch",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          projectile: "arrow",
+          at: null as never,
+          speed: 12,
+          onHit: { force: 0.5 },
+        },
+      ],
+      duration: 1,
+      revise: { review: "unchanged.", final: null },
+    }),
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "malformed launch target returns violations",
+    malformedLaunchTarget.success === false &&
+      malformedLaunchTarget.violations.some(
+        (violation) =>
+          violation.kind === "type" && violation.path === "$input.draft[0].at",
       ),
   );
 
