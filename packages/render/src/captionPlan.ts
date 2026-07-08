@@ -42,6 +42,13 @@ export const planCaptionSidecar = (props: {
 
   const timeline = sequenceTimeline(sequence, shots);
   const frameCount = Math.round(timeline.runtime * fps);
+  // Match planSequenceRender's zero-frame policy: a degenerate runtime that
+  // rounds to no output frames is an error on both the render and the caption
+  // side, so a host never gets a render throw beside a silently-empty sidecar.
+  if (frameCount === 0)
+    throw new Error(
+      `planCaptionSidecar requires at least one frame; fps ${fps} and duration ${timeline.runtime} produced zero frames`,
+    );
   const captions = beatCaptions(script);
 
   const cursor = playbackCursor(sequence, timeline);

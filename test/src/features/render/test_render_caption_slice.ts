@@ -91,4 +91,22 @@ export const test_render_caption_slice = (): void => {
     "non-integer frameEnd throws",
     throwsError(() => sliceCaptionSidecar(sidecar, 1, 5.5), "frameEnd"),
   );
+  // A window whose start is AT the coverage end (frameStart == frameCount) or
+  // beyond it asks for frames the sidecar does not have — the render/caption
+  // frame-count mismatch. Before the guard this returned a NEGATIVE frameCount
+  // (end - frameStart) and passed silently; now it throws, naming both counts.
+  TestValidator.predicate(
+    "window at the coverage end throws",
+    throwsError(
+      () => sliceCaptionSidecar(sidecar, 10, 14),
+      "exceeds caption coverage",
+    ),
+  );
+  TestValidator.predicate(
+    "window entirely beyond coverage throws (no negative frameCount)",
+    throwsError(
+      () => sliceCaptionSidecar(sidecar, 12, 20),
+      "exceeds caption coverage",
+    ),
+  );
 };
