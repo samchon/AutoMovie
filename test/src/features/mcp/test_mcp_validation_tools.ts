@@ -1,4 +1,5 @@
 import {
+  IAutoMovieModel,
   IAutoMovieMotion,
   IAutoMoviePose,
   IAutoMovieScene,
@@ -95,7 +96,7 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
  *    fixture.
  * 2. Each validator returns the standard validation envelope with a path on a
  *    representative invalid artifact.
- * 3. Structurally malformed pose/motion/scene/shot/sequence payloads return
+ * 3. Structurally malformed pose/motion/model/scene/shot/sequence payloads return
  *    validation failures instead of leaking raw JavaScript shape errors.
  */
 export const test_mcp_validation_tools = (): void => {
@@ -261,6 +262,25 @@ export const test_mcp_validation_tools = (): void => {
         skeleton,
       }).validation;
       return hasPath(validation, "$input.keyframes");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed model shape returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          id: "model-1",
+          name: null,
+          origin: "generated",
+          skeleton: null,
+          body: null,
+          asset: null,
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return (
+        hasPath(validation, "$input.materials") &&
+        hasPath(validation, "$input.parts")
+      );
     })(),
   );
   TestValidator.predicate(
