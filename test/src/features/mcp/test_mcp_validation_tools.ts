@@ -5,6 +5,7 @@ import {
   IAutoMovieScene,
   IAutoMovieSequence,
   IAutoMovieShot,
+  IAutoMovieSkeleton,
   IAutoMovieValidation,
 } from "@automovie/interface";
 import { AutoMovieApplication, IAutoMovieMcpMotion } from "@automovie/mcp";
@@ -287,6 +288,16 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed pose target skeleton returns validation",
+    (() => {
+      const validation = app.validatePose({
+        pose: makePose([]),
+        skeleton: null as unknown as IAutoMovieSkeleton,
+      }).validation;
+      return hasPath(validation, "$skeleton");
+    })(),
+  );
+  TestValidator.predicate(
     "malformed motion shape returns validation",
     (() => {
       const validation = app.validateMotion({
@@ -314,6 +325,16 @@ export const test_mcp_validation_tools = (): void => {
         skeleton,
       }).validation;
       return hasPath(validation, "$input.id");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed motion target skeleton returns validation",
+    (() => {
+      const validation = app.validateMotion({
+        motion,
+        skeleton: { id: skeleton.id } as unknown as IAutoMovieSkeleton,
+      }).validation;
+      return hasPath(validation, "$skeleton.bones");
     })(),
   );
   TestValidator.predicate(

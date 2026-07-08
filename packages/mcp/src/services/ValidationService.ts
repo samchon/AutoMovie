@@ -48,7 +48,10 @@ export class ValidationService {
     pose: IAutoMoviePose;
     skeleton: IAutoMovieSkeleton;
   }): IAutoMovieValidateOutput {
-    const shape = validateMcpPoseShape(props.pose);
+    const violations: IAutoMovieConstraintViolation[] = [];
+    appendMcpPoseShape(violations, props.pose, "$input");
+    appendMcpSkeletonShape(violations, props.skeleton, "$skeleton");
+    const shape = toValidation(violations);
     if (shape.success === false) return { validation: shape };
     return {
       validation: validateEnginePose({
@@ -62,7 +65,10 @@ export class ValidationService {
     motion: IAutoMovieMcpMotion;
     skeleton: IAutoMovieSkeleton;
   }): IAutoMovieValidateOutput {
-    const shape = validateMcpMotionShape(props.motion);
+    const violations: IAutoMovieConstraintViolation[] = [];
+    appendMcpMotionShape(violations, props.motion);
+    appendMcpSkeletonShape(violations, props.skeleton, "$skeleton");
+    const shape = toValidation(violations);
     if (shape.success === false) return { validation: shape };
     return {
       validation: validateEngineMotion({
@@ -107,15 +113,6 @@ export class ValidationService {
   }
 }
 
-const validateMcpPoseShape = (
-  pose: IAutoMoviePose | unknown,
-  path = "$input",
-): IAutoMovieValidation => {
-  const violations: IAutoMovieConstraintViolation[] = [];
-  appendMcpPoseShape(violations, pose, path);
-  return toValidation(violations);
-};
-
 const appendMcpPoseShape = (
   violations: IAutoMovieConstraintViolation[],
   pose: IAutoMoviePose | unknown,
@@ -133,12 +130,11 @@ const appendMcpPoseShape = (
     validateTransformArtifact(root, `${path}.root`, "pose root", violations);
 };
 
-const validateMcpMotionShape = (
-  motion: IAutoMovieMcpMotion,
-): IAutoMovieValidation => {
-  const violations: IAutoMovieConstraintViolation[] = [];
-  if (!validateObjectArtifact(motion, "$input", "motion", violations))
-    return toValidation(violations);
+const appendMcpMotionShape = (
+  violations: IAutoMovieConstraintViolation[],
+  motion: IAutoMovieMcpMotion | unknown,
+): void => {
+  if (!validateObjectArtifact(motion, "$input", "motion", violations)) return;
   const shape = motion as Partial<IAutoMovieMcpMotion>;
   validateNonEmptyId(shape.id, "$input.id", "motion id", violations);
   const keyframes = shape.keyframes;
@@ -163,7 +159,6 @@ const validateMcpMotionShape = (
         `${path}.expression`,
       );
     });
-  return toValidation(violations);
 };
 
 const appendMcpExpressionShape = (
@@ -335,71 +330,8 @@ const validateMcpModelShape = (
         violations,
       );
   }
-  const skeleton = shape.skeleton;
-  if (
-    skeleton !== null &&
-    validateObjectArtifact(skeleton, "$input.skeleton", "skeleton", violations)
-  ) {
-    validateNonEmptyId(
-      skeleton.id,
-      "$input.skeleton.id",
-      "skeleton id",
-      violations,
-    );
-    const bones = skeleton.bones;
-    if (
-      validateArrayArtifact(
-        bones,
-        "$input.skeleton.bones",
-        "skeleton bones",
-        violations,
-      )
-    )
-      bones.forEach((bone, index) => {
-        const path = `$input.skeleton.bones[${index}]`;
-        if (!validateObjectArtifact(bone, path, "skeleton bone", violations))
-          return;
-        validateNonEmptyId(
-          bone.bone,
-          `${path}.bone`,
-          "skeleton bone",
-          violations,
-        );
-        if (bone.parent !== null)
-          validateNonEmptyId(
-            bone.parent,
-            `${path}.parent`,
-            "skeleton bone parent",
-            violations,
-          );
-        validateTransformArtifact(
-          bone.rest,
-          `${path}.rest`,
-          "skeleton bone rest transform",
-          violations,
-        );
-        const constraint = bone.constraint;
-        if (
-          constraint !== null &&
-          validateObjectArtifact(
-            constraint,
-            `${path}.constraint`,
-            "skeleton bone constraint",
-            violations,
-          )
-        )
-          JOINT_CONSTRAINT_AXES.forEach((axis) => {
-            const range = constraint[axis];
-            if (range !== null)
-              validateObjectArtifact(
-                range,
-                `${path}.constraint.${axis}`,
-                `skeleton bone constraint ${axis} range`,
-                violations,
-              );
-          });
-      });
-  }
+  if (shape.skeleton !== null)
+    appendMcpSkeletonShape(violations, shape.skeleton, "$input.skeleton");
   const affordances = shape.affordances;
   if (
     affordances !== null &&
@@ -455,4 +387,61 @@ const validateMcpModelShape = (
       }
     });
   return toValidation(violations);
+};
+
+const appendMcpSkeletonShape = (
+  violations: IAutoMovieConstraintViolation[],
+  skeleton: IAutoMovieSkeleton | unknown,
+  path: string,
+): void => {
+  if (!validateObjectArtifact(skeleton, path, "skeleton", violations)) return;
+  validateNonEmptyId(skeleton.id, `${path}.id`, "skeleton id", violations);
+  const bones = skeleton.bones;
+  if (
+    validateArrayArtifact(bones, `${path}.bones`, "skeleton bones", violations)
+  )
+    bones.forEach((bone, index) => {
+      const bonePath = `${path}.bones[${index}]`;
+      if (!validateObjectArtifact(bone, bonePath, "skeleton bone", violations))
+        return;
+      validateNonEmptyId(
+        bone.bone,
+        `${bonePath}.bone`,
+        "skeleton bone",
+        violations,
+      );
+      if (bone.parent !== null)
+        validateNonEmptyId(
+          bone.parent,
+          `${bonePath}.parent`,
+          "skeleton bone parent",
+          violations,
+        );
+      validateTransformArtifact(
+        bone.rest,
+        `${bonePath}.rest`,
+        "skeleton bone rest transform",
+        violations,
+      );
+      const constraint = bone.constraint;
+      if (
+        constraint !== null &&
+        validateObjectArtifact(
+          constraint,
+          `${bonePath}.constraint`,
+          "skeleton bone constraint",
+          violations,
+        )
+      )
+        JOINT_CONSTRAINT_AXES.forEach((axis) => {
+          const range = constraint[axis];
+          if (range !== null)
+            validateObjectArtifact(
+              range,
+              `${bonePath}.constraint.${axis}`,
+              `skeleton bone constraint ${axis} range`,
+              violations,
+            );
+        });
+    });
 };
