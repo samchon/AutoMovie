@@ -197,12 +197,21 @@ const validateMcpModelShape = (
       "model asset id",
       violations,
     );
-  validateArrayArtifact(
-    shape.materials,
-    "$input.materials",
-    "model materials",
-    violations,
-  );
+  const materials = shape.materials;
+  if (
+    validateArrayArtifact(
+      materials,
+      "$input.materials",
+      "model materials",
+      violations,
+    )
+  )
+    materials.forEach((material, index) => {
+      const path = `$input.materials[${index}]`;
+      if (!validateObjectArtifact(material, path, "model material", violations))
+        return;
+      validateNonEmptyId(material.id, `${path}.id`, "material id", violations);
+    });
   const parts = shape.parts;
   if (validateArrayArtifact(parts, "$input.parts", "model parts", violations))
     parts.forEach((part, index) => {
