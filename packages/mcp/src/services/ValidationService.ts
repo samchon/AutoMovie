@@ -205,13 +205,20 @@ const validateMcpModelShape = (
   );
   validateArrayArtifact(shape.parts, "$input.parts", "model parts", violations);
   const skeleton = shape.skeleton;
-  if (skeleton !== null && skeleton !== undefined)
+  if (skeleton !== null && skeleton !== undefined) {
+    validateNonEmptyId(
+      skeleton.id,
+      "$input.skeleton.id",
+      "skeleton id",
+      violations,
+    );
     validateArrayArtifact(
       skeleton.bones,
       "$input.skeleton.bones",
       "skeleton bones",
       violations,
     );
+  }
   const affordances = shape.affordances;
   if (affordances !== null && affordances !== undefined)
     validateArrayArtifact(
