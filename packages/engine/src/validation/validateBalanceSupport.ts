@@ -6,7 +6,11 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
+import {
+  IAutoMovieJointAxes,
+  indexSkeletonTopology,
+  resolvePose,
+} from "../kinematics";
 import { convexHull2D, pointHullDistance } from "../math/hull";
 import { windowSampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
@@ -104,7 +108,8 @@ export const validateBalanceSupport = (props: {
   const sampleRateValid = isPositiveFinite(sampleRate);
   const path = props.path ?? "$input";
   const skeletonBones = new Set(props.skeleton.bones.map((bone) => bone.bone));
-  const reachableBones = fkReachableBones(props.skeleton);
+  const topology = indexSkeletonTopology(props.skeleton);
+  const reachableBones = fkReachableBones(props.skeleton, topology);
 
   if (!sampleRateValid)
     collector.push(
@@ -207,6 +212,7 @@ export const validateBalanceSupport = (props: {
         props.skeleton,
         props.jointAxes,
         props.restFrames,
+        topology,
       );
       for (const bone of pose) resolved.set(bone.bone, bone.worldPosition);
       const centerPosition = resolved.get(centerBone) as IAutoMovieVector3;

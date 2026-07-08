@@ -5,7 +5,11 @@ import {
   IAutoMovieValidation,
 } from "@automovie/interface";
 
-import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
+import {
+  IAutoMovieJointAxes,
+  indexSkeletonTopology,
+  resolvePose,
+} from "../kinematics";
 import { sampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
@@ -78,6 +82,7 @@ export const validateGroundContact = (props: {
   const sampleRate = props.sampleRate ?? 24;
   const path = props.path ?? "$input";
   const groundAt = groundFunction(props.groundY ?? 0);
+  const topology = indexSkeletonTopology(props.skeleton);
 
   sampleTimes(props.motion.duration, sampleRate).forEach((time, index) => {
     const resolved = new Map(
@@ -86,6 +91,7 @@ export const validateGroundContact = (props: {
         props.skeleton,
         props.jointAxes,
         props.restFrames,
+        topology,
       ).map((bone) => [bone.bone, bone]),
     );
     for (const bone of footBones) {

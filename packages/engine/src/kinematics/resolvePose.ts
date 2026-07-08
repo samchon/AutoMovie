@@ -12,6 +12,8 @@ import { Vector3 } from "../math/Vector3";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { IAutoMovieJointAxes, jointToQuaternion } from "./jointToQuaternion";
 
+const ROOT_PARENT = "__root__";
+
 /**
  * A resolved bone transform after forward kinematics: the bone's local rotation
  * (rest ∘ articulation) and its world position.
@@ -34,6 +36,58 @@ export interface IAutoMovieResolvedBone {
    */
   worldRotation: IAutoMovieQuaternion;
 }
+
+export type AutoMovieSkeletonParentKey = AutoMovieHumanoidBone | "__root__";
+
+/**
+ * Pose-independent hierarchy index for a skeleton's FK walk.
+ *
+ * Build this once when resolving many poses against the same skeleton, then
+ * pass it into {@link resolvePose} and {@link reachableBoneNames}. The default
+ * call path intentionally rebuilds the index from the current skeleton object,
+ * so callers that mutate `skeleton.bones` never get a hidden stale cache.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieSkeletonTopology {
+  /** Bones grouped by parent (`__root__` for null-parent roots). */
+  readonly childrenByParent: ReadonlyMap<
+    AutoMovieSkeletonParentKey,
+    readonly IAutoMovieBone[]
+  >;
+
+  /** The exact bone names the FK root walk can reach. */
+  readonly reachableBones: ReadonlySet<AutoMovieHumanoidBone>;
+}
+
+/**
+ * Index a skeleton's parent-child topology once for repeated FK work.
+ *
+ * @author Samchon
+ */
+export const indexSkeletonTopology = (
+  skeleton: IAutoMovieSkeleton,
+): IAutoMovieSkeletonTopology => {
+  const childrenByParent = new Map<
+    AutoMovieSkeletonParentKey,
+    IAutoMovieBone[]
+  >();
+  for (const bone of skeleton.bones) {
+    const key = bone.parent ?? ROOT_PARENT;
+    const children = childrenByParent.get(key) ?? [];
+    children.push(bone);
+    childrenByParent.set(key, children);
+  }
+
+  const reachableBones = new Set<AutoMovieHumanoidBone>();
+  const walk = (bone: IAutoMovieBone): void => {
+    reachableBones.add(bone.bone);
+    for (const child of childrenByParent.get(bone.bone) ?? []) walk(child);
+  };
+  for (const root of childrenByParent.get(ROOT_PARENT) ?? []) walk(root);
+
+  return { childrenByParent, reachableBones };
+};
 
 /**
  * Resolve a {@link IAutoMoviePose} against its {@link IAutoMovieSkeleton} into
@@ -76,6 +130,10 @@ export interface IAutoMovieResolvedBone {
  * it, or an omitted table, is the identity — the angles are taken as the rig's
  * own.
  *
+ * `topology` optionally reuses a pose-independent hierarchy index built by
+ * {@link indexSkeletonTopology}. Omit it for one-off calls, especially if the
+ * skeleton object may have been mutated since a prior resolve.
+ *
  * @author Samchon
  */
 export const resolvePose = (
@@ -83,6 +141,7 @@ export const resolvePose = (
   skeleton: IAutoMovieSkeleton,
   jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>,
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>,
+  topology: IAutoMovieSkeletonTopology = indexSkeletonTopology(skeleton),
 ): IAutoMovieResolvedBone[] => {
   const articulation = new Map<AutoMovieHumanoidBone, IAutoMovieQuaternion>();
   for (const j of pose.joints)
@@ -90,8 +149,6 @@ export const resolvePose = (
       j.bone,
       jointToQuaternion(j, jointAxes?.[j.bone], restFrames?.[j.bone]),
     );
-
-  const children = childrenByParent(skeleton);
 
   const resolved: IAutoMovieResolvedBone[] = [];
 
@@ -118,13 +175,13 @@ export const resolvePose = (
       worldRotation: worldRot,
     });
 
-    for (const child of children.get(bone.bone) ?? [])
+    for (const child of topology.childrenByParent.get(bone.bone) ?? [])
       walk(child, worldRot, worldPos);
   };
 
   const rootTranslation = pose.root?.translation ?? Vector3.create(0, 0, 0);
   const rootRotation = pose.root?.rotation ?? Quaternion.identity();
-  for (const root of children.get("__root__") ?? [])
+  for (const root of topology.childrenByParent.get(ROOT_PARENT) ?? [])
     walk(root, rootRotation, rootTranslation);
 
   return resolved;
@@ -145,30 +202,5 @@ export const resolvePose = (
  */
 export const reachableBoneNames = (
   skeleton: IAutoMovieSkeleton,
-): Set<AutoMovieHumanoidBone> => {
-  const children = childrenByParent(skeleton);
-  const reached = new Set<AutoMovieHumanoidBone>();
-  const walk = (bone: IAutoMovieBone): void => {
-    reached.add(bone.bone);
-    for (const child of children.get(bone.bone) ?? []) walk(child);
-  };
-  for (const root of children.get("__root__") ?? []) walk(root);
-  return reached;
-};
-
-/** Index the skeleton's bones by parent (`__root__` for null-parent roots). */
-const childrenByParent = (
-  skeleton: IAutoMovieSkeleton,
-): Map<AutoMovieHumanoidBone | "__root__", IAutoMovieBone[]> => {
-  const children = new Map<
-    AutoMovieHumanoidBone | "__root__",
-    IAutoMovieBone[]
-  >();
-  for (const b of skeleton.bones) {
-    const key = b.parent ?? "__root__";
-    const list = children.get(key) ?? [];
-    list.push(b);
-    children.set(key, list);
-  }
-  return children;
-};
+  topology: IAutoMovieSkeletonTopology = indexSkeletonTopology(skeleton),
+): Set<AutoMovieHumanoidBone> => new Set(topology.reachableBones);

@@ -3,7 +3,7 @@ import {
   IAutoMovieSkeleton,
 } from "@automovie/interface";
 
-import { reachableBoneNames } from "../kinematics";
+import { IAutoMovieSkeletonTopology, reachableBoneNames } from "../kinematics";
 
 /**
  * The bones a skeleton's forward kinematics can actually reach — a thin alias
@@ -22,4 +22,5 @@ import { reachableBoneNames } from "../kinematics";
  */
 export const fkReachableBones = (
   skeleton: IAutoMovieSkeleton,
-): Set<AutoMovieHumanoidBone> => reachableBoneNames(skeleton);
+  topology?: IAutoMovieSkeletonTopology,
+): Set<AutoMovieHumanoidBone> => reachableBoneNames(skeleton, topology);

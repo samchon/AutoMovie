@@ -6,7 +6,12 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
+import {
+  IAutoMovieJointAxes,
+  IAutoMovieSkeletonTopology,
+  indexSkeletonTopology,
+  resolvePose,
+} from "../kinematics";
 import { windowSampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
@@ -89,7 +94,8 @@ export const validateFootSkate = (props: {
   const sampleRate = props.sampleRate ?? DEFAULT_SAMPLE_RATE;
   const path = props.path ?? "$input";
   const skeletonBones = new Set(props.skeleton.bones.map((bone) => bone.bone));
-  const reachableBones = fkReachableBones(props.skeleton);
+  const topology = indexSkeletonTopology(props.skeleton);
+  const reachableBones = fkReachableBones(props.skeleton, topology);
 
   if (!Number.isFinite(sampleRate) || sampleRate <= 0)
     collector.push(
@@ -162,6 +168,7 @@ export const validateFootSkate = (props: {
       sampleRate,
       props.jointAxes,
       props.restFrames,
+      topology,
     );
     for (let index = 1; index < samples.length; index++) {
       const previous = samples[index - 1]!;
@@ -192,6 +199,7 @@ const sampleWindow = (
   restFrames:
     | Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>
     | undefined,
+  topology: IAutoMovieSkeletonTopology,
 ): Array<{ time: number; position: IAutoMovieVector3 }> =>
   windowSampleTimes(contact.start, contact.end, sampleRate).map((time) => {
     const resolved = resolvePose(
@@ -199,6 +207,7 @@ const sampleWindow = (
       skeleton,
       jointAxes,
       restFrames,
+      topology,
     ).find((bone) => bone.bone === contact.bone);
     return { time, position: resolved!.worldPosition };
   });
