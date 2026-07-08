@@ -1,10 +1,18 @@
-import { IAutoMovieScene, IAutoMovieVector3 } from "@automovie/interface";
+import {
+  IAutoMovieScene,
+  IAutoMovieScript,
+  IAutoMovieShot,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 import {
   AutoMovieApplication,
   IAutoMovieMcpGeometryContext,
   IAutoMovieMcpMotion,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   IDENTITY_TRANSFORM,
@@ -41,7 +49,15 @@ const scene: IAutoMovieScene = {
       pose: null,
     },
   ],
-  cameras: [],
+  cameras: [
+    {
+      id: "camera",
+      transform: transform({ x: 0, y: 1.5, z: 5 }),
+      fovY: 45,
+      near: 0.1,
+      far: 100,
+    },
+  ],
   lights: [],
 };
 
@@ -78,6 +94,26 @@ const context: IAutoMovieMcpGeometryContext = {
   },
 };
 
+const script: IAutoMovieScript = {
+  logline: "an actor reaches toward a marker",
+  theme: "measure before moving",
+  cast: [{ node: "actor", character: "the measured actor", modelRef: null }],
+  beats: [
+    {
+      id: "beat-1",
+      name: "the reach",
+      summary: "the actor shifts toward the marker",
+      durationHint: 1,
+    },
+  ],
+};
+
+const residentShot: IAutoMovieShot = {
+  ...context.shot!,
+  id: "shot:beat-1",
+  scene: scene.id,
+};
+
 /**
  * MCP geometry query tools expose the spatial facts an agent needs before it
  * commits the next action.
@@ -90,7 +126,10 @@ const context: IAutoMovieMcpGeometryContext = {
  *    scene world space.
  * 3. `getReach` reports per-arm reach distance, gap, and IK pose against a
  *    positional target.
- * 4. Ambiguous duplicate geometry state rejects before the agent can trust the
+ * 4. Resident project queries may omit explicit context after commitScene and
+ *    commitShot supplied the session-only model/motion payloads; a reopened
+ *    project explains that those rig payloads are not persisted.
+ * 5. Ambiguous duplicate geometry state rejects before the agent can trust the
  *    wrong node or model.
  */
 export const test_mcp_geometry_query_tools = (): void => {
@@ -176,6 +215,65 @@ export const test_mcp_geometry_query_tools = (): void => {
     }).reach,
     null,
   );
+
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-geometry-"));
+  try {
+    const resident = new AutoMovieApplication();
+    resident.openProject({ root });
+    resident.commitScript({ script });
+    resident.commitScene({ scene, models: context.models });
+    resident.commitShot({ shot: residentShot, motions: context.motions });
+
+    const residentDistance = resident.measureDistance({
+      from: { kind: "node", node: "actor" },
+      to: { kind: "node", node: "marker" },
+    }).measurement;
+    TestValidator.predicate(
+      "resident distance reads committed scene",
+      residentDistance !== null && nclose(residentDistance.distance, 3),
+    );
+
+    const residentPose = resident.getResolvedPose({
+      actor: "actor",
+      beat: "beat-1",
+      t: 1,
+    }).resolvedPose;
+    const residentHips = residentPose?.bones.find(
+      (bone) => bone.bone === "hips",
+    );
+    TestValidator.predicate(
+      "resident pose samples remembered motion registry",
+      residentHips !== undefined &&
+        vclose(residentHips.worldPosition, { x: 1.5, y: 1, z: 2 }),
+    );
+
+    const residentReach = resident.getReach({
+      actor: "actor",
+      target: { kind: "point", point: { x: 1.4, y: 1, z: 2.3 } },
+    }).reach;
+    TestValidator.predicate(
+      "resident reach uses remembered model skeletons",
+      residentReach !== null &&
+        residentReach.reachable &&
+        residentReach.left !== null &&
+        nclose(residentReach.left.gap, 0),
+    );
+
+    const reopened = new AutoMovieApplication({ projectRoot: root });
+    TestValidator.predicate(
+      "reopened rig query explains session-only models",
+      throwsError(
+        () =>
+          reopened.getReach({
+            actor: "actor",
+            target: { kind: "point", point: { x: 1.4, y: 1, z: 2.3 } },
+          }),
+        ["commitScene with models", "context explicitly"],
+      ),
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 
   TestValidator.predicate(
     "duplicate node rejects",

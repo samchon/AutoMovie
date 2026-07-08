@@ -1,6 +1,10 @@
 import path from "node:path";
 
-import { AutoMovieMcpFrameCapture } from "./dto";
+import {
+  AutoMovieMcpFrameCapture,
+  IAutoMovieMcpGeometryModel,
+  IAutoMovieMcpMotion,
+} from "./dto";
 import { AutoMovieProject } from "./project/AutoMovieProject";
 
 /**
@@ -15,6 +19,8 @@ import { AutoMovieProject } from "./project/AutoMovieProject";
  */
 export class AutoMovieContext {
   private project_: AutoMovieProject | null = null;
+  private geometryModels: IAutoMovieMcpGeometryModel[] = [];
+  private geometryMotions: Record<string, IAutoMovieMcpMotion> = {};
 
   public constructor(
     /**
@@ -36,8 +42,10 @@ export class AutoMovieContext {
    */
   public activateProject(rootDir: string): AutoMovieProject {
     const normalized = path.resolve(rootDir);
-    if (this.project_ === null || this.project_.root !== normalized)
+    if (this.project_ === null || this.project_.root !== normalized) {
       this.project_ = AutoMovieProject.open(normalized);
+      this.clearGeometryMemory();
+    }
     return this.project_;
   }
 
@@ -53,5 +61,51 @@ export class AutoMovieContext {
       `${caller} was called without a slate and no project is active. ` +
         `Call openProject with the project root first (or pass the slate explicitly).`,
     );
+  }
+
+  /** Remember the session-only model skeletons a resident commitScene received. */
+  public rememberGeometryModels(models: IAutoMovieMcpGeometryModel[]): void {
+    this.geometryModels = models.map((model) => ({
+      id: model.id,
+      skeleton: model.skeleton,
+    }));
+    this.geometryMotions = {};
+  }
+
+  /** Remember session-only compiled motions a resident commitShot received. */
+  public rememberGeometryMotions(
+    motions: Record<string, IAutoMovieMcpMotion>,
+  ): void {
+    this.geometryMotions = {
+      ...this.geometryMotions,
+      ...Object.fromEntries(
+        Object.values(motions).map((motion) => [motion.id, motion]),
+      ),
+    };
+  }
+
+  /** Clear non-persisted geometry memory when the resident scene root changes. */
+  public clearGeometryMemory(): void {
+    this.geometryModels = [];
+    this.geometryMotions = {};
+  }
+
+  /** Clear compiled clips when resident shots are invalidated. */
+  public clearGeometryMotions(): void {
+    this.geometryMotions = {};
+  }
+
+  /** Session-only geometry memory; project files do not persist these payloads. */
+  public geometryMemory(): {
+    models: IAutoMovieMcpGeometryModel[];
+    motions: Record<string, IAutoMovieMcpMotion>;
+  } {
+    return {
+      models: this.geometryModels.map((model) => ({
+        id: model.id,
+        skeleton: model.skeleton,
+      })),
+      motions: { ...this.geometryMotions },
+    };
   }
 }

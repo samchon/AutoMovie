@@ -16,6 +16,7 @@ Every commit and query tool works in two modes:
 - Writes are atomic (temp file + rename); a crash never leaves a half-written slice.
 - **Beat commits upsert.** Re-committing a beat replaces exactly that beat's `shots/<beat>.json` (or `beatEnds/<beat>.json`); sibling beats' files stay byte-identical.
 - **Compiled motions are not a slice.** A shot stores motion id references, never the clips; the clips are re-`perform`-derived, so the project keeps the AST and re-derives motion on demand. A resident `commitShot` referencing motions must therefore pass the `motions` registry to validate those references (a dangling id is refused, not stored).
+- **Geometry rig payloads are session memory.** Resident `commitScene` remembers the supplied model skeletons, and resident `commitShot` remembers the supplied motion registry, so `getReach` / `getResolvedPose` can omit explicit context in the same application session. These payloads are not files: reopening a project still has the scene and shot ids, but not cast skeleton payloads or compiled clips. Re-run the commits in that session or pass explicit context for rig/motion queries; `measureDistance` only needs the stored scene.
 
 ## Surgical Erase and Set
 

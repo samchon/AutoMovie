@@ -120,7 +120,7 @@ export class AutoMovieApplication {
   }) {
     this.context = new AutoMovieContext(props?.capture, props?.projectRoot);
     this.slateQuery = new SlateQueryService(this.context);
-    this.geometry = new GeometryService();
+    this.geometry = new GeometryService(this.context);
     this.validation = new ValidationService();
     this.commit = new CommitService(this.context);
     this.render = new RenderService(this.context);
@@ -278,18 +278,23 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Resolve an actor's world-space skeleton pose. With a shot it samples the
-   * actor's performed motion at `t`; without one it reads the staged node
-   * pose.
+   * Resolve an actor's world-space skeleton pose. Pass `context` for the
+   * explicit stateless path, or omit it to read the resident project. Resident
+   * mode uses the committed scene, optional committed beat shot, and the
+   * session-only model/motion payloads remembered from resident commitScene and
+   * commitShot; those payloads are not persisted as project slices.
    *
-   * @param props The geometry context, actor id, and optional shot time.
+   * @param props The actor id, optional explicit context or resident beat, and
+   *   optional shot time.
    * @returns The resolved pose, or null when the actor cannot be resolved.
    */
   public getResolvedPose(props: {
     /** Scene, skeletons, optional shot, and compiled motions to query. */
-    context: IAutoMovieMcpGeometryContext;
+    context?: IAutoMovieMcpGeometryContext;
     /** Scene-node id of the actor to resolve. */
     actor: string;
+    /** Resident beat whose committed shot should choose the sampled motion. */
+    beat?: string;
     /** Shot-local time in seconds. Defaults to 0. */
     t?: number;
   }): IAutoMovieGetResolvedPoseOutput {
@@ -297,15 +302,16 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Measure whether an actor's arms can reach a positional target. It returns
-   * per-arm reach distance, gap, and the IK pose for the closest attempt.
+   * Measure whether an actor's arms can reach a positional target. Pass
+   * `context` explicitly, or omit it to use the resident project's committed
+   * scene plus the session-only model skeletons remembered from commitScene.
    *
-   * @param props The geometry context, actor id, and target.
+   * @param props The actor id, target, and optional explicit context.
    * @returns The reach report, or null when actor or target is not positional.
    */
   public getReach(props: {
     /** Scene and skeletons used to resolve the actor and target. */
-    context: IAutoMovieMcpGeometryContext;
+    context?: IAutoMovieMcpGeometryContext;
     /** Scene-node id of the reaching actor. */
     actor: string;
     /** Node, point, or group target to reach. */
@@ -315,15 +321,16 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Measure the world-space distance between two positional targets. Relative
-   * targets return null because they are directions, not points.
+   * Measure the world-space distance between two positional targets. Pass
+   * `scene` explicitly, or omit it to use the resident committed scene.
+   * Relative targets return null because they are directions, not points.
    *
-   * @param props The scene and the two targets to compare.
+   * @param props The two targets and optional explicit scene.
    * @returns The resolved endpoints and distance, or null when unresolved.
    */
   public measureDistance(props: {
     /** Scene whose node positions define the target space. */
-    scene: IAutoMovieScene;
+    scene?: IAutoMovieScene;
     /** First endpoint. */
     from: IAutoMovieActionTarget;
     /** Second endpoint. */
