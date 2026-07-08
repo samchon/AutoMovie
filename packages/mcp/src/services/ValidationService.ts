@@ -216,6 +216,12 @@ const validateMcpModelShape = (
           "model part material id",
           violations,
         );
+      validateObjectArtifact(
+        part.geometry,
+        `${path}.geometry`,
+        "model part geometry",
+        violations,
+      );
     });
   const skeleton = shape.skeleton;
   if (skeleton !== null && skeleton !== undefined) {
