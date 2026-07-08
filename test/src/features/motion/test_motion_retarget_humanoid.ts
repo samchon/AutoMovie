@@ -395,6 +395,11 @@ export const test_motion_retarget_humanoid = (): void => {
       },
     },
     targetJointAxes: {
+      leftUpperArm: {
+        flexion: { x: 0, y: 1, z: 0 },
+        abduction: { x: 0, y: 1, z: 1 },
+        twist: { x: 1, y: 0, z: 0 },
+      },
       rightUpperArm: {
         flexion: { x: 0, y: 1, z: 0 },
         abduction: { x: 0, y: 0, z: Infinity },
@@ -451,6 +456,14 @@ export const test_motion_retarget_humanoid = (): void => {
       malformed.validation,
       "range",
       "$input.targetJointAxes.rightUpperArm.abduction.z",
+    ),
+  );
+  TestValidator.predicate(
+    "target axes report non-orthogonal basis",
+    hasViolation(
+      malformed.validation,
+      "range",
+      "$input.targetJointAxes.leftUpperArm.abduction",
     ),
   );
   TestValidator.predicate(

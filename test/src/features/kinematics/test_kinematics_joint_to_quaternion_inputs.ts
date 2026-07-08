@@ -16,6 +16,11 @@ import { qclose, throwsError } from "../internal/predicates";
  */
 export const test_kinematics_joint_to_quaternion_inputs = (): void => {
   const base = { flexion: null, abduction: null, twist: null };
+  const validAxes = {
+    flexion: { x: 0, y: 1, z: 0 },
+    abduction: { x: 0, y: 0, z: 1 },
+    twist: { x: 1, y: 0, z: 0 },
+  };
 
   TestValidator.predicate(
     "NaN flexion rejects",
@@ -56,14 +61,70 @@ export const test_kinematics_joint_to_quaternion_inputs = (): void => {
   );
 
   TestValidator.predicate(
+    "zero-length custom flexion axis rejects",
+    throwsError(
+      () =>
+        jointToQuaternion(
+          { flexion: 15, abduction: null, twist: null },
+          {
+            ...validAxes,
+            flexion: { x: 0, y: 0, z: 0 },
+          },
+        ),
+      ["jointToQuaternion axes.flexion", "non-zero"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "collinear custom axes reject",
+    throwsError(
+      () =>
+        jointToQuaternion(
+          { flexion: 15, abduction: null, twist: null },
+          {
+            ...validAxes,
+            abduction: { x: 0, y: 2, z: 0 },
+          },
+        ),
+      ["jointToQuaternion axes.abduction", "orthogonal"],
+    ),
+  );
+
+  TestValidator.predicate(
+    "non-orthogonal custom axes reject",
+    throwsError(
+      () =>
+        jointToQuaternion(
+          { flexion: 15, abduction: null, twist: null },
+          {
+            ...validAxes,
+            abduction: { x: 0, y: 1, z: 1 },
+          },
+        ),
+      ["jointToQuaternion axes.abduction", "orthogonal"],
+    ),
+  );
+
+  TestValidator.predicate(
     "valid custom axis still rotates",
     qclose(
       jointToQuaternion(
         { flexion: 30, abduction: null, twist: null },
+        validAxes,
+      ),
+      Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, 30),
+    ),
+  );
+
+  TestValidator.predicate(
+    "valid non-unit orthogonal axes normalize before composing",
+    qclose(
+      jointToQuaternion(
+        { flexion: 30, abduction: null, twist: null },
         {
-          flexion: { x: 0, y: 1, z: 0 },
-          abduction: { x: 0, y: 0, z: 1 },
-          twist: { x: 1, y: 0, z: 0 },
+          flexion: { x: 0, y: 2, z: 0 },
+          abduction: { x: 0, y: 0, z: 3 },
+          twist: { x: 4, y: 0, z: 0 },
         },
       ),
       Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, 30),
