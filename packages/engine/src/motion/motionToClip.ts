@@ -18,6 +18,7 @@ import {
   lowerSkeletonNodes,
 } from "../resolve/skeletonNodes";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
+import { sampleTimes } from "./sampleClock";
 import { sampleMotion } from "./sampleMotion";
 
 export { MOTION_ROOT_NODE_ID };
@@ -198,12 +199,4 @@ const rootTrack = (
     values,
     interpolation: "linear",
   };
-};
-
-/** The dense bake clock: `i / sampleRate` clamped to end exactly at duration. */
-const sampleTimes = (duration: number, sampleRate: number): number[] => {
-  const frames = Math.max(1, Math.ceil(duration * sampleRate));
-  return Array.from({ length: frames + 1 }, (_, index) =>
-    Math.min(duration, index / sampleRate),
-  );
 };

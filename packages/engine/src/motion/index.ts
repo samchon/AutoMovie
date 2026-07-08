@@ -6,6 +6,7 @@ export * from "./gesture";
 export * from "./horseGaits";
 export * from "./humanoidGaits";
 export * from "./plantFeet";
+export * from "./sampleClock";
 export * from "./sampleMotion";
 export * from "./arrange";
 export * from "./locomote";

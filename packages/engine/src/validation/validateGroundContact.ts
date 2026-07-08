@@ -6,6 +6,7 @@ import {
 } from "@automovie/interface";
 
 import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
+import { sampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { groundFunction } from "../space/ground";
@@ -92,13 +93,6 @@ export const validateGroundContact = (props: {
   });
 
   return collector.toValidation();
-};
-
-const sampleTimes = (duration: number, sampleRate: number): number[] => {
-  const frames = Math.max(1, Math.ceil(duration * sampleRate));
-  return Array.from({ length: frames + 1 }, (_, index) =>
-    Math.min(duration, index / sampleRate),
-  );
 };
 
 const round = (value: number): number => Math.round(value * 1_000) / 1_000;

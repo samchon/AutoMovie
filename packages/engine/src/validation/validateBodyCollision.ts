@@ -11,6 +11,7 @@ import {
 import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
 import { Vector3 } from "../math/Vector3";
 import { closestPointsBetweenSegments } from "../math/segments";
+import { sampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import {
   IAutoMovieCollisionResponse,
@@ -261,12 +262,5 @@ const resolveMap = (
       actor.restFrames,
     ).map((bone) => [bone.bone, bone.worldPosition]),
   );
-
-const sampleTimes = (duration: number, sampleRate: number): number[] => {
-  const frames = Math.max(1, Math.ceil(duration * sampleRate));
-  return Array.from({ length: frames + 1 }, (_, index) =>
-    Math.min(duration, index / sampleRate),
-  );
-};
 
 const round = (value: number): number => Math.round(value * 1_000) / 1_000;
