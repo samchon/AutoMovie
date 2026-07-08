@@ -15,9 +15,9 @@ import { Vector3 } from "../math/Vector3";
 import { applyIterativeIK } from "./iterativeIK";
 import {
   blendVec,
-  quatFromTo,
   readWorld,
   recompose,
+  rotationBetween,
   validateInfluence,
 } from "./worldShared";
 
@@ -216,11 +216,11 @@ const applyTwoBoneIK = (
   );
   const newTip = Vector3.add(rootP, Vector3.scale(dir, reach));
 
-  const rootDelta = quatFromTo(
+  const rootDelta = rotationBetween(
     Vector3.normalize(upper),
     Vector3.normalize(Vector3.subtract(newMid, rootP)),
   );
-  const midDelta = quatFromTo(
+  const midDelta = rotationBetween(
     Vector3.normalize(lower),
     Vector3.normalize(Vector3.subtract(newTip, newMid)),
   );
@@ -304,7 +304,7 @@ const aimRotation = (
   worldUp: IAutoMovieVector3,
 ): IAutoMovieQuaternion => {
   const f = Vector3.normalize(dir);
-  const r1 = quatFromTo(Vector3.normalize(aimAxis), f);
+  const r1 = rotationBetween(Vector3.normalize(aimAxis), f);
 
   const desired = projectPerp(worldUp, f);
   const current = projectPerp(Quaternion.rotateVector(r1, upAxis), f);
