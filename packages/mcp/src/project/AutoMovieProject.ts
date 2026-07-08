@@ -1,5 +1,6 @@
 import {
   IAutoMovieBeatEndState,
+  IAutoMovieConstraintViolation,
   IAutoMovieReviewNote,
   IAutoMovieScene,
   IAutoMovieScript,
@@ -14,6 +15,21 @@ import {
   IAutoMovieMcpPropSpec,
   IAutoMovieMcpWritableSlate,
 } from "../dto";
+import {
+  validateSceneArtifact,
+  validateSequenceArtifact,
+} from "../validators/artifacts";
+import {
+  appendValidation,
+  isRecord,
+  pushViolation,
+  validateArrayArtifact,
+  validateNonEmptyId,
+  validateNonEmptyText,
+  validateObjectArtifact,
+  validateRange,
+  validateUniqueBy,
+} from "../validators/primitives";
 import { beatOf, shotIdOf } from "./shotKey";
 
 /**
@@ -80,8 +96,14 @@ export class AutoMovieProject {
   /** The stored slate assembled from the slice files (film excluded). */
   public storedSlate(): Omit<IAutoMovieMcpWritableSlate, "film"> {
     return {
-      script: readJson<IAutoMovieScript>(this.slicePath("script.json")),
-      scene: readJson<IAutoMovieScene>(this.slicePath("scene.json")),
+      script: readValidatedJson<IAutoMovieScript>(
+        this.slicePath("script.json"),
+        validateScriptSlice,
+      ),
+      scene: readValidatedJson<IAutoMovieScene>(
+        this.slicePath("scene.json"),
+        validateSceneSlice,
+      ),
       shots: this.readKeyedSlices<IAutoMovieShot>("shots", {
         label: "shot id",
         expected: shotIdOf,
@@ -93,15 +115,26 @@ export class AutoMovieProject {
         actual: (end) => end.beat,
       }),
       notes:
-        readJson<IAutoMovieReviewNote[]>(this.slicePath("notes.json")) ?? [],
+        readValidatedJson<IAutoMovieReviewNote[]>(
+          this.slicePath("notes.json"),
+          validateNotesSlice,
+        ) ?? [],
     };
   }
 
   /** The full writable slate, including the film slice. */
   public writableSlate(): IAutoMovieMcpWritableSlate {
+    const stored = this.storedSlate();
     return {
-      ...this.storedSlate(),
-      film: readJson<IAutoMovieSequence>(this.slicePath("film.json")),
+      ...stored,
+      film: readValidatedJson<IAutoMovieSequence>(
+        this.slicePath("film.json"),
+        (value, violations) =>
+          appendValidation(
+            violations,
+            validateSequenceArtifact(value as IAutoMovieSequence, stored.shots),
+          ),
+      ),
     };
   }
 
@@ -419,8 +452,131 @@ const validateManifest = (file: string, value: unknown): IManifest => {
   return value as unknown as IManifest;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+const validateScriptSlice = (
+  value: unknown,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateObjectArtifact(value, "$input", "script", violations)) return;
+  validateNonEmptyText(value.logline, "$input.logline", "logline", violations);
+  validateNonEmptyText(value.theme, "$input.theme", "theme", violations);
+  validateArrayArtifact(value.cast, "$input.cast", "script cast", violations);
+  validateUniqueBy(
+    asArray(value.cast).map((member, index) => ({
+      id: isRecord(member) ? member.node : undefined,
+      path: `$input.cast[${index}].node`,
+    })),
+    "cast node",
+    violations,
+  );
+  asArray(value.cast).forEach((member, index) => {
+    const path = `$input.cast[${index}]`;
+    if (!validateObjectArtifact(member, path, "cast member", violations))
+      return;
+    validateNonEmptyId(member.node, `${path}.node`, "cast node", violations);
+    validateNonEmptyText(
+      member.character,
+      `${path}.character`,
+      "cast character",
+      violations,
+    );
+    if (member.modelRef !== null && member.modelRef !== undefined)
+      validateNonEmptyText(
+        member.modelRef,
+        `${path}.modelRef`,
+        "cast modelRef",
+        violations,
+      );
+  });
+
+  validateArrayArtifact(
+    value.beats,
+    "$input.beats",
+    "script beats",
+    violations,
+  );
+  validateUniqueBy(
+    asArray(value.beats).map((beat, index) => ({
+      id: isRecord(beat) ? beat.id : undefined,
+      path: `$input.beats[${index}].id`,
+    })),
+    "beat id",
+    violations,
+  );
+  if (Array.isArray(value.beats) && value.beats.length === 0)
+    pushViolation(
+      violations,
+      "type",
+      "$input.beats",
+      "script must contain at least one beat",
+      value.beats,
+    );
+  asArray(value.beats).forEach((beat, index) => {
+    const path = `$input.beats[${index}]`;
+    if (!validateObjectArtifact(beat, path, "script beat", violations)) return;
+    validateNonEmptyId(beat.id, `${path}.id`, "beat id", violations);
+    validateNonEmptyText(beat.name, `${path}.name`, "beat name", violations);
+    validateNonEmptyText(
+      beat.summary,
+      `${path}.summary`,
+      "beat summary",
+      violations,
+    );
+    validateRange(
+      beat.durationHint,
+      `${path}.durationHint`,
+      0,
+      Infinity,
+      "beat durationHint",
+      violations,
+      false,
+    );
+  });
+};
+
+const validateSceneSlice = (
+  value: unknown,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  appendValidation(
+    violations,
+    validateSceneArtifact(
+      value as IAutoMovieScene,
+      residentSceneModels(value).map((id) => ({ id, skeleton: null })),
+    ),
+  );
+};
+
+const validateNotesSlice = (
+  value: unknown,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateArrayArtifact(value, "$input", "review notes", violations))
+    return;
+  value.forEach((note, index) => {
+    const path = `$input[${index}]`;
+    if (!validateObjectArtifact(note, path, "review note", violations)) return;
+    validateNonEmptyId(note.beat, `${path}.beat`, "note beat", violations);
+    if (
+      note.tier !== "structural" &&
+      note.tier !== "physical" &&
+      note.tier !== "visual"
+    )
+      pushViolation(
+        violations,
+        "type",
+        `${path}.tier`,
+        'note tier must be one of "structural", "physical", or "visual"',
+        note.tier,
+      );
+    validateNonEmptyText(note.issue, `${path}.issue`, "note issue", violations);
+    validateNonEmptyText(
+      note.suggestion,
+      `${path}.suggestion`,
+      "note suggestion",
+      violations,
+    );
+  });
+};
 
 const readJson = <T>(file: string): T | null => {
   if (!fs.existsSync(file)) return null;
@@ -430,6 +586,22 @@ const readJson = <T>(file: string): T | null => {
     const reason = error instanceof Error ? error.message : String(error);
     throw new AutoMovieProjectJsonError(file, reason);
   }
+};
+
+const readValidatedJson = <T>(
+  file: string,
+  validate: (
+    value: unknown,
+    violations: IAutoMovieConstraintViolation[],
+  ) => void,
+): T | null => {
+  const value = readJson<unknown>(file);
+  if (value === null) return null;
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validate(value, violations);
+  if (violations.length > 0)
+    throw new AutoMovieProjectShapeError(file, describeViolations(violations));
+  return value as T;
 };
 
 const sliceKeyFromFilename = (file: string, name: string): string => {
@@ -448,6 +620,29 @@ const sliceKeyFromFilename = (file: string, name: string): string => {
 
 const formatKey = (key: string | null | undefined): string =>
   key === null || key === undefined ? "none" : `"${key}"`;
+
+const asArray = (value: unknown): unknown[] =>
+  Array.isArray(value) ? value : [];
+
+const residentSceneModels = (value: unknown): string[] => {
+  if (!isRecord(value)) return [];
+  return [
+    ...new Set(
+      asArray(value.nodes)
+        .filter(isRecord)
+        .map((node) => node.model)
+        .filter((model): model is string => typeof model === "string"),
+    ),
+  ];
+};
+
+const describeViolations = (
+  violations: readonly IAutoMovieConstraintViolation[],
+): string =>
+  violations
+    .slice(0, 5)
+    .map((violation) => `${violation.path}: ${violation.expected}`)
+    .join("; ");
 
 /** Atomic write: temp file in the same directory, then rename over. */
 const writeAtomic = (file: string, data: Uint8Array | string): void => {

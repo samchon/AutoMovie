@@ -1,4 +1,8 @@
-import { IAutoMovieScript, IAutoMovieShot } from "@automovie/interface";
+import {
+  IAutoMovieScript,
+  IAutoMovieSequence,
+  IAutoMovieShot,
+} from "@automovie/interface";
 import { AutoMovieProject, IAutoMovieMcpWritableSlate } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -73,6 +77,8 @@ const throwsProjectJsonError = (
  *    means content.
  * 5. Malformed resident JSON reports a controlled project-state error naming the
  *    file to fix, for manifest, top-level slice, and keyed slice reads.
+ * 6. Parseable but structurally invalid non-keyed slices also report project
+ *    repair guidance at the resident read boundary.
  */
 export const test_mcp_project_store = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-store-"));
@@ -165,6 +171,58 @@ export const test_mcp_project_store = (): void => {
     );
   } finally {
     fs.rmSync(sliceRoot, { recursive: true, force: true });
+  }
+
+  const invalidShapeCases: {
+    label: string;
+    file: string;
+    value: unknown;
+    fragments: string[];
+  }[] = [
+    {
+      label: "invalid script shape has project guidance",
+      file: "script.json",
+      value: { logline: "x" },
+      fragments: ["script.json", "Validation detail", "cast"],
+    },
+    {
+      label: "invalid notes shape has project guidance",
+      file: "notes.json",
+      value: {},
+      fragments: ["notes.json", "Validation detail", "array"],
+    },
+    {
+      label: "invalid film shape has project guidance",
+      file: "film.json",
+      value: { id: "film-1" } satisfies Partial<IAutoMovieSequence>,
+      fragments: ["film.json", "Validation detail", "shots"],
+    },
+  ];
+  for (const entry of invalidShapeCases) {
+    const invalidRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-invalid-slice-shape-"),
+    );
+    try {
+      AutoMovieProject.open(invalidRoot);
+      fs.writeFileSync(
+        path.join(invalidRoot, entry.file),
+        `${JSON.stringify(entry.value, null, 2)}\n`,
+      );
+      TestValidator.predicate(
+        entry.label,
+        throwsProjectJsonError(
+          () => AutoMovieProject.open(invalidRoot).writableSlate(),
+          [
+            "AutoMovie project file",
+            entry.file,
+            "Fix or remove",
+            ...entry.fragments,
+          ],
+        ),
+      );
+    } finally {
+      fs.rmSync(invalidRoot, { recursive: true, force: true });
+    }
   }
 
   const keyedRoot = fs.mkdtempSync(
