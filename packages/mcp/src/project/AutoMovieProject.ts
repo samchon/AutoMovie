@@ -53,7 +53,7 @@ export class AutoMovieProject {
   private constructor(public readonly root: string) {
     for (const dir of RESERVED_DIRS)
       fs.mkdirSync(path.join(root, dir), { recursive: true });
-    const existing = readJson<IManifest>(this.manifestPath);
+    const existing = readJson<unknown>(this.manifestPath);
     if (existing === null) {
       // A fresh project: create the manifest once.
       this.manifest = { version: 1, assets: [] };
@@ -64,7 +64,7 @@ export class AutoMovieProject {
       // an activation never churns the file's mtime or drops a field. It is
       // re-emitted only when an actual mutation (registerAsset) rewrites it,
       // where the spread preserves those unknown fields.
-      this.manifest = existing;
+      this.manifest = validateManifest(this.manifestPath, existing);
     }
   }
 
@@ -385,6 +385,42 @@ class AutoMovieProjectKeyError extends Error {
     this.name = "AutoMovieProjectKeyError";
   }
 }
+
+class AutoMovieProjectShapeError extends Error {
+  public constructor(file: string, detail: string) {
+    super(
+      `AutoMovie project file "${file}" is semantically invalid. ` +
+        `Fix or remove this file, then call openProject again. ` +
+        `Validation detail: ${detail}`,
+    );
+    this.name = "AutoMovieProjectShapeError";
+  }
+}
+
+const validateManifest = (file: string, value: unknown): IManifest => {
+  if (!isRecord(value))
+    throw new AutoMovieProjectShapeError(
+      file,
+      "manifest must be a JSON object",
+    );
+  if (value.version !== 1)
+    throw new AutoMovieProjectShapeError(
+      file,
+      `manifest version must be 1, but was ${String(value.version)}`,
+    );
+  if (
+    !Array.isArray(value.assets) ||
+    value.assets.some((asset) => typeof asset !== "string")
+  )
+    throw new AutoMovieProjectShapeError(
+      file,
+      "manifest assets must be an array of strings",
+    );
+  return value as unknown as IManifest;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const readJson = <T>(file: string): T | null => {
   if (!fs.existsSync(file)) return null;

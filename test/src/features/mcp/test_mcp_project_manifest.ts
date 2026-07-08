@@ -4,6 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { throwsError } from "../internal/predicates";
+
 /**
  * Opening an existing project is a pure read (#700): a fresh directory gets its
  * manifest created once, but reopening an unchanged project must not rewrite
@@ -19,6 +21,8 @@ import path from "node:path";
  *    write on open) — including an unknown `future` field a newer host wrote.
  * 3. A mutation (`registerAsset`) rewrites the manifest yet preserves the unknown
  *    `future` field (the spread keeps it).
+ * 4. A parseable but invalid manifest reports a project-state repair error on
+ *    open, not a later raw TypeError.
  */
 export const test_mcp_project_manifest = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-manifest-"));
@@ -64,6 +68,18 @@ export const test_mcp_project_manifest = (): void => {
       "mutation preserves the unknown future field",
       after.future,
       { theme: "noir" },
+    );
+
+    fs.writeFileSync(
+      manifestPath,
+      `${JSON.stringify({ version: 1 }, null, 2)}\n`,
+    );
+    TestValidator.predicate(
+      "invalid manifest has project guidance",
+      throwsError(
+        () => AutoMovieProject.open(root),
+        ["AutoMovie project file", "automovie.json", "Fix or remove", "assets"],
+      ),
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
