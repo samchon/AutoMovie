@@ -8,7 +8,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, warningCount } from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -85,8 +85,9 @@ const footAt = (motion: IAutoMovieMotion, time: number) =>
  *
  * Scenarios:
  *
- * 1. The raw skating clip fails validateFootSkate (foot slides 0.2 m/s).
- * 2. The foot-corrected clip passes validateFootSkate over the same window.
+ * 1. The raw skating clip warns from validateFootSkate (foot slides 0.2 m/s — a
+ *    D015 plausibility warning, the run still succeeds).
+ * 2. The foot-corrected clip produces no such warning over the same window.
  * 3. The corrected clip passes validateGroundContact (foot held at the plane).
  * 4. The planted foot's world XZ is constant across the run (the anti-skate
  *    property, numeric) and pinned to the stance-start contact.
@@ -100,7 +101,10 @@ export const test_motion_plant_feet = (): void => {
     skeleton: legSkeleton,
     contacts,
   });
-  TestValidator.equals("raw gait skates the foot", raw.success, false);
+  TestValidator.predicate(
+    "raw gait skates the foot (warns)",
+    raw.success === true && warningCount(raw) > 0,
+  );
 
   const planted = plantStanceFeet({
     skeleton: legSkeleton,
@@ -112,24 +116,28 @@ export const test_motion_plant_feet = (): void => {
   });
 
   TestValidator.equals(
-    "corrected clip passes foot-skate",
-    validateFootSkate({
-      motion: planted.motion,
-      skeleton: legSkeleton,
-      contacts,
-    }).success,
-    true,
+    "corrected clip has no foot-skate warning",
+    warningCount(
+      validateFootSkate({
+        motion: planted.motion,
+        skeleton: legSkeleton,
+        contacts,
+      }),
+    ),
+    0,
   );
   TestValidator.equals(
-    "corrected clip passes ground contact",
-    validateGroundContact({
-      motion: planted.motion,
-      skeleton: legSkeleton,
-      footBones: ["leftFoot"],
-      groundY: 0,
-      tolerance: 1e-3,
-    }).success,
-    true,
+    "corrected clip has no ground-contact warning",
+    warningCount(
+      validateGroundContact({
+        motion: planted.motion,
+        skeleton: legSkeleton,
+        footBones: ["leftFoot"],
+        groundY: 0,
+        tolerance: 1e-3,
+      }),
+    ),
+    0,
   );
 
   const start = footAt(planted.motion, 0);

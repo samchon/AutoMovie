@@ -8,7 +8,13 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { hasViolation, nclose, violationCount } from "../internal/predicates";
+import {
+  hasViolation,
+  hasWarning,
+  nclose,
+  violationCount,
+  warningCount,
+} from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -80,8 +86,10 @@ const pair = {
  *
  * Scenarios:
  *
- * 1. A forearm capsule crossing near the torso capsule produces a physics
- *    violation with a stable `$input.pairs[i].samples[j].distance` path.
+ * 1. A forearm capsule crossing near the torso capsule produces a physics WARNING
+ *    (D015 — a plausibility signal, not a gate) with a stable
+ *    `$input.pairs[i].samples[j].distance` path; the run still succeeds. The
+ *    same crossing acknowledged with `physicsIntent` suppresses it entirely.
  * 2. Moving the same proxy pair away from the torso succeeds, proving the
  *    centerline-distance threshold is the metric gate.
  * 3. Invalid proxy annotations report deterministic type/range failures before
@@ -106,16 +114,31 @@ export const test_validation_self_intersection = (): void => {
     sampleRate: 1,
   });
   TestValidator.predicate(
-    "self-intersection rejected",
-    hasViolation(rejected, "physics", "$input.pairs[0].samples[0].distance"),
+    "self-intersection warns but succeeds",
+    rejected.success === true &&
+      hasWarning(rejected, "physics", "$input.pairs[0].samples[0].distance"),
   );
   const first =
-    rejected.success === false
-      ? rejected.violations.find((v) => v.path.includes("samples[0]"))
+    rejected.success === true
+      ? (rejected.warnings ?? []).find((v) => v.path.includes("samples[0]"))
       : null;
   TestValidator.predicate(
     "self-intersection overshoot",
     first?.kind === "physics" && nclose(first.overshoot ?? -1, 0.25),
+  );
+
+  // physicsIntent (close choreography — a grapple) suppresses the warning.
+  const acknowledged = validateSelfIntersection({
+    motion: crossing,
+    skeleton: crossingSkeleton,
+    pairs: [pair],
+    sampleRate: 1,
+    physicsIntent: "grapple",
+  });
+  TestValidator.equals(
+    "acknowledged self-intersection is clean",
+    acknowledged.success === true && warningCount(acknowledged),
+    0,
   );
 
   const clearSkeleton = skeleton(1);

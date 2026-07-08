@@ -47,6 +47,11 @@ export interface IAutoMovieFootContactWindow {
  * stylized gestures can all move feet legally unless the caller marks a foot as
  * planted for a particular time span.
  *
+ * Foot skate is a physical-plausibility **warning**, not a gate (D015): the run
+ * still succeeds and the warning surfaces so the orchestrator can plant the
+ * foot (IK), restage, or acknowledge a deliberate slide with `physicsIntent`.
+ * Only malformed annotations (bad bone, window, or rate) are errors.
+ *
  * @author Samchon
  */
 export const validateFootSkate = (props: {
@@ -70,8 +75,17 @@ export const validateFootSkate = (props: {
 
   /** Optional rest-frame remap for clinical authoring. */
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
+
+  /**
+   * Marker that opts the clip out of the foot-plant expectation. Foot skate is
+   * a physical-plausibility warning, not a gate (D015) — a deliberate slide (a
+   * moonwalk, a skate, a comedic scoot) sets this and the matching warnings are
+   * suppressed. Malformed annotations (bad bone, window, rate) stay errors.
+   */
+  physicsIntent?: string;
 }): IAutoMovieValidation => {
   const collector = new ViolationCollector();
+  const suppressed = props.physicsIntent !== undefined;
   const sampleRate = props.sampleRate ?? DEFAULT_SAMPLE_RATE;
   const path = props.path ?? "$input";
   const skeletonBones = new Set(props.skeleton.bones.map((bone) => bone.bone));
@@ -153,11 +167,11 @@ export const validateFootSkate = (props: {
       const previous = samples[index - 1]!;
       const current = samples[index]!;
       const speed = horizontalSpeed(previous, current);
-      if (speed > maxHorizontalSpeed)
-        collector.push(
+      if (speed > maxHorizontalSpeed && !suppressed)
+        collector.warn(
           "physics",
           `${cp}.samples[${index}].${contact.bone}.horizontalSpeed`,
-          `${contact.bone} planted horizontal speed must stay <= ${maxHorizontalSpeed}m/s between t=${round(previous.time)}s and t=${round(current.time)}s`,
+          `${contact.bone} planted horizontal speed must stay <= ${maxHorizontalSpeed}m/s between t=${round(previous.time)}s and t=${round(current.time)}s (a planted foot usually should not skate; mark physicsIntent if the slide is deliberate)`,
           speed,
           speed - maxHorizontalSpeed,
         );

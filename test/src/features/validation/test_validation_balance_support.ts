@@ -8,7 +8,13 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { hasViolation, nclose, violationCount } from "../internal/predicates";
+import {
+  hasViolation,
+  hasWarning,
+  nclose,
+  violationCount,
+  warningCount,
+} from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -111,20 +117,43 @@ export const test_validation_balance_support = (): void => {
     sampleRate: 1,
   });
   TestValidator.predicate(
-    "balance support rejected",
-    hasViolation(
-      rejected,
-      "physics",
-      "$input.supports[0].samples[0].centerOfMass.supportDistance",
-    ),
+    "balance support warns but succeeds",
+    rejected.success === true &&
+      hasWarning(
+        rejected,
+        "physics",
+        "$input.supports[0].samples[0].centerOfMass.supportDistance",
+      ),
   );
   const first =
-    rejected.success === false
-      ? rejected.violations.find((v) => v.path.includes("samples[0]"))
+    rejected.success === true
+      ? (rejected.warnings ?? []).find((v) => v.path.includes("samples[0]"))
       : null;
   TestValidator.predicate(
     "balance support overshoot",
     first?.kind === "physics" && nclose(first.overshoot ?? -1, 0.25),
+  );
+
+  // physicsIntent (wire-fu / a deliberately off-balance pose) suppresses it.
+  const acknowledged = validateBalanceSupport({
+    motion: motion(outsideLine),
+    skeleton: outsideLine,
+    supports: [
+      {
+        centerBone: "spine",
+        supportBones: ["leftFoot", "rightFoot"],
+        start: 0,
+        end: 1,
+        margin: 0.05,
+      },
+    ],
+    sampleRate: 1,
+    physicsIntent: "wire-fu",
+  });
+  TestValidator.equals(
+    "acknowledged imbalance is clean",
+    acknowledged.success === true && warningCount(acknowledged),
+    0,
   );
 
   TestValidator.equals(
@@ -253,12 +282,13 @@ export const test_validation_balance_support = (): void => {
     path: "$balance",
   });
   TestValidator.predicate(
-    "polygon support rejected",
-    hasViolation(
-      polygonRejected,
-      "physics",
-      "$balance.supports[0].samples[0].centerOfMass.supportDistance",
-    ),
+    "polygon support warns but succeeds",
+    polygonRejected.success === true &&
+      hasWarning(
+        polygonRejected,
+        "physics",
+        "$balance.supports[0].samples[0].centerOfMass.supportDistance",
+      ),
   );
 
   const invalid = validateBalanceSupport({

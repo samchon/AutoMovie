@@ -23,7 +23,7 @@ Compute tools (`stage`, `block`, `perform`, `cut`, `forge`, `forgeProp`) are nev
 Every compute/validate tool returns `{ success: true, ... }` or `{ success: false, violations }`. Violations carry a `kind`, a field-located `path` (`$input...`), and a `severity`:
 
 - `error` — the artifact breaks integrity (a broken skeleton graph, an out-of-ROM joint, a dangling reference). Validation fails; fix the artifact and resubmit.
-- `warning` — physical-plausibility advice (bodies interpenetrate, a stacked object would topple, an unsupported body would fall). Validation still succeeds and the warnings ride along. A film may be deliberately unphysical: accept the suggested response, restage, or acknowledge with a `physicsIntent` marker on the action (e.g. `"defies-gravity"`, `"superhuman-impact"`) which suppresses the matching warnings on later rounds.
+- `warning` — physical-plausibility advice (a planted foot skates, a foot passes through the ground, bodies interpenetrate or a limb self-intersects, a pose loses balance, a stacked object would topple, an unsupported body would fall). Validation still succeeds and the warnings ride along. A film may be deliberately unphysical: accept the suggested response, restage, or acknowledge with a `physicsIntent` marker on the action (e.g. `"moonwalk"`, `"wire-fu"`, `"defies-gravity"`, `"superhuman-impact"`) which suppresses the matching warnings on later rounds. Only an *impossible* fact is an error; an *implausible* one is a suppressible warning (D015).
 
 Never explain a violation away. Fix the owning artifact, or acknowledge it deliberately — those are the only two honest moves.
 

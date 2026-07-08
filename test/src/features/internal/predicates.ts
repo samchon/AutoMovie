@@ -69,3 +69,21 @@ export const hasViolation = (
 /** Number of violations in a validation result (0 when it succeeded). */
 export const violationCount = (v: IAutoMovieValidation): number =>
   v.success === true ? 0 : v.violations.length;
+
+/**
+ * True when the validation succeeded but carries a matching warning — the
+ * physical-plausibility advice tier (D015), which surfaces without failing.
+ */
+export const hasWarning = (
+  v: IAutoMovieValidation,
+  kind: AutoMovieViolationKind,
+  pathIncludes: string,
+): boolean =>
+  v.success === true &&
+  (v.warnings ?? []).some(
+    (x) => x.kind === kind && x.path.includes(pathIncludes),
+  );
+
+/** Number of warnings on a successful validation (0 when it failed). */
+export const warningCount = (v: IAutoMovieValidation): number =>
+  v.success === true ? (v.warnings ?? []).length : 0;

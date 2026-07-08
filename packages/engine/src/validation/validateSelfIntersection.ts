@@ -41,6 +41,13 @@ export interface IAutoMovieCapsuleProxyPair {
  * parts that should not overlap, while mesh topology remains a later Tier-5
  * concern.
  *
+ * Self-intersection is a physical-plausibility **warning**, not a gate (D015):
+ * close choreography (a grapple, a near-miss blow, an embrace) legitimately
+ * brings body parts into near-contact, so the run still succeeds and the
+ * warning surfaces for the orchestrator to restage or acknowledge with
+ * `physicsIntent`. Only malformed capsules (bad bone, non-distinct, radius <=
+ * 0) are errors.
+ *
  * @author Samchon
  */
 export const validateSelfIntersection = (props: {
@@ -64,8 +71,16 @@ export const validateSelfIntersection = (props: {
 
   /** Optional rest-frame remap for clinical authoring. */
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
+
+  /**
+   * Marker that opts the pair out of the overlap expectation (D015): close
+   * choreography (a grapple, an embrace) sets this and the matching warnings
+   * are suppressed.
+   */
+  physicsIntent?: string;
 }): IAutoMovieValidation => {
   const collector = new ViolationCollector();
+  const suppressed = props.physicsIntent !== undefined;
   const sampleRate =
     props.sampleRate === undefined ? DEFAULT_SAMPLE_RATE : props.sampleRate;
   const path = props.path ?? "$input";
@@ -109,11 +124,11 @@ export const validateSelfIntersection = (props: {
             second.to,
           );
           const minimum = pair.first.radius + pair.second.radius;
-          if (distance < minimum)
-            collector.push(
+          if (distance < minimum && !suppressed)
+            collector.warn(
               "physics",
               `${pp}.samples[${sampleIndex}].distance`,
-              `capsule centerline distance must stay >= ${round(minimum)}m at t=${round(time)}s`,
+              `capsule centerline distance must stay >= ${round(minimum)}m at t=${round(time)}s (body parts may legitimately near-contact in close choreography; mark physicsIntent if it is deliberate)`,
               distance,
               minimum - distance,
             );

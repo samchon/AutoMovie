@@ -15,7 +15,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, warningCount } from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -123,14 +123,15 @@ const plantAndAssert = (turnWindow: number, label: string): void => {
   });
   TestValidator.equals(`${label}: two cycles sized`, path.cycles, 2);
 
-  TestValidator.equals(
-    `${label}: raw corner bake skates the foot`,
-    validateFootSkate({
-      motion: path.motion,
-      skeleton: legSkeleton,
-      contacts,
-    }).success,
-    false,
+  TestValidator.predicate(
+    `${label}: raw corner bake skates the foot (warns)`,
+    warningCount(
+      validateFootSkate({
+        motion: path.motion,
+        skeleton: legSkeleton,
+        contacts,
+      }),
+    ) > 0,
   );
 
   const planted = plantStanceFeet({
@@ -143,24 +144,28 @@ const plantAndAssert = (turnWindow: number, label: string): void => {
   });
 
   TestValidator.equals(
-    `${label}: planted corner walk passes foot-skate`,
-    validateFootSkate({
-      motion: planted.motion,
-      skeleton: legSkeleton,
-      contacts,
-    }).success,
-    true,
+    `${label}: planted corner walk has no foot-skate warning`,
+    warningCount(
+      validateFootSkate({
+        motion: planted.motion,
+        skeleton: legSkeleton,
+        contacts,
+      }),
+    ),
+    0,
   );
   TestValidator.equals(
-    `${label}: planted corner walk passes ground contact`,
-    validateGroundContact({
-      motion: planted.motion,
-      skeleton: legSkeleton,
-      footBones: ["leftFoot"],
-      groundY: 0,
-      tolerance: 1e-3,
-    }).success,
-    true,
+    `${label}: planted corner walk has no ground-contact warning`,
+    warningCount(
+      validateGroundContact({
+        motion: planted.motion,
+        skeleton: legSkeleton,
+        footBones: ["leftFoot"],
+        groundY: 0,
+        tolerance: 1e-3,
+      }),
+    ),
+    0,
   );
 
   TestValidator.equals(
@@ -220,8 +225,8 @@ const plantAndAssert = (turnWindow: number, label: string): void => {
  * Scenarios (each run for the blend window AND the snap corner, turnWindow 0 —
  * the harsher discontinuity):
  *
- * 1. The raw corner bake fails validateFootSkate in the declared stance windows
- *    (the root drags the foot at 0.12 m/s).
+ * 1. The raw corner bake warns from validateFootSkate in the declared stance
+ *    windows (the root drags the foot at 0.12 m/s).
  * 2. PlantStanceFeet over the corner bake passes BOTH validateFootSkate and
  *    validateGroundContact — pinning holds under the rotating pelvis.
  * 3. Exactly three stance runs land — before, straddling, and after the apex — and
@@ -261,13 +266,14 @@ export const test_motion_path_plant_feet_corner = (): void => {
     legs: [LEG],
     sampleRate: 24,
   });
-  TestValidator.equals(
-    "loose tolerance over-reaches through the corner and skates",
-    validateFootSkate({
-      motion: overReached.motion,
-      skeleton: legSkeleton,
-      contacts,
-    }).success,
-    false,
+  TestValidator.predicate(
+    "loose tolerance over-reaches through the corner and skates (warns)",
+    warningCount(
+      validateFootSkate({
+        motion: overReached.motion,
+        skeleton: legSkeleton,
+        contacts,
+      }),
+    ) > 0,
   );
 };

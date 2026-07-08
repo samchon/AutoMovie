@@ -14,7 +14,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, warningCount } from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -122,14 +122,15 @@ export const test_space_ground_pipeline = (): void => {
   );
 
   const contacts = [{ bone: "leftFoot", start: 0, end: 1 } as const];
-  TestValidator.equals(
-    "raw ramp bake skates the foot",
-    validateFootSkate({
-      motion: path.motion,
-      skeleton: legSkeleton,
-      contacts,
-    }).success,
-    false,
+  TestValidator.predicate(
+    "raw ramp bake skates the foot (warns)",
+    warningCount(
+      validateFootSkate({
+        motion: path.motion,
+        skeleton: legSkeleton,
+        contacts,
+      }),
+    ) > 0,
   );
 
   const planted = plantStanceFeet({
@@ -140,23 +141,27 @@ export const test_space_ground_pipeline = (): void => {
     legs: [{ foot: "leftFoot", upper: "leftUpperLeg", lower: "leftLowerLeg" }],
   });
   TestValidator.equals(
-    "planted ramp climb passes foot-skate",
-    validateFootSkate({
-      motion: planted.motion,
-      skeleton: legSkeleton,
-      contacts,
-    }).success,
-    true,
+    "planted ramp climb has no foot-skate warning",
+    warningCount(
+      validateFootSkate({
+        motion: planted.motion,
+        skeleton: legSkeleton,
+        contacts,
+      }),
+    ),
+    0,
   );
   TestValidator.equals(
-    "planted ramp climb passes ground contact on the space",
-    validateGroundContact({
-      motion: planted.motion,
-      skeleton: legSkeleton,
-      footBones: ["leftFoot"],
-      groundY: ground,
-      tolerance: 1e-3,
-    }).success,
-    true,
+    "planted ramp climb has no ground-contact warning on the space",
+    warningCount(
+      validateGroundContact({
+        motion: planted.motion,
+        skeleton: legSkeleton,
+        footBones: ["leftFoot"],
+        groundY: ground,
+        tolerance: 1e-3,
+      }),
+    ),
+    0,
   );
 };

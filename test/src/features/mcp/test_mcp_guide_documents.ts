@@ -16,6 +16,8 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["PERFORMANCE", "Motions Are Derived, Not Stored"],
   ["REVIEW", "advice, not gates"],
   ["REVIEW", "ancestors nearest-first"],
+  ["REVIEW", "plausibility versus possibility"],
+  ["AUTOMOVIE_OVERALL", "an *implausible* one is a suppressible warning"],
   ["PROPS", "crude proxy, rich meaning"],
   ["PROJECT_MEMORY", "cleared slice's file is removed"],
   ["PROJECT_MEMORY", "sibling beats' files stay byte-identical"],

@@ -8,7 +8,13 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { hasViolation, nclose, violationCount } from "../internal/predicates";
+import {
+  hasViolation,
+  hasWarning,
+  nclose,
+  violationCount,
+  warningCount,
+} from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -69,11 +75,13 @@ const key = (time: number, x: number, z: number): IAutoMovieKeyframe => ({
  * Scenarios:
  *
  * 1. A planted left foot that slides 0.1m over 0.5s exceeds a 0.05m/s limit and
- *    reports a physics violation on the stable contact sample path.
+ *    reports a physics WARNING (D015 — advice, not a gate) on the stable
+ *    contact sample path; the run still succeeds. `physicsIntent` (a deliberate
+ *    slide) suppresses it.
  * 2. Raising the allowed speed accepts the same clip, proving the tolerance is the
  *    metric gate rather than the movement itself.
- * 3. Invalid annotation inputs report deterministic non-physics failures and do
- *    not attempt FK sampling.
+ * 3. Invalid annotation inputs report deterministic non-physics failures (errors)
+ *    and do not attempt FK sampling.
  * 4. A no-drift contact with default path, rate, and tolerance succeeds.
  */
 export const test_validation_foot_skate = (): void => {
@@ -90,20 +98,37 @@ export const test_validation_foot_skate = (): void => {
     sampleRate: 2,
   });
   TestValidator.predicate(
-    "foot skate rejected",
-    hasViolation(
-      rejected,
-      "physics",
-      "$input.contacts[0].samples[1].leftFoot.horizontalSpeed",
-    ),
+    "foot skate warns but succeeds",
+    rejected.success === true &&
+      hasWarning(
+        rejected,
+        "physics",
+        "$input.contacts[0].samples[1].leftFoot.horizontalSpeed",
+      ),
   );
   const first =
-    rejected.success === false
-      ? rejected.violations.find((v) => v.path.includes("samples[1]"))
+    rejected.success === true
+      ? (rejected.warnings ?? []).find((v) => v.path.includes("samples[1]"))
       : null;
   TestValidator.predicate(
     "foot skate overshoot",
     first?.kind === "physics" && nclose(first.overshoot ?? -1, 0.15),
+  );
+
+  // physicsIntent (a deliberate moonwalk) suppresses the skate warning.
+  const acknowledged = validateFootSkate({
+    motion: sliding,
+    skeleton: SKELETON,
+    contacts: [
+      { bone: "leftFoot", start: 0, end: 1, maxHorizontalSpeed: 0.05 },
+    ],
+    sampleRate: 2,
+    physicsIntent: "moonwalk",
+  });
+  TestValidator.equals(
+    "acknowledged skate is clean",
+    acknowledged.success === true && warningCount(acknowledged),
+    0,
   );
 
   TestValidator.equals(

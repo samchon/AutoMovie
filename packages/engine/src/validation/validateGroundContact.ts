@@ -29,6 +29,11 @@ const DEFAULT_FOOT_BONES = ["leftFoot", "rightFoot"] as const;
  * The stable path shape is `$input.samples[i].<bone>.worldPosition.y`, where
  * `i` is the validator sample index, not a source keyframe index.
  *
+ * Ground penetration is a physical-plausibility **warning**, not a gate (D015):
+ * the run still succeeds and the warning surfaces so the orchestrator can plant
+ * the foot, restage, or acknowledge a deliberate pass-through (a phasing ghost)
+ * with `physicsIntent`.
+ *
  * @author Samchon
  */
 export const validateGroundContact = (props: {
@@ -58,8 +63,16 @@ export const validateGroundContact = (props: {
 
   /** Optional rest-frame remap for clinical authoring. */
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
+
+  /**
+   * Marker that opts the clip out of the ground-contact expectation (D015): a
+   * deliberate pass-through (a phasing ghost, a stylized float) sets this and
+   * the matching warnings are suppressed.
+   */
+  physicsIntent?: string;
 }): IAutoMovieValidation => {
   const collector = new ViolationCollector();
+  const suppressed = props.physicsIntent !== undefined;
   const footBones = props.footBones ?? DEFAULT_FOOT_BONES;
   const tolerance = props.tolerance ?? 0;
   const sampleRate = props.sampleRate ?? 24;
@@ -81,11 +94,11 @@ export const validateGroundContact = (props: {
       const y = foot.worldPosition.y;
       const ground = groundAt(foot.worldPosition.x, foot.worldPosition.z);
       const minY = ground - tolerance;
-      if (y < minY)
-        collector.push(
+      if (y < minY && !suppressed)
+        collector.warn(
           "physics",
           `${path}.samples[${index}].${bone}.worldPosition.y`,
-          `${bone} world y must stay >= ${minY} at t=${round(time)}s (ground ${ground}, tolerance ${tolerance})`,
+          `${bone} world y must stay >= ${minY} at t=${round(time)}s (ground ${ground}, tolerance ${tolerance}; a foot usually should not pass through the ground; mark physicsIntent if it is deliberate)`,
           y,
           minY - y,
         );

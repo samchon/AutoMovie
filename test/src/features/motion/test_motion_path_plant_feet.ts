@@ -12,6 +12,8 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { warningCount } from "../internal/predicates";
+
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -76,8 +78,8 @@ const LEG = {
  *
  * Scenarios (0.2 m path at 0.2 m/s → one cycle, root slides 0.2 m, yaw 90°):
  *
- * 1. The raw path bake fails validateFootSkate — the foot rides the root at 0.2
- *    m/s through its contact window.
+ * 1. The raw path bake warns from validateFootSkate — the foot rides the root at
+ *    0.2 m/s through its contact window.
  * 2. PlantStanceFeet over the bake passes validateFootSkate: the stance foot is
  *    pinned while the hip walks the path (through the rotated frame the path's
  *    facing put the rig in).
@@ -95,14 +97,15 @@ export const test_motion_path_plant_feet = (): void => {
   });
   const contacts = [{ bone: "leftFoot", start: 0, end: 1 } as const];
 
-  TestValidator.equals(
-    "raw path bake skates the foot",
-    validateFootSkate({
-      motion: path.motion,
-      skeleton: legSkeleton,
-      contacts,
-    }).success,
-    false,
+  TestValidator.predicate(
+    "raw path bake skates the foot (warns)",
+    warningCount(
+      validateFootSkate({
+        motion: path.motion,
+        skeleton: legSkeleton,
+        contacts,
+      }),
+    ) > 0,
   );
 
   const planted = plantStanceFeet({
@@ -114,23 +117,27 @@ export const test_motion_path_plant_feet = (): void => {
     sampleRate: 24,
   });
   TestValidator.equals(
-    "planted path walk passes foot-skate",
-    validateFootSkate({
-      motion: planted.motion,
-      skeleton: legSkeleton,
-      contacts,
-    }).success,
-    true,
+    "planted path walk has no foot-skate warning",
+    warningCount(
+      validateFootSkate({
+        motion: planted.motion,
+        skeleton: legSkeleton,
+        contacts,
+      }),
+    ),
+    0,
   );
   TestValidator.equals(
-    "planted path walk passes ground contact",
-    validateGroundContact({
-      motion: planted.motion,
-      skeleton: legSkeleton,
-      footBones: ["leftFoot"],
-      groundY: 0,
-      tolerance: 1e-3,
-    }).success,
-    true,
+    "planted path walk has no ground-contact warning",
+    warningCount(
+      validateGroundContact({
+        motion: planted.motion,
+        skeleton: legSkeleton,
+        footBones: ["leftFoot"],
+        groundY: 0,
+        tolerance: 1e-3,
+      }),
+    ),
+    0,
   );
 };

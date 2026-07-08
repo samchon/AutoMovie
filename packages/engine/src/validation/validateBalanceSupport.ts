@@ -59,9 +59,12 @@ export interface IAutoMovieBalanceSupportWindow {
  * and rejects frames where the center-of-mass proxy falls outside the support
  * hull plus margin.
  *
- * This validator is deliberately a hard rejection signal, not an auto-fixer:
- * moving the root, widening the stance, or changing the action are different
- * authoring decisions that belong upstream.
+ * Balance is a physical-plausibility **warning**, not a gate (D015): overstated
+ * action, martial arts, dance, and stunts are built on momentary imbalance (a
+ * launch, a landing, a spin, a tiptoe, an airborne pose), so the run still
+ * succeeds and the warning surfaces for the orchestrator to restage or
+ * acknowledge with `physicsIntent`. Only malformed windows (bad/detached bone,
+ * empty support, bad window/margin) are errors.
  *
  * @author Samchon
  */
@@ -86,8 +89,16 @@ export const validateBalanceSupport = (props: {
 
   /** Optional rest-frame remap for clinical authoring. */
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
+
+  /**
+   * Marker that opts the clip out of the balance expectation (D015): a
+   * deliberately off-balance pose (wire-fu, a mid-spin freeze, a tiptoe) sets
+   * this and the matching warnings are suppressed.
+   */
+  physicsIntent?: string;
 }): IAutoMovieValidation => {
   const collector = new ViolationCollector();
+  const suppressed = props.physicsIntent !== undefined;
   const sampleRate =
     props.sampleRate === undefined ? DEFAULT_SAMPLE_RATE : props.sampleRate;
   const sampleRateValid = isPositiveFinite(sampleRate);
@@ -207,13 +218,13 @@ export const validateBalanceSupport = (props: {
         support.supportBones.map((bone) => resolved.get(bone)!),
       );
       const distance = pointHullDistance(centerPosition, hull);
-      if (distance > margin) {
+      if (distance > margin && !suppressed) {
         const roundedMargin = round(margin);
         const roundedTime = round(time);
         const overshoot = distance - margin;
-        const expected = `center-of-mass projection must stay within support hull margin ${roundedMargin}m at t=${roundedTime}s`;
+        const expected = `center-of-mass projection must stay within support hull margin ${roundedMargin}m at t=${roundedTime}s (a pose may be deliberately off-balance; mark physicsIntent if it is intended)`;
         const violationPath = `${sp}.samples[${sampleIndex}].centerOfMass.supportDistance`;
-        collector.push("physics", violationPath, expected, distance, overshoot);
+        collector.warn("physics", violationPath, expected, distance, overshoot);
       }
     }
   }

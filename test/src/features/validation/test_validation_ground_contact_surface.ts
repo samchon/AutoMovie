@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation } from "../internal/predicates";
+import { hasWarning } from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -53,9 +53,10 @@ const rising = (x: number): number => 0.5 * x;
  * Scenarios:
  *
  * 1. A foot gliding at y=0.1 over ground h(x)=0.5x sinks once 0.5x exceeds 0.1: a
- *    `physics` violation on the foot's world y, with the local ground height in
- *    play (overshoot 0.4 at the end).
- * 2. The same clip lifted to y=0.6 clears the slope everywhere — no violation (the
+ *    `physics` WARNING (D015 — advice, not a gate) on the foot's world y, with
+ *    the local ground height in play (overshoot 0.4 at the end); the run
+ *    succeeds.
+ * 2. The same clip lifted to y=0.6 clears the slope everywhere — no warning (the
  *    negative twin).
  * 3. A constant callback `() => 0` matches the scalar `groundY: 0` verdict on the
  *    same clip — the widened parameter did not change the scalar path.
@@ -67,10 +68,14 @@ export const test_validation_ground_contact_surface = (): void => {
     footBones: ["leftFoot"],
     groundY: rising,
   });
-  TestValidator.equals("slope sinks the low glide", sunk.success, false);
+  TestValidator.equals(
+    "slope sinks the low glide (succeeds)",
+    sunk.success,
+    true,
+  );
   TestValidator.predicate(
-    "violation names the foot's world y",
-    hasViolation(sunk, "physics", ".leftFoot.worldPosition.y"),
+    "warning names the foot's world y",
+    hasWarning(sunk, "physics", ".leftFoot.worldPosition.y"),
   );
 
   TestValidator.equals(

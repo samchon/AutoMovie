@@ -8,7 +8,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasWarning } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -68,7 +68,8 @@ const key = (time: number): IAutoMovieKeyframe => ({
  * of `segmentSegmentDistance` produced `NaN` for the two collapsed-segment
  * candidates, `Math.min(0, 0, NaN, NaN)` was `NaN`, and `NaN < minimum` was
  * `false` — the overlap slipped through and the frame validated as clean. This
- * test pins that the error now fires.
+ * test pins that the detection now fires (as a D015 plausibility warning; the
+ * span guard is what makes the distance finite so the overlap is seen at all).
  */
 export const test_validation_self_intersection_collapsed = (): void => {
   const result = validateSelfIntersection({
@@ -85,6 +86,7 @@ export const test_validation_self_intersection_collapsed = (): void => {
 
   TestValidator.predicate(
     "collapsed-centerline overlap no longer slips through as NaN",
-    hasViolation(result, "physics", "$input.pairs[0].samples[0].distance"),
+    result.success === true &&
+      hasWarning(result, "physics", "$input.pairs[0].samples[0].distance"),
   );
 };
