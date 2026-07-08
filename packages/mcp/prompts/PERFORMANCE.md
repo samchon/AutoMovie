@@ -10,6 +10,8 @@
 
 Each performing actor needs a context: its gaits (JSON-safe — named easing only, no bezier tuples), staged position and facing, rest pose, and optionally its rig and rest frames. The server assembles the engine's default synthesizer from these, so the MCP contract stays JSON-only. An IK or physics verb without a rig synthesizes nothing.
 
+A `locomote` action's `gait` is a free string matched by name against the gaits this context supplies — the vocabulary is the actor's own (a biped's `walk`/`run`/`sneak`, a horse's `trot`/`gallop`), not a fixed set. Naming a gait the actor did not supply fails the perform gate with a `type` violation rather than freezing silently, so give each actor the gaits its actions reference.
+
 ## Rules the Engine Enforces
 
 - **One take, one live camera** — exactly one camera is elected per shot.

@@ -88,6 +88,7 @@ export class PipelineService {
       synthesize,
       skeleton: (node) => contexts.get(node)?.rig ?? null,
       restFrames: (node) => contexts.get(node)?.restFrames,
+      gaits: (node) => contexts.get(node)?.gaits.map((gait) => gait.name),
       blocking: props.blocking,
     });
     return { performed: toMcpPerformedShot(performed) };
