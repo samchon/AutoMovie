@@ -12,6 +12,7 @@ import {
   IAutoMovieSequence,
   IAutoMovieShot,
   IAutoMovieShotPerformance,
+  IAutoMovieTransform,
   IAutoMovieValidation,
 } from "@automovie/interface";
 
@@ -610,13 +611,24 @@ export class CommitService {
     // The LLM authors the placement rotation as semantic Euler degrees; lower
     // it to the engine's quaternion before the artifact check runs against the
     // engine transform (#723).
-    const transform = toEngineTransform(props.transform);
-    validateTransformArtifact(
-      transform,
-      "$input.transform",
-      "placement transform",
-      violations,
-    );
+    let transform: IAutoMovieTransform | null = null;
+    try {
+      transform = toEngineTransform(props.transform);
+      validateTransformArtifact(
+        transform,
+        "$input.transform",
+        "placement transform",
+        violations,
+      );
+    } catch {
+      pushViolation(
+        violations,
+        "type",
+        "$input.transform.rotation",
+        "placement rotation must be omitted, null, or a complete Euler rotation with x, y, z, and order",
+        (props.transform as Partial<IAutoMovieMcpTransform>).rotation,
+      );
+    }
     if (slate.scene === null)
       pushViolation(
         violations,
@@ -645,7 +657,7 @@ export class CommitService {
       scene: {
         ...scene,
         nodes: scene.nodes.map((node) =>
-          node.id !== props.node ? node : { ...node, transform },
+          node.id !== props.node ? node : { ...node, transform: transform! },
         ),
       },
       shots: [],

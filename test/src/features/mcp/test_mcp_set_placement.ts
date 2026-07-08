@@ -1,5 +1,5 @@
 import { IAutoMovieScript, IAutoMovieShot } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieApplication, IAutoMovieMcpTransform } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -49,9 +49,9 @@ const unitScale = { x: 1, y: 1, z: 1 };
  *    missing list and names commitShot as the re-do (the #615 interplay).
  * 3. A ghost placement violates at `$input.node` — a set names a thing that
  *    exists.
- * 4. An empty reason violates (evidence discipline); a non-finite transform
- *    violates at `$input.transform`; a project with no committed scene violates
- *    at `$slate.scene`. Nothing is written in any refused case.
+ * 4. An empty reason violates (evidence discipline); malformed and non-finite
+ *    transforms violate at `$input.transform`; a project with no committed
+ *    scene violates at `$slate.scene`. Nothing is written in any refused case.
  * 5. Without an active project the tool throws the actionable openProject guidance
  *    (set is resident-only).
  */
@@ -192,6 +192,20 @@ export const test_mcp_set_placement = (): void => {
     TestValidator.predicate(
       "transform located",
       hasViolation(badTransform.validation, "range", "$input.transform"),
+    );
+    const badEuler = app.setPlacement({
+      node: "knightB",
+      transform: {
+        translation: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 90, z: 0 },
+        scale: unitScale,
+      } as unknown as IAutoMovieMcpTransform,
+      reason: "place the champion with malformed euler",
+    });
+    TestValidator.equals("bad euler refuses", badEuler.updated, false);
+    TestValidator.predicate(
+      "euler rotation located",
+      hasViolation(badEuler.validation, "type", "$input.transform.rotation"),
     );
 
     const bare = new AutoMovieApplication();
