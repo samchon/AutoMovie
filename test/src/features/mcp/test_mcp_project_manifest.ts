@@ -25,6 +25,7 @@ import { throwsError } from "../internal/predicates";
  *    on open, not a later raw TypeError.
  * 5. Parseable manifest assets still obey the same project-relative path policy as
  *    new registrations.
+ * 6. Manifest asset entries remain a unique index after path normalization.
  */
 export const test_mcp_project_manifest = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-manifest-"));
@@ -104,6 +105,30 @@ export const test_mcp_project_manifest = (): void => {
             "Fix or remove",
             "assets[0]",
             "asset path",
+          ],
+        ),
+      );
+    }
+
+    for (const assets of [
+      ["models/a.glb", "models/a.glb"],
+      ["models/a.glb", "models\\a.glb"],
+    ]) {
+      fs.writeFileSync(
+        manifestPath,
+        `${JSON.stringify({ version: 1, assets }, null, 2)}\n`,
+      );
+      TestValidator.predicate(
+        `duplicate manifest asset refuses: ${assets.join(", ")}`,
+        throwsError(
+          () => AutoMovieProject.open(root),
+          [
+            "AutoMovie project file",
+            "automovie.json",
+            "Fix or remove",
+            "assets[1]",
+            "duplicate",
+            "models/a.glb",
           ],
         ),
       );
