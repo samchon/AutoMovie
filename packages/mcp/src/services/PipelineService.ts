@@ -266,7 +266,13 @@ const DEFAULT_GESTURES = new Set<string>([
 ]);
 
 const actorList = (action: IAutoMovieActionCall): string[] =>
-  typeof action.actor === "string" ? [action.actor] : action.actor;
+  typeof action.actor === "string"
+    ? [action.actor]
+    : Array.isArray(action.actor)
+      ? action.actor.filter(
+          (actor): actor is string => typeof actor === "string",
+        )
+      : [];
 
 const actorPath = (
   action: IAutoMovieActionCall,
@@ -274,6 +280,7 @@ const actorPath = (
   actor: string,
 ): string => {
   if (typeof action.actor === "string") return `${actionPath}.actor`;
+  if (!Array.isArray(action.actor)) return `${actionPath}.actor`;
   const index = action.actor.indexOf(actor);
   return index === -1 ? `${actionPath}.actor` : `${actionPath}.actor[${index}]`;
 };

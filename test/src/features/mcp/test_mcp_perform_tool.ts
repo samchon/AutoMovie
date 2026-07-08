@@ -61,6 +61,8 @@ const riglessContext = (
  *    of succeeding with no motion for that actor.
  * 5. Malformed actor context registries fail as data with `$input.actors...` paths
  *    instead of leaking wrapper TypeErrors.
+ * 6. Malformed performance action actors fail as engine validation data even
+ *    though the MCP default-synthesis precheck runs first.
  */
 export const test_mcp_perform_tool = (): void => {
   const app = new AutoMovieApplication();
@@ -211,6 +213,70 @@ export const test_mcp_perform_tool = (): void => {
         (violation) =>
           violation.kind === "type" &&
           violation.path === "$input.actors.knightA.gaits",
+      ),
+  );
+
+  const malformedDraftActor = app.perform({
+    script,
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "locomote",
+          actor: {} as never,
+          start: 0,
+          duration: 1,
+          gait: "walk",
+          to: { kind: "point", point: { x: 1, y: 0, z: 0 } },
+        },
+      ],
+      duration: 1,
+      revise: { review: "unchanged.", final: null },
+    }),
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "malformed draft actor returns violations",
+    malformedDraftActor.success === false &&
+      malformedDraftActor.violations.some(
+        (violation) =>
+          violation.kind === "type" &&
+          violation.path === "$input.draft[0].actor",
+      ),
+  );
+
+  const malformedFinalActor = app.perform({
+    script,
+    staged,
+    performance: makePerformanceWrite({
+      draft: [],
+      duration: 1,
+      revise: {
+        review: "use the revised malformed payload.",
+        final: [
+          {
+            verb: "gesture",
+            actor: null as never,
+            start: 0,
+            duration: 1,
+            kind: "wave",
+          },
+        ],
+      },
+    }),
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "malformed final actor returns violations",
+    malformedFinalActor.success === false &&
+      malformedFinalActor.violations.some(
+        (violation) =>
+          violation.kind === "type" &&
+          violation.path === "$input.revise.final[0].actor",
       ),
   );
 
