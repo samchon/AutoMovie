@@ -37,6 +37,22 @@ const slateWith = (
   ...partial,
 });
 
+const throwsProjectJsonError = (
+  task: () => unknown,
+  fragments: readonly string[],
+): boolean => {
+  try {
+    task();
+    return false;
+  } catch (error) {
+    return (
+      error instanceof Error &&
+      error.name !== "SyntaxError" &&
+      fragments.every((fragment) => error.message.includes(fragment))
+    );
+  }
+};
+
 /**
  * The project folder itself is the memory (#614): opening a fresh directory is
  * a valid empty project, a saved slate becomes visible pretty-printed JSON
@@ -55,6 +71,8 @@ const slateWith = (
  * 4. Re-saving with cleared downstream slices REMOVES their files (null script
  *    file gone, empty notes file gone, shots dir reconciled) — presence always
  *    means content.
+ * 5. Malformed resident JSON reports a controlled project-state error naming the
+ *    file to fix, for manifest, top-level slice, and keyed slice reads.
  */
 export const test_mcp_project_store = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-store-"));
@@ -114,5 +132,55 @@ export const test_mcp_project_store = (): void => {
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+
+  const manifestRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-bad-manifest-"),
+  );
+  try {
+    fs.writeFileSync(path.join(manifestRoot, "automovie.json"), "{ nope");
+    TestValidator.predicate(
+      "malformed manifest has project guidance",
+      throwsProjectJsonError(
+        () => AutoMovieProject.open(manifestRoot),
+        ["AutoMovie project file", "automovie.json", "Fix or remove"],
+      ),
+    );
+  } finally {
+    fs.rmSync(manifestRoot, { recursive: true, force: true });
+  }
+
+  const sliceRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-bad-slice-"),
+  );
+  try {
+    AutoMovieProject.open(sliceRoot);
+    fs.writeFileSync(path.join(sliceRoot, "script.json"), "{ nope");
+    TestValidator.predicate(
+      "malformed top-level slice has project guidance",
+      throwsProjectJsonError(
+        () => AutoMovieProject.open(sliceRoot).writableSlate(),
+        ["AutoMovie project file", "script.json", "Fix or remove"],
+      ),
+    );
+  } finally {
+    fs.rmSync(sliceRoot, { recursive: true, force: true });
+  }
+
+  const keyedRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-bad-keyed-"),
+  );
+  try {
+    AutoMovieProject.open(keyedRoot);
+    fs.writeFileSync(path.join(keyedRoot, "shots", "b1.json"), "{ nope");
+    TestValidator.predicate(
+      "malformed keyed slice has project guidance",
+      throwsProjectJsonError(
+        () => AutoMovieProject.open(keyedRoot).writableSlate(),
+        ["AutoMovie project file", "shots", "b1.json", "Fix or remove"],
+      ),
+    );
+  } finally {
+    fs.rmSync(keyedRoot, { recursive: true, force: true });
   }
 };

@@ -330,8 +330,26 @@ const orderByFilename = <T>(items: T[], keyOf: (item: T) => string): T[] => {
   return named.map((entry) => entry.item);
 };
 
-const readJson = <T>(file: string): T | null =>
-  fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, "utf8")) as T) : null;
+class AutoMovieProjectJsonError extends Error {
+  public constructor(file: string, reason: string) {
+    super(
+      `AutoMovie project file "${file}" contains malformed JSON. ` +
+        `Fix or remove this file, then call openProject again. ` +
+        `Parser detail: ${reason}`,
+    );
+    this.name = "AutoMovieProjectJsonError";
+  }
+}
+
+const readJson = <T>(file: string): T | null => {
+  if (!fs.existsSync(file)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8")) as T;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new AutoMovieProjectJsonError(file, reason);
+  }
+};
 
 /** Atomic write: temp file in the same directory, then rename over. */
 const writeAtomic = (file: string, data: Uint8Array | string): void => {
