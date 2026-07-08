@@ -139,6 +139,7 @@ const residentShot: IAutoMovieShot = {
  *    TypeErrors.
  * 9. Malformed explicit geometry collections reject with path-bearing errors
  *    before helper array iteration.
+ * 10. Non-finite explicit pose sample time rejects with a `$input.t` path.
  */
 export const test_mcp_geometry_query_tools = (): void => {
   const nodeDistance = app.measureDistance({
@@ -251,6 +252,18 @@ export const test_mcp_geometry_query_tools = (): void => {
     "missing actor pose",
     app.getResolvedPose({ context, actor: "missing" }).resolvedPose,
     null,
+  );
+  TestValidator.predicate(
+    "non-finite pose sample time rejects",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context,
+          actor: "actor",
+          t: Infinity,
+        }),
+      ["$input.t", "finite"],
+    ),
   );
   TestValidator.predicate(
     "malformed pose context scene nodes reject",

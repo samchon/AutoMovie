@@ -774,5 +774,8 @@ const inverse = (q: IAutoMovieQuaternion): IAutoMovieQuaternion =>
   Quaternion.normalize({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
 
 const assertFiniteTime = (t: number): void => {
-  if (!Number.isFinite(t)) throw new Error("t must be finite");
+  if (!Number.isFinite(t))
+    throw new Error(
+      `range at $input.t: resolved pose sample time must be finite, but was ${t}`,
+    );
 };
