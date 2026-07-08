@@ -134,6 +134,8 @@ export class PipelineService {
     assemble: IAutoMovieAssembleApplication.IWrite;
     shots: IAutoMovieShot[];
   }): IAutoMovieCutOutput {
+    const violations = validateCutShape(props.assemble, props.shots);
+    if (violations.length > 0) return { cut: { success: false, violations } };
     return { cut: cutSequence(props.assemble, props.shots) };
   }
 
@@ -469,6 +471,57 @@ const validateBlockShape = (
       validateStageTarget(blocking.camera.on, "$input.camera.on", violations);
   }
   return violations;
+};
+
+const validateCutShape = (
+  assemble: unknown,
+  shots: unknown,
+): IAutoMovieConstraintViolation[] => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  if (isJsonObject(assemble, "$input", "assemble", violations)) {
+    if (
+      isJsonObject(assemble.sequence, "$input.sequence", "sequence", violations)
+    )
+      requireString(
+        assemble.sequence.id,
+        "$input.sequence.id",
+        "sequence id",
+        violations,
+      );
+    if (
+      isJsonArray(assemble.entries, "$input.entries", "cut entries", violations)
+    )
+      assemble.entries.forEach((entry, index) => {
+        const path = `$input.entries[${index}]`;
+        if (!isJsonObject(entry, path, "cut entry", violations)) return;
+        requireString(entry.shot, `${path}.shot`, "shot id", violations);
+        validateNullableObject(entry.trim, `${path}.trim`, "trim", violations);
+        validateNullableObject(
+          entry.transition,
+          `${path}.transition`,
+          "transition",
+          violations,
+        );
+      });
+  }
+
+  if (isJsonArray(shots, "$shots", "shots", violations))
+    shots.forEach((shot, index) => {
+      const path = `$shots[${index}]`;
+      if (!isJsonObject(shot, path, "shot", violations)) return;
+      requireString(shot.id, `${path}.id`, "shot id", violations);
+    });
+  return violations;
+};
+
+const validateNullableObject = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (value === null) return;
+  isJsonObject(value, path, label, violations);
 };
 
 const validateActorRegistry = (
