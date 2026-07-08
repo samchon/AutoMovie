@@ -23,6 +23,15 @@ export const sliceCaptionSidecar = (
     throw new Error(
       `frameEnd must be an integer > frameStart, but was ${frameEnd}`,
     );
+  // A window whose start is at or past the sidecar's coverage asks for captions
+  // of frames the sidecar does not have — a render/caption frame-count mismatch
+  // (e.g. the sidecar was planned at a different fps). Clamping frameEnd alone
+  // would leave `end - frameStart` negative and pass a broken slice silently;
+  // surface the mismatch instead, the same discipline as the checks above.
+  if (frameStart >= sidecar.frameCount)
+    throw new Error(
+      `frameStart ${frameStart} is at or beyond the sidecar's ${sidecar.frameCount} frames; the render window exceeds caption coverage`,
+    );
 
   const end = clampWindowEnd(frameEnd, sidecar.frameCount);
   const entries: IAutoMovieCaptionEntry[] = [];

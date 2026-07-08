@@ -216,4 +216,30 @@ export const test_render_caption_sidecar = (): void => {
       "fps",
     ),
   );
+  // Zero-frame policy now matches planSequenceRender: a runtime that rounds to
+  // no output frames throws on the caption side too, instead of silently
+  // returning an empty sidecar beside a render that errored. A 0.1 s trim at
+  // fps 4 rounds to round(0.4) = 0 frames.
+  TestValidator.predicate(
+    "zero output frames throws (aligned with planSequenceRender)",
+    throwsError(
+      () =>
+        planCaptionSidecar({
+          script: TREE_SCRIPT,
+          sequence: {
+            ...CAPTION_SEQUENCE,
+            shots: [
+              {
+                shot: "shot:duel",
+                trim: { start: 0, duration: 0.1 },
+                transition: null,
+              },
+            ],
+          },
+          shots: CAPTION_SHOTS,
+          fps: 4,
+        }),
+      "at least one frame",
+    ),
+  );
 };
