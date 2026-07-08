@@ -69,6 +69,9 @@ export class PipelineService {
     script: IAutoMovieScriptApplication.IWrite;
     staging: IAutoMovieStagingApplication.IWrite;
   }): IAutoMovieStageOutput {
+    const violations = validateStageShape(props.script, props.staging);
+    if (violations.length > 0)
+      return { staged: { success: false, violations } };
     return { staged: stageScene(props.script, props.staging) };
   }
 
@@ -209,6 +212,193 @@ const convertPropSpecForForge = (
       ],
     };
   }
+};
+
+const validateStageShape = (
+  script: unknown,
+  staging: unknown,
+): IAutoMovieConstraintViolation[] => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  if (isJsonObject(script, "$script", "script", violations)) {
+    if (isJsonArray(script.cast, "$script.cast", "script cast", violations))
+      script.cast.forEach((member, index) => {
+        const path = `$script.cast[${index}]`;
+        if (!isJsonObject(member, path, "script cast member", violations))
+          return;
+        requireString(member.node, `${path}.node`, "cast node", violations);
+        if (member.modelRef !== null)
+          requireString(
+            member.modelRef,
+            `${path}.modelRef`,
+            "cast model reference",
+            violations,
+          );
+      });
+  }
+
+  if (isJsonObject(staging, "$input", "staging", violations)) {
+    if (isJsonObject(staging.scene, "$input.scene", "scene", violations))
+      requireString(
+        staging.scene.id,
+        "$input.scene.id",
+        "scene id",
+        violations,
+      );
+    if (
+      isJsonArray(staging.actors, "$input.actors", "staging actors", violations)
+    )
+      staging.actors.forEach((actor, index) => {
+        const path = `$input.actors[${index}]`;
+        if (!isJsonObject(actor, path, "actor placement", violations)) return;
+        requireString(actor.node, `${path}.node`, "actor node", violations);
+        requireVectorObject(
+          actor.position,
+          `${path}.position`,
+          "actor position",
+          violations,
+        );
+        if (actor.attach !== undefined && actor.attach !== null) {
+          if (
+            isJsonObject(
+              actor.attach,
+              `${path}.attach`,
+              "mount binding",
+              violations,
+            )
+          ) {
+            requireString(
+              actor.attach.parent,
+              `${path}.attach.parent`,
+              "mount parent",
+              violations,
+            );
+            requireString(
+              actor.attach.bone,
+              `${path}.attach.bone`,
+              "mount bone",
+              violations,
+            );
+          }
+        } else if (actor.attach === null)
+          violations.push(
+            violation(
+              "type",
+              `${path}.attach`,
+              "mount binding must be omitted or a JSON object",
+              actor.attach,
+            ),
+          );
+      });
+    if (
+      isJsonArray(
+        staging.cameras,
+        "$input.cameras",
+        "staging cameras",
+        violations,
+      )
+    )
+      staging.cameras.forEach((camera, index) => {
+        const path = `$input.cameras[${index}]`;
+        if (!isJsonObject(camera, path, "camera placement", violations)) return;
+        requireString(camera.node, `${path}.node`, "camera node", violations);
+        requireVectorObject(
+          camera.position,
+          `${path}.position`,
+          "camera position",
+          violations,
+        );
+        validateStageTarget(camera.lookAt, `${path}.lookAt`, violations);
+      });
+    if (
+      isJsonArray(staging.lights, "$input.lights", "staging lights", violations)
+    )
+      staging.lights.forEach((light, index) => {
+        const path = `$input.lights[${index}]`;
+        if (!isJsonObject(light, path, "light placement", violations)) return;
+        requireString(light.node, `${path}.node`, "light node", violations);
+        requireVectorObject(
+          light.direction,
+          `${path}.direction`,
+          "light direction",
+          violations,
+        );
+      });
+  }
+  return violations;
+};
+
+const isJsonObject = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): value is Record<string, unknown> => {
+  if (isRecord(value)) return true;
+  violations.push(
+    violation("type", path, `${label} must be a JSON object`, value),
+  );
+  return false;
+};
+
+const isJsonArray = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): value is unknown[] => {
+  if (Array.isArray(value)) return true;
+  violations.push(violation("type", path, `${label} must be an array`, value));
+  return false;
+};
+
+const requireString = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (typeof value === "string") return;
+  violations.push(violation("type", path, `${label} must be a string`, value));
+};
+
+const requireVectorObject = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  isJsonObject(value, path, label, violations);
+};
+
+const validateStageTarget = (
+  target: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(target, path, "camera target", violations)) return;
+  if (target.kind === "node")
+    requireString(
+      target.node,
+      `${path}.node`,
+      "camera target node",
+      violations,
+    );
+  else if (target.kind === "point")
+    requireVectorObject(
+      target.point,
+      `${path}.point`,
+      "camera target point",
+      violations,
+    );
+  else
+    violations.push(
+      violation(
+        "type",
+        path,
+        'camera target kind must be "node" or "point"',
+        target,
+      ),
+    );
 };
 
 const validateActorRegistry = (
