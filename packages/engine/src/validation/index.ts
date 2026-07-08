@@ -7,6 +7,7 @@ export * from "./validateFootSkate";
 export * from "./validateGroundContact";
 export * from "./validateMotion";
 export * from "./validateModel";
+export * from "./capsuleProxy";
 export * from "./validateSelfIntersection";
 export * from "./validateBodyCollision";
 export * from "./validateSupport";

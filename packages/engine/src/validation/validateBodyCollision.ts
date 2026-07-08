@@ -18,7 +18,7 @@ import {
   suggestCollisionResponse,
 } from "../physics/collisionResponse";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
-import { IAutoMovieCapsuleProxy } from "./validateSelfIntersection";
+import { IAutoMovieCapsuleProxy, validateCapsule } from "./capsuleProxy";
 import { ViolationCollector } from "./violation";
 
 const DEFAULT_SAMPLE_RATE = 24;
@@ -33,8 +33,10 @@ const FALLBACK_NORMAL: IAutoMovieVector3 = { x: 0, y: 1, z: 0 };
  * One actor in an inter-body collision test: its rig, its motion, the capsule
  * proxies that stand in for its volume, and its physical body (mass etc., #595)
  * — `null` bodies fall back to a default human mass. `node` labels it in
- * emitted events. Capsule endpoints are a documented precondition: they must be
- * valid bones of `skeleton` (validated upstream, e.g. by validateModel).
+ * emitted events. Each capsule's endpoints must be two distinct bones of
+ * `skeleton` with a positive radius; {@link detectBodyCollision} validates this
+ * itself (a malformed capsule is an error, returned before sampling) rather
+ * than trusting an upstream pass.
  *
  * @author Samchon
  */
@@ -124,6 +126,19 @@ export const detectBodyCollision = (props: {
     return { validation: collector.toValidation(), events: [], response: null };
   }
 
+  // Validate every capsule against its actor's rig before sampling — the same
+  // precondition validateSelfIntersection enforces on itself. A malformed
+  // capsule (bone not on the rig, non-distinct endpoints, bad radius) resolves
+  // to an undefined world position and a NaN distance, and `NaN < minimum` is
+  // false, so an unguarded run would drop the overlap in silence. These are
+  // structural errors, not physics warnings: return before sampling.
+  const capsulesValid = [
+    validateActorCapsules(props.a, `${path}.a`, collector),
+    validateActorCapsules(props.b, `${path}.b`, collector),
+  ].every(Boolean);
+  if (!capsulesValid)
+    return { validation: collector.toValidation(), events: [], response: null };
+
   const duration = Math.min(props.a.motion.duration, props.b.motion.duration);
   const times = sampleTimes(duration, sampleRate);
   const mapsA = times.map((time) => resolveMap(props.a, time));
@@ -189,6 +204,27 @@ export const detectBodyCollision = (props: {
     gain,
   );
   return { validation: collector.toValidation(), events, response };
+};
+
+/**
+ * Validate every capsule of one actor against its own rig, one violation per
+ * fault (all capsules are checked so a correction round sees them together).
+ * Returns whether the actor's capsules are all usable.
+ */
+const validateActorCapsules = (
+  actor: IAutoMovieCollisionActor,
+  path: string,
+  collector: ViolationCollector,
+): boolean => {
+  const bones = new Set(actor.skeleton.bones.map((bone) => bone.bone));
+  let valid = true;
+  actor.capsules.forEach((capsule, index) => {
+    if (
+      !validateCapsule(capsule, `${path}.capsules[${index}]`, bones, collector)
+    )
+      valid = false;
+  });
+  return valid;
 };
 
 const suggestResponse = (
