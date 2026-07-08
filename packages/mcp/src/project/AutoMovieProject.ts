@@ -1,11 +1,16 @@
-import { validateModel as validateEngineModel } from "@automovie/engine";
 import {
+  validateModel as validateEngineModel,
+  validateScriptTree,
+} from "@automovie/engine";
+import {
+  IAutoMovieBeat,
   IAutoMovieBeatEndState,
   IAutoMovieConstraintViolation,
   IAutoMovieModel,
   IAutoMovieReviewNote,
   IAutoMovieScene,
   IAutoMovieScript,
+  IAutoMovieScriptNode,
   IAutoMovieSequence,
   IAutoMovieShot,
 } from "@automovie/interface";
@@ -573,6 +578,234 @@ const validateScriptSlice = (
       false,
     );
   });
+  validateScriptTreeSlice(value.tree, value.beats, violations);
+};
+
+const validateScriptTreeSlice = (
+  tree: unknown,
+  beats: unknown,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (tree === undefined || tree === null) return;
+  const before = violations.length;
+  if (!validateArrayArtifact(tree, "$input.tree", "script tree", violations))
+    return;
+  tree.forEach((node, index) => {
+    const path = `$input.tree[${index}]`;
+    if (!validateObjectArtifact(node, path, "script tree node", violations))
+      return;
+    validateNonEmptyId(
+      node.id,
+      `${path}.id`,
+      "script tree node id",
+      violations,
+    );
+    if (
+      node.kind !== "intent" &&
+      node.kind !== "act" &&
+      node.kind !== "scene" &&
+      node.kind !== "group" &&
+      node.kind !== "beat"
+    )
+      pushViolation(
+        violations,
+        "type",
+        `${path}.kind`,
+        'script tree node kind must be one of "intent", "act", "scene", "group", or "beat"',
+        node.kind,
+      );
+    validateNullableId(
+      node.parent,
+      `${path}.parent`,
+      "script tree node parent",
+      violations,
+    );
+    validateNullableId(
+      node.temporal,
+      `${path}.temporal`,
+      "script tree node temporal predecessor",
+      violations,
+    );
+    if (
+      validateArrayArtifact(
+        node.interactsWith,
+        `${path}.interactsWith`,
+        "script tree interactions",
+        violations,
+      )
+    )
+      node.interactsWith.forEach((other, otherIndex) =>
+        validateNonEmptyId(
+          other,
+          `${path}.interactsWith[${otherIndex}]`,
+          "script tree interaction target",
+          violations,
+        ),
+      );
+    if (
+      !validateObjectArtifact(
+        node.payload,
+        `${path}.payload`,
+        "script tree payload",
+        violations,
+      )
+    )
+      return;
+    validateScriptTreePayload(node, path, violations);
+  });
+  if (violations.length !== before || !Array.isArray(beats)) return;
+  appendValidation(
+    violations,
+    validateScriptTree({
+      tree: tree as IAutoMovieScriptNode[],
+      beats: beats as IAutoMovieBeat[],
+    }),
+  );
+};
+
+const validateNullableId = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (value === null) return;
+  validateNonEmptyId(value, path, label, violations);
+};
+
+const validateScriptTreePayload = (
+  node: Record<string, unknown>,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  const payload = node.payload;
+  if (!isRecord(payload)) return;
+  switch (node.kind) {
+    case "intent":
+      validateNonEmptyText(
+        payload.logline,
+        `${path}.payload.logline`,
+        "intent logline",
+        violations,
+      );
+      validateNonEmptyText(
+        payload.theme,
+        `${path}.payload.theme`,
+        "intent theme",
+        violations,
+      );
+      break;
+    case "act":
+      validateNonEmptyText(
+        payload.purpose,
+        `${path}.payload.purpose`,
+        "act purpose",
+        violations,
+      );
+      break;
+    case "scene":
+      if (
+        payload.interiorExterior !== "INT" &&
+        payload.interiorExterior !== "EXT"
+      )
+        pushViolation(
+          violations,
+          "type",
+          `${path}.payload.interiorExterior`,
+          'scene interiorExterior must be "INT" or "EXT"',
+          payload.interiorExterior,
+        );
+      validateNonEmptyText(
+        payload.location,
+        `${path}.payload.location`,
+        "scene location",
+        violations,
+      );
+      validateNonEmptyText(
+        payload.timeOfDay,
+        `${path}.payload.timeOfDay`,
+        "scene timeOfDay",
+        violations,
+      );
+      if (payload.description !== null)
+        validateNonEmptyText(
+          payload.description,
+          `${path}.payload.description`,
+          "scene description",
+          violations,
+        );
+      break;
+    case "group":
+      validateNonEmptyText(
+        payload.rationale,
+        `${path}.payload.rationale`,
+        "group rationale",
+        violations,
+      );
+      break;
+    case "beat":
+      validateNonEmptyId(
+        payload.beat,
+        `${path}.payload.beat`,
+        "tree beat id",
+        violations,
+      );
+      validateNonEmptyText(
+        payload.direction,
+        `${path}.payload.direction`,
+        "beat direction",
+        violations,
+      );
+      if (
+        validateArrayArtifact(
+          payload.dialogue,
+          `${path}.payload.dialogue`,
+          "beat dialogue",
+          violations,
+        )
+      )
+        payload.dialogue.forEach((line, index) => {
+          const linePath = `${path}.payload.dialogue[${index}]`;
+          if (
+            !validateObjectArtifact(
+              line,
+              linePath,
+              "beat dialogue line",
+              violations,
+            )
+          )
+            return;
+          validateNonEmptyText(
+            line.speaker,
+            `${linePath}.speaker`,
+            "dialogue speaker",
+            violations,
+          );
+          validateNonEmptyText(
+            line.text,
+            `${linePath}.text`,
+            "dialogue text",
+            violations,
+          );
+          if (line.anchor !== null)
+            validateRange(
+              line.anchor,
+              `${linePath}.anchor`,
+              0,
+              Infinity,
+              "dialogue anchor",
+              violations,
+            );
+        });
+      if (payload.caption !== null)
+        validateNonEmptyText(
+          payload.caption,
+          `${path}.payload.caption`,
+          "beat caption",
+          violations,
+        );
+      break;
+  }
 };
 
 const validateSceneSlice = (

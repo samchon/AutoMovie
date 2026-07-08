@@ -62,6 +62,48 @@ const throwsProjectJsonError = (
   }
 };
 
+const scriptWithTree = (tree: unknown): IAutoMovieScript => ({
+  logline: "A duel at dawn.",
+  theme: "discipline under pressure",
+  cast: [{ node: "hero", character: "Hero", modelRef: null }],
+  beats: [
+    {
+      id: "b1",
+      name: "first exchange",
+      summary: "The duelists test distance.",
+      durationHint: 2,
+    },
+  ],
+  tree: tree as IAutoMovieScript["tree"],
+});
+
+const ghostBeatTree = (): NonNullable<IAutoMovieScript["tree"]> => [
+  {
+    id: "root",
+    kind: "intent",
+    parent: null,
+    temporal: null,
+    interactsWith: [],
+    payload: {
+      logline: "A duel at dawn.",
+      theme: "discipline under pressure",
+    },
+  },
+  {
+    id: "beat-node",
+    kind: "beat",
+    parent: "root",
+    temporal: null,
+    interactsWith: [],
+    payload: {
+      beat: "ghost",
+      direction: "The duelists test distance.",
+      dialogue: [],
+      caption: null,
+    },
+  },
+];
+
 /**
  * The project folder itself is the memory (#614): opening a fresh directory is
  * a valid empty project, a saved slate becomes visible pretty-printed JSON
@@ -86,6 +128,7 @@ const throwsProjectJsonError = (
  *    repair guidance at the resident read boundary.
  * 7. Parseable keyed slices whose filename/internal key matches still validate the
  *    rest of their shape before entering resident state.
+ * 8. Resident script trees validate at the read boundary, matching commitScript.
  */
 export const test_mcp_project_store = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-store-"));
@@ -191,6 +234,18 @@ export const test_mcp_project_store = (): void => {
       file: "script.json",
       value: { logline: "x" },
       fragments: ["script.json", "Validation detail", "cast"],
+    },
+    {
+      label: "invalid script tree shape has project guidance",
+      file: "script.json",
+      value: scriptWithTree({}),
+      fragments: ["script.json", "Validation detail", "$input.tree", "array"],
+    },
+    {
+      label: "invalid script tree semantics has project guidance",
+      file: "script.json",
+      value: scriptWithTree(ghostBeatTree()),
+      fragments: ["script.json", "Validation detail", "$input.tree", "ghost"],
     },
     {
       label: "invalid notes shape has project guidance",
