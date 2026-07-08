@@ -87,8 +87,15 @@ export class CommitService {
     output: IAutoMovieCommitOutput,
     resident: boolean,
   ): IAutoMovieCommitOutput {
-    if (resident && output.committed)
-      this.context!.requireProject("commit").saveSlate(output.slate);
+    if (resident && output.committed) {
+      const project = this.context!.requireProject("commit");
+      project.saveSlate(output.slate);
+      // Return the per-beat arrays in the stored filename order the next
+      // resident read produces, not the upsert's append order — so a caller
+      // that caches this output.slate and diffs it (or re-submits it as an
+      // explicit slate) sees no reordering against a later read (#716).
+      return { ...output, slate: project.orderResidentSlate(output.slate) };
+    }
     return output;
   }
 
