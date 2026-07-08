@@ -22,7 +22,9 @@ export interface IAutoMoviePropArticulation {
   /**
    * The prop's internal joint nodes — the subtree the profile binds onto.
    * Parents must resolve within this list (`null` = the prop's own root); the
-   * placement pass parents the subtree under the prop's scene node.
+   * scene bridge (`sceneToNodes`'s `props` registry) parents the subtree under
+   * the prop's scene node with the placement prefix, so the profile binds with
+   * the same prefix (`bindProfile`'s `nodePrefix`).
    */
   nodes: IAutoMovieNode[];
 

@@ -1,6 +1,8 @@
 import {
   IAutoMovieModel,
   IAutoMovieNode,
+  IAutoMoviePropArticulation,
+  IAutoMoviePropSpec,
   IAutoMovieScene,
 } from "@automovie/interface";
 
@@ -26,14 +28,18 @@ import { lowerSkeletonNodes } from "./skeletonNodes";
  * **Naming.** A placed model's subtree is prefixed `${sceneNode.id}/` (root
  * `${id}/root`, bones `${id}/${bone}`), so two actors sharing bone names stay
  * distinct in the one graph — the same prefix the actor's clip channels must
- * carry ({@link motionToClip}'s `nodePrefix`).
+ * carry ({@link motionToClip}'s `nodePrefix`). A placed prop's articulation
+ * lowers the same way (`${id}/hinge`), and its profile binds with the same
+ * prefix (`bindProfile`'s `nodePrefix`).
  *
- * **Guards.** When the `models` registry is supplied, every placed `model` ref
- * must resolve — a lossless bridge refuses silent drops; omit the registry for
- * a placements-only lowering (no bone subtrees). A skeleton-less model (a prop)
- * lowers no subtree either way. Duplicate node ids and dangling parents are
- * rejected downstream by `composeScene`'s index guard — this bridge does not
- * duplicate that gate.
+ * **Guards.** When either registry is supplied, every placed `model` ref must
+ * resolve in their union — a lossless bridge refuses silent drops; omit both
+ * for a placements-only lowering (no subtrees). An id present in BOTH
+ * registries throws: the registries contradict, and a forged prop already
+ * carries its own model, so it never needs a `models` entry. A skeleton-less
+ * model lowers no subtree; a rigid prop (`articulation: null`) lowers none
+ * either. Duplicate node ids and dangling parents are rejected downstream by
+ * `composeScene`'s index guard — this bridge does not duplicate that gate.
  *
  * @author Samchon
  */
@@ -42,8 +48,14 @@ export const sceneToNodes = (props: {
   scene: IAutoMovieScene;
   /** Placed models by model id; omit for a placements-only lowering. */
   models?: Record<string, IAutoMovieModel>;
+  /**
+   * Forged props by prop node id (= model id, the staging join `forgeProp`
+   * gates). A placement resolving here lowers its articulation joints under the
+   * placement group — the placement pass `IAutoMoviePropSpec` promises.
+   */
+  props?: Record<string, IAutoMoviePropSpec>;
 }): IAutoMovieNode[] => {
-  const { scene, models } = props;
+  const { scene, models, props: propSpecs } = props;
   const nodes: IAutoMovieNode[] = [];
 
   for (const placement of scene.nodes) {
@@ -58,8 +70,24 @@ export const sceneToNodes = (props: {
       light: null,
       skin: null,
     });
-    if (models === undefined) continue;
-    const model = models[placement.model];
+    if (models === undefined && propSpecs === undefined) continue;
+    const spec = propSpecs?.[placement.model];
+    const model = models?.[placement.model];
+    if (spec !== undefined && model !== undefined)
+      throw new Error(
+        `sceneToNodes scene "${scene.id}" resolves model "${placement.model}" at node "${placement.id}" in BOTH the props and models registries — the registries contradict (a forged prop carries its own model)`,
+      );
+    if (spec !== undefined) {
+      if (spec.articulation !== null)
+        nodes.push(
+          ...lowerArticulationNodes(
+            spec.articulation,
+            `${placement.id}/`,
+            placement.id,
+          ),
+        );
+      continue;
+    }
     if (model === undefined)
       throw new Error(
         `sceneToNodes scene "${scene.id}" places model "${placement.model}" at node "${placement.id}" but the registry has no such model`,
@@ -102,3 +130,21 @@ export const sceneToNodes = (props: {
 
   return nodes;
 };
+
+/**
+ * Lower a prop's articulation joints under its placement: ids and parent refs
+ * take the placement prefix, a `null` parent seats directly under the placement
+ * group (props declare their own root joint — no synthetic root is added,
+ * unlike the skeleton lowering), and every other node field — kind, transform,
+ * payload refs — carries verbatim (`forgeProp` already gated well-formedness).
+ */
+const lowerArticulationNodes = (
+  articulation: IAutoMoviePropArticulation,
+  prefix: string,
+  rootParent: string,
+): IAutoMovieNode[] =>
+  articulation.nodes.map((node) => ({
+    ...node,
+    id: `${prefix}${node.id}`,
+    parent: node.parent === null ? rootParent : `${prefix}${node.parent}`,
+  }));
