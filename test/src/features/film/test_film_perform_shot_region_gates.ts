@@ -23,6 +23,23 @@ const locomote: IAutoMovieActionCall = {
   to: { kind: "point", point: { x: 0, y: 0, z: 0.25 } },
 };
 
+const lookAt = (start: number): IAutoMovieActionCall => ({
+  verb: "lookAt",
+  actor: "knightA",
+  start,
+  duration: 1,
+  to: { kind: "node", node: "knightB" },
+});
+
+const emote = (start: number): IAutoMovieActionCall => ({
+  verb: "emote",
+  actor: "knightA",
+  start,
+  duration: 1,
+  preset: "neutral",
+  intensity: 0.5,
+});
+
 const fullBody = (start: number): IAutoMovieActionCall => ({
   verb: "gesture",
   kind: "jump",
@@ -45,7 +62,9 @@ const frame: IAutoMovieCameraAction = {
 /**
  * Region gates that sit above the body-region clip masking. `fullBody` owns the
  * entire rig, so it cannot run concurrently with a partial region action for
- * the same actor. Adjacent, non-overlapping actions still sequence normally.
+ * the same actor. Same-region overlaps are also ambiguous because the same
+ * bones cannot play two authored clips at once. Adjacent same-region actions
+ * still sequence normally, and disjoint partial regions still layer.
  */
 export const test_film_perform_shot_region_gates = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -85,6 +104,43 @@ export const test_film_perform_shot_region_gates = (): void => {
   TestValidator.equals(
     "adjacent fullBody + partial passes",
     adjacent.success,
+    true,
+  );
+
+  const sameRegion = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [lookAt(0), lookAt(0.5), frame],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.equals(
+    "overlapping same-region actions fail",
+    sameRegion.success,
+    false,
+  );
+  TestValidator.predicate(
+    "same-region overlap is reported on the later action start",
+    sameRegion.success === false &&
+      hasViolation(sameRegion, "range", "$input.draft[1].start"),
+  );
+
+  const layeredPartials = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [lookAt(0), emote(0.25), frame],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.equals(
+    "overlapping disjoint partial regions pass",
+    layeredPartials.success,
     true,
   );
 };
