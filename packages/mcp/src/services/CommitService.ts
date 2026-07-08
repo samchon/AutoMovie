@@ -42,9 +42,11 @@ import {
 } from "../validators/artifacts";
 import {
   appendValidation,
+  isRecord,
   pushViolation,
   validateNonEmptyId,
   validateNonEmptyText,
+  validateObjectArtifact,
   validateRange,
   validateTransformArtifact,
   validateUniqueBy,
@@ -495,15 +497,58 @@ export class CommitService {
       "set reason",
       violations,
     );
-    validateNonEmptyId(
-      props.performance.node,
-      "$input.performance.node",
-      "performance node",
+    const hasPerformance = validateObjectArtifact(
+      props.performance,
+      "$input.performance",
+      "performance",
       violations,
     );
-    const shotId = shotIdOf(props.beat);
-    const shot = slate.shots.find((entry) => entry.id === shotId);
-    if (props.beat.trim().length > 0 && shot === undefined)
+    if (hasPerformance)
+      validateNonEmptyId(
+        props.performance.node,
+        "$input.performance.node",
+        "performance node",
+        violations,
+      );
+    const motionIds = (() => {
+      if (props.motions === undefined) return null;
+      if (!isRecord(props.motions)) {
+        pushViolation(
+          violations,
+          "type",
+          "$input.motions",
+          "motions registry must be a JSON object",
+          props.motions,
+        );
+        return new Set<string>();
+      }
+      const ids = new Set<string>();
+      Object.entries(props.motions).forEach(([key, motion]) => {
+        const path = `$input.motions.${key}`;
+        if (
+          !validateObjectArtifact(
+            motion,
+            path,
+            "motion registry entry",
+            violations,
+          )
+        )
+          return;
+        validateNonEmptyId(motion.id, `${path}.id`, "motion id", violations);
+        if (typeof motion.id === "string") ids.add(motion.id);
+      });
+      return ids;
+    })();
+    const shotId = typeof props.beat === "string" ? shotIdOf(props.beat) : "";
+    const shot =
+      shotId.length === 0
+        ? undefined
+        : slate.shots.find((entry) => entry.id === shotId);
+    if (
+      typeof props.beat === "string" &&
+      props.beat.trim().length > 0 &&
+      shot === undefined
+    )
       pushViolation(
         violations,
         "type",
@@ -512,7 +557,9 @@ export class CommitService {
         props.beat,
       );
     if (
+      hasPerformance &&
       shot !== undefined &&
+      typeof props.performance.node === "string" &&
       props.performance.node.trim().length > 0 &&
       !shot.performances.some(
         (performance) => performance.node === props.performance.node,
@@ -525,15 +572,16 @@ export class CommitService {
         `node "${props.performance.node}" does not perform in shot "${shotId}" — a new performer is perform + commitShot's job`,
         props.performance.node,
       );
-    validateRange(
-      props.performance.startOffset,
-      "$input.performance.startOffset",
-      0,
-      shot?.duration ?? Infinity,
-      "performance startOffset",
-      violations,
-    );
-    if (props.performance.motion !== null) {
+    if (hasPerformance)
+      validateRange(
+        props.performance.startOffset,
+        "$input.performance.startOffset",
+        0,
+        shot?.duration ?? Infinity,
+        "performance startOffset",
+        violations,
+      );
+    if (hasPerformance && props.performance.motion !== null) {
       validateNonEmptyId(
         props.performance.motion,
         "$input.performance.motion",
@@ -541,10 +589,9 @@ export class CommitService {
         violations,
       );
       if (
-        props.motions !== undefined &&
-        !Object.values(props.motions).some(
-          (motion) => motion.id === props.performance.motion,
-        )
+        motionIds !== null &&
+        typeof props.performance.motion === "string" &&
+        !motionIds.has(props.performance.motion)
       )
         pushViolation(
           violations,
