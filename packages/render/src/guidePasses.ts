@@ -60,6 +60,26 @@ export interface IAutoMovieGuidePassOutput {
 }
 
 /**
+ * Validate and fold a requested pass list: an unknown pass name is a caller bug
+ * and throws; duplicates fold to their first occurrence (which wins the order).
+ * The one place both the whole-render planner ({@link planGuidePassOutputs}) and
+ * the chunked planner normalize a pass request, so they cannot drift.
+ */
+export const normalizeGuidePasses = (
+  passes: readonly string[],
+): AutoMovieGuidePass[] => {
+  const seen = new Set<AutoMovieGuidePass>();
+  const normalized: AutoMovieGuidePass[] = [];
+  for (const pass of passes) {
+    if (!isGuidePass(pass)) throw new Error(`unknown guide pass "${pass}"`);
+    if (seen.has(pass)) continue;
+    seen.add(pass);
+    normalized.push(pass);
+  }
+  return normalized;
+};
+
+/**
  * Plan the per-pass output locations for a frame directory: each requested pass
  * becomes one additional capture per frame time, at a deterministic pass-tagged
  * path. Duplicate passes are folded (first occurrence wins the order); an
@@ -81,15 +101,7 @@ export const planGuidePassOutputs = (props: {
     throw new Error(
       `guide pass frameCount must be a positive integer, but was ${props.frameCount}`,
     );
-  const seen = new Set<AutoMovieGuidePass>();
-  const passes: AutoMovieGuidePass[] = [];
-  for (const pass of props.passes) {
-    if (!isGuidePass(pass)) throw new Error(`unknown guide pass "${pass}"`);
-    if (seen.has(pass)) continue;
-    seen.add(pass);
-    passes.push(pass);
-  }
-  return passes.map((pass) => ({
+  return normalizeGuidePasses(props.passes).map((pass) => ({
     pass,
     firstFrame: `${props.frameDir}/${guidePassFrameName(0, pass)}`,
     lastFrame: `${props.frameDir}/${guidePassFrameName(props.frameCount - 1, pass)}`,

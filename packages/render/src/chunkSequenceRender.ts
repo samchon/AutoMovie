@@ -1,5 +1,11 @@
-import { IAutoMovieRenderSpec } from "@automovie/interface";
+import { AutoMovieGuidePass, IAutoMovieRenderSpec } from "@automovie/interface";
 
+import {
+  IAutoMovieGuidePassOutput,
+  guidePassFramePattern,
+  normalizeGuidePasses,
+  planGuidePassOutputs,
+} from "./guidePasses";
 import { ffmpegArgs, frameName, framePattern } from "./plan";
 import {
   IAutoMovieSequenceRenderFrame,
@@ -60,6 +66,36 @@ export interface IAutoMovieRenderChunk {
 
   /** Exact ffmpeg argument vector for this chunk's encoded output. */
   ffmpegArgs: string[];
+
+  /**
+   * Per-pass output locations inside this chunk's frame dir, chunk-local
+   * indices — present only when the plan requested guide passes. The `beauty`
+   * pass's untagged paths coincide with {@link frames}' paths (it IS the base
+   * capture); tagged passes sit beside them (`frame_00000.depth.png`).
+   */
+  passOutputs?: IAutoMovieGuidePassOutput[];
+}
+
+/**
+ * One guide pass's whole-timeline walk order across the chunks — how a
+ * diffusion host visits every frame of a pass without a video concat: the chunk
+ * frame directories in play order, with the per-chunk ffmpeg input pattern
+ * alongside for hosts that want to encode a pass per chunk.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieRenderPassManifest {
+  /** The guide pass this manifest walks. */
+  pass: AutoMovieGuidePass;
+
+  /** Chunk frame directories in play order. */
+  chunkFrameDirs: string[];
+
+  /** Per-chunk ffmpeg input patterns, parallel to {@link chunkFrameDirs}. */
+  inputPatterns: string[];
+
+  /** Total frames of the pass across all chunks (equals the plan's). */
+  frameCount: number;
 }
 
 /**
@@ -111,6 +147,14 @@ export interface IAutoMovieRenderChunkPlan {
 
   /** How to stitch the chunk outputs into the final video. */
   reassembly: IAutoMovieRenderReassembly;
+
+  /**
+   * Per-pass whole-timeline walk orders — present only when guide passes were
+   * requested. The `beauty` pass reassembles as video through
+   * {@link reassembly}; tagged passes terminate as frame sequences (diffusion
+   * consumes frames, not videos), so their reassembly IS this walk order.
+   */
+  passManifests?: IAutoMovieRenderPassManifest[];
 }
 
 /**
@@ -131,6 +175,22 @@ export interface IAutoMovieRenderChunkPlan {
  * Executing the chunks in parallel / on a render farm is a host concern; this
  * only produces the independent chunk manifests and the concat plan.
  *
+ * **Guide passes (#644).** When `passes` is given, every chunk also plans its
+ * per-pass frame paths (chunk-local indices, the same re-base as the beauty
+ * frames; naming via {@link planGuidePassOutputs} — `beauty` untagged and
+ * coinciding with the chunk's base frames, others tagged
+ * `frame_00000.depth.png`), and the plan gains one
+ * {@link IAutoMovieRenderPassManifest} per pass. The output decision: `beauty`
+ * keeps the per-chunk video encode and the concat reassembly (unchanged);
+ * tagged passes terminate as **frame sequences** — diffusion guidance
+ * (ControlNet et al.) consumes frames, not videos — with each chunk's ffmpeg
+ * input pattern still emitted so a host that wants a video can encode one. No
+ * per-pass concat exists; a pass's whole-timeline order IS its manifest's
+ * chunk-dir walk. `passes` absent omits every pass field (byte-identical to the
+ * pass-less plan); an empty list plans empty pass sets (the
+ * {@link planGuidePassOutputs} convention); an unknown pass name throws before
+ * any chunk is built.
+ *
  * @author Samchon
  */
 export const planChunkedSequenceRender = (props: {
@@ -142,12 +202,17 @@ export const planChunkedSequenceRender = (props: {
 
   /** Output frames per chunk. A positive integer. */
   chunkFrames: number;
+
+  /** Guide passes to plan per chunk; omit for a beauty-only render. */
+  passes?: readonly string[];
 }): IAutoMovieRenderChunkPlan => {
   const { plan, spec, chunkFrames } = props;
   if (!Number.isInteger(chunkFrames) || chunkFrames <= 0)
     throw new Error(
       `chunkFrames must be a positive integer, but was ${chunkFrames}`,
     );
+  const passes =
+    props.passes === undefined ? undefined : normalizeGuidePasses(props.passes);
 
   const chunkCount = Math.ceil(plan.frames.length / chunkFrames);
   const pad = String(Math.max(chunkCount - 1, 0)).length;
@@ -183,6 +248,15 @@ export const planChunkedSequenceRender = (props: {
         inputPattern,
         outputPath,
         ffmpegArgs: ffmpegArgs(spec, inputPattern, outputPath),
+        ...(passes === undefined
+          ? {}
+          : {
+              passOutputs: planGuidePassOutputs({
+                frameDir,
+                frameCount: frames.length,
+                passes,
+              }),
+            }),
       };
     },
   );
@@ -196,6 +270,20 @@ export const planChunkedSequenceRender = (props: {
     chunkFrames,
     chunkCount,
     chunks,
+    ...(passes === undefined
+      ? {}
+      : {
+          passManifests: passes.map(
+            (pass): IAutoMovieRenderPassManifest => ({
+              pass,
+              chunkFrameDirs: chunks.map((chunk) => chunk.frameDir),
+              inputPatterns: chunks.map(
+                (chunk) => `${chunk.frameDir}/${guidePassFramePattern(pass)}`,
+              ),
+              frameCount: plan.frames.length,
+            }),
+          ),
+        }),
     reassembly: {
       outputPath: plan.outputPath,
       chunkOutputs,
