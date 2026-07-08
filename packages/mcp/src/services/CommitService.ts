@@ -23,6 +23,7 @@ import {
   IAutoMovieMcpGeometryModel,
   IAutoMovieMcpMotion,
   IAutoMovieMcpWritableSlate,
+  IAutoMoviePropEraseOutput,
   IAutoMovieRegisterAssetOutput,
   IAutoMovieSetOutput,
 } from "../dto";
@@ -357,6 +358,59 @@ export class CommitService {
     };
     project.saveSlate(next);
     return { erased: true, slate: next, validation: { success: true } };
+  }
+
+  /**
+   * Erase ONE stored prop spec (`props/<node>.json`) from the resident project
+   * (#671) — the targeted removal mirror of `forgeProp`'s write-through.
+   * Evidence (`reason`) required; erasing a prop with no stored spec is a
+   * violation. A prop the committed scene still places is REFUSED, not
+   * cascaded: the scene is upstream of every shot, so clearing it from a spec
+   * erase would be a reset in disguise — re-commit the scene without the
+   * placement first, then erase the spec.
+   */
+  public eraseProp(props: {
+    node: string;
+    reason: string;
+  }): IAutoMoviePropEraseOutput {
+    const project = this.context!.requireProject("eraseProp");
+    const violations: IAutoMovieConstraintViolation[] = [];
+    validateNonEmptyId(props.node, "$input.node", "prop node", violations);
+    validateNonEmptyText(
+      props.reason,
+      "$input.reason",
+      "erase reason",
+      violations,
+    );
+    const stored = project.storedProps().map((spec) => spec.node);
+    if (props.node.trim().length > 0) {
+      if (!stored.includes(props.node))
+        pushViolation(
+          violations,
+          "type",
+          "$input.node",
+          `prop "${props.node}" has no stored spec to erase`,
+          props.node,
+        );
+      const scene = project.storedSlate().scene;
+      if (scene !== null && scene.nodes.some((node) => node.id === props.node))
+        pushViolation(
+          violations,
+          "type",
+          "$slate.scene",
+          `prop "${props.node}" is still placed in the committed scene; re-commit the scene without it before erasing the spec`,
+          props.node,
+        );
+    }
+    const validation = toValidation(violations);
+    if (validation.success === false)
+      return { erased: false, props: stored, validation };
+    project.removeProp(props.node);
+    return {
+      erased: true,
+      props: stored.filter((node) => node !== props.node),
+      validation: { success: true },
+    };
   }
 
   /**

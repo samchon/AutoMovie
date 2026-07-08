@@ -21,3 +21,5 @@ Articulation node ids must be unique and parents must resolve acyclically within
 ## MCP Boundary
 
 The tool's JSON contract is tuple-free: a driven driver's ranges cross as named `{from, to}` objects, and prop profiles carry no gaits (props do not locomote). The success echo is your spec back, accepted.
+
+When a resident project is active, an accepted spec also writes through as `props/<node>.json` (`stored: true` in the output) — forge once, and later sessions read it from the project. Re-forging replaces exactly that file; `eraseProp` removes it (refused while the committed scene still places the prop). See the PROJECT_MEMORY guide's Props section.
