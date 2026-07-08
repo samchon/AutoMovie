@@ -125,6 +125,7 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
         "openProject",
         "perform",
         "planRender",
+        "registerAsset",
         "seeFrame",
         "setActorPerformance",
         "setPlacement",

@@ -28,4 +28,4 @@ Resident commits are gated by the prerequisite ladder: script → scene → shot
 
 ## Assets
 
-`registerAsset` records project-relative asset paths (a GLB, a texture, a rendered frame) in the manifest. Paths must stay inside the project (no absolute paths, no `..`), and registration **never silently overwrites** — an already-registered path or an existing file is refused. Byte-less registration tracks files a host adapter writes (renders, exports); the manifest stays the single index of what the project owns.
+`registerAsset` tracks ONE project-relative asset path per call (a GLB, a texture, a rendered frame) in the manifest and returns the normalized path with the full asset index. Paths must stay inside the project (no absolute paths, no `..`), and registration **never silently overwrites** — a duplicate path is refused as a violation and the index is unchanged. The tool registers paths only: byte-writing stays the host adapter's job (binaries never flow through the server), so register the file the adapter wrote or is about to write. The manifest stays the single index of what the project owns.
