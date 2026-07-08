@@ -7,23 +7,32 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 import {
+  IAutoMovieCaptionSidecar,
+  IAutoMovieRenderChunkPlan,
   ffmpegArgs,
   frameName,
   framePattern,
   frameTimes,
   guidePassFrameName,
   isGuidePass,
+  planCaptionSidecar,
+  planChunkedSequenceRender,
   planGuidePassOutputs,
   planSequenceRender,
   renderPathStem,
+  sliceCaptionSidecar,
 } from "@automovie/render";
 
 import { AutoMovieContext } from "../AutoMovieContext";
 import {
   IAutoMovieMcpCaptureRequest,
+  IAutoMovieMcpRenderChunk,
+  IAutoMovieMcpRenderChunkPlan,
   IAutoMovieMcpRenderPlan,
   IAutoMovieMcpRenderTarget,
   IAutoMovieMcpWritableSlate,
+  IAutoMoviePlanCaptionsOutput,
+  IAutoMoviePlanChunkedRenderOutput,
   IAutoMoviePlanRenderOutput,
   IAutoMovieSeeFrameOutput,
 } from "../dto";
@@ -135,7 +144,245 @@ export class RenderService {
       },
     };
   }
+
+  /**
+   * Plan a long film as `chunkFrames`-sized, independently-renderable chunks
+   * (#609/#644) so an hours-long render is produced in bounded windows and
+   * regenerated one window at a time. Resident-or-explicit like every render
+   * tool; the target must be the committed film (a single shot renders whole
+   * via {@link planRender}). Frame-atomic boundaries — no frame duplicated or
+   * dropped — so concatenating the chunks reproduces the whole render.
+   */
+  public planChunkedRender(props: {
+    slate?: IAutoMovieMcpWritableSlate;
+    spec: IAutoMovieRenderSpec;
+    chunkFrames: number;
+    passes?: string[];
+    frameDir?: string;
+    outputPath?: string;
+  }): IAutoMoviePlanChunkedRenderOutput {
+    const { slate, resident } = this.resolveSlate(
+      props.slate,
+      "planChunkedRender",
+    );
+    return buildChunkedRenderPlan({ ...props, slate, resident });
+  }
+
+  /**
+   * Plan the caption sidecar — the per-shot diffusion-prompt track a render
+   * host reads beside the guide frames (#607). Resident-or-explicit; the
+   * committed script and film supply the captions and the cut. Pass
+   * `chunkFrames` to also get one chunk-local sidecar per render chunk, aligned
+   * with {@link planChunkedRender}'s frame-atomic windows.
+   */
+  public planCaptions(props: {
+    slate?: IAutoMovieMcpWritableSlate;
+    fps: number;
+    chunkFrames?: number;
+  }): IAutoMoviePlanCaptionsOutput {
+    const { slate } = this.resolveSlate(props.slate, "planCaptions");
+    return buildCaptionPlan({ ...props, slate });
+  }
 }
+
+const buildChunkedRenderPlan = (props: {
+  slate: IAutoMovieMcpWritableSlate;
+  spec: IAutoMovieRenderSpec;
+  chunkFrames: number;
+  passes?: string[];
+  frameDir?: string;
+  outputPath?: string;
+  resident: boolean;
+}): IAutoMoviePlanChunkedRenderOutput => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateRenderSpec(props.spec, violations);
+  // Omitted passes => a beauty-only chunk plan with NO pass fields (byte-
+  // identical to the pass-less engine plan); an explicit list is validated and
+  // planned per chunk. resolveGuidePasses' beauty default is deliberately not
+  // used here (it would fabricate a beauty pass manifest).
+  const passes =
+    props.passes === undefined
+      ? undefined
+      : resolveGuidePasses(props.passes, violations);
+  validateChunkFrames(props.chunkFrames, violations);
+  const target = resolveRenderTarget(
+    props.slate,
+    props.spec.target,
+    violations,
+  );
+  // Chunking splits a sequence render; a single shot renders whole via
+  // planRender, so a shot target is a violation, not a chunk plan.
+  if (
+    target !== null &&
+    (target.target.kind !== "sequence" || props.slate.film === null)
+  )
+    pushViolation(
+      violations,
+      "type",
+      "$input.spec.target",
+      `chunked render requires a committed film target, but "${props.spec.target}" is not the film`,
+      props.spec.target,
+    );
+  const validation = toValidation(violations);
+  if (validation.success === false) return { validation, plan: null };
+
+  const stem = renderPathStem(props.spec.target);
+  const plan = planSequenceRender({
+    sequence: props.slate.film!,
+    shots: props.slate.shots,
+    spec: props.spec,
+    frameDir:
+      props.frameDir ?? (props.resident ? `renders/${stem}` : undefined),
+    outputPath:
+      props.outputPath ?? (props.resident ? `renders/${stem}.mp4` : undefined),
+  });
+  // After a successful validation `passes` is undefined (omitted) or a
+  // validated pass list (never null — a null would have failed validation).
+  const chunked = planChunkedSequenceRender({
+    plan,
+    spec: props.spec,
+    chunkFrames: props.chunkFrames,
+    passes: passes ?? undefined,
+  });
+  return { validation: { success: true }, plan: toMcpChunkPlan(chunked) };
+};
+
+/** Strip each chunk's per-frame samples; the host re-derives frame content. */
+const toMcpChunkPlan = (
+  plan: IAutoMovieRenderChunkPlan,
+): IAutoMovieMcpRenderChunkPlan => ({
+  target: plan.target,
+  renderFps: plan.renderFps,
+  frameCount: plan.frameCount,
+  chunkFrames: plan.chunkFrames,
+  chunkCount: plan.chunkCount,
+  chunks: plan.chunks.map(
+    (chunk): IAutoMovieMcpRenderChunk => ({
+      index: chunk.index,
+      frameStart: chunk.frameStart,
+      frameEnd: chunk.frameEnd,
+      frameCount: chunk.frameCount,
+      startSeconds: chunk.startSeconds,
+      endSeconds: chunk.endSeconds,
+      frameDir: chunk.frameDir,
+      firstFrame: chunk.firstFrame,
+      lastFrame: chunk.lastFrame,
+      inputPattern: chunk.inputPattern,
+      outputPath: chunk.outputPath,
+      ffmpegArgs: chunk.ffmpegArgs,
+      ...(chunk.passOutputs === undefined
+        ? {}
+        : { passOutputs: chunk.passOutputs }),
+    }),
+  ),
+  reassembly: plan.reassembly,
+  ...(plan.passManifests === undefined
+    ? {}
+    : { passManifests: plan.passManifests }),
+});
+
+const buildCaptionPlan = (props: {
+  slate: IAutoMovieMcpWritableSlate;
+  fps: number;
+  chunkFrames?: number;
+}): IAutoMoviePlanCaptionsOutput => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateRange(
+    props.fps,
+    "$input.fps",
+    0,
+    Infinity,
+    "caption fps",
+    violations,
+    false,
+  );
+  if (props.chunkFrames !== undefined)
+    validateChunkFrames(props.chunkFrames, violations);
+  if (props.slate.script === null)
+    pushViolation(
+      violations,
+      "type",
+      "$slate.script",
+      "a script must be committed before captions",
+      props.slate.script,
+    );
+  if (props.slate.film === null)
+    pushViolation(
+      violations,
+      "type",
+      "$slate.film",
+      "a film must be committed before captions",
+      props.slate.film,
+    );
+  else
+    appendValidation(
+      violations,
+      validateSequenceArtifact(props.slate.film, props.slate.shots),
+    );
+  // Match planSequenceRender/planCaptionSidecar's zero-frame policy with a
+  // violation rather than letting the engine throw, so the tool answers a
+  // diagnostic like every other planning path.
+  const duration =
+    props.slate.film === null
+      ? 0
+      : sequenceRuntime(props.slate.film, props.slate.shots);
+  if (props.slate.film !== null && Math.round(duration * props.fps) === 0)
+    pushViolation(
+      violations,
+      "range",
+      "$input.fps",
+      "caption fps and film duration must produce at least one frame",
+      { fps: props.fps, duration },
+    );
+  const validation = toValidation(violations);
+  if (validation.success === false)
+    return { validation, sidecar: null, chunks: null };
+
+  const sidecar = planCaptionSidecar({
+    script: props.slate.script!,
+    sequence: props.slate.film!,
+    shots: props.slate.shots,
+    fps: props.fps,
+  });
+  const chunks =
+    props.chunkFrames === undefined
+      ? null
+      : sliceCaptionChunks(sidecar, props.chunkFrames);
+  return { validation: { success: true }, sidecar, chunks };
+};
+
+/**
+ * Slice a sidecar into the same frame-atomic windows planChunkedSequenceRender
+ * uses (`[i·chunkFrames, min((i+1)·chunkFrames, frameCount))`), so caption
+ * chunk `i` aligns with render chunk `i`.
+ */
+const sliceCaptionChunks = (
+  sidecar: IAutoMovieCaptionSidecar,
+  chunkFrames: number,
+): IAutoMovieCaptionSidecar[] => {
+  const count = Math.ceil(sidecar.frameCount / chunkFrames);
+  return Array.from({ length: count }, (_, index) =>
+    sliceCaptionSidecar(
+      sidecar,
+      index * chunkFrames,
+      Math.min((index + 1) * chunkFrames, sidecar.frameCount),
+    ),
+  );
+};
+
+const validateChunkFrames = (
+  chunkFrames: number,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!Number.isInteger(chunkFrames) || chunkFrames <= 0)
+    pushViolation(
+      violations,
+      "range",
+      "$input.chunkFrames",
+      `chunkFrames must be a positive integer, but was ${chunkFrames}`,
+      chunkFrames,
+    );
+};
 
 const buildRenderPlan = (props: {
   slate: IAutoMovieMcpWritableSlate;

@@ -24,6 +24,10 @@ Pass-tagged frames insert the pass name before the extension (`frame_00042.depth
 
 `seeFrame` plans one frame+pass and hands the request to a **host-injected capture adapter**; it returns the real image, or an honest `status: "no-capture-adapter"` when the host attached none. Adapter failures propagate as tool errors. The server plans and validates; pixels belong to the adapter. Use it as your eyes in the review loop: sample the frames a verdict depends on instead of imagining them.
 
-## Long Timelines
+## Long Timelines — planChunkedRender
 
-A long film renders in bounded, independently-renderable chunks (frame-atomic boundaries — no frame duplicated or dropped; a transition straddling a boundary keeps each frame's exact blend), reassembled losslessly by an ffmpeg concat plan. A single chunk re-renders frame-identical to the same frames of the whole, so you regenerate one shot's window without touching the rest.
+`planChunkedRender` splits the committed film into `chunkFrames`-sized, independently-renderable chunks so a two-hour render is produced in bounded windows and regenerated one window at a time. Boundaries are **frame-atomic** — no frame duplicated or dropped, a transition straddling a boundary keeps each frame's exact blend — so concatenating the chunks (via the returned `reassembly` ffmpeg concat plan) reproduces the whole render, and re-rendering a single chunk is frame-identical to the same frames of the whole. Request `passes` to plan each chunk's guide-pass outputs; tagged passes terminate as frame sequences (`passManifests` gives their whole-timeline walk order), while `beauty` reassembles as video. Resident-or-explicit like `planRender`; the target must be the film (a single shot renders whole via `planRender`).
+
+## Captions — planCaptions
+
+`planCaptions` plans the caption sidecar: the per-shot diffusion-prompt track a render host reads beside the guide frames. It resolves which beat's shot is live at every output frame and joins each span to the screenplay's caption and scene slug. Pass `chunkFrames` to also get one chunk-local sidecar per render chunk, aligned with `planChunkedRender`'s windows, so each chunk carries its own caption track. Resident-or-explicit; the committed script and film supply the captions and the cut.

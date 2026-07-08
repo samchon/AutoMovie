@@ -125,6 +125,8 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
         "nextSteps",
         "openProject",
         "perform",
+        "planCaptions",
+        "planChunkedRender",
         "planRender",
         "registerAsset",
         "seeFrame",

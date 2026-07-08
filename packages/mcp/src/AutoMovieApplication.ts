@@ -50,6 +50,8 @@ import {
   IAutoMovieNextStepsOutput,
   IAutoMovieOpenProjectOutput,
   IAutoMoviePerformOutput,
+  IAutoMoviePlanCaptionsOutput,
+  IAutoMoviePlanChunkedRenderOutput,
   IAutoMoviePlanRenderOutput,
   IAutoMoviePropEraseOutput,
   IAutoMovieRegisterAssetOutput,
@@ -693,6 +695,64 @@ export class AutoMovieApplication {
     pass?: string;
   }): Promise<IAutoMovieSeeFrameOutput> {
     return this.render.seeFrame(props);
+  }
+
+  /**
+   * Plan a long film as independently-renderable chunks of `chunkFrames` output
+   * frames each, so an hours-long render is produced in bounded windows and
+   * regenerated one window at a time (#609/#644). The target must be the
+   * committed film; frame-atomic boundaries mean concatenating the chunks
+   * reproduces the whole render. Omit `slate` to plan the resident project.
+   *
+   * @param props The slate (omit for resident), render spec, frames per chunk,
+   *   optional guide passes, and paths.
+   * @returns A chunked render plan, or diagnostics when the target is not
+   *   ready.
+   */
+  public planChunkedRender(props: {
+    /** Slate whose committed film is the source; omit for resident. */
+    slate?: IAutoMovieMcpWritableSlate;
+    /** Render parameters; `target` must be the committed film id. */
+    spec: IAutoMovieRenderSpec;
+    /** Output frames per chunk. A positive integer. */
+    chunkFrames: number;
+    /** Guide passes to plan per chunk. Defaults to beauty only. */
+    passes?: string[];
+    /** Directory where frame files would be written. */
+    frameDir?: string;
+    /** Encoded video output path. */
+    outputPath?: string;
+  }): IAutoMoviePlanChunkedRenderOutput {
+    return this.render.planChunkedRender(props);
+  }
+
+  /**
+   * Plan the caption sidecar — the per-shot diffusion-prompt track a render
+   * host reads beside the guide frames (#607) — from the committed script and
+   * film. Pass `chunkFrames` to also get one chunk-local sidecar per render
+   * chunk, aligned with `planChunkedRender`. Omit `slate` to plan the resident
+   * project.
+   *
+   * @param props The slate (omit for resident), output fps, and optional frames
+   *   per chunk.
+   * @returns The caption sidecar (and per-chunk sidecars when chunked), or
+   *   diagnostics when script/film are not ready.
+   */
+  public planCaptions(props: {
+    /**
+     * Slate whose committed script and film supply the captions; omit for
+     * resident.
+     */
+    slate?: IAutoMovieMcpWritableSlate;
+    /** Output frames per second (the render clock). */
+    fps: number;
+    /**
+     * Frames per chunk to also slice the sidecar into. Omit for whole-film
+     * only.
+     */
+    chunkFrames?: number;
+  }): IAutoMoviePlanCaptionsOutput {
+    return this.render.planCaptions(props);
   }
 
   /**

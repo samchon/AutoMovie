@@ -37,7 +37,12 @@ import {
   IAutoMovieValidation,
   IAutoMovieVector3,
 } from "@automovie/interface";
-import { IAutoMovieGuidePassOutput } from "@automovie/render";
+import {
+  IAutoMovieCaptionSidecar,
+  IAutoMovieGuidePassOutput,
+  IAutoMovieRenderPassManifest,
+  IAutoMovieRenderReassembly,
+} from "@automovie/render";
 
 export interface IAutoMovieMcpStoredSlate {
   /** Committed script, or null before SCRIPT exists. */
@@ -305,6 +310,111 @@ export interface IAutoMovieMcpRenderPlan {
 
   /** Per-pass guide output locations (beauty only unless more requested). */
   passes: IAutoMovieGuidePassOutput[];
+}
+
+/**
+ * One independently-renderable chunk of a long film, as exposed through MCP:
+ * the engine chunk minus its per-frame `frames` array. The whole-plan render
+ * tool returns frame `times`, not per-frame shot/blend samples — the host's
+ * capture adapter re-derives frame content from the sequence — so a chunk needs
+ * only its boundaries, paths, and encoder args, keeping the chunk plan bounded
+ * (one entry per chunk, not per frame) even for an hours-long timeline.
+ */
+export interface IAutoMovieMcpRenderChunk {
+  /** Chunk ordinal (0-based, capture order). */
+  index: number;
+
+  /** First global output frame index in this chunk (inclusive). */
+  frameStart: number;
+
+  /** One past the last global output frame index (exclusive). */
+  frameEnd: number;
+
+  /** Number of frames in this chunk. */
+  frameCount: number;
+
+  /** Global output second of this chunk's first frame. */
+  startSeconds: number;
+
+  /** Global output second of this chunk's last frame. */
+  endSeconds: number;
+
+  /** Directory where this chunk's frame files should be written. */
+  frameDir: string;
+
+  /** First chunk frame path. */
+  firstFrame: string;
+
+  /** Last chunk frame path. */
+  lastFrame: string;
+
+  /** Ffmpeg input pattern for this chunk's frame sequence. */
+  inputPattern: string;
+
+  /** This chunk's encoded video output path. */
+  outputPath: string;
+
+  /** Exact ffmpeg argument vector for this chunk's encoded output. */
+  ffmpegArgs: string[];
+
+  /** Per-pass output locations inside this chunk (present only with passes). */
+  passOutputs?: IAutoMovieGuidePassOutput[];
+}
+
+/**
+ * A long film split into independently-renderable, bounded-window chunks plus
+ * the plan to reassemble them (#609/#644). Exposed so an orchestrator can drive
+ * a two-hour render chunk by chunk without ever holding the whole timeline.
+ */
+export interface IAutoMovieMcpRenderChunkPlan {
+  /** Render target identity. */
+  target: IAutoMovieMcpRenderTarget;
+
+  /** Output fps. */
+  renderFps: number;
+
+  /** Total output frames across all chunks. */
+  frameCount: number;
+
+  /** Frames per chunk (the last chunk may be shorter). */
+  chunkFrames: number;
+
+  /** Number of chunks. */
+  chunkCount: number;
+
+  /** The chunks, in capture order. */
+  chunks: IAutoMovieMcpRenderChunk[];
+
+  /** How to stitch the chunk outputs into the final video. */
+  reassembly: IAutoMovieRenderReassembly;
+
+  /** Per-pass whole-timeline walk orders (present only with passes). */
+  passManifests?: IAutoMovieRenderPassManifest[];
+}
+
+/** Chunked render planning result. */
+export interface IAutoMoviePlanChunkedRenderOutput {
+  /** Success or field-located violations explaining why chunking cannot start. */
+  validation: IAutoMovieValidation;
+
+  /** Chunked render plan, or null when validation failed. */
+  plan: IAutoMovieMcpRenderChunkPlan | null;
+}
+
+/** Caption sidecar planning result. */
+export interface IAutoMoviePlanCaptionsOutput {
+  /** Success or field-located violations explaining why captions cannot plan. */
+  validation: IAutoMovieValidation;
+
+  /** The whole-film caption sidecar, or null when validation failed. */
+  sidecar: IAutoMovieCaptionSidecar | null;
+
+  /**
+   * Per-chunk caption sidecars (chunk-local frame indices) when `chunkFrames`
+   * was given, aligning each render chunk with its own caption track; null when
+   * no chunking was requested (or on validation failure).
+   */
+  chunks: IAutoMovieCaptionSidecar[] | null;
 }
 
 /**

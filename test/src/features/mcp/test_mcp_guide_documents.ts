@@ -28,6 +28,8 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["PROJECT_MEMORY", "Compiled motions are not a slice"],
   ["RENDER_GUIDES", "no-capture-adapter"],
   ["RENDER_GUIDES", "omit `slate`"],
+  ["RENDER_GUIDES", "planChunkedRender"],
+  ["RENDER_GUIDES", "planCaptions"],
 ];
 
 /**
