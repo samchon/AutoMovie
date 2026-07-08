@@ -247,12 +247,72 @@ const validateMcpModelShape = (
           "model part material id",
           violations,
         );
-      validateObjectArtifact(
-        part.geometry,
-        `${path}.geometry`,
-        "model part geometry",
-        violations,
-      );
+      const geometry = part.geometry;
+      if (
+        validateObjectArtifact(
+          geometry,
+          `${path}.geometry`,
+          "model part geometry",
+          violations,
+        )
+      ) {
+        if (geometry.type === "primitive")
+          validateObjectArtifact(
+            geometry.shape,
+            `${path}.geometry.shape`,
+            "model part primitive shape",
+            violations,
+          );
+        else if (geometry.type === "mesh") {
+          const mesh = geometry.mesh;
+          if (
+            validateObjectArtifact(
+              mesh,
+              `${path}.geometry.mesh`,
+              "model part mesh",
+              violations,
+            )
+          ) {
+            validateArrayArtifact(
+              mesh.positions,
+              `${path}.geometry.mesh.positions`,
+              "mesh positions",
+              violations,
+            );
+            for (const buffer of ["normals", "uvs", "indices"] as const) {
+              const values = mesh[buffer];
+              if (values !== null)
+                validateArrayArtifact(
+                  values,
+                  `${path}.geometry.mesh.${buffer}`,
+                  `mesh ${buffer}`,
+                  violations,
+                );
+            }
+            const skin = mesh.skin;
+            if (
+              skin !== null &&
+              validateObjectArtifact(
+                skin,
+                `${path}.geometry.mesh.skin`,
+                "mesh skin",
+                violations,
+              )
+            )
+              for (const buffer of [
+                "joints",
+                "boneIndices",
+                "weights",
+              ] as const)
+                validateArrayArtifact(
+                  skin[buffer],
+                  `${path}.geometry.mesh.skin.${buffer}`,
+                  `mesh skin ${buffer}`,
+                  violations,
+                );
+          }
+        }
+      }
       if (part.transform !== null)
         validateTransformArtifact(
           part.transform,
