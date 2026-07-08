@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation, throwsError } from "../internal/predicates";
+import { hasViolation, qclose, throwsError } from "../internal/predicates";
 
 const scriptWrite = makeScriptWrite();
 const script: IAutoMovieScript = {
@@ -27,7 +27,6 @@ const makeShot = (beat: string, scene: string): IAutoMovieShot => ({
   duration: 1,
 });
 
-const identityRotation = { x: 0, y: 0, z: 0, w: 1 };
 const unitScale = { x: 1, y: 1, z: 1 };
 
 /**
@@ -40,7 +39,9 @@ const unitScale = { x: 1, y: 1, z: 1 };
  *
  * Scenarios:
  *
- * 1. Moving knightB swaps exactly that node's transform: knightA's node is
+ * 1. Moving knightB swaps exactly that node's transform: the LLM authors the
+ *    rotation as semantic Euler degrees (yaw 90 about +Y) and the engine lowers
+ *    it to the quaternion (#723) — the model never emits one. knightA's node is
  *    deep-equal to before, `scene.json` carries the new transform
  *    (write-through), and the commitScene-mirror cascade runs — the committed
  *    shot and its file clear, beat-ends and notes clear, the film nulls.
@@ -95,7 +96,7 @@ export const test_mcp_set_placement = (): void => {
       node: "knightB",
       transform: {
         translation: { x: 0, y: 0, z: 1.4 },
-        rotation: identityRotation,
+        rotation: { x: 0, y: 90, z: 0, order: "XYZ" },
         scale: unitScale,
       },
       reason: "give the challenger room to charge",
@@ -106,6 +107,16 @@ export const test_mcp_set_placement = (): void => {
       "knightB moved",
       scene.nodes.find((node) => node.id === "knightB")?.transform.translation,
       { x: 0, y: 0, z: 1.4 },
+    );
+    // The semantic yaw 90 about +Y lowered to the exact quaternion — the LLM
+    // authored a degree, the engine stored the quaternion (hand oracle:
+    // sin 45 = cos 45 = 0.70710678).
+    TestValidator.predicate(
+      "semantic yaw lowered to the +Y 90 quaternion",
+      qclose(
+        scene.nodes.find((node) => node.id === "knightB")!.transform.rotation,
+        { x: 0, y: 0.7071067811865476, z: 0, w: 0.7071067811865476 },
+      ),
     );
     TestValidator.equals(
       "knightA untouched",
@@ -145,7 +156,6 @@ export const test_mcp_set_placement = (): void => {
       node: "knightC",
       transform: {
         translation: { x: 0, y: 0, z: 0 },
-        rotation: identityRotation,
         scale: unitScale,
       },
       reason: "move a knight that was never staged",
@@ -161,7 +171,6 @@ export const test_mcp_set_placement = (): void => {
       node: "knightB",
       transform: {
         translation: { x: 0, y: 0, z: 0.7 },
-        rotation: identityRotation,
         scale: unitScale,
       },
       reason: "",
@@ -175,7 +184,6 @@ export const test_mcp_set_placement = (): void => {
       node: "knightB",
       transform: {
         translation: { x: Number.NaN, y: 0, z: 0 },
-        rotation: identityRotation,
         scale: unitScale,
       },
       reason: "place the champion at NaN",
@@ -197,7 +205,6 @@ export const test_mcp_set_placement = (): void => {
         node: "knightB",
         transform: {
           translation: { x: 0, y: 0, z: 0 },
-          rotation: identityRotation,
           scale: unitScale,
         },
         reason: "move before any staging exists",
@@ -220,7 +227,6 @@ export const test_mcp_set_placement = (): void => {
             node: "knightB",
             transform: {
               translation: { x: 0, y: 0, z: 0 },
-              rotation: identityRotation,
               scale: unitScale,
             },
             reason: "no project is active",

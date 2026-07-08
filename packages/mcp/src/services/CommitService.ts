@@ -12,16 +12,17 @@ import {
   IAutoMovieSequence,
   IAutoMovieShot,
   IAutoMovieShotPerformance,
-  IAutoMovieTransform,
   IAutoMovieValidation,
 } from "@automovie/interface";
 
 import { AutoMovieContext } from "../AutoMovieContext";
+import { toEngineTransform } from "../convert";
 import {
   IAutoMovieCommitOutput,
   IAutoMovieEraseOutput,
   IAutoMovieMcpGeometryModel,
   IAutoMovieMcpMotion,
+  IAutoMovieMcpTransform,
   IAutoMovieMcpWritableSlate,
   IAutoMoviePropEraseOutput,
   IAutoMovieRegisterAssetOutput,
@@ -582,7 +583,7 @@ export class CommitService {
    */
   public setPlacement(props: {
     node: string;
-    transform: IAutoMovieTransform;
+    transform: IAutoMovieMcpTransform;
     reason: string;
   }): IAutoMovieSetOutput {
     const project = this.context!.requireProject("setPlacement");
@@ -595,8 +596,12 @@ export class CommitService {
       "set reason",
       violations,
     );
+    // The LLM authors the placement rotation as semantic Euler degrees; lower
+    // it to the engine's quaternion before the artifact check runs against the
+    // engine transform (#723).
+    const transform = toEngineTransform(props.transform);
     validateTransformArtifact(
-      props.transform,
+      transform,
       "$input.transform",
       "placement transform",
       violations,
@@ -629,9 +634,7 @@ export class CommitService {
       scene: {
         ...scene,
         nodes: scene.nodes.map((node) =>
-          node.id !== props.node
-            ? node
-            : { ...node, transform: props.transform },
+          node.id !== props.node ? node : { ...node, transform },
         ),
       },
       shots: [],
