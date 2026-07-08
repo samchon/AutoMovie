@@ -493,6 +493,16 @@ const resolveGuidePasses = (
   violations: IAutoMovieConstraintViolation[],
 ): AutoMovieGuidePass[] | null => {
   if (passes === undefined) return ["beauty"];
+  if (!Array.isArray(passes)) {
+    pushViolation(
+      violations,
+      "type",
+      "$input.passes",
+      "guide passes must be an array",
+      passes,
+    );
+    return null;
+  }
   const known: AutoMovieGuidePass[] = [];
   let valid = true;
   passes.forEach((pass, index) => {
