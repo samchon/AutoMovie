@@ -50,8 +50,20 @@ export interface IAutoMovieResolvedBone {
  *   contact, centre of mass).
  *
  * Bones are processed parent-before-child via a topological walk from the root,
- * so a parent's world transform is always available when a child is resolved. A
- * skeleton with no root bone (every bone parented) resolves to an empty array.
+ * so a parent's world transform is always available when a child is resolved.
+ *
+ * **Contract: only root-reachable bones are resolved.** The walk starts from
+ * null-parent roots and follows the parent links, so a bone with an orphaned
+ * parent reference, a detached sub-tree, or a cyclic parent chain (every member
+ * has a non-null parent, so none is entered from a root — no infinite recursion
+ * results, since a bone is reached only through its single parent) is **omitted
+ * from the result**, and a skeleton with no root at all resolves to an empty
+ * array. This is load-bearing: {@link reachableBoneNames} derives the reachable
+ * set from the same walk, and graceful consumers (a physics validator gating a
+ * bone, `retargetHumanoidMotion` measuring rest height) rely on the partial
+ * return to report a malformed rig instead of crashing. A consumer that needs
+ * every declared bone present must gate on {@link reachableBoneNames} first —
+ * the total, non-throwing "which bones will resolve" query.
  *
  * `jointAxes` optionally remaps the clinical axes per bone (e.g.
  * `HUMANOID_JOINT_AXES`, so a T-pose arm's flexion swings it sagittally); a
@@ -79,21 +91,12 @@ export const resolvePose = (
       jointToQuaternion(j, jointAxes?.[j.bone], restFrames?.[j.bone]),
     );
 
-  const children = new Map<
-    AutoMovieHumanoidBone | "__root__",
-    IAutoMovieBone[]
-  >();
-  for (const b of skeleton.bones) {
-    const key = b.parent ?? "__root__";
-    const list = children.get(key) ?? [];
-    list.push(b);
-    children.set(key, list);
-  }
+  const children = childrenByParent(skeleton);
 
   const resolved: IAutoMovieResolvedBone[] = [];
 
   // The walk receives the bone object directly (the children map already holds
-  // it), so there is no name→bone lookup and no unreachable "missing bone" guard.
+  // it), so there is no name→bone lookup during the descent.
   const walk = (
     bone: IAutoMovieBone,
     parentWorldRot: IAutoMovieQuaternion,
@@ -125,4 +128,47 @@ export const resolvePose = (
     walk(root, rootRotation, rootTranslation);
 
   return resolved;
+};
+
+/**
+ * The bones a skeleton's forward-kinematics walk actually reaches — every bone
+ * whose parent chain lands on a null-parent root. Pose-independent (it follows
+ * parent links only), so it is the exact set {@link resolvePose}'s walk visits
+ * and can never disagree with which bones a sampled pose resolves. A physics
+ * validator gates a bone against this set BEFORE reading its resolved world
+ * position: a bone can be **declared** in `skeleton.bones` yet be detached (its
+ * chain never reaches a root), in which case `resolvePose` omits it and the
+ * declared-set membership check alone would read a bone the FK result never
+ * contains. This is the query that names the reachable set explicitly.
+ *
+ * @author Samchon
+ */
+export const reachableBoneNames = (
+  skeleton: IAutoMovieSkeleton,
+): Set<AutoMovieHumanoidBone> => {
+  const children = childrenByParent(skeleton);
+  const reached = new Set<AutoMovieHumanoidBone>();
+  const walk = (bone: IAutoMovieBone): void => {
+    reached.add(bone.bone);
+    for (const child of children.get(bone.bone) ?? []) walk(child);
+  };
+  for (const root of children.get("__root__") ?? []) walk(root);
+  return reached;
+};
+
+/** Index the skeleton's bones by parent (`__root__` for null-parent roots). */
+const childrenByParent = (
+  skeleton: IAutoMovieSkeleton,
+): Map<AutoMovieHumanoidBone | "__root__", IAutoMovieBone[]> => {
+  const children = new Map<
+    AutoMovieHumanoidBone | "__root__",
+    IAutoMovieBone[]
+  >();
+  for (const b of skeleton.bones) {
+    const key = b.parent ?? "__root__";
+    const list = children.get(key) ?? [];
+    list.push(b);
+    children.set(key, list);
+  }
+  return children;
 };

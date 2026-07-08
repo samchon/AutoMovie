@@ -3,31 +3,23 @@ import {
   IAutoMovieSkeleton,
 } from "@automovie/interface";
 
-import { resolvePose } from "../kinematics";
+import { reachableBoneNames } from "../kinematics";
 
 /**
- * The bones a skeleton's forward kinematics can actually reach — every bone the
- * root-anchored walk in {@link resolvePose} visits. Reachability follows the
- * skeleton's parent links, not any joint angles, so it is pose-independent and
- * this resolves a single empty pose to derive it (the same walk every sampled
- * pose would take, so it can never disagree with what a per-sample
- * {@link resolvePose} returns).
+ * The bones a skeleton's forward kinematics can actually reach — a thin alias
+ * over {@link reachableBoneNames}, kept as the name a physics validator reads.
+ * It is the exact set {@link "../kinematics".resolvePose}'s walk visits, so it
+ * can never disagree with which bones a sampled pose resolves.
  *
- * This is the set a physics validator must gate a bone against BEFORE reading
- * its resolved world position. A bone can be **declared** in `skeleton.bones`
- * yet be **detached** — its parent chain never reaches a null-parent root — in
- * which case the declared-set membership check passes but `resolvePose` never
- * returns it. Asserting the lookup non-null then throws instead of reporting
- * the malformed rig as a violation, breaking the validator's totality.
+ * A validator gates a bone against this set BEFORE reading its resolved world
+ * position: a bone can be **declared** in `skeleton.bones` yet be **detached**
+ * — its parent chain never reaches a null-parent root — in which case the
+ * declared-set membership check passes but `resolvePose` omits it, and reading
+ * the missing lookup would crash. Gating on reachability reports the malformed
+ * rig as a violation instead.
  *
  * @author Samchon
  */
 export const fkReachableBones = (
   skeleton: IAutoMovieSkeleton,
-): Set<AutoMovieHumanoidBone> =>
-  new Set(
-    resolvePose(
-      { skeleton: skeleton.id, root: null, joints: [] },
-      skeleton,
-    ).map((bone) => bone.bone),
-  );
+): Set<AutoMovieHumanoidBone> => reachableBoneNames(skeleton);
