@@ -29,6 +29,7 @@ import {
 } from "../validators/artifacts";
 import {
   validateArrayArtifact,
+  validateColorArtifact,
   validateNonEmptyId,
   validateObjectArtifact,
   validateTransformArtifact,
@@ -218,6 +219,11 @@ const validateMcpModelShape = (
           "base color texture id",
           violations,
         );
+      validateColorArtifact(
+        material.baseColor,
+        `${path}.baseColor`,
+        violations,
+      );
     });
   const parts = shape.parts;
   if (validateArrayArtifact(parts, "$input.parts", "model parts", violations))
