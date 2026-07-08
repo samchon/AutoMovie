@@ -42,6 +42,11 @@ export const validateSceneArtifact = (
   validateUniqueIds(scene.cameras, "$input.cameras", "camera id", violations);
   validateUniqueIds(scene.lights, "$input.lights", "light id", violations);
   validateUniqueIds(models, "$models", "model id", violations);
+  asArray(models).forEach((model, i) => {
+    const path = `$models[${i}]`;
+    if (!validateObjectArtifact(model, path, "model", violations)) return;
+    validateNonEmptyId(model.id, `${path}.id`, "model id", violations);
+  });
 
   const modelIds = new Set(
     asArray(models)
