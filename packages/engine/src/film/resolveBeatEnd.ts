@@ -2,18 +2,23 @@ import {
   IAutoMovieBeatEndActorState,
   IAutoMovieBeatEndFootPlant,
   IAutoMovieBeatEndState,
+  IAutoMovieClip,
   IAutoMovieMotion,
   IAutoMovieMountBinding,
   IAutoMoviePose,
   IAutoMovieScene,
   IAutoMovieSceneNode,
   IAutoMovieShot,
+  IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
+import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
+import { sampleClip } from "../resolve/sampleClip";
 import {
+  VELOCITY_DT,
   foldRoot,
   gaitPhaseOf,
   plantsAtEnd,
@@ -22,6 +27,81 @@ import {
 import { IAutoMovieStagedSet } from "./stageScene";
 
 const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: 1 };
+
+/** Zero vector, the empty-window velocity. */
+const ZERO: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
+
+/**
+ * The world transform a baked follow clip writes onto `node` at `t`. A mounted
+ * rider's world root comes from here — the exact clip {@link performShot} baked
+ * through `compileAttach` — so beat-end and per-frame render read the SAME
+ * composition (#674). Scale is not baked (rigid couplings never scale), so it
+ * stays identity.
+ */
+const bakedTransformAt = (
+  clip: IAutoMovieClip,
+  node: string,
+  t: number,
+): IAutoMovieTransform => {
+  const sampled = sampleClip(clip, t);
+  const translation = sampled.get(`node:${node}:translation`)!.value;
+  const rotation = sampled.get(`node:${node}:rotation`)!.value;
+  return {
+    translation: {
+      x: translation[0]!,
+      y: translation[1]!,
+      z: translation[2]!,
+    },
+    rotation: {
+      x: rotation[0]!,
+      y: rotation[1]!,
+      z: rotation[2]!,
+      w: rotation[3]!,
+    },
+    scale: { x: 1, y: 1, z: 1 },
+  };
+};
+
+/**
+ * Trailing world velocity of the baked follow clip at `t` — the rider's real
+ * end velocity as the mount moves, finite-differenced over the last
+ * {@link VELOCITY_DT} and clamped into the clip. Zero exactly at the clip's
+ * start (an empty window), like the pose-clip velocity rule; for any `t > 0`
+ * the window `[t0, t1]` is non-empty (`VELOCITY_DT > 0`). The clip is the one
+ * {@link followClipOf} matched, so its rider translation channel always
+ * samples.
+ */
+const bakedFollowVelocity = (
+  clip: IAutoMovieClip,
+  node: string,
+  t: number,
+): IAutoMovieVector3 => {
+  if (t <= 0) return ZERO;
+  const t1 = Math.min(t, clip.duration);
+  const t0 = Math.max(0, t1 - VELOCITY_DT);
+  const p1 = sampleClip(clip, t1).get(`node:${node}:translation`)!.value;
+  const p0 = sampleClip(clip, t0).get(`node:${node}:translation`)!.value;
+  return Vector3.scale(
+    {
+      x: p1[0]! - p0[0]!,
+      y: p1[1]! - p0[1]!,
+      z: p1[2]! - p0[2]!,
+    },
+    1 / (t1 - t0),
+  );
+};
+
+/**
+ * The baked follow clip driving `node`, or `null` when none does. Matched by
+ * `compileAttach`'s stable `attach:<node>` id — the clip a mount (or an
+ * overriding `attachTo`) produced for the rider carries its world translation
+ * and rotation channels.
+ */
+const followClipOf = (
+  objectMotions: readonly IAutoMovieClip[],
+  node: string,
+): IAutoMovieClip | null =>
+  objectMotions.find((clip) => clip.id === `attach:${node}`) ?? null;
 
 /**
  * Derive the forward-state a later beat should block against from a compiled
@@ -112,6 +192,7 @@ export const resolveBeatEnd = (props: {
 
   const context: IResolveContext = {
     duration: props.shot.duration,
+    objectMotions: props.shot.objectMotions,
     motionById,
     performanceByNode,
     mountByNode,
@@ -127,6 +208,7 @@ export const resolveBeatEnd = (props: {
 /** The per-beat lookups one actor's end snapshot derives from. */
 interface IResolveContext {
   duration: number;
+  objectMotions: readonly IAutoMovieClip[];
   motionById: ReadonlyMap<string, { motion: IAutoMovieMotion; index: number }>;
   performanceByNode: ReadonlyMap<
     string,
@@ -150,6 +232,20 @@ const endActorOf = (
       : Math.max(0, context.duration - performed.performance.startOffset);
   const mount = context.mountByNode.get(node.id)?.binding ?? null;
   const plants = context.plantsByNode.get(node.id);
+  // A mounted rider's end world root comes from the shot's baked follow clip
+  // (#674) — the same composition performShot produced — overriding the rider's
+  // own placement and pose-root. When the shot carries no such clip (a
+  // hand-built shot, or no perform pass), the rider falls back to the staged
+  // path below, byte-identical to the pre-#674 output.
+  const followClip =
+    mount === null ? null : followClipOf(context.objectMotions, node.id);
+  const world: IWorldOverride | null =
+    followClip === null
+      ? null
+      : {
+          transform: bakedTransformAt(followClip, node.id, localTime),
+          rootVelocity: bakedFollowVelocity(followClip, node.id, localTime),
+        };
 
   if (motionId === null)
     return actorState({
@@ -159,6 +255,7 @@ const endActorOf = (
       pose: node.pose,
       mount,
       plants,
+      world,
     });
 
   const motion = context.motionById.get(motionId);
@@ -172,8 +269,15 @@ const endActorOf = (
     pose: sampleMotion(motion.motion, localTime).pose,
     mount,
     plants,
+    world,
   });
 };
+
+/** A rider's world root taken from its baked mount follow clip (#674). */
+interface IWorldOverride {
+  transform: IAutoMovieTransform;
+  rootVelocity: IAutoMovieVector3;
+}
 
 const actorState = (props: {
   node: IAutoMovieSceneNode;
@@ -182,9 +286,13 @@ const actorState = (props: {
   pose: IAutoMoviePose | null;
   mount: IAutoMovieMountBinding | null;
   plants: readonly IAutoMovieBeatEndFootPlant[] | undefined;
+  world: IWorldOverride | null;
 }): IAutoMovieBeatEndActorState => {
   const root = props.pose === null ? null : props.pose.root;
-  const transform = foldRoot(props.node.transform, root);
+  const transform =
+    props.world !== null
+      ? props.world.transform
+      : foldRoot(props.node.transform, root);
   return {
     node: props.node.id,
     transform,
@@ -196,10 +304,14 @@ const actorState = (props: {
       props.motion === null
         ? null
         : gaitPhaseOf(props.motion.clip, props.localTime),
+    // A mounted rider's velocity is the ride's (baked-clip trailing velocity),
+    // even when the rider holds its own pose; otherwise the pose-clip rule.
     rootVelocity:
-      props.motion === null
-        ? null
-        : rootVelocityOf(props.node, props.motion.clip, props.localTime),
+      props.world !== null
+        ? props.world.rootVelocity
+        : props.motion === null
+          ? null
+          : rootVelocityOf(props.node, props.motion.clip, props.localTime),
     footPlants: plantsAtEnd(props.plants, props.localTime),
     mount: props.mount,
   };

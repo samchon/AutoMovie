@@ -37,6 +37,11 @@ const isFiniteVector3 = (vector: IAutoMovieVector3): boolean =>
  * world transform of a mounted rider comes from `resolveAttachment` against the
  * parent's posed skeleton, not from the scene graph.
  *
+ * `performShot` consumes these: every performed shot auto-descends each mount
+ * into the rider's follow clip through `compileAttach` (#674), so the rider
+ * rides for the whole film without re-issuing `attachTo` — the engine owns the
+ * composition, the host stays a pure player.
+ *
  * @author Samchon
  */
 export type IAutoMovieStagedSet =
@@ -64,7 +69,11 @@ export namespace IAutoMovieStagedSet {
     violations: IAutoMovieConstraintViolation[];
   }
 
-  /** One rider→parent-bone coupling, resolved per frame by the host. */
+  /**
+   * One rider→parent-bone coupling. `performShot` bakes it into the rider's
+   * per-frame follow clip (#674); the host plays that clip, it does not resolve
+   * the coupling itself.
+   */
   export interface IMount {
     /** The mounted (riding) scene node. */
     node: string;
