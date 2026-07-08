@@ -6,14 +6,31 @@ import * as THREE from "three";
  * visibility flag, background, and overlay back exactly as it was, so the same
  * built scene can be captured pass after pass without rebuilding — the
  * deterministic engine result is never mutated, only its projection.
+ *
+ * `restore()` also **disposes every resource the override created** (override
+ * materials, the pose overlay's line geometries and material) — a guide-pass
+ * render applies and restores once per frame per pass, so an hour of film would
+ * otherwise leak tens of thousands of WebGL materials. Borrowed originals are
+ * never disposed; they belong to the scene. Restoring twice is safe: the second
+ * call is a no-op, so nothing double-disposes.
  */
 export interface IAutoMovieRenderModeHandle {
   /** The pass this override draws. */
   mode: AutoMovieGuidePass;
 
-  /** Undo the override completely. */
+  /** Undo the override completely. Idempotent. */
   restore: () => void;
 }
+
+/** Run `fn` on the first call only — the restore idempotence guard. */
+const once = (fn: () => void): (() => void) => {
+  let done = false;
+  return () => {
+    if (done) return;
+    done = true;
+    fn();
+  };
+};
 
 /**
  * Apply one diffusion-guide render mode to a built scene, returning the restore
@@ -79,22 +96,29 @@ type MeshLike = THREE.Mesh & {
 const isMeshLike = (object: THREE.Object3D): object is MeshLike =>
   (object as THREE.Mesh).isMesh === true;
 
-/** Swap every mesh material for `make()`'s, restoring the originals. */
+/**
+ * Swap every mesh material for `make()`'s, restoring the originals and
+ * disposing the created overrides.
+ */
 const overrideMaterials = (
   scene: THREE.Scene,
   mode: AutoMovieGuidePass,
   make: () => THREE.Material,
 ): IAutoMovieRenderModeHandle => {
-  const originals = collectMeshes(scene).map((mesh) => {
-    const material = mesh.material;
-    mesh.material = make();
-    return { mesh, material };
+  const swaps = collectMeshes(scene).map((mesh) => {
+    const original = mesh.material;
+    const override = make();
+    mesh.material = override;
+    return { mesh, original, override };
   });
   return {
     mode,
-    restore: () => {
-      for (const { mesh, material } of originals) mesh.material = material;
-    },
+    restore: once(() => {
+      for (const { mesh, original, override } of swaps) {
+        mesh.material = original;
+        override.dispose();
+      }
+    }),
   };
 };
 
@@ -106,19 +130,27 @@ const applyMaskMode = (scene: THREE.Scene): IAutoMovieRenderModeHandle => {
     mesh: MeshLike;
     material: THREE.Material | THREE.Material[];
   }> = [];
+  const created: THREE.Material[] = [];
   scene.children.forEach((child, index) => {
+    const meshes = collectMeshes(child);
+    // Create only for mesh-bearing children (a camera/light child would leak
+    // an unassigned material); the palette index stays the CHILD index, so the
+    // deterministic node→color mapping is unchanged.
+    if (meshes.length === 0) return;
     const material = new THREE.MeshBasicMaterial({ color: maskColor(index) });
-    for (const mesh of collectMeshes(child)) {
+    created.push(material);
+    for (const mesh of meshes) {
       originals.push({ mesh, material: mesh.material });
       mesh.material = material;
     }
   });
   return {
     mode: "mask",
-    restore: () => {
+    restore: once(() => {
       for (const { mesh, material } of originals) mesh.material = material;
+      for (const material of created) material.dispose();
       scene.background = background;
-    },
+    }),
   };
 };
 
@@ -153,11 +185,14 @@ const applyPoseMode = (scene: THREE.Scene): IAutoMovieRenderModeHandle => {
 
   return {
     mode: "pose",
-    restore: () => {
+    restore: once(() => {
       scene.remove(overlay);
+      for (const child of overlay.children)
+        (child as THREE.Line).geometry.dispose();
+      material.dispose();
       for (const { mesh, visible } of hidden) mesh.visible = visible;
       scene.background = background;
-    },
+    }),
   };
 };
 
