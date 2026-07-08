@@ -29,6 +29,7 @@ import {
 import {
   validateArrayArtifact,
   validateObjectArtifact,
+  validateTransformArtifact,
 } from "../validators/primitives";
 
 /**
@@ -121,6 +122,9 @@ const appendMcpPoseShape = (
     "pose joints",
     violations,
   );
+  const root = (pose as Partial<IAutoMoviePose>).root;
+  if (root !== null)
+    validateTransformArtifact(root, `${path}.root`, "pose root", violations);
 };
 
 const validateMcpMotionShape = (
