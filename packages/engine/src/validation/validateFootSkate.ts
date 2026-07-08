@@ -10,6 +10,7 @@ import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
 import { windowSampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
+import { fkReachableBones } from "./fkReachableBones";
 import { ViolationCollector } from "./violation";
 
 const DEFAULT_SAMPLE_RATE = 24;
@@ -74,6 +75,7 @@ export const validateFootSkate = (props: {
   const sampleRate = props.sampleRate ?? DEFAULT_SAMPLE_RATE;
   const path = props.path ?? "$input";
   const skeletonBones = new Set(props.skeleton.bones.map((bone) => bone.bone));
+  const reachableBones = fkReachableBones(props.skeleton);
 
   if (!Number.isFinite(sampleRate) || sampleRate <= 0)
     collector.push(
@@ -93,6 +95,19 @@ export const validateFootSkate = (props: {
         "type",
         `${cp}.bone`,
         `contact bone "${contact.bone}" must exist in the target skeleton`,
+        contact.bone,
+      );
+    // A declared-but-detached bone (its parent chain never reaches a root) is
+    // never returned by FK, so reading its resolved position would crash rather
+    // than report the malformed rig. Gate on FK-reachability, not just
+    // declaration, and skip sampling when it is unreachable.
+    const boneUnreachable =
+      skeletonBones.has(contact.bone) && !reachableBones.has(contact.bone);
+    if (boneUnreachable)
+      collector.push(
+        "type",
+        `${cp}.bone`,
+        `contact bone "${contact.bone}" is declared but not reachable from a root bone via forward kinematics`,
         contact.bone,
       );
     if (
@@ -115,6 +130,7 @@ export const validateFootSkate = (props: {
       );
     if (
       !skeletonBones.has(contact.bone) ||
+      boneUnreachable ||
       !Number.isFinite(contact.start) ||
       !Number.isFinite(contact.end) ||
       contact.end <= contact.start ||

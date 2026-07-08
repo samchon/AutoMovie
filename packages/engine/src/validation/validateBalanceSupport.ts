@@ -11,16 +11,21 @@ import { convexHull2D, pointHullDistance } from "../math/hull";
 import { windowSampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
+import { fkReachableBones } from "./fkReachableBones";
 import { ViolationCollector } from "./violation";
 
 const DEFAULT_CENTER_BONE = "hips";
 const DEFAULT_MARGIN = 0.02;
 const DEFAULT_SAMPLE_RATE = 24;
 const CENTER_BONE_EXPECTED = "center bone must exist in the target skeleton";
+const CENTER_BONE_REACHABLE =
+  "center bone is declared but not reachable from a root bone via forward kinematics";
 const MARGIN_EXPECTED = "margin must be a finite number >= 0";
 const SUPPORT_BONES_EXPECTED =
   "supportBones must contain at least one contact bone";
 const SUPPORT_BONE_EXPECTED = "support bone must exist in the target skeleton";
+const SUPPORT_BONE_REACHABLE =
+  "support bone is declared but not reachable from a root bone via forward kinematics";
 
 /**
  * Declared balance window for center-of-mass support validation.
@@ -88,6 +93,7 @@ export const validateBalanceSupport = (props: {
   const sampleRateValid = isPositiveFinite(sampleRate);
   const path = props.path ?? "$input";
   const skeletonBones = new Set(props.skeleton.bones.map((bone) => bone.bone));
+  const reachableBones = fkReachableBones(props.skeleton);
 
   if (!sampleRateValid)
     collector.push(
@@ -102,8 +108,15 @@ export const validateBalanceSupport = (props: {
     const centerBone = support.centerBone ?? DEFAULT_CENTER_BONE;
     const margin = support.margin ?? DEFAULT_MARGIN;
     const centerMissing = !skeletonBones.has(centerBone);
+    // A declared-but-detached bone (its parent chain never reaches a root) is
+    // never returned by FK, so reading its resolved position would crash rather
+    // than report the malformed rig. Gate on FK-reachability, not just
+    // declaration.
+    const centerUnreachable =
+      skeletonBones.has(centerBone) && !reachableBones.has(centerBone);
     const emptySupport = support.supportBones.length === 0;
     let missingSupport = false;
+    let unreachableSupport = false;
     const temporalInvalid =
       !Number.isFinite(support.start) ||
       !Number.isFinite(support.end) ||
@@ -117,6 +130,13 @@ export const validateBalanceSupport = (props: {
         CENTER_BONE_EXPECTED,
         centerBone,
       );
+    if (centerUnreachable)
+      collector.push(
+        "type",
+        `${sp}.centerBone`,
+        CENTER_BONE_REACHABLE,
+        centerBone,
+      );
     if (emptySupport)
       collector.push(
         "type",
@@ -124,7 +144,7 @@ export const validateBalanceSupport = (props: {
         SUPPORT_BONES_EXPECTED,
         support.supportBones,
       );
-    for (const bone of support.supportBones)
+    for (const bone of support.supportBones) {
       if (!skeletonBones.has(bone)) {
         missingSupport = true;
         collector.push(
@@ -133,7 +153,16 @@ export const validateBalanceSupport = (props: {
           SUPPORT_BONE_EXPECTED,
           bone,
         );
+      } else if (!reachableBones.has(bone)) {
+        unreachableSupport = true;
+        collector.push(
+          "type",
+          `${sp}.supportBones`,
+          SUPPORT_BONE_REACHABLE,
+          bone,
+        );
       }
+    }
     if (temporalInvalid)
       collector.push(
         "temporal",
@@ -146,8 +175,10 @@ export const validateBalanceSupport = (props: {
     if (
       !sampleRateValid ||
       centerMissing ||
+      centerUnreachable ||
       emptySupport ||
       missingSupport ||
+      unreachableSupport ||
       temporalInvalid ||
       marginInvalid
     )
