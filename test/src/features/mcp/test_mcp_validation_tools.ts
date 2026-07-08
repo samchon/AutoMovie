@@ -419,6 +419,21 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed model skeleton bone constraint returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          skeleton: {
+            ...skeleton,
+            bones: [{ ...skeleton.bones[0]!, constraint: undefined }],
+          },
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.skeleton.bones[0].constraint");
+    })(),
+  );
+  TestValidator.predicate(
     "malformed model part id returns validation",
     (() => {
       const validation = app.validateModel({
