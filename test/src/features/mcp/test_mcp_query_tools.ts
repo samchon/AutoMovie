@@ -79,6 +79,8 @@ const slate: IAutoMovieMcpStoredSlate = {
  *    array.
  * 3. Ambiguous duplicate slate entries reject before an agent can commit work
  *    against the wrong context.
+ * 4. Malformed explicit stored-slate collections reject with path-bearing errors
+ *    before raw array iteration reaches the engine helper.
  */
 export const test_mcp_query_tools = (): void => {
   TestValidator.equals("getScript", app.getScript({ slate }).script, script);
@@ -142,6 +144,62 @@ export const test_mcp_query_tools = (): void => {
           beat: "beat-1",
         }),
       ['beat end "beat-1"', "slate.beatEnds[1].beat"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed shot collection rejects",
+    throwsError(
+      () =>
+        app.getShot({
+          slate: {
+            ...slate,
+            shots: null as unknown as IAutoMovieShot[],
+          },
+          beat: "beat-1",
+        }),
+      ["slate.shots", "array"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed notes collection rejects",
+    throwsError(
+      () =>
+        app.getNotes({
+          slate: {
+            ...slate,
+            notes: null as unknown as IAutoMovieReviewNote[],
+          },
+          beat: "beat-1",
+        }),
+      ["slate.notes", "array"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed beat end collection rejects",
+    throwsError(
+      () =>
+        app.getBeatEnd({
+          slate: {
+            ...slate,
+            beatEnds: null as unknown as IAutoMovieBeatEndState[],
+          },
+          beat: "beat-1",
+        }),
+      ["slate.beatEnds", "array"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed shot collection entry rejects",
+    throwsError(
+      () =>
+        app.getShot({
+          slate: {
+            ...slate,
+            shots: [null as unknown as IAutoMovieShot],
+          },
+          beat: "beat-1",
+        }),
+      ["slate.shots[0]", "JSON object"],
     ),
   );
 };
