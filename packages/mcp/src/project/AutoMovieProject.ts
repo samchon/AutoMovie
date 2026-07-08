@@ -98,6 +98,26 @@ export class AutoMovieProject {
   }
 
   /**
+   * Reorder a slate's per-beat arrays into the canonical stored order — the
+   * filename-lexicographic order {@link readKeyedSlices} reads them back in — so
+   * a resident commit returns the arrays exactly as the next resident read
+   * would (#716). A `commitShot`/`commitBeatEnd` upsert appends a new beat at
+   * the array end, diverging from the filename order a later read produces;
+   * sorting by the same `${encodeURIComponent(beat)}.json` filename the store
+   * writes closes that cross-mode gap without a second disk read. Non-keyed
+   * slices (script/scene/notes/film) are untouched.
+   */
+  public orderResidentSlate(
+    slate: IAutoMovieMcpWritableSlate,
+  ): IAutoMovieMcpWritableSlate {
+    return {
+      ...slate,
+      shots: orderByFilename(slate.shots, (shot) => beatOf(shot.id) ?? shot.id),
+      beatEnds: orderByFilename(slate.beatEnds, (end) => end.beat),
+    };
+  }
+
+  /**
    * Persist a whole slate into the tree, reconciling every slice: null slices
    * and empty lists remove their files, per-beat slices add/replace/remove by
    * presence — exactly the invalidation cascade the commit tools perform on the
@@ -133,18 +153,14 @@ export class AutoMovieProject {
    */
   public saveProp(spec: IAutoMovieMcpPropSpec): void {
     writeJsonAtomic(
-      path.join(this.root, "props", `${encodeURIComponent(spec.node)}.json`),
+      path.join(this.root, "props", sliceFilename(spec.node)),
       spec,
     );
   }
 
   /** Remove ONE stored prop spec's file; the caller checks existence first. */
   public removeProp(node: string): void {
-    const file = path.join(
-      this.root,
-      "props",
-      `${encodeURIComponent(node)}.json`,
-    );
+    const file = path.join(this.root, "props", sliceFilename(node));
     if (fs.existsSync(file)) fs.rmSync(file);
   }
 
@@ -224,17 +240,12 @@ export class AutoMovieProject {
     byBeat: ReadonlyMap<string, unknown>,
   ): void {
     const base = path.join(this.root, dir);
-    const wanted = new Set(
-      [...byBeat.keys()].map((beat) => `${encodeURIComponent(beat)}.json`),
-    );
+    const wanted = new Set([...byBeat.keys()].map(sliceFilename));
     for (const name of fs.readdirSync(base))
       if (name.endsWith(".json") && !wanted.has(name))
         fs.rmSync(path.join(base, name));
     for (const [beat, value] of byBeat)
-      writeJsonAtomic(
-        path.join(base, `${encodeURIComponent(beat)}.json`),
-        value,
-      );
+      writeJsonAtomic(path.join(base, sliceFilename(beat)), value);
   }
 
   private writeOrRemove(name: string, value: unknown | null): void {
@@ -296,6 +307,27 @@ const normalizeAssetPath = (relativePath: string): string => {
   const checked = checkAssetPath(relativePath);
   if ("fault" in checked) throw new Error(checked.fault);
   return checked.path;
+};
+
+/**
+ * The per-beat slice filename for a key — the single source of the
+ * `${encodeURIComponent(key)}.json` convention the store reads, writes, and
+ * orders by. Ordering a slate array by this exact string (not the bare encoded
+ * key) reproduces {@link readKeyedSlices}' readdir+sort order precisely: the
+ * `.json` suffix injects a `.` separator that shifts prefix-boundary
+ * comparisons (`"a"` vs `"a-"` sorts opposite to `"a.json"` vs `"a-.json"`).
+ */
+const sliceFilename = (key: string): string =>
+  `${encodeURIComponent(key)}.json`;
+
+/** Order per-beat slices by their stored filename (readKeyedSlices' order). */
+const orderByFilename = <T>(items: T[], keyOf: (item: T) => string): T[] => {
+  const named = items.map((item) => ({
+    item,
+    name: sliceFilename(keyOf(item)),
+  }));
+  named.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  return named.map((entry) => entry.item);
 };
 
 const readJson = <T>(file: string): T | null =>
