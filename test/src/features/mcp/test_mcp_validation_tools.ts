@@ -395,6 +395,18 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed model part material returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          parts: [{ ...model.parts[0]!, material: undefined }],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.parts[0].material");
+    })(),
+  );
+  TestValidator.predicate(
     "malformed scene shape returns validation",
     (() => {
       const validation = app.validateScene({
