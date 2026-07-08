@@ -306,10 +306,11 @@ export class CommitService {
   }): IAutoMovieCommitOutput {
     const { slate, resident } = this.base(props.slate, "commitFilm");
     const violations: IAutoMovieConstraintViolation[] = [];
-    appendValidation(
-      violations,
-      validateSequenceArtifact(props.film, slate.shots),
+    const sequenceValidation = validateSequenceArtifact(
+      props.film,
+      slate.shots,
     );
+    appendValidation(violations, sequenceValidation);
     validateFilmPreconditions(props.film, slate, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
@@ -1099,6 +1100,7 @@ const validateFilmPreconditions = (
     "committed shot id",
     violations,
   );
+  const committedShots = Array.isArray(slate.shots) ? slate.shots : [];
   if (slate.script === null)
     pushViolation(
       violations,
@@ -1123,11 +1125,17 @@ const validateFilmPreconditions = (
       "open review notes must be cleared before committing a film",
       slate.notes,
     );
-  const sequenceShotIds = new Set(film.shots.map((entry) => entry.shot));
+  if (!Array.isArray(film.shots)) return;
+  const sequenceShotIds = new Set(
+    film.shots
+      .filter(isRecord)
+      .map((entry) => entry.shot)
+      .filter((shot): shot is string => typeof shot === "string"),
+  );
   if (slate.script !== null)
     slate.script.beats.forEach((beat, i) => {
       const shot = shotIdOf(beat.id);
-      if (!slate.shots.some((entry) => entry.id === shot))
+      if (!committedShots.some((entry) => entry.id === shot))
         pushViolation(
           violations,
           "type",
@@ -1145,7 +1153,7 @@ const validateFilmPreconditions = (
         );
     });
   if (slate.scene !== null)
-    slate.shots.forEach((shot, i) => {
+    committedShots.forEach((shot, i) => {
       if (shot.scene !== slate.scene?.id)
         pushViolation(
           violations,
