@@ -7,7 +7,7 @@ import { createDoorPropSpec } from "../film/test_film_forge_prop";
 const app = new AutoMovieApplication();
 
 /** The engine door spec re-expressed as the MCP boundary accepts it. */
-const mcpDoorSpec = (): IAutoMovieMcpPropSpec => {
+export const mcpDoorSpec = (): IAutoMovieMcpPropSpec => {
   const spec = createDoorPropSpec();
   const articulation = spec.articulation!;
   return {

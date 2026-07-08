@@ -1,6 +1,6 @@
 # Project Memory
 
-The project folder itself is the durable state — not a hidden mirror. `openProject` activates (or creates) a directory whose tree is human-readable JSON slices plus registered assets: `automovie.json` (manifest with the asset index), `script.json`, `scene.json`, `notes.json`, `film.json`, `shots/<beat>.json`, `beatEnds/<beat>.json`, and reserved `props/`, `models/`, `assets/`, `renders/` directories. A fresh directory is a valid empty project. You can read the files, diff them, and version them — they ARE the state.
+The project folder itself is the durable state — not a hidden mirror. `openProject` activates (or creates) a directory whose tree is human-readable JSON slices plus registered assets: `automovie.json` (manifest with the asset index), `script.json`, `scene.json`, `notes.json`, `film.json`, `shots/<beat>.json`, `beatEnds/<beat>.json`, `props/<node>.json` (stored forged prop specs), and reserved `models/`, `assets/`, `renders/` directories. A fresh directory is a valid empty project. You can read the files, diff them, and version them — they ARE the state.
 
 ## Resident vs Explicit
 
@@ -25,6 +25,10 @@ Every commit and query tool works in two modes:
 ## Ordering
 
 Resident commits are gated by the prerequisite ladder: script → scene → shots → (beat ends, notes, film). An out-of-order commit throws an actionable error naming the current status, the missing rungs, and the ordered next actions. `nextSteps` returns the same computation as data — ask it before guessing. Explicit-slate calls are not gated (order lives where state lives).
+
+## Props
+
+A resident `forgeProp` success writes the accepted spec through as `props/<node>.json` and answers `stored: true` — forge a prop once, and every later session reads it from the project instead of you re-sending the spec. Re-forging a prop replaces exactly its own file; sibling props stay byte-identical. Failed forges and no-project calls store nothing. `eraseProp` removes ONE stored spec (with a `reason`, like every erase); a prop the committed scene still places is refused, not cascaded — re-commit the scene without the placement first, because clearing the scene from a spec erase would be a reset in disguise. The project summary and `nextSteps` status list the stored prop nodes under `props`.
 
 ## Assets
 

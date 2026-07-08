@@ -710,6 +710,14 @@ export namespace IAutoMovieMcpForgedProp {
 export interface IAutoMovieForgePropOutput {
   /** The forged prop on success, or the forge violations on failure. */
   forged: IAutoMovieMcpForgedProp;
+
+  /**
+   * Present only when a resident project is active (#671): `true` when the
+   * accepted spec was written through as `props/<node>.json`. Absent on pure
+   * (no-project) calls, keeping them byte-compatible, and on failed forges,
+   * which write nothing.
+   */
+  stored?: boolean;
 }
 
 /**
@@ -737,6 +745,9 @@ export interface IAutoMovieMcpProjectSummary {
 
   /** Whether `film.json` exists. */
   film: boolean;
+
+  /** Stored forged prop nodes (`props/<node>.json`). */
+  props: string[];
 
   /** Tracked binary asset paths, project-relative, in registration order. */
   assets: string[];
@@ -778,6 +789,23 @@ export interface IAutoMovieSetOutput {
   slate: IAutoMovieMcpWritableSlate;
 
   /** Success, or the violations explaining why the set was refused. */
+  validation: IAutoMovieValidation;
+}
+
+/**
+ * The `eraseProp` tool's result (#671). Erase is a targeted, resident-only
+ * removal of ONE stored prop spec file — `erased` is true only when the named
+ * spec existed and its file was removed. A prop the committed scene still
+ * places is refused: unstaging is `commitScene`'s job, not a spec erase's.
+ */
+export interface IAutoMoviePropEraseOutput {
+  /** True only when the named prop spec existed and its file was removed. */
+  erased: boolean;
+
+  /** Stored prop nodes after the call (unchanged when refused). */
+  props: string[];
+
+  /** Success, or the violations explaining why the erase was refused. */
   validation: IAutoMovieValidation;
 }
 

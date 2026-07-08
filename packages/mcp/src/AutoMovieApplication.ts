@@ -51,6 +51,7 @@ import {
   IAutoMovieOpenProjectOutput,
   IAutoMoviePerformOutput,
   IAutoMoviePlanRenderOutput,
+  IAutoMoviePropEraseOutput,
   IAutoMovieRegisterAssetOutput,
   IAutoMovieSeeFrameOutput,
   IAutoMovieSetOutput,
@@ -121,7 +122,7 @@ export class AutoMovieApplication {
     this.validation = new ValidationService();
     this.commit = new CommitService(this.context);
     this.render = new RenderService(this.context);
-    this.pipeline = new PipelineService();
+    this.pipeline = new PipelineService(this.context);
     this.guide = new GuideService();
   }
 
@@ -570,6 +571,27 @@ export class AutoMovieApplication {
   }
 
   /**
+   * Erase ONE stored prop spec (`props/<node>.json`) from the resident project
+   * — the targeted mirror of `forgeProp`'s resident write-through. Requires an
+   * active project, a non-empty reason (evidence), and an existing stored spec
+   * — erasing nothing is a violation. A prop the committed scene still places
+   * is refused rather than cascaded: the scene is upstream of every shot, so
+   * clearing it from a spec erase would be a reset in disguise — re-commit the
+   * scene without the placement first.
+   *
+   * @param props The prop node whose spec to erase and the reason (evidence).
+   * @returns The stored prop nodes after the erase, or violations when refused.
+   */
+  public eraseProp(props: {
+    /** Prop node whose stored spec should be erased. */
+    node: string;
+    /** Why this spec should go — required evidence. */
+    reason: string;
+  }): IAutoMoviePropEraseOutput {
+    return this.commit.eraseProp(props);
+  }
+
+  /**
    * Replace ONE actor's performance in a beat's committed shot, in the resident
    * project. Sibling performances and other beats stay byte-unchanged; the
    * beat's beat-end is removed (stale without the performance it sampled) and
@@ -778,7 +800,10 @@ export class AutoMovieApplication {
    * acyclically, the profile binding maps every referenced key), and returns
    * the accepted prop or every violation for the correction round. An accepted
    * articulated prop's profile then constrains and drives its joints
-   * deterministically at resolve time.
+   * deterministically at resolve time. When a resident project is active, an
+   * accepted spec also writes through as `props/<node>.json` (re-forging
+   * replaces exactly that file) and the output carries `stored: true`; erase a
+   * stored spec with `eraseProp`.
    *
    * @param props The prop spec: node, model, and optional articulation.
    * @returns The forged prop on success, or the violations to fix.

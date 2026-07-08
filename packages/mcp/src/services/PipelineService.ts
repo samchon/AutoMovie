@@ -21,6 +21,7 @@ import {
   IAutoMovieStagingApplication,
 } from "@automovie/interface";
 
+import { AutoMovieContext } from "../AutoMovieContext";
 import { toEnginePropSpec, toMcpMotion } from "../convert";
 import {
   IAutoMovieBlockOutput,
@@ -41,6 +42,8 @@ import {
  * contract lives on the {@link AutoMovieApplication} facade.
  */
 export class PipelineService {
+  public constructor(private readonly context?: AutoMovieContext) {}
+
   public stage(props: {
     script: IAutoMovieScriptApplication.IWrite;
     staging: IAutoMovieStagingApplication.IWrite;
@@ -102,14 +105,25 @@ export class PipelineService {
     return { forged: forgeCast(props.script, props.forge) };
   }
 
+  /**
+   * The prop side of forge stays a pure gate — except that when a resident
+   * project is active (#671), an ACCEPTED spec writes through as
+   * `props/<node>.json` (the #617 upsert: re-forging replaces exactly its own
+   * file) and the output says so with `stored: true`. Pure (no-project) calls
+   * and failed forges return byte-identical to the pre-#671 shape.
+   */
   public forgeProp(props: {
     spec: IAutoMovieMcpPropSpec;
   }): IAutoMovieForgePropOutput {
     const forged = forgeProp(toEnginePropSpec(props.spec));
-    return {
-      forged:
-        forged.success === true ? { success: true, prop: props.spec } : forged,
+    if (forged.success === false) return { forged };
+    const output: IAutoMovieForgePropOutput = {
+      forged: { success: true, prop: props.spec },
     };
+    const project = this.context?.project ?? null;
+    if (project === null) return output;
+    project.saveProp(props.spec);
+    return { ...output, stored: true };
   }
 }
 

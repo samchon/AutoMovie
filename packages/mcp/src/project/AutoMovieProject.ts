@@ -11,6 +11,7 @@ import path from "node:path";
 
 import {
   IAutoMovieMcpProjectSummary,
+  IAutoMovieMcpPropSpec,
   IAutoMovieMcpWritableSlate,
 } from "../dto";
 
@@ -26,7 +27,9 @@ import {
  * - `script.json` / `scene.json` / `notes.json` / `film.json` — slate slices.
  * - `shots/<beat>.json`, `beatEnds/<beat>.json` — per-beat slices, filenames
  *   URI-encoded from the beat id (Windows-safe, deterministic).
- * - `props/` — reserved for forged prop specs (#617 granularity).
+ * - `props/<node>.json` — forged prop specs (#671), filenames URI-encoded from
+ *   the prop node; a resident `forgeProp` success upserts exactly its own
+ *   file.
  * - `models/`, `assets/` — reserved for 3D binaries (GLB, textures); the store
  *   tracks and guards these paths, the host's adapters write the bytes (the
  *   render package's adapter discipline).
@@ -68,8 +71,8 @@ export class AutoMovieProject {
     return {
       script: readJson<IAutoMovieScript>(this.slicePath("script.json")),
       scene: readJson<IAutoMovieScene>(this.slicePath("scene.json")),
-      shots: this.readBeatSlices<IAutoMovieShot>("shots"),
-      beatEnds: this.readBeatSlices<IAutoMovieBeatEndState>("beatEnds"),
+      shots: this.readKeyedSlices<IAutoMovieShot>("shots"),
+      beatEnds: this.readKeyedSlices<IAutoMovieBeatEndState>("beatEnds"),
       notes:
         readJson<IAutoMovieReviewNote[]>(this.slicePath("notes.json")) ?? [],
     };
@@ -105,6 +108,33 @@ export class AutoMovieProject {
       "beatEnds",
       new Map(slate.beatEnds.map((end) => [end.beat, end])),
     );
+  }
+
+  /** The stored prop specs, one per `props/<node>.json`, in filename order. */
+  public storedProps(): IAutoMovieMcpPropSpec[] {
+    return this.readKeyedSlices<IAutoMovieMcpPropSpec>("props");
+  }
+
+  /**
+   * Upsert ONE forged prop spec as `props/<node>.json` (#671, the #617 upsert
+   * rule below the slate): re-forging a prop replaces exactly its own file,
+   * leaving sibling props byte-identical.
+   */
+  public saveProp(spec: IAutoMovieMcpPropSpec): void {
+    writeJsonAtomic(
+      path.join(this.root, "props", `${encodeURIComponent(spec.node)}.json`),
+      spec,
+    );
+  }
+
+  /** Remove ONE stored prop spec's file; the caller checks existence first. */
+  public removeProp(node: string): void {
+    const file = path.join(
+      this.root,
+      "props",
+      `${encodeURIComponent(node)}.json`,
+    );
+    if (fs.existsSync(file)) fs.rmSync(file);
   }
 
   /**
@@ -155,6 +185,7 @@ export class AutoMovieProject {
       beatEnds: slate.beatEnds.map((end) => end.beat),
       notes: slate.notes.length,
       film: slate.film !== null,
+      props: this.storedProps().map((spec) => spec.node),
       assets: this.assets,
     };
   }
@@ -167,7 +198,7 @@ export class AutoMovieProject {
     return path.join(this.root, name);
   }
 
-  private readBeatSlices<T>(dir: string): T[] {
+  private readKeyedSlices<T>(dir: string): T[] {
     const base = path.join(this.root, dir);
     return fs
       .readdirSync(base)
