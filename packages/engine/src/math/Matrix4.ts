@@ -91,6 +91,14 @@ export namespace Matrix4 {
    * The world-space driver pass needs this: a driver reads a node's _world_
    * orientation/position out of its composed matrix, recomputes it (aim,
    * parent, IK), and recomposes.
+   *
+   * A **collapsed axis** (scale 0 — a hidden part, a folded joint) has an
+   * all-zero basis column, so its normalizer is floored to `Number.EPSILON`
+   * (the {@link "../math/segments"} / hull `Math.max(_, EPSILON)` discipline):
+   * `0 / EPSILON = 0` keeps the rotation basis finite instead of `0 / 0 = NaN`
+   * spreading through the quaternion and every descendant world matrix. The
+   * recovered rotation of a collapsed axis is indeterminate — but finite, so a
+   * degenerate node no longer silently poisons the frame.
    */
   export const decompose = (
     m: number[],
@@ -103,16 +111,23 @@ export namespace Matrix4 {
     const sy = Math.hypot(m[4]!, m[5]!, m[6]!);
     const sz = Math.hypot(m[8]!, m[9]!, m[10]!);
 
+    // Normalize the rotation basis by a floored scale so a collapsed axis
+    // (0 length) yields 0/EPSILON = 0 rather than 0/0 = NaN; the RETURNED scale
+    // below stays the raw length, so a genuine scale round-trips exactly.
+    const nx = Math.max(sx, Number.EPSILON);
+    const ny = Math.max(sy, Number.EPSILON);
+    const nz = Math.max(sz, Number.EPSILON);
+
     // scale-normalized rotation basis, r[row][col]
-    const r00 = m[0]! / sx;
-    const r10 = m[1]! / sx;
-    const r20 = m[2]! / sx;
-    const r01 = m[4]! / sy;
-    const r11 = m[5]! / sy;
-    const r21 = m[6]! / sy;
-    const r02 = m[8]! / sz;
-    const r12 = m[9]! / sz;
-    const r22 = m[10]! / sz;
+    const r00 = m[0]! / nx;
+    const r10 = m[1]! / nx;
+    const r20 = m[2]! / nx;
+    const r01 = m[4]! / ny;
+    const r11 = m[5]! / ny;
+    const r21 = m[6]! / ny;
+    const r02 = m[8]! / nz;
+    const r12 = m[9]! / nz;
+    const r22 = m[10]! / nz;
 
     const trace = r00 + r11 + r22;
     let x: number;
