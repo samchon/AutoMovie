@@ -713,11 +713,23 @@ export interface IAutoMovieForgePropOutput {
 
   /**
    * Present only when a resident project is active (#671): `true` when the
-   * accepted spec was written through as `props/<node>.json`. Absent on pure
-   * (no-project) calls, keeping them byte-compatible, and on failed forges,
-   * which write nothing.
+   * accepted spec was written through as `props/<node>.json`, `false` when the
+   * write-through was refused (#712 — the committed scene still places this
+   * prop, so re-forging its spec would leave committed shots resolving against
+   * stale articulation). Absent on pure (no-project) calls, keeping them
+   * byte-compatible, and on failed forges, which write nothing.
    */
   stored?: boolean;
+
+  /**
+   * The refusal violations (#712), present only when a resident re-forge was
+   * refused (`stored: false`): the committed scene still places this prop node,
+   * so its spec is not replaced. Re-commit the scene without the placement (or
+   * accept re-perform) first. Absent on a stored write-through, on pure calls,
+   * and on failed forges — the `forged.success` already carries the forge
+   * contract's own verdict.
+   */
+  validation?: IAutoMovieValidation;
 }
 
 /**

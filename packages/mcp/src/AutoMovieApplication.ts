@@ -809,7 +809,9 @@ export class AutoMovieApplication {
    * deterministically at resolve time. When a resident project is active, an
    * accepted spec also writes through as `props/<node>.json` (re-forging
    * replaces exactly that file) and the output carries `stored: true`; erase a
-   * stored spec with `eraseProp`.
+   * stored spec with `eraseProp`. Re-forging a prop the committed scene still
+   * places is refused (`stored: false`) — re-commit the scene without the
+   * placement first, else committed shots would resolve against a stale spec.
    *
    * @param props The prop spec: node, model, and optional articulation.
    * @returns The forged prop on success, or the violations to fix.

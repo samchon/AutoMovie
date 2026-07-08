@@ -53,7 +53,10 @@ const crateSpec = (): IAutoMovieMcpPropSpec => ({
  * 4. `eraseProp` removes the named spec's file; erasing a prop with no stored
  *    spec, or with a blank reason, is refused on the ledger.
  * 5. A prop the committed scene still places is refused at `$slate.scene` and its
- *    file survives — unstaging is `commitScene`'s job.
+ *    file survives — unstaging is `commitScene`'s job. Re-forging that placed
+ *    prop is likewise refused (`stored: false`, the spec unchanged), while a
+ *    FIRST forge of a placed-but-unstored node stores (#712 — creating a spec
+ *    is not replacing one).
  * 6. A pure (no-project) forge output carries no `stored` key, and `eraseProp`
  *    without a project throws the actionable openProject prompt.
  */
@@ -164,6 +167,7 @@ export const test_mcp_prop_slice = (): void => {
       nodes: [
         ...staged.scene.nodes,
         { ...staged.scene.nodes[0]!, id: "door", model: "door" },
+        { ...staged.scene.nodes[0]!, id: "lever", model: "lever" },
       ],
     };
     const models = [...new Set(scene.nodes.map((node) => node.model))].map(
@@ -175,6 +179,62 @@ export const test_mcp_prop_slice = (): void => {
       sceneCommit.committed,
       true,
     );
+
+    // #712: re-forging a prop the committed scene still places is refused (the
+    // stored door's spec would otherwise stale committed shots). The forge
+    // itself still succeeds; only the write-through is refused, and the file
+    // survives unchanged (mass still 30 from the earlier re-forge).
+    const restaged = app.forgeProp({
+      spec: {
+        ...mcpDoorSpec(),
+        model: {
+          ...mcpDoorSpec().model,
+          body: { ...mcpDoorSpec().model.body!, mass: 99 },
+        },
+      },
+    });
+    TestValidator.equals(
+      "placed prop re-forge still forges",
+      restaged.forged.success,
+      true,
+    );
+    TestValidator.equals(
+      "placed prop re-forge is not stored",
+      restaged.stored,
+      false,
+    );
+    TestValidator.predicate(
+      "placed re-forge violation blames the committed scene",
+      hasViolation(restaged.validation!, "type", "$slate.scene"),
+    );
+    TestValidator.equals(
+      "refused re-forge leaves the stored spec unchanged",
+      (JSON.parse(fs.readFileSync(doorFile, "utf8")) as IAutoMovieMcpPropSpec)
+        .model.body!.mass,
+      30,
+    );
+
+    // #712 asymmetry: a FIRST forge of a placed-but-not-yet-stored node stores
+    // — it creates the spec shots need rather than replacing one, so the scene
+    // placement does not refuse it (unlike eraseProp, which refuses on
+    // placement alone).
+    const leverSpec: IAutoMovieMcpPropSpec = {
+      ...crateSpec(),
+      node: "lever",
+      model: { ...crateSpec().model, id: "lever", name: "lever" },
+    };
+    const lever = app.forgeProp({ spec: leverSpec });
+    TestValidator.equals(
+      "first forge of a placed prop stores",
+      lever.stored,
+      true,
+    );
+    TestValidator.equals(
+      "first-forge writes the placed prop's file",
+      fs.existsSync(path.join(root, "props", "lever.json")),
+      true,
+    );
+
     const placed = app.eraseProp({ node: "door", reason: "remodeling" });
     TestValidator.equals("placed prop refused", placed.erased, false);
     TestValidator.predicate(
