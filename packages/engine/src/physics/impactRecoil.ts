@@ -42,11 +42,22 @@ export const impulseToRecoilPush = (
   return { flexion: Vector3.length(impulse) * gainDegPerImpulse };
 };
 
+/**
+ * Bound a reactive deflection by the joint's ROM. A **zero push** means the
+ * impact did not deflect this axis, so the axis stays neutral (0): the ROM
+ * bounds how far the impact _yields_ the joint, not where an un-pushed joint
+ * rests. Without this, a joint whose ROM excludes 0 (an always-flexed elbow,
+ * `min > 0`) would be dragged to its lower bound by a flinch that never touched
+ * that axis — spurious motion the impact never caused. A non-zero push is bound
+ * to the range as before.
+ */
 const clampAxis = (
   value: number,
   range: IAutoMovieAngleRange | null,
 ): number =>
-  range === null ? value : Math.max(range.min, Math.min(range.max, value));
+  value === 0 || range === null
+    ? value
+    : Math.max(range.min, Math.min(range.max, value));
 
 const readPushAxis = (
   axis: keyof IAutoMovieRecoilPush,
