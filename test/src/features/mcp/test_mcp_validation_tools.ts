@@ -213,6 +213,30 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed shot motion registry returns validation",
+    (() => {
+      const validation = app.validateShot({
+        shot,
+        scene,
+        motions: null as unknown as Record<string, IAutoMovieMcpMotion>,
+      }).validation;
+      return hasPath(validation, "$motions");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed shot motion registry entry returns validation",
+    (() => {
+      const validation = app.validateShot({
+        shot,
+        scene,
+        motions: {
+          [motion.id]: undefined,
+        } as unknown as Record<string, IAutoMovieMcpMotion>,
+      }).validation;
+      return hasPath(validation, `$motions.${motion.id}`);
+    })(),
+  );
+  TestValidator.predicate(
     "invalid sequence paths",
     (() => {
       const validation = app.validateSequence({
