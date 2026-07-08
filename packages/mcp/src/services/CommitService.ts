@@ -23,12 +23,14 @@ import {
   IAutoMovieMcpGeometryModel,
   IAutoMovieMcpMotion,
   IAutoMovieMcpWritableSlate,
+  IAutoMovieRegisterAssetOutput,
   IAutoMovieSetOutput,
 } from "../dto";
 import {
   AutoMoviePrerequisiteTool,
   assertPrerequisites,
 } from "../project/AutoMoviePrerequisite";
+import { checkAssetPath } from "../project/AutoMovieProject";
 import {
   validateSceneArtifact,
   validateSequenceArtifact,
@@ -49,8 +51,10 @@ import {
 /**
  * The `commit*` tools — pure slate transforms gated by artifact validation and
  * pipeline preconditions, where an upstream replacement clears every stale
- * downstream slice. The MCP contract lives on the {@link AutoMovieApplication}
- * facade; this service owns the execution.
+ * downstream slice — together with the resident-only project mutations built on
+ * the same refusal ledger: targeted `erase*`/`set*` (#617/#654) and manifest
+ * asset registration (#670). The MCP contract lives on the
+ * {@link AutoMovieApplication} facade; this service owns the execution.
  */
 export class CommitService {
   public constructor(private readonly context?: AutoMovieContext) {}
@@ -543,6 +547,56 @@ export class CommitService {
     };
     project.saveSlate(next);
     return { updated: true, slate: next, validation: { success: true } };
+  }
+
+  /**
+   * Track ONE binary asset in the resident project's manifest (#670, completing
+   * #614's asset index). The tool registers the path only: byte-writing stays
+   * the host adapter's job (the render discipline — binaries never flow through
+   * the server), so a registration may point at a file the adapter already
+   * wrote or is about to write. Path escapes and duplicates come back as
+   * violations on the same refusal ledger the erase/set tools use — the store's
+   * own `registerAsset` keeps its throwing contract for programmatic hosts, and
+   * this surface pre-checks so the throw stays unreachable from MCP.
+   */
+  public registerAsset(props: { path: string }): IAutoMovieRegisterAssetOutput {
+    const project = this.context!.requireProject("registerAsset");
+    const violations: IAutoMovieConstraintViolation[] = [];
+    validateNonEmptyText(props.path, "$input.path", "asset path", violations);
+    if (props.path.trim().length > 0) {
+      const checked = checkAssetPath(props.path);
+      if ("fault" in checked)
+        pushViolation(
+          violations,
+          "type",
+          "$input.path",
+          checked.fault,
+          props.path,
+        );
+      else if (project.assets.includes(checked.path))
+        pushViolation(
+          violations,
+          "type",
+          "$input.path",
+          `asset "${checked.path}" is already registered; assets are never silently replaced`,
+          props.path,
+        );
+    }
+    const validation = toValidation(violations);
+    if (validation.success === false)
+      return {
+        registered: false,
+        path: null,
+        assets: project.assets,
+        validation,
+      };
+    const registered = project.registerAsset(props.path);
+    return {
+      registered: true,
+      path: registered,
+      assets: project.assets,
+      validation: { success: true },
+    };
   }
 }
 

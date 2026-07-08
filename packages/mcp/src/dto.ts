@@ -781,6 +781,26 @@ export interface IAutoMovieSetOutput {
   validation: IAutoMovieValidation;
 }
 
+/**
+ * The `registerAsset` tool's result (#670). Registration is a resident-only,
+ * additive manifest mutation: `registered` is true only when the path was newly
+ * tracked — duplicates and path escapes are refused as violations, and the
+ * index is never silently rewritten.
+ */
+export interface IAutoMovieRegisterAssetOutput {
+  /** True only when the path was newly registered into the manifest. */
+  registered: boolean;
+
+  /** The normalized project-relative path, or null when refused. */
+  path: string | null;
+
+  /** Every tracked asset path after the call (unchanged when refused). */
+  assets: string[];
+
+  /** Success, or the violations explaining why registration was refused. */
+  validation: IAutoMovieValidation;
+}
+
 /** The `nextSteps` tool's result — the film ladder as data (#615). */
 export interface IAutoMovieNextStepsOutput {
   /** The resident project's current status. */

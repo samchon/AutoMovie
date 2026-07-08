@@ -139,6 +139,11 @@ export class AutoMovieProject {
     return normalized;
   }
 
+  /** Tracked asset paths, project-relative, in registration order. */
+  public get assets(): string[] {
+    return [...this.manifest.assets];
+  }
+
   /** What the project holds: which slices exist, and the tracked assets. */
   public summary(): IAutoMovieMcpProjectSummary {
     const slate = this.writableSlate();
@@ -150,7 +155,7 @@ export class AutoMovieProject {
       beatEnds: slate.beatEnds.map((end) => end.beat),
       notes: slate.notes.length,
       film: slate.film !== null,
-      assets: [...this.manifest.assets],
+      assets: this.assets,
     };
   }
 
@@ -222,25 +227,36 @@ const shotBeat = (shotId: string): string =>
   shotId.startsWith("shot:") ? shotId.slice("shot:".length) : shotId;
 
 /**
- * Validate and normalize a project-relative asset path: forward slashes, no
- * absolute paths, no `..` escapes, no empty segments.
+ * Check a project-relative asset path: forward slashes, no absolute paths, no
+ * `..` escapes, no empty segments. Returns the normalized path, or the fault
+ * describing the escape — the non-throwing core shared by the store (which
+ * throws on fault) and the MCP tool surface (which reports it as a violation).
  */
-const normalizeAssetPath = (relativePath: string): string => {
+export const checkAssetPath = (
+  relativePath: string,
+): { path: string } | { fault: string } => {
   const forward = relativePath.replace(/\\/g, "/");
   if (
     path.isAbsolute(relativePath) ||
     /^[A-Za-z]:/.test(relativePath) ||
     forward.startsWith("/")
   )
-    throw new Error(
-      `asset path must be project-relative, but was "${relativePath}"`,
-    );
+    return {
+      fault: `asset path must be project-relative, but was "${relativePath}"`,
+    };
   const segments = forward.split("/");
   if (segments.some((segment) => segment === "" || segment === ".."))
-    throw new Error(
-      `asset path must not contain empty or ".." segments, but was "${relativePath}"`,
-    );
-  return segments.join("/");
+    return {
+      fault: `asset path must not contain empty or ".." segments, but was "${relativePath}"`,
+    };
+  return { path: segments.join("/") };
+};
+
+/** The throwing wrapper the store's own contract keeps. */
+const normalizeAssetPath = (relativePath: string): string => {
+  const checked = checkAssetPath(relativePath);
+  if ("fault" in checked) throw new Error(checked.fault);
+  return checked.path;
 };
 
 const readJson = <T>(file: string): T | null =>

@@ -51,6 +51,7 @@ import {
   IAutoMovieOpenProjectOutput,
   IAutoMoviePerformOutput,
   IAutoMoviePlanRenderOutput,
+  IAutoMovieRegisterAssetOutput,
   IAutoMovieSeeFrameOutput,
   IAutoMovieSetOutput,
   IAutoMovieStageOutput,
@@ -156,6 +157,26 @@ export class AutoMovieApplication {
    */
   public nextSteps(): IAutoMovieNextStepsOutput {
     return nextStepsOf(this.context.requireProject("nextSteps"));
+  }
+
+  /**
+   * Track ONE binary asset (a GLB, a texture, a rendered frame) in the resident
+   * project's manifest. The tool registers the project-relative path only —
+   * byte-writing stays the host adapter's job, so the path may name a file the
+   * adapter already wrote or is about to write. Paths must stay inside the
+   * project (no absolute paths, no `..`), and registration never silently
+   * overwrites: a duplicate path is refused as a violation and the index is
+   * unchanged. Requires an active project (call openProject first).
+   *
+   * @param props The project-relative asset path to track.
+   * @returns The normalized path and full asset index, or violations when
+   *   refused.
+   */
+  public registerAsset(props: {
+    /** Project-relative asset path (forward slashes; no `..` escapes). */
+    path: string;
+  }): IAutoMovieRegisterAssetOutput {
+    return this.commit.registerAsset(props);
   }
 
   /**

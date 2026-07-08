@@ -17,6 +17,7 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["PROPS", "crude proxy, rich meaning"],
   ["PROJECT_MEMORY", "cleared slice's file is removed"],
   ["PROJECT_MEMORY", "sibling beats' files stay byte-identical"],
+  ["PROJECT_MEMORY", "byte-writing stays the host adapter's job"],
   ["RENDER_GUIDES", "no-capture-adapter"],
 ];
 
