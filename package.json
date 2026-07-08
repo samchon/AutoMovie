@@ -7,6 +7,7 @@
   "scripts": {
     "build": "pnpm --filter=./packages/** -r build",
     "test": "pnpm --filter @automovie/test build && pnpm --filter @automovie/test start",
+    "e2e:tgz": "node internals/e2e-tgz.mjs",
     "format": "prettier --write \"**/*.ts\"",
     "format:check": "prettier --check \"**/*.ts\""
   },
