@@ -115,6 +115,15 @@ export const test_mcp_erase_notes = (): void => {
       "violation located at the beat",
       hasViolation(again.validation, "type", "$input.beat"),
     );
+    const malformedBeat = app.eraseNotes({
+      beat: null as unknown as string,
+      reason: "reject malformed beat input",
+    });
+    TestValidator.equals("malformed beat refused", malformedBeat.erased, false);
+    TestValidator.predicate(
+      "malformed beat located",
+      hasViolation(malformedBeat.validation, "type", "$input.beat"),
+    );
 
     const noReason = app.eraseNotes({ beat: "beat-2", reason: "" });
     TestValidator.equals("empty reason refused", noReason.erased, false);

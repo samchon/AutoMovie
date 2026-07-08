@@ -165,6 +165,23 @@ export const test_mcp_set_placement = (): void => {
       "ghost located at the node",
       hasViolation(ghost.validation, "type", "$input.node"),
     );
+    const malformedNode = app.setPlacement({
+      node: null as unknown as string,
+      transform: {
+        translation: { x: 0, y: 0, z: 0 },
+        scale: unitScale,
+      },
+      reason: "reject malformed placement node",
+    });
+    TestValidator.equals(
+      "malformed placement node refuses",
+      malformedNode.updated,
+      false,
+    );
+    TestValidator.predicate(
+      "malformed placement node located",
+      hasViolation(malformedNode.validation, "type", "$input.node"),
+    );
 
     // 4. Evidence + artifact twins.
     const noReason = app.setPlacement({

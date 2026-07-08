@@ -54,6 +54,9 @@ import {
   validateVectorArtifact,
 } from "../validators/primitives";
 
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
 /**
  * The `commit*` tools — pure slate transforms gated by artifact validation and
  * pipeline preconditions, where an upstream replacement clears every stale
@@ -342,9 +345,9 @@ export class CommitService {
       "erase reason",
       violations,
     );
-    const shotId = shotIdOf(props.beat);
+    const shotId = isNonEmptyString(props.beat) ? shotIdOf(props.beat) : "";
     if (
-      props.beat.trim().length > 0 &&
+      isNonEmptyString(props.beat) &&
       !slate.shots.some((shot) => shot.id === shotId)
     )
       pushViolation(
@@ -390,7 +393,7 @@ export class CommitService {
       violations,
     );
     if (
-      props.beat.trim().length > 0 &&
+      isNonEmptyString(props.beat) &&
       !slate.notes.some((note) => note.beat === props.beat)
     )
       pushViolation(
@@ -435,7 +438,7 @@ export class CommitService {
       violations,
     );
     const stored = project.storedProps().map((spec) => spec.node);
-    if (props.node.trim().length > 0) {
+    if (isNonEmptyString(props.node)) {
       if (!stored.includes(props.node))
         pushViolation(
           violations,
@@ -539,16 +542,12 @@ export class CommitService {
       });
       return ids;
     })();
-    const shotId = typeof props.beat === "string" ? shotIdOf(props.beat) : "";
+    const shotId = isNonEmptyString(props.beat) ? shotIdOf(props.beat) : "";
     const shot =
       shotId.length === 0
         ? undefined
         : slate.shots.find((entry) => entry.id === shotId);
-    if (
-      typeof props.beat === "string" &&
-      props.beat.trim().length > 0 &&
-      shot === undefined
-    )
+    if (isNonEmptyString(props.beat) && shot === undefined)
       pushViolation(
         violations,
         "type",
@@ -559,8 +558,7 @@ export class CommitService {
     if (
       hasPerformance &&
       shot !== undefined &&
-      typeof props.performance.node === "string" &&
-      props.performance.node.trim().length > 0 &&
+      isNonEmptyString(props.performance.node) &&
       !shot.performances.some(
         (performance) => performance.node === props.performance.node,
       )
@@ -685,7 +683,7 @@ export class CommitService {
         slate.scene,
       );
     else if (
-      props.node.trim().length > 0 &&
+      isNonEmptyString(props.node) &&
       !slate.scene.nodes.some((node) => node.id === props.node)
     )
       pushViolation(
@@ -731,7 +729,7 @@ export class CommitService {
     const project = this.context!.requireProject("registerAsset");
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNonEmptyText(props.path, "$input.path", "asset path", violations);
-    if (props.path.trim().length > 0) {
+    if (isNonEmptyString(props.path)) {
       const checked = checkAssetPath(props.path);
       if ("fault" in checked)
         pushViolation(
