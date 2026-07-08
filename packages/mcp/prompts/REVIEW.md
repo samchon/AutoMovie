@@ -16,3 +16,9 @@ Three honest responses, in order of preference:
 3. **Acknowledge.** If the implausibility is the point (wire-fu, a levitating lantern, a superhuman blow), mark the action with `physicsIntent` (e.g. `"defies-gravity"`). The matching warnings are suppressed on later rounds; the interaction events still surface for downstream consumers.
 
 Never leave a warning unhandled round after round — that is the nagging loop the acknowledgment channel exists to prevent. And never fake a `pass` while errors stand: the verdict is a contract with the next stage, not a mood.
+
+## Locating the Correction on the Screenplay
+
+When the committed script carries a refinement tree, `commitShot` stamps each violation with the screenplay `node` claiming the beat. Walk that node's ancestors nearest-first — beat, then its parents up toward the intent — and fix at the deepest level that owns the fault: a clipped elbow is the beat's own motion authoring; two actors colliding because the choreography packs them too tight may be the parent group's blocking; an impossible reach across the set is the scene's staging.
+
+Match the tool to the level. One actor's take inside an otherwise good shot: `setActorPerformance`. A node staged in the wrong spot: `setPlacement` (it clears downstream like a scene re-commit — moved coordinates invalidate performed shots). A beat that must be redone from its plan: `eraseShot`, then re-`block`/`perform`/`commitShot`. Only a fault that lives in the script text itself warrants `commitScript`'s full downstream clear.

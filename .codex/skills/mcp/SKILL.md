@@ -27,6 +27,7 @@ When adding or rewriting either, count the actual rendered description length ra
 
 ## Other conventions
 
+- A PR that adds or changes an MCP tool checks whether the guide corpus (`packages/mcp/prompts/`) needs the same change — see `packages/mcp/prompts/README.md`; a guide that does not know a tool teaches only the expensive corrections.
 - An MCP tool's return must be a single object type, never a bare union. The engine's success/violations unions are each wrapped (`IAutoMovieStageOutput { staged: IAutoMovieStagedSet }`) rather than returned directly.
 - Do not expose tuple types directly on the MCP surface. `typia.llm.controller` rejects them; use named object fields such as `{ x1, y1, x2, y2 }` or omit the unsupported control from the MCP contract.
 - The old per-stage `typia.llm.application<IAutoMovie*Application>()` interfaces are retired as the integration surface. The `IAutoMovie*Application.IWrite`/`IProps` types stay as the plain data shapes the class methods consume.

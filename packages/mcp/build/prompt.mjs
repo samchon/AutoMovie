@@ -14,7 +14,10 @@ const OUT_DIR = resolve(PACKAGE_ROOT, "src/guides");
 const OUT_FILE = resolve(OUT_DIR, "AutoMovieGuideConstant.ts");
 mkdirSync(OUT_DIR, { recursive: true });
 
-const files = readdirSync(PROMPTS_ROOT).filter((f) => f.endsWith(".md"));
+// README.md documents the corpus itself and is never served as a guide.
+const files = readdirSync(PROMPTS_ROOT).filter(
+  (f) => f.endsWith(".md") && f !== "README.md",
+);
 
 const record = {};
 for (const file of files) {

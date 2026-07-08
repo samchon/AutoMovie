@@ -14,6 +14,13 @@ Every commit and query tool works in two modes:
 - A successful resident commit persists exactly the slices it changed. A failed commit writes nothing.
 - **A cleared slice's file is removed.** Committing a new script clears scene/shots/beatEnds/notes/film — and in the project tree those files disappear. The invalidation cascade is visible on disk; a missing file IS the stale marker.
 - Writes are atomic (temp file + rename); a crash never leaves a half-written slice.
+- **Beat commits upsert.** Re-committing a beat replaces exactly that beat's `shots/<beat>.json` (or `beatEnds/<beat>.json`); sibling beats' files stay byte-identical.
+
+## Surgical Erase and Set
+
+- `eraseShot` removes ONE beat's shot file together with that beat's end-state and notes, and nulls the film. `eraseNotes` removes only the beat's notes and nulls the film. Both demand a `reason` (evidence, not ceremony) and refuse a beat with nothing to erase. Clearing everything a script owns is `commitScript`'s job — a targeted erase of the root would be a reset in disguise.
+- `setActorPerformance` splices one actor's performance inside one committed shot (replacement-only — a new performer belongs to `perform` + `commitShot`), removes that beat's end-state, and nulls the film; other beats' files are untouched.
+- `setPlacement` moves one staged node and mirrors `commitScene`'s full downstream clear (shots, beat ends, notes, film): shots kept against moved world coordinates would be silently stale geometry. The gain over restaging is precision — one node moves, the rest of the staging is untouched — not a shortcut around re-performing.
 
 ## Ordering
 
