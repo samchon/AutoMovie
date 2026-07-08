@@ -9,6 +9,7 @@ import {
 } from "@automovie/engine";
 import {
   IAutoMovieActionTarget,
+  IAutoMovieConstraintViolation,
   IAutoMoviePose,
   IAutoMovieQuaternion,
   IAutoMovieScene,
@@ -17,6 +18,7 @@ import {
   IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
+import path from "node:path";
 
 import { AutoMovieContext } from "../AutoMovieContext";
 import { toEngineMotion } from "../convert";
@@ -31,6 +33,7 @@ import {
   IAutoMovieMeasureDistanceOutput,
 } from "../dto";
 import { shotIdOf } from "../project/shotKey";
+import { validateSceneArtifact } from "../validators/artifacts";
 
 /**
  * Engine geometry queries — resolved poses, reach reports, and distance
@@ -129,6 +132,7 @@ export class GeometryService {
       throw new Error(
         `${caller} was called without a scene, but the resident project has no committed scene. Commit a scene first or pass scene explicitly.`,
       );
+    assertResidentSceneFile(project.root, stored.scene, caller);
     return stored.scene;
   }
 
@@ -144,6 +148,7 @@ export class GeometryService {
       throw new Error(
         `${caller} was called without a context, but the resident project has no committed scene. Commit a scene first or pass context explicitly.`,
       );
+    assertResidentSceneFile(project.root, slate.scene, caller);
     const memory = this.context.geometryMemory();
     const models = mergeResidentModels([
       ...memory.models,
@@ -182,6 +187,58 @@ type ActorPoseState = {
   pose: IAutoMoviePose;
   motion: string | null;
 };
+
+class AutoMovieProjectSemanticError extends Error {
+  public constructor(file: string, caller: string, detail: string) {
+    super(
+      `AutoMovie project file "${file}" is semantically invalid for ${caller}. ` +
+        `Fix or remove this file, then call openProject again. ` +
+        `Validation detail: ${detail}`,
+    );
+    this.name = "AutoMovieProjectSemanticError";
+  }
+}
+
+const assertResidentSceneFile = (
+  root: string,
+  scene: IAutoMovieScene,
+  caller: string,
+): void => {
+  const file = path.join(root, "scene.json");
+  try {
+    const validation = validateSceneArtifact(scene, residentSceneModels(scene));
+    if (validation.success === true) return;
+    throw new AutoMovieProjectSemanticError(
+      file,
+      caller,
+      describeViolations(validation.violations),
+    );
+  } catch (error) {
+    if (error instanceof AutoMovieProjectSemanticError) throw error;
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new AutoMovieProjectSemanticError(file, caller, detail);
+  }
+};
+
+const residentSceneModels = (
+  scene: IAutoMovieScene,
+): IAutoMovieMcpGeometryModel[] =>
+  [...new Set(scene.nodes.map((node) => node.model))].map((id) => ({
+    id,
+    skeleton: null,
+  }));
+
+const describeViolations = (
+  violations: IAutoMovieConstraintViolation[],
+): string =>
+  violations
+    .slice(0, 5)
+    .map(
+      (violation) =>
+        `${violation.kind} at ${violation.path}: ${violation.expected}`,
+    )
+    .join("; ") +
+  (violations.length > 5 ? `; +${violations.length - 5} more` : "");
 
 const resolveActorGeometry = (
   context: IAutoMovieMcpGeometryContext,

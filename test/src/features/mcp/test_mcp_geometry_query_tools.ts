@@ -129,7 +129,9 @@ const residentShot: IAutoMovieShot = {
  * 4. Resident project queries may omit explicit context after commitScene and
  *    commitShot supplied the session-only model/motion payloads; a reopened
  *    project explains that those rig payloads are not persisted.
- * 5. Ambiguous duplicate geometry state rejects before the agent can trust the
+ * 5. A resident project with parseable but invalid `scene.json` reports a
+ *    project-state repair error naming the file before geometry helpers run.
+ * 6. Ambiguous duplicate geometry state rejects before the agent can trust the
  *    wrong node or model.
  */
 export const test_mcp_geometry_query_tools = (): void => {
@@ -269,6 +271,50 @@ export const test_mcp_geometry_query_tools = (): void => {
             target: { kind: "point", point: { x: 1.4, y: 1, z: 2.3 } },
           }),
         ["commitScene with models", "context explicitly"],
+      ),
+    );
+
+    const corruptScene = {
+      ...scene,
+      nodes: [...scene.nodes, scene.nodes[0]!],
+    };
+    fs.writeFileSync(
+      path.join(root, "scene.json"),
+      `${JSON.stringify(corruptScene, null, 2)}\n`,
+    );
+    const sceneFileError = [
+      "AutoMovie project file",
+      "scene.json",
+      "Fix or remove",
+      'scene node id "actor" must be unique',
+    ];
+    TestValidator.predicate(
+      "resident distance corrupt scene has project guidance",
+      throwsError(
+        () =>
+          resident.measureDistance({
+            from: { kind: "node", node: "actor" },
+            to: { kind: "node", node: "marker" },
+          }),
+        sceneFileError,
+      ),
+    );
+    TestValidator.predicate(
+      "resident reach corrupt scene has project guidance",
+      throwsError(
+        () =>
+          resident.getReach({
+            actor: "actor",
+            target: { kind: "point", point: { x: 1.4, y: 1, z: 2.3 } },
+          }),
+        sceneFileError,
+      ),
+    );
+    TestValidator.predicate(
+      "resident pose corrupt scene has project guidance",
+      throwsError(
+        () => resident.getResolvedPose({ actor: "actor", beat: "beat-1" }),
+        sceneFileError,
       ),
     );
   } finally {
