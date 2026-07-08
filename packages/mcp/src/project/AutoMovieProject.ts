@@ -1,6 +1,8 @@
+import { validateModel as validateEngineModel } from "@automovie/engine";
 import {
   IAutoMovieBeatEndState,
   IAutoMovieConstraintViolation,
+  IAutoMovieModel,
   IAutoMovieReviewNote,
   IAutoMovieScene,
   IAutoMovieScript,
@@ -28,7 +30,9 @@ import {
   validateNonEmptyText,
   validateObjectArtifact,
   validateRange,
+  validateTransformArtifact,
   validateUniqueBy,
+  validateVectorArtifact,
 } from "../validators/primitives";
 import { beatOf, shotIdOf } from "./shotKey";
 
@@ -95,25 +99,37 @@ export class AutoMovieProject {
 
   /** The stored slate assembled from the slice files (film excluded). */
   public storedSlate(): Omit<IAutoMovieMcpWritableSlate, "film"> {
-    return {
-      script: readValidatedJson<IAutoMovieScript>(
-        this.slicePath("script.json"),
-        validateScriptSlice,
-      ),
-      scene: readValidatedJson<IAutoMovieScene>(
-        this.slicePath("scene.json"),
-        validateSceneSlice,
-      ),
-      shots: this.readKeyedSlices<IAutoMovieShot>("shots", {
+    const script = readValidatedJson<IAutoMovieScript>(
+      this.slicePath("script.json"),
+      validateScriptSlice,
+    );
+    const scene = readValidatedJson<IAutoMovieScene>(
+      this.slicePath("scene.json"),
+      validateSceneSlice,
+    );
+    const shots = this.readKeyedSlices<IAutoMovieShot>(
+      "shots",
+      {
         label: "shot id",
         expected: shotIdOf,
         actual: (shot) => shot.id,
-      }),
-      beatEnds: this.readKeyedSlices<IAutoMovieBeatEndState>("beatEnds", {
-        label: "beat end",
-        expected: (beat) => beat,
-        actual: (end) => end.beat,
-      }),
+      },
+      (file, shot) => validateProjectValue(file, shot, validateShotSlice),
+    );
+    return {
+      script,
+      scene,
+      shots,
+      beatEnds: this.readKeyedSlices<IAutoMovieBeatEndState>(
+        "beatEnds",
+        {
+          label: "beat end",
+          expected: (beat) => beat,
+          actual: (end) => end.beat,
+        },
+        (file, beatEnd) =>
+          validateProjectValue(file, beatEnd, validateBeatEndSlice),
+      ),
       notes:
         readValidatedJson<IAutoMovieReviewNote[]>(
           this.slicePath("notes.json"),
@@ -184,11 +200,15 @@ export class AutoMovieProject {
 
   /** The stored prop specs, one per `props/<node>.json`, in filename order. */
   public storedProps(): IAutoMovieMcpPropSpec[] {
-    return this.readKeyedSlices<IAutoMovieMcpPropSpec>("props", {
-      label: "prop node",
-      expected: (node) => node,
-      actual: (spec) => spec.node,
-    });
+    return this.readKeyedSlices<IAutoMovieMcpPropSpec>(
+      "props",
+      {
+        label: "prop node",
+        expected: (node) => node,
+        actual: (spec) => spec.node,
+      },
+      (file, spec) => validateProjectValue(file, spec, validatePropSlice),
+    );
   }
 
   /**
@@ -277,6 +297,7 @@ export class AutoMovieProject {
       expected: (fileKey: string) => string;
       actual: (value: T) => string | null | undefined;
     },
+    validate?: (file: string, value: T) => void,
   ): T[] {
     const base = path.join(this.root, dir);
     const out: T[] = [];
@@ -292,6 +313,7 @@ export class AutoMovieProject {
       const actual = key.actual(value);
       if (actual !== expected)
         throw new AutoMovieProjectKeyError(file, key.label, expected, actual);
+      validate?.(file, value);
       out.push(value);
     }
     return out;
@@ -578,6 +600,191 @@ const validateNotesSlice = (
   });
 };
 
+const validateShotSlice = (
+  value: unknown,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateObjectArtifact(value, "$input", "shot", violations)) return;
+  validateNonEmptyId(value.id, "$input.id", "shot id", violations);
+  validateNonEmptyId(value.scene, "$input.scene", "shot scene", violations);
+  validateNonEmptyId(value.camera, "$input.camera", "shot camera", violations);
+  validateRange(
+    value.duration,
+    "$input.duration",
+    0,
+    Infinity,
+    "shot duration",
+    violations,
+    false,
+  );
+  if (value.cameraMotion !== null && value.cameraMotion !== undefined)
+    validateObjectArtifact(
+      value.cameraMotion,
+      "$input.cameraMotion",
+      "shot cameraMotion",
+      violations,
+    );
+  else if (value.cameraMotion === undefined)
+    pushViolation(
+      violations,
+      "type",
+      "$input.cameraMotion",
+      "shot cameraMotion must be null or a clip",
+      value.cameraMotion,
+    );
+  validateArrayArtifact(
+    value.performances,
+    "$input.performances",
+    "shot performances",
+    violations,
+  );
+  validateUniqueBy(
+    asArray(value.performances).map((performance, index) => ({
+      id: isRecord(performance) ? performance.node : undefined,
+      path: `$input.performances[${index}].node`,
+    })),
+    "shot performance node",
+    violations,
+  );
+  asArray(value.performances).forEach((performance, index) => {
+    const path = `$input.performances[${index}]`;
+    if (
+      !validateObjectArtifact(performance, path, "shot performance", violations)
+    )
+      return;
+    validateNonEmptyId(
+      performance.node,
+      `${path}.node`,
+      "performance node",
+      violations,
+    );
+    validateRange(
+      performance.startOffset,
+      `${path}.startOffset`,
+      0,
+      typeof value.duration === "number" ? value.duration : Infinity,
+      "performance startOffset",
+      violations,
+    );
+    if (performance.motion !== null && performance.motion !== undefined)
+      validateNonEmptyId(
+        performance.motion,
+        `${path}.motion`,
+        "performance motion",
+        violations,
+      );
+  });
+  validateArrayArtifact(
+    value.objectMotions,
+    "$input.objectMotions",
+    "shot objectMotions",
+    violations,
+  );
+};
+
+const validateBeatEndSlice = (
+  value: unknown,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateObjectArtifact(value, "$input", "beat end", violations)) return;
+  validateNonEmptyId(value.beat, "$input.beat", "beat id", violations);
+  validateNonEmptyId(value.shot, "$input.shot", "shot id", violations);
+  if (
+    typeof value.beat === "string" &&
+    typeof value.shot === "string" &&
+    value.shot !== shotIdOf(value.beat)
+  )
+    pushViolation(
+      violations,
+      "type",
+      "$input.shot",
+      `beat-end shot must equal "${shotIdOf(value.beat)}"`,
+      value.shot,
+    );
+  validateArrayArtifact(
+    value.actors,
+    "$input.actors",
+    "beat-end actors",
+    violations,
+  );
+  validateUniqueBy(
+    asArray(value.actors).map((actor, index) => ({
+      id: isRecord(actor) ? actor.node : undefined,
+      path: `$input.actors[${index}].node`,
+    })),
+    "beat-end actor",
+    violations,
+  );
+  asArray(value.actors).forEach((actor, index) => {
+    const path = `$input.actors[${index}]`;
+    if (!validateObjectArtifact(actor, path, "beat-end actor", violations))
+      return;
+    validateNonEmptyId(actor.node, `${path}.node`, "actor node", violations);
+    validateTransformArtifact(
+      actor.transform,
+      `${path}.transform`,
+      "beat-end actor transform",
+      violations,
+    );
+    validateVectorArtifact(
+      actor.facing,
+      `${path}.facing`,
+      "beat-end actor facing",
+      violations,
+    );
+    validateRange(
+      actor.localTime,
+      `${path}.localTime`,
+      0,
+      Infinity,
+      "beat-end actor localTime",
+      violations,
+    );
+    if (actor.motion !== null && actor.motion !== undefined)
+      validateNonEmptyId(
+        actor.motion,
+        `${path}.motion`,
+        "beat-end actor motion",
+        violations,
+      );
+  });
+};
+
+const validatePropSlice = (
+  value: unknown,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateObjectArtifact(value, "$input", "prop spec", violations)) return;
+  validateNonEmptyId(value.node, "$input.node", "prop node", violations);
+  if (
+    validateObjectArtifact(
+      value.model,
+      "$input.model",
+      "prop model",
+      violations,
+    )
+  )
+    appendValidation(
+      violations,
+      validateEngineModel({ model: value.model as unknown as IAutoMovieModel }),
+    );
+  if (value.articulation !== null && value.articulation !== undefined)
+    validateObjectArtifact(
+      value.articulation,
+      "$input.articulation",
+      "prop articulation",
+      violations,
+    );
+  else if (value.articulation === undefined)
+    pushViolation(
+      violations,
+      "type",
+      "$input.articulation",
+      "prop articulation must be null or a JSON object",
+      value.articulation,
+    );
+};
+
 const readJson = <T>(file: string): T | null => {
   if (!fs.existsSync(file)) return null;
   try {
@@ -586,6 +793,20 @@ const readJson = <T>(file: string): T | null => {
     const reason = error instanceof Error ? error.message : String(error);
     throw new AutoMovieProjectJsonError(file, reason);
   }
+};
+
+const validateProjectValue = <T>(
+  file: string,
+  value: T,
+  validate: (
+    value: unknown,
+    violations: IAutoMovieConstraintViolation[],
+  ) => void,
+): void => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validate(value, violations);
+  if (violations.length > 0)
+    throw new AutoMovieProjectShapeError(file, describeViolations(violations));
 };
 
 const readValidatedJson = <T>(
@@ -597,10 +818,7 @@ const readValidatedJson = <T>(
 ): T | null => {
   const value = readJson<unknown>(file);
   if (value === null) return null;
-  const violations: IAutoMovieConstraintViolation[] = [];
-  validate(value, violations);
-  if (violations.length > 0)
-    throw new AutoMovieProjectShapeError(file, describeViolations(violations));
+  validateProjectValue(file, value, validate);
   return value as T;
 };
 

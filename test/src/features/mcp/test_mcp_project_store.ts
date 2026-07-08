@@ -1,9 +1,14 @@
 import {
+  IAutoMovieBeatEndState,
   IAutoMovieScript,
   IAutoMovieSequence,
   IAutoMovieShot,
 } from "@automovie/interface";
-import { AutoMovieProject, IAutoMovieMcpWritableSlate } from "@automovie/mcp";
+import {
+  AutoMovieProject,
+  IAutoMovieMcpPropSpec,
+  IAutoMovieMcpWritableSlate,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -79,6 +84,8 @@ const throwsProjectJsonError = (
  *    file to fix, for manifest, top-level slice, and keyed slice reads.
  * 6. Parseable but structurally invalid non-keyed slices also report project
  *    repair guidance at the resident read boundary.
+ * 7. Parseable keyed slices whose filename/internal key matches still validate the
+ *    rest of their shape before entering resident state.
  */
 export const test_mcp_project_store = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-store-"));
@@ -240,5 +247,66 @@ export const test_mcp_project_store = (): void => {
     );
   } finally {
     fs.rmSync(keyedRoot, { recursive: true, force: true });
+  }
+
+  const invalidKeyedShapeCases: {
+    label: string;
+    dir: string;
+    file: string;
+    value: unknown;
+    read: (root: string) => unknown;
+    fragments: string[];
+  }[] = [
+    {
+      label: "invalid shot shape has project guidance",
+      dir: "shots",
+      file: "b1.json",
+      value: { id: "shot:b1" } satisfies Partial<IAutoMovieShot>,
+      read: (root) => AutoMovieProject.open(root).writableSlate(),
+      fragments: ["shots", "b1.json", "Validation detail", "scene"],
+    },
+    {
+      label: "invalid beat-end shape has project guidance",
+      dir: "beatEnds",
+      file: "b1.json",
+      value: { beat: "b1" } satisfies Partial<IAutoMovieBeatEndState>,
+      read: (root) => AutoMovieProject.open(root).writableSlate(),
+      fragments: ["beatEnds", "b1.json", "Validation detail", "shot"],
+    },
+    {
+      label: "invalid prop shape has project guidance",
+      dir: "props",
+      file: "door.json",
+      value: { node: "door" } satisfies Partial<IAutoMovieMcpPropSpec>,
+      read: (root) => AutoMovieProject.open(root).storedProps(),
+      fragments: ["props", "door.json", "Validation detail", "model"],
+    },
+  ];
+  for (const entry of invalidKeyedShapeCases) {
+    const invalidRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-invalid-keyed-shape-"),
+    );
+    try {
+      AutoMovieProject.open(invalidRoot);
+      fs.writeFileSync(
+        path.join(invalidRoot, entry.dir, entry.file),
+        `${JSON.stringify(entry.value, null, 2)}\n`,
+      );
+      TestValidator.predicate(
+        entry.label,
+        throwsProjectJsonError(
+          () => entry.read(invalidRoot),
+          [
+            "AutoMovie project file",
+            entry.dir,
+            entry.file,
+            "Fix or remove",
+            ...entry.fragments,
+          ],
+        ),
+      );
+    } finally {
+      fs.rmSync(invalidRoot, { recursive: true, force: true });
+    }
   }
 };
