@@ -431,6 +431,17 @@ const validateMesh = (
   collector: ViolationCollector,
 ): void => {
   validateTupleBuffer(mesh.positions, 3, `${path}.positions`, collector);
+  // An empty buffer is a multiple of 3, so validateTupleBuffer accepts it; a
+  // mesh with no vertices is degenerate geometry (empty GLB export, empty
+  // collision proxy) and belongs in the correction round, not at render time —
+  // the mesh mirror of a primitive's strictly-positive extents.
+  if (mesh.positions.length === 0)
+    collector.push(
+      "type",
+      `${path}.positions`,
+      "a mesh must contain at least one vertex",
+      mesh.positions.length,
+    );
   const vertexCount = mesh.positions.length / 3;
 
   if (mesh.normals !== null) {
