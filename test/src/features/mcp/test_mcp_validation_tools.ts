@@ -94,6 +94,8 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
  *    fixture.
  * 2. Each validator returns the standard validation envelope with a path on a
  *    representative invalid artifact.
+ * 3. Structurally malformed scene/shot/sequence payloads return validation
+ *    failures instead of leaking raw JavaScript shape errors.
  */
 export const test_mcp_validation_tools = (): void => {
   TestValidator.equals(
@@ -230,6 +232,52 @@ export const test_mcp_validation_tools = (): void => {
         hasPath(validation, "$input.shots[0].shot") &&
         hasPath(validation, "$input.shots[0].transition")
       );
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed scene shape returns validation",
+    (() => {
+      const validation = app.validateScene({
+        scene: { id: "scene-1" } as unknown as IAutoMovieScene,
+        models: [{ id: model.id, skeleton }],
+      }).validation;
+      return (
+        hasPath(validation, "$input.nodes") &&
+        hasPath(validation, "$input.cameras") &&
+        hasPath(validation, "$input.lights")
+      );
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed shot shape returns validation",
+    (() => {
+      const validation = app.validateShot({
+        shot: {
+          id: "shot-1",
+          scene: scene.id,
+          camera: "camera",
+          duration: 1,
+        } as unknown as IAutoMovieShot,
+        scene,
+        motions: {},
+      }).validation;
+      return (
+        hasPath(validation, "$input.performances") &&
+        hasPath(validation, "$input.objectMotions")
+      );
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed sequence shape returns validation",
+    (() => {
+      const validation = app.validateSequence({
+        sequence: {
+          id: "seq-1",
+          fps: 24,
+        } as unknown as IAutoMovieSequence,
+        shots: [shot],
+      }).validation;
+      return hasPath(validation, "$input.shots");
     })(),
   );
 };
