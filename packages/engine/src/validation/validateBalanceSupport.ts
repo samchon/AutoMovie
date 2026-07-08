@@ -8,6 +8,7 @@ import {
 
 import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
 import { convexHull2D, pointHullDistance } from "../math/hull";
+import { windowSampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { ViolationCollector } from "./violation";
@@ -152,13 +153,12 @@ export const validateBalanceSupport = (props: {
     )
       continue;
 
-    const frames = Math.max(
-      1,
-      Math.ceil((support.end - support.start) * sampleRate),
-    );
-    for (let sampleIndex = 0; sampleIndex <= frames; sampleIndex++) {
-      const sampled = support.start + sampleIndex / sampleRate;
-      const time = sampled > support.end ? support.end : sampled;
+    // The engine's shared sampling grid (endpoint-inclusive, end-clamped) —
+    // the same clock footskate/ground/self-intersection step, so the physics
+    // validators can never drift onto different frame boundaries.
+    const times = windowSampleTimes(support.start, support.end, sampleRate);
+    for (let sampleIndex = 0; sampleIndex < times.length; sampleIndex++) {
+      const time = times[sampleIndex]!;
       const resolved = new Map<AutoMovieHumanoidBone, IAutoMovieVector3>();
       const pose = resolvePose(
         sampleMotion(props.motion, time).pose,
