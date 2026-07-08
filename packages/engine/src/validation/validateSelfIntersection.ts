@@ -11,29 +11,10 @@ import { segmentSegmentDistance } from "../math/segments";
 import { sampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
+import { IAutoMovieCapsuleProxy, validateCapsule } from "./capsuleProxy";
 import { ViolationCollector } from "./violation";
 
 const DEFAULT_SAMPLE_RATE = 24;
-
-/**
- * Capsule proxy over two resolved bones.
- *
- * This is the first self-intersection primitive: a segment from `from` to `to`
- * with a radius, enough to catch coarse limb/torso overlap before a mesh-level
- * topology validator exists.
- *
- * @author Samchon
- */
-export interface IAutoMovieCapsuleProxy {
-  /** First endpoint bone. */
-  from: AutoMovieHumanoidBone;
-
-  /** Second endpoint bone. */
-  to: AutoMovieHumanoidBone;
-
-  /** Capsule radius in meters. */
-  radius: number;
-}
 
 /**
  * Explicit capsule pair to test for overlap.
@@ -156,52 +137,6 @@ const rejectSampleRate = (
     sampleRate,
   );
   return collector.toValidation();
-};
-
-const validateCapsule = (
-  capsule: IAutoMovieCapsuleProxy,
-  path: string,
-  skeletonBones: ReadonlySet<AutoMovieHumanoidBone>,
-  collector: ViolationCollector,
-): boolean => {
-  let valid = true;
-  if (!skeletonBones.has(capsule.from)) {
-    valid = false;
-    collector.push(
-      "type",
-      `${path}.from`,
-      `capsule endpoint "${capsule.from}" must exist in the target skeleton`,
-      capsule.from,
-    );
-  }
-  if (!skeletonBones.has(capsule.to)) {
-    valid = false;
-    collector.push(
-      "type",
-      `${path}.to`,
-      `capsule endpoint "${capsule.to}" must exist in the target skeleton`,
-      capsule.to,
-    );
-  }
-  if (capsule.from === capsule.to) {
-    valid = false;
-    collector.push(
-      "type",
-      path,
-      "capsule endpoints must be two distinct bones",
-      { from: capsule.from, to: capsule.to },
-    );
-  }
-  if (!Number.isFinite(capsule.radius) || capsule.radius <= 0) {
-    valid = false;
-    collector.push(
-      "range",
-      `${path}.radius`,
-      `capsule radius must be a finite number > 0, but was ${capsule.radius}`,
-      capsule.radius,
-    );
-  }
-  return valid;
 };
 
 const resolveCapsule = (
