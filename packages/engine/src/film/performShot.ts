@@ -178,6 +178,14 @@ export const performShot = (props: {
     node: string,
   ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>> | undefined;
   /**
+   * The gait names each actor's context supplies, for validating `locomote`
+   * actions: a `locomote` naming a gait this lookup does not list for the actor
+   * is a `type` violation, so the reference synthesiser never silently drops it
+   * (an unresolved gait produces no motion). Omit — or return `undefined` for a
+   * node — to skip the check (byte-identical to before: no gait gate).
+   */
+  gaits?: (node: string) => readonly string[] | undefined;
+  /**
    * The beat's validated blocking (from `blockBeat`), when the pipeline runs
    * the full stage ladder. Supplying it arms the coherence gates between intent
    * and realization: matching beat and duration, every timing anchor covered by
@@ -192,6 +200,7 @@ export const performShot = (props: {
     synthesize,
     skeleton,
     restFrames,
+    gaits,
     blocking,
   } = props;
   const out = new ViolationCollector();
@@ -425,6 +434,24 @@ export const performShot = (props: {
       frames.push({ action, index: i });
     } else {
       stageActions.push(action);
+      if (action.verb === "locomote" && gaits !== undefined) {
+        // A locomote names a gait by the actor's own vocabulary; the reference
+        // synthesiser resolves it by name and would otherwise silently produce
+        // no motion for an unknown one. Surface it as a violation so the gap
+        // between the free-string schema and the actor's actual gaits is caught.
+        actors.forEach((actor) => {
+          const available = gaits(actor);
+          if (available !== undefined && !available.includes(action.gait))
+            out.push(
+              "type",
+              `${base}[${i}].gait`,
+              `locomote gait "${action.gait}" is not one of actor "${actor}"'s gaits (${
+                available.length === 0 ? "none supplied" : available.join(", ")
+              })`,
+              action.gait,
+            );
+        });
+      }
       if (action.verb === "launch") {
         // The projectile is a scene object, so it must be staged (its placed
         // position is where the flight begins), and the aim must resolve to a
