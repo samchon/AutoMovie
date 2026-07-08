@@ -170,6 +170,9 @@ export class PipelineService {
   public forgeProp(props: {
     spec: IAutoMovieMcpPropSpec;
   }): IAutoMovieForgePropOutput {
+    const violations = validateForgePropShape(props.spec);
+    if (violations.length > 0)
+      return { forged: { success: false, violations } };
     const converted = convertPropSpecForForge(props.spec);
     if (converted.success === false) return { forged: converted };
     const forged = forgeProp(converted.prop);
@@ -219,11 +222,385 @@ const convertPropSpecForForge = (
           "type",
           "$input.articulation",
           "prop articulation must match the forgeProp schema",
-          spec.articulation,
+          isRecord(spec) ? spec.articulation : spec,
         ),
       ],
     };
   }
+};
+
+const validateForgePropShape = (
+  spec: unknown,
+): IAutoMovieConstraintViolation[] => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  if (!isJsonObject(spec, "$input", "prop spec", violations)) return violations;
+  requireString(spec.node, "$input.node", "prop node", violations);
+  validateForgeModelShape(spec.model, "$input.model", violations);
+  validateForgePropArticulationShape(
+    spec.articulation,
+    "$input.articulation",
+    violations,
+  );
+  return violations;
+};
+
+const validateForgePropArticulationShape = (
+  articulation: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (articulation === null) return;
+  if (!isJsonObject(articulation, path, "prop articulation", violations))
+    return;
+  if (
+    isJsonArray(
+      articulation.nodes,
+      `${path}.nodes`,
+      "prop articulation nodes",
+      violations,
+    )
+  )
+    articulation.nodes.forEach((node, index) =>
+      validateForgePropNodeShape(node, `${path}.nodes[${index}]`, violations),
+    );
+  validateForgePropProfileShape(
+    articulation.profile,
+    `${path}.profile`,
+    violations,
+  );
+  validateForgePropBindingShape(
+    articulation.binding,
+    `${path}.binding`,
+    violations,
+  );
+};
+
+const validateForgePropNodeShape = (
+  node: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(node, path, "prop articulation node", violations)) return;
+  requireString(node.id, `${path}.id`, "prop articulation node id", violations);
+  validateNullableString(
+    node.parent,
+    `${path}.parent`,
+    "prop articulation node parent",
+    violations,
+  );
+  validateNullableString(
+    node.mesh,
+    `${path}.mesh`,
+    "prop articulation node mesh",
+    violations,
+  );
+  validateNullableString(
+    node.camera,
+    `${path}.camera`,
+    "prop articulation node camera",
+    violations,
+  );
+  validateNullableString(
+    node.light,
+    `${path}.light`,
+    "prop articulation node light",
+    violations,
+  );
+  validateNullableString(
+    node.skin,
+    `${path}.skin`,
+    "prop articulation node skin",
+    violations,
+  );
+};
+
+const validateForgePropProfileShape = (
+  profile: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(profile, path, "prop profile", violations)) return;
+  requireString(profile.id, `${path}.id`, "prop profile id", violations);
+  requireString(profile.name, `${path}.name`, "prop profile name", violations);
+  isJsonArray(
+    profile.controls,
+    `${path}.controls`,
+    "prop profile controls",
+    violations,
+  );
+  if (
+    isJsonArray(
+      profile.drivers,
+      `${path}.drivers`,
+      "prop profile drivers",
+      violations,
+    )
+  )
+    profile.drivers.forEach((driver, index) =>
+      validateForgePropDriverShape(
+        driver,
+        `${path}.drivers[${index}]`,
+        violations,
+      ),
+    );
+  if (
+    isJsonArray(
+      profile.limits,
+      `${path}.limits`,
+      "prop profile limits",
+      violations,
+    )
+  )
+    profile.limits.forEach((limit, index) =>
+      validateForgePropLimitShape(
+        limit,
+        `${path}.limits[${index}]`,
+        violations,
+      ),
+    );
+};
+
+const validateForgePropBindingShape = (
+  binding: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(binding, path, "prop profile binding", violations)) return;
+  requireString(
+    binding.profile,
+    `${path}.profile`,
+    "prop profile binding profile",
+    violations,
+  );
+  requireString(
+    binding.root,
+    `${path}.root`,
+    "prop profile binding root",
+    violations,
+  );
+  validateNullableString(
+    binding.instanceName,
+    `${path}.instanceName`,
+    "prop profile binding instance name",
+    violations,
+  );
+  if (
+    !isJsonObject(
+      binding.boneMap,
+      `${path}.boneMap`,
+      "prop profile binding bone map",
+      violations,
+    )
+  )
+    return;
+  Object.entries(binding.boneMap).forEach(([key, mapped]) =>
+    requireString(
+      mapped,
+      `${path}.boneMap["${key}"]`,
+      "prop profile binding mapped node",
+      violations,
+    ),
+  );
+};
+
+const validateForgePropDriverShape = (
+  driver: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(driver, path, "prop profile driver", violations)) return;
+  if (typeof driver.type !== "string") {
+    requireString(
+      driver.type,
+      `${path}.type`,
+      "prop profile driver type",
+      violations,
+    );
+    return;
+  }
+  switch (driver.type) {
+    case "copy":
+      requireString(
+        driver.owner,
+        `${path}.owner`,
+        "copy driver owner",
+        violations,
+      );
+      requireString(
+        driver.source,
+        `${path}.source`,
+        "copy driver source",
+        violations,
+      );
+      return;
+    case "aim":
+      requireString(
+        driver.owner,
+        `${path}.owner`,
+        "aim driver owner",
+        violations,
+      );
+      requireString(
+        driver.target,
+        `${path}.target`,
+        "aim driver target",
+        violations,
+      );
+      return;
+    case "ik":
+      validateStringArray(
+        driver.chain,
+        `${path}.chain`,
+        "ik driver chain",
+        violations,
+      );
+      requireString(driver.goal, `${path}.goal`, "ik driver goal", violations);
+      validateNullablePole(driver.pole, `${path}.pole`, violations);
+      return;
+    case "parent":
+      requireString(
+        driver.owner,
+        `${path}.owner`,
+        "parent driver owner",
+        violations,
+      );
+      requireString(
+        driver.parent,
+        `${path}.parent`,
+        "parent driver parent",
+        violations,
+      );
+      return;
+    case "driven":
+      validateChannelShape(
+        driver.output,
+        `${path}.output`,
+        "driven driver output",
+        violations,
+      );
+      validateChannelShape(
+        driver.source,
+        `${path}.source`,
+        "driven driver source",
+        violations,
+      );
+      validateNullableRangeObject(
+        driver.inRange,
+        `${path}.inRange`,
+        "driven driver input range",
+        violations,
+      );
+      validateNullableRangeObject(
+        driver.outRange,
+        `${path}.outRange`,
+        "driven driver output range",
+        violations,
+      );
+      return;
+    case "spring":
+      validateStringArray(
+        driver.chain,
+        `${path}.chain`,
+        "spring driver chain",
+        violations,
+      );
+      validateNullableString(
+        driver.center,
+        `${path}.center`,
+        "spring driver center",
+        violations,
+      );
+      return;
+    default:
+      violations.push(
+        violation(
+          "type",
+          `${path}.type`,
+          `prop profile driver type "${driver.type}" is not supported`,
+          driver.type,
+        ),
+      );
+  }
+};
+
+const validateForgePropLimitShape = (
+  limit: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(limit, path, "prop profile limit", violations)) return;
+  validateChannelShape(
+    limit.channel,
+    `${path}.channel`,
+    "limit channel",
+    violations,
+  );
+};
+
+const validateChannelShape = (
+  channel: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(channel, path, label, violations)) return;
+  if (channel.kind === "node") {
+    requireString(channel.node, `${path}.node`, `${label} node`, violations);
+    requireString(channel.path, `${path}.path`, `${label} path`, violations);
+  } else if (channel.kind === "pointer") {
+    requireString(
+      channel.pointer,
+      `${path}.pointer`,
+      `${label} pointer`,
+      violations,
+    );
+    requireString(
+      channel.valueType,
+      `${path}.valueType`,
+      `${label} value type`,
+      violations,
+    );
+  } else
+    violations.push(
+      violation(
+        "type",
+        `${path}.kind`,
+        `${label} kind must be "node" or "pointer"`,
+        channel.kind,
+      ),
+    );
+};
+
+const validateStringArray = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonArray(value, path, label, violations)) return;
+  value.forEach((entry, index) =>
+    requireString(entry, `${path}[${index}]`, label, violations),
+  );
+};
+
+const validateNullablePole = (
+  pole: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (pole === null) return;
+  if (!isJsonObject(pole, path, "ik driver pole", violations)) return;
+  validateNullableString(pole.node, `${path}.node`, "ik pole node", violations);
+};
+
+const validateNullableRangeObject = (
+  range: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (range === undefined) return;
+  if (!isJsonObject(range, path, label, violations)) return;
 };
 
 const validateStageShape = (

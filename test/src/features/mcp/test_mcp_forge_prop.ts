@@ -55,6 +55,8 @@ export const mcpDoorSpec = (): IAutoMovieMcpPropSpec => {
  *    the tool.
  * 4. A malformed MCP articulation shape is reported as a forge failure instead of
  *    leaking a converter TypeError.
+ * 5. Malformed direct prop spec/model/profile/binding shapes stop at the MCP
+ *    boundary instead of leaking raw converter or engine dereference errors.
  */
 export const test_mcp_forge_prop = (): void => {
   const spec = mcpDoorSpec();
@@ -169,5 +171,75 @@ export const test_mcp_forge_prop = (): void => {
   TestValidator.predicate(
     "malformed articulation violation names articulation",
     hasViolation(malformedArticulation.forged, "type", "$input.articulation"),
+  );
+
+  const malformedRoot = app.forgeProp({
+    spec: null as unknown as IAutoMovieMcpPropSpec,
+  });
+  TestValidator.predicate(
+    "malformed prop root returns violations",
+    malformedRoot.forged.success === false &&
+      hasViolation(malformedRoot.forged, "type", "$input"),
+  );
+
+  const malformedModel = app.forgeProp({
+    spec: {
+      ...spec,
+      model: null as unknown as IAutoMovieMcpPropSpec["model"],
+    },
+  });
+  TestValidator.predicate(
+    "malformed prop model returns violations",
+    malformedModel.forged.success === false &&
+      hasViolation(malformedModel.forged, "type", "$input.model"),
+  );
+
+  const malformedDrivers = app.forgeProp({
+    spec: {
+      ...spec,
+      articulation: {
+        ...spec.articulation!,
+        profile: {
+          ...spec.articulation!.profile,
+          drivers: null as unknown as NonNullable<
+            IAutoMovieMcpPropSpec["articulation"]
+          >["profile"]["drivers"],
+        },
+      },
+    },
+  });
+  TestValidator.predicate(
+    "malformed prop profile drivers return violations",
+    malformedDrivers.forged.success === false &&
+      hasViolation(
+        malformedDrivers.forged,
+        "type",
+        "$input.articulation.profile.drivers",
+      ),
+  );
+
+  const malformedBoneMap = app.forgeProp({
+    spec: {
+      ...spec,
+      articulation: {
+        ...spec.articulation!,
+        binding: {
+          ...spec.articulation!.binding,
+          boneMap: { pivot: null, mirror: "handleMirror" } as unknown as Record<
+            string,
+            string
+          >,
+        },
+      },
+    },
+  });
+  TestValidator.predicate(
+    "malformed prop binding bone map returns violations",
+    malformedBoneMap.forged.success === false &&
+      hasViolation(
+        malformedBoneMap.forged,
+        "type",
+        '$input.articulation.binding.boneMap["pivot"]',
+      ),
   );
 };
