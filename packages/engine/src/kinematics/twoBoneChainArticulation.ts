@@ -8,9 +8,6 @@ import { solveTwoBoneIK } from "./solveTwoBoneIK";
 /** World-down, the pole a natural elbow or knee bends away from. */
 const POLE: IAutoMovieVector3 = { x: 0, y: -1, z: 0 };
 
-const inverse = (q: IAutoMovieQuaternion): IAutoMovieQuaternion =>
-  Quaternion.normalize({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
-
 /** The world position and orientation of one resolved chain bone. */
 export interface IAutoMovieChainBone {
   /** World-space bone origin. */
@@ -107,16 +104,19 @@ export const twoBoneChainArticulation = (props: {
   // into the bone-local articulation (restWorld⁻¹ · Δ · restWorld).
   const rsu = props.upper.worldRotation;
   const du = aimRotation(restUpperDir, upperDir);
-  const upper = Quaternion.multiply(inverse(rsu), Quaternion.multiply(du, rsu));
+  const upper = Quaternion.multiply(
+    Quaternion.inverse(rsu),
+    Quaternion.multiply(du, rsu),
+  );
 
   // Mid joint: worldRot(L) = du · Rsl · articL, so the fore segment's local
   // axis (Rsl⁻¹ · restForeDir) must rotate onto (Rsl⁻¹ · du⁻¹ · foreDir).
   const rsl = props.lower.worldRotation;
-  const rslInv = inverse(rsl);
+  const rslInv = Quaternion.inverse(rsl);
   const localFore = Quaternion.rotateVector(rslInv, restForeDir);
   const localGoal = Quaternion.rotateVector(
     rslInv,
-    Quaternion.rotateVector(inverse(du), foreDir),
+    Quaternion.rotateVector(Quaternion.inverse(du), foreDir),
   );
   const lower = aimRotation(localFore, localGoal);
 
