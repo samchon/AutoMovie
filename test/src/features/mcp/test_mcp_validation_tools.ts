@@ -875,6 +875,16 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed scene model registry entry returns validation",
+    (() => {
+      const validation = app.validateScene({
+        scene: { ...scene, nodes: [] },
+        models: [null as unknown as IAutoMovieModel],
+      }).validation;
+      return hasPath(validation, "$models[0]");
+    })(),
+  );
+  TestValidator.predicate(
     "malformed shot shape returns validation",
     (() => {
       const validation = app.validateShot({
