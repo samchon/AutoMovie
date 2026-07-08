@@ -642,15 +642,20 @@ export class AutoMovieApplication {
   /**
    * Plan a deterministic render for a committed shot or film. It returns frame
    * times, frame paths, per-pass guide outputs, and ffmpeg args without doing
-   * host I/O.
+   * host I/O. Omit `slate` to plan the resident project (#614): the frame and
+   * output paths then default into the project's reserved `renders/` directory,
+   * so a long film never re-sends its whole state to plan a render. An explicit
+   * slate stays a pure transform with the legacy `frames/<stem>` default
+   * paths.
    *
-   * @param props The slate, render spec, optional guide passes, and paths.
+   * @param props The slate (omit for the resident project), render spec,
+   *   optional guide passes, and paths.
    * @returns A render plan, or validation diagnostics when the target is not
    *   ready.
    */
   public planRender(props: {
-    /** Slate whose committed shot or film is the render source. */
-    slate: IAutoMovieMcpWritableSlate;
+    /** Slate whose committed shot or film is the source; omit for resident. */
+    slate?: IAutoMovieMcpWritableSlate;
     /** Render parameters for a committed shot or sequence id. */
     spec: IAutoMovieRenderSpec;
     /** Guide passes to capture per frame. Defaults to beauty only. */
@@ -669,14 +674,15 @@ export class AutoMovieApplication {
    * capture adapter the request and returns the captured image. Without an
    * adapter it returns the resolved frame with status `no-capture-adapter`
    * instead of pixels, so an agent always knows whether it actually saw the
-   * frame.
+   * frame. Omit `slate` to preview the resident project (#614).
    *
-   * @param props The slate, render spec, optional frame/time, and guide pass.
+   * @param props The slate (omit for the resident project), render spec,
+   *   optional frame/time, and guide pass.
    * @returns The captured (or planned) preview frame, or diagnostics.
    */
   public async seeFrame(props: {
-    /** Slate whose committed shot or film is the preview source. */
-    slate: IAutoMovieMcpWritableSlate;
+    /** Slate whose committed shot or film is the source; omit for resident. */
+    slate?: IAutoMovieMcpWritableSlate;
     /** Render parameters for a committed shot or sequence id. */
     spec: IAutoMovieRenderSpec;
     /** Zero-based frame index. Defaults to the first frame. */
