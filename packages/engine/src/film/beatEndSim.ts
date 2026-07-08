@@ -77,10 +77,25 @@ export const gaitPhaseOf = (
   clip: IAutoMovieMotion,
   localTime: number,
 ): number | null => {
+  // A carried gait cycle is authoritative: it is how a NON-looping composite
+  // (the film ladder's arranged performance) still knows its stride phase —
+  // without it, compiled shots always answered null and the mid-stride resume
+  // never fired in the real ladder. Degenerate meta yields null, matching the
+  // degenerate-duration rule below.
+  const cycle = clip.gaitCycle ?? null;
+  if (cycle !== null) {
+    if (!Number.isFinite(cycle.period) || cycle.period <= 0) return null;
+    if (!Number.isFinite(cycle.phaseAt)) return null;
+    return modPositive(cycle.phaseAt + localTime, cycle.period);
+  }
   if (!clip.loop) return null;
   if (clip.duration <= 0) return null;
   return wrapTime(localTime, clip.duration);
 };
+
+/** `value mod period` normalized into `[0, period)`. */
+const modPositive = (value: number, period: number): number =>
+  ((value % period) + period) % period;
 
 /**
  * World root velocity at `localTime`, finite-differenced over the clip's last

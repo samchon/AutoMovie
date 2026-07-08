@@ -108,11 +108,36 @@ export const arrangeMotion = (
     }
   }
 
+  // The composite's stride clock: the timeline ends inside (or holding) its
+  // LAST placement, which is exactly where the beat-end handoff samples — so
+  // the composite carries that placement's gait cycle, phase-shifted by its
+  // start (`phaseAt' = (phaseAt - start) mod period`), and none when the last
+  // placement carries no cycle (the actor is not striding at the end). A
+  // mid-timeline cycle followed by a cycle-less action is deliberately NOT
+  // carried — the end state is what the handoff resumes.
+  const last = sorted[sorted.length - 1];
+  const lastCycle = last?.motion.gaitCycle ?? null;
+  const gaitCycle =
+    lastCycle === null
+      ? null
+      : {
+          period: lastCycle.period,
+          phaseAt: modPositive(
+            lastCycle.phaseAt - last!.start,
+            lastCycle.period,
+          ),
+        };
+
   return {
     id,
     skeleton: sorted[0]?.motion.skeleton ?? "",
     duration: keyframes.length ? keyframes[keyframes.length - 1]!.time : 0,
     loop: false,
     keyframes,
+    gaitCycle,
   };
 };
+
+/** `value mod period` normalized into `[0, period)`. */
+const modPositive = (value: number, period: number): number =>
+  ((value % period) + period) % period;

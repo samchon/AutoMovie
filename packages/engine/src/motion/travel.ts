@@ -106,5 +106,9 @@ export const travelMotion = (
     duration: cycles * base.duration,
     loop: false,
     keyframes,
+    // Travel repeats the base cyclically, so the composite's stride clock is
+    // the base's own: carry its cycle, or stamp one from the repeated base (a
+    // hand-authored loop clip is still a cycle of its own duration).
+    gaitCycle: base.gaitCycle ?? { period: base.duration, phaseAt: 0 },
   };
 };

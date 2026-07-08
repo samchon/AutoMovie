@@ -82,12 +82,20 @@ const layerClips = (
       bezier: null,
     };
   });
+  // Disjoint regions mean at most ONE clip strides (the root-bearing
+  // locomotion region); its cycle is the layered composite's cycle. Two
+  // striding regions would be ambiguous, so the clock is honestly dropped.
+  const cycles = clips
+    .map((clip) => clip.gaitCycle ?? null)
+    .filter((cycle) => cycle !== null);
+
   return {
     id,
     skeleton: clips[0]!.skeleton,
     duration: times[times.length - 1]!,
     loop: false,
     keyframes,
+    gaitCycle: cycles.length === 1 ? cycles[0]! : null,
   };
 };
 

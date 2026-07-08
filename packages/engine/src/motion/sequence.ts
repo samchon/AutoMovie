@@ -41,11 +41,31 @@ export const sequenceMotion = (
     }
     offset += part.duration;
   }
+  // A concatenation keeps a stride clock only when every part carries the
+  // SAME cycle and each part spans whole cycles — then the phase runs
+  // continuously across the seams (`phase(t) = (phaseAt + t) % period` holds
+  // for the whole sequence). Any mismatch or partial cycle breaks the clock,
+  // so it is honestly dropped rather than approximated.
+  const first = parts[0]!.gaitCycle ?? null;
+  const continuous =
+    first !== null &&
+    parts.every(
+      (part) =>
+        (part.gaitCycle ?? null) !== null &&
+        part.gaitCycle!.period === first.period &&
+        part.gaitCycle!.phaseAt === first.phaseAt &&
+        Math.abs(
+          part.duration / first.period -
+            Math.round(part.duration / first.period),
+        ) < 1e-9,
+    );
+
   return {
     id,
     skeleton,
     duration: offset,
     loop,
     keyframes,
+    gaitCycle: continuous ? first : null,
   };
 };
