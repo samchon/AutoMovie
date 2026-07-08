@@ -210,6 +210,24 @@ export const test_mcp_set_placement = (): void => {
       "transform located",
       hasViolation(badTransform.validation, "range", "$input.transform"),
     );
+    const malformedTransformRoot = app.setPlacement({
+      node: "knightB",
+      transform: null as unknown as IAutoMovieMcpTransform,
+      reason: "reject a malformed transform root",
+    });
+    TestValidator.equals(
+      "malformed transform root refuses",
+      malformedTransformRoot.updated,
+      false,
+    );
+    TestValidator.predicate(
+      "malformed transform root located",
+      hasViolation(
+        malformedTransformRoot.validation,
+        "type",
+        "$input.transform",
+      ),
+    );
     const badEuler = app.setPlacement({
       node: "knightB",
       transform: {
