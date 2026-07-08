@@ -32,6 +32,7 @@ import {
   assertPrerequisites,
 } from "../project/AutoMoviePrerequisite";
 import { checkAssetPath } from "../project/AutoMovieProject";
+import { beatOf, shotIdOf } from "../project/shotKey";
 import {
   validateSceneArtifact,
   validateSequenceArtifact,
@@ -149,6 +150,13 @@ export class CommitService {
     );
   }
 
+  /**
+   * The **upsert rule** (#617, the AutoBe granularity doctrine): `commitShot`
+   * and `commitBeatEnd` replace by their beat key — re-committing the same
+   * beat's artifact swaps exactly that slice (and, resident, exactly that
+   * file), leaving sibling beats untouched. One beat is the stable correction
+   * target; there is no whole-set re-send.
+   */
   public commitShot(props: {
     slate?: IAutoMovieMcpWritableSlate;
     shot: IAutoMovieShot;
@@ -239,11 +247,11 @@ export class CommitService {
   }
 
   /**
-   * The **upsert rule** (#617, the AutoBe granularity doctrine): `commitShot`
-   * and `commitBeatEnd` replace by their beat key — re-committing the same
-   * beat's artifact swaps exactly that slice (and, resident, exactly that
-   * file), leaving sibling beats untouched. One beat is the stable correction
-   * target; there is no whole-set re-send.
+   * Commit the assembled film — validated against the FULL committed shot set
+   * (every script beat's shot present and sequenced, no open review notes),
+   * then swapped in as the single film slice. Unlike the per-beat commits there
+   * is no upsert key: the film is one artifact, and any upstream change clears
+   * it.
    */
   public commitFilm(props: {
     slate?: IAutoMovieMcpWritableSlate;
@@ -290,7 +298,7 @@ export class CommitService {
       "erase reason",
       violations,
     );
-    const shotId = `shot:${props.beat}`;
+    const shotId = shotIdOf(props.beat);
     if (
       props.beat.trim().length > 0 &&
       !slate.shots.some((shot) => shot.id === shotId)
@@ -451,7 +459,7 @@ export class CommitService {
       "performance node",
       violations,
     );
-    const shotId = `shot:${props.beat}`;
+    const shotId = shotIdOf(props.beat);
     const shot = slate.shots.find((entry) => entry.id === shotId);
     if (props.beat.trim().length > 0 && shot === undefined)
       pushViolation(
@@ -798,7 +806,7 @@ const validateShotCommitPreconditions = (
       slate.scene,
     );
 
-  const beat = shotBeatId(shot.id);
+  const beat = beatOf(shot.id);
   if (beat === null)
     pushViolation(
       violations,
@@ -828,12 +836,12 @@ const validateBeatEndArtifact = (
 ): void => {
   validateNonEmptyId(beatEnd.beat, "$input.beat", "beat id", violations);
   validateNonEmptyId(beatEnd.shot, "$input.shot", "shot id", violations);
-  if (beatEnd.shot !== `shot:${beatEnd.beat}`)
+  if (beatEnd.shot !== shotIdOf(beatEnd.beat))
     pushViolation(
       violations,
       "type",
       "$input.shot",
-      `beat-end shot must equal "shot:${beatEnd.beat}"`,
+      `beat-end shot must equal "${shotIdOf(beatEnd.beat)}"`,
       beatEnd.shot,
     );
   if (slate.script === null)
@@ -965,7 +973,7 @@ const validateNotesArtifact = (
         `review note beat "${note.beat}" must exist in the committed script`,
         note.beat,
       );
-    if (!shotIds.has(`shot:${note.beat}`))
+    if (!shotIds.has(shotIdOf(note.beat)))
       pushViolation(
         violations,
         "type",
@@ -1014,7 +1022,7 @@ const validateFilmPreconditions = (
   const sequenceShotIds = new Set(film.shots.map((entry) => entry.shot));
   if (slate.script !== null)
     slate.script.beats.forEach((beat, i) => {
-      const shot = `shot:${beat.id}`;
+      const shot = shotIdOf(beat.id);
       if (!slate.shots.some((entry) => entry.id === shot))
         pushViolation(
           violations,
@@ -1043,10 +1051,4 @@ const validateFilmPreconditions = (
           shot.scene,
         );
     });
-};
-
-const shotBeatId = (shot: string): string | null => {
-  if (!shot.startsWith("shot:")) return null;
-  const beat = shot.slice("shot:".length);
-  return beat.length === 0 ? null : beat;
 };

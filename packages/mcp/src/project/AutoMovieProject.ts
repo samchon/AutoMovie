@@ -14,6 +14,7 @@ import {
   IAutoMovieMcpPropSpec,
   IAutoMovieMcpWritableSlate,
 } from "../dto";
+import { beatOf } from "./shotKey";
 
 /**
  * The resident AutoMovie project — **the project folder itself is the memory**
@@ -102,7 +103,7 @@ export class AutoMovieProject {
     );
     this.reconcileBeatSlices(
       "shots",
-      new Map(slate.shots.map((shot) => [shotBeat(shot.id), shot])),
+      new Map(slate.shots.map((shot) => [beatOf(shot.id) ?? shot.id, shot])),
     );
     this.reconcileBeatSlices(
       "beatEnds",
@@ -253,9 +254,6 @@ const RESERVED_DIRS = [
   "assets",
   "renders",
 ] as const;
-
-const shotBeat = (shotId: string): string =>
-  shotId.startsWith("shot:") ? shotId.slice("shot:".length) : shotId;
 
 /**
  * Check a project-relative asset path: forward slashes, no absolute paths, no
