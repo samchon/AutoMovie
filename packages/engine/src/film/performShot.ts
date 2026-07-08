@@ -666,9 +666,19 @@ export const performShot = (props: {
   frames.sort((a, b) => a.action.start - b.action.start);
   for (let i = 0; i + 1 < frames.length; ++i) {
     const move = frames[i]!.action;
+    const next = frames[i + 1]!.action;
+    if (next.start <= move.start + 1e-9) {
+      out.push(
+        "range",
+        `${base}[${frames[i + 1]!.index}].start`,
+        `frame moves share the same start time ${next.start}s on the live camera; choose one framing for that instant`,
+        next.start,
+      );
+      continue;
+    }
     if (move.duration === "auto") continue;
     const end = Math.min(move.start + move.duration, performance.duration);
-    if (end > frames[i + 1]!.action.start + 1e-9)
+    if (end > next.start + 1e-9)
       out.push(
         "range",
         `${base}[${frames[i + 1]!.index}].start`,

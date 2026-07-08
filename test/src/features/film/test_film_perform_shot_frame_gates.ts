@@ -36,9 +36,11 @@ const frame = (
  * 2. A 1.5-second move starting at 0 followed by another starting at 1.0 on the
  *    same camera → a `range` violation on the second's `start` (the first still
  *    owns the camera until 1.5 s).
- * 3. An unknown frame `framing` returns a `type` violation instead of leaking
+ * 3. Two auto frame moves at the same start fail instead of letting camera
+ *    compilation overwrite one intent.
+ * 4. An unknown frame `framing` returns a `type` violation instead of leaking
  *    `compileCameraMove`'s throw.
- * 4. An unknown frame `move` returns a `type` violation instead of leaking
+ * 5. An unknown frame `move` returns a `type` violation instead of leaking
  *    `compileCameraMove`'s throw.
  */
 export const test_film_perform_shot_frame_gates = (): void => {
@@ -80,6 +82,23 @@ export const test_film_perform_shot_frame_gates = (): void => {
     "double-booked camera rejected",
     doubled.success === false &&
       hasViolation(doubled, "range", "$input.draft[1].start"),
+  );
+
+  const sameStart = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [frame({ start: 0 }), frame({ start: 0, move: "push-in" })],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.equals("same-start frame moves fail", sameStart.success, false);
+  TestValidator.predicate(
+    "same-start camera moves rejected",
+    sameStart.success === false &&
+      hasViolation(sameStart, "range", "$input.draft[1].start"),
   );
 
   const invalidFraming = performShot({
