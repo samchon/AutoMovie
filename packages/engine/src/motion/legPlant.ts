@@ -9,7 +9,12 @@ import {
 } from "@automovie/interface";
 
 import { decomposeJointRotation } from "../kinematics/decomposeJointRotation";
-import { IAutoMovieResolvedBone, resolvePose } from "../kinematics/resolvePose";
+import {
+  IAutoMovieResolvedBone,
+  IAutoMovieSkeletonTopology,
+  indexSkeletonTopology,
+  resolvePose,
+} from "../kinematics/resolvePose";
 import { twoBoneChainArticulation } from "../kinematics/twoBoneChainArticulation";
 import {
   IAutoMovieFootLeg,
@@ -28,8 +33,9 @@ export const rekeyPlantedFeet = (props: {
   poses: ReadonlyArray<ReturnType<typeof sampleMotion>>;
   legs: readonly IAutoMovieFootLeg[];
   targets: ReadonlyArray<ReadonlyMap<AutoMovieHumanoidBone, IAutoMovieVector3>>;
-}): IAutoMovieKeyframe[] =>
-  props.times.map((time, index) => ({
+}): IAutoMovieKeyframe[] => {
+  const topology = indexSkeletonTopology(props.skeleton);
+  return props.times.map((time, index) => ({
     time,
     pose: {
       skeleton: props.poses[index]!.pose.skeleton,
@@ -39,12 +45,14 @@ export const rekeyPlantedFeet = (props: {
         props.poses[index]!.pose,
         props.legs,
         props.targets[index]!,
+        topology,
       ),
     },
     expression: props.poses[index]!.expression,
     easing: "linear" as const,
     bezier: null,
   }));
+};
 
 /** Wrap the corrected keyframes + plants as the pass result. */
 export const assemblePlantedFeet = (
@@ -66,8 +74,14 @@ export const assemblePlantedFeet = (
 export const resolveBoneMap = (
   skeleton: IAutoMovieSkeleton,
   pose: IAutoMoviePose,
+  topology: IAutoMovieSkeletonTopology = indexSkeletonTopology(skeleton),
 ): Map<AutoMovieHumanoidBone, IAutoMovieResolvedBone> =>
-  new Map(resolvePose(pose, skeleton).map((bone) => [bone.bone, bone]));
+  new Map(
+    resolvePose(pose, skeleton, undefined, undefined, topology).map((bone) => [
+      bone.bone,
+      bone,
+    ]),
+  );
 
 /**
  * The frame's joints with every pinned leg re-solved onto its target: planted
@@ -79,12 +93,13 @@ const plantedJoints = (
   pose: IAutoMoviePose,
   legs: readonly IAutoMovieFootLeg[],
   targets: ReadonlyMap<AutoMovieHumanoidBone, IAutoMovieVector3>,
+  topology: IAutoMovieSkeletonTopology,
 ): IAutoMovieJointPose[] => {
   let joints = pose.joints;
   for (const leg of legs) {
     const target = targets.get(leg.foot);
     if (target === undefined) continue;
-    const solved = solveLegPlant(skeleton, pose, leg, target);
+    const solved = solveLegPlant(skeleton, pose, leg, target, topology);
     if (solved === null) continue;
     joints = [
       ...joints.filter((j) => j.bone !== leg.upper && j.bone !== leg.lower),
@@ -109,6 +124,7 @@ const solveLegPlant = (
   pose: IAutoMoviePose,
   leg: IAutoMovieFootLeg,
   target: IAutoMovieVector3,
+  topology: IAutoMovieSkeletonTopology,
 ): { upper: IAutoMovieJointPose; lower: IAutoMovieJointPose } | null => {
   // The leg at rest under the current parent pose: zero its own articulation so
   // the recovered world rotations carry the hip/torso pose but not the leg's.
@@ -119,7 +135,7 @@ const solveLegPlant = (
       (j) => j.bone !== leg.upper && j.bone !== leg.lower,
     ),
   };
-  const map = resolveBoneMap(skeleton, zeroed);
+  const map = resolveBoneMap(skeleton, zeroed, topology);
   const upper = map.get(leg.upper);
   const lower = map.get(leg.lower);
   const foot = map.get(leg.foot);

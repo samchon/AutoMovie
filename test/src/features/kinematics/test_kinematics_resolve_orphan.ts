@@ -1,4 +1,8 @@
-import { reachableBoneNames, resolvePose } from "@automovie/engine";
+import {
+  indexSkeletonTopology,
+  reachableBoneNames,
+  resolvePose,
+} from "@automovie/engine";
 import { IAutoMovieSkeleton } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -51,6 +55,48 @@ export const test_kinematics_resolve_orphan = (): void => {
   TestValidator.predicate(
     "the orphan is absent from the reachable set (a validator would flag it)",
     !reachable.has("leftHand"),
+  );
+
+  const topology = indexSkeletonTopology(skeleton);
+  const resolvedFromTopology = resolvePose(
+    makePose([]),
+    skeleton,
+    undefined,
+    undefined,
+    topology,
+  )
+    .map((r) => r.bone)
+    .sort();
+  TestValidator.equals(
+    "explicit topology drives the same FK walk as the default path",
+    resolvedFromTopology,
+    resolved,
+  );
+  TestValidator.equals(
+    "reachableBoneNames can reuse the same topology source as resolvePose",
+    [...reachableBoneNames(skeleton, topology)].sort(),
+    resolved,
+  );
+
+  const mutable: IAutoMovieSkeleton = {
+    id: "mutable",
+    bones: [{ bone: "hips", parent: null, rest, constraint: null }],
+  };
+  const oldTopology = indexSkeletonTopology(mutable);
+  mutable.bones.push({ bone: "spine", parent: "hips", rest, constraint: null });
+  TestValidator.equals(
+    "default resolvePose rebuilds topology after skeleton mutation",
+    resolvePose(makePose([]), mutable)
+      .map((r) => r.bone)
+      .sort(),
+    ["hips", "spine"],
+  );
+  TestValidator.equals(
+    "an explicit topology is a caller-owned snapshot for repeated FK work",
+    resolvePose(makePose([]), mutable, undefined, undefined, oldTopology).map(
+      (r) => r.bone,
+    ),
+    ["hips"],
   );
 
   // A fully-reachable skeleton resolves every bone (regression guard).

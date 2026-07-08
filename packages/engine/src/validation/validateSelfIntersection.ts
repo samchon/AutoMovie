@@ -6,7 +6,11 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
+import {
+  IAutoMovieJointAxes,
+  indexSkeletonTopology,
+  resolvePose,
+} from "../kinematics";
 import { segmentSegmentDistance } from "../math/segments";
 import { sampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
@@ -90,6 +94,8 @@ export const validateSelfIntersection = (props: {
     return rejectSampleRate(collector, path, sampleRate);
   if (sampleRate <= 0) return rejectSampleRate(collector, path, sampleRate);
 
+  const topology = indexSkeletonTopology(props.skeleton);
+
   props.pairs.forEach((pair, pairIndex) => {
     const pp = `${path}.pairs[${pairIndex}]`;
     const firstValid = validateCapsule(
@@ -113,6 +119,7 @@ export const validateSelfIntersection = (props: {
               props.skeleton,
               props.jointAxes,
               props.restFrames,
+              topology,
             ).map((bone) => [bone.bone, bone.worldPosition]),
           );
           const first = resolveCapsule(pair.first, resolved);

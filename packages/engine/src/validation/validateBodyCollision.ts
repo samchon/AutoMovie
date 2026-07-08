@@ -8,7 +8,12 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
+import {
+  IAutoMovieJointAxes,
+  IAutoMovieSkeletonTopology,
+  indexSkeletonTopology,
+  resolvePose,
+} from "../kinematics";
 import { Vector3 } from "../math/Vector3";
 import { closestPointsBetweenSegments } from "../math/segments";
 import { sampleTimes } from "../motion/sampleClock";
@@ -139,10 +144,12 @@ export const detectBodyCollision = (props: {
   if (!capsulesValid)
     return { validation: collector.toValidation(), events: [], response: null };
 
+  const topologyA = indexSkeletonTopology(props.a.skeleton);
+  const topologyB = indexSkeletonTopology(props.b.skeleton);
   const duration = Math.min(props.a.motion.duration, props.b.motion.duration);
   const times = sampleTimes(duration, sampleRate);
-  const mapsA = times.map((time) => resolveMap(props.a, time));
-  const mapsB = times.map((time) => resolveMap(props.b, time));
+  const mapsA = times.map((time) => resolveMap(props.a, time, topologyA));
+  const mapsB = times.map((time) => resolveMap(props.b, time, topologyB));
 
   const penetrations: IPenetration[] = [];
   times.forEach((time, frame) => {
@@ -289,6 +296,7 @@ const impactBody = (
 const resolveMap = (
   actor: IAutoMovieCollisionActor,
   time: number,
+  topology: IAutoMovieSkeletonTopology,
 ): Map<AutoMovieHumanoidBone, IAutoMovieVector3> =>
   new Map(
     resolvePose(
@@ -296,6 +304,7 @@ const resolveMap = (
       actor.skeleton,
       actor.jointAxes,
       actor.restFrames,
+      topology,
     ).map((bone) => [bone.bone, bone.worldPosition]),
   );
 
