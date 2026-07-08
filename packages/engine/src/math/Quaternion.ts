@@ -39,6 +39,15 @@ export namespace Quaternion {
     return { x: q.x * inv, y: q.y * inv, z: q.z * inv, w: q.w * inv };
   };
 
+  /**
+   * Inverse rotation: the normalized conjugate. For a unit quaternion this is
+   * the exact inverse (`q * inverse(q) = identity`); for a near-unit one the
+   * normalization keeps the result a valid rotation. The single source both IK
+   * lowerings (two-bone, affordance seat) share.
+   */
+  export const inverse = (q: IAutoMovieQuaternion): IAutoMovieQuaternion =>
+    normalize({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
+
   /** Rotation of `angleDeg` degrees about a (not necessarily unit) `axis`. */
   export const fromAxisAngle = (
     axis: IAutoMovieVector3,

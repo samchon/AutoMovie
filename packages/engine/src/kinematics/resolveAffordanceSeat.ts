@@ -1,15 +1,10 @@
 import {
   IAutoMovieAffordance,
-  IAutoMovieQuaternion,
   IAutoMovieTransform,
 } from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
-
-/** Inverse of a (near-)unit quaternion: the normalized conjugate. */
-const inverse = (q: IAutoMovieQuaternion): IAutoMovieQuaternion =>
-  Quaternion.normalize({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
 
 const UNIT_SCALE = { x: 1, y: 1, z: 1 } as const;
 
@@ -69,7 +64,7 @@ export const resolveAffordanceSeat = (props: {
 
   const childRotation = Quaternion.multiply(
     contactRotation,
-    inverse(child.frame.rotation),
+    Quaternion.inverse(child.frame.rotation),
   );
   return {
     translation: Vector3.subtract(
