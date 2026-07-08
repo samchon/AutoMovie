@@ -12,9 +12,11 @@ import { sampleMotion } from "../motion/sampleMotion";
 
 /**
  * Finite-difference window for the end-velocity estimate, seconds — one frame
- * of the engine's default 24 Hz clock.
+ * of the engine's default 24 Hz clock. Shared with {@link resolveBeatEnd}'s
+ * baked-follow velocity so a mounted rider's end velocity uses the same
+ * window.
  */
-const VELOCITY_DT = 1 / 24;
+export const VELOCITY_DT = 1 / 24;
 
 /**
  * Wrap a non-negative time onto `[0, duration)`, matching the sampler's loop

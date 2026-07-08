@@ -16,7 +16,6 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { HUMANOID_JOINT_AXES } from "../kinematics/humanoidJointAxes";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
@@ -35,8 +34,8 @@ import {
   compileCameraMove,
   computeRestHeight,
 } from "./cameraMove";
-import { compileAttach } from "./compileAttach";
 import { compileLaunch } from "./compileLaunch";
+import { coupleObjects } from "./coupleObjects";
 import { IAutoMovieStagedSet } from "./stageScene";
 
 /**
@@ -68,8 +67,6 @@ const animatedBaseAt =
 
 const actionActors = (action: IAutoMovieActionCall): string[] =>
   typeof action.actor === "string" ? [action.actor] : action.actor;
-
-const eventTimeKey = (time: number): string => time.toFixed(6);
 
 const EVENT_KIND_ORDER: Record<IAutoMovieInteractionEvent["kind"], number> = {
   contact: 0,
@@ -157,6 +154,13 @@ export namespace IAutoMoviePerformedShot {
  * `objectMotion` that rides the parent's bone in scene space each frame. The
  * parent must be a staged, rigged node carrying the named bone — each an input
  * violation otherwise.
+ *
+ * Staged `mounts` (the persistent couplings staging declared, #674) descend
+ * through the SAME {@link compileAttach} baker, spanning the whole shot, so a
+ * rider rides every beat without re-issuing `attachTo`. An explicit `attachTo`
+ * for the same child this beat overrides its mount; a mount emits no
+ * grab/attach/detach/release events (it is standing scene state, not a per-shot
+ * pickup). A mount onto a rig-less parent or an absent bone is a violation.
  *
  * @param props.skeleton Rig lookup for ROM validation; return null for a node
  *   that has no skeleton (its clip skips ROM).
@@ -840,93 +844,23 @@ export const performShot = (props: {
   }
   if (out.items.length > 0) return { success: false, violations: out.items };
 
-  // Attach: bake each coupled child's follow-clip now that the parent's pose
-  // has compiled. The child rides the parent's bone in scene space (staged
-  // placement ∘ per-frame FK), resolved with the same joint axes the renderer
-  // poses the parent by; a parent that only holds rest yields a static child.
-  for (const job of attachments) {
-    const parentNode = staged.scene.nodes.find(
-      (n) => n.id === job.action.parent,
-    )!;
-    const parentRig = skeleton(job.action.parent)!;
-    const end =
-      job.action.duration === "auto"
-        ? performance.duration
-        : Math.min(
-            job.action.start + job.action.duration,
-            performance.duration,
-          );
-    const children =
-      typeof job.action.actor === "string"
-        ? [job.action.actor]
-        : job.action.actor;
-    for (const child of children) {
-      events.push(
-        {
-          id: `grab:${child}:${job.action.parent}:${eventTimeKey(job.action.start)}`,
-          kind: "grab",
-          source: "scriptedCue",
-          time: job.action.start,
-          actor: child,
-          target: job.action.parent,
-          object: child,
-          point: null,
-          actionIndex: job.index,
-          reaction: null,
-        },
-        {
-          id: `attach:${child}:${job.action.parent}:${eventTimeKey(job.action.start)}`,
-          kind: "attach",
-          source: "scriptedCue",
-          time: job.action.start,
-          actor: child,
-          target: job.action.parent,
-          object: child,
-          point: null,
-          actionIndex: job.index,
-          reaction: null,
-        },
-        {
-          id: `detach:${child}:${job.action.parent}:${eventTimeKey(end)}`,
-          kind: "detach",
-          source: "scriptedCue",
-          time: end,
-          actor: child,
-          target: job.action.parent,
-          object: child,
-          point: null,
-          actionIndex: job.index,
-          reaction: null,
-        },
-        {
-          id: `release:${child}:${job.action.parent}:${eventTimeKey(end)}`,
-          kind: "release",
-          source: "scriptedCue",
-          time: end,
-          actor: child,
-          target: job.action.parent,
-          object: child,
-          point: null,
-          actionIndex: job.index,
-          reaction: null,
-        },
-      );
-      objectMotions.push(
-        compileAttach({
-          child,
-          bone: job.action.bone,
-          parentTransform: parentNode.transform,
-          parentSkeleton: parentRig,
-          parentMotion: motions[job.action.parent],
-          start: job.action.start,
-          duration: end - job.action.start,
-          shotDuration: performance.duration,
-          jointAxes: HUMANOID_JOINT_AXES,
-          restFrames: restFrames?.(job.action.parent),
-        }),
-      );
-    }
-  }
+  // Couple objects: bake the per-beat `attachTo` handoffs and the persistent
+  // staged `mounts` into follow clips now that the parents' poses have compiled
+  // (see {@link coupleObjects}). Mount preconditions (parent rig, saddle bone)
+  // surface as violations here — the first place with skeleton access.
+  const coupled = coupleObjects({
+    attachments,
+    mounts: staged.mounts,
+    scene: staged.scene,
+    motions,
+    skeleton,
+    restFrames,
+    duration: performance.duration,
+  });
+  objectMotions.push(...coupled.clips);
+  events.push(...coupled.events);
+  out.items.push(...coupled.violations);
+  if (out.items.length > 0) return { success: false, violations: out.items };
 
   // Compile the live camera's move from its frame actions. Subjects resolve
   // against the staged placements; a node subject's height is measured from
