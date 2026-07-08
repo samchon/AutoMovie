@@ -137,6 +137,8 @@ const residentShot: IAutoMovieShot = {
  *    instead of leaking wrapper TypeErrors.
  * 8. Malformed query targets resolve to null instead of leaking target-shape
  *    TypeErrors.
+ * 9. Malformed explicit geometry collections reject with path-bearing errors
+ *    before helper array iteration.
  */
 export const test_mcp_geometry_query_tools = (): void => {
   const nodeDistance = app.measureDistance({
@@ -185,6 +187,33 @@ export const test_mcp_geometry_query_tools = (): void => {
     }).measurement,
     null,
   );
+  TestValidator.predicate(
+    "malformed distance scene rejects",
+    throwsError(
+      () =>
+        app.measureDistance({
+          scene: null as unknown as IAutoMovieScene,
+          from: { kind: "node", node: "actor" },
+          to: { kind: "node", node: "marker" },
+        }),
+      ["scene", "JSON object"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed distance scene nodes reject",
+    throwsError(
+      () =>
+        app.measureDistance({
+          scene: {
+            ...scene,
+            nodes: null as unknown as IAutoMovieScene["nodes"],
+          },
+          from: { kind: "node", node: "actor" },
+          to: { kind: "node", node: "marker" },
+        }),
+      ["scene.nodes", "array"],
+    ),
+  );
 
   const resolved = app.getResolvedPose({
     context,
@@ -200,6 +229,70 @@ export const test_mcp_geometry_query_tools = (): void => {
     "missing actor pose",
     app.getResolvedPose({ context, actor: "missing" }).resolvedPose,
     null,
+  );
+  TestValidator.predicate(
+    "malformed pose context scene nodes reject",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            scene: {
+              ...scene,
+              nodes: null as unknown as IAutoMovieScene["nodes"],
+            },
+          },
+          actor: "actor",
+        }),
+      ["context.scene.nodes", "array"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed pose context models reject",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            models: null as unknown as IAutoMovieMcpGeometryContext["models"],
+          },
+          actor: "actor",
+        }),
+      ["context.models", "array"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed pose context model entry rejects",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            models: [
+              null as unknown as IAutoMovieMcpGeometryContext["models"][number],
+            ],
+          },
+          actor: "actor",
+        }),
+      ["context.models[0]", "JSON object"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed pose shot performances reject",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            shot: {
+              ...context.shot!,
+              performances: null as unknown as IAutoMovieShot["performances"],
+            },
+          },
+          actor: "actor",
+        }),
+      ["context.shot.performances", "array"],
+    ),
   );
 
   const reach = app.getReach({
