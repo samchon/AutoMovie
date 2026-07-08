@@ -278,14 +278,17 @@ const validateMcpModelShape = (
         violations,
       )
     )
-      bones.forEach((bone, index) =>
-        validateObjectArtifact(
-          bone,
-          `$input.skeleton.bones[${index}]`,
-          "skeleton bone",
+      bones.forEach((bone, index) => {
+        const path = `$input.skeleton.bones[${index}]`;
+        if (!validateObjectArtifact(bone, path, "skeleton bone", violations))
+          return;
+        validateTransformArtifact(
+          bone.rest,
+          `${path}.rest`,
+          "skeleton bone rest transform",
           violations,
-        ),
-      );
+        );
+      });
   }
   const affordances = shape.affordances;
   if (affordances !== null && affordances !== undefined)
