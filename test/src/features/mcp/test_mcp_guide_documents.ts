@@ -10,6 +10,8 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["AUTOMOVIE_OVERALL", "engine enforces, model creates"],
   ["AUTOMOVIE_OVERALL", "surgical, not a reset"],
   ["AUTOMOVIE_OVERALL", "an accepted spec also writes through as"],
+  ["AUTOMOVIE_OVERALL", "tool-specific result field"],
+  ["AUTOMOVIE_OVERALL", "Render and resident mutation tools carry"],
   ["STAGING", "coherence, not craft"],
   ["BLOCKING", "causal order"],
   ["PERFORMANCE", "One take, one live camera"],

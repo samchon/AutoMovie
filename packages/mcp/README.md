@@ -40,7 +40,7 @@ out.
 | `commitNotes` | slate + review notes -> updated slate or violations | MCP commit checks |
 | `commitFilm` | slate + sequence -> updated slate or violations | MCP commit checks |
 | `planRender` | slate + render spec -> frame schedule and ffmpeg args | `@automovie/render` planning |
-| `seeFrame` | slate + render spec + frame/time -> preview frame placeholder | `@automovie/render` planning |
+| `seeFrame` | slate + render spec + frame/time -> preview frame + optional captured image | `@automovie/render` planning + host capture |
 | `stage` | script + staging -> staged scene (or violations) | `stageScene` |
 | `block` | script + staged scene + blocking -> blocked beat (or violations) | `blockBeat` |
 | `perform` | script + staged scene + performance + actor contexts + optional blocking -> performed shot (or violations) | `performShot` |
@@ -63,10 +63,13 @@ candidate artifact, return a new slate only when preconditions and validation
 pass, and otherwise return the unchanged slate with path-bearing violations.
 Upstream replacements clear downstream slices that would become stale.
 
-Render/see tools are placeholders for the capture pipeline. `planRender`
-resolves a committed shot or film into deterministic frame times, frame paths,
-and ffmpeg args; `seeFrame` resolves one preview frame. Neither tool writes
-files or captures pixels yet.
+Render/see tools plan deterministic output, and `seeFrame` can also use a
+host-injected capture adapter. `planRender` resolves a committed shot or film
+into deterministic frame times, frame paths, guide-pass paths, and ffmpeg args.
+`seeFrame` resolves one preview frame and returns `status: "captured"` with an
+image when the host adapter is attached, or `status: "no-capture-adapter"` when
+it is not. The MCP server still does not write files or own the renderer; bytes
+belong to the host adapter.
 
 `perform` keeps the MCP payload JSON-only. Clients provide per-actor motion
 contexts (`gaits`, staged position/facing, rest pose, optional rig/rest frames);
