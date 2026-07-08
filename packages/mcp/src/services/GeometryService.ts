@@ -55,6 +55,7 @@ export class GeometryService {
       props.beat,
       "getResolvedPose",
     );
+    assertGeometryContextShape(source.context);
     return {
       resolvedPose: resolveActorGeometry(
         source.context,
@@ -75,6 +76,7 @@ export class GeometryService {
       undefined,
       "getReach",
     );
+    assertGeometryContextShape(source.context);
     const actor = findActorRig(
       source.context,
       props.actor,
@@ -107,6 +109,7 @@ export class GeometryService {
     to: IAutoMovieActionTarget;
   }): IAutoMovieMeasureDistanceOutput {
     const scene = this.resolveScene(props.scene, "measureDistance");
+    assertGeometrySceneShape(scene, "scene");
     const nodes = nodePositions(scene);
     const from = resolveRuntimeSafeTargetPoint(props.from, nodes);
     const to = resolveRuntimeSafeTargetPoint(props.to, nodes);
@@ -402,6 +405,42 @@ const findMotion = (
       `motion "${id}" is duplicated at context.motions.${entries[1]!.key}.id`,
     );
   return entries[0]?.motion ?? null;
+};
+
+const assertGeometryContextShape = (
+  context: IAutoMovieMcpGeometryContext | unknown,
+): void => {
+  if (!isRecord(context)) throw new Error("context must be a JSON object");
+  assertGeometrySceneShape(context.scene, "context.scene");
+  assertGeometryCollection(context.models, "context.models", "geometry models");
+  const shot = context.shot;
+  if (shot === null || shot === undefined) return;
+  if (!isRecord(shot)) throw new Error("context.shot must be a JSON object");
+  assertGeometryCollection(
+    shot.performances,
+    "context.shot.performances",
+    "shot performances",
+  );
+};
+
+const assertGeometrySceneShape = (scene: unknown, path: string): void => {
+  if (!isRecord(scene)) throw new Error(`${path} must be a JSON object`);
+  assertGeometryCollection(scene.nodes, `${path}.nodes`, "scene nodes");
+};
+
+const assertGeometryCollection = (
+  value: unknown,
+  path: string,
+  label: string,
+): void => {
+  if (!Array.isArray(value))
+    throw new Error(`${label} at ${path} must be an array`);
+  value.forEach((entry, index) => {
+    if (!isRecord(entry))
+      throw new Error(
+        `${label} entry at ${path}[${index}] must be a JSON object`,
+      );
+  });
 };
 
 const nodePositions = (
