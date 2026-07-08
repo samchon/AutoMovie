@@ -15,8 +15,10 @@ import {
   IAutoMovieScriptApplication,
   IAutoMovieSequence,
   IAutoMovieShot,
+  IAutoMovieShotPerformance,
   IAutoMovieSkeleton,
   IAutoMovieStagingApplication,
+  IAutoMovieTransform,
 } from "@automovie/interface";
 
 import { AutoMovieContext } from "./AutoMovieContext";
@@ -50,6 +52,7 @@ import {
   IAutoMoviePerformOutput,
   IAutoMoviePlanRenderOutput,
   IAutoMovieSeeFrameOutput,
+  IAutoMovieSetOutput,
   IAutoMovieStageOutput,
   IAutoMovieValidateOutput,
 } from "./dto";
@@ -543,6 +546,54 @@ export class AutoMovieApplication {
     reason: string;
   }): IAutoMovieEraseOutput {
     return this.commit.eraseNotes(props);
+  }
+
+  /**
+   * Replace ONE actor's performance in a beat's committed shot, in the resident
+   * project. Sibling performances and other beats stay byte-unchanged; the
+   * beat's beat-end is removed (stale without the performance it sampled) and
+   * the film is cleared. Replacement-only: the node must already perform in
+   * that shot — a new performer belongs to perform + commitShot. Requires an
+   * active project and a non-empty reason (evidence). Full motion validation
+   * stays perform's job; pass the motions registry to check the reference.
+   *
+   * @param props The beat, the replacement performance, and the reason.
+   * @returns The slate after the replacement, or violations when refused.
+   */
+  public setActorPerformance(props: {
+    /** Beat id whose shot holds the performance to replace. */
+    beat: string;
+    /** The replacement performance for its `node`. */
+    performance: IAutoMovieShotPerformance;
+    /** Compiled motions keyed by actor node, to check the motion reference. */
+    motions?: Record<string, IAutoMovieMcpMotion>;
+    /** Why this performance is being replaced — required evidence. */
+    reason: string;
+  }): IAutoMovieSetOutput {
+    return this.commit.setActorPerformance(props);
+  }
+
+  /**
+   * Move ONE placement in the resident scene — replace that scene node's
+   * transform, leaving sibling placements byte-unchanged. The cascade mirrors
+   * commitScene deliberately: a moved placement changes the world coordinates
+   * every shot was performed against, so shots, beat-ends, and notes clear and
+   * the film nulls — the gain is staging precision, not a shortcut around
+   * re-performing. Requires an active project, a non-empty reason, and an
+   * existing placement.
+   *
+   * @param props The placement node, its new transform, and the reason.
+   * @returns The slate after the move, or violations when refused.
+   */
+  public setPlacement(props: {
+    /** Scene node id of the placement to move. */
+    node: string;
+    /** The placement's new world transform. */
+    transform: IAutoMovieTransform;
+    /** Why this placement is moving — required evidence. */
+    reason: string;
+  }): IAutoMovieSetOutput {
+    return this.commit.setPlacement(props);
   }
 
   /**
