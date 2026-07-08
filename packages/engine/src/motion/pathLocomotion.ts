@@ -197,6 +197,12 @@ export const followPathMotion = (props: {
       duration,
       loop: false,
       keyframes,
+      // The path bake repeats the gait cycle continuously (phase never resets
+      // across corners), so the composite's stride clock is the gait's own.
+      gaitCycle: props.gait.gaitCycle ?? {
+        period: props.gait.duration,
+        phaseAt: 0,
+      },
     },
     frames,
     length,

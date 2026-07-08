@@ -192,7 +192,15 @@ export const gaitMotion = (
       bezier: null,
     });
   }
-  return { id, skeleton, duration: gait.period, loop: true, keyframes };
+  return {
+    id,
+    skeleton,
+    duration: gait.period,
+    loop: true,
+    keyframes,
+    // The bake IS one cycle: phase(t) = t % period from a fresh start.
+    gaitCycle: { period: gait.period, phaseAt: 0 },
+  };
 };
 
 /**

@@ -16,6 +16,7 @@ import {
   IAutoMovieCopyDriver,
   IAutoMovieDrivenDriver,
   IAutoMovieExpression,
+  IAutoMovieGaitCycle,
   IAutoMovieGaitRootBob,
   IAutoMovieIKDriver,
   IAutoMovieModel,
@@ -533,6 +534,13 @@ export interface IAutoMovieMcpMotion {
 
   /** Keyframes in strictly increasing time order. */
   keyframes: IAutoMovieMcpKeyframe[];
+
+  /**
+   * The gait cycle the motion carries ({@link IAutoMovieGaitCycle}) — how a
+   * non-looping compiled performance still reports a stride phase at the beat
+   * end. Absent/null = no cycle to resume.
+   */
+  gaitCycle?: IAutoMovieGaitCycle | null;
 }
 
 /** JSON-safe keyframe returned by the MCP `perform` tool. */
