@@ -1,4 +1,5 @@
 import { validateModel } from "@automovie/engine";
+import { IAutoMovieModel } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
@@ -61,5 +62,29 @@ export const test_validation_model_nonempty_ids = (): void => {
   TestValidator.predicate(
     "part material reference violation",
     hasViolation(invalid, "type", "$input.parts[0].material"),
+  );
+
+  const malformedBone = validateModel({
+    model: {
+      ...base,
+      skeleton: {
+        ...base.skeleton!,
+        bones: [
+          {
+            ...base.skeleton!.bones[0]!,
+            bone: undefined,
+          },
+        ],
+      },
+    } as unknown as IAutoMovieModel,
+  });
+  TestValidator.equals(
+    "malformed skeleton bone id fails",
+    malformedBone.success,
+    false,
+  );
+  TestValidator.predicate(
+    "skeleton bone id violation",
+    hasViolation(malformedBone, "type", "$input.skeleton.bones[0].bone"),
   );
 };
