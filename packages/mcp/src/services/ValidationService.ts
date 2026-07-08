@@ -186,19 +186,18 @@ const validateMcpModelShape = (
   model: IAutoMovieModel,
 ): IAutoMovieValidation => {
   const violations: IAutoMovieConstraintViolation[] = [];
+  if (!validateObjectArtifact(model, "$input", "model", violations))
+    return toValidation(violations);
+  const shape = model as Partial<IAutoMovieModel>;
+  validateNonEmptyId(shape.id, "$input.id", "model id", violations);
   validateArrayArtifact(
-    (model as Partial<IAutoMovieModel>).materials,
+    shape.materials,
     "$input.materials",
     "model materials",
     violations,
   );
-  validateArrayArtifact(
-    (model as Partial<IAutoMovieModel>).parts,
-    "$input.parts",
-    "model parts",
-    violations,
-  );
-  const skeleton = (model as Partial<IAutoMovieModel>).skeleton;
+  validateArrayArtifact(shape.parts, "$input.parts", "model parts", violations);
+  const skeleton = shape.skeleton;
   if (skeleton !== null && skeleton !== undefined)
     validateArrayArtifact(
       skeleton.bones,
@@ -206,7 +205,7 @@ const validateMcpModelShape = (
       "skeleton bones",
       violations,
     );
-  const affordances = (model as Partial<IAutoMovieModel>).affordances;
+  const affordances = shape.affordances;
   if (affordances !== null && affordances !== undefined)
     validateArrayArtifact(
       affordances,
