@@ -222,6 +222,13 @@ const validateMcpModelShape = (
         "model part geometry",
         violations,
       );
+      if (part.transform !== null)
+        validateTransformArtifact(
+          part.transform,
+          `${path}.transform`,
+          "model part transform",
+          violations,
+        );
     });
   const skeleton = shape.skeleton;
   if (skeleton !== null && skeleton !== undefined) {
