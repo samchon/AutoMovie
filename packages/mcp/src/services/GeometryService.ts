@@ -34,6 +34,7 @@ import {
 } from "../dto";
 import { shotIdOf } from "../project/shotKey";
 import { validateSceneArtifact } from "../validators/artifacts";
+import { isRecord } from "../validators/primitives";
 
 /**
  * Engine geometry queries — resolved poses, reach reports, and distance
@@ -385,8 +386,16 @@ const findMotion = (
   context: IAutoMovieMcpGeometryContext,
   id: string,
 ): IAutoMovieMcpMotion | null => {
+  if (!isRecord(context.motions))
+    throw new Error("motion registry at context.motions must be a JSON object");
   const entries = Object.entries(context.motions)
-    .map(([key, motion]) => ({ key, motion }))
+    .map(([key, motion]) => {
+      if (!isRecord(motion))
+        throw new Error(
+          `motion registry entry at context.motions.${key} must be a JSON object`,
+        );
+      return { key, motion: motion as unknown as IAutoMovieMcpMotion };
+    })
     .filter(({ motion }) => motion.id === id);
   if (entries.length > 1)
     throw new Error(
