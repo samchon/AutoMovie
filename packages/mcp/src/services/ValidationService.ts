@@ -328,12 +328,58 @@ const validateMcpModelShape = (
       });
   }
   const affordances = shape.affordances;
-  if (affordances !== null && affordances !== undefined)
+  if (
+    affordances !== null &&
+    affordances !== undefined &&
     validateArrayArtifact(
       affordances,
       "$input.affordances",
       "model affordances",
       violations,
-    );
+    )
+  )
+    affordances.forEach((affordance, index) => {
+      const path = `$input.affordances[${index}]`;
+      if (
+        !validateObjectArtifact(
+          affordance,
+          path,
+          "model affordance",
+          violations,
+        )
+      )
+        return;
+      validateNonEmptyId(
+        affordance.id,
+        `${path}.id`,
+        "affordance id",
+        violations,
+      );
+      validateTransformArtifact(
+        affordance.frame,
+        `${path}.frame`,
+        "affordance frame",
+        violations,
+      );
+      if (affordance.kind === "stack-top") {
+        const extent = affordance.extent;
+        if (
+          validateArrayArtifact(
+            extent,
+            `${path}.extent`,
+            "stack-top affordance extent",
+            violations,
+          )
+        )
+          extent.forEach((point, pointIndex) =>
+            validateVectorArtifact(
+              point,
+              `${path}.extent[${pointIndex}]`,
+              "stack-top affordance extent point",
+              violations,
+            ),
+          );
+      }
+    });
   return toValidation(violations);
 };

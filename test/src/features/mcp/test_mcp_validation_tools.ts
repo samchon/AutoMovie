@@ -397,6 +397,98 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed model affordance entry returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          affordances: [undefined],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.affordances[0]");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed model affordance id returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          affordances: [
+            {
+              id: undefined,
+              kind: "handle",
+              frame: IDENTITY_TRANSFORM,
+              extent: null,
+            },
+          ],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.affordances[0].id");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed model affordance frame returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          affordances: [
+            {
+              id: "handle-1",
+              kind: "handle",
+              frame: undefined,
+              extent: null,
+            },
+          ],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.affordances[0].frame");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed model stack affordance extent returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          affordances: [
+            {
+              id: "top-1",
+              kind: "stack-top",
+              frame: IDENTITY_TRANSFORM,
+              extent: undefined,
+            },
+          ],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.affordances[0].extent");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed model stack affordance extent point returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          affordances: [
+            {
+              id: "top-1",
+              kind: "stack-top",
+              frame: IDENTITY_TRANSFORM,
+              extent: [
+                undefined,
+                { x: 0.5, y: 0, z: -0.5 },
+                { x: 0, y: 0, z: 0.5 },
+              ],
+            },
+          ],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.affordances[0].extent[0]");
+    })(),
+  );
+  TestValidator.predicate(
     "malformed model skeleton object returns validation",
     (() => {
       const validation = app.validateModel({
