@@ -3,12 +3,14 @@ import { IAutoMovieQuaternion } from "@automovie/interface";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { IAutoMovieRestFrame, toClinicalAngle } from "../rom/restFrame";
-import { DEFAULT_JOINT_AXES, IAutoMovieJointAxes } from "./jointToQuaternion";
+import {
+  DEFAULT_JOINT_AXES,
+  IAutoMovieJointAxes,
+  normalizeJointAxes,
+} from "./jointToQuaternion";
 
 const RAD2DEG = 180 / Math.PI;
 const QUATERNION_AXES = ["x", "y", "z", "w"] as const;
-const JOINT_AXES = ["flexion", "abduction", "twist"] as const;
-const VECTOR_AXES = ["x", "y", "z"] as const;
 
 const assertFiniteQuaternion = (q: IAutoMovieQuaternion): void => {
   for (const axis of QUATERNION_AXES) {
@@ -18,17 +20,6 @@ const assertFiniteQuaternion = (q: IAutoMovieQuaternion): void => {
         `decomposeJointRotation quaternion.${axis} must be finite, but was ${value}`,
       );
   }
-};
-
-const assertFiniteAxes = (axes: IAutoMovieJointAxes): void => {
-  for (const jointAxis of JOINT_AXES)
-    for (const vectorAxis of VECTOR_AXES) {
-      const value = axes[jointAxis][vectorAxis];
-      if (!Number.isFinite(value))
-        throw new Error(
-          `decomposeJointRotation axes.${jointAxis}.${vectorAxis} must be finite, but was ${value}`,
-        );
-    }
 };
 
 /**
@@ -65,7 +56,7 @@ export const decomposeJointRotation = (
   frame?: IAutoMovieRestFrame,
 ): { flexion: number; abduction: number; twist: number } => {
   assertFiniteQuaternion(q);
-  assertFiniteAxes(axes);
+  const basis = normalizeJointAxes(axes, "decomposeJointRotation axes");
 
   // Lift a rig-relative extraction into clinical angles (the inverse of
   // jointToQuaternion's `frame` map); the identity when no frame is given.
@@ -83,26 +74,26 @@ export const decomposeJointRotation = (
   // triple is made right-handed by extracting against −twist, then negating the
   // recovered twist (a rotation about −t by θ is one about t by −θ).
   const handed =
-    Vector3.dot(axes.twist, Vector3.cross(axes.flexion, axes.abduction)) >= 0
+    Vector3.dot(basis.twist, Vector3.cross(basis.flexion, basis.abduction)) >= 0
       ? 1
       : -1;
-  const twistAxis = Vector3.scale(axes.twist, handed);
+  const twistAxis = Vector3.scale(basis.twist, handed);
 
-  const Rf = Quaternion.rotateVector(q, axes.flexion);
-  const Ra = Quaternion.rotateVector(q, axes.abduction);
+  const Rf = Quaternion.rotateVector(q, basis.flexion);
+  const Ra = Quaternion.rotateVector(q, basis.abduction);
   const Rt = Quaternion.rotateVector(q, twistAxis);
 
   // Entries of R' = Mᵀ R M (M = [flex|abd|twist]): R'[i][j] = axisᵢ · (R axisⱼ).
-  const m00 = Vector3.dot(axes.flexion, Rf);
-  const m10 = Vector3.dot(axes.abduction, Rf);
+  const m00 = Vector3.dot(basis.flexion, Rf);
+  const m10 = Vector3.dot(basis.abduction, Rf);
   const m20 = Vector3.dot(twistAxis, Rf);
   const m21 = Vector3.dot(twistAxis, Ra);
   const m22 = Vector3.dot(twistAxis, Rt);
 
   if (m20 < -0.999999 || m20 > 0.999999) {
     // Gimbal: abduction = ±90°, flexion folds into twist. Pin flexion = 0.
-    const m01 = Vector3.dot(axes.flexion, Ra);
-    const m11 = Vector3.dot(axes.abduction, Ra);
+    const m01 = Vector3.dot(basis.flexion, Ra);
+    const m11 = Vector3.dot(basis.abduction, Ra);
     // Both gimbals leave only (twist ± flexion) determined; with flexion pinned
     // to 0, twist = −atan2(R'[0][1], R'[1][1]) reconstructs the rotation.
     const abduction = m20 < 0 ? 90 : -90;

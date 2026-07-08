@@ -5,10 +5,14 @@ import {
 } from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
+import { Vector3 } from "../math/Vector3";
 import { IAutoMovieRestFrame, toRigAngle } from "../rom/restFrame";
 
 const JOINT_AXES = ["flexion", "abduction", "twist"] as const;
 const VECTOR_AXES = ["x", "y", "z"] as const;
+const MIN_AXIS_LENGTH = 1e-9;
+const MAX_AXIS_DOT = 1e-6;
+type AutoMovieJointAxis = (typeof JOINT_AXES)[number];
 
 /**
  * The bone-local axes the three clinical angles rotate about. Lets a rig whose
@@ -33,6 +37,18 @@ export const DEFAULT_JOINT_AXES: IAutoMovieJointAxes = {
   twist: { x: 0, y: 1, z: 0 },
 };
 
+/** A field-located malformed joint-axis basis issue. */
+export interface IAutoMovieJointAxesIssue {
+  /** JSON-ish path to the offending axis field. */
+  path: string;
+
+  /** Human-readable correction requirement. */
+  expected: string;
+
+  /** Offending value. */
+  value: unknown;
+}
+
 const readAngle = (
   joint: Pick<IAutoMovieJointPose, "flexion" | "abduction" | "twist">,
   axis: (typeof JOINT_AXES)[number],
@@ -46,16 +62,93 @@ const readAngle = (
   return toRigAngle(value, frame) ?? 0;
 };
 
-const assertFiniteAxes = (axes: IAutoMovieJointAxes): void => {
-  for (const jointAxis of JOINT_AXES)
+/**
+ * Validate the axis basis used by joint compose/decompose.
+ *
+ * Axes may be non-unit; callers normalize after this check. They must be
+ * finite, non-zero, and mutually orthogonal so clinical angles form a real
+ * basis instead of silently skewing FK/IK.
+ *
+ * @author Samchon
+ */
+export const validateJointAxesBasis = (
+  axes: IAutoMovieJointAxes,
+  path: string,
+): IAutoMovieJointAxesIssue[] => {
+  const issues: IAutoMovieJointAxesIssue[] = [];
+  const usable = new Set<AutoMovieJointAxis>();
+
+  for (const jointAxis of JOINT_AXES) {
+    let finite = true;
     for (const vectorAxis of VECTOR_AXES) {
       const value = axes[jointAxis][vectorAxis];
-      if (!Number.isFinite(value))
-        throw new Error(
-          `jointToQuaternion axes.${jointAxis}.${vectorAxis} must be finite, but was ${value}`,
-        );
+      if (!Number.isFinite(value)) {
+        finite = false;
+        issues.push({
+          path: `${path}.${jointAxis}.${vectorAxis}`,
+          expected: `must be finite, but was ${value}`,
+          value,
+        });
+      }
     }
+    if (!finite) continue;
+    const length = Vector3.length(axes[jointAxis]);
+    if (length <= MIN_AXIS_LENGTH)
+      issues.push({
+        path: `${path}.${jointAxis}`,
+        expected: "must have non-zero length",
+        value: axes[jointAxis],
+      });
+    else usable.add(jointAxis);
+  }
+
+  if (JOINT_AXES.every((axis) => usable.has(axis))) {
+    const normalized = normalizeRawJointAxes(axes);
+    for (const [a, b] of [
+      ["flexion", "abduction"],
+      ["flexion", "twist"],
+      ["abduction", "twist"],
+    ] as const) {
+      const dot = Math.abs(Vector3.dot(normalized[a], normalized[b]));
+      if (dot > MAX_AXIS_DOT)
+        issues.push({
+          path: `${path}.${b}`,
+          expected: `${a} and ${b} axes must be orthogonal`,
+          value: { [a]: axes[a], [b]: axes[b] },
+        });
+    }
+  }
+
+  return issues;
 };
+
+/**
+ * Validate and normalize a joint-axis basis for quaternion math.
+ *
+ * @author Samchon
+ */
+export const normalizeJointAxes = (
+  axes: IAutoMovieJointAxes,
+  path: string,
+): IAutoMovieJointAxes => {
+  const issues = validateJointAxesBasis(axes, path);
+  if (issues.length !== 0) {
+    const issue = issues[0]!;
+    throw new Error(`${issue.path} ${issue.expected}`);
+  }
+  return normalizeRawJointAxes(axes);
+};
+
+const normalizeRawJointAxes = (
+  axes: IAutoMovieJointAxes,
+): IAutoMovieJointAxes => ({
+  flexion: normalizeAxis(axes.flexion),
+  abduction: normalizeAxis(axes.abduction),
+  twist: normalizeAxis(axes.twist),
+});
+
+const normalizeAxis = (axis: IAutoMovieVector3): IAutoMovieVector3 =>
+  Vector3.scale(axis, 1 / Vector3.length(axis));
 
 /**
  * Convert a joint's semantic clinical angles (flexion / abduction / twist) into
@@ -91,17 +184,17 @@ export const jointToQuaternion = (
   axes: IAutoMovieJointAxes = DEFAULT_JOINT_AXES,
   frame?: IAutoMovieRestFrame,
 ): IAutoMovieQuaternion => {
-  assertFiniteAxes(axes);
+  const basis = normalizeJointAxes(axes, "jointToQuaternion axes");
   const qFlexion = Quaternion.fromAxisAngle(
-    axes.flexion,
+    basis.flexion,
     readAngle(joint, "flexion", frame?.flexion),
   );
   const qAbduction = Quaternion.fromAxisAngle(
-    axes.abduction,
+    basis.abduction,
     readAngle(joint, "abduction", frame?.abduction),
   );
   const qTwist = Quaternion.fromAxisAngle(
-    axes.twist,
+    basis.twist,
     readAngle(joint, "twist", frame?.twist),
   );
   return Quaternion.multiply(qTwist, Quaternion.multiply(qAbduction, qFlexion));

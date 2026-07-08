@@ -7,7 +7,10 @@ import {
 } from "@automovie/interface";
 
 import { HUMANOID_JOINT_AXES } from "../kinematics/humanoidJointAxes";
-import { IAutoMovieJointAxes } from "../kinematics/jointToQuaternion";
+import {
+  IAutoMovieJointAxes,
+  validateJointAxesBasis,
+} from "../kinematics/jointToQuaternion";
 import { resolvePose } from "../kinematics/resolvePose";
 import { HUMANOID_REST_FRAME, IAutoMovieRestFrame } from "../rom/restFrame";
 import { validateMotion } from "../validation/validateMotion";
@@ -358,19 +361,12 @@ const validateAxes = (
   for (const [bone, table] of Object.entries(axes) as [
     AutoMovieHumanoidBone,
     IAutoMovieJointAxes,
-  ][]) {
-    for (const axis of ["flexion", "abduction", "twist"] as const)
-      for (const dim of ["x", "y", "z"] as const) {
-        const value = table[axis][dim];
-        if (!Number.isFinite(value))
-          collector.push(
-            "range",
-            `$input.${label}.${bone}.${axis}.${dim}`,
-            "joint axis components must be finite",
-            value,
-          );
-      }
-  }
+  ][])
+    for (const issue of validateJointAxesBasis(
+      table,
+      `$input.${label}.${bone}`,
+    ))
+      collector.push("range", issue.path, issue.expected, issue.value);
 };
 
 const validateRestFrames = (
