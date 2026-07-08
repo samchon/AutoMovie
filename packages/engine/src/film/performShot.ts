@@ -677,10 +677,9 @@ export const performShot = (props: {
       );
   }
 
-  // fullBody owns the whole rig, so it is not disjoint from any partial body
-  // region. Same-region actions still sequence through arrangeMotion, and
-  // partial disjoint regions still layer, but a concurrent fullBody + partial
-  // pair is an authoring contradiction that should be revised.
+  // A body region can run only one authored action at a time. Disjoint partial
+  // regions may layer, but same-region overlaps would force arrangeMotion to
+  // drop keyframes, and fullBody owns every partial region.
   const actorActions = new Map<
     string,
     { action: IAutoMovieActionCall; index: number }[]
@@ -708,10 +707,18 @@ export const performShot = (props: {
         const [b0, b1] = spanOf(b.action);
         if (b0 >= a1 - 1e-9) break;
         const bRegion = actionRegion(b.action);
+        const sameRegionConflict = aRegion === bRegion;
         const fullBodyConflict =
           aRegion !== bRegion &&
           (aRegion === "fullBody" || bRegion === "fullBody");
-        if (fullBodyConflict && b1 > a0 + 1e-9)
+        if (sameRegionConflict && b1 > a0 + 1e-9)
+          out.push(
+            "range",
+            `${base}[${b.index}].start`,
+            `${actor} has overlapping ${aRegion} actions; one body region cannot run two authored clips at the same time`,
+            b.action.start,
+          );
+        else if (fullBodyConflict && b1 > a0 + 1e-9)
           out.push(
             "range",
             `${base}[${b.index}].start`,
