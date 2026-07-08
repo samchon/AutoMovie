@@ -617,6 +617,151 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed model primitive shape returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          parts: [
+            {
+              ...model.parts[0]!,
+              geometry: { type: "primitive", shape: undefined },
+            },
+          ],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.parts[0].geometry.shape");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed model mesh payload returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          parts: [
+            {
+              ...model.parts[0]!,
+              geometry: { type: "mesh", mesh: undefined },
+            },
+          ],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.parts[0].geometry.mesh");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed model mesh positions returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          parts: [
+            {
+              ...model.parts[0]!,
+              geometry: {
+                type: "mesh",
+                mesh: {
+                  positions: undefined,
+                  normals: null,
+                  uvs: null,
+                  indices: null,
+                  skin: null,
+                },
+              },
+            },
+          ],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.parts[0].geometry.mesh.positions");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed model mesh optional buffer returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          parts: [
+            {
+              ...model.parts[0]!,
+              geometry: {
+                type: "mesh",
+                mesh: {
+                  positions: [0, 0, 0],
+                  normals: undefined,
+                  uvs: null,
+                  indices: null,
+                  skin: null,
+                },
+              },
+            },
+          ],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.parts[0].geometry.mesh.normals");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed model mesh skin returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          parts: [
+            {
+              ...model.parts[0]!,
+              geometry: {
+                type: "mesh",
+                mesh: {
+                  positions: [0, 0, 0],
+                  normals: null,
+                  uvs: null,
+                  indices: null,
+                  skin: undefined,
+                },
+              },
+            },
+          ],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.parts[0].geometry.mesh.skin");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed model mesh skin buffer returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          parts: [
+            {
+              ...model.parts[0]!,
+              geometry: {
+                type: "mesh",
+                mesh: {
+                  positions: [0, 0, 0],
+                  normals: null,
+                  uvs: null,
+                  indices: null,
+                  skin: {
+                    joints: ["hips"],
+                    boneIndices: undefined,
+                    weights: [1, 0, 0, 0],
+                  },
+                },
+              },
+            },
+          ],
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(
+        validation,
+        "$input.parts[0].geometry.mesh.skin.boneIndices",
+      );
+    })(),
+  );
+  TestValidator.predicate(
     "malformed model part transform returns validation",
     (() => {
       const validation = app.validateModel({
