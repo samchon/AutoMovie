@@ -43,7 +43,11 @@ const withSurface = (surface: Partial<IAutoMovieSurface>): IAutoMovieSpace => ({
  * 3. A duplicated surface id is a `type` violation on the duplicate.
  * 4. An unknown surface kind (runtime junk past the closed union) is rejected.
  * 5. A footprint of fewer than three points encloses no area.
- * 6. Collinear footprint points enclose no area (the hull collapses).
+ * 6. Collinear footprint points enclose no area (the hull collapses). 6b. A
+ *    concave footprint (an L-shape, whose inner corner sits inside its convex
+ *    hull) is rejected — the ground query would fill the notch. 6c. A convex
+ *    footprint with a collinear point ON an edge is allowed (the vertex stays
+ *    on the hull boundary; only strictly-interior vertices fail).
  * 7. A non-finite footprint plan coordinate is a `range` violation (`y` is
  *    documented-ignored and deliberately not checked).
  * 8. A non-finite height anchor is a `range` violation.
@@ -111,6 +115,31 @@ export const test_validation_space = (): void => {
       "type",
       ".polygon",
     ),
+  );
+  TestValidator.predicate(
+    "concave footprint rejected",
+    hasViolation(
+      validateSpace({
+        space: withSurface({
+          // An L-shape: the (2,2) inner corner sits inside the convex hull, so
+          // surfaceContains would fill the notch — the query must reject it.
+          polygon: [v(0, 0), v(4, 0), v(4, 2), v(2, 2), v(2, 4), v(0, 4)],
+        }),
+      }),
+      "type",
+      ".polygon",
+    ),
+  );
+  TestValidator.equals(
+    "convex footprint with a collinear edge point passes",
+    validateSpace({
+      space: withSurface({
+        // A square with an extra midpoint on the bottom edge — still convex,
+        // the midpoint stays on the hull boundary, so it must be accepted.
+        polygon: [v(0, 0), v(2, 0), v(4, 0), v(4, 4), v(0, 4)],
+      }),
+    }).success,
+    true,
   );
   TestValidator.predicate(
     "non-finite footprint coordinate",
