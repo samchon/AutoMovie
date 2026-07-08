@@ -88,8 +88,8 @@ const driven = (
  *    that the disabled rotation/scale components are left untouched.
  * 3. Malformed copy flags reject before truthy/falsy coercion can change which
  *    transform components are copied.
- * 4. Malformed sampled TRS overrides reject before blend or slerp math can
- *    consume missing, extra, or array-like components.
+ * 4. Malformed sampled TRS overrides reject before blend or slerp math can consume
+ *    missing, extra, or array-like components.
  */
 export const test_resolve_drivers_copy = (): void => {
   // 1. full copy from rest
@@ -245,7 +245,13 @@ export const test_resolve_drivers_copy = (): void => {
       () =>
         resolveDrivers(
           [copy({ translation: true })],
-          seed([["node:s:translation", { kind: "node", node: "s", path: "translation" }, [5, 0]]]),
+          seed([
+            [
+              "node:s:translation",
+              { kind: "node", node: "s", path: "translation" },
+              [5, 0],
+            ],
+          ]),
           validNodes,
         ),
       ["copy driver source translation value", "exactly 3", "2"],
@@ -348,6 +354,75 @@ export const test_resolve_drivers_driven = (): void => {
     "degenerate input range maps to outRange[0]",
     run(driven({ inRange: [5, 5], outRange: [3, 9] }), 5),
     [3],
+  );
+
+  // #724: a curve supersedes the linear range — a nonlinear driver needs no
+  // inRange/outRange/clamp at all (they were dead required fields).
+  const curveOnly: IAutoMovieDrivenDriver = {
+    type: "driven",
+    output: ptr("/out"),
+    source: ptr("/in"),
+    curve: {
+      points: [
+        { source: 0, output: 0 },
+        { source: 10, output: 100 },
+      ],
+    },
+  };
+  TestValidator.equals(
+    "curve driver resolves with no inRange/outRange/clamp",
+    run(curveOnly, 5),
+    [50],
+  );
+
+  // A linear driver may omit clamp; it then defaults to no clamp (extrapolates
+  // past the range rather than pinning).
+  const unclamped: IAutoMovieDrivenDriver = {
+    type: "driven",
+    output: ptr("/out"),
+    source: ptr("/in"),
+    inRange: [0, 10],
+    outRange: [0, 100],
+  };
+  TestValidator.equals(
+    "linear driver without clamp extrapolates (clamp defaults false)",
+    run(unclamped, 20),
+    [200],
+  );
+
+  // But a linear driver (no curve) still requires both ranges — omitting either
+  // throws rather than inventing a default, so a dropped range is a loud error.
+  TestValidator.predicate(
+    "linear driven driver without inRange rejects",
+    throwsError(
+      () =>
+        run(
+          {
+            type: "driven",
+            output: ptr("/out"),
+            source: ptr("/in"),
+            outRange: [0, 100],
+          },
+          5,
+        ),
+      ["driven driver without a curve requires inRange and outRange"],
+    ),
+  );
+  TestValidator.predicate(
+    "linear driven driver without outRange rejects",
+    throwsError(
+      () =>
+        run(
+          {
+            type: "driven",
+            output: ptr("/out"),
+            source: ptr("/in"),
+            inRange: [0, 10],
+          },
+          5,
+        ),
+      ["driven driver without a curve requires inRange and outRange"],
+    ),
   );
 
   // 5. nonlinear curve: slow-then-snap finger curl, ends held

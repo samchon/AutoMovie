@@ -722,11 +722,11 @@ export interface IAutoMovieMcpDrivenDriver extends Omit<
   IAutoMovieDrivenDriver,
   "inRange" | "outRange"
 > {
-  /** Source value range mapped onto {@link outRange}. */
-  inRange: IAutoMovieMcpRange;
+  /** Source value range mapped onto {@link outRange}. Omit when `curve` is set. */
+  inRange?: IAutoMovieMcpRange;
 
-  /** Output value range. */
-  outRange: IAutoMovieMcpRange;
+  /** Output value range. Omit when `curve` is set. */
+  outRange?: IAutoMovieMcpRange;
 }
 
 /** A prop profile driver as the MCP boundary accepts it — tuple-free. */

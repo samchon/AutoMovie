@@ -219,7 +219,6 @@ const applyDriven = (
   d: IAutoMovieDrivenDriver,
   sampled: Map<string, IAutoMovieSampledChannel>,
 ): void => {
-  validateDrivenClamp(d.clamp);
   const src = sampled.get(channelKey(d.source));
   const source =
     src !== undefined ? readDrivenSourceValue(src.value) : undefined;
@@ -250,13 +249,16 @@ const validateDrivenClamp = (clamp: boolean): void => {
     throw new Error(`driven driver clamp must be boolean, but was ${clamp}`);
 };
 
-const validateDrivenRange = (d: IAutoMovieDrivenDriver): void => {
-  validateDrivenRangeTuple("inRange", d.inRange);
-  validateDrivenRangeTuple("outRange", d.outRange);
-  validateDrivenFinite("inRange[0]", d.inRange[0]);
-  validateDrivenFinite("inRange[1]", d.inRange[1]);
-  validateDrivenFinite("outRange[0]", d.outRange[0]);
-  validateDrivenFinite("outRange[1]", d.outRange[1]);
+const validateDrivenRange = (
+  inRange: [number, number],
+  outRange: [number, number],
+): void => {
+  validateDrivenRangeTuple("inRange", inRange);
+  validateDrivenRangeTuple("outRange", outRange);
+  validateDrivenFinite("inRange[0]", inRange[0]);
+  validateDrivenFinite("inRange[1]", inRange[1]);
+  validateDrivenFinite("outRange[0]", outRange[0]);
+  validateDrivenFinite("outRange[1]", outRange[1]);
 };
 
 const validateDrivenRangeTuple = (
@@ -280,8 +282,14 @@ const remapDriven = (
   d: IAutoMovieDrivenDriver,
   source: number | undefined,
 ): number => {
-  validateDrivenRange(d);
-  return remap(source ?? d.inRange[0], d.inRange, d.outRange, d.clamp);
+  const { inRange, outRange } = d;
+  if (inRange === undefined || outRange === undefined)
+    throw new Error(
+      "driven driver without a curve requires inRange and outRange",
+    );
+  validateDrivenRange(inRange, outRange);
+  if (d.clamp !== undefined) validateDrivenClamp(d.clamp);
+  return remap(source ?? inRange[0], inRange, outRange, d.clamp ?? false);
 };
 
 const remap = (
