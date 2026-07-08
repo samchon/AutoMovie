@@ -6,6 +6,7 @@ import {
 } from "@automovie/engine";
 import {
   IAutoMovieConstraintViolation,
+  IAutoMovieExpression,
   IAutoMovieModel,
   IAutoMoviePose,
   IAutoMovieScene,
@@ -152,8 +153,33 @@ const validateMcpMotionShape = (
       )
         return;
       appendMcpPoseShape(violations, keyframe.pose, `${path}.pose`);
+      appendMcpExpressionShape(
+        violations,
+        keyframe.expression,
+        `${path}.expression`,
+      );
     });
   return toValidation(violations);
+};
+
+const appendMcpExpressionShape = (
+  violations: IAutoMovieConstraintViolation[],
+  expression: IAutoMovieExpression | unknown,
+  path: string,
+): void => {
+  if (expression === null) return;
+  if (
+    !validateObjectArtifact(expression, path, "keyframe expression", violations)
+  )
+    return;
+  const blendshapes = (expression as Partial<IAutoMovieExpression>).blendshapes;
+  if (blendshapes !== undefined)
+    validateArrayArtifact(
+      blendshapes,
+      `${path}.blendshapes`,
+      "expression blendshapes",
+      violations,
+    );
 };
 
 const validateMcpModelShape = (
