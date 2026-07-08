@@ -269,12 +269,23 @@ const validateMcpModelShape = (
       "skeleton id",
       violations,
     );
-    validateArrayArtifact(
-      skeleton.bones,
-      "$input.skeleton.bones",
-      "skeleton bones",
-      violations,
-    );
+    const bones = skeleton.bones;
+    if (
+      validateArrayArtifact(
+        bones,
+        "$input.skeleton.bones",
+        "skeleton bones",
+        violations,
+      )
+    )
+      bones.forEach((bone, index) =>
+        validateObjectArtifact(
+          bone,
+          `$input.skeleton.bones[${index}]`,
+          "skeleton bone",
+          violations,
+        ),
+      );
   }
   const affordances = shape.affordances;
   if (affordances !== null && affordances !== undefined)
