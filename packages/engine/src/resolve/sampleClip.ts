@@ -6,6 +6,7 @@ import {
 } from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
+import { segmentIndex } from "../math/bisect";
 import { channelIsRotation, channelKey } from "./channel";
 
 type IAutoMovieNodeChannel = Extract<IAutoMovieChannel, { kind: "node" }>;
@@ -85,12 +86,9 @@ const sampleTrack = (
   const lastIdx = times.length - 1;
   if (time >= times[lastIdx]!) return valueAt(lastIdx);
 
-  let lo = 0;
-  for (let i = 0; i < lastIdx; ++i)
-    if (time >= times[i]! && time <= times[i + 1]!) {
-      lo = i;
-      break;
-    }
+  // Strictly increasing times (validateTrackShape) let the binary search land on
+  // the straddling segment; its tie rule matches the old linear scan exactly.
+  const lo = segmentIndex(times.length, (i) => times[i]!, time);
   const hi = lo + 1;
   const span = times[hi]! - times[lo]!;
   const localT = (time - times[lo]!) / span;

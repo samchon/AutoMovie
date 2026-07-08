@@ -12,6 +12,7 @@ import {
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { segmentIndex } from "../math/bisect";
 import { cubicBezierEasing, ease } from "./easing";
 
 /** A pose plus optional expression sampled at one instant of a clip. */
@@ -55,17 +56,12 @@ export const sampleMotion = (
   const last = frames[frames.length - 1]!;
   if (time >= last.time) return toSample(motion, last);
 
-  let lo = frames[0]!;
-  let hi = last;
-  for (let i = 0; i < frames.length - 1; ++i)
-    if (time >= frames[i]!.time && time <= frames[i + 1]!.time) {
-      lo = frames[i]!;
-      hi = frames[i + 1]!;
-      break;
-    }
-
   // Precondition: the clip has strictly increasing keyframe times (the contract
-  // validateMotion enforces), so the selected segment always has a positive span.
+  // validateMotion enforces), so the binary search lands on a segment with a
+  // positive span, and its tie rule matches the old linear scan exactly.
+  const loIdx = segmentIndex(frames.length, (i) => frames[i]!.time, time);
+  const lo = frames[loIdx]!;
+  const hi = frames[loIdx + 1]!;
   const span = hi.time - lo.time;
   const linearT = (time - lo.time) / span;
   const t =
