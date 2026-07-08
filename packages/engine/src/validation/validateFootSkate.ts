@@ -7,6 +7,7 @@ import {
 } from "@automovie/interface";
 
 import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
+import { windowSampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { ViolationCollector } from "./violation";
@@ -162,7 +163,7 @@ const sampleWindow = (
     | Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>
     | undefined,
 ): Array<{ time: number; position: IAutoMovieVector3 }> =>
-  sampleTimes(contact.start, contact.end, sampleRate).map((time) => {
+  windowSampleTimes(contact.start, contact.end, sampleRate).map((time) => {
     const resolved = resolvePose(
       sampleMotion(motion, time).pose,
       skeleton,
@@ -171,17 +172,6 @@ const sampleWindow = (
     ).find((bone) => bone.bone === contact.bone);
     return { time, position: resolved!.worldPosition };
   });
-
-const sampleTimes = (
-  start: number,
-  end: number,
-  sampleRate: number,
-): number[] => {
-  const frames = Math.max(1, Math.ceil((end - start) * sampleRate));
-  return Array.from({ length: frames + 1 }, (_, index) =>
-    Math.min(end, start + index / sampleRate),
-  );
-};
 
 const horizontalSpeed = (
   previous: { time: number; position: IAutoMovieVector3 },

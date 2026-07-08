@@ -12,6 +12,7 @@ import {
   rekeyPlantedFeet,
   resolveBoneMap,
 } from "./legPlant";
+import { sampleTimes } from "./sampleClock";
 import { sampleMotion } from "./sampleMotion";
 
 const DEFAULT_SAMPLE_RATE = 24;
@@ -142,11 +143,4 @@ export const plantStanceFeet = (props: {
   });
 
   return assemblePlantedFeet(props.motion, keyframes, plants);
-};
-
-const sampleTimes = (duration: number, sampleRate: number): number[] => {
-  const frames = Math.max(1, Math.ceil(duration * sampleRate));
-  return Array.from({ length: frames + 1 }, (_, index) =>
-    Math.min(duration, index / sampleRate),
-  );
 };

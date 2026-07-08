@@ -8,6 +8,7 @@ import {
 
 import { IAutoMovieJointAxes, resolvePose } from "../kinematics";
 import { segmentSegmentDistance } from "../math/segments";
+import { sampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { ViolationCollector } from "./violation";
@@ -201,13 +202,6 @@ const validateCapsule = (
     );
   }
   return valid;
-};
-
-const sampleTimes = (duration: number, sampleRate: number): number[] => {
-  const frames = Math.max(1, Math.ceil(duration * sampleRate));
-  return Array.from({ length: frames + 1 }, (_, index) =>
-    Math.min(duration, index / sampleRate),
-  );
 };
 
 const resolveCapsule = (
