@@ -1,15 +1,18 @@
 import {
+  toValidation,
   validateModel as validateEngineModel,
   validateMotion as validateEngineMotion,
   validatePose as validateEnginePose,
 } from "@automovie/engine";
 import {
+  IAutoMovieConstraintViolation,
   IAutoMovieModel,
   IAutoMoviePose,
   IAutoMovieScene,
   IAutoMovieSequence,
   IAutoMovieShot,
   IAutoMovieSkeleton,
+  IAutoMovieValidation,
 } from "@automovie/interface";
 
 import { toEngineMotion } from "../convert";
@@ -23,6 +26,7 @@ import {
   validateSequenceArtifact,
   validateShotArtifact,
 } from "../validators/artifacts";
+import { validateArrayArtifact } from "../validators/primitives";
 
 /**
  * The standalone `validate*` tools — thin dispatch onto the engine validators
@@ -46,6 +50,8 @@ export class ValidationService {
     motion: IAutoMovieMcpMotion;
     skeleton: IAutoMovieSkeleton;
   }): IAutoMovieValidateOutput {
+    const shape = validateMcpMotionShape(props.motion);
+    if (shape.success === false) return { validation: shape };
     return {
       validation: validateEngineMotion({
         motion: toEngineMotion(props.motion),
@@ -86,3 +92,16 @@ export class ValidationService {
     };
   }
 }
+
+const validateMcpMotionShape = (
+  motion: IAutoMovieMcpMotion,
+): IAutoMovieValidation => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateArrayArtifact(
+    (motion as Partial<IAutoMovieMcpMotion>).keyframes,
+    "$input.keyframes",
+    "motion keyframes",
+    violations,
+  );
+  return toValidation(violations);
+};
