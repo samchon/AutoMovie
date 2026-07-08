@@ -475,6 +475,7 @@ const validateManifest = (file: string, value: unknown): IManifest => {
       file,
       "manifest assets must be an array of strings",
     );
+  const seenAssets = new Set<string>();
   const assets = value.assets.map((asset, index) => {
     const checked = checkAssetPath(asset);
     if ("fault" in checked)
@@ -482,6 +483,12 @@ const validateManifest = (file: string, value: unknown): IManifest => {
         file,
         `manifest assets[${index}] invalid: ${checked.fault}`,
       );
+    if (seenAssets.has(checked.path))
+      throw new AutoMovieProjectShapeError(
+        file,
+        `manifest assets[${index}] duplicates "${checked.path}"`,
+      );
+    seenAssets.add(checked.path);
     return checked.path;
   });
   return { ...value, assets } as unknown as IManifest;
