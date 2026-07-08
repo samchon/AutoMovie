@@ -28,10 +28,10 @@ const TINY = (0.05 * Math.PI) / 180;
  * 6. **Deadzone-free (#643/#720):** a target 0.05° off-axis — inside the old `cos
  *
  * > 0.999999`deadzone — now aims EXACTLY at the target instead of snapping to the
- *    > identity. Because`aimRotation`is the shared core
- *    > of`twoBoneChainArticulation`, this is the sub-0.081° correction
- *    > `reachPose`(an arm putting a hand on a lever) and`legPlant` (a foot plant)
- *    > used to silently drop.
+ * > identity. Because`aimRotation`is the shared core
+ * > of`twoBoneChainArticulation`, this is the sub-0.081° correction
+ * > `reachPose`(an arm putting a hand on a lever) and`legPlant` (a foot plant)
+ * > used to silently drop.
  */
 export const test_kinematics_aim_rotation = (): void => {
   // 1. general

@@ -18,7 +18,6 @@ import {
   IAutoMovieShotPerformance,
   IAutoMovieSkeleton,
   IAutoMovieStagingApplication,
-  IAutoMovieTransform,
 } from "@automovie/interface";
 
 import { AutoMovieContext } from "./AutoMovieContext";
@@ -45,6 +44,7 @@ import {
   IAutoMovieMcpMotion,
   IAutoMovieMcpPropSpec,
   IAutoMovieMcpStoredSlate,
+  IAutoMovieMcpTransform,
   IAutoMovieMcpWritableSlate,
   IAutoMovieMeasureDistanceOutput,
   IAutoMovieNextStepsOutput,
@@ -627,14 +627,18 @@ export class AutoMovieApplication {
    * re-performing. Requires an active project, a non-empty reason, and an
    * existing placement.
    *
+   * The new transform is authored the LLM-facing way: `rotation` is semantic
+   * Euler degrees (or omitted for no turn), never a raw quaternion — the engine
+   * lowers it (#723, D016).
+   *
    * @param props The placement node, its new transform, and the reason.
    * @returns The slate after the move, or violations when refused.
    */
   public setPlacement(props: {
     /** Scene node id of the placement to move. */
     node: string;
-    /** The placement's new world transform. */
-    transform: IAutoMovieTransform;
+    /** The placement's new world transform (rotation as semantic Euler degrees). */
+    transform: IAutoMovieMcpTransform;
     /** Why this placement is moving — required evidence. */
     reason: string;
   }): IAutoMovieSetOutput {

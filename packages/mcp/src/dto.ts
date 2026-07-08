@@ -15,6 +15,7 @@ import {
   IAutoMovieConstraintViolation,
   IAutoMovieCopyDriver,
   IAutoMovieDrivenDriver,
+  IAutoMovieEuler,
   IAutoMovieExpression,
   IAutoMovieGaitCycle,
   IAutoMovieGaitRootBob,
@@ -115,6 +116,33 @@ export interface IAutoMovieMcpGeometryContext {
 
   /** Optional shot whose performances choose which motion each actor samples. */
   shot?: IAutoMovieShot | null;
+}
+
+/**
+ * An LLM-facing placement transform — the MCP boundary form of the engine's
+ * {@link IAutoMovieTransform}, where `rotation` is authored as semantic Euler
+ * degrees ({@link IAutoMovieEuler}) rather than a raw quaternion (#723, D016).
+ *
+ * The engine's quaternion is "not LLM-facing" by its own contract — opaque to a
+ * language model and easy to emit off-unit-norm — yet a raw transform forced
+ * exactly that on any tool where the model authors a placement from scratch.
+ * Here the model states an angle it understands (yaw/pitch/roll about the local
+ * axes, with the composition `order`) and `toEngineTransform` lowers it to the
+ * quaternion, mirroring how joints are authored as clinical degrees. A move
+ * that only translates omits `rotation` entirely (identity).
+ */
+export interface IAutoMovieMcpTransform {
+  /** Translation in parent space (meters). */
+  translation: IAutoMovieVector3;
+
+  /**
+   * Rotation as semantic Euler degrees. Omit or `null` for no rotation
+   * (identity) — a placement that only slides a node needs no angles.
+   */
+  rotation?: IAutoMovieEuler | null;
+
+  /** Per-axis scale factor (`1` = identity). Non-positive is rejected. */
+  scale: IAutoMovieVector3;
 }
 
 /** Minimal model geometry lookup accepted by MCP query tools. */

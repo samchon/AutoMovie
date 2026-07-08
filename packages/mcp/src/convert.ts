@@ -1,9 +1,11 @@
+import { Quaternion } from "@automovie/engine";
 import {
   IAutoMovieDriver,
   IAutoMovieKeyframe,
   IAutoMovieMotion,
   IAutoMovieProfile,
   IAutoMoviePropSpec,
+  IAutoMovieTransform,
 } from "@automovie/interface";
 
 import {
@@ -12,6 +14,7 @@ import {
   IAutoMovieMcpPropDriver,
   IAutoMovieMcpPropProfile,
   IAutoMovieMcpPropSpec,
+  IAutoMovieMcpTransform,
 } from "./dto";
 
 /**
@@ -21,6 +24,24 @@ import {
  * engine's `[x1, y1, x2, y2]` tuple here — the single place both directions
  * live, so they cannot drift apart.
  */
+
+/**
+ * Lower an MCP placement transform onto the engine's {@link IAutoMovieTransform}
+ * (#723, D016): the semantic Euler rotation becomes a quaternion via
+ * {@link Quaternion.fromEuler}, and an omitted/`null` rotation is identity — so
+ * the LLM authors placements in degrees it understands and never emits a raw
+ * quaternion. Translation and scale pass through unchanged.
+ */
+export const toEngineTransform = (
+  transform: IAutoMovieMcpTransform,
+): IAutoMovieTransform => ({
+  translation: transform.translation,
+  rotation:
+    transform.rotation === undefined || transform.rotation === null
+      ? Quaternion.identity()
+      : Quaternion.fromEuler(transform.rotation),
+  scale: transform.scale,
+});
 
 export const toMcpMotion = (motion: IAutoMovieMotion): IAutoMovieMcpMotion => ({
   ...motion,

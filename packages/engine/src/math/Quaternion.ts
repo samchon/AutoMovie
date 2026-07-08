@@ -51,6 +51,34 @@ export namespace Quaternion {
     return { x: axis.x * s, y: axis.y * s, z: axis.z * s, w: Math.cos(half) };
   };
 
+  /**
+   * Compose intrinsic Euler angles (degrees) into a quaternion, applying the
+   * axes in the given `order` — the same intrinsic convention glTF/three.js
+   * use, so `fromEuler({x,y,z,order:"XYZ"})` equals `qx·qy·qz`. This is how the
+   * MCP boundary lowers an LLM-authored semantic placement rotation
+   * ({@link "@automovie/interface".IAutoMovieEuler}) into the engine's
+   * quaternion — the model never emits a quaternion (#723).
+   */
+  export const fromEuler = (euler: {
+    x: number;
+    y: number;
+    z: number;
+    order: "XYZ" | "XZY" | "YXZ" | "YZX" | "ZXY" | "ZYX";
+  }): IAutoMovieQuaternion => {
+    const axisOf = (c: string): IAutoMovieVector3 =>
+      c === "X"
+        ? { x: 1, y: 0, z: 0 }
+        : c === "Y"
+          ? { x: 0, y: 1, z: 0 }
+          : { x: 0, y: 0, z: 1 };
+    const angleOf = (c: string): number =>
+      c === "X" ? euler.x : c === "Y" ? euler.y : euler.z;
+    return euler.order
+      .split("")
+      .map((c) => fromAxisAngle(axisOf(c), angleOf(c)))
+      .reduce((acc, q) => multiply(acc, q), identity());
+  };
+
   /** Rotate a vector by a quaternion: `q * v * q⁻¹`. */
   export const rotateVector = (
     q: IAutoMovieQuaternion,
