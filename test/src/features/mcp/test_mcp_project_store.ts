@@ -34,6 +34,33 @@ const shot: IAutoMovieShot = {
   duration: 1,
 };
 
+const propSpec = (node: string): IAutoMovieMcpPropSpec => ({
+  node,
+  model: {
+    id: node,
+    name: node,
+    origin: "generated",
+    skeleton: null,
+    body: null,
+    materials: [],
+    parts: [
+      {
+        id: "box",
+        name: null,
+        geometry: {
+          type: "primitive",
+          shape: { type: "box", width: 1, height: 1, depth: 1 },
+        },
+        material: null,
+        attachedBone: null,
+        transform: null,
+      },
+    ],
+    asset: null,
+  },
+  articulation: null,
+});
+
 const slateWith = (
   partial: Partial<IAutoMovieMcpWritableSlate>,
 ): IAutoMovieMcpWritableSlate => ({
@@ -129,6 +156,7 @@ const ghostBeatTree = (): NonNullable<IAutoMovieScript["tree"]> => [
  * 7. Parseable keyed slices whose filename/internal key matches still validate the
  *    rest of their shape before entering resident state.
  * 8. Resident script trees validate at the read boundary, matching commitScript.
+ * 9. Resident prop slices validate at the read boundary, matching forgeProp.
  */
 export const test_mcp_project_store = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-store-"));
@@ -335,6 +363,31 @@ export const test_mcp_project_store = (): void => {
       value: { node: "door" } satisfies Partial<IAutoMovieMcpPropSpec>,
       read: (root) => AutoMovieProject.open(root).storedProps(),
       fragments: ["props", "door.json", "Validation detail", "model"],
+    },
+    {
+      label: "prop model/node mismatch has project guidance",
+      dir: "props",
+      file: "door.json",
+      value: {
+        ...propSpec("door"),
+        model: { ...propSpec("door").model, id: "crate" },
+      },
+      read: (root) => AutoMovieProject.open(root).storedProps(),
+      fragments: ["props", "door.json", "Validation detail", "model.id"],
+    },
+    {
+      label: "invalid prop articulation has project guidance",
+      dir: "props",
+      file: "door.json",
+      value: { ...propSpec("door"), articulation: {} },
+      read: (root) => AutoMovieProject.open(root).storedProps(),
+      fragments: [
+        "props",
+        "door.json",
+        "Validation detail",
+        "articulation",
+        "forgeProp",
+      ],
     },
   ];
   for (const entry of invalidKeyedShapeCases) {

@@ -1,4 +1,5 @@
 import {
+  forgeProp,
   validateModel as validateEngineModel,
   validateScriptTree,
 } from "@automovie/engine";
@@ -17,6 +18,7 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 
+import { toEnginePropSpec } from "../convert";
 import {
   IAutoMovieMcpProjectSummary,
   IAutoMovieMcpPropSpec,
@@ -1008,6 +1010,7 @@ const validatePropSlice = (
   violations: IAutoMovieConstraintViolation[],
 ): void => {
   if (!validateObjectArtifact(value, "$input", "prop spec", violations)) return;
+  const before = violations.length;
   validateNonEmptyId(value.node, "$input.node", "prop node", violations);
   if (
     validateObjectArtifact(
@@ -1036,6 +1039,21 @@ const validatePropSlice = (
       "prop articulation must be null or a JSON object",
       value.articulation,
     );
+  if (violations.length !== before) return;
+  try {
+    const forged = forgeProp(
+      toEnginePropSpec(value as unknown as IAutoMovieMcpPropSpec),
+    );
+    if (forged.success === false) violations.push(...forged.violations);
+  } catch {
+    pushViolation(
+      violations,
+      "type",
+      "$input.articulation",
+      "prop articulation must match the forgeProp schema",
+      value.articulation,
+    );
+  }
 };
 
 const readJson = <T>(file: string): T | null => {
