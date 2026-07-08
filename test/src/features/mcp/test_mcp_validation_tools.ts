@@ -906,4 +906,14 @@ export const test_mcp_validation_tools = (): void => {
       return hasPath(validation, "$input.shots");
     })(),
   );
+  TestValidator.predicate(
+    "malformed sequence shot registry entry returns validation",
+    (() => {
+      const validation = app.validateSequence({
+        sequence: { ...sequence, shots: [] },
+        shots: [null as unknown as IAutoMovieShot],
+      }).validation;
+      return hasPath(validation, "$shots[0]");
+    })(),
+  );
 };

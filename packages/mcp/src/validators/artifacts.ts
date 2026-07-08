@@ -342,6 +342,11 @@ export const validateSequenceArtifact = (
     false,
   );
   validateUniqueIds(shots, "$shots", "shot id", violations);
+  asArray(shots).forEach((shot, i) => {
+    const path = `$shots[${i}]`;
+    if (!validateObjectArtifact(shot, path, "shot", violations)) return;
+    validateNonEmptyId(shot.id, `${path}.id`, "shot id", violations);
+  });
   const shotsById = new Map(
     asArray(shots)
       .filter(isRecord)
