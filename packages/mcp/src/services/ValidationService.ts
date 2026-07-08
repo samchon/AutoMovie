@@ -65,6 +65,8 @@ export class ValidationService {
   public validateModel(props: {
     model: IAutoMovieModel;
   }): IAutoMovieValidateOutput {
+    const shape = validateMcpModelShape(props.model);
+    if (shape.success === false) return { validation: shape };
     return { validation: validateEngineModel({ model: props.model }) };
   }
 
@@ -116,5 +118,40 @@ const validateMcpMotionShape = (
     "motion keyframes",
     violations,
   );
+  return toValidation(violations);
+};
+
+const validateMcpModelShape = (
+  model: IAutoMovieModel,
+): IAutoMovieValidation => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateArrayArtifact(
+    (model as Partial<IAutoMovieModel>).materials,
+    "$input.materials",
+    "model materials",
+    violations,
+  );
+  validateArrayArtifact(
+    (model as Partial<IAutoMovieModel>).parts,
+    "$input.parts",
+    "model parts",
+    violations,
+  );
+  const skeleton = (model as Partial<IAutoMovieModel>).skeleton;
+  if (skeleton !== null && skeleton !== undefined)
+    validateArrayArtifact(
+      skeleton.bones,
+      "$input.skeleton.bones",
+      "skeleton bones",
+      violations,
+    );
+  const affordances = (model as Partial<IAutoMovieModel>).affordances;
+  if (affordances !== null && affordances !== undefined)
+    validateArrayArtifact(
+      affordances,
+      "$input.affordances",
+      "model affordances",
+      violations,
+    );
   return toValidation(violations);
 };
