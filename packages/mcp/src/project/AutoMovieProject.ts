@@ -53,11 +53,19 @@ export class AutoMovieProject {
   private constructor(public readonly root: string) {
     for (const dir of RESERVED_DIRS)
       fs.mkdirSync(path.join(root, dir), { recursive: true });
-    this.manifest = readJson<IManifest>(this.manifestPath) ?? {
-      version: 1,
-      assets: [],
-    };
-    writeJsonAtomic(this.manifestPath, this.manifest);
+    const existing = readJson<IManifest>(this.manifestPath);
+    if (existing === null) {
+      // A fresh project: create the manifest once.
+      this.manifest = { version: 1, assets: [] };
+      writeJsonAtomic(this.manifestPath, this.manifest);
+    } else {
+      // Opening an existing project is a pure read — keep the parsed manifest
+      // (unknown host/future fields and all) in memory without rewriting it, so
+      // an activation never churns the file's mtime or drops a field. It is
+      // re-emitted only when an actual mutation (registerAsset) rewrites it,
+      // where the spread preserves those unknown fields.
+      this.manifest = existing;
+    }
   }
 
   /**
