@@ -1,12 +1,14 @@
-import {
-  IAutoMovieQuaternion,
-  IAutoMovieTransform,
-  IAutoMovieVector3,
-} from "@automovie/interface";
+import { IAutoMovieTransform, IAutoMovieVector3 } from "@automovie/interface";
 
 import { Matrix4 } from "../math/Matrix4";
-import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+
+// The exact shortest-arc rotation now lives in math/rotationBetween — the single
+// shortest-arc primitive both the world-driver/iterative IK path (here) and the
+// analytic two-bone path (kinematics/aimRotation) route through, so the two IK
+// families cannot diverge (#643, #720). Re-exported so existing callers keep
+// their `from "./worldShared"` import.
+export { rotationBetween } from "../math/rotationBetween";
 
 /**
  * Shared plumbing for the world-space driver passes ({@link resolveWorldDrivers}
@@ -52,39 +54,6 @@ export const recompose = (
     world.set(child, Matrix4.multiply(parentWorld, local));
     recompose(child, world, localById, childrenById);
   }
-};
-
-/**
- * Exact shortest-arc rotation from unit (or zero) vector `a` to `b`,
- * `atan2`-based — **no near-parallel identity deadzone**. The predecessor
- * (`quatFromTo`) snapped `cos > 0.999999` to the identity, which put a ~1.9e-3
- * m convergence floor under the iterative IK solvers and made the aim driver
- * ignore its last ~0.08° — sub-0.1° corrections are exactly the moves a late
- * solver sweep (or a slow camera track) is made of. Here every angle down to
- * numerical zero produces its exact rotation; a degenerate input (zero vector,
- * exact parallel) degrades to the identity; exact antiparallel takes a
- * deterministic 180° flip about a perpendicular (the `|a.x| < 0.9` axis
- * split).
- */
-export const rotationBetween = (
-  a: IAutoMovieVector3,
-  b: IAutoMovieVector3,
-): IAutoMovieQuaternion => {
-  const cross = Vector3.cross(a, b);
-  const sin = Vector3.length(cross);
-  const cos = Vector3.dot(a, b);
-  if (sin < 1e-12) {
-    if (cos >= 0) return Quaternion.identity();
-    const perp =
-      Math.abs(a.x) < 0.9
-        ? Vector3.cross(a, { x: 1, y: 0, z: 0 })
-        : Vector3.cross(a, { x: 0, y: 1, z: 0 });
-    return Quaternion.fromAxisAngle(perp, 180);
-  }
-  return Quaternion.fromAxisAngle(
-    cross,
-    (Math.atan2(sin, cos) * 180) / Math.PI,
-  );
 };
 
 export const blendVec = (
