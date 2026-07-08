@@ -21,8 +21,10 @@ import { throwsError } from "../internal/predicates";
  *    write on open) — including an unknown `future` field a newer host wrote.
  * 3. A mutation (`registerAsset`) rewrites the manifest yet preserves the unknown
  *    `future` field (the spread keeps it).
- * 4. A parseable but invalid manifest reports a project-state repair error on
- *    open, not a later raw TypeError.
+ * 4. A parseable but invalid manifest shape reports a project-state repair error
+ *    on open, not a later raw TypeError.
+ * 5. Parseable manifest assets still obey the same project-relative path policy as
+ *    new registrations.
  */
 export const test_mcp_project_manifest = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-manifest-"));
@@ -81,6 +83,31 @@ export const test_mcp_project_manifest = (): void => {
         ["AutoMovie project file", "automovie.json", "Fix or remove", "assets"],
       ),
     );
+
+    for (const bad of [
+      "../escape.glb",
+      "/etc/passwd",
+      "models//gap.glb",
+      " ",
+    ]) {
+      fs.writeFileSync(
+        manifestPath,
+        `${JSON.stringify({ version: 1, assets: [bad] }, null, 2)}\n`,
+      );
+      TestValidator.predicate(
+        `invalid manifest asset refuses: "${bad}"`,
+        throwsError(
+          () => AutoMovieProject.open(root),
+          [
+            "AutoMovie project file",
+            "automovie.json",
+            "Fix or remove",
+            "assets[0]",
+            "asset path",
+          ],
+        ),
+      );
+    }
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

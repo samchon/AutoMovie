@@ -19,7 +19,8 @@ import { throwsError } from "../internal/predicates";
  * 2. Registering the same path twice throws (assets are never replaced).
  * 3. Bytes aimed at an existing file throw (never overwrite), while registering
  *    WITHOUT bytes tracks a host-written file legally.
- * 4. Absolute, drive-lettered, `..`-escaping, and empty-segment paths throw.
+ * 4. Blank, absolute, drive-lettered, `..`-escaping, and empty-segment paths
+ *    throw.
  */
 export const test_mcp_project_assets = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-assets-"));
@@ -68,6 +69,7 @@ export const test_mcp_project_assets = (): void => {
     );
 
     for (const bad of [
+      " ",
       "/etc/passwd",
       "C:/windows/system32",
       "models/../escape.glb",
