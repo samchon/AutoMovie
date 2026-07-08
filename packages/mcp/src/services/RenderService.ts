@@ -39,6 +39,7 @@ import {
 import { validateSequenceArtifact } from "../validators/artifacts";
 import {
   appendValidation,
+  isRecord,
   pushViolation,
   validateNonEmptyId,
   validateRange,
@@ -195,6 +196,7 @@ const buildChunkedRenderPlan = (props: {
   resident: boolean;
 }): IAutoMoviePlanChunkedRenderOutput => {
   const violations: IAutoMovieConstraintViolation[] = [];
+  const specIsRecord = isRecord(props.spec);
   validateRenderSpec(props.spec, violations);
   // Omitted passes => a beauty-only chunk plan with NO pass fields (byte-
   // identical to the pass-less engine plan); an explicit list is validated and
@@ -205,11 +207,9 @@ const buildChunkedRenderPlan = (props: {
       ? undefined
       : resolveGuidePasses(props.passes, violations);
   validateChunkFrames(props.chunkFrames, violations);
-  const target = resolveRenderTarget(
-    props.slate,
-    props.spec.target,
-    violations,
-  );
+  const target = specIsRecord
+    ? resolveRenderTarget(props.slate, props.spec.target, violations)
+    : null;
   // Chunking splits a sequence render; a single shot renders whole via
   // planRender, so a shot target is a violation, not a chunk plan.
   if (
@@ -393,13 +393,12 @@ const buildRenderPlan = (props: {
   resident: boolean;
 }): IAutoMoviePlanRenderOutput => {
   const violations: IAutoMovieConstraintViolation[] = [];
+  const specIsRecord = isRecord(props.spec);
   validateRenderSpec(props.spec, violations);
   const passes = resolveGuidePasses(props.passes, violations);
-  const target = resolveRenderTarget(
-    props.slate,
-    props.spec.target,
-    violations,
-  );
+  const target = specIsRecord
+    ? resolveRenderTarget(props.slate, props.spec.target, violations)
+    : null;
   const validation = toValidation(violations);
   if (validation.success === false) return { validation, plan: null };
 
@@ -542,6 +541,16 @@ const validateRenderSpec = (
   spec: IAutoMovieRenderSpec,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
+  if (!isRecord(spec)) {
+    pushViolation(
+      violations,
+      "type",
+      "$input.spec",
+      "render spec must be a JSON object",
+      spec,
+    );
+    return;
+  }
   validateNonEmptyId(
     spec.target,
     "$input.spec.target",
