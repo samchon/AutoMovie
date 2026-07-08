@@ -43,6 +43,7 @@ import {
   IAutoMoviePerformOutput,
   IAutoMovieStageOutput,
 } from "../dto";
+import { isRecord } from "../validators/primitives";
 
 type PerformProps = {
   script: IAutoMovieScriptApplication.IWrite;
@@ -77,6 +78,9 @@ export class PipelineService {
   }
 
   public perform(props: PerformProps): IAutoMoviePerformOutput {
+    const actorViolations = validateActorRegistry(props.actors);
+    if (actorViolations.length > 0)
+      return { performed: { success: false, violations: actorViolations } };
     const contexts = new Map<string, IAutoMovieActorContext>(
       Object.entries(props.actors).map(([node, context]) => [
         node,
@@ -202,6 +206,40 @@ const convertPropSpecForForge = (
       ],
     };
   }
+};
+
+const validateActorRegistry = (
+  actors: unknown,
+): IAutoMovieConstraintViolation[] => {
+  if (!isRecord(actors))
+    return [
+      violation(
+        "type",
+        "$input.actors",
+        "actors must be a JSON object",
+        actors,
+      ),
+    ];
+  const violations: IAutoMovieConstraintViolation[] = [];
+  Object.entries(actors).forEach(([node, context]) => {
+    const path = `$input.actors.${node}`;
+    if (!isRecord(context)) {
+      violations.push(
+        violation("type", path, "actor context must be a JSON object", context),
+      );
+      return;
+    }
+    if (!Array.isArray(context.gaits))
+      violations.push(
+        violation(
+          "type",
+          `${path}.gaits`,
+          "actor context gaits must be an array",
+          context.gaits,
+        ),
+      );
+  });
+  return violations;
 };
 
 const toActorContext = (
