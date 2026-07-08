@@ -51,7 +51,8 @@ const crateSpec = (): IAutoMovieMcpPropSpec => ({
  * 3. Re-forging one prop replaces exactly its own file; the sibling prop's file
  *    stays byte-identical (the #617 upsert below the slate).
  * 4. `eraseProp` removes the named spec's file; erasing a prop with no stored
- *    spec, or with a blank reason, is refused on the ledger.
+ *    spec, a malformed node scalar, or a blank reason is refused on the
+ *    ledger.
  * 5. A prop the committed scene still places is refused at `$slate.scene` and its
  *    file survives — unstaging is `commitScene`'s job. Re-forging that placed
  *    prop is likewise refused (`stored: false`, the spec unchanged), while a
@@ -140,6 +141,19 @@ export const test_mcp_prop_slice = (): void => {
     TestValidator.predicate(
       "absent violation at the node",
       hasViolation(absent.validation, "type", "$input.node"),
+    );
+    const malformed = app.eraseProp({
+      node: null as unknown as string,
+      reason: "reject malformed prop node",
+    });
+    TestValidator.equals(
+      "malformed prop node refused",
+      malformed.erased,
+      false,
+    );
+    TestValidator.predicate(
+      "malformed prop node located",
+      hasViolation(malformed.validation, "type", "$input.node"),
     );
     const blank = app.eraseProp({ node: "door", reason: " " });
     TestValidator.equals("blank reason refused", blank.erased, false);

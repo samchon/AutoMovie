@@ -20,8 +20,8 @@ import { hasViolation, throwsError } from "../internal/predicates";
  *    index, and `nextSteps` status exposes it.
  * 2. Re-registering the same asset (spelled either way) is refused at
  *    `$input.path` and the index is unchanged — the duplicate twin.
- * 3. An empty path, an absolute path, and a `..` escape are each violations at
- *    `$input.path` with nothing registered.
+ * 3. A malformed path scalar, an empty path, an absolute path, and a `..` escape
+ *    are each violations at `$input.path` with nothing registered.
  * 4. Without an active project the tool throws the actionable openProject prompt
  *    (infrastructure gate, not a ledger refusal).
  */
@@ -68,6 +68,14 @@ export const test_mcp_register_asset = (): void => {
       "refused registration changes nothing",
       duplicate.assets,
       ["renders/beat-1/frame_00000.png"],
+    );
+    const malformed = app.registerAsset({
+      path: null as unknown as string,
+    });
+    TestValidator.equals("malformed path refused", malformed.registered, false);
+    TestValidator.predicate(
+      "malformed path violation located at the path",
+      hasViolation(malformed.validation, "type", "$input.path"),
     );
 
     for (const bad of [" ", "/etc/passwd", "models/../escape.glb"]) {

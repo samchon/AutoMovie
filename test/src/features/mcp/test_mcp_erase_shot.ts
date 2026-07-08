@@ -53,8 +53,9 @@ const makeShot = (beat: string, scene: string): IAutoMovieShot => ({
  * 1. Erasing beat-1 removes `shots/beat-1.json`, `beatEnds/beat-1.json`, and
  *    beat-1's notes from `notes.json`, while beat-2's shot and beat-end files
  *    stay byte-identical and beat-2's note survives.
- * 2. Erasing a beat with no committed shot is a violation located at `$input.beat`
- *    — the erase names a mistake that must exist.
+ * 2. Erasing a beat with no committed shot or a malformed beat scalar is a
+ *    violation located at `$input.beat` — the erase names a mistake that must
+ *    exist.
  * 3. An empty reason is a violation (evidence discipline); the slate is unchanged
  *    and no file is touched.
  * 4. Without an active project the tool throws the actionable openProject guidance
@@ -148,6 +149,15 @@ export const test_mcp_erase_shot = (): void => {
     TestValidator.predicate(
       "violation located at the beat",
       hasViolation(missing.validation, "type", "$input.beat"),
+    );
+    const malformedBeat = app.eraseShot({
+      beat: null as unknown as string,
+      reason: "reject malformed beat input",
+    });
+    TestValidator.equals("malformed beat refused", malformedBeat.erased, false);
+    TestValidator.predicate(
+      "malformed beat located",
+      hasViolation(malformedBeat.validation, "type", "$input.beat"),
     );
 
     const before = fs.readFileSync(shot2File, "utf8");
