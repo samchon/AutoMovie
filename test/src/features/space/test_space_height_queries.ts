@@ -1,6 +1,9 @@
 import {
   heightAt,
   isWalkable,
+  prepareSpace,
+  prepareSurface,
+  preparedSurfaceContains,
   surfaceAt,
   surfaceContains,
   surfaceHeightAt,
@@ -120,6 +123,22 @@ export const test_space_height_queries = (): void => {
   );
   TestValidator.equals("walkable on floor", isWalkable(space, 1, 1), true);
 
+  const prepared = prepareSpace(space);
+  TestValidator.equals(
+    "prepared surfaceAt reuses the same topmost decision",
+    surfaceAt(space, 3, 3, prepared)!.id,
+    "deck",
+  );
+  TestValidator.predicate(
+    "prepared heightAt reuses ramp interpolation",
+    nclose(heightAt(space, 8, 2, prepared)!, 2),
+  );
+  TestValidator.equals(
+    "prepared isWalkable agrees with heightAt",
+    isWalkable(space, 8, 2, prepared),
+    true,
+  );
+
   const degenerate: IAutoMovieSurface = {
     ...ramp,
     rampTo: { x: 6, y: 9, z: 0 },
@@ -136,6 +155,24 @@ export const test_space_height_queries = (): void => {
   TestValidator.equals(
     "mis-ordered footprint still contains its center",
     surfaceContains(bowtie, 5, 5),
+    true,
+  );
+
+  const preparedBowtie = prepareSurface(bowtie);
+  TestValidator.equals(
+    "prepared footprint contains the same point",
+    preparedSurfaceContains(preparedBowtie, 5, 5),
+    true,
+  );
+  bowtie.polygon = [v(0, 0), v(1, 0), v(1, 1), v(0, 1)];
+  TestValidator.equals(
+    "default surfaceContains rebuilds after surface mutation",
+    surfaceContains(bowtie, 5, 5),
+    false,
+  );
+  TestValidator.equals(
+    "prepared surface containment keeps its caller-owned hull snapshot",
+    preparedSurfaceContains(preparedBowtie, 5, 5),
     true,
   );
 };

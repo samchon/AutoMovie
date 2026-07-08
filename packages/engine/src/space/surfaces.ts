@@ -10,6 +10,56 @@ import { convexHull2D, pointInHull } from "../math/hull";
 const MIN_RAMP_AXIS = 1e-9;
 
 /**
+ * Prepared footprint for one surface. Build once when checking many points
+ * against the same static polygon.
+ *
+ * @author Samchon
+ */
+export interface IAutoMoviePreparedSurface {
+  /** The source surface whose height/identity remains authoritative. */
+  readonly surface: IAutoMovieSurface;
+
+  /** Convex hull of {@link IAutoMovieSurface.polygon}, in XZ plan. */
+  readonly hull: readonly IAutoMovieVector3[];
+}
+
+/**
+ * Prepared footprint index for all surfaces in a space.
+ *
+ * @author Samchon
+ */
+export interface IAutoMoviePreparedSpace {
+  /** The source space this prepared index was built from. */
+  readonly space: IAutoMovieSpace;
+
+  /** Surface footprints with precomputed convex hulls. */
+  readonly surfaces: readonly IAutoMoviePreparedSurface[];
+}
+
+/**
+ * Precompute one surface footprint hull for repeated point queries.
+ *
+ * @author Samchon
+ */
+export const prepareSurface = (
+  surface: IAutoMovieSurface,
+): IAutoMoviePreparedSurface => ({
+  surface,
+  hull: convexHull2D(surface.polygon),
+});
+
+/**
+ * Precompute every surface footprint hull in a space.
+ *
+ * @author Samchon
+ */
+export const prepareSpace = (space: IAutoMovieSpace): IAutoMoviePreparedSpace =>
+  ({
+    space,
+    surfaces: space.surfaces.map(prepareSurface),
+  }) satisfies IAutoMoviePreparedSpace;
+
+/**
  * Height of one surface at `(x, z)`, ignoring its footprint: a flat patch is
  * `anchor.y` everywhere; a sloped patch interpolates linearly along the `anchor
  * → rampTo` axis on the ground plan (constant perpendicular — a plane). Points
@@ -44,7 +94,18 @@ export const surfaceContains = (
   surface: IAutoMovieSurface,
   x: number,
   z: number,
-): boolean => pointInHull({ x, y: 0, z }, convexHull2D(surface.polygon));
+): boolean => preparedSurfaceContains(prepareSurface(surface), x, z);
+
+/**
+ * Is `(x, z)` on a prepared surface footprint?
+ *
+ * @author Samchon
+ */
+export const preparedSurfaceContains = (
+  prepared: IAutoMoviePreparedSurface,
+  x: number,
+  z: number,
+): boolean => pointInHull({ x, y: 0, z }, prepared.hull);
 
 /**
  * The **topmost** surface under `(x, z)` — walkable or not — or `null` when the
@@ -62,11 +123,13 @@ export const surfaceAt = (
   space: IAutoMovieSpace,
   x: number,
   z: number,
+  prepared: IAutoMoviePreparedSpace = prepareSpace(space),
 ): IAutoMovieSurface | null => {
   let best: IAutoMovieSurface | null = null;
   let bestHeight = -Infinity;
-  for (const surface of space.surfaces) {
-    if (!surfaceContains(surface, x, z)) continue;
+  for (const entry of prepared.surfaces) {
+    if (!preparedSurfaceContains(entry, x, z)) continue;
+    const surface = entry.surface;
     const height = surfaceHeightAt(surface, x, z);
     if (height > bestHeight) {
       best = surface;
@@ -92,8 +155,9 @@ export const heightAt = (
   space: IAutoMovieSpace,
   x: number,
   z: number,
+  prepared: IAutoMoviePreparedSpace = prepareSpace(space),
 ): number | null => {
-  const surface = surfaceAt(space, x, z);
+  const surface = surfaceAt(space, x, z, prepared);
   if (surface === null) return null;
   if (!space.walkable.includes(surface.id)) return null;
   return surfaceHeightAt(surface, x, z);
@@ -104,7 +168,8 @@ export const isWalkable = (
   space: IAutoMovieSpace,
   x: number,
   z: number,
-): boolean => heightAt(space, x, z) !== null;
+  prepared: IAutoMoviePreparedSpace = prepareSpace(space),
+): boolean => heightAt(space, x, z, prepared) !== null;
 
 /**
  * Support contacts for an object footprint resting on the space: each footprint
@@ -121,8 +186,9 @@ export const supportContactsFor = (
   footprint: readonly IAutoMovieVector3[],
 ): IAutoMovieVector3[] => {
   const contacts: IAutoMovieVector3[] = [];
+  const prepared = prepareSpace(space);
   for (const point of footprint) {
-    const surface = surfaceAt(space, point.x, point.z);
+    const surface = surfaceAt(space, point.x, point.z, prepared);
     if (surface === null) continue;
     contacts.push({
       x: point.x,
@@ -148,5 +214,7 @@ export const spaceGround = (
   space: IAutoMovieSpace,
   fallback = 0,
 ): ((x: number, z: number) => number) => {
-  return (x: number, z: number): number => heightAt(space, x, z) ?? fallback;
+  const prepared = prepareSpace(space);
+  return (x: number, z: number): number =>
+    heightAt(space, x, z, prepared) ?? fallback;
 };
