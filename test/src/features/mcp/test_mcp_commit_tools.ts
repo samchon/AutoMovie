@@ -11,6 +11,9 @@ import {
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
@@ -298,6 +301,15 @@ export const test_mcp_commit_tools = (): void => {
     scripted.slate,
   );
   expectRefused(
+    "malformed shot root",
+    app.commitShot({
+      slate: stagedSlate,
+      shot: null as unknown as IAutoMovieShot,
+    }),
+    "$input",
+    stagedSlate,
+  );
+  expectRefused(
     "shot id without beat",
     app.commitShot({ slate: stagedSlate, shot: { ...shot, id: "shot:" } }),
     "$input.id",
@@ -334,6 +346,28 @@ export const test_mcp_commit_tools = (): void => {
       );
     })(),
   );
+  TestValidator.predicate(
+    "resident malformed shot performances returns validation",
+    (() => {
+      const root = fs.mkdtempSync(
+        path.join(os.tmpdir(), "automovie-commit-shot-shape-"),
+      );
+      const resident = new AutoMovieApplication();
+      resident.openProject({ root });
+      resident.commitScript({ script });
+      resident.commitScene({ scene: staged.scene, models });
+      const output = resident.commitShot({
+        shot: {
+          ...shot,
+          performances:
+            "NOT_ARRAY" as unknown as IAutoMovieShot["performances"],
+        },
+      });
+      return (
+        !output.committed && hasPath(output.validation, "$input.performances")
+      );
+    })(),
+  );
 
   const shotSlate = app.commitShot({ slate: stagedSlate, shot }).slate;
   TestValidator.equals("shot inserted", shotSlate.shots, [shot]);
@@ -364,6 +398,63 @@ export const test_mcp_commit_tools = (): void => {
     "$slate.script",
     emptySlate,
   );
+  expectRefused(
+    "malformed beat end root",
+    app.commitBeatEnd({
+      slate: revisedShotSlate,
+      beatEnd: null as unknown as IAutoMovieBeatEndState,
+    }),
+    "$input",
+    revisedShotSlate,
+  );
+  expectRefused(
+    "malformed beat end actors array",
+    app.commitBeatEnd({
+      slate: revisedShotSlate,
+      beatEnd: {
+        ...beatEnd,
+        actors: "NOT_ARRAY" as unknown as IAutoMovieBeatEndState["actors"],
+      },
+    }),
+    "$input.actors",
+    revisedShotSlate,
+  );
+  {
+    const malformedShotSlate = {
+      ...revisedShotSlate,
+      shots: "NOT_ARRAY" as unknown as IAutoMovieMcpWritableSlate["shots"],
+    };
+    expectRefused(
+      "beat end malformed slate shots",
+      app.commitBeatEnd({ slate: malformedShotSlate, beatEnd }),
+      "$slate.shots",
+      malformedShotSlate,
+    );
+  }
+  {
+    const malformedShotPerformanceSlate = {
+      ...revisedShotSlate,
+      shots: [
+        {
+          ...revisedShot,
+          performances:
+            "NOT_ARRAY" as unknown as IAutoMovieShot["performances"],
+        },
+      ],
+    };
+    expectRefused(
+      "beat end malformed committed shot performances",
+      app.commitBeatEnd({
+        slate: malformedShotPerformanceSlate,
+        beatEnd: {
+          ...beatEnd,
+          actors: [{ ...beatEnd.actors[0]!, motion: "missing-motion" }],
+        },
+      }),
+      "$slate.shots[0].performances",
+      malformedShotPerformanceSlate,
+    );
+  }
   TestValidator.predicate(
     "invalid beat end paths",
     (() => {
@@ -411,6 +502,25 @@ export const test_mcp_commit_tools = (): void => {
     app.commitNotes({ slate: emptySlate, notes: [note] }),
     "$slate.script",
     emptySlate,
+  );
+  expectRefused(
+    "malformed notes array",
+    app.commitNotes({
+      slate: beatEndSlate,
+      notes: "NOT_ARRAY" as unknown as IAutoMovieReviewNote[],
+    }),
+    "$input.notes",
+    beatEndSlate,
+  );
+  TestValidator.predicate(
+    "malformed note entry returns validation",
+    (() => {
+      const output = app.commitNotes({
+        slate: beatEndSlate,
+        notes: [null as unknown as IAutoMovieReviewNote],
+      });
+      return !output.committed && hasPath(output.validation, "$input.notes[0]");
+    })(),
   );
   TestValidator.predicate(
     "invalid note paths",
