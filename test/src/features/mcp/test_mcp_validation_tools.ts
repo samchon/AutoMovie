@@ -265,6 +265,29 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed motion keyframe pose returns validation",
+    (() => {
+      const validation = app.validateMotion({
+        motion: {
+          ...motion,
+          keyframes: motion.keyframes.map((keyframe, index) =>
+            index === 0
+              ? keyframe
+              : {
+                  ...keyframe,
+                  pose: {
+                    skeleton: skeleton.id,
+                    root: null,
+                  } as unknown as IAutoMoviePose,
+                },
+          ),
+        },
+        skeleton,
+      }).validation;
+      return hasPath(validation, "$input.keyframes[1].pose.joints");
+    })(),
+  );
+  TestValidator.predicate(
     "malformed model shape returns validation",
     (() => {
       const validation = app.validateModel({

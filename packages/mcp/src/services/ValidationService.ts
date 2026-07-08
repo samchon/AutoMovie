@@ -26,7 +26,10 @@ import {
   validateSequenceArtifact,
   validateShotArtifact,
 } from "../validators/artifacts";
-import { validateArrayArtifact } from "../validators/primitives";
+import {
+  validateArrayArtifact,
+  validateObjectArtifact,
+} from "../validators/primitives";
 
 /**
  * The standalone `validate*` tools — thin dispatch onto the engine validators
@@ -97,27 +100,50 @@ export class ValidationService {
   }
 }
 
-const validateMcpPoseShape = (pose: IAutoMoviePose): IAutoMovieValidation => {
+const validateMcpPoseShape = (
+  pose: IAutoMoviePose | unknown,
+  path = "$input",
+): IAutoMovieValidation => {
   const violations: IAutoMovieConstraintViolation[] = [];
+  appendMcpPoseShape(violations, pose, path);
+  return toValidation(violations);
+};
+
+const appendMcpPoseShape = (
+  violations: IAutoMovieConstraintViolation[],
+  pose: IAutoMoviePose | unknown,
+  path: string,
+): void => {
+  if (!validateObjectArtifact(pose, path, "pose", violations)) return;
   validateArrayArtifact(
     (pose as Partial<IAutoMoviePose>).joints,
-    "$input.joints",
+    `${path}.joints`,
     "pose joints",
     violations,
   );
-  return toValidation(violations);
 };
 
 const validateMcpMotionShape = (
   motion: IAutoMovieMcpMotion,
 ): IAutoMovieValidation => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  validateArrayArtifact(
-    (motion as Partial<IAutoMovieMcpMotion>).keyframes,
-    "$input.keyframes",
-    "motion keyframes",
-    violations,
-  );
+  const keyframes = (motion as Partial<IAutoMovieMcpMotion>).keyframes;
+  if (
+    validateArrayArtifact(
+      keyframes,
+      "$input.keyframes",
+      "motion keyframes",
+      violations,
+    )
+  )
+    keyframes.forEach((keyframe, index) => {
+      const path = `$input.keyframes[${index}]`;
+      if (
+        !validateObjectArtifact(keyframe, path, "motion keyframe", violations)
+      )
+        return;
+      appendMcpPoseShape(violations, keyframe.pose, `${path}.pose`);
+    });
   return toValidation(violations);
 };
 
