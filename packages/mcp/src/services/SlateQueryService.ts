@@ -42,26 +42,24 @@ export class SlateQueryService {
   public getScript(props: {
     slate?: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetScriptOutput {
+    const slate = this.stored(props.slate, "getScript");
+    assertStoredSlateRoot(slate);
     return {
-      script: readSlateContext(
-        toStoredSlate(this.stored(props.slate, "getScript")),
-        {
-          type: "getScript",
-        },
-      ) as IAutoMovieScript | null,
+      script: readSlateContext(toStoredSlate(slate), {
+        type: "getScript",
+      }) as IAutoMovieScript | null,
     };
   }
 
   public getScene(props: {
     slate?: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetSceneOutput {
+    const slate = this.stored(props.slate, "getScene");
+    assertStoredSlateRoot(slate);
     return {
-      scene: readSlateContext(
-        toStoredSlate(this.stored(props.slate, "getScene")),
-        {
-          type: "getScene",
-        },
-      ) as IAutoMovieScene | null,
+      scene: readSlateContext(toStoredSlate(slate), {
+        type: "getScene",
+      }) as IAutoMovieScene | null,
     };
   }
 
@@ -70,6 +68,7 @@ export class SlateQueryService {
     beat: string;
   }): IAutoMovieGetShotOutput {
     const slate = this.stored(props.slate, "getShot");
+    assertStoredSlateRoot(slate);
     assertStoredSlateCollection(
       slate.shots,
       "slate.shots",
@@ -88,6 +87,7 @@ export class SlateQueryService {
     beat?: string;
   }): IAutoMovieGetNotesOutput {
     const slate = this.stored(props.slate, "getNotes");
+    assertStoredSlateRoot(slate);
     assertStoredSlateCollection(
       slate.notes,
       "slate.notes",
@@ -106,6 +106,7 @@ export class SlateQueryService {
     beat: string;
   }): IAutoMovieGetBeatEndOutput {
     const slate = this.stored(props.slate, "getBeatEnd");
+    assertStoredSlateRoot(slate);
     assertStoredSlateCollection(
       slate.beatEnds,
       "slate.beatEnds",
@@ -129,6 +130,14 @@ const toStoredSlate = (slate: IAutoMovieMcpStoredSlate): IAutoMovieSlate => ({
   notes: slate.notes,
   film: null,
 });
+
+function assertStoredSlateRoot(
+  slate: unknown,
+): asserts slate is IAutoMovieMcpStoredSlate {
+  if (typeof slate === "object" && slate !== null && !Array.isArray(slate))
+    return;
+  throw new Error("stored slate at slate must be a JSON object");
+}
 
 const assertStoredSlateCollection = (
   value: unknown,
