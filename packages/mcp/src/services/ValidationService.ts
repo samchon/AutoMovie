@@ -259,7 +259,10 @@ const validateMcpModelShape = (
         );
     });
   const skeleton = shape.skeleton;
-  if (skeleton !== null && skeleton !== undefined) {
+  if (
+    skeleton !== null &&
+    validateObjectArtifact(skeleton, "$input.skeleton", "skeleton", violations)
+  ) {
     validateNonEmptyId(
       skeleton.id,
       "$input.skeleton.id",
