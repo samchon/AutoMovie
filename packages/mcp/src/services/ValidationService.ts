@@ -33,6 +33,7 @@ import {
   validateNonEmptyId,
   validateObjectArtifact,
   validateTransformArtifact,
+  validateVectorArtifact,
 } from "../validators/primitives";
 
 const JOINT_CONSTRAINT_AXES = ["flexion", "abduction", "twist"] as const;
@@ -260,6 +261,20 @@ const validateMcpModelShape = (
           violations,
         );
     });
+  const body = shape.body;
+  if (
+    body !== null &&
+    validateObjectArtifact(body, "$input.body", "model body", violations)
+  ) {
+    const centerOfMass = body.centerOfMass;
+    if (centerOfMass !== null)
+      validateVectorArtifact(
+        centerOfMass,
+        "$input.body.centerOfMass",
+        "model body center of mass",
+        violations,
+      );
+  }
   const skeleton = shape.skeleton;
   if (
     skeleton !== null &&
