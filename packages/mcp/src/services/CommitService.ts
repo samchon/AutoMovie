@@ -714,13 +714,22 @@ export class CommitService {
         violations,
       );
     } catch {
-      pushViolation(
-        violations,
-        "type",
-        "$input.transform.rotation",
-        "placement rotation must be omitted, null, or a complete Euler rotation with x, y, z, and order",
-        (props.transform as Partial<IAutoMovieMcpTransform>).rotation,
-      );
+      if (!isRecord(props.transform))
+        pushViolation(
+          violations,
+          "type",
+          "$input.transform",
+          "placement transform must be a JSON object",
+          props.transform,
+        );
+      else
+        pushViolation(
+          violations,
+          "type",
+          "$input.transform.rotation",
+          "placement rotation must be omitted, null, or a complete Euler rotation with x, y, z, and order",
+          props.transform.rotation,
+        );
     }
     if (slate.scene === null)
       pushViolation(
