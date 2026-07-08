@@ -214,6 +214,28 @@ export const test_mcp_geometry_query_tools = (): void => {
       ["scene.nodes", "array"],
     ),
   );
+  TestValidator.predicate(
+    "malformed distance scene node transform rejects",
+    throwsError(
+      () =>
+        app.measureDistance({
+          scene: {
+            ...scene,
+            nodes: [
+              {
+                ...scene.nodes[0]!,
+                transform:
+                  null as unknown as IAutoMovieScene["nodes"][number]["transform"],
+              },
+              scene.nodes[1]!,
+            ],
+          },
+          from: { kind: "node", node: "actor" },
+          to: { kind: "node", node: "marker" },
+        }),
+      ["scene.nodes[0].transform", "JSON object"],
+    ),
+  );
 
   const resolved = app.getResolvedPose({
     context,
@@ -275,6 +297,31 @@ export const test_mcp_geometry_query_tools = (): void => {
           actor: "actor",
         }),
       ["context.models[0]", "JSON object"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed pose context model skeleton rejects",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            models: [
+              {
+                ...context.models[0]!,
+                skeleton: {
+                  ...skeleton,
+                  bones: null as unknown as NonNullable<
+                    IAutoMovieMcpGeometryContext["models"][number]["skeleton"]
+                  >["bones"],
+                },
+              },
+              context.models[1]!,
+            ],
+          },
+          actor: "actor",
+        }),
+      ["context.models[0].skeleton.bones", "array"],
     ),
   );
   TestValidator.predicate(
@@ -499,6 +546,25 @@ export const test_mcp_geometry_query_tools = (): void => {
           actor: "actor",
         }),
       ["motion registry entry", "context.motions.actor"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed motion keyframes reject",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            motions: {
+              actor: {
+                ...motion,
+                keyframes: null as unknown as IAutoMovieMcpMotion["keyframes"],
+              },
+            },
+          },
+          actor: "actor",
+        }),
+      ["context.motions.actor.keyframes", "array"],
     ),
   );
 };
