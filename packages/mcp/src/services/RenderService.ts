@@ -566,6 +566,22 @@ const validateRenderSpec = (
     false,
   );
   validateRange(spec.crf, "$input.spec.crf", 0, 51, "render crf", violations);
+  if (spec.codec !== "h264")
+    pushViolation(
+      violations,
+      "type",
+      "$input.spec.codec",
+      `render codec must be "h264", but was "${spec.codec}"`,
+      spec.codec,
+    );
+  if (spec.pixelFormat !== "yuv420p")
+    pushViolation(
+      violations,
+      "type",
+      "$input.spec.pixelFormat",
+      `render pixelFormat must be "yuv420p", but was "${spec.pixelFormat}"`,
+      spec.pixelFormat,
+    );
 };
 
 const resolveRenderTarget = (
