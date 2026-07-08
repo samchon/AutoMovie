@@ -97,7 +97,7 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
  * 1. `planRender` resolves committed shot and sequence targets into frame
  *    schedules, frame paths, per-pass guide outputs, and ffmpeg args — beauty
  *    only by default, pass-tagged paths when more passes are requested, and an
- *    unknown pass name is a violation.
+ *    unknown or malformed pass list is a violation.
  * 2. Invalid render specs, missing targets, duplicate shots, invalid sequence
  *    targets, and zero-frame plans return field-located diagnostics.
  * 3. `seeFrame` resolves a preview frame by index or time, rejects conflicts and
@@ -155,6 +155,16 @@ export const test_mcp_render_tools = async (): Promise<void> => {
       app.planRender({ slate, spec, passes: ["beauty", "sketch"] }).validation,
       "$input.passes[1]",
     ),
+  );
+  const malformedPasses = app.planRender({
+    slate,
+    spec,
+    passes: null as unknown as string[],
+  });
+  TestValidator.predicate(
+    "malformed pass list is a violation",
+    malformedPasses.plan === null &&
+      hasPath(malformedPasses.validation, "$input.passes"),
   );
 
   const sequencePlan = app.planRender({

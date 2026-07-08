@@ -95,7 +95,8 @@ const commitResident = (app: AutoMovieApplication): void => {
  * 1. A resident `planChunkedRender` splits the committed film into frame-atomic
  *    chunks under `renders/`, with a lossless concat reassembly; the chunk
  *    frame counts sum to the whole render (nothing duplicated or dropped).
- * 2. Requesting `passes` adds per-chunk pass outputs and per-pass walk manifests.
+ * 2. Requesting `passes` adds per-chunk pass outputs and per-pass walk manifests;
+ *    malformed pass lists are field-located violations.
  * 3. A resident `planCaptions` plans the whole sidecar and, with `chunkFrames`,
  *    one chunk-local sidecar per render chunk (frame counts sum to the whole).
  * 4. A shot target (not the film) is a violation — a shot renders whole.
@@ -177,6 +178,19 @@ export const test_mcp_render_chunked = (): void => {
     TestValidator.predicate(
       "each chunk carries pass outputs",
       passed.chunks.every((c) => c.passOutputs !== undefined),
+    );
+    const malformedPasses = app.planChunkedRender({
+      spec: filmSpec,
+      chunkFrames: 4,
+      passes: null as unknown as string[],
+    });
+    TestValidator.predicate(
+      "malformed chunked pass list is a violation",
+      malformedPasses.plan === null &&
+        malformedPasses.validation.success === false &&
+        malformedPasses.validation.violations.some(
+          (violation) => violation.path === "$input.passes",
+        ),
     );
 
     // 3. resident caption sidecar + chunk-aligned slices
