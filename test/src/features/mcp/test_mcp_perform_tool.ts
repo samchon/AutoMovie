@@ -59,6 +59,8 @@ const riglessContext = (
  *    with the authored action dropped.
  * 4. A rig-required reach with a rigless MCP actor context fails as data instead
  *    of succeeding with no motion for that actor.
+ * 5. Malformed actor context registries fail as data with `$input.actors...` paths
+ *    instead of leaking wrapper TypeErrors.
  */
 export const test_mcp_perform_tool = (): void => {
   const app = new AutoMovieApplication();
@@ -158,6 +160,57 @@ export const test_mcp_perform_tool = (): void => {
       failed.violations.some(
         (violation) =>
           violation.kind === "type" && violation.path === "$input.beat",
+      ),
+  );
+  const malformedActors = app.perform({
+    script,
+    staged,
+    performance,
+    actors: null as unknown as Record<string, IAutoMovieMcpActorContext>,
+  }).performed;
+  TestValidator.predicate(
+    "malformed actors registry returns violations",
+    malformedActors.success === false &&
+      malformedActors.violations.some(
+        (violation) =>
+          violation.kind === "type" && violation.path === "$input.actors",
+      ),
+  );
+  const malformedActor = app.perform({
+    script,
+    staged,
+    performance,
+    actors: {
+      knightA: undefined,
+    } as unknown as Record<string, IAutoMovieMcpActorContext>,
+  }).performed;
+  TestValidator.predicate(
+    "malformed actor entry returns violations",
+    malformedActor.success === false &&
+      malformedActor.violations.some(
+        (violation) =>
+          violation.kind === "type" &&
+          violation.path === "$input.actors.knightA",
+      ),
+  );
+  const malformedGaits = app.perform({
+    script,
+    staged,
+    performance,
+    actors: {
+      knightA: {
+        ...context(nodePosition("knightA"), 0),
+        gaits: null,
+      } as unknown as IAutoMovieMcpActorContext,
+    },
+  }).performed;
+  TestValidator.predicate(
+    "malformed actor gaits return violations",
+    malformedGaits.success === false &&
+      malformedGaits.violations.some(
+        (violation) =>
+          violation.kind === "type" &&
+          violation.path === "$input.actors.knightA.gaits",
       ),
   );
 
