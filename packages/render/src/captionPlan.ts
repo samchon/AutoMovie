@@ -1,4 +1,4 @@
-import { resolveSequencePlayback, sequenceTimeline } from "@automovie/engine";
+import { playbackCursor, sequenceTimeline } from "@automovie/engine";
 import {
   IAutoMovieScript,
   IAutoMovieSequence,
@@ -40,12 +40,13 @@ export const planCaptionSidecar = (props: {
   if (!Number.isFinite(fps) || fps <= 0)
     throw new Error(`fps must be a finite number > 0, but was ${fps}`);
 
-  const { runtime } = sequenceTimeline(sequence, shots);
-  const frameCount = Math.round(runtime * fps);
+  const timeline = sequenceTimeline(sequence, shots);
+  const frameCount = Math.round(timeline.runtime * fps);
   const captions = beatCaptions(script);
 
+  const cursor = playbackCursor(sequence, timeline);
   const frameBeats = Array.from({ length: frameCount }, (_, frame) =>
-    beatOf(resolveSequencePlayback(sequence, shots, frame / fps)!.shot),
+    beatOf(cursor(frame / fps).shot),
   );
   const entries = groupSpans(frameBeats).map((span): IAutoMovieCaptionEntry => {
     const authored = captions.get(span.beat);

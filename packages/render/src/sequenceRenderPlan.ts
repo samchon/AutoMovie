@@ -1,6 +1,6 @@
 import {
-  IAutoMoviePlaybackSample,
   IAutoMoviePlaybackTimeline,
+  playbackCursor,
   sequenceTimeline,
 } from "@automovie/engine";
 import {
@@ -220,9 +220,7 @@ export const planSequenceRender = (props: {
       trim: props.sequence.shots[entry.entry]!.trim,
     })),
     transitionSpans: transitionSpans(props.sequence, timeline),
-    frames: times.map((time, index) =>
-      frameSample(props.sequence, timeline, time, index, frameDir),
-    ),
+    frames: frameSamples(props.sequence, timeline, times, frameDir),
     frameDir,
     firstFrame: `${frameDir}/${frameName(0)}`,
     lastFrame: `${frameDir}/${frameName(times.length - 1)}`,
@@ -253,51 +251,36 @@ const transitionSpans = (
     ];
   });
 
-const frameSample = (
+/**
+ * Resolve every output frame in one forward sweep. Frame times come from
+ * {@link frameTimes} (`i / fps`, strictly increasing), so a single
+ * {@link playbackCursor} walks the timeline once — O(frames + entries) instead
+ * of a per-frame scan — landing on the same live entry a per-frame resolve
+ * would, so the samples are byte-identical.
+ */
+const frameSamples = (
   sequence: IAutoMovieSequence,
   timeline: IAutoMoviePlaybackTimeline,
-  time: number,
-  index: number,
+  times: number[],
   frameDir: string,
-): IAutoMovieSequenceRenderFrame => {
-  const sample = resolveFromTimeline(sequence, timeline, time);
-  return {
-    index,
-    timeSeconds: time,
-    path: `${frameDir}/${frameName(index)}`,
-    shot: sample.shot,
-    shotTimeSeconds: sample.time,
-    blend:
-      sample.blend === null
-        ? null
-        : {
-            shot: sample.blend.shot,
-            shotTimeSeconds: sample.blend.time,
-            alpha: sample.blend.alpha,
-          },
-  };
-};
-
-const resolveFromTimeline = (
-  sequence: IAutoMovieSequence,
-  timeline: IAutoMoviePlaybackTimeline,
-  seconds: number,
-): IAutoMoviePlaybackSample => {
-  let live = timeline.entries[0]!;
-  for (const entry of timeline.entries)
-    if (entry.start <= seconds && seconds < entry.start + entry.played)
-      live = entry;
-
-  const transition = sequence.shots[live.entry]!.transition;
-  const elapsed = seconds - live.start;
-  let blend: IAutoMoviePlaybackSample["blend"] = null;
-  if (transition !== null && elapsed < transition.duration) {
-    const outgoing = timeline.entries[live.entry - 1]!;
-    blend = {
-      shot: outgoing.shot,
-      time: outgoing.offset + (seconds - outgoing.start),
-      alpha: elapsed / transition.duration,
+): IAutoMovieSequenceRenderFrame[] => {
+  const cursor = playbackCursor(sequence, timeline);
+  return times.map((time, index): IAutoMovieSequenceRenderFrame => {
+    const sample = cursor(time);
+    return {
+      index,
+      timeSeconds: time,
+      path: `${frameDir}/${frameName(index)}`,
+      shot: sample.shot,
+      shotTimeSeconds: sample.time,
+      blend:
+        sample.blend === null
+          ? null
+          : {
+              shot: sample.blend.shot,
+              shotTimeSeconds: sample.blend.time,
+              alpha: sample.blend.alpha,
+            },
     };
-  }
-  return { shot: live.shot, time: live.offset + elapsed, blend };
+  });
 };

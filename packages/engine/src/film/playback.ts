@@ -130,11 +130,89 @@ export const sequenceTimeline = (
 };
 
 /**
+ * Turn one live entry into the on-screen sample: the live shot at its local
+ * time, plus — inside the live entry's incoming transition — the previous
+ * entry's tail as the `blend` with the incoming weight `alpha = elapsed /
+ * transition`. The single place the shot/time/blend shape is built, so the
+ * stateless and cursor resolvers cannot drift.
+ */
+const sampleAt = (
+  sequence: IAutoMovieSequence,
+  entries: readonly IAutoMoviePlaybackEntry[],
+  live: IAutoMoviePlaybackEntry,
+  seconds: number,
+): IAutoMoviePlaybackSample => {
+  const transition = sequence.shots[live.entry]!.transition;
+  const elapsed = seconds - live.start;
+  let blend: IAutoMoviePlaybackSample["blend"] = null;
+  if (transition !== null && elapsed < transition.duration) {
+    const outgoing = entries[live.entry - 1]!;
+    blend = {
+      shot: outgoing.shot,
+      time: outgoing.offset + (seconds - outgoing.start),
+      alpha: elapsed / transition.duration,
+    };
+  }
+  return { shot: live.shot, time: live.offset + elapsed, blend };
+};
+
+/**
+ * Resolve one instant against an already-built {@link sequenceTimeline} — the
+ * single-source resolver behind {@link resolveSequencePlayback} and the render
+ * plan. The last entry whose span contains the instant is live (the incoming
+ * shot wins inside a transition overlap). Precondition: `seconds` lies within
+ * `[0, runtime)` — the caller already framed a real output instant (the render
+ * plan drives it from `frameTimes`; {@link resolveSequencePlayback} range-checks
+ * first). O(entries); for a whole film use {@link playbackCursor}.
+ */
+export const resolveFromTimeline = (
+  sequence: IAutoMovieSequence,
+  timeline: IAutoMoviePlaybackTimeline,
+  seconds: number,
+): IAutoMoviePlaybackSample => {
+  let live = timeline.entries[0]!;
+  for (const entry of timeline.entries)
+    if (entry.start <= seconds && seconds < entry.start + entry.played)
+      live = entry;
+  return sampleAt(sequence, timeline.entries, live, seconds);
+};
+
+/**
+ * A forward-only playback resolver for a **monotonically non-decreasing** query
+ * clock — the whole-film seam that turns the per-frame O(entries) scan into one
+ * O(frames + entries) sweep (the render/caption plans call it once per frame in
+ * output order). Entry starts are strictly increasing and the timeline tiles
+ * `[0, runtime)` with no gaps, so the largest entry that has started by
+ * `seconds` is exactly the last one containing it — the cursor only ever moves
+ * forward and lands on the same live entry {@link resolveFromTimeline}'s scan
+ * would, so the samples are byte-identical. Feeding it a time earlier than the
+ * previous call breaks that invariant; use {@link resolveFromTimeline} for
+ * random access.
+ */
+export const playbackCursor = (
+  sequence: IAutoMovieSequence,
+  timeline: IAutoMoviePlaybackTimeline,
+): ((seconds: number) => IAutoMoviePlaybackSample) => {
+  const entries = timeline.entries;
+  let liveIdx = 0;
+  return (seconds: number): IAutoMoviePlaybackSample => {
+    while (
+      liveIdx + 1 < entries.length &&
+      entries[liveIdx + 1]!.start <= seconds
+    )
+      ++liveIdx;
+    return sampleAt(sequence, entries, entries[liveIdx]!, seconds);
+  };
+};
+
+/**
  * Resolve one output second to what is on screen: the last entry whose span
  * contains the instant is live; while the instant still sits inside that
  * entry's incoming transition, the previous entry's tail rides along as the
  * `blend` with the incoming weight `alpha = elapsed / transition`. Returns null
- * outside `[0, runtime)` — there is no frame there to draw.
+ * outside `[0, runtime)` — there is no frame there to draw. Builds the timeline
+ * per call, for random single-instant access (interactive scrubbing); a whole
+ * film drives {@link playbackCursor} off one timeline instead.
  */
 export const resolveSequencePlayback = (
   sequence: IAutoMovieSequence,
@@ -143,24 +221,7 @@ export const resolveSequencePlayback = (
 ): IAutoMoviePlaybackSample | null => {
   const timeline = sequenceTimeline(sequence, shots);
   if (seconds < 0 || seconds >= timeline.runtime) return null;
-
-  let live = timeline.entries[0]!;
-  for (const entry of timeline.entries)
-    if (entry.start <= seconds && seconds < entry.start + entry.played)
-      live = entry;
-
-  const transition = sequence.shots[live.entry]!.transition;
-  const elapsed = seconds - live.start;
-  let blend: IAutoMoviePlaybackSample["blend"] = null;
-  if (transition !== null && elapsed < transition.duration) {
-    const outgoing = timeline.entries[live.entry - 1]!;
-    blend = {
-      shot: outgoing.shot,
-      time: outgoing.offset + (seconds - outgoing.start),
-      alpha: elapsed / transition.duration,
-    };
-  }
-  return { shot: live.shot, time: live.offset + elapsed, blend };
+  return resolveFromTimeline(sequence, timeline, seconds);
 };
 
 /**
@@ -214,10 +275,8 @@ export const playbackFrameSamples = (
       `sequence fps must be a finite number > 0, but was ${sequence.fps}`,
     );
 
-  const { runtime } = sequenceTimeline(sequence, shots);
-  const count = Math.round(runtime * sequence.fps);
-  return Array.from(
-    { length: count },
-    (_, i) => resolveSequencePlayback(sequence, shots, i / sequence.fps)!,
-  );
+  const timeline = sequenceTimeline(sequence, shots);
+  const count = Math.round(timeline.runtime * sequence.fps);
+  const cursor = playbackCursor(sequence, timeline);
+  return Array.from({ length: count }, (_, i) => cursor(i / sequence.fps));
 };
