@@ -14,7 +14,7 @@ import {
   IAutoMovieMcpPropSpec,
   IAutoMovieMcpWritableSlate,
 } from "../dto";
-import { beatOf } from "./shotKey";
+import { beatOf, shotIdOf } from "./shotKey";
 
 /**
  * The resident AutoMovie project — **the project folder itself is the memory**
@@ -82,8 +82,16 @@ export class AutoMovieProject {
     return {
       script: readJson<IAutoMovieScript>(this.slicePath("script.json")),
       scene: readJson<IAutoMovieScene>(this.slicePath("scene.json")),
-      shots: this.readKeyedSlices<IAutoMovieShot>("shots"),
-      beatEnds: this.readKeyedSlices<IAutoMovieBeatEndState>("beatEnds"),
+      shots: this.readKeyedSlices<IAutoMovieShot>("shots", {
+        label: "shot id",
+        expected: shotIdOf,
+        actual: (shot) => shot.id,
+      }),
+      beatEnds: this.readKeyedSlices<IAutoMovieBeatEndState>("beatEnds", {
+        label: "beat end",
+        expected: (beat) => beat,
+        actual: (end) => end.beat,
+      }),
       notes:
         readJson<IAutoMovieReviewNote[]>(this.slicePath("notes.json")) ?? [],
     };
@@ -143,7 +151,11 @@ export class AutoMovieProject {
 
   /** The stored prop specs, one per `props/<node>.json`, in filename order. */
   public storedProps(): IAutoMovieMcpPropSpec[] {
-    return this.readKeyedSlices<IAutoMovieMcpPropSpec>("props");
+    return this.readKeyedSlices<IAutoMovieMcpPropSpec>("props", {
+      label: "prop node",
+      expected: (node) => node,
+      actual: (spec) => spec.node,
+    });
   }
 
   /**
@@ -225,14 +237,31 @@ export class AutoMovieProject {
     return path.join(this.root, name);
   }
 
-  private readKeyedSlices<T>(dir: string): T[] {
+  private readKeyedSlices<T>(
+    dir: string,
+    key: {
+      label: string;
+      expected: (fileKey: string) => string;
+      actual: (value: T) => string | null | undefined;
+    },
+  ): T[] {
     const base = path.join(this.root, dir);
-    return fs
+    const out: T[] = [];
+    for (const name of fs
       .readdirSync(base)
       .filter((name) => name.endsWith(".json"))
-      .sort()
-      .map((name) => readJson<T>(path.join(base, name))!)
-      .filter((value) => value !== null);
+      .sort()) {
+      const file = path.join(base, name);
+      const value = readJson<T>(file);
+      if (value === null) continue;
+      const fileKey = sliceKeyFromFilename(file, name);
+      const expected = key.expected(fileKey);
+      const actual = key.actual(value);
+      if (actual !== expected)
+        throw new AutoMovieProjectKeyError(file, key.label, expected, actual);
+      out.push(value);
+    }
+    return out;
   }
 
   private reconcileBeatSlices(
@@ -341,6 +370,22 @@ class AutoMovieProjectJsonError extends Error {
   }
 }
 
+class AutoMovieProjectKeyError extends Error {
+  public constructor(
+    file: string,
+    label: string,
+    expected: string,
+    actual: string | null | undefined,
+  ) {
+    super(
+      `AutoMovie project file "${file}" has a keyed-slice mismatch. ` +
+        `Fix or remove this file, then call openProject again. ` +
+        `The filename expected ${label} "${expected}", but found ${formatKey(actual)}.`,
+    );
+    this.name = "AutoMovieProjectKeyError";
+  }
+}
+
 const readJson = <T>(file: string): T | null => {
   if (!fs.existsSync(file)) return null;
   try {
@@ -350,6 +395,23 @@ const readJson = <T>(file: string): T | null => {
     throw new AutoMovieProjectJsonError(file, reason);
   }
 };
+
+const sliceKeyFromFilename = (file: string, name: string): string => {
+  try {
+    return decodeURIComponent(name.slice(0, -".json".length));
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new AutoMovieProjectKeyError(
+      file,
+      "filename key",
+      "a URI-encoded key",
+      `${name} (${reason})`,
+    );
+  }
+};
+
+const formatKey = (key: string | null | undefined): string =>
+  key === null || key === undefined ? "none" : `"${key}"`;
 
 /** Atomic write: temp file in the same directory, then rename over. */
 const writeAtomic = (file: string, data: Uint8Array | string): void => {
