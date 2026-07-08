@@ -192,6 +192,8 @@ export const test_mcp_render_tools = async (): Promise<void> => {
           width: 0,
           height: Number.POSITIVE_INFINITY,
           crf: 52,
+          codec: "vp9" as never,
+          pixelFormat: "rgba" as never,
         },
       });
       return (
@@ -200,7 +202,9 @@ export const test_mcp_render_tools = async (): Promise<void> => {
         hasPath(output.validation, "$input.spec.fps") &&
         hasPath(output.validation, "$input.spec.width") &&
         hasPath(output.validation, "$input.spec.height") &&
-        hasPath(output.validation, "$input.spec.crf")
+        hasPath(output.validation, "$input.spec.crf") &&
+        hasPath(output.validation, "$input.spec.codec") &&
+        hasPath(output.validation, "$input.spec.pixelFormat")
       );
     })(),
   );
