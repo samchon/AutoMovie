@@ -288,6 +288,13 @@ const validateMcpModelShape = (
           "skeleton bone rest transform",
           violations,
         );
+        if (bone.constraint !== null)
+          validateObjectArtifact(
+            bone.constraint,
+            `${path}.constraint`,
+            "skeleton bone constraint",
+            violations,
+          );
       });
   }
   const affordances = shape.affordances;
