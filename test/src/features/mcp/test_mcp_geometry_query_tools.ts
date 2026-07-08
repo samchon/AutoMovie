@@ -135,6 +135,8 @@ const residentShot: IAutoMovieShot = {
  *    wrong node or model.
  * 7. Malformed geometry motion registries reject with `context.motions...` paths
  *    instead of leaking wrapper TypeErrors.
+ * 8. Malformed query targets resolve to null instead of leaking target-shape
+ *    TypeErrors.
  */
 export const test_mcp_geometry_query_tools = (): void => {
   const nodeDistance = app.measureDistance({
@@ -162,6 +164,24 @@ export const test_mcp_geometry_query_tools = (): void => {
       scene,
       from: { kind: "direction", headingDeg: 90 },
       to: { kind: "node", node: "actor" },
+    }).measurement,
+    null,
+  );
+  TestValidator.equals(
+    "malformed distance source is null",
+    app.measureDistance({
+      scene,
+      from: { kind: "group", nodes: null } as never,
+      to: { kind: "node", node: "actor" },
+    }).measurement,
+    null,
+  );
+  TestValidator.equals(
+    "malformed distance target is null",
+    app.measureDistance({
+      scene,
+      from: { kind: "node", node: "actor" },
+      to: null as never,
     }).measurement,
     null,
   );
@@ -216,6 +236,15 @@ export const test_mcp_geometry_query_tools = (): void => {
       context,
       actor: "actor",
       target: { kind: "offscreen", edge: "left" },
+    }).reach,
+    null,
+  );
+  TestValidator.equals(
+    "malformed reach target is null",
+    app.getReach({
+      context,
+      actor: "actor",
+      target: null as never,
     }).reach,
     null,
   );

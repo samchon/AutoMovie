@@ -4,7 +4,6 @@ import {
   Vector3,
   reachPose,
   resolvePose,
-  resolveTargetPoint,
   sampleMotion,
 } from "@automovie/engine";
 import {
@@ -35,6 +34,7 @@ import {
 import { shotIdOf } from "../project/shotKey";
 import { validateSceneArtifact } from "../validators/artifacts";
 import { isRecord } from "../validators/primitives";
+import { resolveRuntimeSafeTargetPoint } from "./actionTargets";
 
 /**
  * Engine geometry queries — resolved poses, reach reports, and distance
@@ -81,7 +81,7 @@ export class GeometryService {
       source.resident ? { caller: "getReach" } : undefined,
     );
     if (actor === null) return { reach: null };
-    const target = resolveTargetPoint(
+    const target = resolveRuntimeSafeTargetPoint(
       props.target,
       nodePositions(source.context.scene),
     );
@@ -108,8 +108,8 @@ export class GeometryService {
   }): IAutoMovieMeasureDistanceOutput {
     const scene = this.resolveScene(props.scene, "measureDistance");
     const nodes = nodePositions(scene);
-    const from = resolveTargetPoint(props.from, nodes);
-    const to = resolveTargetPoint(props.to, nodes);
+    const from = resolveRuntimeSafeTargetPoint(props.from, nodes);
+    const to = resolveRuntimeSafeTargetPoint(props.to, nodes);
     return {
       measurement:
         from === null || to === null
