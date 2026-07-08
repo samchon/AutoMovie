@@ -63,6 +63,39 @@ export const test_mcp_forge_prop = (): void => {
     "door",
   );
 
+  // #724: a curve-driven prop driver omits inRange/outRange entirely; the MCP
+  // converter must lower it without inventing dead ranges, and it still forges.
+  const curveSpec: IAutoMovieMcpPropSpec = {
+    ...spec,
+    articulation: {
+      ...spec.articulation!,
+      profile: {
+        ...spec.articulation!.profile,
+        drivers: [
+          ...spec.articulation!.profile.drivers.filter(
+            (d) => d.type !== "driven",
+          ),
+          {
+            type: "driven",
+            output: { kind: "node", node: "pivot", path: "translation" },
+            source: { kind: "pointer", pointer: "/ajar", valueType: "scalar" },
+            curve: {
+              points: [
+                { source: 0, output: 0 },
+                { source: 1, output: 0.1 },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  };
+  TestValidator.equals(
+    "curve-driven prop forges with no ranges (#724)",
+    app.forgeProp({ spec: curveSpec }).forged.success,
+    true,
+  );
+
   const engineSpec = createDoorPropSpec();
   const articulation = engineSpec.articulation!;
   const slammed = resolveFrame({

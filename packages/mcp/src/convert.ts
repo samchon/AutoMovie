@@ -93,11 +93,18 @@ const toEnginePropProfile = (
 
 const toEnginePropDriver = (
   driver: IAutoMovieMcpPropDriver,
-): IAutoMovieDriver =>
-  driver.type === "driven"
-    ? {
-        ...driver,
-        inRange: [driver.inRange.from, driver.inRange.to],
-        outRange: [driver.outRange.from, driver.outRange.to],
-      }
-    : driver;
+): IAutoMovieDriver => {
+  if (driver.type !== "driven") return driver;
+  // Strip the MCP-form ranges and re-add engine tuples only when present — a
+  // curve-driven driver omits both, so it must not carry a dead range (#724).
+  const { inRange, outRange, ...rest } = driver;
+  return {
+    ...rest,
+    ...(inRange !== undefined
+      ? { inRange: [inRange.from, inRange.to] as [number, number] }
+      : {}),
+    ...(outRange !== undefined
+      ? { outRange: [outRange.from, outRange.to] as [number, number] }
+      : {}),
+  };
+};
