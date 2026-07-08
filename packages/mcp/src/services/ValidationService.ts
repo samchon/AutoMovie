@@ -38,6 +38,8 @@ export class ValidationService {
     pose: IAutoMoviePose;
     skeleton: IAutoMovieSkeleton;
   }): IAutoMovieValidateOutput {
+    const shape = validateMcpPoseShape(props.pose);
+    if (shape.success === false) return { validation: shape };
     return {
       validation: validateEnginePose({
         pose: props.pose,
@@ -92,6 +94,17 @@ export class ValidationService {
     };
   }
 }
+
+const validateMcpPoseShape = (pose: IAutoMoviePose): IAutoMovieValidation => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateArrayArtifact(
+    (pose as Partial<IAutoMoviePose>).joints,
+    "$input.joints",
+    "pose joints",
+    violations,
+  );
+  return toValidation(violations);
+};
 
 const validateMcpMotionShape = (
   motion: IAutoMovieMcpMotion,
