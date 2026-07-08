@@ -78,6 +78,21 @@ const EVENT_KIND_ORDER: Record<IAutoMovieInteractionEvent["kind"], number> = {
   release: 6,
 };
 
+const CAMERA_FRAMINGS = new Set<IAutoMovieCameraAction["framing"]>([
+  "wide",
+  "full",
+  "medium",
+  "close",
+]);
+
+const CAMERA_MOVES = new Set<IAutoMovieCameraAction["move"]>([
+  "static",
+  "follow",
+  "orbit",
+  "push-in",
+  "whip",
+]);
+
 const orderEvents = (
   events: readonly IAutoMovieInteractionEvent[],
 ): IAutoMovieInteractionEvent[] =>
@@ -401,6 +416,20 @@ export const performShot = (props: {
     if (action.verb === "frame") {
       const camera =
         typeof action.actor === "string" ? action.actor : action.actor[0]!;
+      if (!CAMERA_FRAMINGS.has(action.framing))
+        out.push(
+          "type",
+          `${base}[${i}].framing`,
+          `camera framing must be one of wide, full, medium, close, but was "${String(action.framing)}"`,
+          action.framing,
+        );
+      if (!CAMERA_MOVES.has(action.move))
+        out.push(
+          "type",
+          `${base}[${i}].move`,
+          `camera move must be one of static, follow, orbit, push-in, whip, but was "${String(action.move)}"`,
+          action.move,
+        );
       validateTargetNodeIds(action.on, `${base}[${i}].on`, "frame target");
       if (typeof action.actor !== "string")
         out.push(
