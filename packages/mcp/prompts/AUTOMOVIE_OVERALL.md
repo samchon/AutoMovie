@@ -9,14 +9,14 @@ Read this guide first. Before using a stage's tools, read the matching guide: `S
 1. `openProject` — activate (or create) the project folder. The folder itself is the durable state: human-readable JSON slices plus registered assets. Call this first in resident mode.
 2. `nextSteps` — ask the server what is missing and what to do next, any time. The same computation gates out-of-order commits, so asking first avoids thrown prerequisite errors.
 3. `commitScript` — the script is the upstream truth: logline, theme, cast, beats. Committing a new script clears every downstream slice (scene, shots, beat ends, notes, film) — in a resident project the cleared slices' files are removed.
-4. `forge` / `forgeProp` — pure compute: build stand-in rigs for `modelRef: null` cast members, and author props as data. Nothing is persisted by these; they gate and return artifacts.
+4. `forge` / `forgeProp` — build stand-in rigs for `modelRef: null` cast members, and author props as data. `forge` persists nothing — it gates and returns the rigs. `forgeProp` gates and returns too, but in a resident project an accepted spec also writes through as `props/<node>.json` (`stored: true`), so a prop is forged once and later sessions read it instead of re-sending the spec (see `PROPS` / `PROJECT_MEMORY`).
 5. `stage` → `commitScene` — place the cast, cameras, and lights; commit the staged scene.
 6. `block` → `perform` → `commitShot` — per beat: gate the shot plan, compile the performance into motions and a shot, commit it.
 7. `commitBeatEnd` / `commitNotes` — persist continuity handoffs and review notes per beat.
 8. `cut` → `commitFilm` — assemble the shots into the sequence.
 9. `planRender` / `seeFrame` — plan deterministic render output and capture frames (see `RENDER_GUIDES`).
 
-Compute tools (`stage`, `block`, `perform`, `cut`, `forge`, `forgeProp`) are pure functions of their explicit inputs and are never gated. Order is enforced only where state lives: resident commits.
+Compute tools (`stage`, `block`, `perform`, `cut`, `forge`, `forgeProp`) are never gated by prerequisite order. All but `forgeProp` are pure functions of their explicit inputs; `forgeProp` is pure too, except that a resident success writes its spec through as noted above. Order is enforced only where state lives: resident commits.
 
 ## Result Semantics
 
