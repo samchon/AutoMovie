@@ -46,6 +46,8 @@ import { hasViolation } from "../internal/predicates";
  *     `$input.draft[0].at`.
  * 17. A non-`frame` action assigned to a staged camera yields `type` on
  *     `$input.draft[0].actor`.
+ * 18. Malformed non-frame actor shapes yield `type` violations instead of raw
+ *     iteration failures.
  */
 export const test_film_perform_shot_bad_refs = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -409,5 +411,54 @@ export const test_film_perform_shot_bad_refs = (): void => {
     "non-frame camera actor rejected",
     cameraGesture.success === false &&
       hasViolation(cameraGesture, "type", "$input.draft[0].actor"),
+  );
+
+  const objectActor = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "locomote",
+          actor: {} as never,
+          start: 0,
+          duration: 1,
+          gait: "walk",
+          to: { kind: "point", point: { x: 1, y: 0, z: 0 } },
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "object actor rejected",
+    objectActor.success === false &&
+      hasViolation(objectActor, "type", "$input.draft[0].actor"),
+  );
+
+  const nonStringActorEntry = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: [null] as never,
+          start: 0,
+          duration: 1,
+          kind: "wave",
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "non-string actor entry rejected",
+    nonStringActorEntry.success === false &&
+      hasViolation(nonStringActorEntry, "type", "$input.draft[0].actor[0]"),
   );
 };
