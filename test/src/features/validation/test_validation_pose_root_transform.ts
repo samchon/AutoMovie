@@ -16,14 +16,16 @@ const poseWith = (root: IAutoMovieTransform) =>
 
 /**
  * Pose root transforms are renderer/export-facing TRS data. Their numeric
- * components must be finite, and scale must remain positive.
+ * components must be finite, rotation must stay unit-length, and scale must
+ * remain positive.
  *
  * Scenarios:
  *
  * 1. A valid root transform still validates.
  * 2. Non-finite translation is a range violation.
  * 3. Non-finite rotation is a range violation.
- * 4. Non-positive scale is a range violation.
+ * 4. Finite but non-unit rotation is a range violation.
+ * 5. Non-positive scale is a range violation.
  */
 export const test_validation_pose_root_transform = (): void => {
   const skeleton = createSkeleton();
@@ -65,6 +67,23 @@ export const test_validation_pose_root_transform = (): void => {
   TestValidator.predicate(
     "range violation on root rotation",
     hasViolation(badRotation, "range", "$input.root.rotation.w"),
+  );
+
+  const nonUnitRotation = validatePoseResult(
+    poseWith({
+      ...ROOT,
+      rotation: { ...ROOT.rotation, w: 2 },
+    }),
+    skeleton,
+  );
+  TestValidator.equals(
+    "non-unit root rotation fails",
+    nonUnitRotation.success,
+    false,
+  );
+  TestValidator.predicate(
+    "range violation on root rotation length",
+    hasViolation(nonUnitRotation, "range", "$input.root.rotation"),
   );
 
   const badScale = validatePoseResult(

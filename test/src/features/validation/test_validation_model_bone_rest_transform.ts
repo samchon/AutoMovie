@@ -23,14 +23,16 @@ const modelWithBoneRest = (rest: IAutoMovieTransform) => {
 
 /**
  * Skeleton bone rest transforms seed viewer/export/film FK paths. Their TRS
- * components must be finite, and scale must remain positive.
+ * components must be finite, rotation must stay unit-length, and scale must
+ * remain positive.
  *
  * Scenarios:
  *
  * 1. A valid explicit rest transform still validates.
  * 2. Non-finite rest translation is a range violation.
  * 3. Non-finite rest rotation is a range violation.
- * 4. Non-positive rest scale is a range violation.
+ * 4. Finite but non-unit rest rotation is a range violation.
+ * 5. Non-positive rest scale is a range violation.
  */
 export const test_validation_model_bone_rest_transform = (): void => {
   TestValidator.equals(
@@ -76,6 +78,26 @@ export const test_validation_model_bone_rest_transform = (): void => {
       badRotation,
       "range",
       "$input.skeleton.bones[0].rest.rotation.w",
+    ),
+  );
+
+  const nonUnitRotation = validateModel({
+    model: modelWithBoneRest({
+      ...IDENTITY_TRANSFORM,
+      rotation: { ...IDENTITY_TRANSFORM.rotation, w: 2 },
+    }),
+  });
+  TestValidator.equals(
+    "non-unit rest rotation fails",
+    nonUnitRotation.success,
+    false,
+  );
+  TestValidator.predicate(
+    "range violation on rest rotation length",
+    hasViolation(
+      nonUnitRotation,
+      "range",
+      "$input.skeleton.bones[0].rest.rotation",
     ),
   );
 

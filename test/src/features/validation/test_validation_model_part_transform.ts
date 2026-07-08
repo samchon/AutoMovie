@@ -23,14 +23,15 @@ const modelWithPartTransform = (transform: IAutoMovieTransform) => {
 
 /**
  * Model part transforms are renderer/export-facing TRS data. Non-null
- * transforms must carry finite components, and scale must remain positive.
+ * transforms must carry finite components, unit rotations, and positive scale.
  *
  * Scenarios:
  *
  * 1. A valid non-null part transform still validates.
  * 2. Non-finite translation is a range violation.
  * 3. Non-finite rotation is a range violation.
- * 4. Non-positive scale is a range violation.
+ * 4. Finite but non-unit rotation is a range violation.
+ * 5. Non-positive scale is a range violation.
  */
 export const test_validation_model_part_transform = (): void => {
   TestValidator.equals(
@@ -73,6 +74,26 @@ export const test_validation_model_part_transform = (): void => {
   TestValidator.predicate(
     "range violation on part rotation",
     hasViolation(badRotation, "range", "$input.parts[0].transform.rotation.w"),
+  );
+
+  const nonUnitRotation = validateModel({
+    model: modelWithPartTransform({
+      ...PART_TRANSFORM,
+      rotation: { ...PART_TRANSFORM.rotation, w: 2 },
+    }),
+  });
+  TestValidator.equals(
+    "non-unit part rotation fails",
+    nonUnitRotation.success,
+    false,
+  );
+  TestValidator.predicate(
+    "range violation on part rotation length",
+    hasViolation(
+      nonUnitRotation,
+      "range",
+      "$input.parts[0].transform.rotation",
+    ),
   );
 
   const badScale = validateModel({

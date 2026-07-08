@@ -166,6 +166,13 @@ export const test_mcp_validation_tools = (): void => {
         scene: {
           ...scene,
           nodes: [
+            {
+              ...scene.nodes[0]!,
+              transform: {
+                ...scene.nodes[0]!.transform,
+                rotation: { ...scene.nodes[0]!.transform.rotation, w: 2 },
+              },
+            },
             ...scene.nodes,
             { ...scene.nodes[0]!, id: "ghost", model: "missing" },
           ],
@@ -174,7 +181,8 @@ export const test_mcp_validation_tools = (): void => {
         models: [{ id: model.id, skeleton }],
       }).validation;
       return (
-        hasPath(validation, "$input.nodes[1].model") &&
+        hasPath(validation, "$input.nodes[0].transform.rotation") &&
+        hasPath(validation, "$input.nodes[2].model") &&
         hasPath(validation, "$input.cameras[0].far")
       );
     })(),
