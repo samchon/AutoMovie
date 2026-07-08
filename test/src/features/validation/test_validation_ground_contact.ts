@@ -8,7 +8,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { hasViolation, nclose, violationCount } from "../internal/predicates";
+import { hasWarning, nclose, warningCount } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -68,11 +68,12 @@ const key = (time: number, rootY: number): IAutoMovieKeyframe => ({
  *
  * Scenarios:
  *
- * 1. A root dip below the ground produces physics violations with a stable
- *    `$input.samples[i].leftFoot.worldPosition.y` path.
+ * 1. A root dip below the ground produces physics WARNINGS (D015 — advice, not a
+ *    gate) with a stable `$input.samples[i].leftFoot.worldPosition.y` path; the
+ *    run still succeeds. `physicsIntent` suppresses them.
  * 2. A small dip inside tolerance is accepted, proving the validator can avoid
  *    false positives for near-ground numerical graze.
- * 3. A custom ground plane and custom path are reflected in the emitted violation
+ * 3. A custom ground plane and custom path are reflected in the emitted warning
  *    path and overshoot.
  */
 export const test_validation_ground_contact = (): void => {
@@ -83,20 +84,34 @@ export const test_validation_ground_contact = (): void => {
     sampleRate: 4,
   });
   TestValidator.predicate(
-    "penetration rejected",
-    hasViolation(
-      rejected,
-      "physics",
-      "$input.samples[2].leftFoot.worldPosition.y",
-    ),
+    "penetration warns but succeeds",
+    rejected.success === true &&
+      hasWarning(
+        rejected,
+        "physics",
+        "$input.samples[2].leftFoot.worldPosition.y",
+      ),
   );
   const mid =
-    rejected.success === false
-      ? rejected.violations.find((v) => v.path.includes("samples[2]"))
+    rejected.success === true
+      ? (rejected.warnings ?? []).find((v) => v.path.includes("samples[2]"))
       : null;
   TestValidator.predicate(
     "penetration overshoot",
     mid?.kind === "physics" && nclose(mid.overshoot ?? -1, 0.2),
+  );
+
+  // physicsIntent (a phasing ghost) suppresses the penetration warnings.
+  const acknowledged = validateGroundContact({
+    motion: dipping,
+    skeleton: SKELETON,
+    sampleRate: 4,
+    physicsIntent: "phasing",
+  });
+  TestValidator.equals(
+    "acknowledged penetration is clean",
+    acknowledged.success === true && warningCount(acknowledged),
+    0,
   );
 
   const grazing = makeMotion([key(0, 0), key(0.5, -0.02), key(1, 0)], 1);
@@ -121,15 +136,11 @@ export const test_validation_ground_contact = (): void => {
   });
   TestValidator.predicate(
     "custom path",
-    hasViolation(
+    hasWarning(
       raisedGround,
       "physics",
       "$motion.samples[0].leftFoot.worldPosition.y",
     ),
   );
-  TestValidator.equals(
-    "custom ground samples",
-    violationCount(raisedGround),
-    2,
-  );
+  TestValidator.equals("custom ground samples", warningCount(raisedGround), 2);
 };

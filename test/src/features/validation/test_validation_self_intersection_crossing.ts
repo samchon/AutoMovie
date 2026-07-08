@@ -8,7 +8,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { hasViolation, nclose } from "../internal/predicates";
+import { hasWarning, nclose } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -96,12 +96,15 @@ export const test_validation_self_intersection_crossing = (): void => {
     sampleRate: 1,
   });
   TestValidator.predicate(
-    "interior X-crossing rejected",
-    hasViolation(crossing, "physics", "$input.pairs[0].samples[0].distance"),
+    "interior X-crossing warns but succeeds",
+    crossing.success === true &&
+      hasWarning(crossing, "physics", "$input.pairs[0].samples[0].distance"),
   );
   const fired =
-    crossing.success === false
-      ? crossing.violations.find((entry) => entry.path.includes("samples[0]"))
+    crossing.success === true
+      ? (crossing.warnings ?? []).find((entry) =>
+          entry.path.includes("samples[0]"),
+        )
       : null;
   TestValidator.predicate(
     "X-crossing overshoot is the full radius sum",
