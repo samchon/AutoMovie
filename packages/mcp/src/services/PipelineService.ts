@@ -9,14 +9,12 @@ import {
   forgeProp,
   makeActorSynthesizer,
   performShot,
-  resolveTargetPoint,
   stageScene,
   toValidation,
   violation,
 } from "@automovie/engine";
 import {
   IAutoMovieActionCall,
-  IAutoMovieActionTarget,
   IAutoMovieAssembleApplication,
   IAutoMovieBlockingApplication,
   IAutoMovieConstraintViolation,
@@ -44,6 +42,11 @@ import {
   IAutoMovieStageOutput,
 } from "../dto";
 import { isRecord } from "../validators/primitives";
+import {
+  isRuntimeSafeActionTarget,
+  resolveRuntimeSafeTargetPoint,
+  targetNodeId,
+} from "./actionTargets";
 
 type PerformProps = {
   script: IAutoMovieScriptApplication.IWrite;
@@ -52,11 +55,6 @@ type PerformProps = {
   actors: Record<string, IAutoMovieMcpActorContext>;
   blocking?: IAutoMovieBlockingApplication.IWrite;
 };
-
-type RuntimeSafeTarget = Extract<
-  IAutoMovieActionTarget,
-  { kind: "node" | "point" | "group" | "direction" | "offscreen" }
->;
 
 /**
  * The film pipeline compute — the stage/block/perform/cut/forge ladder over the
@@ -290,55 +288,23 @@ const actorPath = (
   return index === -1 ? `${actionPath}.actor` : `${actionPath}.actor[${index}]`;
 };
 
-const isFiniteVector3 = (value: unknown): value is IAutoMovieVector3 =>
-  isRecord(value) &&
-  Number.isFinite(value.x) &&
-  Number.isFinite(value.y) &&
-  Number.isFinite(value.z);
-
-const isRuntimeSafeTarget = (target: unknown): target is RuntimeSafeTarget => {
-  if (!isRecord(target)) return false;
-  if (target.kind === "node") return typeof target.node === "string";
-  if (target.kind === "point") return isFiniteVector3(target.point);
-  if (target.kind === "group")
-    return (
-      Array.isArray(target.nodes) &&
-      target.nodes.every((node) => typeof node === "string")
-    );
-  if (target.kind === "direction") return Number.isFinite(target.headingDeg);
-  if (target.kind === "offscreen")
-    return (
-      target.edge === "left" ||
-      target.edge === "right" ||
-      target.edge === "forward" ||
-      target.edge === "back"
-    );
-  return false;
-};
-
 const targetResolves = (
   target: unknown,
   nodes: Map<string, IAutoMovieVector3>,
-): boolean =>
-  isRuntimeSafeTarget(target) && resolveTargetPoint(target, nodes) !== null;
-
-const targetNodeId = (target: unknown): string | null =>
-  isRecord(target) && target.kind === "node" && typeof target.node === "string"
-    ? target.node
-    : null;
+): boolean => resolveRuntimeSafeTargetPoint(target, nodes) !== null;
 
 const canRunDefaultSynthesisPrecheck = (
   action: IAutoMovieActionCall,
 ): boolean => {
-  if (action.verb === "locomote") return isRuntimeSafeTarget(action.to);
-  if (action.verb === "lookAt") return isRuntimeSafeTarget(action.to);
-  if (action.verb === "reach") return isRuntimeSafeTarget(action.to);
-  if (action.verb === "react") return isRuntimeSafeTarget(action.from);
+  if (action.verb === "locomote") return isRuntimeSafeActionTarget(action.to);
+  if (action.verb === "lookAt") return isRuntimeSafeActionTarget(action.to);
+  if (action.verb === "reach") return isRuntimeSafeActionTarget(action.to);
+  if (action.verb === "react") return isRuntimeSafeActionTarget(action.from);
   if (
     action.verb === "gesture" &&
     (action.kind === "point" || action.kind === "strike")
   )
-    return action.at === undefined || isRuntimeSafeTarget(action.at);
+    return action.at === undefined || isRuntimeSafeActionTarget(action.at);
   return true;
 };
 
