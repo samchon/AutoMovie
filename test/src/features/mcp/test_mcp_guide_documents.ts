@@ -20,6 +20,7 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["PROJECT_MEMORY", "byte-writing stays the host adapter's job"],
   ["PROJECT_MEMORY", "forge a prop once"],
   ["RENDER_GUIDES", "no-capture-adapter"],
+  ["RENDER_GUIDES", "omit `slate`"],
 ];
 
 /**

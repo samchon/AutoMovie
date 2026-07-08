@@ -6,6 +6,8 @@ AutoMovie's render output is the deterministic control layer a diffusion pass fo
 
 `planRender` turns a committed shot or the committed film into a deterministic render plan: exact rational frame times (`t = i/fps`, never accumulated), frame paths, and the ffmpeg argument vector. Request `passes` to plan guide-pass outputs alongside the beauty frames.
 
+Like every stateful tool, `planRender` (and `seeFrame`) is resident-or-explicit: **omit `slate`** and it plans the resident project, so a two-hour film never re-sends its whole state to plan a render. Resident plans default their frame and video paths into the project's `renders/` directory (an explicit `frameDir`/`outputPath` still overrides); an explicit slate keeps the legacy `frames/<stem>` paths. Byte-writing stays the host adapter's job — track written outputs with `registerAsset` if you want them in the manifest.
+
 ## Guide Passes
 
 Five passes, each a reversible viewer override applied at capture time (the engine result is never mutated):

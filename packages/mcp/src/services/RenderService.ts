@@ -40,30 +40,59 @@ import {
  * frame capture (#608). Pixels never flow through the server: the service plans
  * the frame and hands the context's capture adapter the request. The MCP
  * contract lives on the {@link AutoMovieApplication} facade.
+ *
+ * Like every stateful tool (#614), render is **resident-or-explicit**: omit
+ * `slate` and it reads the resident project's `writableSlate()`, so a long
+ * production never re-sends its whole state just to plan a render. Planning is
+ * a pure read — no film-ladder prerequisite gate (that guards resident
+ * _commits_); an unready target still surfaces as a `resolveRenderTarget`
+ * violation, the more precise feedback. The resident default frame/output paths
+ * live under the project's reserved `renders/` directory; an explicit slate
+ * keeps the legacy `frames/<stem>` / `<stem>.mp4` defaults, byte-identical.
  */
 export class RenderService {
   public constructor(private readonly context: AutoMovieContext) {}
 
+  /**
+   * The slate a render reads: the explicit one when given (a pure stateless
+   * plan), else the resident project's writable slate (#614, the
+   * {@link SlateQueryService} `stored()` / {@link CommitService} `base()`
+   * precedent). `resident` selects the `renders/` default paths.
+   */
+  private resolveSlate(
+    slate: IAutoMovieMcpWritableSlate | undefined,
+    caller: string,
+  ): { slate: IAutoMovieMcpWritableSlate; resident: boolean } {
+    if (slate !== undefined) return { slate, resident: false };
+    return {
+      slate: this.context.requireProject(caller).writableSlate(),
+      resident: true,
+    };
+  }
+
   public planRender(props: {
-    slate: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     spec: IAutoMovieRenderSpec;
     passes?: string[];
     frameDir?: string;
     outputPath?: string;
   }): IAutoMoviePlanRenderOutput {
-    return buildRenderPlan(props);
+    const { slate, resident } = this.resolveSlate(props.slate, "planRender");
+    return buildRenderPlan({ ...props, slate, resident });
   }
 
   public async seeFrame(props: {
-    slate: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     spec: IAutoMovieRenderSpec;
     frame?: number;
     time?: number;
     pass?: string;
   }): Promise<IAutoMovieSeeFrameOutput> {
+    const { slate, resident } = this.resolveSlate(props.slate, "seeFrame");
     const planned = buildRenderPlan({
-      slate: props.slate,
+      slate,
       spec: props.spec,
+      resident,
     });
     if (planned.validation.success === false)
       return { validation: planned.validation, preview: null };
@@ -114,6 +143,7 @@ const buildRenderPlan = (props: {
   passes?: string[];
   frameDir?: string;
   outputPath?: string;
+  resident: boolean;
 }): IAutoMoviePlanRenderOutput => {
   const violations: IAutoMovieConstraintViolation[] = [];
   validateRenderSpec(props.spec, violations);
@@ -140,13 +170,25 @@ const buildRenderPlan = (props: {
       plan: null,
     };
 
+  // Resident renders default into the project's reserved `renders/` directory
+  // (#614/#678); an explicit slate keeps the legacy `frames/<stem>` /
+  // `<stem>.mp4` defaults so its plan stays byte-identical. An explicit
+  // frameDir/outputPath overrides either default.
+  const stem = renderPathStem(props.spec.target);
+  const defaultFrameDir = props.resident ? `renders/${stem}` : `frames/${stem}`;
+  const defaultOutputPath = props.resident
+    ? `renders/${stem}.mp4`
+    : `${stem}.mp4`;
+
   if (target!.target.kind === "sequence" && props.slate.film !== null) {
     const plan = planSequenceRender({
       sequence: props.slate.film,
       shots: props.slate.shots,
       spec: props.spec,
-      frameDir: props.frameDir,
-      outputPath: props.outputPath,
+      frameDir:
+        props.frameDir ?? (props.resident ? defaultFrameDir : undefined),
+      outputPath:
+        props.outputPath ?? (props.resident ? defaultOutputPath : undefined),
     });
     return {
       validation: { success: true },
@@ -170,9 +212,8 @@ const buildRenderPlan = (props: {
     };
   }
 
-  const stem = renderPathStem(props.spec.target);
-  const frameDir = props.frameDir ?? `frames/${stem}`;
-  const outputPath = props.outputPath ?? `${stem}.mp4`;
+  const frameDir = props.frameDir ?? defaultFrameDir;
+  const outputPath = props.outputPath ?? defaultOutputPath;
   const inputPattern = `${frameDir}/${framePattern()}`;
   return {
     validation: { success: true },

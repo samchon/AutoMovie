@@ -34,7 +34,9 @@ import { beatOf } from "./shotKey";
  * - `models/`, `assets/` — reserved for 3D binaries (GLB, textures); the store
  *   tracks and guards these paths, the host's adapters write the bytes (the
  *   render package's adapter discipline).
- * - `renders/` — reserved for guide-pass outputs (#607/#608).
+ * - `renders/` — where a resident `planRender`/`seeFrame` defaults its frame and
+ *   encoded-video paths (#678); the host adapter writes the bytes and may track
+ *   them with `registerAsset`.
  *
  * A **cleared slice's file is removed** (null script → no `script.json`, an
  * empty notes list → no `notes.json`), so presence in the tree always means
