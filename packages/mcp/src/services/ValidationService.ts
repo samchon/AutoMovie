@@ -211,6 +211,13 @@ const validateMcpModelShape = (
       if (!validateObjectArtifact(material, path, "model material", violations))
         return;
       validateNonEmptyId(material.id, `${path}.id`, "material id", violations);
+      if (material.baseColorTexture !== null)
+        validateNonEmptyId(
+          material.baseColorTexture,
+          `${path}.baseColorTexture`,
+          "base color texture id",
+          violations,
+        );
     });
   const parts = shape.parts;
   if (validateArrayArtifact(parts, "$input.parts", "model parts", violations))
