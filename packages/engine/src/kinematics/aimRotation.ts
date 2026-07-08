@@ -1,20 +1,30 @@
 import { IAutoMovieQuaternion, IAutoMovieVector3 } from "@automovie/interface";
 
-import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { rotationBetween } from "../math/rotationBetween";
 
 const VECTOR_AXES = ["x", "y", "z"] as const;
 
 /**
- * The shortest-arc rotation that turns the unit vector `from` onto `to` — the
- * core of an **aim / look-at** driver (a head or eye whose forward axis tracks
- * a target, a camera that follows its subject). Feed `from` = the bone's rest
- * forward axis and `to` = `target − bonePosition` and the returned quaternion
- * orients the bone at the target.
+ * The shortest-arc rotation that turns the vector `from` onto `to` — the core
+ * of an **aim / look-at** driver (a head or eye whose forward axis tracks a
+ * target, a camera that follows its subject) and the analytic two-bone lowering
+ * (`twoBoneChainArticulation`, hence `reachPose`/`legPlant`). Feed `from` = the
+ * bone's rest forward axis and `to` = `target − bonePosition` and the returned
+ * quaternion orients the bone at the target.
  *
- * Degenerate cases are handled: already-aligned returns identity; antiparallel
- * returns a 180° turn about an arbitrary perpendicular axis (so it never
- * divides by a zero cross product).
+ * This validates finite inputs, normalizes them, and delegates to the engine's
+ * single shortest-arc primitive {@link rotationBetween} — the same
+ * **deadzone-free** `atan2` helper the world-driver / iterative IK path uses,
+ * so the analytic and iterative IK families cannot disagree (#643, #720). Every
+ * angle down to numerical zero produces its exact rotation, so a target a
+ * fraction of a degree off-axis is tracked exactly instead of snapped to the
+ * identity.
+ *
+ * Degenerate cases are handled by {@link rotationBetween}: already-aligned
+ * returns identity; antiparallel returns a 180° turn about a deterministic
+ * perpendicular (the `|a.x| < 0.9` axis split) so it never divides by a zero
+ * cross product.
  *
  * @author Samchon
  */
@@ -24,20 +34,7 @@ export const aimRotation = (
 ): IAutoMovieQuaternion => {
   validateVector("from", from);
   validateVector("to", to);
-  const a = Vector3.normalize(from);
-  const b = Vector3.normalize(to);
-  const d = Vector3.dot(a, b);
-  if (d > 0.999999) return { x: 0, y: 0, z: 0, w: 1 };
-  if (d < -0.999999) {
-    let axis = Vector3.cross(a, { x: 1, y: 0, z: 0 });
-    if (Vector3.length(axis) < 1e-6)
-      axis = Vector3.cross(a, { x: 0, y: 1, z: 0 });
-    return Quaternion.fromAxisAngle(Vector3.normalize(axis), 180);
-  }
-  return Quaternion.fromAxisAngle(
-    Vector3.normalize(Vector3.cross(a, b)),
-    (Math.acos(d) * 180) / Math.PI,
-  );
+  return rotationBetween(Vector3.normalize(from), Vector3.normalize(to));
 };
 
 const validateVector = (
