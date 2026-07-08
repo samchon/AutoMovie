@@ -35,6 +35,8 @@ import {
   validateTransformArtifact,
 } from "../validators/primitives";
 
+const JOINT_CONSTRAINT_AXES = ["flexion", "abduction", "twist"] as const;
+
 /**
  * The standalone `validate*` tools — thin dispatch onto the engine validators
  * and the shared MCP artifact validators. The MCP contract lives on the
@@ -288,13 +290,26 @@ const validateMcpModelShape = (
           "skeleton bone rest transform",
           violations,
         );
-        if (bone.constraint !== null)
+        const constraint = bone.constraint;
+        if (
+          constraint !== null &&
           validateObjectArtifact(
-            bone.constraint,
+            constraint,
             `${path}.constraint`,
             "skeleton bone constraint",
             violations,
-          );
+          )
+        )
+          JOINT_CONSTRAINT_AXES.forEach((axis) => {
+            const range = constraint[axis];
+            if (range !== null)
+              validateObjectArtifact(
+                range,
+                `${path}.constraint.${axis}`,
+                `skeleton bone constraint ${axis} range`,
+                violations,
+              );
+          });
       });
   }
   const affordances = shape.affordances;
