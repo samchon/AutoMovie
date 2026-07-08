@@ -18,6 +18,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
+import { AutoMovieContext } from "../AutoMovieContext";
 import { toEngineMotion } from "../convert";
 import {
   IAutoMovieGetReachOutput,
@@ -29,6 +30,7 @@ import {
   IAutoMovieMcpResolvedPose,
   IAutoMovieMeasureDistanceOutput,
 } from "../dto";
+import { shotIdOf } from "../project/shotKey";
 
 /**
  * Engine geometry queries — resolved poses, reach reports, and distance
@@ -36,30 +38,48 @@ import {
  * {@link AutoMovieApplication} facade; this service owns the execution.
  */
 export class GeometryService {
+  public constructor(private readonly context: AutoMovieContext) {}
+
   public getResolvedPose(props: {
-    context: IAutoMovieMcpGeometryContext;
+    context?: IAutoMovieMcpGeometryContext;
     actor: string;
+    beat?: string;
     t?: number;
   }): IAutoMovieGetResolvedPoseOutput {
+    const source = this.resolveGeometryContext(
+      props.context,
+      props.beat,
+      "getResolvedPose",
+    );
     return {
       resolvedPose: resolveActorGeometry(
-        props.context,
+        source.context,
         props.actor,
         props.t ?? 0,
+        source.resident ? { caller: "getResolvedPose" } : undefined,
       ),
     };
   }
 
   public getReach(props: {
-    context: IAutoMovieMcpGeometryContext;
+    context?: IAutoMovieMcpGeometryContext;
     actor: string;
     target: IAutoMovieActionTarget;
   }): IAutoMovieGetReachOutput {
-    const actor = findActorRig(props.context, props.actor);
+    const source = this.resolveGeometryContext(
+      props.context,
+      undefined,
+      "getReach",
+    );
+    const actor = findActorRig(
+      source.context,
+      props.actor,
+      source.resident ? { caller: "getReach" } : undefined,
+    );
     if (actor === null) return { reach: null };
     const target = resolveTargetPoint(
       props.target,
-      nodePositions(props.context.scene),
+      nodePositions(source.context.scene),
     );
     if (target === null) return { reach: null };
     const localTarget = toModelPoint(target, actor.node.transform);
@@ -78,11 +98,12 @@ export class GeometryService {
   }
 
   public measureDistance(props: {
-    scene: IAutoMovieScene;
+    scene?: IAutoMovieScene;
     from: IAutoMovieActionTarget;
     to: IAutoMovieActionTarget;
   }): IAutoMovieMeasureDistanceOutput {
-    const nodes = nodePositions(props.scene);
+    const scene = this.resolveScene(props.scene, "measureDistance");
+    const nodes = nodePositions(scene);
     const from = resolveTargetPoint(props.from, nodes);
     const to = resolveTargetPoint(props.to, nodes);
     return {
@@ -96,7 +117,60 @@ export class GeometryService {
             },
     };
   }
+
+  private resolveScene(
+    scene: IAutoMovieScene | undefined,
+    caller: string,
+  ): IAutoMovieScene {
+    if (scene !== undefined) return scene;
+    const project = this.context.requireProject(caller);
+    const stored = project.storedSlate();
+    if (stored.scene === null)
+      throw new Error(
+        `${caller} was called without a scene, but the resident project has no committed scene. Commit a scene first or pass scene explicitly.`,
+      );
+    return stored.scene;
+  }
+
+  private resolveGeometryContext(
+    context: IAutoMovieMcpGeometryContext | undefined,
+    beat: string | undefined,
+    caller: string,
+  ): GeometryContextSource {
+    if (context !== undefined) return { context, resident: false };
+    const project = this.context.requireProject(caller);
+    const slate = project.writableSlate();
+    if (slate.scene === null)
+      throw new Error(
+        `${caller} was called without a context, but the resident project has no committed scene. Commit a scene first or pass context explicitly.`,
+      );
+    const memory = this.context.geometryMemory();
+    const models = mergeResidentModels([
+      ...memory.models,
+      ...project.storedProps().map((prop) => ({
+        id: prop.model.id,
+        skeleton: prop.model.skeleton,
+      })),
+    ]);
+    return {
+      resident: true,
+      context: {
+        scene: slate.scene,
+        models,
+        motions: memory.motions,
+        shot:
+          beat === undefined
+            ? null
+            : (slate.shots.find((shot) => shot.id === shotIdOf(beat)) ?? null),
+      },
+    };
+  }
 }
+
+type GeometryContextSource = {
+  context: IAutoMovieMcpGeometryContext;
+  resident: boolean;
+};
 
 type GeometryActor = {
   node: IAutoMovieScene["nodes"][number];
@@ -113,11 +187,18 @@ const resolveActorGeometry = (
   context: IAutoMovieMcpGeometryContext,
   actor: string,
   t: number,
+  contract?: ResidentGeometryContract,
 ): IAutoMovieMcpResolvedPose | null => {
   assertFiniteTime(t);
-  const actorRig = findActorRig(context, actor);
+  const actorRig = findActorRig(context, actor, contract);
   if (actorRig === null) return null;
-  const state = resolveActorPose(context, actorRig.node, actorRig.skeleton, t);
+  const state = resolveActorPose(
+    context,
+    actorRig.node,
+    actorRig.skeleton,
+    t,
+    contract,
+  );
   if (state === null) return null;
   return {
     node: actor,
@@ -147,6 +228,7 @@ const resolveActorPose = (
   node: IAutoMovieScene["nodes"][number],
   skeleton: IAutoMovieSkeleton,
   t: number,
+  contract?: ResidentGeometryContract,
 ): ActorPoseState | null => {
   const performance =
     context.shot === undefined || context.shot === null
@@ -155,6 +237,10 @@ const resolveActorPose = (
   const motionId = performance === null ? node.motion : performance.motion;
   if (motionId !== null) {
     const motion = findMotion(context, motionId);
+    if (motion === null && contract !== undefined)
+      throw new Error(
+        `${contract.caller} cannot sample resident motion "${motionId}" for actor "${node.id}". Project files persist shot motion ids, not compiled motion clips; call commitShot with motions in this application session or pass context explicitly.`,
+      );
     if (motion === null) return null;
     return {
       motion: motionId,
@@ -173,13 +259,28 @@ const resolveActorPose = (
 const findActorRig = (
   context: IAutoMovieMcpGeometryContext,
   actor: string,
+  contract?: ResidentGeometryContract,
 ): GeometryActor | null => {
   const node = findSceneNode(context.scene, actor);
   if (node === null) return null;
   const model = findGeometryModel(context.models, node.model);
+  if (model === null && contract !== undefined)
+    throw new Error(
+      `${contract.caller} cannot resolve resident model "${node.model}" for actor "${actor}". Project files persist the scene, but not cast model skeleton payloads; call commitScene with models in this application session or pass context explicitly.`,
+    );
   if (model === null || model.skeleton === null) return null;
   return { node, model, skeleton: model.skeleton };
 };
+
+type ResidentGeometryContract = {
+  caller: string;
+};
+
+const mergeResidentModels = (
+  models: IAutoMovieMcpGeometryModel[],
+): IAutoMovieMcpGeometryModel[] => [
+  ...new Map(models.map((model) => [model.id, model])).values(),
+];
 
 const findSceneNode = (
   scene: IAutoMovieScene,

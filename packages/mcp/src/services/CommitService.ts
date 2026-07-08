@@ -108,7 +108,7 @@ export class CommitService {
     const validation = validateScriptArtifact(props.script);
     if (validation.success === false)
       return this.finish(failedCommit(slate, validation), resident);
-    return this.finish(
+    const output = this.finish(
       successfulCommit({
         ...slate,
         script: props.script,
@@ -120,6 +120,8 @@ export class CommitService {
       }),
       resident,
     );
+    if (resident && output.committed) this.context!.clearGeometryMemory();
+    return output;
   }
 
   public commitScene(props: {
@@ -145,7 +147,7 @@ export class CommitService {
     const validation = toValidation(violations);
     if (validation.success === false)
       return this.finish(failedCommit(slate, validation), resident);
-    return this.finish(
+    const output = this.finish(
       successfulCommit({
         ...slate,
         scene: props.scene,
@@ -156,6 +158,9 @@ export class CommitService {
       }),
       resident,
     );
+    if (resident && output.committed)
+      this.context!.rememberGeometryModels(props.models);
+    return output;
   }
 
   /**
@@ -220,7 +225,7 @@ export class CommitService {
     const validation = toValidation(located);
     if (validation.success === false)
       return this.finish(failedCommit(slate, validation), resident);
-    return this.finish(
+    const output = this.finish(
       successfulCommit({
         ...slate,
         shots: upsertById(slate.shots, props.shot),
@@ -229,6 +234,9 @@ export class CommitService {
       }),
       resident,
     );
+    if (resident && output.committed && props.motions !== undefined)
+      this.context!.rememberGeometryMotions(props.motions);
+    return output;
   }
 
   public commitBeatEnd(props: {
@@ -567,6 +575,8 @@ export class CommitService {
       film: null,
     };
     project.saveSlate(next);
+    if (props.motions !== undefined)
+      this.context!.rememberGeometryMotions(props.motions);
     return { updated: true, slate: next, validation: { success: true } };
   }
 
@@ -644,6 +654,7 @@ export class CommitService {
       film: null,
     };
     project.saveSlate(next);
+    this.context!.clearGeometryMotions();
     return { updated: true, slate: next, validation: { success: true } };
   }
 

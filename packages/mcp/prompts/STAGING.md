@@ -17,6 +17,8 @@ Before staging an interaction, measure it:
 - `getReach` tells you whether the actor's arm chain can actually reach the target from its placement — per arm, with the reach gap and the IK pose.
 - A strike staged at 3 m mimes at air. The engine will not stop you at staging time (coherence, not craft), but the performance's ROM gate and the reviewer will.
 
+Geometry queries are resident-or-explicit. Pass `scene`/`context` for a stateless check, or omit them after `openProject`: `measureDistance` reads the committed scene from disk, while `getReach` and `getResolvedPose` use the model skeletons remembered from resident `commitScene`. `getResolvedPose({ beat })` also uses the compiled motions remembered from resident `commitShot`. Those skeleton/motion payloads are session memory, not project files; after reopening a project, measure distances directly, but re-run `commitScene`/`commitShot` in the session or pass explicit context for rig/motion queries.
+
 ## Camera
 
 One take, one live camera (enforced at perform time). Place cameras where the blocking's framing intent needs them; the camera move itself is chosen per beat with the `frame` action. Framing distance follows the staged bearing — the director's chosen side is preserved, so stage the camera on the side you mean.

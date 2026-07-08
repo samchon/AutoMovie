@@ -42,4 +42,4 @@ Prefer the narrowest tool that fixes the fault — surgical, not a reset:
 
 ## Geometry Before Guesswork
 
-Never stage by hope. `getReach` tells you whether an actor's arms can reach a target; `measureDistance` measures the world; `getResolvedPose` shows where every bone actually is at a shot time. Measure, then stage.
+Never stage by hope. `getReach` tells you whether an actor's arms can reach a target; `measureDistance` measures the world; `getResolvedPose` shows where every bone actually is at a shot time. Measure, then stage. These geometry tools are resident-or-explicit: omit `scene`/`context` to read the active project, with rig/motion queries using the session-only payloads remembered from resident `commitScene`/`commitShot`; after reopening, pass explicit context or re-run those commits before asking for rigged pose/reach.
