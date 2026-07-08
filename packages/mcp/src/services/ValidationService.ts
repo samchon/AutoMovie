@@ -359,6 +359,19 @@ const validateMcpModelShape = (
         const path = `$input.skeleton.bones[${index}]`;
         if (!validateObjectArtifact(bone, path, "skeleton bone", violations))
           return;
+        validateNonEmptyId(
+          bone.bone,
+          `${path}.bone`,
+          "skeleton bone",
+          violations,
+        );
+        if (bone.parent !== null)
+          validateNonEmptyId(
+            bone.parent,
+            `${path}.parent`,
+            "skeleton bone parent",
+            violations,
+          );
         validateTransformArtifact(
           bone.rest,
           `${path}.rest`,

@@ -42,13 +42,29 @@ export const validateModel = (props: {
       "model asset id",
       collector,
     );
-  if (model.skeleton !== null)
+  if (model.skeleton !== null) {
     validateNonEmptyId(
       model.skeleton.id,
       `${path}.skeleton.id`,
       "skeleton id",
       collector,
     );
+    model.skeleton.bones.forEach((bone, i) => {
+      validateNonEmptyId(
+        bone.bone,
+        `${path}.skeleton.bones[${i}].bone`,
+        "skeleton bone",
+        collector,
+      );
+      if (bone.parent !== null)
+        validateNonEmptyId(
+          bone.parent,
+          `${path}.skeleton.bones[${i}].parent`,
+          "skeleton bone parent",
+          collector,
+        );
+    });
+  }
 
   const materialIds = new Set(model.materials.map((m) => m.id));
   const boneNames = new Set((model.skeleton?.bones ?? []).map((b) => b.bone));
@@ -362,11 +378,15 @@ const validateUniqueValues = (
 };
 
 const validateNonEmptyId = (
-  value: string,
+  value: unknown,
   path: string,
   label: string,
   collector: ViolationCollector,
 ): void => {
+  if (typeof value !== "string") {
+    collector.push("type", path, `${label} must be a string`, value);
+    return;
+  }
   if (value.trim().length === 0)
     collector.push("type", path, `${label} must be a non-empty id`, value);
 };
