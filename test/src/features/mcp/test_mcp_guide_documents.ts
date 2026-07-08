@@ -8,12 +8,15 @@ const app = new AutoMovieApplication();
 /** Every corpus key, with a distinctive phrase its content must carry. */
 const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["AUTOMOVIE_OVERALL", "engine enforces, model creates"],
+  ["AUTOMOVIE_OVERALL", "surgical, not a reset"],
   ["STAGING", "coherence, not craft"],
   ["BLOCKING", "causal order"],
   ["PERFORMANCE", "One take, one live camera"],
   ["REVIEW", "advice, not gates"],
+  ["REVIEW", "ancestors nearest-first"],
   ["PROPS", "crude proxy, rich meaning"],
   ["PROJECT_MEMORY", "cleared slice's file is removed"],
+  ["PROJECT_MEMORY", "sibling beats' files stay byte-identical"],
   ["RENDER_GUIDES", "no-capture-adapter"],
 ];
 
@@ -35,7 +38,7 @@ export const test_mcp_guide_documents = (): void => {
   for (const [name, phrase] of CORPUS) {
     const output = app.getGuideDocument({ name });
     TestValidator.predicate(
-      `${name} resolves with substance`,
+      `${name} resolves with substance ("${phrase}")`,
       output.content.length > 200 && output.content.includes(phrase),
     );
   }

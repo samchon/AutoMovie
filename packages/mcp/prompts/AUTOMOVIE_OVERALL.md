@@ -29,7 +29,16 @@ Never explain a violation away. Fix the owning artifact, or acknowledge it delib
 
 ## Correction Loop
 
-For each stage: submit one coherent artifact → read the violations → fix exactly what they locate → resubmit. Prerequisite errors from resident commits are thrown with a "Do this next" list — follow it literally. Validation tools (`validatePose`, `validateMotion`, `validateModel`, `validateScene`, `validateShot`, `validateSequence`) let you check an artifact before committing anything.
+For each stage: submit one coherent artifact → read the violations → fix exactly what they locate → resubmit. Prerequisite errors from resident commits are thrown with a "Do this next" list — follow it literally. Validation tools (`validatePose`, `validateMotion`, `validateModel`, `validateScene`, `validateShot`, `validateSequence`) let you check an artifact before committing anything. When the committed script carries a refinement tree, `commitShot` stamps each violation with the screenplay `node` claiming the beat — the violation names where in the screenplay the correction belongs (see `REVIEW`).
+
+## Surgical Corrections
+
+Prefer the narrowest tool that fixes the fault — surgical, not a reset:
+
+- Beat commits upsert: re-committing a beat replaces exactly that beat's shot or end-state and leaves sibling beats untouched. Fixing beat 7 never means resending beats 1–6.
+- `eraseShot` / `eraseNotes` — remove ONE beat's shot (with its end-state and notes) or ONE beat's review notes. Both demand a `reason` and refuse a beat with nothing to erase.
+- `setActorPerformance` — splice one actor's performance inside one committed shot. Replacement-only: a NEW performer changes the shot's dramatic content and belongs to `perform` + `commitShot`.
+- `setPlacement` — move one staged node without restaging the scene. It clears everything downstream exactly as `commitScene` would, because every committed shot was performed against the old world coordinates.
 
 ## Geometry Before Guesswork
 
