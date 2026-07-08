@@ -5,11 +5,19 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { convexHull2D } from "../math/hull";
+import { convexHull2D, nearestHullEdge } from "../math/hull";
 import { ViolationCollector } from "./violation";
 
 const SURFACE_KINDS = ["floor", "platform", "ramp"] as const;
 const MIN_RAMP_AXIS = 1e-9;
+
+/**
+ * A footprint vertex farther than this from its own convex hull's boundary sits
+ * strictly inside the hull — a concave notch or a redundant interior point.
+ * Meters, so a nanometre tolerance is exact for authored coordinates while a
+ * real notch (centimetres and up) is caught.
+ */
+const CONVEX_TOLERANCE = 1e-9;
 
 /**
  * Tier-1 structural check for an {@link IAutoMovieSpace} — the constraints the
@@ -18,11 +26,14 @@ const MIN_RAMP_AXIS = 1e-9;
  *
  * Checks: non-empty space/surface ids, unique surface ids, a known surface
  * kind, a footprint of at least three non-collinear points with finite plan
- * coordinates (polygon `y` is documented-ignored and not checked), finite
- * height anchors, a non-degenerate ramp axis (`rampTo` must sit at a different
- * XZ than `anchor`), and walkable ids that resolve uniquely to declared
- * surfaces. Everything is `error` severity — a malformed space is broken input,
- * not an artistic choice.
+ * coordinates (polygon `y` is documented-ignored and not checked) that form a
+ * **convex** polygon — the ground query classifies against the footprint's
+ * convex hull, so a concave footprint would have its notch silently filled; a
+ * vertex strictly inside the hull is rejected while a collinear point on an
+ * edge is allowed — finite height anchors, a non-degenerate ramp axis (`rampTo`
+ * must sit at a different XZ than `anchor`), and walkable ids that resolve
+ * uniquely to declared surfaces. Everything is `error` severity — a malformed
+ * space is broken input, not an artistic choice.
  *
  * @author Samchon
  */
@@ -113,17 +124,32 @@ const validateSurface = (
         );
       }
   });
-  if (
-    planFinite &&
-    surface.polygon.length >= 3 &&
-    convexHull2D(surface.polygon).length < 3
-  )
-    collector.push(
-      "type",
-      `${path}.polygon`,
-      "surface footprint points are collinear — they enclose no area",
-      surface.polygon,
-    );
+  if (planFinite && surface.polygon.length >= 3) {
+    const hull = convexHull2D(surface.polygon);
+    if (hull.length < 3)
+      collector.push(
+        "type",
+        `${path}.polygon`,
+        "surface footprint points are collinear — they enclose no area",
+        surface.polygon,
+      );
+    // The footprint is contractually convex; the ground query (surfaceContains)
+    // classifies against its convex hull, so a concave footprint would have its
+    // notch silently filled. A vertex strictly inside the hull (a reflex/notch
+    // corner, or a redundant interior point) sits off the hull boundary — a
+    // collinear point on an edge stays on the boundary and is allowed.
+    else if (
+      surface.polygon.some(
+        (point) => nearestHullEdge(point, hull).distance > CONVEX_TOLERANCE,
+      )
+    )
+      collector.push(
+        "type",
+        `${path}.polygon`,
+        "surface footprint is concave — a vertex sits inside its convex hull, which the ground query would fill; footprints must be convex",
+        surface.polygon,
+      );
+  }
 
   validateAnchor(surface.anchor, `${path}.anchor`, collector);
   if (surface.rampTo !== null) {
