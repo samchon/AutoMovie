@@ -37,7 +37,7 @@ Prefer the narrowest tool that fixes the fault — surgical, not a reset:
 
 - Beat commits upsert: re-committing a beat replaces exactly that beat's shot or end-state and leaves sibling beats untouched. Fixing beat 7 never means resending beats 1–6.
 - `eraseShot` / `eraseNotes` — remove ONE beat's shot (with its end-state and notes) or ONE beat's review notes. Both demand a `reason` and refuse a beat with nothing to erase.
-- `setActorPerformance` — splice one actor's performance inside one committed shot. Replacement-only: a NEW performer changes the shot's dramatic content and belongs to `perform` + `commitShot`.
+- `setActorPerformance` — splice one actor's performance inside one committed shot. It removes that beat's end-state and review notes, then clears the film. Replacement-only: a NEW performer changes the shot's dramatic content and belongs to `perform` + `commitShot`.
 - `setPlacement` — move one staged node without restaging the scene. Author its `transform.rotation` as **semantic Euler degrees** (`{x, y, z, order}`) — never a raw quaternion — or omit it entirely for a move that only slides the node; the engine lowers the angles. It clears everything downstream exactly as `commitScene` would, because every committed shot was performed against the old world coordinates.
 
 ## Geometry Before Guesswork

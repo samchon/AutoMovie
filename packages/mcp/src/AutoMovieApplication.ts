@@ -596,11 +596,12 @@ export class AutoMovieApplication {
   /**
    * Replace ONE actor's performance in a beat's committed shot, in the resident
    * project. Sibling performances and other beats stay byte-unchanged; the
-   * beat's beat-end is removed (stale without the performance it sampled) and
-   * the film is cleared. Replacement-only: the node must already perform in
-   * that shot — a new performer belongs to perform + commitShot. Requires an
-   * active project and a non-empty reason (evidence). Full motion validation
-   * stays perform's job; pass the motions registry to check the reference.
+   * beat's beat-end and review notes are removed (stale without the performance
+   * they sampled) and the film is cleared. Replacement-only: the node must
+   * already perform in that shot — a new performer belongs to perform +
+   * commitShot. Requires an active project and a non-empty reason (evidence).
+   * Full motion validation stays perform's job; pass the motions registry to
+   * check the reference.
    *
    * @param props The beat, the replacement performance, and the reason.
    * @returns The slate after the replacement, or violations when refused.
