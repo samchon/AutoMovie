@@ -8,6 +8,8 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
+const UNIT_QUATERNION_EPSILON = 1e-6;
+
 /**
  * Violation-collection primitives shared by the MCP artifact validators and the
  * commit preconditions — the path-bearing building blocks every `$input...`
@@ -151,6 +153,20 @@ export const validateQuaternionArtifact = (
         `${label} component must be finite, but was ${quaternion[axis]}`,
         quaternion[axis],
       );
+  const length = Math.hypot(
+    quaternion.x,
+    quaternion.y,
+    quaternion.z,
+    quaternion.w,
+  );
+  if (Number.isFinite(length) && Math.abs(length - 1) > UNIT_QUATERNION_EPSILON)
+    pushViolation(
+      violations,
+      "range",
+      path,
+      `${label} must be a unit quaternion (length 1), but length was ${length}`,
+      quaternion,
+    );
 };
 
 export const validateColorArtifact = (

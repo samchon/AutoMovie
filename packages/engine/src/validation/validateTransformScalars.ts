@@ -2,7 +2,9 @@ import { IAutoMovieTransform } from "@automovie/interface";
 
 import { ViolationCollector } from "./violation";
 
-/** Validate finite TRS components and strictly-positive scale. */
+const UNIT_QUATERNION_EPSILON = 1e-6;
+
+/** Validate finite TRS components, unit rotation, and strictly-positive scale. */
 export const validateTransformScalars = (props: {
   transform: IAutoMovieTransform;
   path: string;
@@ -30,6 +32,23 @@ export const validateTransformScalars = (props: {
         `${label} component must be finite, but was ${value}`,
         value,
       );
+
+  const rotationLength = Math.hypot(
+    transform.rotation.x,
+    transform.rotation.y,
+    transform.rotation.z,
+    transform.rotation.w,
+  );
+  if (
+    Number.isFinite(rotationLength) &&
+    Math.abs(rotationLength - 1) > UNIT_QUATERNION_EPSILON
+  )
+    collector.push(
+      "range",
+      `${path}.rotation`,
+      `${label} rotation must be a unit quaternion (length 1), but length was ${rotationLength}`,
+      transform.rotation,
+    );
 
   const scaleFields: ReadonlyArray<readonly [string, number]> = [
     [`${path}.scale.x`, transform.scale.x],
