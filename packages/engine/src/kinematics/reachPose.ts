@@ -1,25 +1,15 @@
 import {
   AutoMovieHumanoidBone,
   IAutoMoviePose,
-  IAutoMovieQuaternion,
   IAutoMovieSkeleton,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { Quaternion } from "../math/Quaternion";
-import { Vector3 } from "../math/Vector3";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
-import { aimRotation } from "./aimRotation";
 import { decomposeJointRotation } from "./decomposeJointRotation";
 import { HUMANOID_JOINT_AXES } from "./humanoidJointAxes";
 import { resolvePose } from "./resolvePose";
-import { solveTwoBoneIK } from "./solveTwoBoneIK";
-
-/** World-down, the pole a natural elbow bends away from. */
-const POLE: IAutoMovieVector3 = { x: 0, y: -1, z: 0 };
-
-const inverse = (q: IAutoMovieQuaternion): IAutoMovieQuaternion =>
-  Quaternion.normalize({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
+import { twoBoneChainArticulation } from "./twoBoneChainArticulation";
 
 /**
  * Analytic two-bone IK for an arm: the {@link IAutoMoviePose} (upper-arm +
@@ -65,60 +55,13 @@ export const reachPose = (
   if (upper === undefined || lower === undefined || hand === undefined)
     return null;
 
-  const shoulder = upper.worldPosition;
-  const l1 = Vector3.length(Vector3.subtract(lower.worldPosition, shoulder));
-  const l2 = Vector3.length(
-    Vector3.subtract(hand.worldPosition, lower.worldPosition),
-  );
-  if (l1 < 1e-6 || l2 < 1e-6) return null;
-  const restUpperDir = Vector3.normalize(
-    Vector3.subtract(lower.worldPosition, shoulder),
-  );
-  const restForeDir = Vector3.normalize(
-    Vector3.subtract(hand.worldPosition, lower.worldPosition),
-  );
-
-  const reach = Vector3.subtract(target, shoulder);
-  const dist = Vector3.length(reach);
-  if (dist < 1e-6) return null;
-  const axis = Vector3.normalize(reach);
-
-  const { bend, lift } = solveTwoBoneIK(l1, l2, dist);
-  void bend; // the bend angle is realised implicitly by placing the elbow
-
-  // Bend plane: normal ⟂ (reach axis, world-down pole). The upper arm lifts by
-  // `lift` off the axis in this plane, dropping the elbow away from the pole.
-  let normal = Vector3.cross(axis, POLE);
-  if (Vector3.length(normal) < 1e-6)
-    normal = Vector3.cross(axis, { x: 0, y: 0, z: 1 });
-  normal = Vector3.normalize(normal);
-
-  const upperDir = Quaternion.rotateVector(
-    Quaternion.fromAxisAngle(normal, lift),
-    axis,
-  );
-  const elbow = Vector3.add(shoulder, Vector3.scale(upperDir, l1));
-  const foreDir = Vector3.normalize(Vector3.subtract(target, elbow));
-
-  // Shoulder: world delta taking the rest upper-arm dir onto upperDir, lowered
-  // into the bone-local articulation (restWorld⁻¹ · Δ · restWorld).
-  const rsu = upper.worldRotation;
-  const du = aimRotation(restUpperDir, upperDir);
-  const articU = Quaternion.multiply(
-    inverse(rsu),
-    Quaternion.multiply(du, rsu),
-  );
-
-  // Elbow: worldRot(L) = du · Rsl · articL, so the forearm's local axis
-  // (Rsl⁻¹ · restForeDir) must rotate onto (Rsl⁻¹ · du⁻¹ · foreDir).
-  const rsl = lower.worldRotation;
-  const rslInv = inverse(rsl);
-  const localFore = Quaternion.rotateVector(rslInv, restForeDir);
-  const localGoal = Quaternion.rotateVector(
-    rslInv,
-    Quaternion.rotateVector(inverse(du), foreDir),
-  );
-  const articL = aimRotation(localFore, localGoal);
+  const articulation = twoBoneChainArticulation({
+    upper,
+    lower,
+    end: hand.worldPosition,
+    target,
+  });
+  if (articulation === null) return null;
 
   return {
     skeleton: skeleton.id,
@@ -127,7 +70,7 @@ export const reachPose = (
       {
         bone: upperName,
         ...decomposeJointRotation(
-          articU,
+          articulation.upper,
           HUMANOID_JOINT_AXES[upperName],
           restFrames?.[upperName],
         ),
@@ -135,7 +78,7 @@ export const reachPose = (
       {
         bone: lowerName,
         ...decomposeJointRotation(
-          articL,
+          articulation.lower,
           HUMANOID_JOINT_AXES[lowerName],
           restFrames?.[lowerName],
         ),

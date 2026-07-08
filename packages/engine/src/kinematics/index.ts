@@ -8,3 +8,4 @@ export * from "./resolveAffordanceSeat";
 export * from "./resolveAttachment";
 export * from "./resolvePose";
 export * from "./solveTwoBoneIK";
+export * from "./twoBoneChainArticulation";
