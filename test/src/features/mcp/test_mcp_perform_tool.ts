@@ -36,6 +36,14 @@ const context = (
   };
 };
 
+const riglessContext = (
+  position: IAutoMovieVector3,
+  facingDeg: number,
+): IAutoMovieMcpActorContext => {
+  const { rig: _rig, ...rest } = context(position, facingDeg);
+  return rest;
+};
+
 /**
  * The MCP `perform` tool keeps the client contract JSON-only while still
  * driving the engine's rig-aware performance stage.
@@ -47,6 +55,10 @@ const context = (
  *    shot with one motion per actor and the live camera compiled.
  * 2. The same MCP wrapper returns engine violations, not thrown errors, when the
  *    performance names a beat the script never declared.
+ * 3. A default-synthesizer unsupported gesture fails as data instead of succeeding
+ *    with the authored action dropped.
+ * 4. A rig-required reach with a rigless MCP actor context fails as data instead
+ *    of succeeding with no motion for that actor.
  */
 export const test_mcp_perform_tool = (): void => {
   const app = new AutoMovieApplication();
@@ -146,6 +158,67 @@ export const test_mcp_perform_tool = (): void => {
       failed.violations.some(
         (violation) =>
           violation.kind === "type" && violation.path === "$input.beat",
+      ),
+  );
+
+  const unsupportedGesture = app.perform({
+    script,
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          kind: "guard",
+        },
+      ],
+      duration: 1,
+      revise: { review: "unchanged.", final: null },
+    }),
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "unsupported default gesture returns violations",
+    unsupportedGesture.success === false &&
+      unsupportedGesture.violations.some(
+        (violation) =>
+          violation.kind === "type" &&
+          violation.path === "$input.draft[0].kind",
+      ),
+  );
+
+  const riglessReach = app.perform({
+    script,
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "reach",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          hand: "right",
+          to: { kind: "node", node: "knightB" },
+        },
+      ],
+      duration: 1,
+      revise: { review: "unchanged.", final: null },
+    }),
+    actors: {
+      knightA: riglessContext(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "rigless reach returns violations",
+    riglessReach.success === false &&
+      riglessReach.violations.some(
+        (violation) =>
+          violation.kind === "type" &&
+          violation.path === "$input.draft[0].actor",
       ),
   );
 };
