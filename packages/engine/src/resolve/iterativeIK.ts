@@ -12,6 +12,7 @@ import {
   blendVec,
   readWorld,
   recompose,
+  rotationBetween,
   validateInfluence,
 } from "./worldShared";
 
@@ -193,34 +194,9 @@ const solveFabrik = (
 const unitOr = (v: IAutoMovieVector3): IAutoMovieVector3 =>
   Vector3.length(v) < 1e-12 ? FALLBACK_DIR : Vector3.normalize(v);
 
-/**
- * Exact shortest-arc rotation between two unit (or zero) vectors, `atan2`-based
- * — unlike the shared `quatFromTo` it has **no near-parallel identity
- * deadzone**, which matters here: an iterative solver's late sweeps make
- * sub-0.1° corrections, and a deadzone turns into a convergence floor (the tip
- * freezes ~2e-3 m short of the goal). A zero input degrades to the identity;
- * exact antiparallel takes a 180° flip about a deterministic perpendicular.
- */
-const rotationBetween = (
-  a: IAutoMovieVector3,
-  b: IAutoMovieVector3,
-): IAutoMovieQuaternion => {
-  const cross = Vector3.cross(a, b);
-  const sin = Vector3.length(cross);
-  const cos = Vector3.dot(a, b);
-  if (sin < 1e-12) {
-    if (cos >= 0) return Quaternion.identity();
-    const perp =
-      Math.abs(a.x) < 0.9
-        ? Vector3.cross(a, { x: 1, y: 0, z: 0 })
-        : Vector3.cross(a, { x: 0, y: 1, z: 0 });
-    return Quaternion.fromAxisAngle(perp, 180);
-  }
-  return Quaternion.fromAxisAngle(
-    cross,
-    (Math.atan2(sin, cos) * 180) / Math.PI,
-  );
-};
+// The exact shortest-arc rotation now lives in worldShared.rotationBetween —
+// promoted there (#643) so the iterative solvers, the analytic twoBone
+// lowering, and the aim driver all share one deadzone-free implementation.
 
 /**
  * Lower the positional solve into the world map: each non-tip joint's rotation

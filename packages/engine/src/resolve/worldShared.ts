@@ -54,14 +54,27 @@ export const recompose = (
   }
 };
 
-/** Shortest-arc rotation from unit vector `a` to unit vector `b`. */
-export const quatFromTo = (
+/**
+ * Exact shortest-arc rotation from unit (or zero) vector `a` to `b`,
+ * `atan2`-based — **no near-parallel identity deadzone**. The predecessor
+ * (`quatFromTo`) snapped `cos > 0.999999` to the identity, which put a ~1.9e-3
+ * m convergence floor under the iterative IK solvers and made the aim driver
+ * ignore its last ~0.08° — sub-0.1° corrections are exactly the moves a late
+ * solver sweep (or a slow camera track) is made of. Here every angle down to
+ * numerical zero produces its exact rotation; a degenerate input (zero vector,
+ * exact parallel) degrades to the identity; exact antiparallel takes a
+ * deterministic 180° flip about a perpendicular (the `|a.x| < 0.9` axis
+ * split).
+ */
+export const rotationBetween = (
   a: IAutoMovieVector3,
   b: IAutoMovieVector3,
 ): IAutoMovieQuaternion => {
-  const d = Vector3.dot(a, b);
-  if (d > 0.999999) return Quaternion.identity();
-  if (d < -0.999999) {
+  const cross = Vector3.cross(a, b);
+  const sin = Vector3.length(cross);
+  const cos = Vector3.dot(a, b);
+  if (sin < 1e-12) {
+    if (cos >= 0) return Quaternion.identity();
     const perp =
       Math.abs(a.x) < 0.9
         ? Vector3.cross(a, { x: 1, y: 0, z: 0 })
@@ -69,8 +82,8 @@ export const quatFromTo = (
     return Quaternion.fromAxisAngle(perp, 180);
   }
   return Quaternion.fromAxisAngle(
-    Vector3.cross(a, b),
-    (Math.acos(d) * 180) / Math.PI,
+    cross,
+    (Math.atan2(sin, cos) * 180) / Math.PI,
   );
 };
 
