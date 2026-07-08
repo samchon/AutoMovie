@@ -190,6 +190,13 @@ const validateMcpModelShape = (
     return toValidation(violations);
   const shape = model as Partial<IAutoMovieModel>;
   validateNonEmptyId(shape.id, "$input.id", "model id", violations);
+  if (shape.asset !== null)
+    validateNonEmptyId(
+      shape.asset,
+      "$input.asset",
+      "model asset id",
+      violations,
+    );
   validateArrayArtifact(
     shape.materials,
     "$input.materials",
