@@ -33,7 +33,12 @@ import {
 } from "../dto";
 import { shotIdOf } from "../project/shotKey";
 import { validateSceneArtifact } from "../validators/artifacts";
-import { isRecord } from "../validators/primitives";
+import {
+  validateArrayArtifact,
+  validateNonEmptyId,
+  validateObjectArtifact,
+  validateTransformArtifact,
+} from "../validators/primitives";
 import { resolveRuntimeSafeTargetPoint } from "./actionTargets";
 
 /**
@@ -389,16 +394,11 @@ const findMotion = (
   context: IAutoMovieMcpGeometryContext,
   id: string,
 ): IAutoMovieMcpMotion | null => {
-  if (!isRecord(context.motions))
-    throw new Error("motion registry at context.motions must be a JSON object");
-  const entries = Object.entries(context.motions)
-    .map(([key, motion]) => {
-      if (!isRecord(motion))
-        throw new Error(
-          `motion registry entry at context.motions.${key} must be a JSON object`,
-        );
-      return { key, motion: motion as unknown as IAutoMovieMcpMotion };
-    })
+  assertGeometryMotionRegistryShape(context.motions, "context.motions");
+  const entries = Object.entries(
+    context.motions as Record<string, IAutoMovieMcpMotion>,
+  )
+    .map(([key, motion]) => ({ key, motion }))
     .filter(({ motion }) => motion.id === id);
   if (entries.length > 1)
     throw new Error(
@@ -410,37 +410,277 @@ const findMotion = (
 const assertGeometryContextShape = (
   context: IAutoMovieMcpGeometryContext | unknown,
 ): void => {
-  if (!isRecord(context)) throw new Error("context must be a JSON object");
-  assertGeometrySceneShape(context.scene, "context.scene");
-  assertGeometryCollection(context.models, "context.models", "geometry models");
+  const violations: IAutoMovieConstraintViolation[] = [];
+  if (!validateObjectArtifact(context, "context", "context", violations))
+    return assertNoGeometryViolations(violations);
+  appendGeometrySceneShape(context.scene, "context.scene", violations);
+  appendGeometryModelsShape(context.models, "context.models", violations);
   const shot = context.shot;
-  if (shot === null || shot === undefined) return;
-  if (!isRecord(shot)) throw new Error("context.shot must be a JSON object");
-  assertGeometryCollection(
-    shot.performances,
-    "context.shot.performances",
-    "shot performances",
-  );
+  if (shot === null || shot === undefined)
+    return assertNoGeometryViolations(violations);
+  if (!validateObjectArtifact(shot, "context.shot", "context shot", violations))
+    return assertNoGeometryViolations(violations);
+  appendGeometryShotShape(shot, "context.shot", violations);
+  assertNoGeometryViolations(violations);
 };
 
 const assertGeometrySceneShape = (scene: unknown, path: string): void => {
-  if (!isRecord(scene)) throw new Error(`${path} must be a JSON object`);
-  assertGeometryCollection(scene.nodes, `${path}.nodes`, "scene nodes");
+  const violations: IAutoMovieConstraintViolation[] = [];
+  appendGeometrySceneShape(scene, path, violations);
+  assertNoGeometryViolations(violations);
 };
 
-const assertGeometryCollection = (
-  value: unknown,
+const appendGeometrySceneShape = (
+  scene: unknown,
   path: string,
-  label: string,
+  violations: IAutoMovieConstraintViolation[],
 ): void => {
-  if (!Array.isArray(value))
-    throw new Error(`${label} at ${path} must be an array`);
-  value.forEach((entry, index) => {
-    if (!isRecord(entry))
-      throw new Error(
-        `${label} entry at ${path}[${index}] must be a JSON object`,
+  if (!validateObjectArtifact(scene, path, "scene", violations)) return;
+  if (
+    !validateArrayArtifact(
+      scene.nodes,
+      `${path}.nodes`,
+      "scene nodes",
+      violations,
+    )
+  )
+    return;
+  scene.nodes.forEach((node, index) =>
+    appendGeometrySceneNodeShape(node, `${path}.nodes[${index}]`, violations),
+  );
+};
+
+const appendGeometrySceneNodeShape = (
+  node: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateObjectArtifact(node, path, "scene node", violations)) return;
+  validateNonEmptyId(node.id, `${path}.id`, "scene node id", violations);
+  validateNonEmptyId(
+    node.model,
+    `${path}.model`,
+    "scene node model",
+    violations,
+  );
+  validateTransformArtifact(
+    node.transform,
+    `${path}.transform`,
+    "scene node transform",
+    violations,
+  );
+};
+
+const appendGeometryModelsShape = (
+  models: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateArrayArtifact(models, path, "geometry models", violations))
+    return;
+  models.forEach((model, index) => {
+    const modelPath = `${path}[${index}]`;
+    if (!validateObjectArtifact(model, modelPath, "geometry model", violations))
+      return;
+    validateNonEmptyId(
+      model.id,
+      `${modelPath}.id`,
+      "geometry model id",
+      violations,
+    );
+    if (model.skeleton !== null)
+      appendGeometrySkeletonShape(
+        model.skeleton,
+        `${modelPath}.skeleton`,
+        violations,
       );
   });
+};
+
+const appendGeometrySkeletonShape = (
+  skeleton: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (
+    !validateObjectArtifact(
+      skeleton,
+      path,
+      "geometry model skeleton",
+      violations,
+    )
+  )
+    return;
+  validateNonEmptyId(skeleton.id, `${path}.id`, "skeleton id", violations);
+  if (
+    !validateArrayArtifact(
+      skeleton.bones,
+      `${path}.bones`,
+      "skeleton bones",
+      violations,
+    )
+  )
+    return;
+  skeleton.bones.forEach((bone, index) => {
+    const bonePath = `${path}.bones[${index}]`;
+    if (!validateObjectArtifact(bone, bonePath, "skeleton bone", violations))
+      return;
+    validateNonEmptyId(
+      bone.bone,
+      `${bonePath}.bone`,
+      "skeleton bone",
+      violations,
+    );
+    if (bone.parent !== null)
+      validateNonEmptyId(
+        bone.parent,
+        `${bonePath}.parent`,
+        "skeleton bone parent",
+        violations,
+      );
+    validateTransformArtifact(
+      bone.rest,
+      `${bonePath}.rest`,
+      "skeleton bone rest transform",
+      violations,
+    );
+  });
+};
+
+const appendGeometryShotShape = (
+  shot: Record<string, unknown>,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (
+    !validateArrayArtifact(
+      shot.performances,
+      `${path}.performances`,
+      "shot performances",
+      violations,
+    )
+  )
+    return;
+  shot.performances.forEach((performance, index) => {
+    const performancePath = `${path}.performances[${index}]`;
+    if (
+      !validateObjectArtifact(
+        performance,
+        performancePath,
+        "shot performance",
+        violations,
+      )
+    )
+      return;
+    validateNonEmptyId(
+      performance.node,
+      `${performancePath}.node`,
+      "shot performance node",
+      violations,
+    );
+    if (performance.motion !== null)
+      validateNonEmptyId(
+        performance.motion,
+        `${performancePath}.motion`,
+        "shot performance motion",
+        violations,
+      );
+  });
+};
+
+const assertGeometryMotionRegistryShape = (
+  motions: unknown,
+  path: string,
+): void => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  appendGeometryMotionRegistryShape(motions, path, violations);
+  assertNoGeometryViolations(violations);
+};
+
+const appendGeometryMotionRegistryShape = (
+  motions: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateObjectArtifact(motions, path, "motion registry", violations))
+    return;
+  Object.entries(motions).forEach(([key, motion]) =>
+    appendGeometryMotionShape(motion, `${path}.${key}`, violations),
+  );
+};
+
+const appendGeometryMotionShape = (
+  motion: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (
+    !validateObjectArtifact(motion, path, "motion registry entry", violations)
+  )
+    return;
+  validateNonEmptyId(motion.id, `${path}.id`, "motion id", violations);
+  if (
+    !validateArrayArtifact(
+      motion.keyframes,
+      `${path}.keyframes`,
+      "motion keyframes",
+      violations,
+    )
+  )
+    return;
+  motion.keyframes.forEach((keyframe, index) =>
+    appendGeometryMotionKeyframeShape(
+      keyframe,
+      `${path}.keyframes[${index}]`,
+      violations,
+    ),
+  );
+};
+
+const appendGeometryMotionKeyframeShape = (
+  keyframe: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateObjectArtifact(keyframe, path, "motion keyframe", violations))
+    return;
+  appendGeometryPoseShape(keyframe.pose, `${path}.pose`, violations);
+  const bezier = keyframe.bezier;
+  if (bezier !== null)
+    validateObjectArtifact(
+      bezier,
+      `${path}.bezier`,
+      "motion keyframe bezier",
+      violations,
+    );
+};
+
+const appendGeometryPoseShape = (
+  pose: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateObjectArtifact(pose, path, "motion keyframe pose", violations))
+    return;
+  if (pose.root !== null)
+    validateTransformArtifact(
+      pose.root,
+      `${path}.root`,
+      "motion keyframe pose root",
+      violations,
+    );
+  validateArrayArtifact(
+    pose.joints,
+    `${path}.joints`,
+    "pose joints",
+    violations,
+  );
+};
+
+const assertNoGeometryViolations = (
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (violations.length > 0) throw new Error(describeViolations(violations));
 };
 
 const nodePositions = (
