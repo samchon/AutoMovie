@@ -2,8 +2,9 @@ import {
   IAutoMovieReviewNote,
   IAutoMovieScript,
   IAutoMovieShot,
+  IAutoMovieShotPerformance,
 } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieApplication, IAutoMovieMcpMotion } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -85,7 +86,9 @@ const motionsFor = (beat: string) => ({
  *    sampled) while beat-2's survive, and the film is cleared.
  * 2. A supplied motions registry gates the reference: a matching registry accepts;
  *    a registry without the named motion violates at
- *    `$input.performance.motion` (the commitShot registry semantics).
+ *    `$input.performance.motion` (the commitShot registry semantics), and
+ *    malformed performance/registry shapes return validation instead of raw
+ *    TypeErrors.
  * 3. A beat with no committed shot violates at `$input.beat` — a set names a thing
  *    that exists.
  * 4. A node that does not perform in the shot violates at
@@ -240,6 +243,60 @@ export const test_mcp_set_actor_performance = (): void => {
     TestValidator.predicate(
       "mismatch located at the motion",
       hasViolation(mismatch.validation, "type", "$input.performance.motion"),
+    );
+    const malformedPerformance = app.setActorPerformance({
+      beat: "beat-1",
+      performance: null as unknown as IAutoMovieShotPerformance,
+      reason: "reject a malformed performance payload",
+    });
+    TestValidator.equals(
+      "malformed performance refuses",
+      malformedPerformance.updated,
+      false,
+    );
+    TestValidator.predicate(
+      "malformed performance located",
+      hasViolation(
+        malformedPerformance.validation,
+        "type",
+        "$input.performance",
+      ),
+    );
+    const malformedRegistry = app.setActorPerformance({
+      beat: "beat-1",
+      performance: { node: "knightB", motion: "ghost-motion", startOffset: 0 },
+      motions: null as unknown as Record<string, IAutoMovieMcpMotion>,
+      reason: "reject a malformed registry",
+    });
+    TestValidator.equals(
+      "malformed motion registry refuses",
+      malformedRegistry.updated,
+      false,
+    );
+    TestValidator.predicate(
+      "malformed registry located",
+      hasViolation(malformedRegistry.validation, "type", "$input.motions"),
+    );
+    const malformedRegistryEntry = app.setActorPerformance({
+      beat: "beat-1",
+      performance: { node: "knightB", motion: "ghost-motion", startOffset: 0 },
+      motions: {
+        "ghost-motion": undefined,
+      } as unknown as Record<string, IAutoMovieMcpMotion>,
+      reason: "reject a malformed registry entry",
+    });
+    TestValidator.equals(
+      "malformed motion registry entry refuses",
+      malformedRegistryEntry.updated,
+      false,
+    );
+    TestValidator.predicate(
+      "malformed registry entry located",
+      hasViolation(
+        malformedRegistryEntry.validation,
+        "type",
+        "$input.motions.ghost-motion",
+      ),
     );
 
     // 3. A ghost beat.
