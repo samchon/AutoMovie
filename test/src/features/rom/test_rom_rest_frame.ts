@@ -22,6 +22,10 @@ const CLINICAL: IAutoMovieJointConstraint = {
  * 3. An axis with no frame entry is untouched (flexion stays [−60,180]); a null
  *    clinical axis stays null (twist).
  * 4. `HUMANOID_REST_FRAME` mirrors the two shoulders' abduction.
+ * 5. The `swingDeg` cone half-angle carries through unchanged (a deviation
+ *    magnitude the neutral shift leaves invariant): present → preserved, `null`
+ *    → `null`, absent → absent. Dropping it silenced the ball-joint cone on the
+ *    very bones that carry a rest frame (the shoulders).
  */
 export const test_rom_rest_frame = (): void => {
   // 1. sign +1
@@ -49,6 +53,13 @@ export const test_rom_rest_frame = (): void => {
   });
   TestValidator.equals("null axis stays null", left.twist, null);
 
+  // 3b. the CLINICAL fixture carries no cone → the reconciled constraint has none
+  TestValidator.equals(
+    "absent swingDeg stays absent",
+    left.swingDeg,
+    undefined,
+  );
+
   // 4. the humanoid table mirrors the shoulders
   TestValidator.equals(
     "left shoulder frame",
@@ -60,4 +71,22 @@ export const test_rom_rest_frame = (): void => {
     HUMANOID_REST_FRAME.rightUpperArm?.abduction,
     { sign: -1, neutral: 90 },
   );
+
+  // 5. a shoulder cone (swingDeg 180) survives the neutral shift unchanged, and
+  // a null cone stays null — the magnitude is a deviation the shift can't touch.
+  const coned = restRelativeConstraint(
+    { ...CLINICAL, swingDeg: 180 },
+    { abduction: { sign: 1, neutral: 90 } },
+  );
+  TestValidator.equals("cone half-angle preserved", coned.swingDeg, 180);
+  TestValidator.equals(
+    "abduction still shifts under the cone",
+    coned.abduction,
+    { min: -120, max: 90 },
+  );
+  const nullCone = restRelativeConstraint(
+    { ...CLINICAL, swingDeg: null },
+    { abduction: { sign: 1, neutral: 90 } },
+  );
+  TestValidator.equals("null cone stays null", nullCone.swingDeg, null);
 };
