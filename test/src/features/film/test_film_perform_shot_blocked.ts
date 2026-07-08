@@ -152,4 +152,26 @@ export const test_film_perform_shot_blocked = (): void => {
         String(v.expected).includes('asks for a "follow" camera'),
       ),
   );
+
+  const malformedActor = run(
+    makeBlockingWrite(),
+    makePerformanceWrite({
+      draft: [
+        {
+          verb: "locomote",
+          actor: {} as never,
+          start: 0,
+          duration: 1,
+          gait: "walk",
+          to: { kind: "point", point: { x: 1, y: 0, z: 0 } },
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+  );
+  TestValidator.predicate(
+    "blocked malformed actor rejected",
+    malformedActor.success === false &&
+      hasViolation(malformedActor, "type", "$input.draft[0].actor"),
+  );
 };

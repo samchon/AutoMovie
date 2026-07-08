@@ -42,6 +42,8 @@ const frame = (
  *    `compileCameraMove`'s throw.
  * 5. An unknown frame `move` returns a `type` violation instead of leaking
  *    `compileCameraMove`'s throw.
+ * 6. Malformed frame actor/target shapes return path-bearing `type` violations
+ *    instead of raw property access failures.
  */
 export const test_film_perform_shot_frame_gates = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -141,5 +143,73 @@ export const test_film_perform_shot_frame_gates = (): void => {
     "unknown frame move rejected",
     invalidMove.success === false &&
       hasViolation(invalidMove, "type", "$input.draft[0].move"),
+  );
+
+  const malformedActor = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [frame({ actor: null as never })],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "malformed frame actor rejected",
+    malformedActor.success === false &&
+      hasViolation(malformedActor, "type", "$input.draft[0].actor"),
+  );
+
+  const missingTarget = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [frame({ on: undefined as never })],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "missing frame target rejected",
+    missingTarget.success === false &&
+      hasViolation(missingTarget, "type", "$input.draft[0].on"),
+  );
+
+  const malformedGroup = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        frame({
+          on: { kind: "group", nodes: "knightA" } as never,
+        }),
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "malformed group target rejected",
+    malformedGroup.success === false &&
+      hasViolation(malformedGroup, "type", "$input.draft[0].on.nodes"),
+  );
+
+  const malformedKind = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [frame({ on: { kind: null } as never })],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "malformed target kind rejected",
+    malformedKind.success === false &&
+      hasViolation(malformedKind, "type", "$input.draft[0].on"),
   );
 };

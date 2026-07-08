@@ -65,8 +65,20 @@ const animatedBaseAt =
       ),
     );
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const targetKindName = (target: unknown): string =>
+  isRecord(target) && typeof target.kind === "string"
+    ? target.kind
+    : "malformed";
+
 const actionActors = (action: IAutoMovieActionCall): string[] =>
-  typeof action.actor === "string" ? [action.actor] : action.actor;
+  typeof action.actor === "string"
+    ? [action.actor]
+    : Array.isArray(action.actor)
+      ? action.actor
+      : [];
 
 const EVENT_KIND_ORDER: Record<IAutoMovieInteractionEvent["kind"], number> = {
   contact: 0,
@@ -241,22 +253,41 @@ export const performShot = (props: {
   });
 
   const validateNonEmptyId = (
-    id: string,
+    id: unknown,
     path: string,
     label: string,
   ): void => {
+    if (typeof id !== "string") {
+      out.push("type", path, `${label} must be a string`, id);
+      return;
+    }
     if (id.trim().length === 0)
       out.push("type", path, `${label} must be a non-empty id`, id);
   };
 
   const validateTargetNodeIds = (
-    target: IAutoMovieActionTarget,
+    target: unknown,
     path: string,
     label: string,
-  ): void => {
-    if (target.kind === "node")
+  ): target is IAutoMovieActionTarget => {
+    if (!isRecord(target)) {
+      out.push("type", path, `${label} must be an action target`, target);
+      return false;
+    }
+    if (target.kind === "node") {
       validateNonEmptyId(target.node, `${path}.node`, `${label} node id`);
-    else if (target.kind === "group")
+      return true;
+    }
+    if (target.kind === "group") {
+      if (!Array.isArray(target.nodes)) {
+        out.push(
+          "type",
+          `${path}.nodes`,
+          `${label} group nodes must be an array`,
+          target.nodes,
+        );
+        return false;
+      }
       target.nodes.forEach((node, j) =>
         validateNonEmptyId(
           node,
@@ -264,6 +295,9 @@ export const performShot = (props: {
           `${label} group node id`,
         ),
       );
+      return true;
+    }
+    return true;
   };
 
   validateNonEmptyId(performance.beat, "$input.beat", "beat id");
@@ -300,6 +334,26 @@ export const performShot = (props: {
     staged.scene.nodes.map((n) => [n.id, n.transform.rotation]),
   );
 
+  const resolvePositionalTarget = (
+    target: unknown,
+    path: string,
+    label: string,
+    subject: string,
+  ): IAutoMovieVector3 | null => {
+    if (!validateTargetNodeIds(target, path, label)) return null;
+    const point = resolveTargetPoint(target, nodePositions);
+    if (point === null || point === undefined) {
+      out.push(
+        "type",
+        path,
+        `${subject} must resolve to a point — a node/point/group of placed actors, not "${targetKindName(target)}"`,
+        target,
+      );
+      return null;
+    }
+    return point;
+  };
+
   let liveCamera: string | null = null;
   const stageActions: IAutoMovieActionCall[] = [];
   const frames: { action: IAutoMovieCameraAction; index: number }[] = [];
@@ -320,15 +374,14 @@ export const performShot = (props: {
     index: number;
   }[] = [];
   actions.forEach((action, i) => {
-    const actors =
-      typeof action.actor === "string" ? [action.actor] : action.actor;
+    const actors = actionActors(action);
     if (typeof action.actor === "string")
       validateNonEmptyId(
         action.actor,
         `${base}[${i}].actor`,
         "action actor id",
       );
-    if (Array.isArray(action.actor)) {
+    else if (Array.isArray(action.actor)) {
       if (action.actor.length === 0)
         out.push(
           "type",
@@ -352,6 +405,13 @@ export const performShot = (props: {
           );
         seen.add(actor);
       });
+    } else {
+      out.push(
+        "type",
+        `${base}[${i}].actor`,
+        "action actor must be a staged scene node id or an array of ids",
+        action.actor,
+      );
     }
     actors.forEach((actor) => {
       const isNode = nodeIds.has(actor);
@@ -414,8 +474,7 @@ export const performShot = (props: {
         action.repeat,
       );
     if (action.verb === "frame") {
-      const camera =
-        typeof action.actor === "string" ? action.actor : action.actor[0]!;
+      const camera = typeof action.actor === "string" ? action.actor : "";
       if (!CAMERA_FRAMINGS.has(action.framing))
         out.push(
           "type",
@@ -430,7 +489,12 @@ export const performShot = (props: {
           `camera move must be one of static, follow, orbit, push-in, whip, but was "${String(action.move)}"`,
           action.move,
         );
-      validateTargetNodeIds(action.on, `${base}[${i}].on`, "frame target");
+      const target = resolvePositionalTarget(
+        action.on,
+        `${base}[${i}].on`,
+        "frame target",
+        "a frame subject",
+      );
       if (typeof action.actor !== "string")
         out.push(
           "type",
@@ -438,29 +502,23 @@ export const performShot = (props: {
           `a frame action must name exactly one staged camera, not an actor list`,
           action.actor,
         );
-      if (!cameraIds.has(camera))
+      if (typeof action.actor === "string" && !cameraIds.has(camera))
         out.push(
           "type",
           `${base}[${i}].actor`,
           `a frame action's actor must be a staged camera, but "${camera}" is not`,
           camera,
         );
-      else if (liveCamera === null) liveCamera = camera;
-      else if (liveCamera !== camera)
+      else if (typeof action.actor === "string" && liveCamera === null)
+        liveCamera = camera;
+      else if (typeof action.actor === "string" && liveCamera !== camera)
         out.push(
           "type",
           `${base}[${i}].actor`,
           `one live camera per shot — "${liveCamera}" already frames it`,
           camera,
         );
-      if (resolveTargetPoint(action.on, nodePositions) === null)
-        out.push(
-          "type",
-          `${base}[${i}].on`,
-          `a frame subject must resolve to a point — a node/point/group of placed actors, not "${action.on.kind}"`,
-          action.on,
-        );
-      frames.push({ action, index: i });
+      if (target !== null) frames.push({ action, index: i });
     } else {
       stageActions.push(action);
       if (action.verb === "locomote" && gaits !== undefined) {
@@ -509,7 +567,12 @@ export const performShot = (props: {
           `${base}[${i}].projectile`,
           "launch projectile id",
         );
-        validateTargetNodeIds(action.at, `${base}[${i}].at`, "launch target");
+        const target = resolvePositionalTarget(
+          action.at,
+          `${base}[${i}].at`,
+          "launch target",
+          "a launch target",
+        );
         const stagedProjectile = nodeIds.has(action.projectile);
         if (!stagedProjectile)
           out.push(
@@ -525,19 +588,15 @@ export const performShot = (props: {
             `a launch's projectile "${action.projectile}" cannot also be a launching actor`,
             action.projectile,
           );
-        if (action.at.kind === "node" && action.at.node === action.projectile)
+        if (
+          isRecord(action.at) &&
+          action.at.kind === "node" &&
+          action.at.node === action.projectile
+        )
           out.push(
             "type",
             `${base}[${i}].at`,
             `a launch's projectile "${action.projectile}" cannot target itself`,
-            action.at,
-          );
-        const target = resolveTargetPoint(action.at, nodePositions);
-        if (target === null)
-          out.push(
-            "type",
-            `${base}[${i}].at`,
-            `a launch target must resolve to a point — a node/point/group of placed actors, not "${action.at.kind}"`,
             action.at,
           );
         if (stagedProjectile && target !== null)
@@ -546,7 +605,12 @@ export const performShot = (props: {
             index: i,
             origin: nodePositions.get(action.projectile)!,
             target,
-            targetNode: action.at.kind === "node" ? action.at.node : null,
+            targetNode:
+              isRecord(action.at) &&
+              action.at.kind === "node" &&
+              typeof action.at.node === "string"
+                ? action.at.node
+                : null,
           });
       } else if (
         action.verb === "react" &&
@@ -569,38 +633,31 @@ export const performShot = (props: {
           action.intensity,
         );
       } else if (action.verb === "lookAt") {
-        validateTargetNodeIds(action.to, `${base}[${i}].to`, "lookAt target");
-        if (resolveTargetPoint(action.to, nodePositions) === null)
-          out.push(
-            "type",
-            `${base}[${i}].to`,
-            `a lookAt target must resolve to a point — a node/point/group of placed actors, not "${action.to.kind}"`,
-            action.to,
-          );
+        resolvePositionalTarget(
+          action.to,
+          `${base}[${i}].to`,
+          "lookAt target",
+          "a lookAt target",
+        );
       } else if (action.verb === "reach") {
-        validateTargetNodeIds(action.to, `${base}[${i}].to`, "reach target");
-        if (resolveTargetPoint(action.to, nodePositions) === null)
-          out.push(
-            "type",
-            `${base}[${i}].to`,
-            `a reach target must resolve to a point — a node/point/group of placed actors, not "${action.to.kind}"`,
-            action.to,
-          );
+        resolvePositionalTarget(
+          action.to,
+          `${base}[${i}].to`,
+          "reach target",
+          "a reach target",
+        );
       } else if (
         action.verb === "gesture" &&
         (action.kind === "point" || action.kind === "strike")
       ) {
         if (action.at !== undefined)
-          validateTargetNodeIds(
+          resolvePositionalTarget(
             action.at,
             `${base}[${i}].at`,
             `${action.kind} gesture target`,
+            `a ${action.kind} gesture target`,
           );
-        const target =
-          action.at === undefined
-            ? null
-            : resolveTargetPoint(action.at, nodePositions);
-        if (target === null)
+        else
           out.push(
             "type",
             `${base}[${i}].at`,
@@ -696,9 +753,7 @@ export const performShot = (props: {
   >();
   actions.forEach((action, index) => {
     if (action.verb === "frame") return;
-    const actors =
-      typeof action.actor === "string" ? [action.actor] : action.actor;
-    for (const actor of actors) {
+    for (const actor of actionActors(action)) {
       const list = actorActions.get(actor) ?? [];
       list.push({ action, index });
       actorActions.set(actor, list);
@@ -764,9 +819,7 @@ export const performShot = (props: {
     for (const intent of blocking.actors)
       for (const anchor of intent.anchors ?? []) {
         const covered = stageActions.some((action) => {
-          const actors =
-            typeof action.actor === "string" ? [action.actor] : action.actor;
-          if (!actors.includes(intent.node)) return false;
+          if (!actionActors(action).includes(intent.node)) return false;
           const [from, to] = spanOf(action);
           return anchor.t >= from - 1e-9 && anchor.t <= to + 1e-9;
         });
