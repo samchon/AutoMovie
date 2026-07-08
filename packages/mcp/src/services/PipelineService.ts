@@ -23,6 +23,7 @@ import {
   IAutoMovieForgeApplication,
   IAutoMovieGait,
   IAutoMoviePerformanceApplication,
+  IAutoMoviePropSpec,
   IAutoMovieScriptApplication,
   IAutoMovieShot,
   IAutoMovieStagingApplication,
@@ -147,7 +148,9 @@ export class PipelineService {
   public forgeProp(props: {
     spec: IAutoMovieMcpPropSpec;
   }): IAutoMovieForgePropOutput {
-    const forged = forgeProp(toEnginePropSpec(props.spec));
+    const converted = convertPropSpecForForge(props.spec);
+    if (converted.success === false) return { forged: converted };
+    const forged = forgeProp(converted.prop);
     if (forged.success === false) return { forged };
     const output: IAutoMovieForgePropOutput = {
       forged: { success: true, prop: props.spec },
@@ -178,6 +181,28 @@ export class PipelineService {
     return { ...output, stored: true };
   }
 }
+
+const convertPropSpecForForge = (
+  spec: IAutoMovieMcpPropSpec,
+):
+  | { success: true; prop: IAutoMoviePropSpec }
+  | { success: false; violations: IAutoMovieConstraintViolation[] } => {
+  try {
+    return { success: true, prop: toEnginePropSpec(spec) };
+  } catch {
+    return {
+      success: false,
+      violations: [
+        violation(
+          "type",
+          "$input.articulation",
+          "prop articulation must match the forgeProp schema",
+          spec.articulation,
+        ),
+      ],
+    };
+  }
+};
 
 const toActorContext = (
   context: IAutoMovieMcpActorContext,

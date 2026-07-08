@@ -3,6 +3,7 @@ import { AutoMovieApplication, IAutoMovieMcpPropSpec } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import { createDoorPropSpec } from "../film/test_film_forge_prop";
+import { hasViolation } from "../internal/predicates";
 
 const app = new AutoMovieApplication();
 
@@ -52,6 +53,8 @@ export const mcpDoorSpec = (): IAutoMovieMcpPropSpec => {
  *    changed representation, not semantics).
  * 3. A violating spec (skeletoned model) surfaces the engine's violations through
  *    the tool.
+ * 4. A malformed MCP articulation shape is reported as a forge failure instead of
+ *    leaking a converter TypeError.
  */
 export const test_mcp_forge_prop = (): void => {
   const spec = mcpDoorSpec();
@@ -150,5 +153,21 @@ export const test_mcp_forge_prop = (): void => {
       broken.forged.violations.some((v) =>
         v.path.includes("$input.model.skeleton"),
       ),
+  );
+
+  const malformedArticulation = app.forgeProp({
+    spec: {
+      ...spec,
+      articulation: {},
+    } as unknown as IAutoMovieMcpPropSpec,
+  });
+  TestValidator.equals(
+    "malformed articulation returns a forge failure",
+    malformedArticulation.forged.success,
+    false,
+  );
+  TestValidator.predicate(
+    "malformed articulation violation names articulation",
+    hasViolation(malformedArticulation.forged, "type", "$input.articulation"),
   );
 };
