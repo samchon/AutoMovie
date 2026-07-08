@@ -144,13 +144,30 @@ export const solveMovingLaunch = (
   const initialTarget = targetAt(0);
   if (!finiteVector(initialTarget)) return null;
 
+  // Track the closest solve by fixed-point residual |hitTime − t|, not just the
+  // last iterate: when the target outpaces the fixed point the iteration can
+  // oscillate rather than settle, and the final guess need not be the nearest
+  // one visited. Converged shots hit the `settled` early-out, where the last
+  // iterate IS the minimum, so tracking only changes the un-settled tail.
   let t = Vector3.length(Vector3.subtract(initialTarget, origin)) / speed;
-  let solution: IAutoMovieBallisticSolution | null = null;
+  let best: IAutoMovieBallisticSolution | null = null;
+  let bestResidual = Infinity;
   for (let i = 0; i < iterations; ++i) {
-    solution = solveBallisticLaunch(origin, targetAt(t), speed, gravity, arc);
+    const solution = solveBallisticLaunch(
+      origin,
+      targetAt(t),
+      speed,
+      gravity,
+      arc,
+    );
     if (solution === null) return null; // out of range at this iterate
-    if (Math.abs(solution.hitTime - t) < 1e-6) return solution; // settled
+    const residual = Math.abs(solution.hitTime - t);
+    if (residual < bestResidual) {
+      bestResidual = residual;
+      best = solution;
+    }
+    if (residual < 1e-6) return best; // settled onto the meeting point
     t = solution.hitTime;
   }
-  return solution;
+  return best; // capped without settling — the closest lead found
 };
