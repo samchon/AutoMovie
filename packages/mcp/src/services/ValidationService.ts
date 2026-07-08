@@ -224,6 +224,12 @@ const validateMcpModelShape = (
         `${path}.baseColor`,
         violations,
       );
+      if (material.emissive !== null)
+        validateColorArtifact(
+          material.emissive,
+          `${path}.emissive`,
+          violations,
+        );
     });
   const parts = shape.parts;
   if (validateArrayArtifact(parts, "$input.parts", "model parts", violations))
