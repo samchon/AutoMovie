@@ -99,7 +99,8 @@ const commitResident = (app: AutoMovieApplication): void => {
  *    malformed pass lists are field-located violations.
  * 3. A resident `planCaptions` plans the whole sidecar and, with `chunkFrames`,
  *    one chunk-local sidecar per render chunk (frame counts sum to the whole).
- * 4. A shot target (not the film) is a violation — a shot renders whole.
+ * 4. A malformed spec and a shot target (not the film) are violations — a shot
+ *    renders whole.
  * 5. A non-positive / non-integer `chunkFrames` is a violation.
  * 6. An explicit slate keeps the legacy `frames/<stem>` defaults, byte-identical.
  * 7. Without a project and without a slate, both tools throw the openProject
@@ -224,7 +225,21 @@ export const test_mcp_render_chunked = (): void => {
       null,
     );
 
-    // 4. a shot target is a violation (a shot renders whole)
+    // 4. malformed specs and shot targets are violations
+    const malformedSpec = app.planChunkedRender({
+      spec: null as unknown as IAutoMovieRenderSpec,
+      chunkFrames: 4,
+    });
+    TestValidator.predicate(
+      "malformed chunked render spec is a violation",
+      malformedSpec.plan === null &&
+        malformedSpec.validation.success === false &&
+        malformedSpec.validation.violations.some(
+          (violation) => violation.path === "$input.spec",
+        ),
+    );
+
+    // a shot target is a violation (a shot renders whole)
     const shotTarget = app.planChunkedRender({
       spec: { ...filmSpec, target: shot.id },
       chunkFrames: 4,
