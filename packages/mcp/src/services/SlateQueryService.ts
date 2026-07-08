@@ -69,14 +69,17 @@ export class SlateQueryService {
     slate?: IAutoMovieMcpStoredSlate;
     beat: string;
   }): IAutoMovieGetShotOutput {
+    const slate = this.stored(props.slate, "getShot");
+    assertStoredSlateCollection(
+      slate.shots,
+      "slate.shots",
+      "stored slate shots",
+    );
     return {
-      shot: readSlateContext(
-        toStoredSlate(this.stored(props.slate, "getShot")),
-        {
-          type: "getShot",
-          beat: props.beat,
-        },
-      ) as IAutoMovieShot | null,
+      shot: readSlateContext(toStoredSlate(slate), {
+        type: "getShot",
+        beat: props.beat,
+      }) as IAutoMovieShot | null,
     };
   }
 
@@ -84,14 +87,17 @@ export class SlateQueryService {
     slate?: IAutoMovieMcpStoredSlate;
     beat?: string;
   }): IAutoMovieGetNotesOutput {
+    const slate = this.stored(props.slate, "getNotes");
+    assertStoredSlateCollection(
+      slate.notes,
+      "slate.notes",
+      "stored slate notes",
+    );
     return {
-      notes: readSlateContext(
-        toStoredSlate(this.stored(props.slate, "getNotes")),
-        {
-          type: "getNotes",
-          beat: props.beat,
-        },
-      ) as IAutoMovieReviewNote[],
+      notes: readSlateContext(toStoredSlate(slate), {
+        type: "getNotes",
+        beat: props.beat,
+      }) as IAutoMovieReviewNote[],
     };
   }
 
@@ -99,14 +105,17 @@ export class SlateQueryService {
     slate?: IAutoMovieMcpStoredSlate;
     beat: string;
   }): IAutoMovieGetBeatEndOutput {
+    const slate = this.stored(props.slate, "getBeatEnd");
+    assertStoredSlateCollection(
+      slate.beatEnds,
+      "slate.beatEnds",
+      "stored slate beat ends",
+    );
     return {
-      beatEnd: readSlateContext(
-        toStoredSlate(this.stored(props.slate, "getBeatEnd")),
-        {
-          type: "getBeatEnd",
-          beat: props.beat,
-        },
-      ) as IAutoMovieBeatEndState | null,
+      beatEnd: readSlateContext(toStoredSlate(slate), {
+        type: "getBeatEnd",
+        beat: props.beat,
+      }) as IAutoMovieBeatEndState | null,
     };
   }
 }
@@ -120,3 +129,18 @@ const toStoredSlate = (slate: IAutoMovieMcpStoredSlate): IAutoMovieSlate => ({
   notes: slate.notes,
   film: null,
 });
+
+const assertStoredSlateCollection = (
+  value: unknown,
+  path: string,
+  label: string,
+): void => {
+  if (!Array.isArray(value))
+    throw new Error(`${label} at ${path} must be an array`);
+  value.forEach((entry, index) => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry))
+      throw new Error(
+        `${label} entry at ${path}[${index}] must be a JSON object`,
+      );
+  });
+};
