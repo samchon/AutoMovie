@@ -41,6 +41,7 @@ import {
   appendValidation,
   isRecord,
   pushViolation,
+  validateArrayArtifact,
   validateNonEmptyId,
   validateRange,
 } from "../validators/primitives";
@@ -608,9 +609,18 @@ const resolveRenderTarget = (
   target: string,
   violations: IAutoMovieConstraintViolation[],
 ): { target: IAutoMovieMcpRenderTarget; duration: number } | null => {
+  if (
+    !validateArrayArtifact(
+      slate.shots,
+      "$slate.shots",
+      "slate shots",
+      violations,
+    )
+  )
+    return null;
   const shots = slate.shots
     .map((shot, index) => ({ shot, index }))
-    .filter(({ shot }) => shot.id === target);
+    .filter(({ shot }) => isRecord(shot) && shot.id === target);
   if (shots.length > 1)
     pushViolation(
       violations,
@@ -631,6 +641,17 @@ const resolveRenderTarget = (
       false,
     );
     return { target: { kind: "shot", id: shot.id }, duration: shot.duration };
+  }
+
+  if (slate.film !== null && !isRecord(slate.film)) {
+    pushViolation(
+      violations,
+      "type",
+      "$slate.film",
+      "slate film must be null or a JSON object",
+      slate.film,
+    );
+    return null;
   }
 
   if (slate.film !== null && slate.film.id === target) {
