@@ -1,5 +1,6 @@
 import { IAutoMovieMcpProjectSummary } from "../dto";
 import { AutoMovieProject } from "./AutoMovieProject";
+import { shotIdOf } from "./shotKey";
 
 /**
  * The resident-mode ordering gate (#615) — AutoBe's `TOOL_PREREQUISITES`
@@ -86,12 +87,12 @@ export const nextStepsOf = (
     const shotIds = new Set(status.shots);
     const beatEnds = new Set(status.beatEnds);
     for (const beat of beats)
-      if (!shotIds.has(`shot:${beat.id}`))
+      if (!shotIds.has(shotIdOf(beat.id)))
         actions.push(
           `Call commitShot for beat "${beat.id}" (build it with block + perform).`,
         );
     for (const beat of beats)
-      if (shotIds.has(`shot:${beat.id}`) && !beatEnds.has(beat.id))
+      if (shotIds.has(shotIdOf(beat.id)) && !beatEnds.has(beat.id))
         actions.push(
           `Call commitBeatEnd for beat "${beat.id}" so the next beat can resume from it.`,
         );
