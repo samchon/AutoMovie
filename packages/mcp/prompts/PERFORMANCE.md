@@ -17,6 +17,12 @@ Each performing actor needs a context: its gaits (JSON-safe — named easing onl
 - **Reaches are not clamped.** An impossible reach fails the shot's ROM gate rather than being quietly bent into range — reposition the actor, do not expect the engine to hide the miss.
 - Every compiled motion is ROM-checked (`validateMotion`); the launch compiler injects `react` actions timed to the engine-computed hit, so they share the same gate.
 
+## Motions Are Derived, Not Stored
+
+A `perform` returns the compiled `motions` alongside the shot; the shot itself keeps only motion **id references** (`performances[].motion`), never the clips. Those clips are the densest artifact and are purely derived — deterministically re-`perform`able from the resident script/scene/shot — so the project persists the shot, not the motion (the memory is the AST, not its regenerable output). A re-opened project re-derives motion by re-`perform`ing; it is never read back from a file.
+
+Because of that, a **resident** `commitShot` whose shot references any motion must pass the `motions` registry those references resolve against — otherwise it would store a dangling id. Omitting `motions` there is refused, not silently accepted. An explicit-slate `commitShot` stays a pure transform (references are yours to guarantee).
+
 ## Continuity
 
 Author the beat's opening from the previous beat's end state (`getBeatEnd`): seed positions and facing from the recorded transforms, and keep looping gaits phase-continuous rather than restarting them. The end state also carries foot plants and mounts — respect them.

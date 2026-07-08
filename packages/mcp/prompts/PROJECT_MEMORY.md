@@ -15,6 +15,7 @@ Every commit and query tool works in two modes:
 - **A cleared slice's file is removed.** Committing a new script clears scene/shots/beatEnds/notes/film — and in the project tree those files disappear. The invalidation cascade is visible on disk; a missing file IS the stale marker.
 - Writes are atomic (temp file + rename); a crash never leaves a half-written slice.
 - **Beat commits upsert.** Re-committing a beat replaces exactly that beat's `shots/<beat>.json` (or `beatEnds/<beat>.json`); sibling beats' files stay byte-identical.
+- **Compiled motions are not a slice.** A shot stores motion id references, never the clips; the clips are re-`perform`-derived, so the project keeps the AST and re-derives motion on demand. A resident `commitShot` referencing motions must therefore pass the `motions` registry to validate those references (a dangling id is refused, not stored).
 
 ## Surgical Erase and Set
 
