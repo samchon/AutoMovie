@@ -458,9 +458,9 @@ export class CommitService {
    * Replace ONE actor's performance in a beat's resident shot — the AutoBe
    * one-artifact-per-call granularity taken below the beat (#654). Sibling
    * performances and every other beat stay byte-unchanged; the beat's beat-end
-   * is stale without the performance it sampled and is removed, and the
-   * assembled film is cleared (the commit cascade's spirit, scoped to one
-   * beat).
+   * and beat-scoped review notes are stale without the performance they sampled
+   * and are removed, and the assembled film is cleared (the commit cascade's
+   * spirit, scoped to one beat).
    *
    * **Replacement-only.** The node must already perform in that shot:
    * introducing a NEW performer changes the shot's dramatic content and belongs
@@ -563,6 +563,7 @@ export class CommitService {
             },
       ),
       beatEnds: slate.beatEnds.filter((end) => end.beat !== props.beat),
+      notes: slate.notes.filter((note) => note.beat !== props.beat),
       film: null,
     };
     project.saveSlate(next);

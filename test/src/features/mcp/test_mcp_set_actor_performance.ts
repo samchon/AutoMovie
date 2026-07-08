@@ -1,4 +1,8 @@
-import { IAutoMovieScript, IAutoMovieShot } from "@automovie/interface";
+import {
+  IAutoMovieReviewNote,
+  IAutoMovieScript,
+  IAutoMovieShot,
+} from "@automovie/interface";
 import { AutoMovieApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -77,8 +81,8 @@ const motionsFor = (beat: string) => ({
  * 1. Replacing knightB's performance in beat-1 swaps exactly that entry: knightA's
  *    entry is deep-equal to before, beat-2's shot file stays byte-identical on
  *    disk, beat-1's shot file reflects the new motion (write-through), beat-1's
- *    beat-end is removed (stale without the performance it sampled) while
- *    beat-2's survives, and the film is cleared.
+ *    beat-end and notes are removed (stale without the performance they
+ *    sampled) while beat-2's survive, and the film is cleared.
  * 2. A supplied motions registry gates the reference: a matching registry accepts;
  *    a registry without the named motion violates at
  *    `$input.performance.motion` (the commitShot registry semantics).
@@ -123,8 +127,24 @@ export const test_mcp_set_actor_performance = (): void => {
     app.commitBeatEnd({
       beatEnd: { beat: "beat-2", shot: "shot:beat-2", actors: [] },
     });
+    const notes: IAutoMovieReviewNote[] = [
+      {
+        beat: "beat-1",
+        tier: "physical",
+        issue: "brace no longer matches the parry timing",
+        suggestion: "review after the replacement performance lands",
+      },
+      {
+        beat: "beat-2",
+        tier: "visual",
+        issue: "camera clips the shield rim",
+        suggestion: "hold the tighter frame",
+      },
+    ];
+    app.commitNotes({ notes });
 
     const shot2File = path.join(root, "shots", "beat-2.json");
+    const notesFile = path.join(root, "notes.json");
     const shot2Before = fs.readFileSync(shot2File, "utf8");
     const knightABefore = app
       .getShot({ beat: "beat-1" })
@@ -169,6 +189,21 @@ export const test_mcp_set_actor_performance = (): void => {
       "beat-2's beat-end survives",
       fs.existsSync(path.join(root, "beatEnds", "beat-2.json")),
       true,
+    );
+    TestValidator.equals(
+      "beat-1's notes removed (stale)",
+      app.getNotes({ beat: "beat-1" }).notes,
+      [],
+    );
+    TestValidator.equals(
+      "beat-2's notes survive",
+      app.getNotes({ beat: "beat-2" }).notes,
+      [notes[1]],
+    );
+    TestValidator.equals(
+      "notes file keeps only sibling beat notes",
+      JSON.parse(fs.readFileSync(notesFile, "utf8")),
+      [notes[1]],
     );
     TestValidator.equals("film cleared", updated.slate.film, null);
 

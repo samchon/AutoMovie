@@ -20,7 +20,7 @@ Every commit and query tool works in two modes:
 ## Surgical Erase and Set
 
 - `eraseShot` removes ONE beat's shot file together with that beat's end-state and notes, and nulls the film. `eraseNotes` removes only the beat's notes and nulls the film. Both demand a `reason` (evidence, not ceremony) and refuse a beat with nothing to erase. Clearing everything a script owns is `commitScript`'s job — a targeted erase of the root would be a reset in disguise.
-- `setActorPerformance` splices one actor's performance inside one committed shot (replacement-only — a new performer belongs to `perform` + `commitShot`), removes that beat's end-state, and nulls the film; other beats' files are untouched.
+- `setActorPerformance` splices one actor's performance inside one committed shot (replacement-only — a new performer belongs to `perform` + `commitShot`), removes that beat's end-state and review notes, and nulls the film; other beats' files are untouched.
 - `setPlacement` moves one staged node and mirrors `commitScene`'s full downstream clear (shots, beat ends, notes, film): shots kept against moved world coordinates would be silently stale geometry. The gain over restaging is precision — one node moves, the rest of the staging is untouched — not a shortcut around re-performing. Its `transform.rotation` is authored as semantic Euler degrees (or omitted for identity); the engine lowers the angles to a quaternion so you never emit one.
 
 ## Ordering
