@@ -80,6 +80,13 @@ export class PipelineService {
     staged: IAutoMovieStagedSet.ISuccess;
     blocking: IAutoMovieBlockingApplication.IWrite;
   }): IAutoMovieBlockOutput {
+    const violations = validateBlockShape(
+      props.script,
+      props.staged,
+      props.blocking,
+    );
+    if (violations.length > 0)
+      return { blocked: { success: false, violations } };
     return { blocked: blockBeat(props.script, props.staged, props.blocking) };
   }
 
@@ -399,6 +406,69 @@ const validateStageTarget = (
         target,
       ),
     );
+};
+
+const validateBlockShape = (
+  script: unknown,
+  staged: unknown,
+  blocking: unknown,
+): IAutoMovieConstraintViolation[] => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  if (isJsonObject(script, "$script", "script", violations)) {
+    if (isJsonArray(script.beats, "$script.beats", "script beats", violations))
+      script.beats.forEach((beat, index) => {
+        const path = `$script.beats[${index}]`;
+        if (!isJsonObject(beat, path, "script beat", violations)) return;
+        requireString(beat.id, `${path}.id`, "beat id", violations);
+      });
+  }
+
+  if (isJsonObject(staged, "$staged", "staged set", violations)) {
+    if (isJsonObject(staged.scene, "$staged.scene", "scene", violations)) {
+      const nodes = staged.scene.nodes;
+      if (isJsonArray(nodes, "$staged.scene.nodes", "scene nodes", violations))
+        nodes.forEach((node, index) => {
+          const path = `$staged.scene.nodes[${index}]`;
+          if (!isJsonObject(node, path, "scene node", violations)) return;
+          requireString(node.id, `${path}.id`, "scene node id", violations);
+        });
+    }
+  }
+
+  if (isJsonObject(blocking, "$input", "blocking", violations)) {
+    requireString(blocking.beat, "$input.beat", "beat id", violations);
+    const actors = blocking.actors;
+    if (isJsonArray(actors, "$input.actors", "blocking actors", violations))
+      actors.forEach((actor, index) => {
+        const path = `$input.actors[${index}]`;
+        if (!isJsonObject(actor, path, "actor intent", violations)) return;
+        requireString(actor.node, `${path}.node`, "actor node", violations);
+        const anchors = actor.anchors;
+        if (anchors !== undefined && anchors !== null) {
+          if (
+            isJsonArray(
+              anchors,
+              `${path}.anchors`,
+              "actor timing anchors",
+              violations,
+            )
+          )
+            anchors.forEach((anchor, anchorIndex) => {
+              const anchorPath = `${path}.anchors[${anchorIndex}]`;
+              isJsonObject(
+                anchor,
+                anchorPath,
+                "actor timing anchor",
+                violations,
+              );
+            });
+        }
+      });
+
+    if (isJsonObject(blocking.camera, "$input.camera", "camera", violations))
+      validateStageTarget(blocking.camera.on, "$input.camera.on", violations);
+  }
+  return violations;
 };
 
 const validateActorRegistry = (
