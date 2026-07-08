@@ -250,6 +250,19 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed pose root returns validation",
+    (() => {
+      const validation = app.validatePose({
+        pose: {
+          skeleton: skeleton.id,
+          joints: [],
+        } as unknown as IAutoMoviePose,
+        skeleton,
+      }).validation;
+      return hasPath(validation, "$input.root");
+    })(),
+  );
+  TestValidator.predicate(
     "malformed motion shape returns validation",
     (() => {
       const validation = app.validateMotion({
