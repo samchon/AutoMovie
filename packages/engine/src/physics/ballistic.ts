@@ -74,11 +74,18 @@ export const solveBallisticLaunch = (
 
   // Purely vertical target: fire straight up/down; solve when it reaches h.
   if (d < 1e-9) {
-    // origin + v·t + ½·(−g)·t² = h  with v = ±speed along up.
+    // origin + v·t + ½·(−g)·t² = h with v = ±speed along up, i.e.
+    // ½·g·t² − v·t + h = 0 → t = (v ± √(v²−2gh)) / g. Both roots are positive
+    // when the target is overhead and fired up (rising through h, then falling
+    // back through it); the FIRST contact is the earlier root (v−√…)/g. Take the
+    // smallest strictly-positive root so the hit time is when the projectile
+    // first reaches h, not the descending re-crossing.
     for (const v of [speed, -speed]) {
       const disc = v * v - 2 * g * h;
       if (disc < 0) continue;
-      const t = (v + Math.sqrt(disc)) / g; // first non-negative crossing
+      const root = Math.sqrt(disc);
+      const rising = (v - root) / g;
+      const t = rising > 1e-9 ? rising : (v + root) / g;
       if (t > 1e-9) return { velocity: Vector3.scale(up, v), hitTime: t };
     }
     return null;
