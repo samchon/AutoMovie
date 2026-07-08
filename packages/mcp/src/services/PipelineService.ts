@@ -9,6 +9,8 @@ import {
   makeActorSynthesizer,
   performShot,
   stageScene,
+  toValidation,
+  violation,
 } from "@automovie/engine";
 import {
   IAutoMovieAssembleApplication,
@@ -111,6 +113,17 @@ export class PipelineService {
    * `props/<node>.json` (the #617 upsert: re-forging replaces exactly its own
    * file) and the output says so with `stored: true`. Pure (no-project) calls
    * and failed forges return byte-identical to the pre-#671 shape.
+   *
+   * **Re-forging a placed prop is refused (#712), symmetric with `eraseProp`.**
+   * When the committed scene still places this prop AND a spec is already
+   * stored, replacing that spec would leave committed shots resolving against
+   * stale articulation (the same hazard `setPlacement` guards) — so the
+   * write-through is refused (`stored: false`) with a `$slate.scene` violation:
+   * re-commit the scene without the placement (or accept re-perform) first. The
+   * asymmetry with `eraseProp` (which refuses on placement alone) is
+   * deliberate: a FIRST forge of an as-yet-unstored node creates the spec shots
+   * need rather than replacing one, so it always stores even if the scene
+   * already names the node — only a REPLACEMENT of a placed prop stales.
    */
   public forgeProp(props: {
     spec: IAutoMovieMcpPropSpec;
@@ -122,6 +135,26 @@ export class PipelineService {
     };
     const project = this.context?.project ?? null;
     if (project === null) return output;
+
+    const node = props.spec.node;
+    const alreadyStored = project.storedProps().some((s) => s.node === node);
+    const scene = project.storedSlate().scene;
+    const placed =
+      scene !== null && scene.nodes.some((entry) => entry.id === node);
+    if (alreadyStored && placed)
+      return {
+        ...output,
+        stored: false,
+        validation: toValidation([
+          violation(
+            "type",
+            "$slate.scene",
+            `prop "${node}" is still placed in the committed scene; re-commit the scene without the placement before re-forging its spec (or accept re-perform)`,
+            node,
+          ),
+        ]),
+      };
+
     project.saveProp(props.spec);
     return { ...output, stored: true };
   }
