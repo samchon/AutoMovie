@@ -270,6 +270,33 @@ export const test_mcp_render_tools = async (): Promise<void> => {
     malformedFilm.plan === null &&
       hasPath(malformedFilm.validation, "$slate.film"),
   );
+  const malformedShotEntry = app.planRender({
+    slate: {
+      ...slate,
+      shots: [null as unknown as IAutoMovieShot],
+    },
+    spec: { ...spec, target: sequence.id },
+  });
+  TestValidator.predicate(
+    "malformed slate shot entry path",
+    malformedShotEntry.plan === null &&
+      hasPath(malformedShotEntry.validation, "$slate.shots[0]"),
+  );
+  const malformedFilmShots = app.planRender({
+    slate: {
+      ...slate,
+      film: {
+        ...sequence,
+        shots: null as unknown as IAutoMovieSequence["shots"],
+      },
+    },
+    spec: { ...spec, target: sequence.id },
+  });
+  TestValidator.predicate(
+    "malformed slate film sequence path",
+    malformedFilmShots.plan === null &&
+      hasPath(malformedFilmShots.validation, "$input.shots"),
+  );
   TestValidator.predicate(
     "zero-frame plan path",
     hasPath(

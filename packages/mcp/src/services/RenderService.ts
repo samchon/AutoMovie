@@ -316,17 +316,11 @@ const buildCaptionPlan = (props: {
   );
   let shotEntriesReady = shotsReady;
   if (shotsReady)
-    shots.forEach((shot, index) => {
-      if (isRecord(shot)) return;
-      shotEntriesReady = false;
-      pushViolation(
-        violations,
-        "type",
-        `$slate.shots[${index}]`,
-        "slate shot must be a JSON object",
-        shot,
-      );
-    });
+    shotEntriesReady = validateSlateShotEntries(
+      shots,
+      "$slate.shots",
+      violations,
+    );
 
   const film = props.slate.film as unknown;
   let sequence: IAutoMovieSequence | null = null;
@@ -640,6 +634,26 @@ const validateRenderSpec = (
     );
 };
 
+const validateSlateShotEntries = (
+  shots: unknown[],
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): boolean => {
+  let success = true;
+  shots.forEach((shot, index) => {
+    if (isRecord(shot)) return;
+    success = false;
+    pushViolation(
+      violations,
+      "type",
+      `${path}[${index}]`,
+      "slate shot must be a JSON object",
+      shot,
+    );
+  });
+  return success;
+};
+
 const resolveRenderTarget = (
   slate: IAutoMovieMcpWritableSlate,
   target: string,
@@ -653,6 +667,8 @@ const resolveRenderTarget = (
       violations,
     )
   )
+    return null;
+  if (!validateSlateShotEntries(slate.shots, "$slate.shots", violations))
     return null;
   const shots = slate.shots
     .map((shot, index) => ({ shot, index }))
@@ -691,10 +707,12 @@ const resolveRenderTarget = (
   }
 
   if (slate.film !== null && slate.film.id === target) {
-    appendValidation(
-      violations,
-      validateSequenceArtifact(slate.film, slate.shots),
+    const sequenceValidation = validateSequenceArtifact(
+      slate.film,
+      slate.shots,
     );
+    appendValidation(violations, sequenceValidation);
+    if (sequenceValidation.success === false) return null;
     const duration = sequenceRuntime(slate.film, slate.shots);
     validateRange(
       duration,
