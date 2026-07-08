@@ -1,3 +1,6 @@
+export * from "./captionPlan";
+export * from "./captionSidecar";
+export * from "./captionSlice";
 export * from "./chunkSequenceRender";
 export * from "./exportModel";
 export * from "./guidePasses";
@@ -5,5 +8,6 @@ export * from "./headlessCapture";
 export * from "./plan";
 export * from "./renderAndSee";
 export * from "./renderVideo";
+export * from "./screenplay";
 export * from "./sequenceRenderPlan";
 export * from "./sequenceRenderVideo";
