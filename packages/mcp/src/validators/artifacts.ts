@@ -208,10 +208,35 @@ export const validateShotArtifact = (
       .map((node) => node.id)
       .filter((id): id is string => typeof id === "string"),
   );
-  const motionIds =
-    motions === undefined
-      ? null
-      : new Set(Object.values(motions).map((motion) => motion.id));
+  const motionIds = (() => {
+    if (motions === undefined) return null;
+    if (!isRecord(motions)) {
+      pushViolation(
+        violations,
+        "type",
+        "$motions",
+        "motion registry must be a JSON object",
+        motions,
+      );
+      return new Set<string>();
+    }
+    const ids = new Set<string>();
+    Object.entries(motions).forEach(([key, motion]) => {
+      const path = `$motions.${key}`;
+      if (
+        !validateObjectArtifact(
+          motion,
+          path,
+          "motion registry entry",
+          violations,
+        )
+      )
+        return;
+      validateNonEmptyId(motion.id, `${path}.id`, "motion id", violations);
+      if (typeof motion.id === "string") ids.add(motion.id);
+    });
+    return ids;
+  })();
   validateUniqueBy(
     asArray(shot.performances).map((performance, index) => ({
       id: isRecord(performance) ? performance.node : undefined,
