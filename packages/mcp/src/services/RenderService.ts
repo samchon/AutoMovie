@@ -307,27 +307,63 @@ const buildCaptionPlan = (props: {
       "a script must be committed before captions",
       props.slate.script,
     );
-  if (props.slate.film === null)
+  const shots = props.slate.shots as unknown;
+  const shotsReady = validateArrayArtifact(
+    shots,
+    "$slate.shots",
+    "slate shots",
+    violations,
+  );
+  let shotEntriesReady = shotsReady;
+  if (shotsReady)
+    shots.forEach((shot, index) => {
+      if (isRecord(shot)) return;
+      shotEntriesReady = false;
+      pushViolation(
+        violations,
+        "type",
+        `$slate.shots[${index}]`,
+        "slate shot must be a JSON object",
+        shot,
+      );
+    });
+
+  const film = props.slate.film as unknown;
+  let sequence: IAutoMovieSequence | null = null;
+  let sequenceReady = false;
+  if (film === null)
     pushViolation(
       violations,
       "type",
       "$slate.film",
       "a film must be committed before captions",
-      props.slate.film,
+      film,
     );
-  else
-    appendValidation(
+  else if (!isRecord(film))
+    pushViolation(
       violations,
-      validateSequenceArtifact(props.slate.film, props.slate.shots),
+      "type",
+      "$slate.film",
+      "slate film must be null or a JSON object",
+      film,
     );
+  else if (shotsReady) {
+    sequence = film as unknown as IAutoMovieSequence;
+    const sequenceValidation = validateSequenceArtifact(
+      sequence,
+      shots as IAutoMovieShot[],
+    );
+    appendValidation(violations, sequenceValidation);
+    sequenceReady = shotEntriesReady && sequenceValidation.success;
+  }
   // Match planSequenceRender/planCaptionSidecar's zero-frame policy with a
   // violation rather than letting the engine throw, so the tool answers a
   // diagnostic like every other planning path.
   const duration =
-    props.slate.film === null
-      ? 0
-      : sequenceRuntime(props.slate.film, props.slate.shots);
-  if (props.slate.film !== null && Math.round(duration * props.fps) === 0)
+    sequenceReady && sequence !== null
+      ? sequenceRuntime(sequence, shots as IAutoMovieShot[])
+      : 0;
+  if (sequenceReady && Math.round(duration * props.fps) === 0)
     pushViolation(
       violations,
       "range",
@@ -341,8 +377,8 @@ const buildCaptionPlan = (props: {
 
   const sidecar = planCaptionSidecar({
     script: props.slate.script!,
-    sequence: props.slate.film!,
-    shots: props.slate.shots,
+    sequence: sequence!,
+    shots: shots as IAutoMovieShot[],
     fps: props.fps,
   });
   const chunks =
