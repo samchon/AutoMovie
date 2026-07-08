@@ -371,6 +371,32 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed model body returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: { ...model, body: undefined } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.body");
+    })(),
+  );
+  TestValidator.predicate(
+    "malformed model body center of mass returns validation",
+    (() => {
+      const validation = app.validateModel({
+        model: {
+          ...model,
+          body: {
+            mass: 1,
+            centerOfMass: undefined,
+            friction: 0.5,
+            restitution: 0.2,
+          },
+        } as unknown as IAutoMovieModel,
+      }).validation;
+      return hasPath(validation, "$input.body.centerOfMass");
+    })(),
+  );
+  TestValidator.predicate(
     "malformed model skeleton object returns validation",
     (() => {
       const validation = app.validateModel({
