@@ -143,6 +143,9 @@ export class PipelineService {
     script: IAutoMovieScriptApplication.IWrite;
     forge: IAutoMovieForgeApplication.IWrite;
   }): IAutoMovieForgeOutput {
+    const violations = validateForgeShape(props.script, props.forge);
+    if (violations.length > 0)
+      return { forged: { success: false, violations } };
     return { forged: forgeCast(props.script, props.forge) };
   }
 
@@ -522,6 +525,335 @@ const validateNullableObject = (
 ): void => {
   if (value === null) return;
   isJsonObject(value, path, label, violations);
+};
+
+const validateForgeShape = (
+  script: unknown,
+  forge: unknown,
+): IAutoMovieConstraintViolation[] => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  if (isJsonObject(script, "$script", "script", violations)) {
+    if (isJsonArray(script.cast, "$script.cast", "script cast", violations))
+      script.cast.forEach((member, index) => {
+        const path = `$script.cast[${index}]`;
+        if (!isJsonObject(member, path, "script cast member", violations))
+          return;
+        requireString(member.node, `${path}.node`, "cast node", violations);
+        if (member.modelRef !== null)
+          requireString(
+            member.modelRef,
+            `${path}.modelRef`,
+            "cast model reference",
+            violations,
+          );
+      });
+  }
+
+  if (isJsonObject(forge, "$input", "forge", violations)) {
+    if (
+      isJsonArray(forge.entries, "$input.entries", "forge entries", violations)
+    )
+      forge.entries.forEach((entry, index) => {
+        const path = `$input.entries[${index}]`;
+        if (!isJsonObject(entry, path, "forge entry", violations)) return;
+        requireString(
+          entry.node,
+          `${path}.node`,
+          "forge entry node",
+          violations,
+        );
+        validateForgeModelShape(entry.model, `${path}.model`, violations);
+      });
+  }
+  return violations;
+};
+
+const validateForgeModelShape = (
+  model: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(model, path, "forge model", violations)) return;
+  requireString(model.id, `${path}.id`, "model id", violations);
+  requireString(model.origin, `${path}.origin`, "model origin", violations);
+  validateNullableString(
+    model.asset,
+    `${path}.asset`,
+    "model asset",
+    violations,
+  );
+  validateForgeSkeletonShape(model.skeleton, `${path}.skeleton`, violations);
+  validateForgeMaterialsShape(model.materials, `${path}.materials`, violations);
+  validateForgePartsShape(model.parts, `${path}.parts`, violations);
+  validateNullableObject(model.body, `${path}.body`, "model body", violations);
+  if (isRecord(model.body)) {
+    validateNullableObject(
+      model.body.centerOfMass,
+      `${path}.body.centerOfMass`,
+      "model body center of mass",
+      violations,
+    );
+  }
+  validateForgeAffordancesShape(
+    model.affordances,
+    `${path}.affordances`,
+    violations,
+  );
+};
+
+const validateNullableString = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (value === null || value === undefined) return;
+  requireString(value, path, label, violations);
+};
+
+const validateForgeSkeletonShape = (
+  skeleton: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (skeleton === null) return;
+  if (!isJsonObject(skeleton, path, "model skeleton", violations)) return;
+  requireString(skeleton.id, `${path}.id`, "skeleton id", violations);
+  if (
+    isJsonArray(skeleton.bones, `${path}.bones`, "skeleton bones", violations)
+  )
+    skeleton.bones.forEach((bone, index) => {
+      const bonePath = `${path}.bones[${index}]`;
+      if (!isJsonObject(bone, bonePath, "skeleton bone", violations)) return;
+      requireString(bone.bone, `${bonePath}.bone`, "skeleton bone", violations);
+      validateNullableString(
+        bone.parent,
+        `${bonePath}.parent`,
+        "skeleton bone parent",
+        violations,
+      );
+      validateTransformObject(
+        bone.rest,
+        `${bonePath}.rest`,
+        "skeleton bone rest transform",
+        violations,
+      );
+      validateConstraintObject(
+        bone.constraint,
+        `${bonePath}.constraint`,
+        violations,
+      );
+    });
+};
+
+const validateConstraintObject = (
+  constraint: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (constraint === null) return;
+  if (!isJsonObject(constraint, path, "joint constraint", violations)) return;
+  for (const axis of ["flexion", "abduction", "twist"] as const)
+    validateNullableObject(
+      constraint[axis],
+      `${path}.${axis}`,
+      `joint constraint ${axis}`,
+      violations,
+    );
+};
+
+const validateForgeMaterialsShape = (
+  materials: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonArray(materials, path, "model materials", violations)) return;
+  materials.forEach((material, index) => {
+    const materialPath = `${path}[${index}]`;
+    if (!isJsonObject(material, materialPath, "model material", violations))
+      return;
+    requireString(material.id, `${materialPath}.id`, "material id", violations);
+    validateNullableString(
+      material.baseColorTexture,
+      `${materialPath}.baseColorTexture`,
+      "material base color texture",
+      violations,
+    );
+    isJsonObject(
+      material.baseColor,
+      `${materialPath}.baseColor`,
+      "material base color",
+      violations,
+    );
+    validateNullableObject(
+      material.emissive,
+      `${materialPath}.emissive`,
+      "material emissive color",
+      violations,
+    );
+  });
+};
+
+const validateForgePartsShape = (
+  parts: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonArray(parts, path, "model parts", violations)) return;
+  parts.forEach((part, index) => {
+    const partPath = `${path}[${index}]`;
+    if (!isJsonObject(part, partPath, "model part", violations)) return;
+    requireString(part.id, `${partPath}.id`, "model part id", violations);
+    validateNullableString(
+      part.material,
+      `${partPath}.material`,
+      "model part material",
+      violations,
+    );
+    validateNullableString(
+      part.attachedBone,
+      `${partPath}.attachedBone`,
+      "model part attached bone",
+      violations,
+    );
+    validateGeometryShape(part.geometry, `${partPath}.geometry`, violations);
+    validateNullableTransform(
+      part.transform,
+      `${partPath}.transform`,
+      "model part transform",
+      violations,
+    );
+  });
+};
+
+const validateGeometryShape = (
+  geometry: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(geometry, path, "model part geometry", violations)) return;
+  if (geometry.type === "primitive")
+    isJsonObject(
+      geometry.shape,
+      `${path}.shape`,
+      "model part primitive shape",
+      violations,
+    );
+  else if (geometry.type === "mesh")
+    validateMeshShape(geometry.mesh, `${path}.mesh`, violations);
+};
+
+const validateMeshShape = (
+  mesh: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(mesh, path, "model part mesh", violations)) return;
+  isJsonArray(
+    mesh.positions,
+    `${path}.positions`,
+    "mesh positions",
+    violations,
+  );
+  for (const buffer of ["normals", "uvs", "indices"] as const) {
+    const value = mesh[buffer];
+    if (value !== null)
+      isJsonArray(value, `${path}.${buffer}`, `mesh ${buffer}`, violations);
+  }
+  if (mesh.skin !== null) {
+    if (!isJsonObject(mesh.skin, `${path}.skin`, "mesh skin", violations))
+      return;
+    for (const buffer of ["joints", "boneIndices", "weights"] as const)
+      isJsonArray(
+        mesh.skin[buffer],
+        `${path}.skin.${buffer}`,
+        `mesh skin ${buffer}`,
+        violations,
+      );
+  }
+};
+
+const validateForgeAffordancesShape = (
+  affordances: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (affordances === null || affordances === undefined) return;
+  if (!isJsonArray(affordances, path, "model affordances", violations)) return;
+  affordances.forEach((affordance, index) => {
+    const affordancePath = `${path}[${index}]`;
+    if (
+      !isJsonObject(affordance, affordancePath, "model affordance", violations)
+    )
+      return;
+    requireString(
+      affordance.id,
+      `${affordancePath}.id`,
+      "affordance id",
+      violations,
+    );
+    validateTransformObject(
+      affordance.frame,
+      `${affordancePath}.frame`,
+      "affordance frame",
+      violations,
+    );
+    if (affordance.extent !== null) {
+      if (
+        isJsonArray(
+          affordance.extent,
+          `${affordancePath}.extent`,
+          "affordance extent",
+          violations,
+        )
+      )
+        affordance.extent.forEach((point, pointIndex) =>
+          requireVectorObject(
+            point,
+            `${affordancePath}.extent[${pointIndex}]`,
+            "affordance extent point",
+            violations,
+          ),
+        );
+    }
+  });
+};
+
+const validateNullableTransform = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (value === null) return;
+  validateTransformObject(value, path, label, violations);
+};
+
+const validateTransformObject = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(value, path, label, violations)) return;
+  requireVectorObject(
+    value.translation,
+    `${path}.translation`,
+    `${label} translation`,
+    violations,
+  );
+  isJsonObject(
+    value.rotation,
+    `${path}.rotation`,
+    `${label} rotation`,
+    violations,
+  );
+  requireVectorObject(
+    value.scale,
+    `${path}.scale`,
+    `${label} scale`,
+    violations,
+  );
 };
 
 const validateActorRegistry = (
