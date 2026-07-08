@@ -157,6 +157,8 @@ const ghostBeatTree = (): NonNullable<IAutoMovieScript["tree"]> => [
  *    rest of their shape before entering resident state.
  * 8. Resident script trees validate at the read boundary, matching commitScript.
  * 9. Resident prop slices validate at the read boundary, matching forgeProp.
+ * 10. A root path blocked by a file reports project repair guidance instead of
+ *     leaking raw filesystem errors.
  */
 export const test_mcp_project_store = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-store-"));
@@ -416,5 +418,26 @@ export const test_mcp_project_store = (): void => {
     } finally {
       fs.rmSync(invalidRoot, { recursive: true, force: true });
     }
+  }
+
+  const blockedParent = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-file-root-"),
+  );
+  try {
+    const blockedRoot = path.join(blockedParent, "project");
+    fs.writeFileSync(blockedRoot, "not a directory");
+    TestValidator.predicate(
+      "file-backed root has project guidance",
+      throwsProjectJsonError(
+        () => AutoMovieProject.open(blockedRoot),
+        [
+          "AutoMovie project root",
+          "Fix or remove",
+          "project root must be a directory",
+        ],
+      ),
+    );
+  } finally {
+    fs.rmSync(blockedParent, { recursive: true, force: true });
   }
 };
