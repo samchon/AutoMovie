@@ -46,6 +46,27 @@ const makeShot = (beat: string, scene: string): IAutoMovieShot => ({
 });
 
 /**
+ * The motions a beat's shot references — the registry a resident commitShot
+ * needs so its motion ids are not dangling (#696).
+ */
+const motionsFor = (beat: string) => ({
+  a: {
+    id: `charge-a-${beat}`,
+    skeleton: "stickman",
+    duration: 1,
+    loop: false,
+    keyframes: [],
+  },
+  b: {
+    id: `brace-b-${beat}`,
+    skeleton: "stickman",
+    duration: 1,
+    loop: false,
+    keyframes: [],
+  },
+});
+
+/**
  * SetActorPerformance (#654): the AutoBe one-artifact-per-call granularity
  * below the beat — replace ONE actor's performance in a committed shot without
  * re-performing the whole beat. Replacement-only, evidence-backed,
@@ -88,8 +109,14 @@ export const test_mcp_set_actor_performance = (): void => {
       ...new Set(staged.scene.nodes.map((node) => node.model)),
     ].map((id) => ({ id, skeleton: null }));
     app.commitScene({ scene: staged.scene, models });
-    app.commitShot({ shot: makeShot("beat-1", staged.scene.id) });
-    app.commitShot({ shot: makeShot("beat-2", staged.scene.id) });
+    app.commitShot({
+      shot: makeShot("beat-1", staged.scene.id),
+      motions: motionsFor("beat-1"),
+    });
+    app.commitShot({
+      shot: makeShot("beat-2", staged.scene.id),
+      motions: motionsFor("beat-2"),
+    });
     app.commitBeatEnd({
       beatEnd: { beat: "beat-1", shot: "shot:beat-1", actors: [] },
     });

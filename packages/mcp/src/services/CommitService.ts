@@ -156,6 +156,19 @@ export class CommitService {
    * beat's artifact swaps exactly that slice (and, resident, exactly that
    * file), leaving sibling beats untouched. One beat is the stable correction
    * target; there is no whole-set re-send.
+   *
+   * **Motions are not a persisted slice (D012, the AutoBe generated-output
+   * doctrine).** A shot's `performances[].motion` are id references into the
+   * `motions` a `perform` produced, and those clips are the densest, purely
+   * _derived_ artifact — deterministically re-`perform`able from the resident
+   * script/scene/shot, so persisting them would only bloat the project (the
+   * memory is the AST, not its regenerable output). But a resident commit that
+   * kept no registry could silently store a **dangling** motion reference,
+   * unresolvable on a later re-open. So a resident `commitShot` whose shot
+   * references any motion MUST pass the `motions` registry those references
+   * resolve against; without it the commit is refused, not silently accepted.
+   * An explicit-slate call stays a pure transform — its cross-slice references
+   * are the caller's to guarantee — so it is byte-compatible with before.
    */
   public commitShot(props: {
     slate?: IAutoMovieMcpWritableSlate;
@@ -171,6 +184,18 @@ export class CommitService {
       violations,
     );
     const beat = validateShotCommitPreconditions(props.shot, slate, violations);
+    if (
+      resident &&
+      props.motions === undefined &&
+      props.shot.performances.some((performance) => performance.motion !== null)
+    )
+      pushViolation(
+        violations,
+        "type",
+        "$input.motions",
+        "a resident commitShot whose shot references motions must pass the motions registry those references resolve against (motions are re-perform-derived, not persisted, so a reference with no registry would be a dangling id)",
+        props.motions,
+      );
     if (slate.scene !== null)
       appendValidation(
         violations,

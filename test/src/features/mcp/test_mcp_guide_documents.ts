@@ -13,6 +13,7 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["STAGING", "coherence, not craft"],
   ["BLOCKING", "causal order"],
   ["PERFORMANCE", "One take, one live camera"],
+  ["PERFORMANCE", "Motions Are Derived, Not Stored"],
   ["REVIEW", "advice, not gates"],
   ["REVIEW", "ancestors nearest-first"],
   ["PROPS", "crude proxy, rich meaning"],
@@ -20,6 +21,7 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["PROJECT_MEMORY", "sibling beats' files stay byte-identical"],
   ["PROJECT_MEMORY", "byte-writing stays the host adapter's job"],
   ["PROJECT_MEMORY", "forge a prop once"],
+  ["PROJECT_MEMORY", "Compiled motions are not a slice"],
   ["RENDER_GUIDES", "no-capture-adapter"],
   ["RENDER_GUIDES", "omit `slate`"],
 ];
