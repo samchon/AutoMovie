@@ -104,6 +104,13 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
  * 3. `seeFrame` resolves a preview frame by index or time, rejects conflicts and
  *    unknown passes, and reports `no-capture-adapter` on this adapterless
  *    application.
+ * 4. Preview time maps onto the plan's own `i / fps` grid (nearest sample), even
+ *    when `duration × fps` is not an integer — the last grid instant of a 1.02
+ *    s shot at 10 fps resolves to frame 9 (an effective-fps mapping said 8), a
+ *    self-consistent frame/time pair raises no temporal violation, a
+ *    mid-interval time snaps to the nearer neighbour on either side, and an
+ *    out-of-range time-only call reports `$input.time` without inventing a
+ *    `$input.frame` violation.
  */
 export const test_mcp_render_tools = async (): Promise<void> => {
   const shotPlan = app.planRender({ slate, spec }).plan;
@@ -416,6 +423,68 @@ export const test_mcp_render_tools = async (): Promise<void> => {
       (await app.seeFrame({ slate, spec, frame: 1, time: 0.5 })).validation,
       "$input.time",
     ),
+  );
+  TestValidator.predicate(
+    "a self-consistent frame/time pair raises no violation",
+    (await app.seeFrame({ slate, spec, frame: 5, time: 0.5 })).validation
+      .success === true,
+  );
+
+  const fractionalSlate = {
+    ...slate,
+    shots: [{ ...shotA, duration: 1.02 }, shotB],
+  };
+  const lastGridInstant = (
+    await app.seeFrame({ slate: fractionalSlate, spec, time: 0.9 })
+  ).preview;
+  if (lastGridInstant === null)
+    throw new Error("fractional-duration preview must succeed");
+  TestValidator.equals(
+    "the last grid instant of a 1.02s/10fps shot is frame 9",
+    lastGridInstant.frame,
+    9,
+  );
+  TestValidator.predicate(
+    "the matching frame/time pair on the fractional grid is consistent",
+    (
+      await app.seeFrame({
+        slate: fractionalSlate,
+        spec,
+        frame: 9,
+        time: 0.9,
+      })
+    ).validation.success === true,
+  );
+  const snapsBelow = (
+    await app.seeFrame({ slate: fractionalSlate, spec, time: 0.83 })
+  ).preview;
+  const snapsAbove = (
+    await app.seeFrame({ slate: fractionalSlate, spec, time: 0.86 })
+  ).preview;
+  const snapsFirst = (
+    await app.seeFrame({ slate: fractionalSlate, spec, time: 0.04 })
+  ).preview;
+  const snapsOrigin = (
+    await app.seeFrame({ slate: fractionalSlate, spec, time: 0 })
+  ).preview;
+  TestValidator.predicate(
+    "mid-interval times snap to the nearest grid sample",
+    snapsBelow !== null &&
+      snapsBelow.frame === 8 &&
+      snapsAbove !== null &&
+      snapsAbove.frame === 9 &&
+      snapsFirst !== null &&
+      snapsFirst.frame === 0 &&
+      snapsOrigin !== null &&
+      snapsOrigin.frame === 0,
+  );
+  const timeOnlyOutOfRange = (
+    await app.seeFrame({ slate: fractionalSlate, spec, time: 2 })
+  ).validation;
+  TestValidator.predicate(
+    "an out-of-range time-only call reports only the time",
+    hasPath(timeOnlyOutOfRange, "$input.time") &&
+      !hasPath(timeOnlyOutOfRange, "$input.frame"),
   );
   TestValidator.predicate(
     "invalid frame path",
