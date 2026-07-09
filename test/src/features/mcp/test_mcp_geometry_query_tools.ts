@@ -206,7 +206,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           from: { kind: "node", node: "actor" },
           to: { kind: "node", node: "marker" },
         }),
-      ["scene", "JSON object"],
+      ["$input.scene", "JSON object"],
     ),
   );
   TestValidator.predicate(
@@ -221,7 +221,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           from: { kind: "node", node: "actor" },
           to: { kind: "node", node: "marker" },
         }),
-      ["scene.nodes", "array"],
+      ["$input.scene.nodes", "array"],
     ),
   );
   TestValidator.predicate(
@@ -243,7 +243,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           from: { kind: "node", node: "actor" },
           to: { kind: "node", node: "marker" },
         }),
-      ["scene.nodes[0].transform", "JSON object"],
+      ["$input.scene.nodes[0].transform", "JSON object"],
     ),
   );
 
@@ -330,7 +330,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           },
           actor: "actor",
         }),
-      ["context.scene.nodes", "array"],
+      ["$input.context.scene.nodes", "array"],
     ),
   );
   TestValidator.predicate(
@@ -344,7 +344,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           },
           actor: "actor",
         }),
-      ["context.models", "array"],
+      ["$input.context.models", "array"],
     ),
   );
   TestValidator.predicate(
@@ -360,7 +360,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           },
           actor: "actor",
         }),
-      ["context.models[0]", "JSON object"],
+      ["$input.context.models[0]", "JSON object"],
     ),
   );
   TestValidator.predicate(
@@ -385,7 +385,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           },
           actor: "actor",
         }),
-      ["context.models[0].skeleton.bones", "array"],
+      ["$input.context.models[0].skeleton.bones", "array"],
     ),
   );
   TestValidator.predicate(
@@ -402,7 +402,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           },
           actor: "actor",
         }),
-      ["context.shot.performances", "array"],
+      ["$input.context.shot.performances", "array"],
     ),
   );
 
@@ -581,7 +581,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           from: { kind: "node", node: "actor" },
           to: { kind: "node", node: "marker" },
         }),
-      ['scene node "actor"', "scene.nodes[2].id"],
+      ['scene node "actor"', "$input.scene.nodes[2].id"],
     ),
   );
   TestValidator.predicate(
@@ -595,7 +595,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           },
           actor: "actor",
         }),
-      ['geometry model "actor-model"', "context.models[2].id"],
+      ['geometry model "actor-model"', "$input.context.models[2].id"],
     ),
   );
   TestValidator.predicate(
@@ -609,7 +609,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           },
           actor: "actor",
         }),
-      ["motion registry", "context.motions"],
+      ["motion registry", "$input.context.motions"],
     ),
   );
   TestValidator.predicate(
@@ -625,7 +625,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           },
           actor: "actor",
         }),
-      ["motion registry entry", "context.motions.actor"],
+      ["motion registry entry", "$input.context.motions.actor"],
     ),
   );
   TestValidator.predicate(
@@ -644,7 +644,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           },
           actor: "actor",
         }),
-      ["context.motions.actor.keyframes", "array"],
+      ["$input.context.motions.actor.keyframes", "array"],
     ),
   );
 };
