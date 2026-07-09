@@ -51,15 +51,18 @@ export class ValidationService {
     const requestRoot = validateValidationRequestRoot(props);
     if (requestRoot !== null) return { validation: requestRoot };
     const violations: IAutoMovieConstraintViolation[] = [];
-    appendMcpPoseShape(violations, props.pose, "$input");
-    appendMcpSkeletonShape(violations, props.skeleton, "$skeleton");
+    appendMcpPoseShape(violations, props.pose, "$input.pose");
+    appendMcpSkeletonShape(violations, props.skeleton, "$input.skeleton");
     const shape = toValidation(violations);
     if (shape.success === false) return { validation: shape };
     return {
-      validation: validateEnginePose({
-        pose: props.pose,
-        skeleton: props.skeleton,
-      }).toValidation(),
+      validation: remapValidationPaths(
+        validateEnginePose({
+          pose: props.pose,
+          skeleton: props.skeleton,
+        }).toValidation(),
+        [["$input", "$input.pose"]],
+      ),
     };
   }
 
@@ -70,15 +73,18 @@ export class ValidationService {
     const requestRoot = validateValidationRequestRoot(props);
     if (requestRoot !== null) return { validation: requestRoot };
     const violations: IAutoMovieConstraintViolation[] = [];
-    appendMcpMotionShape(violations, props.motion);
-    appendMcpSkeletonShape(violations, props.skeleton, "$skeleton");
+    appendMcpMotionShape(violations, props.motion, "$input.motion");
+    appendMcpSkeletonShape(violations, props.skeleton, "$input.skeleton");
     const shape = toValidation(violations);
     if (shape.success === false) return { validation: shape };
     return {
-      validation: validateEngineMotion({
-        motion: toEngineMotion(props.motion),
-        skeleton: props.skeleton,
-      }),
+      validation: remapValidationPaths(
+        validateEngineMotion({
+          motion: toEngineMotion(props.motion),
+          skeleton: props.skeleton,
+        }),
+        [["$input", "$input.motion"]],
+      ),
     };
   }
 
@@ -87,9 +93,16 @@ export class ValidationService {
   }): IAutoMovieValidateOutput {
     const requestRoot = validateValidationRequestRoot(props);
     if (requestRoot !== null) return { validation: requestRoot };
-    const shape = validateMcpModelShape(props.model);
+    const shape = remapValidationPaths(validateMcpModelShape(props.model), [
+      ["$input", "$input.model"],
+    ]);
     if (shape.success === false) return { validation: shape };
-    return { validation: validateEngineModel({ model: props.model }) };
+    return {
+      validation: remapValidationPaths(
+        validateEngineModel({ model: props.model }),
+        [["$input", "$input.model"]],
+      ),
+    };
   }
 
   public validateScene(props: {
@@ -98,7 +111,15 @@ export class ValidationService {
   }): IAutoMovieValidateOutput {
     const requestRoot = validateValidationRequestRoot(props);
     if (requestRoot !== null) return { validation: requestRoot };
-    return { validation: validateSceneArtifact(props.scene, props.models) };
+    return {
+      validation: remapValidationPaths(
+        validateSceneArtifact(props.scene, props.models),
+        [
+          ["$input", "$input.scene"],
+          ["$models", "$input.models"],
+        ],
+      ),
+    };
   }
 
   public validateShot(props: {
@@ -109,7 +130,13 @@ export class ValidationService {
     const requestRoot = validateValidationRequestRoot(props);
     if (requestRoot !== null) return { validation: requestRoot };
     return {
-      validation: validateShotArtifact(props.shot, props.scene, props.motions),
+      validation: remapValidationPaths(
+        validateShotArtifact(props.shot, props.scene, props.motions),
+        [
+          ["$input", "$input.shot"],
+          ["$motions", "$input.motions"],
+        ],
+      ),
     };
   }
 
@@ -120,7 +147,13 @@ export class ValidationService {
     const requestRoot = validateValidationRequestRoot(props);
     if (requestRoot !== null) return { validation: requestRoot };
     return {
-      validation: validateSequenceArtifact(props.sequence, props.shots),
+      validation: remapValidationPaths(
+        validateSequenceArtifact(props.sequence, props.shots),
+        [
+          ["$input", "$input.sequence"],
+          ["$shots", "$input.shots"],
+        ],
+      ),
     };
   }
 }
@@ -132,6 +165,34 @@ const validateValidationRequestRoot = (
   if (validateObjectArtifact(props, "$input", "validation request", violations))
     return null;
   return toValidation(violations);
+};
+
+const remapValidationPaths = (
+  validation: IAutoMovieValidation,
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): IAutoMovieValidation => {
+  if (validation.success === true) return validation;
+  return {
+    success: false,
+    violations: validation.violations.map((item) => ({
+      ...item,
+      path: remapPath(item.path, replacements),
+    })),
+  };
+};
+
+const remapPath = (
+  path: string,
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): string => {
+  for (const [from, to] of replacements)
+    if (
+      path === from ||
+      path.startsWith(`${from}.`) ||
+      path.startsWith(`${from}[`)
+    )
+      return `${to}${path.slice(from.length)}`;
+  return path;
 };
 
 const appendMcpPoseShape = (
@@ -154,32 +215,42 @@ const appendMcpPoseShape = (
 const appendMcpMotionShape = (
   violations: IAutoMovieConstraintViolation[],
   motion: IAutoMovieMcpMotion | unknown,
+  path: string,
 ): void => {
-  if (!validateObjectArtifact(motion, "$input", "motion", violations)) return;
+  if (!validateObjectArtifact(motion, path, "motion", violations)) return;
   const shape = motion as Partial<IAutoMovieMcpMotion>;
-  validateNonEmptyId(shape.id, "$input.id", "motion id", violations);
+  validateNonEmptyId(shape.id, `${path}.id`, "motion id", violations);
   const keyframes = shape.keyframes;
   if (
     validateArrayArtifact(
       keyframes,
-      "$input.keyframes",
+      `${path}.keyframes`,
       "motion keyframes",
       violations,
     )
   )
     keyframes.forEach((keyframe, index) => {
-      const path = `$input.keyframes[${index}]`;
+      const keyframePath = `${path}.keyframes[${index}]`;
       if (
-        !validateObjectArtifact(keyframe, path, "motion keyframe", violations)
+        !validateObjectArtifact(
+          keyframe,
+          keyframePath,
+          "motion keyframe",
+          violations,
+        )
       )
         return;
-      appendMcpPoseShape(violations, keyframe.pose, `${path}.pose`);
+      appendMcpPoseShape(violations, keyframe.pose, `${keyframePath}.pose`);
       appendMcpExpressionShape(
         violations,
         keyframe.expression,
-        `${path}.expression`,
+        `${keyframePath}.expression`,
       );
-      appendMcpBezierShape(violations, keyframe.bezier, `${path}.bezier`);
+      appendMcpBezierShape(
+        violations,
+        keyframe.bezier,
+        `${keyframePath}.bezier`,
+      );
     });
 };
 

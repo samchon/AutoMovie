@@ -157,7 +157,7 @@ export const test_mcp_validation_tools = (): void => {
         pose: { ...makePose([]), skeleton: "wrong" },
         skeleton,
       }).validation,
-      "$input.skeleton",
+      "$input.pose.skeleton",
     ),
   );
   TestValidator.predicate(
@@ -167,14 +167,14 @@ export const test_mcp_validation_tools = (): void => {
         motion: { ...motion, keyframes: [motion.keyframes[0]!] },
         skeleton,
       }).validation,
-      "$input.keyframes",
+      "$input.motion.keyframes",
     ),
   );
   TestValidator.predicate(
     "invalid model path",
     hasPath(
       app.validateModel({ model: { ...model, parts: [] } }).validation,
-      "$input.parts",
+      "$input.model.parts",
     ),
   );
   TestValidator.predicate(
@@ -199,9 +199,9 @@ export const test_mcp_validation_tools = (): void => {
         models: [{ id: model.id, skeleton }],
       }).validation;
       return (
-        hasPath(validation, "$input.nodes[0].transform.rotation") &&
-        hasPath(validation, "$input.nodes[2].model") &&
-        hasPath(validation, "$input.cameras[0].far")
+        hasPath(validation, "$input.scene.nodes[0].transform.rotation") &&
+        hasPath(validation, "$input.scene.nodes[2].model") &&
+        hasPath(validation, "$input.scene.cameras[0].far")
       );
     })(),
   );
@@ -220,9 +220,9 @@ export const test_mcp_validation_tools = (): void => {
         motions: {},
       }).validation;
       return (
-        hasPath(validation, "$input.camera") &&
-        hasPath(validation, "$input.performances[0].motion") &&
-        hasPath(validation, "$input.performances[0].startOffset")
+        hasPath(validation, "$input.shot.camera") &&
+        hasPath(validation, "$input.shot.performances[0].motion") &&
+        hasPath(validation, "$input.shot.performances[0].startOffset")
       );
     })(),
   );
@@ -234,7 +234,7 @@ export const test_mcp_validation_tools = (): void => {
         scene,
         motions: null as unknown as Record<string, IAutoMovieMcpMotion>,
       }).validation;
-      return hasPath(validation, "$motions");
+      return hasPath(validation, "$input.motions");
     })(),
   );
   TestValidator.predicate(
@@ -247,7 +247,7 @@ export const test_mcp_validation_tools = (): void => {
           [motion.id]: undefined,
         } as unknown as Record<string, IAutoMovieMcpMotion>,
       }).validation;
-      return hasPath(validation, `$motions.${motion.id}`);
+      return hasPath(validation, `$input.motions.${motion.id}`);
     })(),
   );
   TestValidator.predicate(
@@ -268,9 +268,9 @@ export const test_mcp_validation_tools = (): void => {
         shots: [shot],
       }).validation;
       return (
-        hasPath(validation, "$input.fps") &&
-        hasPath(validation, "$input.shots[0].shot") &&
-        hasPath(validation, "$input.shots[0].transition")
+        hasPath(validation, "$input.sequence.fps") &&
+        hasPath(validation, "$input.sequence.shots[0].shot") &&
+        hasPath(validation, "$input.sequence.shots[0].transition")
       );
     })(),
   );
@@ -284,7 +284,7 @@ export const test_mcp_validation_tools = (): void => {
         } as unknown as IAutoMoviePose,
         skeleton,
       }).validation;
-      return hasPath(validation, "$input.joints");
+      return hasPath(validation, "$input.pose.joints");
     })(),
   );
   TestValidator.predicate(
@@ -297,7 +297,7 @@ export const test_mcp_validation_tools = (): void => {
         } as unknown as IAutoMoviePose,
         skeleton,
       }).validation;
-      return hasPath(validation, "$input.root");
+      return hasPath(validation, "$input.pose.root");
     })(),
   );
   TestValidator.predicate(
@@ -307,7 +307,7 @@ export const test_mcp_validation_tools = (): void => {
         pose: makePose([]),
         skeleton: null as unknown as IAutoMovieSkeleton,
       }).validation;
-      return hasPath(validation, "$skeleton");
+      return hasPath(validation, "$input.skeleton");
     })(),
   );
   TestValidator.predicate(
@@ -322,7 +322,7 @@ export const test_mcp_validation_tools = (): void => {
         } as unknown as IAutoMovieMcpMotion,
         skeleton,
       }).validation;
-      return hasPath(validation, "$input.keyframes");
+      return hasPath(validation, "$input.motion.keyframes");
     })(),
   );
   TestValidator.predicate(
@@ -337,7 +337,7 @@ export const test_mcp_validation_tools = (): void => {
         } as unknown as IAutoMovieMcpMotion,
         skeleton,
       }).validation;
-      return hasPath(validation, "$input.id");
+      return hasPath(validation, "$input.motion.id");
     })(),
   );
   TestValidator.predicate(
@@ -347,7 +347,7 @@ export const test_mcp_validation_tools = (): void => {
         motion,
         skeleton: { id: skeleton.id } as unknown as IAutoMovieSkeleton,
       }).validation;
-      return hasPath(validation, "$skeleton.bones");
+      return hasPath(validation, "$input.skeleton.bones");
     })(),
   );
   TestValidator.predicate(
@@ -370,7 +370,7 @@ export const test_mcp_validation_tools = (): void => {
         },
         skeleton,
       }).validation;
-      return hasPath(validation, "$input.keyframes[1].pose.joints");
+      return hasPath(validation, "$input.motion.keyframes[1].pose.joints");
     })(),
   );
   TestValidator.predicate(
@@ -388,7 +388,7 @@ export const test_mcp_validation_tools = (): void => {
         } as unknown as IAutoMovieMcpMotion,
         skeleton,
       }).validation;
-      return hasPath(validation, "$input.keyframes[1].expression");
+      return hasPath(validation, "$input.motion.keyframes[1].expression");
     })(),
   );
   TestValidator.predicate(
@@ -406,7 +406,7 @@ export const test_mcp_validation_tools = (): void => {
         } as unknown as IAutoMovieMcpMotion,
         skeleton,
       }).validation;
-      return hasPath(validation, "$input.keyframes[1].bezier");
+      return hasPath(validation, "$input.motion.keyframes[1].bezier");
     })(),
   );
   TestValidator.predicate(
@@ -423,8 +423,8 @@ export const test_mcp_validation_tools = (): void => {
         } as unknown as IAutoMovieModel,
       }).validation;
       return (
-        hasPath(validation, "$input.materials") &&
-        hasPath(validation, "$input.parts")
+        hasPath(validation, "$input.model.materials") &&
+        hasPath(validation, "$input.model.parts")
       );
     })(),
   );
@@ -434,7 +434,7 @@ export const test_mcp_validation_tools = (): void => {
       const validation = app.validateModel({
         model: { ...model, id: undefined } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.id");
+      return hasPath(validation, "$input.model.id");
     })(),
   );
   TestValidator.predicate(
@@ -443,7 +443,7 @@ export const test_mcp_validation_tools = (): void => {
       const validation = app.validateModel({
         model: { ...model, asset: undefined } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.asset");
+      return hasPath(validation, "$input.model.asset");
     })(),
   );
   TestValidator.predicate(
@@ -452,7 +452,7 @@ export const test_mcp_validation_tools = (): void => {
       const validation = app.validateModel({
         model: { ...model, body: undefined } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.body");
+      return hasPath(validation, "$input.model.body");
     })(),
   );
   TestValidator.predicate(
@@ -469,7 +469,7 @@ export const test_mcp_validation_tools = (): void => {
           },
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.body.centerOfMass");
+      return hasPath(validation, "$input.model.body.centerOfMass");
     })(),
   );
   TestValidator.predicate(
@@ -481,7 +481,7 @@ export const test_mcp_validation_tools = (): void => {
           affordances: [undefined],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.affordances[0]");
+      return hasPath(validation, "$input.model.affordances[0]");
     })(),
   );
   TestValidator.predicate(
@@ -500,7 +500,7 @@ export const test_mcp_validation_tools = (): void => {
           ],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.affordances[0].id");
+      return hasPath(validation, "$input.model.affordances[0].id");
     })(),
   );
   TestValidator.predicate(
@@ -519,7 +519,7 @@ export const test_mcp_validation_tools = (): void => {
           ],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.affordances[0].frame");
+      return hasPath(validation, "$input.model.affordances[0].frame");
     })(),
   );
   TestValidator.predicate(
@@ -538,7 +538,7 @@ export const test_mcp_validation_tools = (): void => {
           ],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.affordances[0].extent");
+      return hasPath(validation, "$input.model.affordances[0].extent");
     })(),
   );
   TestValidator.predicate(
@@ -561,7 +561,7 @@ export const test_mcp_validation_tools = (): void => {
           ],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.affordances[0].extent[0]");
+      return hasPath(validation, "$input.model.affordances[0].extent[0]");
     })(),
   );
   TestValidator.predicate(
@@ -570,7 +570,7 @@ export const test_mcp_validation_tools = (): void => {
       const validation = app.validateModel({
         model: { ...model, skeleton: undefined } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.skeleton");
+      return hasPath(validation, "$input.model.skeleton");
     })(),
   );
   TestValidator.predicate(
@@ -582,7 +582,7 @@ export const test_mcp_validation_tools = (): void => {
           skeleton: { ...skeleton, id: undefined },
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.skeleton.id");
+      return hasPath(validation, "$input.model.skeleton.id");
     })(),
   );
   TestValidator.predicate(
@@ -594,7 +594,7 @@ export const test_mcp_validation_tools = (): void => {
           skeleton: { ...skeleton, bones: [undefined] },
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.skeleton.bones[0]");
+      return hasPath(validation, "$input.model.skeleton.bones[0]");
     })(),
   );
   TestValidator.predicate(
@@ -609,7 +609,7 @@ export const test_mcp_validation_tools = (): void => {
           },
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.skeleton.bones[0].bone");
+      return hasPath(validation, "$input.model.skeleton.bones[0].bone");
     })(),
   );
   TestValidator.predicate(
@@ -624,7 +624,7 @@ export const test_mcp_validation_tools = (): void => {
           },
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.skeleton.bones[0].rest");
+      return hasPath(validation, "$input.model.skeleton.bones[0].rest");
     })(),
   );
   TestValidator.predicate(
@@ -639,7 +639,7 @@ export const test_mcp_validation_tools = (): void => {
           },
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.skeleton.bones[0].constraint");
+      return hasPath(validation, "$input.model.skeleton.bones[0].constraint");
     })(),
   );
   TestValidator.predicate(
@@ -663,7 +663,10 @@ export const test_mcp_validation_tools = (): void => {
           },
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.skeleton.bones[0].constraint.flexion");
+      return hasPath(
+        validation,
+        "$input.model.skeleton.bones[0].constraint.flexion",
+      );
     })(),
   );
   TestValidator.predicate(
@@ -675,7 +678,7 @@ export const test_mcp_validation_tools = (): void => {
           parts: [{ ...model.parts[0]!, id: undefined }],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.parts[0].id");
+      return hasPath(validation, "$input.model.parts[0].id");
     })(),
   );
   TestValidator.predicate(
@@ -687,7 +690,7 @@ export const test_mcp_validation_tools = (): void => {
           parts: [{ ...model.parts[0]!, material: undefined }],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.parts[0].material");
+      return hasPath(validation, "$input.model.parts[0].material");
     })(),
   );
   TestValidator.predicate(
@@ -704,7 +707,7 @@ export const test_mcp_validation_tools = (): void => {
           ],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.parts[0].geometry");
+      return hasPath(validation, "$input.model.parts[0].geometry");
     })(),
   );
   TestValidator.predicate(
@@ -721,7 +724,7 @@ export const test_mcp_validation_tools = (): void => {
           ],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.parts[0].geometry.shape");
+      return hasPath(validation, "$input.model.parts[0].geometry.shape");
     })(),
   );
   TestValidator.predicate(
@@ -738,7 +741,7 @@ export const test_mcp_validation_tools = (): void => {
           ],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.parts[0].geometry.mesh");
+      return hasPath(validation, "$input.model.parts[0].geometry.mesh");
     })(),
   );
   TestValidator.predicate(
@@ -764,7 +767,10 @@ export const test_mcp_validation_tools = (): void => {
           ],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.parts[0].geometry.mesh.positions");
+      return hasPath(
+        validation,
+        "$input.model.parts[0].geometry.mesh.positions",
+      );
     })(),
   );
   TestValidator.predicate(
@@ -790,7 +796,7 @@ export const test_mcp_validation_tools = (): void => {
           ],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.parts[0].geometry.mesh.normals");
+      return hasPath(validation, "$input.model.parts[0].geometry.mesh.normals");
     })(),
   );
   TestValidator.predicate(
@@ -816,7 +822,7 @@ export const test_mcp_validation_tools = (): void => {
           ],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.parts[0].geometry.mesh.skin");
+      return hasPath(validation, "$input.model.parts[0].geometry.mesh.skin");
     })(),
   );
   TestValidator.predicate(
@@ -848,7 +854,7 @@ export const test_mcp_validation_tools = (): void => {
       }).validation;
       return hasPath(
         validation,
-        "$input.parts[0].geometry.mesh.skin.boneIndices",
+        "$input.model.parts[0].geometry.mesh.skin.boneIndices",
       );
     })(),
   );
@@ -861,7 +867,7 @@ export const test_mcp_validation_tools = (): void => {
           parts: [{ ...model.parts[0]!, transform: undefined }],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.parts[0].transform");
+      return hasPath(validation, "$input.model.parts[0].transform");
     })(),
   );
   TestValidator.predicate(
@@ -873,7 +879,7 @@ export const test_mcp_validation_tools = (): void => {
           materials: [{ ...model.materials[0]!, id: undefined }],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.materials[0].id");
+      return hasPath(validation, "$input.model.materials[0].id");
     })(),
   );
   TestValidator.predicate(
@@ -885,7 +891,7 @@ export const test_mcp_validation_tools = (): void => {
           materials: [{ ...model.materials[0]!, baseColorTexture: undefined }],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.materials[0].baseColorTexture");
+      return hasPath(validation, "$input.model.materials[0].baseColorTexture");
     })(),
   );
   TestValidator.predicate(
@@ -897,7 +903,7 @@ export const test_mcp_validation_tools = (): void => {
           materials: [{ ...model.materials[0]!, baseColor: undefined }],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.materials[0].baseColor");
+      return hasPath(validation, "$input.model.materials[0].baseColor");
     })(),
   );
   TestValidator.predicate(
@@ -909,7 +915,7 @@ export const test_mcp_validation_tools = (): void => {
           materials: [{ ...model.materials[0]!, emissive: undefined }],
         } as unknown as IAutoMovieModel,
       }).validation;
-      return hasPath(validation, "$input.materials[0].emissive");
+      return hasPath(validation, "$input.model.materials[0].emissive");
     })(),
   );
   TestValidator.predicate(
@@ -920,9 +926,9 @@ export const test_mcp_validation_tools = (): void => {
         models: [{ id: model.id, skeleton }],
       }).validation;
       return (
-        hasPath(validation, "$input.nodes") &&
-        hasPath(validation, "$input.cameras") &&
-        hasPath(validation, "$input.lights")
+        hasPath(validation, "$input.scene.nodes") &&
+        hasPath(validation, "$input.scene.cameras") &&
+        hasPath(validation, "$input.scene.lights")
       );
     })(),
   );
@@ -933,7 +939,7 @@ export const test_mcp_validation_tools = (): void => {
         scene: { ...scene, nodes: [] },
         models: [null as unknown as IAutoMovieModel],
       }).validation;
-      return hasPath(validation, "$models[0]");
+      return hasPath(validation, "$input.models[0]");
     })(),
   );
   TestValidator.predicate(
@@ -950,8 +956,8 @@ export const test_mcp_validation_tools = (): void => {
         motions: {},
       }).validation;
       return (
-        hasPath(validation, "$input.performances") &&
-        hasPath(validation, "$input.objectMotions")
+        hasPath(validation, "$input.shot.performances") &&
+        hasPath(validation, "$input.shot.objectMotions")
       );
     })(),
   );
@@ -965,7 +971,7 @@ export const test_mcp_validation_tools = (): void => {
         } as unknown as IAutoMovieSequence,
         shots: [shot],
       }).validation;
-      return hasPath(validation, "$input.shots");
+      return hasPath(validation, "$input.sequence.shots");
     })(),
   );
   TestValidator.predicate(
@@ -975,7 +981,7 @@ export const test_mcp_validation_tools = (): void => {
         sequence: { ...sequence, shots: [] },
         shots: [null as unknown as IAutoMovieShot],
       }).validation;
-      return hasPath(validation, "$shots[0]");
+      return hasPath(validation, "$input.shots[0]");
     })(),
   );
 
