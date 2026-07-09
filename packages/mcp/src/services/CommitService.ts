@@ -367,7 +367,15 @@ export class CommitService {
     validateBeatEndArtifact(props.beatEnd, slate, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
-      return this.finish(failedCommit(slate, validation), resident);
+      return this.finish(
+        failedCommit(
+          slate,
+          remapCommitValidationPaths(validation, [
+            ["$input", "$input.beatEnd"],
+          ]),
+        ),
+        resident,
+      );
     return this.finish(
       successfulCommit({
         ...slate,
