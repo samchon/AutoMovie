@@ -65,6 +65,15 @@ const riglessContext = (
  *    though the MCP default-synthesis precheck runs first.
  * 7. Malformed performance action targets fail as engine validation data instead
  *    of leaking default-synthesis target reads.
+ * 8. Malformed actor gait entries (non-object entry, blank/missing name,
+ *    non-finite or non-positive period, malformed rootBob and limb fields) fail
+ *    at their submitted `$input.actors.<node>.gaits[i]...` paths instead of
+ *    being reinterpreted as `$input.performance.draft[i].gait` mismatches or
+ *    leaking engine gait-synthesis throws.
+ * 9. A structurally valid actor context that simply lacks the requested gait still
+ *    fails downstream at `$input.performance.draft[0].gait`, and a fully loaded
+ *    valid gait (rootBob, multi-axis limbs, neutral, named easings) still
+ *    performs.
  */
 export const test_mcp_perform_tool = (): void => {
   const app = new AutoMovieApplication();
@@ -243,6 +252,252 @@ export const test_mcp_perform_tool = (): void => {
           violation.kind === "type" &&
           violation.path === "$input.actors.knightA.gaits",
       ),
+  );
+
+  const gaitProbe = (
+    gaits: unknown,
+  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+    app.perform({
+      script,
+      staged,
+      performance,
+      actors: {
+        knightA: {
+          ...context(nodePosition("knightA"), 0),
+          gaits,
+        } as unknown as IAutoMovieMcpActorContext,
+        knightB: context(nodePosition("knightB"), 180),
+      },
+    }).performed;
+  const hasGaitViolation = (
+    performed: ReturnType<AutoMovieApplication["perform"]>["performed"],
+    kind: "type" | "range",
+    path: string,
+  ): boolean =>
+    performed.success === false &&
+    performed.violations.some(
+      (violation) => violation.kind === kind && violation.path === path,
+    );
+
+  const nullGaitEntry = gaitProbe([null]);
+  TestValidator.predicate(
+    "null gait entry fails at its own path",
+    hasGaitViolation(nullGaitEntry, "type", "$input.actors.knightA.gaits[0]"),
+  );
+  TestValidator.predicate(
+    "null gait entry is not reinterpreted as an action gait mismatch",
+    nullGaitEntry.success === false &&
+      nullGaitEntry.violations.every(
+        (violation) => violation.path !== "$input.performance.draft[0].gait",
+      ),
+  );
+
+  const emptyGaitEntry = gaitProbe([{}]);
+  TestValidator.predicate(
+    "empty gait entry names its missing fields",
+    hasGaitViolation(
+      emptyGaitEntry,
+      "type",
+      "$input.actors.knightA.gaits[0].name",
+    ) &&
+      hasGaitViolation(
+        emptyGaitEntry,
+        "type",
+        "$input.actors.knightA.gaits[0].period",
+      ) &&
+      hasGaitViolation(
+        emptyGaitEntry,
+        "type",
+        "$input.actors.knightA.gaits[0].limbs",
+      ),
+  );
+
+  const blankGaitFields = gaitProbe([{ name: "  ", period: 0, limbs: [null] }]);
+  TestValidator.predicate(
+    "blank gait name, zero period, and null limb fail at their paths",
+    hasGaitViolation(
+      blankGaitFields,
+      "type",
+      "$input.actors.knightA.gaits[0].name",
+    ) &&
+      hasGaitViolation(
+        blankGaitFields,
+        "range",
+        "$input.actors.knightA.gaits[0].period",
+      ) &&
+      hasGaitViolation(
+        blankGaitFields,
+        "type",
+        "$input.actors.knightA.gaits[0].limbs[0]",
+      ),
+  );
+
+  const nanGaitPeriod = gaitProbe([
+    { name: "walk", period: Number.NaN, limbs: [] },
+  ]);
+  TestValidator.predicate(
+    "non-finite gait period fails as a type violation",
+    hasGaitViolation(
+      nanGaitPeriod,
+      "type",
+      "$input.actors.knightA.gaits[0].period",
+    ),
+  );
+
+  const nullRootBob = gaitProbe([
+    { name: "walk", period: 1, rootBob: null, limbs: [] },
+  ]);
+  TestValidator.predicate(
+    "present null rootBob fails at its path",
+    hasGaitViolation(
+      nullRootBob,
+      "type",
+      "$input.actors.knightA.gaits[0].rootBob",
+    ),
+  );
+
+  const rootBobScalars = gaitProbe([
+    {
+      name: "walk",
+      period: 1,
+      rootBob: { amplitude: null, phase: 0, center: "x" },
+      limbs: [],
+    },
+  ]);
+  TestValidator.predicate(
+    "malformed rootBob scalars fail per field while valid ones pass",
+    hasGaitViolation(
+      rootBobScalars,
+      "type",
+      "$input.actors.knightA.gaits[0].rootBob.amplitude",
+    ) &&
+      hasGaitViolation(
+        rootBobScalars,
+        "type",
+        "$input.actors.knightA.gaits[0].rootBob.center",
+      ) &&
+      rootBobScalars.success === false &&
+      rootBobScalars.violations.every(
+        (violation) =>
+          violation.path !== "$input.actors.knightA.gaits[0].rootBob.phase",
+      ),
+  );
+
+  const malformedLimbFields = gaitProbe([
+    {
+      name: "walk",
+      period: 1,
+      limbs: [
+        {
+          bone: "",
+          axis: "yaw",
+          phase: null,
+          duty: 2,
+          amplitude: "big",
+          neutral: null,
+          stanceEasing: "bounce",
+          swingEasing: 5,
+        },
+        { bone: "leftUpperLeg", axis: 5, phase: 0, duty: 0, amplitude: 1 },
+      ],
+    },
+  ]);
+  const limbPath = "$input.actors.knightA.gaits[0].limbs";
+  TestValidator.predicate(
+    "malformed limb fields fail at their submitted paths",
+    hasGaitViolation(malformedLimbFields, "type", `${limbPath}[0].bone`) &&
+      hasGaitViolation(malformedLimbFields, "type", `${limbPath}[0].axis`) &&
+      hasGaitViolation(malformedLimbFields, "type", `${limbPath}[0].phase`) &&
+      hasGaitViolation(malformedLimbFields, "range", `${limbPath}[0].duty`) &&
+      hasGaitViolation(
+        malformedLimbFields,
+        "type",
+        `${limbPath}[0].amplitude`,
+      ) &&
+      hasGaitViolation(malformedLimbFields, "type", `${limbPath}[0].neutral`) &&
+      hasGaitViolation(
+        malformedLimbFields,
+        "type",
+        `${limbPath}[0].stanceEasing`,
+      ) &&
+      hasGaitViolation(
+        malformedLimbFields,
+        "type",
+        `${limbPath}[0].swingEasing`,
+      ) &&
+      hasGaitViolation(malformedLimbFields, "type", `${limbPath}[1].axis`) &&
+      hasGaitViolation(malformedLimbFields, "range", `${limbPath}[1].duty`),
+  );
+
+  const missingGait = app.perform({
+    script,
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "locomote",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          gait: "run",
+          to: { kind: "point", point: { x: 0, y: 0, z: 0.35 } },
+        },
+      ],
+      duration: 1,
+      revise: { review: "unchanged.", final: null },
+    }),
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "a valid context lacking the requested gait still fails downstream",
+    missingGait.success === false &&
+      missingGait.violations.some(
+        (violation) => violation.path === "$input.performance.draft[0].gait",
+      ),
+  );
+
+  const richGait = app.perform({
+    script,
+    staged,
+    performance,
+    actors: {
+      knightA: {
+        ...context(nodePosition("knightA"), 0),
+        gaits: [
+          {
+            name: "walk",
+            period: 1,
+            rootBob: { amplitude: 0.03, phase: 0.25, center: 0 },
+            limbs: [
+              {
+                bone: "leftUpperLeg",
+                phase: 0,
+                duty: 0.5,
+                amplitude: 25,
+                neutral: 5,
+                stanceEasing: "easeInOut",
+                swingEasing: "cubicBezier",
+              },
+              {
+                bone: "leftUpperLeg",
+                axis: "abduction",
+                phase: 0.5,
+                duty: 0.4,
+                amplitude: 8,
+              },
+            ],
+          },
+        ],
+      },
+      knightB: context(nodePosition("knightB"), 180),
+    },
+  }).performed;
+  TestValidator.equals(
+    "fully loaded valid gait performs",
+    richGait.success,
+    true,
   );
 
   const malformedDraftActor = app.perform({
