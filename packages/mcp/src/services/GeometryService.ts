@@ -55,6 +55,7 @@ export class GeometryService {
     beat?: string;
     t?: number;
   }): IAutoMovieGetResolvedPoseOutput {
+    assertGeometryRequestRoot(props);
     const source = this.resolveGeometryContext(
       props.context,
       props.beat,
@@ -76,6 +77,7 @@ export class GeometryService {
     actor: string;
     target: IAutoMovieActionTarget;
   }): IAutoMovieGetReachOutput {
+    assertGeometryRequestRoot(props);
     const source = this.resolveGeometryContext(
       props.context,
       undefined,
@@ -113,6 +115,7 @@ export class GeometryService {
     from: IAutoMovieActionTarget;
     to: IAutoMovieActionTarget;
   }): IAutoMovieMeasureDistanceOutput {
+    assertGeometryRequestRoot(props);
     const scene = this.resolveScene(props.scene, "measureDistance");
     assertGeometrySceneShape(scene, "scene");
     const nodes = nodePositions(scene);
@@ -195,6 +198,12 @@ type GeometryActor = {
 type ActorPoseState = {
   pose: IAutoMoviePose;
   motion: string | null;
+};
+
+const assertGeometryRequestRoot = (props: unknown): void => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateObjectArtifact(props, "$input", "geometry query request", violations);
+  assertNoGeometryViolations(violations);
 };
 
 class AutoMovieProjectSemanticError extends Error {
