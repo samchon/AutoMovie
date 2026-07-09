@@ -158,6 +158,7 @@ const appendMcpMotionShape = (
         keyframe.expression,
         `${path}.expression`,
       );
+      appendMcpBezierShape(violations, keyframe.bezier, `${path}.bezier`);
     });
 };
 
@@ -179,6 +180,15 @@ const appendMcpExpressionShape = (
       "expression blendshapes",
       violations,
     );
+};
+
+const appendMcpBezierShape = (
+  violations: IAutoMovieConstraintViolation[],
+  bezier: unknown,
+  path: string,
+): void => {
+  if (bezier === null) return;
+  validateObjectArtifact(bezier, path, "motion keyframe bezier", violations);
 };
 
 const validateMcpModelShape = (

@@ -379,6 +379,24 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "malformed motion keyframe bezier returns validation",
+    (() => {
+      const validation = app.validateMotion({
+        motion: {
+          ...motion,
+          keyframes: motion.keyframes.map((keyframe, index) => {
+            if (index === 0) return keyframe;
+            const { bezier, ...rest } = keyframe;
+            void bezier;
+            return rest;
+          }),
+        } as unknown as IAutoMovieMcpMotion,
+        skeleton,
+      }).validation;
+      return hasPath(validation, "$input.keyframes[1].bezier");
+    })(),
+  );
+  TestValidator.predicate(
     "malformed model shape returns validation",
     (() => {
       const validation = app.validateModel({
