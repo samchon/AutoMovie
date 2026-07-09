@@ -437,4 +437,58 @@ export const test_mcp_perform_tool = (): void => {
           violation.path === "$input.draft[0].actor",
       ),
   );
+
+  const malformedStaged = app.perform({
+    script,
+    staged: null as never,
+    performance,
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "malformed staged root returns violations",
+    malformedStaged.success === false &&
+      malformedStaged.violations.some(
+        (violation) =>
+          violation.kind === "type" && violation.path === "$staged",
+      ),
+  );
+
+  const malformedPerformance = app.perform({
+    script,
+    staged,
+    performance: null as never,
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "malformed performance root returns violations",
+    malformedPerformance.success === false &&
+      malformedPerformance.violations.some(
+        (violation) => violation.kind === "type" && violation.path === "$input",
+      ),
+  );
+
+  const malformedDraftEntry = app.perform({
+    script,
+    staged,
+    performance: makePerformanceWrite({
+      draft: [null as never],
+      duration: 1,
+      revise: { review: "unchanged.", final: null },
+    }),
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "malformed draft action root returns violations",
+    malformedDraftEntry.success === false &&
+      malformedDraftEntry.violations.some(
+        (violation) =>
+          violation.kind === "type" && violation.path === "$input.draft[0]",
+      ),
+  );
 };

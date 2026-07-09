@@ -91,6 +91,9 @@ export class PipelineService {
   }
 
   public perform(props: PerformProps): IAutoMoviePerformOutput {
+    const shapeViolations = validatePerformShape(props);
+    if (shapeViolations.length > 0)
+      return { performed: { success: false, violations: shapeViolations } };
     const actorViolations = validateActorRegistry(props.actors);
     if (actorViolations.length > 0)
       return { performed: { success: false, violations: actorViolations } };
@@ -714,6 +717,134 @@ const validateStageShape = (
       });
   }
   return violations;
+};
+
+const validatePerformShape = (
+  props: unknown,
+): IAutoMovieConstraintViolation[] => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  if (!isJsonObject(props, "$input", "perform payload", violations))
+    return violations;
+  validatePerformScriptShape(props.script, "$script", violations);
+  validatePerformStagedShape(props.staged, "$staged", violations);
+  validatePerformPerformanceShape(props.performance, "$input", violations);
+  return violations;
+};
+
+const validatePerformScriptShape = (
+  script: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(script, path, "script", violations)) return;
+  if (!isJsonArray(script.beats, `${path}.beats`, "script beats", violations))
+    return;
+  script.beats.forEach((beat, index) => {
+    const beatPath = `${path}.beats[${index}]`;
+    if (!isJsonObject(beat, beatPath, "script beat", violations)) return;
+    requireString(beat.id, `${beatPath}.id`, "script beat id", violations);
+  });
+};
+
+const validatePerformStagedShape = (
+  staged: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(staged, path, "staged set", violations)) return;
+  if (!isJsonObject(staged.scene, `${path}.scene`, "staged scene", violations))
+    return;
+  requireString(
+    staged.scene.id,
+    `${path}.scene.id`,
+    "staged scene id",
+    violations,
+  );
+  if (
+    isJsonArray(
+      staged.scene.nodes,
+      `${path}.scene.nodes`,
+      "staged scene nodes",
+      violations,
+    )
+  )
+    staged.scene.nodes.forEach((node, index) =>
+      validatePerformStagedNodeShape(
+        node,
+        `${path}.scene.nodes[${index}]`,
+        violations,
+      ),
+    );
+  if (
+    isJsonArray(
+      staged.scene.cameras,
+      `${path}.scene.cameras`,
+      "staged scene cameras",
+      violations,
+    )
+  )
+    staged.scene.cameras.forEach((camera, index) => {
+      const cameraPath = `${path}.scene.cameras[${index}]`;
+      if (!isJsonObject(camera, cameraPath, "staged scene camera", violations))
+        return;
+      requireString(
+        camera.id,
+        `${cameraPath}.id`,
+        "staged camera id",
+        violations,
+      );
+    });
+  isJsonArray(staged.mounts, `${path}.mounts`, "staged mounts", violations);
+};
+
+const validatePerformStagedNodeShape = (
+  node: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(node, path, "staged scene node", violations)) return;
+  requireString(node.id, `${path}.id`, "staged scene node id", violations);
+  validateTransformObject(
+    node.transform,
+    `${path}.transform`,
+    "staged scene node transform",
+    violations,
+  );
+};
+
+const validatePerformPerformanceShape = (
+  performance: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(performance, path, "performance", violations)) return;
+  validatePerformActionArray(performance.draft, `${path}.draft`, violations);
+  if (
+    !isJsonObject(
+      performance.revise,
+      `${path}.revise`,
+      "performance revision",
+      violations,
+    )
+  )
+    return;
+  if (performance.revise.final === null) return;
+  validatePerformActionArray(
+    performance.revise.final,
+    `${path}.revise.final`,
+    violations,
+  );
+};
+
+const validatePerformActionArray = (
+  actions: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonArray(actions, path, "performance actions", violations)) return;
+  actions.forEach((action, index) =>
+    isJsonObject(action, `${path}[${index}]`, "performance action", violations),
+  );
 };
 
 const isJsonObject = (
