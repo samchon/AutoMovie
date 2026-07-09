@@ -168,7 +168,12 @@ export class PipelineService {
       return { cut: { success: false, violations: requestRoot } };
     const violations = validateCutShape(props.assemble, props.shots);
     if (violations.length > 0) return { cut: { success: false, violations } };
-    return { cut: cutSequence(props.assemble, props.shots) };
+    return {
+      cut: remapMcpCutPaths(cutSequence(props.assemble, props.shots), [
+        ["$input", "$input.assemble"],
+        ["$shots", "$input.shots"],
+      ]),
+    };
   }
 
   public forge(props: {
@@ -1789,6 +1794,20 @@ const remapMcpBlockedBeatPaths = (
   return {
     success: false,
     violations: blocked.violations.map((item) => ({
+      ...item,
+      path: remapMcpPath(item.path, replacements),
+    })),
+  };
+};
+
+const remapMcpCutPaths = (
+  cut: IAutoMovieCutOutput["cut"],
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): IAutoMovieCutOutput["cut"] => {
+  if (cut.success === true) return cut;
+  return {
+    success: false,
+    violations: cut.violations.map((item) => ({
       ...item,
       path: remapMcpPath(item.path, replacements),
     })),
