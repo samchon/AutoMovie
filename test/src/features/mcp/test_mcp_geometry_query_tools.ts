@@ -139,7 +139,8 @@ const residentShot: IAutoMovieShot = {
  *    TypeErrors.
  * 9. Malformed explicit geometry collections reject with path-bearing errors
  *    before helper array iteration.
- * 10. Non-finite explicit pose sample time rejects with a `$input.t` path.
+ * 10. Malformed request roots reject with `$input` paths before property reads.
+ * 11. Non-finite explicit pose sample time rejects with a `$input.t` path.
  */
 export const test_mcp_geometry_query_tools = (): void => {
   const nodeDistance = app.measureDistance({
@@ -187,6 +188,13 @@ export const test_mcp_geometry_query_tools = (): void => {
       to: null as never,
     }).measurement,
     null,
+  );
+  TestValidator.predicate(
+    "malformed distance request root rejects",
+    throwsError(
+      () => app.measureDistance(null as never),
+      ["$input", "JSON object"],
+    ),
   );
   TestValidator.predicate(
     "malformed distance scene rejects",
@@ -263,6 +271,13 @@ export const test_mcp_geometry_query_tools = (): void => {
           t: Infinity,
         }),
       ["$input.t", "finite"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed pose request root rejects",
+    throwsError(
+      () => app.getResolvedPose(null as never),
+      ["$input", "JSON object"],
     ),
   );
   TestValidator.predicate(
@@ -400,6 +415,10 @@ export const test_mcp_geometry_query_tools = (): void => {
       target: null as never,
     }).reach,
     null,
+  );
+  TestValidator.predicate(
+    "malformed reach request root rejects",
+    throwsError(() => app.getReach(null as never), ["$input", "JSON object"]),
   );
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-geometry-"));
