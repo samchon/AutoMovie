@@ -137,7 +137,7 @@ export const test_mcp_query_tools = (): void => {
           slate: { ...slate, shots: [shot, { ...shot, duration: 2 }] },
           beat: "beat-1",
         }),
-      ['shot id "shot:beat-1"', "slate.shots[1].id"],
+      ['shot id "shot:beat-1"', "$input.slate.shots[1].id"],
     ),
   );
   TestValidator.predicate(
@@ -148,7 +148,7 @@ export const test_mcp_query_tools = (): void => {
           slate: { ...slate, beatEnds: [beatEnd, { ...beatEnd, actors: [] }] },
           beat: "beat-1",
         }),
-      ['beat end "beat-1"', "slate.beatEnds[1].beat"],
+      ['beat end "beat-1"', "$input.slate.beatEnds[1].beat"],
     ),
   );
   TestValidator.predicate(
@@ -162,7 +162,7 @@ export const test_mcp_query_tools = (): void => {
           },
           beat: "beat-1",
         }),
-      ["slate.shots", "array"],
+      ["$input.slate.shots", "array"],
     ),
   );
   TestValidator.predicate(
@@ -176,7 +176,7 @@ export const test_mcp_query_tools = (): void => {
           },
           beat: "beat-1",
         }),
-      ["slate.notes", "array"],
+      ["$input.slate.notes", "array"],
     ),
   );
   TestValidator.predicate(
@@ -190,7 +190,7 @@ export const test_mcp_query_tools = (): void => {
           },
           beat: "beat-1",
         }),
-      ["slate.beatEnds", "array"],
+      ["$input.slate.beatEnds", "array"],
     ),
   );
   TestValidator.predicate(
@@ -204,7 +204,7 @@ export const test_mcp_query_tools = (): void => {
           },
           beat: "beat-1",
         }),
-      ["slate.shots[0]", "JSON object"],
+      ["$input.slate.shots[0]", "JSON object"],
     ),
   );
 
@@ -220,7 +220,7 @@ export const test_mcp_query_tools = (): void => {
   ] as const)
     TestValidator.predicate(
       `${label} malformed slate root rejects`,
-      throwsError(query, ["slate", "JSON object"]),
+      throwsError(query, ["$input.slate", "JSON object"]),
     );
 
   for (const [label, query] of [
