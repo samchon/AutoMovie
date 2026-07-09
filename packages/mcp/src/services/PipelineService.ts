@@ -973,33 +973,56 @@ const validateBlockShape = (
   blocking: unknown,
 ): IAutoMovieConstraintViolation[] => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  if (isJsonObject(script, "$script", "script", violations)) {
-    if (isJsonArray(script.beats, "$script.beats", "script beats", violations))
+  if (isJsonObject(script, "$input.script", "script", violations)) {
+    if (
+      isJsonArray(
+        script.beats,
+        "$input.script.beats",
+        "script beats",
+        violations,
+      )
+    )
       script.beats.forEach((beat, index) => {
-        const path = `$script.beats[${index}]`;
+        const path = `$input.script.beats[${index}]`;
         if (!isJsonObject(beat, path, "script beat", violations)) return;
         requireString(beat.id, `${path}.id`, "beat id", violations);
       });
   }
 
-  if (isJsonObject(staged, "$staged", "staged set", violations)) {
-    if (isJsonObject(staged.scene, "$staged.scene", "scene", violations)) {
+  if (isJsonObject(staged, "$input.staged", "staged set", violations)) {
+    if (
+      isJsonObject(staged.scene, "$input.staged.scene", "scene", violations)
+    ) {
       const nodes = staged.scene.nodes;
-      if (isJsonArray(nodes, "$staged.scene.nodes", "scene nodes", violations))
+      if (
+        isJsonArray(
+          nodes,
+          "$input.staged.scene.nodes",
+          "scene nodes",
+          violations,
+        )
+      )
         nodes.forEach((node, index) => {
-          const path = `$staged.scene.nodes[${index}]`;
+          const path = `$input.staged.scene.nodes[${index}]`;
           if (!isJsonObject(node, path, "scene node", violations)) return;
           requireString(node.id, `${path}.id`, "scene node id", violations);
         });
     }
   }
 
-  if (isJsonObject(blocking, "$input", "blocking", violations)) {
-    requireString(blocking.beat, "$input.beat", "beat id", violations);
+  if (isJsonObject(blocking, "$input.blocking", "blocking", violations)) {
+    requireString(blocking.beat, "$input.blocking.beat", "beat id", violations);
     const actors = blocking.actors;
-    if (isJsonArray(actors, "$input.actors", "blocking actors", violations))
+    if (
+      isJsonArray(
+        actors,
+        "$input.blocking.actors",
+        "blocking actors",
+        violations,
+      )
+    )
       actors.forEach((actor, index) => {
-        const path = `$input.actors[${index}]`;
+        const path = `$input.blocking.actors[${index}]`;
         if (!isJsonObject(actor, path, "actor intent", violations)) return;
         requireString(actor.node, `${path}.node`, "actor node", violations);
         const anchors = actor.anchors;
@@ -1024,8 +1047,19 @@ const validateBlockShape = (
         }
       });
 
-    if (isJsonObject(blocking.camera, "$input.camera", "camera", violations))
-      validateStageTarget(blocking.camera.on, "$input.camera.on", violations);
+    if (
+      isJsonObject(
+        blocking.camera,
+        "$input.blocking.camera",
+        "camera",
+        violations,
+      )
+    )
+      validateStageTarget(
+        blocking.camera.on,
+        "$input.blocking.camera.on",
+        violations,
+      );
   }
   return violations;
 };
