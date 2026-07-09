@@ -148,6 +148,15 @@ export const test_mcp_perform_tool = (): void => {
     "perform:knightA",
   );
 
+  const malformedRequest = app.perform(null as never).performed;
+  TestValidator.predicate(
+    "malformed request root returns violations",
+    malformedRequest.success === false &&
+      malformedRequest.violations.some(
+        (violation) => violation.kind === "type" && violation.path === "$input",
+      ),
+  );
+
   const failed = app.perform({
     script,
     staged,

@@ -68,6 +68,13 @@ export const test_mcp_forge_prop = (): void => {
     "door",
   );
 
+  const malformedRequest = app.forgeProp(null as never).forged;
+  TestValidator.predicate(
+    "malformed request root returns violations",
+    malformedRequest.success === false &&
+      hasViolation(malformedRequest, "type", "$input"),
+  );
+
   // #724: a curve-driven prop driver omits inRange/outRange entirely; the MCP
   // converter must lower it without inventing dead ranges, and it still forges.
   const curveSpec: IAutoMovieMcpPropSpec = {
