@@ -38,7 +38,7 @@ export const test_mcp_stage_tool = (): void => {
   TestValidator.predicate(
     "malformed script cast returns violations",
     malformedCast.success === false &&
-      hasViolation(malformedCast, "type", "$script.cast"),
+      hasViolation(malformedCast, "type", "$input.script.cast"),
   );
 
   const malformedActors = app.stage({
@@ -51,7 +51,7 @@ export const test_mcp_stage_tool = (): void => {
   TestValidator.predicate(
     "malformed staging actors return violations",
     malformedActors.success === false &&
-      hasViolation(malformedActors, "type", "$input.actors"),
+      hasViolation(malformedActors, "type", "$input.staging.actors"),
   );
 
   const malformedActorEntry = app.stage({
@@ -66,7 +66,7 @@ export const test_mcp_stage_tool = (): void => {
   TestValidator.predicate(
     "malformed actor entry returns violations",
     malformedActorEntry.success === false &&
-      hasViolation(malformedActorEntry, "type", "$input.actors[0]"),
+      hasViolation(malformedActorEntry, "type", "$input.staging.actors[0]"),
   );
 
   const malformedCameraTarget = app.stage({
@@ -85,7 +85,11 @@ export const test_mcp_stage_tool = (): void => {
   TestValidator.predicate(
     "malformed camera target returns violations",
     malformedCameraTarget.success === false &&
-      hasViolation(malformedCameraTarget, "type", "$input.cameras[0].lookAt"),
+      hasViolation(
+        malformedCameraTarget,
+        "type",
+        "$input.staging.cameras[0].lookAt",
+      ),
   );
 
   const malformedLightDirection = app.stage({
@@ -107,7 +111,7 @@ export const test_mcp_stage_tool = (): void => {
       hasViolation(
         malformedLightDirection,
         "type",
-        "$input.lights[0].direction",
+        "$input.staging.lights[0].direction",
       ),
   );
 };
