@@ -264,7 +264,20 @@ export const test_mcp_render_tools = async (): Promise<void> => {
         slate: { ...slate, shots: [shotA, shotA] },
         spec,
       }).validation,
-      "$slate.shots[1].id",
+      "$input.slate.shots[1].id",
+    ),
+  );
+  TestValidator.predicate(
+    "invalid explicit slate shot duration path",
+    hasPath(
+      app.planRender({
+        slate: {
+          ...slate,
+          shots: [{ ...shotA, duration: Number.POSITIVE_INFINITY }, shotB],
+        },
+        spec,
+      }).validation,
+      "$input.slate.shots[0].duration",
     ),
   );
   const malformedShots = app.planRender({
@@ -277,7 +290,7 @@ export const test_mcp_render_tools = async (): Promise<void> => {
   TestValidator.predicate(
     "malformed slate shots path",
     malformedShots.plan === null &&
-      hasPath(malformedShots.validation, "$slate.shots"),
+      hasPath(malformedShots.validation, "$input.slate.shots"),
   );
   const malformedSlateRoot = app.planRender({
     slate: null as never,
@@ -298,7 +311,7 @@ export const test_mcp_render_tools = async (): Promise<void> => {
   TestValidator.predicate(
     "malformed slate film path",
     malformedFilm.plan === null &&
-      hasPath(malformedFilm.validation, "$slate.film"),
+      hasPath(malformedFilm.validation, "$input.slate.film"),
   );
   const malformedShotEntry = app.planRender({
     slate: {
@@ -310,7 +323,7 @@ export const test_mcp_render_tools = async (): Promise<void> => {
   TestValidator.predicate(
     "malformed slate shot entry path",
     malformedShotEntry.plan === null &&
-      hasPath(malformedShotEntry.validation, "$slate.shots[0]"),
+      hasPath(malformedShotEntry.validation, "$input.slate.shots[0]"),
   );
   const malformedFilmShots = app.planRender({
     slate: {
@@ -325,7 +338,7 @@ export const test_mcp_render_tools = async (): Promise<void> => {
   TestValidator.predicate(
     "malformed slate film sequence path",
     malformedFilmShots.plan === null &&
-      hasPath(malformedFilmShots.validation, "$input.shots"),
+      hasPath(malformedFilmShots.validation, "$input.slate.film.shots"),
   );
   TestValidator.predicate(
     "zero-frame plan path",
@@ -356,7 +369,7 @@ export const test_mcp_render_tools = async (): Promise<void> => {
         },
         spec: { ...spec, target: sequence.id },
       }).validation,
-      "$input.shots[0].trim",
+      "$input.slate.film.shots[0].trim",
     ),
   );
 
