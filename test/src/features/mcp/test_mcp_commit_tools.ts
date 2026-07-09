@@ -625,6 +625,15 @@ export const test_mcp_commit_tools = (): void => {
     stagedSlate,
   );
   expectRefused(
+    "malformed film root",
+    app.commitFilm({
+      slate: stagedSlate,
+      film: null as unknown as IAutoMovieSequence,
+    }),
+    "$input.film",
+    stagedSlate,
+  );
+  expectRefused(
     "film malformed sequence shots",
     app.commitFilm({
       slate: stagedSlate,
@@ -633,7 +642,7 @@ export const test_mcp_commit_tools = (): void => {
         shots: null as unknown as IAutoMovieSequence["shots"],
       },
     }),
-    "$input.shots",
+    "$input.film.shots",
     stagedSlate,
   );
   expectRefused(

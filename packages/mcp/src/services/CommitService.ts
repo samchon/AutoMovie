@@ -437,7 +437,16 @@ export class CommitService {
     validateFilmPreconditions(props.film, slate, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
-      return this.finish(failedCommit(slate, validation), resident);
+      return this.finish(
+        failedCommit(
+          slate,
+          remapCommitValidationPaths(validation, [
+            ["$shots", "$slate.shots"],
+            ["$input", "$input.film"],
+          ]),
+        ),
+        resident,
+      );
     return this.finish(
       successfulCommit({ ...slate, film: props.film }),
       resident,
@@ -1480,7 +1489,7 @@ const validateFilmPreconditions = (
       "open review notes must be cleared before committing a film",
       slate.notes,
     );
-  if (!Array.isArray(film.shots)) return;
+  if (!isRecord(film) || !Array.isArray(film.shots)) return;
   const sequenceShotIds = new Set(
     film.shots
       .filter(isRecord)
