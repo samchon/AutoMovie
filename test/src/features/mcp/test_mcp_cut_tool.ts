@@ -145,4 +145,36 @@ export const test_mcp_cut_tool = (): void => {
         "$input.assemble.entries[0].transition",
       ),
   );
+
+  const firstTransition = app.cut({
+    assemble: {
+      ...assemble,
+      entries: [
+        {
+          ...assemble.entries[0]!,
+          transition: { kind: "crossDissolve", duration: 0.5 },
+        },
+      ],
+    },
+    shots: [shot],
+  }).cut;
+  TestValidator.predicate(
+    "semantic assemble entry returns wrapper path",
+    firstTransition.success === false &&
+      hasViolation(
+        firstTransition,
+        "type",
+        "$input.assemble.entries[0].transition",
+      ),
+  );
+
+  const duplicateShots = app.cut({
+    assemble,
+    shots: [shot, { ...shot }],
+  }).cut;
+  TestValidator.predicate(
+    "semantic shot registry returns wrapper path",
+    duplicateShots.success === false &&
+      hasViolation(duplicateShots, "type", "$input.shots[1].id"),
+  );
 };
