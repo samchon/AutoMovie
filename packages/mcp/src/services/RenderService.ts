@@ -252,6 +252,7 @@ const buildChunkedRenderPlan = (props: {
   const violations: IAutoMovieConstraintViolation[] = [];
   const specIsRecord = isRecord(props.spec);
   validateRenderSpec(props.spec, violations);
+  validateRenderPathOverrides(props, violations);
   // Omitted passes => a beauty-only chunk plan with NO pass fields (byte-
   // identical to the pass-less engine plan); an explicit list is validated and
   // planned per chunk. resolveGuidePasses' beauty default is deliberately not
@@ -479,6 +480,7 @@ const buildRenderPlan = (props: {
   const violations: IAutoMovieConstraintViolation[] = [];
   const specIsRecord = isRecord(props.spec);
   validateRenderSpec(props.spec, violations);
+  validateRenderPathOverrides(props, violations);
   const passes = resolveGuidePasses(props.passes, violations);
   const target = specIsRecord
     ? resolveRenderTarget(props.slate, props.spec.target, violations)
@@ -685,6 +687,41 @@ const validateRenderSpec = (
       `render pixelFormat must be "yuv420p", but was "${spec.pixelFormat}"`,
       spec.pixelFormat,
     );
+};
+
+const validateRenderPathOverrides = (
+  props: { frameDir?: string; outputPath?: string },
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  validateOptionalRenderPathOverride(
+    props.frameDir,
+    "$input.frameDir",
+    "render frameDir override",
+    violations,
+  );
+  validateOptionalRenderPathOverride(
+    props.outputPath,
+    "$input.outputPath",
+    "render outputPath override",
+    violations,
+  );
+};
+
+const validateOptionalRenderPathOverride = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (value === undefined) return;
+  if (typeof value === "string" && value.trim().length > 0) return;
+  pushViolation(
+    violations,
+    "type",
+    path,
+    `${label} must be a non-empty string`,
+    value,
+  );
 };
 
 const validateSlateShotEntries = (
