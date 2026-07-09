@@ -301,7 +301,17 @@ export class CommitService {
         : locateOnBeat(violations, slate.script?.tree ?? null, beat);
     const validation = toValidation(located);
     if (validation.success === false)
-      return this.finish(failedCommit(slate, validation), resident);
+      return this.finish(
+        failedCommit(
+          slate,
+          remapCommitValidationPaths(validation, [
+            ["$motions", "$input.motions"],
+            ["$input.motions", "$input.motions"],
+            ["$input", "$input.shot"],
+          ]),
+        ),
+        resident,
+      );
     const output = this.finish(
       successfulCommit({
         ...slate,

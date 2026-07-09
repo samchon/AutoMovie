@@ -68,7 +68,7 @@ const script = {
  * 3. Resident commitShot with the matching `motions` registry → committed, the
  *    file appears.
  * 4. Resident commitShot with an EMPTY registry (the reference is dangling) →
- *    refused, with a `$input.performances[].motion` violation.
+ *    refused, with a `$input.shot.performances[].motion` violation.
  * 5. Explicit-slate commitShot with NO `motions` → still committed (pure
  *    transform, unchanged from before this gate).
  */
