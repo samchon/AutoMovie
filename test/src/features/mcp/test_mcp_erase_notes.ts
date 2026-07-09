@@ -90,6 +90,22 @@ export const test_mcp_erase_notes = (): void => {
       ],
     });
 
+    const malformedRequest = app.eraseNotes(null as never);
+    TestValidator.equals(
+      "malformed request root refused",
+      malformedRequest.erased,
+      false,
+    );
+    TestValidator.predicate(
+      "malformed request root located",
+      hasViolation(malformedRequest.validation, "type", "$input"),
+    );
+    TestValidator.equals(
+      "malformed request keeps notes",
+      malformedRequest.slate.notes.map((note) => note.beat),
+      ["beat-1", "beat-2"],
+    );
+
     const erased = app.eraseNotes({
       beat: "beat-1",
       reason: "note resolved by the restaged approach",

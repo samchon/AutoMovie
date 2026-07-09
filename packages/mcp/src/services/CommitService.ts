@@ -385,6 +385,9 @@ export class CommitService {
   }): IAutoMovieEraseOutput {
     const project = this.context!.requireProject("eraseShot");
     const slate = project.writableSlate();
+    const requestRoot = validateMutationRequestRoot(props);
+    if (requestRoot.length > 0)
+      return { erased: false, slate, validation: toValidation(requestRoot) };
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNonEmptyId(props.beat, "$input.beat", "beat id", violations);
     validateNonEmptyText(
@@ -432,6 +435,9 @@ export class CommitService {
   }): IAutoMovieEraseOutput {
     const project = this.context!.requireProject("eraseNotes");
     const slate = project.writableSlate();
+    const requestRoot = validateMutationRequestRoot(props);
+    if (requestRoot.length > 0)
+      return { erased: false, slate, validation: toValidation(requestRoot) };
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNonEmptyId(props.beat, "$input.beat", "beat id", violations);
     validateNonEmptyText(
@@ -477,6 +483,14 @@ export class CommitService {
     reason: string;
   }): IAutoMoviePropEraseOutput {
     const project = this.context!.requireProject("eraseProp");
+    const stored = project.storedProps().map((spec) => spec.node);
+    const requestRoot = validateMutationRequestRoot(props);
+    if (requestRoot.length > 0)
+      return {
+        erased: false,
+        props: stored,
+        validation: toValidation(requestRoot),
+      };
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNonEmptyId(props.node, "$input.node", "prop node", violations);
     validateNonEmptyText(
@@ -485,7 +499,6 @@ export class CommitService {
       "erase reason",
       violations,
     );
-    const stored = project.storedProps().map((spec) => spec.node);
     if (isNonEmptyString(props.node)) {
       if (!stored.includes(props.node))
         pushViolation(
@@ -540,6 +553,9 @@ export class CommitService {
   }): IAutoMovieSetOutput {
     const project = this.context!.requireProject("setActorPerformance");
     const slate = project.writableSlate();
+    const requestRoot = validateMutationRequestRoot(props);
+    if (requestRoot.length > 0)
+      return { updated: false, slate, validation: toValidation(requestRoot) };
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNonEmptyId(props.beat, "$input.beat", "beat id", violations);
     validateNonEmptyText(
@@ -693,6 +709,9 @@ export class CommitService {
   }): IAutoMovieSetOutput {
     const project = this.context!.requireProject("setPlacement");
     const slate = project.writableSlate();
+    const requestRoot = validateMutationRequestRoot(props);
+    if (requestRoot.length > 0)
+      return { updated: false, slate, validation: toValidation(requestRoot) };
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNonEmptyId(props.node, "$input.node", "placement node", violations);
     validateNonEmptyText(
@@ -784,6 +803,14 @@ export class CommitService {
    */
   public registerAsset(props: { path: string }): IAutoMovieRegisterAssetOutput {
     const project = this.context!.requireProject("registerAsset");
+    const requestRoot = validateMutationRequestRoot(props);
+    if (requestRoot.length > 0)
+      return {
+        registered: false,
+        path: null,
+        assets: project.assets,
+        validation: toValidation(requestRoot),
+      };
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNonEmptyText(props.path, "$input.path", "asset path", violations);
     if (isNonEmptyString(props.path)) {
@@ -822,6 +849,14 @@ export class CommitService {
     };
   }
 }
+
+const validateMutationRequestRoot = (
+  props: unknown,
+): IAutoMovieConstraintViolation[] => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateObjectArtifact(props, "$input", "mutation request", violations);
+  return violations;
+};
 
 const failedCommit = (
   slate: IAutoMovieMcpWritableSlate,

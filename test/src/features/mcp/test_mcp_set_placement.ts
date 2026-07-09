@@ -91,6 +91,22 @@ export const test_mcp_set_placement = (): void => {
       .getScene({})
       .scene?.nodes.find((node) => node.id === "knightA");
 
+    const malformedRequest = app.setPlacement(null as never);
+    TestValidator.equals(
+      "malformed request root refused",
+      malformedRequest.updated,
+      false,
+    );
+    TestValidator.predicate(
+      "malformed request root located",
+      hasViolation(malformedRequest.validation, "type", "$input"),
+    );
+    TestValidator.equals(
+      "malformed request keeps the shot",
+      malformedRequest.slate.shots.map((entry) => entry.id),
+      ["shot:beat-1"],
+    );
+
     // 1. The surgical move + the deliberate commitScene-mirror cascade.
     const moved = app.setPlacement({
       node: "knightB",
