@@ -222,9 +222,15 @@ export class PipelineService {
     if (violations.length > 0)
       return { forged: { success: false, violations } };
     const converted = convertPropSpecForForge(props.spec);
-    if (converted.success === false) return { forged: converted };
+    if (converted.success === false)
+      return {
+        forged: remapMcpForgedPropPaths(converted, [["$input", "$input.spec"]]),
+      };
     const forged = forgeProp(converted.prop);
-    if (forged.success === false) return { forged };
+    if (forged.success === false)
+      return {
+        forged: remapMcpForgedPropPaths(forged, [["$input", "$input.spec"]]),
+      };
     const output: IAutoMovieForgePropOutput = {
       forged: { success: true, prop: props.spec },
     };
@@ -295,12 +301,13 @@ const validateForgePropShape = (
   spec: unknown,
 ): IAutoMovieConstraintViolation[] => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  if (!isJsonObject(spec, "$input", "prop spec", violations)) return violations;
-  requireString(spec.node, "$input.node", "prop node", violations);
-  validateForgeModelShape(spec.model, "$input.model", violations);
+  if (!isJsonObject(spec, "$input.spec", "prop spec", violations))
+    return violations;
+  requireString(spec.node, "$input.spec.node", "prop node", violations);
+  validateForgeModelShape(spec.model, "$input.spec.model", violations);
   validateForgePropArticulationShape(
     spec.articulation,
-    "$input.articulation",
+    "$input.spec.articulation",
     violations,
   );
   return violations;
@@ -1808,6 +1815,20 @@ const remapMcpCutPaths = (
   return {
     success: false,
     violations: cut.violations.map((item) => ({
+      ...item,
+      path: remapMcpPath(item.path, replacements),
+    })),
+  };
+};
+
+const remapMcpForgedPropPaths = (
+  forged: IAutoMovieForgePropOutput["forged"],
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): IAutoMovieForgePropOutput["forged"] => {
+  if (forged.success === true) return forged;
+  return {
+    success: false,
+    violations: forged.violations.map((item) => ({
       ...item,
       path: remapMcpPath(item.path, replacements),
     })),
