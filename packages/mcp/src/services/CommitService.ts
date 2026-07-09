@@ -132,7 +132,13 @@ export class CommitService {
     const { slate, resident } = this.base(props.slate, "commitScript");
     const validation = validateScriptArtifact(props.script);
     if (validation.success === false)
-      return this.finish(failedCommit(slate, validation), resident);
+      return this.finish(
+        failedCommit(
+          slate,
+          remapCommitValidationPaths(validation, [["$input", "$input.script"]]),
+        ),
+        resident,
+      );
     const output = this.finish(
       successfulCommit({
         ...slate,
@@ -920,6 +926,29 @@ const successfulCommit = (
   slate,
   validation: { success: true },
 });
+
+const remapCommitValidationPaths = (
+  validation: IAutoMovieValidation.IFailure,
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): IAutoMovieValidation.IFailure => ({
+  success: false,
+  violations: validation.violations.map((item) => ({
+    ...item,
+    path: remapCommitPath(item.path, replacements),
+  })),
+});
+
+const remapCommitPath = (
+  path: string,
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): string => {
+  for (const [from, to] of replacements) {
+    if (path === from) return to;
+    if (path.startsWith(`${from}.`) || path.startsWith(`${from}[`))
+      return `${to}${path.slice(from.length)}`;
+  }
+  return path;
+};
 
 const upsertById = <T extends { id: string }>(items: T[], item: T): T[] =>
   upsertBy(items, item, (entry) => entry.id === item.id);

@@ -56,7 +56,7 @@ const script = (withTree: boolean): IAutoMovieScript => ({
  * 1. An explicit-slate commit with a valid tree succeeds; getScript on the
  *    returned slate hands the tree back intact.
  * 2. A malformed tree (a beat node naming a ghost beat) refuses the commit with a
- *    violation located under `$input.tree`.
+ *    violation located under `$input.script.tree`.
  * 3. A treeless script commits exactly as before — byte-compatible legacy path.
  * 4. Resident path: openProject → commitScript with the tree → `script.json` on
  *    disk carries the tree verbatim.
@@ -92,9 +92,11 @@ export const test_mcp_commit_script_tree = (): void => {
   const refused = app.commitScript({ slate: empty, script: ghost });
   TestValidator.equals("malformed tree refused", refused.committed, false);
   TestValidator.predicate(
-    "violation located under $input.tree",
+    "violation located under $input.script.tree",
     refused.validation.success === false &&
-      refused.validation.violations.some((v) => v.path.includes("$input.tree")),
+      refused.validation.violations.some((v) =>
+        v.path.includes("$input.script.tree"),
+      ),
   );
 
   const legacy = app.commitScript({ slate: empty, script: script(false) });
