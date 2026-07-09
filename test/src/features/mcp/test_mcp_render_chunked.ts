@@ -100,8 +100,8 @@ const commitResident = (app: AutoMovieApplication): void => {
  * 3. A resident `planCaptions` plans the whole sidecar and, with `chunkFrames`,
  *    one chunk-local sidecar per render chunk (frame counts sum to the whole);
  *    malformed explicit caption slate slices stay validation failures.
- * 4. A malformed spec and a shot target (not the film) are violations — a shot
- *    renders whole.
+ * 4. Malformed request/spec roots and a shot target (not the film) are violations
+ *    — a shot renders whole.
  * 5. A non-positive / non-integer `chunkFrames` is a violation.
  * 6. An explicit slate keeps the legacy `frames/<stem>` defaults, byte-identical.
  * 7. Without a project and without a slate, both tools throw the openProject
@@ -314,6 +314,25 @@ export const test_mcp_render_chunked = (): void => {
         malformedCaptionFilm.validation.success === false &&
         malformedCaptionFilm.validation.violations.some(
           (violation) => violation.path === "$slate.film",
+        ),
+    );
+    const malformedChunkedRoot = app.planChunkedRender(null as never);
+    TestValidator.predicate(
+      "malformed chunked render root path",
+      malformedChunkedRoot.plan === null &&
+        malformedChunkedRoot.validation.success === false &&
+        malformedChunkedRoot.validation.violations.some(
+          (violation) => violation.path === "$input",
+        ),
+    );
+    const malformedCaptionRoot = app.planCaptions(null as never);
+    TestValidator.predicate(
+      "malformed caption root path",
+      malformedCaptionRoot.sidecar === null &&
+        malformedCaptionRoot.chunks === null &&
+        malformedCaptionRoot.validation.success === false &&
+        malformedCaptionRoot.validation.violations.some(
+          (violation) => violation.path === "$input",
         ),
     );
   } finally {

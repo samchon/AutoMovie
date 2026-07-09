@@ -98,9 +98,9 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
  *    schedules, frame paths, per-pass guide outputs, and ffmpeg args — beauty
  *    only by default, pass-tagged paths when more passes are requested, and an
  *    unknown or malformed pass list is a violation.
- * 2. Invalid or malformed render specs, malformed slate target slices, missing
- *    targets, duplicate shots, invalid sequence targets, and zero-frame plans
- *    return field-located diagnostics.
+ * 2. Invalid or malformed render request/spec roots, malformed slate target
+ *    slices, missing targets, duplicate shots, invalid sequence targets, and
+ *    zero-frame plans return field-located diagnostics.
  * 3. `seeFrame` resolves a preview frame by index or time, rejects conflicts and
  *    unknown passes, and reports `no-capture-adapter` on this adapterless
  *    application.
@@ -404,6 +404,18 @@ export const test_mcp_render_tools = async (): Promise<void> => {
     "malformed preview render spec path",
     malformedPreviewSpec.preview === null &&
       hasPath(malformedPreviewSpec.validation, "$input.spec"),
+  );
+  const malformedPlanRoot = app.planRender(null as never);
+  TestValidator.predicate(
+    "malformed plan render root path",
+    malformedPlanRoot.plan === null &&
+      hasPath(malformedPlanRoot.validation, "$input"),
+  );
+  const malformedPreviewRoot = await app.seeFrame(null as never);
+  TestValidator.predicate(
+    "malformed preview root path",
+    malformedPreviewRoot.preview === null &&
+      hasPath(malformedPreviewRoot.validation, "$input"),
   );
   TestValidator.equals(
     "missing preview target",
