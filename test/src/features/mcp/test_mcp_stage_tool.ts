@@ -114,4 +114,43 @@ export const test_mcp_stage_tool = (): void => {
         "$input.staging.lights[0].direction",
       ),
   );
+
+  const duplicateScript = app.stage({
+    script: makeScriptWrite({
+      cast: [
+        {
+          node: "knightA",
+          character: "the imported challenger",
+          modelRef: "stickman",
+        },
+        {
+          node: "knightA",
+          character: "the generated impostor",
+          modelRef: null,
+        },
+        { node: "knightB", character: "the champion", modelRef: null },
+      ],
+    }),
+    staging,
+  }).staged;
+  TestValidator.predicate(
+    "semantic duplicate script cast returns wrapper path",
+    duplicateScript.success === false &&
+      hasViolation(duplicateScript, "type", "$input.script.cast[1].node"),
+  );
+
+  const unplacedCast = app.stage({
+    script: makeScriptWrite({
+      cast: [
+        ...script.cast,
+        { node: "unplaced", character: "late arrival", modelRef: null },
+      ],
+    }),
+    staging,
+  }).staged;
+  TestValidator.predicate(
+    "semantic staging actor list returns wrapper path",
+    unplacedCast.success === false &&
+      hasViolation(unplacedCast, "type", "$input.staging.actors"),
+  );
 };

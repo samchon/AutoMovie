@@ -75,7 +75,12 @@ export class PipelineService {
     const violations = validateStageShape(props.script, props.staging);
     if (violations.length > 0)
       return { staged: { success: false, violations } };
-    return { staged: stageScene(props.script, props.staging) };
+    return {
+      staged: remapMcpStagedSetPaths(stageScene(props.script, props.staging), [
+        ["$script", "$input.script"],
+        ["$input", "$input.staging"],
+      ]),
+    };
   }
 
   public block(props: {
@@ -1748,6 +1753,20 @@ const remapMcpPerformedShotPaths = (
   return {
     success: false,
     violations: performed.violations.map((item) => ({
+      ...item,
+      path: remapMcpPath(item.path, replacements),
+    })),
+  };
+};
+
+const remapMcpStagedSetPaths = (
+  staged: IAutoMovieStageOutput["staged"],
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): IAutoMovieStageOutput["staged"] => {
+  if (staged.success === true) return staged;
+  return {
+    success: false,
+    violations: staged.violations.map((item) => ({
       ...item,
       path: remapMcpPath(item.path, replacements),
     })),
