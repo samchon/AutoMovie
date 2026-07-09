@@ -92,6 +92,9 @@ export class RenderService {
     const rootValidation = validateRenderRequestRoot(props);
     if (rootValidation !== null)
       return { validation: rootValidation, plan: null };
+    const slateValidation = validateExplicitRenderSlateRoot(props.slate);
+    if (slateValidation !== null)
+      return { validation: slateValidation, plan: null };
     const { slate, resident } = this.resolveSlate(props.slate, "planRender");
     return buildRenderPlan({ ...props, slate, resident });
   }
@@ -106,6 +109,9 @@ export class RenderService {
     const rootValidation = validateRenderRequestRoot(props);
     if (rootValidation !== null)
       return { validation: rootValidation, preview: null };
+    const slateValidation = validateExplicitRenderSlateRoot(props.slate);
+    if (slateValidation !== null)
+      return { validation: slateValidation, preview: null };
     const { slate, resident } = this.resolveSlate(props.slate, "seeFrame");
     const planned = buildRenderPlan({
       slate,
@@ -173,6 +179,9 @@ export class RenderService {
     const rootValidation = validateRenderRequestRoot(props);
     if (rootValidation !== null)
       return { validation: rootValidation, plan: null };
+    const slateValidation = validateExplicitRenderSlateRoot(props.slate);
+    if (slateValidation !== null)
+      return { validation: slateValidation, plan: null };
     const { slate, resident } = this.resolveSlate(
       props.slate,
       "planChunkedRender",
@@ -195,6 +204,9 @@ export class RenderService {
     const rootValidation = validateRenderRequestRoot(props);
     if (rootValidation !== null)
       return { validation: rootValidation, sidecar: null, chunks: null };
+    const slateValidation = validateExplicitRenderSlateRoot(props.slate);
+    if (slateValidation !== null)
+      return { validation: slateValidation, sidecar: null, chunks: null };
     const { slate } = this.resolveSlate(props.slate, "planCaptions");
     return buildCaptionPlan({ ...props, slate });
   }
@@ -211,6 +223,20 @@ const validateRenderRequestRoot = (
           "$input",
           "render request must be a JSON object",
           props,
+        ),
+      ]);
+
+const validateExplicitRenderSlateRoot = (
+  slate: unknown,
+): IAutoMovieValidation | null =>
+  slate === undefined || isRecord(slate)
+    ? null
+    : toValidation([
+        violation(
+          "type",
+          "$input.slate",
+          "render slate must be a JSON object",
+          slate,
         ),
       ]);
 

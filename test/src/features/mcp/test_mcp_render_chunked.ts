@@ -316,6 +316,32 @@ export const test_mcp_render_chunked = (): void => {
           (violation) => violation.path === "$slate.film",
         ),
     );
+    const malformedChunkedSlateRoot = app.planChunkedRender({
+      slate: null as never,
+      spec: filmSpec,
+      chunkFrames: 4,
+    });
+    TestValidator.predicate(
+      "malformed chunked render slate root path",
+      malformedChunkedSlateRoot.plan === null &&
+        malformedChunkedSlateRoot.validation.success === false &&
+        malformedChunkedSlateRoot.validation.violations.some(
+          (violation) => violation.path === "$input.slate",
+        ),
+    );
+    const malformedCaptionSlateRoot = app.planCaptions({
+      slate: null as never,
+      fps: 10,
+    });
+    TestValidator.predicate(
+      "malformed caption slate root path",
+      malformedCaptionSlateRoot.sidecar === null &&
+        malformedCaptionSlateRoot.chunks === null &&
+        malformedCaptionSlateRoot.validation.success === false &&
+        malformedCaptionSlateRoot.validation.violations.some(
+          (violation) => violation.path === "$input.slate",
+        ),
+    );
     const malformedChunkedRoot = app.planChunkedRender(null as never);
     TestValidator.predicate(
       "malformed chunked render root path",

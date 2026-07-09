@@ -258,6 +258,15 @@ export const test_mcp_render_tools = async (): Promise<void> => {
     malformedShots.plan === null &&
       hasPath(malformedShots.validation, "$slate.shots"),
   );
+  const malformedSlateRoot = app.planRender({
+    slate: null as never,
+    spec,
+  });
+  TestValidator.predicate(
+    "malformed render slate root path",
+    malformedSlateRoot.plan === null &&
+      hasPath(malformedSlateRoot.validation, "$input.slate"),
+  );
   const malformedFilm = app.planRender({
     slate: {
       ...slate,
@@ -416,6 +425,15 @@ export const test_mcp_render_tools = async (): Promise<void> => {
     "malformed preview root path",
     malformedPreviewRoot.preview === null &&
       hasPath(malformedPreviewRoot.validation, "$input"),
+  );
+  const malformedPreviewSlateRoot = await app.seeFrame({
+    slate: null as never,
+    spec,
+  });
+  TestValidator.predicate(
+    "malformed preview slate root path",
+    malformedPreviewSlateRoot.preview === null &&
+      hasPath(malformedPreviewSlateRoot.validation, "$input.slate"),
   );
   TestValidator.equals(
     "missing preview target",
