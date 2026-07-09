@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
+import { throwsError } from "../internal/predicates";
 
 const scriptWrite = makeScriptWrite();
 const script: IAutoMovieScript = {
@@ -34,8 +35,17 @@ const script: IAutoMovieScript = {
  *    cascade is visible as `scene.json` disappearing.
  * 5. A commit with an EXPLICIT slate does not touch the resident files (the
  *    stateless twin), and a failed resident commit writes nothing.
+ * 6. A malformed `openProject` request root rejects before reading `root`.
  */
 export const test_mcp_project_resident_commit = (): void => {
+  TestValidator.predicate(
+    "malformed openProject request root rejects",
+    throwsError(
+      () => new AutoMovieApplication().openProject(null as never),
+      ["$input", "JSON object"],
+    ),
+  );
+
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-resident-"));
   try {
     const app = new AutoMovieApplication();
