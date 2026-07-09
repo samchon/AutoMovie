@@ -139,7 +139,11 @@ export class PipelineService {
       gaits: (node) => contexts.get(node)?.gaits.map((gait) => gait.name),
       blocking: props.blocking,
     });
-    return { performed: toMcpPerformedShot(performed) };
+    return {
+      performed: remapMcpPerformedShotPaths(toMcpPerformedShot(performed), [
+        ["$input", "$input.performance"],
+      ]),
+    };
   }
 
   public cut(props: {
@@ -771,9 +775,13 @@ const validatePerformShape = (
   const violations: IAutoMovieConstraintViolation[] = [];
   if (!isJsonObject(props, "$input", "perform payload", violations))
     return violations;
-  validatePerformScriptShape(props.script, "$script", violations);
-  validatePerformStagedShape(props.staged, "$staged", violations);
-  validatePerformPerformanceShape(props.performance, "$input", violations);
+  validatePerformScriptShape(props.script, "$input.script", violations);
+  validatePerformStagedShape(props.staged, "$input.staged", violations);
+  validatePerformPerformanceShape(
+    props.performance,
+    "$input.performance",
+    violations,
+  );
   return violations;
 };
 
@@ -1560,8 +1568,8 @@ const collectDefaultSynthesisViolations = (
   const actions = props.performance.revise.final ?? props.performance.draft;
   const base =
     props.performance.revise.final !== null
-      ? "$input.revise.final"
-      : "$input.draft";
+      ? "$input.performance.revise.final"
+      : "$input.performance.draft";
   const violations: IAutoMovieConstraintViolation[] = [];
   actions.forEach((action, index) => {
     const actionPath = `${base}[${index}]`;
@@ -1719,3 +1727,31 @@ const toMcpPerformedShot = (
           ]),
         ),
       };
+
+const remapMcpPerformedShotPaths = (
+  performed: IAutoMovieMcpPerformedShot,
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): IAutoMovieMcpPerformedShot => {
+  if (performed.success === true) return performed;
+  return {
+    success: false,
+    violations: performed.violations.map((item) => ({
+      ...item,
+      path: remapMcpPath(item.path, replacements),
+    })),
+  };
+};
+
+const remapMcpPath = (
+  path: string,
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): string => {
+  for (const [from, to] of replacements)
+    if (
+      path === from ||
+      path.startsWith(`${from}.`) ||
+      path.startsWith(`${from}[`)
+    )
+      return `${to}${path.slice(from.length)}`;
+  return path;
+};

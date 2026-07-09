@@ -157,6 +157,23 @@ export const test_mcp_perform_tool = (): void => {
       ),
   );
 
+  const malformedScript = app.perform({
+    script: { ...script, beats: null as unknown as typeof script.beats },
+    staged,
+    performance,
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+    },
+  }).performed;
+  TestValidator.predicate(
+    "malformed script beats return violations",
+    malformedScript.success === false &&
+      malformedScript.violations.some(
+        (violation) =>
+          violation.kind === "type" && violation.path === "$input.script.beats",
+      ),
+  );
+
   const failed = app.perform({
     script,
     staged,
@@ -172,7 +189,8 @@ export const test_mcp_perform_tool = (): void => {
     failed.success === false &&
       failed.violations.some(
         (violation) =>
-          violation.kind === "type" && violation.path === "$input.beat",
+          violation.kind === "type" &&
+          violation.path === "$input.performance.beat",
       ),
   );
   const malformedActors = app.perform({
@@ -254,7 +272,7 @@ export const test_mcp_perform_tool = (): void => {
       malformedDraftActor.violations.some(
         (violation) =>
           violation.kind === "type" &&
-          violation.path === "$input.draft[0].actor",
+          violation.path === "$input.performance.draft[0].actor",
       ),
   );
 
@@ -287,7 +305,7 @@ export const test_mcp_perform_tool = (): void => {
       malformedFinalActor.violations.some(
         (violation) =>
           violation.kind === "type" &&
-          violation.path === "$input.revise.final[0].actor",
+          violation.path === "$input.performance.revise.final[0].actor",
       ),
   );
 
@@ -317,7 +335,8 @@ export const test_mcp_perform_tool = (): void => {
     malformedDraftTarget.success === false &&
       malformedDraftTarget.violations.some(
         (violation) =>
-          violation.kind === "type" && violation.path === "$input.draft[0].to",
+          violation.kind === "type" &&
+          violation.path === "$input.performance.draft[0].to",
       ),
   );
 
@@ -350,7 +369,7 @@ export const test_mcp_perform_tool = (): void => {
       malformedFinalTarget.violations.some(
         (violation) =>
           violation.kind === "type" &&
-          violation.path === "$input.revise.final[0].to.nodes",
+          violation.path === "$input.performance.revise.final[0].to.nodes",
       ),
   );
 
@@ -382,7 +401,8 @@ export const test_mcp_perform_tool = (): void => {
     malformedLaunchTarget.success === false &&
       malformedLaunchTarget.violations.some(
         (violation) =>
-          violation.kind === "type" && violation.path === "$input.draft[0].at",
+          violation.kind === "type" &&
+          violation.path === "$input.performance.draft[0].at",
       ),
   );
 
@@ -412,7 +432,7 @@ export const test_mcp_perform_tool = (): void => {
       unsupportedGesture.violations.some(
         (violation) =>
           violation.kind === "type" &&
-          violation.path === "$input.draft[0].kind",
+          violation.path === "$input.performance.draft[0].kind",
       ),
   );
 
@@ -443,7 +463,7 @@ export const test_mcp_perform_tool = (): void => {
       riglessReach.violations.some(
         (violation) =>
           violation.kind === "type" &&
-          violation.path === "$input.draft[0].actor",
+          violation.path === "$input.performance.draft[0].actor",
       ),
   );
 
@@ -460,7 +480,7 @@ export const test_mcp_perform_tool = (): void => {
     malformedStaged.success === false &&
       malformedStaged.violations.some(
         (violation) =>
-          violation.kind === "type" && violation.path === "$staged",
+          violation.kind === "type" && violation.path === "$input.staged",
       ),
   );
 
@@ -476,7 +496,8 @@ export const test_mcp_perform_tool = (): void => {
     "malformed performance root returns violations",
     malformedPerformance.success === false &&
       malformedPerformance.violations.some(
-        (violation) => violation.kind === "type" && violation.path === "$input",
+        (violation) =>
+          violation.kind === "type" && violation.path === "$input.performance",
       ),
   );
 
@@ -497,7 +518,8 @@ export const test_mcp_perform_tool = (): void => {
     malformedDraftEntry.success === false &&
       malformedDraftEntry.violations.some(
         (violation) =>
-          violation.kind === "type" && violation.path === "$input.draft[0]",
+          violation.kind === "type" &&
+          violation.path === "$input.performance.draft[0]",
       ),
   );
 };
