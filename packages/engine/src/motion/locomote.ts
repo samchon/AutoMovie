@@ -13,10 +13,11 @@ const assertFiniteVector = (label: string, vector: IAutoMovieVector3): void => {
 /**
  * Synthesise the **locomote** action: carry a looping gait clip across a
  * `distance` at `speed` in a `direction`. The engine sizes the travel — it
- * picks how many gait cycles cover the distance and bakes the matching forward
- * velocity via `travelMotion` — so the harness `locomote` verb ("walk to the
- * door") becomes real traveling motion without the model computing cycles or
- * m/s. At least one cycle always plays.
+ * picks how many gait cycles cover the distance at the requested speed, then
+ * bakes the effective velocity that ARRIVES at exactly `distance` over those
+ * whole cycles (`travelMotion`) — so the harness `locomote` verb ("walk to the
+ * door") reaches the door instead of stopping a half-stride short. At least one
+ * cycle always plays.
  *
  * `faceTravel` turns the body to face where it is going: the root is oriented
  * so the model's forward (`+Z`) points down the travel direction, so a figure
@@ -53,7 +54,11 @@ export const locomoteMotion = (
 
   const cycles = Math.max(1, Math.round(distance / (speed * gait.duration)));
   const heading = Vector3.scale(direction, 1 / directionLength);
-  const velocity = Vector3.scale(heading, speed);
+  // Whole cycles quantize the clip length; snap the baked velocity so the
+  // clip arrives at exactly `distance` (followPathMotion's policy). Baking
+  // the requested speed verbatim would travel speed×cycles×duration and miss
+  // the destination by up to half a stride.
+  const velocity = Vector3.scale(heading, distance / (cycles * gait.duration));
   const facing = faceTravel
     ? Quaternion.fromAxisAngle(
         { x: 0, y: 1, z: 0 },
