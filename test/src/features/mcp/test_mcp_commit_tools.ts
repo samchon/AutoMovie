@@ -363,13 +363,13 @@ export const test_mcp_commit_tools = (): void => {
       slate: stagedSlate,
       shot: null as unknown as IAutoMovieShot,
     }),
-    "$input",
+    "$input.shot",
     stagedSlate,
   );
   expectRefused(
     "shot id without beat",
     app.commitShot({ slate: stagedSlate, shot: { ...shot, id: "shot:" } }),
-    "$input.id",
+    "$input.shot.id",
     stagedSlate,
   );
   expectRefused(
@@ -378,7 +378,7 @@ export const test_mcp_commit_tools = (): void => {
       slate: stagedSlate,
       shot: { ...shot, id: "shot:missing" },
     }),
-    "$input.id",
+    "$input.shot.id",
     stagedSlate,
   );
   TestValidator.predicate(
@@ -397,11 +397,21 @@ export const test_mcp_commit_tools = (): void => {
       });
       return (
         !output.committed &&
-        hasPath(output.validation, "$input.camera") &&
-        hasPath(output.validation, "$input.performances[0].motion") &&
-        hasPath(output.validation, "$input.performances[0].startOffset")
+        hasPath(output.validation, "$input.shot.camera") &&
+        hasPath(output.validation, "$input.shot.performances[0].motion") &&
+        hasPath(output.validation, "$input.shot.performances[0].startOffset")
       );
     })(),
+  );
+  expectRefused(
+    "malformed shot motion registry",
+    app.commitShot({
+      slate: stagedSlate,
+      shot,
+      motions: null as unknown as Record<string, never>,
+    }),
+    "$input.motions",
+    stagedSlate,
   );
   TestValidator.predicate(
     "resident malformed shot performances returns validation",
@@ -421,7 +431,8 @@ export const test_mcp_commit_tools = (): void => {
         },
       });
       return (
-        !output.committed && hasPath(output.validation, "$input.performances")
+        !output.committed &&
+        hasPath(output.validation, "$input.shot.performances")
       );
     })(),
   );
