@@ -64,12 +64,13 @@ export class GeometryService {
       beat,
       "getResolvedPose",
     );
-    assertGeometryContextShape(source.context);
+    assertGeometryContextShape(source.context, source.root);
     return {
       resolvedPose: resolveActorGeometry(
         source.context,
         props.actor,
         t,
+        source.root,
         source.resident ? { caller: "getResolvedPose" } : undefined,
       ),
     };
@@ -87,16 +88,17 @@ export class GeometryService {
       undefined,
       "getReach",
     );
-    assertGeometryContextShape(source.context);
+    assertGeometryContextShape(source.context, source.root);
     const actor = findActorRig(
       source.context,
       props.actor,
+      source.root,
       source.resident ? { caller: "getReach" } : undefined,
     );
     if (actor === null) return { reach: null };
     const target = resolveRuntimeSafeTargetPoint(
       props.target,
-      nodePositions(source.context.scene),
+      nodePositions(source.context.scene, `${source.root}.scene`),
     );
     if (target === null) return { reach: null };
     const localTarget = toModelPoint(target, actor.node.transform);
@@ -120,9 +122,9 @@ export class GeometryService {
     to: IAutoMovieActionTarget;
   }): IAutoMovieMeasureDistanceOutput {
     assertGeometryRequestRoot(props);
-    const scene = this.resolveScene(props.scene, "measureDistance");
-    assertGeometrySceneShape(scene, "scene");
-    const nodes = nodePositions(scene);
+    const source = this.resolveScene(props.scene, "measureDistance");
+    assertGeometrySceneShape(source.scene, source.root);
+    const nodes = nodePositions(source.scene, source.root);
     const from = resolveRuntimeSafeTargetPoint(props.from, nodes);
     const to = resolveRuntimeSafeTargetPoint(props.to, nodes);
     return {
@@ -140,8 +142,8 @@ export class GeometryService {
   private resolveScene(
     scene: IAutoMovieScene | undefined,
     caller: string,
-  ): IAutoMovieScene {
-    if (scene !== undefined) return scene;
+  ): GeometrySceneSource {
+    if (scene !== undefined) return { scene, root: "$input.scene" };
     const project = this.context.requireProject(caller);
     const stored = project.storedSlate();
     if (stored.scene === null)
@@ -149,7 +151,7 @@ export class GeometryService {
         `${caller} was called without a scene, but the resident project has no committed scene. Commit a scene first or pass scene explicitly.`,
       );
     assertResidentSceneFile(project.root, stored.scene, caller);
-    return stored.scene;
+    return { scene: stored.scene, root: "scene" };
   }
 
   private resolveGeometryContext(
@@ -157,7 +159,8 @@ export class GeometryService {
     beat: string | undefined,
     caller: string,
   ): GeometryContextSource {
-    if (context !== undefined) return { context, resident: false };
+    if (context !== undefined)
+      return { context, resident: false, root: "$input.context" };
     const project = this.context.requireProject(caller);
     const slate = project.writableSlate();
     if (slate.scene === null)
@@ -175,6 +178,7 @@ export class GeometryService {
     ]);
     return {
       resident: true,
+      root: "context",
       context: {
         scene: slate.scene,
         models,
@@ -191,6 +195,12 @@ export class GeometryService {
 type GeometryContextSource = {
   context: IAutoMovieMcpGeometryContext;
   resident: boolean;
+  root: string;
+};
+
+type GeometrySceneSource = {
+  scene: IAutoMovieScene;
+  root: string;
 };
 
 type GeometryActor = {
@@ -291,16 +301,18 @@ const resolveActorGeometry = (
   context: IAutoMovieMcpGeometryContext,
   actor: string,
   t: number,
+  root: string,
   contract?: ResidentGeometryContract,
 ): IAutoMovieMcpResolvedPose | null => {
   assertFiniteTime(t);
-  const actorRig = findActorRig(context, actor, contract);
+  const actorRig = findActorRig(context, actor, root, contract);
   if (actorRig === null) return null;
   const state = resolveActorPose(
     context,
     actorRig.node,
     actorRig.skeleton,
     t,
+    root,
     contract,
   );
   if (state === null) return null;
@@ -332,15 +344,16 @@ const resolveActorPose = (
   node: IAutoMovieScene["nodes"][number],
   skeleton: IAutoMovieSkeleton,
   t: number,
+  root: string,
   contract?: ResidentGeometryContract,
 ): ActorPoseState | null => {
   const performance =
     context.shot === undefined || context.shot === null
       ? null
-      : findShotPerformance(context.shot, node.id);
+      : findShotPerformance(context.shot, node.id, `${root}.shot.performances`);
   const motionId = performance === null ? node.motion : performance.motion;
   if (motionId !== null) {
-    const motion = findMotion(context, motionId);
+    const motion = findMotion(context, motionId, `${root}.motions`);
     if (motion === null && contract !== undefined)
       throw new Error(
         `${contract.caller} cannot sample resident motion "${motionId}" for actor "${node.id}". Project files persist shot motion ids, not compiled motion clips; call commitShot with motions in this application session or pass context explicitly.`,
@@ -363,11 +376,12 @@ const resolveActorPose = (
 const findActorRig = (
   context: IAutoMovieMcpGeometryContext,
   actor: string,
+  root: string,
   contract?: ResidentGeometryContract,
 ): GeometryActor | null => {
-  const node = findSceneNode(context.scene, actor);
+  const node = findSceneNode(context.scene, actor, `${root}.scene.nodes`);
   if (node === null) return null;
-  const model = findGeometryModel(context.models, node.model);
+  const model = findGeometryModel(context.models, node.model, `${root}.models`);
   if (model === null && contract !== undefined)
     throw new Error(
       `${contract.caller} cannot resolve resident model "${node.model}" for actor "${actor}". Project files persist the scene, but not cast model skeleton payloads; call commitScene with models in this application session or pass context explicitly.`,
@@ -389,13 +403,14 @@ const mergeResidentModels = (
 const findSceneNode = (
   scene: IAutoMovieScene,
   id: string,
+  path: string,
 ): IAutoMovieScene["nodes"][number] | null => {
   const matches = scene.nodes
     .map((node, index) => ({ node, index }))
     .filter(({ node }) => node.id === id);
   if (matches.length > 1)
     throw new Error(
-      `scene node "${id}" is duplicated at context.scene.nodes[${matches[1]!.index}].id`,
+      `scene node "${id}" is duplicated at ${path}[${matches[1]!.index}].id`,
     );
   return matches[0]?.node ?? null;
 };
@@ -403,13 +418,14 @@ const findSceneNode = (
 const findGeometryModel = (
   models: IAutoMovieMcpGeometryModel[],
   id: string,
+  path: string,
 ): IAutoMovieMcpGeometryModel | null => {
   const matches = models
     .map((model, index) => ({ model, index }))
     .filter(({ model }) => model.id === id);
   if (matches.length > 1)
     throw new Error(
-      `geometry model "${id}" is duplicated at context.models[${matches[1]!.index}].id`,
+      `geometry model "${id}" is duplicated at ${path}[${matches[1]!.index}].id`,
     );
   return matches[0]?.model ?? null;
 };
@@ -417,13 +433,14 @@ const findGeometryModel = (
 const findShotPerformance = (
   shot: IAutoMovieShot,
   node: string,
+  path: string,
 ): IAutoMovieShot["performances"][number] | null => {
   const matches = shot.performances
     .map((performance, index) => ({ performance, index }))
     .filter(({ performance }) => performance.node === node);
   if (matches.length > 1)
     throw new Error(
-      `shot performance for "${node}" is duplicated at context.shot.performances[${matches[1]!.index}].node`,
+      `shot performance for "${node}" is duplicated at ${path}[${matches[1]!.index}].node`,
     );
   return matches[0]?.performance ?? null;
 };
@@ -431,8 +448,9 @@ const findShotPerformance = (
 const findMotion = (
   context: IAutoMovieMcpGeometryContext,
   id: string,
+  path: string,
 ): IAutoMovieMcpMotion | null => {
-  assertGeometryMotionRegistryShape(context.motions, "context.motions");
+  assertGeometryMotionRegistryShape(context.motions, path);
   const entries = Object.entries(
     context.motions as Record<string, IAutoMovieMcpMotion>,
   )
@@ -440,25 +458,26 @@ const findMotion = (
     .filter(({ motion }) => motion.id === id);
   if (entries.length > 1)
     throw new Error(
-      `motion "${id}" is duplicated at context.motions.${entries[1]!.key}.id`,
+      `motion "${id}" is duplicated at ${path}.${entries[1]!.key}.id`,
     );
   return entries[0]?.motion ?? null;
 };
 
 const assertGeometryContextShape = (
   context: IAutoMovieMcpGeometryContext | unknown,
+  path: string,
 ): void => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  if (!validateObjectArtifact(context, "context", "context", violations))
+  if (!validateObjectArtifact(context, path, "context", violations))
     return assertNoGeometryViolations(violations);
-  appendGeometrySceneShape(context.scene, "context.scene", violations);
-  appendGeometryModelsShape(context.models, "context.models", violations);
+  appendGeometrySceneShape(context.scene, `${path}.scene`, violations);
+  appendGeometryModelsShape(context.models, `${path}.models`, violations);
   const shot = context.shot;
   if (shot === null || shot === undefined)
     return assertNoGeometryViolations(violations);
-  if (!validateObjectArtifact(shot, "context.shot", "context shot", violations))
+  if (!validateObjectArtifact(shot, `${path}.shot`, "context shot", violations))
     return assertNoGeometryViolations(violations);
-  appendGeometryShotShape(shot, "context.shot", violations);
+  appendGeometryShotShape(shot, `${path}.shot`, violations);
   assertNoGeometryViolations(violations);
 };
 
@@ -723,12 +742,13 @@ const assertNoGeometryViolations = (
 
 const nodePositions = (
   scene: IAutoMovieScene,
+  path: string,
 ): Map<string, IAutoMovieVector3> =>
   new Map(
     scene.nodes.map((node, index) => {
       if (scene.nodes.findIndex((other) => other.id === node.id) !== index)
         throw new Error(
-          `scene node "${node.id}" is duplicated at scene.nodes[${index}].id`,
+          `scene node "${node.id}" is duplicated at ${path}.nodes[${index}].id`,
         );
       return [node.id, node.transform.translation];
     }),
