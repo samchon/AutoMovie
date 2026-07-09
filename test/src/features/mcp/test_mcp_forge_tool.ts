@@ -41,7 +41,7 @@ export const test_mcp_forge_tool = (): void => {
   TestValidator.predicate(
     "malformed script cast returns violations",
     malformedCast.success === false &&
-      hasViolation(malformedCast, "type", "$script.cast"),
+      hasViolation(malformedCast, "type", "$input.script.cast"),
   );
 
   const malformedEntries = app.forge({
@@ -54,7 +54,7 @@ export const test_mcp_forge_tool = (): void => {
   TestValidator.predicate(
     "malformed forge entries return violations",
     malformedEntries.success === false &&
-      hasViolation(malformedEntries, "type", "$input.entries"),
+      hasViolation(malformedEntries, "type", "$input.forge.entries"),
   );
 
   const malformedEntry = app.forge({
@@ -69,7 +69,7 @@ export const test_mcp_forge_tool = (): void => {
   TestValidator.predicate(
     "malformed forge entry returns violations",
     malformedEntry.success === false &&
-      hasViolation(malformedEntry, "type", "$input.entries[0]"),
+      hasViolation(malformedEntry, "type", "$input.forge.entries[0]"),
   );
 
   const malformedModel = app.forge({
@@ -88,7 +88,7 @@ export const test_mcp_forge_tool = (): void => {
   TestValidator.predicate(
     "malformed forge model returns violations",
     malformedModel.success === false &&
-      hasViolation(malformedModel, "type", "$input.entries[0].model"),
+      hasViolation(malformedModel, "type", "$input.forge.entries[0].model"),
   );
 
   const malformedMaterials = app.forge({
@@ -113,7 +113,7 @@ export const test_mcp_forge_tool = (): void => {
       hasViolation(
         malformedMaterials,
         "type",
-        "$input.entries[0].model.materials",
+        "$input.forge.entries[0].model.materials",
       ),
   );
 
@@ -144,7 +144,40 @@ export const test_mcp_forge_tool = (): void => {
       hasViolation(
         malformedPartTransform,
         "type",
-        "$input.entries[0].model.parts[0].transform",
+        "$input.forge.entries[0].model.parts[0].transform",
       ),
+  );
+
+  const duplicateScript = app.forge({
+    script: makeScriptWrite({
+      cast: [
+        {
+          node: "knightA",
+          character: "the imported challenger",
+          modelRef: "stickman",
+        },
+        {
+          node: "knightA",
+          character: "the generated impostor",
+          modelRef: null,
+        },
+      ],
+    }),
+    forge: { type: "write", entries: [forgeEntry("knightA")] },
+  }).forged;
+  TestValidator.predicate(
+    "semantic duplicate script cast returns wrapper path",
+    duplicateScript.success === false &&
+      hasViolation(duplicateScript, "type", "$input.script.cast[1].node"),
+  );
+
+  const ghostEntry = app.forge({
+    script,
+    forge: { type: "write", entries: [forgeEntry("ghost")] },
+  }).forged;
+  TestValidator.predicate(
+    "semantic forge entry returns wrapper path",
+    ghostEntry.success === false &&
+      hasViolation(ghostEntry, "type", "$input.forge.entries[0].node"),
   );
 };
