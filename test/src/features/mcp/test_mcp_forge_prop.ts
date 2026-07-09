@@ -160,7 +160,7 @@ export const test_mcp_forge_prop = (): void => {
     "violation surfaced through the tool",
     broken.forged.success === false &&
       broken.forged.violations.some((v) =>
-        v.path.includes("$input.model.skeleton"),
+        v.path.includes("$input.spec.model.skeleton"),
       ),
   );
 
@@ -177,7 +177,11 @@ export const test_mcp_forge_prop = (): void => {
   );
   TestValidator.predicate(
     "malformed articulation violation names articulation",
-    hasViolation(malformedArticulation.forged, "type", "$input.articulation"),
+    hasViolation(
+      malformedArticulation.forged,
+      "type",
+      "$input.spec.articulation",
+    ),
   );
 
   const malformedRoot = app.forgeProp({
@@ -186,7 +190,7 @@ export const test_mcp_forge_prop = (): void => {
   TestValidator.predicate(
     "malformed prop root returns violations",
     malformedRoot.forged.success === false &&
-      hasViolation(malformedRoot.forged, "type", "$input"),
+      hasViolation(malformedRoot.forged, "type", "$input.spec"),
   );
 
   const malformedModel = app.forgeProp({
@@ -198,7 +202,7 @@ export const test_mcp_forge_prop = (): void => {
   TestValidator.predicate(
     "malformed prop model returns violations",
     malformedModel.forged.success === false &&
-      hasViolation(malformedModel.forged, "type", "$input.model"),
+      hasViolation(malformedModel.forged, "type", "$input.spec.model"),
   );
 
   const malformedDrivers = app.forgeProp({
@@ -221,7 +225,7 @@ export const test_mcp_forge_prop = (): void => {
       hasViolation(
         malformedDrivers.forged,
         "type",
-        "$input.articulation.profile.drivers",
+        "$input.spec.articulation.profile.drivers",
       ),
   );
 
@@ -246,7 +250,7 @@ export const test_mcp_forge_prop = (): void => {
       hasViolation(
         malformedBoneMap.forged,
         "type",
-        '$input.articulation.binding.boneMap["pivot"]',
+        '$input.spec.articulation.binding.boneMap["pivot"]',
       ),
   );
 };
