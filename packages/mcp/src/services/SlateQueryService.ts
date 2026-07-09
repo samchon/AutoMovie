@@ -42,6 +42,7 @@ export class SlateQueryService {
   public getScript(props: {
     slate?: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetScriptOutput {
+    assertSlateQueryRequestRoot(props);
     const slate = this.stored(props.slate, "getScript");
     assertStoredSlateRoot(slate);
     return {
@@ -54,6 +55,7 @@ export class SlateQueryService {
   public getScene(props: {
     slate?: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetSceneOutput {
+    assertSlateQueryRequestRoot(props);
     const slate = this.stored(props.slate, "getScene");
     assertStoredSlateRoot(slate);
     return {
@@ -67,6 +69,7 @@ export class SlateQueryService {
     slate?: IAutoMovieMcpStoredSlate;
     beat: string;
   }): IAutoMovieGetShotOutput {
+    assertSlateQueryRequestRoot(props);
     const slate = this.stored(props.slate, "getShot");
     assertStoredSlateRoot(slate);
     assertStoredSlateCollection(
@@ -86,6 +89,7 @@ export class SlateQueryService {
     slate?: IAutoMovieMcpStoredSlate;
     beat?: string;
   }): IAutoMovieGetNotesOutput {
+    assertSlateQueryRequestRoot(props);
     const slate = this.stored(props.slate, "getNotes");
     assertStoredSlateRoot(slate);
     assertStoredSlateCollection(
@@ -105,6 +109,7 @@ export class SlateQueryService {
     slate?: IAutoMovieMcpStoredSlate;
     beat: string;
   }): IAutoMovieGetBeatEndOutput {
+    assertSlateQueryRequestRoot(props);
     const slate = this.stored(props.slate, "getBeatEnd");
     assertStoredSlateRoot(slate);
     assertStoredSlateCollection(
@@ -119,6 +124,14 @@ export class SlateQueryService {
       }) as IAutoMovieBeatEndState | null,
     };
   }
+}
+
+function assertSlateQueryRequestRoot(
+  props: unknown,
+): asserts props is Record<string, unknown> {
+  if (typeof props === "object" && props !== null && !Array.isArray(props))
+    return;
+  throw new Error("slate query request at $input must be a JSON object");
 }
 
 const toStoredSlate = (slate: IAutoMovieMcpStoredSlate): IAutoMovieSlate => ({

@@ -83,6 +83,8 @@ const slate: IAutoMovieMcpStoredSlate = {
  *    before raw array iteration reaches the engine helper.
  * 5. Malformed explicit stored-slate roots reject before query helpers dereference
  *    slice fields.
+ * 6. Malformed request roots reject before query helpers dereference request
+ *    fields.
  */
 export const test_mcp_query_tools = (): void => {
   TestValidator.equals("getScript", app.getScript({ slate }).script, script);
@@ -218,5 +220,17 @@ export const test_mcp_query_tools = (): void => {
     TestValidator.predicate(
       `${label} malformed slate root rejects`,
       throwsError(query, ["slate", "JSON object"]),
+    );
+
+  for (const [label, query] of [
+    ["getScript", () => app.getScript(null as never)],
+    ["getScene", () => app.getScene(null as never)],
+    ["getShot", () => app.getShot(null as never)],
+    ["getNotes", () => app.getNotes(null as never)],
+    ["getBeatEnd", () => app.getBeatEnd(null as never)],
+  ] as const)
+    TestValidator.predicate(
+      `${label} malformed request root rejects`,
+      throwsError(query, ["$input", "JSON object"]),
     );
 };
