@@ -173,7 +173,7 @@ export const test_mcp_commit_tools = (): void => {
   expectRefused(
     "empty-beat script",
     app.commitScript({ slate: emptySlate, script: { ...script, beats: [] } }),
-    "$input.beats",
+    "$input.script.beats",
     emptySlate,
   );
   expectRefused(
@@ -182,7 +182,7 @@ export const test_mcp_commit_tools = (): void => {
       slate: emptySlate,
       script: null as unknown as IAutoMovieScript,
     }),
-    "$input",
+    "$input.script",
     emptySlate,
   );
   expectRefused(
@@ -194,7 +194,7 @@ export const test_mcp_commit_tools = (): void => {
         cast: null as unknown as IAutoMovieScript["cast"],
       },
     }),
-    "$input.cast",
+    "$input.script.cast",
     emptySlate,
   );
   expectRefused(
@@ -206,7 +206,7 @@ export const test_mcp_commit_tools = (): void => {
         beats: null as unknown as IAutoMovieScript["beats"],
       },
     }),
-    "$input.beats",
+    "$input.script.beats",
     emptySlate,
   );
   TestValidator.predicate(
@@ -222,8 +222,8 @@ export const test_mcp_commit_tools = (): void => {
       });
       return (
         !output.committed &&
-        hasPath(output.validation, "$input.cast[0]") &&
-        hasPath(output.validation, "$input.beats[0]")
+        hasPath(output.validation, "$input.script.cast[0]") &&
+        hasPath(output.validation, "$input.script.beats[0]")
       );
     })(),
   );
@@ -236,7 +236,7 @@ export const test_mcp_commit_tools = (): void => {
         tree: {} as unknown as NonNullable<IAutoMovieScript["tree"]>,
       },
     }),
-    "$input.tree",
+    "$input.script.tree",
     emptySlate,
   );
   expectRefused(
@@ -248,7 +248,7 @@ export const test_mcp_commit_tools = (): void => {
         tree: [null] as unknown as NonNullable<IAutoMovieScript["tree"]>,
       },
     }),
-    "$input.tree",
+    "$input.script.tree",
     emptySlate,
   );
   TestValidator.predicate(
@@ -271,13 +271,13 @@ export const test_mcp_commit_tools = (): void => {
       });
       return (
         !output.committed &&
-        hasPath(output.validation, "$input.logline") &&
-        hasPath(output.validation, "$input.theme") &&
-        hasPath(output.validation, "$input.cast[0].character") &&
-        hasPath(output.validation, "$input.cast[0].modelRef") &&
-        hasPath(output.validation, "$input.cast[1].node") &&
-        hasPath(output.validation, "$input.beats[0].durationHint") &&
-        hasPath(output.validation, "$input.beats[1].id")
+        hasPath(output.validation, "$input.script.logline") &&
+        hasPath(output.validation, "$input.script.theme") &&
+        hasPath(output.validation, "$input.script.cast[0].character") &&
+        hasPath(output.validation, "$input.script.cast[0].modelRef") &&
+        hasPath(output.validation, "$input.script.cast[1].node") &&
+        hasPath(output.validation, "$input.script.beats[0].durationHint") &&
+        hasPath(output.validation, "$input.script.beats[1].id")
       );
     })(),
   );
