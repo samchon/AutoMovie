@@ -21,6 +21,13 @@ export const test_mcp_stage_tool = (): void => {
   const staged = app.stage({ script, staging }).staged;
   TestValidator.equals("valid stage succeeds", staged.success, true);
 
+  const malformedRequest = app.stage(null as never).staged;
+  TestValidator.predicate(
+    "malformed request root returns violations",
+    malformedRequest.success === false &&
+      hasViolation(malformedRequest, "type", "$input"),
+  );
+
   const malformedCast = app.stage({
     script: {
       ...script,

@@ -69,6 +69,9 @@ export class PipelineService {
     script: IAutoMovieScriptApplication.IWrite;
     staging: IAutoMovieStagingApplication.IWrite;
   }): IAutoMovieStageOutput {
+    const requestRoot = validatePipelineRequestRoot(props);
+    if (requestRoot.length > 0)
+      return { staged: { success: false, violations: requestRoot } };
     const violations = validateStageShape(props.script, props.staging);
     if (violations.length > 0)
       return { staged: { success: false, violations } };
@@ -80,6 +83,9 @@ export class PipelineService {
     staged: IAutoMovieStagedSet.ISuccess;
     blocking: IAutoMovieBlockingApplication.IWrite;
   }): IAutoMovieBlockOutput {
+    const requestRoot = validatePipelineRequestRoot(props);
+    if (requestRoot.length > 0)
+      return { blocked: { success: false, violations: requestRoot } };
     const violations = validateBlockShape(
       props.script,
       props.staged,
@@ -91,6 +97,9 @@ export class PipelineService {
   }
 
   public perform(props: PerformProps): IAutoMoviePerformOutput {
+    const requestRoot = validatePipelineRequestRoot(props);
+    if (requestRoot.length > 0)
+      return { performed: { success: false, violations: requestRoot } };
     const shapeViolations = validatePerformShape(props);
     if (shapeViolations.length > 0)
       return { performed: { success: false, violations: shapeViolations } };
@@ -137,6 +146,9 @@ export class PipelineService {
     assemble: IAutoMovieAssembleApplication.IWrite;
     shots: IAutoMovieShot[];
   }): IAutoMovieCutOutput {
+    const requestRoot = validatePipelineRequestRoot(props);
+    if (requestRoot.length > 0)
+      return { cut: { success: false, violations: requestRoot } };
     const violations = validateCutShape(props.assemble, props.shots);
     if (violations.length > 0) return { cut: { success: false, violations } };
     return { cut: cutSequence(props.assemble, props.shots) };
@@ -146,6 +158,9 @@ export class PipelineService {
     script: IAutoMovieScriptApplication.IWrite;
     forge: IAutoMovieForgeApplication.IWrite;
   }): IAutoMovieForgeOutput {
+    const requestRoot = validatePipelineRequestRoot(props);
+    if (requestRoot.length > 0)
+      return { forged: { success: false, violations: requestRoot } };
     const violations = validateForgeShape(props.script, props.forge);
     if (violations.length > 0)
       return { forged: { success: false, violations } };
@@ -173,6 +188,9 @@ export class PipelineService {
   public forgeProp(props: {
     spec: IAutoMovieMcpPropSpec;
   }): IAutoMovieForgePropOutput {
+    const requestRoot = validatePipelineRequestRoot(props);
+    if (requestRoot.length > 0)
+      return { forged: { success: false, violations: requestRoot } };
     const violations = validateForgePropShape(props.spec);
     if (violations.length > 0)
       return { forged: { success: false, violations } };
@@ -209,6 +227,20 @@ export class PipelineService {
     return { ...output, stored: true };
   }
 }
+
+const validatePipelineRequestRoot = (
+  props: unknown,
+): IAutoMovieConstraintViolation[] =>
+  isRecord(props)
+    ? []
+    : [
+        violation(
+          "type",
+          "$input",
+          "pipeline request must be a JSON object",
+          props,
+        ),
+      ];
 
 const convertPropSpecForForge = (
   spec: IAutoMovieMcpPropSpec,

@@ -24,6 +24,13 @@ export const test_mcp_forge_tool = (): void => {
   const forged = app.forge({ script, forge }).forged;
   TestValidator.equals("valid forge succeeds", forged.success, true);
 
+  const malformedRequest = app.forge(null as never).forged;
+  TestValidator.predicate(
+    "malformed request root returns violations",
+    malformedRequest.success === false &&
+      hasViolation(malformedRequest, "type", "$input"),
+  );
+
   const malformedCast = app.forge({
     script: {
       ...script,

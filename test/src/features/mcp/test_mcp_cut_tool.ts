@@ -35,6 +35,13 @@ export const test_mcp_cut_tool = (): void => {
   const cut = app.cut({ assemble, shots: [shot] }).cut;
   TestValidator.equals("valid cut succeeds", cut.success, true);
 
+  const malformedRequest = app.cut(null as never).cut;
+  TestValidator.predicate(
+    "malformed request root returns violations",
+    malformedRequest.success === false &&
+      hasViolation(malformedRequest, "type", "$input"),
+  );
+
   const malformedShots = app.cut({
     assemble,
     shots: null as unknown as IAutoMovieShot[],

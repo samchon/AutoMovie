@@ -27,6 +27,13 @@ export const test_mcp_block_tool = (): void => {
   const blocked = app.block({ script, staged, blocking }).blocked;
   TestValidator.equals("valid block succeeds", blocked.success, true);
 
+  const malformedRequest = app.block(null as never).blocked;
+  TestValidator.predicate(
+    "malformed request root returns violations",
+    malformedRequest.success === false &&
+      hasViolation(malformedRequest, "type", "$input"),
+  );
+
   const malformedBeats = app.block({
     script: {
       ...script,
