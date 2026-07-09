@@ -74,11 +74,13 @@ export class RenderService {
   private resolveSlate(
     slate: IAutoMovieMcpWritableSlate | undefined,
     caller: string,
-  ): { slate: IAutoMovieMcpWritableSlate; resident: boolean } {
-    if (slate !== undefined) return { slate, resident: false };
+  ): { slate: IAutoMovieMcpWritableSlate; resident: boolean; root: string } {
+    if (slate !== undefined)
+      return { slate, resident: false, root: "$input.slate" };
     return {
       slate: this.context.requireProject(caller).writableSlate(),
       resident: true,
+      root: "$slate",
     };
   }
 
@@ -95,8 +97,13 @@ export class RenderService {
     const slateValidation = validateExplicitRenderSlateRoot(props.slate);
     if (slateValidation !== null)
       return { validation: slateValidation, plan: null };
-    const { slate, resident } = this.resolveSlate(props.slate, "planRender");
-    return buildRenderPlan({ ...props, slate, resident });
+    const source = this.resolveSlate(props.slate, "planRender");
+    return buildRenderPlan({
+      ...props,
+      slate: source.slate,
+      slateRoot: source.root,
+      resident: source.resident,
+    });
   }
 
   public async seeFrame(props: {
@@ -112,11 +119,12 @@ export class RenderService {
     const slateValidation = validateExplicitRenderSlateRoot(props.slate);
     if (slateValidation !== null)
       return { validation: slateValidation, preview: null };
-    const { slate, resident } = this.resolveSlate(props.slate, "seeFrame");
+    const source = this.resolveSlate(props.slate, "seeFrame");
     const planned = buildRenderPlan({
-      slate,
+      slate: source.slate,
       spec: props.spec,
-      resident,
+      slateRoot: source.root,
+      resident: source.resident,
     });
     if (planned.validation.success === false)
       return { validation: planned.validation, preview: null };
@@ -182,11 +190,13 @@ export class RenderService {
     const slateValidation = validateExplicitRenderSlateRoot(props.slate);
     if (slateValidation !== null)
       return { validation: slateValidation, plan: null };
-    const { slate, resident } = this.resolveSlate(
-      props.slate,
-      "planChunkedRender",
-    );
-    return buildChunkedRenderPlan({ ...props, slate, resident });
+    const source = this.resolveSlate(props.slate, "planChunkedRender");
+    return buildChunkedRenderPlan({
+      ...props,
+      slate: source.slate,
+      slateRoot: source.root,
+      resident: source.resident,
+    });
   }
 
   /**
@@ -207,8 +217,12 @@ export class RenderService {
     const slateValidation = validateExplicitRenderSlateRoot(props.slate);
     if (slateValidation !== null)
       return { validation: slateValidation, sidecar: null, chunks: null };
-    const { slate } = this.resolveSlate(props.slate, "planCaptions");
-    return buildCaptionPlan({ ...props, slate });
+    const source = this.resolveSlate(props.slate, "planCaptions");
+    return buildCaptionPlan({
+      ...props,
+      slate: source.slate,
+      slateRoot: source.root,
+    });
   }
 }
 
@@ -242,6 +256,7 @@ const validateExplicitRenderSlateRoot = (
 
 const buildChunkedRenderPlan = (props: {
   slate: IAutoMovieMcpWritableSlate;
+  slateRoot: string;
   spec: IAutoMovieRenderSpec;
   chunkFrames: number;
   passes?: string[];
@@ -263,7 +278,12 @@ const buildChunkedRenderPlan = (props: {
       : resolveGuidePasses(props.passes, violations);
   validateChunkFrames(props.chunkFrames, violations);
   const target = specIsRecord
-    ? resolveRenderTarget(props.slate, props.spec.target, violations)
+    ? resolveRenderTarget(
+        props.slate,
+        props.slateRoot,
+        props.spec.target,
+        violations,
+      )
     : null;
   // Chunking splits a sequence render; a single shot renders whole via
   // planRender, so a shot target is a violation, not a chunk plan.
@@ -338,6 +358,7 @@ const toMcpChunkPlan = (
 
 const buildCaptionPlan = (props: {
   slate: IAutoMovieMcpWritableSlate;
+  slateRoot: string;
   fps: number;
   chunkFrames?: number;
 }): IAutoMoviePlanCaptionsOutput => {
@@ -357,14 +378,14 @@ const buildCaptionPlan = (props: {
     pushViolation(
       violations,
       "type",
-      "$slate.script",
+      `${props.slateRoot}.script`,
       "a script must be committed before captions",
       props.slate.script,
     );
   const shots = props.slate.shots as unknown;
   const shotsReady = validateArrayArtifact(
     shots,
-    "$slate.shots",
+    `${props.slateRoot}.shots`,
     "slate shots",
     violations,
   );
@@ -372,7 +393,7 @@ const buildCaptionPlan = (props: {
   if (shotsReady)
     shotEntriesReady = validateSlateShotEntries(
       shots,
-      "$slate.shots",
+      `${props.slateRoot}.shots`,
       violations,
     );
 
@@ -383,7 +404,7 @@ const buildCaptionPlan = (props: {
     pushViolation(
       violations,
       "type",
-      "$slate.film",
+      `${props.slateRoot}.film`,
       "a film must be committed before captions",
       film,
     );
@@ -391,15 +412,18 @@ const buildCaptionPlan = (props: {
     pushViolation(
       violations,
       "type",
-      "$slate.film",
+      `${props.slateRoot}.film`,
       "slate film must be null or a JSON object",
       film,
     );
   else if (shotsReady) {
     sequence = film as unknown as IAutoMovieSequence;
-    const sequenceValidation = validateSequenceArtifact(
-      sequence,
-      shots as IAutoMovieShot[],
+    const sequenceValidation = remapRenderValidationPaths(
+      validateSequenceArtifact(sequence, shots as IAutoMovieShot[]),
+      [
+        ["$input", `${props.slateRoot}.film`],
+        ["$shots", `${props.slateRoot}.shots`],
+      ],
     );
     appendValidation(violations, sequenceValidation);
     sequenceReady = shotEntriesReady && sequenceValidation.success;
@@ -471,6 +495,7 @@ const validateChunkFrames = (
 
 const buildRenderPlan = (props: {
   slate: IAutoMovieMcpWritableSlate;
+  slateRoot: string;
   spec: IAutoMovieRenderSpec;
   passes?: string[];
   frameDir?: string;
@@ -483,7 +508,12 @@ const buildRenderPlan = (props: {
   validateRenderPathOverrides(props, violations);
   const passes = resolveGuidePasses(props.passes, violations);
   const target = specIsRecord
-    ? resolveRenderTarget(props.slate, props.spec.target, violations)
+    ? resolveRenderTarget(
+        props.slate,
+        props.slateRoot,
+        props.spec.target,
+        violations,
+      )
     : null;
   const validation = toValidation(violations);
   if (validation.success === false) return { validation, plan: null };
@@ -744,21 +774,50 @@ const validateSlateShotEntries = (
   return success;
 };
 
+const remapRenderValidationPaths = (
+  validation: IAutoMovieValidation,
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): IAutoMovieValidation => {
+  if (validation.success === true) return validation;
+  return {
+    success: false,
+    violations: validation.violations.map((item) => ({
+      ...item,
+      path: remapRenderPath(item.path, replacements),
+    })),
+  };
+};
+
+const remapRenderPath = (
+  path: string,
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): string => {
+  for (const [from, to] of replacements)
+    if (
+      path === from ||
+      path.startsWith(`${from}.`) ||
+      path.startsWith(`${from}[`)
+    )
+      return `${to}${path.slice(from.length)}`;
+  return path;
+};
+
 const resolveRenderTarget = (
   slate: IAutoMovieMcpWritableSlate,
+  slateRoot: string,
   target: string,
   violations: IAutoMovieConstraintViolation[],
 ): { target: IAutoMovieMcpRenderTarget; duration: number } | null => {
   if (
     !validateArrayArtifact(
       slate.shots,
-      "$slate.shots",
+      `${slateRoot}.shots`,
       "slate shots",
       violations,
     )
   )
     return null;
-  if (!validateSlateShotEntries(slate.shots, "$slate.shots", violations))
+  if (!validateSlateShotEntries(slate.shots, `${slateRoot}.shots`, violations))
     return null;
   const shots = slate.shots
     .map((shot, index) => ({ shot, index }))
@@ -767,7 +826,7 @@ const resolveRenderTarget = (
     pushViolation(
       violations,
       "type",
-      `$slate.shots[${shots[1]!.index}].id`,
+      `${slateRoot}.shots[${shots[1]!.index}].id`,
       `render target shot "${target}" must be unique`,
       target,
     );
@@ -775,7 +834,7 @@ const resolveRenderTarget = (
     const shot = shots[0]!.shot;
     validateRange(
       shot.duration,
-      "$target.duration",
+      `${slateRoot}.shots[${shots[0]!.index}].duration`,
       0,
       Infinity,
       "render target duration",
@@ -789,7 +848,7 @@ const resolveRenderTarget = (
     pushViolation(
       violations,
       "type",
-      "$slate.film",
+      `${slateRoot}.film`,
       "slate film must be null or a JSON object",
       slate.film,
     );
@@ -797,16 +856,19 @@ const resolveRenderTarget = (
   }
 
   if (slate.film !== null && slate.film.id === target) {
-    const sequenceValidation = validateSequenceArtifact(
-      slate.film,
-      slate.shots,
+    const sequenceValidation = remapRenderValidationPaths(
+      validateSequenceArtifact(slate.film, slate.shots),
+      [
+        ["$input", `${slateRoot}.film`],
+        ["$shots", `${slateRoot}.shots`],
+      ],
     );
     appendValidation(violations, sequenceValidation);
     if (sequenceValidation.success === false) return null;
     const duration = sequenceRuntime(slate.film, slate.shots);
     validateRange(
       duration,
-      "$target.duration",
+      `${slateRoot}.film`,
       0,
       Infinity,
       "render target duration",

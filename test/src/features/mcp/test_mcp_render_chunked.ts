@@ -112,6 +112,18 @@ export const test_mcp_render_chunked = (): void => {
   try {
     const app = new AutoMovieApplication();
     app.openProject({ root });
+    const emptyCaptions = app.planCaptions({ fps: 10 });
+    TestValidator.predicate(
+      "resident caption slate paths stay internal",
+      emptyCaptions.sidecar === null &&
+        emptyCaptions.validation.success === false &&
+        emptyCaptions.validation.violations.some(
+          (violation) => violation.path === "$slate.script",
+        ) &&
+        emptyCaptions.validation.violations.some(
+          (violation) => violation.path === "$slate.film",
+        ),
+    );
     commitResident(app);
 
     // 1. resident chunked plan, frame-atomic under renders/
@@ -327,7 +339,7 @@ export const test_mcp_render_chunked = (): void => {
       malformedCaptionShots.sidecar === null &&
         malformedCaptionShots.validation.success === false &&
         malformedCaptionShots.validation.violations.some(
-          (violation) => violation.path === "$slate.shots",
+          (violation) => violation.path === "$input.slate.shots",
         ),
     );
     const malformedCaptionFilm = app.planCaptions({
@@ -339,7 +351,7 @@ export const test_mcp_render_chunked = (): void => {
       malformedCaptionFilm.sidecar === null &&
         malformedCaptionFilm.validation.success === false &&
         malformedCaptionFilm.validation.violations.some(
-          (violation) => violation.path === "$slate.film",
+          (violation) => violation.path === "$input.slate.film",
         ),
     );
     const malformedChunkedSlateRoot = app.planChunkedRender({
