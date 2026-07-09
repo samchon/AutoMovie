@@ -108,6 +108,22 @@ export const test_mcp_erase_shot = (): void => {
     const shot2Before = fs.readFileSync(shot2File, "utf8");
     const end2Before = fs.readFileSync(end2File, "utf8");
 
+    const malformedRequest = app.eraseShot(null as never);
+    TestValidator.equals(
+      "malformed request root refused",
+      malformedRequest.erased,
+      false,
+    );
+    TestValidator.predicate(
+      "malformed request root located",
+      hasViolation(malformedRequest.validation, "type", "$input"),
+    );
+    TestValidator.equals(
+      "malformed request keeps the slate",
+      malformedRequest.slate.shots.length,
+      2,
+    );
+
     const erased = app.eraseShot({
       beat: "beat-1",
       reason: "the charge was staged against the wrong camera",

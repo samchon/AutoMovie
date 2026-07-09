@@ -31,6 +31,27 @@ export const test_mcp_register_asset = (): void => {
     const app = new AutoMovieApplication();
     app.openProject({ root });
 
+    const malformedRequest = app.registerAsset(null as never);
+    TestValidator.equals(
+      "malformed request root refused",
+      malformedRequest.registered,
+      false,
+    );
+    TestValidator.equals(
+      "malformed request path is null",
+      malformedRequest.path,
+      null,
+    );
+    TestValidator.predicate(
+      "malformed request root located",
+      hasViolation(malformedRequest.validation, "type", "$input"),
+    );
+    TestValidator.equals(
+      "malformed request keeps asset index",
+      malformedRequest.assets,
+      [],
+    );
+
     const first = app.registerAsset({
       path: "renders\\beat-1\\frame_00000.png",
     });

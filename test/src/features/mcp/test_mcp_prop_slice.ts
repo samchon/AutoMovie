@@ -136,6 +136,22 @@ export const test_mcp_prop_slice = (): void => {
     );
     TestValidator.equals("props after the erase", erased.props, ["door"]);
 
+    const malformedRequest = app.eraseProp(null as never);
+    TestValidator.equals(
+      "malformed eraseProp request refused",
+      malformedRequest.erased,
+      false,
+    );
+    TestValidator.predicate(
+      "malformed eraseProp request located",
+      hasViolation(malformedRequest.validation, "type", "$input"),
+    );
+    TestValidator.equals(
+      "malformed eraseProp request keeps props",
+      malformedRequest.props,
+      ["door"],
+    );
+
     const absent = app.eraseProp({ node: "crate", reason: "already gone" });
     TestValidator.equals("absent prop refused", absent.erased, false);
     TestValidator.predicate(

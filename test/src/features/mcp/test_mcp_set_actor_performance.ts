@@ -153,6 +153,22 @@ export const test_mcp_set_actor_performance = (): void => {
       .getShot({ beat: "beat-1" })
       .shot?.performances.find((entry) => entry.node === "knightA");
 
+    const malformedRequest = app.setActorPerformance(null as never);
+    TestValidator.equals(
+      "malformed request root refused",
+      malformedRequest.updated,
+      false,
+    );
+    TestValidator.predicate(
+      "malformed request root located",
+      hasViolation(malformedRequest.validation, "type", "$input"),
+    );
+    TestValidator.equals(
+      "malformed request keeps both shots",
+      malformedRequest.slate.shots.map((entry) => entry.id),
+      ["shot:beat-1", "shot:beat-2"],
+    );
+
     // 1. The surgical replacement.
     const updated = app.setActorPerformance({
       beat: "beat-1",
