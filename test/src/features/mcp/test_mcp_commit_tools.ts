@@ -311,7 +311,7 @@ export const test_mcp_commit_tools = (): void => {
       },
       models,
     }),
-    "$input.nodes",
+    "$input.scene.nodes",
     scripted.slate,
   );
   expectRefused(
@@ -324,7 +324,17 @@ export const test_mcp_commit_tools = (): void => {
       },
       models,
     }),
-    "$input.nodes[0].model",
+    "$input.scene.nodes[0].model",
+    scripted.slate,
+  );
+  expectRefused(
+    "scene malformed model registry",
+    app.commitScene({
+      slate: scripted.slate,
+      scene: staged.scene,
+      models: [null as unknown as (typeof models)[number]],
+    }),
+    "$input.models[0]",
     scripted.slate,
   );
 

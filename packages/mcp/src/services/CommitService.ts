@@ -182,7 +182,16 @@ export class CommitService {
     else validateSceneAgainstScript(props.scene, slate.script, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
-      return this.finish(failedCommit(slate, validation), resident);
+      return this.finish(
+        failedCommit(
+          slate,
+          remapCommitValidationPaths(validation, [
+            ["$input", "$input.scene"],
+            ["$models", "$input.models"],
+          ]),
+        ),
+        resident,
+      );
     const output = this.finish(
       successfulCommit({
         ...slate,
