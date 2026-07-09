@@ -643,10 +643,12 @@ const validateStageShape = (
   staging: unknown,
 ): IAutoMovieConstraintViolation[] => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  if (isJsonObject(script, "$script", "script", violations)) {
-    if (isJsonArray(script.cast, "$script.cast", "script cast", violations))
+  if (isJsonObject(script, "$input.script", "script", violations)) {
+    if (
+      isJsonArray(script.cast, "$input.script.cast", "script cast", violations)
+    )
       script.cast.forEach((member, index) => {
-        const path = `$script.cast[${index}]`;
+        const path = `$input.script.cast[${index}]`;
         if (!isJsonObject(member, path, "script cast member", violations))
           return;
         requireString(member.node, `${path}.node`, "cast node", violations);
@@ -660,19 +662,26 @@ const validateStageShape = (
       });
   }
 
-  if (isJsonObject(staging, "$input", "staging", violations)) {
-    if (isJsonObject(staging.scene, "$input.scene", "scene", violations))
+  if (isJsonObject(staging, "$input.staging", "staging", violations)) {
+    if (
+      isJsonObject(staging.scene, "$input.staging.scene", "scene", violations)
+    )
       requireString(
         staging.scene.id,
-        "$input.scene.id",
+        "$input.staging.scene.id",
         "scene id",
         violations,
       );
     if (
-      isJsonArray(staging.actors, "$input.actors", "staging actors", violations)
+      isJsonArray(
+        staging.actors,
+        "$input.staging.actors",
+        "staging actors",
+        violations,
+      )
     )
       staging.actors.forEach((actor, index) => {
-        const path = `$input.actors[${index}]`;
+        const path = `$input.staging.actors[${index}]`;
         if (!isJsonObject(actor, path, "actor placement", violations)) return;
         requireString(actor.node, `${path}.node`, "actor node", violations);
         requireVectorObject(
@@ -716,13 +725,13 @@ const validateStageShape = (
     if (
       isJsonArray(
         staging.cameras,
-        "$input.cameras",
+        "$input.staging.cameras",
         "staging cameras",
         violations,
       )
     )
       staging.cameras.forEach((camera, index) => {
-        const path = `$input.cameras[${index}]`;
+        const path = `$input.staging.cameras[${index}]`;
         if (!isJsonObject(camera, path, "camera placement", violations)) return;
         requireString(camera.node, `${path}.node`, "camera node", violations);
         requireVectorObject(
@@ -734,10 +743,15 @@ const validateStageShape = (
         validateStageTarget(camera.lookAt, `${path}.lookAt`, violations);
       });
     if (
-      isJsonArray(staging.lights, "$input.lights", "staging lights", violations)
+      isJsonArray(
+        staging.lights,
+        "$input.staging.lights",
+        "staging lights",
+        violations,
+      )
     )
       staging.lights.forEach((light, index) => {
-        const path = `$input.lights[${index}]`;
+        const path = `$input.staging.lights[${index}]`;
         if (!isJsonObject(light, path, "light placement", violations)) return;
         requireString(light.node, `${path}.node`, "light node", violations);
         requireVectorObject(
