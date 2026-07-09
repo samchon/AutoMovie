@@ -74,6 +74,11 @@ const riglessContext = (
  *    fails downstream at `$input.performance.draft[0].gait`, and a fully loaded
  *    valid gait (rootBob, multi-axis limbs, neutral, named easings) still
  *    performs.
+ * 10. Duplicate actor gait names and duplicate limb (bone, axis) rows fail as
+ *     field-located violations at the later occurrence instead of leaking the
+ *     engine's `assertUniqueActorGaits` / `assertUniqueGaitAxes` throws, while
+ *     same-bone different-axis rows and per-actor independent gait sets stay
+ *     valid.
  */
 export const test_mcp_perform_tool = (): void => {
   const app = new AutoMovieApplication();
@@ -427,6 +432,50 @@ export const test_mcp_perform_tool = (): void => {
       ) &&
       hasGaitViolation(malformedLimbFields, "type", `${limbPath}[1].axis`) &&
       hasGaitViolation(malformedLimbFields, "range", `${limbPath}[1].duty`),
+  );
+
+  const duplicateGaitName = gaitProbe([WALK, { ...WALK }]);
+  TestValidator.predicate(
+    "duplicate actor gait name fails as data at the later entry",
+    hasGaitViolation(
+      duplicateGaitName,
+      "type",
+      "$input.actors.knightA.gaits[1].name",
+    ),
+  );
+
+  const duplicateLimbRow = gaitProbe([
+    {
+      name: "walk",
+      period: 1,
+      limbs: [
+        { bone: "leftUpperLeg", phase: 0, duty: 0.5, amplitude: 25 },
+        {
+          bone: "leftUpperLeg",
+          axis: "flexion",
+          phase: 0.5,
+          duty: 0.5,
+          amplitude: 10,
+        },
+      ],
+    },
+  ]);
+  TestValidator.predicate(
+    "duplicate limb (bone, axis) row fails as data at the later row",
+    hasGaitViolation(duplicateLimbRow, "type", `${limbPath}[1]`),
+  );
+
+  const emptyLimb = gaitProbe([{ name: "walk", period: 1, limbs: [{}, {}] }]);
+  TestValidator.predicate(
+    "an empty limb names its missing fields without a duplicate-row report",
+    hasGaitViolation(emptyLimb, "type", `${limbPath}[0].bone`) &&
+      hasGaitViolation(emptyLimb, "type", `${limbPath}[0].phase`) &&
+      hasGaitViolation(emptyLimb, "type", `${limbPath}[0].duty`) &&
+      hasGaitViolation(emptyLimb, "type", `${limbPath}[0].amplitude`) &&
+      emptyLimb.success === false &&
+      emptyLimb.violations.every(
+        (violation) => violation.path !== `${limbPath}[1]`,
+      ),
   );
 
   const missingGait = app.perform({
