@@ -900,18 +900,35 @@ const sequenceRuntime = (
   }, 0);
 };
 
+/**
+ * The plan's `times` grid (`i / fps`, exact rationals) is the single source of
+ * truth for frame instants; mapping a preview time through a derived "effective
+ * fps" (`frameCount / duration`) disagrees with that grid whenever `duration ×
+ * fps` is not an integer. Resolve a time to the nearest grid index instead.
+ */
+const nearestPlanFrame = (time: number, times: number[]): number => {
+  let lo = 0;
+  let hi = times.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (times[mid]! < time) lo = mid + 1;
+    else hi = mid;
+  }
+  if (lo > 0 && time - times[lo - 1]! < times[lo]! - time) return lo - 1;
+  return lo;
+};
+
 const resolvePreviewFrame = (
   props: { frame?: number; time?: number },
   plan: IAutoMovieMcpRenderPlan,
   violations: IAutoMovieConstraintViolation[],
 ): number => {
-  let frame =
-    props.frame === undefined
-      ? props.time === undefined
-        ? 0
-        : Math.floor(props.time * (plan.frameCount / plan.duration))
-      : props.frame;
-  if (!Number.isInteger(frame) || frame < 0 || frame >= plan.frameCount)
+  if (
+    props.frame !== undefined &&
+    (!Number.isInteger(props.frame) ||
+      props.frame < 0 ||
+      props.frame >= plan.frameCount)
+  )
     pushViolation(
       violations,
       "range",
@@ -920,6 +937,7 @@ const resolvePreviewFrame = (
       props.frame,
     );
 
+  let timeFrame: number | null = null;
   if (props.time !== undefined) {
     if (
       !Number.isFinite(props.time) ||
@@ -934,19 +952,16 @@ const resolvePreviewFrame = (
         props.time,
       );
     else {
-      const timeFrame = Math.floor(
-        props.time * (plan.frameCount / plan.duration),
-      );
-      if (props.frame !== undefined && timeFrame !== frame)
+      timeFrame = nearestPlanFrame(props.time, plan.times);
+      if (props.frame !== undefined && timeFrame !== props.frame)
         pushViolation(
           violations,
           "temporal",
           "$input.time",
-          `preview time maps to frame ${timeFrame}, not frame ${frame}`,
+          `preview time maps to frame ${timeFrame}, not frame ${props.frame}`,
           props.time,
         );
-      frame = props.frame ?? timeFrame;
     }
   }
-  return frame;
+  return props.frame ?? timeFrame ?? 0;
 };
