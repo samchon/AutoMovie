@@ -104,6 +104,28 @@ const expectRefused = (
   TestValidator.predicate(`${title} path`, hasPath(output.validation, path));
 };
 
+const expectResidentMalformedRequestRoot = (
+  title: string,
+  call: (
+    app: AutoMovieApplication,
+  ) => ReturnType<AutoMovieApplication["commitScript"]>,
+): void => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-commit-root-"));
+  try {
+    const resident = new AutoMovieApplication();
+    resident.openProject({ root });
+    const output = call(resident);
+    TestValidator.equals(`${title} not committed`, output.committed, false);
+    TestValidator.equals(`${title} slate unchanged`, output.slate, emptySlate);
+    TestValidator.predicate(
+      `${title} path`,
+      hasPath(output.validation, "$input"),
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+};
+
 /**
  * MCP commit tools keep slate writes ordered and atomic.
  *
@@ -117,6 +139,31 @@ const expectRefused = (
  *    otherwise become stale.
  */
 export const test_mcp_commit_tools = (): void => {
+  expectResidentMalformedRequestRoot(
+    "commitScript malformed request root",
+    (resident) => resident.commitScript(null as never),
+  );
+  expectResidentMalformedRequestRoot(
+    "commitScene malformed request root",
+    (resident) => resident.commitScene(null as never),
+  );
+  expectResidentMalformedRequestRoot(
+    "commitShot malformed request root",
+    (resident) => resident.commitShot(null as never),
+  );
+  expectResidentMalformedRequestRoot(
+    "commitBeatEnd malformed request root",
+    (resident) => resident.commitBeatEnd(null as never),
+  );
+  expectResidentMalformedRequestRoot(
+    "commitNotes malformed request root",
+    (resident) => resident.commitNotes(null as never),
+  );
+  expectResidentMalformedRequestRoot(
+    "commitFilm malformed request root",
+    (resident) => resident.commitFilm(null as never),
+  );
+
   expectRefused(
     "scene before script",
     app.commitScene({ slate: emptySlate, scene: staged.scene, models }),
