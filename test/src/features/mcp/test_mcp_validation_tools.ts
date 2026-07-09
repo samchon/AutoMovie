@@ -87,6 +87,17 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
   validation.success === false &&
   validation.violations.some((violation) => violation.path.includes(path));
 
+const hasExpected = (
+  validation: IAutoMovieValidation,
+  path: string,
+  expected: string,
+): boolean =>
+  validation.success === false &&
+  validation.violations.some(
+    (violation) =>
+      violation.path.includes(path) && violation.expected.includes(expected),
+  );
+
 /**
  * MCP validation tools expose field-located diagnostics before commit tools
  * persist any slate change.
@@ -99,6 +110,8 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
  *    representative invalid artifact.
  * 3. Structurally malformed pose/motion/model/scene/shot/sequence payloads return
  *    validation failures instead of leaking raw JavaScript shape errors.
+ * 4. Malformed request roots return validation envelopes before validators
+ *    dereference request fields.
  */
 export const test_mcp_validation_tools = (): void => {
   TestValidator.equals(
@@ -965,4 +978,17 @@ export const test_mcp_validation_tools = (): void => {
       return hasPath(validation, "$shots[0]");
     })(),
   );
+
+  for (const [label, validation] of [
+    ["validatePose", app.validatePose(null as never).validation],
+    ["validateMotion", app.validateMotion(null as never).validation],
+    ["validateModel", app.validateModel(null as never).validation],
+    ["validateScene", app.validateScene(null as never).validation],
+    ["validateShot", app.validateShot(null as never).validation],
+    ["validateSequence", app.validateSequence(null as never).validation],
+  ] as const)
+    TestValidator.predicate(
+      `${label} malformed request root returns validation`,
+      hasExpected(validation, "$input", "JSON object"),
+    );
 };

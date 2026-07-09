@@ -48,6 +48,8 @@ export class ValidationService {
     pose: IAutoMoviePose;
     skeleton: IAutoMovieSkeleton;
   }): IAutoMovieValidateOutput {
+    const requestRoot = validateValidationRequestRoot(props);
+    if (requestRoot !== null) return { validation: requestRoot };
     const violations: IAutoMovieConstraintViolation[] = [];
     appendMcpPoseShape(violations, props.pose, "$input");
     appendMcpSkeletonShape(violations, props.skeleton, "$skeleton");
@@ -65,6 +67,8 @@ export class ValidationService {
     motion: IAutoMovieMcpMotion;
     skeleton: IAutoMovieSkeleton;
   }): IAutoMovieValidateOutput {
+    const requestRoot = validateValidationRequestRoot(props);
+    if (requestRoot !== null) return { validation: requestRoot };
     const violations: IAutoMovieConstraintViolation[] = [];
     appendMcpMotionShape(violations, props.motion);
     appendMcpSkeletonShape(violations, props.skeleton, "$skeleton");
@@ -81,6 +85,8 @@ export class ValidationService {
   public validateModel(props: {
     model: IAutoMovieModel;
   }): IAutoMovieValidateOutput {
+    const requestRoot = validateValidationRequestRoot(props);
+    if (requestRoot !== null) return { validation: requestRoot };
     const shape = validateMcpModelShape(props.model);
     if (shape.success === false) return { validation: shape };
     return { validation: validateEngineModel({ model: props.model }) };
@@ -90,6 +96,8 @@ export class ValidationService {
     scene: IAutoMovieScene;
     models: IAutoMovieMcpGeometryModel[];
   }): IAutoMovieValidateOutput {
+    const requestRoot = validateValidationRequestRoot(props);
+    if (requestRoot !== null) return { validation: requestRoot };
     return { validation: validateSceneArtifact(props.scene, props.models) };
   }
 
@@ -98,6 +106,8 @@ export class ValidationService {
     scene: IAutoMovieScene;
     motions?: Record<string, IAutoMovieMcpMotion>;
   }): IAutoMovieValidateOutput {
+    const requestRoot = validateValidationRequestRoot(props);
+    if (requestRoot !== null) return { validation: requestRoot };
     return {
       validation: validateShotArtifact(props.shot, props.scene, props.motions),
     };
@@ -107,11 +117,22 @@ export class ValidationService {
     sequence: IAutoMovieSequence;
     shots: IAutoMovieShot[];
   }): IAutoMovieValidateOutput {
+    const requestRoot = validateValidationRequestRoot(props);
+    if (requestRoot !== null) return { validation: requestRoot };
     return {
       validation: validateSequenceArtifact(props.sequence, props.shots),
     };
   }
 }
+
+const validateValidationRequestRoot = (
+  props: unknown,
+): IAutoMovieValidation | null => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  if (validateObjectArtifact(props, "$input", "validation request", violations))
+    return null;
+  return toValidation(violations);
+};
 
 const appendMcpPoseShape = (
   violations: IAutoMovieConstraintViolation[],
