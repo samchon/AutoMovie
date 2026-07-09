@@ -140,7 +140,8 @@ const residentShot: IAutoMovieShot = {
  * 9. Malformed explicit geometry collections reject with path-bearing errors
  *    before helper array iteration.
  * 10. Malformed request roots reject with `$input` paths before property reads.
- * 11. Non-finite explicit pose sample time rejects with a `$input.t` path.
+ * 11. Malformed scalar fields reject with `$input.*` paths before silent nulls or
+ *     defaults.
  */
 export const test_mcp_geometry_query_tools = (): void => {
   const nodeDistance = app.measureDistance({
@@ -262,6 +263,17 @@ export const test_mcp_geometry_query_tools = (): void => {
     null,
   );
   TestValidator.predicate(
+    "malformed pose actor field rejects",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context,
+          actor: null as unknown as string,
+        }),
+      ["$input.actor", "non-empty string"],
+    ),
+  );
+  TestValidator.predicate(
     "non-finite pose sample time rejects",
     throwsError(
       () =>
@@ -271,6 +283,30 @@ export const test_mcp_geometry_query_tools = (): void => {
           t: Infinity,
         }),
       ["$input.t", "finite"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed pose sample time field rejects",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context,
+          actor: "actor",
+          t: null as unknown as number,
+        }),
+      ["$input.t", "finite number"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed pose beat field rejects",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context,
+          actor: "actor",
+          beat: "" as string,
+        }),
+      ["$input.beat", "non-empty string"],
     ),
   );
   TestValidator.predicate(
@@ -415,6 +451,18 @@ export const test_mcp_geometry_query_tools = (): void => {
       target: null as never,
     }).reach,
     null,
+  );
+  TestValidator.predicate(
+    "malformed reach actor field rejects",
+    throwsError(
+      () =>
+        app.getReach({
+          context,
+          actor: "" as string,
+          target: { kind: "point", point: { x: 1.4, y: 1, z: 2.3 } },
+        }),
+      ["$input.actor", "non-empty string"],
+    ),
   );
   TestValidator.predicate(
     "malformed reach request root rejects",

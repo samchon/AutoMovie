@@ -56,9 +56,12 @@ export class GeometryService {
     t?: number;
   }): IAutoMovieGetResolvedPoseOutput {
     assertGeometryRequestRoot(props);
+    assertGeometryActor(props.actor);
+    const beat = resolveOptionalGeometryBeat(props.beat);
+    const t = resolveResolvedPoseTime(props.t);
     const source = this.resolveGeometryContext(
       props.context,
-      props.beat,
+      beat,
       "getResolvedPose",
     );
     assertGeometryContextShape(source.context);
@@ -66,7 +69,7 @@ export class GeometryService {
       resolvedPose: resolveActorGeometry(
         source.context,
         props.actor,
-        props.t ?? 0,
+        t,
         source.resident ? { caller: "getResolvedPose" } : undefined,
       ),
     };
@@ -78,6 +81,7 @@ export class GeometryService {
     target: IAutoMovieActionTarget;
   }): IAutoMovieGetReachOutput {
     assertGeometryRequestRoot(props);
+    assertGeometryActor(props.actor);
     const source = this.resolveGeometryContext(
       props.context,
       undefined,
@@ -204,6 +208,31 @@ const assertGeometryRequestRoot = (props: unknown): void => {
   const violations: IAutoMovieConstraintViolation[] = [];
   validateObjectArtifact(props, "$input", "geometry query request", violations);
   assertNoGeometryViolations(violations);
+};
+
+function assertGeometryActor(actor: unknown): asserts actor is string {
+  if (typeof actor === "string" && actor.trim().length > 0) return;
+  throw new Error(
+    "geometry query actor at $input.actor must be a non-empty string",
+  );
+}
+
+const resolveOptionalGeometryBeat = (beat: unknown): string | undefined => {
+  if (beat === undefined) return undefined;
+  if (typeof beat === "string" && beat.trim().length > 0) return beat;
+  throw new Error(
+    "geometry query beat at $input.beat must be a non-empty string",
+  );
+};
+
+const resolveResolvedPoseTime = (t: unknown): number => {
+  if (t === undefined) return 0;
+  if (typeof t === "number" && Number.isFinite(t)) return t;
+  throw new Error(
+    `range at $input.t: resolved pose sample time must be a finite number, but was ${String(
+      t,
+    )}`,
+  );
 };
 
 class AutoMovieProjectSemanticError extends Error {
