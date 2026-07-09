@@ -107,10 +107,28 @@ export class CommitService {
     return output;
   }
 
+  private rejectMalformedCommitRequestRoot(
+    props: unknown,
+    caller: AutoMoviePrerequisiteTool,
+  ): IAutoMovieCommitOutput | null {
+    const violations = validateRequestRoot(props, "commit request");
+    if (violations.length === 0) return null;
+    const project = this.context!.requireProject(caller);
+    return failedCommit(
+      project.writableSlate(),
+      toValidation(violations) as IAutoMovieValidation.IFailure,
+    );
+  }
+
   public commitScript(props: {
     slate?: IAutoMovieMcpWritableSlate;
     script: IAutoMovieScript;
   }): IAutoMovieCommitOutput {
+    const malformed = this.rejectMalformedCommitRequestRoot(
+      props,
+      "commitScript",
+    );
+    if (malformed !== null) return malformed;
     const { slate, resident } = this.base(props.slate, "commitScript");
     const validation = validateScriptArtifact(props.script);
     if (validation.success === false)
@@ -136,6 +154,11 @@ export class CommitService {
     scene: IAutoMovieScene;
     models: IAutoMovieMcpGeometryModel[];
   }): IAutoMovieCommitOutput {
+    const malformed = this.rejectMalformedCommitRequestRoot(
+      props,
+      "commitScene",
+    );
+    if (malformed !== null) return malformed;
     const { slate, resident } = this.base(props.slate, "commitScene");
     const violations: IAutoMovieConstraintViolation[] = [];
     appendValidation(
@@ -195,6 +218,11 @@ export class CommitService {
     shot: IAutoMovieShot;
     motions?: Record<string, IAutoMovieMcpMotion>;
   }): IAutoMovieCommitOutput {
+    const malformed = this.rejectMalformedCommitRequestRoot(
+      props,
+      "commitShot",
+    );
+    if (malformed !== null) return malformed;
     const { slate, resident } = this.base(props.slate, "commitShot");
     const violations: IAutoMovieConstraintViolation[] = [];
     const slateShots = validateArrayArtifact(
@@ -277,6 +305,11 @@ export class CommitService {
     slate?: IAutoMovieMcpWritableSlate;
     beatEnd: IAutoMovieBeatEndState;
   }): IAutoMovieCommitOutput {
+    const malformed = this.rejectMalformedCommitRequestRoot(
+      props,
+      "commitBeatEnd",
+    );
+    if (malformed !== null) return malformed;
     const { slate, resident } = this.base(props.slate, "commitBeatEnd");
     const violations: IAutoMovieConstraintViolation[] = [];
     const beatEnds = validateArrayArtifact(
@@ -328,6 +361,11 @@ export class CommitService {
     slate?: IAutoMovieMcpWritableSlate;
     notes: IAutoMovieReviewNote[];
   }): IAutoMovieCommitOutput {
+    const malformed = this.rejectMalformedCommitRequestRoot(
+      props,
+      "commitNotes",
+    );
+    if (malformed !== null) return malformed;
     const { slate, resident } = this.base(props.slate, "commitNotes");
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNotesArtifact(props.notes, slate, violations);
@@ -351,6 +389,11 @@ export class CommitService {
     slate?: IAutoMovieMcpWritableSlate;
     film: IAutoMovieSequence;
   }): IAutoMovieCommitOutput {
+    const malformed = this.rejectMalformedCommitRequestRoot(
+      props,
+      "commitFilm",
+    );
+    if (malformed !== null) return malformed;
     const { slate, resident } = this.base(props.slate, "commitFilm");
     const violations: IAutoMovieConstraintViolation[] = [];
     const sequenceValidation = validateSequenceArtifact(
@@ -853,8 +896,15 @@ export class CommitService {
 const validateMutationRequestRoot = (
   props: unknown,
 ): IAutoMovieConstraintViolation[] => {
+  return validateRequestRoot(props, "mutation request");
+};
+
+const validateRequestRoot = (
+  props: unknown,
+  label: string,
+): IAutoMovieConstraintViolation[] => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  validateObjectArtifact(props, "$input", "mutation request", violations);
+  validateObjectArtifact(props, "$input", label, violations);
   return violations;
 };
 
