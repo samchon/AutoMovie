@@ -168,7 +168,12 @@ export class PipelineService {
     const violations = validateForgeShape(props.script, props.forge);
     if (violations.length > 0)
       return { forged: { success: false, violations } };
-    return { forged: forgeCast(props.script, props.forge) };
+    return {
+      forged: remapMcpForgedCastPaths(forgeCast(props.script, props.forge), [
+        ["$script", "$input.script"],
+        ["$input", "$input.forge"],
+      ]),
+    };
   }
 
   /**
@@ -1138,10 +1143,12 @@ const validateForgeShape = (
   forge: unknown,
 ): IAutoMovieConstraintViolation[] => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  if (isJsonObject(script, "$script", "script", violations)) {
-    if (isJsonArray(script.cast, "$script.cast", "script cast", violations))
+  if (isJsonObject(script, "$input.script", "script", violations)) {
+    if (
+      isJsonArray(script.cast, "$input.script.cast", "script cast", violations)
+    )
       script.cast.forEach((member, index) => {
-        const path = `$script.cast[${index}]`;
+        const path = `$input.script.cast[${index}]`;
         if (!isJsonObject(member, path, "script cast member", violations))
           return;
         requireString(member.node, `${path}.node`, "cast node", violations);
@@ -1155,12 +1162,17 @@ const validateForgeShape = (
       });
   }
 
-  if (isJsonObject(forge, "$input", "forge", violations)) {
+  if (isJsonObject(forge, "$input.forge", "forge", violations)) {
     if (
-      isJsonArray(forge.entries, "$input.entries", "forge entries", violations)
+      isJsonArray(
+        forge.entries,
+        "$input.forge.entries",
+        "forge entries",
+        violations,
+      )
     )
       forge.entries.forEach((entry, index) => {
-        const path = `$input.entries[${index}]`;
+        const path = `$input.forge.entries[${index}]`;
         if (!isJsonObject(entry, path, "forge entry", violations)) return;
         requireString(
           entry.node,
@@ -1736,6 +1748,20 @@ const remapMcpPerformedShotPaths = (
   return {
     success: false,
     violations: performed.violations.map((item) => ({
+      ...item,
+      path: remapMcpPath(item.path, replacements),
+    })),
+  };
+};
+
+const remapMcpForgedCastPaths = (
+  forged: IAutoMovieForgeOutput["forged"],
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): IAutoMovieForgeOutput["forged"] => {
+  if (forged.success === true) return forged;
+  return {
+    success: false,
+    violations: forged.violations.map((item) => ({
       ...item,
       path: remapMcpPath(item.path, replacements),
     })),
