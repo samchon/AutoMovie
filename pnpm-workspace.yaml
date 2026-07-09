@@ -4,12 +4,12 @@ packages:
   - test
 catalogs:
   samchon:
-    typia: 13.0.0-rc.1
-    "@typia/mcp": 13.0.0-rc.1
+    typia: ^13.0.0
+    "@typia/mcp": ^13.0.0
     "@nestia/e2e": 12.0.0-rc.2
   typescript:
-    typescript: 7.0.1-rc
-    ttsc: ^0.17.2
-    "@ttsc/lint": ^0.17.2
-    "@ttsc/unplugin": ^0.17.2
+    typescript: ^7.0.2
+    ttsc: ^0.18.1
+    "@ttsc/lint": ^0.18.1
+    "@ttsc/unplugin": ^0.18.1
 useNodeVersion: 22.15.0
