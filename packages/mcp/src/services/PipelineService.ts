@@ -1520,7 +1520,7 @@ const validateActorRegistry = (
       );
       return;
     }
-    if (!Array.isArray(context.gaits))
+    if (!Array.isArray(context.gaits)) {
       violations.push(
         violation(
           "type",
@@ -1529,8 +1529,183 @@ const validateActorRegistry = (
           context.gaits,
         ),
       );
+      return;
+    }
+    context.gaits.forEach((gait, index) =>
+      validateActorGaitEntry(gait, `${path}.gaits[${index}]`, violations),
+    );
   });
   return violations;
+};
+
+const GAIT_LIMB_AXES = new Set<string>(["flexion", "abduction", "twist"]);
+
+const GAIT_EASING_NAMES = new Set<string>([
+  "linear",
+  "easeIn",
+  "easeOut",
+  "easeInOut",
+  "step",
+  "cubicBezier",
+]);
+
+const requireNonEmptyString = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (typeof value === "string" && value.trim().length > 0) return;
+  violations.push(
+    violation("type", path, `${label} must be a non-empty string`, value),
+  );
+};
+
+const requireFiniteNumber = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  violations.push(
+    violation("type", path, `${label} must be a finite number`, value),
+  );
+  return null;
+};
+
+const validateActorGaitEntry = (
+  gait: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(gait, path, "actor gait", violations)) return;
+  requireNonEmptyString(
+    gait.name,
+    `${path}.name`,
+    "actor gait name",
+    violations,
+  );
+  const period = requireFiniteNumber(
+    gait.period,
+    `${path}.period`,
+    "actor gait period",
+    violations,
+  );
+  if (period !== null && period <= 0)
+    violations.push(
+      violation(
+        "range",
+        `${path}.period`,
+        `actor gait period must be > 0, but was ${period}`,
+        period,
+      ),
+    );
+  if (gait.rootBob !== undefined)
+    validateActorGaitRootBob(gait.rootBob, `${path}.rootBob`, violations);
+  if (isJsonArray(gait.limbs, `${path}.limbs`, "actor gait limbs", violations))
+    gait.limbs.forEach((limb, index) =>
+      validateActorGaitLimb(limb, `${path}.limbs[${index}]`, violations),
+    );
+};
+
+const validateActorGaitRootBob = (
+  rootBob: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(rootBob, path, "actor gait root bob", violations)) return;
+  requireFiniteNumber(
+    rootBob.amplitude,
+    `${path}.amplitude`,
+    "actor gait root bob amplitude",
+    violations,
+  );
+  requireFiniteNumber(
+    rootBob.phase,
+    `${path}.phase`,
+    "actor gait root bob phase",
+    violations,
+  );
+  requireFiniteNumber(
+    rootBob.center,
+    `${path}.center`,
+    "actor gait root bob center",
+    violations,
+  );
+};
+
+const validateActorGaitLimb = (
+  limb: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(limb, path, "actor gait limb", violations)) return;
+  requireNonEmptyString(
+    limb.bone,
+    `${path}.bone`,
+    "actor gait limb bone",
+    violations,
+  );
+  if (
+    limb.axis !== undefined &&
+    (typeof limb.axis !== "string" || !GAIT_LIMB_AXES.has(limb.axis))
+  )
+    violations.push(
+      violation(
+        "type",
+        `${path}.axis`,
+        'actor gait limb axis must be "flexion", "abduction", or "twist"',
+        limb.axis,
+      ),
+    );
+  requireFiniteNumber(
+    limb.phase,
+    `${path}.phase`,
+    "actor gait limb phase",
+    violations,
+  );
+  const duty = requireFiniteNumber(
+    limb.duty,
+    `${path}.duty`,
+    "actor gait limb duty",
+    violations,
+  );
+  if (duty !== null && !(duty > 0 && duty < 1))
+    violations.push(
+      violation(
+        "range",
+        `${path}.duty`,
+        `actor gait limb duty must be within (0, 1), but was ${duty}`,
+        duty,
+      ),
+    );
+  requireFiniteNumber(
+    limb.amplitude,
+    `${path}.amplitude`,
+    "actor gait limb amplitude",
+    violations,
+  );
+  if (limb.neutral !== undefined)
+    requireFiniteNumber(
+      limb.neutral,
+      `${path}.neutral`,
+      "actor gait limb neutral",
+      violations,
+    );
+  for (const key of ["stanceEasing", "swingEasing"] as const) {
+    const easing = limb[key];
+    if (easing === undefined) continue;
+    if (typeof easing !== "string" || !GAIT_EASING_NAMES.has(easing))
+      violations.push(
+        violation(
+          "type",
+          `${path}.${key}`,
+          `actor gait limb ${key} must be a named easing curve`,
+          easing,
+        ),
+      );
+  }
 };
 
 const toActorContext = (
