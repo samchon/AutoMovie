@@ -85,6 +85,7 @@ const slate: IAutoMovieMcpStoredSlate = {
  *    slice fields.
  * 6. Malformed request roots reject before query helpers dereference request
  *    fields.
+ * 7. Beat-scoped query fields reject malformed beat ids before silent misses.
  */
 export const test_mcp_query_tools = (): void => {
   TestValidator.equals("getScript", app.getScript({ slate }).script, script);
@@ -232,5 +233,21 @@ export const test_mcp_query_tools = (): void => {
     TestValidator.predicate(
       `${label} malformed request root rejects`,
       throwsError(query, ["$input", "JSON object"]),
+    );
+
+  for (const [label, query] of [
+    ["getShot", () => app.getShot({ slate, beat: null as unknown as string })],
+    [
+      "getNotes",
+      () => app.getNotes({ slate, beat: null as unknown as string }),
+    ],
+    [
+      "getBeatEnd",
+      () => app.getBeatEnd({ slate, beat: null as unknown as string }),
+    ],
+  ] as const)
+    TestValidator.predicate(
+      `${label} malformed beat field rejects`,
+      throwsError(query, ["$input.beat", "non-empty string"]),
     );
 };

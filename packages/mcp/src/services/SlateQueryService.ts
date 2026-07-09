@@ -70,6 +70,7 @@ export class SlateQueryService {
     beat: string;
   }): IAutoMovieGetShotOutput {
     assertSlateQueryRequestRoot(props);
+    assertRequiredQueryBeat(props.beat);
     const slate = this.stored(props.slate, "getShot");
     assertStoredSlateRoot(slate);
     assertStoredSlateCollection(
@@ -90,6 +91,7 @@ export class SlateQueryService {
     beat?: string;
   }): IAutoMovieGetNotesOutput {
     assertSlateQueryRequestRoot(props);
+    assertOptionalQueryBeat(props.beat);
     const slate = this.stored(props.slate, "getNotes");
     assertStoredSlateRoot(slate);
     assertStoredSlateCollection(
@@ -110,6 +112,7 @@ export class SlateQueryService {
     beat: string;
   }): IAutoMovieGetBeatEndOutput {
     assertSlateQueryRequestRoot(props);
+    assertRequiredQueryBeat(props.beat);
     const slate = this.stored(props.slate, "getBeatEnd");
     assertStoredSlateRoot(slate);
     assertStoredSlateCollection(
@@ -132,6 +135,18 @@ function assertSlateQueryRequestRoot(
   if (typeof props === "object" && props !== null && !Array.isArray(props))
     return;
   throw new Error("slate query request at $input must be a JSON object");
+}
+
+function assertRequiredQueryBeat(beat: unknown): asserts beat is string {
+  if (typeof beat === "string" && beat.trim().length > 0) return;
+  throw new Error("slate query beat at $input.beat must be a non-empty string");
+}
+
+function assertOptionalQueryBeat(
+  beat: unknown,
+): asserts beat is string | undefined {
+  if (beat === undefined) return;
+  assertRequiredQueryBeat(beat);
 }
 
 const toStoredSlate = (slate: IAutoMovieMcpStoredSlate): IAutoMovieSlate => ({
