@@ -900,7 +900,11 @@ export class AutoMovieApplication {
 function assertOpenProjectRequestRoot(
   props: unknown,
 ): asserts props is { root: string } {
-  if (typeof props === "object" && props !== null && !Array.isArray(props))
-    return;
-  throw new Error("openProject request at $input must be a JSON object");
+  if (typeof props !== "object" || props === null || Array.isArray(props))
+    throw new Error("openProject request at $input must be a JSON object");
+  const root = (props as { root?: unknown }).root;
+  if (typeof root === "string" && root.trim().length > 0) return;
+  throw new Error(
+    "openProject request root at $input.root must be a non-empty string",
+  );
 }

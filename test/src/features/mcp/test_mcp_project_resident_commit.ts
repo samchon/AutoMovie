@@ -36,6 +36,7 @@ const script: IAutoMovieScript = {
  * 5. A commit with an EXPLICIT slate does not touch the resident files (the
  *    stateless twin), and a failed resident commit writes nothing.
  * 6. A malformed `openProject` request root rejects before reading `root`.
+ * 7. A malformed `openProject.root` rejects before path resolution.
  */
 export const test_mcp_project_resident_commit = (): void => {
   TestValidator.predicate(
@@ -43,6 +44,16 @@ export const test_mcp_project_resident_commit = (): void => {
     throwsError(
       () => new AutoMovieApplication().openProject(null as never),
       ["$input", "JSON object"],
+    ),
+  );
+  TestValidator.predicate(
+    "malformed openProject root field rejects",
+    throwsError(
+      () =>
+        new AutoMovieApplication().openProject({
+          root: null as unknown as string,
+        }),
+      ["$input.root", "non-empty string"],
     ),
   );
 
