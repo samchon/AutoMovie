@@ -1021,21 +1021,31 @@ const validateCutShape = (
   shots: unknown,
 ): IAutoMovieConstraintViolation[] => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  if (isJsonObject(assemble, "$input", "assemble", violations)) {
+  if (isJsonObject(assemble, "$input.assemble", "assemble", violations)) {
     if (
-      isJsonObject(assemble.sequence, "$input.sequence", "sequence", violations)
+      isJsonObject(
+        assemble.sequence,
+        "$input.assemble.sequence",
+        "sequence",
+        violations,
+      )
     )
       requireString(
         assemble.sequence.id,
-        "$input.sequence.id",
+        "$input.assemble.sequence.id",
         "sequence id",
         violations,
       );
     if (
-      isJsonArray(assemble.entries, "$input.entries", "cut entries", violations)
+      isJsonArray(
+        assemble.entries,
+        "$input.assemble.entries",
+        "cut entries",
+        violations,
+      )
     )
       assemble.entries.forEach((entry, index) => {
-        const path = `$input.entries[${index}]`;
+        const path = `$input.assemble.entries[${index}]`;
         if (!isJsonObject(entry, path, "cut entry", violations)) return;
         requireString(entry.shot, `${path}.shot`, "shot id", violations);
         validateNullableObject(entry.trim, `${path}.trim`, "trim", violations);
@@ -1048,9 +1058,9 @@ const validateCutShape = (
       });
   }
 
-  if (isJsonArray(shots, "$shots", "shots", violations))
+  if (isJsonArray(shots, "$input.shots", "shots", violations))
     shots.forEach((shot, index) => {
-      const path = `$shots[${index}]`;
+      const path = `$input.shots[${index}]`;
       if (!isJsonObject(shot, path, "shot", violations)) return;
       requireString(shot.id, `${path}.id`, "shot id", violations);
     });

@@ -49,7 +49,7 @@ export const test_mcp_cut_tool = (): void => {
   TestValidator.predicate(
     "malformed shots return violations",
     malformedShots.success === false &&
-      hasViolation(malformedShots, "type", "$shots"),
+      hasViolation(malformedShots, "type", "$input.shots"),
   );
 
   const malformedShotEntry = app.cut({
@@ -59,7 +59,7 @@ export const test_mcp_cut_tool = (): void => {
   TestValidator.predicate(
     "malformed shot entry returns violations",
     malformedShotEntry.success === false &&
-      hasViolation(malformedShotEntry, "type", "$shots[0]"),
+      hasViolation(malformedShotEntry, "type", "$input.shots[0]"),
   );
 
   const malformedSequence = app.cut({
@@ -73,7 +73,7 @@ export const test_mcp_cut_tool = (): void => {
   TestValidator.predicate(
     "malformed sequence returns violations",
     malformedSequence.success === false &&
-      hasViolation(malformedSequence, "type", "$input.sequence"),
+      hasViolation(malformedSequence, "type", "$input.assemble.sequence"),
   );
 
   const malformedEntries = app.cut({
@@ -87,7 +87,7 @@ export const test_mcp_cut_tool = (): void => {
   TestValidator.predicate(
     "malformed entries return violations",
     malformedEntries.success === false &&
-      hasViolation(malformedEntries, "type", "$input.entries"),
+      hasViolation(malformedEntries, "type", "$input.assemble.entries"),
   );
 
   const malformedEntry = app.cut({
@@ -102,7 +102,7 @@ export const test_mcp_cut_tool = (): void => {
   TestValidator.predicate(
     "malformed entry returns violations",
     malformedEntry.success === false &&
-      hasViolation(malformedEntry, "type", "$input.entries[0]"),
+      hasViolation(malformedEntry, "type", "$input.assemble.entries[0]"),
   );
 
   const malformedTrim = app.cut({
@@ -120,7 +120,7 @@ export const test_mcp_cut_tool = (): void => {
   TestValidator.predicate(
     "malformed trim returns violations",
     malformedTrim.success === false &&
-      hasViolation(malformedTrim, "type", "$input.entries[0].trim"),
+      hasViolation(malformedTrim, "type", "$input.assemble.entries[0].trim"),
   );
 
   const malformedTransition = app.cut({
@@ -139,6 +139,10 @@ export const test_mcp_cut_tool = (): void => {
   TestValidator.predicate(
     "malformed transition returns violations",
     malformedTransition.success === false &&
-      hasViolation(malformedTransition, "type", "$input.entries[0].transition"),
+      hasViolation(
+        malformedTransition,
+        "type",
+        "$input.assemble.entries[0].transition",
+      ),
   );
 };
