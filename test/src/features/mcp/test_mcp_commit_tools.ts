@@ -163,11 +163,31 @@ export const test_mcp_commit_tools = (): void => {
     "commitFilm malformed request root",
     (resident) => resident.commitFilm(null as never),
   );
+  {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-commit-resident-slate-"),
+    );
+    try {
+      const resident = new AutoMovieApplication();
+      resident.openProject({ root });
+      resident.commitScript({ script });
+      resident.commitScene({ scene: staged.scene, models });
+      resident.commitShot({ shot });
+      resident.commitNotes({ notes: [note] });
+      const output = resident.commitFilm({ film });
+      TestValidator.predicate(
+        "resident film precondition keeps slate path",
+        !output.committed && hasPath(output.validation, "$slate.notes"),
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
 
   expectRefused(
     "scene before script",
     app.commitScene({ slate: emptySlate, scene: staged.scene, models }),
-    "$slate.script",
+    "$input.slate.script",
     emptySlate,
   );
   expectRefused(
@@ -348,13 +368,13 @@ export const test_mcp_commit_tools = (): void => {
   expectRefused(
     "shot before script",
     app.commitShot({ slate: emptySlate, shot: { ...shot, id: "beat-1" } }),
-    "$slate.script",
+    "$input.slate.script",
     emptySlate,
   );
   expectRefused(
     "shot before scene",
     app.commitShot({ slate: scripted.slate, shot }),
-    "$slate.scene",
+    "$input.slate.scene",
     scripted.slate,
   );
   expectRefused(
@@ -442,7 +462,7 @@ export const test_mcp_commit_tools = (): void => {
   expectRefused(
     "duplicate committed shot",
     app.commitShot({ slate: { ...shotSlate, shots: [shot, shot] }, shot }),
-    "$slate.shots[1].id",
+    "$input.slate.shots[1].id",
     { ...shotSlate, shots: [shot, shot] },
   );
   const revisedShot = { ...shot, duration: 2 };
@@ -463,7 +483,7 @@ export const test_mcp_commit_tools = (): void => {
       slate: emptySlate,
       beatEnd: { ...beatEnd, beat: "ghost", shot: "wrong" },
     }),
-    "$slate.script",
+    "$input.slate.script",
     emptySlate,
   );
   expectRefused(
@@ -495,7 +515,7 @@ export const test_mcp_commit_tools = (): void => {
     expectRefused(
       "beat end malformed slate shots",
       app.commitBeatEnd({ slate: malformedShotSlate, beatEnd }),
-      "$slate.shots",
+      "$input.slate.shots",
       malformedShotSlate,
     );
   }
@@ -519,7 +539,7 @@ export const test_mcp_commit_tools = (): void => {
           actors: [{ ...beatEnd.actors[0]!, motion: "missing-motion" }],
         },
       }),
-      "$slate.shots[0].performances",
+      "$input.slate.shots[0].performances",
       malformedShotPerformanceSlate,
     );
   }
@@ -556,7 +576,7 @@ export const test_mcp_commit_tools = (): void => {
       slate: { ...revisedShotSlate, beatEnds: [beatEnd, beatEnd] },
       beatEnd,
     }),
-    "$slate.beatEnds[1].beat",
+    "$input.slate.beatEnds[1].beat",
     { ...revisedShotSlate, beatEnds: [beatEnd, beatEnd] },
   );
   const beatEndSlate = app.commitBeatEnd({
@@ -568,7 +588,7 @@ export const test_mcp_commit_tools = (): void => {
   expectRefused(
     "notes before script",
     app.commitNotes({ slate: emptySlate, notes: [note] }),
-    "$slate.script",
+    "$input.slate.script",
     emptySlate,
   );
   expectRefused(
@@ -602,7 +622,7 @@ export const test_mcp_commit_tools = (): void => {
         hasPath(output.validation, "$input.notes[0].beat") &&
         hasPath(output.validation, "$input.notes[0].issue") &&
         hasPath(output.validation, "$input.notes[0].suggestion") &&
-        hasPath(output.validation, "$slate.shots")
+        hasPath(output.validation, "$input.slate.shots")
       );
     })(),
   );
@@ -615,13 +635,13 @@ export const test_mcp_commit_tools = (): void => {
   expectRefused(
     "film before upstream",
     app.commitFilm({ slate: emptySlate, film }),
-    "$slate.script",
+    "$input.slate.script",
     emptySlate,
   );
   expectRefused(
     "film missing shot",
     app.commitFilm({ slate: stagedSlate, film: { ...film, shots: [] } }),
-    "$slate.shots",
+    "$input.slate.shots",
     stagedSlate,
   );
   expectRefused(
@@ -648,7 +668,7 @@ export const test_mcp_commit_tools = (): void => {
   expectRefused(
     "film with open notes",
     app.commitFilm({ slate: notesSlate, film }),
-    "$slate.notes",
+    "$input.slate.notes",
     notesSlate,
   );
   expectRefused(
@@ -657,7 +677,7 @@ export const test_mcp_commit_tools = (): void => {
       slate: { ...beatEndSlate, shots: [revisedShot, revisedShot] },
       film,
     }),
-    "$slate.shots[1].id",
+    "$input.slate.shots[1].id",
     { ...beatEndSlate, shots: [revisedShot, revisedShot] },
   );
   expectRefused(
@@ -669,7 +689,7 @@ export const test_mcp_commit_tools = (): void => {
       },
       film,
     }),
-    "$slate.shots[0].scene",
+    "$input.slate.shots[0].scene",
     { ...beatEndSlate, shots: [{ ...revisedShot, scene: "wrong-scene" }] },
   );
 

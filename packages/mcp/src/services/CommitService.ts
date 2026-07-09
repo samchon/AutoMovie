@@ -84,11 +84,20 @@ export class CommitService {
   private base(
     slate: IAutoMovieMcpWritableSlate | undefined,
     caller: AutoMoviePrerequisiteTool,
-  ): { slate: IAutoMovieMcpWritableSlate; resident: boolean } {
-    if (slate !== undefined) return { slate, resident: false };
+  ): {
+    slate: IAutoMovieMcpWritableSlate;
+    resident: boolean;
+    slateRoot: string;
+  } {
+    if (slate !== undefined)
+      return { slate, resident: false, slateRoot: "$input.slate" };
     const project = this.context!.requireProject(caller);
     assertPrerequisites(caller, project);
-    return { slate: project.writableSlate(), resident: true };
+    return {
+      slate: project.writableSlate(),
+      resident: true,
+      slateRoot: "$slate",
+    };
   }
 
   private finish(
@@ -165,7 +174,10 @@ export class CommitService {
       "commitScene",
     );
     if (malformed !== null) return malformed;
-    const { slate, resident } = this.base(props.slate, "commitScene");
+    const { slate, resident, slateRoot } = this.base(
+      props.slate,
+      "commitScene",
+    );
     const violations: IAutoMovieConstraintViolation[] = [];
     appendValidation(
       violations,
@@ -175,7 +187,7 @@ export class CommitService {
       pushViolation(
         violations,
         "type",
-        "$slate.script",
+        `${slateRoot}.script`,
         "a script must be committed before a scene",
         slate.script,
       );
@@ -186,6 +198,7 @@ export class CommitService {
         failedCommit(
           slate,
           remapCommitValidationPaths(validation, [
+            ["$input.slate", "$input.slate"],
             ["$input", "$input.scene"],
             ["$models", "$input.models"],
           ]),
@@ -238,11 +251,11 @@ export class CommitService {
       "commitShot",
     );
     if (malformed !== null) return malformed;
-    const { slate, resident } = this.base(props.slate, "commitShot");
+    const { slate, resident, slateRoot } = this.base(props.slate, "commitShot");
     const violations: IAutoMovieConstraintViolation[] = [];
     const slateShots = validateArrayArtifact(
       slate.shots,
-      "$slate.shots",
+      `${slateRoot}.shots`,
       "committed shots",
       violations,
     )
@@ -251,13 +264,13 @@ export class CommitService {
     validateUniqueBy(
       slateShots.map((shot, index) => ({
         id: isRecord(shot) ? shot.id : undefined,
-        path: `$slate.shots[${index}].id`,
+        path: `${slateRoot}.shots[${index}].id`,
       })),
       "committed shot id",
       violations,
     );
     slateShots.forEach((shot, index) => {
-      const path = `$slate.shots[${index}]`;
+      const path = `${slateRoot}.shots[${index}]`;
       if (!validateObjectArtifact(shot, path, "committed shot", violations))
         return;
       validateNonEmptyId(
@@ -267,7 +280,12 @@ export class CommitService {
         violations,
       );
     });
-    const beat = validateShotCommitPreconditions(props.shot, slate, violations);
+    const beat = validateShotCommitPreconditions(
+      props.shot,
+      slate,
+      slateRoot,
+      violations,
+    );
     const shotPerformances =
       isRecord(props.shot) && Array.isArray(props.shot.performances)
         ? props.shot.performances
@@ -305,6 +323,7 @@ export class CommitService {
         failedCommit(
           slate,
           remapCommitValidationPaths(validation, [
+            ["$input.slate", "$input.slate"],
             ["$motions", "$input.motions"],
             ["$input.motions", "$input.motions"],
             ["$input", "$input.shot"],
@@ -335,11 +354,14 @@ export class CommitService {
       "commitBeatEnd",
     );
     if (malformed !== null) return malformed;
-    const { slate, resident } = this.base(props.slate, "commitBeatEnd");
+    const { slate, resident, slateRoot } = this.base(
+      props.slate,
+      "commitBeatEnd",
+    );
     const violations: IAutoMovieConstraintViolation[] = [];
     const beatEnds = validateArrayArtifact(
       slate.beatEnds,
-      "$slate.beatEnds",
+      `${slateRoot}.beatEnds`,
       "committed beat ends",
       violations,
     )
@@ -348,13 +370,13 @@ export class CommitService {
     validateUniqueBy(
       beatEnds.map((end, index) => ({
         id: isRecord(end) ? end.beat : undefined,
-        path: `$slate.beatEnds[${index}].beat`,
+        path: `${slateRoot}.beatEnds[${index}].beat`,
       })),
       "committed beat end",
       violations,
     );
     beatEnds.forEach((end, index) => {
-      const path = `$slate.beatEnds[${index}]`;
+      const path = `${slateRoot}.beatEnds[${index}]`;
       if (!validateObjectArtifact(end, path, "committed beat end", violations))
         return;
       validateNonEmptyId(
@@ -364,13 +386,14 @@ export class CommitService {
         violations,
       );
     });
-    validateBeatEndArtifact(props.beatEnd, slate, violations);
+    validateBeatEndArtifact(props.beatEnd, slate, slateRoot, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
       return this.finish(
         failedCommit(
           slate,
           remapCommitValidationPaths(validation, [
+            ["$input.slate", "$input.slate"],
             ["$input", "$input.beatEnd"],
           ]),
         ),
@@ -399,9 +422,12 @@ export class CommitService {
       "commitNotes",
     );
     if (malformed !== null) return malformed;
-    const { slate, resident } = this.base(props.slate, "commitNotes");
+    const { slate, resident, slateRoot } = this.base(
+      props.slate,
+      "commitNotes",
+    );
     const violations: IAutoMovieConstraintViolation[] = [];
-    validateNotesArtifact(props.notes, slate, violations);
+    validateNotesArtifact(props.notes, slate, slateRoot, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
       return this.finish(failedCommit(slate, validation), resident);
@@ -427,21 +453,22 @@ export class CommitService {
       "commitFilm",
     );
     if (malformed !== null) return malformed;
-    const { slate, resident } = this.base(props.slate, "commitFilm");
+    const { slate, resident, slateRoot } = this.base(props.slate, "commitFilm");
     const violations: IAutoMovieConstraintViolation[] = [];
     const sequenceValidation = validateSequenceArtifact(
       props.film,
       slate.shots,
     );
     appendValidation(violations, sequenceValidation);
-    validateFilmPreconditions(props.film, slate, violations);
+    validateFilmPreconditions(props.film, slate, slateRoot, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
       return this.finish(
         failedCommit(
           slate,
           remapCommitValidationPaths(validation, [
-            ["$shots", "$slate.shots"],
+            ["$input.slate", "$input.slate"],
+            ["$shots", `${slateRoot}.shots`],
             ["$input", "$input.film"],
           ]),
         ),
@@ -1145,6 +1172,7 @@ const validateSceneAgainstScript = (
 const validateShotCommitPreconditions = (
   shot: IAutoMovieShot,
   slate: IAutoMovieMcpWritableSlate,
+  slateRoot: string,
   violations: IAutoMovieConstraintViolation[],
 ): string | null => {
   if (!validateObjectArtifact(shot, "$input", "shot", violations)) return null;
@@ -1152,7 +1180,7 @@ const validateShotCommitPreconditions = (
     pushViolation(
       violations,
       "type",
-      "$slate.script",
+      `${slateRoot}.script`,
       "a script must be committed before a shot",
       slate.script,
     );
@@ -1160,7 +1188,7 @@ const validateShotCommitPreconditions = (
     pushViolation(
       violations,
       "type",
-      "$slate.scene",
+      `${slateRoot}.scene`,
       "a scene must be committed before a shot",
       slate.scene,
     );
@@ -1177,7 +1205,7 @@ const validateShotCommitPreconditions = (
   else if (slate.script !== null) {
     const scriptBeats = validateArrayArtifact(
       slate.script.beats,
-      "$slate.script.beats",
+      `${slateRoot}.script.beats`,
       "committed script beats",
       violations,
     )
@@ -1198,6 +1226,7 @@ const validateShotCommitPreconditions = (
 const validateBeatEndArtifact = (
   beatEnd: IAutoMovieBeatEndState,
   slate: IAutoMovieMcpWritableSlate,
+  slateRoot: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
   if (!validateObjectArtifact(beatEnd, "$input", "beat end", violations))
@@ -1220,14 +1249,14 @@ const validateBeatEndArtifact = (
     pushViolation(
       violations,
       "type",
-      "$slate.script",
+      `${slateRoot}.script`,
       "a script must be committed before a beat end",
       slate.script,
     );
   else {
     const scriptBeats = validateArrayArtifact(
       slate.script.beats,
-      "$slate.script.beats",
+      `${slateRoot}.script.beats`,
       "committed script beats",
       violations,
     )
@@ -1247,7 +1276,7 @@ const validateBeatEndArtifact = (
   }
   const slateShots = validateArrayArtifact(
     slate.shots,
-    "$slate.shots",
+    `${slateRoot}.shots`,
     "committed shots",
     violations,
   )
@@ -1270,16 +1299,21 @@ const validateBeatEndArtifact = (
     pushViolation(
       violations,
       "type",
-      "$slate.scene",
+      `${slateRoot}.scene`,
       "a scene must be committed before a beat end",
       slate.scene,
     );
   else if (
-    validateObjectArtifact(slate.scene, "$slate.scene", "scene", violations)
+    validateObjectArtifact(
+      slate.scene,
+      `${slateRoot}.scene`,
+      "scene",
+      violations,
+    )
   ) {
     const sceneNodes = validateArrayArtifact(
       slate.scene.nodes,
-      "$slate.scene.nodes",
+      `${slateRoot}.scene.nodes`,
       "scene nodes",
       violations,
     )
@@ -1348,7 +1382,7 @@ const validateBeatEndArtifact = (
         isRecord(shot) &&
         validateArrayArtifact(
           shot.performances,
-          `$slate.shots[${shotIndex}].performances`,
+          `${slateRoot}.shots[${shotIndex}].performances`,
           "committed shot performances",
           violations,
         )
@@ -1374,13 +1408,14 @@ const validateBeatEndArtifact = (
 const validateNotesArtifact = (
   notes: IAutoMovieReviewNote[],
   slate: IAutoMovieMcpWritableSlate,
+  slateRoot: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
   if (slate.script === null)
     pushViolation(
       violations,
       "type",
-      "$slate.script",
+      `${slateRoot}.script`,
       "a script must be committed before review notes",
       slate.script,
     );
@@ -1390,7 +1425,7 @@ const validateNotesArtifact = (
       : new Set(
           (validateArrayArtifact(
             slate.script.beats,
-            "$slate.script.beats",
+            `${slateRoot}.script.beats`,
             "committed script beats",
             violations,
           )
@@ -1403,7 +1438,7 @@ const validateNotesArtifact = (
         );
   const slateShots = validateArrayArtifact(
     slate.shots,
-    "$slate.shots",
+    `${slateRoot}.shots`,
     "committed shots",
     violations,
   )
@@ -1446,7 +1481,7 @@ const validateNotesArtifact = (
       pushViolation(
         violations,
         "type",
-        "$slate.shots",
+        `${slateRoot}.shots`,
         `review note beat "${note.beat}" must have a committed shot`,
         note.beat,
       );
@@ -1456,11 +1491,12 @@ const validateNotesArtifact = (
 const validateFilmPreconditions = (
   film: IAutoMovieSequence,
   slate: IAutoMovieMcpWritableSlate,
+  slateRoot: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
   validateUniqueIds(
     slate.shots,
-    "$slate.shots",
+    `${slateRoot}.shots`,
     "committed shot id",
     violations,
   );
@@ -1469,7 +1505,7 @@ const validateFilmPreconditions = (
     pushViolation(
       violations,
       "type",
-      "$slate.script",
+      `${slateRoot}.script`,
       "a script must be committed before a film",
       slate.script,
     );
@@ -1477,7 +1513,7 @@ const validateFilmPreconditions = (
     pushViolation(
       violations,
       "type",
-      "$slate.scene",
+      `${slateRoot}.scene`,
       "a scene must be committed before a film",
       slate.scene,
     );
@@ -1485,7 +1521,7 @@ const validateFilmPreconditions = (
     pushViolation(
       violations,
       "type",
-      "$slate.notes",
+      `${slateRoot}.notes`,
       "open review notes must be cleared before committing a film",
       slate.notes,
     );
@@ -1503,7 +1539,7 @@ const validateFilmPreconditions = (
         pushViolation(
           violations,
           "type",
-          "$slate.shots",
+          `${slateRoot}.shots`,
           `script beat "${beat.id}" must have a committed shot`,
           beat.id,
         );
@@ -1522,7 +1558,7 @@ const validateFilmPreconditions = (
         pushViolation(
           violations,
           "type",
-          `$slate.shots[${i}].scene`,
+          `${slateRoot}.shots[${i}].scene`,
           `committed shot scene must match scene "${slate.scene?.id}"`,
           shot.scene,
         );
