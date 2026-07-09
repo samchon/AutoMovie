@@ -45,7 +45,7 @@ export const test_mcp_block_tool = (): void => {
   TestValidator.predicate(
     "malformed script beats return violations",
     malformedBeats.success === false &&
-      hasViolation(malformedBeats, "type", "$script.beats"),
+      hasViolation(malformedBeats, "type", "$input.script.beats"),
   );
 
   const malformedSceneNodes = app.block({
@@ -62,7 +62,7 @@ export const test_mcp_block_tool = (): void => {
   TestValidator.predicate(
     "malformed staged scene nodes return violations",
     malformedSceneNodes.success === false &&
-      hasViolation(malformedSceneNodes, "type", "$staged.scene.nodes"),
+      hasViolation(malformedSceneNodes, "type", "$input.staged.scene.nodes"),
   );
 
   const malformedActors = app.block({
@@ -76,7 +76,7 @@ export const test_mcp_block_tool = (): void => {
   TestValidator.predicate(
     "malformed blocking actors return violations",
     malformedActors.success === false &&
-      hasViolation(malformedActors, "type", "$input.actors"),
+      hasViolation(malformedActors, "type", "$input.blocking.actors"),
   );
 
   const malformedActorEntry = app.block({
@@ -92,7 +92,7 @@ export const test_mcp_block_tool = (): void => {
   TestValidator.predicate(
     "malformed actor intent returns violations",
     malformedActorEntry.success === false &&
-      hasViolation(malformedActorEntry, "type", "$input.actors[0]"),
+      hasViolation(malformedActorEntry, "type", "$input.blocking.actors[0]"),
   );
 
   const malformedAnchors = app.block({
@@ -112,7 +112,11 @@ export const test_mcp_block_tool = (): void => {
   TestValidator.predicate(
     "malformed actor anchors return violations",
     malformedAnchors.success === false &&
-      hasViolation(malformedAnchors, "type", "$input.actors[0].anchors"),
+      hasViolation(
+        malformedAnchors,
+        "type",
+        "$input.blocking.actors[0].anchors",
+      ),
   );
 
   const malformedCamera = app.block({
@@ -126,7 +130,7 @@ export const test_mcp_block_tool = (): void => {
   TestValidator.predicate(
     "malformed blocking camera returns violations",
     malformedCamera.success === false &&
-      hasViolation(malformedCamera, "type", "$input.camera"),
+      hasViolation(malformedCamera, "type", "$input.blocking.camera"),
   );
 
   const malformedCameraTarget = app.block({
@@ -143,6 +147,6 @@ export const test_mcp_block_tool = (): void => {
   TestValidator.predicate(
     "malformed camera target returns violations",
     malformedCameraTarget.success === false &&
-      hasViolation(malformedCameraTarget, "type", "$input.camera.on"),
+      hasViolation(malformedCameraTarget, "type", "$input.blocking.camera.on"),
   );
 };
