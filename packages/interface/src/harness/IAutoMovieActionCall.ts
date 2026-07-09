@@ -121,11 +121,14 @@ export interface IAutoMovieActionBase {
    * The body-region this action drives ({@link AutoMovieBodyRegion}). Actions on
    * **disjoint** regions compose concurrently (walk while waving while
    * looking); actions sharing a region sequence. Omit to let the engine infer
-   * the natural mask from the verb — a `locomote` is `lowerBody`, a
-   * `wave`/`reach` is `upperBody`, a `lookAt` is `head`, an `emote` is `face`.
-   * Override only when the natural mask is wrong: a roundhouse `kick` is
-   * `lowerBody` though it is a `gesture`; a `jump` or a knockdown `react` is
-   * `fullBody`. Camera (`frame`) and `attachTo` actions ignore it.
+   * the natural mask from the verb and, for gestures, the kind — a `locomote`
+   * is `lowerBody`, a `wave`/`reach` is `upperBody`, a `lookAt` or `nod`/
+   * `shake` is `head`, an `emote` is `face`, and the whole-body gestures
+   * (`bow`/`crouch`/`kick`/`stagger`/`jump`/`draw`) plus `react` are
+   * `fullBody`. Override only when the natural mask is wrong for the staging —
+   * note the engine masks the synthesized clip to the region you pick, so a
+   * narrower region trims the authored motion to those bones. Camera (`frame`)
+   * and `attachTo` actions ignore it.
    */
   region?: AutoMovieBodyRegion;
 
