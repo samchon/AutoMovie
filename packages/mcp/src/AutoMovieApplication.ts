@@ -146,6 +146,7 @@ export class AutoMovieApplication {
     /** Project root directory (created when missing). */
     root: string;
   }): IAutoMovieOpenProjectOutput {
+    assertOpenProjectRequestRoot(props);
     return { project: this.context.activateProject(props.root).summary() };
   }
 
@@ -894,4 +895,12 @@ export class AutoMovieApplication {
   }): IAutoMovieForgePropOutput {
     return this.pipeline.forgeProp(props);
   }
+}
+
+function assertOpenProjectRequestRoot(
+  props: unknown,
+): asserts props is { root: string } {
+  if (typeof props === "object" && props !== null && !Array.isArray(props))
+    return;
+  throw new Error("openProject request at $input must be a JSON object");
 }
