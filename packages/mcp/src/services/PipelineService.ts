@@ -1531,8 +1531,14 @@ const validateActorRegistry = (
       );
       return;
     }
+    const seenGaitNames = new Set<string>();
     context.gaits.forEach((gait, index) =>
-      validateActorGaitEntry(gait, `${path}.gaits[${index}]`, violations),
+      validateActorGaitEntry(
+        gait,
+        `${path}.gaits[${index}]`,
+        seenGaitNames,
+        violations,
+      ),
     );
   });
   return violations;
@@ -1577,6 +1583,7 @@ const requireFiniteNumber = (
 const validateActorGaitEntry = (
   gait: unknown,
   path: string,
+  seenNames: Set<string>,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
   if (!isJsonObject(gait, path, "actor gait", violations)) return;
@@ -1586,6 +1593,18 @@ const validateActorGaitEntry = (
     "actor gait name",
     violations,
   );
+  if (typeof gait.name === "string") {
+    if (seenNames.has(gait.name))
+      violations.push(
+        violation(
+          "type",
+          `${path}.name`,
+          `actor gait name "${gait.name}" must be unique`,
+          gait.name,
+        ),
+      );
+    seenNames.add(gait.name);
+  }
   const period = requireFiniteNumber(
     gait.period,
     `${path}.period`,
@@ -1603,10 +1622,19 @@ const validateActorGaitEntry = (
     );
   if (gait.rootBob !== undefined)
     validateActorGaitRootBob(gait.rootBob, `${path}.rootBob`, violations);
-  if (isJsonArray(gait.limbs, `${path}.limbs`, "actor gait limbs", violations))
+  if (
+    isJsonArray(gait.limbs, `${path}.limbs`, "actor gait limbs", violations)
+  ) {
+    const seenRows = new Set<string>();
     gait.limbs.forEach((limb, index) =>
-      validateActorGaitLimb(limb, `${path}.limbs[${index}]`, violations),
+      validateActorGaitLimb(
+        limb,
+        `${path}.limbs[${index}]`,
+        seenRows,
+        violations,
+      ),
     );
+  }
 };
 
 const validateActorGaitRootBob = (
@@ -1638,6 +1666,7 @@ const validateActorGaitRootBob = (
 const validateActorGaitLimb = (
   limb: unknown,
   path: string,
+  seenRows: Set<string>,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
   if (!isJsonObject(limb, path, "actor gait limb", violations)) return;
@@ -1659,6 +1688,24 @@ const validateActorGaitLimb = (
         limb.axis,
       ),
     );
+  if (
+    typeof limb.bone === "string" &&
+    (limb.axis === undefined ||
+      (typeof limb.axis === "string" && GAIT_LIMB_AXES.has(limb.axis)))
+  ) {
+    const axis = typeof limb.axis === "string" ? limb.axis : "flexion";
+    const row = `${limb.bone}:${axis}`;
+    if (seenRows.has(row))
+      violations.push(
+        violation(
+          "type",
+          path,
+          `duplicate actor gait limb row for ${limb.bone}.${axis}`,
+          limb,
+        ),
+      );
+    seenRows.add(row);
+  }
   requireFiniteNumber(
     limb.phase,
     `${path}.phase`,
