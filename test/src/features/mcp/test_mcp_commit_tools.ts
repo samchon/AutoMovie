@@ -472,7 +472,7 @@ export const test_mcp_commit_tools = (): void => {
       slate: revisedShotSlate,
       beatEnd: null as unknown as IAutoMovieBeatEndState,
     }),
-    "$input",
+    "$input.beatEnd",
     revisedShotSlate,
   );
   expectRefused(
@@ -484,7 +484,7 @@ export const test_mcp_commit_tools = (): void => {
         actors: "NOT_ARRAY" as unknown as IAutoMovieBeatEndState["actors"],
       },
     }),
-    "$input.actors",
+    "$input.beatEnd.actors",
     revisedShotSlate,
   );
   {
@@ -543,10 +543,10 @@ export const test_mcp_commit_tools = (): void => {
       });
       return (
         !output.committed &&
-        hasPath(output.validation, "$input.actors[1].node") &&
-        hasPath(output.validation, "$input.actors[0].node") &&
-        hasPath(output.validation, "$input.actors[0].motion") &&
-        hasPath(output.validation, "$input.actors[0].localTime")
+        hasPath(output.validation, "$input.beatEnd.actors[1].node") &&
+        hasPath(output.validation, "$input.beatEnd.actors[0].node") &&
+        hasPath(output.validation, "$input.beatEnd.actors[0].motion") &&
+        hasPath(output.validation, "$input.beatEnd.actors[0].localTime")
       );
     })(),
   );
