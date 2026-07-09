@@ -191,6 +191,27 @@ export const test_mcp_render_tools = async (): Promise<void> => {
     "frames/seq/frame_%05d.png",
   );
 
+  const malformedFrameDir = app.planRender({
+    slate,
+    spec,
+    frameDir: null as unknown as string,
+  });
+  TestValidator.predicate(
+    "malformed frameDir override is a violation",
+    malformedFrameDir.plan === null &&
+      hasPath(malformedFrameDir.validation, "$input.frameDir"),
+  );
+  const malformedOutputPath = app.planRender({
+    slate,
+    spec,
+    outputPath: "",
+  });
+  TestValidator.predicate(
+    "malformed outputPath override is a violation",
+    malformedOutputPath.plan === null &&
+      hasPath(malformedOutputPath.validation, "$input.outputPath"),
+  );
+
   TestValidator.predicate(
     "invalid render spec paths",
     (() => {

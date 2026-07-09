@@ -265,6 +265,32 @@ export const test_mcp_render_chunked = (): void => {
         .success,
       false,
     );
+    const malformedChunkFrameDir = app.planChunkedRender({
+      spec: filmSpec,
+      chunkFrames: 4,
+      frameDir: null as unknown as string,
+    });
+    TestValidator.predicate(
+      "malformed chunked frameDir override refused",
+      malformedChunkFrameDir.plan === null &&
+        malformedChunkFrameDir.validation.success === false &&
+        malformedChunkFrameDir.validation.violations.some(
+          (violation) => violation.path === "$input.frameDir",
+        ),
+    );
+    const malformedChunkOutputPath = app.planChunkedRender({
+      spec: filmSpec,
+      chunkFrames: 4,
+      outputPath: "",
+    });
+    TestValidator.predicate(
+      "malformed chunked outputPath override refused",
+      malformedChunkOutputPath.plan === null &&
+        malformedChunkOutputPath.validation.success === false &&
+        malformedChunkOutputPath.validation.violations.some(
+          (violation) => violation.path === "$input.outputPath",
+        ),
+    );
 
     // 6. explicit slate keeps the legacy frames/<stem> defaults, byte-identical
     const slate: IAutoMovieMcpWritableSlate = {
