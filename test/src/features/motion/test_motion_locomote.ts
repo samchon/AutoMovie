@@ -22,10 +22,17 @@ const throws = (task: () => void): boolean => {
  * 1. A 1 s gait at 1 m/s over 6 m bakes 6 cycles of travel in the +Z direction;
  *    the final keyframe's root has advanced ≈ 6 m.
  * 2. The direction is normalised before scaling by speed.
- * 3. A distance shorter than one cycle still plays at least one cycle.
+ * 3. A distance shorter than one cycle still plays at least one cycle — and still
+ *    arrives at exactly the asked distance (0.2 m, not a full-stride 1 m
+ *    overshoot).
  * 4. `faceTravel` turns the root so the model's +Z faces the travel heading — a
  *    walk sent along +X ends up facing +X — while the default keeps the root
  *    rotation identity (a strafe).
+ * 5. Invalid distance/speed/gait-duration/direction inputs reject before cycle
+ *    sizing.
+ * 6. A fractional ask arrives exactly: 3.49 m at 1 m/s on a 1 s gait rounds to 3
+ *    cycles but ends at 3.49 m along the heading (the old bake of the requested
+ *    speed stopped at 3.0 m).
  */
 export const test_motion_locomote = (): void => {
   const gait = makeMotion(
@@ -54,9 +61,15 @@ export const test_motion_locomote = (): void => {
   // 4 m at 2 m/s on a 1 s gait → round(2) = 2 cycles → 2 s → 2 × 2 = 4 m
   TestValidator.predicate("normalised: ≈ 4 m at 2 m/s", nclose(dz, 4, 0.001));
 
-  // 3. sub-cycle distance still plays one cycle
+  // 3. sub-cycle distance still plays one cycle — and arrives, not overshoots
   const tiny = locomoteMotion("t", gait, 0.2, 1, { x: 0, y: 0, z: 1 });
   TestValidator.predicate("at least one cycle", nclose(tiny.duration, 1));
+  const tinyZ =
+    tiny.keyframes[tiny.keyframes.length - 1]!.pose.root!.translation.z;
+  TestValidator.predicate(
+    "a 0.2 m ask ends at 0.2 m, not a full stride",
+    nclose(tinyZ, 0.2, 0.001),
+  );
 
   // 4. faceTravel turns the body toward the heading
   const strafe = locomoteMotion("s", gait, 4, 1, { x: 1, y: 0, z: 0 });
@@ -118,4 +131,18 @@ export const test_motion_locomote = (): void => {
         locomoteMotion("badDirection", gait, 1, 1, direction);
       }),
     );
+
+  // 6. a fractional ask arrives exactly
+  const fractional = locomoteMotion("fr", gait, 3.49, 1, { x: 0, y: 0, z: 1 });
+  TestValidator.predicate(
+    "3.49 m rounds to 3 cycles",
+    nclose(fractional.duration, 3),
+  );
+  const fractionalZ =
+    fractional.keyframes[fractional.keyframes.length - 1]!.pose.root!
+      .translation.z;
+  TestValidator.predicate(
+    "3.49 m ask ends at 3.49 m along the heading",
+    nclose(fractionalZ, 3.49, 0.001),
+  );
 };
