@@ -191,6 +191,28 @@ export const test_mcp_commit_tools = (): void => {
     emptySlate,
   );
   expectRefused(
+    "scene malformed committed script cast",
+    app.commitScene({
+      slate: {
+        ...emptySlate,
+        script: {
+          ...script,
+          cast: null as unknown as IAutoMovieScript["cast"],
+        },
+      },
+      scene: staged.scene,
+      models,
+    }),
+    "$input.slate.script.cast",
+    {
+      ...emptySlate,
+      script: {
+        ...script,
+        cast: null as unknown as IAutoMovieScript["cast"],
+      },
+    },
+  );
+  expectRefused(
     "empty-beat script",
     app.commitScript({ slate: emptySlate, script: { ...script, beats: [] } }),
     "$input.script.beats",
@@ -378,6 +400,27 @@ export const test_mcp_commit_tools = (): void => {
     scripted.slate,
   );
   expectRefused(
+    "shot malformed committed script beats",
+    app.commitShot({
+      slate: {
+        ...scripted.slate,
+        script: {
+          ...script,
+          beats: null as unknown as IAutoMovieScript["beats"],
+        },
+      },
+      shot,
+    }),
+    "$input.slate.script.beats",
+    {
+      ...scripted.slate,
+      script: {
+        ...script,
+        beats: null as unknown as IAutoMovieScript["beats"],
+      },
+    },
+  );
+  expectRefused(
     "malformed shot root",
     app.commitShot({
       slate: stagedSlate,
@@ -543,6 +586,24 @@ export const test_mcp_commit_tools = (): void => {
       malformedShotPerformanceSlate,
     );
   }
+  {
+    const malformedSceneSlate = {
+      ...revisedShotSlate,
+      scene: {
+        ...staged.scene,
+        nodes: null as unknown as typeof staged.scene.nodes,
+      },
+    };
+    expectRefused(
+      "beat end malformed committed scene nodes",
+      app.commitBeatEnd({
+        slate: malformedSceneSlate,
+        beatEnd,
+      }),
+      "$input.slate.scene.nodes",
+      malformedSceneSlate,
+    );
+  }
   TestValidator.predicate(
     "invalid beat end paths",
     (() => {
@@ -645,6 +706,21 @@ export const test_mcp_commit_tools = (): void => {
     stagedSlate,
   );
   expectRefused(
+    "film malformed committed shot entry",
+    app.commitFilm({
+      slate: {
+        ...stagedSlate,
+        shots: [null as unknown as IAutoMovieShot],
+      },
+      film,
+    }),
+    "$input.slate.shots[0]",
+    {
+      ...stagedSlate,
+      shots: [null as unknown as IAutoMovieShot],
+    },
+  );
+  expectRefused(
     "malformed film root",
     app.commitFilm({
       slate: stagedSlate,
@@ -670,6 +746,21 @@ export const test_mcp_commit_tools = (): void => {
     app.commitFilm({ slate: notesSlate, film }),
     "$input.slate.notes",
     notesSlate,
+  );
+  expectRefused(
+    "film malformed committed notes",
+    app.commitFilm({
+      slate: {
+        ...beatEndSlate,
+        notes: null as unknown as IAutoMovieReviewNote[],
+      },
+      film,
+    }),
+    "$input.slate.notes",
+    {
+      ...beatEndSlate,
+      notes: null as unknown as IAutoMovieReviewNote[],
+    },
   );
   expectRefused(
     "film duplicate shots",

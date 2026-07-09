@@ -179,19 +179,16 @@ export class CommitService {
       "commitScene",
     );
     const violations: IAutoMovieConstraintViolation[] = [];
-    appendValidation(
+    const sceneValidation = validateSceneArtifact(props.scene, props.models);
+    appendValidation(violations, sceneValidation);
+    const script = validateCommittedScript(
+      slate.script,
+      slateRoot,
+      "a script must be committed before a scene",
       violations,
-      validateSceneArtifact(props.scene, props.models),
     );
-    if (slate.script === null)
-      pushViolation(
-        violations,
-        "type",
-        `${slateRoot}.script`,
-        "a script must be committed before a scene",
-        slate.script,
-      );
-    else validateSceneAgainstScript(props.scene, slate.script, violations);
+    if (sceneValidation.success === true && script !== null)
+      validateSceneAgainstScript(props.scene, script, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
       return this.finish(
@@ -280,7 +277,7 @@ export class CommitService {
         violations,
       );
     });
-    const beat = validateShotCommitPreconditions(
+    const preconditions = validateShotCommitPreconditions(
       props.shot,
       slate,
       slateRoot,
@@ -314,9 +311,9 @@ export class CommitService {
     // claiming beat node, so scriptAncestors can cascade it up to the scene,
     // the act, or the intent.
     const located =
-      beat === null
+      preconditions.beat === null
         ? violations
-        : locateOnBeat(violations, slate.script?.tree ?? null, beat);
+        : locateOnBeat(violations, preconditions.tree, preconditions.beat);
     const validation = toValidation(located);
     if (validation.success === false)
       return this.finish(
@@ -335,7 +332,9 @@ export class CommitService {
       successfulCommit({
         ...slate,
         shots: upsertById(slate.shots, props.shot),
-        beatEnds: slate.beatEnds.filter((end) => end.beat !== beat),
+        beatEnds: slate.beatEnds.filter(
+          (end) => end.beat !== preconditions.beat,
+        ),
         film: null,
       }),
       resident,
@@ -1169,29 +1168,85 @@ const validateSceneAgainstScript = (
   });
 };
 
+const validateCommittedScript = (
+  script: IAutoMovieScript | null | unknown,
+  slateRoot: string,
+  missingMessage: string,
+  violations: IAutoMovieConstraintViolation[],
+): IAutoMovieScript | null => {
+  if (script === null) {
+    pushViolation(
+      violations,
+      "type",
+      `${slateRoot}.script`,
+      missingMessage,
+      script,
+    );
+    return null;
+  }
+  const validation = validateScriptArtifact(script as IAutoMovieScript);
+  if (validation.success === false) {
+    violations.push(
+      ...remapCommitValidationPaths(validation, [
+        ["$input", `${slateRoot}.script`],
+      ]).violations,
+    );
+    return null;
+  }
+  return script as IAutoMovieScript;
+};
+
+const validateCommittedScene = (
+  scene: IAutoMovieScene | null | unknown,
+  slateRoot: string,
+  missingMessage: string,
+  violations: IAutoMovieConstraintViolation[],
+): IAutoMovieScene | null => {
+  if (scene === null) {
+    pushViolation(
+      violations,
+      "type",
+      `${slateRoot}.scene`,
+      missingMessage,
+      scene,
+    );
+    return null;
+  }
+  if (!validateObjectArtifact(scene, `${slateRoot}.scene`, "scene", violations))
+    return null;
+  validateNonEmptyId(scene.id, `${slateRoot}.scene.id`, "scene id", violations);
+  if (
+    !validateArrayArtifact(
+      scene.nodes,
+      `${slateRoot}.scene.nodes`,
+      "scene nodes",
+      violations,
+    )
+  )
+    return null;
+  return scene as unknown as IAutoMovieScene;
+};
+
 const validateShotCommitPreconditions = (
   shot: IAutoMovieShot,
   slate: IAutoMovieMcpWritableSlate,
   slateRoot: string,
   violations: IAutoMovieConstraintViolation[],
-): string | null => {
-  if (!validateObjectArtifact(shot, "$input", "shot", violations)) return null;
-  if (slate.script === null)
-    pushViolation(
-      violations,
-      "type",
-      `${slateRoot}.script`,
-      "a script must be committed before a shot",
-      slate.script,
-    );
-  if (slate.scene === null)
-    pushViolation(
-      violations,
-      "type",
-      `${slateRoot}.scene`,
-      "a scene must be committed before a shot",
-      slate.scene,
-    );
+): { beat: string | null; tree: IAutoMovieScript["tree"] | null } => {
+  if (!validateObjectArtifact(shot, "$input", "shot", violations))
+    return { beat: null, tree: null };
+  const script = validateCommittedScript(
+    slate.script,
+    slateRoot,
+    "a script must be committed before a shot",
+    violations,
+  );
+  validateCommittedScene(
+    slate.scene,
+    slateRoot,
+    "a scene must be committed before a shot",
+    violations,
+  );
 
   const beat = typeof shot.id === "string" ? beatOf(shot.id) : null;
   if (beat === null)
@@ -1202,16 +1257,8 @@ const validateShotCommitPreconditions = (
       'shot id must use the "shot:<beat>" form',
       shot.id,
     );
-  else if (slate.script !== null) {
-    const scriptBeats = validateArrayArtifact(
-      slate.script.beats,
-      `${slateRoot}.script.beats`,
-      "committed script beats",
-      violations,
-    )
-      ? slate.script.beats
-      : [];
-    if (!scriptBeats.some((entry) => isRecord(entry) && entry.id === beat))
+  else if (script !== null) {
+    if (!script.beats.some((entry) => isRecord(entry) && entry.id === beat))
       pushViolation(
         violations,
         "type",
@@ -1220,7 +1267,7 @@ const validateShotCommitPreconditions = (
         shot.id,
       );
   }
-  return beat;
+  return { beat, tree: script?.tree ?? null };
 };
 
 const validateBeatEndArtifact = (
@@ -1245,26 +1292,16 @@ const validateBeatEndArtifact = (
       `beat-end shot must equal "${shotIdOf(beatEnd.beat)}"`,
       beatEnd.shot,
     );
-  if (slate.script === null)
-    pushViolation(
-      violations,
-      "type",
-      `${slateRoot}.script`,
-      "a script must be committed before a beat end",
-      slate.script,
-    );
-  else {
-    const scriptBeats = validateArrayArtifact(
-      slate.script.beats,
-      `${slateRoot}.script.beats`,
-      "committed script beats",
-      violations,
-    )
-      ? slate.script.beats
-      : [];
+  const script = validateCommittedScript(
+    slate.script,
+    slateRoot,
+    "a script must be committed before a beat end",
+    violations,
+  );
+  if (script !== null) {
     if (
       typeof beatEnd.beat === "string" &&
-      !scriptBeats.some((beat) => isRecord(beat) && beat.id === beatEnd.beat)
+      !script.beats.some((beat) => isRecord(beat) && beat.id === beatEnd.beat)
     )
       pushViolation(
         violations,
@@ -1295,32 +1332,15 @@ const validateBeatEndArtifact = (
       beatEnd.shot,
     );
   let nodeIds: Set<string> | null = null;
-  if (slate.scene === null)
-    pushViolation(
-      violations,
-      "type",
-      `${slateRoot}.scene`,
-      "a scene must be committed before a beat end",
-      slate.scene,
-    );
-  else if (
-    validateObjectArtifact(
-      slate.scene,
-      `${slateRoot}.scene`,
-      "scene",
-      violations,
-    )
-  ) {
-    const sceneNodes = validateArrayArtifact(
-      slate.scene.nodes,
-      `${slateRoot}.scene.nodes`,
-      "scene nodes",
-      violations,
-    )
-      ? slate.scene.nodes
-      : [];
+  const scene = validateCommittedScene(
+    slate.scene,
+    slateRoot,
+    "a scene must be committed before a beat end",
+    violations,
+  );
+  if (scene !== null) {
     nodeIds = new Set(
-      sceneNodes
+      scene.nodes
         .filter(isRecord)
         .map((node) => node.id)
         .filter((id): id is string => typeof id === "string"),
@@ -1411,27 +1431,17 @@ const validateNotesArtifact = (
   slateRoot: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
-  if (slate.script === null)
-    pushViolation(
-      violations,
-      "type",
-      `${slateRoot}.script`,
-      "a script must be committed before review notes",
-      slate.script,
-    );
+  const script = validateCommittedScript(
+    slate.script,
+    slateRoot,
+    "a script must be committed before review notes",
+    violations,
+  );
   const beatIds =
-    slate.script === null
+    script === null
       ? null
       : new Set(
-          (validateArrayArtifact(
-            slate.script.beats,
-            `${slateRoot}.script.beats`,
-            "committed script beats",
-            violations,
-          )
-            ? slate.script.beats
-            : []
-          )
+          script.beats
             .filter(isRecord)
             .map((beat) => beat.id)
             .filter((id): id is string => typeof id === "string"),
@@ -1500,30 +1510,38 @@ const validateFilmPreconditions = (
     "committed shot id",
     violations,
   );
-  const committedShots = Array.isArray(slate.shots) ? slate.shots : [];
-  if (slate.script === null)
-    pushViolation(
-      violations,
-      "type",
-      `${slateRoot}.script`,
-      "a script must be committed before a film",
-      slate.script,
-    );
-  if (slate.scene === null)
-    pushViolation(
-      violations,
-      "type",
-      `${slateRoot}.scene`,
-      "a scene must be committed before a film",
-      slate.scene,
-    );
-  if (slate.notes.length > 0)
+  const committedShots = Array.isArray(slate.shots)
+    ? slate.shots
+        .map((shot, index) => ({ shot, index }))
+        .filter(({ shot }) => isRecord(shot))
+    : [];
+  const script = validateCommittedScript(
+    slate.script,
+    slateRoot,
+    "a script must be committed before a film",
+    violations,
+  );
+  const scene = validateCommittedScene(
+    slate.scene,
+    slateRoot,
+    "a scene must be committed before a film",
+    violations,
+  );
+  const notes = validateArrayArtifact(
+    slate.notes,
+    `${slateRoot}.notes`,
+    "committed notes",
+    violations,
+  )
+    ? slate.notes
+    : [];
+  if (notes.length > 0)
     pushViolation(
       violations,
       "type",
       `${slateRoot}.notes`,
       "open review notes must be cleared before committing a film",
-      slate.notes,
+      notes,
     );
   if (!isRecord(film) || !Array.isArray(film.shots)) return;
   const sequenceShotIds = new Set(
@@ -1532,10 +1550,10 @@ const validateFilmPreconditions = (
       .map((entry) => entry.shot)
       .filter((shot): shot is string => typeof shot === "string"),
   );
-  if (slate.script !== null)
-    slate.script.beats.forEach((beat, i) => {
+  if (script !== null)
+    script.beats.forEach((beat, i) => {
       const shot = shotIdOf(beat.id);
-      if (!committedShots.some((entry) => entry.id === shot))
+      if (!committedShots.some((entry) => entry.shot.id === shot))
         pushViolation(
           violations,
           "type",
@@ -1552,14 +1570,14 @@ const validateFilmPreconditions = (
           shot,
         );
     });
-  if (slate.scene !== null)
-    committedShots.forEach((shot, i) => {
-      if (shot.scene !== slate.scene?.id)
+  if (scene !== null)
+    committedShots.forEach(({ shot, index }) => {
+      if (shot.scene !== scene.id)
         pushViolation(
           violations,
           "type",
-          `${slateRoot}.shots[${i}].scene`,
-          `committed shot scene must match scene "${slate.scene?.id}"`,
+          `${slateRoot}.shots[${index}].scene`,
+          `committed shot scene must match scene "${scene.id}"`,
           shot.scene,
         );
     });
