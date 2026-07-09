@@ -98,7 +98,15 @@ export class PipelineService {
     );
     if (violations.length > 0)
       return { blocked: { success: false, violations } };
-    return { blocked: blockBeat(props.script, props.staged, props.blocking) };
+    return {
+      blocked: remapMcpBlockedBeatPaths(
+        blockBeat(props.script, props.staged, props.blocking),
+        [
+          ["$script", "$input.script"],
+          ["$input", "$input.blocking"],
+        ],
+      ),
+    };
   }
 
   public perform(props: PerformProps): IAutoMoviePerformOutput {
@@ -1767,6 +1775,20 @@ const remapMcpStagedSetPaths = (
   return {
     success: false,
     violations: staged.violations.map((item) => ({
+      ...item,
+      path: remapMcpPath(item.path, replacements),
+    })),
+  };
+};
+
+const remapMcpBlockedBeatPaths = (
+  blocked: IAutoMovieBlockOutput["blocked"],
+  replacements: ReadonlyArray<readonly [from: string, to: string]>,
+): IAutoMovieBlockOutput["blocked"] => {
+  if (blocked.success === true) return blocked;
+  return {
+    success: false,
+    violations: blocked.violations.map((item) => ({
       ...item,
       path: remapMcpPath(item.path, replacements),
     })),

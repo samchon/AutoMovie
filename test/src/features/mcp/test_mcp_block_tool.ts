@@ -149,4 +149,35 @@ export const test_mcp_block_tool = (): void => {
     malformedCameraTarget.success === false &&
       hasViolation(malformedCameraTarget, "type", "$input.blocking.camera.on"),
   );
+
+  const duplicateScript = app.block({
+    script: makeScriptWrite({
+      beats: [
+        script.beats[0]!,
+        {
+          ...script.beats[0]!,
+          name: "the duplicate charge",
+          summary: "a second planned beat sharing the same id",
+        },
+      ],
+    }),
+    staged,
+    blocking,
+  }).blocked;
+  TestValidator.predicate(
+    "semantic duplicate script beat returns wrapper path",
+    duplicateScript.success === false &&
+      hasViolation(duplicateScript, "type", "$input.script.beats[1].id"),
+  );
+
+  const unknownBeat = app.block({
+    script,
+    staged,
+    blocking: { ...blocking, beat: "ghost-beat" },
+  }).blocked;
+  TestValidator.predicate(
+    "semantic blocking beat returns wrapper path",
+    unknownBeat.success === false &&
+      hasViolation(unknownBeat, "type", "$input.blocking.beat"),
+  );
 };
