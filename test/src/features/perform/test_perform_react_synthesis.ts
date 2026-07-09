@@ -1,6 +1,7 @@
 import {
   IAutoMovieActorContext,
   makeActorSynthesizer,
+  resolvePose,
   sampleMotion,
   validateMotion,
 } from "@automovie/engine";
@@ -76,6 +77,11 @@ const peakFlexion = (
  *    point) still snaps the actor back; and a blow whose source sits exactly on
  *    the actor falls back to a straight-back flinch instead of dividing by a
  *    zero-length direction.
+ * 6. Side hits lean AWAY from the blow, verified through the engine's own FK
+ *    (`resolvePose`), not the push's sign: with the actor at the origin facing
+ *    +Z, a blow from +X (the actor's left) moves the resolved head's world x
+ *    toward −X at the flinch peak, and the mirrored blow from −X moves it
+ *    toward +X.
  */
 export const test_perform_react_synthesis = (): void => {
   const rig = createSkeleton();
@@ -153,5 +159,34 @@ export const test_perform_react_synthesis = (): void => {
   TestValidator.predicate(
     "a source on the actor falls back to a straight flinch",
     peakFlexion(onTop(react(0.7), "hero")) > 1,
+  );
+
+  // 6. side hits lean away, proven through FK
+  const sideNodes = new Map<string, IAutoMovieVector3>([
+    ["leftSource", { x: 2, y: 0, z: 0 }], // the actor's left (+X at facing 0)
+    ["rightSource", { x: -2, y: 0, z: 0 }],
+  ]);
+  const sideSynth = makeActorSynthesizer(
+    new Map([["hero", baseCtx]]),
+    sideNodes,
+  );
+  const headWorldX = (source: string): number => {
+    const flinch = sideSynth(
+      react(0.8, { from: { kind: "node", node: source } }),
+      "hero",
+    );
+    if (flinch === null) throw new Error("side react must synthesize");
+    const peak = sampleMotion(flinch, 0.16);
+    const head = resolvePose(peak.pose, rig).find((b) => b.bone === "head");
+    if (head === undefined) throw new Error("head must resolve");
+    return head.worldPosition.x;
+  };
+  TestValidator.predicate(
+    "a blow from the actor's left leans the head away (toward −X)",
+    headWorldX("leftSource") < -0.01,
+  );
+  TestValidator.predicate(
+    "the mirrored blow from the right leans the head toward +X",
+    headWorldX("rightSource") > 0.01,
   );
 };

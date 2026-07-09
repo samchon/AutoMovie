@@ -331,7 +331,11 @@ export const makeActorSynthesizer = (
       const source = resolveTargetPoint(action.from, nodes);
       const facing = (ctx.facingDeg * Math.PI) / 180;
       const forward = { x: Math.sin(facing), y: 0, z: Math.cos(facing) };
-      const right = { x: Math.cos(facing), y: 0, z: -Math.sin(facing) };
+      // Anatomical right: facing 0 looks down +Z and the actor's LEFT is +X
+      // (aimYawPitch's +90° yaw), so right is −X there. Positive spine
+      // abduction tilts toward −X, so dot(away, right) leans AWAY from the
+      // blow — the previous +X "right" leaned the body into it.
+      const right = { x: -Math.cos(facing), y: 0, z: Math.sin(facing) };
       let push;
       if (source === null)
         push = { flexion: -magnitude }; // unknown → snap back
