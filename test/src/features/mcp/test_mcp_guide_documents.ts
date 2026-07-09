@@ -49,7 +49,9 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
  *    generated constant cannot drift apart silently.
  * 2. An unknown name (reachable through direct API misuse) throws an error that
  *    lists every valid name, instead of returning undefined content.
- * 3. A malformed request root rejects before the guide lookup dereferences request
+ * 3. Malformed name fields reject before guide lookup so bad input is not confused
+ *    with an unknown guide key.
+ * 4. A malformed request root rejects before the guide lookup dereferences request
  *    fields.
  */
 export const test_mcp_guide_documents = (): void => {
@@ -70,6 +72,24 @@ export const test_mcp_guide_documents = (): void => {
         }),
       ["unknown guide document", "AUTOMOVIE_OVERALL", "RENDER_GUIDES"],
     ),
+  );
+
+  TestValidator.predicate(
+    "malformed name field rejects",
+    throwsError(
+      () =>
+        app.getGuideDocument({
+          name: null as unknown as AutoMovieGuideName,
+        }),
+      ["$input.name", "non-empty string"],
+    ) &&
+      throwsError(
+        () =>
+          app.getGuideDocument({
+            name: "" as AutoMovieGuideName,
+          }),
+        ["$input.name", "non-empty string"],
+      ),
   );
 
   TestValidator.predicate(

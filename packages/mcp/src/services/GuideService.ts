@@ -12,6 +12,7 @@ export class GuideService {
     name: AutoMovieGuideName;
   }): IAutoMovieGuideDocumentOutput {
     assertGuideDocumentRequestRoot(props);
+    assertGuideDocumentName(props.name);
     const content: string | undefined = (
       AUTOMOVIE_GUIDE_CONSTANT as Record<string, string>
     )[props.name];
@@ -31,4 +32,13 @@ function assertGuideDocumentRequestRoot(
   if (typeof props === "object" && props !== null && !Array.isArray(props))
     return;
   throw new Error("guide document request at $input must be a JSON object");
+}
+
+function assertGuideDocumentName(
+  name: unknown,
+): asserts name is AutoMovieGuideName {
+  if (typeof name === "string" && name.trim().length > 0) return;
+  throw new Error(
+    "guide document name at $input.name must be a non-empty string",
+  );
 }
