@@ -174,7 +174,10 @@ export const test_mcp_commit_tools = (): void => {
       resident.commitScene({ scene: staged.scene, models });
       resident.commitShot({ shot });
       resident.commitNotes({ notes: [note] });
-      const output = resident.commitFilm({ film });
+      const output = resident.commitFilm({
+        review: "the cut orders every beat and the runtime reads right",
+        film,
+      });
       TestValidator.predicate(
         "resident film precondition keeps slate path",
         !output.committed && hasPath(output.validation, "$slate.notes"),
@@ -707,19 +710,28 @@ export const test_mcp_commit_tools = (): void => {
 
   expectRefused(
     "film before upstream",
-    app.commitFilm({ slate: emptySlate, film }),
+    app.commitFilm({
+      review: "checking the empty-slate refusal",
+      slate: emptySlate,
+      film,
+    }),
     "$input.slate.script",
     emptySlate,
   );
   expectRefused(
     "film missing shot",
-    app.commitFilm({ slate: stagedSlate, film: { ...film, shots: [] } }),
+    app.commitFilm({
+      review: "checking the empty cut-list refusal",
+      slate: stagedSlate,
+      film: { ...film, shots: [] },
+    }),
     "$input.slate.shots",
     stagedSlate,
   );
   expectRefused(
     "film malformed committed shot entry",
     app.commitFilm({
+      review: "pre-commit self-check of the cut",
       slate: {
         ...stagedSlate,
         shots: [null as unknown as IAutoMovieShot],
@@ -735,6 +747,7 @@ export const test_mcp_commit_tools = (): void => {
   expectRefused(
     "malformed film root",
     app.commitFilm({
+      review: "pre-commit self-check of the cut",
       slate: stagedSlate,
       film: null as unknown as IAutoMovieSequence,
     }),
@@ -744,6 +757,7 @@ export const test_mcp_commit_tools = (): void => {
   expectRefused(
     "film malformed sequence shots",
     app.commitFilm({
+      review: "pre-commit self-check of the cut",
       slate: stagedSlate,
       film: {
         ...film,
@@ -755,13 +769,18 @@ export const test_mcp_commit_tools = (): void => {
   );
   expectRefused(
     "film with open notes",
-    app.commitFilm({ slate: notesSlate, film }),
+    app.commitFilm({
+      review: "checking the open-notes refusal",
+      slate: notesSlate,
+      film,
+    }),
     "$input.slate.notes",
     notesSlate,
   );
   expectRefused(
     "film malformed committed notes",
     app.commitFilm({
+      review: "pre-commit self-check of the cut",
       slate: {
         ...beatEndSlate,
         notes: null as unknown as IAutoMovieReviewNote[],
@@ -777,6 +796,7 @@ export const test_mcp_commit_tools = (): void => {
   expectRefused(
     "film duplicate shots",
     app.commitFilm({
+      review: "pre-commit self-check of the cut",
       slate: { ...beatEndSlate, shots: [revisedShot, revisedShot] },
       film,
     }),
@@ -786,6 +806,7 @@ export const test_mcp_commit_tools = (): void => {
   expectRefused(
     "film scene mismatch",
     app.commitFilm({
+      review: "pre-commit self-check of the cut",
       slate: {
         ...beatEndSlate,
         shots: [{ ...revisedShot, scene: "wrong-scene" }],
@@ -800,6 +821,10 @@ export const test_mcp_commit_tools = (): void => {
     slate: notesSlate,
     notes: [],
   }).slate;
-  const filmSlate = app.commitFilm({ slate: clearedNotesSlate, film }).slate;
+  const filmSlate = app.commitFilm({
+    review: "notes cleared; the cut is ready to persist",
+    slate: clearedNotesSlate,
+    film,
+  }).slate;
   TestValidator.equals("film committed", filmSlate.film, film);
 };

@@ -73,7 +73,7 @@ export const test_mcp_prerequisites_gate = (): void => {
     TestValidator.predicate(
       "commitFilm lists all three missing rungs in ladder order",
       throwsError(
-        () => app.commitFilm({ film: null as never }),
+        () => app.commitFilm({ review: "x", film: null as never }),
         [
           "Cannot commitFilm yet.",
           "1. Call commitScript",

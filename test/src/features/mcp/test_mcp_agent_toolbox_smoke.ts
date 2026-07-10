@@ -189,6 +189,7 @@ export const test_mcp_agent_toolbox_smoke = async (): Promise<void> => {
   if (cut.success !== true) return;
 
   const filmCommitted = app.commitFilm({
+    review: "pre-commit self-check of the cut",
     slate: shotCommitted.slate,
     film: cut.sequence,
   });

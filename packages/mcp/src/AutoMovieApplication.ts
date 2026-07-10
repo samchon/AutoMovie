@@ -557,12 +557,19 @@ export class AutoMovieApplication {
 
   /**
    * Commit the assembled film after sequence and backlog checks. Open review
-   * notes or missing beat shots keep the slate unchanged.
+   * notes or missing beat shots keep the slate unchanged. `review` comes first:
+   * state your pacing/continuity self-check before the cut-list it judges.
    *
-   * @param props The slate and sequence artifact to commit.
+   * @param props The pre-commit review, the slate, and the sequence artifact.
    * @returns The new slate, or the unchanged slate with violations.
    */
   public commitFilm(props: {
+    /**
+     * Self-check of the cut BEFORE committing it: does the shot order serve the
+     * pacing you intended, do the trims/transitions carry continuity across
+     * each cut, and does the runtime feel right? Non-empty text.
+     */
+    review: string;
     /** The slate to transform; omit to commit into the resident project (#614). */
     slate?: IAutoMovieMcpWritableSlate;
     /** Sequence artifact to commit. */

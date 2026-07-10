@@ -95,7 +95,10 @@ const commitResident = (app: AutoMovieApplication): void => {
   );
   TestValidator.equals(
     "resident film committed",
-    app.commitFilm({ film: sequence }).committed,
+    app.commitFilm({
+      review: "the single-shot cut plays whole at the planned rate",
+      film: sequence,
+    }).committed,
     true,
   );
 };
