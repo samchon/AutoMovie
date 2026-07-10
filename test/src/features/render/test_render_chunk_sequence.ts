@@ -80,7 +80,10 @@ const sample = (frame: IAutoMovieSequenceRenderFrame) => ({
  * 5. A single chunk (chunkFrames >= frameCount) reproduces the whole plan's frame
  *    samples 1:1.
  * 6. The reassembly manifest lists the chunk outputs in order with concat args; an
- *    extension-less output path still gets a chunk tag.
+ *    extension-less output path still gets a chunk tag. A directory-qualified
+ *    output (the resident default) keeps the concat list beside the output and
+ *    its lines as basenames (ffmpeg resolves list entries against the list
+ *    file's directory), and a dotted directory never captures the chunk tag.
  * 7. A non-positive or non-integer chunkFrames rejects.
  */
 export const test_render_chunk_sequence = (): void => {
@@ -223,6 +226,53 @@ export const test_render_chunk_sequence = (): void => {
     "extensionless chunk output",
     noExt.chunks[0]!.outputPath,
     "out/render.chunk_0",
+  );
+
+  // 6b. a directory-qualified output (the resident default) keeps chunk videos
+  // beside the list file and the concat lines relative to it — ffmpeg resolves
+  // list entries against the list file's directory, so a path-qualified line
+  // ("renders/seq.chunk_0.mp4") would double the directory.
+  const nested = planChunkedSequenceRender({
+    plan: planSequenceRender({
+      sequence: SEQUENCE,
+      shots: SHOTS,
+      spec: SPEC,
+      outputPath: "renders/seq_duel.mp4",
+    }),
+    spec: SPEC,
+    chunkFrames: 6,
+  });
+  TestValidator.equals(
+    "nested chunk outputs keep the directory",
+    nested.reassembly.chunkOutputs,
+    ["renders/seq_duel.chunk_0.mp4", "renders/seq_duel.chunk_1.mp4"],
+  );
+  TestValidator.equals(
+    "nested concat list sits beside the output",
+    nested.reassembly.concatListPath,
+    "renders/seq_duel.mp4.concat.txt",
+  );
+  TestValidator.equals(
+    "nested concat lines are basenames relative to the list",
+    nested.reassembly.concatListLines,
+    ["file 'seq_duel.chunk_0.mp4'", "file 'seq_duel.chunk_1.mp4'"],
+  );
+
+  // 6c. a dotted directory never captures the chunk tag
+  const dottedDir = planChunkedSequenceRender({
+    plan: planSequenceRender({
+      sequence: SEQUENCE,
+      shots: SHOTS,
+      spec: SPEC,
+      outputPath: "out.v2/render",
+    }),
+    spec: SPEC,
+    chunkFrames: 6,
+  });
+  TestValidator.equals(
+    "dotted directory keeps the tag on the file",
+    dottedDir.chunks[0]!.outputPath,
+    "out.v2/render.chunk_0",
   );
 
   // 7. guards
