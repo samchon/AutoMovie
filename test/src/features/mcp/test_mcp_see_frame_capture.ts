@@ -1,4 +1,8 @@
-import { IAutoMovieRenderSpec, IAutoMovieScene } from "@automovie/interface";
+import {
+  AutoMovieGuidePass,
+  IAutoMovieRenderSpec,
+  IAutoMovieScene,
+} from "@automovie/interface";
 import {
   AutoMovieApplication,
   IAutoMovieMcpCaptureRequest,
@@ -106,7 +110,11 @@ export const test_mcp_see_frame_capture = async (): Promise<void> => {
     dataUrl: "data:image/png;base64,AAAA",
   });
 
-  const invalid = await app.seeFrame({ slate, spec, pass: "sketch" });
+  const invalid = await app.seeFrame({
+    slate,
+    spec,
+    pass: "sketch" as AutoMovieGuidePass,
+  });
   TestValidator.equals("unknown pass fails", invalid.validation.success, false);
   TestValidator.equals(
     "adapter is not called on validation failure",

@@ -1,4 +1,5 @@
 import {
+  AutoMovieGuidePass,
   IAutoMovieRenderSpec,
   IAutoMovieScene,
   IAutoMovieScript,
@@ -196,7 +197,7 @@ export const test_mcp_render_chunked = (): void => {
     const malformedPasses = app.planChunkedRender({
       spec: filmSpec,
       chunkFrames: 4,
-      passes: null as unknown as string[],
+      passes: null as unknown as AutoMovieGuidePass[],
     });
     TestValidator.predicate(
       "malformed chunked pass list is a violation",
