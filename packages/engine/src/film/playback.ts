@@ -226,8 +226,12 @@ export const resolveSequencePlayback = (
 
 /**
  * Place every shot interaction event onto the sequence output clock. Events
- * outside a sequence entry's trimmed source range are omitted; included events
- * keep their shot-local `time` and also expose `shotTime` plus `globalTime`.
+ * outside a sequence entry's trimmed source range are omitted. The range is
+ * half-open (`[from, to)`) so an event sitting exactly on a contiguous trim
+ * seam is emitted once — by the entry that starts there — not once per
+ * neighbouring entry (#1009); it closes at `to` only when the trim ends at the
+ * shot's own end, so a shot-final event is never lost. Included events keep
+ * their shot-local `time` and also expose `shotTime` plus `globalTime`.
  */
 export const sequenceEventTimeline = (
   sequence: IAutoMovieSequence,
@@ -240,8 +244,11 @@ export const sequenceEventTimeline = (
     const shot = byId.get(entry.shot)!.shot;
     const from = entry.offset;
     const to = entry.offset + entry.played;
+    const atShotEnd = Math.abs(to - shot.duration) <= 1e-9;
     for (const event of shot.events ?? []) {
-      if (event.time < from - 1e-9 || event.time > to + 1e-9) continue;
+      if (event.time < from - 1e-9) continue;
+      if (atShotEnd ? event.time > to + 1e-9 : event.time >= to - 1e-9)
+        continue;
       events.push({
         ...event,
         entry: entry.entry,

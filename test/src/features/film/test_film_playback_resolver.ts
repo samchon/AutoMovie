@@ -75,6 +75,10 @@ const SEQUENCE: IAutoMovieSequence = {
  *    = 0.4.
  * 5. T = 4.99…+0.5 = 5.1 (past the dissolve) → entry 2 alone, no blend.
  * 6. T = −1 and T = 7.5 (the exclusive end) → null; T = 0 → entry 0 at 0.
+ * 7. Event windows are half-open at a trim seam: one shot split into contiguous
+ *    trims [0,1] + [1,2] emits an event at shot-time 1.0 exactly once (from the
+ *    entry that starts there), while a shot-final event at 2.0 is still emitted
+ *    because the last trim ends at the shot's own end.
  */
 export const test_film_playback_resolver = (): void => {
   const timeline = sequenceTimeline(SEQUENCE, SHOTS);
@@ -237,5 +241,44 @@ export const test_film_playback_resolver = (): void => {
     "shots without interaction metadata produce no sequence events",
     sequenceEventTimeline(SEQUENCE, SHOTS),
     [],
+  );
+
+  // 7. a contiguous trim seam emits the seam event once; the shot end survives
+  const seamShots: IAutoMovieShot[] = [
+    {
+      ...shot("shot:beat-1", 2),
+      events: [
+        event("seam", "contact", "sampledProximity", 1),
+        event("final", "release", "scriptedCue", 2),
+      ],
+    },
+  ];
+  const seamEvents = sequenceEventTimeline(
+    {
+      id: "seq-seam",
+      name: null,
+      fps: 24,
+      shots: [
+        {
+          shot: "shot:beat-1",
+          trim: { start: 0, duration: 1 },
+          transition: null,
+        },
+        {
+          shot: "shot:beat-1",
+          trim: { start: 1, duration: 1 },
+          transition: null,
+        },
+      ],
+    },
+    seamShots,
+  );
+  TestValidator.equals(
+    "a seam event emits once and the shot-final event survives",
+    seamEvents.map((e) => [e.id, e.entry]),
+    [
+      ["seam", 1],
+      ["final", 1],
+    ],
   );
 };
