@@ -100,6 +100,9 @@ const riglessContext = (
  *     target resolution feeds them to aim/launch math, and malformed mount
  *     entries fail at `$input.staged.mounts[i]...` before `coupleObjects`
  *     dereferences the binding.
+ * 15. A present malformed `blocking` fails at `$input.blocking...` (the same shape
+ *     `block` gates) instead of leaking `performShot`'s `blocking.actors is not
+ *     iterable` TypeError, while omitting blocking stays valid.
  */
 export const test_mcp_perform_tool = (): void => {
   const app = new AutoMovieApplication();
@@ -827,6 +830,35 @@ export const test_mcp_perform_tool = (): void => {
         "type",
         "$input.staged.mounts[2].binding",
       ),
+  );
+
+  const iterlessBlocking = app.perform({
+    script,
+    staged,
+    performance,
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+      knightB: context(nodePosition("knightB"), 180),
+    },
+    blocking: { beat: "beat-1", duration: 1 } as never,
+  }).performed;
+  TestValidator.predicate(
+    "a blocking without actors fails as data, not an iteration TypeError",
+    hasGaitViolation(iterlessBlocking, "type", "$input.blocking.actors"),
+  );
+  const rootlessBlocking = app.perform({
+    script,
+    staged,
+    performance,
+    actors: {
+      knightA: context(nodePosition("knightA"), 0),
+      knightB: context(nodePosition("knightB"), 180),
+    },
+    blocking: null as never,
+  }).performed;
+  TestValidator.predicate(
+    "a null blocking fails at its root",
+    hasGaitViolation(rootlessBlocking, "type", "$input.blocking"),
   );
 
   const missingGait = app.perform({

@@ -812,6 +812,10 @@ const validatePerformShape = (
     "$input.performance",
     violations,
   );
+  // blocking is optional on perform, but when present performShot iterates
+  // its actors and reads camera.move (#1006) — the same shape block() gates.
+  if (props.blocking !== undefined)
+    validateBlockingShape(props.blocking, "$input.blocking", violations);
   return violations;
 };
 
@@ -1111,58 +1115,43 @@ const validateBlockShape = (
     }
   }
 
-  if (isJsonObject(blocking, "$input.blocking", "blocking", violations)) {
-    requireString(blocking.beat, "$input.blocking.beat", "beat id", violations);
-    const actors = blocking.actors;
-    if (
-      isJsonArray(
-        actors,
-        "$input.blocking.actors",
-        "blocking actors",
-        violations,
-      )
-    )
-      actors.forEach((actor, index) => {
-        const path = `$input.blocking.actors[${index}]`;
-        if (!isJsonObject(actor, path, "actor intent", violations)) return;
-        requireString(actor.node, `${path}.node`, "actor node", violations);
-        const anchors = actor.anchors;
-        if (anchors !== undefined && anchors !== null) {
-          if (
-            isJsonArray(
-              anchors,
-              `${path}.anchors`,
-              "actor timing anchors",
-              violations,
-            )
-          )
-            anchors.forEach((anchor, anchorIndex) => {
-              const anchorPath = `${path}.anchors[${anchorIndex}]`;
-              isJsonObject(
-                anchor,
-                anchorPath,
-                "actor timing anchor",
-                violations,
-              );
-            });
-        }
-      });
-
-    if (
-      isJsonObject(
-        blocking.camera,
-        "$input.blocking.camera",
-        "camera",
-        violations,
-      )
-    )
-      validateStageTarget(
-        blocking.camera.on,
-        "$input.blocking.camera.on",
-        violations,
-      );
-  }
+  validateBlockingShape(blocking, "$input.blocking", violations);
   return violations;
+};
+
+/** The blocking shape both `block` and `perform` (#1006) gate. */
+const validateBlockingShape = (
+  blocking: unknown,
+  root: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(blocking, root, "blocking", violations)) return;
+  requireString(blocking.beat, `${root}.beat`, "beat id", violations);
+  const actors = blocking.actors;
+  if (isJsonArray(actors, `${root}.actors`, "blocking actors", violations))
+    actors.forEach((actor, index) => {
+      const path = `${root}.actors[${index}]`;
+      if (!isJsonObject(actor, path, "actor intent", violations)) return;
+      requireString(actor.node, `${path}.node`, "actor node", violations);
+      const anchors = actor.anchors;
+      if (anchors !== undefined && anchors !== null) {
+        if (
+          isJsonArray(
+            anchors,
+            `${path}.anchors`,
+            "actor timing anchors",
+            violations,
+          )
+        )
+          anchors.forEach((anchor, anchorIndex) => {
+            const anchorPath = `${path}.anchors[${anchorIndex}]`;
+            isJsonObject(anchor, anchorPath, "actor timing anchor", violations);
+          });
+      }
+    });
+
+  if (isJsonObject(blocking.camera, `${root}.camera`, "camera", violations))
+    validateStageTarget(blocking.camera.on, `${root}.camera.on`, violations);
 };
 
 const validateCutShape = (
