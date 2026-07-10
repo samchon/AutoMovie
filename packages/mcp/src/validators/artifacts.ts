@@ -366,10 +366,17 @@ export const validateSequenceArtifact = (
     violations,
   );
   const entries = asArray(sequence.shots);
+  // cutSequence's adjacent-transition accumulator (#988): a valid incoming
+  // transition on the previous entry narrows how much of its played span the
+  // NEXT transition may consume, or three entries overlap at one instant.
+  let previousIncoming = 0;
   entries.forEach((entry, i) => {
     const path = `$input.shots[${i}]`;
-    if (!validateObjectArtifact(entry, path, "sequence entry", violations))
+    let incoming = 0;
+    if (!validateObjectArtifact(entry, path, "sequence entry", violations)) {
+      previousIncoming = incoming;
       return;
+    }
     validateNonEmptyId(entry.shot, `${path}.shot`, "sequence shot", violations);
     const shot =
       typeof entry.shot === "string" ? shotsById.get(entry.shot) : undefined;
@@ -428,17 +435,28 @@ export const validateSequenceArtifact = (
       if (
         previous !== null &&
         current !== null &&
-        Number.isFinite(transitionDuration) &&
-        transitionDuration > Math.min(previous, current)
-      )
-        pushViolation(
-          violations,
-          "temporal",
-          `${path}.transition.duration`,
-          `transition duration must fit adjacent entries, but was ${transitionDuration}`,
-          transitionDuration,
-        );
+        Number.isFinite(transitionDuration)
+      ) {
+        if (transitionDuration > Math.min(previous, current))
+          pushViolation(
+            violations,
+            "temporal",
+            `${path}.transition.duration`,
+            `transition duration must fit adjacent entries, but was ${transitionDuration}`,
+            transitionDuration,
+          );
+        else if (previousIncoming + transitionDuration > previous)
+          pushViolation(
+            violations,
+            "temporal",
+            `${path}.transition.duration`,
+            `adjacent transitions (${previousIncoming}s + ${transitionDuration}s) must not overlap inside the previous entry's played span (${previous}s)`,
+            transitionDuration,
+          );
+        else incoming = transitionDuration;
+      }
     }
+    previousIncoming = incoming;
   });
 
   return toValidation(violations);
