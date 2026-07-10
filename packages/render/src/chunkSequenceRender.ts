@@ -263,6 +263,14 @@ export const planChunkedSequenceRender = (props: {
 
   const chunkOutputs = chunks.map((chunk) => chunk.outputPath);
   const concatListPath = `${plan.outputPath}.concat.txt`;
+  // ffmpeg's concat demuxer resolves relative entries against the LIST FILE's
+  // directory, not the invoking cwd. The chunk outputs always sit beside the
+  // list (taggedOutput preserves the directory), so the lines must carry
+  // basenames — a directory-qualified output ("renders/seq.mp4") would
+  // otherwise resolve to "renders/renders/seq.chunk_0.mp4".
+  const concatListLines = chunkOutputs.map(
+    (output) => `file '${baseName(output)}'`,
+  );
   return {
     target: plan.target,
     renderFps: plan.renderFps,
@@ -288,7 +296,7 @@ export const planChunkedSequenceRender = (props: {
       outputPath: plan.outputPath,
       chunkOutputs,
       concatListPath,
-      concatListLines: chunkOutputs.map((output) => `file '${output}'`),
+      concatListLines,
       ffmpegArgs: [
         "-y",
         "-f",
@@ -305,10 +313,19 @@ export const planChunkedSequenceRender = (props: {
   };
 };
 
-/** Insert a `.<label>` tag before the output's extension (or append it). */
+/** The path's last segment (after the final `/` or `\`). */
+const baseName = (path: string): string =>
+  path.slice(Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1);
+
+/**
+ * Insert a `.<label>` tag before the output's extension (or append it). The
+ * extension dot is scanned only within the basename, so a dotted directory
+ * (`out.v2/render`) tags the file, not the directory.
+ */
 const taggedOutput = (output: string, label: string): string => {
   const dot = output.lastIndexOf(".");
-  return dot === -1
+  const separator = Math.max(output.lastIndexOf("/"), output.lastIndexOf("\\"));
+  return dot <= separator
     ? `${output}.${label}`
     : `${output.slice(0, dot)}.${label}${output.slice(dot)}`;
 };
