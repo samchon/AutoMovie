@@ -1,4 +1,9 @@
-import { validateBalanceSupport, validateFootSkate } from "@automovie/engine";
+import {
+  detectBodyCollision,
+  validateBalanceSupport,
+  validateFootSkate,
+  validateSelfIntersection,
+} from "@automovie/engine";
 import {
   IAutoMovieKeyframe,
   IAutoMoviePose,
@@ -64,8 +69,9 @@ const MOTION = {
  * severity/ledger contract, the same totality #685/#688 restored for the
  * collision oracle).
  *
- * Both `validateFootSkate` and `validateBalanceSupport` must now report the
- * detached bone as a `type` violation and never throw, while a normal
+ * `validateFootSkate`, `validateBalanceSupport`, and the capsule validators
+ * (`validateSelfIntersection`, `detectBodyCollision`, #1056) must all report
+ * the detached bone as a `type` violation and never throw, while a normal
  * (fully-reachable) rig keeps validating exactly as before.
  */
 export const test_validation_detached_bone_totality = (): void => {
@@ -110,6 +116,45 @@ export const test_validation_detached_bone_totality = (): void => {
     hasViolation(support, "type", "supports[0].supportBones") &&
       support.success === false &&
       support.violations.some((v) => v.expected.includes("not reachable")),
+  );
+
+  // self-intersection: a capsule endpoint on the detached bone reports at the
+  // endpoint's own path, does not crash (#1056).
+  const capsule = validateSelfIntersection({
+    motion: MOTION,
+    skeleton: DETACHED_SKELETON,
+    pairs: [
+      {
+        first: { from: "hips", to: "leftFoot", radius: 0.1 },
+        second: { from: "leftFoot", to: "hips", radius: 0.1 },
+      },
+    ],
+  });
+  TestValidator.predicate(
+    "self-intersection: detached capsule endpoint is a reachability violation, not a crash",
+    hasViolation(capsule, "type", "pairs[0].first.to") &&
+      hasViolation(capsule, "type", "pairs[0].second.from") &&
+      capsule.success === false &&
+      capsule.violations.some((v) => v.expected.includes("not reachable")),
+  );
+
+  // body collision: a detached endpoint on either actor reports, does not
+  // crash, and sampling is skipped (#1056).
+  const actor = (node: string) => ({
+    node,
+    skeleton: DETACHED_SKELETON,
+    motion: MOTION,
+    capsules: [{ from: "hips" as const, to: "leftFoot" as const, radius: 0.1 }],
+    body: null,
+  });
+  const collision = detectBodyCollision({ a: actor("a"), b: actor("b") });
+  TestValidator.predicate(
+    "body collision: detached capsule endpoint is a reachability violation, not a crash",
+    hasViolation(collision.validation, "type", "a.capsules[0].to") &&
+      hasViolation(collision.validation, "type", "b.capsules[0].to") &&
+      collision.validation.success === false &&
+      collision.events.length === 0 &&
+      collision.response === null,
   );
 
   // A bone entirely absent from the skeleton still reports "must exist", NOT

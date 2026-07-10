@@ -24,6 +24,7 @@ import {
 } from "../physics/collisionResponse";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { IAutoMovieCapsuleProxy, validateCapsule } from "./capsuleProxy";
+import { fkReachableBones } from "./fkReachableBones";
 import { ViolationCollector } from "./violation";
 
 const DEFAULT_SAMPLE_RATE = 24;
@@ -133,19 +134,20 @@ export const detectBodyCollision = (props: {
 
   // Validate every capsule against its actor's rig before sampling — the same
   // precondition validateSelfIntersection enforces on itself. A malformed
-  // capsule (bone not on the rig, non-distinct endpoints, bad radius) resolves
-  // to an undefined world position and a NaN distance, and `NaN < minimum` is
-  // false, so an unguarded run would drop the overlap in silence. These are
-  // structural errors, not physics warnings: return before sampling.
+  // capsule (bone not on the rig, FK-unreachable, non-distinct endpoints, bad
+  // radius) resolves to an undefined world position and a NaN distance (or
+  // crashes outright, #1056), and `NaN < minimum` is false, so an unguarded
+  // run would drop the overlap in silence. These are structural errors, not
+  // physics warnings: return before sampling.
+  const topologyA = indexSkeletonTopology(props.a.skeleton);
+  const topologyB = indexSkeletonTopology(props.b.skeleton);
   const capsulesValid = [
-    validateActorCapsules(props.a, `${path}.a`, collector),
-    validateActorCapsules(props.b, `${path}.b`, collector),
+    validateActorCapsules(props.a, `${path}.a`, topologyA, collector),
+    validateActorCapsules(props.b, `${path}.b`, topologyB, collector),
   ].every(Boolean);
   if (!capsulesValid)
     return { validation: collector.toValidation(), events: [], response: null };
 
-  const topologyA = indexSkeletonTopology(props.a.skeleton);
-  const topologyB = indexSkeletonTopology(props.b.skeleton);
   const duration = Math.min(props.a.motion.duration, props.b.motion.duration);
   const times = sampleTimes(duration, sampleRate);
   const mapsA = times.map((time) => resolveMap(props.a, time, topologyA));
@@ -221,13 +223,21 @@ export const detectBodyCollision = (props: {
 const validateActorCapsules = (
   actor: IAutoMovieCollisionActor,
   path: string,
+  topology: IAutoMovieSkeletonTopology,
   collector: ViolationCollector,
 ): boolean => {
   const bones = new Set(actor.skeleton.bones.map((bone) => bone.bone));
+  const reachable = fkReachableBones(actor.skeleton, topology);
   let valid = true;
   actor.capsules.forEach((capsule, index) => {
     if (
-      !validateCapsule(capsule, `${path}.capsules[${index}]`, bones, collector)
+      !validateCapsule(
+        capsule,
+        `${path}.capsules[${index}]`,
+        bones,
+        reachable,
+        collector,
+      )
     )
       valid = false;
   });

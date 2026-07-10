@@ -16,6 +16,7 @@ import { sampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { IAutoMovieCapsuleProxy, validateCapsule } from "./capsuleProxy";
+import { fkReachableBones } from "./fkReachableBones";
 import { ViolationCollector } from "./violation";
 
 const DEFAULT_SAMPLE_RATE = 24;
@@ -95,6 +96,7 @@ export const validateSelfIntersection = (props: {
   if (sampleRate <= 0) return rejectSampleRate(collector, path, sampleRate);
 
   const topology = indexSkeletonTopology(props.skeleton);
+  const reachableBones = fkReachableBones(props.skeleton, topology);
 
   props.pairs.forEach((pair, pairIndex) => {
     const pp = `${path}.pairs[${pairIndex}]`;
@@ -102,12 +104,14 @@ export const validateSelfIntersection = (props: {
       pair.first,
       `${pp}.first`,
       skeletonBones,
+      reachableBones,
       collector,
     );
     const secondValid = validateCapsule(
       pair.second,
       `${pp}.second`,
       skeletonBones,
+      reachableBones,
       collector,
     );
     if (firstValid && secondValid) {
