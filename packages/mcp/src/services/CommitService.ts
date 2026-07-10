@@ -660,10 +660,12 @@ export class CommitService {
    * **Replacement-only.** The node must already perform in that shot:
    * introducing a NEW performer changes the shot's dramatic content and belongs
    * to `perform` + `commitShot`, not a surgical splice. Validation mirrors
-   * `commitShot`'s registry semantics — startOffset within the shot, and when a
-   * `motions` registry is supplied the performance's motion must reference it;
-   * full ROM/physics validation stays `perform`'s job, because this tool
-   * splices artifacts that a perform already produced.
+   * `commitShot`'s resident registry semantics (#1095) — startOffset within the
+   * shot, and a performance that references a motion MUST pass the `motions`
+   * registry it resolves against (this tool is always resident, and motions are
+   * re-perform-derived, not persisted: a reference with no registry would
+   * durably store a dangling id). Full ROM/physics validation stays `perform`'s
+   * job, because this tool splices artifacts that a perform already produced.
    */
   public setActorPerformance(props: {
     beat: string;
@@ -770,8 +772,19 @@ export class CommitService {
         "performance motion",
         violations,
       );
-      if (
-        motionIds !== null &&
+      // This tool is ALWAYS resident, so commitShot's registry rule applies
+      // verbatim (#1095): motions are re-perform-derived, not persisted —
+      // splicing a motion reference with no registry would durably store a
+      // dangling id that a later resident getResolvedPose cannot resolve.
+      if (motionIds === null)
+        pushViolation(
+          violations,
+          "type",
+          "$input.motions",
+          "a performance that references a motion must pass the motions registry it resolves against (motions are re-perform-derived, not persisted, so a reference with no registry would be a dangling id)",
+          props.motions,
+        );
+      else if (
         typeof props.performance.motion === "string" &&
         !motionIds.has(props.performance.motion)
       )
