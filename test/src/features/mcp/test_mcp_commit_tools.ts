@@ -116,7 +116,20 @@ const expectResidentMalformedRequestRoot = (
     resident.openProject({ root });
     const output = call(resident);
     TestValidator.equals(`${title} not committed`, output.committed, false);
-    TestValidator.equals(`${title} slate unchanged`, output.slate, emptySlate);
+    TestValidator.equals(
+      `${title} resident refusal omits the slate echo`,
+      output.slate,
+      undefined,
+    );
+    TestValidator.equals(`${title} state unchanged`, output.state, {
+      script: false,
+      scene: false,
+      shots: [],
+      beatEnds: [],
+      notes: 0,
+      film: false,
+      cleared: [],
+    });
     TestValidator.predicate(
       `${title} path`,
       hasPath(output.validation, "$input"),
@@ -337,7 +350,7 @@ export const test_mcp_commit_tools = (): void => {
   };
   const scripted = app.commitScript({ slate: dirtySlate, script });
   TestValidator.equals("script committed", scripted.committed, true);
-  TestValidator.equals("script cascades stale slices", scripted.slate, {
+  TestValidator.equals("script cascades stale slices", scripted.slate!, {
     script,
     scene: null,
     shots: [],
@@ -349,7 +362,7 @@ export const test_mcp_commit_tools = (): void => {
   expectRefused(
     "scene missing cast node",
     app.commitScene({
-      slate: scripted.slate,
+      slate: scripted.slate!,
       scene: {
         ...staged.scene,
         nodes: staged.scene.nodes.filter((node) => node.id !== "knightB"),
@@ -357,12 +370,12 @@ export const test_mcp_commit_tools = (): void => {
       models,
     }),
     "$input.scene.nodes",
-    scripted.slate,
+    scripted.slate!,
   );
   expectRefused(
     "scene missing model",
     app.commitScene({
-      slate: scripted.slate,
+      slate: scripted.slate!,
       scene: {
         ...staged.scene,
         nodes: [{ ...staged.scene.nodes[0]!, model: "missing" }],
@@ -370,24 +383,24 @@ export const test_mcp_commit_tools = (): void => {
       models,
     }),
     "$input.scene.nodes[0].model",
-    scripted.slate,
+    scripted.slate!,
   );
   expectRefused(
     "scene malformed model registry",
     app.commitScene({
-      slate: scripted.slate,
+      slate: scripted.slate!,
       scene: staged.scene,
       models: [null as unknown as (typeof models)[number]],
     }),
     "$input.models[0]",
-    scripted.slate,
+    scripted.slate!,
   );
 
   const stagedSlate = app.commitScene({
-    slate: scripted.slate,
+    slate: scripted.slate!,
     scene: staged.scene,
     models,
-  }).slate;
+  }).slate!;
   TestValidator.equals("scene committed", stagedSlate.scene, staged.scene);
 
   expectRefused(
@@ -398,15 +411,15 @@ export const test_mcp_commit_tools = (): void => {
   );
   expectRefused(
     "shot before scene",
-    app.commitShot({ slate: scripted.slate, shot }),
+    app.commitShot({ slate: scripted.slate!, shot }),
     "$input.slate.scene",
-    scripted.slate,
+    scripted.slate!,
   );
   expectRefused(
     "shot malformed committed script beats",
     app.commitShot({
       slate: {
-        ...scripted.slate,
+        ...scripted.slate!,
         script: {
           ...script,
           beats: null as unknown as IAutoMovieScript["beats"],
@@ -416,7 +429,7 @@ export const test_mcp_commit_tools = (): void => {
     }),
     "$input.slate.script.beats",
     {
-      ...scripted.slate,
+      ...scripted.slate!,
       script: {
         ...script,
         beats: null as unknown as IAutoMovieScript["beats"],
@@ -503,7 +516,7 @@ export const test_mcp_commit_tools = (): void => {
     })(),
   );
 
-  const shotSlate = app.commitShot({ slate: stagedSlate, shot }).slate;
+  const shotSlate = app.commitShot({ slate: stagedSlate, shot }).slate!;
   TestValidator.equals("shot inserted", shotSlate.shots, [shot]);
   expectRefused(
     "duplicate committed shot",
@@ -515,7 +528,7 @@ export const test_mcp_commit_tools = (): void => {
   const revisedShotSlate = app.commitShot({
     slate: { ...shotSlate, beatEnds: [beatEnd], film },
     shot: revisedShot,
-  }).slate;
+  }).slate!;
   TestValidator.equals("shot replace clears derived state", revisedShotSlate, {
     ...shotSlate,
     shots: [revisedShot],
@@ -646,7 +659,7 @@ export const test_mcp_commit_tools = (): void => {
   const beatEndSlate = app.commitBeatEnd({
     slate: revisedShotSlate,
     beatEnd,
-  }).slate;
+  }).slate!;
   TestValidator.equals("beat end inserted", beatEndSlate.beatEnds, [beatEnd]);
 
   expectRefused(
@@ -693,18 +706,18 @@ export const test_mcp_commit_tools = (): void => {
   const notesSlate = app.commitNotes({
     slate: beatEndSlate,
     notes: [note],
-  }).slate;
+  }).slate!;
   TestValidator.equals("notes committed", notesSlate.notes, [note]);
 
   const reshot = app.commitShot({ slate: notesSlate, shot: revisedShot });
   TestValidator.equals(
     "replacing a shot clears the beat's stale review notes",
-    reshot.slate.notes,
+    reshot.slate!.notes,
     [],
   );
   TestValidator.equals(
     "replacing a shot still clears the beat end and film",
-    [reshot.slate.beatEnds, reshot.slate.film],
+    [reshot.slate!.beatEnds, reshot.slate!.film],
     [[], null],
   );
 
@@ -820,11 +833,11 @@ export const test_mcp_commit_tools = (): void => {
   const clearedNotesSlate = app.commitNotes({
     slate: notesSlate,
     notes: [],
-  }).slate;
+  }).slate!;
   const filmSlate = app.commitFilm({
     review: "notes cleared; the cut is ready to persist",
     slate: clearedNotesSlate,
     film,
-  }).slate;
+  }).slate!;
   TestValidator.equals("film committed", filmSlate.film, film);
 };

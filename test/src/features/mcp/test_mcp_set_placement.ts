@@ -103,7 +103,7 @@ export const test_mcp_set_placement = (): void => {
     );
     TestValidator.equals(
       "malformed request keeps the shot",
-      malformedRequest.slate.shots.map((entry) => entry.id),
+      malformedRequest.state.shots,
       ["shot:beat-1"],
     );
 
@@ -118,7 +118,7 @@ export const test_mcp_set_placement = (): void => {
       reason: "give the challenger room to charge",
     });
     TestValidator.equals("set applies", moved.updated, true);
-    const scene = moved.slate.scene!;
+    const scene = app.getScene({}).scene!;
     TestValidator.equals(
       "knightB moved",
       scene.nodes.find((node) => node.id === "knightB")?.transform.translation,
@@ -146,15 +146,15 @@ export const test_mcp_set_placement = (): void => {
         .includes('"z": 1.4'),
       true,
     );
-    TestValidator.equals("shots cleared", moved.slate.shots, []);
+    TestValidator.equals("shots cleared", moved.state.shots, []);
     TestValidator.equals(
       "the shot file cleared with them",
       fs.existsSync(path.join(root, "shots", "beat-1.json")),
       false,
     );
-    TestValidator.equals("beat-ends cleared", moved.slate.beatEnds, []);
-    TestValidator.equals("notes cleared", moved.slate.notes, []);
-    TestValidator.equals("film cleared", moved.slate.film, null);
+    TestValidator.equals("beat-ends cleared", moved.state.beatEnds, []);
+    TestValidator.equals("notes cleared", moved.state.notes, 0);
+    TestValidator.equals("film cleared", moved.state.film, false);
 
     // 2. The ladder re-locks and names the re-do.
     const steps = app.nextSteps();

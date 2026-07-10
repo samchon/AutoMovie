@@ -84,7 +84,7 @@ export const test_mcp_resident_slice_order = (): void => {
     const filenameOrder = ["shot:beat-10", "shot:beat-2"];
     TestValidator.equals(
       "resident commit returns shots in filename order, not append order",
-      lastShot.slate.shots.map((shot) => shot.id),
+      lastShot.state.shots,
       filenameOrder,
     );
     TestValidator.equals(
@@ -102,7 +102,7 @@ export const test_mcp_resident_slice_order = (): void => {
     });
     TestValidator.equals(
       "resident commit returns beatEnds in filename order",
-      lastEnd.slate.beatEnds.map((end) => end.beat),
+      lastEnd.state.beatEnds,
       ["beat-10", "beat-2"],
     );
     TestValidator.equals(
@@ -125,7 +125,7 @@ export const test_mcp_resident_slice_order = (): void => {
     });
     TestValidator.equals(
       "explicit slate preserves the caller's shot order (append, no reorder)",
-      explicit.slate.shots.map((shot) => shot.id),
+      explicit.slate!.shots.map((shot) => shot.id),
       ["shot:beat-2", "shot:beat-10"],
     );
   } finally {

@@ -284,12 +284,57 @@ export interface IAutoMovieValidateOutput {
 }
 
 /** Commit tool result. */
+/**
+ * A compact identity digest of a slate — which slices exist, by id (#1132).
+ * Tool returns carry this instead of echoing whole artifacts: state belongs to
+ * the read side (`getSlate`/`getShot`/`nextSteps`), and a full-slate echo on
+ * every write cost thousands of tokens per call while tempting callers to trust
+ * a possibly-stale snapshot over current truth.
+ */
+export interface IAutoMovieMcpSlateDigest {
+  /** Whether a script is committed. */
+  script: boolean;
+
+  /** Whether a staged scene is committed. */
+  scene: boolean;
+
+  /** Committed shot ids. */
+  shots: string[];
+
+  /** Committed beat-end beats. */
+  beatEnds: string[];
+
+  /** Open review note count. */
+  notes: number;
+
+  /** Whether the assembled film is committed. */
+  film: boolean;
+
+  /**
+   * What this call's invalidation cascade cleared, as slice labels (`"film"`,
+   * `"notes"`, `"shot:<beat>"`, `"beatEnd:<beat>"`, ...). Empty when nothing
+   * downstream was invalidated (including every refusal).
+   */
+  cleared: string[];
+}
+
 export interface IAutoMovieCommitOutput {
-  /** True only when the input artifact was written into the returned slate. */
+  /**
+   * True only when the input artifact was persisted. Always equal to
+   * `validation.success` — the one-word answer, not a second status channel.
+   */
   committed: boolean;
 
-  /** Updated slate on success; the unchanged input slate on failure. */
-  slate: IAutoMovieMcpWritableSlate;
+  /** The slate's identity digest after this call (unchanged on refusal). */
+  state: IAutoMovieMcpSlateDigest;
+
+  /**
+   * The transformed slate — present ONLY for explicit-slate calls, where the
+   * tool is a pure transform and the return IS the product (#1132). Resident
+   * calls omit it: the project files are the truth, read via `getSlate` /
+   * `getShot` / `nextSteps` instead of trusting a per-write echo.
+   */
+  slate?: IAutoMovieMcpWritableSlate;
 
   /** Success or field-located violations explaining why commit was refused. */
   validation: IAutoMovieValidation;
@@ -949,8 +994,8 @@ export interface IAutoMovieEraseOutput {
   /** True only when the named artifact existed and was removed. */
   erased: boolean;
 
-  /** The resident slate after the erase (unchanged when refused). */
-  slate: IAutoMovieMcpWritableSlate;
+  /** The resident slate's identity digest after the erase (#1132). */
+  state: IAutoMovieMcpSlateDigest;
 
   /** Success, or the violations explaining why the erase was refused. */
   validation: IAutoMovieValidation;
@@ -966,8 +1011,8 @@ export interface IAutoMovieSetOutput {
   /** True only when the named target existed and was replaced. */
   updated: boolean;
 
-  /** The resident slate after the set (unchanged when refused). */
-  slate: IAutoMovieMcpWritableSlate;
+  /** The resident slate's identity digest after the set (#1132). */
+  state: IAutoMovieMcpSlateDigest;
 
   /** Success, or the violations explaining why the set was refused. */
   validation: IAutoMovieValidation;

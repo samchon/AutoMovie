@@ -166,7 +166,7 @@ export const test_mcp_set_actor_performance = (): void => {
     );
     TestValidator.equals(
       "malformed request keeps both shots",
-      malformedRequest.slate.shots.map((entry) => entry.id),
+      malformedRequest.state.shots,
       ["shot:beat-1", "shot:beat-2"],
     );
 
@@ -234,7 +234,7 @@ export const test_mcp_set_actor_performance = (): void => {
       JSON.parse(fs.readFileSync(notesFile, "utf8")),
       [notes[1]],
     );
-    TestValidator.equals("film cleared", updated.slate.film, null);
+    TestValidator.equals("film cleared", updated.state.film, false);
 
     // 2. The motions registry gates the reference.
     const parry = {

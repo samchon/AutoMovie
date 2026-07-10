@@ -102,8 +102,8 @@ export const test_mcp_erase_notes = (): void => {
     );
     TestValidator.equals(
       "malformed request keeps notes",
-      malformedRequest.slate.notes.map((note) => note.beat),
-      ["beat-1", "beat-2"],
+      malformedRequest.state.notes,
+      2,
     );
 
     const erased = app.eraseNotes({
@@ -113,7 +113,7 @@ export const test_mcp_erase_notes = (): void => {
     TestValidator.equals("erase applies", erased.erased, true);
     TestValidator.equals(
       "only beat-2's note remains",
-      erased.slate.notes.map((note) => note.beat),
+      app.getNotes({}).notes.map((note) => note.beat),
       ["beat-2"],
     );
     const onDisk = JSON.parse(
@@ -149,7 +149,7 @@ export const test_mcp_erase_notes = (): void => {
     );
     TestValidator.equals(
       "refused erase changes nothing",
-      noReason.slate.notes.map((note) => note.beat),
+      app.getNotes({}).notes.map((note) => note.beat),
       ["beat-2"],
     );
   } finally {
