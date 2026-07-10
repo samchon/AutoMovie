@@ -66,15 +66,13 @@ export class GeometryService {
       "getResolvedPose",
     );
     assertGeometryContextShape(source.context, source.root);
-    return {
-      resolvedPose: resolveActorGeometry(
-        source.context,
-        props.actor,
-        t,
-        source.root,
-        source.resident ? { caller: "getResolvedPose" } : undefined,
-      ),
-    };
+    return resolveActorGeometry(
+      source.context,
+      props.actor,
+      t,
+      source.root,
+      source.resident ? { caller: "getResolvedPose" } : undefined,
+    );
   }
 
   public getReach(props: {
@@ -90,20 +88,30 @@ export class GeometryService {
       "getReach",
     );
     assertGeometryContextShape(source.context, source.root);
-    const actor = findActorRig(
+    const found = findActorRig(
       source.context,
       props.actor,
       source.root,
       source.resident ? { caller: "getReach" } : undefined,
     );
-    if (actor === null) return { reach: null };
+    if (found.actor === null) return { reach: null, reason: found.reason };
+    const actor = found.actor;
     const target = resolveRuntimeSafeTargetPoint(
       props.target,
       nodePositions(source.context.scene, `${source.root}.scene`),
     );
-    if (target === null) return { reach: null };
+    if (target === null)
+      return {
+        reach: null,
+        reason:
+          "the target is not positional — direction/offscreen targets carry no world point; use a node, point, or group target",
+      };
     const localTarget = toModelPoint(target, actor.node.transform);
-    if (localTarget === null) return { reach: null };
+    if (localTarget === null)
+      return {
+        reach: null,
+        reason: `actor "${props.actor}" has a degenerate node scale; its transform cannot drop the target into model space`,
+      };
     const left = measureArmReach(actor.skeleton, "left", localTarget);
     const right = measureArmReach(actor.skeleton, "right", localTarget);
     return {
@@ -114,6 +122,7 @@ export class GeometryService {
         right,
         reachable: Boolean(left?.reachable || right?.reachable),
       },
+      reason: null,
     };
   }
 
@@ -128,7 +137,15 @@ export class GeometryService {
     const nodes = nodePositions(source.scene, source.root);
     const from = resolveRuntimeSafeTargetPoint(props.from, nodes);
     const to = resolveRuntimeSafeTargetPoint(props.to, nodes);
+    const missing = [
+      ...(from === null ? ["from"] : []),
+      ...(to === null ? ["to"] : []),
+    ];
     return {
+      reason:
+        missing.length === 0
+          ? null
+          : `the ${missing.join(" and ")} target${missing.length > 1 ? "s are" : " is"} not positional — direction/offscreen targets carry no world point`,
       measurement:
         from === null || to === null
           ? null
@@ -213,11 +230,6 @@ type GeometryActor = {
   node: IAutoMovieScene["nodes"][number];
   model: IAutoMovieMcpGeometryModel;
   skeleton: IAutoMovieSkeleton;
-};
-
-type ActorPoseState = {
-  pose: IAutoMoviePose;
-  motion: string | null;
 };
 
 const assertGeometryRequestRoot = (props: unknown): void => {
@@ -309,10 +321,14 @@ const resolveActorGeometry = (
   t: number,
   root: string,
   contract?: ResidentGeometryContract,
-): IAutoMovieMcpResolvedPose | null => {
+): {
+  resolvedPose: IAutoMovieMcpResolvedPose | null;
+  reason: string | null;
+} => {
   assertFiniteTime(t);
-  const actorRig = findActorRig(context, actor, root, contract);
-  if (actorRig === null) return null;
+  const found = findActorRig(context, actor, root, contract);
+  if (found.actor === null) return { resolvedPose: null, reason: found.reason };
+  const actorRig = found.actor;
   const state = resolveActorPose(
     context,
     actorRig.node,
@@ -321,15 +337,20 @@ const resolveActorGeometry = (
     root,
     contract,
   );
-  if (state === null) return null;
+  if (state.pose === null) return { resolvedPose: null, reason: state.reason };
   return {
-    node: actor,
-    model: actorRig.model.id,
-    motion: state.motion,
-    t,
-    pose: state.pose,
-    bones: resolvePose(state.pose, actorRig.skeleton, HUMANOID_JOINT_AXES).map(
-      (bone) => ({
+    reason: null,
+    resolvedPose: {
+      node: actor,
+      model: actorRig.model.id,
+      motion: state.motion,
+      t,
+      pose: state.pose,
+      bones: resolvePose(
+        state.pose,
+        actorRig.skeleton,
+        HUMANOID_JOINT_AXES,
+      ).map((bone) => ({
         bone: bone.bone,
         localRotation: bone.localRotation,
         worldPosition: applyTransformPoint(
@@ -340,8 +361,8 @@ const resolveActorGeometry = (
           actorRig.node.transform.rotation,
           bone.worldRotation,
         ),
-      }),
-    ),
+      })),
+    },
   };
 };
 
@@ -352,7 +373,11 @@ const resolveActorPose = (
   t: number,
   root: string,
   contract?: ResidentGeometryContract,
-): ActorPoseState | null => {
+): {
+  motion: string | null;
+  pose: IAutoMoviePose | null;
+  reason: string | null;
+} => {
   const performance =
     context.shot === undefined || context.shot === null
       ? null
@@ -364,8 +389,14 @@ const resolveActorPose = (
       throw new Error(
         `${contract.caller} cannot sample resident motion "${motionId}" for actor "${node.id}". Project files persist shot motion ids, not compiled motion clips; call commitShot with motions in this application session or pass context explicitly.`,
       );
-    if (motion === null) return null;
+    if (motion === null)
+      return {
+        motion: motionId,
+        pose: null,
+        reason: `motion "${motionId}" for actor "${node.id}" is not in the motions registry — add it to context.motions or fix the reference`,
+      };
     return {
+      reason: null,
       motion: motionId,
       pose: sampleMotion(
         toEngineMotion(motion),
@@ -374,6 +405,7 @@ const resolveActorPose = (
     };
   }
   return {
+    reason: null,
     motion: null,
     pose: node.pose ?? { skeleton: skeleton.id, root: null, joints: [] },
   };
@@ -384,16 +416,29 @@ const findActorRig = (
   actor: string,
   root: string,
   contract?: ResidentGeometryContract,
-): GeometryActor | null => {
+): { actor: GeometryActor | null; reason: string | null } => {
   const node = findSceneNode(context.scene, actor, `${root}.scene.nodes`);
-  if (node === null) return null;
+  if (node === null)
+    return {
+      actor: null,
+      reason: `actor "${actor}" is not a scene node — check the scene's node ids`,
+    };
   const model = findGeometryModel(context.models, node.model, `${root}.models`);
   if (model === null && contract !== undefined)
     throw new Error(
       `${contract.caller} cannot resolve resident model "${node.model}" for actor "${actor}". Project files persist the scene, but not cast model skeleton payloads; call commitScene with models in this application session or pass context explicitly.`,
     );
-  if (model === null || model.skeleton === null) return null;
-  return { node, model, skeleton: model.skeleton };
+  if (model === null)
+    return {
+      actor: null,
+      reason: `actor "${actor}" places model "${node.model}", which is not in the models list`,
+    };
+  if (model.skeleton === null)
+    return {
+      actor: null,
+      reason: `model "${model.id}" carries no skeleton — rig queries need a skeletal model`,
+    };
+  return { actor: { node, model, skeleton: model.skeleton }, reason: null };
 };
 
 type ResidentGeometryContract = {

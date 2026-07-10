@@ -405,6 +405,44 @@ export const test_mcp_geometry_query_tools = (): void => {
       ["$input.context.shot.performances", "array"],
     ),
   );
+  const reasonOf = (output: { reason: string | null }): string =>
+    output.reason ?? "";
+  const pointTarget = {
+    kind: "point",
+    point: { x: 2, y: 0, z: 2 },
+  } as const;
+  TestValidator.predicate(
+    "null geometry answers carry a diagnosing reason (#994)",
+    reasonOf(
+      app.getReach({ context, actor: "ghost", target: pointTarget }),
+    ).includes("not a scene node") &&
+      reasonOf(
+        app.getReach({
+          context,
+          actor: "actor",
+          target: { kind: "direction", headingDeg: 90 },
+        }),
+      ).includes("not positional") &&
+      reasonOf(
+        app.getReach({ context, actor: "marker", target: pointTarget }),
+      ).includes("carries no skeleton") &&
+      reasonOf(
+        app.getResolvedPose({
+          context: { ...context, motions: {} },
+          actor: "actor",
+        }),
+      ).includes("not in the motions registry") &&
+      reasonOf(
+        app.measureDistance({
+          scene,
+          from: { kind: "direction", headingDeg: 0 },
+          to: { kind: "node", node: "marker" },
+        }),
+      ).includes("from target is not positional") &&
+      app.getReach({ context, actor: "actor", target: pointTarget }).reason ===
+        null,
+  );
+
   TestValidator.predicate(
     "an empty motion clip rejects with a structured path, not a sampleMotion throw",
     throwsError(
