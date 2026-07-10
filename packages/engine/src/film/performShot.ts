@@ -773,9 +773,15 @@ export const performShot = (props: {
         if (b0 >= a1 - 1e-9) break;
         const bRegion = actionRegion(b.action);
         const sameRegionConflict = aRegion === bRegion;
+        // `face` carries EXPRESSION only — no gesture clip authors it, so a
+        // fullBody action shares zero content with an overlapping emote and
+        // "smile while bowing" must stay legal (#1062). `head` stays in the
+        // conflict: whole-body clips may author head/neck joints.
         const fullBodyConflict =
           aRegion !== bRegion &&
-          (aRegion === "fullBody" || bRegion === "fullBody");
+          (aRegion === "fullBody" || bRegion === "fullBody") &&
+          aRegion !== "face" &&
+          bRegion !== "face";
         if (sameRegionConflict && b1 > a0 + 1e-9)
           out.push(
             "range",
