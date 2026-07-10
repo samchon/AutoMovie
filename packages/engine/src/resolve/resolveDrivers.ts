@@ -220,7 +220,7 @@ const applyDriven = (
   d: IAutoMovieDrivenDriver,
   sampled: Map<string, IAutoMovieSampledChannel>,
 ): void => {
-  validateDrivenOutputChannel(d.output);
+  validateDrivenOutputChannel(d.output, sampled);
   const src = sampled.get(channelKey(d.source));
   const source =
     src !== undefined ? readDrivenSourceValue(src.value) : undefined;
@@ -235,17 +235,33 @@ const applyDriven = (
 /**
  * A driven driver computes ONE scalar (the interface contract: "one scalar
  * channel computed from another"), so its output must be a scalar-width
- * channel. Writing the width-1 result onto a node TRS channel would compose
- * `[y, undefined, undefined, ...]` into world matrices downstream — silent NaN
- * poisoning, no violation (#1055) — and node `weights` is variable-width
- * (address a single morph via a scalar JSON pointer instead). Mirrors the width
- * gate `readDrivenSourceValue` applies to the source.
+ * channel. Node TRS channels are rejected outright: composing `[y]` into world
+ * matrices downstream is silent NaN poisoning with no violation (#1055). Node
+ * `weights` is variable-width, so it is judged by the width actually in play
+ * (#1100): an already-sampled multi-morph array must not be narrowed to `[y]`,
+ * while a width-1 array — or an unsampled channel, where the driver CREATES the
+ * scalar weights exactly as a width-1 clip track would — is the classic
+ * single-morph corrective driver and folds into `resolveFrame`'s weights. (A
+ * scalar JSON pointer is NOT a remedy for in-engine consumers: pointer channels
+ * never fold into node outputs.) Mirrors the width gate `readDrivenSourceValue`
+ * applies to the source.
  */
-const validateDrivenOutputChannel = (output: IAutoMovieChannel): void => {
-  if (output.kind === "node")
-    throw new Error(
-      `driven driver output must be a scalar channel, but addressed node "${output.node}" ${output.path} (use a scalar JSON pointer to drive a single component)`,
-    );
+const validateDrivenOutputChannel = (
+  output: IAutoMovieChannel,
+  sampled: Map<string, IAutoMovieSampledChannel>,
+): void => {
+  if (output.kind === "node") {
+    if (output.path !== "weights")
+      throw new Error(
+        `driven driver output must be a scalar channel, but addressed node "${output.node}" ${output.path}; a width-1 write into a TRS channel would NaN-poison the composed world matrices`,
+      );
+    const existing = sampled.get(channelKey(output));
+    if (existing !== undefined && existing.value.length !== 1)
+      throw new Error(
+        `driven driver output "node:${output.node}:weights" must stay scalar-width, but the sampled weights carry ${existing.value.length} morph targets — a scalar write would silently narrow them`,
+      );
+    return;
+  }
   if (output.valueType !== "scalar")
     throw new Error(
       `driven driver output must be a scalar channel, but pointer "${output.pointer}" has valueType "${output.valueType}"`,
