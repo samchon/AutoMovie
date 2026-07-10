@@ -154,6 +154,15 @@ export interface IAutoMovieMcpGeometryModel {
   skeleton: IAutoMovieSkeleton | null;
 }
 
+/** The `getShotEndState` query result. */
+export interface IAutoMovieGetShotEndStateOutput {
+  /** The engine-derived resumable end-state, ready for `commitBeatEnd`. */
+  beatEnd: IAutoMovieBeatEndState | null;
+
+  /** Why derivation failed when `beatEnd` is null; null on success. */
+  reason: string | null;
+}
+
 /** The `getResolvedPose` query result. */
 export interface IAutoMovieGetResolvedPoseOutput {
   /** Actor pose resolved into world-space bone transforms, or null. */
