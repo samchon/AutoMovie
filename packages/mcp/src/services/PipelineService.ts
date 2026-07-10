@@ -1722,14 +1722,17 @@ const validateActorRig = (
   });
   // Graph analysis is only meaningful over structurally clean, unique rows.
   if (violations.length > before) return;
+  // Zero roots is a guaranteed cycle; N>1 roots is a rig the ENGINE accepts
+  // (resolvePose walks every null-parent root), so the boundary must not be
+  // stricter than what it protects (#1063).
   const roots = entries.filter((entry) => entry.parent === null);
-  if (roots.length !== 1) {
+  if (roots.length === 0) {
     violations.push(
       violation(
         "type",
         `${path}.bones`,
-        `actor rig needs exactly one root bone (parent: null), but found ${roots.length}`,
-        roots.map((root) => root.bone),
+        "actor rig needs at least one root bone (parent: null), but found none",
+        entries.map((entry) => entry.bone),
       ),
     );
     return;
@@ -1753,8 +1756,8 @@ const validateActorRig = (
     if (list === undefined) children.set(entry.parent, [entry.bone]);
     else list.push(entry.bone);
   }
-  const reached = new Set<string>([roots[0]!.bone]);
-  const queue = [roots[0]!.bone];
+  const reached = new Set<string>(roots.map((root) => root.bone));
+  const queue = roots.map((root) => root.bone);
   while (queue.length > 0) {
     const bone = queue.pop()!;
     for (const child of children.get(bone) ?? [])
@@ -1769,7 +1772,7 @@ const validateActorRig = (
         violation(
           "type",
           `${path}.bones[${entry.index}]`,
-          `actor rig bone "${entry.bone}" is not reachable from the root (a parent cycle)`,
+          `actor rig bone "${entry.bone}" is not reachable from a root (a parent cycle)`,
           entry.bone,
         ),
       );

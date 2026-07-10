@@ -658,6 +658,20 @@ export const test_mcp_perform_tool = (): void => {
       `${rigRoot}.bones`,
     ),
   );
+  // the engine walks EVERY null-parent root (resolvePose), so the boundary
+  // must accept a multi-root rig it would otherwise refuse (#1063)
+  TestValidator.predicate(
+    "a two-root rig the engine accepts passes the boundary",
+    !hasGaitViolation(
+      rigProbe([
+        rigBone("hips", null),
+        rigBone("spine", "hips"),
+        rigBone("prop", null),
+      ]),
+      "type",
+      `${rigRoot}.bones`,
+    ),
+  );
   const cyclic = rigProbe([
     rigBone("hips", null),
     rigBone("spine", "chest"),
