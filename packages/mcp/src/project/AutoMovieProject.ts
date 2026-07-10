@@ -188,8 +188,19 @@ export class AutoMovieProject {
    * and empty lists remove their files, per-beat slices add/replace/remove by
    * presence — exactly the invalidation cascade the commit tools perform on the
    * slate, made visible as files.
+   *
+   * Every keyed slice's case-collision guard (#1011) runs BEFORE the first file
+   * is touched (#1096): a mid-save throw used to leave the non-keyed slices
+   * already rewritten — a half-persisted slate behind a raw error.
+   * All-or-nothing: either every slice writes or none does.
    */
   public saveSlate(slate: IAutoMovieMcpWritableSlate): void {
+    const shots = new Map(
+      slate.shots.map((shot) => [beatOf(shot.id) ?? shot.id, shot]),
+    );
+    const beatEnds = new Map(slate.beatEnds.map((end) => [end.beat, end]));
+    assertNoCaseCollisions("shots", shots.keys());
+    assertNoCaseCollisions("beatEnds", beatEnds.keys());
     this.writeOrRemove("script.json", slate.script);
     this.writeOrRemove("scene.json", slate.scene);
     this.writeOrRemove("film.json", slate.film);
@@ -197,14 +208,8 @@ export class AutoMovieProject {
       "notes.json",
       slate.notes.length === 0 ? null : slate.notes,
     );
-    this.reconcileBeatSlices(
-      "shots",
-      new Map(slate.shots.map((shot) => [beatOf(shot.id) ?? shot.id, shot])),
-    );
-    this.reconcileBeatSlices(
-      "beatEnds",
-      new Map(slate.beatEnds.map((end) => [end.beat, end])),
-    );
+    this.reconcileBeatSlices("shots", shots);
+    this.reconcileBeatSlices("beatEnds", beatEnds);
   }
 
   /** The stored prop specs, one per `props/<node>.json`, in filename order. */
@@ -354,20 +359,9 @@ export class AutoMovieProject {
     byBeat: ReadonlyMap<string, unknown>,
   ): void {
     const base = path.join(this.root, dir);
-    // Keys whose filenames differ only by case would silently clobber each
-    // other on a case-insensitive filesystem and then wedge the next read
-    // with a filename/internal-key mismatch (#1011) — refuse before touching
-    // the directory.
-    const byLowerName = new Map<string, string>();
-    for (const key of byBeat.keys()) {
-      const lower = sliceFilename(key).toLowerCase();
-      const prior = byLowerName.get(lower);
-      if (prior !== undefined)
-        throw new Error(
-          `${dir} ids "${prior}" and "${key}" collide case-insensitively as "${sliceFilename(key)}"; case-insensitive filesystems would silently clobber one — rename one id`,
-        );
-      byLowerName.set(lower, key);
-    }
+    // Belt-and-braces: saveSlate already asserted this before any write
+    // (#1096); keep the guard here too so no other caller can clobber.
+    assertNoCaseCollisions(dir, byBeat.keys());
     const wanted = new Set([...byBeat.keys()].map(sliceFilename));
     for (const name of fs.readdirSync(base))
       if (name.endsWith(".json") && !wanted.has(name))
@@ -469,6 +463,25 @@ const sliceFilename = (key: string): string => {
       .toUpperCase()
       .padStart(2, "0")}${encoded.slice(1)}`;
   return `${encoded}.json`;
+};
+
+/**
+ * Keys whose slice filenames differ only by case would silently clobber each
+ * other on a case-insensitive filesystem and then wedge the next read with a
+ * filename/internal-key mismatch (#1011) — refuse instead. Runs before any file
+ * is touched (#1096) so a refused slate persists nothing.
+ */
+const assertNoCaseCollisions = (dir: string, keys: Iterable<string>): void => {
+  const byLowerName = new Map<string, string>();
+  for (const key of keys) {
+    const lower = sliceFilename(key).toLowerCase();
+    const prior = byLowerName.get(lower);
+    if (prior !== undefined)
+      throw new Error(
+        `${dir} ids "${prior}" and "${key}" collide case-insensitively as "${sliceFilename(key)}"; case-insensitive filesystems would silently clobber one — rename one id`,
+      );
+    byLowerName.set(lower, key);
+  }
 };
 
 /** Order per-beat slices by their stored filename (readKeyedSlices' order). */
