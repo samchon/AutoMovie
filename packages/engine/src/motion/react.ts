@@ -27,7 +27,10 @@ export const reactMotion = (
   push: IAutoMovieRecoilPush,
   chain: AutoMovieHumanoidBone[],
   duration: number,
-  peak = 0.16,
+  // The default peak scales down for a quick flinch: a fixed 0.16 s would
+  // reject every legitimate sub-0.16 s duration outright (peak >= duration),
+  // while durations >= 0.4 s keep the exact 0.16 s snap.
+  peak = Math.min(0.16, duration * 0.4),
 ): IAutoMovieMotion => {
   if (!Number.isFinite(duration))
     throw new Error("react duration must be finite and positive");

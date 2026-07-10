@@ -53,6 +53,11 @@ const throws = (task: () => void): boolean => {
  *    clamps to its −30° minimum), and an unconstrained bone (chest) takes the
  *    full attenuated push (−200 × 0.6).
  * 3. The clip starts and ends at the neutral rest pose.
+ * 4. Invalid explicit timing rejects: non-positive/NaN durations, and explicit
+ *    peaks outside (0, duration).
+ * 5. The DEFAULT peak scales to the duration: a 0.1 s quick flinch peaks at 0.04 s
+ *    instead of rejecting outright, while a 0.5 s react keeps the exact 0.16 s
+ *    snap (bit-identical to the old fixed default).
  */
 export const test_motion_react = (): void => {
   const clip = reactMotion(
@@ -119,10 +124,21 @@ export const test_motion_react = (): void => {
       }),
     );
 
+  // 5. the default peak scales to a quick flinch instead of rejecting it
+  const quick = reactMotion(
+    "short",
+    skeleton,
+    { flexion: -10 },
+    ["spine"],
+    0.1,
+  );
   TestValidator.predicate(
-    "default peak after short duration rejects",
-    throws(() => {
-      reactMotion("short", skeleton, { flexion: -10 }, ["spine"], 0.1);
-    }),
+    "a 0.1 s duration scales the default peak to 0.04",
+    nclose(quick.keyframes[1]!.time, 0.04) && nclose(quick.duration, 0.1),
+  );
+  const long = reactMotion("long", skeleton, { flexion: -10 }, ["spine"], 0.5);
+  TestValidator.predicate(
+    "durations ≥ 0.4 s keep the exact 0.16 s default peak",
+    nclose(long.keyframes[1]!.time, 0.16),
   );
 };
