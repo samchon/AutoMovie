@@ -81,7 +81,11 @@ export const fitProfileAmplitude = (props: {
       pairs.push([a, b]);
       n++;
     }
-    if (n < 15) continue;
+    // saa === 0 means every sampled midline depth is 0 (flat detection) —
+    // there is no amplitude to solve for, and the 0/0 alpha would ride NaN
+    // past both the best-rms comparison and the clamp (every comparison
+    // with NaN is false), poisoning the calibrated face in silence (#1043).
+    if (n < 15 || saa === 0) continue;
     const alpha = sab / saa;
     let res = 0;
     for (const [a, b] of pairs) res += (alpha * a - b) ** 2;
@@ -89,7 +93,9 @@ export const fitProfileAmplitude = (props: {
     if (best === null || rms < best.rms) best = { alpha, rowScale, rms };
   }
   if (best === null)
-    throw new Error("profile span too short to calibrate (need 15 row pairs)");
+    throw new Error(
+      "profile span too short to calibrate (need 15 row pairs with non-flat midline depth)",
+    );
   best.alpha = Math.max(0.2, Math.min(1.5, best.alpha));
   return best;
 };
