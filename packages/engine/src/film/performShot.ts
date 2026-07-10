@@ -952,6 +952,13 @@ export const performShot = (props: {
         actionIndex: job.index,
       })),
     );
+    // The injected react stays EXEMPT from the region-overlap gate (#1003
+    // decision): the engine schedules it at a computed hit instant the model
+    // cannot know, and the flagship idiom is a MOVING target — rejecting the
+    // overlap would make `onHit` unusable exactly where it matters. The
+    // layering envelope bounds its blend to the flinch window, so the
+    // disruption reads as the hit interrupting the stride, not as a
+    // shot-long dilution.
     if (result.react !== null) stageActions.push(result.react);
   }
   if (out.items.length > 0) return { success: false, violations: out.items };
