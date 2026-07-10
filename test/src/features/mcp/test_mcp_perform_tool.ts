@@ -95,6 +95,11 @@ const riglessContext = (
  *     cycles (reported as unreachable bones) fail at `$input.actors.<node>.rig`
  *     paths instead of leaking `computeRestHeight` throws; malformed bone
  *     entries fail on shape before graph analysis runs.
+ * 14. Staged runtime-safety: non-finite staged node translation components fail at
+ *     `$input.staged.scene.nodes[i].transform.translation.{x,y,z}` before
+ *     target resolution feeds them to aim/launch math, and malformed mount
+ *     entries fail at `$input.staged.mounts[i]...` before `coupleObjects`
+ *     dereferences the binding.
  */
 export const test_mcp_perform_tool = (): void => {
   const app = new AutoMovieApplication();
@@ -753,6 +758,75 @@ export const test_mcp_perform_tool = (): void => {
       force: 0.5,
     }).success,
     true,
+  );
+
+  const stagedProbe = (
+    override: Partial<typeof staged>,
+  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+    app.perform({
+      script,
+      staged: { ...staged, ...override } as typeof staged,
+      performance,
+      actors: {
+        knightA: context(nodePosition("knightA"), 0),
+        knightB: context(nodePosition("knightB"), 180),
+      },
+    }).performed;
+
+  const infiniteNode = stagedProbe({
+    scene: {
+      ...staged.scene,
+      nodes: [
+        {
+          ...staged.scene.nodes[0]!,
+          transform: {
+            ...staged.scene.nodes[0]!.transform,
+            translation: { x: Number.POSITIVE_INFINITY, y: 0, z: 0 },
+          },
+        },
+        ...staged.scene.nodes.slice(1),
+      ],
+    },
+  });
+  TestValidator.predicate(
+    "a non-finite staged node translation fails at its component path",
+    hasGaitViolation(
+      infiniteNode,
+      "type",
+      "$input.staged.scene.nodes[0].transform.translation.x",
+    ),
+  );
+
+  const malformedMount = stagedProbe({
+    mounts: [
+      null,
+      { node: "", binding: { parent: null, bone: "" } },
+      { node: "rider", binding: null },
+    ] as unknown as typeof staged.mounts,
+  });
+  TestValidator.predicate(
+    "malformed mount entries fail at their submitted paths",
+    hasGaitViolation(malformedMount, "type", "$input.staged.mounts[0]") &&
+      hasGaitViolation(
+        malformedMount,
+        "type",
+        "$input.staged.mounts[1].node",
+      ) &&
+      hasGaitViolation(
+        malformedMount,
+        "type",
+        "$input.staged.mounts[1].binding.parent",
+      ) &&
+      hasGaitViolation(
+        malformedMount,
+        "type",
+        "$input.staged.mounts[1].binding.bone",
+      ) &&
+      hasGaitViolation(
+        malformedMount,
+        "type",
+        "$input.staged.mounts[2].binding",
+      ),
   );
 
   const missingGait = app.perform({
