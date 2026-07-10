@@ -232,6 +232,27 @@ export class AutoMovieProject {
     );
   }
 
+  /**
+   * The stored prop id whose slice filename collides case-insensitively with
+   * `node`'s while the id itself differs — the sibling a case-insensitive
+   * filesystem's upsert rename would silently destroy (#1093, the prop twin of
+   * the #1011 beat-slice guard). `null` when no such sibling exists: an exact
+   * id match is the ordinary upsert, not a collision.
+   */
+  public propCaseCollision(node: string): string | null {
+    const target = sliceFilename(node);
+    const lower = target.toLowerCase();
+    const base = path.join(this.root, "props");
+    for (const name of fs.readdirSync(base))
+      if (
+        name.endsWith(".json") &&
+        name.toLowerCase() === lower &&
+        name !== target
+      )
+        return sliceKeyFromFilename(path.join(base, name), name);
+    return null;
+  }
+
   /** Remove ONE stored prop spec's file; the caller checks existence first. */
   public removeProp(node: string): void {
     const file = path.join(this.root, "props", sliceFilename(node));

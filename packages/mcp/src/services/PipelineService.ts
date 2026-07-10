@@ -211,6 +211,14 @@ export class PipelineService {
    * deliberate: a FIRST forge of an as-yet-unstored node creates the spec shots
    * need rather than replacing one, so it always stores even if the scene
    * already names the node — only a REPLACEMENT of a placed prop stales.
+   *
+   * **A case-variant of a stored node id is refused (#1093).** On a
+   * case-insensitive filesystem `props/Door.json` and `props/door.json` are one
+   * file, so the upsert rename would silently destroy the sibling's spec while
+   * the exact-id guards above never fire — the prop twin of the #1011
+   * beat-slice clobber. The refusal is platform-independent (a project must
+   * stay portable to case-insensitive filesystems) and locates
+   * `$input.spec.node`.
    */
   public forgeProp(props: {
     spec: IAutoMovieMcpPropSpec;
@@ -238,6 +246,26 @@ export class PipelineService {
     if (project === null) return output;
 
     const node = props.spec.node;
+    // A node id differing from a stored sibling's only by case shares its
+    // slice filename on a case-insensitive filesystem: the upsert rename
+    // would silently destroy the sibling's spec — and the exact-id guards
+    // below would never fire (#1093, the prop twin of the #1011 beat-slice
+    // clobber). Refuse before touching the directory, on every platform, so
+    // a project stays portable to case-insensitive filesystems.
+    const collision = project.propCaseCollision(node);
+    if (collision !== null)
+      return {
+        ...output,
+        stored: false,
+        validation: toValidation([
+          violation(
+            "type",
+            "$input.spec.node",
+            `prop node "${node}" collides case-insensitively with stored prop "${collision}"; storing it would silently destroy "${collision}" — rename the node or erase the sibling first`,
+            node,
+          ),
+        ]),
+      };
     const alreadyStored = project.storedProps().some((s) => s.node === node);
     const scene = project.storedSlate().scene;
     const placed =
