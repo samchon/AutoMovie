@@ -335,6 +335,10 @@ export class CommitService {
         beatEnds: slate.beatEnds.filter(
           (end) => end.beat !== preconditions.beat,
         ),
+        // Replacing the WHOLE shot clears the beat's review notes like the
+        // strictly smaller surgeries (setActorPerformance, eraseShot) already
+        // do (#1010): the notes reviewed the shot that no longer exists.
+        notes: slate.notes.filter((note) => note.beat !== preconditions.beat),
         film: null,
       }),
       resident,
