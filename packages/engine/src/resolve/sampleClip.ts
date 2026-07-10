@@ -93,7 +93,12 @@ const sampleTrack = (
   const span = times[hi]! - times[lo]!;
   const localT = (time - times[lo]!) / span;
 
-  if (interpolation === "step") return valueAt(lo);
+  // glTF STEP holds v_k for t_k <= t < t_{k+1}: an EXACT hit on the right key
+  // (the bisect tie resolves it into the segment ENDING there, localT = 1)
+  // belongs to the segment STARTING at that key (#1054). The fixed sampling
+  // clock lands exactly on frame-aligned keys, so without this every step
+  // change played one sample late — and asymmetrically to `ease("step", 1)`.
+  if (interpolation === "step") return localT >= 1 ? valueAt(hi) : valueAt(lo);
   if (cubic) return cubicHermite(track, lo, hi, span, localT, width, stride);
   return channelIsRotation(channel)
     ? slerpArray(valueAt(lo), valueAt(hi), localT)
