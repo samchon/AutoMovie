@@ -65,7 +65,9 @@ export class AutoMoviePlayer {
     >,
     /**
      * When true, clamp each sampled pose into the skeleton's ROM before it is
-     * applied — joints can no longer exceed their anatomical limits.
+     * applied — and again AFTER the secondary-motion springs, which overshoot
+     * by design (#1048) — so joints can no longer exceed their anatomical
+     * limits.
      */
     private readonly clampToRom = false,
     /** Secondary-motion joints (tail, ears) driven with follow-through. */
@@ -98,7 +100,14 @@ export class AutoMoviePlayer {
     let pose = this.clampToRom
       ? clampPose(sample.pose, this.skeleton)
       : sample.pose;
-    if (this.spring !== undefined) pose = this.applySpring(pose, seconds);
+    if (this.spring !== undefined) {
+      pose = this.applySpring(pose, seconds);
+      // dampedSpring overshoots by design (ζ<1), so the pre-spring clamp
+      // alone rendered poses past the promised limits (#1048). Re-clamp the
+      // OUTPUT only — the spring state keeps its overshoot and converges
+      // naturally; the render just never shows it outside the ROM.
+      if (this.clampToRom) pose = clampPose(pose, this.skeleton);
+    }
     applyPose(
       this.target,
       pose,
@@ -135,32 +144,54 @@ export class AutoMoviePlayer {
       state: ISpringStep | undefined,
       target: number | null,
     ): { angle: number | null; next: ISpringStep } => {
-      if (target === null)
-        return { angle: null, next: { value: 0, velocity: 0 } };
+      // A vanished axis DECAYS toward neutral instead of hard-resetting
+      // (#1048): follow-through settles smoothly when a keyframe segment
+      // stops authoring the joint, rather than popping to rest.
+      if (target === null) {
+        if (state === undefined || dt === 0)
+          return { angle: null, next: { value: 0, velocity: 0 } };
+        const r = dampedSpring(state.value, state.velocity, 0, params, dt);
+        return { angle: r.value, next: r };
+      }
       if (dt === 0 || state === undefined)
         return { angle: target, next: { value: target, velocity: 0 } };
       const r = dampedSpring(state.value, state.velocity, target, params, dt);
       return { angle: r.value, next: r };
     };
 
-    const joints: IAutoMovieJointPose[] = pose.joints.map((j) => {
-      if (!targets.has(j.bone)) return j;
-      const prev = this.springs.get(j.bone);
-      const f = axis(prev?.flexion, j.flexion);
-      const a = axis(prev?.abduction, j.abduction);
-      const t = axis(prev?.twist, j.twist);
-      this.springs.set(j.bone, {
+    const springJoint = (
+      bone: AutoMovieHumanoidBone,
+      j: IAutoMovieJointPose | null,
+    ): IAutoMovieJointPose => {
+      const prev = this.springs.get(bone);
+      const f = axis(prev?.flexion, j?.flexion ?? null);
+      const a = axis(prev?.abduction, j?.abduction ?? null);
+      const t = axis(prev?.twist, j?.twist ?? null);
+      this.springs.set(bone, {
         flexion: f.next,
         abduction: a.next,
         twist: t.next,
       });
-      return {
-        bone: j.bone,
-        flexion: f.angle,
-        abduction: a.angle,
-        twist: t.angle,
-      };
-    });
+      return { bone, flexion: f.angle, abduction: a.angle, twist: t.angle };
+    };
+
+    const joints: IAutoMovieJointPose[] = pose.joints.map((j) =>
+      targets.has(j.bone) ? springJoint(j.bone, j) : j,
+    );
+    // A configured joint ABSENT from the pose still decays its follow-through
+    // (#1048): the spring keeps integrating toward neutral instead of the
+    // joint vanishing mid-swing.
+    const present = new Set(pose.joints.map((j) => j.bone));
+    for (const bone of cfg.joints) {
+      if (present.has(bone) || !this.springs.has(bone)) continue;
+      const decayed = springJoint(bone, null);
+      if (
+        decayed.flexion !== null ||
+        decayed.abduction !== null ||
+        decayed.twist !== null
+      )
+        joints.push(decayed);
+    }
     return { skeleton: pose.skeleton, root: pose.root, joints };
   }
 
