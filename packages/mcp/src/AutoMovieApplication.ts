@@ -37,6 +37,7 @@ import {
   IAutoMovieGetResolvedPoseOutput,
   IAutoMovieGetSceneOutput,
   IAutoMovieGetScriptOutput,
+  IAutoMovieGetShotEndStateOutput,
   IAutoMovieGetShotOutput,
   IAutoMovieGuideDocumentOutput,
   IAutoMovieMcpActorContext,
@@ -318,6 +319,32 @@ export class AutoMovieApplication {
     target: IAutoMovieActionTarget;
   }): IAutoMovieGetReachOutput {
     return this.geometry.getReach(props);
+  }
+
+  /**
+   * Derive a beat's resumable end-state from its performed shot — the engine
+   * computation `commitBeatEnd` persists, so continuity is engine-derived
+   * instead of hand-authored. Every scene actor gets an end snapshot: held
+   * actors keep their staged placement, performed actors sample their motion at
+   * the shot end with root motion folded into the world transform, plus gait
+   * phase, root velocity, and mount couplings, so the next beat starts actors
+   * where they ended. Omit `context` to derive from the resident committed
+   * scene, the beat's committed shot, and this session's motion memory; pass
+   * staging `mounts` to carry rider couplings. A missing shot or an engine
+   * contract fault returns a `reason` instead of an end-state.
+   *
+   * @param props The geometry context (omit for resident), beat, and mounts.
+   * @returns The derived end-state ready for `commitBeatEnd`, or a reason.
+   */
+  public getShotEndState(props: {
+    /** Scene, skeletons, motions, and shot; omit for the resident project. */
+    context?: IAutoMovieMcpGeometryContext;
+    /** Beat whose shot the end-state derives from. */
+    beat: string;
+    /** Persistent mount couplings from staging, carried to rider states. */
+    mounts?: IAutoMovieStagedSet.IMount[];
+  }): IAutoMovieGetShotEndStateOutput {
+    return this.geometry.getShotEndState(props);
   }
 
   /**

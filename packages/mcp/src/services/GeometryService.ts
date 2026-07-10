@@ -1,8 +1,10 @@
 import {
   HUMANOID_JOINT_AXES,
+  IAutoMovieStagedSet,
   Quaternion,
   Vector3,
   reachPose,
+  resolveBeatEnd,
   resolvePose,
   sampleMotion,
 } from "@automovie/engine";
@@ -24,6 +26,7 @@ import { toEngineMotion } from "../convert";
 import {
   IAutoMovieGetReachOutput,
   IAutoMovieGetResolvedPoseOutput,
+  IAutoMovieGetShotEndStateOutput,
   IAutoMovieMcpArmReach,
   IAutoMovieMcpGeometryContext,
   IAutoMovieMcpGeometryModel,
@@ -124,6 +127,44 @@ export class GeometryService {
       },
       reason: null,
     };
+  }
+
+  public getShotEndState(props: {
+    context?: IAutoMovieMcpGeometryContext;
+    beat: string;
+    mounts?: IAutoMovieStagedSet.IMount[];
+  }): IAutoMovieGetShotEndStateOutput {
+    assertGeometryRequestRoot(props);
+    assertRequiredGeometryBeat(props.beat);
+    const source = this.resolveGeometryContext(
+      props.context,
+      props.beat,
+      "getShotEndState",
+    );
+    assertGeometryContextShape(source.context, source.root);
+    const shot = source.context.shot;
+    if (shot === undefined || shot === null)
+      return {
+        beatEnd: null,
+        reason: `no shot for beat "${props.beat}" — pass context.shot explicitly or commit the beat's shot first`,
+      };
+    // The remaining engine contracts (duplicate motion ids, duplicated
+    // performances/mounts) are authored-data faults a read-only derivation
+    // reports as a reason, not a raw throw across the boundary (#990).
+    try {
+      return {
+        reason: null,
+        beatEnd: resolveBeatEnd({
+          beat: props.beat,
+          scene: source.context.scene,
+          shot,
+          motions: Object.values(source.context.motions).map(toEngineMotion),
+          mounts: props.mounts,
+        }),
+      };
+    } catch (error) {
+      return { beatEnd: null, reason: String((error as Error).message) };
+    }
   }
 
   public measureDistance(props: {
@@ -230,6 +271,13 @@ type GeometryActor = {
   node: IAutoMovieScene["nodes"][number];
   model: IAutoMovieMcpGeometryModel;
   skeleton: IAutoMovieSkeleton;
+};
+
+const assertRequiredGeometryBeat = (beat: unknown): void => {
+  if (typeof beat === "string" && beat.trim().length > 0) return;
+  throw new Error(
+    "geometry query beat at $input.beat must be a non-empty string",
+  );
 };
 
 const assertGeometryRequestRoot = (props: unknown): void => {

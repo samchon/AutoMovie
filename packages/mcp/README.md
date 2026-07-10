@@ -17,7 +17,7 @@ out.
 
 ## Tools
 
-39 tools. Every stateful tool is **resident-or-explicit**: pass a `slate` for a
+40 tools. Every stateful tool is **resident-or-explicit**: pass a `slate` for a
 pure stateless call, or omit it to read/commit the resident project opened with
 `openProject`.
 
@@ -33,6 +33,7 @@ pure stateless call, or omit it to read/commit the resident project opened with
 | `getNotes` | slate + optional beat -> review notes | `readSlateContext` |
 | `getBeatEnd` | slate + beat -> beat end-state or null | `readSlateContext` |
 | `getResolvedPose` | geometry context + actor + time -> world-space bones or null | `sampleMotion` + `resolvePose` |
+| `getShotEndState` | geometry context (or resident) + beat -> resumable beat end-state, or a reason | `resolveBeatEnd` |
 | `getReach` | geometry context + actor + target -> arm reach report or null | `reachPose` |
 | `measureDistance` | scene + two targets -> distance report or null | `resolveTargetPoint` |
 | `validatePose` | pose + skeleton -> validation | `validatePose` |
