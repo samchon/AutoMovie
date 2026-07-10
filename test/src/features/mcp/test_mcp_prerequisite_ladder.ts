@@ -92,6 +92,7 @@ export const test_mcp_prerequisite_ladder = (): void => {
       throwsError(
         () =>
           app.commitFilm({
+            review: "pre-commit self-check of the cut",
             film: {
               id: "seq-1",
               name: null,
@@ -104,6 +105,7 @@ export const test_mcp_prerequisite_ladder = (): void => {
         !throwsError(
           () =>
             app.commitFilm({
+              review: "pre-commit self-check of the cut",
               film: {
                 id: "seq-1",
                 name: null,

@@ -82,7 +82,10 @@ const commitResident = (app: AutoMovieApplication): void => {
   app.commitScript({ script });
   app.commitScene({ scene, models: [] });
   app.commitShot({ shot });
-  app.commitFilm({ film: sequence });
+  app.commitFilm({
+    review: "the single-shot cut plays whole at the planned rate",
+    film: sequence,
+  });
 };
 
 /**

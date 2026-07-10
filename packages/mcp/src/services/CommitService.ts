@@ -451,8 +451,18 @@ export class CommitService {
    * then swapped in as the single film slice. Unlike the per-beat commits there
    * is no upsert key: the film is one artifact, and any upstream change clears
    * it.
+   *
+   * **The one irreversible editorial gate demands a pre-commit `review`**
+   * (#1131), the same evidence discipline every erase/set carries: the cut's
+   * authoring stage justifies pacing and continuity, but nothing forced the
+   * agent to SELF-CHECK the final cut-list against that intent before
+   * persisting it. Declared before the film payload deliberately —
+   * schema-reflected tools present properties in declaration order and the
+   * model fills them in that order, so a reasoning field ahead of the artifact
+   * it steers is chain-of-thought by construction.
    */
   public commitFilm(props: {
+    review: string;
     slate?: IAutoMovieMcpWritableSlate;
     film: IAutoMovieSequence;
   }): IAutoMovieCommitOutput {
@@ -463,6 +473,12 @@ export class CommitService {
     if (malformed !== null) return malformed;
     const { slate, resident, slateRoot } = this.base(props.slate, "commitFilm");
     const violations: IAutoMovieConstraintViolation[] = [];
+    validateNonEmptyText(
+      props.review,
+      "$input.review",
+      "film commit review",
+      violations,
+    );
     const sequenceValidation = validateSequenceArtifact(
       props.film,
       slate.shots,
@@ -475,6 +491,10 @@ export class CommitService {
         failedCommit(
           slate,
           remapCommitValidationPaths(validation, [
+            // identity rules first: remapPath applies the FIRST matching
+            // prefix, so review/slate paths must not fall through to the
+            // generic $input → $input.film rewrite below.
+            ["$input.review", "$input.review"],
             ["$input.slate", "$input.slate"],
             ["$shots", `${slateRoot}.shots`],
             ["$input", "$input.film"],

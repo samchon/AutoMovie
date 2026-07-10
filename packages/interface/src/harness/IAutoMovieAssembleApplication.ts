@@ -15,6 +15,13 @@ import { IAutoMovieContextRequest } from "./IAutoMovieContextRequest";
  * charge ends where the strike begins). Pull a sibling shot via `getContext`
  * (`getShot`) to check a match-cut rather than guess it.
  *
+ * Declaration order is part of this contract, here and in every harness type:
+ * schema-reflected tools present properties in declaration order and the model
+ * fills them in that order, so a reasoning field placed BEFORE the artifact it
+ * steers (`thinking` before `request`, `pacing`/`continuity` beside the entries
+ * they justify) is chain-of-thought by construction, not decoration. Keep
+ * reasoning fields ahead of the payloads they steer in future types.
+ *
  * @author Samchon
  */
 export interface IAutoMovieAssembleApplication {
