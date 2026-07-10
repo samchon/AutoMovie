@@ -343,8 +343,13 @@ export class CommitService {
       }),
       resident,
     );
-    if (resident && output.committed && props.motions !== undefined)
-      this.context!.rememberGeometryMotions(props.motions);
+    if (
+      resident &&
+      output.committed &&
+      props.motions !== undefined &&
+      preconditions.beat !== null
+    )
+      this.context!.rememberGeometryMotions(props.motions, preconditions.beat);
     return output;
   }
 
@@ -801,7 +806,7 @@ export class CommitService {
     };
     project.saveSlate(next);
     if (props.motions !== undefined)
-      this.context!.rememberGeometryMotions(props.motions);
+      this.context!.mergeGeometryMotions(props.motions, props.beat);
     return { updated: true, slate: next, validation: { success: true } };
   }
 
