@@ -23,6 +23,7 @@ import {
   IAutoMovieEraseOutput,
   IAutoMovieMcpGeometryModel,
   IAutoMovieMcpMotion,
+  IAutoMovieMcpSlateDigest,
   IAutoMovieMcpTransform,
   IAutoMovieMcpWritableSlate,
   IAutoMoviePropEraseOutput,
@@ -100,20 +101,31 @@ export class CommitService {
     };
   }
 
+  /**
+   * Shape a commit transform into the public output (#1132): resident commits
+   * write through and return the identity digest only (the project files are
+   * the truth, read via `getSlate`/`nextSteps`); explicit calls also carry the
+   * transformed slate — a pure transform's return IS its product. The digest's
+   * per-beat arrays follow the stored filename order the next resident read
+   * produces (#716).
+   */
   private finish(
-    output: IAutoMovieCommitOutput,
+    transform: ICommitTransform,
     resident: boolean,
+    before: IAutoMovieMcpWritableSlate,
   ): IAutoMovieCommitOutput {
-    if (resident && output.committed) {
+    let after = transform.slate;
+    if (resident && transform.committed) {
       const project = this.context!.requireProject("commit");
-      project.saveSlate(output.slate);
-      // Return the per-beat arrays in the stored filename order the next
-      // resident read produces, not the upsert's append order — so a caller
-      // that caches this output.slate and diffs it (or re-submits it as an
-      // explicit slate) sees no reordering against a later read (#716).
-      return { ...output, slate: project.orderResidentSlate(output.slate) };
+      project.saveSlate(after);
+      after = project.orderResidentSlate(after);
     }
-    return output;
+    return {
+      committed: transform.committed,
+      state: digestOf(after, transform.committed ? before : undefined),
+      ...(resident ? {} : { slate: after }),
+      validation: transform.validation,
+    };
   }
 
   private rejectMalformedCommitRequestRoot(
@@ -123,10 +135,11 @@ export class CommitService {
     const violations = validateRequestRoot(props, "commit request");
     if (violations.length === 0) return null;
     const project = this.context!.requireProject(caller);
-    return failedCommit(
-      project.writableSlate(),
-      toValidation(violations) as IAutoMovieValidation.IFailure,
-    );
+    return {
+      committed: false,
+      state: digestOf(project.writableSlate()),
+      validation: toValidation(violations),
+    };
   }
 
   public commitScript(props: {
@@ -147,6 +160,7 @@ export class CommitService {
           remapCommitValidationPaths(validation, [["$input", "$input.script"]]),
         ),
         resident,
+        slate,
       );
     const output = this.finish(
       successfulCommit({
@@ -159,6 +173,7 @@ export class CommitService {
         film: null,
       }),
       resident,
+      slate,
     );
     if (resident && output.committed) this.context!.clearGeometryMemory();
     return output;
@@ -201,6 +216,7 @@ export class CommitService {
           ]),
         ),
         resident,
+        slate,
       );
     const output = this.finish(
       successfulCommit({
@@ -212,6 +228,7 @@ export class CommitService {
         film: null,
       }),
       resident,
+      slate,
     );
     if (resident && output.committed)
       this.context!.rememberGeometryModels(props.models);
@@ -327,6 +344,7 @@ export class CommitService {
           ]),
         ),
         resident,
+        slate,
       );
     const output = this.finish(
       successfulCommit({
@@ -342,6 +360,7 @@ export class CommitService {
         film: null,
       }),
       resident,
+      slate,
     );
     if (
       resident &&
@@ -406,6 +425,7 @@ export class CommitService {
           ]),
         ),
         resident,
+        slate,
       );
     return this.finish(
       successfulCommit({
@@ -418,6 +438,7 @@ export class CommitService {
         film: null,
       }),
       resident,
+      slate,
     );
   }
 
@@ -438,10 +459,11 @@ export class CommitService {
     validateNotesArtifact(props.notes, slate, slateRoot, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
-      return this.finish(failedCommit(slate, validation), resident);
+      return this.finish(failedCommit(slate, validation), resident, slate);
     return this.finish(
       successfulCommit({ ...slate, notes: props.notes, film: null }),
       resident,
+      slate,
     );
   }
 
@@ -501,10 +523,12 @@ export class CommitService {
           ]),
         ),
         resident,
+        slate,
       );
     return this.finish(
       successfulCommit({ ...slate, film: props.film }),
       resident,
+      slate,
     );
   }
 
@@ -527,7 +551,11 @@ export class CommitService {
     const slate = project.writableSlate();
     const requestRoot = validateMutationRequestRoot(props);
     if (requestRoot.length > 0)
-      return { erased: false, slate, validation: toValidation(requestRoot) };
+      return {
+        erased: false,
+        state: digestOf(slate),
+        validation: toValidation(requestRoot),
+      };
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNonEmptyId(props.beat, "$input.beat", "beat id", violations);
     validateNonEmptyText(
@@ -550,7 +578,7 @@ export class CommitService {
       );
     const validation = toValidation(violations);
     if (validation.success === false)
-      return { erased: false, slate, validation };
+      return { erased: false, state: digestOf(slate), validation };
     const next: IAutoMovieMcpWritableSlate = {
       ...slate,
       shots: slate.shots.filter((shot) => shot.id !== shotId),
@@ -559,7 +587,11 @@ export class CommitService {
       film: null,
     };
     project.saveSlate(next);
-    return { erased: true, slate: next, validation: { success: true } };
+    return {
+      erased: true,
+      state: digestOf(next, slate),
+      validation: { success: true },
+    };
   }
 
   /**
@@ -577,7 +609,11 @@ export class CommitService {
     const slate = project.writableSlate();
     const requestRoot = validateMutationRequestRoot(props);
     if (requestRoot.length > 0)
-      return { erased: false, slate, validation: toValidation(requestRoot) };
+      return {
+        erased: false,
+        state: digestOf(slate),
+        validation: toValidation(requestRoot),
+      };
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNonEmptyId(props.beat, "$input.beat", "beat id", violations);
     validateNonEmptyText(
@@ -599,14 +635,18 @@ export class CommitService {
       );
     const validation = toValidation(violations);
     if (validation.success === false)
-      return { erased: false, slate, validation };
+      return { erased: false, state: digestOf(slate), validation };
     const next: IAutoMovieMcpWritableSlate = {
       ...slate,
       notes: slate.notes.filter((note) => note.beat !== props.beat),
       film: null,
     };
     project.saveSlate(next);
-    return { erased: true, slate: next, validation: { success: true } };
+    return {
+      erased: true,
+      state: digestOf(next, slate),
+      validation: { success: true },
+    };
   }
 
   /**
@@ -697,7 +737,11 @@ export class CommitService {
     const slate = project.writableSlate();
     const requestRoot = validateMutationRequestRoot(props);
     if (requestRoot.length > 0)
-      return { updated: false, slate, validation: toValidation(requestRoot) };
+      return {
+        updated: false,
+        state: digestOf(slate),
+        validation: toValidation(requestRoot),
+      };
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNonEmptyId(props.beat, "$input.beat", "beat id", violations);
     validateNonEmptyText(
@@ -818,7 +862,7 @@ export class CommitService {
     }
     const validation = toValidation(violations);
     if (validation.success === false)
-      return { updated: false, slate, validation };
+      return { updated: false, state: digestOf(slate), validation };
     const next: IAutoMovieMcpWritableSlate = {
       ...slate,
       shots: slate.shots.map((entry) =>
@@ -840,7 +884,11 @@ export class CommitService {
     project.saveSlate(next);
     if (props.motions !== undefined)
       this.context!.mergeGeometryMotions(props.motions, props.beat);
-    return { updated: true, slate: next, validation: { success: true } };
+    return {
+      updated: true,
+      state: digestOf(next, slate),
+      validation: { success: true },
+    };
   }
 
   /**
@@ -864,7 +912,11 @@ export class CommitService {
     const slate = project.writableSlate();
     const requestRoot = validateMutationRequestRoot(props);
     if (requestRoot.length > 0)
-      return { updated: false, slate, validation: toValidation(requestRoot) };
+      return {
+        updated: false,
+        state: digestOf(slate),
+        validation: toValidation(requestRoot),
+      };
     const violations: IAutoMovieConstraintViolation[] = [];
     validateNonEmptyId(props.node, "$input.node", "placement node", violations);
     validateNonEmptyText(
@@ -924,7 +976,7 @@ export class CommitService {
       );
     const validation = toValidation(violations);
     if (validation.success === false)
-      return { updated: false, slate, validation };
+      return { updated: false, state: digestOf(slate), validation };
     const scene = slate.scene!;
     const next: IAutoMovieMcpWritableSlate = {
       ...slate,
@@ -941,7 +993,11 @@ export class CommitService {
     };
     project.saveSlate(next);
     this.context!.clearGeometryMotions();
-    return { updated: true, slate: next, validation: { success: true } };
+    return {
+      updated: true,
+      state: digestOf(next, slate),
+      validation: { success: true },
+    };
   }
 
   /**
@@ -1018,18 +1074,74 @@ const validateRequestRoot = (
   return violations;
 };
 
+/**
+ * The internal commit transform, before {@link CommitService.finish} shapes the
+ * public output (#1132): services keep working on whole slates; only the
+ * boundary decides what the caller sees.
+ */
+interface ICommitTransform {
+  committed: boolean;
+  slate: IAutoMovieMcpWritableSlate;
+  validation: IAutoMovieValidation;
+}
+
 const failedCommit = (
   slate: IAutoMovieMcpWritableSlate,
   validation: IAutoMovieValidation.IFailure,
-): IAutoMovieCommitOutput => ({ committed: false, slate, validation });
+): ICommitTransform => ({ committed: false, slate, validation });
 
 const successfulCommit = (
   slate: IAutoMovieMcpWritableSlate,
-): IAutoMovieCommitOutput => ({
+): ICommitTransform => ({
   committed: true,
   slate,
   validation: { success: true },
 });
+
+/**
+ * The compact identity digest a tool return carries instead of a slate echo
+ * (#1132). `before` (given only on success) yields the `cleared` list: every
+ * slice present before this call and absent after it — the cascade's work,
+ * named.
+ */
+const digestOf = (
+  after: IAutoMovieMcpWritableSlate,
+  before?: IAutoMovieMcpWritableSlate,
+): IAutoMovieMcpSlateDigest => {
+  // Refusal digests must survive the very garbage the refusal names: a
+  // malformed explicit slate (shots: "NOT_ARRAY", a null entry) flows back
+  // through here, so every extraction is defensive.
+  const idsOf = (value: unknown, key: "id" | "beat"): string[] =>
+    Array.isArray(value)
+      ? value
+          .filter(isRecord)
+          .map((entry) => entry[key])
+          .filter((id): id is string => typeof id === "string")
+      : [];
+  const shots = idsOf(after.shots, "id");
+  const beatEnds = idsOf(after.beatEnds, "beat");
+  const notes = Array.isArray(after.notes) ? after.notes.length : 0;
+  const cleared: string[] = [];
+  if (before !== undefined) {
+    if (before.scene != null && after.scene == null) cleared.push("scene");
+    for (const id of idsOf(before.shots, "id"))
+      if (!shots.includes(id)) cleared.push(id);
+    for (const beat of idsOf(before.beatEnds, "beat"))
+      if (!beatEnds.includes(beat)) cleared.push(`beatEnd:${beat}`);
+    if (Array.isArray(before.notes) && before.notes.length > 0 && notes === 0)
+      cleared.push("notes");
+    if (before.film != null && after.film == null) cleared.push("film");
+  }
+  return {
+    script: after.script != null,
+    scene: after.scene != null,
+    shots,
+    beatEnds,
+    notes,
+    film: after.film != null,
+    cleared,
+  };
+};
 
 const remapCommitValidationPaths = (
   validation: IAutoMovieValidation.IFailure,

@@ -94,7 +94,7 @@ export const test_mcp_commit_film_review = (): void => {
   );
   TestValidator.equals(
     "the refused commit leaves the film slice empty",
-    blank.slate.film,
+    blank.slate!.film,
     null,
   );
 
@@ -108,7 +108,7 @@ export const test_mcp_commit_film_review = (): void => {
   TestValidator.equals("a reasoned commit persists", reasoned.committed, true);
   TestValidator.equals(
     "the committed film is intact",
-    reasoned.slate.film,
+    reasoned.slate!.film,
     film,
   );
 };

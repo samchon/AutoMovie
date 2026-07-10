@@ -468,7 +468,8 @@ export class AutoMovieApplication {
    * downstream slice because staging, shots, notes, and film depend on it.
    *
    * @param props The slate and script artifact to commit.
-   * @returns The new slate, or the unchanged slate with violations.
+   * @returns The slate digest (and, for explicit calls, the transformed slate),
+   *   or violations on refusal.
    */
   public commitScript(props: {
     /** The slate to transform; omit to commit into the resident project (#614). */
@@ -484,7 +485,8 @@ export class AutoMovieApplication {
    * invalidates shots, beat ends, notes, and film.
    *
    * @param props The slate, scene, and available model ids.
-   * @returns The new slate, or the unchanged slate with violations.
+   * @returns The slate digest (and, for explicit calls, the transformed slate),
+   *   or violations on refusal.
    */
   public commitScene(props: {
     /** The slate to transform; omit to commit into the resident project (#614). */
@@ -507,7 +509,8 @@ export class AutoMovieApplication {
    * the film after replacing a shot.
    *
    * @param props The slate, shot, and optional compiled motions.
-   * @returns The new slate, or the unchanged slate with violations.
+   * @returns The slate digest (and, for explicit calls, the transformed slate),
+   *   or violations on refusal.
    */
   public commitShot(props: {
     /** The slate to transform; omit to commit into the resident project (#614). */
@@ -527,7 +530,8 @@ export class AutoMovieApplication {
    * committed film — continuity data changed under the cut.
    *
    * @param props The slate and beat-end state to commit.
-   * @returns The new slate, or the unchanged slate with violations.
+   * @returns The slate digest (and, for explicit calls, the transformed slate),
+   *   or violations on refusal.
    */
   public commitBeatEnd(props: {
     /** The slate to transform; omit to commit into the resident project (#614). */
@@ -544,7 +548,8 @@ export class AutoMovieApplication {
    * nulls the committed film: an open backlog means the cut is under review.
    *
    * @param props The slate and complete note backlog.
-   * @returns The new slate, or the unchanged slate with violations.
+   * @returns The slate digest (and, for explicit calls, the transformed slate),
+   *   or violations on refusal.
    */
   public commitNotes(props: {
     /** The slate to transform; omit to commit into the resident project (#614). */
@@ -561,7 +566,8 @@ export class AutoMovieApplication {
    * state your pacing/continuity self-check before the cut-list it judges.
    *
    * @param props The pre-commit review, the slate, and the sequence artifact.
-   * @returns The new slate, or the unchanged slate with violations.
+   * @returns The slate digest (and, for explicit calls, the transformed slate),
+   *   or violations on refusal.
    */
   public commitFilm(props: {
     /**
@@ -588,7 +594,7 @@ export class AutoMovieApplication {
    * downstream (the commit cascade).
    *
    * @param props The beat whose shot to erase and the reason (evidence).
-   * @returns The slate after the erase, or violations when refused.
+   * @returns The slate digest after the erase, or violations when refused.
    */
   public eraseShot(props: {
     /** Beat id whose shot (and dependents) should be erased. */
@@ -607,7 +613,7 @@ export class AutoMovieApplication {
    * assembled film is cleared (any notes change invalidates it).
    *
    * @param props The beat whose notes to erase and the reason (evidence).
-   * @returns The slate after the erase, or violations when refused.
+   * @returns The slate digest after the erase, or violations when refused.
    */
   public eraseNotes(props: {
     /** Beat id whose review notes should be erased. */
@@ -650,7 +656,8 @@ export class AutoMovieApplication {
    * check the reference.
    *
    * @param props The beat, the replacement performance, and the reason.
-   * @returns The slate after the replacement, or violations when refused.
+   * @returns The slate digest after the replacement, or violations when
+   *   refused.
    */
   public setActorPerformance(props: {
     /** Beat id whose shot holds the performance to replace. */
@@ -679,7 +686,7 @@ export class AutoMovieApplication {
    * lowers it (#723, D016).
    *
    * @param props The placement node, its new transform, and the reason.
-   * @returns The slate after the move, or violations when refused.
+   * @returns The slate digest after the move, or violations when refused.
    */
   public setPlacement(props: {
     /** Scene node id of the placement to move. */

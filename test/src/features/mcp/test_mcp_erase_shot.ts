@@ -120,7 +120,7 @@ export const test_mcp_erase_shot = (): void => {
     );
     TestValidator.equals(
       "malformed request keeps the slate",
-      malformedRequest.slate.shots.length,
+      malformedRequest.state.shots.length,
       2,
     );
 
@@ -141,12 +141,12 @@ export const test_mcp_erase_shot = (): void => {
     );
     TestValidator.equals(
       "beat-1's notes removed with it",
-      erased.slate.notes.some((note) => note.beat === "beat-1"),
+      app.getNotes({}).notes.some((note) => note.beat === "beat-1"),
       false,
     );
     TestValidator.equals(
       "beat-2's note survives",
-      erased.slate.notes.some((note) => note.beat === "beat-2"),
+      app.getNotes({}).notes.some((note) => note.beat === "beat-2"),
       true,
     );
     TestValidator.equals(

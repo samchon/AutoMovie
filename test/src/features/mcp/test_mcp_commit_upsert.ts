@@ -124,7 +124,7 @@ export const test_mcp_commit_upsert = (): void => {
     );
     TestValidator.equals(
       "replacement, not append",
-      recommit.slate.shots.length,
+      recommit.state.shots.length,
       2,
     );
   } finally {

@@ -101,7 +101,7 @@ export const test_mcp_beat_end_ambient_motion = (): void => {
   TestValidator.equals("ambient motion commits", ambient.committed, true);
   TestValidator.equals(
     "the committed beat end carries the ambient motion",
-    ambient.slate.beatEnds[0]!.actors[0]!.motion,
+    ambient.slate!.beatEnds[0]!.actors[0]!.motion,
     "spin",
   );
 
