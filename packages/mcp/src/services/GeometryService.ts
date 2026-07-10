@@ -117,6 +117,14 @@ export class GeometryService {
       };
     const left = measureArmReach(actor.skeleton, "left", localTarget);
     const right = measureArmReach(actor.skeleton, "right", localTarget);
+    // A rig with no measurable arm chain on EITHER side is unmeasurable, not
+    // unreachable (#1097): answering `reachable: false` with `reason: null`
+    // reads as a confident geometric verdict when no measurement happened.
+    if (left === null && right === null)
+      return {
+        reach: null,
+        reason: `actor "${props.actor}" has no measurable arm chain (upper arm, lower arm, and hand bones with non-degenerate lengths) on either side; reach cannot be measured`,
+      };
     return {
       reach: {
         actor: props.actor,
