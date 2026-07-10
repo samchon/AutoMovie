@@ -71,5 +71,18 @@ export const cubicBezierEasing = (
     s -= dx / slope;
   }
   s = Math.min(1, Math.max(0, s));
+  // Newton stalls where x'(s) ≈ 0 (a legal steep curve like [1,0,0,1]); when
+  // the residual shows it did not converge, bisect on [0,1] — x(0)=0 and
+  // x(1)=1, so a root exists, and CSS-legal control x's keep x(s) monotone.
+  if (Math.abs(bez(x1, x2, s) - x) >= 1e-5) {
+    let lo = 0;
+    let hi = 1;
+    for (let i = 0; i < 32; ++i) {
+      s = (lo + hi) / 2;
+      if (bez(x1, x2, s) < x) lo = s;
+      else hi = s;
+    }
+    s = (lo + hi) / 2;
+  }
   return bez(y1, y2, s);
 };
