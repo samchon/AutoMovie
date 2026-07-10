@@ -474,7 +474,9 @@ export class AutoMovieApplication {
    * Commit one performed shot after script, scene, and optional motion checks.
    * The shot id must be `shot:<beat>` so slate queries can find it.
    * Re-committing the same beat replaces exactly that beat's shot (the upsert
-   * rule) and leaves sibling beats untouched.
+   * rule) and leaves sibling beats untouched. The cascade also removes that
+   * beat's now-stale end-state and nulls the committed film — re-derive the
+   * beat end and re-commit the film after replacing a shot.
    *
    * @param props The slate, shot, and optional compiled motions.
    * @returns The new slate, or the unchanged slate with violations.
@@ -493,7 +495,8 @@ export class AutoMovieApplication {
   /**
    * Commit the resolved end-state for a beat. It must point at a committed shot
    * and only name actors present in the committed scene. Re-committing the same
-   * beat replaces exactly that beat's end-state (the upsert rule).
+   * beat replaces exactly that beat's end-state (the upsert rule) and nulls the
+   * committed film — continuity data changed under the cut.
    *
    * @param props The slate and beat-end state to commit.
    * @returns The new slate, or the unchanged slate with violations.
@@ -509,7 +512,8 @@ export class AutoMovieApplication {
 
   /**
    * Commit the current review backlog. Notes require a committed script and
-   * built shots so review cannot point at imaginary beats.
+   * built shots so review cannot point at imaginary beats. Committing notes
+   * nulls the committed film: an open backlog means the cut is under review.
    *
    * @param props The slate and complete note backlog.
    * @returns The new slate, or the unchanged slate with violations.

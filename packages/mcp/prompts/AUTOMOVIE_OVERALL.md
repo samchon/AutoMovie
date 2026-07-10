@@ -21,8 +21,8 @@ Compute tools (`stage`, `block`, `perform`, `cut`, `forge`, `forgeProp`) are nev
 ## Result Semantics
 
 Tool results are shaped for the tool, not forced into one top-level envelope.
-Validation tools return `IAutoMovieValidation` directly. Compute tools wrap the
-engine verdict in a tool-specific result field: `stage` returns `staged`,
+Validation tools return `{ validation }` wrapping `IAutoMovieValidation`.
+Compute tools wrap the engine verdict in a tool-specific result field: `stage` returns `staged`,
 `block` returns `blocked`, `perform` returns `performed`, `cut` returns `cut`,
 and `forge` / `forgeProp` return `forged` (with resident storage metadata when
 needed). Render and resident mutation tools carry a sibling `validation` field
