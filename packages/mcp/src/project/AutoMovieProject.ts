@@ -333,6 +333,20 @@ export class AutoMovieProject {
     byBeat: ReadonlyMap<string, unknown>,
   ): void {
     const base = path.join(this.root, dir);
+    // Keys whose filenames differ only by case would silently clobber each
+    // other on a case-insensitive filesystem and then wedge the next read
+    // with a filename/internal-key mismatch (#1011) — refuse before touching
+    // the directory.
+    const byLowerName = new Map<string, string>();
+    for (const key of byBeat.keys()) {
+      const lower = sliceFilename(key).toLowerCase();
+      const prior = byLowerName.get(lower);
+      if (prior !== undefined)
+        throw new Error(
+          `${dir} ids "${prior}" and "${key}" collide case-insensitively as "${sliceFilename(key)}"; case-insensitive filesystems would silently clobber one — rename one id`,
+        );
+      byLowerName.set(lower, key);
+    }
     const wanted = new Set([...byBeat.keys()].map(sliceFilename));
     for (const name of fs.readdirSync(base))
       if (name.endsWith(".json") && !wanted.has(name))
@@ -414,8 +428,23 @@ const normalizeAssetPath = (relativePath: string): string => {
  * `.json` suffix injects a `.` separator that shifts prefix-boundary
  * comparisons (`"a"` vs `"a-"` sorts opposite to `"a.json"` vs `"a-.json"`).
  */
-const sliceFilename = (key: string): string =>
-  `${encodeURIComponent(key)}.json`;
+/** DOS device basenames Windows refuses regardless of extension. */
+const WINDOWS_DEVICE_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+
+const sliceFilename = (key: string): string => {
+  // encodeURIComponent leaves `*` (invalid on Windows — EINVAL at write) and
+  // DOS device basenames (`con`, `nul`, ...) intact (#1011). Escape both with
+  // ordinary percent-encoding so `decodeURIComponent` still round-trips the
+  // key; existing stores are unaffected (such files could never be written).
+  let encoded = encodeURIComponent(key).replace(/\*/g, "%2A");
+  if (WINDOWS_DEVICE_NAMES.test(encoded))
+    encoded = `%${encoded
+      .charCodeAt(0)
+      .toString(16)
+      .toUpperCase()
+      .padStart(2, "0")}${encoded.slice(1)}`;
+  return `${encoded}.json`;
+};
 
 /** Order per-beat slices by their stored filename (readKeyedSlices' order). */
 const orderByFilename = <T>(items: T[], keyOf: (item: T) => string): T[] => {

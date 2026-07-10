@@ -159,6 +159,10 @@ const ghostBeatTree = (): NonNullable<IAutoMovieScript["tree"]> => [
  * 9. Resident prop slices validate at the read boundary, matching forgeProp.
  * 10. A root path blocked by a file reports project repair guidance instead of
  *     leaking raw filesystem errors.
+ * 11. Keyed filenames are Windows-safe: a `*` in a beat id and DOS device basenames
+ *     (`con`) escape to writable, round-tripping filenames, and
+ *     case-only-distinct beat ids refuse before a case-insensitive filesystem
+ *     could silently clobber one.
  */
 export const test_mcp_project_store = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-store-"));
@@ -198,6 +202,60 @@ export const test_mcp_project_store = (): void => {
       "shot slice file parse equals the shot",
       JSON.parse(fs.readFileSync(shotFile, "utf8")),
       shot,
+    );
+
+    // 11. Windows-safe keyed filenames: `*` and DOS device basenames escape,
+    // round-trip, and case-only-distinct beat ids refuse before clobbering.
+    AutoMovieProject.open(root).saveSlate(
+      slateWith({
+        script,
+        shots: [
+          { ...shot, id: "shot:b*1" },
+          { ...shot, id: "shot:con" },
+        ],
+      }),
+    );
+    TestValidator.equals(
+      "a star beat id escapes to a Windows-writable filename",
+      fs.existsSync(path.join(root, "shots", "b%2A1.json")),
+      true,
+    );
+    TestValidator.equals(
+      "a DOS device beat id escapes its first character",
+      fs.existsSync(path.join(root, "shots", "%63on.json")),
+      true,
+    );
+    TestValidator.equals(
+      "escaped keyed slices round-trip on reopen",
+      AutoMovieProject.open(root)
+        .writableSlate()
+        .shots.map((s) => s.id)
+        .sort((a, b) => a.localeCompare(b)),
+      ["shot:b*1", "shot:con"],
+    );
+    TestValidator.predicate(
+      "case-only-distinct beat ids refuse before clobbering",
+      (() => {
+        try {
+          AutoMovieProject.open(root).saveSlate(
+            slateWith({
+              script,
+              shots: [
+                { ...shot, id: "shot:Duel" },
+                { ...shot, id: "shot:duel" },
+              ],
+            }),
+          );
+          return false;
+        } catch (error) {
+          const message = String((error as Error).message);
+          return (
+            message.includes("Duel") &&
+            message.includes("duel") &&
+            message.includes("case-insensitively")
+          );
+        }
+      })(),
     );
 
     AutoMovieProject.open(root).saveSlate(slateWith({ script }));
