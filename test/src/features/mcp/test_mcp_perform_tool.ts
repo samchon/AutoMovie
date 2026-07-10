@@ -90,6 +90,11 @@ const riglessContext = (
  *     facingDeg/eyeHeight, null restPose, and malformed restFrames entries (per
  *     bone, axis, sign, neutral) — while a valid mirrored rest frame still
  *     performs.
+ * 13. A present rig gates its graph before camera framing dereferences it:
+ *     duplicate bone rows, parents naming absent bones, root count, and parent
+ *     cycles (reported as unreachable bones) fail at `$input.actors.<node>.rig`
+ *     paths instead of leaking `computeRestHeight` throws; malformed bone
+ *     entries fail on shape before graph analysis runs.
  */
 export const test_mcp_perform_tool = (): void => {
   const app = new AutoMovieApplication();
@@ -605,6 +610,63 @@ export const test_mcp_perform_tool = (): void => {
       restFrames: { rightUpperArm: { abduction: { sign: -1, neutral: 90 } } },
     }).success,
     true,
+  );
+
+  const rigRoot = `${contextRoot}.rig`;
+  const rest = createSkeleton().bones[0]!.rest;
+  const rigBone = (
+    bone: string,
+    parent: string | null,
+  ): Record<string, unknown> => ({ bone, parent, rest, constraint: null });
+  const rigProbe = (
+    bones: unknown[],
+  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+    contextProbe({ rig: { id: "skeleton-1", bones } });
+  TestValidator.predicate(
+    "a null rig fails at its root",
+    hasGaitViolation(contextProbe({ rig: null }), "type", rigRoot),
+  );
+  TestValidator.predicate(
+    "a duplicate rig bone row fails at the later row",
+    hasGaitViolation(
+      rigProbe([rigBone("hips", null), rigBone("hips", null)]),
+      "type",
+      `${rigRoot}.bones[1].bone`,
+    ),
+  );
+  TestValidator.predicate(
+    "a parent naming an absent bone fails at its path",
+    hasGaitViolation(
+      rigProbe([rigBone("hips", null), rigBone("spine", "torso")]),
+      "type",
+      `${rigRoot}.bones[1].parent`,
+    ),
+  );
+  TestValidator.predicate(
+    "a rootless rig fails on the bones list",
+    hasGaitViolation(
+      rigProbe([rigBone("hips", "spine"), rigBone("spine", "hips")]),
+      "type",
+      `${rigRoot}.bones`,
+    ),
+  );
+  const cyclic = rigProbe([
+    rigBone("hips", null),
+    rigBone("spine", "chest"),
+    rigBone("chest", "spine"),
+  ]);
+  TestValidator.predicate(
+    "a parent cycle fails as unreachable bones, not a framing throw",
+    hasGaitViolation(cyclic, "type", `${rigRoot}.bones[1]`) &&
+      hasGaitViolation(cyclic, "type", `${rigRoot}.bones[2]`),
+  );
+  TestValidator.predicate(
+    "a malformed rig bone entry fails before graph analysis",
+    hasGaitViolation(
+      rigProbe([rigBone("hips", null), { bone: "", parent: 5, rest: null }]),
+      "type",
+      `${rigRoot}.bones[1].bone`,
+    ),
   );
 
   const cameraFrame = {

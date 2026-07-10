@@ -1607,6 +1607,120 @@ const validateActorContextFields = (
       `${path}.restFrames`,
       violations,
     );
+  if (context.rig !== undefined)
+    validateActorRig(context.rig, `${path}.rig`, violations);
+};
+
+/**
+ * The rig graph checks `computeRestHeight` and FK would otherwise throw on
+ * (#999): duplicate bone rows, parents naming absent bones, root count, and
+ * parent cycles. Typia accepts all of these — bone names are a closed union,
+ * but graph relations are not.
+ */
+const validateActorRig = (
+  rig: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(rig, path, "actor rig", violations)) return;
+  requireNonEmptyString(rig.id, `${path}.id`, "actor rig id", violations);
+  if (!isJsonArray(rig.bones, `${path}.bones`, "actor rig bones", violations))
+    return;
+  const before = violations.length;
+  const entries: { bone: string; parent: string | null; index: number }[] = [];
+  const seen = new Set<string>();
+  rig.bones.forEach((bone, index) => {
+    const bonePath = `${path}.bones[${index}]`;
+    if (!isJsonObject(bone, bonePath, "actor rig bone", violations)) return;
+    requireNonEmptyString(
+      bone.bone,
+      `${bonePath}.bone`,
+      "actor rig bone name",
+      violations,
+    );
+    validateTransformObject(
+      bone.rest,
+      `${bonePath}.rest`,
+      "actor rig bone rest",
+      violations,
+    );
+    if (typeof bone.bone !== "string") return;
+    if (seen.has(bone.bone))
+      violations.push(
+        violation(
+          "type",
+          `${bonePath}.bone`,
+          `actor rig bone "${bone.bone}" must be unique`,
+          bone.bone,
+        ),
+      );
+    seen.add(bone.bone);
+    if (bone.parent !== null && typeof bone.parent !== "string") {
+      violations.push(
+        violation(
+          "type",
+          `${bonePath}.parent`,
+          "actor rig bone parent must be null or a bone name",
+          bone.parent,
+        ),
+      );
+      return;
+    }
+    entries.push({ bone: bone.bone, parent: bone.parent, index });
+  });
+  // Graph analysis is only meaningful over structurally clean, unique rows.
+  if (violations.length > before) return;
+  const roots = entries.filter((entry) => entry.parent === null);
+  if (roots.length !== 1) {
+    violations.push(
+      violation(
+        "type",
+        `${path}.bones`,
+        `actor rig needs exactly one root bone (parent: null), but found ${roots.length}`,
+        roots.map((root) => root.bone),
+      ),
+    );
+    return;
+  }
+  const names = new Set(entries.map((entry) => entry.bone));
+  for (const entry of entries)
+    if (entry.parent !== null && !names.has(entry.parent))
+      violations.push(
+        violation(
+          "type",
+          `${path}.bones[${entry.index}].parent`,
+          `actor rig bone parent "${entry.parent}" names a missing bone`,
+          entry.parent,
+        ),
+      );
+  if (violations.length > before) return;
+  const children = new Map<string, string[]>();
+  for (const entry of entries) {
+    if (entry.parent === null) continue;
+    const list = children.get(entry.parent);
+    if (list === undefined) children.set(entry.parent, [entry.bone]);
+    else list.push(entry.bone);
+  }
+  const reached = new Set<string>([roots[0]!.bone]);
+  const queue = [roots[0]!.bone];
+  while (queue.length > 0) {
+    const bone = queue.pop()!;
+    for (const child of children.get(bone) ?? [])
+      if (!reached.has(child)) {
+        reached.add(child);
+        queue.push(child);
+      }
+  }
+  for (const entry of entries)
+    if (!reached.has(entry.bone))
+      violations.push(
+        violation(
+          "type",
+          `${path}.bones[${entry.index}]`,
+          `actor rig bone "${entry.bone}" is not reachable from the root (a parent cycle)`,
+          entry.bone,
+        ),
+      );
 };
 
 const REST_FRAME_AXES = ["flexion", "abduction", "twist"] as const;
