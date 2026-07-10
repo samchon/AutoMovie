@@ -26,6 +26,12 @@ import { IAutoMovieModelObject, applyTransform } from "./buildModel";
  * raises either arm overhead regardless of side); omit it to treat the pose's
  * angles as raw rig-space, the historical behaviour.
  *
+ * Returns the skeleton bones the FK resolved but the model's bone map does not
+ * carry (#1051). A deliberately partial imported map (a VRM without toes)
+ * reports its unmapped bones every call — the host compares against what it
+ * MEANT to map, so a typo in the bone map is distinguishable from an
+ * intentional gap instead of both silently not articulating.
+ *
  * @author Samchon
  */
 export const applyPose = (
@@ -34,16 +40,20 @@ export const applyPose = (
   skeleton: IAutoMovieSkeleton,
   jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>,
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>,
-): void => {
+): AutoMovieHumanoidBone[] => {
+  const skipped: AutoMovieHumanoidBone[] = [];
   for (const r of resolvePose(pose, skeleton, jointAxes, restFrames)) {
     const bone = target.bones.get(r.bone);
-    if (bone !== undefined)
-      bone.quaternion.set(
-        r.localRotation.x,
-        r.localRotation.y,
-        r.localRotation.z,
-        r.localRotation.w,
-      );
+    if (bone === undefined) {
+      skipped.push(r.bone);
+      continue;
+    }
+    bone.quaternion.set(
+      r.localRotation.x,
+      r.localRotation.y,
+      r.localRotation.z,
+      r.localRotation.w,
+    );
   }
   // A null root means "at the node's staged base" — the engine's convention
   // (`resolvePose`/`animatedBaseAt` default it to identity, #1046). Keeping
@@ -51,6 +61,7 @@ export const applyPose = (
   // pose (e.g. a walk's destination) when a gesture clip with null roots
   // takes over.
   applyTransform(target.object, pose.root ?? IDENTITY_ROOT);
+  return skipped;
 };
 
 const IDENTITY_ROOT = {
