@@ -9,7 +9,10 @@ import { TestValidator } from "@nestia/e2e";
  * failure this pins.
  *
  * Scenario: size 0 → empty; size 0.8 at two heights → both behind (mean z < 0),
- * the higher one strictly higher, both within the dome's y range.
+ * the higher one strictly higher, both within the dome's y range. The mesh must
+ * also wind OUTWARD (#1041): its signed volume is positive — the z-mirrored
+ * parameterization previously kept the skull's winding and faced every triangle
+ * into the bun.
  */
 export const test_forge_hair_bun = (): void => {
   const none = buildHairBun({ size: 0, height: 0.5 });
@@ -45,4 +48,29 @@ export const test_forge_hair_bun = (): void => {
       if (y < domeBot - 0.06 || y > domeTop + 0.06)
         throw new Error("bun strays off the skull's vertical span");
     }
+
+  // winding: outward-facing triangles enclose a positive signed volume
+  const signedVolume = (part: {
+    positions: number[];
+    indices: number[];
+  }): number => {
+    let six = 0;
+    for (let i = 0; i < part.indices.length; i += 3) {
+      const [a, b, c] = [
+        part.indices[i]! * 3,
+        part.indices[i + 1]! * 3,
+        part.indices[i + 2]! * 3,
+      ];
+      const p = part.positions;
+      six +=
+        p[a]! * (p[b + 1]! * p[c + 2]! - p[b + 2]! * p[c + 1]!) -
+        p[a + 1]! * (p[b]! * p[c + 2]! - p[b + 2]! * p[c]!) +
+        p[a + 2]! * (p[b]! * p[c + 1]! - p[b + 1]! * p[c]!);
+    }
+    return six / 6;
+  };
+  TestValidator.predicate(
+    "the bun winds outward (positive signed volume)",
+    signedVolume(low) > 0 && signedVolume(high) > 0,
+  );
 };

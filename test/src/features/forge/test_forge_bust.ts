@@ -57,4 +57,33 @@ export const test_forge_bust = (): void => {
   for (let i = 1; i < dome.positions.length; i += 3)
     domeBot = Math.min(domeBot, dome.positions[i]!);
   TestValidator.predicate("starts below the dome", top < domeBot + 0.05);
+
+  // the bottom cap must face DOWN (#1041): a front-side renderer culls an
+  // upward cap from exactly the low angles the cap exists for. The cap fan is
+  // the final SEG triangle triple, all sharing the appended center vertex.
+  const capFacesDown = (part: {
+    positions: number[];
+    indices: number[];
+  }): boolean => {
+    const center = part.positions.length / 3 - 1;
+    for (let i = 0; i < part.indices.length; i += 3) {
+      const [ia, ib, ic] = [
+        part.indices[i]!,
+        part.indices[i + 1]!,
+        part.indices[i + 2]!,
+      ];
+      if (ia !== center && ib !== center && ic !== center) continue;
+      const p = part.positions;
+      const [a, b, c] = [ia * 3, ib * 3, ic * 3];
+      const ab = [p[b]! - p[a]!, p[b + 1]! - p[a + 1]!, p[b + 2]! - p[a + 2]!];
+      const ac = [p[c]! - p[a]!, p[c + 1]! - p[a + 1]!, p[c + 2]! - p[a + 2]!];
+      const ny = ab[2]! * ac[0]! - ab[0]! * ac[2]!;
+      if (ny >= 0) return false;
+    }
+    return true;
+  };
+  TestValidator.predicate(
+    "the bottom cap winds to face −y",
+    capFacesDown(wide),
+  );
 };

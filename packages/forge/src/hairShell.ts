@@ -333,10 +333,13 @@ export const buildHairBun = (
     }
   }
   const col = SEG + 1;
+  // The z-mirror above flips the surface handedness, so the winding must
+  // mirror too (#1041) — the skull's index pattern here would face every
+  // triangle INTO the bun (signed volume was negative).
   for (let r = 0; r < RING; r++)
     for (let s = 0; s < SEG; s++) {
       const i0 = r * col + s;
-      indices.push(i0, i0 + col, i0 + 1, i0 + 1, i0 + col, i0 + col + 1);
+      indices.push(i0, i0 + 1, i0 + col, i0 + 1, i0 + col + 1, i0 + col);
     }
   return { positions, indices };
 };
@@ -387,10 +390,12 @@ export const buildBust = (
       const i0 = r * col + s;
       indices.push(i0, i0 + col, i0 + 1, i0 + 1, i0 + col, i0 + col + 1);
     }
-  // bottom cap so the bust reads solid from low angles
+  // bottom cap so the bust reads solid from low angles — wound to face −y
+  // (#1041): the previous fan faced up and was backface-culled from exactly
+  // the low angles the cap exists for.
   const center = positions.length / 3;
   positions.push(0, yTop - (neckLen + slabLen), -0.012);
   const base = RING * col;
-  for (let s = 0; s < SEG; s++) indices.push(center, base + s, base + s + 1);
+  for (let s = 0; s < SEG; s++) indices.push(center, base + s + 1, base + s);
   return { positions, indices };
 };
