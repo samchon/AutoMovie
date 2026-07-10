@@ -59,13 +59,17 @@ export const applyPose = (
   // (`resolvePose`/`animatedBaseAt` default it to identity, #1046). Keeping
   // the previous pose's root here would strand the model at the LAST rooted
   // pose (e.g. a walk's destination) when a gesture clip with null roots
-  // takes over.
-  applyTransform(target.object, pose.root ?? IDENTITY_ROOT);
+  // takes over. Root SCALE is dropped (#1052): the engine's FK ignores it,
+  // so a rendered root scale would be invisible to every validator that
+  // measured the pose — the rig convention is rotation + translation only.
+  const root = pose.root ?? IDENTITY_ROOT;
+  applyTransform(target.object, { ...root, scale: UNIT_SCALE });
   return skipped;
 };
 
+const UNIT_SCALE = { x: 1, y: 1, z: 1 };
 const IDENTITY_ROOT = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
-  scale: { x: 1, y: 1, z: 1 },
+  scale: UNIT_SCALE,
 };

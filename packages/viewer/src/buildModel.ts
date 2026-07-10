@@ -71,7 +71,24 @@ export const buildModel = (model: IAutoMovieModel): IAutoMovieModelObject => {
     for (const b of model.skeleton.bones) {
       const bone = new THREE.Bone();
       bone.name = b.bone;
-      applyTransform(bone, b.rest);
+      // Rig rest SCALE is ignored — the engine's pinned convention (#1052):
+      // `resolvePose` composes rotation and translation only, and
+      // `motionToClip` matches it ("rest scale ignored on both sides").
+      // Applying it here would render every descendant at the accumulated
+      // scale product while ground contact, collision, and framing measured
+      // the unscaled body. Scale stays first-class on scene NODES and object
+      // motions (#1049) — this convention is about rig bones only.
+      bone.position.set(
+        b.rest.translation.x,
+        b.rest.translation.y,
+        b.rest.translation.z,
+      );
+      bone.quaternion.set(
+        b.rest.rotation.x,
+        b.rest.rotation.y,
+        b.rest.rotation.z,
+        b.rest.rotation.w,
+      );
       bones.set(b.bone, bone);
     }
     for (const b of model.skeleton.bones) {
