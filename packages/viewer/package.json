@@ -22,11 +22,11 @@
   "dependencies": {
     "@automovie/engine": "workspace:^",
     "@automovie/interface": "workspace:^",
-    "three": "^0.169.0"
+    "three": "catalog:three"
   },
   "devDependencies": {
-    "@types/three": "^0.169.0",
-    "rimraf": "^6.0.1",
+    "@types/three": "catalog:three",
+    "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript"
   }
