@@ -31,6 +31,12 @@ const throws = (task: () => void): boolean => {
  *    branch a happy-path curve never reaches.
  * 4. `ease("cubicBezier", x)` — called without control points — falls back to the
  *    linear identity (the control points live on the keyframe, not here).
+ * 5. Invalid scalars reject; finite out-of-range progress clamps.
+ * 6. The bisection fallback: the legal steep curve [1,0,0,1] has x'(0.5)=0, so
+ *    Newton stalls or diverges around the middle; the solver must land on the
+ *    bisection oracle (x(s)=4s³−6s²+3s, y(s)=3s²−2s³): t=0.5 → 0.5 exactly,
+ *    t=0.51 → ≈0.6983 (the unconverged Newton was off by ~0.30), and the mirror
+ *    t=0.49 → ≈0.3017.
  */
 export const test_motion_cubic_bezier = (): void => {
   // 1. linear control points ≈ identity
@@ -99,5 +105,20 @@ export const test_motion_cubic_bezier = (): void => {
   TestValidator.predicate(
     "bezier clamps finite high",
     nclose(cubicBezierEasing([0, 0, 1, 1], 2), 1, 1e-3),
+  );
+
+  // 6. steep-curve bisection fallback lands on the analytic oracle
+  const steep: [number, number, number, number] = [1, 0, 0, 1];
+  TestValidator.predicate(
+    "steep curve at the stall point t=0.5",
+    nclose(cubicBezierEasing(steep, 0.5), 0.5, 1e-3),
+  );
+  TestValidator.predicate(
+    "steep curve just past the stall (bisection oracle 0.6983)",
+    nclose(cubicBezierEasing(steep, 0.51), 0.6983, 2e-3),
+  );
+  TestValidator.predicate(
+    "steep curve mirror side (bisection oracle 0.3017)",
+    nclose(cubicBezierEasing(steep, 0.49), 0.3017, 2e-3),
   );
 };
