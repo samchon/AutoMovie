@@ -40,7 +40,14 @@ export const buildScene = (
 
   for (const node of scene.nodes) {
     const built = getModelObject(node.model);
-    if (built === undefined) continue;
+    // Caller data that cannot resolve is an error, not a skip (#1051): the
+    // segmentation mask palette is keyed by top-level child INDEX, so a
+    // silently dropped node would shift every later node one color over and
+    // a mask consumer would attribute pixels to the wrong node.
+    if (built === undefined)
+      throw new Error(
+        `scene node "${node.id}" references model "${node.model}", which getModelObject could not resolve`,
+      );
     const nodeGroup = new THREE.Group();
     applyTransform(nodeGroup, node.transform);
     nodeGroup.add(built.object);
