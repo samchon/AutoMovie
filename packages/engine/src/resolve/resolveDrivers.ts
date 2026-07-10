@@ -1,4 +1,5 @@
 import {
+  IAutoMovieChannel,
   IAutoMovieCopyDriver,
   IAutoMovieDrivenDriver,
   IAutoMovieDriver,
@@ -219,6 +220,7 @@ const applyDriven = (
   d: IAutoMovieDrivenDriver,
   sampled: Map<string, IAutoMovieSampledChannel>,
 ): void => {
+  validateDrivenOutputChannel(d.output);
   const src = sampled.get(channelKey(d.source));
   const source =
     src !== undefined ? readDrivenSourceValue(src.value) : undefined;
@@ -228,6 +230,26 @@ const applyDriven = (
       ? evaluateDrivenCurve(source, d.curve)
       : remapDriven(d, source);
   setChannel(sampled, channelKey(d.output), d.output, [y]);
+};
+
+/**
+ * A driven driver computes ONE scalar (the interface contract: "one scalar
+ * channel computed from another"), so its output must be a scalar-width
+ * channel. Writing the width-1 result onto a node TRS channel would compose
+ * `[y, undefined, undefined, ...]` into world matrices downstream — silent NaN
+ * poisoning, no violation (#1055) — and node `weights` is variable-width
+ * (address a single morph via a scalar JSON pointer instead). Mirrors the width
+ * gate `readDrivenSourceValue` applies to the source.
+ */
+const validateDrivenOutputChannel = (output: IAutoMovieChannel): void => {
+  if (output.kind === "node")
+    throw new Error(
+      `driven driver output must be a scalar channel, but addressed node "${output.node}" ${output.path} (use a scalar JSON pointer to drive a single component)`,
+    );
+  if (output.valueType !== "scalar")
+    throw new Error(
+      `driven driver output must be a scalar channel, but pointer "${output.pointer}" has valueType "${output.valueType}"`,
+    );
 };
 
 const readDrivenSourceValue = (value: number[]): number => {

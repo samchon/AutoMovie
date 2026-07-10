@@ -178,6 +178,9 @@ export const test_resolve_frame = (): void => {
     ),
   );
 
+  // a driven output onto a node channel rejects as NON-SCALAR before the
+  // missing-node check can even see it (#1055) — the ghost-node validator
+  // keeps its own pin through the clip-track path above
   const ghostOutput: IAutoMovieDrivenDriver = {
     type: "driven",
     source: { kind: "pointer", pointer: "/input", valueType: "scalar" },
@@ -187,7 +190,7 @@ export const test_resolve_frame = (): void => {
     clamp: false,
   };
   TestValidator.predicate(
-    "driver output rejects missing resolve node",
+    "driver output rejects a node channel as non-scalar",
     throwsError(
       () =>
         resolveFrame({
@@ -197,7 +200,7 @@ export const test_resolve_frame = (): void => {
           drivers: [ghostOutput],
           seconds: 0,
         }),
-      ['sampled channel "node:ghost:translation"', 'missing node "ghost"'],
+      ["driven driver output", "scalar", 'node "ghost"'],
     ),
   );
 

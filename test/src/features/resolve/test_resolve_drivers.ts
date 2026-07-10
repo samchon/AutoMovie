@@ -323,6 +323,11 @@ export const test_resolve_drivers_copy = (): void => {
  *    coordinates, and non-increasing curve source points.
  * 7. A malformed `clamp` flag rejects before truthy/falsy coercion can change
  *    extrapolation into clamping.
+ * 8. A non-scalar OUTPUT channel rejects (#1055): the width-1 result written onto
+ *    a node TRS channel would compose `[y, undefined, ...]` into world matrices
+ *    in silence, and a non-scalar pointer is the same poison — mirroring the
+ *    width gate the source side already had. A scalar pointer output keeps
+ *    working (every other scenario here).
  */
 export const test_resolve_drivers_driven = (): void => {
   const run = (d: IAutoMovieDrivenDriver, src?: number): number[] => {
@@ -337,6 +342,33 @@ export const test_resolve_drivers_driven = (): void => {
     "absent source uses inRange[0]",
     run(driven({ inRange: [2, 4], outRange: [7, 9] })),
     [7],
+  );
+
+  // 8. non-scalar output channels reject as data instead of silently writing
+  //    a width-1 value into a multi-component consumer (#1055)
+  TestValidator.predicate(
+    "driven driver rejects a node TRS output channel",
+    throwsError(
+      () =>
+        run(
+          driven({ output: { kind: "node", node: "k", path: "translation" } }),
+          5,
+        ),
+      ["driven driver output", "scalar", "translation"],
+    ),
+  );
+  TestValidator.predicate(
+    "driven driver rejects a non-scalar pointer output channel",
+    throwsError(
+      () =>
+        run(
+          driven({
+            output: { kind: "pointer", pointer: "/out", valueType: "vec3" },
+          }),
+          5,
+        ),
+      ["driven driver output", "scalar", "vec3"],
+    ),
   );
   TestValidator.equals(
     "clamp pins past the range",
