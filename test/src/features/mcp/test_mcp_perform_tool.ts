@@ -84,6 +84,12 @@ const riglessContext = (
  *     `$input.performance.draft[i].duration` / `.force` instead of leaking
  *     `holdMotion`/`reactMotion`/`impactRecoil` throws, while a valid `hold`
  *     and a `react` with `duration: "auto"` still perform.
+ * 12. Non-gait context fields gate at their submitted paths before the synthesizer
+ *     or camera framing can dereference them: blank skeleton, non-finite
+ *     position components, non-numeric/zero speed, non-finite
+ *     facingDeg/eyeHeight, null restPose, and malformed restFrames entries (per
+ *     bone, axis, sign, neutral) — while a valid mirrored rest frame still
+ *     performs.
  */
 export const test_mcp_perform_tool = (): void => {
   const app = new AutoMovieApplication();
@@ -481,6 +487,124 @@ export const test_mcp_perform_tool = (): void => {
       emptyLimb.violations.every(
         (violation) => violation.path !== `${limbPath}[1]`,
       ),
+  );
+
+  const contextProbe = (
+    overrides: Record<string, unknown>,
+  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+    app.perform({
+      script,
+      staged,
+      performance,
+      actors: {
+        knightA: {
+          ...context(nodePosition("knightA"), 0),
+          ...overrides,
+        } as unknown as IAutoMovieMcpActorContext,
+        knightB: context(nodePosition("knightB"), 180),
+      },
+    }).performed;
+  const contextRoot = "$input.actors.knightA";
+
+  const malformedContextFields = contextProbe({
+    skeleton: "",
+    position: { x: Number.POSITIVE_INFINITY, y: 0, z: 0 },
+    speed: "fast",
+    facingDeg: Number.NaN,
+    eyeHeight: null,
+    restPose: null,
+  });
+  TestValidator.predicate(
+    "malformed non-gait context fields fail at their submitted paths",
+    hasGaitViolation(
+      malformedContextFields,
+      "type",
+      `${contextRoot}.skeleton`,
+    ) &&
+      hasGaitViolation(
+        malformedContextFields,
+        "type",
+        `${contextRoot}.position.x`,
+      ) &&
+      hasGaitViolation(
+        malformedContextFields,
+        "type",
+        `${contextRoot}.speed`,
+      ) &&
+      hasGaitViolation(
+        malformedContextFields,
+        "type",
+        `${contextRoot}.facingDeg`,
+      ) &&
+      hasGaitViolation(
+        malformedContextFields,
+        "type",
+        `${contextRoot}.eyeHeight`,
+      ) &&
+      hasGaitViolation(
+        malformedContextFields,
+        "type",
+        `${contextRoot}.restPose`,
+      ),
+  );
+  TestValidator.predicate(
+    "zero speed fails as a range violation, not a locomote throw",
+    hasGaitViolation(
+      contextProbe({ speed: 0 }),
+      "range",
+      `${contextRoot}.speed`,
+    ),
+  );
+  TestValidator.predicate(
+    "a non-object position fails at its root path",
+    hasGaitViolation(
+      contextProbe({ position: null }),
+      "type",
+      `${contextRoot}.position`,
+    ),
+  );
+
+  const restFramesRoot = `${contextRoot}.restFrames`;
+  TestValidator.predicate(
+    "a present null restFrames fails at its path",
+    hasGaitViolation(
+      contextProbe({ restFrames: null }),
+      "type",
+      restFramesRoot,
+    ),
+  );
+  const malformedRestFrames = contextProbe({
+    restFrames: {
+      head: null,
+      spine: { flexion: null },
+      chest: { abduction: { sign: 2, neutral: null }, twist: undefined },
+    },
+  });
+  TestValidator.predicate(
+    "malformed rest frame entries fail per bone, axis, and field",
+    hasGaitViolation(malformedRestFrames, "type", `${restFramesRoot}.head`) &&
+      hasGaitViolation(
+        malformedRestFrames,
+        "type",
+        `${restFramesRoot}.spine.flexion`,
+      ) &&
+      hasGaitViolation(
+        malformedRestFrames,
+        "type",
+        `${restFramesRoot}.chest.abduction.sign`,
+      ) &&
+      hasGaitViolation(
+        malformedRestFrames,
+        "type",
+        `${restFramesRoot}.chest.abduction.neutral`,
+      ),
+  );
+  TestValidator.equals(
+    "a valid mirrored rest frame still performs",
+    contextProbe({
+      restFrames: { rightUpperArm: { abduction: { sign: -1, neutral: 90 } } },
+    }).success,
+    true,
   );
 
   const cameraFrame = {
