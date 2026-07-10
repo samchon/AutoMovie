@@ -917,6 +917,19 @@ export interface IAutoMovieMcpProjectSummary {
   /** Stored forged prop nodes (`props/<node>.json`). */
   props: string[];
 
+  /**
+   * Render outputs the committed truth no longer owns (#1130): top-level
+   * `renders/` entries whose name matches neither the committed film's stem
+   * family, nor any committed shot's, nor a registered asset. Re-committing
+   * upstream clears the film while its rendered frames and videos linger; the
+   * server NEVER deletes user-visible files, so detection is the server's and
+   * the corrective action (delete the strays, or register them deliberately) is
+   * the agent's. Empty when the directory matches the committed truth, and
+   * always empty while no film is committed (a film mid-rework owns nothing
+   * yet).
+   */
+  staleRenders: string[];
+
   /** Tracked binary asset paths, project-relative, in registration order. */
   assets: string[];
 }
