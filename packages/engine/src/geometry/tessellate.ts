@@ -130,11 +130,13 @@ const sphere = (
     }
   }
   const stride = segments + 1;
+  // wind counter-clockwise seen from OUTSIDE (#1053) — the glTF front-face
+  // contract, and what a front-side renderer needs to not cull the surface
   for (let r = 0; r < rings; ++r)
     for (let s = 0; s < segments; ++s) {
       const a = r * stride + s;
       const b = a + stride;
-      indices.push(a, b, a + 1, a + 1, b, b + 1);
+      indices.push(a, a + 1, b, a + 1, b + 1, b);
     }
   return { positions, normals, indices };
 };
@@ -159,9 +161,10 @@ const cylinder = (
     positions.push(cos * radiusBottom, -halfH, sin * radiusBottom);
     normals.push(cos, 0, sin);
   }
+  // counter-clockwise from outside, matching the sphere lattice (#1053)
   for (let s = 0; s < segments; ++s) {
     const a = s * 2;
-    indices.push(a, a + 1, a + 2, a + 2, a + 1, a + 3);
+    indices.push(a, a + 2, a + 1, a + 2, a + 3, a + 1);
   }
   return { positions, normals, indices };
 };
