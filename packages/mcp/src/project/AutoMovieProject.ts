@@ -15,6 +15,7 @@ import {
   IAutoMovieSequence,
   IAutoMovieShot,
 } from "@automovie/interface";
+import { renderPathStem } from "@automovie/render";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -313,8 +314,39 @@ export class AutoMovieProject {
       notes: slate.notes.length,
       film: slate.film !== null,
       props: this.storedProps().map((spec) => spec.node),
+      staleRenders: this.staleRenders(slate),
       assets: this.assets,
     };
+  }
+
+  /**
+   * Top-level `renders/` entries the committed truth no longer owns (#1130). An
+   * entry is OWNED when its name belongs to the committed film's or a committed
+   * shot's stem family (`<stem>` itself — the default frame dir — or
+   * `<stem>.<anything>` — the encoded video, concat list, chunk outputs), or
+   * when a registered asset lives at or under it. Everything else is a stray
+   * from a superseded render. The store never deletes: the ledger surfaces the
+   * strays and the corrective action stays the agent's. Always empty while no
+   * film is committed — mid-rework, ownership is undefined, and a noisy ledger
+   * would prescribe deleting work about to be re-owned.
+   */
+  private staleRenders(slate: IAutoMovieMcpWritableSlate): string[] {
+    if (slate.film === null) return [];
+    const stems = new Set<string>([
+      renderPathStem(slate.film.id),
+      ...slate.shots.map((shot) => renderPathStem(shot.id)),
+    ]);
+    const owned = (name: string): boolean =>
+      [...stems].some((stem) => name === stem || name.startsWith(`${stem}.`)) ||
+      this.manifest.assets.some(
+        (asset) =>
+          asset === `renders/${name}` || asset.startsWith(`renders/${name}/`),
+      );
+    return fs
+      .readdirSync(path.join(this.root, "renders"))
+      .sort()
+      .filter((name) => !owned(name))
+      .map((name) => `renders/${name}`);
   }
 
   private get manifestPath(): string {
