@@ -62,9 +62,11 @@ const frame: IAutoMovieCameraAction = {
 /**
  * Region gates that sit above the body-region clip masking. `fullBody` owns the
  * entire rig, so it cannot run concurrently with a partial region action for
- * the same actor. Same-region overlaps are also ambiguous because the same
- * bones cannot play two authored clips at once. Adjacent same-region actions
- * still sequence normally, and disjoint partial regions still layer.
+ * the same actor — EXCEPT `face` (#1062): an emote carries expression only,
+ * which no gesture clip authors, so the combination is content-disjoint.
+ * Same-region overlaps are also ambiguous because the same bones cannot play
+ * two authored clips at once. Adjacent same-region actions still sequence
+ * normally, and disjoint partial regions still layer.
  */
 export const test_film_perform_shot_region_gates = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -142,5 +144,39 @@ export const test_film_perform_shot_region_gates = (): void => {
     "overlapping disjoint partial regions pass",
     layeredPartials.success,
     true,
+  );
+
+  // face carries expression only — no gesture clip authors it, so a fullBody
+  // action overlapping an emote is content-disjoint: smile-while-bowing is
+  // legal (#1062), while head (which whole-body clips may author) still gates
+  const smileWhileJumping = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [fullBody(0), emote(0.25), frame],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.equals(
+    "an emote overlapping a fullBody gesture passes",
+    smileWhileJumping.success,
+    true,
+  );
+  const lookWhileJumping = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [fullBody(0), lookAt(0.25), frame],
+      revise: { review: "unchanged.", final: null },
+    }),
+    synthesize: validSynthesizer,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "a head action overlapping a fullBody gesture still gates",
+    lookWhileJumping.success === false &&
+      hasViolation(lookWhileJumping, "range", "$input.draft[1].start"),
   );
 };
