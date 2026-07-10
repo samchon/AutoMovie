@@ -212,6 +212,7 @@ export const test_mcp_project_store = (): void => {
         shots: [
           { ...shot, id: "shot:b*1" },
           { ...shot, id: "shot:con" },
+          { ...shot, id: "shot:con.notes" },
         ],
       }),
     );
@@ -225,13 +226,20 @@ export const test_mcp_project_store = (): void => {
       fs.existsSync(path.join(root, "shots", "%63on.json")),
       true,
     );
+    // Windows reserves the pre-first-dot STEM (`con.notes.json` is refused on
+    // Windows 10 like `con.json`), so the dotted key escapes too (#1064)
+    TestValidator.equals(
+      "a dotted DOS device stem escapes its first character",
+      fs.existsSync(path.join(root, "shots", "%63on.notes.json")),
+      true,
+    );
     TestValidator.equals(
       "escaped keyed slices round-trip on reopen",
       AutoMovieProject.open(root)
         .writableSlate()
         .shots.map((s) => s.id)
         .sort((a, b) => a.localeCompare(b)),
-      ["shot:b*1", "shot:con"],
+      ["shot:b*1", "shot:con", "shot:con.notes"],
     );
     TestValidator.predicate(
       "case-only-distinct beat ids refuse before clobbering",
