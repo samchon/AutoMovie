@@ -22,9 +22,13 @@ const throws = (task: () => void): boolean => {
  * 1. A 1 s gait at 1 m/s over 6 m bakes 6 cycles of travel in the +Z direction;
  *    the final keyframe's root has advanced ≈ 6 m.
  * 2. The direction is normalised before scaling by speed.
- * 3. A distance shorter than one cycle still plays at least one cycle — and still
- *    arrives at exactly the asked distance (0.2 m, not a full-stride 1 m
- *    overshoot).
+ * 3. A distance shorter than HALF a stride compresses the single cycle so the
+ *    effective speed floors at ½×nominal (#1065): a 0.2 m ask at 1 m/s on a 1 s
+ *    gait plays one 0.4 s cycle (0.5 m/s, the same worst case whole-cycle
+ *    quantization allows everywhere else) and still arrives at exactly 0.2 m —
+ *    the old full-length cycle skated at 0.2 m/s. The gait-cycle meta scales
+ *    with it. A distance past the half-stride point (0.6 m) keeps the
+ *    uncompressed cycle.
  * 4. `faceTravel` turns the root so the model's +Z faces the travel heading — a
  *    walk sent along +X ends up facing +X — while the default keeps the root
  *    rotation identity (a strafe).
@@ -61,14 +65,38 @@ export const test_motion_locomote = (): void => {
   // 4 m at 2 m/s on a 1 s gait → round(2) = 2 cycles → 2 s → 2 × 2 = 4 m
   TestValidator.predicate("normalised: ≈ 4 m at 2 m/s", nclose(dz, 4, 0.001));
 
-  // 3. sub-cycle distance still plays one cycle — and arrives, not overshoots
+  // 3. sub-half-stride distance compresses the cycle to floor the speed (#1065)
   const tiny = locomoteMotion("t", gait, 0.2, 1, { x: 0, y: 0, z: 1 });
-  TestValidator.predicate("at least one cycle", nclose(tiny.duration, 1));
+  TestValidator.predicate(
+    "one compressed cycle spans 2·distance/speed = 0.4 s",
+    nclose(tiny.duration, 0.4),
+  );
   const tinyZ =
     tiny.keyframes[tiny.keyframes.length - 1]!.pose.root!.translation.z;
   TestValidator.predicate(
-    "a 0.2 m ask ends at 0.2 m, not a full stride",
+    "a 0.2 m ask still ends at 0.2 m, not a full stride",
     nclose(tinyZ, 0.2, 0.001),
+  );
+  TestValidator.predicate(
+    "the effective speed floors at half the nominal speed",
+    nclose(0.2 / tiny.duration, 0.5),
+  );
+  TestValidator.predicate(
+    "the gait-cycle meta scales with the compression",
+    tiny.gaitCycle != null && nclose(tiny.gaitCycle.period, 0.4),
+  );
+  // negative twin: past the half-stride point the cycle stays uncompressed
+  const halfStride = locomoteMotion("h", gait, 0.6, 1, { x: 0, y: 0, z: 1 });
+  TestValidator.predicate(
+    "a 0.6 m ask keeps the full 1 s cycle",
+    nclose(halfStride.duration, 1),
+  );
+  const halfZ =
+    halfStride.keyframes[halfStride.keyframes.length - 1]!.pose.root!
+      .translation.z;
+  TestValidator.predicate(
+    "a 0.6 m ask still arrives exactly",
+    nclose(halfZ, 0.6, 0.001),
   );
 
   // 4. faceTravel turns the body toward the heading
