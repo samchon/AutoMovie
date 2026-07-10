@@ -84,11 +84,12 @@ const motionsFor = (beat: string) => ({
  *    disk, beat-1's shot file reflects the new motion (write-through), beat-1's
  *    beat-end and notes are removed (stale without the performance they
  *    sampled) while beat-2's survive, and the film is cleared.
- * 2. A supplied motions registry gates the reference: a matching registry accepts;
- *    a registry without the named motion violates at
- *    `$input.performance.motion` (the commitShot registry semantics), and
- *    malformed performance/registry shapes return validation instead of raw
- *    TypeErrors.
+ * 2. The motions registry gates the reference with commitShot's RESIDENT semantics
+ *    (#1095): a matching registry accepts; a registry without the named motion
+ *    violates at `$input.performance.motion`; a motion reference with NO
+ *    registry violates at `$input.motions` (persisting it would store a
+ *    dangling id) while a `motion: null` splice needs none; and malformed
+ *    performance/registry shapes return validation instead of raw TypeErrors.
  * 3. A beat with no committed shot violates at `$input.beat` — a set names a thing
  *    that exists.
  * 4. A node that does not perform in the shot violates at
@@ -173,6 +174,15 @@ export const test_mcp_set_actor_performance = (): void => {
     const updated = app.setActorPerformance({
       beat: "beat-1",
       performance: { node: "knightB", motion: "parry-b", startOffset: 0.5 },
+      motions: {
+        b: {
+          id: "parry-b",
+          skeleton: "stickman",
+          duration: 1,
+          loop: false,
+          keyframes: [],
+        },
+      },
       reason: "the champion should parry, not brace",
     });
     TestValidator.equals("set applies", updated.updated, true);
@@ -259,6 +269,45 @@ export const test_mcp_set_actor_performance = (): void => {
     TestValidator.predicate(
       "mismatch located at the motion",
       hasViolation(mismatch.validation, "type", "$input.performance.motion"),
+    );
+    // #1095: a motion reference with NO registry would persist a dangling id
+    // (motions are re-perform-derived, not stored) — refused at the registry.
+    const shot1File = path.join(root, "shots", "beat-1.json");
+    const shot1Before = fs.readFileSync(shot1File, "utf8");
+    const registryless = app.setActorPerformance({
+      beat: "beat-1",
+      performance: {
+        node: "knightB",
+        motion: "ghost:never-compiled",
+        startOffset: 0,
+      },
+      reason: "splice a motion id with no registry to resolve it",
+    });
+    TestValidator.equals(
+      "a registry-less motion reference refuses",
+      registryless.updated,
+      false,
+    );
+    TestValidator.predicate(
+      "the registry-less refusal is located at the registry",
+      hasViolation(registryless.validation, "type", "$input.motions"),
+    );
+    TestValidator.equals(
+      "the refused splice writes nothing",
+      fs.readFileSync(shot1File, "utf8"),
+      shot1Before,
+    );
+    // negative twin: clearing the motion needs no registry — there is no id
+    // left to dangle.
+    const cleared = app.setActorPerformance({
+      beat: "beat-1",
+      performance: { node: "knightB", motion: null, startOffset: 0 },
+      reason: "the champion holds still this beat",
+    });
+    TestValidator.equals(
+      "a null-motion splice needs no registry",
+      cleared.updated,
+      true,
     );
     const malformedPerformance = app.setActorPerformance({
       beat: "beat-1",
