@@ -22,7 +22,11 @@ type BoneMapInput =
  * @author Samchon
  */
 export interface IAutoMovieImportedModelOptions {
-  /** Loaded scene or avatar root. Non-group objects are wrapped in a group. */
+  /**
+   * Loaded scene or avatar root. Always wrapped in a viewer-owned group, so
+   * pose roots never overwrite caller state (a GLTFLoader `gltf.scene`, a VRM0
+   * root with three-vrm's baked π yaw).
+   */
   object: THREE.Object3D;
   /** Optional normalized humanoid bone map for pose playback. */
   bones?: BoneMapInput;
@@ -40,10 +44,11 @@ export interface IAutoMovieImportedModelOptions {
 export const createImportedModelObject = (
   options: IAutoMovieImportedModelOptions,
 ): IAutoMovieModelObject => ({
-  object:
-    options.object instanceof THREE.Group
-      ? options.object
-      : wrapObject(options.object),
+  // ALWAYS wrap (#1047): `applyPose` writes `pose.root` onto the model root's
+  // local transform, and adopting a caller's Group directly (GLTFLoader's
+  // `gltf.scene`, three-vrm's π-yawed VRM0 root) would stomp caller-owned
+  // state — the same asset composed differently on an incidental instanceof.
+  object: wrapObject(options.object),
   bones: normalizeBones(options.bones),
   expressionTargets: options.expressionTargets,
   afterAutoMovieFrame: options.afterAutoMovieFrame,
