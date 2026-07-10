@@ -374,12 +374,26 @@ export const validateSequenceArtifact = (
       .map((shot) => [shot.id as string, shot as unknown as IAutoMovieShot]),
   );
 
-  validateArrayArtifact(
-    sequence.shots,
-    "$input.shots",
-    "sequence shots",
-    violations,
-  );
+  // cutSequence's minimum-entries gate: an empty cut-list is not a film, and
+  // this validator also guards the resident film.json slice on load — looser
+  // here meant an empty film validated clean, then the engine's cut refused
+  // it (#1097). The validator/engine no-drift promise binds both directions.
+  if (
+    validateArrayArtifact(
+      sequence.shots,
+      "$input.shots",
+      "sequence shots",
+      violations,
+    ) &&
+    sequence.shots.length === 0
+  )
+    pushViolation(
+      violations,
+      "type",
+      "$input.shots",
+      "a film must contain at least one shot",
+      sequence.shots,
+    );
   const entries = asArray(sequence.shots);
   // cutSequence's adjacent-transition accumulator (#988): a valid incoming
   // transition on the previous entry narrows how much of its played span the

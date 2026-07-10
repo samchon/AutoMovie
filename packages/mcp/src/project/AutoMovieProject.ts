@@ -421,9 +421,16 @@ export const checkAssetPath = (
       fault: `asset path must be project-relative, but was "${relativePath}"`,
     };
   const segments = forward.split("/");
-  if (segments.some((segment) => segment === "" || segment === ".."))
+  // "." segments would alias one file under two manifest keys
+  // ("assets/./x.png" beside "assets/x.png"), bypassing the never-silently-
+  // replaced duplicate refusal (#1097) — refuse them like "..".
+  if (
+    segments.some(
+      (segment) => segment === "" || segment === ".." || segment === ".",
+    )
+  )
     return {
-      fault: `asset path must not contain empty or ".." segments, but was "${relativePath}"`,
+      fault: `asset path must not contain empty, "." or ".." segments, but was "${relativePath}"`,
     };
   return { path: segments.join("/") };
 };
