@@ -148,8 +148,17 @@ export const followPathMotion = (props: {
   for (let c = 0; c < cycles; ++c)
     for (const k of props.gait.keyframes) {
       // drop the duplicate seam keyframe (a later cycle's time:0) so times stay
-      // strictly increasing — the prior cycle's final frame already covers it
-      if (c > 0 && k.time === 0) continue;
+      // strictly increasing — the prior cycle's final frame covers the pose,
+      // but the seam carries the incoming cycle's first-segment easing (#1012)
+      if (c > 0 && k.time === 0) {
+        const seam = keyframes[keyframes.length - 1]!;
+        keyframes[keyframes.length - 1] = {
+          ...seam,
+          easing: k.easing,
+          bezier: k.bezier,
+        };
+        continue;
+      }
       const globalT = c * props.gait.duration + k.time;
       const s = Math.min(length, speed * globalT);
       const seg = segments[segmentIndexAt(segments, s)]!;
@@ -169,6 +178,12 @@ export const followPathMotion = (props: {
           z: Math.cos(yawDeg * DEG2RAD),
         },
       });
+      // The gait's own root (a bob or sway) is model-frame data; rotate it by
+      // the path facing before adding the world path position (#1012).
+      const baseTranslation =
+        baseRoot === null
+          ? undefined
+          : Quaternion.rotateVector(facing, baseRoot.translation);
       keyframes.push({
         ...k,
         time: globalT,
@@ -176,9 +191,9 @@ export const followPathMotion = (props: {
           ...k.pose,
           root: {
             translation: {
-              x: (baseRoot?.translation.x ?? 0) + x,
-              y: (baseRoot?.translation.y ?? 0) + y,
-              z: (baseRoot?.translation.z ?? 0) + z,
+              x: (baseTranslation?.x ?? 0) + x,
+              y: (baseTranslation?.y ?? 0) + y,
+              z: (baseTranslation?.z ?? 0) + z,
             },
             rotation: Quaternion.multiply(
               facing,

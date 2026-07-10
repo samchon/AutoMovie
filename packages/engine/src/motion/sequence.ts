@@ -36,7 +36,17 @@ export const sequenceMotion = (
   for (let p = 0; p < parts.length; ++p) {
     const part = parts[p]!;
     for (const k of part.keyframes) {
-      if (p > 0 && k.time === 0) continue; // drop the duplicate seam keyframe
+      if (p > 0 && k.time === 0) {
+        // the kept seam keyframe carries the incoming part's first-segment
+        // easing — sampleMotion eases each segment from its start (#1012)
+        const seam = keyframes[keyframes.length - 1]!;
+        keyframes[keyframes.length - 1] = {
+          ...seam,
+          easing: k.easing,
+          bezier: k.bezier,
+        };
+        continue;
+      }
       keyframes.push({ ...k, time: k.time + offset });
     }
     offset += part.duration;

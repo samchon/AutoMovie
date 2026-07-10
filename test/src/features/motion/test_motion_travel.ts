@@ -170,4 +170,44 @@ export const test_motion_travel = (): void => {
         travelMotion("badFacing", base, 1, { x: 0, y: 0, z: 1 }, facing);
       }),
     );
+
+  // 5. a model-frame lateral sway rotates with the facing before travel adds
+  const yaw90b = { x: 0, y: Math.SQRT1_2, z: 0, w: Math.SQRT1_2 };
+  const swayRoot: IAutoMovieTransform = {
+    translation: { x: 0.1, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    scale: { x: 1, y: 1, z: 1 },
+  };
+  const swaying = makeMotion(
+    [
+      keyframe(0, makePose([], swayRoot), "easeIn"),
+      keyframe(1, makePose([], swayRoot), "step"),
+    ],
+    1,
+    true,
+  );
+  const swayFaced = travelMotion(
+    "sway",
+    swaying,
+    2,
+    { x: 1, y: 0, z: 0 },
+    yaw90b,
+  );
+  TestValidator.predicate(
+    "model X sway lands on world −Z under a 90° facing",
+    nclose(swayFaced.keyframes[1]!.pose.root!.translation.z, -0.1) &&
+      nclose(swayFaced.keyframes[1]!.pose.root!.translation.x, 1),
+  );
+
+  // 6. the seam keyframe carries the incoming cycle's first-segment easing
+  TestValidator.equals(
+    "travel seam easing is the incoming cycle's first",
+    swayFaced.keyframes[1]!.easing,
+    "easeIn",
+  );
+  TestValidator.equals(
+    "the authored final easing survives",
+    swayFaced.keyframes[2]!.easing,
+    "step",
+  );
 };
