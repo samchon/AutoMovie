@@ -1,5 +1,6 @@
 import { IAutoMovieStagedSet } from "@automovie/engine";
 import {
+  AutoMovieGuidePass,
   IAutoMovieActionTarget,
   IAutoMovieAssembleApplication,
   IAutoMovieBeatEndState,
@@ -672,7 +673,7 @@ export class AutoMovieApplication {
     /** Render parameters for a committed shot or sequence id. */
     spec: IAutoMovieRenderSpec;
     /** Guide passes to capture per frame. Defaults to beauty only. */
-    passes?: string[];
+    passes?: AutoMovieGuidePass[];
     /** Directory where frame files would be written. */
     frameDir?: string;
     /** Encoded video output path. */
@@ -703,7 +704,7 @@ export class AutoMovieApplication {
     /** Target time in seconds. Must agree with `frame` when both are present. */
     time?: number;
     /** Guide pass to draw. Defaults to `beauty`. */
-    pass?: string;
+    pass?: AutoMovieGuidePass;
   }): Promise<IAutoMovieSeeFrameOutput> {
     return this.render.seeFrame(props);
   }
@@ -728,7 +729,7 @@ export class AutoMovieApplication {
     /** Output frames per chunk. A positive integer. */
     chunkFrames: number;
     /** Guide passes to plan per chunk. Defaults to beauty only. */
-    passes?: string[];
+    passes?: AutoMovieGuidePass[];
     /** Directory where frame files would be written. */
     frameDir?: string;
     /** Encoded video output path. */

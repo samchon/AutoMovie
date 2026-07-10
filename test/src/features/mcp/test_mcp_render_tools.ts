@@ -1,4 +1,5 @@
 import {
+  AutoMovieGuidePass,
   IAutoMovieRenderSpec,
   IAutoMovieScene,
   IAutoMovieSequence,
@@ -163,14 +164,18 @@ export const test_mcp_render_tools = async (): Promise<void> => {
   TestValidator.predicate(
     "unknown pass name is a violation",
     hasPath(
-      app.planRender({ slate, spec, passes: ["beauty", "sketch"] }).validation,
+      app.planRender({
+        slate,
+        spec,
+        passes: ["beauty", "sketch" as AutoMovieGuidePass],
+      }).validation,
       "$input.passes[1]",
     ),
   );
   const malformedPasses = app.planRender({
     slate,
     spec,
-    passes: null as unknown as string[],
+    passes: null as unknown as AutoMovieGuidePass[],
   });
   TestValidator.predicate(
     "malformed pass list is a violation",
@@ -545,7 +550,13 @@ export const test_mcp_render_tools = async (): Promise<void> => {
   TestValidator.predicate(
     "unknown pass path",
     hasPath(
-      (await app.seeFrame({ slate, spec, pass: "sketch" })).validation,
+      (
+        await app.seeFrame({
+          slate,
+          spec,
+          pass: "sketch" as AutoMovieGuidePass,
+        })
+      ).validation,
       "$input.pass",
     ),
   );
