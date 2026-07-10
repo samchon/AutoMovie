@@ -1,6 +1,7 @@
 import {
   IAutoMovieActionSynthesizer,
   compilePerformance,
+  sampleMotion,
 } from "@automovie/engine";
 import {
   AutoMovieHumanoidBone,
@@ -67,6 +68,18 @@ const emoteClip = (): IAutoMovieMotion =>
     1,
   );
 
+// the real lookAt synthesizer's FIRST keyframe is already the full aim
+// (makeActorSynthesizer), which is exactly what makes a backward envelope
+// leak visible — mirror that shape here (#1060)
+const aimClip = (): IAutoMovieMotion =>
+  makeMotion(
+    [
+      keyframe(0, makePose([joint("head", { flexion: 60 })])),
+      keyframe(1, makePose([joint("head", { flexion: 60 })])),
+    ],
+    1,
+  );
+
 /** A region-appropriate clip per verb; null for anything else. */
 const synth: IAutoMovieActionSynthesizer = (
   action: IAutoMovieActionCall,
@@ -76,7 +89,7 @@ const synth: IAutoMovieActionSynthesizer = (
   if (action.verb === "gesture")
     return jointClip("leftUpperArm", 20, { bone: "leftUpperLeg", end: -99 }, 5);
   if (action.verb === "emote") return emoteClip();
-  if (action.verb === "lookAt") return jointClip("head", 60);
+  if (action.verb === "lookAt") return aimClip();
   if (action.verb === "react")
     return makeMotion(
       [
@@ -110,9 +123,15 @@ const frameAt = (motion: IAutoMovieMotion, time: number) =>
  * 3. A finished react's explicit-zero rest keyframes release their claims: a bow
  *    after the flinch window plays at full authored strength instead of being
  *    averaged toward zero.
- * 4. A late-starting composite pads a `step` rest keyframe at t=0, so shot
- *    sampling holds rest until the authored start instead of clamping the first
- *    pose backward.
+ * 4. A late-starting composite pads rest keyframes from t=0 up to its authored
+ *    start, so shot sampling holds rest instead of clamping the first pose
+ *    backward.
+ * 5. The envelope holds BETWEEN union keyframes (#1060): an off-grid sample claims
+ *    neither a late lookAt's aim nor a finished locomote's joints, while the
+ *    walk's destination root still persists; a late emote's expression stays
+ *    null before its start on both the layered and the padded path.
+ * 6. An inserted boundary time where no clip contributes (two rootless clips with
+ *    a gap between their spans) compiles and samples as honest rest.
  */
 export const test_perform_layer = (): void => {
   const locomote: IAutoMovieActionCall = {
@@ -228,13 +247,84 @@ export const test_perform_layer = (): void => {
   );
 
   // 4. a late-starting composite holds rest until its authored start (the
-  //    `step` lead-in pad), instead of clamping the first pose backward
+  //    `step` lead-in pad plus its `first − ε` twin, #1060), instead of
+  //    clamping the first pose backward
   const padded = compilePerformance([lateLook], synth).hero!;
   TestValidator.predicate(
-    "a late composite pads a step rest keyframe at t=0",
+    "a late composite pads rest keyframes up to its authored start",
     padded.keyframes[0]!.time === 0 &&
       padded.keyframes[0]!.easing === "step" &&
       padded.keyframes[0]!.pose.joints.length === 0 &&
-      nclose(padded.keyframes[1]!.time, 3),
+      padded.keyframes[1]!.time < 3 &&
+      padded.keyframes[1]!.pose.joints.length === 0 &&
+      padded.keyframes[1]!.expression === null &&
+      nclose(padded.keyframes[2]!.time, 3),
+  );
+
+  // 5. the envelope holds BETWEEN union keyframes too (#1060): off-grid
+  //    samples must not ramp a late clip's content backward, nor keep a
+  //    finished clip's joints melting toward zero
+  const offGrid = sampleMotion(late, 2);
+  TestValidator.predicate(
+    "off-grid: a late lookAt claims nothing mid-segment",
+    offGrid.pose.joints.every((j) => j.bone !== "head"),
+  );
+  TestValidator.predicate(
+    "off-grid: a finished locomote releases its joints mid-segment",
+    offGrid.pose.joints.every((j) => j.bone !== "leftUpperLeg"),
+  );
+  TestValidator.predicate(
+    "off-grid: the walk's destination root still persists",
+    offGrid.pose.root !== null && nclose(offGrid.pose.root.translation.x, 1),
+  );
+
+  const lateEmote: IAutoMovieActionCall = {
+    verb: "emote",
+    preset: "happy",
+    intensity: 0.8,
+    actor: "hero",
+    start: 3,
+    duration: 1,
+  };
+  const layeredEmote = compilePerformance([locomote, lateEmote], synth).hero!;
+  TestValidator.predicate(
+    "off-grid: a layered late emote's expression stays null before its start",
+    sampleMotion(layeredEmote, 0.1).expression === null &&
+      sampleMotion(layeredEmote, 2).expression === null &&
+      sampleMotion(layeredEmote, 3.5).expression?.preset === "happy",
+  );
+  const paddedEmote = compilePerformance([lateEmote], synth).hero!;
+  TestValidator.predicate(
+    "the lead-in pad holds a null expression until the authored start",
+    sampleMotion(paddedEmote, 0.5).expression === null &&
+      sampleMotion(paddedEmote, 3.5).expression?.preset === "happy",
+  );
+
+  // a start inside the boundary width (0 < first ≤ ε) gets only the t=0 pad:
+  // a `first − ε` twin would land at or before 0 and break the strictly
+  // increasing keyframe contract
+  const hairline = compilePerformance(
+    [{ ...lateEmote, start: 5e-7 }],
+    synth,
+  ).hero!;
+  TestValidator.predicate(
+    "a hairline start pads t=0 only, keeping times strictly increasing",
+    hairline.keyframes[0]!.time === 0 &&
+      nclose(hairline.keyframes[1]!.time, 5e-7) &&
+      hairline.keyframes.every(
+        (k, i, all) => i === 0 || k.time > all[i - 1]!.time,
+      ),
+  );
+
+  // 6. an inserted boundary time where NO clip contributes is honestly rest:
+  //    two rootless clips with a gap between their spans (a finished flinch,
+  //    a not-yet-started lookAt) compile and sample as rest in the gap
+  const gapLook = compilePerformance([react, lateLook], synth).hero!;
+  const gap = sampleMotion(gapLook, 2);
+  TestValidator.predicate(
+    "a fully-released gap samples as rest",
+    gap.pose.joints.length === 0 &&
+      gap.pose.root === null &&
+      gap.expression === null,
   );
 };

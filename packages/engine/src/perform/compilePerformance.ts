@@ -37,6 +37,14 @@ export type IAutoMovieActionSynthesizer = (
 
 const ROOT_REGIONS = new Set<AutoMovieBodyRegion>(["lowerBody", "fullBody"]);
 
+/**
+ * Width of the boundary keyframes that pin a clip's envelope onto the union
+ * grid (#1060). Larger than the envelope comparison tolerance (1e-9) so the
+ * boundary sample itself is excluded, far smaller than any frame interval so
+ * the ramp across it is invisible.
+ */
+const BOUNDARY_EPSILON = 1e-6;
+
 const maskMotionToRegion = (
   motion: IAutoMovieMotion,
   region: AutoMovieBodyRegion,
@@ -69,22 +77,37 @@ const maskMotionToRegion = (
  * its last keyframe a region keeps only its ROOT — a walk's destination
  * persists — while joint and expression claims release, so a finished flinch or
  * emote stops diluting whatever other regions do next.
+ *
+ * The envelope must hold BETWEEN union keyframes too (#1060): the composite is
+ * later interpolated by {@link sampleMotion}, so gating only at union times
+ * would ramp a late clip's content backward across the entire preceding segment
+ * (a lookAt at 4s visibly turning the head from t=0), and expressions — which
+ * interpolation carries at full strength from either segment end — would leak
+ * all the way back. Boundary keyframes at `first − ε` / `last + ε` pin each
+ * envelope edge onto the grid, so every interpolated segment lies entirely
+ * inside or entirely outside the envelope.
  */
 const layerClips = (
   id: string,
   clips: IAutoMovieMotion[],
 ): IAutoMovieMotion => {
-  const times = [
-    ...new Set(clips.flatMap((c) => c.keyframes.map((k) => k.time))),
-  ].sort((a, b) => a - b);
   const envelopes = clips.map((clip) => ({
     clip,
     first: clip.keyframes[0]!.time,
     last: clip.keyframes[clip.keyframes.length - 1]!.time,
   }));
+  const timeSet = new Set(clips.flatMap((c) => c.keyframes.map((k) => k.time)));
+  const earliest = Math.min(...envelopes.map((e) => e.first));
+  const latest = Math.max(...envelopes.map((e) => e.last));
+  for (const { first, last } of envelopes) {
+    if (first - earliest > BOUNDARY_EPSILON)
+      timeSet.add(first - BOUNDARY_EPSILON);
+    if (latest - last > BOUNDARY_EPSILON) timeSet.add(last + BOUNDARY_EPSILON);
+  }
+  const times = [...timeSet].sort((a, b) => a - b);
   const keyframes: IAutoMovieKeyframe[] = times.map((time) => {
-    // Every union time belongs to some clip's own keyframes, so at least one
-    // envelope always contributes a full sample here.
+    // An inserted boundary time may fall where NO envelope contributes (all
+    // clips rootless and out of span) — that instant is honestly rest.
     const samples: { pose: IAutoMoviePose; weight: number }[] = [];
     let expression = null;
     for (const { clip, first, last } of envelopes) {
@@ -103,7 +126,10 @@ const layerClips = (
     }
     return {
       time,
-      pose: blendPoses(samples),
+      pose:
+        samples.length === 0
+          ? { skeleton: clips[0]!.skeleton, root: null, joints: [] }
+          : blendPoses(samples),
       expression,
       easing: "linear",
       bezier: null,
@@ -132,19 +158,33 @@ const layerClips = (
  * keyframe's pose backward over the pre-action span (a lookAt at 3s aimed from
  * frame 0). The `step` easing holds the rest pose across the whole lead-in
  * segment, so the action still begins exactly at its authored start.
+ *
+ * A second rest keyframe at `first − ε` closes the expression hole (#1060):
+ * expression interpolation ignores easing and carries a segment-end expression
+ * at full strength from either endpoint, so the step pad alone held the POSE
+ * but let a late emote's face leak back to t=0. With rest at both ends the
+ * lead-in segment is null-expression throughout.
  */
 const padRestLeadIn = (motion: IAutoMovieMotion): IAutoMovieMotion => {
-  if (motion.keyframes[0]!.time <= 1e-9) return motion;
+  const first = motion.keyframes[0]!.time;
+  if (first <= 1e-9) return motion;
+  const rest = (
+    time: number,
+    easing: IAutoMovieKeyframe["easing"],
+  ): IAutoMovieKeyframe => ({
+    time,
+    pose: { skeleton: motion.skeleton, root: null, joints: [] },
+    expression: null,
+    easing,
+    bezier: null,
+  });
   return {
     ...motion,
     keyframes: [
-      {
-        time: 0,
-        pose: { skeleton: motion.skeleton, root: null, joints: [] },
-        expression: null,
-        easing: "step",
-        bezier: null,
-      },
+      rest(0, "step"),
+      ...(first > BOUNDARY_EPSILON
+        ? [rest(first - BOUNDARY_EPSILON, "linear")]
+        : []),
       ...motion.keyframes,
     ],
   };
