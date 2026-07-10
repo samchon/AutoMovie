@@ -56,7 +56,10 @@ export const applyTransform = (
  * parented to its `attachedBone` and rides that bone. A mesh with skin data and
  * no rigid attachment becomes a `THREE.SkinnedMesh` bound to the skeleton. If
  * both signals are present, `attachedBone` wins: the part is treated as a rigid
- * prop and its skin payload is ignored by the viewer.
+ * prop and its skin payload is ignored by the viewer. An `attachedBone` the
+ * skeleton does not carry throws — the same class as a skin referencing a
+ * missing bone (#1106): a silently root-parented prop renders frozen at the
+ * origin while everything else looks right.
  *
  * The returned `bones` map is what {@link applyPose} drives.
  *
@@ -131,10 +134,19 @@ export const buildModel = (model: IAutoMovieModel): IAutoMovieModelObject => {
       group.updateMatrixWorld(true);
       mesh.bind(new THREE.Skeleton(jointBones));
       mesh.normalizeSkinWeights();
+    } else if (part.attachedBone !== null) {
+      // An unknown attachedBone must throw like the skin path above (#1106):
+      // the silent fallback parented a hand-held prop to the model root,
+      // rendering it frozen at the origin while everything else looked right —
+      // the silent-skip class #1051 removed from the viewer.
+      const parentBone = bones.get(part.attachedBone);
+      if (parentBone === undefined)
+        throw new Error(
+          `part "${part.id}" attachedBone references missing bone "${part.attachedBone}"`,
+        );
+      parentBone.add(mesh);
     } else {
-      const parentBone =
-        part.attachedBone !== null ? bones.get(part.attachedBone) : undefined;
-      (parentBone ?? group).add(mesh);
+      group.add(mesh);
     }
   }
 
