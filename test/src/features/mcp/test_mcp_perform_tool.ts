@@ -79,6 +79,11 @@ const riglessContext = (
  *     engine's `assertUniqueActorGaits` / `assertUniqueGaitAxes` throws, while
  *     same-bone different-axis rows and per-actor independent gait sets stay
  *     valid.
+ * 11. Timing/force-malformed `hold`/`react` actions skip the default-synthesis
+ *     precheck and fail as `performShot`'s field-located violations at
+ *     `$input.performance.draft[i].duration` / `.force` instead of leaking
+ *     `holdMotion`/`reactMotion`/`impactRecoil` throws, while a valid `hold`
+ *     and a `react` with `duration: "auto"` still perform.
  */
 export const test_mcp_perform_tool = (): void => {
   const app = new AutoMovieApplication();
@@ -476,6 +481,92 @@ export const test_mcp_perform_tool = (): void => {
       emptyLimb.violations.every(
         (violation) => violation.path !== `${limbPath}[1]`,
       ),
+  );
+
+  const cameraFrame = {
+    verb: "frame",
+    actor: "cam-main",
+    start: 0,
+    duration: "auto",
+    framing: "medium",
+    move: "static",
+    on: { kind: "node", node: "knightA" },
+  } as const;
+  const timingProbe = (
+    action: Record<string, unknown>,
+  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+    app.perform({
+      script,
+      staged,
+      performance: makePerformanceWrite({
+        draft: [action as never, cameraFrame],
+        duration: 1,
+        revise: { review: "unchanged.", final: null },
+      }),
+      actors: {
+        knightA: context(nodePosition("knightA"), 0),
+      },
+    }).performed;
+  const hasTimingViolation = (
+    performed: ReturnType<AutoMovieApplication["perform"]>["performed"],
+    path: string,
+  ): boolean =>
+    performed.success === false &&
+    performed.violations.some((violation) => violation.path === path);
+
+  const negativeHold = timingProbe({
+    verb: "hold",
+    actor: "knightA",
+    start: 0,
+    duration: -1,
+  });
+  TestValidator.predicate(
+    "a negative hold duration fails as data, not a holdMotion throw",
+    hasTimingViolation(negativeHold, "$input.performance.draft[0].duration"),
+  );
+
+  const negativeReact = timingProbe({
+    verb: "react",
+    actor: "knightA",
+    start: 0,
+    duration: -1,
+    from: { kind: "point", point: { x: 0, y: 0, z: 2 } },
+    force: 0.5,
+  });
+  TestValidator.predicate(
+    "a negative react duration fails as data, not a reactMotion throw",
+    hasTimingViolation(negativeReact, "$input.performance.draft[0].duration"),
+  );
+
+  const forcelessReact = timingProbe({
+    verb: "react",
+    actor: "knightA",
+    start: 0,
+    duration: 0.5,
+    from: { kind: "point", point: { x: 0, y: 0, z: 2 } },
+  });
+  TestValidator.predicate(
+    "a react without force fails as data, not an impactRecoil throw",
+    hasTimingViolation(forcelessReact, "$input.performance.draft[0].force"),
+  );
+
+  TestValidator.equals(
+    "a valid hold still performs",
+    timingProbe({ verb: "hold", actor: "knightA", start: 0, duration: 0.5 })
+      .success,
+    true,
+  );
+  TestValidator.equals(
+    "a react with auto duration still performs",
+    timingProbe({
+      verb: "react",
+      actor: "knightA",
+      start: 0,
+      duration: "auto",
+      from: { kind: "point", point: { x: 0, y: 0, z: 2 } },
+      force: 0.5,
+    }).success,
+    true,
   );
 
   const missingGait = app.perform({
