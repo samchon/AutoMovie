@@ -48,6 +48,7 @@ const templateOf = (
 
   const fallback: unknown[] = Array.isArray(extraNames) ? extraNames : [];
   const targets: Record<string, number[]> = {};
+  const indexByName = new Map<string, number>();
   prim.listTargets().forEach((target, i) => {
     const name =
       target.getName() || (typeof fallback[i] === "string" ? fallback[i] : "");
@@ -55,6 +56,15 @@ const templateOf = (
       throw new Error(
         `morph target #${i} has no name (neither a target name nor mesh.extras.targetNames)`,
       );
+    // Two targets resolving to one name would silently overwrite — the last
+    // sculpt wins and the earlier one vanishes from the template, exactly the
+    // degradation the throw-on-structural-defect contract forbids (#1105).
+    const first = indexByName.get(name);
+    if (first !== undefined)
+      throw new Error(
+        `morph target #${i} duplicates name "${name}" (first at #${first})`,
+      );
+    indexByName.set(name, i);
     const deltaAccessor = target.getAttribute("POSITION");
     if (deltaAccessor === null)
       throw new Error(`morph target "${name}" has no POSITION deltas`);
