@@ -38,7 +38,10 @@ export class SlateQueryService {
     if (slate !== undefined) return { slate, root: "$input.slate" };
     return {
       slate: this.context!.requireProject(caller).storedSlate(),
-      root: "slate",
+      // The `$`-prefixed root matches CommitService/RenderService and the
+      // guides' addressing convention (#995): resident diagnostics read
+      // `$slate...`, explicit ones `$input.slate...`.
+      root: "$slate",
     };
   }
 

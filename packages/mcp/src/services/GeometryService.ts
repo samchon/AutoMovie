@@ -151,7 +151,9 @@ export class GeometryService {
         `${caller} was called without a scene, but the resident project has no committed scene. Commit a scene first or pass scene explicitly.`,
       );
     assertResidentSceneFile(project.root, stored.scene, caller);
-    return { scene: stored.scene, root: "scene" };
+    // `$slate.scene` matches the commit/render services' resident addressing
+    // (#995): the resident scene IS the stored slate's scene slice.
+    return { scene: stored.scene, root: "$slate.scene" };
   }
 
   private resolveGeometryContext(
@@ -178,7 +180,10 @@ export class GeometryService {
     ]);
     return {
       resident: true,
-      root: "context",
+      // `$context` (not `$slate...`): the geometry context is assembled from
+      // the stored scene plus session rig/motion memory, so a slate-slice
+      // root would misaddress the memory-backed parts (#995).
+      root: "$context",
       context: {
         scene: slate.scene,
         models,
