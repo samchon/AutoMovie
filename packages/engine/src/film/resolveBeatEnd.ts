@@ -93,15 +93,31 @@ const bakedFollowVelocity = (
 
 /**
  * The baked follow clip driving `node`, or `null` when none does. Matched by
- * `compileAttach`'s stable `attach:<node>` id — the clip a mount (or an
- * overriding `attachTo`) produced for the rider carries its world translation
- * and rotation channels.
+ * `compileAttach`'s stable `attach:<node>` id; a handoff bakes later couplings
+ * as `attach:<node>:2`, `:3`, … in start order (#989), so the HIGHEST suffix is
+ * the latest coupling — the hand the prop actually ends the beat in.
  */
 const followClipOf = (
   objectMotions: readonly IAutoMovieClip[],
   node: string,
-): IAutoMovieClip | null =>
-  objectMotions.find((clip) => clip.id === `attach:${node}`) ?? null;
+): IAutoMovieClip | null => {
+  const prefix = `attach:${node}`;
+  let best: IAutoMovieClip | null = null;
+  let bestRank = 0;
+  for (const clip of objectMotions) {
+    let rank = 0;
+    if (clip.id === prefix) rank = 1;
+    else if (clip.id.startsWith(`${prefix}:`)) {
+      const suffix = Number(clip.id.slice(prefix.length + 1));
+      if (Number.isInteger(suffix) && suffix > 1) rank = suffix;
+    }
+    if (rank > bestRank) {
+      best = clip;
+      bestRank = rank;
+    }
+  }
+  return best;
+};
 
 /**
  * Derive the forward-state a later beat should block against from a compiled

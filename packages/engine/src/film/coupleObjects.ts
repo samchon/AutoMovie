@@ -92,7 +92,17 @@ const bakeAttachFollows = (
 ): { clips: IAutoMovieClip[]; events: IAutoMovieInteractionEvent[] } => {
   const clips: IAutoMovieClip[] = [];
   const events: IAutoMovieInteractionEvent[] = [];
-  for (const job of attachments) {
+  // A handoff (the same child attached to two parents over disjoint spans)
+  // would bake two clips with one `attach:<child>` id — an uncommittable shot
+  // and an ambiguous beat-end follow (#989). Process attachments in START
+  // order and suffix repeats (`attach:<child>:2`, ...), so the FIRST
+  // occurrence keeps the stable id and the HIGHEST suffix is always the
+  // latest coupling — the one `resolveBeatEnd` should follow.
+  const occurrences = new Map<string, number>();
+  const ordered = [...attachments].sort(
+    (a, b) => a.action.start - b.action.start,
+  );
+  for (const job of ordered) {
     const parentNode = context.scene.nodes.find(
       (n) => n.id === job.action.parent,
     )!;
@@ -111,19 +121,22 @@ const bakeAttachFollows = (
           job.index,
         ),
       );
+      const count = (occurrences.get(child) ?? 0) + 1;
+      occurrences.set(child, count);
+      const baked = compileAttach({
+        child,
+        bone: job.action.bone,
+        parentTransform: parentNode.transform,
+        parentSkeleton: parentRig,
+        parentMotion: context.motions[job.action.parent],
+        start: job.action.start,
+        duration: end - job.action.start,
+        shotDuration: context.duration,
+        jointAxes: HUMANOID_JOINT_AXES,
+        restFrames: context.restFrames?.(job.action.parent),
+      });
       clips.push(
-        compileAttach({
-          child,
-          bone: job.action.bone,
-          parentTransform: parentNode.transform,
-          parentSkeleton: parentRig,
-          parentMotion: context.motions[job.action.parent],
-          start: job.action.start,
-          duration: end - job.action.start,
-          shotDuration: context.duration,
-          jointAxes: HUMANOID_JOINT_AXES,
-          restFrames: context.restFrames?.(job.action.parent),
-        }),
+        count === 1 ? baked : { ...baked, id: `${baked.id}:${count}` },
       );
     }
   }

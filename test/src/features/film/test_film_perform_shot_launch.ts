@@ -85,15 +85,18 @@ const stagingOf = () =>
  * 7. A launch that cannot reach its target at the given speed → a range violation.
  * 8. A launch aimed at a bare point (no actor to recoil) still flies, but
  *    schedules no reaction — nobody performs.
- * 9. A launch at a **moving** target is led: when the foe strides during the shot
- *    (a `locomote` carrying root travel), performShot resolves its animated
- *    position and aims where it will be, so the baked flight lands short of the
- *    foe's start point — and the foe still reacts, at the led contact.
- * 10. A launch fired too late to land before the shot ends yields a `range`
+ * 9. Two launches of one projectile node bake UNIQUE flight ids in draft order
+ *    (`trajectory:arrow`, `trajectory:arrow:2`), so a volley stays committable
+ *    (#989).
+ * 10. A launch at a **moving** target is led: when the foe strides during the shot
+ *     (a `locomote` carrying root travel), performShot resolves its animated
+ *     position and aims where it will be, so the baked flight lands short of
+ *     the foe's start point — and the foe still reacts, at the led contact.
+ * 11. A launch fired too late to land before the shot ends yields a `range`
  *     violation on `.speed`.
- * 11. A launch whose actor is also the projectile yields `type` on `.projectile`.
- * 12. A launch aimed at its own projectile node yields `type` on `.at`.
- * 13. A moving target is still led when its locomote action uses an actor list.
+ * 12. A launch whose actor is also the projectile yields `type` on `.projectile`.
+ * 13. A launch aimed at its own projectile node yields `type` on `.at`.
+ * 14. A moving target is still led when its locomote action uses an actor list.
  */
 export const test_film_perform_shot_launch = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -608,4 +611,35 @@ export const test_film_perform_shot_launch = (): void => {
       lv[lv.length - 3]! < 6 - 0.1,
     );
   }
+
+  // 10. a volley: two launches of one projectile bake unique flight ids
+  const volley = perform([
+    {
+      verb: "launch",
+      actor: "archer",
+      start: 0.2,
+      duration: 0.5,
+      projectile: "arrow",
+      at: { kind: "node", node: "foe" },
+      speed: 22,
+    },
+    {
+      verb: "launch",
+      actor: "archer",
+      start: 1.2,
+      duration: 0.5,
+      projectile: "arrow",
+      at: { kind: "node", node: "foe" },
+      speed: 22,
+    },
+  ]);
+  TestValidator.equals("the volley performs", volley.success, true);
+  if (volley.success === true)
+    TestValidator.equals(
+      "volley flights carry unique draft-ordered ids",
+      volley.shot.objectMotions
+        .map((c) => c.id)
+        .sort((a, b) => a.localeCompare(b)),
+      ["trajectory:arrow", "trajectory:arrow:2"],
+    );
 };

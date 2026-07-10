@@ -879,6 +879,7 @@ export const performShot = (props: {
   // reacts must ride the same synthesis and ROM gate as authored ones. A launch
   // that cannot reach its target at the given speed is a range violation.
   const objectMotions: IAutoMovieClip[] = [];
+  const trajectoryCounts = new Map<string, number>();
   const events: IAutoMovieInteractionEvent[] = [];
   for (const job of launches) {
     // Lead a moving target: when the struck node travels during the shot (it
@@ -938,8 +939,15 @@ export const performShot = (props: {
       );
       continue;
     }
+    // Repeated launches of one projectile node would collide on the stable
+    // `trajectory:<node>` id (#989); suffix later flights so the shot stays
+    // committable (`validateUniqueIds` on objectMotions).
+    const flightCount = (trajectoryCounts.get(result.clip.id) ?? 0) + 1;
+    trajectoryCounts.set(result.clip.id, flightCount);
     objectMotions.push({
       ...result.clip,
+      id:
+        flightCount === 1 ? result.clip.id : `${result.clip.id}:${flightCount}`,
       duration: performance.duration,
       tracks: result.clip.tracks.map((track) => ({
         ...track,
