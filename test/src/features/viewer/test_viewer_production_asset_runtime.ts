@@ -41,7 +41,9 @@ import { nclose, throwsError } from "../internal/predicates";
  *    expression sinks, with explicit ARKit channels overriding preset
  *    expansion.
  * 4. `AutoMoviePlayer.update` writes pose, expression, and imported-runtime frame
- *    hooks on the same timestamp.
+ *    hooks on the same timestamp; the pose root lands on a viewer-owned wrapper
+ *    even for Group inputs, preserving the caller's baked transform (#1047),
+ *    and a null-root pose returns to the staged base (#1046).
  * 5. `captureViewerSnapshot` renders exactly once and returns canvas metadata.
  *
  * @author Samchon
@@ -85,6 +87,9 @@ export const test_viewer_production_asset_runtime = async (): Promise<void> => {
   const morph = createMorphMesh();
   const importedBone = new THREE.Object3D();
   const importedRoot = new THREE.Group();
+  // a caller-baked transform (three-vrm's VRM0 π yaw) that pose roots must
+  // never overwrite (#1047)
+  importedRoot.rotateY(Math.PI);
   importedRoot.add(importedBone, morph);
   const expressionValues = new Map<string, number>();
   const frames: Array<{ seconds: number; deltaSeconds: number }> = [];
@@ -152,6 +157,15 @@ export const test_viewer_production_asset_runtime = async (): Promise<void> => {
     nclose(imported.object.position.x, 1.25) &&
       nclose(imported.object.position.y, 0.5) &&
       nclose(imported.object.position.z, -0.25),
+  );
+  // even a Group input gets a viewer-owned wrapper (#1047): the pose root
+  // landed on the wrapper, and the caller's baked π yaw survived beneath it
+  TestValidator.predicate(
+    "an imported Group is wrapped, its baked transform preserved",
+    imported.object !== importedRoot &&
+      nclose(Math.abs(importedRoot.quaternion.y), 1) &&
+      nclose(importedRoot.quaternion.w, 0) &&
+      nclose(importedRoot.position.x, 0),
   );
   TestValidator.equals("frame hook count", frames.length, 2);
   TestValidator.equals("first frame time", frames[0]!.seconds, 0.25);
