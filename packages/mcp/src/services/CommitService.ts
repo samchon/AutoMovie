@@ -1417,7 +1417,21 @@ const validateBeatEndArtifact = (
         )
           ? shot.performances
           : [];
+      // The engine derives an actor's end motion from its performance when
+      // one exists and from the scene node's AMBIENT motion otherwise
+      // (resolveBeatEnd's endActorOf) — so the advertised getShotEndState →
+      // commitBeatEnd round trip must accept both sources (#1094). Gating on
+      // performances alone dead-ended every scene using ambient node motions.
+      const ambient =
+        scene !== null &&
+        scene.nodes.some(
+          (node) =>
+            isRecord(node) &&
+            node.id === actor.node &&
+            node.motion === actor.motion,
+        );
       if (
+        !ambient &&
         !performances.some(
           (performance) =>
             isRecord(performance) && performance.motion === actor.motion,
@@ -1427,7 +1441,7 @@ const validateBeatEndArtifact = (
           violations,
           "type",
           `${path}.motion`,
-          `beat-end actor motion "${actor.motion}" must reference the committed shot`,
+          `beat-end actor motion "${actor.motion}" must reference the committed shot's performances or the actor's scene-node motion`,
           actor.motion,
         );
     }
