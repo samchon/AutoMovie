@@ -51,10 +51,19 @@ const maskMotionToRegion = (
   keepRoot: boolean,
 ): IAutoMovieMotion => {
   const bones = new Set(bodyRegionBones(region));
+  // Expression is FACE content: joints are made disjoint by the bone filter
+  // below, but a synthesizer authoring an expression on a non-face clip (a
+  // grimace on a fullBody stagger) used to ride through and overlap an emote
+  // ungated — layering resolves expressions last-envelope-wins, so one
+  // silently ate the other (#1101). Stripping it here makes the fullBody↔face
+  // exemption's disjointness claim true by construction: only the face
+  // region's owner speaks for the face.
+  const keepExpression = region === "face";
   return {
     ...motion,
     keyframes: motion.keyframes.map((keyframe) => ({
       ...keyframe,
+      expression: keepExpression ? keyframe.expression : null,
       pose: {
         ...keyframe.pose,
         root: keepRoot ? keyframe.pose.root : null,
