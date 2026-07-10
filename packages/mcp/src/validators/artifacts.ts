@@ -611,11 +611,13 @@ const validateTransition = (
   );
 };
 
+// Both call sites gate `entry` through `isRecord` first, so the parameter is
+// already narrowed — an unreachable defensive re-check here would be dead
+// code the coverage gate rightly refuses to count (#1040).
 const entryDuration = (
-  entry: unknown,
+  entry: Record<string, unknown>,
   shot: IAutoMovieShot | undefined,
 ): number | null => {
-  if (!isRecord(entry)) return null;
   if (shot === undefined) return null;
   if (isRecord(entry.trim) && typeof entry.trim.duration === "number")
     return entry.trim.duration;
