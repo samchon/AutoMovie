@@ -32,8 +32,8 @@ const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: 1 };
 const ZERO: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
 
 /**
- * The world transform a baked follow clip writes onto `node` at `t`. A mounted
- * rider's world root comes from here — the exact clip {@link performShot} baked
+ * The world transform a baked follow clip writes onto `node` at `t`. A coupled
+ * child's world root comes from here — the exact clip {@link performShot} baked
  * through `compileAttach` — so beat-end and per-frame render read the SAME
  * composition (#674). Scale is not baked (rigid couplings never scale), so it
  * stays identity.
@@ -63,8 +63,8 @@ const bakedTransformAt = (
 };
 
 /**
- * Trailing world velocity of the baked follow clip at `t` — the rider's real
- * end velocity as the mount moves, finite-differenced over the last
+ * Trailing world velocity of the baked follow clip at `t` — the coupled child's
+ * real end velocity as its parent moves, finite-differenced over the last
  * {@link VELOCITY_DT} and clamped into the clip. Zero exactly at the clip's
  * start (an empty window), like the pose-clip velocity rule; for any `t > 0`
  * the window `[t0, t1]` is non-empty (`VELOCITY_DT > 0`). The clip is the one
@@ -248,13 +248,16 @@ const endActorOf = (
       : Math.max(0, context.duration - performed.performance.startOffset);
   const mount = context.mountByNode.get(node.id)?.binding ?? null;
   const plants = context.plantsByNode.get(node.id);
-  // A mounted rider's end world root comes from the shot's baked follow clip
-  // (#674) — the same composition performShot produced — overriding the rider's
-  // own placement and pose-root. When the shot carries no such clip (a
-  // hand-built shot, or no perform pass), the rider falls back to the staged
-  // path below, byte-identical to the pre-#674 output.
-  const followClip =
-    mount === null ? null : followClipOf(context.objectMotions, node.id);
+  // A coupled child's end world root comes from the shot's baked follow clip
+  // — the same composition performShot produced (#674) — overriding its own
+  // placement and pose-root. That covers the staged-mount rider AND the
+  // per-beat `attachTo` grab (#1141): the shot leaves a grabbed prop in the
+  // parent's hand, so the next beat must resume it there, not at its staged
+  // spot; `mount` stays the PERSISTENT binding only (null for a grab). When
+  // the shot carries no such clip (never coupled, a hand-built shot, or no
+  // perform pass), the node falls back to the staged path below,
+  // byte-identical to the pre-#674 output.
+  const followClip = followClipOf(context.objectMotions, node.id);
   const world: IWorldOverride | null =
     followClip === null
       ? null
@@ -289,7 +292,7 @@ const endActorOf = (
   });
 };
 
-/** A rider's world root taken from its baked mount follow clip (#674). */
+/** A coupled child's world root taken from its baked follow clip (#674). */
 interface IWorldOverride {
   transform: IAutoMovieTransform;
   rootVelocity: IAutoMovieVector3;
@@ -320,8 +323,8 @@ const actorState = (props: {
       props.motion === null
         ? null
         : gaitPhaseOf(props.motion.clip, props.localTime),
-    // A mounted rider's velocity is the ride's (baked-clip trailing velocity),
-    // even when the rider holds its own pose; otherwise the pose-clip rule.
+    // A coupled child's velocity is its parent's carry (baked-clip trailing
+    // velocity), even when it holds its own pose; otherwise the pose-clip rule.
     rootVelocity:
       props.world !== null
         ? props.world.rootVelocity

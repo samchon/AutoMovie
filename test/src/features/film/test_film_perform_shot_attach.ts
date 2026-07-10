@@ -92,9 +92,13 @@ const stagingOf = () =>
  * 6. A child node cannot attach to one of its own bones.
  * 7. A handoff (#989) — the same child attached over two disjoint spans — bakes
  *    UNIQUE ids in start order (`attach:sword`, `attach:sword:2`), so the shot
- *    stays committable, and `resolveBeatEnd` follows the LATEST coupling: the
- *    sword's end transform rides the second attachment's final follow sample,
- *    not the first's.
+ *    stays committable, and `resolveBeatEnd` follows the LATEST coupling
+ *    WITHOUT any staged mount (#1141 — the grab alone drives the end state):
+ *    the sword's end transform rides the second attachment's final follow
+ *    sample (not the first's, not the staged placement), its end velocity is
+ *    the follow clip's trailing read, and its `mount` stays null (a per-beat
+ *    grab is not a persistent binding). The never-coupled knight keeps the
+ *    staged/pose-root path.
  */
 export const test_film_perform_shot_attach = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -393,23 +397,35 @@ export const test_film_perform_shot_attach = (): void => {
     const v = sampleClip(clip, 2).get("node:sword:translation")!.value;
     return { x: v[0]!, y: v[1]!, z: v[2]! };
   };
-  const swordMount = {
-    node: "sword",
-    binding: { parent: "knight", bone: "leftHand" as const },
-  };
   const ended = resolveBeatEnd({
     beat: "beat-1",
     scene: staged.scene,
     shot: handoff.shot,
     motions: Object.values(handoff.motions),
-    mounts: [swordMount],
   });
+  const endedSword = ended.actors.find((a) => a.node === "sword")!;
   TestValidator.predicate(
-    "the beat end follows the LATEST coupling",
-    vclose(
-      ended.actors.find((a) => a.node === "sword")!.transform.translation,
-      clipEnd(second),
-    ),
+    "the beat end follows the LATEST coupling without a staged mount",
+    vclose(endedSword.transform.translation, clipEnd(second)),
+  );
+  TestValidator.equals(
+    "a per-beat grab is not a persistent binding",
+    endedSword.mount,
+    null,
+  );
+  TestValidator.predicate(
+    "the grabbed prop's end velocity is the follow clip's trailing read",
+    endedSword.rootVelocity !== null &&
+      [
+        endedSword.rootVelocity.x,
+        endedSword.rootVelocity.y,
+        endedSword.rootVelocity.z,
+      ].every((c) => Number.isFinite(c)),
+  );
+  const endedKnight = ended.actors.find((a) => a.node === "knight")!;
+  TestValidator.predicate(
+    "a never-coupled actor keeps the staged/pose-root path",
+    vclose(endedKnight.transform.translation, { x: 0, y: 0, z: 0 }),
   );
 
   // a hand-authored bogus suffix ranks below the bare stable id, so the
@@ -422,7 +438,6 @@ export const test_film_perform_shot_attach = (): void => {
       objectMotions: [first, { ...second, id: "attach:sword:x" }],
     },
     motions: Object.values(handoff.motions),
-    mounts: [swordMount],
   });
   TestValidator.predicate(
     "a bogus suffix does not count as a coupling",
