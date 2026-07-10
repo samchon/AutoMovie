@@ -229,6 +229,9 @@ for (const node of staged.scene.nodes) {
   group.position.set(t.x, t.y, t.z);
   const r = node.transform.rotation;
   group.quaternion.set(r.x, r.y, r.z, r.w);
+  // the FULL staged base, scale included (#1087)
+  const s = node.transform.scale;
+  group.scale.set(s.x, s.y, s.z);
   group.add(obj.object);
   scene.add(group);
   built[node.id] = obj;
