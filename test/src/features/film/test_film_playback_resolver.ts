@@ -82,6 +82,13 @@ const SEQUENCE: IAutoMovieSequence = {
  * 8. Cutting away exactly on a hit keeps the hit (#1061): when NO other entry of
  *    the shot starts at the trim-end instant, the trimmed entry owns the event
  *    instead of it vanishing from every entry.
+ * 9. Ownership requires GLOBAL contiguity (#1099): the same shot played as
+ *    aftermath [2,4] then flashback [0,2] — the flashback's cut lands exactly
+ *    on the hit at shot-time 2, and a shot-LOCAL coincidence with the
+ *    aftermath's start must not suppress it (they play at different global
+ *    times). Both plays emit the hit at their own global instants (per-play
+ *    semantics, #1080), while a genuinely contiguous seam (scenario 7) still
+ *    emits once.
  */
 export const test_film_playback_resolver = (): void => {
   const timeline = sequenceTimeline(SEQUENCE, SHOTS);
@@ -313,5 +320,42 @@ export const test_film_playback_resolver = (): void => {
     "a hit exactly on a mid-shot cut-away survives at the cut",
     cutEvents.map((e) => [e.id, e.entry, e.globalTime]),
     [["hit", 0, 2]],
+  );
+
+  // 9. a flashback's cut keeps its own hit — shot-local coincidence with a
+  // non-contiguous entry owns nothing (#1099)
+  const flashbackShots: IAutoMovieShot[] = [
+    {
+      ...shot("shot:beat-1", 4),
+      events: [event("hit", "contact", "sampledProximity", 2)],
+    },
+  ];
+  const flashbackEvents = sequenceEventTimeline(
+    {
+      id: "seq-flashback",
+      name: null,
+      fps: 24,
+      shots: [
+        {
+          shot: "shot:beat-1",
+          trim: { start: 2, duration: 2 },
+          transition: null,
+        },
+        {
+          shot: "shot:beat-1",
+          trim: { start: 0, duration: 2 },
+          transition: null,
+        },
+      ],
+    },
+    flashbackShots,
+  );
+  TestValidator.equals(
+    "a flashback's cut emits the hit at its own global time (per play)",
+    flashbackEvents.map((e) => [e.id, e.entry, e.globalTime]),
+    [
+      ["hit", 0, 0],
+      ["hit", 1, 4],
+    ],
   );
 };
