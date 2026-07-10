@@ -34,7 +34,11 @@ export const validateJointRom = (props: {
   for (const axis of AXES) {
     const angle: number | null = joint[axis];
     const allowed: IAutoMovieAngleRange | null = constraint[axis];
-    if (angle === null || angle === 0) continue;
+    if (angle === null) continue;
+    // 0 is only implicitly fine on an IMMOBILE axis (it is that axis's rest);
+    // against a zero-excluding override like [10, 90] it must report, or
+    // validate would call clean what clampJointRom moves to the min (#1057)
+    if (angle === 0 && allowed === null) continue;
     if (!Number.isFinite(angle)) {
       collector.push(
         "range",
