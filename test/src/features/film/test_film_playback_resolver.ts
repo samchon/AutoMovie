@@ -79,6 +79,9 @@ const SEQUENCE: IAutoMovieSequence = {
  *    trims [0,1] + [1,2] emits an event at shot-time 1.0 exactly once (from the
  *    entry that starts there), while a shot-final event at 2.0 is still emitted
  *    because the last trim ends at the shot's own end.
+ * 8. Cutting away exactly on a hit keeps the hit (#1061): when NO other entry of
+ *    the shot starts at the trim-end instant, the trimmed entry owns the event
+ *    instead of it vanishing from every entry.
  */
 export const test_film_playback_resolver = (): void => {
   const timeline = sequenceTimeline(SEQUENCE, SHOTS);
@@ -280,5 +283,35 @@ export const test_film_playback_resolver = (): void => {
       ["seam", 1],
       ["final", 1],
     ],
+  );
+
+  // 8. a hit exactly on a mid-shot cut-away survives at the cut (#1061)
+  const cutShots: IAutoMovieShot[] = [
+    {
+      ...shot("shot:beat-1", 4),
+      events: [event("hit", "contact", "sampledProximity", 2)],
+    },
+    shot("shot:beat-2", 1),
+  ];
+  const cutEvents = sequenceEventTimeline(
+    {
+      id: "seq-cut",
+      name: null,
+      fps: 24,
+      shots: [
+        {
+          shot: "shot:beat-1",
+          trim: { start: 0, duration: 2 },
+          transition: null,
+        },
+        { shot: "shot:beat-2", trim: null, transition: null },
+      ],
+    },
+    cutShots,
+  );
+  TestValidator.equals(
+    "a hit exactly on a mid-shot cut-away survives at the cut",
+    cutEvents.map((e) => [e.id, e.entry, e.globalTime]),
+    [["hit", 0, 2]],
   );
 };

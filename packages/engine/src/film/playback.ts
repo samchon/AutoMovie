@@ -229,9 +229,11 @@ export const resolveSequencePlayback = (
  * outside a sequence entry's trimmed source range are omitted. The range is
  * half-open (`[from, to)`) so an event sitting exactly on a contiguous trim
  * seam is emitted once — by the entry that starts there — not once per
- * neighbouring entry (#1009); it closes at `to` only when the trim ends at the
- * shot's own end, so a shot-final event is never lost. Included events keep
- * their shot-local `time` and also expose `shotTime` plus `globalTime`.
+ * neighbouring entry (#1009); it closes at `to` when the trim ends at the
+ * shot's own end (a shot-final event is never lost) AND when no other entry of
+ * the same shot starts at that instant (#1061) — cutting away exactly on a hit
+ * hands the hit to the cut, not to silence. Included events keep their
+ * shot-local `time` and also expose `shotTime` plus `globalTime`.
  */
 export const sequenceEventTimeline = (
   sequence: IAutoMovieSequence,
@@ -240,14 +242,33 @@ export const sequenceEventTimeline = (
   const timeline = sequenceTimeline(sequence, shots);
   const byId = indexShots(shots);
   const events: IAutoMoviePlaybackEvent[] = [];
+  const fromsByShot = new Map<string, number[]>();
+  for (const entry of timeline.entries) {
+    const list = fromsByShot.get(entry.shot) ?? [];
+    list.push(entry.offset);
+    fromsByShot.set(entry.shot, list);
+  }
   for (const entry of timeline.entries) {
     const shot = byId.get(entry.shot)!.shot;
     const from = entry.offset;
     const to = entry.offset + entry.played;
     const atShotEnd = Math.abs(to - shot.duration) <= 1e-9;
+    // An event landing EXACTLY on this entry's trim end belongs to the entry
+    // that starts there (#1009) — but when no entry of the shot does, the
+    // instant would vanish entirely; this entry then keeps it (#1061).
+    const ownedElsewhere = (time: number): boolean =>
+      fromsByShot
+        .get(entry.shot)!
+        .some((f) => f > from + 1e-9 && Math.abs(f - time) <= 1e-9);
     for (const event of shot.events ?? []) {
       if (event.time < from - 1e-9) continue;
-      if (atShotEnd ? event.time > to + 1e-9 : event.time >= to - 1e-9)
+      if (
+        atShotEnd
+          ? event.time > to + 1e-9
+          : Math.abs(event.time - to) <= 1e-9
+            ? ownedElsewhere(event.time)
+            : event.time >= to - 1e-9
+      )
         continue;
       events.push({
         ...event,
