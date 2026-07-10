@@ -229,7 +229,9 @@ export class GeometryService {
         `${caller} was called without a context, but the resident project has no committed scene. Commit a scene first or pass context explicitly.`,
       );
     assertResidentSceneFile(project.root, slate.scene, caller);
-    const memory = this.context.geometryMemory();
+    // Beat-scoped motion memory (#1091): the queried beat's own snapshot, so
+    // `perform:<actor>` ids never resolve to another beat's clip.
+    const memory = this.context.geometryMemory(beat);
     const models = mergeResidentModels([
       ...memory.models,
       ...project.storedProps().map((prop) => ({
