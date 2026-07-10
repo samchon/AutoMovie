@@ -24,8 +24,9 @@ const ORIGIN: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
  * 1. Overhead target, fired up: hit time is the rising root `(v−√…)/g`, well
  *    before the descending root — and the forward simulation confirms the
  *    projectile is on the target at exactly that time (rising through it).
- * 2. Below target, fired up: only one positive root exists, so the value is the
- *    single crossing — unchanged from before the first-root fix (regression).
+ * 2. Below target, default (direct) arc: fired straight DOWN (#1142), so the hit
+ *    is the single positive root of the downward flight — the fast direct drop,
+ *    not the up-and-over lob.
  */
 export const test_physics_ballistic_vertical_first_contact = (): void => {
   // 1. Overhead: origin y=0, target y=10, speed 20, g=9.81.
@@ -58,15 +59,18 @@ export const test_physics_ballistic_vertical_first_contact = (): void => {
     ),
   );
 
-  // 2. Below: origin y=0, target y=−4, speed 6. Only one positive root.
-  //    disc = 6² − 2·9.81·(−4) = 114.48; √114.48 = 10.699533…
-  //    rising root = (6 − 10.699533)/9.81 = −0.479 (rejected)
-  //    → single crossing = (6 + 10.699533)/9.81 = 1.7022968 s (unchanged)
+  // 2. Below: origin y=0, target y=−4, speed 6, default (direct) arc.
+  //    Fired down (v=−6): disc = 6² − 2·9.81·(−4) = 114.48; √114.48 = 10.699533…
+  //    → single positive root = (−6 + 10.699533)/9.81 = 0.4790553 s
   const below: IAutoMovieVector3 = { x: 0, y: -4, z: 0 };
   const down = solveBallisticLaunch(ORIGIN, below, 6, GRAVITY)!;
   TestValidator.predicate(
-    "a below target keeps its single-positive-root hit time (regression)",
-    nclose(down.hitTime, 1.7022968, 1e-4),
+    "a below target's direct arc fires straight down",
+    vclose(down.velocity, { x: 0, y: -6, z: 0 }, 1e-9),
+  );
+  TestValidator.predicate(
+    "the direct drop hits at the downward flight's single positive root",
+    nclose(down.hitTime, 0.4790553, 1e-4),
   );
   TestValidator.predicate(
     "the projectile is on the below target at that time",
