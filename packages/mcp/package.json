@@ -45,13 +45,13 @@
     "@automovie/engine": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/render": "workspace:^",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "catalog:modelcontextprotocol",
     "@typia/mcp": "catalog:samchon",
     "typia": "catalog:samchon"
   },
   "devDependencies": {
-    "@types/node": "^22.19.17",
-    "rimraf": "^6.0.1",
+    "@types/node": "catalog:utils",
+    "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript"
   }

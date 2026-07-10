@@ -42,7 +42,7 @@
     "@automovie/interface": "workspace:^"
   },
   "devDependencies": {
-    "rimraf": "^6.0.1",
+    "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript"
   }

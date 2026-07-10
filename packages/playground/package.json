@@ -28,20 +28,20 @@
     "@automovie/interface": "workspace:^",
     "@automovie/render": "workspace:^",
     "@automovie/viewer": "workspace:^",
-    "@pixiv/three-vrm": "^3",
-    "three": "^0.169.0"
+    "@pixiv/three-vrm": "catalog:three",
+    "three": "catalog:three"
   },
   "devDependencies": {
-    "@gltf-transform/core": "^4",
+    "@gltf-transform/core": "catalog:gltf",
     "@ttsc/unplugin": "catalog:typescript",
-    "@types/three": "^0.169.0",
-    "esbuild": "^0.21.5",
-    "gifenc": "^1.0.3",
-    "h264-mp4-encoder": "^1.0.12",
-    "playwright-core": "^1.60.0",
-    "pngjs": "^7.0.0",
+    "@types/three": "catalog:three",
+    "esbuild": "catalog:vite",
+    "gifenc": "catalog:media",
+    "h264-mp4-encoder": "catalog:media",
+    "playwright-core": "catalog:media",
+    "pngjs": "catalog:media",
     "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript",
-    "vite": "^5.4.10"
+    "vite": "catalog:vite"
   }
 }

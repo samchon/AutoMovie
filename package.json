@@ -29,10 +29,10 @@
     "onlyBuiltDependencies": ["esbuild"]
   },
   "devDependencies": {
-    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
-    "prettier": "^3.5.3",
-    "prettier-plugin-jsdoc": "^1.3.2",
-    "rimraf": "^6.0.1",
+    "@trivago/prettier-plugin-sort-imports": "catalog:typescript",
+    "prettier": "catalog:typescript",
+    "prettier-plugin-jsdoc": "catalog:typescript",
+    "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
     "@ttsc/lint": "catalog:typescript",
     "typescript": "catalog:typescript"
