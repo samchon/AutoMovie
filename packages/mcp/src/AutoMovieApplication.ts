@@ -475,8 +475,9 @@ export class AutoMovieApplication {
    * The shot id must be `shot:<beat>` so slate queries can find it.
    * Re-committing the same beat replaces exactly that beat's shot (the upsert
    * rule) and leaves sibling beats untouched. The cascade also removes that
-   * beat's now-stale end-state and nulls the committed film — re-derive the
-   * beat end and re-commit the film after replacing a shot.
+   * beat's now-stale end-state and review notes (they reviewed the replaced
+   * shot) and nulls the committed film — re-derive the beat end and re-commit
+   * the film after replacing a shot.
    *
    * @param props The slate, shot, and optional compiled motions.
    * @returns The new slate, or the unchanged slate with violations.

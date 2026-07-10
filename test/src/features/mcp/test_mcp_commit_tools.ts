@@ -693,6 +693,18 @@ export const test_mcp_commit_tools = (): void => {
   }).slate;
   TestValidator.equals("notes committed", notesSlate.notes, [note]);
 
+  const reshot = app.commitShot({ slate: notesSlate, shot: revisedShot });
+  TestValidator.equals(
+    "replacing a shot clears the beat's stale review notes",
+    reshot.slate.notes,
+    [],
+  );
+  TestValidator.equals(
+    "replacing a shot still clears the beat end and film",
+    [reshot.slate.beatEnds, reshot.slate.film],
+    [[], null],
+  );
+
   expectRefused(
     "film before upstream",
     app.commitFilm({ slate: emptySlate, film }),
