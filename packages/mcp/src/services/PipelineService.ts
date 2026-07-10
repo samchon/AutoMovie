@@ -1803,13 +1803,33 @@ const targetResolves = (
   nodes: Map<string, IAutoMovieVector3>,
 ): boolean => resolveRuntimeSafeTargetPoint(target, nodes) !== null;
 
+/**
+ * Whether an action's duration can safely reach a throwing engine constructor
+ * (`holdMotion`/`reactMotion`). A malformed duration skips the precheck so
+ * `performShot`'s input scan reports the field-located range violation.
+ */
+const isRuntimeSafeDuration = (
+  duration: unknown,
+  allowAuto: boolean,
+): boolean =>
+  (allowAuto && duration === "auto") ||
+  (typeof duration === "number" && Number.isFinite(duration) && duration > 0);
+
 const canRunDefaultSynthesisPrecheck = (
   action: IAutoMovieActionCall,
 ): boolean => {
   if (action.verb === "locomote") return isRuntimeSafeActionTarget(action.to);
   if (action.verb === "lookAt") return isRuntimeSafeActionTarget(action.to);
   if (action.verb === "reach") return isRuntimeSafeActionTarget(action.to);
-  if (action.verb === "react") return isRuntimeSafeActionTarget(action.from);
+  if (action.verb === "hold")
+    return isRuntimeSafeDuration(action.duration, false);
+  if (action.verb === "react")
+    return (
+      isRuntimeSafeDuration(action.duration, true) &&
+      typeof action.force === "number" &&
+      Number.isFinite(action.force) &&
+      isRuntimeSafeActionTarget(action.from)
+    );
   if (
     action.verb === "gesture" &&
     (action.kind === "point" || action.kind === "strike")
