@@ -6,6 +6,7 @@ import {
   Vector3,
   performShot,
   resolveAttachment,
+  resolveBeatEnd,
   sampleClip,
   sampleMotion,
   stageScene,
@@ -89,6 +90,11 @@ const stagingOf = () =>
  * 4. An attachTo parent with no rig to attach a bone of → a violation.
  * 5. A bone that is not on the parent's skeleton → a violation.
  * 6. A child node cannot attach to one of its own bones.
+ * 7. A handoff (#989) — the same child attached over two disjoint spans — bakes
+ *    UNIQUE ids in start order (`attach:sword`, `attach:sword:2`), so the shot
+ *    stays committable, and `resolveBeatEnd` follows the LATEST coupling: the
+ *    sword's end transform rides the second attachment's final follow sample,
+ *    not the first's.
  */
 export const test_film_perform_shot_attach = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -341,4 +347,88 @@ export const test_film_perform_shot_attach = (): void => {
       "the violation names the child actor",
       selfAttach.violations.some((v) => v.path.includes(".actor")),
     );
+
+  // 7. a handoff bakes unique ids and the beat end follows the latest coupling
+  const handoff = perform([
+    {
+      verb: "gesture",
+      actor: "knight",
+      start: 0,
+      duration: 2,
+      kind: "bow",
+    },
+    {
+      verb: "attachTo",
+      actor: "sword",
+      parent: "knight",
+      bone: "leftHand",
+      start: 0,
+      duration: 0.8,
+    },
+    {
+      verb: "attachTo",
+      actor: "sword",
+      parent: "knight",
+      bone: "chest",
+      start: 1.2,
+      duration: 0.8,
+    },
+  ]);
+  TestValidator.equals("the handoff performs", handoff.success, true);
+  if (handoff.success !== true) return;
+  TestValidator.equals(
+    "handoff clips carry unique start-ordered ids",
+    handoff.shot.objectMotions
+      .map((c) => c.id)
+      .sort((a, b) => a.localeCompare(b)),
+    ["attach:sword", "attach:sword:2"],
+  );
+  const first = handoff.shot.objectMotions.find(
+    (c) => c.id === "attach:sword",
+  )!;
+  const second = handoff.shot.objectMotions.find(
+    (c) => c.id === "attach:sword:2",
+  )!;
+  const clipEnd = (clip: typeof second): IAutoMovieVector3 => {
+    const v = sampleClip(clip, 2).get("node:sword:translation")!.value;
+    return { x: v[0]!, y: v[1]!, z: v[2]! };
+  };
+  const swordMount = {
+    node: "sword",
+    binding: { parent: "knight", bone: "leftHand" as const },
+  };
+  const ended = resolveBeatEnd({
+    beat: "beat-1",
+    scene: staged.scene,
+    shot: handoff.shot,
+    motions: Object.values(handoff.motions),
+    mounts: [swordMount],
+  });
+  TestValidator.predicate(
+    "the beat end follows the LATEST coupling",
+    vclose(
+      ended.actors.find((a) => a.node === "sword")!.transform.translation,
+      clipEnd(second),
+    ),
+  );
+
+  // a hand-authored bogus suffix ranks below the bare stable id, so the
+  // follow resolves to the real coupling, never the malformed one
+  const bogus = resolveBeatEnd({
+    beat: "beat-1",
+    scene: staged.scene,
+    shot: {
+      ...handoff.shot,
+      objectMotions: [first, { ...second, id: "attach:sword:x" }],
+    },
+    motions: Object.values(handoff.motions),
+    mounts: [swordMount],
+  });
+  TestValidator.predicate(
+    "a bogus suffix does not count as a coupling",
+    vclose(
+      bogus.actors.find((a) => a.node === "sword")!.transform.translation,
+      clipEnd(first),
+    ),
+  );
 };
