@@ -142,4 +142,51 @@ export const test_motion_path_locomotion = (): void => {
     path.motion.keyframes.length,
     17,
   );
+
+  // 6. a model-frame lateral sway rotates with the path facing, and the seam
+  //    keyframe carries the incoming cycle's first-segment easing
+  const swayRoot = {
+    translation: { x: 0.1, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    scale: { x: 1, y: 1, z: 1 },
+  };
+  const sway: IAutoMovieMotion = {
+    id: "sway",
+    skeleton: "s",
+    duration: 1,
+    loop: true,
+    keyframes: [
+      {
+        ...kf(0),
+        easing: "easeIn",
+        pose: { skeleton: "s", root: swayRoot, joints: [] },
+      },
+      {
+        ...kf(1),
+        easing: "step",
+        pose: { skeleton: "s", root: swayRoot, joints: [] },
+      },
+    ],
+  };
+  const straight = followPathMotion({
+    id: "sway-straight",
+    gait: sway,
+    waypoints: [
+      { x: 0, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 },
+    ],
+    speed: 1,
+    turnWindow: 0,
+  });
+  // heading +X is yaw 90°, which maps the model's +X sway to world −Z
+  TestValidator.predicate(
+    "model sway rotates with the path facing (X sway → −Z world)",
+    nclose(rootAt(straight.motion, 1).translation.z, -0.1) &&
+      nclose(rootAt(straight.motion, 1).translation.x, 1),
+  );
+  TestValidator.equals(
+    "path seam carries the incoming cycle's easing",
+    straight.motion.keyframes.find((k) => nclose(k.time, 1))!.easing,
+    "easeIn",
+  );
 };

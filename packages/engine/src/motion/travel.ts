@@ -72,10 +72,27 @@ export const travelMotion = (
   for (let c = 0; c < cycles; ++c) {
     for (const k of base.keyframes) {
       // drop the duplicate seam keyframe (a later cycle's time:0) so times stay
-      // strictly increasing — the prior cycle's final frame already covers it
-      if (c > 0 && k.time === 0) continue;
+      // strictly increasing — the prior cycle's final frame covers the pose,
+      // but the seam must carry the INCOMING cycle's first-segment easing
+      // (sampleMotion eases each segment from its starting keyframe, #1012)
+      if (c > 0 && k.time === 0) {
+        const seam = keyframes[keyframes.length - 1]!;
+        keyframes[keyframes.length - 1] = {
+          ...seam,
+          easing: k.easing,
+          bezier: k.bezier,
+        };
+        continue;
+      }
       const globalT = c * base.duration + k.time;
       const baseRoot = k.pose.root;
+      // The base root (a bob or sway) lives in the model frame; under a
+      // facing turn it must rotate with the body before the world travel is
+      // added, or a lateral sway would stay world-axis-aligned (#1012).
+      const baseTranslation =
+        facing === undefined || baseRoot === null
+          ? baseRoot?.translation
+          : Quaternion.rotateVector(facing, baseRoot.translation);
       keyframes.push({
         ...k,
         time: globalT,
@@ -83,9 +100,9 @@ export const travelMotion = (
           ...k.pose,
           root: {
             translation: {
-              x: (baseRoot?.translation.x ?? 0) + velocity.x * globalT,
-              y: (baseRoot?.translation.y ?? 0) + velocity.y * globalT,
-              z: (baseRoot?.translation.z ?? 0) + velocity.z * globalT,
+              x: (baseTranslation?.x ?? 0) + velocity.x * globalT,
+              y: (baseTranslation?.y ?? 0) + velocity.y * globalT,
+              z: (baseTranslation?.z ?? 0) + velocity.z * globalT,
             },
             rotation:
               facing === undefined

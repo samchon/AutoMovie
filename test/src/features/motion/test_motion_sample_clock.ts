@@ -75,4 +75,15 @@ export const test_motion_sample_clock = (): void => {
       nclose(window[1]!, 0.5 + 1 / 24) &&
       nclose(window[18]!, 1.25),
   );
+
+  // (end − start) × rate landing just above an integer (0.3 × 30 =
+  // 9.000000000000002) must not duplicate the clamped final instant — a
+  // zero-width segment downstream validators would divide by.
+  const fpWindow = windowSampleTimes(0.1, 0.4, 30);
+  TestValidator.predicate(
+    "an FP just-above-integer window deduplicates its final instant",
+    fpWindow.length === 10 &&
+      nclose(fpWindow[fpWindow.length - 1]!, 0.4) &&
+      fpWindow[fpWindow.length - 1]! !== fpWindow[fpWindow.length - 2]!,
+  );
 };

@@ -100,4 +100,24 @@ export const test_motion_sequence = (): void => {
       ),
       "sequence part duration must be finite and positive",
     );
+
+  // 5. the seam keyframe carries the INCOMING part's first-segment easing —
+  //    sampleMotion eases each segment from its starting keyframe, so keeping
+  //    the outgoing part's final easing would freeze/pop the next part's
+  //    first segment
+  const eased = makeMotion(
+    [keyframe(0, makePose([]), "easeOut"), keyframe(1, makePose([]), "step")],
+    1,
+  );
+  const seamed = sequenceMotion("seamEase", [eased, eased]);
+  TestValidator.equals(
+    "seam easing is the incoming part's first",
+    seamed.keyframes[1]!.easing,
+    "easeOut",
+  );
+  TestValidator.equals(
+    "the authored final easing survives",
+    seamed.keyframes[2]!.easing,
+    "step",
+  );
 };

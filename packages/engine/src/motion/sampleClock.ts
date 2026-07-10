@@ -29,9 +29,15 @@ export const windowSampleTimes = (
   sampleRate: number,
 ): number[] => {
   const frames = Math.max(1, Math.ceil((end - start) * sampleRate));
-  return Array.from({ length: frames + 1 }, (_, index) =>
+  const times = Array.from({ length: frames + 1 }, (_, index) =>
     Math.min(end, start + index / sampleRate),
   );
+  // FP can land (end − start) × rate just above an integer; the extra instant
+  // clamps onto `end` and duplicates it — a zero-width segment downstream
+  // validators would divide by (#1012).
+  if (times.length > 1 && times[times.length - 1] === times[times.length - 2])
+    times.pop();
+  return times;
 };
 
 /** The sampling grid over `[0, duration]` — see the module contract. */
