@@ -351,6 +351,21 @@ export const validateSequenceArtifact = (
     const path = `$shots[${i}]`;
     if (!validateObjectArtifact(shot, path, "shot", violations)) return;
     validateNonEmptyId(shot.id, `${path}.id`, "shot id", violations);
+    // cutSequence's played-span gate (#1008): a non-positive registry shot
+    // duration would flow into runtime sums (captions, render targets) as a
+    // silently nonsensical negative frame count.
+    if (
+      typeof shot.duration !== "number" ||
+      !Number.isFinite(shot.duration) ||
+      shot.duration <= 0
+    )
+      pushViolation(
+        violations,
+        "range",
+        `${path}.duration`,
+        `referenced shot "${String(shot.id)}" duration must be a finite number > 0 seconds, but was ${String(shot.duration)}`,
+        shot.duration,
+      );
   });
   const shotsById = new Map(
     asArray(shots)

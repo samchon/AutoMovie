@@ -331,6 +331,20 @@ export const test_mcp_render_chunked = (): void => {
       explicit.reassembly.outputPath,
       "seq-duel.mp4",
     );
+    const negativeCaptionDuration = app.planCaptions({
+      slate: { ...slate, shots: [{ ...shot, duration: -1 }] },
+      fps: 10,
+    });
+    TestValidator.predicate(
+      "a non-positive committed shot duration is a caption violation, not an empty sidecar",
+      negativeCaptionDuration.sidecar === null &&
+        negativeCaptionDuration.validation.success === false &&
+        negativeCaptionDuration.validation.violations.some(
+          (violation) =>
+            violation.kind === "range" &&
+            violation.path === "$input.slate.shots[0].duration",
+        ),
+    );
     const malformedCaptionShots = app.planCaptions({
       slate: { ...slate, shots: null as unknown as IAutoMovieShot[] },
       fps: 10,
