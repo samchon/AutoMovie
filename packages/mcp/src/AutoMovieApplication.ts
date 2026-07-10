@@ -70,19 +70,17 @@ import { SlateQueryService } from "./services/SlateQueryService";
 import { ValidationService } from "./services/ValidationService";
 
 /**
- * AutoMovie's deterministic motion-control engine, exposed as MCP tools. Read
- * `getGuideDocument({ name: "AUTOMOVIE_OVERALL" })` first, then the guide
- * matching each stage. Query tools read slate context; `stage`, `block`,
- * `perform`, `cut`, and `forge` compute the film pipeline. Each tool returns
- * the engine's result, including violations that make the engine, not the
- * model, the arbiter of physical truth ("engine enforces, model creates").
- *
- * `@typia/mcp` derives every tool's JSON schema, and validates requests and
- * responses, straight from this class's method signatures and JSDoc via
- * `typia.llm.controller`; the old per-stage
- * `typia.llm.application<IAutoMovie*Application>()` interfaces are retired as
- * the integration surface. Drive the pipeline stage by stage, feeding each
- * tool's output into the next.
+ * AutoMovie's deterministic motion-control engine, exposed as MCP tools:
+ * declarative action verbs and film artifacts go in; ROM-checked motion, camera
+ * moves, and render plans come out — the engine, not the model, is the arbiter
+ * of physical truth ("engine enforces, model creates"). Read
+ * `getGuideDocument({ name: "AUTOMOVIE_OVERALL" })` first, then the stage
+ * guides. For real work open a resident project (`openProject`), let
+ * `nextSteps` steer, and walk the ladder:
+ * `stage`/`block`/`perform`/`cut`/`forge` compute, commit tools persist slices
+ * (stale downstream erased), query/validate tools read and check, render tools
+ * plan frames, chunks, captions, and previews. Every failure returns
+ * field-located violations for the correction round, not a thrown error.
  *
  * `perform` keeps the MCP contract JSON-only by accepting per-actor motion
  * contexts and assembling the engine's default synthesizer inside the server.
@@ -879,12 +877,10 @@ export class AutoMovieApplication {
    * acyclically, the profile binding maps every referenced key), and returns
    * the accepted prop or every violation for the correction round. An accepted
    * articulated prop's profile then constrains and drives its joints
-   * deterministically at resolve time. When a resident project is active, an
-   * accepted spec also writes through as `props/<node>.json` (re-forging
-   * replaces exactly that file) and the output carries `stored: true`; erase a
-   * stored spec with `eraseProp`. Re-forging a prop the committed scene still
-   * places is refused (`stored: false`) — re-commit the scene without the
-   * placement first, else committed shots would resolve against a stale spec.
+   * deterministically at resolve time. With a resident project active an
+   * accepted spec writes through as `props/<node>.json` (`stored: true`) unless
+   * the committed scene still places the prop; the PROPS guide covers the
+   * write-through, refusal, and `eraseProp` rules.
    *
    * @param props The prop spec: node, model, and optional articulation.
    * @returns The forged prop on success, or the violations to fix.
