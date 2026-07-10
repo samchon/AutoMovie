@@ -4,7 +4,7 @@
 
 ## The Verb Vocabulary
 
-`locomote` (walk a gait to a destination) · `gesture` (bow, nod, wave, crouch, kick...) · `reach` / `point` / `strike` (arm IK toward a target) · `lookAt` (head aim) · `attachTo` (couple an object to a parent bone frame) · `launch` (a projectile, with engine-computed hit timing and injected reactions) · `react` (a flinch decomposed into the actor's frame) · `emote` (expression) · `hold` · `frame` (the camera move: static, push-in, orbit, follow, whip).
+`locomote` (walk a gait to a destination) · `gesture` (bow, nod, wave, crouch, kick... — including the arm-IK kinds `point` and `strike`, aimed at the `at` target) · `reach` (arm IK toward `to`) · `lookAt` (head aim) · `attachTo` (couple an object to a parent bone frame) · `launch` (a projectile, with engine-computed hit timing and injected reactions) · `react` (a flinch decomposed into the actor's frame) · `emote` (expression) · `hold` · `frame` (the camera move: static, push-in, orbit, follow, whip). `point`/`strike` are gesture KINDS, not verbs — emit `{ verb: "gesture", kind: "strike", at: ... }`.
 
 ## Actor Contexts
 

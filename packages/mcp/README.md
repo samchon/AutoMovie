@@ -17,8 +17,16 @@ out.
 
 ## Tools
 
+39 tools. Every stateful tool is **resident-or-explicit**: pass a `slate` for a
+pure stateless call, or omit it to read/commit the resident project opened with
+`openProject`.
+
 | tool | in -> out | engine |
 |------|-----------|--------|
+| `openProject` | root directory -> activated project summary | resident store (#614) |
+| `nextSteps` | (resident) -> ladder status, missing prerequisites, next actions | prerequisite ladder |
+| `registerAsset` | project-relative path -> asset index, or refusal | resident manifest |
+| `getGuideDocument` | guide name -> authoring guide markdown | guide corpus |
 | `getScript` | slate -> script slice or null | `readSlateContext` |
 | `getScene` | slate -> staged scene slice or null | `readSlateContext` |
 | `getShot` | slate + beat -> shot or null | `readSlateContext` |
@@ -39,13 +47,21 @@ out.
 | `commitBeatEnd` | slate + beat-end state -> updated slate or violations | MCP commit checks |
 | `commitNotes` | slate + review notes -> updated slate or violations | MCP commit checks |
 | `commitFilm` | slate + sequence -> updated slate or violations | MCP commit checks |
+| `eraseShot` | (resident) beat + reason -> beat's shot/end/notes removed, film nulled, or refusal | resident erase checks |
+| `eraseNotes` | (resident) beat + reason -> beat's notes removed, film nulled, or refusal | resident erase checks |
+| `eraseProp` | (resident) node + reason -> stored prop spec removed, or refusal | resident erase checks |
+| `setActorPerformance` | (resident) beat + actor performance + motions -> spliced shot, or refusal | resident set checks |
+| `setPlacement` | (resident) node + Euler transform + reason -> moved node, downstream cleared, or refusal | resident set checks |
 | `planRender` | slate + render spec -> frame schedule and ffmpeg args | `@automovie/render` planning |
+| `planChunkedRender` | slate + render spec + chunkFrames -> frame-atomic chunk plans + reassembly | `@automovie/render` chunking |
+| `planCaptions` | slate + fps (+ chunkFrames) -> caption sidecar (+ chunk-aligned slices) | `planCaptionSidecar` |
 | `seeFrame` | slate + render spec + frame/time -> preview frame + optional captured image | `@automovie/render` planning + host capture |
 | `stage` | script + staging -> staged scene (or violations) | `stageScene` |
 | `block` | script + staged scene + blocking -> blocked beat (or violations) | `blockBeat` |
 | `perform` | script + staged scene + performance + actor contexts + optional blocking -> performed shot (or violations) | `performShot` |
 | `cut` | assemble plan + performed shots -> cut sequence (or violations) | `cutSequence` |
 | `forge` | script + forge spec -> generated cast models (or violations) | `forgeCast` |
+| `forgeProp` | prop spec (model + optional articulation) -> accepted prop (or violations), stored when resident | `forgeProp` |
 
 The `get*` tools are read-only slate queries. They let an agent ask what has
 already been committed before it writes the next stage, instead of reconstructing
@@ -58,10 +74,26 @@ mesh or material payloads.
 Validation tools are read-only guards for commit flows. They return the standard
 `IAutoMovieValidation` envelope with field-located violations.
 
-Commit tools are pure slate transforms: they take the current slate and a
-candidate artifact, return a new slate only when preconditions and validation
-pass, and otherwise return the unchanged slate with path-bearing violations.
-Upstream replacements clear downstream slices that would become stale.
+Commit tools with an explicit `slate` are pure transforms: they take the
+current slate and a candidate artifact, return a new slate only when
+preconditions and validation pass, and otherwise return the unchanged slate
+with path-bearing violations. Upstream replacements clear downstream slices
+that would become stale (`commitShot` also drops the beat's end-state and
+nulls the film; `commitBeatEnd`/`commitNotes` null the film).
+
+## Resident project
+
+`openProject(root)` activates a directory as the production's memory (#614):
+slate slices live as human-readable JSON files (`script.json`,
+`shots/<beat>.json`, ...), binary assets are tracked by the manifest
+(`registerAsset`), and every `get*`/`commit*`/render tool may then omit its
+`slate` to read from — and write through to — the project. Resident commits
+are gated by the prerequisite ladder (script → scene → shots → beat
+ends/notes/film): an out-of-order commit **throws** an actionable prompt
+naming the missing rungs, and `nextSteps` returns the same computation as
+data. The surgical tools (`eraseShot`/`eraseNotes`/`eraseProp`,
+`setActorPerformance`/`setPlacement`) exist only in resident mode and demand a
+`reason`. See the `PROJECT_MEMORY` guide for the write-through rules.
 
 Render/see tools plan deterministic output, and `seeFrame` can also use a
 host-injected capture adapter. `planRender` resolves a committed shot or film
