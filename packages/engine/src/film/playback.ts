@@ -231,9 +231,17 @@ export const resolveSequencePlayback = (
  * seam is emitted once — by the entry that starts there — not once per
  * neighbouring entry (#1009); it closes at `to` when the trim ends at the
  * shot's own end (a shot-final event is never lost) AND when no other entry of
- * the same shot starts at that instant (#1061) — cutting away exactly on a hit
- * hands the hit to the cut, not to silence. Included events keep their
- * shot-local `time` and also expose `shotTime` plus `globalTime`.
+ * the same shot both starts at that shot-local instant and plays GLOBALLY
+ * contiguous with this entry (#1061, #1099) — cutting away exactly on a hit
+ * hands the hit to the cut, not to silence, and a re-play of the same source
+ * span elsewhere on the output clock (a flashback) cannot claim it.
+ *
+ * Semantics are **per play** (#1080): each entry that shows an instant emits
+ * that instant's events at its own global time — one source event re-played by
+ * a flashback lands once per play, not once per film. "Emitted once" (#1009)
+ * binds a single contiguous seam, where two entries share one on-screen
+ * instant. Included events keep their shot-local `time` and also expose
+ * `shotTime` plus `globalTime`.
  */
 export const sequenceEventTimeline = (
   sequence: IAutoMovieSequence,
@@ -242,24 +250,33 @@ export const sequenceEventTimeline = (
   const timeline = sequenceTimeline(sequence, shots);
   const byId = indexShots(shots);
   const events: IAutoMoviePlaybackEvent[] = [];
-  const fromsByShot = new Map<string, number[]>();
+  const entriesByShot = new Map<string, IAutoMoviePlaybackEntry[]>();
   for (const entry of timeline.entries) {
-    const list = fromsByShot.get(entry.shot) ?? [];
-    list.push(entry.offset);
-    fromsByShot.set(entry.shot, list);
+    const list = entriesByShot.get(entry.shot) ?? [];
+    list.push(entry);
+    entriesByShot.set(entry.shot, list);
   }
   for (const entry of timeline.entries) {
     const shot = byId.get(entry.shot)!.shot;
     const from = entry.offset;
     const to = entry.offset + entry.played;
+    const globalEnd = entry.start + entry.played;
     const atShotEnd = Math.abs(to - shot.duration) <= 1e-9;
     // An event landing EXACTLY on this entry's trim end belongs to the entry
-    // that starts there (#1009) — but when no entry of the shot does, the
-    // instant would vanish entirely; this entry then keeps it (#1061).
+    // that starts there (#1009) — but ONLY when that entry plays globally
+    // contiguous with this one, sharing the on-screen instant. A same-shot
+    // entry re-playing the source span elsewhere on the output clock (a
+    // flashback) owns nothing here: shot-local coincidence alone suppressed
+    // the flashback's own cut hit into silence (#1099). And when no entry
+    // qualifies at all, this entry keeps the event (#1061).
     const ownedElsewhere = (time: number): boolean =>
-      fromsByShot
+      entriesByShot
         .get(entry.shot)!
-        .some((f) => f > from + 1e-9 && Math.abs(f - time) <= 1e-9);
+        .some(
+          (other) =>
+            Math.abs(other.offset - time) <= 1e-9 &&
+            Math.abs(other.start - globalEnd) <= 1e-9,
+        );
     for (const event of shot.events ?? []) {
       if (event.time < from - 1e-9) continue;
       if (
