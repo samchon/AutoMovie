@@ -405,6 +405,111 @@ export const test_mcp_geometry_query_tools = (): void => {
       ["$input.context.shot.performances", "array"],
     ),
   );
+  TestValidator.predicate(
+    "an empty motion clip rejects with a structured path, not a sampleMotion throw",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            motions: { actor: { ...motion, keyframes: [] } },
+          },
+          actor: "actor",
+        }),
+      ["$input.context.motions.actor.keyframes", "at least one keyframe"],
+    ),
+  );
+  TestValidator.predicate(
+    "a non-finite pose joint angle rejects at its axis path",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            motions: {
+              actor: {
+                ...motion,
+                keyframes: [
+                  {
+                    ...motion.keyframes[0]!,
+                    pose: {
+                      ...motion.keyframes[0]!.pose,
+                      joints: [
+                        {
+                          bone: "head",
+                          flexion: Number.POSITIVE_INFINITY,
+                          abduction: null,
+                          twist: null,
+                        },
+                      ],
+                    },
+                  },
+                  ...motion.keyframes.slice(1),
+                ],
+              },
+            },
+          },
+          actor: "actor",
+        }),
+      [
+        "$input.context.motions.actor.keyframes[0].pose.joints[0].flexion",
+        "finite",
+      ],
+    ),
+  );
+  TestValidator.predicate(
+    "a non-finite keyframe bezier control rejects at its path",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            motions: {
+              actor: {
+                ...motion,
+                keyframes: [
+                  {
+                    ...motion.keyframes[0]!,
+                    bezier: {
+                      x1: Number.POSITIVE_INFINITY,
+                      y1: 0,
+                      x2: 1,
+                      y2: 1,
+                    },
+                  },
+                  ...motion.keyframes.slice(1),
+                ],
+              },
+            },
+          },
+          actor: "actor",
+        }),
+      ["$input.context.motions.actor.keyframes[0].bezier.x1", "finite"],
+    ),
+  );
+  TestValidator.predicate(
+    "a present malformed scene node pose rejects before resolvePose iterates it",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: {
+            ...context,
+            scene: {
+              ...scene,
+              nodes: [
+                {
+                  ...scene.nodes[0]!,
+                  pose: {} as unknown as IAutoMovieScene["nodes"][number]["pose"],
+                },
+                ...scene.nodes.slice(1),
+              ],
+            },
+          },
+          actor: "actor",
+        }),
+      ["$input.context.scene.nodes[0].pose.joints", "array"],
+    ),
+  );
 
   const reach = app.getReach({
     context,

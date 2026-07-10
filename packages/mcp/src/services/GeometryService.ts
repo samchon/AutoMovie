@@ -34,6 +34,7 @@ import {
 import { shotIdOf } from "../project/shotKey";
 import { validateSceneArtifact } from "../validators/artifacts";
 import {
+  pushViolation,
   validateArrayArtifact,
   validateNonEmptyId,
   validateObjectArtifact,
@@ -531,6 +532,10 @@ const appendGeometrySceneNodeShape = (
     "scene node transform",
     violations,
   );
+  // A present non-null pose is dereferenced by resolvePose (#1007); absent or
+  // null falls back to the rest pose and never crashes.
+  if (node.pose !== null && node.pose !== undefined)
+    appendGeometryPoseShape(node.pose, `${path}.pose`, violations);
 };
 
 const appendGeometryModelsShape = (
@@ -690,6 +695,16 @@ const appendGeometryMotionShape = (
     )
   )
     return;
+  // sampleMotion throws a pathless error on an empty clip (#1007); rough
+  // types forbid MinItems, so the gate is the only structured diagnosis.
+  if (motion.keyframes.length === 0)
+    pushViolation(
+      violations,
+      "type",
+      `${path}.keyframes`,
+      "motion must carry at least one keyframe to sample",
+      motion.keyframes,
+    );
   motion.keyframes.forEach((keyframe, index) =>
     appendGeometryMotionKeyframeShape(
       keyframe,
@@ -708,14 +723,30 @@ const appendGeometryMotionKeyframeShape = (
     return;
   appendGeometryPoseShape(keyframe.pose, `${path}.pose`, violations);
   const bezier = keyframe.bezier;
-  if (bezier !== null)
-    validateObjectArtifact(
-      bezier,
-      `${path}.bezier`,
-      "motion keyframe bezier",
-      violations,
-    );
+  if (bezier !== null) {
+    if (
+      !validateObjectArtifact(
+        bezier,
+        `${path}.bezier`,
+        "motion keyframe bezier",
+        violations,
+      )
+    )
+      return;
+    // cubicBezierEasing throws on non-finite control points (#1007).
+    for (const control of ["x1", "y1", "x2", "y2"] as const)
+      if (!Number.isFinite(bezier[control]))
+        pushViolation(
+          violations,
+          "range",
+          `${path}.bezier.${control}`,
+          `motion keyframe bezier ${control} must be finite, but was ${String(bezier[control])}`,
+          bezier[control],
+        );
+  }
 };
+
+const GEOMETRY_JOINT_AXES = ["flexion", "abduction", "twist"] as const;
 
 const appendGeometryPoseShape = (
   pose: unknown,
@@ -731,12 +762,38 @@ const appendGeometryPoseShape = (
       "motion keyframe pose root",
       violations,
     );
-  validateArrayArtifact(
-    pose.joints,
-    `${path}.joints`,
-    "pose joints",
-    violations,
-  );
+  if (
+    !validateArrayArtifact(
+      pose.joints,
+      `${path}.joints`,
+      "pose joints",
+      violations,
+    )
+  )
+    return;
+  // jointToQuaternion throws on non-finite non-null angles (#1007).
+  pose.joints.forEach((joint, index) => {
+    const jointPath = `${path}.joints[${index}]`;
+    if (!validateObjectArtifact(joint, jointPath, "pose joint", violations))
+      return;
+    validateNonEmptyId(
+      joint.bone,
+      `${jointPath}.bone`,
+      "pose joint bone",
+      violations,
+    );
+    for (const axis of GEOMETRY_JOINT_AXES) {
+      const angle = joint[axis];
+      if (angle !== null && !Number.isFinite(angle))
+        pushViolation(
+          violations,
+          "range",
+          `${jointPath}.${axis}`,
+          `pose joint ${axis} must be finite or null, but was ${String(angle)}`,
+          angle,
+        );
+    }
+  });
 };
 
 const assertNoGeometryViolations = (
