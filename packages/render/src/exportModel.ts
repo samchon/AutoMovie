@@ -52,7 +52,7 @@ export const exportModelToGLB = async (
   const boneNodes = new Map<string, Node>();
   if (model.skeleton !== null) {
     for (const b of model.skeleton.bones)
-      boneNodes.set(b.bone, setTRS(doc.createNode(b.bone), b.rest));
+      boneNodes.set(b.bone, setBoneRest(doc.createNode(b.bone), b.rest));
     for (const b of model.skeleton.bones) {
       const node = boneNodes.get(b.bone)!;
       if (b.parent === null) {
@@ -143,3 +143,25 @@ const setTRS = (node: Node, t: IAutoMovieTransform | null): Node => {
     .setRotation([t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w])
     .setScale([t.scale.x, t.scale.y, t.scale.z]);
 };
+
+/**
+ * Apply a bone REST transform: rotation + translation only, unit scale — the
+ * decision-309 rig convention (#1052, #1086). The engine's FK and the live
+ * viewer both ignore bone-rest scale, so exporting it verbatim would let
+ * external glTF viewers compose into every descendant a scale no automovie
+ * renderer or validator ever saw. PART node scale stays first-class through
+ * {@link setTRS} — parts are not rig bones on either side of the convention.
+ */
+const setBoneRest = (node: Node, rest: IAutoMovieTransform): Node =>
+  node
+    .setTranslation([
+      rest.translation.x,
+      rest.translation.y,
+      rest.translation.z,
+    ])
+    .setRotation([
+      rest.rotation.x,
+      rest.rotation.y,
+      rest.rotation.z,
+      rest.rotation.w,
+    ]);
