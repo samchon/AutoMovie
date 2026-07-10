@@ -75,20 +75,28 @@ export const solveBallisticLaunch = (
   // Purely vertical target: fire straight up/down; solve when it reaches h.
   if (d < 1e-9) {
     // origin + v·t + ½·(−g)·t² = h with v = ±speed along up, i.e.
-    // ½·g·t² − v·t + h = 0 → t = (v ± √(v²−2gh)) / g. Both roots are positive
-    // when the target is overhead and fired up (rising through h, then falling
-    // back through it); the FIRST contact is the earlier root (v−√…)/g. Take the
-    // smallest strictly-positive root so the hit time is when the projectile
-    // first reaches h, not the descending re-crossing.
+    // ½·g·t² − v·t + h = 0 → t = (v ± √(v²−2gh)) / g. `arc` picks among the
+    // strictly-positive crossings exactly as the range equation's ±root does
+    // (#1142): `direct` is the faster, lower flight (the rising first contact
+    // overhead; fired straight down at a target below), `high` the lobbed one
+    // (the descending re-crossing overhead; fired up and falling past a target
+    // below). Firing away from the target contributes no positive root, so the
+    // sweep over both muzzle signs self-selects the feasible flights.
+    let best: IAutoMovieBallisticSolution | null = null;
     for (const v of [speed, -speed]) {
       const disc = v * v - 2 * g * h;
       if (disc < 0) continue;
       const root = Math.sqrt(disc);
-      const rising = (v - root) / g;
-      const t = rising > 1e-9 ? rising : (v + root) / g;
-      if (t > 1e-9) return { velocity: Vector3.scale(up, v), hitTime: t };
+      for (const t of [(v - root) / g, (v + root) / g]) {
+        if (t <= 1e-9) continue;
+        if (
+          best === null ||
+          (arc === "high" ? t > best.hitTime : t < best.hitTime)
+        )
+          best = { velocity: Vector3.scale(up, v), hitTime: t };
+      }
     }
-    return null;
+    return best;
   }
 
   // Range equation for the launch angle θ above the horizontal.
