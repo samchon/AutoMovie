@@ -53,6 +53,13 @@ const FINGER = constraint(range(-20, 100), null, null);
  * degrees. The cone is a conservative combined flexion+abduction cap, not a
  * population-specific reach envelope.
  *
+ * The HIP cone is live (its 120° cap sits below the flexion+abduction corner,
+ * so max-flexion + max-abduction trips it); the SHOULDER cone is deliberate
+ * headroom (#1058, decision 310): the swing metric never exceeds 180°, and a
+ * pure-plane 180° (arm straight overhead) must stay legal, so no cap below 180
+ * is possible without rejecting canonical overhead poses — the value documents
+ * the sourced anatomical bound rather than gating anything.
+ *
  * @author Samchon
  */
 export const DEFAULT_HUMANOID_ROM: Partial<
