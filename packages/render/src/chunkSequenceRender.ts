@@ -267,9 +267,12 @@ export const planChunkedSequenceRender = (props: {
   // directory, not the invoking cwd. The chunk outputs always sit beside the
   // list (taggedOutput preserves the directory), so the lines must carry
   // basenames — a directory-qualified output ("renders/seq.mp4") would
-  // otherwise resolve to "renders/renders/seq.chunk_0.mp4".
+  // otherwise resolve to "renders/renders/seq.chunk_0.mp4". Each basename is
+  // single-quote escaped: the demuxer's quoted string ends at the first `'`,
+  // so an apostrophe basename ("directors'cut.mp4") otherwise malforms the
+  // list and the lossless concat fails or misparses (#1089).
   const concatListLines = chunkOutputs.map(
-    (output) => `file '${baseName(output)}'`,
+    (output) => `file '${escapeConcatEntry(baseName(output))}'`,
   );
   return {
     target: plan.target,
@@ -316,6 +319,14 @@ export const planChunkedSequenceRender = (props: {
 /** The path's last segment (after the final `/` or `\`). */
 const baseName = (path: string): string =>
   path.slice(Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1);
+
+/**
+ * Escape one concat-demuxer list entry for its single-quoted `file '…'` line: a
+ * quoted string cannot CONTAIN `'`, so each apostrophe closes the quote, emits
+ * an escaped quote, and reopens (`'` → `'\''`) — the same idiom POSIX shells
+ * use, and the grammar ffmpeg's `av_get_token` parses (#1089).
+ */
+const escapeConcatEntry = (name: string): string => name.replace(/'/g, "'\\''");
 
 /**
  * Insert a `.<label>` tag before the output's extension (or append it). The

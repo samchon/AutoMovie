@@ -761,14 +761,29 @@ const validateOptionalRenderPathOverride = (
   violations: IAutoMovieConstraintViolation[],
 ): void => {
   if (value === undefined) return;
-  if (typeof value === "string" && value.trim().length > 0) return;
-  pushViolation(
-    violations,
-    "type",
-    path,
-    `${label} must be a non-empty string`,
-    value,
-  );
+  if (typeof value !== "string" || value.trim().length === 0) {
+    pushViolation(
+      violations,
+      "type",
+      path,
+      `${label} must be a non-empty string`,
+      value,
+    );
+    return;
+  }
+  // ffmpeg's image2 demuxer reads the -i pattern's `%` as a conversion
+  // specifier (`frame_%05d.png`), so a literal `%` anywhere in the frame
+  // dir/output override corrupts the pattern into reading the wrong files —
+  // or none — with no error (#1089). The default paths are stem-sanitized
+  // and can never carry one; only these overrides can, so refuse here.
+  if (value.includes("%"))
+    pushViolation(
+      violations,
+      "type",
+      path,
+      `${label} must not contain "%" — ffmpeg reads it as a pattern conversion specifier`,
+      value,
+    );
 };
 
 const validateSlateShotEntries = (
