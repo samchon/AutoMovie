@@ -11,7 +11,12 @@ import * as THREE from "three";
  * renders the **incoming** shot to the screen, and a full-screen quad
  * composites the outgoing over it at opacity `1 − alpha` — plain alpha-over
  * yields `outgoing·(1 − alpha) + incoming·alpha`, a true cross-fade. The target
- * and quad are created once and reused (resized with the drawing buffer).
+ * and quad are created once **per renderer** and reused (resized with that
+ * renderer's drawing buffer): module-global state let a second live viewer
+ * force a render-target realloc every frame and left the first renderer's FBO
+ * orphaned after its context was disposed (#1050). Call
+ * {@link disposeCrossDissolve} when the renderer goes away — the same lifecycle
+ * contract the render-mode handles carry (#645).
  *
  * `poseOutgoing` / `poseIncoming` each pose `scene` and aim `camera` for their
  * shot at its local time; this helper owns only the render orchestration, so
@@ -20,10 +25,15 @@ import * as THREE from "three";
  *
  * @author Samchon
  */
-let target: THREE.WebGLRenderTarget | null = null;
-let quadScene: THREE.Scene | null = null;
-let quadCamera: THREE.OrthographicCamera | null = null;
-let quadMaterial: THREE.MeshBasicMaterial | null = null;
+interface IDissolveState {
+  target: THREE.WebGLRenderTarget;
+  quadScene: THREE.Scene;
+  quadCamera: THREE.OrthographicCamera;
+  quadMaterial: THREE.MeshBasicMaterial;
+  quadGeometry: THREE.PlaneGeometry;
+}
+
+const states = new WeakMap<THREE.WebGLRenderer, IDissolveState>();
 
 export const renderCrossDissolve = (
   renderer: THREE.WebGLRenderer,
@@ -34,26 +44,33 @@ export const renderCrossDissolve = (
   alpha: number,
 ): void => {
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-  if (target === null) {
-    target = new THREE.WebGLRenderTarget(size.x, size.y);
+  let state = states.get(renderer);
+  if (state === undefined) {
+    const target = new THREE.WebGLRenderTarget(size.x, size.y);
     target.texture.colorSpace = THREE.SRGBColorSpace;
-  } else if (target.width !== size.x || target.height !== size.y)
-    target.setSize(size.x, size.y);
-  if (quadMaterial === null || quadScene === null || quadCamera === null) {
-    quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    quadMaterial = new THREE.MeshBasicMaterial({
+    const quadMaterial = new THREE.MeshBasicMaterial({
       map: target.texture,
       transparent: true,
       depthTest: false,
       depthWrite: false,
     });
-    quadScene = new THREE.Scene();
-    quadScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), quadMaterial));
-  }
+    const quadGeometry = new THREE.PlaneGeometry(2, 2);
+    const quadScene = new THREE.Scene();
+    quadScene.add(new THREE.Mesh(quadGeometry, quadMaterial));
+    state = {
+      target,
+      quadScene,
+      quadCamera: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1),
+      quadMaterial,
+      quadGeometry,
+    };
+    states.set(renderer, state);
+  } else if (state.target.width !== size.x || state.target.height !== size.y)
+    state.target.setSize(size.x, size.y);
 
   // outgoing → offscreen target (autoClear wipes it first)
   poseOutgoing();
-  renderer.setRenderTarget(target);
+  renderer.setRenderTarget(state.target);
   renderer.render(scene, camera);
   renderer.setRenderTarget(null);
 
@@ -62,9 +79,24 @@ export const renderCrossDissolve = (
   renderer.render(scene, camera);
 
   // composite the outgoing over the incoming at opacity (1 − alpha)
-  quadMaterial.opacity = 1 - alpha;
+  state.quadMaterial.opacity = 1 - alpha;
   const prevAutoClear = renderer.autoClear;
   renderer.autoClear = false;
-  renderer.render(quadScene, quadCamera);
+  renderer.render(state.quadScene, state.quadCamera);
   renderer.autoClear = prevAutoClear;
+};
+
+/**
+ * Dispose the dissolve GPU state created for `renderer` (render target, quad
+ * geometry/material) — call alongside the renderer's own disposal, exactly as a
+ * render-mode handle's `restore()` (#1050). Safe to call when nothing was
+ * created; the next dissolve on the same renderer re-initializes lazily.
+ */
+export const disposeCrossDissolve = (renderer: THREE.WebGLRenderer): void => {
+  const state = states.get(renderer);
+  if (state === undefined) return;
+  state.target.dispose();
+  state.quadGeometry.dispose();
+  state.quadMaterial.dispose();
+  states.delete(renderer);
 };
