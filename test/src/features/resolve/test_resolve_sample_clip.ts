@@ -48,8 +48,9 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  *
  * 1. Linear interpolation of a vec3 translation: 0→(10,20,30) at t=0.5 is
  *    (5,10,15); the result keys to `node:n:translation`.
- * 2. Step interpolation holds the left keyframe: the same span at t=0.5 stays at
- *    the start value (0,0,0).
+ * 2. Step interpolation holds the left keyframe mid-segment, while an EXACT hit on
+ *    an interior key takes that key's value (glTF `v_k for t_k <= t < t_(k+1)`,
+ *    #1054) — just-before stays held, and the final key clamps.
  * 3. A linear rotation track slerps (not lerps): identity→90°-about-Y at t=0.5 is
  *    the 45° quaternion, and stays unit length.
  * 4. Cubicspline with zero tangents reduces to the Hermite blend of the values:
@@ -113,6 +114,19 @@ export const test_resolve_sample_clip = (): void => {
   TestValidator.predicate(
     "step holds left keyframe",
     close(val(stepClip, 0.5, "node:n:translation"), [0, 0, 0]),
+  );
+
+  // an EXACT hit on an interior key takes that key's value — glTF STEP is
+  // v_k for t_k <= t < t_(k+1), and the fixed sampling clock makes exact
+  // frame-aligned hits the norm, so holding the PREVIOUS key here played
+  // every step change one sample late (#1054)
+  const stepThree = clip([track(PTR, [0, 1, 2], [10, 20, 30], "step")], 2);
+  TestValidator.predicate(
+    "step exact interior hit takes the hit key, asymptotes stay held",
+    close(val(stepThree, 1, "ptr:/x"), [20]) &&
+      close(val(stepThree, 1 - 1e-9, "ptr:/x"), [10]) &&
+      close(val(stepThree, 1.999, "ptr:/x"), [20]) &&
+      close(val(stepThree, 2, "ptr:/x"), [30]),
   );
 
   const weights = clip(
