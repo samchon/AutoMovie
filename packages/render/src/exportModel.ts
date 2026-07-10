@@ -20,6 +20,15 @@ import { Document, Material, Node, NodeIO } from "@gltf-transform/core";
  * engine only approximates (a capsule tessellates to its bounding cylinder)
  * exports at that fidelity.
  *
+ * **Fidelity reductions against the live viewer (#1088).** A skinned mesh part
+ * (`attachedBone: null` with `skin` data) exports as a STATIC mesh — no
+ * `JOINTS_0`/`WEIGHTS_0`, no glTF skin — so it renders at its rest shape in
+ * external viewers; only rigid `attachedBone` parts articulate in the export. A
+ * mesh without authored normals exports SMOOTH vertex normals when indexed (the
+ * same area-weighted computation the viewer's `computeVertexNormals` performs);
+ * a non-indexed triangle soup omits `NORMAL`, and glTF's mandated flat shading
+ * equals what the viewer computes for a soup anyway.
+ *
  * @author Samchon
  */
 export const exportModelToGLB = async (
@@ -38,7 +47,11 @@ export const exportModelToGLB = async (
         m.baseColor.r,
         m.baseColor.g,
         m.baseColor.b,
-        m.baseColor.a ?? 1,
+        // The live viewer renders `opacity` (three's material opacity) and
+        // ignores baseColor.a, so `{opacity: 0.5, a: null}` was 50%
+        // transparent live yet fully opaque exported (#1088) — fold opacity
+        // into the one alpha glTF has.
+        (m.baseColor.a ?? 1) * m.opacity,
       ])
       .setMetallicFactor(m.metallic)
       .setRoughnessFactor(m.roughness);
@@ -75,7 +88,19 @@ export const exportModelToGLB = async (
         ? tessellate(part.geometry.shape)
         : {
             positions: part.geometry.mesh.positions,
-            normals: part.geometry.mesh.normals ?? [],
+            // The viewer computes smooth vertex normals when none are
+            // authored; omitting NORMAL here meant glTF-mandated flat
+            // shading instead (#1088). Match the viewer for indexed meshes;
+            // a non-indexed soup's computed normals ARE flat, which the
+            // glTF default already provides.
+            normals:
+              part.geometry.mesh.normals ??
+              (part.geometry.mesh.indices === null
+                ? []
+                : computeSmoothNormals(
+                    part.geometry.mesh.positions,
+                    part.geometry.mesh.indices,
+                  )),
             indices: part.geometry.mesh.indices ?? [],
           };
 
@@ -142,6 +167,45 @@ const setTRS = (node: Node, t: IAutoMovieTransform | null): Node => {
     .setTranslation([t.translation.x, t.translation.y, t.translation.z])
     .setRotation([t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w])
     .setScale([t.scale.x, t.scale.y, t.scale.z]);
+};
+
+/**
+ * Area-weighted smooth vertex normals over an indexed triangle list — the same
+ * computation three's `computeVertexNormals` performs for the live viewer
+ * (#1088): each triangle's unnormalized cross product accumulates onto its
+ * three vertices (the magnitude IS the area weight), then each vertex normal is
+ * normalized. A degenerate vertex (no area) stays zero rather than NaN.
+ */
+const computeSmoothNormals = (
+  positions: number[],
+  indices: number[],
+): number[] => {
+  const normals = new Array<number>(positions.length).fill(0);
+  for (let i = 0; i < indices.length; i += 3) {
+    const [a, b, c] = [indices[i]!, indices[i + 1]!, indices[i + 2]!];
+    const abx = positions[b * 3]! - positions[a * 3]!;
+    const aby = positions[b * 3 + 1]! - positions[a * 3 + 1]!;
+    const abz = positions[b * 3 + 2]! - positions[a * 3 + 2]!;
+    const acx = positions[c * 3]! - positions[a * 3]!;
+    const acy = positions[c * 3 + 1]! - positions[a * 3 + 1]!;
+    const acz = positions[c * 3 + 2]! - positions[a * 3 + 2]!;
+    const nx = aby * acz - abz * acy;
+    const ny = abz * acx - abx * acz;
+    const nz = abx * acy - aby * acx;
+    for (const v of [a, b, c]) {
+      normals[v * 3] = normals[v * 3]! + nx;
+      normals[v * 3 + 1] = normals[v * 3 + 1]! + ny;
+      normals[v * 3 + 2] = normals[v * 3 + 2]! + nz;
+    }
+  }
+  for (let v = 0; v < normals.length; v += 3) {
+    const len = Math.hypot(normals[v]!, normals[v + 1]!, normals[v + 2]!);
+    if (len === 0) continue;
+    normals[v] = normals[v]! / len;
+    normals[v + 1] = normals[v + 1]! / len;
+    normals[v + 2] = normals[v + 2]! / len;
+  }
+  return normals;
 };
 
 /**
