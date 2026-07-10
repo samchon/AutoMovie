@@ -22,6 +22,7 @@ import { type IAutoMovieSequenceRenderFrame } from "@automovie/render";
 import {
   AutoMoviePlayer,
   applyObjectMotion,
+  applyPose,
   buildModel,
   mountViewer,
   renderCrossDissolve,
@@ -289,15 +290,26 @@ scene.add(sun);
 // node id → its scene group, so a shot's objectMotions (a projectile/prop's
 // baked clip) can drive the object's world transform each frame.
 const groupsById = new Map<string, THREE.Group>();
+
+// Staged base per node — the FULL transform, scale included (the hand-rolled
+// group setup used to drop staged scale, #1087).
+const stagedNodeById = new Map(staged.scene.nodes.map((n) => [n.id, n]));
+const applyStagedBase = (group: THREE.Group, nodeId: string): void => {
+  const {
+    translation: t,
+    rotation: r,
+    scale: s,
+  } = stagedNodeById.get(nodeId)!.transform;
+  group.position.set(t.x, t.y, t.z);
+  group.quaternion.set(r.x, r.y, r.z, r.w);
+  group.scale.set(s.x, s.y, s.z);
+};
 const built = Object.fromEntries(
   staged.scene.nodes.map((node) => {
     const rig = rigOf[node.id as keyof typeof rigOf];
     const obj = buildModel(rig.model);
     const group = new THREE.Group();
-    const t = node.transform.translation;
-    group.position.set(t.x, t.y, t.z);
-    const r = node.transform.rotation;
-    group.quaternion.set(r.x, r.y, r.z, r.w);
+    applyStagedBase(group, node.id);
     group.add(obj.object);
     scene.add(group);
     groupsById.set(node.id, group);
@@ -355,6 +367,25 @@ type SequenceRenderShotSample = {
 // staged default). The read side used both for a plain frame and for each half
 // of a cross-dissolve.
 const poseShot = (shot: IAutoMovieShot, time: number): void => {
+  // The applyObjectMotion host contract: a host that swaps clips mid-scene
+  // restores staged bases itself (#1087). Without this reset a node driven by
+  // shot A's objectMotion but absent from shot B kept A's tail transform —
+  // order-dependent frames that break chunked capture's determinism promise
+  // (a fresh page at a chunk boundary would render the staged base instead).
+  // Rigs without a performance in this shot likewise return to rest, not the
+  // previous shot's last pose — the same reset applyStagedCamera performs.
+  const performing = new Set(shot.performances.map((p) => p.node));
+  for (const node of staged.scene.nodes) {
+    applyStagedBase(groupsById.get(node.id)!, node.id);
+    if (performing.has(node.id)) continue;
+    const rig = rigOf[node.id as keyof typeof rigOf];
+    applyPose(
+      built[node.id]!,
+      { skeleton: rig.skeleton.id, root: null, joints: [] },
+      rig.skeleton,
+      HUMANOID_JOINT_AXES,
+    );
+  }
   for (const { player } of playersByShot.get(shot.id)!) player.update(time);
   for (const clip of shot.objectMotions)
     applyObjectMotion(clip, time, (node) => groupsById.get(node));
