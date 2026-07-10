@@ -46,7 +46,11 @@ export const renderCrossDissolve = (
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
   let state = states.get(renderer);
   if (state === undefined) {
-    const target = new THREE.WebGLRenderTarget(size.x, size.y);
+    // MSAA parity with the canvas renderer (antialias: true) — without
+    // samples the FIRST blend frame (alpha≈0, visually 100% outgoing)
+    // renders the outgoing shot aliased: a one-frame pop at every dissolve
+    // edge (#1090).
+    const target = new THREE.WebGLRenderTarget(size.x, size.y, { samples: 4 });
     target.texture.colorSpace = THREE.SRGBColorSpace;
     const quadMaterial = new THREE.MeshBasicMaterial({
       map: target.texture,
