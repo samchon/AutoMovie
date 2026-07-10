@@ -72,15 +72,32 @@ import { beatOf, shotIdOf } from "./shotKey";
  * mirrored by files disappearing. Writes are atomic (temp file + rename) and
  * pretty-printed; the whole store is synchronous, matching the tool layer.
  *
+ * **Mutations are transactional cycles (#1133).** Every save stages its
+ * serialized contents in memory first (a cycle that throws persists nothing),
+ * then flushes under a short-lived commit lock (`revision.lock`) against a
+ * monotonic revision counter (`revision.json`): a cycle whose base revision is
+ * stale — another session committed since this instance last read — is refused
+ * with a re-read prompt instead of silently overwriting the other session's
+ * work.
+ *
  * The prerequisite graph (#615) reads {@link summary}; guides (#616) and
  * per-artifact erase (#617) land beside this.
  */
 export class AutoMovieProject {
   private manifest: IManifest;
 
+  /**
+   * The on-disk revision this instance last synchronized with (#1133). Every
+   * read refreshes it; every mutation compare-and-commits against it, so a
+   * concurrent session's commit is REFUSED with a re-read prompt instead of
+   * silently overwritten.
+   */
+  private lastReadRevision_: number;
+
   private constructor(public readonly root: string) {
     for (const dir of RESERVED_DIRS)
       fs.mkdirSync(path.join(root, dir), { recursive: true });
+    this.lastReadRevision_ = this.readRevision();
     const existing = readJson<unknown>(this.manifestPath);
     if (existing === null) {
       // A fresh project: create the manifest once.
@@ -109,6 +126,7 @@ export class AutoMovieProject {
 
   /** The stored slate assembled from the slice files (film excluded). */
   public storedSlate(): Omit<IAutoMovieMcpWritableSlate, "film"> {
+    this.lastReadRevision_ = this.readRevision();
     const script = readValidatedJson<IAutoMovieScript>(
       this.slicePath("script.json"),
       validateScriptSlice,
@@ -190,10 +208,13 @@ export class AutoMovieProject {
    * presence — exactly the invalidation cascade the commit tools perform on the
    * slate, made visible as files.
    *
-   * Every keyed slice's case-collision guard (#1011) runs BEFORE the first file
-   * is touched (#1096): a mid-save throw used to leave the non-keyed slices
-   * already rewritten — a half-persisted slate behind a raw error.
-   * All-or-nothing: either every slice writes or none does.
+   * The save is a TRANSACTION (#1096, #1133): every guard (the #1011
+   * case-collision asserts) and every serialization runs while the cycle is
+   * still staged in memory, so a cycle that throws persists nothing; only then
+   * does {@link commitCycle} flush the staged writes under the revision guard.
+   * The flush itself is a sequence of atomic per-file renames, not one atomic
+   * batch — a hard crash mid-flush remains a documented microsecond window,
+   * surfaced by the per-slice load validation on the next open.
    */
   public saveSlate(slate: IAutoMovieMcpWritableSlate): void {
     const shots = new Map(
@@ -202,19 +223,103 @@ export class AutoMovieProject {
     const beatEnds = new Map(slate.beatEnds.map((end) => [end.beat, end]));
     assertNoCaseCollisions("shots", shots.keys());
     assertNoCaseCollisions("beatEnds", beatEnds.keys());
-    this.writeOrRemove("script.json", slate.script);
-    this.writeOrRemove("scene.json", slate.scene);
-    this.writeOrRemove("film.json", slate.film);
-    this.writeOrRemove(
-      "notes.json",
-      slate.notes.length === 0 ? null : slate.notes,
-    );
-    this.reconcileBeatSlices("shots", shots);
-    this.reconcileBeatSlices("beatEnds", beatEnds);
+    // Stage EVERYTHING before the first byte touches disk: JSON.stringify is
+    // the throw-prone step (a host handing a cyclic or bigint-bearing slate),
+    // and staging it here is what makes the cycle all-or-nothing.
+    const staged: Array<{ file: string; content: string | null }> = [
+      this.stageSlice("script.json", slate.script),
+      this.stageSlice("scene.json", slate.scene),
+      this.stageSlice("film.json", slate.film),
+      this.stageSlice(
+        "notes.json",
+        slate.notes.length === 0 ? null : slate.notes,
+      ),
+    ];
+    const stagedShots = stageBeatSlices(shots);
+    const stagedBeatEnds = stageBeatSlices(beatEnds);
+    this.commitCycle(() => {
+      for (const { file, content } of staged)
+        if (content === null) {
+          if (fs.existsSync(file)) fs.rmSync(file);
+        } else writeAtomic(file, content);
+      this.flushBeatSlices("shots", stagedShots);
+      this.flushBeatSlices("beatEnds", stagedBeatEnds);
+    });
+  }
+
+  /** One staged non-keyed slice: its absolute path and rendered content. */
+  private stageSlice(
+    name: string,
+    value: unknown | null,
+  ): { file: string; content: string | null } {
+    return {
+      file: this.slicePath(name),
+      content: value === null ? null : serializeJson(value),
+    };
+  }
+
+  /**
+   * Flush one keyed slice directory from its staged contents: remove files the
+   * staged set no longer wants, then write every staged file atomically.
+   */
+  private flushBeatSlices(
+    dir: string,
+    staged: ReadonlyMap<string, string>,
+  ): void {
+    const base = path.join(this.root, dir);
+    for (const name of fs.readdirSync(base))
+      if (name.endsWith(".json") && !staged.has(name))
+        fs.rmSync(path.join(base, name));
+    for (const [name, content] of staged)
+      writeAtomic(path.join(base, name), content);
+  }
+
+  /**
+   * Run one mutation cycle under the project's optimistic-concurrency guard
+   * (#1133): take the short-lived commit lock, refuse when another session
+   * committed past this instance's last read (refreshing the mirror so a
+   * re-issued call computes from current truth), flush the staged writes, then
+   * bump the monotonic revision. Every refusal happens BEFORE the first staged
+   * byte lands.
+   */
+  private commitCycle(flush: () => void): void {
+    acquireCommitLock(this.lockPath);
+    try {
+      const current = this.readRevision();
+      if (current !== this.lastReadRevision_) {
+        const base = this.lastReadRevision_;
+        this.lastReadRevision_ = current;
+        throw new Error(
+          `another session committed to this project (on-disk revision ${current}; this session last synchronized at ${base}); nothing was written — re-read the current state (getSlate / nextSteps) and re-issue the call from that truth`,
+        );
+      }
+      flush();
+      this.lastReadRevision_ = current + 1;
+      writeJsonAtomic(this.revisionPath, { revision: this.lastReadRevision_ });
+    } finally {
+      fs.rmSync(this.lockPath, { force: true });
+    }
+  }
+
+  /** The committed revision on disk; a legacy project without one is 0. */
+  private readRevision(): number {
+    const value = readJson<{ revision?: unknown }>(this.revisionPath);
+    return value !== null && typeof value.revision === "number"
+      ? value.revision
+      : 0;
+  }
+
+  private get revisionPath(): string {
+    return path.join(this.root, "revision.json");
+  }
+
+  private get lockPath(): string {
+    return path.join(this.root, "revision.lock");
   }
 
   /** The stored prop specs, one per `props/<node>.json`, in filename order. */
   public storedProps(): IAutoMovieMcpPropSpec[] {
+    this.lastReadRevision_ = this.readRevision();
     return this.readKeyedSlices<IAutoMovieMcpPropSpec>(
       "props",
       {
@@ -232,10 +337,9 @@ export class AutoMovieProject {
    * leaving sibling props byte-identical.
    */
   public saveProp(spec: IAutoMovieMcpPropSpec): void {
-    writeJsonAtomic(
-      path.join(this.root, "props", sliceFilename(spec.node)),
-      spec,
-    );
+    const file = path.join(this.root, "props", sliceFilename(spec.node));
+    const content = serializeJson(spec);
+    this.commitCycle(() => writeAtomic(file, content));
   }
 
   /**
@@ -262,7 +366,9 @@ export class AutoMovieProject {
   /** Remove ONE stored prop spec's file; the caller checks existence first. */
   public removeProp(node: string): void {
     const file = path.join(this.root, "props", sliceFilename(node));
-    if (fs.existsSync(file)) fs.rmSync(file);
+    this.commitCycle(() => {
+      if (fs.existsSync(file)) fs.rmSync(file);
+    });
   }
 
   /**
@@ -281,19 +387,23 @@ export class AutoMovieProject {
         `asset "${normalized}" is already registered; assets are never silently replaced`,
       );
     const absolute = path.join(this.root, ...normalized.split("/"));
-    if (bytes !== undefined) {
-      if (fs.existsSync(absolute))
-        throw new Error(
-          `asset file "${normalized}" already exists; refusing to overwrite it`,
-        );
-      fs.mkdirSync(path.dirname(absolute), { recursive: true });
-      writeAtomic(absolute, bytes);
-    }
-    this.manifest = {
+    const next = {
       ...this.manifest,
       assets: [...this.manifest.assets, normalized],
     };
-    writeJsonAtomic(this.manifestPath, this.manifest);
+    const manifestContent = serializeJson(next);
+    this.commitCycle(() => {
+      if (bytes !== undefined) {
+        if (fs.existsSync(absolute))
+          throw new Error(
+            `asset file "${normalized}" already exists; refusing to overwrite it`,
+          );
+        fs.mkdirSync(path.dirname(absolute), { recursive: true });
+        writeAtomic(absolute, bytes);
+      }
+      this.manifest = next;
+      writeAtomic(this.manifestPath, manifestContent);
+    });
     return normalized;
   }
 
@@ -385,32 +495,22 @@ export class AutoMovieProject {
     }
     return out;
   }
-
-  private reconcileBeatSlices(
-    dir: string,
-    byBeat: ReadonlyMap<string, unknown>,
-  ): void {
-    const base = path.join(this.root, dir);
-    // Belt-and-braces: saveSlate already asserted this before any write
-    // (#1096); keep the guard here too so no other caller can clobber.
-    assertNoCaseCollisions(dir, byBeat.keys());
-    const wanted = new Set([...byBeat.keys()].map(sliceFilename));
-    for (const name of fs.readdirSync(base))
-      if (name.endsWith(".json") && !wanted.has(name))
-        fs.rmSync(path.join(base, name));
-    for (const [beat, value] of byBeat)
-      writeJsonAtomic(path.join(base, sliceFilename(beat)), value);
-  }
-
-  private writeOrRemove(name: string, value: unknown | null): void {
-    const file = this.slicePath(name);
-    if (value === null) {
-      if (fs.existsSync(file)) fs.rmSync(file);
-      return;
-    }
-    writeJsonAtomic(file, value);
-  }
 }
+
+/**
+ * Serialize one keyed slice set into its staged file map (`filename` → rendered
+ * JSON) — the throw-prone half of a beat-slice flush, run while the cycle is
+ * still staged in memory (#1133). The case-collision guard runs separately,
+ * before staging, in {@link AutoMovieProject.saveSlate}.
+ */
+const stageBeatSlices = (
+  byBeat: ReadonlyMap<string, unknown>,
+): Map<string, string> => {
+  const staged = new Map<string, string>();
+  for (const [beat, value] of byBeat)
+    staged.set(sliceFilename(beat), serializeJson(value));
+  return staged;
+};
 
 /** Manifest shape persisted as `automovie.json`. */
 interface IManifest {
@@ -1278,4 +1378,45 @@ const writeAtomic = (file: string, data: Uint8Array | string): void => {
 };
 
 const writeJsonAtomic = (file: string, value: unknown): void =>
-  writeAtomic(file, `${JSON.stringify(value, null, 2)}\n`);
+  writeAtomic(file, serializeJson(value));
+
+/** The store's one JSON rendering (pretty, trailing newline). */
+const serializeJson = (value: unknown): string =>
+  `${JSON.stringify(value, null, 2)}\n`;
+
+/**
+ * Acquire the project's short-lived commit lock: an exclusive-create lock file
+ * guarding the compare-and-commit window (#1133). The window is microseconds of
+ * serialization-free file writes, so contention resolves by a bounded
+ * synchronous spin (the whole store is synchronous by contract); a lock older
+ * than 10 s belongs to a crashed session and is broken.
+ */
+const acquireCommitLock = (lockPath: string): void => {
+  const deadline = Date.now() + 2_000;
+  for (;;) {
+    try {
+      fs.closeSync(fs.openSync(lockPath, "wx"));
+      return;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      try {
+        if (Date.now() - fs.statSync(lockPath).mtimeMs > 10_000) {
+          fs.rmSync(lockPath, { force: true });
+          continue;
+        }
+      } catch {
+        continue; // the holder released (or broke) it between our checks
+      }
+      if (Date.now() > deadline)
+        throw new Error(
+          `the project commit lock is held by another session ("${lockPath}"); retry the call shortly`,
+        );
+      spinWait(2);
+    }
+  }
+};
+
+const spinWait = (ms: number): void => {
+  const end = Date.now() + ms;
+  while (Date.now() < end); // bounded busy-wait: the store is synchronous
+};
