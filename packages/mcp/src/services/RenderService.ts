@@ -301,6 +301,23 @@ const buildChunkedRenderPlan = (props: {
   const validation = toValidation(violations);
   if (validation.success === false) return { validation, plan: null };
 
+  // buildRenderPlan's zero-frame gate, replicated (#1092): a degenerate
+  // fps × duration otherwise reaches planSequenceRender's raw throw and
+  // escapes to the MCP client instead of a field-located violation.
+  const times = frameTimes(props.spec.fps, target!.duration);
+  if (times.length === 0)
+    return {
+      validation: toValidation([
+        violation(
+          "range",
+          "$input.spec.fps",
+          "render spec and target duration must produce at least one frame",
+          { fps: props.spec.fps, duration: target!.duration },
+        ),
+      ]),
+      plan: null,
+    };
+
   const stem = renderPathStem(props.spec.target);
   const plan = planSequenceRender({
     sequence: props.slate.film!,
