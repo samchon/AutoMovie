@@ -436,8 +436,12 @@ const sliceFilename = (key: string): string => {
   // DOS device basenames (`con`, `nul`, ...) intact (#1011). Escape both with
   // ordinary percent-encoding so `decodeURIComponent` still round-trips the
   // key; existing stores are unaffected (such files could never be written).
+  // Windows reserves the segment BEFORE THE FIRST DOT (`con.notes.json` is
+  // refused on Windows 10 and earlier just like `con.json`), and dots survive
+  // encoding — so the device test runs on the stem, not the whole key (#1064).
   let encoded = encodeURIComponent(key).replace(/\*/g, "%2A");
-  if (WINDOWS_DEVICE_NAMES.test(encoded))
+  const stem = encoded.split(".", 1)[0]!;
+  if (WINDOWS_DEVICE_NAMES.test(stem))
     encoded = `%${encoded
       .charCodeAt(0)
       .toString(16)
