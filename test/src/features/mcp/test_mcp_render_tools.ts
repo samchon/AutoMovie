@@ -100,7 +100,10 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
  *    unknown or malformed pass list is a violation.
  * 2. Invalid or malformed render request/spec roots, malformed slate target
  *    slices, missing targets, duplicate shots, invalid sequence targets, and
- *    zero-frame plans return field-located diagnostics.
+ *    zero-frame plans return field-located diagnostics — including
+ *    cutSequence's adjacent-transition overlap gate (two 0.6 s dissolves around
+ *    a 1 s middle entry fail; 0.4 s dissolves plan), so a hand-authored film
+ *    cannot commit or render what the cut stage would reject.
  * 3. `seeFrame` resolves a preview frame by index or time, rejects conflicts and
  *    unknown passes, and reports `no-capture-adapter` on this adapterless
  *    application.
@@ -378,6 +381,44 @@ export const test_mcp_render_tools = async (): Promise<void> => {
       }).validation,
       "$input.slate.film.shots[0].trim",
     ),
+  );
+
+  const shotC: IAutoMovieShot = { ...shotA, id: "shot:beat-3", duration: 2 };
+  const threeShotFilm = (
+    transition: number,
+  ): { slate: IAutoMovieMcpWritableSlate; spec: IAutoMovieRenderSpec } => ({
+    slate: {
+      ...slate,
+      shots: [shotA, shotB, shotC],
+      film: {
+        ...sequence,
+        shots: [
+          { shot: shotB.id, trim: null, transition: null },
+          {
+            shot: shotA.id,
+            trim: null,
+            transition: { kind: "crossDissolve", duration: transition },
+          },
+          {
+            shot: shotC.id,
+            trim: null,
+            transition: { kind: "crossDissolve", duration: transition },
+          },
+        ],
+      },
+    },
+    spec: { ...spec, target: sequence.id },
+  });
+  TestValidator.predicate(
+    "adjacent transitions overlapping the middle entry are rejected like cutSequence",
+    hasPath(
+      app.planRender(threeShotFilm(0.6)).validation,
+      "$input.slate.film.shots[2].transition.duration",
+    ),
+  );
+  TestValidator.predicate(
+    "adjacent transitions that fit the middle entry still plan",
+    app.planRender(threeShotFilm(0.4)).plan !== null,
   );
 
   const defaultPreview = (await app.seeFrame({ slate, spec })).preview;
