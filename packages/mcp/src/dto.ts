@@ -158,6 +158,9 @@ export interface IAutoMovieMcpGeometryModel {
 export interface IAutoMovieGetResolvedPoseOutput {
   /** Actor pose resolved into world-space bone transforms, or null. */
   resolvedPose: IAutoMovieMcpResolvedPose | null;
+
+  /** Which lookup failed when `resolvedPose` is null; null on success. */
+  reason: string | null;
 }
 
 /** Actor pose after sampling motion and running forward kinematics. */
@@ -200,6 +203,9 @@ export interface IAutoMovieMcpResolvedBone {
 export interface IAutoMovieGetReachOutput {
   /** Reach report, or null when actor/target cannot resolve to rigged points. */
   reach: IAutoMovieMcpReachReport | null;
+
+  /** Which lookup failed when `reach` is null; null on success. */
+  reason: string | null;
 }
 
 /** Reachability report for one actor against one target. */
@@ -245,6 +251,9 @@ export interface IAutoMovieMcpArmReach {
 export interface IAutoMovieMeasureDistanceOutput {
   /** Distance report, or null when either target is not positional. */
   measurement: IAutoMovieMcpDistanceMeasurement | null;
+
+  /** Which endpoint failed to resolve when `measurement` is null; else null. */
+  reason: string | null;
 }
 
 /** Resolved endpoints and their Euclidean distance. */
