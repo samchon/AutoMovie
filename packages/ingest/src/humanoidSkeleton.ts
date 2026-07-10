@@ -66,11 +66,14 @@ const normalize = (name: string): string =>
     .replace(/[\s_.:|-]/g, "");
 
 /**
- * Retarget an imported glTF's skin onto a normalized humanoid
- * {@link IAutoMovieSkeleton} by matching each skin joint's name to a
- * {@link AutoMovieHumanoidBone} slot — the bridge that turns a real rigged
- * glTF/VRM into a automovie character (poses and motions authored on the slots
- * then replay on it).
+ * Retarget an imported glTF's skins onto a normalized humanoid
+ * {@link IAutoMovieSkeleton} by matching every skin's joint names to
+ * {@link AutoMovieHumanoidBone} slots (all skins in document order, first match
+ * per slot wins) — the bridge that turns a real rigged glTF/VRM into a
+ * automovie character (poses and motions authored on the slots then replay on
+ * it). Reading every skin matters because exporters bind clothes, hair, and
+ * accessories as separate skins with no ordering guarantee — the body rig must
+ * be found wherever it sits.
  *
  * The skeleton's hierarchy is rebuilt over the mapped joints only: a bone's
  * parent is its nearest _mapped_ ancestor in the glTF node tree, so
@@ -92,16 +95,21 @@ export const humanoidSkeleton = (
   const skins = doc.getRoot().listSkins();
   if (skins.length === 0) return null;
 
-  // First-wins mapping of joint node → humanoid slot.
+  // First-wins mapping of joint node → humanoid slot, over EVERY skin's
+  // joints in document order: exporters bind clothes/hair as their own skins
+  // with no ordering guarantee, so reading only the first skin demoted a
+  // fully rigged character to a prop whenever an accessory skin came first
+  // (#1104). The union keeps single-skin documents byte-identical.
   const slotByNode = new Map<GLTFNode, AutoMovieHumanoidBone>();
   const used = new Set<AutoMovieHumanoidBone>();
-  for (const joint of skins[0]!.listJoints()) {
-    const slot = HUMANOID_ALIASES[normalize(joint.getName())];
-    if (slot !== undefined && !used.has(slot)) {
-      slotByNode.set(joint, slot);
-      used.add(slot);
+  for (const skin of skins)
+    for (const joint of skin.listJoints()) {
+      const slot = HUMANOID_ALIASES[normalize(joint.getName())];
+      if (slot !== undefined && !used.has(slot)) {
+        slotByNode.set(joint, slot);
+        used.add(slot);
+      }
     }
-  }
   if (!used.has("hips")) return null;
 
   const parentNode = new Map<GLTFNode, GLTFNode>();
