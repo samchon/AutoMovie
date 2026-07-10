@@ -159,6 +159,26 @@ export const test_viewer_production_asset_runtime = async (): Promise<void> => {
   TestValidator.equals("second frame delta", frames[1]!.deltaSeconds, 0.25);
   TestValidator.equals("last expression", player.lastExpression, happy);
 
+  // a null-root pose returns the model to the node's staged base (#1046):
+  // the engine defaults a null root to identity, so a gesture clip taking
+  // over from a walk must not strand the model at the walk's destination
+  player.setMotion(
+    makeMotion(
+      [
+        keyframe(0, { skeleton: skeleton.id, root: null, joints: [] }),
+        keyframe(1, { skeleton: skeleton.id, root: null, joints: [] }),
+      ],
+      1,
+    ),
+  );
+  player.update(0.75);
+  TestValidator.predicate(
+    "a null root resets to the staged base, not the last rooted pose",
+    nclose(imported.object.position.x, 0) &&
+      nclose(imported.object.position.y, 0) &&
+      nclose(imported.object.position.z, 0),
+  );
+
   let renders = 0;
   const renderer: IAutoMovieViewerSnapshotRenderer = {
     render: () => {

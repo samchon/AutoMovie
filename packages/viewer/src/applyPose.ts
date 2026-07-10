@@ -45,5 +45,16 @@ export const applyPose = (
         r.localRotation.w,
       );
   }
-  if (pose.root !== null) applyTransform(target.object, pose.root);
+  // A null root means "at the node's staged base" — the engine's convention
+  // (`resolvePose`/`animatedBaseAt` default it to identity, #1046). Keeping
+  // the previous pose's root here would strand the model at the LAST rooted
+  // pose (e.g. a walk's destination) when a gesture clip with null roots
+  // takes over.
+  applyTransform(target.object, pose.root ?? IDENTITY_ROOT);
+};
+
+const IDENTITY_ROOT = {
+  translation: { x: 0, y: 0, z: 0 },
+  rotation: { x: 0, y: 0, z: 0, w: 1 },
+  scale: { x: 1, y: 1, z: 1 },
 };
