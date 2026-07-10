@@ -147,14 +147,23 @@ export class AutoMoviePlayer {
       // A vanished axis DECAYS toward neutral instead of hard-resetting
       // (#1048): follow-through settles smoothly when a keyframe segment
       // stops authoring the joint, rather than popping to rest.
+      //
+      // dt=0 means "no time elapsed", NOT "never sprung" (#1098): a paused
+      // host loop re-calling update(sameT), a backwards scrub (negative
+      // delta clamps to 0), or a frozen-frame capture must HOLD the live
+      // spring — value and velocity — on both the decay and tracking sides.
+      // Conflating the two popped a mid-decay joint to rest (and zeroed its
+      // state), and re-seeded a lagging joint AT its target.
       if (target === null) {
-        if (state === undefined || dt === 0)
+        if (state === undefined)
           return { angle: null, next: { value: 0, velocity: 0 } };
+        if (dt === 0) return { angle: state.value, next: state };
         const r = dampedSpring(state.value, state.velocity, 0, params, dt);
         return { angle: r.value, next: r };
       }
-      if (dt === 0 || state === undefined)
+      if (state === undefined)
         return { angle: target, next: { value: target, velocity: 0 } };
+      if (dt === 0) return { angle: state.value, next: state };
       const r = dampedSpring(state.value, state.velocity, target, params, dt);
       return { angle: r.value, next: r };
     };
