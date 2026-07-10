@@ -878,7 +878,10 @@ const validatePerformStagedShape = (
         violations,
       );
     });
-  isJsonArray(staged.mounts, `${path}.mounts`, "staged mounts", violations);
+  if (isJsonArray(staged.mounts, `${path}.mounts`, "staged mounts", violations))
+    staged.mounts.forEach((mount, index) =>
+      validatePerformMountShape(mount, `${path}.mounts[${index}]`, violations),
+    );
 };
 
 const validatePerformStagedNodeShape = (
@@ -888,10 +891,70 @@ const validatePerformStagedNodeShape = (
 ): void => {
   if (!isJsonObject(node, path, "staged scene node", violations)) return;
   requireString(node.id, `${path}.id`, "staged scene node id", violations);
-  validateTransformObject(
-    node.transform,
-    `${path}.transform`,
-    "staged scene node transform",
+  if (
+    !isJsonObject(
+      node.transform,
+      `${path}.transform`,
+      "staged scene node transform",
+      violations,
+    )
+  )
+    return;
+  // The perform wrapper feeds node translations straight into target
+  // resolution, aim, and launch math (#1005) — non-finite components would
+  // throw in aimYawPitch or bake NaN travel, so finiteness gates here.
+  requireFiniteVector(
+    node.transform.translation,
+    `${path}.transform.translation`,
+    "staged scene node translation",
+    violations,
+  );
+  isJsonObject(
+    node.transform.rotation,
+    `${path}.transform.rotation`,
+    "staged scene node rotation",
+    violations,
+  );
+  requireVectorObject(
+    node.transform.scale,
+    `${path}.transform.scale`,
+    "staged scene node scale",
+    violations,
+  );
+};
+
+/** The mount fields `coupleObjects` dereferences (#1005). */
+const validatePerformMountShape = (
+  mount: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(mount, path, "staged mount", violations)) return;
+  requireNonEmptyString(
+    mount.node,
+    `${path}.node`,
+    "staged mount node",
+    violations,
+  );
+  if (
+    !isJsonObject(
+      mount.binding,
+      `${path}.binding`,
+      "staged mount binding",
+      violations,
+    )
+  )
+    return;
+  requireNonEmptyString(
+    mount.binding.parent,
+    `${path}.binding.parent`,
+    "staged mount binding parent",
+    violations,
+  );
+  requireNonEmptyString(
+    mount.binding.bone,
+    `${path}.binding.bone`,
+    "staged mount binding bone",
     violations,
   );
 };
