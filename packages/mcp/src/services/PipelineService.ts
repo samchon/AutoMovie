@@ -1540,8 +1540,127 @@ const validateActorRegistry = (
         violations,
       ),
     );
+    validateActorContextFields(context, path, violations);
   });
   return violations;
+};
+
+/**
+ * The non-gait actor-context fields the default synthesizer and camera framing
+ * dereference (#998): `speed` feeds `locomoteMotion`'s throwing guard,
+ * `position`/`facingDeg`/`eyeHeight` feed `aimYawPitch`/IK, and `restFrames`
+ * feeds `decomposeJointRotation` — all raw throws without this gate.
+ */
+const validateActorContextFields = (
+  context: Record<string, unknown>,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  requireNonEmptyString(
+    context.skeleton,
+    `${path}.skeleton`,
+    "actor context skeleton",
+    violations,
+  );
+  requireFiniteVector(
+    context.position,
+    `${path}.position`,
+    "actor context position",
+    violations,
+  );
+  const speed = requireFiniteNumber(
+    context.speed,
+    `${path}.speed`,
+    "actor context speed",
+    violations,
+  );
+  if (speed !== null && speed <= 0)
+    violations.push(
+      violation(
+        "range",
+        `${path}.speed`,
+        `actor context speed must be > 0, but was ${speed}`,
+        speed,
+      ),
+    );
+  requireFiniteNumber(
+    context.facingDeg,
+    `${path}.facingDeg`,
+    "actor context facingDeg",
+    violations,
+  );
+  requireFiniteNumber(
+    context.eyeHeight,
+    `${path}.eyeHeight`,
+    "actor context eyeHeight",
+    violations,
+  );
+  isJsonObject(
+    context.restPose,
+    `${path}.restPose`,
+    "actor context rest pose",
+    violations,
+  );
+  if (context.restFrames !== undefined)
+    validateActorRestFrames(
+      context.restFrames,
+      `${path}.restFrames`,
+      violations,
+    );
+};
+
+const REST_FRAME_AXES = ["flexion", "abduction", "twist"] as const;
+
+const validateActorRestFrames = (
+  restFrames: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(restFrames, path, "actor rest frames", violations)) return;
+  Object.entries(restFrames).forEach(([bone, frame]) => {
+    const bonePath = `${path}.${bone}`;
+    if (!isJsonObject(frame, bonePath, "actor rest frame", violations)) return;
+    for (const axis of REST_FRAME_AXES) {
+      const axisFrame = frame[axis];
+      if (axisFrame === undefined) continue;
+      const axisPath = `${bonePath}.${axis}`;
+      if (
+        !isJsonObject(axisFrame, axisPath, "actor rest frame axis", violations)
+      )
+        continue;
+      if (axisFrame.sign !== 1 && axisFrame.sign !== -1)
+        violations.push(
+          violation(
+            "type",
+            `${axisPath}.sign`,
+            "actor rest frame sign must be 1 or -1",
+            axisFrame.sign,
+          ),
+        );
+      requireFiniteNumber(
+        axisFrame.neutral,
+        `${axisPath}.neutral`,
+        "actor rest frame neutral",
+        violations,
+      );
+    }
+  });
+};
+
+const requireFiniteVector = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(value, path, label, violations)) return;
+  for (const axis of ["x", "y", "z"] as const)
+    requireFiniteNumber(
+      value[axis],
+      `${path}.${axis}`,
+      `${label} ${axis}`,
+      violations,
+    );
 };
 
 const GAIT_LIMB_AXES = new Set<string>(["flexion", "abduction", "twist"]);
