@@ -42,6 +42,16 @@ export const test_rom_table_values = (): void => {
     DEFAULT_HUMANOID_ROM.rightUpperArm!.swingDeg,
     180,
   );
+  // the shoulder cone is deliberate HEADROOM (#1058, decision 310): the swing
+  // metric caps at 180°, so even the per-axis-maximal corner never exceeds
+  // it — a live cap would reject the canonical pure-plane overhead pose,
+  // whose swing is already exactly 180
+  TestValidator.predicate(
+    "the shoulder cone is headroom: the maximal corner never trips it",
+    swingConeAngle(shoulder.flexion!.max, shoulder.abduction!.max) <=
+      shoulder.swingDeg! &&
+      nclose(swingConeAngle(shoulder.flexion!.max, 0), 180),
+  );
 
   const hip = DEFAULT_HUMANOID_ROM.leftUpperLeg!;
   TestValidator.equals("left hip swing cone", hip.swingDeg, 120);

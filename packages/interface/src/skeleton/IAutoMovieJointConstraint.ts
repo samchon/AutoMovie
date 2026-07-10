@@ -66,8 +66,15 @@ export interface IAutoMovieJointConstraint {
    * happen _at once_, a corner the real joint cannot reach. The cone bounds the
    * combined swing (`2·acos(cos(flexion/2)·cos(abduction/2))`) so the pose
    * stays inside the joint's true reachable sweep. `null`/omitted on hinges and
-   * any joint that needs no combined cap (pure per-axis euler). Reference:
-   * joint sinus / reach-cone ROM models (Herda et al.).
+   * any joint that needs no combined cap (pure per-axis euler).
+   *
+   * The metric never exceeds 180°, so a 180° cone is pure HEADROOM, not a live
+   * gate (#1058): a joint whose legitimate single-axis maximum is itself 180°
+   * (the shoulder — arm straight overhead reaches swing 180 on one axis alone)
+   * cannot carry a live cone without rejecting that canonical pose. The cone
+   * only bites when set strictly below the per-axis maxima's combined reach, as
+   * the hip's 120° is. Reference: joint sinus / reach-cone ROM models (Herda et
+   * al.).
    */
   swingDeg?: number | null;
 }
