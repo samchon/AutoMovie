@@ -24,43 +24,13 @@ import {
   plantsAtEnd,
   rootVelocityOf,
 } from "./beatEndSim";
+import { bakedTransformAt, followClipOf } from "./followClip";
 import { IAutoMovieStagedSet } from "./stageScene";
 
 const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: 1 };
 
 /** Zero vector, the empty-window velocity. */
 const ZERO: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
-
-/**
- * The world transform a baked follow clip writes onto `node` at `t`. A coupled
- * child's world root comes from here — the exact clip {@link performShot} baked
- * through `compileAttach` — so beat-end and per-frame render read the SAME
- * composition (#674). Scale is not baked (rigid couplings never scale), so it
- * stays identity.
- */
-const bakedTransformAt = (
-  clip: IAutoMovieClip,
-  node: string,
-  t: number,
-): IAutoMovieTransform => {
-  const sampled = sampleClip(clip, t);
-  const translation = sampled.get(`node:${node}:translation`)!.value;
-  const rotation = sampled.get(`node:${node}:rotation`)!.value;
-  return {
-    translation: {
-      x: translation[0]!,
-      y: translation[1]!,
-      z: translation[2]!,
-    },
-    rotation: {
-      x: rotation[0]!,
-      y: rotation[1]!,
-      z: rotation[2]!,
-      w: rotation[3]!,
-    },
-    scale: { x: 1, y: 1, z: 1 },
-  };
-};
 
 /**
  * Trailing world velocity of the baked follow clip at `t` — the coupled child's
@@ -89,34 +59,6 @@ const bakedFollowVelocity = (
     },
     1 / (t1 - t0),
   );
-};
-
-/**
- * The baked follow clip driving `node`, or `null` when none does. Matched by
- * `compileAttach`'s stable `attach:<node>` id; a handoff bakes later couplings
- * as `attach:<node>:2`, `:3`, … in start order (#989), so the HIGHEST suffix is
- * the latest coupling — the hand the prop actually ends the beat in.
- */
-const followClipOf = (
-  objectMotions: readonly IAutoMovieClip[],
-  node: string,
-): IAutoMovieClip | null => {
-  const prefix = `attach:${node}`;
-  let best: IAutoMovieClip | null = null;
-  let bestRank = 0;
-  for (const clip of objectMotions) {
-    let rank = 0;
-    if (clip.id === prefix) rank = 1;
-    else if (clip.id.startsWith(`${prefix}:`)) {
-      const suffix = Number(clip.id.slice(prefix.length + 1));
-      if (Number.isInteger(suffix) && suffix > 1) rank = suffix;
-    }
-    if (rank > bestRank) {
-      best = clip;
-      bestRank = rank;
-    }
-  }
-  return best;
 };
 
 /**
