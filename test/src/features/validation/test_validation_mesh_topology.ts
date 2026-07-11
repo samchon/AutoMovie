@@ -1,0 +1,149 @@
+import { validateMeshTopology } from "@automovie/engine";
+import { IAutoMovieMesh } from "@automovie/interface";
+import { TestValidator } from "@nestia/e2e";
+
+import { hasViolation } from "../internal/predicates";
+
+const mesh = (
+  positions: number[],
+  indices: number[] | null,
+): IAutoMovieMesh => ({
+  positions,
+  normals: null,
+  uvs: null,
+  indices,
+  skin: null,
+});
+
+/** Four distinct vertices of a unit square (z=0) plus spares for extra fins. */
+const P = [
+  0,
+  0,
+  0, // v0
+  1,
+  0,
+  0, // v1
+  0,
+  1,
+  0, // v2
+  1,
+  1,
+  0, // v3
+  0,
+  0,
+  1, // v4 (out of plane, for a third fin)
+];
+
+const topo = (m: IAutoMovieMesh, expectClosed = false) =>
+  validateMeshTopology({ mesh: m, expectClosed });
+
+/**
+ * The Tier-5 mesh-topology validator (#1183): the `"topology"` violation kind
+ * was codified but never emitted. It welds vertices and enforces the two
+ * invariants every valid triangle mesh must satisfy — 2-manifold (no edge on
+ * more than two triangles) and consistent winding (adjacent triangles traverse
+ * a shared edge oppositely) — as errors, with an opt-in watertight check.
+ * Tessellated primitives pass by construction; the target is externally-sourced
+ * or hand-built mesh geometry validated through `validateModel`.
+ *
+ * Scenarios:
+ *
+ * 1. Two triangles sharing an edge with consistent winding pass; the same open
+ *    surface under `expectClosed` reports its boundary edges as errors.
+ * 2. A third triangle on one edge (a fin) is a non-manifold `topology` error.
+ * 3. Two triangles winding a shared edge the SAME way is a winding `topology`
+ *    error, even though the edge is only 2-incident.
+ * 4. A degenerate triangle (a repeated welded vertex) carries no surface and is
+ *    skipped, not errored.
+ * 5. A non-indexed single triangle (indices null → sequential) passes.
+ * 6. Malformed buffers (empty, out-of-range index, ragged index/position count)
+ *    yield no topology verdict — the structural report is `validateModel`'s
+ *    job.
+ */
+export const test_validation_mesh_topology = (): void => {
+  // 1. consistent open pair — passes; expectClosed flags its open edges.
+  const openPair = mesh(P.slice(0, 12), [0, 1, 2, 1, 3, 2]);
+  TestValidator.equals("a consistent open pair passes", topo(openPair), {
+    success: true,
+  });
+  TestValidator.predicate(
+    "under expectClosed, an open edge is a topology error",
+    hasViolation(topo(openPair, true), "topology", "$input.indices") &&
+      topo(openPair, true).success === false,
+  );
+
+  // 2. a fin: three triangles share edge 0–1 → non-manifold.
+  const fin = mesh(P, [0, 1, 2, 1, 0, 3, 0, 1, 4]);
+  const finResult = topo(fin);
+  TestValidator.predicate(
+    "a third triangle on one edge is a non-manifold error",
+    finResult.success === false &&
+      hasViolation(finResult, "topology", "$input.indices") &&
+      finResult.violations.some((v) => v.expected.includes("2-manifold")),
+  );
+
+  // 3. two triangles winding edge 0–1 the same way → flipped.
+  const flipped = mesh(P.slice(0, 12), [0, 1, 2, 0, 1, 3]);
+  const flippedResult = topo(flipped);
+  TestValidator.predicate(
+    "two triangles winding a shared edge alike is a winding error",
+    flippedResult.success === false &&
+      flippedResult.violations.some((v) => v.expected.includes("flipped")),
+  );
+
+  // 4. a degenerate triangle (v3 repeated) carries no surface — skipped.
+  const degenerate = mesh(P, [0, 1, 2, 3, 3, 4]);
+  TestValidator.equals(
+    "a degenerate triangle is skipped, not errored",
+    topo(degenerate),
+    { success: true },
+  );
+
+  // 5. non-indexed single triangle; defaults (no path, no expectClosed) hold.
+  const soup = mesh(P.slice(0, 9), null);
+  TestValidator.equals(
+    "a non-indexed single triangle passes with defaults",
+    validateMeshTopology({ mesh: soup }),
+    { success: true },
+  );
+  TestValidator.predicate(
+    "an explicit path roots the violation",
+    hasViolation(
+      validateMeshTopology({ mesh: fin, path: "$mesh" }),
+      "topology",
+      "$mesh.indices",
+    ),
+  );
+
+  // 6. malformed buffers yield no topology verdict (validateModel reports them).
+  TestValidator.equals(
+    "empty positions yield no topology verdict",
+    topo(mesh([], [])),
+    { success: true },
+  );
+  TestValidator.equals(
+    "an out-of-range index yields no topology verdict",
+    topo(mesh(P.slice(0, 9), [0, 1, 9])),
+    { success: true },
+  );
+  TestValidator.equals(
+    "a negative index yields no topology verdict",
+    topo(mesh(P.slice(0, 9), [0, 1, -1])),
+    { success: true },
+  );
+  TestValidator.equals(
+    "a non-integer index yields no topology verdict",
+    topo(mesh(P.slice(0, 9), [0, 1, 1.5])),
+    { success: true },
+  );
+  TestValidator.equals(
+    "a ragged index count yields no topology verdict",
+    topo(mesh(P.slice(0, 9), [0, 1])),
+    { success: true },
+  );
+  TestValidator.equals(
+    "a ragged position buffer yields no topology verdict",
+    topo(mesh([0, 0, 0, 1], null)),
+    { success: true },
+  );
+};
