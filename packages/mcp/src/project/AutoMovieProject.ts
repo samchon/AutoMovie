@@ -452,14 +452,13 @@ export class AutoMovieProject {
         (asset) =>
           asset === `renders/${name}` || asset.startsWith(`renders/${name}/`),
       );
-    return (
-      fs
-        .readdirSync(path.join(this.root, "renders"))
-        /* c8 ignore next -- a directory's entries are distinct names, so this string comparator's equal (:0) arm is unreachable; its </> arms only differ by the OS readdir enumeration order */
-        .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
-        .filter((name) => !owned(name))
-        .map((name) => `renders/${name}`)
-    );
+    // Sort by UTF-16 code units (a two-way comparator: distinct filenames are
+    // never equal, so both arms are reachable and none needs a c8-ignore).
+    return fs
+      .readdirSync(path.join(this.root, "renders"))
+      .sort((a, b) => a.localeCompare(b))
+      .filter((name) => !owned(name))
+      .map((name) => `renders/${name}`);
   }
 
   private get manifestPath(): string {
@@ -484,8 +483,7 @@ export class AutoMovieProject {
     for (const name of fs
       .readdirSync(base)
       .filter((name) => name.endsWith(".json"))
-      /* c8 ignore next -- a directory's entries are distinct names, so this string comparator's equal (:0) arm is unreachable; its </> arms only differ by the OS readdir enumeration order */
-      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
+      .sort((a, b) => a.localeCompare(b))) {
       const file = path.join(base, name);
       const value = readJson<T>(file);
       if (value === null) continue;
@@ -633,7 +631,9 @@ const orderByFilename = <T>(items: T[], keyOf: (item: T) => string): T[] => {
     item,
     name: sliceFilename(keyOf(item)),
   }));
-  named.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  // Same order readKeyedSlices/staleRenders read filenames back in — keep all
+  // three on localeCompare so the resident read and the ordered slate agree.
+  named.sort((a, b) => a.name.localeCompare(b.name));
   return named.map((entry) => entry.item);
 };
 
