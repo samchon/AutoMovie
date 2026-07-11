@@ -130,8 +130,14 @@ export const cleanSilhouetteBands = (
   let runMin = Number.NEGATIVE_INFINITY;
   let runMax = Number.POSITIVE_INFINITY;
   bands.forEach((_, i) => {
-    if (monoMin && i >= iMin) mins[i] = runMin = Math.max(mins[i]!, runMin);
-    if (monoMax && i >= iMax) maxs[i] = runMax = Math.min(maxs[i]!, runMax);
+    if (monoMin && i >= iMin) {
+      runMin = Math.max(mins[i]!, runMin);
+      mins[i] = runMin;
+    }
+    if (monoMax && i >= iMax) {
+      runMax = Math.min(maxs[i]!, runMax);
+      maxs[i] = runMax;
+    }
   });
 
   const smooth = (arr: number[]): number[] => {

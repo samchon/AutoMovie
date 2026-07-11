@@ -1123,22 +1123,32 @@ const digestOf = (
   const notes = Array.isArray(after.notes) ? after.notes.length : 0;
   const cleared: string[] = [];
   if (before !== undefined) {
-    if (before.scene != null && after.scene == null) cleared.push("scene");
+    if (
+      before.scene !== null &&
+      before.scene !== undefined &&
+      (after.scene === null || after.scene === undefined)
+    )
+      cleared.push("scene");
     for (const id of idsOf(before.shots, "id"))
       if (!shots.includes(id)) cleared.push(id);
     for (const beat of idsOf(before.beatEnds, "beat"))
       if (!beatEnds.includes(beat)) cleared.push(`beatEnd:${beat}`);
     if (Array.isArray(before.notes) && before.notes.length > 0 && notes === 0)
       cleared.push("notes");
-    if (before.film != null && after.film == null) cleared.push("film");
+    if (
+      before.film !== null &&
+      before.film !== undefined &&
+      (after.film === null || after.film === undefined)
+    )
+      cleared.push("film");
   }
   return {
-    script: after.script != null,
-    scene: after.scene != null,
+    script: after.script !== null && after.script !== undefined,
+    scene: after.scene !== null && after.scene !== undefined,
     shots,
     beatEnds,
     notes,
-    film: after.film != null,
+    film: after.film !== null && after.film !== undefined,
     cleared,
   };
 };
@@ -1344,7 +1354,7 @@ const validateSceneAgainstScript = (
 };
 
 const validateCommittedScript = (
-  script: IAutoMovieScript | null | unknown,
+  script: unknown,
   slateRoot: string,
   missingMessage: string,
   violations: IAutoMovieConstraintViolation[],
@@ -1372,7 +1382,7 @@ const validateCommittedScript = (
 };
 
 const validateCommittedScene = (
-  scene: IAutoMovieScene | null | unknown,
+  scene: unknown,
   slateRoot: string,
   missingMessage: string,
   violations: IAutoMovieConstraintViolation[],

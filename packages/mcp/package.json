@@ -18,14 +18,26 @@
     "start": "ttsx src/bin.ts",
     "prepack": "pnpm run build"
   },
-  "keywords": ["mcp", "model-context-protocol", "typia", "llm", "animation"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "typia",
+    "llm",
+    "animation"
+  ],
   "author": "Samchon",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/samchon/automovie"
   },
-  "files": ["lib", "src", "package.json", "LICENSE", "README.md"],
+  "files": [
+    "lib",
+    "src",
+    "package.json",
+    "LICENSE",
+    "README.md"
+  ],
   "publishConfig": {
     "access": "public",
     "main": "lib/index.js",
@@ -53,6 +65,7 @@
     "@types/node": "catalog:utils",
     "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
-    "typescript": "catalog:typescript"
+    "typescript": "catalog:typescript",
+    "@ttsc/lint": "catalog:typescript"
   }
 }

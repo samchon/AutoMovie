@@ -250,7 +250,7 @@ export class AutoMovieProject {
   /** One staged non-keyed slice: its absolute path and rendered content. */
   private stageSlice(
     name: string,
-    value: unknown | null,
+    value: unknown,
   ): { file: string; content: string | null } {
     return {
       file: this.slicePath(name),
@@ -454,7 +454,7 @@ export class AutoMovieProject {
       );
     return fs
       .readdirSync(path.join(this.root, "renders"))
-      .sort()
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
       .filter((name) => !owned(name))
       .map((name) => `renders/${name}`);
   }
@@ -481,7 +481,7 @@ export class AutoMovieProject {
     for (const name of fs
       .readdirSync(base)
       .filter((name) => name.endsWith(".json"))
-      .sort()) {
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
       const file = path.join(base, name);
       const value = readJson<T>(file);
       if (value === null) continue;

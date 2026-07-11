@@ -8,8 +8,7 @@ import {
 import { IAutoMovieReachAction, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { createSkeleton } from "../internal/fixtures";
-import { makePose } from "../internal/fixtures";
+import { createSkeleton, makePose } from "../internal/fixtures";
 import { nclose, vclose } from "../internal/predicates";
 
 const ctx = (facingDeg: number): IAutoMovieActorContext => ({

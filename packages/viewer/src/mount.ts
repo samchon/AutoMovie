@@ -41,7 +41,7 @@ export const mountViewer = (
   canvas: HTMLCanvasElement,
   scene: THREE.Scene,
   camera: THREE.PerspectiveCamera,
-  onFrame: (elapsedSeconds: number) => void | boolean,
+  onFrame: (elapsedSeconds: number) => boolean | undefined,
 ): IAutoMovieViewerHandle => {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   const resize = (): void => {

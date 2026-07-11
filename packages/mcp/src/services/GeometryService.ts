@@ -572,10 +572,7 @@ const findMotion = (
   return entries[0]?.motion ?? null;
 };
 
-const assertGeometryContextShape = (
-  context: IAutoMovieMcpGeometryContext | unknown,
-  path: string,
-): void => {
+const assertGeometryContextShape = (context: unknown, path: string): void => {
   const violations: IAutoMovieConstraintViolation[] = [];
   if (!validateObjectArtifact(context, path, "context", violations))
     return assertNoGeometryViolations(violations);

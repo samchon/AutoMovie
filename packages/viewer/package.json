@@ -28,6 +28,7 @@
     "@types/three": "catalog:three",
     "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
-    "typescript": "catalog:typescript"
+    "typescript": "catalog:typescript",
+    "@ttsc/lint": "catalog:typescript"
   }
 }

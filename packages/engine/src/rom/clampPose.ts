@@ -44,7 +44,11 @@ export const clampJointRom = (
   const twist = clampAxis(joint.twist, constraint.twist);
   // ball-joint swing cone: pull a corner pose straight back onto the cone,
   // preserving the flexion:abduction ratio (the swing direction)
-  if (constraint.swingDeg != null && flexion !== null && abduction !== null) {
+  if (
+    typeof constraint.swingDeg === "number" &&
+    flexion !== null &&
+    abduction !== null
+  ) {
     const k = swingConeScale(flexion, abduction, constraint.swingDeg);
     return {
       bone: joint.bone,

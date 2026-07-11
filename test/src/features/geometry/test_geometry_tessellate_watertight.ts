@@ -40,7 +40,9 @@ const isWatertight = (t: {
     );
     if (new Set(keys).size < 3) continue; // degenerate — no surface, no edges
     for (let e = 0; e < 3; ++e) {
-      const edge = [keys[e]!, keys[(e + 1) % 3]!].sort().join("|");
+      const edge = [keys[e]!, keys[(e + 1) % 3]!]
+        .sort((a, b) => a.localeCompare(b))
+        .join("|");
       counts.set(edge, (counts.get(edge) ?? 0) + 1);
     }
   }

@@ -39,7 +39,7 @@ export const test_ingest_face_template_extras_names = (): void => {
   const template = ingestFaceTemplate(doc);
   TestValidator.equals(
     "extras fallback + own-name precedence",
-    Object.keys(template.targets).sort(),
+    Object.keys(template.targets).sort((a, b) => a.localeCompare(b)),
     ["identity", "jawWidth"],
   );
 };

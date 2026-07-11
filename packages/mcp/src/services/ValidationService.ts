@@ -197,7 +197,7 @@ const remapPath = (
 
 const appendMcpPoseShape = (
   violations: IAutoMovieConstraintViolation[],
-  pose: IAutoMoviePose | unknown,
+  pose: unknown,
   path: string,
 ): void => {
   if (!validateObjectArtifact(pose, path, "pose", violations)) return;
@@ -214,7 +214,7 @@ const appendMcpPoseShape = (
 
 const appendMcpMotionShape = (
   violations: IAutoMovieConstraintViolation[],
-  motion: IAutoMovieMcpMotion | unknown,
+  motion: unknown,
   path: string,
 ): void => {
   if (!validateObjectArtifact(motion, path, "motion", violations)) return;
@@ -256,7 +256,7 @@ const appendMcpMotionShape = (
 
 const appendMcpExpressionShape = (
   violations: IAutoMovieConstraintViolation[],
-  expression: IAutoMovieExpression | unknown,
+  expression: unknown,
   path: string,
 ): void => {
   if (expression === null) return;
@@ -493,7 +493,7 @@ const validateMcpModelShape = (
 
 const appendMcpSkeletonShape = (
   violations: IAutoMovieConstraintViolation[],
-  skeleton: IAutoMovieSkeleton | unknown,
+  skeleton: unknown,
   path: string,
 ): void => {
   if (!validateObjectArtifact(skeleton, path, "skeleton", violations)) return;

@@ -73,7 +73,7 @@ const withSeek = async <T>(
   try {
     return await task();
   } finally {
-    if (previous === undefined) delete host[name];
+    if (previous === undefined) Reflect.deleteProperty(host, name);
     else host[name] = previous;
   }
 };

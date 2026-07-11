@@ -90,7 +90,7 @@ const timeScaleClip = (
   ...clip,
   duration: clip.duration * k,
   keyframes: clip.keyframes.map((kf) => ({ ...kf, time: kf.time * k })),
-  ...(clip.gaitCycle == null
+  ...(clip.gaitCycle === null || clip.gaitCycle === undefined
     ? {}
     : {
         gaitCycle: {

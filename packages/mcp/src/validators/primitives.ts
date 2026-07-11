@@ -1,11 +1,7 @@
 import { violation } from "@automovie/engine";
 import {
   IAutoMovieConstraintViolation,
-  IAutoMovieQuaternion,
-  IAutoMovieScene,
-  IAutoMovieTransform,
   IAutoMovieValidation,
-  IAutoMovieVector3,
 } from "@automovie/interface";
 
 const UNIT_QUATERNION_EPSILON = 1e-6;
@@ -54,8 +50,8 @@ export const validateArrayArtifact = (
   return false;
 };
 
-export const validateUniqueIds = <T extends { id: string }>(
-  items: T[] | unknown,
+export const validateUniqueIds = (
+  items: unknown,
   path: string,
   label: string,
   violations: IAutoMovieConstraintViolation[],
@@ -132,7 +128,7 @@ export const validateNonEmptyText = (
 };
 
 export const validateTransformArtifact = (
-  transform: IAutoMovieTransform | unknown,
+  transform: unknown,
   path: string,
   label: string,
   violations: IAutoMovieConstraintViolation[],
@@ -172,7 +168,7 @@ export const validateTransformArtifact = (
 };
 
 export const validateVectorArtifact = (
-  vector: IAutoMovieVector3 | unknown,
+  vector: unknown,
   path: string,
   label: string,
   violations: IAutoMovieConstraintViolation[],
@@ -190,7 +186,7 @@ export const validateVectorArtifact = (
 };
 
 export const validateQuaternionArtifact = (
-  quaternion: IAutoMovieQuaternion | unknown,
+  quaternion: unknown,
   path: string,
   label: string,
   violations: IAutoMovieConstraintViolation[],
@@ -221,7 +217,7 @@ export const validateQuaternionArtifact = (
 };
 
 export const validateColorArtifact = (
-  color: IAutoMovieScene["lights"][number]["color"] | unknown,
+  color: unknown,
   path: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {

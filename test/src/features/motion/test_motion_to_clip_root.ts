@@ -66,7 +66,7 @@ export const test_motion_to_clip_root = (): void => {
     "root translation + rotation tracks emitted",
     rootTracks
       .map((t) => (t.channel.kind === "node" ? t.channel.path : ""))
-      .sort(),
+      .sort((a, b) => a.localeCompare(b)),
     ["rotation", "translation"],
   );
 

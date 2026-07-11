@@ -84,6 +84,6 @@ export const test_motion_sample_clock = (): void => {
     "an FP just-above-integer window deduplicates its final instant",
     fpWindow.length === 10 &&
       nclose(fpWindow[fpWindow.length - 1]!, 0.4) &&
-      fpWindow[fpWindow.length - 1]! !== fpWindow[fpWindow.length - 2]!,
+      fpWindow[fpWindow.length - 1] !== fpWindow[fpWindow.length - 2],
   );
 };
