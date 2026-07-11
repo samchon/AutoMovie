@@ -8,7 +8,7 @@ description: Work rules, testing, the always-100% coverage mandate, validation, 
 ## Work Rules
 
 - Match existing conventions. Before adding a file, type, or test, open a nearby peer and mirror its naming, location, and style; don't create parallel structures.
-- Respect package boundaries. `@agentica/core` is imported only inside the `agent` package; `three.js` only inside `viewer`; computation flows through `engine`. The `interface` package stays pure types with a `typia`-only dependency.
+- Respect package boundaries. `three.js` is imported only inside `viewer`; computation flows through `engine`; the agent-facing surface is `mcp` (and the `cli` scaffolder), which consume `interface` + `engine`, never the reverse. The `interface` package stays pure types with a `typia`-only dependency.
 - **Rough types in `interface`.** Primitives are plain `string`/`number` — no wrapper aliases like `AutoMovieUuid`, no `typia` tag constraints (`Minimum`, `MinItems`, `Format`). Units and ranges are documented in field JSDoc and enforced at runtime by `engine` validators (this is where the ROM differentiator lives). The only structural constraints are closed `AutoMovie*` unions (bone names, ARKit channels, presets, easing) — those are allowed-value sets, not wrappers.
 - Run `pnpm run format` before every commit and stage the result; never commit unformatted output.
 - Update the matching `.wiki/` doc in the same change when behavior, architecture, or a decision changes (see `documentation/SKILL.md`).
@@ -23,7 +23,7 @@ Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @
 
 ## Coverage is always 100%
 
-Engine coverage is held at **100% on statements, branches, functions, and lines** at all times. Measure with `pnpm --filter @automovie/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). The `test` CI workflow gates this — a drop fails the build.
+Coverage is held at **100% on statements, branches, functions, and lines** at all times, across the whole measured set — `engine`, `forge`, `ingest`, `render`, and `mcp` (see the `--src` list in the `coverage` script). Measure with `pnpm --filter @automovie/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). The `test` CI workflow gates this — a drop fails the build.
 
 **100% is earned by testing, not by hiding code.** A suite of happy paths that reaches every line is not 100% correctness:
 
