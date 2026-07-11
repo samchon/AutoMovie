@@ -171,11 +171,28 @@ const validateKeyframeBezier = (
     return;
   }
 
-  if (!isFiniteBezierTuple(kf.bezier))
+  if (!isFiniteBezierTuple(kf.bezier)) {
     collector.push(
       "type",
       `${kp}.bezier`,
       "cubicBezier keyframes must carry four finite bezier control values",
+      kf.bezier,
+    );
+    return;
+  }
+
+  // Control x's must lie in [0, 1] — the CSS cubic-bezier constraint the easing
+  // solver relies on (`cubicBezierEasing` documents that CSS-legal x's keep
+  // x(s) monotone, so its Newton→bisection root-find is well-posed). An x
+  // outside [0, 1] makes x(s) non-monotone: the solver returns whichever root
+  // basin it lands in — a finite but wrong eased value the finiteness check
+  // alone never catches (#1159). (y is unconstrained.)
+  const [x1, , x2] = kf.bezier;
+  if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)
+    collector.push(
+      "range",
+      `${kp}.bezier`,
+      `cubicBezier control x's (x1, x2) must be within [0, 1] to keep the eased curve monotone, but were x1=${x1}, x2=${x2}`,
       kf.bezier,
     );
 };
