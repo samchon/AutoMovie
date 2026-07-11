@@ -8,7 +8,12 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { hasWarning, nclose, warningCount } from "../internal/predicates";
+import {
+  hasViolation,
+  hasWarning,
+  nclose,
+  warningCount,
+} from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -143,4 +148,31 @@ export const test_validation_ground_contact = (): void => {
     ),
   );
   TestValidator.equals("custom ground samples", warningCount(raisedGround), 2);
+
+  // #1156: a non-finite/non-positive sampleRate empties the sampling clock and
+  // a non-finite tolerance makes `y < NaN` always false — either would silently
+  // drop every penetration. Both must surface as range errors (not a silent
+  // success), matching the sibling sampling validators.
+  for (const badRate of [Number.NaN, 0]) {
+    const result = validateGroundContact({
+      motion: dipping,
+      skeleton: SKELETON,
+      sampleRate: badRate,
+    });
+    TestValidator.predicate(
+      `sampleRate ${badRate} is a range error, not a silent skip`,
+      result.success === false && hasViolation(result, "range", ".sampleRate"),
+    );
+  }
+  const badTolerance = validateGroundContact({
+    motion: dipping,
+    skeleton: SKELETON,
+    sampleRate: 4,
+    tolerance: Number.NaN,
+  });
+  TestValidator.predicate(
+    "non-finite tolerance is a range error",
+    badTolerance.success === false &&
+      hasViolation(badTolerance, "range", ".tolerance"),
+  );
 };

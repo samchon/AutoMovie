@@ -84,6 +84,31 @@ export const validateGroundContact = (props: {
   const groundAt = groundFunction(props.groundY ?? 0);
   const topology = indexSkeletonTopology(props.skeleton);
 
+  // Guard the sampling clock, matching the sibling sampling validators
+  // (validateFootSkate/SelfIntersection/BalanceSupport): a non-finite or
+  // non-positive rate makes `sampleTimes` yield an empty/NaN clock (which then
+  // throws in the sampler), and a non-finite tolerance makes `minY = ground −
+  // NaN = NaN` so `y < NaN` is always false — either one would silently drop
+  // every penetration (a #1051/#1082 silent-skip). Surface both as errors and
+  // do not sample against a broken clock.
+  const badRate = !Number.isFinite(sampleRate) || sampleRate <= 0;
+  const badTolerance = !Number.isFinite(tolerance);
+  if (badRate)
+    collector.push(
+      "range",
+      `${path}.sampleRate`,
+      `sampleRate must be a finite number > 0, but was ${sampleRate}`,
+      sampleRate,
+    );
+  if (badTolerance)
+    collector.push(
+      "range",
+      `${path}.tolerance`,
+      `tolerance must be a finite number, but was ${tolerance}`,
+      tolerance,
+    );
+  if (badRate || badTolerance) return collector.toValidation();
+
   sampleTimes(props.motion.duration, sampleRate).forEach((time, index) => {
     const resolved = new Map(
       resolvePose(
