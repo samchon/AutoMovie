@@ -147,12 +147,13 @@ new GLTFLoader().load(
       string,
       { incr?: number; decr?: number; single?: number }
     > = {};
-    for (const name in dict) {
-      const pair = /^(.*)-(incr|decr)$/.exec(name);
-      if (pair)
-        (groups[pair[1]!] ??= {})[pair[2] as "incr" | "decr"] = dict[name]!;
-      else (groups[name] ??= {}).single = dict[name]!;
-    }
+    for (const name in dict)
+      if (Object.hasOwn(dict, name)) {
+        const pair = /^(.*)-(incr|decr)$/.exec(name);
+        if (pair)
+          (groups[pair[1]!] ??= {})[pair[2] as "incr" | "decr"] = dict[name]!;
+        else (groups[name] ??= {}).single = dict[name]!;
+      }
     for (const [base, g] of Object.entries(groups)) {
       if (g.incr !== undefined && g.decr !== undefined) {
         const inc = g.incr;
@@ -163,7 +164,9 @@ new GLTFLoader().load(
         });
       } else {
         const idx = (g.single ?? g.incr ?? g.decr)!;
-        slider(prettify(base), 0, 1, (v) => (infl[idx] = v));
+        slider(prettify(base), 0, 1, (v) => {
+          infl[idx] = v;
+        });
       }
     }
     status.textContent = `Reference hero base · CC0 · ${Object.keys(groups).length} morphs`;
@@ -175,7 +178,9 @@ new GLTFLoader().load(
     };
   },
   undefined,
-  (err) => (status.textContent = "load error: " + String(err)),
+  (err) => {
+    status.textContent = "load error: " + String(err);
+  },
 );
 
 const tick = (): void => {

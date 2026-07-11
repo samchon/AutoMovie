@@ -420,7 +420,8 @@ const paintFace = (): void => {
 const skinDetailTexture = (): THREE.CanvasTexture => {
   const S = 512;
   const cv = document.createElement("canvas");
-  cv.width = cv.height = S;
+  cv.height = S;
+  cv.width = cv.height;
   const ctx = cv.getContext("2d")!;
   const img = ctx.createImageData(S, S);
   // a few smooth low-frequency mottles
@@ -440,12 +441,15 @@ const skinDetailTexture = (): THREE.CanvasTexture => {
       v = Math.max(0.9, Math.min(1, v));
       const o = (y * S + x) * 4;
       const g = (v * 255) | 0;
-      img.data[o] = img.data[o + 1] = img.data[o + 2] = g;
+      img.data[o + 2] = g;
+      img.data[o + 1] = img.data[o + 2];
+      img.data[o] = img.data[o + 1];
       img.data[o + 3] = 255;
     }
   ctx.putImageData(img, 0, 0);
   const tex = new THREE.CanvasTexture(cv);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.wrapS = tex.wrapT;
   return tex;
 };
 const faceMaterial = new THREE.MeshStandardMaterial({
@@ -863,31 +867,81 @@ const NEST: Record<
   AutoMovieFaceParameterName,
   (f: IAutoMovieFace, w: number) => void
 > = {
-  faceWidth: (f, w) => (f.width = w),
-  faceLength: (f, w) => (f.length = w),
-  cheekFullnessR: (f, w) => (((f.cheeks ??= {}).right ??= {}).fullness = w),
-  cheekFullnessL: (f, w) => (((f.cheeks ??= {}).left ??= {}).fullness = w),
-  jawWidth: (f, w) => ((f.jaw ??= {}).width = w),
-  chinLength: (f, w) => (((f.jaw ??= {}).chin ??= {}).length = w),
-  chinProtrusion: (f, w) => (((f.jaw ??= {}).chin ??= {}).protrusion = w),
-  eyeSizeR: (f, w) => (((f.eyes ??= {}).right ??= {}).size = w),
-  eyeSizeL: (f, w) => (((f.eyes ??= {}).left ??= {}).size = w),
-  eyeWidthR: (f, w) => (((f.eyes ??= {}).right ??= {}).width = w),
-  eyeWidthL: (f, w) => (((f.eyes ??= {}).left ??= {}).width = w),
-  eyeSpacingR: (f, w) => (((f.eyes ??= {}).right ??= {}).offset = w),
-  eyeSpacingL: (f, w) => (((f.eyes ??= {}).left ??= {}).offset = w),
-  eyeHeightR: (f, w) => (((f.eyes ??= {}).right ??= {}).height = w),
-  eyeHeightL: (f, w) => (((f.eyes ??= {}).left ??= {}).height = w),
-  eyeTiltR: (f, w) => (((f.eyes ??= {}).right ??= {}).tilt = w),
-  eyeTiltL: (f, w) => (((f.eyes ??= {}).left ??= {}).tilt = w),
-  browHeightR: (f, w) => (((f.brows ??= {}).right ??= {}).height = w),
-  browHeightL: (f, w) => (((f.brows ??= {}).left ??= {}).height = w),
-  noseLength: (f, w) => ((f.nose ??= {}).length = w),
-  noseWidth: (f, w) => ((f.nose ??= {}).width = w),
-  noseProjection: (f, w) => ((f.nose ??= {}).projection = w),
-  mouthWidth: (f, w) => ((f.mouth ??= {}).width = w),
-  mouthHeight: (f, w) => ((f.mouth ??= {}).height = w),
-  lipFullness: (f, w) => (((f.mouth ??= {}).lips ??= {}).fullness = w),
+  faceWidth: (f, w) => {
+    f.width = w;
+  },
+  faceLength: (f, w) => {
+    f.length = w;
+  },
+  cheekFullnessR: (f, w) => {
+    ((f.cheeks ??= {}).right ??= {}).fullness = w;
+  },
+  cheekFullnessL: (f, w) => {
+    ((f.cheeks ??= {}).left ??= {}).fullness = w;
+  },
+  jawWidth: (f, w) => {
+    (f.jaw ??= {}).width = w;
+  },
+  chinLength: (f, w) => {
+    ((f.jaw ??= {}).chin ??= {}).length = w;
+  },
+  chinProtrusion: (f, w) => {
+    ((f.jaw ??= {}).chin ??= {}).protrusion = w;
+  },
+  eyeSizeR: (f, w) => {
+    ((f.eyes ??= {}).right ??= {}).size = w;
+  },
+  eyeSizeL: (f, w) => {
+    ((f.eyes ??= {}).left ??= {}).size = w;
+  },
+  eyeWidthR: (f, w) => {
+    ((f.eyes ??= {}).right ??= {}).width = w;
+  },
+  eyeWidthL: (f, w) => {
+    ((f.eyes ??= {}).left ??= {}).width = w;
+  },
+  eyeSpacingR: (f, w) => {
+    ((f.eyes ??= {}).right ??= {}).offset = w;
+  },
+  eyeSpacingL: (f, w) => {
+    ((f.eyes ??= {}).left ??= {}).offset = w;
+  },
+  eyeHeightR: (f, w) => {
+    ((f.eyes ??= {}).right ??= {}).height = w;
+  },
+  eyeHeightL: (f, w) => {
+    ((f.eyes ??= {}).left ??= {}).height = w;
+  },
+  eyeTiltR: (f, w) => {
+    ((f.eyes ??= {}).right ??= {}).tilt = w;
+  },
+  eyeTiltL: (f, w) => {
+    ((f.eyes ??= {}).left ??= {}).tilt = w;
+  },
+  browHeightR: (f, w) => {
+    ((f.brows ??= {}).right ??= {}).height = w;
+  },
+  browHeightL: (f, w) => {
+    ((f.brows ??= {}).left ??= {}).height = w;
+  },
+  noseLength: (f, w) => {
+    (f.nose ??= {}).length = w;
+  },
+  noseWidth: (f, w) => {
+    (f.nose ??= {}).width = w;
+  },
+  noseProjection: (f, w) => {
+    (f.nose ??= {}).projection = w;
+  },
+  mouthWidth: (f, w) => {
+    (f.mouth ??= {}).width = w;
+  },
+  mouthHeight: (f, w) => {
+    (f.mouth ??= {}).height = w;
+  },
+  lipFullness: (f, w) => {
+    ((f.mouth ??= {}).lips ??= {}).fullness = w;
+  },
 };
 const refresh = (): void => {
   const face: IAutoMovieFace = {};

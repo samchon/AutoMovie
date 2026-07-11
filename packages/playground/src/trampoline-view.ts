@@ -77,7 +77,7 @@ const arcs: Arc[] = [];
 
 const arcAt = (t: number): { y: number; phase: number } => {
   const a =
-    arcs.find((s) => t >= s.start && t < s.end) ?? arcs[arcs.length - 1]!;
+    arcs.find((s) => t >= s.start && t < s.end) ?? arcs[arcs.length - 1];
   const dt = Math.min(Math.max(t - a.start, 0), a.end - a.start);
   const y = a.v0 * dt + 0.5 * G * dt * dt; // height above the bed
   const phase = a.end - a.start > 0 ? dt / (a.end - a.start) : 0; // 0 launch → 1 land

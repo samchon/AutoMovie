@@ -172,10 +172,11 @@ const renderAt = (t: number, dt = 1 / 30): void => {
     else (pose[a!] ??= { x: 0, y: 0, z: 0 })[b as "x" | "y" | "z"] = v;
   }
   const h = vrm.humanoid;
-  for (const bone in pose) {
-    const node = h.getNormalizedBoneNode(bone as VRMHumanBoneName);
-    if (node) node.rotation.set(pose[bone]!.x, pose[bone]!.y, pose[bone]!.z);
-  }
+  for (const bone in pose)
+    if (Object.hasOwn(pose, bone)) {
+      const node = h.getNormalizedBoneNode(bone as VRMHumanBoneName);
+      if (node) node.rotation.set(pose[bone]!.x, pose[bone]!.y, pose[bone]!.z);
+    }
   if (runtime !== null) {
     const blink = Math.max(0, 1 - Math.abs(((t % 2.6) - 0.12) * 14));
     for (const sink of runtime.expressionTargets ?? []) {
@@ -206,7 +207,9 @@ loader.load("/models/Vita.vrm", (gltf) => {
   VRMUtils.removeUnnecessaryVertices(gltf.scene);
   VRMUtils.combineSkeletons(gltf.scene);
   VRMUtils.rotateVRM0(v);
-  v.scene.traverse((o) => (o.frustumCulled = false));
+  v.scene.traverse((o) => {
+    o.frustumCulled = false;
+  });
   scene.add(v.scene);
   vrm = v;
   runtime = createVrmModelObject(v);

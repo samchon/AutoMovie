@@ -123,7 +123,7 @@ const buildRomFans = (): void => {
   const scl = new THREE.Vector3();
   for (const b of skeleton.bones) {
     const flex = b.constraint?.flexion;
-    if (flex == null) continue;
+    if (flex === null || flex === undefined) continue;
     const child = skeleton.bones.find((x) => x.parent === b.bone);
     const tb = object.bones.get(b.bone);
     if (child === undefined || tb === undefined) continue;
