@@ -43,6 +43,8 @@ Those objects can be animated for seconds, minutes, or hours because the source 
 
 The MCP surface is the product boundary: an agent asks for staged scenes, blocked movement, generated actors, cuts, validation, and renderable guide output; the deterministic engine computes and rejects invalid requests.
 
+There are two ways to drive it, and both are first-class. **MCP** ([`@automovie/mcp`](./packages/mcp)) is the orchestration door — an agent works the pipeline over stdio, with slate state, transactions, and the guided correction loop. **Direct linking** is the code-native door — import [`@automovie/engine`](./packages/engine) and [`@automovie/interface`](./packages/interface) and program against the types themselves, injecting a custom synthesizer into `performShot`. Motion authoring is, at the limit, a coding activity, so a coding agent may reach for either; the `enact` action bridges them, letting a clip you compute in code flow through the same engine the MCP tools use. Scaffold a starter with `npx autobe start <dir>`.
+
 ## What AutoMovie Is Not
 
 AutoMovie is not a character creator.

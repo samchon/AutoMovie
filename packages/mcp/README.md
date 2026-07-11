@@ -59,7 +59,7 @@ pure stateless call, or omit it to read/commit the resident project opened with
 | `seeFrame` | slate + render spec + frame/time -> preview frame + optional captured image | `@automovie/render` planning + host capture |
 | `stage` | script + staging -> staged scene (or violations) | `stageScene` |
 | `block` | script + staged scene + blocking -> blocked beat (or violations) | `blockBeat` |
-| `perform` | script + staged scene + performance + actor contexts + optional blocking -> performed shot (or violations) | `performShot` |
+| `perform` | script + staged scene + performance + actor contexts + optional enacted clips + optional blocking -> performed shot (or violations) | `performShot` |
 | `cut` | assemble plan + performed shots -> cut sequence (or violations) | `cutSequence` |
 | `forge` | script + forge spec -> generated cast models (or violations) | `forgeCast` |
 | `forgeProp` | prop spec (model + optional articulation) -> accepted prop (or violations), stored when resident | `forgeProp` |
@@ -110,6 +110,26 @@ the server builds the default deterministic synthesizer and rig lookup before it
 calls `performShot`. Tuple-valued bezier fields are not part of the MCP
 contract: gait limbs use named easing only, and returned keyframe bezier controls
 come back as `{ x1, y1, x2, y2 }`.
+
+For motion no thin verb covers (a sword kata, a character idiom), `perform`
+takes an **`enact`** action: **compute** the dense clip in code, pass it in
+`perform`'s `clips` registry, and reference it by id. The engine still masks it
+to its region, layers it with disjoint-region actions, and ROM-gates the
+composite — the registry is no back door around the shield. Clips are derived
+output, never persisted; re-supply them on each `perform`.
+
+## Two ways to consume
+
+MCP is the product boundary, but it is not the only door. The same deterministic
+engine is directly linkable: import [`@automovie/engine`](../engine) and
+`@automovie/interface` and program against the types — inject a custom
+`IAutoMovieActionSynthesizer` into `performShot`, call `validateMotion`/ROM as
+oracles, sample clips with `sampleMotion`/`sampleClip`. Use **MCP** for
+orchestrated film state, transactions, and the guided correction loop; use
+**direct linking** for code-native motion authoring and host integrations.
+`enact` is the bridge — compute a clip either way, one engine enforces it. See
+the [`@automovie/engine` README](../engine#소비-방식-두-갈래) and scaffold a
+starter with `npx autobe start <dir>` ([`autobe`](../cli)).
 
 ## Run
 
