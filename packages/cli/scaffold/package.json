@@ -1,0 +1,22 @@
+{
+  "name": "{{name}}",
+  "private": true,
+  "version": "0.1.0",
+  "description": "An automovie project — deterministic character and object motion.",
+  "scripts": {
+    "perform": "tsx src/main.ts",
+    "lint": "ttsc --noEmit -p tsconfig.json",
+    "format": "ttsc format -p tsconfig.json"
+  },
+  "dependencies": {
+    "@automovie/engine": "{{version:engine}}",
+    "@automovie/interface": "{{version:interface}}"
+  },
+  "devDependencies": {
+    "@ttsc/lint": "{{version:ttscLint}}",
+    "@types/node": "{{version:nodeTypes}}",
+    "ttsc": "{{version:ttsc}}",
+    "tsx": "^4.19.0",
+    "typescript": "{{version:typescript}}"
+  }
+}
