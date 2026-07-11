@@ -612,6 +612,10 @@ export const performShot = (props: {
                 ? action.at.node
                 : null,
           });
+      } else if (action.verb === "enact") {
+        // The clip id is the caller's handle into host-supplied content; the
+        // synthesizer resolves it, but an empty id can never resolve.
+        validateNonEmptyId(action.clip, `${base}[${i}].clip`, "enact clip id");
       } else if (
         action.verb === "react" &&
         !(action.force >= 0 && action.force <= 1)

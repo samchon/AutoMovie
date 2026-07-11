@@ -859,10 +859,14 @@ export class AutoMovieApplication {
    * clients pass only JSON: gait/profile data, optional rigs, and optional rest
    * frames. The MCP gait shape omits cubic-bezier tuple fields because the LLM
    * schema cannot express tuples. Supplying validated blocking arms the
-   * intent-realization gates.
+   * intent-realization gates. An `enact` action plays a clip you authored
+   * yourself: COMPUTE the keyframes (with code, never hand-written floats) and
+   * supply the motion in `clips` under the action's clip id -- the engine still
+   * masks it to its region, layers it, and ROM-gates the composite. Clips are
+   * derived output, never persisted; re-supply them on each perform.
    *
    * @param props The script, staged scene, performance write, actor contexts,
-   *   and optional validated blocking.
+   *   optional enacted clips, and optional validated blocking.
    * @returns The performed shot on success, or the performance violations.
    */
   public perform(props: {
@@ -874,6 +878,12 @@ export class AutoMovieApplication {
     performance: IAutoMoviePerformanceApplication.IWrite;
     /** Per staged actor, the data the default synthesizer needs. */
     actors: Record<string, IAutoMovieMcpActorContext>;
+    /**
+     * Caller-authored motions for `enact` actions, keyed by the clip id each
+     * action names. Compute these with code against the actor's skeleton; the
+     * pipeline's region masking and ROM gate apply unchanged.
+     */
+    clips?: Record<string, IAutoMovieMcpMotion>;
     /** Optional validated blocking, from a successful `block` result. */
     blocking?: IAutoMovieBlockingApplication.IWrite;
   }): IAutoMoviePerformOutput {
