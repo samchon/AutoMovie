@@ -29,7 +29,7 @@ let vrm: VRM | null = null;
 let autoBlink = true;
 let lookAtViewer = true;
 let clothesOn = true;
-let clothing: THREE.Object3D[] = [];
+const clothing: THREE.Object3D[] = [];
 
 // editor state
 const exprState: Record<string, number> = {};
@@ -247,7 +247,9 @@ const mountEditor = (): void => {
   for (const name of EXPRESSIONS)
     if (em?.getExpression(name)) {
       exprState[name] = 0;
-      slider(exprHost, name, 0, 1, 0, 0.01, (n) => (exprState[name] = n));
+      slider(exprHost, name, 0, 1, 0, 0.01, (n) => {
+        exprState[name] = n;
+      });
     }
 
   // proportions (uniform bone scale, 0.7..1.5)
@@ -276,22 +278,19 @@ const mountEditor = (): void => {
   // toggles
   document
     .querySelector<HTMLInputElement>("#clothes")!
-    .addEventListener(
-      "change",
-      (e) => (clothesOn = (e.target as HTMLInputElement).checked),
-    );
+    .addEventListener("change", (e) => {
+      clothesOn = (e.target as HTMLInputElement).checked;
+    });
   document
     .querySelector<HTMLInputElement>("#look")!
-    .addEventListener(
-      "change",
-      (e) => (lookAtViewer = (e.target as HTMLInputElement).checked),
-    );
+    .addEventListener("change", (e) => {
+      lookAtViewer = (e.target as HTMLInputElement).checked;
+    });
   document
     .querySelector<HTMLInputElement>("#blink")!
-    .addEventListener(
-      "change",
-      (e) => (autoBlink = (e.target as HTMLInputElement).checked),
-    );
+    .addEventListener("change", (e) => {
+      autoBlink = (e.target as HTMLInputElement).checked;
+    });
 };
 
 // ── load the VRM ─────────────────────────────────────────────────────────────
@@ -330,7 +329,9 @@ loader.load(
     };
   },
   undefined,
-  (err) => (status.textContent = "load error: " + String(err)),
+  (err) => {
+    status.textContent = "load error: " + String(err);
+  },
 );
 
 // ── render loop ──────────────────────────────────────────────────────────────
@@ -345,20 +346,23 @@ const tick = (): void => {
     const h = vrm.humanoid;
     // proportions: scale on the RAW skeleton (the normalized rig drives only
     // rotation, so scale set here persists through vrm.update).
-    for (const bone in scaleState) {
-      const raw = h.getRawBoneNode(bone as VRMHumanBoneName);
-      if (raw !== null) raw.scale.setScalar(scaleState[bone]!);
-    }
+    for (const bone in scaleState)
+      if (Object.hasOwn(scaleState, bone)) {
+        const raw = h.getRawBoneNode(bone as VRMHumanBoneName);
+        if (raw !== null) raw.scale.setScalar(scaleState[bone]!);
+      }
     // pose: rotation on the normalized rig.
-    for (const bone in poseState) {
-      const node = h.getNormalizedBoneNode(bone as VRMHumanBoneName);
-      const r = poseState[bone]!;
-      if (node !== null) node.rotation.set(r.x, r.y, r.z);
-    }
+    for (const bone in poseState)
+      if (Object.hasOwn(poseState, bone)) {
+        const node = h.getNormalizedBoneNode(bone as VRMHumanBoneName);
+        const r = poseState[bone]!;
+        if (node !== null) node.rotation.set(r.x, r.y, r.z);
+      }
     // expressions + blink
     const em = vrm.expressionManager;
     if (em) {
-      for (const name in exprState) em.setValue(name, exprState[name]!);
+      for (const name in exprState)
+        if (Object.hasOwn(exprState, name)) em.setValue(name, exprState[name]!);
       em.setValue(
         "blink",
         autoBlink ? Math.max(0, 1 - Math.abs(((elapsed % 3.2) - 0.1) * 12)) : 0,

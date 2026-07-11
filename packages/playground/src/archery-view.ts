@@ -159,7 +159,6 @@ const HIT_AT = RELEASE + FLIGHT;
 const hitWorldZ = B0.z + V * FLIGHT; // where the (moving) target is struck
 // world launch velocity = relative aim + the rider's forward carry
 const arrowVel = v(relVel.x, relVel.y, relVel.z + V);
-// eslint-disable-next-line no-console
 console.log(
   `[archery] hit=${hit ? "yes" : "NO"} flight=${FLIGHT.toFixed(3)} hitZ=${hitWorldZ.toFixed(2)}`,
 );

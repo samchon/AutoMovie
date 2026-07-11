@@ -138,7 +138,6 @@ const resolved: Resolved[] = SHOTS.map((shot) => {
     hitPoint: hit ? hit.point : torso.center,
   };
 });
-// eslint-disable-next-line no-console
 console.log(
   "[impact]",
   resolved.map((r) => `${r.shot.label}:${r.impact.kind}`).join(" "),
