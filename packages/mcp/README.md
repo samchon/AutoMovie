@@ -43,6 +43,7 @@ pure stateless call, or omit it to read/commit the resident project opened with
 | `validateScene` | scene + model ids -> validation | MCP scene checks |
 | `validateShot` | shot + scene + optional motions -> validation | MCP shot checks |
 | `validateSequence` | sequence + shots -> validation | MCP sequence checks |
+| `lintContinuity` | scene + ordered beats (shot + motions) -> cross-cut drift warnings | `validateFilmContinuity` |
 | `commitScript` | slate + script -> updated slate or violations | MCP commit checks |
 | `commitScene` | slate + scene + model ids -> updated slate or violations | MCP commit checks |
 | `commitShot` | slate + shot + optional motions -> updated slate or violations | MCP commit checks |
