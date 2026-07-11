@@ -1,4 +1,5 @@
 import {
+  AutoMovieViolationKind,
   IAutoMovieModel,
   IAutoMovieMotion,
   IAutoMoviePose,
@@ -87,6 +88,24 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
   validation.success === false &&
   validation.violations.some((violation) => violation.path.includes(path));
 
+/**
+ * How many violations match BOTH a kind and a path fragment — the (kind, path,
+ * count) assertion. Each injected defect must fire exactly one violation of the
+ * documented tier at the documented path: `=== 1` proves the kind (not just
+ * that some path appeared), that the path is right, and that the rule neither
+ * missed nor double-counted the defect.
+ */
+const violationsAt = (
+  validation: IAutoMovieValidation,
+  kind: AutoMovieViolationKind,
+  path: string,
+): number =>
+  validation.success === false
+    ? validation.violations.filter(
+        (violation) => violation.kind === kind && violation.path.includes(path),
+      ).length
+    : 0;
+
 const hasExpected = (
   validation: IAutoMovieValidation,
   path: string,
@@ -106,8 +125,10 @@ const hasExpected = (
  *
  * 1. Pose, motion, model, scene, shot, and sequence validators all accept a valid
  *    fixture.
- * 2. Each validator returns the standard validation envelope with a path on a
- *    representative invalid artifact.
+ * 2. Each validator flags a representative invalid artifact with the exact (kind,
+ *    path, count): every injected defect fires exactly one violation of its
+ *    documented tier at its documented path — not merely "some path appeared".
+ *    Multi-defect scene/shot/sequence cases pin all three.
  * 3. Structurally malformed pose/motion/model/scene/shot/sequence payloads return
  *    validation failures instead of leaking raw JavaScript shape errors.
  * 4. Malformed request roots return validation envelopes before validators
@@ -150,32 +171,38 @@ export const test_mcp_validation_tools = (): void => {
     { success: true },
   );
 
-  TestValidator.predicate(
-    "invalid pose path",
-    hasPath(
+  TestValidator.equals(
+    "invalid pose: skeleton mismatch is one type violation at the skeleton path",
+    violationsAt(
       app.validatePose({
         pose: { ...makePose([]), skeleton: "wrong" },
         skeleton,
       }).validation,
+      "type",
       "$input.pose.skeleton",
     ),
+    1,
   );
-  TestValidator.predicate(
-    "invalid motion path",
-    hasPath(
+  TestValidator.equals(
+    "invalid motion: a single keyframe is one temporal violation at keyframes",
+    violationsAt(
       app.validateMotion({
         motion: { ...motion, keyframes: [motion.keyframes[0]!] },
         skeleton,
       }).validation,
+      "temporal",
       "$input.motion.keyframes",
     ),
+    1,
   );
-  TestValidator.predicate(
-    "invalid model path",
-    hasPath(
+  TestValidator.equals(
+    "invalid model: empty parts is one type violation at parts",
+    violationsAt(
       app.validateModel({ model: { ...model, parts: [] } }).validation,
+      "type",
       "$input.model.parts",
     ),
+    1,
   );
   TestValidator.predicate(
     "invalid scene paths",
@@ -199,9 +226,13 @@ export const test_mcp_validation_tools = (): void => {
         models: [{ id: model.id, skeleton }],
       }).validation;
       return (
-        hasPath(validation, "$input.scene.nodes[0].transform.rotation") &&
-        hasPath(validation, "$input.scene.nodes[2].model") &&
-        hasPath(validation, "$input.scene.cameras[0].far")
+        violationsAt(
+          validation,
+          "range",
+          "$input.scene.nodes[0].transform.rotation",
+        ) === 1 &&
+        violationsAt(validation, "type", "$input.scene.nodes[2].model") === 1 &&
+        violationsAt(validation, "range", "$input.scene.cameras[0].far") === 1
       );
     })(),
   );
@@ -220,9 +251,17 @@ export const test_mcp_validation_tools = (): void => {
         motions: {},
       }).validation;
       return (
-        hasPath(validation, "$input.shot.camera") &&
-        hasPath(validation, "$input.shot.performances[0].motion") &&
-        hasPath(validation, "$input.shot.performances[0].startOffset")
+        violationsAt(validation, "type", "$input.shot.camera") === 1 &&
+        violationsAt(
+          validation,
+          "type",
+          "$input.shot.performances[0].motion",
+        ) === 1 &&
+        violationsAt(
+          validation,
+          "range",
+          "$input.shot.performances[0].startOffset",
+        ) === 1
       );
     })(),
   );
@@ -268,9 +307,14 @@ export const test_mcp_validation_tools = (): void => {
         shots: [shot],
       }).validation;
       return (
-        hasPath(validation, "$input.sequence.fps") &&
-        hasPath(validation, "$input.sequence.shots[0].shot") &&
-        hasPath(validation, "$input.sequence.shots[0].transition")
+        violationsAt(validation, "range", "$input.sequence.fps") === 1 &&
+        violationsAt(validation, "type", "$input.sequence.shots[0].shot") ===
+          1 &&
+        violationsAt(
+          validation,
+          "temporal",
+          "$input.sequence.shots[0].transition",
+        ) === 1
       );
     })(),
   );
