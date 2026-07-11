@@ -61,21 +61,8 @@ const bakedFollowVelocity = (
   );
 };
 
-/**
- * Derive the forward-state a later beat should block against from a compiled
- * shot. Every scene actor gets an end snapshot: held actors keep their staged
- * placement, performed actors sample their motion at the shot end, and pose
- * root motion is folded into the returned world transform.
- *
- * Beyond the end pose, the state is a _resumable_ simulation snapshot: the gait
- * cycle phase (so the next beat continues mid-stride instead of resetting), the
- * world root velocity (finite-differenced over the clip's last instants), the
- * planted feet (when the caller passes the ground-IK pass output), and the
- * persistent mount coupling (absorbing the staged `mounts` the film pipeline
- * previously never consumed). This is the seam that keeps an hours-long
- * timeline continuous across beat boundaries.
- */
-export const resolveBeatEnd = (props: {
+/** Inputs shared by the beat-end and beat-opening snapshots. */
+export interface IResolveBeatProps {
   /** Beat id the shot realizes. */
   beat: string;
 
@@ -106,7 +93,47 @@ export const resolveBeatEnd = (props: {
     /** The pass's pinned stance runs for that node. */
     plants: readonly IAutoMovieBeatEndFootPlant[];
   }>;
-}): IAutoMovieBeatEndState => {
+}
+
+/**
+ * Derive the forward-state a later beat should block against from a compiled
+ * shot. Every scene actor gets an end snapshot: held actors keep their staged
+ * placement, performed actors sample their motion at the shot end, and pose
+ * root motion is folded into the returned world transform.
+ *
+ * Beyond the end pose, the state is a _resumable_ simulation snapshot: the gait
+ * cycle phase (so the next beat continues mid-stride instead of resetting), the
+ * world root velocity (finite-differenced over the clip's last instants), the
+ * planted feet (when the caller passes the ground-IK pass output), and the
+ * persistent mount coupling (absorbing the staged `mounts` the film pipeline
+ * previously never consumed). This is the seam that keeps an hours-long
+ * timeline continuous across beat boundaries.
+ */
+export const resolveBeatEnd = (
+  props: IResolveBeatProps,
+): IAutoMovieBeatEndState => resolveSnapshot(props, props.shot.duration);
+
+/**
+ * The mirror of {@link resolveBeatEnd} at the shot's OPENING instant (`t = 0`):
+ * where every actor stands, faces, and is coupled as the beat begins, before
+ * any of its motion has played. The continuity linter compares this against the
+ * previous beat's end-state to catch a cut that fails to resume from where the
+ * prior beat left off — the "characters drift, props disappear" failure the
+ * forward-written end-state exists to prevent but nothing verified.
+ *
+ * Same shape as the end snapshot, so `gaitPhase`/`rootVelocity`/`footPlants`
+ * are the resumable-state fields at the opening instant; the linter reads only
+ * `transform`, `facing`, and `mount`.
+ */
+export const resolveBeatOpening = (
+  props: IResolveBeatProps,
+): IAutoMovieBeatEndState => resolveSnapshot(props, 0);
+
+/** Shared body: resolve every scene actor's snapshot at a shot-local instant. */
+const resolveSnapshot = (
+  props: IResolveBeatProps,
+  instant: number,
+): IAutoMovieBeatEndState => {
   const motionById = new Map<
     string,
     { motion: IAutoMovieMotion; index: number }
@@ -149,7 +176,7 @@ export const resolveBeatEnd = (props: {
   });
 
   const context: IResolveContext = {
-    duration: props.shot.duration,
+    instant,
     objectMotions: props.shot.objectMotions,
     motionById,
     performanceByNode,
@@ -163,9 +190,13 @@ export const resolveBeatEnd = (props: {
   };
 };
 
-/** The per-beat lookups one actor's end snapshot derives from. */
+/** The per-beat lookups one actor's snapshot derives from. */
 interface IResolveContext {
-  duration: number;
+  /**
+   * Shot-local instant to sample at — `0` for the opening, `duration` for the
+   * end.
+   */
+  instant: number;
   objectMotions: readonly IAutoMovieClip[];
   motionById: ReadonlyMap<string, { motion: IAutoMovieMotion; index: number }>;
   performanceByNode: ReadonlyMap<
@@ -186,8 +217,8 @@ const endActorOf = (
     performed === undefined ? node.motion : performed.performance.motion;
   const localTime =
     performed === undefined
-      ? context.duration
-      : Math.max(0, context.duration - performed.performance.startOffset);
+      ? context.instant
+      : Math.max(0, context.instant - performed.performance.startOffset);
   const mount = context.mountByNode.get(node.id)?.binding ?? null;
   const plants = context.plantsByNode.get(node.id);
   // A coupled child's end world root comes from the shot's baked follow clip
