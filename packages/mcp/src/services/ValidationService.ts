@@ -1,8 +1,10 @@
 import {
+  IResolveBeatProps,
   toValidation,
   validateModel as validateEngineModel,
   validateMotion as validateEngineMotion,
   validatePose as validateEnginePose,
+  validateFilmContinuity,
 } from "@automovie/engine";
 import {
   IAutoMovieConstraintViolation,
@@ -28,6 +30,7 @@ import {
   validateShotArtifact,
 } from "../validators/artifacts";
 import {
+  pushViolation,
   validateArrayArtifact,
   validateColorArtifact,
   validateNonEmptyId,
@@ -154,6 +157,106 @@ export class ValidationService {
           ["$shots", "$input.shots"],
         ],
       ),
+    };
+  }
+
+  public lintContinuity(props: {
+    scene: IAutoMovieScene;
+    beats: {
+      beat: string;
+      shot: IAutoMovieShot;
+      motions?: Record<string, IAutoMovieMcpMotion>;
+    }[];
+    positionTolerance?: number;
+    facingToleranceDeg?: number;
+  }): IAutoMovieValidateOutput {
+    const requestRoot = validateValidationRequestRoot(props);
+    if (requestRoot !== null) return { validation: requestRoot };
+
+    const violations: IAutoMovieConstraintViolation[] = [];
+    if (
+      !validateArrayArtifact(
+        props.beats,
+        "$input.beats",
+        "continuity beats",
+        violations,
+      )
+    )
+      return { validation: toValidation(violations) };
+
+    // Each beat's shot is validated against the scene + its motions first, so
+    // the engine walker below only ever resolves structurally-sound shots and
+    // never throws its resolve-time invariants at the caller.
+    const resolveBeats: IResolveBeatProps[] = [];
+    props.beats.forEach((beat, index) => {
+      const path = `$input.beats[${index}]`;
+      if (!validateObjectArtifact(beat, path, "continuity beat", violations))
+        return;
+      validateNonEmptyId(beat.beat, `${path}.beat`, "beat id", violations);
+      const shotValidation = remapValidationPaths(
+        validateShotArtifact(beat.shot, props.scene, beat.motions),
+        [
+          ["$input", `${path}.shot`],
+          ["$motions", `${path}.motions`],
+        ],
+      );
+      if (shotValidation.success === false) {
+        violations.push(...shotValidation.violations);
+        return;
+      }
+      // Residual resolve-time invariants validateShotArtifact does not cover:
+      // duplicate motion ids in the registry, and a scene node's ambient
+      // motion that the registry omits (both throw inside resolveBeatEnd).
+      const engineMotions = Object.values(beat.motions ?? {}).map(
+        toEngineMotion,
+      );
+      const motionIds = new Set<string>();
+      engineMotions.forEach((motion) => {
+        if (motionIds.has(motion.id))
+          pushViolation(
+            violations,
+            "type",
+            `${path}.motions`,
+            `motion id "${motion.id}" is declared more than once`,
+            motion.id,
+          );
+        motionIds.add(motion.id);
+      });
+      // Only an UNPERFORMED node falls back to its ambient motion at resolve
+      // time; a performed node uses its performance clip, so its ambient motion
+      // is never looked up (and need not be provided).
+      const performed = new Set(
+        beat.shot.performances.map((performance) => performance.node),
+      );
+      props.scene.nodes.forEach((node) => {
+        if (
+          !performed.has(node.id) &&
+          node.motion !== null &&
+          !motionIds.has(node.motion)
+        )
+          pushViolation(
+            violations,
+            "type",
+            `${path}.motions`,
+            `scene node "${node.id}" ambient motion "${node.motion}" must be provided in the beat's motions`,
+            node.motion,
+          );
+      });
+      resolveBeats.push({
+        beat: beat.beat,
+        scene: props.scene,
+        shot: beat.shot,
+        motions: engineMotions,
+      });
+    });
+    if (violations.length > 0) return { validation: toValidation(violations) };
+
+    return {
+      validation: validateFilmContinuity({
+        beats: resolveBeats,
+        positionTolerance: props.positionTolerance,
+        facingToleranceDeg: props.facingToleranceDeg,
+      }),
     };
   }
 }

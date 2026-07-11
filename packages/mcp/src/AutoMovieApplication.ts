@@ -484,6 +484,42 @@ export class AutoMovieApplication {
   }
 
   /**
+   * Lint whole-film continuity across cuts (#1172): compare each beat's OPENING
+   * against the previous beat's END state, in playback order. Continuity is the
+   * structural bet the forward-written beat-end state exists to keep, but
+   * nothing verified it. Emits ADVISORY warnings — a hard cut may intend a jump
+   * — for position drift, facing drift, a dropped or changed mount (the "props
+   * disappear" failure), or an actor missing from the incoming opening. Each
+   * beat carries its shot and the motions its performances reference; every
+   * shot is validated against the scene first, so a malformed shot returns
+   * violations rather than a bogus lint. Drift beyond `positionTolerance`
+   * metres (default 0.05) or `facingToleranceDeg` degrees (default 5) warns; a
+   * nonsensical tolerance is a range error.
+   *
+   * @param props The scene, the film's beats in playback order, and tolerances.
+   * @returns The validation envelope: continuity warnings, or violations.
+   */
+  public lintContinuity(props: {
+    /** The staged scene every beat plays over. */
+    scene: IAutoMovieScene;
+    /** The film's beats, in playback order. */
+    beats: {
+      /** Beat id the shot realizes. */
+      beat: string;
+      /** The beat's compiled shot. */
+      shot: IAutoMovieShot;
+      /** Motions the shot's performances reference (id-keyed). */
+      motions?: Record<string, IAutoMovieMcpMotion>;
+    }[];
+    /** World-space position drift tolerated (metres); defaults to 0.05. */
+    positionTolerance?: number;
+    /** Facing drift tolerated (degrees); defaults to 5. */
+    facingToleranceDeg?: number;
+  }): IAutoMovieValidateOutput {
+    return this.validation.lintContinuity(props);
+  }
+
+  /**
    * Commit a verified script into the slate. Replacing the script clears every
    * downstream slice because staging, shots, notes, and film depend on it.
    *
