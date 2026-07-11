@@ -39,6 +39,7 @@ import {
   IAutoMovieGetScriptOutput,
   IAutoMovieGetShotEndStateOutput,
   IAutoMovieGetShotOutput,
+  IAutoMovieGetSlateOutput,
   IAutoMovieGuideDocumentOutput,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpGeometryContext,
@@ -199,6 +200,25 @@ export class AutoMovieApplication {
     name: AutoMovieGuideName;
   }): IAutoMovieGuideDocumentOutput {
     return this.guide.getGuideDocument(props);
+  }
+
+  /**
+   * Read the WHOLE slate in one call -- every committed slice (script, scene,
+   * shots, beat ends, notes) plus the film. Omit `slate` to read the resident
+   * project (#614); pass one to echo it back. This is the read a refused commit
+   * points you at: when a cross-session write is rejected as stale (#1133),
+   * call `getSlate` to resynchronize with the current on-disk truth, then
+   * re-issue from it. Prefer the per-slice `getScript`/`getScene`/`getShot`
+   * when you need only one part.
+   *
+   * @param props The slate to echo, or omit to read the resident project.
+   * @returns The whole writable slate.
+   */
+  public getSlate(props: {
+    /** The slate to echo; omit to read the resident project (#614). */
+    slate?: IAutoMovieMcpWritableSlate;
+  }): IAutoMovieGetSlateOutput {
+    return this.slateQuery.getSlate(props);
   }
 
   /**

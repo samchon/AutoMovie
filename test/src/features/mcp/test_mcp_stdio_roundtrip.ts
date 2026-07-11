@@ -122,6 +122,7 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
         "getScript",
         "getShot",
         "getShotEndState",
+        "getSlate",
         "measureDistance",
         "nextSteps",
         "openProject",
