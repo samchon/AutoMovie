@@ -1,0 +1,50 @@
+{
+  "name": "autobe",
+  "version": "0.1.0",
+  "description": "Scaffold an automovie project — an MCP server config and a direct-link engine starter.",
+  "main": "src/index.ts",
+  "bin": {
+    "autobe": "lib/bin.js"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "prepare": "pnpm run build:versions",
+    "build:versions": "node build/sync-versions.mjs",
+    "build": "pnpm run build:versions && rimraf lib && ttsc && tsc --emitDeclarationOnly",
+    "postbuild": "node ../../internals/config/assertBuild.js",
+    "start": "ttsx src/bin.ts",
+    "prepack": "pnpm run build"
+  },
+  "keywords": ["automovie", "cli", "scaffold", "starter", "create"],
+  "author": "Samchon",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/samchon/automovie"
+  },
+  "files": ["lib", "src", "templates", "package.json", "LICENSE", "README.md"],
+  "publishConfig": {
+    "access": "public",
+    "main": "lib/index.js",
+    "types": "lib/index.d.ts",
+    "bin": {
+      "autobe": "lib/bin.js"
+    },
+    "exports": {
+      ".": {
+        "types": "./lib/index.d.ts",
+        "default": "./lib/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "catalog:utils",
+    "rimraf": "catalog:utils",
+    "ttsc": "catalog:typescript",
+    "typescript": "catalog:typescript"
+  }
+}

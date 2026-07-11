@@ -12,6 +12,7 @@
   "author": "Samchon",
   "license": "MIT",
   "dependencies": {
+    "autobe": "workspace:^",
     "@automovie/engine": "workspace:^",
     "@automovie/forge": "workspace:^",
     "@automovie/ingest": "workspace:^",
