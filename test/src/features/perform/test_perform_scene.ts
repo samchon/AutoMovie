@@ -107,10 +107,11 @@ export const test_perform_scene = (): void => {
 
   const perf = compilePerformance(actions, synth);
 
-  TestValidator.equals("both actors are performed", Object.keys(perf).sort(), [
-    "guard",
-    "hero",
-  ]);
+  TestValidator.equals(
+    "both actors are performed",
+    Object.keys(perf).sort((a, b) => a.localeCompare(b)),
+    ["guard", "hero"],
+  );
 
   // HERO: legs (gait) + head (look-at) layered, with the smile carried
   const heroBones = bonesOf(perf.hero!);

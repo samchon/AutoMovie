@@ -78,7 +78,7 @@ export const test_perform_compile = (): void => {
   const unison = compilePerformance([gesture(["a", "b", "skip"], 0)], synth);
   TestValidator.equals(
     "unison fans to the non-skipped actors",
-    Object.keys(unison).sort(),
+    Object.keys(unison).sort((a, b) => a.localeCompare(b)),
     ["a", "b"],
   );
   TestValidator.equals(

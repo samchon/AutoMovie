@@ -51,10 +51,11 @@ const doorlike: IAutoMovieProfile = {
 export const test_motion_profile_gaits = (): void => {
   // 1. bind onto one body
   const onHorse = bindProfileGaits(horse, "horse-rig", 4);
-  TestValidator.equals("a clip per named gait", Object.keys(onHorse).sort(), [
-    "trot",
-    "walk",
-  ]);
+  TestValidator.equals(
+    "a clip per named gait",
+    Object.keys(onHorse).sort((a, b) => a.localeCompare(b)),
+    ["trot", "walk"],
+  );
   TestValidator.equals(
     "clip targets the bound skeleton",
     onHorse.walk!.skeleton,

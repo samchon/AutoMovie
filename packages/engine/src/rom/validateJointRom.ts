@@ -75,7 +75,7 @@ export const validateJointRom = (props: {
 
   // combined swing cone (ball joints): caps the corner the per-axis boxes miss
   if (
-    constraint.swingDeg != null &&
+    typeof constraint.swingDeg === "number" &&
     joint.flexion !== null &&
     joint.abduction !== null
   ) {

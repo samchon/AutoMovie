@@ -181,7 +181,7 @@ const validateKeyframeBezier = (
 };
 
 const isFiniteBezierTuple = (
-  value: IAutoMovieKeyframe["bezier"] | unknown,
+  value: unknown,
 ): value is [number, number, number, number] =>
   Array.isArray(value) &&
   value.length === 4 &&

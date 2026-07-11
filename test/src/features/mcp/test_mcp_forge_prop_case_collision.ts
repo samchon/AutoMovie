@@ -85,7 +85,7 @@ export const test_mcp_forge_prop_case_collision = (): void => {
     TestValidator.equals("a distinct id stores", gate.stored, true);
     TestValidator.equals(
       "both props are stored",
-      app.nextSteps().status.props.sort(),
+      app.nextSteps().status.props.sort((a, b) => a.localeCompare(b)),
       ["Door", "gate"],
     );
   } finally {

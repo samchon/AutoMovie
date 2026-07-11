@@ -1,6 +1,10 @@
-import { plantStanceFeet, resolvePose, sampleMotion } from "@automovie/engine";
-import { validateFootSkate } from "@automovie/engine";
-import { validateGroundContact } from "@automovie/engine";
+import {
+  plantStanceFeet,
+  resolvePose,
+  sampleMotion,
+  validateFootSkate,
+  validateGroundContact,
+} from "@automovie/engine";
 import {
   IAutoMovieMotion,
   IAutoMovieSkeleton,

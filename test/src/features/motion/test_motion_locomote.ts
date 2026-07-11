@@ -83,7 +83,9 @@ export const test_motion_locomote = (): void => {
   );
   TestValidator.predicate(
     "the gait-cycle meta scales with the compression",
-    tiny.gaitCycle != null && nclose(tiny.gaitCycle.period, 0.4),
+    tiny.gaitCycle !== null &&
+      tiny.gaitCycle !== undefined &&
+      nclose(tiny.gaitCycle.period, 0.4),
   );
   // negative twin: past the half-stride point the cycle stays uncompressed
   const halfStride = locomoteMotion("h", gait, 0.6, 1, { x: 0, y: 0, z: 1 });

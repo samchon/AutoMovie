@@ -226,7 +226,7 @@ const applyDriven = (
     src !== undefined ? readDrivenSourceValue(src.value) : undefined;
   if (source !== undefined) validateDrivenFinite("source value", source);
   const y =
-    d.curve != null
+    d.curve !== null && d.curve !== undefined
       ? evaluateDrivenCurve(source, d.curve)
       : remapDriven(d, source);
   setChannel(sampled, channelKey(d.output), d.output, [y]);

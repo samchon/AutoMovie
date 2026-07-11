@@ -148,7 +148,7 @@ export class AutoMovieContext {
           const existing = motions[id];
           if (existing === undefined) motions[id] = motion;
           else if (JSON.stringify(existing) !== JSON.stringify(motion)) {
-            delete motions[id];
+            Reflect.deleteProperty(motions, id);
             ambiguous.add(id);
           }
         }

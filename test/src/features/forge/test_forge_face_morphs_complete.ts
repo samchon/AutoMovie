@@ -42,7 +42,7 @@ export const test_forge_face_morphs_complete = (): void => {
   ];
   TestValidator.equals(
     "exactly the closed menu",
-    Object.keys(morphs).sort(),
+    Object.keys(morphs).sort((a, b) => a.localeCompare(b)),
     expected,
   );
   TestValidator.predicate(

@@ -1,7 +1,7 @@
 import { DynamicExecutor } from "@nestia/e2e";
 import chalk from "chalk";
-import path from "path";
-import process from "process";
+import path from "node:path";
+import process from "node:process";
 
 const parseArg = (type: string): string[] => {
   const prefix = `--${type}`;
@@ -63,7 +63,7 @@ async function main(): Promise<void> {
 
 process.on("uncaughtException", (e) => console.log("uncaught", e));
 process.on("unhandledRejection", (e) => console.log("rejection", e));
-main().catch((e) => {
+main().catch((e: unknown) => {
   console.log("critical error", e);
   process.exit(-1);
 });

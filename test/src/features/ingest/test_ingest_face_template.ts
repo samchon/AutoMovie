@@ -43,10 +43,11 @@ export const test_ingest_face_template = (): void => {
 
   const template = ingestFaceTemplate(doc);
   TestValidator.equals("positions", template.positions, [0, 0, 0, 1, 1, 1]);
-  TestValidator.equals("target names", Object.keys(template.targets).sort(), [
-    "eyeSize",
-    "identity",
-  ]);
+  TestValidator.equals(
+    "target names",
+    Object.keys(template.targets).sort((a, b) => a.localeCompare(b)),
+    ["eyeSize", "identity"],
+  );
   TestValidator.equals(
     "identity deltas",
     template.targets["identity"],

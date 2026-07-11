@@ -41,7 +41,8 @@
   "devDependencies": {
     "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
-    "typescript": "catalog:typescript"
+    "typescript": "catalog:typescript",
+    "@ttsc/lint": "catalog:typescript"
   },
   "dependencies": {
     "@automovie/interface": "workspace:^"

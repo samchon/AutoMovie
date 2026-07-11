@@ -285,7 +285,7 @@ const collectRequiredBones = (
   for (const kf of props.motion.keyframes)
     for (const joint of kf.pose.joints) bones.add(joint.bone);
   for (const bone of props.requiredBones ?? []) bones.add(bone);
-  return [...bones].sort();
+  return [...bones].sort((a, b) => a.localeCompare(b));
 };
 
 const validateSkeleton = (

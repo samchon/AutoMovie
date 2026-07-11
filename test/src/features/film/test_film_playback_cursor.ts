@@ -92,10 +92,11 @@ export const test_film_playback_cursor = (): void => {
     seen.add(cur.shot);
   }
   TestValidator.predicate("sweep crossed a transition (blend seen)", sawBlend);
-  TestValidator.equals("sweep visited every distinct shot", [...seen].sort(), [
-    "shot:beat-1",
-    "shot:beat-2",
-  ]);
+  TestValidator.equals(
+    "sweep visited every distinct shot",
+    [...seen].sort((a, b) => a.localeCompare(b)),
+    ["shot:beat-1", "shot:beat-2"],
+  );
 
   // Exact entry-start instants: at a start the cursor must have advanced onto
   // the new entry (incoming wins), matching the scan.

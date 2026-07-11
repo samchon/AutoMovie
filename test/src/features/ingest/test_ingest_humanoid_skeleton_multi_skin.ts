@@ -4,7 +4,7 @@ import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
 const bonesOf = (bones: IAutoMovieBone[]): string[] =>
-  bones.map((b) => b.bone).sort();
+  bones.map((b) => b.bone).sort((a, b) => a.localeCompare(b));
 
 /**
  * Multi-skin documents map humanoid slots over EVERY skin's joints, not only

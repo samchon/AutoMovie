@@ -39,7 +39,7 @@ export const test_kinematics_resolve_orphan = (): void => {
 
   const resolved = resolvePose(makePose([]), skeleton)
     .map((r) => r.bone)
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
   TestValidator.equals(
     "resolvePose returns exactly the root-anchored sub-tree, omitting the orphan",
     resolved,
@@ -49,7 +49,7 @@ export const test_kinematics_resolve_orphan = (): void => {
   const reachable = reachableBoneNames(skeleton);
   TestValidator.equals(
     "reachableBoneNames agrees with the FK walk, bone-for-bone",
-    [...reachable].sort(),
+    [...reachable].sort((a, b) => a.localeCompare(b)),
     ["chest", "hips", "spine"],
   );
   TestValidator.predicate(
@@ -66,7 +66,7 @@ export const test_kinematics_resolve_orphan = (): void => {
     topology,
   )
     .map((r) => r.bone)
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
   TestValidator.equals(
     "explicit topology drives the same FK walk as the default path",
     resolvedFromTopology,
@@ -74,7 +74,9 @@ export const test_kinematics_resolve_orphan = (): void => {
   );
   TestValidator.equals(
     "reachableBoneNames can reuse the same topology source as resolvePose",
-    [...reachableBoneNames(skeleton, topology)].sort(),
+    [...reachableBoneNames(skeleton, topology)].sort((a, b) =>
+      a.localeCompare(b),
+    ),
     resolved,
   );
 
@@ -88,7 +90,7 @@ export const test_kinematics_resolve_orphan = (): void => {
     "default resolvePose rebuilds topology after skeleton mutation",
     resolvePose(makePose([]), mutable)
       .map((r) => r.bone)
-      .sort(),
+      .sort((a, b) => a.localeCompare(b)),
     ["hips", "spine"],
   );
   TestValidator.equals(
