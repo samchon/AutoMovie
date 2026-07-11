@@ -376,4 +376,116 @@ export const test_mcp_perform_enact = (): void => {
         (violation) => violation.path === '$input.clips["frameless"].keyframes',
       ),
   );
+
+  // 7. a malformed KEYFRAME refuses instead of crashing the bake (#1157): an
+  // empty/null keyframe, a non-finite time, and an undefined/bad bezier each
+  // surface a field-located violation rather than a TypeError out of perform().
+  const badKeyframe = (keyframe: unknown): IAutoMovieMcpMotion =>
+    ({ ...kata, keyframes: [keyframe] }) as unknown as IAutoMovieMcpMotion;
+  const kfCase = (keyframe: unknown, expectedPath: string): void => {
+    const performed = app.perform({
+      script,
+      staged,
+      performance: makePerformanceWrite({
+        draft: [
+          { verb: "enact", actor: "knightA", start: 0, duration: 1, clip: "k" },
+        ],
+        duration: 1,
+        revise: { review: "the malformed keyframe.", final: null },
+      }),
+      actors: actors(),
+      clips: { k: badKeyframe(keyframe) },
+    }).performed;
+    TestValidator.predicate(
+      `malformed keyframe refuses at ${expectedPath}`,
+      performed.success === false &&
+        performed.violations.some((v) => v.path === expectedPath),
+    );
+  };
+  kfCase({}, '$input.clips["k"].keyframes[0].time');
+  kfCase(null, '$input.clips["k"].keyframes[0]');
+  kfCase(
+    {
+      time: Number.NaN,
+      pose: { skeleton: "skeleton-1", root: null, joints: [] },
+      expression: null,
+      easing: "linear",
+      bezier: null,
+    },
+    '$input.clips["k"].keyframes[0].time',
+  );
+  kfCase(
+    {
+      time: 0,
+      pose: { skeleton: "skeleton-1", root: null, joints: [] },
+      expression: null,
+      easing: "linear",
+      bezier: { x1: 0, y1: 0, x2: 1 },
+    },
+    '$input.clips["k"].keyframes[0].bezier.y2',
+  );
+  kfCase(
+    {
+      time: 0,
+      pose: { skeleton: "skeleton-1", root: null, joints: [] },
+      expression: null,
+      easing: "linear",
+    },
+    '$input.clips["k"].keyframes[0].bezier',
+  );
+
+  // 8. a well-formed cubic-bezier keyframe passes the shape gate and performs
+  // (the valid path through the per-axis finite check).
+  const bezierClip: IAutoMovieMcpMotion = {
+    id: "curve",
+    skeleton: "skeleton-1",
+    duration: 1,
+    loop: false,
+    keyframes: [
+      {
+        time: 0,
+        pose: { skeleton: "skeleton-1", root: null, joints: [] },
+        expression: null,
+        easing: "cubicBezier",
+        bezier: { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1 },
+      },
+      {
+        time: 1,
+        pose: {
+          skeleton: "skeleton-1",
+          root: null,
+          joints: [
+            { bone: "leftUpperArm", flexion: 30, abduction: null, twist: null },
+          ],
+        },
+        expression: null,
+        easing: "linear",
+        bezier: null,
+      },
+    ],
+  };
+  const bezierPerformed = app.perform({
+    script,
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "enact",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          clip: "curve",
+        },
+      ],
+      duration: 1,
+      revise: { review: "the eased kata.", final: null },
+    }),
+    actors: actors(),
+    clips: { curve: bezierClip },
+  }).performed;
+  TestValidator.equals(
+    "a well-formed cubic-bezier enact clip performs",
+    bezierPerformed.success,
+    true,
+  );
 };

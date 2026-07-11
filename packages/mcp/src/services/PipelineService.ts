@@ -860,10 +860,13 @@ const validatePerformShape = (
 };
 
 /**
- * The `clips` registry's structural floor (#1148): each entry must be a motion
- * object whose keyframes are an array and whose skeleton is a string —
- * `toEngineMotion` maps over the keyframes and the enact rungs compare the
- * skeleton, so a malformed entry would crash the bake instead of refusing.
+ * The `clips` registry's structural floor (#1148, #1157): each entry must be a
+ * motion object whose `skeleton` is a string and whose `keyframes` is an array
+ * of well-formed keyframes. `toEngineMotion` maps over every keyframe and reads
+ * `keyframe.bezier` (and the compile/sample path reads `time`/`pose`), so
+ * without the per-keyframe check a `keyframes: [{}]` / `[null]` / bad-bezier
+ * entry throws a `TypeError` out of the bake instead of refusing with a
+ * field-located violation.
  */
 const validatePerformClipsShape = (
   clips: unknown,
@@ -880,12 +883,50 @@ const validatePerformClipsShape = (
       "enact clip skeleton",
       violations,
     );
-    isJsonArray(
-      clip.keyframes,
-      `${clipPath}.keyframes`,
-      "enact clip keyframes",
-      violations,
-    );
+    if (
+      !isJsonArray(
+        clip.keyframes,
+        `${clipPath}.keyframes`,
+        "enact clip keyframes",
+        violations,
+      )
+    )
+      continue;
+    clip.keyframes.forEach((keyframe, index) => {
+      const kfPath = `${clipPath}.keyframes[${index}]`;
+      if (!isJsonObject(keyframe, kfPath, "enact clip keyframe", violations))
+        return;
+      requireFiniteNumber(
+        keyframe.time,
+        `${kfPath}.time`,
+        "enact clip keyframe time",
+        violations,
+      );
+      isJsonObject(
+        keyframe.pose,
+        `${kfPath}.pose`,
+        "enact clip keyframe pose",
+        violations,
+      );
+      // `bezier` must be null (named easing) or a full { x1, y1, x2, y2 }; an
+      // undefined or non-object bezier is what makes `toEngineMotion` throw.
+      if (
+        keyframe.bezier !== null &&
+        isJsonObject(
+          keyframe.bezier,
+          `${kfPath}.bezier`,
+          "enact clip keyframe bezier",
+          violations,
+        )
+      )
+        for (const axis of ["x1", "y1", "x2", "y2"] as const)
+          requireFiniteNumber(
+            keyframe.bezier[axis],
+            `${kfPath}.bezier.${axis}`,
+            `enact clip keyframe bezier ${axis}`,
+            violations,
+          );
+    });
   }
 };
 
