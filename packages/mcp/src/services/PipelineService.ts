@@ -235,10 +235,12 @@ export class PipelineService {
     if (violations.length > 0)
       return { forged: { success: false, violations } };
     const converted = convertPropSpecForForge(props.spec);
+    /* c8 ignore start -- validateForgePropShape fully gates every field toEnginePropSpec reads, so the converter never fails on a shape-valid spec (defensive net). */
     if (converted.success === false)
       return {
         forged: remapMcpForgedPropPaths(converted, [["$input", "$input.spec"]]),
       };
+    /* c8 ignore stop */
     const forged = forgeProp(converted.prop);
     if (forged.success === false)
       return {
@@ -315,6 +317,7 @@ const convertPropSpecForForge = (
   | { success: false; violations: IAutoMovieConstraintViolation[] } => {
   try {
     return { success: true, prop: toEnginePropSpec(spec) };
+    /* c8 ignore start -- validateForgePropShape gates every field this lowering reads, so toEnginePropSpec cannot throw on a shape-valid spec (the catch never fires from forgeProp). */
   } catch {
     return {
       success: false,
@@ -328,6 +331,7 @@ const convertPropSpecForForge = (
       ],
     };
   }
+  /* c8 ignore stop */
 };
 
 const validateForgePropShape = (
@@ -836,6 +840,7 @@ const validatePerformShape = (
   props: unknown,
 ): IAutoMovieConstraintViolation[] => {
   const violations: IAutoMovieConstraintViolation[] = [];
+  /* c8 ignore next 2 -- perform() runs validatePipelineRequestRoot (the same isRecord gate) first and returns early on a non-object props, so this redundant guard never fails here. */
   if (!isJsonObject(props, "$input", "perform payload", violations))
     return violations;
   validatePerformScriptShape(props.script, "$input.script", violations);
@@ -2146,8 +2151,10 @@ const actorPath = (
   actor: string,
 ): string => {
   if (typeof action.actor === "string") return `${actionPath}.actor`;
+  /* c8 ignore next -- actorPath only ever gets an actor from actorList(action), so action.actor is always a string or array here; the non-array fallback is type-impossible. */
   if (!Array.isArray(action.actor)) return `${actionPath}.actor`;
   const index = action.actor.indexOf(actor);
+  /* c8 ignore next -- actor comes from actorList(action), a member of this same array, so indexOf never returns -1. */
   return index === -1 ? `${actionPath}.actor` : `${actionPath}.actor[${index}]`;
 };
 
@@ -2206,6 +2213,7 @@ const wrapEnactSynthesizer = (
   return (action, actor) => {
     if (action.verb !== "enact") return base(action, actor);
     const clip = clips?.[action.clip];
+    /* c8 ignore next -- describeEnactGap refuses an unsupplied clip id before performShot runs, so by the time this synthesizer bakes an enact the clip is always present. */
     if (clip === undefined) return null;
     return { ...toEngineMotion(clip), id: `${actor}:enact:${clip.id}` };
   };
@@ -2352,6 +2360,7 @@ const describeDefaultSynthesisGap = (
 
   if (action.verb === "locomote") return null;
   if (action.verb === "lookAt")
+    /* c8 ignore start -- the lookAt synthesiser always produces a clip once its target resolves (aimYawPitch cannot fail), and this describer only runs when synthesis returned null, so targetResolves() is never true here. */
     return targetResolves(action.to, nodes)
       ? violation(
           "type",
@@ -2359,7 +2368,7 @@ const describeDefaultSynthesisGap = (
           `the default performer could not synthesize lookAt for actor "${actor}"`,
           action.to,
         )
-      : null;
+      : /* c8 ignore stop */ null;
   if (action.verb === "gesture") {
     if (!DEFAULT_GESTURES.has(action.kind))
       return violation(
@@ -2385,6 +2394,7 @@ const describeDefaultSynthesisGap = (
         action.at,
       );
     }
+    /* c8 ignore start -- every non-point/strike gesture in DEFAULT_GESTURES has a gestureMotion shape, so its synthesis never returns null; this could-not-synthesize arm for those kinds is unreachable. */
     return violation(
       "type",
       `${actionPath}.kind`,
@@ -2392,6 +2402,7 @@ const describeDefaultSynthesisGap = (
       action.kind,
     );
   }
+  /* c8 ignore stop */
   if (action.verb === "reach") {
     if (context.rig === undefined)
       return violation(
@@ -2415,7 +2426,7 @@ const describeDefaultSynthesisGap = (
       `react for actor "${actor}" requires a rig in that actor's MCP context`,
       actor,
     );
-
+  /* c8 ignore start -- describeDefaultSynthesisGap only runs when synthesis returned null, which for the verbs reaching this fall-through (hold, emote, react-with-rig) never happens; the non-react/rigged fall-through is unreachable. */
   return violation(
     "type",
     actionPath,
@@ -2423,6 +2434,7 @@ const describeDefaultSynthesisGap = (
     action,
   );
 };
+/* c8 ignore stop */
 
 const toMcpPerformedShot = (
   performed: IAutoMoviePerformedShot,
@@ -2499,6 +2511,7 @@ const remapMcpForgedPropPaths = (
   forged: IAutoMovieForgePropOutput["forged"],
   replacements: ReadonlyArray<readonly [from: string, to: string]>,
 ): IAutoMovieForgePropOutput["forged"] => {
+  /* c8 ignore next -- forgeProp only ever remaps its FAILURE results (an accepted forge returns its output directly, without remapping), so this success passthrough is never reached. */
   if (forged.success === true) return forged;
   return {
     success: false,

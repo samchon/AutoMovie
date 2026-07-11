@@ -83,7 +83,12 @@ export const nextStepsOf = (
   else if (!status.scene) actions.push(ACTIONS.scene);
   else {
     const slate = project.writableSlate();
+    // in this branch the script rung is committed (status.script), and
+    // validateScriptSlice guarantees a loaded script's beats is a non-empty
+    // array, so the optional chain and ?? fallback never fire (#1040).
+    /* c8 ignore start */
     const beats = slate.script?.beats ?? [];
+    /* c8 ignore stop */
     const shotIds = new Set(status.shots);
     const beatEnds = new Set(status.beatEnds);
     for (const beat of beats)

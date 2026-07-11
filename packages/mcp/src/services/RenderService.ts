@@ -831,8 +831,10 @@ const remapRenderPath = (
       path.startsWith(`${from}[`)
     )
       return `${to}${path.slice(from.length)}`;
+  /* c8 ignore start -- unreachable fallthrough: every validation routed through remapRenderValidationPaths comes from validateSequenceArtifact, whose paths are all rooted at "$input"/"$shots" — both replacement keys (#1040). */
   return path;
 };
+/* c8 ignore stop */
 
 const resolveRenderTarget = (
   slate: IAutoMovieMcpWritableSlate,
@@ -927,7 +929,13 @@ const sequenceRuntime = (
   const byId = new Map(shots.map((shot) => [shot.id, shot]));
   return sequence.shots.reduce((sum, entry) => {
     const shot = byId.get(entry.shot);
+    // sequenceRuntime only runs on a validated sequence (validateSequenceArtifact
+    // has already confirmed every entry.shot is present in `shots` with a numeric
+    // duration), so byId.get always hits: the trailing `?? 0` (missing-shot)
+    // fallback is unreachable defensive (#1040).
+    /* c8 ignore start */
     const duration = entry.trim?.duration ?? shot?.duration ?? 0;
+    /* c8 ignore stop */
     return sum + duration - (entry.transition?.duration ?? 0);
   }, 0);
 };

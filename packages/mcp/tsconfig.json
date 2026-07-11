@@ -3,7 +3,10 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib",
-    "types": ["node"]
+    "types": ["node"],
+    "sourceMap": false,
+    "inlineSourceMap": true,
+    "inlineSources": true
   },
   "include": ["src"]
 }

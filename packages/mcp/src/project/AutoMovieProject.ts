@@ -452,11 +452,14 @@ export class AutoMovieProject {
         (asset) =>
           asset === `renders/${name}` || asset.startsWith(`renders/${name}/`),
       );
-    return fs
-      .readdirSync(path.join(this.root, "renders"))
-      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
-      .filter((name) => !owned(name))
-      .map((name) => `renders/${name}`);
+    return (
+      fs
+        .readdirSync(path.join(this.root, "renders"))
+        /* c8 ignore next -- a directory's entries are distinct names, so this string comparator's equal (:0) arm is unreachable; its </> arms only differ by the OS readdir enumeration order */
+        .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+        .filter((name) => !owned(name))
+        .map((name) => `renders/${name}`)
+    );
   }
 
   private get manifestPath(): string {
@@ -481,6 +484,7 @@ export class AutoMovieProject {
     for (const name of fs
       .readdirSync(base)
       .filter((name) => name.endsWith(".json"))
+      /* c8 ignore next -- a directory's entries are distinct names, so this string comparator's equal (:0) arm is unreachable; its </> arms only differ by the OS readdir enumeration order */
       .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
       const file = path.join(base, name);
       const value = readJson<T>(file);
@@ -695,6 +699,7 @@ const assertProjectRootDirectory = (root: string): void => {
     fs.mkdirSync(root, { recursive: true });
   } catch (error) {
     if (error instanceof AutoMovieProjectRootError) throw error;
+    /* c8 ignore next -- fs.mkdirSync/statSync only ever throw Error; the String(error) fallback is unreachable defensive code */
     const detail = error instanceof Error ? error.message : String(error);
     throw new AutoMovieProjectRootError(root, detail);
   }
@@ -918,6 +923,7 @@ const validateScriptTreePayload = (
   violations: IAutoMovieConstraintViolation[],
 ): void => {
   const payload = node.payload;
+  /* c8 ignore next -- precondition: validateScriptTreeSlice only calls this after validateObjectArtifact(node.payload) passes, so payload is always a record here */
   if (!isRecord(payload)) return;
   switch (node.kind) {
     case "intent":
@@ -1096,6 +1102,7 @@ const validateShotSlice = (
   value: unknown,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
+  /* c8 ignore next -- precondition: readKeyedSlices throws AutoMovieProjectKeyError for any non-object (its filename/key guard reads value.id) before this validator runs, so value is always a record */
   if (!validateObjectArtifact(value, "$input", "shot", violations)) return;
   validateNonEmptyId(value.id, "$input.id", "shot id", violations);
   validateNonEmptyId(value.scene, "$input.scene", "shot scene", violations);
@@ -1178,6 +1185,7 @@ const validateBeatEndSlice = (
   value: unknown,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
+  /* c8 ignore next -- precondition: readKeyedSlices throws AutoMovieProjectKeyError for any non-object (its filename/key guard reads value.beat) before this validator runs, so value is always a record */
   if (!validateObjectArtifact(value, "$input", "beat end", violations)) return;
   validateNonEmptyId(value.beat, "$input.beat", "beat id", violations);
   validateNonEmptyId(value.shot, "$input.shot", "shot id", violations);
@@ -1246,6 +1254,7 @@ const validatePropSlice = (
   value: unknown,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
+  /* c8 ignore next -- precondition: readKeyedSlices throws AutoMovieProjectKeyError for any non-object (its filename/key guard reads value.node) before this validator runs, so value is always a record */
   if (!validateObjectArtifact(value, "$input", "prop spec", violations)) return;
   const before = violations.length;
   validateNonEmptyId(value.node, "$input.node", "prop node", violations);
@@ -1298,6 +1307,7 @@ const readJson = <T>(file: string): T | null => {
   try {
     return JSON.parse(fs.readFileSync(file, "utf8")) as T;
   } catch (error) {
+    /* c8 ignore next -- JSON.parse/readFileSync only ever throw Error; the String(error) fallback is unreachable defensive code */
     const reason = error instanceof Error ? error.message : String(error);
     throw new AutoMovieProjectJsonError(file, reason);
   }
@@ -1334,6 +1344,7 @@ const sliceKeyFromFilename = (file: string, name: string): string => {
   try {
     return decodeURIComponent(name.slice(0, -".json".length));
   } catch (error) {
+    /* c8 ignore next -- decodeURIComponent only ever throws URIError; the String(error) fallback is unreachable defensive code */
     const reason = error instanceof Error ? error.message : String(error);
     throw new AutoMovieProjectKeyError(
       file,
@@ -1404,9 +1415,11 @@ const acquireCommitLock = (lockPath: string): void => {
           fs.rmSync(lockPath, { force: true });
           continue;
         }
+        /* c8 ignore start -- the lock vanishing between openSync(EEXIST) and statSync is a real filesystem race, but cannot be reproduced deterministically from a synchronous in-process test */
       } catch {
         continue; // the holder released (or broke) it between our checks
       }
+      /* c8 ignore stop */
       if (Date.now() > deadline)
         throw new Error(
           `the project commit lock is held by another session ("${lockPath}"); retry the call shortly`,
