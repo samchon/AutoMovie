@@ -18,9 +18,41 @@ import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { fkReachableBones } from "./fkReachableBones";
 import { ViolationCollector } from "./violation";
 
-const DEFAULT_CENTER_BONE = "hips";
 const DEFAULT_MARGIN = 0.02;
 const DEFAULT_SAMPLE_RATE = 24;
+
+/**
+ * Segment mass as a fraction of total body mass, per load-bearing bone (Winter,
+ * "Biomechanics and Motor Control of Human Movement"). Only the ratios matter —
+ * the whole-body COM is a weighted mean, so any consistent scaling yields the
+ * same point. Bones absent from this table (clavicles, toes, eyes, jaw,
+ * fingers) carry {@link DEFAULT_SEGMENT_MASS_FRACTION}, and the mean
+ * renormalizes over whichever bones a rig actually resolves — so an omitted
+ * `upperChest`/`neck` never biases the result.
+ */
+const SEGMENT_MASS_FRACTION: Partial<Record<AutoMovieHumanoidBone, number>> = {
+  hips: 14.2,
+  spine: 13.9,
+  chest: 15.6,
+  upperChest: 6.0,
+  neck: 1.1,
+  head: 7.0,
+  leftUpperArm: 2.8,
+  rightUpperArm: 2.8,
+  leftLowerArm: 1.6,
+  rightLowerArm: 1.6,
+  leftHand: 0.6,
+  rightHand: 0.6,
+  leftUpperLeg: 10.0,
+  rightUpperLeg: 10.0,
+  leftLowerLeg: 4.65,
+  rightLowerLeg: 4.65,
+  leftFoot: 1.45,
+  rightFoot: 1.45,
+};
+
+/** Mass fraction for a minor bone the table omits (clavicle, toe, eye, finger). */
+const DEFAULT_SEGMENT_MASS_FRACTION = 0.2;
 const CENTER_BONE_EXPECTED = "center bone must exist in the target skeleton";
 const CENTER_BONE_REACHABLE =
   "center bone is declared but not reachable from a root bone via forward kinematics";
@@ -41,7 +73,14 @@ const SUPPORT_BONE_REACHABLE =
  * @author Samchon
  */
 export interface IAutoMovieBalanceSupportWindow {
-  /** Bone used as the coarse center-of-mass proxy. Defaults to `hips`. */
+  /**
+   * Center-of-mass source. **Omit** (the default and recommended form) to use
+   * the segment-mass-weighted whole-body COM over the resolved pose —
+   * trustworthy for a lean, reach, or crouch, where the real COM shifts far
+   * from the pelvis. Provide a bone to override with a single-bone proxy (the
+   * pre-#1184 coarse behavior) for a rig or stance where a specific point is
+   * the intended COM.
+   */
   centerBone?: AutoMovieHumanoidBone;
 
   /** Ordered support contact bones projected onto the horizontal XZ plane. */
@@ -59,9 +98,10 @@ export interface IAutoMovieBalanceSupportWindow {
 
 /**
  * Tier-3 balance check over declared support windows. It samples a motion,
- * resolves FK, projects the center bone and support contacts to the XZ plane,
- * and rejects frames where the center-of-mass proxy falls outside the support
- * hull plus margin.
+ * resolves FK, computes the segment-mass-weighted whole-body center of mass (or
+ * a single-bone proxy when `centerBone` is set), projects it and the support
+ * contacts to the XZ plane, and rejects frames where the COM falls outside the
+ * support hull plus margin.
  *
  * Balance is a physical-plausibility **warning**, not a gate (D015): overstated
  * action, martial arts, dance, and stunts are built on momentary imbalance (a
@@ -121,15 +161,20 @@ export const validateBalanceSupport = (props: {
 
   for (const [supportIndex, support] of props.supports.entries()) {
     const sp = `${path}.supports[${supportIndex}]`;
-    const centerBone = support.centerBone ?? DEFAULT_CENTER_BONE;
+    const centerBone = support.centerBone;
     const margin = support.margin ?? DEFAULT_MARGIN;
-    const centerMissing = !skeletonBones.has(centerBone);
+    // A single-bone override is validated for membership/reachability; the
+    // default whole-body COM reads every resolved bone and needs no such gate.
+    const centerMissing =
+      centerBone !== undefined && !skeletonBones.has(centerBone);
     // A declared-but-detached bone (its parent chain never reaches a root) is
     // never returned by FK, so reading its resolved position would crash rather
     // than report the malformed rig. Gate on FK-reachability, not just
     // declaration.
     const centerUnreachable =
-      skeletonBones.has(centerBone) && !reachableBones.has(centerBone);
+      centerBone !== undefined &&
+      skeletonBones.has(centerBone) &&
+      !reachableBones.has(centerBone);
     const emptySupport = support.supportBones.length === 0;
     let missingSupport = false;
     let unreachableSupport = false;
@@ -215,7 +260,10 @@ export const validateBalanceSupport = (props: {
         topology,
       );
       for (const bone of pose) resolved.set(bone.bone, bone.worldPosition);
-      const centerPosition = resolved.get(centerBone) as IAutoMovieVector3;
+      const centerPosition =
+        centerBone === undefined
+          ? weightedCenterOfMass(resolved)
+          : (resolved.get(centerBone) as IAutoMovieVector3);
       // A real convex hull of the support contacts, so a mis-ordered or
       // non-convex support list can no longer be misclassified. Handles the
       // 1-/2-/many-point cases uniformly (a lone contact or a collinear pair
@@ -237,6 +285,32 @@ export const validateBalanceSupport = (props: {
 
   const validation = collector.toValidation();
   return validation;
+};
+
+/**
+ * The whole-body center of mass: each resolved bone's world position weighted
+ * by its segment mass fraction. This is a proximal-joint mass model (each
+ * segment's mass sits at the bone's own joint) — a v1 that is already far more
+ * trustworthy than a single hips bone for a lean, reach, or crouch, where the
+ * real COM shifts away from the pelvis. Sampling runs only past the
+ * reachability gate, so `resolved` always holds at least the root and the total
+ * weight is positive.
+ */
+const weightedCenterOfMass = (
+  resolved: ReadonlyMap<AutoMovieHumanoidBone, IAutoMovieVector3>,
+): IAutoMovieVector3 => {
+  let mass = 0;
+  let x = 0;
+  let y = 0;
+  let z = 0;
+  for (const [bone, position] of resolved) {
+    const weight = SEGMENT_MASS_FRACTION[bone] ?? DEFAULT_SEGMENT_MASS_FRACTION;
+    mass += weight;
+    x += weight * position.x;
+    y += weight * position.y;
+    z += weight * position.z;
+  }
+  return { x: x / mass, y: y / mass, z: z / mass };
 };
 
 const isPositiveFinite = (value: number): boolean =>
