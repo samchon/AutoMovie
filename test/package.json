@@ -7,7 +7,7 @@
   "scripts": {
     "build": "ttsc -p tsconfig.json --noEmit",
     "start": "ttsx -P tsconfig.json src/index.ts",
-    "coverage": "cd .. && c8 --src packages/engine/src --src packages/forge/src --src packages/ingest/src --src packages/render/src --include \"packages/engine/src/**\" --include \"packages/forge/src/**\" --include \"packages/ingest/src/**\" --include \"packages/render/src/**\" --exclude \"**/index.ts\" --extension .ts --temp-directory node_modules/.cache/automovie-c8 --reports-dir node_modules/.cache/automovie-c8-report --reporter=text-summary --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 ttsx -P test/tsconfig.json test/src/index.ts"
+    "coverage": "cd .. && c8 --src packages/engine/src --src packages/forge/src --src packages/ingest/src --src packages/render/src --src packages/mcp/src --include \"packages/engine/src/**\" --include \"packages/forge/src/**\" --include \"packages/ingest/src/**\" --include \"packages/render/src/**\" --include \"packages/mcp/src/**\" --exclude \"**/index.ts\" --exclude \"**/bin.ts\" --extension .ts --temp-directory node_modules/.cache/automovie-c8 --reports-dir node_modules/.cache/automovie-c8-report --reporter=text-summary --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 ttsx -P test/tsconfig.json test/src/index.ts"
   },
   "author": "Samchon",
   "license": "MIT",

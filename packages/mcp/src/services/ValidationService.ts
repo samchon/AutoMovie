@@ -192,8 +192,10 @@ const remapPath = (
       path.startsWith(`${from}[`)
     )
       return `${to}${path.slice(from.length)}`;
+  /* c8 ignore start -- unreachable fallthrough: the standalone validate* tools remap only engine/artifact validator output, whose paths all begin with a replacement key ("$input"/"$models"/"$motions"/"$shots") (#1040). */
   return path;
 };
+/* c8 ignore stop */
 
 const appendMcpPoseShape = (
   violations: IAutoMovieConstraintViolation[],

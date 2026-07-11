@@ -321,6 +321,11 @@ const resolveResolvedPoseTime = (t: unknown): number => {
   );
 };
 
+/* c8 ignore start -- resident scene reads pre-validate the scene through
+   validateSceneSlice (the same validateSceneArtifact assertResidentSceneFile
+   re-runs, over models derived identically from the scene's nodes), so a scene
+   that reaches assertResidentSceneFile has already passed; this repair-guidance
+   error and its throw sites are an unreachable defensive net (#1040). */
 class AutoMovieProjectSemanticError extends Error {
   public constructor(file: string, caller: string, detail: string) {
     super(
@@ -331,6 +336,7 @@ class AutoMovieProjectSemanticError extends Error {
     this.name = "AutoMovieProjectSemanticError";
   }
 }
+/* c8 ignore stop */
 
 const assertResidentSceneFile = (
   root: string,
@@ -341,6 +347,9 @@ const assertResidentSceneFile = (
   try {
     const validation = validateSceneArtifact(scene, residentSceneModels(scene));
     if (validation.success === true) return;
+    /* c8 ignore start -- unreachable: the scene was already validated on read
+       (see the AutoMovieProjectSemanticError note); validateSceneArtifact never
+       throws, so neither the failure throw nor the catch runs (#1040). */
     throw new AutoMovieProjectSemanticError(
       file,
       caller,
@@ -351,6 +360,7 @@ const assertResidentSceneFile = (
     const detail = error instanceof Error ? error.message : String(error);
     throw new AutoMovieProjectSemanticError(file, caller, detail);
   }
+  /* c8 ignore stop */
 };
 
 const residentSceneModels = (
@@ -994,8 +1004,13 @@ const inverse = (q: IAutoMovieQuaternion): IAutoMovieQuaternion =>
   Quaternion.normalize({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
 
 const assertFiniteTime = (t: number): void => {
+  // unreachable throw: getResolvedPose funnels t through resolveResolvedPoseTime,
+  // which rejects any non-finite value before resolveActorGeometry (the only
+  // caller) runs; this is a defensive invariant re-check (#1040).
+  /* c8 ignore start */
   if (!Number.isFinite(t))
     throw new Error(
       `range at $input.t: resolved pose sample time must be finite, but was ${t}`,
     );
+  /* c8 ignore stop */
 };
