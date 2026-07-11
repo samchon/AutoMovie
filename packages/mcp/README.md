@@ -27,6 +27,7 @@ pure stateless call, or omit it to read/commit the resident project opened with
 | `nextSteps` | (resident) -> ladder status, missing prerequisites, next actions | prerequisite ladder |
 | `registerAsset` | project-relative path -> asset index, or refusal | resident manifest |
 | `getGuideDocument` | guide name -> authoring guide markdown | guide corpus |
+| `getSlate` | slate -> whole writable slate (all slices + film) | resident store (#614) |
 | `getScript` | slate -> script slice or null | `readSlateContext` |
 | `getScene` | slate -> staged scene slice or null | `readSlateContext` |
 | `getShot` | slate + beat -> shot or null | `readSlateContext` |

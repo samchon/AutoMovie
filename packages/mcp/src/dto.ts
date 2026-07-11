@@ -68,6 +68,12 @@ export interface IAutoMovieMcpWritableSlate extends IAutoMovieMcpStoredSlate {
   film: IAutoMovieSequence | null;
 }
 
+/** The `getSlate` query result: the whole writable slate in one read. */
+export interface IAutoMovieGetSlateOutput {
+  /** Every committed slice (script/scene/shots/beatEnds/notes) plus the film. */
+  slate: IAutoMovieMcpWritableSlate;
+}
+
 /** The `getScript` query result. */
 export interface IAutoMovieGetScriptOutput {
   /** The committed script slice, or null until it exists. */

@@ -15,7 +15,9 @@ import {
   IAutoMovieGetSceneOutput,
   IAutoMovieGetScriptOutput,
   IAutoMovieGetShotOutput,
+  IAutoMovieGetSlateOutput,
   IAutoMovieMcpStoredSlate,
+  IAutoMovieMcpWritableSlate,
 } from "../dto";
 
 /**
@@ -42,6 +44,22 @@ export class SlateQueryService {
       // guides' addressing convention (#995): resident diagnostics read
       // `$slate...`, explicit ones `$input.slate...`.
       root: "$slate",
+    };
+  }
+
+  /**
+   * The whole writable slate in one read — every slice plus the film. The
+   * explicit form echoes the slate the caller passed; the resident form reads
+   * all slices from the project. This is what the cross-session revision guard
+   * (#1133) points a refused commit at ("re-read via getSlate").
+   */
+  public getSlate(props: {
+    slate?: IAutoMovieMcpWritableSlate;
+  }): IAutoMovieGetSlateOutput {
+    assertSlateQueryRequestRoot(props);
+    if (props.slate !== undefined) return { slate: props.slate };
+    return {
+      slate: this.context!.requireProject("getSlate").writableSlate(),
     };
   }
 
