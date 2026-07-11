@@ -14,15 +14,20 @@ import { sampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { groundFunction } from "../space/ground";
+import { IAutoMovieCapsuleProxy, validateCapsule } from "./capsuleProxy";
+import { fkReachableBones } from "./fkReachableBones";
 import { ViolationCollector } from "./violation";
 
 const DEFAULT_FOOT_BONES = ["leftFoot", "rightFoot"] as const;
 
 /**
- * Tier-3 ground-contact check for clips whose feet are expected to stay on or
+ * Tier-3 ground-contact check for clips whose body is expected to stay on or
  * above the ground. It samples the motion on a fixed clock, resolves FK, and
  * reports any configured foot bone whose world-space `y` falls below the ground
- * height at that foot's `(x, z)` minus `tolerance`.
+ * height at that foot's `(x, z)` minus `tolerance`. With `capsules` it also
+ * sweeps whole-body capsule proxies (#1185): a capsule's lowest surface point
+ * dipping below the ground warns too, so a hand or hip through the floor is not
+ * invisible the way a feet-only check leaves it.
  *
  * Ground is a scalar plane or a `(x, z) → y` height source — plug a space in
  * via {@link spaceGround} (#605) to validate contact over ramps and platforms; a
@@ -49,6 +54,18 @@ export const validateGroundContact = (props: {
 
   /** Bones treated as ground-contact points. Defaults to both humanoid feet. */
   footBones?: readonly AutoMovieHumanoidBone[];
+
+  /**
+   * Whole-body capsule proxies swept against the ground (#1185): each is a
+   * `from → to` bone segment with a radius, and its lowest surface point
+   * (`min(from.y, to.y) − radius`, sampled per endpoint against a heightfield)
+   * must stay above the ground, so a hand, hip, elbow, or prop clipping through
+   * the floor is no longer invisible the way the foot-point check leaves it. A
+   * capsule on a missing or detached bone is a `type` error, not a silent skip
+   * (the totality contract the point check does not carry). Omit to check only
+   * `footBones`.
+   */
+  capsules?: readonly IAutoMovieCapsuleProxy[];
 
   /** Ground height: plane scalar or `(x, z) → y` source. Defaults to `0`. */
   groundY?: number | ((x: number, z: number) => number);
@@ -83,6 +100,22 @@ export const validateGroundContact = (props: {
   const path = props.path ?? "$input";
   const groundAt = groundFunction(props.groundY ?? 0);
   const topology = indexSkeletonTopology(props.skeleton);
+
+  // Capsule endpoints are gated up front, exactly like the self-intersection
+  // and body-collision validators: a detached or missing endpoint is an error,
+  // never a silent skip, so the sweep only ever reads FK-resolved positions.
+  const capsules = props.capsules ?? [];
+  const skeletonBones = new Set(props.skeleton.bones.map((bone) => bone.bone));
+  const reachableBones = fkReachableBones(props.skeleton, topology);
+  const capsuleValid = capsules.map((capsule, capsuleIndex) =>
+    validateCapsule(
+      capsule,
+      `${path}.capsules[${capsuleIndex}]`,
+      skeletonBones,
+      reachableBones,
+      collector,
+    ),
+  );
 
   // Guard the sampling clock, matching the sibling sampling validators
   // (validateFootSkate/SelfIntersection/BalanceSupport): a non-finite or
@@ -134,9 +167,48 @@ export const validateGroundContact = (props: {
           minY - y,
         );
     }
+
+    capsules.forEach((capsule, capsuleIndex) => {
+      if (!capsuleValid[capsuleIndex]) return;
+      // Penetration is linear along a straight capsule over a flat plane or a
+      // linear ramp, so its deepest point is at an endpoint — sampling both
+      // ends against the (possibly sloped) ground finds the worst dip exactly
+      // for a single surface and closely for a heightfield.
+      const worst = [capsule.from, capsule.to].reduce(
+        (deepest: IPenetration | null, endpoint) => {
+          const position = resolved.get(endpoint)!.worldPosition;
+          const surfaceY = position.y - capsule.radius;
+          const minY = groundAt(position.x, position.z) - tolerance;
+          const candidate: IPenetration = {
+            surfaceY,
+            minY,
+            depth: minY - surfaceY,
+          };
+          return deepest === null || candidate.depth > deepest.depth
+            ? candidate
+            : deepest;
+        },
+        null,
+      )!;
+      if (worst.depth > 0 && !suppressed)
+        collector.warn(
+          "physics",
+          `${path}.samples[${index}].capsules[${capsuleIndex}].lowestY`,
+          `capsule (${capsule.from} to ${capsule.to}) lowest surface y must stay >= ${round(worst.minY)} at t=${round(time)}s (radius ${capsule.radius}, tolerance ${tolerance}; a body part usually should not pass through the ground; mark physicsIntent if it is deliberate)`,
+          worst.surfaceY,
+          worst.depth,
+        );
+    });
   });
 
   return collector.toValidation();
 };
+
+/** One capsule endpoint's dip below the ground: surface y, threshold, depth. */
+interface IPenetration {
+  surfaceY: number;
+  minY: number;
+  depth: number;
+}
 
 const round = (value: number): number => Math.round(value * 1_000) / 1_000;
