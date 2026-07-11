@@ -83,21 +83,27 @@ const motion = (target: IAutoMovieSkeleton) =>
   makeMotion([key(target, 0), key(target, 1)], 1);
 
 /**
- * `validateBalanceSupport` pins the v1 balance heuristic: callers declare a
- * support window, the validator projects the COM proxy and support contacts to
- * XZ, then rejects samples whose proxy falls outside the support hull margin.
+ * `validateBalanceSupport` pins the balance heuristic: callers declare a
+ * support window, the validator projects the center of mass and support
+ * contacts to XZ, then rejects samples whose COM falls outside the support hull
+ * margin. With an explicit `centerBone` the COM is that single bone; omitted,
+ * it is the segment-mass-weighted whole-body COM (#1184).
  *
  * Scenarios:
  *
- * 1. A COM proxy beyond a two-foot support segment reports a physics violation on
+ * 1. A single-bone (`spine`) COM beyond a two-foot support segment reports a
+ *    physics violation on
  *    `$input.supports[i].samples[j].centerOfMass.supportDistance`.
  * 2. Widening the margin accepts the same segment case, proving the distance
  *    threshold is the gate.
- * 3. One-foot support and default hips-centered support pass when the projected
- *    COM is on the support point or segment.
+ * 3. One-foot support and the whole-body COM pass when the COM is on the support
+ *    point or segment.
  * 4. A convex four-point foot/toe hull accepts an inside COM and rejects an
  *    outside COM.
- * 5. Invalid support annotations and invalid sample rates report deterministic
+ * 5. The mass-weighted whole-body COM (#1184) warns on a forward-leaning trunk
+ *    that a single-hips proxy misses — the pelvis stays over the feet while the
+ *    body's real COM has pitched past them.
+ * 6. Invalid support annotations and invalid sample rates report deterministic
  *    non-physics failures before sampling.
  */
 export const test_validation_balance_support = (): void => {
@@ -197,13 +203,82 @@ export const test_validation_balance_support = (): void => {
 
   const defaultCenter = skeleton(0, 0);
   TestValidator.equals(
-    "default hips support succeeds",
+    "whole-body COM over an upright rig stays within the foot segment",
     validateBalanceSupport({
       motion: motion(defaultCenter),
       skeleton: defaultCenter,
       supports: [{ supportBones: ["leftFoot", "rightFoot"], start: 0, end: 1 }],
     }).success,
     true,
+  );
+
+  // #1184: a forward-leaning trunk pitches the whole-body COM past the feet,
+  // which the mass-weighted default catches but a single-hips proxy misses —
+  // the pelvis stays over the feet while the heavy trunk has tipped forward.
+  const leaningTrunk: IAutoMovieSkeleton = {
+    id: "leaning",
+    bones: [
+      { bone: "hips", parent: null, rest: restAt(0, 1, 0), constraint: null },
+      {
+        bone: "chest",
+        parent: "hips",
+        rest: restAt(0, 0.5, 1),
+        constraint: null,
+      },
+      {
+        bone: "leftFoot",
+        parent: "hips",
+        rest: restAt(-0.2, -1, 0),
+        constraint: null,
+      },
+      {
+        bone: "rightFoot",
+        parent: "hips",
+        rest: restAt(0.2, -1, 0),
+        constraint: null,
+      },
+    ],
+  };
+  const leanDefault = validateBalanceSupport({
+    motion: motion(leaningTrunk),
+    skeleton: leaningTrunk,
+    supports: [
+      {
+        supportBones: ["leftFoot", "rightFoot"],
+        start: 0,
+        end: 1,
+        margin: 0.05,
+      },
+    ],
+    sampleRate: 1,
+  });
+  TestValidator.predicate(
+    "mass-weighted COM warns on a forward-leaning trunk",
+    leanDefault.success === true &&
+      hasWarning(
+        leanDefault,
+        "physics",
+        "$input.supports[0].samples[0].centerOfMass.supportDistance",
+      ),
+  );
+  const leanHips = validateBalanceSupport({
+    motion: motion(leaningTrunk),
+    skeleton: leaningTrunk,
+    supports: [
+      {
+        centerBone: "hips",
+        supportBones: ["leftFoot", "rightFoot"],
+        start: 0,
+        end: 1,
+        margin: 0.05,
+      },
+    ],
+    sampleRate: 1,
+  });
+  TestValidator.equals(
+    "the single-hips proxy misses the same lean (pelvis stays over the feet)",
+    leanHips.success === true && warningCount(leanHips),
+    0,
   );
 
   const insidePolygon = skeleton(0, 0.2);
