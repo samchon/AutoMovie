@@ -13,6 +13,7 @@ import {
 } from "@automovie/interface";
 
 import { convexHull2D } from "../math/hull";
+import { appendMeshTopology } from "./validateMeshTopology";
 import { validateTransformScalars } from "./validateTransformScalars";
 import { ViolationCollector } from "./violation";
 
@@ -509,6 +510,12 @@ const validateMesh = (
       boneNames,
       collector,
     );
+
+  // Tier-5 topology (#1183): 2-manifold + consistent winding over the welded
+  // surface. Self-guards on the buffers this function already reports, so it
+  // never reads a malformed index. Watertightness is not demanded here — an
+  // open mesh (plane, decal) is a valid model geometry.
+  appendMeshTopology(mesh, path, collector, false);
 };
 
 const validateTupleBuffer = (
