@@ -35,8 +35,9 @@ export const tessellate = (shape: AutoMoviePrimitiveShape): ITessellation => {
     case "cone":
       return cylinder(shape.radius, 0, shape.height, 16);
     case "capsule":
-      // Approximate a capsule by its bounding cylinder for now (caps are a
-      // future refinement); height spans body + both radii.
+      // Approximate a capsule by its closed bounding cylinder for now (the
+      // SPHERICAL end caps are a future refinement); height spans body + both
+      // radii.
       return cylinder(
         shape.radius,
         shape.radius,
@@ -151,20 +152,47 @@ const cylinder = (
   const normals: number[] = [];
   const indices: number[] = [];
   const halfH = height / 2;
-  // side ring (top then bottom)
+  // Side ring (top then bottom). The outward normal follows the SLANT (#1143):
+  // the profile line (radiusTop, +h/2) → (radiusBottom, −h/2) has the outward
+  // perpendicular (height, radiusBottom − radiusTop) in the (radial, y) plane,
+  // which degenerates to the horizontal ring normal at equal radii.
+  const slant = Math.hypot(height, radiusBottom - radiusTop);
+  const nRadial = height / slant;
+  const nY = (radiusBottom - radiusTop) / slant;
   for (let s = 0; s <= segments; ++s) {
     const theta = (s / segments) * Math.PI * 2;
     const cos = Math.cos(theta);
     const sin = Math.sin(theta);
     positions.push(cos * radiusTop, halfH, sin * radiusTop);
-    normals.push(cos, 0, sin);
+    normals.push(cos * nRadial, nY, sin * nRadial);
     positions.push(cos * radiusBottom, -halfH, sin * radiusBottom);
-    normals.push(cos, 0, sin);
+    normals.push(cos * nRadial, nY, sin * nRadial);
   }
   // counter-clockwise from outside, matching the sphere lattice (#1053)
   for (let s = 0; s < segments; ++s) {
     const a = s * 2;
     indices.push(a, a + 2, a + 1, a + 2, a + 3, a + 1);
   }
+  // Cap disks close the solid (#1143): a fan per non-degenerate end, flat ±Y
+  // normals, wound counter-clockwise seen from outside like everything else —
+  // without them the tube is open and a top-down framing sees through the prop.
+  const cap = (radius: number, y: number, up: 1 | -1): void => {
+    if (radius <= 0) return; // a cone's apex end is a point, not a disk
+    const center = positions.length / 3;
+    positions.push(0, y, 0);
+    normals.push(0, up, 0);
+    for (let s = 0; s <= segments; ++s) {
+      const theta = (s / segments) * Math.PI * 2;
+      positions.push(Math.cos(theta) * radius, y, Math.sin(theta) * radius);
+      normals.push(0, up, 0);
+    }
+    for (let s = 0; s < segments; ++s) {
+      const a = center + 1 + s;
+      if (up === 1) indices.push(center, a + 1, a);
+      else indices.push(center, a, a + 1);
+    }
+  };
+  cap(radiusTop, halfH, 1);
+  cap(radiusBottom, -halfH, -1);
   return { positions, normals, indices };
 };
