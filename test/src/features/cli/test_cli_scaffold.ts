@@ -3,6 +3,7 @@ import {
   AUTOMOVIE_TEMPLATE_VERSIONS,
   renderScaffold,
   renderTemplate,
+  scaffoldAssetDirectory,
   writeFiles,
 } from "autobe";
 import * as fs from "node:fs";
@@ -37,8 +38,30 @@ const throws = (fn: () => unknown): boolean => {
  * 4. `writeFiles` materializes the map to disk (every rendered key becomes a
  *    file), refuses a non-empty target unless `force`, and refuses a map key
  *    that would escape the target directory.
+ * 5. The scaffold assets are inside the package's published `files`, or a
+ *    published `autobe` would ship no scaffold and `npx autobe start` would
+ *    throw on install (#1155). Guards the packaging, which the in-repo render
+ *    (workspace source) cannot.
  */
 export const test_cli_scaffold = (): void => {
+  // 5. packaging guard: the scaffold dir must be a published `files` entry.
+  const scaffoldDir = scaffoldAssetDirectory();
+  const cliPackage = JSON.parse(
+    fs.readFileSync(
+      path.join(path.dirname(scaffoldDir), "package.json"),
+      "utf8",
+    ),
+  ) as { files?: string[] };
+  TestValidator.predicate(
+    "the scaffold directory is a published files entry",
+    Array.isArray(cliPackage.files) &&
+      cliPackage.files.includes(path.basename(scaffoldDir)),
+  );
+  TestValidator.predicate(
+    "no stale 'templates' entry lingers in files",
+    Array.isArray(cliPackage.files) && !cliPackage.files.includes("templates"),
+  );
+
   const files = renderScaffold({ name: "demo-film" });
 
   // 1. the file set, POSIX keys, gitignore restored.
