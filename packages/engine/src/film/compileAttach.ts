@@ -30,7 +30,9 @@ const IDENTITY_OFFSET: IAutoMovieTransform = {
  * Each sample resolves the parent's posed skeleton at that instant
  * ({@link resolveAttachment}, which runs the parent's FK) to find the bone's
  * frame in the parent's **model space**, then composes that onto the parent's
- * **staged world placement** so the child lands in scene space:
+ * **staged world placement** — or, when the parent itself rides a coupling this
+ * shot, onto its per-sample ridden frame (`parentTransformAt`, #1140) — so the
+ * child lands in scene space:
  *
  * - `translation = parentPos + parentRot · boneLocal.translation`
  * - `rotation = parentRot ∘ boneLocal.rotation`
@@ -57,6 +59,14 @@ export const compileAttach = (props: {
   bone: AutoMovieHumanoidBone;
   /** The parent's staged world placement (staging fixes it). */
   parentTransform: IAutoMovieTransform;
+  /**
+   * The parent's world root over shot-local time, when the parent itself rides
+   * a coupling this shot (#1140): each sample composes onto THIS frame instead
+   * of the static `parentTransform`, so the child follows the parent's ridden
+   * path — a lance in a mounted knight's hand rides the horse. Omit for a
+   * parent standing on its staged placement.
+   */
+  parentTransformAt?: (t: number) => IAutoMovieTransform;
   /** The parent's rig, for the per-frame FK. */
   parentSkeleton: IAutoMovieSkeleton;
   /** The parent's compiled pose motion; absent ⇒ it holds its rest pose. */
@@ -109,14 +119,12 @@ export const compileAttach = (props: {
       props.jointAxes,
       props.restFrames,
     );
+    const parentWorld = props.parentTransformAt?.(t) ?? parentTransform;
     const worldPos = Vector3.add(
-      parentTransform.translation,
-      Quaternion.rotateVector(parentTransform.rotation, local.translation),
+      parentWorld.translation,
+      Quaternion.rotateVector(parentWorld.rotation, local.translation),
     );
-    const worldRot = Quaternion.multiply(
-      parentTransform.rotation,
-      local.rotation,
-    );
+    const worldRot = Quaternion.multiply(parentWorld.rotation, local.rotation);
     times.push(t);
     pos.push(worldPos.x, worldPos.y, worldPos.z);
     rot.push(worldRot.x, worldRot.y, worldRot.z, worldRot.w);
