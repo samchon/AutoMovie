@@ -719,7 +719,11 @@ export namespace IAutoMovieMcpPerformedShot {
   }
 }
 
-/** JSON-safe motion clip returned by the MCP `perform` tool. */
+/**
+ * JSON-safe motion clip crossing the MCP `perform` boundary — returned as the
+ * compiled per-actor clips, and supplied by the caller as the authored clips an
+ * `enact` action plays (#1148).
+ */
 export interface IAutoMovieMcpMotion {
   /** Stable id so scenes and exports can cite this clip. */
   id: string;

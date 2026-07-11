@@ -29,13 +29,14 @@ import {
 } from "@automovie/interface";
 
 import { AutoMovieContext } from "../AutoMovieContext";
-import { toEnginePropSpec, toMcpMotion } from "../convert";
+import { toEngineMotion, toEnginePropSpec, toMcpMotion } from "../convert";
 import {
   IAutoMovieBlockOutput,
   IAutoMovieCutOutput,
   IAutoMovieForgeOutput,
   IAutoMovieForgePropOutput,
   IAutoMovieMcpActorContext,
+  IAutoMovieMcpMotion,
   IAutoMovieMcpPerformedShot,
   IAutoMovieMcpPropSpec,
   IAutoMoviePerformOutput,
@@ -53,6 +54,7 @@ type PerformProps = {
   staged: IAutoMovieStagedSet.ISuccess;
   performance: IAutoMoviePerformanceApplication.IWrite;
   actors: Record<string, IAutoMovieMcpActorContext>;
+  clips?: Record<string, IAutoMovieMcpMotion>;
   blocking?: IAutoMovieBlockingApplication.IWrite;
 };
 
@@ -131,7 +133,10 @@ export class PipelineService {
         node.transform.translation,
       ]),
     );
-    const synthesize = makeActorSynthesizer(contexts, nodes);
+    const synthesize = wrapEnactSynthesizer(
+      makeActorSynthesizer(contexts, nodes),
+      props.clips,
+    );
     const synthesisViolations = collectDefaultSynthesisViolations(
       props,
       contexts,
@@ -844,7 +849,39 @@ const validatePerformShape = (
   // its actors and reads camera.move (#1006) — the same shape block() gates.
   if (props.blocking !== undefined)
     validateBlockingShape(props.blocking, "$input.blocking", violations);
+  if (props.clips !== undefined)
+    validatePerformClipsShape(props.clips, "$input.clips", violations);
   return violations;
+};
+
+/**
+ * The `clips` registry's structural floor (#1148): each entry must be a motion
+ * object whose keyframes are an array and whose skeleton is a string —
+ * `toEngineMotion` maps over the keyframes and the enact rungs compare the
+ * skeleton, so a malformed entry would crash the bake instead of refusing.
+ */
+const validatePerformClipsShape = (
+  clips: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isJsonObject(clips, path, "enact clips registry", violations)) return;
+  for (const [id, clip] of Object.entries(clips)) {
+    const clipPath = `${path}["${id}"]`;
+    if (!isJsonObject(clip, clipPath, "enact clip", violations)) continue;
+    requireString(
+      clip.skeleton,
+      `${clipPath}.skeleton`,
+      "enact clip skeleton",
+      violations,
+    );
+    isJsonArray(
+      clip.keyframes,
+      `${clipPath}.keyframes`,
+      "enact clip keyframes",
+      violations,
+    );
+  }
 };
 
 const validatePerformScriptShape = (
@@ -2154,6 +2191,26 @@ const canRunDefaultSynthesisPrecheck = (
   return true;
 };
 
+/**
+ * Resolve `enact` actions from the caller-authored `clips` registry (#1148) —
+ * the MCP face of the engine's content seam. The clip is re-keyed per actor so
+ * a unison cast enacting one clip cannot collide on ids; every other verb falls
+ * through to the default synthesizer. Unknown ids return `null`, which the
+ * enact refusal rungs turn into an actionable message before the shot
+ * compiles.
+ */
+const wrapEnactSynthesizer = (
+  base: IAutoMovieActionSynthesizer,
+  clips: Record<string, IAutoMovieMcpMotion> | undefined,
+): IAutoMovieActionSynthesizer => {
+  return (action, actor) => {
+    if (action.verb !== "enact") return base(action, actor);
+    const clip = clips?.[action.clip];
+    if (clip === undefined) return null;
+    return { ...toEngineMotion(clip), id: `${actor}:enact:${clip.id}` };
+  };
+};
+
 const collectDefaultSynthesisViolations = (
   props: PerformProps,
   contexts: ReadonlyMap<string, IAutoMovieActorContext>,
@@ -2173,6 +2230,19 @@ const collectDefaultSynthesisViolations = (
       if (onHit !== null) violations.push(onHit);
       return;
     }
+    if (action.verb === "enact") {
+      for (const actor of actorList(action)) {
+        const gap = describeEnactGap(
+          action,
+          actionPath,
+          actor,
+          contexts,
+          props.clips,
+        );
+        if (gap !== null) violations.push(gap);
+      }
+      return;
+    }
     if (action.verb === "frame" || action.verb === "attachTo") return;
     if (!canRunDefaultSynthesisPrecheck(action)) return;
 
@@ -2189,6 +2259,52 @@ const collectDefaultSynthesisViolations = (
       }
   });
   return violations;
+};
+
+/**
+ * The enact refusal rungs (#1148), most-actionable first: the actor needs a
+ * context, the context needs a rig (a rig-less clip would dodge the shot's ROM
+ * gate — enforcement is the point), the clip must be supplied in the `clips`
+ * registry, and the clip must target the actor's own skeleton.
+ */
+const describeEnactGap = (
+  action: IAutoMovieActionCall & { verb: "enact" },
+  actionPath: string,
+  actor: string,
+  contexts: ReadonlyMap<string, IAutoMovieActorContext>,
+  clips: Record<string, IAutoMovieMcpMotion> | undefined,
+): IAutoMovieConstraintViolation | null => {
+  const context = contexts.get(actor);
+  if (context === undefined)
+    return violation(
+      "type",
+      actorPath(action, actionPath, actor),
+      `actor "${actor}" needs an MCP actor context before the performer can enact a clip for it`,
+      actor,
+    );
+  if (context.rig === undefined)
+    return violation(
+      "type",
+      actorPath(action, actionPath, actor),
+      `enact for actor "${actor}" requires a rig in that actor's MCP context so the compiled clip is ROM-gated`,
+      actor,
+    );
+  const clip = clips?.[action.clip];
+  if (clip === undefined)
+    return violation(
+      "type",
+      `${actionPath}.clip`,
+      `enact names clip "${action.clip}" but the perform call's clips registry does not supply it; pass the authored motion in props.clips`,
+      action.clip,
+    );
+  if (clip.skeleton !== context.rig.id)
+    return violation(
+      "type",
+      `${actionPath}.clip`,
+      `enact clip "${action.clip}" targets skeleton "${clip.skeleton}" but actor "${actor}" rigs skeleton "${context.rig.id}"`,
+      clip.skeleton,
+    );
+  return null;
 };
 
 const describeLaunchOnHitGap = (
