@@ -3,6 +3,7 @@ import {
   IAutoMovieQuaternion,
   IAutoMovieReviewNote,
   IAutoMovieScene,
+  IAutoMovieSceneNode,
   IAutoMovieShot,
   IAutoMovieVector3,
 } from "@automovie/interface";
@@ -21,6 +22,9 @@ const DEFAULT_ASPECT = 16 / 9;
 /** Default visual-read sampling rate (samples/second). */
 const DEFAULT_SAMPLE_RATE = 12;
 
+/** Default body radius a contact point must land within to read as connected. */
+const DEFAULT_CONTACT_RADIUS = 1.0;
+
 /**
  * Engine-computed **visual-read** advisory metrics (#1177), surfaced as `tier:
  * "visual"` review notes — the deterministic complement to the subjective
@@ -28,15 +32,18 @@ const DEFAULT_SAMPLE_RATE = 12;
  * loop scales. These are advisory (D015): they never fail a gate, they populate
  * the review backlog for the agent to weigh.
  *
- * V1 metric — **subject in frame**: for each performed actor, sample its world
- * root over the shot and check it stays inside the live camera's view frustum
- * (in front of the near plane, within the vertical FOV and an assumed-aspect
- * horizontal FOV). An actor drifting off-screen or behind the camera reads as a
- * missing subject, so a note names the beat, the actor, and when it first
- * leaves frame. Silhouette separation and contact-connection at hit events are
- * the natural follow-up metrics; the root-point subject (vs a head-to-foot
- * bounding extent) and a heightfield-free frustum are the v1 approximations.
+ * Metrics:
  *
+ * - **Subject in frame**: each performed actor's world root, sampled over the
+ *   shot, must stay inside the live camera's view frustum (in front of the near
+ *   plane, within the vertical FOV and an assumed-aspect horizontal FOV) — an
+ *   actor drifting off-screen or behind the camera reads as a missing subject.
+ * - **Contact connection**: each `hit`/`contact` event whose engine-computed
+ *   world point lands farther than `contactRadius` from the target actor's body
+ *   reads as a miss (the punch swings through empty air the target has left).
+ *
+ * The root-point subject (vs a head-to-foot bounding extent) is the v1
+ * approximation; silhouette separation is the natural third metric.
  * Deterministic: pure FK (`foldRoot` + `sampleMotion`), fixed-clock sampling,
  * and stateless vector math.
  *
@@ -49,7 +56,7 @@ export const reviewVisualRead = (props: {
   /** Staged scene (nodes + cameras) the shot plays over. */
   scene: IAutoMovieScene;
 
-  /** The compiled shot (camera, camera motion, performances, duration). */
+  /** The compiled shot (camera, camera motion, performances, events, duration). */
   shot: IAutoMovieShot;
 
   /** Motions the shot's performances reference. */
@@ -60,55 +67,106 @@ export const reviewVisualRead = (props: {
 
   /** Render aspect (width/height). Defaults to 16/9. */
   aspect?: number;
-}): IAutoMovieReviewNote[] => {
-  const camera = props.scene.cameras.find((c) => c.id === props.shot.camera);
-  // No live camera, or a nonsensical FOV, leaves nothing to read visually.
-  if (
-    camera === undefined ||
-    !Number.isFinite(camera.fovY) ||
-    camera.fovY <= 0 ||
-    camera.fovY >= 180 ||
-    !(camera.far > camera.near)
-  )
-    return [];
 
-  const aspect = props.aspect ?? DEFAULT_ASPECT;
-  const sampleRate = props.sampleRate ?? DEFAULT_SAMPLE_RATE;
-  const halfY = Math.tan((camera.fovY * Math.PI) / 360);
+  /** Body radius (m) a contact point must land within. Defaults to 1.0. */
+  contactRadius?: number;
+}): IAutoMovieReviewNote[] => {
   const motionById = new Map(props.motions.map((m) => [m.id, m]));
   const nodeById = new Map(props.scene.nodes.map((n) => [n.id, n]));
-  const times = sampleTimes(props.shot.duration, sampleRate);
-
   const notes: IAutoMovieReviewNote[] = [];
-  for (const performance of props.shot.performances) {
+
+  // A performed actor's world root at shot-time `t`, startOffset-aware: the clip
+  // has advanced `max(0, t − startOffset)` at shot time t (the resolveBeatEnd
+  // convention).
+  const worldRootAt = (
+    node: IAutoMovieSceneNode,
+    motion: IAutoMovieMotion,
+    startOffset: number,
+    t: number,
+  ): IAutoMovieVector3 =>
+    foldRoot(
+      node.transform,
+      sampleMotion(motion, Math.max(0, t - startOffset)).pose.root,
+    ).translation;
+
+  // Metric 1 — subject in frame (needs a live, sane camera).
+  const camera = props.scene.cameras.find((c) => c.id === props.shot.camera);
+  if (
+    camera !== undefined &&
+    Number.isFinite(camera.fovY) &&
+    camera.fovY > 0 &&
+    camera.fovY < 180 &&
+    camera.far > camera.near
+  ) {
+    const aspect = props.aspect ?? DEFAULT_ASPECT;
+    const halfY = Math.tan((camera.fovY * Math.PI) / 360);
+    const times = sampleTimes(
+      props.shot.duration,
+      props.sampleRate ?? DEFAULT_SAMPLE_RATE,
+    );
+    for (const performance of props.shot.performances) {
+      const node = nodeById.get(performance.node);
+      const motion =
+        performance.motion === null
+          ? undefined
+          : motionById.get(performance.motion);
+      if (node === undefined || motion === undefined) continue;
+      const offAt = times.find((time) => {
+        const world = worldRootAt(node, motion, performance.startOffset, time);
+        const cam = cameraAt(
+          camera.transform,
+          props.shot.cameraMotion,
+          camera.id,
+          time,
+        );
+        return !inFrame(cam, world, camera.near, camera.far, halfY, aspect);
+      });
+      if (offAt !== undefined)
+        notes.push({
+          beat: props.beat,
+          tier: "visual",
+          issue: `subject "${performance.node}" leaves the camera frame at t=${round(offAt)}s (drifts off-screen or behind the camera)`,
+          suggestion: `keep "${performance.node}" in shot — widen or re-aim camera "${camera.id}", or restage the action within the frame`,
+        });
+    }
+  }
+
+  // Metric 2 — contact connection at hit events (camera-independent).
+  const contactRadius = props.contactRadius ?? DEFAULT_CONTACT_RADIUS;
+  const performanceByNode = new Map(
+    props.shot.performances.map((p) => [p.node, p]),
+  );
+  for (const event of props.shot.events ?? []) {
+    if (
+      (event.kind !== "hit" && event.kind !== "contact") ||
+      event.point === null ||
+      event.target === null
+    )
+      continue;
+    const performance = performanceByNode.get(event.target);
+    if (performance === undefined) continue;
     const node = nodeById.get(performance.node);
     const motion =
       performance.motion === null
         ? undefined
         : motionById.get(performance.motion);
     if (node === undefined || motion === undefined) continue;
-
-    const offAt = times.find((time) => {
-      const world = foldRoot(
-        node.transform,
-        sampleMotion(motion, time).pose.root,
-      ).translation;
-      const cam = cameraAt(
-        camera.transform,
-        props.shot.cameraMotion,
-        camera.id,
-        time,
-      );
-      return !inFrame(cam, world, camera.near, camera.far, halfY, aspect);
-    });
-    if (offAt !== undefined)
+    const world = worldRootAt(
+      node,
+      motion,
+      performance.startOffset,
+      event.time,
+    );
+    const distance = Vector3.length(Vector3.subtract(world, event.point));
+    if (distance > contactRadius)
       notes.push({
         beat: props.beat,
         tier: "visual",
-        issue: `subject "${performance.node}" leaves the camera frame at t=${round(offAt)}s (drifts off-screen or behind the camera)`,
-        suggestion: `keep "${performance.node}" in shot — widen or re-aim camera "${camera.id}", or restage the action within the frame`,
+        issue: `the ${event.kind} at t=${round(event.time)}s lands ${round(distance)}m from "${event.target}" — past the ${contactRadius}m body radius, it reads as a miss`,
+        suggestion: `align the ${event.kind} with "${event.target}"'s body — retime the reaction or reposition the actor so the contact point meets it`,
       });
   }
+
   return notes;
 };
 
