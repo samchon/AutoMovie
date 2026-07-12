@@ -128,6 +128,32 @@ const contact = (
     contactRadius,
   });
 
+/** Two performing actors "a" and "b" over the default origin camera. */
+const silhouette = (
+  a: IAutoMovieMotion,
+  b: IAutoMovieMotion,
+  silhouetteRadius?: number,
+) =>
+  reviewVisualRead({
+    beat: "b1",
+    scene: {
+      id: "s",
+      name: null,
+      nodes: [node("a"), node("b")],
+      cameras: [camera()],
+      lights: [],
+    },
+    shot: shot({
+      performances: [
+        { node: "a", motion: "ma", startOffset: 0 },
+        { node: "b", motion: "mb", startOffset: 0 },
+      ],
+    }),
+    motions: [a, b],
+    sampleRate: 1,
+    silhouetteRadius,
+  });
+
 /**
  * `reviewVisualRead` (#1177) computes deterministic visual-read advisory notes
  * (`tier: "visual"`, D015 — notes, not gates).
@@ -151,6 +177,12 @@ const contact = (
  * 7. A non-impact event (grab), a null point, a null target, a target that does
  *    not perform, and a held target are skipped; a generous contactRadius
  *    tolerates the offset.
+ *
+ * Silhouette-separation scenarios (two performing actors):
+ *
+ * 8. Actors stacked on the camera line merge into one blob; actors spread across
+ *    the frame do not; a large silhouette radius merges the spread pair; an
+ *    actor inside the near plane is a framing note, not a silhouette merge.
  */
 export const test_film_review_visual_read = (): void => {
   TestValidator.equals(
@@ -371,5 +403,40 @@ export const test_film_review_visual_read = (): void => {
     contact(heroAtOrigin, [hitEvent({ point: { x: 5, y: 0, z: 0 } })], 10)
       .length,
     0,
+  );
+
+  // silhouette separation: two actors nearly on the camera's line merge.
+  const merged = silhouette(
+    rootMotion("ma", 0, 0, -5),
+    rootMotion("mb", 0.1, 0, -5),
+  );
+  TestValidator.predicate(
+    "two actors stacked on the camera line merge in silhouette",
+    merged.length === 1 &&
+      merged[0]!.issue.includes("merge in silhouette") &&
+      merged[0]!.issue.includes('"a"') &&
+      merged[0]!.issue.includes('"b"'),
+  );
+  TestValidator.equals(
+    "two actors spread across the frame do not merge",
+    silhouette(rootMotion("ma", 0, 0, -5), rootMotion("mb", 3, 0, -5)).length,
+    0,
+  );
+  TestValidator.equals(
+    "a large silhouette radius merges the spread pair",
+    silhouette(rootMotion("ma", 0, 0, -5), rootMotion("mb", 3, 0, -5), 5)
+      .length,
+    1,
+  );
+  // an actor within the near plane: framing flags it, the silhouette pair skips.
+  const nearGuard = silhouette(
+    rootMotion("ma", 0, 0, -0.05),
+    rootMotion("mb", 0, 0, -5),
+  );
+  TestValidator.predicate(
+    "an actor inside the near plane is a framing note, not a silhouette merge",
+    nearGuard.length === 1 &&
+      nearGuard[0]!.issue.includes("leaves the camera frame") &&
+      !nearGuard.some((n) => n.issue.includes("silhouette")),
   );
 };
