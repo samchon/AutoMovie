@@ -9,6 +9,8 @@ export * from "./scriptGraph";
 export * from "./performShot";
 export * from "./playback";
 export * from "./readSlateContext";
+export * from "./cameraProjection";
+export * from "./resolvePoseKeypoints";
 export * from "./reviewShot";
 export * from "./reviewVisualRead";
 export * from "./resolveBeatEnd";
