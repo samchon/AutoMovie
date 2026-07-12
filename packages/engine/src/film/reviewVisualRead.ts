@@ -1,6 +1,5 @@
 import {
   IAutoMovieMotion,
-  IAutoMovieQuaternion,
   IAutoMovieReviewNote,
   IAutoMovieScene,
   IAutoMovieSceneNode,
@@ -8,13 +7,15 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleTimes } from "../motion/sampleClock";
 import { sampleMotion } from "../motion/sampleMotion";
-import { channelKey } from "../resolve/channel";
-import { sampleClip } from "../resolve/sampleClip";
 import { foldRoot } from "./beatEndSim";
+import {
+  IAutoMovieResolvedCamera,
+  projectToNdc,
+  resolveCameraAt,
+} from "./cameraProjection";
 
 /** Assumed render aspect (width/height) — the scene camera carries no aspect. */
 const DEFAULT_ASPECT = 16 / 9;
@@ -116,7 +117,12 @@ export const reviewVisualRead = (props: {
       props.sampleRate ?? DEFAULT_SAMPLE_RATE,
     );
     const camAt = (time: number) =>
-      cameraAt(camera.transform, props.shot.cameraMotion, camera.id, time);
+      resolveCameraAt(
+        camera.transform,
+        props.shot.cameraMotion,
+        camera.id,
+        time,
+      );
 
     // Resolve the actually-performing actors once, for both metrics.
     const performers = props.shot.performances
@@ -240,60 +246,21 @@ export const reviewVisualRead = (props: {
   return notes;
 };
 
-/** The camera's world placement at `time`: static, or sampled from its move. */
-const cameraAt = (
-  base: { translation: IAutoMovieVector3; rotation: IAutoMovieQuaternion },
-  cameraMotion: IAutoMovieShot["cameraMotion"],
-  cameraId: string,
-  time: number,
-): { position: IAutoMovieVector3; rotation: IAutoMovieQuaternion } => {
-  if (cameraMotion === null)
-    return { position: base.translation, rotation: base.rotation };
-  const sampled = sampleClip(cameraMotion, time);
-  const position = sampled.get(
-    channelKey({ kind: "node", node: cameraId, path: "translation" }),
-  )?.value;
-  const rotation = sampled.get(
-    channelKey({ kind: "node", node: cameraId, path: "rotation" }),
-  )?.value;
-  return {
-    position:
-      position === undefined
-        ? base.translation
-        : { x: position[0]!, y: position[1]!, z: position[2]! },
-    rotation:
-      rotation === undefined
-        ? base.rotation
-        : {
-            x: rotation[0]!,
-            y: rotation[1]!,
-            z: rotation[2]!,
-            w: rotation[3]!,
-          },
-  };
-};
-
 /**
- * Whether `point` sits inside the camera's frustum. The camera looks down its
- * local −Z (glTF), so a point in front has `depth = −localZ > 0`; NDC is `local
- * / (depth · tan(fovY/2))`, horizontally widened by `aspect`.
+ * Whether `point` sits inside the camera's frustum: in front within `[near,
+ * far]` and inside the NDC rectangle. Shares the projection with the keypoint
+ * sidecar via {@link projectToNdc}.
  */
 const inFrame = (
-  cam: { position: IAutoMovieVector3; rotation: IAutoMovieQuaternion },
+  cam: IAutoMovieResolvedCamera,
   point: IAutoMovieVector3,
   near: number,
   far: number,
   halfY: number,
   aspect: number,
 ): boolean => {
-  const local = Quaternion.rotateVector(
-    Quaternion.inverse(cam.rotation),
-    Vector3.subtract(point, cam.position),
-  );
-  const depth = -local.z;
+  const { ndcX, ndcY, depth } = projectToNdc(cam, point, halfY, aspect);
   if (depth < near || depth > far) return false;
-  const ndcY = local.y / (depth * halfY);
-  const ndcX = local.x / (depth * halfY * aspect);
   return Math.abs(ndcX) <= 1 && Math.abs(ndcY) <= 1;
 };
 
