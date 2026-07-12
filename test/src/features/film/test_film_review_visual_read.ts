@@ -2,6 +2,7 @@ import { reviewVisualRead } from "@automovie/engine";
 import {
   IAutoMovieCamera,
   IAutoMovieClip,
+  IAutoMovieInteractionEvent,
   IAutoMovieMotion,
   IAutoMovieScene,
   IAutoMovieSceneNode,
@@ -96,26 +97,60 @@ const camMotion = (tracks: IAutoMovieClip["tracks"]): IAutoMovieClip => ({
   tracks,
 });
 
+const hitEvent = (
+  over: Partial<IAutoMovieInteractionEvent> = {},
+): IAutoMovieInteractionEvent => ({
+  id: "e",
+  kind: "hit",
+  source: "impactOutput",
+  time: 0,
+  actor: null,
+  target: "hero",
+  object: null,
+  point: { x: 0, y: 0, z: 0 },
+  actionIndex: null,
+  reaction: null,
+  ...over,
+});
+
+/** Contact metric only: an invalid camera skips framing, isolating the sweep. */
+const contact = (
+  actor: IAutoMovieMotion,
+  events: IAutoMovieInteractionEvent[],
+  contactRadius?: number,
+) =>
+  reviewVisualRead({
+    beat: "b1",
+    scene: scene(camera()),
+    shot: shot({ camera: "nope", events }),
+    motions: [actor],
+    sampleRate: 1,
+    contactRadius,
+  });
+
 /**
- * `reviewVisualRead` (#1177) computes deterministic visual-read advisory notes.
- * v1 metric — subject in frame: a performed actor's world root, sampled over
- * the shot, must stay inside the live camera's frustum, else a `tier: "visual"`
- * note names the beat, actor, and when it first leaves frame. Advisory (D015):
- * notes, not gates.
+ * `reviewVisualRead` (#1177) computes deterministic visual-read advisory notes
+ * (`tier: "visual"`, D015 — notes, not gates).
  *
- * Scenarios:
+ * Subject-in-frame scenarios:
  *
- * 1. A subject 5 m down the camera's −Z stays centered — no note. 2-5. A subject
- *    above/behind/too-far/beside the frustum each earns exactly one visual note
- *    naming it and the first off-frame time. 6-10. No live camera, a
- *    non-finite/zero/too-wide FOV, and far≤near all leave nothing to read — no
- *    notes.
- * 2. A camera that cranes up over the shot pushes a grounded subject out of frame
- *    — the moving camera is sampled, not read as static. 12-13. A camera move
- *    missing its rotation (or translation) track falls back to the camera's
- *    static component rather than crashing. 14-16. A held (null-motion)
- *    performance, a missing motion, and a missing node are skipped, not
- *    errored.
+ * 1. A subject 5 m down the camera's −Z stays centered — no note; the default
+ *    sample rate and an explicit aspect frame it too.
+ * 2. A subject above/behind/past-far/beside the frustum each earns exactly one
+ *    note naming it and the first off-frame time.
+ * 3. No live camera, a non-finite/zero/too-wide FOV, and far≤near read nothing.
+ * 4. A craning camera is sampled, not read as static; a move missing its rotation
+ *    or translation track falls back to the static component.
+ * 5. A held (null-motion) performance, a missing motion, and a missing node are
+ *    skipped, not errored.
+ *
+ * Contact-connection scenarios (isolated with an invalid camera):
+ *
+ * 6. A hit landing on the target connects (no note); landing past the body radius
+ *    reads as a miss; a `contact`-kind event checks the same way.
+ * 7. A non-impact event (grab), a null point, a null target, a target that does
+ *    not perform, and a held target are skipped; a generous contactRadius
+ *    tolerates the offset.
  */
 export const test_film_review_visual_read = (): void => {
   TestValidator.equals(
@@ -262,6 +297,79 @@ export const test_film_review_visual_read = (): void => {
     framing(camera(), rootMotion("m1", 0, 10, -5), {
       performances: [{ node: "ghost", motion: "m1", startOffset: 0 }],
     }).length,
+    0,
+  );
+
+  // contact-connection: a hit whose point lands on the target reads as
+  // connected; landing past the body radius reads as a miss.
+  const heroAtOrigin = rootMotion("m1", 0, 0, 0);
+  TestValidator.equals(
+    "a hit that lands on the target connects",
+    contact(heroAtOrigin, [hitEvent({ point: { x: 0, y: 0, z: 0 } })]).length,
+    0,
+  );
+  const miss = contact(heroAtOrigin, [
+    hitEvent({ point: { x: 5, y: 0, z: 0 } }),
+  ]);
+  TestValidator.predicate(
+    "a hit that lands off the body reads as a miss",
+    miss.length === 1 &&
+      miss[0]!.tier === "visual" &&
+      miss[0]!.issue.includes("hero") &&
+      miss[0]!.issue.includes("hit"),
+  );
+  TestValidator.equals(
+    "a contact-kind event off the body also reads as a miss",
+    contact(heroAtOrigin, [
+      hitEvent({ kind: "contact", point: { x: 5, y: 0, z: 0 } }),
+    ]).length,
+    1,
+  );
+  TestValidator.equals(
+    "a non-impact event (grab) is not a contact check",
+    contact(heroAtOrigin, [
+      hitEvent({ kind: "grab", point: { x: 5, y: 0, z: 0 } }),
+    ]).length,
+    0,
+  );
+  TestValidator.equals(
+    "an event with no world point is skipped",
+    contact(heroAtOrigin, [hitEvent({ point: null })]).length,
+    0,
+  );
+  TestValidator.equals(
+    "an event with no target is skipped",
+    contact(heroAtOrigin, [
+      hitEvent({ target: null, point: { x: 5, y: 0, z: 0 } }),
+    ]).length,
+    0,
+  );
+  TestValidator.equals(
+    "an event whose target does not perform is skipped",
+    contact(heroAtOrigin, [
+      hitEvent({ target: "ghost", point: { x: 5, y: 0, z: 0 } }),
+    ]).length,
+    0,
+  );
+  TestValidator.equals(
+    "an event whose target is held (null motion) is skipped",
+    reviewVisualRead({
+      beat: "b1",
+      scene: scene(camera()),
+      shot: shot({
+        camera: "nope",
+        performances: [{ node: "hero", motion: null, startOffset: 0 }],
+        events: [hitEvent({ point: { x: 5, y: 0, z: 0 } })],
+      }),
+      motions: [heroAtOrigin],
+      sampleRate: 1,
+    }).length,
+    0,
+  );
+  TestValidator.equals(
+    "a generous contact radius tolerates the same offset",
+    contact(heroAtOrigin, [hitEvent({ point: { x: 5, y: 0, z: 0 } })], 10)
+      .length,
     0,
   );
 };
