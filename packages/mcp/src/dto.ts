@@ -639,14 +639,23 @@ export interface IAutoMovieMcpActorContext {
   /** Gaits this actor can perform, without tuple-valued bezier controls. */
   gaits: IAutoMovieMcpGait[];
 
-  /** Where the actor stands at the start of the shot (world meters). */
-  position: IAutoMovieVector3;
+  /**
+   * Where the actor stands at the start of the shot (world meters). A RESIDENT
+   * `perform` may omit it (#1176): the previous beat's committed end-state
+   * seeds it, so a walking character resumes exactly where it stopped. An
+   * explicit call (or a beat with no committed predecessor) must pass it.
+   */
+  position?: IAutoMovieVector3;
 
   /** Locomotion speed in meters per second. */
   speed: number;
 
-  /** Heading the actor faces, degrees about +Y (0 = +Z). */
-  facingDeg: number;
+  /**
+   * Heading the actor faces, degrees about +Y (0 = +Z). Omittable in a RESIDENT
+   * `perform` exactly like `position` (#1176) — seeded from the previous beat's
+   * committed end-state facing.
+   */
+  facingDeg?: number;
 
   /** Eye height above the actor position, meters. */
   eyeHeight: number;
