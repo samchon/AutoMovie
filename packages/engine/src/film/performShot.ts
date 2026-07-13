@@ -495,6 +495,25 @@ export const performShot = (props: {
         "frame target",
         "a frame subject",
       );
+      // The two lens INTENTS (#1187): validated like any target/scalar, but
+      // never consumed by the camera solve — they ride to shot.cameraIntent.
+      if (action.focus !== undefined)
+        resolvePositionalTarget(
+          action.focus,
+          `${base}[${i}].focus`,
+          "focus target",
+          "a focus subject",
+        );
+      if (
+        action.focalLength !== undefined &&
+        (!Number.isFinite(action.focalLength) || !(action.focalLength > 0))
+      )
+        out.push(
+          "range",
+          `${base}[${i}].focalLength`,
+          `a focal length must be a finite number > 0 mm, but was ${action.focalLength}`,
+          action.focalLength,
+        );
       if (typeof action.actor !== "string")
         out.push(
           "type",
@@ -1061,6 +1080,19 @@ export const performShot = (props: {
       })),
       objectMotions,
       events: orderEvents(events),
+      // Directorial intent per frame span (#1187): the focus subject resolves
+      // to a world point the same way `on` did; the solve itself never reads
+      // these — a diffusion/render host does, beside cameraMotion.
+      cameraIntent: frames.map(({ action }) => ({
+        start: action.start,
+        framing: action.framing,
+        move: action.move,
+        focus:
+          action.focus === undefined
+            ? null
+            : resolveTargetPoint(action.focus, nodePositions)!,
+        focalLength: action.focalLength ?? null,
+      })),
       duration: performance.duration,
     },
     motions,

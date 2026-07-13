@@ -322,4 +322,21 @@ export interface IAutoMovieCameraAction extends IAutoMovieActionBase {
 
   /** What it frames/tracks. */
   on: IAutoMovieActionTarget;
+
+  /**
+   * What the lens holds sharp, when it differs from `on` (a rack focus onto the
+   * approaching rider while the frame stays on the gate). Structural guide
+   * INTENT for a diffusion/render host (#1187) — the deterministic camera solve
+   * never reads it, and it is not depth-of-field blur (that is diffusion's
+   * job). Omit when the framed subject is the focus.
+   */
+  focus?: IAutoMovieActionTarget;
+
+  /**
+   * Lens intent in millimetres (full-frame equivalent — 24 wide, 50 normal, 85
+   * portrait). Structural guide INTENT only (#1187): the scene camera's `fovY`
+   * stays the geometric truth and this never changes the solve. Omit when the
+   * lens is not a directorial choice.
+   */
+  focalLength?: number;
 }
