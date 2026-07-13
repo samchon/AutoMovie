@@ -931,10 +931,15 @@ export class AutoMovieApplication {
    * @returns The blocked beat on success, or the violations to fix.
    */
   public block(props: {
-    /** The script: the cast and their beats. */
-    script: IAutoMovieScriptApplication.IWrite;
+    /**
+     * The script: the cast and their beats. Omit TOGETHER with `staged` to
+     * block against the resident project's committed script and scene (#1176) —
+     * a long production stops re-sending them every beat. Mixed calls are
+     * refused.
+     */
+    script?: IAutoMovieScriptApplication.IWrite;
     /** The staged scene this beat blocks over (a successful `stage` result). */
-    staged: IAutoMovieStagedSet.ISuccess;
+    staged?: IAutoMovieStagedSet.ISuccess;
     /** The blocking plan: the beat's movement intents and timing anchors. */
     blocking: IAutoMovieBlockingApplication.IWrite;
     /**
@@ -942,7 +947,9 @@ export class AutoMovieApplication {
      * `getShotEndState`'s) result so this beat blocks as a continuation:
      * carried actors are gated as staged nodes and the validated state is
      * surfaced on the success as `previous` for the performance stage to seed
-     * from. Omit for the first beat or an intentional hard reset.
+     * from. A RESIDENT block seeds this automatically from the committed
+     * previous beat's end-state (script order) when omitted; omit everywhere
+     * only for the first beat or an intentional hard reset.
      */
     previous?: IAutoMovieBeatEndState;
   }): IAutoMovieBlockOutput {
