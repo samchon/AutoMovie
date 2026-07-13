@@ -49,6 +49,23 @@ Overrides via env: `CHROME=/path/to/chrome` (binary), `BASE=http://host:port`
 `[page, query, durationSeconds, frameCount, width, height, outPath, fps]` to
 capture a new clip. Encoding uses `h264-mp4-encoder` (wasm) + `pngjs`.
 
+## Capture smoke (`smoke:capture`, #1170)
+
+The one REAL (non-faked) headless-capture check: Chrome renders the live
+stickman page, the multi-pass adapter captures beauty/mask/pose twice, and the
+frames are judged **structurally** (not byte-hashed against a golden file —
+GPU rasterization differs across hosts): two sessions must be byte-identical
+to each other, the mask must carry the exact segment color over a plausible
+subject fraction on dominant black, the pose must draw white skeleton lines,
+and beauty must differ from mask. Reuses a running dev server at `--base`
+(default `http://127.0.0.1:5173`), else spawns and kills its own Vite. Needs
+Google Chrome (`--chrome` / `CHROME` to override). Exits non-zero on any
+failed check.
+
+```bash
+pnpm smoke:capture
+```
+
 ## Render-and-see artifact (`.mp4` + `.json` + frames)
 
 `render:see` is the render seam smoke path: it drives one playground route
