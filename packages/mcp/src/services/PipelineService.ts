@@ -51,12 +51,13 @@ import {
 } from "./actionTargets";
 
 type PerformProps = {
-  script: IAutoMovieScriptApplication.IWrite;
-  staged: IAutoMovieStagedSet.ISuccess;
+  script?: IAutoMovieScriptApplication.IWrite;
+  staged?: IAutoMovieStagedSet.ISuccess;
   performance: IAutoMoviePerformanceApplication.IWrite;
   actors: Record<string, IAutoMovieMcpActorContext>;
   clips?: Record<string, IAutoMovieMcpMotion>;
   blocking?: IAutoMovieBlockingApplication.IWrite;
+  mounts?: IAutoMovieStagedSet.IMount[];
 };
 
 /**
@@ -198,7 +199,76 @@ export class PipelineService {
     const requestRoot = validatePipelineRequestRoot(props);
     if (requestRoot.length > 0)
       return { performed: { success: false, violations: requestRoot } };
-    const shapeViolations = validatePerformShape(props);
+    // Resident-or-explicit (#1176): same pairing rule as block. The resident
+    // form reads the committed script and scene, and takes staging mounts as
+    // the one explicit parameter (the getShotEndState precedent — mounts are
+    // not a resident slice); an explicit staged set already carries its own.
+    const resident = props.staged === undefined;
+    if (resident !== (props.script === undefined))
+      return {
+        performed: {
+          success: false,
+          violations: [
+            violation(
+              "type",
+              "$input",
+              "script and staged travel together: pass both (explicit) or omit both (resident)",
+              {
+                script: props.script !== undefined,
+                staged: props.staged !== undefined,
+              },
+            ),
+          ],
+        },
+      };
+    if (!resident && props.mounts !== undefined)
+      return {
+        performed: {
+          success: false,
+          violations: [
+            violation(
+              "type",
+              "$input.mounts",
+              "mounts is the resident form's parameter — an explicit staged set already carries its mounts",
+              props.mounts,
+            ),
+          ],
+        },
+      };
+    let script = props.script;
+    let staged = props.staged;
+    if (resident) {
+      const slate = this.context!.requireProject("perform").writableSlate();
+      const missing: IAutoMovieConstraintViolation[] = [];
+      if (slate.script === null)
+        missing.push(
+          violation(
+            "type",
+            "$slate.script",
+            "a script must be committed before a resident perform",
+            slate.script,
+          ),
+        );
+      if (slate.scene === null)
+        missing.push(
+          violation(
+            "type",
+            "$slate.scene",
+            "a scene must be committed before a resident perform",
+            slate.scene,
+          ),
+        );
+      missing.push(...validateMountsShape(props.mounts));
+      if (missing.length > 0)
+        return { performed: { success: false, violations: missing } };
+      script = { type: "write", ...slate.script! };
+      staged = {
+        success: true,
+        scene: slate.scene!,
+        mounts: props.mounts ?? [],
+      };
+    }
+    const shapeViolations = validatePerformShape(props, resident);
     if (shapeViolations.length > 0)
       return { performed: { success: false, violations: shapeViolations } };
     const actorViolations = validateActorRegistry(props.actors);
@@ -211,10 +281,7 @@ export class PipelineService {
       ]),
     );
     const nodes = new Map(
-      props.staged.scene.nodes.map((node) => [
-        node.id,
-        node.transform.translation,
-      ]),
+      staged!.scene.nodes.map((node) => [node.id, node.transform.translation]),
     );
     const synthesize = wrapEnactSynthesizer(
       makeActorSynthesizer(contexts, nodes),
@@ -231,8 +298,8 @@ export class PipelineService {
         performed: { success: false, violations: synthesisViolations },
       };
     const performed = performShot({
-      script: props.script,
-      staged: props.staged,
+      script: script!,
+      staged: staged!,
       performance: props.performance,
       synthesize,
       skeleton: (node) => contexts.get(node)?.rig ?? null,
@@ -921,13 +988,19 @@ const validateStageShape = (
 
 const validatePerformShape = (
   props: unknown,
+  resident = false,
 ): IAutoMovieConstraintViolation[] => {
   const violations: IAutoMovieConstraintViolation[] = [];
   /* c8 ignore next 2 -- perform() runs validatePipelineRequestRoot (the same isRecord gate) first and returns early on a non-object props, so this redundant guard never fails here. */
   if (!isJsonObject(props, "$input", "perform payload", violations))
     return violations;
-  validatePerformScriptShape(props.script, "$input.script", violations);
-  validatePerformStagedShape(props.staged, "$input.staged", violations);
+  // The resident form's script/scene come from the committed slate, whose
+  // shapes the commit gates already enforced (#1176) — only the caller-typed
+  // payloads need the structural floor here.
+  if (!resident) {
+    validatePerformScriptShape(props.script, "$input.script", violations);
+    validatePerformStagedShape(props.staged, "$input.staged", violations);
+  }
   validatePerformPerformanceShape(
     props.performance,
     "$input.performance",
@@ -1264,6 +1337,48 @@ const validateStageTarget = (
         target,
       ),
     );
+};
+
+/**
+ * Structural totality gate for the resident form's staging mounts (#1176):
+ * performShot walks each coupling's node and binding, so a malformed entry must
+ * refuse as violations before the engine dereferences it. Referential checks
+ * (the rider/parent exist, the bone is real) stay the engine's.
+ */
+const validateMountsShape = (
+  mounts: unknown,
+): IAutoMovieConstraintViolation[] => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  if (mounts === undefined) return violations;
+  if (!isJsonArray(mounts, "$input.mounts", "staging mounts", violations))
+    return violations;
+  mounts.forEach((mount, index) => {
+    const path = `$input.mounts[${index}]`;
+    if (!isJsonObject(mount, path, "staging mount", violations)) return;
+    requireString(mount.node, `${path}.node`, "mount rider node", violations);
+    if (
+      !isJsonObject(
+        mount.binding,
+        `${path}.binding`,
+        "mount binding",
+        violations,
+      )
+    )
+      return;
+    requireString(
+      mount.binding.parent,
+      `${path}.binding.parent`,
+      "mount parent node",
+      violations,
+    );
+    requireString(
+      mount.binding.bone,
+      `${path}.binding.bone`,
+      "mount parent bone",
+      violations,
+    );
+  });
+  return violations;
 };
 
 /**
