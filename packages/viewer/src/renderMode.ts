@@ -38,8 +38,11 @@ const once = (fn: () => void): (() => void) => {
  * the viewer stays a thin projection of the engine result:
  *
  * - `beauty` — no override (the ordinary shaded render).
- * - `depth` — every mesh swapped to `MeshDepthMaterial` (near bright, far dark
- *   within the camera range).
+ * - `depth` — every mesh swapped to a normalized-metric depth shader (#1167):
+ *   grays linear in camera-space distance over a scene-stable range
+ *   ({@link DEPTH_NORMALIZATION_RANGE}, overridable) instead of the camera's
+ *   near/far clip planes, so the same world depth reads the same gray across
+ *   shots, cuts, and chunks; black background = infinitely far.
  * - `mask` — each top-level scene child gets its own flat unlit color
  *   (deterministic golden-angle palette by child index) on a black background:
  *   the per-node segmentation pass.
@@ -56,15 +59,18 @@ const once = (fn: () => void): (() => void) => {
 export const applyRenderMode = (
   scene: THREE.Scene,
   mode: AutoMovieGuidePass,
+  options?: {
+    /** Metric range (m) the depth pass normalizes onto. Defaults to 20. */
+    depthRange?: number;
+  },
 ): IAutoMovieRenderModeHandle => {
   switch (mode) {
     case "beauty":
       return { mode, restore: () => {} };
     case "depth":
-      return overrideMaterials(
+      return applyDepthMode(
         scene,
-        mode,
-        () => new THREE.MeshDepthMaterial(),
+        options?.depthRange ?? DEPTH_NORMALIZATION_RANGE,
       );
     case "outline":
       return overrideMaterials(
@@ -88,6 +94,68 @@ export const applyRenderMode = (
  */
 export const maskColor = (index: number): THREE.Color =>
   new THREE.Color().setHSL(((index * 137.508) % 360) / 360, 1, 0.5);
+
+/**
+ * Metric range (meters) the depth pass normalizes onto (#1167). Depth grays are
+ * LINEAR in camera-space distance over `[0, range]` — white at the lens, black
+ * at `range` and beyond — and deliberately decoupled from the camera's near/far
+ * clip planes, so the same world depth maps to the same gray across shots,
+ * cuts, and chunks (per-camera clip planes vary; this range does not).
+ */
+export const DEPTH_NORMALIZATION_RANGE = 20;
+
+/**
+ * A depth material normalized on a scene-stable metric range instead of the
+ * camera's clip planes. The vertex stage includes three's skinning chunks (a
+ * plain rigid mesh compiles them out; a `SkinnedMesh` deforms correctly), so
+ * the depth of a posed skinned character is the deformed surface's, not the
+ * bind pose's.
+ */
+const makeNormalizedDepthMaterial = (range: number): THREE.ShaderMaterial =>
+  new THREE.ShaderMaterial({
+    uniforms: { depthRange: { value: range } },
+    vertexShader: `
+      #include <common>
+      #include <skinning_pars_vertex>
+      varying float vViewZ;
+      void main() {
+        #include <skinbase_vertex>
+        #include <begin_vertex>
+        #include <skinning_vertex>
+        vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
+        vViewZ = -mvPosition.z;
+        gl_Position = projectionMatrix * mvPosition;
+      }`,
+    fragmentShader: `
+      uniform float depthRange;
+      varying float vViewZ;
+      void main() {
+        float gray = clamp(1.0 - vViewZ / depthRange, 0.0, 1.0);
+        gl_FragColor = vec4(vec3(gray), 1.0);
+      }`,
+  });
+
+/**
+ * Depth pass: every mesh renders its normalized metric depth over a black
+ * (infinitely far) background.
+ */
+const applyDepthMode = (
+  scene: THREE.Scene,
+  range: number,
+): IAutoMovieRenderModeHandle => {
+  const background = scene.background;
+  scene.background = new THREE.Color(0x000000);
+  const materials = overrideMaterials(scene, "depth", () =>
+    makeNormalizedDepthMaterial(range),
+  );
+  return {
+    mode: "depth",
+    restore: once(() => {
+      materials.restore();
+      scene.background = background;
+    }),
+  };
+};
 
 type MeshLike = THREE.Mesh & {
   material: THREE.Material | THREE.Material[];
