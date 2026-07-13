@@ -87,28 +87,107 @@ export class PipelineService {
   }
 
   public block(props: {
-    script: IAutoMovieScriptApplication.IWrite;
-    staged: IAutoMovieStagedSet.ISuccess;
+    script?: IAutoMovieScriptApplication.IWrite;
+    staged?: IAutoMovieStagedSet.ISuccess;
     blocking: IAutoMovieBlockingApplication.IWrite;
     previous?: IAutoMovieBeatEndState;
   }): IAutoMovieBlockOutput {
     const requestRoot = validatePipelineRequestRoot(props);
     if (requestRoot.length > 0)
       return { blocked: { success: false, violations: requestRoot } };
+    // Resident-or-explicit (#1176): script and staged travel together — the
+    // explicit form is a pure transform, the resident form reads both from the
+    // committed slate so a long production stops re-sending the staged scene
+    // every beat. A mixed call is ambiguous about which scene the beat blocks
+    // over, so it is refused rather than guessed.
+    const resident = props.staged === undefined;
+    if (resident !== (props.script === undefined))
+      return {
+        blocked: {
+          success: false,
+          violations: [
+            violation(
+              "type",
+              "$input",
+              "script and staged travel together: pass both (explicit) or omit both (resident)",
+              {
+                script: props.script !== undefined,
+                staged: props.staged !== undefined,
+              },
+            ),
+          ],
+        },
+      };
+    let script = props.script;
+    let staged = props.staged;
+    let previous = props.previous;
+    let scriptRoot = "$input.script";
+    let stagedRoot = "$input.staged";
+    if (resident) {
+      const slate = this.context!.requireProject("block").writableSlate();
+      const missing: IAutoMovieConstraintViolation[] = [];
+      if (slate.script === null)
+        missing.push(
+          violation(
+            "type",
+            "$slate.script",
+            "a script must be committed before a resident block",
+            slate.script,
+          ),
+        );
+      if (slate.scene === null)
+        missing.push(
+          violation(
+            "type",
+            "$slate.scene",
+            "a scene must be committed before a resident block",
+            slate.scene,
+          ),
+        );
+      if (missing.length > 0)
+        return { blocked: { success: false, violations: missing } };
+      script = { type: "write", ...slate.script! };
+      // blockBeat reads only the staged scene's nodes; staging-level mounts
+      // are not a resident slice (the getShotEndState precedent), and block
+      // never consumes them.
+      staged = { success: true, scene: slate.scene!, mounts: [] };
+      scriptRoot = "$slate.script";
+      stagedRoot = "$slate.scene";
+      // Continuity-seed: when the caller carries nothing explicitly, the
+      // previous beat's committed end-state (script order) seeds the block.
+      // An uncommitted predecessor seeds nothing — same as a first beat.
+      if (previous === undefined && isRecord(props.blocking)) {
+        const beat = props.blocking.beat;
+        const index = slate.script!.beats.findIndex((b) => b.id === beat);
+        if (index > 0) {
+          const prevId = slate.script!.beats[index - 1]!.id;
+          previous = slate.beatEnds.find((e) => e.beat === prevId);
+        }
+      }
+    }
     const violations = validateBlockShape(
-      props.script,
-      props.staged,
+      script,
+      resident ? staged!.scene : staged,
       props.blocking,
+      scriptRoot,
+      stagedRoot,
+      resident,
     );
-    violations.push(...validatePreviousShape(props.previous));
+    if (props.previous !== undefined)
+      violations.push(...validatePreviousShape(props.previous));
     if (violations.length > 0)
       return { blocked: { success: false, violations } };
     return {
       blocked: remapMcpBlockedBeatPaths(
-        blockBeat(props.script, props.staged, props.blocking, props.previous),
+        blockBeat(script!, staged!, props.blocking, previous),
         [
-          ["$script", "$input.script"],
-          ["$previous", "$input.previous"],
+          ["$script", scriptRoot],
+          [
+            "$previous",
+            props.previous !== undefined
+              ? "$input.previous"
+              : "$slate.beatEnds",
+          ],
           ["$input", "$input.blocking"],
         ],
       ),
@@ -1196,8 +1275,9 @@ const validateStageTarget = (
 const validatePreviousShape = (
   previous: unknown,
 ): IAutoMovieConstraintViolation[] => {
+  // Caller-gated: block only shape-checks an EXPLICIT previous (a resident
+  // auto-seed comes from storage the commit gates already validated).
   const violations: IAutoMovieConstraintViolation[] = [];
-  if (previous === undefined) return violations;
   if (
     !isJsonObject(previous, "$input.previous", "previous beat-end", violations)
   )
@@ -1233,45 +1313,49 @@ const validatePreviousShape = (
 
 const validateBlockShape = (
   script: unknown,
-  staged: unknown,
+  stagedOrScene: unknown,
   blocking: unknown,
+  scriptRoot = "$input.script",
+  stagedRoot = "$input.staged",
+  sceneDirect = false,
 ): IAutoMovieConstraintViolation[] => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  if (isJsonObject(script, "$input.script", "script", violations)) {
+  if (isJsonObject(script, scriptRoot, "script", violations)) {
     if (
       isJsonArray(
         script.beats,
-        "$input.script.beats",
+        `${scriptRoot}.beats`,
         "script beats",
         violations,
       )
     )
       script.beats.forEach((beat, index) => {
-        const path = `$input.script.beats[${index}]`;
+        const path = `${scriptRoot}.beats[${index}]`;
         if (!isJsonObject(beat, path, "script beat", violations)) return;
         requireString(beat.id, `${path}.id`, "beat id", violations);
       });
   }
 
-  if (isJsonObject(staged, "$input.staged", "staged set", violations)) {
-    if (
-      isJsonObject(staged.scene, "$input.staged.scene", "scene", violations)
-    ) {
-      const nodes = staged.scene.nodes;
-      if (
-        isJsonArray(
-          nodes,
-          "$input.staged.scene.nodes",
-          "scene nodes",
-          violations,
-        )
-      )
-        nodes.forEach((node, index) => {
-          const path = `$input.staged.scene.nodes[${index}]`;
-          if (!isJsonObject(node, path, "scene node", violations)) return;
-          requireString(node.id, `${path}.id`, "scene node id", violations);
-        });
-    }
+  // Explicit calls carry a staged SET ({ scene, mounts }); the resident form
+  // reads the committed scene slice directly, so the shape gate addresses it
+  // without the `.scene` wrapper (#1176).
+  const sceneRoot = sceneDirect ? stagedRoot : `${stagedRoot}.scene`;
+  const scene = sceneDirect
+    ? stagedOrScene
+    : isJsonObject(stagedOrScene, stagedRoot, "staged set", violations)
+      ? stagedOrScene.scene
+      : undefined;
+  if (
+    scene !== undefined &&
+    isJsonObject(scene, sceneRoot, "scene", violations)
+  ) {
+    const nodes = scene.nodes;
+    if (isJsonArray(nodes, `${sceneRoot}.nodes`, "scene nodes", violations))
+      nodes.forEach((node, index) => {
+        const path = `${sceneRoot}.nodes[${index}]`;
+        if (!isJsonObject(node, path, "scene node", violations)) return;
+        requireString(node.id, `${path}.id`, "scene node id", violations);
+      });
   }
 
   validateBlockingShape(blocking, "$input.blocking", violations);

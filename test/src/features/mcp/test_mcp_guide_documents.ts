@@ -22,6 +22,7 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["AUTOMOVIE_OVERALL", "an *implausible* one is a suppressible warning"],
   ["AUTOMOVIE_OVERALL", "semantic Euler degrees"],
   ["PROPS", "crude proxy, rich meaning"],
+  ["BLOCKING", "stops re-sending the staged scene every beat"],
   ["BLOCKING", "pass it as `block`'s `previous`"],
   ["FORGE", "an actor with no body"],
   ["FORGE", "silhouette reads as this character"],
