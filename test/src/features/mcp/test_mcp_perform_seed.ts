@@ -54,10 +54,11 @@ const perf = (beat: string) =>
     ],
   });
 
-/** A context whose `position`/`facingDeg` the caller chooses to carry or omit. */
+/** A context whose per-beat openings the caller chooses to carry or omit. */
 const actorContext = (opening: {
   position?: IAutoMovieVector3;
   facingDeg?: number;
+  gaitPhase?: number | null;
 }): IAutoMovieMcpActorContext => {
   const skeleton = createSkeleton();
   return {
@@ -71,9 +72,17 @@ const actorContext = (opening: {
   };
 };
 
-/** Where and how each knight ended beat-1 — the seed source of truth. */
+/**
+ * Where and how each knight ended beat-1 — the seed source of truth. knightA
+ * closed mid-stride (a recorded gait phase); knightB's close was non-looping
+ * (`null`), so its omitted phase stays an omission.
+ */
 const ENDINGS = {
-  knightA: { position: { x: 0.25, y: 0, z: 0.05 }, facingDeg: 90 },
+  knightA: {
+    position: { x: 0.25, y: 0, z: 0.05 },
+    facingDeg: 90,
+    gaitPhase: 0.25,
+  },
   knightB: { position: { x: -0.25, y: 0, z: 0.1 }, facingDeg: 0 },
 } as const;
 
@@ -87,7 +96,7 @@ const endActor = (node: keyof typeof ENDINGS): IAutoMovieBeatEndActorState => {
     pose: null,
     motion: null,
     localTime: 2,
-    gaitPhase: null,
+    gaitPhase: "gaitPhase" in ending ? ending.gaitPhase : null,
     rootVelocity: null,
     footPlants: null,
     mount: null,
@@ -110,8 +119,10 @@ const beatOneEnd: IAutoMovieBeatEndState = {
  * Scenarios:
  *
  * 1. With beat-1's end committed, a beat-2 resident perform whose contexts omit
- *    both fields compiles the SAME motions as one that passes the end-state
- *    values explicitly — the facing vector→degrees conversion included.
+ *    the openings compiles the SAME motions as one that passes the end-state
+ *    values explicitly — the facing vector→degrees conversion and the
+ *    mid-stride gait phase (#1176 PR-6) included; a `null` recorded phase stays
+ *    an omission.
  * 2. Partial omission seeds only the missing field; the explicit field wins.
  * 3. Nothing to inherit is refused with the commitBeatEnd hint, per missing field:
  *    a first beat (no predecessor) and an uncommitted predecessor.
@@ -219,17 +230,18 @@ export const test_mcp_perform_seed = (): void => {
       { shot: explicit.shot, motions: explicit.motions },
     );
 
-    // 2. partial omission seeds only the missing field, and an explicit value
+    // 2. partial omission seeds only the missing fields, and an explicit value
     // wins over the committed end: knightA keeps its own 270° (the ending says
-    // 90°) while its position is seeded; knightB keeps its own repositioning
-    // while its facing is seeded. The twin passes everything explicitly and
-    // must compile identically.
+    // 90°) while its position AND mid-stride gait phase are seeded; knightB
+    // keeps its own repositioning and explicit null phase while its facing is
+    // seeded. The twin passes everything explicitly and must compile
+    // identically.
     const repositioned: IAutoMovieVector3 = { x: 0.3, y: 0, z: -0.15 };
     const partial = app.perform({
       performance: perf("beat-2"),
       actors: {
         knightA: actorContext({ facingDeg: 270 }),
-        knightB: actorContext({ position: repositioned }),
+        knightB: actorContext({ position: repositioned, gaitPhase: null }),
       },
     }).performed;
     const partialTwin = app.perform({
@@ -238,10 +250,12 @@ export const test_mcp_perform_seed = (): void => {
         knightA: actorContext({
           position: ENDINGS.knightA.position,
           facingDeg: 270,
+          gaitPhase: ENDINGS.knightA.gaitPhase,
         }),
         knightB: actorContext({
           position: repositioned,
           facingDeg: ENDINGS.knightB.facingDeg,
+          gaitPhase: null,
         }),
       },
     }).performed;
@@ -271,6 +285,20 @@ export const test_mcp_perform_seed = (): void => {
       "a non-object context passes the seeder and fails the registry gate",
       nonRecordContext.success === false &&
         hasViolation(nonRecordContext, "type", "$input.actors.knightA"),
+    );
+    const badPhase = app.perform({
+      performance: perf("beat-2"),
+      actors: {
+        knightA: actorContext({
+          ...ENDINGS.knightA,
+          gaitPhase: "mid" as never,
+        }),
+      },
+    }).performed;
+    TestValidator.predicate(
+      "a non-numeric gaitPhase is refused at the field",
+      badPhase.success === false &&
+        hasViolation(badPhase, "type", "$input.actors.knightA.gaitPhase"),
     );
     // ...and the EXPLICIT form still demands both fields itself.
     const explicitOmission = app.perform({

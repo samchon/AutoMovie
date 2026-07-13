@@ -657,6 +657,15 @@ export interface IAutoMovieMcpActorContext {
    */
   facingDeg?: number;
 
+  /**
+   * Seconds into the looping gait cycle at the shot's start — a beat that opens
+   * mid-stride resumes the walk at this phase instead of restarting it.
+   * Omittable in a RESIDENT `perform` exactly like `position` (#1176): seeded
+   * from the previous beat's committed end-state `gaitPhase` when it recorded
+   * one. `null` (or omission with nothing recorded) starts the cycle at zero.
+   */
+  gaitPhase?: number | null;
+
   /** Eye height above the actor position, meters. */
   eyeHeight: number;
 
@@ -673,13 +682,14 @@ export interface IAutoMovieMcpActorContext {
 /**
  * A stored actor context as `actors/<node>.json` holds it (#1176): the
  * beat-invariant half of {@link IAutoMovieMcpActorContext} — everything but
- * `position`/`facingDeg`, which are per-beat openings the continuity seed (or
- * the caller) supplies. A resident `perform` with explicit `actors` writes
- * these through; later resident performs omit `actors` and read them back.
+ * `position`/`facingDeg`/`gaitPhase`, which are per-beat openings the
+ * continuity seed (or the caller) supplies. A resident `perform` with explicit
+ * `actors` writes these through; later resident performs omit `actors` and read
+ * them back.
  */
 export interface IAutoMovieMcpActorSpec extends Omit<
   IAutoMovieMcpActorContext,
-  "position" | "facingDeg"
+  "position" | "facingDeg" | "gaitPhase"
 > {
   /** The scene node / cast id this context belongs to (the storage key). */
   node: string;
