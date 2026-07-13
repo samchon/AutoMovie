@@ -10,6 +10,7 @@ import {
   IAutoMovieValidation,
 } from "@automovie/interface";
 import {
+  AUTOMOVIE_GUIDE_PASSES,
   IAutoMovieCaptionSidecar,
   IAutoMovieRenderChunkPlan,
   ffmpegArgs,
@@ -871,7 +872,7 @@ const resolveGuidePasses = (
         violations,
         "type",
         `$input.passes[${index}]`,
-        `guide pass "${pass}" must be one of beauty, depth, mask, outline, pose`,
+        `guide pass "${pass}" must be one of ${AUTOMOVIE_GUIDE_PASSES.join(", ")}`,
         pass,
       );
     }
@@ -890,7 +891,7 @@ const resolveGuidePass = (
     violations,
     "type",
     "$input.pass",
-    `guide pass "${pass}" must be one of beauty, depth, mask, outline, pose`,
+    `guide pass "${pass}" must be one of ${AUTOMOVIE_GUIDE_PASSES.join(", ")}`,
     pass,
   );
   return null;

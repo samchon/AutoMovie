@@ -32,7 +32,7 @@ export const test_render_guide_passes = (): void => {
   TestValidator.equals(
     "closed pass list",
     [...AUTOMOVIE_GUIDE_PASSES],
-    ["beauty", "depth", "mask", "outline", "pose"],
+    ["beauty", "depth", "mask", "normal", "outline", "pose"],
   );
   TestValidator.equals("known pass accepted", isGuidePass("depth"), true);
   TestValidator.equals("unknown pass rejected", isGuidePass("sketch"), false);
