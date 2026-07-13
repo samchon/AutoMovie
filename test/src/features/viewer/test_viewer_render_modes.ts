@@ -1,4 +1,5 @@
 import {
+  DEPTH_NORMALIZATION_RANGE,
   POSE_OVERLAY_NAME,
   applyRenderMode,
   buildModel,
@@ -62,8 +63,10 @@ const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
  * Scenarios:
  *
  * 1. `beauty` is a no-op: materials keep their exact instances.
- * 2. `depth` swaps every mesh to `MeshDepthMaterial` and restore returns the
- *    original instances.
+ * 2. `depth` swaps every mesh to the normalized-metric depth shader (#1167) —
+ *    grays linear over a scene-stable range decoupled from camera near/far
+ *    (default 20 m, overridable) — on a black (far) background; restore returns
+ *    the original instances and background.
  * 3. `outline` swaps to `MeshNormalMaterial` (the normal-based edge source).
  * 4. `mask` gives each top-level scene node a distinct deterministic flat color on
  *    a black background; restore returns materials and background.
@@ -83,16 +86,52 @@ export const test_viewer_render_modes = (): void => {
   );
   beauty.restore();
 
+  const backgroundBefore = scene.background;
   const depth = applyRenderMode(scene, "depth");
   TestValidator.predicate(
-    "depth swaps every mesh material",
-    meshes.every((mesh) => mesh.material instanceof THREE.MeshDepthMaterial),
+    "depth swaps every mesh to the normalized-metric shader",
+    meshes.every(
+      (mesh) =>
+        mesh.material instanceof THREE.ShaderMaterial &&
+        mesh.material.uniforms.depthRange!.value ===
+          DEPTH_NORMALIZATION_RANGE &&
+        mesh.material.fragmentShader.includes("vViewZ / depthRange"),
+    ),
+  );
+  TestValidator.predicate(
+    "depth deforms skinned meshes (skinning chunks compiled in)",
+    meshes.every(
+      (mesh) =>
+        mesh.material instanceof THREE.ShaderMaterial &&
+        mesh.material.vertexShader.includes("skinning_vertex"),
+    ),
+  );
+  TestValidator.predicate(
+    "depth renders over a black (far) background",
+    scene.background instanceof THREE.Color &&
+      scene.background.getHex() === 0x000000,
   );
   depth.restore();
   TestValidator.predicate(
     "depth restore returns the original instances",
     meshes.every((mesh, i) => mesh.material === originals[i]),
   );
+  TestValidator.equals(
+    "depth restore returns the background",
+    scene.background,
+    backgroundBefore,
+  );
+
+  const customRange = applyRenderMode(scene, "depth", { depthRange: 8 });
+  TestValidator.predicate(
+    "an explicit depthRange overrides the default",
+    meshes.every(
+      (mesh) =>
+        mesh.material instanceof THREE.ShaderMaterial &&
+        mesh.material.uniforms.depthRange!.value === 8,
+    ),
+  );
+  customRange.restore();
 
   const outline = applyRenderMode(scene, "outline");
   TestValidator.predicate(
