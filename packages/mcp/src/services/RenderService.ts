@@ -3,8 +3,10 @@ import {
   AutoMovieGuidePass,
   IAutoMovieConstraintViolation,
   IAutoMovieRenderSpec,
+  IAutoMovieScene,
   IAutoMovieSequence,
   IAutoMovieShot,
+  IAutoMovieSkeleton,
   IAutoMovieValidation,
 } from "@automovie/interface";
 import {
@@ -19,14 +21,17 @@ import {
   planCaptionSidecar,
   planChunkedSequenceRender,
   planGuidePassOutputs,
+  planPoseKeypointSidecar,
   planSequenceRender,
   renderPathStem,
   sliceCaptionSidecar,
 } from "@automovie/render";
 
 import { AutoMovieContext } from "../AutoMovieContext";
+import { toEngineMotion } from "../convert";
 import {
   IAutoMovieMcpCaptureRequest,
+  IAutoMovieMcpMotion,
   IAutoMovieMcpRenderChunk,
   IAutoMovieMcpRenderChunkPlan,
   IAutoMovieMcpRenderPlan,
@@ -34,6 +39,7 @@ import {
   IAutoMovieMcpWritableSlate,
   IAutoMoviePlanCaptionsOutput,
   IAutoMoviePlanChunkedRenderOutput,
+  IAutoMoviePlanPoseKeypointsOutput,
   IAutoMoviePlanRenderOutput,
   IAutoMovieSeeFrameOutput,
 } from "../dto";
@@ -44,8 +50,13 @@ import {
   pushViolation,
   validateArrayArtifact,
   validateNonEmptyId,
+  validateObjectArtifact,
   validateRange,
 } from "../validators/primitives";
+import {
+  appendMcpMotionShape,
+  appendMcpSkeletonShape,
+} from "./ValidationService";
 
 /**
  * The render/see loop — deterministic render planning and the host-adapter
@@ -219,6 +230,34 @@ export class RenderService {
       return { validation: slateValidation, sidecar: null, chunks: null };
     const source = this.resolveSlate(props.slate, "planCaptions");
     return buildCaptionPlan({
+      ...props,
+      slate: source.slate,
+      slateRoot: source.root,
+    });
+  }
+
+  /**
+   * Plan the per-frame pose-keypoint sidecar (#1168) — the OpenPose-style
+   * companion a diffusion host reads beside the guide frames. Resident-or-
+   * explicit for the slate (scene, shots, film); motions are DERIVED, never
+   * stored, so the caller supplies the `motions` registry (and the skeletons
+   * they target) exactly as `commitShot`/`lintContinuity` do.
+   */
+  public planPoseKeypoints(props: {
+    slate?: IAutoMovieMcpWritableSlate;
+    fps: number;
+    motions: Record<string, IAutoMovieMcpMotion>;
+    skeletons: IAutoMovieSkeleton[];
+    aspect?: number;
+  }): IAutoMoviePlanPoseKeypointsOutput {
+    const rootValidation = validateRenderRequestRoot(props);
+    if (rootValidation !== null)
+      return { validation: rootValidation, sidecar: null };
+    const slateValidation = validateExplicitRenderSlateRoot(props.slate);
+    if (slateValidation !== null)
+      return { validation: slateValidation, sidecar: null };
+    const source = this.resolveSlate(props.slate, "planPoseKeypoints");
+    return buildPoseKeypointPlan({
       ...props,
       slate: source.slate,
       slateRoot: source.root,
@@ -475,6 +514,193 @@ const buildCaptionPlan = (props: {
       ? null
       : sliceCaptionChunks(sidecar, props.chunkFrames);
   return { validation: { success: true }, sidecar, chunks };
+};
+
+/**
+ * Gate and build the pose-keypoint plan (#1168). The slate must carry a staged
+ * scene, valid shots, and a committed film; the caller-supplied motion registry
+ * and skeletons are shape-gated (plus the sampling essentials the shape gate
+ * does not cover: at least one keyframe, finite duration, finite keyframe
+ * times) so the engine planner never throws on malformed input.
+ */
+const buildPoseKeypointPlan = (props: {
+  slate: IAutoMovieMcpWritableSlate;
+  slateRoot: string;
+  fps: number;
+  motions: Record<string, IAutoMovieMcpMotion>;
+  skeletons: IAutoMovieSkeleton[];
+  aspect?: number;
+}): IAutoMoviePlanPoseKeypointsOutput => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  validateRange(
+    props.fps,
+    "$input.fps",
+    0,
+    Infinity,
+    "keypoint fps",
+    violations,
+    false,
+  );
+  if (props.aspect !== undefined)
+    validateRange(
+      props.aspect,
+      "$input.aspect",
+      0,
+      Infinity,
+      "keypoint aspect",
+      violations,
+      false,
+    );
+
+  const scene = props.slate.scene as unknown;
+  if (scene === null)
+    pushViolation(
+      violations,
+      "type",
+      `${props.slateRoot}.scene`,
+      "a scene must be committed before pose keypoints",
+      scene,
+    );
+  else
+    validateObjectArtifact(
+      scene,
+      `${props.slateRoot}.scene`,
+      "slate scene",
+      violations,
+    );
+
+  const shots = props.slate.shots as unknown;
+  const shotsReady =
+    validateArrayArtifact(
+      shots,
+      `${props.slateRoot}.shots`,
+      "slate shots",
+      violations,
+    ) &&
+    validateSlateShotEntries(
+      shots as unknown[],
+      `${props.slateRoot}.shots`,
+      violations,
+    );
+
+  const film = props.slate.film as unknown;
+  let sequence: IAutoMovieSequence | null = null;
+  let sequenceReady = false;
+  if (film === null)
+    pushViolation(
+      violations,
+      "type",
+      `${props.slateRoot}.film`,
+      "a film must be committed before pose keypoints",
+      film,
+    );
+  else if (!isRecord(film))
+    pushViolation(
+      violations,
+      "type",
+      `${props.slateRoot}.film`,
+      "slate film must be null or a JSON object",
+      film,
+    );
+  else if (shotsReady) {
+    sequence = film as unknown as IAutoMovieSequence;
+    const sequenceValidation = remapRenderValidationPaths(
+      validateSequenceArtifact(sequence, shots as IAutoMovieShot[]),
+      [
+        ["$input", `${props.slateRoot}.film`],
+        ["$shots", `${props.slateRoot}.shots`],
+      ],
+    );
+    appendValidation(violations, sequenceValidation);
+    sequenceReady = sequenceValidation.success;
+  }
+
+  const motionsReady = validateObjectArtifact(
+    props.motions as unknown,
+    "$input.motions",
+    "motion registry",
+    violations,
+  );
+  if (motionsReady)
+    for (const [key, motion] of Object.entries(props.motions)) {
+      const path = `$input.motions.${key}`;
+      appendMcpMotionShape(violations, motion, path);
+      if (!isRecord(motion)) continue;
+      // Sampling essentials the shape gate does not cover: sampleMotion throws
+      // on an empty keyframe list, and a non-finite duration/time yields NaN
+      // poses downstream instead of an honest refusal.
+      if (Array.isArray(motion.keyframes)) {
+        if (motion.keyframes.length === 0)
+          pushViolation(
+            violations,
+            "type",
+            `${path}.keyframes`,
+            "a motion must have at least one keyframe to sample",
+            motion.keyframes,
+          );
+        motion.keyframes.forEach((keyframe, index) => {
+          if (isRecord(keyframe) && !Number.isFinite(keyframe.time))
+            pushViolation(
+              violations,
+              "range",
+              `${path}.keyframes[${index}].time`,
+              `keyframe time must be a finite number, but was ${keyframe.time}`,
+              keyframe.time,
+            );
+        });
+      }
+      if (!Number.isFinite(motion.duration))
+        pushViolation(
+          violations,
+          "range",
+          `${path}.duration`,
+          `motion duration must be a finite number, but was ${motion.duration}`,
+          motion.duration,
+        );
+    }
+
+  const skeletonsReady = validateArrayArtifact(
+    props.skeletons as unknown,
+    "$input.skeletons",
+    "skeletons",
+    violations,
+  );
+  if (skeletonsReady)
+    props.skeletons.forEach((skeleton, index) =>
+      appendMcpSkeletonShape(
+        violations,
+        skeleton,
+        `$input.skeletons[${index}]`,
+      ),
+    );
+
+  const duration =
+    sequenceReady && sequence !== null
+      ? sequenceRuntime(sequence, shots as IAutoMovieShot[])
+      : 0;
+  if (sequenceReady && Math.round(duration * props.fps) === 0)
+    pushViolation(
+      violations,
+      "range",
+      "$input.fps",
+      "keypoint fps and film duration must produce at least one frame",
+      { fps: props.fps, duration },
+    );
+  const validation = toValidation(violations);
+  if (validation.success === false) return { validation, sidecar: null };
+
+  return {
+    validation: { success: true },
+    sidecar: planPoseKeypointSidecar({
+      sequence: sequence!,
+      shots: shots as IAutoMovieShot[],
+      scenes: [props.slate.scene as IAutoMovieScene],
+      motions: Object.values(props.motions).map(toEngineMotion),
+      skeletons: props.skeletons,
+      fps: props.fps,
+      aspect: props.aspect,
+    }),
+  };
 };
 
 /**

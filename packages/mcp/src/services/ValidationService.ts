@@ -317,7 +317,12 @@ const appendMcpPoseShape = (
     validateTransformArtifact(root, `${path}.root`, "pose root", violations);
 };
 
-const appendMcpMotionShape = (
+/**
+ * Structural shape gate for an MCP motion (object root, id, keyframes with
+ * pose/expression/bezier shapes) — shared with `planPoseKeypoints`, which must
+ * refuse a malformed clip as violations before the engine would throw on it.
+ */
+export const appendMcpMotionShape = (
   violations: IAutoMovieConstraintViolation[],
   motion: unknown,
   path: string,
@@ -596,7 +601,12 @@ const validateMcpModelShape = (
   return toValidation(violations);
 };
 
-const appendMcpSkeletonShape = (
+/**
+ * Structural shape gate for an MCP skeleton (object root, id, bones with
+ * rest/constraint shapes) — shared with `planPoseKeypoints`, which resolves
+ * forward kinematics over the skeleton and must refuse a malformed one first.
+ */
+export const appendMcpSkeletonShape = (
   violations: IAutoMovieConstraintViolation[],
   skeleton: unknown,
   path: string,

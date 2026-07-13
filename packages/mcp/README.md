@@ -58,6 +58,7 @@ pure stateless call, or omit it to read/commit the resident project opened with
 | `planRender` | slate + render spec -> frame schedule and ffmpeg args | `@automovie/render` planning |
 | `planChunkedRender` | slate + render spec + chunkFrames -> frame-atomic chunk plans + reassembly | `@automovie/render` chunking |
 | `planCaptions` | slate + fps (+ chunkFrames) -> caption sidecar (+ chunk-aligned slices) | `planCaptionSidecar` |
+| `planPoseKeypoints` | slate + fps + motions + skeletons -> per-frame OpenPose keypoint sidecar | `planPoseKeypointSidecar` |
 | `seeFrame` | slate + render spec + frame/time -> preview frame + optional captured image | `@automovie/render` planning + host capture |
 | `stage` | script + staging -> staged scene (or violations) | `stageScene` |
 | `block` | script + staged scene + blocking -> blocked beat (or violations) | `blockBeat` |
