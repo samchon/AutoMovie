@@ -10,7 +10,7 @@
 
 ## Continuity Across Beats
 
-`getShotEndState` derives a resumable end-state from the beat's performed shot — end pose, folded world transform, root velocity, gait phase, and mounts — and `commitBeatEnd` persists it, so continuity is engine-derived, never hand-authored. Read the previous beat's end state with `getBeatEnd` and author the next beat to continue from it: start actors where they ended, keep a walking character mid-stride instead of resetting the cycle, keep a rider mounted. Continuity is data, not vibes.
+`getShotEndState` derives a resumable end-state from the beat's performed shot — end pose, folded world transform, root velocity, gait phase, and mounts — and `commitBeatEnd` persists it, so continuity is engine-derived, never hand-authored. Read the previous beat's end state with `getBeatEnd` and pass it as `block`'s `previous`: the engine gates that every carried actor is a staged node and surfaces the validated state on the success, so the next beat blocks as a continuation — start actors where they ended, keep a walking character mid-stride instead of resetting the cycle, keep a rider mounted. Omit `previous` only for the first beat or an intentional hard reset. Continuity is data, not vibes.
 
 ## Coherence
 

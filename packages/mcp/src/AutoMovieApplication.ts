@@ -937,6 +937,14 @@ export class AutoMovieApplication {
     staged: IAutoMovieStagedSet.ISuccess;
     /** The blocking plan: the beat's movement intents and timing anchors. */
     blocking: IAutoMovieBlockingApplication.IWrite;
+    /**
+     * The previous beat's resolved end-state (#1176) — pass `getBeatEnd`'s (or
+     * `getShotEndState`'s) result so this beat blocks as a continuation:
+     * carried actors are gated as staged nodes and the validated state is
+     * surfaced on the success as `previous` for the performance stage to seed
+     * from. Omit for the first beat or an intentional hard reset.
+     */
+    previous?: IAutoMovieBeatEndState;
   }): IAutoMovieBlockOutput {
     return this.pipeline.block(props);
   }
