@@ -41,6 +41,7 @@ import {
 import {
   IAutoMovieCaptionSidecar,
   IAutoMovieGuidePassOutput,
+  IAutoMoviePoseKeypointSidecar,
   IAutoMovieRenderPassManifest,
   IAutoMovieRenderReassembly,
 } from "@automovie/render";
@@ -512,6 +513,15 @@ export interface IAutoMoviePlanCaptionsOutput {
    * no chunking was requested (or on validation failure).
    */
   chunks: IAutoMovieCaptionSidecar[] | null;
+}
+
+/** Pose-keypoint sidecar planning result (#1168). */
+export interface IAutoMoviePlanPoseKeypointsOutput {
+  /** Success or field-located violations explaining why keypoints cannot plan. */
+  validation: IAutoMovieValidation;
+
+  /** The per-frame pose-keypoint sidecar, or null when validation failed. */
+  sidecar: IAutoMoviePoseKeypointSidecar | null;
 }
 
 /**

@@ -55,6 +55,7 @@ import {
   IAutoMoviePerformOutput,
   IAutoMoviePlanCaptionsOutput,
   IAutoMoviePlanChunkedRenderOutput,
+  IAutoMoviePlanPoseKeypointsOutput,
   IAutoMoviePlanRenderOutput,
   IAutoMoviePropEraseOutput,
   IAutoMovieRegisterAssetOutput,
@@ -867,6 +868,37 @@ export class AutoMovieApplication {
     chunkFrames?: number;
   }): IAutoMoviePlanCaptionsOutput {
     return this.render.planCaptions(props);
+  }
+
+  /**
+   * Plan the per-frame pose-keypoint sidecar (#1168): for every output frame of
+   * the committed film, each performing actor's named humanoid joints projected
+   * through the live camera to normalized [0,1] frame coordinates — the exact
+   * OpenPose-style data a pose-conditioned diffusion pass (ControlNet) reads
+   * beside the rendered guide frames. Off-frame joints are never clamped (a
+   * clamped point reads as a false edge keypoint); they carry `inFrame: false`.
+   * The slate is resident-or-explicit and must carry a committed scene, shots,
+   * and film. Motions are derived, never stored, so pass the `motions` registry
+   * the shots' performances reference (and the skeletons they target) exactly
+   * as resident `commitShot` does. Deterministic: same inputs, byte-identical
+   * sidecar.
+   *
+   * @param props The slate, output fps, motion registry, skeletons, and aspect.
+   * @returns The per-frame keypoint sidecar, or violations when it cannot plan.
+   */
+  public planPoseKeypoints(props: {
+    /** Slate whose scene, shots, and film supply the cut; omit for resident. */
+    slate?: IAutoMovieMcpWritableSlate;
+    /** Output frames per second (the render clock). */
+    fps: number;
+    /** Motions the shots' performances reference (id-keyed). */
+    motions: Record<string, IAutoMovieMcpMotion>;
+    /** Skeletons the motions target. */
+    skeletons: IAutoMovieSkeleton[];
+    /** Render aspect (width/height). Defaults to 16/9. */
+    aspect?: number;
+  }): IAutoMoviePlanPoseKeypointsOutput {
+    return this.render.planPoseKeypoints(props);
   }
 
   /**
