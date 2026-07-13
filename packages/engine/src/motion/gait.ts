@@ -161,6 +161,13 @@ const assertUniqueProfileGaitNames = (
  * a cat's stalk — the difference lives entirely in the gait data, not the
  * code.
  *
+ * `phase` slides the whole cycle by that many seconds (#1176): the clip's
+ * keyframe at local time `t` samples the gait at `t + phase`, so a beat that
+ * opens mid-stride resumes exactly where the previous beat's end-state
+ * (`gaitPhase`) left the cycle instead of restarting it — the difference
+ * between a continuous walk and a stutter at every cut. The wrapped cycle stays
+ * a seamless loop for any constant phase.
+ *
  * @author Samchon
  */
 export const gaitMotion = (
@@ -168,6 +175,7 @@ export const gaitMotion = (
   skeleton: string,
   gait: IAutoMovieGait,
   samples: number,
+  phase = 0,
 ): IAutoMovieMotion => {
   if (!Number.isInteger(samples))
     throw new Error("gait samples must be a positive integer");
@@ -176,6 +184,7 @@ export const gaitMotion = (
     throw new Error("gait period must be finite and positive");
   if (!(gait.period > 0))
     throw new Error("gait period must be finite and positive");
+  if (!Number.isFinite(phase)) throw new Error("gait phase must be finite");
   assertUniqueGaitAxes(gait.limbs);
   const keyframes: IAutoMovieKeyframe[] = [];
   for (let i = 0; i <= samples; ++i) {
@@ -184,8 +193,8 @@ export const gaitMotion = (
       time,
       pose: {
         skeleton,
-        root: gaitRoot(gait, time),
-        joints: gaitJoints(gait.limbs, time, gait.period),
+        root: gaitRoot(gait, time + phase),
+        joints: gaitJoints(gait.limbs, time + phase, gait.period),
       },
       expression: null,
       easing: "linear",
@@ -198,8 +207,13 @@ export const gaitMotion = (
     duration: gait.period,
     loop: true,
     keyframes,
-    // The bake IS one cycle: phase(t) = t % period from a fresh start.
-    gaitCycle: { period: gait.period, phaseAt: 0 },
+    // The bake IS one cycle; a phase-seeded bake starts mid-stride, so its
+    // local t = 0 sits at `phase` within the cycle: phase(t) = (phase + t) %
+    // period, and the NEXT beat's end-state records the true stride position.
+    gaitCycle: {
+      period: gait.period,
+      phaseAt: ((phase % gait.period) + gait.period) % gait.period,
+    },
   };
 };
 

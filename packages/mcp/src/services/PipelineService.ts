@@ -2036,9 +2036,12 @@ const seedActorOpenings = (
     if (!isRecord(context)) continue;
     const needsPosition = context.position === undefined;
     const needsFacing = context.facingDeg === undefined;
-    if (!needsPosition && !needsFacing) continue;
+    const needsPhase = context.gaitPhase === undefined;
+    if (!needsPosition && !needsFacing && !needsPhase) continue;
     const state = previous?.actors.find((actor) => actor.node === node);
     if (state === undefined) {
+      // A missing phase alone is never refusable — a beat with nothing
+      // recorded simply starts its gait cycles at zero.
       const unseedable = (field: string): void => {
         violations.push(
           violation(
@@ -2061,6 +2064,11 @@ const seedActorOpenings = (
       facingDeg: needsFacing
         ? Math.atan2(state.facing.x, state.facing.z) * (180 / Math.PI)
         : context.facingDeg,
+      // The end-state's null marks a non-looping close — nothing to resume, so
+      // the omission stays an omission and the cycle starts at zero.
+      ...(needsPhase && state.gaitPhase !== null
+        ? { gaitPhase: state.gaitPhase }
+        : {}),
     };
   }
   return { actors: seeded, violations };
@@ -2156,6 +2164,15 @@ const validateActorContextFields = (
     "actor context facingDeg",
     violations,
   );
+  // gaitPhase is an optional per-beat opening (#1176): absent or null starts
+  // the cycle at zero; anything else must be a finite number of seconds.
+  if (context.gaitPhase !== undefined && context.gaitPhase !== null)
+    requireFiniteNumber(
+      context.gaitPhase,
+      `${path}.gaitPhase`,
+      "actor context gaitPhase",
+      violations,
+    );
   requireFiniteNumber(
     context.eyeHeight,
     `${path}.eyeHeight`,

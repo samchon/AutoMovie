@@ -167,6 +167,7 @@ export const makeActorSynthesizer = (
         ctx.skeleton,
         gait,
         GAIT_SAMPLES,
+        ctx.gaitPhase ?? 0,
       );
       const dest = resolveTargetPoint(action.to, nodes);
       if (dest === null) return cycle; // relative/unresolved → step in place

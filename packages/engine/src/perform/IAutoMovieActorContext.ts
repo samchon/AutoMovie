@@ -31,6 +31,16 @@ export interface IAutoMovieActorContext {
   /** Locomotion speed (m/s) — how fast a `locomote` carries it. */
   speed: number;
 
+  /**
+   * Seconds into the looping gait cycle at the shot's start (#1176) — the
+   * continuity twin of the beat end-state's `gaitPhase`. A beat that opens
+   * mid-stride passes the previous beat's recorded phase here and the
+   * synthesised gait resumes at that point of the cycle instead of restarting
+   * it. Omit (or pass `null`, the end-state's non-looping marker) to start at
+   * the cycle's beginning.
+   */
+  gaitPhase?: number | null;
+
   /** Heading the actor faces, degrees about +Y (0 = +Z) — for a `lookAt`'s yaw. */
   facingDeg: number;
 
