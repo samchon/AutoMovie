@@ -10,6 +10,7 @@ import {
   stageScene,
 } from "@automovie/engine";
 import {
+  AutoMovieGuidePass,
   IAutoMovieBlockingApplication,
   IAutoMovieMotion,
   IAutoMoviePerformanceApplication,
@@ -21,8 +22,10 @@ import {
 import { type IAutoMovieSequenceRenderFrame } from "@automovie/render";
 import {
   AutoMoviePlayer,
+  IAutoMovieRenderModeHandle,
   applyObjectMotion,
   applyPose,
+  applyRenderMode,
   buildModel,
   mountViewer,
   renderCrossDissolve,
@@ -466,6 +469,17 @@ if (freezeAt !== null && Number.isFinite(freezeAt)) draw(freezeAt);
 (window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
   t: number,
 ): void => draw(t);
+// `__afPass` switches the guide pass a capturer screenshots (#1165): restore
+// whatever pass was live, apply the requested one over the already-seeked
+// scene, and re-render — so one seek yields every pass of that frame.
+let passHandle: IAutoMovieRenderModeHandle | null = null;
+(
+  window as unknown as { __afPass: (pass: AutoMovieGuidePass) => void }
+).__afPass = (pass: AutoMovieGuidePass): void => {
+  passHandle?.restore();
+  passHandle = applyRenderMode(scene, pass);
+  renderer.render(scene, camera);
+};
 (
   window as unknown as {
     __afSeekSequenceFrame: (frame: SequenceRenderFrameSample) => void;

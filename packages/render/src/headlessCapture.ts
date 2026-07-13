@@ -1,10 +1,13 @@
-import { frameName } from "./plan";
+import { AutoMovieGuidePass } from "@automovie/interface";
+
+import { guidePassFrameName } from "./guidePasses";
 import { IAutoMovieRenderAdapters } from "./renderVideo";
 
 /** Error category raised by the headless capture adapter. */
 export type AutoMovieHeadlessCaptureErrorCode =
   | "route"
   | "seek-hook"
+  | "pass-hook"
   | "capture"
   | "empty-frame";
 
@@ -94,6 +97,21 @@ export interface IAutoMovieHeadlessCaptureOptions {
   /** Browser global seek function name. Defaults to `__afSeek`. */
   seekFunction?: string;
 
+  /**
+   * Guide passes to capture per frame (#1165). Each frame seeks once, then
+   * every listed pass is rendered via the viewer's pass hook and written to its
+   * pass-tagged file (`frame_00042.depth.png`; `beauty` keeps the plain name).
+   * Omit (or pass exactly `["beauty"]`) for the legacy single-pass capture,
+   * which never touches the pass hook and stays byte-identical.
+   */
+  passes?: readonly AutoMovieGuidePass[];
+
+  /**
+   * Browser global pass-switch function name. Defaults to `__afPass`. Only
+   * required (and awaited) when `passes` asks for more than plain beauty.
+   */
+  passFunction?: string;
+
   /** Navigation wait condition. Defaults to `load`. */
   waitUntil?: string;
 
@@ -123,7 +141,17 @@ export const createHeadlessCaptureAdapter = async (
   options: IAutoMovieHeadlessCaptureOptions,
 ): Promise<IAutoMovieHeadlessCaptureSession> => {
   const seekFunction = options.seekFunction ?? "__afSeek";
+  const passFunction = options.passFunction ?? "__afPass";
   const viewSelector = options.viewSelector ?? "#view";
+  const passes: readonly AutoMovieGuidePass[] = options.passes ?? ["beauty"];
+  if (passes.length === 0)
+    throw new AutoMovieHeadlessCaptureError(
+      "pass-hook",
+      "capture passes must contain at least one guide pass",
+    );
+  // Legacy single-beauty captures never touch the pass hook, so a viewer
+  // predating it (or a plain beauty run) behaves byte-identically.
+  const switchesPasses = passes.some((pass) => pass !== "beauty");
   await guardCapture(
     "route",
     `could not load render route "${options.url}"`,
@@ -143,6 +171,18 @@ export const createHeadlessCaptureAdapter = async (
         seekFunction,
       ),
   );
+  if (switchesPasses)
+    await guardCapture(
+      "pass-hook",
+      `render route "${options.url}" did not expose ${passFunction} (required for guide passes ${passes.join(", ")})`,
+      () =>
+        options.page.waitForFunction(
+          (name) =>
+            typeof (globalThis as unknown as Record<string, unknown>)[name] ===
+            "function",
+          passFunction,
+        ),
+    );
   if (options.hideSelector !== null)
     await guardCapture(
       "capture",
@@ -169,19 +209,45 @@ export const createHeadlessCaptureAdapter = async (
             { name: seekFunction, t: timeSeconds },
           ),
       );
-      const bytes = await guardCapture(
-        "capture",
-        `could not capture ${viewSelector} at t=${timeSeconds}`,
-        () => view.screenshot({ type: "png" }),
-      );
-      if (bytes.byteLength === 0)
-        throw new AutoMovieHeadlessCaptureError(
-          "empty-frame",
-          `captured ${viewSelector} at t=${timeSeconds} but received zero bytes`,
+      const base = dir.replace(/[\\/]+$/, "");
+      let primary: string | null = null;
+      for (const pass of passes) {
+        if (switchesPasses)
+          await guardCapture(
+            "pass-hook",
+            `pass hook ${passFunction} failed for "${pass}" at t=${timeSeconds}`,
+            () =>
+              options.page.evaluate(
+                ({ name, p }) => {
+                  const apply = (
+                    globalThis as unknown as Record<
+                      string,
+                      (pass: string) => void
+                    >
+                  )[name];
+                  apply(p);
+                },
+                { name: passFunction, p: pass },
+              ),
+          );
+        const bytes = await guardCapture(
+          "capture",
+          `could not capture ${viewSelector} (${pass}) at t=${timeSeconds}`,
+          () => view.screenshot({ type: "png" }),
         );
-      const path = `${dir.replace(/[\\/]+$/, "")}/${frameName(index)}`;
-      await options.writeFrame(path, bytes, { timeSeconds, index });
-      return path;
+        if (bytes.byteLength === 0)
+          throw new AutoMovieHeadlessCaptureError(
+            "empty-frame",
+            `captured ${viewSelector} (${pass}) at t=${timeSeconds} but received zero bytes`,
+          );
+        const path = `${base}/${guidePassFrameName(index, pass)}`;
+        await options.writeFrame(path, bytes, { timeSeconds, index });
+        // renderVideo's contract wants ONE path per frame — the beauty frame
+        // it encodes; a guides-only capture returns its first pass instead.
+        if (primary === null || pass === "beauty") primary = path;
+      }
+      // passes is non-empty (gated at creation), so the loop always set it.
+      return primary!;
     },
     close: async () => {
       await options.page.close();

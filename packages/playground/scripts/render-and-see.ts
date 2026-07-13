@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
-import { IAutoMovieRenderSpec } from "@automovie/interface";
+import { AutoMovieGuidePass, IAutoMovieRenderSpec } from "@automovie/interface";
 import {
   IAutoMovieRenderAdapters,
   IAutoMovieRenderAndSeeResult,
   createHeadlessCaptureAdapter,
   frameTimes,
+  normalizeGuidePasses,
   renderAndSee,
 } from "@automovie/render";
 import HMEmod from "h264-mp4-encoder";
@@ -38,6 +39,8 @@ export interface IAutoMoviePlaygroundRenderAndSeeOptions {
   outputPath: string;
   frameDir: string;
   jsonPath: string;
+  /** Guide passes captured per frame (#1165); defaults to plain beauty. */
+  passes: AutoMovieGuidePass[];
 }
 
 export interface IAutoMoviePlaygroundRenderAndSeeArtifact extends IAutoMovieRenderAndSeeResult {
@@ -88,6 +91,7 @@ export const captureRenderAndSee = async (
     const session = await createHeadlessCaptureAdapter({
       page,
       url: route,
+      passes: options.passes,
       writeFrame: async (file, bytes, metadata) => {
         await fs.mkdir(path.dirname(file), { recursive: true });
         await fs.writeFile(file, Buffer.from(bytes));
@@ -205,6 +209,8 @@ const parseArgs = (
     outputPath,
     frameDir,
     jsonPath,
+    // normalizeGuidePasses validates + de-dups and throws on an unknown name.
+    passes: normalizeGuidePasses(flags.passes?.split(",") ?? ["beauty"]),
   };
 };
 
@@ -285,5 +291,7 @@ Options:
   --target <id>       Render target id recorded in the artifact
   --base <url>        Dev server base, default ${DEFAULT_BASE}
   --chrome <path>     Chrome executable, default from CHROME/env platform
+  --passes <list>     Comma-separated guide passes (beauty,depth,mask,outline,pose)
+                      captured per frame; default beauty only
 `);
 };
