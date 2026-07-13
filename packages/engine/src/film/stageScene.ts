@@ -127,6 +127,14 @@ export const stageScene = (
     cast.set(member.node, { member, index });
   });
   const placed = new Map(staging.actors.map((a) => [a.node, a]));
+  // What a camera may aim at: any placed point — an actor or a set piece (an
+  // establishing frame on a doorway is as legitimate as one on a duellist).
+  const placedPoints = new Map<string, IAutoMovieVector3>([
+    ...staging.actors.map((a) => [a.node, a.position] as const),
+    ...(staging.set ?? []).map(
+      (piece) => [piece.node, piece.position] as const,
+    ),
+  ]);
 
   const validateNonEmptyId = (
     id: string,
@@ -204,6 +212,25 @@ export const stageScene = (
     }
   });
 
+  (staging.set ?? []).forEach((piece, i) => {
+    claim(piece.node, `$input.set[${i}].node`, "set node id");
+    validateNonEmptyId(piece.model, `$input.set[${i}].model`, "set model id");
+    if (!isFiniteVector3(piece.position))
+      out.push(
+        "range",
+        `$input.set[${i}].position`,
+        "set position must be a finite vector",
+        piece.position,
+      );
+    if (piece.facingDeg !== undefined && !Number.isFinite(piece.facingDeg))
+      out.push(
+        "range",
+        `$input.set[${i}].facingDeg`,
+        `set facingDeg must be finite when present, but was ${piece.facingDeg}`,
+        piece.facingDeg,
+      );
+  });
+
   staging.cameras.forEach((camera, i) => {
     claim(camera.node, `$input.cameras[${i}].node`, "camera node id");
     const positionFinite = isFiniteVector3(camera.position);
@@ -221,11 +248,11 @@ export const stageScene = (
         `vertical field of view must be within (0, 180)°, but was ${camera.fovDeg}`,
         camera.fovDeg,
       );
-    if (camera.lookAt.kind === "node" && !placed.has(camera.lookAt.node))
+    if (camera.lookAt.kind === "node" && !placedPoints.has(camera.lookAt.node))
       out.push(
         "type",
         `$input.cameras[${i}].lookAt.node`,
-        `camera target "${camera.lookAt.node}" must be a placed actor`,
+        `camera target "${camera.lookAt.node}" must be a placed actor or set piece`,
         camera.lookAt.node,
       );
     if (camera.lookAt.kind === "point" && !isFiniteVector3(camera.lookAt.point))
@@ -237,7 +264,7 @@ export const stageScene = (
       );
     const target =
       camera.lookAt.kind === "node"
-        ? placed.get(camera.lookAt.node)?.position
+        ? placedPoints.get(camera.lookAt.node)
         : camera.lookAt.point;
     if (
       target !== undefined &&
@@ -277,25 +304,47 @@ export const stageScene = (
 
   if (out.items.length > 0) return { success: false, violations: out.items };
 
-  const nodes: IAutoMovieSceneNode[] = staging.actors.map((placement) => ({
-    id: placement.node,
-    model: cast.get(placement.node)!.member.modelRef ?? placement.node,
-    transform: {
-      translation: placement.position,
-      rotation: Quaternion.fromAxisAngle(
-        { x: 0, y: 1, z: 0 },
-        placement.facingDeg,
-      ),
-      scale: { x: 1, y: 1, z: 1 },
-    },
-    motion: null,
-    pose: null,
-  }));
+  const nodes: IAutoMovieSceneNode[] = [
+    ...staging.actors.map(
+      (placement): IAutoMovieSceneNode => ({
+        id: placement.node,
+        model: cast.get(placement.node)!.member.modelRef ?? placement.node,
+        transform: {
+          translation: placement.position,
+          rotation: Quaternion.fromAxisAngle(
+            { x: 0, y: 1, z: 0 },
+            placement.facingDeg,
+          ),
+          scale: { x: 1, y: 1, z: 1 },
+        },
+        motion: null,
+        pose: null,
+      }),
+    ),
+    // Set pieces are scenery: static nodes realising skeleton-less models
+    // (#1173), so the guide passes describe a world, not a void.
+    ...(staging.set ?? []).map(
+      (piece): IAutoMovieSceneNode => ({
+        id: piece.node,
+        model: piece.model,
+        transform: {
+          translation: piece.position,
+          rotation: Quaternion.fromAxisAngle(
+            { x: 0, y: 1, z: 0 },
+            piece.facingDeg ?? 0,
+          ),
+          scale: { x: 1, y: 1, z: 1 },
+        },
+        motion: null,
+        pose: null,
+      }),
+    ),
+  ];
 
   const cameras = staging.cameras.map((camera) => {
     const target: IAutoMovieVector3 =
       camera.lookAt.kind === "node"
-        ? placed.get(camera.lookAt.node)!.position
+        ? placedPoints.get(camera.lookAt.node)!
         : camera.lookAt.point;
     return {
       id: camera.node,

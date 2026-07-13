@@ -94,6 +94,24 @@ export const test_mcp_stage_block_shape_edges = (): void => {
     hasViolation(nonObjectCastMember, "type", "$input.script.cast[0]"),
   );
 
+  // set (#1173): the structural floor for the optional environment array.
+  type StageSet = IAutoMovieStagingApplication.IWrite["set"];
+  const nonArraySet = stageWith({ set: 5 as unknown as StageSet });
+  TestValidator.predicate(
+    "a non-array set fails at its path",
+    hasViolation(nonArraySet, "type", "$input.staging.set"),
+  );
+  const badSetPieces = stageWith({
+    set: [null, { node: 5, model: 5, position: 5 }] as unknown as StageSet,
+  });
+  TestValidator.predicate(
+    "a non-object piece and bad piece fields fail at their paths",
+    hasViolation(badSetPieces, "type", "$input.staging.set[0]") &&
+      hasViolation(badSetPieces, "type", "$input.staging.set[1].node") &&
+      hasViolation(badSetPieces, "type", "$input.staging.set[1].model") &&
+      hasViolation(badSetPieces, "type", "$input.staging.set[1].position"),
+  );
+
   const pointTarget = stageWith({
     cameras: [
       { ...staging.cameras[0]!, lookAt: { kind: "point", point: 5 } },
