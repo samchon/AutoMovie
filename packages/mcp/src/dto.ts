@@ -670,6 +670,21 @@ export interface IAutoMovieMcpActorContext {
   restFrames?: IAutoMovieActorContext["restFrames"];
 }
 
+/**
+ * A stored actor context as `actors/<node>.json` holds it (#1176): the
+ * beat-invariant half of {@link IAutoMovieMcpActorContext} — everything but
+ * `position`/`facingDeg`, which are per-beat openings the continuity seed (or
+ * the caller) supplies. A resident `perform` with explicit `actors` writes
+ * these through; later resident performs omit `actors` and read them back.
+ */
+export interface IAutoMovieMcpActorSpec extends Omit<
+  IAutoMovieMcpActorContext,
+  "position" | "facingDeg"
+> {
+  /** The scene node / cast id this context belongs to (the storage key). */
+  node: string;
+}
+
 /** JSON-safe gait definition accepted by the MCP `perform` tool. */
 export interface IAutoMovieMcpGait {
   /** Stable gait name such as `"walk"` or `"run"`. */
@@ -991,6 +1006,9 @@ export interface IAutoMovieMcpProjectSummary {
   /** Stored forged prop nodes (`props/<node>.json`). */
   props: string[];
 
+  /** Stored actor context nodes (`actors/<node>.json`, #1176). */
+  actors: string[];
+
   /**
    * Render outputs the committed truth no longer owns (#1130): top-level
    * `renders/` entries whose name matches neither the committed film's stem
@@ -1059,6 +1077,24 @@ export interface IAutoMoviePropEraseOutput {
 
   /** Stored prop nodes after the call (unchanged when refused). */
   props: string[];
+
+  /** Success, or the violations explaining why the erase was refused. */
+  validation: IAutoMovieValidation;
+}
+
+/**
+ * The `eraseActor` tool's result (#1176). Erase is a targeted, resident-only
+ * removal of ONE stored actor context file — `erased` is true only when the
+ * named context existed and its file was removed. An actor the committed scene
+ * still stages is refused: later resident performs would lose the context their
+ * beats depend on, and unstaging is `commitScene`'s job.
+ */
+export interface IAutoMovieActorEraseOutput {
+  /** True only when the named actor context existed and its file was removed. */
+  erased: boolean;
+
+  /** Stored actor context nodes after the call (unchanged when refused). */
+  actors: string[];
 
   /** Success, or the violations explaining why the erase was refused. */
   validation: IAutoMovieValidation;

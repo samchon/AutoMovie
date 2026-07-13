@@ -36,6 +36,8 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["PROJECT_MEMORY", "sibling beats' files stay byte-identical"],
   ["PROJECT_MEMORY", "byte-writing stays the host adapter's job"],
   ["PROJECT_MEMORY", "lowers the angles to a quaternion"],
+  ["PROJECT_MEMORY", "supply an actor's rig once"],
+  ["PERFORMANCE", "the registry itself stops travelling"],
   ["PROJECT_MEMORY", "forge a prop once"],
   ["PROJECT_MEMORY", "Compiled motions are not a slice"],
   ["RENDER_GUIDES", "no-capture-adapter"],

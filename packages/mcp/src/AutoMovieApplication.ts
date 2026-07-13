@@ -25,6 +25,7 @@ import { AutoMovieContext } from "./AutoMovieContext";
 import {
   AutoMovieGuideName,
   AutoMovieMcpFrameCapture,
+  IAutoMovieActorEraseOutput,
   IAutoMovieBlockOutput,
   IAutoMovieCommitOutput,
   IAutoMovieCutOutput,
@@ -704,6 +705,28 @@ export class AutoMovieApplication {
   }
 
   /**
+   * Erase ONE stored actor context (`actors/<node>.json`) from the resident
+   * project — the targeted mirror of `perform`'s resident actor write-through
+   * (#1176). Requires an active project, a non-empty reason (evidence), and an
+   * existing stored context — erasing nothing is a violation. An actor the
+   * committed scene still stages is refused rather than cascaded: later
+   * resident performs would lose the context their beats depend on, so
+   * re-commit the scene without the node first.
+   *
+   * @param props The actor node whose context to erase and the reason.
+   * @returns The stored actor nodes after the erase, or violations when
+   *   refused.
+   */
+  public eraseActor(props: {
+    /** Actor node whose stored context should be erased. */
+    node: string;
+    /** Why this context should go — required evidence. */
+    reason: string;
+  }): IAutoMovieActorEraseOutput {
+    return this.commit.eraseActor(props);
+  }
+
+  /**
    * Replace ONE actor's performance in a beat's committed shot, in the resident
    * project. Sibling performances and other beats stay byte-unchanged; the
    * beat's beat-end and review notes are removed (stale without the performance
@@ -989,9 +1012,13 @@ export class AutoMovieApplication {
      * Per staged actor, the data the default synthesizer needs. In a RESIDENT
      * call a context may omit `position`/`facingDeg` (#1176): they are seeded
      * from the previous beat's committed end-state (`commitBeatEnd`), so a
-     * walking character resumes exactly where the last beat left it.
+     * walking character resumes exactly where the last beat left it. A
+     * successful resident perform also writes each context's beat-invariant
+     * half through as `actors/<node>.json` — so a LATER resident perform may
+     * omit `actors` entirely and read the stored contexts back (their openings
+     * seeded the same way). An explicit call always passes the registry.
      */
-    actors: Record<string, IAutoMovieMcpActorContext>;
+    actors?: Record<string, IAutoMovieMcpActorContext>;
     /**
      * Caller-authored motions for `enact` actions, keyed by the clip id each
      * action names. Compute these with code against the actor's skeleton; the
