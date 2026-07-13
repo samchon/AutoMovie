@@ -189,9 +189,10 @@ export class AutoMovieApplication {
    * Fetch a film-authoring guide document by exact name.
    *
    * Start with `AUTOMOVIE_OVERALL` (the operating loop, result semantics, and
-   * the commit ladder), then read the guide matching the next stage: `STAGING`,
-   * `BLOCKING`, `PERFORMANCE`, `REVIEW`, `PROPS`, `PROJECT_MEMORY`, or
-   * `RENDER_GUIDES`. Guides teach the method; tool returns decide correctness.
+   * the commit ladder), then read the guide matching the next stage: `FORGE`,
+   * `STAGING`, `BLOCKING`, `PERFORMANCE`, `REVIEW`, `PROPS`, `PROJECT_MEMORY`,
+   * or `RENDER_GUIDES`. Guides teach the method; tool returns decide
+   * correctness.
    *
    * @param props Exact guide document name.
    * @returns Markdown guide content.
