@@ -985,7 +985,12 @@ export class AutoMovieApplication {
     staged?: IAutoMovieStagedSet.ISuccess;
     /** The performance plan: timed action calls and camera frames. */
     performance: IAutoMoviePerformanceApplication.IWrite;
-    /** Per staged actor, the data the default synthesizer needs. */
+    /**
+     * Per staged actor, the data the default synthesizer needs. In a RESIDENT
+     * call a context may omit `position`/`facingDeg` (#1176): they are seeded
+     * from the previous beat's committed end-state (`commitBeatEnd`), so a
+     * walking character resumes exactly where the last beat left it.
+     */
     actors: Record<string, IAutoMovieMcpActorContext>;
     /**
      * Caller-authored motions for `enact` actions, keyed by the clip id each

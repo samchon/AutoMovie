@@ -237,8 +237,11 @@ export class PipelineService {
       };
     let script = props.script;
     let staged = props.staged;
-    if (resident) {
-      const slate = this.context!.requireProject("perform").writableSlate();
+    let actors = props.actors;
+    const slate = resident
+      ? this.context!.requireProject("perform").writableSlate()
+      : null;
+    if (slate !== null) {
       const missing: IAutoMovieConstraintViolation[] = [];
       if (slate.script === null)
         missing.push(
@@ -271,11 +274,26 @@ export class PipelineService {
     const shapeViolations = validatePerformShape(props, resident);
     if (shapeViolations.length > 0)
       return { performed: { success: false, violations: shapeViolations } };
-    const actorViolations = validateActorRegistry(props.actors);
+    if (slate !== null) {
+      // Continuity-seed (#1176): an actor context that omits position/facing
+      // resumes from the previous beat's committed end-state — the automated
+      // form of the guide's manual "seed positions and facing from getBeatEnd".
+      // Runs after the shape floor so the performance record is guaranteed.
+      const seeded = seedActorOpenings(
+        props.actors,
+        props.performance,
+        slate.script!,
+        slate.beatEnds,
+      );
+      if (seeded.violations.length > 0)
+        return { performed: { success: false, violations: seeded.violations } };
+      actors = seeded.actors;
+    }
+    const actorViolations = validateActorRegistry(actors);
     if (actorViolations.length > 0)
       return { performed: { success: false, violations: actorViolations } };
     const contexts = new Map<string, IAutoMovieActorContext>(
-      Object.entries(props.actors).map(([node, context]) => [
+      Object.entries(actors).map(([node, context]) => [
         node,
         toActorContext(context),
       ]),
@@ -1909,6 +1927,68 @@ const validateTransformObject = (
   );
 };
 
+/**
+ * Continuity-seed for the resident `perform` (#1176): an actor context that
+ * omits `position` or `facingDeg` inherits it from the previous beat's
+ * committed end-state (script order), so a walking character resumes exactly
+ * where — and facing exactly how — the last beat left it. Explicit values
+ * always win. Nothing to inherit (a first beat, an uncommitted predecessor, an
+ * actor the end-state never saw) is refused with the commitBeatEnd hint rather
+ * than silently placed at the origin. Malformed registries and context entries
+ * pass through untouched — the actor-registry gate owns those refusals.
+ */
+const seedActorOpenings = (
+  actors: Record<string, IAutoMovieMcpActorContext>,
+  performance: IAutoMoviePerformanceApplication.IWrite,
+  script: { beats: { id: string }[] },
+  beatEnds: readonly IAutoMovieBeatEndState[],
+): {
+  actors: Record<string, IAutoMovieMcpActorContext>;
+  violations: IAutoMovieConstraintViolation[];
+} => {
+  if (!isRecord(actors)) return { actors, violations: [] };
+  const index = script.beats.findIndex((b) => b.id === performance.beat);
+  const previous =
+    index > 0
+      ? (beatEnds.find((e) => e.beat === script.beats[index - 1]!.id) ?? null)
+      : null;
+  const violations: IAutoMovieConstraintViolation[] = [];
+  const seeded: Record<string, IAutoMovieMcpActorContext> = {};
+  for (const [node, context] of Object.entries(actors)) {
+    seeded[node] = context;
+    if (!isRecord(context)) continue;
+    const needsPosition = context.position === undefined;
+    const needsFacing = context.facingDeg === undefined;
+    if (!needsPosition && !needsFacing) continue;
+    const state = previous?.actors.find((actor) => actor.node === node);
+    if (state === undefined) {
+      const unseedable = (field: string): void => {
+        violations.push(
+          violation(
+            "type",
+            `$input.actors.${node}.${field}`,
+            `actor ${node} has no committed previous beat end to seed ${field} from — commit the predecessor's end (commitBeatEnd) or pass it explicitly`,
+            undefined,
+          ),
+        );
+      };
+      if (needsPosition) unseedable("position");
+      if (needsFacing) unseedable("facingDeg");
+      continue;
+    }
+    seeded[node] = {
+      ...context,
+      position: needsPosition
+        ? { ...state.transform.translation }
+        : context.position,
+      facingDeg: needsFacing
+        ? Math.atan2(state.facing.x, state.facing.z) * (180 / Math.PI)
+        : context.facingDeg,
+    };
+  }
+  return { actors: seeded, violations };
+};
+
 const validateActorRegistry = (
   actors: unknown,
 ): IAutoMovieConstraintViolation[] => {
@@ -2405,6 +2485,10 @@ const toActorContext = (
   context: IAutoMovieMcpActorContext,
 ): IAutoMovieActorContext => ({
   ...context,
+  // The registry gate (and, residently, the continuity seed before it)
+  // guarantees these are present and finite by the time contexts build.
+  position: context.position!,
+  facingDeg: context.facingDeg!,
   gaits: context.gaits.map((gait): IAutoMovieGait => ({ ...gait })),
 });
 

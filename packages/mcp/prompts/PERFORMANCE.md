@@ -35,4 +35,4 @@ Because of that, a **resident** `commitShot` whose shot references any motion mu
 
 ## Continuity
 
-Author the beat's opening from the previous beat's end state (`getBeatEnd`): seed positions and facing from the recorded transforms, and keep looping gaits phase-continuous rather than restarting them. The end state also carries foot plants and mounts — respect them.
+Author the beat's opening from the previous beat's end state. In a **resident** `perform` this is automatic for placement: an actor context that omits `position`/`facingDeg` inherits them from the previous beat's committed end-state (`commitBeatEnd`), so a walking character resumes exactly where it stopped — explicit values always win, and a beat with nothing to inherit (a first beat, an uncommitted predecessor) is refused rather than silently placed at the origin. Everything else stays yours to carry: keep looping gaits phase-continuous rather than restarting them, and respect the foot plants and mounts the end state (`getBeatEnd`) records.
