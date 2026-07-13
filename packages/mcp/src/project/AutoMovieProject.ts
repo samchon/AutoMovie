@@ -21,6 +21,7 @@ import path from "node:path";
 
 import { toEnginePropSpec } from "../convert";
 import {
+  IAutoMovieMcpActorSpec,
   IAutoMovieMcpProjectSummary,
   IAutoMovieMcpPropSpec,
   IAutoMovieMcpWritableSlate,
@@ -350,9 +351,53 @@ export class AutoMovieProject {
    * id match is the ordinary upsert, not a collision.
    */
   public propCaseCollision(node: string): string | null {
+    return this.sliceCaseCollision("props", node);
+  }
+
+  /**
+   * The stored actor context nodes, one per `actors/<node>.json`, in filename
+   * order (#1176). Deep shape validation is deliberately NOT re-run here: a
+   * loaded context flows through `perform`'s actor-registry gate — the same
+   * gate explicit input passes — which reports tampered fields against
+   * `$slate.actors` with full precision.
+   */
+  public storedActors(): IAutoMovieMcpActorSpec[] {
+    this.lastReadRevision_ = this.readRevision();
+    return this.readKeyedSlices<IAutoMovieMcpActorSpec>("actors", {
+      label: "actor node",
+      expected: (node) => node,
+      actual: (spec) => spec.node,
+    });
+  }
+
+  /**
+   * Upsert ONE actor context as `actors/<node>.json` (#1176, the #617 upsert
+   * rule below the slate): re-performing with explicit actors replaces exactly
+   * the named contexts, leaving sibling actors byte-identical.
+   */
+  public saveActor(spec: IAutoMovieMcpActorSpec): void {
+    const file = path.join(this.root, "actors", sliceFilename(spec.node));
+    const content = serializeJson(spec);
+    this.commitCycle(() => writeAtomic(file, content));
+  }
+
+  /** The actor twin of {@link propCaseCollision} (#1093). */
+  public actorCaseCollision(node: string): string | null {
+    return this.sliceCaseCollision("actors", node);
+  }
+
+  /** Remove ONE stored actor context's file; the caller checks existence. */
+  public removeActor(node: string): void {
+    const file = path.join(this.root, "actors", sliceFilename(node));
+    this.commitCycle(() => {
+      if (fs.existsSync(file)) fs.rmSync(file);
+    });
+  }
+
+  private sliceCaseCollision(dir: string, node: string): string | null {
     const target = sliceFilename(node);
     const lower = target.toLowerCase();
-    const base = path.join(this.root, "props");
+    const base = path.join(this.root, dir);
     for (const name of fs.readdirSync(base))
       if (
         name.endsWith(".json") &&
@@ -424,6 +469,7 @@ export class AutoMovieProject {
       notes: slate.notes.length,
       film: slate.film !== null,
       props: this.storedProps().map((spec) => spec.node),
+      actors: this.storedActors().map((spec) => spec.node),
       staleRenders: this.staleRenders(slate),
       assets: this.assets,
     };
@@ -527,6 +573,7 @@ const RESERVED_DIRS = [
   "shots",
   "beatEnds",
   "props",
+  "actors",
   "models",
   "assets",
   "renders",

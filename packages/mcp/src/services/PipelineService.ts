@@ -54,7 +54,7 @@ type PerformProps = {
   script?: IAutoMovieScriptApplication.IWrite;
   staged?: IAutoMovieStagedSet.ISuccess;
   performance: IAutoMoviePerformanceApplication.IWrite;
-  actors: Record<string, IAutoMovieMcpActorContext>;
+  actors?: Record<string, IAutoMovieMcpActorContext>;
   clips?: Record<string, IAutoMovieMcpMotion>;
   blocking?: IAutoMovieBlockingApplication.IWrite;
   mounts?: IAutoMovieStagedSet.IMount[];
@@ -238,9 +238,8 @@ export class PipelineService {
     let script = props.script;
     let staged = props.staged;
     let actors = props.actors;
-    const slate = resident
-      ? this.context!.requireProject("perform").writableSlate()
-      : null;
+    const project = resident ? this.context!.requireProject("perform") : null;
+    const slate = project === null ? null : project.writableSlate();
     if (slate !== null) {
       const missing: IAutoMovieConstraintViolation[] = [];
       if (slate.script === null)
@@ -262,6 +261,44 @@ export class PipelineService {
           ),
         );
       missing.push(...validateMountsShape(props.mounts));
+      // Stored actor contexts (#1176): an omitted registry reads the
+      // write-through store back; an explicit registry must not case-collide
+      // with a stored sibling (or another of its own nodes) — the upsert
+      // rename would silently destroy the sibling's file (#1093).
+      if (props.actors === undefined) {
+        const stored = project!.storedActors();
+        if (stored.length === 0)
+          missing.push(
+            violation(
+              "type",
+              "$slate.actors",
+              "no stored actor contexts to perform with — a first resident perform passes actors explicitly (they write through as actors/<node>.json)",
+              null,
+            ),
+          );
+        else
+          actors = Object.fromEntries(
+            stored.map(({ node, ...context }) => [node, context]),
+          );
+      } else if (isRecord(props.actors)) {
+        const seen = new Map<string, string>();
+        for (const node of Object.keys(props.actors)) {
+          const collision =
+            project!.actorCaseCollision(node) ??
+            seen.get(node.toLowerCase()) ??
+            null;
+          if (collision !== null)
+            missing.push(
+              violation(
+                "type",
+                `$input.actors.${node}`,
+                `actor node "${node}" collides case-insensitively with actor "${collision}"; storing it would silently destroy "${collision}" — rename the node or erase the sibling first`,
+                node,
+              ),
+            );
+          seen.set(node.toLowerCase(), node);
+        }
+      }
       if (missing.length > 0)
         return { performed: { success: false, violations: missing } };
       script = { type: "write", ...slate.script! };
@@ -274,26 +311,50 @@ export class PipelineService {
     const shapeViolations = validatePerformShape(props, resident);
     if (shapeViolations.length > 0)
       return { performed: { success: false, violations: shapeViolations } };
+    // A loaded registry's faults belong to the store, not the (empty) input:
+    // re-anchor them at $slate.actors so a tampered actors/<node>.json file is
+    // blamed where it lives.
+    const rerootActors = (
+      violations: IAutoMovieConstraintViolation[],
+    ): IAutoMovieConstraintViolation[] =>
+      resident && props.actors === undefined
+        ? violations.map((entry) => ({
+            ...entry,
+            path: remapMcpPath(entry.path, [
+              ["$input.actors", "$slate.actors"],
+            ]),
+          }))
+        : violations;
     if (slate !== null) {
       // Continuity-seed (#1176): an actor context that omits position/facing
       // resumes from the previous beat's committed end-state — the automated
       // form of the guide's manual "seed positions and facing from getBeatEnd".
       // Runs after the shape floor so the performance record is guaranteed.
       const seeded = seedActorOpenings(
-        props.actors,
+        actors,
         props.performance,
         slate.script!,
         slate.beatEnds,
       );
       if (seeded.violations.length > 0)
-        return { performed: { success: false, violations: seeded.violations } };
+        return {
+          performed: {
+            success: false,
+            violations: rerootActors(seeded.violations),
+          },
+        };
       actors = seeded.actors;
     }
     const actorViolations = validateActorRegistry(actors);
     if (actorViolations.length > 0)
-      return { performed: { success: false, violations: actorViolations } };
+      return {
+        performed: {
+          success: false,
+          violations: rerootActors(actorViolations),
+        },
+      };
     const contexts = new Map<string, IAutoMovieActorContext>(
-      Object.entries(actors).map(([node, context]) => [
+      Object.entries(actors!).map(([node, context]) => [
         node,
         toActorContext(context),
       ]),
@@ -325,11 +386,27 @@ export class PipelineService {
       gaits: (node) => contexts.get(node)?.gaits.map((gait) => gait.name),
       blocking: props.blocking,
     });
-    return {
-      performed: remapMcpPerformedShotPaths(toMcpPerformedShot(performed), [
-        ["$input", "$input.performance"],
-      ]),
-    };
+    const output = remapMcpPerformedShotPaths(toMcpPerformedShot(performed), [
+      ["$input", "$input.performance"],
+    ]);
+    // Write-through (#1176, the forgeProp precedent): a successful resident
+    // perform with an explicit registry stores each context's beat-invariant
+    // half as actors/<node>.json, so later resident performs omit `actors`.
+    if (slate !== null && props.actors !== undefined && output.success === true)
+      for (const [node, context] of Object.entries(props.actors))
+        project!.saveActor({
+          node,
+          skeleton: context.skeleton,
+          gaits: context.gaits,
+          speed: context.speed,
+          eyeHeight: context.eyeHeight,
+          restPose: context.restPose,
+          ...(context.rig !== undefined ? { rig: context.rig } : {}),
+          ...(context.restFrames !== undefined
+            ? { restFrames: context.restFrames }
+            : {}),
+        });
+    return { performed: output };
   }
 
   public cut(props: {
@@ -1938,12 +2015,12 @@ const validateTransformObject = (
  * pass through untouched — the actor-registry gate owns those refusals.
  */
 const seedActorOpenings = (
-  actors: Record<string, IAutoMovieMcpActorContext>,
+  actors: Record<string, IAutoMovieMcpActorContext> | undefined,
   performance: IAutoMoviePerformanceApplication.IWrite,
   script: { beats: { id: string }[] },
   beatEnds: readonly IAutoMovieBeatEndState[],
 ): {
-  actors: Record<string, IAutoMovieMcpActorContext>;
+  actors: Record<string, IAutoMovieMcpActorContext> | undefined;
   violations: IAutoMovieConstraintViolation[];
 } => {
   if (!isRecord(actors)) return { actors, violations: [] };

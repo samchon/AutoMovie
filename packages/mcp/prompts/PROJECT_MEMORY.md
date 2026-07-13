@@ -1,6 +1,6 @@
 # Project Memory
 
-The project folder itself is the durable state — not a hidden mirror. `openProject` activates (or creates) a directory whose tree is human-readable JSON slices plus registered assets: `automovie.json` (manifest with the asset index), `script.json`, `scene.json`, `notes.json`, `film.json`, `shots/<beat>.json`, `beatEnds/<beat>.json`, `props/<node>.json` (stored forged prop specs), and reserved `models/`, `assets/`, `renders/` directories. A fresh directory is a valid empty project. You can read the files, diff them, and version them — they ARE the state.
+The project folder itself is the durable state — not a hidden mirror. `openProject` activates (or creates) a directory whose tree is human-readable JSON slices plus registered assets: `automovie.json` (manifest with the asset index), `script.json`, `scene.json`, `notes.json`, `film.json`, `shots/<beat>.json`, `beatEnds/<beat>.json`, `props/<node>.json` (stored forged prop specs), `actors/<node>.json` (stored actor contexts), and reserved `models/`, `assets/`, `renders/` directories. A fresh directory is a valid empty project. You can read the files, diff them, and version them — they ARE the state.
 
 ## Resident vs Explicit
 
@@ -32,6 +32,10 @@ Resident commits are gated by the prerequisite ladder: script → scene → shot
 ## Props
 
 A resident `forgeProp` success writes the accepted spec through as `props/<node>.json` and answers `stored: true` — forge a prop once, and every later session reads it from the project instead of you re-sending the spec. Re-forging a prop replaces exactly its own file; sibling props stay byte-identical. Failed forges and no-project calls store nothing. Re-forging a prop the committed scene still places is refused (`stored: false`), symmetric with `eraseProp`: replacing the spec would leave committed shots resolving against stale articulation, so re-commit the scene without the placement first (or accept re-perform). A first forge of a not-yet-stored node always stores — it creates the spec shots need rather than replacing one. `eraseProp` removes ONE stored spec (with a `reason`, like every erase); a prop the committed scene still places is refused, not cascaded — re-commit the scene without the placement first, because clearing the scene from a spec erase would be a reset in disguise. The project summary and `nextSteps` status list the stored prop nodes under `props`.
+
+## Actors
+
+A successful **resident** `perform` with an explicit `actors` registry writes each context's beat-invariant half (skeleton, gaits, speed, eye height, rest pose, optional rig and rest frames) through as `actors/<node>.json` — supply an actor's rig once, and every later resident `perform` may omit `actors` entirely: the stored contexts are read back and their per-beat openings (`position`/`facingDeg`) are seeded from the previous beat's committed end-state. Re-performing with explicit actors upserts exactly the named contexts; sibling actors stay byte-identical, and a node that case-collides with a stored sibling (or another node in the same registry) is refused before anything runs — the upsert rename would silently destroy the sibling's file. Failed performs and no-project calls store nothing. A tampered stored context is blamed at `$slate.actors`, where it lives. `eraseActor` removes ONE stored context (with a `reason`, like every erase); an actor the committed scene still stages is refused, not cascaded — later resident performs would lose the context their beats depend on. The project summary and `nextSteps` status list the stored actor nodes under `actors`.
 
 ## Assets
 

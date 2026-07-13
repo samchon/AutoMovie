@@ -53,6 +53,7 @@ pure stateless call, or omit it to read/commit the resident project opened with
 | `eraseShot` | (resident) beat + reason -> beat's shot/end/notes removed, film nulled, or refusal | resident erase checks |
 | `eraseNotes` | (resident) beat + reason -> beat's notes removed, film nulled, or refusal | resident erase checks |
 | `eraseProp` | (resident) node + reason -> stored prop spec removed, or refusal | resident erase checks |
+| `eraseActor` | (resident) node + reason -> stored actor context removed, or refusal | resident erase checks |
 | `setActorPerformance` | (resident) beat + actor performance + motions -> spliced shot, or refusal | resident set checks |
 | `setPlacement` | (resident) node + Euler transform + reason -> moved node, downstream cleared, or refusal | resident set checks |
 | `planRender` | slate + render spec -> frame schedule and ffmpeg args | `@automovie/render` planning |
@@ -62,7 +63,7 @@ pure stateless call, or omit it to read/commit the resident project opened with
 | `seeFrame` | slate + render spec + frame/time -> preview frame + optional captured image | `@automovie/render` planning + host capture |
 | `stage` | script + staging -> staged scene (or violations) | `stageScene` |
 | `block` | script + staged scene + blocking -> blocked beat (or violations) | `blockBeat` |
-| `perform` | script + staged scene + performance + actor contexts + optional enacted clips + optional blocking -> performed shot (or violations) | `performShot` |
+| `perform` | script + staged scene + performance + actor contexts + optional enacted clips + optional blocking -> performed shot (or violations); resident calls may omit script/staged/actors and read the project (#1176) | `performShot` |
 | `cut` | assemble plan + performed shots -> cut sequence (or violations) | `cutSequence` |
 | `forge` | script + forge spec -> generated cast models (or violations) | `forgeCast` |
 | `forgeProp` | prop spec (model + optional articulation) -> accepted prop (or violations), stored when resident | `forgeProp` |
@@ -95,7 +96,7 @@ slate slices live as human-readable JSON files (`script.json`,
 are gated by the prerequisite ladder (script → scene → shots → beat
 ends/notes/film): an out-of-order commit **throws** an actionable prompt
 naming the missing rungs, and `nextSteps` returns the same computation as
-data. The surgical tools (`eraseShot`/`eraseNotes`/`eraseProp`,
+data. The surgical tools (`eraseShot`/`eraseNotes`/`eraseProp`/`eraseActor`,
 `setActorPerformance`/`setPlacement`) exist only in resident mode and demand a
 `reason`. See the `PROJECT_MEMORY` guide for the write-through rules.
 

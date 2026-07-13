@@ -19,6 +19,7 @@ import {
 import { AutoMovieContext } from "../AutoMovieContext";
 import { toEngineTransform } from "../convert";
 import {
+  IAutoMovieActorEraseOutput,
   IAutoMovieCommitOutput,
   IAutoMovieEraseOutput,
   IAutoMovieMcpGeometryModel,
@@ -705,6 +706,64 @@ export class CommitService {
     return {
       erased: true,
       props: stored.filter((node) => node !== props.node),
+      validation: { success: true },
+    };
+  }
+
+  /**
+   * Erase ONE stored actor context (`actors/<node>.json`, #1176) — the targeted
+   * mirror of the resident `perform`'s actor write-through, shaped exactly like
+   * {@link eraseProp}. An actor the committed scene still stages is refused:
+   * later resident performs would lose the context their beats depend on, and
+   * unstaging is `commitScene`'s job.
+   */
+  public eraseActor(props: {
+    node: string;
+    reason: string;
+  }): IAutoMovieActorEraseOutput {
+    const project = this.context!.requireProject("eraseActor");
+    const stored = project.storedActors().map((spec) => spec.node);
+    const requestRoot = validateMutationRequestRoot(props);
+    if (requestRoot.length > 0)
+      return {
+        erased: false,
+        actors: stored,
+        validation: toValidation(requestRoot),
+      };
+    const violations: IAutoMovieConstraintViolation[] = [];
+    validateNonEmptyId(props.node, "$input.node", "actor node", violations);
+    validateNonEmptyText(
+      props.reason,
+      "$input.reason",
+      "erase reason",
+      violations,
+    );
+    if (isNonEmptyString(props.node)) {
+      if (!stored.includes(props.node))
+        pushViolation(
+          violations,
+          "type",
+          "$input.node",
+          `actor "${props.node}" has no stored context to erase`,
+          props.node,
+        );
+      const scene = project.storedSlate().scene;
+      if (scene !== null && scene.nodes.some((node) => node.id === props.node))
+        pushViolation(
+          violations,
+          "type",
+          "$slate.scene",
+          `actor "${props.node}" is still staged in the committed scene; re-commit the scene without it before erasing its context`,
+          props.node,
+        );
+    }
+    const validation = toValidation(violations);
+    if (validation.success === false)
+      return { erased: false, actors: stored, validation };
+    project.removeActor(props.node);
+    return {
+      erased: true,
+      actors: stored.filter((node) => node !== props.node),
       validation: { success: true },
     };
   }
