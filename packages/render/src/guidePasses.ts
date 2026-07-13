@@ -11,6 +11,7 @@ export const AUTOMOVIE_GUIDE_PASSES: readonly AutoMovieGuidePass[] = [
   "beauty",
   "depth",
   "mask",
+  "normal",
   "outline",
   "pose",
 ];

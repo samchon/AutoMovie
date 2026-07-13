@@ -7,11 +7,11 @@
  * follow the structure automovie computed:
  *
  * - `beauty` — the ordinary shaded render (the default preview).
- * - `depth` — depth-to-grayscale (near bright, far dark), the depth hint.
+ * - `depth` — depth-to-grayscale on a scene-stable metric range, the depth hint.
  * - `mask` — per-scene-node flat silhouette colors, the segmentation hint.
- * - `outline` — the normal-based edge source: an unlit surface-normal render from
- *   which line extraction is a cheap host post-process (a true vector outline
- *   pass is a later refinement).
+ * - `normal` — the unlit surface-normal render, the normal-map hint (#1166).
+ * - `outline` — real white silhouette edges on black (an inverted-hull contour),
+ *   the line/edge hint (#1166) — no host post-processing required.
  * - `pose` — the skeleton overlay: bone segments over a flat background, the pose
  *   hint.
  *
@@ -27,7 +27,9 @@ export type AutoMovieGuidePass =
   | "depth"
   /** Per-node flat-color segmentation pass. */
   | "mask"
-  /** Normal-based edge-source pass (line extraction is a host post-process). */
+  /** Unlit surface-normal pass. */
+  | "normal"
+  /** Silhouette edge pass: white contour lines on black. */
   | "outline"
   /** Skeleton-overlay pose pass. */
   | "pose";

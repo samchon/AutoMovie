@@ -1,5 +1,7 @@
 import {
   DEPTH_NORMALIZATION_RANGE,
+  EDGE_SHELL_NAME,
+  EDGE_WIDTH,
   POSE_OVERLAY_NAME,
   applyRenderMode,
   buildModel,
@@ -67,12 +69,16 @@ const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
  *    grays linear over a scene-stable range decoupled from camera near/far
  *    (default 20 m, overridable) — on a black (far) background; restore returns
  *    the original instances and background.
- * 3. `outline` swaps to `MeshNormalMaterial` (the normal-based edge source).
- * 4. `mask` gives each top-level scene node a distinct deterministic flat color on
+ * 3. `normal` swaps to `MeshNormalMaterial` (the surface-normal hint, #1166).
+ * 4. `outline` is a REAL edge pass (#1166): black fills plus one inverted-hull
+ *    back-face shell per mesh (metric edge width, default overridable, skinning
+ *    chunks compiled in) on a black background; restore removes the shells and
+ *    returns everything.
+ * 5. `mask` gives each top-level scene node a distinct deterministic flat color on
  *    a black background; restore returns materials and background.
- * 5. `pose` hides meshes and adds one line per bone→child-bone connection in a
+ * 6. `pose` hides meshes and adds one line per bone→child-bone connection in a
  *    named overlay; restore removes the overlay and unhides.
- * 6. An unknown mode is a caller bug and throws.
+ * 7. An unknown mode is a caller bug and throws.
  */
 export const test_viewer_render_modes = (): void => {
   const { scene } = buildTwoNodeScene();
@@ -133,12 +139,64 @@ export const test_viewer_render_modes = (): void => {
   );
   customRange.restore();
 
-  const outline = applyRenderMode(scene, "outline");
+  const normal = applyRenderMode(scene, "normal");
   TestValidator.predicate(
-    "outline swaps to the normal-based edge source",
+    "normal swaps to the surface-normal material",
     meshes.every((mesh) => mesh.material instanceof THREE.MeshNormalMaterial),
   );
+  normal.restore();
+
+  const outlineBackground = scene.background;
+  const outline = applyRenderMode(scene, "outline");
+  TestValidator.predicate(
+    "outline fills every mesh black",
+    meshes.every(
+      (mesh) =>
+        mesh.material instanceof THREE.MeshBasicMaterial &&
+        mesh.material.color.getHex() === 0x000000,
+    ),
+  );
+  const shells = meshesOf(scene).filter((m) => m.name === EDGE_SHELL_NAME);
+  TestValidator.equals(
+    "outline adds one inverted-hull shell per mesh",
+    shells.length,
+    meshes.length,
+  );
+  TestValidator.predicate(
+    "shells push outward by the metric edge width, back-face, skinned-aware",
+    shells.every(
+      (shell) =>
+        shell.material instanceof THREE.ShaderMaterial &&
+        shell.material.side === THREE.BackSide &&
+        shell.material.uniforms.edgeWidth!.value === EDGE_WIDTH &&
+        shell.material.vertexShader.includes("skinning_vertex"),
+    ),
+  );
+  TestValidator.predicate(
+    "outline renders over a black background",
+    scene.background instanceof THREE.Color &&
+      scene.background.getHex() === 0x000000,
+  );
   outline.restore();
+  TestValidator.predicate(
+    "outline restore removes shells and returns materials and background",
+    meshesOf(scene).every((m) => m.name !== EDGE_SHELL_NAME) &&
+      meshes.every((mesh, i) => mesh.material === originals[i]) &&
+      scene.background === outlineBackground,
+  );
+
+  const wideEdge = applyRenderMode(scene, "outline", { edgeWidth: 0.05 });
+  TestValidator.predicate(
+    "an explicit edgeWidth overrides the default",
+    meshesOf(scene)
+      .filter((m) => m.name === EDGE_SHELL_NAME)
+      .every(
+        (shell) =>
+          shell.material instanceof THREE.ShaderMaterial &&
+          shell.material.uniforms.edgeWidth!.value === 0.05,
+      ),
+  );
+  wideEdge.restore();
 
   const background = scene.background;
   const mask = applyRenderMode(scene, "mask");

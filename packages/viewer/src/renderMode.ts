@@ -46,9 +46,12 @@ const once = (fn: () => void): (() => void) => {
  * - `mask` — each top-level scene child gets its own flat unlit color
  *   (deterministic golden-angle palette by child index) on a black background:
  *   the per-node segmentation pass.
- * - `outline` — every mesh swapped to `MeshNormalMaterial`: the normal-based edge
- *   source (line extraction is a cheap host post-process; a true vector outline
- *   pass is a later refinement).
+ * - `normal` — every mesh swapped to `MeshNormalMaterial`: the unlit
+ *   surface-normal conditioning pass (#1166).
+ * - `outline` — REAL silhouette edges (#1166): black fills plus inverted-hull
+ *   back-face shells offset {@link EDGE_WIDTH} meters along their normals,
+ *   leaving white contour lines on a black background — no host
+ *   post-processing.
  * - `pose` — meshes hidden, and a line-segment overlay of every bone→child bone
  *   connection drawn over a black background: the skeleton pose pass.
  *
@@ -62,6 +65,9 @@ export const applyRenderMode = (
   options?: {
     /** Metric range (m) the depth pass normalizes onto. Defaults to 20. */
     depthRange?: number;
+
+    /** Silhouette edge width (m) of the outline pass. Defaults to 0.02. */
+    edgeWidth?: number;
   },
 ): IAutoMovieRenderModeHandle => {
   switch (mode) {
@@ -72,12 +78,14 @@ export const applyRenderMode = (
         scene,
         options?.depthRange ?? DEPTH_NORMALIZATION_RANGE,
       );
-    case "outline":
+    case "normal":
       return overrideMaterials(
         scene,
         mode,
         () => new THREE.MeshNormalMaterial(),
       );
+    case "outline":
+      return applyEdgeMode(scene, options?.edgeWidth ?? EDGE_WIDTH);
     case "mask":
       return applyMaskMode(scene);
     case "pose":
@@ -152,6 +160,87 @@ const applyDepthMode = (
     mode: "depth",
     restore: once(() => {
       materials.restore();
+      scene.background = background;
+    }),
+  };
+};
+
+/**
+ * Metric silhouette edge width (meters) of the outline pass (#1166) — the
+ * inverted-hull shell's normal offset. Metric (not a scale factor) so a thin
+ * limb and a broad torso draw the same line weight.
+ */
+export const EDGE_WIDTH = 0.02;
+
+/** Name of the transient shell group the outline pass adds to the scene. */
+export const EDGE_SHELL_NAME = "__automovie_edge_shells";
+
+/**
+ * The inverted-hull shell material: geometry pushed outward along its normals
+ * by `edgeWidth` meters and drawn back-face-only in white, so wherever the
+ * front-facing black fill does not cover it, a contour line remains. The vertex
+ * stage includes three's skinning chunks, so a posed `SkinnedMesh` outlines its
+ * deformed surface.
+ */
+const makeEdgeShellMaterial = (edgeWidth: number): THREE.ShaderMaterial =>
+  new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: { edgeWidth: { value: edgeWidth } },
+    vertexShader: `
+      #include <common>
+      #include <skinning_pars_vertex>
+      uniform float edgeWidth;
+      void main() {
+        #include <beginnormal_vertex>
+        #include <skinbase_vertex>
+        #include <skinnormal_vertex>
+        #include <begin_vertex>
+        #include <skinning_vertex>
+        transformed += normalize(objectNormal) * edgeWidth;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+      }`,
+    fragmentShader: `
+      void main() {
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      }`,
+  });
+
+/**
+ * Outline pass (#1166): REAL silhouette edges, white on black, no host
+ * post-processing. Classic inverted hull — every mesh gets a back-face shell
+ * expanded `edgeWidth` meters along its normals, the mesh itself fills black,
+ * and the black background swallows everything else, leaving white contour
+ * lines where the shell peeks past the fill.
+ */
+const applyEdgeMode = (
+  scene: THREE.Scene,
+  edgeWidth: number,
+): IAutoMovieRenderModeHandle => {
+  const background = scene.background;
+  scene.background = new THREE.Color(0x000000);
+  const shellMaterial = makeEdgeShellMaterial(edgeWidth);
+  const fill = overrideMaterials(
+    scene,
+    "outline",
+    () => new THREE.MeshBasicMaterial({ color: 0x000000 }),
+  );
+  // Shells clone each mesh shallowly (same geometry, same local transform —
+  // a SkinnedMesh clone shares its skeleton, so the shell follows the pose)
+  // under the mesh's own parent, grouped by name for a recognizable scene.
+  const shells: THREE.Object3D[] = [];
+  for (const mesh of collectMeshes(scene)) {
+    const shell = mesh.clone(false) as MeshLike;
+    shell.name = EDGE_SHELL_NAME;
+    shell.material = shellMaterial;
+    mesh.parent!.add(shell);
+    shells.push(shell);
+  }
+  return {
+    mode: "outline",
+    restore: once(() => {
+      for (const shell of shells) shell.parent!.remove(shell);
+      shellMaterial.dispose();
+      fill.restore();
       scene.background = background;
     }),
   };
