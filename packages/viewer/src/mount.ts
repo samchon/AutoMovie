@@ -42,8 +42,31 @@ export const mountViewer = (
   scene: THREE.Scene,
   camera: THREE.PerspectiveCamera,
   onFrame: (elapsedSeconds: number) => boolean | undefined,
+  options?: {
+    /**
+     * Multisample antialiasing (#1169). Defaults to `true` for live viewing; a
+     * CAPTURE path turns it off so structural guide passes (mask/pose/
+     * outline/depth) read back crisp and GPU-independent — AA blends segment
+     * colors across edges and varies by hardware, breaking byte-stable frames.
+     * A WebGL context's AA is fixed at creation, so this is per-mount (the
+     * capture route), not per-pass.
+     */
+    antialias?: boolean;
+
+    /**
+     * Canvas pixel ratio (#1169). Defaults to the renderer's own default; a
+     * capture path pins `1` so frame pixel dimensions never follow the host's
+     * device-pixel-ratio.
+     */
+    pixelRatio?: number;
+  },
 ): IAutoMovieViewerHandle => {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: options?.antialias ?? true,
+  });
+  if (options?.pixelRatio !== undefined)
+    renderer.setPixelRatio(options.pixelRatio);
   const resize = (): void => {
     const w = canvas.clientWidth || 1;
     const h = canvas.clientHeight || 1;

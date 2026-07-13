@@ -454,13 +454,21 @@ const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 const capMode = params.get("cap") === "1";
 const frozen = params.get("t");
 const freezeAt = frozen !== null ? Number(frozen) : null;
-const handle = mountViewer(canvas, scene, camera, (elapsed) => {
-  // In capture/freeze mode the frame is driven by draw() below; returning true
-  // keeps the mount loop from overwriting a composited dissolve with a plain
-  // single-pass render.
-  if (capMode || freezeAt !== null) return true;
-  return drawFrame(elapsed % (FILM_DURATION + 0.8));
-});
+const handle = mountViewer(
+  canvas,
+  scene,
+  camera,
+  (elapsed) => {
+    // In capture/freeze mode the frame is driven by draw() below; returning
+    // true keeps the mount loop from overwriting a composited dissolve with a
+    // plain single-pass render.
+    if (capMode || freezeAt !== null) return true;
+    return drawFrame(elapsed % (FILM_DURATION + 0.8));
+  },
+  // Capture renders with AA off and a pinned pixel ratio (#1169) so structural
+  // guide passes read back crisp and byte-stable across hosts.
+  capMode ? { antialias: false, pixelRatio: 1 } : undefined,
+);
 renderer = handle.renderer;
 const draw = (t: number): void => {
   if (!drawFrame(t)) renderer.render(scene, camera);

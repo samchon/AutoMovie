@@ -274,9 +274,17 @@ const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 // `?cap=1` hands frame timing to the capturer (window.__afSeek) instead of the
 // wall clock, so a recorder can step through deterministically in one session.
 const capMode = params.get("cap") === "1";
-const handle = mountViewer(canvas, scene, camera, (elapsed) => {
-  if (!capMode && freezeAt === null) frame(elapsed);
-});
+const handle = mountViewer(
+  canvas,
+  scene,
+  camera,
+  (elapsed) => {
+    if (!capMode && freezeAt === null) frame(elapsed);
+  },
+  // Capture renders with AA off and a pinned pixel ratio (#1169) so structural
+  // guide passes read back crisp and byte-stable across hosts.
+  capMode ? { antialias: false, pixelRatio: 1 } : undefined,
+);
 (window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
   t: number,
 ): void => {
