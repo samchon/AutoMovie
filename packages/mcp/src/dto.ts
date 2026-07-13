@@ -1098,6 +1098,7 @@ export type AutoMovieGuideName =
   | "STAGING"
   | "BLOCKING"
   | "PERFORMANCE"
+  | "FORGE"
   | "REVIEW"
   | "PROPS"
   | "PROJECT_MEMORY"
