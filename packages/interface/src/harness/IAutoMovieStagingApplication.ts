@@ -52,6 +52,17 @@ export namespace IAutoMovieStagingApplication {
     actors: IPlacement[];
 
     /**
+     * Set pieces — the environment realised as static scene geometry (#1173). A
+     * floor slab, a wall, a doorway, a backdrop: each placement drops a
+     * skeleton-less model (typically a forged prop, `forgeProp`'s crude
+     * primitive proxy) into the scene, so the guide passes describe a world
+     * instead of actors floating in a void. Omit for a bare stage. A set piece
+     * is scenery, not a performer: pair a walkable floor with the scene's
+     * `space` surfaces — the surface is the meaning, this model is the visual.
+     */
+    set?: ISetPlacement[];
+
+    /**
      * Camera placements; each becomes a camera node, its move authored in
      * performance.
      */
@@ -77,6 +88,34 @@ export namespace IAutoMovieStagingApplication {
      * `spine` saddle). Declare it here rather than re-attaching every shot.
      */
     attach?: IAutoMovieMountBinding;
+  }
+
+  /**
+   * One placed set piece — environment geometry as a static scene node (#1173).
+   * The realising model is skeleton-less (a forged prop's primitive parts); the
+   * node never performs, it only stands where the world needs structure.
+   */
+  export interface ISetPlacement {
+    /**
+     * Scene node id for this piece — distinct from every cast, camera, and
+     * light id (and from sibling pieces).
+     */
+    node: string;
+
+    /**
+     * Model id realising the piece — a forged prop's node id (the `forgeProp`
+     * join key), or a static model the host knows how to instantiate.
+     */
+    model: string;
+
+    /** Position (world meters). */
+    position: IAutoMovieVector3;
+
+    /**
+     * Yaw about +Y in degrees (0 = facing +Z). Omit for an unrotated piece — a
+     * floor slab or a centered backdrop needs no heading.
+     */
+    facingDeg?: number;
   }
 
   export interface ICameraPlacement {

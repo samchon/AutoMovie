@@ -928,9 +928,12 @@ export class AutoMovieApplication {
   /**
    * Stage a scene -- the first deterministic step. Place the script's cast on
    * the set per the staging plan, resolve every actor/camera/light to a
-   * concrete world transform (measured against the staged rigs), and validate
-   * persistent mounts. On failure nothing is composed and the violations name
-   * the offending placement to repair.
+   * concrete world transform (measured against the staged rigs), validate
+   * persistent mounts, and drop any `set` pieces -- environment geometry
+   * realised from skeleton-less models (a forged prop's primitives), so the
+   * guide passes describe a world rather than actors floating in a void
+   * (#1173). On failure nothing is composed and the violations name the
+   * offending placement to repair.
    *
    * @param props The script (cast + beats) and the staging plan (placements).
    * @returns The staged scene on success, or the staging violations to fix.
@@ -938,7 +941,7 @@ export class AutoMovieApplication {
   public stage(props: {
     /** The script: the cast to place and the beats they play. */
     script: IAutoMovieScriptApplication.IWrite;
-    /** The staging plan: where each actor, camera, and light goes. */
+    /** The staging plan: actors, cameras, lights, and optional set pieces. */
     staging: IAutoMovieStagingApplication.IWrite;
   }): IAutoMovieStageOutput {
     return this.pipeline.stage(props);

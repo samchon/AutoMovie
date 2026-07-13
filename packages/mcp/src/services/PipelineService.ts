@@ -1038,6 +1038,24 @@ const validateStageShape = (
             ),
           );
       });
+    // set is optional (#1173); when present each piece needs the string ids
+    // and vector the engine's gate dereferences.
+    if (
+      staging.set !== undefined &&
+      isJsonArray(staging.set, "$input.staging.set", "staging set", violations)
+    )
+      staging.set.forEach((piece, index) => {
+        const path = `$input.staging.set[${index}]`;
+        if (!isJsonObject(piece, path, "set placement", violations)) return;
+        requireString(piece.node, `${path}.node`, "set node", violations);
+        requireString(piece.model, `${path}.model`, "set model", violations);
+        requireVectorObject(
+          piece.position,
+          `${path}.position`,
+          "set position",
+          violations,
+        );
+      });
     if (
       isJsonArray(
         staging.cameras,
