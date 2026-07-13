@@ -16,6 +16,7 @@ import {
 import {
   IAutoMovieActionCall,
   IAutoMovieAssembleApplication,
+  IAutoMovieBeatEndState,
   IAutoMovieBlockingApplication,
   IAutoMovieConstraintViolation,
   IAutoMovieForgeApplication,
@@ -89,6 +90,7 @@ export class PipelineService {
     script: IAutoMovieScriptApplication.IWrite;
     staged: IAutoMovieStagedSet.ISuccess;
     blocking: IAutoMovieBlockingApplication.IWrite;
+    previous?: IAutoMovieBeatEndState;
   }): IAutoMovieBlockOutput {
     const requestRoot = validatePipelineRequestRoot(props);
     if (requestRoot.length > 0)
@@ -98,13 +100,15 @@ export class PipelineService {
       props.staged,
       props.blocking,
     );
+    violations.push(...validatePreviousShape(props.previous));
     if (violations.length > 0)
       return { blocked: { success: false, violations } };
     return {
       blocked: remapMcpBlockedBeatPaths(
-        blockBeat(props.script, props.staged, props.blocking),
+        blockBeat(props.script, props.staged, props.blocking, props.previous),
         [
           ["$script", "$input.script"],
+          ["$previous", "$input.previous"],
           ["$input", "$input.blocking"],
         ],
       ),
@@ -1181,6 +1185,50 @@ const validateStageTarget = (
         target,
       ),
     );
+};
+
+/**
+ * Structural totality gate for the optional previous beat-end (#1176): the
+ * engine's own `previous` gates read `actors[i].node` as strings, so a
+ * malformed carry must be refused as violations before it would crash them.
+ * Referential integrity (carried actors are staged nodes) stays the engine's.
+ */
+const validatePreviousShape = (
+  previous: unknown,
+): IAutoMovieConstraintViolation[] => {
+  const violations: IAutoMovieConstraintViolation[] = [];
+  if (previous === undefined) return violations;
+  if (
+    !isJsonObject(previous, "$input.previous", "previous beat-end", violations)
+  )
+    return violations;
+  const actors = (previous as { actors?: unknown }).actors;
+  if (!Array.isArray(actors)) {
+    violations.push(
+      violation(
+        "type",
+        "$input.previous.actors",
+        "previous beat-end actors must be an array",
+        actors,
+      ),
+    );
+    return violations;
+  }
+  actors.forEach((actor, index) => {
+    const path = `$input.previous.actors[${index}]`;
+    if (!isJsonObject(actor, path, "previous beat-end actor", violations))
+      return;
+    if (typeof (actor as { node?: unknown }).node !== "string")
+      violations.push(
+        violation(
+          "type",
+          `${path}.node`,
+          "previous beat-end actor node must be a string",
+          (actor as { node?: unknown }).node,
+        ),
+      );
+  });
+  return violations;
 };
 
 const validateBlockShape = (
