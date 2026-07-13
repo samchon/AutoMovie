@@ -10,12 +10,13 @@ Like every stateful tool, `planRender` (and `seeFrame`) is resident-or-explicit:
 
 ## Guide Passes
 
-Five passes, each a reversible viewer override applied at capture time (the engine result is never mutated):
+Six passes, each a reversible viewer override applied at capture time (the engine result is never mutated):
 
 - `beauty` — the plain render (untagged frame names, byte-compatible with plain plans).
-- `depth` — depth-to-grayscale (a depth-material swap).
+- `depth` — depth-to-grayscale on a scene-stable metric range (same world depth, same gray, across shots).
 - `mask` — per-node flat colors on black: a segmentation map (deterministic golden-angle palette).
-- `outline` — a normal-material pass as the edge source (line extraction is host post-processing).
+- `normal` — the unlit surface-normal render: the normal-map hint.
+- `outline` — real white silhouette edges on black (inverted-hull contour): the line hint, no post-processing.
 - `pose` — meshes hidden, bone→child-bone line overlay: the skeleton hint pass.
 
 Pass-tagged frames insert the pass name before the extension (`frame_00042.depth.png`), so per-pass sequences coexist in one frame directory.
