@@ -4,8 +4,17 @@ import {
   aimRotation,
   solveTwoBoneIK,
 } from "@automovie/engine";
-import { AutoMovieHumanoidBone } from "@automovie/interface";
-import { AutoMoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
+import {
+  AutoMovieGuidePass,
+  AutoMovieHumanoidBone,
+} from "@automovie/interface";
+import {
+  AutoMoviePlayer,
+  IAutoMovieRenderModeHandle,
+  applyRenderMode,
+  buildModel,
+  mountViewer,
+} from "@automovie/viewer";
 import * as THREE from "three";
 
 import { DEFAULT_CAT, buildCat } from "./cat";
@@ -272,6 +281,17 @@ const handle = mountViewer(canvas, scene, camera, (elapsed) => {
   t: number,
 ): void => {
   frame(t);
+  handle.renderer.render(scene, camera);
+};
+// `__afPass` switches the guide pass a capturer screenshots (#1165): restore
+// whatever pass was live, apply the requested one over the already-seeked
+// scene, and re-render — so one seek yields every pass of that frame.
+let passHandle: IAutoMovieRenderModeHandle | null = null;
+(
+  window as unknown as { __afPass: (pass: AutoMovieGuidePass) => void }
+).__afPass = (pass: AutoMovieGuidePass): void => {
+  passHandle?.restore();
+  passHandle = applyRenderMode(scene, pass);
   handle.renderer.render(scene, camera);
 };
 
