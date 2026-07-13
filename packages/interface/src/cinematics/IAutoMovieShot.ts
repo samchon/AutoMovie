@@ -1,4 +1,5 @@
 import { IAutoMovieClip } from "../core/IAutoMovieTrack";
+import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
 import { IAutoMovieInteractionEvent } from "./IAutoMovieInteractionEvent";
 
 /**
@@ -55,8 +56,41 @@ export interface IAutoMovieShot {
    */
   events?: IAutoMovieInteractionEvent[];
 
+  /**
+   * The camera's directorial intent per frame span (#1187) — framing, move, the
+   * resolved focus point, and the lens intent — structural guide metadata a
+   * diffusion/render host reads beside `cameraMotion`, exactly as it reads
+   * `events`. The deterministic camera solve never consumes it. Absent means
+   * legacy; an empty array means the shot was assembled with no frame actions.
+   */
+  cameraIntent?: IAutoMovieCameraIntent[];
+
   /** Shot length in seconds (local time origin = 0). */
   duration: number;
+}
+
+/**
+ * One frame span's directorial camera intent (#1187): what the take frames and
+ * how, plus the two lens intents the fixed move grammar could not carry — the
+ * focus subject (resolved to a world point) and the focal length. INTENT only:
+ * `fovY` on the scene camera stays the geometric truth, and depth-of-field blur
+ * is deliberately out of scope (diffusion's job).
+ */
+export interface IAutoMovieCameraIntent {
+  /** Shot-local start (seconds) of the frame span this intent covers. */
+  start: number;
+
+  /** How tight the framing is. */
+  framing: "wide" | "full" | "medium" | "close";
+
+  /** How the camera behaves over the span. */
+  move: "static" | "follow" | "orbit" | "push-in" | "whip";
+
+  /** Resolved world focus point, or `null` when the action named none. */
+  focus: IAutoMovieVector3 | null;
+
+  /** Lens intent in millimetres, or `null` when the action named none. */
+  focalLength: number | null;
 }
 
 /** What one scene node does during a shot. */
