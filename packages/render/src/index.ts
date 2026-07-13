@@ -6,6 +6,8 @@ export * from "./exportModel";
 export * from "./guidePasses";
 export * from "./headlessCapture";
 export * from "./plan";
+export * from "./poseKeypointPlan";
+export * from "./poseKeypointSidecar";
 export * from "./renderAndSee";
 export * from "./renderVideo";
 export * from "./screenplay";
