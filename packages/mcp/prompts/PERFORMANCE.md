@@ -16,6 +16,8 @@ Enforcement is unchanged: the engine masks the clip to its region (default `full
 
 Each performing actor needs a context: its gaits (JSON-safe — named easing only, no bezier tuples), staged position and facing, rest pose, and optionally its rig and rest frames. The server assembles the engine's default synthesizer from these, so the MCP contract stays JSON-only. An IK or physics verb without a rig synthesizes nothing.
 
+**Resident-or-explicit:** omit `script` AND `staged` together and the shot performs against the resident project's committed script and scene — the whole staged scene stops travelling per beat. Passing one without the other is refused. Staging mounts are not a committed slice, so a resident shot with a mounted rider re-declares them via the `mounts` parameter (an explicit staged set already carries its own; combining the two is refused).
+
 A `locomote` action's `gait` is a free string matched by name against the gaits this context supplies — the vocabulary is the actor's own (a biped's `walk`/`run`/`sneak`, a horse's `trot`/`gallop`), not a fixed set. Naming a gait the actor did not supply fails the perform gate with a `type` violation rather than freezing silently, so give each actor the gaits its actions reference.
 
 ## Rules the Engine Enforces

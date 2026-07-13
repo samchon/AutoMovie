@@ -974,10 +974,15 @@ export class AutoMovieApplication {
    * @returns The performed shot on success, or the performance violations.
    */
   public perform(props: {
-    /** The script: the cast and beats the shot belongs to. */
-    script: IAutoMovieScriptApplication.IWrite;
+    /**
+     * The script: the cast and beats the shot belongs to. Omit TOGETHER with
+     * `staged` to perform against the resident project's committed script and
+     * scene (#1176) — a long production stops re-sending the staged scene every
+     * beat. Mixed calls are refused.
+     */
+    script?: IAutoMovieScriptApplication.IWrite;
     /** The successfully staged scene this shot performs over. */
-    staged: IAutoMovieStagedSet.ISuccess;
+    staged?: IAutoMovieStagedSet.ISuccess;
     /** The performance plan: timed action calls and camera frames. */
     performance: IAutoMoviePerformanceApplication.IWrite;
     /** Per staged actor, the data the default synthesizer needs. */
@@ -990,6 +995,13 @@ export class AutoMovieApplication {
     clips?: Record<string, IAutoMovieMcpMotion>;
     /** Optional validated blocking, from a successful `block` result. */
     blocking?: IAutoMovieBlockingApplication.IWrite;
+    /**
+     * Staging mounts for the RESIDENT form only (#1176) — mounts are not a
+     * committed slice, so a resident shot with a mounted rider re-declares them
+     * here (the `getShotEndState` precedent). An explicit `staged` set already
+     * carries its own mounts; combining the two is refused.
+     */
+    mounts?: IAutoMovieStagedSet.IMount[];
   }): IAutoMoviePerformOutput {
     return this.pipeline.perform(props);
   }
