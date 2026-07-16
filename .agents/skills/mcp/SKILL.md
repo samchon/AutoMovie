@@ -1,6 +1,6 @@
 ---
 name: mcp
-description: Designing packages/mcp -- server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose.
+description: Defines the design rules for packages/mcp — server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose. Use before adding or reshaping an MCP tool or its documentation.
 ---
 
 # MCP Server Design

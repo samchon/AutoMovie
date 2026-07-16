@@ -1,6 +1,6 @@
 ---
 name: project
-description: What automovie is, the long-haul mission, the workspace layout, and the canonical commands.
+description: Defines the automovie product contract, the long-haul mission, workspace layout, and canonical commands. Use when orienting in the repository, working inside any package, or choosing a build, test, format, or coverage command.
 ---
 
 # Project Outline
@@ -20,7 +20,7 @@ This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.w
 - `packages/forge` (`@automovie/forge`): parametric model building (head/body meshes, hair, morphs) from forge specs.
 - `packages/ingest` (`@automovie/ingest`): glTF/model ingestion via `@gltf-transform/core`.
 - `packages/viewer` (`@automovie/viewer`): the render/playback surface over `three.js` (the only package that imports `three`). A viewer, not an editor.
-- `packages/playground`: Vite demo pages exercising the pipeline end to end; capture-verified via headless Chrome (see `.codex/skills/viewer-verification/SKILL.md`).
+- `packages/playground`: Vite demo pages exercising the pipeline end to end; capture-verified via headless Chrome (see `.agents/skills/viewer-verification/SKILL.md`).
 - `packages/mcp` (`@automovie/mcp`): the deterministic engine exposed as an MCP server — `AutoMovieApplication`'s methods (`stage`/`block`/`cut`/`forge`) become validated MCP tools via `typia.llm.controller` + `@typia/mcp`, for an external agent (Codex, Claude) to drive instead of an in-repo LLM workflow.
 - `test/` (`@automovie/test`): the `@nestia/e2e` `DynamicExecutor` program; one scenario per file under `test/src/features/<domain>/`, builders under `features/internal/`.
 - `internals/config`: shared base `tsconfig.json` and `assertBuild.js`.

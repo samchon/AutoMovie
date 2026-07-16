@@ -1,6 +1,6 @@
 ---
 name: 3d-modeling
-description: First-principles doctrine for building the parametric human face/head — pure-form beauty, measured proportion, verify-before-claim. Read before any face/head model, parameter, or likeness work.
+description: Defines the first-principles doctrine for building the parametric human face/head — pure-form beauty, measured proportion, verify-before-claim. Use before any face/head model, parameter, or likeness work.
 ---
 
 # 3D Face & Head Modeling
