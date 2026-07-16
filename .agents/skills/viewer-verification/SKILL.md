@@ -1,6 +1,6 @@
 ---
 name: viewer-verification
-description: Driving the viewer/playground through Playwright MCP to inspect renders, poses, and motion against expectation. Read before claiming a viewer or render change works.
+description: Defines how to drive the viewer/playground through Playwright MCP to inspect renders, poses, and motion against expectation. Use before claiming a viewer, render, pose, motion, or expression change works.
 ---
 
 # Viewer Verification

@@ -32,7 +32,7 @@
 2. **MakeHuman** — `.references/makehuman` (CC0): 오픈소스 파라메트릭 휴먼의 파라미터 축·타깃 분해 참고.
 3. **MediaPipe FaceMesh** — 468 랜드마크(측정/분해 도구).
 4. **학술 인체측정·미학** — `.wiki/04-domain-research/face-head-anthropometry.md`: Farkas 두개안면 인체측정(N≈2,326, 166 비율, 평균±SD), 신고전 캐논과 그 반증, Schmid 예측 비례, 황금비(φ), 세로36%/가로46%, Qoves, Da Silva 2026 J.Anatomy. + `parametric-head-build.md`. (참고는 권위가 아니라 증거 — 측정에 쓰고 그대로 이식 말 것.)
-5. **스킬** — `.codex/skills/`(3d-modeling 등).
+5. **스킬** — `.agents/skills/`(3d-modeling 등).
 
 ## 자기반성 (이전 세션의 근본 과오)
 **가장 큰 과오는 사후합리화다.** 모델을 한 번 조정해놓고 "완벽하다"고 **먼저 결정**한 뒤 측정을 하지 않았다. 그래서 위 측정→분석→개선 싸이클에 **들어가지조차 못하고** 제자리에서 영원히 챗바퀴만 돌았다 — 사용자가 "다르다"고 지적해야 그제서야 마지못해 측정했다. 그 위에 "맞췄다"는 거짓 보고와 "매체 한계"라는 변명이 부산물로 얹혔다.
