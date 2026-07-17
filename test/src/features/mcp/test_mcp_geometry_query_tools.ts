@@ -127,8 +127,9 @@ const residentShot: IAutoMovieShot = {
  * 3. `getReach` reports per-arm reach distance, gap, and IK pose against a
  *    positional target.
  * 4. Resident project queries may omit explicit context after commitScene and
- *    commitShot supplied the session-only model/motion payloads; a reopened
- *    project explains that those rig payloads are not persisted.
+ *    commitShot supplied the session model/motion payloads; a reopened project
+ *    whose actors were never performed (so no `actors/<node>.json` rig exists
+ *    either) explains every source a rig can come from.
  * 5. A resident project with parseable but invalid `scene.json` reports a
  *    project-state repair error naming the file before geometry helpers run.
  * 6. Ambiguous duplicate geometry state rejects before the agent can trust the
@@ -655,16 +656,19 @@ export const test_mcp_geometry_query_tools = (): void => {
         nclose(residentReach.left.gap, 0),
     );
 
+    // No actor was ever performed here, so no `actors/<node>.json` rig exists
+    // either — a reopened session has no rig from any source and must say so,
+    // naming the rig-persisting path (`perform`) as well as the alternatives.
     const reopened = new AutoMovieApplication({ projectRoot: root });
     TestValidator.predicate(
-      "reopened rig query explains session-only models",
+      "reopened rig query with no persisted rig explains every source",
       throwsError(
         () =>
           reopened.getReach({
             actor: "actor",
             target: { kind: "point", point: { x: 1.4, y: 1, z: 2.3 } },
           }),
-        ["commitScene with models", "context explicitly"],
+        ["cannot resolve a rig", "resident perform", "context explicitly"],
       ),
     );
 

@@ -75,6 +75,7 @@ export class GeometryService {
       t,
       source.root,
       source.resident ? { caller: "getResolvedPose" } : undefined,
+      source.actorRigs,
     );
   }
 
@@ -96,6 +97,7 @@ export class GeometryService {
       props.actor,
       source.root,
       source.resident ? { caller: "getReach" } : undefined,
+      source.actorRigs,
     );
     if (found.actor === null) return { reach: null, reason: found.reason };
     const actor = found.actor;
@@ -240,20 +242,21 @@ export class GeometryService {
     // Beat-scoped motion memory (#1091): the queried beat's own snapshot, so
     // `perform:<actor>` ids never resolve to another beat's clip.
     const memory = this.context.geometryMemory(beat);
-    // Persisted cast rigs (actors/<node>.json, #1176) keyed by their scene
-    // node's model reference, so a REOPENED project resolves rest/ambient cast
-    // poses without a destructive commitScene re-run (#1229). Session memory,
-    // when present, is authoritative: it comes AFTER these in the merge, and
-    // mergeResidentModels keeps the last entry per id, so a live commitScene
-    // rig overrides the persisted one on collision.
-    const scene = slate.scene;
-    const storedActorModels = project.storedActors().flatMap((spec) => {
-      if (spec.rig === undefined) return [];
-      const node = scene.nodes.find((n) => n.id === spec.node);
-      return node === undefined ? [] : [{ id: node.model, skeleton: spec.rig }];
-    });
+    // Persisted cast rigs (actors/<node>.json, #1176) stay keyed by their OWN
+    // node, so a REOPENED project resolves rest/ambient cast poses without a
+    // destructive commitScene re-run (#1229) AND each actor resolves its own
+    // rig. They are deliberately NOT merged into the model set: a rig is
+    // per-actor while a model id is shared, so re-keying them by `node.model`
+    // silently gave every cast node on one `modelRef` a single arbitrary rig
+    // (#1244). `findActorRig` consults this map per actor instead.
+    const actorRigs = new Map(
+      project
+        .storedActors()
+        .flatMap((spec) =>
+          spec.rig === undefined ? [] : [[spec.node, spec.rig] as const],
+        ),
+    );
     const models = mergeResidentModels([
-      ...storedActorModels,
       ...memory.models,
       ...project.storedProps().map((prop) => ({
         id: prop.model.id,
@@ -262,6 +265,7 @@ export class GeometryService {
     ]);
     return {
       resident: true,
+      actorRigs,
       // `$context` (not `$slate...`): the geometry context is assembled from
       // the stored scene plus session rig/motion memory, so a slate-slice
       // root would misaddress the memory-backed parts (#995).
@@ -283,6 +287,8 @@ type GeometryContextSource = {
   context: IAutoMovieMcpGeometryContext;
   resident: boolean;
   root: string;
+  /** Persisted per-actor rigs; resident-only (#1244). See {@link findActorRig}. */
+  actorRigs?: ReadonlyMap<string, IAutoMovieSkeleton>;
 };
 
 type GeometrySceneSource = {
@@ -402,12 +408,13 @@ const resolveActorGeometry = (
   t: number,
   root: string,
   contract?: ResidentGeometryContract,
+  actorRigs?: ReadonlyMap<string, IAutoMovieSkeleton>,
 ): {
   resolvedPose: IAutoMovieMcpResolvedPose | null;
   reason: string | null;
 } => {
   assertFiniteTime(t);
-  const found = findActorRig(context, actor, root, contract);
+  const found = findActorRig(context, actor, root, contract, actorRigs);
   if (found.actor === null) return { resolvedPose: null, reason: found.reason };
   const actorRig = found.actor;
   const state = resolveActorPose(
@@ -497,6 +504,14 @@ const findActorRig = (
   actor: string,
   root: string,
   contract?: ResidentGeometryContract,
+  /**
+   * Persisted `actors/<node>.json` rigs, keyed by their OWN node (#1244). A rig
+   * is per-actor, so it must never be re-keyed into the model namespace: cast
+   * nodes may share one `modelRef` (a crowd from one VRM), and a model-keyed
+   * merge would silently resolve every one of them against a single arbitrary
+   * rig. Resident-only; the explicit-context path has no persisted store.
+   */
+  actorRigs?: ReadonlyMap<string, IAutoMovieSkeleton>,
 ): { actor: GeometryActor | null; reason: string | null } => {
   const node = findSceneNode(context.scene, actor, `${root}.scene.nodes`);
   if (node === null)
@@ -505,21 +520,31 @@ const findActorRig = (
       reason: `actor "${actor}" is not a scene node — check the scene's node ids`,
     };
   const model = findGeometryModel(context.models, node.model, `${root}.models`);
-  if (model === null && contract !== undefined)
+  // Session memory stays authoritative only when it CARRIES a rig: a
+  // `commitScene` model with `skeleton: null` is the ABSENCE of a rig, not a
+  // rig, so it must not mask the actor's own persisted one (#1244) — otherwise
+  // the session that just wrote the rig resolves worse than a reopened project.
+  const sessionSkeleton = model?.skeleton ?? null;
+  const persisted = actorRigs?.get(actor);
+  const skeleton = sessionSkeleton ?? persisted ?? null;
+  if (skeleton === null && contract !== undefined)
     throw new Error(
-      `${contract.caller} cannot resolve resident model "${node.model}" for actor "${actor}". Project files persist the scene, but not cast model skeleton payloads; call commitScene with models in this application session or pass context explicitly.`,
+      `${contract.caller} cannot resolve a rig for actor "${actor}" (model "${node.model}"). Project files persist the scene and each performed actor's rig; run a resident perform with this actor's rig (or commitScene with skeletal models) in this session, or pass context explicitly.`,
     );
-  if (model === null)
+  if (model === null && skeleton === null)
     return {
       actor: null,
       reason: `actor "${actor}" places model "${node.model}", which is not in the models list`,
     };
-  if (model.skeleton === null)
+  if (skeleton === null)
     return {
       actor: null,
-      reason: `model "${model.id}" carries no skeleton — rig queries need a skeletal model`,
+      reason: `model "${node.model}" carries no skeleton — rig queries need a skeletal model`,
     };
-  return { actor: { node, model, skeleton: model.skeleton }, reason: null };
+  return {
+    actor: { node, model: model ?? { id: node.model, skeleton }, skeleton },
+    reason: null,
+  };
 };
 
 type ResidentGeometryContract = {
