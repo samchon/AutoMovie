@@ -48,6 +48,13 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["RENDER_GUIDES", "omit `slate`"],
   ["RENDER_GUIDES", "planChunkedRender"],
   ["RENDER_GUIDES", "planCaptions"],
+  // The three tools taught in #1232/#1241 and corrected in #1253 — pinned so the
+  // corpus cannot silently drop or contradict them again (the #1241 miss).
+  ["PROJECT_MEMORY", "read companion to the commit ladder"],
+  ["PROJECT_MEMORY", "prefer the per-slice reads over pulling the whole slate"],
+  ["REVIEW", "it is not resident, and it reads no committed film"],
+  ["RENDER_GUIDES", "OpenPose-style sidecar"],
+  ["AUTOMOVIE_OVERALL", "no re-commit needed"],
 ];
 
 /**

@@ -17,7 +17,7 @@ out.
 
 ## Tools
 
-40 tools. Every stateful tool is **resident-or-explicit**: pass a `slate` for a
+44 tools. Every stateful tool is **resident-or-explicit**: pass a `slate` for a
 pure stateless call, or omit it to read/commit the resident project opened with
 `openProject`.
 

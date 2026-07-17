@@ -304,9 +304,12 @@ export class AutoMovieApplication {
   /**
    * Resolve an actor's world-space skeleton pose. Pass `context` for the
    * explicit stateless path, or omit it to read the resident project. Resident
-   * mode uses the committed scene, optional committed beat shot, and the
-   * session-only model/motion payloads remembered from resident commitScene and
-   * commitShot; those payloads are not persisted as project slices.
+   * mode uses the committed scene, optional committed beat shot, each cast
+   * actor's persisted rig (`actors/<node>.json`, so a reopened project resolves
+   * rest/ambient poses without a re-commit), and the session-only compiled
+   * motions remembered from resident commitShot. Motions are not persisted as
+   * slices, so a query that samples a specific beat's motion needs that beat's
+   * commitShot in this session (or an explicit context).
    *
    * @param props The actor id, optional explicit context or resident beat, and
    *   optional shot time.
