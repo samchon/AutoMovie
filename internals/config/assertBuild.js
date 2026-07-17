@@ -54,3 +54,18 @@ for (const target of publishTargets) {
   const exists = fs.existsSync(resolved);
   if (exists === false) fail(`publishConfig target does not exist: ${target}`);
 }
+
+// Every literal `files` entry must exist on disk (#1254). npm silently drops a
+// missing entry, so a package declaring LICENSE/README.md in `files` without the
+// file publishes without it — a tarball missing its license, caught here at
+// build instead of at publish. Glob entries are left to npm.
+const hasGlob = (entry) => /[*?[\]{}]/.test(entry);
+for (const entry of packageJson.files ?? []) {
+  if (typeof entry !== "string" || hasGlob(entry)) continue;
+  const resolved = path.resolve(
+    process.cwd(),
+    entry.startsWith("./") ? entry.slice(2) : entry,
+  );
+  if (fs.existsSync(resolved) === false)
+    fail(`"files" entry does not exist on disk: ${entry}`);
+}
