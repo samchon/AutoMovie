@@ -29,4 +29,11 @@ export const createAutoMovieMcpServer = (props?: {
       "automovie",
       new AutoMovieApplication(props),
     ),
+    // Ship the serialized-JSON text block beside `structuredContent` on every
+    // successful result. @typia/mcp 13.1.x defaults this off (structured-only),
+    // which the dependency bump inherited silently; the published binary
+    // advertises "any MCP client", so a client that reads `content` text and
+    // ignores `outputSchema` must still receive the result. This restores the
+    // pre-bump wire contract; the doubled payload is the cost of that reach.
+    { textFallback: true },
   );
