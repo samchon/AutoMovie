@@ -393,8 +393,11 @@ export class PipelineService {
     // perform with an explicit registry stores each context's beat-invariant
     // half as actors/<node>.json, so later resident performs omit `actors`.
     if (slate !== null && props.actors !== undefined && output.success === true)
-      for (const [node, context] of Object.entries(props.actors))
-        project!.saveActor({
+      // One transaction across the whole registry (#1257): a mid-write failure
+      // must leave the actor store untouched and the revision unbumped, not tear
+      // it actor-by-actor.
+      project!.saveActors(
+        Object.entries(props.actors).map(([node, context]) => ({
           node,
           skeleton: context.skeleton,
           gaits: context.gaits,
@@ -405,7 +408,8 @@ export class PipelineService {
           ...(context.restFrames !== undefined
             ? { restFrames: context.restFrames }
             : {}),
-        });
+        })),
+      );
     return { performed: output };
   }
 
