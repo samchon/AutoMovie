@@ -205,4 +205,22 @@ export const test_film_attach = (): void => {
     "rest-framed attach differs from raw rig-space FK",
     !vclose(posAt(framed, 0.5), posAt(raw, 0.5), 1e-3),
   );
+
+  // 5. a non-positive span throws before it can bake a degenerate clip (#1224).
+  // With duration 0 the sample loop emits `start` for both endpoints, so the
+  // clip's keyframe times would be [start, start] — an unsamplable follow. The
+  // baker rejects it up front, the same precondition projectileTrajectory
+  // enforces, so no caller can slip a zero-span coupling past.
+  const zeroSpanAttach = (): void => {
+    compileAttach({
+      child: "sword",
+      bone: "leftHand",
+      parentTransform,
+      parentSkeleton: createSkeleton(),
+      start: 2,
+      duration: 0,
+      shotDuration: 2,
+    });
+  };
+  TestValidator.error("a zero-span attach throws", zeroSpanAttach);
 };

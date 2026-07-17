@@ -446,4 +446,31 @@ export const test_film_perform_shot_attach = (): void => {
       clipEnd(first),
     ),
   );
+
+  // 8. an "auto" attach starting at the shot end has zero span (#1224): before
+  // the fix this passed every validation and baked a follow clip with duplicate
+  // keyframe times [start, start], which threw the moment anything sampled it.
+  // A numeric duration at the end is already caught by the span check; the auto
+  // case was the uncaught remainder. The shot is `perform`'s 2 s, so start 2 is
+  // exactly the end.
+  const zeroSpan = perform([
+    {
+      verb: "attachTo",
+      actor: "sword",
+      parent: "knight",
+      bone: "leftHand",
+      start: 2,
+      duration: "auto",
+    },
+  ]);
+  TestValidator.equals(
+    "an auto attach starting at the shot end is rejected",
+    zeroSpan.success,
+    false,
+  );
+  if (zeroSpan.success === false)
+    TestValidator.predicate(
+      "the violation names the zero-span duration",
+      zeroSpan.violations.some((v) => v.path.includes(".duration")),
+    );
 };

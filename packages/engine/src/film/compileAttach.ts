@@ -95,6 +95,15 @@ export const compileAttach = (props: {
     shotDuration,
   } = props;
   const fps = props.fps ?? 30;
+  // A non-positive span would bake duplicate keyframe times (the loop below
+  // emits `start` for both endpoints), an unsamplable clip. `performShot`
+  // rejects a zero-span coupling before it reaches here; this precondition (the
+  // same one `projectileTrajectory` enforces) seals the baker itself so no
+  // other caller can produce a degenerate follow clip.
+  if (!(duration > 0))
+    throw new RangeError(
+      `attach follow duration must be > 0 seconds, but was ${duration}`,
+    );
   const restPose: IAutoMoviePose = {
     skeleton: parentSkeleton.id,
     root: null,

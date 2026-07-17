@@ -463,6 +463,25 @@ export const performShot = (props: {
         `action span [${action.start}, ${action.start + action.duration}] must lie inside the shot [0, ${performance.duration}]`,
         action.duration,
       );
+    // An "auto" duration fills to the shot end, so it needs a positive span to
+    // fill: an action that starts exactly at the shot end has zero span. A
+    // numeric duration is already caught above (start + duration > shot); the
+    // auto case is not span-checked there, and a zero-span auto coupling bakes
+    // a degenerate clip with duplicate keyframe times that throws the moment
+    // anything samples it. `start > shot` is already reported as a start range
+    // error, so this fires only on the exact `start === shot` remainder.
+    if (
+      action.duration === "auto" &&
+      finiteStart &&
+      action.start <= performance.duration &&
+      performance.duration - action.start <= 0
+    )
+      out.push(
+        "range",
+        `${base}[${i}].duration`,
+        `an "auto" duration leaves no span when the action starts at the shot end (${performance.duration}s) — start earlier`,
+        action.duration,
+      );
     if (
       action.repeat !== undefined &&
       (!Number.isInteger(action.repeat) || action.repeat < 1)
