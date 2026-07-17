@@ -59,6 +59,13 @@ const topo = (m: IAutoMovieMesh, expectClosed = false) =>
  * 6. Malformed buffers (empty, out-of-range index, ragged index/position count)
  *    yield no topology verdict — the structural report is `validateModel`'s
  *    job.
+ * 7. A closed manifold (a tetrahedron: every edge shared by exactly two
+ *    outward-wound faces) PASSES `expectClosed` — the non-firing twin of
+ *    scenario 1's open-surface failure, so an over-matching boundary detector
+ *    could not hide behind the absence of a watertight-passes case.
+ * 8. That same tetrahedron with one face removed reports its three now-open
+ *    boundary edges under `expectClosed` — pinning the watertight check to fire
+ *    only on genuine boundaries.
  */
 export const test_validation_mesh_topology = (): void => {
   // 1. consistent open pair — passes; expectClosed flags its open edges.
@@ -145,5 +152,53 @@ export const test_validation_mesh_topology = (): void => {
     "a ragged position buffer yields no topology verdict",
     topo(mesh([0, 0, 0, 1], null)),
     { success: true },
+  );
+
+  // 7. a closed manifold passes expectClosed (the watertight non-firing twin).
+  // Tetrahedron on v0(0,0,0) v1(1,0,0) v2(0,1,0) v3(0,0,1); the four faces are
+  // wound outward so every one of the six edges is shared by exactly two faces
+  // traversing it oppositely (2-manifold, consistent winding, watertight).
+  const TETRA = [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1];
+  const closedTetra = mesh(TETRA, [
+    0,
+    2,
+    1, // face opposite v3
+    0,
+    1,
+    3, // face opposite v2
+    0,
+    3,
+    2, // face opposite v1
+    1,
+    2,
+    3, // face opposite v0
+  ]);
+  TestValidator.equals(
+    "a closed manifold passes without expectClosed",
+    topo(closedTetra),
+    { success: true },
+  );
+  TestValidator.equals(
+    "a closed manifold passes UNDER expectClosed (watertight)",
+    topo(closedTetra, true),
+    { success: true },
+  );
+
+  // 8. the same tetrahedron minus one face exposes exactly its three open edges
+  const openTetra = mesh(TETRA, [0, 2, 1, 0, 1, 3, 0, 3, 2]);
+  TestValidator.equals(
+    "an open tetra passes without expectClosed",
+    topo(openTetra),
+    { success: true },
+  );
+  const openTetraClosed = topo(openTetra, true);
+  TestValidator.equals(
+    "an open tetra fails under expectClosed",
+    openTetraClosed.success,
+    false,
+  );
+  TestValidator.predicate(
+    "the watertight check reports the open boundary as a topology error",
+    hasViolation(openTetraClosed, "topology", "$input.indices"),
   );
 };
