@@ -673,6 +673,29 @@ const validateJointConstraint = (
         `swingDeg must be a finite number > 0, but was ${swingDeg}`,
         swingDeg,
       );
+    else
+      // The swing cone is measured from neutral (0, 0), so a flexion/abduction
+      // box that excludes neutral is geometrically incompatible with it: no
+      // pose satisfies both the box and the cone (e.g. [10, 90] with a 5° cone
+      // needs a swing >= 14° yet caps it at 5°), and clampJointRom's cone scale
+      // — which pulls toward neutral — would drop the axis below a positive min,
+      // producing a pose validateJointRom then rejects. Require each swung axis
+      // to bracket neutral so the clamp/validate pair stays consistent.
+      for (const axis of ["flexion", "abduction"] as const) {
+        const range = constraint[axis];
+        if (
+          range !== null &&
+          Number.isFinite(range.min) &&
+          Number.isFinite(range.max) &&
+          (range.min > 0 || range.max < 0)
+        )
+          collector.push(
+            "range",
+            `${path}.${axis}`,
+            `a swing-coned joint's ${axis} range must include neutral (0), but was [${range.min}, ${range.max}] — the cone is measured from neutral, so no pose can satisfy both`,
+            range,
+          );
+      }
   }
 };
 

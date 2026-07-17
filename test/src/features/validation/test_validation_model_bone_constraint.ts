@@ -38,6 +38,11 @@ const modelWithConstraint = (constraint: IAutoMovieJointConstraint) => {
  * 2. Non-finite axis range bounds are range violations.
  * 3. Inverted axis ranges are range violations.
  * 4. Non-positive swing cones are range violations.
+ * 5. A swing-coned flexion range that excludes neutral (min > 0) is a range
+ *    violation — the cone is measured from neutral, so no pose satisfies both
+ *    the box and the cone, and clampJointRom's cone scale would drop the axis
+ *    below its positive min (the #1230 clamp/validate inconsistency at root).
+ * 6. The same for an abduction range whose max < 0 (neutral excluded above).
  */
 export const test_validation_model_bone_constraint = (): void => {
   TestValidator.equals(
@@ -106,6 +111,48 @@ export const test_validation_model_bone_constraint = (): void => {
       badSwing,
       "range",
       "$input.skeleton.bones[0].constraint.swingDeg",
+    ),
+  );
+
+  // 5. a swing-coned flexion range that excludes neutral (min > 0)
+  const flexionAboveNeutral = validateModel({
+    model: modelWithConstraint({
+      ...VALID_CONSTRAINT,
+      flexion: { min: 10, max: 90 },
+    }),
+  });
+  TestValidator.equals(
+    "a swing-coned flexion range excluding neutral fails",
+    flexionAboveNeutral.success,
+    false,
+  );
+  TestValidator.predicate(
+    "range violation on the neutral-excluding flexion",
+    hasViolation(
+      flexionAboveNeutral,
+      "range",
+      "$input.skeleton.bones[0].constraint.flexion",
+    ),
+  );
+
+  // 6. a swing-coned abduction range that excludes neutral from above (max < 0)
+  const abductionBelowNeutral = validateModel({
+    model: modelWithConstraint({
+      ...VALID_CONSTRAINT,
+      abduction: { min: -90, max: -10 },
+    }),
+  });
+  TestValidator.equals(
+    "a swing-coned abduction range excluding neutral fails",
+    abductionBelowNeutral.success,
+    false,
+  );
+  TestValidator.predicate(
+    "range violation on the neutral-excluding abduction",
+    hasViolation(
+      abductionBelowNeutral,
+      "range",
+      "$input.skeleton.bones[0].constraint.abduction",
     ),
   );
 };
