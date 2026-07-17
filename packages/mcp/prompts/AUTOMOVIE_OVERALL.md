@@ -2,7 +2,7 @@
 
 AutoMovie MCP is the deterministic gate for turning creative intent into a validated, renderable film. The engine computes and validates — poses, motion, physics plausibility, staging coherence — but it never decides what the film should be. You, the coding agent, are the orchestrator: you author intent, the engine enforces reality ("engine enforces, model creates"). The server blocks wrong order and names the next step, but it does not drive the loop for you.
 
-Read this guide first. Before using a stage's tools, read the matching guide: `STAGING`, `BLOCKING`, `PERFORMANCE`, `REVIEW`, `PROPS`, `PROJECT_MEMORY`, `RENDER_GUIDES`.
+Read this guide first. Before using a stage's tools, read the matching guide: `STAGING`, `BLOCKING`, `PERFORMANCE`, `FORGE`, `PROPS`, `REVIEW`, `PROJECT_MEMORY`, `RENDER_GUIDES`.
 
 ## The Ladder
 
@@ -52,4 +52,4 @@ Prefer the narrowest tool that fixes the fault — surgical, not a reset:
 
 ## Geometry Before Guesswork
 
-Never stage by hope. `getReach` tells you whether an actor's arms can reach a target; `measureDistance` measures the world; `getResolvedPose` shows where every bone actually is at a shot time. Measure, then stage. These geometry tools are resident-or-explicit: omit `scene`/`context` to read the active project, with rig/motion queries using the session-only payloads remembered from resident `commitScene`/`commitShot`; after reopening, pass explicit context or re-run those commits before asking for rigged pose/reach.
+Never stage by hope. `getReach` tells you whether an actor's arms can reach a target; `measureDistance` measures the world; `getResolvedPose` shows where every bone actually is at a shot time. Measure, then stage. These geometry tools are resident-or-explicit: omit `scene`/`context` to read the active project. A reopened project resolves cast rest/ambient poses and reach from each actor's persisted rig (`actors/<node>.json`, written by resident `perform`) — no re-commit needed. Motions stay session-only, so a query that samples a specific beat's compiled motion still needs that beat's `commitShot` in this session, or an explicit `context`. Do NOT re-run `commitScene` to recover a rig: it clears shots, beat ends, notes, and the film.

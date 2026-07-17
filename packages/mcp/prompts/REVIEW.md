@@ -19,7 +19,9 @@ Never leave a warning unhandled round after round — that is the nagging loop t
 
 ## Continuity Across Cuts — lintContinuity
 
-Per-beat review judges one shot in isolation; `lintContinuity` judges the assembled film as a whole. It walks the committed cut and checks each shot against the prior beat's committed end-state — an actor that teleports between a beat's end and the next shot's opening, a prop that changes hands or vanishes across the seam, a velocity that reverses without cause. Run it after the beats are committed and assembled, before a final render: a shot can pass its own review yet still break continuity with its neighbor. It is resident-or-explicit like the commit tools; the surviving continuity faults file on the beat whose opening disagrees with the prior end.
+Per-beat review judges one shot in isolation; `lintContinuity` judges the film across its cuts. You pass the `beats` in playback order — each with its compiled `shot` and the `motions` its performances reference — and the `scene` they play over; it derives each beat's end state and compares the next beat's opening against it. (It takes those beats explicitly; it is not resident, and it reads no committed film.) Every shot is validated against the scene first, so a malformed shot returns violations rather than a bogus lint.
+
+The warnings are **advisory** — a hard cut may intend a jump — and cover four seams: an actor's world-position drift (beyond `positionTolerance`, default 0.05 m), its facing drift (beyond `facingToleranceDeg`, default 5°), a persistent mount dropped or changed (the "props disappear" failure — a rider's horse vanishing across the seam), and an actor present at a beat's end but missing from the next opening. Run it after the beats are committed and assembled, before a final render: a shot can pass its own review yet still break continuity with its neighbour. Each surviving fault files on the beat whose opening disagrees with the prior end.
 
 ## Locating the Correction on the Screenplay
 

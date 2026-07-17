@@ -11,6 +11,8 @@ Every commit and query tool works in two modes:
 
 `getSlate` reads the whole resident slate back as one document — script, scene, shots, beat ends, notes, and film together — so you can inspect the current committed state without re-deriving it from the individual files or re-sending it. It is the read companion to the commit ladder: ask it (or `nextSteps` for just the status and next actions) before guessing what the project already holds.
 
+When you need only one part, prefer the per-slice reads over pulling the whole slate: `getScript`, `getScene`, `getShot` (one beat's compiled shot), and `getNotes` (one beat's review notes). Each returns just its slice, so a large film's other beats never travel — the same token discipline the resident write-through keeps on the commit side.
+
 ## Write-Through Rules
 
 - A successful resident commit persists exactly the slices it changed. A failed commit writes nothing.
