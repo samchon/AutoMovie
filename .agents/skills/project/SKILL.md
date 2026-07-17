@@ -15,7 +15,7 @@ This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.w
 
 ## Layout
 
-- `packages/interface` (`@automovie/interface`): the type hub — the AST the LLM emits against (geometry, skeleton/rig, pose, expression, motion, material, model, scene, validation). Depends on `typia` only; pure types, no runtime.
+- `packages/interface` (`@automovie/interface`): the type hub — the AST the LLM emits against (geometry, skeleton/rig, pose, expression, motion, material, model, scene, validation). Pure types with no runtime dependency; ranges and units live in field JSDoc, enforced by `engine` validators.
 - `packages/engine` (`@automovie/engine`): the deterministic engine — math, kinematics (FK), ROM and other constraint validators, motion sampling, tessellation, the film pipeline (stage/block/perform/cut). Pure TypeScript, no `three.js`.
 - `packages/forge` (`@automovie/forge`): parametric model building (head/body meshes, hair, morphs) from forge specs.
 - `packages/ingest` (`@automovie/ingest`): glTF/model ingestion via `@gltf-transform/core`.
