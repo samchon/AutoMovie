@@ -17,12 +17,41 @@ import {
 import { createSkeleton, makePose } from "../internal/fixtures";
 import { throwsError } from "../internal/predicates";
 
-const scriptWrite = makeScriptWrite();
+/**
+ * BOTH cast members reference one `modelRef` — the shared-model case (#1244). A
+ * rig is per-actor while a model id is shared, so this is the arrangement a
+ * model-keyed rig merge silently collapses.
+ */
+const scriptWrite = makeScriptWrite({
+  cast: [
+    { node: "knightA", character: "the challenger", modelRef: "stickman" },
+    { node: "knightB", character: "the champion", modelRef: "stickman" },
+  ],
+});
 
 const walk: IAutoMovieGait = {
   name: "walk",
   period: 1,
   limbs: [{ bone: "leftUpperLeg", phase: 0, duty: 0.5, amplitude: 25 }],
+};
+
+/** A rig told apart from its sibling by the hips rest height. */
+const rigWithHipsY = (y: number) => {
+  const base = createSkeleton();
+  return {
+    ...base,
+    bones: base.bones.map((bone) =>
+      bone.bone === "hips"
+        ? {
+            ...bone,
+            rest: {
+              ...bone.rest,
+              translation: { ...bone.rest.translation, y },
+            },
+          }
+        : bone,
+    ),
+  };
 };
 
 const perf = () =>
@@ -42,19 +71,24 @@ const perf = () =>
 const actorContext = (
   position: IAutoMovieVector3,
   facingDeg: number,
-): IAutoMovieMcpActorContext => {
-  const skeleton = createSkeleton();
-  return {
-    skeleton: skeleton.id,
-    gaits: [walk],
-    position,
-    speed: 1,
-    facingDeg,
-    eyeHeight: 1.6,
-    restPose: makePose([]),
-    rig: skeleton,
-  };
-};
+  rig: ReturnType<typeof rigWithHipsY> = createSkeleton(),
+): IAutoMovieMcpActorContext => ({
+  skeleton: rig.id,
+  gaits: [walk],
+  position,
+  speed: 1,
+  facingDeg,
+  eyeHeight: 1.6,
+  restPose: makePose([]),
+  rig,
+});
+
+/** The resolved hips height — the value that tells the two rigs apart. */
+const hipsYOf = (app: AutoMovieApplication, actor: string): number | null =>
+  app
+    .getResolvedPose({ actor, beat: scriptWrite.beats[0]!.id })
+    .resolvedPose?.bones.find((b) => b.bone === "hips")?.worldPosition.y ??
+  null;
 
 /** Write one stored actor spec straight to `actors/<node>.json`. */
 const writeActorFile = (root: string, spec: IAutoMovieMcpActorSpec): void =>
@@ -66,26 +100,36 @@ const writeActorFile = (root: string, spec: IAutoMovieMcpActorSpec): void =>
 
 /**
  * A reopened project resolves cast rest poses from the persisted actor rigs
- * (#1229). Cast model skeletons used to live only in session memory (resident
- * `commitScene`'s `models`), so a second application session on a fully
- * committed project could not resolve even a rest pose — and the only in-band
- * recovery, re-running `commitScene`, wipes the committed shots. #1176 already
- * persists each performed actor's rig as `actors/<node>.json`; the resident
- * geometry context now merges those rigs (keyed by their scene node's model)
- * into the model set, so a fresh session resolves without a destructive
- * re-commit.
+ * (#1229), and each actor resolves its OWN rig (#1244). Cast model skeletons
+ * used to live only in session memory (resident `commitScene`'s `models`), so a
+ * second application session on a fully committed project could not resolve
+ * even a rest pose — and the only in-band recovery, re-running `commitScene`,
+ * wipes the committed shots. #1176 persists each performed actor's rig as
+ * `actors/<node>.json`; the resident geometry context reads those rigs keyed by
+ * their own node.
+ *
+ * The rig is per-ACTOR while a model id is shared, so the rigs must never be
+ * re-keyed into the model namespace: this fixture puts BOTH cast members on one
+ * `modelRef` with provably different rigs, the arrangement a model-keyed merge
+ * collapses to a single arbitrary rig (#1244).
  *
  * Scenarios:
  *
  * 1. Session A commits the scene and performs (writing `actors/<node>.json`),
- *    never committing a shot. A FRESH application session on the same project
- *    root — with no session geometry memory at all — resolves the cast actor's
- *    rest pose for the beat, proving the skeleton came off disk. The merge is
- *    robust to a stored actor with no rig (skipped) and a stored actor whose
- *    scene node is gone (skipped), so neither derails resolving the real ones.
- * 2. After the cast actor's own persisted rig is removed, the fresh session throws
- *    the actionable "cannot resolve resident model" guidance — the merge fills
- *    real persisted rigs, it does not fabricate a missing one.
+ *    never committing a shot. A FRESH session on the same root — no session
+ *    geometry memory at all — resolves EACH actor's own rig off disk, though
+ *    both share one model id. Robust to a stored actor with no rig and one
+ *    whose scene node is gone (both skipped without derailing the real ones).
+ * 2. A `commitScene` model carrying `skeleton: null` is the ABSENCE of a rig, not
+ *    a rig: it must not mask the actor's own persisted one, so the session that
+ *    just wrote the rigs resolves them too (it used to resolve worse than a
+ *    reopened project).
+ * 3. A session `commitScene` model carrying a REAL skeleton still overrides the
+ *    persisted rig for that model — session memory stays authoritative when it
+ *    actually carries a rig.
+ * 4. An actor with no rig anywhere throws the actionable guidance, which names the
+ *    rig-persisting path (`perform`) rather than only the destructive
+ *    `commitScene`.
  */
 export const test_mcp_geometry_reopened_actor = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-georeopen-"));
@@ -121,11 +165,12 @@ export const test_mcp_geometry_reopened_actor = (): void => {
       if (node === undefined) throw new Error(`missing node ${id}`);
       return node.transform.translation;
     };
+    // Provably DIFFERENT rigs on the two nodes that share model "stickman".
     const performed = sessionA.perform({
       performance: perf(),
       actors: {
-        knightA: actorContext(positionOf("knightA"), 0),
-        knightB: actorContext(positionOf("knightB"), 180),
+        knightA: actorContext(positionOf("knightA"), 0, rigWithHipsY(1)),
+        knightB: actorContext(positionOf("knightB"), 180, rigWithHipsY(5)),
       },
     }).performed;
     if (performed.success !== true)
@@ -135,6 +180,25 @@ export const test_mcp_geometry_reopened_actor = (): void => {
     TestValidator.predicate(
       "session A persisted the actor rigs to disk",
       fs.existsSync(path.join(root, "actors", "knightA.json")),
+    );
+    TestValidator.equals(
+      "both cast nodes share one model id (the collision arrangement)",
+      [
+        ...new Set(
+          staged.scene.nodes
+            .filter((n) => n.id === "knightA" || n.id === "knightB")
+            .map((n) => n.model),
+        ),
+      ],
+      ["stickman"],
+    );
+
+    // 2. a skeleton:null session model must not mask the persisted rig — the
+    // session that just wrote the rigs resolves them in-session.
+    TestValidator.equals(
+      "a skeleton:null session model does not mask the persisted rig",
+      hipsYOf(sessionA, "knightA"),
+      1,
     );
 
     // Two persisted actors the merge must skip without derailing: one with no
@@ -174,20 +238,50 @@ export const test_mcp_geometry_reopened_actor = (): void => {
         resolved.bones.length > 0,
     );
 
-    // 2. once the cast actor's own persisted rig is gone, resolving throws
+    // 1b. and EACH actor resolves its OWN rig, though both share model
+    // "stickman" — a model-keyed merge gave both the last-read rig (#1244).
+    TestValidator.equals(
+      "each actor on a shared model resolves its own persisted rig",
+      [hipsYOf(sessionB, "knightA"), hipsYOf(sessionB, "knightB")],
+      [1, 5],
+    );
+
+    // 3. a session model carrying a REAL skeleton still overrides the persisted
+    // rig for that model — session memory is authoritative when it has a rig.
+    const sessionOverride = new AutoMovieApplication();
+    sessionOverride.openProject({ root });
+    sessionOverride.commitScene({
+      scene: staged.scene,
+      models: [...new Set(staged.scene.nodes.map((node) => node.model))].map(
+        (id) => ({ id, skeleton: rigWithHipsY(9) }),
+      ),
+    });
+    TestValidator.equals(
+      "a session model with a real skeleton overrides the persisted rig",
+      hipsYOf(sessionOverride, "knightA"),
+      9,
+    );
+
+    // 4. an actor with no rig anywhere throws guidance naming the rig-persisting
+    // path (`perform`), not only the destructive commitScene the fix removed.
     fs.rmSync(path.join(root, "actors", "knightA.json"));
     const sessionC = new AutoMovieApplication();
     sessionC.openProject({ root });
     TestValidator.predicate(
-      "a cast node without a persisted rig still throws the model guidance",
+      "an actor with no rig anywhere throws guidance naming perform",
       throwsError(
         () =>
           sessionC.getResolvedPose({
             actor: "knightA",
             beat: scriptWrite.beats[0]!.id,
           }),
-        ["cannot resolve resident model"],
+        ["cannot resolve a rig for actor", "resident perform"],
       ),
+    );
+    TestValidator.equals(
+      "the sibling actor's own rig still resolves after the erase",
+      hipsYOf(sessionC, "knightB"),
+      5,
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
