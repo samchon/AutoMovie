@@ -49,6 +49,17 @@ const call = async <T>(
   );
   if (result.structuredContent === undefined)
     throw new Error(`tool ${name} returned no structured content`);
+  // The server ships the serialized text block beside structuredContent
+  // (textFallback: true, #1228): a client that reads `content` text and ignores
+  // outputSchema must still see the result. @typia/mcp 13.1.x defaults this off,
+  // so pin the wire contract here — a silent flip back to structured-only
+  // would leave every text-fallback client with an empty successful result.
+  const content = result.content as Array<{ type: string; text?: string }>;
+  TestValidator.predicate(
+    `tool ${name} ships a text fallback beside structuredContent`,
+    Array.isArray(content) &&
+      content.some((part) => part.type === "text" && (part.text ?? "") !== ""),
+  );
   return result.structuredContent as T;
 };
 
