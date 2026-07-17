@@ -17,6 +17,10 @@ Three honest responses, in order of preference:
 
 Never leave a warning unhandled round after round — that is the nagging loop the acknowledgment channel exists to prevent. And never fake a `pass` while errors stand: the verdict is a contract with the next stage, not a mood.
 
+## Continuity Across Cuts — lintContinuity
+
+Per-beat review judges one shot in isolation; `lintContinuity` judges the assembled film as a whole. It walks the committed cut and checks each shot against the prior beat's committed end-state — an actor that teleports between a beat's end and the next shot's opening, a prop that changes hands or vanishes across the seam, a velocity that reverses without cause. Run it after the beats are committed and assembled, before a final render: a shot can pass its own review yet still break continuity with its neighbor. It is resident-or-explicit like the commit tools; the surviving continuity faults file on the beat whose opening disagrees with the prior end.
+
 ## Locating the Correction on the Screenplay
 
 When the committed script carries a refinement tree, `commitShot` stamps each violation with the screenplay `node` claiming the beat. Walk that node's ancestors nearest-first — beat, then its parents up toward the intent — and fix at the deepest level that owns the fault: a clipped elbow is the beat's own motion authoring; two actors colliding because the choreography packs them too tight may be the parent group's blocking; an impossible reach across the set is the scene's staging.

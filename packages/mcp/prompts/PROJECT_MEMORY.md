@@ -9,6 +9,8 @@ Every commit and query tool works in two modes:
 - **Resident** (omit `slate`): the tool reads and transforms the project's own state and, on success, writes through to the files. This is the mode for real work — no re-sending hundreds of beats per call.
 - **Explicit** (pass `slate`): a pure stateless transform. The project is never touched. Use it for what-if checks or when driving state you manage yourself.
 
+`getSlate` reads the whole resident slate back as one document — script, scene, shots, beat ends, notes, and film together — so you can inspect the current committed state without re-deriving it from the individual files or re-sending it. It is the read companion to the commit ladder: ask it (or `nextSteps` for just the status and next actions) before guessing what the project already holds.
+
 ## Write-Through Rules
 
 - A successful resident commit persists exactly the slices it changed. A failed commit writes nothing.
