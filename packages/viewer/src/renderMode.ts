@@ -32,6 +32,36 @@ const once = (fn: () => void): (() => void) => {
   };
 };
 
+/** A renderable that is NOT a mesh: a line/grid/helper, points, or a sprite. */
+const isNonMeshRenderable = (object: THREE.Object3D): boolean =>
+  (object as THREE.Line).isLine === true ||
+  (object as THREE.Points).isPoints === true ||
+  (object as THREE.Sprite).isSprite === true;
+
+/**
+ * Hide every currently-visible non-mesh renderable in the scene (grids and
+ * other `LineSegments`/`Line` helpers, `Points`, `Sprite`s) and return a
+ * restore that makes them visible again. A structural guide pass segments only
+ * the subject MESH geometry, so any non-mesh renderable left visible would draw
+ * its live beauty material over the pass's black background — a grid reading as
+ * "very close" in the depth pass, a non-palette color in the mask, a stray line
+ * beside the skeleton in the pose pass (#1226). Hidden BEFORE a pass builds its
+ * own overlay (the pose skeleton is itself `LineSegments`), so that overlay,
+ * added afterward, stays visible.
+ */
+const hideNonMeshRenderables = (scene: THREE.Scene): (() => void) => {
+  const hidden: THREE.Object3D[] = [];
+  scene.traverse((object) => {
+    if (isNonMeshRenderable(object) && object.visible) {
+      object.visible = false;
+      hidden.push(object);
+    }
+  });
+  return () => {
+    for (const object of hidden) object.visible = true;
+  };
+};
+
 /**
  * Apply one diffusion-guide render mode to a built scene, returning the restore
  * handle. The override is applied at snapshot time and reversed right after, so
@@ -70,29 +100,42 @@ export const applyRenderMode = (
     edgeWidth?: number;
   },
 ): IAutoMovieRenderModeHandle => {
-  switch (mode) {
-    case "beauty":
-      return { mode, restore: () => {} };
-    case "depth":
-      return applyDepthMode(
-        scene,
-        options?.depthRange ?? DEPTH_NORMALIZATION_RANGE,
-      );
-    case "normal":
-      return overrideMaterials(
-        scene,
-        mode,
-        () => new THREE.MeshNormalMaterial(),
-      );
-    case "outline":
-      return applyEdgeMode(scene, options?.edgeWidth ?? EDGE_WIDTH);
-    case "mask":
-      return applyMaskMode(scene);
-    case "pose":
-      return applyPoseMode(scene);
-    default:
-      throw new Error(`unknown render mode "${String(mode)}"`);
-  }
+  if (mode === "beauty") return { mode, restore: () => {} };
+  // Resolve (and validate) the structural pass builder BEFORE touching the
+  // scene, so an unknown mode throws without leaving anything hidden.
+  const build = ((): (() => IAutoMovieRenderModeHandle) => {
+    switch (mode) {
+      case "depth":
+        return () =>
+          applyDepthMode(
+            scene,
+            options?.depthRange ?? DEPTH_NORMALIZATION_RANGE,
+          );
+      case "normal":
+        return () =>
+          overrideMaterials(scene, mode, () => new THREE.MeshNormalMaterial());
+      case "outline":
+        return () => applyEdgeMode(scene, options?.edgeWidth ?? EDGE_WIDTH);
+      case "mask":
+        return () => applyMaskMode(scene);
+      case "pose":
+        return () => applyPoseMode(scene);
+      default:
+        throw new Error(`unknown render mode "${String(mode)}"`);
+    }
+  })();
+  // A structural pass renders only the subject mesh geometry: hide every
+  // non-mesh renderable first (#1226), then build the pass (whose own overlay,
+  // if any, is added afterward and stays visible). Restore reverses both.
+  const restoreRenderables = hideNonMeshRenderables(scene);
+  const handle = build();
+  return {
+    mode,
+    restore: once(() => {
+      handle.restore();
+      restoreRenderables();
+    }),
+  };
 };
 
 /**
