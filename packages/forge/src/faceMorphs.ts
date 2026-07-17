@@ -80,9 +80,18 @@ export const buildFaceMorphs = (
   const yEye = (eyeCR[1] + eyeCL[1]) / 2;
   const yLip = (P(13)[1] + P(14)[1]) / 2;
   const U = 0.01; // 1 cm
-  /** This side's gaussian when it owns the vertex (nearer side), else 0. */
+  /**
+   * This side's share of the gaussian: the full value when it owns the vertex
+   * (the nearer side), zero when the other side does, and HALF at an exact tie.
+   * A vertex on the mirror midline (`x === 0`) is exactly equidistant from a
+   * paired feature's two centers, so both sides' gaussians are equal; a plain
+   * `>=` gave the vertex the full gaussian from BOTH targets — a 2× deformation
+   * spike down the centerline (glabella, nose bridge, philtrum), #1256.
+   * Splitting the tie keeps the two shares summing to one side's gaussian, so
+   * the combined field stays continuous as `x → 0`.
+   */
   const gate = (mine: number, other: number): number =>
-    mine >= other && mine > 1e-3 ? mine : 0;
+    mine <= 1e-3 || mine < other ? 0 : mine === other ? mine / 2 : mine;
 
   /** Each entry: vertex index -> [dx, dy, dz] at weight +1 */
   const recipes: Record<
