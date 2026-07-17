@@ -395,15 +395,38 @@ const poseShot = (shot: IAutoMovieShot, time: number): void => {
   else applyObjectMotion(shot.cameraMotion, time, () => camera);
 };
 
-// Draw one manifest frame sample. On a hard cut it only poses the live shot and
-// returns false (the caller renders); inside a transition it composites the
-// outgoing tail and the incoming shot into a cross-dissolve itself and returns
-// true.
-const drawSequenceFrame = (frame: SequenceRenderFrameSample): boolean => {
+// The last manifest frame drawn, so `__afPass` can re-render the SAME frame
+// composition (including a cross-dissolve) under a guide-pass override rather
+// than a plain single-pass render over the incoming-only posed scene (#1250).
+let lastSequenceFrame: SequenceRenderFrameSample | null = null;
+
+// Draw one manifest frame sample. Without a `pass`: on a hard cut it only poses
+// the live shot and returns false (the caller renders single-pass); inside a
+// transition it composites the outgoing tail and the incoming shot itself and
+// returns true. With a `pass` it always renders here (returning true) — the cut
+// under the pass override, or the dissolve with the override applied to each
+// half so both shots reach the guide frame (#1250).
+const drawSequenceFrame = (
+  frame: SequenceRenderFrameSample,
+  pass?: AutoMovieGuidePass,
+): boolean => {
+  lastSequenceFrame = frame;
   const live = shotById.get(frame.shot)!;
+  const withPass =
+    pass === undefined
+      ? undefined
+      : (render: () => void): void => {
+          // Apply/restore per render so the pose overlay is built from whatever
+          // shot is posed at that moment (the dissolve halves differ).
+          const handle = applyRenderMode(scene, pass);
+          render();
+          handle.restore();
+        };
   if (frame.blend === null) {
     poseShot(live, frame.shotTimeSeconds);
-    return false;
+    if (withPass === undefined) return false;
+    withPass(() => renderer.render(scene, camera));
+    return true;
   }
   const b = frame.blend;
   const outgoing = shotById.get(b.shot)!;
@@ -414,6 +437,7 @@ const drawSequenceFrame = (frame: SequenceRenderFrameSample): boolean => {
     () => poseShot(outgoing, b.shotTimeSeconds),
     () => poseShot(live, frame.shotTimeSeconds),
     b.alpha,
+    withPass,
   );
   return true;
 };
@@ -476,16 +500,26 @@ if (freezeAt !== null && Number.isFinite(freezeAt)) draw(freezeAt);
 (window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
   t: number,
 ): void => draw(t);
-// `__afPass` switches the guide pass a capturer screenshots (#1165): restore
-// whatever pass was live, apply the requested one over the already-seeked
-// scene, and re-render — so one seek yields every pass of that frame.
+// `__afPass` switches the guide pass a capturer screenshots (#1165): re-render
+// the LAST seeked frame's composition under the requested pass, so one seek
+// yields every pass of that frame. Re-composing the frame (rather than a plain
+// single-pass render over the posed scene) is what carries a cross-dissolve
+// into the guide passes — otherwise a transition frame's passes, and its beauty
+// frame, showed only the incoming shot (#1250). The frame drives its own
+// apply/restore, so no override lingers across passes.
 let passHandle: IAutoMovieRenderModeHandle | null = null;
 (
   window as unknown as { __afPass: (pass: AutoMovieGuidePass) => void }
 ).__afPass = (pass: AutoMovieGuidePass): void => {
   passHandle?.restore();
-  passHandle = applyRenderMode(scene, pass);
-  renderer.render(scene, camera);
+  passHandle = null;
+  if (lastSequenceFrame !== null) drawSequenceFrame(lastSequenceFrame, pass);
+  else {
+    // No frame recorded yet (a freeze that resolved to no sample): fall back to
+    // a single-pass override of the current scene.
+    passHandle = applyRenderMode(scene, pass);
+    renderer.render(scene, camera);
+  }
 };
 (
   window as unknown as {
