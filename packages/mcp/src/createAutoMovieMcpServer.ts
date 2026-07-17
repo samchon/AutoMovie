@@ -29,5 +29,4 @@ export const createAutoMovieMcpServer = (props?: {
       "automovie",
       new AutoMovieApplication(props),
     ),
-    "0.1.0",
   );
