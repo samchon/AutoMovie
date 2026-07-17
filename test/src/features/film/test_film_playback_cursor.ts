@@ -1,5 +1,6 @@
 import {
   IAutoMoviePlaybackSample,
+  cutSequence,
   playbackCursor,
   resolveFromTimeline,
   sequenceTimeline,
@@ -110,6 +111,60 @@ export const test_film_playback_cursor = (): void => {
       ),
     );
   }
+
+  // A FULL-overlap dissolve (`transition.duration === previousPlayed`) makes two
+  // adjacent entry starts EQUAL — entry starts are non-decreasing, not strictly
+  // increasing, and cutSequence allows it (only `> previousPlayed` is rejected).
+  // The cursor's `start <= seconds` advance must still land on the highest such
+  // index (the incoming shot), matching the scan (#1250-adjacent, the corrected
+  // playbackCursor invariant).
+  const overlapShots = [shot("shot:a", 1), shot("shot:b", 1)];
+  const overlapSequence: IAutoMovieSequence = {
+    id: "overlap",
+    name: null,
+    fps: 24,
+    shots: [
+      { shot: "shot:a", trim: null, transition: null },
+      {
+        shot: "shot:b",
+        trim: null,
+        transition: { kind: "crossDissolve", duration: 1 }, // === a's played span
+      },
+    ],
+  };
+  TestValidator.equals(
+    "cutSequence accepts a full-overlap dissolve (equal adjacent starts)",
+    cutSequence(
+      {
+        type: "write",
+        sequence: { id: "overlap", name: "overlap" },
+        fps: 24,
+        entries: overlapSequence.shots,
+        pacing: "a full cross-dissolve from a into b.",
+        continuity: "b opens exactly as a ends.",
+      },
+      overlapShots,
+    ).success,
+    true,
+  );
+  const overlapTimeline = sequenceTimeline(overlapSequence, overlapShots);
+  TestValidator.equals(
+    "the full overlap makes the two entry starts equal",
+    overlapTimeline.entries[0]!.start,
+    overlapTimeline.entries[1]!.start,
+  );
+  const overlapCursor = playbackCursor(overlapSequence, overlapTimeline);
+  TestValidator.predicate(
+    "at the shared start the cursor lands on the incoming entry, like the scan",
+    sameSample(
+      overlapCursor(overlapTimeline.entries[1]!.start),
+      resolveFromTimeline(
+        overlapSequence,
+        overlapTimeline,
+        overlapTimeline.entries[1]!.start,
+      ),
+    ),
+  );
 
   // Large-N tiling: 200 back-to-back 1 s shots (no trims/transitions), swept
   // per second — the cursor advances ~200 times across the run while the scan
