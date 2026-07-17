@@ -43,7 +43,11 @@ export const clampJointRom = (
   const abduction = clampAxis(joint.abduction, constraint.abduction);
   const twist = clampAxis(joint.twist, constraint.twist);
   // ball-joint swing cone: pull a corner pose straight back onto the cone,
-  // preserving the flexion:abduction ratio (the swing direction)
+  // preserving the flexion:abduction ratio (the swing direction). This scale
+  // pulls toward neutral, so it stays inside each axis box only when the box
+  // brackets neutral — which validateModel guarantees for a swing-coned
+  // constraint (a positive-min/negative-max swung axis is rejected there, #1230),
+  // keeping this clamp consistent with validateJointRom's per-axis check.
   if (
     typeof constraint.swingDeg === "number" &&
     flexion !== null &&
