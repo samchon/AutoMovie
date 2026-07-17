@@ -73,13 +73,15 @@ export const validateJointRom = (props: {
     }
   }
 
-  // combined swing cone (ball joints): caps the corner the per-axis boxes miss
-  if (
-    typeof constraint.swingDeg === "number" &&
-    joint.flexion !== null &&
-    joint.abduction !== null
-  ) {
-    const swing = swingConeAngle(joint.flexion, joint.abduction);
+  // Combined swing cone (ball joints): caps the corner the per-axis boxes miss.
+  // The cone is a COUPLING between the two axes, not a per-axis check, so a
+  // resting (`null`) axis is not exempt — it contributes its actual rotation, 0,
+  // exactly as the renderer reads it (`jointToQuaternion`'s `?? 0`). Gating on
+  // both axes being non-null made `{flexion:150, abduction:null}` pass while its
+  // identical twin `{flexion:150, abduction:0}` — the same quaternion — failed
+  // (#1245).
+  if (typeof constraint.swingDeg === "number") {
+    const swing = swingConeAngle(joint.flexion ?? 0, joint.abduction ?? 0);
     if (swing > constraint.swingDeg) {
       const overshoot = swing - constraint.swingDeg;
       collector.push(
