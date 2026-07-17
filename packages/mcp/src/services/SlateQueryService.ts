@@ -232,13 +232,11 @@ const assertUniqueStoredSlateEntries = (
 ): void => {
   const seen = new Map<string, number>();
   value.forEach((entry, index) => {
-    // unreachable guard: every getShot/getBeatEnd caller runs
+    // Precondition: every getShot/getBeatEnd caller runs
     // assertStoredSlateCollection first, which throws on any non-object entry,
-    // so this uniqueness scan only ever sees objects (#1040).
-    /* c8 ignore start */
-    if (typeof entry !== "object" || entry === null || Array.isArray(entry))
-      return;
-    /* c8 ignore stop */
+    // so this uniqueness scan only ever sees objects — no dead type guard to
+    // hide behind a c8-ignore (#1040, #1252). A non-string id is still handled
+    // below (a stored slice with the wrong key shape is not this scan's fault).
     const id = (entry as Record<string, unknown>)[key];
     if (typeof id !== "string") return;
     const first = seen.get(id);
