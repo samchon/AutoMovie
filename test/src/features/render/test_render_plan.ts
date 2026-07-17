@@ -67,7 +67,7 @@ export const test_render_plan = (): void => {
   TestValidator.equals("frame name padded", frameName(42), "frame_00042.png");
   TestValidator.equals("frame pattern", framePattern(), "frame_%05d.png");
   TestValidator.equals(
-    "path stem sanitizes target",
+    "path stem sanitizes separators and colons",
     renderPathStem("seq:duel/main"),
     "seq_duel_main",
   );
@@ -75,6 +75,39 @@ export const test_render_plan = (): void => {
     "empty path stem fallback",
     renderPathStem(""),
     "render",
+  );
+  // A stem must be exactly one safe component — never `.`/`..` (which would let
+  // `renders/${stem}` escape the reserved dir), a trailing dot/space, or a
+  // Windows reserved device name.
+  TestValidator.equals(
+    "a parent-dir stem cannot escape renders/",
+    renderPathStem(".."),
+    "render",
+  );
+  TestValidator.equals(
+    "a self-dir stem cannot address renders/ itself",
+    renderPathStem("."),
+    "render",
+  );
+  TestValidator.equals(
+    "a trailing dot is stripped (Windows drops it anyway)",
+    renderPathStem("shot."),
+    "shot",
+  );
+  TestValidator.equals(
+    "a Windows reserved device name is defused",
+    renderPathStem("con"),
+    "_con",
+  );
+  TestValidator.equals(
+    "a reserved name is reserved with any extension too",
+    renderPathStem("NUL.mp4"),
+    "_NUL.mp4",
+  );
+  TestValidator.equals(
+    "internal .. between separators stays contained (one component)",
+    renderPathStem("a/../../b"),
+    "a_.._.._b",
   );
 
   // 5. ffmpeg args
