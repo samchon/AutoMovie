@@ -4,6 +4,8 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 
+import { compareCodeUnits } from "../text/compareCodeUnits";
+
 /**
  * One entry's placement on the output timeline: where it starts globally, how
  * long it plays (its trim, else the whole shot), and the shot-local second its
@@ -300,7 +302,7 @@ export const sequenceEventTimeline = (
     (a, b) =>
       a.globalTime - b.globalTime ||
       a.entry - b.entry ||
-      a.id.localeCompare(b.id),
+      compareCodeUnits(a.id, b.id),
   );
 };
 

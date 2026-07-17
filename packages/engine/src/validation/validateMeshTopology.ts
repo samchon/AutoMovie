@@ -1,5 +1,6 @@
 import { IAutoMovieMesh, IAutoMovieValidation } from "@automovie/interface";
 
+import { compareCodeUnits } from "../text/compareCodeUnits";
 import { ViolationCollector } from "./violation";
 
 /** Weld tolerance: ring seams recompute cos/sin with ~1e-16 float error. */
@@ -94,7 +95,7 @@ export const appendMeshTopology = (
       const from = keys[e]!;
       const to = keys[(e + 1) % 3]!;
       directed.set(`${from}|${to}`, (directed.get(`${from}|${to}`) ?? 0) + 1);
-      const edge = [from, to].sort((a, b) => a.localeCompare(b)).join("|");
+      const edge = [from, to].sort(compareCodeUnits).join("|");
       undirected.set(edge, (undirected.get(edge) ?? 0) + 1);
     }
   }

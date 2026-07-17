@@ -38,5 +38,7 @@ export const writeFiles = (
     fs.writeFileSync(target, content, "utf8");
     written.push(target);
   }
-  return written.sort((a, b) => a.localeCompare(b));
+  // Code-unit order, not localeCompare: a scaffold must lay files down in the
+  // same order on every host (localeCompare varies with host locale/ICU).
+  return written.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 };

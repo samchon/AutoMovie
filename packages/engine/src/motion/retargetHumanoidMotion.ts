@@ -13,6 +13,7 @@ import {
 } from "../kinematics/jointToQuaternion";
 import { resolvePose } from "../kinematics/resolvePose";
 import { HUMANOID_REST_FRAME, IAutoMovieRestFrame } from "../rom/restFrame";
+import { compareCodeUnits } from "../text/compareCodeUnits";
 import { validateMotion } from "../validation/validateMotion";
 import { validateTransformScalars } from "../validation/validateTransformScalars";
 import { ViolationCollector } from "../validation/violation";
@@ -285,7 +286,7 @@ const collectRequiredBones = (
   for (const kf of props.motion.keyframes)
     for (const joint of kf.pose.joints) bones.add(joint.bone);
   for (const bone of props.requiredBones ?? []) bones.add(bone);
-  return [...bones].sort((a, b) => a.localeCompare(b));
+  return [...bones].sort(compareCodeUnits);
 };
 
 const validateSkeleton = (
