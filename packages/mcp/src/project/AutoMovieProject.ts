@@ -372,14 +372,28 @@ export class AutoMovieProject {
   }
 
   /**
-   * Upsert ONE actor context as `actors/<node>.json` (#1176, the #617 upsert
-   * rule below the slate): re-performing with explicit actors replaces exactly
-   * the named contexts, leaving sibling actors byte-identical.
+   * Upsert a whole actor registry as ONE transaction (#1176 upsert rule, #1257
+   * atomicity): stage every `actors/<node>.json`, then flush them under a
+   * single {@link commitCycle} with one revision bump. Re-performing with
+   * explicit actors replaces exactly the named contexts, leaving sibling actors
+   * byte-identical.
+   *
+   * A per-actor loop (one cycle each) was not a transaction: a failure on the
+   * k-th actor left 1..k−1 written with the NEW contexts and the rest with the
+   * old, while the call threw — a torn registry every later resident perform
+   * reads back silently — and each cycle bumped the revision, so a perform that
+   * reported failure looked like N commits to a second session. Staging first
+   * (serializeJson is the throw-prone step) makes it all-or-nothing, exactly as
+   * {@link saveSlate} does.
    */
-  public saveActor(spec: IAutoMovieMcpActorSpec): void {
-    const file = path.join(this.root, "actors", sliceFilename(spec.node));
-    const content = serializeJson(spec);
-    this.commitCycle(() => writeAtomic(file, content));
+  public saveActors(specs: readonly IAutoMovieMcpActorSpec[]): void {
+    const staged = specs.map((spec) => ({
+      file: path.join(this.root, "actors", sliceFilename(spec.node)),
+      content: serializeJson(spec),
+    }));
+    this.commitCycle(() => {
+      for (const { file, content } of staged) writeAtomic(file, content);
+    });
   }
 
   /** The actor twin of {@link propCaseCollision} (#1093). */

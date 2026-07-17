@@ -45,6 +45,10 @@ const slateOf = (logline: string): IAutoMovieMcpWritableSlate => ({
  *    re-reads, the same save commits (negative twin).
  * 3. Single-session cycles are unaffected: read → save → read round-trips, bumping
  *    the revision once per mutation.
+ * 4. A whole actor registry saves as ONE cycle (#1257): two actors bump the
+ *    revision once (not once per actor) and both land together.
+ * 5. A staging throw on any actor in the registry persists NOTHING and does not
+ *    bump — the all-or-nothing guarantee the per-actor loop lacked.
  */
 export const test_mcp_project_transactions = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-txn-"));
@@ -118,6 +122,61 @@ export const test_mcp_project_transactions = (): void => {
       "the round trip reads back the committed truth",
       a.writableSlate().script?.logline,
       "one more cycle",
+    );
+
+    // 4. a whole actor registry saves as ONE cycle (#1257): the per-actor loop
+    // it replaced bumped the revision once PER actor and could tear the store.
+    const actorSpec = (node: string) => ({
+      node,
+      skeleton: `${node}-sk`,
+      gaits: [],
+      speed: 1,
+      eyeHeight: 1.6,
+      restPose: { skeleton: `${node}-sk`, root: null, joints: [] },
+    });
+    a.writableSlate();
+    const revBeforeActors = JSON.parse(
+      fs.readFileSync(revisionFile, "utf8"),
+    ) as { revision: number };
+    a.saveActors([actorSpec("knightA"), actorSpec("knightB")]);
+    const revAfterActors = JSON.parse(
+      fs.readFileSync(revisionFile, "utf8"),
+    ) as { revision: number };
+    TestValidator.equals(
+      "saving a two-actor registry bumps the revision exactly once",
+      revAfterActors.revision,
+      revBeforeActors.revision + 1,
+    );
+    TestValidator.predicate(
+      "both actor files landed under the one cycle",
+      fs.existsSync(path.join(root, "actors", "knightA.json")) &&
+        fs.existsSync(path.join(root, "actors", "knightB.json")),
+    );
+
+    // 5. a staging throw on any actor persists NOTHING and does not bump.
+    const bad = actorSpec("knightC") as unknown as { loop?: unknown };
+    bad.loop = bad; // self-referential → serializeJson throws while staging
+    a.writableSlate();
+    TestValidator.predicate(
+      "an unserializable actor throws during staging",
+      throwsError(
+        () =>
+          a.saveActors([
+            actorSpec("knightD"),
+            bad as unknown as ReturnType<typeof actorSpec>,
+          ]),
+        "circular",
+      ),
+    );
+    TestValidator.predicate(
+      "neither actor from the failed registry save landed",
+      !fs.existsSync(path.join(root, "actors", "knightD.json")) &&
+        !fs.existsSync(path.join(root, "actors", "knightC.json")),
+    );
+    TestValidator.equals(
+      "the revision did not move on the failed actor save",
+      JSON.parse(fs.readFileSync(revisionFile, "utf8")).revision,
+      revAfterActors.revision,
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
