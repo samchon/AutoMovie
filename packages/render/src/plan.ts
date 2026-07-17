@@ -32,10 +32,55 @@ export const frameName = (index: number, ext = "png", pad = 5): string =>
 export const framePattern = (ext = "png", pad = 5): string =>
   `frame_%0${pad}d.${ext}`;
 
-/** File-safe stem used for default frame directories and output video names. */
+/**
+ * Windows reserved device names — reserved with ANY extension (`con.mp4` is
+ * `con`), case-insensitive. A stem whose first dot-segment is one of these
+ * would name a device, not a file.
+ */
+const WINDOWS_RESERVED_NAMES = new Set([
+  "con",
+  "prn",
+  "aux",
+  "nul",
+  "com1",
+  "com2",
+  "com3",
+  "com4",
+  "com5",
+  "com6",
+  "com7",
+  "com8",
+  "com9",
+  "lpt1",
+  "lpt2",
+  "lpt3",
+  "lpt4",
+  "lpt5",
+  "lpt6",
+  "lpt7",
+  "lpt8",
+  "lpt9",
+]);
+
+/**
+ * A file-safe stem for default frame directories and output video names —
+ * always exactly ONE safe path component. The character filter alone is not
+ * enough: `.` and `..` are made of legal characters but mean self/parent
+ * directory positionally, so `renders/${stem}` would escape the reserved
+ * `renders/` dir (`renders/..` is the project root). This also neutralizes a
+ * Windows reserved device name and a trailing dot or space, both of which
+ * change the name Windows actually writes.
+ */
 export const renderPathStem = (target: string): string => {
-  const stem = target.replace(/[^A-Za-z0-9_.-]+/g, "_");
-  return stem.length === 0 ? "render" : stem;
+  const cleaned = target
+    .replace(/[^A-Za-z0-9_.-]+/g, "_")
+    // Windows silently strips a trailing dot or space; strip it ourselves so the
+    // name we compute is the name that lands on disk (this also collapses a bare
+    // `.`/`..` to empty).
+    .replace(/[ .]+$/, "");
+  if (cleaned.length === 0) return "render";
+  const base = cleaned.split(".")[0]!.toLowerCase();
+  return WINDOWS_RESERVED_NAMES.has(base) ? `_${cleaned}` : cleaned;
 };
 
 /**
