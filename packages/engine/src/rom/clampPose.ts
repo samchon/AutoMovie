@@ -7,7 +7,7 @@ import {
 } from "@automovie/interface";
 
 import { getConstraint } from "./humanoidRom";
-import { swingConeScale } from "./swingCone";
+import { swingConeBlend } from "./swingCone";
 
 const clampAxis = (
   angle: number | null,
@@ -42,27 +42,48 @@ export const clampJointRom = (
   const flexion = clampAxis(joint.flexion, constraint.flexion);
   const abduction = clampAxis(joint.abduction, constraint.abduction);
   const twist = clampAxis(joint.twist, constraint.twist);
-  // ball-joint swing cone: pull a corner pose straight back onto the cone,
-  // preserving the flexion:abduction ratio (the swing direction). This scale
-  // pulls toward neutral, so it stays inside each axis box only when the box
-  // brackets neutral — which validateModel guarantees for a swing-coned
-  // constraint (a positive-min/negative-max swung axis is rejected there, #1230),
-  // keeping this clamp consistent with validateJointRom's per-axis check.
-  if (
-    typeof constraint.swingDeg === "number" &&
-    flexion !== null &&
-    abduction !== null
-  ) {
-    const k = swingConeScale(flexion, abduction, constraint.swingDeg);
+  // Ball-joint swing cone: pull a corner pose back onto the cone. The cone is a
+  // COUPLING between the two axes, not a per-axis check, so a resting (`null`)
+  // axis is not exempt from it — it contributes its actual rotation, 0, exactly
+  // as the renderer reads it (`jointToQuaternion`'s `?? 0`). Gating the cone on
+  // both axes being non-null let `{flexion:150, abduction:null}` keep an angle
+  // its identical twin `{flexion:150, abduction:0}` was clamped out of (#1245).
+  if (typeof constraint.swingDeg === "number") {
+    const f = flexion ?? 0;
+    const a = abduction ?? 0;
+    // Pull toward the box point nearest neutral rather than toward neutral
+    // itself: for a box that excludes neutral, shrinking toward the origin
+    // leaves the box (#1245). A resting axis anchors at its own rest, 0.
+    const anchorF = flexion === null ? 0 : nearestNeutral(constraint.flexion);
+    const anchorA =
+      abduction === null ? 0 : nearestNeutral(constraint.abduction);
+    const t = swingConeBlend(f, a, anchorF, anchorA, constraint.swingDeg);
+    const blend = (value: number, anchor: number): number =>
+      anchor + (value - anchor) * t;
     return {
       bone: joint.bone,
-      flexion: flexion * k,
-      abduction: abduction * k,
+      // A resting axis stays resting: blending 0 toward its own 0 rest is 0.
+      flexion: flexion === null ? null : blend(f, anchorF),
+      abduction: abduction === null ? null : blend(a, anchorA),
       twist,
     };
   }
   return { bone: joint.bone, flexion, abduction, twist };
 };
+
+/**
+ * The point of `allowed` closest to neutral — neutral itself when the range
+ * brackets it, else the nearer bound. This is the swing cone's pull target: the
+ * joint's most-retracted reachable articulation on that axis.
+ */
+const nearestNeutral = (allowed: IAutoMovieAngleRange | null): number =>
+  allowed === null
+    ? 0
+    : allowed.min > 0
+      ? allowed.min
+      : allowed.max < 0
+        ? allowed.max
+        : 0;
 
 /**
  * Clamp every joint of a pose into its skeleton's ROM, returning a new pose

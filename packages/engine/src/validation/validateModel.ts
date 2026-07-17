@@ -13,6 +13,7 @@ import {
 } from "@automovie/interface";
 
 import { convexHull2D } from "../math/hull";
+import { swingConeAngle } from "../rom/swingCone";
 import { appendMeshTopology } from "./validateMeshTopology";
 import { validateTransformScalars } from "./validateTransformScalars";
 import { ViolationCollector } from "./violation";
@@ -673,29 +674,38 @@ const validateJointConstraint = (
         `swingDeg must be a finite number > 0, but was ${swingDeg}`,
         swingDeg,
       );
-    else
-      // The swing cone is measured from neutral (0, 0), so a flexion/abduction
-      // box that excludes neutral is geometrically incompatible with it: no
-      // pose satisfies both the box and the cone (e.g. [10, 90] with a 5° cone
-      // needs a swing >= 14° yet caps it at 5°), and clampJointRom's cone scale
-      // — which pulls toward neutral — would drop the axis below a positive min,
-      // producing a pose validateJointRom then rejects. Require each swung axis
-      // to bracket neutral so the clamp/validate pair stays consistent.
-      for (const axis of ["flexion", "abduction"] as const) {
-        const range = constraint[axis];
-        if (
-          range !== null &&
-          Number.isFinite(range.min) &&
-          Number.isFinite(range.max) &&
-          (range.min > 0 || range.max < 0)
-        )
-          collector.push(
-            "range",
-            `${path}.${axis}`,
-            `a swing-coned joint's ${axis} range must include neutral (0), but was [${range.min}, ${range.max}] — the cone is measured from neutral, so no pose can satisfy both`,
-            range,
-          );
-      }
+    else {
+      // A swing-coned constraint is unsatisfiable exactly when its box and its
+      // cone do not intersect — NOT merely when the box excludes neutral (#1245).
+      // The box point nearest neutral is each axis clamped toward 0, and the
+      // cone grows monotonically away from neutral, so that point has the
+      // smallest swing the box can reach: if even IT exceeds `swingDeg`, no pose
+      // satisfies both. A box that excludes neutral but sits inside a wide cone
+      // is perfectly sound — e.g. flexion [10, 90] with a 95° cone admits
+      // (10, 0) at 10° of swing — and rejecting it refused rigs the per-bone
+      // override exists to express (a limb that cannot fully extend).
+      const nearest = (range: IAutoMovieAngleRange | null): number =>
+        range === null ||
+        !Number.isFinite(range.min) ||
+        !Number.isFinite(range.max)
+          ? 0
+          : range.min > 0
+            ? range.min
+            : range.max < 0
+              ? range.max
+              : 0;
+      const minimumSwing = swingConeAngle(
+        nearest(constraint.flexion),
+        nearest(constraint.abduction),
+      );
+      if (minimumSwing > swingDeg)
+        collector.push(
+          "range",
+          `${path}.swingDeg`,
+          `a swing-coned joint must admit at least one pose: the most-retracted articulation its flexion/abduction ranges allow already swings ${minimumSwing.toFixed(1)}°, past this ${swingDeg}° cone, so no pose satisfies both the ranges and the cone`,
+          swingDeg,
+        );
+    }
   }
 };
 
