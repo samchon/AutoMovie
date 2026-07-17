@@ -108,13 +108,16 @@ const plan = (over: {
   fps?: number;
   motions?: Record<string, IAutoMovieMcpMotion>;
   skeletons?: (typeof skeleton)[];
-  aspect?: number;
+  width?: number;
+  height?: number;
 }) =>
   app.planPoseKeypoints({
     slate: slate(),
     fps: 2,
     motions: { m1: still },
     skeletons: [skeleton],
+    width: 1920, // 16/9, the projection the happy-path expectations assume
+    height: 1080,
     ...over,
   });
 
@@ -129,7 +132,7 @@ const plan = (over: {
  * 1. Happy path: a 1 s film at fps 2 plans 2 frames; the hero's hips project to
  *    frame center on frame 0.
  * 2. A missing film, a missing scene, a zero fps, a zero-frame runtime, and a
- *    non-positive aspect each refuse with a located violation and null
+ *    non-positive width or height each refuse with a located violation and null
  *    sidecar.
  * 3. A non-object motion registry, an empty-keyframe motion, a non-finite motion
  *    duration, a non-finite keyframe time, a non-array skeletons input, and a
@@ -150,7 +153,7 @@ export const test_mcp_plan_pose_keypoints = (): void => {
     nclose(hips.x, 0.5) && hips.inFrame,
   );
 
-  // 2. request/slate/fps/aspect gates.
+  // 2. request/slate/fps/width/height gates.
   TestValidator.predicate(
     "a non-object request refuses at the root",
     hasViolation(
@@ -201,8 +204,12 @@ export const test_mcp_plan_pose_keypoints = (): void => {
       plan({ fps: 0.2 }).sidecar === null,
   );
   TestValidator.predicate(
-    "a non-positive aspect refuses",
-    hasViolation(plan({ aspect: 0 }).validation, "range", "$input.aspect"),
+    "a non-positive width refuses",
+    hasViolation(plan({ width: 0 }).validation, "range", "$input.width"),
+  );
+  TestValidator.predicate(
+    "a non-positive height refuses",
+    hasViolation(plan({ height: 0 }).validation, "range", "$input.height"),
   );
 
   // 3. motion/skeleton registry gates.
@@ -279,6 +286,8 @@ export const test_mcp_plan_pose_keypoints = (): void => {
           fps: 2,
           motions: { m1: still },
           skeletons: [skeleton],
+          width: 1920,
+          height: 1080,
         }),
       ["openProject"],
     ),

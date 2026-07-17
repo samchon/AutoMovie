@@ -249,7 +249,8 @@ export class RenderService {
     fps: number;
     motions: Record<string, IAutoMovieMcpMotion>;
     skeletons: IAutoMovieSkeleton[];
-    aspect?: number;
+    width: number;
+    height: number;
   }): IAutoMoviePlanPoseKeypointsOutput {
     const rootValidation = validateRenderRequestRoot(props);
     if (rootValidation !== null)
@@ -530,7 +531,8 @@ const buildPoseKeypointPlan = (props: {
   fps: number;
   motions: Record<string, IAutoMovieMcpMotion>;
   skeletons: IAutoMovieSkeleton[];
-  aspect?: number;
+  width: number;
+  height: number;
 }): IAutoMoviePlanPoseKeypointsOutput => {
   const violations: IAutoMovieConstraintViolation[] = [];
   validateRange(
@@ -542,16 +544,28 @@ const buildPoseKeypointPlan = (props: {
     violations,
     false,
   );
-  if (props.aspect !== undefined)
-    validateRange(
-      props.aspect,
-      "$input.aspect",
-      0,
-      Infinity,
-      "keypoint aspect",
-      violations,
-      false,
-    );
+  // The sidecar projects through the same camera aspect as the rendered pose
+  // pass, so it takes the render's width/height rather than a free `aspect`
+  // that could silently disagree with a non-16/9 render (#1231). Both must be
+  // positive for width/height to yield a finite aspect.
+  validateRange(
+    props.width,
+    "$input.width",
+    0,
+    Infinity,
+    "keypoint width",
+    violations,
+    false,
+  );
+  validateRange(
+    props.height,
+    "$input.height",
+    0,
+    Infinity,
+    "keypoint height",
+    violations,
+    false,
+  );
 
   const scene = props.slate.scene as unknown;
   if (scene === null)
@@ -699,7 +713,7 @@ const buildPoseKeypointPlan = (props: {
       motions: Object.values(props.motions).map(toEngineMotion),
       skeletons: props.skeletons,
       fps: props.fps,
-      aspect: props.aspect,
+      aspect: props.width / props.height,
     }),
   };
 };

@@ -907,7 +907,8 @@ export class AutoMovieApplication {
    * as resident `commitShot` does. Deterministic: same inputs, byte-identical
    * sidecar.
    *
-   * @param props The slate, output fps, motion registry, skeletons, and aspect.
+   * @param props The slate, output fps, motion registry, skeletons, and the
+   *   render width/height the sidecar projects through.
    * @returns The per-frame keypoint sidecar, or violations when it cannot plan.
    */
   public planPoseKeypoints(props: {
@@ -919,8 +920,14 @@ export class AutoMovieApplication {
     motions: Record<string, IAutoMovieMcpMotion>;
     /** Skeletons the motions target. */
     skeletons: IAutoMovieSkeleton[];
-    /** Render aspect (width/height). Defaults to 16/9. */
-    aspect?: number;
+    /**
+     * The render's output width in pixels. The sidecar projects through the
+     * camera aspect `width / height`, so pass the SAME dimensions as the render
+     * spec — a mismatch misaligns the keypoints from the rendered pose pass.
+     */
+    width: number;
+    /** The render's output height in pixels (see {@link width}). */
+    height: number;
   }): IAutoMoviePlanPoseKeypointsOutput {
     return this.render.planPoseKeypoints(props);
   }
