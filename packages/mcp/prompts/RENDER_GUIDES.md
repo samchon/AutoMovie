@@ -32,3 +32,7 @@ Pass-tagged frames insert the pass name before the extension (`frame_00042.depth
 ## Captions — planCaptions
 
 `planCaptions` plans the caption sidecar: the per-shot diffusion-prompt track a render host reads beside the guide frames. It resolves which beat's shot is live at every output frame and joins each span to the screenplay's caption and scene slug. Pass `chunkFrames` to also get one chunk-local sidecar per render chunk, aligned with `planChunkedRender`'s windows, so each chunk carries its own caption track. Resident-or-explicit; the committed script and film supply the captions and the cut.
+
+## Pose Keypoints — planPoseKeypoints
+
+`planPoseKeypoints` plans the numeric companion to the `pose` pass: a per-frame OpenPose-style sidecar giving each named joint's projected 2D frame position (and whether it is in frame), the exact data an OpenPose ControlNet reads beside the rendered pose guide. Pass the SAME `width`/`height` as the render — the keypoints project through the camera aspect `width/height`, so a mismatch misaligns them from the pose pixels. Motions are derived, never stored, so supply the `motions` registry the shots reference and the `skeletons` they target, exactly as `commitShot` does. Resident-or-explicit; deterministic (same inputs, byte-identical sidecar).
