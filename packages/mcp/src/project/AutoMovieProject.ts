@@ -44,6 +44,7 @@ import {
   validateUniqueBy,
   validateVectorArtifact,
 } from "../validators/primitives";
+import { acquireCommitLock, releaseCommitLock } from "./commitLock";
 import { beatOf, shotIdOf } from "./shotKey";
 
 /**
@@ -285,7 +286,7 @@ export class AutoMovieProject {
    * byte lands.
    */
   private commitCycle(flush: () => void): void {
-    acquireCommitLock(this.lockPath);
+    const token = acquireCommitLock(this.lockPath);
     try {
       const current = this.readRevision();
       if (current !== this.lastReadRevision_) {
@@ -299,7 +300,7 @@ export class AutoMovieProject {
       this.lastReadRevision_ = current + 1;
       writeJsonAtomic(this.revisionPath, { revision: this.lastReadRevision_ });
     } finally {
-      fs.rmSync(this.lockPath, { force: true });
+      releaseCommitLock(this.lockPath, token);
     }
   }
 
@@ -1460,42 +1461,3 @@ const writeJsonAtomic = (file: string, value: unknown): void =>
 /** The store's one JSON rendering (pretty, trailing newline). */
 const serializeJson = (value: unknown): string =>
   `${JSON.stringify(value, null, 2)}\n`;
-
-/**
- * Acquire the project's short-lived commit lock: an exclusive-create lock file
- * guarding the compare-and-commit window (#1133). The window is microseconds of
- * serialization-free file writes, so contention resolves by a bounded
- * synchronous spin (the whole store is synchronous by contract); a lock older
- * than 10 s belongs to a crashed session and is broken.
- */
-const acquireCommitLock = (lockPath: string): void => {
-  const deadline = Date.now() + 2_000;
-  for (;;) {
-    try {
-      fs.closeSync(fs.openSync(lockPath, "wx"));
-      return;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      try {
-        if (Date.now() - fs.statSync(lockPath).mtimeMs > 10_000) {
-          fs.rmSync(lockPath, { force: true });
-          continue;
-        }
-        /* c8 ignore start -- the lock vanishing between openSync(EEXIST) and statSync is a real filesystem race, but cannot be reproduced deterministically from a synchronous in-process test */
-      } catch {
-        continue; // the holder released (or broke) it between our checks
-      }
-      /* c8 ignore stop */
-      if (Date.now() > deadline)
-        throw new Error(
-          `the project commit lock is held by another session ("${lockPath}"); retry the call shortly`,
-        );
-      spinWait(2);
-    }
-  }
-};
-
-const spinWait = (ms: number): void => {
-  const end = Date.now() + ms;
-  while (Date.now() < end); // bounded busy-wait: the store is synchronous
-};
