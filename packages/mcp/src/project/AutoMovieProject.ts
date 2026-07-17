@@ -1,4 +1,5 @@
 import {
+  compareCodeUnits,
   forgeProp,
   validateModel as validateEngineModel,
   validateScriptTree,
@@ -498,11 +499,14 @@ export class AutoMovieProject {
         (asset) =>
           asset === `renders/${name}` || asset.startsWith(`renders/${name}/`),
       );
-    // Sort by UTF-16 code units (a two-way comparator: distinct filenames are
-    // never equal, so both arms are reachable and none needs a c8-ignore).
+    // Sort by UTF-16 code units — a locale-independent total order, so the
+    // stale-render listing is identical on every host (unlike localeCompare,
+    // whose result varies with the host locale/ICU build and can even return 0
+    // for distinct Unicode-equivalent names). Distinct filenames are never
+    // equal, so both comparator arms are reachable and none needs a c8-ignore.
     return fs
       .readdirSync(path.join(this.root, "renders"))
-      .sort((a, b) => a.localeCompare(b))
+      .sort(compareCodeUnits)
       .filter((name) => !owned(name))
       .map((name) => `renders/${name}`);
   }
@@ -529,7 +533,7 @@ export class AutoMovieProject {
     for (const name of fs
       .readdirSync(base)
       .filter((name) => name.endsWith(".json"))
-      .sort((a, b) => a.localeCompare(b))) {
+      .sort(compareCodeUnits)) {
       const file = path.join(base, name);
       const value = readJson<T>(file);
       if (value === null) continue;
@@ -679,8 +683,9 @@ const orderByFilename = <T>(items: T[], keyOf: (item: T) => string): T[] => {
     name: sliceFilename(keyOf(item)),
   }));
   // Same order readKeyedSlices/staleRenders read filenames back in — keep all
-  // three on localeCompare so the resident read and the ordered slate agree.
-  named.sort((a, b) => a.name.localeCompare(b.name));
+  // three on the code-unit comparator so the resident read and the ordered
+  // slate agree, identically on every host.
+  named.sort((a, b) => compareCodeUnits(a.name, b.name));
   return named.map((entry) => entry.item);
 };
 

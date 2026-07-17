@@ -40,9 +40,11 @@ const renderKey = (relative: string): string => {
 const listFiles = (root: string): string[] => {
   const out: string[] = [];
   const walk = (dir: string): void => {
+    // Code-unit order, not localeCompare: the file listing must be identical
+    // on every host (localeCompare varies with host locale/ICU build).
     const entries = fs
       .readdirSync(dir, { withFileTypes: true })
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);

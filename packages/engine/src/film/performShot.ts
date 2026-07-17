@@ -26,6 +26,7 @@ import {
 } from "../perform/compilePerformance";
 import { resolveTargetPoint } from "../perform/resolveTargetPoint";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
+import { compareCodeUnits } from "../text/compareCodeUnits";
 import { validateMotion } from "../validation/validateMotion";
 import { ViolationCollector } from "../validation/violation";
 import {
@@ -112,7 +113,7 @@ const orderEvents = (
     (a, b) =>
       a.time - b.time ||
       EVENT_KIND_ORDER[a.kind] - EVENT_KIND_ORDER[b.kind] ||
-      a.id.localeCompare(b.id),
+      compareCodeUnits(a.id, b.id),
   );
 
 /**

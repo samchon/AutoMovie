@@ -1,4 +1,5 @@
 export * from "./math";
+export * from "./text";
 export * from "./film";
 export * from "./kinematics";
 export * from "./rom";
