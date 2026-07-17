@@ -240,7 +240,20 @@ export class GeometryService {
     // Beat-scoped motion memory (#1091): the queried beat's own snapshot, so
     // `perform:<actor>` ids never resolve to another beat's clip.
     const memory = this.context.geometryMemory(beat);
+    // Persisted cast rigs (actors/<node>.json, #1176) keyed by their scene
+    // node's model reference, so a REOPENED project resolves rest/ambient cast
+    // poses without a destructive commitScene re-run (#1229). Session memory,
+    // when present, is authoritative: it comes AFTER these in the merge, and
+    // mergeResidentModels keeps the last entry per id, so a live commitScene
+    // rig overrides the persisted one on collision.
+    const scene = slate.scene;
+    const storedActorModels = project.storedActors().flatMap((spec) => {
+      if (spec.rig === undefined) return [];
+      const node = scene.nodes.find((n) => n.id === spec.node);
+      return node === undefined ? [] : [{ id: node.model, skeleton: spec.rig }];
+    });
     const models = mergeResidentModels([
+      ...storedActorModels,
       ...memory.models,
       ...project.storedProps().map((prop) => ({
         id: prop.model.id,
