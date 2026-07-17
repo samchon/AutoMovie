@@ -42,15 +42,31 @@ export const renderCrossDissolve = (
   poseOutgoing: () => void,
   poseIncoming: () => void,
   alpha: number,
+  /**
+   * Wraps each half's render (#1250). A multi-pass guide capture supplies a
+   * wrapper that applies the pass override — freshly per half, so the `pose`
+   * overlay reflects each shot's own pose — around `render()`; the composite is
+   * then a cross-fade of two guide-pass renders, the guide-space analogue of
+   * the beauty cross-fade. Omitted for a plain render.
+   */
+  renderHalf: (render: () => void) => void = (render) => render(),
 ): void => {
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
   let state = states.get(renderer);
   if (state === undefined) {
-    // MSAA parity with the canvas renderer (antialias: true) — without
-    // samples the FIRST blend frame (alpha≈0, visually 100% outgoing)
-    // renders the outgoing shot aliased: a one-frame pop at every dissolve
-    // edge (#1090).
-    const target = new THREE.WebGLRenderTarget(size.x, size.y, { samples: 4 });
+    // Match the renderer's own antialiasing, decided once per renderer. On the
+    // live (AA-on) canvas, samples stop the FIRST blend frame (alpha≈0, ~100%
+    // outgoing) rendering the outgoing shot aliased — a one-frame pop at every
+    // dissolve edge (#1090). On the capture renderer (AA off, #1169) the target
+    // must be AA-off too, or the outgoing half is MSAA-resolved (hardware-
+    // dependent) and composited onto an aliased canvas, reintroducing exactly
+    // the cross-host variance the capture path pins away (#1250).
+    // A renderer that does not expose its context attributes is treated as
+    // AA-on (the prior unconditional default); the capture renderer is a real
+    // WebGLRenderer that reports `antialias: false`.
+    const samples =
+      renderer.getContextAttributes?.()?.antialias === false ? 0 : 4;
+    const target = new THREE.WebGLRenderTarget(size.x, size.y, { samples });
     target.texture.colorSpace = THREE.SRGBColorSpace;
     const quadMaterial = new THREE.MeshBasicMaterial({
       map: target.texture,
@@ -75,12 +91,12 @@ export const renderCrossDissolve = (
   // outgoing → offscreen target (autoClear wipes it first)
   poseOutgoing();
   renderer.setRenderTarget(state.target);
-  renderer.render(scene, camera);
+  renderHalf(() => renderer.render(scene, camera));
   renderer.setRenderTarget(null);
 
   // incoming → screen
   poseIncoming();
-  renderer.render(scene, camera);
+  renderHalf(() => renderer.render(scene, camera));
 
   // composite the outgoing over the incoming at opacity (1 − alpha)
   state.quadMaterial.opacity = 1 - alpha;

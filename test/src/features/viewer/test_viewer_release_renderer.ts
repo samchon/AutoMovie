@@ -9,6 +9,7 @@ const makeFakeRenderer = (width: number, height: number) => {
   const renderer = {
     autoClear: true,
     getDrawingBufferSize: (v: THREE.Vector2) => v.copy(size),
+    getContextAttributes: () => ({ antialias: true }),
     setRenderTarget: (t: THREE.WebGLRenderTarget | null) => {
       targets.push(t);
     },
