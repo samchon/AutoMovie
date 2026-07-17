@@ -194,10 +194,6 @@ importers:
         version: 7.0.2
 
   packages/interface:
-    dependencies:
-      typia:
-        specifier: catalog:samchon
-        version: 13.1.1(@types/node@22.19.20)
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
