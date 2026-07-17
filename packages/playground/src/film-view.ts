@@ -353,7 +353,6 @@ const applyStagedCamera = (): void => {
 applyStagedCamera();
 
 const shotById = new Map(shots.map((s) => [s.id, s]));
-let renderer!: THREE.WebGLRenderer;
 
 type SequenceRenderFrameSample = Pick<
   IAutoMovieSequenceRenderFrame,
@@ -469,7 +468,7 @@ const handle = mountViewer(
   // guide passes read back crisp and byte-stable across hosts.
   capMode ? { antialias: false, pixelRatio: 1 } : undefined,
 );
-renderer = handle.renderer;
+const renderer = handle.renderer;
 const draw = (t: number): void => {
   if (!drawFrame(t)) renderer.render(scene, camera);
 };
