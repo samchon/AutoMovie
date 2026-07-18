@@ -9,6 +9,7 @@ import {
 import { Vector3 } from "../math/Vector3";
 import { solveBallisticLaunch, solveMovingLaunch } from "../physics/ballistic";
 import { projectileAt, projectileTrajectory } from "../physics/projectile";
+import { eventTimeKey } from "./handoffEvents";
 
 /** The default fall the launch solves against — Earth gravity, world −Y. */
 const DEFAULT_GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
@@ -44,8 +45,6 @@ export interface IAutoMovieLaunchResult {
   /** Engine-visible contact/hit/fall events on the shot-local clock. */
   events: IAutoMovieInteractionEvent[];
 }
-
-const eventTimeKey = (time: number): string => time.toFixed(6);
 
 const firstActor = (action: IAutoMovieLaunchAction): string | null =>
   typeof action.actor === "string" ? action.actor : (action.actor[0] ?? null);
