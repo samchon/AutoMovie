@@ -12,23 +12,15 @@ import {
   IAutoMovieSequenceRenderTransitionSpan,
   renderSequenceAndSee,
 } from "@automovie/render";
-import HMEmod from "h264-mp4-encoder";
+import * as HME from "h264-mp4-encoder";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { type Locator, type Page, chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
-const HME = HMEmod.default ?? HMEmod;
+import { DEFAULT_CHROME_EXECUTABLE } from "./chromeExecutable";
 
 const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
-const DEFAULT_CHROME =
-  process.env.CHROME ??
-  {
-    win32: "C:/Program Files/Google/Chrome/Application/chrome.exe",
-    darwin: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    linux: "google-chrome",
-  }[process.platform] ??
-  "google-chrome";
 
 export interface IAutoMoviePlaygroundSequenceRenderOptions {
   page: string;
@@ -497,7 +489,7 @@ const parseArgs = (
     page: flags.page ?? "film.html",
     query: flags.query ?? "",
     base: flags.base ?? DEFAULT_BASE,
-    chrome: flags.chrome ?? DEFAULT_CHROME,
+    chrome: flags.chrome ?? DEFAULT_CHROME_EXECUTABLE,
     fps: positiveNumber(flags.fps, 12, "--fps"),
     width: even(positiveInteger(flags.width, 640, "--width")),
     height: even(positiveInteger(flags.height, 360, "--height")),

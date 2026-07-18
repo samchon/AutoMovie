@@ -7,6 +7,21 @@ checkout the folder is empty; these scripts rebuild it.
 All commands run from `packages/playground` (or via `pnpm --filter
 @automovie/playground <script>`).
 
+## Type-check boundary
+
+`tsconfig.scripts.json` owns the root `scripts/*.ts` production entries and
+their shared TypeScript support. The playground `build` checks this Node/DOM
+program before Vite builds the separate browser `src` program, so workspace API
+drift fails the normal package and repository build even though the `.cjs`
+launchers still use esbuild for runtime bundling.
+
+Production `.mjs` utilities such as `build-human.mjs`, `capture-shots.mjs`, and
+`capture-head.mjs` run directly in Node and remain outside this TypeScript-only
+program. MakeHuman/model-fitting utilities under `scripts/mh/**` keep their
+separate experimental boundary. Add every new production `.ts` launcher entry
+at the scripts root so the existing `scripts/*.ts` boundary picks it up
+automatically.
+
 ## Models (`.glb`)
 
 Each character is exported straight from its `build*` AST through
