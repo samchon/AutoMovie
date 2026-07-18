@@ -15,6 +15,11 @@ Every tool's JSON schema is derived at compile time from
 JSDoc via `typia.llm.controller` (+ `@typia/mcp`), and calls are validated in and
 out.
 
+The MCP initialize handshake advertises `automovie` with the installed
+`@automovie/mcp` package version. The server reads that version from its sibling
+`package.json`, so client diagnostics identify the artifact actually serving
+the tools; MCP protocol-version negotiation remains a separate SDK concern.
+
 ## Tools
 
 44 tools. Every stateful tool is **resident-or-explicit**: pass a `slate` for a

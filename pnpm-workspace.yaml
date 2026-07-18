@@ -5,11 +5,11 @@ packages:
 
 catalogs:
   samchon:
-    typia: &typia ^13.1.1
+    typia: &typia ^13.1.19
     "@typia/mcp": *typia
     "@nestia/e2e": ^12.0.0
   typescript:
-    ttsc: &ttsc ^0.19.1
+    ttsc: &ttsc ^0.19.2
     "@ttsc/lint": *ttsc
     "@ttsc/unplugin": *ttsc
     typescript: ^7.0.2

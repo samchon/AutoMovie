@@ -211,9 +211,24 @@ try {
   // 4. Drive the packaged server as a real MCP client. The client runs with
   //    the fresh project as cwd so @modelcontextprotocol/sdk resolves from
   //    the installed dependency graph, not from this repository.
-  const expectedVersion = JSON.parse(
-    readFileSync(resolve(REPO_ROOT, "packages", "mcp", "package.json"), "utf8"),
-  ).version;
+  const installedManifest = JSON.parse(
+    readFileSync(
+      join(
+        projectDir,
+        "node_modules",
+        "@automovie",
+        "mcp",
+        "package.json",
+      ),
+      "utf8",
+    ),
+  );
+  if (
+    installedManifest.name !== "@automovie/mcp" ||
+    typeof installedManifest.version !== "string"
+  )
+    fail("installed @automovie/mcp manifest has no valid package identity");
+  const expectedVersion = installedManifest.version;
   writeFileSync(join(projectDir, "client.mjs"), CLIENT_SOURCE);
   const client = spawnSync(`node client.mjs`, {
     cwd: projectDir,

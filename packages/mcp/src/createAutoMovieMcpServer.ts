@@ -1,9 +1,21 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createMcpServer } from "@typia/mcp";
+import path from "node:path";
 import typia from "typia";
 
 import { AutoMovieApplication } from "./AutoMovieApplication";
 import { AutoMovieMcpFrameCapture } from "./dto";
+
+/**
+ * The installed MCP implementation version from its package manifest.
+ *
+ * `require` keeps the JSON outside the TypeScript `rootDir`. `__dirname` is
+ * `src` under ttsx and `lib` in the published package, with `package.json` one
+ * level above in both layouts.
+ */
+const MCP_PACKAGE_VERSION = (
+  require(path.join(__dirname, "..", "package.json")) as { version: string }
+).version;
 
 /**
  * Build the AutoMovie MCP server: wrap {@link AutoMovieApplication} in a
@@ -35,5 +47,5 @@ export const createAutoMovieMcpServer = (props?: {
     // advertises "any MCP client", so a client that reads `content` text and
     // ignores `outputSchema` must still receive the result. This restores the
     // pre-bump wire contract; the doubled payload is the cost of that reach.
-    { textFallback: true },
+    { version: MCP_PACKAGE_VERSION, textFallback: true },
   );
