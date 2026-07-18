@@ -1104,13 +1104,10 @@ const validateStageShape = (
 };
 
 const validatePerformShape = (
-  props: unknown,
+  props: PerformProps,
   resident = false,
 ): IAutoMovieConstraintViolation[] => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  /* c8 ignore next 2 -- perform() runs validatePipelineRequestRoot (the same isRecord gate) first and returns early on a non-object props, so this redundant guard never fails here. */
-  if (!isJsonObject(props, "$input", "perform payload", violations))
-    return violations;
   // The resident form's script/scene come from the committed slate, whose
   // shapes the commit gates already enforced (#1176) — only the caller-typed
   // payloads need the structural floor here.

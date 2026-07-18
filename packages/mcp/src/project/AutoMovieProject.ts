@@ -962,7 +962,7 @@ const validateScriptTreeSlice = (
       )
     )
       return;
-    validateScriptTreePayload(node, path, violations);
+    validateScriptTreePayload(node.kind, node.payload, path, violations);
   });
   if (violations.length !== before || !Array.isArray(beats)) return;
   appendValidation(
@@ -985,14 +985,12 @@ const validateNullableId = (
 };
 
 const validateScriptTreePayload = (
-  node: Record<string, unknown>,
+  kind: unknown,
+  payload: Record<string, unknown>,
   path: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
-  const payload = node.payload;
-  /* c8 ignore next -- precondition: validateScriptTreeSlice only calls this after validateObjectArtifact(node.payload) passes, so payload is always a record here */
-  if (!isRecord(payload)) return;
-  switch (node.kind) {
+  switch (kind) {
     case "intent":
       validateNonEmptyText(
         payload.logline,
@@ -1166,11 +1164,9 @@ const validateNotesSlice = (
 };
 
 const validateShotSlice = (
-  value: unknown,
+  value: IAutoMovieShot,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
-  /* c8 ignore next -- precondition: readKeyedSlices throws AutoMovieProjectKeyError for any non-object (its filename/key guard reads value.id) before this validator runs, so value is always a record */
-  if (!validateObjectArtifact(value, "$input", "shot", violations)) return;
   validateNonEmptyId(value.id, "$input.id", "shot id", violations);
   validateNonEmptyId(value.scene, "$input.scene", "shot scene", violations);
   validateNonEmptyId(value.camera, "$input.camera", "shot camera", violations);
@@ -1249,11 +1245,9 @@ const validateShotSlice = (
 };
 
 const validateBeatEndSlice = (
-  value: unknown,
+  value: IAutoMovieBeatEndState,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
-  /* c8 ignore next -- precondition: readKeyedSlices throws AutoMovieProjectKeyError for any non-object (its filename/key guard reads value.beat) before this validator runs, so value is always a record */
-  if (!validateObjectArtifact(value, "$input", "beat end", violations)) return;
   validateNonEmptyId(value.beat, "$input.beat", "beat id", violations);
   validateNonEmptyId(value.shot, "$input.shot", "shot id", violations);
   if (
@@ -1318,11 +1312,9 @@ const validateBeatEndSlice = (
 };
 
 const validatePropSlice = (
-  value: unknown,
+  value: IAutoMovieMcpPropSpec,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
-  /* c8 ignore next -- precondition: readKeyedSlices throws AutoMovieProjectKeyError for any non-object (its filename/key guard reads value.node) before this validator runs, so value is always a record */
-  if (!validateObjectArtifact(value, "$input", "prop spec", violations)) return;
   const before = violations.length;
   validateNonEmptyId(value.node, "$input.node", "prop node", violations);
   if (
@@ -1383,10 +1375,7 @@ const readJson = <T>(file: string): T | null => {
 const validateProjectValue = <T>(
   file: string,
   value: T,
-  validate: (
-    value: unknown,
-    violations: IAutoMovieConstraintViolation[],
-  ) => void,
+  validate: (value: T, violations: IAutoMovieConstraintViolation[]) => void,
 ): void => {
   const violations: IAutoMovieConstraintViolation[] = [];
   validate(value, violations);
