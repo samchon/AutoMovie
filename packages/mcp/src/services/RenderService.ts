@@ -1195,13 +1195,9 @@ const sequenceRuntime = (
   const byId = new Map(shots.map((shot) => [shot.id, shot]));
   return sequence.shots.reduce((sum, entry) => {
     const shot = byId.get(entry.shot);
-    // sequenceRuntime only runs on a validated sequence (validateSequenceArtifact
-    // has already confirmed every entry.shot is present in `shots` with a numeric
-    // duration), so byId.get always hits: the trailing `?? 0` (missing-shot)
-    // fallback is unreachable defensive (#1040).
-    /* c8 ignore start */
-    const duration = entry.trim?.duration ?? shot?.duration ?? 0;
-    /* c8 ignore stop */
+    // Each caller has accepted validateSequenceArtifact, which proves that every
+    // entry references a supplied shot with a numeric duration (#1040).
+    const duration = entry.trim?.duration ?? shot!.duration;
     return sum + duration - (entry.transition?.duration ?? 0);
   }, 0);
 };
