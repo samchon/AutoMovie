@@ -41,9 +41,7 @@ const SEQUENCE: IAutoMovieSequence = {
 
 const SPEC: IAutoMovieRenderSpec = {
   target: SEQUENCE.id,
-  fps: 4,
-  width: 640,
-  height: 360,
+  frameFormat: { fps: 4, width: 640, height: 360 },
   toneMapping: "none",
   codec: "h264",
   pixelFormat: "yuv420p",
@@ -222,7 +220,10 @@ export const test_render_sequence_plan = (): void => {
             ],
           },
           shots: SHOTS,
-          spec: { ...SPEC, fps: 1 },
+          spec: {
+            ...SPEC,
+            frameFormat: { ...SPEC.frameFormat, fps: 1 },
+          },
         }),
       ["planSequenceRender", "at least one frame", "produced zero frames"],
     ),

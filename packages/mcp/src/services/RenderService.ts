@@ -2,6 +2,7 @@ import { toValidation, violation } from "@automovie/engine";
 import {
   AutoMovieGuidePass,
   IAutoMovieConstraintViolation,
+  IAutoMovieRenderFrameFormat,
   IAutoMovieRenderSpec,
   IAutoMovieScene,
   IAutoMovieSequence,
@@ -156,8 +157,8 @@ export class RenderService {
       time,
       pass: pass!,
       framePath,
-      width: props.spec.width,
-      height: props.spec.height,
+      width: props.spec.frameFormat.width,
+      height: props.spec.frameFormat.height,
       toneMapping: props.spec.toneMapping,
     };
     const image =
@@ -172,8 +173,8 @@ export class RenderService {
         time,
         pass: pass!,
         framePath,
-        width: props.spec.width,
-        height: props.spec.height,
+        width: props.spec.frameFormat.width,
+        height: props.spec.frameFormat.height,
         toneMapping: props.spec.toneMapping,
         status: image === null ? "no-capture-adapter" : "captured",
         image,
@@ -221,7 +222,7 @@ export class RenderService {
    */
   public planCaptions(props: {
     slate?: IAutoMovieMcpWritableSlate;
-    fps: number;
+    frameFormat: IAutoMovieRenderFrameFormat;
     chunkFrames?: number;
   }): IAutoMoviePlanCaptionsOutput {
     const rootValidation = validateRenderRequestRoot(props);
@@ -247,11 +248,9 @@ export class RenderService {
    */
   public planPoseKeypoints(props: {
     slate?: IAutoMovieMcpWritableSlate;
-    fps: number;
+    frameFormat: IAutoMovieRenderFrameFormat;
     motions: Record<string, IAutoMovieMcpMotion>;
     skeletons: IAutoMovieSkeleton[];
-    width: number;
-    height: number;
   }): IAutoMoviePlanPoseKeypointsOutput {
     const rootValidation = validateRenderRequestRoot(props);
     if (rootValidation !== null)
@@ -346,15 +345,15 @@ const buildChunkedRenderPlan = (props: {
   // buildRenderPlan's zero-frame gate, replicated (#1092): a degenerate
   // fps × duration otherwise reaches planSequenceRender's raw throw and
   // escapes to the MCP client instead of a field-located violation.
-  const times = frameTimes(props.spec.fps, target!.duration);
+  const times = frameTimes(props.spec.frameFormat.fps, target!.duration);
   if (times.length === 0)
     return {
       validation: toValidation([
         violation(
           "range",
-          "$input.spec.fps",
+          "$input.spec.frameFormat.fps",
           "render spec and target duration must produce at least one frame",
-          { fps: props.spec.fps, duration: target!.duration },
+          { fps: props.spec.frameFormat.fps, duration: target!.duration },
         ),
       ]),
       plan: null,
@@ -418,18 +417,15 @@ const toMcpChunkPlan = (
 const buildCaptionPlan = (props: {
   slate: IAutoMovieMcpWritableSlate;
   slateRoot: string;
-  fps: number;
+  frameFormat: IAutoMovieRenderFrameFormat;
   chunkFrames?: number;
 }): IAutoMoviePlanCaptionsOutput => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  validateRange(
-    props.fps,
-    "$input.fps",
-    0,
-    Infinity,
-    "caption fps",
+  const frameFormatReady = validateRenderFrameFormat(
+    props.frameFormat,
+    "$input.frameFormat",
+    "caption",
     violations,
-    false,
   );
   if (props.chunkFrames !== undefined)
     validateChunkFrames(props.chunkFrames, violations);
@@ -494,13 +490,17 @@ const buildCaptionPlan = (props: {
     sequenceReady && sequence !== null
       ? sequenceRuntime(sequence, shots as IAutoMovieShot[])
       : 0;
-  if (sequenceReady && Math.round(duration * props.fps) === 0)
+  if (
+    sequenceReady &&
+    frameFormatReady &&
+    Math.round(duration * props.frameFormat.fps) === 0
+  )
     pushViolation(
       violations,
       "range",
-      "$input.fps",
+      "$input.frameFormat.fps",
       "caption fps and film duration must produce at least one frame",
-      { fps: props.fps, duration },
+      { fps: props.frameFormat.fps, duration },
     );
   const validation = toValidation(violations);
   if (validation.success === false)
@@ -510,7 +510,7 @@ const buildCaptionPlan = (props: {
     script: props.slate.script!,
     sequence: sequence!,
     shots: shots as IAutoMovieShot[],
-    fps: props.fps,
+    fps: props.frameFormat.fps,
   });
   const chunks =
     props.chunkFrames === undefined
@@ -529,54 +529,15 @@ const buildCaptionPlan = (props: {
 const buildPoseKeypointPlan = (props: {
   slate: IAutoMovieMcpWritableSlate;
   slateRoot: string;
-  fps: number;
+  frameFormat: IAutoMovieRenderFrameFormat;
   motions: Record<string, IAutoMovieMcpMotion>;
   skeletons: IAutoMovieSkeleton[];
-  width: number;
-  height: number;
 }): IAutoMoviePlanPoseKeypointsOutput => {
   const violations: IAutoMovieConstraintViolation[] = [];
-  validateRange(
-    props.fps,
-    "$input.fps",
-    0,
-    Infinity,
-    "keypoint fps",
-    violations,
-    false,
-  );
-  // The sidecar projects through the same camera aspect as the rendered pose
-  // pass, so it takes the render's width/height rather than a free `aspect`
-  // that could silently disagree with a non-16/9 render (#1231). Both must be
-  // positive for width/height to yield a finite aspect.
-  validateRange(
-    props.width,
-    "$input.width",
-    0,
-    Infinity,
-    "keypoint width",
-    violations,
-    false,
-  );
-  validateEvenDimension(
-    props.width,
-    "$input.width",
-    "keypoint width",
-    violations,
-  );
-  validateRange(
-    props.height,
-    "$input.height",
-    0,
-    Infinity,
-    "keypoint height",
-    violations,
-    false,
-  );
-  validateEvenDimension(
-    props.height,
-    "$input.height",
-    "keypoint height",
+  const frameFormatReady = validateRenderFrameFormat(
+    props.frameFormat,
+    "$input.frameFormat",
+    "keypoint",
     violations,
   );
 
@@ -706,13 +667,17 @@ const buildPoseKeypointPlan = (props: {
     sequenceReady && sequence !== null
       ? sequenceRuntime(sequence, shots as IAutoMovieShot[])
       : 0;
-  if (sequenceReady && Math.round(duration * props.fps) === 0)
+  if (
+    sequenceReady &&
+    frameFormatReady &&
+    Math.round(duration * props.frameFormat.fps) === 0
+  )
     pushViolation(
       violations,
       "range",
-      "$input.fps",
+      "$input.frameFormat.fps",
       "keypoint fps and film duration must produce at least one frame",
-      { fps: props.fps, duration },
+      { fps: props.frameFormat.fps, duration },
     );
   const validation = toValidation(violations);
   if (validation.success === false) return { validation, sidecar: null };
@@ -725,8 +690,8 @@ const buildPoseKeypointPlan = (props: {
       scenes: [props.slate.scene as IAutoMovieScene],
       motions: Object.values(props.motions).map(toEngineMotion),
       skeletons: props.skeletons,
-      fps: props.fps,
-      aspect: props.width / props.height,
+      fps: props.frameFormat.fps,
+      aspect: props.frameFormat.width / props.frameFormat.height,
     }),
   };
 };
@@ -789,15 +754,15 @@ const buildRenderPlan = (props: {
   const validation = toValidation(violations);
   if (validation.success === false) return { validation, plan: null };
 
-  const times = frameTimes(props.spec.fps, target!.duration);
+  const times = frameTimes(props.spec.frameFormat.fps, target!.duration);
   if (times.length === 0)
     return {
       validation: toValidation([
         violation(
           "range",
-          "$input.spec.fps",
+          "$input.spec.frameFormat.fps",
           "render spec and target duration must produce at least one frame",
-          { fps: props.spec.fps, duration: target!.duration },
+          { fps: props.spec.frameFormat.fps, duration: target!.duration },
         ),
       ]),
       plan: null,
@@ -944,43 +909,10 @@ const validateRenderSpec = (
     "render target",
     violations,
   );
-  validateRange(
-    spec.fps,
-    "$input.spec.fps",
-    0,
-    Infinity,
-    "render fps",
-    violations,
-    false,
-  );
-  validateRange(
-    spec.width,
-    "$input.spec.width",
-    0,
-    Infinity,
-    "render width",
-    violations,
-    false,
-  );
-  validateEvenDimension(
-    spec.width,
-    "$input.spec.width",
-    "render width",
-    violations,
-  );
-  validateRange(
-    spec.height,
-    "$input.spec.height",
-    0,
-    Infinity,
-    "render height",
-    violations,
-    false,
-  );
-  validateEvenDimension(
-    spec.height,
-    "$input.spec.height",
-    "render height",
+  validateRenderFrameFormat(
+    spec.frameFormat,
+    "$input.spec.frameFormat",
+    "render",
     violations,
   );
   validateRange(spec.crf, "$input.spec.crf", 0, 51, "render crf", violations);
@@ -1000,6 +932,64 @@ const validateRenderSpec = (
       `render pixelFormat must be "yuv420p", but was "${spec.pixelFormat}"`,
       spec.pixelFormat,
     );
+};
+
+const validateRenderFrameFormat = (
+  frameFormat: IAutoMovieRenderFrameFormat,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): boolean => {
+  if (!isRecord(frameFormat)) {
+    pushViolation(
+      violations,
+      "type",
+      path,
+      `${label} frame format must be a JSON object`,
+      frameFormat,
+    );
+    return false;
+  }
+  validateRange(
+    frameFormat.fps,
+    `${path}.fps`,
+    0,
+    Infinity,
+    `${label} fps`,
+    violations,
+    false,
+  );
+  validateRange(
+    frameFormat.width,
+    `${path}.width`,
+    0,
+    Infinity,
+    `${label} width`,
+    violations,
+    false,
+  );
+  validateEvenDimension(
+    frameFormat.width,
+    `${path}.width`,
+    `${label} width`,
+    violations,
+  );
+  validateRange(
+    frameFormat.height,
+    `${path}.height`,
+    0,
+    Infinity,
+    `${label} height`,
+    violations,
+    false,
+  );
+  validateEvenDimension(
+    frameFormat.height,
+    `${path}.height`,
+    `${label} height`,
+    violations,
+  );
+  return true;
 };
 
 const validateRenderPathOverrides = (

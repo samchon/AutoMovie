@@ -66,9 +66,7 @@ const slate: IAutoMovieMcpWritableSlate = {
 
 const spec: IAutoMovieRenderSpec = {
   target: sequence.id,
-  fps: 10,
-  width: 640,
-  height: 360,
+  frameFormat: { fps: 10, width: 640, height: 360 },
   toneMapping: "none",
   codec: "h264",
   pixelFormat: "yuv420p",

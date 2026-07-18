@@ -69,9 +69,7 @@ const sequence: IAutoMovieSequence = {
 // fps 10 over a 1 s film → 10 output frames; chunkFrames 4 → 3 chunks (4/4/2).
 const filmSpec: IAutoMovieRenderSpec = {
   target: sequence.id,
-  fps: 10,
-  width: 640,
-  height: 360,
+  frameFormat: { fps: 10, width: 640, height: 360 },
   toneMapping: "none",
   codec: "h264",
   pixelFormat: "yuv420p",
@@ -116,7 +114,9 @@ export const test_mcp_render_chunked = (): void => {
   try {
     const app = new AutoMovieApplication();
     app.openProject({ root });
-    const emptyCaptions = app.planCaptions({ fps: 10 });
+    const emptyCaptions = app.planCaptions({
+      frameFormat: filmSpec.frameFormat,
+    });
     TestValidator.predicate(
       "resident caption slate paths stay internal",
       emptyCaptions.sidecar === null &&
@@ -212,7 +212,10 @@ export const test_mcp_render_chunked = (): void => {
     );
 
     // 3. resident caption sidecar + chunk-aligned slices
-    const captions = app.planCaptions({ fps: 10, chunkFrames: 4 });
+    const captions = app.planCaptions({
+      frameFormat: filmSpec.frameFormat,
+      chunkFrames: 4,
+    });
     if (captions.sidecar === null)
       throw new Error("resident captions must succeed");
     TestValidator.equals(
@@ -235,7 +238,7 @@ export const test_mcp_render_chunked = (): void => {
     );
 
     // captions without chunking omit the chunk slices
-    const whole = app.planCaptions({ fps: 10 });
+    const whole = app.planCaptions({ frameFormat: filmSpec.frameFormat });
     TestValidator.equals(
       "unchunked captions omit chunk slices",
       whole.chunks,
@@ -336,7 +339,7 @@ export const test_mcp_render_chunked = (): void => {
     );
     const negativeCaptionDuration = app.planCaptions({
       slate: { ...slate, shots: [{ ...shot, duration: -1 }] },
-      fps: 10,
+      frameFormat: filmSpec.frameFormat,
     });
     TestValidator.predicate(
       "a non-positive committed shot duration is a caption violation, not an empty sidecar",
@@ -350,7 +353,7 @@ export const test_mcp_render_chunked = (): void => {
     );
     const malformedCaptionShots = app.planCaptions({
       slate: { ...slate, shots: null as unknown as IAutoMovieShot[] },
-      fps: 10,
+      frameFormat: filmSpec.frameFormat,
     });
     TestValidator.predicate(
       "malformed caption slate shots path",
@@ -362,7 +365,7 @@ export const test_mcp_render_chunked = (): void => {
     );
     const malformedCaptionFilm = app.planCaptions({
       slate: { ...slate, film: undefined as unknown as IAutoMovieSequence },
-      fps: 10,
+      frameFormat: filmSpec.frameFormat,
     });
     TestValidator.predicate(
       "malformed caption slate film path",
@@ -387,7 +390,7 @@ export const test_mcp_render_chunked = (): void => {
     );
     const malformedCaptionSlateRoot = app.planCaptions({
       slate: null as never,
-      fps: 10,
+      frameFormat: filmSpec.frameFormat,
     });
     TestValidator.predicate(
       "malformed caption slate root path",
@@ -433,7 +436,7 @@ export const test_mcp_render_chunked = (): void => {
   TestValidator.predicate(
     "planCaptions without project or slate throws openProject prompt",
     throwsError(
-      () => bare.planCaptions({ fps: 10 }),
+      () => bare.planCaptions({ frameFormat: filmSpec.frameFormat }),
       ["planCaptions", "no project is active"],
     ),
   );

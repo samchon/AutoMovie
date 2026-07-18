@@ -197,9 +197,7 @@ export const test_mcp_agent_toolbox_smoke = async (): Promise<void> => {
 
   const spec: IAutoMovieRenderSpec = {
     target: cut.sequence.id,
-    fps: 12,
-    width: 640,
-    height: 360,
+    frameFormat: { fps: 12, width: 640, height: 360 },
     toneMapping: "none",
     codec: "h264",
     pixelFormat: "yuv420p",

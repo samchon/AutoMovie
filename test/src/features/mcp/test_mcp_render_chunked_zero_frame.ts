@@ -72,9 +72,7 @@ const slate: IAutoMovieMcpWritableSlate = {
 
 const spec = (fps: number): IAutoMovieRenderSpec => ({
   target: sequence.id,
-  fps,
-  width: 640,
-  height: 360,
+  frameFormat: { fps, width: 640, height: 360 },
   toneMapping: "none",
   codec: "h264",
   pixelFormat: "yuv420p",
@@ -91,7 +89,7 @@ const spec = (fps: number): IAutoMovieRenderSpec => ({
  * Scenarios (0.4 s film, explicit slate):
  *
  * 1. Fps 1 rounds to zero output frames: `planChunkedRender` returns a range
- *    violation at `$input.spec.fps` (no throw, no plan).
+ *    violation at `$input.spec.frameFormat.fps` (no throw, no plan).
  * 2. Parity: `planRender` on the same request locates the identical path, so the
  *    two planners diagnose the degenerate clock identically.
  * 3. Negative twin: fps 10 yields 4 frames and a real chunk plan (2 chunks of 2 at
@@ -112,7 +110,8 @@ export const test_mcp_render_chunked_zero_frame = (): void => {
       chunked.validation.success === false &&
       chunked.validation.violations.some(
         (violation) =>
-          violation.kind === "range" && violation.path === "$input.spec.fps",
+          violation.kind === "range" &&
+          violation.path === "$input.spec.frameFormat.fps",
       ),
   );
 

@@ -1,14 +1,16 @@
+import { IAutoMovieRenderFrameFormat } from "./IAutoMovieRenderFrameFormat";
+
 /**
  * Render parameters for turning a shot or sequence into frames and video. Kept
  * separate from the shot so the same shot renders at a draft 12 fps or a final
  * 30/60 fps without editing the content.
  *
- * The pipeline: `N = round(duration × fps)` frames, sampled at `t = i / fps`
- * (rational, not accumulated, for determinism), each rendered headless to an
- * sRGB image, then encoded (`ffmpeg -framerate fps -r fps -c:v libx264 -pix_fmt
- * yuv420p`). `toneMapping` is `none` for the stylized/toon path and
- * `acesFilmic` for the photoreal path; `pixelFormat` is pinned for player
- * compatibility and reproducibility.
+ * The pipeline: `N = round(duration × frameFormat.fps)` frames, sampled at `t =
+ * i / frameFormat.fps` (rational, not accumulated, for determinism), each
+ * rendered headless to an sRGB image, then encoded (`ffmpeg -framerate fps -r
+ * fps -c:v libx264 -pix_fmt yuv420p`). `toneMapping` is `none` for the
+ * stylized/toon path and `acesFilmic` for the photoreal path; `pixelFormat` is
+ * pinned for player compatibility and reproducibility.
  *
  * @author Samchon
  */
@@ -16,23 +18,12 @@ export interface IAutoMovieRenderSpec {
   /** Id of the shot or sequence to render. */
   target: string;
 
-  /** Output frame rate; sets the frame count and the sample times `t = i/fps`. */
-  fps: number;
-
   /**
-   * Output width in pixels. Must be a positive EVEN whole number: the render
-   * pins the encoded frame to `width×height` (ffmpeg `-s`), and `yuv420p` chroma
-   * subsampling can only encode even axes — an odd or fractional width is
-   * rejected at validation, not silently rounded (a rounding would desync the
-   * pose-keypoint sidecar aspect, #1231).
+   * Shared output clock and pixel geometry. Pass this same object to caption
+   * and pose-keypoint planning so every companion is sampled against the render
+   * it describes.
    */
-  width: number;
-
-  /**
-   * Output height in pixels. Positive EVEN whole number, for the same reason as
-   * {@link width}.
-   */
-  height: number;
+  frameFormat: IAutoMovieRenderFrameFormat;
 
   /**
    * Tone mapping applied before sRGB encode. `none` for toon, `acesFilmic` for

@@ -89,10 +89,10 @@ export const renderVideo = async (
   outputPath: string,
   adapters: IAutoMovieRenderAdapters,
 ): Promise<IAutoMovieRenderResult> => {
-  const times = frameTimes(spec.fps, durationSeconds);
+  const times = frameTimes(spec.frameFormat.fps, durationSeconds);
   if (times.length === 0)
     throw new Error(
-      `renderVideo requires at least one frame; fps ${spec.fps} and duration ${durationSeconds} produced zero frames`,
+      `renderVideo requires at least one frame; fps ${spec.frameFormat.fps} and duration ${durationSeconds} produced zero frames`,
     );
 
   const frames: string[] = [];

@@ -57,6 +57,7 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   // The even-dimension gate (#1251) — pinned so the corpus keeps teaching the
   // new hard authoring rule the render/keypoint validators now enforce.
   ["RENDER_GUIDES", "can only encode even axes"],
+  ["RENDER_GUIDES", "reuse that exact value"],
   ["AUTOMOVIE_OVERALL", "no re-commit needed"],
 ];
 

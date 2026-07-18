@@ -9,6 +9,7 @@ import {
   IAutoMovieModel,
   IAutoMoviePerformanceApplication,
   IAutoMoviePose,
+  IAutoMovieRenderFrameFormat,
   IAutoMovieRenderSpec,
   IAutoMovieReviewNote,
   IAutoMovieScene,
@@ -875,8 +876,8 @@ export class AutoMovieApplication {
    * chunk, aligned with `planChunkedRender`. Omit `slate` to plan the resident
    * project.
    *
-   * @param props The slate (omit for resident), output fps, and optional frames
-   *   per chunk.
+   * @param props The slate (omit for resident), shared render frame format, and
+   *   optional frames per chunk.
    * @returns The caption sidecar (and per-chunk sidecars when chunked), or
    *   diagnostics when script/film are not ready.
    */
@@ -886,8 +887,8 @@ export class AutoMovieApplication {
      * resident.
      */
     slate?: IAutoMovieMcpWritableSlate;
-    /** Output frames per second (the render clock). */
-    fps: number;
+    /** The exact clock and pixel geometry shared with the companion render. */
+    frameFormat: IAutoMovieRenderFrameFormat;
     /**
      * Frames per chunk to also slice the sidecar into. Omit for whole-film
      * only.
@@ -910,27 +911,19 @@ export class AutoMovieApplication {
    * as resident `commitShot` does. Deterministic: same inputs, byte-identical
    * sidecar.
    *
-   * @param props The slate, output fps, motion registry, skeletons, and the
-   *   render width/height the sidecar projects through.
+   * @param props The slate, shared render frame format, motion registry, and
+   *   skeletons.
    * @returns The per-frame keypoint sidecar, or violations when it cannot plan.
    */
   public planPoseKeypoints(props: {
     /** Slate whose scene, shots, and film supply the cut; omit for resident. */
     slate?: IAutoMovieMcpWritableSlate;
-    /** Output frames per second (the render clock). */
-    fps: number;
+    /** The exact clock and pixel geometry shared with the companion render. */
+    frameFormat: IAutoMovieRenderFrameFormat;
     /** Motions the shots' performances reference (id-keyed). */
     motions: Record<string, IAutoMovieMcpMotion>;
     /** Skeletons the motions target. */
     skeletons: IAutoMovieSkeleton[];
-    /**
-     * The render's output width in pixels. The sidecar projects through the
-     * camera aspect `width / height`, so pass the SAME dimensions as the render
-     * spec — a mismatch misaligns the keypoints from the rendered pose pass.
-     */
-    width: number;
-    /** The render's output height in pixels (see {@link width}). */
-    height: number;
   }): IAutoMoviePlanPoseKeypointsOutput {
     return this.render.planPoseKeypoints(props);
   }

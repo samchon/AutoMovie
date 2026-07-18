@@ -6,7 +6,7 @@
 
 ## 공개 표면
 
-- `frameTimes`, `frameName`, `framePattern`, `ffmpegArgs`: render spec에서 frame schedule과 encode 인자를 만든다.
+- `frameTimes`, `frameName`, `framePattern`, `ffmpegArgs`: render spec의 공유 `frameFormat`에서 frame schedule·출력 크기·encode 인자를 만든다.
 - `planSequenceRender`: `IAutoMovieSequence`와 committed shot list를 renderable timeline manifest로 바꾼다. trim, transition overlap, per-frame live shot/blend sample, frame path, output path, ffmpeg args를 한 번에 반환한다.
 - `renderVideo`: `captureFrame`과 `encode` adapter를 받아 프레임 캡처 순서와 비디오 인코딩 순서를 실행한다.
 - `renderSequenceVideo` / `renderSequenceAndSee`: sequence manifest를 프레임별 capture adapter와 encode adapter에 태운다. capture host는 frame index뿐 아니라 live shot local time과 outgoing blend tail을 받는다.
