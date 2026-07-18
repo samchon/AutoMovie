@@ -19,10 +19,19 @@ export interface IAutoMovieRenderSpec {
   /** Output frame rate; sets the frame count and the sample times `t = i/fps`. */
   fps: number;
 
-  /** Output width in pixels. */
+  /**
+   * Output width in pixels. Must be a positive EVEN whole number: the render
+   * pins the encoded frame to `width×height` (ffmpeg `-s`), and `yuv420p` chroma
+   * subsampling can only encode even axes — an odd or fractional width is
+   * rejected at validation, not silently rounded (a rounding would desync the
+   * pose-keypoint sidecar aspect, #1231).
+   */
   width: number;
 
-  /** Output height in pixels. */
+  /**
+   * Output height in pixels. Positive EVEN whole number, for the same reason as
+   * {@link width}.
+   */
   height: number;
 
   /**

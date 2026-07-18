@@ -13,7 +13,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { hasViolation, nclose } from "../internal/predicates";
 
 const app = new AutoMovieApplication();
 
@@ -264,8 +264,8 @@ export const test_mcp_render_tools = async (): Promise<void> => {
       });
       return (
         odd.plan === null &&
-        hasPath(odd.validation, "$input.spec.width") &&
-        hasPath(odd.validation, "$input.spec.height")
+        hasViolation(odd.validation, "range", "$input.spec.width") &&
+        hasViolation(odd.validation, "range", "$input.spec.height")
       );
     })(),
   );

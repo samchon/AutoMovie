@@ -54,6 +54,9 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["PROJECT_MEMORY", "prefer the per-slice reads over pulling the whole slate"],
   ["REVIEW", "it is not resident, and it reads no committed film"],
   ["RENDER_GUIDES", "OpenPose-style sidecar"],
+  // The even-dimension gate (#1251) — pinned so the corpus keeps teaching the
+  // new hard authoring rule the render/keypoint validators now enforce.
+  ["RENDER_GUIDES", "can only encode even axes"],
   ["AUTOMOVIE_OVERALL", "no re-commit needed"],
 ];
 
