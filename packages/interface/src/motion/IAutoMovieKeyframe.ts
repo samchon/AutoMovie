@@ -24,7 +24,13 @@ export interface IAutoMovieKeyframe {
   /** The body pose held at this instant. */
   pose: IAutoMoviePose;
 
-  /** Optional facial expression at this instant. `null` = leave the face as-is. */
+  /**
+   * Facial expression at this instant, or `null` for the neutral (rest) face.
+   * `null` is the unauthored/neutral side, blended toward like a resting joint
+   * axis: an expression authored only at the far keyframe ramps in from neutral
+   * across the segment (it does not pop to full at the segment start), and one
+   * authored only at the near keyframe fades back out to neutral.
+   */
   expression: IAutoMovieExpression | null;
 
   /** How to interpolate from this keyframe toward the next. */
