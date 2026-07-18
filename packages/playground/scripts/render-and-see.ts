@@ -76,7 +76,13 @@ export const main = async (
 export const captureRenderAndSee = async (
   options: IAutoMoviePlaygroundRenderAndSeeOptions,
 ): Promise<IAutoMoviePlaygroundRenderAndSeeArtifact> => {
-  const route = routeUrl(options.base, options.page, options.query);
+  const route = routeUrl(
+    options.base,
+    options.page,
+    options.query,
+    options.width,
+    options.height,
+  );
   const browser = await chromium.launch({
     executablePath: options.chrome,
     headless: true,
@@ -262,7 +268,13 @@ const repoRoot = (): string => {
 const resolveFromRoot = (root: string, value: string): string =>
   path.isAbsolute(value) ? value : path.resolve(root, value);
 
-const routeUrl = (base: string, page: string, query: string): string => {
+const routeUrl = (
+  base: string,
+  page: string,
+  query: string,
+  width: number,
+  height: number,
+): string => {
   const normalizedBase = `${base.replace(/\/+$/, "")}/`;
   const url = new URL(page.replace(/^\/+/, ""), normalizedBase);
   const trimmed = query.trim().replace(/^\?/, "");
@@ -271,6 +283,10 @@ const routeUrl = (base: string, page: string, query: string): string => {
       url.searchParams.set(key, value),
     );
   url.searchParams.set("cap", "1");
+  // Pin the capture canvas to the frame size (#1251), so the screenshot is WxH
+  // regardless of the viewport — the same URL contract capture-shots.mjs uses.
+  url.searchParams.set("w", `${width}`);
+  url.searchParams.set("h", `${height}`);
   return url.toString();
 };
 
