@@ -1,8 +1,8 @@
-import { validateMeshTopology } from "@automovie/engine";
+import { tessellateToMesh, validateMeshTopology } from "@automovie/engine";
 import { IAutoMovieMesh } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, violationCount } from "../internal/predicates";
 
 const mesh = (
   positions: number[],
@@ -200,5 +200,34 @@ export const test_validation_mesh_topology = (): void => {
   TestValidator.predicate(
     "the watertight check reports the open boundary as a topology error",
     hasViolation(openTetraClosed, "topology", "$input.indices"),
+  );
+  // The removed face exposes exactly its three edges, so the check must report
+  // three boundary edges — not merely "at least one" (a single collapsed
+  // violation would still satisfy `hasViolation`).
+  TestValidator.equals(
+    "each of the three open edges is reported once",
+    violationCount(openTetraClosed),
+    3,
+  );
+
+  // 9. a tessellated box is per-face geometry: its eight corners are emitted
+  // three times each (once per adjoining face), so it is watertight ONLY after
+  // the topology check welds coincident positions. Passing `expectClosed`
+  // exercises WELD_GRID on a genuine seam — the merge's real purpose — where the
+  // hand-built fixtures above already share their vertex indices.
+  const weldedBox = tessellateToMesh({
+    type: "box",
+    width: 1,
+    height: 1,
+    depth: 1,
+  });
+  TestValidator.predicate(
+    "the box carries duplicated corners the weld must merge",
+    weldedBox.positions.length / 3 > 8,
+  );
+  TestValidator.equals(
+    "a tessellated box is watertight once coincident corners weld",
+    topo(weldedBox, true),
+    { success: true },
   );
 };
