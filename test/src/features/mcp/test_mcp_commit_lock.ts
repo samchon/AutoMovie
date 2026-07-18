@@ -5,24 +5,21 @@ import os from "node:os";
 import path from "node:path";
 
 /**
- * The commit lock is owner-identified (#1257): a stale reclaim is single-winner
- * and a release only deletes the lock while it still holds this session's
- * token. A blind reclaim let two sessions both break one stale lock, and a
- * blind `finally` rmSync let one session delete a successor's lock — either way
- * two sessions "held" it at once and could lose an update the #1133 guard
- * exists to prevent. The concurrent interleavings are not reproducible from a
- * synchronous in-process test, but the ownership LOGIC each defence rests on
- * is.
+ * The commit lock is owner-identified and fail-closed (#1257/#1252): a release
+ * deletes only this session's token, and age never authorizes a different
+ * session to steal the path. A stale timestamp proves neither process death nor
+ * file identity; automatic stat-then-rename reclaim can move a fresh successor
+ * that appeared between the calls and recreate the lost-update race the lock
+ * exists to prevent.
  *
  * Scenarios:
  *
  * 1. Acquiring an unheld lock writes this session's token and returns it.
  * 2. A second acquire on a live (fresh) lock is refused after the bounded wait.
- * 3. A lock older than 10 s is reclaimed: the acquire succeeds and the file now
- *    carries the new token, not the stale one.
- * 4. Release deletes the lock ONLY when it still holds our token; a lock a
- *    reclaimer replaced with a foreign token is left for its owner; an already
- *    vanished lock is a no-op.
+ * 3. A lock older than 10 s is still refused and remains byte-identical. After an
+ *    operator explicitly removes it, acquisition succeeds normally.
+ * 4. Release deletes the lock ONLY when it still holds our token; a foreign
+ *    owner's lock is left untouched; an already vanished lock is a no-op.
  */
 export const test_mcp_commit_lock = (): void => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-lock-"));
@@ -50,8 +47,8 @@ export const test_mcp_commit_lock = (): void => {
       ),
     );
 
-    // 4a. release with a FOREIGN token leaves the lock in place (a reclaimer
-    // replaced ours) — the core owner-check: we must not delete a successor's.
+    // 4a. release with a FOREIGN token leaves the lock in place — the core
+    // owner-check: we must not delete another session's lock.
     releaseCommitLock(lockPath, "some-other-session-token");
     TestValidator.equals(
       "release with a foreign token leaves the lock untouched",
@@ -75,13 +72,26 @@ export const test_mcp_commit_lock = (): void => {
       false,
     );
 
-    // 3. a stale (>10 s) lock is reclaimed on acquire
+    // 3. an old mtime is not authority to steal another owner's lock
     fs.writeFileSync(lockPath, "stale-crashed-session-token", { flag: "w" });
     const stale = new Date(Date.now() - 20_000);
     fs.utimesSync(lockPath, stale, stale);
+    TestValidator.predicate(
+      "an old lock is refused with the explicit recovery condition",
+      throws(
+        () => acquireCommitLock(lockPath),
+        ["held by another session", "verify", "remove", "manually"],
+      ),
+    );
+    TestValidator.equals(
+      "an old lock is never stolen or rewritten automatically",
+      fs.readFileSync(lockPath, "utf8"),
+      "stale-crashed-session-token",
+    );
+    fs.rmSync(lockPath);
     const fresh = acquireCommitLock(lockPath);
     TestValidator.equals(
-      "a stale lock is reclaimed and now holds the new token",
+      "explicit recovery allows a normal owner-identified acquire",
       fs.readFileSync(lockPath, "utf8"),
       fresh,
     );
