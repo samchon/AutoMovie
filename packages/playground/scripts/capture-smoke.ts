@@ -6,15 +6,9 @@ import path from "node:path";
 import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
+import { DEFAULT_CHROME_EXECUTABLE } from "./chromeExecutable";
+
 const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
-const DEFAULT_CHROME =
-  process.env.CHROME ??
-  {
-    win32: "C:/Program Files/Google/Chrome/Application/chrome.exe",
-    darwin: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    linux: "google-chrome",
-  }[process.platform] ??
-  "google-chrome";
 const WIDTH = 640;
 const HEIGHT = 360;
 
@@ -42,7 +36,7 @@ export const main = async (
 ): Promise<void> => {
   const flags = readFlags(argv);
   const base = flags.base ?? DEFAULT_BASE;
-  const chrome = flags.chrome ?? DEFAULT_CHROME;
+  const chrome = flags.chrome ?? DEFAULT_CHROME_EXECUTABLE;
   // Pin the capture canvas to the frame size (#1251) via the w/h URL contract, so
   // the screenshot is WxH regardless of the viewport (the same pin capture-shots
   // and the render-and-see harnesses use).
@@ -151,7 +145,9 @@ const ensureDevServer = async (
   while (Date.now() < deadline) {
     if (await answers(base))
       return { spawned: true, close: () => child.kill() };
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
   }
   child.kill();
   throw new Error(`dev server did not answer at ${base} within 30s`);

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "ttsc --noEmit && vite build",
+    "build": "ttsc --noEmit && ttsc -p tsconfig.scripts.json --noEmit && vite build",
     "build:human": "node scripts/build-human.mjs",
     "build:stickman": "node scripts/build-stickman.cjs",
     "build:cat": "node scripts/build-cat.cjs",
@@ -35,6 +35,8 @@
   "devDependencies": {
     "@gltf-transform/core": "catalog:gltf",
     "@ttsc/unplugin": "catalog:typescript",
+    "@types/node": "catalog:utils",
+    "@types/pngjs": "catalog:media",
     "@types/three": "catalog:three",
     "esbuild": "catalog:vite",
     "gifenc": "catalog:media",

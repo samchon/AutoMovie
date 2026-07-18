@@ -10,6 +10,9 @@ catalogs:
       specifier: ^4.1.1
       version: 4.4.0
   media:
+    '@types/pngjs':
+      specifier: ^6.0.5
+      version: 6.0.5
     gifenc:
       specifier: ^1.0.3
       version: 1.0.3
@@ -278,6 +281,12 @@ importers:
       '@ttsc/unplugin':
         specifier: catalog:typescript
         version: 0.19.3(ttsc@0.19.3)
+      '@types/node':
+        specifier: catalog:utils
+        version: 22.19.20
+      '@types/pngjs':
+        specifier: catalog:media
+        version: 6.0.5
       '@types/three':
         specifier: catalog:three
         version: 0.169.0
@@ -923,6 +932,9 @@ packages:
 
   '@types/node@22.19.20':
     resolution: {integrity: sha512-6tELRwSDYWW9EdZhbeZmYGZ1/7Djkt+Ah3/ScEYT9cDord7UJzasR/4D3VONg9tQI5CDp+/CZC1AXj2pCFOvpw==}
+
+  '@types/pngjs@6.0.5':
+    resolution: {integrity: sha512-0k5eKfrA83JOZPppLtS2C7OUtyNAl2wKNxfyYl9Q5g9lPkgBl/9hNyAu6HuEH2J4XmIv2znEpkDd0SaZVxW6iQ==}
 
   '@types/stats.js@0.17.4':
     resolution: {integrity: sha512-jIBvWWShCvlBqBNIZt0KAshWpvSjhkwkEu4ZUcASoAvhmrgAUI2t1dXrjSL4xXVLB4FznPrIsX3nKXFl/Dt4vA==}
@@ -2446,6 +2458,10 @@ snapshots:
   '@types/node@22.19.20':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/pngjs@6.0.5':
+    dependencies:
+      '@types/node': 22.19.20
 
   '@types/stats.js@0.17.4': {}
 

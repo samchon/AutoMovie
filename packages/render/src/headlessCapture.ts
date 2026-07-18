@@ -11,6 +11,13 @@ export type AutoMovieHeadlessCaptureErrorCode =
   | "capture"
   | "empty-frame";
 
+/** Navigation milestones accepted by Playwright's page contract. */
+export type AutoMovieHeadlessWaitUntil =
+  | "commit"
+  | "domcontentloaded"
+  | "load"
+  | "networkidle";
+
 /**
  * Structured capture failure. The code tells an agent whether it missed a page
  * route, a deterministic seek hook, the screenshot call, or an empty frame.
@@ -41,7 +48,10 @@ export class AutoMovieHeadlessCaptureError extends Error {
  */
 export interface IAutoMovieHeadlessPage {
   /** Navigate to the viewer route. */
-  goto(url: string, options: { waitUntil: string }): Promise<unknown>;
+  goto(
+    url: string,
+    options: { waitUntil: AutoMovieHeadlessWaitUntil },
+  ): Promise<unknown>;
 
   /** Wait until the viewer exposes its deterministic seek hook. */
   waitForFunction<T>(predicate: (arg: T) => unknown, arg: T): Promise<unknown>;
@@ -124,7 +134,7 @@ export interface IAutoMovieHeadlessCaptureOptions {
   passFunction?: string;
 
   /** Navigation wait condition. Defaults to `load`. */
-  waitUntil?: string;
+  waitUntil?: AutoMovieHeadlessWaitUntil;
 
   /** Persist one PNG frame and its metadata. */
   writeFrame: IAutoMovieHeadlessFrameWriter;

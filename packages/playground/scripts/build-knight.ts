@@ -1,6 +1,6 @@
 import { exportModelToGLB } from "@automovie/render";
-import { mkdirSync, writeFileSync } from "fs";
-import { resolve } from "path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { buildKnight } from "../src/knight";
 

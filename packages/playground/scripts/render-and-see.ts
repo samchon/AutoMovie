@@ -8,23 +8,15 @@ import {
   normalizeGuidePasses,
   renderAndSee,
 } from "@automovie/render";
-import HMEmod from "h264-mp4-encoder";
+import * as HME from "h264-mp4-encoder";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
-const HME = HMEmod.default ?? HMEmod;
+import { DEFAULT_CHROME_EXECUTABLE } from "./chromeExecutable";
 
 const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
-const DEFAULT_CHROME =
-  process.env.CHROME ??
-  {
-    win32: "C:/Program Files/Google/Chrome/Application/chrome.exe",
-    darwin: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    linux: "google-chrome",
-  }[process.platform] ??
-  "google-chrome";
 
 export interface IAutoMoviePlaygroundRenderAndSeeOptions {
   page: string;
@@ -211,7 +203,7 @@ const parseArgs = (
     page: flags.page ?? "stickman.html",
     query: flags.query ?? "char=human&clip=walk&az=80",
     base: flags.base ?? DEFAULT_BASE,
-    chrome: flags.chrome ?? DEFAULT_CHROME,
+    chrome: flags.chrome ?? DEFAULT_CHROME_EXECUTABLE,
     durationSeconds: positiveNumber(flags.duration, 1, "--duration"),
     fps: positiveNumber(flags.fps, 12, "--fps"),
     width: even(positiveInteger(flags.width, 640, "--width")),
