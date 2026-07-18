@@ -1,5 +1,6 @@
 import {
   AutoMovieArkitChannel,
+  AutoMovieExpressionPreset,
   AutoMovieHumanoidBone,
   IAutoMovieBlendshapeChannel,
   IAutoMovieExpression,
@@ -161,17 +162,32 @@ const interpolateExpression = (
   b: IAutoMovieExpression | null,
   t: number,
 ): IAutoMovieExpression | null => {
+  // `null` is the NEUTRAL side (intensity 0 of the authored preset), blended
+  // toward like a resting joint axis (`lerpAxis` null → 0) or a resting
+  // transform (`lerpTransform` null → identity) — the same "unauthored side"
+  // convention this file uses everywhere else. An expression authored only at
+  // the far keyframe therefore RAMPS in from neutral instead of popping to full
+  // at the segment start, and one authored only at the near keyframe fades out
+  // to neutral (#1245-round-2 R2-8). Only when neither side is authored is there
+  // no expression to sample.
   if (a === null && b === null) return null;
-  if (a === null) return b;
-  if (b === null) return a;
+  const ea = a ?? neutral(b!.preset);
+  const eb = b ?? neutral(a!.preset);
   // Same preset → blend smoothly; differing presets → switch at the midpoint.
-  if (a.preset !== b.preset) return t < 0.5 ? a : b;
+  if (ea.preset !== eb.preset) return t < 0.5 ? ea : eb;
   return {
-    preset: a.preset,
-    intensity: a.intensity + (b.intensity - a.intensity) * t,
-    blendshapes: blendChannels(a, b, t),
+    preset: ea.preset,
+    intensity: ea.intensity + (eb.intensity - ea.intensity) * t,
+    blendshapes: blendChannels(ea, eb, t),
   };
 };
+
+/** The rest expression of a preset: present but with zero intensity/channels. */
+const neutral = (preset: AutoMovieExpressionPreset): IAutoMovieExpression => ({
+  preset,
+  intensity: 0,
+  blendshapes: null,
+});
 
 const blendChannels = (
   a: IAutoMovieExpression,
