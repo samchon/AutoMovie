@@ -43,7 +43,10 @@ export const main = async (
   const flags = readFlags(argv);
   const base = flags.base ?? DEFAULT_BASE;
   const chrome = flags.chrome ?? DEFAULT_CHROME;
-  const route = `${base.replace(/\/+$/, "")}/stickman.html?char=human&clip=walk&az=80&cap=1`;
+  // Pin the capture canvas to the frame size (#1251) via the w/h URL contract, so
+  // the screenshot is WxH regardless of the viewport (the same pin capture-shots
+  // and the render-and-see harnesses use).
+  const route = `${base.replace(/\/+$/, "")}/stickman.html?char=human&clip=walk&az=80&cap=1&w=${WIDTH}&h=${HEIGHT}`;
 
   const server = await ensureDevServer(base);
   try {
