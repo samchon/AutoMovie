@@ -7,7 +7,7 @@ export const AUTOMOVIE_TEMPLATE_VERSIONS: Record<string, string> = {
   interface: "^0.1.0",
   mcp: "^0.1.0",
   nodeTypes: "^22.19.17",
-  ttsc: "^0.19.1",
-  ttscLint: "^0.19.1",
+  ttsc: "^0.19.2",
+  ttscLint: "^0.19.2",
   typescript: "^7.0.2",
 };
