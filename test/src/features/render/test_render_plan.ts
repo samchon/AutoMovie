@@ -35,7 +35,7 @@ const SPEC: IAutoMovieRenderSpec = {
  * 4. Frame names zero-pad to the input pattern (`frame_00042.png` and
  *    `frame_%05d.png`), and render path stems are file-safe.
  * 5. `ffmpegArgs` encodes the spec into the pinned H.264 / pixel-format / crf /
- *    faststart command.
+ *    output-size (`-s width x height`) / faststart command.
  */
 export const test_render_plan = (): void => {
   // 1. schedule
@@ -128,6 +128,8 @@ export const test_render_plan = (): void => {
       "20",
       "-r",
       "30",
+      "-s",
+      "1920x1080",
       "-movflags",
       "+faststart",
       "out.mp4",

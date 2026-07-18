@@ -91,6 +91,14 @@ export const renderPathStem = (target: string): string => {
  * mapping is applied upstream in the renderer (per
  * {@link IAutoMovieRenderSpec}), not here.
  *
+ * The output size is pinned to the spec with `-s {width}x{height}` (#1251): a
+ * validated `width`/`height` that never reached the encoder made the rendered
+ * aspect the host viewport's, silently disagreeing with the pose-keypoint
+ * sidecar's `width/height` aspect (#1231). The dimensions must be even (the spec
+ * is validated so before it reaches here), which `yuv420p` chroma subsampling
+ * requires; pinning them here means the encoded frame size is the requested one
+ * on every host regardless of the capture viewport.
+ *
  * @author Samchon
  */
 export const ffmpegArgs = (
@@ -111,6 +119,8 @@ export const ffmpegArgs = (
   `${spec.crf}`,
   "-r",
   `${spec.fps}`,
+  "-s",
+  `${spec.width}x${spec.height}`,
   "-movflags",
   "+faststart",
   outputPath,

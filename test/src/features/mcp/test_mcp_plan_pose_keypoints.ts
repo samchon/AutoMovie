@@ -211,6 +211,17 @@ export const test_mcp_plan_pose_keypoints = (): void => {
     "a non-positive height refuses",
     hasViolation(plan({ height: 0 }).validation, "range", "$input.height"),
   );
+  // The sidecar aspect must match a render pinned at these dims with ffmpeg `-s`,
+  // and yuv420p can only encode even axes, so an odd (or fractional) dimension —
+  // which no render could reproduce exactly — is refused here too (#1251).
+  TestValidator.predicate(
+    "an odd width refuses",
+    hasViolation(plan({ width: 641 }).validation, "range", "$input.width"),
+  );
+  TestValidator.predicate(
+    "a fractional height refuses",
+    hasViolation(plan({ height: 360.5 }).validation, "range", "$input.height"),
+  );
 
   // 3. motion/skeleton registry gates.
   TestValidator.predicate(

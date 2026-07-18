@@ -50,6 +50,7 @@ import {
   isRecord,
   pushViolation,
   validateArrayArtifact,
+  validateEvenDimension,
   validateNonEmptyId,
   validateObjectArtifact,
   validateRange,
@@ -557,6 +558,12 @@ const buildPoseKeypointPlan = (props: {
     violations,
     false,
   );
+  validateEvenDimension(
+    props.width,
+    "$input.width",
+    "keypoint width",
+    violations,
+  );
   validateRange(
     props.height,
     "$input.height",
@@ -565,6 +572,12 @@ const buildPoseKeypointPlan = (props: {
     "keypoint height",
     violations,
     false,
+  );
+  validateEvenDimension(
+    props.height,
+    "$input.height",
+    "keypoint height",
+    violations,
   );
 
   const scene = props.slate.scene as unknown;
@@ -949,6 +962,12 @@ const validateRenderSpec = (
     violations,
     false,
   );
+  validateEvenDimension(
+    spec.width,
+    "$input.spec.width",
+    "render width",
+    violations,
+  );
   validateRange(
     spec.height,
     "$input.spec.height",
@@ -957,6 +976,12 @@ const validateRenderSpec = (
     "render height",
     violations,
     false,
+  );
+  validateEvenDimension(
+    spec.height,
+    "$input.spec.height",
+    "render height",
+    violations,
   );
   validateRange(spec.crf, "$input.spec.crf", 0, 51, "render crf", violations);
   if (spec.codec !== "h264")

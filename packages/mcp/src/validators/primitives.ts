@@ -259,6 +259,34 @@ export const validateRange = (
     );
 };
 
+/**
+ * A pixel dimension usable as an encoded frame size: a positive EVEN whole
+ * number. `yuv420p` chroma subsampling halves each axis, so an odd width or
+ * height cannot be encoded without a silent rounding — and a silent rounding is
+ * exactly what would desync the pose-keypoint sidecar's `width/height` aspect
+ * from the rendered frame the render pins with `-s` (#1231/#1251). Finiteness
+ * and positivity are a preceding {@link validateRange}'s job; this adds only the
+ * even-whole-number constraint and stays silent on values `validateRange`
+ * already rejects, so one bad dimension yields one violation, not two.
+ */
+export const validateEvenDimension = (
+  value: unknown,
+  path: string,
+  label: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0)
+    return;
+  if (!Number.isInteger(value) || value % 2 !== 0)
+    pushViolation(
+      violations,
+      "range",
+      path,
+      `${label} must be an even whole number of pixels (yuv420p needs both axes even), but was ${value}`,
+      value,
+    );
+};
+
 export const pushViolation = (
   violations: IAutoMovieConstraintViolation[],
   kind: IAutoMovieConstraintViolation["kind"],
