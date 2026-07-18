@@ -2638,12 +2638,13 @@ const actorPath = (
   actionPath: string,
   actor: string,
 ): string => {
+  // A string actor points at `.actor`; an array points at `.actor[i]`. `actor`
+  // always comes from actorList(action), a string-filtered SUBSET of this same
+  // array, so it is a member and `indexOf` (deliberately on the ORIGINAL array,
+  // so the path indexes the authored JSON) never returns -1. The `string` guard
+  // narrows the array case, so no `Array.isArray` re-check is needed.
   if (typeof action.actor === "string") return `${actionPath}.actor`;
-  /* c8 ignore next -- actorPath only ever gets an actor from actorList(action), so action.actor is always a string or array here; the non-array fallback is type-impossible. */
-  if (!Array.isArray(action.actor)) return `${actionPath}.actor`;
-  const index = action.actor.indexOf(actor);
-  /* c8 ignore next -- actor comes from actorList(action), a member of this same array, so indexOf never returns -1. */
-  return index === -1 ? `${actionPath}.actor` : `${actionPath}.actor[${index}]`;
+  return `${actionPath}.actor[${action.actor.indexOf(actor)}]`;
 };
 
 const targetResolves = (
