@@ -1,4 +1,5 @@
 import {
+  AutoMovieGenericGesture,
   IAutoMovieActionSynthesizer,
   IAutoMovieActorContext,
   IAutoMoviePerformedShot,
@@ -361,20 +362,21 @@ export class PipelineService {
     const nodes = new Map(
       staged!.scene.nodes.map((node) => [node.id, node.transform.translation]),
     );
-    const synthesize = wrapEnactSynthesizer(
-      makeActorSynthesizer(contexts, nodes),
-      props.clips,
-    );
+    const synthesizeDefault = makeActorSynthesizer(contexts, nodes);
     const synthesisViolations = collectDefaultSynthesisViolations(
       props,
       contexts,
       nodes,
-      synthesize,
+      synthesizeDefault,
     );
     if (synthesisViolations.length > 0)
       return {
         performed: { success: false, violations: synthesisViolations },
       };
+    const synthesize = wrapEnactSynthesizer(
+      synthesizeDefault,
+      props.clips ?? {},
+    );
     const performed = performShot({
       script: script!,
       staged: staged!,
@@ -2573,21 +2575,45 @@ const toActorContext = (
   gaits: context.gaits.map((gait): IAutoMovieGait => ({ ...gait })),
 });
 
+const TOTAL_DEFAULT_GESTURES = {
+  bow: true,
+  nod: true,
+  shake: true,
+  crouch: true,
+  kick: true,
+  stagger: true,
+  wave: true,
+  celebrate: true,
+  draw: true,
+  throw: true,
+  jump: true,
+} satisfies Record<AutoMovieGenericGesture | "jump", true>;
+
+type TotalDefaultGesture = keyof typeof TOTAL_DEFAULT_GESTURES;
+
+const TOTAL_DEFAULT_GESTURE_NAMES = Object.keys(
+  TOTAL_DEFAULT_GESTURES,
+) as TotalDefaultGesture[];
+
+const TOTAL_DEFAULT_GESTURE_SET = new Set<string>(TOTAL_DEFAULT_GESTURE_NAMES);
+
 const DEFAULT_GESTURES = new Set<string>([
-  "bow",
-  "nod",
-  "shake",
-  "crouch",
-  "kick",
-  "stagger",
-  "wave",
-  "celebrate",
-  "draw",
-  "throw",
-  "jump",
+  ...TOTAL_DEFAULT_GESTURE_NAMES,
   "point",
   "strike",
 ]);
+
+type DefaultSynthesisGapAction =
+  | Extract<
+      IAutoMovieActionCall,
+      { verb: "locomote" | "lookAt" | "reach" | "react" }
+    >
+  | (Extract<IAutoMovieActionCall, { verb: "gesture" }> & {
+      kind: Exclude<
+        Extract<IAutoMovieActionCall, { verb: "gesture" }>["kind"],
+        TotalDefaultGesture
+      >;
+    });
 
 const actorList = (action: IAutoMovieActionCall): string[] =>
   typeof action.actor === "string"
@@ -2652,23 +2678,30 @@ const canRunDefaultSynthesisPrecheck = (
   return true;
 };
 
+const canDefaultSynthesisReturnNull = (
+  action: IAutoMovieActionCall,
+): action is DefaultSynthesisGapAction =>
+  action.verb === "locomote" ||
+  action.verb === "lookAt" ||
+  action.verb === "reach" ||
+  action.verb === "react" ||
+  (action.verb === "gesture" && !TOTAL_DEFAULT_GESTURE_SET.has(action.kind));
+
 /**
  * Resolve `enact` actions from the caller-authored `clips` registry (#1148) —
  * the MCP face of the engine's content seam. The clip is re-keyed per actor so
  * a unison cast enacting one clip cannot collide on ids; every other verb falls
- * through to the default synthesizer. Unknown ids return `null`, which the
- * enact refusal rungs turn into an actionable message before the shot
- * compiles.
+ * through to the default synthesizer. The wrapper is constructed only after the
+ * enact refusal rungs reject unknown ids, so every enact action it receives
+ * names a supplied clip.
  */
 const wrapEnactSynthesizer = (
   base: IAutoMovieActionSynthesizer,
-  clips: Record<string, IAutoMovieMcpMotion> | undefined,
+  clips: Readonly<Record<string, IAutoMovieMcpMotion>>,
 ): IAutoMovieActionSynthesizer => {
   return (action, actor) => {
     if (action.verb !== "enact") return base(action, actor);
-    const clip = clips?.[action.clip];
-    /* c8 ignore next -- describeEnactGap refuses an unsupplied clip id before performShot runs, so by the time this synthesizer bakes an enact the clip is always present. */
-    if (clip === undefined) return null;
+    const clip = clips[action.clip]!;
     return { ...toEngineMotion(clip), id: `${actor}:enact:${clip.id}` };
   };
 };
@@ -2707,14 +2740,29 @@ const collectDefaultSynthesisViolations = (
     }
     if (action.verb === "frame" || action.verb === "attachTo") return;
     if (!canRunDefaultSynthesisPrecheck(action)) return;
+    const readyActors: Array<readonly [string, IAutoMovieActorContext]> = [];
+    for (const actor of actorList(action)) {
+      const context = contexts.get(actor);
+      if (context === undefined)
+        violations.push(
+          violation(
+            "type",
+            actorPath(action, actionPath, actor),
+            `actor "${actor}" needs an MCP actor context before the default performer can synthesize its ${action.verb} action`,
+            actor,
+          ),
+        );
+      else readyActors.push([actor, context]);
+    }
+    if (!canDefaultSynthesisReturnNull(action)) return;
 
-    for (const actor of actorList(action))
+    for (const [actor, context] of readyActors)
       if (synthesize(action, actor) === null) {
         const gap = describeDefaultSynthesisGap(
           action,
           actionPath,
           actor,
-          contexts,
+          context,
           nodes,
         );
         if (gap !== null) violations.push(gap);
@@ -2797,66 +2845,37 @@ const describeLaunchOnHitGap = (
 };
 
 const describeDefaultSynthesisGap = (
-  action: IAutoMovieActionCall,
+  action: DefaultSynthesisGapAction,
   actionPath: string,
   actor: string,
-  contexts: ReadonlyMap<string, IAutoMovieActorContext>,
+  context: IAutoMovieActorContext,
   nodes: Map<string, IAutoMovieVector3>,
 ): IAutoMovieConstraintViolation | null => {
-  const context = contexts.get(actor);
-  if (context === undefined)
-    return violation(
-      "type",
-      actorPath(action, actionPath, actor),
-      `actor "${actor}" needs an MCP actor context before the default performer can synthesize its ${action.verb} action`,
-      actor,
-    );
-
-  if (action.verb === "locomote") return null;
-  if (action.verb === "lookAt")
-    /* c8 ignore start -- the lookAt synthesiser always produces a clip once its target resolves (aimYawPitch cannot fail), and this describer only runs when synthesis returned null, so targetResolves() is never true here. */
-    return targetResolves(action.to, nodes)
-      ? violation(
-          "type",
-          `${actionPath}.to`,
-          `the default performer could not synthesize lookAt for actor "${actor}"`,
-          action.to,
-        )
-      : /* c8 ignore stop */ null;
+  if (action.verb === "locomote" || action.verb === "lookAt") return null;
   if (action.verb === "gesture") {
-    if (!DEFAULT_GESTURES.has(action.kind))
+    if (action.kind !== "point" && action.kind !== "strike")
       return violation(
         "type",
         `${actionPath}.kind`,
         `gesture "${action.kind}" is not supported by the MCP default performer; use one of ${[...DEFAULT_GESTURES].join(", ")} or provide a supported action`,
         action.kind,
       );
-    if (action.kind === "point" || action.kind === "strike") {
-      if (context.rig === undefined)
-        return violation(
-          "type",
-          actorPath(action, actionPath, actor),
-          `gesture "${action.kind}" for actor "${actor}" requires a rig in that actor's MCP context`,
-          actor,
-        );
-      if (action.at === undefined || !targetResolves(action.at, nodes))
-        return null;
+    if (context.rig === undefined)
       return violation(
         "type",
-        `${actionPath}.at`,
-        `the default performer could not solve gesture "${action.kind}" for actor "${actor}"`,
-        action.at,
+        actorPath(action, actionPath, actor),
+        `gesture "${action.kind}" for actor "${actor}" requires a rig in that actor's MCP context`,
+        actor,
       );
-    }
-    /* c8 ignore start -- every non-point/strike gesture in DEFAULT_GESTURES has a gestureMotion shape, so its synthesis never returns null; this could-not-synthesize arm for those kinds is unreachable. */
+    if (action.at === undefined || !targetResolves(action.at, nodes))
+      return null;
     return violation(
       "type",
-      `${actionPath}.kind`,
-      `the default performer could not synthesize gesture "${action.kind}" for actor "${actor}"`,
-      action.kind,
+      `${actionPath}.at`,
+      `the default performer could not solve gesture "${action.kind}" for actor "${actor}"`,
+      action.at,
     );
   }
-  /* c8 ignore stop */
   if (action.verb === "reach") {
     if (context.rig === undefined)
       return violation(
@@ -2873,22 +2892,13 @@ const describeDefaultSynthesisGap = (
       action.to,
     );
   }
-  if (action.verb === "react" && context.rig === undefined)
-    return violation(
-      "type",
-      actorPath(action, actionPath, actor),
-      `react for actor "${actor}" requires a rig in that actor's MCP context`,
-      actor,
-    );
-  /* c8 ignore start -- describeDefaultSynthesisGap only runs when synthesis returned null, which for the verbs reaching this fall-through (hold, emote, react-with-rig) never happens; the non-react/rigged fall-through is unreachable. */
   return violation(
     "type",
-    actionPath,
-    `the MCP default performer could not synthesize ${action.verb} for actor "${actor}"`,
-    action,
+    actorPath(action, actionPath, actor),
+    `react for actor "${actor}" requires a rig in that actor's MCP context`,
+    actor,
   );
 };
-/* c8 ignore stop */
 
 const toMcpPerformedShot = (
   performed: IAutoMoviePerformedShot,
