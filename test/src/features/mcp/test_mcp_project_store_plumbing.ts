@@ -63,8 +63,8 @@ const film: IAutoMovieSequence = {
  * guidance, {@link AutoMovieProject.orderResidentSlate} reproduces the
  * filename-lexicographic read order (including the `beatOf(id) ?? id` fallback
  * for a non-`shot:` id), a saved non-`shot:` id keys by the raw id, a keyed
- * slice file holding `null` is skipped, and the commit lock breaks a stale
- * holder while refusing a live one.
+ * slice file holding `null` is skipped, and the commit lock refuses both old
+ * and fresh foreign owners until explicitly recovered.
  *
  * Scenarios:
  *
@@ -76,9 +76,10 @@ const film: IAutoMovieSequence = {
  * 3. Saving a slate whose shot id is not `shot:<beat>` keys the slice by the raw
  *    id.
  * 4. A keyed slice file holding literal `null` is skipped on read.
- * 5. A stale (>10s) commit lock is broken and the save proceeds; a live lock is
- *    refused with the retry prompt; a non-EEXIST lock-open failure (root
- *    removed mid-flight) propagates unchanged.
+ * 5. A stale (>10s) commit lock is never stolen: the save is refused, the lock
+ *    stays byte-identical, and an explicit removal permits the retry. A live
+ *    lock is likewise refused; a non-EEXIST lock-open failure (root removed
+ *    mid-flight) propagates unchanged.
  * 6. Reading many keyed slices and a stale-render ledger over many strays both
  *    round-trip through the filename sort.
  */
@@ -174,17 +175,35 @@ export const test_mcp_project_store_plumbing = (): void => {
     fs.rmSync(nullRoot, { recursive: true, force: true });
   }
 
-  // 5. stale lock broken; live lock refused
+  // 5. old and fresh foreign locks are both fail-closed
   const staleRoot = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-stale-"));
   try {
     const project = AutoMovieProject.open(staleRoot);
     const lockPath = path.join(staleRoot, "revision.lock");
-    fs.closeSync(fs.openSync(lockPath, "w"));
+    fs.writeFileSync(lockPath, "crashed-owner-token");
     const stale = new Date(Date.now() - 20_000);
     fs.utimesSync(lockPath, stale, stale);
+    TestValidator.predicate(
+      "an old commit lock is refused with explicit recovery guidance",
+      throwsError(
+        () => project.saveSlate(slateWith({ script })),
+        ["commit lock is held", "verify", "remove", "manually"],
+      ),
+    );
+    TestValidator.equals(
+      "an old commit lock blocks every staged write",
+      fs.existsSync(path.join(staleRoot, "script.json")),
+      false,
+    );
+    TestValidator.equals(
+      "an old commit lock stays byte-identical",
+      fs.readFileSync(lockPath, "utf8"),
+      "crashed-owner-token",
+    );
+    fs.rmSync(lockPath);
     project.saveSlate(slateWith({ script }));
     TestValidator.equals(
-      "a stale commit lock is broken and the save proceeds",
+      "an explicit recovery allows the save retry",
       fs.existsSync(path.join(staleRoot, "script.json")),
       true,
     );
