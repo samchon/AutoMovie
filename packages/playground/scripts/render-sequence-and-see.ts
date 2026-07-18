@@ -147,9 +147,11 @@ export const captureSequenceRenderAndSee = async (
     try {
       const spec: IAutoMovieRenderSpec = {
         target: options.target ?? session.metadata.sequence.id,
-        fps: options.fps,
-        width: options.width,
-        height: options.height,
+        frameFormat: {
+          fps: options.fps,
+          width: options.width,
+          height: options.height,
+        },
         toneMapping: "none",
         codec: "h264",
         pixelFormat: "yuv420p",
@@ -324,9 +326,9 @@ const createH264Encoder =
     const frameCount = options.captured.size;
     if (frameCount === 0) throw new Error("no captured sequence frames");
     const encoder = await HME.createH264MP4Encoder();
-    encoder.width = options.spec.width;
-    encoder.height = options.spec.height;
-    encoder.frameRate = options.spec.fps;
+    encoder.width = options.spec.frameFormat.width;
+    encoder.height = options.spec.frameFormat.height;
+    encoder.frameRate = options.spec.frameFormat.fps;
     encoder.quantizationParameter = options.spec.crf;
     encoder.initialize();
     try {

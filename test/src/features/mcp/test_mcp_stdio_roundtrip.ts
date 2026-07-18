@@ -37,6 +37,37 @@ const WALK: IAutoMovieGait = {
 
 const REQUEST_OPTIONS = { timeout: 120_000 };
 
+interface IJsonSchema {
+  $defs?: Record<string, IJsonSchema>;
+  $ref?: string;
+  additionalProperties?: boolean | IJsonSchema;
+  properties?: Record<string, IJsonSchema>;
+  required?: string[];
+  type?: string;
+}
+
+const resolveSchema = (root: IJsonSchema, schema: IJsonSchema): IJsonSchema => {
+  if (schema.$ref === undefined) return schema;
+  const prefix = "#/$defs/";
+  if (schema.$ref.startsWith(prefix) === false)
+    throw new Error(`unsupported schema reference: ${schema.$ref}`);
+  const resolved = root.$defs?.[schema.$ref.slice(prefix.length)];
+  if (resolved === undefined)
+    throw new Error(`unresolved schema reference: ${schema.$ref}`);
+  return resolved;
+};
+
+const schemaProperty = (
+  root: IJsonSchema,
+  schema: IJsonSchema,
+  property: string,
+): IJsonSchema => {
+  const found = resolveSchema(root, schema).properties?.[property];
+  if (found === undefined)
+    throw new Error(`schema property not found: ${property}`);
+  return resolveSchema(root, found);
+};
+
 const call = async <T>(
   client: Client,
   name: string,
@@ -94,7 +125,9 @@ const assemble = (shot: string): IAutoMovieAssembleApplication.IWrite => ({
  *
  * 1. A real stdio client sees the AutoMovie stage, slate-query, geometry-query,
  *    and validation tools.
- * 2. The same client calls `stage -> getScene/measureDistance/validateScene ->
+ * 2. The render, caption, and pose-keypoint tools expose one identical nested
+ *    frame-format contract, with no legacy top-level dimension fields.
+ * 3. The same client calls `stage -> getScene/measureDistance/validateScene ->
  *    forge -> block -> perform -> cut`, feeding structured outputs forward and
  *    receiving a successful final sequence.
  */
@@ -157,6 +190,64 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
         "validateShot",
       ],
     );
+
+    const toolSchema = (name: string): IJsonSchema => {
+      const schema = tools.tools.find(
+        (tool) => tool.name === name,
+      )?.inputSchema;
+      if (schema === undefined)
+        throw new Error(`tool schema not found: ${name}`);
+      return schema as IJsonSchema;
+    };
+    const renderRoot = toolSchema("planRender");
+    const captionRoot = toolSchema("planCaptions");
+    const poseRoot = toolSchema("planPoseKeypoints");
+    const renderSpecSchema = schemaProperty(renderRoot, renderRoot, "spec");
+    const formats = [
+      schemaProperty(renderRoot, renderSpecSchema, "frameFormat"),
+      schemaProperty(captionRoot, captionRoot, "frameFormat"),
+      schemaProperty(poseRoot, poseRoot, "frameFormat"),
+    ];
+    for (const [index, format] of formats.entries()) {
+      TestValidator.equals(
+        `frame format ${index} property names`,
+        Object.keys(format.properties ?? {}).sort((a, b) => a.localeCompare(b)),
+        ["fps", "height", "width"],
+      );
+      TestValidator.equals(
+        `frame format ${index} required fields`,
+        [...(format.required ?? [])].sort((a, b) => a.localeCompare(b)),
+        ["fps", "height", "width"],
+      );
+      TestValidator.equals(
+        `frame format ${index} property types`,
+        Object.fromEntries(
+          Object.entries(format.properties ?? {}).map(([key, value]) => [
+            key,
+            value.type,
+          ]),
+        ),
+        { fps: "number", width: "number", height: "number" },
+      );
+      TestValidator.equals(
+        `frame format ${index} rejects extra fields`,
+        format.additionalProperties,
+        false,
+      );
+    }
+    for (const [label, schema] of [
+      ["render spec", renderSpecSchema],
+      ["caption input", captionRoot],
+      ["pose input", poseRoot],
+    ] as const)
+      TestValidator.equals(
+        `${label} has no legacy frame fields`,
+        ["fps", "width", "height"].filter(
+          (field) =>
+            resolveSchema(schema, schema).properties?.[field] !== undefined,
+        ),
+        [],
+      );
 
     const script = makeScriptWrite();
     const scriptArtifact: IAutoMovieScript = {
@@ -334,9 +425,7 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
 
     const renderSpec: IAutoMovieRenderSpec = {
       target: cut.sequence.id,
-      fps: 12,
-      width: 640,
-      height: 360,
+      frameFormat: { fps: 12, width: 640, height: 360 },
       toneMapping: "none",
       codec: "h264",
       pixelFormat: "yuv420p",

@@ -94,10 +94,10 @@ export const renderPathStem = (target: string): string => {
  * The output size is pinned to the spec with `-s {width}x{height}` (#1251): a
  * validated `width`/`height` that never reached the encoder made the rendered
  * aspect the host viewport's, silently disagreeing with the pose-keypoint
- * sidecar's `width/height` aspect (#1231). The dimensions must be even (the spec
- * is validated so before it reaches here), which `yuv420p` chroma subsampling
- * requires; pinning them here means the encoded frame size is the requested one
- * on every host regardless of the capture viewport.
+ * sidecar's `width/height` aspect (#1231). The dimensions must be even (the
+ * spec is validated so before it reaches here), which `yuv420p` chroma
+ * subsampling requires; pinning them here means the encoded frame size is the
+ * requested one on every host regardless of the capture viewport.
  *
  * @author Samchon
  */
@@ -108,7 +108,7 @@ export const ffmpegArgs = (
 ): string[] => [
   "-y",
   "-framerate",
-  `${spec.fps}`,
+  `${spec.frameFormat.fps}`,
   "-i",
   inputPattern,
   "-c:v",
@@ -118,9 +118,9 @@ export const ffmpegArgs = (
   "-crf",
   `${spec.crf}`,
   "-r",
-  `${spec.fps}`,
+  `${spec.frameFormat.fps}`,
   "-s",
-  `${spec.width}x${spec.height}`,
+  `${spec.frameFormat.width}x${spec.frameFormat.height}`,
   "-movflags",
   "+faststart",
   outputPath,

@@ -75,9 +75,7 @@ const slate: IAutoMovieMcpWritableSlate = {
 
 const spec: IAutoMovieRenderSpec = {
   target: shotA.id,
-  fps: 10,
-  width: 640,
-  height: 360,
+  frameFormat: { fps: 10, width: 640, height: 360 },
   toneMapping: "none",
   codec: "h264",
   pixelFormat: "yuv420p",
@@ -235,9 +233,11 @@ export const test_mcp_render_tools = async (): Promise<void> => {
         spec: {
           ...spec,
           target: "",
-          fps: 0,
-          width: 0,
-          height: Number.POSITIVE_INFINITY,
+          frameFormat: {
+            fps: 0,
+            width: 0,
+            height: Number.POSITIVE_INFINITY,
+          },
           crf: 52,
           codec: "vp9" as never,
           pixelFormat: "rgba" as never,
@@ -246,9 +246,9 @@ export const test_mcp_render_tools = async (): Promise<void> => {
       return (
         output.plan === null &&
         hasPath(output.validation, "$input.spec.target") &&
-        hasPath(output.validation, "$input.spec.fps") &&
-        hasPath(output.validation, "$input.spec.width") &&
-        hasPath(output.validation, "$input.spec.height") &&
+        hasPath(output.validation, "$input.spec.frameFormat.fps") &&
+        hasPath(output.validation, "$input.spec.frameFormat.width") &&
+        hasPath(output.validation, "$input.spec.frameFormat.height") &&
         hasPath(output.validation, "$input.spec.crf") &&
         hasPath(output.validation, "$input.spec.codec") &&
         hasPath(output.validation, "$input.spec.pixelFormat")
@@ -260,12 +260,19 @@ export const test_mcp_render_tools = async (): Promise<void> => {
     (() => {
       const odd = app.planRender({
         slate,
-        spec: { ...spec, width: 641, height: 361 },
+        spec: {
+          ...spec,
+          frameFormat: { ...spec.frameFormat, width: 641, height: 361 },
+        },
       });
       return (
         odd.plan === null &&
-        hasViolation(odd.validation, "range", "$input.spec.width") &&
-        hasViolation(odd.validation, "range", "$input.spec.height")
+        hasViolation(
+          odd.validation,
+          "range",
+          "$input.spec.frameFormat.width",
+        ) &&
+        hasViolation(odd.validation, "range", "$input.spec.frameFormat.height")
       );
     })(),
   );
@@ -277,6 +284,15 @@ export const test_mcp_render_tools = async (): Promise<void> => {
     "malformed render spec path",
     malformedSpec.plan === null &&
       hasPath(malformedSpec.validation, "$input.spec"),
+  );
+  const malformedFrameFormat = app.planRender({
+    slate,
+    spec: { ...spec, frameFormat: null as never },
+  });
+  TestValidator.predicate(
+    "malformed render frame format path",
+    malformedFrameFormat.plan === null &&
+      hasPath(malformedFrameFormat.validation, "$input.spec.frameFormat"),
   );
   TestValidator.predicate(
     "missing target path",
@@ -374,9 +390,9 @@ export const test_mcp_render_tools = async (): Promise<void> => {
     hasPath(
       app.planRender({
         slate: { ...slate, shots: [{ ...shotA, duration: 0.01 }, shotB] },
-        spec: { ...spec, fps: 1 },
+        spec: { ...spec, frameFormat: { ...spec.frameFormat, fps: 1 } },
       }).validation,
-      "$input.spec.fps",
+      "$input.spec.frameFormat.fps",
     ),
   );
   TestValidator.predicate(

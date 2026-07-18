@@ -92,22 +92,53 @@ const slate: IAutoMovieMcpWritableSlate = {
  * Scenarios:
  *
  * 1. `planCaptions` over a valid committed film whose fps × runtime rounds below
- *    one frame violates at `$input.fps` (and never invents a sidecar) — the
- *    same call drives the sequence-runtime accumulator across a trimmed and an
- *    un-trimmed entry.
+ *    one frame violates at `$input.frameFormat.fps` (and never invents a
+ *    sidecar) — the same call drives the sequence-runtime accumulator across a
+ *    trimmed and an un-trimmed entry.
  * 2. Negative twin: the same slate at a normal fps plans a sidecar.
+ * 3. The caption tool enforces the complete shared frame-format object even though
+ *    its sampling math directly consumes only fps.
  */
 export const test_mcp_render_caption_runtime_edges = (): void => {
-  const underflow = app.planCaptions({ slate, fps: 0.001 });
+  const underflow = app.planCaptions({
+    slate,
+    frameFormat: { fps: 0.001, width: 640, height: 360 },
+  });
   TestValidator.predicate(
     "a caption fps below one frame violates at the fps path",
     underflow.sidecar === null &&
-      hasViolation(underflow.validation, "range", "$input.fps"),
+      hasViolation(underflow.validation, "range", "$input.frameFormat.fps"),
   );
 
-  const planned = app.planCaptions({ slate, fps: 24 });
+  const planned = app.planCaptions({
+    slate,
+    frameFormat: { fps: 24, width: 640, height: 360 },
+  });
   TestValidator.predicate(
     "a normal caption fps plans a sidecar",
     planned.validation.success === true && planned.sidecar !== null,
+  );
+
+  const malformedFormat = app.planCaptions({
+    slate,
+    frameFormat: null as never,
+  });
+  TestValidator.predicate(
+    "a non-object caption frame format refuses at the shared object",
+    malformedFormat.sidecar === null &&
+      hasViolation(malformedFormat.validation, "type", "$input.frameFormat"),
+  );
+  const oddDimension = app.planCaptions({
+    slate,
+    frameFormat: { fps: 24, width: 641, height: 360 },
+  });
+  TestValidator.predicate(
+    "caption planning enforces the companion render dimensions",
+    oddDimension.sidecar === null &&
+      hasViolation(
+        oddDimension.validation,
+        "range",
+        "$input.frameFormat.width",
+      ),
   );
 };

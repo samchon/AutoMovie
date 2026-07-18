@@ -4,9 +4,7 @@ import { TestValidator } from "@nestia/e2e";
 
 const SPEC: IAutoMovieRenderSpec = {
   target: "shot-1",
-  fps: 24,
-  width: 640,
-  height: 480,
+  frameFormat: { fps: 24, width: 640, height: 480 },
   toneMapping: "acesFilmic",
   codec: "h264",
   pixelFormat: "yuv420p",
@@ -122,7 +120,7 @@ export const test_render_video = async (): Promise<void> => {
     await rejectsError(
       () =>
         renderVideo(
-          { ...SPEC, fps: 0 },
+          { ...SPEC, frameFormat: { ...SPEC.frameFormat, fps: 0 } },
           1,
           "/tmp/x",
           "/tmp/out.mp4",

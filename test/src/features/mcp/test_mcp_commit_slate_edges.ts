@@ -42,9 +42,7 @@ const beatEnd: IAutoMovieBeatEndState = {
 
 const spec = (over: Partial<IAutoMovieRenderSpec>): IAutoMovieRenderSpec => ({
   target: "seq-1",
-  fps: 24,
-  width: 640,
-  height: 360,
+  frameFormat: { fps: 24, width: 640, height: 360 },
   toneMapping: "none",
   codec: "h264",
   pixelFormat: "yuv420p",
@@ -88,7 +86,7 @@ export const test_mcp_commit_slate_edges = (): void => {
   // 2. captions need a committed script
   const scriptless = app.planCaptions({
     slate: slate({ script: null }),
-    fps: 10,
+    frameFormat: { fps: 10, width: 640, height: 360 },
   });
   TestValidator.predicate(
     "scriptless captions locate the slate script",

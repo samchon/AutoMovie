@@ -1,4 +1,5 @@
 import {
+  IAutoMovieRenderFrameFormat,
   IAutoMovieScene,
   IAutoMovieScript,
   IAutoMovieSequence,
@@ -105,19 +106,15 @@ const slate = (over: Partial<IAutoMovieMcpWritableSlate> = {}) =>
 // default would silently replace it and the malformed-input branch never runs).
 const plan = (over: {
   slate?: IAutoMovieMcpWritableSlate;
-  fps?: number;
+  frameFormat?: IAutoMovieRenderFrameFormat;
   motions?: Record<string, IAutoMovieMcpMotion>;
   skeletons?: (typeof skeleton)[];
-  width?: number;
-  height?: number;
 }) =>
   app.planPoseKeypoints({
     slate: slate(),
-    fps: 2,
+    frameFormat: { fps: 2, width: 1920, height: 1080 },
     motions: { m1: still },
     skeletons: [skeleton],
-    width: 1920, // 16/9, the projection the happy-path expectations assume
-    height: 1080,
     ...over,
   });
 
@@ -196,31 +193,64 @@ export const test_mcp_plan_pose_keypoints = (): void => {
   );
   TestValidator.predicate(
     "zero fps refuses",
-    hasViolation(plan({ fps: 0 }).validation, "range", "$input.fps"),
+    hasViolation(
+      plan({ frameFormat: { fps: 0, width: 1920, height: 1080 } }).validation,
+      "range",
+      "$input.frameFormat.fps",
+    ),
   );
   TestValidator.predicate(
     "a zero-frame runtime refuses",
-    hasViolation(plan({ fps: 0.2 }).validation, "range", "$input.fps") &&
-      plan({ fps: 0.2 }).sidecar === null,
+    hasViolation(
+      plan({ frameFormat: { fps: 0.2, width: 1920, height: 1080 } }).validation,
+      "range",
+      "$input.frameFormat.fps",
+    ) &&
+      plan({ frameFormat: { fps: 0.2, width: 1920, height: 1080 } }).sidecar ===
+        null,
   );
   TestValidator.predicate(
     "a non-positive width refuses",
-    hasViolation(plan({ width: 0 }).validation, "range", "$input.width"),
+    hasViolation(
+      plan({ frameFormat: { fps: 2, width: 0, height: 1080 } }).validation,
+      "range",
+      "$input.frameFormat.width",
+    ),
   );
   TestValidator.predicate(
     "a non-positive height refuses",
-    hasViolation(plan({ height: 0 }).validation, "range", "$input.height"),
+    hasViolation(
+      plan({ frameFormat: { fps: 2, width: 1920, height: 0 } }).validation,
+      "range",
+      "$input.frameFormat.height",
+    ),
   );
   // The sidecar aspect must match a render pinned at these dims with ffmpeg `-s`,
   // and yuv420p can only encode even axes, so an odd (or fractional) dimension —
   // which no render could reproduce exactly — is refused here too (#1251).
   TestValidator.predicate(
     "an odd width refuses",
-    hasViolation(plan({ width: 641 }).validation, "range", "$input.width"),
+    hasViolation(
+      plan({ frameFormat: { fps: 2, width: 641, height: 1080 } }).validation,
+      "range",
+      "$input.frameFormat.width",
+    ),
   );
   TestValidator.predicate(
     "a fractional height refuses",
-    hasViolation(plan({ height: 360.5 }).validation, "range", "$input.height"),
+    hasViolation(
+      plan({ frameFormat: { fps: 2, width: 1920, height: 360.5 } }).validation,
+      "range",
+      "$input.frameFormat.height",
+    ),
+  );
+  TestValidator.predicate(
+    "a non-object frame format refuses at the shared object",
+    hasViolation(
+      plan({ frameFormat: null as never }).validation,
+      "type",
+      "$input.frameFormat",
+    ),
   );
 
   // 3. motion/skeleton registry gates.
@@ -294,11 +324,9 @@ export const test_mcp_plan_pose_keypoints = (): void => {
     throwsError(
       () =>
         new AutoMovieApplication().planPoseKeypoints({
-          fps: 2,
+          frameFormat: { fps: 2, width: 1920, height: 1080 },
           motions: { m1: still },
           skeletons: [skeleton],
-          width: 1920,
-          height: 1080,
         }),
       ["openProject"],
     ),

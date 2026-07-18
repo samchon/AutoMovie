@@ -193,10 +193,10 @@ export const planSequenceRender = (props: {
     );
 
   const timeline = sequenceTimeline(props.sequence, props.shots);
-  const times = frameTimes(props.spec.fps, timeline.runtime);
+  const times = frameTimes(props.spec.frameFormat.fps, timeline.runtime);
   if (times.length === 0)
     throw new Error(
-      `planSequenceRender requires at least one frame; fps ${props.spec.fps} and duration ${timeline.runtime} produced zero frames`,
+      `planSequenceRender requires at least one frame; fps ${props.spec.frameFormat.fps} and duration ${timeline.runtime} produced zero frames`,
     );
 
   const stem = renderPathStem(props.sequence.id);
@@ -206,7 +206,7 @@ export const planSequenceRender = (props: {
   return {
     target: { kind: "sequence", id: props.sequence.id },
     sequenceFps: props.sequence.fps,
-    renderFps: props.spec.fps,
+    renderFps: props.spec.frameFormat.fps,
     durationSeconds: timeline.runtime,
     frameCount: times.length,
     times,

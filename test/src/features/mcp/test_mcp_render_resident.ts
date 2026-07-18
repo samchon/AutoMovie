@@ -67,9 +67,7 @@ const sequence: IAutoMovieSequence = {
 
 const spec: IAutoMovieRenderSpec = {
   target: shot.id,
-  fps: 10,
-  width: 640,
-  height: 360,
+  frameFormat: { fps: 10, width: 640, height: 360 },
   toneMapping: "none",
   codec: "h264",
   pixelFormat: "yuv420p",

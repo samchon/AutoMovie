@@ -12,9 +12,7 @@ import { nclose } from "../internal/predicates";
 
 const SPEC: IAutoMovieRenderSpec = {
   target: "shot-1",
-  fps: 30,
-  width: 1920,
-  height: 1080,
+  frameFormat: { fps: 30, width: 1920, height: 1080 },
   toneMapping: "none",
   codec: "h264",
   pixelFormat: "yuv420p",

@@ -8,9 +8,7 @@ import { TestValidator } from "@nestia/e2e";
 
 const SPEC: IAutoMovieRenderSpec = {
   target: "shot-1",
-  fps: 4,
-  width: 320,
-  height: 180,
+  frameFormat: { fps: 4, width: 320, height: 180 },
   toneMapping: "none",
   codec: "h264",
   pixelFormat: "yuv420p",
