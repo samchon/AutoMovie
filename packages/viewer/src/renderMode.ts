@@ -87,16 +87,32 @@ const hideNonMeshRenderables = (scene: THREE.Scene): (() => void) => {
  *
  * An unknown mode is a caller bug and throws.
  *
+ * `options` (`depthRange`, `edgeWidth`) is an escape hatch for a direct embedder
+ * tuning the passes to an unusual scene. The bundled capture path (`__afPass`)
+ * deliberately omits it: a screenshot pass reads the same world depth as the same
+ * gray only when the normalization range is a scene-stable constant, so the
+ * capture side is fixed to the defaults on purpose (#1167). A scene whose depth
+ * of interest exceeds {@link DEPTH_NORMALIZATION_RANGE} would clamp to black past
+ * that range in the bundled capture — override via a direct call, not the hook.
+ *
  * @author Samchon
  */
 export const applyRenderMode = (
   scene: THREE.Scene,
   mode: AutoMovieGuidePass,
   options?: {
-    /** Metric range (m) the depth pass normalizes onto. Defaults to 20. */
+    /**
+     * Metric range (m) the depth pass normalizes onto. Defaults to
+     * {@link DEPTH_NORMALIZATION_RANGE} (20). Direct callers only — the capture
+     * path keeps the scene-stable default (see above).
+     */
     depthRange?: number;
 
-    /** Silhouette edge width (m) of the outline pass. Defaults to 0.02. */
+    /**
+     * Silhouette edge width (m) of the outline pass. Defaults to
+     * {@link EDGE_WIDTH} (0.02). Direct callers only — the capture path keeps the
+     * default.
+     */
     edgeWidth?: number;
   },
 ): IAutoMovieRenderModeHandle => {
