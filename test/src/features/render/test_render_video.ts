@@ -98,6 +98,8 @@ export const test_render_video = async (): Promise<void> => {
     "18",
     "-r",
     "24",
+    "-s",
+    "640x480",
     "-movflags",
     "+faststart",
     "/tmp/out.mp4",

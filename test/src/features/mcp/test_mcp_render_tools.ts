@@ -255,6 +255,20 @@ export const test_mcp_render_tools = async (): Promise<void> => {
       );
     })(),
   );
+  TestValidator.predicate(
+    "odd render dimensions refuse (yuv420p needs even axes)",
+    (() => {
+      const odd = app.planRender({
+        slate,
+        spec: { ...spec, width: 641, height: 361 },
+      });
+      return (
+        odd.plan === null &&
+        hasPath(odd.validation, "$input.spec.width") &&
+        hasPath(odd.validation, "$input.spec.height")
+      );
+    })(),
+  );
   const malformedSpec = app.planRender({
     slate,
     spec: null as unknown as IAutoMovieRenderSpec,
