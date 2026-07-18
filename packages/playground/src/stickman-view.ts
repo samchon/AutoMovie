@@ -11,6 +11,7 @@ import {
 import {
   AutoMoviePlayer,
   IAutoMovieRenderModeHandle,
+  applyCaptureCanvasSize,
   applyRenderMode,
   buildModel,
   mountViewer,
@@ -274,6 +275,14 @@ const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 // `?cap=1` hands frame timing to the capturer (window.__afSeek) instead of the
 // wall clock, so a recorder can step through deterministically in one session.
 const capMode = params.get("cap") === "1";
+// Pin the capture canvas to the render plan's exact frame size (#1251), so a
+// headless screenshot of `#view` is that size regardless of the host window.
+if (capMode)
+  applyCaptureCanvasSize(
+    canvas,
+    Number(params.get("w")),
+    Number(params.get("h")),
+  );
 const handle = mountViewer(
   canvas,
   scene,

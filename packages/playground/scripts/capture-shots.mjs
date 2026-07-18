@@ -209,7 +209,12 @@ const capture = async ([page, q, dur, n, w, h, out, fps]) => {
     deviceScaleFactor: 1,
   });
   const sep = q ? "&" : "";
-  await pg.goto(`${BASE}/${page}?${q}${sep}cap=1`, { waitUntil: "load" });
+  // Pass the even frame size in the URL too (#1251): the viewer pins `#view` to
+  // exactly W×H, so the element screenshot is that size even if the viewport
+  // above ever drifts. Viewport and canvas now agree by contract, not luck.
+  await pg.goto(`${BASE}/${page}?${q}${sep}cap=1&w=${W}&h=${H}`, {
+    waitUntil: "load",
+  });
   await pg.waitForFunction(() => typeof window.__afSeek === "function");
   // frame only the 3D — hide any UI overlay (clip-selector bar) that would
   // otherwise overlap the canvas in the element screenshot

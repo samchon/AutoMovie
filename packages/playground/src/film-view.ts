@@ -23,6 +23,7 @@ import { type IAutoMovieSequenceRenderFrame } from "@automovie/render";
 import {
   AutoMoviePlayer,
   IAutoMovieRenderModeHandle,
+  applyCaptureCanvasSize,
   applyObjectMotion,
   applyPose,
   applyRenderMode,
@@ -475,6 +476,14 @@ const renderShotOnly = (sample: SequenceRenderShotSample): void => {
 const params = new URLSearchParams(location.search);
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 const capMode = params.get("cap") === "1";
+// Pin the capture canvas to the render plan's exact frame size (#1251), so a
+// headless screenshot of `#view` is that size regardless of the host window.
+if (capMode)
+  applyCaptureCanvasSize(
+    canvas,
+    Number(params.get("w")),
+    Number(params.get("h")),
+  );
 const frozen = params.get("t");
 const freezeAt = frozen !== null ? Number(frozen) : null;
 const handle = mountViewer(
