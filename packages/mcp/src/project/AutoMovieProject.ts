@@ -766,8 +766,8 @@ const assertProjectRootDirectory = (root: string): void => {
     fs.mkdirSync(root, { recursive: true });
   } catch (error) {
     if (error instanceof AutoMovieProjectRootError) throw error;
-    /* c8 ignore next -- fs.mkdirSync/statSync only ever throw Error; the String(error) fallback is unreachable defensive code */
-    const detail = error instanceof Error ? error.message : String(error);
+    // Node's synchronous filesystem APIs throw Error objects.
+    const detail = (error as Error).message;
     throw new AutoMovieProjectRootError(root, detail);
   }
 };
@@ -1366,8 +1366,8 @@ const readJson = <T>(file: string): T | null => {
   try {
     return JSON.parse(fs.readFileSync(file, "utf8")) as T;
   } catch (error) {
-    /* c8 ignore next -- JSON.parse/readFileSync only ever throw Error; the String(error) fallback is unreachable defensive code */
-    const reason = error instanceof Error ? error.message : String(error);
+    // JSON.parse and Node's synchronous filesystem APIs throw Error objects.
+    const reason = (error as Error).message;
     throw new AutoMovieProjectJsonError(file, reason);
   }
 };
@@ -1400,8 +1400,8 @@ const sliceKeyFromFilename = (file: string, name: string): string => {
   try {
     return decodeURIComponent(name.slice(0, -".json".length));
   } catch (error) {
-    /* c8 ignore next -- decodeURIComponent only ever throws URIError; the String(error) fallback is unreachable defensive code */
-    const reason = error instanceof Error ? error.message : String(error);
+    // decodeURIComponent throws URIError for malformed escapes.
+    const reason = (error as URIError).message;
     throw new AutoMovieProjectKeyError(
       file,
       "filename key",

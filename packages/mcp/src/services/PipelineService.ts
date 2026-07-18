@@ -22,7 +22,6 @@ import {
   IAutoMovieForgeApplication,
   IAutoMovieGait,
   IAutoMoviePerformanceApplication,
-  IAutoMoviePropSpec,
   IAutoMovieScriptApplication,
   IAutoMovieShot,
   IAutoMovieStagingApplication,
@@ -483,14 +482,7 @@ export class PipelineService {
     const violations = validateForgePropShape(props.spec);
     if (violations.length > 0)
       return { forged: { success: false, violations } };
-    const converted = convertPropSpecForForge(props.spec);
-    /* c8 ignore start -- validateForgePropShape fully gates every field toEnginePropSpec reads, so the converter never fails on a shape-valid spec (defensive net). */
-    if (converted.success === false)
-      return {
-        forged: remapMcpForgedPropPaths(converted, [["$input", "$input.spec"]]),
-      };
-    /* c8 ignore stop */
-    const forged = forgeProp(converted.prop);
+    const forged = forgeProp(toEnginePropSpec(props.spec));
     if (forged.success === false)
       return {
         forged: remapMcpForgedPropPaths(forged, [["$input", "$input.spec"]]),
@@ -558,30 +550,6 @@ const validatePipelineRequestRoot = (
           props,
         ),
       ];
-
-const convertPropSpecForForge = (
-  spec: IAutoMovieMcpPropSpec,
-):
-  | { success: true; prop: IAutoMoviePropSpec }
-  | { success: false; violations: IAutoMovieConstraintViolation[] } => {
-  try {
-    return { success: true, prop: toEnginePropSpec(spec) };
-    /* c8 ignore start -- validateForgePropShape gates every field this lowering reads, so toEnginePropSpec cannot throw on a shape-valid spec (the catch never fires from forgeProp). */
-  } catch {
-    return {
-      success: false,
-      violations: [
-        violation(
-          "type",
-          "$input.articulation",
-          "prop articulation must match the forgeProp schema",
-          isRecord(spec) ? spec.articulation : spec,
-        ),
-      ],
-    };
-  }
-  /* c8 ignore stop */
-};
 
 const validateForgePropShape = (
   spec: unknown,
@@ -2994,19 +2962,15 @@ const remapMcpCutPaths = (
 };
 
 const remapMcpForgedPropPaths = (
-  forged: IAutoMovieForgePropOutput["forged"],
+  forged: Extract<IAutoMovieForgePropOutput["forged"], { success: false }>,
   replacements: ReadonlyArray<readonly [from: string, to: string]>,
-): IAutoMovieForgePropOutput["forged"] => {
-  /* c8 ignore next -- forgeProp only ever remaps its FAILURE results (an accepted forge returns its output directly, without remapping), so this success passthrough is never reached. */
-  if (forged.success === true) return forged;
-  return {
-    success: false,
-    violations: forged.violations.map((item) => ({
-      ...item,
-      path: remapMcpPath(item.path, replacements),
-    })),
-  };
-};
+): Extract<IAutoMovieForgePropOutput["forged"], { success: false }> => ({
+  success: false,
+  violations: forged.violations.map((item) => ({
+    ...item,
+    path: remapMcpPath(item.path, replacements),
+  })),
+});
 
 const remapMcpForgedCastPaths = (
   forged: IAutoMovieForgeOutput["forged"],
