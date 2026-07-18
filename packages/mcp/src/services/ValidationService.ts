@@ -288,17 +288,15 @@ const remapPath = (
   path: string,
   replacements: ReadonlyArray<readonly [from: string, to: string]>,
 ): string => {
-  for (const [from, to] of replacements)
-    if (
+  // Each caller supplies every root its selected validator can emit.
+  const [from, to] = replacements.find(
+    ([from]) =>
       path === from ||
       path.startsWith(`${from}.`) ||
-      path.startsWith(`${from}[`)
-    )
-      return `${to}${path.slice(from.length)}`;
-  /* c8 ignore start -- unreachable fallthrough: the standalone validate* tools remap only engine/artifact validator output, whose paths all begin with a replacement key ("$input"/"$models"/"$motions"/"$shots") (#1040). */
-  return path;
+      path.startsWith(`${from}[`),
+  )!;
+  return `${to}${path.slice(from.length)}`;
 };
-/* c8 ignore stop */
 
 const appendMcpPoseShape = (
   violations: IAutoMovieConstraintViolation[],

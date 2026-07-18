@@ -1090,17 +1090,15 @@ const remapRenderPath = (
   path: string,
   replacements: ReadonlyArray<readonly [from: string, to: string]>,
 ): string => {
-  for (const [from, to] of replacements)
-    if (
+  // validateSequenceArtifact roots every path at $input or $shots.
+  const [from, to] = replacements.find(
+    ([from]) =>
       path === from ||
       path.startsWith(`${from}.`) ||
-      path.startsWith(`${from}[`)
-    )
-      return `${to}${path.slice(from.length)}`;
-  /* c8 ignore start -- unreachable fallthrough: every validation routed through remapRenderValidationPaths comes from validateSequenceArtifact, whose paths are all rooted at "$input"/"$shots" — both replacement keys (#1040). */
-  return path;
+      path.startsWith(`${from}[`),
+  )!;
+  return `${to}${path.slice(from.length)}`;
 };
-/* c8 ignore stop */
 
 const resolveRenderTarget = (
   slate: IAutoMovieMcpWritableSlate,

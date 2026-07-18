@@ -19,7 +19,6 @@ import {
   IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
-import path from "node:path";
 
 import { AutoMovieContext } from "../AutoMovieContext";
 import { toEngineMotion } from "../convert";
@@ -35,7 +34,6 @@ import {
   IAutoMovieMeasureDistanceOutput,
 } from "../dto";
 import { shotIdOf } from "../project/shotKey";
-import { validateSceneArtifact } from "../validators/artifacts";
 import {
   pushViolation,
   validateArrayArtifact,
@@ -219,7 +217,7 @@ export class GeometryService {
       throw new Error(
         `${caller} was called without a scene, but the resident project has no committed scene. Commit a scene first or pass scene explicitly.`,
       );
-    assertResidentSceneFile(project.root, stored.scene, caller);
+    // storedSlate validates scene.json before returning the resident scene.
     // `$slate.scene` matches the commit/render services' resident addressing
     // (#995): the resident scene IS the stored slate's scene slice.
     return { scene: stored.scene, root: "$slate.scene" };
@@ -238,7 +236,7 @@ export class GeometryService {
       throw new Error(
         `${caller} was called without a context, but the resident project has no committed scene. Commit a scene first or pass context explicitly.`,
       );
-    assertResidentSceneFile(project.root, slate.scene, caller);
+    // writableSlate reaches the scene through the same validated stored read.
     // Beat-scoped motion memory (#1091): the queried beat's own snapshot, so
     // `perform:<actor>` ids never resolve to another beat's clip.
     const memory = this.context.geometryMemory(beat);
@@ -340,56 +338,6 @@ const resolveResolvedPoseTime = (t: unknown): number => {
   );
 };
 
-/* c8 ignore start -- resident scene reads pre-validate the scene through
-   validateSceneSlice (the same validateSceneArtifact assertResidentSceneFile
-   re-runs, over models derived identically from the scene's nodes), so a scene
-   that reaches assertResidentSceneFile has already passed; this repair-guidance
-   error and its throw sites are an unreachable defensive net (#1040). */
-class AutoMovieProjectSemanticError extends Error {
-  public constructor(file: string, caller: string, detail: string) {
-    super(
-      `AutoMovie project file "${file}" is semantically invalid for ${caller}. ` +
-        `Fix or remove this file, then call openProject again. ` +
-        `Validation detail: ${detail}`,
-    );
-    this.name = "AutoMovieProjectSemanticError";
-  }
-}
-/* c8 ignore stop */
-
-const assertResidentSceneFile = (
-  root: string,
-  scene: IAutoMovieScene,
-  caller: string,
-): void => {
-  const file = path.join(root, "scene.json");
-  try {
-    const validation = validateSceneArtifact(scene, residentSceneModels(scene));
-    if (validation.success === true) return;
-    /* c8 ignore start -- unreachable: the scene was already validated on read
-       (see the AutoMovieProjectSemanticError note); validateSceneArtifact never
-       throws, so neither the failure throw nor the catch runs (#1040). */
-    throw new AutoMovieProjectSemanticError(
-      file,
-      caller,
-      describeViolations(validation.violations),
-    );
-  } catch (error) {
-    if (error instanceof AutoMovieProjectSemanticError) throw error;
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new AutoMovieProjectSemanticError(file, caller, detail);
-  }
-  /* c8 ignore stop */
-};
-
-const residentSceneModels = (
-  scene: IAutoMovieScene,
-): IAutoMovieMcpGeometryModel[] =>
-  [...new Set(scene.nodes.map((node) => node.model))].map((id) => ({
-    id,
-    skeleton: null,
-  }));
-
 const describeViolations = (
   violations: IAutoMovieConstraintViolation[],
 ): string =>
@@ -413,7 +361,7 @@ const resolveActorGeometry = (
   resolvedPose: IAutoMovieMcpResolvedPose | null;
   reason: string | null;
 } => {
-  assertFiniteTime(t);
+  // getResolvedPose is the only caller and resolves t through the finite gate.
   const found = findActorRig(context, actor, root, contract, actorRigs);
   if (found.actor === null) return { resolvedPose: null, reason: found.reason };
   const actorRig = found.actor;
@@ -1040,15 +988,3 @@ const toModelPoint = (
 
 const inverse = (q: IAutoMovieQuaternion): IAutoMovieQuaternion =>
   Quaternion.normalize({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
-
-const assertFiniteTime = (t: number): void => {
-  // unreachable throw: getResolvedPose funnels t through resolveResolvedPoseTime,
-  // which rejects any non-finite value before resolveActorGeometry (the only
-  // caller) runs; this is a defensive invariant re-check (#1040).
-  /* c8 ignore start */
-  if (!Number.isFinite(t))
-    throw new Error(
-      `range at $input.t: resolved pose sample time must be finite, but was ${t}`,
-    );
-  /* c8 ignore stop */
-};
