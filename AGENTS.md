@@ -41,6 +41,10 @@ Structured multi-agent topic discussion with persistent research notes and trans
 
 Repository-wide issue discovery, lead-vetted issue publication, batched implementation pull requests, and campaign closure — the conquest loop, `.agents/skills/issue-campaign/SKILL.md`. Read when the user asks for a broad audit, many issue candidates, or an issue-to-implementation campaign; do not use it for one already-defined issue.
 
+### Benchmark Campaign
+
+The empirical MCP benchmark loop — authoring a persistent short/medium/long scenario corpus, driving the live MCP surface with an external agent (Claude, Codex), scoring and attributing each run, publishing lead-vetted defect and gap issues, developing every one before the next run, `.agents/skills/benchmark-campaign/SKILL.md`. Read when the user wants to benchmark the pipeline through real MCP runs or turn benchmark shortfalls into an issue-to-pull-request campaign; do not use it for a static code audit (issue-campaign) or one already-defined issue.
+
 ### 3D Modeling
 
 Working rules for parametric head/face modeling — verification discipline, anthropometric fitting, derived-data cascades, texture/morph craft, `.agents/skills/3d-modeling/SKILL.md`. Read before any 3D model, likeness, or pipeline work.
@@ -84,4 +88,4 @@ Update AGENTS.md only for repository-contract changes: a new skill area, a renam
 - **Two trigger surfaces, one scope.** The frontmatter description is the full trigger contract, including exclusions. The AGENTS.md pointer mirrors that scope more briefly. Correct the frontmatter first when the scope changes.
 - **Create or merge.** Add a skill when a substantial repository concern would otherwise inflate AGENTS.md beyond an index. Merge sibling concerns when they share most of their structure.
 - **Headings are plain.** No chapter numbers in skill or AGENTS.md headings. Use descriptive titles.
-- **Current set.** The repository skills are `project`, `development`, `documentation`, `review`, `discussion`, `issue-campaign`, `3d-modeling`, `viewer-verification`, `mcp`, and `pull-request`.
+- **Current set.** The repository skills are `project`, `development`, `documentation`, `review`, `discussion`, `issue-campaign`, `benchmark-campaign`, `3d-modeling`, `viewer-verification`, `mcp`, and `pull-request`.
