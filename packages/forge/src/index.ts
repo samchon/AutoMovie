@@ -1,8 +1,8 @@
 /**
  * Geometry-forging utilities.
  *
- * The face/head morph exports are a dormant Decision 001 boundary: preserved
- * for future revival, not the current motion-first execution path.
+ * The face/head morph exports are a dormant D001 boundary: preserved for future
+ * revival, not the current motion-first execution path.
  */
 export * from "./hairTails";
 export * from "./eyeShells";

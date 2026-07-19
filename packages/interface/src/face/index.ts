@@ -1,5 +1,5 @@
 /**
- * Dormant face/head document boundary retained after Decision 001.
+ * Dormant face/head document boundary retained after D001.
  *
  * The current product path is motion-first, but these interfaces stay exported
  * so stored face assets and future face-editor revival work keep a stable
