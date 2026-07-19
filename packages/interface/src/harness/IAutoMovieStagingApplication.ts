@@ -1,5 +1,6 @@
 import { IAutoMovieNamedId } from "../core/IAutoMovieNamedId";
 import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
+import { IAutoMovieSpace } from "../scene/IAutoMovieSpace";
 import { IAutoMovieMountBinding } from "./IAutoMovieMountBinding";
 import { IAutoMovieNodeTarget } from "./IAutoMovieNodeTarget";
 import { IAutoMoviePointTarget } from "./IAutoMoviePointTarget";
@@ -63,6 +64,17 @@ export namespace IAutoMovieStagingApplication {
     set?: ISetPlacement[];
 
     /**
+     * The ground itself — standable surfaces and walkability (#1173), copied
+     * onto the composed scene's {@link IAutoMovieScene.space}. A `space` is the
+     * MEANING of the floor (where feet and props may rest, how high it is,
+     * which patches locomotion may cross); a `set` piece is its crude visual.
+     * Author them as one thing so the world the feet obey is the world the
+     * guide passes draw. Omit for a bare stage: the engine then falls back to
+     * the scalar ground plane it assumed before spaces existed.
+     */
+    space?: IAutoMovieSpace;
+
+    /**
      * Camera placements; each becomes a camera node, its move authored in
      * performance.
      */
@@ -116,6 +128,18 @@ export namespace IAutoMovieStagingApplication {
      * floor slab or a centered backdrop needs no heading.
      */
     facingDeg?: number;
+
+    /**
+     * Size multiplier on the realising model — a bare number scales all three
+     * axes, a vector scales each axis on its own (a `2 × 0.1 × 6` slab out of
+     * one unit box). This is what lets ONE forged primitive stand in for a
+     * whole set: a wall, a step, and a table top are the same box at different
+     * sizes, rather than a separately forged model each. Omit for the model's
+     * authored size. Every axis must be finite and greater than zero — zero
+     * collapses the piece to nothing, and a negative axis mirrors it so the
+     * normal and outline passes read the surface inside out.
+     */
+    scale?: number | IAutoMovieVector3;
   }
 
   export interface ICameraPlacement {
