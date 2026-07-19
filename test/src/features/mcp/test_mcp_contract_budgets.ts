@@ -1,8 +1,6 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { TestValidator } from "@nestia/e2e";
 
-const REQUEST_OPTIONS = { timeout: 120_000 };
+import { openMcpStdio } from "../internal/mcpStdio";
 
 /**
  * Detect a double-encoding artifact: UTF-8 text decoded once through Latin-1
@@ -40,15 +38,8 @@ const hasDoubleEncoding = (text: string): boolean => {
  * 3. No tool description and no instruction carries a double-encoding artifact.
  */
 export const test_mcp_contract_budgets = async (): Promise<void> => {
-  const client = new Client({ name: "automovie-test", version: "0.0.0" });
-  const transport = new StdioClientTransport({
-    command: "pnpm",
-    args: ["--filter", "@automovie/mcp", "start"],
-  });
-  await client.connect(transport, REQUEST_OPTIONS);
+  const { client, tools } = await openMcpStdio("automovie-test");
   try {
-    const { tools } = await client.listTools(undefined, REQUEST_OPTIONS);
-
     // 1. per-tool description budget
     for (const tool of tools) {
       TestValidator.predicate(

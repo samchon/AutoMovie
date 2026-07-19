@@ -3,6 +3,7 @@ import {
   IAutoMovieCut,
   IAutoMovieForgedCast,
   IAutoMovieStagedSet,
+  compareCodeUnits,
 } from "@automovie/engine";
 import {
   IAutoMovieAssembleApplication,
@@ -16,7 +17,6 @@ import {
   IAutoMovieMcpPerformedShot,
 } from "@automovie/mcp";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -27,6 +27,7 @@ import {
   makeStagingWrite,
 } from "../internal/filmFixtures";
 import { createSkeleton, makePose } from "../internal/fixtures";
+import { MCP_REQUEST_TIMEOUT, openMcpStdio } from "../internal/mcpStdio";
 import { nclose } from "../internal/predicates";
 
 const WALK: IAutoMovieGait = {
@@ -35,7 +36,7 @@ const WALK: IAutoMovieGait = {
   limbs: [{ bone: "leftUpperLeg", phase: 0, duty: 0.5, amplitude: 25 }],
 };
 
-const REQUEST_OPTIONS = { timeout: 120_000 };
+const REQUEST_OPTIONS = { timeout: MCP_REQUEST_TIMEOUT };
 
 interface IJsonSchema {
   $defs?: Record<string, IJsonSchema>;
@@ -132,17 +133,11 @@ const assemble = (shot: string): IAutoMovieAssembleApplication.IWrite => ({
  *    receiving a successful final sequence.
  */
 export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
-  const client = new Client({ name: "automovie-test", version: "0.0.0" });
-  const transport = new StdioClientTransport({
-    command: "pnpm",
-    args: ["--filter", "@automovie/mcp", "start"],
-  });
-  await client.connect(transport, REQUEST_OPTIONS);
+  const { client, tools } = await openMcpStdio("automovie-test");
   try {
-    const tools = await client.listTools(undefined, REQUEST_OPTIONS);
     TestValidator.equals(
       "tool names",
-      tools.tools.map((tool) => tool.name).sort((a, b) => a.localeCompare(b)),
+      tools.map((tool) => tool.name).sort(compareCodeUnits),
       [
         "block",
         "commitBeatEnd",
@@ -192,9 +187,7 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     );
 
     const toolSchema = (name: string): IJsonSchema => {
-      const schema = tools.tools.find(
-        (tool) => tool.name === name,
-      )?.inputSchema;
+      const schema = tools.find((tool) => tool.name === name)?.inputSchema;
       if (schema === undefined)
         throw new Error(`tool schema not found: ${name}`);
       return schema as IJsonSchema;
@@ -211,12 +204,12 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     for (const [index, format] of formats.entries()) {
       TestValidator.equals(
         `frame format ${index} property names`,
-        Object.keys(format.properties ?? {}).sort((a, b) => a.localeCompare(b)),
+        Object.keys(format.properties ?? {}).sort(compareCodeUnits),
         ["fps", "height", "width"],
       );
       TestValidator.equals(
         `frame format ${index} required fields`,
-        [...(format.required ?? [])].sort((a, b) => a.localeCompare(b)),
+        [...(format.required ?? [])].sort(compareCodeUnits),
         ["fps", "height", "width"],
       );
       TestValidator.equals(
