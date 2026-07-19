@@ -86,6 +86,28 @@ const nearestNeutral = (allowed: IAutoMovieAngleRange | null): number =>
         : 0;
 
 /**
+ * Clamp one joint against the skeleton's effective ROM: the bone's own
+ * `constraint` override when it carries one, otherwise the default humanoid
+ * table — the `target-override-then-default-humanoid` precedence
+ * {@link retargetHumanoidMotion} names as its ROM policy. A bone with neither
+ * passes through unchanged.
+ *
+ * Exposed separately from {@link clampPose} because a solver that rewrites only
+ * the joints it derived (a retarget contact correction) must not clamp the
+ * authored joints it left alone.
+ *
+ * @author Samchon
+ */
+export const clampJointToSkeleton = (
+  joint: IAutoMovieJointPose,
+  skeleton: IAutoMovieSkeleton,
+): IAutoMovieJointPose => {
+  const bone = skeleton.bones.find((b) => b.bone === joint.bone);
+  const constraint = getConstraint(joint.bone, bone?.constraint ?? null);
+  return constraint === null ? joint : clampJointRom(joint, constraint);
+};
+
+/**
  * Clamp every joint of a pose into its skeleton's ROM, returning a new pose
  * (the root transform is untouched). A joint whose bone has no constraint —
  * neither a per-bone override nor a default-table entry — passes through
@@ -103,9 +125,5 @@ export const clampPose = (
 ): IAutoMoviePose => ({
   skeleton: pose.skeleton,
   root: pose.root,
-  joints: pose.joints.map((joint) => {
-    const bone = skeleton.bones.find((b) => b.bone === joint.bone);
-    const constraint = getConstraint(joint.bone, bone?.constraint ?? null);
-    return constraint === null ? joint : clampJointRom(joint, constraint);
-  }),
+  joints: pose.joints.map((joint) => clampJointToSkeleton(joint, skeleton)),
 });

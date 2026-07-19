@@ -13,6 +13,7 @@ export * from "./locomote";
 export * from "./motionToClip";
 export * from "./pathLocomotion";
 export * from "./react";
+export * from "./retargetContacts";
 export * from "./retargetHumanoidMotion";
 export * from "./sequence";
 export * from "./travel";

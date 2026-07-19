@@ -17,6 +17,11 @@ import { compareCodeUnits } from "../text/compareCodeUnits";
 import { validateMotion } from "../validation/validateMotion";
 import { validateTransformScalars } from "../validation/validateTransformScalars";
 import { ViolationCollector } from "../validation/violation";
+import {
+  AutoMovieRetargetContactPolicy,
+  IAutoMovieRetargetContactProps,
+  preserveRetargetContacts,
+} from "./retargetContacts";
 
 const EPSILON = 1e-6;
 
@@ -72,6 +77,9 @@ export interface IAutoMovieHumanoidRetargetCharacterization {
   /** Effective ROM priority for the target validation pass. */
   romPolicy: AutoMovieRetargetRomPolicy;
 
+  /** Whether source contacts were re-pinned on the target rig. */
+  contactPolicy: AutoMovieRetargetContactPolicy;
+
   /** Bones that had to exist in both rigs for this retarget operation. */
   requiredBones: AutoMovieHumanoidBone[];
 }
@@ -118,6 +126,12 @@ export interface IAutoMovieHumanoidRetargetProps {
    */
   rootScale?: number;
 
+  /**
+   * Contact policy for the contact-preserving pass. Omitted runs the pass with
+   * humanoid legs and no declared hand contact.
+   */
+  contacts?: IAutoMovieRetargetContactProps;
+
   /** Optional id for the retargeted clip. */
   id?: string;
 }
@@ -147,6 +161,14 @@ export interface IAutoMovieHumanoidRetargetResult {
  * result against the target skeleton's ROM policy, and returns the target
  * `jointAxes`/`restFrames` that convert those clinical values into target
  * rig-space during FK or viewer playback.
+ *
+ * A verbatim angle copy is exact only for a **proportional** target. When the
+ * rigs differ in proportion, {@link preserveRetargetContacts} re-pins each
+ * contacting limb onto the source contact mapped through the same `rootScale`,
+ * so a planted foot lands where the performance put it instead of sliding. The
+ * pass runs by default, corrects the clip at its authored keyframe times, and
+ * reports a residual it could not reach under the target's ROM as a `warning` —
+ * the returned `validation` still succeeds (D015).
  *
  * @author Samchon
  */
@@ -199,8 +221,10 @@ export const retargetHumanoidMotion = (
     collector,
   );
 
-  const sourceHeight = skeletonHeight(props.source);
-  const targetHeight = skeletonHeight(props.target);
+  const sourceSpan = restVerticalSpan(props.source);
+  const targetSpan = restVerticalSpan(props.target);
+  const sourceHeight = sourceSpan.height;
+  const targetHeight = targetSpan.height;
   if (!(sourceHeight > EPSILON))
     collector.push(
       "range",
@@ -234,26 +258,51 @@ export const retargetHumanoidMotion = (
       characterization: null,
     };
 
+  // Resolved once: the characterization, the contact pass's source FK, and the
+  // contact pass's target FK must all read the clip through the same tables.
+  const sourceJointAxes = props.sourceJointAxes ?? HUMANOID_JOINT_AXES;
+  const sourceRestFrames = props.sourceRestFrames ?? HUMANOID_REST_FRAME;
+  const targetJointAxes = props.targetJointAxes ?? HUMANOID_JOINT_AXES;
+  const targetRestFrames = props.targetRestFrames ?? HUMANOID_REST_FRAME;
+
   const source = characterizeRig({
     skeleton: props.source,
     binding: props.sourceBinding,
     height: sourceHeight,
-    jointAxes: props.sourceJointAxes ?? HUMANOID_JOINT_AXES,
-    restFrames: props.sourceRestFrames ?? HUMANOID_REST_FRAME,
+    jointAxes: sourceJointAxes,
+    restFrames: sourceRestFrames,
   });
   const target = characterizeRig({
     skeleton: props.target,
     binding: props.targetBinding,
     height: targetHeight,
-    jointAxes: props.targetJointAxes ?? HUMANOID_JOINT_AXES,
-    restFrames: props.targetRestFrames ?? HUMANOID_REST_FRAME,
+    jointAxes: targetJointAxes,
+    restFrames: targetRestFrames,
   });
-  const motion = retargetMotion(
+  const scaled = retargetMotion(
     props.motion,
     props.target.id,
     rootScale,
     props.id,
   );
+
+  const contactsEnabled = props.contacts?.enabled ?? true;
+  const motion = contactsEnabled
+    ? preserveRetargetContacts({
+        source: props.source,
+        target: props.target,
+        sourceMotion: props.motion,
+        retargeted: scaled,
+        rootScale,
+        sourceFloor: sourceSpan.floor,
+        sourceJointAxes,
+        sourceRestFrames,
+        targetJointAxes,
+        targetRestFrames,
+        contacts: props.contacts,
+        collector,
+      })
+    : scaled;
 
   const targetValidation = validateMotion({ motion, skeleton: props.target });
   if (!targetValidation.success) {
@@ -266,7 +315,7 @@ export const retargetHumanoidMotion = (
   }
 
   return {
-    validation: { success: true },
+    validation: collector.toValidation(),
     motion,
     characterization: {
       source,
@@ -274,6 +323,9 @@ export const retargetHumanoidMotion = (
       rootScale,
       facing: "preserve-authored",
       romPolicy: "target-override-then-default-humanoid",
+      contactPolicy: contactsEnabled
+        ? "pin-source-contacts"
+        : "carry-joint-angles",
       requiredBones,
     },
   };
@@ -399,19 +451,27 @@ const validateRestFrames = (
     }
 };
 
-const skeletonHeight = (skeleton: IAutoMovieSkeleton): number => {
+/**
+ * The rig's rest-pose vertical extent: `height` drives the root-motion scale,
+ * `floor` is the world Y its lowest bone sits at — the ground plane the contact
+ * pass judges stance against, so a rig authored with its feet above the origin
+ * is still detected as standing on something.
+ */
+const restVerticalSpan = (
+  skeleton: IAutoMovieSkeleton,
+): { floor: number; height: number } => {
   const resolved = resolvePose(
     { skeleton: skeleton.id, root: null, joints: [] },
     skeleton,
   );
-  if (resolved.length === 0) return 0;
+  if (resolved.length === 0) return { floor: 0, height: 0 };
   let minY = Infinity;
   let maxY = -Infinity;
   for (const bone of resolved) {
     minY = Math.min(minY, bone.worldPosition.y);
     maxY = Math.max(maxY, bone.worldPosition.y);
   }
-  return maxY - minY;
+  return { floor: minY, height: maxY - minY };
 };
 
 const characterizeRig = (props: {
