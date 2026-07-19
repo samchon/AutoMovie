@@ -14,7 +14,8 @@ AI가 만든 `@automovie/interface` 모델, 포즈, 모션, 표정을 화면에 
 | `applyPose(modelObject, pose, skeleton)` | 엔진 FK 결과를 bone quaternion과 root transform에 쓴다. |
 | `applyExpression(modelObject, expression)` | VRM preset, ARKit channel, morph target influence를 갱신한다. |
 | `AutoMoviePlayer` | 모션을 샘플링하고 pose, expression, imported-runtime flush를 같은 frame clock에서 수행한다. |
-| `buildScene(scene, getModelObject)` | scene graph, camera, light를 three scene으로 만든다. |
+| `buildScene(scene, getModelObject)` | scene graph, camera, light, 그리고 `scene.space`가 있으면 그 지면까지 three scene으로 만든다. |
+| `buildSpaceObject(space)` | space의 standable surface마다 실제 `Mesh` 하나를 만들어 `__automovie_space` 그룹에 담는다. footprint의 convex hull을 팬 삼각분할하고 각 꼭짓점을 `surfaceHeightAt`으로 들어올리므로 ramp는 자기 평면이 그대로 나온다. 구조 가이드 패스는 지오메트리를 `traverse ∩ isMesh`로 모으니, 이 메시가 곧 depth/mask/normal/outline에 들어가는 지면이다(#1173). |
 | `mountViewer(canvas, scene, camera, onFrame)` | 브라우저 RAF와 `WebGLRenderer`를 붙인다. |
 | `captureViewerSnapshot(renderer, scene, camera)` | headless-friendly renderer 표면으로 한 프레임을 data URL로 읽는다. |
 

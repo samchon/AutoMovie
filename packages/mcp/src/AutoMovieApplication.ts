@@ -442,7 +442,10 @@ export class AutoMovieApplication {
 
   /**
    * Validate a staged scene's local integrity: ids, model references, finite
-   * transforms, camera clip planes, and light ranges.
+   * transforms, camera clip planes, light ranges, and -- when the scene
+   * declares one -- its `space`'s surfaces (convex footprints, ramp axes,
+   * walkable ids). A space surface needs no model: it is the ground's meaning,
+   * drawn from its own footprint, never a registry entry.
    *
    * @param props The scene and available model ids.
    * @returns The validation envelope.
@@ -931,12 +934,15 @@ export class AutoMovieApplication {
   /**
    * Stage a scene -- the first deterministic step. Place the script's cast on
    * the set per the staging plan, resolve every actor/camera/light to a
-   * concrete world transform (measured against the staged rigs), validate
-   * persistent mounts, and drop any `set` pieces -- environment geometry
-   * realised from skeleton-less models (a forged prop's primitives), so the
-   * guide passes describe a world rather than actors floating in a void
-   * (#1173). On failure nothing is composed and the violations name the
-   * offending placement to repair.
+   * concrete world transform (measured against the staged rigs), and validate
+   * persistent mounts. The environment comes in two halves (#1173): `set`
+   * pieces are geometry -- skeleton-less models (a forged prop's primitives),
+   * each optionally resized by `scale`, so one box serves as wall, step, and
+   * table top -- while `space` is the ground's meaning, the walkable surfaces
+   * copied onto the scene and drawn as real meshes. Together they keep the
+   * guide passes describing a world rather than actors floating in a void. On
+   * failure nothing is composed and the violations name the offending placement
+   * to repair.
    *
    * @param props The script (cast + beats) and the staging plan (placements).
    * @returns The staged scene on success, or the staging violations to fix.
@@ -944,7 +950,10 @@ export class AutoMovieApplication {
   public stage(props: {
     /** The script: the cast to place and the beats they play. */
     script: IAutoMovieScriptApplication.IWrite;
-    /** The staging plan: actors, cameras, lights, and optional set pieces. */
+    /**
+     * The staging plan: actors, cameras, lights, optional set pieces, and an
+     * optional space.
+     */
     staging: IAutoMovieStagingApplication.IWrite;
   }): IAutoMovieStageOutput {
     return this.pipeline.stage(props);

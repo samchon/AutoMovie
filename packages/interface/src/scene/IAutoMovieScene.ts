@@ -37,6 +37,11 @@ export interface IAutoMovieScene {
    * plane it assumed before the space layer existed. Optional (`?`) rather than
    * required so every pre-space scene stays valid — the evolving-schema pattern
    * {@link IAutoMovieShot.events} uses.
+   *
+   * Staging authors it ({@link IAutoMovieStagingApplication.IWrite.space}) and
+   * the viewer draws it: each surface becomes a real mesh, so the ground
+   * reaches the structural guide passes instead of leaving actors over a void
+   * (#1173).
    */
   space?: IAutoMovieSpace | null;
 }

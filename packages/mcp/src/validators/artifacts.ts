@@ -1,14 +1,16 @@
-import { toValidation } from "@automovie/engine";
+import { toValidation, validateSpace } from "@automovie/engine";
 import {
   IAutoMovieConstraintViolation,
   IAutoMovieScene,
   IAutoMovieSequence,
   IAutoMovieShot,
+  IAutoMovieSpace,
   IAutoMovieValidation,
 } from "@automovie/interface";
 
 import { IAutoMovieMcpGeometryModel, IAutoMovieMcpMotion } from "../dto";
 import {
+  appendValidation,
   isRecord,
   pushViolation,
   validateArrayArtifact,
@@ -20,6 +22,7 @@ import {
   validateUniqueBy,
   validateUniqueIds,
 } from "./primitives";
+import { validateSpaceShape } from "./space";
 
 /**
  * Shared artifact validators over the MCP-facing scene/shot/sequence shapes —
@@ -160,8 +163,33 @@ export const validateSceneArtifact = (
       );
   });
 
+  // The ground the feet obey (#1173). Absent or null is the pre-space scalar
+  // plane, so only a declared space is checked — and it needs NO model: a
+  // surface is semantics plus, in the viewer, generated geometry, never a
+  // registry entry, so the model-resolution gate above deliberately ignores it.
+  const space = scene.space ?? null;
+  if (space !== null && validateSpaceShape(space, "$input.space", violations))
+    appendValidation(
+      violations,
+      remapSpaceViolations(validateSpace({ space: space as IAutoMovieSpace })),
+    );
+
   return toValidation(violations);
 };
+
+/** Re-root `validateSpace`'s own `$input` paths under the scene's `space`. */
+const remapSpaceViolations = (
+  validation: IAutoMovieValidation,
+): IAutoMovieValidation =>
+  validation.success === false
+    ? {
+        success: false,
+        violations: validation.violations.map((item) => ({
+          ...item,
+          path: item.path.replace("$input", "$input.space"),
+        })),
+      }
+    : validation;
 
 export const validateShotArtifact = (
   shot: IAutoMovieShot,

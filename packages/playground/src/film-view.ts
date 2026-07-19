@@ -11,7 +11,9 @@ import {
 } from "@automovie/engine";
 import {
   AutoMovieGuidePass,
+  AutoMoviePrimitiveShape,
   IAutoMovieBlockingApplication,
+  IAutoMovieModel,
   IAutoMovieMotion,
   IAutoMoviePerformanceApplication,
   IAutoMovieScriptApplication,
@@ -28,6 +30,7 @@ import {
   applyPose,
   applyRenderMode,
   buildModel,
+  buildSpaceObject,
   mountViewer,
   renderCrossDissolve,
 } from "@automovie/viewer";
@@ -70,11 +73,50 @@ const script: IAutoMovieScriptApplication.IWrite = {
 const staging: IAutoMovieStagingApplication.IWrite = {
   type: "write",
   scene: { id: "scene-pursuit", name: "the pursuit" },
-  plan: "walker starts 2.95 m behind the waiter, both facing +Z; the camera stands side-on and follows the walker in.",
+  plan: "walker starts 2.95 m behind the waiter, both facing +Z; a 12 × 10 m floor carries the walk, a low wall closes the far side; the camera stands side-on and follows the walker in.",
   actors: [
     { node: "walker", position: { x: 0, y: 0, z: -2.4 }, facingDeg: 0 },
     { node: "waiter", position: { x: 0, y: 0, z: 0.55 }, facingDeg: 0 },
   ],
+  // Set pieces (#1173): one unit box model resized per placement — the wall and
+  // the crate are the SAME `block` model at two sizes, which is the point of
+  // `scale`. The floor is drawn from the space below, not as a set node.
+  set: [
+    {
+      node: "wall-back",
+      model: "block",
+      position: { x: 0, y: 0.9, z: -4.6 },
+      scale: { x: 12, y: 1.8, z: 0.24 },
+    },
+    {
+      node: "crate",
+      model: "block",
+      position: { x: -1.6, y: 0.25, z: -1.2 },
+      facingDeg: 24,
+      scale: 0.5,
+    },
+  ],
+  // The space is the same floor's MEANING: one walkable patch under the whole
+  // walk. `buildSpaceObject` draws it, so the ground reaches every structural
+  // guide pass (a GridHelper never did — it is a LineSegments, hidden first).
+  space: {
+    id: "space-pursuit",
+    surfaces: [
+      {
+        id: "floor",
+        kind: "floor",
+        polygon: [
+          { x: -6, y: 0, z: -5 },
+          { x: 6, y: 0, z: -5 },
+          { x: 6, y: 0, z: 5 },
+          { x: -6, y: 0, z: 5 },
+        ],
+        anchor: { x: 0, y: 0, z: 0 },
+        rampTo: null,
+      },
+    ],
+    walkable: ["floor"],
+  },
   cameras: [
     {
       node: "cam-main",
@@ -207,7 +249,66 @@ const performances: IAutoMoviePerformanceApplication.IWrite[] = [
 // ── rigs + the content seam ──────────────────────────────────────────────────
 const walkerRig = buildStickman(DEFAULT_STICKMAN);
 const waiterRig = buildStickman(DEFAULT_STICKMAN);
-const rigOf = { walker: walkerRig, waiter: waiterRig } as const;
+const rigOf: Record<string, ReturnType<typeof buildStickman> | undefined> = {
+  walker: walkerRig,
+  waiter: waiterRig,
+};
+/** The rig of a performing node; set pieces have none and never pose. */
+const rigFor = (node: string): ReturnType<typeof buildStickman> => {
+  const rig = rigOf[node];
+  if (rig === undefined) throw new Error(`node "${node}" has no rig`);
+  return rig;
+};
+
+/**
+ * The one skeleton-less model every set piece is realised from: a 1 m unit box,
+ * resized per placement through the staged node's scale (#1173). One primitive
+ * standing in for a wall and a crate is exactly the "rough stages, primitive
+ * props" bet — the model registry stays at one entry, staging owns the sizes.
+ */
+const UNIT_BOX: AutoMoviePrimitiveShape = {
+  type: "box",
+  width: 1,
+  height: 1,
+  depth: 1,
+};
+const blockModel: IAutoMovieModel = {
+  id: "block",
+  name: "set block",
+  origin: "generated",
+  parts: [
+    {
+      id: "body",
+      name: "body",
+      geometry: { type: "primitive", shape: UNIT_BOX },
+      material: "stone",
+      attachedBone: null,
+      transform: null,
+    },
+  ],
+  skeleton: null,
+  body: null,
+  materials: [
+    {
+      id: "stone",
+      name: "stone",
+      baseColor: { r: 0.72, g: 0.73, b: 0.76, a: 1, hex: null },
+      metallic: 0,
+      roughness: 0.9,
+      emissive: null,
+      opacity: 1,
+      baseColorTexture: null,
+    },
+  ],
+  asset: null,
+};
+/**
+ * The model realising one staged node: a set piece's shared block, or the
+ * node's own rig. Keyed on the NODE (not the model id) because both actors
+ * share the one `stickman` cast `modelRef` while owning separate rigs.
+ */
+const modelForNode = (node: { id: string; model: string }): IAutoMovieModel =>
+  node.model === blockModel.id ? blockModel : rigFor(node.id).model;
 
 // The canonical humanoid walk from the engine's gait library — bent knees
 // (neutral-centered so they stay in ROM), contralateral arm swing, already
@@ -220,18 +321,20 @@ if (staged.success !== true) throw new Error("staging failed");
 const nodePositions = new Map<string, IAutoMovieVector3>(
   staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
 );
+// Only the rigged cast gets a motion context; a set piece never performs.
+const actorNodes = staged.scene.nodes.filter((n) => rigOf[n.id] !== undefined);
 const contexts = new Map<string, IAutoMovieActorContext>(
-  staged.scene.nodes.map((n) => [
+  actorNodes.map((n) => [
     n.id,
     {
-      skeleton: rigOf[n.id as keyof typeof rigOf].skeleton.id,
+      skeleton: rigFor(n.id).skeleton.id,
       gaits: [WALK],
       position: n.transform.translation,
       speed: 0.75,
       facingDeg: 0,
       eyeHeight: 1.45,
       restPose: {
-        skeleton: rigOf[n.id as keyof typeof rigOf].skeleton.id,
+        skeleton: rigFor(n.id).skeleton.id,
         root: null,
         joints: [],
       },
@@ -252,7 +355,7 @@ performances.forEach((performance, i) => {
     staged,
     performance,
     synthesize,
-    skeleton: (node) => rigOf[node as keyof typeof rigOf].skeleton,
+    skeleton: (node) => rigFor(node).skeleton,
     blocking: blocked.blocking,
   });
   if (performed.success !== true)
@@ -285,7 +388,11 @@ export const FILM_DURATION = cut.runtime;
 // ── the set: scene nodes → three.js ─────────────────────────────────────────
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf2f4f8);
-scene.add(new THREE.GridHelper(10, 20, 0xb8c0cc, 0xd5dbe4));
+// The staged space, drawn as real meshes (#1173). This replaces the GridHelper
+// that used to stand in for a floor: a grid is a LineSegments, which every
+// structural guide pass hides (#1226), so depth/mask/outline saw no ground at
+// all. A mesh floor is collected by the passes like any other geometry.
+scene.add(buildSpaceObject(staged.scene.space!));
 scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa3b2, 1.1));
 const sun = new THREE.DirectionalLight(0xffffff, 1.4);
 sun.position.set(2.4, 3.4, -1);
@@ -310,8 +417,7 @@ const applyStagedBase = (group: THREE.Group, nodeId: string): void => {
 };
 const built = Object.fromEntries(
   staged.scene.nodes.map((node) => {
-    const rig = rigOf[node.id as keyof typeof rigOf];
-    const obj = buildModel(rig.model);
+    const obj = buildModel(modelForNode(node));
     const group = new THREE.Group();
     applyStagedBase(group, node.id);
     group.add(obj.object);
@@ -332,7 +438,7 @@ const playersByShot = new Map<
       node: p.node,
       player: new AutoMoviePlayer(
         built[p.node]!,
-        rigOf[p.node as keyof typeof rigOf].skeleton,
+        rigFor(p.node).skeleton,
         motionsByShot.get(shot.id)![p.node]!,
         HUMANOID_JOINT_AXES,
       ),
@@ -380,8 +486,9 @@ const poseShot = (shot: IAutoMovieShot, time: number): void => {
   const performing = new Set(shot.performances.map((p) => p.node));
   for (const node of staged.scene.nodes) {
     applyStagedBase(groupsById.get(node.id)!, node.id);
-    if (performing.has(node.id)) continue;
-    const rig = rigOf[node.id as keyof typeof rigOf];
+    // A set piece has no rig to rest: its staged base IS its whole state.
+    if (performing.has(node.id) || rigOf[node.id] === undefined) continue;
+    const rig = rigFor(node.id);
     applyPose(
       built[node.id]!,
       { skeleton: rig.skeleton.id, root: null, joints: [] },

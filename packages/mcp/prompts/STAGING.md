@@ -1,6 +1,6 @@
 # Staging
 
-`stage` converts the script's cast into a placed scene: actor placements, cameras, lights, and optional `set` pieces (the environment). Its gates are referential integrity — geometry is converted, never judged. Whether 0.7 m is striking range is your business, and you settle it by measuring, not hoping.
+`stage` converts the script's cast into a placed scene: actor placements, cameras, lights, optional `set` pieces (the environment's geometry), and an optional `space` (the ground's meaning). Its gates are referential integrity — geometry is converted, never judged. Whether 0.7 m is striking range is your business, and you settle it by measuring, not hoping.
 
 ## Contract
 
@@ -23,10 +23,16 @@ Geometry queries are resident-or-explicit. Pass `scene`/`context` for a stateles
 
 The stage does not have to be a void. A `set` placement drops environment geometry — a floor slab, walls, a doorway, a backdrop — as static scene nodes realising skeleton-less models (`forgeProp`'s crude primitive proxies are exactly this shape). The point is the guide passes: depth/mask/outline of an empty stage give a diffusion pass no world to condition on, while even a crude box-room describes one. Set pieces never perform; a camera may `lookAt` one (an establishing frame on the doorway is legitimate). `facingDeg` is optional yaw — omit it for a floor or a centered backdrop. Remember `commitScene`'s models registry must resolve every staged model id, set models included.
 
+Size the piece with `scale`, not with another forged model: a bare number scales all three axes, a vector scales each on its own (`{ x: 12, y: 1.8, z: 0.24 }` turns one unit box into a wall). Forge **one** box and place it as the wall, the step, and the table top — every axis must be finite and greater than zero, since zero collapses the piece and a negative axis mirrors it into an inside-out normal pass.
+
 ## Camera
 
 One take, one live camera (enforced at perform time). Place cameras where the blocking's framing intent needs them; the camera move itself is chosen per beat with the `frame` action. Framing distance follows the staged bearing — the director's chosen side is preserved, so stage the camera on the side you mean.
 
 ## Space
 
-A scene may carry a `space` — walkable surfaces (floors, platforms, ramps) and no-go regions. Ground height then comes from the surfaces instead of a flat plane: locomotion follows ramps, feet plant on real heights, support contacts derive from surface tops. Omit `space` and everything falls back to the flat ground plane. A `space` surface and a `set` floor piece are two halves of one thing: the surface is the walkable MEANING, the set model is the visible geometry — pair them so the world the feet obey is the world the passes draw.
+Stage a `space` beside the actors and it is copied onto the composed scene: walkable surfaces (floors, platforms, ramps) and no-go regions. The scene then states its ground height, walkability, and support tops as data instead of assuming a flat plane, and the renderer draws those surfaces. Omit `space` and everything falls back to the flat ground plane. A `space` surface and a `set` piece are two halves of one thing: the surface is the walkable MEANING, the set model is the visible geometry — pair them so the world the feet obey is the world the passes draw.
+
+One caveat worth knowing: performed motion still plants feet on the flat plane. The surfaces answer height and support queries and they render, but the perform stage does not yet drive locomotion from them, so a ramp reads visually before it reads underfoot.
+
+A surface is a **convex** XZ footprint (at least three non-collinear points, `y` ignored — write `0`) plus height anchors: `anchor` is the height everywhere on a flat patch, and a second `rampTo` anchor at a different `(x, z)` makes it a plane sloping from `anchor.y` to `rampTo.y`. `walkable` lists the surface ids an actor may cross; a surface left out is a standable-but-forbidden top (a table props rest on, not a step). A concave footprint is refused — the ground query would silently fill the notch. The renderer draws these surfaces as real meshes, so a staged floor reaches depth/mask/outline on its own; a set slab under it is optional dressing, not the ground.

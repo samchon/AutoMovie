@@ -44,6 +44,7 @@ import {
   IAutoMovieStageOutput,
 } from "../dto";
 import { isRecord } from "../validators/primitives";
+import { validateSpaceShape } from "../validators/space";
 import {
   isRuntimeSafeActionTarget,
   resolveRuntimeSafeTargetPoint,
@@ -1029,7 +1030,26 @@ const validateStageShape = (
           "set position",
           violations,
         );
+        // scale is uniform-or-per-axis (#1173): anything else would reach the
+        // engine's lowering as neither a number nor a vector.
+        if (
+          piece.scale !== undefined &&
+          typeof piece.scale !== "number" &&
+          !isRecord(piece.scale)
+        )
+          violations.push(
+            violation(
+              "type",
+              `${path}.scale`,
+              "set scale must be a number or a vector object",
+              piece.scale,
+            ),
+          );
       });
+    // space is optional (#1173); its shape floor is shared with the committed
+    // scene's, so the two entry points cannot drift.
+    if (staging.space !== undefined)
+      validateSpaceShape(staging.space, "$input.staging.space", violations);
     if (
       isJsonArray(
         staging.cameras,

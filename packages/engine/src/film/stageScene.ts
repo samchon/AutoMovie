@@ -12,6 +12,7 @@ import {
 import { aimRotation } from "../kinematics/aimRotation";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { validateSpace } from "../validation/validateSpace";
 import { ViolationCollector } from "../validation/violation";
 import { lookRotation } from "./cameraMove";
 
@@ -29,6 +30,21 @@ const isFiniteVector3 = (vector: IAutoMovieVector3): boolean =>
   [vector.x, vector.y, vector.z].every((coordinate) =>
     Number.isFinite(coordinate),
   );
+
+/**
+ * Lower a set piece's optional size multiplier onto the node transform's scale:
+ * omitted keeps the model's authored size, a bare number scales uniformly, a
+ * vector scales per axis. One forged primitive can therefore stand in for a
+ * whole set — a wall, a step, and a table top are the same box at three sizes
+ * (#1173).
+ */
+const setPieceScale = (
+  scale: number | IAutoMovieVector3 | undefined,
+): IAutoMovieVector3 => {
+  if (scale === undefined) return { x: 1, y: 1, z: 1 };
+  if (typeof scale === "number") return { x: scale, y: scale, z: scale };
+  return scale;
+};
 
 /**
  * A staged film set: the composed {@link IAutoMovieScene} plus the persistent
@@ -97,9 +113,17 @@ export namespace IAutoMovieStagedSet {
  * business, not a constraint.
  *
  * Conversions: `facingDeg` (about +Y, 0 = facing +Z) becomes the node's
- * rotation; a camera's `lookAt` resolves to a point and the shortest-arc
- * rotation aims its −Z there; every light is realised as directional, because
- * the staging schema gives lights a direction and no position.
+ * rotation; a set piece's optional `scale` becomes the node transform's scale
+ * (one primitive at many sizes); a camera's `lookAt` resolves to a point and
+ * the shortest-arc rotation aims its −Z there; every light is realised as
+ * directional, because the staging schema gives lights a direction and no
+ * position.
+ *
+ * The environment is two halves of one thing (#1173): `set` pieces are the
+ * visible geometry the guide passes draw, and the optional `space` is the
+ * ground's meaning — standable surfaces and walkability — copied onto the
+ * composed scene after {@link validateSpace} accepts it. Omitting `space`
+ * composes `space: null`, the scalar ground plane the engine assumed before.
  */
 export const stageScene = (
   script: IAutoMovieScriptApplication.IWrite,
@@ -229,7 +253,38 @@ export const stageScene = (
         `set facingDeg must be finite when present, but was ${piece.facingDeg}`,
         piece.facingDeg,
       );
+    if (piece.scale !== undefined) {
+      const scale = setPieceScale(piece.scale);
+      // Zero collapses the piece to nothing (a set piece that draws no pixels
+      // is a staging mistake, not a style); a negative axis mirrors it, which
+      // flips the winding the normal and outline passes read.
+      if (
+        ![scale.x, scale.y, scale.z].every(
+          (axis) => Number.isFinite(axis) && axis > 0,
+        )
+      )
+        out.push(
+          "range",
+          `$input.set[${i}].scale`,
+          "set scale must be finite and greater than zero on every axis",
+          piece.scale,
+        );
+    }
   });
+
+  // The space is the ground's meaning, gated by the shared surface validator so
+  // staging and a hand-authored scene can never disagree about what a
+  // well-formed space is (#1173). Its own `$input` paths are re-rooted under
+  // `$input.space` so the correction round points at the submitted field.
+  if (staging.space !== undefined) {
+    const validated = validateSpace({ space: staging.space });
+    if (validated.success === false)
+      for (const item of validated.violations)
+        out.items.push({
+          ...item,
+          path: item.path.replace("$input", "$input.space"),
+        });
+  }
 
   staging.cameras.forEach((camera, i) => {
     claim(camera.node, `$input.cameras[${i}].node`, "camera node id");
@@ -333,7 +388,7 @@ export const stageScene = (
             { x: 0, y: 1, z: 0 },
             piece.facingDeg ?? 0,
           ),
-          scale: { x: 1, y: 1, z: 1 },
+          scale: setPieceScale(piece.scale),
         },
         motion: null,
         pose: null,
@@ -383,6 +438,10 @@ export const stageScene = (
       nodes,
       cameras,
       lights,
+      // Emitted explicitly (not omitted) so a staged scene always states
+      // whether it has a ground: `null` is "no space, fall back to the scalar
+      // plane", which is a decision, not an absent field.
+      space: staging.space ?? null,
     },
     mounts,
   };
