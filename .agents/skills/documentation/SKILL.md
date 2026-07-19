@@ -7,7 +7,7 @@ description: Defines the .wiki/ working knowledge base, package README, and code
 
 ## The `.wiki/` knowledge base
 
-`.wiki/` (gitignored) is automovie's durable, cross-session knowledge base, written in Korean. It is the first thing to read at session start and must be revised as the work proceeds, not at the end. Layout: `00-governance` (operating manual, reading ledger), `01-progress` (current state, next priorities), `02-overview` (product), `03-philosophy` (the two harness articles + principles), `04-domain-research` (external study), `05-references` (agentica/autobe/interia), `06-architecture` (monorepo + per-package design), `07-decisions` (append-only decision log), `08-campaigns` (issue-campaign knowledge bases), `99-worklog` (dated logs).
+`.wiki/` (gitignored) is automovie's durable, cross-session knowledge base, written in Korean. It is the first thing to read at session start and must be revised as the work proceeds, not at the end. Layout: `00-governance` (operating manual, reading ledger), `01-progress` (current state, next priorities), `02-overview` (product), `03-philosophy` (the two harness articles + principles), `04-domain-research` (external study), `05-references` (agentica/autobe/interia), `06-architecture` (monorepo + per-package design), `07-decisions` (append-only decision log), `08-campaigns` (issue-campaign knowledge bases), `09-benchmarks` (benchmark-campaign corpus and run records), `99-worklog` (dated logs).
 
 - Record a design choice in `07-decisions/` (append-only; a later entry supersedes an earlier one) the moment it is made.
 - Update `01-progress/README.md` whenever a package or capability lands.
