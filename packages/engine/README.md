@@ -26,6 +26,8 @@ the sequence output clock after trims and transitions.
 
 Root motion은 기본적으로 `target rest height / source rest height`로 translation을 스케일한다. Facing은 v1에서 authored root rotation을 보존한다. Target ROM은 skeleton bone constraint가 있으면 그것을 우선하고, 없으면 `DEFAULT_HUMANOID_ROM`을 쓴다.
 
+각도를 그대로 복사하는 것은 비례가 같은 리그에서만 정확하다. 비례가 다르면 **접촉 보존 패스**(`contacts`, 기본 켬)가 소스에서 지면 접촉을 검출해 같은 `rootScale`로 사상하고, 작성된 키프레임 시각 그대로 대상 사지를 다시 푼다. 손은 지면 기준이 없어 `contacts.hands`로 시간창을 선언한 경우에만 핀한다. IK 결과는 target ROM으로 clamp되며, clamp된 체인이 접촉에 못 닿으면 실패가 아니라 `physics` warning으로 남는다(D015). `contacts.enabled === false`가 v1 동작이고, `characterization.contactPolicy`가 어느 쪽이 돌았는지 기록한다. 자세한 내용은 `.wiki/07-decisions/311-retarget-contact-preservation.md`.
+
 이 API는 VRM/glTF animation export/import 자체가 아니라 그 전 단계의 retarget decision record다. Exporter나 viewer runtime은 반환된 motion, boneMap, jointAxes, restFrames를 사용해 concrete node animation으로 내리면 된다.
 
 automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 계산·검증한다. AI도 `three.js`도 없다 — 순수 TypeScript.

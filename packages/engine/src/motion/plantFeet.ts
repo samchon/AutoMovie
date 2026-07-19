@@ -8,6 +8,7 @@ import {
 import { groundFunction } from "../space/ground";
 import { pinStanceTargets } from "./groundPins";
 import {
+  HUMANOID_LEG_CHAINS,
   assemblePlantedFeet,
   rekeyPlantedFeet,
   resolveBoneMap,
@@ -34,10 +35,17 @@ export interface IAutoMovieFootLeg {
   lower: AutoMovieHumanoidBone;
 }
 
-const DEFAULT_LEGS: readonly IAutoMovieFootLeg[] = [
-  { foot: "leftFoot", upper: "leftUpperLeg", lower: "leftLowerLeg" },
-  { foot: "rightFoot", upper: "rightUpperLeg", lower: "rightLowerLeg" },
-];
+/**
+ * The humanoid legs, named from the shared chain table so the ground-IK pass
+ * and the retarget contact pass cannot disagree about which bones a leg is.
+ */
+const DEFAULT_LEGS: readonly IAutoMovieFootLeg[] = HUMANOID_LEG_CHAINS.map(
+  (chain) => ({
+    foot: chain.effector,
+    upper: chain.upper,
+    lower: chain.lower,
+  }),
+);
 
 /**
  * One planted-foot stance run the pass detected and pinned: the foot stayed on

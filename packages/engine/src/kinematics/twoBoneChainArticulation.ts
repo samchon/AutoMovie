@@ -39,14 +39,15 @@ export interface IAutoMovieTwoBoneArticulation {
  *
  * The solve is `solveTwoBoneIK`'s closed form: measure the segment lengths and
  * reference directions from the resolved chain, lift the upper segment off the
- * root→target axis in the bend plane (normal ⟂ axis and the world-down pole —
- * elbows and knees both bend away from world-down; the axis-parallel degenerate
- * falls back to a +Z plane), place the mid joint, then lower the two world
- * deltas into bone-local rotations: the root joint via `restWorld⁻¹ · Δ ·
- * restWorld`, the mid joint by aiming the fore segment's bone-local direction
- * onto the bone-local goal. An unreachable target extends the chain fully
- * toward it (`solveTwoBoneIK` clamps), so the end effector stops on the
- * reachable shell rather than failing.
+ * root→target axis in the bend plane (the caller's `bendNormal` when given,
+ * else normal ⟂ axis and the world-down pole — elbows and knees both bend away
+ * from world-down; the axis-parallel degenerate falls back to a +Z plane),
+ * place the mid joint, then lower the two world deltas into bone-local
+ * rotations: the root joint via `restWorld⁻¹ · Δ · restWorld`, the mid joint by
+ * aiming the fore segment's bone-local direction onto the bone-local goal. An
+ * unreachable target extends the chain fully toward it (`solveTwoBoneIK`
+ * clamps), so the end effector stops on the reachable shell rather than
+ * failing.
  *
  * Returns `null` for a degenerate chain: a zero-length segment, or a target
  * coincident with the root. Which bones form the chain, how they were resolved
@@ -68,6 +69,17 @@ export const twoBoneChainArticulation = (props: {
 
   /** World target the end effector should land on. */
   target: IAutoMovieVector3;
+
+  /**
+   * World normal of the bend plane, overriding the world-down pole derivation.
+   * A rig that declares the mid joint as a hinge (a knee with `flexion` ranged
+   * and `abduction`/`twist` immobile) can only articulate in that hinge's own
+   * plane, so a caller that must keep the result inside the joint's ROM passes
+   * the hinge axis here — solving in any other plane produces abduction/twist
+   * the ROM clamp then destroys. Rotation follows the right-hand rule about it,
+   * so the two signs are the chain's two bend branches.
+   */
+  bendNormal?: IAutoMovieVector3;
 }): IAutoMovieTwoBoneArticulation | null => {
   const root = props.upper.worldPosition;
   const mid = props.lower.worldPosition;
@@ -85,10 +97,10 @@ export const twoBoneChainArticulation = (props: {
 
   const { lift } = solveTwoBoneIK(l1, l2, dist);
 
-  // Bend plane: normal ⟂ (reach axis, world-down pole). The upper segment
-  // lifts by `lift` off the axis in this plane, dropping the mid joint away
-  // from the pole.
-  let normal = Vector3.cross(axis, POLE);
+  // Bend plane: the caller's explicit normal when it has one, else normal ⟂
+  // (reach axis, world-down pole). The upper segment lifts by `lift` off the
+  // axis in this plane, dropping the mid joint away from the pole.
+  let normal = props.bendNormal ?? Vector3.cross(axis, POLE);
   if (Vector3.length(normal) < 1e-6)
     normal = Vector3.cross(axis, { x: 0, y: 0, z: 1 });
   normal = Vector3.normalize(normal);
