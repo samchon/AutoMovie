@@ -35,6 +35,7 @@ import { scenePlacements } from "../perform/scenePlacements";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { compareCodeUnits } from "../text/compareCodeUnits";
 import { validateMotion } from "../validation/validateMotion";
+import { validateShotArtifact } from "../validation/validateShotArtifact";
 import { ViolationCollector } from "../validation/violation";
 import {
   DEFAULT_SUBJECT_HEIGHT,
@@ -1350,40 +1351,62 @@ export const performShot = (props: {
       }),
   );
 
-  return {
-    success: true,
-    shot: {
-      id: `shot:${performance.beat}`,
-      name: beat!.name,
-      scene: staged.scene.id,
-      camera: liveCamera!,
-      cameraMotion,
-      performances: Object.entries(motions).map(([node, motion]) => ({
-        node,
-        motion: motion.id,
-        startOffset: 0,
-      })),
-      objectMotions,
-      events: orderEvents(events),
-      // Directorial intent per frame span (#1187): the focus subject resolves
-      // to a world point the same way `on` did; the solve itself never reads
-      // these, a diffusion/render host does, beside cameraMotion.
-      cameraIntent: frames.map(({ action }) => ({
-        start: action.start,
-        framing: action.framing,
-        move: action.move,
-        focus:
-          action.focus === undefined
-            ? null
-            : resolveTargetPoint(action.focus, nodePositions)!,
-        focalLength: action.focalLength ?? null,
-      })),
-      // The beat's other staged angles (#1187), compiled from the blocking's
-      // coverage intent. Empty when the beat was covered by one camera; the
-      // hero take stays the singular camera/cameraMotion every consumer reads.
-      coverage,
-      duration: performance.duration,
-    },
-    motions,
+  const shot: IAutoMovieShot = {
+    id: `shot:${performance.beat}`,
+    name: beat!.name,
+    scene: staged.scene.id,
+    camera: liveCamera!,
+    cameraMotion,
+    performances: Object.entries(motions).map(([node, motion]) => ({
+      node,
+      motion: motion.id,
+      startOffset: 0,
+    })),
+    objectMotions,
+    events: orderEvents(events),
+    // Directorial intent per frame span (#1187): the focus subject resolves
+    // to a world point the same way `on` did; the solve itself never reads
+    // these, a diffusion/render host does, beside cameraMotion.
+    cameraIntent: frames.map(({ action }) => ({
+      start: action.start,
+      framing: action.framing,
+      move: action.move,
+      focus:
+        action.focus === undefined
+          ? null
+          : resolveTargetPoint(action.focus, nodePositions)!,
+      focalLength: action.focalLength ?? null,
+    })),
+    // The beat's other staged angles (#1187), compiled from the blocking's
+    // coverage intent. Empty when the beat was covered by one camera; the
+    // hero take stays the singular camera/cameraMotion every consumer reads.
+    coverage,
+    duration: performance.duration,
   };
+
+  // The producer states the contract its output satisfies. Until #1320 the shot
+  // contract lived only beside the MCP commit gate, so every field this compiler
+  // forgot became a shot returned as success that a consumer then refused, five
+  // times over (#1224, #1308, #1314, #1316, #1318). One definition now, checked
+  // here, against the same scene and clips the caller is about to receive.
+  //
+  // A failure is NOT an author fault: every author-reachable way to reach it is
+  // gated above and refused with a path the author can act on. Reaching here
+  // means a gate is missing, which is an engine defect, so it throws rather than
+  // returning violations that would blame the wrong party (#1294's lesson).
+  // Callers reading `{ success: false, violations }` see no change.
+  const assembled = validateShotArtifact(
+    shot,
+    staged.scene,
+    new Set(Object.values(motions).map((motion) => motion.id)),
+  );
+  if (assembled.success === false)
+    throw new Error(
+      `performShot produced a shot that violates the shot artifact contract, which is an engine defect rather than an authoring fault: ${assembled.violations
+        .slice(0, 5)
+        .map((item) => `${item.kind} at ${item.path}: ${item.expected}`)
+        .join("; ")}`,
+    );
+
+  return { success: true, shot, motions };
 };

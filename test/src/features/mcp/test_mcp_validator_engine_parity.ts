@@ -13,7 +13,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { IDENTITY_TRANSFORM, createSkeleton } from "../internal/fixtures";
+import {
+  makePerformanceWrite,
+  makeScriptWrite,
+  makeStagingWrite,
+} from "../internal/filmFixtures";
+import {
+  IDENTITY_TRANSFORM,
+  createSkeleton,
+  makePose,
+} from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 const app = new AutoMovieApplication();
@@ -50,6 +59,21 @@ const ARMLESS: IAutoMovieSkeleton = {
       constraint: null,
     },
   ],
+};
+
+/** The minimal actor context the default performer needs for one gesture. */
+const performActor = () => {
+  const rig = createSkeleton();
+  return {
+    skeleton: rig.id,
+    gaits: [],
+    position: { x: 0, y: 0, z: 0 },
+    speed: 1,
+    facingDeg: 0,
+    eyeHeight: 1.6,
+    restPose: makePose([]),
+    rig,
+  };
 };
 
 const sceneWith = (model: string): IAutoMovieScene => ({
@@ -95,6 +119,12 @@ const sceneWith = (model: string): IAutoMovieScene => ({
  * 3. `getReach` on a rig with no measurable arm chain answers `reach: null` with a
  *    diagnosing reason: unmeasurable is not "unreachable". Negative twin: a rig
  *    with one usable arm still measures (`reason: null`).
+ * 4. The STRUCTURAL property the header promises, rather than a fourth example of
+ *    it: a shot the engine actually produces is accepted by the validator that
+ *    gates its commit. Three hand-picked rules cannot show that the two
+ *    definitions agree, and until #1320 they were two definitions; now the
+ *    producer checks its output against the same code this validator runs, so
+ *    the promise is enforced by construction and this pins it.
  */
 export const test_mcp_validator_engine_parity = (): void => {
   // 1. an empty film refuses like the engine's cut
@@ -170,5 +200,45 @@ export const test_mcp_validator_engine_parity = (): void => {
   TestValidator.predicate(
     "a rig with one usable arm still measures",
     measured.reach !== null && measured.reason === null,
+  );
+
+  // 4. the structural property, not a fourth example of it: what the engine
+  //    PRODUCES is what the commit gate ACCEPTS. `performShot` now checks its
+  //    output against the same validator this tool runs (#1320), so a produced
+  //    shot that this refused would be a contradiction the engine itself would
+  //    have thrown on first.
+  const performScript = makeScriptWrite();
+  const staged = app.stage({
+    script: performScript,
+    staging: makeStagingWrite(),
+  }).staged;
+  if (staged.success !== true) throw new Error("staging fixture must succeed");
+  const performed = app.perform({
+    script: performScript,
+    staged,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "gesture",
+          actor: "knightA",
+          start: 0,
+          duration: 1,
+          kind: "wave",
+        },
+      ],
+      revise: { review: "unchanged.", final: null },
+    }),
+    actors: { knightA: performActor() },
+  }).performed;
+  if (performed.success !== true)
+    throw new Error("the perform fixture must succeed");
+  TestValidator.equals(
+    "a shot the engine produces is accepted by the gate that commits it",
+    app.validateShot({
+      shot: performed.shot,
+      scene: staged.scene,
+      motions: performed.motions,
+    }).validation.success,
+    true,
   );
 };
