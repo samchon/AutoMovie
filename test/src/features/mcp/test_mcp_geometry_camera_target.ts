@@ -99,9 +99,10 @@ const reasonOf = (output: { reason: string | null }): string =>
  *    one problem. The identically-faulted pair (both sides relative), where the
  *    risk is collapsing two clauses into one rather than merging two causes,
  *    belongs to `test_mcp_geometry_query_edges`.
- * 7. The shape floor the new camera read requires: a context scene whose `cameras`
- *    is not a list refuses with a located violation instead of throwing a
- *    `TypeError` out of the placement table.
+ * 7. The shape floor the camera read requires, at all three rungs: a `cameras`
+ *    that is not a list, an ENTRY that is not an object, and an entry whose own
+ *    fields are malformed each refuse with a located violation instead of
+ *    throwing a `TypeError` out of the placement table.
  */
 export const test_mcp_geometry_camera_target = (): void => {
   // 1. a camera is a measurable placement.
@@ -238,6 +239,20 @@ export const test_mcp_geometry_camera_target = (): void => {
             target: { kind: "node", node: "marker" },
           }),
         ["$input.context.scene.cameras[0]"],
+      ) &&
+      // The ENTRY gate, not a field gate: `nodePositions` reads
+      // `camera.transform.translation` off each element, so a camera entry that
+      // is not an object must stop at its own index. Without this rung the read
+      // is a TypeError with no path, which is the failure the shape gates exist
+      // to replace (#1005/#1007).
+      throwsError(
+        () =>
+          app.measureDistance({
+            scene: bad({ ...scene, cameras: [null] }),
+            from: { kind: "node", node: "marker" },
+            to: { kind: "node", node: "actor" },
+          }),
+        ["$input.scene.cameras[0]", "must be a JSON object"],
       ),
   );
 };

@@ -160,6 +160,11 @@ const says = (
  *    take goes through the same clip validation the hero take does.
  * 5. `coverage[i].cameraMotion: null` is legal (a locked-off covering camera), and
  *    its `cameraIntent` is gated with the same rules as the hero one.
+ * 6. The three ENTRY gates, one per list: an element that is not an object is
+ *    refused at its own index. Every consumer reads properties off these
+ *    elements, so a primitive must stop at the entry rather than be read
+ *    through. Paired with the absence/`null` distinction on `cameraMotion`:
+ *    `null` is the locked-off camera, a missing key is a take that never said.
  */
 export const test_mcp_shot_metadata_gates = (): void => {
   // 1. the positive floor.
@@ -219,7 +224,20 @@ export const test_mcp_shot_metadata_gates = (): void => {
         validate({ events: [event({ actionIndex: 1.5 })] }),
         ".events[0].actionIndex",
         "must be null or an integer",
+      ) &&
+      says(
+        validate({ events: [event({ target: 7 })] }),
+        ".events[0].target",
+        "shot event target",
       ),
+  );
+  // The entry itself, not one of its fields. `playbackEvents` and
+  // `reviewVisualRead` read properties off each element, so a non-object entry
+  // must be refused at the element path rather than producing per-field
+  // violations against a primitive (or reading through it).
+  TestValidator.predicate(
+    "an event entry that is not an object is refused at the entry",
+    says(validate({ events: [null] }), ".events[0]", "must be a JSON object"),
   );
 
   // 3. cameraIntent.
@@ -255,6 +273,14 @@ export const test_mcp_shot_metadata_gates = (): void => {
         ".cameraIntent[0].focus.z",
         "must be finite",
       ),
+  );
+  TestValidator.predicate(
+    "an intent span that is not an object is refused at the entry",
+    says(
+      validate({ cameraIntent: [null] }),
+      ".cameraIntent[0]",
+      "must be a JSON object",
+    ),
   );
 
   // 4. coverage.
@@ -292,7 +318,32 @@ export const test_mcp_shot_metadata_gates = (): void => {
         validate({ coverage: [take({ cameraIntent: bad(null) })] }),
         ".coverage[0].cameraIntent",
         "must be an array",
+      ) &&
+      says(
+        validate({ coverage: [take({ camera: 7 })] }),
+        ".coverage[0].camera",
+        "coverage camera",
       ),
+  );
+  // `cameraMotion` is REQUIRED on a take and `null` is a value, not an absence:
+  // null is the locked-off covering camera (scenario 5 proves it validates
+  // clean), while a missing key is a take that never states whether it moves.
+  // Collapsing the two would let a half-built take commit as locked-off.
+  TestValidator.predicate(
+    "an absent cameraMotion is refused, and null still passes",
+    says(
+      validate({ coverage: [{ camera: "side", cameraIntent: [intent()] }] }),
+      ".coverage[0].cameraMotion",
+      "must be null or a clip",
+    ) && validate({ coverage: [take()] }).success === true,
+  );
+  TestValidator.predicate(
+    "a coverage take that is not an object is refused at the entry",
+    says(
+      validate({ coverage: [null] }),
+      ".coverage[0]",
+      "must be a JSON object",
+    ),
   );
 
   // 5. the legal boundaries inside a coverage take.
