@@ -25,7 +25,7 @@ import {
 import { validateSpaceShape } from "./space";
 
 /**
- * Shared artifact validators over the MCP-facing scene/shot/sequence shapes ,
+ * Shared artifact validators over the MCP-facing scene/shot/sequence shapes,
  * consumed by both the standalone `validate*` tools and the `commit*`
  * preconditions, so a commit can never accept what validation would reject.
  */

@@ -2708,7 +2708,7 @@ const canDefaultSynthesisReturnNull = (
   (action.verb === "gesture" && !TOTAL_DEFAULT_GESTURE_SET.has(action.kind));
 
 /**
- * Resolve `enact` actions from the caller-authored `clips` registry (#1148) ,
+ * Resolve `enact` actions from the caller-authored `clips` registry (#1148),
  * the MCP face of the engine's content seam. The clip is re-keyed per actor so
  * a unison cast enacting one clip cannot collide on ids; every other verb falls
  * through to the default synthesizer. The wrapper is constructed only after the

@@ -18,7 +18,7 @@ import { createSkeleton, makePose } from "../internal/fixtures";
 import { throwsError } from "../internal/predicates";
 
 /**
- * BOTH cast members reference one `modelRef`, the shared-model case (#1244). A
+ * BOTH cast members reference one `modelRef`: the shared-model case (#1244). A
  * rig is per-actor while a model id is shared, so this is the arrangement a
  * model-keyed rig merge silently collapses.
  */
@@ -83,7 +83,7 @@ const actorContext = (
   rig,
 });
 
-/** The resolved hips height, the value that tells the two rigs apart. */
+/** The resolved hips height: the value that tells the two rigs apart. */
 const hipsYOf = (app: AutoMovieApplication, actor: string): number | null =>
   app
     .getResolvedPose({ actor, beat: scriptWrite.beats[0]!.id })
@@ -116,8 +116,8 @@ const writeActorFile = (root: string, spec: IAutoMovieMcpActorSpec): void =>
  * Scenarios:
  *
  * 1. Session A commits the scene and performs (writing `actors/<node>.json`),
- *    never committing a shot. A FRESH session on the same root, no session
- *    geometry memory at all, resolves EACH actor's own rig off disk, though
+ *    never committing a shot. A FRESH session on the same root (no session
+ *    geometry memory at all) resolves EACH actor's own rig off disk, though
  *    both share one model id. Robust to a stored actor with no rig and one
  *    whose scene node is gone (both skipped without derailing the real ones).
  * 2. A `commitScene` model carrying `skeleton: null` is the ABSENCE of a rig, not
@@ -125,7 +125,7 @@ const writeActorFile = (root: string, spec: IAutoMovieMcpActorSpec): void =>
  *    just wrote the rigs resolves them too (it used to resolve worse than a
  *    reopened project).
  * 3. A session `commitScene` model carrying a REAL skeleton still overrides the
- *    persisted rig for that model, session memory stays authoritative when it
+ *    persisted rig for that model: session memory stays authoritative when it
  *    actually carries a rig.
  * 4. An actor with no rig anywhere throws the actionable guidance, which names the
  *    rig-persisting path (`perform`) rather than only the destructive
@@ -151,7 +151,7 @@ export const test_mcp_geometry_reopened_actor = (): void => {
     }).staged;
     if (staged.success !== true)
       throw new Error("staging fixture must succeed");
-    // commitScene models carry NO skeleton, the only skeleton source for the
+    // commitScene models carry NO skeleton: the only skeleton source for the
     // reopened session must be the persisted actor rigs, not this session's
     // memory (which the fresh session never sees anyway).
     sessionA.commitScene({
@@ -193,7 +193,7 @@ export const test_mcp_geometry_reopened_actor = (): void => {
       ["stickman"],
     );
 
-    // 2. a skeleton:null session model must not mask the persisted rig, the
+    // 2. a skeleton:null session model must not mask the persisted rig. The
     // session that just wrote the rigs resolves them in-session.
     TestValidator.equals(
       "a skeleton:null session model does not mask the persisted rig",
@@ -239,7 +239,7 @@ export const test_mcp_geometry_reopened_actor = (): void => {
     );
 
     // 1b. and EACH actor resolves its OWN rig, though both share model
-    // "stickman", a model-keyed merge gave both the last-read rig (#1244).
+    // "stickman": a model-keyed merge gave both the last-read rig (#1244).
     TestValidator.equals(
       "each actor on a shared model resolves its own persisted rig",
       [hipsYOf(sessionB, "knightA"), hipsYOf(sessionB, "knightB")],
@@ -247,7 +247,7 @@ export const test_mcp_geometry_reopened_actor = (): void => {
     );
 
     // 3. a session model carrying a REAL skeleton still overrides the persisted
-    // rig for that model, session memory is authoritative when it has a rig.
+    // rig for that model: session memory is authoritative when it has a rig.
     const sessionOverride = new AutoMovieApplication();
     sessionOverride.openProject({ root });
     sessionOverride.commitScene({

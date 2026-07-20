@@ -933,7 +933,7 @@ export const performShot = (props: {
   for (const job of launches) {
     // Lead a moving target: when the struck node travels during the shot (it
     // carries a `locomote`), resolve where it WILL be rather than aiming at its
-    // start. Compile just that node's own motion for the animated position ,
+    // start. Compile just that node's own motion for the animated position,
     // node-local root rotated into the world by its staged facing, the same
     // read a `follow` camera uses. Its own recoil fires at impact, past the
     // lead window, so it does not perturb the pre-hit path. A static target

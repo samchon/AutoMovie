@@ -657,7 +657,7 @@ export const test_mcp_geometry_query_tools = (): void => {
     );
 
     // No actor was ever performed here, so no `actors/<node>.json` rig exists
-    // either, a reopened session has no rig from any source and must say so,
+    // either: a reopened session has no rig from any source and must say so,
     // naming the rig-persisting path (`perform`) as well as the alternatives.
     const reopened = new AutoMovieApplication({ projectRoot: root });
     TestValidator.predicate(

@@ -38,7 +38,7 @@ const surface = (partial: Record<string, unknown> = {}) => ({
  * holding a further array of vectors, so a malformed one would reach
  * `surface.polygon.forEach` or `surface.rampTo.x` inside the engine as a throw
  * instead of a field-located violation. `scale` is the same class one level
- * down, the engine lowers it as either a number or a vector and nothing else.
+ * down: the engine lowers it as either a number or a vector and nothing else.
  *
  * Scenarios:
  *
@@ -141,7 +141,7 @@ export const test_mcp_stage_space_shape = (): void => {
     hasViolation(badScale, "type", "$input.staging.set[0].scale"),
   );
 
-  // 5. the positive twin, valid shapes stage clean.
+  // 5. the positive twin: valid shapes stage clean.
   const staged = stageWith({
     space: {
       id: "space-1",

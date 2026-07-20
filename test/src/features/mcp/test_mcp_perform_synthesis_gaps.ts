@@ -46,7 +46,7 @@ const riglessContext = (
 };
 
 /**
- * A structurally valid rig (unique bones, one root, no cycle, it passes
+ * A structurally valid rig (unique bones, one root, no cycle; it passes
  * `validateActorRig`) that nonetheless LACKS the arm chain `reachPose` needs. A
  * `reach`/`point`/`strike` to a resolvable target therefore synthesises `null`
  * from a present rig, driving the "could not solve" describer arms that an
@@ -106,7 +106,7 @@ const cameraFrame = {
  * 5. A unison (`actor: [a, b]`) rig-less gesture locates each refusal at its own
  *    `actor[i]` index.
  * 6. A successful perform whose second actor carries a rig-less context still
- *    compiles, the `skeleton(node) => rig ?? null` accessor returns null for
+ *    compiles: the `skeleton(node) => rig ?? null` accessor returns null for
  *    it without failing the shot.
  */
 export const test_mcp_perform_synthesis_gaps = (): void => {

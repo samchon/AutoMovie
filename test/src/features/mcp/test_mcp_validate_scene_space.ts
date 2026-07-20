@@ -55,7 +55,7 @@ const validate = (space: unknown) =>
  * it composes, but `commitScene` accepts a caller-authored scene, and a
  * malformed space there would sit in the project until a ground query
  * dereferenced it. The scene validator therefore runs the same shape floor and
- * the same engine `validateSpace` the staging path does, one rule, one
+ * the same engine `validateSpace` the staging path does: one rule, one
  * meaning, whichever door the space came through.
  *
  * A space surface deliberately needs NO entry in the models registry: it is the
@@ -65,7 +65,7 @@ const validate = (space: unknown) =>
  * Scenarios:
  *
  * 1. A scene whose only geometry beyond the one node is a walkable floor validates
- *    clean against a registry holding just that node's model, the surface
+ *    clean against a registry holding just that node's model: the surface
  *    demands no model of its own.
  * 2. A scene with no space at all, and one with an explicit `null`, both stay
  *    clean: the pre-space scalar plane is untouched by this check.
@@ -88,7 +88,7 @@ export const test_mcp_validate_scene_space = (): void => {
     success: true,
   });
 
-  // `surfaces` is not an array, the engine validator would iterate it into a
+  // `surfaces` is not an array: the engine validator would iterate it into a
   // throw. It also carries a walkable id resolving to nothing, so the ABSENCE
   // of that engine violation is what proves the shape gate short-circuited.
   const brokenShape = validate({

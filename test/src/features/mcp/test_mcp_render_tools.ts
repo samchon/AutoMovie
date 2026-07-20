@@ -94,7 +94,7 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
  * Scenarios:
  *
  * 1. `planRender` resolves committed shot and sequence targets into frame
- *    schedules, frame paths, per-pass guide outputs, and ffmpeg args, beauty
+ *    schedules, frame paths, per-pass guide outputs, and ffmpeg args: beauty
  *    only by default, pass-tagged paths when more passes are requested, and an
  *    unknown or malformed pass list is a violation.
  * 2. Invalid or malformed render request/spec roots, malformed slate target
@@ -107,7 +107,7 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
  *    unknown passes, and reports `no-capture-adapter` on this adapterless
  *    application.
  * 4. Preview time maps onto the plan's own `i / fps` grid (nearest sample), even
- *    when `duration × fps` is not an integer, the last grid instant of a 1.02
+ *    when `duration × fps` is not an integer: the last grid instant of a 1.02
  *    s shot at 10 fps resolves to frame 9 (an effective-fps mapping said 8), a
  *    self-consistent frame/time pair raises no temporal violation, a
  *    mid-interval time snaps to the nearer neighbour on either side, and an

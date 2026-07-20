@@ -169,7 +169,7 @@ export class AutoMovieApplication {
 
   /**
    * Track ONE binary asset (a GLB, a texture, a rendered frame) in the resident
-   * project's manifest. The tool registers the project-relative path only ,
+   * project's manifest. The tool registers the project-relative path only,
    * byte-writing stays the host adapter's job, so the path may name a file the
    * adapter already wrote or is about to write. Paths must stay inside the
    * project (no absolute paths, no `..`), and registration never silently
@@ -497,8 +497,8 @@ export class AutoMovieApplication {
    * Lint whole-film continuity across cuts (#1172): compare each beat's OPENING
    * against the previous beat's END state, in playback order. Continuity is the
    * structural bet the forward-written beat-end state exists to keep, but
-   * nothing verified it. Emits ADVISORY warnings, a hard cut may intend a jump
-   *, for position drift, facing drift, a dropped or changed mount (the "props
+   * nothing verified it. Emits ADVISORY warnings, a hard cut may intend a jump,
+   * for position drift, facing drift, a dropped or changed mount (the "props
    * disappear" failure), or an actor missing from the incoming opening. Each
    * beat carries its shot and the motions its performances reference; every
    * shot is validated against the scene first, so a malformed shot returns
@@ -691,10 +691,10 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Erase ONE stored prop spec (`props/<node>.json`) from the resident project
-   *, the targeted mirror of `forgeProp`'s resident write-through. Requires an
-   * active project, a non-empty reason (evidence), and an existing stored spec
-   *, erasing nothing is a violation. A prop the committed scene still places
+   * Erase ONE stored prop spec (`props/<node>.json`) from the resident project,
+   * the targeted mirror of `forgeProp`'s resident write-through. Requires an
+   * active project, a non-empty reason (evidence), and an existing stored spec,
+   * erasing nothing is a violation. A prop the committed scene still places
    * is refused rather than cascaded: the scene is upstream of every shot, so
    * clearing it from a spec erase would be a reset in disguise, re-commit the
    * scene without the placement first.
@@ -971,7 +971,7 @@ export class AutoMovieApplication {
   public block(props: {
     /**
      * The script: the cast and their beats. Omit TOGETHER with `staged` to
-     * block against the resident project's committed script and scene (#1176) ,
+     * block against the resident project's committed script and scene (#1176),
      * a long production stops re-sending them every beat. Mixed calls are
      * refused.
      */

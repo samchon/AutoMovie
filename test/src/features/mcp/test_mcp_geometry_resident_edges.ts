@@ -89,7 +89,7 @@ const withProject = (run: (root: string) => void): void => {
  *    actor's ambient node motion (the shot slice is absent, so the beat's shot
  *    resolves to null).
  * 4. A resident `getResolvedPose` whose actor references a motion never compiled
- *    in this session throws the "call commitShot with motions" guidance ,
+ *    in this session throws the "call commitShot with motions" guidance:
  *    project files persist shot motion ids, not compiled clips.
  * 5. A resident query after a `forgeProp` merges the stored prop's model into the
  *    geometry model registry.

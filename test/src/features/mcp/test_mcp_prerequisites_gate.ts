@@ -30,10 +30,10 @@ const emptySlate: IAutoMovieMcpWritableSlate = {
 
 /**
  * The resident commit gate (#615): an out-of-order commit against the resident
- * project THROWS the actionable "do this next" prompt before any transform runs
- *, the AutoBe prerequisite convention over automovie's film ladder. The gate
- * is resident-only: an explicit slate stays the stateless pure transform whose
- * cross-slice preconditions surface as violations, exactly as before.
+ * project THROWS the actionable "do this next" prompt before any transform
+ * runs, the AutoBe prerequisite convention over automovie's film ladder. The
+ * gate is resident-only: an explicit slate stays the stateless pure transform
+ * whose cross-slice preconditions surface as violations, exactly as before.
  *
  * Scenarios:
  *
@@ -45,7 +45,7 @@ const emptySlate: IAutoMovieMcpWritableSlate = {
  * 3. After commitScript, commitShot still throws, now naming only the missing
  *    scene (the satisfied script no longer appears in "Missing").
  * 4. The stateless twin: the same out-of-order commitScene with an EXPLICIT empty
- *    slate does not throw, it returns `committed: false` with the precondition
+ *    slate does not throw. It returns `committed: false` with the precondition
  *    violation, byte-identical to the pre-#615 behavior.
  * 5. Without any active project, the resident call still fails with the
  *    openProject guidance (requireProject fires before the gate).

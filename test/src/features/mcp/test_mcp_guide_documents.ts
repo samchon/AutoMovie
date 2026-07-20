@@ -70,7 +70,7 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
  * Scenarios:
  *
  * 1. Every declared guide name resolves to non-empty markdown carrying its
- *    distinctive doctrine phrase, the union, the prompts directory, and the
+ *    distinctive doctrine phrase: the union, the prompts directory, and the
  *    generated constant cannot drift apart silently.
  * 2. An unknown name (reachable through direct API misuse) throws an error that
  *    lists every valid name, instead of returning undefined content.

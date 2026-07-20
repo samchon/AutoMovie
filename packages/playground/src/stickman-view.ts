@@ -102,7 +102,7 @@ const ctr = isCat ? 0.12 : 0; // cat trunk centre is forward of the hips
 const camY = target + (isCat ? 0.22 : 0.1);
 
 // `?follow=1` makes the camera ride along with the character's root as a
-// traveling clip (stroll/sprint/prowl/bound) carries it across the floor ,
+// traveling clip (stroll/sprint/prowl/bound) carries it across the floor,
 // holding the same orbit offset but re-centred on the moving body, so the
 // figure stays framed while the ground scrolls past (a tracking shot). The
 // root translation the engine bakes via travelMotion lands on `object.object`,

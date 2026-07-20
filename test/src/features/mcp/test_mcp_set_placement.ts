@@ -31,7 +31,7 @@ const unitScale = { x: 1, y: 1, z: 1 };
 
 /**
  * SetPlacement (#654): move ONE placement in the resident scene without
- * re-staging, sibling placements stay byte-unchanged. The cascade mirrors
+ * re-staging. Sibling placements stay byte-unchanged. The cascade mirrors
  * `commitScene` deliberately: a moved placement changes the world coordinates
  * every committed shot was performed against, so keeping those shots would be
  * silently stale geometry; the gain is staging precision, not a shortcut around
@@ -41,13 +41,13 @@ const unitScale = { x: 1, y: 1, z: 1 };
  *
  * 1. Moving knightB swaps exactly that node's transform: the LLM authors the
  *    rotation as semantic Euler degrees (yaw 90 about +Y) and the engine lowers
- *    it to the quaternion (#723), the model never emits one. knightA's node is
+ *    it to the quaternion (#723): the model never emits one. knightA's node is
  *    deep-equal to before, `scene.json` carries the new transform
- *    (write-through), and the commitScene-mirror cascade runs, the committed
+ *    (write-through), and the commitScene-mirror cascade runs: the committed
  *    shot and its file clear, beat-ends and notes clear, the film nulls.
  * 2. The ladder reflects the cascade: nextSteps flips `shots` back into the
  *    missing list and names commitShot as the re-do (the #615 interplay).
- * 3. A ghost placement violates at `$input.node`, a set names a thing that
+ * 3. A ghost placement violates at `$input.node`: a set names a thing that
  *    exists.
  * 4. An empty reason violates (evidence discipline); malformed and non-finite
  *    transforms violate at `$input.transform`; a project with no committed
@@ -124,7 +124,7 @@ export const test_mcp_set_placement = (): void => {
       scene.nodes.find((node) => node.id === "knightB")?.transform.translation,
       { x: 0, y: 0, z: 1.4 },
     );
-    // The semantic yaw 90 about +Y lowered to the exact quaternion, the LLM
+    // The semantic yaw 90 about +Y lowered to the exact quaternion: the LLM
     // authored a degree, the engine stored the quaternion (hand oracle:
     // sin 45 = cos 45 = 0.70710678).
     TestValidator.predicate(

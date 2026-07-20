@@ -52,7 +52,7 @@ const shot: IAutoMovieShot = {
  * 1. A shot committed before the scene exists is refused, and, because the
  *    committed script carries a refinement tree claiming `beat-1`, every
  *    violation of that commit carries `node: "b1"`.
- * 2. The treeless twin: the identical refusal without a tree carries no node ,
+ * 2. The treeless twin: the identical refusal without a tree carries no node;
  *    byte-compatible pre-#620 behavior.
  */
 export const test_mcp_commit_shot_located = (): void => {

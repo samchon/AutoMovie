@@ -77,14 +77,14 @@ const sceneWith = (model: string): IAutoMovieScene => ({
 });
 
 /**
- * Three validator/engine parity gaps from one review sweep (#1097), the
+ * Three validator/engine parity gaps from one review sweep (#1097): the
  * artifacts header promises the MCP validators and the engine cannot drift, and
  * each of these answered a confident verdict the engine (or the manifest
  * doctrine) contradicts.
  *
  * Scenarios:
  *
- * 1. `validateSequence` refuses an EMPTY cut-list at `$input.shots`, the engine's
+ * 1. `validateSequence` refuses an EMPTY cut-list at `$input.shots`: the engine's
  *    `cutSequence` pins "a film must contain at least one shot", and this
  *    validator also gates the resident `film.json` slice on load. Negative
  *    twin: a one-entry sequence over its shot validates clean.
@@ -93,7 +93,7 @@ const sceneWith = (model: string): IAutoMovieScene => ({
  *    never-silently-replaced duplicate refusal. Negative twin: the plain
  *    spelling registers, and a dotted FILENAME (`x.v2.png`) stays legal.
  * 3. `getReach` on a rig with no measurable arm chain answers `reach: null` with a
- *    diagnosing reason, unmeasurable is not "unreachable". Negative twin: a
+ *    diagnosing reason: unmeasurable is not "unreachable". Negative twin: a
  *    rig with one usable arm still measures (`reason: null`).
  */
 export const test_mcp_validator_engine_parity = (): void => {

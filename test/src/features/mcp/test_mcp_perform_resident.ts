@@ -66,7 +66,7 @@ const actorContext = (
  * Scenarios:
  *
  * 1. After resident commitScript/commitScene, a resident perform (performance +
- *    actors only) compiles the same shot the explicit form does, shot id,
+ *    actors only) compiles the same shot the explicit form does: shot id,
  *    scene reference, and motion ids match.
  * 2. Performing before the scene is committed refuses at `$slate.scene`.
  * 3. A mixed call (script without staged) is refused at `$input`; `mounts` on an

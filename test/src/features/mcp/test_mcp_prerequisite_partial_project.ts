@@ -43,8 +43,8 @@ const write = (root: string, rel: string, value: unknown): void => {
 /**
  * The film-ladder prerequisite prompt reports EVERY rung's status, including a
  * committed film, even when an upstream rung is missing (#1040 coverage). A
- * partially-populated project, a committed film and its shot but no script ,
- * is a legitimate on-disk state a hand edit or a partial restore can produce;
+ * partially-populated project (a committed film and its shot but no script) is
+ * a legitimate on-disk state a hand edit or a partial restore can produce;
  * `commitScene` there refuses with a prompt whose status block reads "Film:
  * committed" beside the missing script.
  *

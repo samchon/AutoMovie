@@ -84,7 +84,7 @@ const call = async <T>(
   // The server ships the serialized text block beside structuredContent
   // (textFallback: true, #1228): a client that reads `content` text and ignores
   // outputSchema must still see the result. @typia/mcp 13.1.x defaults this off,
-  // so pin the wire contract here, a silent flip back to structured-only
+  // so pin the wire contract here: a silent flip back to structured-only
   // would leave every text-fallback client with an empty successful result.
   const content = result.content as Array<{ type: string; text?: string }>;
   TestValidator.predicate(
