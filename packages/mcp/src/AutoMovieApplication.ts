@@ -332,10 +332,13 @@ export class AutoMovieApplication {
   /**
    * Measure whether an actor's arms can reach a positional target. Pass
    * `context` explicitly, or omit it to use the resident project's committed
-   * scene plus the session-only model skeletons remembered from commitScene.
+   * scene plus the session-only model skeletons remembered from commitScene. A
+   * node target may name any staged placement, an actor, a set piece, or a
+   * camera.
    *
    * @param props The actor id, target, and optional explicit context.
-   * @returns The reach report, or null when actor or target is not positional.
+   * @returns The reach report, or null with a reason naming the id or the
+   *   relative kind that failed to resolve.
    */
   public getReach(props: {
     /** Scene and skeletons used to resolve the actor and target. */
@@ -376,11 +379,13 @@ export class AutoMovieApplication {
 
   /**
    * Measure the world-space distance between two positional targets. Pass
-   * `scene` explicitly, or omit it to use the resident committed scene.
+   * `scene` explicitly, or omit it to use the resident committed scene. A node
+   * target may name any staged placement, an actor, a set piece, or a camera.
    * Relative targets return null because they are directions, not points.
    *
    * @param props The two targets and optional explicit scene.
-   * @returns The resolved endpoints and distance, or null when unresolved.
+   * @returns The resolved endpoints and distance, or null with a per-side
+   *   reason naming the id or the relative kind that failed to resolve.
    */
   public measureDistance(props: {
     /** Scene whose node positions define the target space. */

@@ -4,5 +4,6 @@ export * from "./compilePerformance";
 export * from "./IAutoMovieActorContext";
 export * from "./makeActorSynthesizer";
 export * from "./mergePoses";
+export * from "./positionalTargetFault";
 export * from "./resolveTargetPoint";
 export * from "./scenePlacements";

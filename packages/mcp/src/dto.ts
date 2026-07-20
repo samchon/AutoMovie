@@ -265,7 +265,7 @@ export interface IAutoMovieMcpArmReach {
 
 /** The `measureDistance` query result. */
 export interface IAutoMovieMeasureDistanceOutput {
-  /** Distance report, or null when either target is not positional. */
+  /** Distance report, or null when either endpoint failed to resolve. */
   measurement: IAutoMovieMcpDistanceMeasurement | null;
 
   /** Which endpoint failed to resolve when `measurement` is null; else null. */

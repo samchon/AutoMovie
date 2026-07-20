@@ -1,8 +1,10 @@
 import {
   HUMANOID_JOINT_AXES,
   IAutoMovieStagedSet,
+  POSITIONAL_TARGET_SHAPE,
   Quaternion,
   Vector3,
+  positionalTargetFault,
   reachPose,
   resolveBeatEnd,
   resolvePose,
@@ -106,8 +108,7 @@ export class GeometryService {
     if (target === null)
       return {
         reach: null,
-        reason:
-          "the target is not positional, direction/offscreen targets carry no world point; use a node, point, or group target",
+        reason: unresolvedTargetReason(null, props.target),
       };
     const localTarget = toModelPoint(target, actor.node.transform);
     if (localTarget === null)
@@ -186,15 +187,20 @@ export class GeometryService {
     const nodes = nodePositions(source.scene, source.root);
     const from = resolveRuntimeSafeTargetPoint(props.from, nodes);
     const to = resolveRuntimeSafeTargetPoint(props.to, nodes);
+    // One clause per unresolved SIDE, each naming its own fault: merging them
+    // into one sentence made a `from` that named an unplaced id and a `to` that
+    // was a heading read as the same problem.
     const missing = [
-      ...(from === null ? ["from"] : []),
-      ...(to === null ? ["to"] : []),
+      ...(from === null ? [["from", props.from] as const] : []),
+      ...(to === null ? [["to", props.to] as const] : []),
     ];
     return {
       reason:
         missing.length === 0
           ? null
-          : `the ${missing.join(" and ")} target${missing.length > 1 ? "s are" : " is"} not positional, direction/offscreen targets carry no world point`,
+          : missing
+              .map(([side, target]) => unresolvedTargetReason(side, target))
+              .join("; "),
       measurement:
         from === null || to === null
           ? null
@@ -337,6 +343,26 @@ const resolveResolvedPoseTime = (t: unknown): number => {
     )}`,
   );
 };
+
+/**
+ * Why a geometry query could not turn a target into a world point, in the
+ * engine's own words ({@link positionalTargetFault}).
+ *
+ * One vocabulary, two rungs: the perform gate learned in #1294 that blaming the
+ * discriminator of a kind the same sentence lists as legal leaves the
+ * correction round nothing to act on. The geometry queries kept answering "not
+ * positional" for EVERY failure, so a `node` target naming an unplaced id, or a
+ * camera the table did not carry, was reported as the one thing it demonstrably
+ * was not.
+ *
+ * `side` names which endpoint failed on the two-sided distance measurement, and
+ * is `null` for a single-target query.
+ */
+const unresolvedTargetReason = (
+  side: "from" | "to" | null,
+  target: unknown,
+): string =>
+  `the ${side === null ? "" : `${side} `}target must resolve to a point (${POSITIONAL_TARGET_SHAPE}), but ${positionalTargetFault(target)}`;
 
 const describeViolations = (
   violations: IAutoMovieConstraintViolation[],
@@ -595,6 +621,37 @@ const appendGeometrySceneShape = (
   violations: IAutoMovieConstraintViolation[],
 ): void => {
   if (!validateObjectArtifact(scene, path, "scene", violations)) return;
+  // The placement table now reads `scene.cameras` too (#1294 symmetry), so the
+  // camera list needs the same structural floor the node list has: without it a
+  // hand-built context throws a TypeError out of `nodePositions` instead of
+  // refusing with a located violation (#1005/#1007).
+  if (
+    validateArrayArtifact(
+      scene.cameras,
+      `${path}.cameras`,
+      "scene cameras",
+      violations,
+    )
+  )
+    scene.cameras.forEach((camera, index) => {
+      const cameraPath = `${path}.cameras[${index}]`;
+      if (
+        !validateObjectArtifact(camera, cameraPath, "scene camera", violations)
+      )
+        return;
+      validateNonEmptyId(
+        camera.id,
+        `${cameraPath}.id`,
+        "scene camera id",
+        violations,
+      );
+      validateTransformArtifact(
+        camera.transform,
+        `${cameraPath}.transform`,
+        "scene camera transform",
+        violations,
+      );
+    });
   if (
     !validateArrayArtifact(
       scene.nodes,
@@ -898,19 +955,32 @@ const assertNoGeometryViolations = (
   if (violations.length > 0) throw new Error(describeViolations(violations));
 };
 
+/**
+ * Every staged thing a geometry query may address by id: the scene's nodes AND
+ * its cameras, the same table `scenePlacements` gives the perform gate (#1294).
+ * Measuring the distance to a lens, or asking whether an arm reaches it, is the
+ * read the guide's "face the camera" idiom already relies on; answering it only
+ * for nodes made one rung refuse what the next accepts.
+ *
+ * Cameras are laid down FIRST, `scenePlacements`' precedence, so an (illegal)
+ * id repeated between a camera and a node still resolves to the node.
+ */
 const nodePositions = (
   scene: IAutoMovieScene,
   path: string,
 ): Map<string, IAutoMovieVector3> =>
-  new Map(
-    scene.nodes.map((node, index) => {
+  new Map<string, IAutoMovieVector3>([
+    ...scene.cameras.map(
+      (camera) => [camera.id, camera.transform.translation] as const,
+    ),
+    ...scene.nodes.map((node, index) => {
       if (scene.nodes.findIndex((other) => other.id === node.id) !== index)
         throw new Error(
           `scene node "${node.id}" is duplicated at ${path}.nodes[${index}].id`,
         );
-      return [node.id, node.transform.translation];
+      return [node.id, node.transform.translation] as const;
     }),
-  );
+  ]);
 
 const measureArmReach = (
   skeleton: IAutoMovieSkeleton,

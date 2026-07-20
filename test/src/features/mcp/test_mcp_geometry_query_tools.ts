@@ -423,7 +423,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           actor: "actor",
           target: { kind: "direction", headingDeg: 90 },
         }),
-      ).includes("not positional") &&
+      ).includes('a target of kind "direction" is relative') &&
       reasonOf(
         app.getReach({ context, actor: "marker", target: pointTarget }),
       ).includes("carries no skeleton") &&
@@ -439,7 +439,7 @@ export const test_mcp_geometry_query_tools = (): void => {
           from: { kind: "direction", headingDeg: 0 },
           to: { kind: "node", node: "marker" },
         }),
-      ).includes("from target is not positional") &&
+      ).includes("the from target must resolve to a point") &&
       app.getReach({ context, actor: "actor", target: pointTarget }).reason ===
         null,
   );

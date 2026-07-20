@@ -108,8 +108,10 @@ export namespace IAutoMovieStagedSet {
  * Referential integrity is the whole check: every placement must name a cast
  * member, every cast member must be placed (an unplaced character can never
  * appear on screen), ids must not collide, and a camera aimed at a node or a
- * mount riding a parent must point at something that exists. Geometry is
- * converted, not judged, whether 0.7 m is striking range is the reviewer's
+ * mount riding a parent must point at something that exists. A camera's target
+ * may be any staged placement, another camera included, the same table the
+ * performance stage resolves its positional targets against (#1294). Geometry
+ * is converted, not judged, whether 0.7 m is striking range is the reviewer's
  * business, not a constraint.
  *
  * Conversions: `facingDeg` (about +Y, 0 = facing +Z) becomes the node's
@@ -151,9 +153,19 @@ export const stageScene = (
     cast.set(member.node, { member, index });
   });
   const placed = new Map(staging.actors.map((a) => [a.node, a]));
-  // What a camera may aim at: any placed point, an actor or a set piece (an
-  // establishing frame on a doorway is as legitimate as one on a duellist).
+  // What a camera may aim at: any placed point, an actor, a set piece (an
+  // establishing frame on a doorway is as legitimate as one on a duellist), or
+  // another camera. The camera entry is what makes this rung agree with the
+  // rest: `performShot` resolves a positional target against every staged
+  // placement, cameras included (#1294), so a subject the performance stage
+  // accepts must be a subject staging can aim at. A camera naming itself is
+  // still refused, by the zero-length look-vector check below.
+  //
+  // Cameras are laid down FIRST, the same precedence `scenePlacements` uses, so
+  // an (illegal) id repeated between a camera and an actor still resolves to the
+  // actor and the two tables cannot disagree about a malformed scene.
   const placedPoints = new Map<string, IAutoMovieVector3>([
+    ...staging.cameras.map((camera) => [camera.node, camera.position] as const),
     ...staging.actors.map((a) => [a.node, a.position] as const),
     ...(staging.set ?? []).map(
       (piece) => [piece.node, piece.position] as const,
@@ -307,7 +319,7 @@ export const stageScene = (
       out.push(
         "type",
         `$input.cameras[${i}].lookAt.node`,
-        `camera target "${camera.lookAt.node}" must be a placed actor or set piece`,
+        `camera target "${camera.lookAt.node}" must be a placed actor, set piece, or camera`,
         camera.lookAt.node,
       );
     if (camera.lookAt.kind === "point" && !isFiniteVector3(camera.lookAt.point))

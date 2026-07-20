@@ -73,6 +73,14 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["STAGING", "covered by several staged cameras"],
   ["BLOCKING", "cut between angles of one performed beat"],
   ["RENDER_GUIDES", "one entry per alternate camera take of the beat"],
+  // The aim-height axis. #1294's "same table" sentence was true of WHICH ids
+  // resolve and silent about WHERE on the subject each verb aims, so an agent
+  // could not predict why pointing at a nearby actor breaks the ROM gate while
+  // looking at the same actor passes. Pinned in both guides that teach a half:
+  // performance owns the per-verb rule, blocking owns what a camera may favour.
+  ["PERFORMANCE", "the same table does not mean the same aim height"],
+  ["PERFORMANCE", "an actor placement lifted by that actor's `eyeHeight`"],
+  ["BLOCKING", "an actor, a set piece, or another camera"],
 ];
 
 /**

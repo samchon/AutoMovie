@@ -376,6 +376,7 @@ export class PipelineService {
       props,
       contexts,
       nodes,
+      new Set(staged!.scene.nodes.map((node) => node.id)),
       synthesizeDefault,
     );
     if (synthesisViolations.length > 0)
@@ -2820,6 +2821,12 @@ const collectDefaultSynthesisViolations = (
   props: PerformProps,
   contexts: ReadonlyMap<string, IAutoMovieActorContext>,
   nodes: Map<string, IAutoMovieVector3>,
+  /**
+   * The staged scene NODES, which is narrower than `nodes`: the placement table
+   * also carries cameras (#1294). The launch pre-check needs the narrow set,
+   * because only a scene node can recoil.
+   */
+  sceneNodes: ReadonlySet<string>,
   synthesize: IAutoMovieActionSynthesizer,
 ): IAutoMovieConstraintViolation[] => {
   const actions = props.performance.revise.final ?? props.performance.draft;
@@ -2831,7 +2838,12 @@ const collectDefaultSynthesisViolations = (
   actions.forEach((action, index) => {
     const actionPath = `${base}[${index}]`;
     if (action.verb === "launch") {
-      const onHit = describeLaunchOnHitGap(action, actionPath, contexts, nodes);
+      const onHit = describeLaunchOnHitGap(
+        action,
+        actionPath,
+        contexts,
+        sceneNodes,
+      );
       if (onHit !== null) violations.push(onHit);
       return;
     }
@@ -2927,14 +2939,22 @@ const describeEnactGap = (
   return null;
 };
 
+/**
+ * The `onHit` pre-check speaks only about ids that can actually recoil, i.e.
+ * staged scene NODES. An unplaced id and a camera id both yield to the engine's
+ * own refusal: the engine names the missing placement, and refuses a camera aim
+ * outright (a camera performs nothing but frame). Testing against the wider
+ * placement table instead told the agent that a CAMERA "needs an actor
+ * context", which is an instruction to make a camera a performer.
+ */
 const describeLaunchOnHitGap = (
   action: IAutoMovieActionCall & { verb: "launch" },
   actionPath: string,
   contexts: ReadonlyMap<string, IAutoMovieActorContext>,
-  nodes: Map<string, IAutoMovieVector3>,
+  sceneNodes: ReadonlySet<string>,
 ): IAutoMovieConstraintViolation | null => {
   const node = targetNodeId(action.at);
-  if (action.onHit === undefined || node === null || !nodes.has(node))
+  if (action.onHit === undefined || node === null || !sceneNodes.has(node))
     return null;
   const context = contexts.get(node);
   if (context === undefined)
