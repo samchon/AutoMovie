@@ -42,8 +42,8 @@ const context = (
 };
 
 /**
- * A clip COMPUTED the way an agent's code would, a sampled sine arc on the arm
- * chain, never hand-written floats. Peak flexion lands at t=0.5.
+ * A clip COMPUTED the way an agent's code would (a sampled sine arc on the arm
+ * chain), never hand-written floats. Peak flexion lands at t=0.5.
  */
 const computedKata = (
   skeleton: string,
@@ -85,7 +85,7 @@ const computedKata = (
 
 /**
  * The MCP face of the engine's content seam (#1148): an `enact` action plays a
- * clip the CALLER computed, supplied in the perform call's `clips` registry ,
+ * clip the CALLER computed, supplied in the perform call's `clips` registry:
  * dense motion enters the pipeline without abandoning its gates.
  *
  * Scenarios:
@@ -93,12 +93,12 @@ const computedKata = (
  * 1. A computed clip enacts through the full pipeline: the shot compiles, the
  *    actor's composite carries the clip's peak arm flexion at mid-time.
  * 2. Enforcement is NOT bypassed: the same clip scaled past the shoulder's ROM
- *    fails the shot's ROM gate at a `$compiled` path, the registry is no back
+ *    fails the shot's ROM gate at a `$compiled` path: the registry is no back
  *    door around the shield.
- * 3. A unison cast (`actor: [a, b]`) enacts one clip without id collisions, both
+ * 3. A unison cast (`actor: [a, b]`) enacts one clip without id collisions. Both
  *    actors get composites carrying the content.
  * 4. Region layering: an `enact` narrowed to `upperBody` layers with a concurrent
- *    `locomote` (lowerBody), the composite claims both the gait's leg and the
+ *    `locomote` (lowerBody): the composite claims both the gait's leg and the
  *    clip's arm at mid-shot.
  * 5. Refusal rungs, most-actionable first: no actor context; a rig-less context
  *    (an ungated dense clip would dodge the ROM gate); a clip id the registry
@@ -161,7 +161,7 @@ export const test_mcp_perform_enact = (): void => {
     midArm !== undefined && nclose(midArm.flexion!, 90, 1e-6),
   );
 
-  // 2. an out-of-ROM clip fails the shot's ROM gate, no back door.
+  // 2. an out-of-ROM clip fails the shot's ROM gate: no back door.
   const outOfRom = app.perform({
     script,
     staged,

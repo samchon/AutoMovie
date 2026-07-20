@@ -39,7 +39,7 @@ const previous = (
 /**
  * The `block` tool's `previous` seam (#1176): the prior beat's resolved
  * end-state threads through to the engine's existing `blockBeat` gate, so a
- * beat blocks as a CONTINUATION, carried actors must be staged nodes, and the
+ * beat blocks as a CONTINUATION: carried actors must be staged nodes, and the
  * validated state surfaces on the success for the performance stage to seed
  * from. Malformed carries fail as violations, never a crash.
  *
@@ -49,7 +49,7 @@ const previous = (
  *    verbatim as `blocked.previous`.
  * 2. Omitting previous blocks as before with `previous: null` (first beat).
  * 3. A carried actor the stage never placed, and a duplicated carried actor, each
- *    fail at `$input.previous.actors[i].node`, the engine gates, remapped to
+ *    fail at `$input.previous.actors[i].node`: the engine gates, remapped to
  *    the tool path.
  * 4. Totality: a non-object previous, a non-array `actors`, a non-object actor
  *    entry, and a non-string node each fail as shape violations before the

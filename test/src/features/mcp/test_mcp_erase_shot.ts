@@ -43,7 +43,7 @@ const makeShot = (beat: string, scene: string): IAutoMovieShot => ({
 });
 
 /**
- * EraseShot (#617): a targeted, evidence-backed removal of ONE beat's shot ,
+ * EraseShot (#617): a targeted, evidence-backed removal of ONE beat's shot,
  * never a reset. The cascade mirrors the commit tools' invalidation: the beat's
  * beat-end and its beat-scoped review notes are stale without their shot and go
  * with it; sibling beats are untouched on disk.
@@ -54,7 +54,7 @@ const makeShot = (beat: string, scene: string): IAutoMovieShot => ({
  *    beat-1's notes from `notes.json`, while beat-2's shot and beat-end files
  *    stay byte-identical and beat-2's note survives.
  * 2. Erasing a beat with no committed shot or a malformed beat scalar is a
- *    violation located at `$input.beat`, the erase names a mistake that must
+ *    violation located at `$input.beat`: the erase names a mistake that must
  *    exist.
  * 3. An empty reason is a violation (evidence discipline); the slate is unchanged
  *    and no file is touched.

@@ -23,7 +23,7 @@ const script: IAutoMovieScript = {
  *
  * Scenarios:
  *
- * 1. CommitScript on a fresh project passes (its prerequisite set is empty, the
+ * 1. CommitScript on a fresh project passes (its prerequisite set is empty; the
  *    ladder must be enterable).
  * 2. CommitScene after the script passes the gate and commits.
  * 3. CommitShot after the scene passes the gate and commits (a minimal valid shot

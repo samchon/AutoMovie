@@ -167,7 +167,7 @@ export interface IAutoMovieHumanoidRetargetResult {
  * contacting limb onto the source contact mapped through the same `rootScale`,
  * so a planted foot lands where the performance put it instead of sliding. The
  * pass runs by default, corrects the clip at its authored keyframe times, and
- * reports a residual it could not reach under the target's ROM as a `warning` ,
+ * reports a residual it could not reach under the target's ROM as a `warning`,
  * the returned `validation` still succeeds.
  *
  * @author Samchon

@@ -59,7 +59,7 @@ const film: IAutoMovieSequence = {
  * The stale-render ledger (#1130): the server never deletes user-visible files,
  * so re-committing upstream leaves a superseded render's frame dirs and videos
  * lingering under `renders/` with nothing listing them. The project summary now
- * carries `staleRenders`, top-level `renders/` entries owned by neither the
+ * carries `staleRenders`: top-level `renders/` entries owned by neither the
  * committed film's stem family, nor any committed shot's, nor a registered
  * asset. Detection is the server's; the corrective action stays the agent's.
  *

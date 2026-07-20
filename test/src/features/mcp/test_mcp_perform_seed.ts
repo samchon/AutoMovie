@@ -73,7 +73,7 @@ const actorContext = (opening: {
 };
 
 /**
- * Where and how each knight ended beat-1, the seed source of truth. knightA
+ * Where and how each knight ended beat-1: the seed source of truth. knightA
  * closed mid-stride (a recorded gait phase); knightB's close was non-looping
  * (`null`), so its omitted phase stays an omission.
  */
@@ -112,15 +112,15 @@ const beatOneEnd: IAutoMovieBeatEndState = {
 /**
  * Resident `perform` continuity-seed (#1176): an actor context that omits
  * `position`/`facingDeg` inherits them from the previous beat's committed
- * end-state, so a walking character resumes exactly where, and facing exactly
- * how, the last beat left it, without the caller round-tripping `getBeatEnd`
+ * end-state, so a walking character resumes exactly where (and facing exactly
+ * how) the last beat left it, without the caller round-tripping `getBeatEnd`
  * by hand.
  *
  * Scenarios:
  *
  * 1. With beat-1's end committed, a beat-2 resident perform whose contexts omit
  *    the openings compiles the SAME motions as one that passes the end-state
- *    values explicitly, the facing vector→degrees conversion and the
+ *    values explicitly: the facing vector→degrees conversion and the
  *    mid-stride gait phase (#1176 PR-6) included; a `null` recorded phase stays
  *    an omission.
  * 2. Partial omission seeds only the missing field; the explicit field wins.

@@ -79,8 +79,8 @@ export class CommitService {
    *
    * The resident path is additionally gated by the film-ladder prerequisites
    * (#615): an out-of-order resident commit throws the actionable "do this
-   * next" prompt before any transform runs. An explicit slate bypasses the gate
-   *, it is a pure transform whose cross-slice preconditions already surface as
+   * next" prompt before any transform runs. An explicit slate bypasses the gate,
+   * it is a pure transform whose cross-slice preconditions already surface as
    * violations.
    */
   private base(
@@ -479,7 +479,7 @@ export class CommitService {
    * (#1131), the same evidence discipline every erase/set carries: the cut's
    * authoring stage justifies pacing and continuity, but nothing forced the
    * agent to SELF-CHECK the final cut-list against that intent before
-   * persisting it. Declared before the film payload deliberately ,
+   * persisting it. Declared before the film payload deliberately,
    * schema-reflected tools present properties in declaration order and the
    * model fills them in that order, so a reasoning field ahead of the artifact
    * it steers is chain-of-thought by construction.
@@ -896,7 +896,7 @@ export class CommitService {
         violations,
       );
       // This tool is ALWAYS resident, so commitShot's registry rule applies
-      // verbatim (#1095): motions are re-perform-derived, not persisted ,
+      // verbatim (#1095): motions are re-perform-derived, not persisted,
       // splicing a motion reference with no registry would durably store a
       // dangling id that a later resident getResolvedPose cannot resolve.
       if (motionIds === null)
@@ -1296,7 +1296,7 @@ const validateScriptArtifact = (
   // Beat ids become slice FILENAMES (shots/<beat>.json, beatEnds/<beat>.json),
   // so ids differing only by case collide on a case-insensitive filesystem.
   // Unrefused here, the collision surfaced as the store's raw mid-save throw
-  // at the SECOND beat's commitShot, after non-keyed slices were rewritten ,
+  // at the SECOND beat's commitShot, after non-keyed slices were rewritten,
   // wedging that beat while nextSteps kept prescribing it (#1096). Refuse at
   // the source with a located violation instead.
   const beatsByLower = new Map<string, { id: string; index: number }>();

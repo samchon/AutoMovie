@@ -1029,7 +1029,7 @@ const validateOptionalRenderPathOverride = (
   }
   // ffmpeg's image2 demuxer reads the -i pattern's `%` as a conversion
   // specifier (`frame_%05d.png`), so a literal `%` anywhere in the frame
-  // dir/output override corrupts the pattern into reading the wrong files ,
+  // dir/output override corrupts the pattern into reading the wrong files,
   // or none, with no error (#1089). The default paths are stem-sanitized
   // and can never carry one; only these overrides can, so refuse here.
   if (value.includes("%"))

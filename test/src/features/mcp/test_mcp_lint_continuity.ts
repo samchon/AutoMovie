@@ -33,7 +33,7 @@ const toMcp = (motion: IAutoMovieMotion): IAutoMovieMcpMotion => ({
   keyframes: motion.keyframes.map((kf) => ({ ...kf, bezier: null })),
 });
 
-/** A clip whose root never leaves the origin, end sits where it opened. */
+/** A clip whose root never leaves the origin: end sits where it opened. */
 const still: IAutoMovieMcpMotion = toMcp({
   ...makeMotion(
     [
@@ -49,7 +49,7 @@ const still: IAutoMovieMcpMotion = toMcp({
   id: "still",
 });
 
-/** A clip whose root travels +2 m in x over the shot, end is 2 m from open. */
+/** A clip whose root travels +2 m in x over the shot: end is 2 m from open. */
 const move: IAutoMovieMcpMotion = toMcp({
   ...makeMotion(
     [
@@ -127,14 +127,14 @@ const failsAt = (validation: IAutoMovieValidation, path: string): boolean =>
  *    walker would throw.
  */
 export const test_mcp_lint_continuity = (): void => {
-  // 1. still clip, clean resume.
+  // 1. still clip: clean resume.
   const resumed = app.lintContinuity({
     scene,
     beats: [beatFor("b1", still), beatFor("b2", still)],
   }).validation;
   TestValidator.equals("a still film has no drift", warningCount(resumed), 0);
 
-  // 2. travelling clip, the second beat opens 2 m behind where the first ended.
+  // 2. travelling clip: the second beat opens 2 m behind where the first ended.
   const drifted = app.lintContinuity({
     scene,
     beats: [beatFor("b1", move), beatFor("b2", move)],
@@ -249,7 +249,7 @@ export const test_mcp_lint_continuity = (): void => {
   );
 
   // 7. a beat whose shot performs nothing (so the hero is held with a null
-  // ambient motion) and omits its motions registry passes cleanly, the held
+  // ambient motion) and omits its motions registry passes cleanly: the held
   // null-motion node needs no clip, and an empty registry is valid.
   const held = app.lintContinuity({
     scene,

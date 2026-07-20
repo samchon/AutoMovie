@@ -47,7 +47,7 @@ export const test_mcp_commit_lock = (): void => {
       ),
     );
 
-    // 4a. release with a FOREIGN token leaves the lock in place, the core
+    // 4a. release with a FOREIGN token leaves the lock in place. The core
     // owner-check: we must not delete another session's lock.
     releaseCommitLock(lockPath, "some-other-session-token");
     TestValidator.equals(

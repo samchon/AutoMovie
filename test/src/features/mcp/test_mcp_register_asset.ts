@@ -8,8 +8,8 @@ import { hasViolation, throwsError } from "../internal/predicates";
 
 /**
  * RegisterAsset (#670): the manifest's asset index gains its MCP surface. The
- * tool tracks ONE project-relative path per call, byte-writing stays the host
- * adapter's job, and refuses duplicates and path escapes as violations on the
+ * tool tracks ONE project-relative path per call (byte-writing stays the host
+ * adapter's job) and refuses duplicates and path escapes as violations on the
  * erase/set refusal ledger, so the guide's asset doctrine and the live tool
  * finally agree.
  *
@@ -19,7 +19,7 @@ import { hasViolation, throwsError } from "../internal/predicates";
  *    forward-slash path, the manifest file (`automovie.json`) mirrors the
  *    index, and `nextSteps` status exposes it.
  * 2. Re-registering the same asset (spelled either way) is refused at
- *    `$input.path` and the index is unchanged, the duplicate twin.
+ *    `$input.path` and the index is unchanged: the duplicate twin.
  * 3. A malformed path scalar, an empty path, an absolute path, and a `..` escape
  *    are each violations at `$input.path` with nothing registered.
  * 4. Without an active project the tool throws the actionable openProject prompt

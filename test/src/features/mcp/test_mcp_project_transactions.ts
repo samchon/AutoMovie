@@ -38,7 +38,7 @@ const slateOf = (logline: string): IAutoMovieMcpWritableSlate => ({
  * Scenarios:
  *
  * 1. A save cycle that throws during staging (a slate carrying an unserializable
- *    value) persists NOTHING, the previously committed script survives
+ *    value) persists NOTHING: the previously committed script survives
  *    byte-identical and the revision does not move.
  * 2. Two stores on one directory: after session B commits, session A's stale-based
  *    save is REFUSED with the re-read prompt and writes nothing; after A
@@ -48,7 +48,7 @@ const slateOf = (logline: string): IAutoMovieMcpWritableSlate => ({
  * 4. A whole actor registry saves as ONE cycle (#1257): two actors bump the
  *    revision once (not once per actor) and both land together.
  * 5. A staging throw on any actor in the registry persists NOTHING and does not
- *    bump, the all-or-nothing guarantee the per-actor loop lacked.
+ *    bump: the all-or-nothing guarantee the per-actor loop lacked.
  */
 export const test_mcp_project_transactions = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-txn-"));

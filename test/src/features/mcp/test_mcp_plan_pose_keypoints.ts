@@ -226,7 +226,7 @@ export const test_mcp_plan_pose_keypoints = (): void => {
     ),
   );
   // The sidecar aspect must match a render pinned at these dims with ffmpeg `-s`,
-  // and yuv420p can only encode even axes, so an odd (or fractional) dimension ,
+  // and yuv420p can only encode even axes, so an odd (or fractional) dimension,
   // which no render could reproduce exactly, is refused here too (#1251).
   TestValidator.predicate(
     "an odd width refuses",

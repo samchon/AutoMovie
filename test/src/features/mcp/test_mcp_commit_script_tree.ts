@@ -48,7 +48,7 @@ const script = (withTree: boolean): IAutoMovieScript => ({
  * The screenplay tree rides the script slice through the whole commit path
  * (slice A of #606/#610/#620): the tree validates at commitScript's gate, the
  * committed slate carries it, getScript returns it intact, and the #614
- * write-through persists it inside `script.json`, the screenplay is a
+ * write-through persists it inside `script.json`. The screenplay is a
  * first-class, durable, human-readable production document.
  *
  * Scenarios:
@@ -57,7 +57,7 @@ const script = (withTree: boolean): IAutoMovieScript => ({
  *    returned slate hands the tree back intact.
  * 2. A malformed tree (a beat node naming a ghost beat) refuses the commit with a
  *    violation located under `$input.script.tree`.
- * 3. A treeless script commits exactly as before, byte-compatible legacy path.
+ * 3. A treeless script commits exactly as before: byte-compatible legacy path.
  * 4. Resident path: openProject → commitScript with the tree → `script.json` on
  *    disk carries the tree verbatim.
  */

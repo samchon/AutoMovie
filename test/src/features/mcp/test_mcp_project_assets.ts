@@ -9,7 +9,7 @@ import { throwsError } from "../internal/predicates";
 /**
  * Binary assets are first-class managed artifacts (#614): the manifest tracks
  * project-relative paths, bytes write atomically when supplied, and nothing is
- * ever silently overwritten, an existing registration or an existing file is a
+ * ever silently overwritten: an existing registration or an existing file is a
  * refusal, not a replace.
  *
  * Scenarios:

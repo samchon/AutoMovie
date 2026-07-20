@@ -89,7 +89,7 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
   validation.violations.some((violation) => violation.path.includes(path));
 
 /**
- * How many violations match BOTH a kind and a path fragment, the (kind, path,
+ * How many violations match BOTH a kind and a path fragment: the (kind, path,
  * count) assertion. Each injected defect must fire exactly one violation of the
  * documented tier at the documented path: `=== 1` proves the kind (not just
  * that some path appeared), that the path is right, and that the rule neither

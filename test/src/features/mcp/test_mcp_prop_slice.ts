@@ -9,7 +9,7 @@ import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation, throwsError } from "../internal/predicates";
 import { mcpDoorSpec } from "./test_mcp_forge_prop";
 
-/** A minimal rigid prop, no body, no affordances, no articulation. */
+/** A minimal rigid prop: no body, no affordances, no articulation. */
 const crateSpec = (): IAutoMovieMcpPropSpec => ({
   node: "crate",
   model: {
@@ -39,7 +39,7 @@ const crateSpec = (): IAutoMovieMcpPropSpec => ({
 
 /**
  * The props slice (#671): a resident `forgeProp` success writes through as
- * `props/<node>.json`, the reserved directory's promise finally kept, and
+ * `props/<node>.json` (the reserved directory's promise finally kept), and
  * `eraseProp` is its targeted removal mirror. Pure (no-project) calls stay
  * byte-compatible.
  *
@@ -54,9 +54,9 @@ const crateSpec = (): IAutoMovieMcpPropSpec => ({
  *    spec, a malformed node scalar, or a blank reason is refused on the
  *    ledger.
  * 5. A prop the committed scene still places is refused at `$slate.scene` and its
- *    file survives, unstaging is `commitScene`'s job. Re-forging that placed
+ *    file survives: unstaging is `commitScene`'s job. Re-forging that placed
  *    prop is likewise refused (`stored: false`, the spec unchanged), while a
- *    FIRST forge of a placed-but-unstored node stores (#712, creating a spec
+ *    FIRST forge of a placed-but-unstored node stores (#712: creating a spec
  *    is not replacing one).
  * 6. A pure (no-project) forge output carries no `stored` key, and `eraseProp`
  *    without a project throws the actionable openProject prompt.
@@ -244,9 +244,9 @@ export const test_mcp_prop_slice = (): void => {
       30,
     );
 
-    // #712 asymmetry: a FIRST forge of a placed-but-not-yet-stored node stores
-    //, it creates the spec shots need rather than replacing one, so the scene
-    // placement does not refuse it (unlike eraseProp, which refuses on
+    // #712 asymmetry: a FIRST forge of a placed-but-not-yet-stored node
+    // stores. It creates the spec shots need rather than replacing one, so the
+    // scene placement does not refuse it (unlike eraseProp, which refuses on
     // placement alone).
     const leverSpec: IAutoMovieMcpPropSpec = {
       ...crateSpec(),

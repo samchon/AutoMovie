@@ -93,7 +93,7 @@ const slate: IAutoMovieMcpWritableSlate = {
  *
  * 1. `planCaptions` over a valid committed film whose fps × runtime rounds below
  *    one frame violates at `$input.frameFormat.fps` (and never invents a
- *    sidecar), the same call drives the sequence-runtime accumulator across a
+ *    sidecar); the same call drives the sequence-runtime accumulator across a
  *    trimmed and an un-trimmed entry.
  * 2. Negative twin: the same slate at a normal fps plans a sidecar.
  * 3. The caption tool enforces the complete shared frame-format object even though
