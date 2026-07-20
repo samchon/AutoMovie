@@ -7,6 +7,8 @@ description: Defines repository-wide issue discovery, lead-vetted issue publicat
 
 An issue campaign is a repeatable sequence of exhaustive discovery, issue publication, implementation pull requests, and campaign closure — the conquest loop: conquer every open ticket, then review the whole surface, surface new issues, and continue. The user's requested phase boundary controls how far to proceed; do not infer permission to publish issues, push branches, open pull requests, or merge from an audit-only request. A standing autonomous mandate (see the pull-request skill) is the exception: it authorizes the full loop end to end.
 
+Apply [AGENTS.md's **Choose the principled course** rule](../../../AGENTS.md#attitude) to every admission, disposition, implementation, and review decision in the campaign. A campaign's scale, duration, and blast radius demand stronger evidence and deeper consequence analysis; they never justify admitting an unverified candidate or accepting a weaker implementation or review standard.
+
 Read the project, development, and review skills before starting, and require every discovery-agent brief to do the same. Use the review skill's Issue Discovery Rounds; issue discovery is independent review, not discussion.
 
 ## Campaign Knowledge Base
