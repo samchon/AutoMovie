@@ -28,8 +28,22 @@ A `locomote` action's `gait` is a free string matched by name against the gaits 
 - **No overlapping camera moves**, and a `fullBody` action cannot layer with a partial-body action on the same span. Disjoint body regions (lower/upper/head) layer freely: a walk plus a wave plus a look compose without a bone claimed twice; overlapping regions blend by weight.
 - **Reaches are not clamped.** An impossible reach fails the shot's ROM gate rather than being quietly bent into range. Reposition the actor, do not expect the engine to hide the miss.
 - **A positional target may name any staged placement**: an actor, a set piece, or a **camera**. `lookAt`, `reach`, a `point`/`strike` gesture aim, a `launch` aim, and a frame subject or focus all resolve the same table, so "face the camera" is written `{ "kind": "node", "node": "<camera id>" }` and needs no invented point. The same table is what `stage`'s camera `lookAt`, `block`'s `camera.on` and `coverage[].on`, and the `measureDistance` / `getReach` queries resolve, so a subject one rung accepts is a subject every rung accepts. That does not make a camera an actor: a camera still acts only through `frame`, it is a place to point at, not a performer, and a `launch` carrying `onHit` must aim at a scene **node**, since nothing recoils a camera. A target that fails to resolve is refused by the **id** it named (or by the relative kind that names no place at all), so read the violation for the id, not for the discriminator.
-- **A `lookAt` meets its subject's eyes.** A node target resolves to a placement, which for an actor is the ground its feet stand on, so the engine lifts an actor subject by that actor's `eyeHeight` before aiming. Two actors at conversational range therefore hold each other's gaze instead of both staring at the floor and failing the head's ROM. Set pieces, props, and cameras keep their placement point: their origin is where staging put them, and a camera's translation is already its lens. Use an explicit `point` when you want a precise height.
+- **The same table does not mean the same aim height.** Which ids resolve is one rule; where on the subject each verb aims is another, and it decides whether a ROM gate fires. See Aim Height below.
 - Every compiled motion is ROM-checked (`validateMotion`); the launch compiler injects `react` actions timed to the engine-computed hit, so they share the same gate.
+
+## Aim Height
+
+Every positional verb resolves the same ids. WHERE on the subject each one aims is a separate, per-verb rule, because a node's placement is where the thing STANDS: for an actor that is the floor between its feet.
+
+| Verb | Aims at | Why |
+| --- | --- | --- |
+| `lookAt` | the subject's **eyes**: an actor placement lifted by that actor's `eyeHeight` | a gaze meets a gaze. Without the lift two actors at conversational range both stare at the floor, and 1.6 m of eye height over 0.7 m of separation needs 66 degrees of head flexion against a 45 degree limit, so the shot is refused |
+| `reach`, `point`, `strike` | the **placement** point | an arm does not reach for eyes, and no measured chest/hand height exists on the actor context to lift by. Author an explicit `point` target when you need a precise arm goal |
+| `locomote` | the **placement** point | a destination is a place on the ground |
+| `launch` | the **placement** point | the review pass measures a hit against the target's ground root, so aim and review agree |
+| `frame`, a `coverage` angle | a **measured fraction of the subject's rig height**: mid-body for `wide`/`full`, 0.72 for `medium`, 0.85 for `close` | the framing grammar owns its own aim height and measures it from the rig |
+
+Only actor ids move. A set piece, a prop, and a camera always resolve to their placement: a prop's origin is wherever staging put it, and a camera's translation is already its lens.
 
 ## Motions Are Derived, Not Stored
 
