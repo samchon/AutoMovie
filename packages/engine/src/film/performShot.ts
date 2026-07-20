@@ -83,6 +83,11 @@ const isFiniteVector3 = (vector: IAutoMovieVector3): boolean =>
     Number.isFinite(coordinate),
   );
 
+const isFiniteQuaternion = (rotation: IAutoMovieQuaternion): boolean =>
+  [rotation.x, rotation.y, rotation.z, rotation.w].every((component) =>
+    Number.isFinite(component),
+  );
+
 const actionActors = (action: IAutoMovieActionCall): string[] =>
   typeof action.actor === "string"
     ? [action.actor]
@@ -1063,6 +1068,14 @@ export const performShot = (props: {
   const validateFramingCamera = (
     camera: IAutoMovieCamera,
     path: string,
+    /**
+     * Whether this camera's move copies its staged ROTATION into the clip. Only
+     * `whip` does: it pans in place from the staged orientation, so that
+     * quaternion is pushed verbatim as the first keyframe, while every other
+     * move derives its rotation through {@link lookRotation}. Checking it
+     * unconditionally would refuse a shot whose move never reads it (#1316).
+     */
+    readsRotation: boolean,
   ): void => {
     if (!(camera.fovY > 0 && camera.fovY < 180))
       out.push(
@@ -1078,16 +1091,30 @@ export const performShot = (props: {
         `a camera that frames must be placed at a finite point, but "${camera.id}" is not`,
         camera.transform.translation,
       );
+    if (readsRotation && !isFiniteQuaternion(camera.transform.rotation))
+      out.push(
+        "range",
+        `${path}.transform.rotation`,
+        `a "whip" pans from the camera's staged orientation, so "${camera.id}" must carry a finite rotation`,
+        camera.transform.rotation,
+      );
   };
   // Walking the staged cameras (rather than looking the elected one up) keeps
   // the read total: there is no "the hero id names no camera" case to defend
   // against, because only a camera that IS in this list can be reached here.
   staged.scene.cameras.forEach((camera, i) => {
-    if (
-      (frames.length > 0 && camera.id === liveCamera) ||
-      coverageJobs.some((job) => job.camera === camera)
-    )
-      validateFramingCamera(camera, `$staged.scene.cameras[${i}]`);
+    const job = coverageJobs.find((entry) => entry.camera === camera);
+    const hero = frames.length > 0 && camera.id === liveCamera;
+    if (job === undefined && !hero) return;
+    // A coverage camera is never the elected one (the coverage gate refuses
+    // that), so a job settles which move this camera plays.
+    validateFramingCamera(
+      camera,
+      `$staged.scene.cameras[${i}]`,
+      job !== undefined
+        ? job.intent.move === "whip"
+        : frames.some((entry) => entry.action.move === "whip"),
+    );
   });
 
   if (out.items.length > 0) return { success: false, violations: out.items };

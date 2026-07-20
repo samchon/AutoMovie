@@ -55,7 +55,7 @@ const staged = (() => {
  */
 const withCamera = (
   id: string,
-  over: { fovY?: number; x?: number },
+  over: { fovY?: number; x?: number; rotX?: number },
 ): typeof staged => ({
   ...staged,
   scene: {
@@ -72,27 +72,37 @@ const withCamera = (
                 ...camera.transform.translation,
                 x: over.x ?? camera.transform.translation.x,
               },
+              rotation: {
+                ...camera.transform.rotation,
+                x: over.rotX ?? camera.transform.rotation.x,
+              },
             },
           },
     ),
   } as IAutoMovieScene,
 });
 
-const frame = (actor: string): IAutoMovieActionCall => ({
+const frame = (
+  actor: string,
+  move: "static" | "whip" = "static",
+): IAutoMovieActionCall => ({
   verb: "frame",
   actor,
   start: 0,
   duration: "auto",
   framing: "medium",
-  move: "static",
+  move,
   on: { kind: "node", node: "knightA" },
 });
 
-const coverageOn = (camera: string): ICoverage[] => [
+const coverageOn = (
+  camera: string,
+  move: "static" | "whip" = "static",
+): ICoverage[] => [
   {
     camera,
     framing: "medium",
-    move: "static",
+    move,
     on: { kind: "node", node: "knightB" },
   },
 ];
@@ -168,7 +178,14 @@ const clipValues = (result: IAutoMoviePerformedShot): number[] =>
  *    so legitimate extreme lenses are not swept up by the gate.
  * 4. The same two conditions against a COVERAGE camera, which is a separate
  *    subject reached through a separate path.
- * 5. The counter-case that keeps the gate narrow: a degenerate camera the shot
+ * 5. The rotation, which only a `whip` reads: it pans in place from the staged
+ *    orientation, so that quaternion is pushed verbatim as the first keyframe
+ *    while every other move derives its rotation through `lookRotation`. Both
+ *    subjects are refused when they whip on a non-finite rotation, and both
+ *    still compile with the same rotation under a non-whip move, which is what
+ *    proves the check follows what the solve consumes rather than validating
+ *    the whole transform (#1316). A valid whip emits only finite keyframes.
+ * 6. The counter-case that keeps the gate narrow: a degenerate camera the shot
  *    never frames through is not checked. With no frame action at all the shot
  *    falls back to the first camera locked off, compiling no move, so even a
  *    degenerate elected camera is left alone.
@@ -245,7 +262,63 @@ export const test_film_perform_shot_framing_camera = (): void => {
     ),
   );
 
-  // 5. the counter-cases that keep the gate narrow.
+  // 5. the rotation, which ONLY a `whip` reads: it pans in place from the
+  //    staged orientation, so that quaternion is pushed verbatim as the first
+  //    keyframe while every other move derives its rotation through
+  //    lookRotation. The non-whip case is the counter-case that proves the
+  //    check follows what the solve consumes rather than validating the whole
+  //    transform (#1316).
+  TestValidator.predicate(
+    "a whip on a camera with a non-finite rotation is refused",
+    says(
+      perform(withCamera("cam-main", { rotX: Number.NaN }), [
+        frame("cam-main", "whip"),
+      ]),
+      `${heroPath}.transform.rotation`,
+      '"cam-main"',
+      "whip",
+    ),
+  );
+  TestValidator.equals(
+    "the same rotation with a non-whip move still compiles",
+    perform(withCamera("cam-main", { rotX: Number.NaN }), [frame("cam-main")])
+      .success,
+    true,
+  );
+  TestValidator.predicate(
+    "a whip coverage take on a non-finite rotation is refused",
+    says(
+      perform(
+        withCamera("cam-alt", { rotX: Number.POSITIVE_INFINITY }),
+        [frame("cam-main")],
+        coverageOn("cam-alt", "whip"),
+      ),
+      "$staged.scene.cameras[1].transform.rotation",
+      '"cam-alt"',
+    ),
+  );
+  TestValidator.equals(
+    "a non-whip coverage take on the same rotation still compiles",
+    perform(
+      withCamera("cam-alt", { rotX: Number.POSITIVE_INFINITY }),
+      [frame("cam-main")],
+      coverageOn("cam-alt"),
+    ).success,
+    true,
+  );
+  TestValidator.predicate(
+    "a valid whip compiles, and every keyframe it emits is finite",
+    (() => {
+      const whipped = perform(staged, [frame("cam-main", "whip")]);
+      return (
+        whipped.success === true &&
+        clipValues(whipped).length > 0 &&
+        clipValues(whipped).every(Number.isFinite)
+      );
+    })(),
+  );
+
+  // 6. the counter-cases that keep the gate narrow.
   TestValidator.equals(
     "a degenerate camera the shot never frames through is not checked",
     perform(withCamera("cam-alt", { fovY: 0 }), [frame("cam-main")]).success,
