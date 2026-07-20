@@ -1190,7 +1190,13 @@ export const performShot = (props: {
   // What a camera entry frames, resolved once for every take: the hero's frame
   // spans and each coverage angle read the SAME subject, so an alternate camera
   // frames the beat's subject exactly as the hero does, only from its own
-  // staged bearing.
+  // staged bearing. A subject may be any staged placement, a camera included
+  // (#1294), which is why neither lookup below may be asserted non-null: the
+  // placement table carries cameras, `nodeRotations` does not, and a camera can
+  // reach `motions` through a `launch` `onHit` aimed at it (the injected react
+  // names the struck id as its actor). Without a staged facing there is no
+  // node-local root to rotate into the world, so such a subject holds still:
+  // `at: null`, the documented degenerate case a `follow` move already handles.
   const framedSubject = (
     on: IAutoMovieActionTarget,
   ): IAutoMovieFramedSubject => {
@@ -1199,15 +1205,16 @@ export const performShot = (props: {
     const rig = node === null ? null : skeleton(node);
     const measured = rig === null ? 0 : computeRestHeight(rig);
     const motion = node === null ? undefined : motions[node];
+    const facing = node === null ? undefined : nodeRotations.get(node);
     return {
       base: point,
       height: measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT,
       // The animated base rides the node-local root under its staged facing,
       // the same read a leading launch uses (see animatedBaseAt).
       at:
-        motion === undefined
+        motion === undefined || facing === undefined
           ? null
-          : animatedBaseAt(point, nodeRotations.get(node!)!, motion),
+          : animatedBaseAt(point, facing, motion),
     };
   };
   const entries: IAutoMovieCameraFrameEntry[] = frames.map(({ action }) => ({
