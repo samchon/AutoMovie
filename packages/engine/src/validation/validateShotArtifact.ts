@@ -1,4 +1,5 @@
 import {
+  IAutoMovieConstraintViolation,
   IAutoMovieScene,
   IAutoMovieShot,
   IAutoMovieValidation,
