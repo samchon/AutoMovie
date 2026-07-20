@@ -59,6 +59,14 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["RENDER_GUIDES", "can only encode even axes"],
   ["RENDER_GUIDES", "reuse that exact value"],
   ["AUTOMOVIE_OVERALL", "no re-commit needed"],
+  // The perform surface corrected in #1294/#1295, pinned so the corpus keeps
+  // teaching the rules that actually ship: a camera is a legal positional
+  // target (but never a performer), a first beat opens on its staged
+  // placement, and commitBeatEnd is the remedy for exactly one refusal.
+  ["PERFORMANCE", "a place to point at, not a performer"],
+  ["PERFORMANCE", "a first beat opens on the staged placement"],
+  ["PERFORMANCE", "the only case that hint fits"],
+  ["PROJECT_MEMORY", "a first beat opens on the staged placement"],
 ];
 
 /**

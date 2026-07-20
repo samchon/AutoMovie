@@ -29,6 +29,11 @@ const scriptWrite = makeScriptWrite({
   beats: [
     { id: "beat-1", name: "one", summary: "the charge", durationHint: 2 },
     { id: "beat-2", name: "two", summary: "the aftermath", durationHint: 2 },
+    // beat-3 exists so one beat in this film has an UNCOMMITTED predecessor:
+    // since #1295 a first beat seeds its opening from the committed staged
+    // placement, so only a later beat can still be genuinely unseedable, and
+    // that is what pins the store-rerooting of the refusal.
+    { id: "beat-3", name: "three", summary: "the retreat", durationHint: 2 },
   ],
 });
 
@@ -98,8 +103,11 @@ const endActor = (node: keyof typeof ENDINGS): IAutoMovieBeatEndActorState => {
  * 4. A node case-colliding with a stored sibling, or with another node of the same
  *    registry, is refused before anything runs (#1093).
  * 5. Store faults are blamed at the store: a tampered context reports
- *    `$slate.actors.<node>...`, an unseedable loaded opening likewise, and a
- *    node/filename mismatch throws the keyed-slice error.
+ *    `$slate.actors.<node>...`, an unseedable loaded opening (a beat whose
+ *    predecessor's end was never committed) likewise, and a node/filename
+ *    mismatch throws the keyed-slice error. The counter-case: the same stored
+ *    contexts on the FIRST beat seed from the committed scene (#1295) and are
+ *    not refused.
  * 6. `eraseActor` refuses a staged actor, an absent context, malformed scalars,
  *    and a blank reason; after the scene is re-committed without the node, the
  *    erase removes exactly its file. Without a project it throws the
@@ -307,14 +315,27 @@ export const test_mcp_actor_slice = (): void => {
         hasViolation(intraCollision, "type", "$input.actors.guard"),
     );
 
-    // 5a. a loaded opening nothing can seed is blamed at the store.
-    const loadedFirstBeat = app.perform({
-      performance: perf("beat-1"),
+    // 5a. a loaded opening nothing can seed is blamed at the store. beat-3's
+    // predecessor (beat-2) has no committed end, and a later beat never falls
+    // back to the staged placement (#1295), so the stored contexts' omitted
+    // openings are unseedable and the refusal must locate the STORE.
+    const loadedSeedless = app.perform({
+      performance: perf("beat-3"),
     }).performed;
     TestValidator.predicate(
       "a loaded registry on a seedless beat is blamed at the slate",
-      loadedFirstBeat.success === false &&
-        hasViolation(loadedFirstBeat, "type", "$slate.actors.knightA.position"),
+      loadedSeedless.success === false &&
+        hasViolation(loadedSeedless, "type", "$slate.actors.knightA.position"),
+    );
+    // ...and the counter-case: the film's FIRST beat seeds those same stored
+    // contexts from the committed scene, so it is not refused at all.
+    const loadedFirstBeat = app.perform({
+      performance: perf("beat-1"),
+    }).performed;
+    TestValidator.equals(
+      "a loaded registry on the first beat seeds from the committed scene",
+      loadedFirstBeat.success,
+      true,
     );
 
     // 5b. a tampered stored context is blamed at the store.
