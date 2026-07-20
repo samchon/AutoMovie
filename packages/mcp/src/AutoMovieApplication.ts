@@ -1025,9 +1025,11 @@ export class AutoMovieApplication {
     performance: IAutoMoviePerformanceApplication.IWrite;
     /**
      * Per staged actor, the data the default synthesizer needs. In a RESIDENT
-     * call a context may omit `position`/`facingDeg` (#1176): they are seeded
-     * from the previous beat's committed end-state (`commitBeatEnd`), so a
-     * walking character resumes exactly where the last beat left it. A
+     * call a context may omit `position`/`facingDeg` (#1176, #1295): they are
+     * seeded from the previous beat's committed end-state (`commitBeatEnd`), so
+     * a walking character resumes exactly where the last beat left it, and on a
+     * beat with no predecessor from the committed staged placement itself, so a
+     * film's first beat never restates what `commitScene` just stored. A
      * successful resident perform also writes each context's beat-invariant
      * half through as `actors/<node>.json`, so a LATER resident perform may
      * omit `actors` entirely and read the stored contexts back (their openings

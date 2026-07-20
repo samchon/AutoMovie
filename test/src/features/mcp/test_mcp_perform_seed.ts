@@ -124,8 +124,10 @@ const beatOneEnd: IAutoMovieBeatEndState = {
  *    gait phase (#1176 PR-6) included; a `null` recorded phase stays an
  *    omission.
  * 2. Partial omission seeds only the missing field; the explicit field wins.
- * 3. Nothing to inherit is refused with the commitBeatEnd hint, per missing field:
- *    a first beat (no predecessor) and an uncommitted predecessor.
+ * 3. Nothing to inherit is refused per missing field. On a first beat only an
+ *    actor the committed scene never placed is unseedable (#1295 seeds the
+ *    staged knights there), and an uncommitted predecessor is refused with the
+ *    commitBeatEnd hint that fits it.
  * 4. Malformed registries and context entries pass through the seeder to the
  *    actor-registry gate; an EXPLICIT call may never omit the fields.
  */
@@ -155,8 +157,9 @@ export const test_mcp_perform_seed = (): void => {
       ),
     });
 
-    // 3a. beat-1 has no predecessor: every omitted field is unseedable, and the
-    // refusal names each one (both omitted / position-only / facing-only).
+    // 3a. beat-1 has no predecessor end, but the staged knights carry their own
+    // opening (#1295), so only the never-placed herald is unseedable. The
+    // staged pair is the counter-case: the refusal must not spread to them.
     const firstBeat = app.perform({
       performance: perf("beat-1"),
       actors: {
@@ -166,12 +169,12 @@ export const test_mcp_perform_seed = (): void => {
       },
     }).performed;
     TestValidator.predicate(
-      "a first beat cannot seed and refuses per omitted field",
+      "a first beat refuses only the actor the committed scene never placed",
       firstBeat.success === false &&
-        hasViolation(firstBeat, "type", "$input.actors.knightA.position") &&
-        hasViolation(firstBeat, "type", "$input.actors.knightA.facingDeg") &&
-        hasViolation(firstBeat, "type", "$input.actors.knightB.position") &&
-        hasViolation(firstBeat, "type", "$input.actors.herald.facingDeg"),
+        hasViolation(firstBeat, "type", "$input.actors.herald.facingDeg") &&
+        !hasViolation(firstBeat, "type", "$input.actors.knightA.position") &&
+        !hasViolation(firstBeat, "type", "$input.actors.knightA.facingDeg") &&
+        !hasViolation(firstBeat, "type", "$input.actors.knightB.position"),
     );
 
     // 3b. beat-2 before commitBeatEnd: the predecessor exists but its end was

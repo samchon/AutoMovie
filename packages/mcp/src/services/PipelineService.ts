@@ -4,12 +4,14 @@ import {
   IAutoMovieActorContext,
   IAutoMoviePerformedShot,
   IAutoMovieStagedSet,
+  Quaternion,
   blockBeat,
   cutSequence,
   forgeCast,
   forgeProp,
   makeActorSynthesizer,
   performShot,
+  scenePlacements,
   stageScene,
   toValidation,
   violation,
@@ -23,6 +25,7 @@ import {
   IAutoMovieForgeApplication,
   IAutoMovieGait,
   IAutoMoviePerformanceApplication,
+  IAutoMovieScene,
   IAutoMovieScriptApplication,
   IAutoMovieShot,
   IAutoMovieStagingApplication,
@@ -327,15 +330,18 @@ export class PipelineService {
           }))
         : violations;
     if (slate !== null) {
-      // Continuity-seed (#1176): an actor context that omits position/facing
-      // resumes from the previous beat's committed end-state, the automated
-      // form of the guide's manual "seed positions and facing from getBeatEnd".
-      // Runs after the shape floor so the performance record is guaranteed.
+      // Continuity-seed (#1176, #1295): an actor context that omits
+      // position/facing resumes from the previous beat's committed end-state,
+      // or, on the film's first beat, from the placement `commitScene` already
+      // stored, the automated form of the guide's manual "seed positions and
+      // facing from getBeatEnd". Runs after the shape floor so the performance
+      // record is guaranteed.
       const seeded = seedActorOpenings(
         actors,
         props.performance,
         slate.script!,
         slate.beatEnds,
+        slate.scene!,
       );
       if (seeded.violations.length > 0)
         return {
@@ -360,9 +366,11 @@ export class PipelineService {
         toActorContext(context),
       ]),
     );
-    const nodes = new Map(
-      staged!.scene.nodes.map((node) => [node.id, node.transform.translation]),
-    );
+    // The SAME placement table the engine's perform gate resolves targets
+    // against (#1294), cameras included. Two tables would let a target pass the
+    // gate and then synthesize nothing, which reads as a silently dropped
+    // action rather than a refusal.
+    const nodes = scenePlacements(staged!.scene);
     const synthesizeDefault = makeActorSynthesizer(contexts, nodes);
     const synthesisViolations = collectDefaultSynthesisViolations(
       props,
@@ -2013,30 +2021,63 @@ const validateTransformObject = (
 };
 
 /**
- * Continuity-seed for the resident `perform` (#1176): an actor context that
- * omits `position` or `facingDeg` inherits it from the previous beat's
- * committed end-state (script order), so a walking character resumes exactly
- * where, and facing exactly how, the last beat left it. Explicit values always
- * win. Nothing to inherit (a first beat, an uncommitted predecessor, an actor
- * the end-state never saw) is refused with the commitBeatEnd hint rather than
- * silently placed at the origin. Malformed registries and context entries pass
- * through untouched, the actor-registry gate owns those refusals.
+ * The heading a facing vector points, as degrees about +Y with 0 = +Z: the one
+ * convention staging authors placements in, so a seeded opening and the
+ * `facingDeg` the caller would have typed mean the same thing.
+ */
+const headingDegOf = (facing: IAutoMovieVector3): number =>
+  Math.atan2(facing.x, facing.z) * (180 / Math.PI);
+
+/**
+ * Continuity-seed for the resident `perform` (#1176, #1295): an actor context
+ * that omits `position` or `facingDeg` takes it from committed project state
+ * instead of from the caller, so a production stops restating what it already
+ * committed. Explicit values always win.
+ *
+ * Which committed state depends on where the beat sits:
+ *
+ * - A **later** beat resumes the previous beat's committed end-state, so a
+ *   walking character carries on exactly where, and facing exactly how, the
+ *   last beat left it;
+ * - The **first** beat has no predecessor, and its opening simply IS the
+ *   placement `commitScene` stored: position from that node's transform
+ *   translation, facing from the same transform's rotation (D012, the project
+ *   folder is the memory, so a resident call reads it rather than asking for it
+ *   again).
+ *
+ * The staged placement seeds a first beat only. On a later beat it is where the
+ * film opened, not where the actor now stands, so inheriting it would silently
+ * teleport the actor back to the top of the film; that stays a refusal.
+ *
+ * Each way of having nothing to inherit carries its own remedy, because
+ * `commitBeatEnd` is an instruction only one of them can follow: no predecessor
+ * beat and no staged placement, a predecessor whose end was never committed, or
+ * a committed end that never recorded this actor. None of them invents an
+ * origin. Malformed registries and context entries pass through untouched, the
+ * actor-registry gate owns those refusals.
  */
 const seedActorOpenings = (
   actors: Record<string, IAutoMovieMcpActorContext> | undefined,
   performance: IAutoMoviePerformanceApplication.IWrite,
   script: { beats: { id: string }[] },
   beatEnds: readonly IAutoMovieBeatEndState[],
+  scene: IAutoMovieScene,
 ): {
   actors: Record<string, IAutoMovieMcpActorContext> | undefined;
   violations: IAutoMovieConstraintViolation[];
 } => {
   if (!isRecord(actors)) return { actors, violations: [] };
   const index = script.beats.findIndex((b) => b.id === performance.beat);
+  // `null` covers both "this is the first beat" and "the script does not list
+  // this beat at all"; neither has a predecessor end to resume.
+  const predecessor = index > 0 ? script.beats[index - 1]!.id : null;
   const previous =
-    index > 0
-      ? (beatEnds.find((e) => e.beat === script.beats[index - 1]!.id) ?? null)
-      : null;
+    predecessor === null
+      ? null
+      : (beatEnds.find((e) => e.beat === predecessor) ?? null);
+  const placements = new Map(
+    scene.nodes.map((node) => [node.id, node.transform] as const),
+  );
   const violations: IAutoMovieConstraintViolation[] = [];
   const seeded: Record<string, IAutoMovieMcpActorContext> = {};
   for (const [node, context] of Object.entries(actors)) {
@@ -2048,6 +2089,27 @@ const seedActorOpenings = (
     if (!needsPosition && !needsFacing && !needsPhase) continue;
     const state = previous?.actors.find((actor) => actor.node === node);
     if (state === undefined) {
+      // A first beat opens on the staged placement itself. Staging records no
+      // stride, so `gaitPhase` stays omitted and the cycle starts at zero.
+      const placement = predecessor === null ? placements.get(node) : undefined;
+      if (placement !== undefined) {
+        seeded[node] = {
+          ...context,
+          position: needsPosition
+            ? { ...placement.translation }
+            : context.position,
+          facingDeg: needsFacing
+            ? headingDegOf(
+                Quaternion.rotateVector(placement.rotation, {
+                  x: 0,
+                  y: 0,
+                  z: 1,
+                }),
+              )
+            : context.facingDeg,
+        };
+        continue;
+      }
       // A missing phase alone is never refusable, a beat with nothing
       // recorded simply starts its gait cycles at zero.
       const unseedable = (field: string): void => {
@@ -2055,7 +2117,11 @@ const seedActorOpenings = (
           violation(
             "type",
             `$input.actors.${node}.${field}`,
-            `actor ${node} has no committed previous beat end to seed ${field} from, commit the predecessor's end (commitBeatEnd) or pass it explicitly`,
+            predecessor === null
+              ? `actor ${node} has no predecessor beat to inherit ${field} from, and a first beat seeds it from the committed staged placement, but the committed scene does not place ${node}, stage it (commitScene) or pass ${field} explicitly`
+              : previous === null
+                ? `actor ${node} resumes beat "${predecessor}", whose end was never committed, so there is no ${field} to inherit, commit that beat's end (commitBeatEnd) or pass ${field} explicitly`
+                : `the committed end of beat "${predecessor}" records no state for actor ${node}, so there is no ${field} to inherit, pass ${field} explicitly (an actor entering mid-film has no previous end to resume)`,
             undefined,
           ),
         );
@@ -2069,9 +2135,7 @@ const seedActorOpenings = (
       position: needsPosition
         ? { ...state.transform.translation }
         : context.position,
-      facingDeg: needsFacing
-        ? Math.atan2(state.facing.x, state.facing.z) * (180 / Math.PI)
-        : context.facingDeg,
+      facingDeg: needsFacing ? headingDegOf(state.facing) : context.facingDeg,
       // The end-state's null marks a non-looping close, nothing to resume, so
       // the omission stays an omission and the cycle starts at zero.
       ...(needsPhase && state.gaitPhase !== null
