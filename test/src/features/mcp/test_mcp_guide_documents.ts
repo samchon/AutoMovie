@@ -67,6 +67,12 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["PERFORMANCE", "a first beat opens on the staged placement"],
   ["PERFORMANCE", "the only case that hint fits"],
   ["PROJECT_MEMORY", "a first beat opens on the staged placement"],
+  // Multi-camera coverage (#1187), pinned in all three guides that teach a half
+  // of it: staging places the extra angles, blocking names them, and the render
+  // guides read the compiled alternates.
+  ["STAGING", "covered by several staged cameras"],
+  ["BLOCKING", "cut between angles of one performed beat"],
+  ["RENDER_GUIDES", "one entry per alternate camera take of the beat"],
 ];
 
 /**
