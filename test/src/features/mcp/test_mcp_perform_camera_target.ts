@@ -43,10 +43,27 @@ const context = (
 const LENS: IAutoMovieVector3 = { x: 1, y: 1.6, z: 3 };
 
 const script = makeScriptWrite();
+/**
+ * KnightB stands on the lens's ground point, so the actor target and the camera
+ * target differ in exactly one thing: the HEIGHT of the point they resolve to
+ * (a node resolves to `transform.translation`, an actor's feet; the camera
+ * resolves to its own translation, eye height). That is what makes scenario 4 a
+ * true adjacent case rather than a second, unrelated aim.
+ *
+ * The distance is load bearing. From knightA's eye at `y = 1.6`, aiming at a
+ * ground point `h` metres away tilts the head by `atan2(1.6, h)`, and the
+ * head's default ROM allows 45 degrees of flexion. At `h = sqrt(1^2 + 3^2) =
+ * 3.162` the aim is `atan2(1.6, 3.162) = 26.8` degrees, inside the limit with
+ * 18 degrees to spare; the yaw is `atan2(1, 3) = 18.4` degrees, the same as the
+ * camera aim, against a 70 degree twist limit. A knightB at conversational
+ * range would need `atan2(1.6, 0.7) = 66` degrees and be refused by the ROM
+ * gate, which is a statement about necks, not about the placement table under
+ * test.
+ */
 const staging = makeStagingWrite({
   actors: [
     { node: "knightA", position: { x: 0, y: 0, z: 0 }, facingDeg: 0 },
-    { node: "knightB", position: { x: 0, y: 0, z: 0.7 }, facingDeg: 180 },
+    { node: "knightB", position: { x: 1, y: 0, z: 3 }, facingDeg: 180 },
   ],
   cameras: [
     {
@@ -85,8 +102,11 @@ const lookAt = (to: IAutoMovieActionCall) =>
  * 3. The negative twin: an unknown id is refused at
  *    `$input.performance.draft[0].to`, and the refusal quotes that id instead
  *    of the `"node"` discriminator the same sentence lists as legal.
- * 4. The adjacent case one property away, a plain actor target, still performs, so
- *    the wider table did not turn into a wider acceptance of anything.
+ * 4. The adjacent case one property away, a plain actor target on the lens's
+ *    ground point, still performs, so the wider table did not turn into a wider
+ *    acceptance of anything. Only the resolved point's height differs from
+ *    scenario 1, and the staging comment derives why that height must be
+ *    reachable for the case to test the table rather than the neck's ROM.
  */
 export const test_mcp_perform_camera_target = (): void => {
   const app = new AutoMovieApplication();
