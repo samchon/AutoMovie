@@ -363,7 +363,8 @@ export const compileCameraCoverage = (props: {
  * world-Y extent. This is the subject height the framing grammar measures
  * distance from, the same "measure from the rig, not hope" doctrine as
  * staging's reach/stride.
- */ export const computeRestHeight = (skeleton: IAutoMovieSkeleton): number => {
+ */
+export const computeRestHeight = (skeleton: IAutoMovieSkeleton): number => {
   if (skeleton.bones.length === 0) return 0;
 
   const byName = new Map<
