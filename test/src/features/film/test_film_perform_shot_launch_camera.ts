@@ -1,5 +1,6 @@
 import {
   IAutoMoviePerformedShot,
+  compareCodeUnits,
   performShot,
   stageScene,
 } from "@automovie/engine";
@@ -104,7 +105,9 @@ export const test_film_perform_shot_launch_camera = (): void => {
   const perform = performing();
   const performers = (result: IAutoMoviePerformedShot): string[] =>
     result.success === true
-      ? result.shot.performances.map((entry) => entry.node).sort()
+      ? result.shot.performances
+          .map((entry) => entry.node)
+          .sort(compareCodeUnits)
       : [];
 
   // 1. shooting at the lens is legal.

@@ -1,3 +1,4 @@
+import { compareCodeUnits } from "@automovie/engine";
 import {
   IAutoMovieActionCall,
   IAutoMovieActionTarget,
@@ -116,7 +117,9 @@ export const test_mcp_perform_eye_contact = (): void => {
   if (performed.success !== true) return;
   TestValidator.equals(
     "both knights carry a compiled performance",
-    performed.shot.performances.map((entry) => entry.node).sort(),
+    performed.shot.performances
+      .map((entry) => entry.node)
+      .sort(compareCodeUnits),
     ["knightA", "knightB"],
   );
 
