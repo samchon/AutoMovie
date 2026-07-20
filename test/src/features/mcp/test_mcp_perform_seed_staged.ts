@@ -139,10 +139,9 @@ const aimOf = (
   motions: Record<string, IAutoMovieMcpMotion>,
   node: string,
 ): number => {
-  const motion = motions[node];
-  if (motion === undefined)
+  if (!(node in motions))
     throw new Error(`the head aim of ${node} was never synthesized`);
-  return headTwist(motion);
+  return headTwist(motions[node]!);
 };
 
 /** Open a resident project already carrying the committed script and scene. */
