@@ -2,6 +2,7 @@ import {
   appendShotMetadataArtifact,
   compareCodeUnits,
   forgeProp,
+  validateClipArtifact,
   validateModel as validateEngineModel,
   validateScriptTree,
 } from "@automovie/engine";
@@ -1180,12 +1181,12 @@ const validateShotSlice = (
     false,
   );
   if (value.cameraMotion !== null && value.cameraMotion !== undefined)
-    validateObjectArtifact(
-      value.cameraMotion,
-      "$input.cameraMotion",
-      "shot cameraMotion",
-      violations,
-    );
+    // To the depth a consumer dereferences it, not merely "is an object": a
+    // stored clip goes straight to `sampleClip`, whose search assumes the
+    // strictly increasing times this pins. The coverage takes beside it were
+    // already checked this deeply, so the hero clip was the shallow one in its
+    // own function (#1324).
+    validateClipArtifact(value.cameraMotion, "$input.cameraMotion", violations);
   else if (value.cameraMotion === undefined)
     pushViolation(
       violations,
@@ -1236,12 +1237,17 @@ const validateShotSlice = (
         violations,
       );
   });
-  validateArrayArtifact(
-    value.objectMotions,
-    "$input.objectMotions",
-    "shot objectMotions",
-    violations,
-  );
+  if (
+    validateArrayArtifact(
+      value.objectMotions,
+      "$input.objectMotions",
+      "shot objectMotions",
+      violations,
+    )
+  )
+    value.objectMotions.forEach((clip, index) =>
+      validateClipArtifact(clip, `$input.objectMotions[${index}]`, violations),
+    );
   // The #1187 guide metadata and the event stream, gated on READ as well as on
   // submit: a slice validated looser than the submitted artifact is exactly the
   // validator drift #1097 called out. No scene travels with a shot slice, so the

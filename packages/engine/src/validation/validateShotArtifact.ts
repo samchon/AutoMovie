@@ -499,7 +499,14 @@ const appendShotCoverageArtifact = (
   });
 };
 
-const validateClipArtifact = (
+/**
+ * One clip's structural contract: track shape, strictly increasing times inside
+ * the clip's duration, and finite values. Exported because the shot artifact is
+ * not its only gate: the project store validates stored clips on READ, and a
+ * gate that exists to catch a corrupted file must check what its consumers
+ * dereference (#1324). `sampleClip` assumes the increasing times this pins.
+ */
+export const validateClipArtifact = (
   clip: unknown,
   path: string,
   violations: IAutoMovieConstraintViolation[],

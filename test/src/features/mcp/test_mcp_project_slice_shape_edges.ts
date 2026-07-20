@@ -302,6 +302,76 @@ export const test_mcp_project_slice_shape_edges = (): void => {
       },
       fragments: ["semantically invalid", "$input.events[0].time"],
     },
+    // 5c. the stored clip fields, to the depth a consumer dereferences them.
+    //     `sampleClip`'s search assumes strictly increasing times, and a stored
+    //     shot goes straight there. The coverage takes beside these were already
+    //     checked this deeply, so the hero clip was the shallow one inside its
+    //     own function (#1324).
+    {
+      title: "a stored cameraMotion with non-increasing times is refused",
+      rel: "shots/b1.json",
+      value: {
+        id: "shot:b1",
+        name: null,
+        scene: "sc",
+        camera: "cam",
+        cameraMotion: {
+          id: "cam:b1",
+          name: null,
+          duration: 2,
+          loop: false,
+          tracks: [
+            {
+              channel: { kind: "node", node: "cam", path: "translation" },
+              times: [1, 1],
+              values: [0, 0, 0, 0, 0, 0],
+              interpolation: "linear",
+            },
+          ],
+        },
+        performances: [],
+        objectMotions: [],
+        duration: 2,
+      },
+      fragments: [
+        "semantically invalid",
+        "$input.cameraMotion.tracks[0].times[1]",
+      ],
+    },
+    {
+      // JSON carries no NaN or Infinity, so the shape a hand-edited file can
+      // actually hold is a non-number: the check is finiteness, and a string
+      // fails it the same way. Writing `Number.NaN` here would serialise to
+      // `null` and quietly test something else.
+      title: "a stored objectMotion with a non-numeric track value is refused",
+      rel: "shots/b1.json",
+      value: {
+        id: "shot:b1",
+        name: null,
+        scene: "sc",
+        camera: "cam",
+        cameraMotion: null,
+        performances: [],
+        objectMotions: [
+          {
+            id: "attach:sword",
+            name: null,
+            duration: 2,
+            loop: false,
+            tracks: [
+              {
+                channel: { kind: "node", node: "sword", path: "translation" },
+                times: [0, 1],
+                values: [0, 0, 0, 0, "x", 0],
+                interpolation: "linear",
+              },
+            ],
+          },
+        ],
+        duration: 2,
+      },
+      fragments: ["semantically invalid", "$input.objectMotions[0]"],
+    },
     // 6. beat-end shot-mismatch guard
     {
       title: "a beat-end whose shot is not shot:<beat> reports the mismatch",
