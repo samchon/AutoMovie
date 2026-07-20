@@ -3,9 +3,19 @@ on:
   pull_request:
     paths:
       - '.github/workflows/test.yml'
+      # Matched by SHAPE, mirroring build.yml. The suite reads more than `src`:
+      # the per-package lint ruleset `ttsc` enforces before a scenario runs, the
+      # generators whose output it asserts, the guide corpus `prepare` bakes
+      # into a pinned constant, and the scaffold `test_cli_scaffold` reads from
+      # disk. None of those triggered a run before (#1333).
       - 'packages/*/src/**'
-      - 'packages/*/package.json'
-      - 'packages/*/tsconfig.json'
+      - 'packages/*/*.json'
+      - 'packages/*/*.ts'
+      - 'packages/*/*.html'
+      - 'packages/*/build/**'
+      - 'packages/*/prompts/**'
+      - 'packages/*/scaffold/**'
+      - 'packages/*/scripts/**'
       - 'internals/config/**'
       - 'test/**'
       - 'package.json'
