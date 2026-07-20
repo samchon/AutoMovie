@@ -213,9 +213,6 @@ importers:
 
   packages/mcp:
     dependencies:
-      '@automovie/cli':
-        specifier: workspace:^
-        version: link:../packages/cli
       '@automovie/engine':
         specifier: workspace:^
         version: link:../engine
@@ -373,6 +370,9 @@ importers:
 
   test:
     dependencies:
+      '@automovie/cli':
+        specifier: workspace:^
+        version: link:../packages/cli
       '@automovie/engine':
         specifier: workspace:^
         version: link:../packages/engine
