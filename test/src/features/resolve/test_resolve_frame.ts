@@ -47,8 +47,8 @@ const tx = (m: number[]): number => m[12]!;
  * The per-frame resolver end to end: SAMPLE → CONSTRAIN → COMPOSE, plus the
  * weights side-channel and the rest-pose (null clip) path.
  *
- * The scene has five nodes — one animating translation+rotation, one rotation
- * only, one scale only, one morph weights, and one static — exercising every
+ * The scene has five nodes (one animating translation+rotation, one rotation
+ * only, one scale only, one morph weights, and one static), exercising every
  * combination of present/absent TRS channels when folding samples into
  * overrides (in particular a rotation-only node, where the translation channel
  * is absent so the rotation channel is the one that triggers the override).
@@ -179,7 +179,7 @@ export const test_resolve_frame = (): void => {
   );
 
   // a driven output onto a node channel rejects as NON-SCALAR before the
-  // missing-node check can even see it (#1055) — the ghost-node validator
+  // missing-node check can even see it (#1055): the ghost-node validator
   // keeps its own pin through the clip-track path above
   const ghostOutput: IAutoMovieDrivenDriver = {
     type: "driven",

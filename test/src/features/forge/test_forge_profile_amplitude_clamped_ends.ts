@@ -11,7 +11,7 @@ import { nclose } from "../internal/predicates";
  *
  * Scenario: a kinked midline anchored at the nose (y 100, z 0) but ending at y
  * 140 inside a nose..chin span of 100..160; the profile is built from the same
- * clamped extension at alpha 0.5 / rowScale 0.8 — both come back.
+ * clamped extension at alpha 0.5 / rowScale 0.8. Both come back.
  */
 export const test_forge_profile_amplitude_clamped_ends = (): void => {
   const noseY = 100;

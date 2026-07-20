@@ -14,11 +14,11 @@ import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { projectToNdc, resolveCameraAt } from "./cameraProjection";
 
-/** Assumed render aspect (width/height) — the scene camera carries no aspect. */
+/** Assumed render aspect (width/height): the scene camera carries no aspect. */
 const DEFAULT_ASPECT = 16 / 9;
 
 /**
- * The OpenPose-style BODY keypoint set — the load-bearing humanoid bones, minus
+ * The OpenPose-style BODY keypoint set: the load-bearing humanoid bones, minus
  * the 30 finger bones (the dimensional tail that pose-conditioned diffusion
  * does not use). A rig that omits a bone simply produces no keypoint for it.
  */
@@ -45,7 +45,7 @@ export const DEFAULT_KEYPOINT_BONES: readonly AutoMovieHumanoidBone[] = [
 ];
 
 /**
- * Project one posed actor's named joints to 2D screen keypoints (#1168) — the
+ * Project one posed actor's named joints to 2D screen keypoints (#1168), the
  * exact OpenPose-style conditioning automovie can emit because it already knows
  * every bone's exact 3D world position. Forward kinematics resolves the pose in
  * rig space, the staged scene node's transform lifts each bone into scene-world
@@ -53,7 +53,7 @@ export const DEFAULT_KEYPOINT_BONES: readonly AutoMovieHumanoidBone[] = [
  * normalized `[0, 1]` frame coordinate.
  *
  * A joint behind the camera or outside the frame is still projected (never
- * silently clamped — a clamped point reads as a false edge keypoint) but
+ * silently clamped: a clamped point reads as a false edge keypoint) but
  * flagged `inFrame: false`. Deterministic: pure FK + stateless projection.
  *
  * @author Samchon

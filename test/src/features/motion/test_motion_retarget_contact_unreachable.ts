@@ -17,7 +17,7 @@ const missBy = (
 
 /**
  * A contact the target rig cannot physically hold is reported as a warning, not
- * a failure — residual foot slide is implausible, not impossible (D015).
+ * a failure: residual foot slide is implausible, not impossible.
  *
  * The rig pair is the same legs-1.5x / torso-0.9x target as the tracking case,
  * but now under the **default** humanoid ROM, whose hip gamut stops at 120
@@ -29,12 +29,12 @@ const missBy = (
  *
  * Scenarios:
  *
- * 1. The retarget succeeds — `validation.success` is true and `motion` is non-null
- *    — while carrying one `physics` warning per foot, located on the keyframe
- *    and effector that missed by the most.
+ * 1. The retarget succeeds (`validation.success` is true and `motion` is
+ *    non-null) while carrying one `physics` warning per foot, located on the
+ *    keyframe and effector that missed by the most.
  * 2. The residual it warns about is real: the pinned foot still misses its mapped
  *    contact by more than the 0.02 * rootScale contact budget.
- * 3. The clamped correction is still an improvement, not damage — the pinned foot
+ * 3. The clamped correction is still an improvement, not damage: the pinned foot
  *    ends closer to the mapped contact than the verbatim angle copy does.
  * 4. Widening `contacts.tolerance` widens the same budget, so the identical
  *    residual stops being worth reporting and the run comes back clean.

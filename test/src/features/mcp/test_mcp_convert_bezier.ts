@@ -20,7 +20,7 @@ import { qclose, vclose } from "../internal/predicates";
  * Scenarios:
  *
  * 1. `toMcpMotion` maps an engine clip's bezier tuple onto the named object and
- *    preserves a null bezier — and `toEngineMotion` inverts both, so the round
+ *    preserves a null bezier, and `toEngineMotion` inverts both, so the round
  *    trip is identity.
  * 2. `toEngineTransform` lowers an omitted/null rotation to the identity
  *    quaternion and an Euler rotation to its quaternion (90° about Y turns +Z

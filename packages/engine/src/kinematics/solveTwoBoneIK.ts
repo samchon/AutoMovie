@@ -19,7 +19,7 @@ const acosDeg = (x: number): number =>
 
 /**
  * Solve a two-bone IK chain (upper + lower segment) reaching toward a goal a
- * straight-line `distance` from the root — the closed-form, deterministic
+ * straight-line `distance` from the root: the closed-form, deterministic
  * **analytic IK** the engine references (the 80% case: arms, legs), no solver
  * iteration. Returns the mid-joint bend and the upper-segment lift via the law
  * of cosines; the caller orients the chain toward the goal and applies `bend`

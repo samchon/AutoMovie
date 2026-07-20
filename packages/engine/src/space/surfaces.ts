@@ -62,7 +62,7 @@ export const prepareSpace = (space: IAutoMovieSpace): IAutoMoviePreparedSpace =>
 /**
  * Height of one surface at `(x, z)`, ignoring its footprint: a flat patch is
  * `anchor.y` everywhere; a sloped patch interpolates linearly along the `anchor
- * → rampTo` axis on the ground plan (constant perpendicular — a plane). Points
+ * → rampTo` axis on the ground plan (constant perpendicular, a plane). Points
  * beyond the anchors extrapolate on that plane; the polygon, not the anchors,
  * bounds where the surface exists (see {@link surfaceContains}). A degenerate
  * ramp axis (same XZ as the anchor, rejected by {@link validateSpace}) safely
@@ -108,7 +108,7 @@ export const preparedSurfaceContains = (
 ): boolean => pointInHull({ x, y: 0, z }, prepared.hull);
 
 /**
- * The **topmost** surface under `(x, z)` — walkable or not — or `null` when the
+ * The **topmost** surface under `(x, z)` (walkable or not), or `null` when the
  * point is over nothing. Topmost is decided by the surface height _at that
  * point_ (a ramp may pass over a floor); an exact tie keeps the earlier surface
  * in the array, so the query is deterministic.
@@ -141,9 +141,9 @@ export const surfaceAt = (
 
 /**
  * The walking height at `(x, z)`: the height of the topmost surface there,
- * **when that surface is walkable** — `null` over nothing and `null` when the
+ * **when that surface is walkable**: `null` over nothing and `null` when the
  * topmost surface is a no-go top (standing space is occupied by something an
- * actor may not stand on; this 2.5-D heightfield cannot walk _under_ it —
+ * actor may not stand on; this 2.5-D heightfield cannot walk _under_ it:
  * overhangs are interia's future refinement).
  *
  * `isWalkable` is exactly `heightAt !== null`, so the two queries can never
@@ -173,9 +173,9 @@ export const isWalkable = (
 
 /**
  * Support contacts for an object footprint resting on the space: each footprint
- * point that lies over a surface (walkable or not — objects rest on no-go tops
+ * point that lies over a surface (walkable or not: objects rest on no-go tops
  * too) becomes a contact at that surface's height; points over nothing
- * contribute none. The result feeds {@link detectSupportToppling} directly — a
+ * contribute none. The result feeds {@link detectSupportToppling} directly: a
  * crate half off a table edge yields only the on-table contacts, so its
  * overhanging center of mass topples exactly as #601 judges it.
  *
@@ -203,7 +203,7 @@ export const supportContactsFor = (
  * Adapt a space into the `(x, z) → y` ground callback the motion seams consume
  * ({@link followPathMotion}'s ground, {@link plantStanceFeet} /
  * {@link validateGroundContact}'s widened `groundY`). Over nothing or over a
- * no-go top it returns `fallback` (default `0` — the scalar plane the engine
+ * no-go top it returns `fallback` (default `0`, the scalar plane the engine
  * assumed before the space layer, so an authored path that strays off the
  * surfaces degrades to the legacy behavior instead of a solver-ish
  * nearest-surface search, which stays deferred).

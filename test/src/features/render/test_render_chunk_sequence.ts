@@ -68,7 +68,7 @@ const sample = (frame: IAutoMovieSequenceRenderFrame) => ({
  *    frameEnd of each chunk equals the next chunk's frameStart (no
  *    gap/overlap).
  * 2. The chunks' frames, concatenated in order, reproduce the whole plan's frame
- *    samples exactly (count + per-frame time/shot/shotTimeSeconds/blend) — only
+ *    samples exactly (count + per-frame time/shot/shotTimeSeconds/blend); only
  *    the chunk-local index/path differ.
  * 3. The dissolve straddles the chunk-1 boundary (frame 2 in chunk 0, frame 3 in
  *    chunk 1); each keeps its exact blend, and no frame is duplicated or
@@ -227,7 +227,7 @@ export const test_render_chunk_sequence = (): void => {
   );
 
   // 6b. a directory-qualified output (the resident default) keeps chunk videos
-  // beside the list file and the concat lines relative to it — ffmpeg resolves
+  // beside the list file and the concat lines relative to it: ffmpeg resolves
   // list entries against the list file's directory, so a path-qualified line
   // ("renders/seq.chunk_0.mp4") would double the directory.
   const nested = planChunkedSequenceRender({

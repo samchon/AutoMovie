@@ -28,13 +28,13 @@ export interface IForgeAmplitudeFit {
  *
  * Landmark detectors get relative depth shapes roughly right but their
  * amplitude wrong, and two-view triangulation cannot fix it either (the
- * bas-relief ambiguity couples depth scale with the unknown yaw) — the profile
+ * bas-relief ambiguity couples depth scale with the unknown yaw). The profile
  * silhouette is the one absolute reference. Point anchors ("the chin tip")
  * proved fragile across chin shapes, so the WHOLE nose→chin midline curve is
  * matched instead: grid-search the cross-view row scale (the nose row pins the
  * offset), solve the amplitude by least squares at each candidate, keep the
  * best-residual pair. Rows whose silhouette edge is not skin (bangs, strands)
- * are excluded. The amplitude is clamped to `[0.2, 1.5]` — beyond that the fit
+ * are excluded. The amplitude is clamped to `[0.2, 1.5]`: beyond that the fit
  * is answering a different question.
  *
  * @author Samchon
@@ -81,7 +81,7 @@ export const fitProfileAmplitude = (props: {
       pairs.push([a, b]);
       n++;
     }
-    // saa === 0 means every sampled midline depth is 0 (flat detection) —
+    // saa === 0 means every sampled midline depth is 0 (flat detection):
     // there is no amplitude to solve for, and the 0/0 alpha would ride NaN
     // past both the best-rms comparison and the clamp (every comparison
     // with NaN is false), poisoning the calibrated face in silence (#1043).

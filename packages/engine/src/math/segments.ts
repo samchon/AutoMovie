@@ -13,7 +13,7 @@ const closestPointOnSegment = (
   const segment = Vector3.subtract(end, start);
   // Guard the zero-length segment (start === end, e.g. two bones the FK
   // resolves onto the same world point): an unguarded `0/0` yields NaN, and a
-  // NaN distance slips every `distance < minimum` collision test as false —
+  // NaN distance slips every `distance < minimum` collision test as false,
   // silently passing a real overlap. `Number.EPSILON` floors the span so t=0
   // and the closest point degrades to `start`, i.e. the exact point-to-point
   // distance. Mirrors `hull.ts`'s `closestPointOnSegmentXZ`.
@@ -35,13 +35,13 @@ export const pointSegmentDistance = (
   );
 
 /**
- * The exact closest pair of points on segments `a→b` and `c→d` — the clamped
+ * The exact closest pair of points on segments `a→b` and `c→d`, the clamped
  * segment-segment solver (Ericson, _Real-Time Collision Detection_ §5.1.9),
  * minimising `|P1(s) − P2(t)|` over `s, t ∈ [0, 1]`.
  *
  * The predecessor took the smallest of the four endpoint-to-segment distances,
  * which is only an upper bound on the true distance: two segments crossing
- * through each other's **interior** (an X, the commonest self-intersection — an
+ * through each other's **interior** (an X, the commonest self-intersection: an
  * arm sweeping through a torso) report each endpoint a full segment-width away
  * while the real distance is zero, so the forced self-intersection check (and
  * the body-collision warning) missed the overlap entirely. This solves for the
@@ -138,7 +138,7 @@ export interface IAutoMovieClosestSegmentPoints {
 
 /**
  * Closest points between two segments and their distance, the exact clamped
- * solver ({@link closestSegmentPair}) — the same pair
+ * solver ({@link closestSegmentPair}), the same pair
  * {@link segmentSegmentDistance} measures, so a contact normal derived from the
  * pair agrees with the distance that flagged the contact.
  *

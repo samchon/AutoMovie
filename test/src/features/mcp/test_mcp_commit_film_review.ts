@@ -73,7 +73,7 @@ const film: IAutoMovieSequence = {
  * The one irreversible editorial gate demands a pre-commit self-review (#1131):
  * the cut's authoring stage justifies pacing and continuity, but nothing forced
  * the agent to SELF-CHECK the final cut-list against that intent before
- * persisting it — the same evidence discipline every erase/set already carries.
+ * persisting it, the same evidence discipline every erase/set already carries.
  * `review` is declared BEFORE the film payload because schema-reflected tools
  * present properties in declaration order and the model fills them in that
  * order: reasoning ahead of the artifact it steers is chain-of-thought by

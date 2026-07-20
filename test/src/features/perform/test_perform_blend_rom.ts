@@ -12,8 +12,8 @@ import { hasViolation } from "../internal/predicates";
 
 /**
  * The blend never clamps: a weighted result outside a joint's ROM stays out of
- * range, so `validateMotion` reports it — the model must reweigh or reposition,
- * the engine does not hide it (D007). This proves the additive path passes an
+ * range, so `validateMotion` reports it: the model must reweigh or reposition,
+ * the engine does not hide it. This proves the additive path passes an
  * out-of-ROM value straight through to validation rather than silently pulling
  * it into gamut.
  *
@@ -21,7 +21,7 @@ import { hasViolation } from "../internal/predicates";
  *
  * 1. Two layers whose blended elbow flexion (300°) exceeds the joint's range
  *    produce a motion that fails validation with a `rom` violation on the
- *    flexion axis — the blend did not clamp it.
+ *    flexion axis: the blend did not clamp it.
  * 2. A blend well inside ROM validates cleanly (the negative twin).
  */
 export const test_perform_blend_rom = (): void => {

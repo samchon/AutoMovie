@@ -12,12 +12,12 @@ import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { ease } from "../motion/easing";
 
-/** World up — the horizon a camera keeps level. */
+/** World up: the horizon a camera keeps level. */
 const UP: IAutoMovieVector3 = { x: 0, y: 1, z: 0 };
 
 /**
  * The rotation that points a camera's −Z down `direction` while keeping its
- * horizon level (world-up stabilized) — what a shortest-arc `aimRotation`
+ * horizon level (world-up stabilized), what a shortest-arc `aimRotation`
  * cannot do: the shortest arc from −Z rolls the frame on off-axis aims, which
  * the demo's orbit shot exposed as a tilted horizon. Standard look-at basis (x
  * = up × z, y = z × x) converted to a quaternion; aiming straight up/down
@@ -34,7 +34,7 @@ export const lookRotation = (
   // Basis → quaternion (Shepperd's method, w-branch first). The usual
   // x-major branch is provably unreachable here: this basis keeps x
   // horizontal, so x.x = z.z/h and y.y = h ≥ 0 (h = |(z.x, z.z)|), and
-  // x.x > y.y forces trace = x.x + y.y + z.z > 0 — the w-branch already
+  // x.x > y.y forces trace = x.x + y.y + z.z > 0. The w-branch already
   // took it. Only w / y-major / z-major remain.
   const trace = x.x + y.y + z.z;
   if (trace > 0) {
@@ -105,8 +105,8 @@ const FOLLOW_HZ = 4;
 
 /**
  * What a `frame` action points the camera at, resolved by the caller: the
- * subject's base (ground) point, its measured height, and — when the subject is
- * an actor with compiled motion — its animated base over shot time (base plus
+ * subject's base (ground) point, its measured height, and, when the subject is
+ * an actor with compiled motion, its animated base over shot time (base plus
  * the clip's root displacement). `at: null` means the subject holds still; a
  * `follow` move on it degenerates to a static framing.
  *
@@ -130,17 +130,17 @@ export interface IAutoMovieCameraFrameEntry {
 }
 
 /**
- * Compile a shot's `frame` actions into the live camera's motion clip — the
+ * Compile a shot's `frame` actions into the live camera's motion clip, the
  * deterministic shot grammar: **framing** picks the distance (the fraction of
  * the subject's height the frame shows, fitted to the camera's vertical FOV by
- * `d = (visible/2) / tan(fovY/2)`) and the aim height; **move** picks the path
- * — `static` locks the framed position, `push-in` dollies from 1.25× to 0.8× of
+ * `d = (visible/2) / tan(fovY/2)`) and the aim height; **move** picks the path:
+ * `static` locks the framed position, `push-in` dollies from 1.25× to 0.8× of
  * the framed distance, `orbit` sweeps 45° around the subject, `follow`
  * re-frames against the subject's animated base, and `whip` pans in place from
  * the staged orientation onto the subject.
  *
- * The camera approaches along its **staged bearing** — the direction from the
- * subject's aim point to where staging placed the camera — so the side the
+ * The camera approaches along its **staged bearing** (the direction from the
+ * subject's aim point to where staging placed the camera), so the side the
  * director chose is preserved; only the distance is solved. Consecutive entries
  * are keyed back to back, so the sampler's linear interpolation plays the gap
  * between two framings as a deliberate re-frame move.
@@ -230,7 +230,7 @@ export const compileCameraMove = (props: {
       case "push-in": {
         // Ease the dolly in and out instead of ramping at constant speed: the
         // distance eases from 1.25× to 0.8× of framed, so the camera creeps in,
-        // accelerates, and settles — a cinematic push, not a mechanical slide.
+        // accelerates, and settles: a cinematic push, not a mechanical slide.
         for (let k = 0; k <= PUSH_IN_SEGMENTS; ++k) {
           const p = k / PUSH_IN_SEGMENTS;
           const scale =
@@ -243,7 +243,7 @@ export const compileCameraMove = (props: {
       case "orbit": {
         // Ease the swept angle in and out (not the radius or the endpoints): the
         // orbit creeps off its mark, accelerates through the mid-arc, and settles
-        // onto the far bearing — a reveal orbit, not a turntable at constant rate.
+        // onto the far bearing: a reveal orbit, not a turntable at constant rate.
         for (let k = 0; k <= ORBIT_SEGMENTS; ++k) {
           const p = k / ORBIT_SEGMENTS;
           const swing = Quaternion.fromAxisAngle(
@@ -282,7 +282,7 @@ export const compileCameraMove = (props: {
           camera.transform.translation,
           lookRotation(Vector3.subtract(aim0, camera.transform.translation)),
         );
-        // Whip pans in place — the framed distance is not honored; `k` exists
+        // Whip pans in place. The framed distance is not honored; `k` exists
         // only to keep the framing math total for future dolly-after-whip.
         void k;
         break;
@@ -318,7 +318,7 @@ export const compileCameraMove = (props: {
  * A skeleton's rest-pose height: compose each bone's rest transform down the
  * parent chain (rotation and translation; rigs keep unit scale) and take the
  * world-Y extent. This is the subject height the framing grammar measures
- * distance from — the same "measure from the rig, not hope" doctrine as
+ * distance from, the same "measure from the rig, not hope" doctrine as
  * staging's reach/stride.
  */
 export const computeRestHeight = (skeleton: IAutoMovieSkeleton): number => {

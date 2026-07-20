@@ -20,7 +20,7 @@ const handAt = (
   )!.worldPosition;
 
 /**
- * `reachPose` — analytic two-bone arm IK. The contract is the FK oracle: pose
+ * `reachPose`: analytic two-bone arm IK. The contract is the FK oracle: pose
  * the skeleton with the returned angles and the hand lands on the target. Any
  * error in the shoulder/elbow solve or the quaternion→clinical lowering shows
  * up as a hand that misses, so this pins correctness end to end regardless of
@@ -31,7 +31,7 @@ const handAt = (
  *
  * Scenarios:
  *
- * 1. Several reachable targets around the shoulder (forward, down, across, up) —
+ * 1. Several reachable targets around the shoulder (forward, down, across, up):
  *    the resolved left hand lands on each within tolerance.
  * 2. A target beyond the 0.55 m reach extends the arm fully toward it: the hand
  *    lands on the shoulder→target ray at exactly reach distance (on the shell,
@@ -40,7 +40,7 @@ const handAt = (
  *    the shoulder returns null (degenerate); a zero-length arm bone (a
  *    malformed rig) returns null instead of dividing by zero.
  * 4. A target straight below the shoulder (the reach axis parallel to the
- *    world-down pole) still lands — the bend-plane normal falls back to a
+ *    world-down pole) still lands: the bend-plane normal falls back to a
  *    second reference so the solve stays total.
  */
 export const test_kinematics_reach = (): void => {

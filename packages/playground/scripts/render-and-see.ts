@@ -281,7 +281,7 @@ const routeUrl = (
     );
   url.searchParams.set("cap", "1");
   // Pin the capture canvas to the frame size (#1251), so the screenshot is WxH
-  // regardless of the viewport — the same URL contract capture-shots.mjs uses.
+  // regardless of the viewport: the same URL contract capture-shots.mjs uses.
   url.searchParams.set("w", `${width}`);
   url.searchParams.set("h", `${height}`);
   return url.toString();

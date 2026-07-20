@@ -4,7 +4,7 @@ import { IAutoMovieSceneNode } from "./IAutoMovieSceneNode";
 import { IAutoMovieSpace } from "./IAutoMovieSpace";
 
 /**
- * A scene: placed characters, cameras, and lights — the top-level container the
+ * A scene: placed characters, cameras, and lights, the top-level container the
  * viewer plays and the renderer bakes frames from.
  *
  * The scene is the composition layer above individual rigs: it says _where_
@@ -32,10 +32,10 @@ export interface IAutoMovieScene {
   lights: IAutoMovieLight[];
 
   /**
-   * The scene's space — standable surfaces and walkability (#605). Absent or
+   * The scene's space: standable surfaces and walkability (#605). Absent or
    * `null` means no declared space: the engine falls back to the scalar ground
    * plane it assumed before the space layer existed. Optional (`?`) rather than
-   * required so every pre-space scene stays valid — the evolving-schema pattern
+   * required so every pre-space scene stays valid, the evolving-schema pattern
    * {@link IAutoMovieShot.events} uses.
    *
    * Staging authors it ({@link IAutoMovieStagingApplication.IWrite.space}) and

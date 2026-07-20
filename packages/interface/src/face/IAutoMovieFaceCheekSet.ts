@@ -10,9 +10,9 @@ import { IAutoMovieFaceCheek } from "./IAutoMovieFaceCheek";
  * @author Samchon
  */
 export interface IAutoMovieFaceCheekSet {
-  /** The subject's LEFT cheek — applies to BOTH cheeks when `right` is omitted. */
+  /** The subject's LEFT cheek; applies to BOTH cheeks when `right` is omitted. */
   left?: IAutoMovieFaceCheek;
 
-  /** The subject's RIGHT cheek — applies to BOTH cheeks when `left` is omitted. */
+  /** The subject's RIGHT cheek; applies to BOTH cheeks when `left` is omitted. */
   right?: IAutoMovieFaceCheek;
 }

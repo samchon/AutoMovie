@@ -12,7 +12,7 @@ const at = (x: number, y: number, z: number): IAutoMovieVector3 => ({
 });
 
 /**
- * `aimYawPitch` — the yaw/pitch that aims from a point at a target in a frame
+ * `aimYawPitch`: the yaw/pitch that aims from a point at a target in a frame
  * facing `facingDeg`.
  *
  * Scenarios:

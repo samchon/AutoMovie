@@ -82,8 +82,8 @@ const endActor = (node: keyof typeof ENDINGS): IAutoMovieBeatEndActorState => {
 /**
  * The actors slice (#1176): a successful resident `perform` with an explicit
  * registry writes each context's beat-invariant half through as
- * `actors/<node>.json`, so a later resident `perform` omits `actors` entirely —
- * the stored contexts come back with their openings continuity-seeded — and
+ * `actors/<node>.json`, so a later resident `perform` omits `actors` entirely ,
+ * the stored contexts come back with their openings continuity-seeded, and
  * `eraseActor` is the targeted removal mirror.
  *
  * Scenarios:
@@ -95,8 +95,8 @@ const endActor = (node: keyof typeof ENDINGS): IAutoMovieBeatEndActorState => {
  *    single-actor perform upserts its own file and leaves the sibling
  *    byte-identical.
  * 3. An omitted registry compiles the same shot the explicit registry did.
- * 4. A node case-colliding with a stored sibling — or with another node of the
- *    same registry — is refused before anything runs (#1093).
+ * 4. A node case-colliding with a stored sibling, or with another node of the
+ *    same registry, is refused before anything runs (#1093).
  * 5. Store faults are blamed at the store: a tampered context reports
  *    `$slate.actors.<node>...`, an unseedable loaded opening likewise, and a
  *    node/filename mismatch throws the keyed-slice error.
@@ -162,7 +162,7 @@ export const test_mcp_actor_slice = (): void => {
       rig: rigged,
       restFrames: { rightUpperArm: { abduction: { sign: -1, neutral: 90 } } },
     };
-    // knightB carries neither rig nor rest frames — the optional halves of the
+    // knightB carries neither rig nor rest frames, the optional halves of the
     // stored spec stay absent, not null-filled.
     const knightB: IAutoMovieMcpActorContext = {
       skeleton: rigged.id,
@@ -380,7 +380,7 @@ export const test_mcp_actor_slice = (): void => {
         malformedRequest.actors.length === 2,
     );
 
-    // 6b. recast the script without knightB — the commit cascade clears the
+    // 6b. recast the script without knightB, the commit cascade clears the
     // scene, so the orphaned context is no longer staged anywhere and erases.
     const recast = app.commitScript({
       script: {

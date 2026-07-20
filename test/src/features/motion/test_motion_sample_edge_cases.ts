@@ -34,7 +34,7 @@ const flex = (
  *    (sampling at t=5 still yields the start, 30°).
  * 3. A negative time on a looping clip wraps into [0, duration): t=−0.25 on a 1s
  *    loop equals t=0.75, so 0→120 gives 90.
- * 4. Keyframes with different bone sets — a bone present in only one keyframe
+ * 4. Keyframes with different bone sets: a bone present in only one keyframe
  *    interpolates against "no articulation" on the absent side: the shoulder,
  *    present only at the end at 40°, samples to 20° at t=0.5 (and symmetrically
  *    when present only at the start).

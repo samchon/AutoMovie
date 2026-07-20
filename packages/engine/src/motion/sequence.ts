@@ -1,7 +1,7 @@
 import { IAutoMovieKeyframe, IAutoMovieMotion } from "@automovie/interface";
 
 /**
- * Concatenate several clips end-to-end into one timeline — the smallest step
+ * Concatenate several clips end-to-end into one timeline, the smallest step
  * toward a _performance_ (a shot stitched from beats: walk, then leap, then
  * sit). Each part's keyframes are shifted by the running offset so part `n`
  * starts where part `n−1` ended; the boundary keyframe (a later part's `time:
@@ -38,7 +38,7 @@ export const sequenceMotion = (
     for (const k of part.keyframes) {
       if (p > 0 && k.time === 0) {
         // the kept seam keyframe carries the incoming part's first-segment
-        // easing — sampleMotion eases each segment from its start (#1012)
+        // easing, sampleMotion eases each segment from its start (#1012)
         const seam = keyframes[keyframes.length - 1]!;
         keyframes[keyframes.length - 1] = {
           ...seam,
@@ -52,7 +52,7 @@ export const sequenceMotion = (
     offset += part.duration;
   }
   // A concatenation keeps a stride clock only when every part carries the
-  // SAME cycle and each part spans whole cycles — then the phase runs
+  // SAME cycle and each part spans whole cycles, then the phase runs
   // continuously across the seams (`phase(t) = (phaseAt + t) % period` holds
   // for the whole sequence). Any mismatch or partial cycle breaks the clock,
   // so it is honestly dropped rather than approximated.

@@ -2,7 +2,7 @@
 // model's profile render, normalize both, and report numeric shape error.
 //
 // The side photo's facial profile (forehead/nose/lips/chin/jaw) is the most
-// diagnostic, hair-free, fully-extractable curve we have — no landmark library
+// diagnostic, hair-free, fully-extractable curve we have: no landmark library
 // needed. We segment skin/hair from the light studio background, take the
 // face-front edge per row, and compare it (normalized by the nose-tip..chin
 // span) against the same curve pulled from the model.
@@ -10,7 +10,7 @@
 // MODEL curve = the clay MESH midline (morphs + the ported applyProfileSculpt,
 // so it matches the render's z-only chin/midface sculpt). CAVEAT: the rendered
 // nose-tip and lips are separate ellipsoids NOT in model.mesh, so the lip band
-// (v ~= -0.4..-0.7) reads too RECEDED vs the photo — treat those samples as
+// (v ~= -0.4..-0.7) reads too RECEDED vs the photo. Treat those samples as
 // measurement artifacts. The forehead (v>0), broad chin (v ~= -0.85..-1), and
 // midface ARE clay and reliable; fit chinSetbackZ/midfaceProjectZ against them.
 //

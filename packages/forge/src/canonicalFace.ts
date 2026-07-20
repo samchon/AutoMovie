@@ -1,5 +1,5 @@
 /**
- * The MediaPipe canonical face model — 468 vertices, UVs, and triangulation —
+ * The MediaPipe canonical face model (468 vertices, UVs, and triangulation),
  * converted to meters with glTF axis/UV conventions (y up, z toward the viewer,
  * UV origin top-left). This is the neutral base topology of the face editor:
  * index-compatible with FaceMesh landmark detections, so detected faces align
@@ -208,12 +208,12 @@ const CANONICAL_FACE_POSITIONS_RAW: number[] = [
 ];
 
 /**
- * Resting vertex positions (xyz triples, meters), 468 vertices — the raw
+ * Resting vertex positions (xyz triples, meters), 468 vertices: the raw
  * MediaPipe canonical, the neutral the editor's `0` resolves to and the base
  * every morph and identity residual is computed against.
  *
  * NOTE: an earlier "average-beauty" corrective (eye enlargement + glabella
- * smoothing) was reverted — measured A/B renders proved it made the neutral
+ * smoothing) was reverted. Measured A/B renders proved it made the neutral
  * WORSE (the eye enlargement puffed the lids and the glabella smooth reached
  * the upper lids, both drooping the eyes into a sleepy/monster look). The raw
  * canonical reads as a plain but natural face; any beauty corrective must be

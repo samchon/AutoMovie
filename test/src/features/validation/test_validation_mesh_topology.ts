@@ -40,9 +40,9 @@ const topo = (m: IAutoMovieMesh, expectClosed = false) =>
 /**
  * The Tier-5 mesh-topology validator (#1183): the `"topology"` violation kind
  * was codified but never emitted. It welds vertices and enforces the two
- * invariants every valid triangle mesh must satisfy — 2-manifold (no edge on
+ * invariants every valid triangle mesh must satisfy: 2-manifold (no edge on
  * more than two triangles) and consistent winding (adjacent triangles traverse
- * a shared edge oppositely) — as errors, with an opt-in watertight check.
+ * a shared edge oppositely). Both are errors, with an opt-in watertight check.
  * Tessellated primitives pass by construction; the target is externally-sourced
  * or hand-built mesh geometry validated through `validateModel`.
  *
@@ -57,18 +57,18 @@ const topo = (m: IAutoMovieMesh, expectClosed = false) =>
  *    skipped, not errored.
  * 5. A non-indexed single triangle (indices null → sequential) passes.
  * 6. Malformed buffers (empty, out-of-range index, ragged index/position count)
- *    yield no topology verdict — the structural report is `validateModel`'s
+ *    yield no topology verdict: the structural report is `validateModel`'s
  *    job.
  * 7. A closed manifold (a tetrahedron: every edge shared by exactly two
- *    outward-wound faces) PASSES `expectClosed` — the non-firing twin of
+ *    outward-wound faces) PASSES `expectClosed`: the non-firing twin of
  *    scenario 1's open-surface failure, so an over-matching boundary detector
  *    could not hide behind the absence of a watertight-passes case.
  * 8. That same tetrahedron with one face removed reports its three now-open
- *    boundary edges under `expectClosed` — pinning the watertight check to fire
+ *    boundary edges under `expectClosed`, pinning the watertight check to fire
  *    only on genuine boundaries.
  */
 export const test_validation_mesh_topology = (): void => {
-  // 1. consistent open pair — passes; expectClosed flags its open edges.
+  // 1. consistent open pair: passes; expectClosed flags its open edges.
   const openPair = mesh(P.slice(0, 12), [0, 1, 2, 1, 3, 2]);
   TestValidator.equals("a consistent open pair passes", topo(openPair), {
     success: true,
@@ -98,7 +98,7 @@ export const test_validation_mesh_topology = (): void => {
       flippedResult.violations.some((v) => v.expected.includes("flipped")),
   );
 
-  // 4. a degenerate triangle (v3 repeated) carries no surface — skipped.
+  // 4. a degenerate triangle (v3 repeated) carries no surface: skipped.
   const degenerate = mesh(P, [0, 1, 2, 3, 3, 4]);
   TestValidator.equals(
     "a degenerate triangle is skipped, not errored",
@@ -202,7 +202,7 @@ export const test_validation_mesh_topology = (): void => {
     hasViolation(openTetraClosed, "topology", "$input.indices"),
   );
   // The removed face exposes exactly its three edges, so the check must report
-  // three boundary edges — not merely "at least one" (a single collapsed
+  // three boundary edges, not merely "at least one" (a single collapsed
   // violation would still satisfy `hasViolation`).
   TestValidator.equals(
     "each of the three open edges is reported once",
@@ -213,7 +213,7 @@ export const test_validation_mesh_topology = (): void => {
   // 9. a tessellated box is per-face geometry: its eight corners are emitted
   // three times each (once per adjoining face), so it is watertight ONLY after
   // the topology check welds coincident positions. Passing `expectClosed`
-  // exercises WELD_GRID on a genuine seam — the merge's real purpose — where the
+  // exercises WELD_GRID on a genuine seam (the merge's real purpose), where the
   // hand-built fixtures above already share their vertex indices.
   const weldedBox = tessellateToMesh({
     type: "box",

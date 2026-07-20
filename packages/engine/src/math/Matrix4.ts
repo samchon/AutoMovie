@@ -4,7 +4,7 @@ import { IAutoMovieQuaternion, IAutoMovieVector3 } from "@automovie/interface";
  * Pure-function 4×4 matrix math, column-major (glTF / `three.js` storage order:
  * element `m[col * 4 + row]`).
  *
- * The interface never exposes a matrix — nodes carry decomposed TRS so every
+ * The interface never exposes a matrix: nodes carry decomposed TRS so every
  * value stays animatable ({@link IAutoMovieTransform}). But composing a
  * hierarchy _correctly_ under non-uniform scale needs a real matrix product
  * (TRS-only composition shears wrong when a scaled parent rotates a child), so
@@ -84,7 +84,7 @@ export namespace Matrix4 {
   /**
    * Split a transform matrix back into its TRS triple (the inverse of
    * {@link compose}), matching `three.js` `Matrix4.decompose`. Scale is taken as
-   * the basis-column lengths (assumed positive — the engine never mirrors); the
+   * the basis-column lengths (assumed positive: the engine never mirrors); the
    * rotation is read from the scale-normalized basis via the standard
    * largest-diagonal quaternion extraction.
    *
@@ -92,12 +92,12 @@ export namespace Matrix4 {
    * orientation/position out of its composed matrix, recomputes it (aim,
    * parent, IK), and recomposes.
    *
-   * A **collapsed axis** (scale 0 — a hidden part, a folded joint) has an
+   * A **collapsed axis** (scale 0: a hidden part, a folded joint) has an
    * all-zero basis column, so its normalizer is floored to `Number.EPSILON`
    * (the {@link "../math/segments"} / hull `Math.max(_, EPSILON)` discipline):
    * `0 / EPSILON = 0` keeps the rotation basis finite instead of `0 / 0 = NaN`
    * spreading through the quaternion and every descendant world matrix. The
-   * recovered rotation of a collapsed axis is indeterminate — but finite, so a
+   * recovered rotation of a collapsed axis is indeterminate, but finite, so a
    * degenerate node no longer silently poisons the frame.
    */
   export const decompose = (

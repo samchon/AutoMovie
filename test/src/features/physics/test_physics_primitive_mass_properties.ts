@@ -14,7 +14,7 @@ import { nclose, vclose } from "../internal/predicates";
  * 1. Box volume is width·height·depth.
  * 2. Sphere volume is 4/3·π·r³.
  * 3. Cylinder volume is π·r²·h.
- * 4. Cone volume is 1/3·π·r²·h — a third of its bounding cylinder.
+ * 4. Cone volume is 1/3·π·r²·h, a third of its bounding cylinder.
  * 5. Capsule volume is the cylinder body plus a full sphere.
  * 6. Plane is a degenerate solid with zero volume.
  * 7. Only the cone has an off-origin centroid, at +height/4 along +Y; every other

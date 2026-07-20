@@ -23,7 +23,7 @@ const LEFT_ARM: Omit<IAutoMovieRetargetHandContact, "start" | "end"> = {
  * A hand contact is preserved only where the caller declares it, because a hand
  * has no ground to be judged against.
  *
- * A foot's contact is inferable — it is the effector sitting on the ground
+ * A foot's contact is inferable: it is the effector sitting on the ground
  * plane. A hand resting on a table, braced on a wall, or gripping a partner is
  * geometrically indistinguishable from a hand in the air, so inferring one
  * would be a guess. The retarget therefore pins a hand only across a declared
@@ -35,14 +35,14 @@ const LEFT_ARM: Omit<IAutoMovieRetargetHandContact, "start" | "end"> = {
  * Scenarios:
  *
  * 1. Without a declaration, the 1.3x arm carries its angles verbatim and the left
- *    hand misses the mapped source contact by the full rest-length difference —
+ *    hand misses the mapped source contact by the full rest-length difference:
  *    0.2177, the hand-derived distance between (0.923, 1.645, 0) and (0.71,
  *    1.6, 0).
  * 2. Declaring the left-arm chain over the whole clip pins the hand back onto the
  *    mapped source contact within 0.005, on both keyframes, with no
  *    plausibility warning.
  * 3. A window that falls between the authored keyframe times pins nothing, so the
- *    clip is deep-equal to the undeclared retarget — the window bounds are
+ *    clip is deep-equal to the undeclared retarget: the window bounds are
  *    inclusive tests against real keyframe times, not a hint.
  * 4. A declaration naming bones the target rig does not have is skipped rather
  *    than half-solved, and the retarget still succeeds.

@@ -4,14 +4,14 @@ import { IAutoMovieNamedId } from "../core/IAutoMovieNamedId";
 import { IAutoMovieContextRequest } from "./IAutoMovieContextRequest";
 
 /**
- * Stage 6 — **ASSEMBLE** (the cut). With every beat's shot built and passed,
+ * Stage 6: **ASSEMBLE** (the cut). With every beat's shot built and passed,
  * edit them into one film: the order, each shot's trim, the transitions, and
- * the frame rate — an {@link IAutoMovieSequence} cut-list. This is the editorial
+ * the frame rate, an {@link IAutoMovieSequence} cut-list. This is the editorial
  * rung above the shots; the rhythm here (a sharp short strike, a held
  * aftermath) is where pacing lives.
  *
  * The CoT slots make the editor justify the cut: `pacing` (why this rhythm
- * serves the theme) and `continuity` (how the shots match across each cut — the
+ * serves the theme) and `continuity` (how the shots match across each cut: the
  * charge ends where the strike begins). Pull a sibling shot via `getContext`
  * (`getShot`) to check a match-cut rather than guess it.
  *
@@ -32,7 +32,7 @@ export namespace IAutoMovieAssembleApplication {
     /**
      * Think before you cut. In what order do the shots tell the story, where do
      * you trim dead air, where does a hard cut land harder than a dissolve, and
-     * what is the rhythm — which shots breathe, which snap? Note any continuity
+     * what is the rhythm: which shots breathe, which snap? Note any continuity
      * mismatch you are resolving.
      */
     thinking: string;
@@ -57,14 +57,14 @@ export namespace IAutoMovieAssembleApplication {
     entries: IEntry[];
 
     /**
-     * Why this rhythm serves the theme — which shots are held and which are cut
+     * Why this rhythm serves the theme: which shots are held and which are cut
      * tight, and why. (Pacing has no cheap deterministic verifier, so the
      * rationale is the quality signal.)
      */
     pacing: string;
 
     /**
-     * How the shots flow across the cuts — match-cuts, energy carried, no
+     * How the shots flow across the cuts: match-cuts, energy carried, no
      * jarring jump unless intended. The continuity you checked.
      */
     continuity: string;

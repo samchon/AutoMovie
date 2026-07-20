@@ -39,11 +39,11 @@ const T = (
 
 /**
  * `sceneToNodes` lowers the specialized scene onto the general node graph as
- * REST STRUCTURE — placements as world-transformed groups, cameras/lights as
- * payload nodes, skeleton subtrees prefixed per placement — and what a node is
+ * REST STRUCTURE (placements as world-transformed groups, cameras/lights as
+ * payload nodes, skeleton subtrees prefixed per placement), and what a node is
  * DOING arrives as clip overrides. The static parity contract (proof A of #594
  * S3): every lowered element's `composeScene` world equals the specialized
- * path's expectation — a placement/camera/light world IS its transform, a
+ * path's expectation: a placement/camera/light world IS its transform, a
  * held-pose actor's bone worlds are `placement ∘ resolvePose(pose)` (pose.root
  * folded by resolvePose, the same `foldRoot` semantics beatEndSim uses), and
  * the actor's synthetic root sits at `placement ∘ pose.root`.
@@ -53,13 +53,13 @@ const T = (
  * 1. A placement group's world transform equals its scene-node transform, a camera
  *    node's world equals the camera transform, a light node's world equals the
  *    light transform (rest structure, no overrides).
- * 2. A skeleton-less prop placement lowers no subtree — its group node is the only
+ * 2. A skeleton-less prop placement lowers no subtree: its group node is the only
  *    node carrying its id prefix.
  * 3. A held pose played as a constant clip (bridged with the placement's
  *    `nodePrefix`) reproduces the specialized path on every bone: world ≡
- *    `placement ∘ resolvePose(pose)` — position and rotation.
+ *    `placement ∘ resolvePose(pose)` (position and rotation).
  * 4. The actor's synthetic root node world equals `placement ∘ pose.root` (the
- *    fold contract), not the placement alone — the negative twin distinguishes
+ *    fold contract), not the placement alone: the negative twin distinguishes
  *    the two whenever `pose.root` is non-identity.
  */
 export const test_resolve_scene_to_nodes = (): void => {

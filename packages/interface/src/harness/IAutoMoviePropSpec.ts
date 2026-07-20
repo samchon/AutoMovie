@@ -6,7 +6,7 @@ import {
 import { IAutoMovieModel } from "../model/IAutoMovieModel";
 
 /**
- * The self-declared articulation of a prop — the internal joint nodes (a door's
+ * The self-declared articulation of a prop: the internal joint nodes (a door's
  * hinge, a drawer's slide) plus the profile that constrains and drives them,
  * all as data.
  *
@@ -20,7 +20,7 @@ import { IAutoMovieModel } from "../model/IAutoMovieModel";
  */
 export interface IAutoMoviePropArticulation {
   /**
-   * The prop's internal joint nodes — the subtree the profile binds onto.
+   * The prop's internal joint nodes: the subtree the profile binds onto.
    * Parents must resolve within this list (`null` = the prop's own root); the
    * scene bridge (`sceneToNodes`'s `props` registry) parents the subtree under
    * the prop's scene node with the placement prefix, so the profile binds with
@@ -39,7 +39,7 @@ export interface IAutoMoviePropArticulation {
 }
 
 /**
- * One authored prop — a crude primitive proxy with rich meaning (D011): the
+ * One authored prop, a crude primitive proxy with rich meaning: the
  * geometry stays simple boxes and cylinders, while the physics body
  * ({@link IAutoMovieModel.body}), the contact semantics
  * ({@link IAutoMovieModel.affordances}), and the self-declared articulation
@@ -48,7 +48,7 @@ export interface IAutoMoviePropArticulation {
  * The spec is what the FORGE stage's object side (`forgeProp`) gates: the model
  * must be a generated, skeleton-less prop whose id equals `node` (the staged
  * scene joins on it, exactly as a forged cast member does), and the
- * articulation — when present — must bind its profile onto the declared nodes
+ * articulation, when present, must bind its profile onto the declared nodes
  * without a dangling reference.
  *
  * @author Samchon

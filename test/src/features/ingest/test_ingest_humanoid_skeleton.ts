@@ -43,7 +43,7 @@ const find = (bones: IAutoMovieBone[], bone: string): IAutoMovieBone => {
  *    belongs to the imported object, not the skeleton): hips under a translated
  *    `Armature` keeps its own local rest.
  * 9. UE-mannequin naming maps in-chain: `pelvis → spine_01 → spine_02 → spine_03`
- *    land on hips/spine/chest/upperChest (#1042's amplifier — an unmapped spine
+ *    land on hips/spine/chest/upperChest (#1042's amplifier: an unmapped spine
  *    chain made dropped helper offsets the common case).
  */
 export const test_ingest_humanoid_skeleton = (): void => {
@@ -156,7 +156,7 @@ export const test_ingest_humanoid_skeleton = (): void => {
     vclose(worldOf(rolledSkel, "spine").worldPosition, { x: -0.2, y: 1, z: 0 }),
   );
 
-  // 8. a root bone keeps its own local rest — the armature is not composed
+  // 8. a root bone keeps its own local rest: the armature is not composed
   const wrapped = new Document();
   const armature = wrapped.createNode("Armature").setTranslation([5, 0, 0]);
   const wHips = wrapped.createNode("Hips").setTranslation([0, 1, 0]);

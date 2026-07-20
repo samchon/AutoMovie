@@ -1,5 +1,5 @@
 /**
- * Normalize a ground source — a plane scalar or an `(x, z) → y` heightfield —
+ * Normalize a ground source (a plane scalar or an `(x, z) → y` heightfield)
  * into the height callback the motion and validation seams consume. The one
  * spot the scalar/callback duality is resolved, so `plantStanceFeet` and
  * `validateGroundContact` stay byte-compatible with their pre-space scalar

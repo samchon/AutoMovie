@@ -7,7 +7,7 @@ import { nclose } from "../internal/predicates";
 
 /**
  * The pose sampler now binary-searches the enclosing keyframe segment instead
- * of scanning front to back — the O(N·F) → O(F·log N) fix for hours-long clips.
+ * of scanning front to back: the O(N·F) → O(F·log N) fix for hours-long clips.
  * A closed-form ramp gives an exact oracle at every point of a large clip: with
  * flexion(i) = i° and root.x = i at time i·dt (all linear easing), a linear
  * blend makes the sampled value exactly time/dt everywhere, so the binary

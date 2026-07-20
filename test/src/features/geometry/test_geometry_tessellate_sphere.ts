@@ -8,7 +8,7 @@ import { nclose } from "../internal/predicates";
  * the sphere's radius, and every normal is unit length (so lighting across the
  * surface is correct). Pins both to floating-point tolerance.
  *
- * Scenario: a radius-0.5 sphere — every vertex is exactly 0.5 from the origin,
+ * Scenario: a radius-0.5 sphere. Every vertex is exactly 0.5 from the origin,
  * and every normal has length 1.
  */
 export const test_geometry_tessellate_sphere = (): void => {

@@ -15,7 +15,7 @@ import { createSkeleton, joint, makePose } from "../internal/fixtures";
 import { nclose, throwsError, vclose } from "../internal/predicates";
 
 /**
- * `resolveAttachment` — the cross-skeleton joint that fixes a child model's
+ * `resolveAttachment`: the cross-skeleton joint that fixes a child model's
  * root into a bone of a posed parent (a rider in a horse's saddle). It runs FK
  * on the parent, reads the attachment bone's world position + orientation, and
  * composes the offset into that frame.
@@ -31,7 +31,7 @@ import { nclose, throwsError, vclose } from "../internal/predicates";
  *    the bone world position.
  * 3. Rotating the parent's root yaws the whole rig: the child inherits the bone's
  *    world rotation, and its offset translation is carried (rotated) into that
- *    frame — exactly matching a hand-composed FK result.
+ *    frame: exactly matching a hand-composed FK result.
  * 4. Attaching to a bone absent from the skeleton throws.
  * 5. A clinical-space parent pose resolves through the same rest-frame table as
  *    the renderer, so an attachment rides the visible hand rather than raw
@@ -76,7 +76,7 @@ export const test_kinematics_attachment = (): void => {
     nclose(r2.translation.y, 1.45) && nclose(r2.translation.z, 0.1),
   );
 
-  // 3. yaw the whole rig via the pose root — child inherits the bone's world
+  // 3. yaw the whole rig via the pose root: child inherits the bone's world
   //    rotation and the offset is carried into that frame
   const yaw = Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, 90);
   const yawed = makePose([], {

@@ -12,7 +12,7 @@ const broken = (
 
 /**
  * ForgeProp's gates report every contract breach with a field-located path for
- * the correction round — and, unlike bindProfile's first-throw, the missing
+ * the correction round, and, unlike bindProfile's first-throw, the missing
  * boneMap mappings are reported all at once.
  *
  * Scenarios:
@@ -20,7 +20,7 @@ const broken = (
  * 1. An empty prop node id is a `type` violation on `$input.node`.
  * 2. A model id differing from the node breaks the staging join.
  * 3. An imported origin violates the generated-prop contract.
- * 4. A model WITH a skeleton is an actor, not a prop — rejected toward forgeCast.
+ * 4. A model WITH a skeleton is an actor, not a prop: rejected toward forgeCast.
  * 5. An invalid model (zero-extent part) surfaces validateModel's violation
  *    remapped under `$input.model`.
  * 6. Empty articulation nodes violate.

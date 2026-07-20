@@ -33,7 +33,7 @@ const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: 1 };
 const ZERO: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
 
 /**
- * Trailing world velocity of the baked follow clip at `t` — the coupled child's
+ * Trailing world velocity of the baked follow clip at `t`, the coupled child's
  * real end velocity as its parent moves, finite-differenced over the last
  * {@link VELOCITY_DT} and clamped into the clip. Zero exactly at the clip's
  * start (an empty window), like the pose-clip velocity rule; for any `t > 0`
@@ -118,7 +118,7 @@ export const resolveBeatEnd = (
  * where every actor stands, faces, and is coupled as the beat begins, before
  * any of its motion has played. The continuity linter compares this against the
  * previous beat's end-state to catch a cut that fails to resume from where the
- * prior beat left off — the "characters drift, props disappear" failure the
+ * prior beat left off: the "characters drift, props disappear" failure the
  * forward-written end-state exists to prevent but nothing verified.
  *
  * Same shape as the end snapshot, so `gaitPhase`/`rootVelocity`/`footPlants`
@@ -193,7 +193,7 @@ const resolveSnapshot = (
 /** The per-beat lookups one actor's snapshot derives from. */
 interface IResolveContext {
   /**
-   * Shot-local instant to sample at — `0` for the opening, `duration` for the
+   * Shot-local instant to sample at: `0` for the opening, `duration` for the
    * end.
    */
   instant: number;
@@ -221,8 +221,8 @@ const endActorOf = (
       : Math.max(0, context.instant - performed.performance.startOffset);
   const mount = context.mountByNode.get(node.id)?.binding ?? null;
   const plants = context.plantsByNode.get(node.id);
-  // A coupled child's end world root comes from the shot's baked follow clip
-  // — the same composition performShot produced (#674) — overriding its own
+  // A coupled child's end world root comes from the shot's baked follow clip,
+  // the same composition performShot produced (#674), overriding its own
   // placement and pose-root. That covers the staged-mount rider AND the
   // per-beat `attachTo` grab (#1141): the shot leaves a grabbed prop in the
   // parent's hand, so the next beat must resume it there, not at its staged

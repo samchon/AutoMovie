@@ -4,7 +4,7 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose } from "../internal/predicates";
 
 /**
- * `projectileAt` — closed-form ballistic evaluation: `p = origin + v·t +
+ * `projectileAt`, closed-form ballistic evaluation: `p = origin + v·t +
  * ½·g·t²`, `v(t) = v + g·t`.
  *
  * Scenarios:

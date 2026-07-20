@@ -8,7 +8,7 @@ import { throwsError } from "../internal/predicates";
 /**
  * A rigid part whose `attachedBone` the skeleton does not carry throws instead
  * of silently parenting to the model root (#1106): the fallback rendered a
- * hand-held prop frozen at the origin while everything else looked right — the
+ * hand-held prop frozen at the origin while everything else looked right: the
  * silent-skip class #1051 removed from the viewer, and the same defect class
  * the skin path already throws on.
  *

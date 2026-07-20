@@ -16,8 +16,8 @@ const profileWith = (
 });
 
 /**
- * ProfileSemanticKeys walks exactly the references bindProfile remaps — limit
- * node channels and every driver's node fields — deduplicated in
+ * ProfileSemanticKeys walks exactly the references bindProfile remaps (limit
+ * node channels and every driver's node fields), deduplicated in
  * first-reference order, so forgeProp can demand every boneMap entry in one
  * correction round.
  *

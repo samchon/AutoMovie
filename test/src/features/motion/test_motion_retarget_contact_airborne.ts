@@ -24,7 +24,7 @@ import {
  *    the source rig's floor plus tolerance, so only the grounded first keyframe
  *    is corrected and the airborne one keeps its empty authored pose.
  * 2. Declaring a ground plane far below the rig removes every contact, and the
- *    corrected clip becomes deep-equal to the verbatim angle copy — the
+ *    corrected clip becomes deep-equal to the verbatim angle copy: the
  *    no-contact boundary.
  * 3. A single-keyframe clip is rejected by the clip validator, not by a crash
  *    inside the contact pass, and returns a field-located temporal violation.

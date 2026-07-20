@@ -39,8 +39,8 @@ export const mcpDoorSpec = (): IAutoMovieMcpPropSpec => {
 };
 
 /**
- * The MCP `forgeProp` tool: a JSON-only prop spec — driven ranges as named
- * `{from, to}` objects, no tuples — forges through the same engine gates, and
+ * The MCP `forgeProp` tool: a JSON-only prop spec, driven ranges as named
+ * `{from, to}` objects, no tuples, forges through the same engine gates, and
  * the accepted echo stays MCP-safe.
  *
  * Scenarios:

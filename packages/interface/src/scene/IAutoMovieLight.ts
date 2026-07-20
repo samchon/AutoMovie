@@ -3,7 +3,7 @@ import { IAutoMovieTransform } from "../geometry/IAutoMovieTransform";
 
 /**
  * A scene light. Discriminated on `type` so each light kind carries exactly the
- * parameters it needs and no others — directional light has no position-derived
+ * parameters it needs and no others: directional light has no position-derived
  * falloff, point/spot do.
  *
  * Maps onto glTF `KHR_lights_punctual` / `three.js` light types.

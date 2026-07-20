@@ -20,7 +20,7 @@ const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
  * A skeleton where two DISTINCT bones (`hips`, `spine`) resolve to the SAME
  * world point: `spine` is parented to `hips` with a zero rest offset, so its FK
  * position coincides with `hips` at the origin. A capsule declared over that
- * pair has a centerline that collapses to a single point — the zero-length
+ * pair has a centerline that collapses to a single point: the zero-length
  * segment the shared distance oracle must survive. The `leftUpperArm →
  * leftLowerArm` chain lays a second capsule straight through the origin.
  */
@@ -62,12 +62,12 @@ const key = (time: number): IAutoMovieKeyframe => ({
  * The zero-length-centerline regression: a capsule whose two endpoint bones are
  * distinct in the skeleton but coincident in world space collapses to a point.
  * Its centerline distance to a second capsule passing through that point is a
- * true `0`, well inside the summed radii — a real self-intersection.
+ * true `0`, well inside the summed radii: a real self-intersection.
  *
  * Before the span guard in `closestPointOnSegment`, the four-candidate distance
  * of `segmentSegmentDistance` produced `NaN` for the two collapsed-segment
  * candidates, `Math.min(0, 0, NaN, NaN)` was `NaN`, and `NaN < minimum` was
- * `false` — the overlap slipped through and the frame validated as clean. This
+ * `false`: the overlap slipped through and the frame validated as clean. This
  * test pins that the detection now fires (as a D015 plausibility warning; the
  * span guard is what makes the distance finite so the overlap is seen at all).
  */

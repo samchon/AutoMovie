@@ -47,7 +47,7 @@ export const createImportedModelObject = (
   // ALWAYS wrap (#1047): `applyPose` writes `pose.root` onto the model root's
   // local transform, and adopting a caller's Group directly (GLTFLoader's
   // `gltf.scene`, three-vrm's π-yawed VRM0 root) would stomp caller-owned
-  // state — the same asset composed differently on an incidental instanceof.
+  // state, the same asset composed differently on an incidental instanceof.
   object: wrapObject(options.object),
   bones: normalizeBones(options.bones),
   expressionTargets: options.expressionTargets,

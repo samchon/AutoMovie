@@ -2,7 +2,7 @@ import { IAutoMovieTransform } from "../geometry/IAutoMovieTransform";
 import { IAutoMovieJointPose } from "./IAutoMovieJointPose";
 
 /**
- * A single static full-body pose — a snapshot of the skeleton's articulation at
+ * A single static full-body pose: a snapshot of the skeleton's articulation at
  * one instant.
  *
  * A pose is **sparse**: `joints` lists only the bones that move away from their
@@ -31,7 +31,7 @@ export interface IAutoMoviePose {
   root: IAutoMovieTransform | null;
 
   /**
-   * The articulated joints. Sparse — only bones that leave their rest pose
+   * The articulated joints. Sparse: only bones that leave their rest pose
    * appear. Each {@link IAutoMovieJointPose.bone} should appear at most once;
    * the engine treats duplicates as a conflict.
    */

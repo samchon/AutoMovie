@@ -8,8 +8,8 @@ import { ViolationCollector } from "./violation";
 
 /**
  * Which parent kinds each node kind may refine. The refinement tree is
- * deliberately permissive where the design is silent — a tiny film may go
- * straight `intent → beat` — but never inverted: an act cannot hang under a
+ * deliberately permissive where the design is silent (a tiny film may go
+ * straight `intent → beat`), but never inverted: an act cannot hang under a
  * scene, a beat is always a leaf. `intent` is absent here because it is the
  * root and may have no parent at all.
  */
@@ -24,13 +24,13 @@ const ALLOWED_PARENTS: Record<
 };
 
 /**
- * Validate the screenplay refinement tree (D013) against its script's flat
- * beats — the structural gate a script with a `tree` must pass before commit.
+ * Validate the screenplay refinement tree against its script's flat
+ * beats, the structural gate a script with a `tree` must pass before commit.
  *
  * Checks, all `error` severity:
  *
  * - Node ids are non-empty and unique.
- * - Exactly one root (`parent: null`) exists and it is the `intent` — the tree
+ * - Exactly one root (`parent: null`) exists and it is the `intent`: the tree
  *   refines one film-level thought; a rootless forest or a second root is two
  *   films in one script.
  * - Every `parent` resolves, the refinement axis is acyclic, and each child's
@@ -39,7 +39,7 @@ const ALLOWED_PARENTS: Record<
  * - `temporal` and every `interactsWith` entry resolve to an existing node and
  *   never to the node itself.
  * - Beat-kind nodes join the flat `beats` 1:1: every beat node names a real beat
- *   id, no two nodes claim one beat, and every beat is claimed — a tree that
+ *   id, no two nodes claim one beat, and every beat is claimed: a tree that
  *   forgets a beat silently drops authored structure.
  * - Dialogue anchors are finite and `>= 0` when non-null.
  *

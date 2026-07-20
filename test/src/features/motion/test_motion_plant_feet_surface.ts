@@ -70,7 +70,7 @@ const rising = (x: number): number => 0.2 * x;
 /**
  * `plantStanceFeet` pins against the ground height at the stance-start contact,
  * not a global plane: on a slope the pin's `y` is the local surface height, so
- * a foot standing uphill plants higher than one at the origin — and a constant
+ * a foot standing uphill plants higher than one at the origin, and a constant
  * callback stays identical to the scalar it generalizes.
  *
  * Scenarios (stationary stand at root x=1 → foot world x=1.1):
@@ -78,7 +78,7 @@ const rising = (x: number): number => 0.2 * x;
  * 1. On the rising slope the stance is detected against the local height and the
  *    plant pins at `y = h(1.1) = 0.22` (hand oracle).
  * 2. The same stand planted with the constant callback `() => 0` produces exactly
- *    the scalar `groundY: 0` plant — the widened parameter preserved the scalar
+ *    the scalar `groundY: 0` plant: the widened parameter preserved the scalar
  *    behavior.
  */
 export const test_motion_plant_feet_surface = (): void => {

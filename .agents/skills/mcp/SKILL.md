@@ -1,6 +1,6 @@
 ---
 name: mcp
-description: Defines the design rules for packages/mcp — server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose. Use before adding or reshaping an MCP tool or its documentation.
+description: Defines the design rules for packages/mcp: server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose. Use before adding or reshaping an MCP tool or its documentation.
 ---
 
 # MCP Server Design
@@ -27,8 +27,8 @@ When adding or rewriting either, count the actual rendered description length ra
 
 ## Other conventions
 
-- A PR that adds or changes an MCP tool checks whether the guide corpus (`packages/mcp/prompts/`) needs the same change — see `packages/mcp/prompts/README.md`; a guide that does not know a tool teaches only the expensive corrections.
-- A PR that touches the MCP surface or package wiring runs `pnpm run e2e:tgz` (`internals/e2e-tgz.mjs`) — it packs the published chain, installs the tarballs fresh, and drives the packaged bin over stdio, catching `files`/`bin`/publishConfig regressions the in-repo gate cannot. Slow and network-dependent, so it stays outside the c8 coverage gate.
+- A PR that adds or changes an MCP tool checks whether the guide corpus (`packages/mcp/prompts/`) needs the same change (see `packages/mcp/prompts/README.md`); a guide that does not know a tool teaches only the expensive corrections.
+- A PR that touches the MCP surface or package wiring runs `pnpm run e2e:tgz` (`internals/e2e-tgz.mjs`). It packs the published chain, installs the tarballs fresh, and drives the packaged bin over stdio, catching `files`/`bin`/publishConfig regressions the in-repo gate cannot. Slow and network-dependent, so it stays outside the c8 coverage gate.
 - An MCP tool's return must be a single object type, never a bare union. The engine's success/violations unions are each wrapped (`IAutoMovieStageOutput { staged: IAutoMovieStagedSet }`) rather than returned directly.
 - Do not expose tuple types directly on the MCP surface. `typia.llm.controller` rejects them; use named object fields such as `{ x1, y1, x2, y2 }` or omit the unsupported control from the MCP contract.
 - The old per-stage `typia.llm.application<IAutoMovie*Application>()` interfaces are retired as the integration surface. The `IAutoMovie*Application.IWrite`/`IProps` types stay as the plain data shapes the class methods consume.

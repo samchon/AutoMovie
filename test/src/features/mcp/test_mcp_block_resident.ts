@@ -44,8 +44,8 @@ const beatEnd = (beat: string): IAutoMovieBeatEndState => ({
 
 /**
  * Resident `block` (#1176): omit `script` AND `staged` together and the beat
- * blocks against the committed slate — a long production stops re-sending the
- * staged scene every beat — and the previous beat's committed end-state (script
+ * blocks against the committed slate, a long production stops re-sending the
+ * staged scene every beat, and the previous beat's committed end-state (script
  * order) seeds `previous` automatically.
  *
  * Scenarios:
@@ -57,7 +57,7 @@ const beatEnd = (beat: string): IAutoMovieBeatEndState => ({
  *    auto-seed.
  * 3. Blocking before the scene is committed refuses at `$slate.scene`.
  * 4. A mixed call (script without staged, or staged without script) is refused at
- *    `$input` — the ambiguity is never guessed.
+ *    `$input`, the ambiguity is never guessed.
  * 5. Without a project, the resident form throws the actionable openProject
  *    prompt.
  */

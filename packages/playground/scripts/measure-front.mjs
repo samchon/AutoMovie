@@ -3,8 +3,8 @@
 //
 // Front is harder than profile: hair occludes the upper face oval. So we
 // skin-segment (skin = warm & bright; hair = dark; backdrop/shirt = neutral)
-// and use the reliably hair-free LOWER face — jaw and chin width and the
-// chin-to-brow height — plus whatever cheek width is visible.
+// and use the reliably hair-free LOWER face (jaw and chin width and the
+// chin-to-brow height) plus whatever cheek width is visible.
 //
 // Usage: node scripts/measure-front.mjs <hero>   (default hero3)
 // Step 1: extract + draw the skin mask edges so the segmentation can be

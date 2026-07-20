@@ -39,8 +39,8 @@ const beatEnd: IAutoMovieBeatEndState = {
 
 /**
  * Resident queries (#614): once a project is open, `get*` tools omitting their
- * slate read the resident project — so a long production never re-sends its
- * whole state per call — while explicit slates behave exactly as before and a
+ * slate read the resident project, so a long production never re-sends its
+ * whole state per call, while explicit slates behave exactly as before and a
  * missing project fails with an actionable message.
  *
  * Scenarios:

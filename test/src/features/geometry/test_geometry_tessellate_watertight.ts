@@ -24,7 +24,7 @@ const keyAt = (positions: number[], index: number): string =>
 
 /**
  * Every undirected edge of a non-degenerate triangle must be shared by exactly
- * two triangles — the 2-manifold "no holes, no fins" oracle. Vertices weld by
+ * two triangles: the 2-manifold "no holes, no fins" oracle. Vertices weld by
  * position (faces do not share indices), and triangles with a repeated welded
  * vertex (a sphere pole ring, a cone apex ring) carry no surface and are
  * skipped.
@@ -38,7 +38,7 @@ const isWatertight = (t: {
     const keys = [0, 1, 2].map((corner) =>
       keyAt(t.positions, t.indices[i + corner]!),
     );
-    if (new Set(keys).size < 3) continue; // degenerate — no surface, no edges
+    if (new Set(keys).size < 3) continue; // degenerate: no surface, no edges
     for (let e = 0; e < 3; ++e) {
       const edge = [keys[e]!, keys[(e + 1) % 3]!]
         .sort((a, b) => a.localeCompare(b))
@@ -50,7 +50,7 @@ const isWatertight = (t: {
   return counts.size > 0;
 };
 
-/** Signed volume via the divergence theorem — exact for a closed polyhedron. */
+/** Signed volume via the divergence theorem, exact for a closed polyhedron. */
 const signedVolume = (t: {
   positions: number[];
   indices: number[];
@@ -71,7 +71,7 @@ const signedVolume = (t: {
 
 /**
  * Solid primitives must be WATERTIGHT (#1143). The cylinder lattice used to
- * emit only its side wall — a barrel prop was see-through from above under
+ * emit only its side wall: a barrel prop was see-through from above under
  * back-face culling, and the winding sweep's `volume > 0` oracle passed
  * vacuously (an open side wall already fluxes ⅔·πr²h). Closing the ends makes
  * the divergence-theorem volume equal the analytic n-gon solid EXACTLY, which
@@ -85,8 +85,8 @@ const signedVolume = (t: {
  * 2. Closed signed volumes match the analytic n-gon solids exactly: prism `A·h`
  *    (cylinder), pyramid `A·h/3` (cone), bounding prism `A·(h+2r)` (capsule).
  * 3. Every emitted normal is unit length, and the cone's side normals carry the
- *    slant's exact y-component `(0 − r)/√(h² + r²)` — not 0.
- * 4. Negative twin: the plane stays a degenerate zero-volume solid — exempt from
+ *    slant's exact y-component `(0 − r)/√(h² + r²)`, not 0.
+ * 4. Negative twin: the plane stays a degenerate zero-volume solid, exempt from
  *    the watertight demand, its signed volume exactly 0.
  */
 export const test_geometry_tessellate_watertight = (): void => {

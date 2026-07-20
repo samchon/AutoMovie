@@ -7,7 +7,7 @@ import { IAutoMovieFaceMouth } from "./IAutoMovieFaceMouth";
 import { IAutoMovieFaceNose } from "./IAutoMovieFaceNose";
 
 /**
- * A face-shape specification — the document the face editor's tool calling
+ * A face-shape specification: the document the face editor's tool calling
  * emits and the engine morphs deterministically.
  *
  * The document mirrors facial anatomy: overall head form at the top level, then
@@ -18,7 +18,7 @@ import { IAutoMovieFaceNose } from "./IAutoMovieFaceNose";
  * (the canonical neutral topology, or a character whose `identity` morph is
  * already baked): `0` is the template unchanged, the sign picks the direction,
  * `±1` is one nameable trait step, and beyond `±1` exaggerates toward
- * caricature. **Omitted fields and groups mean neutral** — emit only the traits
+ * caricature. **Omitted fields and groups mean neutral**: emit only the traits
  * you intend to change. Magnitudes are enforced at runtime by the engine
  * validator; each leaf projects onto one glTF morph target
  * ({@link AutoMovieFaceParameterName}) the forge bakes into the template.
@@ -35,34 +35,34 @@ export interface IAutoMovieFace {
 
   /**
    * Vertical stretch about the eye line: `+` longer (lower jaw drops, brow
-   * rises), `-` shorter and rounder — childlike faces sit negative.
+   * rises), `-` shorter and rounder; childlike faces sit negative.
    */
   length?: AutoMovieFaceWeight;
 
   /**
-   * The cheeks (left/right asymmetry inside) — see
+   * The cheeks (left/right asymmetry inside). See
    * {@link IAutoMovieFaceCheekSet}.
    */
   cheeks?: IAutoMovieFaceCheekSet;
 
-  /** The jaw, with the chin nested at its tip — see {@link IAutoMovieFaceJaw}. */
+  /** The jaw, with the chin nested at its tip. See {@link IAutoMovieFaceJaw}. */
   jaw?: IAutoMovieFaceJaw;
 
   /**
-   * The eyes, shared fields + left/right asymmetry — see
+   * The eyes, shared fields + left/right asymmetry. See
    * {@link IAutoMovieFaceEyeSet}.
    */
   eyes?: IAutoMovieFaceEyeSet;
 
   /**
-   * The eyebrows (left/right asymmetry inside) — see
+   * The eyebrows (left/right asymmetry inside). See
    * {@link IAutoMovieFaceBrowSet}.
    */
   brows?: IAutoMovieFaceBrowSet;
 
-  /** The nose — see {@link IAutoMovieFaceNose}. */
+  /** The nose. See {@link IAutoMovieFaceNose}. */
   nose?: IAutoMovieFaceNose;
 
-  /** The mouth, with the lips nested inside — see {@link IAutoMovieFaceMouth}. */
+  /** The mouth, with the lips nested inside. See {@link IAutoMovieFaceMouth}. */
   mouth?: IAutoMovieFaceMouth;
 }

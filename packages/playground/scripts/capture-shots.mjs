@@ -2,7 +2,7 @@
 // Regenerate the .shots/*.mp4 demo clips. Drives the playground viewer pages in
 // ONE persistent headless-Chromium session (Playwright): the page is loaded
 // once per clip, then `window.__afSeek(t)` steps it to each frame deterministi-
-// cally and the canvas is screenshotted — no per-frame browser relaunch. Frames
+// cally and the canvas is screenshotted. No per-frame browser relaunch. Frames
 // are encoded straight to H.264 MP4 in-process (wasm), so no ffmpeg needed.
 //
 // Prerequisites:
@@ -216,7 +216,7 @@ const capture = async ([page, q, dur, n, w, h, out, fps]) => {
     waitUntil: "load",
   });
   await pg.waitForFunction(() => typeof window.__afSeek === "function");
-  // frame only the 3D — hide any UI overlay (clip-selector bar) that would
+  // frame only the 3D: hide any UI overlay (clip-selector bar) that would
   // otherwise overlap the canvas in the element screenshot
   await pg.addStyleTag({ content: "#clips{display:none!important}" });
   const view = pg.locator("#view");

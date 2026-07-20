@@ -5,7 +5,7 @@ import { createSkeleton, createValidPose } from "../internal/fixtures";
 
 /**
  * A pose whose every articulated joint sits inside its anatomical range
- * validates successfully — the "valid input passes" baseline that gives the
+ * validates successfully: the "valid input passes" baseline that gives the
  * failure tests their meaning.
  *
  * Scenario: the standard valid pose (shoulder, elbow, and hip all well within

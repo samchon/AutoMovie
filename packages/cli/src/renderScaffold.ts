@@ -68,7 +68,7 @@ export const scaffoldAssetDirectory = (): string => {
 };
 
 /**
- * Render the bundled starter into an in-memory `{ posixPath: content }` map —
+ * Render the bundled starter into an in-memory `{ posixPath: content }` map:
  * read every asset, normalize line endings, substitute `{{name}}` and the
  * catalog-synced `{{version:*}}` tokens, and rename shipped-safe filenames.
  *

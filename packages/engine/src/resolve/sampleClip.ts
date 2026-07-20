@@ -27,7 +27,7 @@ export interface IAutoMovieSampledChannel {
  *
  * This is the engine's bridge from the sparse keyframes an LLM (or an imported
  * glTF) emits to the dense per-frame channel values the rest of the pipeline
- * (constrain → compose) consumes — the universal generalization of the
+ * (constrain → compose) consumes, the universal generalization of the
  * humanoid-only {@link sampleMotion}: a track may drive a node's TRS, morph
  * weights, a camera FOV, or any pointer-addressed property, and they all sample
  * identically.
@@ -97,7 +97,7 @@ const sampleTrack = (
   // (the bisect tie resolves it into the segment ENDING there, localT = 1)
   // belongs to the segment STARTING at that key (#1054). The fixed sampling
   // clock lands exactly on frame-aligned keys, so without this every step
-  // change played one sample late — and asymmetrically to `ease("step", 1)`.
+  // change played one sample late, and asymmetrically to `ease("step", 1)`.
   if (interpolation === "step") return localT >= 1 ? valueAt(hi) : valueAt(lo);
   if (cubic) return cubicHermite(track, lo, hi, span, localT, width, stride);
   return channelIsRotation(channel)

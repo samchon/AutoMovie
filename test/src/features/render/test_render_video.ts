@@ -30,7 +30,7 @@ const rejectsError = async (
 
 /**
  * The render orchestration over injected I/O: it captures one frame per
- * scheduled instant in order, then encodes the sequence — pure control flow, so
+ * scheduled instant in order, then encodes the sequence: pure control flow, so
  * a fake capture/encode pair drives it deterministically.
  *
  * Scenario: a 1 s clip at 24 fps captures 24 frames (each adapter call recorded

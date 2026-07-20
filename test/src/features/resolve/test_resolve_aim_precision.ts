@@ -41,13 +41,13 @@ const runAim = (
   return world;
 };
 
-/** 0.05° in radians — inside the OLD quatFromTo identity deadzone. */
+/** 0.05° in radians: inside the OLD quatFromTo identity deadzone. */
 const TINY = (0.05 * Math.PI) / 180;
 
 /**
  * The aim driver's rotation is deadzone-free (#643): the shared shortest-arc
  * helper used to snap `cos > 0.999999` (≈0.08°) to the identity, so an aim
- * whose target sat a fraction of a degree off-axis silently refused to track —
+ * whose target sat a fraction of a degree off-axis silently refused to track,
  * visible as a micro-freeze on a slow camera pan. After promoting the exact
  * `atan2`-based `rotationBetween`, every angle down to numerical zero produces
  * its exact rotation, and the antiparallel flip stays deterministic on both
@@ -55,7 +55,7 @@ const TINY = (0.05 * Math.PI) / 180;
  *
  * Scenarios:
  *
- * 1. A target 0.05° off the aim axis — inside the old deadzone — now aims EXACTLY
+ * 1. A target 0.05° off the aim axis (inside the old deadzone) now aims EXACTLY
  *    at the target (x-component = sin 0.05°, not the old identity's 0).
  * 2. A target exactly behind an owner whose aim axis has `|x| < 0.9` takes the
  *    x-perpendicular 180° flip and lands on the target.
@@ -75,7 +75,7 @@ export const test_resolve_aim_precision = (): void => {
       nclose(tracked.z, dir.z, 1e-9),
   );
   TestValidator.predicate(
-    "the rotation is real — not the old identity (x ≈ sin 0.05° ≠ 0)",
+    "the rotation is real, not the old identity (x ≈ sin 0.05° ≠ 0)",
     tracked.x > 1e-4,
   );
 

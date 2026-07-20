@@ -34,7 +34,7 @@ const GENERIC = new Set<string>([
 
 // A joint stop across the three articulation axes (unset axes stay null). The
 // arm gestures are authored in **clinical** space (abduction 0 = arm down, 90 =
-// horizontal, 180 = overhead — the same value raises either arm); the per-side
+// horizontal, 180 = overhead: the same value raises either arm); the per-side
 // rest-frame remap that fits it to a rig lives in the render, not these angles.
 const j = (
   bone: AutoMovieHumanoidBone,
@@ -47,7 +47,7 @@ const j = (
 });
 
 /**
- * Each generic gesture as a list of `[fraction, joints]` stops over the beat —
+ * Each generic gesture as a list of `[fraction, joints]` stops over the beat:
  * every angle hand-kept inside the humanoid ROM (bow bends the spine forward, a
  * nod dips the head, a shake twists it, a crouch folds hips and knees). The
  * fractions are of the action's `duration`, so the same shape stretches to
@@ -116,8 +116,8 @@ const SHAPES: Record<
     [1, []],
   ],
   // A stagger: the trunk lurches off balance (spine bends and leans to one
-  // side), a leg braces, then overcorrects the other way and settles — a
-  // trunk/leg loss of balance, no arm abduction. All within humanoid ROM
+  // side), a leg braces, then overcorrects the other way and settles (a
+  // trunk/leg loss of balance, no arm abduction). All within humanoid ROM
   // (spine flexion ≤80/extension ≥−30, abduction ±35).
   stagger: [
     [0, []],
@@ -152,7 +152,7 @@ const SHAPES: Record<
     [1, []],
   ],
   // A two-arm celebration: both arms thrown up in a V and pumped. In clinical
-  // space the raise is +abduction on both arms alike — no per-side mirror.
+  // space the raise is +abduction on both arms alike: no per-side mirror.
   celebrate: [
     [0, []],
     [0.22, celebratePose(1)],
@@ -222,7 +222,7 @@ const SHAPES: Record<
 /**
  * Both arms thrown up in a V, scaled by `s` (a pump raises them higher). The
  * clinical abduction raises either arm alike, so both sides carry the same
- * positive angle — no per-side mirror.
+ * positive angle (no per-side mirror).
  */
 function celebratePose(s: number): IAutoMovieJointPose[] {
   return [
@@ -263,18 +263,18 @@ function crouchPose(depth: number): IAutoMovieJointPose[] {
 
 /**
  * A **jump** as `[fraction, rootY, legFlex]` stops: the body coils (knees bend,
- * hips dip), pushes off, arcs up with the legs tucked, and absorbs the landing
- * — a whole-body verb, so unlike the postural gestures it carries **root**
+ * hips dip), pushes off, arcs up with the legs tucked, and absorbs the landing.
+ * A whole-body verb, so unlike the postural gestures it carries **root**
  * translation (the ballistic rise on Y). Every leg angle stays inside the same
  * ROM the crouch uses, so no arm/abduction is involved and it needs no
  * left/right mirror.
  */
 const JUMP_STOPS: [number, number, number][] = [
   [0, 0, 0], // rest
-  [0.2, -0.05, 40], // coil — dip and bend
-  [0.36, 0.03, 6], // push off — extend
-  [0.58, 0.34, 24], // apex — peak, legs tucked
-  [0.8, 0, 46], // land — absorb
+  [0.2, -0.05, 40], // coil: dip and bend
+  [0.36, 0.03, 6], // push off: extend
+  [0.58, 0.34, 24], // apex: peak, legs tucked
+  [0.8, 0, 46], // land: absorb
   [1, 0, 0], // recover
 ];
 
@@ -303,15 +303,15 @@ function jumpPose(
 }
 
 /**
- * Synthesise a **postural or whole-body gesture** — the trunk/leg half of the
- * harness `gesture` verb — into a short ROM-safe clip. `bow`/`nod`/`shake`/
+ * Synthesise a **postural or whole-body gesture**, the trunk/leg half of the
+ * harness `gesture` verb, into a short ROM-safe clip. `bow`/`nod`/`shake`/
  * `crouch` are single-axis trunk/head oscillations, `kick` is a right-leg front
  * snap, `stagger` lurches the trunk off balance and catches it, `wave` raises
  * the right arm and swings the forearm, `celebrate` throws both arms up in a V,
  * `draw` pulls a bow, `throw` whips an overhand throw, and `jump` is a
  * whole-body coil-and-leap carrying root translation. The arm gestures are
  * authored in clinical space (abduction 0 = down, 90 = horizontal, 180 =
- * overhead — the same value raises either arm), read up through the rig's rest
+ * overhead: the same value raises either arm), read up through the rig's rest
  * frame at render. `strike` (a targeted jab) needs reach content and returns
  * `null` here, left to the richer synthesiser.
  *

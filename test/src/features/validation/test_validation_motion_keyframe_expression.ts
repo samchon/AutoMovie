@@ -16,8 +16,8 @@ const rest = makePose([joint("leftLowerArm", { flexion: 0 })]);
 /**
  * Motion validation also validates each keyframe's optional expression (range
  * checks on weights/intensity), reporting under that keyframe's expression
- * path. Pins the keyframe-expression branch — and the path/collector-passing
- * arm of `validateExpression` — that the bare pose clips never exercise.
+ * path. Pins the keyframe-expression branch (and the path/collector-passing
+ * arm of `validateExpression`) that the bare pose clips never exercise.
  *
  * Scenario: a 1s clip whose second keyframe carries an expression with an
  * out-of-range blendshape weight (1.5). The clip's poses are all valid, so the

@@ -31,7 +31,7 @@ import {
 import { sampleMotion } from "./sampleMotion";
 
 /**
- * A two-segment chain pinned by its end effector — a leg (hip → knee → ankle)
+ * A two-segment chain pinned by its end effector: a leg (hip → knee → ankle)
  * or an arm (shoulder → elbow → hand). The plant solver is limb-agnostic: which
  * bones form the chain is the caller's rig policy, the algebra is not.
  *
@@ -54,7 +54,7 @@ export const HUMANOID_LEG_CHAINS: readonly IAutoMoviePlantChain[] = [
 
 /**
  * Re-key the sampled frames densely, re-solving every pinned leg onto its
- * stance target — the assembly stage of {@link plantStanceFeet}.
+ * stance target (the assembly stage of {@link plantStanceFeet}).
  */
 export const rekeyPlantedFeet = (props: {
   skeleton: IAutoMovieSkeleton;
@@ -164,7 +164,7 @@ const plantedJoints = (
  * `jointAxes` / `restFrames` decide the clinical convention the two deltas are
  * lowered into. The ground-IK pass omits them (legs sit on the default clinical
  * basis); the retarget contact pass supplies the target rig's own tables, which
- * is what lets an arm chain — whose humanoid axes are remapped — come back as
+ * is what lets an arm chain, whose humanoid axes are remapped, come back as
  * angles the same tables will re-read.
  *
  * The returned `hinge` is the mid joint's world flexion axis under that same

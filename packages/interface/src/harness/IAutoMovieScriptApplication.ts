@@ -1,9 +1,9 @@
 import { IAutoMovieBeat, IAutoMovieCastMember } from "./IAutoMovieSlate";
 
 /**
- * Stage 1 — **SCRIPT** (macro). Turn the user's brief into a plan: a logline, a
+ * Stage 1: **SCRIPT** (macro). Turn the user's brief into a plan: a logline, a
  * theme, the cast, and an ordered beat list (the shots, in words). No motion
- * yet — this is the treatment the rest of the production works to.
+ * yet; this is the treatment the rest of the production works to.
  *
  * Exposed to the model as
  * `typia.llm.application<IAutoMovieScriptApplication>()`. The single `process`
@@ -18,7 +18,7 @@ export interface IAutoMovieScriptApplication {
 export namespace IAutoMovieScriptApplication {
   export interface IProps {
     /**
-     * Think before you act. What is the user really asking for — the action,
+     * Think before you act. What is the user really asking for: the action,
      * the mood, the cast, the rough shape? Note ambiguities you are resolving
      * by default and any constraint the brief implies.
      */
@@ -47,7 +47,7 @@ export namespace IAutoMovieScriptApplication {
     cast: IAutoMovieCastMember[];
 
     /**
-     * The ordered beats — each becomes one shot. Keep each beat a single clear
+     * The ordered beats: each becomes one shot. Keep each beat a single clear
      * action ("the knight charges", "he is unhorsed"); do not pack a whole
      * scene into one beat. Their `durationHint`s should sum near the target
      * length.

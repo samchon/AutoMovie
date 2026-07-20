@@ -5,8 +5,8 @@ import {
 } from "@automovie/interface";
 
 /**
- * Merge several poses — each driving a (usually disjoint) set of bones, e.g.
- * one per body region — into a single pose. Joints **union by bone**: a later
+ * Merge several poses, each driving a (usually disjoint) set of bones, e.g.
+ * one per body region, into a single pose. Joints **union by bone**: a later
  * pose's joint overrides an earlier one for the same bone, so an explicit
  * override beats a base and disjoint regions simply combine. The **root** is
  * the last non-null one (the travelling region carries it); the skeleton is the
@@ -14,7 +14,7 @@ import {
  *
  * This is the per-frame composition behind layering: sample each region's clip
  * at a time, merge the poses, and the actor walks (legs) while waving (arms)
- * while looking (head) — no bone claimed twice.
+ * while looking (head): no bone claimed twice.
  *
  * @author Samchon
  */

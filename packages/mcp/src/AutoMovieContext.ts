@@ -9,11 +9,11 @@ import { AutoMovieProject } from "./project/AutoMovieProject";
 
 /**
  * Runtime context shared by the {@link AutoMovieApplication} facade and its
- * services — the deterministic infrastructure the tools run on, never LLM
+ * services, the deterministic infrastructure the tools run on, never LLM
  * orchestration.
  *
  * It carries the host-injected frame-capture adapter (#608) and the resident
- * {@link AutoMovieProject} (#614 — the project directory itself, JSON AST plus
+ * {@link AutoMovieProject} (#614, the project directory itself, JSON AST plus
  * 3D assets, is the memory, unlike AutoBe's hidden `.autobe` JSON mirror). The
  * prerequisite graph (#615) will read the resident project from here.
  */
@@ -28,7 +28,7 @@ export class AutoMovieContext {
   public constructor(
     /**
      * Frame-capture adapter owned by the host (a Playwright page, a render
-     * worker), or `undefined` when the host has none — `seeFrame` then reports
+     * worker), or `undefined` when the host has none, `seeFrame` then reports
      * `no-capture-adapter` honestly instead of pretending.
      */
     public readonly capture?: AutoMovieMcpFrameCapture,
@@ -78,7 +78,7 @@ export class AutoMovieContext {
   /**
    * Remember session-only compiled motions a resident commit received, scoped
    * to the beat whose shot they animate (#1091). `compilePerformance` names
-   * every actor's clip `perform:<actor>` — NOT beat-scoped — so a shared
+   * every actor's clip `perform:<actor>`, NOT beat-scoped, so a shared
    * registry let beat N's commit silently overwrite beat N−1's clip for the
    * same actor, and earlier beats' end states sampled the wrong clip. Each beat
    * keeps its own snapshot (replaced whole, like the shot it belongs to), and
@@ -97,7 +97,7 @@ export class AutoMovieContext {
   }
 
   /**
-   * Merge session-only compiled motions into a beat's snapshot — the surgical
+   * Merge session-only compiled motions into a beat's snapshot, the surgical
    * counterpart for {@link rememberGeometryMotions}: `setActorPerformance`
    * updates ONE performance, so the beat's other remembered clips survive.
    */
@@ -130,7 +130,7 @@ export class AutoMovieContext {
    * With a `beat`, motions are that beat's own snapshot. Without one, the view
    * unions all beats and DROPS any id whose content differs across beats
    * (#1091): a beat-less query against an ambiguous id must miss (the
-   * downstream "motion not registered" reason names the fix — pass the beat)
+   * downstream "motion not registered" reason names the fix, pass the beat)
    * rather than sample whichever beat committed last.
    */
   public geometryMemory(beat?: string): {

@@ -16,7 +16,7 @@ const body = (over: Partial<IAutoMovieImpactBody>): IAutoMovieImpactBody => ({
 });
 
 /**
- * `resolveImpact` — abstracted collision response: impulse + post-velocities +
+ * `resolveImpact`, abstracted collision response: impulse + post-velocities +
  * a qualitative kind from a material heuristic.
  *
  * Scenarios:
@@ -102,13 +102,13 @@ export const test_physics_impact = (): void => {
   );
   TestValidator.equals("soft but moderate speed → embed", emb2.kind, "embed");
 
-  // 4. deflect — already separating
+  // 4. deflect: already separating
   const sep = resolveImpact(body({ velocity: v(0, 0, -5) }), body({}), N);
   TestValidator.equals("separating → deflect", sep.kind, "deflect");
   TestValidator.predicate("no impulse", nclose(sep.impulse.z, 0));
   TestValidator.predicate("velocity unchanged", nclose(sep.velocityA.z, -5));
 
-  // 5. deflect — slow, non-bouncy, non-penetrable (final else, inelastic impulse)
+  // 5. deflect: slow, non-bouncy, non-penetrable (final else, inelastic impulse)
   const dfl = resolveImpact(
     body({ mass: 1, velocity: v(0, 0, 4), restitution: 0.2, hardness: 0.3 }),
     body({ mass: 1, restitution: 0.2, hardness: 0.3, penetrability: 0.2 }),

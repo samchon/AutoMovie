@@ -43,7 +43,7 @@ const throws = (task: () => void): boolean => {
 };
 
 /**
- * `reactMotion` — the harness `react` verb as a flinch clip: rest → ROM-clamped
+ * `reactMotion`, the harness `react` verb as a flinch clip: rest → ROM-clamped
  * recoil (`impactRecoil`) → rest.
  *
  * Scenarios:

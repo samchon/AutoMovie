@@ -62,7 +62,7 @@ type PerformProps = {
 };
 
 /**
- * The film pipeline compute — the stage/block/perform/cut/forge ladder over the
+ * The film pipeline compute, the stage/block/perform/cut/forge ladder over the
  * engine's deterministic consumers. `perform` assembles the default synthesizer
  * from JSON actor contexts so the MCP contract stays tuple-free. The MCP
  * contract lives on the {@link AutoMovieApplication} facade.
@@ -97,7 +97,7 @@ export class PipelineService {
     const requestRoot = validatePipelineRequestRoot(props);
     if (requestRoot.length > 0)
       return { blocked: { success: false, violations: requestRoot } };
-    // Resident-or-explicit (#1176): script and staged travel together — the
+    // Resident-or-explicit (#1176): script and staged travel together, the
     // explicit form is a pure transform, the resident form reads both from the
     // committed slate so a long production stops re-sending the staged scene
     // every beat. A mixed call is ambiguous about which scene the beat blocks
@@ -157,7 +157,7 @@ export class PipelineService {
       stagedRoot = "$slate.scene";
       // Continuity-seed: when the caller carries nothing explicitly, the
       // previous beat's committed end-state (script order) seeds the block.
-      // An uncommitted predecessor seeds nothing — same as a first beat.
+      // An uncommitted predecessor seeds nothing, same as a first beat.
       if (previous === undefined && isRecord(props.blocking)) {
         const beat = props.blocking.beat;
         const index = slate.script!.beats.findIndex((b) => b.id === beat);
@@ -202,7 +202,7 @@ export class PipelineService {
       return { performed: { success: false, violations: requestRoot } };
     // Resident-or-explicit (#1176): same pairing rule as block. The resident
     // form reads the committed script and scene, and takes staging mounts as
-    // the one explicit parameter (the getShotEndState precedent — mounts are
+    // the one explicit parameter (the getShotEndState precedent, mounts are
     // not a resident slice); an explicit staged set already carries its own.
     const resident = props.staged === undefined;
     if (resident !== (props.script === undefined))
@@ -230,7 +230,7 @@ export class PipelineService {
             violation(
               "type",
               "$input.mounts",
-              "mounts is the resident form's parameter — an explicit staged set already carries its mounts",
+              "mounts is the resident form's parameter, an explicit staged set already carries its mounts",
               props.mounts,
             ),
           ],
@@ -264,7 +264,7 @@ export class PipelineService {
       missing.push(...validateMountsShape(props.mounts));
       // Stored actor contexts (#1176): an omitted registry reads the
       // write-through store back; an explicit registry must not case-collide
-      // with a stored sibling (or another of its own nodes) — the upsert
+      // with a stored sibling (or another of its own nodes), the upsert
       // rename would silently destroy the sibling's file (#1093).
       if (props.actors === undefined) {
         const stored = project!.storedActors();
@@ -273,7 +273,7 @@ export class PipelineService {
             violation(
               "type",
               "$slate.actors",
-              "no stored actor contexts to perform with — a first resident perform passes actors explicitly (they write through as actors/<node>.json)",
+              "no stored actor contexts to perform with, a first resident perform passes actors explicitly (they write through as actors/<node>.json)",
               null,
             ),
           );
@@ -293,7 +293,7 @@ export class PipelineService {
               violation(
                 "type",
                 `$input.actors.${node}`,
-                `actor node "${node}" collides case-insensitively with actor "${collision}"; storing it would silently destroy "${collision}" — rename the node or erase the sibling first`,
+                `actor node "${node}" collides case-insensitively with actor "${collision}"; storing it would silently destroy "${collision}", rename the node or erase the sibling first`,
                 node,
               ),
             );
@@ -328,7 +328,7 @@ export class PipelineService {
         : violations;
     if (slate !== null) {
       // Continuity-seed (#1176): an actor context that omits position/facing
-      // resumes from the previous beat's committed end-state — the automated
+      // resumes from the previous beat's committed end-state, the automated
       // form of the guide's manual "seed positions and facing from getBeatEnd".
       // Runs after the shape floor so the performance record is guaranteed.
       const seeded = seedActorOpenings(
@@ -451,7 +451,7 @@ export class PipelineService {
   }
 
   /**
-   * The prop side of forge stays a pure gate — except that when a resident
+   * The prop side of forge stays a pure gate, except that when a resident
    * project is active (#671), an ACCEPTED spec writes through as
    * `props/<node>.json` (the #617 upsert: re-forging replaces exactly its own
    * file) and the output says so with `stored: true`. Pure (no-project) calls
@@ -460,18 +460,18 @@ export class PipelineService {
    * **Re-forging a placed prop is refused (#712), symmetric with `eraseProp`.**
    * When the committed scene still places this prop AND a spec is already
    * stored, replacing that spec would leave committed shots resolving against
-   * stale articulation (the same hazard `setPlacement` guards) — so the
+   * stale articulation (the same hazard `setPlacement` guards), so the
    * write-through is refused (`stored: false`) with a `$slate.scene` violation:
    * re-commit the scene without the placement (or accept re-perform) first. The
    * asymmetry with `eraseProp` (which refuses on placement alone) is
    * deliberate: a FIRST forge of an as-yet-unstored node creates the spec shots
    * need rather than replacing one, so it always stores even if the scene
-   * already names the node — only a REPLACEMENT of a placed prop stales.
+   * already names the node, only a REPLACEMENT of a placed prop stales.
    *
    * **A case-variant of a stored node id is refused (#1093).** On a
    * case-insensitive filesystem `props/Door.json` and `props/door.json` are one
    * file, so the upsert rename would silently destroy the sibling's spec while
-   * the exact-id guards above never fire — the prop twin of the #1011
+   * the exact-id guards above never fire, the prop twin of the #1011
    * beat-slice clobber. The refusal is platform-independent (a project must
    * stay portable to case-insensitive filesystems) and locates
    * `$input.spec.node`.
@@ -499,7 +499,7 @@ export class PipelineService {
     const node = props.spec.node;
     // A node id differing from a stored sibling's only by case shares its
     // slice filename on a case-insensitive filesystem: the upsert rename
-    // would silently destroy the sibling's spec — and the exact-id guards
+    // would silently destroy the sibling's spec, and the exact-id guards
     // below would never fire (#1093, the prop twin of the #1011 beat-slice
     // clobber). Refuse before touching the directory, on every platform, so
     // a project stays portable to case-insensitive filesystems.
@@ -512,7 +512,7 @@ export class PipelineService {
           violation(
             "type",
             "$input.spec.node",
-            `prop node "${node}" collides case-insensitively with stored prop "${collision}"; storing it would silently destroy "${collision}" — rename the node or erase the sibling first`,
+            `prop node "${node}" collides case-insensitively with stored prop "${collision}"; storing it would silently destroy "${collision}", rename the node or erase the sibling first`,
             node,
           ),
         ]),
@@ -1099,7 +1099,7 @@ const validatePerformShape = (
 ): IAutoMovieConstraintViolation[] => {
   const violations: IAutoMovieConstraintViolation[] = [];
   // The resident form's script/scene come from the committed slate, whose
-  // shapes the commit gates already enforced (#1176) — only the caller-typed
+  // shapes the commit gates already enforced (#1176), only the caller-typed
   // payloads need the structural floor here.
   if (!resident) {
     validatePerformScriptShape(props.script, "$input.script", violations);
@@ -1111,7 +1111,7 @@ const validatePerformShape = (
     violations,
   );
   // blocking is optional on perform, but when present performShot iterates
-  // its actors and reads camera.move (#1006) — the same shape block() gates.
+  // its actors and reads camera.move (#1006), the same shape block() gates.
   if (props.blocking !== undefined)
     validateBlockingShape(props.blocking, "$input.blocking", violations);
   if (props.clips !== undefined)
@@ -1276,7 +1276,7 @@ const validatePerformStagedNodeShape = (
   )
     return;
   // The perform wrapper feeds node translations straight into target
-  // resolution, aim, and launch math (#1005) — non-finite components would
+  // resolution, aim, and launch math (#1005), non-finite components would
   // throw in aimYawPitch or bake NaN travel, so finiteness gates here.
   requireFiniteVector(
     node.transform.translation,
@@ -2017,11 +2017,11 @@ const validateTransformObject = (
  * Continuity-seed for the resident `perform` (#1176): an actor context that
  * omits `position` or `facingDeg` inherits it from the previous beat's
  * committed end-state (script order), so a walking character resumes exactly
- * where — and facing exactly how — the last beat left it. Explicit values
+ * where, and facing exactly how, the last beat left it. Explicit values
  * always win. Nothing to inherit (a first beat, an uncommitted predecessor, an
  * actor the end-state never saw) is refused with the commitBeatEnd hint rather
  * than silently placed at the origin. Malformed registries and context entries
- * pass through untouched — the actor-registry gate owns those refusals.
+ * pass through untouched, the actor-registry gate owns those refusals.
  */
 const seedActorOpenings = (
   actors: Record<string, IAutoMovieMcpActorContext> | undefined,
@@ -2049,14 +2049,14 @@ const seedActorOpenings = (
     if (!needsPosition && !needsFacing && !needsPhase) continue;
     const state = previous?.actors.find((actor) => actor.node === node);
     if (state === undefined) {
-      // A missing phase alone is never refusable — a beat with nothing
+      // A missing phase alone is never refusable, a beat with nothing
       // recorded simply starts its gait cycles at zero.
       const unseedable = (field: string): void => {
         violations.push(
           violation(
             "type",
             `$input.actors.${node}.${field}`,
-            `actor ${node} has no committed previous beat end to seed ${field} from — commit the predecessor's end (commitBeatEnd) or pass it explicitly`,
+            `actor ${node} has no committed previous beat end to seed ${field} from, commit the predecessor's end (commitBeatEnd) or pass it explicitly`,
             undefined,
           ),
         );
@@ -2073,7 +2073,7 @@ const seedActorOpenings = (
       facingDeg: needsFacing
         ? Math.atan2(state.facing.x, state.facing.z) * (180 / Math.PI)
         : context.facingDeg,
-      // The end-state's null marks a non-looping close — nothing to resume, so
+      // The end-state's null marks a non-looping close, nothing to resume, so
       // the omission stays an omission and the cycle starts at zero.
       ...(needsPhase && state.gaitPhase !== null
         ? { gaitPhase: state.gaitPhase }
@@ -2133,7 +2133,7 @@ const validateActorRegistry = (
  * The non-gait actor-context fields the default synthesizer and camera framing
  * dereference (#998): `speed` feeds `locomoteMotion`'s throwing guard,
  * `position`/`facingDeg`/`eyeHeight` feed `aimYawPitch`/IK, and `restFrames`
- * feeds `decomposeJointRotation` — all raw throws without this gate.
+ * feeds `decomposeJointRotation`, all raw throws without this gate.
  */
 const validateActorContextFields = (
   context: Record<string, unknown>,
@@ -2207,7 +2207,7 @@ const validateActorContextFields = (
 /**
  * The rig graph checks `computeRestHeight` and FK would otherwise throw on
  * (#999): duplicate bone rows, parents naming absent bones, root count, and
- * parent cycles. Typia accepts all of these — bone names are a closed union,
+ * parent cycles. Typia accepts all of these, bone names are a closed union,
  * but graph relations are not.
  */
 const validateActorRig = (
@@ -2708,7 +2708,7 @@ const canDefaultSynthesisReturnNull = (
   (action.verb === "gesture" && !TOTAL_DEFAULT_GESTURE_SET.has(action.kind));
 
 /**
- * Resolve `enact` actions from the caller-authored `clips` registry (#1148) —
+ * Resolve `enact` actions from the caller-authored `clips` registry (#1148) ,
  * the MCP face of the engine's content seam. The clip is re-keyed per actor so
  * a unison cast enacting one clip cannot collide on ids; every other verb falls
  * through to the default synthesizer. The wrapper is constructed only after the
@@ -2794,7 +2794,7 @@ const collectDefaultSynthesisViolations = (
 /**
  * The enact refusal rungs (#1148), most-actionable first: the actor needs a
  * context, the context needs a rig (a rig-less clip would dodge the shot's ROM
- * gate — enforcement is the point), the clip must be supplied in the `clips`
+ * gate, enforcement is the point), the clip must be supplied in the `clips`
  * registry, and the clip must target the actor's own skeleton.
  */
 const describeEnactGap = (

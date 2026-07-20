@@ -151,20 +151,20 @@ const assertUniqueProfileGaitNames = (
 
 /**
  * Synthesise a **declarative gait** ({@link IAutoMovieGait}) into a looping
- * {@link IAutoMovieMotion} — the engine fattening a creature's characteristic
+ * {@link IAutoMovieMotion}: the engine fattening a creature's characteristic
  * locomotion (per-limb phase / duty / amplitude) into per-frame flexion. The
  * result is an ordinary one-cycle clip (sampled at `samples` even steps, the
  * closing keyframe repeating the first for a seamless loop) that
  * `locomoteMotion` / `travelMotion` can drive across the floor.
  *
  * The same synthesiser produces a human walk, a horse's lateral-sequence walk,
- * a cat's stalk — the difference lives entirely in the gait data, not the
+ * a cat's stalk. The difference lives entirely in the gait data, not the
  * code.
  *
  * `phase` slides the whole cycle by that many seconds (#1176): the clip's
  * keyframe at local time `t` samples the gait at `t + phase`, so a beat that
  * opens mid-stride resumes exactly where the previous beat's end-state
- * (`gaitPhase`) left the cycle instead of restarting it — the difference
+ * (`gaitPhase`) left the cycle instead of restarting it, the difference
  * between a continuous walk and a stutter at every cut. The wrapped cycle stays
  * a seamless loop for any constant phase.
  *
@@ -219,7 +219,7 @@ export const gaitMotion = (
 
 /**
  * Bind a profile's gait set ({@link IAutoMovieProfile.gaits}) onto a concrete
- * skeleton — synthesising each named gait into a clip for **this** body. The
+ * skeleton, synthesising each named gait into a clip for **this** body. The
  * point of a profile binding: the _same_ profile applied to a horse skeleton
  * and a pony skeleton yields each its own gait clips, so one declarative gait
  * set drives many bodies. Returns the clips keyed by gait name (empty when the

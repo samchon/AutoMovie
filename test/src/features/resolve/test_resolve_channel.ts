@@ -24,7 +24,7 @@ const pointer = (
  *    can never collide.
  * 2. `channelIsRotation` is true exactly for a node `rotation` path and a pointer
  *    whose `valueType` is `quaternion`; every other node path and pointer type
- *    is false — both sides of each discriminator.
+ *    is false, both sides of each discriminator.
  * 3. Unknown channel discriminator values reject instead of falling through to
  *    pointer behavior.
  * 4. Unknown node `path` and pointer `valueType` tags reject instead of being
@@ -43,7 +43,7 @@ export const test_resolve_channel = (): void => {
     "ptr:/cameras/0/fovY",
   );
 
-  // 2. rotation discrimination — both kinds, both outcomes
+  // 2. rotation discrimination: both kinds, both outcomes
   TestValidator.equals(
     "node rotation is rotation",
     channelIsRotation(node("hips", "rotation")),

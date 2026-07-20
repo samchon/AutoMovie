@@ -27,7 +27,7 @@ const REACT_MAX_DEFLECTION = 32;
 /** An unbalancing blow flinches this much harder (a floored reaction). */
 const REACT_UNBALANCE_GAIN = 1.5;
 
-/** The chain a torso/head blow ripples down — head whips most, hips least. */
+/** The chain a torso/head blow ripples down: head whips most, hips least. */
 const REACT_CHAIN = ["head", "neck", "chest", "spine"] as const;
 
 const assertUniqueActorGaits = (
@@ -117,14 +117,14 @@ const jabClip = (
 };
 
 /**
- * Build a reference {@link IAutoMovieActionSynthesizer} — the content seam
- * {@link compilePerformance} injects — for the verbs the engine can fatten
+ * Build a reference {@link IAutoMovieActionSynthesizer} (the content seam
+ * {@link compilePerformance} injects) for the verbs the engine can fatten
  * **deterministically** from an actor's context:
  *
  * - `locomote` → the actor's matching {@link IAutoMovieGait}; if its target
  *   resolves to a world point ({@link resolveTargetPoint}, against `nodes`), the
  *   gait is carried that far at the actor's speed ({@link locomoteMotion}),
- *   otherwise it steps in place (a relative target — "off to the left" — has no
+ *   otherwise it steps in place (a relative target, "off to the left", has no
  *   positional point yet);
  * - `hold` → the actor's rest pose held for the duration ({@link holdMotion});
  * - `lookAt` → the head turned to aim at a resolved target;
@@ -144,7 +144,7 @@ const jabClip = (
  * Every other verb returns `null` (the host supplies its rig-specific content,
  * or a richer synthesiser does), and an unknown actor returns `null`. This is
  * the bridge that makes the action compiler actually produce motion from the
- * declarative gait/profile data — the thin verb in, dense motion out.
+ * declarative gait/profile data: the thin verb in, dense motion out.
  *
  * @author Samchon
  */
@@ -173,7 +173,7 @@ export const makeActorSynthesizer = (
       if (dest === null) return cycle; // relative/unresolved → step in place
       // Travel is baked onto the pose root, which the renderer applies in the
       // actor's model frame (under its staged facing). So aim it in model space
-      // — undo the facing — and the composed render carries it to the world
+      // (undo the facing) and the composed render carries it to the world
       // destination; a turned actor would otherwise walk off its heading.
       const local = toModelSpace(dest, ctx.position, ctx.facingDeg);
       const distance = Math.hypot(local.x, local.z);
@@ -196,7 +196,7 @@ export const makeActorSynthesizer = (
       );
     if (action.verb === "lookAt") {
       const target = resolveTargetPoint(action.to, nodes);
-      if (target === null) return null; // relative target — no aim point yet
+      if (target === null) return null; // relative target: no aim point yet
       const eye = {
         x: ctx.position.x,
         y: ctx.position.y + ctx.eyeHeight,
@@ -252,7 +252,7 @@ export const makeActorSynthesizer = (
     }
     if (action.verb === "gesture") {
       const duration = action.duration === "auto" ? 1 : action.duration;
-      // `point` rides reachPose (an arm extended toward `at` — reachPose
+      // `point` rides reachPose (an arm extended toward `at`; reachPose
       // clamps a far target onto the reach shell, which is exactly a pointing
       // arm). Left unclamped like `reach`, so an impossible point fails the
       // shot's ROM gate. Needs the rig and a resolvable target.
@@ -270,8 +270,8 @@ export const makeActorSynthesizer = (
           ? null
           : extendHoldClip(`${actor}:point`, ctx.skeleton, pose, duration);
       }
-      // `strike` (a jab) also rides reachPose — the fist thrown toward the
-      // target — but snaps out and retracts (jabClip) instead of holding, so it
+      // `strike` (a jab) also rides reachPose (the fist thrown toward the
+      // target), but snaps out and retracts (jabClip) instead of holding, so it
       // reads as a punch. Same rig + resolvable-target requirement as point.
       if (action.kind === "strike" && ctx.rig !== undefined) {
         const world =
@@ -301,10 +301,10 @@ export const makeActorSynthesizer = (
       // target to a world point, drop it into the actor's model space (undo the
       // placement), and solve the arm. reachPose does not clamp to ROM, so a
       // reach to an impossible spot yields an out-of-ROM pose the shot's ROM
-      // gate rejects — the model must reposition, not the engine hide it.
+      // gate rejects. The model must reposition, not the engine hide it.
       if (ctx.rig === undefined) return null;
       const world = resolveTargetPoint(action.to, nodes);
-      if (world === null) return null; // relative target — no point to reach
+      if (world === null) return null; // relative target: no point to reach
       const reach = reachPose(
         ctx.rig,
         action.hand,
@@ -335,7 +335,7 @@ export const makeActorSynthesizer = (
       // Anatomical right: facing 0 looks down +Z and the actor's LEFT is +X
       // (aimYawPitch's +90° yaw), so right is −X there. Positive spine
       // abduction tilts toward −X, so dot(away, right) leans AWAY from the
-      // blow — the previous +X "right" leaned the body into it.
+      // blow. The previous +X "right" leaned the body into it.
       const right = { x: -Math.cos(facing), y: 0, z: Math.sin(facing) };
       let push;
       if (source === null)

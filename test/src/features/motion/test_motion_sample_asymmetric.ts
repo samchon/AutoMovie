@@ -19,7 +19,7 @@ const shift = (x: number): IAutoMovieTransform => ({
 
 /**
  * Interpolation must handle keyframes whose joint axes, root transform, and
- * expression are present on one side but not the other — the asymmetric cases a
+ * expression are present on one side but not the other: the asymmetric cases a
  * uniform clip never produces. Each interpolation helper treats a missing value
  * as its neutral (an absent angle as 0, an absent root as identity) and an
  * absent expression by carrying the present one through.

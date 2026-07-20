@@ -30,7 +30,7 @@ export interface IAutoMovieColor {
 
   /**
    * Linear alpha, `[0, 1]`. `1` = fully opaque. Null when the color is used in
-   * an opacity-irrelevant slot (e.g. light color, emissive) — distinct from `0`
+   * an opacity-irrelevant slot (e.g. light color, emissive), distinct from `0`
    * (fully transparent).
    */
   a: number | null;

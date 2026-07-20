@@ -33,7 +33,7 @@ const doorlike: IAutoMovieProfile = {
 };
 
 /**
- * `bindProfileGaits` — synthesise a profile's declarative gait set onto a
+ * `bindProfileGaits`: synthesise a profile's declarative gait set onto a
  * concrete skeleton. The same profile bound to two different bodies yields each
  * its own clips: one gait set, many bodies.
  *
@@ -43,7 +43,7 @@ const doorlike: IAutoMovieProfile = {
  *    name, each targeting that skeleton with its own period and a
  *    profile-scoped id.
  * 2. The same profile bound to a _different_ skeleton retargets every clip onto
- *    the new body — the point of a binding.
+ *    the new body: the point of a binding.
  * 3. A profile that declares no gaits (a door) binds to nothing.
  * 4. Duplicate gait names are rejected before one clip overwrites another under
  *    the same profile binding key.

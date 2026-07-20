@@ -11,7 +11,7 @@ import { solveBallisticLaunch, solveMovingLaunch } from "../physics/ballistic";
 import { projectileAt, projectileTrajectory } from "../physics/projectile";
 import { eventTimeKey } from "./handoffEvents";
 
-/** The default fall the launch solves against — Earth gravity, world −Y. */
+/** The default fall the launch solves against: Earth gravity, world −Y. */
 const DEFAULT_GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
 
 /** What compiling a `launch` yields: the flight, and the hit it schedules. */
@@ -20,7 +20,7 @@ export interface IAutoMovieLaunchResult {
   clip: IAutoMovieClip;
 
   /**
-   * The target's recoil, scheduled at the **computed** contact — a synthetic
+   * The target's recoil, scheduled at the **computed** contact: a synthetic
    * {@link IAutoMovieReactAction} to fold into the action list, or `null` when
    * the launch carried no `onHit` (or aimed at a point/group with no single
    * actor to recoil). Its `start` is the shot-local instant the projectile
@@ -50,14 +50,14 @@ const firstActor = (action: IAutoMovieLaunchAction): string | null =>
   typeof action.actor === "string" ? action.actor : (action.actor[0] ?? null);
 
 /**
- * Compose the `launch` verb's engine primitives into one result — the missing
+ * Compose the `launch` verb's engine primitives into one result, the missing
  * orchestrator that turns the model's thin _"loose the arrow at him"_ into the
  * projectile's motion **and** the struck target's reaction, timed to the
  * engine-computed hit rather than a number the model had to guess.
  *
  * It {@link solveBallisticLaunch solves the aim} that connects `origin` to
  * `target` at `action.speed`, {@link projectileTrajectory bakes the flight} into
- * the projectile node's clip, and — when the launch carries an `onHit` — emits
+ * the projectile node's clip, and, when the launch carries an `onHit`, emits
  * the target's `react` at the detected contact time. This is the reactive event
  * the schema promises ("shoot him off his horse" without hand-timing the fall):
  * the contact time is a computed output, so the reaction is scheduled, not
@@ -65,7 +65,7 @@ const firstActor = (action: IAutoMovieLaunchAction): string | null =>
  * (nothing to fly, nothing to hit).
  *
  * `target` is the target's world point resolved by the caller. Pass `targetAt`
- * as well to **lead a moving target** — the aim then solves against where the
+ * as well to **lead a moving target**. The aim then solves against where the
  * mover _will be_ (via {@link solveMovingLaunch}) rather than its start point,
  * and `target` is only the fallback origin of the sightline. Feed the returned
  * `clip` to the projectile node and fold `react` into the target's action list
@@ -81,7 +81,7 @@ export const compileLaunch = (props: {
   /** The struck target's world point (the solved flight lands here). */
   target: IAutoMovieVector3;
   /**
-   * The struck scene node — the emitted `react`'s actor — or `null` when the
+   * The struck scene node (the emitted `react`'s actor), or `null` when the
    * aim is a point/group with no single actor to recoil (the flight still
    * bakes; only the reaction is withheld).
    */

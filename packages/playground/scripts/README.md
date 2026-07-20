@@ -1,6 +1,6 @@
 # Regenerating `.shots` (GLB models + demo GIFs)
 
-`.shots/` is **gitignored scratch** — everything in it is derived from the
+`.shots/` is **gitignored scratch**: everything in it is derived from the
 playground's TypeScript AST, so it is regenerated, never committed. On a fresh
 checkout the folder is empty; these scripts rebuild it.
 
@@ -36,14 +36,14 @@ pnpm build:horse       # → .shots/knight/horse.glb
 pnpm build:knight      # → .shots/knight/knight.glb
 ```
 
-No browser needed — these run headless in Node.
+No browser needed: these run headless in Node.
 
 ## Demo clips (`.mp4`)
 
 The clips are deterministic captures of the viewer pages, encoded straight to
 H.264 MP4 in-process (no ffmpeg). One **persistent** headless-Chromium session
 (Playwright) loads each page once, then `window.__afSeek(t)` (the `?cap=1` hook
-in every view) steps it to each frame and the canvas is screenshotted — so it
+in every view) steps it to each frame and the canvas is screenshotted, so it
 takes seconds per clip, not a browser relaunch per frame.
 
 Needs:
@@ -60,7 +60,7 @@ pnpm shots shadowbox   # only shots whose output path matches "shadowbox"
 ```
 
 Overrides via env: `CHROME=/path/to/chrome` (binary), `BASE=http://host:port`
-(server). The shot list lives at the top of `capture-shots.mjs` — add a row
+(server). The shot list lives at the top of `capture-shots.mjs`. Add a row
 `[page, query, durationSeconds, frameCount, width, height, outPath, fps]` to
 capture a new clip. Encoding uses `h264-mp4-encoder` (wasm) + `pngjs`.
 
@@ -68,7 +68,7 @@ capture a new clip. Encoding uses `h264-mp4-encoder` (wasm) + `pngjs`.
 
 The one REAL (non-faked) headless-capture check: Chrome renders the live
 stickman page, the multi-pass adapter captures beauty/mask/pose twice, and the
-frames are judged **structurally** (not byte-hashed against a golden file —
+frames are judged **structurally** (not byte-hashed against a golden file:
 GPU rasterization differs across hosts): two sessions must be byte-identical
 to each other, the mask must carry the exact segment color over a plausible
 subject fraction on dominant black, the pose must draw white skeleton lines,

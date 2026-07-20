@@ -20,7 +20,7 @@ const romItems = (axes: Parameters<typeof joint>[1]) => {
 
 /**
  * An angle outside a joint's `[min, max]` is flagged on exactly the offending
- * axis — the verifier catching the "physically impossible" poses raw LLM
+ * axis: the verifier catching the "physically impossible" poses raw LLM
  * emission produces, which is the heart of automovie's differentiator.
  *
  * Scenarios:

@@ -42,18 +42,18 @@ const saddle: IAutoMovieMountBinding = { parent: "horse", bone: "spine" };
 /**
  * The cut-boundary continuity linter (#1172): the incoming beat's opening state
  * against the previous beat's recorded end-state. Drift is advisory (a warning,
- * never a gate) — a cut may intend a jump — so a success carries warnings, and
+ * never a gate; a cut may intend a jump), so a success carries warnings, and
  * only a nonsensical tolerance is an error.
  *
  * Scenarios:
  *
- * 1. A clean resume — same position, same facing, mount preserved — passes with no
+ * 1. A clean resume (same position, same facing, mount preserved) passes with no
  *    warnings (position/facing within tolerance and mount unchanged: every
  *    negative branch).
  * 2. Position drift past the tolerance warns at the translation path.
  * 3. Facing drift past the tolerance warns at the facing path.
  * 4. A dropped mount (rider unmounted), a changed parent, and a changed bone each
- *    warn at the mount path — the "props disappear" failure.
+ *    warn at the mount path: the "props disappear" failure.
  * 5. An actor that ended the prior beat but is absent from the incoming opening
  *    warns rather than silently skipping.
  * 6. A generous position tolerance suppresses a large drift (provided tolerance
@@ -62,7 +62,7 @@ const saddle: IAutoMovieMountBinding = { parent: "horse", bone: "spine" };
  *    range ERRORS (not warnings), and short-circuit before any comparison.
  */
 export const test_validation_continuity = (): void => {
-  // 1. clean resume with a preserved mount — no warnings.
+  // 1. clean resume with a preserved mount: no warnings.
   const clean = validateContinuity({
     previous: state([actor({ node: "rider", x: 2, mount: saddle })]),
     opening: state([actor({ node: "rider", x: 2, mount: saddle })]),
@@ -93,7 +93,7 @@ export const test_validation_continuity = (): void => {
     hasWarning(spun, "physics", "$input.opening.actors[node=hero].facing"),
   );
 
-  // 4. mount discontinuity — dropped, changed parent, changed bone.
+  // 4. mount discontinuity: dropped, changed parent, changed bone.
   const dropped = validateContinuity({
     previous: state([actor({ node: "rider", mount: saddle })]),
     opening: state([actor({ node: "rider", mount: null })]),
@@ -133,7 +133,7 @@ export const test_validation_continuity = (): void => {
     hasWarning(missing, "physics", "$input.opening.actors"),
   );
 
-  // 6. a generous tolerance suppresses a large drift — no warning.
+  // 6. a generous tolerance suppresses a large drift: no warning.
   const tolerant = validateContinuity({
     previous: state([actor({ node: "hero", x: 0 })]),
     opening: state([actor({ node: "hero", x: 3 })]),

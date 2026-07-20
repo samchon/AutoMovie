@@ -35,8 +35,8 @@ export interface IAutoMovieSceneObject {
  * surfaces become real meshes under one `SPACE_GROUP_NAME` group (see
  * {@link buildSpaceObject}), so the structural guide passes describe a world
  * instead of actors floating in a void. The group is added LAST, after the
- * nodes and lights, because the mask palette is keyed by top-level child index
- * — appending leaves every node's segmentation color exactly where it was, and
+ * nodes and lights, because the mask palette is keyed by top-level child index:
+ * appending leaves every node's segmentation color exactly where it was, and
  * the whole ground reads as one further color rather than one per surface.
  *
  * @author Samchon

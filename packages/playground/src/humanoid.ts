@@ -12,11 +12,11 @@ import {
 } from "@automovie/interface";
 
 /**
- * The tunable proportions of the procedural humanoid — the parameters the
+ * The tunable proportions of the procedural humanoid: the parameters the
  * character editor exposes. Every value is in meters (or a unitless factor for
  * the radii). This is deliberately the "beginner" tier: a handful of gross body
  * measurements, not a per-vertex morph rig. It is enough to make tall/short,
- * lanky/stocky, big/small-headed figures — the variety a character roster needs
+ * lanky/stocky, big/small-headed figures, the variety a character roster needs
  * before any finer sculpting.
  *
  * @author Samchon
@@ -40,7 +40,7 @@ export interface IHumanoidParams {
   thighLength: number;
   /** Shin (knee → ankle) length. */
   shinLength: number;
-  /** Limb (arm/leg) capsule radius — "stockiness". */
+  /** Limb (arm/leg) capsule radius: "stockiness". */
   limbRadius: number;
   /** Head sphere radius. */
   headRadius: number;
@@ -85,7 +85,7 @@ const yToDir = (dir: IAutoMovieVector3): IAutoMovieQuaternion => {
   const n = v(dir.x / len, dir.y / len, dir.z / len);
   const dot = n.y; // dot(+Y, n)
   if (dot > 0.999999) return { x: 0, y: 0, z: 0, w: 1 };
-  // Antiparallel: 180° about any axis ⟂ Y — use +Z.
+  // Antiparallel: 180° about any axis ⟂ Y: use +Z.
   if (dot < -0.999999) return { x: 0, y: 0, z: 1, w: 0 };
   // axis = cross(+Y, n); angle from dot.
   const axis = v(n.z, 0, -n.x); // cross((0,1,0), n)
@@ -139,8 +139,8 @@ const blob = (
 });
 
 /**
- * Build the procedural humanoid — a normalized VRM skeleton plus a primitive
- * "blockman" skin — from a set of editor proportions.
+ * Build the procedural humanoid (a normalized VRM skeleton plus a primitive
+ * "blockman" skin) from a set of editor proportions.
  *
  * This is automovie's bootstrap **base 3D model**: fully generated (no external
  * asset), deterministic, and rigged on the same {@link AutoMovieHumanoidBone}

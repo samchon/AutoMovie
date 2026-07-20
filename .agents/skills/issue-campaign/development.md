@@ -38,7 +38,7 @@ The agent assigned a batch claims it as its first action, before writing any cod
 2. Create one implementation-free claim commit with `git commit --allow-empty`.
 3. Push the branch and open a draft pull request that overviews the batch scope and links every batched issue.
 4. Record the batch, worktree, branch, issues, owned files, and pull request in the campaign knowledge base.
-5. Start `pnpm install` in the worktree asynchronously — a fresh worktree carries no `node_modules`, so its build and suite cannot run until it finishes — and begin the source, consequence-surface, and test-design work at once.
+5. Start `pnpm install` in the worktree asynchronously (a fresh worktree carries no `node_modules`, so its build and suite cannot run until it finishes) and begin the source, consequence-surface, and test-design work at once.
 
 The draft pull request reserves the whole batch before code is written, preventing another agent from starting overlapping work.
 
@@ -48,7 +48,7 @@ Start every long command asynchronously and continue with work that does not dep
 
 The overlap follows the state of the batch. While installation runs, read the admitted issue and the implementation around it, map the consequence surface, and write the implementation and its tests. Once a stable source-and-test snapshot is committed and pushed, launch the narrow package-scoped verification and begin Self-Review at once; a test process may run during review because it does not change the snapshot. When several independent checks are needed, start them together instead of serially discovering that each needs the same environment.
 
-Keep a compact command record — the command, its worktree, the source snapshot, the decision that depends on it, and its final result. Check a running command at a genuine decision boundary, when it exits, or before merge, and never through a sleep loop or a foreground wait that only discovers it is still running. Report every command still in flight, its dependency, and its last observed state when handing work off.
+Keep a compact command record: the command, its worktree, the source snapshot, the decision that depends on it, and its final result. Check a running command at a genuine decision boundary, when it exits, or before merge, and never through a sleep loop or a foreground wait that only discovers it is still running. Report every command still in flight, its dependency, and its last observed state when handing work off.
 
 Two boundaries stay strict because overlap would destroy the evidence:
 
@@ -93,7 +93,7 @@ If an assignment ends without a merge, first record retained evidence and confir
 
 Report the wave after every surviving issue is covered by its assigned batch pull request.
 
-When the user requests another discovery cycle — or the standing autonomous mandate's loop continues — return to the parent skill's Discover Issues phase and start new unlimited full rounds over the entire campaign scope. Earlier rounds are not coverage.
+When the user requests another discovery cycle (or the standing autonomous mandate's loop continues), return to the parent skill's Discover Issues phase and start new unlimited full rounds over the entire campaign scope. Earlier rounds are not coverage.
 
 ## Close The Campaign
 

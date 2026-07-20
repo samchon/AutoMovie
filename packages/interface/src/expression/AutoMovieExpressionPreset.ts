@@ -1,5 +1,5 @@
 /**
- * The closed set of **VRM 1.0 expression presets** — high-level named emotions
+ * The closed set of **VRM 1.0 expression presets**: high-level named emotions
  * and visemes.
  *
  * Where {@link AutoMovieArkitChannel} is the fine-grained 52-channel control,

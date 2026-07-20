@@ -11,7 +11,7 @@ import { throwsError } from "../internal/predicates";
 /**
  * The film-ladder prerequisite gate (#615): a resident commit called out of
  * order throws the actionable "do this next" prompt BEFORE any transform runs,
- * naming the tool, every missing rung, and the ordered actions — so an agent
+ * naming the tool, every missing rung, and the ordered actions, so an agent
  * that skipped a rung is told exactly how to recover instead of decoding a
  * violation. Explicit-slate calls bypass the gate (pure transforms), so only
  * the resident path is pinned here (#1040).
@@ -55,7 +55,7 @@ export const test_mcp_prerequisite_ladder = (): void => {
         () => app.commitScene({ scene: staged.scene, models }),
         [
           "Cannot commitScene yet.",
-          "script: no script committed — commit one with commitScript",
+          "script: no script committed, commit one with commitScript",
           "1. Call commitScript",
         ],
       ),

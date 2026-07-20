@@ -5,8 +5,8 @@ import { ffmpegArgs, frameName, framePattern, frameTimes } from "./plan";
 /**
  * The host-supplied I/O a render needs. Kept as injected dependencies so the
  * orchestration ({@link renderVideo}) stays a pure, deterministic, testable
- * function while the environment-specific halves — a headless browser
- * screenshot and an ffmpeg spawn — live in the caller (the engine is
+ * function while the environment-specific halves (a headless browser
+ * screenshot and an ffmpeg spawn) live in the caller (the engine is
  * renderer-agnostic; this keeps the render pipeline the same way).
  *
  * @author Samchon
@@ -77,7 +77,7 @@ export interface IAutoMovieRenderResult {
  * `t = i / fps`, then encode the sequence with the pinned ffmpeg args.
  *
  * This is the spine of automovie's "frames → video" path and its
- * reproducibility guarantee — pure control flow over injected I/O, so the same
+ * reproducibility guarantee: pure control flow over injected I/O, so the same
  * spec drives the same frames in the same order every time.
  *
  * @author Samchon

@@ -34,7 +34,7 @@ const hasDoubleEncoding = (text: string): boolean => {
  * 1. Every tool carries a non-empty description within the 1023-character cap.
  * 2. The server instruction exists and its first 512 characters already state what
  *    the server is and how to start (the engine-enforces framing, the
- *    guide-document entry point) — the inverted pyramid, not a build-up.
+ *    guide-document entry point), the inverted pyramid, not a build-up.
  * 3. No tool description and no instruction carries a double-encoding artifact.
  */
 export const test_mcp_contract_budgets = async (): Promise<void> => {

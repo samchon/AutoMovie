@@ -58,8 +58,8 @@ export interface IProportions {
  * from the source in **proportion** rather than only in overall size.
  *
  * At proportion `1` the rest pose is exact and hand-checkable: hips at y=1.0,
- * hip joint 0.95, knee 0.50, ankle (±0.1, 0.10, 0.10), head 1.75 — a floor of
- * 0.10 and a rest height of 1.65.
+ * hip joint 0.95, knee 0.50, ankle (±0.1, 0.10, 0.10), head 1.75 (a floor of
+ * 0.10 and a rest height of 1.65).
  */
 export const proportionedRig = (
   id: string,
@@ -139,7 +139,7 @@ export const withZeroLengthBones = (
 
 /**
  * A two-keyframe clip that only moves the root, leaving every joint at rest.
- * Both feet therefore sit exactly on the rig's rest floor for the whole clip —
+ * Both feet therefore sit exactly on the rig's rest floor for the whole clip:
  * an unambiguous, hand-checkable contact the retarget must preserve.
  */
 export const rootShiftClip = (

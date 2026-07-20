@@ -43,7 +43,7 @@ export const test_film_block_beat_invalid = (): void => {
         },
         {
           node: "knightA",
-          beats: "strikes before stepping — impossible",
+          beats: "strikes before stepping, impossible",
           anchors: [
             { t: 1.5, cue: "the strike" },
             { t: 0.5, cue: "the step" },

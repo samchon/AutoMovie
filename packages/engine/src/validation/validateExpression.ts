@@ -8,7 +8,7 @@ import {
 import { ViolationCollector } from "./violation";
 
 /**
- * Validate an {@link IAutoMovieExpression} — Tier-1 range checks the rough types
+ * Validate an {@link IAutoMovieExpression}: Tier-1 range checks the rough types
  * intentionally do not encode.
  *
  * Preset and ARKit channel names are runtime-checked against their closed

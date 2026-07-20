@@ -13,14 +13,14 @@ const stageSet = (set: SetPlacement[]) =>
 /**
  * A set piece carries an optional uniform-or-per-axis `scale` (#1173), lowered
  * onto the staged node's transform. This is what lets ONE forged primitive
- * furnish a whole set — the wall, the step, and the table top are the same unit
- * box at three sizes — where the pinned `{1, 1, 1}` forced a separately forged
+ * furnish a whole set (the wall, the step, and the table top are the same unit
+ * box at three sizes) where the pinned `{1, 1, 1}` forced a separately forged
  * model per size.
  *
  * Scenarios:
  *
  * 1. An omitted `scale` keeps the model's authored size (identity); a bare number
- *    scales all three axes; a vector scales each axis on its own — one `slab`
+ *    scales all three axes; a vector scales each axis on its own: one `slab`
  *    model staged three ways in one round.
  * 2. The gate refuses a zero axis (the piece would draw nothing), a negative axis
  *    (mirrored winding reads inside out in the normal/outline passes), and a

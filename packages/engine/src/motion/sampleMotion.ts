@@ -164,7 +164,7 @@ const interpolateExpression = (
 ): IAutoMovieExpression | null => {
   // `null` is the NEUTRAL side (intensity 0 of the authored preset), blended
   // toward like a resting joint axis (`lerpAxis` null → 0) or a resting
-  // transform (`lerpTransform` null → identity) — the same "unauthored side"
+  // transform (`lerpTransform` null → identity), the same "unauthored side"
   // convention this file uses everywhere else. An expression authored only at
   // the far keyframe therefore RAMPS in from neutral instead of popping to full
   // at the segment start, and one authored only at the near keyframe fades out

@@ -19,7 +19,7 @@ export interface IAutoMovieFaceTrait {
   weight: number;
 }
 
-/** Traits with one morph target — symmetric features. */
+/** Traits with one morph target: symmetric features. */
 const SINGLE: {
   parameter: AutoMovieFaceParameterName;
   path: string;
@@ -61,7 +61,7 @@ const SINGLE: {
 /**
  * Traits with one morph target per side. **Side rule** (mirrors the interface
  * docs): when only one of `left`/`right` is defined on the pair set, that lone
- * side is the SOURCE for both targets — a single side is the symmetric
+ * side is the SOURCE for both targets: a single side is the symmetric
  * shorthand; when both are defined, each side drives only its own target.
  * `base` + `R`/`L` must both exist in {@link AutoMovieFaceParameterName}.
  */
@@ -121,7 +121,7 @@ const PAIRED: {
 ];
 
 /**
- * Project an {@link IAutoMovieFace} onto its morph targets — the nested,
+ * Project an {@link IAutoMovieFace} onto its morph targets: the nested,
  * anatomy-shaped document flattened to `(parameter, weight)` pairs in
  * declaration order, omitted leaves and groups skipped.
  *

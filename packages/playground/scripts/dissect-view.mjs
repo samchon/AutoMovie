@@ -4,7 +4,7 @@
 // 3/4 ("rotate a little and it's all wrong"). This tool removes the yaw
 // confound: it detects the reference photo's head yaw (via a 2D yaw indicator),
 // sweeps the MODEL camera yaw until the model's yaw matches, then compares the
-// same proportional ratios at that MATCHED yaw — so the residual is pure SHAPE
+// same proportional ratios at that MATCHED yaw, so the residual is pure SHAPE
 // error at that angle.
 //
 // Usage: node scripts/dissect-view.mjs <hero> <view>

@@ -4,8 +4,8 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose } from "../internal/predicates";
 
 /**
- * `faceWidth` is the one analytically exact morph — dx = 0.07·x with no y/z
- * motion — so it pins the builder's delta layout (xyz interleaving, vertex
+ * `faceWidth` is the one analytically exact morph (dx = 0.07·x with no y/z
+ * motion), so it pins the builder's delta layout (xyz interleaving, vertex
  * alignment) against the spec's arithmetic rather than against the code.
  *
  * Scenario: explicit canonical positions in; every vertex's delta equals

@@ -2,7 +2,7 @@ import { AutoMovieFaceWeight } from "./AutoMovieFaceWeight";
 import { IAutoMovieFaceChin } from "./IAutoMovieFaceChin";
 
 /**
- * Jaw traits of an {@link IAutoMovieFace} — signed morph weights in `[-2, 2]`,
+ * Jaw traits of an {@link IAutoMovieFace}: signed morph weights in `[-2, 2]`,
  * `0`/omitted meaning the template's jaw unchanged. The chin nests here because
  * it is the front of the same mandible.
  *
@@ -15,6 +15,6 @@ export interface IAutoMovieFaceJaw {
    */
   width?: AutoMovieFaceWeight;
 
-  /** The chin at the jaw's tip — see {@link IAutoMovieFaceChin}. */
+  /** The chin at the jaw's tip. See {@link IAutoMovieFaceChin}. */
   chin?: IAutoMovieFaceChin;
 }

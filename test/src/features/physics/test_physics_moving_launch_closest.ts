@@ -12,7 +12,7 @@ const GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
  * point **oscillate** instead of settle: the flight-time residual `|hitTime −
  * guess|` falls to a minimum and then rises again. When the loop is capped
  * before it diverges, the solver must return the **closest** iterate it visited
- * — the one the JSDoc promises — not merely the last guess, which is farther
+ * (the one the JSDoc promises), not merely the last guess, which is farther
  * from a fixed point.
  *
  * The fixed-point walk is reconstructed here from the static aim
@@ -31,7 +31,7 @@ export const test_physics_moving_launch_closest = (): void => {
   });
 
   // Walk the same fixed point the solver walks, capturing each iterate's
-  // hit-time and residual — the guess for iterate 0 is the target's current
+  // hit-time and residual. The guess for iterate 0 is the target's current
   // distance over the speed, exactly as solveMovingLaunch seeds it.
   const init = accel(0);
   let guess =
@@ -49,7 +49,7 @@ export const test_physics_moving_launch_closest = (): void => {
   const closest = iterates.reduce((a, b) => (b.residual < a.residual ? b : a));
   const last = iterates[iterates.length - 1]!;
   TestValidator.predicate(
-    "the residual is non-monotone — the fixed point does not settle within four",
+    "the residual is non-monotone, the fixed point does not settle within four",
     closest !== last && last.residual > closest.residual,
   );
 

@@ -13,14 +13,14 @@ import {
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
 /**
- * Two-boxer **sparring** — two stick figures squaring off and trading crisp,
+ * Two-boxer **sparring**: two stick figures squaring off and trading crisp,
  * professional combinations (jab, one-two, hook, uppercut) with real defence
  * (slip, weave, duck, block, lean-back), ending when one boxer eats a one-two
  * and is knocked out: head snapping back, legs buckling, toppling to the
  * canvas.
  *
  * Both boxers ride the same stick rig (recoloured red / blue); the two clips
- * share one timeline so an attack and its counter line up frame-for-frame — the
+ * share one timeline so an attack and its counter line up frame-for-frame: the
  * "give and take" is authored as a single choreography, not physics. The KO is
  * a root-driven fall (the engine just plays the keyframes).
  *
@@ -341,7 +341,7 @@ const MOMENTS: Moment[] = (() => {
     out.push({ t: end, red: P.guard(), blue: P.guard() });
     t = end;
   }
-  // the finish — red steps in behind a one-two and blue is knocked out
+  // the finish: red steps in behind a one-two and blue is knocked out
   const z = t;
   const at = (dt: number): number => Math.round((z + dt) * 1000) / 1000;
   out.push({

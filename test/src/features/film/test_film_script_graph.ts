@@ -5,18 +5,18 @@ import { throwsError } from "../internal/predicates";
 import { createScriptTree } from "../validation/test_validation_script_tree";
 
 /**
- * The refinement-graph walkers of the feedback cascade (D013): scriptAncestors
+ * The refinement-graph walkers of the feedback cascade: scriptAncestors
  * returns the chain a located violation climbs, and beatNodeOf is the flat-beat
  * → graph-node join a beat-scoped consumer locates itself with. Walkers serve
  * validated trees but refuse silent drops on malformed input (the bindProfile
- * precedent) — a cascade that stopped short would misdirect the correction.
+ * precedent): a cascade that stopped short would misdirect the correction.
  *
  * Scenarios:
  *
  * 1. A deep chain walks nearest-first to the root, excluding the node itself: beat
  *    `b1` under group/scene/act/intent yields exactly `["grp", "scene1",
  *    "act1", "root"]`.
- * 2. The root itself has no ancestors — an empty chain, not a throw.
+ * 2. The root itself has no ancestors: an empty chain, not a throw.
  * 3. An unknown node id throws (refusal, not an empty answer).
  * 4. A dangling parent mid-walk throws.
  * 5. A cyclic parent chain throws instead of looping forever.

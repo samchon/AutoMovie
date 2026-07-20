@@ -34,7 +34,7 @@ const film: IAutoMovieSequence = {
  * Scenarios:
  *
  * 1. Resident: after a commitScript, `getSlate({})` reads the whole resident slate
- *    — script present, film null (nothing cut yet), other slices empty.
+ *, script present, film null (nothing cut yet), other slices empty.
  * 2. Explicit: a passed writable slate (with a film) is echoed back verbatim,
  *    ignoring any resident project.
  * 3. Without an active project, omitting the slate throws the actionable

@@ -1,4 +1,4 @@
-// MakeHuman macro + modifier geometry engine — faithful JS port.
+// MakeHuman macro + modifier geometry engine: faithful JS port.
 //
 // Reproduces MakeHuman's mesh generation exactly:
 //   coord = base.obj + Σ_path detail[path] · delta(path)
@@ -104,7 +104,7 @@ export function computeVals(macro = {}) {
   v.idealproportions = Math.max(0.0, proportions * 2 - 1);
   v.uncommonproportions = Math.max(0.0, 1 - proportions * 2);
   v.regularproportions = 1 - Math.max(v.idealproportions, v.uncommonproportions);
-  // race (ethnic) — normalized to sum 1, mimicking setCaucasian/African(sync=False)
+  // race (ethnic), normalized to sum 1, mimicking setCaucasian/African(sync=False)
   // then setAsian(sync=True): exclude='asian', distribute remaining over the rest.
   ethnicVals(v, macro);
   return v;

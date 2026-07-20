@@ -25,14 +25,14 @@ const assertFiniteQuaternion = (q: IAutoMovieQuaternion): void => {
 /**
  * The inverse of {@link jointToQuaternion}: recover the clinical angles (flexion
  * / abduction / twist, degrees) from a bone-local rotation, given the same axis
- * basis. This is what an IK solver needs — it computes the bone rotations that
+ * basis. This is what an IK solver needs. It computes the bone rotations that
  * reach a goal as quaternions, then lowers them back into the
  * flexion/abduction/twist a pose carries.
  *
  * The extraction diagonalises the fixed composition `q = qTwist · qAbduction ·
  * qFlexion`. Changing basis by `M = [flexAxis | abdAxis | twistAxis]` turns it
  * into the standard `Rz(twist)·Ry(abduction)·Rx(flexion)` sequence, whose
- * closed-form ZYX extraction is well known — computed here as dot products of
+ * closed-form ZYX extraction is well known, computed here as dot products of
  * the axes with the rotated axes, so no matrix is built. Gimbal lock (abduction
  * ≈ ±90°, the arm straight up or down) collapses flexion into twist; the
  * extraction pins flexion to 0 and folds the freedom into twist, which still
@@ -45,7 +45,7 @@ const assertFiniteQuaternion = (q: IAutoMovieQuaternion): void => {
  *
  * A `frame` ({@link IAutoMovieRestFrame}) lifts the recovered rest-relative
  * angles into **clinical** ones (`clinical = sign · r + neutral`), the inverse
- * of `jointToQuaternion`'s `frame` map — so `jointToQuaternion(decompose(q,
+ * of `jointToQuaternion`'s `frame` map, so `jointToQuaternion(decompose(q,
  * axes, f), axes, f)` still round-trips.
  *
  * @author Samchon

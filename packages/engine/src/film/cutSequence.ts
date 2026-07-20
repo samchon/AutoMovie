@@ -38,12 +38,12 @@ export namespace IAutoMovieCut {
 }
 
 /**
- * The ASSEMBLE consumer — fold the editor's cut-list into an
+ * The ASSEMBLE consumer: fold the editor's cut-list into an
  * {@link IAutoMovieSequence} over the shots the pipeline actually built. The
  * gates are editorial physics: every entry must name a built shot, a trim must
  * select a positive span that lies inside its shot, a transition must not
  * outlast the incoming shot's played span, and the film must play at a positive
- * frame rate. Pacing and continuity stay prose — they have no cheap
+ * frame rate. Pacing and continuity stay prose. They have no cheap
  * deterministic verifier, so the schema carries the rationale instead.
  *
  * `runtime` sums each entry's played span (its trim's duration, else the whole

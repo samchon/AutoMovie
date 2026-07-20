@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Runner for build-cat.ts — see build-stickman.cjs. esbuild bundles the entry
+// Runner for build-cat.ts. See build-stickman.cjs. esbuild bundles the entry
 // (and the workspace TS it pulls in) into one CommonJS module, then runs its
 // `main()`. Emits .shots/cat/cat.glb.
 const esbuild = require("esbuild");

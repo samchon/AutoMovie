@@ -4,13 +4,13 @@ const VECTOR_AXES = ["x", "y", "z"] as const;
 
 /**
  * The **yaw and pitch** (degrees) that aim from `from` at `to`, expressed in a
- * frame facing `facingDeg` about +Y — the angles a head / eye / camera turns
+ * frame facing `facingDeg` about +Y, the angles a head / eye / camera turns
  * through to look at a target. The world direction is rotated into the actor's
  * local frame (undoing its facing), then:
  *
- * - **yaw** = `atan2(localX, localZ)` — the turn off straight-ahead (0 = dead
+ * - **yaw** = `atan2(localX, localZ)`: the turn off straight-ahead (0 = dead
  *   ahead, +90 = the actor's left, matching the direction-target convention);
- * - **pitch** = `atan2(localY, horizontal)` — the tilt up (+) / down (−).
+ * - **pitch** = `atan2(localY, horizontal)`: the tilt up (+) / down (−).
  *
  * Returns `{ yawDeg: 0, pitchDeg: 0 }` for a degenerate zero-length aim (the
  * target sits on `from`). The caller maps yaw/pitch onto a rig's joints (a

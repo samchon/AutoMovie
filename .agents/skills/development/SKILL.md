@@ -27,8 +27,8 @@ These four are never acceptable; choosing any one means the approach is already 
 ## Work Rules
 
 - Match existing conventions. Before adding a file, type, or test, open a nearby peer and mirror its naming, location, and style; don't create parallel structures.
-- Respect package boundaries. `three.js` is imported only inside `viewer`; computation flows through `engine`; the agent-facing surface is `mcp` (and the `cli` scaffolder), which consume `interface` + `engine`, never the reverse. The `interface` package stays pure types with **no runtime dependency** — it is the AST the LLM emits against, and its constraints live in field JSDoc, not in `typia` tags (which is why the last such tag, and interface's `typia` dependency, were removed).
-- **Rough types in `interface`.** Primitives are plain `string`/`number` — no wrapper aliases like `AutoMovieUuid`, no `typia` tag constraints (`Minimum`, `MinItems`, `Format`). Units and ranges are documented in field JSDoc and enforced at runtime by `engine` validators (this is where the ROM differentiator lives). The only structural constraints are closed `AutoMovie*` unions (bone names, ARKit channels, presets, easing) — those are allowed-value sets, not wrappers.
+- Respect package boundaries. `three.js` is imported only inside `viewer`; computation flows through `engine`; the agent-facing surface is `mcp` (and the `cli` scaffolder), which consume `interface` + `engine`, never the reverse. The `interface` package stays pure types with **no runtime dependency**: it is the AST the LLM emits against, and its constraints live in field JSDoc, not in `typia` tags (which is why the last such tag, and interface's `typia` dependency, were removed).
+- **Rough types in `interface`.** Primitives are plain `string`/`number`: no wrapper aliases like `AutoMovieUuid`, no `typia` tag constraints (`Minimum`, `MinItems`, `Format`). Units and ranges are documented in field JSDoc and enforced at runtime by `engine` validators (this is where the ROM differentiator lives). The only structural constraints are closed `AutoMovie*` unions (bone names, ARKit channels, presets, easing). Those are allowed-value sets, not wrappers.
 - Keep changes surgical. Touch only what the request and the verified consequence surface require; do not refactor adjacent code without a product reason.
 - Run `pnpm run format` before every commit and stage the result; never commit unformatted output.
 - Update the matching `.wiki/` doc in the same change when behavior, architecture, or a decision changes (see `documentation/SKILL.md`).
@@ -55,14 +55,14 @@ Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @
 
 ## Coverage is always 100%
 
-Coverage is held at **100% on statements, branches, functions, and lines** at all times, across the whole measured set — `engine`, `forge`, `ingest`, `render`, and `mcp` (see the `--src` list in the `coverage` script). Measure with `pnpm --filter @automovie/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). The `test` CI workflow gates this — a drop fails the build.
+Coverage is held at **100% on statements, branches, functions, and lines** at all times, across the whole measured set: `engine`, `forge`, `ingest`, `render`, and `mcp` (see the `--src` list in the `coverage` script). Measure with `pnpm --filter @automovie/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). The `test` CI workflow gates this: a drop fails the build.
 
 **100% is earned by testing, not by hiding code.** A suite of happy paths that reaches every line is not 100% correctness:
 
 - **A negative twin for every positive.** Wherever a validator fires (ROM, range, temporal, type), pin an adjacent case one property away where it must NOT fire. An over-match stays invisible until the counter-example exists.
-- **Both sides of every branch.** A `?? null`, an `if`, a discriminated union arm — exercise each side with a real input (asymmetric keyframes, opposite-hemisphere slerp, a non-box primitive, a skeletonless model).
+- **Both sides of every branch.** A `?? null`, an `if`, a discriminated union arm: exercise each side with a real input (asymmetric keyframes, opposite-hemisphere slerp, a non-box primitive, a skeletonless model).
 - **Boundaries.** The empty case, the single element, the exact limit, the immobile axis, the degenerate/zero input.
-- **Oracle-derived expectations.** Take expected numbers from the spec or hand math, not from whatever the code currently emits — a snapshot of the code's own output locks its bugs in.
+- **Oracle-derived expectations.** Take expected numbers from the spec or hand math, not from whatever the code currently emits. A snapshot of the code's own output locks its bugs in.
 
 Do not reach 100% by ignoring a branch. A genuinely unreachable defensive branch is removed by refactoring (drop a dead lookup, document a precondition), not hidden behind `c8 ignore`.
 

@@ -41,7 +41,7 @@ const makeSpace = (
 });
 
 /**
- * Staging may author the scene's `space` (#1173) — the ground's MEANING beside
+ * Staging may author the scene's `space` (#1173): the ground's MEANING beside
  * the `set`'s geometry. `stageScene` gates it with the shared `validateSpace`
  * (re-rooted under `$input.space`, so one surface rule can never mean two
  * things) and copies it onto the composed scene, which is what finally lets the
@@ -50,12 +50,12 @@ const makeSpace = (
  *
  * Scenarios:
  *
- * 1. A floor + ramp space stages onto the scene verbatim — ids, kinds, anchors,
- *    and walkability — and the composed scene feeds `spaceGround` directly: 0 m
+ * 1. A floor + ramp space stages onto the scene verbatim (ids, kinds, anchors,
+ *    and walkability), and the composed scene feeds `spaceGround` directly: 0 m
  *    over the floor, 0.5 m at the ramp's midpoint (half of the 1 m climb), and
  *    the 0 m fallback off every footprint.
  * 2. Omitting `space` composes `space: null`, the scalar ground plane the engine
- *    assumed before spaces existed — an absent ground is stated, not implied.
+ *    assumed before spaces existed: an absent ground is stated, not implied.
  * 3. The gates fire at the submitted field: a concave footprint, a degenerate ramp
  *    axis, and a walkable id resolving to no surface are each refused under
  *    `$input.space.*` in one round.
@@ -106,7 +106,7 @@ export const test_film_stage_scene_space = (): void => {
           {
             id: "floor",
             kind: "floor",
-            // (0, 0) sits strictly inside the hull of the other three — the
+            // (0, 0) sits strictly inside the hull of the other three: the
             // notch the ground query would silently fill.
             polygon: [
               { x: -2, y: 0, z: -2 },
@@ -142,7 +142,7 @@ export const test_film_stage_scene_space = (): void => {
       hasViolation(refused, "type", "$input.space.walkable[1]"),
   );
 
-  // 4. the negative twin — the notch vertex pulled back onto the hull edge.
+  // 4. the negative twin: the notch vertex pulled back onto the hull edge.
   const convex = stageScene(
     makeScriptWrite(),
     makeStagingWrite({

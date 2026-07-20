@@ -89,7 +89,7 @@ def main():
     hair_face_mask = body_all & np.all(hairV[fvert], axis=1)
     HAIR_OFFSET = 0.09
 
-    # hair offset vertices (computed up front so ALL v/vn precede every face —
+    # hair offset vertices (computed up front so ALL v/vn precede every face:
     # THREE's OBJLoader is unreliable when vertices are defined after faces).
     # Push RADIALLY outward from the head centre (robust vs per-vertex normal noise).
     hv_idx = np.unique(fvert[hair_face_mask])

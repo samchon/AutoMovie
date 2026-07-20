@@ -57,8 +57,8 @@ const peakFlexion = (
 
 /**
  * The reference synthesiser fattening the `react` verb into a ROM-clamped
- * flinch. The verb is a physics verb — its deflection is bounded by each
- * joint's ROM — so it needs the context's `rig`; the mapping snaps the body
+ * flinch. The verb is a physics verb (its deflection is bounded by each
+ * joint's ROM), so it needs the context's `rig`; the mapping snaps the body
  * away from where the blow comes from, scaled by `force`, and the whole flinch
  * validates against the same ROM table the engine gates on.
  *
@@ -70,7 +70,7 @@ const peakFlexion = (
  * 2. Force is monotone: a 0.9 blow flinches harder than a 0.3 blow, and both stay
  *    inside ROM (validateMotion passes) because impactRecoil clamps.
  * 3. `unbalance: true` flinches harder still than the same force upright.
- * 4. A context with no `rig` synthesises nothing (null) — the physics verb can't
+ * 4. A context with no `rig` synthesises nothing (null): the physics verb can't
  *    clamp without the body.
  * 5. Totality of the direction decomposition: a `duration: "auto"` react runs the
  *    default 0.5 s; a blow from an unresolvable target (a direction, not a

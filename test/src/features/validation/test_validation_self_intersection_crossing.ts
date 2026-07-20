@@ -19,12 +19,12 @@ const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
 /**
  * Two capsules whose centerlines pierce each other as an X: `armA` runs along
  * the world x-axis from (-1,0,0) to (1,0,0), `armB` along the z-axis from
- * (0,0,-1) to (0,0,1). They cross at the origin, interior to both — the two
+ * (0,0,-1) to (0,0,1). They cross at the origin, interior to both: the two
  * centerlines share a point, so the true distance is 0.
  *
  * Every capsule endpoint sits a full unit from the other centerline, so the
  * retired four-endpoint approximation measured this pair 1 m apart and the
- * forced self-intersection check passed it — the exact clamped solver reads the
+ * forced self-intersection check passed it; the exact clamped solver reads the
  * real 0 and rejects it.
  */
 const crossSkeleton = (): IAutoMovieSkeleton => ({

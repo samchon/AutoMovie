@@ -3,7 +3,7 @@ import type { Document, Primitive } from "@gltf-transform/core";
 
 /**
  * Extract an {@link IAutoMovieFaceTemplate} from a parsed glTF/GLB
- * {@link Document} — the import side of the face editor.
+ * {@link Document}: the import side of the face editor.
  *
  * A face asset carries its editable shape as glTF morph targets on one
  * primitive: `POSITION` is the resting face and each target holds per-vertex
@@ -56,7 +56,7 @@ const templateOf = (
       throw new Error(
         `morph target #${i} has no name (neither a target name nor mesh.extras.targetNames)`,
       );
-    // Two targets resolving to one name would silently overwrite — the last
+    // Two targets resolving to one name would silently overwrite: the last
     // sculpt wins and the earlier one vanishes from the template, exactly the
     // degradation the throw-on-structural-defect contract forbids (#1105).
     const first = indexByName.get(name);

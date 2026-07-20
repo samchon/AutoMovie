@@ -3,14 +3,14 @@ import type { IAutoMovieMotion } from "@automovie/interface";
 /**
  * A clip authored the way a coding agent authors motion: **computed**, not
  * hand-keyed. Here a simple sine arc sweeps the left arm up and back down over
- * one second — `flexion(t) = peak · sin(π·t)`, sampled at a handful of
- * keyframes — but the same seam holds for parametric curves, phase-composed
+ * one second (`flexion(t) = peak · sin(π·t)`, sampled at a handful of
+ * keyframes), but the same seam holds for parametric curves, phase-composed
  * gaits, or a sampled physics solver. The engine then enforces (ROM) and plays
  * (sampling) whatever you compute.
  *
  * Raise `peakDeg` past the shoulder's range and `main.ts` will show the engine
- * REFUSING the clip — the point of the split: you create, the engine is the
- * arbiter of physical truth.
+ * REFUSING the clip. That is the point of the split: you create, the engine
+ * is the arbiter of physical truth.
  */
 export const buildWaveClip = (
   skeletonId: string,

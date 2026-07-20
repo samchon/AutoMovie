@@ -47,7 +47,7 @@ const legSkeleton: IAutoMovieSkeleton = {
   ],
 };
 
-// The whole body (and the planted foot) slides +x — a baked gait skating.
+// The whole body (and the planted foot) slides +x: a baked gait skating.
 const skating: IAutoMovieMotion = {
   id: "skate",
   skeleton: "leg",
@@ -89,7 +89,7 @@ const footAt = (motion: IAutoMovieMotion, time: number) =>
  *
  * Scenarios:
  *
- * 1. The raw skating clip warns from validateFootSkate (foot slides 0.2 m/s — a
+ * 1. The raw skating clip warns from validateFootSkate (foot slides 0.2 m/s, a
  *    D015 plausibility warning, the run still succeeds).
  * 2. The foot-corrected clip produces no such warning over the same window.
  * 3. The corrected clip passes validateGroundContact (foot held at the plane).

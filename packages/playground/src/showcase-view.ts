@@ -82,7 +82,7 @@ const arm = (
 const performance: IAutoMoviePerformanceApplication.IWrite = {
   type: "write",
   beat: "parade",
-  plan: "wave, celebrate, draw, throw — one after another.",
+  plan: "wave, celebrate, draw, throw: one after another.",
   draft: [
     arm(0, 1.3, "wave"),
     arm(1.5, 1.3, "celebrate"),

@@ -1,5 +1,5 @@
 /**
- * A blend between two adjacent shots in a sequence — the alternative to the
+ * A blend between two adjacent shots in a sequence: the alternative to the
  * default hard cut. The incoming entry overlaps the previous one for `duration`
  * seconds.
  *

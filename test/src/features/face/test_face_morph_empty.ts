@@ -5,7 +5,7 @@ import { makeFace } from "../internal/fixtures";
 
 /**
  * An empty parameter list returns the template's resting face unchanged, and as
- * a fresh array — morphFace must never alias the template's `positions`, or a
+ * a fresh array. morphFace must never alias the template's `positions`, or a
  * later morph would corrupt the shared template.
  *
  * Scenario: zero parameters yield values equal to the template positions while

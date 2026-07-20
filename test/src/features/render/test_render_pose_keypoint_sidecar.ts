@@ -101,20 +101,20 @@ const hipsX = (frames: ReturnType<typeof plan>["frames"], frame: number) =>
  * `planPoseKeypointSidecar` (#1168): the per-frame OpenPose-style sidecar. The
  * cut lands on the same frame-atomic output clock as the render/caption plans,
  * each frame resolves its live shot, and every performing actor's named joints
- * project through the shot's camera. Genuinely per-frame — poses change every
- * frame — unlike the caption sidecar's run-length spans.
+ * project through the shot's camera. Genuinely per-frame (poses change every
+ * frame), unlike the caption sidecar's run-length spans.
  *
  * Scenarios (camera at origin looking down −Z, fovY 60; fps 2, 1 s → 2 frames):
  *
  * 1. A still actor 5 m down −Z yields 2 frames of beat "b1", one actor "hero",
  *    hips centered (x = 0.5) on both frames.
  * 2. A travelling actor (root x 0→2) moves BETWEEN frames: frame 0 centered, frame
- *    1 right of center — the sidecar is per-frame, not per-shot.
+ *    1 right of center: the sidecar is per-frame, not per-shot.
  * 3. `startOffset` delays the clip: with offset 0.5 the travelling actor is still
  *    centered on frame 1 (its clip has only just started).
  * 4. A missing scene or camera yields empty actors; a held (null-motion)
  *    performance, a missing motion, a missing node, and a missing skeleton are
- *    each skipped — never a throw.
+ *    each skipped: never a throw.
  * 5. An unprefixed shot id passes through as the beat id.
  * 6. Serialization is deterministic bytes and round-trips via JSON.parse.
  * 7. Zero/non-finite fps and a zero-frame runtime throw, aligned with the

@@ -11,7 +11,7 @@ const disjoint = (
 };
 
 /**
- * `bodyRegionBones` — the disjoint-and-complete partition of the humanoid
+ * `bodyRegionBones`: the disjoint-and-complete partition of the humanoid
  * skeleton into body regions, the basis for layering clips on non-overlapping
  * regions.
  *
@@ -20,7 +20,7 @@ const disjoint = (
  * 1. Each region owns the expected bones (lower = hips+legs, upper = torso+arms+
  *    fingers, head = neck/head/eyes/jaw, face = none).
  * 2. The three bony regions are pairwise disjoint.
- * 3. They cover the full 55-bone VRM rig exactly — `fullBody` is their union.
+ * 3. They cover the full 55-bone VRM rig exactly: `fullBody` is their union.
  */
 export const test_perform_body_region_bones = (): void => {
   const lower = bodyRegionBones("lowerBody");

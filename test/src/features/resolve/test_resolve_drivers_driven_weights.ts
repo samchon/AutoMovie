@@ -48,7 +48,7 @@ const driven = (
 
 /**
  * The driven output gate is width-aware for node `weights` (#1100): the
- * corrective-morph driver — `node:X:weights` on a single-morph node — is
+ * corrective-morph driver (`node:X:weights` on a single-morph node) is
  * genuinely scalar-width and folds into `resolveFrame`'s weights, so rejecting
  * every node output was a capability regression whose suggested remedy (a
  * scalar JSON pointer) never folds into node outputs at all. TRS outputs stay
@@ -60,7 +60,7 @@ const driven = (
  *
  * 1. End-to-end: a driven driver writing `node:k:weights` with no sampled weights
  *    CREATES the scalar channel (exactly as a width-1 clip track would) and
- *    `resolveFrame` folds it into `weights` — the classic corrective-morph
+ *    `resolveFrame` folds it into `weights`: the classic corrective-morph
  *    driver works again.
  * 2. A sampled width-1 weights channel is overwritten in place (the driver
  *    replaces the clip's value).

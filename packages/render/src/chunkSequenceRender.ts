@@ -13,7 +13,7 @@ import {
 } from "./sequenceRenderPlan";
 
 /**
- * One independently-renderable slice of a sequence render — a contiguous range
+ * One independently-renderable slice of a sequence render: a contiguous range
  * of the whole plan's output frames with its own frame directory, paths, and
  * encoder output. A 1-hour film is rendered (and regenerated) chunk by chunk in
  * bounded windows without ever holding the whole timeline at once.
@@ -42,8 +42,8 @@ export interface IAutoMovieRenderChunk {
   /**
    * The chunk's frames. Each carries a chunk-local
    * {@link IAutoMovieSequenceRenderFrame.index} and `path` (so the chunk
-   * captures its own files independently), while every sample field —
-   * `timeSeconds`, `shot`, `shotTimeSeconds`, `blend` — is copied verbatim from
+   * captures its own files independently), while every sample field
+   * (`timeSeconds`, `shot`, `shotTimeSeconds`, `blend`) is copied verbatim from
    * the whole plan, so a chunk renders frame-identical to the same frames of
    * the un-chunked render.
    */
@@ -69,7 +69,7 @@ export interface IAutoMovieRenderChunk {
 
   /**
    * Per-pass output locations inside this chunk's frame dir, chunk-local
-   * indices — present only when the plan requested guide passes. The `beauty`
+   * indices, present only when the plan requested guide passes. The `beauty`
    * pass's untagged paths coincide with {@link frames}' paths (it IS the base
    * capture); tagged passes sit beside them (`frame_00000.depth.png`).
    */
@@ -77,7 +77,7 @@ export interface IAutoMovieRenderChunk {
 }
 
 /**
- * One guide pass's whole-timeline walk order across the chunks — how a
+ * One guide pass's whole-timeline walk order across the chunks, how a
  * diffusion host visits every frame of a pass without a video concat: the chunk
  * frame directories in play order, with the per-chunk ffmpeg input pattern
  * alongside for hosts that want to encode a pass per chunk.
@@ -149,7 +149,7 @@ export interface IAutoMovieRenderChunkPlan {
   reassembly: IAutoMovieRenderReassembly;
 
   /**
-   * Per-pass whole-timeline walk orders — present only when guide passes were
+   * Per-pass whole-timeline walk orders, present only when guide passes were
    * requested. The `beauty` pass reassembles as video through
    * {@link reassembly}; tagged passes terminate as frame sequences (diffusion
    * consumes frames, not videos), so their reassembly IS this walk order.
@@ -167,7 +167,7 @@ export interface IAutoMovieRenderChunkPlan {
  * plan's `frames`, `[i·chunkFrames, (i+1)·chunkFrames)`). Because a
  * transition's blend is already baked into each output frame's `blend`, a
  * transition that straddles a chunk boundary is simply split at a frame
- * boundary with each frame keeping its exact blend — no frame is duplicated or
+ * boundary with each frame keeping its exact blend: no frame is duplicated or
  * dropped, and concatenating the chunks reproduces the whole render
  * frame-for-frame. Deterministic: it only slices and re-labels the
  * already-rational frame schedule.
@@ -177,13 +177,13 @@ export interface IAutoMovieRenderChunkPlan {
  *
  * **Guide passes (#644).** When `passes` is given, every chunk also plans its
  * per-pass frame paths (chunk-local indices, the same re-base as the beauty
- * frames; naming via {@link planGuidePassOutputs} — `beauty` untagged and
+ * frames; naming via {@link planGuidePassOutputs}: `beauty` untagged and
  * coinciding with the chunk's base frames, others tagged
  * `frame_00000.depth.png`), and the plan gains one
  * {@link IAutoMovieRenderPassManifest} per pass. The output decision: `beauty`
  * keeps the per-chunk video encode and the concat reassembly (unchanged);
- * tagged passes terminate as **frame sequences** — diffusion guidance
- * (ControlNet et al.) consumes frames, not videos — with each chunk's ffmpeg
+ * tagged passes terminate as **frame sequences**: diffusion guidance
+ * (ControlNet et al.) consumes frames, not videos, with each chunk's ffmpeg
  * input pattern still emitted so a host that wants a video can encode one. No
  * per-pass concat exists; a pass's whole-timeline order IS its manifest's
  * chunk-dir walk. `passes` absent omits every pass field (byte-identical to the
@@ -266,7 +266,7 @@ export const planChunkedSequenceRender = (props: {
   // ffmpeg's concat demuxer resolves relative entries against the LIST FILE's
   // directory, not the invoking cwd. The chunk outputs always sit beside the
   // list (taggedOutput preserves the directory), so the lines must carry
-  // basenames — a directory-qualified output ("renders/seq.mp4") would
+  // basenames. A directory-qualified output ("renders/seq.mp4") would
   // otherwise resolve to "renders/renders/seq.chunk_0.mp4". Each basename is
   // single-quote escaped: the demuxer's quoted string ends at the first `'`,
   // so an apostrophe basename ("directors'cut.mp4") otherwise malforms the
@@ -323,7 +323,7 @@ const baseName = (path: string): string =>
 /**
  * Escape one concat-demuxer list entry for its single-quoted `file '…'` line: a
  * quoted string cannot CONTAIN `'`, so each apostrophe closes the quote, emits
- * an escaped quote, and reopens (`'` → `'\''`) — the same idiom POSIX shells
+ * an escaped quote, and reopens (`'` → `'\''`), the same idiom POSIX shells
  * use, and the grammar ffmpeg's `av_get_token` parses (#1089).
  */
 const escapeConcatEntry = (name: string): string => name.replace(/'/g, "'\\''");

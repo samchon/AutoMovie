@@ -10,7 +10,7 @@ import {
  * One application of a profile onto a concrete subtree: the reusable profile
  * data, the binding that maps its semantic keys onto real node ids, and the
  * optional placement prefix a bridged actor's nodes carry
- * (`sceneToNodes`/`motionToClip` naming — `"actor/"` turns `hips` into
+ * (`sceneToNodes`/`motionToClip` naming: `"actor/"` turns `hips` into
  * `actor/hips`).
  */
 export interface IAutoMovieProfileApplication {
@@ -41,13 +41,13 @@ export interface IAutoMovieBoundProfile {
  * in the profile's declared `limits` and `drivers` through the binding's
  * `boneMap` (then the placement `nodePrefix`), yielding limits and drivers
  * `resolveFrame` can consume directly. This is what makes "profiles are data,
- * not code" executable — a door profile's hinge limit or a humanoid profile's
+ * not code" executable: a door profile's hinge limit or a humanoid profile's
  * eye aim becomes a live constraint/driver on the bound nodes.
  *
  * Node channels and driver node fields go through the map; **pointer channels
  * pass through untouched** (an RFC-6901 pointer addresses a global property,
- * not a subtree node). A semantic key missing from `boneMap` — or mapping to an
- * empty id — **throws**: a binding that silently dropped a declared constraint
+ * not a subtree node). A semantic key missing from `boneMap`, or mapping to an
+ * empty id, **throws**: a binding that silently dropped a declared constraint
  * would un-constrain the rig without a trace, the exact silent drop the engine
  * refuses everywhere else ({@link motionToClip}, sampled channel validation).
  *
@@ -152,7 +152,7 @@ const mapDriver = (
 };
 
 /**
- * Every semantic node key a profile references — the exact set of `boneMap`
+ * Every semantic node key a profile references: the exact set of `boneMap`
  * entries {@link bindProfile} will demand. Walks the same references
  * `mapDriver`/`mapChannel` remap (limit node channels; each driver's node
  * fields; pointer channels excluded), deduplicated in first-reference order, so

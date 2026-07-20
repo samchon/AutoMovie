@@ -64,7 +64,7 @@ const skating: IAutoMovieMotion = {
 /**
  * With no options the pass uses the default ground plane (0), tolerance (0.02),
  * sample rate (24), and both humanoid legs. A leg whose foot bone is absent
- * from the rig contributes no stance — it is simply skipped, not an error.
+ * from the rig contributes no stance; it is simply skipped, not an error.
  *
  * Scenarios:
  *

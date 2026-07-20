@@ -83,8 +83,8 @@ export const TREE_SCRIPT: IAutoMovieScript = {
 
 /**
  * The screenplay document: the tree renders depth-first with the documented
- * plain-text convention — slug, direction, indented dialogue with anchors,
- * bracketed captions — and the same script yields the same bytes.
+ * plain-text convention (slug, direction, indented dialogue with anchors,
+ * bracketed captions), and the same script yields the same bytes.
  *
  * Scenarios:
  *
@@ -102,18 +102,18 @@ export const test_render_screenplay = (): void => {
   const order = [
     "LOGLINE: A knight faces his rival.",
     "THEME: honor",
-    "ACT — the rivalry breaks",
+    "ACT, the rivalry breaks",
     "EXT. CASTLE COURTYARD - DAWN",
     "Mist over the flagstones.",
     "[the exchange]",
-    "BEAT — The duel",
+    "BEAT, The duel",
     "A lunges; B parries.",
     "                KNIGHTA",
     "        [t=1.5s] Yield!",
     "                KNIGHTB",
     "        Never.",
     "[Shot: two knights clash at dawn]",
-    "BEAT — The aftermath",
+    "BEAT, The aftermath",
     "Dust settles.",
   ];
   let cursor = -1;

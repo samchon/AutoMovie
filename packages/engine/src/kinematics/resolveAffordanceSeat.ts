@@ -10,16 +10,16 @@ const UNIT_SCALE = { x: 1, y: 1, z: 1 } as const;
 
 /**
  * Resolve the **world transform of a child model's root** seated on another
- * model's affordance — the model-frame sibling of {@link resolveAttachment}.
+ * model's affordance, the model-frame sibling of {@link resolveAttachment}.
  * Where that couples a child to a posed **bone** (a rider on a horse), this
  * aligns two declared contact frames: crate B's base socket onto crate A's
  * stack-top, a lantern's ring onto a hook, a hand frame onto a mug handle.
  *
  * The parent's contact frame in world space is the parent affordance's frame
- * composed onto the parent root (the {@link resolveAttachment} convention — `pos
+ * composed onto the parent root (the {@link resolveAttachment} convention: `pos
  * = parentPos + parentRot · frame.translation`, `rot = parentRot ∘
- * frame.rotation`). The child is then placed so its own contact frame — its
- * `childAffordance.frame`, or the child root origin when `null` — coincides
+ * frame.rotation`). The child is then placed so its own contact frame (its
+ * `childAffordance.frame`, or the child root origin when `null`) coincides
  * with it:
  *
  * - `childRot = contactRot ∘ childFrame.rotation⁻¹`
@@ -28,7 +28,7 @@ const UNIT_SCALE = { x: 1, y: 1, z: 1 } as const;
  * Seating never rescales: the returned `scale` is unit (the engine never
  * mirrors, and an affordance is a contact, not a resize). Wiring the film
  * layer's `attachTo` verb to affordance targets (baking a follow clip the way
- * `compileAttach` does for bones) is a follow-up — this is the primitive it
+ * `compileAttach` does for bones) is a follow-up. This is the primitive it
  * will call per frame.
  *
  * @author Samchon
@@ -37,7 +37,7 @@ export const resolveAffordanceSeat = (props: {
   /** Parent model root in world space. */
   parentWorld: IAutoMovieTransform;
 
-  /** The parent's contact point (any kind — seating is pure frame alignment). */
+  /** The parent's contact point (any kind: seating is pure frame alignment). */
   parentAffordance: IAutoMovieAffordance;
 
   /**

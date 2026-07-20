@@ -23,8 +23,8 @@ export interface IAutoMovieIngestResult {
 }
 
 /**
- * Ingest a parsed glTF/GLB {@link Document} into automovie's **core** model —
- * the node graph and animation clips — with no three.js and no humanoid
+ * Ingest a parsed glTF/GLB {@link Document} into automovie's **core** model
+ * (the node graph and animation clips), with no three.js and no humanoid
  * assumptions.
  *
  * This is the import side of the pipeline: `@gltf-transform/core` parses the
@@ -34,13 +34,13 @@ export interface IAutoMovieIngestResult {
  * node becomes an {@link IAutoMovieNode} (TRS, parent, kind, and the
  * mesh/camera/ skin it carries), and every glTF animation becomes an
  * {@link IAutoMovieClip} whose tracks are glTF channel+sampler pairs
- * ({@link IAutoMovieTrack}) — the exact forms the engine's sample pass already
+ * ({@link IAutoMovieTrack}), the exact forms the engine's sample pass already
  * consumes. Humanoid retargeting (mapping bones onto the VRM slots) is a later,
  * separate stage; this layer stays generic so props, cameras, and characters
  * all import the same way.
  *
  * Node identity: glTF nodes have no stable id, so each is keyed by its index
- * (`node_{i}`) — deterministic and collision-free even when names repeat. All
+ * (`node_{i}`), deterministic and collision-free even when names repeat. All
  * cross-references (a child's `parent`, a channel's target) use the same key.
  *
  * @author Samchon

@@ -62,7 +62,7 @@ const expressions = (m: IAutoMovieMotion): (string | null)[] =>
  * `maskMotionToRegion` strips `expression` from every region except `face`
  * (#1101): joints were made disjoint by the bone filter, but expression rode
  * through on ANY region's clip, so a host synthesizer authoring a grimace on a
- * fullBody stagger overlapped an emote UNGATED — layering resolves expressions
+ * fullBody stagger overlapped an emote UNGATED: layering resolves expressions
  * last-envelope-wins and one silently ate the other, defeating the
  * fullBody↔face exemption's disjointness claim. Now only the face region's
  * owner speaks for the face, by construction.
@@ -74,7 +74,7 @@ const expressions = (m: IAutoMovieMotion): (string | null)[] =>
  * 2. Negative twin: the same clip on the `face` region keeps its expression at
  *    every keyframe.
  * 3. Layered disjointness: a fullBody clip authoring "angry" beside a face clip
- *    authoring "happy" — the composite carries only the face region's "happy";
+ *    authoring "happy": the composite carries only the face region's "happy";
  *    the fullBody grimace never surfaces.
  */
 export const test_perform_mask_expression_region = (): void => {

@@ -2,7 +2,7 @@
   "private": true,
   "name": "@automovie/test",
   "version": "0.1.0",
-  "description": "automovie test program — exhaustive deterministic engine validation",
+  "description": "automovie test program: exhaustive deterministic engine validation",
   "main": "src/index.ts",
   "scripts": {
     "build": "ttsc -p tsconfig.json --noEmit",

@@ -25,7 +25,7 @@ const DEFAULT_FPS = 30;
 export interface IAutoMovieFreeFallResult {
   /** Warning-severity feedback (or an error for bad input). */
   validation: IAutoMovieValidation;
-  /** Fall events on the shot clock — "one calculation, two consumers". */
+  /** Fall events on the shot clock: "one calculation, two consumers". */
   events: IAutoMovieInteractionEvent[];
   /**
    * Suggested free-fall arc from this frame, or `null` when not expected to
@@ -39,14 +39,14 @@ export interface IAutoMovieFreeFallResult {
  * falls.
  *
  * At the given frame, an object with a declared {@link IAutoMovieBody} is
- * expected to fall when it is (a) **unsupported** — its center of mass does not
- * project onto any support contact (reusing #601's hull judgment), (b) **not
+ * expected to fall when it is (a) **unsupported** (its center of mass does not
+ * project onto any support contact, reusing #601's hull judgment), (b) **not
  * attached / driven** (`attached`), and (c) **not already falling**
- * (`falling`). Because a film may be deliberately unphysical (D010) this is an
+ * (`falling`). Because a film may be deliberately unphysical this is an
  * advisory `warning`, not a hard reject: it suggests the fall arc (via
  * {@link projectileTrajectory}, from rest or an inherited velocity) the model
  * can accept, and emits a `fall` event. A `physicsIntent` marker (e.g.
- * `"defies-gravity"`) opts the body out — the warning and suggestion are
+ * `"defies-gravity"`) opts the body out: the warning and suggestion are
  * suppressed while the event still surfaces. A `body: null` object (no declared
  * physics) is never a fall candidate.
  *

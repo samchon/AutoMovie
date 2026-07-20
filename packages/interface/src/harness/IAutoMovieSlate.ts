@@ -13,7 +13,7 @@ export interface IAutoMovieBeat {
   name: string;
 
   /**
-   * What happens in this beat, in prose — the brief the blocking stage works
+   * What happens in this beat, in prose: the brief the blocking stage works
    * to.
    */
   summary: string;
@@ -27,7 +27,7 @@ export interface IAutoMovieCastMember {
   /** Id of the scene node (set in staging) that embodies this character. */
   node: string;
 
-  /** Who they are — read by the model when blocking their action. */
+  /** Who they are, read by the model when blocking their action. */
   character: string;
 
   /**
@@ -54,7 +54,7 @@ export interface IAutoMovieScript {
   /**
    * The screenplay refinement tree ({@link IAutoMovieScriptNode}, D013): intent
    * → acts/scenes/groups → beat nodes carrying stage direction, dialogue, and
-   * shot captions. Evolving-schema optional — absent means the flat `beats`
+   * shot captions. Evolving-schema optional: absent means the flat `beats`
    * list is the whole authored structure (fully backward-compatible); when
    * present, beat-kind nodes join `beats` 1:1 and the tree validates on
    * commit.
@@ -63,7 +63,7 @@ export interface IAutoMovieScript {
 }
 
 /**
- * A reviewer's note on a built shot — the feedback that drives a
+ * A reviewer's note on a built shot: the feedback that drives a
  * re-block/re-perform.
  */
 export interface IAutoMovieReviewNote {
@@ -84,7 +84,7 @@ export interface IAutoMovieReviewNote {
 }
 
 /**
- * The **slate** — the clapperboard that heads every take and carries the
+ * The **slate**: the clapperboard that heads every take and carries the
  * production's running context between stages. Each harness stage reads the
  * slate's upstream slices and writes its own, exactly as AutoBe threads state
  * between analyze → database → interface → realize → test. State lives here;

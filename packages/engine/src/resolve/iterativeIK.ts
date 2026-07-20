@@ -17,7 +17,7 @@ import {
 } from "./worldShared";
 
 /**
- * Iteration budget when the driver leaves `iterations: null` — enough for a
+ * Iteration budget when the driver leaves `iterations: null`, enough for a
  * short chain to converge well past the visual threshold, small enough that the
  * worst case stays a fixed, cheap constant.
  */
@@ -39,7 +39,7 @@ const CONVERGENCE_EPSILON = 1e-6;
 const FALLBACK_DIR: IAutoMovieVector3 = { x: 1, y: 0, z: 0 };
 
 /**
- * Apply an iterative IK driver (`ccd` or `fabrik`) to a composed world map —
+ * Apply an iterative IK driver (`ccd` or `fabrik`) to a composed world map:
  * the long-chain complement to the analytic two-bone solver, now executed
  * inside the engine so the deterministic guarantee covers it (S2 of the core
  * wiring: these used to be returned untouched for a host to run).
@@ -47,12 +47,12 @@ const FALLBACK_DIR: IAutoMovieVector3 = { x: 1, y: 0, z: 0 };
  * Both solvers work on the chain's world positions with rigid segment lengths
  * and a **fixed iteration budget** (`driver.iterations`, else
  * {@link DEFAULT_ITERATIONS}) plus a convergence early-out
- * ({@link CONVERGENCE_EPSILON}) — same inputs, same output, always. CCD sweeps
+ * ({@link CONVERGENCE_EPSILON}). Same inputs, same output, always. CCD sweeps
  * the joints back-to-front rotating each toward the goal; FABRIK runs
  * backward/forward position passes (and resolves an out-of-reach goal as full
  * extension toward it). After the positional solve each joint's world rotation
  * gets the shortest-arc delta of its segment, the result is blended by
- * `influence`, and — matching the two-bone convention — the tip's subtree
+ * `influence`, and, matching the two-bone convention, the tip's subtree
  * recomposes.
  *
  * @author Samchon
@@ -118,8 +118,8 @@ const solveCcd = (
       break;
     for (let j = tip - 1; j >= 0; --j) {
       // A degenerate direction (tip or goal exactly on the pivot) normalizes to
-      // the zero vector, and rotationBetween of a zero vector is the identity —
-      // the pivot simply contributes nothing that sweep, no guard needed.
+      // the zero vector, and rotationBetween of a zero vector is the identity.
+      // The pivot simply contributes nothing that sweep, no guard needed.
       const rot = rotationBetween(
         Vector3.normalize(Vector3.subtract(p[tip]!, p[j]!)),
         Vector3.normalize(Vector3.subtract(goal, p[j]!)),
@@ -137,7 +137,7 @@ const solveCcd = (
 /**
  * FABRIK: alternate backward (tip pinned to the goal) and forward (root pinned
  * home) passes that re-place each joint at its exact segment length. A goal
- * beyond total reach resolves directly as full extension toward it — FABRIK's
+ * beyond total reach resolves directly as full extension toward it: FABRIK's
  * canonical unreachable handling, and exactly "the chain points at what it
  * cannot touch".
  */
@@ -194,7 +194,7 @@ const solveFabrik = (
 const unitOr = (v: IAutoMovieVector3): IAutoMovieVector3 =>
   Vector3.length(v) < 1e-12 ? FALLBACK_DIR : Vector3.normalize(v);
 
-// The exact shortest-arc rotation now lives in worldShared.rotationBetween —
+// The exact shortest-arc rotation now lives in worldShared.rotationBetween,
 // promoted there (#643) so the iterative solvers, the analytic twoBone
 // lowering, and the aim driver all share one deadzone-free implementation.
 

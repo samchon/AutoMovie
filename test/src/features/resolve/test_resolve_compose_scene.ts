@@ -35,7 +35,7 @@ const tx = (m: number[]): number => m[12]!;
  *
  * Scenarios:
  *
- * 1. A lone root with no overrides composes from its own rest transform — a +1
+ * 1. A lone root with no overrides composes from its own rest transform: a +1
  *    translation lands at x=1 in the world matrix.
  * 2. A child listed _before_ its parent still composes correctly: the parent is
  *    pulled in on demand, then the later loop iteration over the parent hits

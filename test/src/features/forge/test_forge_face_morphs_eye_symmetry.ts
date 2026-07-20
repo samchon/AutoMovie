@@ -4,7 +4,7 @@ import { TestValidator } from "@nestia/e2e";
 /**
  * Per-side eye targets must be exact mirrors AND independent. The canonical
  * face is x-mirror-symmetric, so each left-side target's delta magnitude at a
- * left landmark equals the right-side target's at the mirrored landmark — and a
+ * left landmark equals the right-side target's at the mirrored landmark, and a
  * side's target must leave the OTHER eye exactly untouched (overlapping
  * gaussians once bound the whole left eye to the right center; the nearest-
  * center gate pins both properties).

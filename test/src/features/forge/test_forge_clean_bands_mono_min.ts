@@ -3,7 +3,7 @@ import { TestValidator } from "@nestia/e2e";
 
 /**
  * The min side mirrors the max side: after its extremum (the leftmost reach),
- * the min may only move inward (non-decreasing) — a spur jutting left below the
+ * the min may only move inward (non-decreasing): a spur jutting left below the
  * head is clipped back to the running minimum.
  *
  * Scenario (filters off): mins [10, 6, 8, 2, 9] anchor at y=1 (6); the y=3 spur

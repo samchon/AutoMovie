@@ -20,7 +20,7 @@ const assertFinite = (label: string, value: number): void => {
 
 /**
  * Advance a one-dimensional damped spring one fixed timestep (semi-implicit
- * Euler): a generic numeric integrator for **secondary motion** — a value that
+ * Euler): a generic numeric integrator for **secondary motion**, a value that
  * lags, overshoots, and settles toward a moving target instead of snapping to
  * it. Driving a tail or ear joint's angle through this off the animated target
  * gives the follow-through a physics joint produces, while staying a pure,

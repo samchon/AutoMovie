@@ -11,7 +11,7 @@ import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
 
 /**
- * Finite-difference window for the end-velocity estimate, seconds — one frame
+ * Finite-difference window for the end-velocity estimate, seconds: one frame
  * of the engine's default 24 Hz clock. Shared with {@link resolveBeatEnd}'s
  * baked-follow velocity so a mounted rider's end velocity uses the same
  * window.
@@ -80,8 +80,8 @@ export const gaitPhaseOf = (
   localTime: number,
 ): number | null => {
   // A carried gait cycle is authoritative: it is how a NON-looping composite
-  // (the film ladder's arranged performance) still knows its stride phase —
-  // without it, compiled shots always answered null and the mid-stride resume
+  // (the film ladder's arranged performance) still knows its stride phase.
+  // Without it, compiled shots always answered null and the mid-stride resume
   // never fired in the real ladder. Degenerate meta yields null, matching the
   // degenerate-duration rule below.
   const cycle = clip.gaitCycle ?? null;
@@ -108,7 +108,7 @@ const modPositive = (value: number, period: number): number =>
  * cycle's opening instants it shrinks to `[0, phase]`; and exactly on the seam
  * the cycle's closing stretch is measured with the clip clamped (un-looped) so
  * sampling `duration` does not wrap to the cycle start. A clamped clip that has
- * already reached its end holds its last pose — zero velocity.
+ * already reached its end holds its last pose: zero velocity.
  */
 export const rootVelocityOf = (
   node: IAutoMovieSceneNode,
@@ -131,7 +131,7 @@ export const rootVelocityOf = (
 };
 
 /**
- * The most recent stance plant per foot at/before `localTime` — the contact the
+ * The most recent stance plant per foot at/before `localTime`, the contact the
  * next beat should keep each foot on. Later entries win ties; `null` when no
  * plant data was supplied or none had started yet.
  */

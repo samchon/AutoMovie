@@ -19,7 +19,7 @@ import { qclose, vclose } from "./predicates";
  * The S1 parity oracle as a reusable boolean: for every queried time, the
  * humanoid FK world (`resolvePose ∘ sampleMotion`) must match the general
  * pipeline world (`resolveFrame` = `composeScene ∘ sampleClip` over the
- * `motionToClip` bridge) on every skeleton bone — position via `vclose`,
+ * `motionToClip` bridge) on every skeleton bone: position via `vclose`,
  * rotation via `qclose` (sign-insensitive). Builds the boolean for
  * `TestValidator.predicate`; tolerances default to the helpers' 1e-6.
  */

@@ -64,7 +64,7 @@ const at = (world: Map<string, number[]>, id: string): IAutoMovieVector3 =>
  * 4. A straight limb along Y exercises the other fallback (`cross` with +X).
  * 5. A pole with a null node falls back to the limb's current bend plane.
  * 6. A null-node pole with a roll angle twists the bend plane around the goal.
- * 7. A `ccd` driver is consumed by the world pass (S2 — iterative IK now runs
+ * 7. A `ccd` driver is consumed by the world pass (S2: iterative IK now runs
  *    in-engine); only the wrong-length two-bone chain and the stateful `spring`
  *    remain deferred.
  * 8. Invalid influence and pole angle values reject before the analytic solve

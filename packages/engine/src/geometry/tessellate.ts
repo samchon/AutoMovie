@@ -131,7 +131,7 @@ const sphere = (
     }
   }
   const stride = segments + 1;
-  // wind counter-clockwise seen from OUTSIDE (#1053) — the glTF front-face
+  // wind counter-clockwise seen from OUTSIDE (#1053), the glTF front-face
   // contract, and what a front-side renderer needs to not cull the surface
   for (let r = 0; r < rings; ++r)
     for (let s = 0; s < segments; ++s) {
@@ -174,8 +174,8 @@ const cylinder = (
     indices.push(a, a + 2, a + 1, a + 2, a + 3, a + 1);
   }
   // Cap disks close the solid (#1143): a fan per non-degenerate end, flat ±Y
-  // normals, wound counter-clockwise seen from outside like everything else —
-  // without them the tube is open and a top-down framing sees through the prop.
+  // normals, wound counter-clockwise seen from outside like everything else.
+  // Without them the tube is open and a top-down framing sees through the prop.
   const cap = (radius: number, y: number, up: 1 | -1): void => {
     if (radius <= 0) return; // a cone's apex end is a point, not a disk
     const center = positions.length / 3;

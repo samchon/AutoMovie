@@ -8,7 +8,7 @@
  * semantic flexion/abduction names to.
  *
  * `order` records the intrinsic rotation order so the engine can compose the
- * axes unambiguously. Euler angles are gimbal-prone and order-sensitive — this
+ * axes unambiguously. Euler angles are gimbal-prone and order-sensitive. This
  * type is intentionally secondary; prefer semantic joint angles for
  * characters.
  *

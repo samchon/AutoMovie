@@ -9,7 +9,7 @@ import { hasViolation } from "../internal/predicates";
  * lacks is a dangling reference, reported as a `type` violation. Pins that
  * part-to-bone wiring is checked.
  *
- * Scenario: a part attached to `jaw` — absent from the test skeleton — fails,
+ * Scenario: a part attached to `jaw` (absent from the test skeleton) fails,
  * with a `type` violation on `attachedBone`.
  */
 export const test_validation_model_bone_ref = (): void => {

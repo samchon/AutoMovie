@@ -142,12 +142,12 @@ const ghostBeatTree = (): NonNullable<IAutoMovieScript["tree"]> => [
  * 1. Opening a fresh temp dir initializes the tree (manifest + reserved dirs) and
  *    reports an empty summary.
  * 2. Saving a slate persists slices as human-readable JSON; a REOPENED project (a
- *    new instance over the same root) reads the identical slate back —
+ *    new instance over the same root) reads the identical slate back ,
  *    durability, not in-process caching.
  * 3. The shot slice file is itself valid pretty JSON whose parse equals the
  *    committed shot (the user-visible file IS the state).
  * 4. Re-saving with cleared downstream slices REMOVES their files (null script
- *    file gone, empty notes file gone, shots dir reconciled) — presence always
+ *    file gone, empty notes file gone, shots dir reconciled), presence always
  *    means content.
  * 5. Malformed resident JSON reports a controlled project-state error naming the
  *    file to fix, for manifest, top-level slice, and keyed slice reads.

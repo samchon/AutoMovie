@@ -43,7 +43,7 @@ export interface IAutoMovieToppling {
 export interface IAutoMovieSupportResult {
   /** Warning-severity feedback (or an error for bad input). */
   validation: IAutoMovieValidation;
-  /** Fall events on the shot clock — "one calculation, two consumers". */
+  /** Fall events on the shot clock: "one calculation, two consumers". */
   events: IAutoMovieInteractionEvent[];
   /** Suggested topple, or `null` when supported. */
   toppling: IAutoMovieToppling | null;
@@ -52,13 +52,13 @@ export interface IAutoMovieSupportResult {
 /**
  * Judge whether an object is stably supported: its center of mass, projected
  * onto the ground plane, must fall within the convex hull (plus margin) of its
- * support contact points. When it overhangs — and because a film may be
- * deliberately unphysical (D010) — this reports an advisory `warning`, not a
+ * support contact points. When it overhangs, and because a film may be
+ * deliberately unphysical, this reports an advisory `warning`, not a
  * hard reject, and suggests the topple (the pivot edge and fall direction). A
  * `physicsIntent` marker (a levitating prop) suppresses the warning and
  * suggestion while still surfacing the event.
  *
- * The support contacts are given as input — the top face of whatever the object
+ * The support contacts are given as input: the top face of whatever the object
  * rests on. Deriving them from real surface geometry is deferred to #605; full
  * fall-motion synthesis into the shot is deferred to #620.
  *

@@ -97,20 +97,20 @@ const plant = (
  *
  * 1. A non-looping clip mid-flight (0.5 s of 1 s): gaitPhase null (no cycle),
  *    rootVelocity = the clip's true 2 m/s.
- * 2. The same clip past its end (2 s ≥ 1 s): it clamps and holds — zero velocity,
- *    still no phase.
+ * 2. The same clip past its end (2 s ≥ 1 s): it clamps and holds (zero velocity,
+ *    still no phase).
  * 3. A held actor: gaitPhase, rootVelocity, footPlants, and mount all null.
  * 4. Plants carry the latest run per foot at/before beat end: a later left-foot
  *    run supersedes an earlier one even listed first, a not-yet-started run is
  *    filtered, and a foot's only run is kept.
- * 5. No plant entry for a node — and an entry with zero applicable runs — both
+ * 5. No plant entry for a node, and an entry with zero applicable runs, both
  *    yield null.
  * 6. A staged mount is carried onto its rider; unmounted actors get null.
  * 7. Duplicated plant/mount node entries throw loudly.
- * 8. A degenerate zero-duration looping clip has no cycle to resume — null phase,
- *    zero velocity — instead of dividing by its empty period.
+ * 8. A degenerate zero-duration looping clip has no cycle to resume (null phase,
+ *    zero velocity) instead of dividing by its empty period.
  * 9. A performance that starts exactly at shot end (local time 0) has an empty
- *    velocity window — zero, not NaN.
+ *    velocity window: zero, not NaN.
  */
 export const test_film_beat_end_sim_state = (): void => {
   const flight = resolveBeatEnd({

@@ -45,7 +45,7 @@ const dist = (a: IAutoMovieVector3, b: IAutoMovieVector3): number =>
  * 1. A reachable goal converges: the tip lands within 1e-3 of the goal and both
  *    unit segment lengths are preserved.
  * 2. The same inputs replay identically (fixed budget → determinism).
- * 3. An unreachable goal extends the chain fully toward it — the tip ends on the
+ * 3. An unreachable goal extends the chain fully toward it: the tip ends on the
  *    reachable shell pointing at what it cannot touch.
  * 4. `influence: 0.5` puts the tip exactly halfway between its original and its
  *    fully-solved position (the blend is linear by construction).
@@ -56,7 +56,7 @@ const dist = (a: IAutoMovieVector3, b: IAutoMovieVector3): number =>
  *    shorter than 2 nodes rejects; a zero-length segment rejects; missing chain
  *    or goal nodes reject; out-of-range influence rejects.
  * 8. A single-segment chain (the 2-node minimum) whose goal sits exactly behind it
- *    takes the antiparallel 180° flip — via both deterministic-perpendicular
+ *    takes the antiparallel 180° flip, via both deterministic-perpendicular
  *    selections (an X-aligned and a Y-aligned segment).
  */
 export const test_resolve_ccd_ik = (): void => {

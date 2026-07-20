@@ -5,7 +5,7 @@ import { IAutoMovieRenderSpec } from "@automovie/interface";
  * = round(duration × fps)` frames sampled at `t = i / fps`.
  *
  * The times are computed as exact rationals (`i / fps`), never accumulated, so
- * the same spec yields the same sample instants on every machine — the property
+ * the same spec yields the same sample instants on every machine, the property
  * that makes a automovie render reproducible (the whole point versus a
  * stochastic diffusion video). A non-finite or non-positive fps/duration yields
  * no frames.
@@ -33,7 +33,7 @@ export const framePattern = (ext = "png", pad = 5): string =>
   `frame_%0${pad}d.${ext}`;
 
 /**
- * Windows reserved device names — reserved with ANY extension (`con.mp4` is
+ * Windows reserved device names, reserved with ANY extension (`con.mp4` is
  * `con`), case-insensitive. A stem whose first dot-segment is one of these
  * would name a device, not a file.
  */
@@ -63,7 +63,7 @@ const WINDOWS_RESERVED_NAMES = new Set([
 ]);
 
 /**
- * A file-safe stem for default frame directories and output video names —
+ * A file-safe stem for default frame directories and output video names:
  * always exactly ONE safe path component. The character filter alone is not
  * enough: `.` and `..` are made of legal characters but mean self/parent
  * directory positionally, so `renders/${stem}` would escape the reserved

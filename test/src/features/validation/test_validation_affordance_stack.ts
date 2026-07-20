@@ -18,13 +18,13 @@ const UNIT = { x: 1, y: 1, z: 1 };
  * Stacking is judgeable end-to-end from authored affordances alone: crate A
  * declares a stack-top, `resolveAffordanceSeat` seats crate B's base socket on
  * it, `affordanceSupportContacts` supplies the support face to
- * `detectSupportToppling` (#601), and physics answers — stable inside the face,
+ * `detectSupportToppling` (#601), and physics answers: stable inside the face,
  * toppling when the center of mass overhangs it.
  *
  * Scenarios:
  *
  * 1. Crate B (1 m cube, base socket at its bottom face) seated on crate A's top at
- *    world (3, 0, 2): B's root lands at (3, 1, 2) — hand oracle — and its
+ *    world (3, 0, 2): B's root lands at (3, 1, 2) (hand oracle) and its
  *    centered COM projects inside the top's contacts → no warning, no
  *    toppling.
  * 2. The same stack with B's COM shifted 0.7 m along +X (0.2 m past the face edge)

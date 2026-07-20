@@ -3,8 +3,8 @@ import * as THREE from "three";
 import { disposeCrossDissolve } from "./applyDissolve";
 
 /**
- * Release a viewer's renderer AND the auxiliary GPU state frames created for it
- * — today the cross-dissolve FBO/quad, which #1050 gave a dispose that nothing
+ * Release a viewer's renderer AND the auxiliary GPU state frames created for it:
+ * today the cross-dissolve FBO/quad, which #1050 gave a dispose that nothing
  * wired (#1090). `mountViewer`'s `stop()` calls this; a host that owns its
  * renderer directly (a capture harness) calls it the same way. Idempotent and
  * safe when no dissolve ever ran.
@@ -16,7 +16,7 @@ export const releaseViewerRenderer = (renderer: THREE.WebGLRenderer): void => {
 
 /**
  * Handle returned by {@link mountViewer}; call `stop()` to end the loop and
- * release the renderer — including any dissolve GPU state the frames created.
+ * release the renderer, including any dissolve GPU state the frames created.
  */
 export interface IAutoMovieViewerHandle {
   renderer: THREE.WebGLRenderer;
@@ -29,7 +29,7 @@ export interface IAutoMovieViewerHandle {
  * `camera`.
  *
  * This is the one browser-only entry point. `onFrame` is where a
- * {@link AutoMoviePlayer} advances — the viewer stays a thin shell around the
+ * {@link AutoMoviePlayer} advances: the viewer stays a thin shell around the
  * deterministic engine. `elapsedSeconds` is measured from the first frame. If
  * `onFrame` returns `true` it has **already drawn** the frame itself (e.g. a
  * multi-pass cross-dissolve composite), so the loop skips its own default
@@ -46,7 +46,7 @@ export const mountViewer = (
     /**
      * Multisample antialiasing (#1169). Defaults to `true` for live viewing; a
      * CAPTURE path turns it off so structural guide passes (mask/pose/
-     * outline/depth) read back crisp and GPU-independent — AA blends segment
+     * outline/depth) read back crisp and GPU-independent. AA blends segment
      * colors across edges and varies by hardware, breaking byte-stable frames.
      * A WebGL context's AA is fixed at creation, so this is per-mount (the
      * capture route), not per-pass.

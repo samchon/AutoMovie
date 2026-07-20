@@ -5,8 +5,8 @@ import { makeExpression } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
- * Setting the same ARKit channel twice in one expression is a conflict — two
- * weights for one morph target — reported as a `type` violation rather than
+ * Setting the same ARKit channel twice in one expression is a conflict (two
+ * weights for one morph target), reported as a `type` violation rather than
  * silently picking one.
  *
  * Scenario: an expression listing `jawOpen` twice (0.3 and 0.6) fails, with a

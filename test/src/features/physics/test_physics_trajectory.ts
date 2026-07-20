@@ -12,7 +12,7 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose, vclose } from "../internal/predicates";
 
 /**
- * `projectileTrajectory` — bake a projectile's flight into a node clip. The
+ * `projectileTrajectory`: bake a projectile's flight into a node clip. The
  * contract is that the baked clip agrees with the closed-form
  * {@link projectileAt} at every sampled instant, and its rotation keeps the
  * model's +Z along the velocity so the arrow noses over.
@@ -23,7 +23,7 @@ import { nclose, vclose } from "../internal/predicates";
  *    both a translation and a rotation track for the projectile node, closing
  *    exactly on the duration.
  * 2. Sampling the clip at several instants matches `projectileAt`'s position.
- * 3. The rotation aims +Z down the instantaneous velocity — at the top of a lobbed
+ * 3. The rotation aims +Z down the instantaneous velocity: at the top of a lobbed
  *    arc the arrow is level, and by landing it noses downward.
  * 4. End to end with the aim solver: fire a solved launch, bake its flight, and
  *    the clip's last position sits on the target.
@@ -52,7 +52,7 @@ export const test_physics_trajectory = (): void => {
   );
 
   // Check at frame-aligned instants (multiples of 1/30) where the clip's
-  // linear track returns the baked value exactly — between samples the linear
+  // linear track returns the baked value exactly. Between samples the linear
   // interpolation of a parabola drifts, as it should.
   for (const t of [0, 0.3, 20 / 30, 1]) {
     const sampled = sampleClip(clip, t).get("node:arrow:translation")!.value;
@@ -73,7 +73,7 @@ export const test_physics_trajectory = (): void => {
       { x: 0, y: 0, z: 1 },
     );
   };
-  const apex = 8 / 9.81; // v_y / g — the top of the arc
+  const apex = 8 / 9.81; // v_y / g, the top of the arc
   TestValidator.predicate(
     "at the apex the arrow is level (no vertical velocity)",
     nclose(rotAt(apex).y, 0, 1e-3),

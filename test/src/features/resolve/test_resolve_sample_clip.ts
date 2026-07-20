@@ -50,7 +50,7 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  *    (5,10,15); the result keys to `node:n:translation`.
  * 2. Step interpolation holds the left keyframe mid-segment, while an EXACT hit on
  *    an interior key takes that key's value (glTF `v_k for t_k <= t < t_(k+1)`,
- *    #1054) — just-before stays held, and the final key clamps.
+ *    #1054): just-before stays held, and the final key clamps.
  * 3. A linear rotation track slerps (not lerps): identity→90°-about-Y at t=0.5 is
  *    the 45° quaternion, and stays unit length.
  * 4. Cubicspline with zero tangents reduces to the Hermite blend of the values:
@@ -62,7 +62,7 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  *    value; sampling at/after the last returns the last.
  * 7. A single-keyframe track returns that key at any time.
  * 8. A three-keyframe track samples the _interior_ segment (selecting [1,2], not
- *    [0,1]) — the segment search advances past the first pair.
+ *    [0,1]): the segment search advances past the first pair.
  * 9. A looping clip wraps the query time into `[0, duration)`: t=1.25 → 0.25 and a
  *    negative t=−0.25 → 0.75.
  * 10. A non-looping clip clamps past the end (t=5 on a 1s clip → the last value),
@@ -116,7 +116,7 @@ export const test_resolve_sample_clip = (): void => {
     close(val(stepClip, 0.5, "node:n:translation"), [0, 0, 0]),
   );
 
-  // an EXACT hit on an interior key takes that key's value — glTF STEP is
+  // an EXACT hit on an interior key takes that key's value: glTF STEP is
   // v_k for t_k <= t < t_(k+1), and the fixed sampling clock makes exact
   // frame-aligned hits the norm, so holding the PREVIOUS key here played
   // every step change one sample late (#1054)

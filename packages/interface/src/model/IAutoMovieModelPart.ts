@@ -6,8 +6,8 @@ import { IAutoMovieGeometry } from "./IAutoMovieGeometry";
  * One piece of a model: a chunk of geometry, the material on it, and how it
  * attaches to the rig.
  *
- * A model is assembled from parts so a character can mix paths — a primitive
- * torso here, an imported mesh head there — and so each surface can carry its
+ * A model is assembled from parts so a character can mix paths (a primitive
+ * torso here, an imported mesh head there) and so each surface can carry its
  * own material. How a part follows the skeleton is captured by two mutually
  * informing fields: a _skinned_ part deforms via its mesh's
  * {@link IAutoMovieMeshSkin} (`attachedBone` is `null`); a _rigid_ part (a prop,
@@ -26,7 +26,7 @@ export interface IAutoMovieModelPart {
    */
   name: string | null;
 
-  /** This part's geometry — a primitive or a mesh. */
+  /** This part's geometry: a primitive or a mesh. */
   geometry: IAutoMovieGeometry;
 
   /**

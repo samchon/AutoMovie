@@ -6,7 +6,7 @@ import { vclose } from "../internal/predicates";
 
 /**
  * Pins the happy path of the STAGING consumer: a coherent script + staging pair
- * composes an {@link IAutoMovieScene} whose geometry is the placements' — facing
+ * composes an {@link IAutoMovieScene} whose geometry is the placements'. Facing
  * degrees become Y rotations, cameras aim their −Z at the resolved target,
  * lights are realised as directional, and mount couplings surface as validated
  * `mounts` rather than scene-graph edges.
@@ -16,7 +16,7 @@ import { vclose } from "../internal/predicates";
  * 1. Two placed knights → success with two nodes; `knightA` keeps its cast
  *    `modelRef` ("stickman"), `knightB` (null ref) falls back to its node id.
  * 2. `facingDeg` 0 leaves +Z forward (identity rotation); 180 turns the node to
- *    face −Z — checked by rotating +Z through each node's rotation.
+ *    face −Z: checked by rotating +Z through each node's rotation.
  * 3. A node-target camera's −Z axis points from its position at `knightA`'s
  *    position; a point-target camera aims at the literal point (both `lookAt`
  *    kinds exercised in one staging).

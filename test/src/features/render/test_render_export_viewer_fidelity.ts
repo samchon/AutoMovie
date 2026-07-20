@@ -39,16 +39,16 @@ const model = (over: Partial<IAutoMovieModel>): IAutoMovieModel => ({
  * Scenarios:
  *
  * 1. Opacity folds into the exported alpha: the viewer renders `material.opacity`
- *    and ignores `baseColor.a`, so `{opacity: 0.5, a: null}` — 50% transparent
- *    live — must not export fully opaque. Exported alpha = `(a ?? 1) ×
+ *    and ignores `baseColor.a`, so `{opacity: 0.5, a: null}` (50% transparent
+ *    live) must not export fully opaque. Exported alpha = `(a ?? 1) ×
  *    opacity`; an authored `a` multiplies in; a fully opaque material stays
  *    alpha 1 (negative twin).
- * 2. A mesh with `normals: null` and indices exports SMOOTH vertex normals — the
+ * 2. A mesh with `normals: null` and indices exports SMOOTH vertex normals, the
  *    same area-weighted accumulation the viewer's `computeVertexNormals`
  *    performs: a flat indexed quad exports (0,0,1) at every referenced vertex,
  *    and an unreferenced vertex keeps the zero normal (no NaN from the
  *    degenerate normalize).
- * 3. Negative twin: a non-indexed soup still omits NORMAL — glTF's mandated flat
+ * 3. Negative twin: a non-indexed soup still omits NORMAL; glTF's mandated flat
  *    shading equals what the viewer computes for a soup.
  */
 export const test_render_export_viewer_fidelity = async (): Promise<void> => {

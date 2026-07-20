@@ -31,19 +31,19 @@ const flexionAt = (motion: IAutoMovieMotion, time: number): number =>
 
 /**
  * The gait phase never resets along a path: the corner only steers the root,
- * while keyframe times replicate the base cycle untouched — so the limb swing
+ * while keyframe times replicate the base cycle untouched, so the limb swing
  * sampled either side of the corner equals the base cycle at the same phase
  * (#597's continuity spirit applied to path walking).
  *
  * Scenarios (the L-path corner falls at t=2, mid-timeline):
  *
  * 1. Just before the corner (t=1.75, phase 0.75) the flexion equals the base
- *    cycle's 60° — and just after (t=2.25, phase 0.25) it is 60° again: the
+ *    cycle's 60°, and just after (t=2.25, phase 0.25) it is 60° again: the
  *    swing marches straight through the turn with no reset.
  * 2. At an exact keyframe past the corner (t=2.5, phase 0.5) the flexion is the
  *    base peak 120°.
  * 3. The same phase sampled in the first cycle (t=0.25) matches the phase sampled
- *    after the corner (t=2.25) — cycle N and cycle N+2 agree.
+ *    after the corner (t=2.25): cycle N and cycle N+2 agree.
  */
 export const test_motion_path_phase_continuity = (): void => {
   const path = followPathMotion({

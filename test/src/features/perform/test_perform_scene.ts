@@ -44,14 +44,14 @@ const hasExpression = (motion: {
 
 /**
  * End-to-end acceptance: a two-actor beat compiles through the **whole**
- * executable core — the reference synthesizer (gait travel, look-at, emote) and
- * the region-layering compiler — into one performance clip per actor.
+ * executable core, the reference synthesizer (gait travel, look-at, emote) and
+ * the region-layering compiler, into one performance clip per actor.
  *
  * The beat: HERO walks over to GUARD while looking at her and smiling; GUARD
  * stands her ground, glaring back and scowling. So HERO layers three disjoint
  * regions (legs travel + head look + face) over a 5 m walk, and GUARD layers
  * two (head + face). This exercises multi-actor fan-out, per-region
- * concurrency, gait travel, and aim — composed, not in isolation.
+ * concurrency, gait travel, and aim (composed, not in isolation).
  */
 export const test_perform_scene = (): void => {
   const contexts = new Map<string, IAutoMovieActorContext>([
@@ -128,7 +128,7 @@ export const test_perform_scene = (): void => {
     nclose(perf.hero!.duration, 5),
   );
 
-  // GUARD: stands and glares — a turned head + a scowl, no travel
+  // GUARD: stands and glares, a turned head + a scowl, no travel
   const guardBones = bonesOf(perf.guard!);
   TestValidator.predicate("guard turns her head", guardBones.has("head"));
   TestValidator.predicate(

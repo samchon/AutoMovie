@@ -43,16 +43,16 @@ const shot: IAutoMovieShot = {
 /**
  * The one real wiring of the feedback cascade (#620): commitShot locates its
  * violations on the screenplay graph. The film-ladder consumers take the script
- * WRITE payload (no tree), so the commit gate — which holds the committed
- * script, the beat, and the violations together — is where the stamp lives;
+ * WRITE payload (no tree), so the commit gate, which holds the committed
+ * script, the beat, and the violations together, is where the stamp lives;
  * downstream, scriptAncestors climbs from the stamped node.
  *
  * Scenarios:
  *
- * 1. A shot committed before the scene exists is refused, and — because the
- *    committed script carries a refinement tree claiming `beat-1` — every
+ * 1. A shot committed before the scene exists is refused, and, because the
+ *    committed script carries a refinement tree claiming `beat-1`, every
  *    violation of that commit carries `node: "b1"`.
- * 2. The treeless twin: the identical refusal without a tree carries no node —
+ * 2. The treeless twin: the identical refusal without a tree carries no node ,
  *    byte-compatible pre-#620 behavior.
  */
 export const test_mcp_commit_shot_located = (): void => {

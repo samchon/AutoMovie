@@ -13,7 +13,7 @@ import {
 } from "@automovie/interface";
 
 /**
- * A stick-figure **horse** — a large quadruped on the normalized humanoid rig,
+ * A stick-figure **horse**: a large quadruped on the normalized humanoid rig,
  * the mount for the {@link buildKnight} rider. Same reinterpretation as the
  * {@link buildCat}: a horizontal spine (hips at the croup, chest at the
  * withers), the **arm** slots are the front legs and the **leg** slots the hind
@@ -143,8 +143,8 @@ const rod = (
 });
 
 /**
- * Build the stick-figure horse — a big quadruped skeleton, rods, a maned neck,
- * a muzzle, ears, and a long tail — from a set of proportions. The `spine` bone
+ * Build the stick-figure horse (a big quadruped skeleton, rods, a maned neck,
+ * a muzzle, ears, and a long tail) from a set of proportions. The `spine` bone
  * is the saddle a rider attaches to.
  *
  * @author Samchon
@@ -236,7 +236,7 @@ export const buildHorse = (
     rod("neckRod", "chest", neckSeg, tr * 0.72),
     rod("headStalk", "neck", headSeg, tr * 0.5),
     knob("head", "head", p.headRadius, "hide", v(0, 0.02, 0.04)),
-    // muzzle — a smaller sphere out the front of the head
+    // muzzle: a smaller sphere out the front of the head
     knob(
       "muzzle",
       "head",
@@ -288,7 +288,7 @@ export const buildHorse = (
       "pupil",
       v(-0.11, 0.05, p.headRadius * 0.78),
     ),
-    // mane — a row of plates riding the neck
+    // mane: a row of plates riding the neck
     knob(
       "mane1",
       "neck",
@@ -327,12 +327,12 @@ export const buildHorse = (
     rod("hlLowerL", "leftLowerLeg", down(p.lowerLeg), r * 0.82),
     rod("hlUpperR", "rightUpperLeg", down(p.upperLeg), r),
     rod("hlLowerR", "rightLowerLeg", down(p.lowerLeg), r * 0.82),
-    // hooves — dark caps at each lower-leg tip
+    // hooves: dark caps at each lower-leg tip
     knob("hoofFL", "leftHand", r * 0.95, "hoof", v(0, 0, 0)),
     knob("hoofFR", "rightHand", r * 0.95, "hoof", v(0, 0, 0)),
     knob("hoofHL", "leftFoot", r * 0.95, "hoof", v(0, 0, 0)),
     knob("hoofHR", "rightFoot", r * 0.95, "hoof", v(0, 0, 0)),
-    // tail — base rod joins the hips to the first tail segment (mane-coloured)
+    // tail: base rod joins the hips to the first tail segment (mane-coloured)
     rod("tailBase", "hips", v(0, 0.04, -0.16), r * 0.8, "mane"),
     rod("tail1", "leftLittleProximal", v(0, -0.06, -0.18), r * 0.7, "mane"),
     rod("tail2", "leftLittleIntermediate", v(0, -0.12, -0.16), r * 0.6, "mane"),

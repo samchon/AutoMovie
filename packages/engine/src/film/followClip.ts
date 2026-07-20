@@ -4,8 +4,8 @@ import { sampleClip } from "../resolve/sampleClip";
 
 /**
  * The world transform a baked follow clip writes onto `node` at `t`. A coupled
- * child's world root comes from here — the exact clip {@link performShot} baked
- * through `compileAttach` — so beat-end, per-frame render, and a chained
+ * child's world root comes from here (the exact clip {@link performShot} baked
+ * through `compileAttach`), so beat-end, per-frame render, and a chained
  * coupling's parent read (#1140) all share the SAME composition (#674). Scale
  * is not baked (rigid couplings never scale), so it stays identity.
  *
@@ -39,7 +39,7 @@ export const bakedTransformAt = (
  * The baked follow clip driving `node`, or `null` when none does. Matched by
  * `compileAttach`'s stable `attach:<node>` id; a handoff bakes later couplings
  * as `attach:<node>:2`, `:3`, … in start order (#989), so the HIGHEST suffix is
- * the latest coupling — the hand the prop actually ends the beat in.
+ * the latest coupling, the hand the prop actually ends the beat in.
  *
  * @author Samchon
  */

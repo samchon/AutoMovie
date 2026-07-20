@@ -9,7 +9,7 @@ const CLINICAL: IAutoMovieJointConstraint = {
 };
 
 /**
- * `restRelativeConstraint` — shifting a clinical ROM into a rig's rest-relative
+ * `restRelativeConstraint`, shifting a clinical ROM into a rig's rest-relative
  * pose space via a per-axis `{ sign, neutral }` frame (clinical = sign·pose +
  * neutral).
  *
@@ -73,7 +73,7 @@ export const test_rom_rest_frame = (): void => {
   );
 
   // 5. a shoulder cone (swingDeg 180) survives the neutral shift unchanged, and
-  // a null cone stays null — the magnitude is a deviation the shift can't touch.
+  // a null cone stays null: the magnitude is a deviation the shift can't touch.
   const coned = restRelativeConstraint(
     { ...CLINICAL, swingDeg: 180 },
     { abduction: { sign: 1, neutral: 90 } },

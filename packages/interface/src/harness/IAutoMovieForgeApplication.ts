@@ -1,14 +1,14 @@
 import { IAutoMovieModel } from "../model/IAutoMovieModel";
 
 /**
- * Stage 1.5 — **FORGE** (the prop shop). Build a stick-figure stand-in rig for
+ * Stage 1.5: **FORGE** (the prop shop). Build a stick-figure stand-in rig for
  * every cast member the script left without a `modelRef`: a skeleton of
- * humanoid-named bones (reused metaphorically for creatures — a horse's hind
+ * humanoid-named bones (reused metaphorically for creatures: a horse's hind
  * legs ride `leftUpperLeg`/`rightUpperLeg`, its saddle is `spine`) dressed in
  * primitive parts (capsule rods, sphere heads), with per-bone ROM overrides
  * where the creature's joints differ from the human default.
  *
- * The model does _not_ sculpt geometry — it composes primitives on bones, the
+ * The model does _not_ sculpt geometry; it composes primitives on bones, the
  * way `buildStickman`/`buildHorse` do by hand. Proportions are the whole craft:
  * a rig's reach and stride are what staging measures distances from, so a
  * forged arm that is too short makes every later strike mime at air.
@@ -40,7 +40,7 @@ export namespace IAutoMovieForgeApplication {
     type: "write";
 
     /**
-     * One forged model per cast member whose `modelRef` is null — no more, no
+     * One forged model per cast member whose `modelRef` is null: no more, no
      * fewer. Members with a `modelRef` are imported assets and must not be
      * forged.
      */
@@ -55,7 +55,7 @@ export namespace IAutoMovieForgeApplication {
     /**
      * The stand-in: `origin: "generated"`, a skeleton (a performer without
      * bones cannot be posed), primitive parts attached to its bones, and the
-     * model `id` equal to `node` — that id is how the staged scene finds it.
+     * model `id` equal to `node`; that id is how the staged scene finds it.
      */
     model: IAutoMovieModel;
   }

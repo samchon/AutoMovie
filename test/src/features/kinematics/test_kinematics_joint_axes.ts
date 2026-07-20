@@ -11,7 +11,7 @@ import { qclose } from "../internal/predicates";
  *
  * Scenarios:
  *
- * 1. No articulation — all axes null, or all zero — yields the identity.
+ * 1. No articulation (all axes null, or all zero) yields the identity.
  * 2. Flexion rotates about local X.
  * 3. Abduction rotates about local Z.
  * 4. Twist rotates about local Y.

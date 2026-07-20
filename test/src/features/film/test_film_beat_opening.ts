@@ -77,8 +77,8 @@ const shot: IAutoMovieShot = {
  *
  * Scenarios:
  *
- * 1. A hero performing the x = 2t walk from the staged origin opens at x = 0 — the
- *    clip's first frame — with gait phase 0, the walk clip named, and local
+ * 1. A hero performing the x = 2t walk from the staged origin opens at x = 0 (the
+ *    clip's first frame) with gait phase 0, the walk clip named, and local
  *    time 0.
  * 2. The same beat's END (duration 0.5) sits at x = 1.0, so the opening is
  *    genuinely the shot's start and not an alias of the end.

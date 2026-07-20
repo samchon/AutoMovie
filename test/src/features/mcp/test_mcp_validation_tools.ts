@@ -89,7 +89,7 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
   validation.violations.some((violation) => violation.path.includes(path));
 
 /**
- * How many violations match BOTH a kind and a path fragment — the (kind, path,
+ * How many violations match BOTH a kind and a path fragment, the (kind, path,
  * count) assertion. Each injected defect must fire exactly one violation of the
  * documented tier at the documented path: `=== 1` proves the kind (not just
  * that some path appeared), that the path is right, and that the rule neither
@@ -127,7 +127,7 @@ const hasExpected = (
  *    fixture.
  * 2. Each validator flags a representative invalid artifact with the exact (kind,
  *    path, count): every injected defect fires exactly one violation of its
- *    documented tier at its documented path — not merely "some path appeared".
+ *    documented tier at its documented path, not merely "some path appeared".
  *    Multi-defect scene/shot/sequence cases pin all three.
  * 3. Structurally malformed pose/motion/model/scene/shot/sequence payloads return
  *    validation failures instead of leaking raw JavaScript shape errors.

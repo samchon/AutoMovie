@@ -4,8 +4,8 @@ import { TestValidator } from "@nestia/e2e";
 import { createModel } from "../internal/fixtures";
 
 /**
- * A model body is opt-in physics metadata. A well-formed body — positive mass,
- * coefficients in [0,1], a finite explicit center of mass — validates, and a
+ * A model body is opt-in physics metadata. A well-formed body (positive mass,
+ * coefficients in [0,1], a finite explicit center of mass) validates, and a
  * null body (the default, meaning no declared physics) validates too.
  *
  * Scenarios:

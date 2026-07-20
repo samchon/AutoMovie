@@ -12,12 +12,12 @@ import { TREE_SCRIPT, screenplayNode } from "./test_render_screenplay";
  *
  * Scenarios:
  *
- * 1. A treeless script renders the flat fallback — header from the flat
+ * 1. A treeless script renders the flat fallback: header from the flat
  *    logline/theme, each beat as name over summary.
  * 2. A beat node naming a ghost flat beat falls back to the raw beat id (the
  *    renderer is total; commit validation owns the rejection).
  * 3. `tree: []` renders an empty document body (total function).
- * 4. Zero beats throw — there is no screenplay to render.
+ * 4. Zero beats throw: there is no screenplay to render.
  */
 export const test_render_screenplay_fallback = (): void => {
   const flat: IAutoMovieScript = { ...TREE_SCRIPT, tree: null };
@@ -29,8 +29,8 @@ export const test_render_screenplay_fallback = (): void => {
   );
   TestValidator.predicate(
     "flat beats render name over summary",
-    text.includes("BEAT — The duel\nThe duel summary") &&
-      text.includes("BEAT — The aftermath\nThe aftermath summary"),
+    text.includes("BEAT, The duel\nThe duel summary") &&
+      text.includes("BEAT, The aftermath\nThe aftermath summary"),
   );
 
   const ghost: IAutoMovieScript = {
@@ -52,7 +52,7 @@ export const test_render_screenplay_fallback = (): void => {
   };
   TestValidator.predicate(
     "ghost beat id passes through",
-    renderScreenplay(ghost).includes("BEAT — ghost"),
+    renderScreenplay(ghost).includes("BEAT, ghost"),
   );
 
   TestValidator.equals(

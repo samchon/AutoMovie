@@ -32,7 +32,7 @@ const scene = (nodeId: string, modelRef: string): IAutoMovieScene => ({
 /**
  * `sceneToNodes` is a lossless bridge: with a model registry supplied every
  * placed ref must resolve; without one it lowers placements only. Duplicate
- * node ids are rejected downstream by `composeScene`'s index guard — the bridge
+ * node ids are rejected downstream by `composeScene`'s index guard: the bridge
  * does not duplicate that gate, so the downstream contract is pinned here.
  *
  * Scenarios:
@@ -43,7 +43,7 @@ const scene = (nodeId: string, modelRef: string): IAutoMovieScene => ({
  * 3. Registry supplied but the placed model is missing → throws naming the scene,
  *    model, and node.
  * 4. A crafted id collision (a placement literally named like a lowered bone node)
- *    passes the bridge and is rejected by `composeScene` downstream — the
+ *    passes the bridge and is rejected by `composeScene` downstream: the
  *    documented division of guard labor.
  * 5. `lowerSkeletonNodes` defaults: no prefix → the bare S1 names, no `rootParent`
  *    → the synthetic root is a graph root (the twin of the bridge paths, which

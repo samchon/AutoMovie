@@ -16,12 +16,12 @@ import { bodyRegionBones } from "./bodyRegionBones";
 /**
  * The **content seam** of the action compiler. Given one action call (and the
  * actor performing it), synthesise the _base_ clip for **one cycle** of that
- * action — local time starting at 0, the clip's own natural duration. Return
+ * action: local time starting at 0, the clip's own natural duration. Return
  * `null` to skip (the action produces no motion for this actor).
  *
  * This is where rig-specific content enters: a "strike" clip, a "walk" gait, an
  * IK reach are all authored against a particular skeleton, so the host supplies
- * them. The compiler stays generic — it owns the **timeline assembly** (which
+ * them. The compiler stays generic: it owns the **timeline assembly** (which
  * actor, when, repeated how often, held across gaps, layered by region), never
  * the keyframes. This is the harness's "thin verb in, dense motion out" split
  * made concrete: the model emits {@link IAutoMovieActionCall}s, this seam
@@ -54,7 +54,7 @@ const maskMotionToRegion = (
   // Expression is FACE content: joints are made disjoint by the bone filter
   // below, but a synthesizer authoring an expression on a non-face clip (a
   // grimace on a fullBody stagger) used to ride through and overlap an emote
-  // ungated — layering resolves expressions last-envelope-wins, so one
+  // ungated. Layering resolves expressions last-envelope-wins, so one
   // silently ate the other (#1101). Stripping it here makes the fullBody↔face
   // exemption's disjointness claim true by construction: only the face
   // region's owner speaks for the face.
@@ -76,22 +76,22 @@ const maskMotionToRegion = (
 /**
  * Layer several per-region clips into one by **sampling and blending**: at
  * every keyframe time across the clips, sample each and {@link blendPoses} the
- * result (equal weight — the regions are disjoint here, so the additive blend
+ * result (equal weight: the regions are disjoint here, so the additive blend
  * equals a union), so disjoint regions play _concurrently_ (legs walk while
  * arms wave while the head tracks). A face clip's expression rides along.
  *
  * A region claims its bones only from its first keyframe onward (#1003):
  * clamp-sampling before that would replay a late lookAt's aim (or a react's
  * explicit-zero rest) backward over the whole shot, breaking causality. PAST
- * its last keyframe a region keeps only its ROOT — a walk's destination
- * persists — while joint and expression claims release, so a finished flinch or
+ * its last keyframe a region keeps only its ROOT (a walk's destination
+ * persists) while joint and expression claims release, so a finished flinch or
  * emote stops diluting whatever other regions do next.
  *
  * The envelope must hold BETWEEN union keyframes too (#1060): the composite is
  * later interpolated by {@link sampleMotion}, so gating only at union times
  * would ramp a late clip's content backward across the entire preceding segment
- * (a lookAt at 4s visibly turning the head from t=0), and expressions — which
- * interpolation carries at full strength from either segment end — would leak
+ * (a lookAt at 4s visibly turning the head from t=0), and expressions, which
+ * interpolation carries at full strength from either segment end, would leak
  * all the way back. Boundary keyframes at `first − ε` / `last + ε` pin each
  * envelope edge onto the grid, so every interpolated segment lies entirely
  * inside or entirely outside the envelope.
@@ -116,11 +116,11 @@ const layerClips = (
   const times = [...timeSet].sort((a, b) => a - b);
   const keyframes: IAutoMovieKeyframe[] = times.map((time) => {
     // An inserted boundary time may fall where NO envelope contributes (all
-    // clips rootless and out of span) — that instant is honestly rest.
+    // clips rootless and out of span). That instant is honestly rest.
     const samples: { pose: IAutoMoviePose; weight: number }[] = [];
     let expression = null;
     for (const { clip, first, last } of envelopes) {
-      if (time < first - 1e-9) continue; // not started — no claim yet
+      if (time < first - 1e-9) continue; // not started: no claim yet
       const s = sampleMotion(clip, time);
       if (time > last + 1e-9) {
         if (s.pose.root !== null)
@@ -128,7 +128,7 @@ const layerClips = (
             pose: { skeleton: clip.skeleton, root: s.pose.root, joints: [] },
             weight: 1,
           });
-        continue; // ended — the root persists, the joints release
+        continue; // ended: the root persists, the joints release
       }
       samples.push({ pose: s.pose, weight: 1 });
       if (s.expression !== null) expression = s.expression;
@@ -208,16 +208,16 @@ const padRestLeadIn = (motion: IAutoMovieMotion): IAutoMovieMotion => {
  * onto each actor's timeline; **expands `repeat`** by concatenating the
  * synthesised cycle ({@link sequenceMotion}); and groups each actor's actions by
  * **body region**. Actions sharing a region are placed on one timeline and
- * **held across gaps** ({@link arrangeMotion}) — they take turns. Actions on
- * **disjoint** regions are **layered** ({@link layerClips}) — a walk
+ * **held across gaps** ({@link arrangeMotion}): they take turns. Actions on
+ * **disjoint** regions are **layered** ({@link layerClips}): a walk
  * (`lowerBody`) plays at the same time as a wave (`upperBody`) and a look-at
  * (`head`). An actor touching only one region keeps the simple arranged
  * timeline, padded to hold rest before a late start. The per-action keyframes
- * come entirely from `synthesize` — a `null` synthesis is skipped.
+ * come entirely from `synthesize`. A `null` synthesis is skipped.
  *
  * @author Samchon
  * @param actions The shot's action calls (any order; arranged by `start`).
- * @param synthesize The content seam — one action → one base clip (or null).
+ * @param synthesize The content seam: one action → one base clip (or null).
  * @returns Per-actor performance motion, keyed by actor node id.
  */
 export const compilePerformance = (
@@ -234,7 +234,7 @@ export const compilePerformance = (
       typeof action.actor === "string" ? [action.actor] : action.actor;
     for (const actor of actors) {
       const base = synthesize(action, actor);
-      if (base === null) continue; // no motion for this actor — skip
+      if (base === null) continue; // no motion for this actor, skip
 
       // 2. repeat: concatenate the base cycle N times within the action's span
       const cycles =

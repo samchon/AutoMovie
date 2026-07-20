@@ -14,7 +14,7 @@ const errorMessage = (task: () => void): string | null => {
 };
 
 /**
- * `sequenceMotion` — concatenating clips into one timeline. Parts are laid
+ * `sequenceMotion`: concatenating clips into one timeline. Parts are laid
  * end-to-end with their keyframe times offset by the running duration; a later
  * part's `time: 0` boundary keyframe is dropped so the merged times stay
  * strictly increasing.
@@ -101,7 +101,7 @@ export const test_motion_sequence = (): void => {
       "sequence part duration must be finite and positive",
     );
 
-  // 5. the seam keyframe carries the INCOMING part's first-segment easing —
+  // 5. the seam keyframe carries the INCOMING part's first-segment easing:
   //    sampleMotion eases each segment from its starting keyframe, so keeping
   //    the outgoing part's final easing would freeze/pop the next part's
   //    first segment

@@ -62,7 +62,7 @@ import {
 } from "./ValidationService";
 
 /**
- * The render/see loop — deterministic render planning and the host-adapter
+ * The render/see loop, deterministic render planning and the host-adapter
  * frame capture (#608). Pixels never flow through the server: the service plans
  * the frame and hands the context's capture adapter the request. The MCP
  * contract lives on the {@link AutoMovieApplication} facade.
@@ -70,7 +70,7 @@ import {
  * Like every stateful tool (#614), render is **resident-or-explicit**: omit
  * `slate` and it reads the resident project's `writableSlate()`, so a long
  * production never re-sends its whole state just to plan a render. Planning is
- * a pure read — no film-ladder prerequisite gate (that guards resident
+ * a pure read, no film-ladder prerequisite gate (that guards resident
  * _commits_); an unready target still surfaces as a `resolveRenderTarget`
  * violation, the more precise feedback. The resident default frame/output paths
  * live under the project's reserved `renders/` directory; an explicit slate
@@ -187,8 +187,8 @@ export class RenderService {
    * (#609/#644) so an hours-long render is produced in bounded windows and
    * regenerated one window at a time. Resident-or-explicit like every render
    * tool; the target must be the committed film (a single shot renders whole
-   * via {@link planRender}). Frame-atomic boundaries — no frame duplicated or
-   * dropped — so concatenating the chunks reproduces the whole render.
+   * via {@link planRender}). Frame-atomic boundaries, no frame duplicated or
+   * dropped, so concatenating the chunks reproduces the whole render.
    */
   public planChunkedRender(props: {
     slate?: IAutoMovieMcpWritableSlate;
@@ -214,7 +214,7 @@ export class RenderService {
   }
 
   /**
-   * Plan the caption sidecar — the per-shot diffusion-prompt track a render
+   * Plan the caption sidecar, the per-shot diffusion-prompt track a render
    * host reads beside the guide frames (#607). Resident-or-explicit; the
    * committed script and film supply the captions and the cut. Pass
    * `chunkFrames` to also get one chunk-local sidecar per render chunk, aligned
@@ -240,7 +240,7 @@ export class RenderService {
   }
 
   /**
-   * Plan the per-frame pose-keypoint sidecar (#1168) — the OpenPose-style
+   * Plan the per-frame pose-keypoint sidecar (#1168), the OpenPose-style
    * companion a diffusion host reads beside the guide frames. Resident-or-
    * explicit for the slate (scene, shots, film); motions are DERIVED, never
    * stored, so the caller supplies the `motions` registry (and the skeletons
@@ -370,7 +370,7 @@ const buildChunkedRenderPlan = (props: {
       props.outputPath ?? (props.resident ? `renders/${stem}.mp4` : undefined),
   });
   // After a successful validation `passes` is undefined (omitted) or a
-  // validated pass list (never null — a null would have failed validation).
+  // validated pass list (never null, a null would have failed validation).
   const chunked = planChunkedSequenceRender({
     plan,
     spec: props.spec,
@@ -1029,15 +1029,15 @@ const validateOptionalRenderPathOverride = (
   }
   // ffmpeg's image2 demuxer reads the -i pattern's `%` as a conversion
   // specifier (`frame_%05d.png`), so a literal `%` anywhere in the frame
-  // dir/output override corrupts the pattern into reading the wrong files —
-  // or none — with no error (#1089). The default paths are stem-sanitized
+  // dir/output override corrupts the pattern into reading the wrong files ,
+  // or none, with no error (#1089). The default paths are stem-sanitized
   // and can never carry one; only these overrides can, so refuse here.
   if (value.includes("%"))
     pushViolation(
       violations,
       "type",
       path,
-      `${label} must not contain "%" — ffmpeg reads it as a pattern conversion specifier`,
+      `${label} must not contain "%", ffmpeg reads it as a pattern conversion specifier`,
       value,
     );
 };

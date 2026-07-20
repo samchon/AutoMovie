@@ -22,7 +22,7 @@ const bonesOf = (
  * replacing what the clip authored on them and leaving every other authored
  * joint exactly as written.
  *
- * A pose is **sparse** — only bones that leave rest appear — so a correction
+ * A pose is **sparse** (only bones that leave rest appear), so a correction
  * cannot simply append its result: appending would leave two entries for the
  * same bone, and whichever the FK walk read last would silently win. The pass
  * therefore drops the chain's own entries before adding the solved ones, which
@@ -35,12 +35,12 @@ const bonesOf = (
  *
  * Scenarios:
  *
- * 1. The corrected pose names each bone exactly once — the two authored leg joints
+ * 1. The corrected pose names each bone exactly once: the two authored leg joints
  *    are replaced, not duplicated, and both right-leg joints are added.
  * 2. The authored spine joint is carried through untouched, angles and all.
  * 3. The authored left-leg angles are gone: the solved knee differs from the 12
  *    degrees the clip wrote.
- * 4. The point of the rewrite holds — the left foot ends on the mapped source
+ * 4. The point of the rewrite holds: the left foot ends on the mapped source
  *    contact within 0.005, which the authored angles alone missed.
  */
 export const test_motion_retarget_contact_authored_joints = (): void => {

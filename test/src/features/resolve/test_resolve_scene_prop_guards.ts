@@ -35,9 +35,9 @@ const scene = (
  * Scenarios:
  *
  * 1. A mixed scene resolves: the door through `props`, the actor through `models`
- *    — both subtrees lower into one graph (the positive twin).
+ *    and both subtrees lower into one graph (the positive twin).
  * 2. An id in both registries throws naming the contradiction.
- * 3. With only `props` supplied, a placement missing from the union throws — the
+ * 3. With only `props` supplied, a placement missing from the union throws: the
  *    union rule, not a silent partial lowering.
  * 4. Both registries omitted → placements-only lowering, no throw (the legacy
  *    twin).

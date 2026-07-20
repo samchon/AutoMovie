@@ -1,5 +1,5 @@
 /**
- * A face template in render-ready flat-array form — the geometry side of the
+ * A face template in render-ready flat-array form: the geometry side of the
  * face editor that an {@link IAutoMovieFace} morphs.
  *
  * `positions` is the template's resting face (the canonical neutral, or a

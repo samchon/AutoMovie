@@ -46,7 +46,7 @@ export interface IAutoMovieCapsuleProxyPair {
  * parts that should not overlap, while mesh topology remains a later Tier-5
  * concern.
  *
- * Self-intersection is a physical-plausibility **warning**, not a gate (D015):
+ * Self-intersection is a physical-plausibility **warning**, not a gate:
  * close choreography (a grapple, a near-miss blow, an embrace) legitimately
  * brings body parts into near-contact, so the run still succeeds and the
  * warning surfaces for the orchestrator to restage or acknowledge with
@@ -78,7 +78,7 @@ export const validateSelfIntersection = (props: {
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
 
   /**
-   * Marker that opts the pair out of the overlap expectation (D015): close
+   * Marker that opts the pair out of the overlap expectation: close
    * choreography (a grapple, an embrace) sets this and the matching warnings
    * are suppressed.
    */

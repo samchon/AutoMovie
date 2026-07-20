@@ -17,7 +17,7 @@ const rest = makePose([joint("leftLowerArm", { flexion: 0 })]);
  * a resting joint axis (`lerpAxis` null → 0), not a "hold the other keyframe"
  * skip. An expression authored only at the far keyframe therefore RAMPS in from
  * neutral across the segment instead of popping to full at the segment start,
- * and one authored only at the near keyframe fades back out to neutral — the
+ * and one authored only at the near keyframe fades back out to neutral, the
  * same unauthored-side convention the pose path uses (#1245-round-2 R2-8).
  *
  * Scenarios:

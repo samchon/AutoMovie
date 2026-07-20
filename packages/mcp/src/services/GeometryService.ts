@@ -44,7 +44,7 @@ import {
 import { resolveRuntimeSafeTargetPoint } from "./actionTargets";
 
 /**
- * Engine geometry queries — resolved poses, reach reports, and distance
+ * Engine geometry queries, resolved poses, reach reports, and distance
  * measurements over the narrow geometry context. The MCP contract lives on the
  * {@link AutoMovieApplication} facade; this service owns the execution.
  */
@@ -107,7 +107,7 @@ export class GeometryService {
       return {
         reach: null,
         reason:
-          "the target is not positional — direction/offscreen targets carry no world point; use a node, point, or group target",
+          "the target is not positional, direction/offscreen targets carry no world point; use a node, point, or group target",
       };
     const localTarget = toModelPoint(target, actor.node.transform);
     if (localTarget === null)
@@ -154,7 +154,7 @@ export class GeometryService {
     if (shot === undefined || shot === null)
       return {
         beatEnd: null,
-        reason: `no shot for beat "${props.beat}" — pass context.shot explicitly or commit the beat's shot first`,
+        reason: `no shot for beat "${props.beat}", pass context.shot explicitly or commit the beat's shot first`,
       };
     // The remaining engine contracts (duplicate motion ids, duplicated
     // performances/mounts) are authored-data faults a read-only derivation
@@ -194,7 +194,7 @@ export class GeometryService {
       reason:
         missing.length === 0
           ? null
-          : `the ${missing.join(" and ")} target${missing.length > 1 ? "s are" : " is"} not positional — direction/offscreen targets carry no world point`,
+          : `the ${missing.join(" and ")} target${missing.length > 1 ? "s are" : " is"} not positional, direction/offscreen targets carry no world point`,
       measurement:
         from === null || to === null
           ? null
@@ -429,7 +429,7 @@ const resolveActorPose = (
       return {
         motion: motionId,
         pose: null,
-        reason: `motion "${motionId}" for actor "${node.id}" is not in the motions registry — add it to context.motions or fix the reference`,
+        reason: `motion "${motionId}" for actor "${node.id}" is not in the motions registry, add it to context.motions or fix the reference`,
       };
     return {
       reason: null,
@@ -465,12 +465,12 @@ const findActorRig = (
   if (node === null)
     return {
       actor: null,
-      reason: `actor "${actor}" is not a scene node — check the scene's node ids`,
+      reason: `actor "${actor}" is not a scene node, check the scene's node ids`,
     };
   const model = findGeometryModel(context.models, node.model, `${root}.models`);
   // Session memory stays authoritative only when it CARRIES a rig: a
   // `commitScene` model with `skeleton: null` is the ABSENCE of a rig, not a
-  // rig, so it must not mask the actor's own persisted one (#1244) — otherwise
+  // rig, so it must not mask the actor's own persisted one (#1244), otherwise
   // the session that just wrote the rig resolves worse than a reopened project.
   const sessionSkeleton = model?.skeleton ?? null;
   const persisted = actorRigs?.get(actor);
@@ -487,7 +487,7 @@ const findActorRig = (
   if (skeleton === null)
     return {
       actor: null,
-      reason: `model "${node.model}" carries no skeleton — rig queries need a skeletal model`,
+      reason: `model "${node.model}" carries no skeleton, rig queries need a skeletal model`,
     };
   return {
     actor: { node, model: model ?? { id: node.model, skeleton }, skeleton },

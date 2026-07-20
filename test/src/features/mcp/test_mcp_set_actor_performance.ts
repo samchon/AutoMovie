@@ -51,7 +51,7 @@ const makeShot = (beat: string, scene: string): IAutoMovieShot => ({
 });
 
 /**
- * The motions a beat's shot references — the registry a resident commitShot
+ * The motions a beat's shot references, the registry a resident commitShot
  * needs so its motion ids are not dangling (#696).
  */
 const motionsFor = (beat: string) => ({
@@ -73,7 +73,7 @@ const motionsFor = (beat: string) => ({
 
 /**
  * SetActorPerformance (#654): the AutoBe one-artifact-per-call granularity
- * below the beat — replace ONE actor's performance in a committed shot without
+ * below the beat, replace ONE actor's performance in a committed shot without
  * re-performing the whole beat. Replacement-only, evidence-backed,
  * resident-only.
  *
@@ -90,10 +90,10 @@ const motionsFor = (beat: string) => ({
  *    registry violates at `$input.motions` (persisting it would store a
  *    dangling id) while a `motion: null` splice needs none; and malformed
  *    performance/registry shapes return validation instead of raw TypeErrors.
- * 3. A beat with no committed shot violates at `$input.beat` — a set names a thing
+ * 3. A beat with no committed shot violates at `$input.beat`, a set names a thing
  *    that exists.
  * 4. A node that does not perform in the shot violates at
- *    `$input.performance.node` — a NEW performer is perform + commitShot's job
+ *    `$input.performance.node`, a NEW performer is perform + commitShot's job
  *    (replacement-only).
  * 5. An empty reason violates (evidence discipline); a startOffset beyond the
  *    shot's duration violates; nothing is written in any refused case.
@@ -271,7 +271,7 @@ export const test_mcp_set_actor_performance = (): void => {
       hasViolation(mismatch.validation, "type", "$input.performance.motion"),
     );
     // #1095: a motion reference with NO registry would persist a dangling id
-    // (motions are re-perform-derived, not stored) — refused at the registry.
+    // (motions are re-perform-derived, not stored), refused at the registry.
     const shot1File = path.join(root, "shots", "beat-1.json");
     const shot1Before = fs.readFileSync(shot1File, "utf8");
     const registryless = app.setActorPerformance({
@@ -297,7 +297,7 @@ export const test_mcp_set_actor_performance = (): void => {
       fs.readFileSync(shot1File, "utf8"),
       shot1Before,
     );
-    // negative twin: clearing the motion needs no registry — there is no id
+    // negative twin: clearing the motion needs no registry, there is no id
     // left to dangle.
     const cleared = app.setActorPerformance({
       beat: "beat-1",

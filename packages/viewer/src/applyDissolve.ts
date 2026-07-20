@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 /**
- * A **cross-dissolve** between two shots of the same scene — the render side of
+ * A **cross-dissolve** between two shots of the same scene: the render side of
  * `resolveSequencePlayback`'s `blend`. The engine says "at this instant the
  * incoming shot is at weight `alpha`, the outgoing tail rides along"; this
  * draws both and cross-fades them so a cut can dissolve instead of
@@ -9,13 +9,13 @@ import * as THREE from "three";
  *
  * One pass renders the **outgoing** shot to an offscreen target, a second
  * renders the **incoming** shot to the screen, and a full-screen quad
- * composites the outgoing over it at opacity `1 − alpha` — plain alpha-over
+ * composites the outgoing over it at opacity `1 − alpha`: plain alpha-over
  * yields `outgoing·(1 − alpha) + incoming·alpha`, a true cross-fade. The target
  * and quad are created once **per renderer** and reused (resized with that
  * renderer's drawing buffer): module-global state let a second live viewer
  * force a render-target realloc every frame and left the first renderer's FBO
  * orphaned after its context was disposed (#1050). Call
- * {@link disposeCrossDissolve} when the renderer goes away — the same lifecycle
+ * {@link disposeCrossDissolve} when the renderer goes away, the same lifecycle
  * contract the render-mode handles carry (#645).
  *
  * `poseOutgoing` / `poseIncoming` each pose `scene` and aim `camera` for their
@@ -44,8 +44,8 @@ export const renderCrossDissolve = (
   alpha: number,
   /**
    * Wraps each half's render (#1250). A multi-pass guide capture supplies a
-   * wrapper that applies the pass override — freshly per half, so the `pose`
-   * overlay reflects each shot's own pose — around `render()`; the composite is
+   * wrapper that applies the pass override (freshly per half, so the `pose`
+   * overlay reflects each shot's own pose) around `render()`; the composite is
    * then a cross-fade of two guide-pass renders, the guide-space analogue of
    * the beauty cross-fade. Omitted for a plain render.
    */
@@ -56,7 +56,7 @@ export const renderCrossDissolve = (
   if (state === undefined) {
     // Match the renderer's own antialiasing, decided once per renderer. On the
     // live (AA-on) canvas, samples stop the FIRST blend frame (alpha≈0, ~100%
-    // outgoing) rendering the outgoing shot aliased — a one-frame pop at every
+    // outgoing) rendering the outgoing shot aliased, a one-frame pop at every
     // dissolve edge (#1090). On the capture renderer (AA off, #1169) the target
     // must be AA-off too, or the outgoing half is MSAA-resolved (hardware-
     // dependent) and composited onto an aliased canvas, reintroducing exactly
@@ -108,7 +108,7 @@ export const renderCrossDissolve = (
 
 /**
  * Dispose the dissolve GPU state created for `renderer` (render target, quad
- * geometry/material) — call alongside the renderer's own disposal, exactly as a
+ * geometry/material). Call alongside the renderer's own disposal, exactly as a
  * render-mode handle's `restore()` (#1050). Safe to call when nothing was
  * created; the next dissolve on the same renderer re-initializes lazily.
  */

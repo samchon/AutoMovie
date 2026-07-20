@@ -441,7 +441,7 @@
       eyeballMesh.visible = false;
       root.add(eyeballMesh);
       const metricsGroup = new THREE.Group();
-      // Hidden by default — the yellow measurement guide lines should not pollute
+      // Hidden by default: the yellow measurement guide lines should not pollute
       // renders / future MediaPipe passes. (__faceEditor can toggle if needed.)
       metricsGroup.visible = false;
       root.add(metricsGroup);
@@ -603,7 +603,7 @@
             hairMat,
           );
           // Wide enough in x to overlap the hair backing at the crown (closes the
-          // specks) but shallow in z and height so it hugs the skull — the
+          // specks) but shallow in z and height so it hugs the skull. The
           // reference hair is sleek/pulled-back, not a bouffant dome. An oversized
           // z made the crown bulge front-to-back in profile.
           cap.scale.set((mxx - mnx) * 0.6, (mxy - hairlineY) * 1.06, (mxz - mnz) * 0.58);
@@ -653,13 +653,13 @@
         const frontCut = facts.faceBottom + facts.faceHeight * 0.5;
         const depth = Math.max(0.001, facts.profileDepth);
         // Shallower socket + softer brow ridge: the deep socket made the eyes
-        // read sunken and the lift built a heavy bony supraorbital bossing —
-        // both read ADULT/masculine and the references are soft young faces.
+        // read sunken and the lift built a heavy bony supraorbital bossing.
+        // Both read ADULT/masculine and the references are soft young faces.
         const socketDepth = 0.013 + get("eyeDepth") * 0.014 + get("eyeScale") * 0.007;
         const browLift = 0.0012 + get("browHeight") * 0.004;
         // Discrete per-group pushes have NO spatial falloff, so they cut hard
         // step-creases into the smooth mesh (the source of the eye-area "각짐").
-        // Cut them to ~40% — just enough to seat the eyeball — and let the smooth
+        // Cut them to ~40% (just enough to seat the eyeball) and let the smooth
         // Gaussian carve below own the visible socket.
         const pushGroup = (indices, scale, lift = 0) => {
           for (const index of indices ?? []) {
@@ -683,7 +683,7 @@
         // the lash, modest amplitude so it's a roll not a bag.
         // Anchor the roll HIGH, hugging the lash (eyeBandY*0.55 below the eye,
         // not 0.82 which sits in the bag/tear-trough zone), and keep it very
-        // subtle — the reference's lower lid is nearly flat.
+        // subtle: the reference's lower lid is nearly flat.
         const aegyoY = eyeY - eyeBandY * 0.55;
         for (let i = 0; i < positions.length; i += 3) {
           const x = positions[i];
@@ -822,7 +822,7 @@
         const lm = state.data.landmarks ?? {};
         // Each eye is seated on the MakeHuman socket landmarks: a white sphere
         // recessed so its front pole sits just BEHIND the skin aperture (the
-        // cornea peeks through the lid hole — it never bulges proud of the
+        // cornea peeks through the lid hole: it never bulges proud of the
         // lids), a large dark iris + pupil on that pole, and lid/lash/brow
         // strokes hugging the measured aperture. Asian-neutral: dark iris fills
         // most of the visible aperture, leaving only sclera slivers.
@@ -863,7 +863,7 @@
           const cy = symY + get("eyeHeightPosition") * 0.012;
           const apertureFrontZ = skinFrontZ(cx, cy);
           // Size the eye to the MEASURED reference fissure: eyeWidth/faceWidth
-          // ~= 0.206 (the clay eyes were ~0.13 — far too small). Aperture, iris
+          // ~= 0.206 (the clay eyes were ~0.13, far too small). Aperture, iris
           // and eyeball all scale off the face width so the eye stays in
           // proportion as the head morphs, and the iris fills the aperture
           // (Asian-neutral: only sclera slivers at the corners).
@@ -904,7 +904,7 @@
           // Lid coverage scales with eyeHeight so the aperture is per-hero:
           // big round eyes (hero1, high eyeHeight) open wide; smaller eyes
           // (hero3) close to a narrow iris-dominant almond.
-          // Upper-lid hood only (no heavy lower pad — that made the eyes
+          // Upper-lid hood only (no heavy lower pad: that made the eyes
           // sleepy). Hood height scales with eyeHeight so big eyes (hero1) stay
           // open and round while smaller eyes hood a touch more.
           const open = get("eyeHeight");
@@ -1034,7 +1034,7 @@
             const ceZ = aim.apFrontZ - aim.targetR + aim.dz;
             const z = ceZ + s * (base[i + 2] - cz);
             arr[i] = x; arr[i + 1] = y; arr[i + 2] = z;
-            // smooth (radial) normal from the eye centre — the mesh is non-indexed
+            // smooth (radial) normal from the eye centre: the mesh is non-indexed
             // so computeVertexNormals would face-facet it into a banded specular.
             const nx = x - aim.cx, ny = y - aim.cy, nz = z - ceZ;
             const len = Math.hypot(nx, ny, nz) || 1;
@@ -1129,7 +1129,7 @@
         const step = (w) => {
           const q = p.slice();
           for (let i = 0; i < n; i++) {
-            if (isB[i]) continue; // pin open-boundary (neck rim) — no pleating
+            if (isB[i]) continue; // pin open-boundary (neck rim), no pleating
             const ns = nbr[i]; const L = ns.length; if (!L) continue;
             let mx = 0, my = 0, mz = 0;
             for (let k = 0; k < L; k++) { const j = ns[k] * 3; mx += p[j]; my += p[j + 1]; mz += p[j + 2]; }
@@ -1142,14 +1142,14 @@
         };
         // The user's mandate: beauty is in flowing curves, angularity is ugly.
         // Push the volume-preserving Taubin pass hard (12 iters) so the whole form
-        // — silhouette, jaw, cheek, neck — reads as continuous curve, not facet.
+        // (silhouette, jaw, cheek, neck) reads as continuous curve, not facet.
         for (let it = 0; it < 12; it++) { step(0.5); step(-0.53); }
         // Concavity-FILLING finish: volume-preserving Taubin keeps grooves intact,
         // but a young face has no tear-trough / nasolabial / paranasal dents. A few
-        // pure-Laplacian (positive-only) passes are mean-curvature flow — they melt
+        // pure-Laplacian (positive-only) passes are mean-curvature flow: they melt
         // high-curvature grooves fastest, filling the dents into flowing skin. The
         // central face (orbital/paranasal/perioral) still read dented at 3 passes,
-        // so push to 8 to melt them — the residual nasolabial/perioral creases
+        // so push to 8 to melt them: the residual nasolabial/perioral creases
         // read as AGING WRINKLES (a young face has none). Watch nose/lip survive.
         for (let it = 0; it < 8; it++) { step(0.42); }
         return { positions: p, indices: t2.indices };
@@ -1263,7 +1263,7 @@
           new THREE.Vector3(offset, baseY + 0.012 + get("tipRotation") * 0.012, tipZ),
         ], 0xa47b6b, 0.015);
         // Refine the tip: narrower (0.028 -> 0.023) and shorter (0.021 -> 0.018)
-        // but keep the depth (0.027) so projection is unchanged — a delicate tip,
+        // but keep the depth (0.027) so projection is unchanged: a delicate tip,
         // not a flattened one.
         const tip = ellipsoid("nose-tip", 0.023 * (1 + get("tipWidth") * 0.08), 0.018, 0.027, clay, 24);
         tip.position.set(offset, baseY + 0.012 + get("tipRotation") * 0.012, tipZ);
@@ -1283,7 +1283,7 @@
         const upperH = 0.019 * c.upperLip;
         const lowerH = 0.023 * c.lowerLip;
         const z = 0.402 + get("lipProjection") * 0.018;
-        // Seat the mouth-line flush (was +0.016/+0.025 proud — a hard seam that
+        // Seat the mouth-line flush (was +0.016/+0.025 proud, a hard seam that
         // split the mouth into two stacked pads). A near-flush line + tightened
         // vertical overlap reads as one continuous mouth, not two ellipsoids.
         makeCapsuleLine("mouth-line", [
@@ -1364,7 +1364,7 @@
         tipProjectionToFace: facts.tipProjection / facts.faceHeight,
       });
       // Per-preset hair carve: drop the proxy triangles over the front face so
-      // the hair frames the face. carveTop is the highest y still cut — a lower
+      // the hair frames the face. carveTop is the highest y still cut. A lower
       // value keeps forehead hair (bangs). hero1 (cute) keeps bangs; the others
       // open the forehead (centre part).
       const hairCarveTop = { hero1: 0.46 };
@@ -1384,7 +1384,7 @@
           if (z > 0.4 && Math.abs(x) < 0.46 && y > -0.5 && y < top) return true;
           // (2) strips that drape over the cheek/jaw skin: hair sitting clearly
           // proud of the face (high z) across the wider cheek span reads as a
-          // flat panel stuck on the face — drop it so the hair falls behind.
+          // flat panel stuck on the face. Drop it so the hair falls behind.
           // Lowered z (0.32->0.27) and widened x (0.64->0.72) to also catch the
           // dark shards that hang proud of the jaw and break the jaw-neck flow.
           if (z > 0.27 && Math.abs(x) < 0.72 && y > -0.7 && y < top) return true;

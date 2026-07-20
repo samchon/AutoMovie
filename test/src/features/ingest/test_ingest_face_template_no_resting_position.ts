@@ -6,7 +6,7 @@ import { throwsError } from "../internal/predicates";
 
 /**
  * A morphed primitive without a resting POSITION has deltas but nothing to
- * apply them to — the negative twin of the happy path's POSITION carry-over,
+ * apply them to: the negative twin of the happy path's POSITION carry-over,
  * one attribute away.
  *
  * Scenario: a primitive carrying only a named morph target (no POSITION)

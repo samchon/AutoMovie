@@ -17,7 +17,7 @@ const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
 });
 
 /**
- * Hips at world y=1, chest at 1.5, leftHand at 0.1 — a body standing over y=0
+ * Hips at world y=1, chest at 1.5, leftHand at 0.1: a body standing over y=0
  * ground with one low hand. A hips→leftHand capsule of radius 0.2 dips to y =
  * 0.1 − 0.2 = −0.1, penetrating; hips→chest (radius 0.2, lowest 0.8) clears.
  */
@@ -73,7 +73,7 @@ const still = (target: IAutoMovieSkeleton) =>
  * The whole-body capsule sweep (#1185): `validateGroundContact` checked only
  * foot points, so a hand, hip, or elbow clipping through the floor was
  * invisible. A capsule proxy's lowest surface point (`min(from.y, to.y) −
- * radius`) is now swept against the ground too — advisory, like the foot check,
+ * radius`) is now swept against the ground too: advisory, like the foot check,
  * and total (a detached endpoint is an error, not a silent skip).
  *
  * Scenarios (all isolate the sweep with `footBones: []`):
@@ -82,11 +82,11 @@ const still = (target: IAutoMovieSkeleton) =>
  *    warns at `$input.samples[i].capsules[0].lowestY` while the run succeeds.
  * 2. A hips→chest capsule that stays well above the ground raises no warning.
  * 3. Reversing the endpoints (hand→hips) still finds the low hand as the deepest
- *    point — the endpoint reduction is order-independent.
+ *    point: the endpoint reduction is order-independent.
  * 4. `physicsIntent` suppresses the capsule warning, exactly as it does the foot
  *    warning.
  * 5. A capsule on a detached endpoint is a `type` error (not reachable), not a
- *    silent skip or a crash — the totality contract the point check lacks.
+ *    silent skip or a crash: the totality contract the point check lacks.
  */
 export const test_validation_ground_contact_capsule = (): void => {
   const sunk = validateGroundContact({

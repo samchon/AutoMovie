@@ -167,8 +167,8 @@ export interface IAutoMovieHumanoidRetargetResult {
  * contacting limb onto the source contact mapped through the same `rootScale`,
  * so a planted foot lands where the performance put it instead of sliding. The
  * pass runs by default, corrects the clip at its authored keyframe times, and
- * reports a residual it could not reach under the target's ROM as a `warning` —
- * the returned `validation` still succeeds (D015).
+ * reports a residual it could not reach under the target's ROM as a `warning` ,
+ * the returned `validation` still succeeds.
  *
  * @author Samchon
  */
@@ -453,7 +453,7 @@ const validateRestFrames = (
 
 /**
  * The rig's rest-pose vertical extent: `height` drives the root-motion scale,
- * `floor` is the world Y its lowest bone sits at — the ground plane the contact
+ * `floor` is the world Y its lowest bone sits at, the ground plane the contact
  * pass judges stance against, so a rig authored with its feet above the origin
  * is still detected as standing on something.
  */

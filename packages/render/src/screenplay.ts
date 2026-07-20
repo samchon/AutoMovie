@@ -6,28 +6,28 @@ import {
 
 /**
  * Serialize an {@link IAutoMovieScript} into the deterministic, human-readable
- * plain-text screenplay — the artifact a person reviews and edits, exported
+ * plain-text screenplay: the artifact a person reviews and edits, exported
  * alongside the guide video (D009: dialogue TEXT is authoring data; audio is
  * diffusion's).
  *
  * **Convention** (plain text, fixed indents, no trailing whitespace):
  *
- * - Header: `LOGLINE: …` and `THEME: …` — from the intent root when a tree is
+ * - Header: `LOGLINE: …` and `THEME: …`, from the intent root when a tree is
  *   present (the tree is the authored truth), else from the flat script.
- * - Act: a blank-line-separated `ACT — <purpose>` rule.
+ * - Act: a blank-line-separated `ACT, <purpose>` rule.
  * - Scene: the screenplay slug `INT. LOCATION - TIMEOFDAY` (location and time
  *   upper-cased), followed by the optional description line.
  * - Group: the rationale bracketed as `[<rationale>]`.
- * - Beat: the beat's flat name as `BEAT — <name>`, the stage direction prose,
+ * - Beat: the beat's flat name as `BEAT, <name>`, the stage direction prose,
  *   each dialogue line as a 16-space-indented `SPEAKER` line over an
  *   8-space-indented text line (prefixed `[t=…s]` when anchored), and the shot
  *   caption bracketed as `[Shot: …]`.
  *
  * **Tree vs flat.** With `script.tree` the document walks the refinement tree
  * depth-first, children in declaration order (the tree already validated on
- * commit — one intent root, acyclic, beats joined 1:1). Without a tree the
- * fallback renders the header plus each flat beat as `BEAT — <name>` over its
- * summary — treeless scripts stay exportable. A script with no beats at all
+ * commit: one intent root, acyclic, beats joined 1:1). Without a tree the
+ * fallback renders the header plus each flat beat as `BEAT, <name>` over its
+ * summary. Treeless scripts stay exportable. A script with no beats at all
  * throws: there is no screenplay to render, and serializing an empty shell
  * would hide the authoring gap.
  *
@@ -38,7 +38,7 @@ import {
  */
 export const renderScreenplay = (script: IAutoMovieScript): string => {
   if (script.beats.length === 0)
-    throw new Error("script has no beats — there is no screenplay to render");
+    throw new Error("script has no beats: there is no screenplay to render");
 
   const tree = script.tree ?? null;
   if (tree === null) return renderFlat(script);
@@ -51,7 +51,7 @@ const renderFlat = (script: IAutoMovieScript): string => {
     `THEME: ${script.theme}`,
   ];
   for (const beat of script.beats) {
-    lines.push("", `BEAT — ${beat.name}`, beat.summary);
+    lines.push("", `BEAT, ${beat.name}`, beat.summary);
   }
   return `${lines.join("\n")}\n`;
 };
@@ -78,7 +78,7 @@ const renderTree = (
         );
         break;
       case "act":
-        lines.push("", `ACT — ${node.payload.purpose}`);
+        lines.push("", `ACT, ${node.payload.purpose}`);
         break;
       case "scene": {
         const slug = sceneSlug(node.payload);
@@ -92,7 +92,7 @@ const renderTree = (
         break;
       case "beat": {
         const name = beatNames.get(node.payload.beat) ?? node.payload.beat;
-        lines.push("", `BEAT — ${name}`, node.payload.direction);
+        lines.push("", `BEAT, ${name}`, node.payload.direction);
         for (const line of node.payload.dialogue)
           lines.push(...dialogueLines(line));
         if (node.payload.caption !== null)
@@ -107,7 +107,7 @@ const renderTree = (
   return `${lines.join("\n")}\n`;
 };
 
-/** `INT. CASTLE COURTYARD - DAWN` — the slug, location and time upper-cased. */
+/** `INT. CASTLE COURTYARD - DAWN`: the slug, location and time upper-cased. */
 const sceneSlug = (payload: {
   interiorExterior: "INT" | "EXT";
   location: string;
@@ -124,11 +124,11 @@ const dialogueLines = (line: IAutoMovieDialogueLine): string[] => {
 };
 
 /**
- * Per-beat caption + enclosing scene slug from the screenplay tree — the join
+ * Per-beat caption + enclosing scene slug from the screenplay tree: the join
  * table {@link planCaptionSidecar} consults per span. The tree walks depth-first
  * from the intent root (the same walk the screenplay document renders with),
  * carrying the nearest scene slug down; a treeless script (null or the legacy
- * absent field) — or a tree with no root to walk — yields an empty map, so
+ * absent field), or a tree with no root to walk, yields an empty map, so
  * every span captions `null`. A node unreachable from the root is never
  * visited: commit validation owns that rejection, the join is total.
  */

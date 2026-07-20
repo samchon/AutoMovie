@@ -75,7 +75,7 @@ const key = (time: number, x: number, z: number): IAutoMovieKeyframe => ({
  * Scenarios:
  *
  * 1. A planted left foot that slides 0.1m over 0.5s exceeds a 0.05m/s limit and
- *    reports a physics WARNING (D015 — advice, not a gate) on the stable
+ *    reports a physics WARNING (D015: advice, not a gate) on the stable
  *    contact sample path; the run still succeeds. `physicsIntent` (a deliberate
  *    slide) suppresses it.
  * 2. Raising the allowed speed accepts the same clip, proving the tolerance is the

@@ -72,7 +72,7 @@ const context: IAutoMovieMcpGeometryContext = {
 };
 
 /**
- * `getShotEndState` exposes the engine's `resolveBeatEnd` — the continuity
+ * `getShotEndState` exposes the engine's `resolveBeatEnd`, the continuity
  * ladder's derivation rung: the agent asks the engine for the beat's resumable
  * end-state instead of hand-authoring folded transforms, velocities, and gait
  * phases, then persists it with `commitBeatEnd`.

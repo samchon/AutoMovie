@@ -57,7 +57,7 @@ const materialsOf = (mesh: THREE.Mesh): THREE.Material[] =>
   Array.isArray(mesh.material) ? mesh.material : [mesh.material];
 
 /**
- * Restore() must dispose every resource the override CREATED — exactly once —
+ * Restore() must dispose every resource the override CREATED (exactly once)
  * and never the borrowed originals: a guide-pass render applies and restores
  * once per frame per pass, so an hour of film would otherwise leak tens of
  * thousands of WebGL materials/geometries (#645). Restoring twice is a no-op.
@@ -72,7 +72,7 @@ const materialsOf = (mesh: THREE.Mesh): THREE.Material[] =>
  *    originals untouched; the background instance is restored.
  * 4. `pose`: every created line geometry AND the shared line material are disposed
  *    exactly once; the overlay leaves the scene.
- * 5. `beauty`: creates nothing and disposes nothing — original materials keep a
+ * 5. `beauty`: creates nothing and disposes nothing. Original materials keep a
  *    zero dispose count through apply+restore.
  */
 export const test_viewer_render_mode_dispose = (): void => {
@@ -82,7 +82,7 @@ export const test_viewer_render_mode_dispose = (): void => {
     materialsOf(mesh).map(spyDispose),
   );
 
-  // 1. depth — created disposed once, originals never, restore-twice safe.
+  // 1. depth: created disposed once, originals never, restore-twice safe.
   const depth = applyRenderMode(scene, "depth");
   const depthSpies = meshes.flatMap((mesh) =>
     materialsOf(mesh).map(spyDispose),
@@ -98,7 +98,7 @@ export const test_viewer_render_mode_dispose = (): void => {
     depthSpies.every((spy) => spy.count === 1),
   );
 
-  // 2. outline — same contract.
+  // 2. outline: same contract.
   const outline = applyRenderMode(scene, "outline");
   const outlineSpies = meshes.flatMap((mesh) =>
     materialsOf(mesh).map(spyDispose),
@@ -109,7 +109,7 @@ export const test_viewer_render_mode_dispose = (): void => {
     outlineSpies.every((spy) => spy.count === 1),
   );
 
-  // 3. mask — created per-node materials disposed once, background restored.
+  // 3. mask: created per-node materials disposed once, background restored.
   const background = scene.background;
   const mask = applyRenderMode(scene, "mask");
   const maskSpies = meshes.flatMap((mesh) => materialsOf(mesh).map(spyDispose));
@@ -123,7 +123,7 @@ export const test_viewer_render_mode_dispose = (): void => {
     scene.background === background,
   );
 
-  // 4. pose — line geometries and the shared line material disposed once.
+  // 4. pose: line geometries and the shared line material disposed once.
   const pose = applyRenderMode(scene, "pose");
   const overlay = scene.getObjectByName(POSE_OVERLAY_NAME);
   if (overlay === undefined) throw new Error("pose overlay must exist");
@@ -148,7 +148,7 @@ export const test_viewer_render_mode_dispose = (): void => {
     1,
   );
 
-  // 5. beauty — nothing created, nothing disposed; originals never disposed
+  // 5. beauty: nothing created, nothing disposed; originals never disposed
   //    through the whole run.
   const beauty = applyRenderMode(scene, "beauty");
   beauty.restore();

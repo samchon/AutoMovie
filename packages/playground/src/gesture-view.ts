@@ -22,7 +22,7 @@ import * as THREE from "three";
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
 // The whole-body `jump` gesture on screen: a figure coils, leaps (the pose
-// root arcs up on Y), tucks its legs at the apex, and absorbs the landing —
+// root arcs up on Y), tucks its legs at the apex, and absorbs the landing,
 // then throws both arms overhead in a celebration. The celebrate gesture is
 // authored in clinical space (abduction 180 = straight up, no per-side mirror);
 // the player is handed HUMANOID_REST_FRAME so it reads those angles up. Engine-

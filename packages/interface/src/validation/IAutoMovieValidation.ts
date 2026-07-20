@@ -2,7 +2,7 @@ import { IAutoMovieConstraintViolation } from "./IAutoMovieConstraintViolation";
 
 /**
  * The result of running a automovie artifact through the deterministic
- * validator tiers — success, or the full list of violations to feed back.
+ * validator tiers: success, or the full list of violations to feed back.
  *
  * Discriminated on `success` so the consumer either proceeds with the validated
  * artifact or hands `violations` to the harness for a correction round. Success
@@ -26,7 +26,7 @@ export namespace IAutoMovieValidation {
     success: true;
 
     /**
-     * `"warning"`-severity violations that did not block success — physical
+     * `"warning"`-severity violations that did not block success: physical
      * implausibilities the author may accept or correct. Present only when the
      * run produced warnings; absent when everything was clean.
      */

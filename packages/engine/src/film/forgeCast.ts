@@ -38,13 +38,13 @@ export namespace IAutoMovieForgedCast {
 }
 
 /**
- * The FORGE consumer — accept the stand-in rigs the forge stage built for the
+ * The FORGE consumer: accept the stand-in rigs the forge stage built for the
  * script's `modelRef: null` cast members, and gate them on both contracts:
  *
  * The **casting contract**: exactly one entry per stand-in cast member (a
  * missing rig is an actor with no body; a rig for an imported-`modelRef` member
  * or for a stranger contradicts the script), and each entry's model `id` must
- * equal its cast `node` — that id is the join the staged scene's `modelRef ??
+ * equal its cast `node`. That id is the join the staged scene's `modelRef ??
  * node` fallback resolves against.
  *
  * The **rig contract**: `validateModel` covers parts/materials/extents and the
@@ -127,7 +127,7 @@ export const forgeCast = (
       out.push(
         "type",
         `${ep}.model.skeleton`,
-        "a stand-in performer needs a skeleton — a boneless model cannot be posed",
+        "a stand-in performer needs a skeleton: a boneless model cannot be posed",
         entry.model.skeleton,
       );
 

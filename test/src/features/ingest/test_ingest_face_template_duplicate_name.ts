@@ -7,7 +7,7 @@ import { throwsError } from "../internal/predicates";
 /**
  * Two morph targets resolving to the SAME name are a structural defect: the
  * record write would silently keep only the last sculpt, so the template no
- * longer matches the asset — the degradation the throw-on-structural-defect
+ * longer matches the asset, the degradation the throw-on-structural-defect
  * contract forbids (#1105). The import throws, naming both indices.
  *
  * Scenarios:

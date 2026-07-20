@@ -9,8 +9,8 @@ import { nclose } from "../internal/predicates";
  * producing empty parts (the preset schema covers tailless styles with the same
  * fields).
  *
- * Scenario: default-skull tails at length .6 — mirror centroids, count
- * equality; length 1 vs .2 minY ordering; length 0 empties.
+ * Scenario: default-skull tails at length .6 (mirror centroids, count
+ * equality); length 1 vs .2 minY ordering; length 0 empties.
  */
 export const test_forge_hair_tails = (): void => {
   const base = { length: 0.6, height: 0.4, spread: 0.5, width: 0.5 };

@@ -62,7 +62,7 @@ const ctx: IAutoMovieActorContext = {
 };
 
 const nodes = new Map<string, IAutoMovieVector3>([
-  ["exit", { x: 3, y: 1.2, z: 1 }], // far — a point extends the arm toward it
+  ["exit", { x: 3, y: 1.2, z: 1 }], // far: a point extends the arm toward it
 ]);
 
 const gesture = (
@@ -97,7 +97,7 @@ const boneWorld = (
  *    ends up markedly further along the shoulder→target direction than at rest,
  *    and the clip is a rest → extend → hold.
  * 2. `strike at: exit` snaps the right fist toward the target (a jab) and retracts
- *    it — rest → strike → rest.
+ *    it: rest → strike → rest.
  * 3. `point`/`strike` with no `at`, a rig-less context, and an unhandled combat
  *    kind (`draw`) all synthesise nothing.
  * 4. Rest frames on the context lift the IK verbs into **clinical** space: the
@@ -122,7 +122,7 @@ export const test_perform_arm_gestures = (): void => {
     pointedHand.x > restHand.x + 0.1,
   );
 
-  // strike at the target: a jab — the right fist snaps toward it, then retracts.
+  // strike at the target: a jab; the right fist snaps toward it, then retracts.
   const strike = synth(
     gesture("strike", { at: { kind: "node", node: "exit" } }),
     "hero",

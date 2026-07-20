@@ -27,7 +27,7 @@ const placedScene = (): IAutoMovieScene => ({
 
 /**
  * A placed prop's articulation lowers under its placement group exactly the way
- * a skeleton does — prefixed ids and parents, a `null` parent seating directly
+ * a skeleton does: prefixed ids and parents, a `null` parent seating directly
  * under the placement (props declare their own root joint; no synthetic root is
  * added), every other node field verbatim. A rigid prop lowers nothing extra.
  *
@@ -36,9 +36,9 @@ const placedScene = (): IAutoMovieScene => ({
  * 1. The forged door's three joints lower as `frontDoor/root` (parent
  *    `frontDoor`), `frontDoor/hinge` and `frontDoor/handleMirror` (parents
  *    `frontDoor/root`).
- * 2. Transforms carry verbatim — the hinge keeps its authored `(0, 1, 0)` local
- *    translation — and the node kind carries too.
- * 3. A rigid prop (`articulation: null`) lowers only its placement group — the
+ * 2. Transforms carry verbatim (the hinge keeps its authored `(0, 1, 0)` local
+ *    translation), and the node kind carries too.
+ * 3. A rigid prop (`articulation: null`) lowers only its placement group: the
  *    negative twin of the subtree.
  */
 export const test_resolve_scene_prop_lowering = (): void => {

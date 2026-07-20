@@ -34,7 +34,7 @@ import {
 } from "../internal/fixtures";
 import { vclose } from "../internal/predicates";
 
-/** A launch/attach produces no actor pose — those animate objects, not the rig. */
+/** A launch/attach produces no actor pose: those animate objects, not the rig. */
 const synth: IAutoMovieActionSynthesizer = (action, actor) =>
   action.verb === "launch" || action.verb === "attachTo"
     ? null
@@ -76,8 +76,8 @@ const stagingOf = () =>
 
 /**
  * Wires the `attachTo` verb through the PERFORMANCE consumer: the coupled prop
- * gets a shot `objectMotion` that rides the parent's bone — animated when the
- * parent moves — and the prop, being no rig, gets no pose performance.
+ * gets a shot `objectMotion` that rides the parent's bone (animated when the
+ * parent moves), and the prop, being no rig, gets no pose performance.
  *
  * Scenarios:
  *
@@ -90,10 +90,10 @@ const stagingOf = () =>
  * 4. An attachTo parent with no rig to attach a bone of → a violation.
  * 5. A bone that is not on the parent's skeleton → a violation.
  * 6. A child node cannot attach to one of its own bones.
- * 7. A handoff (#989) — the same child attached over two disjoint spans — bakes
+ * 7. A handoff (#989), the same child attached over two disjoint spans, bakes
  *    UNIQUE ids in start order (`attach:sword`, `attach:sword:2`), so the shot
  *    stays committable, and `resolveBeatEnd` follows the LATEST coupling
- *    WITHOUT any staged mount (#1141 — the grab alone drives the end state):
+ *    WITHOUT any staged mount (#1141, the grab alone drives the end state):
  *    the sword's end transform rides the second attachment's final follow
  *    sample (not the first's, not the staged placement), its end velocity is
  *    the follow clip's trailing read, and its `mount` stays null (a per-beat
@@ -150,7 +150,7 @@ export const test_film_perform_shot_attach = (): void => {
   if (ok.success !== true) return;
 
   TestValidator.equals(
-    "two object motions — the sword's and the shield's follows",
+    "two object motions, the sword's and the shield's follows",
     ok.shot.objectMotions.map((c) => c.id).sort((a, b) => a.localeCompare(b)),
     ["attach:shield", "attach:sword"],
   );
@@ -169,7 +169,7 @@ export const test_film_perform_shot_attach = (): void => {
     !vclose(posAt(0), posAt(0.5), 1e-3),
   );
   TestValidator.equals(
-    "the props are no rig — only the knight performs",
+    "the props are no rig, only the knight performs",
     ok.shot.performances.map((p) => p.node),
     ["knight"],
   );

@@ -48,7 +48,7 @@ const SPEC: IAutoMovieRenderSpec = {
 };
 
 /**
- * The chunked render plans guide passes per chunk — the 1-hour film's real
+ * The chunked render plans guide passes per chunk, the 1-hour film's real
  * path: chunking (#609) × guide passes (#608) in one manifest. Each chunk's
  * per-pass paths carry the chunk-local re-base exactly like its beauty frames,
  * so a single chunk renders a pass frame-identical to the same frames of the
@@ -65,11 +65,11 @@ const SPEC: IAutoMovieRenderSpec = {
  * 3. Parity modulo dir + re-base: the whole render's depth frame at global index 9
  *    is `frame_00009.depth.png` under the whole frameDir, while the chunk
  *    holding it addresses the same capture as `frame_00000.depth.png` under
- *    `chunk_3/` — global index − frameStart, exactly the beauty re-base.
+ *    `chunk_3/`: global index − frameStart, exactly the beauty re-base.
  * 4. The pass manifests walk all chunks in play order with parallel per-chunk
  *    input patterns and the whole plan's frameCount.
  * 5. An unknown pass name throws before any chunk is built.
- * 6. An empty pass list plans empty pass sets (fields present, no outputs) — the
+ * 6. An empty pass list plans empty pass sets (fields present, no outputs), the
  *    planGuidePassOutputs convention.
  */
 export const test_render_chunk_guide_passes = (): void => {

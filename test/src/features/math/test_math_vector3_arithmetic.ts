@@ -12,7 +12,7 @@ import { TestValidator } from "@nestia/e2e";
  * 1. Add (1,2,3)+(4,5,6) → (5,7,9), the per-component sum.
  * 2. Subtract (4,5,6)−(1,2,3) → (3,3,3).
  * 3. Scale (1,2,3)·2 → (2,4,6).
- * 4. Dot (1,2,3)·(4,5,6) → 32, and the dot of two perpendicular axes is 0 —
+ * 4. Dot (1,2,3)·(4,5,6) → 32, and the dot of two perpendicular axes is 0,
  *    pinning the orthogonality the projection and lighting math rely on.
  */
 export const test_math_vector3_arithmetic = (): void => {

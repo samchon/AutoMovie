@@ -38,7 +38,7 @@ const node = (id: string): IAutoMovieSceneNode => ({
   pose: null,
 });
 
-/** A static actor whose world root sits at (x, y, z) — the node is at origin. */
+/** A static actor whose world root sits at (x, y, z). The node is at origin. */
 const rootMotion = (
   id: string,
   x: number,
@@ -156,11 +156,11 @@ const silhouette = (
 
 /**
  * `reviewVisualRead` (#1177) computes deterministic visual-read advisory notes
- * (`tier: "visual"`, D015 — notes, not gates).
+ * (`tier: "visual"`, D015: notes, not gates).
  *
  * Subject-in-frame scenarios:
  *
- * 1. A subject 5 m down the camera's −Z stays centered — no note; the default
+ * 1. A subject 5 m down the camera's −Z stays centered: no note; the default
  *    sample rate and an explicit aspect frame it too.
  * 2. A subject above/behind/past-far/beside the frustum each earns exactly one
  *    note naming it and the first off-frame time.

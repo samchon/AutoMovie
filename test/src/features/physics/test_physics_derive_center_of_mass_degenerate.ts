@@ -5,7 +5,7 @@ import { makeProp, primitivePart } from "../internal/fixtures";
 
 /**
  * `deriveCenterOfMass` returns null when a model has no primitive volume to
- * weigh — the caller's signal that `centerOfMass` must be declared explicitly
+ * weigh: the caller's signal that `centerOfMass` must be declared explicitly
  * rather than derived.
  *
  * Scenarios:

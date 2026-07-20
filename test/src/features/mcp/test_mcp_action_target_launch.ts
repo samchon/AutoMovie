@@ -50,7 +50,7 @@ const cameraFrame = {
 /**
  * `targetNodeId` resolves the launch on-hit target (#1040 coverage): the launch
  * on-hit describer reads its `at` target through the node-id extractor, which
- * yields the node id for a node target and null for a non-node target — so the
+ * yields the node id for a node target and null for a non-node target, so the
  * describer only inspects a real node's context.
  *
  * Scenarios:

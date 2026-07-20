@@ -31,8 +31,8 @@ const DEFAULT_TOLERANCE = 0.02;
 /**
  * Drift below this, in target model units, is floating-point residue rather
  * than a proportion mismatch. Under a uniform rig scale the factor distributes
- * cleanly through the FK walk — rotate is linear and every accumulated sum
- * scales with it — so a target effector sits on its mapped source contact to
+ * cleanly through the FK walk (rotate is linear and every accumulated sum
+ * scales with it), so a target effector sits on its mapped source contact to
  * the last bit, the drift measures zero, and the pass leaves the frame
  * untouched. That is what makes contact preservation a mathematical no-op on a
  * proportional rig, and why it is safe to leave on by default.
@@ -56,7 +56,7 @@ export type AutoMovieRetargetContactPolicy =
  * hand is touching something.
  *
  * Feet are detected geometrically against the ground, but a hand has no such
- * reference — a hand on a table, a wall, or a partner is indistinguishable from
+ * reference: a hand on a table, a wall, or a partner is indistinguishable from
  * a hand in the air by position alone. So a hand contact is **declared**, never
  * inferred.
  *
@@ -134,8 +134,8 @@ interface IAutoMovieContactWindow {
  * decides which effectors are in contact (feet via the shared
  * {@link contactMask} ground predicate, hands via the caller's declared
  * windows), maps each contact position into target space by the **same
- * `rootScale` the root path uses** — so the contact and the root stay one
- * consistent frame — and re-solves the target limb onto it with the shared
+ * `rootScale` the root path uses** (so the contact and the root stay one
+ * consistent frame) and re-solves the target limb onto it with the shared
  * two-bone lowering. The pin is the source effector's position on **that**
  * frame rather than the stance run's first frame: retargeting reproduces the
  * source performance, including a slide the source itself authored;
@@ -152,7 +152,7 @@ interface IAutoMovieContactWindow {
  *   intent, so it is clamped into the target's ROM
  *   ({@link clampJointToSkeleton}) instead of being allowed to fail the
  *   retarget. When the clamped chain then cannot hold the contact, the residual
- *   is a `warning` — residual slide is implausible, not impossible (D015).
+ *   is a `warning`, residual slide is implausible, not impossible.
  *
  * @author Samchon
  */
@@ -283,7 +283,7 @@ export const preserveRetargetContacts = (props: {
       props.collector.warn(
         "physics",
         `$input.motion.keyframes[${entry.index}].pose.joints["${effector}"]`,
-        `${effector} could not hold its retargeted contact: the target rig's proportions leave it ${round(entry.residual)} from the mapped source contact, beyond the ${round(budget)} contact budget (residual slide is implausible, not impossible — retune the rig proportions or the contact tolerance)`,
+        `${effector} could not hold its retargeted contact: the target rig's proportions leave it ${round(entry.residual)} from the mapped source contact, beyond the ${round(budget)} contact budget (residual slide is implausible, not impossible, retune the rig proportions or the contact tolerance)`,
         entry.residual,
         entry.residual - budget,
       );
@@ -348,7 +348,7 @@ const correctFrame = (props: {
     // Three bend planes are tried, not one: the world-down pole the ground-IK
     // pass uses, and the mid joint's own hinge in both directions. A hinge
     // joint can only articulate in its hinge plane, so the pole solution
-    // routinely lowers into abduction/twist the ROM clamp then zeroes — which
+    // routinely lowers into abduction/twist the ROM clamp then zeroes, which
     // would leave the limb further from the contact than doing nothing. Each
     // candidate is clamped and re-resolved, and the one that actually lands
     // closest to the contact wins; ties keep the earlier candidate, so the

@@ -1,7 +1,7 @@
 // Fit a hero's PROFILE depth axes by minimizing the facial-profile silhouette
 // RMS (model midline vs side photo), averaged over the left AND right side
 // photos (the model midline is symmetric, so both photos test the same curve
-// and the average cancels per-photo extraction noise). Pure geometry + image —
+// and the average cancels per-photo extraction noise). Pure geometry + image,
 // no browser. Reuses the verified extraction from measure-profile.mjs.
 //
 // Usage: node scripts/fit-profile.mjs <hero>   (default hero2)
@@ -136,7 +136,7 @@ const base = model.mesh.positions;
 // PURE DEPTH axes only. noseLength is excluded on purpose: it changes the
 // nose->chin vertical SPAN, which is the normalization anchor, so letting the
 // optimizer move it games the normalized RMS (it drove cute hero1 to a long
-// nose) — the same degenerate trap as the front overfit. Depth axes move z
+// nose), the same degenerate trap as the front overfit. Depth axes move z
 // without shifting the anchor.
 const FIT = [
   "tipProjection",

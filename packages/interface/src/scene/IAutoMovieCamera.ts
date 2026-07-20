@@ -1,7 +1,7 @@
 import { IAutoMovieTransform } from "../geometry/IAutoMovieTransform";
 
 /**
- * A perspective camera — the viewpoint a frame is rendered from.
+ * A perspective camera: the viewpoint a frame is rendered from.
  *
  * The camera is what turns a posed scene into the image/video output that
  * motivates automovie as a diffusion alternative: place the rig, place the

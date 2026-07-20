@@ -4,7 +4,7 @@ import {
 } from "@automovie/interface";
 
 /**
- * Resolve a **positional** action target — `node`, `point`, or `group` — to a
+ * Resolve a **positional** action target (`node`, `point`, or `group`) to a
  * single world point, given the world positions of the scene's nodes:
  *
  * - `node` → that node's world position (or `null` if it is not in the frame);
@@ -13,7 +13,7 @@ import {
  *
  * Returns `null` for the **relative** targets (`direction`, `offscreen`): those
  * are headings / frame edges, not points, and need the actor's facing or the
- * camera to become a position — resolved elsewhere, not here. This is the
+ * camera to become a position, resolved elsewhere, not here. This is the
  * geometry primitive the harness's reach / distance queries and the locomote
  * traveller share.
  *
@@ -40,5 +40,5 @@ export const resolveTargetPoint = (
       z: sum.z / points.length,
     };
   }
-  return null; // direction / offscreen — relative, not a positional point
+  return null; // direction / offscreen: relative, not a positional point
 };

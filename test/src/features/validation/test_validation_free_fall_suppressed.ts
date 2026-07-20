@@ -15,7 +15,7 @@ const warnCount = (r: ReturnType<typeof detectFreeFall>) =>
 
 /**
  * The gravity expectation is suppressed by anything that would hold a body up
- * or that the author opts out of — an unheld body is a fall candidate only when
+ * or that the author opts out of: an unheld body is a fall candidate only when
  * none of these apply.
  *
  * Scenarios:

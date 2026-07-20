@@ -29,7 +29,7 @@ import { qclose, vclose } from "../internal/predicates";
  * pipeline (forge → stage → perform), each actor's compiled humanoid motion is
  * baked through `motionToClip` with its placement prefix, the tracks merge into
  * ONE clip over the ONE `sceneToNodes` graph, and at every bake-clock time each
- * actor's every bone world from `resolveFrame` equals the specialized path —
+ * actor's every bone world from `resolveFrame` equals the specialized path:
  * `placement ∘ resolvePose(sampleMotion(motion, t))`. The engine's execution
  * representation converges on Clip while `IAutoMovieMotion` stays the authoring
  * surface.
@@ -37,15 +37,15 @@ import { qclose, vclose } from "../internal/predicates";
  * Scenarios:
  *
  * 1. The merge precondition: every compiled motion fits the shot and at least one
- *    spans it exactly — a shorter actor's tracks end early and HOLD, the same
+ *    spans it exactly: a shorter actor's tracks end early and HOLD, the same
  *    clamp-hold boundary rule `sampleMotion` applies, so the merged clip is
  *    well-formed (track times ≤ clip duration).
  * 2. For every bake time and both actors, every bone's world position and rotation
- *    agree between the specialized and general paths (1e-6) — including the
+ *    agree between the specialized and general paths (1e-6), including the
  *    hold window where the shorter actor has ended (the hold semantics agree
  *    across both pipelines).
  * 3. The negative twin: reading knightA's bones through knightB's prefix does NOT
- *    match — the per-placement prefixes really keep the two actors' subtrees
+ *    match: the per-placement prefixes really keep the two actors' subtrees
  *    distinct (the knights stand 0.7 m apart, facing opposite ways).
  */
 export const test_resolve_scene_clip_parity = (): void => {

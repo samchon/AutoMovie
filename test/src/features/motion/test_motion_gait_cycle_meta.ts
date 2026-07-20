@@ -37,13 +37,13 @@ const oneShot = (): IAutoMovieMotion => ({
  *
  * Scenarios:
  *
- * 1. `gaitMotion` stamps `{period, phaseAt: 0}` — the bake is one fresh cycle.
+ * 1. `gaitMotion` stamps `{period, phaseAt: 0}`: the bake is one fresh cycle.
  * 2. `travelMotion` carries the base's cycle; a cycle-less looping base gets one
  *    stamped from its own duration (travel repeats it cyclically).
  * 3. `followPathMotion` stamps the gait's cycle (phase never resets on paths).
  * 4. `arrangeMotion` carries the LAST placement's cycle phase-shifted by its start
  *    (`(0 − 2.3) mod 0.8 = 0.1`); a cycle-less last placement (a hold after the
- *    walk) drops the clock — the actor is not striding at the end.
+ *    walk) drops the clock: the actor is not striding at the end.
  * 5. `sequenceMotion` keeps the clock when every part shares the cycle over whole
  *    cycles, and drops it on a period mismatch or a partial cycle.
  * 6. `holdMotion` carries no cycle at all.

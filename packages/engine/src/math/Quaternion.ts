@@ -62,11 +62,11 @@ export namespace Quaternion {
 
   /**
    * Compose intrinsic Euler angles (degrees) into a quaternion, applying the
-   * axes in the given `order` — the same intrinsic convention glTF/three.js
+   * axes in the given `order`, the same intrinsic convention glTF/three.js
    * use, so `fromEuler({x,y,z,order:"XYZ"})` equals `qx·qy·qz`. This is how the
    * MCP boundary lowers an LLM-authored semantic placement rotation
    * ({@link "@automovie/interface".IAutoMovieEuler}) into the engine's
-   * quaternion — the model never emits a quaternion (#723).
+   * quaternion. The model never emits a quaternion (#723).
    */
   export const fromEuler = (euler: {
     x: number;
@@ -124,7 +124,7 @@ export namespace Quaternion {
       bw = -bw;
     }
     if (cos > 0.9995) {
-      // nearly parallel — fall back to normalized lerp
+      // nearly parallel: fall back to normalized lerp
       return normalize({
         x: a.x + (bx - a.x) * t,
         y: a.y + (by - a.y) * t,

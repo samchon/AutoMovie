@@ -116,7 +116,7 @@ export interface IAutoMovieHeadlessCaptureOptions {
    *
    * Frame size is the HOST's responsibility for guide passes. The `beauty` video
    * is conformed to the render spec by ffmpeg `-s` at encode time (#1251), but a
-   * guide pass terminates as a raw PNG sequence with no encoder backstop — each
+   * guide pass terminates as a raw PNG sequence with no encoder backstop. Each
    * frame is whatever pixels `viewSelector` screenshots. So the pose-keypoint
    * sidecar's `width/height` aspect (#1231) matches the guide frames the
    * diffusion host consumes ONLY if the capture surface is sized to the render
@@ -263,7 +263,7 @@ export const createHeadlessCaptureAdapter = async (
           );
         const path = `${base}/${guidePassFrameName(index, pass)}`;
         await options.writeFrame(path, bytes, { timeSeconds, index });
-        // renderVideo's contract wants ONE path per frame — the beauty frame
+        // renderVideo's contract wants ONE path per frame, the beauty frame
         // it encodes; a guides-only capture returns its first pass instead.
         if (primary === null || pass === "beauty") primary = path;
       }

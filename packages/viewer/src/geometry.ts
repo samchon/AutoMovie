@@ -3,7 +3,7 @@ import { IAutoMovieGeometry, IAutoMovieMaterial } from "@automovie/interface";
 import * as THREE from "three";
 
 /**
- * Build a `three.js` geometry from a automovie geometry node — tessellating a
+ * Build a `three.js` geometry from a automovie geometry node: tessellating a
  * parametric primitive (via the engine) or uploading raw mesh arrays.
  *
  * @author Samchon

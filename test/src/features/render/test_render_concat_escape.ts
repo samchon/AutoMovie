@@ -50,7 +50,7 @@ const planWith = (outputPath: string) =>
 
 /**
  * The concat-demuxer list quotes each entry as `file '<basename>'`, and
- * ffmpeg's quoted string ends at the FIRST apostrophe — so a caller/LLM
+ * ffmpeg's quoted string ends at the FIRST apostrophe, so a caller/LLM
  * supplied output like `directors'cut.mp4` malformed the list and the lossless
  * reassembly failed or misparsed (#1089). Entries now escape each apostrophe
  * with the `'\''` close-escape-reopen idiom the demuxer's token grammar

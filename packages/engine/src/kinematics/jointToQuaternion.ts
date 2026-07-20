@@ -158,8 +158,8 @@ const normalizeAxis = (axis: IAutoMovieVector3): IAutoMovieVector3 =>
  * about {@link IAutoMovieJointAxes.flexion} (default local **X**, sagittal),
  * abduction about `abduction` (default **Z**, frontal), twist about `twist`
  * (default **Y**, the bone's long axis). Composition order is twist ∘ abduction
- * ∘ flexion — flexion first in the bone's own frame, then abduction, then axial
- * twist:
+ * ∘ flexion (flexion first in the bone's own frame, then abduction, then axial
+ * twist):
  *
  *     q = qTwist * qAbduction * qFlexion;
  *
@@ -172,7 +172,7 @@ const normalizeAxis = (axis: IAutoMovieVector3): IAutoMovieVector3 =>
  *
  * When a `frame` ({@link IAutoMovieRestFrame}) is given, the joint's angles are
  * read as **clinical** and mapped into the rig's rest-relative space first (`r
- * = (clinical − neutral) / sign`, per {@link toRigAngle}) — so a pose can be
+ * = (clinical − neutral) / sign`, per {@link toRigAngle}), so a pose can be
  * authored in one intuitive clinical convention (e.g. +abduction raises either
  * arm) and the per-side rest frame reconciles it. Omit it for angles already in
  * the rig's own space.

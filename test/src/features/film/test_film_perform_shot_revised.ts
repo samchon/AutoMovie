@@ -16,7 +16,7 @@ import {
  *
  * Scenarios:
  *
- * 1. The draft is a single action by a stranger (`ghost`) — unusable — but
+ * 1. The draft is a single action by a stranger (`ghost`), unusable, but
  *    `revise.final` replaces it with `knightA` waving plus two `frame` calls on
  *    the same `cam-main` → success, proving the final list performed (a
  *    draft-path run would have failed on `ghost`).

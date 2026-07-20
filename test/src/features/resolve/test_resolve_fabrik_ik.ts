@@ -40,12 +40,12 @@ const dist = (a: IAutoMovieVector3, b: IAutoMovieVector3): number =>
  *
  * Scenarios:
  *
- * 1. A reachable goal converges — the tip lands within 1e-3 of the goal — and both
+ * 1. A reachable goal converges (the tip lands within 1e-3 of the goal) and both
  *    segment lengths are preserved to 1e-9 (FABRIK re-places at exact lengths
  *    by construction).
  * 2. An unreachable goal is a closed form, not an iteration: every joint sits on
  *    the root→goal ray at its cumulative length, exactly.
- * 3. A four-node chain converges too — the long-chain case the analytic two-bone
+ * 3. A four-node chain converges too: the long-chain case the analytic two-bone
  *    solver cannot express.
  * 4. The measure-zero degenerate where a backward pass lands two joints on the
  *    same point takes the deterministic fallback direction and still terminates

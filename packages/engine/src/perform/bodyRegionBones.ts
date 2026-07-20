@@ -75,9 +75,9 @@ const HEAD: AutoMovieHumanoidBone[] = [
  * the skeleton **disjointly and completely** (`lowerBody ∪ upperBody ∪ head` =
  * all 55 VRM bones; `face` owns no bones, being expression/morph channels;
  * `fullBody` owns every bone). This is what lets the performance compiler
- * **layer** clips on disjoint regions concurrently — a walk drives `lowerBody`
+ * **layer** clips on disjoint regions concurrently (a walk drives `lowerBody`
  * while a wave drives `upperBody` and a look-at drives `head`, with no bone
- * claimed twice — instead of forcing them to sequence.
+ * claimed twice) instead of forcing them to sequence.
  *
  * @author Samchon
  */

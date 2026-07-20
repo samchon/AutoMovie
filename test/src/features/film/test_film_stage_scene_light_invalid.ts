@@ -6,7 +6,7 @@ import { hasViolation } from "../internal/predicates";
 
 /**
  * Pins the light gates: intensity is physical (non-negative) and a directional
- * light needs an actual direction — the zero vector aims a light nowhere and
+ * light needs an actual direction: the zero vector aims a light nowhere and
  * would degenerate the aim rotation.
  *
  * Scenarios:

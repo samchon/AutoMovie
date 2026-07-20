@@ -16,7 +16,7 @@ const bonesOf = (bones: IAutoMovieBone[]): string[] =>
  * Scenarios:
  *
  * 1. An accessory-first document (skin "cloth" holds only an unmapped `Button`,
- *    skin "body" holds `Hips → Spine`) still yields the body skeleton — before
+ *    skin "body" holds `Hips → Spine`) still yields the body skeleton: before
  *    the fix `skins[0]` had no hips and the whole character demoted to `null`.
  * 2. Negative twin: the SAME joints with the body skin first yield the identical
  *    skeleton, pinning order independence.
@@ -24,11 +24,11 @@ const bonesOf = (bones: IAutoMovieBone[]): string[] =>
  *    `Spine` (sharing the hips joint), and the emitted skeleton carries both
  *    slots with `spine` parenting `hips` across the skin boundary.
  * 4. First-wins across skins: when two skins name DIFFERENT nodes `Spine`, the
- *    earlier skin's node owns the slot — the later duplicate is dropped,
+ *    earlier skin's node owns the slot: the later duplicate is dropped,
  *    matching the single-skin duplicate rule.
  */
 export const test_ingest_humanoid_skeleton_multi_skin = (): void => {
-  // 1. accessory skin first — the body rig sits in the second skin
+  // 1. accessory skin first: the body rig sits in the second skin
   const accessoryFirst = new Document();
   const button = accessoryFirst.createNode("Button");
   const aHips = accessoryFirst.createNode("Hips").setTranslation([0, 1, 0]);
@@ -47,7 +47,7 @@ export const test_ingest_humanoid_skeleton_multi_skin = (): void => {
     ["hips", "spine"],
   );
 
-  // 2. negative twin: body skin first — identical result
+  // 2. negative twin: body skin first, identical result
   const bodyFirst = new Document();
   const bButton = bodyFirst.createNode("Button");
   const bHips = bodyFirst.createNode("Hips").setTranslation([0, 1, 0]);

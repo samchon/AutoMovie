@@ -18,7 +18,7 @@ import { ViolationCollector } from "./violation";
 const MAX_ANGULAR_SPEED_DEG_PER_S = 900;
 
 /**
- * Validate an {@link IAutoMovieMotion} clip — Tier-4 temporal coherence plus the
+ * Validate an {@link IAutoMovieMotion} clip: Tier-4 temporal coherence plus the
  * per-keyframe Tier-1/Tier-2 checks (every keyframe pose is validated against
  * the skeleton, every keyframe expression range-checked).
  *
@@ -181,11 +181,11 @@ const validateKeyframeBezier = (
     return;
   }
 
-  // Control x's must lie in [0, 1] — the CSS cubic-bezier constraint the easing
+  // Control x's must lie in [0, 1], the CSS cubic-bezier constraint the easing
   // solver relies on (`cubicBezierEasing` documents that CSS-legal x's keep
   // x(s) monotone, so its Newton→bisection root-find is well-posed). An x
   // outside [0, 1] makes x(s) non-monotone: the solver returns whichever root
-  // basin it lands in — a finite but wrong eased value the finiteness check
+  // basin it lands in, a finite but wrong eased value the finiteness check
   // alone never catches (#1159). (y is unconstrained.)
   const [x1, , x2] = kf.bezier;
   if (x1 < 0 || x1 > 1 || x2 < 0 || x2 > 1)

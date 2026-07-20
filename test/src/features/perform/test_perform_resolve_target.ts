@@ -23,7 +23,7 @@ const isPoint = (
 ): boolean => p !== null && nclose(p.x, x) && nclose(p.y, y) && nclose(p.z, z);
 
 /**
- * `resolveTargetPoint` — turn a positional action target into a world point.
+ * `resolveTargetPoint`: turn a positional action target into a world point.
  *
  * Scenarios:
  *

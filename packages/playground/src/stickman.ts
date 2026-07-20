@@ -12,7 +12,7 @@ import {
 } from "@automovie/interface";
 
 /**
- * Proportions of the **stick figure** ("졸라맨") — the deliberately minimal test
+ * Proportions of the **stick figure** ("졸라맨"), the deliberately minimal test
  * character. Where {@link IHumanoidParams} fills the rig with capsule "flesh",
  * the stick figure keeps every segment a thin uniform rod and the head a single
  * sphere: the most legible possible body to read a pose or a motion off of.
@@ -49,9 +49,9 @@ export interface IStickmanParams {
   thigh: number;
   /** Shin (knee → ankle) length. */
   shin: number;
-  /** Radius of an arm / leg rod — the limb "thickness". */
+  /** Radius of an arm / leg rod, the limb "thickness". */
   rodRadius: number;
-  /** Radius of a torso (spine/chest) rod — a touch heftier than the limbs. */
+  /** Radius of a torso (spine/chest) rod, a touch heftier than the limbs. */
   torsoRadius: number;
   /** Radius of the fist spheres capping the wrists. */
   fistRadius: number;
@@ -60,7 +60,7 @@ export interface IStickmanParams {
 }
 
 /**
- * A legible stick figure ≈ 1.72 m tall — no longer hairline-thin: arms/legs and
+ * A legible stick figure ≈ 1.72 m tall, no longer hairline-thin: arms/legs and
  * torso carry a believable thickness (the head and fists stay simple spheres)
  * so it reads like a body, not a wire diagram.
  */
@@ -100,7 +100,7 @@ const bone = (
   rest: IAutoMovieTransform,
 ): IAutoMovieBone => {
   // each joint carries its anatomical ROM in **clinical** space (abduction 0 =
-  // arm down, 90 = horizontal, 180 = overhead — the engine validates/clamps
+  // arm down, 90 = horizontal, 180 = overhead, the engine validates/clamps
   // against it, the core differentiator). The per-side rest-frame remap that
   // reconciles clinical to this T-pose rig lives in the render (the player's
   // HUMANOID_REST_FRAME), not baked into the constraint.
@@ -147,12 +147,12 @@ const rod = (
 };
 
 /**
- * Build the stick figure — a normalized VRM skeleton clothed in thin rods and a
- * sphere head — from a set of proportions.
+ * Build the stick figure, a normalized VRM skeleton clothed in thin rods and a
+ * sphere head, from a set of proportions.
  *
  * The rig is a T-pose at rest (arms out along ±X, legs straight down −Y); a
  * pose or motion articulates it from there. Same bone slots, same FK path, same
- * ROM hooks as the fuller {@link buildHumanoid} blockman — just the most
+ * ROM hooks as the fuller {@link buildHumanoid} blockman, just the most
  * stripped-down skin so motion is the only thing on screen.
  *
  * @author Samchon
@@ -216,7 +216,7 @@ export const buildStickman = (
   });
 
   const parts: IAutoMovieModelPart[] = [
-    // torso column — one rod per spine bone so it bends with the back (thicker
+    // torso column, one rod per spine bone so it bends with the back (thicker
     // than the limbs, tapering up the neck)
     rod("spineRod", "hips", v(0, p.pelvisToSpine, 0), tr, "ink"),
     rod("chestRod", "spine", v(0, p.spineToChest, 0), tr, "ink"),
@@ -270,7 +270,7 @@ export const buildStickman = (
       "ink",
       v(0, p.headRadius * 0.8, p.headRadius * 1.12),
     ),
-    // clavicles — connect the spine column to each shoulder socket
+    // clavicles, connect the spine column to each shoulder socket
     rod("clavicleL", "chest", v(p.shoulderHalf, p.shoulderRise, 0), r, "ink"),
     rod("clavicleR", "chest", v(-p.shoulderHalf, p.shoulderRise, 0), r, "ink"),
     // arms
@@ -283,7 +283,7 @@ export const buildStickman = (
     rod("legLowerL", "leftLowerLeg", v(0, -p.shin, 0), r, "ink"),
     rod("legUpperR", "rightUpperLeg", v(0, -p.thigh, 0), r, "ink"),
     rod("legLowerR", "rightLowerLeg", v(0, -p.shin, 0), r, "ink"),
-    // ball joints — pelvis, shoulders, elbows, hips, knees
+    // ball joints, pelvis, shoulders, elbows, hips, knees
     ball("jointHip", "hips"),
     ball("jointShoulderL", "leftUpperArm"),
     ball("jointShoulderR", "rightUpperArm"),
@@ -293,10 +293,10 @@ export const buildStickman = (
     ball("jointHipR", "rightUpperLeg"),
     ball("jointKneeL", "leftLowerLeg"),
     ball("jointKneeR", "rightLowerLeg"),
-    // fists — round caps at the wrists (so punches land with a visible hand)
+    // fists, round caps at the wrists (so punches land with a visible hand)
     knob("fistL", "leftHand", p.fistRadius),
     knob("fistR", "rightHand", p.fistRadius),
-    // feet — short rods off each ankle pointing forward (+Z) so the figure
+    // feet, short rods off each ankle pointing forward (+Z) so the figure
     // stands on something instead of tapering to a point
     rod("footL", "leftFoot", v(0, 0, p.headRadius * 1.1), r * 1.1, "ink"),
     rod("footR", "rightFoot", v(0, 0, p.headRadius * 1.1), r * 1.1, "ink"),

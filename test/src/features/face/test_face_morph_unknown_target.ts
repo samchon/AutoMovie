@@ -6,7 +6,7 @@ import { throwsError } from "../internal/predicates";
 
 /**
  * A parameter naming a morph target the template does not carry is a broken
- * asset, not a validation matter — the document itself may be perfectly legal
+ * asset, not a validation matter: the document itself may be perfectly legal
  * against a richer template. morphFace throws instead of silently skipping, so
  * an asset/parameter mismatch can never produce a half-applied face.
  *

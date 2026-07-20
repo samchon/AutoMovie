@@ -4,11 +4,11 @@ import * as THREE from "three";
 /**
  * A reversible render-mode override. `restore()` puts every touched material,
  * visibility flag, background, and overlay back exactly as it was, so the same
- * built scene can be captured pass after pass without rebuilding — the
+ * built scene can be captured pass after pass without rebuilding: the
  * deterministic engine result is never mutated, only its projection.
  *
  * `restore()` also **disposes every resource the override created** (override
- * materials, the pose overlay's line geometries and material) — a guide-pass
+ * materials, the pose overlay's line geometries and material): a guide-pass
  * render applies and restores once per frame per pass, so an hour of film would
  * otherwise leak tens of thousands of WebGL materials. Borrowed originals are
  * never disposed; they belong to the scene. Restoring twice is safe: the second
@@ -22,7 +22,7 @@ export interface IAutoMovieRenderModeHandle {
   restore: () => void;
 }
 
-/** Run `fn` on the first call only — the restore idempotence guard. */
+/** Run `fn` on the first call only: the restore idempotence guard. */
 const once = (fn: () => void): (() => void) => {
   let done = false;
   return () => {
@@ -43,7 +43,7 @@ const isNonMeshRenderable = (object: THREE.Object3D): boolean =>
  * other `LineSegments`/`Line` helpers, `Points`, `Sprite`s) and return a
  * restore that makes them visible again. A structural guide pass segments only
  * the subject MESH geometry, so any non-mesh renderable left visible would draw
- * its live beauty material over the pass's black background — a grid reading as
+ * its live beauty material over the pass's black background: a grid reading as
  * "very close" in the depth pass, a non-palette color in the mask, a stray line
  * beside the skeleton in the pose pass (#1226). Hidden BEFORE a pass builds its
  * own overlay (the pose skeleton is itself `LineSegments`), so that overlay,
@@ -67,22 +67,22 @@ const hideNonMeshRenderables = (scene: THREE.Scene): (() => void) => {
  * handle. The override is applied at snapshot time and reversed right after, so
  * the viewer stays a thin projection of the engine result:
  *
- * - `beauty` — no override (the ordinary shaded render).
- * - `depth` — every mesh swapped to a normalized-metric depth shader (#1167):
+ * - `beauty`: no override (the ordinary shaded render).
+ * - `depth`: every mesh swapped to a normalized-metric depth shader (#1167):
  *   grays linear in camera-space distance over a scene-stable range
  *   ({@link DEPTH_NORMALIZATION_RANGE}, overridable) instead of the camera's
  *   near/far clip planes, so the same world depth reads the same gray across
  *   shots, cuts, and chunks; black background = infinitely far.
- * - `mask` — each top-level scene child gets its own flat unlit color
+ * - `mask`: each top-level scene child gets its own flat unlit color
  *   (deterministic golden-angle palette by child index) on a black background:
  *   the per-node segmentation pass.
- * - `normal` — every mesh swapped to `MeshNormalMaterial`: the unlit
+ * - `normal`: every mesh swapped to `MeshNormalMaterial`: the unlit
  *   surface-normal conditioning pass (#1166).
- * - `outline` — REAL silhouette edges (#1166): black fills plus inverted-hull
+ * - `outline`: REAL silhouette edges (#1166): black fills plus inverted-hull
  *   back-face shells offset {@link EDGE_WIDTH} meters along their normals,
- *   leaving white contour lines on a black background — no host
+ *   leaving white contour lines on a black background, no host
  *   post-processing.
- * - `pose` — meshes hidden, and a line-segment overlay of every bone→child bone
+ * - `pose`: meshes hidden, and a line-segment overlay of every bone→child bone
  *   connection drawn over a black background: the skeleton pose pass.
  *
  * An unknown mode is a caller bug and throws.
@@ -93,7 +93,7 @@ const hideNonMeshRenderables = (scene: THREE.Scene): (() => void) => {
  * gray only when the normalization range is a scene-stable constant, so the
  * capture side is fixed to the defaults on purpose (#1167). A scene whose depth
  * of interest exceeds {@link DEPTH_NORMALIZATION_RANGE} would clamp to black past
- * that range in the bundled capture — override via a direct call, not the hook.
+ * that range in the bundled capture. Override via a direct call, not the hook.
  *
  * @author Samchon
  */
@@ -103,14 +103,14 @@ export const applyRenderMode = (
   options?: {
     /**
      * Metric range (m) the depth pass normalizes onto. Defaults to
-     * {@link DEPTH_NORMALIZATION_RANGE} (20). Direct callers only — the capture
+     * {@link DEPTH_NORMALIZATION_RANGE} (20). Direct callers only: the capture
      * path keeps the scene-stable default (see above).
      */
     depthRange?: number;
 
     /**
      * Silhouette edge width (m) of the outline pass. Defaults to
-     * {@link EDGE_WIDTH} (0.02). Direct callers only — the capture path keeps the
+     * {@link EDGE_WIDTH} (0.02). Direct callers only: the capture path keeps the
      * default.
      */
     edgeWidth?: number;
@@ -156,7 +156,7 @@ export const applyRenderMode = (
 
 /**
  * The deterministic flat color of mask index `i`: golden-angle hue stepping,
- * full saturation, mid lightness — adjacent nodes land far apart on the hue
+ * full saturation, mid lightness. Adjacent nodes land far apart on the hue
  * wheel, and the same scene always gets the same colors.
  */
 export const maskColor = (index: number): THREE.Color =>
@@ -164,8 +164,8 @@ export const maskColor = (index: number): THREE.Color =>
 
 /**
  * Metric range (meters) the depth pass normalizes onto (#1167). Depth grays are
- * LINEAR in camera-space distance over `[0, range]` — white at the lens, black
- * at `range` and beyond — and deliberately decoupled from the camera's near/far
+ * LINEAR in camera-space distance over `[0, range]` (white at the lens, black
+ * at `range` and beyond) and deliberately decoupled from the camera's near/far
  * clip planes, so the same world depth maps to the same gray across shots,
  * cuts, and chunks (per-camera clip planes vary; this range does not).
  */
@@ -225,7 +225,7 @@ const applyDepthMode = (
 };
 
 /**
- * Metric silhouette edge width (meters) of the outline pass (#1166) — the
+ * Metric silhouette edge width (meters) of the outline pass (#1166): the
  * inverted-hull shell's normal offset. Metric (not a scale factor) so a thin
  * limb and a broad torso draw the same line weight.
  */
@@ -266,7 +266,7 @@ const makeEdgeShellMaterial = (edgeWidth: number): THREE.ShaderMaterial =>
 
 /**
  * Outline pass (#1166): REAL silhouette edges, white on black, no host
- * post-processing. Classic inverted hull — every mesh gets a back-face shell
+ * post-processing. Classic inverted hull: every mesh gets a back-face shell
  * expanded `edgeWidth` meters along its normals, the mesh itself fills black,
  * and the black background swallows everything else, leaving white contour
  * lines where the shell peeks past the fill.
@@ -283,7 +283,7 @@ const applyEdgeMode = (
     "outline",
     () => new THREE.MeshBasicMaterial({ color: 0x000000 }),
   );
-  // Shells clone each mesh shallowly (same geometry, same local transform —
+  // Shells clone each mesh shallowly (same geometry, same local transform:
   // a SkinnedMesh clone shares its skeleton, so the shell follows the pose)
   // under the mesh's own parent, grouped by name for a recognizable scene.
   const shells: THREE.Object3D[] = [];

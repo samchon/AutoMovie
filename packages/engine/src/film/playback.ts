@@ -74,7 +74,7 @@ const indexShots = (
 
 /**
  * What plays at one output instant: the live entry's shot at its local time,
- * plus — inside an incoming transition — the outgoing entry's tail and the
+ * plus, inside an incoming transition, the outgoing entry's tail and the
  * incoming shot's weight ramping 0 → 1 across the transition.
  */
 export interface IAutoMoviePlaybackSample {
@@ -89,7 +89,7 @@ export interface IAutoMoviePlaybackSample {
 }
 
 /**
- * Lay the cut onto the output clock — the playback mirror of `cutSequence`'s
+ * Lay the cut onto the output clock, the playback mirror of `cutSequence`'s
  * runtime arithmetic: each entry plays its trimmed span, and a transition pulls
  * its entry forward to overlap the previous tail by the transition's duration.
  * Precondition: the sequence already passed `cutSequence` (every entry
@@ -133,7 +133,7 @@ export const sequenceTimeline = (
 
 /**
  * Turn one live entry into the on-screen sample: the live shot at its local
- * time, plus — inside the live entry's incoming transition — the previous
+ * time, plus, inside the live entry's incoming transition, the previous
  * entry's tail as the `blend` with the incoming weight `alpha = elapsed /
  * transition`. The single place the shot/time/blend shape is built, so the
  * stateless and cursor resolvers cannot drift.
@@ -159,11 +159,11 @@ const sampleAt = (
 };
 
 /**
- * Resolve one instant against an already-built {@link sequenceTimeline} — the
+ * Resolve one instant against an already-built {@link sequenceTimeline}, the
  * single-source resolver behind {@link resolveSequencePlayback} and the render
  * plan. The last entry whose span contains the instant is live (the incoming
  * shot wins inside a transition overlap). Precondition: `seconds` lies within
- * `[0, runtime)` — the caller already framed a real output instant (the render
+ * `[0, runtime)`, the caller already framed a real output instant (the render
  * plan drives it from `frameTimes`; {@link resolveSequencePlayback} range-checks
  * first). O(entries); for a whole film use {@link playbackCursor}.
  */
@@ -181,14 +181,14 @@ export const resolveFromTimeline = (
 
 /**
  * A forward-only playback resolver for a **monotonically non-decreasing** query
- * clock — the whole-film seam that turns the per-frame O(entries) scan into one
+ * clock, the whole-film seam that turns the per-frame O(entries) scan into one
  * O(frames + entries) sweep (the render/caption plans call it once per frame in
- * output order). Entry starts are **non-decreasing** — a full-overlap dissolve
+ * output order). Entry starts are **non-decreasing**, a full-overlap dissolve
  * (`transition.duration === previousPlayed`) makes two adjacent starts equal,
- * which `cutSequence` allows — and the timeline tiles `[0, runtime)` with no
+ * which `cutSequence` allows, and the timeline tiles `[0, runtime)` with no
  * gaps. The advance test is `start <= seconds`, so among equal-start entries
  * the cursor lands on the **highest** index, which is exactly the last entry
- * whose span contains the instant — the same live entry
+ * whose span contains the instant, the same live entry
  * {@link resolveFromTimeline}'s scan returns, so the samples are byte-identical.
  * (Strict increase is NOT required and is not enforced; the earlier "strictly
  * increasing" note was the one false premise in this argument.) Feeding it a
@@ -216,7 +216,7 @@ export const playbackCursor = (
  * contains the instant is live; while the instant still sits inside that
  * entry's incoming transition, the previous entry's tail rides along as the
  * `blend` with the incoming weight `alpha = elapsed / transition`. Returns null
- * outside `[0, runtime)` — there is no frame there to draw. Builds the timeline
+ * outside `[0, runtime)`, there is no frame there to draw. Builds the timeline
  * per call, for random single-instant access (interactive scrubbing); a whole
  * film drives {@link playbackCursor} off one timeline instead.
  */
@@ -234,16 +234,16 @@ export const resolveSequencePlayback = (
  * Place every shot interaction event onto the sequence output clock. Events
  * outside a sequence entry's trimmed source range are omitted. The range is
  * half-open (`[from, to)`) so an event sitting exactly on a contiguous trim
- * seam is emitted once — by the entry that starts there — not once per
+ * seam is emitted once, by the entry that starts there, not once per
  * neighbouring entry (#1009); it closes at `to` when the trim ends at the
  * shot's own end (a shot-final event is never lost) AND when no other entry of
  * the same shot both starts at that shot-local instant and plays GLOBALLY
- * contiguous with this entry (#1061, #1099) — cutting away exactly on a hit
+ * contiguous with this entry (#1061, #1099), cutting away exactly on a hit
  * hands the hit to the cut, not to silence, and a re-play of the same source
  * span elsewhere on the output clock (a flashback) cannot claim it.
  *
  * Semantics are **per play** (#1080): each entry that shows an instant emits
- * that instant's events at its own global time — one source event re-played by
+ * that instant's events at its own global time, one source event re-played by
  * a flashback lands once per play, not once per film. "Emitted once" (#1009)
  * binds a single contiguous seam, where two entries share one on-screen
  * instant. Included events keep their shot-local `time` and also expose
@@ -269,7 +269,7 @@ export const sequenceEventTimeline = (
     const globalEnd = entry.start + entry.played;
     const atShotEnd = Math.abs(to - shot.duration) <= 1e-9;
     // An event landing EXACTLY on this entry's trim end belongs to the entry
-    // that starts there (#1009) — but ONLY when that entry plays globally
+    // that starts there (#1009), but ONLY when that entry plays globally
     // contiguous with this one, sharing the on-screen instant. A same-shot
     // entry re-playing the source span elsewhere on the output clock (a
     // flashback) owns nothing here: shot-local coincidence alone suppressed
@@ -314,7 +314,7 @@ export const sequenceEventTimeline = (
  * The whole film as frame sample points: `runtime × fps` output frames (the
  * same `round` policy as the render plan's `frameTimes`), each resolved to its
  * on-screen sample. This is the deterministic seam a render host drives its
- * per-frame capture from — pose the live shot's scene at `time`, blend the
+ * per-frame capture from, pose the live shot's scene at `time`, blend the
  * outgoing tail when a dissolve is in flight, write the frame.
  */
 export const playbackFrameSamples = (

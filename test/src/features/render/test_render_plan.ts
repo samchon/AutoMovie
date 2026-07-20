@@ -74,7 +74,7 @@ export const test_render_plan = (): void => {
     renderPathStem(""),
     "render",
   );
-  // A stem must be exactly one safe component — never `.`/`..` (which would let
+  // A stem must be exactly one safe component: never `.`/`..` (which would let
   // `renders/${stem}` escape the reserved dir), a trailing dot/space, or a
   // Windows reserved device name.
   TestValidator.equals(

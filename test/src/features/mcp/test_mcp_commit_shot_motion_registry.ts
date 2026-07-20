@@ -49,10 +49,10 @@ const script = {
 };
 
 /**
- * Motions are a re-perform-derived output, not a persisted slice (D012): a shot
+ * Motions are a re-perform-derived output, not a persisted slice: a shot
  * stores motion id references, and the clips live only in what a `perform`
  * returned. So a RESIDENT commitShot referencing motions must carry the
- * `motions` registry those references resolve against — else it would persist a
+ * `motions` registry those references resolve against, else it would persist a
  * dangling id, unresolvable when the project is re-opened and the motion is
  * re-derived. An explicit-slate commitShot stays a pure transform (its
  * cross-slice references are the caller's to guarantee), byte-compatible with

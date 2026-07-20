@@ -111,11 +111,11 @@ const basisX = (m: number[]): [number, number, number] => [m[0]!, m[1]!, m[2]!];
  * 1. A profile copy driver, bound with `nodePrefix: "actor/"` onto prefixed nodes,
  *    copies the hinge's 90° rotation onto the handle: both world matrices' X
  *    basis lands at `(0, 0, -1)`.
- * 2. Without the profile the handle stays at rest (X basis `(1, 0, 0)`) — the
+ * 2. Without the profile the handle stays at rest (X basis `(1, 0, 0)`): the
  *    negative twin proving the profile did it.
  * 3. World-pass precedence: a profile aim driver points the eye's X axis at a +X
  *    target while a direct aim driver on the same owner points it at a −X
- *    target — the direct driver applies after and wins (X basis `(-1, 0, 0)`);
+ *    target: the direct driver applies after and wins (X basis `(-1, 0, 0)`);
  *    with only the profile aim the X basis stays `(1, 0, 0)` toward +X.
  */
 export const test_resolve_frame_profile_drivers = (): void => {

@@ -18,9 +18,9 @@ const ROOT_ONLY: IAutoMovieSkeleton = {
 
 /**
  * The rig scale convention (#1052, decision 309): the engine's FK composes
- * rotation and translation ONLY — `resolvePose` ignores bone-rest and pose-root
- * scale, and `motionToClip` pins the same ("rest scale ignored on both sides")
- * — so the render must ignore them too. The viewer used to apply both, making
+ * rotation and translation ONLY: `resolvePose` ignores bone-rest and pose-root
+ * scale, and `motionToClip` pins the same ("rest scale ignored on both sides"),
+ * so the render must ignore them too. The viewer used to apply both, making
  * every descendant diverge from what ground contact, collision, and framing
  * validated. Scene-node transforms and object-motion scale channels stay
  * first-class (#1049); this convention is about RIG bones and pose roots only.

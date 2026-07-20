@@ -1,4 +1,4 @@
-// Measure a model render PNG vs a reference photo with a COMPLETE metric set —
+// Measure a model render PNG vs a reference photo with a COMPLETE metric set,
 // including the blind spots my earlier reviews missed: EYE APERTURE (openness +
 // absolute size) and LIP THICKNESS (upper/lower). Runs MediaPipe FaceLandmarker
 // (478 pts, iris-refined) on both images via the vite-served page.

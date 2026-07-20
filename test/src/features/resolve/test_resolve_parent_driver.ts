@@ -40,8 +40,8 @@ const trs = (x: number, y: number, z: number): IAutoMovieTransform => ({
  *
  * Scenarios:
  *
- * 1. All flags on: the owner snaps to the parent's full world frame — position,
- *    rotation (90° about Y), and scale (×2) — and its child recomposes off the
+ * 1. All flags on: the owner snaps to the parent's full world frame in position,
+ *    rotation (90° about Y), and scale (×2), and its child recomposes off the
  *    new frame.
  * 2. All flags off: the owner is left exactly as it was (each component takes its
  *    own value), proving the off-side of every flag.

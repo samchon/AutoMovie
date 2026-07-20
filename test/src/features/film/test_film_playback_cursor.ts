@@ -39,18 +39,18 @@ const sameSample = (
 /**
  * The forward-only {@link playbackCursor} must land on exactly the live entry
  * the O(entries) {@link resolveFromTimeline} scan would, so a whole-film sweep
- * is byte-identical to the per-instant resolver — the equivalence that lets the
+ * is byte-identical to the per-instant resolver: the equivalence that lets the
  * render/caption plans drop the per-frame O(frames×entries) cost to
  * O(frames+entries) without changing a single output (#686).
  *
  * The cursor advances only forward (feeding it a non-decreasing clock is its
  * precondition), so both a hand-laid transition sequence and a large-N tiling
  * are swept in monotone frame order and compared against the scan at every
- * instant — including exact entry-start instants and the middle of a
+ * instant, including exact entry-start instants and the middle of a
  * cross-dissolve, where the incoming shot must win in both resolvers.
  */
 export const test_film_playback_cursor = (): void => {
-  // Hand-laid sequence with a trim and a dissolve — entry starts 0 / 3 / 4.5,
+  // Hand-laid sequence with a trim and a dissolve: entry starts 0 / 3 / 4.5,
   // runtime 7.5 (the transition overlap [4.5, 5) has entry 1 AND entry 2 live).
   const shots = [shot("shot:beat-1", 3), shot("shot:beat-2", 4)];
   const sequence: IAutoMovieSequence = {
@@ -113,7 +113,7 @@ export const test_film_playback_cursor = (): void => {
   }
 
   // A FULL-overlap dissolve (`transition.duration === previousPlayed`) makes two
-  // adjacent entry starts EQUAL — entry starts are non-decreasing, not strictly
+  // adjacent entry starts EQUAL: entry starts are non-decreasing, not strictly
   // increasing, and cutSequence allows it (only `> previousPlayed` is rejected).
   // The cursor's `start <= seconds` advance must still land on the highest such
   // index (the incoming shot), matching the scan (#1250-adjacent, the corrected
@@ -167,7 +167,7 @@ export const test_film_playback_cursor = (): void => {
   );
 
   // Large-N tiling: 200 back-to-back 1 s shots (no trims/transitions), swept
-  // per second — the cursor advances ~200 times across the run while the scan
+  // per second: the cursor advances ~200 times across the run while the scan
   // re-walks all entries each call; the samples must still match at every step.
   const bigShots = Array.from({ length: 200 }, (_, i) =>
     shot(`shot:beat-${i}`, 1),

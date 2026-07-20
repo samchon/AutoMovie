@@ -4,8 +4,8 @@ import { Quaternion } from "./Quaternion";
 import { Vector3 } from "./Vector3";
 
 /**
- * Exact shortest-arc rotation from vector `a` to vector `b`, `atan2`-based —
- * **no near-parallel identity deadzone** — the single shortest-arc primitive
+ * Exact shortest-arc rotation from vector `a` to vector `b`, `atan2`-based
+ * (**no near-parallel identity deadzone**), the single shortest-arc primitive
  * the whole engine shares. Both the iterative/world-driver IK path
  * ({@link "../resolve/worldShared".rotationBetween re-export}) and the analytic
  * two-bone path (`kinematics/aimRotation`) route through this one definition,
@@ -13,7 +13,7 @@ import { Vector3 } from "./Vector3";
  *
  * The predecessor (`quatFromTo`) snapped `cos > 0.999999` to the identity,
  * which put a ~1.9e-3 m convergence floor under the iterative IK solvers and
- * made the aim/reach path ignore its last ~0.08° — sub-0.1° corrections are
+ * made the aim/reach path ignore its last ~0.08°. Sub-0.1° corrections are
  * exactly the moves a late solver sweep, a foot plant, or a slow camera track
  * is made of. Here every angle down to numerical zero produces its exact
  * rotation (#643).

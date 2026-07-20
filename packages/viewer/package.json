@@ -2,7 +2,7 @@
   "private": true,
   "name": "@automovie/viewer",
   "version": "0.1.0",
-  "description": "automovie viewer — three.js renderer that plays automovie models, poses, and motion (not an editor)",
+  "description": "automovie viewer: three.js renderer that plays automovie models, poses, and motion (not an editor)",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",

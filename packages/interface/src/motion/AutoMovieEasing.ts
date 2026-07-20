@@ -21,7 +21,7 @@ export type AutoMovieEasing =
   | "easeOut"
   /** Slow start and stop (most natural for body motion). */
   | "easeInOut"
-  /** No blend — hold, then jump at the next keyframe (snappy / robotic). */
+  /** No blend: hold, then jump at the next keyframe (snappy / robotic). */
   | "step"
   /** Explicit cubic Bézier; control points supplied on the keyframe. */
   | "cubicBezier";

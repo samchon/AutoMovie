@@ -36,7 +36,7 @@ const makeAnimatedDoc = () => {
  *
  * The document: a `root` group with a `meshNode` (mesh) and `camNode` (camera)
  * child, plus a `bone` (skin joint), a `skinned` mesh+skin node, and an unnamed
- * node — all under the scene. One named animation drives three channels
+ * node, all under the scene. One named animation drives three channels
  * (translation LINEAR, rotation STEP, scale CUBICSPLINE) and a second, unnamed,
  * empty animation.
  *

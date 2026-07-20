@@ -28,9 +28,9 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
 // The `launch` verb on screen: the archer looses, the engine solves the aim and
 // bakes the arrow's flight into the shot's `objectMotions` (a world-space node
-// clip — a projectile has no rig, so it moves the way the camera does), and
+// clip: a projectile has no rig, so it moves the way the camera does), and
 // schedules the target's recoil at the *computed* contact. The viewer samples
-// that clip onto the arrow's group each frame — the read side of the whole
+// that clip onto the arrow's group each frame: the read side of the whole
 // launch arc. Deterministic via renderAt(t) for capture.
 
 // ── the arrow prop: a thin shaft, no rig (driven wholly by its objectMotion) ──
@@ -246,7 +246,7 @@ for (const node of staged.scene.nodes) {
 }
 
 // One player per performing actor (poses ride inside the staged-facing group);
-// the arrow has no performance — its group is driven by the objectMotion.
+// the arrow has no performance: its group is driven by the objectMotion.
 const playersByShot = new Map(
   shots.map((shot) => [
     shot.id,
@@ -285,7 +285,7 @@ const renderAt = (seconds: number): void => {
     player.update(sample.time);
   const live = shotById.get(sample.shot)!;
   // objectMotions: world-space node clips (the arrow's flight). Drive the
-  // object's group transform straight from the sampled clip — the read side of
+  // object's group transform straight from the sampled clip: the read side of
   // compileLaunch/projectileTrajectory.
   for (const clip of live.objectMotions)
     applyObjectMotion(clip, sample.time, (node) => groupsById.get(node));

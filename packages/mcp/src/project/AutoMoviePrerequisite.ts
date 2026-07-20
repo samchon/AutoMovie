@@ -3,24 +3,24 @@ import { AutoMovieProject } from "./AutoMovieProject";
 import { shotIdOf } from "./shotKey";
 
 /**
- * The resident-mode ordering gate (#615) — AutoBe's `TOOL_PREREQUISITES`
+ * The resident-mode ordering gate (#615), AutoBe's `TOOL_PREREQUISITES`
  * structure over automovie's film ladder. Each resident commit tool declares
  * the coarse project state it needs; an out-of-order call **throws an
  * actionable prompt** ("Cannot commitScene yet … Do this next: 1. …"), so the
  * agent is told the next step instead of decoding a violation list. The server
- * still never orchestrates (D012): it blocks wrong order and names the fix, the
+ * still never orchestrates: it blocks wrong order and names the fix, the
  * agent drives.
  *
  * Only the **resident** path is gated: a commit with an explicit slate is a
  * pure stateless transform whose cross-slice preconditions already surface as
  * violations, and the pipeline compute tools (`stage`/`block`/`perform`/`cut`/
- * `forge`/`forgeProp`) are pure functions over explicit inputs — ordering lives
+ * `forge`/`forgeProp`) are pure functions over explicit inputs, ordering lives
  * where state lives. `get*` tools require nothing; they answer `null`
  * honestly.
  *
  * Prerequisite failure THROWS (the AutoBe convention and the `requireProject`
  * precedent): the submission never happened, so there is no artifact for a
- * violation to locate — the error is the guidance.
+ * violation to locate, the error is the guidance.
  */
 export type AutoMoviePrerequisiteTool =
   | "commitScript"
@@ -61,7 +61,7 @@ export const assertPrerequisites = (
 };
 
 /**
- * The film ladder's current status and ordered next actions, as data — the same
+ * The film ladder's current status and ordered next actions, as data, the same
  * computation the prerequisite throw uses, so an agent can ASK before trying.
  * Per-beat detail (which beats still need shots or beat ends) comes from the
  * resident slices.
@@ -86,7 +86,7 @@ export const nextStepsOf = (
     // This branch runs only when the script rung is committed (`status.script`),
     // read synchronously from the same project, so `slate.script` is the
     // validated non-null script (`validateScriptSlice` also guarantees `beats`
-    // is a non-empty array). The `!` documents that precondition — no dead
+    // is a non-empty array). The `!` documents that precondition, no dead
     // optional-chain/`?? []` fallback to hide behind a c8-ignore (#1040, #1252).
     const beats = slate.script!.beats;
     const shotIds = new Set(status.shots);
@@ -139,11 +139,11 @@ const ACTIONS: Record<PrerequisiteKey | "film", string> = {
 const describeMissing = (key: PrerequisiteKey): string => {
   switch (key) {
     case "script":
-      return "script: no script committed — commit one with commitScript";
+      return "script: no script committed, commit one with commitScript";
     case "scene":
-      return "scene: no staged scene committed — commit one with commitScene";
+      return "scene: no staged scene committed, commit one with commitScene";
     case "shots":
-      return "shots: no shots committed — commit at least one with commitShot";
+      return "shots: no shots committed, commit at least one with commitShot";
   }
 };
 

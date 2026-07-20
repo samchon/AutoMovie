@@ -47,11 +47,11 @@ export namespace IAutoMovieBlockedBeat {
 }
 
 /**
- * The BLOCKING consumer — gate one beat's shot plan before any performance is
+ * The BLOCKING consumer: gate one beat's shot plan before any performance is
  * compiled from it. The checks are coherence, not craft: the beat must be one
  * the script planned, every intent must belong to a placed actor, the camera
  * must favour something placed, and the timing anchors must sit on the beat's
- * own timeline **in the order they are listed** — the list order is the causal
+ * own timeline **in the order they are listed**. The list order is the causal
  * order ("the loose before the hit"), so an anchor whose `t` runs backwards
  * contradicts the causality it exists to fix.
  *
@@ -138,7 +138,7 @@ export const blockBeat = (
         out.push(
           "range",
           `$input.actors[${i}].anchors[${j}].t`,
-          `anchor "${anchor.cue}" (t=${anchor.t}) runs before its predecessor (t=${previous}) — the list order is the causal order`,
+          `anchor "${anchor.cue}" (t=${anchor.t}) runs before its predecessor (t=${previous}): the list order is the causal order`,
           anchor.t,
         );
       if (finiteAnchorTime) previous = anchor.t;
@@ -183,7 +183,7 @@ export const blockBeat = (
         out.push(
           "type",
           `$previous.actors[${i}].node`,
-          `previous beat-end actor "${actor.node}" is not a staged scene node — a carried state must resume placed actors`,
+          `previous beat-end actor "${actor.node}" is not a staged scene node: a carried state must resume placed actors`,
           actor.node,
         );
     });

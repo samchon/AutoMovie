@@ -8,9 +8,9 @@ const warningCount = (r: ReturnType<typeof detectBodyCollision>): number =>
   r.validation.success === true ? (r.validation.warnings?.length ?? 0) : -1;
 
 /**
- * Inter-body collision is advisory (D010): overlapping capsules produce
+ * Inter-body collision is advisory: overlapping capsules produce
  * warning-severity feedback that still succeeds, plus contact events and a
- * suggested response — never a hard rejection. Bodies that stay apart produce
+ * suggested response, never a hard rejection. Bodies that stay apart produce
  * nothing.
  *
  * Scenarios:

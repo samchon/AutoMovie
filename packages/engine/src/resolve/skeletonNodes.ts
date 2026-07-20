@@ -18,13 +18,13 @@ const IDENTITY = {
  * Lower a skeleton to the node hierarchy {@link composeScene} walks: a `group`
  * root carrying the motion's root transform, then one `bone` node per bone with
  * the rest translation/rotation and scale pinned to `1` (mirroring
- * `resolvePose`, which never scales bones — see `motionToClip`'s contract).
+ * `resolvePose`, which never scales bones: see `motionToClip`'s contract).
  *
  * **Naming.** Node ids are `${prefix}${boneName}` and the synthetic root is
  * `${prefix}${MOTION_ROOT_NODE_ID}`. The default empty prefix keeps the S1
  * bare-name convention (one actor per node graph); a scene bridge lowering
  * several actors into ONE graph passes a per-placement prefix (e.g.
- * `"knightA/"`) so two actors sharing bone names stay distinct — the same
+ * `"knightA/"`) so two actors sharing bone names stay distinct, the same
  * prefix a multi-actor clip playback must use on its channel node refs (see
  * `motionToClip`'s `nodePrefix`).
  *

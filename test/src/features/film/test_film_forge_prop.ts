@@ -107,16 +107,16 @@ export const createDoorPropSpec = (): IAutoMoviePropSpec => ({
 });
 
 /**
- * ForgeProp accepts a prop authored entirely as data — crude primitive parts
+ * ForgeProp accepts a prop authored entirely as data (crude primitive parts
  * carrying a physical body, a stack-top affordance, and a self-declared hinge
- * articulation (D011) — when both the model contract and the articulation
+ * articulation) when both the model contract and the articulation
  * contract hold.
  *
  * Scenarios:
  *
  * 1. The fully-loaded door prop passes and the accepted spec is echoed for the
  *    staging join.
- * 2. A rigid prop (articulation null) passes on the model contract alone — the
+ * 2. A rigid prop (articulation null) passes on the model contract alone: the
  *    articulation gates never fire for it.
  */
 export const test_film_forge_prop = (): void => {

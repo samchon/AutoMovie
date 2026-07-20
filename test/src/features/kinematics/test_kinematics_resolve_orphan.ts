@@ -18,7 +18,7 @@ const rest = {
  * The core #730 scenario: a skeleton with a real root and a reachable sub-tree,
  * plus ONE orphaned bone whose parent names a bone absent from the skeleton.
  * `resolvePose` resolves the reachable bones and **omits the orphan** (the
- * partial-return contract) — so a consumer that reads a specific bone must gate
+ * partial-return contract), so a consumer that reads a specific bone must gate
  * on {@link reachableBoneNames} to notice the orphan rather than trusting the
  * `skeleton.bones` declared set. This pins that the reachable-set query and the
  * FK walk agree exactly on which bones are present.

@@ -22,7 +22,7 @@ export const uniform = (rng: () => number, min: number, max: number): number =>
   min + (max - min) * rng();
 
 /**
- * A uniformly distributed unit quaternion (Shoemake's subgroup algorithm) — an
+ * A uniformly distributed unit quaternion (Shoemake's subgroup algorithm): an
  * unbiased random rotation, so quaternion invariants are probed across the
  * whole sphere rather than a hand-picked corner.
  */

@@ -4,7 +4,7 @@
 # files show up as phantom modifications after every format run.
 * text=auto eol=lf
 
-# Binary assets — never normalize.
+# Binary assets: never normalize.
 *.png binary
 *.jpg binary
 *.jpeg binary

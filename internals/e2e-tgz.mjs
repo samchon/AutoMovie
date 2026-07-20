@@ -6,7 +6,7 @@
 //
 // Run: pnpm run e2e:tgz
 //
-// Deliberately OUTSIDE the c8 coverage gate — it is slow (four prepack
+// Deliberately OUTSIDE the c8 coverage gate: it is slow (four prepack
 // builds plus an npm install) and needs registry network for third-party
 // dependencies such as @modelcontextprotocol/sdk.
 import { spawnSync } from "node:child_process";
@@ -30,7 +30,7 @@ const REPO_ROOT = resolve(HERE, "..");
 const PACKAGES = ["interface", "engine", "render", "mcp"];
 
 const fail = (message) => {
-  console.error(`\n✗ e2e:tgz FAILED — ${message}`);
+  console.error(`\n✗ e2e:tgz FAILED: ${message}`);
   process.exit(1);
 };
 
@@ -56,7 +56,7 @@ import path from "node:path";
 
 const assert = (name, condition, detail) => {
   if (!condition) {
-    console.error(\`✗ \${name} — \${detail}\`);
+    console.error(\`✗ \${name}: \${detail}\`);
     process.exit(1);
   }
   console.log(\`✓ \${name}\`);
@@ -88,7 +88,7 @@ try {
   );
 
   const { tools } = await client.listTools();
-  // Floor, not an exact pin — test_mcp_stdio_roundtrip pins the full list.
+  // Floor, not an exact pin. test_mcp_stdio_roundtrip pins the full list.
   assert(
     "tool-count",
     tools.length >= 30,
@@ -117,7 +117,7 @@ try {
   assert(
     "guide-corpus",
     guide.isError !== true && guideText.length >= 1000,
-    \`isError=\${guide.isError} length=\${guideText.length} — guide corpus missing from the pack?\`,
+    \`isError=\${guide.isError} length=\${guideText.length} (guide corpus missing from the pack?)\`,
   );
 
   const open = await client.callTool({
@@ -206,7 +206,7 @@ try {
   );
   if (!existsSync(binTarget))
     fail(`packed artifact is missing the bin target: ${binTarget}`);
-  console.log("✓ bin-target — lib/bin.js present in the installed package");
+  console.log("✓ bin-target: lib/bin.js present in the installed package");
 
   // 4. Drive the packaged server as a real MCP client. The client runs with
   //    the fresh project as cwd so @modelcontextprotocol/sdk resolves from
@@ -237,7 +237,7 @@ try {
     env: { ...process.env, E2E_EXPECTED_VERSION: expectedVersion },
   });
   if (client.status !== 0) fail("stdio client assertions failed (see above)");
-  console.log("\n✓ e2e:tgz PASSED — packaged MCP surface verified");
+  console.log("\n✓ e2e:tgz PASSED: packaged MCP surface verified");
 } finally {
   rmSync(stage, { recursive: true, force: true, maxRetries: 5 });
 }

@@ -6,8 +6,8 @@ import { IAutoMovieNodeTarget } from "./IAutoMovieNodeTarget";
 import { IAutoMoviePointTarget } from "./IAutoMoviePointTarget";
 
 /**
- * Stage 2 — **STAGING** (set up). Realise the script's cast as placed scene
- * nodes, rig the cameras and lights, and declare any persistent couplings —
+ * Stage 2: **STAGING** (set up). Realise the script's cast as placed scene
+ * nodes, rig the cameras and lights, and declare any persistent couplings;
  * i.e. build the `IAutoMovieScene` the shots render. The model chooses _what to
  * place and where_; the host instantiates the actual models (a generated rig,
  * or an imported VRM named by the cast's `modelRef`).
@@ -26,7 +26,7 @@ export namespace IAutoMovieStagingApplication {
   export interface IProps {
     /**
      * Think before you act. Lay out the ground: where does each character start
-     * so every beat reads — measured from the rigs' reach/stride, not guessed
+     * so every beat reads, measured from the rigs' reach/stride, not guessed
      * (two boxers ~0.7 m apart so a jab lands; a pursuer a few metres behind
      * the fleer). Who rides/holds what (a persistent coupling)? What must each
      * camera see? State the geometry and your reasoning before the placements.
@@ -44,7 +44,7 @@ export namespace IAutoMovieStagingApplication {
 
     /**
      * A compact plan: the ground layout, who stands where facing where (with
-     * the distances), the persistent couplings, and how the cameras cover it —
+     * the distances), the persistent couplings, and how the cameras cover it,
      * written before the placements so they can be checked against it.
      */
     plan: string;
@@ -53,18 +53,18 @@ export namespace IAutoMovieStagingApplication {
     actors: IPlacement[];
 
     /**
-     * Set pieces — the environment realised as static scene geometry (#1173). A
+     * Set pieces: the environment realised as static scene geometry (#1173). A
      * floor slab, a wall, a doorway, a backdrop: each placement drops a
      * skeleton-less model (typically a forged prop, `forgeProp`'s crude
      * primitive proxy) into the scene, so the guide passes describe a world
      * instead of actors floating in a void. Omit for a bare stage. A set piece
      * is scenery, not a performer: pair a walkable floor with the scene's
-     * `space` surfaces — the surface is the meaning, this model is the visual.
+     * `space` surfaces: the surface is the meaning, this model is the visual.
      */
     set?: ISetPlacement[];
 
     /**
-     * The ground itself — standable surfaces and walkability (#1173), copied
+     * The ground itself: standable surfaces and walkability (#1173), copied
      * onto the composed scene's {@link IAutoMovieScene.space}. A `space` is the
      * MEANING of the floor (where feet and props may rest, how high it is,
      * which patches locomotion may cross); a `set` piece is its crude visual.
@@ -95,7 +95,7 @@ export namespace IAutoMovieStagingApplication {
     facingDeg: number;
 
     /**
-     * A persistent coupling fixed for the whole film — a rider on a mount, a
+     * A persistent coupling fixed for the whole film: a rider on a mount, a
      * passenger in a cart. The node rides `parent`'s `bone` (e.g. a horse's
      * `spine` saddle). Declare it here rather than re-attaching every shot.
      */
@@ -103,19 +103,19 @@ export namespace IAutoMovieStagingApplication {
   }
 
   /**
-   * One placed set piece — environment geometry as a static scene node (#1173).
+   * One placed set piece: environment geometry as a static scene node (#1173).
    * The realising model is skeleton-less (a forged prop's primitive parts); the
    * node never performs, it only stands where the world needs structure.
    */
   export interface ISetPlacement {
     /**
-     * Scene node id for this piece — distinct from every cast, camera, and
+     * Scene node id for this piece, distinct from every cast, camera, and
      * light id (and from sibling pieces).
      */
     node: string;
 
     /**
-     * Model id realising the piece — a forged prop's node id (the `forgeProp`
+     * Model id realising the piece: a forged prop's node id (the `forgeProp`
      * join key), or a static model the host knows how to instantiate.
      */
     model: string;
@@ -124,18 +124,18 @@ export namespace IAutoMovieStagingApplication {
     position: IAutoMovieVector3;
 
     /**
-     * Yaw about +Y in degrees (0 = facing +Z). Omit for an unrotated piece — a
+     * Yaw about +Y in degrees (0 = facing +Z). Omit for an unrotated piece: a
      * floor slab or a centered backdrop needs no heading.
      */
     facingDeg?: number;
 
     /**
-     * Size multiplier on the realising model — a bare number scales all three
+     * Size multiplier on the realising model: a bare number scales all three
      * axes, a vector scales each axis on its own (a `2 × 0.1 × 6` slab out of
      * one unit box). This is what lets ONE forged primitive stand in for a
      * whole set: a wall, a step, and a table top are the same box at different
      * sizes, rather than a separately forged model each. Omit for the model's
-     * authored size. Every axis must be finite and greater than zero — zero
+     * authored size. Every axis must be finite and greater than zero: zero
      * collapses the piece to nothing, and a negative axis mirrors it so the
      * normal and outline passes read the surface inside out.
      */

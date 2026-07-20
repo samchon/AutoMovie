@@ -51,7 +51,7 @@ const marchSynth = () =>
 /**
  * Pins the follow seam between the shot compiler and the camera grammar: the
  * subject's animated base is its placement plus the compiled clip's root
- * displacement, so a follow move tracks a traveling actor — and every fallback
+ * displacement, so a follow move tracks a traveling actor, and every fallback
  * (rootless clip, motionless subject, point subject) stays total.
  *
  * Scenarios:

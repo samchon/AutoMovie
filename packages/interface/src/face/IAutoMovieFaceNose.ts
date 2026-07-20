@@ -1,7 +1,7 @@
 import { AutoMovieFaceWeight } from "./AutoMovieFaceWeight";
 
 /**
- * Nose traits of an {@link IAutoMovieFace} — signed morph weights in `[-2, 2]`,
+ * Nose traits of an {@link IAutoMovieFace}: signed morph weights in `[-2, 2]`,
  * `0`/omitted meaning the template's nose unchanged.
  *
  * @author Samchon

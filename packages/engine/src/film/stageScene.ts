@@ -17,7 +17,7 @@ import { ViolationCollector } from "../validation/violation";
 import { lookRotation } from "./cameraMove";
 
 /**
- * Camera frustum bounds the staging schema does not ask the model for — the LLM
+ * Camera frustum bounds the staging schema does not ask the model for, the LLM
  * decides placement and field of view, the engine owns the clip planes.
  */
 const CAMERA_NEAR = 0.1;
@@ -35,7 +35,7 @@ const isFiniteVector3 = (vector: IAutoMovieVector3): boolean =>
  * Lower a set piece's optional size multiplier onto the node transform's scale:
  * omitted keeps the model's authored size, a bare number scales uniformly, a
  * vector scales per axis. One forged primitive can therefore stand in for a
- * whole set — a wall, a step, and a table top are the same box at three sizes
+ * whole set, a wall, a step, and a table top are the same box at three sizes
  * (#1173).
  */
 const setPieceScale = (
@@ -49,13 +49,13 @@ const setPieceScale = (
 /**
  * A staged film set: the composed {@link IAutoMovieScene} plus the persistent
  * mount couplings staging declared. Mounts stay alongside rather than inside
- * the scene because a scene node is a flat world placement — the per-frame
+ * the scene because a scene node is a flat world placement, the per-frame
  * world transform of a mounted rider comes from `resolveAttachment` against the
  * parent's posed skeleton, not from the scene graph.
  *
  * `performShot` consumes these: every performed shot auto-descends each mount
  * into the rider's follow clip through `compileAttach` (#674), so the rider
- * rides for the whole film without re-issuing `attachTo` — the engine owns the
+ * rides for the whole film without re-issuing `attachTo`, the engine owns the
  * composition, the host stays a pure player.
  *
  * @author Samchon
@@ -100,7 +100,7 @@ export namespace IAutoMovieStagedSet {
 }
 
 /**
- * The STAGING consumer — fold the script's cast and the staging stage's
+ * The STAGING consumer, fold the script's cast and the staging stage's
  * placements into the {@link IAutoMovieScene} every later stage performs into.
  * This is the first rung of the film pipeline (the workflow spine): LLM stage
  * payloads in, a validated engine artifact or a violation list out.
@@ -109,7 +109,7 @@ export namespace IAutoMovieStagedSet {
  * member, every cast member must be placed (an unplaced character can never
  * appear on screen), ids must not collide, and a camera aimed at a node or a
  * mount riding a parent must point at something that exists. Geometry is
- * converted, not judged — whether 0.7 m is striking range is the reviewer's
+ * converted, not judged, whether 0.7 m is striking range is the reviewer's
  * business, not a constraint.
  *
  * Conversions: `facingDeg` (about +Y, 0 = facing +Z) becomes the node's
@@ -121,7 +121,7 @@ export namespace IAutoMovieStagedSet {
  *
  * The environment is two halves of one thing (#1173): `set` pieces are the
  * visible geometry the guide passes draw, and the optional `space` is the
- * ground's meaning — standable surfaces and walkability — copied onto the
+ * ground's meaning, standable surfaces and walkability, copied onto the
  * composed scene after {@link validateSpace} accepts it. Omitting `space`
  * composes `space: null`, the scalar ground plane the engine assumed before.
  */
@@ -151,7 +151,7 @@ export const stageScene = (
     cast.set(member.node, { member, index });
   });
   const placed = new Map(staging.actors.map((a) => [a.node, a]));
-  // What a camera may aim at: any placed point — an actor or a set piece (an
+  // What a camera may aim at: any placed point, an actor or a set piece (an
   // establishing frame on a doorway is as legitimate as one on a duellist).
   const placedPoints = new Map<string, IAutoMovieVector3>([
     ...staging.actors.map((a) => [a.node, a.position] as const),

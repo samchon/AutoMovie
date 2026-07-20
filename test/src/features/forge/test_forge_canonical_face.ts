@@ -23,7 +23,7 @@ export const test_forge_canonical_face = (): void => {
     CANONICAL_FACE_UVS.every((u) => u >= 0 && u <= 1),
   );
   // the global argmax-z is landmark 4 (lower nose bridge), 1.1mm ahead of the
-  // tip — assert the front-most vertex is on the nose, not its exact index
+  // tip; assert the front-most vertex is on the nose, not its exact index
   let argmax = 0;
   for (let i = 0; i < 468; i++)
     if (

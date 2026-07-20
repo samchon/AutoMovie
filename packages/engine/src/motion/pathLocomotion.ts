@@ -25,7 +25,7 @@ export type AutoMoviePathGround = number | ((x: number, z: number) => number);
 
 /**
  * The path frame at one baked keyframe time: where the root sits on the path
- * and which way it faces — the per-time data a later pass (a camera follow, a
+ * and which way it faces, the per-time data a later pass (a camera follow, a
  * foot-planting pass) consumes without re-deriving the path math.
  *
  * @author Samchon
@@ -42,7 +42,7 @@ export interface IAutoMoviePathFrame {
 }
 
 /**
- * A gait baked along a path, plus the per-keyframe path frames — mirroring how
+ * A gait baked along a path, plus the per-keyframe path frames, mirroring how
  * the ground-IK pass returns its plants (#596).
  *
  * @author Samchon
@@ -77,20 +77,20 @@ interface ISegment {
 }
 
 /**
- * Bake a looping gait cycle **along a waypoint path** — curved walking with
+ * Bake a looping gait cycle **along a waypoint path**: curved walking with
  * natural turning and ground-height adaptation, where {@link locomoteMotion}
  * only walks a straight line. The motion side of long-form staging: a character
  * that rounds a corner or climbs a ramp instead of teleport-facing its goal.
  *
  * The path is a world-space polyline over the ground plan: arc length is
- * measured on XZ (piecewise linear — no smoothing solver, deterministic), and
- * **waypoint `y` is ignored** — height comes from `ground` (a plane scalar or a
+ * measured on XZ (piecewise linear: no smoothing solver, deterministic), and
+ * **waypoint `y` is ignored**. Height comes from `ground` (a plane scalar or a
  * `(x, z) → y` callback; #605's surfaces will refine this seam). Root
  * translation follows arc length at the gait's pace; like {@link travelMotion}
  * the offset is a continuous function of global time, so it carries across
  * every cycle seam, and any root bob the gait carries is preserved on top. The
- * engine sizes the travel exactly as `locomoteMotion` does — whole cycles
- * nearest the requested `speed`, at least one — then snaps the effective speed
+ * engine sizes the travel exactly as `locomoteMotion` does (whole cycles
+ * nearest the requested `speed`, at least one), then snaps the effective speed
  * so the path completes exactly at the clip end (no end-of-path plateau for
  * feet to skate on).
  *
@@ -98,12 +98,12 @@ interface ISegment {
  * +Z forward, as `locomoteMotion`), composed onto the base root rotation. At a
  * corner the yaw blends linearly in arc length over a window of `min(turnWindow
  * / 2, half of each adjacent stretch)` on either side, taking the shortest
- * angular arc — a bounded turn rate instead of a snap (`turnWindow: 0` snaps).
+ * angular arc, a bounded turn rate instead of a snap (`turnWindow: 0` snaps).
  * Gait phase never resets: keyframe times replicate the base cycle untouched
  * (#597's continuity spirit), the corner only steers the root.
  *
  * Feed the result through {@link plantStanceFeet} (#596) to pin the stance feet.
- * Pathfinding and obstacle avoidance are out of scope — the path is authored
+ * Pathfinding and obstacle avoidance are out of scope: the path is authored
  * (blocking / #605's navigable space provide it).
  *
  * @author Samchon
@@ -148,7 +148,7 @@ export const followPathMotion = (props: {
   for (let c = 0; c < cycles; ++c)
     for (const k of props.gait.keyframes) {
       // drop the duplicate seam keyframe (a later cycle's time:0) so times stay
-      // strictly increasing — the prior cycle's final frame covers the pose,
+      // strictly increasing: the prior cycle's final frame covers the pose,
       // but the seam carries the incoming cycle's first-segment easing (#1012)
       if (c > 0 && k.time === 0) {
         const seam = keyframes[keyframes.length - 1]!;

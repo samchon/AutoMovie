@@ -1,5 +1,5 @@
 /**
- * A look direction as **yaw** and **pitch** in degrees — the two angles a head,
+ * A look direction as **yaw** and **pitch** in degrees: the two angles a head,
  * eye, or camera turns through to face a target, relative to its own forward
  * (yaw = turn off straight-ahead, +90 = its left; pitch = tilt up (+) / down
  * (−)). A rig maps these onto its joints (a neck's twist + flexion, a camera's

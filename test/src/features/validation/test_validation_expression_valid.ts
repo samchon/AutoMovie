@@ -5,7 +5,7 @@ import { makeExpression } from "../internal/fixtures";
 
 /**
  * An expression with an in-range preset intensity and in-range blendshape
- * weights validates — the "valid face passes" baseline for expression
+ * weights validates: the "valid face passes" baseline for expression
  * checking.
  *
  * Scenario: the `happy` preset at intensity 0.8 with a `jawOpen` channel at 0.3

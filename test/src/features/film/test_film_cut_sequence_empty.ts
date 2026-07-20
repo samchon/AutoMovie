@@ -5,7 +5,7 @@ import { hasViolation } from "../internal/predicates";
 
 /**
  * Pins the film-level gates of the ASSEMBLE consumer: a film needs at least one
- * shot and a positive frame rate — an empty cut at 0 fps is not a short film,
+ * shot and a positive frame rate: an empty cut at 0 fps is not a short film,
  * it is nothing.
  *
  * Scenarios:

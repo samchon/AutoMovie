@@ -42,9 +42,9 @@ export const CAPTION_SEQUENCE: IAutoMovieSequence = {
  * serialization is deterministic pretty JSON.
  *
  * Scenarios (fps 4, runtime 2.5 s → 10 frames; the dissolve hands frames to the
- * incoming shot exactly as playback does — hand math):
+ * incoming shot exactly as playback does, by hand math):
  *
- * 1. Two spans: `[0,2)` beat "duel", `[2,10)` beat "aftermath" — the incoming shot
+ * 1. Two spans: `[0,2)` beat "duel", `[2,10)` beat "aftermath"; the incoming shot
  *    is live from its span start (`0.5 s` → frame 2).
  * 2. The duel span carries its authored caption and the EXT slug; the aftermath
  *    beat authored no caption → `caption: null` with the slug still present

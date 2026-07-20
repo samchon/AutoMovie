@@ -1,5 +1,5 @@
 /**
- * An action/camera target that is **several nodes at once** — a camera frames
+ * An action/camera target that is **several nodes at once**: a camera frames
  * their collective extent (a two-shot, a crowd).
  *
  * @author Samchon

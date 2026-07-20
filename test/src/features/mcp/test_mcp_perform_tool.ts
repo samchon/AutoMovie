@@ -88,7 +88,7 @@ const riglessContext = (
  *     or camera framing can dereference them: blank skeleton, non-finite
  *     position components, non-numeric/zero speed, non-finite
  *     facingDeg/eyeHeight, null restPose, and malformed restFrames entries (per
- *     bone, axis, sign, neutral) — while a valid mirrored rest frame still
+ *     bone, axis, sign, neutral), while a valid mirrored rest frame still
  *     performs.
  * 13. A present rig gates its graph before camera framing dereferences it:
  *     duplicate bone rows, parents naming absent bones, root count, and parent

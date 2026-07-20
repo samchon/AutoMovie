@@ -48,13 +48,13 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["RENDER_GUIDES", "omit `slate`"],
   ["RENDER_GUIDES", "planChunkedRender"],
   ["RENDER_GUIDES", "planCaptions"],
-  // The three tools taught in #1232/#1241 and corrected in #1253 — pinned so the
+  // The three tools taught in #1232/#1241 and corrected in #1253, pinned so the
   // corpus cannot silently drop or contradict them again (the #1241 miss).
   ["PROJECT_MEMORY", "read companion to the commit ladder"],
   ["PROJECT_MEMORY", "prefer the per-slice reads over pulling the whole slate"],
   ["REVIEW", "it is not resident, and it reads no committed film"],
   ["RENDER_GUIDES", "OpenPose-style sidecar"],
-  // The even-dimension gate (#1251) — pinned so the corpus keeps teaching the
+  // The even-dimension gate (#1251), pinned so the corpus keeps teaching the
   // new hard authoring rule the render/keypoint validators now enforce.
   ["RENDER_GUIDES", "can only encode even axes"],
   ["RENDER_GUIDES", "reuse that exact value"],
@@ -70,7 +70,7 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
  * Scenarios:
  *
  * 1. Every declared guide name resolves to non-empty markdown carrying its
- *    distinctive doctrine phrase — the union, the prompts directory, and the
+ *    distinctive doctrine phrase, the union, the prompts directory, and the
  *    generated constant cannot drift apart silently.
  * 2. An unknown name (reachable through direct API misuse) throws an error that
  *    lists every valid name, instead of returning undefined content.

@@ -3,7 +3,7 @@ import { IAutoMovieTransform, IAutoMovieVector3 } from "@automovie/interface";
 import { Matrix4 } from "../math/Matrix4";
 import { Vector3 } from "../math/Vector3";
 
-// The exact shortest-arc rotation now lives in math/rotationBetween — the single
+// The exact shortest-arc rotation now lives in math/rotationBetween, the single
 // shortest-arc primitive both the world-driver/iterative IK path (here) and the
 // analytic two-bone path (kinematics/aimRotation) route through, so the two IK
 // families cannot diverge (#643, #720). Re-exported so existing callers keep

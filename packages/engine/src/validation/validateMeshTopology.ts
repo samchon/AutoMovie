@@ -12,15 +12,15 @@ const WELD_GRID = 1e9;
  * checks the two invariants EVERY valid triangle mesh must satisfy, regardless
  * of whether it is a closed solid or an open surface:
  *
- * - **2-manifold:** no edge is shared by more than two triangles (a "fin" — a
- *   third face growing out of an edge — cannot bound a surface).
+ * - **2-manifold:** no edge is shared by more than two triangles (a "fin", a
+ *   third face growing out of an edge, cannot bound a surface).
  * - **Consistent winding:** two triangles adjacent on an edge traverse it in
  *   opposite directions, so their outward faces agree (the glTF front-face
  *   contract a renderer culls against).
  *
- * These are ERRORS — a mesh violating them is structurally broken, not merely
+ * These are ERRORS: a mesh violating them is structurally broken, not merely
  * implausible. **Watertightness** (no boundary/open edges) is context-dependent
- * — a plane, decal, or cloth is a legitimate open mesh — so it is only checked
+ * (a plane, decal, or cloth is a legitimate open mesh), so it is only checked
  * when the caller sets `expectClosed` (a baked solid, a collision proxy).
  *
  * The check assumes structurally-valid buffers (positions a multiple of 3,
@@ -39,7 +39,7 @@ export const validateMeshTopology = (props: {
   /** JSON path of the mesh being checked. Defaults to `$input`. */
   path?: string;
 
-  /** When set, a boundary (open) edge is also an error — the mesh must close. */
+  /** When set, a boundary (open) edge is also an error: the mesh must close. */
   expectClosed?: boolean;
 }): IAutoMovieValidation => {
   const collector = new ViolationCollector();
@@ -53,7 +53,7 @@ export const validateMeshTopology = (props: {
 };
 
 /**
- * Append mesh-topology violations to a collector — the shared body behind the
+ * Append mesh-topology violations to a collector, the shared body behind the
  * standalone {@link validateMeshTopology} and `validateModel`'s mesh check.
  */
 export const appendMeshTopology = (
@@ -89,7 +89,7 @@ export const appendMeshTopology = (
   for (let i = 0; i < indices.length; i += 3) {
     const keys = [indices[i]!, indices[i + 1]!, indices[i + 2]!].map(keyOf);
     // A triangle with a repeated welded vertex (a pole ring, a collapsed cap)
-    // carries no surface — skip it, exactly as the watertightness oracle does.
+    // carries no surface: skip it, exactly as the watertightness oracle does.
     if (new Set(keys).size < 3) continue;
     for (let e = 0; e < 3; ++e) {
       const from = keys[e]!;

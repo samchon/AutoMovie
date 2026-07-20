@@ -13,7 +13,7 @@ import { throwsError } from "../internal/predicates";
  * Guide passes make one deterministic frame schedule yield several
  * diffusion-conditioning outputs: the beauty pass keeps the plain frame name so
  * a single-pass render stays byte-compatible with every existing plan, and any
- * other pass tags the filename before the extension — so pass outputs coexist
+ * other pass tags the filename before the extension, so pass outputs coexist
  * in one frame directory and compose unchanged with chunking (#609).
  *
  * Scenarios:

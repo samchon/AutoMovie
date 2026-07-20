@@ -19,13 +19,13 @@ const at = (
 };
 
 /**
- * A pose's optional root transform places the whole character in the world — it
+ * A pose's optional root transform places the whole character in the world: it
  * seeds the hierarchy walk, so it offsets every resolved bone uniformly. Pins
  * that planting or translating the model root moves the entire skeleton
  * together.
  *
  * Scenario: a root translation of (+1,0,0) shifts every bone's world position
- * by +1 on X — hips from (0,1,0) to (1,1,0), and the leftLowerArm from
+ * by +1 on X: hips from (0,1,0) to (1,1,0), and the leftLowerArm from
  * (0.5,1.4,0) to (1.5,1.4,0).
  */
 export const test_kinematics_resolve_root = (): void => {

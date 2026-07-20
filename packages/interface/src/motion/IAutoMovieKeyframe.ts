@@ -7,7 +7,7 @@ import { AutoMovieEasing } from "./AutoMovieEasing";
  * plus the easing into the _next_ keyframe.
  *
  * A keyframe is just a static {@link IAutoMoviePose} stamped with a `time` and a
- * blend curve — so everything that validates a pose (ROM, joint conflicts)
+ * blend curve, so everything that validates a pose (ROM, joint conflicts)
  * validates a keyframe for free, and the temporal layer only adds ordering and
  * rate checks on top.
  *
@@ -16,7 +16,7 @@ import { AutoMovieEasing } from "./AutoMovieEasing";
 export interface IAutoMovieKeyframe {
   /**
    * Timestamp within the clip, seconds. Must be `<= clip duration`, and
-   * keyframes must be strictly increasing in `time` — both enforced by the
+   * keyframes must be strictly increasing in `time`; both enforced by the
    * engine's temporal verifier.
    */
   time: number;

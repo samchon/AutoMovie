@@ -21,7 +21,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
 // ── collision-response demo: projectiles strike a braced stick figure; the
 // engine's resolveImpact decides bounce / embed / knock-back (and the ball's
-// rebound), and impactRecoil drives the figure's flinch — bounded by joint ROM,
+// rebound), and impactRecoil drives the figure's flinch, bounded by joint ROM,
 // the overflow becoming a root stagger. The engine computes the reaction; the
 // view just plays it. ─────────────────────────────────────────────────────────
 const params = new URLSearchParams(location.search);
@@ -39,7 +39,7 @@ const j = (
 const { skeleton, model } = buildStickman(DEFAULT_STICKMAN);
 const object = buildModel(model);
 
-// a braced stance — knees soft, hands up to take the hit
+// a braced stance: knees soft, hands up to take the hit
 const BRACE: IAutoMovieJointPose[] = [
   j("leftUpperLeg", { flexion: -10, abduction: 10 }),
   j("rightUpperLeg", { flexion: -10, abduction: -10 }),

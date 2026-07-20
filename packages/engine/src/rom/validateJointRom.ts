@@ -16,7 +16,7 @@ const AXES = ["flexion", "abduction", "twist"] as const;
  * Two failure modes per axis:
  *
  * - The joint specifies a non-zero angle on an axis the constraint marks `null`
- *   (the joint physically does not move that way — e.g. an elbow abducting);
+ *   (the joint physically does not move that way, e.g. an elbow abducting);
  * - The angle is outside the allowed `[min, max]`.
  *
  * `path` is the JSON path of the joint (e.g. `$input.joints[3]`); the offending
@@ -75,10 +75,10 @@ export const validateJointRom = (props: {
 
   // Combined swing cone (ball joints): caps the corner the per-axis boxes miss.
   // The cone is a COUPLING between the two axes, not a per-axis check, so a
-  // resting (`null`) axis is not exempt — it contributes its actual rotation, 0,
+  // resting (`null`) axis is not exempt. It contributes its actual rotation, 0,
   // exactly as the renderer reads it (`jointToQuaternion`'s `?? 0`). Gating on
   // both axes being non-null made `{flexion:150, abduction:null}` pass while its
-  // identical twin `{flexion:150, abduction:0}` — the same quaternion — failed
+  // identical twin `{flexion:150, abduction:0}` (the same quaternion) failed
   // (#1245).
   if (typeof constraint.swingDeg === "number") {
     const swing = swingConeAngle(joint.flexion ?? 0, joint.abduction ?? 0);

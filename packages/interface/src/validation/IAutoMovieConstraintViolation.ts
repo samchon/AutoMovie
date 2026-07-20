@@ -1,7 +1,7 @@
 import { AutoMovieViolationKind } from "./AutoMovieViolationKind";
 
 /**
- * One deterministic constraint violation — the unit of feedback the harness
+ * One deterministic constraint violation: the unit of feedback the harness
  * turns into a `// ❌` correction comment.
  *
  * This is automovie's domain-level analogue of typia's `IValidation.IError`,
@@ -16,19 +16,19 @@ import { AutoMovieViolationKind } from "./AutoMovieViolationKind";
  * @author Samchon
  */
 export interface IAutoMovieConstraintViolation {
-  /** Which tier/category failed — routes the correction. */
+  /** Which tier/category failed; routes the correction. */
   kind: AutoMovieViolationKind;
 
   /**
-   * How binding this feedback is. `"error"` is a rig/render-integrity breach —
-   * a disconnected skeleton, a non-finite quaternion, a negative duration, an
-   * out-of-range coefficient — and fails validation. `"warning"` is
+   * How binding this feedback is. `"error"` is a rig/render-integrity breach
+   * (a disconnected skeleton, a non-finite quaternion, a negative duration, an
+   * out-of-range coefficient) and fails validation. `"warning"` is
    * physical-plausibility advice (a body that would topple, an unsupported mass
    * that would fall): recommended, not forbidden, because a film may be
    * deliberately unphysical. A `"warning"` never fails validation on its own;
    * it rides the same envelope so the harness can surface it and the author (or
    * an action's `physicsIntent` marker) can accept or dismiss it. `"warning"`
-   * is the compiler's word for this level — not "advisory".
+   * is the compiler's word for this level, not "advisory".
    */
   severity: "error" | "warning";
 
@@ -48,7 +48,7 @@ export interface IAutoMovieConstraintViolation {
 
   /**
    * The actual offending value, carried verbatim for the feedback comment.
-   * `unknown` because a violation can occur at any field type — this is the one
+   * `unknown` because a violation can occur at any field type; this is the one
    * deliberate `unknown` at the validation boundary.
    */
   value: unknown;
@@ -64,12 +64,12 @@ export interface IAutoMovieConstraintViolation {
 
   /**
    * Id of the screenplay refinement-graph node ({@link IAutoMovieScriptNode})
-   * this feedback locates on — usually the beat node whose work produced it.
+   * this feedback locates on, usually the beat node whose work produced it.
    * With the node in hand, `scriptAncestors` walks the refinement chain up
    * (beat → scene → act → intent), so a physics warning can cascade past the
-   * motion into the screenplay itself (D013): the correction may target the
-   * pose, the beat's staging, or the scene's intent — the agent decides which
-   * level to fix (D012). Absent when no screenplay tree exists or the feedback
+   * motion into the screenplay itself: the correction may target the
+   * pose, the beat's staging, or the scene's intent; the agent decides which
+   * level to fix. Absent when no screenplay tree exists or the feedback
    * is not beat-scoped.
    */
   node?: string;

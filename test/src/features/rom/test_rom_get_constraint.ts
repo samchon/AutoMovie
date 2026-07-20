@@ -13,8 +13,8 @@ import { TestValidator } from "@nestia/e2e";
  * 1. A per-bone skeleton override wins outright over the default table.
  * 2. With no override, the default humanoid table entry is returned (the elbow's
  *    own entry, checked by identity).
- * 3. A bone with neither an override nor a table entry (the hips) resolves to null
- *    — unconstrained.
+ * 3. A bone with neither an override nor a table entry (the hips) resolves to null,
+ *    unconstrained.
  */
 export const test_rom_get_constraint = (): void => {
   const override: IAutoMovieJointConstraint = {

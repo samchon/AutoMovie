@@ -213,7 +213,7 @@ const frontRatios = (lm, w, h) => {
   const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
   const fw = d(P(234), P(454));
   // WIDTHS only. eyeToNose/eyeToMouth depend on the clay eye line (iris Y),
-  // which is unreliable on the crude clay eyes — chasing them drove an
+  // which is unreliable on the crude clay eyes. Chasing them drove an
   // unnatural high mouth. The vertical lip/nose-base position is constrained
   // instead by the reliable PROFILE midline term of the joint objective.
   return {

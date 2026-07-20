@@ -40,12 +40,12 @@ const skeleton: IAutoMovieSkeleton = {
  *
  * Scenarios (a joint whose flexion/abduction ROM both exclude 0):
  *
- * 1. A twist-only push leaves flexion and abduction un-pushed (value 0) — they
+ * 1. A twist-only push leaves flexion and abduction un-pushed (value 0): they
  *    stay neutral, not dragged to ROM min 10 / 5.
  * 2. A non-zero push on the same 0-excluding ROM is still bound to the range
  *    (over-range flexion → max; a below-min abduction push → min).
  * 3. `falloff` of 0 zeroes a downstream link's push, so that link stays neutral
- *    too — not pinned to its ROM min.
+ *    too, not pinned to its ROM min.
  */
 export const test_physics_impact_recoil_neutral_axis = (): void => {
   // 1. twist push only; flexion & abduction get no push (value 0)

@@ -22,7 +22,7 @@ const launch = (
 });
 
 /**
- * `compileLaunch` — compose the `launch` verb's primitives into a projectile
+ * `compileLaunch`: compose the `launch` verb's primitives into a projectile
  * flight plus the target's scheduled reaction. The contract: the baked flight
  * lands on the target, the reaction is scheduled at the computed contact (not a
  * hand-timed one), and its `from` recoils the body along the shot's travel.
@@ -36,18 +36,18 @@ const launch = (
  *    `action.start + hitTime` (the computed contact, offset by the launch's own
  *    start), and carries the force/unbalance through.
  * 3. The react's `from` sits upstream of the incoming velocity, so `target − from`
- *    points down the arrow's travel — the body is knocked the way the arrow
+ *    points down the arrow's travel: the body is knocked the way the arrow
  *    flew, not toward the shooter.
  * 4. Without `onHit`, no reaction is scheduled (`react` is null).
  * 5. The lobbed `high` arc reaches the same target with a longer flight than the
  *    flat `direct` arc.
  * 6. A target out of range at the given speed → null (nothing to fly).
  * 7. A vertical lob to exactly its apex (under a custom gravity) arrives with zero
- *    speed — the degenerate case where the incoming direction falls back to the
+ *    speed: the degenerate case where the incoming direction falls back to the
  *    sightline, so the reaction still has a well-formed `from`.
  * 8. With `targetAt`, the aim **leads a moving target**: against a foe sliding
- *    downrange, the baked flight lands where the target will be — past its
- *    start point — and the react is still timed to the computed contact.
+ *    downrange, the baked flight lands where the target will be (past its
+ *    start point), and the react is still timed to the computed contact.
  */
 export const test_film_launch = (): void => {
   const origin: IAutoMovieVector3 = { x: 0, y: 1.6, z: 0 };
@@ -132,7 +132,7 @@ export const test_film_launch = (): void => {
       hit.events[2]!.reaction === "foe",
   );
 
-  // 3. `from` sits upstream of the incoming velocity — the body is knocked the
+  // 3. `from` sits upstream of the incoming velocity: the body is knocked the
   // way the arrow flew, not toward the shooter. `hitPoint − from` reconstructs
   // the incoming direction exactly (from = hitPoint − normalize(v(hit))), and
   // it runs downrange (+x, no lateral drift for this in-plane shot).
@@ -208,7 +208,7 @@ export const test_film_launch = (): void => {
   );
 
   // 4b. an onHit aimed at a point (no single actor) still flies, but schedules
-  // no reaction — there is no node to recoil.
+  // no reaction: there is no node to recoil.
   const pointed = compileLaunch({
     action: launch({ onHit: { force: 0.9 } }),
     origin,
@@ -294,7 +294,7 @@ export const test_film_launch = (): void => {
   );
 
   // 8. leading a MOVING target: with `targetAt` sampling a foe sliding downrange
-  // (+x at 4 m/s from x = 10), the aim leads it — the baked flight lands where
+  // (+x at 4 m/s from x = 10), the aim leads it: the baked flight lands where
   // the target WILL be (targetAt(hitTime)), past its start point, and the react
   // is still timed to the computed contact.
   const startAt: IAutoMovieVector3 = { x: 10, y: 1.4, z: 0 };

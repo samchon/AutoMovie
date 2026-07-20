@@ -107,10 +107,10 @@ const parseTarget = (relative) => {
 
 // The MakeHuman MACRO BASE: a young + female + asian near-full-mesh delta,
 // applied at weight 1.0 to the raw base vertices BEFORE head selection. This is
-// the "step zero" we were missing — MakeHuman's smooth, full-cheeked, youthful
+// the "step zero" we were missing: MakeHuman's smooth, full-cheeked, youthful
 // head shape comes from this macro layer, not the sparse feature sliders (those
 // are small refinements on top). Applied in RAW base.obj units; the per-vertex
-// centering/scaling happens downstream. NEVER load a *-old target — that is the
+// centering/scaling happens downstream. NEVER load a *-old target: that is the
 // literal source of the nasolabial/perioral/mentolabial AGING creases.
 const applyMacroBase = (vertices) => {
   const macros = [
@@ -753,7 +753,7 @@ const parameters = [
     "pointed chin transition",
     ["chinCurvature"],
   ),
-  // Procedural profile-depth controls (no MakeHuman target — applied as smooth
+  // Procedural profile-depth controls (no MakeHuman target, applied as smooth
   // z-only deformations in head.html's applyProfileSculpt). These give the fine
   // profile DOF the coarse MakeHuman depth morphs lack, WITHOUT touching x/y so
   // the converged front view is preserved.
@@ -1407,7 +1407,7 @@ const build = () => {
   // the head cut (helper-hair, helper-*-teeth, helper-*-eye, helper-eyelashes,
   // helper-tongue, helper-tights, and the joint-* cubes) is proxy/helper
   // geometry that would weld into the clay mesh as ribbons, bars, and floating
-  // boxes — it must never enter the rendered head.
+  // boxes. It must never enter the rendered head.
   // Trim the wide, low trapezius/shoulder flaps (the ragged shelves below the
   // neck) so the bust ends in a clean neck + narrow shoulder line instead of
   // jagged wings. Keep head + neck + inner shoulder; drop low & wide verts.

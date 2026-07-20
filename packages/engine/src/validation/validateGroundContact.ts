@@ -29,7 +29,7 @@ const DEFAULT_FOOT_BONES = ["leftFoot", "rightFoot"] as const;
  * dipping below the ground warns too, so a hand or hip through the floor is not
  * invisible the way a feet-only check leaves it.
  *
- * Ground is a scalar plane or a `(x, z) → y` height source — plug a space in
+ * Ground is a scalar plane or a `(x, z) → y` height source. Plug a space in
  * via {@link spaceGround} (#605) to validate contact over ramps and platforms; a
  * plain scalar keeps the exact pre-space behavior.
  *
@@ -38,7 +38,7 @@ const DEFAULT_FOOT_BONES = ["leftFoot", "rightFoot"] as const;
  * The stable path shape is `$input.samples[i].<bone>.worldPosition.y`, where
  * `i` is the validator sample index, not a source keyframe index.
  *
- * Ground penetration is a physical-plausibility **warning**, not a gate (D015):
+ * Ground penetration is a physical-plausibility **warning**, not a gate:
  * the run still succeeds and the warning surfaces so the orchestrator can plant
  * the foot, restage, or acknowledge a deliberate pass-through (a phasing ghost)
  * with `physicsIntent`.
@@ -86,7 +86,7 @@ export const validateGroundContact = (props: {
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
 
   /**
-   * Marker that opts the clip out of the ground-contact expectation (D015): a
+   * Marker that opts the clip out of the ground-contact expectation: a
    * deliberate pass-through (a phasing ghost, a stylized float) sets this and
    * the matching warnings are suppressed.
    */
@@ -121,7 +121,7 @@ export const validateGroundContact = (props: {
   // (validateFootSkate/SelfIntersection/BalanceSupport): a non-finite or
   // non-positive rate makes `sampleTimes` yield an empty/NaN clock (which then
   // throws in the sampler), and a non-finite tolerance makes `minY = ground −
-  // NaN = NaN` so `y < NaN` is always false — either one would silently drop
+  // NaN = NaN` so `y < NaN` is always false. Either one would silently drop
   // every penetration (a #1051/#1082 silent-skip). Surface both as errors and
   // do not sample against a broken clock.
   const badRate = !Number.isFinite(sampleRate) || sampleRate <= 0;
@@ -171,7 +171,7 @@ export const validateGroundContact = (props: {
     capsules.forEach((capsule, capsuleIndex) => {
       if (!capsuleValid[capsuleIndex]) return;
       // Penetration is linear along a straight capsule over a flat plane or a
-      // linear ramp, so its deepest point is at an endpoint — sampling both
+      // linear ramp, so its deepest point is at an endpoint: sampling both
       // ends against the (possibly sloped) ground finds the worst dip exactly
       // for a single surface and closely for a heightfield.
       const worst = [capsule.from, capsule.to].reduce(

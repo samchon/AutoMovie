@@ -1,5 +1,5 @@
 /**
- * A trim into a shot (seconds) — the OpenTimelineIO `source_range` analogue: a
+ * A trim into a shot (seconds), the OpenTimelineIO `source_range` analogue: a
  * start offset and a duration carved out of the shot's local timeline.
  *
  * @author Samchon

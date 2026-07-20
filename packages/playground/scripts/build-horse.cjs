@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Runner for build-horse.ts — see build-stickman.cjs. Emits .shots/knight/horse.glb.
+// Runner for build-horse.ts. See build-stickman.cjs. Emits .shots/knight/horse.glb.
 const esbuild = require("esbuild");
 const fs = require("fs");
 const path = require("path");

@@ -1,5 +1,5 @@
 /**
- * Query tool: pull the open review notes the loop must address — the correction
+ * Query tool: pull the open review notes the loop must address: the correction
  * backlog from the last REVIEW. On a revise pass this is how blocking/
  * performance reads _what the reviewer asked to fix_ (closing the review→revise
  * loop) rather than rebuilding blind.

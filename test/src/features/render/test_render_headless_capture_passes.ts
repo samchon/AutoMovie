@@ -84,7 +84,7 @@ const codeOf = async (task: () => Promise<unknown>): Promise<string | null> => {
 /**
  * Multi-pass guide capture (#1165): the adapter seeks each frame once, then
  * renders every requested pass through the viewer's `__afPass` hook and writes
- * it to its pass-tagged file — so the depth/mask/outline/pose files the render
+ * it to its pass-tagged file, so the depth/mask/outline/pose files the render
  * plans promise are actually produced.
  *
  * Scenarios:
@@ -93,7 +93,7 @@ const codeOf = async (task: () => Promise<unknown>): Promise<string | null> => {
  *    writes the plain beauty name plus the two pass-tagged names, and returns
  *    the beauty path (the frame renderVideo encodes).
  * 2. A guides-only capture (`["depth"]`) returns its first pass path instead.
- * 3. Legacy: omitting `passes` never waits for nor calls the pass hook — a viewer
+ * 3. Legacy: omitting `passes` never waits for nor calls the pass hook. A viewer
  *    predating `__afPass` still captures byte-identically; an explicit
  *    `["beauty"]` behaves the same.
  * 4. Guide passes without a page `__afPass` fail with the `pass-hook` code; a hook

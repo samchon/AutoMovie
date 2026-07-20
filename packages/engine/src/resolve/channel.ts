@@ -34,7 +34,7 @@ export const channelKey = (channel: IAutoMovieChannel): string => {
 
 /**
  * Whether a channel carries a rotation (a quaternion), which the sample pass
- * must interpolate with slerp rather than component-wise lerp — the glTF rule
+ * must interpolate with slerp rather than component-wise lerp, the glTF rule
  * for LINEAR rotation tracks.
  */
 export const channelIsRotation = (channel: IAutoMovieChannel): boolean => {

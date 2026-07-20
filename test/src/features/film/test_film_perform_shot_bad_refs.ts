@@ -24,7 +24,7 @@ import { hasViolation } from "../internal/predicates";
  *    `$input.draft[0].actor`.
  * 4. That action starts at t = 5 s, outside the shot's [0, 0] span → `range` on
  *    `$input.draft[0].start`.
- * 5. A staged action with explicit duration 0 — `range` on
+ * 5. A staged action with explicit duration 0: `range` on
  *    `$input.draft[0].duration`.
  * 6. A staged action whose explicit span ends after the shot yields `range` on
  *    `$input.draft[0].duration`.

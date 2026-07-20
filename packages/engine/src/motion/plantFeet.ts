@@ -29,7 +29,7 @@ const DEFAULT_TOLERANCE = 0.02;
 export interface IAutoMovieFootLeg {
   /** Foot end-effector bone (the ground-contact point that is pinned). */
   foot: AutoMovieHumanoidBone;
-  /** Upper leg segment (thigh) — the chain root. */
+  /** Upper leg segment (thigh): the chain root. */
   upper: AutoMovieHumanoidBone;
   /** Lower leg segment (shin). */
   lower: AutoMovieHumanoidBone;
@@ -66,7 +66,7 @@ export interface IAutoMovieFootPlant {
 }
 
 /**
- * A foot-corrected motion plus the stance runs that were pinned — the plant
+ * A foot-corrected motion plus the stance runs that were pinned, the plant
  * data a later continuous-state pass (#597) can hand off between beats.
  *
  * @author Samchon
@@ -83,8 +83,8 @@ export interface IAutoMoviePlantedFeet {
  * gait no longer skates or sinks. It samples the motion on a fixed clock,
  * detects each foot's **stance runs** (frames where the foot is at or below the
  * ground plane, mirroring {@link validateGroundContact}'s `y <= groundY +
- * tolerance`), pins the foot's world XZ to its stance-start contact — with `y`
- * snapped to the ground plane — across the whole run, and re-solves the leg
+ * tolerance`), pins the foot's world XZ to its stance-start contact, with `y`
+ * snapped to the ground plane, across the whole run, and re-solves the leg
  * (thigh/shin via {@link solveTwoBoneIK}, ankle toward the pinned target) so the
  * foot holds still while the hip travels over it. The correction is lowered
  * into the leg's bone-local clinical angles the way {@link reachPose} lowers an
@@ -98,7 +98,7 @@ export interface IAutoMoviePlantedFeet {
  * {@link validateFootSkate} and {@link validateGroundContact} where the raw gait
  * failed. Swing frames and non-leg joints are carried through unchanged.
  *
- * Ground is a scalar plane or a `(x, z) → y` source — plug a space in via
+ * Ground is a scalar plane or a `(x, z) → y` source. Plug a space in via
  * {@link spaceGround} (#605). Path/turning locomotion is #599; the shared
  * two-bone lowering could be factored out of {@link reachPose} (follow-up).
  *

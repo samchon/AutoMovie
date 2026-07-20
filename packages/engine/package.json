@@ -1,7 +1,7 @@
 {
   "name": "@automovie/engine",
   "version": "0.1.0",
-  "description": "automovie deterministic engine — kinematics, ROM validation, motion sampling, tessellation",
+  "description": "automovie deterministic engine, kinematics, ROM validation, motion sampling, tessellation",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",

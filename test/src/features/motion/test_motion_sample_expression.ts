@@ -15,7 +15,7 @@ const rest = makePose([joint("leftLowerArm", { flexion: 0 })]);
 /**
  * Expression sampling interpolates the _face_ alongside the body. When adjacent
  * keyframes share a preset it blends intensity smoothly; when the presets
- * differ — there is no meaningful blend between, say, happy and angry — it
+ * differ (there is no meaningful blend between, say, happy and angry), it
  * switches at the segment midpoint.
  *
  * Scenarios:

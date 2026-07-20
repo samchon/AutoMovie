@@ -1,5 +1,5 @@
 /* eslint-disable */
-// Runner for capture-smoke.ts — the real (non-faked) headless-capture smoke
+// Runner for capture-smoke.ts, the real (non-faked) headless-capture smoke
 // (#1170). Bundles the workspace TypeScript, leaving browser/codec deps as
 // package imports resolved from @automovie/playground.
 const esbuild = require("esbuild");

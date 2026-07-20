@@ -7,7 +7,7 @@ import {
 } from "./primitives";
 
 /**
- * Structural floor for an {@link IAutoMovieSpace} arriving over MCP (#1173) —
+ * Structural floor for an {@link IAutoMovieSpace} arriving over MCP (#1173) ,
  * the JSON shape the engine's `validateSpace` dereferences without checking,
  * because inside the engine the value is already typed.
  *
@@ -17,7 +17,7 @@ import {
  * malformed one would otherwise reach `surface.polygon.forEach` or
  * `surface.rampTo.x` as a throw instead of a field-located violation.
  *
- * Types only — emptiness, uniqueness, convexity, ramp axes, and walkable
+ * Types only, emptiness, uniqueness, convexity, ramp axes, and walkable
  * resolution stay with the engine's `validateSpace`, so every space rule has
  * exactly one owner and staging cannot disagree with a committed scene. Returns
  * whether the shape is safe to hand to that validator.
@@ -94,7 +94,7 @@ const validateSurfaceShape = (
     violations,
   );
   // `rampTo` is `IAutoMovieVector3 | null`, and the height query branches on
-  // `!== null` before reading `.x` — an omitted field would read as a ramp and
+  // `!== null` before reading `.x`, an omitted field would read as a ramp and
   // throw, so absence is a violation rather than a silent flat patch.
   if (surface.rampTo !== null)
     validateObjectArtifact(

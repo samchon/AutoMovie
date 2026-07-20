@@ -84,8 +84,8 @@ const driven = (
  *    source's rest values, written as fresh sampled channels.
  * 2. A translation-only copy at influence 0.5 between two _animated_ nodes reads
  *    both sides from the sampled map and overwrites the owner's existing sample
- *    — proving the rest-vs-sample and new-vs-existing branches both ways, and
- *    that the disabled rotation/scale components are left untouched.
+ *    (proving the rest-vs-sample and new-vs-existing branches both ways, and
+ *    that the disabled rotation/scale components are left untouched).
  * 3. Malformed copy flags reject before truthy/falsy coercion can change which
  *    transform components are copied.
  * 4. Malformed sampled TRS overrides reject before blend or slerp math can consume
@@ -325,7 +325,7 @@ export const test_resolve_drivers_copy = (): void => {
  *    extrapolation into clamping.
  * 8. A non-scalar OUTPUT channel rejects (#1055): the width-1 result written onto
  *    a node TRS channel would compose `[y, undefined, ...]` into world matrices
- *    in silence, and a non-scalar pointer is the same poison — mirroring the
+ *    in silence, and a non-scalar pointer is the same poison, mirroring the
  *    width gate the source side already had. A scalar pointer output keeps
  *    working (every other scenario here).
  */
@@ -388,7 +388,7 @@ export const test_resolve_drivers_driven = (): void => {
     [3],
   );
 
-  // #724: a curve supersedes the linear range — a nonlinear driver needs no
+  // #724: a curve supersedes the linear range: a nonlinear driver needs no
   // inRange/outRange/clamp at all (they were dead required fields).
   const curveOnly: IAutoMovieDrivenDriver = {
     type: "driven",
@@ -422,7 +422,7 @@ export const test_resolve_drivers_driven = (): void => {
     [200],
   );
 
-  // But a linear driver (no curve) still requires both ranges — omitting either
+  // But a linear driver (no curve) still requires both ranges: omitting either
   // throws rather than inventing a default, so a dropped range is a loud error.
   TestValidator.predicate(
     "linear driven driver without inRange rejects",
@@ -779,7 +779,7 @@ export const test_resolve_drivers_order = (): void => {
  * A dependency cycle among value drivers throws rather than looping.
  *
  * Scenario: `o`'s rotation copies from `s` while `s`'s rotation copies from `o`
- * — a back edge onto a driver still on the stack — so resolution rejects the
+ * (a back edge onto a driver still on the stack), so resolution rejects the
  * ill-formed rig.
  */
 export const test_resolve_drivers_cycle = (): void => {

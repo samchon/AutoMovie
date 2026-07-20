@@ -1,5 +1,5 @@
 /**
- * A 3D vector in automovie space (y-up, right-handed — see the package README
+ * A 3D vector in automovie space (y-up, right-handed; see the package README
  * coordinate convention).
  *
  * Used both for positions / translations (in meters) and for unitless
@@ -9,12 +9,12 @@
  * @author Samchon
  */
 export interface IAutoMovieVector3 {
-  /** X — toward the character's left (+) / right (−). */
+  /** X: toward the character's left (+) / right (−). */
   x: number;
 
-  /** Y — up (+) / down (−). */
+  /** Y: up (+) / down (−). */
   y: number;
 
-  /** Z — toward the character's front (+) / back (−). */
+  /** Z: toward the character's front (+) / back (−). */
   z: number;
 }

@@ -25,16 +25,16 @@ export const swingConeAngle = (flexion: number, abduction: number): number =>
 /**
  * The largest blend `t` in `[0, 1]` along the segment from `(anchorFlexion,
  * anchorAbduction)` to `(flexion, abduction)` whose combined
- * {@link swingConeAngle} still fits within `swingDeg` — `1` when the pose
+ * {@link swingConeAngle} still fits within `swingDeg`: `1` when the pose
  * already fits, `0` when only the anchor does.
  *
- * Pulling toward `(0, 0)` — the anchor a box that brackets neutral yields — is
+ * Pulling toward `(0, 0)` (the anchor a box that brackets neutral yields) is
  * right only when the joint can actually reach neutral. For a per-bone override
  * whose flexion/abduction box EXCLUDES neutral (a limb that cannot fully
  * extend), shrinking toward the origin drops the axis below its own `min`, and
  * the clamped pose then fails {@link validateJointRom}'s box check (#1245).
- * Pulling toward a point the box contains keeps the result inside the box — the
- * segment between two box points stays in the box, which is convex — while the
+ * Pulling toward a point the box contains keeps the result inside the box (the
+ * segment between two box points stays in the box, which is convex) while the
  * bisection puts it inside the cone.
  *
  * The combined swing is monotonic along that segment but not linear, so there

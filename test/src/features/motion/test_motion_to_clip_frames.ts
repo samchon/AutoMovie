@@ -27,7 +27,7 @@ import { vclose } from "../internal/predicates";
  *
  * 1. A both-shoulders abduction motion baked with `HUMANOID_JOINT_AXES` +
  *    `HUMANOID_REST_FRAME` holds parity at every baked time.
- * 2. Negative twin: the remap is not a no-op — the left hand's world position
+ * 2. Negative twin: the remap is not a no-op; the left hand's world position
  *    baked with the rest frames differs from the bake without them.
  */
 export const test_motion_to_clip_frames = (): void => {

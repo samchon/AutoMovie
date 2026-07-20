@@ -7,7 +7,7 @@ import { flattenFace } from "./flattenFace";
 export type { IAutoMovieFaceTemplate };
 
 /**
- * Apply an {@link IAutoMovieFace}'s parameter weights to a face template — the
+ * Apply an {@link IAutoMovieFace}'s parameter weights to a face template, the
  * deterministic core of the face editor.
  *
  * Plain linear blendshape math, `positions + Σ weight·delta`, evaluated by the

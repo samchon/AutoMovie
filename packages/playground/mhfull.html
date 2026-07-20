@@ -2,7 +2,7 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MakeHuman hero — litsphere render (identical to MakeHuman)</title>
+    <title>MakeHuman hero: litsphere render (identical to MakeHuman)</title>
     <style>html,body{margin:0;height:100%;background:#d9dde2}#view{width:100vw;height:100vh;display:block}
       #tag{position:fixed;left:12px;top:10px;font:13px monospace;color:#333}</style>
     <script type="module">
@@ -84,7 +84,7 @@
       window.setView = (name)=>{ const [yaw,pitch,zoom=1]=VIEWS[name]||VIEWS.front; const d=headSize*2.5*zoom;
         const ry=yaw*Math.PI/180, rp=pitch*Math.PI/180;
         camera.position.set(headCenter.x+d*Math.cos(rp)*Math.sin(ry), headCenter.y+d*Math.sin(rp), headCenter.z+d*Math.cos(rp)*Math.cos(ry));
-        camera.lookAt(headCenter); controls.target.copy(headCenter); controls.update(); tag.textContent = `MakeHuman ${model} — ${name}`; };
+        camera.lookAt(headCenter); controls.target.copy(headCenter); controls.update(); tag.textContent = `MakeHuman ${model}: ${name}`; };
       (function tick(){ controls.update(); renderer.render(scene,camera); requestAnimationFrame(tick); })();
       addEventListener("resize", ()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
       load();

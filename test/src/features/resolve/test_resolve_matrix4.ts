@@ -14,12 +14,12 @@ const close = (a: number[], b: number[], eps = 1e-6): boolean =>
  *
  * 1. `identity()` is the 16-element identity, ones on the diagonal.
  * 2. Composing translation (1,2,3) + identity rotation + scale (2,2,2) places the
- *    scale on the diagonal and the translation in the last column — the
+ *    scale on the diagonal and the translation in the last column: the
  *    glTF/`three.js` column-major layout.
  * 3. Composing a 90° rotation about +Y (with unit scale) turns the basis so the
  *    matrix maps +X to −Z (right-handed, Y-up): the third row of column 0 is
  *    −1.
- * 4. `multiply(identity, M) === M` — identity is the product's unit.
+ * 4. `multiply(identity, M) === M`: identity is the product's unit.
  * 5. A non-trivial product `T · S` (translate ∘ scale) scales the basis and keeps
  *    the translation, confirming row/column indexing is consistent.
  */
@@ -59,7 +59,7 @@ export const test_resolve_matrix4 = (): void => {
     close(Matrix4.multiply(Matrix4.identity(), ts), ts),
   );
 
-  // 5. T · S product — translate after scale
+  // 5. T · S product: translate after scale
   const t = Matrix4.compose(
     { x: 5, y: 0, z: 0 },
     { x: 0, y: 0, z: 0, w: 1 },

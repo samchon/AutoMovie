@@ -33,7 +33,7 @@ const withSurface = (surface: Partial<IAutoMovieSurface>): IAutoMovieSpace => ({
 
 /**
  * A malformed space is broken input, not an artistic choice, so `validateSpace`
- * rejects it with error-severity violations the correction round can act on —
+ * rejects it with error-severity violations the correction round can act on,
  * before any height query computes over garbage.
  *
  * Scenarios:
@@ -45,7 +45,7 @@ const withSurface = (surface: Partial<IAutoMovieSurface>): IAutoMovieSpace => ({
  * 5. A footprint of fewer than three points encloses no area.
  * 6. Collinear footprint points enclose no area (the hull collapses). 6b. A
  *    concave footprint (an L-shape, whose inner corner sits inside its convex
- *    hull) is rejected — the ground query would fill the notch. 6c. A convex
+ *    hull) is rejected: the ground query would fill the notch. 6c. A convex
  *    footprint with a collinear point ON an edge is allowed (the vertex stays
  *    on the hull boundary; only strictly-interior vertices fail).
  * 7. A non-finite footprint plan coordinate is a `range` violation (`y` is
@@ -54,7 +54,7 @@ const withSurface = (surface: Partial<IAutoMovieSurface>): IAutoMovieSpace => ({
  * 9. A ramp whose `rampTo` sits at the anchor's XZ has a degenerate axis.
  * 10. A non-finite `rampTo` is caught by the anchor check (and safely skips the
  *     degeneracy math).
- * 11. A walkable id that resolves to no surface — or is duplicated — is a `type`
+ * 11. A walkable id that resolves to no surface (or is duplicated) is a `type`
  *     violation.
  */
 export const test_validation_space = (): void => {
@@ -122,7 +122,7 @@ export const test_validation_space = (): void => {
       validateSpace({
         space: withSurface({
           // An L-shape: the (2,2) inner corner sits inside the convex hull, so
-          // surfaceContains would fill the notch — the query must reject it.
+          // surfaceContains would fill the notch: the query must reject it.
           polygon: [v(0, 0), v(4, 0), v(4, 2), v(2, 2), v(2, 4), v(0, 4)],
         }),
       }),
@@ -134,7 +134,7 @@ export const test_validation_space = (): void => {
     "convex footprint with a collinear edge point passes",
     validateSpace({
       space: withSurface({
-        // A square with an extra midpoint on the bottom edge — still convex,
+        // A square with an extra midpoint on the bottom edge: still convex,
         // the midpoint stays on the hull boundary, so it must be accepted.
         polygon: [v(0, 0), v(2, 0), v(4, 0), v(4, 4), v(0, 4)],
       }),

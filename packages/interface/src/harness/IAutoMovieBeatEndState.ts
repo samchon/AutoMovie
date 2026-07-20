@@ -5,7 +5,7 @@ import { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
 import { IAutoMovieMountBinding } from "./IAutoMovieMountBinding";
 
 /**
- * One stance plant carried across a beat boundary — where a foot stood on the
+ * One stance plant carried across a beat boundary: where a foot stood on the
  * ground when the beat ended, as the ground-IK pass pinned it.
  *
  * Mirrors the engine's ground-IK plant output at the interface level so the
@@ -65,7 +65,7 @@ export interface IAutoMovieBeatEndActorState {
    * Seconds into the looping clip's cycle at beat end (`localTime` wrapped by
    * the clip duration), or `null` for a non-looping clip or a held actor. The
    * next beat resumes the gait mid-stride at this phase instead of resetting to
-   * the cycle start — the difference between a continuous walk and a stutter at
+   * the cycle start: the difference between a continuous walk and a stutter at
    * every cut.
    */
   gaitPhase: number | null;
@@ -87,8 +87,8 @@ export interface IAutoMovieBeatEndActorState {
 
   /**
    * The persistent coupling this actor rides (a rider on a horse's saddle
-   * bone), or `null` when unmounted. Carried rider-side — one rider rides
-   * exactly one parent while a parent may carry many riders — so the next beat
+   * bone), or `null` when unmounted. Carried rider-side (one rider rides
+   * exactly one parent while a parent may carry many riders), so the next beat
    * re-couples without staging having to re-declare it.
    */
   mount: IAutoMovieMountBinding | null;

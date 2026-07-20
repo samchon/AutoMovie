@@ -6,7 +6,7 @@ import { hasViolation } from "../internal/predicates";
 
 /**
  * Pins the inverse referential gate: staging may only place nodes the script
- * cast — a placement naming a stranger is a contradiction with the plan, not a
+ * cast: a placement naming a stranger is a contradiction with the plan, not a
  * new character.
  *
  * Scenarios:

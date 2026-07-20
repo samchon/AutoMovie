@@ -15,7 +15,7 @@ const v = (x: number, y: number, z: number): IAutoMovieVector3 => ({ x, y, z });
  * closest point happened to be an endpoint. The headline gain is the
  * interior-to-interior crossing: two segments passing through each other as an
  * X measured a full segment-width apart under the approximation while the real
- * distance is zero — the commonest self-intersection (a limb sweeping through a
+ * distance is zero: the commonest self-intersection (a limb sweeping through a
  * torso), silently missed by a check that forces it as an error.
  *
  * Every hand-computed case below also pins one branch of the solver so the
@@ -25,7 +25,7 @@ const v = (x: number, y: number, z: number): IAutoMovieVector3 => ({ x, y, z });
  * 2. First segment a point, projected onto the second (`A ≤ ε`).
  * 3. Second segment a point, projected onto the first (`E ≤ ε`).
  * 4. Interior X-crossing (non-parallel, `t` in range) → distance 0, both closest
- *    points at the origin — the case the approximation missed.
+ *    points at the origin, the case the approximation missed.
  * 5. Parallel offset (`denom = 0`) → `s` pinned to 0, exact gap.
  * 6. Colinear separated → `t < 0` clamped, `s` re-solved to 1 (clamp01 upper).
  * 7. Skew far end → `t > 1` clamped to the near end.
@@ -75,7 +75,7 @@ export const test_math_segment_segment_exact = (): void => {
 
   // 4. interior X-crossing: x-axis [(-1,0,0)-(1,0,0)] and z-axis
   // [(0,0,-1)-(0,0,1)] pierce at the origin. s = t = 0.5, both points (0,0,0),
-  // distance 0 — the approximation returned 1 (every endpoint a unit away).
+  // distance 0: the approximation returned 1 (every endpoint a unit away).
   {
     const r = closestPointsBetweenSegments(
       v(-1, 0, 0),

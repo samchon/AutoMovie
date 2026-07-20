@@ -5,8 +5,8 @@ import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
- * Pins mount-coupling integrity: a rider must ride a _different, placed_ actor
- * — self-mounts and dangling parents are both contradictions staging must hear
+ * Pins mount-coupling integrity: a rider must ride a _different, placed_ actor.
+ * Self-mounts and dangling parents are both contradictions staging must hear
  * about before any shot is performed.
  *
  * Scenarios:

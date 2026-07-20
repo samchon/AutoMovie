@@ -42,7 +42,7 @@ const run = (
  * 2. Blocking for another beat → `type` on `$input.beat`.
  * 3. Blocking fixed at 3 s against a 2-second performance → `range` on
  *    `$input.duration`.
- * 4. An anchor at t = 0.2 for knightA — before any of knightA's actions (locomote
+ * 4. An anchor at t = 0.2 for knightA: before any of knightA's actions (locomote
  *    starts at 0 but... it does cover 0.2; use knightB at t = 1.9 with no
  *    knightB action past the unison locomote's [0, 1] span) → `range` naming
  *    the dropped cue.

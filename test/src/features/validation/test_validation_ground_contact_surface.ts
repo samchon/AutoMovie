@@ -47,19 +47,19 @@ const rising = (x: number): number => 0.5 * x;
 /**
  * `validateGroundContact` now judges each foot against the ground height _at
  * that foot's plan position_, so a clip that clears a flat plane can still sink
- * into a rising slope — and a scalar ground stays byte-compatible with the
+ * into a rising slope, and a scalar ground stays byte-compatible with the
  * pre-space behavior.
  *
  * Scenarios:
  *
  * 1. A foot gliding at y=0.1 over ground h(x)=0.5x sinks once 0.5x exceeds 0.1: a
- *    `physics` WARNING (D015 — advice, not a gate) on the foot's world y, with
+ *    `physics` WARNING (D015: advice, not a gate) on the foot's world y, with
  *    the local ground height in play (overshoot 0.4 at the end); the run
  *    succeeds.
- * 2. The same clip lifted to y=0.6 clears the slope everywhere — no warning (the
+ * 2. The same clip lifted to y=0.6 clears the slope everywhere: no warning (the
  *    negative twin).
  * 3. A constant callback `() => 0` matches the scalar `groundY: 0` verdict on the
- *    same clip — the widened parameter did not change the scalar path.
+ *    same clip: the widened parameter did not change the scalar path.
  */
 export const test_validation_ground_contact_surface = (): void => {
   const sunk = validateGroundContact({

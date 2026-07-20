@@ -23,7 +23,7 @@ const flexionSeq = (
   );
 
 /**
- * `gaitMotion` — synthesise a declarative {@link IAutoMovieGait} into a looping
+ * `gaitMotion`: synthesise a declarative {@link IAutoMovieGait} into a looping
  * clip. The difference between a creature's gaits lives entirely in the
  * per-limb phase / duty / amplitude data, not the code.
  *
@@ -33,7 +33,7 @@ const flexionSeq = (
  *    repeating t=0), duration = period, loop = true.
  * 2. A phase-0 limb sweeps the stance→swing sawtooth +30 → 0 → −30 → 0 → +30
  *    (planted push, then recovery), the closing frame matching the first.
- * 3. A phase-0.5 limb runs exactly half a cycle out of step — the per-limb phase
+ * 3. A phase-0.5 limb runs exactly half a cycle out of step: the per-limb phase
  *    offset that makes one gait a walk and another a trot.
  * 4. `neutral` centers the swing: a knee swung symmetrically about zero crosses
  *    into hyperextension and the ROM validator rejects it, while the same swing
@@ -80,7 +80,7 @@ export const test_motion_gait = (): void => {
     right.every((v, i) => nclose(v, -left[i]!)),
   );
 
-  // 4. neutral centers the swing — the knee's negative twin
+  // 4. neutral centers the swing: the knee's negative twin
   const sk = createSkeleton();
   const kneeGait = (neutral: number | undefined): IAutoMovieGait => ({
     name: "step",

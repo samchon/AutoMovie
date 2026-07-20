@@ -10,8 +10,8 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { createVrmModelObject } from "./vrmAdapter";
 
-// A short authored performance — a beautiful character actually moving and
-// emoting — rendered deterministically (renderAt(t)) so the same clip captures
+// A short authored performance (a beautiful character actually moving and
+// emoting) rendered deterministically (renderAt(t)) so the same clip captures
 // frame-for-frame to video. This is automovie's whole point: structured motion data
 // → a deterministic engine → a reproducible render, here on a VRoid (CC0) face.
 

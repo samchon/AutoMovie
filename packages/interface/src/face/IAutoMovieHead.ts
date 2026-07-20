@@ -1,7 +1,7 @@
 import { AutoMovieFaceWeight } from "./AutoMovieFaceWeight";
 
 /**
- * Cranium and overall head proportion — the frame the features sit in.
+ * Cranium and overall head proportion: the frame the features sit in.
  *
  * @author Samchon
  */
@@ -35,7 +35,7 @@ export interface IAutoMovieHeadBrow {
 }
 
 /**
- * Eyes — symmetric shared controls (asymmetry is a future global axis). The
+ * Eyes: symmetric shared controls (asymmetry is a future global axis). The
  * `epicanthus`/`fold` cues are the East-Asian-defining controls.
  *
  * @author Samchon
@@ -124,7 +124,7 @@ export interface IAutoMovieHeadJaw {
 
 /**
  * A full-head shape specification for the parametric head built on the clean
- * MakeHuman-derived base — the document the head editor's tool calling emits
+ * MakeHuman-derived base: the document the head editor's tool calling emits
  * and the engine projects (via `flattenHead`) onto
  * {@link AutoMovieHeadParameterName} morph weights the forge `morphHead`
  * applies.

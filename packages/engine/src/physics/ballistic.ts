@@ -22,14 +22,14 @@ export interface IAutoMovieBallisticSolution {
 
 /**
  * Solve the **launch velocity** that lands a projectile fired from `origin` at
- * fixed `speed` onto `target` under a constant `gravity` — the inverse of the
+ * fixed `speed` onto `target` under a constant `gravity`: the inverse of the
  * forward {@link projectileAt} simulation, and the missing half of the `launch`
  * verb (the model says "loose the arrow at speed s"; the engine finds the aim
  * that connects). Returns `null` when the target is out of range at that
  * speed.
  *
- * Under downward gravity a target has two firing arcs — a flat **direct** shot
- * and a lobbed **high** one — selected by `arc`; the direct arc is the default.
+ * Under downward gravity a target has two firing arcs (a flat **direct** shot
+ * and a lobbed **high** one) selected by `arc`; the direct arc is the default.
  * With zero gravity it degenerates to a straight shot along the sightline. The
  * horizontal solve uses the standard range equation `tanθ = (s² ± √(s⁴ −
  * g(g·d²
@@ -116,7 +116,7 @@ export const solveBallisticLaunch = (
 };
 
 /**
- * Solve the launch that **leads a moving target** — the aim that lands the
+ * Solve the launch that **leads a moving target**: the aim that lands the
  * projectile where the target _will be_, not where it is. `targetAt(t)` gives
  * the target's world position at flight-time `t` (e.g. its animated base plus
  * root travel). This is the reactive event the `launch` verb promises against a
@@ -177,5 +177,5 @@ export const solveMovingLaunch = (
     if (residual < 1e-6) return best; // settled onto the meeting point
     t = solution.hitTime;
   }
-  return best; // capped without settling — the closest lead found
+  return best; // capped without settling: the closest lead found
 };

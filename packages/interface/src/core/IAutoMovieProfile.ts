@@ -5,13 +5,13 @@ import { IAutoMovieDriver } from "./IAutoMovieDriver";
 
 /**
  * A profile (= USD applied schema): a declarative capability layered onto a
- * subtree of the node graph that gives it a domain semantics — a named set of
+ * subtree of the node graph that gives it a domain semantics: a named set of
  * controls, the standard drivers that resolve them, and the constraints that
  * bound them. The humanoid profile is the first instance (a bone-name → control
  * map plus anatomical ROM, eye look-at, finger curl); a door profile is a
  * one-DOF hinge; a costume profile is a cloth/spring rig.
  *
- * Profiles are **data, not code**: a new rig kind (or a community mod — a new
+ * Profiles are **data, not code**: a new rig kind (or a community mod: a new
  * preset, hair pack, ethnicity) ships as a profile descriptor, registered at
  * runtime, never a release. This is the mechanism that keeps automovie additive
  * and mod-friendly, and the reason the model is expressed as interfaces rather
@@ -41,7 +41,7 @@ export interface IAutoMovieProfile {
 
   /**
    * The characteristic gaits this profile's body performs
-   * ({@link IAutoMovieGait}) — a horse profile's walk/trot/canter/gallop, a
+   * ({@link IAutoMovieGait}): a horse profile's walk/trot/canter/gallop, a
    * humanoid's walk/run. The engine binds them onto a concrete skeleton to
    * synthesise locomotion, so the same abstract "move" resolves to each body's
    * own gait. Omitted/empty for a profile that does not locomote (a door, a
@@ -50,7 +50,7 @@ export interface IAutoMovieProfile {
    * This field is core's one upward reference (`core → motion`), kept
    * deliberately: a gait names humanoid bones and easing curves, so moving it
    * into core would drag `core → skeleton` and a second `core → motion` edge
-   * along — replacing one documented type-only reference on an optional field
+   * along, replacing one documented type-only reference on an optional field
    * with two worse ones. The dependency is acyclic and confined to this field.
    */
   gaits?: IAutoMovieGait[];
@@ -87,7 +87,7 @@ export interface IAutoMovieProfileBinding {
 }
 
 /**
- * One named control a profile exposes — the abstract handle an LLM or an editor
+ * One named control a profile exposes: the abstract handle an LLM or an editor
  * UI drives, mapped onto a concrete channel.
  */
 export interface IAutoMovieProfileControl {

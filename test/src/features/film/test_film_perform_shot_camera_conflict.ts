@@ -21,7 +21,7 @@ import { hasViolation } from "../internal/predicates";
  *    `$input.draft[0].actor`.
  * 2. Two `frame` actions on different cameras (`cam-main`, then `cam-b`) → `type`
  *    on the second's actor, naming the camera already live.
- * 3. A `frame` action with an actor list — `type` on its `actor`, because a frame
+ * 3. A `frame` action with an actor list: `type` on its `actor`, because a frame
  *    move has exactly one live camera.
  */
 export const test_film_perform_shot_camera_conflict = (): void => {

@@ -31,7 +31,7 @@ export type IAutoMovieActionTarget =
  * to specialise within a family ("strike" + note "jab"), or `custom` to
  * describe a one-off the engine should approximate.
  *
- * The set spans **both humanoid and creature** actors — the project rigs horses
+ * The set spans **both humanoid and creature** actors: the project rigs horses
  * and cats on the same {@link AutoMovieHumanoidBone} skeleton (spine = barrel,
  * the limbs retargeted), so the engine dispatches each kind to the actor's rig
  * vocabulary: `kick` is a leg snap on a fighter and a hind-leg lash on a horse;
@@ -63,7 +63,7 @@ export type AutoMovieGestureKind =
   | "custom";
 
 /**
- * A single **action verb** an actor performs — the _thin_ unit the model emits
+ * A single **action verb** an actor performs: the _thin_ unit the model emits
  * and the engine **fattens into dense motion**. The model says _what_ ("jab",
  * "walk to the door", "look at her", "get knocked back"); the engine's
  * primitives (locomotion bakers, two-bone IK, aim, ROM clamp, spring,
@@ -74,7 +74,7 @@ export type AutoMovieGestureKind =
  * shot's local timeline (`start`, and a `duration` or `"auto"` to let the
  * engine choose a natural length). The engine composes an actor's actions into
  * its performance clip (`arrangeMotion`, holding the last pose across gaps).
- * The camera is an actor too — its {@link IAutoMovieCameraAction}s are how it
+ * The camera is an actor too; its {@link IAutoMovieCameraAction}s are how it
  * moves.
  *
  * @author Samchon
@@ -96,8 +96,8 @@ export type IAutoMovieActionCall =
 export interface IAutoMovieActionBase {
   /**
    * The scene-node id(s) performing this action (reuse ids from staging). A
-   * list applies the **same** verb to several actors in **unison** — a chorus
-   * line, a crowd, synchronised dancers — instead of repeating the action per
+   * list applies the **same** verb to several actors in **unison** (a chorus
+   * line, a crowd, synchronised dancers) instead of repeating the action per
    * actor (fewer tokens, no drift across parallel runs).
    */
   actor: string | string[];
@@ -112,7 +112,7 @@ export interface IAutoMovieActionBase {
   duration: number | "auto";
 
   /**
-   * Loop the action's motion this many times within its span (default 1) — a
+   * Loop the action's motion this many times within its span (default 1): a
    * step repeated on the count, an idle sway. Cheaper than N near-identical
    * copies.
    */
@@ -122,11 +122,11 @@ export interface IAutoMovieActionBase {
    * The body-region this action drives ({@link AutoMovieBodyRegion}). Actions on
    * **disjoint** regions compose concurrently (walk while waving while
    * looking); actions sharing a region sequence. Omit to let the engine infer
-   * the natural mask from the verb and, for gestures, the kind — a `locomote`
+   * the natural mask from the verb and, for gestures, the kind: a `locomote`
    * is `lowerBody`, a `wave`/`reach` is `upperBody`, a `lookAt` or `nod`/
    * `shake` is `head`, an `emote` is `face`, and the whole-body gestures
    * (`bow`/`crouch`/`kick`/`stagger`/`jump`/`draw`) plus `react` are
-   * `fullBody`. Override only when the natural mask is wrong for the staging —
+   * `fullBody`. Override only when the natural mask is wrong for the staging;
    * note the engine masks the synthesized clip to the region you pick, so a
    * narrower region trims the authored motion to those bones. Camera (`frame`)
    * and `attachTo` actions ignore it.
@@ -137,22 +137,22 @@ export interface IAutoMovieActionBase {
    * Acknowledge a deliberate physical implausibility so the engine's
    * physical-plausibility feedback (`"warning"`-severity, see
    * {@link IAutoMovieConstraintViolation.severity}) does not re-fire on this
-   * action. A free-text intent — `"defies-gravity"`, `"superhuman-impact"`,
-   * `"intentional-clip"` — that marks "this is on purpose". Omit for ordinary
+   * action. A free-text intent (`"defies-gravity"`, `"superhuman-impact"`,
+   * `"intentional-clip"`) that marks "this is on purpose". Omit for ordinary
    * actions; the engine warns as usual and the correction loop can address it.
    */
   physicsIntent?: string;
 }
 
 /**
- * Travel across the floor on a gait — engine: locomotion + `travelMotion`.
+ * Travel across the floor on a gait; engine: locomotion + `travelMotion`.
  *
  * `gait` names one of the gaits the actor's context actually supplies
- * ({@link IAutoMovieGait.name}) — it is matched by name, so the vocabulary is
+ * ({@link IAutoMovieGait.name}); it is matched by name, so the vocabulary is
  * the actor's own, not a fixed set: a biped declares `walk`/`run`/`sprint`/
  * `sneak`/`march`, a horse declares `walk`/`trot`/`canter`/`gallop`, a cat
  * `walk`/`stalk`/`pounce`. Naming a gait the actor did not supply is a
- * validation error (the shot's perform gate reports it), not a silent freeze —
+ * validation error (the shot's perform gate reports it), not a silent freeze,
  * so the schema's free string cannot drift from the runtime's actual set.
  */
 export interface IAutoMovieLocomoteAction extends IAutoMovieActionBase {
@@ -169,7 +169,7 @@ export interface IAutoMovieLocomoteAction extends IAutoMovieActionBase {
 
 /**
  * A whole-body gesture from the engine's motion vocabulary. Pick the closest
- * `kind`; refine with `note`. The engine owns the keyframes — keep this intent,
+ * `kind`; refine with `note`. The engine owns the keyframes; keep this intent,
  * not animation.
  */
 export interface IAutoMovieGestureAction extends IAutoMovieActionBase {
@@ -188,7 +188,7 @@ export interface IAutoMovieGestureAction extends IAutoMovieActionBase {
 }
 
 /**
- * Reach a hand to a target — engine: two-bone IK (`solveTwoBoneIK`). A
+ * Reach a hand to a target; engine: two-bone IK (`solveTwoBoneIK`). A
  * humanoid-rig verb (left/right arm); a quadruped pawing at something uses
  * `gesture` (`paw`) instead.
  */
@@ -200,7 +200,7 @@ export interface IAutoMovieReachAction extends IAutoMovieActionBase {
   to: IAutoMovieActionTarget;
 }
 
-/** Turn the head/eyes to track a target — engine: `aimRotation` look-at. */
+/** Turn the head/eyes to track a target; engine: `aimRotation` look-at. */
 export interface IAutoMovieLookAtAction extends IAutoMovieActionBase {
   verb: "lookAt";
 
@@ -208,7 +208,7 @@ export interface IAutoMovieLookAtAction extends IAutoMovieActionBase {
 }
 
 /**
- * Rigidly couple this actor to another node's bone for the action's span — a
+ * Rigidly couple this actor to another node's bone for the action's span: a
  * sword in a hand, a prop carried. Engine: `resolveAttachment`. (A _persistent_
  * mount, e.g. a rider on a horse, is better declared once in staging than
  * repeated as an action every shot.)
@@ -222,11 +222,11 @@ export interface IAutoMovieAttachAction extends IAutoMovieActionBase {
 }
 
 /**
- * Loose a projectile toward a target — engine: `projectileAt` +
+ * Loose a projectile toward a target; engine: `projectileAt` +
  * `projectileSphereHit` (it leads a moving target). Because the **contact time
  * is computed by the engine**, the model cannot hand-time the target's
  * reaction; instead give `onHit`, and the engine schedules the target's `react`
- * at the **detected** moment of impact (the reactive event — "shoot him off his
+ * at the **detected** moment of impact (the reactive event: "shoot him off his
  * horse" without knowing when the arrow lands).
  */
 export interface IAutoMovieLaunchAction extends IAutoMovieActionBase {
@@ -246,7 +246,7 @@ export interface IAutoMovieLaunchAction extends IAutoMovieActionBase {
 }
 
 /**
- * React to being struck — the engine resolves the impact (`resolveImpact`) and
+ * React to being struck: the engine resolves the impact (`resolveImpact`) and
  * the ROM-bounded flinch/knock-back (`impactRecoil`). Usually emitted by the
  * engine from a {@link IAutoMovieLaunchAction}'s `onHit`; author it directly for
  * a melee blow whose timing you control.
@@ -264,7 +264,7 @@ export interface IAutoMovieReactAction extends IAutoMovieActionBase {
   unbalance?: boolean;
 }
 
-/** Play a facial expression — engine: blendshape/expression channels. */
+/** Play a facial expression; engine: blendshape/expression channels. */
 export interface IAutoMovieEmoteAction extends IAutoMovieActionBase {
   verb: "emote";
 
@@ -282,19 +282,19 @@ export interface IAutoMovieHoldAction extends IAutoMovieActionBase {
 }
 
 /**
- * Play a clip the caller **authored itself** — the escape for the expressive
+ * Play a clip the caller **authored itself**: the escape for the expressive
  * motion no thin verb covers (a sword kata, a stumble-and-recover, a
  * character-specific idiom). Where every other verb is fattened by a
  * synthesizer, `enact` inverts the direction: the caller **computes** the dense
- * {@link IAutoMovieMotion} (motion authoring is, at the limit, a coding activity
- * — parametric curves, phase composition, sampled solvers) and hands it in by
+ * {@link IAutoMovieMotion} (motion authoring is, at the limit, a coding activity:
+ * parametric curves, phase composition, sampled solvers) and hands it in by
  * `clip` id; the host's synthesizer resolves the id against the clips it was
  * given.
  *
  * Enforcement is NOT bypassed: the engine masks the clip to its region (default
  * `fullBody`; narrow via `region`), layers it with disjoint-region actions,
  * sequences same-region overlaps, and ROM-gates the compiled composite exactly
- * like synthesized content — "engine enforces, model creates", with the model
+ * like synthesized content: "engine enforces, model creates", with the model
  * creating at code bandwidth. Prefer a thin verb whenever one fits; reach for
  * `enact` when you can compute the keyframes.
  */
@@ -326,14 +326,14 @@ export interface IAutoMovieCameraAction extends IAutoMovieActionBase {
   /**
    * What the lens holds sharp, when it differs from `on` (a rack focus onto the
    * approaching rider while the frame stays on the gate). Structural guide
-   * INTENT for a diffusion/render host (#1187) — the deterministic camera solve
+   * INTENT for a diffusion/render host (#1187): the deterministic camera solve
    * never reads it, and it is not depth-of-field blur (that is diffusion's
    * job). Omit when the framed subject is the focus.
    */
   focus?: IAutoMovieActionTarget;
 
   /**
-   * Lens intent in millimetres (full-frame equivalent — 24 wide, 50 normal, 85
+   * Lens intent in millimetres (full-frame equivalent: 24 wide, 50 normal, 85
    * portrait). Structural guide INTENT only (#1187): the scene camera's `fovY`
    * stays the geometric truth and this never changes the solve. Omit when the
    * lens is not a directorial choice.

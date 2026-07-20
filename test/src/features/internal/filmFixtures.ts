@@ -11,7 +11,7 @@ import { createModel, joint, keyframe, makeMotion, makePose } from "./fixtures";
 
 /**
  * One forge entry: the shared one-part test model re-idified so its `id` equals
- * the cast node — the join contract `forgeCast` enforces and the staged scene's
+ * the cast node: the join contract `forgeCast` enforces and the staged scene's
  * `modelRef ?? node` fallback resolves against.
  */
 export const forgeEntry = (
@@ -80,7 +80,7 @@ export const makeBlockingWrite = (
 ): IAutoMovieBlockingApplication.IWrite => ({
   type: "write",
   beat: "beat-1",
-  analysis: "the charge must read as decisive — one step, one strike.",
+  analysis: "the charge must read as decisive, one step, one strike.",
   rationale: "medium static keeps both knights readable at striking range.",
   actors: [
     {

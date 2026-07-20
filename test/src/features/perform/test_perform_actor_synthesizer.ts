@@ -89,7 +89,7 @@ const lookAt = (
 const door: IAutoMovieActionTarget = { kind: "node", node: "door" };
 
 /**
- * `makeActorSynthesizer` — the reference content seam that lets the action
+ * `makeActorSynthesizer`: the reference content seam that lets the action
  * compiler fatten verbs from declarative gait/profile data.
  *
  * Scenarios:
@@ -98,7 +98,7 @@ const door: IAutoMovieActionTarget = { kind: "node", node: "door" };
  *    speed (a non-looping clip whose length is the covered cycles); a turned
  *    actor's travel is baked in model space so it reaches the world destination
  *    once the renderer applies its staged facing.
- * 2. `locomote` to a relative target (no positional point) — or to its own spot —
+ * 2. `locomote` to a relative target (no positional point), or to its own spot,
  *    steps in place: the looping one-cycle gait.
  * 3. An unmatched gait, a non-synthesised verb, and an unknown actor → null.
  * 4. `hold` holds the rest pose; and a locomote+hold beat compiles end to end.
@@ -125,7 +125,7 @@ export const test_perform_actor_synthesizer = (): void => {
 
   // 1b. a turned actor's travel is baked in *model* space: the renderer applies
   // the pose root under the node's staged facing, so composing that facing with
-  // the baked root must reach the world destination — not a path rotated off
+  // the baked root must reach the world destination, not a path rotated off
   // the heading. Facing +90°, walking to a point 5 m along world +X.
   const turned = makeActorSynthesizer(
     new Map<string, IAutoMovieActorContext>([

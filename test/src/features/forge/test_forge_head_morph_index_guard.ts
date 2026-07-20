@@ -6,7 +6,7 @@ import { throwsError } from "../internal/predicates";
 /**
  * A sparse morph delta targeting a vertex outside the base is a structural
  * defect and throws (#1107): the write would read `undefined` and silently
- * EXTEND the array with NaN holes — poisoned vertices that vanish or explode
+ * EXTEND the array with NaN holes: poisoned vertices that vanish or explode
  * the bounds far from the actual defect, the same silent NaN ride #1043 closed
  * for the amplitude fit.
  *
@@ -17,7 +17,7 @@ import { throwsError } from "../internal/predicates";
  * 2. A negative index throws.
  * 3. A fractional index throws.
  * 4. Negative twin: the boundary index (1, the last vertex) morphs fine.
- * 5. A defective morph left at value 0 stays skipped — the guard fires only on
+ * 5. A defective morph left at value 0 stays skipped: the guard fires only on
  *    applied deltas.
  */
 export const test_forge_head_morph_index_guard = (): void => {

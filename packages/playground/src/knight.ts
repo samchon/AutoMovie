@@ -9,7 +9,7 @@ import {
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
 /**
- * A **knight** rider — the stick figure dressed for the saddle: the same rig
+ * A **knight** rider, the stick figure dressed for the saddle: the same rig
  * and proportions as {@link buildStickman}, recoloured to steel, with a helmet
  * and plume on the head, a couched **lance** in the right hand, and a
  * **shield** on the left forearm.
@@ -77,9 +77,9 @@ export const buildKnight = (
   });
 
   const extras: IAutoMovieModelPart[] = [
-    // helmet — a steel dome capping the crown (eyes stay visible below it)
+    // helmet: a steel dome capping the crown (eyes stay visible below it)
     knob("helmet", "head", hr * 1.04, "steel", v(0, hr * 0.42, -0.01)),
-    // nose guard — a thin steel bar down the front of the face
+    // nose guard: a thin steel bar down the front of the face
     {
       id: "noseGuard",
       name: "noseGuard",
@@ -96,11 +96,11 @@ export const buildKnight = (
       attachedBone: "head",
       transform: at(v(0, hr * 0.95, hr * 1.02)),
     },
-    // plume — a red crest on top of the helmet
+    // plume: a red crest on top of the helmet
     knob("plume1", "head", hr * 0.34, "plume", v(0, hr * 1.7, -0.04)),
     knob("plume2", "head", hr * 0.28, "plume", v(0, hr * 1.78, -0.18)),
     knob("plume3", "head", hr * 0.22, "plume", v(0, hr * 1.7, -0.3)),
-    // lance — a long shaft couched along the right hand, pointing forward (+Z)
+    // lance: a long shaft couched along the right hand, pointing forward (+Z)
     {
       id: "lance",
       name: "lance",
@@ -131,7 +131,7 @@ export const buildKnight = (
       attachedBone: "rightHand",
       transform: at(v(0, 0, -0.14 + lower)),
     },
-    // shield — a rounded plate on the left forearm, facing out (−X / forward)
+    // shield: a rounded plate on the left forearm, facing out (−X / forward)
     {
       id: "shield",
       name: "shield",

@@ -1,14 +1,14 @@
 import { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
 
 /**
- * One named humanoid joint projected to screen space (#1168) — the exact
+ * One named humanoid joint projected to screen space (#1168): the exact
  * OpenPose-style keypoint automovie can emit because it already knows every
  * bone's exact 3D world position. `x`/`y` are normalized to the frame (`[0,
  * 1]`, top-left origin), resolution-independent so a host scales them to
  * whatever it renders at.
  *
  * A joint behind the camera or outside the frame rectangle is still projected
- * (never silently clamped — a clamped off-screen point reads as a false edge
+ * (never silently clamped: a clamped off-screen point reads as a false edge
  * keypoint and corrupts ControlNet conditioning) but flagged `inFrame: false`,
  * so a consumer keeps it or drops it deliberately.
  *

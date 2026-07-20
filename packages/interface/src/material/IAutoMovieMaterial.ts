@@ -1,19 +1,19 @@
 import { IAutoMovieColor } from "../color/IAutoMovieColor";
 
 /**
- * A physically-based (PBR) surface material — the "what it's made of and how it
+ * A physically-based (PBR) surface material: the "what it's made of and how it
  * catches light" of a character or object surface.
  *
  * Fields mirror the glTF 2.0 metallic-roughness model so a generated material
  * maps 1:1 onto `three.js` `MeshStandardMaterial`, VRM/MToon inputs, and glTF
  * export. Every coefficient is a scalar documented to `[0, 1]` or an
- * {@link IAutoMovieColor} — the whole material is a small numeric record, which
+ * {@link IAutoMovieColor}; the whole material is a small numeric record, which
  * is exactly why an LLM can author or tweak it ("make it more metallic",
  * "rougher", "warmer base color") through structured output; the engine
  * range-checks the coefficients.
  *
  * Texture _maps_ (image-based base color / normal / roughness) are referenced
- * by id rather than embedded — the pixel payload is an asset the engine
+ * by id rather than embedded: the pixel payload is an asset the engine
  * resolves, not something the LLM emits.
  *
  * Reference: glTF 2.0 `pbrMetallicRoughness`
@@ -39,7 +39,7 @@ export interface IAutoMovieMaterial {
 
   /**
    * Emissive (self-illumination) color, or `null` for a non-emitting surface.
-   * Distinct from a black base color — this surface _adds_ light.
+   * Distinct from a black base color: this surface _adds_ light.
    */
   emissive: IAutoMovieColor | null;
 

@@ -30,8 +30,8 @@ const SKELETON: IAutoMovieSkeleton = {
 /**
  * The player's secondary-motion springs run between sampling and rendering, and
  * `dampedSpring` OVERSHOOTS by design (ζ < 1). Clamping only before the springs
- * let the render exceed the ROM the `clampToRom` constructor promise guarantees
- * — stiffness 100 / damping 5 stepping toward a 40° cap peaked at ≈ 58°
+ * let the render exceed the ROM the `clampToRom` constructor promise guarantees:
+ * stiffness 100 / damping 5 stepping toward a 40° cap peaked at ≈ 58°
  * (#1048). A joint vanishing from the sampled pose also hard-reset its spring,
  * popping follow-through to rest mid-swing.
  *

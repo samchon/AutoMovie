@@ -24,7 +24,7 @@ const clampAxis = (
 };
 
 /**
- * Clamp one joint's articulation into its anatomical range of motion — the
+ * Clamp one joint's articulation into its anatomical range of motion, the
  * **enforce** face of {@link validateJointRom}'s **detect** face (the core
  * model's `ClampOutcome`: clamp and validate are one calculation).
  *
@@ -44,7 +44,7 @@ export const clampJointRom = (
   const twist = clampAxis(joint.twist, constraint.twist);
   // Ball-joint swing cone: pull a corner pose back onto the cone. The cone is a
   // COUPLING between the two axes, not a per-axis check, so a resting (`null`)
-  // axis is not exempt from it — it contributes its actual rotation, 0, exactly
+  // axis is not exempt from it. It contributes its actual rotation, 0, exactly
   // as the renderer reads it (`jointToQuaternion`'s `?? 0`). Gating the cone on
   // both axes being non-null let `{flexion:150, abduction:null}` keep an angle
   // its identical twin `{flexion:150, abduction:0}` was clamped out of (#1245).
@@ -72,7 +72,7 @@ export const clampJointRom = (
 };
 
 /**
- * The point of `allowed` closest to neutral — neutral itself when the range
+ * The point of `allowed` closest to neutral: neutral itself when the range
  * brackets it, else the nearer bound. This is the swing cone's pull target: the
  * joint's most-retracted reachable articulation on that axis.
  */
@@ -88,7 +88,7 @@ const nearestNeutral = (allowed: IAutoMovieAngleRange | null): number =>
 /**
  * Clamp one joint against the skeleton's effective ROM: the bone's own
  * `constraint` override when it carries one, otherwise the default humanoid
- * table — the `target-override-then-default-humanoid` precedence
+ * table, the `target-override-then-default-humanoid` precedence
  * {@link retargetHumanoidMotion} names as its ROM policy. A bone with neither
  * passes through unchanged.
  *
@@ -109,8 +109,8 @@ export const clampJointToSkeleton = (
 
 /**
  * Clamp every joint of a pose into its skeleton's ROM, returning a new pose
- * (the root transform is untouched). A joint whose bone has no constraint —
- * neither a per-bone override nor a default-table entry — passes through
+ * (the root transform is untouched). A joint whose bone has no constraint
+ * (neither a per-bone override nor a default-table entry) passes through
  * unchanged.
  *
  * This is what makes a joint behave like a limited physics joint: feed any pose

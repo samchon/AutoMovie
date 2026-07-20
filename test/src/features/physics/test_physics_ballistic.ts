@@ -16,14 +16,14 @@ const landing = (
     .position;
 
 /**
- * `solveBallisticLaunch` — the inverse of the forward projectile simulation:
- * the launch velocity that connects. The contract is the forward oracle — fire
+ * `solveBallisticLaunch`, the inverse of the forward projectile simulation:
+ * the launch velocity that connects. The contract is the forward oracle: fire
  * the returned velocity and, at the returned hit time, the projectile is on the
  * target. Any error in the range equation shows up as a miss.
  *
  * Scenarios:
  *
- * 1. A ground-to-ground shot (target level, downrange) — the direct arc lands on
+ * 1. A ground-to-ground shot (target level, downrange): the direct arc lands on
  *    it, and the launch speed matches the requested speed.
  * 2. The high arc reaches the same target with a steeper, slower-horizontal lob (a
  *    longer flight time than the direct arc).

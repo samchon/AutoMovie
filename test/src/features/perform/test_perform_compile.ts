@@ -8,7 +8,7 @@ import { TestValidator } from "@nestia/e2e";
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-/** A gesture action — the only verb shape these scenarios need. */
+/** A gesture action: the only verb shape these scenarios need. */
 const gesture = (
   actor: string | string[],
   start: number,
@@ -40,7 +40,7 @@ const synth: IAutoMovieActionSynthesizer = (
 const times = (m: IAutoMovieMotion): number[] => m.keyframes.map((k) => k.time);
 
 /**
- * `compilePerformance` — the action compiler's timeline assembly (the content
+ * `compilePerformance`: the action compiler's timeline assembly (the content
  * seam is faked here; rig-specific clips are exercised elsewhere).
  *
  * Scenarios:

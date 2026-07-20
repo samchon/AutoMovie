@@ -7,7 +7,7 @@ import * as path from "node:path";
  * (sorted).
  *
  * Refuses any entry that resolves outside `location` (a `../` escape in a map
- * key), and — unless `force` — refuses to write into a non-empty directory, so
+ * key), and, unless `force`, refuses to write into a non-empty directory, so
  * a scaffold never silently clobbers an existing project. Rendering the file
  * map is {@link renderScaffold}'s job; this is the write half of that split.
  *
@@ -26,7 +26,7 @@ export const writeFiles = (
     options?.force !== true
   )
     throw new Error(
-      `target directory is not empty: ${base} — pass --force to scaffold into it anyway`,
+      `target directory is not empty: ${base}; pass --force to scaffold into it anyway`,
     );
 
   const written: string[] = [];

@@ -25,7 +25,7 @@ const flexionOf = (pose: IAutoMoviePose): number | null =>
  * A dt=0 spring frame means "no time elapsed", not "never sprung" (#1098): a
  * paused host loop re-calling `update(sameT)`, a backwards scrub (negative
  * delta clamps to 0), or a capture harness re-rendering a frozen frame must
- * HOLD the live spring — value and velocity — instead of resetting it. The old
+ * HOLD the live spring (value and velocity) instead of resetting it. The old
  * decay branch conflated the two, snapping a mid-decay joint to null AND
  * zeroing its state (the exact pop #1078 exists to remove); the tracking branch
  * re-seeded a lagging joint AT its target with velocity destroyed.
@@ -40,7 +40,7 @@ const flexionOf = (pose: IAutoMoviePose): number | null =>
  *    `update(sameT)` renders the identical lagged angle instead of popping to
  *    the target.
  * 3. Negative twin: a genuinely fresh joint (no spring state) at a dt=0 first
- *    frame still initializes AT its target — the hold only protects LIVE
+ *    frame still initializes AT its target: the hold only protects LIVE
  *    state.
  */
 export const test_viewer_player_spring_hold = (): void => {
