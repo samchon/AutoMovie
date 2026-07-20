@@ -1179,13 +1179,15 @@ export const performShot = (props: {
   // spans and each coverage angle read the SAME subject, so an alternate camera
   // frames the beat's subject exactly as the hero does, only from its own
   // staged bearing. A subject may be any staged placement, a camera included
-  // (#1294), which is why neither lookup below may be asserted non-null: the
-  // placement table carries cameras, `nodeRotations` and `motions` do not (a
-  // camera performs nothing but frame, and the one path that used to smuggle
-  // one into `motions`, a `launch` `onHit` aimed at a camera, is now refused at
-  // the aim). Without a staged facing there is no node-local root to rotate
-  // into the world, so such a subject holds still: `at: null`, the documented
-  // degenerate case a `follow` move already handles.
+  // (#1294), which is why the lookups below may not be asserted non-null: the
+  // placement table carries cameras and `nodeRotations` does not. `motions`
+  // does not either, now that the one path which used to smuggle a camera into
+  // it (a `launch` `onHit` aimed at a camera, injecting a react named on the
+  // struck id) is refused at the aim, so a camera subject falls out on the
+  // `motion === undefined` clause; the facing clause is what keeps the read
+  // total for the compiler. Without a staged facing there is no node-local root
+  // to rotate into the world, so such a subject holds still: `at: null`, the
+  // documented degenerate case a `follow` move already handles.
   const framedSubject = (
     on: IAutoMovieActionTarget,
   ): IAutoMovieFramedSubject => {

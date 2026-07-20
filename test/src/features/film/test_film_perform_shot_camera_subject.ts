@@ -98,7 +98,12 @@ const staged = (() => {
   return result;
 })();
 
-/** A loose at `cam-main`, carrying `onHit` so a react names the camera. */
+/**
+ * A loose down the lens. It carries NO `onHit`: a camera is a place to shoot
+ * at, but nothing recoils it, and the engine refuses an `onHit` whose aim names
+ * a camera because the react it would inject rides past the gate that keeps a
+ * camera out of `shot.performances`.
+ */
 const looseAtCamera: IAutoMovieActionCall = {
   verb: "launch",
   actor: "archer",
@@ -107,7 +112,6 @@ const looseAtCamera: IAutoMovieActionCall = {
   projectile: "arrow",
   at: { kind: "node", node: "cam-main" },
   speed: 22,
-  onHit: { force: 0.6, unbalance: false },
 };
 
 const frame = (
@@ -167,34 +171,39 @@ const keysOf = (values: readonly number[]) =>
   }));
 
 /**
- * A camera is a legal positional target (#1294), so a `frame` subject and a
- * `coverage` subject may both name one. That widening put camera ids into the
- * placement table `resolveTargetPoint` reads, while the staged-facing table
- * stays nodes-only, and a camera CAN reach the compiled motion map: a `launch`
- * carrying `onHit` at a camera makes the engine inject a `react` whose actor is
- * the struck camera id, and a host synthesizer answers for it. A subject that
- * is animated but has no staged facing must therefore hold still rather than
- * rotate a root under an absent quaternion.
+ * A camera is a legal positional target (#1294), so a `frame` subject, a
+ * `coverage` subject, and a `launch` aim may all name one. That widening put
+ * camera ids into the placement table `resolveTargetPoint` reads, while the
+ * staged-facing table stays nodes-only, so a camera subject has a base point
+ * and no facing. Such a subject must hold still (`at: null`) rather than rotate
+ * a root under an absent quaternion, and a `follow` on it degenerates to a
+ * single key.
  *
- * The coverage half below is reached the way a caller reaches it in production:
+ * A camera never reaches the compiled motion map: the input gate refuses a
+ * camera as the actor of any verb but `frame`, and the one path that used to
+ * slip past it, a `launch` carrying `onHit` at a camera injecting a `react`
+ * that names the struck camera, is refused at the aim. So the fixture's loose
+ * carries no `onHit`, and the shot's performances are asserted camera-free:
+ * producing a shot whose performance node is not a scene node is exactly what
+ * the MCP artifact validator refuses at commit.
+ *
+ * The coverage half is reached the way a caller reaches it in production:
  * `perform` takes `blocking` as an ordinary argument, so a hand-written plan
- * arrives without passing through `block`. That matters, because `blockBeat`
- * still measures a coverage subject against staged NODES only and would refuse
- * this camera subject. The gap is the known cross-rung asymmetry #1294 left
- * behind (`block` has not been widened to match `perform`), not a rule this
- * scenario invents: within `performShot` a coverage subject resolves exactly as
- * a hero `frame` subject does, which is the coherence that belongs to this
- * rung.
+ * arrives without passing through `block`. `blockBeat` now measures a coverage
+ * subject against the same staged placements, cameras included, so the two
+ * rungs agree; `test_film_block_beat_camera_target` pins that half.
  *
  * Scenarios:
  *
- * 1. A loose with `onHit` at `cam-main` plus a `follow` frame on `cam-main`
- *    assembles instead of throwing, and the follow degenerates to one key (the
- *    subject holds still), which is the documented `at: null` behaviour.
- * 2. The same subject reached through the blocking's `coverage`: an alternate
+ * 1. A loose at `cam-main` plus a `follow` frame on `cam-main` assembles instead
+ *    of throwing, and the follow degenerates to one key (the subject holds
+ *    still), which is the documented `at: null` behaviour.
+ * 2. No camera performs: `shot.performances` names only scene nodes, the invariant
+ *    the artifact validator independently enforces.
+ * 3. The same subject reached through the blocking's `coverage`: an alternate
  *    camera framing ANOTHER camera is legal, for the same reason the hero
  *    take's subject may be one, and its take degenerates identically.
- * 3. Negative twin: a `follow` on `foe`, an actor that has both a staged facing
+ * 4. Negative twin: a `follow` on `foe`, an actor that has both a staged facing
  *    and root travel, still tracks. Its keys move along the marched path, so
  *    the guard flattens only the facing-less case and no legitimate follow with
  *    it.
@@ -205,17 +214,26 @@ export const test_film_perform_shot_camera_subject = (): void => {
   TestValidator.equals("a camera subject performs", hero.success, true);
   if (hero.success !== true) return;
   TestValidator.equals(
-    "the struck camera really is in the compiled motions",
-    Object.keys(hero.motions).includes("cam-main"),
-    true,
-  );
-  TestValidator.equals(
     "a follow on a facing-less subject keys once",
     keysOf(hero.shot.cameraMotion!.tracks[0]!.values).length,
     1,
   );
 
-  // 2. the same subject through a coverage take.
+  // 2. no camera performs, in the motion map or in the shot.
+  TestValidator.equals(
+    "a camera never reaches the compiled motions",
+    Object.keys(hero.motions).filter((node) => node.startsWith("cam-")),
+    [],
+  );
+  TestValidator.equals(
+    "every performance names a staged scene node",
+    hero.shot.performances
+      .map((entry) => entry.node)
+      .filter((node) => !staged.scene.nodes.some((n) => n.id === node)),
+    [],
+  );
+
+  // 3. the same subject through a coverage take.
   const covered = perform(
     [looseAtCamera, frame("cam-alt", "cam-main")],
     [
@@ -244,7 +262,7 @@ export const test_film_perform_shot_camera_subject = (): void => {
     1,
   );
 
-  // 3. negative twin: a subject WITH a staged facing still tracks.
+  // 4. negative twin: a subject WITH a staged facing still tracks.
   const tracking = perform([
     {
       verb: "locomote",

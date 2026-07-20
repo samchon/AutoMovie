@@ -560,7 +560,7 @@ export const test_mcp_geometry_query_edges = (): void => {
 
   // action-target: an unknown target kind is not runtime-safe and resolves null.
   TestValidator.predicate(
-    "an unknown action-target kind answers the not-positional reason",
+    "an unknown action-target kind is refused by that kind",
     (() => {
       const output = app.measureDistance({
         scene,
@@ -569,7 +569,9 @@ export const test_mcp_geometry_query_edges = (): void => {
       });
       return (
         output.measurement === null &&
-        (output.reason ?? "").includes("not positional")
+        (output.reason ?? "").includes(
+          '"mystery" is not a positional target kind',
+        )
       );
     })(),
   );
