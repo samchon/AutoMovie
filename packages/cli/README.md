@@ -1,9 +1,9 @@
-# autobe
+# @automovie/cli
 
 Scaffold an [automovie](https://github.com/samchon/automovie) project.
 
 ```bash
-npx autobe start my-film
+npx automovie start my-film
 ```
 
 Lays down a starter with both ways to drive the engine:
@@ -17,7 +17,7 @@ Lays down a starter with both ways to drive the engine:
 ## Usage
 
 ```
-npx autobe start <directory> [--force]
+npx automovie start <directory> [--force]
 ```
 
 `start` refuses a non-empty directory unless `--force`. The scaffolded project's
@@ -32,7 +32,7 @@ returns an in-memory file map, and writing is a separate call, so the same
 output can be asserted in a test or written by another consumer:
 
 ```ts
-import { renderScaffold, writeFiles } from "autobe";
+import { renderScaffold, writeFiles } from "@automovie/cli";
 
 const files = renderScaffold({ name: "my-film" }); // { "package.json": "...", ... }
 writeFiles("./my-film", files); // → written absolute paths

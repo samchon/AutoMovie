@@ -47,7 +47,7 @@ automovie를 구동하는 길은 둘이며, 둘 다 일급이다.
 - `validateMotion`/`validatePose`/`clampPose` + ROM: 결정론적 오라클. 무엇을 만들든 물리 진실은 엔진이 심판한다.
 - `sampleMotion`/`sampleClip`: 재생 계약. 저작한 클립을 프레임으로 샘플링한다.
 
-두 경로는 합쳐진다: 코드로 클립을 계산하고, 어느 문으로 들어왔든 **같은 엔진**이 강제한다. `enact`가 그 다리다. 러너블 스타터는 `npx autobe start <dir>`([`autobe`](../cli)) 참고.
+두 경로는 합쳐진다: 코드로 클립을 계산하고, 어느 문으로 들어왔든 **같은 엔진**이 강제한다. `enact`가 그 다리다. 러너블 스타터는 `npx automovie start <dir>`([`@automovie/cli`](../cli)) 참고.
 
 ## 모듈
 

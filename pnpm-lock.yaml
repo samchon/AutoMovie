@@ -370,6 +370,9 @@ importers:
 
   test:
     dependencies:
+      '@automovie/cli':
+        specifier: workspace:^
+        version: link:../packages/cli
       '@automovie/engine':
         specifier: workspace:^
         version: link:../packages/engine
@@ -400,9 +403,6 @@ importers:
       '@nestia/e2e':
         specifier: catalog:samchon
         version: 12.0.0
-      autobe:
-        specifier: workspace:^
-        version: link:../packages/cli
       three:
         specifier: catalog:three
         version: 0.169.0
