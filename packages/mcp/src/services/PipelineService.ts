@@ -397,6 +397,10 @@ export class PipelineService {
       blocking: props.blocking,
     });
     const output = remapMcpPerformedShotPaths(toMcpPerformedShot(performed), [
+      // `$blocking` is the engine's name for this call's `blocking` argument
+      // (coverage faults, #1187); re-anchor it where the shape gate already
+      // blames the same field, so one field never speaks two path dialects.
+      ["$blocking", "$input.blocking"],
       ["$input", "$input.performance"],
     ]);
     // Write-through (#1176, the forgeProp precedent): a successful resident
@@ -1621,6 +1625,28 @@ const validateBlockingShape = (
 
   if (isJsonObject(blocking.camera, `${root}.camera`, "camera", violations))
     validateStageTarget(blocking.camera.on, `${root}.camera.on`, violations);
+
+  // The optional coverage list (#1187). Both consumers walk it (`blockBeat`
+  // gates the plan, `performShot` compiles each entry into an alternate take)
+  // and both read `intent.on.kind` directly, so a non-array coverage or a
+  // targetless entry would throw out of the engine instead of refusing with a
+  // field-located violation. An omitted or null list is the single-camera beat.
+  const coverage = blocking.coverage;
+  if (coverage !== undefined && coverage !== null)
+    if (
+      isJsonArray(coverage, `${root}.coverage`, "blocking coverage", violations)
+    )
+      coverage.forEach((intent, index) => {
+        const path = `${root}.coverage[${index}]`;
+        if (!isJsonObject(intent, path, "coverage intent", violations)) return;
+        requireString(
+          intent.camera,
+          `${path}.camera`,
+          "coverage camera",
+          violations,
+        );
+        validateStageTarget(intent.on, `${path}.on`, violations);
+      });
 };
 
 const validateCutShape = (
