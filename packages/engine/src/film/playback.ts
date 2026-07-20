@@ -133,10 +133,10 @@ export const sequenceTimeline = (
 
 /**
  * Turn one live entry into the on-screen sample: the live shot at its local
- * time, plus, inside the live entry's incoming transition, the previous
- * entry's tail as the `blend` with the incoming weight `alpha = elapsed /
- * transition`. The single place the shot/time/blend shape is built, so the
- * stateless and cursor resolvers cannot drift.
+ * time, plus, inside the live entry's incoming transition, the previous entry's
+ * tail as the `blend` with the incoming weight `alpha = elapsed / transition`.
+ * The single place the shot/time/blend shape is built, so the stateless and
+ * cursor resolvers cannot drift.
  */
 const sampleAt = (
   sequence: IAutoMovieSequence,
@@ -243,8 +243,8 @@ export const resolveSequencePlayback = (
  * span elsewhere on the output clock (a flashback) cannot claim it.
  *
  * Semantics are **per play** (#1080): each entry that shows an instant emits
- * that instant's events at its own global time, one source event re-played by
- * a flashback lands once per play, not once per film. "Emitted once" (#1009)
+ * that instant's events at its own global time, one source event re-played by a
+ * flashback lands once per play, not once per film. "Emitted once" (#1009)
  * binds a single contiguous seam, where two entries share one on-screen
  * instant. Included events keep their shot-local `time` and also expose
  * `shotTime` plus `globalTime`.

@@ -19,10 +19,10 @@ const romItems = (axes: Parameters<typeof joint>[1]) => {
 };
 
 /**
- * A joint may simply lack an axis: an elbow does not abduct. Any non-zero
- * angle on such an axis is a ROM violation (the joint physically cannot move
- * that way), while zero on it is fine. Pins the "immobile axis" rejection a
- * plain min/max range check would miss.
+ * A joint may simply lack an axis: an elbow does not abduct. Any non-zero angle
+ * on such an axis is a ROM violation (the joint physically cannot move that
+ * way), while zero on it is fine. Pins the "immobile axis" rejection a plain
+ * min/max range check would miss.
  *
  * Scenarios:
  *

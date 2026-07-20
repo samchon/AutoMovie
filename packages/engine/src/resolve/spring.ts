@@ -97,8 +97,8 @@ const readLocal = (
  *
  * When `colliders` are given, each stepped joint is pushed out of every sphere
  * it penetrates (surface + the driver's `hitRadius`) **after** the length
- * constraint (the VRM SpringBone order), so a collision can stretch the bone
- * by up to the push distance for that step rather than tunnel through a body.
+ * constraint (the VRM SpringBone order), so a collision can stretch the bone by
+ * up to the push distance for that step rather than tunnel through a body.
  *
  * @author Samchon
  */

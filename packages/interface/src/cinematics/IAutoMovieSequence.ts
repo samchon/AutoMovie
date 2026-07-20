@@ -2,8 +2,8 @@ import { IAutoMovieTransition } from "./IAutoMovieTransition";
 import { IAutoMovieTrim } from "./IAutoMovieTrim";
 
 /**
- * A sequence: an ordered cut-list of shots, the editorial timeline, modelled
- * on OpenTimelineIO. Shots play back to back; a hard cut is the default (two
+ * A sequence: an ordered cut-list of shots, the editorial timeline, modelled on
+ * OpenTimelineIO. Shots play back to back; a hard cut is the default (two
  * adjacent entries with no transition), an optional transition blends them.
  *
  * Each shot keeps its own local time origin; the sequence composes the global

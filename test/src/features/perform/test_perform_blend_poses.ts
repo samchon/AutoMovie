@@ -33,9 +33,8 @@ const axis = (
  *    null.
  * 2. Two equal-weight layers on the same axis average; a 3:1 weighting biases
  *    toward the heavier layer.
- * 3. A null axis in one layer does not dilute the other: each axis is the
- *    weighted mean of only the layers that set it, and an axis no layer sets is
- *    null.
+ * 3. A null axis in one layer does not dilute the other: each axis is the weighted
+ *    mean of only the layers that set it, and an axis no layer sets is null.
  * 4. Disjoint layers combine their joints (order = first appearance) and the root
  *    comes from the rooted layer, byte-identical to the old union.
  * 5. An `ownsRoot` layer's root wins even when a later layer is also rooted.

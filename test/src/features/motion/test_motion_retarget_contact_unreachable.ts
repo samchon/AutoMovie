@@ -29,9 +29,9 @@ const missBy = (
  *
  * Scenarios:
  *
- * 1. The retarget succeeds (`validation.success` is true and `motion` is
- *    non-null) while carrying one `physics` warning per foot, located on the
- *    keyframe and effector that missed by the most.
+ * 1. The retarget succeeds (`validation.success` is true and `motion` is non-null)
+ *    while carrying one `physics` warning per foot, located on the keyframe and
+ *    effector that missed by the most.
  * 2. The residual it warns about is real: the pinned foot still misses its mapped
  *    contact by more than the 0.02 * rootScale contact budget.
  * 3. The clamped correction is still an improvement, not damage: the pinned foot

@@ -62,8 +62,8 @@ export interface IAutoMovieJointConstraint {
   /**
    * Optional **swing cone** (degrees): a cap on the _combined_ flexion +
    * abduction, on top of the per-axis ranges. Per-axis boxes alone over-permit
-   * a ball joint (shoulder, hip): they let max flexion and max abduction
-   * happen _at once_, a corner the real joint cannot reach. The cone bounds the
+   * a ball joint (shoulder, hip): they let max flexion and max abduction happen
+   * _at once_, a corner the real joint cannot reach. The cone bounds the
    * combined swing (`2·acos(cos(flexion/2)·cos(abduction/2))`) so the pose
    * stays inside the joint's true reachable sweep. `null`/omitted on hinges and
    * any joint that needs no combined cap (pure per-axis euler).

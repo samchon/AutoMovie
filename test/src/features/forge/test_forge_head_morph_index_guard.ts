@@ -6,9 +6,9 @@ import { throwsError } from "../internal/predicates";
 /**
  * A sparse morph delta targeting a vertex outside the base is a structural
  * defect and throws (#1107): the write would read `undefined` and silently
- * EXTEND the array with NaN holes: poisoned vertices that vanish or explode
- * the bounds far from the actual defect, the same silent NaN ride #1043 closed
- * for the amplitude fit.
+ * EXTEND the array with NaN holes: poisoned vertices that vanish or explode the
+ * bounds far from the actual defect, the same silent NaN ride #1043 closed for
+ * the amplitude fit.
  *
  * Scenarios (two-vertex base, indices 0..1):
  *

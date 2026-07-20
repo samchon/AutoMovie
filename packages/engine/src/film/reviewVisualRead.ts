@@ -31,10 +31,10 @@ const DEFAULT_SILHOUETTE_RADIUS = 0.35;
 
 /**
  * Engine-computed **visual-read** advisory metrics (#1177), surfaced as `tier:
- * "visual"` review notes, the deterministic complement to the subjective
- * review pass, so "does the action read" becomes measurable and the correction
- * loop scales. These are advisory: they never fail a gate, they populate
- * the review backlog for the agent to weigh.
+ * "visual"` review notes, the deterministic complement to the subjective review
+ * pass, so "does the action read" becomes measurable and the correction loop
+ * scales. These are advisory: they never fail a gate, they populate the review
+ * backlog for the agent to weigh.
  *
  * Metrics:
  *

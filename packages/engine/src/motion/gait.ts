@@ -158,15 +158,14 @@ const assertUniqueProfileGaitNames = (
  * `locomoteMotion` / `travelMotion` can drive across the floor.
  *
  * The same synthesiser produces a human walk, a horse's lateral-sequence walk,
- * a cat's stalk. The difference lives entirely in the gait data, not the
- * code.
+ * a cat's stalk. The difference lives entirely in the gait data, not the code.
  *
  * `phase` slides the whole cycle by that many seconds (#1176): the clip's
  * keyframe at local time `t` samples the gait at `t + phase`, so a beat that
  * opens mid-stride resumes exactly where the previous beat's end-state
- * (`gaitPhase`) left the cycle instead of restarting it, the difference
- * between a continuous walk and a stutter at every cut. The wrapped cycle stays
- * a seamless loop for any constant phase.
+ * (`gaitPhase`) left the cycle instead of restarting it, the difference between
+ * a continuous walk and a stutter at every cut. The wrapped cycle stays a
+ * seamless loop for any constant phase.
  *
  * @author Samchon
  */

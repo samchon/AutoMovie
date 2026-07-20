@@ -19,8 +19,8 @@ import {
  * Scenarios:
  *
  * 1. The bridge copies the motion's loop flag, id, and duration onto the clip.
- * 2. A looping motion holds parity at wrapped queries: t = duration (wraps to 0
- *    on both sides), t = 1.3·duration, and a negative t.
+ * 2. A looping motion holds parity at wrapped queries: t = duration (wraps to 0 on
+ *    both sides), t = 1.3·duration, and a negative t.
  * 3. Non-loop twin: the same motion with loop off clamps past the end on both
  *    sides (parity at t = duration + 0.5).
  */

@@ -109,8 +109,8 @@ export const createDoorPropSpec = (): IAutoMoviePropSpec => ({
 /**
  * ForgeProp accepts a prop authored entirely as data (crude primitive parts
  * carrying a physical body, a stack-top affordance, and a self-declared hinge
- * articulation) when both the model contract and the articulation
- * contract hold.
+ * articulation) when both the model contract and the articulation contract
+ * hold.
  *
  * Scenarios:
  *

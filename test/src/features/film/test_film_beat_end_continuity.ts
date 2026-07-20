@@ -86,8 +86,8 @@ const endOf = (duration: number) =>
  * this beat left it. The carried gait phase re-samples to the very pose the
  * beat ended on, the folded transform is the exact world position to restage at
  * (with the pose root cleared so nothing double-applies), and the root velocity
- * matches the clip's true derivative, including at the loop seam, where a
- * naive finite difference across the wrap would report a teleport.
+ * matches the clip's true derivative, including at the loop seam, where a naive
+ * finite difference across the wrap would report a teleport.
  *
  * Scenarios:
  *

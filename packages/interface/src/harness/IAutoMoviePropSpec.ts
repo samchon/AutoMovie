@@ -39,8 +39,8 @@ export interface IAutoMoviePropArticulation {
 }
 
 /**
- * One authored prop, a crude primitive proxy with rich meaning: the
- * geometry stays simple boxes and cylinders, while the physics body
+ * One authored prop, a crude primitive proxy with rich meaning: the geometry
+ * stays simple boxes and cylinders, while the physics body
  * ({@link IAutoMovieModel.body}), the contact semantics
  * ({@link IAutoMovieModel.affordances}), and the self-declared articulation
  * carry everything the engine validates and simulates.

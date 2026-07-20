@@ -18,8 +18,8 @@ import {
  * - Scene: the screenplay slug `INT. LOCATION - TIMEOFDAY` (location and time
  *   upper-cased), followed by the optional description line.
  * - Group: the rationale bracketed as `[<rationale>]`.
- * - Beat: the beat's flat name as `BEAT, <name>`, the stage direction prose,
- *   each dialogue line as a 16-space-indented `SPEAKER` line over an
+ * - Beat: the beat's flat name as `BEAT, <name>`, the stage direction prose, each
+ *   dialogue line as a 16-space-indented `SPEAKER` line over an
  *   8-space-indented text line (prefixed `[t=…s]` when anchored), and the shot
  *   caption bracketed as `[Shot: …]`.
  *
@@ -128,9 +128,9 @@ const dialogueLines = (line: IAutoMovieDialogueLine): string[] => {
  * table {@link planCaptionSidecar} consults per span. The tree walks depth-first
  * from the intent root (the same walk the screenplay document renders with),
  * carrying the nearest scene slug down; a treeless script (null or the legacy
- * absent field), or a tree with no root to walk, yields an empty map, so
- * every span captions `null`. A node unreachable from the root is never
- * visited: commit validation owns that rejection, the join is total.
+ * absent field), or a tree with no root to walk, yields an empty map, so every
+ * span captions `null`. A node unreachable from the root is never visited:
+ * commit validation owns that rejection, the join is total.
  */
 export const beatCaptions = (
   script: IAutoMovieScript,

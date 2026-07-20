@@ -28,8 +28,8 @@ const script: IAutoMovieScript = {
  * 2. CommitScene after the script passes the gate and commits.
  * 3. CommitShot after the scene passes the gate and commits (a minimal valid shot
  *    against the staged scene).
- * 4. CommitNotes, gated on shots, now passes too, proving the coarse rungs
- *    unlock in order.
+ * 4. CommitNotes, gated on shots, now passes too, proving the coarse rungs unlock
+ *    in order.
  */
 export const test_mcp_prerequisites_ladder = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-ladder-"));

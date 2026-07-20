@@ -3,10 +3,10 @@ import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
 import { IAutoMovieInteractionEvent } from "./IAutoMovieInteractionEvent";
 
 /**
- * A shot: one continuous take (a scene, the camera that frames it, the
- * camera's move, and what every placed node performs) over a local time range.
- * This is the unit an LLM renders ("render this shot") and the rung above a
- * single clip on the road to assembling a film from objects and motion.
+ * A shot: one continuous take (a scene, the camera that frames it, the camera's
+ * move, and what every placed node performs) over a local time range. This is
+ * the unit an LLM renders ("render this shot") and the rung above a single clip
+ * on the road to assembling a film from objects and motion.
  *
  * Time is local to the shot (origin 0, seconds); a {@link IAutoMovieSequence}
  * composes shots into a global timeline. The camera is a scene node, so its
@@ -29,8 +29,8 @@ export interface IAutoMovieShot {
   camera: string;
 
   /**
-   * The camera's move for this shot: a clip of the camera node's transform
-   * (and FOV) tracks. `null` for a locked-off (static) camera.
+   * The camera's move for this shot: a clip of the camera node's transform (and
+   * FOV) tracks. `null` for a locked-off (static) camera.
    */
   cameraMotion: IAutoMovieClip | null;
 
@@ -39,12 +39,12 @@ export interface IAutoMovieShot {
 
   /**
    * Node-transform clips for **non-skeletal scene objects** the shot animates
-   * (a launched projectile's baked flight, a prop carried along a path), each an
-   * ordinary {@link IAutoMovieClip} keyed to its object's scene node. Distinct
-   * from `performances` (skeletal pose motions played through a rig) and from
-   * `cameraMotion` (the one live camera): a projectile has no skeleton, so it
-   * moves the same way the camera does: a clip of transform tracks. Empty when
-   * the shot animates no such object.
+   * (a launched projectile's baked flight, a prop carried along a path), each
+   * an ordinary {@link IAutoMovieClip} keyed to its object's scene node.
+   * Distinct from `performances` (skeletal pose motions played through a rig)
+   * and from `cameraMotion` (the one live camera): a projectile has no
+   * skeleton, so it moves the same way the camera does: a clip of transform
+   * tracks. Empty when the shot animates no such object.
    */
   objectMotions: IAutoMovieClip[];
 

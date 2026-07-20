@@ -6,8 +6,8 @@ import { makeFace } from "../internal/fixtures";
 /**
  * Face trait weights are signed morph weights documented to [-2, 2]; a document
  * whose effective per-side weights all sit inside (including exactly on) that
- * bound validates: the "valid face passes" baseline, pinning both limits so
- * the boundary itself is legal.
+ * bound validates: the "valid face passes" baseline, pinning both limits so the
+ * boundary itself is legal.
  *
  * Scenario: every singular leaf present, and the paired features exercising the
  * SIDE RULE's compositions: a lone left (mirrors to both eyes), two defined

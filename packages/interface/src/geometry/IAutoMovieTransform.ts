@@ -8,9 +8,9 @@ import { IAutoMovieVector3 } from "./IAutoMovieVector3";
  * Mirrors glTF node transform semantics so it maps 1:1 onto `three.js`,
  * `@pixiv/three-vrm`, and glTF export. Used for scene-node placement
  * ({@link IAutoMovieSceneNode}) and the root transform of a pose
- * ({@link IAutoMoviePose}). Per-joint articulation does NOT use this: joints
- * use semantic angles ({@link IAutoMovieJointPose}); a full TRS per joint would
- * hand the LLM quaternions it cannot emit reliably.
+ * ({@link IAutoMoviePose}). Per-joint articulation does NOT use this: joints use
+ * semantic angles ({@link IAutoMovieJointPose}); a full TRS per joint would hand
+ * the LLM quaternions it cannot emit reliably.
  *
  * @author Samchon
  */

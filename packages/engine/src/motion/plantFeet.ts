@@ -66,8 +66,8 @@ export interface IAutoMovieFootPlant {
 }
 
 /**
- * A foot-corrected motion plus the stance runs that were pinned, the plant
- * data a later continuous-state pass (#597) can hand off between beats.
+ * A foot-corrected motion plus the stance runs that were pinned, the plant data
+ * a later continuous-state pass (#597) can hand off between beats.
  *
  * @author Samchon
  */

@@ -3,11 +3,11 @@ import * as THREE from "three";
 import { disposeCrossDissolve } from "./applyDissolve";
 
 /**
- * Release a viewer's renderer AND the auxiliary GPU state frames created for it:
- * today the cross-dissolve FBO/quad, which #1050 gave a dispose that nothing
- * wired (#1090). `mountViewer`'s `stop()` calls this; a host that owns its
- * renderer directly (a capture harness) calls it the same way. Idempotent and
- * safe when no dissolve ever ran.
+ * Release a viewer's renderer AND the auxiliary GPU state frames created for
+ * it: today the cross-dissolve FBO/quad, which #1050 gave a dispose that
+ * nothing wired (#1090). `mountViewer`'s `stop()` calls this; a host that owns
+ * its renderer directly (a capture harness) calls it the same way. Idempotent
+ * and safe when no dissolve ever ran.
  */
 export const releaseViewerRenderer = (renderer: THREE.WebGLRenderer): void => {
   disposeCrossDissolve(renderer);

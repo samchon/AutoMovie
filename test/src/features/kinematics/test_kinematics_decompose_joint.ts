@@ -38,8 +38,8 @@ const rotationsMatch = (
   );
 
 /**
- * `decomposeJointRotation`: the inverse of `jointToQuaternion`. The contract
- * is the round-trip: `jointToQuaternion(decompose(q, axes), axes)` is the same
+ * `decomposeJointRotation`: the inverse of `jointToQuaternion`. The contract is
+ * the round-trip: `jointToQuaternion(decompose(q, axes), axes)` is the same
  * rotation as `q`, for any bone-local rotation and any orthonormal axis basis
  * (right- or left-handed). This is the lowering an IK solver needs: quaternion
  * bone rotations back into clinical flexion/abduction/twist.

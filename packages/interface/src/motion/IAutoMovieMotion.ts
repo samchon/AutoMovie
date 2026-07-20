@@ -60,8 +60,8 @@ export interface IAutoMovieMotion {
   loop: boolean;
 
   /**
-   * Keyframes in strictly increasing `time` order. At least two are required:
-   * a clip needs a start and an end to interpolate between.
+   * Keyframes in strictly increasing `time` order. At least two are required: a
+   * clip needs a start and an end to interpolate between.
    */
   keyframes: IAutoMovieKeyframe[];
 

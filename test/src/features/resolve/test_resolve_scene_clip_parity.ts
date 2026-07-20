@@ -41,9 +41,9 @@ import { qclose, vclose } from "../internal/predicates";
  *    clamp-hold boundary rule `sampleMotion` applies, so the merged clip is
  *    well-formed (track times ≤ clip duration).
  * 2. For every bake time and both actors, every bone's world position and rotation
- *    agree between the specialized and general paths (1e-6), including the
- *    hold window where the shorter actor has ended (the hold semantics agree
- *    across both pipelines).
+ *    agree between the specialized and general paths (1e-6), including the hold
+ *    window where the shorter actor has ended (the hold semantics agree across
+ *    both pipelines).
  * 3. The negative twin: reading knightA's bones through knightB's prefix does NOT
  *    match: the per-placement prefixes really keep the two actors' subtrees
  *    distinct (the knights stand 0.7 m apart, facing opposite ways).

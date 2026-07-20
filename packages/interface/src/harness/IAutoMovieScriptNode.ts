@@ -22,9 +22,9 @@ export interface IAutoMovieDialogueLine {
 }
 
 /**
- * The intent payload, the refinement root's thought: what film this is and
- * what it should feel like. The whole tree below refines this single statement,
- * so it carries only the top-of-funnel decomposition.
+ * The intent payload, the refinement root's thought: what film this is and what
+ * it should feel like. The whole tree below refines this single statement, so
+ * it carries only the top-of-funnel decomposition.
  */
 export interface IAutoMovieIntentPayload {
   /** One-sentence summary of the film. */
@@ -97,8 +97,8 @@ export interface IAutoMovieScriptNodeBase {
   id: string;
 
   /**
-   * The refinement edge: the parent this node makes concrete, or `null` for
-   * the single intent root. The refinement axis is a strict tree (acyclic, one
+   * The refinement edge: the parent this node makes concrete, or `null` for the
+   * single intent root. The refinement axis is a strict tree (acyclic, one
    * root); feedback propagates up this chain.
    */
   parent: string | null;
@@ -163,10 +163,10 @@ export interface IAutoMovieScriptBeatNode extends IAutoMovieScriptNodeBase {
 }
 
 /**
- * One node of the screenplay **refinement graph**: the script is a tree
- * from one abstract intent down to concrete beats (whose compiled shots and
- * motions are the graph's computed leaves) with temporal and interaction edges
- * crossing it. Each kind carries its **own** payload shape (D014, heterogeneous
+ * One node of the screenplay **refinement graph**: the script is a tree from
+ * one abstract intent down to concrete beats (whose compiled shots and motions
+ * are the graph's computed leaves) with temporal and interaction edges crossing
+ * it. Each kind carries its **own** payload shape (D014, heterogeneous
  * chain-of-thought): intent decomposition is not blocking geometry is not
  * dialogue, so no uniform thinking/plan/draft slots exist.
  *

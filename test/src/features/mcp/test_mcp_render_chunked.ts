@@ -102,8 +102,8 @@ const commitResident = (app: AutoMovieApplication): void => {
  * 3. A resident `planCaptions` plans the whole sidecar and, with `chunkFrames`,
  *    one chunk-local sidecar per render chunk (frame counts sum to the whole);
  *    malformed explicit caption slate slices stay validation failures.
- * 4. Malformed request/spec roots and a shot target (not the film) are
- *    violations: a shot renders whole.
+ * 4. Malformed request/spec roots and a shot target (not the film) are violations:
+ *    a shot renders whole.
  * 5. A non-positive / non-integer `chunkFrames` is a violation.
  * 6. An explicit slate keeps the legacy `frames/<stem>` defaults, byte-identical.
  * 7. Without a project and without a slate, both tools throw the openProject

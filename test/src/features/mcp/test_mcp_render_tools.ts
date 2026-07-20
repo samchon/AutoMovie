@@ -99,16 +99,16 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
  *    unknown or malformed pass list is a violation.
  * 2. Invalid or malformed render request/spec roots, malformed slate target
  *    slices, missing targets, duplicate shots, invalid sequence targets, and
- *    zero-frame plans return field-located diagnostics, including
- *    cutSequence's adjacent-transition overlap gate (two 0.6 s dissolves around
- *    a 1 s middle entry fail; 0.4 s dissolves plan), so a hand-authored film
- *    cannot commit or render what the cut stage would reject.
+ *    zero-frame plans return field-located diagnostics, including cutSequence's
+ *    adjacent-transition overlap gate (two 0.6 s dissolves around a 1 s middle
+ *    entry fail; 0.4 s dissolves plan), so a hand-authored film cannot commit
+ *    or render what the cut stage would reject.
  * 3. `seeFrame` resolves a preview frame by index or time, rejects conflicts and
  *    unknown passes, and reports `no-capture-adapter` on this adapterless
  *    application.
  * 4. Preview time maps onto the plan's own `i / fps` grid (nearest sample), even
- *    when `duration × fps` is not an integer: the last grid instant of a 1.02
- *    s shot at 10 fps resolves to frame 9 (an effective-fps mapping said 8), a
+ *    when `duration × fps` is not an integer: the last grid instant of a 1.02 s
+ *    shot at 10 fps resolves to frame 9 (an effective-fps mapping said 8), a
  *    self-consistent frame/time pair raises no temporal violation, a
  *    mid-interval time snaps to the nearer neighbour on either side, and an
  *    out-of-range time-only call reports `$input.time` without inventing a

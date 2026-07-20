@@ -95,8 +95,8 @@ const endActor = (node: keyof typeof ENDINGS): IAutoMovieBeatEndActorState => {
  *    single-actor perform upserts its own file and leaves the sibling
  *    byte-identical.
  * 3. An omitted registry compiles the same shot the explicit registry did.
- * 4. A node case-colliding with a stored sibling, or with another node of the
- *    same registry, is refused before anything runs (#1093).
+ * 4. A node case-colliding with a stored sibling, or with another node of the same
+ *    registry, is refused before anything runs (#1093).
  * 5. Store faults are blamed at the store: a tampered context reports
  *    `$slate.actors.<node>...`, an unseedable loaded opening likewise, and a
  *    node/filename mismatch throws the keyed-slice error.

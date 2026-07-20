@@ -138,10 +138,10 @@ export class AutoMovieApplication {
    * human-readable JSON files (`script.json`, `shots/<beat>.json`, ...), and
    * binary assets (models, textures, rendered frames) are tracked by the
    * manifest and referenced by path. After opening, every `get*` and `commit*`
-   * tool may omit its `slate` to read from, and write through to, the
-   * project, so a long production never re-sends its whole state per call.
-   * Reopening the same root keeps the live project; a fresh directory is a
-   * valid empty project.
+   * tool may omit its `slate` to read from, and write through to, the project,
+   * so a long production never re-sends its whole state per call. Reopening the
+   * same root keeps the live project; a fresh directory is a valid empty
+   * project.
    *
    * @param props The project root directory.
    * @returns The activated project's summary.
@@ -694,8 +694,8 @@ export class AutoMovieApplication {
    * Erase ONE stored prop spec (`props/<node>.json`) from the resident project,
    * the targeted mirror of `forgeProp`'s resident write-through. Requires an
    * active project, a non-empty reason (evidence), and an existing stored spec,
-   * erasing nothing is a violation. A prop the committed scene still places
-   * is refused rather than cascaded: the scene is upstream of every shot, so
+   * erasing nothing is a violation. A prop the committed scene still places is
+   * refused rather than cascaded: the scene is upstream of every shot, so
    * clearing it from a spec erase would be a reset in disguise, re-commit the
    * scene without the placement first.
    *
@@ -817,12 +817,12 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Capture one preview frame for inspection, the render/see loop. It plans
-   * the target frame and requested guide pass, then hands the host-injected
-   * capture adapter the request and returns the captured image. Without an
-   * adapter it returns the resolved frame with status `no-capture-adapter`
-   * instead of pixels, so an agent always knows whether it actually saw the
-   * frame. Omit `slate` to preview the resident project (#614).
+   * Capture one preview frame for inspection, the render/see loop. It plans the
+   * target frame and requested guide pass, then hands the host-injected capture
+   * adapter the request and returns the captured image. Without an adapter it
+   * returns the resolved frame with status `no-capture-adapter` instead of
+   * pixels, so an agent always knows whether it actually saw the frame. Omit
+   * `slate` to preview the resident project (#614).
    *
    * @param props The slate (omit for the resident project), render spec,
    *   optional frame/time, and guide pass.
@@ -873,10 +873,10 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Plan the caption sidecar, the per-shot diffusion-prompt track a render
-   * host reads beside the guide frames (#607), from the committed script and
-   * film. Pass `chunkFrames` to also get one chunk-local sidecar per render
-   * chunk, aligned with `planChunkedRender`. Omit `slate` to plan the resident
+   * Plan the caption sidecar, the per-shot diffusion-prompt track a render host
+   * reads beside the guide frames (#607), from the committed script and film.
+   * Pass `chunkFrames` to also get one chunk-local sidecar per render chunk,
+   * aligned with `planChunkedRender`. Omit `slate` to plan the resident
    * project.
    *
    * @param props The slate (omit for resident), shared render frame format, and

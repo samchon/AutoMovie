@@ -46,8 +46,8 @@ const assertFiniteQuaternion = (
  * is added on top.
  *
  * The result is an ordinary non-looping {@link IAutoMovieMotion} (it has a
- * finite extent in space), sampled like any other clip, and a camera can
- * follow its root to keep the moving character in frame.
+ * finite extent in space), sampled like any other clip, and a camera can follow
+ * its root to keep the moving character in frame.
  *
  * `facing`, when given, orients the root by that rotation (composed onto any
  * rotation the base root already carries), so a walk that travels sideways can

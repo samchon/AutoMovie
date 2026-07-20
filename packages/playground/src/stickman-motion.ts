@@ -9,8 +9,8 @@ import {
 } from "@automovie/interface";
 
 /**
- * A small library of motion clips for the stick figure, the deliberate
- * exercise of automovie's motion AST against the simplest possible body.
+ * A small library of motion clips for the stick figure, the deliberate exercise
+ * of automovie's motion AST against the simplest possible body.
  *
  * Each clip is an {@link IAutoMovieMotion}: sparse keyframes the engine
  * interpolates (per-axis joint angles + an optional whole-body `root`

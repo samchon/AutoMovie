@@ -224,11 +224,11 @@ const ADJ: number[][] = Array.from({ length: 468 }, () => []);
   }
 }
 /**
- * Cheap geometry-driven ambient occlusion: a concave vertex (a valley: the
- * alar crease, nasolabial fold, under-nose, mentolabial groove, eye socket)
- * sits below the average of its neighbours along the outward normal, so light
- * is partly blocked there. Darkening those vertices is what turns flat clay
- * into a face that reads as having recesses. Adapts to morphs automatically.
+ * Cheap geometry-driven ambient occlusion: a concave vertex (a valley: the alar
+ * crease, nasolabial fold, under-nose, mentolabial groove, eye socket) sits
+ * below the average of its neighbours along the outward normal, so light is
+ * partly blocked there. Darkening those vertices is what turns flat clay into a
+ * face that reads as having recesses. Adapts to morphs automatically.
  */
 const concavityAO = (pos: number[]): Float32Array => {
   // per-vertex normal from the cut triangulation

@@ -55,8 +55,8 @@ const TINY = (0.05 * Math.PI) / 180;
  *
  * Scenarios:
  *
- * 1. A target 0.05° off the aim axis (inside the old deadzone) now aims EXACTLY
- *    at the target (x-component = sin 0.05°, not the old identity's 0).
+ * 1. A target 0.05° off the aim axis (inside the old deadzone) now aims EXACTLY at
+ *    the target (x-component = sin 0.05°, not the old identity's 0).
  * 2. A target exactly behind an owner whose aim axis has `|x| < 0.9` takes the
  *    x-perpendicular 180° flip and lands on the target.
  * 3. The same with an aim axis of `|x| >= 0.9` takes the y-perpendicular branch

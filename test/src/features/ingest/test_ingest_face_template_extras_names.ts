@@ -4,9 +4,9 @@ import { TestValidator } from "@nestia/e2e";
 
 /**
  * Many exporters (and three.js) leave glTF morph targets unnamed and put the
- * names in `mesh.extras.targetNames` instead. The import must fall back to
- * that convention per index, while a target that does carry its own name keeps
- * it over the extras entry.
+ * names in `mesh.extras.targetNames` instead. The import must fall back to that
+ * convention per index, while a target that does carry its own name keeps it
+ * over the extras entry.
  *
  * Scenario: target #0 is unnamed but extras lists "identity"; target #1 is
  * named "jawWidth" while extras lists "WRONG" at its index: the template keys

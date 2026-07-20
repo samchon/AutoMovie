@@ -65,10 +65,10 @@ const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
  * Scenarios:
  *
  * 1. `beauty` is a no-op: materials keep their exact instances.
- * 2. `depth` swaps every mesh to the normalized-metric depth shader (#1167):
- *    grays linear over a scene-stable range decoupled from camera near/far
- *    (default 20 m, overridable), on a black (far) background; restore returns
- *    the original instances and background.
+ * 2. `depth` swaps every mesh to the normalized-metric depth shader (#1167): grays
+ *    linear over a scene-stable range decoupled from camera near/far (default
+ *    20 m, overridable), on a black (far) background; restore returns the
+ *    original instances and background.
  * 3. `normal` swaps to `MeshNormalMaterial` (the surface-normal hint, #1166).
  * 4. `outline` is a REAL edge pass (#1166): black fills plus one inverted-hull
  *    back-face shell per mesh (metric edge width, default overridable, skinning

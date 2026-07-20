@@ -15,9 +15,9 @@ const clip = (id: string, duration: number): IAutoMovieMcpMotion => ({
 /**
  * The session-only geometry memory's beat-less UNION view (#1091, #1040): a
  * query without a beat unions all beats' motion snapshots and DROPS any id
- * whose content differs across beats: an ambiguous id must miss (the
- * downstream reason names the fix: pass the beat) rather than sample whichever
- * beat committed last. Project re-activation with the same root keeps the live
+ * whose content differs across beats: an ambiguous id must miss (the downstream
+ * reason names the fix: pass the beat) rather than sample whichever beat
+ * committed last. Project re-activation with the same root keeps the live
  * memory; a different root clears it.
  *
  * Scenarios:

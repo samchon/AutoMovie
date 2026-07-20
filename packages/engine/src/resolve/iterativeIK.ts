@@ -39,10 +39,10 @@ const CONVERGENCE_EPSILON = 1e-6;
 const FALLBACK_DIR: IAutoMovieVector3 = { x: 1, y: 0, z: 0 };
 
 /**
- * Apply an iterative IK driver (`ccd` or `fabrik`) to a composed world map:
- * the long-chain complement to the analytic two-bone solver, now executed
- * inside the engine so the deterministic guarantee covers it (S2 of the core
- * wiring: these used to be returned untouched for a host to run).
+ * Apply an iterative IK driver (`ccd` or `fabrik`) to a composed world map: the
+ * long-chain complement to the analytic two-bone solver, now executed inside
+ * the engine so the deterministic guarantee covers it (S2 of the core wiring:
+ * these used to be returned untouched for a host to run).
  *
  * Both solvers work on the chain's world positions with rigid segment lengths
  * and a **fixed iteration budget** (`driver.iterations`, else

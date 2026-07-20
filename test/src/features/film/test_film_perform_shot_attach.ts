@@ -93,11 +93,11 @@ const stagingOf = () =>
  * 7. A handoff (#989), the same child attached over two disjoint spans, bakes
  *    UNIQUE ids in start order (`attach:sword`, `attach:sword:2`), so the shot
  *    stays committable, and `resolveBeatEnd` follows the LATEST coupling
- *    WITHOUT any staged mount (#1141, the grab alone drives the end state):
- *    the sword's end transform rides the second attachment's final follow
- *    sample (not the first's, not the staged placement), its end velocity is
- *    the follow clip's trailing read, and its `mount` stays null (a per-beat
- *    grab is not a persistent binding). The never-coupled knight keeps the
+ *    WITHOUT any staged mount (#1141, the grab alone drives the end state): the
+ *    sword's end transform rides the second attachment's final follow sample
+ *    (not the first's, not the staged placement), its end velocity is the
+ *    follow clip's trailing read, and its `mount` stays null (a per-beat grab
+ *    is not a persistent binding). The never-coupled knight keeps the
  *    staged/pose-root path.
  */
 export const test_film_perform_shot_attach = (): void => {

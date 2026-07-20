@@ -40,9 +40,9 @@ const model = (over: Partial<IAutoMovieModel>): IAutoMovieModel => ({
  *
  * 1. Opacity folds into the exported alpha: the viewer renders `material.opacity`
  *    and ignores `baseColor.a`, so `{opacity: 0.5, a: null}` (50% transparent
- *    live) must not export fully opaque. Exported alpha = `(a ?? 1) ×
- *    opacity`; an authored `a` multiplies in; a fully opaque material stays
- *    alpha 1 (negative twin).
+ *    live) must not export fully opaque. Exported alpha = `(a ?? 1) × opacity`;
+ *    an authored `a` multiplies in; a fully opaque material stays alpha 1
+ *    (negative twin).
  * 2. A mesh with `normals: null` and indices exports SMOOTH vertex normals, the
  *    same area-weighted accumulation the viewer's `computeVertexNormals`
  *    performs: a flat indexed quad exports (0,0,1) at every referenced vertex,

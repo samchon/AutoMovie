@@ -57,10 +57,10 @@ const materialsOf = (mesh: THREE.Mesh): THREE.Material[] =>
   Array.isArray(mesh.material) ? mesh.material : [mesh.material];
 
 /**
- * Restore() must dispose every resource the override CREATED (exactly once)
- * and never the borrowed originals: a guide-pass render applies and restores
- * once per frame per pass, so an hour of film would otherwise leak tens of
- * thousands of WebGL materials/geometries (#645). Restoring twice is a no-op.
+ * Restore() must dispose every resource the override CREATED (exactly once) and
+ * never the borrowed originals: a guide-pass render applies and restores once
+ * per frame per pass, so an hour of film would otherwise leak tens of thousands
+ * of WebGL materials/geometries (#645). Restoring twice is a no-op.
  *
  * Scenarios:
  *

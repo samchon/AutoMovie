@@ -3,12 +3,11 @@ import { IAutoMovieClip } from "@automovie/interface";
 import * as THREE from "three";
 
 /**
- * Drive scene objects from a **world-space node clip**: a shot's
- * `objectMotion` (a projectile's baked flight, a prop following a bone) or its
- * `cameraMotion`. Sample the clip at `seconds` and write each node channel's
- * translation / rotation / scale straight onto the `THREE.Object3D` that
- * `resolve` returns for that node; a node with no object (or a non-node
- * channel) is skipped.
+ * Drive scene objects from a **world-space node clip**: a shot's `objectMotion`
+ * (a projectile's baked flight, a prop following a bone) or its `cameraMotion`.
+ * Sample the clip at `seconds` and write each node channel's translation /
+ * rotation / scale straight onto the `THREE.Object3D` that `resolve` returns
+ * for that node; a node with no object (or a non-node channel) is skipped.
  *
  * This is the render side of the engine's clip bakers ({@link compileLaunch},
  * `compileAttach`, `cameraMove`): the object rides its clip each frame, no rig

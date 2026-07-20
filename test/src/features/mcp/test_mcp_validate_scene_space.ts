@@ -55,8 +55,8 @@ const validate = (space: unknown) =>
  * it composes, but `commitScene` accepts a caller-authored scene, and a
  * malformed space there would sit in the project until a ground query
  * dereferenced it. The scene validator therefore runs the same shape floor and
- * the same engine `validateSpace` the staging path does: one rule, one
- * meaning, whichever door the space came through.
+ * the same engine `validateSpace` the staging path does: one rule, one meaning,
+ * whichever door the space came through.
  *
  * A space surface deliberately needs NO entry in the models registry: it is the
  * ground's meaning, drawn from its own footprint, so the node model-resolution

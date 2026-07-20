@@ -46,8 +46,8 @@ const launch = (
  *    speed: the degenerate case where the incoming direction falls back to the
  *    sightline, so the reaction still has a well-formed `from`.
  * 8. With `targetAt`, the aim **leads a moving target**: against a foe sliding
- *    downrange, the baked flight lands where the target will be (past its
- *    start point), and the react is still timed to the computed contact.
+ *    downrange, the baked flight lands where the target will be (past its start
+ *    point), and the react is still timed to the computed contact.
  */
 export const test_film_launch = (): void => {
   const origin: IAutoMovieVector3 = { x: 0, y: 1.6, z: 0 };

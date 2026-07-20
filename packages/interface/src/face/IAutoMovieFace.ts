@@ -7,8 +7,8 @@ import { IAutoMovieFaceMouth } from "./IAutoMovieFaceMouth";
 import { IAutoMovieFaceNose } from "./IAutoMovieFaceNose";
 
 /**
- * A face-shape specification: the document the face editor's tool calling
- * emits and the engine morphs deterministically.
+ * A face-shape specification: the document the face editor's tool calling emits
+ * and the engine morphs deterministically.
  *
  * The document mirrors facial anatomy: overall head form at the top level, then
  * one named group per feature ({@link IAutoMovieFaceEyeSet eyes},

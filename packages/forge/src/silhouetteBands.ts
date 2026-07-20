@@ -92,8 +92,8 @@ export interface IForgeBandCleaning {
  * tracking glitches, extremum-anchored monotone clamps against spurs (ribbons,
  * tails) ballooning a slice, then a wide double triangular kernel because the
  * band drives a lofted clay surface where row jitter reads as ring banding.
- * Each side's clamp starts only AT its own extremum row: above it the head
- * must stay free to bulge outward.
+ * Each side's clamp starts only AT its own extremum row: above it the head must
+ * stay free to bulge outward.
  *
  * @author Samchon
  */

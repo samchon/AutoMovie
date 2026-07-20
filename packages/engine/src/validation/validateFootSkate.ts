@@ -52,10 +52,10 @@ export interface IAutoMovieFootContactWindow {
  * stylized gestures can all move feet legally unless the caller marks a foot as
  * planted for a particular time span.
  *
- * Foot skate is a physical-plausibility **warning**, not a gate: the run
- * still succeeds and the warning surfaces so the orchestrator can plant the
- * foot (IK), restage, or acknowledge a deliberate slide with `physicsIntent`.
- * Only malformed annotations (bad bone, window, or rate) are errors.
+ * Foot skate is a physical-plausibility **warning**, not a gate: the run still
+ * succeeds and the warning surfaces so the orchestrator can plant the foot
+ * (IK), restage, or acknowledge a deliberate slide with `physicsIntent`. Only
+ * malformed annotations (bad bone, window, or rate) are errors.
  *
  * @author Samchon
  */

@@ -48,11 +48,11 @@ const SPEC: IAutoMovieRenderSpec = {
 };
 
 /**
- * The chunked render plans guide passes per chunk, the 1-hour film's real
- * path: chunking (#609) × guide passes (#608) in one manifest. Each chunk's
- * per-pass paths carry the chunk-local re-base exactly like its beauty frames,
- * so a single chunk renders a pass frame-identical to the same frames of the
- * whole render modulo the chunk dir + re-base; tagged passes terminate as frame
+ * The chunked render plans guide passes per chunk, the 1-hour film's real path:
+ * chunking (#609) × guide passes (#608) in one manifest. Each chunk's per-pass
+ * paths carry the chunk-local re-base exactly like its beauty frames, so a
+ * single chunk renders a pass frame-identical to the same frames of the whole
+ * render modulo the chunk dir + re-base; tagged passes terminate as frame
  * sequences whose whole-timeline order is the pass manifest's chunk-dir walk.
  *
  * Scenarios:

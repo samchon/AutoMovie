@@ -7,9 +7,9 @@ import * as path from "node:path";
  * (sorted).
  *
  * Refuses any entry that resolves outside `location` (a `../` escape in a map
- * key), and, unless `force`, refuses to write into a non-empty directory, so
- * a scaffold never silently clobbers an existing project. Rendering the file
- * map is {@link renderScaffold}'s job; this is the write half of that split.
+ * key), and, unless `force`, refuses to write into a non-empty directory, so a
+ * scaffold never silently clobbers an existing project. Rendering the file map
+ * is {@link renderScaffold}'s job; this is the write half of that split.
  *
  * @author Samchon
  */

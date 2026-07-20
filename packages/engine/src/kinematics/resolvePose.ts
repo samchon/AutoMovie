@@ -30,9 +30,9 @@ export interface IAutoMovieResolvedBone {
   worldPosition: IAutoMovieVector3;
   /**
    * Bone orientation in world/model space (parent world rotation ∘ local). This
-   * is what an **attachment** rides. Fixing a child body's frame in this
-   * bone's frame (e.g. a rider in a horse's saddle) parents the two the way a
-   * physics joint does.
+   * is what an **attachment** rides. Fixing a child body's frame in this bone's
+   * frame (e.g. a rider in a horse's saddle) parents the two the way a physics
+   * joint does.
    */
   worldRotation: IAutoMovieQuaternion;
 }
@@ -116,8 +116,8 @@ export const indexSkeletonTopology = (
  * set from the same walk, and graceful consumers (a physics validator gating a
  * bone, `retargetHumanoidMotion` measuring rest height) rely on the partial
  * return to report a malformed rig instead of crashing. A consumer that needs
- * every declared bone present must gate on {@link reachableBoneNames} first:
- * the total, non-throwing "which bones will resolve" query.
+ * every declared bone present must gate on {@link reachableBoneNames} first: the
+ * total, non-throwing "which bones will resolve" query.
  *
  * `jointAxes` optionally remaps the clinical axes per bone (e.g.
  * `HUMANOID_JOINT_AXES`, so a T-pose arm's flexion swings it sagittally); a

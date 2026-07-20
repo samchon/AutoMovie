@@ -471,10 +471,9 @@ export class PipelineService {
    * **A case-variant of a stored node id is refused (#1093).** On a
    * case-insensitive filesystem `props/Door.json` and `props/door.json` are one
    * file, so the upsert rename would silently destroy the sibling's spec while
-   * the exact-id guards above never fire, the prop twin of the #1011
-   * beat-slice clobber. The refusal is platform-independent (a project must
-   * stay portable to case-insensitive filesystems) and locates
-   * `$input.spec.node`.
+   * the exact-id guards above never fire, the prop twin of the #1011 beat-slice
+   * clobber. The refusal is platform-independent (a project must stay portable
+   * to case-insensitive filesystems) and locates `$input.spec.node`.
    */
   public forgeProp(props: {
     spec: IAutoMovieMcpPropSpec;
@@ -2017,11 +2016,11 @@ const validateTransformObject = (
  * Continuity-seed for the resident `perform` (#1176): an actor context that
  * omits `position` or `facingDeg` inherits it from the previous beat's
  * committed end-state (script order), so a walking character resumes exactly
- * where, and facing exactly how, the last beat left it. Explicit values
- * always win. Nothing to inherit (a first beat, an uncommitted predecessor, an
- * actor the end-state never saw) is refused with the commitBeatEnd hint rather
- * than silently placed at the origin. Malformed registries and context entries
- * pass through untouched, the actor-registry gate owns those refusals.
+ * where, and facing exactly how, the last beat left it. Explicit values always
+ * win. Nothing to inherit (a first beat, an uncommitted predecessor, an actor
+ * the end-state never saw) is refused with the commitBeatEnd hint rather than
+ * silently placed at the origin. Malformed registries and context entries pass
+ * through untouched, the actor-registry gate owns those refusals.
  */
 const seedActorOpenings = (
   actors: Record<string, IAutoMovieMcpActorContext> | undefined,
@@ -2207,8 +2206,8 @@ const validateActorContextFields = (
 /**
  * The rig graph checks `computeRestHeight` and FK would otherwise throw on
  * (#999): duplicate bone rows, parents naming absent bones, root count, and
- * parent cycles. Typia accepts all of these, bone names are a closed union,
- * but graph relations are not.
+ * parent cycles. Typia accepts all of these, bone names are a closed union, but
+ * graph relations are not.
  */
 const validateActorRig = (
   rig: unknown,

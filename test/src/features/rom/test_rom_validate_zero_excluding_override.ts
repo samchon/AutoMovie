@@ -20,11 +20,11 @@ import { nclose } from "../internal/predicates";
  * Scenarios:
  *
  * 1. Flexion 0 against a zero-excluding `[10, 90]` override reports a `rom`
- *    violation at the axis path, and `clampJointRom` moves the same input to
- *    10 (clamp/validate parity).
+ *    violation at the axis path, and `clampJointRom` moves the same input to 10
+ *    (clamp/validate parity).
  * 2. Zero on an immobile (`null`) axis of the same constraint stays clean, and a
- *    zero against a zero-INCLUDING range stays clean: the skip survives
- *    exactly where it is correct.
+ *    zero against a zero-INCLUDING range stays clean: the skip survives exactly
+ *    where it is correct.
  */
 export const test_rom_validate_zero_excluding_override = (): void => {
   const constraint: IAutoMovieJointConstraint = {

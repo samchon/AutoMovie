@@ -53,8 +53,8 @@ export interface IAutoMovieSupportResult {
  * Judge whether an object is stably supported: its center of mass, projected
  * onto the ground plane, must fall within the convex hull (plus margin) of its
  * support contact points. When it overhangs, and because a film may be
- * deliberately unphysical, this reports an advisory `warning`, not a
- * hard reject, and suggests the topple (the pivot edge and fall direction). A
+ * deliberately unphysical, this reports an advisory `warning`, not a hard
+ * reject, and suggests the topple (the pivot edge and fall direction). A
  * `physicsIntent` marker (a levitating prop) suppresses the warning and
  * suggestion while still surfacing the event.
  *

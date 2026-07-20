@@ -143,9 +143,9 @@ const rod = (
 });
 
 /**
- * Build the stick-figure horse (a big quadruped skeleton, rods, a maned neck,
- * a muzzle, ears, and a long tail) from a set of proportions. The `spine` bone
- * is the saddle a rider attaches to.
+ * Build the stick-figure horse (a big quadruped skeleton, rods, a maned neck, a
+ * muzzle, ears, and a long tail) from a set of proportions. The `spine` bone is
+ * the saddle a rider attaches to.
  *
  * @author Samchon
  */

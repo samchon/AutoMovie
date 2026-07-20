@@ -40,8 +40,7 @@ const flexionOf = (pose: IAutoMoviePose): number | null =>
  *    `update(sameT)` renders the identical lagged angle instead of popping to
  *    the target.
  * 3. Negative twin: a genuinely fresh joint (no spring state) at a dt=0 first
- *    frame still initializes AT its target: the hold only protects LIVE
- *    state.
+ *    frame still initializes AT its target: the hold only protects LIVE state.
  */
 export const test_viewer_player_spring_hold = (): void => {
   // 1. mid-decay hold across repeated same-t updates

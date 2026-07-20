@@ -7,8 +7,8 @@ import {
 } from "./primitives";
 
 /**
- * Structural floor for an {@link IAutoMovieSpace} arriving over MCP (#1173),
- * the JSON shape the engine's `validateSpace` dereferences without checking,
+ * Structural floor for an {@link IAutoMovieSpace} arriving over MCP (#1173), the
+ * JSON shape the engine's `validateSpace` dereferences without checking,
  * because inside the engine the value is already typed.
  *
  * Both space entry points share it: the `stage` tool's `staging.space` and a

@@ -53,8 +53,8 @@ export const DEFAULT_KEYPOINT_BONES: readonly AutoMovieHumanoidBone[] = [
  * normalized `[0, 1]` frame coordinate.
  *
  * A joint behind the camera or outside the frame is still projected (never
- * silently clamped: a clamped point reads as a false edge keypoint) but
- * flagged `inFrame: false`. Deterministic: pure FK + stateless projection.
+ * silently clamped: a clamped point reads as a false edge keypoint) but flagged
+ * `inFrame: false`. Deterministic: pure FK + stateless projection.
  *
  * @author Samchon
  */

@@ -19,9 +19,9 @@ const yaw = (deg: number) => Quaternion.fromAxisAngle(Y, deg);
  *    and t=1, and the midpoint is the half-angle rotation Y45.
  * 2. Opposite hemisphere (identity → Y200, dot = cos 100° < 0): the implementation
  *    negates `b` to take the shorter arc, so the t=0.5 result is Y(−80°), the
- *    short-way midpoint, not the long-way Y100. Pins that slerp never takes
- *    the long way around. (Endpoints still hold up to sign, since q and −q are
- *    the same rotation.)
+ *    short-way midpoint, not the long-way Y100. Pins that slerp never takes the
+ *    long way around. (Endpoints still hold up to sign, since q and −q are the
+ *    same rotation.)
  * 3. Near-parallel (identity → Y0.4, dot ≈ 0.99999 > 0.9995): slerp falls back to
  *    a normalized lerp to avoid dividing by sin θ ≈ 0; the midpoint is still ≈
  *    Y0.2 to a looser tolerance.

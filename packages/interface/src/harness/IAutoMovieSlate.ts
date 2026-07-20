@@ -12,10 +12,7 @@ export interface IAutoMovieBeat {
   /** Short title ("the charge", "the rear"). */
   name: string;
 
-  /**
-   * What happens in this beat, in prose: the brief the blocking stage works
-   * to.
-   */
+  /** What happens in this beat, in prose: the brief the blocking stage works to. */
   summary: string;
 
   /** Rough length (seconds) the script imagines; blocking may refine it. */
@@ -54,10 +51,9 @@ export interface IAutoMovieScript {
   /**
    * The screenplay refinement tree ({@link IAutoMovieScriptNode}, D013): intent
    * → acts/scenes/groups → beat nodes carrying stage direction, dialogue, and
-   * shot captions. Evolving-schema optional: absent means the flat `beats`
-   * list is the whole authored structure (fully backward-compatible); when
-   * present, beat-kind nodes join `beats` 1:1 and the tree validates on
-   * commit.
+   * shot captions. Evolving-schema optional: absent means the flat `beats` list
+   * is the whole authored structure (fully backward-compatible); when present,
+   * beat-kind nodes join `beats` 1:1 and the tree validates on commit.
    */
   tree?: IAutoMovieScriptNode[] | null;
 }

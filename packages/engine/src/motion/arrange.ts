@@ -13,8 +13,8 @@ export interface IAutoMoviePlacement {
 }
 
 /**
- * Hold a single pose for `duration` seconds: the simplest "action" an actor
- * can perform (a beat of stillness), and the filler the timeline composer uses
+ * Hold a single pose for `duration` seconds: the simplest "action" an actor can
+ * perform (a beat of stillness), and the filler the timeline composer uses
  * across gaps. A two-keyframe clip with the same pose at both ends.
  *
  * @author Samchon

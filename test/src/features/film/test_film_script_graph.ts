@@ -5,9 +5,9 @@ import { throwsError } from "../internal/predicates";
 import { createScriptTree } from "../validation/test_validation_script_tree";
 
 /**
- * The refinement-graph walkers of the feedback cascade: scriptAncestors
- * returns the chain a located violation climbs, and beatNodeOf is the flat-beat
- * → graph-node join a beat-scoped consumer locates itself with. Walkers serve
+ * The refinement-graph walkers of the feedback cascade: scriptAncestors returns
+ * the chain a located violation climbs, and beatNodeOf is the flat-beat →
+ * graph-node join a beat-scoped consumer locates itself with. Walkers serve
  * validated trees but refuse silent drops on malformed input (the bindProfile
  * precedent): a cascade that stopped short would misdirect the correction.
  *

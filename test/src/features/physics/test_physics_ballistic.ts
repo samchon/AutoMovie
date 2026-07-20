@@ -16,9 +16,9 @@ const landing = (
     .position;
 
 /**
- * `solveBallisticLaunch`, the inverse of the forward projectile simulation:
- * the launch velocity that connects. The contract is the forward oracle: fire
- * the returned velocity and, at the returned hit time, the projectile is on the
+ * `solveBallisticLaunch`, the inverse of the forward projectile simulation: the
+ * launch velocity that connects. The contract is the forward oracle: fire the
+ * returned velocity and, at the returned hit time, the projectile is on the
  * target. Any error in the range equation shows up as a miss.
  *
  * Scenarios:

@@ -47,8 +47,7 @@ const unitScale = { x: 1, y: 1, z: 1 };
  *    shot and its file clear, beat-ends and notes clear, the film nulls.
  * 2. The ladder reflects the cascade: nextSteps flips `shots` back into the
  *    missing list and names commitShot as the re-do (the #615 interplay).
- * 3. A ghost placement violates at `$input.node`: a set names a thing that
- *    exists.
+ * 3. A ghost placement violates at `$input.node`: a set names a thing that exists.
  * 4. An empty reason violates (evidence discipline); malformed and non-finite
  *    transforms violate at `$input.transform`; a project with no committed
  *    scene violates at `$slate.scene`. Nothing is written in any refused case.

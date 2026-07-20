@@ -5,8 +5,8 @@ import { IAutoMovieReviewNote } from "./IAutoMovieSlate";
  * return either a pass or field-located notes that send it back to blocking /
  * performance. This is the human-facing twin of the validation ladder: the
  * structural and physical tiers run automatically (typia, ROM/physics) and
- * attach their findings; this stage adds the **visual** tier: does the
- * rendered shot actually read as the beat intended?
+ * attach their findings; this stage adds the **visual** tier: does the rendered
+ * shot actually read as the beat intended?
  *
  * The model is shown the rendered frames (M2) plus any automatic violations and
  * must decide. A revise verdict with no notes is invalid; if it fails, say why
@@ -27,8 +27,8 @@ export namespace IAutoMovieReviewApplication {
      *   shot off his horse")?
      * - Do **interactions connect**: the strike lands on the body, the rider
      *   stays coupled through the rear, the hit precedes the fall?
-     * - Is the **motion plausible**: no skating, no limbs through bodies, ROM
-     *   not visibly violated (and weigh the automatic structural/physical
+     * - Is the **motion plausible**: no skating, no limbs through bodies, ROM not
+     *   visibly violated (and weigh the automatic structural/physical
      *   violations you were handed)?
      * - Is the **camera** framing the moment that matters, and the **timing** /
      *   energy right for the theme? Be strict: a shot that only "roughly" reads

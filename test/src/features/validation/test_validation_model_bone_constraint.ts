@@ -42,8 +42,8 @@ const modelWithConstraint = (constraint: IAutoMovieJointConstraint) => {
  *    violation on `swingDeg`: the most-retracted articulation the ranges allow
  *    already swings past the cone, so no pose satisfies both (#1245). Reported
  *    against the cone, since the ranges alone are unobjectionable.
- * 6. The non-firing twins: a box that excludes neutral but sits INSIDE a wide
- *    cone is sound and must validate, in both the `min > 0` and `max < 0`
+ * 6. The non-firing twins: a box that excludes neutral but sits INSIDE a wide cone
+ *    is sound and must validate, in both the `min > 0` and `max < 0`
  *    directions. Rejecting these refused rigs the per-bone override exists to
  *    express (a limb that cannot fully extend), on a false premise (#1245).
  */

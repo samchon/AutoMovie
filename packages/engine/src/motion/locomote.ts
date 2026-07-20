@@ -12,14 +12,14 @@ const assertFiniteVector = (label: string, vector: IAutoMovieVector3): void => {
 
 /**
  * Synthesise the **locomote** action: carry a looping gait clip across a
- * `distance` at `speed` in a `direction`. The engine sizes the travel: it
- * picks how many gait cycles cover the distance at the requested speed, then
- * bakes the effective velocity that ARRIVES at exactly `distance` over those
- * whole cycles (`travelMotion`), so the harness `locomote` verb ("walk to the
- * door") reaches the door instead of stopping a half-stride short. At least one
- * cycle always plays; a distance shorter than half a stride compresses that
- * cycle so the effective speed never falls below half the requested speed
- * (#1065): a quick short step instead of unbounded slow motion.
+ * `distance` at `speed` in a `direction`. The engine sizes the travel: it picks
+ * how many gait cycles cover the distance at the requested speed, then bakes
+ * the effective velocity that ARRIVES at exactly `distance` over those whole
+ * cycles (`travelMotion`), so the harness `locomote` verb ("walk to the door")
+ * reaches the door instead of stopping a half-stride short. At least one cycle
+ * always plays; a distance shorter than half a stride compresses that cycle so
+ * the effective speed never falls below half the requested speed (#1065): a
+ * quick short step instead of unbounded slow motion.
  *
  * `faceTravel` turns the body to face where it is going: the root is oriented
  * so the model's forward (`+Z`) points down the travel direction, so a figure

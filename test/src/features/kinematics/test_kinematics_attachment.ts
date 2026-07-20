@@ -15,9 +15,9 @@ import { createSkeleton, joint, makePose } from "../internal/fixtures";
 import { nclose, throwsError, vclose } from "../internal/predicates";
 
 /**
- * `resolveAttachment`: the cross-skeleton joint that fixes a child model's
- * root into a bone of a posed parent (a rider in a horse's saddle). It runs FK
- * on the parent, reads the attachment bone's world position + orientation, and
+ * `resolveAttachment`: the cross-skeleton joint that fixes a child model's root
+ * into a bone of a posed parent (a rider in a horse's saddle). It runs FK on
+ * the parent, reads the attachment bone's world position + orientation, and
  * composes the offset into that frame.
  *
  * The fixture skeleton stacks hips(0,1,0) → spine(0,0.2,0) → chest(0,0.2,0), so

@@ -87,13 +87,14 @@ const hideNonMeshRenderables = (scene: THREE.Scene): (() => void) => {
  *
  * An unknown mode is a caller bug and throws.
  *
- * `options` (`depthRange`, `edgeWidth`) is an escape hatch for a direct embedder
- * tuning the passes to an unusual scene. The bundled capture path (`__afPass`)
- * deliberately omits it: a screenshot pass reads the same world depth as the same
- * gray only when the normalization range is a scene-stable constant, so the
- * capture side is fixed to the defaults on purpose (#1167). A scene whose depth
- * of interest exceeds {@link DEPTH_NORMALIZATION_RANGE} would clamp to black past
- * that range in the bundled capture. Override via a direct call, not the hook.
+ * `options` (`depthRange`, `edgeWidth`) is an escape hatch for a direct
+ * embedder tuning the passes to an unusual scene. The bundled capture path
+ * (`__afPass`) deliberately omits it: a screenshot pass reads the same world
+ * depth as the same gray only when the normalization range is a scene-stable
+ * constant, so the capture side is fixed to the defaults on purpose (#1167). A
+ * scene whose depth of interest exceeds {@link DEPTH_NORMALIZATION_RANGE} would
+ * clamp to black past that range in the bundled capture. Override via a direct
+ * call, not the hook.
  *
  * @author Samchon
  */

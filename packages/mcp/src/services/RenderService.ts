@@ -62,10 +62,10 @@ import {
 } from "./ValidationService";
 
 /**
- * The render/see loop, deterministic render planning and the host-adapter
- * frame capture (#608). Pixels never flow through the server: the service plans
- * the frame and hands the context's capture adapter the request. The MCP
- * contract lives on the {@link AutoMovieApplication} facade.
+ * The render/see loop, deterministic render planning and the host-adapter frame
+ * capture (#608). Pixels never flow through the server: the service plans the
+ * frame and hands the context's capture adapter the request. The MCP contract
+ * lives on the {@link AutoMovieApplication} facade.
  *
  * Like every stateful tool (#614), render is **resident-or-explicit**: omit
  * `slate` and it reads the resident project's `writableSlate()`, so a long
@@ -214,11 +214,11 @@ export class RenderService {
   }
 
   /**
-   * Plan the caption sidecar, the per-shot diffusion-prompt track a render
-   * host reads beside the guide frames (#607). Resident-or-explicit; the
-   * committed script and film supply the captions and the cut. Pass
-   * `chunkFrames` to also get one chunk-local sidecar per render chunk, aligned
-   * with {@link planChunkedRender}'s frame-atomic windows.
+   * Plan the caption sidecar, the per-shot diffusion-prompt track a render host
+   * reads beside the guide frames (#607). Resident-or-explicit; the committed
+   * script and film supply the captions and the cut. Pass `chunkFrames` to also
+   * get one chunk-local sidecar per render chunk, aligned with
+   * {@link planChunkedRender}'s frame-atomic windows.
    */
   public planCaptions(props: {
     slate?: IAutoMovieMcpWritableSlate;

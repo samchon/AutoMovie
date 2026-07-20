@@ -90,8 +90,8 @@ const cameraFrame = {
  *
  * 1. A `launch` whose `onHit` targets a staged node fails when that node has no
  *    MCP context, and again when the context is rig-less, both at
- *    `$input.performance.draft[i].onHit`, while a launch whose target carries
- *    a full context returns no synthesis gap (its shot compiles).
+ *    `$input.performance.draft[i].onHit`, while a launch whose target carries a
+ *    full context returns no synthesis gap (its shot compiles).
  * 2. A non-launch/non-enact action naming an actor with no MCP context at all
  *    fails at that action's `actor` path before the default performer reads
  *    it.
@@ -106,8 +106,8 @@ const cameraFrame = {
  * 5. A unison (`actor: [a, b]`) rig-less gesture locates each refusal at its own
  *    `actor[i]` index.
  * 6. A successful perform whose second actor carries a rig-less context still
- *    compiles: the `skeleton(node) => rig ?? null` accessor returns null for
- *    it without failing the shot.
+ *    compiles: the `skeleton(node) => rig ?? null` accessor returns null for it
+ *    without failing the shot.
  */
 export const test_mcp_perform_synthesis_gaps = (): void => {
   const app = new AutoMovieApplication();

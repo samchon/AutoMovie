@@ -146,8 +146,8 @@ const composed = (
  * Chained object couplings compose through every link (#1140). Before the fix
  * each coupling was baked from its parent's STAGED transform + pose motion
  * alone: a prop attached to a mounted knight silently stayed at the knight's
- * staged spot while the knight rode away, and a coupling cycle baked two
- * frozen couplings with no violation.
+ * staged spot while the knight rode away, and a coupling cycle baked two frozen
+ * couplings with no violation.
  *
  * Scenarios:
  *

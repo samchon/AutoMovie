@@ -16,8 +16,8 @@ const body = (over: Partial<IAutoMovieImpactBody>): IAutoMovieImpactBody => ({
 });
 
 /**
- * `resolveImpact`, abstracted collision response: impulse + post-velocities +
- * a qualitative kind from a material heuristic.
+ * `resolveImpact`, abstracted collision response: impulse + post-velocities + a
+ * qualitative kind from a material heuristic.
  *
  * Scenarios:
  *

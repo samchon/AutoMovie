@@ -292,11 +292,11 @@ export interface IAutoMovieValidateOutput {
 
 /** Commit tool result. */
 /**
- * A compact identity digest of a slate, which slices exist, by id (#1132).
- * Tool returns carry this instead of echoing whole artifacts: state belongs to
- * the read side (`getSlate`/`getShot`/`nextSteps`), and a full-slate echo on
- * every write cost thousands of tokens per call while tempting callers to trust
- * a possibly-stale snapshot over current truth.
+ * A compact identity digest of a slate, which slices exist, by id (#1132). Tool
+ * returns carry this instead of echoing whole artifacts: state belongs to the
+ * read side (`getSlate`/`getShot`/`nextSteps`), and a full-slate echo on every
+ * write cost thousands of tokens per call while tempting callers to trust a
+ * possibly-stale snapshot over current truth.
  */
 export interface IAutoMovieMcpSlateDigest {
   /** Whether a script is committed. */
@@ -885,9 +885,9 @@ export type IAutoMovieMcpPropDriver =
 
 /**
  * A prop's profile as the MCP boundary accepts it: the declared controls,
- * limits, and (tuple-free) drivers. Gaits are omitted, a prop does not
- * locomote (`IAutoMovieProfile.gaits` is for bodies); the humanoid gait path
- * rides the `perform` tool's actor contexts instead.
+ * limits, and (tuple-free) drivers. Gaits are omitted, a prop does not locomote
+ * (`IAutoMovieProfile.gaits` is for bodies); the humanoid gait path rides the
+ * `perform` tool's actor contexts instead.
  */
 export interface IAutoMovieMcpPropProfile {
   /** Stable profile id. */
@@ -1113,8 +1113,8 @@ export interface IAutoMovieActorEraseOutput {
 /**
  * The `registerAsset` tool's result (#670). Registration is a resident-only,
  * additive manifest mutation: `registered` is true only when the path was newly
- * tracked, duplicates and path escapes are refused as violations, and the
- * index is never silently rewritten.
+ * tracked, duplicates and path escapes are refused as violations, and the index
+ * is never silently rewritten.
  */
 export interface IAutoMovieRegisterAssetOutput {
   /** True only when the path was newly registered into the manifest. */

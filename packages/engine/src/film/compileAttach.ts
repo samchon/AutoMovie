@@ -24,8 +24,8 @@ const IDENTITY_OFFSET: IAutoMovieTransform = {
 /**
  * Bake the `attachTo` verb into the **child object's** flight-follow clip, the
  * per-frame realisation of a rigid coupling to a parent's bone (a sword in a
- * hand, a prop on a saddle). The child is not a rig, so (like a projectile)
- * it moves by a node clip of transform tracks, not a pose motion.
+ * hand, a prop on a saddle). The child is not a rig, so (like a projectile) it
+ * moves by a node clip of transform tracks, not a pose motion.
  *
  * Each sample resolves the parent's posed skeleton at that instant
  * ({@link resolveAttachment}, which runs the parent's FK) to find the bone's
@@ -63,8 +63,8 @@ export const compileAttach = (props: {
    * The parent's world root over shot-local time, when the parent itself rides
    * a coupling this shot (#1140): each sample composes onto THIS frame instead
    * of the static `parentTransform`, so the child follows the parent's ridden
-   * path: a lance in a mounted knight's hand rides the horse. Omit for a
-   * parent standing on its staged placement.
+   * path: a lance in a mounted knight's hand rides the horse. Omit for a parent
+   * standing on its staged placement.
    */
   parentTransformAt?: (t: number) => IAutoMovieTransform;
   /** The parent's rig, for the per-frame FK. */

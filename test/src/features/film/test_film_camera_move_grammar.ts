@@ -39,8 +39,8 @@ const SUBJECT = { base: { x: 0, y: 0, z: 0 }, height: 2, at: null };
 /**
  * Pins the framing grammar's arithmetic with hand-computed oracles. With a 90°
  * vertical FOV, `tan(fovY/2) = 1`, so the framed distance is exactly half the
- * visible height: a subject of height 2 framed `medium` (0.62×) gives `d =
- * 1.24 / 2 = 0.62`, aimed at 0.72 × height = y 1.44.
+ * visible height: a subject of height 2 framed `medium` (0.62×) gives `d = 1.24
+ * / 2 = 0.62`, aimed at 0.72 × height = y 1.44.
  *
  * Scenarios:
  *

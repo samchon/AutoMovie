@@ -56,8 +56,8 @@ const crateSpec = (): IAutoMovieMcpPropSpec => ({
  * 5. A prop the committed scene still places is refused at `$slate.scene` and its
  *    file survives: unstaging is `commitScene`'s job. Re-forging that placed
  *    prop is likewise refused (`stored: false`, the spec unchanged), while a
- *    FIRST forge of a placed-but-unstored node stores (#712: creating a spec
- *    is not replacing one).
+ *    FIRST forge of a placed-but-unstored node stores (#712: creating a spec is
+ *    not replacing one).
  * 6. A pure (no-project) forge output carries no `stored` key, and `eraseProp`
  *    without a project throws the actionable openProject prompt.
  */
