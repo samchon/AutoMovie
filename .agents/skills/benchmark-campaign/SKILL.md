@@ -1,17 +1,21 @@
 ---
 name: benchmark-campaign
-description: Defines the empirical MCP benchmark loop for automovie: authoring a persistent scenario corpus, driving the live MCP surface with an external agent (Claude, Codex), scoring and attributing each run, publishing lead-vetted defect and gap issues, developing every one of them, and only then re-running the corpus. Use when the user wants to benchmark the pipeline through real MCP runs, generate and exercise short/medium/long scenarios, or turn benchmark shortfalls into an issue-to-pull-request campaign; do not use for a static code audit (see the issue-campaign skill) or one already-defined issue.
+description: Defines the default solo empirical MCP benchmark loop for automovie: authoring a persistent scenario corpus, driving the live MCP surface with an external agent (Claude, Codex), scoring and attributing each run, publishing main-agent-vetted defect and gap issues, developing every one in one cycle pull request, and only then re-running the corpus. Use when the user wants to benchmark the pipeline through real MCP runs, generate and exercise short/medium/long scenarios, or turn benchmark shortfalls into an issue-to-pull-request campaign unless the user explicitly requests parallel or multi-agent execution; do not use for a static code audit (see the issue-campaign skill) or one already-defined issue.
 ---
 
 # Benchmark Campaign
 
-A benchmark campaign measures automovie through real use and turns every shortfall into work: author a diverse scenario corpus, drive the live MCP surface with an external agent (Claude, Codex 5.6), score and attribute each run, publish the automovie-owned defects and gaps as lead-vetted issues, implement every one of them, and only then re-run the corpus to measure again. It is the empirical counterpart to the issue campaign (issue candidates come from lived runs and rendered output, not from a static audit), and it inherits that skill's lead-vetted publication, self-contained issue body, batched implementation, and closure discipline.
+A benchmark campaign measures automovie through real use and turns every shortfall into work: author a diverse scenario corpus, drive the live MCP surface with an external agent (Claude, Codex), score and attribute each run, publish the automovie-owned defects and gaps as main-agent-vetted issues, implement every one of them, and only then re-run the corpus to measure again. It is the empirical counterpart to the issue campaign (issue candidates come from lived runs and rendered output, not from a static audit), and it inherits that skill's main-agent-vetted publication, self-contained issue body, one-PR cycle implementation, and closure discipline.
+
+This document is the whole default campaign procedure. The main agent performs every campaign phase and never spawns or delegates to a subagent.
+
+Use the [multi-agent skill](../multi-agent/SKILL.md) and its benchmark-campaign procedure instead only when the user explicitly asks for a parallel or multi-agent benchmark campaign.
 
 The measure–fix–measure order is the campaign's spine: a benchmark cycle does not re-run until every issue discovered in the current cycle is developed and merged. Measuring against a surface with known, unfixed gaps wastes the run and muddies attribution; the corpus is re-driven only after the full fix wave lands.
 
 Apply [AGENTS.md's **Choose the principled course** rule](../../../AGENTS.md#attitude) to every launch, score, attribution, publication, and implementation decision. A run's cost and duration decide how carefully it is prepared, never what counts as a pass.
 
-Read the project, development, review, mcp, viewer-verification, and pull-request skills before starting, and require every benchmark-agent brief to do the same. The user's requested phase boundary controls how far to proceed: an author-and-run request does not authorize publishing issues, pushing branches, or merging. A standing autonomous mandate (see the pull-request skill) authorizes the full loop end to end. The boundary binds harder here because a run is itself an expensive, long-running action that consumes the external agent's model quota: when the user has not asked for the whole loop, say which corpus, how long, and at whose cost before starting one.
+Read the project, development, review, mcp, viewer-verification, and pull-request skills before starting. Use the review skill's Solo Issue Discovery Rounds. The user's requested phase boundary controls how far to proceed: an author-and-run request does not authorize publishing issues, pushing branches, or merging. A standing autonomous mandate (see the pull-request skill) authorizes only the actions it explicitly names. The boundary binds harder here because a run is itself an expensive, long-running action that consumes the external agent's model quota: when the user has not asked for the whole loop, say which corpus, how long, and at whose cost before starting one.
 
 ## Benchmark Knowledge Base
 
@@ -21,8 +25,8 @@ The corpus and its run records are the benchmark's durable asset, not scratch. N
 
 - the **scenario corpus**: each scenario's intent, duration/complexity tier, capability axes exercised, and expected observable result;
 - **run records**: per run, the agent and exact model id, the brief given, the full tool-call trace, every tool output and validation result, the rendered output, retries, and cost;
-- the **triage ledger**: each shortfall's attribution, evidence, and lead disposition;
-- **implementation and regression**: the inherited dependency DAG, grouping decisions, split-reason ledger, batches, their pull requests, official empty-claim `createdAt`-to-`mergedAt` duration, verification, and the before/after runs that confirm each fix.
+- the **triage ledger**: each shortfall's attribution, evidence, and main-agent disposition; and
+- **implementation and regression**: the published-issue DAG, internal implementation order, one unified cycle pull request, official empty-claim `createdAt`-to-`mergedAt` duration, verification, and the before/after runs that confirm each fix.
 
 The knowledge base supports the campaign but is not the issue body: a published issue must stand alone without `.wiki`, which is gitignored and invisible to a fresh implementer.
 
@@ -40,7 +44,7 @@ Launch only from a state whose measurement will still mean something: the suites
 
 Work through the scenarios in ascending cost, short tier first. A regression in a shared path breaks every scenario, so it is worth finding on the cheapest one; reserve the long, ambitious scenarios for the claims only they can adjudicate.
 
-Drive the live MCP server through a real external-client handshake (see the mcp skill and `packages/mcp/README.md`) using the actual target agent (Claude, Codex 5.6), never an in-repo mock or the lead standing in for the model. The external agent drives the tools; the lead observes and records.
+Drive the live MCP server through a real external-client handshake (see the mcp skill and `packages/mcp/README.md`) using the actual target agent (Claude, Codex), never an in-repo mock or the main agent standing in for the model. The external agent drives the tools; the main agent observes and records.
 
 Record every run in the knowledge base: agent and model id, the brief, the complete tool-call trace, each tool output and validation result, the rendered output (verified through the viewer-verification skill for anything visual), and the retries and cost.
 
@@ -71,7 +75,7 @@ The run, not a theory, decides whether a change is needed.
 
 ## Vet And Publish Issues
 
-Publication follows the issue-campaign skill's Vet And Publish Issues phase unchanged: the lead, not a benchmark agent, owns every decision, reopens and reproduces the evidence, traces the consequence surface, compares open and closed work, and records the disposition. Publish only the adjudicated form, and only with user authorization or under a standing autonomous mandate.
+Publication follows the issue-campaign skill's Vet And Publish Issues phase unchanged: the main agent owns every decision, reopens and reproduces the evidence, traces the consequence surface, compares open and closed work, and records the disposition. Publish only the adjudicated form, and only with user authorization or under a standing autonomous mandate.
 
 Write each body to that skill's Self-Contained Issue Body contract, adding the benchmark evidence a fresh implementer needs to reproduce without `.wiki`:
 
@@ -83,6 +87,6 @@ State an interface-gap issue as a missing axis in extensibility terms (additive,
 
 ## Develop Every Issue, Then Re-Benchmark
 
-When the user authorizes implementation or a standing autonomous mandate covers it, implement in batches by the issue-campaign skill's [development.md](../issue-campaign/development.md): the published-unclaimed dependency frontier, owner/root-cause/change-surface/shared-verification batching, active-claim freeze, claim pull requests, worktree isolation, official batch-duration metric, the standing rule that no agent idles on a running command, and closure, with every ordinary gate (`pnpm run format`, green `build` and `test` at 100% coverage, the pull-request skill's check loop) in force. An author-run-and-publish-only campaign does not load it.
+When the user authorizes implementation or a standing autonomous mandate covers it, implement by the issue-campaign skill's [solo development procedure](../issue-campaign/development.md): one empty-claim pull request containing every implementation-ready issue, DAG-ordered edits, complete coverage, local and CI validation, solo Self-Review, red-CI repair in the same pull request, merge, cleanup, and renewed discovery. An author-run-and-publish-only campaign does not load it.
 
-The cycle's gate is total: the next benchmark measurement begins only after **every** issue from the current cycle is merged, not after a subset. Then re-run the affected scenarios and the whole corpus against the fixed surface, recording the before/after runs so each fix's effect is measured, and re-triage what remains. A renewed cycle extends the corpus with new reach scenarios, drives them, and repeats; earlier runs are not coverage. The campaign ends only when a full corpus run against a fully-developed surface surfaces no automovie-owned shortfall that survives lead verification.
+The cycle's gate is total: the next benchmark measurement begins only after **every** issue from the current cycle is merged, not after a subset. Then re-run the affected scenarios and the whole corpus against the fixed surface, recording the before/after runs so each fix's effect is measured, and re-triage what remains. A renewed cycle extends the corpus with new reach scenarios, drives them, and repeats; earlier runs are not coverage. The campaign ends only when a full corpus run against a fully-developed surface surfaces no automovie-owned shortfall that survives main-agent fact-checking.
