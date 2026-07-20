@@ -1632,7 +1632,7 @@ const validateBlockingShape = (
   // targetless entry would throw out of the engine instead of refusing with a
   // field-located violation. An omitted or null list is the single-camera beat.
   const coverage = blocking.coverage;
-  if (coverage !== undefined && coverage !== null)
+  if (coverage !== undefined && coverage !== null) {
     if (
       isJsonArray(coverage, `${root}.coverage`, "blocking coverage", violations)
     )
@@ -1647,6 +1647,7 @@ const validateBlockingShape = (
         );
         validateStageTarget(intent.on, `${path}.on`, violations);
       });
+  }
 };
 
 const validateCutShape = (
