@@ -94,8 +94,11 @@ const reasonOf = (output: { reason: string | null }): string =>
  * 5. The relative kinds keep the sentence that was always true of them, and an
  *    unknown or malformed target is refused by its kind: the honest cases must
  *    not have been traded away for the dishonest ones.
- * 6. Both sides unresolved yield one clause each, so a `from` that named an
- *    unplaced id and a `to` that was a heading stop reading as one problem.
+ * 6. Both sides unresolved for DIFFERENT causes yield one clause each, so a `from`
+ *    that named an unplaced id and a `to` that was a heading stop reading as
+ *    one problem. The identically-faulted pair (both sides relative), where the
+ *    risk is collapsing two clauses into one rather than merging two causes,
+ *    belongs to `test_mcp_geometry_query_edges`.
  * 7. The shape floor the new camera read requires: a context scene whose `cameras`
  *    is not a list refuses with a located violation instead of throwing a
  *    `TypeError` out of the placement table.

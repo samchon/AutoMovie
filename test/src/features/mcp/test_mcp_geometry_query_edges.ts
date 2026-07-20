@@ -161,8 +161,11 @@ const contextWith = (
  * 2. `getReach` against a rig whose only arm chain has zero-length bones answers
  *    "no measurable arm chain"; a both-arms rig past every arm's span reports
  *    an unreachable verdict from BOTH sides.
- * 3. `measureDistance` with BOTH targets relative pluralizes the not-positional
- *    reason ("targets are").
+ * 3. `measureDistance` with BOTH targets unresolved for the SAME cause still
+ *    speaks once per SIDE. The reason grammar is one clause per endpoint, not
+ *    one clause per distinct fault, so an identically-faulted pair must not
+ *    collapse into a single sentence (the heterogeneous pair, two sides with
+ *    two different faults, is `test_mcp_geometry_camera_target`'s).
  * 4. A shot-less context resolves an actor's AMBIENT node motion (and, with an
  *    empty performance list, still falls back to it); a context with neither
  *    motion nor performance returns the rest pose.
@@ -234,16 +237,22 @@ export const test_mcp_geometry_query_edges = (): void => {
       !bothArms.reachable,
   );
 
-  // 3. both targets relative
+  // 3. both sides unresolved, and for the SAME cause. The old grammar merged
+  //     the two into one pluralized sentence; the current one emits a clause
+  //     per endpoint, so the contract worth holding is that an identical pair
+  //     still speaks twice and names each side. Counting the clause head is
+  //     what makes "twice" observable rather than inferred from a separator.
+  const bothRelative =
+    app.measureDistance({
+      scene,
+      from: { kind: "direction", headingDeg: 0 },
+      to: { kind: "direction", headingDeg: 90 },
+    }).reason ?? "";
   TestValidator.predicate(
-    "two relative targets pluralize the not-positional reason",
-    (
-      app.measureDistance({
-        scene,
-        from: { kind: "direction", headingDeg: 0 },
-        to: { kind: "direction", headingDeg: 90 },
-      }).reason ?? ""
-    ).includes("targets are"),
+    "two identically-faulted sides still yield one clause each",
+    bothRelative.includes("the from target must resolve to a point") &&
+      bothRelative.includes("the to target must resolve to a point") &&
+      bothRelative.split("must resolve to a point").length - 1 === 2,
   );
 
   // 4. ambient / rest-pose fallbacks
