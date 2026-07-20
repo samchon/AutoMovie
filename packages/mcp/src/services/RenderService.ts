@@ -47,6 +47,7 @@ import {
 } from "../dto";
 import { validateSequenceArtifact } from "../validators/artifacts";
 import {
+  appendMotionClockShape,
   appendValidation,
   isRecord,
   pushViolation,
@@ -637,6 +638,17 @@ const buildPoseKeypointPlan = (props: {
               keyframe.time,
             );
         });
+        // And the order those times put the clip in. `planPoseKeypointSidecar`
+        // samples this registry directly, and `sampleMotion`'s binary search
+        // assumes a positive span between neighbours: out of order it selects a
+        // segment that does not straddle the instant, so the sidecar's joint
+        // coordinates are finite, deterministic, and not the pose the clip
+        // describes (#1328).
+        appendMotionClockShape(
+          motion.keyframes,
+          `${path}.keyframes`,
+          violations,
+        );
       }
       if (!Number.isFinite(motion.duration))
         pushViolation(

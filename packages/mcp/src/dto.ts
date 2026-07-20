@@ -290,7 +290,6 @@ export interface IAutoMovieValidateOutput {
   validation: IAutoMovieValidation;
 }
 
-/** Commit tool result. */
 /**
  * A compact identity digest of a slate, which slices exist, by id (#1132). Tool
  * returns carry this instead of echoing whole artifacts: state belongs to the

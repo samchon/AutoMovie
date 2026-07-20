@@ -37,7 +37,7 @@ import {
 } from "../dto";
 import { shotIdOf } from "../project/shotKey";
 import {
-  isRecord,
+  appendMotionClockShape,
   pushViolation,
   validateArrayArtifact,
   validateNonEmptyId,
@@ -158,6 +158,18 @@ export class GeometryService {
         beatEnd: null,
         reason: `no shot for beat "${props.beat}", pass context.shot explicitly or commit the beat's shot first`,
       };
+    // The registry this is about to sample, gated the same way `getResolvedPose`
+    // gates it (through `findMotion`). This method reaches `resolveBeatEnd` ->
+    // `sampleMotion` WITHOUT that lookup, and the context shape gate above
+    // covers scene, models, and shot but not motions, so the clip floor #1322
+    // added was reachable from one geometry query and not the other (#1328).
+    // Structural, so it throws like every other shape fault in this service,
+    // and it runs outside the try below: an unsampleable clip is not an
+    // authored-data reason, it is a malformed context.
+    assertGeometryMotionRegistryShape(
+      source.context.motions,
+      `${source.root}.motions`,
+    );
     // The remaining engine contracts (duplicate motion ids, duplicated
     // performances/mounts) are authored-data faults a read-only derivation
     // reports as a reason, not a raw throw across the boundary (#990).
@@ -868,22 +880,10 @@ const appendGeometryMotionShape = (
   );
   // And the ORDER, which no single keyframe can show: the sampler's binary
   // search assumes a positive span between neighbours, so equal or descending
-  // times interpolate across a zero or negative one. A single keyframe orders
-  // nothing and is left alone.
-  let previous: number | null = null;
-  motion.keyframes.forEach((keyframe, index) => {
-    const time = isRecord(keyframe) ? keyframe.time : undefined;
-    if (typeof time !== "number" || !Number.isFinite(time)) return;
-    if (previous !== null && time <= previous)
-      pushViolation(
-        violations,
-        "temporal",
-        `${path}.keyframes[${index}].time`,
-        `motion keyframe times must strictly increase; ${time} is not greater than ${previous}`,
-        time,
-      );
-    previous = time;
-  });
+  // times interpolate across a zero or negative one. One definition, shared
+  // with every other entry point that hands host motions to `sampleMotion`
+  // (#1328).
+  appendMotionClockShape(motion.keyframes, `${path}.keyframes`, violations);
 };
 
 const appendGeometryMotionKeyframeShape = (

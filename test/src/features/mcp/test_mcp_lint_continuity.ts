@@ -122,9 +122,10 @@ const failsAt = (validation: IAutoMovieValidation, path: string): boolean =>
  *    beat id each return violations rather than throwing.
  * 5. A structurally invalid shot surfaces its violations under the beat's shot
  *    path, not a continuity result.
- * 6. Duplicate motion ids in one beat's registry, and an unperformed scene node's
- *    ambient motion the registry omits, are each caught before the engine
- *    walker would throw.
+ * 6. Duplicate motion ids in one beat's registry, an unperformed scene node's
+ *    ambient motion the registry omits, and a clip whose keyframe times do not
+ *    strictly increase (the precondition the walker's sampler declares) are
+ *    each caught before the engine walker would answer from them.
  */
 export const test_mcp_lint_continuity = (): void => {
   // 1. still clip: clean resume.
@@ -245,6 +246,33 @@ export const test_mcp_lint_continuity = (): void => {
         beats: [beatFor("b1", still)],
       }).validation,
       "$input.beats[0].motions",
+    ),
+  );
+
+  // 6b. the clock the walker's sampler orders each clip by. `resolveBeatEnd`
+  // calls `sampleMotion`, whose binary search assumes a positive span between
+  // neighbouring keyframes; out of order it interpolates across the wrong pair
+  // and the continuity verdict describes a beat end the film never reaches.
+  // Nothing else on this path establishes it: the registry is checked only for
+  // object shape and a non-empty id (#1328).
+  const reversed: IAutoMovieMcpMotion = {
+    ...still,
+    keyframes: [still.keyframes[1]!, { ...still.keyframes[0]!, time: 0 }],
+  };
+  TestValidator.predicate(
+    "non-increasing keyframe times are caught at the offending index",
+    failsAt(
+      app.lintContinuity({
+        scene,
+        beats: [
+          {
+            beat: "b1",
+            shot: shotFor("b1", still.id),
+            motions: { still: reversed },
+          },
+        ],
+      }).validation,
+      "$input.beats[0].motions.still.keyframes[1].time",
     ),
   );
 
