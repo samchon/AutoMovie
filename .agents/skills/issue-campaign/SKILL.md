@@ -20,7 +20,7 @@ Keep concise, current Markdown documents for:
 - the campaign scope, architecture and ownership boundaries, and provenance notes;
 - experiments, reproductions, and related issue or pull-request history;
 - candidates, evidence, dependencies, and lead disposition;
-- implementation batches, their pull requests, and verification records when those phases apply.
+- implementation batches, their dependency DAG, grouping decisions, split-reason ledger, pull requests, official empty-claim `createdAt`-to-`mergedAt` duration, and verification records when those phases apply.
 
 The knowledge base supports the campaign but is not the final issue body. A published issue must stand alone without access to `.wiki`: the wiki is gitignored and never visible to a fresh implementer.
 

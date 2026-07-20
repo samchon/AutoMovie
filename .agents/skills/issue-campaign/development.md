@@ -20,17 +20,34 @@ Two rules govern the whole implementation phase:
 
 ## Plan And Claim A Pull Request Wave
 
-Build the issue dependency DAG before assigning implementation. Use it to form cohesive batches, not to create one worktree per issue.
+Recompute the published-issue dependency DAG after publication and before every implementation wave. A published issue is an evidence and acceptance unit, not a default pull-request boundary. Form the smallest number of maximal cohesive batches that the verified dependencies and implementation surfaces permit.
 
-Batching follows these rules:
+Admit two or more published, unclaimed, dependency-ready issues to one batch only when every row below supports the same implementation unit:
 
-- Group dependency-ready issues when their owned files, change surfaces, and verification are compatible. File ownership, not issue count or topic, is the real constraint on parallelism.
-- Run batches concurrently only when their owned file sets are disjoint; serialize batches that overlap or depend on one another.
-- Assign one batch to one agent, worktree, branch, and pull request.
-- State the ownership boundary in every batch brief: the files that batch owns, and the files each concurrent batch holds. An agent that does not know what another agent is holding cannot avoid it.
-- Name this document in every batch brief, so the implementing agent inherits its worktree, ownership, and no-idling rules rather than rediscovering them.
-- Split jointly implementable issues only for a concrete dependency, ownership, atomicity, or validation reason. Record that reason in the campaign knowledge base.
-- Immediately before claiming a batch, check again for an overlapping implementation pull request or branch.
+| Decision axis | Group when | Split when |
+| --- | --- | --- |
+| Dependency readiness | Every issue is ready on the same DAG frontier and the batch can finish without waiting for another member or an external state transition. | An issue has a different prerequisite, external blocker, release gate, or target-branch timing. |
+| Architectural ownership and root cause | The issues repair the same verified root cause or closely coupled invariants under one architectural owner. | They belong to different repositories, target branches, product owners, or independently releasable contracts. |
+| Change and consequence surface | The owned files overlap, must move together, or form one traceable consequence surface. Disjoint files may still group when one invariant requires all of them. | The changes can land and roll back independently without leaving either issue incomplete. |
+| Verification | The issues share most setup, focused harnesses, rendered evidence, and broad validation lanes. | They require materially different environments, validation owners, or merge gates, or one failure would unnecessarily block the others. |
+| Atomicity and review | One diff can keep every issue's acceptance matrix explicit and can be reviewed, reverted, and diagnosed as one coherent change. | Combining them obscures root cause, issue-level acceptance, rollback, or failure attribution. |
+
+Topic, label, package proximity, reporter, and issue count do not justify a batch by themselves. File disjointness does not require a split when the same root cause and verification lane bind the files, and file overlap does not justify grouping issues with different readiness or atomicity.
+
+Build each wave in this order:
+
+1. Take every published, admitted, unclaimed node on the current dependency frontier.
+2. Partition the nodes by architectural owner and verified root cause.
+3. Merge partitions that share a change and consequence surface and most verification work while preserving issue-level acceptance and rollback.
+4. Split only for a named dependency, ownership, atomicity, or validation reason from the table.
+5. Check open pull requests and remote branches for overlapping implementation immediately before claiming.
+6. Freeze the batch once its empty claim pull request exists. Do not add a newly published issue to an active claim or close, move, or combine an active claim merely to improve batching or throughput statistics. Change an active claim only when correctness, overlap, or invalidated evidence requires a lead decision.
+
+Run batches concurrently only when their owned file sets are disjoint; serialize batches that overlap or depend on one another. Assign one batch to one agent, worktree, branch, and pull request.
+
+State the ownership boundary in every batch brief: the files that batch owns, and the files each concurrent batch holds. Name this document in the brief so the implementing agent inherits its worktree, ownership, batching, and no-idling rules rather than rediscovering them.
+
+Record the DAG edges, the issues in each batch, the owned change and consequence surfaces, the shared verification lane, every grouping reason, and every split reason in the campaign knowledge base. Report the pull-request unit count before batching and after batching before opening claims.
 
 The agent assigned a batch claims it as its first action, before writing any code:
 
@@ -41,6 +58,8 @@ The agent assigned a batch claims it as its first action, before writing any cod
 5. Start `pnpm install` in the worktree asynchronously (a fresh worktree carries no `node_modules`, so its build and suite cannot run until it finishes) and begin the source, consequence-surface, and test-design work at once.
 
 The draft pull request reserves the whole batch before code is written, preventing another agent from starting overlapping work.
+
+Measure the official duration of a claimed batch from the empty claim pull request's GitHub `createdAt` timestamp through its `mergedAt` timestamp. Use the GitHub fields, not a local clock or commit timestamp. The duration includes installation, implementation, validation, review, dependency waiting, rebases, CI, and merge. Record the issue count beside the duration so batch density remains visible, and do not remove outliers or replace the official per-pull-request measure with a commit-to-merge or per-issue metric.
 
 ## Keep Working While Commands Run
 

@@ -22,7 +22,7 @@ The corpus and its run records are the benchmark's durable asset, not scratch. N
 - the **scenario corpus**: each scenario's intent, duration/complexity tier, capability axes exercised, and expected observable result;
 - **run records**: per run, the agent and exact model id, the brief given, the full tool-call trace, every tool output and validation result, the rendered output, retries, and cost;
 - the **triage ledger**: each shortfall's attribution, evidence, and lead disposition;
-- **implementation and regression**: batches, their pull requests, verification, and the before/after runs that confirm each fix.
+- **implementation and regression**: the inherited dependency DAG, grouping decisions, split-reason ledger, batches, their pull requests, official empty-claim `createdAt`-to-`mergedAt` duration, verification, and the before/after runs that confirm each fix.
 
 The knowledge base supports the campaign but is not the issue body: a published issue must stand alone without `.wiki`, which is gitignored and invisible to a fresh implementer.
 
@@ -83,6 +83,6 @@ State an interface-gap issue as a missing axis in extensibility terms (additive,
 
 ## Develop Every Issue, Then Re-Benchmark
 
-When the user authorizes implementation or a standing autonomous mandate covers it, implement in batches by the issue-campaign skill's [development.md](../issue-campaign/development.md): the dependency DAG, file-ownership batching, claim pull requests, worktree isolation, the standing rule that no agent idles on a running command, and closure, with every ordinary gate (`pnpm run format`, green `build` and `test` at 100% coverage, the pull-request skill's check loop) in force. An author-run-and-publish-only campaign does not load it.
+When the user authorizes implementation or a standing autonomous mandate covers it, implement in batches by the issue-campaign skill's [development.md](../issue-campaign/development.md): the published-unclaimed dependency frontier, owner/root-cause/change-surface/shared-verification batching, active-claim freeze, claim pull requests, worktree isolation, official batch-duration metric, the standing rule that no agent idles on a running command, and closure, with every ordinary gate (`pnpm run format`, green `build` and `test` at 100% coverage, the pull-request skill's check loop) in force. An author-run-and-publish-only campaign does not load it.
 
 The cycle's gate is total: the next benchmark measurement begins only after **every** issue from the current cycle is merged, not after a subset. Then re-run the affected scenarios and the whole corpus against the fixed surface, recording the before/after runs so each fix's effect is measured, and re-triage what remains. A renewed cycle extends the corpus with new reach scenarios, drives them, and repeats; earlier runs are not coverage. The campaign ends only when a full corpus run against a fully-developed surface surfaces no automovie-owned shortfall that survives lead verification.
