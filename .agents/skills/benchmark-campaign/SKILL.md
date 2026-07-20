@@ -38,7 +38,7 @@ Each scenario is a self-contained brief a fresh external agent can attempt from 
 
 Launch only from a state whose measurement will still mean something: the suites green at 100% coverage, and every change under test merged into `master`. A build that compiles is not a validated build, and "the remaining failures are probably unrelated" is an assumption, not evidence. A run started from an unverified tree spends its hours producing evidence about a state that will never exist again; kill it, discard its records so nothing later mistakes them for a result, and note the aborted attempt in the knowledge base rather than the ledger.
 
-Drive the scenarios in ascending cost, short tier first. A regression in a shared path breaks every scenario, so it is worth finding on the cheapest one; reserve the long, ambitious scenarios for the claims only they can adjudicate.
+Work through the scenarios in ascending cost, short tier first. A regression in a shared path breaks every scenario, so it is worth finding on the cheapest one; reserve the long, ambitious scenarios for the claims only they can adjudicate.
 
 Drive the live MCP server through a real external-client handshake (see the mcp skill and `packages/mcp/README.md`) using the actual target agent — Claude, Codex 5.6 — never an in-repo mock or the lead standing in for the model. The external agent drives the tools; the lead observes and records.
 
@@ -66,7 +66,6 @@ The run, not a theory, decides whether a change is needed.
 
 - Record a suspicion the current runs cannot settle as a hypothesis in the knowledge base, together with the exact observation that would confirm or refute it. Do not implement a hypothesis before a run adjudicates it, unless the repository proves the defect on its own.
 - Reserve a rich claim for a scenario that can adjudicate it. A short single-character scenario cannot settle camera, scene, or multi-actor expressiveness.
-- Attribute every observation to exactly one origin. Misattribution is more damaging than a slow campaign.
 - Never loosen a rubric, a validator, or a scenario's expected result to make a run score better. A benchmark that fails honestly is worth more than a green one that lies; that failure is the entire product of the campaign.
 - A discovery round is never held open waiting for a run. Judge each round against the current tree and the most recent completed runs; a run that finishes afterwards opens a new round over what it produced.
 

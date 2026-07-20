@@ -33,7 +33,7 @@ Source JSDoc is English, in the interia voice: state what the type or function i
 
 ## Agent instructions
 
-`AGENTS.md` and `SKILL.md` files are operational documents for humans and agents. Keep the repository-wide contract in `AGENTS.md`, the always-applicable procedure in `SKILL.md`, and conditional detail in a linked sibling document. A revision should read as if the rule had always been written there.
+`AGENTS.md` and `SKILL.md` files are operational documents for humans and agents. `AGENTS.md ## Maintenance` decides where a rule belongs; these rules decide how it is written. A revision should read as if it had always been there.
 
 - **Optimize for comprehension, not minimum length.** A shorter document that forces the reader to infer prerequisites, reasons, exceptions, or stop conditions is not concise. Include the context needed to execute correctly.
 - **Remove repetition, not substance.** State a rule once at its owning document and link to it elsewhere. Keep the rationale when it prevents a plausible mistake.
