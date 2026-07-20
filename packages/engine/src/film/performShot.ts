@@ -981,7 +981,19 @@ export const performShot = (props: {
         "the staged scene has no camera, so the shot cannot be framed",
         performance.beat,
       );
-    else liveCamera = first.id;
+    else {
+      // The id this fallback picks becomes `shot.camera`, which the artifact
+      // contract requires to be non-empty. The other two routes to that field
+      // already check it (a `frame` action through its actor, a coverage intent
+      // through its own id), so an unchecked fallback was the one way to
+      // assemble a shot the validator refuses (#1318).
+      validateNonEmptyId(
+        first.id,
+        "$staged.scene.cameras[0].id",
+        "the fallback camera id",
+      );
+      liveCamera = first.id;
+    }
   }
 
   // Coverage (#1187): the blocking's ADDITIONAL angles become alternate takes
