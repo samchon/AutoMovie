@@ -37,6 +37,7 @@ import {
 } from "../dto";
 import { shotIdOf } from "../project/shotKey";
 import {
+  isRecord,
   pushViolation,
   validateArrayArtifact,
   validateNonEmptyId,
@@ -865,6 +866,24 @@ const appendGeometryMotionShape = (
       violations,
     ),
   );
+  // And the ORDER, which no single keyframe can show: the sampler's binary
+  // search assumes a positive span between neighbours, so equal or descending
+  // times interpolate across a zero or negative one. A single keyframe orders
+  // nothing and is left alone.
+  let previous: number | null = null;
+  motion.keyframes.forEach((keyframe, index) => {
+    const time = isRecord(keyframe) ? keyframe.time : undefined;
+    if (typeof time !== "number" || !Number.isFinite(time)) return;
+    if (previous !== null && time <= previous)
+      pushViolation(
+        violations,
+        "temporal",
+        `${path}.keyframes[${index}].time`,
+        `motion keyframe times must strictly increase; ${time} is not greater than ${previous}`,
+        time,
+      );
+    previous = time;
+  });
 };
 
 const appendGeometryMotionKeyframeShape = (
@@ -874,6 +893,22 @@ const appendGeometryMotionKeyframeShape = (
 ): void => {
   if (!validateObjectArtifact(keyframe, path, "motion keyframe", violations))
     return;
+  // The clock `sampleMotion` orders the clip by. Its own comment names the
+  // precondition ("strictly increasing keyframe times, the contract
+  // validateMotion enforces"), and nothing establishes that here: a geometry
+  // context's motions are host-supplied and never see validateMotion. A
+  // non-finite time makes every comparison in the sampler's search false, so
+  // the span is NaN and the interpolated pose is NaN, which `getResolvedPose`
+  // then reports with `reason: null` (#1322). The sibling floor for `enact`
+  // clips already requires this; the two disagreed about this one field.
+  if (typeof keyframe.time !== "number" || !Number.isFinite(keyframe.time))
+    pushViolation(
+      violations,
+      "range",
+      `${path}.time`,
+      `motion keyframe time must be a finite number of seconds, but was ${String(keyframe.time)}`,
+      keyframe.time,
+    );
   appendGeometryPoseShape(keyframe.pose, `${path}.pose`, violations);
   const bezier = keyframe.bezier;
   if (bezier !== null) {
