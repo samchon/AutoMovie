@@ -176,6 +176,16 @@ const keysOf = (values: readonly number[]) =>
  * is animated but has no staged facing must therefore hold still rather than
  * rotate a root under an absent quaternion.
  *
+ * The coverage half below is reached the way a caller reaches it in production:
+ * `perform` takes `blocking` as an ordinary argument, so a hand-written plan
+ * arrives without passing through `block`. That matters, because `blockBeat`
+ * still measures a coverage subject against staged NODES only and would refuse
+ * this camera subject. The gap is the known cross-rung asymmetry #1294 left
+ * behind (`block` has not been widened to match `perform`), not a rule this
+ * scenario invents: within `performShot` a coverage subject resolves exactly as
+ * a hero `frame` subject does, which is the coherence that belongs to this
+ * rung.
+ *
  * Scenarios:
  *
  * 1. A loose with `onHit` at `cam-main` plus a `follow` frame on `cam-main`
