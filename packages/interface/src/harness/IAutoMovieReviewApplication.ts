@@ -1,15 +1,15 @@
 import { IAutoMovieReviewNote } from "./IAutoMovieSlate";
 
 /**
- * Stage 5 — **REVIEW** (the loop). Judge a built shot against its beat and
+ * Stage 5: **REVIEW** (the loop). Judge a built shot against its beat and
  * return either a pass or field-located notes that send it back to blocking /
  * performance. This is the human-facing twin of the validation ladder: the
  * structural and physical tiers run automatically (typia, ROM/physics) and
- * attach their findings; this stage adds the **visual** tier — does the
+ * attach their findings; this stage adds the **visual** tier: does the
  * rendered shot actually read as the beat intended?
  *
  * The model is shown the rendered frames (M2) plus any automatic violations and
- * must decide. A revise verdict with no notes is invalid — if it fails, say why
+ * must decide. A revise verdict with no notes is invalid; if it fails, say why
  * and how to fix it (the feedback the next pass consumes).
  *
  * @author Samchon
@@ -25,9 +25,9 @@ export namespace IAutoMovieReviewApplication {
      *
      * - Does the **key action read** at a glance (a stranger would see "he is
      *   shot off his horse")?
-     * - Do **interactions connect** — the strike lands on the body, the rider
+     * - Do **interactions connect**: the strike lands on the body, the rider
      *   stays coupled through the rear, the hit precedes the fall?
-     * - Is the **motion plausible** — no skating, no limbs through bodies, ROM
+     * - Is the **motion plausible**: no skating, no limbs through bodies, ROM
      *   not visibly violated (and weigh the automatic structural/physical
      *   violations you were handed)?
      * - Is the **camera** framing the moment that matters, and the **timing** /
@@ -46,7 +46,7 @@ export namespace IAutoMovieReviewApplication {
     beat: string;
 
     /**
-     * What you observed in the render, good and bad — the evidence for the
+     * What you observed in the render, good and bad: the evidence for the
      * verdict.
      */
     observations: string;
@@ -55,7 +55,7 @@ export namespace IAutoMovieReviewApplication {
     verdict: "pass" | "revise";
 
     /**
-     * The fixes, when revising — each located as concretely as possible and
+     * The fixes, when revising: each located as concretely as possible and
      * tier-tagged. Empty only when `verdict` is `pass`.
      */
     notes: IAutoMovieReviewNote[];

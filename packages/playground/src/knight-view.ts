@@ -53,7 +53,7 @@ const horsePlayer = new AutoMoviePlayer(
   QUADRUPED_REST_FRAME,
 );
 
-// ── the rider's body pose — sitting astride, lance couched, shield up ────────
+// ── the rider's body pose: sitting astride, lance couched, shield up ────────
 const j = (
   bone: AutoMovieHumanoidBone,
   a: { flexion?: number; abduction?: number; twist?: number },
@@ -69,7 +69,7 @@ const ridePose = (lean: number): IAutoMoviePose => ({
   joints: [
     j("spine", { flexion: 6 + lean }),
     j("chest", { flexion: 4 }),
-    // legs straddle the barrel and grip — thighs forward-and-out, knees bent
+    // legs straddle the barrel and grip: thighs forward-and-out, knees bent
     j("leftUpperLeg", { flexion: -52, abduction: 24 }),
     j("rightUpperLeg", { flexion: -52, abduction: -24 }),
     j("leftLowerLeg", { flexion: 74 }),

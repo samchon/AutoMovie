@@ -43,7 +43,7 @@ const posAt = (
 };
 
 /**
- * `compileAttach` — bake the `attachTo` verb into a child object's follow-clip.
+ * `compileAttach`: bake the `attachTo` verb into a child object's follow-clip.
  * The contract: the child rides the parent's bone in **scene space** (the
  * parent's staged placement composed onto the bone's per-frame FK), the clip is
  * shot-local, and a resting parent yields a static child while a moving one
@@ -52,8 +52,8 @@ const posAt = (
  * Scenarios:
  *
  * 1. A resting parent: the child is static and sits exactly at the bone's world
- *    point — the `leftHand` rest position (0.75, 1.4, 0) in the parent's model
- *    space, composed onto the staged placement (hand-computed FK oracle) — and
+ *    point, the `leftHand` rest position (0.75, 1.4, 0) in the parent's model
+ *    space, composed onto the staged placement (hand-computed FK oracle), and
  *    inherits the parent's facing.
  * 2. The clip is shot-local: its times run over `[start, start + duration]` and it
  *    spans the shot.
@@ -208,7 +208,7 @@ export const test_film_attach = (): void => {
 
   // 5. a non-positive span throws before it can bake a degenerate clip (#1224).
   // With duration 0 the sample loop emits `start` for both endpoints, so the
-  // clip's keyframe times would be [start, start] — an unsamplable follow. The
+  // clip's keyframe times would be [start, start]: an unsamplable follow. The
   // baker rejects it up front, the same precondition projectileTrajectory
   // enforces, so no caller can slip a zero-span coupling past.
   const zeroSpanAttach = (): void => {

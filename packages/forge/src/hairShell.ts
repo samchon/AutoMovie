@@ -11,7 +11,7 @@ export interface IForgeMeshPart {
 }
 
 /**
- * The parametric hair controls — pure numbers in `[0, 1]`, so a character's
+ * The parametric hair controls: pure numbers in `[0, 1]`, so a character's
  * hairstyle rides in a preset document next to its face parameters.
  */
 export interface IForgeHairParameters {
@@ -37,7 +37,7 @@ export interface IForgeHairParameters {
   updo?: number;
 }
 
-/** The neck/shoulder bust controls — preset data like every other parameter. */
+/** The neck/shoulder bust controls: preset data like every other parameter. */
 export interface IForgeBustParameters {
   /** Neck thickness: `0` slender, `1` thick. */
   neck: number;
@@ -46,7 +46,7 @@ export interface IForgeBustParameters {
   shoulders: number;
 }
 
-/** The chignon controls — preset data like every other hair parameter. */
+/** The chignon controls: preset data like every other hair parameter. */
 export interface IForgeBunParameters {
   /** Bun size: `0` none (empty part), `1` a full chignon. */
   size: number;
@@ -56,7 +56,7 @@ export interface IForgeBunParameters {
 }
 
 /**
- * The parametric cranium controls — signed `[-1, 1]` numbers, `0` the
+ * The parametric cranium controls: signed `[-1, 1]` numbers, `0` the
  * face-derived default, each scaling its axis by ±20%.
  */
 export interface IForgeSkullParameters {
@@ -129,7 +129,7 @@ const skullAxes = (face: number[], skull: IForgeSkullParameters) => {
     b,
     // occiput depth: a real head fills ~a square in profile (front-back depth
     // ≈ crown-chin height) and its cephalic index sits 75–85, never the 133
-    // a shallow dome gives — so the back of the skull must project well past
+    // a shallow dome gives, so the back of the skull must project well past
     // the ear. cFront+cBack ≈ 2.0·halfW lands depth ≈ 0.9·height.
     cBack: halfW * 1.7 * (1 + 0.2 * s.depth),
     cFront: halfW * 0.34, // behind the eyelid plane: eyeballs must own the openings
@@ -139,13 +139,13 @@ const skullAxes = (face: number[], skull: IForgeSkullParameters) => {
 const NEUTRAL_SKULL: IForgeSkullParameters = { width: 0, crown: 0, depth: 0 };
 
 /**
- * A cranium for the canonical face — the ellipsoid the face shell wraps and
+ * A cranium for the canonical face: the ellipsoid the face shell wraps and
  * every hairstyle drapes over.
  *
  * Proportions derive from the face itself: the dome spans the face width with
  * the crown about a third of a face-height above the hairline, and its front
  * face stays just behind the face shell so the two never z-fight. A
- * mannequin-grade simplification, not anatomy — props and hair need a volume,
+ * mannequin-grade simplification, not anatomy: props and hair need a volume,
  * not a skull atlas.
  *
  * @author Samchon
@@ -168,7 +168,7 @@ export const buildSkullShell = (
       const depth = z >= 0 ? cFront : cBack;
       positions.push(
         a * Math.sin(th) * sin,
-        // the dome ends at the chin line — a full ellipsoid's lower half
+        // the dome ends at the chin line, since a full ellipsoid's lower half
         // reads as a second chin under the face
         Math.max(cy + b * Math.cos(phi), chinY + 0.008),
         depth * z - 0.004,
@@ -185,15 +185,15 @@ export const buildSkullShell = (
 };
 
 /**
- * A parametric hairstyle shell — the hair system's base layer.
+ * A parametric hairstyle shell: the hair system's base layer.
  *
  * The surface is a strand grid (yaw around the skull × travel down the strand):
  * every strand leaves the skull cap at the parting, hugs the dome inflated by
- * `volume`, then falls to a tip whose height blends by yaw — `length` rules the
+ * `volume`, then falls to a tip whose height blends by yaw: `length` rules the
  * back and sides, `bangs` rules the front sector over the forehead, and
  * `curtain` narrows the face opening so side hair overlaps the cheeks. All
- * controls are `[0, 1]` numbers, so a hairstyle is preset data, not geometry —
- * the same recipe redraws it over any same-topology face.
+ * controls are `[0, 1]` numbers, so a hairstyle is preset data, not geometry.
+ * The same recipe redraws it over any same-topology face.
  *
  * This intentionally replaces silhouette carving for hair: carved long hair
  * collapses into pillars (single-ellipse slices can't hold concave multi-lobe
@@ -235,7 +235,7 @@ export const buildHairShell = (
     const t = (ax - openHalf) / (openHalf * 0.35);
     return bangTip + (backTip - bangTip) * t;
   };
-  // fringe hug: 0 outside the fringe sector, 1 inside — fringe strands taper
+  // fringe hug: 0 outside the fringe sector, 1 inside. fringe strands taper
   // back onto the forehead instead of floating in front of it
   const fringeness = (yaw: number): number => {
     const ax = Math.abs(yaw);
@@ -262,11 +262,11 @@ export const buildHairShell = (
       const fall = y > cy ? 0 : (cy - y) / Math.max(1e-6, cy - tip);
       const fr = fringeness(yaw);
       // side/back strands FLARE outward as they fall (twin-tail / A-line
-      // reading), scaled by volume — bound hair doesn't flare, so `updo`
+      // reading), scaled by volume. bound hair doesn't flare, so `updo`
       // suppresses it
       const flare =
         1 + (1 - fr) * fall * (0.04 + 0.3 * p.volume) * (1 - 0.85 * lift);
-      // fringe hug pulls tips onto the forehead — but at temple yaws the
+      // fringe hug pulls tips onto the forehead, but at temple yaws the
       // tuck must never dive inside the skull (bare-scalp patches): clamp it
       // to the dome radius there, while the center forehead (face-plate
       // territory, skull safely behind) keeps the full hug
@@ -294,7 +294,7 @@ export const buildHairShell = (
 };
 
 /**
- * A chignon lobe on the occiput — the gathered mass an `updo` drape ties into,
+ * A chignon lobe on the occiput: the gathered mass an `updo` drape ties into,
  * which a closed loft cannot express (same reasoning as the twin tails).
  *
  * A head-flattened spheroid whose center rides the occiput surface at `height`
@@ -334,7 +334,7 @@ export const buildHairBun = (
   }
   const col = SEG + 1;
   // The z-mirror above flips the surface handedness, so the winding must
-  // mirror too (#1041) — the skull's index pattern here would face every
+  // mirror too (#1041): the skull's index pattern here would face every
   // triangle INTO the bun (signed volume was negative).
   for (let r = 0; r < RING; r++)
     for (let s = 0; s < SEG; s++) {
@@ -345,7 +345,7 @@ export const buildHairBun = (
 };
 
 /**
- * A neck-and-shoulders bust under the head — without it every render reads as a
+ * A neck-and-shoulders bust under the head. Without it every render reads as a
  * severed mask floating in space. Proportions derive from the face: the neck
  * spans a fraction of the jaw width and drops from just above the chin line (so
  * the jaw overlaps it, no gap at any chin length), flaring into a shoulder slab
@@ -390,7 +390,7 @@ export const buildBust = (
       const i0 = r * col + s;
       indices.push(i0, i0 + col, i0 + 1, i0 + 1, i0 + col, i0 + col + 1);
     }
-  // bottom cap so the bust reads solid from low angles — wound to face −y
+  // bottom cap so the bust reads solid from low angles, wound to face −y
   // (#1041): the previous fan faced up and was backface-culled from exactly
   // the low angles the cap exists for.
   const center = positions.length / 3;

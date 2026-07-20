@@ -7,8 +7,8 @@ import { nclose } from "../internal/predicates";
  * The shared sampling clock is the engine's one frame-boundary contract: every
  * sampler (motion bakes, physics validators, the ground-IK pass) steps this
  * exact grid, so their frame boundaries can never drift apart. These oracles
- * pin the contract itself — endpoint-inclusive, `frames + 1` instants, minimum
- * one interval — and the window/duration equivalence that made the six former
+ * pin the contract itself (endpoint-inclusive, `frames + 1` instants, minimum
+ * one interval) and the window/duration equivalence that made the six former
  * private copies one function.
  *
  * Scenarios:
@@ -19,9 +19,9 @@ import { nclose } from "../internal/predicates";
  *    clamps the final instant to the duration (endpoint-inclusive, never
  *    past).
  * 3. A sub-frame duration still yields its two endpoints (min one interval).
- * 4. `sampleTimes(d, r)` is exactly `windowSampleTimes(0, d, r)` — the delegation
+ * 4. `sampleTimes(d, r)` is exactly `windowSampleTimes(0, d, r)`: the delegation
  *    is the identity that keeps every consumer on one grid.
- * 5. A shifted window `[start, end]` steps `start + i/r` clamped to `end` — the
+ * 5. A shifted window `[start, end]` steps `start + i/r` clamped to `end`: the
  *    foot-skate contact-window form, same arithmetic shifted.
  */
 export const test_motion_sample_clock = (): void => {
@@ -77,7 +77,7 @@ export const test_motion_sample_clock = (): void => {
   );
 
   // (end − start) × rate landing just above an integer (0.3 × 30 =
-  // 9.000000000000002) must not duplicate the clamped final instant — a
+  // 9.000000000000002) must not duplicate the clamped final instant: a
   // zero-width segment downstream validators would divide by.
   const fpWindow = windowSampleTimes(0.1, 0.4, 30);
   TestValidator.predicate(

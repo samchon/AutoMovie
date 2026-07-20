@@ -11,7 +11,7 @@ import { nclose, vclose } from "../internal/predicates";
 const GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
 
 /**
- * `solveMovingLaunch` — the aim that leads a **moving** target, fixed-point on
+ * `solveMovingLaunch`: the aim that leads a **moving** target, fixed-point on
  * the time of flight. The contract is the forward oracle: fire the returned
  * velocity and, at the returned hit time, the projectile sits on the target's
  * position at _that_ time (`targetAt(hitTime)`), so the shaft and the mover
@@ -19,7 +19,7 @@ const GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
  *
  * Scenarios:
  *
- * 1. A stationary target reduces to the static solve — same velocity and hit time
+ * 1. A stationary target reduces to the static solve: same velocity and hit time
  *    as `solveBallisticLaunch` on that point.
  * 2. A target sliding downrange is led: the baked flight meets `targetAt(hitTime)`
  *    to millimetres.

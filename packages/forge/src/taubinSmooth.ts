@@ -8,7 +8,7 @@ export interface IForgeAdjacency {
 }
 
 /**
- * Build vertex adjacency and boundary flags from triangle indices — the
+ * Build vertex adjacency and boundary flags from triangle indices: the
  * structure {@link taubinSmooth} smooths over.
  *
  * An edge referenced by exactly one triangle is open; both its endpoints are
@@ -65,14 +65,14 @@ export interface IForgeTaubinOptions {
   boundaryFactor?: number;
 
   /**
-   * Per-vertex strength in `[0, 1]` — protect features (eyelids, lip seam, nose
+   * Per-vertex strength in `[0, 1]`: protect features (eyelids, lip seam, nose
    * tip) by lowering theirs. Default: `1` everywhere.
    */
   weights?: number[];
 }
 
 /**
- * Taubin λ|μ mesh smoothing — noise removal without the shrinkage of plain
+ * Taubin λ|μ mesh smoothing: noise removal without the shrinkage of plain
  * Laplacian passes, the cleanup that keeps detection jitter from reading as
  * lumpy clay.
  *

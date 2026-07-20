@@ -22,7 +22,7 @@ const throws = (fn: () => unknown): boolean => {
 
 /**
  * The `autobe` scaffolder renders the starter into an in-memory file map and
- * writes it out — the render/write split learned from the reference scaffolder,
+ * writes it out: the render/write split learned from the reference scaffolder,
  * so the map can be asserted without disk I/O.
  *
  * Scenarios:

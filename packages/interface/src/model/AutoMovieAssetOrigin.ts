@@ -1,5 +1,5 @@
 /**
- * Where a model's geometry came from — assembled by automovie, or imported by
+ * Where a model's geometry came from: assembled by automovie, or imported by
  * the user.
  *
  * This gates the pipeline. A `generated` model is built by automovie's geometry

@@ -29,7 +29,7 @@ import { nclose, qclose, vclose } from "../internal/predicates";
  * 2. Feeding `jointToQuaternion` a clinical angle with a frame equals feeding it
  *    the pre-converted rig angle with no frame.
  * 3. `decompose(jointToQuaternion(c, axes, f), axes, f)` round-trips the clinical
- *    angles — including the gimbal case (abduction at the rig's ±90°).
+ *    angles, including the gimbal case (abduction at the rig's ±90°).
  */
 export const test_kinematics_rest_frame_angles = (): void => {
   // right-arm-like: abduction mirrors (sign −1) and rests at 90° (a T-pose arm)
@@ -103,7 +103,7 @@ export const test_kinematics_rest_frame_angles = (): void => {
   );
 
   // gimbal: clinical 0 maps to rig abduction +90 (the arm straight along the
-  // frame axis) — decompose pins flexion and lifts abduction back to 0.
+  // frame axis): decompose pins flexion and lifts abduction back to 0.
   const gimbal = jointToQuaternion(
     { flexion: 30, abduction: 0, twist: 0 },
     DEFAULT_JOINT_AXES,

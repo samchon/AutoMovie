@@ -22,7 +22,7 @@ export interface IForgeSilhouetteBand {
 /**
  * Track the subject's own silhouette run down the scanlines.
  *
- * A multi-view sheet's figure mask has several runs per row — the head plus
+ * A multi-view sheet's figure mask has several runs per row: the head plus
  * detached spurs (twin tails, ribbons, loose strands). The head is followed by
  * continuity: the first row takes its widest run, every later row takes the run
  * overlapping the previous row's choice the most, and a row whose runs all miss
@@ -62,7 +62,7 @@ export const trackSilhouetteBands = (
 export interface IForgeBandCleaning {
   /**
    * Clamp the min side monotonically non-decreasing after its extremum row (the
-   * skull's widest point) — spurs can shrink the band but never widen it again
+   * skull's widest point): spurs can shrink the band but never widen it again
    * below the head.
    */
   monoMin?: boolean;
@@ -82,7 +82,7 @@ export interface IForgeBandCleaning {
 
   /**
    * Triangular smoothing radius in rows, applied twice; `0` disables. Default
-   * `12` — clay shading exposes every per-row jiggle a texture hides.
+   * `12`, because clay shading exposes every per-row jiggle a texture hides.
    */
   smoothRadius?: number;
 }
@@ -92,7 +92,7 @@ export interface IForgeBandCleaning {
  * tracking glitches, extremum-anchored monotone clamps against spurs (ribbons,
  * tails) ballooning a slice, then a wide double triangular kernel because the
  * band drives a lofted clay surface where row jitter reads as ring banding.
- * Each side's clamp starts only AT its own extremum row — above it the head
+ * Each side's clamp starts only AT its own extremum row: above it the head
  * must stay free to bulge outward.
  *
  * @author Samchon

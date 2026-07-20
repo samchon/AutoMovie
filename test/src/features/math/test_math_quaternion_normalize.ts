@@ -11,7 +11,7 @@ import { qclose, qunit } from "../internal/predicates";
  *
  * 1. A pure-scale quaternion (0,0,0,2) normalizes onto the identity.
  * 2. An arbitrary non-unit quaternion (1,2,3,4) normalizes to unit length.
- * 3. The zero quaternion (0,0,0,0) — magnitude 0 — returns the identity instead of
+ * 3. The zero quaternion (0,0,0,0), magnitude 0, returns the identity instead of
  *    NaNs. Exercises the zero-length guard a normal rotation never hits.
  */
 export const test_math_quaternion_normalize = (): void => {

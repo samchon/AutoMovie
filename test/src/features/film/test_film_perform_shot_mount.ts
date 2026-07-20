@@ -78,7 +78,7 @@ const scriptOf = () =>
   });
 
 /**
- * The rider is placed far away and airborne (5, 5, 5) ON PURPOSE — a coordinate
+ * The rider is placed far away and airborne (5, 5, 5) ON PURPOSE: a coordinate
  * it must never end at. Its `attach` mounts it to the horse's `spine`, so the
  * mount, not the staged placement, owns its world root.
  */
@@ -111,7 +111,7 @@ const riderPosAt = (clip: IAutoMovieClip, t: number): IAutoMovieVector3 => {
 
 /**
  * A staged mount (#674) auto-descends into the rider's per-frame follow at
- * perform time — no per-beat `attachTo` — so the rider rides the whole film.
+ * perform time (no per-beat `attachTo`), so the rider rides the whole film.
  *
  * The horse walks +x; the rider is mounted on its `spine` but staged far away
  * and airborne at (5, 5, 5), a coordinate the mount must override.
@@ -119,7 +119,7 @@ const riderPosAt = (clip: IAutoMovieClip, t: number): IAutoMovieVector3 => {
  * Scenarios:
  *
  * 1. Perform bakes one `attach:rider` objectMotion (reusing compileAttach), and it
- *    MOVES with the horse — the rider is never left at its staged (5,5,5).
+ *    MOVES with the horse: the rider is never left at its staged (5,5,5).
  *    Exact oracle: the follow equals resolveAttachment on the compiled horse
  *    motion composed with the horse's staged transform.
  * 2. A mount emits no grab/attach/detach/release events (persistent scene state,
@@ -127,7 +127,7 @@ const riderPosAt = (clip: IAutoMovieClip, t: number): IAutoMovieVector3 => {
  * 3. `resolveBeatEnd` derives the rider's end transform/velocity from that same
  *    baked clip: it sits at the saddle (following the horse), not at (5,5,5),
  *    with the horse's trailing velocity, and carries the mount binding.
- * 4. Continuity: a SECOND beat with no `attachTo` still bakes the follow — the
+ * 4. Continuity: a SECOND beat with no `attachTo` still bakes the follow: the
  *    persistence #631's beat-end carry is meant to enable.
  * 5. An explicit `attachTo` for the rider this beat overrides its mount (one
  *    follow clip, the attachTo one).
@@ -201,7 +201,7 @@ export const test_film_perform_shot_mount = (): void => {
     vclose(end, expectedEnd, 1e-9),
   );
 
-  // 2. a persistent mount is not a per-shot pickup — no handoff events.
+  // 2. a persistent mount is not a per-shot pickup: no handoff events.
   TestValidator.equals(
     "a mount emits no attach/detach events",
     (ok.shot.events ?? []).filter(
@@ -243,7 +243,7 @@ export const test_film_perform_shot_mount = (): void => {
   });
 
   // 3b. a mounted rider whose OWN performance starts exactly at shot end has a
-  // local time of 0 — its mount-velocity window is empty, so zero (not NaN),
+  // local time of 0: its mount-velocity window is empty, so zero (not NaN),
   // while its transform still reads the saddle at the clip's start.
   const endStart = resolveBeatEnd({
     beat: "beat-1",
@@ -353,7 +353,7 @@ export const test_film_perform_shot_mount = (): void => {
   TestValidator.equals("the override performs", overridden.success, true);
   if (overridden.success === true)
     TestValidator.equals(
-      "one rider follow clip — the explicit attachTo, not a second from the mount",
+      "one rider follow clip, the explicit attachTo, not a second from the mount",
       overridden.shot.objectMotions.filter((c) => c.id === "attach:rider")
         .length,
       1,
@@ -414,7 +414,7 @@ export const test_film_perform_shot_mount = (): void => {
       duration: 2,
     }),
     synthesize: synth,
-    // horse has no rig now — the mount cannot ride a bone of it.
+    // horse has no rig now: the mount cannot ride a bone of it.
     skeleton: (node) => (node === "horse" ? null : createSkeleton()),
   });
   TestValidator.equals(
@@ -464,7 +464,7 @@ export const test_film_perform_shot_mount = (): void => {
       duration: 2,
     }),
     synthesize: synth,
-    // createSkeleton has no rightHand — the saddle bone is absent.
+    // createSkeleton has no rightHand: the saddle bone is absent.
     skeleton: () => createSkeleton(),
   });
   TestValidator.equals(

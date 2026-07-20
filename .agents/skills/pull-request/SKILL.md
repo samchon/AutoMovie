@@ -5,9 +5,9 @@ description: Defines automovie branch, commit, pull-request, check, and merge wo
 
 # Pull Request Submission
 
-Standing instruction (user, 2026-07-06): work proceeds in **topic-unit PRs** — one coherent topic per PR, opened when the topic's changes are green locally. Never commit to `master` directly.
+Standing instruction (user, 2026-07-06): work proceeds in **topic-unit PRs**: one coherent topic per PR, opened when the topic's changes are green locally. Never commit to `master` directly.
 
-Permission to open is not permission to merge. Merge only when the user explicitly asks, or under a **standing autonomous mandate** — an autonomous campaign (e.g. the conquest loop) or an explicit instruction to carry the work through merge. The mandate is the request for every step it names, including push and merge, and every check, verification, and Self-Review gate still applies to each step.
+Permission to open is not permission to merge. Merge only when the user explicitly asks, or under a **standing autonomous mandate**, an autonomous campaign (e.g. the conquest loop) or an explicit instruction to carry the work through merge. The mandate is the request for every step it names, including push and merge, and every check, verification, and Self-Review gate still applies to each step.
 
 ## Branch From The Target
 

@@ -41,7 +41,7 @@ interface IAxisSprings {
  * clip (via the engine's interpolation) and applies the resulting pose to the
  * model's bones.
  *
- * The player is pure with respect to time — call {@link update} with seconds
+ * The player is pure with respect to time: call {@link update} with seconds
  * elapsed and it renders nothing itself; the host owns the animation loop (see
  * {@link mountViewer}). This keeps playback deterministic and testable.
  *
@@ -65,8 +65,8 @@ export class AutoMoviePlayer {
     >,
     /**
      * When true, clamp each sampled pose into the skeleton's ROM before it is
-     * applied — and again AFTER the secondary-motion springs, which overshoot
-     * by design (#1048) — so joints can no longer exceed their anatomical
+     * applied, and again AFTER the secondary-motion springs, which overshoot
+     * by design (#1048), so joints can no longer exceed their anatomical
      * limits.
      */
     private readonly clampToRom = false,
@@ -104,7 +104,7 @@ export class AutoMoviePlayer {
       pose = this.applySpring(pose, seconds);
       // dampedSpring overshoots by design (ζ<1), so the pre-spring clamp
       // alone rendered poses past the promised limits (#1048). Re-clamp the
-      // OUTPUT only — the spring state keeps its overshoot and converges
+      // OUTPUT only: the spring state keeps its overshoot and converges
       // naturally; the render just never shows it outside the ROM.
       if (this.clampToRom) pose = clampPose(pose, this.skeleton);
     }
@@ -151,7 +151,7 @@ export class AutoMoviePlayer {
       // dt=0 means "no time elapsed", NOT "never sprung" (#1098): a paused
       // host loop re-calling update(sameT), a backwards scrub (negative
       // delta clamps to 0), or a frozen-frame capture must HOLD the live
-      // spring — value and velocity — on both the decay and tracking sides.
+      // spring (value and velocity) on both the decay and tracking sides.
       // Conflating the two popped a mid-decay joint to rest (and zeroed its
       // state), and re-seeded a lagging joint AT its target.
       if (target === null) {

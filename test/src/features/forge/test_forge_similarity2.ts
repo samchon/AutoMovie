@@ -7,7 +7,7 @@ import { nclose } from "../internal/predicates";
  * The 2D similarity fit recovers a known transform exactly when the
  * correspondence is exact: destination points are the sources rotated 30°,
  * scaled 2x, and translated, with z scaled by the same factor about the
- * centroid — the oracle is the constructed transform itself, not the fit's own
+ * centroid. The oracle is the constructed transform itself, not the fit's own
  * output.
  *
  * Scenario: a 4-point square mapped by (s=2, θ=30°, t=(5, -3), z 2x) yields

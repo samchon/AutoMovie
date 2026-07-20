@@ -73,7 +73,7 @@ const key = (time: number, rootY: number): IAutoMovieKeyframe => ({
  *
  * Scenarios:
  *
- * 1. A root dip below the ground produces physics WARNINGS (D015 — advice, not a
+ * 1. A root dip below the ground produces physics WARNINGS (D015: advice, not a
  *    gate) with a stable `$input.samples[i].leftFoot.worldPosition.y` path; the
  *    run still succeeds. `physicsIntent` suppresses them.
  * 2. A small dip inside tolerance is accepted, proving the validator can avoid
@@ -150,7 +150,7 @@ export const test_validation_ground_contact = (): void => {
   TestValidator.equals("custom ground samples", warningCount(raisedGround), 2);
 
   // #1156: a non-finite/non-positive sampleRate empties the sampling clock and
-  // a non-finite tolerance makes `y < NaN` always false — either would silently
+  // a non-finite tolerance makes `y < NaN` always false; either would silently
   // drop every penetration. Both must surface as range errors (not a silent
   // success), matching the sibling sampling validators.
   for (const badRate of [Number.NaN, 0]) {

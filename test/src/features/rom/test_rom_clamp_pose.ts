@@ -33,7 +33,7 @@ const SKELETON: IAutoMovieSkeleton = {
 };
 
 /**
- * `clampPose` — the enforce face of ROM. Every joint axis is pulled into its
+ * `clampPose`, the enforce face of ROM. Every joint axis is pulled into its
  * `[min,max]`; an immobile (`null`) axis is forced to 0; an unconstrained bone
  * passes through. Mirrors `validateJointRom`'s bounds, so a clamped pose is one
  * that pose-ROM validation would accept.

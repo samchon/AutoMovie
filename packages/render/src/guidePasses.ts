@@ -3,7 +3,7 @@ import { AutoMovieGuidePass } from "@automovie/interface";
 import { frameName, framePattern } from "./plan";
 
 /**
- * The runtime list matching the {@link AutoMovieGuidePass} closed union — what
+ * The runtime list matching the {@link AutoMovieGuidePass} closed union: what
  * validators check a requested pass name against (the `interface` package is
  * pure types, so the value list lives here).
  */
@@ -25,7 +25,7 @@ export const isGuidePass = (value: string): value is AutoMovieGuidePass =>
  * {@link frameName} (`frame_00042.png`) so a single-pass render is byte-
  * compatible with every existing plan, and any other pass tags the name before
  * the extension (`frame_00042.depth.png`). Deterministic, so the same request
- * yields the same paths on every machine — and chunking (#609) composes
+ * yields the same paths on every machine, and chunking (#609) composes
  * unchanged, since a pass only refines the filename inside a chunk's frame
  * dir.
  *

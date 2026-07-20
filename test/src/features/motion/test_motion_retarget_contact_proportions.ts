@@ -27,7 +27,7 @@ const WIDE_HIP: IAutoMovieJointConstraint = {
  * This is the property v1 could not deliver: copying clinical angles verbatim
  * is exact only for a proportional rig, so a target with relatively longer legs
  * planted its feet somewhere else entirely and the performance skated. The rig
- * pair here is the brief's own case — legs 1.5x, torso 0.9x — with the target
+ * pair here is the brief's own case (legs 1.5x, torso 0.9x) with the target
  * declaring its own hip gamut, which is exactly the
  * `target-override-then-default-humanoid` ROM precedence the retarget names.
  *
@@ -40,7 +40,7 @@ const WIDE_HIP: IAutoMovieJointConstraint = {
  *    within 0.005 of `rootScale` times those source contacts on both keyframes,
  *    and the run reports no plausibility warning.
  * 3. The negative twin: the same retarget with `contacts.enabled === false`
- *    reproduces the v1 slide — the left foot misses its mapped contact by more
+ *    reproduces the v1 slide: the left foot misses its mapped contact by more
  *    than 0.5, the hand-derived distance between the target's own rest ankle
  *    and the mapped contact.
  * 4. The characterization names which policy ran, and the corrected clip keeps the

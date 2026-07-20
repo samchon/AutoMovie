@@ -13,7 +13,7 @@ export interface IAutoMoviePlacement {
 }
 
 /**
- * Hold a single pose for `duration` seconds — the simplest "action" an actor
+ * Hold a single pose for `duration` seconds: the simplest "action" an actor
  * can perform (a beat of stillness), and the filler the timeline composer uses
  * across gaps. A two-keyframe clip with the same pose at both ends.
  *
@@ -48,7 +48,7 @@ export const holdMotion = (
 
 /**
  * Lay several timed clips onto **one actor's** shot timeline, holding the last
- * pose across any gap between them — the composer the harness PERFORMANCE stage
+ * pose across any gap between them: the composer the harness PERFORMANCE stage
  * uses to turn an actor's ordered action calls (each synthesised to a clip by
  * the engine) into a single performance {@link IAutoMovieMotion}.
  *
@@ -56,7 +56,7 @@ export const holdMotion = (
  * the next placement, the previous clip's final pose is repeated at the next
  * start so the actor holds rather than slowly morphing across the gap. Keyframe
  * times are kept strictly increasing (an overlapping or coincident later frame
- * is dropped — v1 sequences rather than layers concurrent actions). The result
+ * is dropped: v1 sequences rather than layers concurrent actions). The result
  * is a plain non-looping clip sampled like any other.
  *
  * @author Samchon
@@ -109,12 +109,12 @@ export const arrangeMotion = (
   }
 
   // The composite's stride clock: the timeline ends inside (or holding) its
-  // LAST placement, which is exactly where the beat-end handoff samples — so
+  // LAST placement, which is exactly where the beat-end handoff samples, so
   // the composite carries that placement's gait cycle, phase-shifted by its
   // start (`phaseAt' = (phaseAt - start) mod period`), and none when the last
   // placement carries no cycle (the actor is not striding at the end). A
   // mid-timeline cycle followed by a cycle-less action is deliberately NOT
-  // carried — the end state is what the handoff resumes.
+  // carried. The end state is what the handoff resumes.
   const last = sorted[sorted.length - 1];
   const lastCycle = last?.motion.gaitCycle ?? null;
   const gaitCycle =

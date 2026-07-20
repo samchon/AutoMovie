@@ -43,14 +43,14 @@ const makeShot = (beat: string, scene: string): IAutoMovieShot => ({
 });
 
 /**
- * EraseNotes (#617): per-beat note removal — notes carry no ids, so the beat is
+ * EraseNotes (#617): per-beat note removal, notes carry no ids, so the beat is
  * their identity anchor and the minimal addressable granularity. Evidence
  * required; erasing a beat with no notes is a violation.
  *
  * Scenarios:
  *
  * 1. Erasing beat-1's notes leaves beat-2's note in the slate and in `notes.json`.
- * 2. Erasing them again (now none exist) is a violation located at `$input.beat` —
+ * 2. Erasing them again (now none exist) is a violation located at `$input.beat` ,
  *    the twin proving the existence gate.
  * 3. An empty reason is a violation and changes nothing.
  */

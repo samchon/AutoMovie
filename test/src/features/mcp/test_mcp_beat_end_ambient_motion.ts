@@ -89,10 +89,10 @@ const endState = (motion: string | null): IAutoMovieBeatEndState => ({
  *
  * 1. A beat end whose actor motion equals the scene node's ambient motion commits.
  * 2. Negative twin: a motion in NEITHER the performances nor the actor's scene
- *    node ("phantom") is still refused at the actor's motion path — the gate
+ *    node ("phantom") is still refused at the actor's motion path, the gate
  *    widened by exactly one source, it did not open.
  * 3. The ambient motion on a DIFFERENT node's actor entry does not qualify: "spin"
- *    committed against a staged actor node (not the windmill) is refused — the
+ *    committed against a staged actor node (not the windmill) is refused, the
  *    exemption is per-node, mirroring `endActorOf`.
  */
 export const test_mcp_beat_end_ambient_motion = (): void => {

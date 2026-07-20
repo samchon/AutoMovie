@@ -15,7 +15,7 @@ const throws = (task: () => void): boolean => {
 };
 
 /**
- * `travelMotion` — baking continuous root travel onto an in-place locomotion
+ * `travelMotion`: baking continuous root travel onto an in-place locomotion
  * cycle. A looping clip is repeated `cycles` times and a root offset growing
  * linearly with elapsed time (`velocity · t`) is added, so the figure glides
  * forward across every seam while its legs keep cycling.
@@ -25,12 +25,12 @@ const throws = (task: () => void): boolean => {
  * 1. A two-keyframe, 1 s in-place base (root null) travelled at 0.5 m/s in +Z over
  *    3 cycles → a 3 s non-looping clip whose seam keyframes are dropped (4
  *    keyframes, not 6) and whose root Z is exactly velocity·time at every
- *    keyframe — strictly increasing and continuous across the seams.
+ *    keyframe, strictly increasing and continuous across the seams.
  * 2. A base that already carries a root transform (a vertical bob + a yaw) has the
  *    travel added on top: its own translation and rotation are preserved.
  * 3. Travel is purely a function of global time, so the duplicate-seam frame of
  *    cycle n and the first frame of cycle n+1 would have landed at the same
- *    place — confirming continuity (no per-cycle reset / snap-back).
+ *    place, confirming continuity (no per-cycle reset / snap-back).
  * 4. A `facing` rotation composes onto the base root rotation: travelling the
  *    45°-yaw base with a further 90° yaw lands the root at 135° yaw.
  */
@@ -113,7 +113,7 @@ export const test_motion_travel = (): void => {
   );
 
   // 3. continuity: the last frame of one cycle and the (dropped) seam of the
-  //    next would coincide — root advances monotonically, never resets
+  //    next would coincide: root advances monotonically, never resets
   TestValidator.predicate(
     "root Z strictly increasing across seams",
     travelled.keyframes.every(

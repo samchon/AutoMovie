@@ -45,7 +45,7 @@ const MODEL: IAutoMovieModel = {
 /**
  * Exported bone nodes follow the decision-309 rig convention (#1086): the
  * engine's FK and the live viewer compose bone-rest ROTATION + TRANSLATION only
- * (#1052), so the exporter must not bake rest scale onto glTF bone nodes —
+ * (#1052), so the exporter must not bake rest scale onto glTF bone nodes:
  * external viewers compose node scale into every descendant, and a VRM-style
  * rig with slight non-unit rest scales would render a scaled body no automovie
  * renderer or validator ever saw. PART node scale stays first-class: parts are

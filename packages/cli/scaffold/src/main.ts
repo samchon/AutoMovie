@@ -9,7 +9,7 @@ import { buildWaveClip } from "./motion";
 /**
  * The DIRECT-LINK path: import `@automovie/interface` (types) and
  * `@automovie/engine` (the deterministic engine), author a clip in code, and
- * drive the same primitives the MCP server exposes — here `validateMotion`
+ * drive the same primitives the MCP server exposes: here `validateMotion`
  * (engine enforces) and `sampleMotion` (engine plays). The MCP path in
  * `automovie.config.jsonc` is the other door; both create motion, one engine
  * enforces it.
@@ -21,7 +21,7 @@ const rest = (x: number, y: number, z: number): IAutoMovieTransform => ({
   scale: { x: 1, y: 1, z: 1 },
 });
 
-/** A minimal arm chain — enough for the engine to run FK and ROM-check a pose. */
+/** A minimal arm chain, enough for the engine to run FK and ROM-check a pose. */
 const skeleton: IAutoMovieSkeleton = {
   id: "starter-rig",
   bones: [

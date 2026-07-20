@@ -28,7 +28,7 @@ const skeleton = (bones: IAutoMovieBone[]): IAutoMovieSkeleton => ({
  * Pins the rig-measured subject height the framing grammar depends on. The
  * shared fixture skeleton composes (identity rest rotations, so world Y is a
  * plain running sum) to head at y = 1 + 0.2 + 0.2 + 0.2 + 0.1 = 1.7 and the
- * left lower leg at y = 1 − 0.1 − 0.4 = 0.5 — a hand-computed extent of 1.2.
+ * left lower leg at y = 1 − 0.1 − 0.4 = 0.5: a hand-computed extent of 1.2.
  *
  * Scenarios:
  *

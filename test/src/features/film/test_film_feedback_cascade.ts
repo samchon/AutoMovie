@@ -13,8 +13,8 @@ import {
 /**
  * THE CASCADE PROOF (D013, #620): physics feedback reaches the screenplay. A
  * real physics producer raises a warning while a beat is being worked; located
- * on that beat's graph node, the warning climbs the refinement chain — beat →
- * group → scene → act → intent — so the correction can target any level of the
+ * on that beat's graph node, the warning climbs the refinement chain (beat →
+ * group → scene → act → intent), so the correction can target any level of the
  * screenplay, not just the offending motion. The screenplay is upstream truth,
  * and the engine's feedback now reaches it.
  *
@@ -24,10 +24,10 @@ import {
  *    `warning` from detectSupportToppling (not a synthetic violation).
  * 2. LocateOnBeat stamps it with the claiming beat node `b1`.
  * 3. ScriptAncestors walks the stamped node up the refinement chain: exactly
- *    `["grp", "scene1", "act1", "root"]` — the scene, the act, and the intent
+ *    `["grp", "scene1", "act1", "root"]`: the scene, the act, and the intent
  *    all become addressable correction targets.
  * 4. The treeless twin: the same warning without a screenplay tree stays unlocated
- *    (no node), and there is no chain to walk — feedback remains motion-local,
+ *    (no node), and there is no chain to walk: feedback remains motion-local,
  *    exactly the pre-#620 world.
  */
 export const test_film_feedback_cascade = (): void => {

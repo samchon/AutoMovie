@@ -23,7 +23,7 @@ A complete round must satisfy all four rules:
 Self-Review is strictly solo. The author does not spawn subagents, form a team, or load the discussion skill. An ordinary review request also defaults to this solo workflow unless the user explicitly asks for a team.
 
 1. Establish the complete change surface, including the pull request base-to-head diff and any uncommitted changes.
-2. Perform one complete round under the Non-Negotiable Review Law. Include correctness and boundaries, numeric and quaternion behavior, determinism, Windows and POSIX behavior, state, public API and MCP-surface compatibility, test isolation and the 100% coverage mandate, CI and packaging, documentation and the `.wiki`, and — for anything visual — the viewer-verification skill.
+2. Perform one complete round under the Non-Negotiable Review Law. Include correctness and boundaries, numeric and quaternion behavior, determinism, Windows and POSIX behavior, state, public API and MCP-surface compatibility, test isolation and the 100% coverage mandate, CI and packaging, documentation and the `.wiki`, and (for anything visual) the viewer-verification skill.
 3. Apply every sound improvement and run the narrowest verification that proves it.
 4. If anything changed, restart at step 1 as a fresh full round.
 5. Finish only when a complete round finds nothing to improve. Report the final clean round and any verification that could not run.
@@ -43,7 +43,7 @@ Use Review Cycle only when the user explicitly asks for a team or multi-agent re
 
 Use Research Review Round when a team review needs external or cross-repository evidence before proposing changes. The reference study that precedes each major `interface`/`engine` design push (rig model, constraint/driver taxonomy, motion model) runs this way or as a Discussion.
 
-Each agent independently reviews the complete change surface and all relevant primary sources — `.references/<source>/` material, sibling repositories (`interia`, `typia`/`nestia` lineage), and external specs. Agents submit evidence-backed proposals directly to the lead without a discussion phase.
+Each agent independently reviews the complete change surface and all relevant primary sources: `.references/<source>/` material, sibling repositories (`interia`, `typia`/`nestia` lineage), and external specs. Agents submit evidence-backed proposals directly to the lead without a discussion phase.
 
 The lead validates every proposal and applies the Team Review Cycle stop rule. External research adds evidence; it does not relax full-surface coverage. Durable conclusions drawn from `.references/` are promoted into `.wiki/04-domain-research/` or `.wiki/06-architecture/` with the source cited; the raw material stays in `.references/`.
 
@@ -65,6 +65,6 @@ Review agents may start without conversation history or loaded repository instru
 - the objective and complete declared surface;
 - constraints and evidence locations, including the relevant `.wiki/` and `.references/` material;
 - the required output format; and
-- the exact repository instructions and skills to read — at least AGENTS.md `## Attitude` plus the `.agents/skills/*/SKILL.md` files the task touches.
+- the exact repository instructions and skills to read: at least AGENTS.md `## Attitude` plus the `.agents/skills/*/SKILL.md` files the task touches.
 
 State facts and constraints, not a preferred conclusion; a leading hypothesis steers the agent to a shallow finding. Agents execute the brief directly and do not re-delegate.

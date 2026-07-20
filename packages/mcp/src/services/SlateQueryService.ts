@@ -21,7 +21,7 @@ import {
 } from "../dto";
 
 /**
- * Read-only slate queries — the stored-context reads behind the `get*` tools.
+ * Read-only slate queries, the stored-context reads behind the `get*` tools.
  * The MCP contract (names, schemas, tool descriptions) lives on the
  * {@link AutoMovieApplication} facade; this service owns the execution.
  */
@@ -30,7 +30,7 @@ export class SlateQueryService {
 
   /**
    * The slate a query reads: the explicit one when given, else the resident
-   * project's stored slices (#614) — with the context's actionable error when
+   * project's stored slices (#614), with the context's actionable error when
    * neither exists.
    */
   private stored(
@@ -48,7 +48,7 @@ export class SlateQueryService {
   }
 
   /**
-   * The whole writable slate in one read — every slice plus the film. The
+   * The whole writable slate in one read, every slice plus the film. The
    * explicit form echoes the slate the caller passed; the resident form reads
    * all slices from the project. This is what the cross-session revision guard
    * (#1133) points a refused commit at ("re-read via getSlate").
@@ -234,7 +234,7 @@ const assertUniqueStoredSlateEntries = (
   value.forEach((entry, index) => {
     // Precondition: every getShot/getBeatEnd caller runs
     // assertStoredSlateCollection first, which throws on any non-object entry,
-    // so this uniqueness scan only ever sees objects — no dead type guard to
+    // so this uniqueness scan only ever sees objects, no dead type guard to
     // hide behind a c8-ignore (#1040, #1252). A non-string id is still handled
     // below (a stored slice with the wrong key shape is not this scan's fault).
     const id = (entry as Record<string, unknown>)[key];

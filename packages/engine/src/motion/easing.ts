@@ -25,7 +25,7 @@ export const ease = (curve: AutoMovieEasing, t: number): number => {
     case "step":
       return x < 1 ? 0 : 1;
     case "cubicBezier":
-      return x; // needs control points — see cubicBezierEasing
+      return x; // needs control points (see cubicBezierEasing)
   }
   throw new Error(`unknown easing curve "${String(curve)}"`);
 };
@@ -72,7 +72,7 @@ export const cubicBezierEasing = (
   }
   s = Math.min(1, Math.max(0, s));
   // Newton stalls where x'(s) ≈ 0 (a legal steep curve like [1,0,0,1]); when
-  // the residual shows it did not converge, bisect on [0,1] — x(0)=0 and
+  // the residual shows it did not converge, bisect on [0,1]: x(0)=0 and
   // x(1)=1, so a root exists, and CSS-legal control x's keep x(s) monotone.
   if (Math.abs(bez(x1, x2, s) - x) >= 1e-5) {
     let lo = 0;

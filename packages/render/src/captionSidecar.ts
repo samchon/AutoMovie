@@ -2,7 +2,7 @@
  * One caption span: the output frames `[frameStart, frameEnd)` during which one
  * beat's shot is live, with the diffusion caption and the scene slug as
  * context. `caption`/`slug` are `null` for a treeless script or a beat that
- * authored none — a diffusion host skips the span or falls back to its own
+ * authored none. A diffusion host skips the span or falls back to its own
  * default prompt.
  *
  * @author Samchon
@@ -25,7 +25,7 @@ export interface IAutoMovieCaptionEntry {
 }
 
 /**
- * The per-shot caption track for a sequence render — the machine-readable
+ * The per-shot caption track for a sequence render: the machine-readable
  * sidecar a diffusion pass reads next to the guide frames.
  *
  * @author Samchon
@@ -37,7 +37,7 @@ export interface IAutoMovieCaptionSidecar {
   /** Output frames per second the spans are addressed in. */
   fps: number;
 
-  /** Total output frames (`round(runtime × fps)` — the frame-atomic clock). */
+  /** Total output frames (`round(runtime × fps)`, the frame-atomic clock). */
   frameCount: number;
 
   /** Caption spans in play order, covering every output frame exactly once. */

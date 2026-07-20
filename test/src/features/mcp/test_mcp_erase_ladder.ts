@@ -17,7 +17,7 @@ const script: IAutoMovieScript = {
 
 /**
  * Erase and the prerequisite ladder (#617 × #615): removing the last shot flips
- * the ladder's `shots` rung back off — the film's ordering state is derived
+ * the ladder's `shots` rung back off, the film's ordering state is derived
  * from the files, so an erase honestly re-locks what depended on the erased
  * artifact, and nextSteps names the re-do.
  *
@@ -27,7 +27,7 @@ const script: IAutoMovieScript = {
  * 2. Erasing that shot flips `shots` back into the missing list, and nextActions
  *    names committing the beat's shot again.
  * 3. A commit gated on shots (commitNotes) now throws the prerequisite prompt
- *    again — the twin proving the gate re-armed.
+ *    again, the twin proving the gate re-armed.
  * 4. An explicit-slate commitShot is untouched by all of this: it transforms its
  *    own slate and the project files stay as the erase left them.
  */

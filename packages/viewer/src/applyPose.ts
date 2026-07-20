@@ -18,7 +18,7 @@ import { IAutoMovieModelObject, applyTransform } from "./buildModel";
  * the model root.
  *
  * The engine owns the math (semantic angles → quaternions), so the viewer only
- * copies results onto `three.js` objects — keeping rendering a thin, swappable
+ * copies results onto `three.js` objects, keeping rendering a thin, swappable
  * layer over the deterministic core.
  *
  * `restFrames` optionally reads each joint angle as **clinical** and maps it
@@ -28,7 +28,7 @@ import { IAutoMovieModelObject, applyTransform } from "./buildModel";
  *
  * Returns the skeleton bones the FK resolved but the model's bone map does not
  * carry (#1051). A deliberately partial imported map (a VRM without toes)
- * reports its unmapped bones every call — the host compares against what it
+ * reports its unmapped bones every call: the host compares against what it
  * MEANT to map, so a typo in the bone map is distinguishable from an
  * intentional gap instead of both silently not articulating.
  *
@@ -55,13 +55,13 @@ export const applyPose = (
       r.localRotation.w,
     );
   }
-  // A null root means "at the node's staged base" — the engine's convention
+  // A null root means "at the node's staged base", the engine's convention
   // (`resolvePose`/`animatedBaseAt` default it to identity, #1046). Keeping
   // the previous pose's root here would strand the model at the LAST rooted
   // pose (e.g. a walk's destination) when a gesture clip with null roots
   // takes over. Root SCALE is dropped (#1052): the engine's FK ignores it,
   // so a rendered root scale would be invisible to every validator that
-  // measured the pose — the rig convention is rotation + translation only.
+  // measured the pose. The rig convention is rotation + translation only.
   const root = pose.root ?? IDENTITY_ROOT;
   applyTransform(target.object, { ...root, scale: UNIT_SCALE });
   return skipped;

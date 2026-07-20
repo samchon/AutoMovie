@@ -5,8 +5,8 @@ import { IAutoMovieVector3 } from "@automovie/interface";
  *
  * Points are {@link IAutoMovieVector3}; only `x` and `z` are used (`y` ignored),
  * because support and balance are decided by the ground-plane footprint. The
- * hull is built with Andrew's monotone chain — deterministic (no `Math.random`)
- * so support/topple judgments are reproducible — and canonicalized to
+ * hull is built with Andrew's monotone chain, deterministic (no `Math.random`)
+ * so support/topple judgments are reproducible, and canonicalized to
  * counter-clockwise order, so callers never have to assume the input points
  * were given convex or correctly ordered.
  *
@@ -83,7 +83,7 @@ export interface IAutoMovieHullEdge {
 }
 
 /**
- * The hull boundary edge nearest to `point` — the tip-over axis when an object
+ * The hull boundary edge nearest to `point`, the tip-over axis when an object
  * topples over that edge. A single-vertex hull degenerates to a zero-length
  * edge at that vertex.
  */

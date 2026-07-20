@@ -7,7 +7,7 @@ import {
 import { clampUnitParameter } from "./parameters";
 
 /**
- * The twin-tail controls — pure `[0, 1]` numbers, preset data like every other
+ * The twin-tail controls: pure `[0, 1]` numbers, preset data like every other
  * hair parameter.
  */
 export interface IForgeTailParameters {
@@ -88,7 +88,7 @@ const tailPart = (
 };
 
 /**
- * Twin-tail lobes — the hairstyle element the draped shell cannot express (a
+ * Twin-tail lobes: the hairstyle element the draped shell cannot express (a
  * closed loft has no detached masses).
  *
  * Each tail is a tapered tube anchored on the skull's side: a short stem at the

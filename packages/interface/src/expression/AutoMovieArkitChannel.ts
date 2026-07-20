@@ -4,7 +4,7 @@
  * ARKit's 52 coefficients are the de-facto industry standard for facial
  * expression: Apple face tracking, MetaHuman, Ready Player Me, and NVIDIA
  * Audio2Face all target them, each in `[0, 1]`. For automovie this is the ideal
- * structured-output target — a fixed, named, normalized, _low_-dimensional
+ * structured-output target: a fixed, named, normalized, _low_-dimensional
  * vector. The model picks channels from this closed menu (so an invalid channel
  * name is impossible) and assigns weights documented to `[0, 1]` (the engine
  * clamps/validates the magnitude).

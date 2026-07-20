@@ -6,10 +6,10 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * discovers it per package and applies the rules during the type-aware build.
  *
  * Formatting stays owned by prettier (`pnpm run format`), so `format.severity`
- * is `off` here — the block only documents the house style the sort/format
+ * is `off` here: the block only documents the house style the sort/format
  * would use, it never fails a build. The `rules` are a deliberately
  * **correctness-oriented** set (runtime traps, type-aware bugs, async-error
- * swallowing, misleading regex/security sinks) — not a style dragnet: every
+ * swallowing, misleading regex/security sinks), not a style dragnet: every
  * rule flags a real defect, which is why each is `error`.
  */
 const config = {

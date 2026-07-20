@@ -62,7 +62,7 @@ const SEQUENCE: IAutoMovieSequence = {
  * the two arithmetics (gate-side runtime, playback-side timeline) can never
  * drift apart silently. Hand-laid timeline: entry 0 spans [0, 3), entry 1 (trim
  * [0.5, 2.5]) spans [3, 5), entry 2 dissolves in 0.5 s early, spanning [4.5,
- * 7.5) — runtime 7.5.
+ * 7.5): runtime 7.5.
  *
  * Scenarios:
  *
@@ -83,7 +83,7 @@ const SEQUENCE: IAutoMovieSequence = {
  *    the shot starts at the trim-end instant, the trimmed entry owns the event
  *    instead of it vanishing from every entry.
  * 9. Ownership requires GLOBAL contiguity (#1099): the same shot played as
- *    aftermath [2,4] then flashback [0,2] — the flashback's cut lands exactly
+ *    aftermath [2,4] then flashback [0,2]: the flashback's cut lands exactly
  *    on the hit at shot-time 2, and a shot-LOCAL coincidence with the
  *    aftermath's start must not suppress it (they play at different global
  *    times). Both plays emit the hit at their own global instants (per-play
@@ -322,7 +322,7 @@ export const test_film_playback_resolver = (): void => {
     [["hit", 0, 2]],
   );
 
-  // 9. a flashback's cut keeps its own hit — shot-local coincidence with a
+  // 9. a flashback's cut keeps its own hit: shot-local coincidence with a
   // non-contiguous entry owns nothing (#1099)
   const flashbackShots: IAutoMovieShot[] = [
     {

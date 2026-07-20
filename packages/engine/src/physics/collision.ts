@@ -14,7 +14,7 @@ const assertFiniteVector = (name: string, vector: IAutoMovieVector3): void => {
 };
 
 /**
- * A world-space sphere collider — the simplest body to test a hit against (an
+ * A world-space sphere collider: the simplest body to test a hit against (an
  * arrow vs. a rider's torso). Cheap, rotation-free, and enough to answer the
  * one question a strike needs: _did it connect, and when?_
  *

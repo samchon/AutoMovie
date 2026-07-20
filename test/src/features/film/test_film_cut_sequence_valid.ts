@@ -22,9 +22,9 @@ const shot = (id: string, duration: number): IAutoMovieShot => ({
  *
  * Scenarios:
  *
- * 1. Three entries over two built shots — the first played whole (3 s), the second
+ * 1. Three entries over two built shots (the first played whole (3 s), the second
  *    trimmed to [0.5, 2.5] (2 s), the first reused with a 0.5 s cross-dissolve
- *    in — → success; the sequence carries id/name/fps and the entries in
+ *    in) → success; the sequence carries id/name/fps and the entries in
  *    order.
  * 2. Runtime = 3 + 2 + 3 − 0.5 = 7.5 s (a reused shot plays again; the dissolve
  *    overlaps the previous tail).

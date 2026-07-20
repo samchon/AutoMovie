@@ -53,7 +53,7 @@ export class ViolationCollector {
   }
 
   /**
-   * Push a `"warning"`-severity violation — physical-plausibility advice that
+   * Push a `"warning"`-severity violation, physical-plausibility advice that
    * does not fail validation (see
    * {@link IAutoMovieConstraintViolation.severity}).
    */

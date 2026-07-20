@@ -239,8 +239,8 @@ const applyDriven = (
  * matrices downstream is silent NaN poisoning with no violation (#1055). Node
  * `weights` is variable-width, so it is judged by the width actually in play
  * (#1100): an already-sampled multi-morph array must not be narrowed to `[y]`,
- * while a width-1 array — or an unsampled channel, where the driver CREATES the
- * scalar weights exactly as a width-1 clip track would — is the classic
+ * while a width-1 array (or an unsampled channel, where the driver CREATES the
+ * scalar weights exactly as a width-1 clip track would) is the classic
  * single-morph corrective driver and folds into `resolveFrame`'s weights. (A
  * scalar JSON pointer is NOT a remedy for in-engine consumers: pointer channels
  * never fold into node outputs.) Mirrors the width gate `readDrivenSourceValue`
@@ -258,7 +258,7 @@ const validateDrivenOutputChannel = (
     const existing = sampled.get(channelKey(output));
     if (existing !== undefined && existing.value.length !== 1)
       throw new Error(
-        `driven driver output "node:${output.node}:weights" must stay scalar-width, but the sampled weights carry ${existing.value.length} morph targets — a scalar write would silently narrow them`,
+        `driven driver output "node:${output.node}:weights" must stay scalar-width, but the sampled weights carry ${existing.value.length} morph targets: a scalar write would silently narrow them`,
       );
     return;
   }

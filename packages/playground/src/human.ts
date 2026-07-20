@@ -71,9 +71,9 @@ app.innerHTML = `
       <div class="tog"><input type="checkbox" id="blink" checked/><label for="blink">Auto-blink</label></div>
       <details open><summary>Expression</summary><div id="expr" class="grp"></div></details>
       <details open><summary>Proportions (bone scale)</summary><div id="prop" class="grp"></div></details>
-      <details open><summary>Pose — head &amp; torso</summary><div id="pose-core" class="grp"></div></details>
-      <details><summary>Pose — arms</summary><div id="pose-arms" class="grp"></div></details>
-      <details><summary>Pose — legs</summary><div id="pose-legs" class="grp"></div></details>
+      <details open><summary>Pose: head &amp; torso</summary><div id="pose-core" class="grp"></div></details>
+      <details><summary>Pose: arms</summary><div id="pose-arms" class="grp"></div></details>
+      <details><summary>Pose: legs</summary><div id="pose-legs" class="grp"></div></details>
     </div>
   </div>
 `;
@@ -319,7 +319,7 @@ loader.load(
     scene.add(loaded.scene);
     if (loaded.lookAt) loaded.lookAt.target = gazeTarget;
     vrm = loaded;
-    // Model "Vita" — VRoid sample, CC0 (public domain): fully MIT-compatible.
+    // Model "Vita", VRoid sample, CC0 (public domain): fully MIT-compatible.
     status.textContent = "Model: Vita · CC0 (public domain)";
     mountEditor();
     (

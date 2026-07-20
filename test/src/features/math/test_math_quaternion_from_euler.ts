@@ -5,7 +5,7 @@ import { qclose, vclose } from "../internal/predicates";
 
 /**
  * `Quaternion.fromEuler` composes intrinsic Euler degrees into a quaternion in
- * the given axis `order` — the bridge that lets the MCP boundary accept an
+ * the given axis `order`: the bridge that lets the MCP boundary accept an
  * LLM-authored semantic placement rotation instead of a raw quaternion (#723).
  *
  * Scenarios:

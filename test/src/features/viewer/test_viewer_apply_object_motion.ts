@@ -18,7 +18,7 @@ const node = (
 /**
  * `applyObjectMotion` is the render side of the engine's clip bakers: every
  * node channel the engine composes must land on the `THREE.Object3D` the same
- * way. Scale used to fall through silently (#1049) — a clip growing a prop 1→2
+ * way. Scale used to fall through silently (#1049): a clip growing a prop 1→2
  * rendered rigid while every engine-side consumer (`sampleClip` width
  * validation, `resolveFrame` matrix composition) saw it at 1.5 mid-clip.
  *
@@ -30,7 +30,7 @@ const node = (
  * 2. An unresolved node and a non-node (pointer) channel are skipped without
  *    touching anything or throwing.
  * 3. The documented carry-over contract: a channel absent from the clip keeps the
- *    object's existing value (the helper owns no rest poses — hosts that swap
+ *    object's existing value (the helper owns no rest poses: hosts that swap
  *    clips restore staged bases themselves).
  */
 export const test_viewer_apply_object_motion = (): void => {

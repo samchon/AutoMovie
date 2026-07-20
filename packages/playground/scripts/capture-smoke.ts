@@ -16,11 +16,11 @@ const HEIGHT = 360;
  * The one REAL (non-faked) headless-capture smoke (#1170). Everything the unit
  * suite fakes, this drives for real: Chrome renders the live playground page,
  * the multi-pass adapter captures beauty/mask/pose, and the frames are judged
- * STRUCTURALLY — not byte-hashed against a golden file (GPU rasterization
+ * STRUCTURALLY, not byte-hashed against a golden file (GPU rasterization
  * differs across hosts) but against invariants any correct capture satisfies:
  *
  * - Determinism: two independent capture sessions produce byte-identical frames
- *   per pass (same machine, same bytes — the reproducibility headline).
+ *   per pass (same machine, same bytes: the reproducibility headline).
  * - Mask structure: the exact `maskColor(0)` segment color covers a plausible
  *   subject fraction, and the black background dominates.
  * - Pose structure: white skeleton lines exist in a plausible fraction on black,
@@ -29,7 +29,7 @@ const HEIGHT = 360;
  *
  * Needs Google Chrome; the Vite dev server is reused when already running at
  * `--base`, else spawned (and killed) automatically. Exits non-zero on any
- * failed check — run it via `pnpm smoke:capture`.
+ * failed check. Run it via `pnpm smoke:capture`.
  */
 export const main = async (
   argv: string[] = process.argv.slice(2),

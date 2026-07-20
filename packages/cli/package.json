@@ -1,7 +1,7 @@
 {
   "name": "autobe",
   "version": "0.1.0",
-  "description": "Scaffold an automovie project — an MCP server config and a direct-link engine starter.",
+  "description": "Scaffold an automovie project: an MCP server config and a direct-link engine starter.",
   "main": "src/index.ts",
   "bin": {
     "autobe": "lib/bin.js"

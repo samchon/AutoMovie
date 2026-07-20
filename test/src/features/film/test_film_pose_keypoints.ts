@@ -70,7 +70,7 @@ const of = (ks: IAutoMoviePoseKeypoint[], bone: string) =>
 
 /**
  * `resolvePoseKeypoints` (#1168) projects a posed actor's named joints to 2D
- * screen keypoints — the exact OpenPose-style ControlNet conditioning automovie
+ * screen keypoints: the exact OpenPose-style ControlNet conditioning automovie
  * can emit from its known 3D joint positions. Coordinates are normalized to the
  * frame ([0,1], top-left origin); out-of-frame joints project honestly (never
  * clamped) with `inFrame: false`.
@@ -78,7 +78,7 @@ const of = (ks: IAutoMoviePoseKeypoint[], bone: string) =>
  * Scenarios (camera at origin looking down −Z, fovY 60):
  *
  * 1. A rig 5 m down −Z projects hips to frame center (0.5, 0.5) and the head 1 m
- *    above it to y ≈ 0.327 — both in frame.
+ *    above it to y ≈ 0.327: both in frame.
  * 2. A joint high above, behind the camera, past the far plane, or beside the
  *    frame each projects out of [0,1] with inFrame false and is NOT clamped.
  * 3. A bone the rig lacks yields no keypoint; the default joint set emits only the

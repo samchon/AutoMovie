@@ -125,7 +125,7 @@ const ratios = (det) => {
   const eyeWidth = (d(P(33), P(133)) + d(P(263), P(362))) / 2;
   const intercanthal = d(P(133), P(362));
   const interocular = d(P(33), P(263));
-  const irisSpacing = d(P(468), P(473)); // iris centres — reliable on both
+  const irisSpacing = d(P(468), P(473)); // iris centres, reliable on both
   const noseWidth = d(P(129), P(358));
   const mouthWidth = d(P(61), P(291));
   const eyeY = (P(33)[1] + P(263)[1]) / 2;

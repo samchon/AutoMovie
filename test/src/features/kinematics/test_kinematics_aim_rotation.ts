@@ -8,11 +8,11 @@ const Y = { x: 0, y: 1, z: 0 };
 const nX = { x: -1, y: 0, z: 0 };
 const nY = { x: 0, y: -1, z: 0 };
 
-/** 0.05° in radians — inside the OLD quatFromTo identity deadzone. */
+/** 0.05° in radians: inside the OLD quatFromTo identity deadzone. */
 const TINY = (0.05 * Math.PI) / 180;
 
 /**
- * `aimRotation` — the shortest-arc rotation taking one direction onto another
+ * `aimRotation`: the shortest-arc rotation taking one direction onto another
  * (the heart of an aim/look-at driver AND the analytic two-bone lowering, hence
  * `reachPose`/`legPlant`). Verified by rotating `from` with the result and
  * checking it lands on `to`.
@@ -25,9 +25,9 @@ const TINY = (0.05 * Math.PI) / 180;
  *    `|a.x| >= 0.9` ⇒ the +Y-axis branch) still flips +X to −X.
  * 4. Antiparallel with the `|a.x| < 0.9` branch (+Y → −Y) flips +Y to −Y.
  * 5. Non-unit inputs are normalized first.
- * 6. **Deadzone-free (#643/#720):** a target 0.05° off-axis — inside the old `cos
+ * 6. **Deadzone-free (#643/#720):** a target 0.05° off-axis, inside the old `cos
  *
- * > 0.999999`deadzone — now aims EXACTLY at the target instead of snapping to the
+ * > 0.999999`deadzone, now aims EXACTLY at the target instead of snapping to the
  * > identity. Because`aimRotation`is the shared core
  * > of`twoBoneChainArticulation`, this is the sub-0.081° correction
  * > `reachPose`(an arm putting a hand on a lever) and`legPlant` (a foot plant)
@@ -96,7 +96,7 @@ export const test_kinematics_aim_rotation = (): void => {
     vclose(aimed, to),
   );
   TestValidator.predicate(
-    "the rotation is real — not the old identity (x ≈ sin 0.05° ≠ 0)",
+    "the rotation is real, not the old identity (x ≈ sin 0.05° ≠ 0)",
     aimed.x > 1e-4,
   );
 };

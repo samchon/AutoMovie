@@ -36,7 +36,7 @@ const coneItems = (axes: Parameters<typeof joint>[1]) => {
  * 2. 30° + 30° → ~42° swing, well inside the cone: no violation.
  * 3. A resting (`null`) axis does NOT exempt the cone (#1245): the cone is a
  *    COUPLING between the two axes, so a resting axis contributes its actual
- *    rotation, 0 — exactly as `jointToQuaternion` reads it. A single-axis pose
+ *    rotation, 0 (exactly as `jointToQuaternion` reads it). A single-axis pose
  *    inside the cone passes, and one past the cone is flagged identically to
  *    its `0` twin, which renders the same quaternion. The old skip let
  *    `{flexion:150, abduction:null}` through while `{flexion:150, abduction:0}`

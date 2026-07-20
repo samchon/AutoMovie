@@ -5,12 +5,12 @@ import { TestValidator } from "@nestia/e2e";
  * The chignon lobe rides the occiput: size `0` must yield empty parts (the
  * preset schema covers bunless styles), a real bun sits wholly BEHIND the
  * head's center plane, and `height` moves it up the occiput. The lobe must also
- * stay inside the skull's vertical span — a bun floating off the head is the
+ * stay inside the skull's vertical span: a bun floating off the head is the
  * failure this pins.
  *
  * Scenario: size 0 → empty; size 0.8 at two heights → both behind (mean z < 0),
  * the higher one strictly higher, both within the dome's y range. The mesh must
- * also wind OUTWARD (#1041): its signed volume is positive — the z-mirrored
+ * also wind OUTWARD (#1041): its signed volume is positive. The z-mirrored
  * parameterization previously kept the skull's winding and faced every triangle
  * into the bun.
  */

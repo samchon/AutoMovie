@@ -26,13 +26,13 @@ const TWO_BONES: IAutoMovieSkeleton = {
 /**
  * Two viewer paths used to drop caller data in silence (#1051):
  *
- * 1. `buildScene` skipped a node whose model id could not resolve — and the
+ * 1. `buildScene` skipped a node whose model id could not resolve, and the
  *    segmentation mask palette is keyed by top-level child INDEX, so every
  *    later node shifted one color over and a mask consumer attributed pixels to
  *    the wrong node. Unresolvable caller data now throws, the same class as
  *    `buildModel`'s missing skin bone.
  * 2. `applyPose` dropped articulation for any bone missing from the model's bone
- *    map with no trace — a typo in an imported bone map was indistinguishable
+ *    map with no trace: a typo in an imported bone map was indistinguishable
  *    from a deliberately partial one. It now returns the skipped bones so the
  *    host can compare against what it meant to map.
  *

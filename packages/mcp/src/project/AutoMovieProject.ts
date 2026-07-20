@@ -48,30 +48,30 @@ import { acquireCommitLock, releaseCommitLock } from "./commitLock";
 import { beatOf, shotIdOf } from "./shotKey";
 
 /**
- * The resident AutoMovie project — **the project folder itself is the memory**
+ * The resident AutoMovie project, **the project folder itself is the memory**
  * (#614, D012). Unlike AutoBe's hidden `.autobe` JSON mirror, every slice here
  * is a user-visible, human-readable file, and 3D/binary assets are first-class
  * managed artifacts referenced by path, never regenerable throwaways.
  *
  * Layout under the project root:
  *
- * - `automovie.json` — the manifest: format version and the asset index.
- * - `script.json` / `scene.json` / `notes.json` / `film.json` — slate slices.
- * - `shots/<beat>.json`, `beatEnds/<beat>.json` — per-beat slices, filenames
+ * - `automovie.json`, the manifest: format version and the asset index.
+ * - `script.json` / `scene.json` / `notes.json` / `film.json`, slate slices.
+ * - `shots/<beat>.json`, `beatEnds/<beat>.json`, per-beat slices, filenames
  *   URI-encoded from the beat id (Windows-safe, deterministic).
- * - `props/<node>.json` — forged prop specs (#671), filenames URI-encoded from
+ * - `props/<node>.json`, forged prop specs (#671), filenames URI-encoded from
  *   the prop node; a resident `forgeProp` success upserts exactly its own
  *   file.
- * - `models/`, `assets/` — reserved for 3D binaries (GLB, textures); the store
+ * - `models/`, `assets/`, reserved for 3D binaries (GLB, textures); the store
  *   tracks and guards these paths, the host's adapters write the bytes (the
  *   render package's adapter discipline).
- * - `renders/` — where a resident `planRender`/`seeFrame` defaults its frame and
+ * - `renders/`, where a resident `planRender`/`seeFrame` defaults its frame and
  *   encoded-video paths (#678); the host adapter writes the bytes and may track
  *   them with `registerAsset`.
  *
  * A **cleared slice's file is removed** (null script → no `script.json`, an
  * empty notes list → no `notes.json`), so presence in the tree always means
- * content — the invalidation cascade a `commitScript` performs on the slate is
+ * content, the invalidation cascade a `commitScript` performs on the slate is
  * mirrored by files disappearing. Writes are atomic (temp file + rename) and
  * pretty-printed; the whole store is synchronous, matching the tool layer.
  *
@@ -79,7 +79,7 @@ import { beatOf, shotIdOf } from "./shotKey";
  * serialized contents in memory first (a cycle that throws persists nothing),
  * then flushes under a short-lived commit lock (`revision.lock`) against a
  * monotonic revision counter (`revision.json`): a cycle whose base revision is
- * stale — another session committed since this instance last read — is refused
+ * stale, another session committed since this instance last read, is refused
  * with a re-read prompt instead of silently overwriting the other session's
  * work.
  *
@@ -107,7 +107,7 @@ export class AutoMovieProject {
       this.manifest = { version: 1, assets: [] };
       writeJsonAtomic(this.manifestPath, this.manifest);
     } else {
-      // Opening an existing project is a pure read — keep the parsed manifest
+      // Opening an existing project is a pure read, keep the parsed manifest
       // (unknown host/future fields and all) in memory without rewriting it, so
       // an activation never churns the file's mtime or drops a field. It is
       // re-emitted only when an actual mutation (registerAsset) rewrites it,
@@ -119,7 +119,7 @@ export class AutoMovieProject {
   /**
    * Open (or initialize) the project at `rootDir`: the directory tree and
    * manifest are created when missing, and missing slice files simply mean an
-   * empty slate — a fresh directory is a valid empty project.
+   * empty slate, a fresh directory is a valid empty project.
    */
   public static open(rootDir: string): AutoMovieProject {
     const root = path.resolve(rootDir);
@@ -186,8 +186,8 @@ export class AutoMovieProject {
   }
 
   /**
-   * Reorder a slate's per-beat arrays into the canonical stored order — the
-   * filename-lexicographic order {@link readKeyedSlices} reads them back in — so
+   * Reorder a slate's per-beat arrays into the canonical stored order, the
+   * filename-lexicographic order {@link readKeyedSlices} reads them back in, so
    * a resident commit returns the arrays exactly as the next resident read
    * would (#716). A `commitShot`/`commitBeatEnd` upsert appends a new beat at
    * the array end, diverging from the filename order a later read produces;
@@ -208,7 +208,7 @@ export class AutoMovieProject {
   /**
    * Persist a whole slate into the tree, reconciling every slice: null slices
    * and empty lists remove their files, per-beat slices add/replace/remove by
-   * presence — exactly the invalidation cascade the commit tools perform on the
+   * presence, exactly the invalidation cascade the commit tools perform on the
    * slate, made visible as files.
    *
    * The save is a TRANSACTION (#1096, #1133): every guard (the #1011
@@ -216,7 +216,7 @@ export class AutoMovieProject {
    * still staged in memory, so a cycle that throws persists nothing; only then
    * does {@link commitCycle} flush the staged writes under the revision guard.
    * The flush itself is a sequence of atomic per-file renames, not one atomic
-   * batch — a hard crash mid-flush remains a documented microsecond window,
+   * batch, a hard crash mid-flush remains a documented microsecond window,
    * surfaced by the per-slice load validation on the next open.
    */
   public saveSlate(slate: IAutoMovieMcpWritableSlate): void {
@@ -293,7 +293,7 @@ export class AutoMovieProject {
         const base = this.lastReadRevision_;
         this.lastReadRevision_ = current;
         throw new Error(
-          `another session committed to this project (on-disk revision ${current}; this session last synchronized at ${base}); nothing was written — re-read the current state (getSlate / nextSteps) and re-issue the call from that truth`,
+          `another session committed to this project (on-disk revision ${current}; this session last synchronized at ${base}); nothing was written, re-read the current state (getSlate / nextSteps) and re-issue the call from that truth`,
         );
       }
       flush();
@@ -347,7 +347,7 @@ export class AutoMovieProject {
 
   /**
    * The stored prop id whose slice filename collides case-insensitively with
-   * `node`'s while the id itself differs — the sibling a case-insensitive
+   * `node`'s while the id itself differs, the sibling a case-insensitive
    * filesystem's upsert rename would silently destroy (#1093, the prop twin of
    * the #1011 beat-slice guard). `null` when no such sibling exists: an exact
    * id match is the ordinary upsert, not a collision.
@@ -359,8 +359,8 @@ export class AutoMovieProject {
   /**
    * The stored actor context nodes, one per `actors/<node>.json`, in filename
    * order (#1176). Deep shape validation is deliberately NOT re-run here: a
-   * loaded context flows through `perform`'s actor-registry gate — the same
-   * gate explicit input passes — which reports tampered fields against
+   * loaded context flows through `perform`'s actor-registry gate, the same
+   * gate explicit input passes, which reports tampered fields against
    * `$slate.actors` with full precision.
    */
   public storedActors(): IAutoMovieMcpActorSpec[] {
@@ -381,8 +381,8 @@ export class AutoMovieProject {
    *
    * A per-actor loop (one cycle each) was not a transaction: a failure on the
    * k-th actor left 1..k−1 written with the NEW contexts and the rest with the
-   * old, while the call threw — a torn registry every later resident perform
-   * reads back silently — and each cycle bumped the revision, so a perform that
+   * old, while the call threw, a torn registry every later resident perform
+   * reads back silently, and each cycle bumped the revision, so a perform that
    * reported failure looked like N commits to a second session. Staging first
    * (serializeJson is the throw-prone step) makes it all-or-nothing, exactly as
    * {@link saveSlate} does.
@@ -436,7 +436,7 @@ export class AutoMovieProject {
    * Register a path-referenced binary asset (a GLB under `models/`, a texture
    * under `assets/`, a rendered frame under `renders/`). The store validates
    * and tracks the path and keeps the manifest's asset index consistent; when
-   * `bytes` are given it also writes them atomically — but it **never silently
+   * `bytes` are given it also writes them atomically, but it **never silently
    * overwrites**: an already-registered path, or bytes aimed at an existing
    * file, throw. Registering without bytes tracks a file the host's adapter
    * writes (or wrote) itself.
@@ -494,12 +494,12 @@ export class AutoMovieProject {
   /**
    * Top-level `renders/` entries the committed truth no longer owns (#1130). An
    * entry is OWNED when its name belongs to the committed film's or a committed
-   * shot's stem family (`<stem>` itself — the default frame dir — or
-   * `<stem>.<anything>` — the encoded video, concat list, chunk outputs), or
+   * shot's stem family (`<stem>` itself, the default frame dir, or
+   * `<stem>.<anything>`, the encoded video, concat list, chunk outputs), or
    * when a registered asset lives at or under it. Everything else is a stray
    * from a superseded render. The store never deletes: the ledger surfaces the
    * strays and the corrective action stays the agent's. Always empty while no
-   * film is committed — mid-rework, ownership is undefined, and a noisy ledger
+   * film is committed, mid-rework, ownership is undefined, and a noisy ledger
    * would prescribe deleting work about to be re-owned.
    */
   private staleRenders(slate: IAutoMovieMcpWritableSlate): string[] {
@@ -514,7 +514,7 @@ export class AutoMovieProject {
         (asset) =>
           asset === `renders/${name}` || asset.startsWith(`renders/${name}/`),
       );
-    // Sort by UTF-16 code units — a locale-independent total order, so the
+    // Sort by UTF-16 code units, a locale-independent total order, so the
     // stale-render listing is identical on every host (unlike localeCompare,
     // whose result varies with the host locale/ICU build and can even return 0
     // for distinct Unicode-equivalent names). Distinct filenames are never
@@ -566,7 +566,7 @@ export class AutoMovieProject {
 
 /**
  * Serialize one keyed slice set into its staged file map (`filename` → rendered
- * JSON) — the throw-prone half of a beat-slice flush, run while the cycle is
+ * JSON), the throw-prone half of a beat-slice flush, run while the cycle is
  * still staged in memory (#1133). The case-collision guard runs separately,
  * before staging, in {@link AutoMovieProject.saveSlate}.
  */
@@ -601,7 +601,7 @@ const RESERVED_DIRS = [
 /**
  * Check a project-relative asset path: forward slashes, no absolute paths, no
  * `..` escapes, no empty segments. Returns the normalized path, or the fault
- * describing the escape — the non-throwing core shared by the store (which
+ * describing the escape, the non-throwing core shared by the store (which
  * throws on fault) and the MCP tool surface (which reports it as a violation).
  */
 export const checkAssetPath = (
@@ -623,7 +623,7 @@ export const checkAssetPath = (
   const segments = forward.split("/");
   // "." segments would alias one file under two manifest keys
   // ("assets/./x.png" beside "assets/x.png"), bypassing the never-silently-
-  // replaced duplicate refusal (#1097) — refuse them like "..".
+  // replaced duplicate refusal (#1097), refuse them like "..".
   if (
     segments.some(
       (segment) => segment === "" || segment === ".." || segment === ".",
@@ -643,7 +643,7 @@ const normalizeAssetPath = (relativePath: string): string => {
 };
 
 /**
- * The per-beat slice filename for a key — the single source of the
+ * The per-beat slice filename for a key, the single source of the
  * `${encodeURIComponent(key)}.json` convention the store reads, writes, and
  * orders by. Ordering a slate array by this exact string (not the bare encoded
  * key) reproduces {@link readKeyedSlices}' readdir+sort order precisely: the
@@ -654,13 +654,13 @@ const normalizeAssetPath = (relativePath: string): string => {
 const WINDOWS_DEVICE_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
 const sliceFilename = (key: string): string => {
-  // encodeURIComponent leaves `*` (invalid on Windows — EINVAL at write) and
+  // encodeURIComponent leaves `*` (invalid on Windows, EINVAL at write) and
   // DOS device basenames (`con`, `nul`, ...) intact (#1011). Escape both with
   // ordinary percent-encoding so `decodeURIComponent` still round-trips the
   // key; existing stores are unaffected (such files could never be written).
   // Windows reserves the segment BEFORE THE FIRST DOT (`con.notes.json` is
   // refused on Windows 10 and earlier just like `con.json`), and dots survive
-  // encoding — so the device test runs on the stem, not the whole key (#1064).
+  // encoding, so the device test runs on the stem, not the whole key (#1064).
   let encoded = encodeURIComponent(key).replace(/\*/g, "%2A");
   const stem = encoded.split(".", 1)[0]!;
   if (WINDOWS_DEVICE_NAMES.test(stem))
@@ -675,7 +675,7 @@ const sliceFilename = (key: string): string => {
 /**
  * Keys whose slice filenames differ only by case would silently clobber each
  * other on a case-insensitive filesystem and then wedge the next read with a
- * filename/internal-key mismatch (#1011) — refuse instead. Runs before any file
+ * filename/internal-key mismatch (#1011), refuse instead. Runs before any file
  * is touched (#1096) so a refused slate persists nothing.
  */
 const assertNoCaseCollisions = (dir: string, keys: Iterable<string>): void => {
@@ -685,7 +685,7 @@ const assertNoCaseCollisions = (dir: string, keys: Iterable<string>): void => {
     const prior = byLowerName.get(lower);
     if (prior !== undefined)
       throw new Error(
-        `${dir} ids "${prior}" and "${key}" collide case-insensitively as "${sliceFilename(key)}"; case-insensitive filesystems would silently clobber one — rename one id`,
+        `${dir} ids "${prior}" and "${key}" collide case-insensitively as "${sliceFilename(key)}"; case-insensitive filesystems would silently clobber one, rename one id`,
       );
     byLowerName.set(lower, key);
   }
@@ -697,7 +697,7 @@ const orderByFilename = <T>(items: T[], keyOf: (item: T) => string): T[] => {
     item,
     name: sliceFilename(keyOf(item)),
   }));
-  // Same order readKeyedSlices/staleRenders read filenames back in — keep all
+  // Same order readKeyedSlices/staleRenders read filenames back in, keep all
   // three on the code-unit comparator so the resident read and the ordered
   // slate agree, identically on every host.
   named.sort((a, b) => compareCodeUnits(a.name, b.name));

@@ -41,15 +41,15 @@ Structured multi-agent topic discussion with persistent research notes and trans
 
 ### Issue Campaign
 
-Repository-wide issue discovery, lead-vetted issue publication, batched implementation pull requests, and campaign closure — the conquest loop, `.agents/skills/issue-campaign/SKILL.md`. Read when the user asks for a broad audit, many issue candidates, or an issue-to-implementation campaign; do not use it for one already-defined issue.
+Repository-wide issue discovery, lead-vetted issue publication, batched implementation pull requests, and campaign closure (the conquest loop), `.agents/skills/issue-campaign/SKILL.md`. Read when the user asks for a broad audit, many issue candidates, or an issue-to-implementation campaign; do not use it for one already-defined issue.
 
 ### Benchmark Campaign
 
-The empirical MCP benchmark loop — authoring a persistent short/medium/long scenario corpus, driving the live MCP surface with an external agent (Claude, Codex), scoring and attributing each run, publishing lead-vetted defect and gap issues, developing every one before the next run, `.agents/skills/benchmark-campaign/SKILL.md`. Read when the user wants to benchmark the pipeline through real MCP runs or turn benchmark shortfalls into an issue-to-pull-request campaign; do not use it for a static code audit (issue-campaign) or one already-defined issue.
+The empirical MCP benchmark loop: authoring a persistent short/medium/long scenario corpus, driving the live MCP surface with an external agent (Claude, Codex), scoring and attributing each run, publishing lead-vetted defect and gap issues, developing every one before the next run, `.agents/skills/benchmark-campaign/SKILL.md`. Read when the user wants to benchmark the pipeline through real MCP runs or turn benchmark shortfalls into an issue-to-pull-request campaign; do not use it for a static code audit (issue-campaign) or one already-defined issue.
 
 ### 3D Modeling
 
-Working rules for parametric head/face modeling — verification discipline, anthropometric fitting, derived-data cascades, texture/morph craft, `.agents/skills/3d-modeling/SKILL.md`. Read before any 3D model, likeness, or pipeline work.
+Working rules for parametric head/face modeling: verification discipline, anthropometric fitting, derived-data cascades, texture/morph craft, `.agents/skills/3d-modeling/SKILL.md`. Read before any 3D model, likeness, or pipeline work.
 
 ### Viewer Verification
 
@@ -57,7 +57,7 @@ Driving the viewer/playground through Playwright MCP to inspect renders, poses, 
 
 ### MCP Server Design
 
-Designing `packages/mcp` — server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose (the 512-character server-instruction lead, the 1023-character tool-description cap), `.agents/skills/mcp/SKILL.md`. Read before adding or reshaping an MCP tool.
+Designing `packages/mcp`: server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose (the 512-character server-instruction lead, the 1023-character tool-description cap), `.agents/skills/mcp/SKILL.md`. Read before adding or reshaping an MCP tool.
 
 ### Pull Request Submission
 

@@ -17,7 +17,7 @@ const script: IAutoMovieScript = {
 };
 
 /**
- * The `nextSteps` tool (#615): the film ladder as data — the same computation
+ * The `nextSteps` tool (#615): the film ladder as data, the same computation
  * the resident gate throws, exposed so an agent can ASK before trying. The
  * missing list mirrors the gate; the next actions walk the ladder with per-beat
  * detail once the coarse rungs are in.
@@ -25,7 +25,7 @@ const script: IAutoMovieScript = {
  * Scenarios:
  *
  * 1. Without an active project the tool fails with the openProject guidance.
- * 2. A fresh project misses every rung and its first action is commitScript — the
+ * 2. A fresh project misses every rung and its first action is commitScript, the
  *    same wording the gate's prompt orders.
  * 3. After the script, the first action becomes commitScene and the missing list
  *    no longer names the script.
@@ -62,7 +62,7 @@ export const test_mcp_next_steps = (): void => {
     app.commitScript({ script });
     const afterScript = app.nextSteps();
     TestValidator.predicate(
-      "script satisfied — missing list drops it",
+      "script satisfied, missing list drops it",
       afterScript.missing.every((line) => !line.startsWith("script:")),
     );
     TestValidator.equals(
@@ -107,7 +107,7 @@ export const test_mcp_next_steps = (): void => {
 
     const afterShot = app.nextSteps();
     TestValidator.equals(
-      "all coarse rungs satisfied — missing empties",
+      "all coarse rungs satisfied, missing empties",
       afterShot.missing,
       [],
     );

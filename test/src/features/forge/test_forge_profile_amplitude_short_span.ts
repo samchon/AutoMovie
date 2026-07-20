@@ -5,7 +5,7 @@ import { throwsError } from "../internal/predicates";
 
 /**
  * Fewer than 15 usable row pairs at every candidate scale is not enough signal
- * to calibrate against — the fit throws rather than returning a coin-flip
+ * to calibrate against: the fit throws rather than returning a coin-flip
  * amplitude.
  *
  * Scenario: a 5-row nose→chin span throws.

@@ -67,12 +67,12 @@ const space: IAutoMovieSpace = {
  * 3. The ramp plane is constant perpendicular to its axis (same height at any z on
  *    the footprint).
  * 4. Over nothing: `surfaceAt` null, `heightAt` null, `isWalkable` false.
- * 5. The topmost surface wins where patches stack — and when it is a no-go top,
+ * 5. The topmost surface wins where patches stack, and when it is a no-go top,
  *    `surfaceAt` still reports it (objects rest there) while `heightAt` reads
  *    null (an actor cannot stand there).
  * 6. An exact height tie keeps the earlier surface in the array.
  * 7. A degenerate ramp axis (rampTo at the anchor's XZ) safely reads as flat.
- * 8. A mis-ordered (bowtie) footprint still classifies containment correctly — the
+ * 8. A mis-ordered (bowtie) footprint still classifies containment correctly: the
  *    polygon is canonicalized through the shared convex hull.
  */
 export const test_space_height_queries = (): void => {

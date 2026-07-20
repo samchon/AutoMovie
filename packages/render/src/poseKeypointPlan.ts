@@ -20,12 +20,12 @@ import {
 
 /**
  * Plan the per-frame pose-keypoint sidecar (#1168): lay the cut onto the output
- * clock ({@link sequenceTimeline} — the same frame-atomic arithmetic the render,
+ * clock ({@link sequenceTimeline}, the same frame-atomic arithmetic the render,
  * chunk, and caption plans use), resolve the live shot at every output frame
  * ({@link playbackCursor}), and for each performing actor project its named
  * joints to the frame through {@link resolvePoseKeypoints}. A frame whose shot,
  * scene, or camera cannot be resolved, and an actor whose motion, skeleton, or
- * node cannot, simply contribute no keypoints rather than throwing — the
+ * node cannot, simply contribute no keypoints rather than throwing: the
  * sidecar still covers every output frame.
  *
  * Planning only: the host writes the file ({@link renderPoseKeypointSidecar}).

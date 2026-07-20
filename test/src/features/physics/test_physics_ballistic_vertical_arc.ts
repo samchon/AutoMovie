@@ -25,7 +25,7 @@ const landsOn = (
  * The purely-vertical branch of `solveBallisticLaunch` must honour the `arc`
  * selection like the general range equation does (#1142): `direct` is the
  * faster, lower flight, `high` the lobbed one. Before the fix the branch never
- * read `arc` — a target below always got the up-and-over lob (a "direct" shot
+ * read `arc`: a target below always got the up-and-over lob (a "direct" shot
  * seconds late) and a target overhead never got the descending re-crossing a
  * "high" shot asks for; the react `compileLaunch` schedules at `start +
  * hitTime` fired at the wrong instant.

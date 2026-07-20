@@ -126,12 +126,12 @@ export interface IAutoMovieMcpGeometryContext {
 }
 
 /**
- * An LLM-facing placement transform — the MCP boundary form of the engine's
+ * An LLM-facing placement transform, the MCP boundary form of the engine's
  * {@link IAutoMovieTransform}, where `rotation` is authored as semantic Euler
  * degrees ({@link IAutoMovieEuler}) rather than a raw quaternion (#723, D016).
  *
- * The engine's quaternion is "not LLM-facing" by its own contract — opaque to a
- * language model and easy to emit off-unit-norm — yet a raw transform forced
+ * The engine's quaternion is "not LLM-facing" by its own contract, opaque to a
+ * language model and easy to emit off-unit-norm, yet a raw transform forced
  * exactly that on any tool where the model authors a placement from scratch.
  * Here the model states an angle it understands (yaw/pitch/roll about the local
  * axes, with the composition `order`) and `toEngineTransform` lowers it to the
@@ -144,7 +144,7 @@ export interface IAutoMovieMcpTransform {
 
   /**
    * Rotation as semantic Euler degrees. Omit or `null` for no rotation
-   * (identity) — a placement that only slides a node needs no angles.
+   * (identity), a placement that only slides a node needs no angles.
    */
   rotation?: IAutoMovieEuler | null;
 
@@ -292,7 +292,7 @@ export interface IAutoMovieValidateOutput {
 
 /** Commit tool result. */
 /**
- * A compact identity digest of a slate — which slices exist, by id (#1132).
+ * A compact identity digest of a slate, which slices exist, by id (#1132).
  * Tool returns carry this instead of echoing whole artifacts: state belongs to
  * the read side (`getSlate`/`getShot`/`nextSteps`), and a full-slate echo on
  * every write cost thousands of tokens per call while tempting callers to trust
@@ -328,7 +328,7 @@ export interface IAutoMovieMcpSlateDigest {
 export interface IAutoMovieCommitOutput {
   /**
    * True only when the input artifact was persisted. Always equal to
-   * `validation.success` — the one-word answer, not a second status channel.
+   * `validation.success`, the one-word answer, not a second status channel.
    */
   committed: boolean;
 
@@ -336,7 +336,7 @@ export interface IAutoMovieCommitOutput {
   state: IAutoMovieMcpSlateDigest;
 
   /**
-   * The transformed slate — present ONLY for explicit-slate calls, where the
+   * The transformed slate, present ONLY for explicit-slate calls, where the
    * tool is a pure transform and the return IS the product (#1132). Resident
    * calls omit it: the project files are the truth, read via `getSlate` /
    * `getShot` / `nextSteps` instead of trusting a per-write echo.
@@ -413,8 +413,8 @@ export interface IAutoMovieMcpRenderPlan {
 /**
  * One independently-renderable chunk of a long film, as exposed through MCP:
  * the engine chunk minus its per-frame `frames` array. The whole-plan render
- * tool returns frame `times`, not per-frame shot/blend samples — the host's
- * capture adapter re-derives frame content from the sequence — so a chunk needs
+ * tool returns frame `times`, not per-frame shot/blend samples, the host's
+ * capture adapter re-derives frame content from the sequence, so a chunk needs
  * only its boundaries, paths, and encoder args, keeping the chunk plan bounded
  * (one entry per chunk, not per frame) even for an hours-long timeline.
  */
@@ -570,7 +570,7 @@ export interface IAutoMovieMcpCapturedImage {
 /**
  * Host-injected frame capture: drives a real renderer (a Playwright page over
  * the viewer, a render worker) for one planned frame and returns the image.
- * Failures should throw — a capture error is a host runtime fault, not a
+ * Failures should throw, a capture error is a host runtime fault, not a
  * validation issue, and propagates as a tool error.
  */
 export type AutoMovieMcpFrameCapture = (
@@ -652,13 +652,13 @@ export interface IAutoMovieMcpActorContext {
 
   /**
    * Heading the actor faces, degrees about +Y (0 = +Z). Omittable in a RESIDENT
-   * `perform` exactly like `position` (#1176) — seeded from the previous beat's
+   * `perform` exactly like `position` (#1176), seeded from the previous beat's
    * committed end-state facing.
    */
   facingDeg?: number;
 
   /**
-   * Seconds into the looping gait cycle at the shot's start — a beat that opens
+   * Seconds into the looping gait cycle at the shot's start, a beat that opens
    * mid-stride resumes the walk at this phase instead of restarting it.
    * Omittable in a RESIDENT `perform` exactly like `position` (#1176): seeded
    * from the previous beat's committed end-state `gaitPhase` when it recorded
@@ -681,7 +681,7 @@ export interface IAutoMovieMcpActorContext {
 
 /**
  * A stored actor context as `actors/<node>.json` holds it (#1176): the
- * beat-invariant half of {@link IAutoMovieMcpActorContext} — everything but
+ * beat-invariant half of {@link IAutoMovieMcpActorContext}, everything but
  * `position`/`facingDeg`/`gaitPhase`, which are per-beat openings the
  * continuity seed (or the caller) supplies. A resident `perform` with explicit
  * `actors` writes these through; later resident performs omit `actors` and read
@@ -770,7 +770,7 @@ export namespace IAutoMovieMcpPerformedShot {
 }
 
 /**
- * JSON-safe motion clip crossing the MCP `perform` boundary — returned as the
+ * JSON-safe motion clip crossing the MCP `perform` boundary, returned as the
  * compiled per-actor clips, and supplied by the caller as the authored clips an
  * `enact` action plays (#1148).
  */
@@ -791,7 +791,7 @@ export interface IAutoMovieMcpMotion {
   keyframes: IAutoMovieMcpKeyframe[];
 
   /**
-   * The gait cycle the motion carries ({@link IAutoMovieGaitCycle}) — how a
+   * The gait cycle the motion carries ({@link IAutoMovieGaitCycle}), how a
    * non-looping compiled performance still reports a stride phase at the beat
    * end. Absent/null = no cycle to resume.
    */
@@ -874,7 +874,7 @@ export interface IAutoMovieMcpDrivenDriver extends Omit<
   outRange?: IAutoMovieMcpRange;
 }
 
-/** A prop profile driver as the MCP boundary accepts it — tuple-free. */
+/** A prop profile driver as the MCP boundary accepts it, tuple-free. */
 export type IAutoMovieMcpPropDriver =
   | IAutoMovieCopyDriver
   | IAutoMovieAimDriver
@@ -885,7 +885,7 @@ export type IAutoMovieMcpPropDriver =
 
 /**
  * A prop's profile as the MCP boundary accepts it: the declared controls,
- * limits, and (tuple-free) drivers. Gaits are omitted — a prop does not
+ * limits, and (tuple-free) drivers. Gaits are omitted, a prop does not
  * locomote (`IAutoMovieProfile.gaits` is for bodies); the humanoid gait path
  * rides the `perform` tool's actor contexts instead.
  */
@@ -919,8 +919,8 @@ export interface IAutoMovieMcpPropArticulation {
 }
 
 /**
- * A prop spec as the `forgeProp` tool accepts it — a crude primitive proxy with
- * rich meaning: body, affordances, self-declared articulation (D011).
+ * A prop spec as the `forgeProp` tool accepts it, a crude primitive proxy with
+ * rich meaning: body, affordances, self-declared articulation.
  */
 export interface IAutoMovieMcpPropSpec {
   /** The scene node this prop will occupy (the staging join key). */
@@ -969,7 +969,7 @@ export interface IAutoMovieForgePropOutput {
   /**
    * Present only when a resident project is active (#671): `true` when the
    * accepted spec was written through as `props/<node>.json`, `false` when the
-   * write-through was refused (#712 — the committed scene still places this
+   * write-through was refused (#712, the committed scene still places this
    * prop, so re-forging its spec would leave committed shots resolving against
    * stale articulation). Absent on pure (no-project) calls, keeping them
    * byte-compatible, and on failed forges, which write nothing.
@@ -981,14 +981,14 @@ export interface IAutoMovieForgePropOutput {
    * refused (`stored: false`): the committed scene still places this prop node,
    * so its spec is not replaced. Re-commit the scene without the placement (or
    * accept re-perform) first. Absent on a stored write-through, on pure calls,
-   * and on failed forges — the `forged.success` already carries the forge
+   * and on failed forges, the `forged.success` already carries the forge
    * contract's own verdict.
    */
   validation?: IAutoMovieValidation;
 }
 
 /**
- * What a resident project holds — which slate slices exist as files and which
+ * What a resident project holds, which slate slices exist as files and which
  * binary assets the manifest tracks (#614: the project folder is the memory).
  */
 export interface IAutoMovieMcpProjectSummary {
@@ -1044,7 +1044,7 @@ export interface IAutoMovieOpenProjectOutput {
 
 /**
  * An erase tool's result (#617). Erase is a targeted, resident-only removal of
- * one named artifact — never a reset; `erased` is true only when the named
+ * one named artifact, never a reset; `erased` is true only when the named
  * mistake existed and its files were removed (with the downstream cascade).
  */
 export interface IAutoMovieEraseOutput {
@@ -1060,7 +1060,7 @@ export interface IAutoMovieEraseOutput {
 
 /**
  * A `set*` tool's result (#654). Set is a targeted, resident-only replacement
- * of one artifact inside a committed slice — the granularity below the beat;
+ * of one artifact inside a committed slice, the granularity below the beat;
  * `updated` is true only when the named target existed and was replaced (with
  * the documented downstream cascade).
  */
@@ -1077,7 +1077,7 @@ export interface IAutoMovieSetOutput {
 
 /**
  * The `eraseProp` tool's result (#671). Erase is a targeted, resident-only
- * removal of ONE stored prop spec file — `erased` is true only when the named
+ * removal of ONE stored prop spec file, `erased` is true only when the named
  * spec existed and its file was removed. A prop the committed scene still
  * places is refused: unstaging is `commitScene`'s job, not a spec erase's.
  */
@@ -1094,7 +1094,7 @@ export interface IAutoMoviePropEraseOutput {
 
 /**
  * The `eraseActor` tool's result (#1176). Erase is a targeted, resident-only
- * removal of ONE stored actor context file — `erased` is true only when the
+ * removal of ONE stored actor context file, `erased` is true only when the
  * named context existed and its file was removed. An actor the committed scene
  * still stages is refused: later resident performs would lose the context their
  * beats depend on, and unstaging is `commitScene`'s job.
@@ -1113,7 +1113,7 @@ export interface IAutoMovieActorEraseOutput {
 /**
  * The `registerAsset` tool's result (#670). Registration is a resident-only,
  * additive manifest mutation: `registered` is true only when the path was newly
- * tracked — duplicates and path escapes are refused as violations, and the
+ * tracked, duplicates and path escapes are refused as violations, and the
  * index is never silently rewritten.
  */
 export interface IAutoMovieRegisterAssetOutput {
@@ -1130,7 +1130,7 @@ export interface IAutoMovieRegisterAssetOutput {
   validation: IAutoMovieValidation;
 }
 
-/** The `nextSteps` tool's result — the film ladder as data (#615). */
+/** The `nextSteps` tool's result, the film ladder as data (#615). */
 export interface IAutoMovieNextStepsOutput {
   /** The resident project's current status. */
   status: IAutoMovieMcpProjectSummary;

@@ -8,12 +8,12 @@ export const SPACE_GROUP_NAME = "__automovie_space";
 /**
  * Flat neutral gray for a ground surface. Deliberately featureless: the set is
  * a structural hint for the diffusion passes, and appearance is the diffusion
- * model's job (D009), so the surface carries shape and nothing else.
+ * model's job, so the surface carries shape and nothing else.
  */
 const SPACE_COLOR = 0.62;
 
 /**
- * Build the visible ground of an {@link IAutoMovieSpace} — one `Mesh` per
+ * Build the visible ground of an {@link IAutoMovieSpace}: one `Mesh` per
  * standable surface, grouped under {@link SPACE_GROUP_NAME}.
  *
  * This is what closes the gap between the space the feet obey and the world the
@@ -22,19 +22,19 @@ const SPACE_COLOR = 0.62;
  * them, so a depth or mask pass of a staged scene showed actors floating in a
  * void. Building them as real meshes is enough: every structural pass collects
  * geometry as `scene.traverse` ∩ `isMesh`, so the ground joins depth, mask,
- * normal, and outline with no pass-side change — unlike the playground's
+ * normal, and outline with no pass-side change, unlike the playground's
  * `GridHelper`, which is a `LineSegments` and is hidden before every structural
  * pass.
  *
  * Each surface becomes its convex footprint hull, fan-triangulated, with every
- * vertex lifted to {@link surfaceHeightAt} — so a floor or platform is a flat
+ * vertex lifted to {@link surfaceHeightAt}, so a floor or platform is a flat
  * slab at its anchor height and a ramp is the plane its `anchor → rampTo` axis
  * describes, without a second interpretation of the surface math. The hull is
  * counter-clockwise in the XZ plan, whose fan normal points **down**, so the
  * fan is wound in reverse: front faces look up, which is what an override
  * material (all single-sided) needs in order to draw at all.
  *
- * A degenerate footprint (fewer than three non-collinear points — rejected by
+ * A degenerate footprint (fewer than three non-collinear points, rejected by
  * `validateSpace`, but a hand-built space may still carry one) encloses no area
  * and contributes no mesh rather than an invalid geometry.
  *

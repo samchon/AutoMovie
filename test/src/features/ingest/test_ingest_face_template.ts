@@ -4,7 +4,7 @@ import { TestValidator } from "@nestia/e2e";
 
 /**
  * The happy path of the face-template import: a primitive carrying POSITION
- * plus named morph targets maps onto the flat-array template verbatim — resting
+ * plus named morph targets maps onto the flat-array template verbatim: resting
  * positions from POSITION, each delta array keyed by its target's own name. A
  * plain (target-less) mesh earlier in the document must be skipped, pinning the
  * "first MORPHED primitive" selection rule.

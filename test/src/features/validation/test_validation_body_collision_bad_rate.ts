@@ -21,7 +21,7 @@ const apart = () => ({
 
 /**
  * Unlike an overlap (advisory), a malformed sampleRate is an integrity error:
- * the check cannot run, so it fails with an `error`-severity range violation —
+ * the check cannot run, so it fails with an `error`-severity range violation:
  * the config axis stays hard even though the physics axis is soft.
  *
  * Scenarios:

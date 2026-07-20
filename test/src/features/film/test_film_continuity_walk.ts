@@ -84,7 +84,7 @@ const beatProps = (beat: string, stagedX: number, duration: number) => {
  * compare each beat's opening against the previous beat's end. Continuity is
  * MANUAL in the pipeline (nothing seeds the next beat from the prior end), so a
  * hero staged back at the origin instead of where it walked to is exactly the
- * uncaught "characters drift" bug this surfaces — as advisory warnings, never a
+ * uncaught "characters drift" bug this surfaces, as advisory warnings, never a
  * gate.
  *
  * Scenarios:
@@ -92,7 +92,7 @@ const beatProps = (beat: string, stagedX: number, duration: number) => {
  * 1. An empty film and a single-beat film have no cut to lint and pass with no
  *    warnings (the pairwise loop never runs).
  * 2. Two beats where the second is staged where the first ended (x = 1) resume
- *    cleanly — no drift warning.
+ *    cleanly: no drift warning.
  * 3. Two beats where the second restarts at the origin drift one metre; the linter
  *    warns at that cut's opening translation path, keyed by beat index.
  * 4. A nonsensical tolerance is a range error that short-circuits before any

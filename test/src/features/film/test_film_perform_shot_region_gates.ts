@@ -62,7 +62,7 @@ const frame: IAutoMovieCameraAction = {
 /**
  * Region gates that sit above the body-region clip masking. `fullBody` owns the
  * entire rig, so it cannot run concurrently with a partial region action for
- * the same actor — EXCEPT `face` (#1062): an emote carries expression only,
+ * the same actor, EXCEPT `face` (#1062): an emote carries expression only,
  * which no gesture clip authors, so the combination is content-disjoint.
  * Same-region overlaps are also ambiguous because the same bones cannot play
  * two authored clips at once. Adjacent same-region actions still sequence
@@ -146,7 +146,7 @@ export const test_film_perform_shot_region_gates = (): void => {
     true,
   );
 
-  // face carries expression only — no gesture clip authors it, so a fullBody
+  // face carries expression only; no gesture clip authors it, so a fullBody
   // action overlapping an emote is content-disjoint: smile-while-bowing is
   // legal (#1062), while head (which whole-body clips may author) still gates
   const smileWhileJumping = performShot({

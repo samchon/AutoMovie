@@ -4,8 +4,8 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose } from "../internal/predicates";
 
 /**
- * The default humanoid ROM table is where automovie's core differentiator lives
- * — it encodes the anatomical limits the pose verifier checks every joint
+ * The default humanoid ROM table is where automovie's core differentiator lives:
+ * it encodes the anatomical limits the pose verifier checks every joint
  * against. This pins the key joint archetypes so a regression in the table is
  * caught immediately.
  *
@@ -44,7 +44,7 @@ export const test_rom_table_values = (): void => {
   );
   // the shoulder cone is deliberate HEADROOM (#1058, decision 310): the swing
   // metric caps at 180°, so even the per-axis-maximal corner never exceeds
-  // it — a live cap would reject the canonical pure-plane overhead pose,
+  // it: a live cap would reject the canonical pure-plane overhead pose,
   // whose swing is already exactly 180
   TestValidator.predicate(
     "the shoulder cone is headroom: the maximal corner never trips it",

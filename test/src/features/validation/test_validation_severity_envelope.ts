@@ -12,7 +12,7 @@ import { TestValidator } from "@nestia/e2e";
  * 1. `warn` pushes a `"warning"`-severity violation; a warning-only collector
  *    succeeds and carries the warning in `warnings`.
  * 2. An error alongside a warning fails, and the failure's `violations` keeps both
- *    — a warning is not dropped just because an error co-occurs.
+ *    (a warning is not dropped just because an error co-occurs).
  * 3. A default `push` is `"error"` severity and fails on its own.
  * 4. The `violation` builder defaults to `"error"` and stamps `"warning"` when
  *    asked, preserving `overshoot`; an empty list is a clean success.

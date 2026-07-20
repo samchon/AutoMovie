@@ -59,9 +59,9 @@ const COS55 = Math.cos((55 * Math.PI) / 180);
 
 /**
  * The door profile a prop author (#603 forgeProp) would ship: a one-DOF +Y
- * hinge capped at 110° — expressed as per-component quaternion bounds (x/z
+ * hinge capped at 110°, expressed as per-component quaternion bounds (x/z
  * pinned to 0, `y ∈ [0, sin55°]`, `w ∈ [cos55°, 1]`, so the clamped corner is
- * exactly the 110° unit quaternion) — plus a copy driver mirroring the hinge
+ * exactly the 110° unit quaternion), plus a copy driver mirroring the hinge
  * onto a dependent node.
  */
 const DOOR_PROFILE: IAutoMovieProfile = {
@@ -99,8 +99,8 @@ const basisX = (m: number[]): [number, number, number] => [m[0]!, m[1]!, m[2]!];
 
 /**
  * The #603 gate proof: a skeleton-less prop declares its own constraint and
- * dependency purely as profile DATA — a hinge limited to 0..110° and a copy
- * driver — and resolveFrame enforces both. This is exactly what forgeProp will
+ * dependency purely as profile DATA (a hinge limited to 0..110° and a copy
+ * driver), and resolveFrame enforces both. This is exactly what forgeProp will
  * author; "profiles are data, not code" as an executable fact.
  *
  * Scenarios:
@@ -108,7 +108,7 @@ const basisX = (m: number[]): [number, number, number] => [m[0]!, m[1]!, m[2]!];
  * 1. An in-range 90° swing passes: no violations, the hinge's world X basis lands
  *    at `(0, 0, -1)` under its parent door.
  * 2. The profile's copy driver mirrors the hinge onto the dependent node in the
- *    same frame (same X basis) — the declared dependency drives.
+ *    same frame (same X basis): the declared dependency drives.
  * 3. An over-limit 150° swing clamps to exactly the 110° unit quaternion (the
  *    per-component corner): world X basis `(cos110°, 0, -sin110°)`, with the
  *    y-max and w-min breaches reported as violations tagged `profile:

@@ -22,7 +22,7 @@ const sample = (): IAutoMovieConstraintViolation[] => [
 ];
 
 /**
- * LocateOnBeat stamps beat-scoped feedback onto the screenplay graph — and only
+ * LocateOnBeat stamps beat-scoped feedback onto the screenplay graph, and only
  * then: without a tree or a claiming node the input passes through unstamped,
  * and the originals are never mutated (a located copy is a new object).
  *
@@ -30,7 +30,7 @@ const sample = (): IAutoMovieConstraintViolation[] => [
  *
  * 1. With a tree that claims the beat, every violation gains `node` = the beat
  *    node's id, severity and paths untouched.
- * 2. The input objects are NOT mutated — the stamp lives on copies.
+ * 2. The input objects are NOT mutated: the stamp lives on copies.
  * 3. A treeless call returns the violations without a `node` field.
  * 4. An unclaimed beat likewise passes through unstamped.
  */

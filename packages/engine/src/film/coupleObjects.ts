@@ -39,8 +39,8 @@ const childrenOf = (action: IAutoMovieActionCall): string[] =>
   typeof action.actor === "string" ? [action.actor] : action.actor;
 
 /**
- * Bake the object couplings a shot carries — the per-beat `attachTo` handoffs
- * and the persistent staged `mounts` (#674) — into follow clips once the
+ * Bake the object couplings a shot carries, the per-beat `attachTo` handoffs
+ * and the persistent staged `mounts` (#674), into follow clips once the
  * parents' poses have compiled. Lives in its own module because it is the hot
  * region {@link performShot} kept growing.
  *
@@ -50,13 +50,13 @@ const childrenOf = (action: IAutoMovieActionCall): string[] =>
  * spanning the whole shot, so a rider rides every beat without re-issuing
  * `attachTo`; an explicit `attachTo` for the same child this beat overrides its
  * mount, and a mount emits no handoff events (standing scene state, not a
- * per-shot pickup). A mount's parent rig and bone are validated here — staging
- * placed the parent but had no skeletons — and returned as violations.
+ * per-shot pickup). A mount's parent rig and bone are validated here (staging
+ * placed the parent but had no skeletons) and returned as violations.
  *
  * Couplings CHAIN (#1140): a parent that is itself a coupled child this shot (a
  * knight mounted on a horse, carrying a lance) is baked FIRST, and its riders
  * compose onto its baked follow frame per sample instead of its staged
- * placement — through any depth, the same `followClipOf` read the beat-end uses
+ * placement, through any depth, the same `followClipOf` read the beat-end uses
  * (#989 latest coupling). A coupling CYCLE has no world composition (nobody
  * stands on the ground), so it violates instead of baking frozen couplings
  * silently.
@@ -106,7 +106,7 @@ export const coupleObjects = (props: {
   // Cycle gate + bake order (#1140): walk each child up its parent edges. A
   // cycle is reported whole (the all-at-once style forgeProp's articulation
   // gate uses) and its members are never baked; the post-order visits every
-  // coupled parent before its riders — exactly the order that lets a child
+  // coupled parent before its riders, exactly the order that lets a child
   // sample its parent's already-baked follow clip.
   const order: string[] = [];
   const visited = new Set<string>();
@@ -136,7 +136,7 @@ export const coupleObjects = (props: {
   for (const child of parentsOf.keys()) visit(child, []);
 
   // Bake parents-first. A parent with no baked follow of its own stands on
-  // its staged placement (parentPathOf yields undefined — the static path).
+  // its staged placement (parentPathOf yields undefined: the static path).
   const bakedByNode = new Map<string, IAutoMovieClip[]>();
   const parentPathOf = (
     parent: string,
@@ -164,7 +164,7 @@ export const coupleObjects = (props: {
     clips.push(clip);
   };
   for (const child of order) {
-    if (cyclic.has(child)) continue; // unresolvable — the violation stands
+    if (cyclic.has(child)) continue; // unresolvable, the violation stands
     const jobs = jobsByChild.get(child);
     if (jobs !== undefined)
       bakeAttachFollows(child, jobs, context, parentPathOf, keep, events);
@@ -183,10 +183,10 @@ export const coupleObjects = (props: {
 /**
  * Bake one child's per-beat `attachTo` follows and their handoff events. A
  * handoff (the same child attached to two parents over disjoint spans) would
- * bake two clips with one `attach:<child>` id — an uncommittable shot and an
+ * bake two clips with one `attach:<child>` id: an uncommittable shot and an
  * ambiguous beat-end follow (#989). Process the child's attachments in START
  * order and suffix repeats (`attach:<child>:2`, ...), so the FIRST occurrence
- * keeps the stable id and the HIGHEST suffix is always the latest coupling —
+ * keeps the stable id and the HIGHEST suffix is always the latest coupling,
  * the one `resolveBeatEnd` should follow.
  */
 const bakeAttachFollows = (

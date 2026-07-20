@@ -21,7 +21,7 @@ const MCP_PACKAGE_VERSION = (
  * Build the AutoMovie MCP server: wrap {@link AutoMovieApplication} in a
  * `typia.llm.controller` (which derives each method's validated tool schema at
  * compile time) and hand it to `@typia/mcp`'s `createMcpServer`. Connect the
- * returned server to a transport — `StdioServerTransport` for a spawned
+ * returned server to a transport, `StdioServerTransport` for a spawned
  * subprocess (see `bin.ts`).
  *
  * A host that owns a renderer can inject a `capture` adapter so `seeFrame`

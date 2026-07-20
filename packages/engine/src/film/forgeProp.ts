@@ -10,7 +10,7 @@ import { ViolationCollector } from "../validation/violation";
 
 /**
  * A forged prop: the spec gated on both contracts, ready for staging to place
- * and — when articulated — for `resolveFrame` to constrain and drive through
+ * and, when articulated, for `resolveFrame` to constrain and drive through
  * `bindProfile`.
  *
  * @author Samchon
@@ -39,14 +39,14 @@ export namespace IAutoMovieForgedProp {
 }
 
 /**
- * The FORGE consumer's object side — accept a prop an agent authored as data
+ * The FORGE consumer's object side, accept a prop an agent authored as data
  * (crude primitive proxy, rich meaning: body, affordances, self-declared
  * articulation, D011) and gate it on both contracts. `forgeCast` forges the
  * performers; this forges the things they hold, open, and stack.
  *
  * The **model contract**: the prop's `model.id` must equal `node` (the staged
  * scene joins on it, exactly as a forged cast member does), `origin` must be
- * `"generated"`, and `skeleton` must be `null` — a riggable actor goes through
+ * `"generated"`, and `skeleton` must be `null`, a riggable actor goes through
  * `forgeCast`; a prop's moving parts are articulation nodes, not bones.
  * `validateModel` covers parts/materials/extents plus the body (#595) and
  * affordance (#604) semantics, remapped onto the spec's path.
@@ -55,7 +55,7 @@ export namespace IAutoMovieForgedProp {
  * non-empty, parents resolving within the declared nodes (`null` = the prop's
  * root) without a cycle; the binding targeting the declared profile; every
  * `boneMap` value naming a declared node; and every semantic key the profile
- * references ({@link profileSemanticKeys}) mapped — reported **all at once**,
+ * references ({@link profileSemanticKeys}) mapped, reported **all at once**,
  * where `bindProfile` itself would throw on the first, so one correction round
  * sees the whole list. A spec that passes these gates binds without a throw;
  * the door round-trip test drives the forged artifact through `resolveFrame` to
@@ -89,7 +89,7 @@ export const forgeProp = (spec: IAutoMoviePropSpec): IAutoMovieForgedProp => {
     out.push(
       "type",
       "$input.model.skeleton",
-      "a prop must be skeleton-less — riggable actors go through forgeCast; moving parts are articulation nodes",
+      "a prop must be skeleton-less, riggable actors go through forgeCast; moving parts are articulation nodes",
       spec.model.skeleton.id,
     );
 

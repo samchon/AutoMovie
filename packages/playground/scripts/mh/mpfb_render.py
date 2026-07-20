@@ -7,7 +7,7 @@ MHM = argv[0]
 OUT = argv[1] if len(argv) > 1 else "D:/github/samchon/motica/.shots/mpfb/out.png"
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 
-# clear default scene objects (do NOT factory-reset — that disables the extension)
+# clear default scene objects (do NOT factory-reset: that disables the extension)
 for o in list(bpy.data.objects):
     bpy.data.objects.remove(o, do_unlink=True)
 
@@ -32,7 +32,7 @@ print(">>> loading mhm", MHM, flush=True)
 human = HumanService.deserialize_from_mhm(MHM, settings)
 print(">>> human:", human.name, "verts", len(human.data.vertices), flush=True)
 
-# procedural enhanced skin (v2) — the photoreal MPFB skin shader
+# procedural enhanced skin (v2): the photoreal MPFB skin shader
 try:
     MaterialService.create_v2_skin_material("mpfb_skin", human)
     print(">>> applied v2 skin", flush=True)

@@ -20,7 +20,7 @@ const square = [v(0, 0), v(2, 0), v(2, 2), v(0, 2)];
  *
  * Scenarios:
  *
- * 1. A centered COM is stable — success, no event, no suggestion.
+ * 1. A centered COM is stable: success, no event, no suggestion.
  * 2. A COM overhanging past x=2 by 1m warns (not errors), with overshoot =
  *    distance − margin, a +x fall direction, a fall event, and the x=2 tip
  *    edge.

@@ -68,18 +68,18 @@ const jointsAt = (motion: IAutoMovieMotion, time: number) => {
  * Scenarios:
  *
  * 1. A lone `nod` compiles to a clip that still drives the head (flexion 22 at the
- *    0.25 stop) — under the old default it compiled to empty poses.
+ *    0.25 stop); under the old default it compiled to empty poses.
  * 2. A lone `crouch` keeps its knee bend (lowerLeg flexion 65 at the 0.3 stop)
- *    alongside the spine lean — legs previously vanished.
+ *    alongside the spine lean; legs previously vanished.
  * 3. A lone `kick` keeps both the right-leg snap (upperLeg 55 at 0.22) and the
- *    spine counterbalance (−6) — fullBody spans what upperBody stripped.
- * 4. A `jump` layered with a concurrent `emote` (face — disjoint) keeps its
- *    ballistic root at the apex stop (y 0.34 at 0.58) — fullBody is a root
+ *    spine counterbalance (−6): fullBody spans what upperBody stripped.
+ * 4. A `jump` layered with a concurrent `emote` (face, disjoint) keeps its
+ *    ballistic root at the apex stop (y 0.34 at 0.58): fullBody is a root
  *    region, so layering no longer drops the leap.
  * 5. A `nod` layered with a `wave` (head + upperBody, disjoint under the new
  *    defaults) drives the head and the waving arm at the same instant.
  * 6. An explicit narrower `region` still masks: a kick forced to `upperBody` keeps
- *    the spine but drops the leg — the documented escape hatch and the
+ *    the spine but drops the leg: the documented escape hatch and the
  *    cross-region leak strip stay intact.
  */
 export const test_perform_gesture_region_content = (): void => {

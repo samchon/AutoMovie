@@ -1,6 +1,6 @@
 // Extract reference face landmarks from the hero photo sheet with MediaPipe
 // FaceLandmarker (478 points incl. iris) running in headless Chrome. Front XY is
-// reliable (depth z is monocular — do NOT trust it; use the side photos for
+// reliable (depth z is monocular: do NOT trust it; use the side photos for
 // profile). Saves landmarks-<hero>.json and draws a debug overlay so the
 // detection is eyeballed before any ratio is trusted.
 //

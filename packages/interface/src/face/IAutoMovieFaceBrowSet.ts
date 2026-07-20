@@ -10,9 +10,9 @@ import { IAutoMovieFaceBrow } from "./IAutoMovieFaceBrow";
  * @author Samchon
  */
 export interface IAutoMovieFaceBrowSet {
-  /** The subject's LEFT brow — applies to BOTH brows when `right` is omitted. */
+  /** The subject's LEFT brow; applies to BOTH brows when `right` is omitted. */
   left?: IAutoMovieFaceBrow;
 
-  /** The subject's RIGHT brow — applies to BOTH brows when `left` is omitted. */
+  /** The subject's RIGHT brow; applies to BOTH brows when `left` is omitted. */
   right?: IAutoMovieFaceBrow;
 }

@@ -33,7 +33,7 @@ const dissolve = (renderer: THREE.WebGLRenderer): void =>
  * The cross-dissolve GPU state (offscreen target, quad) used to be
  * MODULE-GLOBAL with no dispose path (#1050): a second live viewer with a
  * different drawing-buffer size forced a render-target realloc every dissolve
- * frame, and a disposed renderer left its FBO orphaned — in a package whose
+ * frame, and a disposed renderer left its FBO orphaned, in a package whose
  * render modes already carry a create/dispose lifecycle (#645). The state is
  * now keyed per renderer with an explicit `disposeCrossDissolve`.
  *

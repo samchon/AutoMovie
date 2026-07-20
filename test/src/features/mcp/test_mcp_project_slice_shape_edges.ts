@@ -13,7 +13,7 @@ const writeSlice = (root: string, rel: string, value: unknown): void =>
     `${JSON.stringify(value, null, 2)}\n`,
   );
 
-/** A structurally valid beat-end actor — no violations of its own. */
+/** A structurally valid beat-end actor, no violations of its own. */
 const validActor = (node: string, motion: string | null): unknown => ({
   node,
   transform: {
@@ -136,7 +136,7 @@ const readSlate = (root: string): unknown =>
  * commit-time validators (#614): a parseable-but-malformed file becomes a
  * controlled project-repair error naming the field to fix, never a leaked
  * TypeError. Each case below is the malformed twin of a shape the store
- * otherwise accepts, driving one specific validator branch — the manifest shape
+ * otherwise accepts, driving one specific validator branch, the manifest shape
  * guard, the script cast/beat/tree passes, the intent-tree payload switch, the
  * notes tier guard, the shot/beat-end field checks, the non-object scene, and
  * the keyed-filename decode + key-mismatch reporting.

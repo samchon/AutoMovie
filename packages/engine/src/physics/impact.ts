@@ -5,7 +5,7 @@ import { Vector3 } from "../math/Vector3";
 /**
  * A colliding body, reduced to what a collision _response_ needs: how heavy it
  * is, how fast it is going, and the material traits that decide whether a hit
- * bounces, embeds, or passes through. This is deliberately abstract — the point
+ * bounces, embeds, or passes through. This is deliberately abstract: the point
  * (per the project's direction) is to compute a high-level, deterministic
  * _result_ an AI can be handed as a hint, not to run a full rigid-body sim.
  *
@@ -16,24 +16,24 @@ export interface IAutoMovieImpactBody {
   mass: number;
   /** Linear velocity (world m/s). */
   velocity: IAutoMovieVector3;
-  /** Bounciness `[0,1]` — how much closing speed is returned. */
+  /** Bounciness `[0,1]`: how much closing speed is returned. */
   restitution: number;
-  /** Rigidity `[0,1]` — 1 a hard shell, 0 soft flesh. */
+  /** Rigidity `[0,1]`: 1 a hard shell, 0 soft flesh. */
   hardness: number;
   /**
-   * How easily this body is pierced `[0,1]` — 1 a soft target an arrow sinks
+   * How easily this body is pierced `[0,1]`: 1 a soft target an arrow sinks
    * into.
    */
   penetrability: number;
 }
 
-/** How a collision resolves — the qualitative outcome. */
+/** How a collision resolves: the qualitative outcome. */
 export type AutoMovieImpactKind = "bounce" | "embed" | "through" | "deflect";
 
 /**
  * The abstracted result of one collision: the contact normal, the impulse
  * delivered, the closing speed, both bodies' post-impact velocities, and a
- * qualitative {@link AutoMovieImpactKind}. One value serves both consumers — an
+ * qualitative {@link AutoMovieImpactKind}. One value serves both consumers: an
  * AI hint ("recoil this hard, this way; it embeds") and a deterministic driver
  * for auto-played aftermath.
  */
@@ -112,8 +112,8 @@ const assertImpactBody = (
  * Resolve a collision between bodies `a` and `b` across unit contact `normal`
  * (pointing from `a` to `b`) into an abstracted {@link IAutoMovieImpact}.
  *
- * Impulse is the textbook normal response — `jn = (1+e)·closing / (1/mₐ +
- * 1/m_b)` — but the **effective restitution and a qualitative kind** come from
+ * Impulse is the textbook normal response, `jn = (1+e)·closing / (1/mₐ +
+ * 1/m_b)`, but the **effective restitution and a qualitative kind** come from
  * a cheap, deterministic material heuristic rather than a contact solver: a
  * fast strike into a soft, penetrable body **embeds** (no rebound) or, if very
  * fast and very soft, passes **through** (only a fraction of the momentum

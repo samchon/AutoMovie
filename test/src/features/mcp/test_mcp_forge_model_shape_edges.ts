@@ -38,7 +38,7 @@ const modelRoot = "$input.forge.entries[0].model";
  * 2. Non-object materials entries, a non-array parts list, a non-object part, and
  *    a non-object part geometry fail at their model paths.
  * 3. A `mesh` geometry validates its positions, optional buffers, and skin buffers
- *    — malformed ones fail at `...mesh...` paths.
+ *, malformed ones fail at `...mesh...` paths.
  * 4. A non-array affordances list and a non-object affordance entry fail at their
  *    affordance paths.
  * 5. A non-object script cast member fails at `$input.script.cast[0]`.

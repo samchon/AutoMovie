@@ -12,7 +12,7 @@ const ORIGIN: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
  * contact time, not the fall-back re-crossing.
  *
  * Fired straight up at an overhead target, the projectile passes the target
- * height twice — rising through it, then falling back through it — so the
+ * height twice (rising through it, then falling back through it), so the
  * quadratic `½·g·t² − v·t + h = 0` has two positive roots `(v ∓ √(v²−2gh))/g`.
  * The hit time the `launch` verb schedules a reaction against must be the
  * earlier (rising) root; returning the later root delays the reaction by the
@@ -22,10 +22,10 @@ const ORIGIN: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
  * Scenarios (hand-computed oracles, not snapshots):
  *
  * 1. Overhead target, fired up: hit time is the rising root `(v−√…)/g`, well
- *    before the descending root — and the forward simulation confirms the
+ *    before the descending root, and the forward simulation confirms the
  *    projectile is on the target at exactly that time (rising through it).
  * 2. Below target, default (direct) arc: fired straight DOWN (#1142), so the hit
- *    is the single positive root of the downward flight — the fast direct drop,
+ *    is the single positive root of the downward flight: the fast direct drop,
  *    not the up-and-over lob.
  */
 export const test_physics_ballistic_vertical_first_contact = (): void => {

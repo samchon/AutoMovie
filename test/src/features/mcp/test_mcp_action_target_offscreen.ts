@@ -31,7 +31,7 @@ const scene: IAutoMovieScene = {
 };
 
 /**
- * Offscreen action targets are RELATIVE — a frame edge, not a point — so the
+ * Offscreen action targets are RELATIVE, a frame edge, not a point, so the
  * geometry queries answer a diagnosing reason instead of inventing a position
  * (#994 discipline, #1040 coverage): `isRuntimeSafeActionTarget` recognizes all
  * four frame edges, and the engine's `resolveTargetPoint` deliberately resolves
@@ -40,7 +40,7 @@ const scene: IAutoMovieScene = {
  * Scenarios:
  *
  * 1. Every valid edge (left/right/forward/back) is recognized and answers the "not
- *    positional" reason — none leaks a fabricated point.
+ *    positional" reason, none leaks a fabricated point.
  * 2. Negative twin: an unknown edge ("up") is not a runtime-safe target and
  *    likewise answers a reason, never a distance.
  */

@@ -11,7 +11,7 @@ export interface IForgeSimilarity2 {
 }
 
 /**
- * Fit the least-squares 2D similarity mapping `src` onto `dst` — the alignment
+ * Fit the least-squares 2D similarity mapping `src` onto `dst`: the alignment
  * step that drops detected landmarks (image px, near-frontal) onto the
  * canonical face frame.
  *

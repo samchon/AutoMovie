@@ -23,7 +23,7 @@ const ctx = (facingDeg: number): IAutoMovieActorContext => ({
 });
 
 // Each lever is placed so its model-space image (after undoing the actor's
-// facing) sits inside the 0.55 m arm reach for that facing — a fixed world
+// facing) sits inside the 0.55 m arm reach for that facing: a fixed world
 // point maps to a different arm distance as the actor turns.
 const nodes = new Map<string, IAutoMovieVector3>([
   ["lever", { x: 1.35, y: 1.2, z: 2.25 }], // reachable facing 0
@@ -65,7 +65,7 @@ const worldHand = (
 /**
  * The reference synthesiser fattening the `reach` verb through `reachPose`. The
  * contract carries end to end: resolve the target, drop it into the actor's
- * model space, solve the arm — and at the held instant the actor's hand, placed
+ * model space, solve the arm, and at the held instant the actor's hand, placed
  * back in the world, lands on the world target. Facing must be undone correctly
  * for a placed, turned actor.
  *
@@ -74,7 +74,7 @@ const worldHand = (
  * 1. A facing-0 actor reaching a world node → a rest → extend → hold clip whose
  *    held pose puts the world hand on the lever; the clip is not looped and
  *    lasts the duration.
- * 2. A facing-90 actor reaching the same node still lands the hand on it — the
+ * 2. A facing-90 actor reaching the same node still lands the hand on it: the
  *    world→model facing transform is inverted correctly.
  * 3. A rig-less context and a relative (direction) target both synthesise nothing.
  */

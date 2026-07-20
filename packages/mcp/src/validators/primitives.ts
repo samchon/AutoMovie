@@ -8,7 +8,7 @@ const UNIT_QUATERNION_EPSILON = 1e-6;
 
 /**
  * Violation-collection primitives shared by the MCP artifact validators and the
- * commit preconditions — the path-bearing building blocks every `$input...`
+ * commit preconditions, the path-bearing building blocks every `$input...`
  * diagnostic is assembled from.
  */
 
@@ -262,7 +262,7 @@ export const validateRange = (
 /**
  * A pixel dimension usable as an encoded frame size: a positive EVEN whole
  * number. `yuv420p` chroma subsampling halves each axis, so an odd width or
- * height cannot be encoded without a silent rounding — and a silent rounding is
+ * height cannot be encoded without a silent rounding, and a silent rounding is
  * exactly what would desync the pose-keypoint sidecar's `width/height` aspect
  * from the rendered frame the render pins with `-s` (#1231/#1251). Finiteness
  * and positivity are a preceding {@link validateRange}'s job; this adds only the

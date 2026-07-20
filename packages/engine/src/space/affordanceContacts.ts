@@ -8,7 +8,7 @@ import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 
 /**
- * The world-space support contacts of a `"stack-top"` affordance — its extent
+ * The world-space support contacts of a `"stack-top"` affordance: its extent
  * corners carried through the affordance frame and the parent's world
  * transform, in exactly the shape {@link detectSupportToppling} and
  * {@link supportContactsFor} consume.
@@ -16,13 +16,13 @@ import { Vector3 } from "../math/Vector3";
  * This is the #601/#605 bridge that makes stacking judgeable end-to-end: crate
  * B seated on crate A's top (via `resolveAffordanceSeat`) is stable when its
  * center of mass projects inside these contacts' hull, and topples when it
- * overhangs — the same judgment a floor or table surface gets, now supplied by
+ * overhangs, the same judgment a floor or table surface gets, now supplied by
  * the object itself.
  *
  * Each extent corner is a point in the affordance frame's XZ plane (`y`
  * ignored, per {@link IAutoMovieAffordance.extent}): it is lifted into the model
  * frame through the affordance `frame`, then into world through `parentWorld`
- * (the {@link resolveAttachment} composition convention — no scale folding, the
+ * (the {@link resolveAttachment} composition convention: no scale folding, the
  * engine never mirrors).
  *
  * Throws on a non-`stack-top` kind or a missing extent: feeding a handle to the
@@ -32,7 +32,7 @@ import { Vector3 } from "../math/Vector3";
  * @author Samchon
  */
 export const affordanceSupportContacts = (props: {
-  /** The declared contact face — must be a `"stack-top"` with an extent. */
+  /** The declared contact face. Must be a `"stack-top"` with an extent. */
   affordance: IAutoMovieAffordance;
 
   /** The owning model's root in world space. */

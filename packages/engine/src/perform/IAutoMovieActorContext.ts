@@ -28,11 +28,11 @@ export interface IAutoMovieActorContext {
   /** Where the actor stands at the start of the shot (world meters). */
   position: IAutoMovieVector3;
 
-  /** Locomotion speed (m/s) — how fast a `locomote` carries it. */
+  /** Locomotion speed (m/s): how fast a `locomote` carries it. */
   speed: number;
 
   /**
-   * Seconds into the looping gait cycle at the shot's start (#1176) — the
+   * Seconds into the looping gait cycle at the shot's start (#1176): the
    * continuity twin of the beat end-state's `gaitPhase`. A beat that opens
    * mid-stride passes the previous beat's recorded phase here and the
    * synthesised gait resumes at that point of the cycle instead of restarting
@@ -41,11 +41,11 @@ export interface IAutoMovieActorContext {
    */
   gaitPhase?: number | null;
 
-  /** Heading the actor faces, degrees about +Y (0 = +Z) — for a `lookAt`'s yaw. */
+  /** Heading the actor faces, degrees about +Y (0 = +Z), for a `lookAt`'s yaw. */
   facingDeg: number;
 
   /**
-   * Eye height above the actor's position (meters) — where a `lookAt` aims
+   * Eye height above the actor's position (meters): where a `lookAt` aims
    * from.
    */
   eyeHeight: number;
@@ -54,7 +54,7 @@ export interface IAutoMovieActorContext {
   restPose: IAutoMoviePose;
 
   /**
-   * The actor's resolved skeleton geometry — the rig bones and their ROM
+   * The actor's resolved skeleton geometry: the rig bones and their ROM
    * constraints. Required only by the physics/IK verbs that measure or clamp
    * against the body (`react` folds a flinch bounded by each joint's ROM); the
    * gait/hold/lookAt/emote verbs need only the `skeleton` id, so a context
@@ -65,7 +65,7 @@ export interface IAutoMovieActorContext {
 
   /**
    * Per-bone rest frames that let the IK/arm verbs (`reach`/`point`/`strike`)
-   * emit their arm angles in **clinical** space — lifted by `sign·r + neutral`
+   * emit their arm angles in **clinical** space, lifted by `sign·r + neutral`
    * so a downstream renderer reads them up through the same frames (abduction
    * 180 raises either arm overhead regardless of side). Omit to have those
    * verbs output raw rig-space angles, the historical behaviour; when supplied

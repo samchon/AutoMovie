@@ -3,7 +3,7 @@ import { TestValidator } from "@nestia/e2e";
 
 /**
  * The shared binary segment search under the pose and track samplers must pick
- * exactly the segment the historical front-to-back linear scan did — otherwise
+ * exactly the segment the historical front-to-back linear scan did. Otherwise
  * an exact-keyframe hit could resolve to a different (equal-in-value but not
  * byte-identical) segment. This pins the equivalence and the endpoint tie rule
  * directly on the helper, so the sampler byte-identity follows by
@@ -21,7 +21,7 @@ import { TestValidator } from "@nestia/e2e";
  */
 
 // The pre-optimization behavior: the first i with times[i] <= time <=
-// times[i+1], given times[0] < time < times[last] — the exact scan both
+// times[i+1], given times[0] < time < times[last], the exact scan both
 // samplers ran before the binary search replaced it.
 const linearSegment = (times: readonly number[], time: number): number => {
   for (let i = 0; i < times.length - 1; ++i)

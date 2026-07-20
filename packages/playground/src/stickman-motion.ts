@@ -9,13 +9,13 @@ import {
 } from "@automovie/interface";
 
 /**
- * A small library of motion clips for the stick figure — the deliberate
+ * A small library of motion clips for the stick figure, the deliberate
  * exercise of automovie's motion AST against the simplest possible body.
  *
  * Each clip is an {@link IAutoMovieMotion}: sparse keyframes the engine
  * interpolates (per-axis joint angles + an optional whole-body `root`
  * transform) with easing. Together they cover every degree of freedom the
- * motion layer offers — frontal-plane `abduction`, sagittal `flexion`, axial
+ * motion layer offers, frontal-plane `abduction`, sagittal `flexion`, axial
  * `twist`, asymmetric single-limb articulation, and root translation / rotation
  * that moves the whole character through space.
  *
@@ -67,7 +67,7 @@ const key = (time: number, p: IAutoMoviePose): IAutoMovieKeyframe => ({
   bezier: null,
 });
 
-/** Jumping jacks — arms sweep overhead and legs splay in the frontal plane. */
+/** Jumping jacks, arms sweep overhead and legs splay in the frontal plane. */
 export const jumpingJack = (sk: string): IAutoMovieMotion => {
   const closed = pose(sk, [
     j("leftUpperArm", { abduction: 18 }),
@@ -88,7 +88,7 @@ export const jumpingJack = (sk: string): IAutoMovieMotion => {
   };
 };
 
-/** A friendly wave — right arm held overhead, forearm swinging side to side. */
+/** A friendly wave, right arm held overhead, forearm swinging side to side. */
 export const wave = (sk: string): IAutoMovieMotion => {
   const stanceArm = j("leftUpperArm", { abduction: 26 });
   const up = (fore: number): IAutoMoviePose =>
@@ -108,11 +108,11 @@ export const wave = (sk: string): IAutoMovieMotion => {
   };
 };
 
-/** A walk cycle in place — legs stride fore/aft, arms counter-swing. */
+/** A walk cycle in place, legs stride fore/aft, arms counter-swing. */
 export const walk = (sk: string): IAutoMovieMotion => {
   // Arms hang down-and-out (abduction) and swing fore/aft via `flexion` (the
   // anatomical sagittal axis under HUMANOID_JOINT_AXES); `s` is the swing phase
-  // in [−1, 1] (+1 = left arm back, right arm forward — opposing the legs).
+  // in [−1, 1] (+1 = left arm back, right arm forward, opposing the legs).
   // HUMANOID_REST_FRAME recovers the mirrored rig signs at render time.
   // Specified in EVERY keyframe so they swing smoothly instead of snapping back
   // to the rest T-pose.
@@ -155,7 +155,7 @@ export const walk = (sk: string): IAutoMovieMotion => {
   };
 };
 
-/** A hop — the whole body launches up (root translation) with a leg tuck. */
+/** A hop, the whole body launches up (root translation) with a leg tuck. */
 export const hop = (sk: string): IAutoMovieMotion => {
   // Arms specified in every keyframe (no rest-T-pose snap): down at rest, swept
   // back in the crouch, thrown up at the apex.
@@ -206,7 +206,7 @@ export const hop = (sk: string): IAutoMovieMotion => {
   };
 };
 
-/** A turn — the whole character yaws back and forth about its vertical axis. */
+/** A turn, the whole character yaws back and forth about its vertical axis. */
 export const turn = (sk: string): IAutoMovieMotion => {
   const at = (yaw: number): IAutoMoviePose =>
     pose(
@@ -226,11 +226,11 @@ export const turn = (sk: string): IAutoMovieMotion => {
   };
 };
 
-/** A run — bigger strides than the walk with an airborne flight phase. */
+/** A run, bigger strides than the walk with an airborne flight phase. */
 export const run = (sk: string): IAutoMovieMotion => {
   const lean = [j("spine", { flexion: 14 }), j("chest", { flexion: 8 })];
   // a runner pumps with the elbows held bent ~90° (forearms up), swinging
-  // fore/aft from the shoulder — not straight arms windmilling
+  // fore/aft from the shoulder, not straight arms windmilling
   const arms = (s: number): IAutoMovieJointPose[] => [
     j("leftUpperArm", { abduction: 48, flexion: 48 * s }),
     j("leftLowerArm", { flexion: -88 }),
@@ -280,7 +280,7 @@ export const run = (sk: string): IAutoMovieMotion => {
   };
 };
 
-/** A dance — hip sway, a twisting spine, and arms raised on alternating beats. */
+/** A dance, hip sway, a twisting spine, and arms raised on alternating beats. */
 export const dance = (sk: string): IAutoMovieMotion => {
   const beat = (d: number): IAutoMoviePose =>
     pose(
@@ -349,7 +349,7 @@ export const combo = (sk: string): IAutoMovieMotion =>
   );
 
 /**
- * Traveling clips — the in-place locomotion cycles baked to actually cross the
+ * Traveling clips, the in-place locomotion cycles baked to actually cross the
  * floor (so a follow camera has something to track). `stroll` is the walk at
  * ~0.6 m/s, `sprint` the run at ~2 m/s, both forward (+Z, the way the figure
  * faces).
@@ -359,7 +359,7 @@ export const stroll = (sk: string): IAutoMovieMotion =>
 export const sprint = (sk: string): IAutoMovieMotion =>
   travelMotion("sprint", run(sk), 9, { x: 0, y: 0, z: 2.0 });
 
-// ── shadow boxing — a ~30 s precision kickboxing round ───────────────────────
+// ── shadow boxing, a ~30 s precision kickboxing round ───────────────────────
 // A bladed guard stance (hands up, knees soft, slight lean) is the base pose;
 // every technique merges its overrides over the guard and snaps back, and the
 // beats are stitched with sequenceMotion into one round. Arms use the humanoid
@@ -460,7 +460,7 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
     ]),
     root: root(0, -0.08, 0, 0),
   });
-  // weave: a deep bob to one side — waist AND both knees fold together and the
+  // weave: a deep bob to one side, waist AND both knees fold together and the
   // whole body sinks low under the imagined punch, then comes up the far side
   const weave = (d: number): IAutoMoviePose => ({
     ...merge([
@@ -533,7 +533,7 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
     j("chest", { twist: 20 }),
     j("leftUpperArm", { flexion: -18, abduction: 134 }),
   ]);
-  // lead (left) high axe/front kick — straight up high
+  // lead (left) high axe/front kick, straight up high
   const chamberHigh = merge([
     j("leftUpperLeg", { flexion: -64 }),
     j("leftLowerLeg", { flexion: 70 }),
@@ -614,7 +614,7 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
         [0, guard],
         [0.6, guard],
       ]), // settle
-      // round 1 — find the range behind the jab + footwork
+      // round 1, find the range behind the jab + footwork
       punch(0.34, jab),
       punch(0.34, jab),
       combo2(0.62, jab, cross),
@@ -623,7 +623,7 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
       stepStrike(0.42, jab, 0, 0.16),
       stepStep(0.34, 0, -0.16),
       punch(0.42, cross),
-      // round 2 — hooks, uppercuts, weaving
+      // round 2, hooks, uppercuts, weaving
       punch(0.3, jab),
       punch(0.42, leadHook),
       punch(0.42, rearHook),
@@ -633,7 +633,7 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
       punch(0.42, rearUpper),
       defend(0.5, duck()),
       combo2(0.62, cross, leadHook),
-      // round 3 — fast footwork flurry
+      // round 3, fast footwork flurry
       stepStep(0.3, 0.16, 0),
       punch(0.28, jab),
       punch(0.28, jab),
@@ -642,13 +642,13 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
       stepStep(0.34, -0.16, 0),
       defend(0.42, slip(-1)),
       defend(0.5, weave(1)),
-      // round 4 — kicks
+      // round 4, kicks
       kick(1.0, chamberFront, teep),
       kick(1.2, chamberFront, teep),
       kick(0.85, chamberKnee, kneeStrike),
       kick(0.85, chamberKnee, kneeStrike),
       kick(1.4, chamberRound, roundhouse),
-      // round 5 — boxing combination + defence
+      // round 5, boxing combination + defence
       punch(0.3, jab),
       combo2(0.7, cross, leadHook),
       punch(0.42, rearHook),
@@ -658,13 +658,13 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
       defend(0.5, duck()),
       stepStrike(0.42, jab, 0, 0.16),
       stepStep(0.34, 0, -0.16),
-      // round 6 — knees + high kicks
+      // round 6, knees + high kicks
       kick(0.8, chamberKnee, kneeStrike),
       kick(0.95, chamberFront, teep),
       kick(1.4, chamberRound, roundhouse),
       kick(1.3, chamberHigh, highKick),
       kick(1.2, chamberFront, teep),
-      // round 7 — finishing flurry
+      // round 7, finishing flurry
       punch(0.28, jab),
       punch(0.28, jab),
       punch(0.4, cross),
@@ -680,7 +680,7 @@ export const shadowbox = (sk: string): IAutoMovieMotion => {
   );
 };
 
-/** All clips, keyed by id — the demo's selectable set. */
+/** All clips, keyed by id, the demo's selectable set. */
 export const STICKMAN_CLIPS = (
   sk: string,
 ): Record<string, IAutoMovieMotion> => ({

@@ -13,7 +13,7 @@ const finiteQuat = (q: IAutoMovieQuaternion): boolean =>
   Number.isFinite(q.w);
 
 /**
- * `Matrix4.decompose` stays total on a **collapsed axis** (scale 0 — a hidden
+ * `Matrix4.decompose` stays total on a **collapsed axis** (scale 0: a hidden
  * part, a folded joint): its normalizer is floored to `Number.EPSILON` so the
  * zero basis column reads `0 / EPSILON = 0` instead of `0 / 0 = NaN`, which
  * would otherwise spread through the quaternion and every descendant world
@@ -27,7 +27,7 @@ const finiteQuat = (q: IAutoMovieQuaternion): boolean =>
  *    the floor), and the surviving scales are recovered exactly.
  * 2. All three axes collapsed (zero matrix rotation block): still finite.
  * 3. Regression: a genuine near-zero-but-nonzero scale (1e-3) round-trips exactly
- *    — the floor never perturbs a real scale.
+ *    (the floor never perturbs a real scale).
  */
 export const test_resolve_matrix4_decompose_collapsed = (): void => {
   const t = { x: 1, y: 2, z: 3 };
@@ -50,7 +50,7 @@ export const test_resolve_matrix4_decompose_collapsed = (): void => {
     TestValidator.predicate(`${title}: position finite`, finiteVec(d.position));
   }
 
-  // 2. Fully collapsed — the whole rotation block is zero; still finite.
+  // 2. Fully collapsed: the whole rotation block is zero; still finite.
   const allZero = Matrix4.decompose(
     Matrix4.compose(t, identity, { x: 0, y: 0, z: 0 }),
   );
@@ -69,7 +69,7 @@ export const test_resolve_matrix4_decompose_collapsed = (): void => {
   });
 
   // 3. Regression: a real tiny scale (1e-3, far above EPSILON ~2.2e-16)
-  //    round-trips exactly — the floor is a no-op for genuine scales.
+  //    round-trips exactly: the floor is a no-op for genuine scales.
   const tiny = { x: 1e-3, y: 1e-3, z: 1e-3 };
   const rt = Matrix4.decompose(Matrix4.compose(t, identity, tiny));
   TestValidator.predicate("tiny scale x", nclose(rt.scale.x, 1e-3, 1e-9));

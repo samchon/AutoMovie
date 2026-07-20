@@ -3,7 +3,7 @@ import { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
 /**
  * The articulation of a single joint, expressed as semantic clinical angles.
  *
- * This is the **LLM-facing** rotation primitive — the one thing the model
+ * This is the **LLM-facing** rotation primitive: the one thing the model
  * actually emits to move a body. It deliberately mirrors the axis decomposition
  * of {@link IAutoMovieJointConstraint} (flexion / abduction / twist) so a
  * generated angle can be validated against the joint's ROM by a direct,
@@ -17,8 +17,8 @@ import { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
  * can read.
  *
  * Each axis is `number | null`; `null` means "no rotation on this axis"
- * (equivalent to 0, and the only valid value for an axis the joint cannot move
- * — the ROM verifier rejects a non-null angle on a `null` constraint axis).
+ * (equivalent to 0, and the only valid value for an axis the joint cannot move;
+ * the ROM verifier rejects a non-null angle on a `null` constraint axis).
  *
  * @author Samchon
  */

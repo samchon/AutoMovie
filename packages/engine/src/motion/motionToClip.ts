@@ -46,7 +46,7 @@ export interface IAutoMovieMotionClipBridge {
 
 /**
  * Bake a humanoid {@link IAutoMovieMotion} (clinical-angle keyframes) into the
- * general {@link IAutoMovieClip} node-channel form — the bridge that makes "the
+ * general {@link IAutoMovieClip} node-channel form, the bridge that makes "the
  * humanoid motion model and the general clip model are the same thing" a
  * provable fact rather than a doc claim: for every baked sample time,
  * `composeScene` over the returned nodes and clip reproduces `resolvePose`'s
@@ -54,19 +54,19 @@ export interface IAutoMovieMotionClipBridge {
  *
  * **What a rotation track carries.** `composeScene` overrides _replace_ a
  * node's local TRS, so each bone's rotation track holds the bone's full local
- * rotation — `rest.rotation ∘ jointToQuaternion(articulation)` — exactly the
+ * rotation (`rest.rotation ∘ jointToQuaternion(articulation)`), exactly the
  * `localRotation` {@link resolvePose} computes. Bone translations stay the rest
  * translation (articulation never translates) and node scales are pinned to
  * `1`: `resolvePose` never scales bones (it ignores rest scale and the root
  * scale), so the lowered nodes must too, or a scaled rest pose would shear the
  * composed world apart from FK. The motion's root transform becomes
- * translation/rotation tracks on the synthetic root node — mirroring how
+ * translation/rotation tracks on the synthetic root node, mirroring how
  * `resolvePose` seats root bones under `pose.root`'s rotation/translation.
  *
  * **Sampling parity.** `sampleMotion` interpolates clinical angles per axis and
  * then converts to quaternions; a baked rotation track slerps quaternions. The
  * two agree exactly at bake sample times and differ O(step²) between them, so
- * the bake is dense on a fixed clock (`sampleRate`, default 24 — the engine's
+ * the bake is dense on a fixed clock (`sampleRate`, default 24, the engine's
  * convention) and every easing/bezier curve is captured by the dense samples
  * (inter-sample interpolation is linear/slerp after the bake). Expression
  * channels (morph `weights` tracks) are deferred.
@@ -86,7 +86,7 @@ export const motionToClip = (props: {
   sampleRate?: number;
   /**
    * Node-id prefix applied to every lowered node AND every clip channel ref
-   * (root and bones alike). Defaults to `""` — the bare single-actor naming. A
+   * (root and bones alike). Defaults to `""`: the bare single-actor naming. A
    * multi-actor graph (see `sceneToNodes`) passes the placement prefix (e.g.
    * `"knightA/"`) so each actor's channels drive its own subtree.
    */
@@ -133,8 +133,8 @@ export const motionToClip = (props: {
       rootTrack(times, samples, "rotation", prefix),
     );
   }
-  // Deterministic track order: skeleton declaration order, articulated only —
-  // an unarticulated bone keeps its node rest transform, which already equals
+  // Deterministic track order: skeleton declaration order, articulated only.
+  // An unarticulated bone keeps its node rest transform, which already equals
   // resolvePose's identity-articulation local rotation.
   for (const bone of skeleton.bones) {
     if (!articulated.has(bone.bone)) continue;

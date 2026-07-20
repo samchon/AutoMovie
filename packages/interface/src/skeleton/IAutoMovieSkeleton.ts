@@ -1,13 +1,13 @@
 import { IAutoMovieBone } from "./IAutoMovieBone";
 
 /**
- * A normalized humanoid skeleton — the rig a pose or motion targets.
+ * A normalized humanoid skeleton: the rig a pose or motion targets.
  *
  * The skeleton is the contract between _what exists_ (which bones, their
  * hierarchy, their ROM) and _what an animation does_ (which bones it rotates).
  * Because bones are keyed by the closed {@link AutoMovieHumanoidBone} enum, a
  * motion authored against one skeleton retargets onto any other that shares the
- * humanoid convention — the basis of automovie's "author once, play on any VRM"
+ * humanoid convention, the basis of automovie's "author once, play on any VRM"
  * portability.
  *
  * Whether the skeleton was generated (geometry phase) or imported (ingest of a

@@ -4,25 +4,25 @@ import { Document, Material, Node, NodeIO } from "@gltf-transform/core";
 
 /**
  * Serialize an {@link IAutoMovieModel} AST into a binary glTF (`.glb`) byte
- * buffer — the **export** half of automovie's glTF round-trip (ingest is the
+ * buffer: the **export** half of automovie's glTF round-trip (ingest is the
  * import half).
  *
  * The model's skeleton becomes a glTF node hierarchy (one node per bone, parent
- * links preserved, rest transforms intact). Each part is tessellated — a
- * primitive through the engine's {@link tessellate}, a mesh passed through — and
+ * links preserved, rest transforms intact). Each part is tessellated (a
+ * primitive through the engine's {@link tessellate}, a mesh passed through) and
  * attached as a mesh node: a rigid part is parented to its `attachedBone` node
  * so the exported file articulates by rotating those bone nodes (no skinning
  * needed), everything else sits at the scene root. Materials map onto glTF's
  * metallic-roughness model, which {@link IAutoMovieMaterial} already mirrors.
  *
  * The result is a self-contained `.glb` (geometry embedded in one buffer) that
- * any glTF viewer — or automovie's own ingest — can load. Geometry that the
+ * any glTF viewer, or automovie's own ingest, can load. Geometry that the
  * engine only approximates (a capsule tessellates to its bounding cylinder)
  * exports at that fidelity.
  *
  * **Fidelity reductions against the live viewer (#1088).** A skinned mesh part
- * (`attachedBone: null` with `skin` data) exports as a STATIC mesh — no
- * `JOINTS_0`/`WEIGHTS_0`, no glTF skin — so it renders at its rest shape in
+ * (`attachedBone: null` with `skin` data) exports as a STATIC mesh (no
+ * `JOINTS_0`/`WEIGHTS_0`, no glTF skin), so it renders at its rest shape in
  * external viewers; only rigid `attachedBone` parts articulate in the export. A
  * mesh without authored normals exports SMOOTH vertex normals when indexed (the
  * same area-weighted computation the viewer's `computeVertexNormals` performs);
@@ -49,7 +49,7 @@ export const exportModelToGLB = async (
         m.baseColor.b,
         // The live viewer renders `opacity` (three's material opacity) and
         // ignores baseColor.a, so `{opacity: 0.5, a: null}` was 50%
-        // transparent live yet fully opaque exported (#1088) — fold opacity
+        // transparent live yet fully opaque exported (#1088). Fold opacity
         // into the one alpha glTF has.
         (m.baseColor.a ?? 1) * m.opacity,
       ])
@@ -170,7 +170,7 @@ const setTRS = (node: Node, t: IAutoMovieTransform | null): Node => {
 };
 
 /**
- * Area-weighted smooth vertex normals over an indexed triangle list — the same
+ * Area-weighted smooth vertex normals over an indexed triangle list, the same
  * computation three's `computeVertexNormals` performs for the live viewer
  * (#1088): each triangle's unnormalized cross product accumulates onto its
  * three vertices (the magnitude IS the area weight), then each vertex normal is
@@ -209,12 +209,12 @@ const computeSmoothNormals = (
 };
 
 /**
- * Apply a bone REST transform: rotation + translation only, unit scale — the
+ * Apply a bone REST transform: rotation + translation only, unit scale, the
  * decision-309 rig convention (#1052, #1086). The engine's FK and the live
  * viewer both ignore bone-rest scale, so exporting it verbatim would let
  * external glTF viewers compose into every descendant a scale no automovie
  * renderer or validator ever saw. PART node scale stays first-class through
- * {@link setTRS} — parts are not rig bones on either side of the convention.
+ * {@link setTRS}. Parts are not rig bones on either side of the convention.
  */
 const setBoneRest = (node: Node, rest: IAutoMovieTransform): Node =>
   node

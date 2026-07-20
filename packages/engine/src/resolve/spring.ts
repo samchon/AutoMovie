@@ -12,7 +12,7 @@ import { Vector3 } from "../math/Vector3";
  * Cross-frame state for the spring driver: each chain joint's world position on
  * the previous step, which the Verlet integrator differences against the
  * current position to recover velocity. The caller owns one of these per scene
- * and threads it through {@link stepSpring} — either directly, or by handing it
+ * and threads it through {@link stepSpring}, either directly, or by handing it
  * to {@link "./resolveFrame".resolveFrame} via its `springs` input, which then
  * steps every spring driver inside the frame pass (S2). Without a state and a
  * `dt` the per-frame resolve has no memory, so springs defer.
@@ -25,7 +25,7 @@ export interface IAutoMovieSpringState {
   /** Center node id -> its world position last step for center-relative inertia. */
   centers: Map<string, IAutoMovieVector3>;
   /**
-   * Joint id → its **post-spring** world position last step — what a host loop
+   * Joint id → its **post-spring** world position last step, what a host loop
    * would have left in its carried world map. {@link resolveFrame} composes the
    * scene fresh every frame, so it seeds each chain joint from here before
    * stepping; that is what lets the in-frame spring accumulate sag across
@@ -42,7 +42,7 @@ export const createSpringState = (): IAutoMovieSpringState => ({
 });
 
 /**
- * A world-space collision sphere the spring chain keeps out of — a head, a
+ * A world-space collision sphere the spring chain keeps out of: a head, a
  * torso, a shoulder pad. A chain joint is pushed to the sphere's surface plus
  * the driver's own `hitRadius` (the joint's physical thickness), completing the
  * VRM SpringBone collision semantics that `hitRadius` always declared.
@@ -81,7 +81,7 @@ const readLocal = (
 
 /**
  * Advance one spring ({@link IAutoMovieSpringDriver}) by a fixed timestep with
- * Verlet integration — the deterministic secondary-motion driver (hair, skirt,
+ * Verlet integration, the deterministic secondary-motion driver (hair, skirt,
  * tail), modelled on VRM SpringBone.
  *
  * For each non-root chain joint: carry inertia from `(current − previous)`
@@ -91,13 +91,13 @@ const readLocal = (
  * joint's world matrix and the previous-position state is rolled forward, so
  * replaying the same inputs reproduces the motion frame-for-frame.
  *
- * The root joint (`chain[0]`) is kinematic — driven by the animation — and left
+ * The root joint (`chain[0]`) is kinematic, driven by the animation, and left
  * untouched; orientation of the moved joints is left to the renderer/skin,
  * which derives it from the joint positions.
  *
  * When `colliders` are given, each stepped joint is pushed out of every sphere
  * it penetrates (surface + the driver's `hitRadius`) **after** the length
- * constraint — the VRM SpringBone order — so a collision can stretch the bone
+ * constraint (the VRM SpringBone order), so a collision can stretch the bone
  * by up to the push distance for that step rather than tunnel through a body.
  *
  * @author Samchon
@@ -154,7 +154,7 @@ export const stepSpring = (
       ),
     );
 
-    // collision: push the joint out of every penetrated sphere (VRM order —
+    // collision: push the joint out of every penetrated sphere (VRM order:
     // after the length constraint, so a hit stretches rather than tunnels)
     for (const sphere of colliders) {
       const minimum = sphere.radius + d.hitRadius;

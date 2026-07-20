@@ -3,7 +3,7 @@ import { IAutoMovieChannel } from "./IAutoMovieChannel";
 import { IAutoMovieDrivenCurve } from "./IAutoMovieDrivenCurve";
 
 /**
- * A driver: a relationship that computes channels from other channels — the
+ * A driver: a relationship that computes channels from other channels, the
  * joint-dependency layer that turns a bare imported model into a rig. The
  * engine resolves drivers in dependency order (a cached topological DAG) each
  * frame, after sampling tracks and before clamping constraints. This is the
@@ -12,7 +12,7 @@ import { IAutoMovieDrivenCurve } from "./IAutoMovieDrivenCurve";
  *
  * Discriminated on `type`. The taxonomy is reduced from the established DCC
  * constraint/driver set (Blender/Maya): copy, aim, ik, parent, driven, spring.
- * (A pure value limit is a {@link IAutoMovieChannelLimit}, not a driver —
+ * (A pure value limit is a {@link IAutoMovieChannelLimit}, not a driver:
  * computation and restriction are kept separate.)
  *
  * @author Samchon
@@ -126,7 +126,7 @@ export interface IAutoMovieDrivenDriver {
   source: IAutoMovieChannel;
   /**
    * Source value range `[in0, in1]` mapped onto `outRange` (linear default).
-   * Required for the linear remap; **omit when `curve` is set** — the curve
+   * Required for the linear remap; **omit when `curve` is set**: the curve
    * supersedes it, so a nonlinear driver need not invent a dead range.
    */
   inRange?: [number, number];
@@ -148,7 +148,7 @@ export interface IAutoMovieDrivenDriver {
 }
 
 /**
- * Secondary spring dynamics (hair, skirt, tail) — the engine's archetype
+ * Secondary spring dynamics (hair, skirt, tail): the engine's archetype
  * integrated-but-deterministic driver, modelled on VRM SpringBone and stepped
  * with Verlet integration at the fixed timestep, so it replays identically.
  */

@@ -76,7 +76,7 @@ const spec: IAutoMovieRenderSpec = {
 /**
  * A literal `%` in a render path override corrupts ffmpeg's image2 `-i` pattern
  * (`frame_%05d.png`): the demuxer reads it as a conversion specifier and
- * silently reads the wrong files — or none (#1089). The default paths are
+ * silently reads the wrong files, or none (#1089). The default paths are
  * stem-sanitized and can never carry one; only the overrides can, so the MCP
  * render boundary refuses them with a located violation.
  *

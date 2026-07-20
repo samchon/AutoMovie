@@ -31,7 +31,7 @@ export interface IAutoMovieTwoBoneArticulation {
 }
 
 /**
- * The shared two-bone lowering — the algebra {@link reachPose} (arm) and the
+ * The shared two-bone lowering, the algebra {@link reachPose} (arm) and the
  * ground-IK leg plant both apply, extracted so the two cannot drift (#630):
  * given a resolved two-segment chain (root and mid bones with their world
  * frames, plus the end effector's world position), compute the bone-local
@@ -40,7 +40,7 @@ export interface IAutoMovieTwoBoneArticulation {
  * The solve is `solveTwoBoneIK`'s closed form: measure the segment lengths and
  * reference directions from the resolved chain, lift the upper segment off the
  * root→target axis in the bend plane (the caller's `bendNormal` when given,
- * else normal ⟂ axis and the world-down pole — elbows and knees both bend away
+ * else normal ⟂ axis and the world-down pole: elbows and knees both bend away
  * from world-down; the axis-parallel degenerate falls back to a +Z plane),
  * place the mid joint, then lower the two world deltas into bone-local
  * rotations: the root joint via `restWorld⁻¹ · Δ · restWorld`, the mid joint by
@@ -52,7 +52,7 @@ export interface IAutoMovieTwoBoneArticulation {
  * Returns `null` for a degenerate chain: a zero-length segment, or a target
  * coincident with the root. Which bones form the chain, how they were resolved
  * (rest FK for an arm reach, zeroed-leg posed FK for a foot plant), and which
- * clinical axes/rest frames decompose the deltas stay the CALLER's — this is
+ * clinical axes/rest frames decompose the deltas stay the CALLER's. This is
  * the geometry, not the rig policy.
  *
  * @author Samchon
@@ -75,7 +75,7 @@ export const twoBoneChainArticulation = (props: {
    * A rig that declares the mid joint as a hinge (a knee with `flexion` ranged
    * and `abduction`/`twist` immobile) can only articulate in that hinge's own
    * plane, so a caller that must keep the result inside the joint's ROM passes
-   * the hinge axis here — solving in any other plane produces abduction/twist
+   * the hinge axis here. Solving in any other plane produces abduction/twist
    * the ROM clamp then destroys. Rotation follows the right-hand rule about it,
    * so the two signs are the chain's two bend branches.
    */

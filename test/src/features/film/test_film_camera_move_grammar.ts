@@ -39,7 +39,7 @@ const SUBJECT = { base: { x: 0, y: 0, z: 0 }, height: 2, at: null };
 /**
  * Pins the framing grammar's arithmetic with hand-computed oracles. With a 90°
  * vertical FOV, `tan(fovY/2) = 1`, so the framed distance is exactly half the
- * visible height — a subject of height 2 framed `medium` (0.62×) gives `d =
+ * visible height: a subject of height 2 framed `medium` (0.62×) gives `d =
  * 1.24 / 2 = 0.62`, aimed at 0.72 × height = y 1.44.
  *
  * Scenarios:
@@ -112,7 +112,7 @@ export const test_film_camera_move_grammar = (): void => {
   );
   // Eased, not ramped: at the quarter mark easeInOut(0.25) = 0.125, so the dolly
   // has crept only 12.5% of the way (d = 0.62 × 1.19375 = 0.7401), well short of
-  // a linear quarter (0.705) — the camera starts slow.
+  // a linear quarter (0.705): the camera starts slow.
   TestValidator.predicate(
     "the dolly eases in (slow at the start)",
     nclose(dolly.tracks[0]!.values[8]!, 0.7401, 1e-3),

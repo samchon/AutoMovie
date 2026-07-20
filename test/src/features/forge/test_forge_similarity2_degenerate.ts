@@ -4,7 +4,7 @@ import { TestValidator } from "@nestia/e2e";
 import { throwsError } from "../internal/predicates";
 
 /**
- * All-coincident source points define no scale or rotation — the fit throws
+ * All-coincident source points define no scale or rotation. The fit throws
  * rather than emitting NaNs that would silently corrupt every downstream
  * vertex.
  *

@@ -19,7 +19,7 @@ import { validateTransformScalars } from "./validateTransformScalars";
 import { ViolationCollector } from "./violation";
 
 /**
- * Validate an {@link IAutoMovieModel} — Tier-1 structural/range checks over its
+ * Validate an {@link IAutoMovieModel}: Tier-1 structural/range checks over its
  * geometry and material wiring, the constraints the rough types don't encode.
  *
  * Checks: at least one part; primitive extents are strictly positive; material
@@ -205,7 +205,7 @@ export const validateModel = (props: {
 
 /**
  * Validate one {@link IAutoMovieAffordance}: a non-empty id, finite frame
- * scalars, and extent semantics by kind — a `stack-top` needs a well-formed
+ * scalars, and extent semantics by kind: a `stack-top` needs a well-formed
  * supporting face (>= 3 finite, non-collinear plan points), while point-like
  * kinds (`handle` / `socket` / `hook`) must leave `extent` null. The closed
  * kind union makes an unknown kind structurally impossible.
@@ -268,7 +268,7 @@ const validateAffordance = (
     collector.push(
       "type",
       `${path}.extent`,
-      "stack-top extent points are collinear — they enclose no area",
+      "stack-top extent points are collinear: they enclose no area",
       extent,
     );
 };
@@ -455,7 +455,7 @@ const validateMesh = (
   validateTupleBuffer(mesh.positions, 3, `${path}.positions`, collector);
   // An empty buffer is a multiple of 3, so validateTupleBuffer accepts it; a
   // mesh with no vertices is degenerate geometry (empty GLB export, empty
-  // collision proxy) and belongs in the correction round, not at render time —
+  // collision proxy) and belongs in the correction round, not at render time,
   // the mesh mirror of a primitive's strictly-positive extents.
   if (mesh.positions.length === 0)
     collector.push(
@@ -514,7 +514,7 @@ const validateMesh = (
 
   // Tier-5 topology (#1183): 2-manifold + consistent winding over the welded
   // surface. Self-guards on the buffers this function already reports, so it
-  // never reads a malformed index. Watertightness is not demanded here — an
+  // never reads a malformed index. Watertightness is not demanded here: an
   // open mesh (plane, decal) is a valid model geometry.
   appendMeshTopology(mesh, path, collector, false);
 };
@@ -676,13 +676,13 @@ const validateJointConstraint = (
       );
     else {
       // A swing-coned constraint is unsatisfiable exactly when its box and its
-      // cone do not intersect — NOT merely when the box excludes neutral (#1245).
+      // cone do not intersect, NOT merely when the box excludes neutral (#1245).
       // The box point nearest neutral is each axis clamped toward 0, and the
       // cone grows monotonically away from neutral, so that point has the
       // smallest swing the box can reach: if even IT exceeds `swingDeg`, no pose
       // satisfies both. A box that excludes neutral but sits inside a wide cone
-      // is perfectly sound — e.g. flexion [10, 90] with a 95° cone admits
-      // (10, 0) at 10° of swing — and rejecting it refused rigs the per-bone
+      // is perfectly sound (e.g. flexion [10, 90] with a 95° cone admits
+      // (10, 0) at 10° of swing), and rejecting it refused rigs the per-bone
       // override exists to express (a limb that cannot fully extend).
       const nearest = (range: IAutoMovieAngleRange | null): number =>
         range === null ||

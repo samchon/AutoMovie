@@ -9,7 +9,7 @@ import { joint } from "../internal/fixtures";
 
 /**
  * A joint articulated within its anatomical range produces no violations. This
- * is the "valid pose passes cleanly" baseline for the ROM verifier — as
+ * is the "valid pose passes cleanly" baseline for the ROM verifier, as
  * important as the failure cases, since a verifier that flagged everything
  * would be useless.
  *

@@ -3,7 +3,7 @@ import { TestValidator } from "@nestia/e2e";
 
 /**
  * `faceLength` stretches about the eye line: dy is affine in y with slope 0.09
- * (so dy − 0.09·y is one constant across all vertices) and x/z stay put —
+ * (so dy − 0.09·y is one constant across all vertices) and x/z stay put,
  * checked as a property, without re-deriving the eye-line constant the builder
  * anchors on.
  *

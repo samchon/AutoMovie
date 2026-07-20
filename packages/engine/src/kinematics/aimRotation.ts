@@ -6,7 +6,7 @@ import { rotationBetween } from "../math/rotationBetween";
 const VECTOR_AXES = ["x", "y", "z"] as const;
 
 /**
- * The shortest-arc rotation that turns the vector `from` onto `to` — the core
+ * The shortest-arc rotation that turns the vector `from` onto `to`: the core
  * of an **aim / look-at** driver (a head or eye whose forward axis tracks a
  * target, a camera that follows its subject) and the analytic two-bone lowering
  * (`twoBoneChainArticulation`, hence `reachPose`/`legPlant`). Feed `from` = the
@@ -14,7 +14,7 @@ const VECTOR_AXES = ["x", "y", "z"] as const;
  * quaternion orients the bone at the target.
  *
  * This validates finite inputs, normalizes them, and delegates to the engine's
- * single shortest-arc primitive {@link rotationBetween} — the same
+ * single shortest-arc primitive {@link rotationBetween}, the same
  * **deadzone-free** `atan2` helper the world-driver / iterative IK path uses,
  * so the analytic and iterative IK families cannot disagree (#643, #720). Every
  * angle down to numerical zero produces its exact rotation, so a target a

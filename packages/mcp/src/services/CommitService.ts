@@ -61,9 +61,9 @@ const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
 
 /**
- * The `commit*` tools — pure slate transforms gated by artifact validation and
+ * The `commit*` tools, pure slate transforms gated by artifact validation and
  * pipeline preconditions, where an upstream replacement clears every stale
- * downstream slice — together with the resident-only project mutations built on
+ * downstream slice, together with the resident-only project mutations built on
  * the same refusal ledger: targeted `erase*`/`set*` (#617/#654) and manifest
  * asset registration (#670). The MCP contract lives on the
  * {@link AutoMovieApplication} facade; this service owns the execution.
@@ -74,13 +74,13 @@ export class CommitService {
   /**
    * The slate a commit transforms: the explicit one when given (the tool stays
    * a pure transform), else the resident project's slate (#614). Resident-based
-   * successful commits write through — the project files mirror the returned
+   * successful commits write through, the project files mirror the returned
    * slate, including the invalidation cascade (cleared slices disappear).
    *
    * The resident path is additionally gated by the film-ladder prerequisites
    * (#615): an out-of-order resident commit throws the actionable "do this
    * next" prompt before any transform runs. An explicit slate bypasses the gate
-   * — it is a pure transform whose cross-slice preconditions already surface as
+   *, it is a pure transform whose cross-slice preconditions already surface as
    * violations.
    */
   private base(
@@ -106,7 +106,7 @@ export class CommitService {
    * Shape a commit transform into the public output (#1132): resident commits
    * write through and return the identity digest only (the project files are
    * the truth, read via `getSlate`/`nextSteps`); explicit calls also carry the
-   * transformed slate — a pure transform's return IS its product. The digest's
+   * transformed slate, a pure transform's return IS its product. The digest's
    * per-beat arrays follow the stored filename order the next resident read
    * produces (#716).
    */
@@ -238,7 +238,7 @@ export class CommitService {
 
   /**
    * The **upsert rule** (#617, the AutoBe granularity doctrine): `commitShot`
-   * and `commitBeatEnd` replace by their beat key — re-committing the same
+   * and `commitBeatEnd` replace by their beat key, re-committing the same
    * beat's artifact swaps exactly that slice (and, resident, exactly that
    * file), leaving sibling beats untouched. One beat is the stable correction
    * target; there is no whole-set re-send.
@@ -246,15 +246,15 @@ export class CommitService {
    * **Motions are not a persisted slice (D012, the AutoBe generated-output
    * doctrine).** A shot's `performances[].motion` are id references into the
    * `motions` a `perform` produced, and those clips are the densest, purely
-   * _derived_ artifact — deterministically re-`perform`able from the resident
+   * _derived_ artifact, deterministically re-`perform`able from the resident
    * script/scene/shot, so persisting them would only bloat the project (the
    * memory is the AST, not its regenerable output). But a resident commit that
    * kept no registry could silently store a **dangling** motion reference,
    * unresolvable on a later re-open. So a resident `commitShot` whose shot
    * references any motion MUST pass the `motions` registry those references
    * resolve against; without it the commit is refused, not silently accepted.
-   * An explicit-slate call stays a pure transform — its cross-slice references
-   * are the caller's to guarantee — so it is byte-compatible with before.
+   * An explicit-slate call stays a pure transform, its cross-slice references
+   * are the caller's to guarantee, so it is byte-compatible with before.
    */
   public commitShot(props: {
     slate?: IAutoMovieMcpWritableSlate;
@@ -324,7 +324,7 @@ export class CommitService {
         violations,
         validateShotArtifact(props.shot, slate.scene, props.motions),
       );
-    // Locate this beat's feedback on the screenplay refinement graph (D013):
+    // Locate this beat's feedback on the screenplay refinement graph:
     // when the script carries a tree, every violation of this commit gains the
     // claiming beat node, so scriptAncestors can cascade it up to the scene,
     // the act, or the intent.
@@ -469,7 +469,7 @@ export class CommitService {
   }
 
   /**
-   * Commit the assembled film — validated against the FULL committed shot set
+   * Commit the assembled film, validated against the FULL committed shot set
    * (every script beat's shot present and sequenced, no open review notes),
    * then swapped in as the single film slice. Unlike the per-beat commits there
    * is no upsert key: the film is one artifact, and any upstream change clears
@@ -479,7 +479,7 @@ export class CommitService {
    * (#1131), the same evidence discipline every erase/set carries: the cut's
    * authoring stage justifies pacing and continuity, but nothing forced the
    * agent to SELF-CHECK the final cut-list against that intent before
-   * persisting it. Declared before the film payload deliberately —
+   * persisting it. Declared before the film payload deliberately ,
    * schema-reflected tools present properties in declaration order and the
    * model fills them in that order, so a reasoning field ahead of the artifact
    * it steers is chain-of-thought by construction.
@@ -534,12 +534,12 @@ export class CommitService {
   }
 
   /**
-   * Erase ONE beat's shot from the resident project — a targeted removal of a
+   * Erase ONE beat's shot from the resident project, a targeted removal of a
    * named mistake, never a reset (#617). The cascade mirrors the commit tools'
    * invalidation: the beat's beat-end and beat-scoped review notes are stale
    * without their shot and go with it, and the assembled film (built against
    * the full shot set) is cleared. Requires evidence (`reason`), and the shot
-   * must exist — erasing nothing is itself a mistake, reported as a violation.
+   * must exist, erasing nothing is itself a mistake, reported as a violation.
    * Upstream slices (script/scene) have no erase: re-committing upstream
    * already owns that path via the commit cascade, and a targeted erase of the
    * root would be a reset in disguise.
@@ -597,7 +597,7 @@ export class CommitService {
 
   /**
    * Erase ONE beat's review notes from the resident project. Per-beat is the
-   * minimal addressable granularity — notes carry no ids; the beat is their
+   * minimal addressable granularity, notes carry no ids; the beat is their
    * identity anchor. Evidence (`reason`) required; erasing a beat with no notes
    * is a violation. The assembled film is cleared (any notes change invalidates
    * it, mirroring `commitNotes`).
@@ -652,11 +652,11 @@ export class CommitService {
 
   /**
    * Erase ONE stored prop spec (`props/<node>.json`) from the resident project
-   * (#671) — the targeted removal mirror of `forgeProp`'s write-through.
+   * (#671), the targeted removal mirror of `forgeProp`'s write-through.
    * Evidence (`reason`) required; erasing a prop with no stored spec is a
    * violation. A prop the committed scene still places is REFUSED, not
    * cascaded: the scene is upstream of every shot, so clearing it from a spec
-   * erase would be a reset in disguise — re-commit the scene without the
+   * erase would be a reset in disguise, re-commit the scene without the
    * placement first, then erase the spec.
    */
   public eraseProp(props: {
@@ -711,7 +711,7 @@ export class CommitService {
   }
 
   /**
-   * Erase ONE stored actor context (`actors/<node>.json`, #1176) — the targeted
+   * Erase ONE stored actor context (`actors/<node>.json`, #1176), the targeted
    * mirror of the resident `perform`'s actor write-through, shaped exactly like
    * {@link eraseProp}. An actor the committed scene still stages is refused:
    * later resident performs would lose the context their beats depend on, and
@@ -769,7 +769,7 @@ export class CommitService {
   }
 
   /**
-   * Replace ONE actor's performance in a beat's resident shot — the AutoBe
+   * Replace ONE actor's performance in a beat's resident shot, the AutoBe
    * one-artifact-per-call granularity taken below the beat (#654). Sibling
    * performances and every other beat stay byte-unchanged; the beat's beat-end
    * and beat-scoped review notes are stale without the performance they sampled
@@ -779,7 +779,7 @@ export class CommitService {
    * **Replacement-only.** The node must already perform in that shot:
    * introducing a NEW performer changes the shot's dramatic content and belongs
    * to `perform` + `commitShot`, not a surgical splice. Validation mirrors
-   * `commitShot`'s resident registry semantics (#1095) — startOffset within the
+   * `commitShot`'s resident registry semantics (#1095), startOffset within the
    * shot, and a performance that references a motion MUST pass the `motions`
    * registry it resolves against (this tool is always resident, and motions are
    * re-perform-derived, not persisted: a reference with no registry would
@@ -876,7 +876,7 @@ export class CommitService {
         violations,
         "type",
         "$input.performance.node",
-        `node "${props.performance.node}" does not perform in shot "${shotId}" — a new performer is perform + commitShot's job`,
+        `node "${props.performance.node}" does not perform in shot "${shotId}", a new performer is perform + commitShot's job`,
         props.performance.node,
       );
     if (hasPerformance)
@@ -896,7 +896,7 @@ export class CommitService {
         violations,
       );
       // This tool is ALWAYS resident, so commitShot's registry rule applies
-      // verbatim (#1095): motions are re-perform-derived, not persisted —
+      // verbatim (#1095): motions are re-perform-derived, not persisted ,
       // splicing a motion reference with no registry would durably store a
       // dangling id that a later resident getResolvedPose cannot resolve.
       if (motionIds === null)
@@ -951,13 +951,13 @@ export class CommitService {
   }
 
   /**
-   * Move ONE placement in the resident scene — replace that scene node's
+   * Move ONE placement in the resident scene, replace that scene node's
    * transform, leaving sibling placements byte-unchanged (#654).
    *
    * **The cascade mirrors `commitScene`, deliberately.** A placement move
    * changes the world coordinates every committed shot was performed against:
-   * keeping those shots would be silently stale geometry — worse than
-   * re-performing — so shots, beat-ends, and review notes clear and the film
+   * keeping those shots would be silently stale geometry, worse than
+   * re-performing, so shots, beat-ends, and review notes clear and the film
    * nulls, exactly as a scene re-commit would. The gain over re-staging is
    * precision (one node moves, the rest of the staging is untouched), not a
    * shortcut around re-performing.
@@ -1062,10 +1062,10 @@ export class CommitService {
   /**
    * Track ONE binary asset in the resident project's manifest (#670, completing
    * #614's asset index). The tool registers the path only: byte-writing stays
-   * the host adapter's job (the render discipline — binaries never flow through
+   * the host adapter's job (the render discipline, binaries never flow through
    * the server), so a registration may point at a file the adapter already
    * wrote or is about to write. Path escapes and duplicates come back as
-   * violations on the same refusal ledger the erase/set tools use — the store's
+   * violations on the same refusal ledger the erase/set tools use, the store's
    * own `registerAsset` keeps its throwing contract for programmatic hosts, and
    * this surface pre-checks so the throw stays unreachable from MCP.
    */
@@ -1160,7 +1160,7 @@ const successfulCommit = (
 /**
  * The compact identity digest a tool return carries instead of a slate echo
  * (#1132). `before` (given only on success) yields the `cleared` list: every
- * slice present before this call and absent after it — the cascade's work,
+ * slice present before this call and absent after it, the cascade's work,
  * named.
  */
 const digestOf = (
@@ -1296,7 +1296,7 @@ const validateScriptArtifact = (
   // Beat ids become slice FILENAMES (shots/<beat>.json, beatEnds/<beat>.json),
   // so ids differing only by case collide on a case-insensitive filesystem.
   // Unrefused here, the collision surfaced as the store's raw mid-save throw
-  // at the SECOND beat's commitShot — after non-keyed slices were rewritten —
+  // at the SECOND beat's commitShot, after non-keyed slices were rewritten ,
   // wedging that beat while nextSteps kept prescribing it (#1096). Refuse at
   // the source with a located violation instead.
   const beatsByLower = new Map<string, { id: string; index: number }>();
@@ -1309,7 +1309,7 @@ const validateScriptArtifact = (
         violations,
         "type",
         `$input.beats[${index}].id`,
-        `beat id "${beat.id}" collides case-insensitively with "${prior.id}" ($input.beats[${prior.index}].id); their per-beat slice files would clobber on a case-insensitive filesystem — rename one beat`,
+        `beat id "${beat.id}" collides case-insensitively with "${prior.id}" ($input.beats[${prior.index}].id); their per-beat slice files would clobber on a case-insensitive filesystem, rename one beat`,
         beat.id,
       );
     if (prior === undefined) beatsByLower.set(lower, { id: beat.id, index });
@@ -1362,7 +1362,7 @@ const validateScriptArtifact = (
       false,
     );
   });
-  // The screenplay refinement tree (D013) validates as part of the script
+  // The screenplay refinement tree validates as part of the script
   // artifact: a script with a malformed tree cannot commit. Absent tree =
   // legacy flat beats, no extra checks (byte-compatible).
   if (script.tree !== undefined && script.tree !== null) {
@@ -1654,7 +1654,7 @@ const validateBeatEndArtifact = (
           : [];
       // The engine derives an actor's end motion from its performance when
       // one exists and from the scene node's AMBIENT motion otherwise
-      // (resolveBeatEnd's endActorOf) — so the advertised getShotEndState →
+      // (resolveBeatEnd's endActorOf), so the advertised getShotEndState →
       // commitBeatEnd round trip must accept both sources (#1094). Gating on
       // performances alone dead-ended every scene using ambient node motions.
       const ambient =

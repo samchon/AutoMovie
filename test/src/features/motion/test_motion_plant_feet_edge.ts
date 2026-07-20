@@ -105,7 +105,7 @@ const reachLeg: IAutoMovieSkeleton = {
  *    is left untouched (no throw).
  * 2. A zero-length thigh (l1 = 0) is skipped.
  * 3. A leg folded so the foot rests on the hip (reach distance 0) is skipped.
- * 4. A pin beyond the leg's reach extends it fully — the corrected foot is finite
+ * 4. A pin beyond the leg's reach extends it fully: the corrected foot is finite
  *    (no NaN), on the reachable shell.
  * 5. A non-positive sample rate throws.
  */

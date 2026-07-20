@@ -12,8 +12,8 @@ import { Vector3 } from "../math/Vector3";
  * Analytic solid volume of a primitive, in cubic meters.
  *
  * These are the true solid volumes (a cone is `1/3 π r² h`, a capsule is a
- * cylinder plus a full sphere), not the render tessellation's approximations —
- * the physics layer weighs real shapes. A `plane` is a degenerate solid and
+ * cylinder plus a full sphere), not the render tessellation's approximations.
+ * The physics layer weighs real shapes. A `plane` is a degenerate solid and
  * contributes no volume.
  *
  * @author Samchon
@@ -57,14 +57,14 @@ export const primitiveCentroid = (
 
 /**
  * Volume-weighted center of mass of a model's primitive geometry, in the
- * model's local frame — the fallback the engine uses when
+ * model's local frame: the fallback the engine uses when
  * {@link IAutoMovieBody.centerOfMass} is left `null`.
  *
  * Uniform density is assumed: each primitive part contributes its analytic
  * solid volume (scaled by its part transform) at its transformed centroid. Mesh
  * parts and zero-volume primitives (a plane, or a non-positive scale)
  * contribute nothing. Returns `null` when the model has no primitive volume to
- * weigh — a mesh-only or all-degenerate model — which is the caller's signal
+ * weigh (a mesh-only or all-degenerate model), which is the caller's signal
  * that `centerOfMass` must be declared explicitly.
  *
  * @author Samchon

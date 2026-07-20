@@ -17,7 +17,7 @@ import {
 /**
  * Pins the ROM gate on the far side of the compile: even a referentially
  * perfect action list fails when the synthesised clip bends a joint past its
- * anatomical range — and the violation's path is remapped from `$input` onto
+ * anatomical range, and the violation's path is remapped from `$input` onto
  * `$compiled["<node>"]` so the blame lands on the offending actor's clip, not
  * the LLM's own JSON.
  *

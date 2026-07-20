@@ -1,10 +1,10 @@
 // Aspect-CORRECT, landmark-ALIGNED overlay for honest visual verification.
 //
 // The head.html overlay stretches a portrait photo cell to the wide viewport
-// (background-size), so its proportions are wrong — never trust it for shape.
+// (background-size), so its proportions are wrong. Never trust it for shape.
 // This tool instead detects MediaPipe landmarks on BOTH the native (undistorted)
 // photo cell and the model's clay #view, computes a similarity transform
-// (uniform scale + rotation + translation — preserves aspect) from two robust
+// (uniform scale + rotation + translation: preserves aspect) from two robust
 // anchors (the iris centres), warps the photo onto the model frame so the eyes
 // coincide, and alpha-blends. Whatever then fails to line up (face length, jaw,
 // nose, mouth, chin) is a REAL shape difference, not a display artifact.
@@ -20,7 +20,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../..");
 const hero = process.argv[2] ?? "hero3";
 // view: front | leftThreeQuarter | rightThreeQuarter (3/4 alignment is
-// approximate — if the photo yaw differs from the model camera yaw, the
+// approximate: if the photo yaw differs from the model camera yaw, the
 // iris-similarity overlay shows that yaw gap, not a shape error).
 const view = process.argv[3] ?? "front";
 const CHROME =

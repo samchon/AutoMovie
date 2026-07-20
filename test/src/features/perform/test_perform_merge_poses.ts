@@ -17,7 +17,7 @@ const flexionOf = (
 ): number => pose.joints.find((j) => j.bone === bone)!.flexion!;
 
 /**
- * `mergePoses` — compose several per-region poses into one (the per-frame
+ * `mergePoses`: compose several per-region poses into one (the per-frame
  * operation behind layering).
  *
  * Scenarios:

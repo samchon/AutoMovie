@@ -76,7 +76,7 @@ const tx = (m: number[]): number => m[12]!;
 /**
  * Profile-declared limits actually constrain in resolveFrame's CONSTRAIN stage:
  * a bound limit clamps the sampled channel, its violation is tagged with the
- * sourcing profile id, and the caller's directly-passed limit clamps last — the
+ * sourcing profile id, and the caller's directly-passed limit clamps last: the
  * direct bound is the final word.
  *
  * Scenarios:
@@ -85,10 +85,10 @@ const tx = (m: number[]): number => m[12]!;
  *    clamps to 50 in the composed world matrix, reporting exactly one violation
  *    tagged `profile: "slider-profile"`.
  * 2. An in-range sample (x=25) passes: no violations, world untouched by the clamp
- *    — the negative twin.
+ *    (the negative twin).
  * 3. A direct limit ([0, 30]) alongside the profile's ([0, 50]) on the same
  *    channel: the value clamps through both (profile first, direct last) to 30,
- *    with two violations in order — the profile-tagged one, then the direct one
+ *    with two violations in order: the profile-tagged one, then the direct one
  *    carrying no profile tag.
  * 4. Byte-compat: `profiles: []` resolves identically to omitting the field.
  */

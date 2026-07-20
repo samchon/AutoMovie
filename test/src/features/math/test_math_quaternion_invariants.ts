@@ -13,9 +13,9 @@ import { makeRng, randomUnitQuaternion } from "../internal/random";
  * Scenarios (each over 256 samples from a fixed seed):
  *
  * 1. Unit preservation: the product and the slerp of two unit quaternions stay
- *    unit-length — the group is closed on the unit sphere.
+ *    unit-length: the group is closed on the unit sphere.
  * 2. Slerp endpoints: `slerp(a, b, 0)` is `a` and `slerp(a, b, 1)` is `b` (up to
- *    sign — a quaternion and its negation are the same rotation).
+ *    sign: a quaternion and its negation are the same rotation).
  * 3. Normalize idempotence: normalizing an already-unit quaternion is a no-op.
  * 4. Multiply associativity: `(a·b)·c` equals `a·(b·c)` up to sign.
  */

@@ -93,7 +93,7 @@ const shotOf = (motionId: string, duration: number): IAutoMovieShot => ({
 /**
  * The #650 proof: gaitPhase is ALIVE in the real performShot ladder. The
  * compiled performance is a non-looping arrange composite, which used to answer
- * null unconditionally — the carried {@link IAutoMovieGaitCycle} meta now flows
+ * null unconditionally. The carried {@link IAutoMovieGaitCycle} meta now flows
  * locomote → travel → arrange → compilePerformance, and resolveBeatEnd reads a
  * true stride phase off it.
  *
@@ -101,14 +101,14 @@ const shotOf = (motionId: string, duration: number): IAutoMovieShot => ({
  *
  * 1. A real locomote performance (walk to the door, 5 m at 1 m/s on a 1 s gait)
  *    compiled by the REAL synthesizer + compiler carries the cycle, and
- *    resolveBeatEnd at shot end 3.5 s returns phase 0.5 — non-null through the
+ *    resolveBeatEnd at shot end 3.5 s returns phase 0.5: non-null through the
  *    actual ladder.
  * 2. The mid-stride resume invariant holds on the real path: the composite sampled
  *    at the shot end equals the source gait cycle sampled at the carried phase
  *    (leftUpperLeg flexion, grid-aligned time).
  * 3. A layered multi-region performance (locomote + lookAt) still carries the
  *    single striding region's clock through layerClips.
- * 4. A gesture-only performance carries no cycle — phase stays null (the honest
+ * 4. A gesture-only performance carries no cycle: phase stays null (the honest
  *    one-shot answer, not a regression).
  */
 export const test_film_gait_phase_pipeline = (): void => {

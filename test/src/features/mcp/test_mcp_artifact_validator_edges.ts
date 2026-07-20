@@ -89,7 +89,7 @@ const hasExpected = (
 
 /**
  * Edge sweep of the shared MCP artifact validators (`validateScene` /
- * `validateShot` / `validateSequence`) — every malformed-shape and boundary
+ * `validateShot` / `validateSequence`), every malformed-shape and boundary
  * branch the happy-path fixtures never touch, exercised through the public
  * tools so a commit can never accept what validation would reject (#1040). The
  * probes are direct in-process calls (`as`-cast payloads): the stdio transport
@@ -101,7 +101,7 @@ const hasExpected = (
  * 1. Scene: non-array node/camera/light/model collections, non-object entries,
  *    non-object and non-unit transforms, non-positive artifact scale, a point
  *    light's range and a spot light's coneAngle bounds, camera fovY above its
- *    exclusive maximum, and a non-object models registry entry — all report at
+ *    exclusive maximum, and a non-object models registry entry, all report at
  *    their exact `$input.scene...` / `$input.models...` paths.
  * 2. Shot: a non-object scene argument, non-array performances, non-object
  *    performance entries, a performance node missing from the scene, an

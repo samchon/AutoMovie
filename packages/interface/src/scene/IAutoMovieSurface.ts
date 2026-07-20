@@ -2,19 +2,19 @@ import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
 import { AutoMovieSurfaceKind } from "./AutoMovieSurfaceKind";
 
 /**
- * One standable surface patch of a space — the semantic ground the engine
+ * One standable surface patch of a space: the semantic ground the engine
  * queries where it previously assumed a single scalar plane.
  *
  * The parameterization is deliberately minimal ("proxy means the thing", D011):
  * a **convex XZ footprint** plus height anchors. A flat patch (floor, platform
  * top) is the polygon at `anchor.y`. A sloped patch (ramp) carries a second
  * anchor: height interpolates linearly along the `anchor → rampTo` axis on the
- * ground plan and is constant perpendicular to it — a plane, which is what a
+ * ground plan and is constant perpendicular to it: a plane, which is what a
  * real ramp is. Stairs are approximated as a ramp for now.
  *
  * The visual set piece behind a surface needs no new geometry type: a set proxy
  * is an ordinary static {@link IAutoMovieModel} (skeleton `null`) placed as a
- * scene node — a room is a box, a table is a box, per the stickman doctrine.
+ * scene node: a room is a box, a table is a box, per the stickman doctrine.
  * The surface is the _meaning_ (where feet and props may rest); the model is
  * the crude diffusion hint.
  *
@@ -29,7 +29,7 @@ export interface IAutoMovieSurface {
 
   /**
    * Convex footprint on the ground plan, at least three non-collinear points.
-   * Only `x` and `z` are used — the vertical extent comes from the height
+   * Only `x` and `z` are used: the vertical extent comes from the height
    * anchors, so `y` here is ignored (write `0`).
    */
   polygon: IAutoMovieVector3[];

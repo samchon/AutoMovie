@@ -17,7 +17,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
 // ── trampoline bounce: the figure falls, the engine's resolveImpact returns the
 // rebound velocity off a springy trampoline, and a projectile arc carries it up
-// again — tucking at the apex, extending to land. The bounce heights come from
+// again, tucking at the apex, extending to land. The bounce heights come from
 // the physics, not a hand-keyed sine. ─────────────────────────────────────────
 const params = new URLSearchParams(location.search);
 const v = (x: number, y: number, z: number): IAutoMovieVector3 => ({ x, y, z });

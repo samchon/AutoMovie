@@ -26,7 +26,7 @@ const passesCone = (j: ReturnType<typeof joint>): boolean => {
 /**
  * The clamp face of the swing cone: a corner pose past the cone is pulled
  * straight back onto it (preserving the flexion:abduction ratio), so the result
- * passes {@link validateJointRom} — clamp and validate stay one calculation.
+ * passes {@link validateJointRom}: clamp and validate stay one calculation.
  *
  * Scenarios:
  *
@@ -36,7 +36,7 @@ const passesCone = (j: ReturnType<typeof joint>): boolean => {
  * 3. A resting (`null`) axis contributes the 0 it renders, so it neither exempts
  *    the cone nor becomes non-null: a lone axis inside the cone passes through,
  *    and a lone axis PAST the cone is pulled back exactly like its explicit-`0`
- *    twin (#1245 — the old skip left it at its illegal angle).
+ *    twin (#1245: the old skip left it at its illegal angle).
  * 4. For a box that EXCLUDES neutral, the cone pull targets the box point nearest
  *    neutral rather than neutral itself, so the clamped pose stays inside the
  *    box and validates. Pulling toward the origin dropped it below its own
@@ -75,7 +75,7 @@ export const test_rom_clamp_swing_cone = (): void => {
     nclose(keptSame.abduction!, 30),
   );
 
-  // 3. a resting axis stays null and contributes 0 — inside the cone it passes
+  // 3. a resting axis stays null and contributes 0: inside the cone it passes
   // through; past the cone it is pulled back like its explicit-0 twin.
   const oneAxis = clampJointRom(joint("leftUpperArm", { abduction: 50 }), CONE);
   TestValidator.equals("rest flexion stays null", oneAxis.flexion, null);

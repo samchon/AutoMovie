@@ -14,7 +14,7 @@ const NOTE: IAutoMovieReviewNote = {
 
 /**
  * Pins the REVIEW consumer's loop-closing gates: a verdict must leave the
- * re-perform loop something to run on — a revise carries its backlog, a pass
+ * re-perform loop something to run on: a revise carries its backlog, a pass
  * declares it empty, and every note is filed on the beat this review judges.
  *
  * Scenarios:

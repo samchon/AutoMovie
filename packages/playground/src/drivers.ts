@@ -95,7 +95,7 @@ app.innerHTML = `
   <div id="cap">
     <h1>automovie · engine drivers</h1>
     <p>Two-bone IK (the core resolver) bends a 3-joint arm so its wrist tracks
-       the red goal, recomputed every frame. No AI — just resolveFrame.</p>
+       the red goal, recomputed every frame. No AI: just resolveFrame.</p>
   </div>
 `;
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;

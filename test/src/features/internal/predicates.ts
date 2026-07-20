@@ -10,7 +10,7 @@ import {
  *
  * The project's convention (mirroring interia) is to assert with
  * `TestValidator.equals` for exact values and `TestValidator.predicate(title,
- * <boolean>)` for floating-point comparisons — these helpers just build that
+ * <boolean>)` for floating-point comparisons. These helpers just build that
  * boolean, they never throw.
  */
 export const nclose = (a: number, b: number, eps = 1e-6): boolean =>
@@ -71,8 +71,8 @@ export const violationCount = (v: IAutoMovieValidation): number =>
   v.success === true ? 0 : v.violations.length;
 
 /**
- * True when the validation succeeded but carries a matching warning — the
- * physical-plausibility advice tier (D015), which surfaces without failing.
+ * True when the validation succeeded but carries a matching warning: the
+ * physical-plausibility advice tier, which surfaces without failing.
  */
 export const hasWarning = (
   v: IAutoMovieValidation,

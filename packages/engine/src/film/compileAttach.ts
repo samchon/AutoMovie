@@ -14,7 +14,7 @@ import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 
-/** The child rides the bone directly — origin on the bone, no extra offset. */
+/** The child rides the bone directly: origin on the bone, no extra offset. */
 const IDENTITY_OFFSET: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -22,23 +22,23 @@ const IDENTITY_OFFSET: IAutoMovieTransform = {
 };
 
 /**
- * Bake the `attachTo` verb into the **child object's** flight-follow clip — the
+ * Bake the `attachTo` verb into the **child object's** flight-follow clip, the
  * per-frame realisation of a rigid coupling to a parent's bone (a sword in a
- * hand, a prop on a saddle). The child is not a rig, so — like a projectile —
+ * hand, a prop on a saddle). The child is not a rig, so (like a projectile)
  * it moves by a node clip of transform tracks, not a pose motion.
  *
  * Each sample resolves the parent's posed skeleton at that instant
  * ({@link resolveAttachment}, which runs the parent's FK) to find the bone's
  * frame in the parent's **model space**, then composes that onto the parent's
- * **staged world placement** — or, when the parent itself rides a coupling this
- * shot, onto its per-sample ridden frame (`parentTransformAt`, #1140) — so the
+ * **staged world placement**, or, when the parent itself rides a coupling this
+ * shot, onto its per-sample ridden frame (`parentTransformAt`, #1140), so the
  * child lands in scene space:
  *
  * - `translation = parentPos + parentRot · boneLocal.translation`
  * - `rotation = parentRot ∘ boneLocal.rotation`
  *
  * So as the parent walks, turns, or swings the limb, the child rides with it,
- * position and orientation together — what a physics fixed-joint does. Pass the
+ * position and orientation together, what a physics fixed-joint does. Pass the
  * same `jointAxes` the renderer poses the parent with (`HUMANOID_JOINT_AXES`),
  * plus the same `restFrames` when parent clips are authored in clinical space,
  * or the child follows a bone that sits where the renderer does not draw it.
@@ -53,7 +53,7 @@ const IDENTITY_OFFSET: IAutoMovieTransform = {
  * @author Samchon
  */
 export const compileAttach = (props: {
-  /** The coupled child's scene node — the clip's target. */
+  /** The coupled child's scene node: the clip's target. */
   child: string;
   /** The parent bone the child rides. */
   bone: AutoMovieHumanoidBone;
@@ -63,7 +63,7 @@ export const compileAttach = (props: {
    * The parent's world root over shot-local time, when the parent itself rides
    * a coupling this shot (#1140): each sample composes onto THIS frame instead
    * of the static `parentTransform`, so the child follows the parent's ridden
-   * path — a lance in a mounted knight's hand rides the horse. Omit for a
+   * path: a lance in a mounted knight's hand rides the horse. Omit for a
    * parent standing on its staged placement.
    */
   parentTransformAt?: (t: number) => IAutoMovieTransform;
@@ -75,7 +75,7 @@ export const compileAttach = (props: {
   start: number;
   /** Length of the coupling in seconds. */
   duration: number;
-  /** The shot's length — the clip spans it (shot-local time). */
+  /** The shot's length: the clip spans it (shot-local time). */
   shotDuration: number;
   /** Samples per second of the baked follow (default 30). */
   fps?: number;

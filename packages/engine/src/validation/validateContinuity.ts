@@ -27,15 +27,15 @@ interface ITolerances {
 /**
  * Validate one cut boundary: the incoming beat's OPENING state against the
  * previous beat's recorded END state. This is the check the forward-written
- * {@link IAutoMovieBeatEndState} always implied but nothing performed — a cut
+ * {@link IAutoMovieBeatEndState} always implied but nothing performed: a cut
  * that fails to resume where the prior beat left off is the README's named
  * failure ("characters drift, props disappear").
  *
  * Drift is **advisory** (a `warning`, never a gate): a hard cut can
  * legitimately jump an actor to a new mark, a time-skip, or a new blocking. The
  * linter surfaces the drift with the exact actor, offset, and tolerance so the
- * author decides whether the cut intends it — it does not refuse the film. This
- * mirrors the physical-plausibility advisory tier (D015).
+ * author decides whether the cut intends it. It does not refuse the film. This
+ * mirrors the physical-plausibility advisory tier.
  *
  * Per actor present at the prior beat's end:
  *
@@ -170,7 +170,7 @@ const compareBoundary = (
       collector.warn(
         "physics",
         `${root}.opening.actors`,
-        `actor "${prev.node}" ended the previous beat but is absent from the incoming beat's opening — continuity cannot be verified`,
+        `actor "${prev.node}" ended the previous beat but is absent from the incoming beat's opening: continuity cannot be verified`,
         prev.node,
       );
       return;

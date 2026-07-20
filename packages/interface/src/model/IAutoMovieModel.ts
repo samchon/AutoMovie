@@ -6,14 +6,14 @@ import { IAutoMovieBody } from "./IAutoMovieBody";
 import { IAutoMovieModelPart } from "./IAutoMovieModelPart";
 
 /**
- * A 3D model — the riggable subject that poses, motions, and expressions drive.
+ * A 3D model: the riggable subject that poses, motions, and expressions drive.
  *
  * This is automovie's central geometry container, and it deliberately unifies
  * the two things the project animates:
  *
- * - A **character** is a model _with_ a humanoid `skeleton` — poses and motions
+ * - A **character** is a model _with_ a humanoid `skeleton`: poses and motions
  *   articulate its bones;
- * - An **object / prop** is a model with `skeleton: null` — it has geometry and
+ * - An **object / prop** is a model with `skeleton: null`; it has geometry and
  *   materials but no joints, and is moved as a whole (placed in a scene, or
  *   parented to a character's bone as a held item).
  *
@@ -21,7 +21,7 @@ import { IAutoMovieModelPart } from "./IAutoMovieModelPart";
  * its `materials` behind one id; downstream layers cite it by `id` and never
  * need to know whether it was generated from primitives or imported as a mesh
  * (that is `origin`). The LLM authors parts, materials, and the skeleton's ROM
- * — never raw vertex arrays, which arrive only via import.
+ * (never raw vertex arrays, which arrive only via import).
  *
  * @author Samchon
  */
@@ -46,14 +46,14 @@ export interface IAutoMovieModel {
   skeleton: IAutoMovieSkeleton | null;
 
   /**
-   * The physical body — mass, center of mass, friction, restitution. `null`
+   * The physical body: mass, center of mass, friction, restitution. `null`
    * when the model has no declared physics (a static prop or set piece);
    * physical-plausibility feedback is only computed for models with a body.
    */
   body: IAutoMovieBody | null;
 
   /**
-   * Semantic contact points the object declares — stackable tops, handles,
+   * Semantic contact points the object declares: stackable tops, handles,
    * sockets, hooks ({@link IAutoMovieAffordance}). Optional evolving-schema
    * field (the `space?` / `events?` pattern): absent or `null` means the model
    * declares no affordances, and nothing downstream changes.

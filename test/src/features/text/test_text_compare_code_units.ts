@@ -5,7 +5,7 @@ import { TestValidator } from "@nestia/e2e";
  * `compareCodeUnits` is the locale-independent total order the engine and store
  * use wherever an order feeds the render event stream, tool-visible arrays, or
  * persisted slate reads (#1225). It must be a pure function of the UTF-16 code
- * units — reproducible on every host regardless of locale or ICU build — and,
+ * units (reproducible on every host regardless of locale or ICU build) and,
  * unlike `localeCompare`, it must return a non-zero result for any two distinct
  * strings so a sort stays a strict order.
  *
@@ -16,7 +16,7 @@ import { TestValidator } from "@nestia/e2e";
  *    distinct keys never reaches).
  * 2. Uppercase sorts before lowercase (code-unit order: 'A' 0x41 < 'a' 0x61), the
  *    exact case where locale collation interleaves and this order does not.
- * 3. Distinct-but-Unicode-equivalent strings (NFC vs NFD) compare non-zero —
+ * 3. Distinct-but-Unicode-equivalent strings (NFC vs NFD) compare non-zero:
  *    `localeCompare` returns 0 here, which would collapse two distinct keys;
  *    the code-unit order keeps them ordered.
  * 4. A full sort of mixed-case filenames matches the hand-written code-unit oracle

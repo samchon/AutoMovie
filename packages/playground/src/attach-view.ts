@@ -29,8 +29,8 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
 // The `attachTo` verb on screen: a figure walks the floor with a blade coupled
 // to its left hand. The engine bakes the coupling into the shot's objectMotions
-// — a world-space node clip that, each frame, is the hand's frame (the walker's
-// FK) composed onto the walker's placement — so the blade rides the hand across
+// (a world-space node clip that, each frame, is the hand's frame (the walker's
+// FK) composed onto the walker's placement) so the blade rides the hand across
 // the shot. The viewer drives the blade's group from that clip: the read side
 // of compileAttach. Deterministic via renderAt(t) for capture.
 

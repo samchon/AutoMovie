@@ -19,7 +19,7 @@ const modelWithMesh = (mesh: IAutoMovieMesh): IAutoMovieModel => {
 
 /**
  * An empty position buffer is a multiple of 3, so the tuple-length check
- * accepts it and every downstream buffer stays "consistent" at vertexCount 0 —
+ * accepts it and every downstream buffer stays "consistent" at vertexCount 0:
  * a mesh with no vertices used to validate clean and only degenerate at
  * render/export. validateModel now rejects it, mirroring a primitive's
  * strictly-positive extents, so the correction round catches empty geometry.
@@ -28,10 +28,10 @@ const modelWithMesh = (mesh: IAutoMovieMesh): IAutoMovieModel => {
  *
  * 1. Empty positions, all optional buffers null → a positions type violation (the
  *    dependent buffers are absent, so nothing masks the empty-vertex fault).
- * 2. Empty positions with empty normals/uvs/indices — each is length 0, so the
+ * 2. Empty positions with empty normals/uvs/indices: each is length 0, so the
  *    per-vertex length checks all pass at vertexCount 0; the only violation is
  *    the empty positions itself (the dependent buffers do not drift).
- * 3. A single-vertex mesh (the minimum) still validates — the check is "at least
+ * 3. A single-vertex mesh (the minimum) still validates: the check is "at least
  *    one", not "at least a triangle".
  */
 export const test_validation_model_mesh_empty = (): void => {

@@ -28,7 +28,7 @@ import { fkReachableBones } from "./fkReachableBones";
 import { ViolationCollector } from "./violation";
 
 const DEFAULT_SAMPLE_RATE = 24;
-const DEFAULT_MASS = 70; // kg — an unspecified body defaults to a human mass
+const DEFAULT_MASS = 70; // kg: an unspecified body defaults to a human mass
 const DEFAULT_RESTITUTION = 0.2;
 const DEFAULT_HARDNESS = 0.5;
 const DEFAULT_PENETRABILITY = 0.3;
@@ -37,8 +37,8 @@ const FALLBACK_NORMAL: IAutoMovieVector3 = { x: 0, y: 1, z: 0 };
 
 /**
  * One actor in an inter-body collision test: its rig, its motion, the capsule
- * proxies that stand in for its volume, and its physical body (mass etc., #595)
- * — `null` bodies fall back to a default human mass. `node` labels it in
+ * proxies that stand in for its volume, and its physical body (mass etc., #595):
+ * `null` bodies fall back to a default human mass. `node` labels it in
  * emitted events. Each capsule's endpoints must be two distinct bones of
  * `skeleton` with a positive radius; {@link detectBodyCollision} validates this
  * itself (a malformed capsule is an error, returned before sampling) rather
@@ -73,7 +73,7 @@ export interface IAutoMovieCollisionActor {
 export interface IAutoMovieBodyCollisionResult {
   /** Warning-severity feedback (or an error for a bad sampleRate). */
   validation: IAutoMovieValidation;
-  /** Contact events on the shot clock — "one calculation, two consumers". */
+  /** Contact events on the shot clock: "one calculation, two consumers". */
   events: IAutoMovieInteractionEvent[];
   /** Suggested response at the deepest contact, or `null` when none applies. */
   response: IAutoMovieCollisionResponse | null;
@@ -90,8 +90,8 @@ interface IPenetration {
 }
 
 /**
- * Detect where two actors' capsule proxies interpenetrate over a shot, and —
- * because a film may be deliberately unphysical (D010) — report it as advisory
+ * Detect where two actors' capsule proxies interpenetrate over a shot, and,
+ * because a film may be deliberately unphysical, report it as advisory
  * `warning`s, not a hard rejection. At the deepest contact it suggests a
  * plausible response ({@link resolveImpact} + recoil flinch) the model can
  * accept or override, and emits `contact` events so downstream/render see the
@@ -132,7 +132,7 @@ export const detectBodyCollision = (props: {
     return { validation: collector.toValidation(), events: [], response: null };
   }
 
-  // Validate every capsule against its actor's rig before sampling — the same
+  // Validate every capsule against its actor's rig before sampling, the same
   // precondition validateSelfIntersection enforces on itself. A malformed
   // capsule (bone not on the rig, FK-unreachable, non-distinct endpoints, bad
   // radius) resolves to an undefined world position and a NaN distance (or

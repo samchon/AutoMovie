@@ -55,7 +55,7 @@ const at = (w: Map<string, number[]>, id: string): IAutoMovieVector3 =>
  *    run (the negative twin).
  * 3. A joint exactly on the sphere center takes the deterministic `+Y` fallback
  *    direction.
- * 4. Colliders apply in array order — a second sphere sees the first push's
+ * 4. Colliders apply in array order: a second sphere sees the first push's
  *    result.
  * 5. Non-positive and non-finite collider radii and a non-finite center reject
  *    before the integrator reads transforms.

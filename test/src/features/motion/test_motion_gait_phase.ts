@@ -26,7 +26,7 @@ const GAIT: IAutoMovieGait = {
  *    while the keyframe TIMES stay the local clock.
  * 2. The offset preserves the seamless loop: the phased closing keyframe's pose
  *    equals its own first.
- * 3. Omitting the phase is the zero phase — byte-identical clips.
+ * 3. Omitting the phase is the zero phase: byte-identical clips.
  * 4. A whole-period phase wraps back to the unphased cycle.
  * 5. A non-finite phase throws.
  */

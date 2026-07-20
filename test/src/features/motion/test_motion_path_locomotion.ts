@@ -38,7 +38,7 @@ const rootAt = (motion: IAutoMovieMotion, time: number) =>
 /**
  * FollowPathMotion bakes a gait along a waypoint polyline: the root follows arc
  * length at the snapped speed, passes exactly through each waypoint, and faces
- * the path tangent — blending linearly across a corner window instead of
+ * the path tangent, blending linearly across a corner window instead of
  * snapping, unless the window is zero.
  *
  * Scenarios (L-path, speed 1 → 4 whole cycles, effective speed 1):
@@ -48,7 +48,7 @@ const rootAt = (motion: IAutoMovieMotion, time: number) =>
  *    the final waypoint (2,0,2) at t=4.
  * 2. Facing oracle (turnWindow 1 → blend s∈[1.5, 2.5]): yaw 90° mid first stretch
  *    (outside the window), 45° exactly at the corner (half-blended), 22.5° at
- *    s=2.25 (three-quarters through), 0° once past the window — and the root
+ *    s=2.25 (three-quarters through), 0° once past the window, and the root
  *    rotation quaternion equals the yaw about +Y (base root is null, so facing
  *    composes onto identity).
  * 3. The frames sidecar mirrors the bake: one frame per keyframe carrying the path

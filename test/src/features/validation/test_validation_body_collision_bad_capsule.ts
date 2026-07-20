@@ -43,7 +43,7 @@ const withCapsule = (
  * Scenarios:
  *
  * 1. Well-formed overlap still warns (the geometry genuinely intersects).
- * 2. An endpoint bone absent from the rig fails with a type violation — the
+ * 2. An endpoint bone absent from the rig fails with a type violation: the
  *    overlap is no longer silently dropped.
  * 3. Non-distinct endpoints fail with a type violation.
  * 4. A non-positive radius fails with a range violation.
@@ -51,7 +51,7 @@ const withCapsule = (
  *    response are emitted.
  */
 export const test_validation_body_collision_bad_capsule = (): void => {
-  // 1. sanity — the well-formed geometry overlaps, so a real warning exists.
+  // 1. sanity: the well-formed geometry overlaps, so a real warning exists.
   const clean = detectBodyCollision(overlapping());
   TestValidator.equals(
     "well-formed overlap warns (success stays true, warning-only)",
@@ -63,7 +63,7 @@ export const test_validation_body_collision_bad_capsule = (): void => {
     clean.events.length > 0,
   );
 
-  // 2. bone off the rig — previously a silent success, now an error.
+  // 2. bone off the rig: previously a silent success, now an error.
   const badBone = overlapping();
   const nan = detectBodyCollision({
     ...badBone,
@@ -108,7 +108,7 @@ export const test_validation_body_collision_bad_capsule = (): void => {
     hasViolation(radius.validation, "range", ".a.capsules[0].radius"),
   );
 
-  // 5. both actors malformed — every fault reported, nothing sampled.
+  // 5. both actors malformed: every fault reported, nothing sampled.
   const both = overlapping();
   const pair = detectBodyCollision({
     ...both,

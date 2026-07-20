@@ -42,7 +42,7 @@ import {
 const JOINT_CONSTRAINT_AXES = ["flexion", "abduction", "twist"] as const;
 
 /**
- * The standalone `validate*` tools — thin dispatch onto the engine validators
+ * The standalone `validate*` tools, thin dispatch onto the engine validators
  * and the shared MCP artifact validators. The MCP contract lives on the
  * {@link AutoMovieApplication} facade; this service owns the execution.
  */
@@ -317,7 +317,7 @@ const appendMcpPoseShape = (
 
 /**
  * Structural shape gate for an MCP motion (object root, id, keyframes with
- * pose/expression/bezier shapes) — shared with `planPoseKeypoints`, which must
+ * pose/expression/bezier shapes), shared with `planPoseKeypoints`, which must
  * refuse a malformed clip as violations before the engine would throw on it.
  */
 export const appendMcpMotionShape = (
@@ -601,7 +601,7 @@ const validateMcpModelShape = (
 
 /**
  * Structural shape gate for an MCP skeleton (object root, id, bones with
- * rest/constraint shapes) — shared with `planPoseKeypoints`, which resolves
+ * rest/constraint shapes), shared with `planPoseKeypoints`, which resolves
  * forward kinematics over the skeleton and must refuse a malformed one first.
  */
 export const appendMcpSkeletonShape = (

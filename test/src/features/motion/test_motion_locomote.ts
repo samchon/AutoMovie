@@ -14,7 +14,7 @@ const throws = (task: () => void): boolean => {
 };
 
 /**
- * `locomoteMotion` — the harness `locomote` verb: carry a looping gait across a
+ * `locomoteMotion`, the harness `locomote` verb: carry a looping gait across a
  * distance at a speed, the engine sizing the cycles + forward velocity.
  *
  * Scenarios:
@@ -25,12 +25,12 @@ const throws = (task: () => void): boolean => {
  * 3. A distance shorter than HALF a stride compresses the single cycle so the
  *    effective speed floors at ½×nominal (#1065): a 0.2 m ask at 1 m/s on a 1 s
  *    gait plays one 0.4 s cycle (0.5 m/s, the same worst case whole-cycle
- *    quantization allows everywhere else) and still arrives at exactly 0.2 m —
+ *    quantization allows everywhere else) and still arrives at exactly 0.2 m;
  *    the old full-length cycle skated at 0.2 m/s. The gait-cycle meta scales
  *    with it. A distance past the half-stride point (0.6 m) keeps the
  *    uncompressed cycle.
- * 4. `faceTravel` turns the root so the model's +Z faces the travel heading — a
- *    walk sent along +X ends up facing +X — while the default keeps the root
+ * 4. `faceTravel` turns the root so the model's +Z faces the travel heading (a
+ *    walk sent along +X ends up facing +X), while the default keeps the root
  *    rotation identity (a strafe).
  * 5. Invalid distance/speed/gait-duration/direction inputs reject before cycle
  *    sizing.

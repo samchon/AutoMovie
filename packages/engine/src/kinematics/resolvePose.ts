@@ -30,7 +30,7 @@ export interface IAutoMovieResolvedBone {
   worldPosition: IAutoMovieVector3;
   /**
    * Bone orientation in world/model space (parent world rotation ∘ local). This
-   * is what an **attachment** rides — fixing a child body's frame in this
+   * is what an **attachment** rides. Fixing a child body's frame in this
    * bone's frame (e.g. a rider in a horse's saddle) parents the two the way a
    * physics joint does.
    */
@@ -109,14 +109,14 @@ export const indexSkeletonTopology = (
  * **Contract: only root-reachable bones are resolved.** The walk starts from
  * null-parent roots and follows the parent links, so a bone with an orphaned
  * parent reference, a detached sub-tree, or a cyclic parent chain (every member
- * has a non-null parent, so none is entered from a root — no infinite recursion
+ * has a non-null parent, so none is entered from a root: no infinite recursion
  * results, since a bone is reached only through its single parent) is **omitted
  * from the result**, and a skeleton with no root at all resolves to an empty
  * array. This is load-bearing: {@link reachableBoneNames} derives the reachable
  * set from the same walk, and graceful consumers (a physics validator gating a
  * bone, `retargetHumanoidMotion` measuring rest height) rely on the partial
  * return to report a malformed rig instead of crashing. A consumer that needs
- * every declared bone present must gate on {@link reachableBoneNames} first —
+ * every declared bone present must gate on {@link reachableBoneNames} first:
  * the total, non-throwing "which bones will resolve" query.
  *
  * `jointAxes` optionally remaps the clinical axes per bone (e.g.
@@ -127,7 +127,7 @@ export const indexSkeletonTopology = (
  * `restFrames` optionally reads each joint's angles as **clinical** and maps
  * them into that bone's rest-relative space (e.g. `HUMANOID_REST_FRAME`, so
  * `+abduction` raises either arm despite the shared axis); a bone absent from
- * it, or an omitted table, is the identity — the angles are taken as the rig's
+ * it, or an omitted table, is the identity. The angles are taken as the rig's
  * own.
  *
  * `topology` optionally reuses a pose-independent hierarchy index built by
@@ -188,7 +188,7 @@ export const resolvePose = (
 };
 
 /**
- * The bones a skeleton's forward-kinematics walk actually reaches — every bone
+ * The bones a skeleton's forward-kinematics walk actually reaches, every bone
  * whose parent chain lands on a null-parent root. Pose-independent (it follows
  * parent links only), so it is the exact set {@link resolvePose}'s walk visits
  * and can never disagree with which bones a sampled pose resolves. A physics

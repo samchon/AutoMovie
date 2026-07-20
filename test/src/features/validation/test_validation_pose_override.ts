@@ -10,7 +10,7 @@ import { createSkeleton, joint, makePose } from "../internal/fixtures";
  * lookup.
  *
  * Scenario: with the elbow's constraint widened to flexion [0, 200], a 175°
- * flexion — rejected by the default 150° limit — validates successfully.
+ * flexion (rejected by the default 150° limit) validates successfully.
  */
 export const test_validation_pose_override = (): void => {
   const base = createSkeleton();

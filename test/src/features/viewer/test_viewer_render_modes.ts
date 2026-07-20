@@ -57,7 +57,7 @@ const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
 
 /**
  * Guide-pass render modes are reversible scene overrides applied at snapshot
- * time: the deterministic engine result is never mutated, only its projection —
+ * time: the deterministic engine result is never mutated, only its projection:
  * `restore()` puts every touched material, visibility flag, background, and
  * overlay back exactly as it was, so the same built scene captures pass after
  * pass.
@@ -65,9 +65,9 @@ const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
  * Scenarios:
  *
  * 1. `beauty` is a no-op: materials keep their exact instances.
- * 2. `depth` swaps every mesh to the normalized-metric depth shader (#1167) —
+ * 2. `depth` swaps every mesh to the normalized-metric depth shader (#1167):
  *    grays linear over a scene-stable range decoupled from camera near/far
- *    (default 20 m, overridable) — on a black (far) background; restore returns
+ *    (default 20 m, overridable), on a black (far) background; restore returns
  *    the original instances and background.
  * 3. `normal` swaps to `MeshNormalMaterial` (the surface-normal hint, #1166).
  * 4. `outline` is a REAL edge pass (#1166): black fills plus one inverted-hull

@@ -7,13 +7,13 @@ import { nclose } from "../internal/predicates";
  * The amplitude fit recovers a synthetic ground truth: the profile curve is
  * manufactured FROM the midline at a known alpha and row scale, so the
  * grid-search + least-squares must find that pair with a near-zero residual
- * (the oracle is the construction, not the fit). The midline must be nonlinear
- * — under a straight line every row scale explains the curve equally and the
+ * (the oracle is the construction, not the fit). The midline must be nonlinear:
+ * under a straight line every row scale explains the curve equally and the
  * scale is unidentifiable, which is also why real noses and lips (kinked
  * curves) pin it.
  *
  * Scenario: a kinked midline (steep to y=130, near-flat after) over rows
- * 100..160, profile rows built at alpha 0.5 / rowScale 0.8 — the fit returns
+ * 100..160, profile rows built at alpha 0.5 / rowScale 0.8: the fit returns
  * alpha ≈ 0.5, rowScale ≈ 0.8, rms ≈ 0.
  */
 export const test_forge_profile_amplitude = (): void => {

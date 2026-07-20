@@ -68,7 +68,7 @@ const at = (world: Map<string, number[]>, id: string): IAutoMovieVector3 => {
  * 2. With state+dt the first step matches the closed-form Verlet oracle: from
  *    rest, gravity pulls the joint down by `g·dt²` and the hard length
  *    constraint re-normalizes it onto the unit sphere around its parent.
- * 3. A second frame accumulates — the state seeds the joint from its previous
+ * 3. A second frame accumulates: the state seeds the joint from its previous
  *    post-spring position (the carried-world semantics), matching the update
  *    law applied by hand, sagging strictly further; and the two-frame sequence
  *    replays deterministically from a fresh state.
@@ -77,7 +77,7 @@ const at = (world: Map<string, number[]>, id: string): IAutoMovieVector3 => {
  *    result identical to the collider-free step.
  * 5. A collider naming a missing node rejects loudly.
  * 6. A non-spring driver still deferred by the world pass is untouched by the
- *    spring step — `springs` consumes only springs.
+ *    spring step: `springs` consumes only springs.
  */
 export const test_resolve_frame_spring = (): void => {
   // 1. byte-compat: no springs input → deferred
@@ -235,7 +235,7 @@ export const test_resolve_frame_spring = (): void => {
     ),
   );
 
-  // 6. springs consumes only springs — other deferrals pass through
+  // 6. springs consumes only springs: other deferrals pass through
   const shortIk: IAutoMovieIKDriver = {
     type: "ik",
     chain: ["root", "j1"],

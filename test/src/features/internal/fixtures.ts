@@ -183,5 +183,5 @@ export const makeProp = (
   asset: null,
 });
 
-/** A face document — optional trait fields, omitted means neutral. */
+/** A face document: optional trait fields, omitted means neutral. */
 export const makeFace = (face: IAutoMovieFace = {}): IAutoMovieFace => face;

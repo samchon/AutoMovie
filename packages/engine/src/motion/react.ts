@@ -12,8 +12,8 @@ import { IAutoMovieRecoilPush, impactRecoil } from "../physics/impactRecoil";
 /**
  * Synthesise the **react** action into a short flinch clip: snap from rest into
  * the impact's recoil and ease back. The flinch pose is the engine's
- * `impactRecoil` — the reactive `push` propagated down the bone `chain` and
- * **clamped to each joint's ROM** — so this is the harness `react` verb turned
+ * `impactRecoil` (the reactive `push` propagated down the bone `chain` and
+ * **clamped to each joint's ROM**), so this is the harness `react` verb turned
  * into motion by the impact engine (the caller maps an `IAutoMovieImpact`'s
  * impulse to the `push`).
  *

@@ -6,7 +6,7 @@ import { hasViolation } from "../internal/predicates";
 
 /**
  * Pins the camera gates: a field of view must sit strictly inside (0, 180)° and
- * a node-target must track a placed actor — a camera aimed at nobody frames
+ * a node-target must track a placed actor: a camera aimed at nobody frames
  * nothing.
  *
  * Scenarios:

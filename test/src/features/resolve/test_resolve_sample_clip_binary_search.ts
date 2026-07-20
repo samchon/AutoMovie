@@ -10,7 +10,7 @@ import { nclose } from "../internal/predicates";
 
 /**
  * The track sampler now binary-searches the enclosing keyframe segment instead
- * of scanning front to back — the same O(N·F) → O(F·log N) fix the pose sampler
+ * of scanning front to back, the same O(N·F) → O(F·log N) fix the pose sampler
  * got, on the general channel path (`resolveFrame`/`resolveDrivers`/attached
  * objects). A closed-form ramp on a vec3 translation track (value.x = i at time
  * i·dt, linear) gives an exact oracle: the sampled x equals time/dt across the

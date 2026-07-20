@@ -24,8 +24,8 @@ const makeScript = (beatIds: [string, string]): IAutoMovieScript => ({
  * `beatEnds/<beat>.json`), so ids differing only by case collide on a
  * case-insensitive filesystem. Before #1096 the collision passed `commitScript`
  * and `commitShot`'s validation, then surfaced as the store's RAW mid-save
- * throw at the second beat's `commitShot` — after the non-keyed slices were
- * already rewritten — leaving that beat permanently uncommittable while
+ * throw at the second beat's `commitShot`, after the non-keyed slices were
+ * already rewritten, leaving that beat permanently uncommittable while
  * `nextSteps` kept prescribing it. The gate now refuses at the source.
  *
  * Scenarios:

@@ -21,13 +21,13 @@ import { createSkeleton } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
 /**
- * The whole stage ladder in one take — every harness stage's payload flows
+ * The whole stage ladder in one take. Every harness stage's payload flows
  * through its engine consumer with every gate passing: the script's stand-in is
  * forged, the world staged, the beat blocked, the performance realized against
  * that blocking, the shot reviewed and passed, the film cut, and the cut
  * resolved to render-ready frame samples. This is the pipeline the `agent`
  * package will drive with a real LLM; here the payloads are fixtures, which is
- * the point — everything below the model is deterministic.
+ * the point: everything below the model is deterministic.
  *
  * Scenarios:
  *
@@ -98,7 +98,7 @@ export const test_film_full_ladder_e2e = (): void => {
       sequence: { id: "seq-duel", name: "duel at dawn" },
       fps: 24,
       entries: [{ shot: performed.shot.id, trim: null, transition: null }],
-      pacing: "one held take — the beat is the film.",
+      pacing: "one held take, the beat is the film.",
       continuity: "n/a (single shot).",
     },
     [performed.shot],

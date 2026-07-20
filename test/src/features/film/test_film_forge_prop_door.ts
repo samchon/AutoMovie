@@ -30,7 +30,7 @@ const basisX = (m: number[]): [number, number, number] => [m[0]!, m[1]!, m[2]!];
 
 /**
  * The authored-data-to-executable-constraint round trip: a door forged by
- * forgeProp — not hand-assembled — drives resolveFrame, and the constraint the
+ * forgeProp, not hand-assembled, drives resolveFrame, and the constraint the
  * AUTHOR declared as data clamps and reports while the declared driver drives.
  * This is the #603 promise made whole: an agent ships a spec, the engine
  * enforces it.
@@ -40,8 +40,8 @@ const basisX = (m: number[]): [number, number, number] => [m[0]!, m[1]!, m[2]!];
  * 1. The forged spec passes the gates, and its articulation feeds resolveFrame
  *    directly: an in-range 90° swing produces no violations and the mirror node
  *    follows the hinge (the declared copy driver drives).
- * 2. An over-limit 150° swing clamps to exactly the 110° unit quaternion — the
- *    hinge's world X basis lands at `(cos110°, 0, −sin110°)` — with the
+ * 2. An over-limit 150° swing clamps to exactly the 110° unit quaternion, the
+ *    hinge's world X basis lands at `(cos110°, 0, −sin110°)`, with the
  *    violations tagged by the FORGED profile's id.
  */
 export const test_film_forge_prop_door = (): void => {

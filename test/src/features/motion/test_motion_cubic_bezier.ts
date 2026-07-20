@@ -20,7 +20,7 @@ const throws = (task: () => void): boolean => {
  *
  * Scenarios:
  *
- * 1. Linear control points [0,0,1,1] reproduce the identity curve — output ≈ input
+ * 1. Linear control points [0,0,1,1] reproduce the identity curve: output ≈ input
  *    at 0.25 and 0.5 (to 1e-3, since Newton converges, not exactly).
  * 2. Any curve is pinned at its endpoints: a standard ease [0.42,0,0.58,1] returns
  *    exactly 0 at t=0 and 1 at t=1.
@@ -29,7 +29,7 @@ const throws = (task: () => void): boolean => {
  *    the solver must break safely (no NaN/Infinity from dividing by ~0) and
  *    still return a finite value within [0,1]. This exercises the safeguard
  *    branch a happy-path curve never reaches.
- * 4. `ease("cubicBezier", x)` — called without control points — falls back to the
+ * 4. `ease("cubicBezier", x)`, called without control points, falls back to the
  *    linear identity (the control points live on the keyframe, not here).
  * 5. Invalid scalars reject; finite out-of-range progress clamps.
  * 6. The bisection fallback: the legal steep curve [1,0,0,1] has x'(0.5)=0, so

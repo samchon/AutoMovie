@@ -1,5 +1,5 @@
 /**
- * What a walkable/standable surface _is_ in the set — semantic labeling for the
+ * What a walkable/standable surface _is_ in the set: semantic labeling for the
  * space layer, not geometry. A `floor` is the ground plane of a room or lot; a
  * `platform` is a raised standable top (a table, a stage, a crate lid); a
  * `ramp` is a sloped connector whose height varies along one axis. The closed

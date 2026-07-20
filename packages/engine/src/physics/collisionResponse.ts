@@ -17,7 +17,7 @@ import {
 } from "./impactRecoil";
 
 /**
- * A suggested collision response — the abstracted {@link IAutoMovieImpact}, the
+ * A suggested collision response: the abstracted {@link IAutoMovieImpact}, the
  * {@link IAutoMovieRecoilPush} its impulse maps to, and (when a struck chain is
  * given) the ROM-bounded flinch {@link IAutoMoviePose}. It is advice an agent
  * can accept, not an imposed result (see D010): a warning carries this so the
@@ -36,8 +36,8 @@ export interface IAutoMovieCollisionResponse {
 
 /**
  * Suggest how a collision resolves: run {@link resolveImpact} for the impulse,
- * bridge it to a recoil push, and — when a struck `chain` + `skeleton` are
- * given — bound that push by joint ROM into a flinch pose via
+ * bridge it to a recoil push, and (when a struck `chain` + `skeleton` are
+ * given) bound that push by joint ROM into a flinch pose via
  * {@link impactRecoil}. This is the reusable core the pipeline (and
  * {@link detectBodyCollision}) attaches to a contact warning; it wires together
  * resolveImpact and impactRecoil, whose consumer was previously missing.

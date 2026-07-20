@@ -38,19 +38,19 @@ const rotationsMatch = (
   );
 
 /**
- * `decomposeJointRotation` — the inverse of `jointToQuaternion`. The contract
+ * `decomposeJointRotation`: the inverse of `jointToQuaternion`. The contract
  * is the round-trip: `jointToQuaternion(decompose(q, axes), axes)` is the same
  * rotation as `q`, for any bone-local rotation and any orthonormal axis basis
- * (right- or left-handed). This is the lowering an IK solver needs — quaternion
+ * (right- or left-handed). This is the lowering an IK solver needs: quaternion
  * bone rotations back into clinical flexion/abduction/twist.
  *
  * Scenarios:
  *
  * 1. Round-trip on the right-handed arm basis for a spread of angle triples (pure
- *    flexion / abduction / twist, and mixed) — the reconstructed rotation
+ *    flexion / abduction / twist, and mixed): the reconstructed rotation
  *    matches the original on every probe vector.
  * 2. Round-trip on the left-handed default clinical basis (flex×abd = −twist),
- *    exercising the handedness correction — same match.
+ *    exercising the handedness correction: same match.
  * 3. Gimbal lock: abduction at exactly ±90° (flexion folds into twist) still
  *    round-trips, and the recovered abduction is ±90 with flexion pinned to 0.
  * 4. Pure-axis recovery reads the exact clinical angle back: a 40° flexion

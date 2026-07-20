@@ -1,6 +1,6 @@
 /**
- * The reaction the engine applies to whatever a projectile is detected striking
- * — carried on an {@link IAutoMovieLaunchAction} so the model says "shoot him
+ * The reaction the engine applies to whatever a projectile is detected striking,
+ * carried on an {@link IAutoMovieLaunchAction} so the model says "shoot him
  * off his horse" and the engine schedules the target's recoil at the _computed_
  * contact time, not a hand-timed one.
  *

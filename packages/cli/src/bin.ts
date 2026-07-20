@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { renderScaffold } from "./renderScaffold";
 import { writeFiles } from "./writeFiles";
 
-const USAGE = `autobe — scaffold an automovie project
+const USAGE = `autobe: scaffold an automovie project
 
 Usage:
   npx autobe start <directory> [--force]

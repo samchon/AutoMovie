@@ -1,7 +1,7 @@
 import { AutoMovieFaceWeight } from "./AutoMovieFaceWeight";
 
 /**
- * Chin traits of an {@link IAutoMovieFace}'s jaw — signed morph weights in `[-2,
+ * Chin traits of an {@link IAutoMovieFace}'s jaw: signed morph weights in `[-2,
  * 2]`, `0`/omitted meaning the template's chin unchanged.
  *
  * @author Samchon

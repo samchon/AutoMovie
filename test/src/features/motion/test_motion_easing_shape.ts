@@ -5,7 +5,7 @@ import { nclose } from "../internal/predicates";
 
 /**
  * Beyond their endpoints, the easing curves must have their characteristic
- * shapes — this is what makes motion feel linear, eased, or snapped rather than
+ * shapes. This is what makes motion feel linear, eased, or snapped rather than
  * merely landing in the right place. Pins the qualitative behaviour of each
  * named curve.
  *

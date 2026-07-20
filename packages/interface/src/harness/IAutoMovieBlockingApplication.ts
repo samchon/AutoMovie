@@ -4,9 +4,9 @@ import { IAutoMoviePointTarget } from "./IAutoMoviePointTarget";
 import { IAutoMovieTimingAnchor } from "./IAutoMovieTimingAnchor";
 
 /**
- * Stage 3 — **BLOCKING** (meso, per beat). Turn one beat's prose into a
+ * Stage 3: **BLOCKING** (meso, per beat). Turn one beat's prose into a
  * structured **shot plan**: what each actor is trying to do, the camera's
- * coverage, and the timing — but still as _intent_, not motion. The performance
+ * coverage, and the timing, but still as _intent_, not motion. The performance
  * stage turns the intent into engine action calls.
  *
  * Run once per beat (fan-out). The CoT slots (`analysis` → `rationale` →
@@ -24,7 +24,7 @@ export namespace IAutoMovieBlockingApplication {
      * where, what must change by the end of the beat, what the camera must
      * catch (the strike landing, the fall). Resolve timing conflicts. If this
      * is a **revise pass** (the shot came back from review), pull `getNotes`
-     * first and make every open note a concrete change to the blocking — never
+     * first and make every open note a concrete change to the blocking; never
      * re-block blind to the correction.
      */
     thinking: string;
@@ -41,13 +41,13 @@ export namespace IAutoMovieBlockingApplication {
 
     /**
      * What this beat is _for_ dramatically and what the viewer must read from
-     * it — the yardstick the visual review will judge against.
+     * it: the yardstick the visual review will judge against.
      */
     analysis: string;
 
     /**
      * Why this blocking serves the beat: why these actor intents, this camera
-     * choice, this timing. (The slot that catches retrofit — a plan with no
+     * choice, this timing. (The slot that catches retrofit: a plan with no
      * rationale is suspect.)
      */
     rationale: string;
@@ -62,7 +62,7 @@ export namespace IAutoMovieBlockingApplication {
     duration: number;
   }
 
-  /** One actor's intent — prose the performance stage compiles to action calls. */
+  /** One actor's intent: prose the performance stage compiles to action calls. */
   export interface IActorIntent {
     /** Scene node id. */
     node: string;
@@ -76,7 +76,7 @@ export namespace IAutoMovieBlockingApplication {
 
     /**
      * Optional sparse {@link IAutoMovieTimingAnchor}s pinning this actor's key
-     * moments on the beat timeline — the temporal skeleton the performance
+     * moments on the beat timeline: the temporal skeleton the performance
      * stage aligns its verbs to (and the order that fixes causality). Pin only
      * the moments that matter (the loose, the connect, the landing); leave the
      * fill to the engine. Omit for a beat with no critical timing.

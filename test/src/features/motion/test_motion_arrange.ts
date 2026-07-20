@@ -8,7 +8,7 @@ const spine = (m: ReturnType<typeof makePose>) =>
   m.joints.find((x) => x.bone === "spine");
 
 /**
- * `holdMotion` + `arrangeMotion` — the harness PERFORMANCE composer.
+ * `holdMotion` + `arrangeMotion`: the harness PERFORMANCE composer.
  *
  * Scenarios:
  *

@@ -32,7 +32,7 @@ const localOf = (
  * Scenarios:
  *
  * 1. The default basis is X/Z/Y; `jointToQuaternion` with no axes equals a pure
- *    flexion about X (and is NOT the about-Y rotation — the negative twin).
+ *    flexion about X (and is NOT the about-Y rotation, the negative twin).
  * 2. Passing an axes override rotates about the given axis: flexion under the
  *    humanoid arm basis is a rotation about Y.
  * 3. `HUMANOID_JOINT_AXES` remaps the whole arm chain (flexion→Y, abduction→Z,

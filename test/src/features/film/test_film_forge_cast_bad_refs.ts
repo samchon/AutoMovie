@@ -11,8 +11,8 @@ import { hasViolation } from "../internal/predicates";
  *
  * Scenarios (entry per index):
  *
- * 1. `ghost` — not in the cast → `type` on `$input.entries[0].node`.
- * 2. `knightA` — has modelRef "stickman" (imported) → `type` on
+ * 1. `ghost`: not in the cast → `type` on `$input.entries[0].node`.
+ * 2. `knightA`: has modelRef "stickman" (imported) → `type` on
  *    `$input.entries[1].node`.
  * 3. `knightB` with model id "wrong-id" → `type` on `$input.entries[2].model.id`.
  * 4. `knightB` again (duplicate) with `origin: "imported"` → `type` on

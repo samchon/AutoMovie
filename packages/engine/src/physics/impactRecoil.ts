@@ -18,7 +18,7 @@ export interface IAutoMovieRecoilPush {
 
 /**
  * Bridge an {@link IAutoMovieImpact}'s impulse to a recoil
- * {@link IAutoMovieRecoilPush} — the missing consumer between collision response
+ * {@link IAutoMovieRecoilPush}: the missing consumer between collision response
  * and flinch. The impulse magnitude (N·s) scaled by `gainDegPerImpulse` becomes
  * the `flexion` the struck body yields; {@link impactRecoil} then bounds that
  * push by joint ROM and spreads it down the chain. Kept deliberately simple
@@ -48,7 +48,7 @@ export const impulseToRecoilPush = (
  * bounds how far the impact _yields_ the joint, not where an un-pushed joint
  * rests. Without this, a joint whose ROM excludes 0 (an always-flexed elbow,
  * `min > 0`) would be dragged to its lower bound by a flinch that never touched
- * that axis — spurious motion the impact never caused. A non-zero push is bound
+ * that axis: spurious motion the impact never caused. A non-zero push is bound
  * to the range as before.
  */
 const clampAxis = (
@@ -74,13 +74,13 @@ const readPushAxis = (
 /**
  * Build the **flinch** a struck body yields under an impact: the reactive
  * `push` (a deflection driven by the impulse) propagates down a `chain` of
- * bones — from the contact bone toward the body — losing strength by `falloff`
+ * bones (from the contact bone toward the body) losing strength by `falloff`
  * each link, and **each joint only yields as far as its ROM allows**
  * ({@link IAutoMovieJointConstraint}). So what the hit _does_ to the body is
  * bounded by the same joint ranges the engine already validates against: a neck
  * can only snap so far, a spine only bend so much.
  *
- * This is the ROM-aware half of collision response — the reactive force decides
+ * This is the ROM-aware half of collision response: the reactive force decides
  * how hard the push is, the joint ROM decides how far the body actually goes.
  * The caller maps an {@link IAutoMovieImpact}'s impulse to the `push`
  * magnitude.

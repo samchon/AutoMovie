@@ -14,7 +14,7 @@ import { throwsError } from "../internal/predicates";
  * The bridge is an explicit conversion, so structural misuse throws instead of
  * silently dropping animated data: a motion articulating a bone the skeleton
  * does not have would bake to nothing (`resolvePose` ignores it), which is
- * lossy — the bridge refuses.
+ * lossy; the bridge refuses.
  *
  * Scenarios:
  *

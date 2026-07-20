@@ -14,14 +14,14 @@ const whole = () =>
   });
 
 /**
- * Chunk-slicing the caption track — the caption mirror of the chunk plan's
+ * Chunk-slicing the caption track, the caption mirror of the chunk plan's
  * frame-atomic rule: entries clip to the window and re-base to chunk-local
  * indices, so every chunk render carries its own caption sidecar.
  *
  * Scenarios (whole = 10 frames: duel `[0,2)`, aftermath `[2,10)`):
  *
  * 1. A middle window `[1,5)` clips both spans and re-bases them to `[0,1)` /
- *    `[1,4)` with captions intact — the hand-math oracle.
+ *    `[1,4)` with captions intact: the hand-math oracle.
  * 2. The full window `[0,10)` reproduces the whole sidecar exactly.
  * 3. A window past the end clamps to `frameCount` (frames re-based, count `end -
  *    frameStart`).
@@ -92,7 +92,7 @@ export const test_render_caption_slice = (): void => {
     throwsError(() => sliceCaptionSidecar(sidecar, 1, 5.5), "frameEnd"),
   );
   // A window whose start is AT the coverage end (frameStart == frameCount) or
-  // beyond it asks for frames the sidecar does not have — the render/caption
+  // beyond it asks for frames the sidecar does not have: the render/caption
   // frame-count mismatch. Before the guard this returned a NEGATIVE frameCount
   // (end - frameStart) and passed silently; now it throws, naming both counts.
   TestValidator.predicate(

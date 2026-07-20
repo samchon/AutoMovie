@@ -2,7 +2,7 @@
   "private": true,
   "name": "@automovie/station",
   "version": "0.1.0",
-  "description": "automovie monorepo — LLM structured-output engine for character/object motion",
+  "description": "automovie monorepo: LLM structured-output engine for character/object motion",
   "packageManager": "pnpm@10.6.4",
   "scripts": {
     "build": "pnpm --filter=./packages/** -r build",

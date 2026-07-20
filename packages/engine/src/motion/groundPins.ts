@@ -9,7 +9,7 @@ import { IAutoMovieFootLeg, IAutoMovieFootPlant } from "./plantFeet";
  * {@link validateGroundContact}'s contact test.
  *
  * It is extracted so the two consumers cannot disagree about what "planted"
- * means — {@link pinStanceTargets} groups the mask into stance runs for the
+ * means: {@link pinStanceTargets} groups the mask into stance runs for the
  * ground-IK pass, while the retarget contact pass reads it frame by frame to
  * decide which frames carry a contact worth preserving.
  *

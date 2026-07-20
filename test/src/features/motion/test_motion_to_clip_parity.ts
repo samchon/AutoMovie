@@ -17,19 +17,19 @@ import {
 /**
  * The S1 parity proof: `motionToClip` lowers a humanoid motion onto the general
  * node/clip model such that the general pipeline (`resolveFrame` = sampleClip →
- * composeScene) reproduces humanoid FK (`resolvePose` ∘ `sampleMotion`) — the
+ * composeScene) reproduces humanoid FK (`resolvePose` ∘ `sampleMotion`): the
  * fact that makes "the two motion models are the same thing" provable. At bake
  * sample times the two agree to float precision (both sides sample the same
  * clinical pose); between samples the piecewise-linear bake diverges from the
- * eased curve by O(step²) — for this 24 Hz, ≤120°/s, eased test motion the
+ * eased curve by O(step²); for this 24 Hz, ≤120°/s, eased test motion the
  * measured mid-sample maxima are ≈3.5e-3 m / ≈9.3e-6 quaternion deviation
  * (worst near the bezier knee where the easing curvature peaks), asserted with
  * ~2-4× headroom.
  *
  * Scenarios:
  *
- * 1. A nontrivial non-looping motion — multi-joint (shoulder two-axis, elbow, hips
- *    twist), easeInOut and cubicBezier segments, an animated root — holds
+ * 1. A nontrivial non-looping motion (multi-joint (shoulder two-axis, elbow, hips
+ *    twist), easeInOut and cubicBezier segments, an animated root) holds
  *    world-transform parity on every bone at every baked sample time (1e-6).
  * 2. Between samples (segment midpoints) the divergence stays bounded: positions
  *    within 8e-3 m, rotations within qclose 4e-5.

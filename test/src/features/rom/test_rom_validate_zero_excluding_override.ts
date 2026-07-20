@@ -12,7 +12,7 @@ import { nclose } from "../internal/predicates";
 /**
  * Detect and enforce must be one calculation: `validateJointRom` used to skip
  * `angle === 0` unconditionally, but a per-bone override may legally EXCLUDE
- * zero (`flexion: [10, 90]` — only min ≤ max is enforced), and `clampJointRom`
+ * zero (`flexion: [10, 90]`, only min ≤ max is enforced), and `clampJointRom`
  * moves that 0 to the min. Validation calling the authored 0 clean while the
  * clamp rewrites it broke the pair's contract (#1057). The zero skip exists
  * only for the IMMOBILE axis, where 0 is that axis's rest.
@@ -20,10 +20,10 @@ import { nclose } from "../internal/predicates";
  * Scenarios:
  *
  * 1. Flexion 0 against a zero-excluding `[10, 90]` override reports a `rom`
- *    violation at the axis path — and `clampJointRom` moves the same input to
+ *    violation at the axis path, and `clampJointRom` moves the same input to
  *    10 (clamp/validate parity).
  * 2. Zero on an immobile (`null`) axis of the same constraint stays clean, and a
- *    zero against a zero-INCLUDING range stays clean — the skip survives
+ *    zero against a zero-INCLUDING range stays clean: the skip survives
  *    exactly where it is correct.
  */
 export const test_rom_validate_zero_excluding_override = (): void => {

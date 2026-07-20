@@ -1,5 +1,5 @@
 /**
- * A **timing anchor** — a key moment pinned on the beat's local timeline. A
+ * A **timing anchor**: a key moment pinned on the beat's local timeline. A
  * sparse list of these is the coarse temporal skeleton (in-betweening's stage
  * one) the performance stage aligns its verbs to, so the dense action timing
  * follows a committed structure instead of being invented per-verb. Anchors are

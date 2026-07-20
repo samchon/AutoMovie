@@ -42,7 +42,7 @@ const modelWithConstraint = (constraint: IAutoMovieJointConstraint) => {
  *    violation on `swingDeg`: the most-retracted articulation the ranges allow
  *    already swings past the cone, so no pose satisfies both (#1245). Reported
  *    against the cone, since the ranges alone are unobjectionable.
- * 6. The non-firing twins — a box that excludes neutral but sits INSIDE a wide
+ * 6. The non-firing twins: a box that excludes neutral but sits INSIDE a wide
  *    cone is sound and must validate, in both the `min > 0` and `max < 0`
  *    directions. Rejecting these refused rigs the per-bone override exists to
  *    express (a limb that cannot fully extend), on a false premise (#1245).
@@ -118,7 +118,7 @@ export const test_validation_model_bone_constraint = (): void => {
   );
 
   // 5. box ∩ cone empty: the most-retracted articulation the ranges allow is
-  // (10, 10), which already swings 14.1° — past this 5° cone. No pose satisfies
+  // (10, 10), which already swings 14.1°, past this 5° cone. No pose satisfies
   // both, so the constraint is genuinely unsatisfiable.
   const emptyIntersection = validateModel({
     model: modelWithConstraint({
@@ -170,7 +170,7 @@ export const test_validation_model_bone_constraint = (): void => {
 
   // 6. the non-firing twins: a box that excludes neutral but sits inside a wide
   // cone admits poses and must validate. Oracle: the most-retracted pose is
-  // (10, 0) — swingConeAngle(10, 0) = 10° — comfortably inside a 95° cone.
+  // (10, 0): swingConeAngle(10, 0) = 10°, comfortably inside a 95° cone.
   TestValidator.equals(
     "a neutral-excluding flexion range inside a wide cone succeeds",
     validateModel({

@@ -33,7 +33,7 @@ const skeleton: IAutoMovieSkeleton = {
 };
 
 /**
- * `impactRecoil` — the reactive `push` propagates down a bone chain (losing
+ * `impactRecoil`: the reactive `push` propagates down a bone chain (losing
  * strength by `falloff` per link), and each joint yields only within its ROM.
  *
  * Scenarios:

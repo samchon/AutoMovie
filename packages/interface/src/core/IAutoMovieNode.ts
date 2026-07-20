@@ -2,7 +2,7 @@ import { IAutoMovieTransform } from "../geometry/IAutoMovieTransform";
 import { AutoMovieNodeKind } from "./AutoMovieNodeKind";
 
 /**
- * A node in the scene graph — the universal transformable element. Characters,
+ * A node in the scene graph: the universal transformable element. Characters,
  * props, bones, cameras, and lights are all nodes; this is the spine the whole
  * core model hangs from (glTF node = USD prim).
  *
@@ -12,7 +12,7 @@ import { AutoMovieNodeKind } from "./AutoMovieNodeKind";
  * parent-before-child. **A group is simply a node with children**
  * ({@link AutoMovieNodeKind} `group`): its TRS moves the subtree, its local
  * frame is the rotation pivot, and a {@link IAutoMovieChannelLimit} on its
- * rotation is a group-level ROM — no separate grouping concept exists.
+ * rotation is a group-level ROM; no separate grouping concept exists.
  *
  * Transform is parent-local TRS (never a matrix, so it stays animatable and
  * decomposed). Cross-node relationships (a sword following a hand) are

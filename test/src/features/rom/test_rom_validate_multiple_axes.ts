@@ -10,11 +10,11 @@ import { joint } from "../internal/fixtures";
 /**
  * Each axis is checked independently, so a single joint with several
  * out-of-range axes produces one violation per axis rather than collapsing into
- * one — giving the correction loop a precise, per-axis account of what to fix.
+ * one, giving the correction loop a precise, per-axis account of what to fix.
  *
  * Scenario: a shoulder driven to 999° on both flexion and twist files one
  * violation per offending axis. The combined swing cone also fires here, and
- * legitimately so — 999° of flexion composes to 279° of swing, past the
+ * legitimately so: 999° of flexion composes to 279° of swing, past the
  * shoulder's 180° cone, and a resting abduction axis does not exempt it (#1245:
  * the cone reads a resting axis as the 0 it actually renders). The assertion is
  * on per-axis presence rather than a raw count, so it pins the independence it

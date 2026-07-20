@@ -18,7 +18,7 @@ const assertFiniteVector = (name: string, vector: IAutoMovieVector3): void => {
 /**
  * A ballistic **projectile** launch: an origin, an initial velocity, and a
  * constant acceleration (gravity). This is the minimal state needed to fly an
- * arrow, a thrown spear, or any free body — the first taste of _simulation_
+ * arrow, a thrown spear, or any free body: the first taste of _simulation_
  * (state evolving under physical law) rather than authored keyframes.
  *
  * @author Samchon
@@ -66,7 +66,7 @@ export const projectileAt = (
 };
 
 /**
- * Bake a projectile's flight into an {@link IAutoMovieClip} for its scene node —
+ * Bake a projectile's flight into an {@link IAutoMovieClip} for its scene node:
  * position sampled from {@link projectileAt} at `fps`, plus a rotation track
  * that keeps the model's forward (+Z) pointing down the arc's velocity, so the
  * arrow noses over as it falls. This is the projectile half of the `launch`

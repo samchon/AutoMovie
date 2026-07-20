@@ -97,7 +97,7 @@ nulls the film; `commitBeatEnd`/`commitNotes` null the film).
 slate slices live as human-readable JSON files (`script.json`,
 `shots/<beat>.json`, ...), binary assets are tracked by the manifest
 (`registerAsset`), and every `get*`/`commit*`/render tool may then omit its
-`slate` to read from — and write through to — the project. Resident commits
+`slate` to read from (and write through to) the project. Resident commits
 are gated by the prerequisite ladder (script → scene → shots → beat
 ends/notes/film): an out-of-order commit **throws** an actionable prompt
 naming the missing rungs, and `nextSteps` returns the same computation as
@@ -124,19 +124,19 @@ For motion no thin verb covers (a sword kata, a character idiom), `perform`
 takes an **`enact`** action: **compute** the dense clip in code, pass it in
 `perform`'s `clips` registry, and reference it by id. The engine still masks it
 to its region, layers it with disjoint-region actions, and ROM-gates the
-composite — the registry is no back door around the shield. Clips are derived
+composite: the registry is no back door around the shield. Clips are derived
 output, never persisted; re-supply them on each `perform`.
 
 ## Two ways to consume
 
 MCP is the product boundary, but it is not the only door. The same deterministic
 engine is directly linkable: import [`@automovie/engine`](../engine) and
-`@automovie/interface` and program against the types — inject a custom
+`@automovie/interface` and program against the types: inject a custom
 `IAutoMovieActionSynthesizer` into `performShot`, call `validateMotion`/ROM as
 oracles, sample clips with `sampleMotion`/`sampleClip`. Use **MCP** for
 orchestrated film state, transactions, and the guided correction loop; use
 **direct linking** for code-native motion authoring and host integrations.
-`enact` is the bridge — compute a clip either way, one engine enforces it. See
+`enact` is the bridge: compute a clip either way, one engine enforces it. See
 the [`@automovie/engine` README](../engine#소비-방식-두-갈래) and scaffold a
 starter with `npx autobe start <dir>` ([`autobe`](../cli)).
 

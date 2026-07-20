@@ -62,7 +62,7 @@ const spec: IAutoMovieRenderSpec = {
  * `seeFrame` closes the render/see loop through a host-injected capture
  * adapter: the server plans the frame and the pass, the adapter owns the
  * renderer and returns the pixels, and the tool reports `captured` with the
- * image — while validation still runs before any capture, and a capture fault
+ * image, while validation still runs before any capture, and a capture fault
  * propagates as a real error rather than a fake success.
  *
  * Scenarios:
@@ -72,7 +72,7 @@ const spec: IAutoMovieRenderSpec = {
  *    with the adapter's image.
  * 2. The requested guide pass rides the request and tags the frame path.
  * 3. An unknown pass fails validation before the adapter is ever called.
- * 4. An adapter failure rejects the call — a host runtime fault is not wrapped as
+ * 4. An adapter failure rejects the call, a host runtime fault is not wrapped as
  *    a validation result.
  */
 export const test_mcp_see_frame_capture = async (): Promise<void> => {

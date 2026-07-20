@@ -11,7 +11,7 @@ import { nclose } from "../internal/predicates";
  * the same world point) must not poison the shared distance oracle. Before the
  * `Number.EPSILON` span floor, the segment direction `end - start` is the zero
  * vector, so the projection `0/0` was `NaN`, `lerp(start, end, NaN)` was `NaN`,
- * and the distance came back `NaN` — which slips every `distance < minimum`
+ * and the distance came back `NaN`, which slips every `distance < minimum`
  * collision test as `false`, silently passing a real overlap.
  *
  * `nclose` fails on `NaN` (it requires `Number.isFinite`), so each assertion
@@ -23,7 +23,7 @@ import { nclose } from "../internal/predicates";
  *    (`(3,4,0)` to the collapsed segment at the origin is `5`), degrading to
  *    the correct point-to-point measure rather than `NaN`.
  * 2. A zero-length segment overlapping a real segment: the four-candidate minimum
- *    is the true `0`, not `NaN` — the case a capsule whose centerline collapses
+ *    is the true `0`, not `NaN`: the case a capsule whose centerline collapses
  *    to a point must still flag when another capsule passes through it.
  * 3. A zero-length segment clear of a real segment: a finite, exact gap.
  */

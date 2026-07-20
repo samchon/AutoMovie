@@ -25,7 +25,7 @@ import {
 import { validateSpaceShape } from "./space";
 
 /**
- * Shared artifact validators over the MCP-facing scene/shot/sequence shapes —
+ * Shared artifact validators over the MCP-facing scene/shot/sequence shapes ,
  * consumed by both the standalone `validate*` tools and the `commit*`
  * preconditions, so a commit can never accept what validation would reject.
  */
@@ -164,7 +164,7 @@ export const validateSceneArtifact = (
   });
 
   // The ground the feet obey (#1173). Absent or null is the pre-space scalar
-  // plane, so only a declared space is checked — and it needs NO model: a
+  // plane, so only a declared space is checked, and it needs NO model: a
   // surface is semantics plus, in the viewer, generated geometry, never a
   // registry entry, so the model-resolution gate above deliberately ignores it.
   const space = scene.space ?? null;
@@ -403,7 +403,7 @@ export const validateSequenceArtifact = (
   );
 
   // cutSequence's minimum-entries gate: an empty cut-list is not a film, and
-  // this validator also guards the resident film.json slice on load — looser
+  // this validator also guards the resident film.json slice on load, looser
   // here meant an empty film validated clean, then the engine's cut refused
   // it (#1097). The validator/engine no-drift promise binds both directions.
   if (
@@ -654,7 +654,7 @@ const validateTransition = (
 };
 
 // Both call sites gate `entry` through `isRecord` first, so the parameter is
-// already narrowed — an unreachable defensive re-check here would be dead
+// already narrowed, an unreachable defensive re-check here would be dead
 // code the coverage gate rightly refuses to count (#1040).
 const entryDuration = (
   entry: Record<string, unknown>,

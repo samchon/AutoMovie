@@ -10,7 +10,7 @@ import {
 /**
  * Pins the happy path of the FORGE consumer and its join with staging: the one
  * cast member without a `modelRef` gets exactly one validated stand-in, keyed
- * by its node — and the staged scene's `modelRef ?? node` fallback resolves to
+ * by its node, and the staged scene's `modelRef ?? node` fallback resolves to
  * that forged model's id.
  *
  * Scenarios:
@@ -18,7 +18,7 @@ import {
  * 1. The duel cast (knightA imports "stickman", knightB has no modelRef) with one
  *    forge entry for knightB → success; `models` holds exactly knightB's rig
  *    with a skeleton.
- * 2. Chained into `stageScene`, knightB's scene node carries model "knightB" — the
+ * 2. Chained into `stageScene`, knightB's scene node carries model "knightB": the
  *    exact key `forgeCast` validated, closing the loop from forge to stage.
  */
 export const test_film_forge_cast_valid = (): void => {

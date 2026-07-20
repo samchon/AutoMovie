@@ -31,7 +31,7 @@ const assertFiniteQuaternion = (
 };
 
 /**
- * Bake continuous root **travel** onto an in-place locomotion cycle — turning a
+ * Bake continuous root **travel** onto an in-place locomotion cycle, turning a
  * walk/run that marches on the spot into one that actually crosses the floor.
  *
  * A locomotion clip (walk, run) is authored looping and stationary so its
@@ -40,17 +40,17 @@ const assertFiniteQuaternion = (
  * every loop boundary. `travelMotion` instead repeats `base` `cycles` times and
  * adds a root offset that grows **linearly with elapsed time** (`velocity · t`,
  * world meters/second). Because the offset is a continuous function of the
- * global time — not reset per cycle — it carries smoothly across every seam, so
+ * global time, not reset per cycle, it carries smoothly across every seam, so
  * the figure glides forward while its legs keep cycling. Any root transform the
  * base already carries (e.g. a hop's vertical bob) is preserved and the travel
  * is added on top.
  *
  * The result is an ordinary non-looping {@link IAutoMovieMotion} (it has a
- * finite extent in space), sampled like any other clip — and a camera can
+ * finite extent in space), sampled like any other clip, and a camera can
  * follow its root to keep the moving character in frame.
  *
  * `facing`, when given, orients the root by that rotation (composed onto any
- * rotation the base root already carries) — so a walk that travels sideways can
+ * rotation the base root already carries), so a walk that travels sideways can
  * turn the body to face where it is going instead of strafing.
  *
  * @author Samchon
@@ -72,7 +72,7 @@ export const travelMotion = (
   for (let c = 0; c < cycles; ++c) {
     for (const k of base.keyframes) {
       // drop the duplicate seam keyframe (a later cycle's time:0) so times stay
-      // strictly increasing — the prior cycle's final frame covers the pose,
+      // strictly increasing, the prior cycle's final frame covers the pose,
       // but the seam must carry the INCOMING cycle's first-segment easing
       // (sampleMotion eases each segment from its starting keyframe, #1012)
       if (c > 0 && k.time === 0) {

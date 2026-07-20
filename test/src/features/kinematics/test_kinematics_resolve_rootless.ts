@@ -12,13 +12,13 @@ const rest = {
 
 /**
  * `resolvePose` walks from null-parent roots. When no bone is a root, nothing
- * is walked: the result is an empty array — the load-bearing "partial return"
+ * is walked: the result is an empty array, the load-bearing "partial return"
  * contract graceful consumers (`retargetHumanoidMotion`'s rest-height measure,
  * the FK-reachability gate a validator uses) rely on to report a malformed rig
  * instead of crashing. {@link reachableBoneNames} answers the same "nothing is
  * reachable" without a separate FK pass, and a cyclic parent chain resolves to
  * the same empty result (every member has a non-null parent, so none is entered
- * from a root — and because a bone is reached only through its single parent,
+ * from a root, and because a bone is reached only through its single parent,
  * the walk cannot recurse infinitely).
  *
  * Scenario A (rootless): `spine`→`hips` and `chest`→`spine`, but no `hips`

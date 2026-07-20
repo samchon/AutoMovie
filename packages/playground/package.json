@@ -2,7 +2,7 @@
   "private": true,
   "name": "@automovie/playground",
   "version": "0.1.0",
-  "description": "automovie playground — a usable web UI: viewer viewport + humanoid character editor",
+  "description": "automovie playground, a usable web UI: viewer viewport + humanoid character editor",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -58,11 +58,11 @@ const run = (steps: number): Map<string, number[]> => {
  *
  * Scenarios:
  *
- * 1. After enough steps the chain laid out along +X has sagged downward — both
+ * 1. After enough steps the chain laid out along +X has sagged downward: both
  *    joints sit below the rest line, the tip lower than the mid.
  * 2. Each bone keeps its rest length exactly (the hard length constraint), so the
  *    joints ride a unit sphere around their parent.
- * 3. The same inputs replay bit-for-bit (determinism — the property that makes
+ * 3. The same inputs replay bit-for-bit (determinism: the property that makes
  *    spring usable in a reproducible render).
  * 4. Invalid integration parameters reject before the integrator reads world or
  *    local transforms.

@@ -24,7 +24,7 @@ const limit = (
  *
  * Scenarios:
  *
- * 1. A both-sides-null limit clamps nothing and reports no violation — the value
+ * 1. A both-sides-null limit clamps nothing and reports no violation: the value
  *    passes through untouched.
  * 2. A mixed limit (`min=[0,null,-5]`, `max=[10,null,50]`) on `[-3,99,100]`:
  *    component 0 underflows and clamps up to 0, component 1 is free on both

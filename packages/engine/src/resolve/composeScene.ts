@@ -24,13 +24,13 @@ const indexNodes = (
 };
 
 /**
- * The COMPOSE pass: turn a flat list of nodes — each with a parent-local TRS —
+ * The COMPOSE pass: turn a flat list of nodes (each with a parent-local TRS)
  * into a world matrix per node, walking parent-before-child.
  *
  * `localOverrides` carries the transforms the sample/constrain passes produced
  * for animated nodes; a node absent from the map keeps its rest-pose
  * {@link IAutoMovieNode} transform. Resolution is memoized and parent-driven, so
- * the input list may be in any order — a child seen before its parent pulls the
+ * the input list may be in any order. A child seen before its parent pulls the
  * parent in on demand.
  *
  * Composition is a real matrix product (via {@link Matrix4}) rather than TRS

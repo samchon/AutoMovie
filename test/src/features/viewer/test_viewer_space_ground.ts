@@ -67,7 +67,7 @@ const trianglesOf = (mesh: THREE.Mesh): THREE.Vector3[][] => {
   return out;
 };
 
-/** The right-hand face normal of one triangle — the winding, made numeric. */
+/** The right-hand face normal of one triangle: the winding, made numeric. */
 const faceNormal = (triangle: THREE.Vector3[]): THREE.Vector3 =>
   new THREE.Vector3()
     .subVectors(triangle[1]!, triangle[0]!)
@@ -79,7 +79,7 @@ const faceNormal = (triangle: THREE.Vector3[]): THREE.Vector3 =>
  * semantic ground while nothing rendered them, so a depth or mask pass of a
  * staged scene showed actors over a void: the only ground anywhere was a
  * `GridHelper`, and a grid is a `LineSegments` that every structural pass hides
- * first (#1226). Building the surfaces as real meshes is the whole fix — the
+ * first (#1226). Building the surfaces as real meshes is the whole fix: the
  * passes collect geometry as `traverse` ∩ `isMesh`, so the ground joins them
  * with no pass-side change.
  *
@@ -89,7 +89,7 @@ const faceNormal = (triangle: THREE.Vector3[]): THREE.Vector3 =>
  *    the surface, appended AFTER the nodes and lights so the mask palette's
  *    top-level child indexing leaves every node's color where it was.
  * 2. The floor faces UP: its four-vertex footprint fans into two triangles, and
- *    both right-hand face normals are +Y — the winding a single-sided override
+ *    both right-hand face normals are +Y: the winding a single-sided override
  *    material needs in order to draw at all (the counter-clockwise XZ hull fans
  *    to −Y, so the fan is deliberately reversed).
  * 3. A ramp lifts each vertex to its own interpolated height: over a 2 m axis
@@ -99,7 +99,7 @@ const faceNormal = (triangle: THREE.Vector3[]): THREE.Vector3 =>
  *    degenerate surface never reaches the GPU as invalid geometry.
  * 5. Both sides of the absent-space branch: `null` and an omitted field add no
  *    group, leaving the pre-space scene byte-for-byte as it was.
- * 6. A structural pass really does pick the ground up — the depth override swaps
+ * 6. A structural pass really does pick the ground up: the depth override swaps
  *    the ground mesh's material along with the actor's, which is exactly what
  *    the hidden grid never allowed.
  */

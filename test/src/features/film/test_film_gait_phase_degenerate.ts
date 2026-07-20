@@ -64,14 +64,14 @@ const phaseOf = (gaitCycle: IAutoMovieGaitCycle): number | null =>
   }).actors.find((a) => a.node === "hero")!.gaitPhase;
 
 /**
- * A carried gait cycle is authoritative for the beat-end stride phase — and its
+ * A carried gait cycle is authoritative for the beat-end stride phase, and its
  * degenerate forms answer null (matching the degenerate-duration rule of the
  * legacy loop path), never NaN or a bogus phase.
  *
  * Scenarios:
  *
  * 1. A valid carried cycle wins over `loop: false`: phase = (phaseAt + t) mod
- *    period, normalized into [0, period) — (0.7 + 0.5) mod 0.8 = 0.4.
+ *    period, normalized into [0, period): (0.7 + 0.5) mod 0.8 = 0.4.
  * 2. A zero, negative, or non-finite period answers null.
  * 3. A non-finite phaseAt answers null.
  */

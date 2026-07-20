@@ -43,7 +43,7 @@ import { IAutoMovieStagedSet } from "./stageScene";
  * A node's animated **world** position over shot time: its staged `base` plus
  * the node-local root displacement of `motion` at that instant, rotated into
  * the world by the node's staged `facing`. The read shared by a `follow` camera
- * tracking a walking actor and a `launch` leading a moving target — one place,
+ * tracking a walking actor and a `launch` leading a moving target, one place,
  * one convention (the root is node-local; the renderer applies it under the
  * same facing).
  */
@@ -119,7 +119,7 @@ const orderEvents = (
 /**
  * A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion
  * clips the compiler synthesised for it. The clips travel alongside the shot
- * because the shot references them by id — the host registers them wherever its
+ * because the shot references them by id, the host registers them wherever its
  * clip store lives.
  *
  * @author Samchon
@@ -151,7 +151,7 @@ export namespace IAutoMoviePerformedShot {
 }
 
 /**
- * The PERFORMANCE consumer — fold one beat's action calls into an
+ * The PERFORMANCE consumer, fold one beat's action calls into an
  * {@link IAutoMovieShot} through {@link compilePerformance}, gating both sides of
  * the seam: the calls must reference the staged world (a beat the script
  * planned, actors the stage placed), and the clips the synthesizer fattened
@@ -161,7 +161,7 @@ export namespace IAutoMoviePerformedShot {
  *
  * Camera `frame` actions elect the live camera and author its move: the first
  * one names the shot's camera (staging aimed it already), rival `frame` calls
- * on a second camera are a violation — one take, one live camera — and the
+ * on a second camera are a violation, one take, one live camera, and the
  * elected camera's frame actions compile into `cameraMotion` through
  * {@link compileCameraMove}'s framing grammar. Frame subjects must resolve to a
  * point (node/point/group), and same-camera moves must not overlap in time. A
@@ -170,17 +170,17 @@ export namespace IAutoMoviePerformedShot {
  * fails.
  *
  * `launch` actions are compiled through {@link compileLaunch}: the projectile (a
- * staged scene node) gets its baked flight as a shot `objectMotion`, and — for
- * a node aim carrying `onHit` — the struck actor's recoil is folded into the
+ * staged scene node) gets its baked flight as a shot `objectMotion`, and, for
+ * a node aim carrying `onHit`, the struck actor's recoil is folded into the
  * action list at the **engine-computed** contact, so it rides the same
  * synthesis and ROM gate as an authored `react`. The projectile must be staged,
  * the aim must resolve to a point, and the shot must reach the target at the
- * given speed — each an input violation otherwise.
+ * given speed, each an input violation otherwise.
  *
  * `attachTo` actions are compiled through {@link compileAttach} once the parent
  * pose is known: the coupled child (a prop, not a rig) gets a shot
  * `objectMotion` that rides the parent's bone in scene space each frame. The
- * parent must be a staged, rigged node carrying the named bone — each an input
+ * parent must be a staged, rigged node carrying the named bone, each an input
  * violation otherwise.
  *
  * Staged `mounts` (the persistent couplings staging declared, #674) descend
@@ -209,8 +209,8 @@ export const performShot = (props: {
    * The gait names each actor's context supplies, for validating `locomote`
    * actions: a `locomote` naming a gait this lookup does not list for the actor
    * is a `type` violation, so the reference synthesiser never silently drops it
-   * (an unresolved gait produces no motion). Omit — or return `undefined` for a
-   * node — to skip the check (byte-identical to before: no gait gate).
+   * (an unresolved gait produces no motion). Omit, or return `undefined` for a
+   * node, to skip the check (byte-identical to before: no gait gate).
    */
   gaits?: (node: string) => readonly string[] | undefined;
   /**
@@ -347,7 +347,7 @@ export const performShot = (props: {
       out.push(
         "type",
         path,
-        `${subject} must resolve to a point — a node/point/group of placed actors, not "${targetKindName(target)}"`,
+        `${subject} must resolve to a point, a node/point/group of placed actors, not "${targetKindName(target)}"`,
         target,
       );
       return null;
@@ -358,7 +358,7 @@ export const performShot = (props: {
   let liveCamera: string | null = null;
   const stageActions: IAutoMovieActionCall[] = [];
   const frames: { action: IAutoMovieCameraAction; index: number }[] = [];
-  // Launch jobs collected while validating — the projectile must be a staged
+  // Launch jobs collected while validating, the projectile must be a staged
   // node and the target must resolve to a point; compiled after the input
   // gate (below) into the projectile's flight and the target's scheduled react.
   const launches: {
@@ -368,7 +368,7 @@ export const performShot = (props: {
     target: IAutoMovieVector3;
     targetNode: string | null;
   }[] = [];
-  // Attach jobs — the parent must be a staged, rigged node carrying the target
+  // Attach jobs, the parent must be a staged, rigged node carrying the target
   // bone; the child's follow-clip is baked after the parent's pose compiles.
   const attachments: {
     action: IAutoMovieActionCall & { verb: "attachTo" };
@@ -480,7 +480,7 @@ export const performShot = (props: {
       out.push(
         "range",
         `${base}[${i}].duration`,
-        `an "auto" duration leaves no span when the action starts at the shot end (${performance.duration}s) — start earlier`,
+        `an "auto" duration leaves no span when the action starts at the shot end (${performance.duration}s), start earlier`,
         action.duration,
       );
     if (
@@ -516,7 +516,7 @@ export const performShot = (props: {
         "a frame subject",
       );
       // The two lens INTENTS (#1187): validated like any target/scalar, but
-      // never consumed by the camera solve — they ride to shot.cameraIntent.
+      // never consumed by the camera solve, they ride to shot.cameraIntent.
       if (action.focus !== undefined)
         resolvePositionalTarget(
           action.focus,
@@ -554,7 +554,7 @@ export const performShot = (props: {
         out.push(
           "type",
           `${base}[${i}].actor`,
-          `one live camera per shot — "${liveCamera}" already frames it`,
+          `one live camera per shot, "${liveCamera}" already frames it`,
           camera,
         );
       if (target !== null) frames.push({ action, index: i });
@@ -704,7 +704,7 @@ export const performShot = (props: {
           out.push(
             "type",
             `${base}[${i}].at`,
-            `a ${action.kind} gesture target must resolve to a point — a node/point/group of placed actors`,
+            `a ${action.kind} gesture target must resolve to a point, a node/point/group of placed actors`,
             action.at,
           );
       } else if (action.verb === "attachTo") {
@@ -782,7 +782,7 @@ export const performShot = (props: {
       out.push(
         "range",
         `${base}[${frames[i + 1]!.index}].start`,
-        `frame moves overlap — the previous move runs until ${end}s, but this one starts at ${frames[i + 1]!.action.start}s`,
+        `frame moves overlap, the previous move runs until ${end}s, but this one starts at ${frames[i + 1]!.action.start}s`,
         frames[i + 1]!.action.start,
       );
   }
@@ -816,7 +816,7 @@ export const performShot = (props: {
         if (b0 >= a1 - 1e-9) break;
         const bRegion = actionRegion(b.action);
         const sameRegionConflict = aRegion === bRegion;
-        // `face` carries EXPRESSION only — no gesture clip authors it, so a
+        // `face` carries EXPRESSION only, no gesture clip authors it, so a
         // fullBody action shares zero content with an overlapping emote and
         // "smile while bowing" must stay legal (#1062). `head` stays in the
         // conflict: whole-body clips may author head/neck joints.
@@ -847,7 +847,7 @@ export const performShot = (props: {
   // realize that plan, not another one. The beat and duration must match,
   // every timing anchor must be covered by some action of its actor (an
   // anchored key moment nobody performs is a dropped beat), and the camera
-  // intent must be honoured by the first frame move — or, for a static
+  // intent must be honoured by the first frame move, or, for a static
   // intent, a locked-off camera will do.
   if (blocking !== undefined) {
     if (blocking.beat !== performance.beat)
@@ -924,7 +924,7 @@ export const performShot = (props: {
 
   // Launch: solve each aim, bake the projectile's flight into an object clip,
   // and fold the target's engine-timed recoil into the action list so the
-  // performance compiles it. Do this before `compilePerformance` — the injected
+  // performance compiles it. Do this before `compilePerformance`, the injected
   // reacts must ride the same synthesis and ROM gate as authored ones. A launch
   // that cannot reach its target at the given speed is a range violation.
   const objectMotions: IAutoMovieClip[] = [];
@@ -933,7 +933,7 @@ export const performShot = (props: {
   for (const job of launches) {
     // Lead a moving target: when the struck node travels during the shot (it
     // carries a `locomote`), resolve where it WILL be rather than aiming at its
-    // start. Compile just that node's own motion for the animated position —
+    // start. Compile just that node's own motion for the animated position ,
     // node-local root rotated into the world by its staged facing, the same
     // read a `follow` camera uses. Its own recoil fires at impact, past the
     // lead window, so it does not perturb the pre-hit path. A static target
@@ -950,7 +950,7 @@ export const performShot = (props: {
       targetAt = animatedBaseAt(
         nodePositions.get(job.targetNode)!,
         nodeRotations.get(job.targetNode)!,
-        // just this node's own motion — its recoil fires at impact, past the
+        // just this node's own motion, its recoil fires at impact, past the
         // lead window, so it never perturbs the pre-hit path being sampled.
         compilePerformance(
           stageActions.filter((action) => targetsNode(action)),
@@ -968,7 +968,7 @@ export const performShot = (props: {
       out.push(
         "range",
         `${base}[${job.index}].speed`,
-        `the launch cannot reach its target at ${job.action.speed} m/s — raise the speed or move the shooter closer`,
+        `the launch cannot reach its target at ${job.action.speed} m/s, raise the speed or move the shooter closer`,
         job.action.speed,
       );
       continue;
@@ -977,13 +977,13 @@ export const performShot = (props: {
     // so it launches at the action's start and lands exactly when the react
     // fires (start + hitTime). Times shift by start; the clip spans the shot,
     // holding at the origin before launch and at the target after (sampleClip
-    // clamps) — the same shot-local convention as `cameraMotion`.
+    // clamps), the same shot-local convention as `cameraMotion`.
     const hitAt = job.action.start + result.hitTime;
     if (hitAt > performance.duration + 1e-9) {
       out.push(
         "range",
         `${base}[${job.index}].speed`,
-        `the launch lands at ${hitAt}s, outside the shot ending at ${performance.duration}s — fire earlier, raise the speed, or lengthen the shot`,
+        `the launch lands at ${hitAt}s, outside the shot ending at ${performance.duration}s, fire earlier, raise the speed, or lengthen the shot`,
         job.action.speed,
       );
       continue;
@@ -1011,7 +1011,7 @@ export const performShot = (props: {
     );
     // The injected react stays EXEMPT from the region-overlap gate (#1003
     // decision): the engine schedules it at a computed hit instant the model
-    // cannot know, and the flagship idiom is a MOVING target — rejecting the
+    // cannot know, and the flagship idiom is a MOVING target, rejecting the
     // overlap would make `onHit` unusable exactly where it matters. The
     // layering envelope bounds its blend to the flinch window, so the
     // disruption reads as the hit interrupting the stride, not as a
@@ -1037,7 +1037,7 @@ export const performShot = (props: {
   // Couple objects: bake the per-beat `attachTo` handoffs and the persistent
   // staged `mounts` into follow clips now that the parents' poses have compiled
   // (see {@link coupleObjects}). Mount preconditions (parent rig, saddle bone)
-  // surface as violations here — the first place with skeleton access.
+  // surface as violations here, the first place with skeleton access.
   const coupled = coupleObjects({
     attachments,
     mounts: staged.mounts,
@@ -1102,7 +1102,7 @@ export const performShot = (props: {
       events: orderEvents(events),
       // Directorial intent per frame span (#1187): the focus subject resolves
       // to a world point the same way `on` did; the solve itself never reads
-      // these — a diffusion/render host does, beside cameraMotion.
+      // these, a diffusion/render host does, beside cameraMotion.
       cameraIntent: frames.map(({ action }) => ({
         start: action.start,
         framing: action.framing,

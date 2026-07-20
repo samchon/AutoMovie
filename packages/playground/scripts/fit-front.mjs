@@ -36,7 +36,7 @@ const cell = ref.views.front;
 
 // Front axes that each clearly OWN one of the measured ratios. No depth axes
 // (noseLength/bridge*/tip projection live in the profile fit), and no
-// lower-face axes the front ratios can't constrain (jaw/chin) — including those
+// lower-face axes the front ratios can't constrain (jaw/chin). Including those
 // only invites degenerate overfits. eyeToNose/eyeToMouth are vertical, so they
 // are driven by noseBaseHeight / mouthHeightPosition, NOT by depth length.
 // Only axes that OWN a hair-robust lower-face metric. Dropped: eyeSpacing
@@ -65,7 +65,7 @@ const penalty = (vals) => {
 
 // Only ratios that are RELIABLE on the clay render: face width (jaw/cheek
 // contour), iris-centre spacing (the iris discs are clear), nose-wing & mouth
-// width, and vertical positions. Eye CORNER / eye-WIDTH metrics are dropped —
+// width, and vertical positions. Eye CORNER / eye-WIDTH metrics are dropped:
 // the clay eyes are crude inserted geometry and MediaPipe's corner detection on
 // them is noisy (it lured the optimizer into a degenerate eyeWidth).
 const ratios = (lm, w, h) => {

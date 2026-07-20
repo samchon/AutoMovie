@@ -133,7 +133,7 @@ const OBJECT: IAutoMovieModel = {
  * The AST → glTF binary export (`exportModelToGLB`), the export half of the
  * glTF round-trip. Pins that a model's skeleton becomes a node hierarchy, its
  * parts become mesh nodes (rigid parts parented to their bone), and its
- * materials map onto glTF metallic-roughness — verified by reading the emitted
+ * materials map onto glTF metallic-roughness, verified by reading the emitted
  * `.glb` back with an independent glTF reader.
  *
  * Scenarios:
@@ -147,7 +147,7 @@ const OBJECT: IAutoMovieModel = {
  *    - NORMAL + indices, and the one material attached.
  * 3. A skeletonless object with a raw, non-indexed, norm-less mesh and no material
  *    exports the bare positions only (no NORMAL, no indices, no material
- *    binding) — the negative twin of the character's every branch.
+ *    binding): the negative twin of the character's every branch.
  * 4. The transparent/emissive material on the object becomes a BLEND material with
  *    an emissive factor.
  */

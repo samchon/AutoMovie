@@ -9,12 +9,12 @@ import { throwsError } from "../internal/predicates";
 /**
  * Binary assets are first-class managed artifacts (#614): the manifest tracks
  * project-relative paths, bytes write atomically when supplied, and nothing is
- * ever silently overwritten — an existing registration or an existing file is a
+ * ever silently overwritten, an existing registration or an existing file is a
  * refusal, not a replace.
  *
  * Scenarios:
  *
- * 1. Registering with bytes writes the file and the manifest index — and the index
+ * 1. Registering with bytes writes the file and the manifest index, and the index
  *    survives reopen (durability).
  * 2. Registering the same path twice throws (assets are never replaced).
  * 3. Bytes aimed at an existing file throw (never overwrite), while registering

@@ -40,14 +40,14 @@ interface IAxisAccumulator {
  * axis (flexion / abduction / twist), the result is the weight-normalized sum
  * of the layers that set that axis. A `null` axis contributes nothing and does
  * not dilute the others, so a single layer at weight 1 reproduces its own value
- * exactly — which makes this a drop-in for the last-wins {@link mergePoses} on
+ * exactly, which makes this a drop-in for the last-wins {@link mergePoses} on
  * the disjoint-region layering path (no bone is set twice there), while adding
  * real blending when layers genuinely overlap on an axis (e.g. a carry pose
  * plus a reaction flinch on the same arm).
  *
  * The blend never clamps: a weighted result outside a joint's ROM stays out of
- * range so `validateMotion` reports it — the model must reweigh or reposition,
- * the engine does not hide it (D007). Root: the last `ownsRoot` layer, else the
+ * range so `validateMotion` reports it. The model must reweigh or reposition,
+ * the engine does not hide it. Root: the last `ownsRoot` layer, else the
  * last non-null root; skeleton: the first layer's. The input must be
  * non-empty.
  *

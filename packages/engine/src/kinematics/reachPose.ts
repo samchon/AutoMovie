@@ -14,7 +14,7 @@ import { twoBoneChainArticulation } from "./twoBoneChainArticulation";
 /**
  * Analytic two-bone IK for an arm: the {@link IAutoMoviePose} (upper-arm +
  * forearm articulation) that brings the `side` hand onto `target`, in the
- * skeleton's own model space. This is the harness `reach` verb made concrete —
+ * skeleton's own model space. This is the harness `reach` verb made concrete:
  * the model says "put your right hand on the lever" and the engine solves the
  * shoulder and elbow that land it there, deterministically, no solver
  * iteration.
@@ -27,7 +27,7 @@ import { twoBoneChainArticulation } from "./twoBoneChainArticulation";
  * unreachable target extends the arm fully toward it (the hand stops on the
  * reachable shell) rather than failing.
  *
- * Returns `null` if the arm bones are missing or degenerate — a rig that cannot
+ * Returns `null` if the arm bones are missing or degenerate, a rig that cannot
  * reach.
  *
  * @author Samchon

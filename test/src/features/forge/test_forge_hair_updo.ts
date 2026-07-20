@@ -3,7 +3,7 @@ import { TestValidator } from "@nestia/e2e";
 
 /**
  * `updo` gathers the drape: at full lift the back/side strands end near the
- * nape instead of falling by `length`, and the A-line flare collapses — bound
+ * nape instead of falling by `length`, and the A-line flare collapses: bound
  * hair hugs the skull. Same parameters otherwise, so the comparison isolates
  * the new control.
  *

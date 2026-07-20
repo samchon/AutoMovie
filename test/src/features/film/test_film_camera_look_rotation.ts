@@ -12,16 +12,16 @@ const RIGHT: IAutoMovieVector3 = { x: 1, y: 0, z: 0 };
  * the demo's orbit shot exposed a rolled horizon, because a shortest arc from
  * −Z has no notion of "up". `lookRotation` must point −Z down the requested
  * direction AND keep the camera's local X horizontal (no roll) for every
- * direction — including the straight-up/down degenerates and the quaternion
+ * direction, including the straight-up/down degenerates and the quaternion
  * conversion's non-w branches.
  *
  * Scenarios (each direction: forward lands on it, unit quaternion, and the
  * rotated X axis stays level):
  *
  * 1. Straight ahead (−Z) → identity.
- * 2. Behind (+Z), pure sides (±X) — the 180° family that leaves the w-trace.
+ * 2. Behind (+Z), pure sides (±X): the 180° family that leaves the w-trace.
  * 3. Compound diagonals (the orbit path's actual aims).
- * 4. Straight down and straight up — the up-parallel degenerates, resolved against
+ * 4. Straight down and straight up: the up-parallel degenerates, resolved against
  *    the +Z reference (roll is unconstrained there, so only the forward mapping
  *    is pinned).
  */

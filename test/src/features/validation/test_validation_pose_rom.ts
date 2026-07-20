@@ -6,7 +6,7 @@ import { hasViolation } from "../internal/predicates";
 
 /**
  * Pose validation runs the ROM verifier over every joint, so an anatomically
- * impossible pose is rejected — the engine's core differentiator surfacing at
+ * impossible pose is rejected: the engine's core differentiator surfacing at
  * the whole-pose level, not just the bare-joint level.
  *
  * Scenario: an elbow bent to 175° flexion (past its 150° limit) fails, with a

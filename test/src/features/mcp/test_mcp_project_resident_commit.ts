@@ -18,7 +18,7 @@ const script: IAutoMovieScript = {
 
 /**
  * Resident commits (#614): once a project is open, commit tools omitting their
- * slate transform the RESIDENT slate and write through — the project files
+ * slate transform the RESIDENT slate and write through, the project files
  * mirror the returned slate, including the upstream-edit invalidation cascade.
  * An explicit slate keeps the tool a pure transform that never touches the
  * project.
@@ -31,7 +31,7 @@ const script: IAutoMovieScript = {
  * 3. CommitScene with no slate reads the resident script as its base (the
  *    cross-slice precondition holds without re-sending state) and persists
  *    `scene.json`.
- * 4. Re-committing the script clears the downstream scene — the invalidation
+ * 4. Re-committing the script clears the downstream scene, the invalidation
  *    cascade is visible as `scene.json` disappearing.
  * 5. A commit with an EXPLICIT slate does not touch the resident files (the
  *    stateless twin), and a failed resident commit writes nothing.

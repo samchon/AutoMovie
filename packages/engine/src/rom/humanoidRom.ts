@@ -44,7 +44,7 @@ const FINGER = constraint(range(-20, 100), null, null);
  * per-bone via {@link IAutoMovieBone.constraint} (a contortionist, a stylized
  * non-human rig); this table is only the fallback.
  *
- * These numbers are a deliberate, documented baseline — good enough to reject
+ * These numbers are a deliberate, documented baseline: good enough to reject
  * grossly impossible poses (a backward elbow, a hyper-extended knee). Sourcing
  * exact per-population norms is tracked as future work.
  *
@@ -57,7 +57,7 @@ const FINGER = constraint(range(-20, 100), null, null);
  * so max-flexion + max-abduction trips it); the SHOULDER cone is deliberate
  * headroom (#1058, decision 310): the swing metric never exceeds 180°, and a
  * pure-plane 180° (arm straight overhead) must stay legal, so no cap below 180
- * is possible without rejecting canonical overhead poses — the value documents
+ * is possible without rejecting canonical overhead poses. The value documents
  * the sourced anatomical bound rather than gating anything.
  *
  * @author Samchon

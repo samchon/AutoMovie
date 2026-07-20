@@ -4,7 +4,7 @@ import {
 } from "./captionSidecar";
 
 /**
- * Slice the sidecar to one chunk's window `[frameStart, frameEnd)` — the
+ * Slice the sidecar to one chunk's window `[frameStart, frameEnd)`: the
  * caption mirror of `planChunkedSequenceRender`'s frame-atomic rule: entries
  * clipped to the window and re-based to chunk-local frame indices, so every
  * chunk's render carries its own caption track. (The caption side of what
@@ -24,7 +24,7 @@ export const sliceCaptionSidecar = (
       `frameEnd must be an integer > frameStart, but was ${frameEnd}`,
     );
   // A window whose start is at or past the sidecar's coverage asks for captions
-  // of frames the sidecar does not have — a render/caption frame-count mismatch
+  // of frames the sidecar does not have, a render/caption frame-count mismatch
   // (e.g. the sidecar was planned at a different fps). Clamping frameEnd alone
   // would leave `end - frameStart` negative and pass a broken slice silently;
   // surface the mismatch instead, the same discipline as the checks above.

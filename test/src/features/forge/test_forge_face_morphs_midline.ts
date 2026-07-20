@@ -5,7 +5,7 @@ import { TestValidator } from "@nestia/e2e";
  * A paired feature's side-ownership gate must split an exact tie, not double
  * it. A vertex on the mirror midline (`x === 0`) is equidistant from a paired
  * feature's two centers, so both sides' gaussians are equal; a plain `>=` gave
- * such a vertex the FULL gaussian from both targets — a 2× deformation spike
+ * such a vertex the FULL gaussian from both targets: a 2× deformation spike
  * down the centerline (glabella, nose bridge, philtrum), #1256. The fix splits
  * the tie 0.5/0.5, keeping the combined field continuous as `x → 0`.
  *
@@ -15,7 +15,7 @@ import { TestValidator } from "@nestia/e2e";
  *    equal (the split), so neither side owns the tie alone.
  * 2. The combined R+L deformation at a midline vertex is CONTINUOUS across the
  *    seam: nudging that vertex a hair off the midline (so one side owns it
- *    outright) barely changes its combined delta — it does NOT halve, which is
+ *    outright) barely changes its combined delta: it does NOT halve, which is
  *    what a 2×-at-the-tie spike would show.
  */
 export const test_forge_face_morphs_midline = (): void => {

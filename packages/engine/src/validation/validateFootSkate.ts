@@ -52,7 +52,7 @@ export interface IAutoMovieFootContactWindow {
  * stylized gestures can all move feet legally unless the caller marks a foot as
  * planted for a particular time span.
  *
- * Foot skate is a physical-plausibility **warning**, not a gate (D015): the run
+ * Foot skate is a physical-plausibility **warning**, not a gate: the run
  * still succeeds and the warning surfaces so the orchestrator can plant the
  * foot (IK), restage, or acknowledge a deliberate slide with `physicsIntent`.
  * Only malformed annotations (bad bone, window, or rate) are errors.
@@ -83,7 +83,7 @@ export const validateFootSkate = (props: {
 
   /**
    * Marker that opts the clip out of the foot-plant expectation. Foot skate is
-   * a physical-plausibility warning, not a gate (D015) — a deliberate slide (a
+   * a physical-plausibility warning, not a gate: a deliberate slide (a
    * moonwalk, a skate, a comedic scoot) sets this and the matching warnings are
    * suppressed. Malformed annotations (bad bone, window, rate) stay errors.
    */

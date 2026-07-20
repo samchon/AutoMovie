@@ -2,14 +2,14 @@ import { Vector3 } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * `Vector3.cross` follows the right-handed convention — the single most
+ * `Vector3.cross` follows the right-handed convention: the single most
  * consequential sign decision in the engine, since every rotation axis, surface
  * normal, and world transform downstream inherits this handedness.
  *
  * Scenarios:
  *
  * 1. The three cyclic basis products: X×Y=Z, Y×Z=X, Z×X=Y.
- * 2. Anti-commutativity — reversing the operands negates the result, so Y×X=−Z.
+ * 2. Anti-commutativity: reversing the operands negates the result, so Y×X=−Z.
  *    Together these pin both the magnitude and the orientation of the product.
  */
 export const test_math_vector3_cross = (): void => {

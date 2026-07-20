@@ -9,7 +9,7 @@ import { throwsError } from "../internal/predicates";
 /**
  * Opening an existing project is a pure read (#700): a fresh directory gets its
  * manifest created once, but reopening an unchanged project must not rewrite
- * the file — an activation that churned the mtime would turn a `get*` read into
+ * the file, an activation that churned the mtime would turn a `get*` read into
  * a disk write, and a round-trip that reserialized through the known-fields
  * type would drop any host/future manifest field. A real mutation
  * (`registerAsset`) still rewrites, and must carry the unknown field through.
@@ -18,7 +18,7 @@ import { throwsError } from "../internal/predicates";
  *
  * 1. A fresh dir → the manifest is created with `{version, assets}`.
  * 2. Reopening an unchanged project leaves the manifest file byte-identical (no
- *    write on open) — including an unknown `future` field a newer host wrote.
+ *    write on open), including an unknown `future` field a newer host wrote.
  * 3. A mutation (`registerAsset`) rewrites the manifest yet preserves the unknown
  *    `future` field (the spread keeps it).
  * 4. A parseable but invalid manifest shape reports a project-state repair error

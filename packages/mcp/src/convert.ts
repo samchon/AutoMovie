@@ -21,14 +21,14 @@ import {
  * The MCP ⇄ engine motion bridge. The LLM JSON schema cannot express tuples, so
  * keyframe cubic-bezier controls cross the MCP boundary as named `{x1, y1, x2,
  * y2}` objects ({@link IAutoMovieMcpBezier}) and are converted to and from the
- * engine's `[x1, y1, x2, y2]` tuple here — the single place both directions
+ * engine's `[x1, y1, x2, y2]` tuple here, the single place both directions
  * live, so they cannot drift apart.
  */
 
 /**
  * Lower an MCP placement transform onto the engine's {@link IAutoMovieTransform}
  * (#723, D016): the semantic Euler rotation becomes a quaternion via
- * {@link Quaternion.fromEuler}, and an omitted/`null` rotation is identity — so
+ * {@link Quaternion.fromEuler}, and an omitted/`null` rotation is identity, so
  * the LLM authors placements in degrees it understands and never emits a raw
  * quaternion. Translation and scale pass through unchanged.
  */
@@ -116,7 +116,7 @@ const toEnginePropDriver = (
   driver: IAutoMovieMcpPropDriver,
 ): IAutoMovieDriver => {
   if (driver.type !== "driven") return driver;
-  // Strip the MCP-form ranges and re-add engine tuples only when present — a
+  // Strip the MCP-form ranges and re-add engine tuples only when present, a
   // curve-driven driver omits both, so it must not carry a dead range (#724).
   const { inRange, outRange, ...rest } = driver;
   return {

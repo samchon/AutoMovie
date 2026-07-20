@@ -27,7 +27,7 @@ engine it targets.
 
 ## API
 
-The renderer and writer are exported for programmatic use — the render step
+The renderer and writer are exported for programmatic use: the render step
 returns an in-memory file map, and writing is a separate call, so the same
 output can be asserted in a test or written by another consumer:
 

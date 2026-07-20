@@ -4,13 +4,13 @@ import { TestValidator } from "@nestia/e2e";
 import { qclose, qunit } from "../internal/predicates";
 
 /**
- * `Quaternion.inverse` is the normalized conjugate — the single source both IK
+ * `Quaternion.inverse` is the normalized conjugate, the single source both IK
  * lowerings (two-bone, affordance seat) now share instead of a private copy.
  *
  * Scenarios:
  *
  * 1. For a unit quaternion `q`, `q * inverse(q) = identity` (the defining property
- *    of an inverse) — hand case: a 90° rotation about +Y composed with its
+ *    of an inverse). Hand case: a 90° rotation about +Y composed with its
  *    inverse returns to identity.
  * 2. The inverse of a rotation about +Y by 90° equals a rotation about +Y by −90°
  *    (conjugate flips the vector part, keeps `w`).

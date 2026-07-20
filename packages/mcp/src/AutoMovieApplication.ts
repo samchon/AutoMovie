@@ -78,7 +78,7 @@ import { ValidationService } from "./services/ValidationService";
 /**
  * AutoMovie's deterministic motion-control engine, exposed as MCP tools:
  * declarative action verbs and film artifacts go in; ROM-checked motion, camera
- * moves, and render plans come out — the engine, not the model, is the arbiter
+ * moves, and render plans come out, the engine, not the model, is the arbiter
  * of physical truth ("engine enforces, model creates"). Read
  * `getGuideDocument({ name: "AUTOMOVIE_OVERALL" })` first, then the stage
  * guides. For real work open a resident project (`openProject`), let
@@ -138,7 +138,7 @@ export class AutoMovieApplication {
    * human-readable JSON files (`script.json`, `shots/<beat>.json`, ...), and
    * binary assets (models, textures, rendered frames) are tracked by the
    * manifest and referenced by path. After opening, every `get*` and `commit*`
-   * tool may omit its `slate` to read from — and write through to — the
+   * tool may omit its `slate` to read from, and write through to, the
    * project, so a long production never re-sends its whole state per call.
    * Reopening the same root keeps the live project; a fresh directory is a
    * valid empty project.
@@ -169,7 +169,7 @@ export class AutoMovieApplication {
 
   /**
    * Track ONE binary asset (a GLB, a texture, a rendered frame) in the resident
-   * project's manifest. The tool registers the project-relative path only —
+   * project's manifest. The tool registers the project-relative path only ,
    * byte-writing stays the host adapter's job, so the path may name a file the
    * adapter already wrote or is about to write. Paths must stay inside the
    * project (no absolute paths, no `..`), and registration never silently
@@ -349,7 +349,7 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Derive a beat's resumable end-state from its performed shot — the engine
+   * Derive a beat's resumable end-state from its performed shot, the engine
    * computation `commitBeatEnd` persists, so continuity is engine-derived
    * instead of hand-authored. Every scene actor gets an end snapshot: held
    * actors keep their staged placement, performed actors sample their motion at
@@ -497,8 +497,8 @@ export class AutoMovieApplication {
    * Lint whole-film continuity across cuts (#1172): compare each beat's OPENING
    * against the previous beat's END state, in playback order. Continuity is the
    * structural bet the forward-written beat-end state exists to keep, but
-   * nothing verified it. Emits ADVISORY warnings — a hard cut may intend a jump
-   * — for position drift, facing drift, a dropped or changed mount (the "props
+   * nothing verified it. Emits ADVISORY warnings, a hard cut may intend a jump
+   *, for position drift, facing drift, a dropped or changed mount (the "props
    * disappear" failure), or an actor missing from the incoming opening. Each
    * beat carries its shot and the motions its performances reference; every
    * shot is validated against the scene first, so a malformed shot returns
@@ -571,7 +571,7 @@ export class AutoMovieApplication {
    * Re-committing the same beat replaces exactly that beat's shot (the upsert
    * rule) and leaves sibling beats untouched. The cascade also removes that
    * beat's now-stale end-state and review notes (they reviewed the replaced
-   * shot) and nulls the committed film — re-derive the beat end and re-commit
+   * shot) and nulls the committed film, re-derive the beat end and re-commit
    * the film after replacing a shot.
    *
    * @param props The slate, shot, and optional compiled motions.
@@ -593,7 +593,7 @@ export class AutoMovieApplication {
    * Commit the resolved end-state for a beat. It must point at a committed shot
    * and only name actors present in the committed scene. Re-committing the same
    * beat replaces exactly that beat's end-state (the upsert rule) and nulls the
-   * committed film — continuity data changed under the cut.
+   * committed film, continuity data changed under the cut.
    *
    * @param props The slate and beat-end state to commit.
    * @returns The slate digest (and, for explicit calls, the transformed slate),
@@ -651,11 +651,11 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Erase ONE beat's shot from the resident project — a targeted removal of a
+   * Erase ONE beat's shot from the resident project, a targeted removal of a
    * named mistake, never a reset. The beat's beat-end and its review notes go
    * with it (they are stale without their shot) and the assembled film is
    * cleared. Requires an active project, a non-empty reason (evidence), and an
-   * existing shot — erasing nothing is reported as a violation. Upstream slices
+   * existing shot, erasing nothing is reported as a violation. Upstream slices
    * (script, scene) have no erase tool: re-committing upstream already clears
    * downstream (the commit cascade).
    *
@@ -665,7 +665,7 @@ export class AutoMovieApplication {
   public eraseShot(props: {
     /** Beat id whose shot (and dependents) should be erased. */
     beat: string;
-    /** Why this shot is a mistake — required evidence. */
+    /** Why this shot is a mistake, required evidence. */
     reason: string;
   }): IAutoMovieEraseOutput {
     return this.commit.eraseShot(props);
@@ -675,7 +675,7 @@ export class AutoMovieApplication {
    * Erase ONE beat's review notes from the resident project. Notes carry no
    * ids; the beat is their identity anchor, so per-beat is the erase
    * granularity. Requires an active project, a non-empty reason, and existing
-   * notes for the beat — erasing nothing is reported as a violation. The
+   * notes for the beat, erasing nothing is reported as a violation. The
    * assembled film is cleared (any notes change invalidates it).
    *
    * @param props The beat whose notes to erase and the reason (evidence).
@@ -684,7 +684,7 @@ export class AutoMovieApplication {
   public eraseNotes(props: {
     /** Beat id whose review notes should be erased. */
     beat: string;
-    /** Why these notes should go — required evidence. */
+    /** Why these notes should go, required evidence. */
     reason: string;
   }): IAutoMovieEraseOutput {
     return this.commit.eraseNotes(props);
@@ -692,11 +692,11 @@ export class AutoMovieApplication {
 
   /**
    * Erase ONE stored prop spec (`props/<node>.json`) from the resident project
-   * — the targeted mirror of `forgeProp`'s resident write-through. Requires an
+   *, the targeted mirror of `forgeProp`'s resident write-through. Requires an
    * active project, a non-empty reason (evidence), and an existing stored spec
-   * — erasing nothing is a violation. A prop the committed scene still places
+   *, erasing nothing is a violation. A prop the committed scene still places
    * is refused rather than cascaded: the scene is upstream of every shot, so
-   * clearing it from a spec erase would be a reset in disguise — re-commit the
+   * clearing it from a spec erase would be a reset in disguise, re-commit the
    * scene without the placement first.
    *
    * @param props The prop node whose spec to erase and the reason (evidence).
@@ -705,7 +705,7 @@ export class AutoMovieApplication {
   public eraseProp(props: {
     /** Prop node whose stored spec should be erased. */
     node: string;
-    /** Why this spec should go — required evidence. */
+    /** Why this spec should go, required evidence. */
     reason: string;
   }): IAutoMoviePropEraseOutput {
     return this.commit.eraseProp(props);
@@ -713,9 +713,9 @@ export class AutoMovieApplication {
 
   /**
    * Erase ONE stored actor context (`actors/<node>.json`) from the resident
-   * project — the targeted mirror of `perform`'s resident actor write-through
+   * project, the targeted mirror of `perform`'s resident actor write-through
    * (#1176). Requires an active project, a non-empty reason (evidence), and an
-   * existing stored context — erasing nothing is a violation. An actor the
+   * existing stored context, erasing nothing is a violation. An actor the
    * committed scene still stages is refused rather than cascaded: later
    * resident performs would lose the context their beats depend on, so
    * re-commit the scene without the node first.
@@ -727,7 +727,7 @@ export class AutoMovieApplication {
   public eraseActor(props: {
     /** Actor node whose stored context should be erased. */
     node: string;
-    /** Why this context should go — required evidence. */
+    /** Why this context should go, required evidence. */
     reason: string;
   }): IAutoMovieActorEraseOutput {
     return this.commit.eraseActor(props);
@@ -738,7 +738,7 @@ export class AutoMovieApplication {
    * project. Sibling performances and other beats stay byte-unchanged; the
    * beat's beat-end and review notes are removed (stale without the performance
    * they sampled) and the film is cleared. Replacement-only: the node must
-   * already perform in that shot — a new performer belongs to perform +
+   * already perform in that shot, a new performer belongs to perform +
    * commitShot. Requires an active project and a non-empty reason (evidence).
    * Full motion validation stays perform's job; pass the motions registry to
    * check the reference.
@@ -754,23 +754,23 @@ export class AutoMovieApplication {
     performance: IAutoMovieShotPerformance;
     /** Compiled motions keyed by actor node, to check the motion reference. */
     motions?: Record<string, IAutoMovieMcpMotion>;
-    /** Why this performance is being replaced — required evidence. */
+    /** Why this performance is being replaced, required evidence. */
     reason: string;
   }): IAutoMovieSetOutput {
     return this.commit.setActorPerformance(props);
   }
 
   /**
-   * Move ONE placement in the resident scene — replace that scene node's
+   * Move ONE placement in the resident scene, replace that scene node's
    * transform, leaving sibling placements byte-unchanged. The cascade mirrors
    * commitScene deliberately: a moved placement changes the world coordinates
    * every shot was performed against, so shots, beat-ends, and notes clear and
-   * the film nulls — the gain is staging precision, not a shortcut around
+   * the film nulls, the gain is staging precision, not a shortcut around
    * re-performing. Requires an active project, a non-empty reason, and an
    * existing placement.
    *
    * The new transform is authored the LLM-facing way: `rotation` is semantic
-   * Euler degrees (or omitted for no turn), never a raw quaternion — the engine
+   * Euler degrees (or omitted for no turn), never a raw quaternion, the engine
    * lowers it (#723, D016).
    *
    * @param props The placement node, its new transform, and the reason.
@@ -781,7 +781,7 @@ export class AutoMovieApplication {
     node: string;
     /** The placement's new world transform (rotation as semantic Euler degrees). */
     transform: IAutoMovieMcpTransform;
-    /** Why this placement is moving — required evidence. */
+    /** Why this placement is moving, required evidence. */
     reason: string;
   }): IAutoMovieSetOutput {
     return this.commit.setPlacement(props);
@@ -817,7 +817,7 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Capture one preview frame for inspection — the render/see loop. It plans
+   * Capture one preview frame for inspection, the render/see loop. It plans
    * the target frame and requested guide pass, then hands the host-injected
    * capture adapter the request and returns the captured image. Without an
    * adapter it returns the resolved frame with status `no-capture-adapter`
@@ -873,8 +873,8 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Plan the caption sidecar — the per-shot diffusion-prompt track a render
-   * host reads beside the guide frames (#607) — from the committed script and
+   * Plan the caption sidecar, the per-shot diffusion-prompt track a render
+   * host reads beside the guide frames (#607), from the committed script and
    * film. Pass `chunkFrames` to also get one chunk-local sidecar per render
    * chunk, aligned with `planChunkedRender`. Omit `slate` to plan the resident
    * project.
@@ -904,7 +904,7 @@ export class AutoMovieApplication {
   /**
    * Plan the per-frame pose-keypoint sidecar (#1168): for every output frame of
    * the committed film, each performing actor's named humanoid joints projected
-   * through the live camera to normalized [0,1] frame coordinates — the exact
+   * through the live camera to normalized [0,1] frame coordinates, the exact
    * OpenPose-style data a pose-conditioned diffusion pass (ControlNet) reads
    * beside the rendered guide frames. Off-frame joints are never clamped (a
    * clamped point reads as a false edge keypoint); they carry `inFrame: false`.
@@ -971,7 +971,7 @@ export class AutoMovieApplication {
   public block(props: {
     /**
      * The script: the cast and their beats. Omit TOGETHER with `staged` to
-     * block against the resident project's committed script and scene (#1176) —
+     * block against the resident project's committed script and scene (#1176) ,
      * a long production stops re-sending them every beat. Mixed calls are
      * refused.
      */
@@ -981,7 +981,7 @@ export class AutoMovieApplication {
     /** The blocking plan: the beat's movement intents and timing anchors. */
     blocking: IAutoMovieBlockingApplication.IWrite;
     /**
-     * The previous beat's resolved end-state (#1176) — pass `getBeatEnd`'s (or
+     * The previous beat's resolved end-state (#1176), pass `getBeatEnd`'s (or
      * `getShotEndState`'s) result so this beat blocks as a continuation:
      * carried actors are gated as staged nodes and the validated state is
      * surfaced on the success as `previous` for the performance stage to seed
@@ -1015,7 +1015,7 @@ export class AutoMovieApplication {
     /**
      * The script: the cast and beats the shot belongs to. Omit TOGETHER with
      * `staged` to perform against the resident project's committed script and
-     * scene (#1176) — a long production stops re-sending the staged scene every
+     * scene (#1176), a long production stops re-sending the staged scene every
      * beat. Mixed calls are refused.
      */
     script?: IAutoMovieScriptApplication.IWrite;
@@ -1029,7 +1029,7 @@ export class AutoMovieApplication {
      * from the previous beat's committed end-state (`commitBeatEnd`), so a
      * walking character resumes exactly where the last beat left it. A
      * successful resident perform also writes each context's beat-invariant
-     * half through as `actors/<node>.json` — so a LATER resident perform may
+     * half through as `actors/<node>.json`, so a LATER resident perform may
      * omit `actors` entirely and read the stored contexts back (their openings
      * seeded the same way). An explicit call always passes the registry.
      */
@@ -1043,7 +1043,7 @@ export class AutoMovieApplication {
     /** Optional validated blocking, from a successful `block` result. */
     blocking?: IAutoMovieBlockingApplication.IWrite;
     /**
-     * Staging mounts for the RESIDENT form only (#1176) — mounts are not a
+     * Staging mounts for the RESIDENT form only (#1176), mounts are not a
      * committed slice, so a resident shot with a mounted rider re-declares them
      * here (the `getShotEndState` precedent). An explicit `staged` set already
      * carries its own mounts; combining the two is refused.

@@ -13,7 +13,7 @@ const SOLIDS: AutoMoviePrimitiveShape[] = [
 
 /**
  * Signed volume of the indexed surface via the divergence theorem: positive
- * when triangles wind counter-clockwise seen from OUTSIDE — the glTF front-face
+ * when triangles wind counter-clockwise seen from OUTSIDE: the glTF front-face
  * contract, and what a front-side renderer needs to avoid culling the visible
  * surface (#1053, same oracle as the forge's #1041).
  */
@@ -37,7 +37,7 @@ const signedVolume = (t: {
 
 /**
  * Every triangle's geometric (winding) normal must agree with its authored
- * vertex normals — a per-triangle check that catches local flips a global
+ * vertex normals: a per-triangle check that catches local flips a global
  * volume cannot. Zero-area triangles (a cone apex ring, a plane's collapsed
  * sides) carry no orientation and are skipped.
  */
@@ -79,9 +79,9 @@ const windingAgreesWithNormals = (t: {
  * Scenarios:
  *
  * 1. Every solid primitive (box, sphere, cylinder, cone, capsule) encloses a
- *    strictly positive signed volume — outward winding globally.
+ *    strictly positive signed volume: outward winding globally.
  * 2. Every non-degenerate triangle's winding normal agrees with its authored
- *    vertex normals — outward winding locally, for all six primitive types
+ *    vertex normals: outward winding locally, for all six primitive types
  *    including the plane.
  */
 export const test_geometry_tessellate_winding = (): void => {

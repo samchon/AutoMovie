@@ -6,7 +6,7 @@ import { hasViolation, nclose, vclose } from "../internal/predicates";
 
 const v = (x: number, z: number, y = 0) => ({ x, y, z });
 
-/** A lone 2×2 table top at height 1 over void — nothing else to rest on. */
+/** A lone 2×2 table top at height 1 over void: nothing else to rest on. */
 const space: IAutoMovieSpace = {
   id: "set",
   surfaces: [
@@ -30,9 +30,9 @@ const space: IAutoMovieSpace = {
 
 /**
  * `supportContactsFor` derives the support points #601's topple judgment was
- * taking as raw input: each footprint corner over a surface (walkable or not —
+ * taking as raw input: each footprint corner over a surface (walkable or not:
  * objects rest on no-go tops) becomes a contact at that surface's height, and
- * corners over nothing contribute none — so a crate half off a table edge loses
+ * corners over nothing contribute none, so a crate half off a table edge loses
  * exactly the overhanging contacts and topples as physics expects.
  *
  * Scenarios:
@@ -44,7 +44,7 @@ const space: IAutoMovieSpace = {
  * 3. A centered box is stable: `detectSupportToppling` over the derived contacts
  *    reports no topple.
  * 4. Half off the table edge only the on-table corners contact, and the center of
- *    mass overhangs — the same call now suggests a topple.
+ *    mass overhangs: the same call now suggests a topple.
  * 5. Fully over void there are no contacts, and the topple judgment rejects the
  *    empty support with a `type` violation (its existing guard).
  */

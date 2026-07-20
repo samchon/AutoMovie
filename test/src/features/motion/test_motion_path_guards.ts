@@ -26,7 +26,7 @@ const LINE = [
 ];
 
 /**
- * FollowPathMotion rejects degenerate input up front — rough types make these
+ * FollowPathMotion rejects degenerate input up front: rough types make these
  * runtime guards, and each has a passing twin so a guard never fires on valid
  * input.
  *
@@ -34,7 +34,7 @@ const LINE = [
  *
  * 1. Fewer than two waypoints is rejected; two distinct ones pass.
  * 2. Consecutive waypoints that coincide in XZ are rejected (a zero-length stretch
- *    has no direction) — differing only in y still coincides, since waypoint y
+ *    has no direction); differing only in y still coincides, since waypoint y
  *    is ignored.
  * 3. Non-finite waypoint x / z are rejected by index.
  * 4. Zero, negative, and non-finite speed are rejected.

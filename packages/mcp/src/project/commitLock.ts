@@ -51,7 +51,7 @@ export const acquireCommitLock = (lockPath: string): string => {
 };
 
 /**
- * Release the commit lock — but only if it still holds `token`. Deleting a
+ * Release the commit lock, but only if it still holds `token`. Deleting a
  * foreign token would delete another session's lock (#1257). A vanished lock is
  * a no-op.
  */
@@ -60,6 +60,6 @@ export const releaseCommitLock = (lockPath: string, token: string): void => {
     if (fs.readFileSync(lockPath, "utf8") === token)
       fs.rmSync(lockPath, { force: true });
   } catch {
-    // already gone — nothing of ours to release
+    // already gone, nothing of ours to release
   }
 };

@@ -44,7 +44,7 @@ const withAffordances = (
 
 /**
  * Affordances are validated inside `validateModel`: ids unique and non-empty,
- * frame scalars finite, and extent semantics by kind — a stack-top needs a
+ * frame scalars finite, and extent semantics by kind: a stack-top needs a
  * well-formed supporting face, point-like kinds must leave extent null. The
  * field is evolving-schema optional, so models that never heard of affordances
  * validate unchanged.
@@ -57,7 +57,7 @@ const withAffordances = (
  * 3. An empty id is a `type` violation.
  * 4. A stack-top with `extent: null` is a `type` violation on `.extent`.
  * 5. A stack-top with only 2 extent points is a `type` violation.
- * 6. A collinear extent encloses no area — `type` violation.
+ * 6. A collinear extent encloses no area: `type` violation.
  * 7. A non-finite extent coordinate is a `range` violation on that axis.
  * 8. A handle carrying an extent is a `type` violation (point-like).
  * 9. A non-finite frame scalar is a `range` violation via the shared transform

@@ -25,7 +25,7 @@ import {
 import { nclose, vclose } from "../internal/predicates";
 
 /**
- * Like the shared content seam, but a `launch` produces no actor motion — it
+ * Like the shared content seam, but a `launch` produces no actor motion: it
  * animates the projectile object and schedules a react, not the shooter.
  */
 const synth: IAutoMovieActionSynthesizer = (action, actor) =>
@@ -68,13 +68,13 @@ const stagingOf = () =>
 /**
  * Wires the `launch` verb through the PERFORMANCE consumer end to end: the
  * projectile's flight becomes a shot `objectMotion`, and the struck target's
- * recoil is folded into the action list at the engine-computed contact — so it
+ * recoil is folded into the action list at the engine-computed contact, so it
  * synthesises and ROM-gates like any authored `react`.
  *
  * Scenarios:
  *
  * 1. A loose at the foe compiles: the arrow node gets one baked flight clip that
- *    lands on the foe, and the foe — nobody else — gets a performance (the
+ *    lands on the foe, and the foe (nobody else) gets a performance (the
  *    injected react), proving the reaction was scheduled by the engine.
  * 2. A projectile that is not a staged node → an input violation.
  * 3. A target that does not resolve to a point (a relative direction) → a
@@ -84,14 +84,14 @@ const stagingOf = () =>
  * 6. A launch with `onHit.force` outside `[0,1]` yields a range violation.
  * 7. A launch that cannot reach its target at the given speed → a range violation.
  * 8. A launch aimed at a bare point (no actor to recoil) still flies, but
- *    schedules no reaction — nobody performs.
+ *    schedules no reaction: nobody performs.
  * 9. Two launches of one projectile node bake UNIQUE flight ids in draft order
  *    (`trajectory:arrow`, `trajectory:arrow:2`), so a volley stays committable
  *    (#989).
  * 10. A launch at a **moving** target is led: when the foe strides during the shot
  *     (a `locomote` carrying root travel), performShot resolves its animated
  *     position and aims where it will be, so the baked flight lands short of
- *     the foe's start point — and the foe still reacts, at the led contact.
+ *     the foe's start point, and the foe still reacts, at the led contact.
  * 11. A launch fired too late to land before the shot ends yields a `range`
  *     violation on `.speed`.
  * 12. A launch whose actor is also the projectile yields `type` on `.projectile`.
@@ -145,7 +145,7 @@ export const test_film_perform_shot_launch = (): void => {
   if (ok.success !== true) return;
 
   TestValidator.equals(
-    "one object motion — the arrow's flight",
+    "one object motion, the arrow's flight",
     ok.shot.objectMotions.length,
     1,
   );
@@ -170,7 +170,7 @@ export const test_film_perform_shot_launch = (): void => {
     ) < 5e-3,
   );
   // The flight is placed on the shot clock: it launches at the action's start
-  // (0.2 s), spans the shot, and — via sampleClip's clamp — holds at the arrow's
+  // (0.2 s), spans the shot, and, via sampleClip's clamp, holds at the arrow's
   // staged origin before the loose rather than starting mid-air at shot t = 0.
   const times = flight.tracks[0]!.times;
   TestValidator.equals("the flight spans the shot", flight.duration, 2);
@@ -192,7 +192,7 @@ export const test_film_perform_shot_launch = (): void => {
     ),
   );
   TestValidator.equals(
-    "only the struck foe performs — the engine-scheduled react",
+    "only the struck foe performs, the engine-scheduled react",
     ok.shot.performances.map((p) => p.node),
     ["foe"],
   );
@@ -498,8 +498,8 @@ export const test_film_perform_shot_launch = (): void => {
 
   // 13. a moving target is led. The foe strides (a locomote whose baked motion
   // carries root travel); performShot resolves its animated world position and
-  // leads the aim, so the flight lands short of the foe's staged x = 6 (the foe
-  // — facing 180 — advances toward the archer as the arrow flies).
+  // leads the aim, so the flight lands short of the foe's staged x = 6 (the
+  // foe, facing 180, advances toward the archer as the arrow flies).
   const rootAt = (x: number): IAutoMovieTransform => ({
     translation: { x, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -553,7 +553,7 @@ export const test_film_perform_shot_launch = (): void => {
     const lead = led.shot.objectMotions[0]!;
     const lv = lead.tracks[0]!.values;
     TestValidator.predicate(
-      "the flight leads the approaching foe — lands short of its start (x < 6)",
+      "the flight leads the approaching foe, lands short of its start (x < 6)",
       lv[lv.length - 3]! < 6 - 0.1,
     );
     TestValidator.predicate(

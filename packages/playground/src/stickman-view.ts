@@ -102,7 +102,7 @@ const ctr = isCat ? 0.12 : 0; // cat trunk centre is forward of the hips
 const camY = target + (isCat ? 0.22 : 0.1);
 
 // `?follow=1` makes the camera ride along with the character's root as a
-// traveling clip (stroll/sprint/prowl/bound) carries it across the floor —
+// traveling clip (stroll/sprint/prowl/bound) carries it across the floor ,
 // holding the same orbit offset but re-centred on the moving body, so the
 // figure stays framed while the ground scrolls past (a tracking shot). The
 // root translation the engine bakes via travelMotion lands on `object.object`,
@@ -125,7 +125,7 @@ if (followMode) followCamera();
 // ── ROM overlay: a flexion-gamut fan at every constrained joint ─────────────
 // Each joint's `constraint.flexion` [min,max] swept about its flexion axis (the
 // same axis the engine validates against), drawn at rest so the figure's whole
-// range of motion is visible at once — the joint-limit idea made tangible.
+// range of motion is visible at once, the joint-limit idea made tangible.
 const buildRomFans = (): void => {
   scene.updateMatrixWorld(true);
   const pos = new THREE.Vector3();
@@ -199,7 +199,7 @@ const aimHead = (elapsed: number): void => {
 // ── two-bone IK reach driver (?reach=1) ─────────────────────────────────────
 // The right arm reaches a moving target: aim the upper arm off the shoulder→goal
 // line by the engine's solveTwoBoneIK `lift`, then point the forearm at the goal
-// — the hand lands on the target, the elbow bending as it moves in and out.
+//, the hand lands on the target, the elbow bending as it moves in and out.
 const reachMode = params.get("reach") === "1";
 const segLen = (b: string): number => {
   const t = skeleton.bones.find((x) => x.bone === b)?.rest.translation;
@@ -260,7 +260,7 @@ const reach = (elapsed: number): void => {
   lower.quaternion.copy(upperWorldQ.invert().multiply(lowerWorld));
 };
 
-// One frame of animation at `elapsed` seconds — shared by the live render loop
+// One frame of animation at `elapsed` seconds, shared by the live render loop
 // and the deterministic capture hook below.
 const frame = (elapsed: number): void => {
   if (reachMode) reach(elapsed);
@@ -302,7 +302,7 @@ const handle = mountViewer(
 };
 // `__afPass` switches the guide pass a capturer screenshots (#1165): restore
 // whatever pass was live, apply the requested one over the already-seeked
-// scene, and re-render — so one seek yields every pass of that frame.
+// scene, and re-render, so one seek yields every pass of that frame.
 let passHandle: IAutoMovieRenderModeHandle | null = null;
 (
   window as unknown as { __afPass: (pass: AutoMovieGuidePass) => void }

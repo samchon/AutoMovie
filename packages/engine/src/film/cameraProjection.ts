@@ -56,7 +56,7 @@ export const resolveCameraAt = (
  * Project a world point into the camera's normalized device coordinates. The
  * camera looks down its local −Z (glTF), so `depth = −localZ` is positive in
  * front of the lens; NDC is `local / (depth · tan(fovY/2))`, horizontally
- * widened by `aspect`. Behind the camera (`depth ≤ 0`) the NDC is unbounded —
+ * widened by `aspect`. Behind the camera (`depth ≤ 0`) the NDC is unbounded:
  * the caller reads `depth` (and the near/far/rectangle bounds) to decide, this
  * never clamps.
  */

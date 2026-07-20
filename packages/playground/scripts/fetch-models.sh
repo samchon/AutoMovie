@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Download the VRM avatar the human editor renders.
 #
-# Model: "Vita" — a VRoid sample avatar released CC0 (public domain). No usage,
+# Model: "Vita", a VRoid sample avatar released CC0 (public domain). No usage,
 # redistribution, or attribution restriction whatsoever, so it is fully
 # compatible with this MIT-licensed project (unlike VRoid models whose embedded
 # VRM license is "Other" with no terms URL). The file (~14 MB) is fetched on

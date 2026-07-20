@@ -47,7 +47,7 @@ const frameAction = (
 
 /**
  * The camera-intent guide metadata (#1187): a frame action may carry a `focus`
- * target and a `focalLength` — structural INTENT for a diffusion/render host,
+ * target and a `focalLength`: structural INTENT for a diffusion/render host,
  * never consumed by the deterministic camera solve. `performShot` validates
  * them like any target/scalar and emits the resolved record on
  * `shot.cameraIntent`, exactly as it emits `shot.events`.
@@ -56,7 +56,7 @@ const frameAction = (
  *
  * 1. A frame with `focus: knightB` and `focalLength: 85` emits one intent entry
  *    carrying the framing/move, knightB's staged world point, and 85 mm.
- * 2. Omitting both intents emits the entry with `focus`/`focalLength` null — and
+ * 2. Omitting both intents emits the entry with `focus`/`focalLength` null, and
  *    the compiled `cameraMotion` is byte-identical with or without the intents
  *    (the solve never reads them).
  * 3. A focus target naming an unstaged node is a `type` violation at `.focus`; a

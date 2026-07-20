@@ -70,7 +70,7 @@ const emoteClip = (): IAutoMovieMotion =>
 
 // the real lookAt synthesizer's FIRST keyframe is already the full aim
 // (makeActorSynthesizer), which is exactly what makes a backward envelope
-// leak visible — mirror that shape here (#1060)
+// leak visible: mirror that shape here (#1060)
 const aimClip = (): IAutoMovieMotion =>
   makeMotion(
     [
@@ -106,7 +106,7 @@ const frameAt = (motion: IAutoMovieMotion, time: number) =>
   motion.keyframes.find((k) => nclose(k.time, time))!;
 
 /**
- * `compilePerformance` layering — actions on disjoint body regions play
+ * `compilePerformance` layering: actions on disjoint body regions play
  * concurrently rather than taking turns.
  *
  * Scenarios:

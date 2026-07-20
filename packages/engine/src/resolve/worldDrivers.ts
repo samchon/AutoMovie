@@ -30,13 +30,13 @@ const VECTOR_AXES = ["x", "y", "z"] as const;
  * world transform, and recomposes the owner's subtree so descendants follow.
  *
  * This step resolves {@link IAutoMovieAimDriver} (look-at: orient a node so one
- * of its axes points at a target — eyes, head, a camera),
+ * of its axes points at a target: eyes, head, a camera),
  * {@link IAutoMovieParentDriver} (Child-Of: make a node inherit another's world
- * frame, per component — a sword following a hand), the analytic two-bone
- * {@link IAutoMovieIKDriver} (back-solve a 3-node limb so its tip reaches a goal
- * — arms, legs), and the iterative `ccd`/`fabrik` solvers for longer chains
- * ({@link applyIterativeIK}, fixed budgets — S2 of the core wiring). Only
- * `spring` still defers here — it is stateful, and steps inside
+ * frame, per component: a sword following a hand), the analytic two-bone
+ * {@link IAutoMovieIKDriver} (back-solve a 3-node limb so its tip reaches a
+ * goal: arms, legs), and the iterative `ccd`/`fabrik` solvers for longer chains
+ * ({@link applyIterativeIK}, fixed budgets, S2 of the core wiring). Only
+ * `spring` still defers here: it is stateful, and steps inside
  * {@link resolveFrame} when the caller provides `dt` + state, or in the host's
  * own pass otherwise; nothing is silently dropped.
  *

@@ -69,9 +69,9 @@ const runAim = (
  * 1. Aiming `−Z` at a target on `+X` rotates the owner so its aim axis points
  *    along `+X` and its up axis stays generally up (the roll is applied).
  * 2. A target straight along `worldUp` leaves the roll undefined (the desired up
- *    projects to zero) and is skipped — the aim still points at the target.
+ *    projects to zero) and is skipped: the aim still points at the target.
  * 3. A driver whose up axis equals its aim axis makes the rolled up project to
- *    zero — the other half of the roll-skip guard — and still aims correctly.
+ *    zero (the other half of the roll-skip guard) and still aims correctly.
  * 4. Influence 0 leaves the owner's original orientation untouched.
  * 5. A target already along the aim axis (parallel) and one directly behind it
  *    (antiparallel, for two axis choices) all resolve to pointing at the

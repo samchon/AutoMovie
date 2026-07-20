@@ -7,7 +7,7 @@ import { makeRng, randomUnitQuaternion } from "../internal/random";
 /**
  * The clinical-angle decomposition (`decomposeJointRotation`) is the inverse of
  * `jointToQuaternion`, and its JSDoc claims the composition round-trips for ANY
- * rotation — including the gimbal-lock corner (abduction ≈ ±90°), where flexion
+ * rotation, including the gimbal-lock corner (abduction ≈ ±90°), where flexion
  * folds into twist but the reconstructed rotation is still identical. A
  * property sweep is the honest way to assert "any": hand fixtures cannot
  * enumerate the sphere, and gimbal is exactly the case a fixture author

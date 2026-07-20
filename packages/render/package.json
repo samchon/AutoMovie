@@ -1,7 +1,7 @@
 {
   "name": "@automovie/render",
   "version": "0.1.0",
-  "description": "automovie render — deterministic frame schedule + encode plan from a render spec",
+  "description": "automovie render: deterministic frame schedule + encode plan from a render spec",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",

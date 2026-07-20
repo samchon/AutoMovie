@@ -41,7 +41,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 // The film pipeline end to end, on screen: the same stage payloads the LLM
 // harness will emit (script → staging → blocking → performance → assemble),
 // consumed by the engine's film compilers, played back through the sequence
-// resolver — real gait travel, a follow camera compiled from a `frame` verb,
+// resolver: real gait travel, a follow camera compiled from a `frame` verb,
 // a hard cut onto an orbiting close-up. Deterministic via `renderAt(t)`, so
 // capture-shots.mjs bakes the identical film every run.
 
@@ -78,7 +78,7 @@ const staging: IAutoMovieStagingApplication.IWrite = {
     { node: "walker", position: { x: 0, y: 0, z: -2.4 }, facingDeg: 0 },
     { node: "waiter", position: { x: 0, y: 0, z: 0.55 }, facingDeg: 0 },
   ],
-  // Set pieces (#1173): one unit box model resized per placement — the wall and
+  // Set pieces (#1173): one unit box model resized per placement. The wall and
   // the crate are the SAME `block` model at two sizes, which is the point of
   // `scale`. The floor is drawn from the space below, not as a set node.
   set: [
@@ -98,7 +98,7 @@ const staging: IAutoMovieStagingApplication.IWrite = {
   ],
   // The space is the same floor's MEANING: one walkable patch under the whole
   // walk. `buildSpaceObject` draws it, so the ground reaches every structural
-  // guide pass (a GridHelper never did — it is a LineSegments, hidden first).
+  // guide pass (a GridHelper never did: it is a LineSegments, hidden first).
   space: {
     id: "space-pursuit",
     surfaces: [
@@ -139,7 +139,7 @@ const blockings: IAutoMovieBlockingApplication.IWrite[] = [
   {
     type: "write",
     beat: "approach",
-    analysis: "the distance itself is the drama — the walk must read whole.",
+    analysis: "the distance itself is the drama: the walk must read whole.",
     rationale:
       "a medium follow keeps the walker's stride and the shrinking gap in one frame.",
     actors: [
@@ -160,7 +160,7 @@ const blockings: IAutoMovieBlockingApplication.IWrite[] = [
   {
     type: "write",
     beat: "face-off",
-    analysis: "stillness after motion — the circle asks who moves first.",
+    analysis: "stillness after motion: the circle asks who moves first.",
     rationale:
       "an orbiting close-up on the waiter turns his stillness into tension.",
     actors: [
@@ -239,7 +239,7 @@ const performances: IAutoMoviePerformanceApplication.IWrite[] = [
       },
     ],
     revise: {
-      review: "nothing moves but the camera — as blocked.",
+      review: "nothing moves but the camera, as blocked.",
       final: null,
     },
     duration: 2.5,
@@ -264,7 +264,7 @@ const rigFor = (node: string): ReturnType<typeof buildStickman> => {
  * The one skeleton-less model every set piece is realised from: a 1 m unit box,
  * resized per placement through the staged node's scale (#1173). One primitive
  * standing in for a wall and a crate is exactly the "rough stages, primitive
- * props" bet — the model registry stays at one entry, staging owns the sizes.
+ * props" bet: the model registry stays at one entry, staging owns the sizes.
  */
 const UNIT_BOX: AutoMoviePrimitiveShape = {
   type: "box",
@@ -310,7 +310,7 @@ const blockModel: IAutoMovieModel = {
 const modelForNode = (node: { id: string; model: string }): IAutoMovieModel =>
   node.model === blockModel.id ? blockModel : rigFor(node.id).model;
 
-// The canonical humanoid walk from the engine's gait library — bent knees
+// The canonical humanoid walk from the engine's gait library: bent knees
 // (neutral-centered so they stay in ROM), contralateral arm swing, already
 // tuned. The demo drops it straight into the actor context; no hand-authoring.
 const WALK = HUMANOID_GAITS.walk;
@@ -402,7 +402,7 @@ scene.add(sun);
 // baked clip) can drive the object's world transform each frame.
 const groupsById = new Map<string, THREE.Group>();
 
-// Staged base per node — the FULL transform, scale included (the hand-rolled
+// Staged base per node: the FULL transform, scale included (the hand-rolled
 // group setup used to drop staged scale, #1087).
 const stagedNodeById = new Map(staged.scene.nodes.map((n) => [n.id, n]));
 const applyStagedBase = (group: THREE.Group, nodeId: string): void => {
@@ -478,11 +478,11 @@ type SequenceRenderShotSample = {
 const poseShot = (shot: IAutoMovieShot, time: number): void => {
   // The applyObjectMotion host contract: a host that swaps clips mid-scene
   // restores staged bases itself (#1087). Without this reset a node driven by
-  // shot A's objectMotion but absent from shot B kept A's tail transform —
+  // shot A's objectMotion but absent from shot B kept A's tail transform,
   // order-dependent frames that break chunked capture's determinism promise
   // (a fresh page at a chunk boundary would render the staged base instead).
   // Rigs without a performance in this shot likewise return to rest, not the
-  // previous shot's last pose — the same reset applyStagedCamera performs.
+  // previous shot's last pose, the same reset applyStagedCamera performs.
   const performing = new Set(shot.performances.map((p) => p.node));
   for (const node of staged.scene.nodes) {
     applyStagedBase(groupsById.get(node.id)!, node.id);
@@ -511,7 +511,7 @@ let lastSequenceFrame: SequenceRenderFrameSample | null = null;
 // Draw one manifest frame sample. Without a `pass`: on a hard cut it only poses
 // the live shot and returns false (the caller renders single-pass); inside a
 // transition it composites the outgoing tail and the incoming shot itself and
-// returns true. With a `pass` it always renders here (returning true) — the cut
+// returns true. With a `pass` it always renders here (returning true): the cut
 // under the pass override, or the dissolve with the override applied to each
 // half so both shots reach the guide frame (#1250).
 const drawSequenceFrame = (
@@ -620,7 +620,7 @@ if (freezeAt !== null && Number.isFinite(freezeAt)) draw(freezeAt);
 // the LAST seeked frame's composition under the requested pass, so one seek
 // yields every pass of that frame. Re-composing the frame (rather than a plain
 // single-pass render over the posed scene) is what carries a cross-dissolve
-// into the guide passes — otherwise a transition frame's passes, and its beauty
+// into the guide passes. Otherwise a transition frame's passes, and its beauty
 // frame, showed only the incoming shot (#1250). The frame drives its own
 // apply/restore, so no override lingers across passes.
 let passHandle: IAutoMovieRenderModeHandle | null = null;

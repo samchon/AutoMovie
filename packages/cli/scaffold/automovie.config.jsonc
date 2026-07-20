@@ -2,7 +2,7 @@
   // Register the automovie MCP server with your agent (Claude Desktop, Codex,
   // Claude Code, any MCP client). The engine enforces physical truth; your
   // agent emits thin action verbs and the server fattens them into ROM-checked
-  // motion, camera moves, and render plans — "engine enforces, model creates".
+  // motion, camera moves, and render plans: "engine enforces, model creates".
   //
   // Copy the "automovie" entry below into your client's MCP config. The server
   // runs over stdio, so the client spawns it as a subprocess on demand.
@@ -13,7 +13,7 @@
     }
   }
 
-  // In a session, ask the server for its overview first —
+  // In a session, ask the server for its overview first:
   //   getGuideDocument({ name: "AUTOMOVIE_OVERALL" })
   // then let nextSteps() steer the ladder: stage → block → perform → cut → forge.
 }

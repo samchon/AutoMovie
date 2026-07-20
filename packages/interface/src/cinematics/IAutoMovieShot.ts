@@ -3,14 +3,14 @@ import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
 import { IAutoMovieInteractionEvent } from "./IAutoMovieInteractionEvent";
 
 /**
- * A shot: one continuous take — a scene, the camera that frames it, the
- * camera's move, and what every placed node performs — over a local time range.
+ * A shot: one continuous take (a scene, the camera that frames it, the
+ * camera's move, and what every placed node performs) over a local time range.
  * This is the unit an LLM renders ("render this shot") and the rung above a
  * single clip on the road to assembling a film from objects and motion.
  *
  * Time is local to the shot (origin 0, seconds); a {@link IAutoMovieSequence}
  * composes shots into a global timeline. The camera is a scene node, so its
- * move is an ordinary {@link IAutoMovieClip} of transform (and FOV) tracks — no
+ * move is an ordinary {@link IAutoMovieClip} of transform (and FOV) tracks: no
  * special camera-animation concept.
  *
  * @author Samchon
@@ -29,7 +29,7 @@ export interface IAutoMovieShot {
   camera: string;
 
   /**
-   * The camera's move for this shot — a clip of the camera node's transform
+   * The camera's move for this shot: a clip of the camera node's transform
    * (and FOV) tracks. `null` for a locked-off (static) camera.
    */
   cameraMotion: IAutoMovieClip | null;
@@ -38,12 +38,12 @@ export interface IAutoMovieShot {
   performances: IAutoMovieShotPerformance[];
 
   /**
-   * Node-transform clips for **non-skeletal scene objects** the shot animates —
-   * a launched projectile's baked flight, a prop carried along a path — each an
+   * Node-transform clips for **non-skeletal scene objects** the shot animates
+   * (a launched projectile's baked flight, a prop carried along a path), each an
    * ordinary {@link IAutoMovieClip} keyed to its object's scene node. Distinct
    * from `performances` (skeletal pose motions played through a rig) and from
    * `cameraMotion` (the one live camera): a projectile has no skeleton, so it
-   * moves the same way the camera does — a clip of transform tracks. Empty when
+   * moves the same way the camera does: a clip of transform tracks. Empty when
    * the shot animates no such object.
    */
   objectMotions: IAutoMovieClip[];
@@ -57,8 +57,8 @@ export interface IAutoMovieShot {
   events?: IAutoMovieInteractionEvent[];
 
   /**
-   * The camera's directorial intent per frame span (#1187) — framing, move, the
-   * resolved focus point, and the lens intent — structural guide metadata a
+   * The camera's directorial intent per frame span (#1187): framing, move, the
+   * resolved focus point, and the lens intent. Structural guide metadata a
    * diffusion/render host reads beside `cameraMotion`, exactly as it reads
    * `events`. The deterministic camera solve never consumes it. Absent means
    * legacy; an empty array means the shot was assembled with no frame actions.
@@ -71,7 +71,7 @@ export interface IAutoMovieShot {
 
 /**
  * One frame span's directorial camera intent (#1187): what the take frames and
- * how, plus the two lens intents the fixed move grammar could not carry — the
+ * how, plus the two lens intents the fixed move grammar could not carry: the
  * focus subject (resolved to a world point) and the focal length. INTENT only:
  * `fovY` on the scene camera stays the geometric truth, and depth-of-field blur
  * is deliberately out of scope (diffusion's job).

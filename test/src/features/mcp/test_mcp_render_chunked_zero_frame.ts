@@ -83,7 +83,7 @@ const spec = (fps: number): IAutoMovieRenderSpec => ({
  * `planChunkedRender` answers a degenerate fps × duration with the same
  * field-located violation `planRender` already returns, instead of letting
  * `planSequenceRender`'s raw "requires at least one frame" Error escape to the
- * MCP client (#1092) — the server instruction pins "every failure returns
+ * MCP client (#1092), the server instruction pins "every failure returns
  * field-located violations, not a thrown error".
  *
  * Scenarios (0.4 s film, explicit slate):

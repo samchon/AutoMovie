@@ -85,14 +85,14 @@ const shift = (
  * Re-express a clinical {@link IAutoMovieJointConstraint} in a rig's
  * rest-relative pose space using its {@link IAutoMovieRestFrame}, so ROM
  * validation/clamping and the ROM overlay line up with how the rig actually
- * articulates — the reconciliation a physics joint does implicitly by defining
+ * articulates, the reconciliation a physics joint does implicitly by defining
  * its limits in the joint's own reference frame.
  *
  * The `swingDeg` cone half-angle carries through unchanged: it caps the
  * _combined_ swing away from rest (`2·acos(cos(flexion/2)·cos(abduction/2))`
  * over the pose angles the rig articulates), so it is a deviation magnitude the
- * rest frame's `sign`/`neutral` shift — which relocates each axis's origin, not
- * the scale of a deviation — leaves invariant. Dropping it here silenced the
+ * rest frame's `sign`/`neutral` shift (which relocates each axis's origin, not
+ * the scale of a deviation) leaves invariant. Dropping it here silenced the
  * ball-joint cone on exactly the bones that carry a rest frame (the shoulders),
  * since `validateJointRom`/`clampJointRom` gate the cone on `swingDeg !=
  * null`.
@@ -112,7 +112,7 @@ export const restRelativeConstraint = (
 /**
  * Rest frames for the **canonical T-pose humanoid**, where they differ from the
  * identity. The shoulders sit at ~90° clinical abduction at rest, and the two
- * sides mirror the abduction sign (a first pass — flexion/twist reconciliation
+ * sides mirror the abduction sign (a first pass: flexion/twist reconciliation
  * is future work). Bones omitted need no shift (legs/spine rest at clinical
  * neutral).
  *

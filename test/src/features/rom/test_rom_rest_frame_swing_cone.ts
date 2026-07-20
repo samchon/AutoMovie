@@ -18,7 +18,7 @@ const CLINICAL_SHOULDER: IAutoMovieJointConstraint = {
   swingDeg: 100,
 };
 
-/** The rig's rest frame — the shoulder sits at 30° abduction, this side +. */
+/** The rig's rest frame: the shoulder sits at 30° abduction, this side +. */
 const FRAME = { abduction: { sign: 1 as const, neutral: 30 } };
 
 const passesCone = (
@@ -35,16 +35,16 @@ const passesCone = (
  * `restRelativeConstraint` shifts each per-axis range into the rig's
  * rest-relative space; if it dropped `swingDeg` (the bug), the reconciled
  * ball-joint constraint would carry no cone and
- * `validateJointRom`/`clampJointRom` — which gate the cone on `swingDeg !=
- * null` — would silently stop bounding the corner a per-axis box over-permits.
+ * `validateJointRom`/`clampJointRom` (which gate the cone on `swingDeg !=
+ * null`) would silently stop bounding the corner a per-axis box over-permits.
  * This is exactly the shoulder, the one bone that carries a rest frame.
  *
  * Scenarios (all on the RECONCILED constraint, not the clinical one):
  *
  * 1. The cone half-angle carries through the shift unchanged (100°), while the
  *    framed abduction range actually shifts (proving reconciliation ran).
- * 2. A rest-relative corner pose (90°+90° = 120° of swing) — inside both shifted
- *    per-axis boxes — is flagged once on the `.swing` path, overshoot 20°. On
+ * 2. A rest-relative corner pose (90°+90° = 120° of swing), inside both shifted
+ *    per-axis boxes, is flagged once on the `.swing` path, overshoot 20°. On
  *    the swingDeg-dropping code this pose passed clean.
  * 3. `clampJointRom` against the reconciled constraint pulls the corner straight
  *    back onto the cone (ratio preserved), and the result now validates.

@@ -1,7 +1,7 @@
 import { AutoMovieFaceWeight } from "./AutoMovieFaceWeight";
 
 /**
- * Lip traits of an {@link IAutoMovieFace}'s mouth — signed morph weights in
+ * Lip traits of an {@link IAutoMovieFace}'s mouth: signed morph weights in
  * `[-2, 2]`, `0`/omitted meaning the template's lips unchanged.
  *
  * @author Samchon

@@ -6,7 +6,7 @@ import { nclose } from "../internal/predicates";
 const v = (x: number, y: number, z: number) => ({ x, y, z });
 
 /**
- * `segmentSphere` + `projectileSphereHit` — the collision tests behind a hit.
+ * `segmentSphere` + `projectileSphereHit`: the collision tests behind a hit.
  *
  * `segmentSphere` scenarios (cover every branch):
  *
@@ -67,7 +67,7 @@ export const test_physics_collision = (): void => {
   );
   TestValidator.predicate("projectile hit detected", hit !== null);
   // the path reaches the centre at t=1, so it ENTERS the r=1 sphere a touch
-  // earlier (~0.9s) — contact is the surface crossing, not the centre crossing
+  // earlier (~0.9s): contact is the surface crossing, not the centre crossing
   TestValidator.predicate(
     "hit time just before the centre crossing",
     hit!.time > 0.8 && hit!.time <= 1.0,

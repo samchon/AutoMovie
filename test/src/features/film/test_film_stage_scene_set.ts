@@ -5,8 +5,8 @@ import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation, vclose } from "../internal/predicates";
 
 /**
- * Set pieces (#1173): staging may drop environment geometry — a floor slab, a
- * wall — as static scene nodes realising skeleton-less models, so the guide
+ * Set pieces (#1173): staging may drop environment geometry (a floor slab, a
+ * wall) as static scene nodes realising skeleton-less models, so the guide
  * passes describe a world instead of actors floating in a void.
  *
  * Scenarios:
@@ -14,7 +14,7 @@ import { hasViolation, vclose } from "../internal/predicates";
  * 1. A floor (no `facingDeg`) and a turned wall stage as scene nodes after the
  *    cast: model ids kept verbatim, the floor unrotated (identity), the wall's
  *    yaw encoded exactly like an actor's facing, motion/pose null.
- * 2. A camera may `lookAt` a set piece — its −Z aims at the piece's position.
+ * 2. A camera may `lookAt` a set piece: its −Z aims at the piece's position.
  * 3. The gates: a set node colliding with a cast id, a blank node id, a blank
  *    model id, a non-finite position, and a non-finite `facingDeg` are all
  *    refused in one round at their `$input.set[i]` paths; an omitted
@@ -63,7 +63,7 @@ export const test_film_stage_scene_set = (): void => {
     "a set piece is static scenery",
     floor.motion === null && floor.pose === null,
   );
-  // facingDeg 90 turns +Z onto +X — the same encoding actors use.
+  // facingDeg 90 turns +Z onto +X: the same encoding actors use.
   TestValidator.predicate(
     "the wall's yaw is encoded like an actor's facing",
     vclose(

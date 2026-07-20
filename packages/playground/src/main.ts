@@ -232,7 +232,7 @@ app.innerHTML = `
     <canvas id="view"></canvas>
     <div id="panel">
       <h1>automovie · character editor</h1>
-      <div class="sub">Procedural humanoid — adjust body, pose, or play a clip.</div>
+      <div class="sub">Procedural humanoid: adjust body, pose, or play a clip.</div>
       <button id="play">▶ Play wave</button>
       <h2>Proportions</h2>
       <div id="proportions"></div>

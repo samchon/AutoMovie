@@ -1,5 +1,5 @@
 /**
- * An action target that is a **frame edge** — exit toward / aim at "off-screen
+ * An action target that is a **frame edge**: exit toward / aim at "off-screen
  * left", so an exit or glance needs no invented world coordinates.
  *
  * @author Samchon

@@ -97,7 +97,7 @@ const cameraOf = (): IAutoMovieStagingApplication.IWrite["cameras"] => [
 /**
  * Every intermediate parent is staged at a decoy coordinate the chain must
  * override: the horse rides the dragon's hips, the rider rides the horse's
- * spine, and the sword is grabbed per beat — three couplings deep.
+ * spine, and the sword is grabbed per beat: three couplings deep.
  */
 const stagingOf = () =>
   makeStagingWrite({
@@ -130,7 +130,7 @@ const posAt = (
   return { x: v[0]!, y: v[1]!, z: v[2]! };
 };
 
-/** Compose `local` onto a parent world frame — compileAttach's composition. */
+/** Compose `local` onto a parent world frame: compileAttach's composition. */
 const composed = (
   parent: { translation: IAutoMovieVector3; rotation: IAutoMovieQuaternion },
   local: IAutoMovieTransform,
@@ -145,8 +145,8 @@ const composed = (
 /**
  * Chained object couplings compose through every link (#1140). Before the fix
  * each coupling was baked from its parent's STAGED transform + pose motion
- * alone — a prop attached to a mounted knight silently stayed at the knight's
- * staged spot while the knight rode away — and a coupling cycle baked two
+ * alone: a prop attached to a mounted knight silently stayed at the knight's
+ * staged spot while the knight rode away, and a coupling cycle baked two
  * frozen couplings with no violation.
  *
  * Scenarios:
@@ -159,11 +159,11 @@ const composed = (
  * 3. The pre-fix output is dead: the sword never sits at the composition onto the
  *    rider's staged decoy placement.
  * 4. A mount cycle (A rides B, B rides A) fails the shot with a violation naming
- *    the cycle — never a silent frozen bake.
- * 5. A mutual per-beat `attachTo` (A grabs B while B grabs A) fails the same way —
+ *    the cycle: never a silent frozen bake.
+ * 5. A mutual per-beat `attachTo` (A grabs B while B grabs A) fails the same way:
  *    the gate covers both coupling sources.
  * 6. A chained coupling whose intermediate parent has no rig still reports the
- *    existing mount-rig violation — the chain does not mask it.
+ *    existing mount-rig violation: the chain does not mask it.
  */
 export const test_film_perform_shot_coupling_chain = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());

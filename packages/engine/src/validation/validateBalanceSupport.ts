@@ -23,11 +23,11 @@ const DEFAULT_SAMPLE_RATE = 24;
 
 /**
  * Segment mass as a fraction of total body mass, per load-bearing bone (Winter,
- * "Biomechanics and Motor Control of Human Movement"). Only the ratios matter —
+ * "Biomechanics and Motor Control of Human Movement"). Only the ratios matter:
  * the whole-body COM is a weighted mean, so any consistent scaling yields the
  * same point. Bones absent from this table (clavicles, toes, eyes, jaw,
  * fingers) carry {@link DEFAULT_SEGMENT_MASS_FRACTION}, and the mean
- * renormalizes over whichever bones a rig actually resolves — so an omitted
+ * renormalizes over whichever bones a rig actually resolves, so an omitted
  * `upperChest`/`neck` never biases the result.
  */
 const SEGMENT_MASS_FRACTION: Partial<Record<AutoMovieHumanoidBone, number>> = {
@@ -75,7 +75,7 @@ const SUPPORT_BONE_REACHABLE =
 export interface IAutoMovieBalanceSupportWindow {
   /**
    * Center-of-mass source. **Omit** (the default and recommended form) to use
-   * the segment-mass-weighted whole-body COM over the resolved pose —
+   * the segment-mass-weighted whole-body COM over the resolved pose,
    * trustworthy for a lean, reach, or crouch, where the real COM shifts far
    * from the pelvis. Provide a bone to override with a single-bone proxy (the
    * pre-#1184 coarse behavior) for a rig or stance where a specific point is
@@ -103,7 +103,7 @@ export interface IAutoMovieBalanceSupportWindow {
  * contacts to the XZ plane, and rejects frames where the COM falls outside the
  * support hull plus margin.
  *
- * Balance is a physical-plausibility **warning**, not a gate (D015): overstated
+ * Balance is a physical-plausibility **warning**, not a gate: overstated
  * action, martial arts, dance, and stunts are built on momentary imbalance (a
  * launch, a landing, a spin, a tiptoe, an airborne pose), so the run still
  * succeeds and the warning surfaces for the orchestrator to restage or
@@ -135,7 +135,7 @@ export const validateBalanceSupport = (props: {
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
 
   /**
-   * Marker that opts the clip out of the balance expectation (D015): a
+   * Marker that opts the clip out of the balance expectation: a
    * deliberately off-balance pose (wire-fu, a mid-spin freeze, a tiptoe) sets
    * this and the matching warnings are suppressed.
    */
@@ -245,7 +245,7 @@ export const validateBalanceSupport = (props: {
     )
       continue;
 
-    // The engine's shared sampling grid (endpoint-inclusive, end-clamped) —
+    // The engine's shared sampling grid (endpoint-inclusive, end-clamped):
     // the same clock footskate/ground/self-intersection step, so the physics
     // validators can never drift onto different frame boundaries.
     const times = windowSampleTimes(support.start, support.end, sampleRate);
@@ -290,7 +290,7 @@ export const validateBalanceSupport = (props: {
 /**
  * The whole-body center of mass: each resolved bone's world position weighted
  * by its segment mass fraction. This is a proximal-joint mass model (each
- * segment's mass sits at the bone's own joint) — a v1 that is already far more
+ * segment's mass sits at the bone's own joint), a v1 that is already far more
  * trustworthy than a single hips bone for a lean, reach, or crouch, where the
  * real COM shifts away from the pelvis. Sampling runs only past the
  * reachability gate, so `resolved` always holds at least the root and the total

@@ -37,7 +37,7 @@ export interface IAutoMovieSpringCollider {
 /**
  * The cross-frame inputs that let {@link resolveFrame} step spring drivers
  * inside the frame pass: the previous-step state, the timestep, and optional
- * node-attached collision spheres. Springs are the one stateful driver — with
+ * node-attached collision spheres. Springs are the one stateful driver: with
  * this the engine advances them deterministically frame-to-frame; without it
  * they defer exactly as before.
  */
@@ -79,7 +79,7 @@ export interface IAutoMovieResolveInput {
    * Profiles applied to this scene ({@link bindProfile} per entry). Their bound
    * limits and drivers merge **before** the directly-passed `limits`/`drivers`:
    * a profile is the rig's standard baseline, the direct inputs are the
-   * caller's per-scene word — so a direct limit clamps last (its bound is the
+   * caller's per-scene word, so a direct limit clamps last (its bound is the
    * final one) and direct world-space drivers apply after profile-bound ones.
    * Omit for none; absent, behavior is byte-identical to before profiles
    * existed.
@@ -116,9 +116,9 @@ export interface IAutoMovieResolveOutput {
   violations: IAutoMovieResolveViolation[];
 
   /**
-   * Drivers this pass could not resolve — surfaced, never dropped. After S2
+   * Drivers this pass could not resolve: surfaced, never dropped. After S2
    * only two things can appear here: springs when no
-   * {@link IAutoMovieResolveInput.springs} input was given (stateful — nothing
+   * {@link IAutoMovieResolveInput.springs} input was given (stateful: nothing
    * to step them with), and malformed two-bone chains (length ≠ 3).
    */
   deferredDrivers: IAutoMovieDriver[];
@@ -128,12 +128,12 @@ export interface IAutoMovieResolveOutput {
  * Resolve one frame of a scene: SAMPLE the clip, DRIVE the channel-space
  * drivers, CONSTRAIN the values to their channel limits, COMPOSE the node
  * hierarchy into world matrices, then run the world-space DRIVE pass
- * (aim/parent/two-bone and iterative ccd/fabrik IK) and — when the caller
- * threads `springs` state — STEP every spring driver.
+ * (aim/parent/two-bone and iterative ccd/fabrik IK) and, when the caller
+ * threads `springs` state, STEP every spring driver.
  *
  * This is the engine's per-frame entry point and the deterministic core of
  * automovie: given the same scene, clip, limits, drivers, time (and spring
- * state) it always yields the same matrices — the property that makes the
+ * state) it always yields the same matrices, the property that makes the
  * renderer a reproducible diffusion alternative. Every solver runs on a fixed
  * budget, so nothing here is host-dependent; springs without a `springs` input
  * are the one thing still surfaced in `deferredDrivers`.
@@ -147,7 +147,7 @@ export const resolveFrame = (
     input.clip === null ? new Map() : sampleClip(input.clip, input.seconds);
 
   // Bind applied profiles and merge: profile-bound limits/drivers first, the
-  // caller's direct inputs after (the caller's word is final — a direct limit
+  // caller's direct inputs after (the caller's word is final: a direct limit
   // clamps last; direct world drivers apply after profile-bound ones).
   const limitEntries: ILimitEntry[] = [];
   const drivers: IAutoMovieDriver[] = [];
@@ -247,7 +247,7 @@ export const resolveFrame = (
  * of the previous frame. A host loop carries its mutated world map across
  * steps; `resolveFrame` composes fresh from the animation every frame, so
  * without this the spring would restart from the animated pose each time and
- * never accumulate sag. Rotation/scale stay animated — spring only owns the
+ * never accumulate sag. Rotation/scale stay animated: spring only owns the
  * position, exactly like {@link stepSpring}'s own write.
  */
 const seedSprungPositions = (

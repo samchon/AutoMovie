@@ -5,7 +5,7 @@ import { qclose, qunit } from "../internal/predicates";
 
 /**
  * When more than one axis is articulated, `jointToQuaternion` composes them in
- * the documented order — twist ∘ abduction ∘ flexion — and the product is
+ * the documented order (twist ∘ abduction ∘ flexion), and the product is
  * always a unit quaternion (a pure rotation, no scaling). The order matters
  * because quaternion multiplication does not commute.
  *

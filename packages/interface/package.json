@@ -1,7 +1,7 @@
 {
   "name": "@automovie/interface",
   "version": "0.1.0",
-  "description": "automovie type definitions — skeleton, pose, motion, expression, material, scene AST",
+  "description": "automovie type definitions: skeleton, pose, motion, expression, material, scene AST",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",

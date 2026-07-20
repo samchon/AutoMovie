@@ -3,7 +3,7 @@ import { IAutoMovieVector3 } from "@automovie/interface";
 /**
  * Pure-function vector math over {@link IAutoMovieVector3} (`{ x, y, z }`).
  *
- * Stateless helpers — every operation returns a fresh object and never mutates
+ * Stateless helpers: every operation returns a fresh object and never mutates
  * its inputs. The engine keeps its own tiny math layer (rather than depending
  * on `three.js`) so it stays renderer-agnostic and runnable headless.
  *

@@ -55,7 +55,7 @@ const kf = (time: number): IAutoMovieKeyframe => ({
   bezier: null,
 });
 
-/** A stationary 1 s cycle — all travel comes from the path bake. */
+/** A stationary 1 s cycle: all travel comes from the path bake. */
 const gait: IAutoMovieMotion = {
   id: "stand",
   skeleton: "leg",
@@ -74,11 +74,11 @@ const LEG = {
  * Path locomotion composes with the ground-IK pass (#596): a path-baked walk
  * whose raw root drag skates the foot is corrected by plantStanceFeet into a
  * clip that passes the very foot-skate and ground-contact validators the raw
- * bake fails — the full "walk a path, feet planted" pipeline on flat ground.
+ * bake fails: the full "walk a path, feet planted" pipeline on flat ground.
  *
  * Scenarios (0.2 m path at 0.2 m/s → one cycle, root slides 0.2 m, yaw 90°):
  *
- * 1. The raw path bake warns from validateFootSkate — the foot rides the root at
+ * 1. The raw path bake warns from validateFootSkate: the foot rides the root at
  *    0.2 m/s through its contact window.
  * 2. PlantStanceFeet over the bake passes validateFootSkate: the stance foot is
  *    pinned while the hip walks the path (through the rotated frame the path's

@@ -35,7 +35,7 @@ const gait: IAutoMovieMotion = {
   keyframes: [kf(0), kf(1)],
 };
 
-/** Straight 4 m along +X — with garbage waypoint `y` that must be ignored. */
+/** Straight 4 m along +X, with garbage waypoint `y` that must be ignored. */
 const RAMP: IAutoMovieVector3[] = [
   { x: 0, y: 7, z: 0 },
   { x: 4, y: 7, z: 0 },
@@ -53,7 +53,7 @@ const rootAt = (motion: IAutoMovieMotion, time: number) =>
  *
  * Scenarios (straight 4 m path, speed 1 → 4 cycles, waypoint y = 7 everywhere):
  *
- * 1. Callback slope y = 0.5·x: root y is bob + 0.5 at x=1 and bob + 1.5 at x=3 —
+ * 1. Callback slope y = 0.5·x: root y is bob + 0.5 at x=1 and bob + 1.5 at x=3,
  *    following the ramp, oblivious to the waypoint 7.
  * 2. The frame's path point carries the bare ground height (0.5 at x=1), the bob
  *    stays on the root only.

@@ -7,19 +7,19 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.join(here, "configs");
 
-// helper: symmetric eye/cheek/ear levers — `eye-scale-decr|incr` -> l+r fullNames
+// helper: symmetric eye/cheek/ear levers. `eye-scale-decr|incr` -> l+r fullNames
 const eye = (n, v) => ({ [`eyes/l-${n}`]: v, [`eyes/r-${n}`]: v });
 const cheek = (n, v) => ({ [`cheek/l-${n}`]: v, [`cheek/r-${n}`]: v });
 const merge = (...o) => Object.assign({}, ...o);
 
 const MACRO = { gender: 0.0, age: 0.5, asian: 1.0, muscle: 0.5, weight: 0.5, height: 0.5, proportions: 0.5 };
 
-// hero1 — cute young girl (neoteny): big low-set wide eyes, round short face,
+// hero1: cute young girl (neoteny): big low-set wide eyes, round short face,
 // small nose+chin, full cheeks & lips, high forehead, soft jaw.
 const hero1 = {
   macro: { ...MACRO, age: 0.21 }, // R3: younger child (midface too tall at 0.24)
   modifiers: merge(
-    // R6: measurement-driven (mhdissect hero1-front) — lips +80%/+39%, mouth -15%
+    // R6: measurement-driven (mhdissect hero1-front): lips +80%/+39%, mouth -15%
     // & too low, eyeOpenness -14%, facialIndex -13%.
     eye("eye-scale-decr|incr", 0.7),
     eye("eye-height1-decr|incr", 0.66),
@@ -49,12 +49,12 @@ const hero1 = {
   ),
 };
 
-// hero2 — refined beauty (극미녀): large elegant upturned eyes, narrow set,
+// hero2: refined beauty (극미녀): large elegant upturned eyes, narrow set,
 // high cheekbones, tapered defined jaw/chin, long oval face, refined small nose.
 const hero2 = {
   macro: { ...MACRO },
   modifiers: merge(
-    // R6: measurement-driven (mhdissect hero2-front) — mostly close (±3%) EXCEPT
+    // R6: measurement-driven (mhdissect hero2-front): mostly close (±3%) EXCEPT
     // browToEye -30% (tall eyes crowd the brow), lips +14%, irisSpacing -6.6%.
     eye("eye-scale-decr|incr", 0.7),
     eye("eye-height1-decr|incr", 0.65),
@@ -86,8 +86,8 @@ const hero2 = {
   ),
 };
 
-// hero3 — 절세미인 (stunning, balanced): a harmonious elevation of every region,
-// neither cute-exaggerated nor sharply mature — the flagship base.
+// hero3: 절세미인 (stunning, balanced): a harmonious elevation of every region,
+// neither cute-exaggerated nor sharply mature: the flagship base.
 const hero3 = {
   macro: { ...MACRO, age: 0.27 }, // ~14yo teen
   // R5: measurement-driven (mhdissect hero3-front). Fixes the over/under-shoots

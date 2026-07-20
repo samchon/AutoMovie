@@ -3,7 +3,7 @@
  * the requested frame size regardless of the host browser window.
  *
  * Without this the capture canvas is CSS `100vw/100vh`, so `#view`'s rendered
- * (and screenshotted) size is whatever viewport the host happened to open —
+ * (and screenshotted) size is whatever viewport the host happened to open,
  * making the encoded aspect a convention the pose-keypoint sidecar's `width/height`
  * aspect (#1231) could not rely on. The render plan now pins the encoded size with
  * ffmpeg `-s` (#1251); pinning the CANVAS to the same `width`/`height` here means

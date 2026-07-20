@@ -15,7 +15,7 @@ ASSETS="$REF/makehuman-assets"
 M="https://media.githubusercontent.com/media/makehumancommunity/makehuman-assets/master/base"
 mkdir -p "$PUB"
 
-# 1. sparse-clone the asset metas (obj/mhclo/mhmat — not the LFS textures)
+# 1. sparse-clone the asset metas (obj/mhclo/mhmat, not the LFS textures)
 if [ ! -d "$ASSETS/.git" ]; then
   GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --filter=blob:none --sparse \
     https://github.com/makehumancommunity/makehuman-assets.git "$ASSETS"

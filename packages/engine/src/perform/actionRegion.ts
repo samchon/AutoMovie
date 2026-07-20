@@ -20,8 +20,8 @@ const REGION_BY_VERB: Partial<
  * authors: `nod`/`shake` drive only head joints, and the whole-body kinds
  * (trunk+legs, or the jump's ballistic root) span regions, so the generic
  * `upperBody` verb default would silently strip their content in
- * `maskMotionToRegion`. Kinds absent here (the arm gestures — wave, celebrate,
- * throw, point, strike — whose spine/arm joints all live in `upperBody`) fall
+ * `maskMotionToRegion`. Kinds absent here (the arm gestures: wave, celebrate,
+ * throw, point, strike, whose spine/arm joints all live in `upperBody`) fall
  * through to the verb default.
  */
 const REGION_BY_GESTURE: Partial<

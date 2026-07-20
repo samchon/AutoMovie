@@ -12,19 +12,19 @@ const assertFiniteVector = (label: string, vector: IAutoMovieVector3): void => {
 
 /**
  * Synthesise the **locomote** action: carry a looping gait clip across a
- * `distance` at `speed` in a `direction`. The engine sizes the travel — it
+ * `distance` at `speed` in a `direction`. The engine sizes the travel: it
  * picks how many gait cycles cover the distance at the requested speed, then
  * bakes the effective velocity that ARRIVES at exactly `distance` over those
- * whole cycles (`travelMotion`) — so the harness `locomote` verb ("walk to the
+ * whole cycles (`travelMotion`), so the harness `locomote` verb ("walk to the
  * door") reaches the door instead of stopping a half-stride short. At least one
  * cycle always plays; a distance shorter than half a stride compresses that
  * cycle so the effective speed never falls below half the requested speed
- * (#1065) — a quick short step instead of unbounded slow motion.
+ * (#1065): a quick short step instead of unbounded slow motion.
  *
  * `faceTravel` turns the body to face where it is going: the root is oriented
  * so the model's forward (`+Z`) points down the travel direction, so a figure
  * sent sideways walks facing its path instead of strafing. Omit it (the
- * default) to keep the rest facing — a strafe or a backpedal.
+ * default) to keep the rest facing: a strafe or a backpedal.
  *
  * @author Samchon
  */
@@ -58,7 +58,7 @@ export const locomoteMotion = (
   const cycles = Math.max(1, Math.round(quantized));
   // Whole-cycle quantization bounds the effective speed at ½×nominal
   // everywhere EXCEPT the min-1-cycle clamp, where a shrinking distance made
-  // slow-motion unbounded — a 0.1 m walk over a full 1 s cycle skated at
+  // slow-motion unbounded: a 0.1 m walk over a full 1 s cycle skated at
   // 0.1 m/s with full-rate leg swing (#1065). Hold the same ½ floor there by
   // COMPRESSING the single cycle (a quick, short step): the whole cycle
   // still plays, so loop continuity and exact arrival are untouched.
@@ -80,7 +80,7 @@ export const locomoteMotion = (
 
 /**
  * Uniformly time-scale a clip by `k`: keyframe times, duration, and the gait
- * cycle's period/phase (both are seconds) — the same footwork played faster, so
+ * cycle's period/phase (both are seconds), the same footwork played faster, so
  * loop continuity survives the compression.
  */
 const timeScaleClip = (

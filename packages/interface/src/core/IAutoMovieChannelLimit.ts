@@ -1,7 +1,7 @@
 import { IAutoMovieChannel } from "./IAutoMovieChannel";
 
 /**
- * A constraint: a value-domain restriction on one channel — the generalized
+ * A constraint: a value-domain restriction on one channel, the generalized
  * range of motion. The engine clamps the channel to these bounds during
  * resolution and, crucially, _reports_ any violation (the same `[min, max]`
  * that clamps the pose also feeds the harness's `// ❌` correction), so

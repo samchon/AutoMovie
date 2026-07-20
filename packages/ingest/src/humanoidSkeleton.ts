@@ -69,22 +69,22 @@ const normalize = (name: string): string =>
  * Retarget an imported glTF's skins onto a normalized humanoid
  * {@link IAutoMovieSkeleton} by matching every skin's joint names to
  * {@link AutoMovieHumanoidBone} slots (all skins in document order, first match
- * per slot wins) — the bridge that turns a real rigged glTF/VRM into a
+ * per slot wins), the bridge that turns a real rigged glTF/VRM into a
  * automovie character (poses and motions authored on the slots then replay on
  * it). Reading every skin matters because exporters bind clothes, hair, and
- * accessories as separate skins with no ordering guarantee — the body rig must
+ * accessories as separate skins with no ordering guarantee: the body rig must
  * be found wherever it sits.
  *
  * The skeleton's hierarchy is rebuilt over the mapped joints only: a bone's
  * parent is its nearest _mapped_ ancestor in the glTF node tree, so
  * non-humanoid helper bones between two slots are skipped. Rest transforms
- * compose the joint's local TRS through every skipped helper (#1042) —
+ * compose the joint's local TRS through every skipped helper (#1042):
  * {@link IAutoMovieBone.rest} is "relative to `parent`", so a helper's offset or
  * roll must survive into the emitted rest or every bone beneath it lands
  * misplaced under FK. A root bone (no mapped ancestor) keeps its own local TRS:
  * armature/scene transforms belong to the imported object, not the skeleton.
  * Returns `null` when there is no skin or no `hips` (the required root) could
- * be identified — the caller then keeps the model as a non-articulated object.
+ * be identified. The caller then keeps the model as a non-articulated object.
  *
  * @author Samchon
  */
@@ -156,7 +156,7 @@ const localTransform = (node: GLTFNode): IAutoMovieTransform => {
  * Compose two local TRS transforms (`parent` applied over `child`): the
  * standard rig decomposition `t' = t_p + R_p·(s_p ∘ t_c)`, `r' = r_p·r_c`, `s'
  * = s_p ∘ s_c`. Exact whenever scales are uniform or the rotation chain does
- * not shear — the shapes real skeleton hierarchies use.
+ * not shear, the shapes real skeleton hierarchies use.
  */
 const composeLocal = (
   p: IAutoMovieTransform,

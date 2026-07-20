@@ -14,7 +14,7 @@ const bodyAt = (mass: number, vx: number) => ({
 
 /**
  * `suggestCollisionResponse` composes the resolved impact, the recoil push its
- * impulse maps to, and — when a struck chain is given — the ROM-bounded flinch.
+ * impulse maps to, and (when a struck chain is given) the ROM-bounded flinch.
  * Two equal 2kg bodies, one closing at 1 m/s along the normal, give a textbook
  * normal impulse; the flinch appears only when a chain is supplied.
  *

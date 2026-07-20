@@ -17,16 +17,16 @@ const b = (
 });
 
 /**
- * Pins the skeleton-graph gates: a rig must be one connected tree — unique bone
+ * Pins the skeleton-graph gates: a rig must be one connected tree (unique bone
  * names, resolvable parents, exactly one root, and every bone reachable from
- * it. The detached-cycle case is the reason reachability exists at all: it
+ * it). The detached-cycle case is the reason reachability exists at all: it
  * satisfies every local check and is still unposable.
  *
  * Scenarios:
  *
  * 1. A skeleton declaring `hips` twice, `spine` parented to the undeclared `neck`,
  *    and two roots (`hips`, `chest`) → `type` violations on the duplicate bone,
- *    the unresolvable parent, and the root count (and reachability is skipped —
+ *    the unresolvable parent, and the root count (and reachability is skipped:
  *    meaningless without a single root).
  * 2. A single-rooted skeleton (`hips` → `spine`) plus a two-bone cycle (`leftHand`
  *    ⇄ `leftLowerArm`) floating off the tree → every local check passes, but

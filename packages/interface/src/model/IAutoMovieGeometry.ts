@@ -2,7 +2,7 @@ import { AutoMoviePrimitiveShape } from "./AutoMoviePrimitiveShape";
 import { IAutoMovieMesh } from "./IAutoMovieMesh";
 
 /**
- * The geometry of one model part — either an LLM-authored parametric primitive
+ * The geometry of one model part: either an LLM-authored parametric primitive
  * or imported/baked raw mesh data.
  *
  * Discriminated on `type` so the two paths the project cares about are

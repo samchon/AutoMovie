@@ -13,13 +13,13 @@ import { beatCaptions } from "./screenplay";
 
 /**
  * Plan the caption sidecar: lay the cut onto the output clock
- * ({@link sequenceTimeline} — the same frame-atomic arithmetic the render and
+ * ({@link sequenceTimeline}, the same frame-atomic arithmetic the render and
  * chunk plans use), resolve which shot is LIVE at every output frame
  * (transitions hand the frame to the incoming shot, exactly as playback does),
  * group consecutive frames of one shot into spans, and join each span's beat
  * (`shot.id = "shot:" + beat`; an unprefixed id passes through as the beat id)
  * to the screenplay tree's beat node for the caption and the enclosing scene's
- * slug. Treeless scripts caption every span `null` — the sidecar still carries
+ * slug. Treeless scripts caption every span `null`. The sidecar still carries
  * the frame→beat map.
  *
  * Planning only: the host writes the file ({@link renderCaptionSidecar}).

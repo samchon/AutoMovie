@@ -24,7 +24,7 @@ const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
 });
 
 // The plant-feet suite's bent-rest leg: hip 0.8 up over an ~0.85 leg, so the
-// horizontal reach shell is ~0.29 m — every pin-to-hip distance below stays
+// horizontal reach shell is ~0.29 m; every pin-to-hip distance below stays
 // well inside it.
 const legSkeleton: IAutoMovieSkeleton = {
   id: "leg",
@@ -53,8 +53,8 @@ const legSkeleton: IAutoMovieSkeleton = {
 
 // Beside the driving thigh, a zero-articulation shin and foot ride along:
 // numerically identity (the toe track is untouched), but the planting
-// re-solve's leg-strip filters now see non-thigh joints — the shin is stripped
-// with the thigh, the foot is carried through — instead of only ever matching
+// re-solve's leg-strip filters now see non-thigh joints (the shin is stripped
+// with the thigh, the foot is carried through) instead of only ever matching
 // the first `bone !== upper` test.
 const flex = (deg: number): IAutoMovieJointPose[] => [
   { bone: "leftUpperLeg", flexion: deg, abduction: null, twist: null },
@@ -75,11 +75,11 @@ const kf = (time: number, deg: number): IAutoMovieKeyframe => ({
  * t=0.5 (raising the foot 0.8·(1−cos 20°) ≈ 0.048 m) and lands again by t=0.6.
  * With the 0.005 m stance tolerance the 24 Hz plant clock keeps the t = 10/24
  * and 14/24 samples in stance (flexion 3.33°, lift ≈ 0.0014 m) and marks {11,
- * 12, 13}/24 as swing — so each cycle's stance run starts and ends at a mere
+ * 12, 13}/24 as swing, so each cycle's stance run starts and ends at a mere
  * 3.33° of residual flexion, keeping the run-start pin close to the hip track
  * (the residual swings the foot only ~0.047 m locally; a larger tolerance pins
  * at 11.67° ≈ 0.16 m of swing offset, which the yaw blend then drags past the
- * ~0.29 m reach shell — the documented unreachable-pin extension, not a
+ * ~0.29 m reach shell: the documented unreachable-pin extension, not a
  * planting defect, as the diagnosis for this test showed).
  */
 const liftGait: IAutoMovieMotion = {
@@ -209,42 +209,42 @@ const plantAndAssert = (turnWindow: number, label: string): void => {
 /**
  * The ground-IK pass holds through a corner: on an L-path the yaw blend (and
  * the harsher snap) rotates the pelvis over a planted foot, and the pinned
- * stance must survive it — the curved-walking case #599 exists for, which the
+ * stance must survive it: the curved-walking case #599 exists for, which the
  * straight-line composition proof never exercised.
  *
  * Path arithmetic: legs 0.12 m + 0.12 m at speed 0.12 m/s → 2 whole 1 s cycles
- * (duration 2 s), the corner apex at s = 0.12 → t = 1.0 — dead centre of the
+ * (duration 2 s), the corner apex at s = 0.12 → t = 1.0, dead centre of the
  * middle stance run R2 = [14/24, 1+10/24] the lifting gait produces (see
  * {@link liftGait}). The default turn window caps at half of each 0.12 m
  * stretch, blending yaw across s ∈ [0.06, 0.18] → t ∈ [0.5, 1.5]: the ENTIRE
  * straddling stance run rotates. With the 3.33° run-boundary residual the worst
  * pin-to-upper-joint distance is ≈ 0.231 m, inside the leg's ~0.298 m reach
  * shell with a 22% margin (the prior fixture lesson, re-derived through the
- * yaw-rotated hip offset — see {@link liftGait}'s note).
+ * yaw-rotated hip offset; see {@link liftGait}'s note).
  *
- * Scenarios (each run for the blend window AND the snap corner, turnWindow 0 —
+ * Scenarios (each run for the blend window AND the snap corner, turnWindow 0,
  * the harsher discontinuity):
  *
  * 1. The raw corner bake warns from validateFootSkate in the declared stance
  *    windows (the root drags the foot at 0.12 m/s).
  * 2. PlantStanceFeet over the corner bake passes BOTH validateFootSkate and
- *    validateGroundContact — pinning holds under the rotating pelvis.
- * 3. Exactly three stance runs land — before, straddling, and after the apex — and
+ *    validateGroundContact: pinning holds under the rotating pelvis.
+ * 3. Exactly three stance runs land (before, straddling, and after the apex), and
  *    the middle run brackets t = 1.0 (the straddle fact).
  * 4. Each run's foot world XZ is numerically constant from run start through the
  *    apex to run end (the anti-skate property, through the turn).
- * 5. The composite's gaitCycle meta ({period: 1, phaseAt: 0}) survives the bake —
+ * 5. The composite's gaitCycle meta ({period: 1, phaseAt: 0}) survives the bake:
  *    the stride clock never resets across the corner (#650/#597).
  */
 export const test_motion_path_plant_feet_corner = (): void => {
   plantAndAssert(0.5, "blend");
   plantAndAssert(0, "snap");
 
-  // Scenario 6 — the diagnosed failure mode, pinned as fact: with a LOOSE
+  // Scenario 6, the diagnosed failure mode, pinned as fact: with a LOOSE
   // stance tolerance (0.02 m) the run starts at 11.67° of flexion, throwing
   // the pin ~0.16 m behind the yaw-rotated hip; the blend then drags the
   // upper joint past the ~0.298 m reach shell, and the pass extends the leg
-  // toward the unreachable pin instead of holding it — so the planted clip
+  // toward the unreachable pin instead of holding it, so the planted clip
   // honestly FAILS foot-skate (the documented unreachable-pin semantics, the
   // exact trap this test's arithmetic avoids above).
   const loose = followPathMotion({

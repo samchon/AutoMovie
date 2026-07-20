@@ -21,7 +21,7 @@ const axis = (
 ): number | null => pose.joints.find((j) => j.bone === bone)![which];
 
 /**
- * `blendPoses` — weighted additive composition of pose layers, per bone per
+ * `blendPoses`: weighted additive composition of pose layers, per bone per
  * axis, normalized by the weight of the layers that actually set each axis. A
  * `null` axis contributes nothing; a lone layer at weight 1 reproduces its own
  * value, which makes the blend a drop-in for the disjoint-region layering the
@@ -33,11 +33,11 @@ const axis = (
  *    null.
  * 2. Two equal-weight layers on the same axis average; a 3:1 weighting biases
  *    toward the heavier layer.
- * 3. A null axis in one layer does not dilute the other — each axis is the
+ * 3. A null axis in one layer does not dilute the other: each axis is the
  *    weighted mean of only the layers that set it, and an axis no layer sets is
  *    null.
  * 4. Disjoint layers combine their joints (order = first appearance) and the root
- *    comes from the rooted layer — byte-identical to the old union.
+ *    comes from the rooted layer, byte-identical to the old union.
  * 5. An `ownsRoot` layer's root wins even when a later layer is also rooted.
  * 6. With no owning layer the root is the last non-null one (a null-root first
  *    layer does not clear it).

@@ -41,7 +41,7 @@ const actorContext = (
 
 /**
  * Resident motion memory is BEAT-scoped (#1091): `compilePerformance` names
- * every actor's compiled clip `perform:<actor>` — not beat-scoped — so a shared
+ * every actor's compiled clip `perform:<actor>`, not beat-scoped, so a shared
  * session registry let beat 2's `commitShot` silently overwrite beat 1's clip
  * for the same actor. `getShotEndState` for the earlier beat then sampled the
  * WRONG beat's clip with `reason: null` and plausible numbers, corrupting the

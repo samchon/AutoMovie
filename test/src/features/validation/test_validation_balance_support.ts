@@ -101,7 +101,7 @@ const motion = (target: IAutoMovieSkeleton) =>
  * 4. A convex four-point foot/toe hull accepts an inside COM and rejects an
  *    outside COM.
  * 5. The mass-weighted whole-body COM (#1184) warns on a forward-leaning trunk
- *    that a single-hips proxy misses — the pelvis stays over the feet while the
+ *    that a single-hips proxy misses: the pelvis stays over the feet while the
  *    body's real COM has pitched past them.
  * 6. Invalid support annotations and invalid sample rates report deterministic
  *    non-physics failures before sampling.
@@ -213,7 +213,7 @@ export const test_validation_balance_support = (): void => {
   );
 
   // #1184: a forward-leaning trunk pitches the whole-body COM past the feet,
-  // which the mass-weighted default catches but a single-hips proxy misses —
+  // which the mass-weighted default catches but a single-hips proxy misses:
   // the pelvis stays over the feet while the heavy trunk has tipped forward.
   const leaningTrunk: IAutoMovieSkeleton = {
     id: "leaning",

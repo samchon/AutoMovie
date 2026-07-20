@@ -12,7 +12,7 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-// Every bone validates against the default anatomical table — including the
+// Every bone validates against the default anatomical table, including the
 // arms, now that gestures are authored in **clinical** space (abduction 180
 // raises either arm alike; the per-side rest-frame remap lives in the render,
 // not in the gesture values). So "ROM-legal" here is the real pipeline gate: a
@@ -69,7 +69,7 @@ const maxAbs = (
   );
 
 /**
- * `gestureMotion` — the postural/whole-body half of the harness `gesture` verb.
+ * `gestureMotion`: the postural/whole-body half of the harness `gesture` verb.
  * The trunk/head/leg gestures are single-axis oscillations; the arm gestures
  * (wave/celebrate/draw/throw) are authored in clinical space and read up
  * through the rig's rest frame at render. All are engine-authored and hand-kept
@@ -80,7 +80,7 @@ const maxAbs = (
  *
  * 1. Each generic kind synthesises a non-empty clip that opens and closes on the
  *    neutral pose (returns to rest) and validates against the default
- *    anatomical ROM — the arms too, since the clinical angles live inside that
+ *    anatomical ROM: the arms too, since the clinical angles live inside that
  *    table.
  * 2. The gestures move the right joint: bow flexes the spine, nod dips the head
  *    (flexion), shake turns it (twist), crouch folds the knees, kick raises the
@@ -90,13 +90,13 @@ const maxAbs = (
  *    s).
  * 4. `jump` is a whole-body coil-and-leap: it folds the knees, arcs the root up to
  *    a positive apex (and dips into a coil first), opens/closes grounded, and
- *    stays ROM-legal — no arm abduction, so no left/right mirror needed.
+ *    stays ROM-legal: no arm abduction, so no left/right mirror needed.
  * 5. The arm gestures abduct in clinical space: `wave` raises the right arm
  *    (+abduction) and swings the forearm; `celebrate` throws both arms up with
- *    the same positive abduction on each side — no per-side mirror. `draw`
+ *    the same positive abduction on each side: no per-side mirror. `draw`
  *    reaches the bow arm forward and folds the string arm back; `throw` winds
  *    the arm back then whips it forward while the trunk coils.
- * 6. Only `strike` (a targeted jab) and unknown kinds return null — the compiler
+ * 6. Only `strike` (a targeted jab) and unknown kinds return null: the compiler
  *    skips them for the reach-based synthesiser.
  */
 export const test_motion_gesture = (): void => {
@@ -147,7 +147,7 @@ export const test_motion_gesture = (): void => {
     ) > 30,
   );
 
-  // kick — a right-leg front snap: the hip flexes to raise the leg, and the knee
+  // kick, a right-leg front snap: the hip flexes to raise the leg, and the knee
   // chambers folded then snaps near-straight.
   const kick = gestureMotion("k", RIG.id, "kick", 1)!;
   TestValidator.predicate(
@@ -164,7 +164,7 @@ export const test_motion_gesture = (): void => {
     Math.max(...kneeFlex) > 60 && Math.min(...kneeFlex) < 15,
   );
 
-  // stagger — the trunk lurches off balance: the spine leans (abduction) and
+  // stagger, the trunk lurches off balance: the spine leans (abduction) and
   // a leg braces.
   const stagger = gestureMotion("st", RIG.id, "stagger", 1)!;
   TestValidator.predicate(
@@ -174,7 +174,7 @@ export const test_motion_gesture = (): void => {
   );
 
   // The clinical raise is a positive abduction on either side (a rig-space
-  // mirror would flip the sign) — take the signed peak, not the magnitude.
+  // mirror would flip the sign). Take the signed peak, not the magnitude.
   const peakAbd = (
     motion: NonNullable<ReturnType<typeof gestureMotion>>,
     b: AutoMovieHumanoidBone,
@@ -185,7 +185,7 @@ export const test_motion_gesture = (): void => {
       ),
     );
 
-  // wave — the right arm raised (clinical +abduction) and the elbow swinging.
+  // wave: the right arm raised (clinical +abduction) and the elbow swinging.
   const wave = gestureMotion("w", RIG.id, "wave", 1)!;
   TestValidator.predicate(
     "wave raises the right arm (clinical +abduction, read up through the frame)",
@@ -196,7 +196,7 @@ export const test_motion_gesture = (): void => {
     maxAbs(wave, "rightLowerArm", "flexion") > 30,
   );
 
-  // celebrate — both arms thrown up by clinical abduction, the SAME positive
+  // celebrate: both arms thrown up by clinical abduction, the SAME positive
   // angle on each side (no per-side mirror; the rest frame reads it up).
   const celebrate = gestureMotion("c2", RIG.id, "celebrate", 1)!;
   TestValidator.predicate(
@@ -208,7 +208,7 @@ export const test_motion_gesture = (): void => {
       ),
   );
 
-  // draw — the bow arm reaches forward (left-arm flexion) and the string hand
+  // draw: the bow arm reaches forward (left-arm flexion) and the string hand
   // folds back to the cheek (right forearm flexion).
   const draw = gestureMotion("d", RIG.id, "draw", 1)!;
   TestValidator.predicate(
@@ -217,7 +217,7 @@ export const test_motion_gesture = (): void => {
       maxAbs(draw, "rightLowerArm", "flexion") > 90,
   );
 
-  // throw — the right arm cocks back (negative upper-arm flexion) then whips
+  // throw: the right arm cocks back (negative upper-arm flexion) then whips
   // forward (positive), and the trunk coils on its twist.
   const thrown = gestureMotion("t", RIG.id, "throw", 1)!;
   const throwArmFlex = thrown.keyframes.map(
@@ -240,7 +240,7 @@ export const test_motion_gesture = (): void => {
     2,
   );
 
-  // jump — a whole-body coil-and-leap. Unlike the postural gestures it carries
+  // jump: a whole-body coil-and-leap. Unlike the postural gestures it carries
   // root translation (the ballistic rise), folds the knees on the coil/landing,
   // opens and closes grounded, and stays ROM-legal.
   const jump = gestureMotion("j", RIG.id, "jump", 1)!;

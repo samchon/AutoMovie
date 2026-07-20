@@ -1,7 +1,7 @@
 // Pose-matched 3/4 aligned overlay. A fixed 3/4 model camera does not match the
 // photo's head yaw, so a plain overlay shows the yaw gap, not shape. Here we
 // estimate the photo's head yaw from MediaPipe's facial transformation matrix,
-// point the model camera at that same yaw, then iris-align and blend — so what
+// point the model camera at that same yaw, then iris-align and blend, so what
 // remains is a REAL shape difference at 3/4 (cheekbone/jaw/nose projection).
 //
 // Needs Vite :5173 + network. Usage: node scripts/overlay-pose.mjs <hero> <view>

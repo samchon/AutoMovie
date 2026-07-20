@@ -13,13 +13,13 @@ import {
 } from "@automovie/interface";
 
 /**
- * A stick-figure **cat** — a quadruped mapped onto the normalized humanoid
+ * A stick-figure **cat**: a quadruped mapped onto the normalized humanoid
  * skeleton, the counterpart to the human {@link buildStickman}.
  *
  * The rig is reinterpreted, not extended: the spine runs horizontal (hips at
  * the rear, chest at the front), the **arm** slots become the front legs and
  * the **leg** slots the hind legs (all four pointing straight down, so the
- * engine's default clinical axes already swing them sagittally — no axis remap
+ * engine's default clinical axes already swing them sagittally, no axis remap
  * needed), and one finger chain is repurposed as a three-segment articulable
  * **tail**. Cones make the ears; a sphere the head. Each joint carries a
  * cat-tuned ROM ({@link CAT_ROM}) so the rig self-describes its gamut.
@@ -44,13 +44,13 @@ export interface ICatParams {
   neckLength: number;
   /** Head sphere radius. */
   headRadius: number;
-  /** Radius of a leg rod — the limb "thickness". */
+  /** Radius of a leg rod: the limb "thickness". */
   rodRadius: number;
-  /** Radius of the trunk (spine) rods — a chunkier body. */
+  /** Radius of the trunk (spine) rods: a chunkier body. */
   trunkRadius: number;
 }
 
-/** A house-cat ≈ 0.35 m at the shoulder — legs and trunk fleshed, not wiry. */
+/** A house-cat ≈ 0.35 m at the shoulder: legs and trunk fleshed, not wiry. */
 export const DEFAULT_CAT: ICatParams = {
   backHeight: 0.34,
   trunkLength: 0.28,
@@ -149,8 +149,8 @@ const rod = (
 });
 
 /**
- * Build the stick-figure cat — a quadruped skeleton, rods, ears, a tail, and a
- * cat-tuned ROM — from a set of proportions.
+ * Build the stick-figure cat (a quadruped skeleton, rods, ears, a tail, and a
+ * cat-tuned ROM) from a set of proportions.
  *
  * @author Samchon
  */
@@ -234,7 +234,7 @@ export const buildCat = (
   });
 
   const parts: IAutoMovieModelPart[] = [
-    // horizontal spine — a chunky trunk tapering up the neck
+    // horizontal spine: a chunky trunk tapering up the neck
     rod("trunkRear", "hips", v(0, 0, t1), tr),
     rod("trunkFront", "spine", v(0, 0, t1), tr),
     rod("neckRod", "chest", v(0, 0.05, 0.09), tr * 0.8),
@@ -299,7 +299,7 @@ export const buildCat = (
     rod("hlLowerL", "leftLowerLeg", down(p.lowerLeg), r),
     rod("hlUpperR", "rightUpperLeg", down(p.upperLeg), r),
     rod("hlLowerR", "rightLowerLeg", down(p.lowerLeg), r),
-    // tail — base rod joins the hips to the first tail segment (no gap)
+    // tail: base rod joins the hips to the first tail segment (no gap)
     rod("tailBase", "hips", v(0, 0.05, -0.1), r * 0.9),
     rod("tail1", "leftLittleProximal", v(0, 0.03, -0.09), r * 0.85),
     rod("tail2", "leftLittleIntermediate", v(0, 0.015, -0.08), r * 0.75),

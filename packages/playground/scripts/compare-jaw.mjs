@@ -142,7 +142,7 @@ const perPoint = JAW.map((idx, k) => {
 const rms = Math.sqrt(sum / JAW.length);
 // Hair-free chin + lower-jaw subset only. The upper-arc points (zygion 234/454
 // and the temple-side points) sit under hair in the photo, so MediaPipe places
-// them inconsistently vs the bald clay — a vertical artifact, not a jaw-shape
+// them inconsistently vs the bald clay, a vertical artifact, not a jaw-shape
 // error. This subset is the trustworthy jawline signal.
 const CHIN_SUBSET = [
   172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397,

@@ -61,8 +61,8 @@ const STRUCTURAL: AutoMovieGuidePass[] = [
 
 /**
  * A structural guide pass segments only the subject MESH geometry (#1226).
- * Every non-mesh renderable — a grid or other `LineSegments`/`Line` helper,
- * `Points`, a `Sprite` — must be hidden while the pass renders, or it would
+ * Every non-mesh renderable (a grid or other `LineSegments`/`Line` helper,
+ * `Points`, a `Sprite`) must be hidden while the pass renders, or it would
  * draw its live beauty material over the pass's black background (a grid
  * reading as "very close" in depth, a non-palette color in mask, a stray line
  * beside the skeleton in pose). Restore makes them visible again; `beauty`
@@ -75,7 +75,7 @@ const STRUCTURAL: AutoMovieGuidePass[] = [
  *    restore returns them all to visible.
  * 2. `beauty` leaves every non-mesh renderable visible (no override at all).
  * 3. The pose pass hides the pre-existing non-mesh renderables yet keeps its own
- *    skeleton overlay visible — the fix hides what was there, not what the pass
+ *    skeleton overlay visible: the fix hides what was there, not what the pass
  *    draws.
  */
 export const test_viewer_guide_pass_non_mesh = (): void => {

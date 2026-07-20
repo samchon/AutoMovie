@@ -37,7 +37,7 @@ const IMMOBILE: IAutoMovieJointConstraint = {
  *    solve degenerate; the joints stay empty and the residual is warned about.
  * 3. A target whose leg joints declare every axis immobile clamps each candidate
  *    straight back to rest, so no candidate beats the uncorrected limb and the
- *    authored pose is kept — with the residual still reported.
+ *    authored pose is kept, with the residual still reported.
  */
 export const test_motion_retarget_contact_degenerate = (): void => {
   const source = proportionedRig("degenerate-source");

@@ -19,7 +19,7 @@ import {
  * path is scaled by the same `s`, so the mapped contact and the resolved
  * effector coincide to the last bit. The pass measures that drift before
  * solving anything and skips the frame, so the corrected clip is not merely
- * close to the uncorrected one — it is equal.
+ * close to the uncorrected one: it is equal.
  *
  * Scenarios:
  *

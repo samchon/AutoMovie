@@ -33,8 +33,8 @@ const dissolve = (renderer: THREE.WebGLRenderer): void =>
 
 /**
  * The viewer-lifecycle gaps #1090 closed: #1050 gave the cross-dissolve GPU
- * state a dispose that NOTHING called — `mountViewer.stop()` disposed the
- * renderer while the dissolve FBO/quad lingered until GC — and the dissolve's
+ * state a dispose that NOTHING called (`mountViewer.stop()` disposed the
+ * renderer while the dissolve FBO/quad lingered until GC), and the dissolve's
  * offscreen target was created without MSAA while the canvas renderer runs
  * `antialias: true`, so the first blend frame (alpha≈0, visually 100% outgoing)
  * popped aliased at every dissolve edge. `stop()` now routes through
@@ -48,7 +48,7 @@ const dissolve = (renderer: THREE.WebGLRenderer): void =>
  *    re-initializes lazily.
  * 2. Negative twin: with no dissolve state, the release still disposes the
  *    renderer and throws nothing.
- * 3. The dissolve's offscreen target is created with `samples: 4` — MSAA parity
+ * 3. The dissolve's offscreen target is created with `samples: 4`, MSAA parity
  *    with the antialiased canvas renderer.
  */
 export const test_viewer_release_renderer = (): void => {
@@ -78,7 +78,7 @@ export const test_viewer_release_renderer = (): void => {
     fresh instanceof THREE.WebGLRenderTarget && fresh !== target,
   );
 
-  // 2. negative twin: no dissolve state — release stays safe
+  // 2. negative twin: no dissolve state, release stays safe
   const untouched = makeFakeRenderer(64, 32);
   releaseViewerRenderer(untouched.renderer);
   TestValidator.equals(

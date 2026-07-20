@@ -39,7 +39,7 @@ const makeShot = (beat: string, scene: string): IAutoMovieShot => ({
  * Resident slice arrays come back in the stored filename order, not the upsert
  * append order (#716). `readKeyedSlices` reads `shots/`/`beatEnds/` in
  * filename-lexicographic order, but a `commitShot`/`commitBeatEnd` upsert
- * appends a new beat at the array end — so the slate a resident commit returned
+ * appends a new beat at the array end, so the slate a resident commit returned
  * was NOT byte-identical to what the next resident read produced, breaking the
  * "same logical state, same bytes" expectation a caller that diffs or caches
  * the returned slate relies on. `finish` now reorders the resident-committed
@@ -49,10 +49,10 @@ const makeShot = (beat: string, scene: string): IAutoMovieShot => ({
  * reverse):
  *
  * 1. The last resident commitShot returns shots in filename order [shot:beat-10,
- *    shot:beat-2] — the reordering actually happened (not the [beat-2, beat-10]
+ *    shot:beat-2], the reordering actually happened (not the [beat-2, beat-10]
  *    append order).
  * 2. That returned order equals the next resident read's order
- *    (`nextSteps().status.shots`) — cross-mode byte consistency.
+ *    (`nextSteps().status.shots`), cross-mode byte consistency.
  * 3. The same holds for beatEnds committed in the reverse-of-filename order.
  * 4. An explicit-slate commit is a pure transform: it preserves the caller's given
  *    shot order verbatim (no reordering, byte-compat).
@@ -75,7 +75,7 @@ export const test_mcp_resident_slice_order = (): void => {
     ].map((id) => ({ id, skeleton: null }));
     app.commitScene({ scene: staged.scene, models });
 
-    // Commit in the order beat-2, then beat-10 — the append order.
+    // Commit in the order beat-2, then beat-10, the append order.
     app.commitShot({ shot: makeShot("beat-2", staged.scene.id) });
     const lastShot = app.commitShot({
       shot: makeShot("beat-10", staged.scene.id),

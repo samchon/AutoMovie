@@ -40,13 +40,13 @@ const SPEC: IAutoMovieRenderSpec = {
 
 /**
  * Requesting no guide passes changes nothing: the chunk plan without a `passes`
- * argument is byte-identical to the pre-#644 shape — the pass fields are not
+ * argument is byte-identical to the pre-#644 shape: the pass fields are not
  * merely empty, they are absent.
  *
  * Scenarios:
  *
  * 1. Plans built with and without `passes: undefined` deep-equal each other.
- * 2. Neither the chunks nor the plan carry the pass keys at all (`in` checks) —
+ * 2. Neither the chunks nor the plan carry the pass keys at all (`in` checks):
  *    absence, not emptiness, so pre-#644 consumers see the exact same object
  *    shape.
  */

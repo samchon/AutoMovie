@@ -20,7 +20,7 @@ import {
  * Scenarios:
  *
  * 1. A motion whose root is set on one keyframe and `null` on the other holds
- *    parity at every baked time — the null side folds as identity.
+ *    parity at every baked time: the null side folds as identity.
  * 2. Root tracks exist exactly when some keyframe has a root: the animated motion
  *    emits translation + rotation tracks on the synthetic root node.
  * 3. Negative twin: an all-null-root motion emits no root-node tracks at all.

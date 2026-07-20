@@ -47,8 +47,8 @@ const makeShot = (
 
 /**
  * The upsert rule (#617, the AutoBe granularity doctrine): re-committing the
- * same beat's artifact replaces exactly that slice — and, resident, exactly
- * that file — leaving sibling beats byte-identical. One beat is the stable
+ * same beat's artifact replaces exactly that slice, and, resident, exactly
+ * that file, leaving sibling beats byte-identical. One beat is the stable
  * correction target.
  *
  * Scenarios:
@@ -56,11 +56,11 @@ const makeShot = (
  * 1. Two beats' shots commit into the resident project as two files.
  * 2. Re-committing beat-1's shot with changed content replaces `shots/beat-1
  *    .json` (the parse shows the new duration) while `shots/beat-2.json` stays
- *    byte-identical — the upsert touched one slice only.
+ *    byte-identical, the upsert touched one slice only.
  * 3. The re-commit invalidates ONLY beat-1's beat-end (commitShot's cascade):
  *    `beatEnds/beat-1.json` disappears, `beatEnds/beat-2.json` survives
  *    byte-identical.
- * 4. The slate's shot count stays 2 after the re-commit — replacement, not append
+ * 4. The slate's shot count stays 2 after the re-commit, replacement, not append
  *    (the negative twin of an accidental duplicate).
  */
 export const test_mcp_commit_upsert = (): void => {

@@ -21,18 +21,18 @@ import { qclose, vclose } from "../internal/predicates";
 
 /**
  * `motionToClip`'s `nodePrefix` gives a multi-actor node graph per-actor
- * channel namespaces (S3): every lowered node id AND every clip channel ref —
- * bones and the synthetic root alike — carries the prefix, while the default
+ * channel namespaces (S3): every lowered node id AND every clip channel ref
+ * (bones and the synthetic root alike) carries the prefix, while the default
  * stays the bare single-actor naming S1 shipped (byte-compat).
  *
  * Scenarios:
  *
- * 1. Default (no prefix): node ids and channel refs are bare — the S1 contract
+ * 1. Default (no prefix): node ids and channel refs are bare, the S1 contract
  *    unchanged (the byte-compat twin of the prefixed run).
  * 2. Prefixed: every node id, every bone channel, and the root TRS channels carry
  *    the prefix; no bare id survives.
  * 3. Parity holds under the prefix: the world of `"knightA/" + bone` over the
- *    prefixed bridge equals `resolvePose ∘ sampleMotion` on every bake time —
+ *    prefixed bridge equals `resolvePose ∘ sampleMotion` on every bake time:
  *    prefixing renames the graph without moving it.
  */
 export const test_motion_to_clip_prefix = (): void => {

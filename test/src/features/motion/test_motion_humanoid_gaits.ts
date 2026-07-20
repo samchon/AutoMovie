@@ -46,7 +46,7 @@ const ampOf = (
 ) => gait.limbs.find((l) => l.bone === b)!.amplitude;
 
 /**
- * The canonical humanoid gait library — `locomote`'s whole `gait` enum as ready
+ * The canonical humanoid gait library: `locomote`'s whole `gait` enum as ready
  * data. The point of the library (and of the `neutral` field it leans on):
  * every gait must sit inside the humanoid ROM, so a host can drop any of the
  * five into an actor context and the compiled clip validates without
@@ -57,7 +57,7 @@ const ampOf = (
  * 1. All five gaits are present under their enum names, each stamping its own
  *    name.
  * 2. Each gait, synthesised densely (24 samples) and validated against the
- *    default-ROM humanoid rig, passes — knees never hyperextend, fast-gait hips
+ *    default-ROM humanoid rig, passes: knees never hyperextend, fast-gait hips
  *    never cross the −30° floor. This is the whole reason `neutral` is tuned
  *    per gait.
  * 3. The gaits are ordered by energy where it should show: sprint's hip swing

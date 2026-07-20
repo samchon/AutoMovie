@@ -2,7 +2,7 @@
  * Substitute `{{key}}` tokens in a template payload from `variables`, throwing
  * on an unknown key. Throwing (rather than leaving the token, or silently
  * blanking it) makes a mistyped placeholder a loud build-time failure instead
- * of a broken scaffold shipped to a user — the same discipline the reference
+ * of a broken scaffold shipped to a user, the same discipline the reference
  * scaffolder uses.
  *
  * @author Samchon

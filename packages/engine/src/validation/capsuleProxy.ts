@@ -5,7 +5,7 @@ import { ViolationCollector } from "./violation";
 /**
  * Capsule proxy over two resolved bones.
  *
- * A segment from `from` to `to` with a radius — the coarse volume stand-in both
+ * A segment from `from` to `to` with a radius: the coarse volume stand-in both
  * the self-intersection ({@link validateSelfIntersection}) and inter-body
  * collision ({@link detectBodyCollision}) checks resolve their overlap against,
  * before a mesh-level topology validator exists.
@@ -28,15 +28,15 @@ export interface IAutoMovieCapsuleProxy {
  * must be bones of the rig, FK-reachable from a root (#1056), the two endpoints
  * must be distinct, and the radius must be finite and positive. Returns whether
  * the capsule is usable; every failure is pushed as an **error** (structural
- * precondition, not a physics warning — you cannot advise on geometry that will
+ * precondition, not a physics warning: you cannot advise on geometry that will
  * not resolve).
  *
  * Shared by both capsule validators so a malformed capsule is rejected the same
- * way in each — where `detectBodyCollision` previously resolved a bad bone to
+ * way in each, where `detectBodyCollision` previously resolved a bad bone to
  * `undefined`, produced a NaN distance, and dropped the overlap in silence
  * (`NaN < minimum === false`). A declared-but-detached endpoint (its parent
  * chain never reaches a root) is never returned by FK, so reading its resolved
- * position would crash rather than report the malformed rig — the same gate the
+ * position would crash rather than report the malformed rig, the same gate the
  * footskate and balance validators carry.
  *
  * @author Samchon

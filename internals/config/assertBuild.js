@@ -57,7 +57,7 @@ for (const target of publishTargets) {
 
 // Every literal `files` entry must exist on disk (#1254). npm silently drops a
 // missing entry, so a package declaring LICENSE/README.md in `files` without the
-// file publishes without it — a tarball missing its license, caught here at
+// file publishes without it: a tarball missing its license, caught here at
 // build instead of at publish. Glob entries are left to npm.
 const hasGlob = (entry) => /[*?[\]{}]/.test(entry);
 for (const entry of packageJson.files ?? []) {

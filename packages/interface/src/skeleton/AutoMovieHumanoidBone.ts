@@ -4,14 +4,14 @@
  *
  * This enum is the backbone of automovie's "named scalar" strategy. Because
  * every bone an LLM can address is a fixed identifier from this union, a
- * hallucinated or mistyped bone name is structurally impossible — the model
+ * hallucinated or mistyped bone name is structurally impossible; the model
  * picks from a menu, it does not invent. The names map 1:1 onto `VRMHumanoid`
  * so a validated pose retargets cleanly onto _any_ VRM avatar (the whole point
  * of a normalized humanoid rig).
  *
  * Required vs optional bones: VRM marks ~16 as required (hips, spine, chest,
  * head, the four limb chains). Fingers, eyes, jaw, `upperChest`, `neck`,
- * `toes`, and `shoulder` are optional — an imported rig may omit them, in which
+ * `toes`, and `shoulder` are optional: an imported rig may omit them, in which
  * case a pose simply never references them.
  *
  * The finger bones (30 of the 55) are the dimensional tail: a full-hand pose is

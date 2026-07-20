@@ -57,7 +57,7 @@ export const applyTransform = (
  * no rigid attachment becomes a `THREE.SkinnedMesh` bound to the skeleton. If
  * both signals are present, `attachedBone` wins: the part is treated as a rigid
  * prop and its skin payload is ignored by the viewer. An `attachedBone` the
- * skeleton does not carry throws — the same class as a skin referencing a
+ * skeleton does not carry throws, the same class as a skin referencing a
  * missing bone (#1106): a silently root-parented prop renders frozen at the
  * origin while everything else looks right.
  *
@@ -74,13 +74,13 @@ export const buildModel = (model: IAutoMovieModel): IAutoMovieModelObject => {
     for (const b of model.skeleton.bones) {
       const bone = new THREE.Bone();
       bone.name = b.bone;
-      // Rig rest SCALE is ignored — the engine's pinned convention (#1052):
+      // Rig rest SCALE is ignored, the engine's pinned convention (#1052):
       // `resolvePose` composes rotation and translation only, and
       // `motionToClip` matches it ("rest scale ignored on both sides").
       // Applying it here would render every descendant at the accumulated
       // scale product while ground contact, collision, and framing measured
       // the unscaled body. Scale stays first-class on scene NODES and object
-      // motions (#1049) — this convention is about rig bones only.
+      // motions (#1049). This convention is about rig bones only.
       bone.position.set(
         b.rest.translation.x,
         b.rest.translation.y,
@@ -137,7 +137,7 @@ export const buildModel = (model: IAutoMovieModel): IAutoMovieModelObject => {
     } else if (part.attachedBone !== null) {
       // An unknown attachedBone must throw like the skin path above (#1106):
       // the silent fallback parented a hand-held prop to the model root,
-      // rendering it frozen at the origin while everything else looked right —
+      // rendering it frozen at the origin while everything else looked right,
       // the silent-skip class #1051 removed from the viewer.
       const parentBone = bones.get(part.attachedBone);
       if (parentBone === undefined)

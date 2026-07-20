@@ -86,7 +86,7 @@ const endOf = (duration: number) =>
  * this beat left it. The carried gait phase re-samples to the very pose the
  * beat ended on, the folded transform is the exact world position to restage at
  * (with the pose root cleared so nothing double-applies), and the root velocity
- * matches the clip's true derivative — including at the loop seam, where a
+ * matches the clip's true derivative, including at the loop seam, where a
  * naive finite difference across the wrap would report a teleport.
  *
  * Scenarios:
@@ -94,12 +94,12 @@ const endOf = (duration: number) =>
  * 1. Mid-cycle end (2.25 s into a 1 s loop): gaitPhase = 0.25, world position
  *    folds to x = 0.5, and rootVelocity = the clip's constant 2 m/s.
  * 2. Resume equality: sampling the clip at the carried phase reproduces the end
- *    sample exactly (same joints, same root) — the next beat's first frame IS
+ *    sample exactly (same joints, same root): the next beat's first frame IS
  *    this beat's last.
  * 3. Restage seam: the end pose's root is cleared, so an actor staged at the
  *    carried transform starts precisely at the end position, no double-apply.
  * 4. Exactly on the loop seam (2.0 s): phase wraps to 0 and velocity is measured
- *    on the cycle's closing stretch (clamped, not wrapped) — still 2 m/s, not a
+ *    on the cycle's closing stretch (clamped, not wrapped): still 2 m/s, not a
  *    backwards teleport.
  * 5. In the cycle's opening instants (phase < the finite-difference window) the
  *    window shrinks to [0, phase] and still reads 2 m/s.

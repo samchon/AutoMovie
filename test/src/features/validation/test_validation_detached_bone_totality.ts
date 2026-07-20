@@ -61,10 +61,10 @@ const MOTION = {
 
 /**
  * A physics validator's bone membership is checked against the DECLARED set
- * (`skeleton.bones`), but `resolvePose` returns only the FK-REACHABLE set — the
+ * (`skeleton.bones`), but `resolvePose` returns only the FK-REACHABLE set: the
  * bones its root-anchored walk visits. A declared-but-detached bone slips the
  * gap: the declared check passes, yet the resolved lookup comes back empty, and
- * the old code asserted it non-null and crashed. A validator must be total —
+ * the old code asserted it non-null and crashed. A validator must be total:
  * malformed input becomes a violation, never a thrown exception (the #593
  * severity/ledger contract, the same totality #685/#688 restored for the
  * collision oracle).
@@ -158,7 +158,7 @@ export const test_validation_detached_bone_totality = (): void => {
   );
 
   // A bone entirely absent from the skeleton still reports "must exist", NOT
-  // the reachability message — the two failures stay distinct.
+  // the reachability message: the two failures stay distinct.
   const absent = validateFootSkate({
     motion: MOTION,
     skeleton: DETACHED_SKELETON,

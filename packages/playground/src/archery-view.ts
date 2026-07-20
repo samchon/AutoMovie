@@ -26,7 +26,7 @@ import { QUADRUPED_JOINT_AXES, QUADRUPED_REST_FRAME } from "./quadruped-rig";
 // ── Parthian shot, at the gallop: two knights charge across the field (camera
 // tracking), the lead archer twists back in the saddle and looses an arrow at
 // his pursuer. The arrow is a real ballistic projectile; the hit is DETECTED
-// (in the moving target's frame), and the detected contact unhorses him — his
+// (in the moving target's frame), and the detected contact unhorses him: his
 // horse gallops on while he tumbles to the turf and recedes. ~10s. ────────────
 const params = new URLSearchParams(location.search);
 
@@ -138,7 +138,7 @@ const struck: IAutoMovieJointPose[] = [
 ];
 
 // ── timing + the arrow (lead the moving target; detect in the target frame) ──
-// the archer flees, then SNAPS around to loose — a fast twist just before release
+// the archer flees, then SNAPS around to loose, a fast twist just before release
 const DRAW_START = 4.9;
 const RELEASE = 5.4;
 const g = v(0, -3.4, 0);
@@ -253,7 +253,7 @@ const step = (t: number): void => {
   );
   setRider(archerObj, archer.skeleton, blend(ride, drawBack, dw), seatA);
 
-  // target: seated until struck; then thrown off — stays in the world where he
+  // target: seated until struck; then thrown off: stays in the world where he
   // was hit (counter the rig's ongoing travel) and tumbles down as the horse runs on
   if (t < HIT_AT) {
     setRider(targetObj, target.skeleton, ride, seatB);

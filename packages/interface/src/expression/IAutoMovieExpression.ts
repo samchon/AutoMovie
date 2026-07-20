@@ -2,20 +2,20 @@ import { AutoMovieExpressionPreset } from "./AutoMovieExpressionPreset";
 import { IAutoMovieBlendshapeChannel } from "./IAutoMovieBlendshapeChannel";
 
 /**
- * A facial expression at one instant — coarse preset intent plus optional
+ * A facial expression at one instant: coarse preset intent plus optional
  * fine-grained ARKit overrides.
  *
  * AutoMovie offers two registration levels so the model can work at whatever
  * resolution the task needs:
  *
- * - `preset` + `intensity` — the **coarse, most reliable** handle. "Look happy at
+ * - `preset` + `intensity`: the **coarse, most reliable** handle. "Look happy at
  *   0.8." Portable across every VRM avatar.
- * - `blendshapes` — **fine-grained** ARKit channel overrides for precise lip
+ * - `blendshapes`: **fine-grained** ARKit channel overrides for precise lip
  *   shapes, asymmetric expressions, or audio-driven lip-sync, layered on top of
  *   the preset. `null` when the preset alone is enough.
  *
  * This split keeps the common case tiny (one preset + one number) while still
- * allowing the full 52-channel vector when needed — and both are validated the
+ * allowing the full 52-channel vector when needed, and both are validated the
  * same way (closed names, `[0, 1]` weights).
  *
  * @author Samchon

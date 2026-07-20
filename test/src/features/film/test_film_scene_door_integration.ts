@@ -68,21 +68,21 @@ const SCENE: IAutoMovieScene = {
 /**
  * The #603×S3 integration made whole: a door FORGED by forgeProp is PLACED in a
  * scene, its articulation lowers into the one scene graph, and its
- * author-declared constraint executes with the placement composed in — the
+ * author-declared constraint executes with the placement composed in: the
  * S4/#642 door oracles now hold THROUGH the scene, alongside a second occupant
  * whose skeleton shares the graph without collision.
  *
  * Scenarios:
  *
  * 1. The forged door forges, lowers under its placement, and an in-range 90° swing
- *    passes: the hinge's world POSITION is `placement + (0,1,0)` — the
- *    placement composition is real — and its world X basis lands at
+ *    passes: the hinge's world POSITION is `placement + (0,1,0)` (the
+ *    placement composition is real), and its world X basis lands at
  *    `(0,0,-1)`.
  * 2. The declared copy driver mirrors the hinge in the same scene graph.
  * 3. An over-limit 150° swing clamps to exactly 110° (world X basis `(cos110°, 0,
  *    −sin110°)`) with every violation tagged by the forged profile on the
  *    PREFIXED hinge channel.
- * 4. The second occupant's bones live in the same graph (`knight/hips` resolves) —
+ * 4. The second occupant's bones live in the same graph (`knight/hips` resolves):
  *    no id collisions between actor and prop subtrees.
  */
 export const test_film_scene_door_integration = (): void => {

@@ -145,7 +145,7 @@ const makeBinding = (
  *    copy owner/source, aim owner/target, ik chain/goal/pole.node (with a
  *    null-pole-node and a null-pole twin left untouched), parent owner/parent,
  *    spring chain/center (with a null-center twin), and a driven's node-channel
- *    output — while its pointer-channel source passes through unchanged.
+ *    output, while its pointer-channel source passes through unchanged.
  * 2. Limits remap the node channel and leave the pointer-channel limit untouched;
  *    with no prefix the mapped ids are the bare boneMap values.
  * 3. A semantic key missing from boneMap throws naming the profile and key.

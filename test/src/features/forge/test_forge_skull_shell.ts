@@ -7,7 +7,7 @@ import { TestValidator } from "@nestia/e2e";
  * and a front surface well behind the canonical nose tip (z 0.075) so the two
  * never z-fight.
  *
- * Scenario: default build — vertex count (SEG+1)·(RING+1), |mean x| < 1e-6, max
+ * Scenario: default build, vertex count (SEG+1)·(RING+1), |mean x| < 1e-6, max
  * z < 0.05.
  */
 export const test_forge_skull_shell = (): void => {
