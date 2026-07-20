@@ -17,7 +17,6 @@ import {
  * this module's surface for the rest of the MCP validators.
  */
 export {
-  asArray,
   isRecord,
   pushViolation,
   validateArrayArtifact,
