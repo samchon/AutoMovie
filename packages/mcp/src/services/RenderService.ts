@@ -584,18 +584,16 @@ const buildPoseKeypointPlan = (props: {
   // two very different contracts and the shallow side threw where every sibling
   // refusal returns a located violation (#1331). One definition, the engine's.
   if (shotsReady)
-    (shots as unknown[]).forEach((shot, index) => {
-      // Exactly as wide as the consumer's requirement: `resolveCameraAt` takes
-      // `cameraMotion ?? null` and skips sampling for both, so neither absence
-      // nor null is a fault here.
-      if (
-        !isRecord(shot) ||
-        shot.cameraMotion === null ||
-        shot.cameraMotion === undefined
-      )
-        return;
+    // Every entry is a record here: that is what `validateSlateShotEntries`
+    // just proved, so re-testing it would add a branch nothing can reach.
+    (shots as IAutoMovieShot[]).forEach((shot, index) => {
+      // Exactly as wide as the consumer's requirement, and stated the same way:
+      // `resolveCameraAt` takes `cameraMotion ?? null` and samples nothing for
+      // either, so neither absence nor null is a fault here.
+      const clip = shot.cameraMotion ?? null;
+      if (clip === null) return;
       validateClipArtifact(
-        shot.cameraMotion,
+        clip,
         `${props.slateRoot}.shots[${index}].cameraMotion`,
         violations,
       );

@@ -406,6 +406,17 @@ export const test_mcp_plan_pose_keypoints = (): void => {
     }).validation,
     { success: true },
   );
+  // The clip gate hangs off the shot list being usable at all. A non-array
+  // `shots` refuses before it, which is also the arm that proves the gate does
+  // not run on a list it was never given.
+  TestValidator.predicate(
+    "a non-array slate shots refuses before the clip gate",
+    hasViolation(
+      plan({ slate: slate({ shots: null as never }) }).validation,
+      "type",
+      "$input.slate.shots",
+    ),
+  );
   TestValidator.predicate(
     "a non-array skeletons input refuses",
     hasViolation(
