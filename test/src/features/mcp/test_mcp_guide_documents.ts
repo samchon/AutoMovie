@@ -71,7 +71,10 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
  *
  * 1. Every declared guide name resolves to non-empty markdown carrying its
  *    distinctive doctrine phrase: the union, the prompts directory, and the
- *    generated constant cannot drift apart silently.
+ *    generated constant cannot drift apart silently. Phrases match case-folded,
+ *    because a pin holds doctrine, not capitalization: a corpus-wide
+ *    punctuation pass (#1298's em-dash ban) re-cased two sentence-initial words
+ *    and must not read as dropped doctrine.
  * 2. An unknown name (reachable through direct API misuse) throws an error that
  *    lists every valid name, instead of returning undefined content.
  * 3. Malformed name fields reject before guide lookup so bad input is not confused
@@ -80,11 +83,13 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
  *    fields.
  */
 export const test_mcp_guide_documents = (): void => {
+  const folded = (s: string): string => s.toLowerCase();
   for (const [name, phrase] of CORPUS) {
     const output = app.getGuideDocument({ name });
     TestValidator.predicate(
       `${name} resolves with substance ("${phrase}")`,
-      output.content.length > 200 && output.content.includes(phrase),
+      output.content.length > 200 &&
+        folded(output.content).includes(folded(phrase)),
     );
   }
 
