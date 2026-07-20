@@ -63,8 +63,8 @@ export namespace IAutoMovieBlockingApplication {
      * extra angle (a side camera on the duel while the hero holds the close
      * framing). The hero take stays the singular `camera` above; each coverage
      * intent names its own staged camera so the performance stage can frame
-     * that angle too, and the performed shot carries the compiled alternates on
-     * its `coverage`. Omit for a single-camera beat.
+     * that angle too, the compiled alternates riding the shot's `coverage` as
+     * guide metadata. Omit for a single-camera beat.
      */
     coverage?: ICoverageIntent[];
 

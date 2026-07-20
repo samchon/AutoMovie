@@ -35,7 +35,7 @@ Pass-tagged frames insert the pass name before the extension (`frame_00042.depth
 
 ## Camera Intent & Coverage
 
-The performed shot carries two pieces of structural camera metadata beside the frames. `cameraIntent` records each frame span's directorial intent: framing, move, the resolved world focus point, and the focal-length intent in millimetres. It is intent, not optics: the scene camera's `fovY` stays the geometric truth, and depth-of-field blur is the diffusion pass's job, never simulated here. `coverage` lists the beat's alternate camera takes when the blocking planned several staged cameras: each entry pairs one staged camera with its own compiled move (the same framing grammar as the hero take) and its own per-span intent. Read both beside the guide frames: render the hero take as planned, or cut to a coverage angle of the same performed beat without re-performing it.
+The performed shot carries two pieces of structural camera metadata beside the frames. `cameraIntent` records each frame span's directorial intent: framing, move, the resolved world focus point, and the focal-length intent in millimetres. It is intent, not optics: the scene camera's `fovY` stays the geometric truth, and depth-of-field blur is the diffusion pass's job, never simulated here. `coverage` is the multi-angle companion: one entry per alternate camera take of the beat, each pairing a staged camera with its own compiled move (the same framing grammar as the hero take) and its own per-span intent. Read both beside the guide frames: render the hero take as planned, or cut to a coverage angle of the same performed beat without re-performing it.
 
 ## Pose Keypoints: planPoseKeypoints
 

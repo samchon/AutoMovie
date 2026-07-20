@@ -83,7 +83,7 @@ export const test_film_camera_coverage = (): void => {
   });
   TestValidator.equals("take names its camera", side.camera, "cam-alt");
   TestValidator.predicate(
-    "locked-off is not forced",
+    "a spanned take compiles a clip",
     side.cameraMotion !== null,
   );
   if (side.cameraMotion !== null) {
