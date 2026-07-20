@@ -168,8 +168,8 @@ export const validateColorArtifact = (
  * the non-keyed slices were rewritten. That is the exact symptom #1096 removed
  * for submitted scripts, reached from disk instead (#1327).
  *
- * Exact duplicates keep their own {@link validateUniqueBy} violation, so one bad
- * pair yields one violation rather than two.
+ * Exact duplicates keep their own `validateUniqueBy` violation, so one bad pair
+ * yields one violation rather than two.
  *
  * The fold is over the raw id, not over `sliceFilename`'s encoding of it. That
  * refuses a marginal pair the store would in fact tolerate (`con` and `Con`
