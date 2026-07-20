@@ -2,8 +2,10 @@ import {
   AutoMovieHumanoidBone,
   IAutoMovieCamera,
   IAutoMovieCameraAction,
+  IAutoMovieCameraIntent,
   IAutoMovieClip,
   IAutoMovieQuaternion,
+  IAutoMovieShotCoverage,
   IAutoMovieSkeleton,
   IAutoMovieVector3,
 } from "@automovie/interface";
@@ -313,6 +315,47 @@ export const compileCameraMove = (props: {
     ],
   };
 };
+
+/**
+ * One `frame` action paired with its resolved subject and its resolved intent
+ * record: the bundle a coverage take compiles from. Carrying the intent beside
+ * the action keeps the take's `cameraIntent` in one-to-one correspondence with
+ * the spans its `cameraMotion` plays, by construction.
+ */
+export interface IAutoMovieCameraCoverageEntry extends IAutoMovieCameraFrameEntry {
+  /** This span's resolved intent record (as the hero take's entries emit). */
+  intent: IAutoMovieCameraIntent;
+}
+
+/**
+ * Compile one beat's coverage take (#1187): the alternate angle another staged
+ * camera plays over the beat, paired with its per-span intent as one
+ * {@link IAutoMovieShotCoverage} record. The move compiles through the same
+ * {@link compileCameraMove} framing grammar the hero take uses (the camera is a
+ * parameter, so a side camera's staged bearing frames its own angle), and the
+ * deterministic solve stays the only consumer of the geometry: the intent
+ * records ride as guide metadata, never back into the math.
+ *
+ * Entries carry the same precondition as the hero take's: sorted by `start`,
+ * non-overlapping (the shot compiler gates that). An empty list is a locked-off
+ * covering camera: `cameraMotion: null`, no intent spans, the same convention
+ * as a shot with no `frame` action.
+ */
+export const compileCameraCoverage = (props: {
+  camera: IAutoMovieCamera;
+  clipId: string;
+  entries: IAutoMovieCameraCoverageEntry[];
+  shotDuration: number;
+}): IAutoMovieShotCoverage => ({
+  camera: props.camera.id,
+  cameraMotion: compileCameraMove({
+    clipId: props.clipId,
+    camera: props.camera,
+    entries: props.entries,
+    shotDuration: props.shotDuration,
+  }),
+  cameraIntent: props.entries.map((entry) => entry.intent),
+});
 
 /**
  * A skeleton's rest-pose height: compose each bone's rest transform down the

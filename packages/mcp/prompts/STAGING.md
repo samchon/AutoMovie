@@ -29,6 +29,8 @@ Size the piece with `scale`, not with another forged model: a bare number scales
 
 One take, one live camera (enforced at perform time). Place cameras where the blocking's framing intent needs them; the camera move itself is chosen per beat with the `frame` action. Framing distance follows the staged bearing: the director's chosen side is preserved, so stage the camera on the side you mean.
 
+One beat can be covered by several staged cameras. Stage every angle you want (the hero side-on, an alternate close, a wide safety), then name the extra cameras in the blocking's `coverage`: each entry is an ordinary camera intent (framing/move/on) plus the staged camera that plays it. A coverage camera must be staged, named exactly once, and favour something placed. The shot schema carries the compiled alternates as `coverage` beside the singular hero `camera`/`cameraMotion`: structural guide metadata a render/diffusion host reads to cut between angles of the same performed beat. Coverage is intent, not a second election: the deterministic perform stage still elects one live camera per shot, and depth-of-field stays the diffusion pass's job.
+
 ## Space
 
 Stage a `space` beside the actors and it is copied onto the composed scene: walkable surfaces (floors, platforms, ramps) and no-go regions. The scene then states its ground height, walkability, and support tops as data instead of assuming a flat plane, and the renderer draws those surfaces. Omit `space` and everything falls back to the flat ground plane. A `space` surface and a `set` piece are two halves of one thing: the surface is the walkable MEANING, the set model is the visible geometry. Pair them so the world the feet obey is the world the passes draw.

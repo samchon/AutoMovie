@@ -65,6 +65,19 @@ export interface IAutoMovieShot {
    */
   cameraIntent?: IAutoMovieCameraIntent[];
 
+  /**
+   * The alternate camera takes covering the same beat (#1187): one staged
+   * camera per additional angle, each with its own compiled move and intent.
+   * The hero take stays the singular `camera`/`cameraMotion` every consumer
+   * already reads; coverage rides beside it as structural guide metadata a
+   * diffusion/render host uses to render the beat from the other staged angles,
+   * exactly as it reads `cameraIntent`. The cut is untouched: coverage takes
+   * are alternates of THIS shot, never separate timeline entries. Absent means
+   * legacy or single-camera data; an empty array means the shot was assembled
+   * with one camera.
+   */
+  coverage?: IAutoMovieShotCoverage[];
+
   /** Shot length in seconds (local time origin = 0). */
   duration: number;
 }
@@ -91,6 +104,31 @@ export interface IAutoMovieCameraIntent {
 
   /** Lens intent in millimetres, or `null` when the action named none. */
   focalLength: number | null;
+}
+
+/**
+ * One alternate camera take covering the shot's beat (#1187): the staged camera
+ * that plays the angle, its compiled move, and its per-span directorial intent.
+ * Same contract as the hero take, plural: a beat blocked for several angles
+ * assembles one take per staged camera, and a render/diffusion host picks or
+ * intercuts them without re-performing the shot.
+ */
+export interface IAutoMovieShotCoverage {
+  /** Id of the scene camera this take plays on (never the hero `camera`). */
+  camera: string;
+
+  /**
+   * The covering camera's move: a clip of its transform tracks, compiled by the
+   * same framing grammar as the hero `cameraMotion`. `null` for a locked-off
+   * (static) covering camera.
+   */
+  cameraMotion: IAutoMovieClip | null;
+
+  /**
+   * This take's directorial intent per frame span, the same record the hero
+   * take carries on `cameraIntent`. Empty when the angle had no frame actions.
+   */
+  cameraIntent: IAutoMovieCameraIntent[];
 }
 
 /** What one scene node does during a shot. */

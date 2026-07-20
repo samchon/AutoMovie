@@ -58,6 +58,16 @@ export namespace IAutoMovieBlockingApplication {
     /** How the camera covers the beat. */
     camera: ICameraIntent;
 
+    /**
+     * The ADDITIONAL staged cameras covering the beat (#1187): one entry per
+     * extra angle (a side camera on the duel while the hero holds the close
+     * framing). The hero take stays the singular `camera` above; each coverage
+     * intent names its own staged camera so the performance stage can frame
+     * that angle too, the compiled alternates riding the shot's `coverage` as
+     * guide metadata. Omit for a single-camera beat.
+     */
+    coverage?: ICoverageIntent[];
+
     /** Beat length in seconds. */
     duration: number;
   }
@@ -94,5 +104,16 @@ export namespace IAutoMovieBlockingApplication {
 
     /** What it favours (a node id or a point). */
     on: IAutoMovieNodeTarget | IAutoMoviePointTarget;
+  }
+
+  /**
+   * One additional camera's coverage of the beat (#1187): an ordinary camera
+   * intent plus the staged camera that plays the angle. The hero intent needs
+   * no id (performance elects it from the frame actions); a coverage intent
+   * must name its camera so several angles never blur into one election.
+   */
+  export interface ICoverageIntent extends ICameraIntent {
+    /** Id of the staged camera this angle plays on. */
+    camera: string;
   }
 }

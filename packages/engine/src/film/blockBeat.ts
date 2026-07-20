@@ -8,6 +8,16 @@ import {
 import { ViolationCollector } from "../validation/violation";
 import { IAutoMovieStagedSet } from "./stageScene";
 
+/** The closed framing union, gated at runtime the way performShot gates it. */
+const CAMERA_FRAMINGS = new Set<
+  IAutoMovieBlockingApplication.ICameraIntent["framing"]
+>(["wide", "full", "medium", "close"]);
+
+/** The closed move union, gated at runtime the way performShot gates it. */
+const CAMERA_MOVES = new Set<
+  IAutoMovieBlockingApplication.ICameraIntent["move"]
+>(["static", "follow", "orbit", "push-in", "whip"]);
+
 /**
  * A validated blocking: the beat's shot plan, coherent with the script and the
  * staged world, ready to steer the performance stage.
@@ -53,7 +63,9 @@ export namespace IAutoMovieBlockedBeat {
  * must favour something placed, and the timing anchors must sit on the beat's
  * own timeline **in the order they are listed**. The list order is the causal
  * order ("the loose before the hit"), so an anchor whose `t` runs backwards
- * contradicts the causality it exists to fix.
+ * contradicts the causality it exists to fix. The optional `coverage` cameras
+ * (#1187) are gated the same way, plus their own rules: each must name a staged
+ * camera exactly once and state a real framing/move.
  *
  * When the prior beat's end-state is supplied it becomes this beat's initial
  * condition: its actors are gated for referential integrity (every carried
@@ -161,6 +173,64 @@ export const blockBeat = (
       "$input.camera.on.node",
       "camera target node id",
     );
+
+  // Additional cameras covering the beat (#1187). Each names its own staged
+  // camera (one angle never blurs into another), favours something placed, and
+  // states a real framing/move: unlike the hero intent, coverage has no
+  // downstream coherence gate to catch a garbage value, so the closed unions
+  // are gated here, the way performShot gates frame actions.
+  const cameraIds = new Set(staged.scene.cameras.map((c) => c.id));
+  const covered = new Map<string, number>();
+  (blocking.coverage ?? []).forEach((intent, i) => {
+    validateNonEmptyId(
+      intent.camera,
+      `$input.coverage[${i}].camera`,
+      "coverage camera id",
+    );
+    if (!cameraIds.has(intent.camera))
+      out.push(
+        "type",
+        `$input.coverage[${i}].camera`,
+        `a coverage camera must be a staged camera, but "${intent.camera}" is not`,
+        intent.camera,
+      );
+    const first = covered.get(intent.camera);
+    if (first !== undefined)
+      out.push(
+        "type",
+        `$input.coverage[${i}].camera`,
+        `coverage camera id "${intent.camera}" is duplicated; first declared at $input.coverage[${first}].camera`,
+        intent.camera,
+      );
+    else covered.set(intent.camera, i);
+    if (!CAMERA_FRAMINGS.has(intent.framing))
+      out.push(
+        "type",
+        `$input.coverage[${i}].framing`,
+        `camera framing must be one of wide, full, medium, close, but was "${String(intent.framing)}"`,
+        intent.framing,
+      );
+    if (!CAMERA_MOVES.has(intent.move))
+      out.push(
+        "type",
+        `$input.coverage[${i}].move`,
+        `camera move must be one of static, follow, orbit, push-in, whip, but was "${String(intent.move)}"`,
+        intent.move,
+      );
+    if (intent.on.kind === "node" && !nodeIds.has(intent.on.node))
+      out.push(
+        "type",
+        `$input.coverage[${i}].on.node`,
+        `a coverage camera must favour a placed actor, but "${intent.on.node}" is not staged`,
+        intent.on.node,
+      );
+    if (intent.on.kind === "node")
+      validateNonEmptyId(
+        intent.on.node,
+        `$input.coverage[${i}].on.node`,
+        "coverage target node id",
+      );
+  });
 
   if (previous !== undefined) {
     const carried = new Map<string, number>();
