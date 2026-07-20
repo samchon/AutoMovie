@@ -8,6 +8,8 @@ Follow the literal request; it is the contract, not a hint at what the user "rea
 
 - **Scope is the user's to widen.** Reinterpret the goal, weigh alternatives, or expand the task only on an explicit hand-off ("figure it out", "you decide"). Take a confident, specific ask as given.
 - **Fidelity binds the goal, not the effort.** Within that goal, act with full initiative: do the substeps it needs, verify your work, surface what you notice. Literal scope is no excuse for passive execution.
+- **Match the user's language.** Communicate in English when the user writes in English and in Korean when the user writes in Korean. Switch when the user switches, unless they explicitly request another language.
+- **Choose the principled course.** Decide from correctness, evidence, product boundaries, and the durable consequence, and take the course those require. Work size, difficulty, duration, and blast radius change how much investigation and verification a decision needs; they never change the standard it must meet, and they never buy a shortcut, a workaround, or a weaker conclusion.
 - **Evidence precedes correction.** Treat issue reports, review proposals, and claims that something is wrong or missing as hypotheses. Verify the real code path, tests, rendered output, and history before accepting the premise or changing behavior.
 - **Trace the consequence surface.** A named file or failing case is the starting point, not the investigation boundary. Follow the same cause through downstream consumers, side effects, state transitions, and boundary cases, then address the whole verified class of failure within the requested goal.
 - **Default over ask.** On an ambiguous detail, pick the sensible default and say what you chose; reserve questions for forks only the user can settle.
@@ -27,7 +29,7 @@ Work rules, testing, the always-100% coverage mandate, validation, consequence a
 
 ### Documentation
 
-The `.wiki/` working knowledge base, package READMEs, code JSDoc, `.agents/skills/documentation/SKILL.md`. Read before writing or modifying docs, and revise the wiki as the work proceeds.
+The `.wiki/` working knowledge base, package READMEs, code JSDoc, and the writing rules for AGENTS.md and skills themselves, `.agents/skills/documentation/SKILL.md`. Read before writing or modifying docs or agent instructions, and revise the wiki as the work proceeds.
 
 ### Review
 
@@ -65,15 +67,7 @@ Branch, commit, pull request, check, and merge flow, `.agents/skills/pull-reques
 
 ### Writing style
 
-AGENTS.md and SKILL.md files are read by humans as well as agents.
-
-- **Optimize for comprehension, not minimum length.** A shorter document that forces the reader to infer prerequisites, reasons, exceptions, or stop conditions is not concise. Add the context needed to execute correctly.
-- **Remove repetition, not substance.** State a rule once at its owner and link to it elsewhere. Keep the rationale when it prevents a plausible mistake.
-- **Give each paragraph one job.** Split purpose, rule, rationale, procedure, and consequence when combining them would make the reader unpack a dense block.
-- **Use structure as compression.** Use numbered lists for ordered procedures, bullets for choices or checklists, tables for repeated mappings, and code blocks for exact commands. Do not hide a workflow inside one long sentence.
-- **State the rule before its reason.** Use negative phrasing only for a named failure mode that the affirmative rule does not already exclude.
-- **Skills point, not paraphrase.** Do not restate what the `.wiki/`, READMEs, or source comments already say; link to them. Skills are for cross-cutting rules and conventions, not a second copy of project docs.
-- **Source lines are not paragraphs.** Keep each prose paragraph on one source line and never hard-wrap it, but insert as many blank-line paragraph boundaries as the ideas require.
+AGENTS.md and SKILL.md files are read by humans as well as agents. Read the documentation skill's [Agent instructions](.agents/skills/documentation/SKILL.md#agent-instructions) section before editing either; it owns the operational writing rules and the prose-line rule.
 
 ### AGENTS.md
 

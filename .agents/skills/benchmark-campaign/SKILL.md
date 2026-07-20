@@ -9,7 +9,9 @@ A benchmark campaign measures automovie through real use and turns every shortfa
 
 The measure–fix–measure order is the campaign's spine: a benchmark cycle does not re-run until every issue discovered in the current cycle is developed and merged. Measuring against a surface with known, unfixed gaps wastes the run and muddies attribution; the corpus is re-driven only after the full fix wave lands.
 
-Read the project, development, review, mcp, viewer-verification, and pull-request skills before starting, and require every benchmark-agent brief to do the same. The user's requested phase boundary controls how far to proceed: an author-and-run request does not authorize publishing issues, pushing branches, or merging. A standing autonomous mandate (see the pull-request skill) authorizes the full loop end to end.
+Apply [AGENTS.md's **Choose the principled course** rule](../../../AGENTS.md#attitude) to every launch, score, attribution, publication, and implementation decision. A run's cost and duration decide how carefully it is prepared, never what counts as a pass.
+
+Read the project, development, review, mcp, viewer-verification, and pull-request skills before starting, and require every benchmark-agent brief to do the same. The user's requested phase boundary controls how far to proceed: an author-and-run request does not authorize publishing issues, pushing branches, or merging. A standing autonomous mandate (see the pull-request skill) authorizes the full loop end to end. The boundary binds harder here because a run is itself an expensive, long-running action that consumes the external agent's model quota: when the user has not asked for the whole loop, say which corpus, how long, and at whose cost before starting one.
 
 ## Benchmark Knowledge Base
 
@@ -24,6 +26,8 @@ The corpus and its run records are the benchmark's durable asset, not scratch �
 
 The knowledge base supports the campaign but is not the issue body: a published issue must stand alone without `.wiki`, which is gitignored and invisible to a fresh implementer.
 
+`.wiki/` is also machine-local, so the canonical run-by-run results belong in a durable ledger that survives across machines and sessions: a dedicated GitHub issue, appended to and never rewritten, recording each run's scenario set, agent and model id, scores, and cost. A killed or invalidated run stays in that ledger's notes, never as a comparison row.
+
 ## Author The Scenario Corpus
 
 An AI authors the scenarios — the requested count, about ten by default — spanning short, medium, and long duration and rising ambition. Diversity is mandatory: cover the capability surface across single and multiple characters, pose, motion, expression, camera, scene, light, time, props, and parametric forge, and deliberately reach past the current schema to probe the extensibility frontier the project mission commits to.
@@ -31,6 +35,10 @@ An AI authors the scenarios — the requested count, about ten by default — sp
 Each scenario is a self-contained brief a fresh external agent can attempt from the MCP surface alone: the film beat to realize, the expected observable result, the duration/complexity tier, and the capability axes it exercises. Do not tune scenarios to what already works; a reach scenario expected to expose a missing axis is the strongest signal for the additive-axis mission. Version the corpus and add to it — earlier scenarios persist as the regression suite; reconcile, never silently replace.
 
 ## Run The Benchmark
+
+Launch only from a state whose measurement will still mean something: the suites green at 100% coverage, and every change under test merged into `master`. A build that compiles is not a validated build, and "the remaining failures are probably unrelated" is an assumption, not evidence. A run started from an unverified tree spends its hours producing evidence about a state that will never exist again; kill it, discard its records so nothing later mistakes them for a result, and note the aborted attempt in the knowledge base rather than the ledger.
+
+Drive the scenarios in ascending cost, short tier first. A regression in a shared path breaks every scenario, so it is worth finding on the cheapest one; reserve the long, ambitious scenarios for the claims only they can adjudicate.
 
 Drive the live MCP server through a real external-client handshake (see the mcp skill and `packages/mcp/README.md`) using the actual target agent — Claude, Codex 5.6 — never an in-repo mock or the lead standing in for the model. The external agent drives the tools; the lead observes and records.
 
@@ -52,6 +60,16 @@ Triage every shortfall by attribution before it can become an issue:
 
 Only the first four are automovie-owned issues. Prove attribution from the trace, the engine result, and the schema, not from a guess; a model-side classification holds only once you have shown the surface was adequate and the miss reproduced. Cross-check engine against render per the viewer-verification skill: a render that disagrees with the engine result is a viewer bug; one that agrees but still looks wrong is an engine or data bug.
 
+## Evidence-First Discipline
+
+The run, not a theory, decides whether a change is needed.
+
+- Record a suspicion the current runs cannot settle as a hypothesis in the knowledge base, together with the exact observation that would confirm or refute it. Do not implement a hypothesis before a run adjudicates it, unless the repository proves the defect on its own.
+- Reserve a rich claim for a scenario that can adjudicate it. A short single-character scenario cannot settle camera, scene, or multi-actor expressiveness.
+- Attribute every observation to exactly one origin. Misattribution is more damaging than a slow campaign.
+- Never loosen a rubric, a validator, or a scenario's expected result to make a run score better. A benchmark that fails honestly is worth more than a green one that lies; that failure is the entire product of the campaign.
+- A discovery round is never held open waiting for a run. Judge each round against the current tree and the most recent completed runs; a run that finishes afterwards opens a new round over what it produced.
+
 ## Vet And Publish Issues
 
 Publication follows the issue-campaign skill's Vet And Publish Issues phase unchanged: the lead, not a benchmark agent, owns every decision, reopens and reproduces the evidence, traces the consequence surface, compares open and closed work, and records the disposition. Publish only the adjudicated form, and only with user authorization or under a standing autonomous mandate.
@@ -66,6 +84,6 @@ State an interface-gap issue as a missing axis in extensibility terms — additi
 
 ## Develop Every Issue, Then Re-Benchmark
 
-When the user authorizes implementation or a standing autonomous mandate covers it, implement in batches by the issue-campaign skill's [development.md](../issue-campaign/development.md): the dependency DAG, claim pull requests, implementation waves, worktree cleanup, and closure, with every ordinary gate (`pnpm run format`, green `build` and `test` at 100% coverage, the pull-request skill's check loop) in force. An author-run-and-publish-only campaign does not load it.
+When the user authorizes implementation or a standing autonomous mandate covers it, implement in batches by the issue-campaign skill's [development.md](../issue-campaign/development.md): the dependency DAG, file-ownership batching, claim pull requests, worktree isolation, the standing rule that no agent idles on a running command, and closure, with every ordinary gate (`pnpm run format`, green `build` and `test` at 100% coverage, the pull-request skill's check loop) in force. An author-run-and-publish-only campaign does not load it.
 
 The cycle's gate is total: the next benchmark measurement begins only after **every** issue from the current cycle is merged, not after a subset. Then re-run the affected scenarios and the whole corpus against the fixed surface, recording the before/after runs so each fix's effect is measured, and re-triage what remains. A renewed cycle extends the corpus with new reach scenarios, drives them, and repeats; earlier runs are not coverage. The campaign ends only when a full corpus run against a fully-developed surface surfaces no automovie-owned shortfall that survives lead verification.
