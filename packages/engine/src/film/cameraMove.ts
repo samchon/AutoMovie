@@ -329,8 +329,8 @@ export interface IAutoMovieCameraCoverageEntry extends IAutoMovieCameraFrameEntr
 
 /**
  * Compile one beat's coverage take (#1187): the alternate angle another staged
- * camera plays over the SAME frame spans, paired with its per-span intent as
- * one {@link IAutoMovieShotCoverage} record. The move compiles through the same
+ * camera plays over the beat, paired with its per-span intent as one
+ * {@link IAutoMovieShotCoverage} record. The move compiles through the same
  * {@link compileCameraMove} framing grammar the hero take uses (the camera is a
  * parameter, so a side camera's staged bearing frames its own angle), and the
  * deterministic solve stays the only consumer of the geometry: the intent

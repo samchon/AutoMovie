@@ -3,6 +3,7 @@ import {
   IAutoMovieActionCall,
   IAutoMovieActionTarget,
   IAutoMovieBlockingApplication,
+  IAutoMovieCamera,
   IAutoMovieCameraAction,
   IAutoMovieClip,
   IAutoMovieConstraintViolation,
@@ -12,6 +13,7 @@ import {
   IAutoMovieQuaternion,
   IAutoMovieScriptApplication,
   IAutoMovieShot,
+  IAutoMovieShotCoverage,
   IAutoMovieSkeleton,
   IAutoMovieVector3,
 } from "@automovie/interface";
@@ -33,6 +35,8 @@ import { ViolationCollector } from "../validation/violation";
 import {
   DEFAULT_SUBJECT_HEIGHT,
   IAutoMovieCameraFrameEntry,
+  IAutoMovieFramedSubject,
+  compileCameraCoverage,
   compileCameraMove,
   computeRestHeight,
 } from "./cameraMove";
@@ -204,14 +208,22 @@ export namespace IAutoMoviePerformedShot {
  * (`cameraMotion: null`); a scene with no cameras at all cannot be framed and
  * fails.
  *
+ * The blocking's `coverage` intents (#1187) are the plural half of that rule.
+ * They never join the election; each compiles into its own alternate take on
+ * `shot.coverage` through {@link compileCameraCoverage}, playing its single
+ * intent across the whole beat so a render host can cut to the angle at any
+ * instant. A coverage camera must be staged, must not be the elected live
+ * camera or a sibling coverage camera, must state a real framing/move, and must
+ * favour something that resolves to a point.
+ *
  * Positional targets (`lookAt`, `reach`, a `point`/`strike` gesture aim, a
- * `launch` aim, a frame subject or focus) resolve against every staged
- * placement, {@link scenePlacements}, **cameras included**: an actor may be
- * directed to look down the lens, which is ordinary film grammar (#1294). That
- * does not loosen the camera-as-actor rule, a camera still performs nothing but
- * `frame`; it only makes a camera a place one can point at. A target that does
- * not resolve names the id (or the relative kind) that failed, never the
- * discriminator of a kind that was legal all along.
+ * `launch` aim, a frame subject or focus, a coverage subject) resolve against
+ * every staged placement, {@link scenePlacements}, **cameras included**: an
+ * actor may be directed to look down the lens, which is ordinary film grammar
+ * (#1294). That does not loosen the camera-as-actor rule, a camera still
+ * performs nothing but `frame`; it only makes a camera a place one can point
+ * at. A target that does not resolve names the id (or the relative kind) that
+ * failed, never the discriminator of a kind that was legal all along.
  *
  * `launch` actions are compiled through {@link compileLaunch}: the projectile (a
  * staged scene node) gets its baked flight as a shot `objectMotion`, and, for a
@@ -965,6 +977,78 @@ export const performShot = (props: {
     else liveCamera = first.id;
   }
 
+  // Coverage (#1187): the blocking's ADDITIONAL angles become alternate takes
+  // of this same shot. Gate them here, the first point where the elected live
+  // camera is final, because the rules are relative to it: a coverage entry
+  // must name a staged camera that is neither the hero nor a sibling's (one
+  // angle never blurs into another), state a real framing/move, and favour
+  // something that resolves to a point. The election itself is untouched: a
+  // coverage camera never becomes a second live `frame`.
+  const coverageJobs: {
+    intent: IAutoMovieBlockingApplication.ICoverageIntent;
+    camera: IAutoMovieCamera;
+  }[] = [];
+  const coveredCameras = new Map<string, number>();
+  (blocking?.coverage ?? []).forEach((intent, i) => {
+    const path = `$blocking.coverage[${i}]`;
+    validateNonEmptyId(intent.camera, `${path}.camera`, "coverage camera id");
+    const camera = staged.scene.cameras.find((c) => c.id === intent.camera);
+    if (camera === undefined)
+      out.push(
+        "type",
+        `${path}.camera`,
+        `a coverage camera must be a staged camera, but "${intent.camera}" is not`,
+        intent.camera,
+      );
+    else if (intent.camera === liveCamera)
+      out.push(
+        "type",
+        `${path}.camera`,
+        `coverage plays ANOTHER angle of the beat, but "${intent.camera}" is already this shot's live camera`,
+        intent.camera,
+      );
+    const first = coveredCameras.get(intent.camera);
+    if (first !== undefined)
+      out.push(
+        "type",
+        `${path}.camera`,
+        `coverage camera id "${intent.camera}" is duplicated; first declared at $blocking.coverage[${first}].camera`,
+        intent.camera,
+      );
+    else coveredCameras.set(intent.camera, i);
+    const framed = CAMERA_FRAMINGS.has(intent.framing);
+    if (!framed)
+      out.push(
+        "type",
+        `${path}.framing`,
+        `camera framing must be one of wide, full, medium, close, but was "${String(intent.framing)}"`,
+        intent.framing,
+      );
+    const moved = CAMERA_MOVES.has(intent.move);
+    if (!moved)
+      out.push(
+        "type",
+        `${path}.move`,
+        `camera move must be one of static, follow, orbit, push-in, whip, but was "${String(intent.move)}"`,
+        intent.move,
+      );
+    const subject = resolvePositionalTarget(
+      intent.on,
+      `${path}.on`,
+      "coverage target",
+      "a coverage subject",
+    );
+    if (
+      camera !== undefined &&
+      intent.camera !== liveCamera &&
+      first === undefined &&
+      framed &&
+      moved &&
+      subject !== null
+    )
+      coverageJobs.push({ intent, camera });
+  });
+
   if (out.items.length > 0) return { success: false, violations: out.items };
 
   // Launch: solve each aim, bake the projectile's flight into an object clip,
@@ -1103,32 +1187,78 @@ export const performShot = (props: {
   // animated base rides the compiled clip's root displacement so `follow`
   // tracks a walking actor.
   const cameraObject = staged.scene.cameras.find((c) => c.id === liveCamera)!;
-  const entries: IAutoMovieCameraFrameEntry[] = frames.map(({ action }) => {
-    const point = resolveTargetPoint(action.on, nodePositions)!;
-    const node = action.on.kind === "node" ? action.on.node : null;
+  // What a camera entry frames, resolved once for every take: the hero's frame
+  // spans and each coverage angle read the SAME subject, so an alternate camera
+  // frames the beat's subject exactly as the hero does, only from its own
+  // staged bearing.
+  const framedSubject = (
+    on: IAutoMovieActionTarget,
+  ): IAutoMovieFramedSubject => {
+    const point = resolveTargetPoint(on, nodePositions)!;
+    const node = on.kind === "node" ? on.node : null;
     const rig = node === null ? null : skeleton(node);
     const measured = rig === null ? 0 : computeRestHeight(rig);
     const motion = node === null ? undefined : motions[node];
     return {
-      action,
-      subject: {
-        base: point,
-        height: measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT,
-        // The animated base rides the node-local root under its staged facing,
-        // the same read a leading launch uses (see animatedBaseAt).
-        at:
-          motion === undefined
-            ? null
-            : animatedBaseAt(point, nodeRotations.get(node!)!, motion),
-      },
+      base: point,
+      height: measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT,
+      // The animated base rides the node-local root under its staged facing,
+      // the same read a leading launch uses (see animatedBaseAt).
+      at:
+        motion === undefined
+          ? null
+          : animatedBaseAt(point, nodeRotations.get(node!)!, motion),
     };
-  });
+  };
+  const entries: IAutoMovieCameraFrameEntry[] = frames.map(({ action }) => ({
+    action,
+    subject: framedSubject(action.on),
+  }));
   const cameraMotion = compileCameraMove({
     clipId: `cam:${performance.beat}`,
     camera: cameraObject,
     entries,
     shotDuration: performance.duration,
   });
+
+  // One alternate take per validated coverage intent (#1187). A blocking's
+  // coverage angle carries no timing of its own, so each covering camera plays
+  // its single intent across the WHOLE beat: an alternate a host can cut to at
+  // any instant, which is the point of coverage. The take compiles through the
+  // same framing grammar with its own staged camera as the parameter, so the
+  // side the director staged is the side the angle plays from.
+  const coverage: IAutoMovieShotCoverage[] = coverageJobs.map(
+    ({ intent, camera }) =>
+      compileCameraCoverage({
+        camera,
+        clipId: `cam:${performance.beat}:${camera.id}`,
+        entries: [
+          {
+            action: {
+              verb: "frame",
+              actor: camera.id,
+              start: 0,
+              duration: "auto",
+              framing: intent.framing,
+              move: intent.move,
+              on: intent.on,
+            },
+            subject: framedSubject(intent.on),
+            // The blocking's coverage grammar carries framing/move/subject
+            // only, so the two lens INTENTS a `frame` action may add stay null
+            // here rather than being invented for the alternate angle.
+            intent: {
+              start: 0,
+              framing: intent.framing,
+              move: intent.move,
+              focus: null,
+              focalLength: null,
+            },
+          },
+        ],
+        shotDuration: performance.duration,
+      }),
+  );
 
   return {
     success: true,
@@ -1158,6 +1288,10 @@ export const performShot = (props: {
             : resolveTargetPoint(action.focus, nodePositions)!,
         focalLength: action.focalLength ?? null,
       })),
+      // The beat's other staged angles (#1187), compiled from the blocking's
+      // coverage intent. Empty when the beat was covered by one camera; the
+      // hero take stays the singular camera/cameraMotion every consumer reads.
+      coverage,
       duration: performance.duration,
     },
     motions,
