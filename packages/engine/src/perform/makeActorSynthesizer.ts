@@ -77,6 +77,12 @@ const toModelSpace = (
  * about which ids are legal. Routing the lift through the table rather than
  * through the verb is what makes a `group` target average EYE points instead of
  * ground points without a second code path.
+ *
+ * **Only `lookAt` reads this table**, and that is a decision, not an oversight.
+ * `locomote` walks to a place on the ground, so its destination is the
+ * placement itself. The arm verbs (`reach`, the `point` and `strike` gestures)
+ * do not reach for eyes, and no measured chest/hand datum exists on the context
+ * to lift them by; each of those branches says so where it resolves.
  */
 const aimPointsOf = (
   contexts: ReadonlyMap<string, IAutoMovieActorContext>,
@@ -304,6 +310,14 @@ export const makeActorSynthesizer = (
       // clamps a far target onto the reach shell, which is exactly a pointing
       // arm). Left unclamped like `reach`, so an impossible point fails the
       // shot's ROM gate. Needs the rig and a resolvable target.
+      //
+      // The arm verbs resolve `nodes`, NOT `aimPoints`: the lift is deliberately
+      // not applied here. `eyeHeight` answers "where does a gaze meet this
+      // actor", and an arm does not reach for eyes; the chest/hand datum an arm
+      // target would need does not exist on the context, and inventing a
+      // fraction here would be the guess the "measure, don't hope" doctrine
+      // forbids. Author an explicit `point` for a precise arm goal until a
+      // measured datum exists.
       if (action.kind === "point" && ctx.rig !== undefined) {
         const world =
           action.at === undefined ? null : resolveTargetPoint(action.at, nodes);
@@ -320,7 +334,8 @@ export const makeActorSynthesizer = (
       }
       // `strike` (a jab) also rides reachPose (the fist thrown toward the
       // target), but snaps out and retracts (jabClip) instead of holding, so it
-      // reads as a punch. Same rig + resolvable-target requirement as point.
+      // reads as a punch. Same rig + resolvable-target requirement as point,
+      // and the same placement-not-aim-point resolution (see above).
       if (action.kind === "strike" && ctx.rig !== undefined) {
         const world =
           action.at === undefined ? null : resolveTargetPoint(action.at, nodes);
@@ -350,6 +365,10 @@ export const makeActorSynthesizer = (
       // placement), and solve the arm. reachPose does not clamp to ROM, so a
       // reach to an impossible spot yields an out-of-ROM pose the shot's ROM
       // gate rejects. The model must reposition, not the engine hide it.
+      //
+      // `nodes`, not `aimPoints`, for the reason spelled out at the `point`
+      // gesture: an arm target is not an eye, and the context carries no
+      // measured chest/hand height to lift by.
       if (ctx.rig === undefined) return null;
       const world = resolveTargetPoint(action.to, nodes);
       if (world === null) return null; // relative target: no point to reach
