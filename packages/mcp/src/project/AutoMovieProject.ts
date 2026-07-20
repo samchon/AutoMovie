@@ -1246,12 +1246,7 @@ const validateShotSlice = (
   // submit: a slice validated looser than the submitted artifact is exactly the
   // validator drift #1097 called out. No scene travels with a shot slice, so the
   // coverage cameras cannot be cross-referenced here; every other rule applies.
-  appendShotMetadataArtifact(
-    value as unknown as Record<string, unknown>,
-    "$input",
-    null,
-    violations,
-  );
+  appendShotMetadataArtifact(value, "$input", null, violations);
 };
 
 const validateBeatEndSlice = (

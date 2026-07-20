@@ -9,7 +9,7 @@ const targetKindName = (target: unknown): string =>
 /**
  * What a positional target may be, stated once so every verb's refusal, on
  * every rung, teaches the same vocabulary. Cameras belong in the list because
- * {@link scenePlacements} resolves them (#1294).
+ * the shared placement table (`scenePlacements`) resolves them (#1294).
  *
  * @author Samchon
  */

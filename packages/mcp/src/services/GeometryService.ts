@@ -106,7 +106,10 @@ export class GeometryService {
       nodePositions(source.context.scene, `${source.root}.scene`),
     );
     if (target === null)
-      return { reach: null, reason: unresolvedTargetReason("", props.target) };
+      return {
+        reach: null,
+        reason: unresolvedTargetReason(null, props.target),
+      };
     const localTarget = toModelPoint(target, actor.node.transform);
     if (localTarget === null)
       return {
@@ -188,8 +191,8 @@ export class GeometryService {
     // into one sentence made a `from` that named an unplaced id and a `to` that
     // was a heading read as the same problem.
     const missing = [
-      ...(from === null ? [["from ", props.from] as const] : []),
-      ...(to === null ? [["to ", props.to] as const] : []),
+      ...(from === null ? [["from", props.from] as const] : []),
+      ...(to === null ? [["to", props.to] as const] : []),
     ];
     return {
       reason:
@@ -352,11 +355,14 @@ const resolveResolvedPoseTime = (t: unknown): number => {
  * camera the table did not carry, was reported as the one thing it demonstrably
  * was not.
  *
- * `side` is the empty string for a single-target query and `"from "` / `"to "`
- * for the two-sided distance measurement.
+ * `side` names which endpoint failed on the two-sided distance measurement, and
+ * is `null` for a single-target query.
  */
-const unresolvedTargetReason = (side: string, target: unknown): string =>
-  `the ${side}target must resolve to a point (${POSITIONAL_TARGET_SHAPE}), but ${positionalTargetFault(target)}`;
+const unresolvedTargetReason = (
+  side: "from" | "to" | null,
+  target: unknown,
+): string =>
+  `the ${side === null ? "" : `${side} `}target must resolve to a point (${POSITIONAL_TARGET_SHAPE}), but ${positionalTargetFault(target)}`;
 
 const describeViolations = (
   violations: IAutoMovieConstraintViolation[],

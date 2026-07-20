@@ -110,6 +110,11 @@ const shotWith = (over: Record<string, unknown>): IAutoMovieShot =>
 const validate = (over: Record<string, unknown>): IAutoMovieValidation =>
   app.validateShot({ shot: shotWith(over), scene }).validation;
 
+/**
+ * True when the validation refused at `path` with the stated fragment. The
+ * `validateShot` tool re-roots the artifact validator's `$input` under
+ * `$input.shot`, so every expected path here carries that prefix.
+ */
 const says = (
   validation: IAutoMovieValidation,
   path: string,
@@ -118,7 +123,8 @@ const says = (
   validation.success === false &&
   validation.violations.some(
     (violation) =>
-      violation.path === path && violation.expected.includes(expected),
+      violation.path === `$input.shot${path}` &&
+      violation.expected.includes(expected),
   );
 
 /**
@@ -186,32 +192,32 @@ export const test_mcp_shot_metadata_gates = (): void => {
     "a malformed event list is refused field by field",
     says(
       validate({ events: bad("not-a-list") }),
-      "$input.events",
+      ".events",
       "must be an array",
     ) &&
       says(
         validate({ events: [event({ time: 5 })] }),
-        "$input.events[0].time",
+        ".events[0].time",
         "shot event time",
       ) &&
       says(
         validate({ events: [event({ kind: "explode" })] }),
-        "$input.events[0].kind",
+        ".events[0].kind",
         "shot event kind must be one of",
       ) &&
       says(
         validate({ events: [event({ source: "vibes" })] }),
-        "$input.events[0].source",
+        ".events[0].source",
         "shot event source must be one of",
       ) &&
       says(
         validate({ events: [event({ point: { x: 0, y: NaN, z: 0 } })] }),
-        "$input.events[0].point.y",
+        ".events[0].point.y",
         "must be finite",
       ) &&
       says(
         validate({ events: [event({ actionIndex: 1.5 })] }),
-        "$input.events[0].actionIndex",
+        ".events[0].actionIndex",
         "must be null or an integer",
       ),
   );
@@ -221,32 +227,32 @@ export const test_mcp_shot_metadata_gates = (): void => {
     "a malformed intent span is refused field by field",
     says(
       validate({ cameraIntent: bad(7) }),
-      "$input.cameraIntent",
+      ".cameraIntent",
       "must be an array",
     ) &&
       says(
         validate({ cameraIntent: [intent({ framing: "enormous" })] }),
-        "$input.cameraIntent[0].framing",
+        ".cameraIntent[0].framing",
         "camera intent framing must be one of",
       ) &&
       says(
         validate({ cameraIntent: [intent({ move: "swoop" })] }),
-        "$input.cameraIntent[0].move",
+        ".cameraIntent[0].move",
         "camera intent move must be one of",
       ) &&
       says(
         validate({ cameraIntent: [intent({ start: 3 })] }),
-        "$input.cameraIntent[0].start",
+        ".cameraIntent[0].start",
         "camera intent start",
       ) &&
       says(
         validate({ cameraIntent: [intent({ focalLength: 0 })] }),
-        "$input.cameraIntent[0].focalLength",
+        ".cameraIntent[0].focalLength",
         "camera intent focal length",
       ) &&
       says(
         validate({ cameraIntent: [intent({ focus: { x: 0, y: 0 } })] }),
-        "$input.cameraIntent[0].focus.z",
+        ".cameraIntent[0].focus.z",
         "must be finite",
       ),
   );
@@ -262,29 +268,29 @@ export const test_mcp_shot_metadata_gates = (): void => {
     "a malformed coverage list is refused field by field",
     says(
       validate({ coverage: [take({ camera: "ghost-cam" })] }),
-      "$input.coverage[0].camera",
+      ".coverage[0].camera",
       "must reference a scene camera",
     ) &&
       says(
         validate({ coverage: [take({ camera: "hero" })] }),
-        "$input.coverage[0].camera",
+        ".coverage[0].camera",
         "already this shot's live camera",
       ) &&
       says(
         validate({ coverage: [take(), take()] }),
-        "$input.coverage[1].camera",
+        ".coverage[1].camera",
         "is duplicated",
       ) &&
       says(
         validate({
           coverage: [take({ cameraMotion: clip("cam:dup", [1, 1]) })],
         }),
-        "$input.coverage[0].cameraMotion.tracks[0].times[1]",
+        ".coverage[0].cameraMotion.tracks[0].times[1]",
         "must strictly increase",
       ) &&
       says(
         validate({ coverage: [take({ cameraIntent: bad(null) })] }),
-        "$input.coverage[0].cameraIntent",
+        ".coverage[0].cameraIntent",
         "must be an array",
       ),
   );
@@ -303,7 +309,7 @@ export const test_mcp_shot_metadata_gates = (): void => {
       validate({
         coverage: [take({ cameraIntent: [intent({ move: "swoop" })] })],
       }),
-      "$input.coverage[0].cameraIntent[0].move",
+      ".coverage[0].cameraIntent[0].move",
       "camera intent move must be one of",
     ),
   );

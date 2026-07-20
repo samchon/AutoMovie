@@ -381,6 +381,13 @@ const EVENT_KINDS = new Set([
   "fall",
 ]);
 
+/**
+ * The slack the shot-local event clock carries at its upper bound, matching
+ * `performShot`'s own landing comparison so the two cannot disagree about an
+ * event that lands exactly on the shot end.
+ */
+const EVENT_TIME_EPSILON = 1e-9;
+
 /** The closed event-source union. */
 const EVENT_SOURCES = new Set([
   "collisionSolver",
@@ -412,7 +419,18 @@ const CAMERA_MOVES = new Set(["static", "follow", "orbit", "push-in", "whip"]);
  * (the stored-slice path, which reads one file with no scene beside it).
  */
 export const appendShotMetadataArtifact = (
-  shot: Record<string, unknown>,
+  /**
+   * Structural, not `IAutoMovieShot`, so both callers pass their own value
+   * without a cast: the submitted artifact arrives already narrowed to a
+   * record, the stored slice arrives as the typed shot.
+   */
+  shot: {
+    duration?: unknown;
+    camera?: unknown;
+    events?: unknown;
+    cameraIntent?: unknown;
+    coverage?: unknown;
+  },
   path: string,
   sceneCameras: ReadonlySet<string> | null,
   violations: IAutoMovieConstraintViolation[],
@@ -477,15 +495,25 @@ const appendShotEventsArtifact = (
         event.source,
       );
     // The shot-local clock: `playbackEvents` maps this onto the output timeline,
-    // so a time outside the shot lands somewhere no entry plays.
-    validateRange(
-      event.time,
-      `${eventPath}.time`,
-      0,
-      duration,
-      "shot event time",
-      violations,
-    );
+    // so a time outside the shot lands somewhere no entry plays. The upper bound
+    // carries the SAME slack `performShot`'s landing gate allows (it refuses a
+    // hit only past `duration + 1e-9`), or a launch that lands exactly on the
+    // shot end would produce a shot this validator refuses: validator/engine
+    // drift in the direction #1097 warned about.
+    const time = event.time;
+    if (
+      typeof time !== "number" ||
+      !Number.isFinite(time) ||
+      time < 0 ||
+      time > duration + EVENT_TIME_EPSILON
+    )
+      pushViolation(
+        violations,
+        "temporal",
+        `${eventPath}.time`,
+        `shot event time must be finite and within [0, ${duration}] (the shot), but was ${String(time)}`,
+        time,
+      );
     for (const field of ["actor", "target", "object", "reaction"] as const)
       if (event[field] !== null)
         validateNonEmptyId(
