@@ -135,7 +135,9 @@ const plan = (over: {
  *    duration, a non-finite keyframe time, non-increasing keyframe times, a
  *    non-array skeletons input, and a malformed skeleton entry each refuse with
  *    a located violation, while a single-keyframe motion (which orders nothing)
- *    still plans.
+ *    still plans. An explicit slate's shot clip is gated to the depth
+ *    `sampleClip` reads it, so unordered track times refuse with a located
+ *    violation rather than throwing, and an ordered clip still plans.
  * 4. Without a project, omitting the slate throws the actionable openProject
  *    prompt (the resident contract).
  */
@@ -334,6 +336,86 @@ export const test_mcp_plan_pose_keypoints = (): void => {
     plan({ motions: { m1: { ...still, keyframes: [still.keyframes[0]!] } } })
       .validation,
     { success: true },
+  );
+  // The clip this planner SAMPLES, on the explicit-slate path. A resident slate
+  // arrives already checked to this depth by the store's read gate (#1324),
+  // while an explicit one was checked only for object-ness, so the same
+  // artifact reached `sampleClip` under two very different contracts and the
+  // shallow side THREW where every sibling refusal returns a located violation
+  // (#1331). Ordering is the reachable violation: JSON carries no NaN, but
+  // `[1, 0]` is a valid `number[]`.
+  const unordered = plan({
+    slate: slate({
+      shots: [
+        {
+          ...shot,
+          cameraMotion: {
+            id: "cam:b1",
+            name: null,
+            duration: 1,
+            loop: false,
+            tracks: [
+              {
+                channel: { kind: "node", node: "cam", path: "translation" },
+                times: [1, 0],
+                values: [0, 0, 0, 0, 0, 0],
+                interpolation: "linear",
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  });
+  TestValidator.predicate(
+    "an unordered shot clip refuses instead of throwing out of the sampler",
+    unordered.sidecar === null &&
+      hasViolation(
+        unordered.validation,
+        "temporal",
+        "$input.slate.shots[0].cameraMotion.tracks[0].times[1]",
+      ),
+  );
+  // The counter-case one property away: the same shot with an ordered clip
+  // still plans, so the gate is as wide as the sampler's requirement and no
+  // wider. A null `cameraMotion` is covered by every other case in this file.
+  TestValidator.equals(
+    "an ordered shot clip still plans",
+    plan({
+      slate: slate({
+        shots: [
+          {
+            ...shot,
+            cameraMotion: {
+              id: "cam:b1",
+              name: null,
+              duration: 1,
+              loop: false,
+              tracks: [
+                {
+                  channel: { kind: "node", node: "cam", path: "translation" },
+                  times: [0, 1],
+                  values: [0, 0, 0, 0, 0, 0],
+                  interpolation: "linear",
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    }).validation,
+    { success: true },
+  );
+  // The clip gate hangs off the shot list being usable at all. A non-array
+  // `shots` refuses before it, which is also the arm that proves the gate does
+  // not run on a list it was never given.
+  TestValidator.predicate(
+    "a non-array slate shots refuses before the clip gate",
+    hasViolation(
+      plan({ slate: slate({ shots: null as never }) }).validation,
+      "type",
+      "$input.slate.shots",
+    ),
   );
   TestValidator.predicate(
     "a non-array skeletons input refuses",

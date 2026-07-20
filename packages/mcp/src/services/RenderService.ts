@@ -1,4 +1,8 @@
-import { toValidation, violation } from "@automovie/engine";
+import {
+  toValidation,
+  validateClipArtifact,
+  violation,
+} from "@automovie/engine";
 import {
   AutoMovieGuidePass,
   IAutoMovieConstraintViolation,
@@ -572,6 +576,28 @@ const buildPoseKeypointPlan = (props: {
       `${props.slateRoot}.shots`,
       violations,
     );
+  // The clip this planner SAMPLES. `resolvePoseKeypoints` hands
+  // `shot.cameraMotion` to `resolveCameraAt` -> `sampleClip`, which validates
+  // its own track shape and throws. A resident slate arrives already checked to
+  // this depth by the store's read gate (#1324); an explicit one is checked
+  // only for object-ness, so the same artifact reached the same sampler under
+  // two very different contracts and the shallow side threw where every sibling
+  // refusal returns a located violation (#1331). One definition, the engine's.
+  if (shotsReady)
+    // Every entry is a record here: that is what `validateSlateShotEntries`
+    // just proved, so re-testing it would add a branch nothing can reach.
+    (shots as IAutoMovieShot[]).forEach((shot, index) => {
+      // Exactly as wide as the consumer's requirement, and stated the same way:
+      // `resolveCameraAt` takes `cameraMotion ?? null` and samples nothing for
+      // either, so neither absence nor null is a fault here.
+      const clip = shot.cameraMotion ?? null;
+      if (clip === null) return;
+      validateClipArtifact(
+        clip,
+        `${props.slateRoot}.shots[${index}].cameraMotion`,
+        violations,
+      );
+    });
 
   const film = props.slate.film as unknown;
   let sequence: IAutoMovieSequence | null = null;

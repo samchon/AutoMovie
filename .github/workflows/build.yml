@@ -3,9 +3,20 @@ on:
   pull_request:
     paths:
       - '.github/workflows/build.yml'
+      # Every build input a package can carry, by SHAPE rather than by name.
+      # The previous list named `src`, `package.json`, and `tsconfig.json`, and
+      # each input added afterwards (per-package lint rules, code generators,
+      # the guide corpus, the CLI scaffold, playground scripts and entry points)
+      # fell outside it, so a change to any of them ran no job at all (#1333).
+      # Enumerating today's files is what drifted, so these match the shape.
       - 'packages/*/src/**'
-      - 'packages/*/package.json'
-      - 'packages/*/tsconfig.json'
+      - 'packages/*/*.json'
+      - 'packages/*/*.ts'
+      - 'packages/*/*.html'
+      - 'packages/*/build/**'
+      - 'packages/*/prompts/**'
+      - 'packages/*/scaffold/**'
+      - 'packages/*/scripts/**'
       - 'internals/config/**'
       - 'test/**'
       - 'package.json'
