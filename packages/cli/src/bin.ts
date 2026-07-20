@@ -4,10 +4,10 @@ import * as path from "node:path";
 import { renderScaffold } from "./renderScaffold";
 import { writeFiles } from "./writeFiles";
 
-const USAGE = `autobe: scaffold an automovie project
+const USAGE = `automovie: scaffold an automovie project
 
 Usage:
-  npx autobe start <directory> [--force]
+  npx automovie start <directory> [--force]
 
 Commands:
   start <directory>   Create <directory> and lay down the starter template:
@@ -38,9 +38,9 @@ const projectNameOf = (targetDir: string): string =>
     .replace(/^[-.]+|[-.]+$/g, "") || "automovie-project";
 
 /**
- * The `autobe` CLI entry: parse argv, render the starter, and write it to the
- * target directory. Returns the process exit code (0 success, 1 on a usage or
- * scaffold error) rather than exiting, so the logic stays unit-testable.
+ * The `automovie` CLI entry: parse argv, render the starter, and write it to
+ * the target directory. Returns the process exit code (0 success, 1 on a usage
+ * or scaffold error) rather than exiting, so the logic stays unit-testable.
  *
  * @author Samchon
  */

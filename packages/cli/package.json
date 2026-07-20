@@ -1,10 +1,10 @@
 {
-  "name": "autobe",
+  "name": "@automovie/cli",
   "version": "0.1.0",
   "description": "Scaffold an automovie project: an MCP server config and a direct-link engine starter.",
   "main": "src/index.ts",
   "bin": {
-    "autobe": "lib/bin.js"
+    "automovie": "lib/bin.js"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -44,7 +44,7 @@
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "bin": {
-      "autobe": "lib/bin.js"
+      "automovie": "lib/bin.js"
     },
     "exports": {
       ".": {

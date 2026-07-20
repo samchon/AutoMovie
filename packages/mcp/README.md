@@ -138,7 +138,7 @@ orchestrated film state, transactions, and the guided correction loop; use
 **direct linking** for code-native motion authoring and host integrations.
 `enact` is the bridge: compute a clip either way, one engine enforces it. See
 the [`@automovie/engine` README](../engine#소비-방식-두-갈래) and scaffold a
-starter with `npx autobe start <dir>` ([`autobe`](../cli)).
+starter with `npx automovie start <dir>` ([`@automovie/cli`](../cli)).
 
 ## Run
 
