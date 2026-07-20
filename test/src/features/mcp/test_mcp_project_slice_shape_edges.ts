@@ -253,6 +253,55 @@ export const test_mcp_project_slice_shape_edges = (): void => {
       },
       fragments: ["semantically invalid", "cameraMotion"],
     },
+    // 5b. the #1187 guide metadata, gated on READ as well as on submit. A slice
+    //     travels without its scene, so the coverage cameras cannot be
+    //     cross-referenced here; every scene-independent rule still applies, and
+    //     a take that never states whether it moves is not a locked-off take.
+    {
+      title: "a malformed shot slice reports the coverage cameraMotion guard",
+      rel: "shots/b1.json",
+      value: {
+        id: "shot:b1",
+        name: null,
+        scene: "sc",
+        camera: "cam",
+        cameraMotion: null,
+        performances: [],
+        objectMotions: [],
+        duration: 2,
+        coverage: [{ camera: "side", cameraIntent: [] }],
+      },
+      fragments: ["semantically invalid", "$input.coverage[0].cameraMotion"],
+    },
+    {
+      title: "a malformed shot slice reports the event clock guard",
+      rel: "shots/b1.json",
+      value: {
+        id: "shot:b1",
+        name: null,
+        scene: "sc",
+        camera: "cam",
+        cameraMotion: null,
+        performances: [],
+        objectMotions: [],
+        duration: 2,
+        events: [
+          {
+            id: "hit:x:y:0",
+            kind: "hit",
+            source: "impactOutput",
+            time: 9,
+            actor: null,
+            target: null,
+            object: null,
+            point: null,
+            actionIndex: null,
+            reaction: null,
+          },
+        ],
+      },
+      fragments: ["semantically invalid", "$input.events[0].time"],
+    },
     // 6. beat-end shot-mismatch guard
     {
       title: "a beat-end whose shot is not shot:<beat> reports the mismatch",

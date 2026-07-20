@@ -111,10 +111,12 @@ const validate = (over: Record<string, unknown>): IAutoMovieValidation =>
   app.validateShot({ shot: shotWith(over), scene }).validation;
 
 /**
- * True when the validation refused at `path` with the stated fragment. The
- * `validateShot` tool re-roots the artifact validator's `$input` under
- * `$input.shot`, so every expected path here carries that prefix.
+ * The `validateShot` tool re-roots the artifact validator's `$input` under
+ * `$input.shot`, so every expected path in this scenario carries that prefix.
  */
+const rooted = (path: string): string => `$input.shot${path}`;
+
+/** True when the validation refused at `path` with the stated fragment. */
 const says = (
   validation: IAutoMovieValidation,
   path: string,
@@ -123,9 +125,13 @@ const says = (
   validation.success === false &&
   validation.violations.some(
     (violation) =>
-      violation.path === `$input.shot${path}` &&
-      violation.expected.includes(expected),
+      violation.path === rooted(path) && violation.expected.includes(expected),
   );
+
+/** True when nothing was refused at `path` (the over-descent counter-case). */
+const silentAt = (validation: IAutoMovieValidation, path: string): boolean =>
+  validation.success === true ||
+  validation.violations.every((violation) => violation.path !== rooted(path));
 
 /**
  * The shot artifact validator gates every field the shot declares, `events`,
@@ -160,6 +166,17 @@ const says = (
  *    take goes through the same clip validation the hero take does.
  * 5. `coverage[i].cameraMotion: null` is legal (a locked-off covering camera), and
  *    its `cameraIntent` is gated with the same rules as the hero one.
+ * 6. Two gates per list, and they are NOT the same gate:
+ *
+ *    | Gate | Input | Refuses at | | --- | --- | --- | | the LIST is not an array
+ *    | `events: "x"`, `cameraIntent: 7`, `coverage: "x"` | the field | | an
+ *    ELEMENT is not an object | `[null]` | that element's index |
+ *
+ *    Both are held for all three lists. A non-array must also STOP at the field
+ *    rather than descend, since per-element checks on a primitive would invent
+ *    indices or read through it. Paired with the absence/`null` distinction on
+ *    `cameraMotion`: `null` is the locked-off camera, a missing key is a take
+ *    that never said.
  */
 export const test_mcp_shot_metadata_gates = (): void => {
   // 1. the positive floor.
@@ -219,7 +236,20 @@ export const test_mcp_shot_metadata_gates = (): void => {
         validate({ events: [event({ actionIndex: 1.5 })] }),
         ".events[0].actionIndex",
         "must be null or an integer",
+      ) &&
+      says(
+        validate({ events: [event({ target: 7 })] }),
+        ".events[0].target",
+        "shot event target",
       ),
+  );
+  // The entry itself, not one of its fields. `playbackEvents` and
+  // `reviewVisualRead` read properties off each element, so a non-object entry
+  // must be refused at the element path rather than producing per-field
+  // violations against a primitive (or reading through it).
+  TestValidator.predicate(
+    "an event entry that is not an object is refused at the entry",
+    says(validate({ events: [null] }), ".events[0]", "must be a JSON object"),
   );
 
   // 3. cameraIntent.
@@ -255,6 +285,14 @@ export const test_mcp_shot_metadata_gates = (): void => {
         ".cameraIntent[0].focus.z",
         "must be finite",
       ),
+  );
+  TestValidator.predicate(
+    "an intent span that is not an object is refused at the entry",
+    says(
+      validate({ cameraIntent: [null] }),
+      ".cameraIntent[0]",
+      "must be a JSON object",
+    ),
   );
 
   // 4. coverage.
@@ -292,7 +330,47 @@ export const test_mcp_shot_metadata_gates = (): void => {
         validate({ coverage: [take({ cameraIntent: bad(null) })] }),
         ".coverage[0].cameraIntent",
         "must be an array",
+      ) &&
+      says(
+        validate({ coverage: [take({ camera: 7 })] }),
+        ".coverage[0].camera",
+        "coverage camera",
       ),
+  );
+  // `cameraMotion` is REQUIRED on a take and `null` is a value, not an absence:
+  // null is the locked-off covering camera (scenario 5 proves it validates
+  // clean), while a missing key is a take that never states whether it moves.
+  // Collapsing the two would let a half-built take commit as locked-off.
+  TestValidator.predicate(
+    "an absent cameraMotion is refused, and null still passes",
+    says(
+      validate({ coverage: [{ camera: "side", cameraIntent: [intent()] }] }),
+      ".coverage[0].cameraMotion",
+      "must be null or a clip",
+    ) && validate({ coverage: [take()] }).success === true,
+  );
+  // The LIST gate, which is a different gate from the ELEMENT gate below and
+  // takes a different input: `coverage` is absent or an array, and a non-array
+  // stops at the field itself. Not descending is part of the observable
+  // contract, since per-element checks on a non-array would either invent
+  // indices or read through a primitive.
+  TestValidator.predicate(
+    "a coverage list that is not an array is refused at the field, and stops",
+    (() => {
+      const notAList = validate({ coverage: bad("not-a-list") });
+      return (
+        says(notAList, ".coverage", "must be an array") &&
+        silentAt(notAList, ".coverage[0]")
+      );
+    })(),
+  );
+  TestValidator.predicate(
+    "a coverage take that is not an object is refused at the entry",
+    says(
+      validate({ coverage: [null] }),
+      ".coverage[0]",
+      "must be a JSON object",
+    ),
   );
 
   // 5. the legal boundaries inside a coverage take.
