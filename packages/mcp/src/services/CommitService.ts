@@ -47,6 +47,7 @@ import {
   isRecord,
   pushViolation,
   validateArrayArtifact,
+  validateBeatIdCaseCollisions,
   validateNonEmptyId,
   validateNonEmptyText,
   validateObjectArtifact,
@@ -1297,23 +1298,10 @@ const validateScriptArtifact = (
   // so ids differing only by case collide on a case-insensitive filesystem.
   // Unrefused here, the collision surfaced as the store's raw mid-save throw
   // at the SECOND beat's commitShot, after non-keyed slices were rewritten,
-  // wedging that beat while nextSteps kept prescribing it (#1096). Refuse at
-  // the source with a located violation instead.
-  const beatsByLower = new Map<string, { id: string; index: number }>();
-  beats.forEach((beat, index) => {
-    if (!isRecord(beat) || typeof beat.id !== "string") return;
-    const lower = beat.id.toLowerCase();
-    const prior = beatsByLower.get(lower);
-    if (prior !== undefined && prior.id !== beat.id)
-      pushViolation(
-        violations,
-        "type",
-        `$input.beats[${index}].id`,
-        `beat id "${beat.id}" collides case-insensitively with "${prior.id}" ($input.beats[${prior.index}].id); their per-beat slice files would clobber on a case-insensitive filesystem, rename one beat`,
-        beat.id,
-      );
-    if (prior === undefined) beatsByLower.set(lower, { id: beat.id, index });
-  });
+  // wedging that beat while nextSteps kept prescribing it (#1096). The store's
+  // read gate applies the same shared rule, so a script arriving from disk
+  // cannot reach that throw either (#1327).
+  validateBeatIdCaseCollisions(beats, "$input.beats", violations);
   cast.forEach((member, i) => {
     const path = `$input.cast[${i}]`;
     if (!validateObjectArtifact(member, path, "cast member", violations))

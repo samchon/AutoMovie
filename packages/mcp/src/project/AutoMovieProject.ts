@@ -38,12 +38,14 @@ import {
   isRecord,
   pushViolation,
   validateArrayArtifact,
+  validateBeatIdCaseCollisions,
   validateNonEmptyId,
   validateNonEmptyText,
   validateObjectArtifact,
   validateRange,
   validateTransformArtifact,
   validateUniqueBy,
+  validateUniqueIds,
   validateVectorArtifact,
 } from "../validators/primitives";
 import { acquireCommitLock, releaseCommitLock } from "./commitLock";
@@ -643,6 +645,9 @@ const normalizeAssetPath = (relativePath: string): string => {
   return checked.path;
 };
 
+/** DOS device basenames Windows refuses regardless of extension. */
+const WINDOWS_DEVICE_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+
 /**
  * The per-beat slice filename for a key, the single source of the
  * `${encodeURIComponent(key)}.json` convention the store reads, writes, and
@@ -651,9 +656,6 @@ const normalizeAssetPath = (relativePath: string): string => {
  * `.json` suffix injects a `.` separator that shifts prefix-boundary
  * comparisons (`"a"` vs `"a-"` sorts opposite to `"a.json"` vs `"a-.json"`).
  */
-/** DOS device basenames Windows refuses regardless of extension. */
-const WINDOWS_DEVICE_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
-
 const sliceFilename = (key: string): string => {
   // encodeURIComponent leaves `*` (invalid on Windows, EINVAL at write) and
   // DOS device basenames (`con`, `nul`, ...) intact (#1011). Escape both with
@@ -861,6 +863,12 @@ const validateScriptSlice = (
     "beat id",
     violations,
   );
+  // The same rule the commit gate applies. A stored script is a file this
+  // server may not have written, and the beat ids in it become this store's own
+  // slice filenames, so a collision that loads clean here wedges the second
+  // beat's commitShot with a raw mid-save throw instead of a located violation
+  // (#1327).
+  validateBeatIdCaseCollisions(value.beats, "$input.beats", violations);
   if (Array.isArray(value.beats) && value.beats.length === 0)
     pushViolation(
       violations,
@@ -1244,10 +1252,22 @@ const validateShotSlice = (
       "shot objectMotions",
       violations,
     )
-  )
+  ) {
+    // Clip ids must be unique, the same rule the submit gate applies. The
+    // engine works to satisfy it: `performShot` suffixes a repeated projectile
+    // flight's `trajectory:<node>` clip "so the shot stays committable"
+    // (#989). A stored shot that breaks it addresses two clips by one id, and
+    // was refused on submit but not on read (#1326).
+    validateUniqueIds(
+      value.objectMotions,
+      "$input.objectMotions",
+      "object motion clip id",
+      violations,
+    );
     value.objectMotions.forEach((clip, index) =>
       validateClipArtifact(clip, `$input.objectMotions[${index}]`, violations),
     );
+  }
   // The #1187 guide metadata and the event stream, gated on READ as well as on
   // submit: a slice validated looser than the submitted artifact is exactly the
   // validator drift #1097 called out. No scene travels with a shot slice, so the
