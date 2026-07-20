@@ -1,4 +1,5 @@
 import {
+  appendShotMetadataArtifact,
   compareCodeUnits,
   forgeProp,
   validateModel as validateEngineModel,
@@ -28,7 +29,6 @@ import {
   IAutoMovieMcpWritableSlate,
 } from "../dto";
 import {
-  appendShotMetadataArtifact,
   validateSceneArtifact,
   validateSequenceArtifact,
 } from "../validators/artifacts";
