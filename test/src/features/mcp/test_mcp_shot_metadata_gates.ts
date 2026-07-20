@@ -111,17 +111,12 @@ const validate = (over: Record<string, unknown>): IAutoMovieValidation =>
   app.validateShot({ shot: shotWith(over), scene }).validation;
 
 /**
- * True when the validation refused at `path` with the stated fragment. The
- * `validateShot` tool re-roots the artifact validator's `$input` under
- * `$input.shot`, so every expected path here carries that prefix.
+ * The `validateShot` tool re-roots the artifact validator's `$input` under
+ * `$input.shot`, so every expected path in this scenario carries that prefix.
  */
-/** True when nothing was refused at `path` (the over-descent counter-case). */
-const silentAt = (validation: IAutoMovieValidation, path: string): boolean =>
-  validation.success === true ||
-  validation.violations.every(
-    (violation) => violation.path !== `$input.shot${path}`,
-  );
+const rooted = (path: string): string => `$input.shot${path}`;
 
+/** True when the validation refused at `path` with the stated fragment. */
 const says = (
   validation: IAutoMovieValidation,
   path: string,
@@ -130,9 +125,13 @@ const says = (
   validation.success === false &&
   validation.violations.some(
     (violation) =>
-      violation.path === `$input.shot${path}` &&
-      violation.expected.includes(expected),
+      violation.path === rooted(path) && violation.expected.includes(expected),
   );
+
+/** True when nothing was refused at `path` (the over-descent counter-case). */
+const silentAt = (validation: IAutoMovieValidation, path: string): boolean =>
+  validation.success === true ||
+  validation.violations.every((violation) => violation.path !== rooted(path));
 
 /**
  * The shot artifact validator gates every field the shot declares, `events`,
