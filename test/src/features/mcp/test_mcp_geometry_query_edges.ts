@@ -447,6 +447,93 @@ export const test_mcp_geometry_query_edges = (): void => {
       ["$input.context.shot.performances[0]", "JSON object"],
     ),
   );
+  // The clock the sampler orders the clip by. `sampleMotion` declares the
+  // precondition in its own source ("strictly increasing keyframe times, the
+  // contract validateMotion enforces") and nothing established it here: a
+  // geometry context's motions are host-supplied and never see validateMotion.
+  // Ungated, a NaN time made every comparison in the sampler's search false, so
+  // the span was NaN and the pose came back NaN with `reason: null`, a
+  // confident verdict over nothing measured (#1322). The sibling floor for
+  // `enact` clips already required this, so the two shape floors over one type
+  // disagreed about exactly this field.
+  TestValidator.predicate(
+    "a non-finite keyframe time rejects at its own path",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: contextWith({
+            motions: {
+              actor: {
+                ...motion,
+                keyframes: [
+                  { ...motion.keyframes[0]!, time: Number.NaN },
+                  motion.keyframes[1]!,
+                ],
+              },
+            },
+          }),
+          actor: "actor",
+        }),
+      ["$input.context.motions.actor.keyframes[0].time", "finite"],
+    ),
+  );
+  // Order is a property of the LIST, so no single keyframe can carry it: the
+  // binary search assumes a positive span between neighbours, and equal or
+  // descending times interpolate across a zero or negative one.
+  TestValidator.predicate(
+    "non-increasing keyframe times reject at the offending index",
+    throwsError(
+      () =>
+        app.getResolvedPose({
+          context: contextWith({
+            motions: {
+              actor: {
+                ...motion,
+                keyframes: [
+                  motion.keyframes[1]!,
+                  { ...motion.keyframes[0]!, time: 0 },
+                ],
+              },
+            },
+          }),
+          actor: "actor",
+        }),
+      ["$input.context.motions.actor.keyframes[1].time", "strictly increase"],
+    ),
+  );
+  // The counter-cases that keep both checks narrow: a single keyframe orders
+  // nothing, and a well-formed clip still resolves a finite pose. The second is
+  // the property the defect violated, stated directly rather than inferred from
+  // the absence of a throw.
+  TestValidator.predicate(
+    "a single-keyframe motion orders nothing and still resolves",
+    app.getResolvedPose({
+      context: contextWith({
+        motions: { actor: { ...motion, keyframes: [motion.keyframes[0]!] } },
+      }),
+      actor: "actor",
+    }).resolvedPose !== null,
+  );
+  TestValidator.predicate(
+    "a well-formed clip resolves finite bone positions with no reason",
+    (() => {
+      const resolved = app.getResolvedPose({
+        context: contextWith({ motions: { actor: motion } }),
+        actor: "actor",
+      });
+      return (
+        resolved.reason === null &&
+        resolved.resolvedPose !== null &&
+        resolved.resolvedPose.bones.every((bone) =>
+          [
+            bone.worldPosition.x,
+            bone.worldPosition.y,
+            bone.worldPosition.z,
+          ].every(Number.isFinite),
+        )
+      );
+    })(),
+  );
   TestValidator.predicate(
     "a non-object motion keyframe rejects at its index",
     throwsError(
