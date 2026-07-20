@@ -44,10 +44,7 @@ export interface IAutoMovieActorContext {
   /** Heading the actor faces, degrees about +Y (0 = +Z), for a `lookAt`'s yaw. */
   facingDeg: number;
 
-  /**
-   * Eye height above the actor's position (meters): where a `lookAt` aims
-   * from.
-   */
+  /** Eye height above the actor's position (meters): where a `lookAt` aims from. */
   eyeHeight: number;
 
   /** The pose the actor settles into for a `hold`. */

@@ -1,11 +1,13 @@
 /**
  * The lower index of the segment straddling `time` in a strictly increasing
  * sequence of `length` key times read through `timeAt`: the `lo` in `[0,
- * length - 2]` with `timeAt(lo) <= time <= timeAt(lo + 1)`, resolving an exact
- * hit on an interior key to the segment ENDING at it (so `time === timeAt(k)`
- * yields `lo === k - 1`). That tie rule reproduces the historical front-to-back
- * linear scan the pose and track samplers used, so swapping this binary search
- * in leaves every interpolated result byte-identical.
+ * length
+ *
+ * - 2]`with`timeAt(lo) <= time <= timeAt(lo + 1)`, resolving an exact hit on an
+ *   interior key to the segment ENDING at it (so `time === timeAt(k)`yields`lo
+ *   === k - 1`). That tie rule reproduces the historical front-to-back linear
+ *   scan the pose and track samplers used, so swapping this binary search in
+ *   leaves every interpolated result byte-identical.
  *
  * Runs in `O(log length)`. The caller must already have handled the ends (`time
  * <= timeAt(0)` and `time >= timeAt(length - 1)`); this searches the strict

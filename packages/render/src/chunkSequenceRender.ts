@@ -77,10 +77,10 @@ export interface IAutoMovieRenderChunk {
 }
 
 /**
- * One guide pass's whole-timeline walk order across the chunks, how a
- * diffusion host visits every frame of a pass without a video concat: the chunk
- * frame directories in play order, with the per-chunk ffmpeg input pattern
- * alongside for hosts that want to encode a pass per chunk.
+ * One guide pass's whole-timeline walk order across the chunks, how a diffusion
+ * host visits every frame of a pass without a video concat: the chunk frame
+ * directories in play order, with the per-chunk ffmpeg input pattern alongside
+ * for hosts that want to encode a pass per chunk.
  *
  * @author Samchon
  */

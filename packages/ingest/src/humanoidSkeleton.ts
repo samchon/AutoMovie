@@ -69,9 +69,9 @@ const normalize = (name: string): string =>
  * Retarget an imported glTF's skins onto a normalized humanoid
  * {@link IAutoMovieSkeleton} by matching every skin's joint names to
  * {@link AutoMovieHumanoidBone} slots (all skins in document order, first match
- * per slot wins), the bridge that turns a real rigged glTF/VRM into a
- * automovie character (poses and motions authored on the slots then replay on
- * it). Reading every skin matters because exporters bind clothes, hair, and
+ * per slot wins), the bridge that turns a real rigged glTF/VRM into a automovie
+ * character (poses and motions authored on the slots then replay on it).
+ * Reading every skin matters because exporters bind clothes, hair, and
  * accessories as separate skins with no ordering guarantee: the body rig must
  * be found wherever it sits.
  *

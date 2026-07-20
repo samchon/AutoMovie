@@ -116,10 +116,10 @@ export interface IAutoMovieResolveOutput {
   violations: IAutoMovieResolveViolation[];
 
   /**
-   * Drivers this pass could not resolve: surfaced, never dropped. After S2
-   * only two things can appear here: springs when no
-   * {@link IAutoMovieResolveInput.springs} input was given (stateful: nothing
-   * to step them with), and malformed two-bone chains (length ≠ 3).
+   * Drivers this pass could not resolve: surfaced, never dropped. After S2 only
+   * two things can appear here: springs when no
+   * {@link IAutoMovieResolveInput.springs} input was given (stateful: nothing to
+   * step them with), and malformed two-bone chains (length ≠ 3).
    */
   deferredDrivers: IAutoMovieDriver[];
 }

@@ -11,10 +11,10 @@ import { createSkeleton } from "../internal/fixtures";
 
 /**
  * Run the whole film-pipeline spine (stage -> perform each beat -> cut) from
- * identical inputs and serialize everything it produces: the staged scene,
- * both shots, the dense per-frame motion clips, and the cut sequence. The
- * densest artifact, the compiled `motions`, is where a residual non-purity
- * would show up in the sampled floats.
+ * identical inputs and serialize everything it produces: the staged scene, both
+ * shots, the dense per-frame motion clips, and the cut sequence. The densest
+ * artifact, the compiled `motions`, is where a residual non-purity would show
+ * up in the sampled floats.
  */
 const runPipeline = (): string => {
   const script = makeScriptWrite({
@@ -103,8 +103,8 @@ const runPipeline = (): string => {
  *
  * What that gates and what it does NOT: two runs of a pure function are
  * byte-identical by construction, and Map/Set iteration order, `JSON.stringify`
- * key order, and float accumulation order are all per-process deterministic,
- * so this cannot fail on those ordering hazards; only an incidental IMPURITY
+ * key order, and float accumulation order are all per-process deterministic, so
+ * this cannot fail on those ordering hazards; only an incidental IMPURITY
  * leaking between the two runs (a `Date.now()`/`Math.random()` reach, mutable
  * module state) makes them differ, and that is exactly what a same-process
  * double-run catches. The ordering hazards are covered where they can be: by
@@ -112,14 +112,13 @@ const runPipeline = (): string => {
  * for the cross-host ordering the determinism mandate is really about, by
  * `compareCodeUnits` replacing locale collation at every ordering site (#1225).
  * A committed golden digest would gate cross-process reproducibility too, but
- * it is a snapshot of the code's own output, the anti-oracle the coverage
- * skill warns against, so it is deliberately not used here.
+ * it is a snapshot of the code's own output, the anti-oracle the coverage skill
+ * warns against, so it is deliberately not used here.
  *
  * Scenarios:
  *
  * 1. Running the full stage -> perform -> cut spine twice from identical fixtures
- *    serializes byte-identically: no residual clock/RNG/global-state
- *    impurity.
+ *    serializes byte-identically: no residual clock/RNG/global-state impurity.
  * 2. The serialized output actually carries the dense float artifact (the keyframe
  *    samples), so the check is a real signal, not a trivially-equal empty
  *    payload.

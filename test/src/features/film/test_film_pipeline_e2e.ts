@@ -12,9 +12,9 @@ import { nclose } from "../internal/predicates";
 
 /**
  * The workflow spine, end to end: one script's stage payloads flow through
- * every film-pipeline rung (stage the world, perform each beat into a shot,
- * cut the shots into a sequence) with every gate passing on the way. This is
- * the scenario the LLM harness will drive for real; here the stage payloads are
+ * every film-pipeline rung (stage the world, perform each beat into a shot, cut
+ * the shots into a sequence) with every gate passing on the way. This is the
+ * scenario the LLM harness will drive for real; here the stage payloads are
  * authored fixtures, which is exactly the point: the pipeline is deterministic
  * below the model.
  *
@@ -22,8 +22,7 @@ import { nclose } from "../internal/predicates";
  *
  * 1. A two-beat duel script stages into `scene-duel`, and each beat performs into
  *    its own shot (`shot:beat-1` with both knights moving, `shot:beat-2` with
- *    the champion celebrating): both ROM-validated against the stick
- *    skeleton.
+ *    the champion celebrating): both ROM-validated against the stick skeleton.
  * 2. The cut plays beat-1 whole (2 s) then dissolves 0.5 s into a 1.5 s trim of
  *    beat-2 → a 24 fps sequence with runtime 2 + 1.5 − 0.5 = 3 s, every shot
  *    reference resolving to a built shot.

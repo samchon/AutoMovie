@@ -135,9 +135,9 @@ export const validateBalanceSupport = (props: {
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
 
   /**
-   * Marker that opts the clip out of the balance expectation: a
-   * deliberately off-balance pose (wire-fu, a mid-spin freeze, a tiptoe) sets
-   * this and the matching warnings are suppressed.
+   * Marker that opts the clip out of the balance expectation: a deliberately
+   * off-balance pose (wire-fu, a mid-spin freeze, a tiptoe) sets this and the
+   * matching warnings are suppressed.
    */
   physicsIntent?: string;
 }): IAutoMovieValidation => {

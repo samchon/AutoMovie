@@ -19,8 +19,8 @@ const modelWithMesh = (mesh: IAutoMovieMesh): IAutoMovieModel => {
 
 /**
  * An empty position buffer is a multiple of 3, so the tuple-length check
- * accepts it and every downstream buffer stays "consistent" at vertexCount 0:
- * a mesh with no vertices used to validate clean and only degenerate at
+ * accepts it and every downstream buffer stays "consistent" at vertexCount 0: a
+ * mesh with no vertices used to validate clean and only degenerate at
  * render/export. validateModel now rejects it, mirroring a primitive's
  * strictly-positive extents, so the correction round catches empty geometry.
  *

@@ -47,8 +47,8 @@ const makeShot = (
 
 /**
  * The upsert rule (#617, the AutoBe granularity doctrine): re-committing the
- * same beat's artifact replaces exactly that slice (and, resident, exactly
- * that file), leaving sibling beats byte-identical. One beat is the stable
+ * same beat's artifact replaces exactly that slice (and, resident, exactly that
+ * file), leaving sibling beats byte-identical. One beat is the stable
  * correction target.
  *
  * Scenarios:

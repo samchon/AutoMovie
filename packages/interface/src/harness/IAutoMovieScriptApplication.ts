@@ -18,9 +18,9 @@ export interface IAutoMovieScriptApplication {
 export namespace IAutoMovieScriptApplication {
   export interface IProps {
     /**
-     * Think before you act. What is the user really asking for: the action,
-     * the mood, the cast, the rough shape? Note ambiguities you are resolving
-     * by default and any constraint the brief implies.
+     * Think before you act. What is the user really asking for: the action, the
+     * mood, the cast, the rough shape? Note ambiguities you are resolving by
+     * default and any constraint the brief implies.
      */
     thinking: string;
 

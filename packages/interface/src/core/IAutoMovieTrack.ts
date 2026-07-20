@@ -36,9 +36,9 @@ export interface IAutoMovieTrack {
 
 /**
  * A clip: a named bundle of flat-accessor tracks sharing one local-seconds
- * timeline. The general track form: its tracks may drive a character's bones,
- * a camera's transform and FOV, a prop's hinge, and a face's morph weights all
- * at once.
+ * timeline. The general track form: its tracks may drive a character's bones, a
+ * camera's transform and FOV, a prop's hinge, and a face's morph weights all at
+ * once.
  *
  * Clip **coexists with** {@link IAutoMovieMotion}, it does not replace it: they
  * are two live forms for two jobs. Motion is the semantic keyframe-pose vehicle

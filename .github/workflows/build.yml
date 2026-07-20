@@ -24,5 +24,11 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
+      # Formatting drifts silently without a gate: three separate topics in one
+      # session each found the same three files unformatted on master and each
+      # had to revert the churn to keep its diff on topic.
+      - name: Check Formatting
+        run: pnpm run format:check
+
       - name: Build Packages
         run: pnpm run build

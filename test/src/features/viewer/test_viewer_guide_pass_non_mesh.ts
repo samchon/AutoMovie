@@ -62,12 +62,12 @@ const STRUCTURAL: AutoMovieGuidePass[] = [
 /**
  * A structural guide pass segments only the subject MESH geometry (#1226).
  * Every non-mesh renderable (a grid or other `LineSegments`/`Line` helper,
- * `Points`, a `Sprite`) must be hidden while the pass renders, or it would
- * draw its live beauty material over the pass's black background (a grid
- * reading as "very close" in depth, a non-palette color in mask, a stray line
- * beside the skeleton in pose). Restore makes them visible again; `beauty`
- * never hides them; and the pose pass's own skeleton overlay (itself
- * `LineSegments`, added after the hide) stays visible.
+ * `Points`, a `Sprite`) must be hidden while the pass renders, or it would draw
+ * its live beauty material over the pass's black background (a grid reading as
+ * "very close" in depth, a non-palette color in mask, a stray line beside the
+ * skeleton in pose). Restore makes them visible again; `beauty` never hides
+ * them; and the pose pass's own skeleton overlay (itself `LineSegments`, added
+ * after the hide) stays visible.
  *
  * Scenarios:
  *

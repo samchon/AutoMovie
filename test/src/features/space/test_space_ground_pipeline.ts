@@ -83,11 +83,11 @@ const gait: IAutoMovieMotion = {
 /**
  * `spaceGround` is the adapter that plugs a space into every ground seam: the
  * path bake climbs the ramp, the ground-IK pass plants feet against the same
- * heights, and the contact validator judges against them: the full space →
- * path → feet pipeline on one surface set.
+ * heights, and the contact validator judges against them: the full space → path
+ * → feet pipeline on one surface set.
  *
- * Scenarios (a 0.15 m climb, short enough for one stance pin to stay inside
- * the leg's reach while the hip walks and rises, as the flat pipeline test):
+ * Scenarios (a 0.15 m climb, short enough for one stance pin to stay inside the
+ * leg's reach while the hip walks and rises, as the flat pipeline test):
  *
  * 1. `followPathMotion` with the space ground climbs the ramp: the mid-path
  *    frame's `y` is the ramp height there (hand oracle: h(x)=0.2x → 0.015 at

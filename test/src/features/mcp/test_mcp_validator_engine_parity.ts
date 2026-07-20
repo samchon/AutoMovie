@@ -93,8 +93,8 @@ const sceneWith = (model: string): IAutoMovieScene => ({
  *    never-silently-replaced duplicate refusal. Negative twin: the plain
  *    spelling registers, and a dotted FILENAME (`x.v2.png`) stays legal.
  * 3. `getReach` on a rig with no measurable arm chain answers `reach: null` with a
- *    diagnosing reason: unmeasurable is not "unreachable". Negative twin: a
- *    rig with one usable arm still measures (`reason: null`).
+ *    diagnosing reason: unmeasurable is not "unreachable". Negative twin: a rig
+ *    with one usable arm still measures (`reason: null`).
  */
 export const test_mcp_validator_engine_parity = (): void => {
   // 1. an empty film refuses like the engine's cut

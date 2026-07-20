@@ -43,8 +43,8 @@ const withCapsule = (
  * Scenarios:
  *
  * 1. Well-formed overlap still warns (the geometry genuinely intersects).
- * 2. An endpoint bone absent from the rig fails with a type violation: the
- *    overlap is no longer silently dropped.
+ * 2. An endpoint bone absent from the rig fails with a type violation: the overlap
+ *    is no longer silently dropped.
  * 3. Non-distinct endpoints fail with a type violation.
  * 4. A non-positive radius fails with a range violation.
  * 5. Both actors malformed: violations name each actor's capsule; no events or

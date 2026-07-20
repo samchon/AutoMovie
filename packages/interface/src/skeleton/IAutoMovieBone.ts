@@ -25,9 +25,9 @@ export interface IAutoMovieBone {
   parent: AutoMovieHumanoidBone | null;
 
   /**
-   * Rest-pose local transform relative to `parent`: the bone at 0
-   * articulation. Semantic joint angles ({@link IAutoMovieJointPose}) are
-   * applied _on top of_ this by the engine.
+   * Rest-pose local transform relative to `parent`: the bone at 0 articulation.
+   * Semantic joint angles ({@link IAutoMovieJointPose}) are applied _on top of_
+   * this by the engine.
    */
   rest: IAutoMovieTransform;
 

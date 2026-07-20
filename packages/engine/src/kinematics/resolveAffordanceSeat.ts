@@ -19,8 +19,8 @@ const UNIT_SCALE = { x: 1, y: 1, z: 1 } as const;
  * composed onto the parent root (the {@link resolveAttachment} convention: `pos
  * = parentPos + parentRot · frame.translation`, `rot = parentRot ∘
  * frame.rotation`). The child is then placed so its own contact frame (its
- * `childAffordance.frame`, or the child root origin when `null`) coincides
- * with it:
+ * `childAffordance.frame`, or the child root origin when `null`) coincides with
+ * it:
  *
  * - `childRot = contactRot ∘ childFrame.rotation⁻¹`
  * - `childPos = contactPos − childRot · childFrame.translation`
@@ -28,8 +28,8 @@ const UNIT_SCALE = { x: 1, y: 1, z: 1 } as const;
  * Seating never rescales: the returned `scale` is unit (the engine never
  * mirrors, and an affordance is a contact, not a resize). Wiring the film
  * layer's `attachTo` verb to affordance targets (baking a follow clip the way
- * `compileAttach` does for bones) is a follow-up. This is the primitive it
- * will call per frame.
+ * `compileAttach` does for bones) is a follow-up. This is the primitive it will
+ * call per frame.
  *
  * @author Samchon
  */

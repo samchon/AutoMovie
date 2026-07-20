@@ -4,8 +4,8 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose } from "../internal/predicates";
 
 /**
- * The default humanoid ROM table is where automovie's core differentiator lives:
- * it encodes the anatomical limits the pose verifier checks every joint
+ * The default humanoid ROM table is where automovie's core differentiator
+ * lives: it encodes the anatomical limits the pose verifier checks every joint
  * against. This pins the key joint archetypes so a regression in the table is
  * caught immediately.
  *

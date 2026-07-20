@@ -25,8 +25,8 @@ export const swingConeAngle = (flexion: number, abduction: number): number =>
 /**
  * The largest blend `t` in `[0, 1]` along the segment from `(anchorFlexion,
  * anchorAbduction)` to `(flexion, abduction)` whose combined
- * {@link swingConeAngle} still fits within `swingDeg`: `1` when the pose
- * already fits, `0` when only the anchor does.
+ * {@link swingConeAngle} still fits within `swingDeg`: `1` when the pose already
+ * fits, `0` when only the anchor does.
  *
  * Pulling toward `(0, 0)` (the anchor a box that brackets neutral yields) is
  * right only when the joint can actually reach neutral. For a per-bone override

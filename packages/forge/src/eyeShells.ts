@@ -58,8 +58,8 @@ const fitEye = (face: number[], ring: number[]): IForgeEyeShell => {
  * Each sphere takes its center and radius from that eye's lid ring on the given
  * face (so it follows a morphed or identity-baked face), with the front surface
  * sitting a fraction of a millimeter proud of the lid plane the way a cornea
- * does. The returned `center` is the FRONT pole: the renderer colors
- * iris/pupil by angular distance from it.
+ * does. The returned `center` is the FRONT pole: the renderer colors iris/pupil
+ * by angular distance from it.
  *
  * @author Samchon
  */

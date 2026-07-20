@@ -81,9 +81,9 @@ export const compileLaunch = (props: {
   /** The struck target's world point (the solved flight lands here). */
   target: IAutoMovieVector3;
   /**
-   * The struck scene node (the emitted `react`'s actor), or `null` when the
-   * aim is a point/group with no single actor to recoil (the flight still
-   * bakes; only the reaction is withheld).
+   * The struck scene node (the emitted `react`'s actor), or `null` when the aim
+   * is a point/group with no single actor to recoil (the flight still bakes;
+   * only the reaction is withheld).
    */
   targetNode: string | null;
   /**

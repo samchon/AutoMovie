@@ -9,10 +9,10 @@ import {
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
 /**
- * A **knight** rider, the stick figure dressed for the saddle: the same rig
- * and proportions as {@link buildStickman}, recoloured to steel, with a helmet
- * and plume on the head, a couched **lance** in the right hand, and a
- * **shield** on the left forearm.
+ * A **knight** rider, the stick figure dressed for the saddle: the same rig and
+ * proportions as {@link buildStickman}, recoloured to steel, with a helmet and
+ * plume on the head, a couched **lance** in the right hand, and a **shield** on
+ * the left forearm.
  *
  * It is a plain {@link IAutoMovieModel} like any other; the mounted scene fixes
  * its root to the horse's saddle bone each frame via the engine's

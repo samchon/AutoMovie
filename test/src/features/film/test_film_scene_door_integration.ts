@@ -75,9 +75,8 @@ const SCENE: IAutoMovieScene = {
  * Scenarios:
  *
  * 1. The forged door forges, lowers under its placement, and an in-range 90° swing
- *    passes: the hinge's world POSITION is `placement + (0,1,0)` (the
- *    placement composition is real), and its world X basis lands at
- *    `(0,0,-1)`.
+ *    passes: the hinge's world POSITION is `placement + (0,1,0)` (the placement
+ *    composition is real), and its world X basis lands at `(0,0,-1)`.
  * 2. The declared copy driver mirrors the hinge in the same scene graph.
  * 3. An over-limit 150° swing clamps to exactly 110° (world X basis `(cos110°, 0,
  *    −sin110°)`) with every violation tagged by the forged profile on the

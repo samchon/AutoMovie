@@ -83,12 +83,11 @@ const SEQUENCE: IAutoMovieSequence = {
  *    the shot starts at the trim-end instant, the trimmed entry owns the event
  *    instead of it vanishing from every entry.
  * 9. Ownership requires GLOBAL contiguity (#1099): the same shot played as
- *    aftermath [2,4] then flashback [0,2]: the flashback's cut lands exactly
- *    on the hit at shot-time 2, and a shot-LOCAL coincidence with the
- *    aftermath's start must not suppress it (they play at different global
- *    times). Both plays emit the hit at their own global instants (per-play
- *    semantics, #1080), while a genuinely contiguous seam (scenario 7) still
- *    emits once.
+ *    aftermath [2,4] then flashback [0,2]: the flashback's cut lands exactly on
+ *    the hit at shot-time 2, and a shot-LOCAL coincidence with the aftermath's
+ *    start must not suppress it (they play at different global times). Both
+ *    plays emit the hit at their own global instants (per-play semantics,
+ *    #1080), while a genuinely contiguous seam (scenario 7) still emits once.
  */
 export const test_film_playback_resolver = (): void => {
   const timeline = sequenceTimeline(SEQUENCE, SHOTS);

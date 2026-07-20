@@ -13,8 +13,8 @@ import { AutoMovieProject } from "./project/AutoMovieProject";
  * orchestration.
  *
  * It carries the host-injected frame-capture adapter (#608) and the resident
- * {@link AutoMovieProject} (#614, the project directory itself, JSON AST plus
- * 3D assets, is the memory, unlike AutoBe's hidden `.autobe` JSON mirror). The
+ * {@link AutoMovieProject} (#614, the project directory itself, JSON AST plus 3D
+ * assets, is the memory, unlike AutoBe's hidden `.autobe` JSON mirror). The
  * prerequisite graph (#615) will read the resident project from here.
  */
 export class AutoMovieContext {
@@ -78,11 +78,11 @@ export class AutoMovieContext {
   /**
    * Remember session-only compiled motions a resident commit received, scoped
    * to the beat whose shot they animate (#1091). `compilePerformance` names
-   * every actor's clip `perform:<actor>`, NOT beat-scoped, so a shared
-   * registry let beat N's commit silently overwrite beat N−1's clip for the
-   * same actor, and earlier beats' end states sampled the wrong clip. Each beat
-   * keeps its own snapshot (replaced whole, like the shot it belongs to), and
-   * reads resolve through the queried beat.
+   * every actor's clip `perform:<actor>`, NOT beat-scoped, so a shared registry
+   * let beat N's commit silently overwrite beat N−1's clip for the same actor,
+   * and earlier beats' end states sampled the wrong clip. Each beat keeps its
+   * own snapshot (replaced whole, like the shot it belongs to), and reads
+   * resolve through the queried beat.
    */
   public rememberGeometryMotions(
     motions: Record<string, IAutoMovieMcpMotion>,

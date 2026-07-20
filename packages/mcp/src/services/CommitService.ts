@@ -79,9 +79,9 @@ export class CommitService {
    *
    * The resident path is additionally gated by the film-ladder prerequisites
    * (#615): an out-of-order resident commit throws the actionable "do this
-   * next" prompt before any transform runs. An explicit slate bypasses the gate,
-   * it is a pure transform whose cross-slice preconditions already surface as
-   * violations.
+   * next" prompt before any transform runs. An explicit slate bypasses the
+   * gate, it is a pure transform whose cross-slice preconditions already
+   * surface as violations.
    */
   private base(
     slate: IAutoMovieMcpWritableSlate | undefined,

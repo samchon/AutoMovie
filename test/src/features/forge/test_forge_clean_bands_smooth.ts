@@ -4,10 +4,10 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose } from "../internal/predicates";
 
 /**
- * The triangular smoothing kernel is normalized: a constant band passes
- * through bit-exact (no drift to lock in), while a step edge is softened,
- * which is the property that keeps band rows from reading as ring banding on
- * the lofted clay surface.
+ * The triangular smoothing kernel is normalized: a constant band passes through
+ * bit-exact (no drift to lock in), while a step edge is softened, which is the
+ * property that keeps band rows from reading as ring banding on the lofted clay
+ * surface.
  *
  * Scenario: a constant 20 stays exactly 20 under radius 2; a 0|10 step's corner
  * rows pull toward each other (strictly between the plateau values, symmetric

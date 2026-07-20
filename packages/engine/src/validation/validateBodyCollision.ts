@@ -37,8 +37,8 @@ const FALLBACK_NORMAL: IAutoMovieVector3 = { x: 0, y: 1, z: 0 };
 
 /**
  * One actor in an inter-body collision test: its rig, its motion, the capsule
- * proxies that stand in for its volume, and its physical body (mass etc., #595):
- * `null` bodies fall back to a default human mass. `node` labels it in
+ * proxies that stand in for its volume, and its physical body (mass etc.,
+ * #595): `null` bodies fall back to a default human mass. `node` labels it in
  * emitted events. Each capsule's endpoints must be two distinct bones of
  * `skeleton` with a positive radius; {@link detectBodyCollision} validates this
  * itself (a malformed capsule is an error, returned before sampling) rather

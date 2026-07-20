@@ -103,8 +103,8 @@ const plant = (
  * 4. Plants carry the latest run per foot at/before beat end: a later left-foot
  *    run supersedes an earlier one even listed first, a not-yet-started run is
  *    filtered, and a foot's only run is kept.
- * 5. No plant entry for a node, and an entry with zero applicable runs, both
- *    yield null.
+ * 5. No plant entry for a node, and an entry with zero applicable runs, both yield
+ *    null.
  * 6. A staged mount is carried onto its rider; unmounted actors get null.
  * 7. Duplicated plant/mount node entries throw loudly.
  * 8. A degenerate zero-duration looping clip has no cycle to resume (null phase,

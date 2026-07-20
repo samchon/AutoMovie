@@ -170,8 +170,8 @@ export namespace IAutoMoviePerformedShot {
  * fails.
  *
  * `launch` actions are compiled through {@link compileLaunch}: the projectile (a
- * staged scene node) gets its baked flight as a shot `objectMotion`, and, for
- * a node aim carrying `onHit`, the struck actor's recoil is folded into the
+ * staged scene node) gets its baked flight as a shot `objectMotion`, and, for a
+ * node aim carrying `onHit`, the struck actor's recoil is folded into the
  * action list at the **engine-computed** contact, so it rides the same
  * synthesis and ROM gate as an authored `react`. The projectile must be staged,
  * the aim must resolve to a point, and the shot must reach the target at the

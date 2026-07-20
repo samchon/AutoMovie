@@ -45,8 +45,8 @@ const rest = createSkeleton().bones[0]!.rest;
  * base perform tool test does not reach: a non-object script/staged/
  * performance sub-shape, a non-object scene node transform, a non-array action
  * list, a non-object clips registry, and the actor rig's own bones-array /
- * bone-object / bone-name floor. Each fails as a field-located violation
- * before the synthesizer or engine dereferences it.
+ * bone-object / bone-name floor. Each fails as a field-located violation before
+ * the synthesizer or engine dereferences it.
  *
  * Scenarios:
  *

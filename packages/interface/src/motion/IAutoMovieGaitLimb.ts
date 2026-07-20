@@ -21,8 +21,8 @@ export interface IAutoMovieGaitLimb {
   axis?: "flexion" | "abduction" | "twist";
 
   /**
-   * Where in the stride this limb's cycle starts, in `[0, 1)`: the phase
-   * offset that distinguishes one gait's footfall sequence from another's.
+   * Where in the stride this limb's cycle starts, in `[0, 1)`: the phase offset
+   * that distinguishes one gait's footfall sequence from another's.
    */
   phase: number;
 

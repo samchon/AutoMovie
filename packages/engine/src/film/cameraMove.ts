@@ -17,10 +17,10 @@ const UP: IAutoMovieVector3 = { x: 0, y: 1, z: 0 };
 
 /**
  * The rotation that points a camera's −Z down `direction` while keeping its
- * horizon level (world-up stabilized), what a shortest-arc `aimRotation`
- * cannot do: the shortest arc from −Z rolls the frame on off-axis aims, which
- * the demo's orbit shot exposed as a tilted horizon. Standard look-at basis (x
- * = up × z, y = z × x) converted to a quaternion; aiming straight up/down
+ * horizon level (world-up stabilized), what a shortest-arc `aimRotation` cannot
+ * do: the shortest arc from −Z rolls the frame on off-axis aims, which the
+ * demo's orbit shot exposed as a tilted horizon. Standard look-at basis (x = up
+ * × z, y = z × x) converted to a quaternion; aiming straight up/down
  * degenerates the cross product, so +Z steps in as the reference.
  */
 export const lookRotation = (

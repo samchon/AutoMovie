@@ -3,8 +3,8 @@ import { TestValidator } from "@nestia/e2e";
 
 /**
  * A vertex the indices never reference has no neighbors and must pass through
- * smoothing untouched (the fewer-than-two-neighbors guard). Eyeball spheres
- * and other detached parts ride in the same position array.
+ * smoothing untouched (the fewer-than-two-neighbors guard). Eyeball spheres and
+ * other detached parts ride in the same position array.
  *
  * Scenario: a lone triangle plus an unreferenced 4th vertex at (5, 5, 5); the
  * 4th vertex comes out bit-exact.

@@ -17,8 +17,8 @@ const script: IAutoMovieScript = {
 
 /**
  * Erase and the prerequisite ladder (#617 × #615): removing the last shot flips
- * the ladder's `shots` rung back off: the film's ordering state is derived
- * from the files, so an erase honestly re-locks what depended on the erased
+ * the ladder's `shots` rung back off: the film's ordering state is derived from
+ * the files, so an erase honestly re-locks what depended on the erased
  * artifact, and nextSteps names the re-do.
  *
  * Scenarios:

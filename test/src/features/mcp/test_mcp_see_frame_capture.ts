@@ -72,8 +72,8 @@ const spec: IAutoMovieRenderSpec = {
  *    with the adapter's image.
  * 2. The requested guide pass rides the request and tags the frame path.
  * 3. An unknown pass fails validation before the adapter is ever called.
- * 4. An adapter failure rejects the call: a host runtime fault is not wrapped as
- *    a validation result.
+ * 4. An adapter failure rejects the call: a host runtime fault is not wrapped as a
+ *    validation result.
  */
 export const test_mcp_see_frame_capture = async (): Promise<void> => {
   const requests: IAutoMovieMcpCaptureRequest[] = [];

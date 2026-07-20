@@ -76,10 +76,10 @@ export namespace IAutoMovieBlockingApplication {
 
     /**
      * Optional sparse {@link IAutoMovieTimingAnchor}s pinning this actor's key
-     * moments on the beat timeline: the temporal skeleton the performance
-     * stage aligns its verbs to (and the order that fixes causality). Pin only
-     * the moments that matter (the loose, the connect, the landing); leave the
-     * fill to the engine. Omit for a beat with no critical timing.
+     * moments on the beat timeline: the temporal skeleton the performance stage
+     * aligns its verbs to (and the order that fixes causality). Pin only the
+     * moments that matter (the loose, the connect, the landing); leave the fill
+     * to the engine. Omit for a beat with no critical timing.
      */
     anchors?: IAutoMovieTimingAnchor[];
   }

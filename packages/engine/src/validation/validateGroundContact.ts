@@ -29,8 +29,8 @@ const DEFAULT_FOOT_BONES = ["leftFoot", "rightFoot"] as const;
  * dipping below the ground warns too, so a hand or hip through the floor is not
  * invisible the way a feet-only check leaves it.
  *
- * Ground is a scalar plane or a `(x, z) → y` height source. Plug a space in
- * via {@link spaceGround} (#605) to validate contact over ramps and platforms; a
+ * Ground is a scalar plane or a `(x, z) → y` height source. Plug a space in via
+ * {@link spaceGround} (#605) to validate contact over ramps and platforms; a
  * plain scalar keeps the exact pre-space behavior.
  *
  * This is intentionally opt-in rather than part of `validateMotion`: jumps,
@@ -38,9 +38,9 @@ const DEFAULT_FOOT_BONES = ["leftFoot", "rightFoot"] as const;
  * The stable path shape is `$input.samples[i].<bone>.worldPosition.y`, where
  * `i` is the validator sample index, not a source keyframe index.
  *
- * Ground penetration is a physical-plausibility **warning**, not a gate:
- * the run still succeeds and the warning surfaces so the orchestrator can plant
- * the foot, restage, or acknowledge a deliberate pass-through (a phasing ghost)
+ * Ground penetration is a physical-plausibility **warning**, not a gate: the
+ * run still succeeds and the warning surfaces so the orchestrator can plant the
+ * foot, restage, or acknowledge a deliberate pass-through (a phasing ghost)
  * with `physicsIntent`.
  *
  * @author Samchon

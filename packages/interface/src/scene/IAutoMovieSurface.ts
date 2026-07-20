@@ -14,9 +14,9 @@ import { AutoMovieSurfaceKind } from "./AutoMovieSurfaceKind";
  *
  * The visual set piece behind a surface needs no new geometry type: a set proxy
  * is an ordinary static {@link IAutoMovieModel} (skeleton `null`) placed as a
- * scene node: a room is a box, a table is a box, per the stickman doctrine.
- * The surface is the _meaning_ (where feet and props may rest); the model is
- * the crude diffusion hint.
+ * scene node: a room is a box, a table is a box, per the stickman doctrine. The
+ * surface is the _meaning_ (where feet and props may rest); the model is the
+ * crude diffusion hint.
  *
  * @author Samchon
  */

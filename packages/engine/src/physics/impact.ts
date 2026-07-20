@@ -113,10 +113,10 @@ const assertImpactBody = (
  * (pointing from `a` to `b`) into an abstracted {@link IAutoMovieImpact}.
  *
  * Impulse is the textbook normal response, `jn = (1+e)·closing / (1/mₐ +
- * 1/m_b)`, but the **effective restitution and a qualitative kind** come from
- * a cheap, deterministic material heuristic rather than a contact solver: a
- * fast strike into a soft, penetrable body **embeds** (no rebound) or, if very
- * fast and very soft, passes **through** (only a fraction of the momentum
+ * 1/m_b)`, but the **effective restitution and a qualitative kind** come from a
+ * cheap, deterministic material heuristic rather than a contact solver: a fast
+ * strike into a soft, penetrable body **embeds** (no rebound) or, if very fast
+ * and very soft, passes **through** (only a fraction of the momentum
  * transfers); a hard, bouncy pair **bounces**; otherwise it **deflects**.
  * Bodies already separating yield a pure `deflect` with no impulse.
  *

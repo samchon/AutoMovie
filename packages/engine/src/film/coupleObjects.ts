@@ -186,8 +186,8 @@ export const coupleObjects = (props: {
  * bake two clips with one `attach:<child>` id: an uncommittable shot and an
  * ambiguous beat-end follow (#989). Process the child's attachments in START
  * order and suffix repeats (`attach:<child>:2`, ...), so the FIRST occurrence
- * keeps the stable id and the HIGHEST suffix is always the latest coupling,
- * the one `resolveBeatEnd` should follow.
+ * keeps the stable id and the HIGHEST suffix is always the latest coupling, the
+ * one `resolveBeatEnd` should follow.
  */
 const bakeAttachFollows = (
   child: string,

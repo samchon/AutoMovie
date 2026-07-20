@@ -57,10 +57,10 @@ const peakFlexion = (
 
 /**
  * The reference synthesiser fattening the `react` verb into a ROM-clamped
- * flinch. The verb is a physics verb (its deflection is bounded by each
- * joint's ROM), so it needs the context's `rig`; the mapping snaps the body
- * away from where the blow comes from, scaled by `force`, and the whole flinch
- * validates against the same ROM table the engine gates on.
+ * flinch. The verb is a physics verb (its deflection is bounded by each joint's
+ * ROM), so it needs the context's `rig`; the mapping snaps the body away from
+ * where the blow comes from, scaled by `force`, and the whole flinch validates
+ * against the same ROM table the engine gates on.
  *
  * Scenarios:
  *

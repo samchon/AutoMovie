@@ -114,16 +114,16 @@ export interface IAutoMovieHeadlessCaptureOptions {
    * Omit (or pass exactly `["beauty"]`) for the legacy single-pass capture,
    * which never touches the pass hook and stays byte-identical.
    *
-   * Frame size is the HOST's responsibility for guide passes. The `beauty` video
-   * is conformed to the render spec by ffmpeg `-s` at encode time (#1251), but a
-   * guide pass terminates as a raw PNG sequence with no encoder backstop. Each
-   * frame is whatever pixels `viewSelector` screenshots. So the pose-keypoint
-   * sidecar's `width/height` aspect (#1231) matches the guide frames the
-   * diffusion host consumes ONLY if the capture surface is sized to the render
-   * spec. Pin it: the reference viewer honors `w`/`h` capture-URL params for
-   * exactly this. A host that captures guide passes at a viewport not equal to
-   * the spec silently tears the guide frames away from both the sidecar and the
-   * `-s`-conformed beauty video.
+   * Frame size is the HOST's responsibility for guide passes. The `beauty`
+   * video is conformed to the render spec by ffmpeg `-s` at encode time
+   * (#1251), but a guide pass terminates as a raw PNG sequence with no encoder
+   * backstop. Each frame is whatever pixels `viewSelector` screenshots. So the
+   * pose-keypoint sidecar's `width/height` aspect (#1231) matches the guide
+   * frames the diffusion host consumes ONLY if the capture surface is sized to
+   * the render spec. Pin it: the reference viewer honors `w`/`h` capture-URL
+   * params for exactly this. A host that captures guide passes at a viewport
+   * not equal to the spec silently tears the guide frames away from both the
+   * sidecar and the `-s`-conformed beauty video.
    */
   passes?: readonly AutoMovieGuidePass[];
 

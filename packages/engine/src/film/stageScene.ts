@@ -49,8 +49,8 @@ const setPieceScale = (
 /**
  * A staged film set: the composed {@link IAutoMovieScene} plus the persistent
  * mount couplings staging declared. Mounts stay alongside rather than inside
- * the scene because a scene node is a flat world placement, the per-frame
- * world transform of a mounted rider comes from `resolveAttachment` against the
+ * the scene because a scene node is a flat world placement, the per-frame world
+ * transform of a mounted rider comes from `resolveAttachment` against the
  * parent's posed skeleton, not from the scene graph.
  *
  * `performShot` consumes these: every performed shot auto-descends each mount

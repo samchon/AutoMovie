@@ -24,8 +24,8 @@ const ALLOWED_PARENTS: Record<
 };
 
 /**
- * Validate the screenplay refinement tree against its script's flat
- * beats, the structural gate a script with a `tree` must pass before commit.
+ * Validate the screenplay refinement tree against its script's flat beats, the
+ * structural gate a script with a `tree` must pass before commit.
  *
  * Checks, all `error` severity:
  *

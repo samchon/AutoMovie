@@ -52,8 +52,8 @@ export interface IAutoMovieTwoBoneArticulation {
  * Returns `null` for a degenerate chain: a zero-length segment, or a target
  * coincident with the root. Which bones form the chain, how they were resolved
  * (rest FK for an arm reach, zeroed-leg posed FK for a foot plant), and which
- * clinical axes/rest frames decompose the deltas stay the CALLER's. This is
- * the geometry, not the rig policy.
+ * clinical axes/rest frames decompose the deltas stay the CALLER's. This is the
+ * geometry, not the rig policy.
  *
  * @author Samchon
  */

@@ -5,8 +5,8 @@ export type ForgeHeadDelta = [number, number, number, number];
  * A bipolar parameter morph on the parametric head: the sculpt for the `+1`
  * direction and the (independent) sculpt for the `-1` direction.
  *
- * The two are NOT negatives of each other: "wider nose" and "narrower nose"
- * are separately authored shapes, so each direction carries its own deltas.
+ * The two are NOT negatives of each other: "wider nose" and "narrower nose" are
+ * separately authored shapes, so each direction carries its own deltas.
  *
  * @author Samchon
  */
@@ -25,13 +25,13 @@ export interface IForgeHeadMorph {
  * (`plus` for `v > 0`, `minus` for `v < 0`) is weighted by `|v|` and added onto
  * the base. Unknown names and zero values are skipped (host-facing
  * conveniences), but a delta whose vertex index lies outside the base is a
- * structural defect and throws: writing it would silently extend the array
- * with NaN holes (#1107). The base is not mutated; a new flat `xyz` array is
+ * structural defect and throws: writing it would silently extend the array with
+ * NaN holes (#1107). The base is not mutated; a new flat `xyz` array is
  * returned.
  *
- * This is the pure deformation primitive behind the parametric head editor,
- * the same additive model MakeHuman's `.target` system uses, kept independent
- * of any geometry source so it can be unit-tested in isolation.
+ * This is the pure deformation primitive behind the parametric head editor, the
+ * same additive model MakeHuman's `.target` system uses, kept independent of
+ * any geometry source so it can be unit-tested in isolation.
  *
  * @author Samchon
  */

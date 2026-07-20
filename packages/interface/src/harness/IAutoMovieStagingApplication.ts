@@ -7,8 +7,8 @@ import { IAutoMoviePointTarget } from "./IAutoMoviePointTarget";
 
 /**
  * Stage 2: **STAGING** (set up). Realise the script's cast as placed scene
- * nodes, rig the cameras and lights, and declare any persistent couplings;
- * i.e. build the `IAutoMovieScene` the shots render. The model chooses _what to
+ * nodes, rig the cameras and lights, and declare any persistent couplings; i.e.
+ * build the `IAutoMovieScene` the shots render. The model chooses _what to
  * place and where_; the host instantiates the actual models (a generated rig,
  * or an imported VRM named by the cast's `modelRef`).
  *
@@ -109,8 +109,8 @@ export namespace IAutoMovieStagingApplication {
    */
   export interface ISetPlacement {
     /**
-     * Scene node id for this piece, distinct from every cast, camera, and
-     * light id (and from sibling pieces).
+     * Scene node id for this piece, distinct from every cast, camera, and light
+     * id (and from sibling pieces).
      */
     node: string;
 

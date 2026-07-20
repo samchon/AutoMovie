@@ -23,8 +23,8 @@ export interface IAutoMovieIngestResult {
 }
 
 /**
- * Ingest a parsed glTF/GLB {@link Document} into automovie's **core** model
- * (the node graph and animation clips), with no three.js and no humanoid
+ * Ingest a parsed glTF/GLB {@link Document} into automovie's **core** model (the
+ * node graph and animation clips), with no three.js and no humanoid
  * assumptions.
  *
  * This is the import side of the pipeline: `@gltf-transform/core` parses the

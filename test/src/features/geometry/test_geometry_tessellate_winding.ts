@@ -37,9 +37,9 @@ const signedVolume = (t: {
 
 /**
  * Every triangle's geometric (winding) normal must agree with its authored
- * vertex normals: a per-triangle check that catches local flips a global
- * volume cannot. Zero-area triangles (a cone apex ring, a plane's collapsed
- * sides) carry no orientation and are skipped.
+ * vertex normals: a per-triangle check that catches local flips a global volume
+ * cannot. Zero-area triangles (a cone apex ring, a plane's collapsed sides)
+ * carry no orientation and are skipped.
  */
 const windingAgreesWithNormals = (t: {
   positions: number[];

@@ -7,8 +7,8 @@ import { AutoMovieFaceWeight } from "./AutoMovieFaceWeight";
  * Lives under {@link IAutoMovieFaceEyeSet.left} / `right`. **Side rule:** when
  * it is the only side defined on the set, these traits apply to BOTH eyes; when
  * both sides are defined, each applies to its own eye only. Sides are the
- * SUBJECT's left/right: her left eye is on the viewer's right. Heterochromia
- * is an iris-color concern, not geometry.
+ * SUBJECT's left/right: her left eye is on the viewer's right. Heterochromia is
+ * an iris-color concern, not geometry.
  *
  * @author Samchon
  */

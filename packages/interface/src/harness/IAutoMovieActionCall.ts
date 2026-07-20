@@ -122,9 +122,9 @@ export interface IAutoMovieActionBase {
    * The body-region this action drives ({@link AutoMovieBodyRegion}). Actions on
    * **disjoint** regions compose concurrently (walk while waving while
    * looking); actions sharing a region sequence. Omit to let the engine infer
-   * the natural mask from the verb and, for gestures, the kind: a `locomote`
-   * is `lowerBody`, a `wave`/`reach` is `upperBody`, a `lookAt` or `nod`/
-   * `shake` is `head`, an `emote` is `face`, and the whole-body gestures
+   * the natural mask from the verb and, for gestures, the kind: a `locomote` is
+   * `lowerBody`, a `wave`/`reach` is `upperBody`, a `lookAt` or `nod`/ `shake`
+   * is `head`, an `emote` is `face`, and the whole-body gestures
    * (`bow`/`crouch`/`kick`/`stagger`/`jump`/`draw`) plus `react` are
    * `fullBody`. Override only when the natural mask is wrong for the staging;
    * note the engine masks the synthesized clip to the region you pick, so a
@@ -148,8 +148,8 @@ export interface IAutoMovieActionBase {
  * Travel across the floor on a gait; engine: locomotion + `travelMotion`.
  *
  * `gait` names one of the gaits the actor's context actually supplies
- * ({@link IAutoMovieGait.name}); it is matched by name, so the vocabulary is
- * the actor's own, not a fixed set: a biped declares `walk`/`run`/`sprint`/
+ * ({@link IAutoMovieGait.name}); it is matched by name, so the vocabulary is the
+ * actor's own, not a fixed set: a biped declares `walk`/`run`/`sprint`/
  * `sneak`/`march`, a horse declares `walk`/`trot`/`canter`/`gallop`, a cat
  * `walk`/`stalk`/`pounce`. Naming a gait the actor did not supply is a
  * validation error (the shot's perform gate reports it), not a silent freeze,
@@ -286,10 +286,10 @@ export interface IAutoMovieHoldAction extends IAutoMovieActionBase {
  * motion no thin verb covers (a sword kata, a stumble-and-recover, a
  * character-specific idiom). Where every other verb is fattened by a
  * synthesizer, `enact` inverts the direction: the caller **computes** the dense
- * {@link IAutoMovieMotion} (motion authoring is, at the limit, a coding activity:
- * parametric curves, phase composition, sampled solvers) and hands it in by
- * `clip` id; the host's synthesizer resolves the id against the clips it was
- * given.
+ * {@link IAutoMovieMotion} (motion authoring is, at the limit, a coding
+ * activity: parametric curves, phase composition, sampled solvers) and hands it
+ * in by `clip` id; the host's synthesizer resolves the id against the clips it
+ * was given.
  *
  * Enforcement is NOT bypassed: the engine masks the clip to its region (default
  * `fullBody`; narrow via `region`), layers it with disjoint-region actions,

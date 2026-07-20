@@ -63,13 +63,13 @@ const WINDOWS_RESERVED_NAMES = new Set([
 ]);
 
 /**
- * A file-safe stem for default frame directories and output video names:
- * always exactly ONE safe path component. The character filter alone is not
- * enough: `.` and `..` are made of legal characters but mean self/parent
- * directory positionally, so `renders/${stem}` would escape the reserved
- * `renders/` dir (`renders/..` is the project root). This also neutralizes a
- * Windows reserved device name and a trailing dot or space, both of which
- * change the name Windows actually writes.
+ * A file-safe stem for default frame directories and output video names: always
+ * exactly ONE safe path component. The character filter alone is not enough:
+ * `.` and `..` are made of legal characters but mean self/parent directory
+ * positionally, so `renders/${stem}` would escape the reserved `renders/` dir
+ * (`renders/..` is the project root). This also neutralizes a Windows reserved
+ * device name and a trailing dot or space, both of which change the name
+ * Windows actually writes.
  */
 export const renderPathStem = (target: string): string => {
   const cleaned = target

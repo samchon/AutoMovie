@@ -4,11 +4,11 @@ import {
 } from "./captionSidecar";
 
 /**
- * Slice the sidecar to one chunk's window `[frameStart, frameEnd)`: the
- * caption mirror of `planChunkedSequenceRender`'s frame-atomic rule: entries
- * clipped to the window and re-based to chunk-local frame indices, so every
- * chunk's render carries its own caption track. (The caption side of what
- * review finding #644 asks for guide passes.)
+ * Slice the sidecar to one chunk's window `[frameStart, frameEnd)`: the caption
+ * mirror of `planChunkedSequenceRender`'s frame-atomic rule: entries clipped to
+ * the window and re-based to chunk-local frame indices, so every chunk's render
+ * carries its own caption track. (The caption side of what review finding #644
+ * asks for guide passes.)
  */
 export const sliceCaptionSidecar = (
   sidecar: IAutoMovieCaptionSidecar,

@@ -24,8 +24,8 @@ const IDENTITY = {
  * `${prefix}${MOTION_ROOT_NODE_ID}`. The default empty prefix keeps the S1
  * bare-name convention (one actor per node graph); a scene bridge lowering
  * several actors into ONE graph passes a per-placement prefix (e.g.
- * `"knightA/"`) so two actors sharing bone names stay distinct, the same
- * prefix a multi-actor clip playback must use on its channel node refs (see
+ * `"knightA/"`) so two actors sharing bone names stay distinct, the same prefix
+ * a multi-actor clip playback must use on its channel node refs (see
  * `motionToClip`'s `nodePrefix`).
  *
  * `rootParent` seats the synthetic root under an existing node (a scene

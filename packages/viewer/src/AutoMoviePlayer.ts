@@ -65,9 +65,8 @@ export class AutoMoviePlayer {
     >,
     /**
      * When true, clamp each sampled pose into the skeleton's ROM before it is
-     * applied, and again AFTER the secondary-motion springs, which overshoot
-     * by design (#1048), so joints can no longer exceed their anatomical
-     * limits.
+     * applied, and again AFTER the secondary-motion springs, which overshoot by
+     * design (#1048), so joints can no longer exceed their anatomical limits.
      */
     private readonly clampToRom = false,
     /** Secondary-motion joints (tail, ears) driven with follow-through. */

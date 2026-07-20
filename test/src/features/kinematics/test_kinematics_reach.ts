@@ -40,8 +40,8 @@ const handAt = (
  *    the shoulder returns null (degenerate); a zero-length arm bone (a
  *    malformed rig) returns null instead of dividing by zero.
  * 4. A target straight below the shoulder (the reach axis parallel to the
- *    world-down pole) still lands: the bend-plane normal falls back to a
- *    second reference so the solve stays total.
+ *    world-down pole) still lands: the bend-plane normal falls back to a second
+ *    reference so the solve stays total.
  */
 export const test_kinematics_reach = (): void => {
   const skeleton = createSkeleton();

@@ -119,9 +119,9 @@ const riderPosAt = (clip: IAutoMovieClip, t: number): IAutoMovieVector3 => {
  * Scenarios:
  *
  * 1. Perform bakes one `attach:rider` objectMotion (reusing compileAttach), and it
- *    MOVES with the horse: the rider is never left at its staged (5,5,5).
- *    Exact oracle: the follow equals resolveAttachment on the compiled horse
- *    motion composed with the horse's staged transform.
+ *    MOVES with the horse: the rider is never left at its staged (5,5,5). Exact
+ *    oracle: the follow equals resolveAttachment on the compiled horse motion
+ *    composed with the horse's staged transform.
  * 2. A mount emits no grab/attach/detach/release events (persistent scene state,
  *    not a per-shot pickup).
  * 3. `resolveBeatEnd` derives the rider's end transform/velocity from that same

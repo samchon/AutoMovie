@@ -47,9 +47,8 @@ interface IAxisAccumulator {
  *
  * The blend never clamps: a weighted result outside a joint's ROM stays out of
  * range so `validateMotion` reports it. The model must reweigh or reposition,
- * the engine does not hide it. Root: the last `ownsRoot` layer, else the
- * last non-null root; skeleton: the first layer's. The input must be
- * non-empty.
+ * the engine does not hide it. Root: the last `ownsRoot` layer, else the last
+ * non-null root; skeleton: the first layer's. The input must be non-empty.
  *
  * Weights are supplied by the caller; deriving them from action priority or an
  * IK solver is a later pass.

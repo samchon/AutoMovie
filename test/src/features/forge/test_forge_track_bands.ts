@@ -4,8 +4,8 @@ import { TestValidator } from "@nestia/e2e";
 /**
  * Band tracking follows the subject by run continuity, not by size: the first
  * row seeds with its widest run, and every later row picks the run with the
- * largest overlap against the previous choice: a wider detached spur (a
- * ribbon) must lose to the narrower run that continues the head.
+ * largest overlap against the previous choice: a wider detached spur (a ribbon)
+ * must lose to the narrower run that continues the head.
  *
  * Scenario: row 0 picks [10, 30] over [40, 45]; row 1 offers a spur [32, 90]
  * (wider) and the continuing [12, 28]: overlap wins, so the band stays on [12,

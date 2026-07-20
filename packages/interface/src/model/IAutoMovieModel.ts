@@ -46,8 +46,8 @@ export interface IAutoMovieModel {
   skeleton: IAutoMovieSkeleton | null;
 
   /**
-   * The physical body: mass, center of mass, friction, restitution. `null`
-   * when the model has no declared physics (a static prop or set piece);
+   * The physical body: mass, center of mass, friction, restitution. `null` when
+   * the model has no declared physics (a static prop or set piece);
    * physical-plausibility feedback is only computed for models with a body.
    */
   body: IAutoMovieBody | null;

@@ -9,8 +9,8 @@ import type { IAutoMovieMotion } from "@automovie/interface";
  * (sampling) whatever you compute.
  *
  * Raise `peakDeg` past the shoulder's range and `main.ts` will show the engine
- * REFUSING the clip. That is the point of the split: you create, the engine
- * is the arbiter of physical truth.
+ * REFUSING the clip. That is the point of the split: you create, the engine is
+ * the arbiter of physical truth.
  */
 export const buildWaveClip = (
   skeletonId: string,

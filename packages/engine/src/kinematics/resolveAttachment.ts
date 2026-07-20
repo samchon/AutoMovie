@@ -14,8 +14,8 @@ import { resolvePose } from "./resolvePose";
 
 /**
  * Resolve the **world transform of a child model's root** rigidly coupled to a
- * bone of a posed parent skeleton, the cross-skeleton joint behind a rider on
- * a horse, a sword in a hand, a passenger in a cart.
+ * bone of a posed parent skeleton, the cross-skeleton joint behind a rider on a
+ * horse, a sword in a hand, a passenger in a cart.
  *
  * It runs forward kinematics on the parent ({@link resolvePose}), reads the
  * attachment bone's world position + orientation, and composes the
@@ -25,9 +25,9 @@ import { resolvePose } from "./resolvePose";
  * - `rotation = boneWorldRot ∘ offset.rotation`
  *
  * So the child inherits both where the bone is and how it is turned: as a horse
- * rears and its chest pitches back, the seat (and the rider locked to it)
- * pitch with it, exactly as a physics fixed-joint would carry one body on
- * another. Feed the returned transform to the child as its root each frame.
+ * rears and its chest pitches back, the seat (and the rider locked to it) pitch
+ * with it, exactly as a physics fixed-joint would carry one body on another.
+ * Feed the returned transform to the child as its root each frame.
  *
  * Throws if the skeleton has no such bone (a mis-wired attachment is a bug, not
  * a silently-skipped frame).

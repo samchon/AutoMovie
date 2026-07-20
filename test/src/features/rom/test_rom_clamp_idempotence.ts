@@ -38,10 +38,10 @@ const wildPose = (rng: () => number): IAutoMovieJointPose[] =>
 /**
  * ROM clamping must be **idempotent**: clamping an already-clamped pose changes
  * nothing. If it were not, a second validation/clamp pass could drift a pose
- * that the first pass called settled, the fixed point the "clamp then
- * validate" contract assumes. A property sweep over wild random poses (every
- * axis far past its limit) exercises the clamp on every branch, which a few
- * hand poses cannot.
+ * that the first pass called settled, the fixed point the "clamp then validate"
+ * contract assumes. A property sweep over wild random poses (every axis far
+ * past its limit) exercises the clamp on every branch, which a few hand poses
+ * cannot.
  *
  * Scenarios:
  *

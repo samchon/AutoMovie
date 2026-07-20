@@ -6,8 +6,8 @@ import { rotationBetween } from "../math/rotationBetween";
 const VECTOR_AXES = ["x", "y", "z"] as const;
 
 /**
- * The shortest-arc rotation that turns the vector `from` onto `to`: the core
- * of an **aim / look-at** driver (a head or eye whose forward axis tracks a
+ * The shortest-arc rotation that turns the vector `from` onto `to`: the core of
+ * an **aim / look-at** driver (a head or eye whose forward axis tracks a
  * target, a camera that follows its subject) and the analytic two-bone lowering
  * (`twoBoneChainArticulation`, hence `reachPose`/`legPlant`). Feed `from` = the
  * bone's rest forward axis and `to` = `target − bonePosition` and the returned

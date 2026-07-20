@@ -79,8 +79,8 @@ const kf = (time: number, deg: number): IAutoMovieKeyframe => ({
  * 3.33° of residual flexion, keeping the run-start pin close to the hip track
  * (the residual swings the foot only ~0.047 m locally; a larger tolerance pins
  * at 11.67° ≈ 0.16 m of swing offset, which the yaw blend then drags past the
- * ~0.29 m reach shell: the documented unreachable-pin extension, not a
- * planting defect, as the diagnosis for this test showed).
+ * ~0.29 m reach shell: the documented unreachable-pin extension, not a planting
+ * defect, as the diagnosis for this test showed).
  */
 const liftGait: IAutoMovieMotion = {
   id: "lift",

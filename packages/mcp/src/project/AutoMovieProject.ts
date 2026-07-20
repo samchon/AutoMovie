@@ -59,9 +59,8 @@ import { beatOf, shotIdOf } from "./shotKey";
  * - `script.json` / `scene.json` / `notes.json` / `film.json`, slate slices.
  * - `shots/<beat>.json`, `beatEnds/<beat>.json`, per-beat slices, filenames
  *   URI-encoded from the beat id (Windows-safe, deterministic).
- * - `props/<node>.json`, forged prop specs (#671), filenames URI-encoded from
- *   the prop node; a resident `forgeProp` success upserts exactly its own
- *   file.
+ * - `props/<node>.json`, forged prop specs (#671), filenames URI-encoded from the
+ *   prop node; a resident `forgeProp` success upserts exactly its own file.
  * - `models/`, `assets/`, reserved for 3D binaries (GLB, textures); the store
  *   tracks and guards these paths, the host's adapters write the bytes (the
  *   render package's adapter discipline).
@@ -359,8 +358,8 @@ export class AutoMovieProject {
   /**
    * The stored actor context nodes, one per `actors/<node>.json`, in filename
    * order (#1176). Deep shape validation is deliberately NOT re-run here: a
-   * loaded context flows through `perform`'s actor-registry gate, the same
-   * gate explicit input passes, which reports tampered fields against
+   * loaded context flows through `perform`'s actor-registry gate, the same gate
+   * explicit input passes, which reports tampered fields against
    * `$slate.actors` with full precision.
    */
   public storedActors(): IAutoMovieMcpActorSpec[] {

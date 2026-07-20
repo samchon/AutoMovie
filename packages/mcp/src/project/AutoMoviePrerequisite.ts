@@ -8,8 +8,8 @@ import { shotIdOf } from "./shotKey";
  * the coarse project state it needs; an out-of-order call **throws an
  * actionable prompt** ("Cannot commitScene yet … Do this next: 1. …"), so the
  * agent is told the next step instead of decoding a violation list. The server
- * still never orchestrates: it blocks wrong order and names the fix, the
- * agent drives.
+ * still never orchestrates: it blocks wrong order and names the fix, the agent
+ * drives.
  *
  * Only the **resident** path is gated: a commit with an explicit slate is a
  * pure stateless transform whose cross-slice preconditions already surface as

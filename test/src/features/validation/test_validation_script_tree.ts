@@ -83,16 +83,16 @@ export const createScriptTree = (): IAutoMovieScriptNode[] => [
 ];
 
 /**
- * The screenplay refinement tree: a well-formed five-kind tree (one
- * intent root refined through act, scene, and group down to beat nodes that
- * join the flat beats 1:1, with dialogue anchors, a temporal chain, and a
- * mutual interaction edge) validates clean.
+ * The screenplay refinement tree: a well-formed five-kind tree (one intent root
+ * refined through act, scene, and group down to beat nodes that join the flat
+ * beats 1:1, with dialogue anchors, a temporal chain, and a mutual interaction
+ * edge) validates clean.
  *
  * Scenarios:
  *
  * 1. The full tree over both beats validates with zero violations.
- * 2. Anchored and floating (null-anchor) dialogue lines both pass: the anchor
- *    rule only bounds non-null values.
+ * 2. Anchored and floating (null-anchor) dialogue lines both pass: the anchor rule
+ *    only bounds non-null values.
  * 3. A minimal one-node tree (intent root alone) over zero beats validates: the
  *    smallest legal refinement is the intent itself.
  */

@@ -50,8 +50,8 @@ const makeSpace = (
  *
  * Scenarios:
  *
- * 1. A floor + ramp space stages onto the scene verbatim (ids, kinds, anchors,
- *    and walkability), and the composed scene feeds `spaceGround` directly: 0 m
+ * 1. A floor + ramp space stages onto the scene verbatim (ids, kinds, anchors, and
+ *    walkability), and the composed scene feeds `spaceGround` directly: 0 m
  *    over the floor, 0.5 m at the ramp's midpoint (half of the 1 m climb), and
  *    the 0 m fallback off every footprint.
  * 2. Omitting `space` composes `space: null`, the scalar ground plane the engine

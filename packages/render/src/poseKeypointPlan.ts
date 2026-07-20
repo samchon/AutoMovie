@@ -25,8 +25,8 @@ import {
  * ({@link playbackCursor}), and for each performing actor project its named
  * joints to the frame through {@link resolvePoseKeypoints}. A frame whose shot,
  * scene, or camera cannot be resolved, and an actor whose motion, skeleton, or
- * node cannot, simply contribute no keypoints rather than throwing: the
- * sidecar still covers every output frame.
+ * node cannot, simply contribute no keypoints rather than throwing: the sidecar
+ * still covers every output frame.
  *
  * Planning only: the host writes the file ({@link renderPoseKeypointSidecar}).
  *

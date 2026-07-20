@@ -31,8 +31,8 @@ import {
 import { sampleMotion } from "./sampleMotion";
 
 /**
- * A two-segment chain pinned by its end effector: a leg (hip → knee → ankle)
- * or an arm (shoulder → elbow → hand). The plant solver is limb-agnostic: which
+ * A two-segment chain pinned by its end effector: a leg (hip → knee → ankle) or
+ * an arm (shoulder → elbow → hand). The plant solver is limb-agnostic: which
  * bones form the chain is the caller's rig policy, the algebra is not.
  *
  * @author Samchon
