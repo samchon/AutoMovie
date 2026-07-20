@@ -1,10 +1,13 @@
 import {
-  IAutoMovieBlockingApplication,
   IAutoMoviePerformedShot,
   performShot,
   stageScene,
 } from "@automovie/engine";
-import { IAutoMovieActionCall, IAutoMovieScene } from "@automovie/interface";
+import {
+  IAutoMovieActionCall,
+  IAutoMovieBlockingApplication,
+  IAutoMovieScene,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
