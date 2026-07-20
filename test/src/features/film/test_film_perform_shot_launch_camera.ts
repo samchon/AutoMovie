@@ -55,7 +55,7 @@ const throwAt = (
   projectile: "pebble",
   speed: 20,
   at,
-  ...(onHit === undefined ? {} : { onHit }),
+  onHit,
 });
 
 /** True when the refusal at `path` states every fragment. */
