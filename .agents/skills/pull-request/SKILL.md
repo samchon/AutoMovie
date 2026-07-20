@@ -13,11 +13,13 @@ Permission to open is not permission to merge. Merge only when the user explicit
 
 Branch from the PR target (`master` unless stated otherwise); never commit to the target directly. Name the branch to reflect the change: `feat/<scope>`, `fix/<scope>`, `test/<scope>`, `docs/<scope>`, `ci/<scope>`.
 
-If the current checkout contains unrelated or protected work, create an isolated worktree from the target branch instead of stashing, reverting, or mixing it.
+Ordinary pull requests, solo campaigns, and Self-Review use the current checkout and one topic branch. Do not create another clone or worktree for them. If unrelated or protected work prevents a safe branch switch, preserve it and report the blocker rather than stashing, reverting, mixing it, or creating a worktree.
+
+Only an explicitly selected multi-agent campaign creates isolated worktrees, under that campaign's file-ownership and cleanup rules.
 
 ## Commit Logical Units
 
-One commit per coherent unit, not a single mega-commit when the diff is large. Use the repository's `<type>(<scope>): <subject>` message style, and end the message with the `Co-Authored-By` trailer. Run `pnpm run format` before each commit.
+One commit per coherent unit, not a single mega-commit when the diff is large. Use the repository's `<type>(<scope>): <subject>` message style, and end the message with the `Co-Authored-By` trailer. Run `pnpm run format` before commits that change configured source. For Markdown-only and agent-instruction commits, inspect the direct diff and run `git diff --check` instead.
 
 Stage explicit paths when the worktree is mixed. Never include unrelated user changes silently.
 
@@ -26,6 +28,10 @@ Stage explicit paths when the worktree is mixed. Never include unrelated user ch
 Write the PR body at open: intent, scope, deferred items, test plan (including the coverage result). Treat it as the PR's historical intent statement. Use a file-backed body for multiline Markdown when opening through `gh`.
 
 Do not rewrite the body on every follow-up push; subsequent CI fixes and newly-found issues go in `gh pr comment` so the thread preserves chronology. The title describes the merged outcome in `<type>(<scope>)` style, not the work process.
+
+## Campaign Override
+
+Before a campaign implementation push or pull request, complete the selected campaign's development procedure. Solo issue and benchmark campaigns use `.agents/skills/issue-campaign/development.md` in the current checkout. Campaigns with parallel implementation use `.agents/skills/multi-agent/issue-campaign.md`, with the benchmark additions in `.agents/skills/multi-agent/benchmark-campaign.md`. Their ownership, worktree, CI-repair, and cleanup rules override the ordinary flow here.
 
 ## Watch Checks After Every Push
 

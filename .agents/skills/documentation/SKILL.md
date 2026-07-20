@@ -39,6 +39,8 @@ Write each Markdown paragraph on one source line. Never hard-wrap a single parag
 
 One source line does not mean one long paragraph. Insert a blank line whenever the idea changes. Keep structural line breaks for paragraphs, list items, headings, tables, and fenced code.
 
+Agent instructions have no repository-wide formatter. Inspect Markdown-only and agent-instruction diffs directly, then run `git diff --check`. Run `pnpm format` only when the development or pull-request workflow calls for the configured source formatter.
+
 ## Voice
 
 Plain and direct. State the fact and stop.

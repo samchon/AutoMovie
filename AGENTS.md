@@ -33,7 +33,11 @@ The `.wiki/` working knowledge base, package READMEs, code JSDoc, and the writin
 
 ### Review
 
-Solo review, team Review Cycle, Research Review Round, and exhaustive issue-discovery rounds, `.agents/skills/review/SKILL.md`. Every agent inspects the whole declared surface independently; Self-Review and any unqualified review request are always solo. Read the Briefing Review Agents rule before delegating to any subagent. The reference study that precedes each major `interface`/`engine` push runs as a Research Review Round or a Discussion.
+Default solo Self-Review, unqualified review, and exhaustive solo issue-discovery rounds, `.agents/skills/review/SKILL.md`. The main agent inspects the whole declared surface and repeats fresh rounds until a complete pass finds no sound improvement or meaningful candidate. Read the multi-agent skill only for an explicitly requested team, parallel, or multi-agent review.
+
+### Multi-Agent Workflows
+
+Explicitly parallel review, issue-campaign, and benchmark-campaign variants live under one overview skill, `.agents/skills/multi-agent/SKILL.md`, with separate detailed topic documents. Read it only when the user explicitly asks for a team, parallel, or multi-agent workflow. Multi-agent issue campaigns parallelize discovery and implementation by default, and switch to solo implementation only when the user explicitly asks for parallel discovery with solo implementation. Self-Review remains solo.
 
 ### Discussion
 
@@ -41,11 +45,11 @@ Structured multi-agent topic discussion with persistent research notes and trans
 
 ### Issue Campaign
 
-Repository-wide issue discovery, lead-vetted issue publication, batched implementation pull requests, and campaign closure (the conquest loop), `.agents/skills/issue-campaign/SKILL.md`. Read when the user asks for a broad audit, many issue candidates, or an issue-to-implementation campaign; do not use it for one already-defined issue.
+Default solo repository-wide issue discovery, main-agent-vetted issue publication, one unified implementation pull request per cycle, and campaign closure (the conquest loop), `.agents/skills/issue-campaign/SKILL.md`. Read when the user asks for a broad audit, many issue candidates, or an issue-to-implementation campaign without explicitly requesting parallel agents; do not use it for one already-defined issue.
 
 ### Benchmark Campaign
 
-The empirical MCP benchmark loop: authoring a persistent short/medium/long scenario corpus, driving the live MCP surface with an external agent (Claude, Codex), scoring and attributing each run, publishing lead-vetted defect and gap issues, developing every one before the next run, `.agents/skills/benchmark-campaign/SKILL.md`. Read when the user wants to benchmark the pipeline through real MCP runs or turn benchmark shortfalls into an issue-to-pull-request campaign; do not use it for a static code audit (issue-campaign) or one already-defined issue.
+Default solo empirical MCP benchmark loop: authoring a persistent short/medium/long scenario corpus, driving the live MCP surface with an external agent (Claude, Codex), scoring and attributing each run, publishing main-agent-vetted defect and gap issues, developing every one before the next run, `.agents/skills/benchmark-campaign/SKILL.md`. Read when the user wants to benchmark the pipeline through real MCP runs or turn benchmark shortfalls into an issue-to-pull-request campaign without explicitly requesting parallel agents; do not use it for a static code audit (issue-campaign) or one already-defined issue.
 
 ### 3D Modeling
 
@@ -81,5 +85,6 @@ Update AGENTS.md only for repository-contract changes: a new skill area, a renam
 - **Core in SKILL.md, conditional topics as sibling documents.** Keep always-applicable procedure in SKILL.md. Move a topic needed only under a specific condition to a one-level-deep sibling document and link it with that read condition.
 - **Two trigger surfaces, one scope.** The frontmatter description is the full trigger contract, including exclusions. The AGENTS.md pointer mirrors that scope more briefly. Correct the frontmatter first when the scope changes.
 - **Create or merge.** Add a skill when a substantial repository concern would otherwise inflate AGENTS.md beyond an index. Merge sibling concerns when they share most of their structure.
+- **Repository skill files only.** Keep repository skills to `SKILL.md` and conditionally loaded sibling documents. Do not create separate `multi-agent-*` skills or `agents/openai.yaml`; parallel variants belong under `multi-agent/`.
 - **Headings are plain.** No chapter numbers in skill or AGENTS.md headings. Use descriptive titles.
-- **Current set.** The repository skills are `project`, `development`, `documentation`, `review`, `discussion`, `issue-campaign`, `benchmark-campaign`, `3d-modeling`, `viewer-verification`, `mcp`, and `pull-request`.
+- **Current set.** The repository skills are `project`, `development`, `documentation`, `review`, `multi-agent`, `discussion`, `issue-campaign`, `benchmark-campaign`, `3d-modeling`, `viewer-verification`, `mcp`, and `pull-request`.
