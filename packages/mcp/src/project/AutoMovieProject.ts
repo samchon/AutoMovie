@@ -28,6 +28,7 @@ import {
   IAutoMovieMcpWritableSlate,
 } from "../dto";
 import {
+  appendShotMetadataArtifact,
   validateSceneArtifact,
   validateSequenceArtifact,
 } from "../validators/artifacts";
@@ -1239,6 +1240,16 @@ const validateShotSlice = (
     value.objectMotions,
     "$input.objectMotions",
     "shot objectMotions",
+    violations,
+  );
+  // The #1187 guide metadata and the event stream, gated on READ as well as on
+  // submit: a slice validated looser than the submitted artifact is exactly the
+  // validator drift #1097 called out. No scene travels with a shot slice, so the
+  // coverage cameras cannot be cross-referenced here; every other rule applies.
+  appendShotMetadataArtifact(
+    value as unknown as Record<string, unknown>,
+    "$input",
+    null,
     violations,
   );
 };

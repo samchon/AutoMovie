@@ -13,7 +13,7 @@
 
 Before staging an interaction, measure it:
 
-- `measureDistance` between two placements tells you whether a strike, a hand-off, or a conversation distance is plausible.
+- `measureDistance` between two placements tells you whether a strike, a hand-off, or a conversation distance is plausible. Either endpoint may be an actor, a set piece, or a **camera**: the geometry queries address every staged placement, the same table the performance stage resolves a target against.
 - `getReach` tells you whether the actor's arm chain can actually reach the target from its placement, per arm, with the reach gap and the IK pose.
 - A strike staged at 3 m mimes at air. The engine will not stop you at staging time (coherence, not craft), but the performance's ROM gate and the reviewer will.
 
@@ -21,7 +21,7 @@ Geometry queries are resident-or-explicit. Pass `scene`/`context` for a stateles
 
 ## Set
 
-The stage does not have to be a void. A `set` placement drops environment geometry (a floor slab, walls, a doorway, a backdrop) as static scene nodes realising skeleton-less models (`forgeProp`'s crude primitive proxies are exactly this shape). The point is the guide passes: depth/mask/outline of an empty stage give a diffusion pass no world to condition on, while even a crude box-room describes one. Set pieces never perform; a camera may `lookAt` one (an establishing frame on the doorway is legitimate). `facingDeg` is optional yaw: omit it for a floor or a centered backdrop. Remember `commitScene`'s models registry must resolve every staged model id, set models included.
+The stage does not have to be a void. A `set` placement drops environment geometry (a floor slab, walls, a doorway, a backdrop) as static scene nodes realising skeleton-less models (`forgeProp`'s crude primitive proxies are exactly this shape). The point is the guide passes: depth/mask/outline of an empty stage give a diffusion pass no world to condition on, while even a crude box-room describes one. Set pieces never perform; a camera may `lookAt` one (an establishing frame on the doorway is legitimate), and it may `lookAt` another camera (a monitor, a mirror, a making-of angle). `facingDeg` is optional yaw: omit it for a floor or a centered backdrop. Remember `commitScene`'s models registry must resolve every staged model id, set models included.
 
 Size the piece with `scale`, not with another forged model: a bare number scales all three axes, a vector scales each on its own (`{ x: 12, y: 1.8, z: 0.24 }` turns one unit box into a wall). Forge **one** box and place it as the wall, the step, and the table top. Every axis must be finite and greater than zero, since zero collapses the piece and a negative axis mirrors it into an inside-out normal pass.
 

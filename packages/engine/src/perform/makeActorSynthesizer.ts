@@ -60,6 +60,40 @@ const toModelSpace = (
   };
 };
 
+/**
+ * The placement table lifted to **aim** points: every id an actor context knows
+ * is raised by that actor's `eyeHeight`, every other id keeps its placement.
+ *
+ * A placement is where a thing stands, which for a humanoid is the floor under
+ * it; an aim point is where another actor's gaze meets it. `eyeHeight` is
+ * already defined as "where a `lookAt` aims from", so using it as where a
+ * `lookAt` aims TO is the symmetric read (eyes meet eyes) and invents no
+ * number. Ids with no context keep their placement on purpose: a prop's origin
+ * is wherever staging put it rather than a floor convention, and a camera's
+ * translation is already its optical point.
+ *
+ * The key set is identical to the placement table's, so the perform gate (which
+ * asks only whether a target resolves) and this synthesizer can never disagree
+ * about which ids are legal. Routing the lift through the table rather than
+ * through the verb is what makes a `group` target average EYE points instead of
+ * ground points without a second code path.
+ */
+const aimPointsOf = (
+  contexts: ReadonlyMap<string, IAutoMovieActorContext>,
+  nodes: ReadonlyMap<string, IAutoMovieVector3>,
+): Map<string, IAutoMovieVector3> =>
+  new Map(
+    [...nodes].map(([id, point]) => {
+      const eyeHeight = contexts.get(id)?.eyeHeight;
+      return [
+        id,
+        eyeHeight === undefined
+          ? point
+          : { x: point.x, y: point.y + eyeHeight, z: point.z },
+      ] as const;
+    }),
+  );
+
 /** A rest → hold-pose → hold clip: ease into `pose` over half the span, hold. */
 const extendHoldClip = (
   id: string,
@@ -127,7 +161,8 @@ const jabClip = (
  *   otherwise it steps in place (a relative target, "off to the left", has no
  *   positional point yet);
  * - `hold` → the actor's rest pose held for the duration ({@link holdMotion});
- * - `lookAt` → the head turned to aim at a resolved target;
+ * - `lookAt` → the head turned to aim at a resolved target, resolved against the
+ *   **aim points** rather than the raw placements (see below);
  * - `emote` → a face-region expression clip;
  * - `gesture` → the postural/whole-body gestures (bow/nod/shake/crouch/kick/
  *   stagger/wave/celebrate/jump) via {@link gestureMotion}, plus the reachPose
@@ -146,6 +181,16 @@ const jabClip = (
  * the bridge that makes the action compiler actually produce motion from the
  * declarative gait/profile data: the thin verb in, dense motion out.
  *
+ * `lookAt` resolves against {@link aimPointsOf} instead of `nodes` because a
+ * placement is a **ground** point: staging writes an actor's position straight
+ * into its node transform, and a humanoid rig's origin sits between its feet,
+ * so "look at him" aimed the head at the floor and two actors at conversational
+ * range could not regard each other at all (1.6 m of eye height over 0.7 m of
+ * separation is 66.37 degrees of flexion against a 45 degree head limit). The
+ * camera solve met the same wall and answered it with a measured aim fraction
+ * of the subject's height; this is the aim verbs' half of that answer, using
+ * the one datum the context already carries for exactly this purpose.
+ *
  * @author Samchon
  */
 export const makeActorSynthesizer = (
@@ -153,6 +198,7 @@ export const makeActorSynthesizer = (
   nodes: Map<string, IAutoMovieVector3>,
 ): IAutoMovieActionSynthesizer => {
   for (const [actor, ctx] of contexts) assertUniqueActorGaits(actor, ctx.gaits);
+  const aimPoints = aimPointsOf(contexts, nodes);
   return (
     action: IAutoMovieActionCall,
     actor: string,
@@ -195,7 +241,9 @@ export const makeActorSynthesizer = (
         action.duration,
       );
     if (action.verb === "lookAt") {
-      const target = resolveTargetPoint(action.to, nodes);
+      // The AIM table, not the placement table: a look meets the subject's
+      // eyes, not the ground its feet stand on (see the aim-point note above).
+      const target = resolveTargetPoint(action.to, aimPoints);
       if (target === null) return null; // relative target: no aim point yet
       const eye = {
         x: ctx.position.x,

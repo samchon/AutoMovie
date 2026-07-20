@@ -21,6 +21,7 @@ import {
   validateTransformArtifact,
   validateUniqueBy,
   validateUniqueIds,
+  validateVectorArtifact,
 } from "./primitives";
 import { validateSpaceShape } from "./space";
 
@@ -354,7 +355,300 @@ export const validateShotArtifact = (
     validateClipArtifact(clip, `$input.objectMotions[${i}]`, violations);
   });
 
+  appendShotMetadataArtifact(
+    shot,
+    "$input",
+    new Set(
+      sceneCameras
+        .filter(isRecord)
+        .map((camera) => camera.id)
+        .filter((id): id is string => typeof id === "string"),
+    ),
+    violations,
+  );
+
   return toValidation(violations);
+};
+
+/** The closed event-kind union, gated the way the engine's compilers emit it. */
+const EVENT_KINDS = new Set([
+  "contact",
+  "hit",
+  "grab",
+  "release",
+  "attach",
+  "detach",
+  "fall",
+]);
+
+/** The closed event-source union. */
+const EVENT_SOURCES = new Set([
+  "collisionSolver",
+  "scriptedCue",
+  "sampledProximity",
+  "impactOutput",
+]);
+
+/** The closed framing union, the same set `performShot` gates a frame action by. */
+const CAMERA_FRAMINGS = new Set(["wide", "full", "medium", "close"]);
+
+/** The closed move union, the same set `performShot` gates a frame action by. */
+const CAMERA_MOVES = new Set(["static", "follow", "orbit", "push-in", "whip"]);
+
+/**
+ * The three shot fields the validators used to pass ungated: `events`,
+ * `cameraIntent`, and `coverage`.
+ *
+ * A field the engine emits and a consumer dereferences is part of the artifact
+ * contract, not decoration: `playbackEvents` and `reviewVisualRead` iterate
+ * `shot.events` (a non-iterable value throws with no path), and a render or
+ * diffusion host reads `cameraIntent` and `coverage` as the structural guide
+ * metadata #1187 promised it. All three are optional on {@link IAutoMovieShot}
+ * and documented as "absent means legacy", so absence stays valid; only a
+ * PRESENT value is inspected.
+ *
+ * `sceneCameras` is the scene's camera-id set when the caller has a scene to
+ * cross-reference (the submitted-artifact path) and `null` when it does not
+ * (the stored-slice path, which reads one file with no scene beside it).
+ */
+export const appendShotMetadataArtifact = (
+  shot: Record<string, unknown>,
+  path: string,
+  sceneCameras: ReadonlySet<string> | null,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  const duration = typeof shot.duration === "number" ? shot.duration : Infinity;
+  if (shot.events !== undefined)
+    appendShotEventsArtifact(
+      shot.events,
+      `${path}.events`,
+      duration,
+      violations,
+    );
+  if (shot.cameraIntent !== undefined)
+    appendCameraIntentArtifact(
+      shot.cameraIntent,
+      `${path}.cameraIntent`,
+      duration,
+      violations,
+    );
+  if (shot.coverage !== undefined)
+    appendShotCoverageArtifact(
+      shot.coverage,
+      `${path}.coverage`,
+      duration,
+      shot.camera,
+      sceneCameras,
+      violations,
+    );
+};
+
+const appendShotEventsArtifact = (
+  events: unknown,
+  path: string,
+  duration: number,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateArrayArtifact(events, path, "shot events", violations)) return;
+  events.forEach((event, i) => {
+    const eventPath = `${path}[${i}]`;
+    if (!validateObjectArtifact(event, eventPath, "shot event", violations))
+      return;
+    validateNonEmptyId(
+      event.id,
+      `${eventPath}.id`,
+      "shot event id",
+      violations,
+    );
+    if (typeof event.kind !== "string" || !EVENT_KINDS.has(event.kind))
+      pushViolation(
+        violations,
+        "type",
+        `${eventPath}.kind`,
+        `shot event kind must be one of ${[...EVENT_KINDS].join(", ")}, but was "${String(event.kind)}"`,
+        event.kind,
+      );
+    if (typeof event.source !== "string" || !EVENT_SOURCES.has(event.source))
+      pushViolation(
+        violations,
+        "type",
+        `${eventPath}.source`,
+        `shot event source must be one of ${[...EVENT_SOURCES].join(", ")}, but was "${String(event.source)}"`,
+        event.source,
+      );
+    // The shot-local clock: `playbackEvents` maps this onto the output timeline,
+    // so a time outside the shot lands somewhere no entry plays.
+    validateRange(
+      event.time,
+      `${eventPath}.time`,
+      0,
+      duration,
+      "shot event time",
+      violations,
+    );
+    for (const field of ["actor", "target", "object", "reaction"] as const)
+      if (event[field] !== null)
+        validateNonEmptyId(
+          event[field],
+          `${eventPath}.${field}`,
+          `shot event ${field}`,
+          violations,
+        );
+    // A non-finite point makes `reviewVisualRead`'s contact distance NaN, and
+    // `NaN > contactRadius` is false, so a genuine miss reads as a connect.
+    if (event.point !== null)
+      validateVectorArtifact(
+        event.point,
+        `${eventPath}.point`,
+        "shot event point",
+        violations,
+      );
+    if (event.actionIndex !== null && !Number.isInteger(event.actionIndex))
+      pushViolation(
+        violations,
+        "range",
+        `${eventPath}.actionIndex`,
+        `shot event actionIndex must be null or an integer, but was ${String(event.actionIndex)}`,
+        event.actionIndex,
+      );
+  });
+};
+
+const appendCameraIntentArtifact = (
+  intents: unknown,
+  path: string,
+  duration: number,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateArrayArtifact(intents, path, "camera intent spans", violations))
+    return;
+  intents.forEach((intent, i) => {
+    const intentPath = `${path}[${i}]`;
+    if (
+      !validateObjectArtifact(intent, intentPath, "camera intent", violations)
+    )
+      return;
+    validateRange(
+      intent.start,
+      `${intentPath}.start`,
+      0,
+      duration,
+      "camera intent start",
+      violations,
+    );
+    if (
+      typeof intent.framing !== "string" ||
+      !CAMERA_FRAMINGS.has(intent.framing)
+    )
+      pushViolation(
+        violations,
+        "type",
+        `${intentPath}.framing`,
+        `camera intent framing must be one of ${[...CAMERA_FRAMINGS].join(", ")}, but was "${String(intent.framing)}"`,
+        intent.framing,
+      );
+    if (typeof intent.move !== "string" || !CAMERA_MOVES.has(intent.move))
+      pushViolation(
+        violations,
+        "type",
+        `${intentPath}.move`,
+        `camera intent move must be one of ${[...CAMERA_MOVES].join(", ")}, but was "${String(intent.move)}"`,
+        intent.move,
+      );
+    if (intent.focus !== null)
+      validateVectorArtifact(
+        intent.focus,
+        `${intentPath}.focus`,
+        "camera intent focus",
+        violations,
+      );
+    // The input gate refuses a focal length <= 0 mm; the artifact must agree.
+    if (intent.focalLength !== null)
+      validateRange(
+        intent.focalLength,
+        `${intentPath}.focalLength`,
+        0,
+        Infinity,
+        "camera intent focal length",
+        violations,
+        false,
+      );
+  });
+};
+
+const appendShotCoverageArtifact = (
+  coverage: unknown,
+  path: string,
+  duration: number,
+  heroCamera: unknown,
+  sceneCameras: ReadonlySet<string> | null,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!validateArrayArtifact(coverage, path, "shot coverage", violations))
+    return;
+  const seen = new Map<string, number>();
+  coverage.forEach((take, i) => {
+    const takePath = `${path}[${i}]`;
+    if (!validateObjectArtifact(take, takePath, "coverage take", violations))
+      return;
+    validateNonEmptyId(
+      take.camera,
+      `${takePath}.camera`,
+      "coverage camera",
+      violations,
+    );
+    if (typeof take.camera === "string") {
+      if (sceneCameras !== null && !sceneCameras.has(take.camera))
+        pushViolation(
+          violations,
+          "type",
+          `${takePath}.camera`,
+          `coverage camera "${take.camera}" must reference a scene camera`,
+          take.camera,
+        );
+      // The same rule the engine enforces when compiling the take: coverage
+      // plays ANOTHER angle, so the hero camera can never also cover the beat,
+      // and one camera never covers it twice.
+      if (take.camera === heroCamera)
+        pushViolation(
+          violations,
+          "type",
+          `${takePath}.camera`,
+          `coverage plays another angle of the beat, but "${take.camera}" is already this shot's live camera`,
+          take.camera,
+        );
+      const first = seen.get(take.camera);
+      if (first !== undefined)
+        pushViolation(
+          violations,
+          "type",
+          `${takePath}.camera`,
+          `coverage camera "${take.camera}" is duplicated; first declared at ${path}[${first}].camera`,
+          take.camera,
+        );
+      else seen.set(take.camera, i);
+    }
+    if (take.cameraMotion === undefined)
+      pushViolation(
+        violations,
+        "type",
+        `${takePath}.cameraMotion`,
+        "coverage cameraMotion must be null or a clip",
+        take.cameraMotion,
+      );
+    else if (take.cameraMotion !== null)
+      validateClipArtifact(
+        take.cameraMotion,
+        `${takePath}.cameraMotion`,
+        violations,
+      );
+    appendCameraIntentArtifact(
+      take.cameraIntent,
+      `${takePath}.cameraIntent`,
+      duration,
+      violations,
+    );
+  });
 };
 
 export const validateSequenceArtifact = (

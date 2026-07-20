@@ -26,6 +26,10 @@ import {
   IAutoMovieActionSynthesizer,
   compilePerformance,
 } from "../perform/compilePerformance";
+import {
+  POSITIONAL_TARGET_SHAPE,
+  positionalTargetFault,
+} from "../perform/positionalTargetFault";
 import { resolveTargetPoint } from "../perform/resolveTargetPoint";
 import { scenePlacements } from "../perform/scenePlacements";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
@@ -73,45 +77,6 @@ const animatedBaseAt =
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
-
-const targetKindName = (target: unknown): string =>
-  isRecord(target) && typeof target.kind === "string"
-    ? target.kind
-    : "malformed";
-
-/**
- * What a positional target may be, stated once so every verb's refusal teaches
- * the same vocabulary. Cameras belong in the list because
- * {@link scenePlacements} resolves them (#1294).
- */
-const POSITIONAL_TARGET_SHAPE =
-  "a node/point/group, whose ids name placed actors, set pieces, or cameras";
-
-/**
- * Why a positional target did not resolve to a world point, phrased as the
- * clause after "but".
- *
- * The discriminator is the fault only for a relative or unknown kind. A `node`
- * or `group` target names a legal kind and an id that is not placed, so echoing
- * the kind made one sentence list a node target as valid and reject it at the
- * same time, leaving the correction round nothing it could act on (#1294). Name
- * the id instead: it is the only thing the author can fix.
- */
-const positionalTargetFault = (target: IAutoMovieActionTarget): string => {
-  if (target.kind === "node")
-    return `"${String(target.node)}" is not placed in the staged scene`;
-  if (target.kind === "group")
-    return target.nodes.length === 0
-      ? "its group names no members"
-      : `none of its group members are placed in the staged scene: ${target.nodes
-          .map((node) => `"${String(node)}"`)
-          .join(", ")}`;
-  if (target.kind === "point")
-    return "a point target carries no point to resolve";
-  if (target.kind === "direction" || target.kind === "offscreen")
-    return `a target of kind "${target.kind}" is relative (a heading or a frame edge), so it names no place`;
-  return `"${targetKindName(target)}" is not a positional target kind`;
-};
 
 const actionActors = (action: IAutoMovieActionCall): string[] =>
   typeof action.actor === "string"
@@ -231,7 +196,10 @@ export namespace IAutoMoviePerformedShot {
  * action list at the **engine-computed** contact, so it rides the same
  * synthesis and ROM gate as an authored `react`. The projectile must be staged,
  * the aim must resolve to a point, and the shot must reach the target at the
- * given speed, each an input violation otherwise.
+ * given speed, each an input violation otherwise. An `onHit` aim must also name
+ * a staged scene NODE: a camera is a place to shoot at, but nothing recoils it,
+ * and the injected react would otherwise name a camera as its actor behind the
+ * back of the gate that refuses exactly that.
  *
  * `attachTo` actions are compiled through {@link compileAttach} once the parent
  * pose is known: the coupled child (a prop, not a rig) gets a shot
@@ -669,6 +637,31 @@ export const performShot = (props: {
           "launch target",
           "a launch target",
         );
+        const aimNode =
+          isRecord(action.at) &&
+          action.at.kind === "node" &&
+          typeof action.at.node === "string"
+            ? action.at.node
+            : null;
+        // A camera is a place to aim at, never a performer. `at` may therefore
+        // name one (the projectile flies to the lens, ordinary film grammar),
+        // but `onHit` schedules a RECOIL on the struck id, and the react it
+        // injects rides the action list past the actor gate above, which would
+        // otherwise refuse a camera outright. Left open, the shot compiles with
+        // a camera in `shot.performances`, which the artifact validator then
+        // refuses at commit: the engine would be declaring a shot successful
+        // that its own consumers cannot accept.
+        if (
+          action.onHit !== undefined &&
+          aimNode !== null &&
+          cameraIds.has(aimNode)
+        )
+          out.push(
+            "type",
+            `${base}[${i}].at`,
+            `a launch's onHit recoils the id it strikes, but "${aimNode}" is a camera, and a camera performs nothing but frame; drop onHit to shoot at the lens, or aim at a staged scene node`,
+            action.at,
+          );
         const stagedProjectile = nodeIds.has(action.projectile);
         if (!stagedProjectile)
           out.push(
@@ -701,12 +694,7 @@ export const performShot = (props: {
             index: i,
             origin: nodePositions.get(action.projectile)!,
             target,
-            targetNode:
-              isRecord(action.at) &&
-              action.at.kind === "node" &&
-              typeof action.at.node === "string"
-                ? action.at.node
-                : null,
+            targetNode: aimNode,
           });
       } else if (action.verb === "enact") {
         // The clip id is the caller's handle into host-supplied content; the
@@ -1192,11 +1180,12 @@ export const performShot = (props: {
   // frames the beat's subject exactly as the hero does, only from its own
   // staged bearing. A subject may be any staged placement, a camera included
   // (#1294), which is why neither lookup below may be asserted non-null: the
-  // placement table carries cameras, `nodeRotations` does not, and a camera can
-  // reach `motions` through a `launch` `onHit` aimed at it (the injected react
-  // names the struck id as its actor). Without a staged facing there is no
-  // node-local root to rotate into the world, so such a subject holds still:
-  // `at: null`, the documented degenerate case a `follow` move already handles.
+  // placement table carries cameras, `nodeRotations` and `motions` do not (a
+  // camera performs nothing but frame, and the one path that used to smuggle
+  // one into `motions`, a `launch` `onHit` aimed at a camera, is now refused at
+  // the aim). Without a staged facing there is no node-local root to rotate
+  // into the world, so such a subject holds still: `at: null`, the documented
+  // degenerate case a `follow` move already handles.
   const framedSubject = (
     on: IAutoMovieActionTarget,
   ): IAutoMovieFramedSubject => {

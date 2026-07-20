@@ -60,12 +60,13 @@ export namespace IAutoMovieBlockedBeat {
  * The BLOCKING consumer: gate one beat's shot plan before any performance is
  * compiled from it. The checks are coherence, not craft: the beat must be one
  * the script planned, every intent must belong to a placed actor, the camera
- * must favour something placed, and the timing anchors must sit on the beat's
- * own timeline **in the order they are listed**. The list order is the causal
- * order ("the loose before the hit"), so an anchor whose `t` runs backwards
- * contradicts the causality it exists to fix. The optional `coverage` cameras
- * (#1187) are gated the same way, plus their own rules: each must name a staged
- * camera exactly once and state a real framing/move.
+ * must favour something placed (an actor, a set piece, or another camera, the
+ * same table `performShot` resolves against), and the timing anchors must sit
+ * on the beat's own timeline **in the order they are listed**. The list order
+ * is the causal order ("the loose before the hit"), so an anchor whose `t` runs
+ * backwards contradicts the causality it exists to fix. The optional `coverage`
+ * cameras (#1187) are gated the same way, plus their own rules: each must name
+ * a staged camera exactly once and state a real framing/move.
  *
  * When the prior beat's end-state is supplied it becomes this beat's initial
  * condition: its actors are gated for referential integrity (every carried
@@ -157,14 +158,22 @@ export const blockBeat = (
     });
   });
 
+  // What a camera intent may favour: any staged placement, an actor, a set
+  // piece, or another camera. This is the SAME table `performShot` resolves a
+  // positional target against (#1294); a plan the performance stage would
+  // happily realize must not be refused one rung earlier, or "camera A frames
+  // camera B" becomes a beat that can be performed but never blocked.
+  const cameraIds = new Set(staged.scene.cameras.map((c) => c.id));
+  const placedIds = new Set([...cameraIds, ...nodeIds]);
+
   if (
     blocking.camera.on.kind === "node" &&
-    !nodeIds.has(blocking.camera.on.node)
+    !placedIds.has(blocking.camera.on.node)
   )
     out.push(
       "type",
       "$input.camera.on.node",
-      `the camera must favour a placed actor, but "${blocking.camera.on.node}" is not staged`,
+      `the camera must favour something staged (an actor, a set piece, or another camera), but "${blocking.camera.on.node}" is not placed`,
       blocking.camera.on.node,
     );
   if (blocking.camera.on.kind === "node")
@@ -179,7 +188,6 @@ export const blockBeat = (
   // states a real framing/move: unlike the hero intent, coverage has no
   // downstream coherence gate to catch a garbage value, so the closed unions
   // are gated here, the way performShot gates frame actions.
-  const cameraIds = new Set(staged.scene.cameras.map((c) => c.id));
   const covered = new Map<string, number>();
   (blocking.coverage ?? []).forEach((intent, i) => {
     validateNonEmptyId(
@@ -217,11 +225,11 @@ export const blockBeat = (
         `camera move must be one of static, follow, orbit, push-in, whip, but was "${String(intent.move)}"`,
         intent.move,
       );
-    if (intent.on.kind === "node" && !nodeIds.has(intent.on.node))
+    if (intent.on.kind === "node" && !placedIds.has(intent.on.node))
       out.push(
         "type",
         `$input.coverage[${i}].on.node`,
-        `a coverage camera must favour a placed actor, but "${intent.on.node}" is not staged`,
+        `a coverage camera must favour something staged (an actor, a set piece, or another camera), but "${intent.on.node}" is not placed`,
         intent.on.node,
       );
     if (intent.on.kind === "node")
