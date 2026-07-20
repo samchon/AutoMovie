@@ -487,7 +487,7 @@ export const test_film_perform_shot_positional_target = (): void => {
         },
       ]),
       "$input.draft[0].at",
-      "placed actors, set pieces, or cameras",
+      "whose ids name placed actors, set pieces, or cameras",
       "but none was given",
     ),
   );

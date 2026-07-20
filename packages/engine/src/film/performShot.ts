@@ -81,17 +81,17 @@ const targetKindName = (target: unknown): string =>
  * {@link scenePlacements} resolves them (#1294).
  */
 const POSITIONAL_TARGET_SHAPE =
-  "a node/point/group naming placed actors, set pieces, or cameras";
+  "a node/point/group, whose ids name placed actors, set pieces, or cameras";
 
 /**
  * Why a positional target did not resolve to a world point, phrased as the
  * clause after "but".
  *
- * The discriminator is the fault only for a relative or malformed kind. A
- * `node` or `group` target names a legal kind and an id that is not placed, so
- * echoing the kind used to answer "a node is allowed, not "node"" and left the
- * correction round with nothing to change (#1294). Name the id instead: it is
- * the only thing the author can fix.
+ * The discriminator is the fault only for a relative or unknown kind. A `node`
+ * or `group` target names a legal kind and an id that is not placed, so echoing
+ * the kind made one sentence list a node target as valid and reject it at the
+ * same time, leaving the correction round nothing it could act on (#1294). Name
+ * the id instead: it is the only thing the author can fix.
  */
 const positionalTargetFault = (target: IAutoMovieActionTarget): string => {
   if (target.kind === "node")
