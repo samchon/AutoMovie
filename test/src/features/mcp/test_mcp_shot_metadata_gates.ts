@@ -115,6 +115,13 @@ const validate = (over: Record<string, unknown>): IAutoMovieValidation =>
  * `validateShot` tool re-roots the artifact validator's `$input` under
  * `$input.shot`, so every expected path here carries that prefix.
  */
+/** True when nothing was refused at `path` (the over-descent counter-case). */
+const silentAt = (validation: IAutoMovieValidation, path: string): boolean =>
+  validation.success === true ||
+  validation.violations.every(
+    (violation) => violation.path !== `$input.shot${path}`,
+  );
+
 const says = (
   validation: IAutoMovieValidation,
   path: string,
@@ -160,11 +167,17 @@ const says = (
  *    take goes through the same clip validation the hero take does.
  * 5. `coverage[i].cameraMotion: null` is legal (a locked-off covering camera), and
  *    its `cameraIntent` is gated with the same rules as the hero one.
- * 6. The three ENTRY gates, one per list: an element that is not an object is
- *    refused at its own index. Every consumer reads properties off these
- *    elements, so a primitive must stop at the entry rather than be read
- *    through. Paired with the absence/`null` distinction on `cameraMotion`:
- *    `null` is the locked-off camera, a missing key is a take that never said.
+ * 6. Two gates per list, and they are NOT the same gate:
+ *
+ *    | Gate | Input | Refuses at | | --- | --- | --- | | the LIST is not an array
+ *    | `events: "x"`, `cameraIntent: 7`, `coverage: "x"` | the field | | an
+ *    ELEMENT is not an object | `[null]` | that element's index |
+ *
+ *    Both are held for all three lists. A non-array must also STOP at the field
+ *    rather than descend, since per-element checks on a primitive would invent
+ *    indices or read through it. Paired with the absence/`null` distinction on
+ *    `cameraMotion`: `null` is the locked-off camera, a missing key is a take
+ *    that never said.
  */
 export const test_mcp_shot_metadata_gates = (): void => {
   // 1. the positive floor.
@@ -336,6 +349,21 @@ export const test_mcp_shot_metadata_gates = (): void => {
       ".coverage[0].cameraMotion",
       "must be null or a clip",
     ) && validate({ coverage: [take()] }).success === true,
+  );
+  // The LIST gate, which is a different gate from the ELEMENT gate below and
+  // takes a different input: `coverage` is absent or an array, and a non-array
+  // stops at the field itself. Not descending is part of the observable
+  // contract, since per-element checks on a non-array would either invent
+  // indices or read through a primitive.
+  TestValidator.predicate(
+    "a coverage list that is not an array is refused at the field, and stops",
+    (() => {
+      const notAList = validate({ coverage: bad("not-a-list") });
+      return (
+        says(notAList, ".coverage", "must be an array") &&
+        silentAt(notAList, ".coverage[0]")
+      );
+    })(),
   );
   TestValidator.predicate(
     "a coverage take that is not an object is refused at the entry",
