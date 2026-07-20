@@ -25,6 +25,7 @@ import {
   compilePerformance,
 } from "../perform/compilePerformance";
 import { resolveTargetPoint } from "../perform/resolveTargetPoint";
+import { scenePlacements } from "../perform/scenePlacements";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { compareCodeUnits } from "../text/compareCodeUnits";
 import { validateMotion } from "../validation/validateMotion";
@@ -73,6 +74,40 @@ const targetKindName = (target: unknown): string =>
   isRecord(target) && typeof target.kind === "string"
     ? target.kind
     : "malformed";
+
+/**
+ * What a positional target may be, stated once so every verb's refusal teaches
+ * the same vocabulary. Cameras belong in the list because
+ * {@link scenePlacements} resolves them (#1294).
+ */
+const POSITIONAL_TARGET_SHAPE =
+  "a node/point/group naming placed actors, set pieces, or cameras";
+
+/**
+ * Why a positional target did not resolve to a world point, phrased as the
+ * clause after "but".
+ *
+ * The discriminator is the fault only for a relative or malformed kind. A
+ * `node` or `group` target names a legal kind and an id that is not placed, so
+ * echoing the kind used to answer "a node is allowed, not "node"" and left the
+ * correction round with nothing to change (#1294). Name the id instead: it is
+ * the only thing the author can fix.
+ */
+const positionalTargetFault = (target: IAutoMovieActionTarget): string => {
+  if (target.kind === "node")
+    return `"${String(target.node)}" is not placed in the staged scene`;
+  if (target.kind === "group")
+    return target.nodes.length === 0
+      ? "its group names no members"
+      : `none of its group members are placed in the staged scene: ${target.nodes
+          .map((node) => `"${String(node)}"`)
+          .join(", ")}`;
+  if (target.kind === "point")
+    return "a point target carries no point to resolve";
+  if (target.kind === "direction" || target.kind === "offscreen")
+    return `a target of kind "${target.kind}" is relative (a heading or a frame edge), so it names no place`;
+  return `"${targetKindName(target)}" is not a positional target kind`;
+};
 
 const actionActors = (action: IAutoMovieActionCall): string[] =>
   typeof action.actor === "string"
@@ -168,6 +203,15 @@ export namespace IAutoMoviePerformedShot {
  * shot with no `frame` call falls back to the scene's first camera, locked off
  * (`cameraMotion: null`); a scene with no cameras at all cannot be framed and
  * fails.
+ *
+ * Positional targets (`lookAt`, `reach`, a `point`/`strike` gesture aim, a
+ * `launch` aim, a frame subject or focus) resolve against every staged
+ * placement, {@link scenePlacements}, **cameras included**: an actor may be
+ * directed to look down the lens, which is ordinary film grammar (#1294). That
+ * does not loosen the camera-as-actor rule, a camera still performs nothing but
+ * `frame`; it only makes a camera a place one can point at. A target that does
+ * not resolve names the id (or the relative kind) that failed, never the
+ * discriminator of a kind that was legal all along.
  *
  * `launch` actions are compiled through {@link compileLaunch}: the projectile (a
  * staged scene node) gets its baked flight as a shot `objectMotion`, and, for a
@@ -328,9 +372,10 @@ export const performShot = (props: {
   const nodeIds = new Set(staged.scene.nodes.map((n) => n.id));
   const cameraIds = new Set(staged.scene.cameras.map((c) => c.id));
 
-  const nodePositions = new Map<string, IAutoMovieVector3>(
-    staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
-  );
+  // Every placed thing a target may name, cameras included (#1294): one table
+  // shared with the reference synthesizer, so a target the gate accepts is a
+  // target the performer can actually aim at.
+  const nodePositions = scenePlacements(staged.scene);
   const nodeRotations = new Map(
     staged.scene.nodes.map((n) => [n.id, n.transform.rotation]),
   );
@@ -347,7 +392,7 @@ export const performShot = (props: {
       out.push(
         "type",
         path,
-        `${subject} must resolve to a point, a node/point/group of placed actors, not "${targetKindName(target)}"`,
+        `${subject} must resolve to a point (${POSITIONAL_TARGET_SHAPE}), but ${positionalTargetFault(target)}`,
         target,
       );
       return null;
@@ -704,7 +749,7 @@ export const performShot = (props: {
           out.push(
             "type",
             `${base}[${i}].at`,
-            `a ${action.kind} gesture target must resolve to a point, a node/point/group of placed actors`,
+            `a ${action.kind} gesture target must resolve to a point (${POSITIONAL_TARGET_SHAPE}), but none was given`,
             action.at,
           );
       } else if (action.verb === "attachTo") {
