@@ -1,5 +1,8 @@
 import { performShot, stageScene } from "@automovie/engine";
-import { IAutoMovieBlockingApplication } from "@automovie/interface";
+import {
+  IAutoMovieBlockingApplication,
+  IAutoMovieCameraIntent,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -176,7 +179,7 @@ export const test_film_perform_shot_coverage = (): void => {
       { x: 0, y: 1, z: 0, w: 0 },
     ),
   );
-  TestValidator.equals("the take carries its own intent", take.cameraIntent, [
+  const expectedIntent: IAutoMovieCameraIntent[] = [
     {
       start: 0,
       framing: "medium",
@@ -184,7 +187,12 @@ export const test_film_perform_shot_coverage = (): void => {
       focus: null,
       focalLength: null,
     },
-  ]);
+  ];
+  TestValidator.equals(
+    "the take carries its own intent",
+    take.cameraIntent,
+    expectedIntent,
+  );
   TestValidator.predicate(
     "the hero take still frames from +X",
     vclose(firstKey(single.shot.cameraMotion!.tracks[0]!.values), {

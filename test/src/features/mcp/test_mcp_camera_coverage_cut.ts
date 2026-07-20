@@ -1,6 +1,7 @@
 import { resolveCameraAt } from "@automovie/engine";
 import {
   IAutoMovieAssembleApplication,
+  IAutoMovieCameraIntent,
   IAutoMovieGait,
   IAutoMovieVector3,
 } from "@automovie/interface";
@@ -179,18 +180,19 @@ export const test_mcp_camera_coverage_cut = (): void => {
     take.cameraMotion!.id,
     "cam:beat-1:cam-profile",
   );
+  const expectedIntent: IAutoMovieCameraIntent[] = [
+    {
+      start: 0,
+      framing: "medium",
+      move: "static",
+      focus: null,
+      focalLength: null,
+    },
+  ];
   TestValidator.equals(
     "the alternate carries its own intent",
     take.cameraIntent,
-    [
-      {
-        start: 0,
-        framing: "medium",
-        move: "static",
-        focus: null,
-        focalLength: null,
-      },
-    ],
+    expectedIntent,
   );
 
   const cut = app.cut({
