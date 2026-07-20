@@ -30,6 +30,7 @@ import {
   validateShotArtifact,
 } from "../validators/artifacts";
 import {
+  appendMotionClockShape,
   pushViolation,
   validateArrayArtifact,
   validateColorArtifact,
@@ -222,6 +223,19 @@ export class ValidationService {
           );
         motionIds.add(motion.id);
       });
+      // The clock the walker's sampler orders each clip by. `resolveBeatEnd`
+      // calls `sampleMotion`, whose binary search assumes a positive span
+      // between neighbouring keyframes; out of order it interpolates across the
+      // wrong pair, so the continuity verdict describes a beat end the film
+      // never reaches (#1328). Nothing else on this path establishes it: the
+      // registry is only checked for object shape and a non-empty id.
+      Object.entries(beat.motions ?? {}).forEach(([key, motion]) =>
+        appendMotionClockShape(
+          motion.keyframes,
+          `${path}.motions.${key}.keyframes`,
+          violations,
+        ),
+      );
       // Only an UNPERFORMED node falls back to its ambient motion at resolve
       // time; a performed node uses its performance clip, so its ambient motion
       // is never looked up (and need not be provided).

@@ -132,8 +132,10 @@ const plan = (over: {
  *    non-positive width or height each refuse with a located violation and null
  *    sidecar.
  * 3. A non-object motion registry, an empty-keyframe motion, a non-finite motion
- *    duration, a non-finite keyframe time, a non-array skeletons input, and a
- *    malformed skeleton entry each refuse with a located violation.
+ *    duration, a non-finite keyframe time, non-increasing keyframe times, a
+ *    non-array skeletons input, and a malformed skeleton entry each refuse with
+ *    a located violation, while a single-keyframe motion (which orders nothing)
+ *    still plans.
  * 4. Without a project, omitting the slate throws the actionable openProject
  *    prompt (the resident contract).
  */
@@ -300,6 +302,38 @@ export const test_mcp_plan_pose_keypoints = (): void => {
       "range",
       "$input.motions.m1.keyframes[0].time",
     ),
+  );
+  // And the ORDER those times put the clip in, which no single keyframe can
+  // show. `planPoseKeypointSidecar` samples this registry directly, and
+  // `sampleMotion`'s binary search assumes a positive span between neighbours:
+  // out of order it lands on a segment that does not straddle the instant, so
+  // the sidecar's joint coordinates come back finite, deterministic, and not the
+  // pose the clip describes (#1328).
+  TestValidator.predicate(
+    "non-increasing keyframe times refuse at the offending index",
+    hasViolation(
+      plan({
+        motions: {
+          m1: {
+            ...still,
+            keyframes: [
+              still.keyframes[1]!,
+              { ...still.keyframes[0]!, time: 0 },
+            ],
+          },
+        },
+      }).validation,
+      "temporal",
+      "$input.motions.m1.keyframes[1].time",
+    ),
+  );
+  // The counter-case that keeps the check narrow: order is a property of the
+  // LIST, so a single keyframe orders nothing and still plans.
+  TestValidator.equals(
+    "a single-keyframe motion orders nothing and still plans",
+    plan({ motions: { m1: { ...still, keyframes: [still.keyframes[0]!] } } })
+      .validation,
+    { success: true },
   );
   TestValidator.predicate(
     "a non-array skeletons input refuses",

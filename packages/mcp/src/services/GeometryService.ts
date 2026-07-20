@@ -37,7 +37,7 @@ import {
 } from "../dto";
 import { shotIdOf } from "../project/shotKey";
 import {
-  isRecord,
+  appendMotionClockShape,
   pushViolation,
   validateArrayArtifact,
   validateNonEmptyId,
@@ -868,22 +868,10 @@ const appendGeometryMotionShape = (
   );
   // And the ORDER, which no single keyframe can show: the sampler's binary
   // search assumes a positive span between neighbours, so equal or descending
-  // times interpolate across a zero or negative one. A single keyframe orders
-  // nothing and is left alone.
-  let previous: number | null = null;
-  motion.keyframes.forEach((keyframe, index) => {
-    const time = isRecord(keyframe) ? keyframe.time : undefined;
-    if (typeof time !== "number" || !Number.isFinite(time)) return;
-    if (previous !== null && time <= previous)
-      pushViolation(
-        violations,
-        "temporal",
-        `${path}.keyframes[${index}].time`,
-        `motion keyframe times must strictly increase; ${time} is not greater than ${previous}`,
-        time,
-      );
-    previous = time;
-  });
+  // times interpolate across a zero or negative one. One definition, shared
+  // with every other entry point that hands host motions to `sampleMotion`
+  // (#1328).
+  appendMotionClockShape(motion.keyframes, `${path}.keyframes`, violations);
 };
 
 const appendGeometryMotionKeyframeShape = (
