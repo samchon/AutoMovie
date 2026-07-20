@@ -85,7 +85,10 @@ const context: IAutoMovieMcpGeometryContext = {
  *    null payload alone or a throw.
  * 3. An engine contract fault (two registry entries carrying the same motion id)
  *    comes back as a `reason`, not a raw throw across the boundary.
- * 4. Malformed request roots and blank beats reject with the structured
+ * 4. A registry clip whose keyframe times do not strictly increase, the
+ *    precondition `sampleMotion` declares, rejects structurally at its own path
+ *    instead of yielding a beat end derived from the wrong segment.
+ * 5. Malformed request roots and blank beats reject with the structured
  *    `$input...` throw convention shared by the other geometry queries.
  */
 export const test_mcp_shot_end_state = (): void => {
@@ -134,6 +137,40 @@ export const test_mcp_shot_end_state = (): void => {
     "an engine contract fault comes back as a reason, not a throw",
     duplicated.beatEnd === null &&
       (duplicated.reason ?? "").includes("duplicated"),
+  );
+
+  // The registry this query samples. `getResolvedPose` gates it through
+  // `findMotion`, but this method reaches `resolveBeatEnd` -> `sampleMotion`
+  // without that lookup, and the context shape gate covers scene, models, and
+  // shot but not motions, so the clip floor was reachable from one geometry
+  // query and not the other. Out of order, the sampler's binary search picks a
+  // segment that does not straddle the instant, and the derived beat end, which
+  // an agent then commits, describes a pose the clip never holds. Structural, so
+  // it throws rather than becoming a reason, matching the sibling query (#1328).
+  TestValidator.predicate(
+    "non-increasing keyframe times reject at the offending index",
+    throwsError(
+      () =>
+        app.getShotEndState({
+          context: {
+            ...context,
+            motions: {
+              "walk-clip": {
+                ...motion,
+                keyframes: [
+                  motion.keyframes[1]!,
+                  { ...motion.keyframes[0]!, time: 0 },
+                ],
+              },
+            },
+          },
+          beat: "beat-1",
+        }),
+      [
+        "$input.context.motions.walk-clip.keyframes[1].time",
+        "strictly increase",
+      ],
+    ),
   );
 
   TestValidator.predicate(

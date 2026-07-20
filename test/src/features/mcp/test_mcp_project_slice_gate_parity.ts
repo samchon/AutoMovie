@@ -103,10 +103,14 @@ const scene: IAutoMovieScene = {
  * slice filenames. Both are now one definition applied by both gates (#1326,
  * #1327).
  *
- * The submit half of the beat rule is pinned by
- * `test_mcp_script_beat_case_collision`; this scenario pins the read half of
- * it, and both halves of the object-motion rule, which had no pin on either
- * side.
+ * Each rule's submit half is pinned elsewhere already:
+ * `test_mcp_script_beat_case_collision` for the beat ids, and
+ * `test_mcp_artifact_validator_edges` for the clip ids. What was missing is the
+ * read half of both, and a single place that states the AGREEMENT rather than
+ * each side separately. The clip rule's submit assertion is repeated here for
+ * that reason: its existing pin sits inside a large edge-case aggregate where
+ * the parity claim is not what the case is about, so pruning it would retire
+ * the guard silently.
  *
  * Scenarios:
  *
