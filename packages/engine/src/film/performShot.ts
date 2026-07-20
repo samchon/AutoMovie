@@ -78,6 +78,11 @@ const animatedBaseAt =
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const isFiniteVector3 = (vector: IAutoMovieVector3): boolean =>
+  [vector.x, vector.y, vector.z].every((coordinate) =>
+    Number.isFinite(coordinate),
+  );
+
 const actionActors = (action: IAutoMovieActionCall): string[] =>
   typeof action.actor === "string"
     ? [action.actor]
@@ -162,6 +167,15 @@ export namespace IAutoMoviePerformedShot {
  * them into must survive `validateMotion` against each actor's skeleton. The
  * revise pass wins by construction: `revise.final ?? draft` is the list that
  * performs.
+ *
+ * A camera the shot compiles a move FROM is itself gated: its vertical field of
+ * view must lie within (0, 180)° and its placement must be finite, the same
+ * bounds staging applies, because an explicit staged set never passes through
+ * staging and the framing solve divides by `tan(fovY / 2)`. Ungated, a zero
+ * field of view baked an infinite distance into every keyframe and the shot
+ * came back successful with a clip its own artifact validator refuses. Only the
+ * elected camera and the coverage cameras are checked; an unused degenerate
+ * camera never fails a shot that does not frame through it.
  *
  * Camera `frame` actions elect the live camera and author its move: the first
  * one names the shot's camera (staging aimed it already), rival `frame` calls
@@ -1035,6 +1049,45 @@ export const performShot = (props: {
       subject !== null
     )
       coverageJobs.push({ intent, camera });
+  });
+
+  // A camera the shot compiles a move FROM must be one the framing grammar can
+  // solve. `stageScene` already bounds a camera's field of view to (0, 180) and
+  // its position to a finite point, but an EXPLICIT staged set never passes
+  // through staging, so nothing re-checks it here. The solve divides by
+  // `tan(fovY / 2)`: a zero or NaN field of view makes the framed distance
+  // infinite, every keyframe non-finite, and the shot one that `performShot`
+  // calls successful while the artifact validator refuses its clip. Gate only
+  // the cameras a move is actually compiled from, so a scene carrying an unused
+  // degenerate camera does not fail a shot that never frames through it.
+  const validateFramingCamera = (
+    camera: IAutoMovieCamera,
+    path: string,
+  ): void => {
+    if (!(camera.fovY > 0 && camera.fovY < 180))
+      out.push(
+        "range",
+        `${path}.fovY`,
+        `a camera that frames must have a vertical field of view within (0, 180)°, but "${camera.id}" has ${camera.fovY}`,
+        camera.fovY,
+      );
+    if (!isFiniteVector3(camera.transform.translation))
+      out.push(
+        "range",
+        `${path}.transform.translation`,
+        `a camera that frames must be placed at a finite point, but "${camera.id}" is not`,
+        camera.transform.translation,
+      );
+  };
+  // Walking the staged cameras (rather than looking the elected one up) keeps
+  // the read total: there is no "the hero id names no camera" case to defend
+  // against, because only a camera that IS in this list can be reached here.
+  staged.scene.cameras.forEach((camera, i) => {
+    if (
+      (frames.length > 0 && camera.id === liveCamera) ||
+      coverageJobs.some((job) => job.camera === camera)
+    )
+      validateFramingCamera(camera, `$staged.scene.cameras[${i}]`);
   });
 
   if (out.items.length > 0) return { success: false, violations: out.items };
