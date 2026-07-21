@@ -20,7 +20,13 @@ import {
   makeScriptWrite,
   makeStagingWrite,
 } from "../internal/filmFixtures";
-import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
+import {
+  createSkeleton,
+  joint,
+  keyframe,
+  makeMotion,
+  makePose,
+} from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 /** The hind legs of a retargeted quadruped: the humanoid `lowerBody` chain. */
@@ -70,6 +76,8 @@ const clip = (props: {
   bones: AutoMovieHumanoidBone[];
   root?: boolean;
   expression?: boolean;
+  /** Peak flexion of the second keyframe; past any ROM when deliberately large. */
+  peak?: number;
 }): IAutoMovieMotion => {
   const pose = (flexion: number): IAutoMoviePose =>
     makePose(
@@ -80,7 +88,7 @@ const clip = (props: {
   return makeMotion(
     [
       keyframe(0, pose(0), "linear", expression),
-      keyframe(1, pose(20), "linear", expression),
+      keyframe(1, pose(props.peak ?? 20), "linear", expression),
     ],
     1,
   );
@@ -152,6 +160,9 @@ const bonesOf = (motion: IAutoMovieMotion): Set<AutoMovieHumanoidBone> =>
  * 6. The tier is a warning and nothing more: a genuine error in the same shot (an
  *    action naming an unstaged actor) still fails, so the softening did not
  *    disarm the gate around it.
+ * 7. And when a later gate DOES error on a masked shot, the note travels with it:
+ *    `toValidation` states the two tiers ride one list into the correction
+ *    round, so a failure must not swallow what the mask found.
  */
 export const test_film_perform_shot_masked_channels = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -175,6 +186,7 @@ export const test_film_perform_shot_masked_channels = (): void => {
 
   // 1. positive: the S-07 shape, region omitted
   const quadruped = clip({ bones: QUADRUPED });
+  const overBentQuadruped = clip({ bones: QUADRUPED, peak: 500 });
   const dropped = perform([gait(), frame], () => quadruped);
   TestValidator.equals(
     "a gait reaching outside its region still performs",
@@ -328,5 +340,29 @@ export const test_film_perform_shot_masked_channels = (): void => {
     "an action naming an unstaged actor still fails the shot",
     unstaged.success === false &&
       hasViolation(unstaged, "type", "$input.draft"),
+  );
+
+  // 7. and when a LATER gate errors on the same shot, the note travels with it:
+  //    `toValidation` states the two tiers ride one list into the correction
+  //    round, so a failure must not swallow what the mask found.
+  const overRom = performShot({
+    script: makeScriptWrite(),
+    staged,
+    performance: makePerformanceWrite({
+      draft: [gait(), frame],
+      revise: { review: "unchanged.", final: null },
+    }),
+    // The hind chain is inside `lowerBody` and bent far past any knee's range,
+    // while the fore chain is masked away: one shot, one error and one warning.
+    synthesize: () => overBentQuadruped,
+    skeleton: () => createSkeleton(),
+  });
+  TestValidator.predicate(
+    "a ROM error fails the shot and carries the mask warning beside it",
+    overRom.success === false &&
+      overRom.violations.some((v) => v.severity === "error") &&
+      overRom.violations.some(
+        (v) => v.severity === "warning" && v.path === "$input.draft[0].region",
+      ),
   );
 };

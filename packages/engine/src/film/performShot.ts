@@ -1242,7 +1242,7 @@ export const performShot = (props: {
       );
       continue;
     }
-    // The baked flight is clip-local (0 → hitTime); place it on the shot clock
+    // The baked flight is clip-local (0 ??hitTime); place it on the shot clock
     // so it launches at the action's start and lands exactly when the react
     // fires (start + hitTime). Times shift by start; the clip spans the shot,
     // holding at the origin before launch and at the target after (sampleClip
@@ -1314,21 +1314,31 @@ export const performShot = (props: {
   // shot, so it rides the warning tier `IAutoMovieConstraintViolation.severity`
   // already defines: the author learns precisely what will not play, and the
   // shot still plays. The note points at `region`, the field the author owns.
-  const masked = compiled.masked.map((drop) => {
-    const lost = [
-      ...(drop.bones.length > 0 ? [`the bones ${drop.bones.join(", ")}`] : []),
-      ...(drop.root ? ["a root displacement"] : []),
-      ...(drop.expression ? ["an expression"] : []),
-    ].join(" and ");
-    return violation(
-      "type",
-      stageActionPaths[drop.action]!,
-      `${drop.actor}'s clip authors ${lost}, which the "${drop.region}" body region does not carry, so the performance drops that content; set region to one that owns it ("fullBody" owns every bone and the root, only "face" carries an expression), or move the content to its own action`,
-      drop.region,
-      undefined,
-      "warning",
-    );
-  });
+  // Collected into the same sink as everything else, so a shot that goes on to
+  // fail carries its notes into the correction round beside the errors, the way
+  // `toValidation` states the two tiers travel ("the whole list, warnings
+  // included"). The gates below therefore ask whether an ERROR was found rather
+  // than whether the sink is non-empty.
+  const errorFound = () => out.items.some((item) => item.severity === "error");
+  out.items.push(
+    ...compiled.masked.map((drop) => {
+      const lost = [
+        ...(drop.bones.length > 0
+          ? [`the bones ${drop.bones.join(", ")}`]
+          : []),
+        ...(drop.root ? ["a root displacement"] : []),
+        ...(drop.expression ? ["an expression"] : []),
+      ].join(" and ");
+      return violation(
+        "type",
+        stageActionPaths[drop.action]!,
+        `${drop.actor}'s clip authors ${lost}, which the "${drop.region}" body region does not carry, so the performance drops that content; set region to one that owns it ("fullBody" owns every bone and the root, only "face" carries an expression), or move the content to its own action`,
+        drop.region,
+        undefined,
+        "warning",
+      );
+    }),
+  );
 
   for (const [node, motion] of Object.entries(motions)) {
     const rig = skeleton(node);
@@ -1341,7 +1351,7 @@ export const performShot = (props: {
           path: violation.path.replace("$input", `$compiled["${node}"]`),
         });
   }
-  if (out.items.length > 0) return { success: false, violations: out.items };
+  if (errorFound()) return { success: false, violations: out.items };
 
   // Couple objects: bake the per-beat `attachTo` handoffs and the persistent
   // staged `mounts` into follow clips now that the parents' poses have compiled
@@ -1359,7 +1369,7 @@ export const performShot = (props: {
   objectMotions.push(...coupled.clips);
   events.push(...coupled.events);
   out.items.push(...coupled.violations);
-  if (out.items.length > 0) return { success: false, violations: out.items };
+  if (errorFound()) return { success: false, violations: out.items };
 
   // Compile the live camera's move from its frame actions. Subjects resolve
   // against the staged placements; a node subject's height is measured from
@@ -1507,7 +1517,7 @@ export const performShot = (props: {
         .join("; ")}`,
     );
 
-  return masked.length === 0
+  return out.items.length === 0
     ? { success: true, shot, motions }
-    : { success: true, shot, motions, warnings: masked };
+    : { success: true, shot, motions, warnings: out.items };
 };
