@@ -4,7 +4,16 @@ import {
   IAutoMovieActionCall,
 } from "@automovie/interface";
 
-/** The body region a verb drives by default, when an action sets none. */
+/**
+ * The body region a verb drives by default, when an action sets none.
+ *
+ * `locomote` stays `lowerBody` deliberately, and that is what lets a walk layer
+ * under a wave: the gait's arm rows yield to whatever `upperBody` action shares
+ * the actor, which `test_perform_layer` pins as the designed behavior. The
+ * shipped gaits counter-swing the arms, so a plain walk does lose that swing to
+ * the mask; the loss is reported rather than refused (#1359), because a masked
+ * gait is a quality note about a structurally valid shot, not a contradiction.
+ */
 const REGION_BY_VERB: Partial<
   Record<IAutoMovieActionCall["verb"], AutoMovieBodyRegion>
 > = {

@@ -37,7 +37,7 @@ import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { compareCodeUnits } from "../text/compareCodeUnits";
 import { validateMotion } from "../validation/validateMotion";
 import { validateShotArtifact } from "../validation/validateShotArtifact";
-import { ViolationCollector } from "../validation/violation";
+import { ViolationCollector, violation } from "../validation/violation";
 import {
   DEFAULT_SUBJECT_HEIGHT,
   IAutoMovieCameraFrameEntry,
@@ -154,6 +154,19 @@ export namespace IAutoMoviePerformedShot {
 
     /** The synthesised per-actor clips, keyed by scene-node id. */
     motions: Record<string, IAutoMovieMotion>;
+
+    /**
+     * Advice about a shot that compiled: content a region mask did not carry
+     * into the performance (#1349, #1359). Absent when there is none.
+     *
+     * These ride the SUCCESS arm because a masked clip is a quality note about
+     * a structurally valid shot, not a contradiction: the region mask is the
+     * designed behavior that lets a walk and a wave layer, and the shipped
+     * gaits counter-swing the arms, so refusing every mask refused the plainest
+     * possible film. The author still learns exactly what will not play, in the
+     * same `severity: "warning"` tier the plausibility advice uses.
+     */
+    warnings?: IAutoMovieConstraintViolation[];
   }
 
   /** The action list contradicted the stage, or a compiled clip broke ROM. */
@@ -1285,27 +1298,37 @@ export const performShot = (props: {
   const compiled = compilePerformance(stageActions, synthesize);
   const motions = compiled.performances;
 
-  // An authored channel the compiler does not apply is REPORTED (#1349). The
-  // region mask itself is deliberate (disjoint regions are what let a walk and
-  // a wave layer), but it used to discard content in silence: a retargeted
-  // quadruped's front legs ride the ARM chains, which `locomote`'s default
-  // `lowerBody` region excludes, so half the authored gait vanished and the
-  // shot still returned success with zero violations. The remedy is a field the
-  // author owns, so the violation points at `region` rather than at the clip.
-  for (const drop of compiled.masked) {
-    const path = stageActionPaths[drop.action]!;
+  // An authored channel the compiler does not apply is REPORTED (#1349), as
+  // ADVICE rather than as a refusal (#1359). The region mask is the designed
+  // behavior, not a fault: disjoint regions are what let a walk and a wave
+  // layer, and the walk yielding its arms to the wave is exactly the mechanism
+  // (`test_perform_layer` pins it). What was wrong was discarding content in
+  // SILENCE: a retargeted quadruped's front legs ride the ARM chains, which
+  // `locomote`'s default `lowerBody` region excludes, so half the authored gait
+  // vanished and the shot came back clean.
+  //
+  // Refusing every mask instead made the plainest possible film impossible: the
+  // shipped `HUMANOID_GAITS` counter-swing the arms on every kind, so a lone
+  // actor walking failed to perform at all, and the repository's own film demo
+  // threw on load. A masked clip is a quality note about a structurally valid
+  // shot, so it rides the warning tier `IAutoMovieConstraintViolation.severity`
+  // already defines: the author learns precisely what will not play, and the
+  // shot still plays. The note points at `region`, the field the author owns.
+  const masked = compiled.masked.map((drop) => {
     const lost = [
       ...(drop.bones.length > 0 ? [`the bones ${drop.bones.join(", ")}`] : []),
       ...(drop.root ? ["a root displacement"] : []),
       ...(drop.expression ? ["an expression"] : []),
     ].join(" and ");
-    out.push(
+    return violation(
       "type",
-      path,
-      `${drop.actor}'s clip authors ${lost}, which the "${drop.region}" body region does not carry, so the performance would drop that content; set region to one that owns it ("fullBody" owns every bone and the root, only "face" carries an expression), or move the content to its own action`,
+      stageActionPaths[drop.action]!,
+      `${drop.actor}'s clip authors ${lost}, which the "${drop.region}" body region does not carry, so the performance drops that content; set region to one that owns it ("fullBody" owns every bone and the root, only "face" carries an expression), or move the content to its own action`,
       drop.region,
+      undefined,
+      "warning",
     );
-  }
+  });
 
   for (const [node, motion] of Object.entries(motions)) {
     const rig = skeleton(node);
@@ -1484,5 +1507,7 @@ export const performShot = (props: {
         .join("; ")}`,
     );
 
-  return { success: true, shot, motions };
+  return masked.length === 0
+    ? { success: true, shot, motions }
+    : { success: true, shot, motions, warnings: masked };
 };

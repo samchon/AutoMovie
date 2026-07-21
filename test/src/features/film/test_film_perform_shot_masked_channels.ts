@@ -112,33 +112,46 @@ const bonesOf = (motion: IAutoMovieMotion): Set<AutoMovieHumanoidBone> =>
   new Set(motion.keyframes.flatMap((k) => k.pose.joints.map((j) => j.bone)));
 
 /**
- * `perform` must never drop authored content in silence (#1349). The
- * body-region mask is deliberate (disjoint regions are what let a walk and a
- * wave layer), but it used to discard whatever fell outside the action's region
- * and still return `success: true` with zero violations: a benchmark run
- * shipped a walking quadruped whose two front legs never moved, because a
- * retargeted quadruped's fore legs ride the humanoid ARM chains and `locomote`
- * defaults to `lowerBody`. The compiler holds both facts at the moment it drops
- * one, so it now states what it masked and the shot gate refuses, pointing at
- * the `region` field the author owns rather than at the compiled clip they
- * would have to diff.
+ * `perform` must never drop authored content in silence (#1349), and must not
+ * refuse the shot over it either (#1359).
+ *
+ * The body-region mask is deliberate: disjoint regions are what let a walk and
+ * a wave layer, and the walk yielding its arms to the wave IS that mechanism
+ * (`test_perform_layer` pins it). What was wrong was discarding the content
+ * without a word: a benchmark run shipped a walking quadruped whose two front
+ * legs never moved, because a retargeted quadruped's fore legs ride the
+ * humanoid ARM chains and `locomote` defaults to `lowerBody`.
+ *
+ * Reporting it as a failure then proved too strong: the shipped
+ * `HUMANOID_GAITS` counter-swing the arms on every kind, so a lone actor
+ * walking with a stock gait could not perform at all and the repository's own
+ * film demo threw on load. A masked clip is a quality note about a structurally
+ * valid shot, so it rides the `severity: "warning"` tier on the SUCCESS arm:
+ * the shot plays, and the author still learns exactly what will not, at the
+ * `region` field they own rather than in a compiled clip they would have to
+ * diff.
  *
  * Scenarios:
  *
  * 1. Positive. A twelve-bone quadruped gait under a `region`-less `locomote`
- *    fails, with a `type` violation on `$input.draft[0].region` naming every
- *    one of the six masked fore-leg bones in code-unit order.
- * 2. Negative twin. The same gait with `region: "fullBody"` performs, and all
- *    twelve authored bones reach the compiled clip.
+ *    performs, and carries a `type` WARNING on `$input.draft[0].region` naming
+ *    every one of the six masked fore-leg bones in code-unit order. The clip it
+ *    returns carries only the bones the region owns, which is what the warning
+ *    is about.
+ * 2. Negative twin. The same gait with `region: "fullBody"` performs with NO
+ *    warning at all, and all twelve authored bones reach the compiled clip.
  * 3. Boundary, the region's own bones. A gait confined to `hips` plus the hind
  *    chain (all inside `lowerBody`, `hips` being the member a leg chain sits
- *    next to) performs, and every one of those bones survives.
+ *    next to) performs warning-free, and every one of those bones survives.
  * 4. The other two masked channels. A `head` action layered beside a `lowerBody`
  *    one loses its root, and any non-`face` clip loses its expression; both are
- *    named in one violation, while a clip losing only its expression names just
+ *    named in one warning, while a clip losing only its expression names just
  *    that.
- * 5. One record per (action, actor): a unison action masked for two actors reports
- *    each separately, ordered by action index then actor id.
+ * 5. One record per (action, actor): a unison action masked for two actors warns
+ *    about each separately, ordered by action index then actor id.
+ * 6. The tier is a warning and nothing more: a genuine error in the same shot (an
+ *    action naming an unstaged actor) still fails, so the softening did not
+ *    disarm the gate around it.
  */
 export const test_film_perform_shot_masked_channels = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -164,24 +177,37 @@ export const test_film_perform_shot_masked_channels = (): void => {
   const quadruped = clip({ bones: QUADRUPED });
   const dropped = perform([gait(), frame], () => quadruped);
   TestValidator.equals(
-    "a gait reaching outside its region fails the shot",
+    "a gait reaching outside its region still performs",
     dropped.success,
-    false,
+    true,
   );
   TestValidator.predicate(
-    "the drop is reported on the action's own region field",
-    hasViolation(dropped, "type", "$input.draft[0].region"),
+    "the drop is reported as a warning on the action's own region field",
+    dropped.success === true &&
+      (dropped.warnings ?? []).some(
+        (v) =>
+          v.path === "$input.draft[0].region" &&
+          v.kind === "type" &&
+          v.severity === "warning",
+      ),
   );
   TestValidator.predicate(
-    "the violation names every masked bone in code-unit order",
-    dropped.success === false &&
-      dropped.violations.some(
+    "the warning names every masked bone in code-unit order",
+    dropped.success === true &&
+      (dropped.warnings ?? []).some(
         (v) =>
           v.path === "$input.draft[0].region" &&
           v.expected.includes(FORE_SORTED) &&
           v.expected.includes('"lowerBody"') &&
           v.value === "lowerBody",
       ),
+  );
+  TestValidator.equals(
+    "the clip the warning is about carries only the region's own bones",
+    dropped.success === true
+      ? [...bonesOf(dropped.motions.knightA!)].sort(compareCodeUnits)
+      : [],
+    [...HIND].sort(compareCodeUnits),
   );
 
   // 2. negative twin: the same gait, region widened to one that owns the bones
@@ -190,6 +216,11 @@ export const test_film_perform_shot_masked_channels = (): void => {
     "the same gait on fullBody performs",
     widened.success,
     true,
+  );
+  TestValidator.equals(
+    "a clip inside its region carries no warning at all",
+    widened.success === true ? (widened.warnings ?? []).length : -1,
+    0,
   );
   TestValidator.equals(
     "all twelve authored bones survive to the compiled clip",
@@ -234,8 +265,8 @@ export const test_film_perform_shot_masked_channels = (): void => {
   );
   TestValidator.predicate(
     "a layered non-locomotion region reports its dropped root and expression",
-    rootAndFace.success === false &&
-      rootAndFace.violations.some(
+    rootAndFace.success === true &&
+      (rootAndFace.warnings ?? []).some(
         (v) =>
           v.path === "$input.draft[1].region" &&
           v.expected.includes("a root displacement and an expression") &&
@@ -244,8 +275,8 @@ export const test_film_perform_shot_masked_channels = (): void => {
   );
   TestValidator.predicate(
     "a clip losing only its expression names only that",
-    rootAndFace.success === false &&
-      rootAndFace.violations.some(
+    rootAndFace.success === true &&
+      (rootAndFace.warnings ?? []).some(
         (v) =>
           v.path === "$input.draft[0].region" &&
           v.expected.includes("authors an expression") &&
@@ -271,9 +302,31 @@ export const test_film_perform_shot_masked_channels = (): void => {
   );
   TestValidator.equals(
     "a unison action reports each masked actor, ordered by actor id",
-    unison.success === false
-      ? unison.violations.map((v) => v.expected.split("'s clip")[0]!)
+    unison.success === true
+      ? (unison.warnings ?? []).map((v) => v.expected.split("'s clip")[0]!)
       : [],
     ["knightA", "knightB"],
+  );
+
+  // 6. the softening is exactly one tier wide: a real error still fails, and it
+  //    fails BEFORE any clip is compiled, so no warning rides along to soften it
+  const unstaged = perform(
+    [
+      {
+        verb: "locomote",
+        actor: "ghost",
+        start: 0,
+        duration: 1,
+        gait: "walk",
+        to: { kind: "point", point: { x: 0, y: 0, z: 0.25 } },
+      },
+      frame,
+    ],
+    () => quadruped,
+  );
+  TestValidator.predicate(
+    "an action naming an unstaged actor still fails the shot",
+    unstaged.success === false &&
+      hasViolation(unstaged, "type", "$input.draft"),
   );
 };
