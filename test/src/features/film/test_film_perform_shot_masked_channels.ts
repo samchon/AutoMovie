@@ -1,5 +1,6 @@
 import {
   IAutoMovieActionSynthesizer,
+  compareCodeUnits,
   performShot,
   stageScene,
 } from "@automovie/engine";
@@ -20,7 +21,7 @@ import {
   makeStagingWrite,
 } from "../internal/filmFixtures";
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
-import { hasViolation, violationCount } from "../internal/predicates";
+import { hasViolation } from "../internal/predicates";
 
 /** The hind legs of a retargeted quadruped: the humanoid `lowerBody` chain. */
 const HIND: AutoMovieHumanoidBone[] = [
@@ -41,6 +42,12 @@ const FORE: AutoMovieHumanoidBone[] = [
   "rightLowerArm",
   "rightHand",
 ];
+
+/** Every bone the twelve-channel quadruped gait drives. */
+const QUADRUPED: AutoMovieHumanoidBone[] = [...HIND, ...FORE];
+
+/** The hind chain plus the boundary member `lowerBody` also owns. */
+const INSIDE_LOWER: AutoMovieHumanoidBone[] = ["hips", ...HIND];
 
 /** The fore-leg bones as the violation must name them: code-unit sorted. */
 const FORE_SORTED =
@@ -121,11 +128,11 @@ const bonesOf = (motion: IAutoMovieMotion): Set<AutoMovieHumanoidBone> =>
  * 1. Positive. A twelve-bone quadruped gait under a `region`-less `locomote`
  *    fails, with a `type` violation on `$input.draft[0].region` naming every
  *    one of the six masked fore-leg bones in code-unit order.
- * 2. Negative twin. The same gait with `region: "fullBody"` succeeds with zero
- *    violations, and the compiled clip carries all twelve bones.
+ * 2. Negative twin. The same gait with `region: "fullBody"` performs, and all
+ *    twelve authored bones reach the compiled clip.
  * 3. Boundary, the region's own bones. A gait confined to `hips` plus the hind
  *    chain (all inside `lowerBody`, `hips` being the member a leg chain sits
- *    next to) succeeds and reports nothing.
+ *    next to) performs, and every one of those bones survives.
  * 4. The other two masked channels. A `head` action layered beside a `lowerBody`
  *    one loses its root, and any non-`face` clip loses its expression; both are
  *    named in one violation, while a clip losing only its expression names just
@@ -154,7 +161,7 @@ export const test_film_perform_shot_masked_channels = (): void => {
     });
 
   // 1. positive: the S-07 shape, region omitted
-  const quadruped = clip({ bones: [...HIND, ...FORE] });
+  const quadruped = clip({ bones: QUADRUPED });
   const dropped = perform([gait(), frame], () => quadruped);
   TestValidator.equals(
     "a gait reaching outside its region fails the shot",
@@ -185,29 +192,26 @@ export const test_film_perform_shot_masked_channels = (): void => {
     true,
   );
   TestValidator.equals(
-    "the widened shot reports nothing",
-    violationCount(widened),
-    0,
-  );
-  TestValidator.equals(
     "all twelve authored bones survive to the compiled clip",
-    widened.success === true ? bonesOf(widened.motions.knightA!).size : -1,
-    12,
+    widened.success === true
+      ? [...bonesOf(widened.motions.knightA!)].sort(compareCodeUnits)
+      : [],
+    [...QUADRUPED].sort(compareCodeUnits),
   );
 
   // 3. boundary: hips is the lowerBody member a leg gait sits next to
-  const clean = perform([gait(), frame], () =>
-    clip({ bones: ["hips", ...HIND] }),
-  );
+  const clean = perform([gait(), frame], () => clip({ bones: INSIDE_LOWER }));
   TestValidator.equals(
     "a gait entirely inside its region performs",
     clean.success,
     true,
   );
   TestValidator.equals(
-    "an in-region gait reports nothing",
-    violationCount(clean),
-    0,
+    "the boundary bone and the whole hind chain survive",
+    clean.success === true
+      ? [...bonesOf(clean.motions.knightA!)].sort(compareCodeUnits)
+      : [],
+    [...INSIDE_LOWER].sort(compareCodeUnits),
   );
 
   // 4. the root and expression channels, and an expression-only drop

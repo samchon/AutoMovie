@@ -113,23 +113,25 @@ interface IAutoMovieRegionPlacement extends IAutoMoviePlacement {
   action: number;
 }
 
+/**
+ * What one mask trimmed, before the action and actor that own it are known.
+ * Stated once, off {@link IAutoMovieMaskedContent}, so the three channels cannot
+ * be listed differently in the two places that read them.
+ */
+type IAutoMovieMaskedChannels = Pick<
+  IAutoMovieMaskedContent,
+  "bones" | "root" | "expression"
+>;
+
 /** Whether a mask record carries anything worth reporting. */
-const maskedAnything = (masked: {
-  bones: AutoMovieHumanoidBone[];
-  root: boolean;
-  expression: boolean;
-}): boolean => masked.bones.length > 0 || masked.root || masked.expression;
+const maskedAnything = (masked: IAutoMovieMaskedChannels): boolean =>
+  masked.bones.length > 0 || masked.root || masked.expression;
 
 const maskMotionToRegion = (
   motion: IAutoMovieMotion,
   region: AutoMovieBodyRegion,
   keepRoot: boolean,
-): {
-  motion: IAutoMovieMotion;
-  bones: AutoMovieHumanoidBone[];
-  root: boolean;
-  expression: boolean;
-} => {
+): IAutoMovieMaskedChannels & { motion: IAutoMovieMotion } => {
   const bones = new Set(bodyRegionBones(region));
   // Expression is FACE content: joints are made disjoint by the bone filter
   // below, but a synthesizer authoring an expression on a non-face clip (a

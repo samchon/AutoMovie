@@ -402,12 +402,14 @@ export const performShot = (props: {
 
   let liveCamera: string | null = null;
   const stageActions: IAutoMovieActionCall[] = [];
-  // The authoring path of each entry in `stageActions`, index for index. The
-  // compiler reports a masked clip by its position in the list it was handed,
-  // and that list is neither `actions` (frames are filtered out) nor stable
-  // (engine-injected reacts are appended), so the mapping is carried rather
-  // than recomputed from object identity, which a list repeating one action
-  // object would collapse.
+  // Where a masked-content violation lands for each entry in `stageActions`,
+  // index for index. The compiler reports a masked clip by its position in the
+  // list it was handed, and that list is neither `actions` (frames are filtered
+  // out) nor stable (engine-injected reacts are appended), so the mapping is
+  // carried rather than recomputed from object identity, which a list repeating
+  // one action object would collapse. The whole path is stored, not a prefix,
+  // because an authored action is fixed at its own `region` field while an
+  // engine-injected react has no such field to name.
   const stageActionPaths: string[] = [];
   const frames: { action: IAutoMovieCameraAction; index: number }[] = [];
   // Launch jobs collected while validating, the projectile must be a staged
@@ -612,7 +614,7 @@ export const performShot = (props: {
       if (target !== null) frames.push({ action, index: i });
     } else {
       stageActions.push(action);
-      stageActionPaths.push(`${base}[${i}]`);
+      stageActionPaths.push(`${base}[${i}].region`);
       if (action.verb === "locomote" && gaits !== undefined) {
         // A locomote names a gait by the actor's own vocabulary; the reference
         // synthesiser resolves it by name and would otherwise silently produce
@@ -1239,9 +1241,9 @@ export const performShot = (props: {
     // shot-long dilution.
     if (result.react !== null) {
       stageActions.push(result.react);
-      // The recoil is engine-scheduled, so its authoring anchor is the launch
-      // that produced it: a masked react points the author at the `onHit` they
-      // wrote, never at an action index they cannot find in their own input.
+      // The recoil is engine-scheduled and carries no `region` of its own, so
+      // a masked react points the author at the `onHit` they wrote, never at a
+      // field that does not exist or an action index absent from their input.
       stageActionPaths.push(`${base}[${job.index}].onHit`);
     }
   }
@@ -1266,7 +1268,7 @@ export const performShot = (props: {
     ].join(" and ");
     out.push(
       "type",
-      `${path}.region`,
+      path,
       `${drop.actor}'s clip authors ${lost}, which the "${drop.region}" body region does not carry, so the performance would drop that content; set region to one that owns it ("fullBody" owns every bone and the root, only "face" carries an expression), or move the content to its own action`,
       drop.region,
     );
