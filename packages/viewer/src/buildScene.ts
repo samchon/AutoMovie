@@ -80,9 +80,9 @@ export const buildScene = (
   // find one without depending on where it landed.
   const lights = new Map<string, THREE.Light>();
   for (const light of scene.lights) {
-    const built = buildLight(light);
-    root.add(built);
-    lights.set(light.id, built);
+    const object = buildLight(light);
+    root.add(object);
+    lights.set(light.id, object);
   }
 
   const space = scene.space ?? null;
