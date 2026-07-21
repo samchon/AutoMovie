@@ -57,14 +57,13 @@ export interface IAutoMovieLightOverride {
 /** One animatable light property: how it is addressed, and how it is applied. */
 export interface IAutoMovieLightChannelProperty {
   /**
-   * The value type the addressing pointer channel must declare. Pinning it is
-   * what makes `sampleClip`'s own width rule (derived from the value type)
-   * agree with {@link width} instead of being a second opinion.
+   * The value type the addressing pointer channel must declare, which is also
+   * the only place this axis states a value's WIDTH. `sampleClip` already owns
+   * the value-type → width mapping and refuses a track that disagrees with it,
+   * so restating "vec3 is three numbers" here would be a second copy of a rule
+   * that already has an owner, and the two could drift.
    */
   valueType: AutoMovieChannelValueType;
-
-  /** Numbers per keyframe, the width {@link write} consumes. */
-  width: number;
 
   /**
    * The bounds every component of a keyframe value must satisfy: the SAME ones
@@ -98,9 +97,10 @@ export interface IAutoMovieLightChannelProperty {
   carries: (kind: unknown) => boolean;
 
   /**
-   * Record the sampled value. Precondition: {@link carries} accepted the light
-   * and `value` is {@link width} long, both established by the gate and by
-   * `sampleClip`'s width check before a value ever reaches here.
+   * Record the sampled value. Precondition: {@link carries} accepted the light,
+   * and `value` is as wide as {@link valueType} resolves to — the gate
+   * establishes the first, `sampleClip`'s width check the second, before a
+   * value ever reaches here.
    */
   write: (override: IAutoMovieLightOverride, value: readonly number[]) => void;
 }
@@ -117,7 +117,6 @@ export const LIGHT_CHANNEL_PROPERTIES: Readonly<
 > = {
   intensity: {
     valueType: "scalar",
-    width: 1,
     bounds: { min: 0, max: Infinity, inclusiveMin: true },
     carries: () => true,
     write: (override, value) => {
@@ -126,7 +125,6 @@ export const LIGHT_CHANNEL_PROPERTIES: Readonly<
   },
   color: {
     valueType: "vec3",
-    width: 3,
     bounds: { min: 0, max: 1, inclusiveMin: true },
     carries: () => true,
     write: (override, value) => {
@@ -144,7 +142,6 @@ export const LIGHT_CHANNEL_PROPERTIES: Readonly<
   },
   range: {
     valueType: "scalar",
-    width: 1,
     bounds: { min: 0, max: Infinity, inclusiveMin: true },
     carries: (kind) => kind !== "directional",
     write: (override, value) => {
@@ -153,7 +150,6 @@ export const LIGHT_CHANNEL_PROPERTIES: Readonly<
   },
   coneAngle: {
     valueType: "scalar",
-    width: 1,
     bounds: { min: 0, max: 90, inclusiveMin: false },
     carries: (kind) => kind === "spot",
     write: (override, value) => {
