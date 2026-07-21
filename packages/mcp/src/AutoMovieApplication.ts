@@ -330,15 +330,16 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Measure whether an actor's arms can reach a positional target, answering
-   * the question `perform` will answer. `reachable` is true only when the
-   * target is within the arm's shell AND the IK pose that lands there satisfies
-   * the rig's range of motion; when it is not, `romViolations` names the exact
-   * joint axes that block it, and `withinShell` still reports the purely
-   * geometric distance verdict. Pass `context` explicitly, or omit it to use
-   * the resident project's committed scene plus the session-only model
-   * skeletons remembered from commitScene. A node target may name any staged
-   * placement, an actor, a set piece, or a camera.
+   * Measure whether an actor's arms can reach a positional target. `reachable`
+   * is the DISTANCE verdict: the target lies inside the arm's shell. Whether
+   * the reach also survives `perform` is a second, separate answer per arm:
+   * `poseWithinRom` says whether the returned IK pose satisfies the rig's range
+   * of motion, and `romViolations` names the exact joint axes that break it, at
+   * the same paths `perform` reports (#1338). Read both: a reach can be well
+   * inside the shell and still be a pose the joints cannot hold. Pass `context`
+   * explicitly, or omit it to use the resident project's committed scene plus
+   * the session-only model skeletons remembered from commitScene. A node target
+   * may name any staged placement, an actor, a set piece, or a camera.
    *
    * @param props The actor id, target, and optional explicit context.
    * @returns The reach report, or null with a reason naming the id or the

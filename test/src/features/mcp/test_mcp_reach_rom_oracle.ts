@@ -102,38 +102,46 @@ const reachOf = (skeleton: IAutoMovieSkeleton, point: IAutoMovieVector3) =>
   }).reach;
 
 /**
- * `getReach` must apply the gate its consumer applies (#1338).
+ * `getReach` must run the gate its consumer runs, and say only what it can
+ * establish (#1338).
  *
  * The oracle used to answer `reachable: true` on distance alone, so an author
- * following the surface's own "measure, then stage" doctrine exactly staged
- * against a pose `perform` then refused with `error`-severity ROM violations,
- * after the staging and blocking the measurement existed to protect. The report
- * now separates the two questions it was conflating: `withinShell` is the pure
- * distance test the old `reachable` actually computed, `reachable` is that AND
- * an IK pose the rig's joints can hold, and `romViolations` carries the axes
- * that block it.
+ * following the surface's own "measure, then stage" doctrine staged against a
+ * pose `perform` then refused with `error`-severity ROM violations, after the
+ * staging and blocking the measurement existed to protect. The report now
+ * carries the ROM verdict as its own per-arm answer: `reachable` stays the
+ * distance question, `poseWithinRom` says whether the returned pose survives
+ * the rig, and `romViolations` names the axes that break it.
+ *
+ * The verdict is scoped to the POSE, not to the arm, and that scope is load
+ * bearing. The engine has one analytic two-bone solve; a candidate that breaks
+ * ROM is not proof that no valid pose exists. Folding it into `reachable` was
+ * tried and reverted: on the canonical humanoid the solve produces a
+ * ROM-breaking pose for nearly every target, so the field went permanently
+ * false and the tool became useless, which is a worse failure than the one
+ * being fixed and asserts an impossibility the engine never established.
  *
  * Scenarios:
  *
  * 1. A hinge elbow with a target INSIDE the reach shell whose analytic solve needs
- *    off-hinge articulation: `withinShell` true, `reachable` false, and
- *    `romViolations` naming the immobile axes at the same `$input.joints[i]`
- *    paths the perform gate reports, at `error` severity.
+ *    off-hinge articulation: `reachable` stays true (the arm is long enough),
+ *    `poseWithinRom` is false, and `romViolations` names the immobile axes at
+ *    the same `$input.joints[i]` paths the perform gate reports, at `error`
+ *    severity.
  * 2. Negative twin, one property away: the same rig with the elbow's axes opened
- *    reports `reachable: true` with no violations, so the gate does not
- *    over-refuse. Every distance is bit-identical across the pair, proving the
- *    constraint alone flipped the verdict.
+ *    reports `poseWithinRom: true` with no violations, so the ROM answer does
+ *    not over-refuse. Every distance is bit-identical across the pair, proving
+ *    the constraint alone flipped the verdict and the geometry did not move.
  * 3. Boundary, out of shell: a target past the arm's span keeps its positive
- *    `gap`, reports `withinShell: false` and `reachable: false`, and still
- *    returns the documented "extends toward it" pose.
+ *    `gap`, reports `reachable: false`, and still returns the documented
+ *    "extends toward it" pose.
  * 4. Boundary, degenerate solve: a target ON the shoulder has no two-bone
  *    solution, so `pose` is null. Nothing can be claimed about a pose that does
- *    not exist, so `reachable` is false with an empty `romViolations` even
- *    though the target is trivially within the shell.
+ *    not exist, so `poseWithinRom` is false with an empty `romViolations`,
+ *    while `reachable` still answers the distance question it can answer.
  * 5. Boundary, nothing to measure: an armless rig still answers `reach: null` with
  *    the unmeasurable reason rather than a confident geometric verdict.
- * 6. The per-arm verdict propagates to the top-level `reachable`, the field an
- *    author reads first.
+ * 6. The distance verdict propagates to the top-level `reachable`.
  */
 export const test_mcp_reach_rom_oracle = (): void => {
   // 1. inside the shell, outside the ROM
@@ -141,13 +149,13 @@ export const test_mcp_reach_rom_oracle = (): void => {
   const hinged = reachOf(armRig(HINGE), target);
   TestValidator.predicate(
     "a hinge elbow reports the target inside its shell",
-    hinged !== null && hinged.left !== null && hinged.left.withinShell,
+    hinged !== null && hinged.left !== null && hinged.left.reachable,
   );
   TestValidator.predicate(
-    "and still refuses it, naming the immobile axes",
+    "and refuses the POSE, naming the immobile axes",
     hinged !== null &&
       hinged.left !== null &&
-      hinged.left.reachable === false &&
+      hinged.left.poseWithinRom === false &&
       hinged.left.pose !== null &&
       hinged.left.romViolations.length > 0 &&
       hinged.left.romViolations.every(
@@ -160,21 +168,21 @@ export const test_mcp_reach_rom_oracle = (): void => {
         entry.expected.includes("does not move in"),
       ),
   );
-  // 6. the report's own verdict follows the arms
+  // 6. the top-level field answers the distance question, and says so
   TestValidator.equals(
-    "the top-level verdict refuses too",
+    "the report's reachable is the distance verdict, not the ROM one",
     hinged?.reachable,
-    false,
+    true,
   );
 
   // 2. NEGATIVE TWIN: same geometry, same target, elbow opened up
   const free = reachOf(armRig(FREE), target);
   TestValidator.predicate(
-    "an unconstrained elbow reaches the identical target cleanly",
+    "an unconstrained elbow holds the identical target's pose cleanly",
     free !== null &&
       free.left !== null &&
-      free.left.withinShell &&
       free.left.reachable &&
+      free.left.poseWithinRom &&
       free.left.romViolations.length === 0 &&
       free.reachable,
   );
@@ -196,7 +204,6 @@ export const test_mcp_reach_rom_oracle = (): void => {
     far !== null &&
       far.left !== null &&
       far.left.gap > 0 &&
-      far.left.withinShell === false &&
       far.left.reachable === false &&
       far.left.pose !== null,
   );
@@ -204,14 +211,13 @@ export const test_mcp_reach_rom_oracle = (): void => {
   // 4. BOUNDARY: the degenerate solve, a target on the shoulder itself
   const shoulder = reachOf(armRig(FREE), { x: 0.2, y: 1.4, z: 0 });
   TestValidator.predicate(
-    "a target on the shoulder has no solve, so nothing is claimed",
+    "a target on the shoulder has no solve, so nothing is claimed about one",
     shoulder !== null &&
       shoulder.left !== null &&
       shoulder.left.pose === null &&
-      shoulder.left.withinShell &&
-      shoulder.left.reachable === false &&
-      shoulder.left.romViolations.length === 0 &&
-      shoulder.reachable === false,
+      shoulder.left.reachable &&
+      shoulder.left.poseWithinRom === false &&
+      shoulder.left.romViolations.length === 0,
   );
 
   // 5. BOUNDARY: nothing to measure

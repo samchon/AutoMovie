@@ -258,10 +258,10 @@ export interface IAutoMovieMcpReachReport {
   right: IAutoMovieMcpArmReach | null;
 
   /**
-   * True when either arm can reach the target AND the pose that reaches it
-   * satisfies that arm's range of motion, i.e. the answer `perform` will give
-   * (#1338). Consult {@link IAutoMovieMcpArmReach.withinShell} for the purely
-   * geometric "is it within arm's length" question.
+   * True when either arm's shell contains the target: a DISTANCE verdict, and
+   * only that. It does not promise `perform` will accept the reach; consult
+   * each arm's {@link IAutoMovieMcpArmReach.poseWithinRom} and
+   * {@link IAutoMovieMcpArmReach.romViolations} for that (#1338).
    */
   reachable: boolean;
 }
@@ -281,35 +281,45 @@ export interface IAutoMovieMcpArmReach {
   gap: number;
 
   /**
-   * True when the target lies within the arm's reach shell, a pure distance
-   * test (`gap == 0`). Geometry only: the arm may still be unable to assume the
-   * pose that lands there.
-   */
-  withinShell: boolean;
-
-  /**
-   * True when this arm both reaches the target and does so within the rig's
-   * range of motion: `withinShell` AND `romViolations` empty (#1338).
+   * True when the target lies within the arm's reach shell (`gap == 0`). A
+   * DISTANCE verdict: whether the arm is long enough, reaching from where the
+   * actor stands.
    *
-   * This is the verdict the CONSUMING stage gives. `perform` compiles the same
-   * IK pose and runs the same ROM gate, so an oracle that answered on distance
-   * alone sent authors to stage against a reach `perform` then refused, after
-   * the staging and blocking the measurement existed to protect.
+   * It is deliberately NOT the answer `perform` gives. Whether the arm can hold
+   * the pose that lands there is {@link poseWithinRom}, and the two are separate
+   * because the engine can establish the first and can only answer the second
+   * about ONE candidate pose (see {@link romViolations}).
    */
   reachable: boolean;
 
   /**
+   * True when {@link pose} satisfies the rig's range of motion, so `perform`
+   * would accept this reach. False when it would refuse, and `false` when no
+   * pose was solved at all.
+   *
+   * Scoped to the pose, not to the arm, and the scope is the honest limit. A
+   * `false` here says "the pose this solver produced breaks the rig", NOT "the
+   * arm cannot reach": the engine has one analytic two-bone solve, so a failed
+   * candidate is not proof that no valid pose exists. Claiming the stronger
+   * verdict would repeat the original defect's error (#1338) in the opposite
+   * direction, asserting an impossibility from a single unsuccessful attempt.
+   */
+  poseWithinRom: boolean;
+
+  /**
    * The violations the rig's ROM gate raises against {@link pose}, empty when
-   * the pose is clean. These are the exact violations `perform` would report,
-   * field-located per joint axis, so an author can see WHICH axis blocks the
-   * reach rather than only that it does. Also empty when no pose was solved.
+   * the pose is clean or no pose was solved. These are the exact violations
+   * `perform` reports for this pose, field-located per joint axis, so the
+   * author sees WHICH axis blocks the reach at measure time instead of after
+   * staging and blocking against it.
    */
   romViolations: IAutoMovieConstraintViolation[];
 
   /**
-   * IK pose that reaches the target, or extends toward it if out of range.
-   * `null` when the chain is degenerate for this target (a target coincident
-   * with the shoulder has no solve), which is also reported as not reachable.
+   * IK pose that reaches the target, or extends toward it if out of range, in
+   * CLINICAL angles (the space the ROM table, `perform`, and a pose author all
+   * use). `null` when the chain is degenerate for this target, a target
+   * coincident with the shoulder having no two-bone solve.
    */
   pose: IAutoMoviePose | null;
 }

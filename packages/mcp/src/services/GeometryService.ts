@@ -1,5 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   IAutoMovieStagedSet,
   POSITIONAL_TARGET_SHAPE,
   Quaternion,
@@ -1048,13 +1049,16 @@ const measureArmReach = (
   );
   const maximumDistance = upperLength + lowerLength;
   const gap = Math.max(0, targetDistance - maximumDistance);
-  const withinShell = gap <= 1e-6;
-  const pose = reachPose(skeleton, side, target);
-  // The oracle applies the gate its consumer applies (#1338). `perform`
-  // compiles this same pose and refuses it on the rig's ROM, so a report that
-  // answered on distance alone contradicted the stage it was consulted to
-  // protect. A chain with no solve (a target on the shoulder) is not reachable
-  // either: there is no pose to hand back, so nothing can be claimed about it.
+  // The oracle runs the gate its consumer runs (#1338), and runs it in the
+  // coordinate frame the gate is written in. `DEFAULT_HUMANOID_ROM` is stated
+  // in CLINICAL angles (neutral = arms at the sides) while a T-pose rig rests
+  // at ~90 degrees of shoulder abduction, so decomposing without the rest frame
+  // yields rest-relative angles that the clinical table then rejects by a
+  // ~90-degree offset. `HUMANOID_REST_FRAME` is the canonical humanoid's own
+  // table and pairs with the `HUMANOID_JOINT_AXES` this path already assumes;
+  // supplying it changes the reported angles, never the geometry, and the hand
+  // still lands on the same point.
+  const pose = reachPose(skeleton, side, target, HUMANOID_REST_FRAME);
   const romViolations =
     pose === null ? [] : validatePose({ pose, skeleton }).items;
   return {
@@ -1062,8 +1066,13 @@ const measureArmReach = (
     targetDistance,
     maximumDistance,
     gap,
-    withinShell,
-    reachable: withinShell && pose !== null && romViolations.length === 0,
+    // Distance, and only distance. Folding the ROM verdict in here made the
+    // field permanently false on the canonical humanoid, because the analytic
+    // solve cannot produce a ROM-valid arm pose for almost any target; that is
+    // its own defect, and reporting it as "unreachable" would state an
+    // impossibility the engine has not established.
+    reachable: gap <= 1e-6,
+    poseWithinRom: pose !== null && romViolations.length === 0,
     romViolations,
     pose,
   };
