@@ -148,7 +148,8 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
       "an excess property on an echoed object is refused at its INPUT path",
       echoed.refused &&
         echoed.text.includes("$input.spec.model.materials[0].baseColor.z") &&
-        echoed.text.includes("$input.spec.model.materials[0].baseColor.z") &&
+        // the blame no longer lands on the output wrapper it used to name
+        echoed.text.includes("$input.forged.") === false &&
         echoed.text.includes('Type errors in "forgeProp" output:') === false,
     );
 
