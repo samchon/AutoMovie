@@ -1,5 +1,4 @@
 import {
-  IAutoMovieChannel,
   IAutoMovieConstraintViolation,
   IAutoMovieScene,
   IAutoMovieShot,
@@ -19,16 +18,12 @@ import {
   validateVectorArtifact,
 } from "./artifactShape";
 import {
+  IAutoMovieNodeChannel,
   NODE_CHANNEL_PATHS,
   clipLoopFault,
   clipTrackShapeFaults,
 } from "./clipTrackShape";
 import { toValidation } from "./violation";
-
-type AutoMovieNodeChannelPath = Extract<
-  IAutoMovieChannel,
-  { kind: "node" }
->["path"];
 
 /**
  * The shot artifact's structural contract, owned by the engine that produces
@@ -654,7 +649,7 @@ const validateHonorableChannel = (
   // instead of a violation (#1353): the pointer arm was closed and the node
   // arm's unknown paths were left open, which is the same false green one
   // discriminator over.
-  if (!NODE_CHANNEL_PATHS.has(channel.path as AutoMovieNodeChannelPath))
+  if (!NODE_CHANNEL_PATHS.has(channel.path as IAutoMovieNodeChannel["path"]))
     pushViolation(
       violations,
       "type",

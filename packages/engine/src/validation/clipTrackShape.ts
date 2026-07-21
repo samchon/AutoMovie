@@ -5,7 +5,11 @@ import {
   IAutoMovieConstraintViolation,
 } from "@automovie/interface";
 
-type IAutoMovieNodeChannel = Extract<IAutoMovieChannel, { kind: "node" }>;
+/** The node channel arm, and the property set {@link NODE_CHANNEL_PATHS} spans. */
+export type IAutoMovieNodeChannel = Extract<
+  IAutoMovieChannel,
+  { kind: "node" }
+>;
 type IAutoMoviePointerChannel = Extract<IAutoMovieChannel, { kind: "pointer" }>;
 
 /**

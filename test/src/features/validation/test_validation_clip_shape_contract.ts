@@ -68,9 +68,9 @@ const bothAccept = (value: unknown): boolean =>
  * uneven value stride, an empty keyframe list, a wrong value width, an
  * unsupported interpolation, a non-triplet `cubicspline` stride, a non-boolean
  * `loop`, and an unknown node channel path each committed clean and threw
- * later. Both sides now read the same rule set, and this scenario pins the
- * equivalence rather than the seven checks individually: a rule that lands on
- * one side only fails here.
+ * later. Both sides now derive from one rule set, so this scenario asserts the
+ * two verdicts together, rule by rule, rather than each side's checks apart: a
+ * rule reintroduced on one side alone is what this would catch.
  *
  * Scenarios:
  *

@@ -160,8 +160,9 @@ const normalizeQuatArray = (q: number[]): number[] => {
 
 /**
  * The clip's own shape, plus the query time. Duration and `loop` come from the
- * shared contract ({@link clipTrackShape}), so the artifact gate that exists to
- * spare a consumer this throw refuses exactly what would reach it (#1353).
+ * shared contract ({@link clipDurationFault}, {@link clipLoopFault}), so the
+ * artifact gate that exists to spare a consumer this throw refuses exactly what
+ * would reach it (#1353).
  */
 const validateSampleTime = (
   seconds: number,
