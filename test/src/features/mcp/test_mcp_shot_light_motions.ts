@@ -40,6 +40,15 @@ const scene: IAutoMovieScene = {
       color: { r: 1, g: 1, b: 1, a: null, hex: null },
       intensity: 3,
     },
+    {
+      id: "lamp",
+      type: "spot",
+      transform: IDENTITY_TRANSFORM,
+      color: { r: 1, g: 1, b: 1, a: null, hex: null },
+      intensity: 2,
+      range: 10,
+      coneAngle: 40,
+    },
   ],
   space: null,
 };
@@ -52,13 +61,14 @@ const clip = (
   channel: unknown,
   times: number[] = [0, 1.6],
   values: number[] = [1.4, 0.04],
+  interpolation = "step",
 ): IAutoMovieClip =>
   bad({
     id,
     name: null,
     duration: 3,
     loop: false,
-    tracks: [{ channel, times, values, interpolation: "step" }],
+    tracks: [{ channel, times, values, interpolation }],
   });
 
 const pointerChannel = (pointer: string, valueType = "scalar"): unknown => ({
@@ -141,7 +151,15 @@ const says = (
  * 7. Boundary: a malformed scene light (a `null` entry, and a light with a
  *    non-string id) is simply not addressable — the pointer naming it reads as
  *    unstaged rather than crashing the gate.
- * 8. The refusal reaches `commitShot`, not only the read-only validator.
+ * 8. Every keyframe is held to the property's DOCUMENTED range, the same numbers
+ *    `validateSceneArtifact` holds the staged light to: a negative intensity, a
+ *    colour component past 1, and a zero cone are each refused at the value
+ *    that carries them, while the inclusive bounds themselves (a 90 degree
+ *    cone, a zero intensity) stay legal. A `cubicspline` track is exempt,
+ *    because its stored triplets include tangents, which are derivatives and
+ *    not light values. A non-finite keyframe is reported exactly once, by the
+ *    clip gate that owns finiteness.
+ * 9. The refusal reaches `commitShot`, not only the read-only validator.
  */
 export const test_mcp_shot_light_motions = (): void => {
   const blowout = clip(
@@ -330,7 +348,83 @@ export const test_mcp_shot_light_motions = (): void => {
     })(),
   );
 
-  // 8. the commit gate carries the same refusal.
+  // 8. the property's own bounds, the ones the staged light is held to.
+  const boundsOn = (
+    pointer: string,
+    valueType: string,
+    values: number[],
+    interpolation = "step",
+  ): IAutoMovieValidation =>
+    validate({
+      lightMotions: [
+        clip(
+          "bounded",
+          pointerChannel(pointer, valueType),
+          [0, 1.6],
+          values,
+          interpolation,
+        ),
+      ],
+    });
+  TestValidator.predicate(
+    "a keyframe outside the property's documented range is refused",
+    says(
+      boundsOn("/lights/candleGlow/intensity", "scalar", [1.4, -0.5]),
+      ".lightMotions[0].tracks[0].values[1]",
+      "light intensity",
+    ) &&
+      says(
+        boundsOn("/lights/candleGlow/color", "vec3", [1, 1, 1, 1.2, 0, 0]),
+        ".lightMotions[0].tracks[0].values[3]",
+        "light color",
+      ) &&
+      says(
+        boundsOn("/lights/lamp/coneAngle", "scalar", [40, 0]),
+        ".lightMotions[0].tracks[0].values[1]",
+        "light coneAngle",
+      ),
+  );
+  TestValidator.equals(
+    "the inclusive bound itself is legal: a 90 degree cone, a zero intensity",
+    [
+      boundsOn("/lights/lamp/coneAngle", "scalar", [40, 90]).success,
+      boundsOn("/lights/candleGlow/intensity", "scalar", [1.4, 0]).success,
+    ],
+    [true, true],
+  );
+  // A cubicspline's stored triplets are in-tangent/value/out-tangent, and a
+  // tangent is a derivative rather than a light value: range-checking one would
+  // refuse a legal spline, so the bounds rule deliberately stops at the two
+  // interpolations whose stored numbers ARE values.
+  TestValidator.equals(
+    "a cubicspline's negative tangent is not read as a negative intensity",
+    boundsOn(
+      "/lights/candleGlow/intensity",
+      "scalar",
+      [0, 1.4, -2, 0, 0.04, 0],
+      "cubicspline",
+    ).success,
+    true,
+  );
+  // One fault, one violation: finiteness belongs to the clip gate, and the
+  // bounds check must not report the same value a second time.
+  const notFinite = boundsOn("/lights/candleGlow/intensity", "scalar", [
+    1.4,
+    NaN,
+  ]);
+  TestValidator.equals(
+    "a non-finite keyframe is reported once, by the gate that owns finiteness",
+    notFinite.success === false
+      ? notFinite.violations.filter(
+          (violation) =>
+            violation.path ===
+            "$input.shot.lightMotions[0].tracks[0].values[1]",
+        ).length
+      : -1,
+    1,
+  );
+
+  // 9. the commit gate carries the same refusal.
   const committed = app.commitShot({
     slate: {
       script: {

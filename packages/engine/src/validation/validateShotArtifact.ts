@@ -6,6 +6,7 @@ import {
 } from "@automovie/interface";
 
 import {
+  AutoMovieLightProperty,
   LIGHT_CHANNEL_PROPERTIES,
   parseLightPointer,
 } from "../resolve/lightChannel";
@@ -625,8 +626,11 @@ export const validateClipArtifact = (
  * The per-field rule for which channels one clip's tracks may address. A shot
  * field admits exactly the targets its own applier writes, so the gate is a
  * parameter of the field rather than one fixed rule for every clip.
+ *
+ * Exported because {@link validateClipArtifact} takes one: a parameter type a
+ * declaration cannot name is not a contract a caller can meet.
  */
-type IAutoMovieClipChannelGate = (
+export type IAutoMovieClipChannelGate = (
   channel: Record<string, unknown>,
   path: string,
   violations: IAutoMovieConstraintViolation[],
@@ -787,12 +791,17 @@ const stagedLightKinds = (scene: unknown): ReadonlyMap<string, unknown> => {
  * absent stays valid ("absent means legacy"), a present value is inspected in
  * full.
  *
- * Beyond each clip's own shape, one rule is the field's alone: no two tracks in
- * the whole field may address the same light property. Within one clip
- * `validateClipArtifact` already refuses a duplicate channel, but two CLIPS
- * both dimming the same candle would resolve last-writer-wins, which is a
+ * Beyond each clip's own shape, two rules are the field's alone.
+ *
+ * No two tracks in the whole field may address the same light property. Within
+ * one clip `validateClipArtifact` already refuses a duplicate channel, but two
+ * CLIPS both dimming the same candle would resolve last-writer-wins, which is a
  * deterministic answer to a question the artifact never meant to ask. Refusing
  * it keeps the committed film's lighting single-valued at every instant.
+ *
+ * And every keyframe value is held to the property's own bounds
+ * ({@link appendLightValueBounds}), because the light a track drives has a
+ * documented range that the scene gate already enforces on the staged value.
  */
 export const appendLightMotionsArtifact = (
   lightMotions: unknown,
@@ -824,8 +833,53 @@ export const appendLightMotionsArtifact = (
         id: target === null ? undefined : `${target.light}/${target.property}`,
         path: `${clipPath}.tracks[${j}].channel`,
       });
+      if (target !== null)
+        appendLightValueBounds(
+          track,
+          target,
+          `${clipPath}.tracks[${j}]`,
+          violations,
+        );
     });
   });
   validateUniqueBy(addressed, "light motion channel", violations);
+};
+
+/**
+ * Every keyframe value of one light track, held to the property's own bounds:
+ * the same `validateRange` call, with the same numbers, the scene gate makes on
+ * the staged light. A film must not be able to state through time what
+ * `commitScene` refuses outright.
+ *
+ * `cubicspline` is deliberately exempt. Its `values` interleave in-tangent,
+ * value, and out-tangent per keyframe, and a tangent is a derivative, not a
+ * light value: range-checking one would refuse a legal spline. A spline's
+ * in-between values can leave the keyframe hull in any case, which is a
+ * property of the glTF sampler rather than of this axis, so the honest rule is
+ * the one that is decidable — every stored value of a `step` or `linear` track,
+ * whose samples are exactly the hull of its keys.
+ */
+const appendLightValueBounds = (
+  track: unknown,
+  target: { property: AutoMovieLightProperty },
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (!isRecord(track) || track.interpolation === "cubicspline") return;
+  const { bounds } = LIGHT_CHANNEL_PROPERTIES[target.property];
+  asArray(track.values).forEach((value, k) => {
+    // Finiteness is `validateClipArtifact`'s to report, and reporting it twice
+    // on one path would read as two separate faults.
+    if (!Number.isFinite(value)) return;
+    validateRange(
+      value,
+      `${path}.values[${k}]`,
+      bounds.min,
+      bounds.max,
+      `light ${target.property}`,
+      violations,
+      bounds.inclusiveMin,
+    );
+  });
 };
 

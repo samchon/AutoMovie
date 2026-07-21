@@ -67,6 +67,22 @@ export interface IAutoMovieLightChannelProperty {
   width: number;
 
   /**
+   * The bounds every component of a keyframe value must satisfy: the SAME ones
+   * the staged light is held to by the scene gate. Without them a track could
+   * state through time what `commitScene` refuses outright (a negative
+   * intensity, a 200-degree cone), and the axis would be the one place in the
+   * artifact where a documented range is not enforced.
+   */
+  bounds: {
+    /** Lower bound. */
+    min: number;
+    /** Upper bound, `Infinity` for none. */
+    max: number;
+    /** Whether {@link min} itself is allowed (`false` for the spot cone). */
+    inclusiveMin: boolean;
+  };
+
+  /**
    * Whether a light of this kind (`IAutoMovieLight["type"]`) carries the
    * property at all: `range` is meaningless on a directional (infinitely
    * distant) light and `coneAngle` exists only on a spot. The gate asks this
@@ -102,6 +118,7 @@ export const LIGHT_CHANNEL_PROPERTIES: Readonly<
   intensity: {
     valueType: "scalar",
     width: 1,
+    bounds: { min: 0, max: Infinity, inclusiveMin: true },
     carries: () => true,
     write: (override, value) => {
       override.intensity = value[0]!;
@@ -110,6 +127,7 @@ export const LIGHT_CHANNEL_PROPERTIES: Readonly<
   color: {
     valueType: "vec3",
     width: 3,
+    bounds: { min: 0, max: 1, inclusiveMin: true },
     carries: () => true,
     write: (override, value) => {
       override.color = {
@@ -127,6 +145,7 @@ export const LIGHT_CHANNEL_PROPERTIES: Readonly<
   range: {
     valueType: "scalar",
     width: 1,
+    bounds: { min: 0, max: Infinity, inclusiveMin: true },
     carries: (kind) => kind !== "directional",
     write: (override, value) => {
       override.range = value[0]!;
@@ -135,6 +154,7 @@ export const LIGHT_CHANNEL_PROPERTIES: Readonly<
   coneAngle: {
     valueType: "scalar",
     width: 1,
+    bounds: { min: 0, max: 90, inclusiveMin: false },
     carries: (kind) => kind === "spot",
     write: (override, value) => {
       override.coneAngle = value[0]!;
