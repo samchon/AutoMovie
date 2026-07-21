@@ -1,6 +1,6 @@
+import { IAutoMovieStagedSet } from "@automovie/engine";
 import {
   IAutoMovieScriptApplication,
-  IAutoMovieStagedSet,
   IAutoMovieStagingApplication,
 } from "@automovie/interface";
 import { AutoMovieApplication } from "@automovie/mcp";

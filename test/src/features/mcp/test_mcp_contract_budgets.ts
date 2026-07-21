@@ -25,6 +25,31 @@ const schemaChars = (schema: unknown): number =>
   JSON.stringify(schema ?? {}).length;
 
 /**
+ * The shape this scenario reads out of an advertised tool schema: the `$defs`
+ * map whose entries are the inlined type closure, and nothing else.
+ *
+ * Declared rather than cast past. A tool's schema arrives as an untyped JSON
+ * object, and stating what this scenario expects to find in it is what lets the
+ * closure walk below stay typed end to end; reading it as an opaque bag and
+ * asserting `number` at the arithmetic would only move the claim to where it
+ * cannot be checked.
+ */
+interface IAdvertisedSchema {
+  /** Inlined type definitions, keyed by name. Their contents are not read. */
+  $defs?: Record<string, unknown>;
+}
+
+/** Total serialized size of every `$defs` entry one schema inlines. */
+const closureChars = (schema: unknown): number => {
+  const defs = (schema as IAdvertisedSchema | undefined)?.$defs;
+  if (defs === undefined) return 0;
+  let chars = 0;
+  for (const definition of Object.values(defs))
+    chars += JSON.stringify(definition).length;
+  return chars;
+};
+
+/**
  * Total advertised schema payload, in characters.
  *
  * COUNTING RULE, stated so an independent measurement cannot disagree by
@@ -157,18 +182,8 @@ export const test_mcp_contract_budgets = async (): Promise<void> => {
       for (const schema of [
         tool.inputSchema,
         (tool as { outputSchema?: unknown }).outputSchema,
-      ]) {
-        const defs = (schema as { $defs?: Record<string, unknown> } | undefined)
-          ?.$defs;
-        if (defs === undefined) continue;
-        largestClosure = Math.max(
-          largestClosure,
-          Object.values(defs).reduce(
-            (sum, definition) => sum + JSON.stringify(definition).length,
-            0,
-          ),
-        );
-      }
+      ])
+        largestClosure = Math.max(largestClosure, closureChars(schema));
     const headroom = SCHEMA_PAYLOAD_BUDGET - total;
     TestValidator.predicate(
       `the budget cannot absorb another inlined closure (headroom ${headroom} < ${largestClosure})`,

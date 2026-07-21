@@ -12,6 +12,7 @@ import {
 import { aimRotation } from "../kinematics/aimRotation";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { isRecord } from "../validation/artifactShape";
 import { validateSpace } from "../validation/validateSpace";
 import { ViolationCollector } from "../validation/violation";
 import { lookRotation } from "./cameraMove";
@@ -196,7 +197,7 @@ const validateLightColor = (
   path: string,
   out: ViolationCollector,
 ): void => {
-  if (typeof color !== "object" || color === null || Array.isArray(color)) {
+  if (!isRecord(color)) {
     out.push(
       "type",
       `${path}.color`,
@@ -205,19 +206,48 @@ const validateLightColor = (
     );
     return;
   }
-  const channels = color as Record<"r" | "g" | "b" | "a", unknown>;
   for (const key of ["r", "g", "b"] as const)
-    out.range(
+    unitComponent(
+      color[key],
       `${path}.color.${key}`,
-      channels[key] as number,
-      0,
-      1,
       `light color ${key}`,
+      out,
     );
   // `a` is nullable by contract: a light slot is opacity-irrelevant, so `null`
   // is the documented value there, distinct from an out-of-range number.
-  if (channels.a !== null)
-    out.range(`${path}.color.a`, channels.a as number, 0, 1, "light color a");
+  if (color.a !== null)
+    unitComponent(color.a, `${path}.color.a`, "light color a", out);
+};
+
+/**
+ * One color component in `[0, 1]`, reported in
+ * {@link ViolationCollector.range}'s own words.
+ *
+ * The collector's helper takes a `number`, and a component read off an untyped
+ * payload is `unknown`. Casting it to `number` to satisfy that signature would
+ * assert exactly the thing the check exists to doubt, so the comparison narrows
+ * with `typeof` instead and the message is kept identical to the collector's,
+ * so the two rungs read the same to an author.
+ */
+const unitComponent = (
+  value: unknown,
+  path: string,
+  label: string,
+  out: ViolationCollector,
+): void => {
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= 1
+  )
+    return;
+  out.push(
+    "range",
+    path,
+    `${label} must be a finite number within [0, 1], but was ${String(value)}`,
+    value,
+  );
 };
 
 /**
