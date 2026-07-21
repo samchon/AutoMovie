@@ -825,21 +825,25 @@ export const appendLightMotionsArtifact = (
     const clipPath = `${path}[${i}]`;
     validateClipArtifact(clip, clipPath, violations, gate);
     asArray(isRecord(clip) ? clip.tracks : undefined).forEach((track, j) => {
-      const channel: unknown = isRecord(track) ? track.channel : undefined;
+      const trackPath = `${clipPath}.tracks[${j}]`;
+      // A track that is not an object addresses nothing; `validateClipArtifact`
+      // has already refused it at its own index. Narrowing here rather than
+      // re-asking further down keeps the bounds pass free of a guard its caller
+      // has already decided, which no input could ever reach.
+      if (!isRecord(track)) {
+        addressed.push({ id: undefined, path: `${trackPath}.channel` });
+        return;
+      }
+      const channel: unknown = track.channel;
       const target = isRecord(channel)
         ? parseLightPointer(channel.pointer)
         : null;
       addressed.push({
         id: target === null ? undefined : `${target.light}/${target.property}`,
-        path: `${clipPath}.tracks[${j}].channel`,
+        path: `${trackPath}.channel`,
       });
       if (target !== null)
-        appendLightValueBounds(
-          track,
-          target,
-          `${clipPath}.tracks[${j}]`,
-          violations,
-        );
+        appendLightValueBounds(track, target.property, trackPath, violations);
     });
   });
   validateUniqueBy(addressed, "light motion channel", violations);
@@ -860,13 +864,13 @@ export const appendLightMotionsArtifact = (
  * whose samples are exactly the hull of its keys.
  */
 const appendLightValueBounds = (
-  track: unknown,
-  target: { property: AutoMovieLightProperty },
+  track: Record<string, unknown>,
+  property: AutoMovieLightProperty,
   path: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
-  if (!isRecord(track) || track.interpolation === "cubicspline") return;
-  const { bounds } = LIGHT_CHANNEL_PROPERTIES[target.property];
+  if (track.interpolation === "cubicspline") return;
+  const { bounds } = LIGHT_CHANNEL_PROPERTIES[property];
   asArray(track.values).forEach((value, k) => {
     // Finiteness is `validateClipArtifact`'s to report, and reporting it twice
     // on one path would read as two separate faults.
@@ -876,7 +880,7 @@ const appendLightValueBounds = (
       `${path}.values[${k}]`,
       bounds.min,
       bounds.max,
-      `light ${target.property}`,
+      `light ${property}`,
       violations,
       bounds.inclusiveMin,
     );

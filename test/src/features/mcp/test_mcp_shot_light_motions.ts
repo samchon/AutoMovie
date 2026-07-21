@@ -146,8 +146,9 @@ const says = (
  *    last-writer-wins, a deterministic answer to a question it never meant to
  *    ask. Two DIFFERENT properties of one light stay legal, one property away.
  * 6. The list gate is not the element gate: a non-array `lightMotions` stops at
- *    the field, a null clip is refused at its index, and a null track at its
- *    own.
+ *    the field, a null clip is refused at its index, a null track at its own,
+ *    and a track whose `channel` is not an object at the channel. Three nesting
+ *    levels, three separate gates, none of them reading through a primitive.
  * 7. Boundary: a malformed scene light (a `null` entry, and a light with a
  *    non-string id) is simply not addressable — the pointer naming it reads as
  *    unstaged rather than crashing the gate.
@@ -323,6 +324,13 @@ export const test_mcp_shot_light_motions = (): void => {
           lightMotions: [bad({ ...blowout, tracks: [null] })],
         }),
         ".lightMotions[0].tracks[0]",
+        "must be a JSON object",
+      ) &&
+      says(
+        validate({
+          lightMotions: [clip("channelless", null, [0], [1.4])],
+        }),
+        ".lightMotions[0].tracks[0].channel",
         "must be a JSON object",
       ),
   );
