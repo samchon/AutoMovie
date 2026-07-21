@@ -80,9 +80,32 @@ Because of that, a **resident** `commitShot` whose shot references any motion mu
 
 A shot's `objectMotions` and `cameraMotion` tracks address **node** channels: `{ "kind": "node", "node": "<scene node id>", "path": "translation" | "rotation" | "scale" | "weights" }`. That is what the renderer and the viewer apply, and a track addressing anything else is refused at `validateShot` / `commitShot` rather than accepted and dropped.
 
-The keyframe payload is a glTF-style pair of flat arrays, and it is checked to the depth the sampler reads it: `times` strictly increases inside `[0, duration]`, `values` holds exactly `times.length x channel width` finite numbers (3 for `translation`/`scale`, 4 for `rotation`, whatever the model carries for `weights`, times three for `cubicspline`, which stores in-tangent/value/out-tangent per keyframe), `interpolation` is `step`, `linear`, or `cubicspline`, and `loop` is a boolean. A payload that misses any of those is refused at `validateShot` / `commitShot` with the field named, never accepted and left to fail while the film is being played.
+The keyframe payload is a glTF-style pair of flat arrays, and it is checked to the depth the sampler reads it: `times` strictly increases inside `[0, duration]`, `values` holds exactly `times.length x channel width` finite numbers (3 for `translation`/`scale`, 4 for `rotation`, whatever the model carries for `weights`, and for a pointer channel whatever its `valueType` fixes: 1 for `scalar`, 3 for `vec3`; times three for `cubicspline`, which stores in-tangent/value/out-tangent per keyframe), `interpolation` is `step`, `linear`, or `cubicspline`, and `loop` is a boolean. A payload that misses any of those is refused at `validateShot` / `commitShot` with the field named, never accepted and left to fail while the film is being played. **This applies to every clip a shot carries, `lightMotions` included.**
 
-In particular a `pointer` channel (`/lights/0/intensity`, `/materials/2/baseColor`) is **not** a way to animate a scene property from a shot. The pointer form is real, and drivers consume it, but no shot-clip consumer resolves one, so accepting it would hand you a clean validation for a film that never changes. There is no intra-beat light or material animation today; if a beat needs one, say so rather than encoding it into a track.
+A `pointer` channel is refused on those two fields, and on a `coverage` take's move, for the same reason: nothing applies one there, so accepting it would hand you a clean validation for a film that never changes.
+
+### A Light Changes Through `lightMotions`
+
+The shot's `lightMotions` is the one field whose tracks address a **pointer** channel, because a light is not a scene node and no node channel can reach it (glTF has the same split: a node animation moves a light's placement, animating the light itself needs a pointer). Each clip is an ordinary clip, held to the same payload rules above; each track addresses one staged light by **id**:
+
+```json
+"lightMotions": [{ "id": "candleOut", "name": null, "duration": 3, "loop": false, "tracks": [{
+  "channel": { "kind": "pointer", "pointer": "/lights/candleGlow/intensity", "valueType": "scalar" },
+  "times": [0, 1.55, 1.6, 3], "values": [1.4, 1.4, 0.04, 0.04], "interpolation": "step" }] }]
+```
+
+| property | pointer | `valueType` | on which lights |
+| --- | --- | --- | --- |
+| intensity | `/lights/<id>/intensity` | `scalar` | every kind |
+| colour | `/lights/<id>/color` | `vec3` (linear RGB) | every kind |
+| range | `/lights/<id>/range` | `scalar` | `point`, `spot` |
+| cone half-angle | `/lights/<id>/coneAngle` | `scalar` (degrees) | `spot` |
+
+`/lights/0/intensity` is **not** the form: lights are addressed by their staged id, never by position. A pointer naming an unstaged light, a property its kind does not carry (a `range` on a `directional`), or a wrong `valueType` is refused with the path that carries it, and no two tracks in the whole field may drive the same light property, so the film's lighting is single-valued at every instant. Anything reading the committed artifacts evaluates the light at any frame from `scene.json` plus `shots/<beat>.json`; there is nothing to re-derive.
+
+Two things to know before you write one. **`perform` does not emit `lightMotions`**: no verb means "light", so add the field to the shot `perform` returned and pass THAT shot to `validateShot` / `commitShot`. And the change **does not carry to the next beat**: continuity inherits placement and stride, not lighting, so a later beat opens on the light `commitScene` staged. A candle that must stay out restates it, e.g. a one-key `[0] -> [0.04]` track on that beat.
+
+Still absent, and still worth saying rather than encoding: material properties (`/materials/2/baseColor`) and camera FOV. The pointer form is real for those too, but no applier resolves them yet, so they are refused everywhere on a shot.
 
 ## Continuity
 

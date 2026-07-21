@@ -7,7 +7,10 @@ import * as THREE from "three";
  * (a projectile's baked flight, a prop following a bone) or its `cameraMotion`.
  * Sample the clip at `seconds` and write each node channel's translation /
  * rotation / scale straight onto the `THREE.Object3D` that `resolve` returns
- * for that node; a node with no object (or a non-node channel) is skipped.
+ * for that node; a node with no object (or a non-node channel) is skipped. A
+ * light change is not a node channel and never arrives here: it rides the
+ * shot's `lightMotions` through {@link applyLightMotion}, and the artifact gate
+ * refuses a pointer track on a transform clip so the two cannot be confused.
  *
  * This is the render side of the engine's clip bakers ({@link compileLaunch},
  * `compileAttach`, `cameraMove`): the object rides its clip each frame, no rig

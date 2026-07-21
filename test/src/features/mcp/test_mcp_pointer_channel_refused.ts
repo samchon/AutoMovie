@@ -112,6 +112,12 @@ const shotWith = (motions: IAutoMovieClip[]): IAutoMovieShot => ({
  * other user of `IAutoMovieChannel`, and the driver graph does read pointer
  * keys, so `forgeProp` must stay unaffected.
  *
+ * The rule is not "pointers are wrong" but "a field admits exactly what its own
+ * applier writes". A shot's `lightMotions` does carry light pointers, because
+ * the engine's lighting pass writes them (#1348); every clip slot in THIS
+ * scenario still refuses one, because `applyObjectMotion` still does not.
+ * `test_mcp_shot_light_motions` owns the other half.
+ *
  * The probes are direct in-process calls, one of them an `as`-cast payload: the
  * stdio transport adds typia's structural gate on top (it refuses an unknown
  * `kind` before the validator sees it), but the artifact contract must be total

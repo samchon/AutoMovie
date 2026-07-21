@@ -98,6 +98,13 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   // author must emit, since a guide that names only the channel teaches half of
   // what a track is.
   ["PERFORMANCE", "checked to the depth the sampler reads it"],
+  // The light-time axis (#1348). Two sessions were told outright that a light
+  // could not change and encoded the change as English prose in a caption
+  // instead, so the corpus now teaches the field, the pointer grammar, and the
+  // one thing an agent cannot guess: lights are named by id, not by index.
+  ["STAGING", "re-lighting a beat never discards the performances already"],
+  ["PERFORMANCE", "lights are addressed by their staged id, never by position"],
+  ["PERFORMANCE", "no two tracks in the whole field may drive the same light"],
 ];
 
 /**

@@ -11,6 +11,27 @@ action for actor motion. `attachTo` records scripted `grab`/`attach` and
 Use `sequenceEventTimeline(sequence, shots)` to map those shot-local events onto
 the sequence output clock after trims and transitions.
 
+## Light over time
+
+`shot.lightMotions` states how a staged light changes across the shot's own
+clock, and `resolveShotLighting({ lights, clips, seconds })` evaluates it: the
+scene's lights carrying their values at that instant, with an untouched light
+returned by identity. A light is not a scene node, so its tracks address a
+pointer channel (`/lights/<light id>/<property>`) rather than a node channel,
+by id and never by index.
+
+`LIGHT_CHANNEL_PROPERTIES` is the single table both halves read.
+`validateShotArtifact` admits a pointer only when the table has an entry whose
+`carries` accepts the staged light's kind, and holds every keyframe to that
+entry's `bounds` (the same range the scene gate enforces on the staged value);
+the applier writes through the same entry. Adding a property to
+`AutoMovieLightProperty` without giving it that pair does not compile, so the
+admitted set and the applied set cannot drift.
+
+The transform clips are unchanged: `cameraMotion`, `objectMotions`, and a
+coverage take still refuse every pointer channel, because `applyObjectMotion`
+and `resolveFrame` still write node channels only.
+
 ## 현재 Tier 3 표면
 
 - `validateGroundContact`: 설정한 발 본이 `y` 지면 평면 위에 있어야 하는 클립에서만 호출하는 물리 검증기. 모션을 샘플링하고 FK를 푼 뒤, `$input.samples[i].<bone>.worldPosition.y` 경로에 `physics` 위반을 만든다.

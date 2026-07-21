@@ -8,6 +8,9 @@ import { IAutoMovieTransform } from "../geometry/IAutoMovieTransform";
  *
  * Maps onto glTF `KHR_lights_punctual` / `three.js` light types.
  *
+ * These are the light's values at REST; a shot changes them over its own clock
+ * through `IAutoMovieShot.lightMotions`.
+ *
  * @author Samchon
  */
 export type IAutoMovieLight =

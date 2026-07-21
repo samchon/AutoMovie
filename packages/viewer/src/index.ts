@@ -4,6 +4,7 @@ export * from "./applyPose";
 export * from "./applyExpression";
 export * from "./importedModel";
 export * from "./applyObjectMotion";
+export * from "./applyLightMotion";
 export * from "./applyDissolve";
 export * from "./buildSpace";
 export * from "./buildScene";

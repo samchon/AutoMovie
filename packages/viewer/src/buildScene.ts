@@ -5,17 +5,27 @@ import {
 } from "@automovie/interface";
 import * as THREE from "three";
 
+import { applyLightState } from "./applyLightMotion";
 import { applyPose } from "./applyPose";
 import { IAutoMovieModelObject, applyTransform } from "./buildModel";
 import { buildSpaceObject } from "./buildSpace";
 
 /**
- * Result of building a scene: the `three.js` scene and its cameras (first is
- * default).
+ * Result of building a scene: the `three.js` scene, its cameras (first is
+ * default), and its lights indexed by id.
  */
 export interface IAutoMovieSceneObject {
   scene: THREE.Scene;
   cameras: THREE.PerspectiveCamera[];
+
+  /**
+   * Built lights keyed by their {@link IAutoMovieLight.id}, the index
+   * {@link applyLightMotion} resolves a shot's `lightMotions` against. Keyed by
+   * id rather than handed back positionally: the scene's own child order is
+   * load-bearing for the mask palette, so a light must never be found by
+   * counting.
+   */
+  lights: Map<string, THREE.Light>;
 }
 
 /**
@@ -65,13 +75,21 @@ export const buildScene = (
     root.add(nodeGroup);
   }
 
-  for (const light of scene.lights) root.add(buildLight(light));
+  // Lights stay top-level children in staging order: the mask palette is keyed
+  // by that index. The id map is built alongside so a shot's `lightMotions` can
+  // find one without depending on where it landed.
+  const lights = new Map<string, THREE.Light>();
+  for (const light of scene.lights) {
+    const object = buildLight(light);
+    root.add(object);
+    lights.set(light.id, object);
+  }
 
   const space = scene.space ?? null;
   if (space !== null) root.add(buildSpaceObject(space));
 
   const cameras = scene.cameras.map(buildCamera);
-  return { scene: root, cameras };
+  return { scene: root, cameras, lights };
 };
 
 const buildCamera = (cam: IAutoMovieCamera): THREE.PerspectiveCamera => {
@@ -80,26 +98,22 @@ const buildCamera = (cam: IAutoMovieCamera): THREE.PerspectiveCamera => {
   return camera;
 };
 
+/**
+ * Build the `three.js` light one staged light plays on. The kind decides the
+ * class; every value is written by {@link applyLightState}, the same call a
+ * shot's `lightMotions` uses each frame, so placing a light and animating it
+ * cannot map `range` or `coneAngle` two different ways.
+ */
 const buildLight = (light: IAutoMovieLight): THREE.Light => {
-  const color = new THREE.Color(light.color.r, light.color.g, light.color.b);
-  if (light.type === "directional") {
-    const l = new THREE.DirectionalLight(color, light.intensity);
-    applyTransform(l, light.transform);
-    return l;
-  }
-  if (light.type === "point") {
-    const l = new THREE.PointLight(color, light.intensity, light.range);
-    applyTransform(l, light.transform);
-    return l;
-  }
-  const l = new THREE.SpotLight(
-    color,
-    light.intensity,
-    light.range,
-    (light.coneAngle * Math.PI) / 180,
-  );
-  applyTransform(l, light.transform);
-  return l;
+  const built: THREE.Light =
+    light.type === "directional"
+      ? new THREE.DirectionalLight()
+      : light.type === "point"
+        ? new THREE.PointLight()
+        : new THREE.SpotLight();
+  applyLightState(built, light);
+  applyTransform(built, light.transform);
+  return built;
 };
 
 /** Re-export so callers can pose static nodes after building the scene. */

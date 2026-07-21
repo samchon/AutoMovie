@@ -49,6 +49,14 @@ export interface IAutoMovieShot {
   objectMotions: IAutoMovieClip[];
 
   /**
+   * Clips changing this shot's LIGHTING over its local clock: a candle going
+   * out, a sunset. Each track addresses one staged light by pointer channel
+   * (`/lights/<id>/intensity`); the PERFORMANCE guide states the grammar.
+   * Absent means legacy; an empty array means constant light.
+   */
+  lightMotions?: IAutoMovieClip[];
+
+  /**
    * Computed or scripted interactions on this shot's local clock. `performShot`
    * emits this for contacts, hits, falls, and attach handoffs so downstream
    * tools can follow the same timing the engine used. Absent means legacy or
