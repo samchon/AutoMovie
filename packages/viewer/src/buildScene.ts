@@ -103,9 +103,9 @@ const buildCamera = (cam: IAutoMovieCamera): THREE.PerspectiveCamera => {
  * artifact says. The kind decides the class; every value is written by
  * {@link applyLightState}, the same call a shot's `lightMotions` uses each
  * frame, so placing a light and animating it cannot map `range` or `coneAngle`
- * two different ways; the two aimed kinds then get their target ({@link
- * aimLight}), which is the half of a light's placement `three.js` does not read
- * off a quaternion.
+ * two different ways; the two aimed kinds then get their target
+ * ({@link aimLight}), which is the half of a light's placement `three.js` does
+ * not read off a quaternion.
  *
  * Exported because a host that assembles its own scene graph (the playground's
  * film page) must light it from `scene.lights` rather than from a hardcoded

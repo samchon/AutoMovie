@@ -3062,20 +3062,7 @@ const remapMcpPerformedShotPaths = (
   performed: IAutoMovieMcpPerformedShot,
   replacements: ReadonlyArray<readonly [from: string, to: string]>,
 ): IAutoMovieMcpPerformedShot => {
-  // A masked-content warning rides the SUCCESS arm (#1359) and names the same
-  // `$input.draft[i].region` the engine speaks, so it needs the same
-  // re-anchoring the failure arm gets: a note pointing at a path the caller
-  // never wrote is the diagnostic fault #1294 removed from the other side.
-  if (performed.success === true)
-    return performed.warnings === undefined
-      ? performed
-      : {
-          ...performed,
-          warnings: performed.warnings.map((item) => ({
-            ...item,
-            path: remapMcpPath(item.path, replacements),
-          })),
-        };
+  if (performed.success === true) return performed;
   return {
     success: false,
     violations: performed.violations.map((item) => ({

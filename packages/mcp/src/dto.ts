@@ -883,19 +883,6 @@ export namespace IAutoMovieMcpPerformedShot {
 
     /** The synthesized per-actor clips, keyed by scene-node id. */
     motions: Record<string, IAutoMovieMcpMotion>;
-
-    /**
-     * Advice about a shot that compiled: content a region mask did not carry
-     * into the performance (#1349, #1359). Absent when there is none.
-     *
-     * Read these. The shot is playable and the mask is deliberate (disjoint
-     * regions are what let a walk and a wave layer), but each entry names
-     * authored content that will NOT play, at the `region` field that decides
-     * it. A stock gait counter-swings the arms, so a plain `locomote` on
-     * `lowerBody` reports its arm rows here: widen the region if the swing
-     * matters, leave it if another action owns the arms.
-     */
-    warnings?: IAutoMovieConstraintViolation[];
   }
 
   /** The action list contradicted the stage, or a compiled clip broke ROM. */

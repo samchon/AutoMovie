@@ -2,6 +2,7 @@ import {
   HUMANOID_GAITS,
   HUMANOID_PROFILE,
   bindProfileGaits,
+  bodyRegionBones,
   gaitMotion,
   validateMotion,
 } from "@automovie/engine";
@@ -62,7 +63,13 @@ const ampOf = (
  *    per gait.
  * 3. The gaits are ordered by energy where it should show: sprint's hip swing
  *    exceeds run's exceeds walk's; sprint bends the knee hardest of the five;
- *    sneak is the slowest (longest period) and quietest-armed.
+ *    sneak is the slowest (longest period). 3b. Every gait authors ONLY bones
+ *    `lowerBody` owns (#1359). The table used to counter-swing the arms, which
+ *    `locomote`'s default region does not carry, so the engine's own shipped
+ *    content was refused by the engine's own default region and no plain walk
+ *    could perform. This pins the agreement itself rather than the walk that
+ *    exercises it, so a limb row added to a region the verb does not drive
+ *    fails here, at the table.
  * 4. The humanoid profile fixture carries the same gait names and binds them into
  *    concrete clips with profile-scoped ids.
  */
@@ -90,7 +97,6 @@ export const test_motion_humanoid_gaits = (): void => {
 
   const hip: AutoMovieHumanoidBone = "leftUpperLeg";
   const knee: AutoMovieHumanoidBone = "leftLowerLeg";
-  const arm: AutoMovieHumanoidBone = "leftUpperArm";
   TestValidator.predicate(
     "hip swing grows walk < run < sprint",
     ampOf(HUMANOID_GAITS.walk, hip) < ampOf(HUMANOID_GAITS.run, hip) &&
@@ -104,13 +110,24 @@ export const test_motion_humanoid_gaits = (): void => {
     ),
   );
   TestValidator.predicate(
-    "sneak is the slowest and quietest-armed",
+    "sneak is the slowest of the five",
     NAMES.filter((n) => n !== "sneak").every(
       (n) => HUMANOID_GAITS.sneak.period > HUMANOID_GAITS[n].period,
-    ) &&
-      NAMES.filter((n) => n !== "sneak").every(
-        (n) => ampOf(HUMANOID_GAITS.sneak, arm) < ampOf(HUMANOID_GAITS[n], arm),
-      ),
+    ),
+  );
+
+  // 3b. the shipped content agrees with the shipped default region (#1359)
+  const lowerBody = new Set<AutoMovieHumanoidBone>(
+    bodyRegionBones("lowerBody"),
+  );
+  TestValidator.equals(
+    "no shipped gait authors a bone locomote's default region cannot carry",
+    NAMES.flatMap((n) =>
+      HUMANOID_GAITS[n].limbs
+        .filter((limb) => !lowerBody.has(limb.bone))
+        .map((limb) => `${n}:${limb.bone}`),
+    ),
+    [],
   );
 
   const bound = bindProfileGaits(HUMANOID_PROFILE, RIG.id, 24);

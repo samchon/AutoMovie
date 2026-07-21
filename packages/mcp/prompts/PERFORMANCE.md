@@ -40,7 +40,7 @@ Channel names are Apple's `ARFaceAnchor.BlendShapeLocation` keys verbatim, 52 of
 
 ## Body Regions, and Which One Each Verb Drives
 
-An action drives ONE body region, and the engine masks its clip to that region's bones so disjoint regions can layer. When `region` is omitted the verb's default applies, and a channel outside it is **reported, not dropped in silence**: the shot still performs, and its result carries a `warnings` entry on that action's `region` naming every bone the region does not carry. Read those warnings. The mask is often what you want, a walk yielding its arms to a wave is the layering mechanism itself, but when the lost content matters, widen `region` rather than diffing the compiled clip to discover what went missing.
+An action drives ONE body region, and the engine masks its clip to that region's bones so disjoint regions can layer. When `region` is omitted the verb's default applies, and a channel outside it is **refused**, not dropped: the shot fails with a `type` violation on that action's `region`, naming every bone the region does not carry. Set `region` to one that owns the content instead of diffing the compiled clip to discover what went missing.
 
 | Region | Owns |
 | --- | --- |
@@ -61,9 +61,9 @@ An action drives ONE body region, and the engine masks its clip to that region's
 
 The root and the expression are masked on the same rule as the bones. The expression always belongs to `face` alone, so any other region's clip loses it. The root is only contested when one actor's actions span several regions at once: then only the striding region (`lowerBody` or `fullBody`) keeps it, since two regions cannot both move the actor. An actor performing on a single region keeps whatever its clip carries.
 
-**A retargeted non-biped is where this bites.** The humanoid bone enum is the only vocabulary, so a quadruped's FRONT legs ride the arm chains (`leftUpperArm`/`leftLowerArm`/`leftHand` and the right pair). A four-legged gait therefore reaches outside `locomote`'s `lowerBody` default: write `"region": "fullBody"` on that action, or the front legs are warned about and then frozen.
+**A stock biped gait fits the default, by construction.** The engine's shipped gaits drive hips and knees only, which is exactly what `lowerBody` owns, so a plain `locomote` performs with nothing masked and nothing refused. A gait YOU author that also swings the arms reaches outside that default, and is refused the same way anything else outside a region is: widen `region`, or drop the rows the region cannot carry.
 
-**A biped gait warns too, and usually that is fine.** The stock gaits counter-swing the arms, which `lowerBody` does not carry, so a plain `locomote` reports its arm rows on every walk. Widen to `fullBody` when the walk plays alone and the swing should read; leave it when a `gesture` or `reach` owns the arms for that span, which is precisely the case the mask exists for.
+**A retargeted non-biped is where this bites.** The humanoid bone enum is the only vocabulary, so a quadruped's FRONT legs ride the arm chains (`leftUpperArm`/`leftLowerArm`/`leftHand` and the right pair). A four-legged gait therefore reaches outside `locomote`'s `lowerBody` default: write `"region": "fullBody"` on that action, or the front legs are refused rather than frozen.
 
 ## Actor Contexts
 

@@ -90,12 +90,13 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   // outside `locomote`'s `lowerBody` default and vanished from a shot the
   // engine still called successful. The per-verb defaults and the non-biped
   // consequence are pinned so the corpus cannot drop them again.
-  ["PERFORMANCE", "reported, not dropped in silence"],
+  ["PERFORMANCE", "a channel outside it is **refused**, not dropped"],
   ["PERFORMANCE", "a quadruped's FRONT legs ride the arm chains"],
-  // The tier that report rides (#1359). A stock gait swings the arms, so the
-  // plainest walk warns; teaching it as a refusal sent an agent hunting for a
-  // failure that no longer happens, and hid the case the mask exists for.
-  ["PERFORMANCE", "A biped gait warns too, and usually that is fine"],
+  // The other half of that rule (#1359): the SHIPPED gaits fit the default, so
+  // a reader cannot conclude from the quadruped paragraph that every walk needs
+  // a widened region. They used to swing the arms, which made the engine's own
+  // default content refused by its own default region.
+  ["PERFORMANCE", "A stock biped gait fits the default, by construction."],
   // The clip payload contract (#1353). The gate had learned one of the
   // sampler's rules, so an uneven `values` stride committed clean and threw
   // while the film was being played; the corpus now states the whole shape an

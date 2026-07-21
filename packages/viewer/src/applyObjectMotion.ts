@@ -10,8 +10,8 @@ import * as THREE from "three";
  * and scale onto the object's transform, `weights` onto the morph influences of
  * every morphable mesh beneath it. A node with no object (or a non-node
  * channel) is skipped. A light change is not a node channel and never arrives
- * here: it rides the shot's `lightMotions` through {@link applyLightMotion},
- * and the artifact gate refuses a pointer track on a transform clip so the two
+ * here: it rides the shot's `lightMotions` through {@link applyLightMotion}, and
+ * the artifact gate refuses a pointer track on a transform clip so the two
  * cannot be confused.
  *
  * The paths are matched by an EXHAUSTIVE switch, not by an `if` chain with a

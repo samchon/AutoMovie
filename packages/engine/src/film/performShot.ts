@@ -37,7 +37,7 @@ import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { compareCodeUnits } from "../text/compareCodeUnits";
 import { validateMotion } from "../validation/validateMotion";
 import { validateShotArtifact } from "../validation/validateShotArtifact";
-import { ViolationCollector, violation } from "../validation/violation";
+import { ViolationCollector } from "../validation/violation";
 import {
   DEFAULT_SUBJECT_HEIGHT,
   IAutoMovieCameraFrameEntry,
@@ -154,19 +154,6 @@ export namespace IAutoMoviePerformedShot {
 
     /** The synthesised per-actor clips, keyed by scene-node id. */
     motions: Record<string, IAutoMovieMotion>;
-
-    /**
-     * Advice about a shot that compiled: content a region mask did not carry
-     * into the performance (#1349, #1359). Absent when there is none.
-     *
-     * These ride the SUCCESS arm because a masked clip is a quality note about
-     * a structurally valid shot, not a contradiction: the region mask is the
-     * designed behavior that lets a walk and a wave layer, and the shipped
-     * gaits counter-swing the arms, so refusing every mask refused the plainest
-     * possible film. The author still learns exactly what will not play, in the
-     * same `severity: "warning"` tier the plausibility advice uses.
-     */
-    warnings?: IAutoMovieConstraintViolation[];
   }
 
   /** The action list contradicted the stage, or a compiled clip broke ROM. */
@@ -1298,47 +1285,27 @@ export const performShot = (props: {
   const compiled = compilePerformance(stageActions, synthesize);
   const motions = compiled.performances;
 
-  // An authored channel the compiler does not apply is REPORTED (#1349), as
-  // ADVICE rather than as a refusal (#1359). The region mask is the designed
-  // behavior, not a fault: disjoint regions are what let a walk and a wave
-  // layer, and the walk yielding its arms to the wave is exactly the mechanism
-  // (`test_perform_layer` pins it). What was wrong was discarding content in
-  // SILENCE: a retargeted quadruped's front legs ride the ARM chains, which
-  // `locomote`'s default `lowerBody` region excludes, so half the authored gait
-  // vanished and the shot came back clean.
-  //
-  // Refusing every mask instead made the plainest possible film impossible: the
-  // shipped `HUMANOID_GAITS` counter-swing the arms on every kind, so a lone
-  // actor walking failed to perform at all, and the repository's own film demo
-  // threw on load. A masked clip is a quality note about a structurally valid
-  // shot, so it rides the warning tier `IAutoMovieConstraintViolation.severity`
-  // already defines: the author learns precisely what will not play, and the
-  // shot still plays. The note points at `region`, the field the author owns.
-  // Collected into the same sink as everything else, so a shot that goes on to
-  // fail carries its notes into the correction round beside the errors, the way
-  // `toValidation` states the two tiers travel ("the whole list, warnings
-  // included"). The gates below therefore ask whether an ERROR was found rather
-  // than whether the sink is non-empty.
-  const errorFound = () => out.items.some((item) => item.severity === "error");
-  out.items.push(
-    ...compiled.masked.map((drop) => {
-      const lost = [
-        ...(drop.bones.length > 0
-          ? [`the bones ${drop.bones.join(", ")}`]
-          : []),
-        ...(drop.root ? ["a root displacement"] : []),
-        ...(drop.expression ? ["an expression"] : []),
-      ].join(" and ");
-      return violation(
-        "type",
-        stageActionPaths[drop.action]!,
-        `${drop.actor}'s clip authors ${lost}, which the "${drop.region}" body region does not carry, so the performance drops that content; set region to one that owns it ("fullBody" owns every bone and the root, only "face" carries an expression), or move the content to its own action`,
-        drop.region,
-        undefined,
-        "warning",
-      );
-    }),
-  );
+  // An authored channel the compiler does not apply is REPORTED (#1349). The
+  // region mask itself is deliberate (disjoint regions are what let a walk and
+  // a wave layer), but it used to discard content in silence: a retargeted
+  // quadruped's front legs ride the ARM chains, which `locomote`'s default
+  // `lowerBody` region excludes, so half the authored gait vanished and the
+  // shot still returned success with zero violations. The remedy is a field the
+  // author owns, so the violation points at `region` rather than at the clip.
+  for (const drop of compiled.masked) {
+    const path = stageActionPaths[drop.action]!;
+    const lost = [
+      ...(drop.bones.length > 0 ? [`the bones ${drop.bones.join(", ")}`] : []),
+      ...(drop.root ? ["a root displacement"] : []),
+      ...(drop.expression ? ["an expression"] : []),
+    ].join(" and ");
+    out.push(
+      "type",
+      path,
+      `${drop.actor}'s clip authors ${lost}, which the "${drop.region}" body region does not carry, so the performance would drop that content; set region to one that owns it ("fullBody" owns every bone and the root, only "face" carries an expression), or move the content to its own action`,
+      drop.region,
+    );
+  }
 
   for (const [node, motion] of Object.entries(motions)) {
     const rig = skeleton(node);
@@ -1351,7 +1318,7 @@ export const performShot = (props: {
           path: violation.path.replace("$input", `$compiled["${node}"]`),
         });
   }
-  if (errorFound()) return { success: false, violations: out.items };
+  if (out.items.length > 0) return { success: false, violations: out.items };
 
   // Couple objects: bake the per-beat `attachTo` handoffs and the persistent
   // staged `mounts` into follow clips now that the parents' poses have compiled
@@ -1369,7 +1336,7 @@ export const performShot = (props: {
   objectMotions.push(...coupled.clips);
   events.push(...coupled.events);
   out.items.push(...coupled.violations);
-  if (errorFound()) return { success: false, violations: out.items };
+  if (out.items.length > 0) return { success: false, violations: out.items };
 
   // Compile the live camera's move from its frame actions. Subjects resolve
   // against the staged placements; a node subject's height is measured from
@@ -1517,7 +1484,5 @@ export const performShot = (props: {
         .join("; ")}`,
     );
 
-  return out.items.length === 0
-    ? { success: true, shot, motions }
-    : { success: true, shot, motions, warnings: out.items };
+  return { success: true, shot, motions };
 };
