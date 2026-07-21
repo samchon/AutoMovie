@@ -1094,12 +1094,25 @@ const validateStageShape = (
         const path = `$input.staging.lights[${index}]`;
         if (!isJsonObject(light, path, "light placement", violations)) return;
         requireString(light.node, `${path}.node`, "light node", violations);
-        requireVectorObject(
-          light.direction,
-          `${path}.direction`,
-          "light direction",
-          violations,
-        );
+        // Structural floor only: WHICH of these a placement must carry depends
+        // on its `type` and belongs to `stageScene`, which owns the per-kind
+        // contract (#1341). A point light legitimately has no `direction` and a
+        // directional light legitimately has no `position`, so requiring either
+        // here would refuse a valid staging with the wrong diagnosis.
+        if (light.direction !== undefined)
+          requireVectorObject(
+            light.direction,
+            `${path}.direction`,
+            "light direction",
+            violations,
+          );
+        if (light.position !== undefined)
+          requireVectorObject(
+            light.position,
+            `${path}.position`,
+            "light position",
+            violations,
+          );
       });
   }
   return violations;

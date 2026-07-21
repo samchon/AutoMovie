@@ -1,3 +1,4 @@
+import { IAutoMovieColor } from "../color/IAutoMovieColor";
 import { IAutoMovieNamedId } from "../core/IAutoMovieNamedId";
 import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
 import { IAutoMovieSpace } from "../scene/IAutoMovieSpace";
@@ -159,13 +160,62 @@ export namespace IAutoMovieStagingApplication {
     /** Light node id. */
     node: string;
 
-    /** The role this light plays. */
-    role: "key" | "fill" | "rim" | "ambient" | "sun";
+    /**
+     * Which light this is dramatically. Authoring annotation only: the lowering
+     * does not read it, so omit it unless it helps the plan read. It was
+     * required once and discarded, which cost a decision on every staging call
+     * and changed nothing (#1341); state the light's actual physics through
+     * {@link type} / {@link color} / {@link position} instead.
+     */
+    role?: "key" | "fill" | "rim" | "ambient" | "sun";
 
-    /** Direction the light points (world; for sun/key/rim). */
-    direction: IAutoMovieVector3;
+    /**
+     * What kind of light this is, matching the scene light it lowers into:
+     * `directional` is an infinitely distant parallel source (the sun, a sky)
+     * with no falloff, aimed by {@link direction}; `point` radiates in every
+     * direction from {@link position} (a candle, a bare bulb, a fire); `spot` is
+     * a cone from {@link position} along {@link direction}, its spread set by
+     * {@link coneAngle}. Defaults to `directional`.
+     */
+    type?: "directional" | "point" | "spot";
+
+    /**
+     * Direction the light points (world). Required for `directional` and
+     * `spot`, which are aimed; a `point` light radiates every way and must NOT
+     * carry one, so supplying it there is refused rather than ignored.
+     */
+    direction?: IAutoMovieVector3;
+
+    /**
+     * World position of the source, meters. Required for `point` and `spot`,
+     * which fall off with distance and so must be somewhere; a `directional`
+     * light is infinitely distant and must NOT carry one.
+     */
+    position?: IAutoMovieVector3;
+
+    /**
+     * Light color (linear). Omit for neutral white. This is the difference
+     * between a candle and a fluorescent tube, and staging is where it belongs:
+     * the render's guide passes carry it forward, so a warm interior and a cold
+     * dawn stop being the same frame.
+     */
+    color?: IAutoMovieColor;
 
     /** Relative brightness `[0, ~2]`. */
     intensity: number;
+
+    /**
+     * `point` / `spot` only: distance in meters past which the light
+     * contributes nothing. `0` (the default) is infinite. A `directional` light
+     * has no falloff and must not carry one.
+     */
+    range?: number;
+
+    /**
+     * `spot` only: half-angle of the cone in degrees, `(0, 90]`. Defaults to
+     * `45`. A `directional` or `point` light has no cone and must not carry
+     * one.
+     */
+    coneAngle?: number;
   }
 }
