@@ -159,7 +159,8 @@ export const test_perform_layer = (): void => {
     duration: "auto",
   };
 
-  const perf = compilePerformance([locomote, gesture, emote], synth).hero!;
+  const perf = compilePerformance([locomote, gesture, emote], synth)
+    .performances.hero!;
 
   TestValidator.predicate(
     "the layered clip spans one second",
@@ -195,7 +196,8 @@ export const test_perform_layer = (): void => {
     start: 3,
     duration: 1,
   };
-  const late = compilePerformance([locomote, lateLook], synth).hero!;
+  const late = compilePerformance([locomote, lateLook], synth).performances
+    .hero!;
   const boneAt = (time: number, bone: AutoMovieHumanoidBone) =>
     frameAt(late, time).pose.joints.find((j) => j.bone === bone);
   TestValidator.predicate(
@@ -232,7 +234,8 @@ export const test_perform_layer = (): void => {
     start: 1.5,
     duration: "auto",
   };
-  const undiluted = compilePerformance([react, lateBow], synth).hero!;
+  const undiluted = compilePerformance([react, lateBow], synth).performances
+    .hero!;
   const bowEnd = frameAt(undiluted, 2.5).pose.joints.find(
     (j) => j.bone === "leftUpperArm",
   );
@@ -249,7 +252,7 @@ export const test_perform_layer = (): void => {
   // 4. a late-starting composite holds rest until its authored start (the
   //    `step` lead-in pad plus its `first − ε` twin, #1060), instead of
   //    clamping the first pose backward
-  const padded = compilePerformance([lateLook], synth).hero!;
+  const padded = compilePerformance([lateLook], synth).performances.hero!;
   TestValidator.predicate(
     "a late composite pads rest keyframes up to its authored start",
     padded.keyframes[0]!.time === 0 &&
@@ -286,14 +289,15 @@ export const test_perform_layer = (): void => {
     start: 3,
     duration: 1,
   };
-  const layeredEmote = compilePerformance([locomote, lateEmote], synth).hero!;
+  const layeredEmote = compilePerformance([locomote, lateEmote], synth)
+    .performances.hero!;
   TestValidator.predicate(
     "off-grid: a layered late emote's expression stays null before its start",
     sampleMotion(layeredEmote, 0.1).expression === null &&
       sampleMotion(layeredEmote, 2).expression === null &&
       sampleMotion(layeredEmote, 3.5).expression?.preset === "happy",
   );
-  const paddedEmote = compilePerformance([lateEmote], synth).hero!;
+  const paddedEmote = compilePerformance([lateEmote], synth).performances.hero!;
   TestValidator.predicate(
     "the lead-in pad holds a null expression until the authored start",
     sampleMotion(paddedEmote, 0.5).expression === null &&
@@ -303,10 +307,8 @@ export const test_perform_layer = (): void => {
   // a start inside the boundary width (0 < first ≤ ε) gets only the t=0 pad:
   // a `first − ε` twin would land at or before 0 and break the strictly
   // increasing keyframe contract
-  const hairline = compilePerformance(
-    [{ ...lateEmote, start: 5e-7 }],
-    synth,
-  ).hero!;
+  const hairline = compilePerformance([{ ...lateEmote, start: 5e-7 }], synth)
+    .performances.hero!;
   TestValidator.predicate(
     "a hairline start pads t=0 only, keeping times strictly increasing",
     hairline.keyframes[0]!.time === 0 &&
@@ -319,7 +321,8 @@ export const test_perform_layer = (): void => {
   // 6. an inserted boundary time where NO clip contributes is honestly rest:
   //    two rootless clips with a gap between their spans (a finished flinch,
   //    a not-yet-started lookAt) compile and sample as rest in the gap
-  const gapLook = compilePerformance([react, lateLook], synth).hero!;
+  const gapLook = compilePerformance([react, lateLook], synth).performances
+    .hero!;
   const gap = sampleMotion(gapLook, 2);
   TestValidator.predicate(
     "a fully-released gap samples as rest",

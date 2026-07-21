@@ -1,5 +1,6 @@
 import {
   AutoMovieBodyRegion,
+  AutoMovieHumanoidBone,
   IAutoMovieActionCall,
   IAutoMovieKeyframe,
   IAutoMovieMotion,
@@ -9,6 +10,7 @@ import {
 import { IAutoMoviePlacement, arrangeMotion } from "../motion/arrange";
 import { sampleMotion } from "../motion/sampleMotion";
 import { sequenceMotion } from "../motion/sequence";
+import { compareCodeUnits } from "../text/compareCodeUnits";
 import { actionRegion } from "./actionRegion";
 import { blendPoses } from "./blendPoses";
 import { bodyRegionBones } from "./bodyRegionBones";
@@ -45,11 +47,89 @@ const ROOT_REGIONS = new Set<AutoMovieBodyRegion>(["lowerBody", "fullBody"]);
  */
 const BOUNDARY_EPSILON = 1e-6;
 
+/**
+ * What one action's clip lost to its region mask, for the caller that must
+ * report it (#1349). The mask is correct and deliberate, but it used to be
+ * SILENT: a quadruped gait driving the front legs (the arm chains) under
+ * `locomote`'s default `lowerBody` region lost six of its twelve bones and the
+ * shot still came back successful with zero violations. The compiler holds both
+ * facts (what the synthesizer authored, what the region admits) at the moment
+ * it drops one, so it is the only place that can state the difference.
+ *
+ * Emitted only when something was actually dropped; a clip entirely inside its
+ * region produces no record at all.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieMaskedContent {
+  /** Index into the action list {@link compilePerformance} was given. */
+  action: number;
+
+  /** The actor whose clip lost the content (an action may fan to several). */
+  actor: string;
+
+  /** The region whose bone set masked it: the action's own, or its default. */
+  region: AutoMovieBodyRegion;
+
+  /**
+   * The bones the region excludes, sorted by {@link compareCodeUnits} and
+   * deduplicated across keyframes. Empty when only the root or the expression
+   * was dropped.
+   */
+  bones: AutoMovieHumanoidBone[];
+
+  /**
+   * Whether a keyframe's root displacement was dropped, which happens when a
+   * non-locomotion region layers beside another (only the root-bearing region
+   * strides).
+   */
+  root: boolean;
+
+  /** Whether a keyframe's expression was dropped (every region but `face`). */
+  expression: boolean;
+}
+
+/**
+ * What {@link compilePerformance} produced: the per-actor clips, and the
+ * authored content its region masks discarded.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieCompiledPerformance {
+  /** Per-actor performance motion, keyed by actor node id. */
+  performances: Record<string, IAutoMovieMotion>;
+
+  /**
+   * Every piece of authored content a region mask dropped, ordered by action
+   * index then actor. Empty when every clip fell inside its own region, which
+   * is the ordinary case.
+   */
+  masked: IAutoMovieMaskedContent[];
+}
+
+/** One placed clip, carrying the index of the action that produced it. */
+interface IAutoMovieRegionPlacement extends IAutoMoviePlacement {
+  /** Index into the action list `compilePerformance` was given. */
+  action: number;
+}
+
+/** Whether a mask record carries anything worth reporting. */
+const maskedAnything = (masked: {
+  bones: AutoMovieHumanoidBone[];
+  root: boolean;
+  expression: boolean;
+}): boolean => masked.bones.length > 0 || masked.root || masked.expression;
+
 const maskMotionToRegion = (
   motion: IAutoMovieMotion,
   region: AutoMovieBodyRegion,
   keepRoot: boolean,
-): IAutoMovieMotion => {
+): {
+  motion: IAutoMovieMotion;
+  bones: AutoMovieHumanoidBone[];
+  root: boolean;
+  expression: boolean;
+} => {
   const bones = new Set(bodyRegionBones(region));
   // Expression is FACE content: joints are made disjoint by the bone filter
   // below, but a synthesizer authoring an expression on a non-face clip (a
@@ -59,17 +139,35 @@ const maskMotionToRegion = (
   // exemption's disjointness claim true by construction: only the face
   // region's owner speaks for the face.
   const keepExpression = region === "face";
-  return {
-    ...motion,
-    keyframes: motion.keyframes.map((keyframe) => ({
+  const dropped = new Set<AutoMovieHumanoidBone>();
+  let droppedRoot = false;
+  let droppedExpression = false;
+  const keyframes = motion.keyframes.map((keyframe) => {
+    if (!keepRoot && keyframe.pose.root !== null) droppedRoot = true;
+    if (!keepExpression && keyframe.expression !== null)
+      droppedExpression = true;
+    return {
       ...keyframe,
       expression: keepExpression ? keyframe.expression : null,
       pose: {
         ...keyframe.pose,
         root: keepRoot ? keyframe.pose.root : null,
-        joints: keyframe.pose.joints.filter((joint) => bones.has(joint.bone)),
+        joints: keyframe.pose.joints.filter((joint) => {
+          if (bones.has(joint.bone)) return true;
+          dropped.add(joint.bone);
+          return false;
+        }),
       },
-    })),
+    };
+  });
+  return {
+    motion: { ...motion, keyframes },
+    // Sorted so the reported list is stable whatever order the keyframes
+    // happened to name the bones in (the engine is deterministic, and its
+    // diagnostics are part of that).
+    bones: [...dropped].sort(compareCodeUnits),
+    root: droppedRoot,
+    expression: droppedExpression,
   };
 };
 
@@ -215,21 +313,27 @@ const padRestLeadIn = (motion: IAutoMovieMotion): IAutoMovieMotion => {
  * timeline, padded to hold rest before a late start. The per-action keyframes
  * come entirely from `synthesize`. A `null` synthesis is skipped.
  *
+ * The compiler also **states what it did not apply**: every clip the region
+ * mask trimmed rides back on `masked` (#1349), so the caller that owns the
+ * success envelope can refuse or report it instead of returning a clip that
+ * silently omits half of what the author asked for.
+ *
  * @author Samchon
  * @param actions The shot's action calls (any order; arranged by `start`).
  * @param synthesize The content seam: one action → one base clip (or null).
- * @returns Per-actor performance motion, keyed by actor node id.
+ * @returns Per-actor performance motion keyed by actor node id, plus every
+ *   piece of authored content the region mask discarded.
  */
 export const compilePerformance = (
   actions: IAutoMovieActionCall[],
   synthesize: IAutoMovieActionSynthesizer,
-): Record<string, IAutoMovieMotion> => {
+): IAutoMovieCompiledPerformance => {
   // 1. fan each action to every actor that performs it, grouped by body region
   const byActor = new Map<
     string,
-    Map<AutoMovieBodyRegion, IAutoMoviePlacement[]>
+    Map<AutoMovieBodyRegion, IAutoMovieRegionPlacement[]>
   >();
-  for (const action of actions) {
+  actions.forEach((action, index) => {
     const actors =
       typeof action.actor === "string" ? [action.actor] : action.actor;
     for (const actor of actors) {
@@ -250,27 +354,35 @@ export const compilePerformance = (
       const region = actionRegion(action);
       const regions =
         byActor.get(actor) ??
-        new Map<AutoMovieBodyRegion, IAutoMoviePlacement[]>();
+        new Map<AutoMovieBodyRegion, IAutoMovieRegionPlacement[]>();
       const placements = regions.get(region) ?? [];
-      placements.push({ start: action.start, motion });
+      placements.push({ start: action.start, motion, action: index });
       regions.set(region, placements);
       byActor.set(actor, regions);
     }
-  }
+  });
 
   // 3. per actor: arrange each region, then layer the regions (or pass one through)
   const performances: Record<string, IAutoMovieMotion> = {};
+  const masked: IAutoMovieMaskedContent[] = [];
   for (const [actor, regions] of byActor) {
     const layered = regions.size > 1;
     const regionClips = [...regions.entries()].map(([region, placements]) => {
       const keepRoot = !layered || ROOT_REGIONS.has(region);
-      return arrangeMotion(
-        `perform:${actor}:${region}`,
-        placements.map((placement) => ({
-          start: placement.start,
-          motion: maskMotionToRegion(placement.motion, region, keepRoot),
-        })),
-      );
+      const arranged: IAutoMoviePlacement[] = placements.map((placement) => {
+        const trimmed = maskMotionToRegion(placement.motion, region, keepRoot);
+        if (maskedAnything(trimmed))
+          masked.push({
+            action: placement.action,
+            actor,
+            region,
+            bones: trimmed.bones,
+            root: trimmed.root,
+            expression: trimmed.expression,
+          });
+        return { start: placement.start, motion: trimmed.motion };
+      });
+      return arrangeMotion(`perform:${actor}:${region}`, arranged);
     });
     performances[actor] = padRestLeadIn(
       regionClips.length === 1
@@ -278,5 +390,10 @@ export const compilePerformance = (
         : layerClips(`perform:${actor}`, regionClips),
     );
   }
-  return performances;
+  // Action order first, then actor, so the report reads in the order the author
+  // wrote the shot rather than in Map-insertion order.
+  masked.sort(
+    (a, b) => a.action - b.action || compareCodeUnits(a.actor, b.actor),
+  );
+  return { performances, masked };
 };

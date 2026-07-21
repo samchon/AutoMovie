@@ -105,7 +105,7 @@ export const test_perform_scene = (): void => {
     },
   ];
 
-  const perf = compilePerformance(actions, synth);
+  const perf = compilePerformance(actions, synth).performances;
 
   TestValidator.equals(
     "both actors are performed",

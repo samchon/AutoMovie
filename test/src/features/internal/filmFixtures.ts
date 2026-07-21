@@ -1,5 +1,10 @@
-import { IAutoMovieActionSynthesizer } from "@automovie/engine";
 import {
+  IAutoMovieActionSynthesizer,
+  actionRegion,
+  bodyRegionBones,
+} from "@automovie/engine";
+import {
+  IAutoMovieActionCall,
   IAutoMovieBlockingApplication,
   IAutoMovieForgeApplication,
   IAutoMoviePerformanceApplication,
@@ -99,17 +104,36 @@ export const makeBlockingWrite = (
   ...partial,
 });
 
+/** The one bone the film fixtures drive; it lives in the `upperBody` region. */
+export const FIXTURE_BONE = "leftLowerArm" as const;
+
 /**
- * The content seam for film scenarios: every action becomes the same valid
- * one-second elbow clip (0° → 120° flexion, well inside ROM), so scenarios
- * exercise the pipeline's assembly and gating rather than clip content.
+ * Whether an action's body region carries {@link FIXTURE_BONE}. A fixture clip
+ * must author content the action's own region owns: the compiler masks a clip
+ * to its region, and since #1349 it reports what it dropped, so a fixture
+ * leaking an arm onto a `locomote` would fail every scenario on a lie about
+ * what the shot performs. The masked result was empty either way, so the
+ * compiled output is unchanged.
  */
-export const validSynthesizer: IAutoMovieActionSynthesizer = () =>
+export const fixtureRegionDrivesBone = (
+  action: IAutoMovieActionCall,
+): boolean => bodyRegionBones(actionRegion(action)).includes(FIXTURE_BONE);
+
+/**
+ * The content seam for film scenarios: every action whose region owns the elbow
+ * becomes the same valid one-second elbow clip (0° → 120° flexion, well inside
+ * ROM), and every other action becomes the same clip with no joints, so
+ * scenarios exercise the pipeline's assembly and gating rather than clip
+ * content.
+ */
+export const validSynthesizer: IAutoMovieActionSynthesizer = (action) =>
   makeMotion(
-    [
-      keyframe(0, makePose([joint("leftLowerArm", { flexion: 0 })])),
-      keyframe(1, makePose([joint("leftLowerArm", { flexion: 120 })])),
-    ],
+    fixtureRegionDrivesBone(action)
+      ? [
+          keyframe(0, makePose([joint(FIXTURE_BONE, { flexion: 0 })])),
+          keyframe(1, makePose([joint(FIXTURE_BONE, { flexion: 120 })])),
+        ]
+      : [keyframe(0, makePose([])), keyframe(1, makePose([]))],
     1,
   );
 

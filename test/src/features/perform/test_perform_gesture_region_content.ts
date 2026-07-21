@@ -83,14 +83,15 @@ const jointsAt = (motion: IAutoMovieMotion, time: number) => {
  *    cross-region leak strip stay intact.
  */
 export const test_perform_gesture_region_content = (): void => {
-  const nod = compilePerformance([gesture("nod")], synth).hero!;
+  const nod = compilePerformance([gesture("nod")], synth).performances.hero!;
   const nodStop = jointsAt(nod, 0.25);
   TestValidator.predicate(
     "a lone nod still drives the head",
     nclose(nodStop.map.get("head")!.flexion!, 22),
   );
 
-  const crouch = compilePerformance([gesture("crouch")], synth).hero!;
+  const crouch = compilePerformance([gesture("crouch")], synth).performances
+    .hero!;
   const crouchStop = jointsAt(crouch, 0.3);
   TestValidator.predicate(
     "a lone crouch keeps its knee bend and spine lean",
@@ -99,7 +100,7 @@ export const test_perform_gesture_region_content = (): void => {
       nclose(crouchStop.map.get("spine")!.flexion!, 15),
   );
 
-  const kick = compilePerformance([gesture("kick")], synth).hero!;
+  const kick = compilePerformance([gesture("kick")], synth).performances.hero!;
   const kickStop = jointsAt(kick, 0.22);
   TestValidator.predicate(
     "a lone kick keeps the leg snap and the spine counterbalance",
@@ -116,7 +117,8 @@ export const test_perform_gesture_region_content = (): void => {
     start: 0,
     duration: 1,
   };
-  const jump = compilePerformance([gesture("jump"), emote], synth).hero!;
+  const jump = compilePerformance([gesture("jump"), emote], synth).performances
+    .hero!;
   const apex = jointsAt(jump, 0.58);
   TestValidator.predicate(
     "a layered jump keeps its ballistic root at the apex",
@@ -127,17 +129,15 @@ export const test_perform_gesture_region_content = (): void => {
   const nodAndWave = compilePerformance(
     [gesture("nod"), gesture("wave")],
     synth,
-  ).hero!;
+  ).performances.hero!;
   const both = jointsAt(nodAndWave, 0.25);
   TestValidator.predicate(
     "a nod and a wave layer on disjoint regions",
     both.map.has("head") && both.map.has("rightUpperArm"),
   );
 
-  const maskedKick = compilePerformance(
-    [gesture("kick", "upperBody")],
-    synth,
-  ).hero!;
+  const maskedKick = compilePerformance([gesture("kick", "upperBody")], synth)
+    .performances.hero!;
   const maskedStop = jointsAt(maskedKick, 0.22);
   TestValidator.predicate(
     "an explicit narrower region still masks the clip to its bones",

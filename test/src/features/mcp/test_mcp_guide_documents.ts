@@ -81,6 +81,13 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["PERFORMANCE", "the same table does not mean the same aim height"],
   ["PERFORMANCE", "an actor placement lifted by that actor's `eyeHeight`"],
   ["BLOCKING", "an actor, a set piece, or another camera"],
+  // The body-region axis (#1349). The mask was always there and no guide named
+  // it, so a retargeted quadruped's front legs (which ride the ARM chains) fell
+  // outside `locomote`'s `lowerBody` default and vanished from a shot the
+  // engine still called successful. The per-verb defaults and the non-biped
+  // consequence are pinned so the corpus cannot drop them again.
+  ["PERFORMANCE", "a channel outside it is **refused**, not dropped"],
+  ["PERFORMANCE", "a quadruped's FRONT legs ride the arm chains"],
 ];
 
 /**
