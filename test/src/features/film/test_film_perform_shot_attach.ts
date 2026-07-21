@@ -98,7 +98,9 @@ const stagingOf = () =>
  *    (not the first's, not the staged placement), its end velocity is the
  *    follow clip's trailing read, and its `mount` stays null (a per-beat grab
  *    is not a persistent binding). The never-coupled knight keeps the
- *    staged/pose-root path.
+ *    staged/pose-root path. Renaming the second clip to an id no producer
+ *    writes changes none of that (#1361): the end follows what a clip drives
+ *    and when it starts, never how it is spelled.
  */
 export const test_film_perform_shot_attach = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -428,9 +430,14 @@ export const test_film_perform_shot_attach = (): void => {
     vclose(endedKnight.transform.translation, { x: 0, y: 0, z: 0 }),
   );
 
-  // a hand-authored bogus suffix ranks below the bare stable id, so the
-  // follow resolves to the real coupling, never the malformed one
-  const bogus = resolveBeatEnd({
+  // Renaming a clip changes nothing (#1361): the end resolves through what a
+  // clip DRIVES and when it starts, not through how its id is spelled. The
+  // handoff's second coupling still owns the end under an id no producer
+  // writes, which is the same property that makes a `trajectory:<node>` flight
+  // reachable at all. This used to assert the opposite, that an unparseable
+  // suffix demoted the clip below the bare id, which is exactly the id
+  // dependence that hid the launch pass's own output from the beat end.
+  const renamed = resolveBeatEnd({
     beat: "beat-1",
     scene: staged.scene,
     shot: {
@@ -440,10 +447,10 @@ export const test_film_perform_shot_attach = (): void => {
     motions: Object.values(handoff.motions),
   });
   TestValidator.predicate(
-    "a bogus suffix does not count as a coupling",
+    "an id no producer writes does not change which clip owns the end",
     vclose(
-      bogus.actors.find((a) => a.node === "sword")!.transform.translation,
-      clipEnd(first),
+      renamed.actors.find((a) => a.node === "sword")!.transform.translation,
+      clipEnd(second),
     ),
   );
 
