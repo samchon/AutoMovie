@@ -19,9 +19,22 @@ on:
       - 'packages/*/scripts/**'
       - 'internals/config/**'
       - 'test/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
+      # Root tooling configuration, by shape for the same reason (#1335). The
+      # root half was outside the enumeration #1333 re-derived, so a pull
+      # request touching only `prettier.config.js`, `.prettierignore` or
+      # `.gitattributes` ran neither workflow. All three are read by the steps
+      # below: the first two decide what `format:check` checks and how, and
+      # `.gitattributes` normalizes the line endings of the tree this job
+      # checks out, which `test_cli_scaffold` then asserts on.
+      #
+      # A leading `*` is kept off the dotfiles on purpose: `.gitignore` is not
+      # a build input, so it stays unmatched rather than triggering both jobs.
+      - '*.js'
+      - '*.json'
+      - '*.yaml'
+      - '*.yml'
+      - '.prettier*'
+      - '.gitattributes'
 jobs:
   Ubuntu:
     runs-on: ubuntu-latest
