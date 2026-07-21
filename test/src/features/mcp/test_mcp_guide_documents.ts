@@ -86,6 +86,10 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   // outside `locomote`'s `lowerBody` default and vanished from a shot the
   // engine still called successful. The per-verb defaults and the non-biped
   // consequence are pinned so the corpus cannot drop them again.
+  // The write discriminator (#1347): optional on the authoring payloads,
+  // absent from the commit artifacts. Five sessions lost a round to a token no
+  // guide named, so the corpus now names it in both directions.
+  ["AUTOMOVIE_OVERALL", 'optional** `"type": "write"` discriminator'],
   ["PERFORMANCE", "a channel outside it is **refused**, not dropped"],
   ["PERFORMANCE", "a quadruped's FRONT legs ride the arm chains"],
 ];

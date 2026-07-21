@@ -16,6 +16,8 @@ Read this guide first. Before using a stage's tools, read the matching guide: `S
 8. `cut` → `commitFilm`: assemble the shots into the sequence.
 9. `planRender` / `seeFrame`: plan deterministic render output and capture frames (see `RENDER_GUIDES`).
 
+The authoring payloads (`script`, `staging`, `blocking`, `performance`, `assemble`, `forge`) carry an **optional** `"type": "write"` discriminator. Every tool that takes one takes only the write arm, so the tool's own signature already fixes the value: omit it or supply it, whichever you prefer, and it is never the reason a call fails. A different literal is refused, and the commit tools take finished ARTIFACTS (`commitScript` takes a script, not a script write), which carry no discriminator at all: adding one there is an excess property and is refused.
+
 Compute tools (`stage`, `block`, `perform`, `cut`, `forge`, `forgeProp`) are never gated by prerequisite order. All but `forgeProp` are pure functions of their explicit inputs; `forgeProp` is pure too, except that a resident success writes its spec through as noted above. Order is enforced only where state lives: resident commits.
 
 ## Result Semantics
