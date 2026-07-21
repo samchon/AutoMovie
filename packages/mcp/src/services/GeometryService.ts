@@ -9,6 +9,7 @@ import {
   resolveBeatEnd,
   resolvePose,
   sampleMotion,
+  validatePose,
 } from "@automovie/engine";
 import {
   IAutoMovieActionTarget,
@@ -1047,13 +1048,24 @@ const measureArmReach = (
   );
   const maximumDistance = upperLength + lowerLength;
   const gap = Math.max(0, targetDistance - maximumDistance);
+  const withinShell = gap <= 1e-6;
+  const pose = reachPose(skeleton, side, target);
+  // The oracle applies the gate its consumer applies (#1338). `perform`
+  // compiles this same pose and refuses it on the rig's ROM, so a report that
+  // answered on distance alone contradicted the stage it was consulted to
+  // protect. A chain with no solve (a target on the shoulder) is not reachable
+  // either: there is no pose to hand back, so nothing can be claimed about it.
+  const romViolations =
+    pose === null ? [] : validatePose({ pose, skeleton }).items;
   return {
     side,
     targetDistance,
     maximumDistance,
     gap,
-    reachable: gap <= 1e-6,
-    pose: reachPose(skeleton, side, target),
+    withinShell,
+    reachable: withinShell && pose !== null && romViolations.length === 0,
+    romViolations,
+    pose,
   };
 };
 

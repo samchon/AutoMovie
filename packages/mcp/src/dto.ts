@@ -238,7 +238,12 @@ export interface IAutoMovieMcpReachReport {
   /** Right arm report, or null when the rig lacks that arm chain. */
   right: IAutoMovieMcpArmReach | null;
 
-  /** True when either arm can reach without a positive gap. */
+  /**
+   * True when either arm can reach the target AND the pose that reaches it
+   * satisfies that arm's range of motion, i.e. the answer `perform` will give
+   * (#1338). Consult {@link IAutoMovieMcpArmReach.withinShell} for the purely
+   * geometric "is it within arm's length" question.
+   */
   reachable: boolean;
 }
 
@@ -253,13 +258,40 @@ export interface IAutoMovieMcpArmReach {
   /** Shoulder-to-hand reach length in model space. */
   maximumDistance: number;
 
-  /** Positive miss distance; zero means reachable. */
+  /** Positive miss distance; zero means the target is within arm's length. */
   gap: number;
 
-  /** True when the target lies within the arm's reach shell. */
+  /**
+   * True when the target lies within the arm's reach shell, a pure distance
+   * test (`gap == 0`). Geometry only: the arm may still be unable to assume the
+   * pose that lands there.
+   */
+  withinShell: boolean;
+
+  /**
+   * True when this arm both reaches the target and does so within the rig's
+   * range of motion: `withinShell` AND `romViolations` empty (#1338).
+   *
+   * This is the verdict the CONSUMING stage gives. `perform` compiles the same
+   * IK pose and runs the same ROM gate, so an oracle that answered on distance
+   * alone sent authors to stage against a reach `perform` then refused, after
+   * the staging and blocking the measurement existed to protect.
+   */
   reachable: boolean;
 
-  /** IK pose that reaches the target, or extends toward it if out of range. */
+  /**
+   * The violations the rig's ROM gate raises against {@link pose}, empty when
+   * the pose is clean. These are the exact violations `perform` would report,
+   * field-located per joint axis, so an author can see WHICH axis blocks the
+   * reach rather than only that it does. Also empty when no pose was solved.
+   */
+  romViolations: IAutoMovieConstraintViolation[];
+
+  /**
+   * IK pose that reaches the target, or extends toward it if out of range.
+   * `null` when the chain is degenerate for this target (a target coincident
+   * with the shoulder has no solve), which is also reported as not reachable.
+   */
   pose: IAutoMoviePose | null;
 }
 
@@ -646,7 +678,7 @@ export interface IAutoMovieMcpActorContext {
    */
   position?: IAutoMovieVector3;
 
-  /** Locomotion speed in meters per second. */
+  /** Locomotion speed (m/s): how fast a `locomote` carries the actor. */
   speed: number;
 
   /**
@@ -665,16 +697,30 @@ export interface IAutoMovieMcpActorContext {
    */
   gaitPhase?: number | null;
 
-  /** Eye height above the actor position, meters. */
+  /** Eye height above the actor's position (meters): where a `lookAt` aims from. */
   eyeHeight: number;
 
-  /** Pose the actor settles into for a `hold`. */
+  /** The pose the actor settles into for a `hold`. */
   restPose: IAutoMoviePose;
 
-  /** Optional rig for ROM validation and IK/physics synthesis. */
+  /**
+   * The actor's resolved skeleton geometry: the rig bones and their ROM
+   * constraints. Required only by the physics/IK verbs that measure or clamp
+   * against the body (`react` folds a flinch bounded by each joint's ROM) and
+   * by `enact`; the gait/hold/lookAt/emote verbs need only the `skeleton` id,
+   * so a context built for those alone may omit it, and a physics verb with no
+   * `rig` synthesises nothing.
+   */
   rig?: IAutoMovieSkeleton;
 
-  /** Optional clinical rest-frame lookup, paired with the renderer/player. */
+  /**
+   * Per-bone rest frames that let the IK/arm verbs (`reach`/`point`/`strike`)
+   * emit their arm angles in **clinical** space, lifted by `sign·r + neutral`
+   * so a downstream renderer reads them up through the same frames (abduction
+   * `180` raises either arm overhead regardless of side). Omit to have those
+   * verbs output raw rig-space angles; when supplied it must be paired with the
+   * same frames on the player.
+   */
   restFrames?: IAutoMovieActorContext["restFrames"];
 }
 
@@ -694,45 +740,84 @@ export interface IAutoMovieMcpActorSpec extends Omit<
   node: string;
 }
 
-/** JSON-safe gait definition accepted by the MCP `perform` tool. */
+/**
+ * JSON-safe gait definition accepted by the MCP `perform` tool, mirroring
+ * {@link IAutoMovieGait} minus the tuple-valued bezier controls its limbs cannot
+ * express here.
+ */
 export interface IAutoMovieMcpGait {
-  /** Stable gait name such as `"walk"` or `"run"`. */
+  /** Stable name (`"walk"`, `"trot"`, `"gallop"`, `"stalk"`). */
   name: string;
 
-  /** Stride period in seconds. */
+  /** Stride period (one full cycle) in seconds. */
   period: number;
 
-  /** Optional vertical body-mass oscillation. */
+  /**
+   * Optional vertical root bob for the body mass during the cycle. When
+   * present, the synthesiser emits a root transform whose `translation.y`
+   * follows `center + amplitude * sin(2 * PI * (t / period + phase))`. Omit it
+   * to leave root placement entirely to travel/staging.
+   */
   rootBob?: IAutoMovieGaitRootBob;
 
-  /** Limb swing channels without tuple-valued bezier controls. */
+  /**
+   * Each limb's contribution to the cycle. The limbs differ only in **when**
+   * they swing (`phase`) and **how**: a horse walk is its four legs at phase
+   * offsets `0, 0.5, 0.25, 0.75` (lateral sequence), a trot at `0, 0.5, 0.5, 0`
+   * (diagonal pairs).
+   */
   limbs: IAutoMovieMcpGaitLimb[];
 }
 
 /** JSON-safe gait limb channel accepted by the MCP `perform` tool. */
 export interface IAutoMovieMcpGaitLimb {
-  /** The bone this limb swing drives. */
+  /** The bone this limb's swing drives (a leg's upper bone). */
   bone: AutoMovieHumanoidBone;
 
-  /** Joint axis this gait channel writes. */
+  /**
+   * Joint axis this gait channel writes. Omitted means `"flexion"` (the
+   * sagittal swing); set `"abduction"` for side-to-side sway/spread or
+   * `"twist"` for axial gait details.
+   */
   axis?: "flexion" | "abduction" | "twist";
 
-  /** Cycle phase offset in [0, 1). */
+  /**
+   * Where in the stride this limb's cycle starts, in `[0, 1)`: the phase offset
+   * that distinguishes one gait's footfall sequence from another's.
+   */
   phase: number;
 
-  /** Fraction of the stride spent in stance. */
+  /**
+   * Fraction of the stride the limb spends in **stance** (planted, pushing the
+   * body back) versus **swing** (lifted, recovering forward), in `(0, 1)`. A
+   * walk has a high duty (long ground contact); a gallop a low one.
+   */
   duty: number;
 
-  /** Peak swing on the selected axis, degrees. */
+  /** Peak swing on `axis` (degrees) about the limb's neutral. */
   amplitude: number;
 
-  /** Easing used while the limb is in stance. */
+  /**
+   * Easing used while the limb is in stance (planted, pushing back). Omitted
+   * means `"linear"`.
+   */
   stanceEasing?: AutoMovieEasing;
 
-  /** Easing used while the limb is in swing. */
+  /**
+   * Easing used while the limb is in swing (recovering forward). Omitted means
+   * `"linear"`.
+   */
   swingEasing?: AutoMovieEasing;
 
-  /** Center the swing oscillates around, degrees. */
+  /**
+   * Center the swing oscillates around (degrees), default `0`. A symmetric limb
+   * (a hip, a shoulder) leaves this unset and swings `±amplitude` about zero; a
+   * limb that only bends one way needs a nonzero center to keep the whole swing
+   * on the anatomical side. A knee, whose flexion ROM is `[0, 150]°` and cannot
+   * hyperextend, walks with e.g. `{ neutral: 25, amplitude: 18 }` so its swing
+   * stays in `[7, 43]°` instead of crossing zero: the offset the ROM validator
+   * forces once you try to bend a knee at all.
+   */
   neutral?: number;
 }
 
@@ -777,16 +862,22 @@ export interface IAutoMovieMcpMotion {
   /** Stable id so scenes and exports can cite this clip. */
   id: string;
 
-  /** Which skeleton this clip animates. */
+  /** Which skeleton this clip animates. Every keyframe pose targets this rig. */
   skeleton: string;
 
-  /** Total clip length, seconds. */
+  /** Total clip length, seconds. Every keyframe `time` must be `<= duration`. */
   duration: number;
 
-  /** Whether the clip loops seamlessly. */
+  /**
+   * Whether the clip loops seamlessly. When `true`, the engine expects the last
+   * keyframe to be continuous with the first.
+   */
   loop: boolean;
 
-  /** Keyframes in strictly increasing time order. */
+  /**
+   * Keyframes in strictly increasing `time` order. At least two are required: a
+   * clip needs a start and an end to interpolate between.
+   */
   keyframes: IAutoMovieMcpKeyframe[];
 
   /**
@@ -799,31 +890,49 @@ export interface IAutoMovieMcpMotion {
 
 /** JSON-safe keyframe returned by the MCP `perform` tool. */
 export interface IAutoMovieMcpKeyframe {
-  /** Timestamp within the clip, seconds. */
+  /**
+   * Timestamp within the clip, seconds. Must be `<= clip duration`, and
+   * keyframes must be strictly increasing in `time`; both enforced by the
+   * engine's temporal verifier.
+   */
   time: number;
 
   /** The body pose held at this instant. */
   pose: IAutoMoviePose;
 
-  /** Optional facial expression at this instant. */
+  /**
+   * Facial expression at this instant, or `null` for the neutral (rest) face.
+   * `null` is the unauthored/neutral side, blended toward like a resting joint
+   * axis: an expression authored only at the far keyframe ramps in from neutral
+   * across the segment, and one authored only at the near keyframe fades out.
+   */
   expression: IAutoMovieExpression | null;
 
   /** How to interpolate from this keyframe toward the next. */
   easing: AutoMovieEasing;
 
-  /** Cubic-bezier control points as named fields, or null for named easing. */
+  /**
+   * Control points for `easing: "cubicBezier"`, `null` for all other easings.
+   * The engine's own keyframe carries these as the tuple `[x1, y1, x2, y2]`;
+   * the LLM schema cannot express a tuple, so the MCP boundary names the four
+   * numbers instead. Same values, same order.
+   */
   bezier: IAutoMovieMcpBezier | null;
 }
 
-/** Cubic-bezier control points as named fields, not a tuple. */
+/**
+ * Cubic-bezier control points as named fields, not a tuple: the MCP form of the
+ * engine's `[x1, y1, x2, y2]`, in the unit square (CSS `cubic-bezier`
+ * convention).
+ */
 export interface IAutoMovieMcpBezier {
-  /** First control point x. */
+  /** First control point x, in `[0, 1]`. */
   x1: number;
 
   /** First control point y. */
   y1: number;
 
-  /** Second control point x. */
+  /** Second control point x, in `[0, 1]`. */
   x2: number;
 
   /** Second control point y. */
