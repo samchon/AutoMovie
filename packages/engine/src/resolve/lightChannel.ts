@@ -221,6 +221,12 @@ const unescapePointerSegment = (segment: string): string =>
  * Written as a total switch rather than a spread so each kind keeps exactly the
  * parameters its discriminator promises: a `range` recorded against a light
  * that later reads as directional cannot leak a field the type does not carry.
+ *
+ * Every kind is its own `case` and there is no `default`. A `default` arm would
+ * silently build a spot for a kind added later, and it would hide that omission
+ * from the exhaustiveness check: the switch is what makes adding an
+ * `IAutoMovieLight` arm a compile error here rather than a wrong light at
+ * runtime.
  */
 export const applyLightOverride = (
   light: IAutoMovieLight,
@@ -237,7 +243,7 @@ export const applyLightOverride = (
       return { ...base, type: "directional" };
     case "point":
       return { ...base, type: "point", range: override.range ?? light.range };
-    default:
+    case "spot":
       return {
         ...base,
         type: "spot",
