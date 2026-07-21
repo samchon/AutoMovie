@@ -33,6 +33,8 @@ An action drives ONE body region, and the engine masks its clip to that region's
 | `emote` | `face` |
 | `hold`, `enact`, `react`, `attachTo`, `launch` | `fullBody` |
 
+The root and the expression are masked on the same rule as the bones. The expression always belongs to `face` alone, so any other region's clip loses it. The root is only contested when one actor's actions span several regions at once: then only the striding region (`lowerBody` or `fullBody`) keeps it, since two regions cannot both move the actor. An actor performing on a single region keeps whatever its clip carries.
+
 **A retargeted non-biped is where this bites.** The humanoid bone enum is the only vocabulary, so a quadruped's FRONT legs ride the arm chains (`leftUpperArm`/`leftLowerArm`/`leftHand` and the right pair). A four-legged gait therefore reaches outside `locomote`'s `lowerBody` default: write `"region": "fullBody"` on that action, or the front legs are refused rather than frozen.
 
 ## Actor Contexts
