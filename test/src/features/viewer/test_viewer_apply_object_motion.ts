@@ -6,7 +6,10 @@ import * as THREE from "three";
 import { nclose } from "../internal/predicates";
 
 const node = (
-  path: "translation" | "rotation" | "scale",
+  // The FULL node-channel union on purpose: a helper that cannot express
+  // `weights` is how the fourth path stayed unapplied while a scenario claimed
+  // to prove the mapping complete (#1357), the same shape that hid `scale`.
+  path: "translation" | "rotation" | "scale" | "weights",
   values: number[],
 ): IAutoMovieTrack => ({
   channel: { kind: "node", node: "prop", path },
@@ -15,12 +18,27 @@ const node = (
   interpolation: "linear",
 });
 
+/** A mesh carrying `count` morph targets, all resting at zero. */
+const morphMesh = (count: number): THREE.Mesh => {
+  const mesh = new THREE.Mesh(
+    new THREE.BufferGeometry(),
+    new THREE.MeshBasicMaterial(),
+  );
+  mesh.morphTargetInfluences = Array.from({ length: count }, () => 0);
+  return mesh;
+};
+
 /**
  * `applyObjectMotion` is the render side of the engine's clip bakers: every
  * node channel the engine composes must land on the `THREE.Object3D` the same
  * way. Scale used to fall through silently (#1049): a clip growing a prop 1→2
  * rendered rigid while every engine-side consumer (`sampleClip` width
  * validation, `resolveFrame` matrix composition) saw it at 1.5 mid-clip.
+ *
+ * `weights` was the last path still falling through (#1357): the gate accepted
+ * such a track, `resolveFrame` interpolated it, and the render left the mesh
+ * where it was, so a clip that morphs a prop validated clean and changed
+ * nothing on screen.
  *
  * Scenarios:
  *
@@ -32,6 +50,13 @@ const node = (
  * 3. The documented carry-over contract: a channel absent from the clip keeps the
  *    object's existing value (the helper owns no rest poses: hosts that swap
  *    clips restore staged bases themselves).
+ * 4. A `weights` track writes the sampled vector, by INDEX, onto every morphable
+ *    mesh beneath the resolved object, including a nested one; the value is the
+ *    interpolated midpoint, not either endpoint.
+ * 5. Boundaries of that write: an object with no morphable mesh is skipped without
+ *    throwing, a mesh with FEWER influences than the track is filled as far as
+ *    it goes (a clip authored against another model), and a mesh with MORE
+ *    keeps its untouched tail.
  */
 export const test_viewer_apply_object_motion = (): void => {
   const s = Math.SQRT1_2;
@@ -91,5 +116,50 @@ export const test_viewer_apply_object_motion = (): void => {
   TestValidator.predicate(
     "a channel absent from the clip keeps the object's existing value",
     nclose(prop.position.x, 2) && nclose(prop.scale.x, 1.5),
+  );
+
+  // 4. weights land on every morphable mesh under the object, by index
+  const morphs: IAutoMovieClip = {
+    ...clip,
+    tracks: [node("weights", [0, 0, 1, 0.5])],
+  };
+  const carrier = new THREE.Object3D();
+  const direct = morphMesh(2);
+  const nested = new THREE.Object3D();
+  const buried = morphMesh(2);
+  nested.add(buried);
+  carrier.add(direct);
+  carrier.add(nested);
+  applyObjectMotion(morphs, 0.5, (n) => (n === "prop" ? carrier : undefined));
+  TestValidator.predicate(
+    "a weights track writes the sampled vector onto every morphable mesh",
+    nclose(direct.morphTargetInfluences![0]!, 0.5) &&
+      nclose(direct.morphTargetInfluences![1]!, 0.25) &&
+      nclose(buried.morphTargetInfluences![0]!, 0.5) &&
+      nclose(buried.morphTargetInfluences![1]!, 0.25),
+  );
+
+  // 5. BOUNDARIES: no morphable mesh, a shorter influence array, a longer one
+  const bare = new THREE.Object3D();
+  applyObjectMotion(morphs, 0.5, (n) => (n === "prop" ? bare : undefined));
+  TestValidator.equals(
+    "an object with no morphable mesh is skipped",
+    bare.children.length,
+    0,
+  );
+  const short = morphMesh(1);
+  const long = morphMesh(3);
+  long.morphTargetInfluences![2] = 0.9;
+  const mixed = new THREE.Object3D();
+  mixed.add(short);
+  mixed.add(long);
+  applyObjectMotion(morphs, 0.5, (n) => (n === "prop" ? mixed : undefined));
+  TestValidator.predicate(
+    "a shorter influence array fills as far as it goes and a longer one keeps its tail",
+    short.morphTargetInfluences!.length === 1 &&
+      nclose(short.morphTargetInfluences![0]!, 0.5) &&
+      nclose(long.morphTargetInfluences![0]!, 0.5) &&
+      nclose(long.morphTargetInfluences![1]!, 0.25) &&
+      nclose(long.morphTargetInfluences![2]!, 0.9),
   );
 };
