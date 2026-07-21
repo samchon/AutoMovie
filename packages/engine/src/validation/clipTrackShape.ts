@@ -38,7 +38,7 @@ export interface IAutoMovieClipShapeFault {
 
   /**
    * Field carrying the fault, relative to the track (or the clip, for
-   * {@link clipDurationFaults} / {@link clipLoopFault}), e.g. `values`,
+   * {@link clipDurationFault} / {@link clipLoopFault}), e.g. `values`,
    * `times[2]`, `interpolation`. The gate joins it onto its own path; the
    * sampler ignores it, because its message already names the field.
    */
@@ -173,9 +173,10 @@ export const clipLoopFault = (
  * {@link sampleClip} discovers them (its first throw is this list's first
  * entry).
  *
- * Total over `unknown`: `times`/`values`/`channel` may be any JSON. A field of
- * the wrong TYPE yields no fault here, because the caller that reads stored
- * JSON reports that separately and one mistake earns one violation.
+ * Every field is read as `unknown`, because a stored track carries whatever
+ * JSON it carries. A field of the wrong TYPE yields no fault here, because the
+ * caller reading that JSON reports it separately and one mistake earns one
+ * violation.
  */
 export const clipTrackShapeFaults = (
   /**
