@@ -7,6 +7,7 @@ import {
 } from "@automovie/interface";
 
 import { aimYawPitch } from "../kinematics/aimYawPitch";
+import { gazeChainJoints } from "../kinematics/gazeChain";
 import { reachPose } from "../kinematics/reachPose";
 import { Vector3 } from "../math/Vector3";
 import { holdMotion } from "../motion/arrange";
@@ -167,8 +168,10 @@ const jabClip = (
  *   otherwise it steps in place (a relative target, "off to the left", has no
  *   positional point yet);
  * - `hold` → the actor's rest pose held for the duration ({@link holdMotion});
- * - `lookAt` → the head turned to aim at a resolved target, resolved against the
- *   **aim points** rather than the raw placements (see below);
+ * - `lookAt` → the gaze chain turned to aim at a resolved target, resolved
+ *   against the **aim points** rather than the raw placements (see below), and
+ *   distributed over `neck`/`head` by the context's declared ROM when it
+ *   carries a `rig` ({@link gazeChainJoints});
  * - `emote` → a face-region expression clip;
  * - `gesture` → the postural/whole-body gestures (bow/nod/shake/crouch/kick/
  *   stagger/wave/celebrate/jump) via {@link gestureMotion}, plus the reachPose
@@ -195,7 +198,10 @@ const jabClip = (
  * separation is 66.37 degrees of flexion against a 45 degree head limit). The
  * camera solve met the same wall and answered it with a measured aim fraction
  * of the subject's height; this is the aim verbs' half of that answer, using
- * the one datum the context already carries for exactly this purpose.
+ * the one datum the context already carries for exactly this purpose. Since
+ * #1360 that same 66.37 degrees is legal on a declared chain, which does not
+ * soften the reason: a gaze aimed between the subject's feet is a stoop, and
+ * the lift is what makes it a look.
  *
  * @author Samchon
  */
@@ -258,13 +264,20 @@ export const makeActorSynthesizer = (
       };
       const { yawDeg, pitchDeg } = aimYawPitch(eye, target, ctx.facingDeg);
       const duration = action.duration === "auto" ? 1 : action.duration;
-      // turn the head: twist toward the target, flexion to tilt (up = extension)
+      // Turn the gaze CHAIN: twist toward the target, flexion to tilt (up =
+      // extension), spread over `neck` and `head` as the rig declares they can
+      // hold it (#1360). Piling the whole solved angle on the head emitted
+      // poses the rig itself forbade for any target much below eye level, and
+      // the `head` region this verb drives already owns the neck, so nothing
+      // downstream had to change for the second joint to survive the mask.
       const headPose: IAutoMoviePose = {
         skeleton: ctx.skeleton,
         root: null,
-        joints: [
-          { bone: "head", flexion: -pitchDeg, abduction: null, twist: yawDeg },
-        ],
+        joints: gazeChainJoints({
+          rig: ctx.rig ?? null,
+          flexionDeg: -pitchDeg,
+          twistDeg: yawDeg,
+        }),
       };
       const frame = (time: number): IAutoMovieKeyframe => ({
         time,

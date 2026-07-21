@@ -105,6 +105,13 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["STAGING", "re-lighting a beat never discards the performances already"],
   ["PERFORMANCE", "lights are addressed by their staged id, never by position"],
   ["PERFORMANCE", "no two tracks in the whole field may drive the same light"],
+  // The gaze chain (#1360). A steep `lookAt` used to break the head's ROM with
+  // the neck idle, and the recovery an agent reached for was widening the head
+  // bone until one joint carried the whole cervical range. The corpus now names
+  // both halves an author cannot infer: the chain absorbs the aim, and it does
+  // so only for a context that supplies a `rig`.
+  ["PERFORMANCE", "spreads its solved aim over `neck` and `head`"],
+  ["PERFORMANCE", "without one the whole angle sits on the head"],
 ];
 
 /**

@@ -2,6 +2,7 @@ export * from "./aimRotation";
 export * from "./aimYawPitch";
 export * from "./armChainFault";
 export * from "./decomposeJointRotation";
+export * from "./gazeChain";
 export * from "./hingedArmArticulation";
 export * from "./humanoidJointAxes";
 export * from "./jointToQuaternion";
