@@ -891,8 +891,9 @@ const appendLightValueBounds = (
   if (track.interpolation === "cubicspline") return;
   const { bounds } = LIGHT_CHANNEL_PROPERTIES[property];
   asArray(track.values).forEach((value, k) => {
-    // Finiteness is `validateClipArtifact`'s to report, and reporting it twice
-    // on one path would read as two separate faults.
+    // Finiteness belongs to the shared track-shape contract
+    // (`clipTrackShapeFaults`), which reports it at this very path. Adding a
+    // range verdict on top would read as two separate faults for one mistake.
     if (!Number.isFinite(value)) return;
     validateRange(
       value,
