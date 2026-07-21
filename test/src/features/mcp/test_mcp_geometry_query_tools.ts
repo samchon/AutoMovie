@@ -125,7 +125,10 @@ const residentShot: IAutoMovieShot = {
  * 2. `getResolvedPose` samples an MCP-safe motion and returns bone positions in
  *    scene world space.
  * 3. `getReach` reports per-arm reach distance, gap, and IK pose against a
- *    positional target.
+ *    positional target. `reachable` answers the distance question and
+ *    `poseWithinRom` the one `perform` answers, so a target inside the arm's
+ *    shell whose IK pose breaks the rig's ROM reports `reachable: true` with
+ *    `poseWithinRom: false` and the blocking axes in `romViolations` (#1338).
  * 4. Resident project queries may omit explicit context after commitScene and
  *    commitShot supplied the session model/motion payloads; a reopened project
  *    whose actors were never performed (so no `actors/<node>.json` rig exists
@@ -556,14 +559,31 @@ export const test_mcp_geometry_query_tools = (): void => {
     target: { kind: "point", point: { x: 1.4, y: 1, z: 2.3 } },
   }).reach;
   TestValidator.predicate(
-    "left arm reaches target",
+    "left arm spans the distance to the target",
     reach !== null &&
-      reach.reachable &&
       reach.left !== null &&
+      reach.left.reachable &&
       reach.left.pose !== null &&
       nclose(reach.left.maximumDistance, 0.55) &&
       nclose(reach.left.gap, 0) &&
       reach.right === null,
+  );
+  // The ROM answer is separate from the distance one (#1338): this rig's
+  // default humanoid ROM marks the elbow's abduction immobile, and the analytic
+  // solve lands the target with a bent-out elbow, so the arm is long enough and
+  // the POSE is still one `perform` refuses. The violations name the axes, at
+  // the same `joints[i].<axis>` paths the perform gate reports.
+  TestValidator.predicate(
+    "a ROM-breaking IK pose is reported as such, without denying the reach",
+    reach !== null &&
+      reach.left !== null &&
+      reach.reachable &&
+      !reach.left.poseWithinRom &&
+      reach.left.romViolations.length > 0 &&
+      reach.left.romViolations.every((entry) => entry.kind === "rom") &&
+      reach.left.romViolations.some((entry) =>
+        entry.path.endsWith(".abduction"),
+      ),
   );
 
   const farReach = app.getReach({

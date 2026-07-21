@@ -1,5 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   IAutoMovieStagedSet,
   POSITIONAL_TARGET_SHAPE,
   Quaternion,
@@ -9,6 +10,7 @@ import {
   resolveBeatEnd,
   resolvePose,
   sampleMotion,
+  validatePose,
 } from "@automovie/engine";
 import {
   IAutoMovieActionTarget,
@@ -1047,13 +1049,32 @@ const measureArmReach = (
   );
   const maximumDistance = upperLength + lowerLength;
   const gap = Math.max(0, targetDistance - maximumDistance);
+  // The oracle runs the gate its consumer runs (#1338), and runs it in the
+  // coordinate frame the gate is written in. `DEFAULT_HUMANOID_ROM` is stated
+  // in CLINICAL angles (neutral = arms at the sides) while a T-pose rig rests
+  // at ~90 degrees of shoulder abduction, so decomposing without the rest frame
+  // yields rest-relative angles that the clinical table then rejects by a
+  // ~90-degree offset. `HUMANOID_REST_FRAME` is the canonical humanoid's own
+  // table and pairs with the `HUMANOID_JOINT_AXES` this path already assumes;
+  // supplying it changes the reported angles, never the geometry, and the hand
+  // still lands on the same point.
+  const pose = reachPose(skeleton, side, target, HUMANOID_REST_FRAME);
+  const romViolations =
+    pose === null ? [] : validatePose({ pose, skeleton }).items;
   return {
     side,
     targetDistance,
     maximumDistance,
     gap,
+    // Distance, and only distance. Folding the ROM verdict in here made the
+    // field permanently false on the canonical humanoid, because the analytic
+    // solve cannot produce a ROM-valid arm pose for almost any target; that is
+    // its own defect, and reporting it as "unreachable" would state an
+    // impossibility the engine has not established.
     reachable: gap <= 1e-6,
-    pose: reachPose(skeleton, side, target),
+    poseWithinRom: pose !== null && romViolations.length === 0,
+    romViolations,
+    pose,
   };
 };
 

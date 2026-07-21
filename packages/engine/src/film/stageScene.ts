@@ -12,6 +12,7 @@ import {
 import { aimRotation } from "../kinematics/aimRotation";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { isRecord } from "../validation/artifactShape";
 import { validateSpace } from "../validation/validateSpace";
 import { ViolationCollector } from "../validation/violation";
 import { lookRotation } from "./cameraMove";
@@ -25,6 +26,9 @@ const CAMERA_FAR = 1000;
 
 /** Cameras look down local −Z (glTF convention); lights shine down −Z too. */
 const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: -1 };
+
+/** No turn: a point light radiates every way, so its orientation is arbitrary. */
+const IDENTITY_ROTATION = { x: 0, y: 0, z: 0, w: 1 };
 
 const isFiniteVector3 = (vector: IAutoMovieVector3): boolean =>
   [vector.x, vector.y, vector.z].every((coordinate) =>
@@ -44,6 +48,243 @@ const setPieceScale = (
   if (scale === undefined) return { x: 1, y: 1, z: 1 };
   if (typeof scale === "number") return { x: scale, y: scale, z: scale };
   return scale;
+};
+
+/** A light placement's kind, defaulting to the sun-like parallel source. */
+const lightTypeOf = (
+  light: IAutoMovieStagingApplication.ILightPlacement,
+): "directional" | "point" | "spot" => light.type ?? "directional";
+
+/** A spot's cone half-angle when the placement leaves it to the engine. */
+const DEFAULT_CONE_ANGLE = 45;
+
+/**
+ * The staging light contract, per kind (#1341).
+ *
+ * `stage` used to accept `{node, role, direction, intensity}` and lower every
+ * entry to a white directional light, so a candle, a sunset, a neon sign, and a
+ * window shaft were all the same frame, and an author who wanted a warm lamp
+ * had to hand-patch `scene.lights` after `stage` and lose the referential
+ * integrity `stage` exists to give. The placement now spans the same three
+ * kinds {@link IAutoMovieLight} already models, which makes each kind's
+ * parameter set exact rather than advisory:
+ *
+ * - An aimed light (`directional`, `spot`) needs a finite non-zero `direction`
+ *   and a `point` light must not carry one, since it radiates every way;
+ * - A positioned light (`point`, `spot`) needs a finite `position` and a
+ *   `directional` light must not carry one, since it is infinitely distant;
+ * - `range` belongs to the falloff kinds and `coneAngle` to `spot` alone.
+ *
+ * A parameter that cannot act is refused rather than ignored: silently dropping
+ * a `coneAngle` on a point light is the same false green the campaign is
+ * closing elsewhere. Colors are range-checked here too, because `stage` is the
+ * only rung between the model and the scene.
+ */
+const validateLightPlacementShape = (
+  light: IAutoMovieStagingApplication.ILightPlacement,
+  path: string,
+  out: ViolationCollector,
+): void => {
+  const type = lightTypeOf(light);
+  const aimed = type === "directional" || type === "spot";
+  const positioned = type === "point" || type === "spot";
+
+  if (light.direction === undefined) {
+    if (aimed)
+      out.push(
+        "type",
+        `${path}.direction`,
+        `a ${type} light is aimed and needs a direction`,
+        light.direction,
+      );
+  } else if (!aimed)
+    out.push(
+      "type",
+      `${path}.direction`,
+      `a point light radiates in every direction and takes no direction`,
+      light.direction,
+    );
+  else if (
+    !isFiniteVector3(light.direction) ||
+    Vector3.length(light.direction) === 0
+  )
+    out.push(
+      "range",
+      `${path}.direction`,
+      `direction must be a finite non-zero vector`,
+      light.direction,
+    );
+
+  if (light.position === undefined) {
+    if (positioned)
+      out.push(
+        "type",
+        `${path}.position`,
+        `a ${type} light falls off with distance and needs a position`,
+        light.position,
+      );
+  } else if (!positioned)
+    out.push(
+      "type",
+      `${path}.position`,
+      `a directional light is infinitely distant and takes no position`,
+      light.position,
+    );
+  else if (!isFiniteVector3(light.position))
+    out.push(
+      "range",
+      `${path}.position`,
+      `position must be a finite vector`,
+      light.position,
+    );
+
+  if (light.range !== undefined) {
+    if (!positioned)
+      out.push(
+        "type",
+        `${path}.range`,
+        `a directional light has no distance falloff and takes no range`,
+        light.range,
+      );
+    else if (!Number.isFinite(light.range) || light.range < 0)
+      out.push(
+        "range",
+        `${path}.range`,
+        `light range must be a finite number >= 0 (0 = infinite), but was ${light.range}`,
+        light.range,
+      );
+  }
+
+  if (light.coneAngle !== undefined) {
+    if (type !== "spot")
+      out.push(
+        "type",
+        `${path}.coneAngle`,
+        `only a spot light has a cone; a ${type} light takes no coneAngle`,
+        light.coneAngle,
+      );
+    else if (
+      !Number.isFinite(light.coneAngle) ||
+      light.coneAngle <= 0 ||
+      light.coneAngle > 90
+    )
+      out.push(
+        "range",
+        `${path}.coneAngle`,
+        `spot coneAngle must be a finite number within (0, 90], but was ${light.coneAngle}`,
+        light.coneAngle,
+      );
+  }
+
+  if (light.color !== undefined) validateLightColor(light.color, path, out);
+};
+
+/**
+ * A staged light's color, checked to the same rule the scene artifact validator
+ * applies downstream.
+ *
+ * Both halves matter. The object check keeps this validator TOTAL: `stage` is
+ * reachable in-process with an untyped payload (the transport's structural gate
+ * is not the engine's), and a `null` color would otherwise dereference into a
+ * TypeError instead of a located violation. The alpha check keeps the two rungs
+ * agreeing: `validateColorArtifact` range-checks a non-null `a`, so leaving it
+ * to `commitScene` would let a bad alpha compose a scene here and be refused
+ * one stage later, which is the wrong-stage failure this cycle closes
+ * elsewhere.
+ */
+const validateLightColor = (
+  color: unknown,
+  path: string,
+  out: ViolationCollector,
+): void => {
+  if (!isRecord(color)) {
+    out.push(
+      "type",
+      `${path}.color`,
+      "light color must be a JSON object",
+      color,
+    );
+    return;
+  }
+  for (const key of ["r", "g", "b"] as const)
+    unitComponent(
+      color[key],
+      `${path}.color.${key}`,
+      `light color ${key}`,
+      out,
+    );
+  // `a` is nullable by contract: a light slot is opacity-irrelevant, so `null`
+  // is the documented value there, distinct from an out-of-range number.
+  if (color.a !== null)
+    unitComponent(color.a, `${path}.color.a`, "light color a", out);
+};
+
+/**
+ * One color component in `[0, 1]`, reported in
+ * {@link ViolationCollector.range}'s own words.
+ *
+ * The collector's helper takes a `number`, and a component read off an untyped
+ * payload is `unknown`. Casting it to `number` to satisfy that signature would
+ * assert exactly the thing the check exists to doubt, so the comparison narrows
+ * with `typeof` instead and the message is kept identical to the collector's,
+ * so the two rungs read the same to an author.
+ */
+const unitComponent = (
+  value: unknown,
+  path: string,
+  label: string,
+  out: ViolationCollector,
+): void => {
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= 1
+  )
+    return;
+  out.push(
+    "range",
+    path,
+    `${label} must be a finite number within [0, 1], but was ${String(value)}`,
+    value,
+  );
+};
+
+/**
+ * Lower one accepted placement into the scene light it describes.
+ *
+ * An aimed light keeps the shortest-arc rotation that puts its local −Z on
+ * `direction`; a positioned light keeps that same aim (a spot needs it, a point
+ * is rotation-indifferent and takes identity) and translates to `position`.
+ * Omitted color is neutral white with `a: null`, the light-slot convention
+ * {@link IAutoMovieColor} documents.
+ */
+const lowerLightPlacement = (
+  light: IAutoMovieStagingApplication.ILightPlacement,
+): IAutoMovieLight => {
+  const type = lightTypeOf(light);
+  const base = {
+    id: light.node,
+    transform: {
+      translation: light.position ?? { x: 0, y: 0, z: 0 },
+      rotation:
+        light.direction === undefined
+          ? IDENTITY_ROTATION
+          : aimRotation(FORWARD, light.direction),
+      scale: { x: 1, y: 1, z: 1 },
+    },
+    color: light.color ?? { r: 1, g: 1, b: 1, a: null, hex: null },
+    intensity: light.intensity,
+  };
+  if (type === "point") return { ...base, type, range: light.range ?? 0 };
+  if (type === "spot")
+    return {
+      ...base,
+      type,
+      range: light.range ?? 0,
+      coneAngle: light.coneAngle ?? DEFAULT_CONE_ANGLE,
+    };
+  return { ...base, type };
 };
 
 /**
@@ -117,9 +358,9 @@ export namespace IAutoMovieStagedSet {
  * Conversions: `facingDeg` (about +Y, 0 = facing +Z) becomes the node's
  * rotation; a set piece's optional `scale` becomes the node transform's scale
  * (one primitive at many sizes); a camera's `lookAt` resolves to a point and
- * the shortest-arc rotation aims its −Z there; every light is realised as
- * directional, because the staging schema gives lights a direction and no
- * position.
+ * the shortest-arc rotation aims its −Z there; a light placement lowers to the
+ * scene light its `type` names (directional, point, or spot), aimed by
+ * `direction` and placed at `position`, in its authored color.
  *
  * The environment is two halves of one thing (#1173): `set` pieces are the
  * visible geometry the guide passes draw, and the optional `space` is the
@@ -348,25 +589,16 @@ export const stageScene = (
   });
 
   staging.lights.forEach((light, i) => {
-    claim(light.node, `$input.lights[${i}].node`, "light node id");
+    const path = `$input.lights[${i}]`;
+    claim(light.node, `${path}.node`, "light node id");
     if (!Number.isFinite(light.intensity) || light.intensity < 0)
       out.push(
         "range",
-        `$input.lights[${i}].intensity`,
+        `${path}.intensity`,
         `intensity must be a finite number >= 0, but was ${light.intensity}`,
         light.intensity,
       );
-    const direction = [light.direction.x, light.direction.y, light.direction.z];
-    if (
-      direction.some((component) => !Number.isFinite(component)) ||
-      Vector3.length(light.direction) === 0
-    )
-      out.push(
-        "range",
-        `$input.lights[${i}].direction`,
-        `direction must be a finite non-zero vector`,
-        light.direction,
-      );
+    validateLightPlacementShape(light, path, out);
   });
 
   if (out.items.length > 0) return { success: false, violations: out.items };
@@ -426,17 +658,7 @@ export const stageScene = (
     };
   });
 
-  const lights: IAutoMovieLight[] = staging.lights.map((light) => ({
-    id: light.node,
-    type: "directional",
-    transform: {
-      translation: { x: 0, y: 0, z: 0 },
-      rotation: aimRotation(FORWARD, light.direction),
-      scale: { x: 1, y: 1, z: 1 },
-    },
-    color: { r: 1, g: 1, b: 1, a: null, hex: null },
-    intensity: light.intensity,
-  }));
+  const lights: IAutoMovieLight[] = staging.lights.map(lowerLightPlacement);
 
   const mounts: IAutoMovieStagedSet.IMount[] = staging.actors
     .filter((placement) => placement.attach !== undefined)

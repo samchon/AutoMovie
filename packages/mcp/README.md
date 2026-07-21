@@ -40,7 +40,7 @@ pure stateless call, or omit it to read/commit the resident project opened with
 | `getBeatEnd` | slate + beat -> beat end-state or null | `readSlateContext` |
 | `getResolvedPose` | geometry context + actor + time -> world-space bones or null | `sampleMotion` + `resolvePose` |
 | `getShotEndState` | geometry context (or resident) + beat -> resumable beat end-state, or a reason | `resolveBeatEnd` |
-| `getReach` | geometry context + actor + target -> arm reach report or null | `reachPose` |
+| `getReach` | geometry context + actor + target -> arm reach report (shell distance AND the rig's ROM verdict) or null | `reachPose` + `validatePose` |
 | `measureDistance` | scene + two targets -> distance report or null | `resolveTargetPoint` |
 | `validatePose` | pose + skeleton -> validation | `validatePose` |
 | `validateMotion` | MCP-safe motion + skeleton -> validation | `validateMotion` |
@@ -66,7 +66,7 @@ pure stateless call, or omit it to read/commit the resident project opened with
 | `planCaptions` | slate + shared frameFormat (+ chunkFrames) -> caption sidecar (+ chunk-aligned slices) | `planCaptionSidecar` |
 | `planPoseKeypoints` | slate + shared frameFormat + motions + skeletons -> per-frame OpenPose keypoint sidecar | `planPoseKeypointSidecar` |
 | `seeFrame` | slate + render spec + frame/time -> preview frame + optional captured image | `@automovie/render` planning + host capture |
-| `stage` | script + staging -> staged scene (or violations) | `stageScene` |
+| `stage` | script + staging (actors, cameras, directional/point/spot lights, set, space) -> staged scene (or violations) | `stageScene` |
 | `block` | script + staged scene + blocking -> blocked beat (or violations) | `blockBeat` |
 | `perform` | script + staged scene + performance + actor contexts + optional enacted clips + optional blocking -> performed shot (or violations); resident calls may omit script/staged/actors and read the project (#1176) | `performShot` |
 | `cut` | assemble plan + performed shots -> cut sequence (or violations) | `cutSequence` |

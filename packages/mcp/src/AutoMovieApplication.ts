@@ -330,11 +330,16 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Measure whether an actor's arms can reach a positional target. Pass
-   * `context` explicitly, or omit it to use the resident project's committed
-   * scene plus the session-only model skeletons remembered from commitScene. A
-   * node target may name any staged placement, an actor, a set piece, or a
-   * camera.
+   * Measure whether an actor's arms can reach a positional target. `reachable`
+   * is the DISTANCE verdict: the target lies inside the arm's shell. Whether
+   * the reach also survives `perform` is a second, separate answer per arm:
+   * `poseWithinRom` says whether the returned IK pose satisfies the rig's range
+   * of motion, and `romViolations` names the exact joint axes that break it, at
+   * the same paths `perform` reports (#1338). Read both: a reach can be well
+   * inside the shell and still be a pose the joints cannot hold. Pass `context`
+   * explicitly, or omit it to use the resident project's committed scene plus
+   * the session-only model skeletons remembered from commitScene. A node target
+   * may name any staged placement, an actor, a set piece, or a camera.
    *
    * @param props The actor id, target, and optional explicit context.
    * @returns The reach report, or null with a reason naming the id or the
@@ -945,9 +950,12 @@ export class AutoMovieApplication {
    * each optionally resized by `scale`, so one box serves as wall, step, and
    * table top -- while `space` is the ground's meaning, the walkable surfaces
    * copied onto the scene and drawn as real meshes. Together they keep the
-   * guide passes describing a world rather than actors floating in a void. On
-   * failure nothing is composed and the violations name the offending placement
-   * to repair.
+   * guide passes describing a world rather than actors floating in a void. A
+   * light states its physics: `type` picks directional (aimed, no falloff),
+   * point (`position`, optional `range`), or spot (both, plus `coneAngle`), and
+   * `color` makes a candle warm; a parameter its kind cannot use is refused,
+   * not ignored. On failure nothing is composed and the violations name the
+   * offending placement to repair.
    *
    * @param props The script (cast + beats) and the staging plan (placements).
    * @returns The staged scene on success, or the staging violations to fix.

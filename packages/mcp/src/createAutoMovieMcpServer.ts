@@ -28,6 +28,10 @@ const MCP_PACKAGE_VERSION = (
  * returns real pixels; the plain stdio binary has none and `seeFrame` reports
  * `no-capture-adapter`.
  *
+ * Tool inputs are validated with typia's `validateEquals` (the `equals: true`
+ * schema config), so an excess property is refused where the caller wrote it
+ * rather than tolerated (see the call site).
+ *
  * @author Samchon
  */
 export const createAutoMovieMcpServer = (props?: {
@@ -37,7 +41,17 @@ export const createAutoMovieMcpServer = (props?: {
   projectRoot?: string;
 }): McpServer =>
   createMcpServer(
-    typia.llm.controller<AutoMovieApplication>(
+    // `equals: true` selects typia's `validateEquals` over `validate`, so an
+    // excess property is refused at the INPUT boundary. Without it one
+    // authoring mistake got two opposite answers (#1340): a stray property on
+    // an input-only object was accepted and silently discarded, while the same
+    // stray property on an object the engine echoes into its result survived
+    // into the output, failed the OUTPUT schema, and threw -- blaming the
+    // tool's output for the caller's input, at a path prefixed `$input.forged.`
+    // when the caller had written `$input.forge.`. Strict input makes the blame
+    // path correct by construction: the property is named where it was written,
+    // before the engine runs, and every tool answers the same way.
+    typia.llm.controller<AutoMovieApplication, { equals: true }>(
       "automovie",
       new AutoMovieApplication(props),
     ),
