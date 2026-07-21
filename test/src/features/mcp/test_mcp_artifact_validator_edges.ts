@@ -340,7 +340,7 @@ export const test_mcp_artifact_validator_edges = (): void => {
       hasExpected(
         clipEdges,
         "$input.shot.cameraMotion.tracks[2].times[1]",
-        "strictly increase",
+        "strictly increasing",
       ) &&
       hasExpected(
         clipEdges,

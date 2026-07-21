@@ -324,7 +324,7 @@ export const test_mcp_shot_metadata_gates = (): void => {
           coverage: [take({ cameraMotion: clip("cam:dup", [1, 1]) })],
         }),
         ".coverage[0].cameraMotion.tracks[0].times[1]",
-        "must strictly increase",
+        "must be strictly increasing",
       ) &&
       says(
         validate({ coverage: [take({ cameraIntent: bad(null) })] }),

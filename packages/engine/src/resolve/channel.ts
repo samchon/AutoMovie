@@ -1,5 +1,10 @@
 import { IAutoMovieChannel } from "@automovie/interface";
 
+import {
+  CHANNEL_VALUE_TYPES,
+  NODE_CHANNEL_PATHS,
+} from "../validation/clipTrackShape";
+
 type IAutoMovieNodeChannel = Extract<IAutoMovieChannel, { kind: "node" }>;
 type IAutoMoviePointerChannel = Extract<IAutoMovieChannel, { kind: "pointer" }>;
 
@@ -66,19 +71,3 @@ const validateChannelValueType = (
   if (!CHANNEL_VALUE_TYPES.has(valueType))
     throw new Error(`unknown channel valueType "${String(valueType)}"`);
 };
-
-const NODE_CHANNEL_PATHS = new Set<IAutoMovieNodeChannel["path"]>([
-  "translation",
-  "rotation",
-  "scale",
-  "weights",
-]);
-
-const CHANNEL_VALUE_TYPES = new Set<IAutoMoviePointerChannel["valueType"]>([
-  "scalar",
-  "vec2",
-  "vec3",
-  "vec4",
-  "quaternion",
-  "weights",
-]);

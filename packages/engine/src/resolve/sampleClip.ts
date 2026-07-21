@@ -1,5 +1,4 @@
 import {
-  AutoMovieInterpolation,
   IAutoMovieChannel,
   IAutoMovieClip,
   IAutoMovieTrack,
@@ -7,10 +6,12 @@ import {
 
 import { Quaternion } from "../math/Quaternion";
 import { segmentIndex } from "../math/bisect";
+import {
+  clipDurationFault,
+  clipLoopFault,
+  clipTrackShapeFaults,
+} from "../validation/clipTrackShape";
 import { channelIsRotation, channelKey } from "./channel";
-
-type IAutoMovieNodeChannel = Extract<IAutoMovieChannel, { kind: "node" }>;
-type IAutoMoviePointerChannel = Extract<IAutoMovieChannel, { kind: "pointer" }>;
 
 /** One channel's value sampled at an instant, with the channel it targets. */
 export interface IAutoMovieSampledChannel {
@@ -157,6 +158,11 @@ const normalizeQuatArray = (q: number[]): number[] => {
   return [n.x, n.y, n.z, n.w];
 };
 
+/**
+ * The clip's own shape, plus the query time. Duration and `loop` come from the
+ * shared contract ({@link clipTrackShape}), so the artifact gate that exists to
+ * spare a consumer this throw refuses exactly what would reach it (#1353).
+ */
 const validateSampleTime = (
   seconds: number,
   duration: number,
@@ -164,104 +170,23 @@ const validateSampleTime = (
 ): void => {
   if (!Number.isFinite(seconds))
     throw new Error(`sampleClip seconds must be finite, but was ${seconds}`);
-  if (!Number.isFinite(duration))
-    throw new Error(
-      `sampleClip clip duration must be finite, but was ${duration}`,
-    );
-  if (duration < 0)
-    throw new Error(
-      `sampleClip clip duration must be non-negative, but was ${duration}`,
-    );
-  if (typeof loop !== "boolean")
-    throw new Error(`sampleClip clip loop must be boolean, but was ${loop}`);
+  const fault = clipDurationFault(duration) ?? clipLoopFault(loop);
+  if (fault !== null) throw new Error(`sampleClip clip ${fault.message}`);
 };
 
+/**
+ * One track's keyframe payload, read through the shared contract. The sampler
+ * throws its FIRST fault: reaching an unreadable track means every gate in
+ * front of this one let it through, which is an engine defect rather than an
+ * authoring one, and one sentence is what a stack trace can carry (#1353).
+ */
 const validateTrackShape = (
   track: IAutoMovieTrack,
   key: string,
   duration: number,
 ): void => {
-  const { times, values, interpolation, channel } = track;
-  if (!TRACK_INTERPOLATIONS.has(interpolation))
-    throw new Error(
-      `track "${key}" interpolation "${String(interpolation)}" is not supported`,
-    );
-  if (times.length === 0)
-    throw new Error(`track "${key}" must have keyframes to sample`);
-  if (values.length === 0)
-    throw new Error(`track "${key}" values must not be empty`);
-  for (let i = 0; i < values.length; ++i)
-    if (!Number.isFinite(values[i]!))
-      throw new Error(
-        `track "${key}" values[${i}] must be finite, but was ${values[i]!}`,
-      );
-
-  for (const time of times)
-    if (!Number.isFinite(time))
-      throw new Error(`track "${key}" keyframe times must be finite`);
-
-  if (times[0]! < 0)
-    throw new Error(
-      `track "${key}" keyframe times must be non-negative, but first was ${times[0]!}`,
-    );
-
-  for (let i = 1; i < times.length; ++i)
-    if (times[i]! <= times[i - 1]!)
-      throw new Error(
-        `track "${key}" keyframe times must be strictly increasing`,
-      );
-
-  const lastTime = times[times.length - 1]!;
-  if (duration > 0 && lastTime > duration)
-    throw new Error(
-      `track "${key}" keyframe times must be within clip duration ${duration}, but last was ${lastTime}`,
-    );
-
-  const stride = values.length / times.length;
-  if (!Number.isInteger(stride))
-    throw new Error(
-      `track "${key}" values length must divide evenly by keyframe count`,
-    );
-  if (interpolation === "cubicspline" && stride % 3 !== 0)
-    throw new Error(`track "${key}" cubicspline stride must be divisible by 3`);
-
-  const width = interpolation === "cubicspline" ? stride / 3 : stride;
-  const expectedWidth = getFixedChannelWidth(channel);
-  if (expectedWidth !== undefined && width !== expectedWidth)
-    throw new Error(
-      `track "${key}" value width must be ${expectedWidth}, but was ${width}`,
-    );
-};
-
-const TRACK_INTERPOLATIONS = new Set<AutoMovieInterpolation>([
-  "step",
-  "linear",
-  "cubicspline",
-]);
-
-const getFixedChannelWidth = (
-  channel: IAutoMovieChannel,
-): number | undefined => {
-  if (channel.kind === "node") return NODE_CHANNEL_WIDTHS[channel.path];
-  return CHANNEL_VALUE_WIDTHS[channel.valueType];
-};
-
-const NODE_CHANNEL_WIDTHS: Partial<
-  Record<IAutoMovieNodeChannel["path"], number>
-> = {
-  translation: 3,
-  rotation: 4,
-  scale: 3,
-};
-
-const CHANNEL_VALUE_WIDTHS: Partial<
-  Record<IAutoMoviePointerChannel["valueType"], number>
-> = {
-  scalar: 1,
-  vec2: 2,
-  vec3: 3,
-  vec4: 4,
-  quaternion: 4,
+  const fault = clipTrackShapeFaults(track, duration)[0];
+  if (fault !== undefined) throw new Error(`track "${key}" ${fault.message}`);
 };
 
 /** Clamp (or wrap, when looping) a query time into the clip's duration. */

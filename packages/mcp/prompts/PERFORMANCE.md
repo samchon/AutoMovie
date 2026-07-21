@@ -80,6 +80,8 @@ Because of that, a **resident** `commitShot` whose shot references any motion mu
 
 A shot's `objectMotions` and `cameraMotion` tracks address **node** channels: `{ "kind": "node", "node": "<scene node id>", "path": "translation" | "rotation" | "scale" | "weights" }`. That is what the renderer and the viewer apply, and a track addressing anything else is refused at `validateShot` / `commitShot` rather than accepted and dropped.
 
+The keyframe payload is a glTF-style pair of flat arrays, and it is checked to the depth the sampler reads it: `times` strictly increases inside `[0, duration]`, `values` holds exactly `times.length x channel width` finite numbers (3 for `translation`/`scale`, 4 for `rotation`, whatever the model carries for `weights`, times three for `cubicspline`, which stores in-tangent/value/out-tangent per keyframe), `interpolation` is `step`, `linear`, or `cubicspline`, and `loop` is a boolean. A payload that misses any of those is refused at `validateShot` / `commitShot` with the field named, never accepted and left to fail while the film is being played.
+
 In particular a `pointer` channel (`/lights/0/intensity`, `/materials/2/baseColor`) is **not** a way to animate a scene property from a shot. The pointer form is real, and drivers consume it, but no shot-clip consumer resolves one, so accepting it would hand you a clean validation for a film that never changes. There is no intra-beat light or material animation today; if a beat needs one, say so rather than encoding it into a track.
 
 ## Continuity
