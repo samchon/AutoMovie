@@ -1,3 +1,4 @@
+export * from "./actionRegion";
 export * from "./blendPoses";
 export * from "./bodyRegionBones";
 export * from "./compilePerformance";

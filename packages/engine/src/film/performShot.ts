@@ -402,6 +402,15 @@ export const performShot = (props: {
 
   let liveCamera: string | null = null;
   const stageActions: IAutoMovieActionCall[] = [];
+  // Where a masked-content violation lands for each entry in `stageActions`,
+  // index for index. The compiler reports a masked clip by its position in the
+  // list it was handed, and that list is neither `actions` (frames are filtered
+  // out) nor stable (engine-injected reacts are appended), so the mapping is
+  // carried rather than recomputed from object identity, which a list repeating
+  // one action object would collapse. The whole path is stored, not a prefix,
+  // because an authored action is fixed at its own `region` field while an
+  // engine-injected react has no such field to name.
+  const stageActionPaths: string[] = [];
   const frames: { action: IAutoMovieCameraAction; index: number }[] = [];
   // Launch jobs collected while validating, the projectile must be a staged
   // node and the target must resolve to a point; compiled after the input
@@ -605,6 +614,7 @@ export const performShot = (props: {
       if (target !== null) frames.push({ action, index: i });
     } else {
       stageActions.push(action);
+      stageActionPaths.push(`${base}[${i}].region`);
       if (action.verb === "locomote" && gaits !== undefined) {
         // A locomote names a gait by the actor's own vocabulary; the reference
         // synthesiser resolves it by name and would otherwise silently produce
@@ -1162,10 +1172,13 @@ export const performShot = (props: {
         nodeRotations.get(job.targetNode)!,
         // just this node's own motion, its recoil fires at impact, past the
         // lead window, so it never perturbs the pre-hit path being sampled.
+        // Its `masked` report is deliberately dropped: this is a probe over a
+        // SUBSET of the same actions, and the authoritative compile below
+        // reports every one of those drops once, at the same authoring paths.
         compilePerformance(
           stageActions.filter((action) => targetsNode(action)),
           synthesize,
-        )[job.targetNode]!,
+        ).performances[job.targetNode]!,
       );
     const result = compileLaunch({
       action: job.action,
@@ -1226,11 +1239,41 @@ export const performShot = (props: {
     // layering envelope bounds its blend to the flinch window, so the
     // disruption reads as the hit interrupting the stride, not as a
     // shot-long dilution.
-    if (result.react !== null) stageActions.push(result.react);
+    if (result.react !== null) {
+      stageActions.push(result.react);
+      // The recoil is engine-scheduled and carries no `region` of its own, so
+      // a masked react points the author at the `onHit` they wrote, never at a
+      // field that does not exist or an action index absent from their input.
+      stageActionPaths.push(`${base}[${job.index}].onHit`);
+    }
   }
   if (out.items.length > 0) return { success: false, violations: out.items };
 
-  const motions = compilePerformance(stageActions, synthesize);
+  const compiled = compilePerformance(stageActions, synthesize);
+  const motions = compiled.performances;
+
+  // An authored channel the compiler does not apply is REPORTED (#1349). The
+  // region mask itself is deliberate (disjoint regions are what let a walk and
+  // a wave layer), but it used to discard content in silence: a retargeted
+  // quadruped's front legs ride the ARM chains, which `locomote`'s default
+  // `lowerBody` region excludes, so half the authored gait vanished and the
+  // shot still returned success with zero violations. The remedy is a field the
+  // author owns, so the violation points at `region` rather than at the clip.
+  for (const drop of compiled.masked) {
+    const path = stageActionPaths[drop.action]!;
+    const lost = [
+      ...(drop.bones.length > 0 ? [`the bones ${drop.bones.join(", ")}`] : []),
+      ...(drop.root ? ["a root displacement"] : []),
+      ...(drop.expression ? ["an expression"] : []),
+    ].join(" and ");
+    out.push(
+      "type",
+      path,
+      `${drop.actor}'s clip authors ${lost}, which the "${drop.region}" body region does not carry, so the performance would drop that content; set region to one that owns it ("fullBody" owns every bone and the root, only "face" carries an expression), or move the content to its own action`,
+      drop.region,
+    );
+  }
+
   for (const [node, motion] of Object.entries(motions)) {
     const rig = skeleton(node);
     if (rig === null) continue;

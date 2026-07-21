@@ -29,7 +29,13 @@ export namespace IAutoMovieScriptApplication {
   }
 
   export interface IWrite {
-    type: "write";
+    /**
+     * Discriminator against {@link IDecline}. **Optional**: every parameter that
+     * takes this type takes only this arm, so the signature already fixes the
+     * value. Omitting it is legal, and supplying `"write"` is equally legal;
+     * only a wrong literal is refused (#1347).
+     */
+    type?: "write";
 
     /** One sentence: the whole film. */
     logline: string;

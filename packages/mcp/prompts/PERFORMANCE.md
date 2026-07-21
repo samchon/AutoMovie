@@ -12,6 +12,31 @@ When no thin verb covers the motion (a sword kata, a stumble-and-recover, a char
 
 Enforcement is unchanged: the engine masks the clip to its region (default `fullBody`; narrow with `region`), layers it with disjoint-region actions, and ROM-gates the compiled composite. The actor needs a rig in its context (a rig-less enact is refused: an ungated dense clip would dodge the ROM shield), and the clip's `skeleton` must match that rig. Clips follow the derived-output rule below: they are never persisted, so re-supply them on every `perform`.
 
+## Body Regions, and Which One Each Verb Drives
+
+An action drives ONE body region, and the engine masks its clip to that region's bones so disjoint regions can layer. When `region` is omitted the verb's default applies, and a channel outside it is **refused**, not dropped: the shot fails with a `type` violation on that action's `region`, naming every bone the region does not carry. Set `region` to one that owns the content instead of diffing the compiled clip to discover what went missing.
+
+| Region | Owns |
+| --- | --- |
+| `lowerBody` | `hips` + both leg chains (through the toes), and the root displacement that makes an actor travel |
+| `upperBody` | `spine`/`chest`/`upperChest` + both arm chains + every finger |
+| `head` | `neck`, `head`, both eyes, `jaw` |
+| `face` | no bones at all: the expression channel only |
+| `fullBody` | every bone, and the root |
+
+| Verb | Default region |
+| --- | --- |
+| `locomote` | `lowerBody` |
+| `gesture` | `upperBody`, except `nod`/`shake` (`head`) and `bow`/`crouch`/`kick`/`stagger`/`jump`/`draw` (`fullBody`) |
+| `reach` | `upperBody` |
+| `lookAt` | `head` |
+| `emote` | `face` |
+| `hold`, `enact`, `react`, `attachTo`, `launch` | `fullBody` |
+
+The root and the expression are masked on the same rule as the bones. The expression always belongs to `face` alone, so any other region's clip loses it. The root is only contested when one actor's actions span several regions at once: then only the striding region (`lowerBody` or `fullBody`) keeps it, since two regions cannot both move the actor. An actor performing on a single region keeps whatever its clip carries.
+
+**A retargeted non-biped is where this bites.** The humanoid bone enum is the only vocabulary, so a quadruped's FRONT legs ride the arm chains (`leftUpperArm`/`leftLowerArm`/`leftHand` and the right pair). A four-legged gait therefore reaches outside `locomote`'s `lowerBody` default: write `"region": "fullBody"` on that action, or the front legs are refused rather than frozen.
+
 ## Actor Contexts
 
 Each performing actor needs a context: its gaits (JSON-safe: named easing only, no bezier tuples), staged position and facing, rest pose, and optionally its rig and rest frames. The server assembles the engine's default synthesizer from these, so the MCP contract stays JSON-only. An IK or physics verb without a rig synthesizes nothing.

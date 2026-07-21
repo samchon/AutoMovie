@@ -57,11 +57,11 @@ const times = (m: IAutoMovieMotion): number[] => m.keyframes.map((k) => k.time);
  */
 export const test_perform_compile = (): void => {
   // 1. empty
-  const empty = compilePerformance([], synth);
+  const empty = compilePerformance([], synth).performances;
   TestValidator.equals("empty → no actors", Object.keys(empty).length, 0);
 
   // 2. single actor, single action at a start offset
-  const one = compilePerformance([gesture("a", 0)], synth);
+  const one = compilePerformance([gesture("a", 0)], synth).performances;
   TestValidator.equals("one actor compiled", Object.keys(one), ["a"]);
   TestValidator.equals(
     "performance id names the actor",
@@ -75,7 +75,10 @@ export const test_perform_compile = (): void => {
   );
 
   // 3. unison + a skipped actor
-  const unison = compilePerformance([gesture(["a", "b", "skip"], 0)], synth);
+  const unison = compilePerformance(
+    [gesture(["a", "b", "skip"], 0)],
+    synth,
+  ).performances;
   TestValidator.equals(
     "unison fans to the non-skipped actors",
     Object.keys(unison).sort((a, b) => a.localeCompare(b)),
@@ -88,7 +91,8 @@ export const test_perform_compile = (): void => {
   );
 
   // 4. repeat: >1 concatenates, =1 and undefined stay single
-  const repeated = compilePerformance([gesture("r", 0, 2)], synth).r!;
+  const repeated = compilePerformance([gesture("r", 0, 2)], synth).performances
+    .r!;
   TestValidator.predicate(
     "repeat 2 doubles the duration",
     nclose(repeated.duration, 2),
@@ -97,17 +101,15 @@ export const test_perform_compile = (): void => {
     "repeat 2 → times 0,1,2 (seam dropped)",
     times(repeated).every((t, i) => nclose(t, [0, 1, 2][i]!)),
   );
-  const once = compilePerformance([gesture("o", 0, 1)], synth).o!;
+  const once = compilePerformance([gesture("o", 0, 1)], synth).performances.o!;
   TestValidator.predicate(
     "explicit repeat 1 stays a single cycle",
     nclose(once.duration, 1),
   );
 
   // 5. two actions, same actor, with a gap → arranged, hold across the gap
-  const gapped = compilePerformance(
-    [gesture("g", 0), gesture("g", 2)],
-    synth,
-  ).g!;
+  const gapped = compilePerformance([gesture("g", 0), gesture("g", 2)], synth)
+    .performances.g!;
   TestValidator.predicate(
     "two clips + gap → times 0,1,2,3",
     times(gapped).every((t, i) => nclose(t, [0, 1, 2, 3][i]!)),

@@ -10,6 +10,8 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import {
+  FIXTURE_BONE,
+  fixtureRegionDrivesBone,
   makePerformanceWrite,
   makeScriptWrite,
   makeStagingWrite,
@@ -26,9 +28,15 @@ import { vclose, violationCount } from "../internal/predicates";
 
 type ICoverage = IAutoMovieBlockingApplication.ICoverageIntent;
 
-/** A pose marching the root `x` metres along model +X. */
-const march = (x: number) =>
-  makePose([joint("leftLowerArm", { flexion: 10 + x * 10 })], {
+/**
+ * A pose marching the root `x` metres along model +X. The elbow rides along
+ * only when the action's region owns it: a `locomote` runs on `lowerBody`,
+ * which the arm chain is not part of, and a fixture that authored it anyway
+ * would now be refused for content the compiler would drop (#1349). The root
+ * (what this scenario actually reads) belongs to `lowerBody` either way.
+ */
+const march = (x: number, drivesBone: boolean) =>
+  makePose(drivesBone ? [joint(FIXTURE_BONE, { flexion: 10 + x * 10 })] : [], {
     translation: { x, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0, w: 1 },
     scale: { x: 1, y: 1, z: 1 },
@@ -42,8 +50,13 @@ const march = (x: number) =>
  */
 const synth: IAutoMovieActionSynthesizer = (action, actor) => {
   if (action.verb === "launch") return null;
-  if (actor === "foe")
-    return makeMotion([keyframe(0, march(0)), keyframe(1, march(1))], 1);
+  if (actor === "foe") {
+    const driven = fixtureRegionDrivesBone(action);
+    return makeMotion(
+      [keyframe(0, march(0, driven)), keyframe(1, march(1, driven))],
+      1,
+    );
+  }
   return validSynthesizer(action, actor);
 };
 

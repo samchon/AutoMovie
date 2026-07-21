@@ -1,8 +1,7 @@
 import { IAutoMovieModel } from "@automovie/interface";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { TestValidator } from "@nestia/e2e";
 
-import { MCP_REQUEST_TIMEOUT, openMcpStdio } from "../internal/mcpStdio";
+import { openMcpStdio, probeMcpTool } from "../internal/mcpStdio";
 
 /** A minimal valid prop model: generated, skeleton-less, id equal to the node. */
 const propModel = (): IAutoMovieModel => ({
@@ -38,29 +37,6 @@ const propModel = (): IAutoMovieModel => ({
   ],
   asset: null,
 });
-
-interface IProbe {
-  /** Whether the tool refused the call. */
-  refused: boolean;
-
-  /** The serialized annotation text the client receives. */
-  text: string;
-}
-
-const probe = async (
-  client: Client,
-  name: string,
-  args: Record<string, unknown>,
-): Promise<IProbe> => {
-  const result = await client.callTool({ name, arguments: args }, undefined, {
-    timeout: MCP_REQUEST_TIMEOUT,
-  });
-  const content = (result.content ?? []) as { text?: string }[];
-  return {
-    refused: result.isError === true,
-    text: content.map((part) => part.text ?? "").join(""),
-  };
-};
 
 /**
  * One authoring mistake gets one answer (#1340).
@@ -108,7 +84,7 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
     });
 
     // 1. CONTROL
-    const control = await probe(client, "forgeProp", {
+    const control = await probeMcpTool(client, "forgeProp", {
       spec: spec(propModel()),
     });
     TestValidator.equals(
@@ -118,7 +94,7 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
     );
 
     // 2. excess on an input-only object
-    const inputOnly = await probe(client, "forgeProp", {
+    const inputOnly = await probeMcpTool(client, "forgeProp", {
       spec: { ...spec(propModel()), bogusInputOnlyField: "x" },
     });
     TestValidator.predicate(
@@ -130,7 +106,7 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
 
     // 3. excess on an object the engine echoes into its result
     const echoedModel = propModel();
-    const echoed = await probe(client, "forgeProp", {
+    const echoed = await probeMcpTool(client, "forgeProp", {
       spec: spec({
         ...echoedModel,
         materials: [
@@ -161,7 +137,7 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
     );
 
     // 5. BOUNDARY: depth, and a tool that echoes nothing
-    const topLevel = await probe(client, "validatePose", {
+    const topLevel = await probeMcpTool(client, "validatePose", {
       pose: { skeleton: "s", root: null, joints: [] },
       skeleton: { id: "s", bones: [] },
       bogusTopLevel: 1,
@@ -170,7 +146,7 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
       "a top-level excess property is refused",
       topLevel.refused && topLevel.text.includes("$input.bogusTopLevel"),
     );
-    const nested = await probe(client, "validatePose", {
+    const nested = await probeMcpTool(client, "validatePose", {
       pose: { skeleton: "s", root: null, joints: [], bogusNested: 1 },
       skeleton: { id: "s", bones: [] },
     });
@@ -178,7 +154,7 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
       "a nested excess property on a non-echoing tool is refused too",
       nested.refused && nested.text.includes("$input.pose.bogusNested"),
     );
-    const inArray = await probe(client, "validatePose", {
+    const inArray = await probeMcpTool(client, "validatePose", {
       pose: {
         skeleton: "s",
         root: null,
@@ -194,7 +170,7 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
     );
 
     // 6. NEGATIVE TWIN: a real missing field still reads the way it always did
-    const missing = await probe(client, "forgeProp", {
+    const missing = await probeMcpTool(client, "forgeProp", {
       spec: { node: "crate", articulation: null },
     });
     TestValidator.predicate(

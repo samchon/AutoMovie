@@ -114,7 +114,7 @@ const shotOf = (motionId: string, duration: number): IAutoMovieShot => ({
 export const test_film_gait_phase_pipeline = (): void => {
   const synthesize = makeActorSynthesizer(contexts, nodes);
 
-  const walking = compilePerformance([locomote], synthesize);
+  const walking = compilePerformance([locomote], synthesize).performances;
   const hero = walking["hero"]!;
   TestValidator.equals(
     "the compiled composite carries the cycle",
@@ -144,14 +144,17 @@ export const test_film_gait_phase_pipeline = (): void => {
     nclose(legAtEnd.flexion ?? 0, legAtPhase.flexion ?? 0),
   );
 
-  const layered = compilePerformance([locomote, lookAt], synthesize)["hero"]!;
+  const layered = compilePerformance([locomote, lookAt], synthesize)
+    .performances["hero"]!;
   TestValidator.equals(
     "layered regions keep the single striding clock",
     layered.gaitCycle,
     { period: 1, phaseAt: 0 },
   );
 
-  const gestureOnly = compilePerformance([gesture], synthesize)["hero"]!;
+  const gestureOnly = compilePerformance([gesture], synthesize).performances[
+    "hero"
+  ]!;
   const gestureEnd = resolveBeatEnd({
     beat: "beat-1",
     scene,

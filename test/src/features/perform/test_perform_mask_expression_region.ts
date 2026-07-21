@@ -84,7 +84,7 @@ export const test_perform_mask_expression_region = (): void => {
   const stripped = compilePerformance(
     [action("wave", "upperBody", 0)],
     angryEverywhere as IAutoMovieActionSynthesizer,
-  ).a!;
+  ).performances.a!;
   TestValidator.predicate(
     "a non-face region's expression is stripped at every keyframe",
     expressions(stripped).every((preset) => preset === null),
@@ -94,7 +94,7 @@ export const test_perform_mask_expression_region = (): void => {
   const kept = compilePerformance(
     [action("nod", "face", 0)],
     angryEverywhere as IAutoMovieActionSynthesizer,
-  ).a!;
+  ).performances.a!;
   TestValidator.predicate(
     "the face region keeps its expression at every keyframe",
     expressions(kept).every((preset) => preset === "angry"),
@@ -107,7 +107,7 @@ export const test_perform_mask_expression_region = (): void => {
   const layered = compilePerformance(
     [action("stagger", "fullBody", 0), action("nod", "face", 0)],
     byKind as IAutoMovieActionSynthesizer,
-  ).a!;
+  ).performances.a!;
   const presets = new Set(
     expressions(layered).filter((preset) => preset !== null),
   );

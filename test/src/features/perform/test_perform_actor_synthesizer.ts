@@ -263,7 +263,7 @@ export const test_perform_actor_synthesizer = (): void => {
   const performances = compilePerformance(
     [locomote("walk", door), hold(6)],
     synth,
-  );
+  ).performances;
   TestValidator.equals("one actor performed", Object.keys(performances), [
     "hero",
   ]);
