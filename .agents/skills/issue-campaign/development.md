@@ -13,10 +13,10 @@ Read this document in full when the user authorizes implementation pull requests
 
 Four rules govern the implementation phase:
 
-- The main agent performs all implementation, test authoring, CI diagnosis, review, and cleanup. Do not spawn or delegate to a subagent.
+- The main agent performs all implementation, test authoring, CI diagnosis, review, and cleanup. Spawn no subagent except the read-only [commit early-warning pass](#implement-and-write-tests).
 - Put every accepted, implementation-ready issue in the current cycle into one pull request. The issue DAG controls implementation order inside that pull request, not pull-request count.
 - Use the current checkout and one topic branch. Do not create a clone or worktree for a solo campaign or its Self-Review.
-- Every push must reach a terminal CI result, and a merge requires green required checks plus a clean solo Self-Review over the same head.
+- CI is read once per settled head. The merge gate is green required checks plus a clean solo Self-Review over that same immutable head.
 
 ## Plan One Cycle Pull Request
 
@@ -34,6 +34,8 @@ Different packages, invariants, or validation lanes do not split the solo cycle.
 
 An issue whose only predecessor is another issue in the same cycle is implementation-ready for this purpose. Order the edits through the DAG instead of deferring it to another pull request.
 
+Difficulty never removes an issue from the cycle. When a resolution needs a judgment call about design, invariant ownership, or an acceptable behavior change, settle it from the issue's evidence and implement that decision inside the cycle. A proved duplicate, an invalid premise, an out-of-scope finding, and an external blocker remain the only dispositions that remove one.
+
 ## Claim The Complete Cycle
 
 Claim the whole cycle before implementation:
@@ -41,14 +43,26 @@ Claim the whole cycle before implementation:
 1. Use the current clean repository checkout, switch to the target branch, update it with `git pull --ff-only`, and create one topic branch. Do not create a clone or worktree.
 2. Create one implementation-free commit with `git commit --allow-empty`.
 3. Push the branch and open one draft pull request.
-4. Link every cycle issue, mark verification pending, and state that the pull request owns the complete accepted cycle.
+4. Reference every cycle issue by number, mark verification pending, and state that the pull request owns the complete accepted cycle.
 5. Record the checkout, branch, pull request, head SHA, issue set, and external temporary-asset ledger in `.wiki`.
+
+Keep every closing keyword out of the claim body. The body is written before any code exists, so a claim-time `Closes #n` list closes whatever the cycle later drops, defers, narrows, or disproves, burying the analysis those issues carry. The cycle's closing set is the union of the [commit closing lines](#implement-and-write-tests), which makes the merge close exactly what landed. Reference the cycle issues as bare numbers instead, and let a partially resolved issue stay open on its own evidence without a hand-written exemption in the body.
 
 The empty pull request prevents overlapping contributor work before code is written. Measure official duration from its GitHub `createdAt` timestamp through `mergedAt`, including implementation, local and CI validation, review, fixes, rebases, and merge.
 
 ## Implement And Write Tests
 
 Work through the DAG on the claimed topic branch. Analyze the full consequence and case surface across every issue before editing, then implement the complete cycle and its tests.
+
+Implement without interruption. Write each piece's tests as that piece lands instead of leaving the tests for the end of the cycle, and keep committing as each unit becomes coherent. Do not pause the sequence to watch a check run; [CI is read once per settled head](#validate-with-ci-and-self-review).
+
+Close each issue from the commit that earns it. End the commit message with one `Close #n: <issue title>` line per resolved issue, placed as its own paragraph before the `Co-Authored-By` trailer, so a commit that resolves several issues carries several lines. GitHub matches the keyword and the number and ignores the title tail, so the line closes the issue normally while the log stays legible without opening each number. The squash merge carries those lines into `master`, which is what makes the cycle close exactly the issues it landed.
+
+Post a pull-request comment after each commit naming what that commit landed and which issues it resolved. The comment is the running ledger for a reader who does not read the diff, not a closing mechanism: GitHub closes an issue only from a commit message or the pull-request body.
+
+Once a commit lands, the main agent may spawn one read-only subagent as a commit early-warning pass over that commit and keep implementing while it runs. The pass reads that one commit and reports candidates. It never edits, commits, pushes, or makes an implementation decision. Its value is timing: a defect named while that code is the newest thing written costs little to correct, and nothing has been built on top of it yet.
+
+The pass never reduces the [Self-Review](#validate-with-ci-and-self-review) that gates the merge. A reader holding one commit cannot see what appears only across files: a helper that duplicates one the package already has, a validator whose new branch leaves the mirrored MCP DTO stale, or a wiki page claiming a verification the component it describes does not perform. The main agent's own complete round over the whole base-to-head diff is what finds those, and no number of passes substitutes for it. The [review skill](../review/SKILL.md#commit-early-warning-pass) owns that boundary and the name the pass must not take.
 
 Each issue remains an evidence and acceptance unit inside the combined diff. Keep its positive, negative, boundary, and regression cases identifiable. The repository's 100% coverage mandate for changed behavior is required; a green happy path is not completion.
 
@@ -59,6 +73,8 @@ If implementation disproves, narrows, or externally blocks an issue, reopen the 
 ## Validate With CI And Self-Review
 
 Commit and push the formatted integrated snapshot, then let every ordinary pull-request check run. Start solo Self-Review immediately over that exact base-to-head diff while CI executes.
+
+Read CI once per settled head. It gates the cycle, not each commit, so an intermediate commit's result never justifies pausing implementation. `build` and `test` carry no `concurrency` block, so an intermediate run finishes on its own rather than being cancelled by the next push: read a result that has already landed, and treat a red one as information about a head the cycle has moved past, never as the cycle's gate.
 
 CI and review are independent gates:
 

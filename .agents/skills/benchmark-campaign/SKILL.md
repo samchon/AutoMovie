@@ -7,7 +7,7 @@ description: Defines the default solo empirical MCP benchmark loop for automovie
 
 A benchmark campaign measures automovie through real use and turns every shortfall into work: author a diverse scenario corpus, drive the live MCP surface with an external agent (Claude, Codex), score and attribute each run, publish the automovie-owned defects and gaps as main-agent-vetted issues, implement every one of them, and only then re-run the corpus to measure again. It is the empirical counterpart to the issue campaign (issue candidates come from lived runs and rendered output, not from a static audit), and it inherits that skill's main-agent-vetted publication, self-contained issue body, one-PR cycle implementation, and closure discipline.
 
-This document is the whole default campaign procedure. The main agent performs every campaign phase and never spawns or delegates to a subagent.
+This document is the whole default campaign procedure. The main agent performs every campaign phase and spawns no subagent other than the read-only commit early-warning pass that the [solo development procedure](../issue-campaign/development.md#implement-and-write-tests) defines for the implementation phase. Authoring, running, scoring, and triage are never delegated: an external agent drives the MCP tools as the measured subject, which is the opposite of a subagent doing the campaign's work.
 
 Use the [multi-agent skill](../multi-agent/SKILL.md) and its benchmark-campaign procedure instead only when the user explicitly asks for a parallel or multi-agent benchmark campaign.
 
@@ -88,5 +88,11 @@ State an interface-gap issue as a missing axis in extensibility terms (additive,
 ## Develop Every Issue, Then Re-Benchmark
 
 When the user authorizes implementation or a standing autonomous mandate covers it, implement by the issue-campaign skill's [solo development procedure](../issue-campaign/development.md): one empty-claim pull request containing every implementation-ready issue, DAG-ordered edits, complete coverage, local and CI validation, solo Self-Review, red-CI repair in the same pull request, merge, cleanup, and renewed discovery. An author-run-and-publish-only campaign does not load it.
+
+Three of that procedure's mechanics carry benchmark-specific weight:
+
+- **The claim body carries no closing keyword.** A benchmark cycle is the likeliest place for an issue to narrow under implementation, because the run that motivated it measured a symptom and the fix adjudicates a cause. Let each commit's `Close #n: <issue title>` line decide what the merge closes, so an issue that ships only its durable half stays open on its own evidence instead of needing a hand-written exemption in a body written before the code existed.
+- **The per-commit pull-request comment names the run it answers.** Give each commit's ledger comment the scenario and run record behind the issue it resolves, so the before/after re-run has a per-commit anchor and the durable run ledger can cite the exact commit that changed a score.
+- **The durable run-ledger issue never appears in a closing line.** It is an append-only record for the whole campaign, not a cycle deliverable, and a stray keyword would close the campaign's own log.
 
 The cycle's gate is total: the next benchmark measurement begins only after **every** issue from the current cycle is merged, not after a subset. Then re-run the affected scenarios and the whole corpus against the fixed surface, recording the before/after runs so each fix's effect is measured, and re-triage what remains. A renewed cycle extends the corpus with new reach scenarios, drives them, and repeats; earlier runs are not coverage. The campaign ends only when a full corpus run against a fully-developed surface surfaces no automovie-owned shortfall that survives main-agent fact-checking.
