@@ -31,11 +31,13 @@ Do not rewrite the body on every follow-up push; subsequent CI fixes and newly-f
 
 ## Campaign Override
 
-Before a campaign implementation push or pull request, complete the selected campaign's development procedure. Solo issue and benchmark campaigns use `.agents/skills/issue-campaign/development.md` in the current checkout. Campaigns with parallel implementation use `.agents/skills/multi-agent/issue-campaign.md`, with the benchmark additions in `.agents/skills/multi-agent/benchmark-campaign.md`. Their ownership, worktree, CI-repair, and cleanup rules override the ordinary flow here.
+Before a campaign implementation push or pull request, complete the selected campaign's development procedure. Solo issue and benchmark campaigns use `.agents/skills/issue-campaign/development.md` in the current checkout. Campaigns with parallel implementation use `.agents/skills/multi-agent/issue-campaign.md`, with the benchmark additions in `.agents/skills/multi-agent/benchmark-campaign.md`. Their ownership, worktree, commit-message, check-cadence, CI-repair, and cleanup rules override the ordinary flow here.
 
 ## Watch Checks After Every Push
 
 After every push, watch `gh pr checks <PR>` until each check settles. On failure, fetch the job log, diagnose the real cause, fix it in place, push a new commit, and let the checks resume. Both `build` and `test` (the 100% coverage gate) must pass; do not treat a green unrelated job as acceptance for a failed required surface.
+
+A campaign implementation cycle reads CI once per settled head instead, under its own development procedure. Its intermediate commits are not gates, and its merge still requires the settled head's green required checks.
 
 ## Merge On Explicit Request Or Standing Autonomous Mandate
 

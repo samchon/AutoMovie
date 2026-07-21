@@ -7,7 +7,7 @@ description: Defines exhaustive solo review, Self-Review, and solo repository-wi
 
 ## Non-Negotiable Review Law
 
-One reviewer performs every review in this skill from scratch over the entire declared surface. Do not spawn a subagent, delegate a concern, or load the discussion skill.
+One reviewer performs every review in this skill from scratch over the entire declared surface. Do not spawn a subagent, delegate a concern, or load the discussion skill. The [commit early-warning pass](#commit-early-warning-pass) is not a review under this skill and is the sole read-only subagent a solo campaign author may run alongside implementation.
 
 Apply [AGENTS.md's **Choose the principled course** rule](../../../AGENTS.md#attitude) to every review decision. A review's duration, difficulty, and consequence surface are reasons to inspect more deeply, never reasons to pass over a sound improvement, accept an unsupported claim, or lower the completion standard.
 
@@ -30,6 +30,14 @@ Self-Review and an unqualified review request use this solo workflow:
 6. Finish only when a complete round finds nothing to improve. Report the final clean round and every verification that could not run.
 
 Self-Review does not authorize creating, pushing, updating, or merging a pull request. Those actions follow the pull-request skill's own authorization rules.
+
+## Commit Early-Warning Pass
+
+A commit early-warning pass is not a review under this skill. It is the read-only per-commit reader a solo campaign author may run while still implementing, defined by the [solo campaign development document](../issue-campaign/development.md#implement-and-write-tests).
+
+It delegates nothing the Non-Negotiable Review Law governs. The law governs the author's own round, which still runs alone over the whole surface before merge under all four rules. One commit is not a declared surface, a reported candidate is not an accepted finding, and the passes do not add up to a round.
+
+Never call the pass a Self-Review, and never report it as one. A reader who sees that name concludes the gate already ran, and the whole-surface round disappears without anyone deciding to drop it.
 
 ## Solo Issue Discovery Rounds
 
