@@ -542,12 +542,16 @@ export const validateClipArtifact = (
     const trackPath = `${path}.tracks[${i}]`;
     if (!validateObjectArtifact(track, trackPath, "clip track", violations))
       return;
-    validateObjectArtifact(
-      track.channel,
-      `${trackPath}.channel`,
-      "clip track channel",
-      violations,
-    );
+    const channel: unknown = track.channel;
+    if (
+      validateObjectArtifact(
+        channel,
+        `${trackPath}.channel`,
+        "clip track channel",
+        violations,
+      )
+    )
+      validateHonorableChannel(channel, `${trackPath}.channel`, violations);
     validateArrayArtifact(
       track.times,
       `${trackPath}.times`,
@@ -577,6 +581,44 @@ export const validateClipArtifact = (
         );
     });
   });
+};
+
+/**
+ * A clip track must address a channel the pipeline can HONOR (#1339).
+ *
+ * `IAutoMovieChannel` has two arms, and only one of them is applied when a shot
+ * plays. `resolveFrame` and the viewer's `applyObjectMotion` each write node
+ * channels onto the node they name and `continue` past everything else, so a
+ * pointer track (`/lights/0/intensity`, `/materials/2/baseColor`, a rig DOF)
+ * validated clean, persisted to `shots/<beat>.json`, was read back unchanged by
+ * `getShot`, and then silently did nothing: the committed artifact said the
+ * candle dims and the film never dimmed it.
+ *
+ * A validator that passes an instruction no consumer executes is a false green,
+ * and the guide corpus tells an agent to trust exactly this verdict. So the
+ * artifact contract refuses what the pipeline cannot perform, naming the
+ * supported set, rather than accepting and discarding it. Resolving pointer
+ * channels onto scene properties is a separate, additive capability; when it
+ * lands, this gate is where the supported set widens.
+ *
+ * The gate is scoped to CLIP TRACKS on purpose. The other user of
+ * `IAutoMovieChannel` is the driver graph (a prop profile's `source`/`output`,
+ * `IAutoMovieChannelLimit.channel`), where `resolve/drivers` does read pointer
+ * keys out of the sampled map. Those stay untouched.
+ */
+const validateHonorableChannel = (
+  channel: Record<string, unknown>,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (channel.kind === "node") return;
+  pushViolation(
+    violations,
+    "type",
+    `${path}.kind`,
+    `clip track channel kind must be "node"; the pipeline resolves node channels (translation/rotation/scale/weights) onto scene nodes and honors no other target on a shot clip, but was ${JSON.stringify(channel.kind)}`,
+    channel.kind,
+  );
 };
 
 const validateIncreasingTimes = (

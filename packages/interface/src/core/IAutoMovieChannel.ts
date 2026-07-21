@@ -10,8 +10,9 @@ import { AutoMovieChannelValueType } from "./AutoMovieChannelValueType";
  * - {@link IAutoMovieNodeChannel}: a node's TRS or morph weights, the glTF-core
  *   path that every loader supports (and the cheap, common case).
  * - {@link IAutoMoviePointerChannel}: an arbitrary property addressed by an
- *   RFC-6901 JSON pointer (material factor, camera FOV, light intensity, a rig
- *   DOF). This is what lets automovie "animate any value, not just node TRS".
+ *   RFC-6901 JSON pointer (material factor, camera FOV, a rig DOF). This is the
+ *   form that lets automovie address "any value, not just node TRS"; today the
+ *   driver graph consumes it and a shot clip's tracks do not.
  *
  * A node-TRS channel is sugar for the pointer `/nodes/{id}/{path}`; the engine
  * treats both as the same kind of addressable lvalue.
@@ -41,7 +42,13 @@ export interface IAutoMovieNodeChannel {
   path: "translation" | "rotation" | "scale" | "weights";
 }
 
-/** A channel addressing an arbitrary property by RFC-6901 JSON pointer. */
+/**
+ * A channel addressing an arbitrary property by RFC-6901 JSON pointer. Honored
+ * by the DRIVER graph (a prop profile's `source`/`output`, a channel limit),
+ * never by a shot clip's tracks: those are applied node-by-node and a pointer
+ * track would validate and then do nothing, so the shot contract refuses one
+ * (#1339).
+ */
 export interface IAutoMoviePointerChannel {
   /** Discriminator. */
   kind: "pointer";

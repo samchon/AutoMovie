@@ -51,6 +51,12 @@ A `perform` returns the compiled `motions` alongside the shot; the shot itself k
 
 Because of that, a **resident** `commitShot` whose shot references any motion must pass the `motions` registry those references resolve against. Otherwise it would store a dangling id. Omitting `motions` there is refused, not silently accepted. An explicit-slate `commitShot` stays a pure transform (references are yours to guarantee).
 
+## A Shot Clip Animates Nodes
+
+A shot's `objectMotions` and `cameraMotion` tracks address **node** channels: `{ "kind": "node", "node": "<scene node id>", "path": "translation" | "rotation" | "scale" | "weights" }`. That is what the renderer and the viewer apply, and a track addressing anything else is refused at `validateShot` / `commitShot` rather than accepted and dropped.
+
+In particular a `pointer` channel (`/lights/0/intensity`, `/materials/2/baseColor`) is **not** a way to animate a scene property from a shot. The pointer form is real, and drivers consume it, but no shot-clip consumer resolves one, so accepting it would hand you a clean validation for a film that never changes. There is no intra-beat light or material animation today; if a beat needs one, say so rather than encoding it into a track.
+
 ## Continuity
 
 Author the beat's opening from the previous beat's end state. In a **resident** `perform` this is automatic for placement and stride alike: an actor context that omits `position`/`facingDeg` inherits them from the previous beat's committed end-state (`commitBeatEnd`), so a walking character resumes exactly where it stopped.
