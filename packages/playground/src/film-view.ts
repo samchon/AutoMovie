@@ -29,6 +29,7 @@ import {
   applyObjectMotion,
   applyPose,
   applyRenderMode,
+  buildLight,
   buildModel,
   buildSpaceObject,
   mountViewer,
@@ -39,13 +40,13 @@ import * as THREE from "three";
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
 // The film pipeline end to end, on screen: the same stage payloads the LLM
-// harness will emit (script → staging → blocking → performance → assemble),
+// harness will emit (script ??staging ??blocking ??performance ??assemble),
 // consumed by the engine's film compilers, played back through the sequence
 // resolver: real gait travel, a follow camera compiled from a `frame` verb,
 // a hard cut onto an orbiting close-up. Deterministic via `renderAt(t)`, so
 // capture-shots.mjs bakes the identical film every run.
 
-// ── the stage payloads (what the LLM will author; fixtures here) ─────────────
+// ?�?� the stage payloads (what the LLM will author; fixtures here) ?�?�?�?�?�?�?�?�?�?�?�?�?�
 const script: IAutoMovieScriptApplication.IWrite = {
   type: "write",
   logline: "A pursuer closes the distance; the one waiting never turns.",
@@ -246,7 +247,7 @@ const performances: IAutoMoviePerformanceApplication.IWrite[] = [
   },
 ];
 
-// ── rigs + the content seam ──────────────────────────────────────────────────
+// ?�?� rigs + the content seam ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 const walkerRig = buildStickman(DEFAULT_STICKMAN);
 const waiterRig = buildStickman(DEFAULT_STICKMAN);
 const rigOf: Record<string, ReturnType<typeof buildStickman> | undefined> = {
@@ -343,7 +344,7 @@ const contexts = new Map<string, IAutoMovieActorContext>(
 );
 const synthesize = makeActorSynthesizer(contexts, nodePositions);
 
-// ── the ladder: block → perform → cut ────────────────────────────────────────
+// ?�?� the ladder: block ??perform ??cut ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 const shots: IAutoMovieShot[] = [];
 const motionsByShot = new Map<string, Record<string, IAutoMovieMotion>>();
 performances.forEach((performance, i) => {
@@ -385,7 +386,7 @@ const cut = cutSequence(
 if (cut.success !== true) throw new Error("cut failed");
 export const FILM_DURATION = cut.runtime;
 
-// ── the set: scene nodes → three.js ─────────────────────────────────────────
+// ?�?� the set: scene nodes ??three.js ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf2f4f8);
 // The staged space, drawn as real meshes (#1173). This replaces the GridHelper
@@ -393,12 +394,15 @@ scene.background = new THREE.Color(0xf2f4f8);
 // structural guide pass hides (#1226), so depth/mask/outline saw no ground at
 // all. A mesh floor is collected by the passes like any other geometry.
 scene.add(buildSpaceObject(staged.scene.space!));
+// Ambient fill stays a page decision (staging models no sky), but the KEY light
+// is the staged one, built through the viewer. A hardcoded sun stood here and
+// `staged.scene.lights` went unused, so every capture proved the page's own
+// lighting and nothing about the film's: the direction #1356 restored had no
+// witness on the render side at all.
 scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa3b2, 1.1));
-const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-sun.position.set(2.4, 3.4, -1);
-scene.add(sun);
+for (const light of staged.scene.lights) scene.add(buildLight(light));
 
-// node id → its scene group, so a shot's objectMotions (a projectile/prop's
+// node id ??its scene group, so a shot's objectMotions (a projectile/prop's
 // baked clip) can drive the object's world transform each frame.
 const groupsById = new Map<string, THREE.Group>();
 
@@ -446,7 +450,7 @@ const playersByShot = new Map<
   ]),
 );
 
-// ── the projector: global seconds → posed set + framed camera ────────────────
+// ?�?� the projector: global seconds ??posed set + framed camera ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 100);
 const stagedCam = staged.scene.cameras[0]!;
 const applyStagedCamera = (): void => {
@@ -579,7 +583,7 @@ const renderShotOnly = (sample: SequenceRenderShotSample): void => {
   renderer.render(scene, camera);
 };
 
-// ── mount + deterministic seek contract (capture-shots.mjs) ──────────────────
+// ?�?� mount + deterministic seek contract (capture-shots.mjs) ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 const params = new URLSearchParams(location.search);
 const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
 const capMode = params.get("cap") === "1";

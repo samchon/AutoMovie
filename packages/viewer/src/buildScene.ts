@@ -99,21 +99,61 @@ const buildCamera = (cam: IAutoMovieCamera): THREE.PerspectiveCamera => {
 };
 
 /**
- * Build the `three.js` light one staged light plays on. The kind decides the
- * class; every value is written by {@link applyLightState}, the same call a
- * shot's `lightMotions` uses each frame, so placing a light and animating it
- * cannot map `range` or `coneAngle` two different ways.
+ * Build the `three.js` light one staged light plays on, aimed the way the
+ * artifact says. The kind decides the class; every value is written by
+ * {@link applyLightState}, the same call a shot's `lightMotions` uses each
+ * frame, so placing a light and animating it cannot map `range` or `coneAngle`
+ * two different ways; the two aimed kinds then get their target ({@link
+ * aimLight}), which is the half of a light's placement `three.js` does not read
+ * off a quaternion.
+ *
+ * Exported because a host that assembles its own scene graph (the playground's
+ * film page) must light it from `scene.lights` rather than from a hardcoded
+ * source of its own: a page that lights itself proves nothing about the film's
+ * lighting, which is how the aim defect in #1356 survived every capture.
  */
-const buildLight = (light: IAutoMovieLight): THREE.Light => {
-  const built: THREE.Light =
+export const buildLight = (light: IAutoMovieLight): THREE.Light => {
+  if (light.type === "point") {
+    const built = new THREE.PointLight();
+    applyLightState(built, light);
+    applyTransform(built, light.transform);
+    return built;
+  }
+  const built =
     light.type === "directional"
       ? new THREE.DirectionalLight()
-      : light.type === "point"
-        ? new THREE.PointLight()
-        : new THREE.SpotLight();
+      : new THREE.SpotLight();
   applyLightState(built, light);
   applyTransform(built, light.transform);
-  return built;
+  return aimLight(built);
+};
+
+/**
+ * Point an aimed light along the direction its transform carries.
+ *
+ * `stage` requires a `direction` for the aimed kinds and lowers it into the
+ * scene light's `transform.rotation` ({@link IAutoMovieLight}: "for directional
+ * light only the orientation matters"), but `three.js` does not shine a
+ * `DirectionalLight`/`SpotLight` along its quaternion: it shines from its
+ * position toward its `target`, which defaults to a fresh object at the world
+ * origin. Writing the transform alone therefore threw the whole authored
+ * direction away, and a staged directional light (whose lowering puts it at the
+ * origin, since only its orientation means anything) came out shining along the
+ * ZERO vector while a spot silently aimed at the origin from wherever it stood
+ * (#1356).
+ *
+ * Parenting the target to the light is what keeps one source of truth: the
+ * target sits one meter down the light's local −Z, the same forward axis
+ * `stageScene` aimed, so the rendered direction IS the artifact's rotation and
+ * no second field can drift from it. `three.js` only reads a target that is in
+ * the scene graph, and a child of the light always is.
+ */
+const aimLight = <Light extends THREE.DirectionalLight | THREE.SpotLight>(
+  light: Light,
+): Light => {
+  light.target.position.set(0, 0, -1);
+  light.add(light.target);
+  return light;
 };
 
 /** Re-export so callers can pose static nodes after building the scene. */
