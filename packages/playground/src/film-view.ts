@@ -29,6 +29,7 @@ import {
   applyObjectMotion,
   applyPose,
   applyRenderMode,
+  buildLight,
   buildModel,
   buildSpaceObject,
   mountViewer,
@@ -393,10 +394,13 @@ scene.background = new THREE.Color(0xf2f4f8);
 // structural guide pass hides (#1226), so depth/mask/outline saw no ground at
 // all. A mesh floor is collected by the passes like any other geometry.
 scene.add(buildSpaceObject(staged.scene.space!));
+// Ambient fill stays a page decision (staging models no sky), but the KEY light
+// is the staged one, built through the viewer. A hardcoded sun stood here and
+// `staged.scene.lights` went unused, so every capture proved the page's own
+// lighting and nothing about the film's: the direction #1356 restored had no
+// witness on the render side at all.
 scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa3b2, 1.1));
-const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-sun.position.set(2.4, 3.4, -1);
-scene.add(sun);
+for (const light of staged.scene.lights) scene.add(buildLight(light));
 
 // node id → its scene group, so a shot's objectMotions (a projectile/prop's
 // baked clip) can drive the object's world transform each frame.
