@@ -16,4 +16,5 @@ export * from "./react";
 export * from "./retargetContacts";
 export * from "./retargetHumanoidMotion";
 export * from "./sequence";
+export * from "./timeScale";
 export * from "./travel";

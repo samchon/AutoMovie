@@ -15,6 +15,7 @@ import { gaitMotion } from "../motion/gait";
 import { gestureMotion } from "../motion/gesture";
 import { locomoteMotion } from "../motion/locomote";
 import { reactMotion } from "../motion/react";
+import { timeScaleMotion } from "../motion/timeScale";
 import { IAutoMovieActorContext } from "./IAutoMovieActorContext";
 import { IAutoMovieActionSynthesizer } from "./compilePerformance";
 import { resolveTargetPoint } from "./resolveTargetPoint";
@@ -158,6 +159,37 @@ const jabClip = (
 };
 
 /**
+ * Fit a synthesised locomotion clip onto the span its action DECLARES.
+ *
+ * `IAutoMovieActionBase.duration` is defined as "length in seconds, or `"auto"`
+ * to let the engine pick a natural duration", and every other verb here sizes
+ * its clip by that number. `locomote` did not: it sized the walk from distance
+ * and the actor's speed and discarded what the author wrote, so a walk declared
+ * 7.5s compiled to 3.0s with no violation, no warning, and nothing in the guide
+ * corpus saying it would (#1366). That is the substitute-in-silence shape #1349
+ * refused for channels, moved from content to timing, and it is the one
+ * quantity `performShot` already treats as authoritative everywhere else: its
+ * `spanOf` gates overlaps and covers blocking anchors with exactly this
+ * number.
+ *
+ * The fit is a uniform time scale, so the walk still arrives exactly where
+ * {@link locomoteMotion} landed it and still plays whole gait cycles: only the
+ * cadence changes, which is how a body covers the same ground in more or less
+ * time. It deliberately overrides the ½-nominal-speed floor `locomoteMotion`
+ * holds for its OWN sizing (#1065), because that floor bounds what the engine
+ * may choose when nobody said, not what an author may state.
+ *
+ * `"auto"` is untouched, and remains the way to ask for the engine's sizing.
+ */
+const fitDeclaredSpan = (
+  motion: IAutoMovieMotion,
+  duration: IAutoMovieActionCall["duration"],
+): IAutoMovieMotion =>
+  duration === "auto"
+    ? motion
+    : timeScaleMotion(motion, duration / motion.duration);
+
+/**
  * Build a reference {@link IAutoMovieActionSynthesizer} (the content seam
  * {@link compilePerformance} injects) for the verbs the engine can fatten
  * **deterministically** from an actor's context:
@@ -166,7 +198,8 @@ const jabClip = (
  *   resolves to a world point ({@link resolveTargetPoint}, against `nodes`), the
  *   gait is carried that far at the actor's speed ({@link locomoteMotion}),
  *   otherwise it steps in place (a relative target, "off to the left", has no
- *   positional point yet);
+ *   positional point yet). Either way an explicit `duration` sets the clip's
+ *   span ({@link fitDeclaredSpan}) and `"auto"` keeps the engine's own sizing;
  * - `hold` → the actor's rest pose held for the duration ({@link holdMotion});
  * - `lookAt` → the gaze chain turned to aim at a resolved target, resolved
  *   against the **aim points** rather than the raw placements (see below), and
@@ -228,21 +261,29 @@ export const makeActorSynthesizer = (
         ctx.gaitPhase ?? 0,
       );
       const dest = resolveTargetPoint(action.to, nodes);
-      if (dest === null) return cycle; // relative/unresolved → step in place
+      // Every arm below is fitted to a DECLARED duration (#1366). The engine
+      // sizes the walk from distance and speed, which is what `"auto"` asks
+      // for; a number is the author stating the span, exactly as it does on
+      // every other verb, and it used to be discarded here in silence (a walk
+      // declared 7.5s compiled to 3.0s with no violation and no warning).
+      if (dest === null) return fitDeclaredSpan(cycle, action.duration); // relative/unresolved → step in place
       // Travel is baked onto the pose root, which the renderer applies in the
       // actor's model frame (under its staged facing). So aim it in model space
       // (undo the facing) and the composed render carries it to the world
       // destination; a turned actor would otherwise walk off its heading.
       const local = toModelSpace(dest, ctx.position, ctx.facingDeg);
       const distance = Math.hypot(local.x, local.z);
-      if (distance < 1e-6) return cycle; // already there → step in place
-      return locomoteMotion(
-        `${actor}:${action.gait}:travel`,
-        cycle,
-        distance,
-        ctx.speed,
-        { x: local.x, y: 0, z: local.z },
-        action.faceTravel === true,
+      if (distance < 1e-6) return fitDeclaredSpan(cycle, action.duration); // already there → step in place
+      return fitDeclaredSpan(
+        locomoteMotion(
+          `${actor}:${action.gait}:travel`,
+          cycle,
+          distance,
+          ctx.speed,
+          { x: local.x, y: 0, z: local.z },
+          action.faceTravel === true,
+        ),
+        action.duration,
       );
     }
     if (action.verb === "hold")
