@@ -238,7 +238,12 @@ export const jointRomOvershoot = (
   const collector = new ViolationCollector();
   validateJointRom({ joint, constraint, path: "$candidate", collector });
   return collector.items.reduce(
-    (total, item) => total + (item.overshoot ?? 0),
+    // A violation with no overshoot is not a free one. `validateJointRom` omits
+    // the measure exactly when the angle is NOT FINITE, which is worse than any
+    // distance past a limit and has no distance to report. Scoring it `0` would
+    // rank a malformed candidate as perfectly legal and let it win the
+    // selection outright, so it is scored as unusable instead.
+    (total, item) => total + (item.overshoot ?? Number.POSITIVE_INFINITY),
     0,
   );
 };

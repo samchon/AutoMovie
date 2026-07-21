@@ -32,8 +32,13 @@ import { nclose, qclose, vclose } from "../internal/predicates";
  *    angles, including the gimbal case (abduction at the rig's ±90°).
  * 4. `resolvePose` threads the frame: a clinical pose resolved with the humanoid
  *    frames lands the hand where the pre-converted rig pose does without them.
- * 5. `reachPose` threads the frame: its arm angles come out clinical, and the raw
- *    rig-space answer must now be asked for explicitly with an empty table.
+ * 5. `reachPose` threads the frame: the raw rig-space answer must now be asked for
+ *    explicitly with an empty table. Each frame's pose lands the hand on the
+ *    target when read in its own space, and the elbow's hinge angle is
+ *    identical across frames because the target distance alone sets it. The two
+ *    SHOULDER solutions are not a fixed offset apart: the solver picks its
+ *    swivel by ROM legality, judged in the declared space, so a frame selects a
+ *    different exact solution rather than renaming one (#1345).
  * 6. Omitting `restFrames` takes the canonical humanoid frame rather than raw rig
  *    space, so the arm verbs and the reach oracle answer one rig in ONE space
  *    (#1346). The negative twin is scenario 5's explicit `{}`, which still
@@ -147,10 +152,22 @@ export const test_kinematics_rest_frame_angles = (): void => {
     vclose(handClinical, handRig, 1e-9),
   );
 
-  // 5. reachPose threads the frame: its output arm angles come out clinical
-  // (lifted by sign·r + neutral); left arm sign +1, neutral 90 → clinical =
-  // rig + 90. The raw rig-space answer must now be asked for EXPLICITLY with an
-  // empty table, because omitting the argument takes the clinical default.
+  // 5. reachPose threads the frame, and the raw rig-space answer must now be
+  // asked for EXPLICITLY with an empty table, because omitting the argument
+  // takes the clinical default.
+  //
+  // The two answers are NOT a fixed offset apart, and expecting them to be is
+  // the premise this scenario used to carry. Since #1345 every swivel angle
+  // around the shoulder-to-hand axis is an EXACT solution, so the solver spends
+  // that freedom on ROM legality -- and ROM is judged in whichever space the
+  // caller declared. Change the space and a different candidate wins: measured
+  // on this target, the two poses differ by 3.59 degrees of shoulder flexion
+  // and 130.42 of twist, not by the abduction neutral. They are two different
+  // legal solutions, not one solution in two notations.
+  //
+  // What the frame DOES guarantee is pinned instead: a rest frame changes the
+  // representation, never the geometry. The offset law itself stays pinned in
+  // scenarios 1-3, on a fixed rotation, which is where it is a theorem.
   const target = { x: 0.45, y: 1.3, z: 0.3 };
   const reachClinical = reachPose(skel, "left", target, HUMANOID_REST_FRAME);
   const reachRig = reachPose(skel, "left", target, {});
@@ -159,15 +176,27 @@ export const test_kinematics_rest_frame_angles = (): void => {
     reachClinical !== null && reachRig !== null,
   );
   if (reachClinical !== null && reachRig !== null) {
-    const cAbd = reachClinical.joints.find(
-      (j) => j.bone === "leftUpperArm",
-    )!.abduction!;
-    const rAbd = reachRig.joints.find(
-      (j) => j.bone === "leftUpperArm",
-    )!.abduction!;
+    const handOf = (
+      pose: NonNullable<ReturnType<typeof reachPose>>,
+      frames: Parameters<typeof reachPose>[3],
+    ) =>
+      resolvePose(pose, skel, HUMANOID_JOINT_AXES, frames).find(
+        (b) => b.bone === "leftHand",
+      )!.worldPosition;
     TestValidator.predicate(
-      "the reach's upper-arm abduction is lifted to clinical (rig + 90)",
-      nclose(cAbd, rAbd + 90, 1e-6),
+      "each frame's pose lands the hand on the target, read in its own space",
+      vclose(handOf(reachClinical, HUMANOID_REST_FRAME), target, 1e-9) &&
+        vclose(handOf(reachRig, {}), target, 1e-9),
+    );
+    // The sharper invariant the frame cannot touch: the hinge angle is fixed by
+    // the shoulder-to-target DISTANCE, and no rest frame moves the target.
+    TestValidator.predicate(
+      "and the elbow's hinge angle is identical across the two frames",
+      nclose(
+        reachClinical.joints.find((j) => j.bone === "leftLowerArm")!.flexion!,
+        reachRig.joints.find((j) => j.bone === "leftLowerArm")!.flexion!,
+        1e-12,
+      ),
     );
   }
 
