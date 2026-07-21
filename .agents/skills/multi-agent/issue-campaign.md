@@ -42,9 +42,9 @@ For each immediately executable batch:
 
 1. Create one isolated worktree and topic branch.
 2. Create an implementation-free commit with `git commit --allow-empty`.
-3. Push and open a draft pull request linking every batch issue and stating its owned files.
+3. Push and open a draft pull request referencing every batch issue by number and stating its owned files. The [solo claim rule](../issue-campaign/development.md#claim-the-complete-cycle) applies unchanged: no closing keyword in a body written before the code exists.
 4. Record the batch, worktree, branch, issues, owned files, and pull request in the campaign knowledge base.
-5. Implement the full consequence surface and the required positive, negative, boundary, and regression coverage. Run `pnpm run format`, then commit and push coherent increments.
+5. Implement the full consequence surface and the required positive, negative, boundary, and regression coverage. Run `pnpm run format`, then commit and push coherent increments, each carrying the [commit closing lines](../issue-campaign/development.md#implement-and-write-tests) for the issues it earns.
 6. Run the narrowest local proving commands followed by the broader locally owned lanes. Freeze the head and complete solo Self-Review. If code changes, rerun the necessary local gates and restart the full review.
 7. Watch the pull request's CI. Repair every red lane in this same pull request, even when the failure predates the campaign or is unrelated to its original issues, then commit, push, and restart the required review and CI loop.
 8. Let the lead independently verify issue fit, dispositions, evidence, and batch scope. Merge only with user authorization after the required checks and final clean Self-Review are complete.
