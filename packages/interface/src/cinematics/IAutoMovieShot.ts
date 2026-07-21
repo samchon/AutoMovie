@@ -50,13 +50,9 @@ export interface IAutoMovieShot {
 
   /**
    * Clips changing this shot's LIGHTING over its local clock: a candle going
-   * out, a lamp switched on, a sunset. Each track addresses one staged light's
-   * animatable property by pointer channel (`/lights/<light id>/intensity`,
-   * `/color`, `/range`, `/coneAngle`), because a light is not a scene node and
-   * no node channel can reach it. Shot-scoped on purpose: re-lighting a beat
-   * costs no `commitScene`, so the performances already compiled survive it.
-   * Absent means legacy or unlit-change data; an empty array means the shot was
-   * assembled with constant light.
+   * out, a sunset. Each track addresses one staged light by pointer channel
+   * (`/lights/<id>/intensity`); the PERFORMANCE guide states the grammar.
+   * Absent means legacy; an empty array means constant light.
    */
   lightMotions?: IAutoMovieClip[];
 

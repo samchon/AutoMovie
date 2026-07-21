@@ -46,15 +46,12 @@ export interface IAutoMovieNodeChannel {
 /**
  * A channel addressing an arbitrary property by RFC-6901 JSON pointer. Honored
  * by the DRIVER graph (a prop profile's `source`/`output`, a channel limit) and
- * by a shot's `lightMotions`, whose tracks address `/lights/<id>/<property>`
- * and are applied by the engine's lighting pass (#1348).
+ * by a shot's `lightMotions` (`/lights/<id>/<property>`).
  *
- * A shot's `cameraMotion` and `objectMotions` still refuse one: those are
- * applied node-by-node, so a pointer track there would validate and then do
- * nothing (#1339). The rule is not "which form", it is that a shot field admits
- * exactly the targets its own applier writes. A pointer no applier resolves
- * (`/materials/2/baseColor`, `/cameras/0/fovY`) is refused on every shot clip
- * until one does.
+ * A shot field admits exactly the targets its own applier writes, so
+ * `cameraMotion` and `objectMotions` refuse one: those are applied node-by-node
+ * and a pointer track there would validate and then do nothing (#1339). A
+ * pointer no applier resolves is refused on every shot clip until one lands.
  */
 export interface IAutoMoviePointerChannel {
   /** Discriminator. */

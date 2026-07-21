@@ -8,11 +8,8 @@ import { IAutoMovieTransform } from "../geometry/IAutoMovieTransform";
  *
  * Maps onto glTF `KHR_lights_punctual` / `three.js` light types.
  *
- * The fields here are the light's value at rest. A shot changes them over its
- * own clock through `IAutoMovieShot.lightMotions`, whose tracks address
- * `/lights/<id>/intensity` (and `/color`, `/range`, `/coneAngle`) the way glTF
- * animates a punctual light through `KHR_animation_pointer` rather than through
- * the node the light hangs on.
+ * These are the light's values at REST; a shot changes them over its own clock
+ * through `IAutoMovieShot.lightMotions`.
  *
  * @author Samchon
  */
