@@ -1242,7 +1242,7 @@ export const performShot = (props: {
       );
       continue;
     }
-    // The baked flight is clip-local (0 ??hitTime); place it on the shot clock
+    // The baked flight is clip-local (0 → hitTime); place it on the shot clock
     // so it launches at the action's start and lands exactly when the react
     // fires (start + hitTime). Times shift by start; the clip spans the shot,
     // holding at the origin before launch and at the target after (sampleClip
