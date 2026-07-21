@@ -46,6 +46,18 @@ import {
   IAutoMovieRenderReassembly,
 } from "@automovie/render";
 
+/**
+ * The committed slices a READ tool needs: everything but the assembled film.
+ *
+ * `film` is declared here as optional rather than omitted, because every
+ * producer of a slate emits the writable form and the documented loop is
+ * commit-then-read: `commitScene`'s echoed slate goes straight back into
+ * `getScene`. Tool inputs are validated with `validateEquals` (#1340), so a
+ * property the parameter does not declare is refused, and leaving `film`
+ * undeclared would have broken that round trip at the boundary. Declaring it
+ * optional accepts both forms and states the truth: a read of the script, the
+ * scene, a shot, the notes, or a beat end does not consult the film.
+ */
 export interface IAutoMovieMcpStoredSlate {
   /** Committed script, or null before SCRIPT exists. */
   script: IAutoMovieScript | null;
@@ -61,6 +73,13 @@ export interface IAutoMovieMcpStoredSlate {
 
   /** Open review notes. */
   notes: IAutoMovieReviewNote[];
+
+  /**
+   * Assembled film, or null before CUT has committed. Carried so a slate
+   * returned by any tool can be passed straight back to a read tool; the reads
+   * themselves never consult it.
+   */
+  film?: IAutoMovieSequence | null;
 }
 
 /** Writable slate accepted and returned by MCP commit tools. */

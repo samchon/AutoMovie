@@ -48,6 +48,7 @@ import {
   IAutoMovieMcpGeometryModel,
   IAutoMovieMcpMotion,
   IAutoMovieMcpPropSpec,
+  IAutoMovieMcpStoredSlate,
   IAutoMovieMcpTransform,
   IAutoMovieMcpWritableSlate,
   IAutoMovieMeasureDistanceOutput,
@@ -234,7 +235,7 @@ export class AutoMovieApplication {
    */
   public getScript(props: {
     /** The slate to read; omit to read the resident project (#614). */
-    slate?: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetScriptOutput {
     return this.slateQuery.getScript(props);
   }
@@ -248,7 +249,7 @@ export class AutoMovieApplication {
    */
   public getScene(props: {
     /** The slate to read; omit to read the resident project (#614). */
-    slate?: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpStoredSlate;
   }): IAutoMovieGetSceneOutput {
     return this.slateQuery.getScene(props);
   }
@@ -262,7 +263,7 @@ export class AutoMovieApplication {
    */
   public getShot(props: {
     /** The slate to read; omit to read the resident project (#614). */
-    slate?: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpStoredSlate;
     /** Beat id whose shot should be read. */
     beat: string;
   }): IAutoMovieGetShotOutput {
@@ -278,7 +279,7 @@ export class AutoMovieApplication {
    */
   public getNotes(props: {
     /** The slate to read; omit to read the resident project (#614). */
-    slate?: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpStoredSlate;
     /** Optional beat id filter. */
     beat?: string;
   }): IAutoMovieGetNotesOutput {
@@ -294,7 +295,7 @@ export class AutoMovieApplication {
    */
   public getBeatEnd(props: {
     /** The slate to read; omit to read the resident project (#614). */
-    slate?: IAutoMovieMcpWritableSlate;
+    slate?: IAutoMovieMcpStoredSlate;
     /** Beat id whose end state should be read. */
     beat: string;
   }): IAutoMovieGetBeatEndOutput {
