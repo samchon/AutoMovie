@@ -64,7 +64,7 @@ export class SlateQueryService {
   }
 
   public getScript(props: {
-    slate?: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpWritableSlate;
   }): IAutoMovieGetScriptOutput {
     assertSlateQueryRequestRoot(props);
     const source = this.stored(props.slate, "getScript");
@@ -77,7 +77,7 @@ export class SlateQueryService {
   }
 
   public getScene(props: {
-    slate?: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpWritableSlate;
   }): IAutoMovieGetSceneOutput {
     assertSlateQueryRequestRoot(props);
     const source = this.stored(props.slate, "getScene");
@@ -90,7 +90,7 @@ export class SlateQueryService {
   }
 
   public getShot(props: {
-    slate?: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     beat: string;
   }): IAutoMovieGetShotOutput {
     assertSlateQueryRequestRoot(props);
@@ -117,7 +117,7 @@ export class SlateQueryService {
   }
 
   public getNotes(props: {
-    slate?: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     beat?: string;
   }): IAutoMovieGetNotesOutput {
     assertSlateQueryRequestRoot(props);
@@ -138,7 +138,7 @@ export class SlateQueryService {
   }
 
   public getBeatEnd(props: {
-    slate?: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     beat: string;
   }): IAutoMovieGetBeatEndOutput {
     assertSlateQueryRequestRoot(props);

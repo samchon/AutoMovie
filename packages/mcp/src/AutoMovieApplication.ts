@@ -48,7 +48,6 @@ import {
   IAutoMovieMcpGeometryModel,
   IAutoMovieMcpMotion,
   IAutoMovieMcpPropSpec,
-  IAutoMovieMcpStoredSlate,
   IAutoMovieMcpTransform,
   IAutoMovieMcpWritableSlate,
   IAutoMovieMeasureDistanceOutput,
@@ -235,7 +234,7 @@ export class AutoMovieApplication {
    */
   public getScript(props: {
     /** The slate to read; omit to read the resident project (#614). */
-    slate?: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpWritableSlate;
   }): IAutoMovieGetScriptOutput {
     return this.slateQuery.getScript(props);
   }
@@ -249,7 +248,7 @@ export class AutoMovieApplication {
    */
   public getScene(props: {
     /** The slate to read; omit to read the resident project (#614). */
-    slate?: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpWritableSlate;
   }): IAutoMovieGetSceneOutput {
     return this.slateQuery.getScene(props);
   }
@@ -263,7 +262,7 @@ export class AutoMovieApplication {
    */
   public getShot(props: {
     /** The slate to read; omit to read the resident project (#614). */
-    slate?: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     /** Beat id whose shot should be read. */
     beat: string;
   }): IAutoMovieGetShotOutput {
@@ -279,7 +278,7 @@ export class AutoMovieApplication {
    */
   public getNotes(props: {
     /** The slate to read; omit to read the resident project (#614). */
-    slate?: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     /** Optional beat id filter. */
     beat?: string;
   }): IAutoMovieGetNotesOutput {
@@ -295,7 +294,7 @@ export class AutoMovieApplication {
    */
   public getBeatEnd(props: {
     /** The slate to read; omit to read the resident project (#614). */
-    slate?: IAutoMovieMcpStoredSlate;
+    slate?: IAutoMovieMcpWritableSlate;
     /** Beat id whose end state should be read. */
     beat: string;
   }): IAutoMovieGetBeatEndOutput {
@@ -330,11 +329,15 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Measure whether an actor's arms can reach a positional target. Pass
-   * `context` explicitly, or omit it to use the resident project's committed
-   * scene plus the session-only model skeletons remembered from commitScene. A
-   * node target may name any staged placement, an actor, a set piece, or a
-   * camera.
+   * Measure whether an actor's arms can reach a positional target, answering
+   * the question `perform` will answer. `reachable` is true only when the
+   * target is within the arm's shell AND the IK pose that lands there satisfies
+   * the rig's range of motion; when it is not, `romViolations` names the exact
+   * joint axes that block it, and `withinShell` still reports the purely
+   * geometric distance verdict. Pass `context` explicitly, or omit it to use
+   * the resident project's committed scene plus the session-only model
+   * skeletons remembered from commitScene. A node target may name any staged
+   * placement, an actor, a set piece, or a camera.
    *
    * @param props The actor id, target, and optional explicit context.
    * @returns The reach report, or null with a reason naming the id or the
@@ -945,9 +948,12 @@ export class AutoMovieApplication {
    * each optionally resized by `scale`, so one box serves as wall, step, and
    * table top -- while `space` is the ground's meaning, the walkable surfaces
    * copied onto the scene and drawn as real meshes. Together they keep the
-   * guide passes describing a world rather than actors floating in a void. On
-   * failure nothing is composed and the violations name the offending placement
-   * to repair.
+   * guide passes describing a world rather than actors floating in a void. A
+   * light states its physics: `type` picks directional (aimed, no falloff),
+   * point (`position`, optional `range`), or spot (both, plus `coneAngle`), and
+   * `color` makes a candle warm; a parameter its kind cannot use is refused,
+   * not ignored. On failure nothing is composed and the violations name the
+   * offending placement to repair.
    *
    * @param props The script (cast + beats) and the staging plan (placements).
    * @returns The staged scene on success, or the staging violations to fix.
