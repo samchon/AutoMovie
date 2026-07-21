@@ -157,9 +157,11 @@ const MIRRORS: readonly {
  * 5. Boundary: a field that legitimately differs (the bezier control tuples the
  *    mirrors exist to rewrite) is absent from the mirror rather than drifted,
  *    and is not reported.
- * 6. The restoration stays inside the surface's prose budgets: every tool
- *    description is still within 1023 characters, since these are `$defs` field
- *    descriptions and must not have leaked into a tool's own.
+ * 6. The restoration landed where it belongs: these are `$defs` field
+ *    descriptions, so `perform`'s OWN description must still be within its
+ *    1023-character cap. The whole-surface sweep of that cap lives in
+ *    `test_mcp_contract_budgets`; repeating it here would only buy a second
+ *    copy of the same assertion.
  */
 export const test_mcp_dto_doc_parity = async (): Promise<void> => {
   // 3-5. the drift check, over the source pair
@@ -234,12 +236,12 @@ export const test_mcp_dto_doc_parity = async (): Promise<void> => {
       total > 1000,
     );
 
-    // 6. and it did not leak into any tool's own description budget
-    for (const tool of tools)
-      TestValidator.predicate(
-        `tool description still within 1023 chars: ${tool.name}`,
-        (tool.description ?? "").length <= 1023,
-      );
+    // 6. the restored prose landed in the `$defs` field descriptions and not in
+    //     `perform`'s own, which has its own hard cap.
+    TestValidator.predicate(
+      `perform's own description stayed within 1023 chars (${(perform.description ?? "").length})`,
+      (perform.description ?? "").length <= 1023,
+    );
   } finally {
     await client.close();
   }
