@@ -1,5 +1,6 @@
 import { stageScene } from "@automovie/engine";
 import {
+  IAutoMovieColor,
   IAutoMovieLight,
   IAutoMovieStagingApplication,
   IAutoMovieValidation,
@@ -69,6 +70,12 @@ const WARM = { r: 1, g: 0.72, b: 0.36, a: null, hex: null };
  *    infinite while a negative range is refused; a non-finite `position` is a
  *    range fault rather than a missing-parameter one; a color component outside
  *    `[0, 1]` is refused.
+ * 8. The color check is total and complete: a color that is not a JSON object
+ *    reports rather than dereferencing into a TypeError (the engine validator
+ *    has no transport gate under it), a light-slot `a: null` is the documented
+ *    value, and an alpha outside `[0, 1]` is refused HERE rather than passing
+ *    `stage` and being refused a rung later by `commitScene`'s color artifact
+ *    check, which is the wrong-stage failure this cycle closes elsewhere.
  */
 export const test_film_stage_light_axis = (): void => {
   // 1. COMPATIBILITY: the legacy four-field shape is unchanged
@@ -405,6 +412,57 @@ export const test_film_stage_light_axis = (): void => {
       ),
       "range",
       "$input.lights[0].color.r",
+    ),
+  );
+
+  // 8. the color's own totality and its alpha, the rule the scene artifact
+  //     validator applies one rung later
+  const withColor = (color: unknown) =>
+    failure(
+      stageLights([
+        {
+          node: "sun",
+          direction: { x: -1, y: -1, z: 0 },
+          intensity: 1,
+          color: color as IAutoMovieColor,
+        },
+      ]),
+    );
+  TestValidator.predicate(
+    "a color that is not an object reports instead of throwing",
+    hasViolation(withColor(null), "type", "$input.lights[0].color") &&
+      hasViolation(withColor([1, 1, 1]), "type", "$input.lights[0].color"),
+  );
+  TestValidator.equals(
+    "a light-slot alpha of null is the documented value, not a fault",
+    stageLights([
+      {
+        node: "sun",
+        direction: { x: -1, y: -1, z: 0 },
+        intensity: 1,
+        color: { r: 1, g: 1, b: 1, a: null, hex: null },
+      },
+    ]).success,
+    true,
+  );
+  TestValidator.equals(
+    "a numeric alpha inside [0, 1] is accepted",
+    stageLights([
+      {
+        node: "sun",
+        direction: { x: -1, y: -1, z: 0 },
+        intensity: 1,
+        color: { r: 1, g: 1, b: 1, a: 0.5, hex: null },
+      },
+    ]).success,
+    true,
+  );
+  TestValidator.predicate(
+    "and an alpha outside it is refused HERE, not one rung later at commitScene",
+    hasViolation(
+      withColor({ r: 1, g: 1, b: 1, a: 5, hex: null }),
+      "range",
+      "$input.lights[0].color.a",
     ),
   );
 };

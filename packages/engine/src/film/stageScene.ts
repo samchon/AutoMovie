@@ -175,13 +175,49 @@ const validateLightPlacementShape = (
       );
   }
 
-  if (light.color !== undefined)
-    for (const [key, value] of [
-      ["r", light.color.r],
-      ["g", light.color.g],
-      ["b", light.color.b],
-    ] as const)
-      out.range(`${path}.color.${key}`, value, 0, 1, `light color ${key}`);
+  if (light.color !== undefined) validateLightColor(light.color, path, out);
+};
+
+/**
+ * A staged light's color, checked to the same rule the scene artifact validator
+ * applies downstream.
+ *
+ * Both halves matter. The object check keeps this validator TOTAL: `stage` is
+ * reachable in-process with an untyped payload (the transport's structural gate
+ * is not the engine's), and a `null` color would otherwise dereference into a
+ * TypeError instead of a located violation. The alpha check keeps the two rungs
+ * agreeing: `validateColorArtifact` range-checks a non-null `a`, so leaving it
+ * to `commitScene` would let a bad alpha compose a scene here and be refused
+ * one stage later, which is the wrong-stage failure this cycle closes
+ * elsewhere.
+ */
+const validateLightColor = (
+  color: unknown,
+  path: string,
+  out: ViolationCollector,
+): void => {
+  if (typeof color !== "object" || color === null || Array.isArray(color)) {
+    out.push(
+      "type",
+      `${path}.color`,
+      "light color must be a JSON object",
+      color,
+    );
+    return;
+  }
+  const channels = color as Record<"r" | "g" | "b" | "a", unknown>;
+  for (const key of ["r", "g", "b"] as const)
+    out.range(
+      `${path}.color.${key}`,
+      channels[key] as number,
+      0,
+      1,
+      `light color ${key}`,
+    );
+  // `a` is nullable by contract: a light slot is opacity-irrelevant, so `null`
+  // is the documented value there, distinct from an out-of-range number.
+  if (channels.a !== null)
+    out.range(`${path}.color.a`, channels.a as number, 0, 1, "light color a");
 };
 
 /**
