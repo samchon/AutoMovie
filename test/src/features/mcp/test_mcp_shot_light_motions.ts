@@ -160,7 +160,14 @@ const says = (
  *    because its stored triplets include tangents, which are derivatives and
  *    not light values. A non-finite keyframe is reported exactly once, by the
  *    clip gate that owns finiteness.
- * 9. The refusal reaches `commitShot`, not only the read-only validator.
+ * 9. A light clip is an ordinary clip, so it goes through the SAME track-shape
+ *    contract `sampleClip` reads (#1353) rather than a second copy: an uneven
+ *    stride, a width the channel's `valueType` does not fix, an unsupported
+ *    interpolation, and a non-boolean `loop` are each refused at their own
+ *    field. The two contracts are orthogonal and both apply — this one decides
+ *    whether the TRACK is readable, the table above decides whether the CHANNEL
+ *    is addressable.
+ * 10. The refusal reaches `commitShot`, not only the read-only validator.
  */
 export const test_mcp_shot_light_motions = (): void => {
   const blowout = clip(
@@ -432,7 +439,38 @@ export const test_mcp_shot_light_motions = (): void => {
     1,
   );
 
-  // 9. the commit gate carries the same refusal.
+  // 9. the SHARED track-shape contract reaches a light clip too.
+  TestValidator.predicate(
+    "a light clip is held to the same track shape every other clip is",
+    // An uneven stride: three values across two keyframes.
+    says(
+      boundsOn("/lights/candleGlow/intensity", "scalar", [1.4, 0.04, 0.9]),
+      ".lightMotions[0].tracks[0].values",
+      "values length must divide evenly by keyframe count",
+    ) &&
+      // A width the channel's own valueType does not fix: vec3 needs three.
+      says(
+        boundsOn("/lights/candleGlow/color", "vec3", [1, 0.8, 0, 0]),
+        ".lightMotions[0].tracks[0].values",
+        "value width must be 3",
+      ) &&
+      // An interpolation the sampler does not implement.
+      says(
+        boundsOn("/lights/candleGlow/intensity", "scalar", [1.4, 0.04], "ease"),
+        ".lightMotions[0].tracks[0].interpolation",
+        "is not supported",
+      ) &&
+      // And the clip-level flag, which decides whether a query wraps.
+      says(
+        validate({
+          lightMotions: [bad({ ...blowout, loop: "false" })],
+        }),
+        ".lightMotions[0].loop",
+        "loop must be boolean",
+      ),
+  );
+
+  // 10. the commit gate carries the same refusal.
   const committed = app.commitShot({
     slate: {
       script: {

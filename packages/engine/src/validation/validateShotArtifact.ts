@@ -537,6 +537,14 @@ const appendShotCoverageArtifact = (
  * tolerates a zero-length clip by normalizing every query to its start. A gate
  * stricter than its consumer refuses more, never less, so it cannot let a throw
  * escape.
+ *
+ * Two orthogonal questions, and every clip is asked both. The SHAPE of a track
+ * ({@link clipTrackShapeFaults}) is the same for every clip a shot carries,
+ * `lightMotions` included, and `channelValueWidth` already reads a pointer
+ * channel's width from its `valueType`, so nothing about that contract is
+ * node-only. Which channel a track may ADDRESS is the shot FIELD's own rule,
+ * because a field admits exactly what its applier writes, and that is what
+ * `channelGate` carries.
  */
 export const validateClipArtifact = (
   clip: unknown,
@@ -791,7 +799,18 @@ const stagedLightKinds = (scene: unknown): ReadonlyMap<string, unknown> => {
  * absent stays valid ("absent means legacy"), a present value is inspected in
  * full.
  *
- * Beyond each clip's own shape, two rules are the field's alone.
+ * Each clip goes through {@link validateClipArtifact} unchanged, so a light clip
+ * is held to the SAME track-shape contract `sampleClip` reads (#1353): strictly
+ * increasing times inside the duration, a whole-number stride, the width the
+ * channel's `valueType` fixes, a supported interpolation, a boolean `loop`.
+ * Those rules are about a track, not about a node, and re-deciding them here
+ * would re-split the contract that issue just made single.
+ *
+ * Beyond that shape, three rules are this field's alone: which channel a track
+ * may address, which light kinds carry the property, and the value's own
+ * range.
+ *
+ * Two of them are worth stating.
  *
  * No two tracks in the whole field may address the same light property. Within
  * one clip `validateClipArtifact` already refuses a duplicate channel, but two
@@ -886,4 +905,3 @@ const appendLightValueBounds = (
     );
   });
 };
-
