@@ -137,7 +137,9 @@ const plan = (over: {
  *    a located violation, while a single-keyframe motion (which orders nothing)
  *    still plans. An explicit slate's shot clip is gated to the depth
  *    `sampleClip` reads it, so unordered track times refuse with a located
- *    violation rather than throwing, and an ordered clip still plans.
+ *    violation rather than throwing, and an ordered clip still plans. The same
+ *    holds for the rest of that contract: an uneven value stride refuses at the
+ *    `values` it sits on rather than reaching the sampler (#1353).
  * 4. Without a project, omitting the slate throws the actionable openProject
  *    prompt (the resident contract).
  */
@@ -374,6 +376,41 @@ export const test_mcp_plan_pose_keypoints = (): void => {
         unordered.validation,
         "temporal",
         "$input.slate.shots[0].cameraMotion.tracks[0].times[1]",
+      ),
+  );
+  // Ordering was only the first of the sampler's rules the gate had learned.
+  // `values: [0, 0, 0, 0, 0]` against two keyframes is as ordinary a `number[]`
+  // as `[1, 0]` is, and it reached the same sampler the same way (#1353).
+  const uneven = plan({
+    slate: slate({
+      shots: [
+        {
+          ...shot,
+          cameraMotion: {
+            id: "cam:b1",
+            name: null,
+            duration: 1,
+            loop: false,
+            tracks: [
+              {
+                channel: { kind: "node", node: "cam", path: "translation" },
+                times: [0, 1],
+                values: [0, 0, 0, 0, 0],
+                interpolation: "linear",
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  });
+  TestValidator.predicate(
+    "an uneven value stride refuses instead of throwing out of the sampler",
+    uneven.sidecar === null &&
+      hasViolation(
+        uneven.validation,
+        "type",
+        "$input.slate.shots[0].cameraMotion.tracks[0].values",
       ),
   );
   // The counter-case one property away: the same shot with an ordered clip

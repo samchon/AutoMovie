@@ -17,6 +17,12 @@ import {
   validateUniqueIds,
   validateVectorArtifact,
 } from "./artifactShape";
+import {
+  IAutoMovieNodeChannel,
+  NODE_CHANNEL_PATHS,
+  clipLoopFault,
+  clipTrackShapeFaults,
+} from "./clipTrackShape";
 import { toValidation } from "./violation";
 
 /**
@@ -500,11 +506,26 @@ const appendShotCoverageArtifact = (
 };
 
 /**
- * One clip's structural contract: track shape, strictly increasing times inside
- * the clip's duration, and finite values. Exported because the shot artifact is
- * not its only gate: the project store validates stored clips on READ, and a
- * gate that exists to catch a corrupted file must check what its consumers
- * dereference (#1324). `sampleClip` assumes the increasing times this pins.
+ * One clip's structural contract, to the depth every consumer dereferences it.
+ *
+ * Exported because the shot artifact is not its only gate: the project store
+ * validates stored clips on READ, and a gate that exists to catch a corrupted
+ * file must check what its consumers dereference (#1324).
+ *
+ * The keyframe payload comes from the contract `sampleClip` itself reads
+ * ({@link clipTrackShapeFaults}), rather than from a second hand-maintained copy
+ * of it. Holding the rule twice is what let this gate learn ONE of the
+ * sampler's checks and none of the other seven, so a clip with an uneven value
+ * stride, an empty keyframe list, a wrong value width, an unsupported
+ * interpolation, a non-triplet `cubicspline` stride, a non-boolean `loop`, or
+ * an unknown node channel path validated clean here and threw out of the engine
+ * when something played it (#1353).
+ *
+ * The clip's own `duration` stays stricter here than the sampler's rule: a
+ * committed clip must last longer than zero seconds, while the sampler
+ * tolerates a zero-length clip by normalizing every query to its start. A gate
+ * stricter than its consumer refuses more, never less, so it cannot let a throw
+ * escape.
  */
 export const validateClipArtifact = (
   clip: unknown,
@@ -522,6 +543,15 @@ export const validateClipArtifact = (
     violations,
     false,
   );
+  const loop = clipLoopFault(clip.loop);
+  if (loop !== null)
+    pushViolation(
+      violations,
+      loop.kind,
+      `${path}.${loop.field}`,
+      `clip ${loop.message}`,
+      loop.value,
+    );
   validateArrayArtifact(
     clip.tracks,
     `${path}.tracks`,
@@ -564,22 +594,14 @@ export const validateClipArtifact = (
       "clip track values",
       violations,
     );
-    validateIncreasingTimes(
-      track.times,
-      clip.duration,
-      `${trackPath}.times`,
-      violations,
-    );
-    asArray(track.values).forEach((value, j) => {
-      if (!Number.isFinite(value))
-        pushViolation(
-          violations,
-          "range",
-          `${trackPath}.values[${j}]`,
-          `track value must be finite, but was ${value}`,
-          value,
-        );
-    });
+    for (const fault of clipTrackShapeFaults(track, clip.duration))
+      pushViolation(
+        violations,
+        fault.kind,
+        `${trackPath}.${fault.field}`,
+        `track ${fault.message}`,
+        fault.value,
+      );
   });
 };
 
@@ -611,47 +633,28 @@ const validateHonorableChannel = (
   path: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
-  if (channel.kind === "node") return;
-  pushViolation(
-    violations,
-    "type",
-    `${path}.kind`,
-    `clip track channel kind must be "node"; the pipeline resolves node channels (translation/rotation/scale/weights) onto scene nodes and honors no other target on a shot clip, but was ${JSON.stringify(channel.kind)}`,
-    channel.kind,
-  );
-};
-
-const validateIncreasingTimes = (
-  times: unknown,
-  duration: unknown,
-  path: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  if (!Array.isArray(times)) return;
-  let previous = -Infinity;
-  times.forEach((time, i) => {
-    if (
-      !Number.isFinite(time) ||
-      typeof time !== "number" ||
-      typeof duration !== "number" ||
-      time < 0 ||
-      time > duration
-    )
-      pushViolation(
-        violations,
-        "temporal",
-        `${path}[${i}]`,
-        `track time must be finite and within [0, ${duration}], but was ${time}`,
-        time,
-      );
-    if (Number.isFinite(time) && time <= previous)
-      pushViolation(
-        violations,
-        "temporal",
-        `${path}[${i}]`,
-        `track times must strictly increase; ${time} is not greater than ${previous}`,
-        time,
-      );
-    if (Number.isFinite(time)) previous = time;
-  });
+  if (channel.kind !== "node") {
+    pushViolation(
+      violations,
+      "type",
+      `${path}.kind`,
+      `clip track channel kind must be "node"; the pipeline resolves node channels (translation/rotation/scale/weights) onto scene nodes and honors no other target on a shot clip, but was ${JSON.stringify(channel.kind)}`,
+      channel.kind,
+    );
+    return;
+  }
+  // The node arm's own address. `channelKey` builds `node:<id>:<path>` from the
+  // same set and throws for anything outside it, so a track naming a property
+  // like `opacity` used to validate clean here and take the sampler's throw
+  // instead of a violation (#1353): the pointer arm was closed and the node
+  // arm's unknown paths were left open, which is the same false green one
+  // discriminator over.
+  if (!NODE_CHANNEL_PATHS.has(channel.path as IAutoMovieNodeChannel["path"]))
+    pushViolation(
+      violations,
+      "type",
+      `${path}.path`,
+      `clip track channel path must be one of ${[...NODE_CHANNEL_PATHS].join(", ")}; the pipeline writes no other property of a node, but was ${JSON.stringify(channel.path)}`,
+      channel.path,
+    );
 };

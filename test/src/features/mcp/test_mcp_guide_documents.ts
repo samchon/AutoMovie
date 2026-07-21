@@ -92,6 +92,12 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   // consequence are pinned so the corpus cannot drop them again.
   ["PERFORMANCE", "a channel outside it is **refused**, not dropped"],
   ["PERFORMANCE", "a quadruped's FRONT legs ride the arm chains"],
+  // The clip payload contract (#1353). The gate had learned one of the
+  // sampler's rules, so an uneven `values` stride committed clean and threw
+  // while the film was being played; the corpus now states the whole shape an
+  // author must emit, since a guide that names only the channel teaches half of
+  // what a track is.
+  ["PERFORMANCE", "checked to the depth the sampler reads it"],
 ];
 
 /**
