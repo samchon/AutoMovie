@@ -18,9 +18,19 @@ on:
       - 'packages/*/scripts/**'
       - 'internals/config/**'
       - 'test/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
+      # Root tooling configuration, by shape (#1335). This list is deliberately
+      # identical to build.yml's apart from the workflow filename above: the two
+      # have now drifted once each, and keeping them character-identical is what
+      # makes the next drift visible in review. GitHub cannot share a `paths:`
+      # block between workflow files, so the alternative is one workflow with
+      # two jobs, which would rename both required checks; not worth doing while
+      # Actions cannot execute a step to confirm the rename.
+      - '*.js'
+      - '*.json'
+      - '*.yaml'
+      - '*.yml'
+      - '.prettier*'
+      - '.gitattributes'
 jobs:
   Ubuntu:
     runs-on: ubuntu-latest
