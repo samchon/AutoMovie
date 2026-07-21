@@ -48,6 +48,10 @@ export interface IAutoMovieHingedArticulation {
    * ranges genuinely cannot hold any pose that reaches the target must still
    * say so, instead of the solver quietly returning its least-bad attempt as if
    * it were clean.
+   *
+   * `Infinity` when the scorer found a violation with no measurable overshoot,
+   * which {@link jointRomOvershoot} reserves for a non-finite angle: unusable
+   * rather than free, so a malformed candidate can never win the selection.
    */
   overshoot: number;
 }
