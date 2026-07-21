@@ -39,6 +39,18 @@ const HINGE: IAutoMovieJointConstraint = {
   twist: null,
 };
 
+/**
+ * A FUSED elbow: the hinge exists but is pinned shut, so the chain has exactly
+ * one span. Any target off that span needs a bend the joint refuses, which is a
+ * rig that genuinely cannot hold the pose rather than a solver that failed to
+ * find one.
+ */
+const FUSED: IAutoMovieJointConstraint = {
+  flexion: { min: 0, max: 0 },
+  abduction: null,
+  twist: null,
+};
+
 const bone = (
   name: IAutoMovieBone["bone"],
   parent: IAutoMovieBone["parent"],
@@ -60,6 +72,22 @@ const armRig = (elbow: IAutoMovieJointConstraint): IAutoMovieSkeleton => ({
     bone("leftUpperArm", "chest", restAt(0.2, 0, 0)),
     bone("leftLowerArm", "leftUpperArm", restAt(0.3, 0, 0), elbow),
     bone("leftHand", "leftLowerArm", restAt(0.25, 0, 0)),
+  ],
+});
+
+/**
+ * The same chain with the arm HANGING along local −Y instead of out along +X.
+ * The elbow's flexion axis is then the forearm's own long axis, so flexion is a
+ * roll and the hand cannot move (#1346).
+ */
+const hangingArmRig = (): IAutoMovieSkeleton => ({
+  id: "reach-rig",
+  bones: [
+    bone("hips", null, restAt(0, 1, 0)),
+    bone("chest", "hips", restAt(0, 0.4, 0)),
+    bone("leftUpperArm", "chest", restAt(0.2, 0, 0)),
+    bone("leftLowerArm", "leftUpperArm", restAt(0, -0.3, 0), HINGE),
+    bone("leftHand", "leftLowerArm", restAt(0, -0.25, 0)),
   ],
 });
 
@@ -116,35 +144,47 @@ const reachOf = (skeleton: IAutoMovieSkeleton, point: IAutoMovieVector3) =>
  * The verdict is scoped to the POSE, not to the arm, and that scope is load
  * bearing. The engine has one analytic two-bone solve; a candidate that breaks
  * ROM is not proof that no valid pose exists. Folding it into `reachable` was
- * tried and reverted: on the canonical humanoid the solve produces a
- * ROM-breaking pose for nearly every target, so the field went permanently
- * false and the tool became useless, which is a worse failure than the one
- * being fixed and asserts an impossibility the engine never established.
+ * tried and reverted, because asserting an impossibility from one unsuccessful
+ * attempt repeats the original defect in the opposite direction.
+ *
+ * **What changed with #1345.** The solve no longer articulates the mid joint as
+ * a free swing, so a hinge elbow is no longer refused for the solver's own
+ * choice of axes: the elbow turns only about its flexion axis and its abduction
+ * and twist are zero by construction. A hinge elbow that used to produce a
+ * guaranteed `rom` error now produces a clean pose, and the negative twin moved
+ * to where the refusal is REAL: a rig whose declared range cannot hold any pose
+ * that reaches the target. Pinning the old behaviour would pin the defect.
  *
  * Scenarios:
  *
- * 1. A hinge elbow with a target INSIDE the reach shell whose analytic solve needs
- *    off-hinge articulation: `reachable` stays true (the arm is long enough),
- *    `poseWithinRom` is false, and `romViolations` names the immobile axes at
- *    the same `$input.joints[i]` paths the perform gate reports, at `error`
- *    severity.
- * 2. Negative twin, one property away: the same rig with the elbow's axes opened
- *    reports `poseWithinRom: true` with no violations, so the ROM answer does
- *    not over-refuse. Every distance is bit-identical across the pair, proving
- *    the constraint alone flipped the verdict and the geometry did not move.
- * 3. Boundary, out of shell: a target past the arm's span keeps its positive
+ * 1. A hinge elbow with a target inside the reach shell: `reachable` stays true
+ *    and `poseWithinRom` is now TRUE, with the elbow's immobile axes at exactly
+ *    zero, because the solver articulates the hinge in its own plane (#1345).
+ * 2. Twin, one property away: opening the elbow's axes changes nothing, since the
+ *    hinge solve never needed them. Every distance is bit-identical across the
+ *    pair.
+ * 3. NEGATIVE TWIN: a FUSED elbow (`flexion` pinned to `[0, 0]`) cannot reach a
+ *    target off its one span, so `poseWithinRom` is false and `romViolations`
+ *    names the flexion axis at the `$input.joints[i]` path the perform gate
+ *    reports, at `error` severity. The ROM answer still refuses when the rig
+ *    genuinely refuses.
+ * 4. Boundary, out of shell: a target past the arm's span keeps its positive
  *    `gap`, reports `reachable: false`, and still returns the documented
  *    "extends toward it" pose.
- * 4. Boundary, degenerate solve: a target ON the shoulder has no two-bone
- *    solution, so `pose` is null. Nothing can be claimed about a pose that does
- *    not exist, so `poseWithinRom` is false with an empty `romViolations`,
- *    while `reachable` still answers the distance question it can answer.
- * 5. Boundary, nothing to measure: an armless rig still answers `reach: null` with
+ * 5. Boundary, degenerate solve: a target ON the shoulder has no two-bone
+ *    solution, so `pose` is null, `poseWithinRom` is false with an empty
+ *    `romViolations`, and `poseReason` says which degeneracy happened (#1346)
+ *    instead of leaving the null unexplained. Its twin is a rig whose arm
+ *    HANGS, where the elbow's flexion is a roll: also a null pose, but named at
+ *    the elbow, because that rig cannot pose any placement rather than this
+ *    one.
+ * 6. Boundary, nothing to measure: an armless rig still answers `reach: null` with
  *    the unmeasurable reason rather than a confident geometric verdict.
- * 6. The distance verdict propagates to the top-level `reachable`.
+ * 7. The distance verdict propagates to the top-level `reachable`.
  */
 export const test_mcp_reach_rom_oracle = (): void => {
-  // 1. inside the shell, outside the ROM
+  // 1. inside the shell, and now inside the ROM: the hinge is articulated in
+  // its own plane instead of by a free swing that loaded the immobile axes.
   const target: IAutoMovieVector3 = { x: 0.3, y: 1.2, z: 0.25 };
   const hinged = reachOf(armRig(HINGE), target);
   TestValidator.predicate(
@@ -152,30 +192,26 @@ export const test_mcp_reach_rom_oracle = (): void => {
     hinged !== null && hinged.left !== null && hinged.left.reachable,
   );
   TestValidator.predicate(
-    "and refuses the POSE, naming the immobile axes",
+    "and now HOLDS the pose, with the immobile axes at exactly zero",
     hinged !== null &&
       hinged.left !== null &&
-      hinged.left.poseWithinRom === false &&
+      hinged.left.poseWithinRom === true &&
+      hinged.left.romViolations.length === 0 &&
       hinged.left.pose !== null &&
-      hinged.left.romViolations.length > 0 &&
-      hinged.left.romViolations.every(
-        (entry) =>
-          entry.kind === "rom" &&
-          entry.severity === "error" &&
-          entry.path.startsWith("$input.joints["),
-      ) &&
-      hinged.left.romViolations.some((entry) =>
-        entry.expected.includes("does not move in"),
+      hinged.left.poseReason === null &&
+      hinged.left.pose.joints.some(
+        (j) => j.bone === "leftLowerArm" && j.abduction === 0 && j.twist === 0,
       ),
   );
-  // 6. the top-level field answers the distance question, and says so
+  // 7. the top-level field answers the distance question, and says so
   TestValidator.equals(
     "the report's reachable is the distance verdict, not the ROM one",
     hinged?.reachable,
     true,
   );
 
-  // 2. NEGATIVE TWIN: same geometry, same target, elbow opened up
+  // 2. TWIN, one property away: opening the elbow changes nothing here, because
+  // the hinge solve never used the axes the old free swing loaded.
   const free = reachOf(armRig(FREE), target);
   TestValidator.predicate(
     "an unconstrained elbow holds the identical target's pose cleanly",
@@ -197,7 +233,30 @@ export const test_mcp_reach_rom_oracle = (): void => {
       nclose(hinged.left.gap, free.left.gap, 0),
   );
 
-  // 3. BOUNDARY: past the shell
+  // 3. NEGATIVE TWIN: the ROM answer must still refuse a rig that really cannot
+  // hold the pose. A fused elbow has one span; this target is off it.
+  const fused = reachOf(armRig(FUSED), target);
+  TestValidator.predicate(
+    "a fused elbow still reports the target inside its shell",
+    fused !== null && fused.left !== null && fused.left.reachable,
+  );
+  TestValidator.predicate(
+    "and refuses the POSE, naming the flexion the joint cannot make",
+    fused !== null &&
+      fused.left !== null &&
+      fused.left.poseWithinRom === false &&
+      fused.left.pose !== null &&
+      fused.left.romViolations.length > 0 &&
+      fused.left.romViolations.every(
+        (entry) =>
+          entry.kind === "rom" &&
+          entry.severity === "error" &&
+          entry.path.startsWith("$input.joints["),
+      ) &&
+      fused.left.romViolations.some((entry) => entry.path.endsWith(".flexion")),
+  );
+
+  // 4. BOUNDARY: past the shell
   const far = reachOf(armRig(FREE), { x: 9, y: 1.4, z: 0 });
   TestValidator.predicate(
     "a target past the span keeps its gap, its extended pose, and refuses",
@@ -208,7 +267,7 @@ export const test_mcp_reach_rom_oracle = (): void => {
       far.left.pose !== null,
   );
 
-  // 4. BOUNDARY: the degenerate solve, a target on the shoulder itself
+  // 5. BOUNDARY: the degenerate solve, a target on the shoulder itself
   const shoulder = reachOf(armRig(FREE), { x: 0.2, y: 1.4, z: 0 });
   TestValidator.predicate(
     "a target on the shoulder has no solve, so nothing is claimed about one",
@@ -219,8 +278,33 @@ export const test_mcp_reach_rom_oracle = (): void => {
       shoulder.left.poseWithinRom === false &&
       shoulder.left.romViolations.length === 0,
   );
+  TestValidator.predicate(
+    "and the null pose says WHICH degeneracy, not merely that there was one",
+    shoulder !== null &&
+      shoulder.left !== null &&
+      (shoulder.left.poseReason ?? "").includes("no two-bone solve"),
+  );
 
-  // 5. BOUNDARY: nothing to measure
+  // The OTHER degeneracy, and the reason the two are distinguished at all: this
+  // rig cannot pose ANY placement, not merely this one, so an author who reads
+  // "restage and measure again" would be chasing a target that can never work.
+  const hanging = reachOf(hangingArmRig(), target);
+  TestValidator.predicate(
+    "a rig whose elbow cannot bend reports no pose, and names the elbow",
+    hanging !== null &&
+      hanging.left !== null &&
+      hanging.left.pose === null &&
+      hanging.left.poseWithinRom === false &&
+      hanging.left.romViolations.length === 0 &&
+      (hanging.left.poseReason ?? "").includes("leftLowerArm") &&
+      (hanging.left.poseReason ?? "").includes("parallel"),
+  );
+  TestValidator.predicate(
+    "while the distance question it CAN answer is still answered",
+    hanging !== null && hanging.left !== null && hanging.left.reachable,
+  );
+
+  // 6. BOUNDARY: nothing to measure
   const armless = app.getReach({
     context: contextFor(armlessRig()),
     actor: "actor",

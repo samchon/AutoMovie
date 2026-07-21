@@ -5,6 +5,7 @@ import {
   POSITIONAL_TARGET_SHAPE,
   Quaternion,
   Vector3,
+  armChainFault,
   positionalTargetFault,
   reachPose,
   resolveBeatEnd,
@@ -1061,11 +1062,25 @@ const measureArmReach = (
   const pose = reachPose(skeleton, side, target, HUMANOID_REST_FRAME);
   const romViolations =
     pose === null ? [] : validatePose({ pose, skeleton }).items;
+  // A null pose is not self-explaining, and the two ways to get one are
+  // different facts an author must act on differently: a target sitting on the
+  // shoulder has no two-bone solve for THAT placement, while an arm whose elbow
+  // flexion is a roll has no solvable pose for ANY placement (#1346). Saying
+  // which is what turns "reachable: true, pose: null" from a silence into a
+  // report.
+  const fault = armChainFault(skeleton, side);
+  const poseReason =
+    pose !== null
+      ? null
+      : fault !== null
+        ? fault.reason
+        : `no two-bone solve exists for this target on the ${side} arm chain; the target coincides with the shoulder, or a chain segment has zero length`;
   return {
     side,
     targetDistance,
     maximumDistance,
     gap,
+    poseReason,
     // Distance, and only distance. Folding the ROM verdict in here made the
     // field permanently false on the canonical humanoid, because the analytic
     // solve cannot produce a ROM-valid arm pose for almost any target; that is

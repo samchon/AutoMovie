@@ -61,13 +61,22 @@ export interface IAutoMovieActorContext {
   rig?: IAutoMovieSkeleton;
 
   /**
-   * Per-bone rest frames that let the IK/arm verbs (`reach`/`point`/`strike`)
-   * emit their arm angles in **clinical** space, lifted by `sign·r + neutral`
-   * so a downstream renderer reads them up through the same frames (abduction
-   * 180 raises either arm overhead regardless of side). Omit to have those
-   * verbs output raw rig-space angles, the historical behaviour; when supplied
-   * it must be paired with the same frames on the player
-   * ({@link IAutoMovieActorContext} feeds `AutoMoviePlayer`'s `restFrames`).
+   * Per-bone rest frames the IK/arm verbs (`reach`/`point`/`strike`) express
+   * their arm angles through, lifted by `sign·r + neutral` so a downstream
+   * renderer reads them up through the same frames (abduction 180 raises either
+   * arm overhead regardless of side). When supplied it must be paired with the
+   * same frames on the player ({@link IAutoMovieActorContext} feeds
+   * `AutoMoviePlayer`'s `restFrames`).
+   *
+   * **Omitting it no longer means raw rig space.** `reachPose` now defaults to
+   * the canonical `HUMANOID_REST_FRAME` that pairs with the humanoid arm axes
+   * it already applies unconditionally, because a pose carries clinical angles
+   * by definition and is validated against the clinical ROM table by a direct
+   * per-axis comparison. While this was optional, an actor context without it
+   * made `perform`'s arm verbs emit rest-relative angles that the clinical
+   * table then judged off by the shoulder's whole 90-degree rest abduction, and
+   * disagree with `getReach`, which had always passed the frame (#1346). Supply
+   * this only for a rig whose rest convention is genuinely its own.
    */
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
 }

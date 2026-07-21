@@ -10,6 +10,7 @@ import {
   AutoMovieHumanoidBone,
   IAutoMovieBone,
   IAutoMovieGestureAction,
+  IAutoMovieJointPose,
   IAutoMovieSkeleton,
   IAutoMovieVector3,
 } from "@automovie/interface";
@@ -100,10 +101,13 @@ const boneWorld = (
  *    it: rest → strike → rest.
  * 3. `point`/`strike` with no `at`, a rig-less context, and an unhandled combat
  *    kind (`draw`) all synthesise nothing.
- * 4. Rest frames on the context lift the IK verbs into **clinical** space: the
- *    same point solve comes out with its arm abduction lifted by the frame
- *    (`rightUpperArm` sign −1, neutral 90 → clinical = 90 − rig), so a player
- *    reading through the same frames raises the arm correctly.
+ * 4. The context's rest frames decide the space the IK verbs answer in, and an
+ *    omitted table takes the clinical default (#1346), so an ordinary context's
+ *    `point` agrees with the explicit clinical solve digit for digit. The
+ *    rig-space solve is a DIFFERENT legal pose rather than the same one
+ *    renamed, because the solver elects its swivel by ROM legality judged in
+ *    the declared space (#1345); the elbow's hinge angle, set by the target
+ *    distance alone, is identical across both.
  */
 export const test_perform_arm_gestures = (): void => {
   const synth = makeActorSynthesizer(new Map([["hero", ctx]]), nodes);
@@ -199,24 +203,60 @@ export const test_perform_arm_gestures = (): void => {
     null,
   );
 
-  // rest frames lift the same point solve into clinical space: the held pose's
-  // right-upper-arm abduction comes out at 90 − rig (the frame's sign −1,
-  // neutral 90), the value a matching player reads back up.
-  const abdOf = (clip: ReturnType<typeof synth>): number | null =>
+  // The actor context's rest frames decide the space the point solve answers
+  // in. The rig-space side is asked for EXPLICITLY with an empty table, because
+  // a context that simply omits `restFrames` now takes the clinical default
+  // (#1346).
+  //
+  // The two are NOT `90 − rig` apart, and expecting that was this case's old
+  // premise. Since #1345 every swivel angle around the shoulder-to-hand axis is
+  // an exact solution, so the solver spends that freedom on ROM legality, and
+  // ROM is judged in whichever space the context declared. A different space
+  // therefore elects a different legal pose, not a renaming of one. What the
+  // frame cannot move is the elbow: its hinge angle follows from the
+  // shoulder-to-target distance alone.
+  const jointOf = (
+    clip: ReturnType<typeof synth>,
+    bone: AutoMovieHumanoidBone,
+  ): IAutoMovieJointPose | null =>
     clip === null
       ? null
       : (clip.keyframes[clip.keyframes.length - 1]!.pose.joints.find(
-          (j) => j.bone === "rightUpperArm",
-        )?.abduction ?? null);
+          (j) => j.bone === bone,
+        ) ?? null);
+  const abdOf = (clip: ReturnType<typeof synth>): number | null =>
+    jointOf(clip, "rightUpperArm")?.abduction ?? null;
   const clinical = makeActorSynthesizer(
     new Map([["hero", { ...ctx, restFrames: HUMANOID_REST_FRAME }]]),
     nodes,
   );
+  const rigSpace = makeActorSynthesizer(
+    new Map([["hero", { ...ctx, restFrames: {} }]]),
+    nodes,
+  );
   const pointAt = gesture("point", { at: { kind: "node", node: "exit" } });
-  const rigAbd = abdOf(synth(pointAt, "hero"));
-  const clinAbd = abdOf(clinical(pointAt, "hero"));
+  const rigClip = rigSpace(pointAt, "hero");
+  const clinicalClip = clinical(pointAt, "hero");
+  const clinAbd = abdOf(clinicalClip);
   TestValidator.predicate(
-    "rest frames lift the point's arm abduction to clinical (90 − rig)",
-    rigAbd !== null && clinAbd !== null && nclose(clinAbd, 90 - rigAbd, 1e-6),
+    "both frames synthesise a point clip, each in its own space",
+    rigClip !== null && clinicalClip !== null && clinAbd !== null,
+  );
+  TestValidator.predicate(
+    "and the elbow's hinge angle is identical across the two frames",
+    nclose(
+      jointOf(rigClip, "rightLowerArm")?.flexion ?? Number.NaN,
+      jointOf(clinicalClip, "rightLowerArm")?.flexion ?? Number.NaN,
+      1e-12,
+    ),
+  );
+  // The frame the gate grades against is the one an ordinary context gets: a
+  // `point` authored with no rest frames must agree with the explicit clinical
+  // solve digit for digit, which is what stops `getReach` and `perform` from
+  // describing one rig in two spaces.
+  TestValidator.equals(
+    "an actor context with no restFrames performs the CLINICAL point solve",
+    abdOf(synth(pointAt, "hero")),
+    clinAbd,
   );
 };

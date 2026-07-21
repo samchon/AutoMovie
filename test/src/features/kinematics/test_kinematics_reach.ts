@@ -1,4 +1,9 @@
-import { HUMANOID_JOINT_AXES, reachPose, resolvePose } from "@automovie/engine";
+import {
+  HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
+  reachPose,
+  resolvePose,
+} from "@automovie/engine";
 import { IAutoMovieBone, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -11,13 +16,22 @@ const idTransform = {
   scale: { x: 1, y: 1, z: 1 },
 };
 
-/** Where the hand lands after posing the skeleton with `pose`. */
+/**
+ * Where the hand lands after posing the skeleton with `pose`.
+ *
+ * `reachPose` answers in CLINICAL angles (#1346), so the FK that checks it must
+ * read them back through the same rest frame. Resolving without one would
+ * measure a different pose than the one the solver returned.
+ */
 const handAt = (
   pose: NonNullable<ReturnType<typeof reachPose>>,
 ): IAutoMovieVector3 =>
-  resolvePose(pose, createSkeleton(), HUMANOID_JOINT_AXES).find(
-    (b) => b.bone === "leftHand",
-  )!.worldPosition;
+  resolvePose(
+    pose,
+    createSkeleton(),
+    HUMANOID_JOINT_AXES,
+    HUMANOID_REST_FRAME,
+  ).find((b) => b.bone === "leftHand")!.worldPosition;
 
 /**
  * `reachPose`: analytic two-bone arm IK. The contract is the FK oracle: pose
@@ -39,9 +53,12 @@ const handAt = (
  * 3. A missing arm chain (the fixture has no rightHand) returns null; a target on
  *    the shoulder returns null (degenerate); a zero-length arm bone (a
  *    malformed rig) returns null instead of dividing by zero.
- * 4. A target straight below the shoulder (the reach axis parallel to the
- *    world-down pole) still lands: the bend-plane normal falls back to a second
- *    reference so the solve stays total.
+ * 4. A target straight below the shoulder still lands. This was the case that used
+ *    to need the bend-plane fallback, because the reach axis ran parallel to
+ *    the world-down pole the plane was derived from. Since #1345 the arm bends
+ *    in the elbow's own hinge plane, so no pole and no fallback are involved;
+ *    the case is kept because the axis-aligned target is still the one most
+ *    likely to expose a degenerate cross product.
  */
 export const test_kinematics_reach = (): void => {
   const skeleton = createSkeleton();
@@ -110,11 +127,12 @@ export const test_kinematics_reach = (): void => {
     null,
   );
 
-  // 4. straight-down target: reach axis ∥ world-down pole
+  // 4. straight-down target: the axis-aligned case that used to need the pole
+  // fallback, kept as the likeliest place for a degenerate cross product
   const below: IAutoMovieVector3 = { x: 0.2, y: 1.0, z: 0 };
   const belowPose = reachPose(skeleton, "left", below)!;
   TestValidator.predicate(
-    "a straight-down reach still lands (pole fallback)",
+    "a straight-down reach still lands",
     vclose(handAt(belowPose), below, 1e-3),
   );
 };

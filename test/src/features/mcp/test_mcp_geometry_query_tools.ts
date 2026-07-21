@@ -126,9 +126,10 @@ const residentShot: IAutoMovieShot = {
  *    scene world space.
  * 3. `getReach` reports per-arm reach distance, gap, and IK pose against a
  *    positional target. `reachable` answers the distance question and
- *    `poseWithinRom` the one `perform` answers, so a target inside the arm's
- *    shell whose IK pose breaks the rig's ROM reports `reachable: true` with
- *    `poseWithinRom: false` and the blocking axes in `romViolations` (#1338).
+ *    `poseWithinRom` the one `perform` answers (#1338); since #1345 the solve
+ *    keeps the elbow on its own hinge, so a target inside the shell comes back
+ *    with a pose the rig can hold and the immobile axes at exactly zero. The
+ *    refusal twin lives in `test_mcp_reach_rom_oracle`.
  * 4. Resident project queries may omit explicit context after commitScene and
  *    commitShot supplied the session model/motion payloads; a reopened project
  *    whose actors were never performed (so no `actors/<node>.json` rig exists
@@ -568,21 +569,34 @@ export const test_mcp_geometry_query_tools = (): void => {
       nclose(reach.left.gap, 0) &&
       reach.right === null,
   );
-  // The ROM answer is separate from the distance one (#1338): this rig's
-  // default humanoid ROM marks the elbow's abduction immobile, and the analytic
-  // solve lands the target with a bent-out elbow, so the arm is long enough and
-  // the POSE is still one `perform` refuses. The violations name the axes, at
-  // the same `joints[i].<axis>` paths the perform gate reports.
+  // The ROM answer stays separate from the distance one (#1338), and since
+  // #1345 it is also ATTAINABLE: the solve keeps the elbow on its own hinge
+  // instead of swinging it free, so this target comes back with a pose the rig
+  // can actually hold. It used to report a bent-out elbow that `perform` then
+  // refused, on axes the default humanoid ROM marks immobile.
+  //
+  // The refusal twin lives in `test_mcp_reach_rom_oracle` (a fused elbow, where
+  // the rig genuinely cannot hold any reaching pose), so the two sides of the
+  // verdict stay pinned without a second rig fixture here.
   TestValidator.predicate(
-    "a ROM-breaking IK pose is reported as such, without denying the reach",
+    "the IK pose is one the rig can hold, and says so",
     reach !== null &&
       reach.left !== null &&
       reach.reachable &&
-      !reach.left.poseWithinRom &&
-      reach.left.romViolations.length > 0 &&
-      reach.left.romViolations.every((entry) => entry.kind === "rom") &&
-      reach.left.romViolations.some((entry) =>
-        entry.path.endsWith(".abduction"),
+      reach.left.poseWithinRom &&
+      reach.left.romViolations.length === 0 &&
+      reach.left.poseReason === null,
+  );
+  TestValidator.predicate(
+    "and the elbow carries no rotation on the axes it does not have",
+    reach !== null &&
+      reach.left !== null &&
+      reach.left.pose !== null &&
+      reach.left.pose.joints.some(
+        (j) =>
+          j.bone === "leftLowerArm" &&
+          nclose(j.abduction ?? 0, 0, 0) &&
+          nclose(j.twist ?? 0, 0, 0),
       ),
   );
 
