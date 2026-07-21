@@ -18,6 +18,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
+import { armChainFault } from "../kinematics/armChainFault";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
@@ -400,6 +401,34 @@ export const performShot = (props: {
     return point;
   };
 
+  /**
+   * Refuse an arm verb asked of a rig whose elbow cannot bend that arm.
+   *
+   * The reference synthesizer answers such a verb with `null`, and a `null`
+   * synthesis is SKIPPED by the compiler, so without this gate the shot would
+   * come back successful having quietly performed nothing (#1349's failure
+   * shape, one verb lower). Stated here, at the action that asked, so the
+   * correction round gets the rig's own geometry rather than a missing clip.
+   */
+  const refuseUnbendableArm = (
+    side: "left" | "right",
+    path: string,
+    performers: readonly string[],
+  ): void => {
+    for (const performer of performers) {
+      const rig = skeleton(performer);
+      if (rig === null) continue;
+      const fault = armChainFault(rig, side);
+      if (fault === null) continue;
+      out.push(
+        "type",
+        path,
+        `"${performer}" cannot perform an arm verb on its ${side} arm: ${fault.reason}`,
+        side,
+      );
+    }
+  };
+
   let liveCamera: string | null = null;
   const stageActions: IAutoMovieActionCall[] = [];
   // Where a masked-content violation lands for each entry in `stageActions`,
@@ -764,10 +793,14 @@ export const performShot = (props: {
           "reach target",
           "a reach target",
         );
+        refuseUnbendableArm(action.hand, `${base}[${i}].hand`, actors);
       } else if (
         action.verb === "gesture" &&
         (action.kind === "point" || action.kind === "strike")
       ) {
+        // The arm gestures always solve the RIGHT arm (see the reference
+        // synthesizer), so the fault is asked of that side.
+        refuseUnbendableArm("right", `${base}[${i}].kind`, actors);
         if (action.at !== undefined)
           resolvePositionalTarget(
             action.at,

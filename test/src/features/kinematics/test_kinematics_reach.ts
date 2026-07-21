@@ -1,4 +1,9 @@
-import { HUMANOID_JOINT_AXES, reachPose, resolvePose } from "@automovie/engine";
+import {
+  HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
+  reachPose,
+  resolvePose,
+} from "@automovie/engine";
 import { IAutoMovieBone, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -11,13 +16,22 @@ const idTransform = {
   scale: { x: 1, y: 1, z: 1 },
 };
 
-/** Where the hand lands after posing the skeleton with `pose`. */
+/**
+ * Where the hand lands after posing the skeleton with `pose`.
+ *
+ * `reachPose` answers in CLINICAL angles (#1346), so the FK that checks it must
+ * read them back through the same rest frame. Resolving without one would
+ * measure a different pose than the one the solver returned.
+ */
 const handAt = (
   pose: NonNullable<ReturnType<typeof reachPose>>,
 ): IAutoMovieVector3 =>
-  resolvePose(pose, createSkeleton(), HUMANOID_JOINT_AXES).find(
-    (b) => b.bone === "leftHand",
-  )!.worldPosition;
+  resolvePose(
+    pose,
+    createSkeleton(),
+    HUMANOID_JOINT_AXES,
+    HUMANOID_REST_FRAME,
+  ).find((b) => b.bone === "leftHand")!.worldPosition;
 
 /**
  * `reachPose`: analytic two-bone arm IK. The contract is the FK oracle: pose

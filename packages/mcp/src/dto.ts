@@ -318,10 +318,23 @@ export interface IAutoMovieMcpArmReach {
   /**
    * IK pose that reaches the target, or extends toward it if out of range, in
    * CLINICAL angles (the space the ROM table, `perform`, and a pose author all
-   * use). `null` when the chain is degenerate for this target, a target
-   * coincident with the shoulder having no two-bone solve.
+   * use). `null` when no pose could be solved, and {@link poseReason} says why.
    */
   pose: IAutoMoviePose | null;
+
+  /**
+   * Why {@link pose} is null, `null` when a pose was solved.
+   *
+   * The two causes need different corrections, so the report names which one
+   * happened instead of leaving an unexplained null. A target coincident with
+   * the shoulder has no two-bone solve for THAT placement: restage and measure
+   * again. An arm whose elbow flexion axis lies along the forearm's own rest
+   * direction has no solvable pose for ANY placement, because elbow flexion
+   * rolls the forearm instead of moving the hand, so the chain has one fixed
+   * radius rather than a reach shell: that rig cannot be asked to reach until
+   * its arm chain is authored to bend (#1346).
+   */
+  poseReason: string | null;
 }
 
 /** The `measureDistance` query result. */

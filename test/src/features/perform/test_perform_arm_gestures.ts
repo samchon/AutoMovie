@@ -201,7 +201,9 @@ export const test_perform_arm_gestures = (): void => {
 
   // rest frames lift the same point solve into clinical space: the held pose's
   // right-upper-arm abduction comes out at 90 − rig (the frame's sign −1,
-  // neutral 90), the value a matching player reads back up.
+  // neutral 90), the value a matching player reads back up. The rig-space side
+  // is asked for EXPLICITLY with an empty table, because an actor context that
+  // simply omits `restFrames` now takes the clinical default (#1346).
   const abdOf = (clip: ReturnType<typeof synth>): number | null =>
     clip === null
       ? null
@@ -212,11 +214,24 @@ export const test_perform_arm_gestures = (): void => {
     new Map([["hero", { ...ctx, restFrames: HUMANOID_REST_FRAME }]]),
     nodes,
   );
+  const rigSpace = makeActorSynthesizer(
+    new Map([["hero", { ...ctx, restFrames: {} }]]),
+    nodes,
+  );
   const pointAt = gesture("point", { at: { kind: "node", node: "exit" } });
-  const rigAbd = abdOf(synth(pointAt, "hero"));
+  const rigAbd = abdOf(rigSpace(pointAt, "hero"));
   const clinAbd = abdOf(clinical(pointAt, "hero"));
   TestValidator.predicate(
     "rest frames lift the point's arm abduction to clinical (90 − rig)",
     rigAbd !== null && clinAbd !== null && nclose(clinAbd, 90 - rigAbd, 1e-6),
+  );
+  // The frame the gate grades against is the one an ordinary context gets: a
+  // `point` authored with no rest frames must agree with the explicit clinical
+  // solve digit for digit, which is what stops `getReach` and `perform` from
+  // describing one rig in two spaces.
+  TestValidator.equals(
+    "an actor context with no restFrames performs the CLINICAL point solve",
+    abdOf(synth(pointAt, "hero")),
+    clinAbd,
   );
 };

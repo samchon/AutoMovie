@@ -30,6 +30,14 @@ import { nclose, qclose, vclose } from "../internal/predicates";
  *    the pre-converted rig angle with no frame.
  * 3. `decompose(jointToQuaternion(c, axes, f), axes, f)` round-trips the clinical
  *    angles, including the gimbal case (abduction at the rig's ±90°).
+ * 4. `resolvePose` threads the frame: a clinical pose resolved with the humanoid
+ *    frames lands the hand where the pre-converted rig pose does without them.
+ * 5. `reachPose` threads the frame: its arm angles come out clinical, and the raw
+ *    rig-space answer must now be asked for explicitly with an empty table.
+ * 6. Omitting `restFrames` takes the canonical humanoid frame rather than raw rig
+ *    space, so the arm verbs and the reach oracle answer one rig in ONE space
+ *    (#1346). The negative twin is scenario 5's explicit `{}`, which still
+ *    produces the rig-space angles a caller with its own convention needs.
  */
 export const test_kinematics_rest_frame_angles = (): void => {
   // right-arm-like: abduction mirrors (sign −1) and rests at 90° (a T-pose arm)
@@ -141,10 +149,11 @@ export const test_kinematics_rest_frame_angles = (): void => {
 
   // 5. reachPose threads the frame: its output arm angles come out clinical
   // (lifted by sign·r + neutral); left arm sign +1, neutral 90 → clinical =
-  // rig + 90.
+  // rig + 90. The raw rig-space answer must now be asked for EXPLICITLY with an
+  // empty table, because omitting the argument takes the clinical default.
   const target = { x: 0.45, y: 1.3, z: 0.3 };
   const reachClinical = reachPose(skel, "left", target, HUMANOID_REST_FRAME);
-  const reachRig = reachPose(skel, "left", target);
+  const reachRig = reachPose(skel, "left", target, {});
   TestValidator.predicate(
     "reachPose returns a pose both ways",
     reachClinical !== null && reachRig !== null,
@@ -161,4 +170,17 @@ export const test_kinematics_rest_frame_angles = (): void => {
       nclose(cAbd, rAbd + 90, 1e-6),
     );
   }
+
+  // 6. The DEFAULT is the clinical one (#1346). A pose carries clinical angles
+  // by definition and is graded against the clinical ROM table by a direct
+  // per-axis comparison, so the producer that hardcodes the humanoid arm AXES
+  // must apply the rest frame that pairs with them. While this was optional,
+  // `getReach` passed it and `perform`'s arm verbs did not, and the same rig
+  // got two answers a shoulder's whole rest abduction apart.
+  const reachDefault = reachPose(skel, "left", target);
+  TestValidator.equals(
+    "an omitted rest frame is the canonical humanoid one, not raw rig space",
+    reachDefault,
+    reachClinical,
+  );
 };

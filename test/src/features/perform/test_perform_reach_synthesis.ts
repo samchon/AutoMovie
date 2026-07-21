@@ -1,5 +1,6 @@
 import {
   HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   IAutoMovieActorContext,
   makeActorSynthesizer,
   resolvePose,
@@ -42,15 +43,26 @@ const reach = (
   ...overrides,
 });
 
-/** The left hand's world position, given the pose sampled in model space. */
+/**
+ * The left hand's world position, given the pose sampled in model space.
+ *
+ * The synthesised reach carries CLINICAL angles even though this context
+ * declares no `restFrames` (#1346: `reachPose` defaults to the frame that pairs
+ * with the humanoid arm axes it already applies), so the FK reads them back
+ * through that same frame. This is the whole point of the fix: the shot
+ * artifact and the oracle that approved it are now in one space.
+ */
 const worldHand = (
   pose: ReturnType<typeof sampleMotion>["pose"],
   facingDeg: number,
   position: IAutoMovieVector3,
 ): IAutoMovieVector3 => {
-  const model = resolvePose(pose, createSkeleton(), HUMANOID_JOINT_AXES).find(
-    (b) => b.bone === "leftHand",
-  )!.worldPosition;
+  const model = resolvePose(
+    pose,
+    createSkeleton(),
+    HUMANOID_JOINT_AXES,
+    HUMANOID_REST_FRAME,
+  ).find((b) => b.bone === "leftHand")!.worldPosition;
   const f = (facingDeg * Math.PI) / 180;
   const cos = Math.cos(f);
   const sin = Math.sin(f);

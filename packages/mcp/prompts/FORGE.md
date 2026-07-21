@@ -17,6 +17,18 @@ The `thinking` field is where the design happens: for each stand-in, what silhou
 - The whole model passes `validateModel`: parts and materials, strictly positive extents, and the skeleton graph (bones parent acyclically to a root). Violations come back remapped onto the offending entry's path, all at once, so one correction round sees the whole list.
 - Attach each visible part to its bone (`attachedBone`) so the primitive rides the joint it embodies; sizes are meters, and ROM constraints beyond the humanoid defaults go on the bones that need them.
 
+## Rest the Arms Out, Not Down
+
+The arm chain has a rest convention, and it is the only part of the rig where the rest DIRECTION changes what the engine can compute.
+
+**Rest the arms out along local ±X (the T-pose), so the forearm offset is `{x: ±L, y: 0, z: 0}`.** The engine maps the arm's `flexion` onto the bone's local **+Y** precisely because a T-pose arm lies along X, which is what makes flexion swing the arm fore/aft instead of rolling it along its own length.
+
+Hang the arms down instead (`{x: 0, y: -L, z: 0}`, the other obvious rest pose) and the elbow's flexion axis becomes the forearm's own long axis. Elbow flexion is then a **roll**: the hand does not move at all, the shoulder-to-hand distance is a constant instead of a reach shell, and the arm is a rigid stick. Nothing about it is malformed, so `forge` accepts it; it is refused where an arm-IK question is actually asked, which means `getReach` returns no pose (with `poseReason` naming the elbow) and a `reach`, `point`, or `strike` fails the shot.
+
+Legs are unaffected: they rest down along −Y by convention and use the default axes.
+
+**This is not a T-pose requirement on the whole rig.** A retargeted quadruped's front legs ride the arm chains and legitimately rest hanging; that rig stays forgeable and performable, and only an arm-IK verb asked of it is refused. If a quadruped needs to paw at something, keep it to the postural gestures rather than `reach`.
+
 ## What the Forge Feeds
 
 The success result is the forged cast keyed by node, each entry a validated model + skeleton. Downstream:
