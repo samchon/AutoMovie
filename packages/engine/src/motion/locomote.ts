@@ -2,6 +2,7 @@ import { IAutoMovieMotion, IAutoMovieVector3 } from "@automovie/interface";
 
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { timeScaleMotion } from "./timeScale";
 import { travelMotion } from "./travel";
 
 const assertFiniteVector = (label: string, vector: IAutoMovieVector3): void => {
@@ -62,7 +63,7 @@ export const locomoteMotion = (
   // 0.1 m/s with full-rate leg swing (#1065). Hold the same ½ floor there by
   // COMPRESSING the single cycle (a quick, short step): the whole cycle
   // still plays, so loop continuity and exact arrival are untouched.
-  const base = quantized < 0.5 ? timeScaleClip(gait, quantized / 0.5) : gait;
+  const base = quantized < 0.5 ? timeScaleMotion(gait, quantized / 0.5) : gait;
   const heading = Vector3.scale(direction, 1 / directionLength);
   // Whole cycles quantize the clip length; snap the baked velocity so the
   // clip arrives at exactly `distance` (followPathMotion's policy). Baking
@@ -77,25 +78,3 @@ export const locomoteMotion = (
     : undefined;
   return travelMotion(id, base, cycles, velocity, facing);
 };
-
-/**
- * Uniformly time-scale a clip by `k`: keyframe times, duration, and the gait
- * cycle's period/phase (both are seconds), the same footwork played faster, so
- * loop continuity survives the compression.
- */
-const timeScaleClip = (
-  clip: IAutoMovieMotion,
-  k: number,
-): IAutoMovieMotion => ({
-  ...clip,
-  duration: clip.duration * k,
-  keyframes: clip.keyframes.map((kf) => ({ ...kf, time: kf.time * k })),
-  ...(clip.gaitCycle === null || clip.gaitCycle === undefined
-    ? {}
-    : {
-        gaitCycle: {
-          period: clip.gaitCycle.period * k,
-          phaseAt: clip.gaitCycle.phaseAt * k,
-        },
-      }),
-});

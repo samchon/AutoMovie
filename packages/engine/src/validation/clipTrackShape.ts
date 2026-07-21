@@ -50,7 +50,12 @@ export interface IAutoMovieClipShapeFault {
    */
   message: string;
 
-  /** The offending value, for the violation record. */
+  /**
+   * The offending value, for the violation record. A fault about a dense
+   * payload's SHAPE reports the quantity that offends (a length, a stride)
+   * rather than the payload: echoing hundreds of floats back spends the
+   * client's context to repeat what it just sent (#1362).
+   */
   value: unknown;
 }
 
@@ -278,34 +283,54 @@ export const clipTrackShapeFaults = (
   // is arithmetic on that stride, so a stride that is not a whole number ends
   // the analysis: the widths it would imply are meaningless.
   if (times.length === 0 || values.length === 0) return faults;
+  const cubic = interpolation === "cubicspline";
+  const expected = channelValueWidth(channel);
+  // What ONE keyframe occupies on this channel: its width, tripled for
+  // `cubicspline`, which stores in-tangent / value / out-tangent per keyframe.
+  // `undefined` for a `weights` channel, whose width is the model's morph
+  // target count and therefore not the track's to state.
+  const perKeyframe = (channelWidth: number): number =>
+    cubic ? channelWidth * 3 : channelWidth;
+  // Every number this fault judges rides the message (#1362). It used to say
+  // only the rule ("divide evenly"), and the sibling check that names the width
+  // sits below the `return` this fault takes, so the author most lost was the
+  // one told least: four consecutive commits failed to converge on a 67-frame
+  // trajectory because nothing stated 67, 195, or the 201 that would satisfy
+  // it. The width belongs HERE rather than one check later, because the width
+  // arithmetic below is meaningless on a fractional stride, so continuing would
+  // report a computed width that is not a real one.
   const stride = values.length / times.length;
   if (!Number.isInteger(stride)) {
     faults.push({
       kind: "type",
       field: "values",
-      message: "values length must divide evenly by keyframe count",
-      value: values,
+      message:
+        `values length must divide evenly by keyframe count ${times.length}, but ${values.length} does not` +
+        (expected === undefined
+          ? ""
+          : `; this channel carries ${perKeyframe(expected)} per keyframe, so values must hold ${perKeyframe(expected) * times.length}`),
+      // The LENGTH, not the array: a dense track echoed hundreds of floats back
+      // into the client's context to say nothing the message did not.
+      value: values.length,
     });
     return faults;
   }
-  const cubic = interpolation === "cubicspline";
   if (cubic && stride % 3 !== 0) {
     faults.push({
       kind: "type",
       field: "values",
-      message: "cubicspline stride must be divisible by 3",
-      value: values,
+      message: `cubicspline stride must be divisible by 3, but ${values.length} values / ${times.length} times gives ${stride}`,
+      value: values.length,
     });
     return faults;
   }
   const width = cubic ? stride / 3 : stride;
-  const expected = channelValueWidth(channel);
   if (expected !== undefined && width !== expected)
     faults.push({
       kind: "type",
       field: "values",
-      message: `value width must be ${expected}, but was ${width}`,
-      value: values,
+      message: `value width must be ${expected}, but was ${width}; ${values.length} values / ${times.length} times must be ${perKeyframe(expected) * times.length}`,
+      value: values.length,
     });
   return faults;
 };

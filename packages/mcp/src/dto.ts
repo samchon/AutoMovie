@@ -747,11 +747,11 @@ export interface IAutoMovieMcpActorContext {
 
   /**
    * The actor's resolved skeleton geometry: the rig bones and their ROM
-   * constraints. Required only by the physics/IK verbs that measure or clamp
-   * against the body (`react` folds a flinch bounded by each joint's ROM) and
-   * by `enact`; the gait/hold/lookAt/emote verbs need only the `skeleton` id,
-   * so a context built for those alone may omit it, and a physics verb with no
-   * `rig` synthesises nothing.
+   * constraints. Required by the physics/IK verbs that measure or clamp against
+   * the body (`react` folds a flinch bounded by each joint's ROM) and by
+   * `enact`; one of those without a `rig` synthesises nothing. `lookAt` reads
+   * it too, spreading a steep aim across the `neck` and `head` ranges you
+   * declare instead of putting the whole angle on the head.
    */
   rig?: IAutoMovieSkeleton;
 

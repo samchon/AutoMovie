@@ -8,6 +8,7 @@ import {
 import {
   AutoMovieApplication,
   IAutoMovieMcpActorContext,
+  IAutoMovieMcpMotion,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
@@ -17,6 +18,7 @@ import {
   makeStagingWrite,
 } from "../internal/filmFixtures";
 import { createSkeleton, makePose } from "../internal/fixtures";
+import { nclose } from "../internal/predicates";
 
 const WALK: IAutoMovieGait = {
   name: "walk",
@@ -68,6 +70,20 @@ const performing = (draft: IAutoMovieActionCall[]) => {
   }).performed;
 };
 
+/**
+ * Total downward flexion the compiled gaze chain carries at the first frame.
+ *
+ * Summed over the joints rather than read off `head`, because the aim is spread
+ * across `neck` and `head` by the rig's declared ROM (#1360) and the sum is
+ * what the aim geometry fixes; which bone holds how much is the chain's
+ * business.
+ */
+const chainFlexion = (motion: IAutoMovieMcpMotion): number =>
+  motion.keyframes[0]!.pose.joints.reduce(
+    (sum, entry) => sum + (entry.flexion ?? 0),
+    0,
+  );
+
 const lookAt = (
   actor: string,
   to: IAutoMovieActionTarget,
@@ -85,21 +101,30 @@ const lookAt = (
  *
  * The staging fixture places the knights 0.7 m apart, the distance the staging
  * schema itself names for a duel, and each actor context puts its eyes at 1.6
- * m. Resolving a `lookAt` at the other's PLACEMENT aims the head at the floor
- * and needs `atan2(1.6, 0.7) = 66.37` degrees of flexion, which the head's 45
- * degree limit refuses; resolving it at the other's eyes needs none. Both
- * halves are asserted here so the fix is proved by the pair, not by one green
- * result.
+ * m. Resolving a `lookAt` at the other's PLACEMENT aims at the floor between
+ * its feet and needs `atan2(1.6, 0.7) = 66.37` degrees of downward flexion;
+ * resolving it at the other's eyes needs none. Both halves are asserted here so
+ * the fix is proved by the pair, not by one green result.
+ *
+ * **The counter-case is measured, not refused (#1360).** It used to fail the
+ * ROM gate because the whole 66.37 degrees landed on `head` against its 45
+ * degree limit. The gaze chain now spreads an aim over `neck` and `head`, and a
+ * 66.37 degree stoop fits inside the two declared ranges, so what proves the
+ * aim moved is the ANGLE each geometry compiles to rather than whether one of
+ * them compiles at all. That is the stronger statement: it holds however wide
+ * the rig's cervical ranges are.
  *
  * Scenarios:
  *
- * 1. Mutual `lookAt` between the two staged knights performs, and both actors
- *    carry a compiled performance (a dropped synthesis would leave one out of
- *    `shot.performances` while still reporting success).
+ * 1. Mutual `lookAt` between the two staged knights performs, both actors carry a
+ *    compiled performance (a dropped synthesis would leave one out of
+ *    `shot.performances` while still reporting success), and the gaze chain is
+ *    level: the compiled flexion over the whole chain is 0.
  * 2. The same beat written with an explicit `point` at the other's placement, the
- *    geometry the engine used to resolve to, is refused by the ROM gate on the
- *    compiled clip. This is the counter-case that shows scenario 1 passes
- *    because the aim moved, not because the gate stopped firing.
+ *    geometry the engine used to resolve to, compiles the full `atan2(1.6,
+ *    0.7)` stoop across `neck` and `head`. This is the counter-case that shows
+ *    scenario 1 is level because the aim moved, not because the angle
+ *    vanished.
  * 3. Only the aim height differs: an explicit `point` at the other's EYE point
  *    performs exactly as the node target does, shot and motions alike.
  */
@@ -122,17 +147,27 @@ export const test_mcp_perform_eye_contact = (): void => {
       .sort(compareCodeUnits),
     ["knightA", "knightB"],
   );
+  TestValidator.predicate(
+    "eyes meeting eyes compiles a level gaze chain",
+    nclose(chainFlexion(performed.motions.knightA!), 0),
+  );
 
-  // 2. the counter-case: the old geometry, still refused by the neck.
+  // 2. the counter-case: the old geometry compiles the whole stoop instead.
   const atTheFeet = performing([
     lookAt("knightA", { kind: "point", point: B_PLACEMENT }),
   ]);
+  if (atTheFeet.success !== true)
+    throw new Error("a stoop the declared chain can hold must compile");
   TestValidator.predicate(
-    "aiming at the subject's placement still breaks the head ROM",
-    atTheFeet.success === false &&
-      atTheFeet.violations.some(
-        (item) => item.kind === "rom" && item.path.includes("knightA"),
-      ),
+    "aiming at the placement stoops the chain by the full 66.37 degrees",
+    nclose(chainFlexion(atTheFeet.motions.knightA!), 66.3706, 1e-4),
+  );
+  TestValidator.equals(
+    "the stoop is carried by the chain, not by one bone",
+    atTheFeet.motions
+      .knightA!.keyframes[0]!.pose.joints.map((entry) => entry.bone)
+      .sort(compareCodeUnits),
+    ["head", "neck"],
   );
 
   // 3. the node target IS the eye point, stated as an equality.

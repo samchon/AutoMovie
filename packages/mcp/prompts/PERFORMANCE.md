@@ -12,6 +12,32 @@ When no thin verb covers the motion (a sword kata, a stumble-and-recover, a char
 
 Enforcement is unchanged: the engine masks the clip to its region (default `fullBody`; narrow with `region`), layers it with disjoint-region actions, and ROM-gates the compiled composite. The actor needs a rig in its context (a rig-less enact is refused: an ungated dense clip would dodge the ROM shield), and the clip's `skeleton` must match that rig. Clips follow the derived-output rule below: they are never persisted, so re-supply them on every `perform`.
 
+## Expressions Beyond the Six Presets
+
+`emote` takes a **preset** (`neutral`/`happy`/`angry`/`sad`/`relaxed`/`surprised`, plus the visemes and eye directions) and an intensity. That set is VRM 1.0's, closed by standard and deliberately coarse: portable across every avatar, one token to write, and right for most beats.
+
+An emotion the six do not name — wary, suspicious, resigned, relieved rather than happy, a smile that does not reach the eyes — is authored on the **ARKit 52-channel overlay**, not by picking the nearest preset. Every keyframe expression carries it:
+
+```json
+{ "time": 0, "pose": { "skeleton": "noa-rig", "root": null, "joints": [] },
+  "expression": { "preset": "neutral", "intensity": 0.2, "blendshapes": [
+    { "channel": "browDownLeft", "weight": 0.45 },
+    { "channel": "browDownRight", "weight": 0.3 },
+    { "channel": "eyeSquintLeft", "weight": 0.5 },
+    { "channel": "eyeSquintRight", "weight": 0.35 },
+    { "channel": "mouthPressLeft", "weight": 0.4 },
+    { "channel": "mouthPressRight", "weight": 0.4 } ] },
+  "easing": "easeInOut", "bezier": null }
+```
+
+That is suspicion: brows down and uneven, eyes narrowed, lips pressed. The asymmetry is the point, and a preset has none.
+
+Channel names are Apple's `ARFaceAnchor.BlendShapeLocation` keys verbatim, 52 of them in seven groups: eyes (14: `eyeBlink`/`eyeLookDown`/`eyeLookIn`/`eyeLookOut`/`eyeLookUp`/`eyeSquint`/`eyeWide`, each `Left` and `Right`), jaw (4: `jawForward`, `jawLeft`, `jawRight`, `jawOpen`), mouth (23: `mouthClose`, `mouthFunnel`, `mouthPucker`, `mouthLeft`, `mouthRight`, `mouthRollLower`, `mouthRollUpper`, `mouthShrugLower`, `mouthShrugUpper`, and `mouthSmile`/`mouthFrown`/`mouthDimple`/`mouthStretch`/`mouthPress`/`mouthLowerDown`/`mouthUpperUp` per side), brows (5: `browDownLeft`, `browDownRight`, `browInnerUp`, `browOuterUpLeft`, `browOuterUpRight`), cheeks (3: `cheekPuff`, `cheekSquintLeft`, `cheekSquintRight`), nose (2: `noseSneerLeft`, `noseSneerRight`), tongue (1: `tongueOut`). Weights are `[0, 1]` and each channel appears at most once.
+
+**The overlay LAYERS on the preset, it does not replace it.** `preset: "sad"` at 0.3 with `browInnerUp` at 0.6 is one specific sadness, not two competing faces.
+
+**Where you write one.** The overlay lives on a keyframe's `expression`, so it is authored through a clip: compute the motion, carry the face on its keyframes, pass it in `clips`, play it with `enact`. The `emote` verb takes preset and intensity only, so a beat whose emotion is outside the six is an `enact`, not an `emote`. Do not stretch a preset and call it what the brief asked for: committing `relaxed` for "relieved" commits a different performance than the one you were given.
+
 ## Body Regions, and Which One Each Verb Drives
 
 An action drives ONE body region, and the engine masks its clip to that region's bones so disjoint regions can layer. When `region` is omitted the verb's default applies, and a channel outside it is **refused**, not dropped: the shot fails with a `type` violation on that action's `region`, naming every bone the region does not carry. Set `region` to one that owns the content instead of diffing the compiled clip to discover what went missing.
@@ -52,6 +78,8 @@ A `locomote` action's `gait` is a free string matched by name against the gaits 
 - **One take, one live camera**: exactly one camera is elected per shot.
 - **No overlapping camera moves**, and a `fullBody` action cannot layer with a partial-body action on the same span. Disjoint body regions (lower/upper/head) layer freely: a walk plus a wave plus a look compose without a bone claimed twice; overlapping regions blend by weight.
 - **Reaches are not clamped.** An impossible reach fails the shot's ROM gate rather than being quietly bent into range. Reposition the actor, do not expect the engine to hide the miss.
+- **A declared `duration` is the span, on every verb.** Write a number and the action lasts exactly that long: `locomote` fits its walk onto it, same path and same arrival, a slower or quicker cadence. Write `"auto"` to ask for the engine's own sizing, which is what picks whole gait cycles from distance and speed. The number is also what the overlap and blocking-anchor gates read, so it was the one declared quantity a compiled clip could silently disagree with.
+- **A gaze turns the whole chain.** `lookAt` spreads its solved aim over `neck` and `head` by the ranges the actor's `rig` declares (the head takes what it legally can, the neck carries the rest), so a steep look at something on a desk or on the floor compiles whenever the two ranges together span it. Supply the `rig` to get this: without one the whole angle sits on the head. An aim neither joint can hold is still refused by the ROM gate, unclamped, like a reach; widen the joint that actually moves rather than making one bone carry the whole cervical range.
 - **A positional target may name any staged placement**: an actor, a set piece, or a **camera**. `lookAt`, `reach`, a `point`/`strike` gesture aim, a `launch` aim, and a frame subject or focus all resolve the same table, so "face the camera" is written `{ "kind": "node", "node": "<camera id>" }` and needs no invented point. The same table is what `stage`'s camera `lookAt`, `block`'s `camera.on` and `coverage[].on`, and the `measureDistance` / `getReach` queries resolve, so a subject one rung accepts is a subject every rung accepts. That does not make a camera an actor: a camera still acts only through `frame`, it is a place to point at, not a performer, and a `launch` carrying `onHit` must aim at a scene **node**, since nothing recoils a camera. A target that fails to resolve is refused by the **id** it named (or by the relative kind that names no place at all), so read the violation for the id, not for the discriminator.
 - **The same table does not mean the same aim height.** Which ids resolve is one rule; where on the subject each verb aims is another, and it decides whether a ROM gate fires. See Aim Height below.
 - Every compiled motion is ROM-checked (`validateMotion`); the launch compiler injects `react` actions timed to the engine-computed hit, so they share the same gate.
@@ -62,7 +90,7 @@ Every positional verb resolves the same ids. WHERE on the subject each one aims 
 
 | Verb | Aims at | Why |
 | --- | --- | --- |
-| `lookAt` | the subject's **eyes**: an actor placement lifted by that actor's `eyeHeight` | a gaze meets a gaze. Without the lift two actors at conversational range both stare at the floor, and 1.6 m of eye height over 0.7 m of separation needs 66 degrees of head flexion against a 45 degree limit, so the shot is refused |
+| `lookAt` | the subject's **eyes**: an actor placement lifted by that actor's `eyeHeight` | a gaze meets a gaze. Without the lift two actors at conversational range both stare at the floor: 1.6 m of eye height over 0.7 m of separation is 66 degrees of downward aim, which is a stoop, not a look |
 | `reach`, `point`, `strike` | the **placement** point | an arm does not reach for eyes, and no measured chest/hand height exists on the actor context to lift by. Author an explicit `point` target when you need a precise arm goal |
 | `locomote` | the **placement** point | a destination is a place on the ground |
 | `launch` | the **placement** point | the review pass measures a hit against the target's ground root, so aim and review agree |

@@ -137,8 +137,10 @@ export const test_perform_look_at_eye_level = (): void => {
   TestValidator.predicate(
     "the same subject's placement point still demands the ROM-breaking tilt",
     nclose(ground.flexion, flexionFor(-1.6, 0.7)) &&
-      // atan2(1.6, 0.7) = 66.3706 degrees, against DEFAULT_HUMANOID_ROM.head's
-      // 45 degree flexion maximum: the refusal this issue is about.
+      // atan2(1.6, 0.7) = 66.3706 degrees, well past DEFAULT_HUMANOID_ROM.head's
+      // 45 degree flexion maximum: the stoop this issue is about. These contexts
+      // carry no rig, so the whole angle stays on the head (#1360 spreads it
+      // over the declared neck/head chain only when a rig declares one).
       nclose(ground.flexion, 66.3706, 1e-4) &&
       ground.flexion > 45,
   );

@@ -52,11 +52,15 @@ export interface IAutoMovieActorContext {
 
   /**
    * The actor's resolved skeleton geometry: the rig bones and their ROM
-   * constraints. Required only by the physics/IK verbs that measure or clamp
-   * against the body (`react` folds a flinch bounded by each joint's ROM); the
-   * gait/hold/lookAt/emote verbs need only the `skeleton` id, so a context
-   * built for those alone may omit it, and a physics verb with no `rig`
-   * synthesises nothing.
+   * constraints. Required by the physics/IK verbs that measure or clamp against
+   * the body (`react` folds a flinch bounded by each joint's ROM), and READ,
+   * when present, by `lookAt`, which spreads its solved aim over the `neck` and
+   * `head` ranges the rig declares instead of piling it all on the head
+   * (#1360). The gait/hold/emote verbs need only the `skeleton` id, so a
+   * context built for those alone may omit it; a physics verb with no `rig`
+   * synthesises nothing, and a rig-less `lookAt` keeps the single-bone aim,
+   * which is exactly what `performShot` gates such an actor by (no rig, no ROM
+   * check).
    */
   rig?: IAutoMovieSkeleton;
 
