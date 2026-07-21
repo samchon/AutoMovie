@@ -112,6 +112,19 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   // so only for a context that supplies a `rig`.
   ["PERFORMANCE", "spreads its solved aim over `neck` and `head`"],
   ["PERFORMANCE", "without one the whole angle sits on the head"],
+  // The declared-span rule (#1366). `locomote` sized its walk from distance and
+  // speed and discarded an explicit `duration`, and no guide said which of the
+  // two an author was writing.
+  ["PERFORMANCE", "A declared `duration` is the span, on every verb."],
+  // The fine facial axis (#1363). `blendshapes` ships on every keyframe
+  // expression and the corpus never named it, so seven sessions across three
+  // scenarios approximated every emotion with the nearest of six presets and
+  // three of them committed a different emotion than the brief asked for. Both
+  // halves are pinned: that the axis exists, and the one thing an author cannot
+  // guess, that `emote` is not where it is written.
+  ["PERFORMANCE", "ARKit 52-channel overlay"],
+  ["PERFORMANCE", "The `emote` verb takes preset and intensity only"],
+  ["AUTOMOVIE_OVERALL", "The Face Has Two Resolutions"],
 ];
 
 /**

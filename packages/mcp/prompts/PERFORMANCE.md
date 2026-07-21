@@ -12,6 +12,32 @@ When no thin verb covers the motion (a sword kata, a stumble-and-recover, a char
 
 Enforcement is unchanged: the engine masks the clip to its region (default `fullBody`; narrow with `region`), layers it with disjoint-region actions, and ROM-gates the compiled composite. The actor needs a rig in its context (a rig-less enact is refused: an ungated dense clip would dodge the ROM shield), and the clip's `skeleton` must match that rig. Clips follow the derived-output rule below: they are never persisted, so re-supply them on every `perform`.
 
+## Expressions Beyond the Six Presets
+
+`emote` takes a **preset** (`neutral`/`happy`/`angry`/`sad`/`relaxed`/`surprised`, plus the visemes and eye directions) and an intensity. That set is VRM 1.0's, closed by standard and deliberately coarse: portable across every avatar, one token to write, and right for most beats.
+
+An emotion the six do not name — wary, suspicious, resigned, relieved rather than happy, a smile that does not reach the eyes — is authored on the **ARKit 52-channel overlay**, not by picking the nearest preset. Every keyframe expression carries it:
+
+```json
+{ "time": 0, "pose": { "skeleton": "noa-rig", "root": null, "joints": [] },
+  "expression": { "preset": "neutral", "intensity": 0.2, "blendshapes": [
+    { "channel": "browDownLeft", "weight": 0.45 },
+    { "channel": "browDownRight", "weight": 0.3 },
+    { "channel": "eyeSquintLeft", "weight": 0.5 },
+    { "channel": "eyeSquintRight", "weight": 0.35 },
+    { "channel": "mouthPressLeft", "weight": 0.4 },
+    { "channel": "mouthPressRight", "weight": 0.4 } ] },
+  "easing": "easeInOut", "bezier": null }
+```
+
+That is suspicion: brows down and uneven, eyes narrowed, lips pressed. The asymmetry is the point, and a preset has none.
+
+Channel names are Apple's `ARFaceAnchor.BlendShapeLocation` keys verbatim, 52 of them in seven groups: eyes (14: `eyeBlink`/`eyeLookDown`/`eyeLookIn`/`eyeLookOut`/`eyeLookUp`/`eyeSquint`/`eyeWide`, each `Left` and `Right`), jaw (4: `jawForward`, `jawLeft`, `jawRight`, `jawOpen`), mouth (23: `mouthClose`, `mouthFunnel`, `mouthPucker`, `mouthLeft`, `mouthRight`, `mouthRollLower`, `mouthRollUpper`, `mouthShrugLower`, `mouthShrugUpper`, and `mouthSmile`/`mouthFrown`/`mouthDimple`/`mouthStretch`/`mouthPress`/`mouthLowerDown`/`mouthUpperUp` per side), brows (5: `browDownLeft`, `browDownRight`, `browInnerUp`, `browOuterUpLeft`, `browOuterUpRight`), cheeks (3: `cheekPuff`, `cheekSquintLeft`, `cheekSquintRight`), nose (2: `noseSneerLeft`, `noseSneerRight`), tongue (1: `tongueOut`). Weights are `[0, 1]` and each channel appears at most once.
+
+**The overlay LAYERS on the preset, it does not replace it.** `preset: "sad"` at 0.3 with `browInnerUp` at 0.6 is one specific sadness, not two competing faces.
+
+**Where you write one.** The overlay lives on a keyframe's `expression`, so it is authored through a clip: compute the motion, carry the face on its keyframes, pass it in `clips`, play it with `enact`. The `emote` verb takes preset and intensity only, so a beat whose emotion is outside the six is an `enact`, not an `emote`. Do not stretch a preset and call it what the brief asked for: committing `relaxed` for "relieved" commits a different performance than the one you were given.
+
 ## Body Regions, and Which One Each Verb Drives
 
 An action drives ONE body region, and the engine masks its clip to that region's bones so disjoint regions can layer. When `region` is omitted the verb's default applies, and a channel outside it is **refused**, not dropped: the shot fails with a `type` violation on that action's `region`, naming every bone the region does not carry. Set `region` to one that owns the content instead of diffing the compiled clip to discover what went missing.
