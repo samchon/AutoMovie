@@ -50,7 +50,12 @@ export interface IAutoMovieClipShapeFault {
    */
   message: string;
 
-  /** The offending value, for the violation record. */
+  /**
+   * The offending value, for the violation record. A fault about a dense
+   * payload's SHAPE reports the quantity that offends (a length, a stride)
+   * rather than the payload: echoing hundreds of floats back spends the
+   * client's context to repeat what it just sent (#1362).
+   */
   value: unknown;
 }
 
