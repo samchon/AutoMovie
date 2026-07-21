@@ -39,7 +39,7 @@ A light placement lowers to the scene light its `type` names, so state the light
 
 `role` (`key`/`fill`/`rim`/`ambient`/`sun`) is optional annotation the lowering does not read. It used to be required and discarded; state the light through `type`/`color`/`position` instead.
 
-There is no light animation: a scene's lights hold for the whole film, and a shot clip cannot address them (see PERFORMANCE, "A Shot Clip Animates Nodes"). If a beat needs the light to change, say so rather than encoding it.
+What you stage here is the light **at rest**. A beat that changes it (a candle blown out, a lamp switched on, a sunset) states that change on the shot, not on the scene: see PERFORMANCE, "A Shot Clip Animates Nodes". Changing the light costs no `commitScene`, so **re-lighting a beat never discards the performances already compiled**.
 
 ## Camera
 

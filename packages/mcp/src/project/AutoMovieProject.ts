@@ -1,4 +1,5 @@
 import {
+  appendLightMotionsArtifact,
   appendShotMetadataArtifact,
   compareCodeUnits,
   forgeProp,
@@ -1273,6 +1274,15 @@ const validateShotSlice = (
   // validator drift #1097 called out. No scene travels with a shot slice, so the
   // coverage cameras cannot be cross-referenced here; every other rule applies.
   appendShotMetadataArtifact(value, "$input", null, violations);
+  // Same discipline for the light-time axis (#1348): the stored slice carries no
+  // scene, so which lights are staged defers, but the pointer grammar, the value
+  // type, the clip shape, and single-valued lighting are all checked on READ.
+  appendLightMotionsArtifact(
+    value.lightMotions,
+    "$input.lightMotions",
+    null,
+    violations,
+  );
 };
 
 const validateBeatEndSlice = (

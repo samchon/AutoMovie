@@ -1,5 +1,7 @@
 export * from "./channel";
+export * from "./lightChannel";
 export * from "./sampleClip";
+export * from "./resolveShotLighting";
 export * from "./applyChannelLimit";
 export * from "./bindProfile";
 export * from "./composeScene";

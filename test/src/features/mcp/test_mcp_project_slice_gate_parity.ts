@@ -55,6 +55,49 @@ const shotWith = (clipIds: [string, string]): unknown => ({
   duration: 2,
 });
 
+/** The channel a light clip must NOT address: the transform clips' form. */
+const NODE_LIGHT_TRACK: unknown = {
+  kind: "node",
+  node: "prop",
+  path: "translation",
+};
+
+/** The channel a light clip must address. */
+const LIGHT_POINTER_TRACK: unknown = {
+  kind: "pointer",
+  pointer: "/lights/candleGlow/intensity",
+  valueType: "scalar",
+};
+
+/** A shot slice whose only questionable property is its light clip's channel. */
+const shotLit = (channel: unknown): unknown => ({
+  id: "shot:b1",
+  name: null,
+  scene: "sc",
+  camera: "cam",
+  cameraMotion: null,
+  performances: [],
+  objectMotions: [],
+  lightMotions: [
+    {
+      id: "candleOut",
+      name: null,
+      duration: 2,
+      loop: false,
+      tracks: [
+        {
+          channel,
+          times: [0, 1],
+          values:
+            channel === NODE_LIGHT_TRACK ? [0, 0, 0, 1, 0, 0] : [1.4, 0.04],
+          interpolation: "step",
+        },
+      ],
+    },
+  ],
+  duration: 2,
+});
+
 /** A script slice whose only questionable property is its beat ids. */
 const scriptWith = (beatIds: [string, string]): unknown => ({
   logline: "two beats one letter apart",
@@ -123,6 +166,12 @@ const scene: IAutoMovieScene = {
  * 4. A stored script whose beats are "Beat" and "beat" is refused on read at the
  *    second beat's id, naming both ids.
  * 5. Negative twin: beats one character apart load, both of them.
+ * 6. The light-time axis (#1348) is read under the same discipline: a stored shot
+ *    whose `lightMotions` track addresses a node channel is refused on read,
+ *    and `validateShot` refuses the same artifact. No scene travels with a
+ *    slice, so WHICH lights are staged is the one rule that defers; the pointer
+ *    grammar is not, which is why the read half can be stated at all.
+ * 7. Negative twin: the same shot with a light pointer loads, carrying its clip.
  */
 export const test_mcp_project_slice_gate_parity = (): void => {
   // 1. duplicate object-motion clip ids are refused on read.
@@ -192,6 +241,44 @@ export const test_mcp_project_slice_gate_parity = (): void => {
       "distinct beat ids load",
       slate.script?.beats.map((beat) => beat.id),
       ["beat-a", "beat-b"],
+    );
+  });
+
+  // 6. the light-time axis reads under the same gate it submits under.
+  inProject((root) => {
+    writeSlice(root, "shots/b1.json", shotLit(NODE_LIGHT_TRACK));
+    TestValidator.predicate(
+      "a stored light clip addressing a node channel is refused on read",
+      throwsError(
+        () => AutoMovieProject.open(root).writableSlate(),
+        [
+          "semantically invalid",
+          "$input.lightMotions[0].tracks[0].channel.kind",
+          'must be "pointer"',
+        ],
+      ),
+    );
+  });
+  TestValidator.predicate(
+    "validateShot refuses the same stored artifact",
+    hasViolation(
+      app.validateShot({
+        shot: shotLit(NODE_LIGHT_TRACK) as IAutoMovieShot,
+        scene,
+      }).validation,
+      "type",
+      "$input.shot.lightMotions[0].tracks[0].channel.kind",
+    ),
+  );
+
+  // 7. negative twin: a light pointer reads clean, one property away.
+  inProject((root) => {
+    writeSlice(root, "shots/b1.json", shotLit(LIGHT_POINTER_TRACK));
+    const slate = AutoMovieProject.open(root).writableSlate();
+    TestValidator.equals(
+      "a light pointer clip loads",
+      slate.shots.map((shot) => (shot.lightMotions ?? []).map((c) => c.id)),
+      [["candleOut"]],
     );
   });
 };

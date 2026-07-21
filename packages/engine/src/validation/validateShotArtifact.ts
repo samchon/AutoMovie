@@ -6,6 +6,10 @@ import {
 } from "@automovie/interface";
 
 import {
+  LIGHT_CHANNEL_PROPERTIES,
+  parseLightPointer,
+} from "../resolve/lightChannel";
+import {
   asArray,
   isRecord,
   pushViolation,
@@ -180,6 +184,12 @@ export const validateShotArtifact = (
   asArray(shot.objectMotions).forEach((clip, i) => {
     validateClipArtifact(clip, `$input.objectMotions[${i}]`, violations);
   });
+  appendLightMotionsArtifact(
+    shot.lightMotions,
+    "$input.lightMotions",
+    stagedLightKinds(scene),
+    violations,
+  );
 
   appendShotMetadataArtifact(
     shot,
@@ -531,6 +541,12 @@ export const validateClipArtifact = (
   clip: unknown,
   path: string,
   violations: IAutoMovieConstraintViolation[],
+  /**
+   * Which channels this clip's tracks may address. Defaults to the node gate
+   * every transform clip (`cameraMotion`, `objectMotions`, a coverage take, a
+   * stored slice) is held to; `lightMotions` passes its own.
+   */
+  channelGate: IAutoMovieClipChannelGate = validateHonorableChannel,
 ): void => {
   if (!validateObjectArtifact(clip, path, "clip", violations)) return;
   validateNonEmptyId(clip.id, `${path}.id`, "clip id", violations);
@@ -581,7 +597,7 @@ export const validateClipArtifact = (
         violations,
       )
     )
-      validateHonorableChannel(channel, `${trackPath}.channel`, violations);
+      channelGate(channel, `${trackPath}.channel`, violations);
     validateArrayArtifact(
       track.times,
       `${trackPath}.times`,
@@ -606,39 +622,55 @@ export const validateClipArtifact = (
 };
 
 /**
- * A clip track must address a channel the pipeline can HONOR (#1339).
+ * The per-field rule for which channels one clip's tracks may address. A shot
+ * field admits exactly the targets its own applier writes, so the gate is a
+ * parameter of the field rather than one fixed rule for every clip.
+ */
+type IAutoMovieClipChannelGate = (
+  channel: Record<string, unknown>,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+) => void;
+
+/**
+ * A TRANSFORM clip's track must address a channel the pipeline can HONOR
+ * (#1339).
  *
  * `IAutoMovieChannel` has two arms, and only one of them is applied when a shot
- * plays. `resolveFrame` and the viewer's `applyObjectMotion` each write node
- * channels onto the node they name and `continue` past everything else, so a
- * pointer track (`/lights/0/intensity`, `/materials/2/baseColor`, a rig DOF)
- * validated clean, persisted to `shots/<beat>.json`, was read back unchanged by
- * `getShot`, and then silently did nothing: the committed artifact said the
- * candle dims and the film never dimmed it.
+ * plays a transform clip. `resolveFrame` and the viewer's `applyObjectMotion`
+ * each write node channels onto the node they name and `continue` past
+ * everything else, so a pointer track (`/materials/2/baseColor`,
+ * `/cameras/0/fovY`, a rig DOF) validated clean, persisted to
+ * `shots/<beat>.json`, was read back unchanged by `getShot`, and then silently
+ * did nothing: the committed artifact said the candle dims and the film never
+ * dimmed it.
  *
  * A validator that passes an instruction no consumer executes is a false green,
  * and the guide corpus tells an agent to trust exactly this verdict. So the
  * artifact contract refuses what the pipeline cannot perform, naming the
- * supported set, rather than accepting and discarding it. Resolving pointer
- * channels onto scene properties is a separate, additive capability; when it
- * lands, this gate is where the supported set widens.
+ * supported set, rather than accepting and discarding it.
+ *
+ * The set widens where an applier lands, and only there: `lightMotions` carries
+ * light pointers because {@link resolveShotLighting} writes them (#1348), and
+ * this gate is unchanged because `applyObjectMotion` still does not. Widening
+ * it here without an applier would restore the exact false green #1339 closed.
  *
  * The gate is scoped to CLIP TRACKS on purpose. The other user of
  * `IAutoMovieChannel` is the driver graph (a prop profile's `source`/`output`,
  * `IAutoMovieChannelLimit.channel`), where `resolve/drivers` does read pointer
  * keys out of the sampled map. Those stay untouched.
  */
-const validateHonorableChannel = (
-  channel: Record<string, unknown>,
-  path: string,
-  violations: IAutoMovieConstraintViolation[],
+const validateHonorableChannel: IAutoMovieClipChannelGate = (
+  channel,
+  path,
+  violations,
 ): void => {
   if (channel.kind !== "node") {
     pushViolation(
       violations,
       "type",
       `${path}.kind`,
-      `clip track channel kind must be "node"; the pipeline resolves node channels (translation/rotation/scale/weights) onto scene nodes and honors no other target on a shot clip, but was ${JSON.stringify(channel.kind)}`,
+      `clip track channel kind must be "node"; the pipeline resolves node channels (translation/rotation/scale/weights) onto scene nodes and honors no other target on a transform clip (a light change belongs in the shot's lightMotions), but was ${JSON.stringify(channel.kind)}`,
       channel.kind,
     );
     return;
@@ -658,3 +690,138 @@ const validateHonorableChannel = (
       channel.path,
     );
 };
+
+/**
+ * A LIGHT clip's track must address one staged light's animatable property, and
+ * exactly the ones {@link resolveShotLighting} writes (#1348).
+ *
+ * Admission is read out of `LIGHT_CHANNEL_PROPERTIES`, the same table the
+ * applier folds its sampled values through. There is no second list to keep in
+ * step: a property the table does not carry is refused here and unreachable
+ * there, and a property added to the table becomes admissible and applied in
+ * one edit. That is the mechanical form of the rule two of this campaign's
+ * defects sit on either side of: a validated axis with no applier (#1339), and
+ * an applier that silently ignores part of its input (#1349).
+ *
+ * `stagedLightKinds` is the scene's light id → `type` index when the caller has
+ * a scene to cross-reference (the submitted-artifact path) and `null` when it
+ * does not (the stored-slice path, which reads one file with no scene beside
+ * it). Without it the pointer grammar and value type are still gated; only the
+ * "does this light exist, and does its kind carry this" pair defers.
+ */
+export const lightClipChannelGate =
+  (
+    stagedLightKinds: ReadonlyMap<string, unknown> | null,
+  ): IAutoMovieClipChannelGate =>
+  (channel, path, violations): void => {
+    if (channel.kind !== "pointer") {
+      pushViolation(
+        violations,
+        "type",
+        `${path}.kind`,
+        `light clip track channel kind must be "pointer" addressing /lights/<light id>/<property>, but was ${JSON.stringify(channel.kind)}`,
+        channel.kind,
+      );
+      return;
+    }
+    const target = parseLightPointer(channel.pointer);
+    if (target === null) {
+      pushViolation(
+        violations,
+        "type",
+        `${path}.pointer`,
+        `light clip track pointer must be /lights/<light id>/<property> with property one of ${[...Object.keys(LIGHT_CHANNEL_PROPERTIES)].join(", ")}, but was ${JSON.stringify(channel.pointer)}`,
+        channel.pointer,
+      );
+      return;
+    }
+    const property = LIGHT_CHANNEL_PROPERTIES[target.property];
+    if (channel.valueType !== property.valueType)
+      pushViolation(
+        violations,
+        "type",
+        `${path}.valueType`,
+        `light clip track "${target.property}" resolves to ${property.valueType}, but was ${JSON.stringify(channel.valueType)}`,
+        channel.valueType,
+      );
+    if (stagedLightKinds === null) return;
+    const kind = stagedLightKinds.get(target.light);
+    if (kind === undefined)
+      pushViolation(
+        violations,
+        "type",
+        `${path}.pointer`,
+        `light clip track must address a staged scene light, but "${target.light}" is not one`,
+        channel.pointer,
+      );
+    else if (!property.carries(kind))
+      pushViolation(
+        violations,
+        "type",
+        `${path}.pointer`,
+        `light clip track addresses "${target.property}", which a ${String(kind)} light does not carry`,
+        channel.pointer,
+      );
+  };
+
+/**
+ * The scene's light id → `type` index, keyed by the only thing a pointer can
+ * name. A staged entry that is not an object, or whose id is not a string, is
+ * not addressable at all and is left out; that scene is malformed, and
+ * `validateSceneArtifact` is the gate that says so.
+ */
+const stagedLightKinds = (scene: unknown): ReadonlyMap<string, unknown> => {
+  const index = new Map<string, unknown>();
+  for (const light of asArray(isRecord(scene) ? scene.lights : undefined))
+    if (isRecord(light) && typeof light.id === "string")
+      index.set(light.id, light.type);
+  return index;
+};
+
+/**
+ * The shot's `lightMotions`, gated the way every other optional shot field is:
+ * absent stays valid ("absent means legacy"), a present value is inspected in
+ * full.
+ *
+ * Beyond each clip's own shape, one rule is the field's alone: no two tracks in
+ * the whole field may address the same light property. Within one clip
+ * `validateClipArtifact` already refuses a duplicate channel, but two CLIPS
+ * both dimming the same candle would resolve last-writer-wins, which is a
+ * deterministic answer to a question the artifact never meant to ask. Refusing
+ * it keeps the committed film's lighting single-valued at every instant.
+ */
+export const appendLightMotionsArtifact = (
+  lightMotions: unknown,
+  path: string,
+  /**
+   * The scene's light id → kind index, or `null` with no scene to check
+   * against.
+   */
+  stagedLights: ReadonlyMap<string, unknown> | null,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (lightMotions === undefined) return;
+  if (
+    !validateArrayArtifact(lightMotions, path, "shot lightMotions", violations)
+  )
+    return;
+  validateUniqueIds(lightMotions, path, "light motion clip id", violations);
+  const gate = lightClipChannelGate(stagedLights);
+  const addressed: { id: unknown; path: string }[] = [];
+  lightMotions.forEach((clip, i) => {
+    const clipPath = `${path}[${i}]`;
+    validateClipArtifact(clip, clipPath, violations, gate);
+    asArray(isRecord(clip) ? clip.tracks : undefined).forEach((track, j) => {
+      const channel: unknown = isRecord(track) ? track.channel : undefined;
+      const target = isRecord(channel)
+        ? parseLightPointer(channel.pointer)
+        : null;
+      addressed.push({
+        id: target === null ? undefined : `${target.light}/${target.property}`,
+        path: `${clipPath}.tracks[${j}].channel`,
+      });
+    });
+  });
+  validateUniqueBy(addressed, "light motion channel", violations);
+};
+

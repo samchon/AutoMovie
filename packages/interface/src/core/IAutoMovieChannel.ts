@@ -10,9 +10,10 @@ import { AutoMovieChannelValueType } from "./AutoMovieChannelValueType";
  * - {@link IAutoMovieNodeChannel}: a node's TRS or morph weights, the glTF-core
  *   path that every loader supports (and the cheap, common case).
  * - {@link IAutoMoviePointerChannel}: an arbitrary property addressed by an
- *   RFC-6901 JSON pointer (material factor, camera FOV, a rig DOF). This is the
- *   form that lets automovie address "any value, not just node TRS"; today the
- *   driver graph consumes it and a shot clip's tracks do not.
+ *   RFC-6901 JSON pointer (a light's intensity, a material factor, a camera
+ *   FOV, a rig DOF). This is the form that lets automovie address "any value,
+ *   not just node TRS"; today the driver graph and a shot's `lightMotions`
+ *   consume it.
  *
  * A node-TRS channel is sugar for the pointer `/nodes/{id}/{path}`; the engine
  * treats both as the same kind of addressable lvalue.
@@ -44,10 +45,16 @@ export interface IAutoMovieNodeChannel {
 
 /**
  * A channel addressing an arbitrary property by RFC-6901 JSON pointer. Honored
- * by the DRIVER graph (a prop profile's `source`/`output`, a channel limit),
- * never by a shot clip's tracks: those are applied node-by-node and a pointer
- * track would validate and then do nothing, so the shot contract refuses one
- * (#1339).
+ * by the DRIVER graph (a prop profile's `source`/`output`, a channel limit) and
+ * by a shot's `lightMotions`, whose tracks address `/lights/<id>/<property>`
+ * and are applied by the engine's lighting pass (#1348).
+ *
+ * A shot's `cameraMotion` and `objectMotions` still refuse one: those are
+ * applied node-by-node, so a pointer track there would validate and then do
+ * nothing (#1339). The rule is not "which form", it is that a shot field admits
+ * exactly the targets its own applier writes. A pointer no applier resolves
+ * (`/materials/2/baseColor`, `/cameras/0/fovY`) is refused on every shot clip
+ * until one does.
  */
 export interface IAutoMoviePointerChannel {
   /** Discriminator. */
