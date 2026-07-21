@@ -703,15 +703,15 @@ const validateHonorableChannel: IAutoMovieClipChannelGate = (
  * defects sit on either side of: a validated axis with no applier (#1339), and
  * an applier that silently ignores part of its input (#1349).
  *
- * `stagedLightKinds` is the scene's light id → `type` index when the caller has
- * a scene to cross-reference (the submitted-artifact path) and `null` when it
+ * `stagedLights` is the scene's light id → `type` index when the caller has a
+ * scene to cross-reference (the submitted-artifact path) and `null` when it
  * does not (the stored-slice path, which reads one file with no scene beside
  * it). Without it the pointer grammar and value type are still gated; only the
  * "does this light exist, and does its kind carry this" pair defers.
  */
 export const lightClipChannelGate =
   (
-    stagedLightKinds: ReadonlyMap<string, unknown> | null,
+    stagedLights: ReadonlyMap<string, unknown> | null,
   ): IAutoMovieClipChannelGate =>
   (channel, path, violations): void => {
     if (channel.kind !== "pointer") {
@@ -744,8 +744,8 @@ export const lightClipChannelGate =
         `light clip track "${target.property}" resolves to ${property.valueType}, but was ${JSON.stringify(channel.valueType)}`,
         channel.valueType,
       );
-    if (stagedLightKinds === null) return;
-    const kind = stagedLightKinds.get(target.light);
+    if (stagedLights === null) return;
+    const kind = stagedLights.get(target.light);
     if (kind === undefined)
       pushViolation(
         violations,
@@ -766,8 +766,12 @@ export const lightClipChannelGate =
 
 /**
  * The scene's light id → `type` index, keyed by the only thing a pointer can
- * name. A staged entry that is not an object, or whose id is not a string, is
- * not addressable at all and is left out; that scene is malformed, and
+ * name.
+ *
+ * A light is addressable exactly when it is an object with a string id and a
+ * `type`, which is what a `Map.get` miss states in one read: an entry left out
+ * and an entry stored with no kind both answer `undefined`, and neither can be
+ * the target of a track. Such a scene is malformed either way, and
  * `validateSceneArtifact` is the gate that says so.
  */
 const stagedLightKinds = (scene: unknown): ReadonlyMap<string, unknown> => {

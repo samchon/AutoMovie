@@ -103,6 +103,8 @@ The shot's `lightMotions` is the one field whose tracks address a **pointer** ch
 
 `/lights/0/intensity` is **not** the form: lights are addressed by their staged id, never by position. A pointer naming an unstaged light, a property its kind does not carry (a `range` on a `directional`), or a wrong `valueType` is refused with the path that carries it, and no two tracks in the whole field may drive the same light property, so the film's lighting is single-valued at every instant. Anything reading the committed artifacts evaluates the light at any frame from `scene.json` plus `shots/<beat>.json`; there is nothing to re-derive.
 
+Two things to know before you write one. **`perform` does not emit `lightMotions`**: no verb means "light", so add the field to the shot `perform` returned and pass THAT shot to `validateShot` / `commitShot`. And the change **does not carry to the next beat**: continuity inherits placement and stride, not lighting, so a later beat opens on the light `commitScene` staged. A candle that must stay out restates it, e.g. a one-key `[0] -> [0.04]` track on that beat.
+
 Still absent, and still worth saying rather than encoding: material properties (`/materials/2/baseColor`) and camera FOV. The pointer form is real for those too, but no applier resolves them yet, so they are refused everywhere on a shot.
 
 ## Continuity

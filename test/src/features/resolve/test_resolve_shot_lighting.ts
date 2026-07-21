@@ -101,7 +101,9 @@ const intensityOf = (lights: IAutoMovieLight[], id: string): number =>
  * 1. S-03 realized. The blowout clip evaluates to 1.4 at `t = 0` (the lower
  *    boundary), 1.4 at the key `t = 1.55`, 1.4 at frame 38 of 72 (`38/24`),
  *    0.04 exactly AT the cue `t = 1.6`, 0.04 at frame 39 (`39/24`), and 0.04 at
- *    `t = duration` (the upper boundary).
+ *    `t = duration` (the upper boundary). The one-keyframe hold the guide tells
+ *    an author to write on the FOLLOWING beat (lighting does not inherit across
+ *    a cut the way placement does) reads the same value at every instant.
  * 2. The negative twin the mission requires: a light no clip addresses comes back
  *    by IDENTITY, and so does every light when the shot carries no clips at
  *    all. A film that never changes its light gets the lights it staged,
@@ -132,6 +134,25 @@ export const test_resolve_shot_lighting = (): void => {
     "the candle holds warm, then reads dark from the cue instant onward",
     [at(0), at(1.55), at(38 / 24), at(1.6), at(39 / 24), at(3)],
     [1.4, 1.4, 1.4, 0.04, 0.04, 0.04],
+  );
+
+  // The hold the guide tells an author to write when a light must STAY changed
+  // across a cut: one keyframe, read the same at every instant of the beat.
+  const held = clip(
+    "candleStaysOut",
+    pointer("/lights/candleGlow/intensity", "scalar"),
+    [0],
+    [0.04],
+  );
+  TestValidator.equals(
+    "a one-keyframe track holds its value for the whole beat",
+    [0, 1.7, 3].map((seconds) =>
+      intensityOf(
+        resolveShotLighting({ lights: LIGHTS, clips: [held], seconds }),
+        "candleGlow",
+      ),
+    ),
+    [0.04, 0.04, 0.04],
   );
 
   // 2. the negative twin: untouched lights are the SAME objects.
