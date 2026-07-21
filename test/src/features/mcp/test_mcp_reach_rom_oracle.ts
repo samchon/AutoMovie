@@ -75,6 +75,22 @@ const armRig = (elbow: IAutoMovieJointConstraint): IAutoMovieSkeleton => ({
   ],
 });
 
+/**
+ * The same chain with the arm HANGING along local −Y instead of out along +X.
+ * The elbow's flexion axis is then the forearm's own long axis, so flexion is a
+ * roll and the hand cannot move (#1346).
+ */
+const hangingArmRig = (): IAutoMovieSkeleton => ({
+  id: "reach-rig",
+  bones: [
+    bone("hips", null, restAt(0, 1, 0)),
+    bone("chest", "hips", restAt(0, 0.4, 0)),
+    bone("leftUpperArm", "chest", restAt(0.2, 0, 0)),
+    bone("leftLowerArm", "leftUpperArm", restAt(0, -0.3, 0), HINGE),
+    bone("leftHand", "leftLowerArm", restAt(0, -0.25, 0)),
+  ],
+});
+
 /** A rig with no arm chain at all: reach cannot be measured. */
 const armlessRig = (): IAutoMovieSkeleton => ({
   id: "reach-rig",
@@ -158,7 +174,10 @@ const reachOf = (skeleton: IAutoMovieSkeleton, point: IAutoMovieVector3) =>
  * 5. Boundary, degenerate solve: a target ON the shoulder has no two-bone
  *    solution, so `pose` is null, `poseWithinRom` is false with an empty
  *    `romViolations`, and `poseReason` says which degeneracy happened (#1346)
- *    instead of leaving the null unexplained.
+ *    instead of leaving the null unexplained. Its twin is a rig whose arm
+ *    HANGS, where the elbow's flexion is a roll: also a null pose, but named at
+ *    the elbow, because that rig cannot pose any placement rather than this
+ *    one.
  * 6. Boundary, nothing to measure: an armless rig still answers `reach: null` with
  *    the unmeasurable reason rather than a confident geometric verdict.
  * 7. The distance verdict propagates to the top-level `reachable`.
@@ -264,6 +283,25 @@ export const test_mcp_reach_rom_oracle = (): void => {
     shoulder !== null &&
       shoulder.left !== null &&
       (shoulder.left.poseReason ?? "").includes("no two-bone solve"),
+  );
+
+  // The OTHER degeneracy, and the reason the two are distinguished at all: this
+  // rig cannot pose ANY placement, not merely this one, so an author who reads
+  // "restage and measure again" would be chasing a target that can never work.
+  const hanging = reachOf(hangingArmRig(), target);
+  TestValidator.predicate(
+    "a rig whose elbow cannot bend reports no pose, and names the elbow",
+    hanging !== null &&
+      hanging.left !== null &&
+      hanging.left.pose === null &&
+      hanging.left.poseWithinRom === false &&
+      hanging.left.romViolations.length === 0 &&
+      (hanging.left.poseReason ?? "").includes("leftLowerArm") &&
+      (hanging.left.poseReason ?? "").includes("parallel"),
+  );
+  TestValidator.predicate(
+    "while the distance question it CAN answer is still answered",
+    hanging !== null && hanging.left !== null && hanging.left.reachable,
   );
 
   // 6. BOUNDARY: nothing to measure

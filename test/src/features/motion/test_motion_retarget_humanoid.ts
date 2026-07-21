@@ -155,9 +155,10 @@ const world = (
  * 2. A clinical wave resolves on the imported rig with the returned
  *    rest-frame/axis tables, so the right hand rises instead of mirroring
  *    down.
- * 3. A reach pose first fails against the default humanoid elbow ROM, then passes
- *    when the imported target supplies its own elbow constraint; the target
- *    hand lands at the scaled source hand position.
+ * 3. A reach pose retargets onto the imported rig and the target hand lands at the
+ *    scaled source hand position. It carries no elbow abduction for the default
+ *    humanoid ROM to reject, because the arm solve keeps the elbow on its own
+ *    hinge (#1345); it used to need the target to widen that axis.
  * 4. Missing required bones and invalid explicit root scale return field-located
  *    validation failures instead of throwing.
  */
@@ -303,9 +304,18 @@ export const test_motion_retarget_humanoid = (): void => {
     target,
     requiredBones: ["rightHand"],
   });
+  // Since #1345 the source reach no longer swings the elbow off its hinge, so
+  // the pose that retargets carries NO elbow abduction to reject. The contact
+  // pass cannot reintroduce it either: it pins humanoid legs by default and no
+  // hand contact was declared, so the arm chain is carried through the
+  // characterization rather than re-solved.
+  //
+  // Scoped deliberately to that one axis. This scenario's oracle is the
+  // proportional landing below, and asserting the whole retarget clean here
+  // would pin far more than the elbow fact this line exists to state.
   TestValidator.predicate(
-    "default target ROM rejects a reach-only elbow abduction",
-    hasViolation(
+    "the retargeted reach carries no elbow abduction to reject",
+    !hasViolation(
       reachDefault.validation,
       "rom",
       "$input.keyframes[1].pose.joints[1].abduction",

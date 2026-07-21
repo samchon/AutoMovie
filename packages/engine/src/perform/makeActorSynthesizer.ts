@@ -362,9 +362,11 @@ export const makeActorSynthesizer = (
     if (action.verb === "reach") {
       // An IK verb: needs the rig geometry (arm lengths, rest FK). Resolve the
       // target to a world point, drop it into the actor's model space (undo the
-      // placement), and solve the arm. reachPose does not clamp to ROM, so a
-      // reach to an impossible spot yields an out-of-ROM pose the shot's ROM
-      // gate rejects. The model must reposition, not the engine hide it.
+      // placement), and solve the arm. reachPose SEEKS a ROM-valid pose but
+      // never CLAMPS to one (#1345): where the rig's declared ranges admit no
+      // articulation that reaches, it returns the least-violating candidate and
+      // the shot's ROM gate rejects it. The model must reposition, not the
+      // engine hide it.
       //
       // `nodes`, not `aimPoints`, for the reason spelled out at the `point`
       // gesture: an arm target is not an eye, and the context carries no
