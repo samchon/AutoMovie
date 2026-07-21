@@ -221,16 +221,18 @@ const endActorOf = (
       : Math.max(0, context.instant - performed.performance.startOffset);
   const mount = context.mountByNode.get(node.id)?.binding ?? null;
   const plants = context.plantsByNode.get(node.id);
-  // A coupled child's end world root comes from the shot's baked follow clip,
-  // the same composition performShot produced (#674), overriding its own
-  // placement and pose-root. That covers the staged-mount rider AND the
-  // per-beat `attachTo` grab (#1141): the shot leaves a grabbed prop in the
-  // parent's hand, so the next beat must resume it there, not at its staged
-  // spot; `mount` stays the PERSISTENT binding only (null for a grab). When
-  // the shot carries no such clip (never coupled, a hand-built shot, or no
-  // perform pass), the node falls back to the staged path below,
-  // byte-identical to the pre-#674 output.
-  const followClip = followClipOf(context.objectMotions, node.id);
+  // A driven object's end world root comes from the shot's baked clip, the same
+  // composition performShot produced (#674), overriding its own placement and
+  // pose-root. That covers the staged-mount rider, the per-beat `attachTo` grab
+  // (#1141), and the ballistic flight a `launch` bakes (#1361): the shot leaves
+  // a grabbed prop in the parent's hand and a thrown one where it landed, so
+  // the next beat must resume it there rather than at its staged spot; `mount`
+  // stays the PERSISTENT binding only (null for a grab). Resolved AT this
+  // beat's end instant, because a prop's authority changes hands mid-shot: held
+  // until release, flying after it. When the shot carries no clip driving the
+  // node (never coupled, a hand-built shot, or no perform pass), it falls back
+  // to the staged path below, byte-identical to the pre-#674 output.
+  const followClip = followClipOf(context.objectMotions, node.id, localTime);
   const world: IWorldOverride | null =
     followClip === null
       ? null
