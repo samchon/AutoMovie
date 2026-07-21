@@ -63,3 +63,37 @@ export const openMcpStdio = async (
   });
   return { client, tools };
 };
+
+/** What one probing tool call observed at the client. */
+export interface IAutoMovieMcpProbe {
+  /** Whether the tool refused the call. */
+  refused: boolean;
+
+  /** The serialized annotation text the client receives. */
+  text: string;
+}
+
+/**
+ * Call one tool and read the verdict the way a client sees it: refused or not,
+ * plus the joined text of every content part.
+ *
+ * Input validation is only observable through a real client (an in-process
+ * `AutoMovieApplication` call bypasses typia entirely), so every scenario that
+ * pins a boundary refusal needs this read. It lives here beside the spawn and
+ * the budgets for the same reason they do: restating it per scenario is how two
+ * copies of one observation drift apart.
+ */
+export const probeMcpTool = async (
+  client: Client,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<IAutoMovieMcpProbe> => {
+  const result = await client.callTool({ name, arguments: args }, undefined, {
+    timeout: MCP_REQUEST_TIMEOUT,
+  });
+  const content = (result.content ?? []) as { text?: string }[];
+  return {
+    refused: result.isError === true,
+    text: content.map((part) => part.text ?? "").join(""),
+  };
+};

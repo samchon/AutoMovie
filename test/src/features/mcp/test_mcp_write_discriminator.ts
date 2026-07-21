@@ -1,31 +1,7 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { MCP_REQUEST_TIMEOUT, openMcpStdio } from "../internal/mcpStdio";
-
-interface IProbe {
-  /** Whether the tool refused the call. */
-  refused: boolean;
-
-  /** The serialized annotation text the client receives. */
-  text: string;
-}
-
-const probe = async (
-  client: Client,
-  name: string,
-  args: Record<string, unknown>,
-): Promise<IProbe> => {
-  const result = await client.callTool({ name, arguments: args }, undefined, {
-    timeout: MCP_REQUEST_TIMEOUT,
-  });
-  const content = (result.content ?? []) as { text?: string }[];
-  return {
-    refused: result.isError === true,
-    text: content.map((part) => part.text ?? "").join(""),
-  };
-};
+import { openMcpStdio, probeMcpTool } from "../internal/mcpStdio";
 
 /** The same payload with its `type` discriminator removed. */
 const withoutType = (value: object): Record<string, unknown> => {
@@ -74,7 +50,7 @@ export const test_mcp_write_discriminator = async (): Promise<void> => {
     const staging = makeStagingWrite();
 
     // 1. POSITIVE: neither write parameter carries the constant
-    const omitted = await probe(client, "stage", {
+    const omitted = await probeMcpTool(client, "stage", {
       script: withoutType(script),
       staging: withoutType(staging),
     });
@@ -85,7 +61,7 @@ export const test_mcp_write_discriminator = async (): Promise<void> => {
     );
 
     // 2. REGRESSION: supplying it is still legal
-    const supplied = await probe(client, "stage", { script, staging });
+    const supplied = await probeMcpTool(client, "stage", { script, staging });
     TestValidator.equals(
       "a stage call supplying the write discriminator still succeeds",
       supplied.refused,
@@ -93,7 +69,7 @@ export const test_mcp_write_discriminator = async (): Promise<void> => {
     );
 
     // 3. BOUNDARY: the other arm's tag is not a legal value here
-    const declined = await probe(client, "stage", {
+    const declined = await probeMcpTool(client, "stage", {
       script: { ...script, type: "decline" },
       staging,
     });
@@ -103,7 +79,7 @@ export const test_mcp_write_discriminator = async (): Promise<void> => {
     );
 
     // 4. NEGATIVE TWIN: strictness elsewhere is unchanged
-    const excess = await probe(client, "stage", {
+    const excess = await probeMcpTool(client, "stage", {
       script: { ...withoutType(script), bogusScriptField: 1 },
       staging: withoutType(staging),
     });
