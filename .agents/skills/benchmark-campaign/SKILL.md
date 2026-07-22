@@ -72,6 +72,7 @@ The run, not a theory, decides whether a change is needed.
 - Reserve a rich claim for a scenario that can adjudicate it. A short single-character scenario cannot settle camera, scene, or multi-actor expressiveness.
 - Never loosen a rubric, a validator, or a scenario's expected result to make a run score better. A benchmark that fails honestly is worth more than a green one that lies; that failure is the entire product of the campaign.
 - A discovery round is never held open waiting for a run. Judge each round against the current tree and the most recent completed runs; a run that finishes afterwards opens a new round over what it produced.
+- A round that produces a shortfall is followed by another full-scope round over the runs already in hand, and publication waits for the round that adds nothing to that set. The second reading of a trace carries what the first round proved, which is what separates one scenario's symptom from the cause sitting under several of them.
 
 ## Vet And Publish Issues
 

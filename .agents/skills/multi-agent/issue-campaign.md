@@ -24,6 +24,8 @@ Use [review.md](review.md)'s Parallel Issue Discovery Rounds. Every discovery ag
 
 Pool raw candidates in `.wiki`, then reproduce and combine, split, rewrite, reject, or defer them before publication. Parallel discovery changes evidence breadth, not publication authority.
 
+Rounds repeat inside the cycle exactly as the base skill's [One Cycle Costs As Many Rounds As It Takes](../issue-campaign/SKILL.md#one-cycle-costs-as-many-rounds-as-it-takes) requires. A round that produces a surviving candidate is followed by another parallel round at the same repository state, and publication waits for the round that adds nothing. Running agents in parallel widens one round; it does not make one round enough.
+
 ## Build Coarse Implementation Batches
 
 When implementation is also parallel, recompute the published-issue DAG before every wave. Form the smallest number of maximal cohesive batches that dependency readiness and ownership permit.
@@ -66,6 +68,6 @@ After every parallel implementation batch is resolved and its worktree and exter
 
 ## Completion
 
-After the selected implementation flow is resolved, run another complete parallel full-scope discovery round against the integrated repository.
+After the selected implementation flow is resolved, reopen Parallel Discovery against the integrated repository and run its rounds until one comes up empty.
 
 The campaign succeeds only when every reviewer completes the whole scope, no meaningful candidate survives lead verification, no accepted issue remains unresolved, and every campaign worktree and assignment-owned temporary asset is removed. Report an external blocker as blocked, not complete.
