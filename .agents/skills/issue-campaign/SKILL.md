@@ -53,7 +53,9 @@ Stopping at the first productive round costs more than it saves. The issues a se
 
 ### A Merged Cycle Reopens Discovery
 
-A merged cycle does not end the campaign. It reopens discovery: begin a fresh full-scope round against the integrated repository and run the rounds again until one comes up empty. Discovery continues cycle after cycle, with no round limit, and ends only when one complete fresh round produces no meaningful issue candidate after fact-checking and no accepted issue remains unresolved.
+A merged cycle does not end the campaign. It reopens discovery: begin a fresh full-scope round against the integrated repository and run the rounds again until one comes up empty.
+
+Discovery continues cycle after cycle with no round limit. It ends only when one complete fresh round produces no meaningful issue candidate after fact-checking and no accepted issue remains unresolved.
 
 Report the campaign complete only from a round that actually came up empty. Ending after a cycle that merely felt thorough leaves the issues the next round would have found unrecorded.
 
