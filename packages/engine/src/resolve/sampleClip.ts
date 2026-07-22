@@ -6,6 +6,7 @@ import {
 
 import { Quaternion } from "../math/Quaternion";
 import { segmentIndex } from "../math/bisect";
+import { cubicHermiteValue } from "../math/cubicHermite";
 import {
   clipDurationFault,
   clipLoopFault,
@@ -53,6 +54,46 @@ export const sampleClip = (
       channel: track.channel,
       value: sampleTrack(track, time, clip.duration),
     });
+  }
+  return out;
+};
+
+/**
+ * Sample a sequence of clips under shot-time channel authority.
+ *
+ * Authority is selected independently for every channel: among tracks whose
+ * first key has started by `seconds`, the track with the latest first key wins;
+ * equal starts go to the later clip in producer order. A future track writes
+ * nothing, instead of letting {@link sampleClip}'s before-first-key clamp
+ * overwrite the authority that is currently in effect.
+ *
+ * @author Samchon
+ */
+export const sampleClipSequence = (
+  clips: readonly IAutoMovieClip[],
+  seconds: number,
+): Map<string, IAutoMovieSampledChannel> => {
+  if (!Number.isFinite(seconds))
+    throw new Error(
+      `sampleClipSequence seconds must be finite, but was ${seconds}`,
+    );
+  const sampledByClip = new Map(
+    clips.map((clip) => [clip, sampleClip(clip, seconds)] as const),
+  );
+  const authority = new Map<string, { start: number; clip: IAutoMovieClip }>();
+  for (const clip of clips)
+    for (const track of clip.tracks) {
+      const start = track.times[0]!;
+      if (start > seconds) continue;
+      const key = channelKey(track.channel);
+      const previous = authority.get(key);
+      if (previous === undefined || start >= previous.start)
+        authority.set(key, { start, clip });
+    }
+
+  const out = new Map<string, IAutoMovieSampledChannel>();
+  for (const [key, entry] of authority) {
+    out.set(key, sampledByClip.get(entry.clip)!.get(key)!);
   }
   return out;
 };
@@ -123,20 +164,13 @@ const cubicHermite = (
   stride: number,
 ): number[] => {
   const { values, channel } = track;
-  const t2 = t * t;
-  const t3 = t2 * t;
-  const h00 = 2 * t3 - 3 * t2 + 1;
-  const h10 = t3 - 2 * t2 + t;
-  const h01 = -2 * t3 + 3 * t2;
-  const h11 = t3 - t2;
-
   const out = new Array<number>(width);
   for (let c = 0; c < width; ++c) {
     const vLo = values[lo * stride + width + c]!;
     const bLo = values[lo * stride + 2 * width + c]!;
     const vHi = values[hi * stride + width + c]!;
     const aHi = values[hi * stride + c]!;
-    out[c] = h00 * vLo + h10 * span * bLo + h01 * vHi + h11 * span * aHi;
+    out[c] = cubicHermiteValue(vLo, bLo, vHi, aHi, span, t);
   }
   return channelIsRotation(channel) ? normalizeQuatArray(out) : out;
 };

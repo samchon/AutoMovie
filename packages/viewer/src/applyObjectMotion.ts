@@ -1,4 +1,8 @@
-import { sampleClip } from "@automovie/engine";
+import {
+  IAutoMovieSampledChannel,
+  sampleClip,
+  sampleClipSequence,
+} from "@automovie/engine";
 import { IAutoMovieClip } from "@automovie/interface";
 import * as THREE from "three";
 
@@ -38,7 +42,29 @@ export const applyObjectMotion = (
   seconds: number,
   resolve: (node: string) => THREE.Object3D | undefined,
 ): void => {
-  for (const { channel, value } of sampleClip(clip, seconds).values()) {
+  applySampledObjectMotion(sampleClip(clip, seconds), resolve);
+};
+
+/**
+ * Apply a shot's object clips under the engine's per-channel authority rule. A
+ * future-only channel writes nothing. As with {@link applyObjectMotion}, a
+ * stateful host must restore staged bases before each seek/frame when no active
+ * authority should leave the staged value visible.
+ */
+export const applyObjectMotions = (
+  clips: readonly IAutoMovieClip[],
+  seconds: number,
+  resolve: (node: string) => THREE.Object3D | undefined,
+): void => {
+  applySampledObjectMotion(sampleClipSequence(clips, seconds), resolve);
+};
+
+/** Write an already-authoritative sample table to the Three.js scene. */
+const applySampledObjectMotion = (
+  sampled: ReadonlyMap<string, IAutoMovieSampledChannel>,
+  resolve: (node: string) => THREE.Object3D | undefined,
+): void => {
+  for (const { channel, value } of sampled.values()) {
     if (channel.kind !== "node") continue;
     const object = resolve(channel.node);
     if (object === undefined) continue;

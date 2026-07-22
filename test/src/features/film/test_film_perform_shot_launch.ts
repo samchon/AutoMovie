@@ -103,6 +103,8 @@ const stagingOf = () =>
  *     aim and camera paths use.
  * 16. If a live-bone sample becomes unavailable, launch retains its validated
  *     start-point target instead of failing the shot.
+ * 17. A live bone supplied by the rig callback but absent from the staged scene is
+ *     refused before its resolver can make that virtual actor targetable.
  */
 export const test_film_perform_shot_launch = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -695,5 +697,29 @@ export const test_film_perform_shot_launch = (): void => {
     "a missing live bone sample falls back to the validated target",
     unavailableBone.success === true &&
       unavailableBone.shot.objectMotions.length === 1,
+  );
+
+  const unstagedBone = perform(
+    [
+      {
+        verb: "launch",
+        actor: "archer",
+        start: 0.2,
+        duration: "auto",
+        projectile: "arrow",
+        at: { kind: "bone", node: "ghost", bone: "leftHand" },
+        speed: 22,
+      },
+    ],
+    () => ({ x: 6, y: 1.2, z: 0 }),
+  );
+  TestValidator.predicate(
+    "launch refuses a bone target outside the staged scene",
+    unstagedBone.success === false &&
+      unstagedBone.violations.some(
+        (violation) =>
+          violation.path.endsWith(".at.node") &&
+          violation.expected.includes("staged scene node"),
+      ),
   );
 };

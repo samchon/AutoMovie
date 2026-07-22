@@ -12,6 +12,10 @@ import {
 import { aimRotation } from "../kinematics/aimRotation";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import {
+  AUTO_MOVIE_LIGHT_TYPES,
+  isAutoMovieLightType,
+} from "../resolve/lightChannel";
 import { isRecord } from "../validation/artifactShape";
 import { validateSpace } from "../validation/validateSpace";
 import { ViolationCollector } from "../validation/violation";
@@ -53,7 +57,11 @@ const setPieceScale = (
 /** A light placement's kind, defaulting to the sun-like parallel source. */
 const lightTypeOf = (
   light: IAutoMovieStagingApplication.ILightPlacement,
-): "directional" | "point" | "spot" => light.type ?? "directional";
+): IAutoMovieLight["type"] | null => {
+  const type = (light as unknown as { type?: unknown }).type;
+  if (type === undefined) return "directional";
+  return isAutoMovieLightType(type) ? type : null;
+};
 
 /** A spot's cone half-angle when the placement leaves it to the engine. */
 const DEFAULT_CONE_ANGLE = 45;
@@ -86,6 +94,15 @@ const validateLightPlacementShape = (
   out: ViolationCollector,
 ): void => {
   const type = lightTypeOf(light);
+  if (type === null) {
+    out.push(
+      "type",
+      `${path}.type`,
+      `light type must be one of ${[...AUTO_MOVIE_LIGHT_TYPES].join(", ")}`,
+      (light as unknown as { type?: unknown }).type,
+    );
+    return;
+  }
   const aimed = type === "directional" || type === "spot";
   const positioned = type === "point" || type === "spot";
 
@@ -262,7 +279,7 @@ const unitComponent = (
 const lowerLightPlacement = (
   light: IAutoMovieStagingApplication.ILightPlacement,
 ): IAutoMovieLight => {
-  const type = lightTypeOf(light);
+  const type = lightTypeOf(light)!;
   const base = {
     id: light.node,
     transform: {

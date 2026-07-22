@@ -1,14 +1,15 @@
 import { IAutoMovieStagedSet } from "@automovie/engine";
 import {
   AutoMovieGuidePass,
-  IAutoMovieActionTarget,
   IAutoMovieAssembleApplication,
   IAutoMovieBeatEndState,
   IAutoMovieBlockingApplication,
+  IAutoMovieDistanceTarget,
   IAutoMovieForgeApplication,
   IAutoMovieModel,
   IAutoMoviePerformanceApplication,
   IAutoMoviePose,
+  IAutoMovieReachTarget,
   IAutoMovieRenderFrameFormat,
   IAutoMovieRenderSpec,
   IAutoMovieReviewNote,
@@ -310,11 +311,12 @@ export class AutoMovieApplication {
    * Resolve an actor's world-space skeleton pose. Pass `context` for the
    * explicit stateless path, or omit it to read the resident project. Resident
    * mode uses the committed scene, optional committed beat shot, each cast
-   * actor's persisted rig (`actors/<node>.json`, so a reopened project resolves
-   * rest/ambient poses without a re-commit), and the session-only compiled
-   * motions remembered from resident commitShot. Motions are not persisted as
-   * slices, so a query that samples a specific beat's motion needs that beat's
-   * commitShot in this session (or an explicit context).
+   * actor's persisted rig and clinical rest frames (`actors/<node>.json`, so a
+   * reopened project resolves rest/ambient poses without a re-commit), and the
+   * session-only compiled motions remembered from resident commitShot. Motions
+   * are not persisted as slices, so a query that samples a specific beat's
+   * motion needs that beat's commitShot in this session (or an explicit
+   * context).
    *
    * @param props The actor id, optional explicit context or resident beat, and
    *   optional shot time.
@@ -343,7 +345,11 @@ export class AutoMovieApplication {
    * inside the shell and still be a pose the joints cannot hold. Pass `context`
    * explicitly, or omit it to use the resident project's committed scene plus
    * the session-only model skeletons remembered from commitScene. A node target
-   * may name any staged placement, an actor, a set piece, or a camera.
+   * may name any staged placement, an actor, a set piece, or a camera. A bone
+   * target samples that actor's resolved rig at `t`; in resident mode `beat`
+   * selects its committed shot. The selected reaching actor's custom clinical
+   * rest frames apply to the IK result; omission uses the canonical humanoid
+   * frame.
    *
    * @param props The actor id, target, and optional explicit context.
    * @returns The reach report, or null with a reason naming the id or the
@@ -354,8 +360,12 @@ export class AutoMovieApplication {
     context?: IAutoMovieMcpGeometryContext;
     /** Scene-node id of the reaching actor. */
     actor: string;
-    /** Node, point, or group target to reach. */
-    target: IAutoMovieActionTarget;
+    /** Node, bone, point, or group target to reach. */
+    target: IAutoMovieReachTarget;
+    /** Resident beat whose motion a live bone should sample. */
+    beat?: string;
+    /** Shot-local seconds at which a live bone is sampled. Defaults to 0. */
+    t?: number;
   }): IAutoMovieGetReachOutput {
     return this.geometry.getReach(props);
   }
@@ -410,7 +420,8 @@ export class AutoMovieApplication {
    * Measure the world-space distance between two positional targets. Pass
    * `scene` explicitly, or omit it to use the resident committed scene. A node
    * target may name any staged placement, an actor, a set piece, or a camera.
-   * Relative targets return null because they are directions, not points.
+   * Bone and relative targets are deliberately absent: this scene-only query
+   * has neither a rig clock nor a unique point for a direction.
    *
    * @param props The two targets and optional explicit scene.
    * @returns The resolved endpoints and distance, or null with a per-side
@@ -420,9 +431,9 @@ export class AutoMovieApplication {
     /** Scene whose node positions define the target space. */
     scene?: IAutoMovieScene;
     /** First endpoint. */
-    from: IAutoMovieActionTarget;
+    from: IAutoMovieDistanceTarget;
     /** Second endpoint. */
-    to: IAutoMovieActionTarget;
+    to: IAutoMovieDistanceTarget;
   }): IAutoMovieMeasureDistanceOutput {
     return this.geometry.measureDistance(props);
   }

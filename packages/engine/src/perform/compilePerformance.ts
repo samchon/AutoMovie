@@ -50,9 +50,9 @@ const BOUNDARY_EPSILON = 1e-6;
 /**
  * What one action's clip lost to its region mask, for the caller that must
  * report it (#1349). The mask is correct and deliberate, but it used to be
- * SILENT: a quadruped gait driving the front legs (the arm chains) under
- * `locomote`'s default `lowerBody` region lost six of its twelve bones and the
- * shot still came back successful with zero violations. The compiler holds both
+ * SILENT: a quadruped gait driving the front legs (the arm chains) under an
+ * explicitly lower-body quadruped gait can lose its front-leg arm chains and
+ * still come back successful with zero violations. The compiler holds both
  * facts (what the synthesizer authored, what the region admits) at the moment
  * it drops one, so it is the only place that can state the difference.
  *
@@ -309,11 +309,12 @@ const padRestLeadIn = (motion: IAutoMovieMotion): IAutoMovieMotion => {
  * synthesised cycle ({@link sequenceMotion}); and groups each actor's actions by
  * **body region**. Actions sharing a region are placed on one timeline and
  * **held across gaps** ({@link arrangeMotion}): they take turns. Actions on
- * **disjoint** regions are **layered** ({@link layerClips}): a walk
- * (`lowerBody`) plays at the same time as a wave (`upperBody`) and a look-at
- * (`head`). An actor touching only one region keeps the simple arranged
- * timeline, padded to hold rest before a late start. The per-action keyframes
- * come entirely from `synthesize`. A `null` synthesis is skipped.
+ * **disjoint** regions are **layered** ({@link layerClips}): a walk can play at
+ * the same time as a content-disjoint gesture or look-at. Actions in one broad
+ * region normally share an arranged timeline; when two overlap on disjoint
+ * carried bones they receive separate lanes and layer without either being
+ * truncated. The per-action keyframes come entirely from `synthesize`. A `null`
+ * synthesis is skipped.
  *
  * The compiler also **states what it did not apply**: every clip the region
  * mask trimmed rides back on `masked` (#1349), so the caller that owns the
@@ -364,28 +365,57 @@ export const compilePerformance = (
     }
   });
 
-  // 3. per actor: arrange each region, then layer the regions (or pass one through)
+  // 3. Per actor, arrange non-overlapping placements into region lanes, then
+  // layer every lane. Most regions need one lane. Content-disjoint actions may
+  // overlap under the same broad region, though, and a second lane preserves
+  // both instead of making arrangeMotion truncate one by timestamp.
   const performances: Record<string, IAutoMovieMotion> = {};
   const masked: IAutoMovieMaskedContent[] = [];
   for (const [actor, regions] of byActor) {
     const layered = regions.size > 1;
-    const regionClips = [...regions.entries()].map(([region, placements]) => {
-      const keepRoot = !layered || ROOT_REGIONS.has(region);
-      const arranged: IAutoMoviePlacement[] = placements.map((placement) => {
-        const trimmed = maskMotionToRegion(placement.motion, region, keepRoot);
-        if (maskedAnything(trimmed))
-          masked.push({
-            action: placement.action,
-            actor,
+    const regionClips = [...regions.entries()].flatMap(
+      ([region, placements]) => {
+        const keepRoot = !layered || ROOT_REGIONS.has(region);
+        const lanes: Array<{
+          end: number;
+          placements: IAutoMoviePlacement[];
+        }> = [];
+        for (const placement of [...placements].sort(
+          (a, b) => a.start - b.start || a.action - b.action,
+        )) {
+          const trimmed = maskMotionToRegion(
+            placement.motion,
             region,
-            bones: trimmed.bones,
-            root: trimmed.root,
-            expression: trimmed.expression,
-          });
-        return { start: placement.start, motion: trimmed.motion };
-      });
-      return arrangeMotion(`perform:${actor}:${region}`, arranged);
-    });
+            keepRoot,
+          );
+          if (maskedAnything(trimmed))
+            masked.push({
+              action: placement.action,
+              actor,
+              region,
+              bones: trimmed.bones,
+              root: trimmed.root,
+              expression: trimmed.expression,
+            });
+          const item = { start: placement.start, motion: trimmed.motion };
+          const lane = lanes.find(
+            (candidate) => candidate.end <= item.start + 1e-9,
+          );
+          if (lane === undefined)
+            lanes.push({
+              end: item.start + item.motion.duration,
+              placements: [item],
+            });
+          else {
+            lane.placements.push(item);
+            lane.end = item.start + item.motion.duration;
+          }
+        }
+        return lanes.map((lane, index) =>
+          arrangeMotion(`perform:${actor}:${region}:${index}`, lane.placements),
+        );
+      },
+    );
     performances[actor] = padRestLeadIn(
       regionClips.length === 1
         ? { ...regionClips[0]!, id: `perform:${actor}` }

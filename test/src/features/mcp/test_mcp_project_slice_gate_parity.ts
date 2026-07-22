@@ -131,6 +131,25 @@ const scene: IAutoMovieScene = {
   lights: [],
 };
 
+/** A scene differing only in the light discriminator under test. */
+const sceneLit = (type: string): unknown => ({
+  ...scene,
+  lights: [
+    {
+      id: "lamp",
+      type,
+      transform: {
+        translation: { x: 0, y: 1, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        scale: { x: 1, y: 1, z: 1 },
+      },
+      color: { r: 1, g: 1, b: 1, a: null, hex: null },
+      intensity: 1,
+      range: 0,
+    },
+  ],
+});
+
 /**
  * A stored slice must be refused by exactly the rules that would refuse the
  * same artifact on submit. The resident store's read gate exists for files this
@@ -172,6 +191,9 @@ const scene: IAutoMovieScene = {
  *    slice, so WHICH lights are staged is the one rule that defers; the pointer
  *    grammar is not, which is why the read half can be stated at all.
  * 7. Negative twin: the same shot with a light pointer loads, carrying its clip.
+ * 8. A parseable scene with an unknown light discriminator is refused on read, and
+ *    the submit validator refuses the same artifact at the same field.
+ * 9. Negative twin: changing only the discriminator to `point` loads.
  */
 export const test_mcp_project_slice_gate_parity = (): void => {
   // 1. duplicate object-motion clip ids are refused on read.
@@ -279,6 +301,40 @@ export const test_mcp_project_slice_gate_parity = (): void => {
       "a light pointer clip loads",
       slate.shots.map((shot) => (shot.lightMotions ?? []).map((c) => c.id)),
       [["candleOut"]],
+    );
+  });
+
+  // 8. the resident scene gate refuses the same unknown kind as submission.
+  inProject((root) => {
+    writeSlice(root, "scene.json", sceneLit("laser"));
+    TestValidator.predicate(
+      "a stored scene with an unknown light discriminator is refused",
+      throwsError(
+        () => AutoMovieProject.open(root).writableSlate(),
+        ["semantically invalid", "$input.lights[0].type", "one of"],
+      ),
+    );
+  });
+  TestValidator.predicate(
+    "validateScene refuses the same unknown light discriminator",
+    hasViolation(
+      app.validateScene({
+        scene: sceneLit("laser") as IAutoMovieScene,
+        models: [],
+      }).validation,
+      "type",
+      "$input.scene.lights[0].type",
+    ),
+  );
+
+  // 9. negative twin: a supported discriminator loads.
+  inProject((root) => {
+    writeSlice(root, "scene.json", sceneLit("point"));
+    const slate = AutoMovieProject.open(root).writableSlate();
+    TestValidator.equals(
+      "a supported light discriminator loads",
+      slate.scene?.lights[0]?.type,
+      "point",
     );
   });
 };

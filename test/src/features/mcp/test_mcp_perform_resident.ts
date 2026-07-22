@@ -25,7 +25,7 @@ const walk: IAutoMovieGait = {
 };
 
 /** A solvable performance: one walk both knights share (no IK rest frames). */
-const perf = () =>
+const perf = (destinationZ = 0.35) =>
   makePerformanceWrite({
     draft: [
       {
@@ -34,7 +34,7 @@ const perf = () =>
         start: 0,
         duration: 2,
         gait: "walk",
-        to: { kind: "point", point: { x: 0, y: 0, z: 0.35 } },
+        to: { kind: "point", point: { x: 0, y: 0, z: destinationZ } },
       },
     ],
   });
@@ -189,8 +189,13 @@ export const test_mcp_perform_resident = (): void => {
         ),
     );
 
+    const compactBeforeFull = app.perform({
+      performance: perf(0.35),
+    }).performed;
+    if (compactBeforeFull.success !== true)
+      throw new Error("second compact resident perform must succeed");
     const fullResident = app.perform({
-      performance: perf(),
+      performance: perf(1.1),
       response: "full",
     }).performed;
     TestValidator.predicate(
@@ -199,13 +204,65 @@ export const test_mcp_perform_resident = (): void => {
         Object.keys(fullResident.motions).length ===
           fullResident.motionSummary.length,
     );
+    if (fullResident.success !== true)
+      throw new Error("full resident perform must succeed");
+    const staleAfterFull = app.commitShot({ shot: fullResident.shot });
+    TestValidator.predicate(
+      "a successful full response clears an older compact handoff for the same shot",
+      staleAfterFull.committed === false &&
+        staleAfterFull.validation.success === false &&
+        staleAfterFull.validation.violations.some(
+          (violation) => violation.path === "$input.motions",
+        ),
+    );
+    TestValidator.equals(
+      "the full response commits only with its own returned registry",
+      app.commitShot({
+        shot: fullResident.shot,
+        motions: fullResident.motions,
+      }).committed,
+      true,
+    );
+    const fullEnd = app.getShotEndState({ beat: "beat-1" });
+    TestValidator.predicate(
+      "geometry memory follows the full response rather than the cleared compact one",
+      fullEnd.reason === null &&
+        fullEnd.beatEnd?.actors.every(
+          (actor) => Math.abs(actor.transform.translation.z - 1.1) < 1e-6,
+        ) === true,
+    );
+
+    const compactBeforeFailure = app.perform({
+      performance: perf(),
+    }).performed;
+    if (compactBeforeFailure.success !== true)
+      throw new Error("compact perform before failed retry must succeed");
+    const invalidRetry = perf();
+    if (invalidRetry.draft[0]?.verb === "locomote")
+      invalidRetry.draft[0].gait = "missing";
+    TestValidator.equals(
+      "a failed retry is reported",
+      app.perform({ performance: invalidRetry }).performed.success,
+      false,
+    );
+    TestValidator.equals(
+      "a failed retry preserves the last successful compact handoff",
+      app.commitShot({ shot: compactBeforeFailure.shot }).committed,
+      true,
+    );
+
+    const compactBeforeScene = app.perform({
+      performance: perf(),
+    }).performed;
+    if (compactBeforeScene.success !== true)
+      throw new Error("compact perform before scene replacement must succeed");
     app.commitScene({
       scene: staged.scene,
       models: [...new Set(staged.scene.nodes.map((node) => node.model))].map(
         (id) => ({ id, skeleton: null }),
       ),
     });
-    const staleCompact = app.commitShot({ shot: residentShot.shot });
+    const staleCompact = app.commitShot({ shot: compactBeforeScene.shot });
     TestValidator.predicate(
       "a scene replacement clears the compact motion handoff",
       staleCompact.committed === false &&

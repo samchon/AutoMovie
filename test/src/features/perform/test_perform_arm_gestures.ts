@@ -112,6 +112,9 @@ const boneWorld = (
  *    distance alone, is identical across both.
  * 5. A bone target's FK point carries its pose-root travel once, then its staged
  *    actor position once; it never doubles locomotion.
+ * 6. Live-target point/reach retain rest -> extend -> hold, while strike retains
+ *    rest -> 40% peak -> rest; a moving target is sampled inside that
+ *    envelope.
  */
 export const test_perform_arm_gestures = (): void => {
   const synth = makeActorSynthesizer(new Map([["hero", ctx]]), nodes);
@@ -234,6 +237,79 @@ export const test_perform_arm_gestures = (): void => {
     rootedTarget !== null &&
       nclose(rootedTarget.x, 6.75) &&
       nclose(rootedTarget.y, 1.4),
+  );
+
+  const constantTarget = makeActorSynthesizer(
+    new Map([["hero", ctx]]),
+    nodes,
+    () => nodes.get("exit")!,
+  );
+  const livePoint = constantTarget(
+    gesture("point", { at: disappearingBone }),
+    "hero",
+  )!;
+  const liveStrike = constantTarget(
+    gesture("strike", { at: disappearingBone }),
+    "hero",
+  )!;
+  const staticReach = synth(
+    {
+      verb: "reach",
+      actor: "hero",
+      start: 0,
+      duration: 1,
+      hand: "right",
+      to: { kind: "node", node: "exit" },
+    },
+    "hero",
+  )!;
+  const liveReach = constantTarget(
+    {
+      verb: "reach",
+      actor: "hero",
+      start: 0,
+      duration: 1,
+      hand: "right",
+      to: disappearingBone,
+    },
+    "hero",
+  )!;
+  const jointsAt = (
+    clip: NonNullable<ReturnType<typeof synth>>,
+    time: number,
+  ): IAutoMovieJointPose[] => sampleMotion(clip, time).pose.joints;
+  TestValidator.equals(
+    "live point keeps the static rest/extend/hold phases",
+    [0, 0.5, 1].map((time) => jointsAt(livePoint, time)),
+    [0, 0.5, 1].map((time) => jointsAt(point, time)),
+  );
+  TestValidator.equals(
+    "live strike keeps the static rest/40%-peak/rest phases",
+    [0, 0.4, 1].map((time) => jointsAt(liveStrike, time)),
+    [0, 0.4, 1].map((time) => jointsAt(strike!, time)),
+  );
+  TestValidator.equals(
+    "live reach keeps the static rest/extend/hold phases",
+    [0, 0.5, 1].map((time) => jointsAt(liveReach, time)),
+    [0, 0.5, 1].map((time) => jointsAt(staticReach, time)),
+  );
+
+  const trackingTarget = makeActorSynthesizer(
+    new Map([["hero", ctx]]),
+    nodes,
+    (_target, seconds) => ({
+      ...nodes.get("exit")!,
+      z: nodes.get("exit")!.z + seconds,
+    }),
+  );
+  const trackingPoint = trackingTarget(
+    gesture("point", { at: disappearingBone }),
+    "hero",
+  )!;
+  TestValidator.predicate(
+    "a held live point tracks target motion after extension",
+    JSON.stringify(jointsAt(trackingPoint, 0.5)) !==
+      JSON.stringify(jointsAt(trackingPoint, 1)),
   );
   const dynamicThenMissing = makeActorSynthesizer(
     new Map([["hero", ctx]]),

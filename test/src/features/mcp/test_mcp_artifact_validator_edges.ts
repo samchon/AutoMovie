@@ -184,6 +184,13 @@ export const test_mcp_artifact_validator_edges = (): void => {
           range: 5,
           coneAngle: 91,
         },
+        {
+          id: "arc",
+          type: "laser",
+          transform: IDENTITY_TRANSFORM,
+          color: { r: 1, g: 1, b: 1, a: null, hex: null },
+          intensity: 1,
+        },
       ],
     }),
     models: bad([6, { name: "anonymous" }, { id: model.id, skeleton }]),
@@ -229,6 +236,7 @@ export const test_mcp_artifact_validator_edges = (): void => {
       hasExpected(sceneEdges, "$input.scene.lights[1].range", ">= 0") &&
       hasExpected(sceneEdges, "$input.scene.lights[2].coneAngle", "within") &&
       hasExpected(sceneEdges, "$input.scene.lights[2].color.r", "within") &&
+      hasExpected(sceneEdges, "$input.scene.lights[3].type", "one of") &&
       hasExpected(sceneEdges, "$input.models[0]", "JSON object") &&
       hasExpected(sceneEdges, "$input.models[1].id", "string"),
   );

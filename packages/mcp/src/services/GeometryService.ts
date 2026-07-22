@@ -1,6 +1,7 @@
 import {
   HUMANOID_JOINT_AXES,
   HUMANOID_REST_FRAME,
+  IAutoMovieActorContext,
   IAutoMovieStagedSet,
   POSITIONAL_TARGET_SHAPE,
   Quaternion,
@@ -14,10 +15,11 @@ import {
   validatePose,
 } from "@automovie/engine";
 import {
-  IAutoMovieActionTarget,
   IAutoMovieConstraintViolation,
+  IAutoMovieDistanceTarget,
   IAutoMoviePose,
   IAutoMovieQuaternion,
+  IAutoMovieReachTarget,
   IAutoMovieScene,
   IAutoMovieShot,
   IAutoMovieSkeleton,
@@ -42,12 +44,16 @@ import { shotIdOf } from "../project/shotKey";
 import {
   appendMotionClockShape,
   pushViolation,
+  validateActorRestFramesArtifact,
   validateArrayArtifact,
   validateNonEmptyId,
   validateObjectArtifact,
   validateTransformArtifact,
 } from "../validators/primitives";
-import { resolveRuntimeSafeTargetPoint } from "./actionTargets";
+import {
+  isRuntimeSafeActionTarget,
+  resolveRuntimeSafeTargetPoint,
+} from "./actionTargets";
 
 /**
  * Engine geometry queries, resolved poses, reach reports, and distance
@@ -80,21 +86,22 @@ export class GeometryService {
       source.root,
       source.resident ? { caller: "getResolvedPose" } : undefined,
       source.actorRigs,
+      source.actorRestFrames,
     );
   }
 
   public getReach(props: {
     context?: IAutoMovieMcpGeometryContext;
     actor: string;
-    target: IAutoMovieActionTarget;
+    target: IAutoMovieReachTarget;
+    beat?: string;
+    t?: number;
   }): IAutoMovieGetReachOutput {
     assertGeometryRequestRoot(props);
     assertGeometryActor(props.actor);
-    const source = this.resolveGeometryContext(
-      props.context,
-      undefined,
-      "getReach",
-    );
+    const beat = resolveOptionalGeometryBeat(props.beat);
+    const t = resolveResolvedPoseTime(props.t);
+    const source = this.resolveGeometryContext(props.context, beat, "getReach");
     assertGeometryContextShape(source.context, source.root);
     const found = findActorRig(
       source.context,
@@ -102,26 +109,35 @@ export class GeometryService {
       source.root,
       source.resident ? { caller: "getReach" } : undefined,
       source.actorRigs,
+      source.actorRestFrames,
     );
     if (found.actor === null) return { reach: null, reason: found.reason };
     const actor = found.actor;
-    const target = resolveRuntimeSafeTargetPoint(
-      props.target,
-      nodePositions(source.context.scene, `${source.root}.scene`),
-    );
-    if (target === null)
+    const resolvedTarget = resolveReachTarget(props.target, source, t);
+    if (resolvedTarget.point === null)
       return {
         reach: null,
-        reason: unresolvedTargetReason(null, props.target),
+        reason: resolvedTarget.reason,
       };
+    const target = resolvedTarget.point;
     const localTarget = toModelPoint(target, actor.node.transform);
     if (localTarget === null)
       return {
         reach: null,
         reason: `actor "${props.actor}" has a degenerate node scale; its transform cannot drop the target into model space`,
       };
-    const left = measureArmReach(actor.skeleton, "left", localTarget);
-    const right = measureArmReach(actor.skeleton, "right", localTarget);
+    const left = measureArmReach(
+      actor.skeleton,
+      "left",
+      localTarget,
+      actor.restFrames,
+    );
+    const right = measureArmReach(
+      actor.skeleton,
+      "right",
+      localTarget,
+      actor.restFrames,
+    );
     // A rig with no measurable arm chain on EITHER side is unmeasurable, not
     // unreachable (#1097): answering `reachable: false` with `reason: null`
     // reads as a confident geometric verdict when no measurement happened.
@@ -194,8 +210,8 @@ export class GeometryService {
 
   public measureDistance(props: {
     scene?: IAutoMovieScene;
-    from: IAutoMovieActionTarget;
-    to: IAutoMovieActionTarget;
+    from: IAutoMovieDistanceTarget;
+    to: IAutoMovieDistanceTarget;
   }): IAutoMovieMeasureDistanceOutput {
     assertGeometryRequestRoot(props);
     const source = this.resolveScene(props.scene, "measureDistance");
@@ -269,12 +285,18 @@ export class GeometryService {
     // per-actor while a model id is shared, so re-keying them by `node.model`
     // silently gave every cast node on one `modelRef` a single arbitrary rig
     // (#1244). `findActorRig` consults this map per actor instead.
+    const actorSpecs = project.storedActors();
     const actorRigs = new Map(
-      project
-        .storedActors()
-        .flatMap((spec) =>
-          spec.rig === undefined ? [] : [[spec.node, spec.rig] as const],
-        ),
+      actorSpecs.flatMap((spec) =>
+        spec.rig === undefined ? [] : [[spec.node, spec.rig] as const],
+      ),
+    );
+    const actorRestFrames = new Map(
+      actorSpecs.flatMap((spec) =>
+        spec.restFrames === undefined
+          ? []
+          : [[spec.node, spec.restFrames] as const],
+      ),
     );
     const models = mergeResidentModels([
       ...memory.models,
@@ -286,6 +308,7 @@ export class GeometryService {
     return {
       resident: true,
       actorRigs,
+      actorRestFrames,
       // `$context` (not `$slate...`): the geometry context is assembled from
       // the stored scene plus session rig/motion memory, so a slate-slice
       // root would misaddress the memory-backed parts (#995).
@@ -309,6 +332,8 @@ type GeometryContextSource = {
   root: string;
   /** Persisted per-actor rigs; resident-only (#1244). See {@link findActorRig}. */
   actorRigs?: ReadonlyMap<string, IAutoMovieSkeleton>;
+  /** Persisted per-actor clinical frames, resident-only (#1377). */
+  actorRestFrames?: ReadonlyMap<string, ActorRestFrames>;
 };
 
 type GeometrySceneSource = {
@@ -316,11 +341,58 @@ type GeometrySceneSource = {
   root: string;
 };
 
+/** Resolve one getReach target, including a live bone at shot time. */
+const resolveReachTarget = (
+  target: unknown,
+  source: GeometryContextSource,
+  t: number,
+): { point: IAutoMovieVector3 | null; reason: string | null } => {
+  if (!isRuntimeSafeActionTarget(target))
+    return { point: null, reason: unresolvedTargetReason(null, target) };
+  if (target.kind !== "bone") {
+    const point = resolveRuntimeSafeTargetPoint(
+      target,
+      nodePositions(source.context.scene, `${source.root}.scene`),
+    );
+    return {
+      point,
+      reason: point === null ? unresolvedTargetReason(null, target) : null,
+    };
+  }
+
+  const geometry = resolveActorGeometry(
+    source.context,
+    target.node,
+    t,
+    source.root,
+    source.resident ? { caller: "getReach" } : undefined,
+    source.actorRigs,
+    source.actorRestFrames,
+  );
+  if (geometry.resolvedPose === null)
+    return {
+      point: null,
+      reason: `bone target "${target.node}.${target.bone}" cannot resolve: ${geometry.reason}`,
+    };
+  const bone = geometry.resolvedPose.bones.find(
+    (entry) => entry.bone === target.bone,
+  );
+  return bone === undefined
+    ? {
+        point: null,
+        reason: `bone target "${target.node}.${target.bone}" names a bone that does not resolve on that actor's skeleton`,
+      }
+    : { point: bone.worldPosition, reason: null };
+};
+
 type GeometryActor = {
   node: IAutoMovieScene["nodes"][number];
   model: IAutoMovieMcpGeometryModel;
   skeleton: IAutoMovieSkeleton;
+  restFrames?: ActorRestFrames;
 };
+
+type ActorRestFrames = NonNullable<IAutoMovieActorContext["restFrames"]>;
 
 const assertRequiredGeometryBeat = (beat: unknown): void => {
   if (typeof beat === "string" && beat.trim().length > 0) return;
@@ -399,12 +471,20 @@ const resolveActorGeometry = (
   root: string,
   contract?: ResidentGeometryContract,
   actorRigs?: ReadonlyMap<string, IAutoMovieSkeleton>,
+  actorRestFrames?: ReadonlyMap<string, ActorRestFrames>,
 ): {
   resolvedPose: IAutoMovieMcpResolvedPose | null;
   reason: string | null;
 } => {
   // getResolvedPose is the only caller and resolves t through the finite gate.
-  const found = findActorRig(context, actor, root, contract, actorRigs);
+  const found = findActorRig(
+    context,
+    actor,
+    root,
+    contract,
+    actorRigs,
+    actorRestFrames,
+  );
   if (found.actor === null) return { resolvedPose: null, reason: found.reason };
   const actorRig = found.actor;
   const state = resolveActorPose(
@@ -428,6 +508,7 @@ const resolveActorGeometry = (
         state.pose,
         actorRig.skeleton,
         HUMANOID_JOINT_AXES,
+        actorRig.restFrames ?? HUMANOID_REST_FRAME,
       ).map((bone) => ({
         bone: bone.bone,
         localRotation: bone.localRotation,
@@ -502,6 +583,8 @@ const findActorRig = (
    * rig. Resident-only; the explicit-context path has no persisted store.
    */
   actorRigs?: ReadonlyMap<string, IAutoMovieSkeleton>,
+  /** Persisted actor frames; explicit contexts use `context.actorRestFrames`. */
+  actorRestFrames?: ReadonlyMap<string, ActorRestFrames>,
 ): { actor: GeometryActor | null; reason: string | null } => {
   const node = findSceneNode(context.scene, actor, `${root}.scene.nodes`);
   if (node === null)
@@ -517,6 +600,8 @@ const findActorRig = (
   const sessionSkeleton = model?.skeleton ?? null;
   const persisted = actorRigs?.get(actor);
   const skeleton = sessionSkeleton ?? persisted ?? null;
+  const restFrames =
+    context.actorRestFrames?.[actor] ?? actorRestFrames?.get(actor);
   if (skeleton === null && contract !== undefined)
     throw new Error(
       `${contract.caller} cannot resolve a rig for actor "${actor}" (model "${node.model}"). Project files persist the scene and each performed actor's rig; run a resident perform with this actor's rig (or commitScene with skeletal models) in this session, or pass context explicitly.`,
@@ -532,7 +617,12 @@ const findActorRig = (
       reason: `model "${node.model}" carries no skeleton, rig queries need a skeletal model`,
     };
   return {
-    actor: { node, model: model ?? { id: node.model, skeleton }, skeleton },
+    actor: {
+      node,
+      model: model ?? { id: node.model, skeleton },
+      skeleton,
+      restFrames,
+    },
     reason: null,
   };
 };
@@ -616,6 +706,23 @@ const assertGeometryContextShape = (context: unknown, path: string): void => {
     return assertNoGeometryViolations(violations);
   appendGeometrySceneShape(context.scene, `${path}.scene`, violations);
   appendGeometryModelsShape(context.models, `${path}.models`, violations);
+  if (context.actorRestFrames !== undefined) {
+    if (
+      validateObjectArtifact(
+        context.actorRestFrames,
+        `${path}.actorRestFrames`,
+        "actor rest-frame registry",
+        violations,
+      )
+    )
+      Object.entries(context.actorRestFrames).forEach(([actor, frames]) =>
+        validateActorRestFramesArtifact(
+          frames,
+          `${path}.actorRestFrames.${actor}`,
+          violations,
+        ),
+      );
+  }
   const shot = context.shot;
   if (shot === null || shot === undefined)
     return assertNoGeometryViolations(violations);
@@ -1024,6 +1131,7 @@ const measureArmReach = (
   skeleton: IAutoMovieSkeleton,
   side: "left" | "right",
   target: IAutoMovieVector3,
+  restFrames?: ActorRestFrames,
 ): IAutoMovieMcpArmReach | null => {
   const upperName = side === "left" ? "leftUpperArm" : "rightUpperArm";
   const lowerName = side === "left" ? "leftLowerArm" : "rightLowerArm";
@@ -1059,7 +1167,12 @@ const measureArmReach = (
   // table and pairs with the `HUMANOID_JOINT_AXES` this path already assumes;
   // supplying it changes the reported angles, never the geometry, and the hand
   // still lands on the same point.
-  const pose = reachPose(skeleton, side, target, HUMANOID_REST_FRAME);
+  const pose = reachPose(
+    skeleton,
+    side,
+    target,
+    restFrames ?? HUMANOID_REST_FRAME,
+  );
   const romViolations =
     pose === null ? [] : validatePose({ pose, skeleton }).items;
   // A null pose is not self-explaining, and the two ways to get one are

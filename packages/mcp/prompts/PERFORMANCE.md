@@ -52,7 +52,7 @@ An action drives ONE body region, and the engine masks its clip to that region's
 
 | Verb | Default region |
 | --- | --- |
-| `locomote` | `lowerBody` |
+| `locomote` | `fullBody` |
 | `gesture` | `upperBody`, except `nod`/`shake` (`head`) and `bow`/`crouch`/`kick`/`stagger`/`jump`/`draw` (`fullBody`) |
 | `reach` | `upperBody` |
 | `lookAt` | `head` |
@@ -61,9 +61,9 @@ An action drives ONE body region, and the engine masks its clip to that region's
 
 The root and the expression are masked on the same rule as the bones. The expression always belongs to `face` alone, so any other region's clip loses it. The root is only contested when one actor's actions span several regions at once: then only the striding region (`lowerBody` or `fullBody`) keeps it, since two regions cannot both move the actor. An actor performing on a single region keeps whatever its clip carries.
 
-**A stock biped gait fits the default, by construction.** The engine's shipped gaits drive hips and knees only, which is exactly what `lowerBody` owns, so a plain `locomote` performs with nothing masked and nothing refused. A gait YOU author that also swings the arms reaches outside that default, and is refused the same way anything else outside a region is: widen `region`, or drop the rows the region cannot carry.
+**A stock biped gait uses the whole default.** The engine's shipped gaits drive hips, knees, and contralateral upper-arm swing, so a plain `locomote` carries all of them through `fullBody`. A custom legs-only gait also works; the broader mask does not invent arm content.
 
-**A retargeted non-biped is where this bites.** The humanoid bone enum is the only vocabulary, so a quadruped's FRONT legs ride the arm chains (`leftUpperArm`/`leftLowerArm`/`leftHand` and the right pair). A four-legged gait therefore reaches outside `locomote`'s `lowerBody` default: write `"region": "fullBody"` on that action, or the front legs are refused rather than frozen.
+**An explicit narrow region is still enforced.** The humanoid bone enum is the only vocabulary, so a quadruped's FRONT legs ride the arm chains (`leftUpperArm`/`leftLowerArm`/`leftHand` and the right pair). If you override that locomote to `lowerBody`, those rows are refused rather than frozen; keep the `fullBody` default or use a region that owns every authored limb.
 
 ## Actor Contexts
 
@@ -78,7 +78,7 @@ A `locomote` action's `gait` is a free string matched by name against the gaits 
 ## Rules the Engine Enforces
 
 - **One take, one live camera**: exactly one camera is elected per shot.
-- **No overlapping camera moves**, and a `fullBody` action cannot layer with a partial-body action on the same span. Disjoint body regions (lower/upper/head) layer freely: a walk plus a wave plus a look compose without a bone claimed twice; overlapping regions blend by weight.
+- **No overlapping camera moves.** Actor actions may overlap when the synthesized content surviving their region masks is disjoint. The engine compares the root, exact bones, and expression channel: a full-body walk may layer with a head-only look, while a walk whose gait swings the arms conflicts with a wave/point/strike claiming the same arm. A custom legs-only gait may layer with an arm gesture. The later action's `start` receives a violation naming the shared channels when content really collides.
 - **Reaches are not clamped.** An impossible reach fails the shot's ROM gate rather than being quietly bent into range. Reposition the actor, do not expect the engine to hide the miss.
 - **A declared `duration` is the span, on every verb.** Write a number and the action lasts exactly that long: `locomote` fits its walk onto it, same path and same arrival, a slower or quicker cadence. Write `"auto"` to ask for the engine's own sizing, which is what picks whole gait cycles from distance and speed. The number is also what the overlap and blocking-anchor gates read, so it was the one declared quantity a compiled clip could silently disagree with.
 - **A gaze turns the whole chain.** `lookAt` spreads its solved aim over `neck` and `head` by the ranges the actor's `rig` declares (the head takes what it legally can, the neck carries the rest), so a steep look at something on a desk or on the floor compiles whenever the two ranges together span it. Supply the `rig` to get this: without one the whole angle sits on the head. An aim neither joint can hold is still refused by the ROM gate, unclamped, like a reach; widen the joint that actually moves rather than making one bone carry the whole cervical range.

@@ -1,4 +1,5 @@
 import {
+  AUTO_MOVIE_LIGHT_TYPES,
   AutoMovieGenericGesture,
   IAutoMovieActionSynthesizer,
   IAutoMovieActorContext,
@@ -6,11 +7,14 @@ import {
   IAutoMovieStagedSet,
   Quaternion,
   blockBeat,
+  compilePerformance,
   cutSequence,
   forgeCast,
   forgeProp,
+  isAutoMovieLightType,
   makeActorSynthesizer,
   performShot,
+  resolveActorWorldFrame,
   resolveBoneTarget,
   scenePlacements,
   stageScene,
@@ -48,7 +52,10 @@ import {
   IAutoMoviePerformOutput,
   IAutoMovieStageOutput,
 } from "../dto";
-import { isRecord } from "../validators/primitives";
+import {
+  isRecord,
+  validateActorRestFramesArtifact,
+} from "../validators/primitives";
 import { validateSpaceShape } from "../validators/space";
 import {
   isRuntimeSafeActionTarget,
@@ -379,18 +386,29 @@ export class PipelineService {
     // final pass samples that performance on the shot clock. The first pass
     // falls back to rest pose, breaking target cycles deterministically while
     // the second makes a gaze/IK/camera follow the target's actual motion.
-    let preliminaryMotions:
-      | IAutoMoviePerformedShot.ISuccess["motions"]
-      | undefined;
+    const preliminaryState: {
+      motions: IAutoMoviePerformedShot.ISuccess["motions"] | undefined;
+    } = { motions: undefined };
     const boneTargetAt = (
       target: IAutoMovieActionTarget,
       seconds: number,
     ): IAutoMovieVector3 | null =>
-      resolveBoneTarget(target, contexts, preliminaryMotions, seconds);
+      resolveBoneTarget(target, contexts, preliminaryState.motions, seconds);
+    const actorFrameAt = (actor: string, seconds: number) => {
+      // makeActorSynthesizer invokes this only after resolving the same actor's
+      // context; a missing actor returns before the callback is reachable.
+      const context = contexts.get(actor)!;
+      return resolveActorWorldFrame(
+        context,
+        preliminaryState.motions?.[actor],
+        seconds,
+      );
+    };
     const synthesizeDefault = makeActorSynthesizer(
       contexts,
       nodes,
       boneTargetAt,
+      actorFrameAt,
     );
     const synthesisViolations = collectDefaultSynthesisViolations(
       props,
@@ -413,6 +431,7 @@ export class PipelineService {
       performance: props.performance,
       synthesize,
       skeleton: (node: string) => contexts.get(node)?.rig ?? null,
+      hasActorContext: (node: string) => contexts.has(node),
       restFrames: (node: string) => contexts.get(node)?.restFrames,
       gaits: (node: string) =>
         contexts.get(node)?.gaits.map((gait) => gait.name),
@@ -420,9 +439,15 @@ export class PipelineService {
       targetAt: boneTargetAt,
     };
     const preliminary = performShot(performInput);
-    if (preliminary.success === true) preliminaryMotions = preliminary.motions;
-    const performed =
-      preliminary.success === false ? preliminary : performShot(performInput);
+    preliminaryState.motions =
+      preliminary.success === true
+        ? preliminary.motions
+        : compileBoneTargetBootstrapMotions(props.performance, synthesize);
+    // The first pass is only a motion source for live bone targets. Its
+    // observer clips still aim at rest-pose placeholders and therefore cannot
+    // authoritatively fail ROM/content. The second pass samples the target
+    // actors' preliminary motion and owns the final verdict.
+    const performed = performShot(performInput);
     const motions =
       performed.success === true ? toMcpMotions(performed.motions) : undefined;
     const output = remapMcpPerformedShotPaths(
@@ -456,8 +481,14 @@ export class PipelineService {
             : {}),
         })),
       );
-    if (slate !== null && response === "compact" && output.success === true)
-      this.context!.rememberPerformedMotions(output.shot.id, motions!);
+    if (slate !== null && output.success === true) {
+      if (response === "compact")
+        this.context!.rememberPerformedMotions(output.shot.id, motions!);
+      // A full response hands its own registry to the caller. Keeping an older
+      // compact response for the same stable shot id lets commitShot validate
+      // the new shot against old clips whose ids happen to match (#1375).
+      else this.context!.forgetPerformedMotions(output.shot.id);
+    }
     return { performed: output };
   }
 
@@ -584,6 +615,43 @@ export class PipelineService {
     return { ...output, stored: true };
   }
 }
+
+/**
+ * Build only the motions needed to sample live bone targets when the ordinary
+ * first perform pass failed on a frozen-target observer clip.
+ *
+ * Target actors' own actions are compiled without the shot-level ROM/content
+ * verdict. Their bone-dependent actions still resolve against rest on this
+ * bootstrap, which is the deterministic fixed point for mutual/cyclic targets;
+ * the authoritative second perform pass validates the resulting live poses.
+ */
+const compileBoneTargetBootstrapMotions = (
+  performance: IAutoMoviePerformanceApplication.IWrite,
+  synthesize: IAutoMovieActionSynthesizer,
+): IAutoMoviePerformedShot.ISuccess["motions"] => {
+  const actions = performance.revise.final ?? performance.draft;
+  const targetActors = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (!isRecord(value)) return;
+    if (value.kind === "bone" && typeof value.node === "string") {
+      targetActors.add(value.node);
+      return;
+    }
+    Object.values(value).forEach(visit);
+  };
+  actions.forEach(visit);
+  const targetActions = actions.filter((action) => {
+    const actors: unknown = action.actor;
+    if (typeof actors === "string") return targetActors.has(actors);
+    if (!Array.isArray(actors)) return false;
+    return actors.some((actor) => targetActors.has(actor));
+  });
+  return compilePerformance(targetActions, synthesize).performances;
+};
 
 const validatePipelineRequestRoot = (
   props: unknown,
@@ -1127,6 +1195,15 @@ const validateStageShape = (
         const path = `$input.staging.lights[${index}]`;
         if (!isJsonObject(light, path, "light placement", violations)) return;
         requireString(light.node, `${path}.node`, "light node", violations);
+        if (light.type !== undefined && !isAutoMovieLightType(light.type))
+          violations.push(
+            violation(
+              "type",
+              `${path}.type`,
+              `light type must be one of ${[...AUTO_MOVIE_LIGHT_TYPES].join(", ")}`,
+              light.type,
+            ),
+          );
         // Structural floor only: WHICH of these a placement must carry depends
         // on its `type` and belongs to `stageScene`, which owns the per-kind
         // contract (#1341). A point light legitimately has no `direction` and a
@@ -2354,7 +2431,7 @@ const validateActorContextFields = (
     violations,
   );
   if (context.restFrames !== undefined)
-    validateActorRestFrames(
+    validateActorRestFramesArtifact(
       context.restFrames,
       `${path}.restFrames`,
       violations,
@@ -2476,44 +2553,6 @@ const validateActorRig = (
           entry.bone,
         ),
       );
-};
-
-const REST_FRAME_AXES = ["flexion", "abduction", "twist"] as const;
-
-const validateActorRestFrames = (
-  restFrames: unknown,
-  path: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  if (!isJsonObject(restFrames, path, "actor rest frames", violations)) return;
-  Object.entries(restFrames).forEach(([bone, frame]) => {
-    const bonePath = `${path}.${bone}`;
-    if (!isJsonObject(frame, bonePath, "actor rest frame", violations)) return;
-    for (const axis of REST_FRAME_AXES) {
-      const axisFrame = frame[axis];
-      if (axisFrame === undefined) continue;
-      const axisPath = `${bonePath}.${axis}`;
-      if (
-        !isJsonObject(axisFrame, axisPath, "actor rest frame axis", violations)
-      )
-        continue;
-      if (axisFrame.sign !== 1 && axisFrame.sign !== -1)
-        violations.push(
-          violation(
-            "type",
-            `${axisPath}.sign`,
-            "actor rest frame sign must be 1 or -1",
-            axisFrame.sign,
-          ),
-        );
-      requireFiniteNumber(
-        axisFrame.neutral,
-        `${axisPath}.neutral`,
-        "actor rest frame neutral",
-        violations,
-      );
-    }
-  });
 };
 
 const requireFiniteVector = (

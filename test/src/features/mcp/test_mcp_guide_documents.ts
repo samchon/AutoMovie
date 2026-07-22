@@ -86,17 +86,14 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   // guide named, so the corpus now names it in both directions.
   ["AUTOMOVIE_OVERALL", 'optional** `"type": "write"` discriminator'],
   // The body-region axis (#1349). The mask was always there and no guide named
-  // it, so a retargeted quadruped's front legs (which ride the ARM chains) fell
-  // outside `locomote`'s `lowerBody` default and vanished from a shot the
-  // engine still called successful. The per-verb defaults and the non-biped
-  // consequence are pinned so the corpus cannot drop them again.
+  // it, so a narrow authored region could hide a retargeted quadruped's front
+  // legs (which ride the ARM chains). The refusal and non-biped consequence are
+  // pinned so the corpus cannot drop them again.
   ["PERFORMANCE", "a channel outside it is **refused**, not dropped"],
   ["PERFORMANCE", "a quadruped's FRONT legs ride the arm chains"],
-  // The other half of that rule (#1359): the SHIPPED gaits fit the default, so
-  // a reader cannot conclude from the quadruped paragraph that every walk needs
-  // a widened region. They used to swing the arms, which made the engine's own
-  // default content refused by its own default region.
-  ["PERFORMANCE", "A stock biped gait fits the default, by construction."],
+  // The shipped gaits use the full default and retain contralateral arm swing.
+  ["PERFORMANCE", "A stock biped gait uses the whole default."],
+  ["PERFORMANCE", "compares the root, exact bones, and expression channel"],
   // The clip payload contract (#1353). The gate had learned one of the
   // sampler's rules, so an uneven `values` stride committed clean and threw
   // while the film was being played; the corpus now states the whole shape an

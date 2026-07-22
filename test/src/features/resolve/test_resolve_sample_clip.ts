@@ -1,4 +1,4 @@
-import { sampleClip } from "@automovie/engine";
+import { sampleClip, sampleClipSequence } from "@automovie/engine";
 import {
   IAutoMovieChannel,
   IAutoMovieClip,
@@ -274,6 +274,13 @@ export const test_resolve_sample_clip = (): void => {
     throwsError(
       () => sampleClip(lin, Number.NaN),
       ["sampleClip seconds", "finite"],
+    ),
+  );
+  TestValidator.predicate(
+    "non-finite sequence time rejects even when the sequence is empty",
+    throwsError(
+      () => sampleClipSequence([], Number.NaN),
+      ["sampleClipSequence seconds", "finite"],
     ),
   );
 

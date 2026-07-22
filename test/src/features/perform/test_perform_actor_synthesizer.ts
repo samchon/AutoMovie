@@ -3,6 +3,7 @@ import {
   Quaternion,
   compilePerformance,
   makeActorSynthesizer,
+  resolveActorWorldFrame,
   sampleMotion,
 } from "@automovie/engine";
 import {
@@ -104,7 +105,10 @@ const door: IAutoMovieActionTarget = { kind: "node", node: "door" };
  * 4. `hold` holds the rest pose; and a locomote+hold beat compiles end to end.
  * 5. `emote` produces an expression-only clip.
  * 6. `lookAt` turns the head toward a resolvable target.
- * 7. Duplicate actor-context gait names are rejected before locomotion lookup can
+ * 7. A live performer frame composes staged and motion-root translation/rotation,
+ *    and lookAt samples that frame instead of freezing the observer at
+ *    staging.
+ * 8. Duplicate actor-context gait names are rejected before locomotion lookup can
  *    silently pick one.
  */
 export const test_perform_actor_synthesizer = (): void => {
@@ -272,7 +276,75 @@ export const test_perform_actor_synthesizer = (): void => {
     nclose(performances.hero!.duration, 7),
   );
 
-  // 7. actor gait names are lookup keys, so duplicates are ambiguous
+  // 7. The performer's sampled root is composed under its staged transform.
+  const rootMotion = {
+    id: "root",
+    skeleton: "h",
+    duration: 1,
+    loop: false,
+    keyframes: [0, 1].map((time) => ({
+      time,
+      pose: {
+        skeleton: "h",
+        root: {
+          translation: { x: 0, y: 0, z: time },
+          rotation: Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, 45 * time),
+          scale: { x: 1, y: 1, z: 1 },
+        },
+        joints: [],
+      },
+      expression: null,
+      easing: "linear" as const,
+      bezier: null,
+    })),
+  };
+  TestValidator.equals(
+    "a missing/rootless preliminary motion has no dynamic performer frame",
+    resolveActorWorldFrame(ctx, undefined, 0),
+    null,
+  );
+  TestValidator.equals(
+    "a rootless preliminary pose has no dynamic performer frame",
+    resolveActorWorldFrame(ctx, held!, 0),
+    null,
+  );
+  const liveFrame = resolveActorWorldFrame(
+    { ...ctx, position: { x: 1, y: 0, z: 2 }, facingDeg: 90 },
+    rootMotion,
+    1,
+  )!;
+  TestValidator.predicate(
+    "staged facing carries root travel into world position",
+    vclose(liveFrame.position, { x: 2, y: 0, z: 2 }, 1e-9),
+  );
+  TestValidator.predicate(
+    "staged and root yaw compose into the live facing",
+    nclose(liveFrame.facingDeg, 135),
+  );
+
+  const movingLook = makeActorSynthesizer(
+    contexts,
+    nodes,
+    undefined,
+    (_actor, seconds) => ({
+      position: { x: 0, y: 0, z: seconds },
+      rotation: Quaternion.identity(),
+      facingDeg: 0,
+    }),
+  )(lookAt(door, 1), "hero")!;
+  const movingStart = sampleMotion(movingLook, 0).pose.joints.find(
+    (joint) => joint.bone === "head",
+  )!;
+  const movingEnd = sampleMotion(movingLook, 1).pose.joints.find(
+    (joint) => joint.bone === "head",
+  )!;
+  TestValidator.predicate(
+    "lookAt samples the moving observer eye rather than its staged origin",
+    movingLook.keyframes.length > 2 &&
+      !nclose(movingStart.flexion!, movingEnd.flexion!),
+  );
+
+  // 8. actor gait names are lookup keys, so duplicates are ambiguous
   TestValidator.predicate(
     "duplicate actor-context gait names throw",
     throwsError(

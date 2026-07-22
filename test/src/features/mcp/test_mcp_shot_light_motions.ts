@@ -369,13 +369,14 @@ export const test_mcp_shot_light_motions = (): void => {
     valueType: string,
     values: number[],
     interpolation = "step",
+    times = [0, 1.6],
   ): IAutoMovieValidation =>
     validate({
       lightMotions: [
         clip(
           "bounded",
           pointerChannel(pointer, valueType),
-          [0, 1.6],
+          times,
           values,
           interpolation,
         ),
@@ -407,12 +408,11 @@ export const test_mcp_shot_light_motions = (): void => {
     ],
     [true, true],
   );
-  // A cubicspline's stored triplets are in-tangent/value/out-tangent, and a
-  // tangent is a derivative rather than a light value: range-checking one would
-  // refuse a legal spline, so the bounds rule deliberately stops at the two
-  // interpolations whose stored numbers ARE values.
+  // A cubicspline's stored triplets are in-tangent/value/out-tangent. Tangents
+  // are derivatives rather than light values, but both the key value and the
+  // Hermite curve they produce are still held to the light's range (#1371).
   TestValidator.equals(
-    "a cubicspline's negative tangent is not read as a negative intensity",
+    "a cubicspline's negative tangent is legal when its actual curve stays in range",
     boundsOn(
       "/lights/candleGlow/intensity",
       "scalar",
@@ -420,6 +420,93 @@ export const test_mcp_shot_light_motions = (): void => {
       "cubicspline",
     ).success,
     true,
+  );
+  TestValidator.predicate(
+    "cubicspline key values are checked without mistaking their tangents for values",
+    says(
+      boundsOn(
+        "/lights/candleGlow/intensity",
+        "scalar",
+        [0, -1, 0, 0, -2, 0],
+        "cubicspline",
+      ),
+      ".lightMotions[0].tracks[0].values[1]",
+      "light intensity",
+    ) &&
+      says(
+        boundsOn(
+          "/lights/lamp/coneAngle",
+          "scalar",
+          [0, 0, -20, 20, 40, 0],
+          "cubicspline",
+        ),
+        ".lightMotions[0].tracks[0].values[1]",
+        "light coneAngle",
+      ),
+  );
+  TestValidator.predicate(
+    "an interior Hermite overshoot is refused for scalar and vector light properties",
+    says(
+      boundsOn(
+        "/lights/candleGlow/intensity",
+        "scalar",
+        [0, 0, -10, 10, 0, 0],
+        "cubicspline",
+      ),
+      ".lightMotions[0].tracks[0].values",
+      "cubicspline segment 0 component 0",
+    ) &&
+      says(
+        boundsOn(
+          "/lights/candleGlow/color",
+          "vec3",
+          [0, 0, 0, 0.5, 0.5, 0.5, -10, 0, 0, 10, 0, 0, 0.5, 0.5, 0.5, 0, 0, 0],
+          "cubicspline",
+        ),
+        ".lightMotions[0].tracks[0].values",
+        "cubicspline segment 0 component 0",
+      ),
+  );
+  TestValidator.equals(
+    "a monotone cubic with no derivative roots stays accepted",
+    boundsOn(
+      "/lights/candleGlow/intensity",
+      "scalar",
+      [0, 0, 2, 2, 1, 0],
+      "cubicspline",
+    ).success,
+    true,
+  );
+  TestValidator.equals(
+    "a cubic whose derivative has a negative discriminant stays accepted",
+    boundsOn(
+      "/lights/candleGlow/intensity",
+      "scalar",
+      [0, 0, 1.25, 1.25, 1, 0],
+      "cubicspline",
+    ).success,
+    true,
+  );
+  TestValidator.equals(
+    "a cubic with one repeated stationary point stays accepted",
+    boundsOn(
+      "/lights/candleGlow/intensity",
+      "scalar",
+      [0, 0, 3, 3, 1, 0],
+      "cubicspline",
+      [0, 1],
+    ).success,
+    true,
+  );
+  TestValidator.predicate(
+    "a cubic with a decreasing clock stops at the shared track-shape gate",
+    boundsOn(
+      "/lights/candleGlow/intensity",
+      "scalar",
+      [0, 0, 0, 0, 1, 0],
+      "cubicspline",
+      [1, 0],
+    ).success === false,
   );
   // One fault, one violation: finiteness belongs to the clip gate, and the
   // bounds check must not report the same value a second time.

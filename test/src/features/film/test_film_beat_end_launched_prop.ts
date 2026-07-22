@@ -68,11 +68,11 @@ const FLIGHT = drives("trajectory:stone", [RELEASE, CONTACT], [HAND, LANDED]);
 /** A clip driving the same node under an id no consumer knows to look for. */
 const SLIDE = drives("slide:stone", [3, 4], [LANDED, SLID]);
 
-/**
- * Translation only: it cannot answer a world transform, whose rotation half
- * `bakedTransformAt` reads with the same certainty as its translation.
- */
+/** Translation-only late authority; rotation remains owned by the flight. */
 const PARTIAL = drives("drift:stone", [4, 4.5], [SLID, HAND], false);
+
+/** An authority that begins exactly at the requested beat-end instant. */
+const JUST_STARTED = drives("arrival:stone", [5], [LANDED]);
 
 const scene: IAutoMovieScene = {
   id: "scene",
@@ -155,11 +155,12 @@ const stoneAt = (
  *    placement, byte-identical to the pre-#674 path.
  * 6. A landed prop's end velocity is zero: the flight clip is clamped past
  *    contact, so nothing reports the stone as still travelling.
- * 7. A clip carrying only the translation half is not an authority: it starts
- *    latest of all, and the flight still wins, because a clip that cannot
- *    answer the rotation cannot answer the transform.
+ * 7. Authority is per channel: a later translation-only clip supplies position
+ *    while the earlier flight keeps supplying rotation.
  * 8. Array order decides nothing: the same two clips listed flight-first resolve
  *    to the flight, so it is the later START that wins, not the later entry.
+ * 9. A transform authority that starts exactly at beat end has no preceding sample
+ *    window, so its derived velocity is honestly zero.
  */
 export const test_film_beat_end_launched_prop = (): void => {
   // 1. the contradiction, resolved: the shot's clip decides.
@@ -205,15 +206,27 @@ export const test_film_beat_end_launched_prop = (): void => {
       vclose(landed.rootVelocity, { x: 0, y: 0, z: 0 }, 1e-9),
   );
 
-  // 7. half a transform is not an authority.
+  // 7. disjoint channel authorities compose into one transform.
   TestValidator.predicate(
-    "a translation-only clip does not take the node over",
-    vclose(stoneAt(5, [HELD, FLIGHT, PARTIAL]), LANDED, 1e-9),
+    "a later translation composes with the earlier rotation authority",
+    vclose(stoneAt(5, [HELD, FLIGHT, PARTIAL]), HAND, 1e-9),
   );
 
   // 8. the later START wins, not the later entry.
   TestValidator.predicate(
     "listing the flight first changes nothing",
     vclose(stoneAt(5, [FLIGHT, HELD]), LANDED, 1e-9),
+  );
+
+  const justStarted = resolveBeatEnd({
+    beat: "beat-1",
+    scene,
+    shot: shotOf(5, [JUST_STARTED]),
+    motions: [],
+  }).actors.find((actor) => actor.node === "stone")!;
+  TestValidator.predicate(
+    "an authority starting at beat end has no prior velocity sample",
+    justStarted.rootVelocity !== null &&
+      vclose(justStarted.rootVelocity, { x: 0, y: 0, z: 0 }, 1e-9),
   );
 };

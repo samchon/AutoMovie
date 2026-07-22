@@ -1,4 +1,4 @@
-import { compareCodeUnits } from "@automovie/engine";
+import { compareCodeUnits, sampleMotion } from "@automovie/engine";
 import {
   IAutoMovieActionCall,
   IAutoMovieActionTarget,
@@ -9,6 +9,7 @@ import {
   AutoMovieApplication,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpMotion,
+  toEngineMotion,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
@@ -55,9 +56,13 @@ const actors = {
   knightB: context(B_PLACEMENT, 180),
 };
 
-const performing = (draft: IAutoMovieActionCall[]) => {
+const performing = (
+  draft: IAutoMovieActionCall[],
+  actorRegistry: Record<string, IAutoMovieMcpActorContext> = actors,
+  stagingWrite = staging,
+) => {
   const app = new AutoMovieApplication();
-  const staged = app.stage({ script, staging }).staged;
+  const staged = app.stage({ script, staging: stagingWrite }).staged;
   if (staged.success !== true) throw new Error("staging fixture must succeed");
   return app.perform({
     script,
@@ -66,7 +71,7 @@ const performing = (draft: IAutoMovieActionCall[]) => {
       draft,
       revise: { review: "unchanged.", final: null },
     }),
-    actors,
+    actors: actorRegistry,
   }).performed;
 };
 
@@ -83,6 +88,37 @@ const chainFlexion = (motion: IAutoMovieMcpMotion): number =>
     (sum, entry) => sum + (entry.flexion ?? 0),
     0,
   );
+
+const sameSampledJoints = (
+  left: IAutoMovieMcpMotion,
+  right: IAutoMovieMcpMotion,
+  leftTime: number,
+  rightTime = leftTime,
+  bonePrefix?: string,
+): boolean => {
+  const select = (motion: IAutoMovieMcpMotion, time: number) =>
+    sampleMotion(toEngineMotion(motion), time).pose.joints.filter(
+      (joint) => bonePrefix === undefined || joint.bone.startsWith(bonePrefix),
+    );
+  const leftJoints = select(left, leftTime);
+  const rightJoints = select(right, rightTime);
+  return (
+    leftJoints.length === rightJoints.length &&
+    leftJoints.every((joint) => {
+      const twin = rightJoints.find(
+        (candidate) => candidate.bone === joint.bone,
+      );
+      return (
+        twin !== undefined &&
+        (["flexion", "abduction", "twist"] as const).every((axis) => {
+          const a = joint[axis];
+          const b = twin[axis];
+          return a === null || b === null ? a === b : nclose(a, b);
+        })
+      );
+    })
+  );
+};
 
 const chainTwist = (motion: IAutoMovieMcpMotion, index: number): number =>
   motion.keyframes[index]!.pose.joints.reduce(
@@ -137,6 +173,16 @@ const lookAt = (
  *    freezing the rest-pose point), and `point`, `strike`, and `reach` compile
  *    their arm pose at the target's changing beat time.
  * 5. A missing rig bone is refused at `bone`.
+ * 6. A bone target actor must be a staged scene node before its context is
+ *    consulted: an extra/stale actor and a camera id are refused at `node`.
+ * 7. After staging membership passes, a missing actor context, missing rig, and
+ *    missing bone retain distinct diagnostics.
+ * 8. A target that walks from an invalid rest-side aim into a valid position
+ *    before the observer starts succeeds and matches the explicit final point.
+ * 9. The converse still fails: a valid rest target that moves into a genuinely
+ *    invalid final aim is rejected by the authoritative pass.
+ * 10. A delayed arm reach uses the same bootstrap, and mutual bone targets
+ *     terminate deterministically from the documented rest-pose fixed point.
  */
 export const test_mcp_perform_eye_contact = (): void => {
   // 1. they hold each other's gaze.
@@ -281,6 +327,18 @@ export const test_mcp_perform_eye_contact = (): void => {
       dynamicArm(strikeAtHand) &&
       dynamicArm(reachForHand),
   );
+  if (pointAtHand.success !== true)
+    throw new Error("the self-hand point must perform");
+  TestValidator.predicate(
+    "performer translation preserves its self-target arm solution",
+    sameSampledJoints(
+      pointAtHand.motions.knightA!,
+      pointAtHand.motions.knightA!,
+      1,
+      2,
+      "right",
+    ),
+  );
 
   const missingBone = performing([
     lookAt("knightA", {
@@ -295,5 +353,261 @@ export const test_mcp_perform_eye_contact = (): void => {
       missingBone.violations.some((violation) =>
         violation.path.endsWith(".bone"),
       ),
+  );
+
+  const ghostBone: IAutoMovieActionTarget = {
+    kind: "bone",
+    node: "ghost",
+    bone: "leftHand",
+  };
+  const extraContext = {
+    ...actors,
+    ghost: context({ x: 4, y: 0, z: 0 }, 0),
+  };
+  const ghostLook = performing([lookAt("knightA", ghostBone)], extraContext);
+  const ghostFrame = performing(
+    [
+      {
+        verb: "frame",
+        actor: "cam-main",
+        start: 0,
+        duration: 2,
+        framing: "medium",
+        move: "static",
+        on: ghostBone,
+      },
+    ],
+    extraContext,
+  );
+  TestValidator.predicate(
+    "a stale context cannot target an actor absent from the scene",
+    [ghostLook, ghostFrame].every(
+      (result) =>
+        result.success === false &&
+        result.violations.some(
+          (violation) =>
+            violation.path.endsWith(".node") &&
+            violation.expected.includes("staged scene node"),
+        ),
+    ),
+  );
+
+  const cameraBone = performing(
+    [
+      lookAt("knightA", {
+        kind: "bone",
+        node: "cam-main",
+        bone: "leftHand",
+      }),
+    ],
+    {
+      ...actors,
+      "cam-main": context({ x: 0, y: 1.6, z: 4 }, 0),
+    },
+  );
+  TestValidator.predicate(
+    "a camera id cannot masquerade as a rigged staged actor",
+    cameraBone.success === false &&
+      cameraBone.violations.some(
+        (violation) =>
+          violation.path.endsWith(".node") &&
+          violation.expected.includes("staged scene node"),
+      ),
+  );
+
+  const noContext = performing(
+    [lookAt("knightA", { kind: "bone", node: "knightB", bone: "leftHand" })],
+    { knightA: actors.knightA },
+  );
+  const noRig = performing(
+    [lookAt("knightA", { kind: "bone", node: "knightB", bone: "leftHand" })],
+    { ...actors, knightB: { ...actors.knightB, rig: undefined } },
+  );
+  TestValidator.predicate(
+    "missing context, missing rig, and missing bone stay distinct",
+    noContext.success === false &&
+      noContext.violations.some((violation) =>
+        violation.expected.includes("no actor context"),
+      ) &&
+      noRig.success === false &&
+      noRig.violations.some((violation) =>
+        violation.expected.includes("has no rig"),
+      ) &&
+      missingBone.success === false &&
+      missingBone.violations.some((violation) =>
+        violation.expected.includes("not carried by rigged staged actor"),
+      ),
+  );
+
+  const delayedStaging = makeStagingWrite({
+    actors: [
+      { node: "knightA", position: A_PLACEMENT, facingDeg: 0 },
+      {
+        node: "knightB",
+        position: { x: 0, y: 0, z: -1 },
+        facingDeg: 0,
+      },
+    ],
+  });
+  const delayedActors = {
+    knightA: context(A_PLACEMENT, 0),
+    knightB: context({ x: 0, y: 0, z: -1 }, 0),
+  };
+  const delayedWalk: IAutoMovieActionCall = {
+    verb: "locomote",
+    actor: "knightB",
+    start: 0,
+    duration: 1.5,
+    gait: "walk",
+    to: { kind: "point", point: { x: 0, y: 0, z: 1 } },
+  };
+  const delayedLook = (to: IAutoMovieActionTarget): IAutoMovieActionCall => ({
+    verb: "lookAt",
+    actor: "knightA",
+    start: 1.5,
+    duration: 0.5,
+    to,
+  });
+  const delayedBone = performing(
+    [
+      delayedWalk,
+      delayedLook({ kind: "bone", node: "knightB", bone: "leftHand" }),
+    ],
+    delayedActors,
+    delayedStaging,
+  );
+  const delayedPoint = performing(
+    [
+      delayedWalk,
+      delayedLook({
+        kind: "point",
+        point: { x: 0.75, y: 1.4, z: 1 },
+      }),
+    ],
+    delayedActors,
+    delayedStaging,
+  );
+  TestValidator.predicate(
+    "a delayed moving-hand gaze ignores the invalid frozen bootstrap pose",
+    delayedBone.success === true &&
+      delayedPoint.success === true &&
+      [1.5, 1.75, 2].every(
+        (time) =>
+          JSON.stringify(
+            sampleMotion(toEngineMotion(delayedBone.motions.knightA!), time)
+              .pose,
+          ) ===
+          JSON.stringify(
+            sampleMotion(toEngineMotion(delayedPoint.motions.knightA!), time)
+              .pose,
+          ),
+      ),
+  );
+
+  const invalidStaging = makeStagingWrite({
+    actors: [
+      { node: "knightA", position: A_PLACEMENT, facingDeg: 0 },
+      { node: "knightB", position: { x: 0, y: 0, z: 1 }, facingDeg: 0 },
+    ],
+  });
+  const invalidFinal = performing(
+    [
+      {
+        ...delayedWalk,
+        to: { kind: "point", point: { x: 0, y: 0, z: -1 } },
+      },
+      delayedLook({ kind: "bone", node: "knightB", bone: "leftHand" }),
+    ],
+    {
+      knightA: context(A_PLACEMENT, 0),
+      knightB: context({ x: 0, y: 0, z: 1 }, 0),
+    },
+    invalidStaging,
+  );
+  TestValidator.predicate(
+    "a genuinely invalid final live target still fails ROM",
+    invalidFinal.success === false &&
+      invalidFinal.violations.some((violation) =>
+        violation.path.startsWith('$compiled["knightA"]'),
+      ),
+  );
+
+  const reachStaging = makeStagingWrite({
+    actors: [
+      { node: "knightA", position: A_PLACEMENT, facingDeg: 0 },
+      {
+        node: "knightB",
+        position: { x: -0.2, y: 0, z: -1 },
+        facingDeg: 0,
+      },
+    ],
+  });
+  const reachActors = {
+    knightA: context(A_PLACEMENT, 0),
+    knightB: context({ x: -0.2, y: 0, z: -1 }, 0),
+  };
+  const reachWalk: IAutoMovieActionCall = {
+    ...delayedWalk,
+    to: { kind: "point", point: { x: -0.2, y: 0, z: 0.2 } },
+  };
+  const delayedReach = (to: IAutoMovieActionTarget): IAutoMovieActionCall => ({
+    verb: "reach",
+    actor: "knightA",
+    start: 1.5,
+    duration: 0.5,
+    hand: "left",
+    to,
+  });
+  const boneReach = performing(
+    [
+      reachWalk,
+      delayedReach({ kind: "bone", node: "knightB", bone: "leftHand" }),
+    ],
+    reachActors,
+    reachStaging,
+  );
+  const pointReach = performing(
+    [
+      reachWalk,
+      delayedReach({
+        kind: "point",
+        point: { x: 0.55, y: 1.4, z: 0.2 },
+      }),
+    ],
+    reachActors,
+    reachStaging,
+  );
+  TestValidator.predicate(
+    "a delayed moving-hand reach matches the actual-time point twin",
+    boneReach.success === true &&
+      pointReach.success === true &&
+      [1.75, 2].every((time) =>
+        sameSampledJoints(
+          boneReach.motions.knightA!,
+          pointReach.motions.knightA!,
+          time,
+        ),
+      ),
+  );
+
+  const cyclicDraft = [
+    lookAt("knightA", {
+      kind: "bone",
+      node: "knightB",
+      bone: "leftHand",
+    }),
+    lookAt("knightB", {
+      kind: "bone",
+      node: "knightA",
+      bone: "leftHand",
+    }),
+  ];
+  const cyclicA = performing(cyclicDraft);
+  const cyclicB = performing(cyclicDraft);
+  TestValidator.predicate(
+    "mutual bone targets terminate deterministically",
+    cyclicA.success === true &&
+      cyclicB.success === true &&
+      JSON.stringify(cyclicA) === JSON.stringify(cyclicB),
   );
 };

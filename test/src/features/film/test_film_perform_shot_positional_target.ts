@@ -3,7 +3,10 @@ import {
   performShot,
   stageScene,
 } from "@automovie/engine";
-import { IAutoMovieActionCall } from "@automovie/interface";
+import {
+  IAutoMovieActionCall,
+  IAutoMovieActionTarget,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -43,9 +46,9 @@ const staging = makeStagingWrite({
 });
 
 /** One perform per probe, differing only in the draft under test. */
-const performing = (): ((
-  draft: IAutoMovieActionCall[],
-) => IAutoMoviePerformedShot) => {
+const performing = (
+  targetAt?: Parameters<typeof performShot>[0]["targetAt"],
+): ((draft: IAutoMovieActionCall[]) => IAutoMoviePerformedShot) => {
   const staged = stageScene(script, staging);
   if (staged.success !== true) throw new Error("staging fixture must succeed");
   return (draft) =>
@@ -58,6 +61,7 @@ const performing = (): ((
       }),
       synthesize: validSynthesizer,
       skeleton: () => createSkeleton(),
+      targetAt,
     });
 };
 
@@ -83,6 +87,18 @@ const silentAt = (result: IAutoMoviePerformedShot, path: string): boolean =>
 const UNRESOLVED_BY_VERB: ReadonlyArray<
   readonly [string, IAutoMovieActionCall, string]
 > = [
+  [
+    "locomote",
+    {
+      verb: "locomote",
+      actor: "knightA",
+      start: 0,
+      duration: 1,
+      gait: "walk",
+      to: { kind: "node", node: "ghost" },
+    },
+    "$input.draft[0].to",
+  ],
   [
     "lookAt",
     {
@@ -174,6 +190,17 @@ const UNRESOLVED_BY_VERB: ReadonlyArray<
 
 /** The same probes, aimed at a staged camera instead of an unknown id. */
 const CAMERA_BY_VERB: ReadonlyArray<readonly [string, IAutoMovieActionCall]> = [
+  [
+    "locomote",
+    {
+      verb: "locomote",
+      actor: "knightA",
+      start: 0,
+      duration: 1,
+      gait: "walk",
+      to: { kind: "node", node: "cam-main" },
+    },
+  ],
   [
     "lookAt",
     {
@@ -285,6 +312,9 @@ const CAMERA_BY_VERB: ReadonlyArray<readonly [string, IAutoMovieActionCall]> = [
  *    same target vocabulary.
  * 7. Camera-as-TARGET does not loosen camera-as-ACTOR: a gesture performed by a
  *    camera is still refused at `.actor`.
+ * 8. Locomote refuses broken absolute node/group/bone/point destinations at `.to`,
+ *    resolves a live bone at `action.start`, and preserves the explicit
+ *    relative direction/offscreen in-place fallback.
  */
 export const test_film_perform_shot_positional_target = (): void => {
   const perform = performing();
@@ -507,5 +537,79 @@ export const test_film_perform_shot_positional_target = (): void => {
     "a camera still cannot act outside frame",
     says(cameraActor, "$input.draft[0].actor", "is a camera") &&
       silentAt(cameraActor, "$input.draft[0].at"),
+  );
+
+  // 8. Locomote's in-place fallback belongs only to intentionally relative
+  // targets. Broken absolute destinations are authored mistakes, not steps in
+  // place that may be reported as a successful trip.
+  const locomote = (
+    to: IAutoMovieActionTarget,
+    start = 0,
+  ): IAutoMovieActionCall => ({
+    verb: "locomote",
+    actor: "knightA",
+    start,
+    duration: 1,
+    gait: "walk",
+    to,
+  });
+  TestValidator.predicate(
+    "locomote refuses a group with no placed member",
+    says(
+      perform([locomote({ kind: "group", nodes: ["ghost"] })]),
+      "$input.draft[0].to",
+      "none of its group members are placed",
+    ),
+  );
+  TestValidator.predicate(
+    "locomote refuses an unstaged bone actor at its node",
+    says(
+      perform([locomote({ kind: "bone", node: "ghost", bone: "leftHand" })]),
+      "$input.draft[0].to.node",
+      "must be a staged scene node",
+    ),
+  );
+  TestValidator.predicate(
+    "locomote refuses non-finite point coordinates",
+    says(
+      perform([
+        locomote({
+          kind: "point",
+          point: { x: Number.NaN, y: 0, z: 1 },
+        }),
+      ]),
+      "$input.draft[0].to",
+      "finite x/y/z coordinates",
+    ),
+  );
+  for (const [label, target] of [
+    ["node", { kind: "node", node: "altar" }],
+    ["group", { kind: "group", nodes: ["altar", "ghost"] }],
+    ["point", { kind: "point", point: { x: 1, y: 0, z: 1 } }],
+    ["direction", { kind: "direction", headingDeg: 90 }],
+    ["offscreen", { kind: "offscreen", edge: "left" }],
+  ] as const)
+    TestValidator.equals(
+      `locomote accepts a legal ${label} target`,
+      perform([locomote(target as IAutoMovieActionTarget)]).success,
+      true,
+    );
+
+  const sampledAt: number[] = [];
+  const livePerform = performing((_target, seconds) => {
+    sampledAt.push(seconds);
+    return { x: 1, y: 1.4, z: 1 };
+  });
+  TestValidator.equals(
+    "a live bone locomote target resolves at the action start",
+    livePerform([
+      locomote({ kind: "bone", node: "knightB", bone: "leftHand" }, 0.5),
+    ]).success,
+    true,
+  );
+  TestValidator.equals(
+    "the live resolver receives action.start",
+    sampledAt,
+    [0.5],
   );
 };

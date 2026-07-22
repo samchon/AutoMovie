@@ -23,6 +23,7 @@ import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
 import { actionRegion } from "../perform/actionRegion";
+import { bodyRegionBones } from "../perform/bodyRegionBones";
 import {
   IAutoMovieActionSynthesizer,
   compilePerformance,
@@ -237,6 +238,8 @@ export namespace IAutoMoviePerformedShot {
  *
  * @param props.skeleton Rig lookup for ROM validation; return null for a node
  *   that has no skeleton (its clip skips ROM).
+ * @param props.hasActorContext Optional actor-registry membership lookup. It
+ *   keeps a missing context distinct from a present context with no rig.
  * @param props.restFrames Optional per-node clinical rest-frame lookup. Supply
  *   the same frame table the renderer/player uses so `attachTo` objectMotions
  *   ride the visible posed bone, not raw rig-space FK.
@@ -247,6 +250,7 @@ export const performShot = (props: {
   performance: IAutoMoviePerformanceApplication.IWrite;
   synthesize: IAutoMovieActionSynthesizer;
   skeleton: (node: string) => IAutoMovieSkeleton | null;
+  hasActorContext?: (node: string) => boolean;
   restFrames?: (
     node: string,
   ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>> | undefined;
@@ -277,12 +281,26 @@ export const performShot = (props: {
     performance,
     synthesize,
     skeleton,
+    hasActorContext,
     restFrames,
     targetAt: resolveLiveTarget,
     gaits,
     blocking,
   } = props;
   const out = new ViolationCollector();
+  const synthesisCache = new WeakMap<
+    IAutoMovieActionCall,
+    Map<string, IAutoMovieMotion | null>
+  >();
+  const synthesizeOnce: IAutoMovieActionSynthesizer = (action, actor) => {
+    const cachedByActor = synthesisCache.get(action);
+    if (cachedByActor?.has(actor) === true) return cachedByActor.get(actor)!;
+    const motion = synthesize(action, actor);
+    const byActor = cachedByActor ?? new Map<string, IAutoMovieMotion | null>();
+    byActor.set(actor, motion);
+    synthesisCache.set(action, byActor);
+    return motion;
+  };
   const beatById = new Map<
     string,
     {
@@ -317,6 +335,9 @@ export const performShot = (props: {
       out.push("type", path, `${label} must be a non-empty id`, id);
   };
 
+  const nodeIds = new Set(staged.scene.nodes.map((n) => n.id));
+  const cameraIds = new Set(staged.scene.cameras.map((c) => c.id));
+
   const validateTargetNodeIds = (
     target: unknown,
     path: string,
@@ -334,17 +355,37 @@ export const performShot = (props: {
       validateNonEmptyId(target.node, `${path}.node`, `${label} bone node id`);
       validateNonEmptyId(target.bone, `${path}.bone`, `${label} bone id`);
       if (typeof target.node === "string" && typeof target.bone === "string") {
-        const rig = skeleton(target.node);
-        if (
-          rig === null ||
-          !rig.bones.some((bone) => bone.bone === target.bone)
-        )
+        if (!nodeIds.has(target.node))
           out.push(
             "type",
-            `${path}.bone`,
-            `bone "${target.bone}" is not carried by rigged staged actor "${target.node}"`,
-            target.bone,
+            `${path}.node`,
+            `bone target actor "${target.node}" must be a staged scene node`,
+            target.node,
           );
+        else if (hasActorContext !== undefined && !hasActorContext(target.node))
+          out.push(
+            "type",
+            `${path}.node`,
+            `staged bone target actor "${target.node}" has no actor context`,
+            target.node,
+          );
+        else {
+          const rig = skeleton(target.node);
+          if (rig === null)
+            out.push(
+              "type",
+              `${path}.bone`,
+              `staged bone target actor "${target.node}" has no rig`,
+              target.bone,
+            );
+          else if (!rig.bones.some((bone) => bone.bone === target.bone))
+            out.push(
+              "type",
+              `${path}.bone`,
+              `bone "${target.bone}" is not carried by rigged staged actor "${target.node}"`,
+              target.bone,
+            );
+        }
       }
       return true;
     }
@@ -394,9 +435,6 @@ export const performShot = (props: {
   const base =
     performance.revise.final !== null ? "$input.revise.final" : "$input.draft";
 
-  const nodeIds = new Set(staged.scene.nodes.map((n) => n.id));
-  const cameraIds = new Set(staged.scene.cameras.map((c) => c.id));
-
   // Every placed thing a target may name, cameras included (#1294): one table
   // shared with the reference synthesizer, so a target the gate accepts is a
   // target the performer can actually aim at.
@@ -410,12 +448,19 @@ export const performShot = (props: {
     path: string,
     label: string,
     subject: string,
+    seconds = 0,
   ): IAutoMovieVector3 | null => {
     if (!validateTargetNodeIds(target, path, label)) return null;
     const point =
-      resolveLiveTarget?.(target, 0) ??
+      resolveLiveTarget?.(target, seconds) ??
       resolveTargetPoint(target, nodePositions);
-    if (point === null || point === undefined) {
+    if (
+      point === null ||
+      point === undefined ||
+      !Number.isFinite(point.x) ||
+      !Number.isFinite(point.y) ||
+      !Number.isFinite(point.z)
+    ) {
       out.push(
         "type",
         path,
@@ -688,7 +733,19 @@ export const performShot = (props: {
             );
         });
       }
-      if (action.verb === "launch") {
+      if (action.verb === "locomote") {
+        const relative =
+          isRecord(action.to) &&
+          (action.to.kind === "direction" || action.to.kind === "offscreen");
+        if (!relative)
+          resolvePositionalTarget(
+            action.to,
+            `${base}[${i}].to`,
+            "locomote target",
+            "a locomote destination",
+            action.start,
+          );
+      } else if (action.verb === "launch") {
         // The projectile is a scene object, so it must be staged (its placed
         // position is where the flight begins), and the aim must resolve to a
         // point. A node aim also names the actor the hit recoils; a point/group
@@ -921,9 +978,10 @@ export const performShot = (props: {
       );
   }
 
-  // A body region can run only one authored action at a time. Disjoint partial
-  // regions may layer, but same-region overlaps would force arrangeMotion to
-  // drop keyframes, and fullBody owns every partial region.
+  // Overlapping actions are compatible when the content they actually carry
+  // after their region masks is disjoint. Region names are only mask policy:
+  // a fullBody gait that authors legs+arms shares nothing with a head-only
+  // lookAt, while that same gait really does collide with an arm gesture.
   const actorActions = new Map<
     string,
     { action: IAutoMovieActionCall; index: number }[]
@@ -937,6 +995,46 @@ export const performShot = (props: {
     }
   });
   for (const [actor, list] of actorActions) {
+    // Synthesis used to begin only after the complete input gate. Preserve that
+    // boundary: a malformed request must return its located violations rather
+    // than reaching a throwing content constructor during overlap inspection.
+    if (out.items.length > 0) continue;
+    const layered =
+      new Set(list.map(({ action }) => actionRegion(action))).size > 1;
+    const carried = new Map<
+      IAutoMovieActionCall,
+      {
+        bones: Set<AutoMovieHumanoidBone>;
+        expression: boolean;
+        root: boolean;
+      }
+    >();
+    const contentOf = (action: IAutoMovieActionCall) => {
+      const cached = carried.get(action);
+      if (cached !== undefined) return cached;
+      const motion = synthesizeOnce(action, actor);
+      const region = actionRegion(action);
+      const allowed = new Set(bodyRegionBones(region));
+      const content = {
+        bones: new Set<AutoMovieHumanoidBone>(),
+        expression: false,
+        root: false,
+      };
+      if (motion !== null)
+        for (const keyframe of motion.keyframes) {
+          for (const joint of keyframe.pose.joints)
+            if (allowed.has(joint.bone)) content.bones.add(joint.bone);
+          if (
+            keyframe.pose.root !== null &&
+            (!layered || region === "lowerBody" || region === "fullBody")
+          )
+            content.root = true;
+          if (keyframe.expression !== null && region === "face")
+            content.expression = true;
+        }
+      carried.set(action, content);
+      return content;
+    };
     const sorted = [...list].sort(
       (a, b) => spanOf(a.action)[0] - spanOf(b.action)[0],
     );
@@ -949,28 +1047,21 @@ export const performShot = (props: {
         const [b0, b1] = spanOf(b.action);
         if (b0 >= a1 - 1e-9) break;
         const bRegion = actionRegion(b.action);
-        const sameRegionConflict = aRegion === bRegion;
-        // `face` carries EXPRESSION only, no gesture clip authors it, so a
-        // fullBody action shares zero content with an overlapping emote and
-        // "smile while bowing" must stay legal (#1062). `head` stays in the
-        // conflict: whole-body clips may author head/neck joints.
-        const fullBodyConflict =
-          aRegion !== bRegion &&
-          (aRegion === "fullBody" || bRegion === "fullBody") &&
-          aRegion !== "face" &&
-          bRegion !== "face";
-        if (sameRegionConflict && b1 > a0 + 1e-9)
+        const aContent = contentOf(a.action);
+        const bContent = contentOf(b.action);
+        const sharedBones = [...aContent.bones]
+          .filter((bone) => bContent.bones.has(bone))
+          .sort(compareCodeUnits);
+        const shared = [
+          ...(aContent.root && bContent.root ? ["root"] : []),
+          ...sharedBones,
+          ...(aContent.expression && bContent.expression ? ["expression"] : []),
+        ];
+        if (shared.length > 0 && b1 > a0 + 1e-9)
           out.push(
             "range",
             `${base}[${b.index}].start`,
-            `${actor} has overlapping ${aRegion} actions; one body region cannot run two authored clips at the same time`,
-            b.action.start,
-          );
-        else if (fullBodyConflict && b1 > a0 + 1e-9)
-          out.push(
-            "range",
-            `${base}[${b.index}].start`,
-            `${actor} has overlapping ${aRegion} and ${bRegion} actions; fullBody cannot layer with a partial body region`,
+            `${actor} has overlapping ${aRegion} and ${bRegion} actions that both author ${shared.join(", ")} after region masking; move one action, shorten it, or author disjoint content`,
             b.action.start,
           );
       }
@@ -1238,7 +1329,7 @@ export const performShot = (props: {
         // reports every one of those drops once, at the same authoring paths.
         compilePerformance(
           stageActions.filter((action) => targetsNode(action)),
-          synthesize,
+          synthesizeOnce,
         ).performances[job.targetNode]!,
       );
     const result = compileLaunch({
@@ -1310,15 +1401,13 @@ export const performShot = (props: {
   }
   if (out.items.length > 0) return { success: false, violations: out.items };
 
-  const compiled = compilePerformance(stageActions, synthesize);
+  const compiled = compilePerformance(stageActions, synthesizeOnce);
   const motions = compiled.performances;
 
   // An authored channel the compiler does not apply is REPORTED (#1349). The
-  // region mask itself is deliberate (disjoint regions are what let a walk and
-  // a wave layer), but it used to discard content in silence: a retargeted
-  // quadruped's front legs ride the ARM chains, which `locomote`'s default
-  // `lowerBody` region excludes, so half the authored gait vanished and the
-  // shot still returned success with zero violations. The remedy is a field the
+  // region mask itself is deliberate, but it used to discard content in
+  // silence: for example, explicitly forcing a retargeted quadruped gait to
+  // `lowerBody` excludes its front-leg ARM chains. The remedy is a field the
   // author owns, so the violation points at `region` rather than at the clip.
   for (const drop of compiled.masked) {
     const path = stageActionPaths[drop.action]!;

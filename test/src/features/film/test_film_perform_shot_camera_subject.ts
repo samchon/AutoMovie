@@ -32,10 +32,9 @@ type ICoverage = IAutoMovieBlockingApplication.ICoverageIntent;
 
 /**
  * A pose marching the root `x` metres along model +X. The elbow rides along
- * only when the action's region owns it: a `locomote` runs on `lowerBody`,
- * which the arm chain is not part of, and a fixture that authored it anyway
- * would now be refused for content the compiler would drop (#1349). The root
- * (what this scenario actually reads) belongs to `lowerBody` either way.
+ * only when the action's region owns it. `locomote` now uses `fullBody`, so its
+ * synthesized elbow and root both survive; the root is what this scenario
+ * actually reads.
  */
 const march = (x: number, drivesBone: boolean) =>
   makePose(drivesBone ? [joint(FIXTURE_BONE, { flexion: 10 + x * 10 })] : [], {

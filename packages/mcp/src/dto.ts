@@ -140,6 +140,16 @@ export interface IAutoMovieMcpGeometryContext {
   /** Compiled motions, usually the `perform` output's `motions` record. */
   motions: Record<string, IAutoMovieMcpMotion>;
 
+  /**
+   * Per-actor clinical rest-frame tables, keyed by scene-node id. Omitted
+   * actors use the canonical humanoid frame; an explicit empty table selects
+   * raw rig-space angles for that actor.
+   */
+  actorRestFrames?: Record<
+    string,
+    NonNullable<IAutoMovieActorContext["restFrames"]>
+  >;
+
   /** Optional shot whose performances choose which motion each actor samples. */
   shot?: IAutoMovieShot | null;
 }
@@ -759,9 +769,9 @@ export interface IAutoMovieMcpActorContext {
    * Per-bone rest frames that let the IK/arm verbs (`reach`/`point`/`strike`)
    * emit their arm angles in **clinical** space, lifted by `sign·r + neutral`
    * so a downstream renderer reads them up through the same frames (abduction
-   * `180` raises either arm overhead regardless of side). Omit to have those
-   * verbs output raw rig-space angles; when supplied it must be paired with the
-   * same frames on the player.
+   * `180` raises either arm overhead regardless of side). Omission uses the
+   * canonical humanoid clinical frame; supply `{}` only for raw rig-space
+   * angles. A custom table must be paired with the same frames on the player.
    */
   restFrames?: IAutoMovieActorContext["restFrames"];
 }

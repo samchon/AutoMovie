@@ -5,6 +5,7 @@ import {
   IAutoMovieValidation,
 } from "@automovie/interface";
 
+import { cubicHermiteValue } from "../math/cubicHermite";
 import {
   AutoMovieLightProperty,
   LIGHT_CHANNEL_PROPERTIES,
@@ -874,13 +875,11 @@ export const appendLightMotionsArtifact = (
  * the staged light. A film must not be able to state through time what
  * `commitScene` refuses outright.
  *
- * `cubicspline` is deliberately exempt. Its `values` interleave in-tangent,
- * value, and out-tangent per keyframe, and a tangent is a derivative, not a
- * light value: range-checking one would refuse a legal spline. A spline's
- * in-between values can leave the keyframe hull in any case, which is a
- * property of the glTF sampler rather than of this axis, so the honest rule is
- * the one that is decidable — every stored value of a `step` or `linear` track,
- * whose samples are exactly the hull of its keys.
+ * A `cubicspline` interleaves in-tangent, value, and out-tangent per keyframe.
+ * Tangents are derivatives and remain unbounded; the key values and the curve
+ * they produce do not. Its interior extrema are the roots of the Hermite
+ * polynomial's derivative, evaluated through the SAME {@link cubicHermiteValue}
+ * playback uses (#1371).
  */
 const appendLightValueBounds = (
   track: Record<string, unknown>,
@@ -888,8 +887,11 @@ const appendLightValueBounds = (
   path: string,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
-  if (track.interpolation === "cubicspline") return;
   const { bounds } = LIGHT_CHANNEL_PROPERTIES[property];
+  if (track.interpolation === "cubicspline") {
+    appendCubicLightValueBounds(track, property, path, violations);
+    return;
+  }
   asArray(track.values).forEach((value, k) => {
     // Finiteness belongs to the shared track-shape contract
     // (`clipTrackShapeFaults`), which reports it at this very path. Adding a
@@ -905,4 +907,113 @@ const appendLightValueBounds = (
       bounds.inclusiveMin,
     );
   });
+};
+
+/** A finite scalar lies inside one light property's documented range. */
+const lightValueInBounds = (
+  value: number,
+  property: AutoMovieLightProperty,
+): boolean => {
+  const { min, max, inclusiveMin } = LIGHT_CHANNEL_PROPERTIES[property].bounds;
+  return (inclusiveMin ? value >= min : value > min) && value <= max;
+};
+
+/** Roots of `a*t² + b*t + c` strictly inside the normalized segment `(0, 1)`. */
+const interiorQuadraticRoots = (a: number, b: number, c: number): number[] => {
+  const epsilon = 1e-12;
+  const roots =
+    Math.abs(a) < epsilon
+      ? Math.abs(b) < epsilon
+        ? []
+        : [-c / b]
+      : (() => {
+          const discriminant = b * b - 4 * a * c;
+          if (discriminant < 0) return [];
+          const root = Math.sqrt(discriminant);
+          return root < epsilon
+            ? [-b / (2 * a)]
+            : [(-b - root) / (2 * a), (-b + root) / (2 * a)];
+        })();
+  return roots.filter((root) => root > 0 && root < 1);
+};
+
+/** Validate cubic key values and every interior Hermite extremum. */
+const appendCubicLightValueBounds = (
+  track: Record<string, unknown>,
+  property: AutoMovieLightProperty,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  const times = asArray(track.times);
+  const values = asArray(track.values);
+  const width =
+    LIGHT_CHANNEL_PROPERTIES[property].valueType === "scalar" ? 1 : 3;
+  const stride = width * 3;
+  // The shared clip-shape gate owns every malformed case. Stop here rather
+  // than deriving ranges from a stride or clock it has already refused.
+  if (
+    times.length === 0 ||
+    values.length !== times.length * stride ||
+    !times.every((time) => Number.isFinite(time)) ||
+    !values.every((value) => Number.isFinite(value)) ||
+    times.some(
+      (time, index) =>
+        index > 0 && !((time as number) > (times[index - 1] as number)),
+    )
+  )
+    return;
+
+  let keysInBounds = true;
+  for (let key = 0; key < times.length; ++key)
+    for (let component = 0; component < width; ++component) {
+      const index = key * stride + width + component;
+      const value = values[index] as number;
+      if (!lightValueInBounds(value, property)) keysInBounds = false;
+      validateRange(
+        value,
+        `${path}.values[${index}]`,
+        LIGHT_CHANNEL_PROPERTIES[property].bounds.min,
+        LIGHT_CHANNEL_PROPERTIES[property].bounds.max,
+        `light ${property}`,
+        violations,
+        LIGHT_CHANNEL_PROPERTIES[property].bounds.inclusiveMin,
+      );
+    }
+  if (!keysInBounds) return;
+
+  for (let segment = 0; segment + 1 < times.length; ++segment) {
+    const span = (times[segment + 1] as number) - (times[segment] as number);
+    for (let component = 0; component < width; ++component) {
+      const leftBase = segment * stride;
+      const rightBase = (segment + 1) * stride;
+      const left = values[leftBase + width + component] as number;
+      const outTangent = values[leftBase + 2 * width + component] as number;
+      const right = values[rightBase + width + component] as number;
+      const inTangent = values[rightBase + component] as number;
+      // Derivative of the shared Hermite cubic in normalized segment time.
+      const a =
+        6 * left + 3 * span * outTangent - 6 * right + 3 * span * inTangent;
+      const b =
+        -6 * left - 4 * span * outTangent + 6 * right - 2 * span * inTangent;
+      const c = span * outTangent;
+      for (const t of interiorQuadraticRoots(a, b, c)) {
+        const value = cubicHermiteValue(
+          left,
+          outTangent,
+          right,
+          inTangent,
+          span,
+          t,
+        );
+        if (lightValueInBounds(value, property)) continue;
+        pushViolation(
+          violations,
+          "range",
+          `${path}.values`,
+          `light ${property} cubicspline segment ${segment} component ${component} leaves its documented range at t=${t} (value ${value})`,
+          value,
+        );
+      }
+    }
+  }
 };

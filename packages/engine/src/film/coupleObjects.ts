@@ -56,10 +56,10 @@ const childrenOf = (action: IAutoMovieActionCall): string[] =>
  * Couplings CHAIN (#1140): a parent that is itself a coupled child this shot (a
  * knight mounted on a horse, carrying a lance) is baked FIRST, and its riders
  * compose onto its baked follow frame per sample instead of its staged
- * placement, through any depth, the same `followClipOf` read the beat-end uses
- * (#989 latest coupling). A coupling CYCLE has no world composition (nobody
- * stands on the ground), so it violates instead of baking frozen couplings
- * silently.
+ * placement, through any depth. The latest parent coupling is selected by its
+ * first track time rather than by an id suffix. A coupling CYCLE has no world
+ * composition (nobody stands on the ground), so it violates instead of baking
+ * frozen couplings silently.
  */
 export const coupleObjects = (props: {
   attachments: readonly IAttachJob[];
@@ -184,10 +184,10 @@ export const coupleObjects = (props: {
  * Bake one child's per-beat `attachTo` follows and their handoff events. A
  * handoff (the same child attached to two parents over disjoint spans) would
  * bake two clips with one `attach:<child>` id: an uncommittable shot and an
- * ambiguous beat-end follow (#989). Process the child's attachments in START
- * order and suffix repeats (`attach:<child>:2`, ...), so the FIRST occurrence
- * keeps the stable id and the HIGHEST suffix is always the latest coupling, the
- * one `resolveBeatEnd` should follow.
+ * duplicate artifact id (#989). Process the child's attachments in START order
+ * and suffix repeats (`attach:<child>:2`, ...), so the FIRST occurrence keeps
+ * the stable id. Runtime authority follows track start and producer order, not
+ * the spelling of this uniqueness suffix.
  */
 const bakeAttachFollows = (
   child: string,

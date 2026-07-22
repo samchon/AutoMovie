@@ -19,6 +19,7 @@ import {
 import {
   AutoMoviePlayer,
   applyObjectMotion,
+  applyObjectMotions,
   buildModel,
   mountViewer,
 } from "@automovie/viewer";
@@ -287,8 +288,9 @@ const renderAt = (seconds: number): void => {
   // objectMotions: world-space node clips (the arrow's flight). Drive the
   // object's group transform straight from the sampled clip: the read side of
   // compileLaunch/projectileTrajectory.
-  for (const clip of live.objectMotions)
-    applyObjectMotion(clip, sample.time, (node) => groupsById.get(node));
+  applyObjectMotions(live.objectMotions, sample.time, (node) =>
+    groupsById.get(node),
+  );
   if (live.cameraMotion === null) applyStagedCamera();
   else applyObjectMotion(live.cameraMotion, sample.time, () => camera);
 };

@@ -50,7 +50,7 @@ export const test_mcp_action_target_offscreen = (): void => {
     const output = app.measureDistance({
       scene,
       from: { kind: "node", node: "marker" },
-      to: { kind: "offscreen", edge },
+      to: { kind: "offscreen", edge } as never,
     });
     TestValidator.predicate(
       `offscreen edge "${edge}" answers the relative-kind reason`,

@@ -51,6 +51,7 @@ const locomote = (actor: string | string[]): IAutoMovieActionCall => ({
   actor,
   start: 0,
   duration: 1,
+  region: "lowerBody",
   gait: "walk",
   to: { kind: "point", point: { x: 0, y: 0, z: 1 } },
 });

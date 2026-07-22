@@ -27,6 +27,7 @@ import {
   IAutoMovieRenderModeHandle,
   applyCaptureCanvasSize,
   applyObjectMotion,
+  applyObjectMotions,
   applyPose,
   applyRenderMode,
   buildLight,
@@ -501,8 +502,7 @@ const poseShot = (shot: IAutoMovieShot, time: number): void => {
     );
   }
   for (const { player } of playersByShot.get(shot.id)!) player.update(time);
-  for (const clip of shot.objectMotions)
-    applyObjectMotion(clip, time, (node) => groupsById.get(node));
+  applyObjectMotions(shot.objectMotions, time, (node) => groupsById.get(node));
   if (shot.cameraMotion === null) applyStagedCamera();
   else applyObjectMotion(shot.cameraMotion, time, () => camera);
 };

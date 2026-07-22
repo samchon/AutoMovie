@@ -172,7 +172,7 @@ export const test_mcp_geometry_query_tools = (): void => {
     "relative target is not measurable",
     app.measureDistance({
       scene,
-      from: { kind: "direction", headingDeg: 90 },
+      from: { kind: "direction", headingDeg: 90 } as never,
       to: { kind: "node", node: "actor" },
     }).measurement,
     null,
@@ -425,7 +425,7 @@ export const test_mcp_geometry_query_tools = (): void => {
         app.getReach({
           context,
           actor: "actor",
-          target: { kind: "direction", headingDeg: 90 },
+          target: { kind: "direction", headingDeg: 90 } as never,
         }),
       ).includes('a target of kind "direction" is relative') &&
       reasonOf(
@@ -440,7 +440,7 @@ export const test_mcp_geometry_query_tools = (): void => {
       reasonOf(
         app.measureDistance({
           scene,
-          from: { kind: "direction", headingDeg: 0 },
+          from: { kind: "direction", headingDeg: 0 } as never,
           to: { kind: "node", node: "marker" },
         }),
       ).includes("the from target must resolve to a point") &&
@@ -617,7 +617,7 @@ export const test_mcp_geometry_query_tools = (): void => {
     app.getReach({
       context,
       actor: "actor",
-      target: { kind: "offscreen", edge: "left" },
+      target: { kind: "offscreen", edge: "left" } as never,
     }).reach,
     null,
   );
@@ -688,6 +688,13 @@ export const test_mcp_geometry_query_tools = (): void => {
         residentReach.reachable &&
         residentReach.left !== null &&
         nclose(residentReach.left.gap, 0),
+    );
+    TestValidator.predicate(
+      "resident reach resolves a live bone target through resident geometry",
+      resident.getReach({
+        actor: "actor",
+        target: { kind: "bone", node: "actor", bone: "leftHand" },
+      }).reach !== null,
     );
 
     // No actor was ever performed here, so no `actors/<node>.json` rig exists

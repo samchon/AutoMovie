@@ -14,7 +14,11 @@ import { IAutoMovieProfileApplication, bindProfile } from "./bindProfile";
 import { channelKey } from "./channel";
 import { composeScene } from "./composeScene";
 import { resolveDrivers } from "./resolveDrivers";
-import { IAutoMovieSampledChannel, sampleClip } from "./sampleClip";
+import {
+  IAutoMovieSampledChannel,
+  sampleClip,
+  sampleClipSequence,
+} from "./sampleClip";
 import {
   IAutoMovieSpringSphere,
   IAutoMovieSpringState,
@@ -55,8 +59,11 @@ export interface IAutoMovieResolveInput {
   /** The scene graph: nodes with parent-local rest transforms. */
   nodes: IAutoMovieNode[];
 
-  /** The clip animating the scene this frame, or `null` for the rest pose. */
-  clip: IAutoMovieClip | null;
+  /**
+   * The clip(s) animating this frame, or `null` for the rest pose. A sequence
+   * resolves duplicate channels by their track start time and producer order.
+   */
+  clip: IAutoMovieClip | readonly IAutoMovieClip[] | null;
 
   /** Channel limits to clamp sampled values against (generalized ROM). */
   limits: IAutoMovieChannelLimit[];
@@ -144,7 +151,11 @@ export const resolveFrame = (
   input: IAutoMovieResolveInput,
 ): IAutoMovieResolveOutput => {
   const sampled: Map<string, IAutoMovieSampledChannel> =
-    input.clip === null ? new Map() : sampleClip(input.clip, input.seconds);
+    input.clip === null
+      ? new Map()
+      : Array.isArray(input.clip)
+        ? sampleClipSequence(input.clip, input.seconds)
+        : sampleClip(input.clip as IAutoMovieClip, input.seconds);
 
   // Bind applied profiles and merge: profile-bound limits/drivers first, the
   // caller's direct inputs after (the caller's word is final: a direct limit
