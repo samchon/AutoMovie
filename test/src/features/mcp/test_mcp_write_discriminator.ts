@@ -38,7 +38,7 @@ const withoutType = (value: object): Record<string, unknown> => {
  * 2. Regression. The same call supplying `type: "write"` still succeeds, so the
  *    habit five sessions formed keeps working.
  * 3. Boundary. A wrong literal (`type: "decline"`, the other union arm's tag) is
- *    still refused, at its own `$input.script.type` path.
+ *    still refused, at its own `$input.call.input.script.type` path.
  * 4. Negative twin. Input strictness was not widened generally: an excess property
  *    on the same payload is still refused where it was written, which is the
  *    guarantee #1340 bought.
@@ -75,7 +75,8 @@ export const test_mcp_write_discriminator = async (): Promise<void> => {
     });
     TestValidator.predicate(
       "a wrong literal is refused at its own path",
-      declined.refused && declined.text.includes("$input.script.type"),
+      declined.refused &&
+        declined.text.includes("$input.call.input.script.type"),
     );
 
     // 4. NEGATIVE TWIN: strictness elsewhere is unchanged
@@ -86,7 +87,7 @@ export const test_mcp_write_discriminator = async (): Promise<void> => {
     TestValidator.predicate(
       "an excess property on the same payload is still refused",
       excess.refused &&
-        excess.text.includes("$input.script.bogusScriptField") &&
+        excess.text.includes("$input.call.input.script.bogusScriptField") &&
         excess.text.includes("is not defined in the object type"),
     );
   } finally {

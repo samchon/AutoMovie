@@ -75,7 +75,10 @@ const call = async <T>(
   args: Record<string, unknown>,
 ): Promise<T> => {
   const result = await client.callTool(
-    { name, arguments: args },
+    {
+      name: "execute",
+      arguments: { call: { operation: name, input: args } },
+    },
     undefined,
     REQUEST_OPTIONS,
   );
@@ -92,7 +95,15 @@ const call = async <T>(
     Array.isArray(content) &&
       content.some((part) => part.type === "text" && (part.text ?? "") !== ""),
   );
-  return result.structuredContent as T;
+  const gateway = result.structuredContent as {
+    result: { operation: string; output: T };
+  };
+  TestValidator.equals(
+    `execute returns the requested operation: ${name}`,
+    gateway.result.operation,
+    name,
+  );
+  return gateway.result.output;
 };
 
 const actorContext = (
@@ -124,13 +135,15 @@ const assemble = (shot: string): IAutoMovieAssembleApplication.IWrite => ({
  *
  * Scenarios:
  *
- * 1. A real stdio client sees the AutoMovie stage, slate-query, geometry-query,
- *    and validation tools.
- * 2. The render, caption, and pose-keypoint tools expose one identical nested
- *    frame-format contract, with no legacy top-level dimension fields.
- * 3. The same client calls `stage -> getScene/measureDistance/validateScene ->
- *    forge -> block -> perform -> cut`, feeding structured outputs forward and
- *    receiving a successful final sequence.
+ * 1. A real stdio client sees the four compact entry points, while the explicit
+ *    compatibility server retains the complete 45-name inventory.
+ * 2. On that granular compatibility surface, render, caption, and pose-keypoint
+ *    operations expose one identical nested frame-format contract with no
+ *    legacy top-level dimension fields.
+ * 3. Through the compact `execute` tool the same client calls `stage ->
+ *    getScene/measureDistance/validateScene -> forge -> block -> perform ->
+ *    cut`, feeding structured outputs forward and receiving a successful final
+ *    sequence.
  */
 export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
   const { client, tools } = await openMcpStdio("automovie-test");
@@ -138,110 +151,125 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     TestValidator.equals(
       "tool names",
       tools.map((tool) => tool.name).sort(compareCodeUnits),
-      [
-        "block",
-        "commitBeatEnd",
-        "commitFilm",
-        "commitNotes",
-        "commitScene",
-        "commitScript",
-        "commitShot",
-        "cut",
-        "eraseActor",
-        "eraseNotes",
-        "eraseProp",
-        "eraseShot",
-        "forge",
-        "forgeProp",
-        "getBeatEnd",
-        "getGuideDocument",
-        "getNotes",
-        "getReach",
-        "getResolvedPose",
-        "getResolvedPropFrame",
-        "getScene",
-        "getScript",
-        "getShot",
-        "getShotEndState",
-        "getSlate",
-        "lintContinuity",
-        "measureDistance",
-        "nextSteps",
-        "openProject",
-        "perform",
-        "planCaptions",
-        "planChunkedRender",
-        "planPoseKeypoints",
-        "planRender",
-        "registerAsset",
-        "seeFrame",
-        "setActorPerformance",
-        "setPlacement",
-        "stage",
-        "validateModel",
-        "validateMotion",
-        "validatePose",
-        "validateScene",
-        "validateSequence",
-        "validateShot",
-      ],
+      ["execute", "getGuideDocument", "nextSteps", "openProject"],
     );
 
-    const toolSchema = (name: string): IJsonSchema => {
-      const schema = tools.find((tool) => tool.name === name)?.inputSchema;
-      if (schema === undefined)
-        throw new Error(`tool schema not found: ${name}`);
-      return schema as IJsonSchema;
-    };
-    const renderRoot = toolSchema("planRender");
-    const captionRoot = toolSchema("planCaptions");
-    const poseRoot = toolSchema("planPoseKeypoints");
-    const renderSpecSchema = schemaProperty(renderRoot, renderRoot, "spec");
-    const formats = [
-      schemaProperty(renderRoot, renderSpecSchema, "frameFormat"),
-      schemaProperty(captionRoot, captionRoot, "frameFormat"),
-      schemaProperty(poseRoot, poseRoot, "frameFormat"),
-    ];
-    for (const [index, format] of formats.entries()) {
+    const granular = await openMcpStdio("automovie-granular-test", {
+      surface: "granular",
+    });
+    const granularTools = granular.tools;
+    try {
       TestValidator.equals(
-        `frame format ${index} property names`,
-        Object.keys(format.properties ?? {}).sort(compareCodeUnits),
-        ["fps", "height", "width"],
+        "granular compatibility tool names",
+        granularTools.map((tool) => tool.name).sort(compareCodeUnits),
+        [
+          "block",
+          "commitBeatEnd",
+          "commitFilm",
+          "commitNotes",
+          "commitScene",
+          "commitScript",
+          "commitShot",
+          "cut",
+          "eraseActor",
+          "eraseNotes",
+          "eraseProp",
+          "eraseShot",
+          "forge",
+          "forgeProp",
+          "getBeatEnd",
+          "getGuideDocument",
+          "getNotes",
+          "getReach",
+          "getResolvedPose",
+          "getResolvedPropFrame",
+          "getScene",
+          "getScript",
+          "getShot",
+          "getShotEndState",
+          "getSlate",
+          "lintContinuity",
+          "measureDistance",
+          "nextSteps",
+          "openProject",
+          "perform",
+          "planCaptions",
+          "planChunkedRender",
+          "planPoseKeypoints",
+          "planRender",
+          "registerAsset",
+          "seeFrame",
+          "setActorPerformance",
+          "setPlacement",
+          "stage",
+          "validateModel",
+          "validateMotion",
+          "validatePose",
+          "validateScene",
+          "validateSequence",
+          "validateShot",
+        ],
       );
-      TestValidator.equals(
-        `frame format ${index} required fields`,
-        [...(format.required ?? [])].sort(compareCodeUnits),
-        ["fps", "height", "width"],
-      );
-      TestValidator.equals(
-        `frame format ${index} property types`,
-        Object.fromEntries(
-          Object.entries(format.properties ?? {}).map(([key, value]) => [
-            key,
-            value.type,
-          ]),
-        ),
-        { fps: "number", width: "number", height: "number" },
-      );
-      TestValidator.equals(
-        `frame format ${index} rejects extra fields`,
-        format.additionalProperties,
-        false,
-      );
+
+      const toolSchema = (name: string): IJsonSchema => {
+        const schema = granularTools.find((tool) => tool.name === name)
+          ?.inputSchema;
+        if (schema === undefined)
+          throw new Error(`tool schema not found: ${name}`);
+        return schema as IJsonSchema;
+      };
+      const renderRoot = toolSchema("planRender");
+      const captionRoot = toolSchema("planCaptions");
+      const poseRoot = toolSchema("planPoseKeypoints");
+      const renderSpecSchema = schemaProperty(renderRoot, renderRoot, "spec");
+      const formats = [
+        schemaProperty(renderRoot, renderSpecSchema, "frameFormat"),
+        schemaProperty(captionRoot, captionRoot, "frameFormat"),
+        schemaProperty(poseRoot, poseRoot, "frameFormat"),
+      ];
+      for (const [index, format] of formats.entries()) {
+        TestValidator.equals(
+          `frame format ${index} property names`,
+          Object.keys(format.properties ?? {}).sort(compareCodeUnits),
+          ["fps", "height", "width"],
+        );
+        TestValidator.equals(
+          `frame format ${index} required fields`,
+          [...(format.required ?? [])].sort(compareCodeUnits),
+          ["fps", "height", "width"],
+        );
+        TestValidator.equals(
+          `frame format ${index} property types`,
+          Object.fromEntries(
+            Object.entries(format.properties ?? {}).map(([key, value]) => [
+              key,
+              value.type,
+            ]),
+          ),
+          { fps: "number", width: "number", height: "number" },
+        );
+        TestValidator.equals(
+          `frame format ${index} rejects extra fields`,
+          format.additionalProperties,
+          false,
+        );
+      }
+      for (const [label, schema] of [
+        ["render spec", renderSpecSchema],
+        ["caption input", captionRoot],
+        ["pose input", poseRoot],
+      ] as const)
+        TestValidator.equals(
+          `${label} has no legacy frame fields`,
+          ["fps", "width", "height"].filter(
+            (field) =>
+              resolveSchema(schema, schema).properties?.[field] !== undefined,
+          ),
+          [],
+        );
+    } finally {
+      await granular.client.close();
     }
-    for (const [label, schema] of [
-      ["render spec", renderSpecSchema],
-      ["caption input", captionRoot],
-      ["pose input", poseRoot],
-    ] as const)
-      TestValidator.equals(
-        `${label} has no legacy frame fields`,
-        ["fps", "width", "height"].filter(
-          (field) =>
-            resolveSchema(schema, schema).properties?.[field] !== undefined,
-        ),
-        [],
-      );
 
     const script = makeScriptWrite();
     const scriptArtifact: IAutoMovieScript = {

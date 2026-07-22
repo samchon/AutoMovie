@@ -63,6 +63,9 @@ const assert = (name, condition, detail) => {
 };
 
 const bin = path.resolve("node_modules/@automovie/mcp/lib/bin.js");
+const granularBin = path.resolve(
+  "node_modules/@automovie/mcp/lib/bin-granular.js",
+);
 const projectRoot = path.resolve("automovie-project");
 const transport = new StdioClientTransport({
   command: process.execPath,
@@ -88,13 +91,12 @@ try {
   );
 
   const { tools } = await client.listTools();
-  // Floor, not an exact pin. test_mcp_stdio_roundtrip pins the full list.
   assert(
     "tool-count",
-    tools.length >= 30,
-    \`expected at least 30 tools, got \${tools.length}\`,
+    tools.length === 4,
+    \`expected 4 compact tools, got \${tools.length}\`,
   );
-  for (const name of ["getGuideDocument", "openProject", "nextSteps", "stage", "perform", "cut"])
+  for (const name of ["execute", "getGuideDocument", "openProject", "nextSteps"])
     assert(
       \`tool-present:\${name}\`,
       tools.some((tool) => tool.name === name),
@@ -151,8 +153,53 @@ try {
     next.isError !== true && nextText.length > 0,
     nextText.slice(0, 300),
   );
+
+  const slate = await client.callTool({
+    name: "execute",
+    arguments: { call: { operation: "getSlate", input: {} } },
+  });
+  const slateResult = slate.structuredContent?.result;
+  assert(
+    "execute-operation",
+    slate.isError !== true &&
+      slateResult?.operation === "getSlate" &&
+      slateResult.output?.slate !== undefined,
+    (slate.content?.[0]?.text ?? "").slice(0, 300),
+  );
 } finally {
   await client.close();
+}
+
+assert(
+  "granular-bin-target",
+  existsSync(granularBin),
+  "the compatibility binary is missing",
+);
+const granularTransport = new StdioClientTransport({
+  command: process.execPath,
+  args: [granularBin],
+  stderr: "pipe",
+});
+const granular = new Client({
+  name: "automovie-tgz-e2e-granular",
+  version: "0.0.0",
+});
+await granular.connect(granularTransport);
+try {
+  const { tools } = await granular.listTools();
+  assert(
+    "granular-tool-count",
+    tools.length === 45,
+    \`expected 45 granular tools, got \${tools.length}\`,
+  );
+  for (const name of ["stage", "perform", "cut"])
+    assert(
+      \`granular-tool-present:\${name}\`,
+      tools.some((tool) => tool.name === name),
+      "tool missing from compatibility tools/list",
+    );
+} finally {
+  await granular.close();
 }
 `;
 
@@ -207,6 +254,21 @@ try {
   if (!existsSync(binTarget))
     fail(`packed artifact is missing the bin target: ${binTarget}`);
   console.log("✓ bin-target: lib/bin.js present in the installed package");
+  const granularBinTarget = join(
+    projectDir,
+    "node_modules",
+    "@automovie",
+    "mcp",
+    "lib",
+    "bin-granular.js",
+  );
+  if (!existsSync(granularBinTarget))
+    fail(
+      `packed artifact is missing the granular bin target: ${granularBinTarget}`,
+    );
+  console.log(
+    "✓ granular-bin-target: lib/bin-granular.js present in the installed package",
+  );
 
   // 4. Drive the packaged server as a real MCP client. The client runs with
   //    the fresh project as cwd so @modelcontextprotocol/sdk resolves from

@@ -47,7 +47,8 @@ const propModel = (): IAutoMovieModel => ({
  * property was discarded, while on an object the engine echoes into its result
  * the same property survived into the output, failed OUTPUT validation, and
  * threw. The error then blamed the tool's output for the caller's input, at a
- * path prefixed `$input.forged.` where the caller had written `$input.forge.`.
+ * path prefixed `$input.forged.` where the caller had written
+ * `$input.call.input.forge.` on the compact gateway.
  *
  * The fix is at the boundary, not in the diagnostics: the controller validates
  * with typia's `validateEquals`, so an excess property is refused where it was
@@ -63,8 +64,8 @@ const propModel = (): IAutoMovieModel => ({
  * 2. An excess property on an INPUT-ONLY object is refused, named at its own input
  *    path.
  * 3. An excess property on an ECHOED object is refused at its own INPUT path
- *    (`$input.spec.model...`), not at the output wrapper's, so the blame points
- *    where the author can act.
+ *    (`$input.call.input.spec.model...`), not at the output wrapper's, so the
+ *    blame points where the author can act.
  * 4. Probes 2 and 3 give the SAME verdict as each other. That equality is the
  *    whole issue: the two are one mistake in two places.
  * 5. Boundary, depth: top-level, array-element, and deeply-nested excess
@@ -100,7 +101,7 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
     TestValidator.predicate(
       "an excess property on an input-only object is refused where it was written",
       inputOnly.refused &&
-        inputOnly.text.includes("$input.spec.bogusInputOnlyField") &&
+        inputOnly.text.includes("$input.call.input.spec.bogusInputOnlyField") &&
         inputOnly.text.includes("is not defined in the object type"),
     );
 
@@ -123,7 +124,9 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
     TestValidator.predicate(
       "an excess property on an echoed object is refused at its INPUT path",
       echoed.refused &&
-        echoed.text.includes("$input.spec.model.materials[0].baseColor.z") &&
+        echoed.text.includes(
+          "$input.call.input.spec.model.materials[0].baseColor.z",
+        ) &&
         // the blame no longer lands on the output wrapper it used to name
         echoed.text.includes("$input.forged.") === false &&
         echoed.text.includes('Type errors in "forgeProp" output:') === false,
@@ -144,7 +147,8 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
     });
     TestValidator.predicate(
       "a top-level excess property is refused",
-      topLevel.refused && topLevel.text.includes("$input.bogusTopLevel"),
+      topLevel.refused &&
+        topLevel.text.includes("$input.call.input.bogusTopLevel"),
     );
     const nested = await probeMcpTool(client, "validatePose", {
       pose: { skeleton: "s", root: null, joints: [], bogusNested: 1 },
@@ -152,7 +156,8 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
     });
     TestValidator.predicate(
       "a nested excess property on a non-echoing tool is refused too",
-      nested.refused && nested.text.includes("$input.pose.bogusNested"),
+      nested.refused &&
+        nested.text.includes("$input.call.input.pose.bogusNested"),
     );
     const inArray = await probeMcpTool(client, "validatePose", {
       pose: {
@@ -166,7 +171,8 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
     });
     TestValidator.predicate(
       "an excess property inside an array element is refused at its index",
-      inArray.refused && inArray.text.includes("$input.pose.joints[0].bogus"),
+      inArray.refused &&
+        inArray.text.includes("$input.call.input.pose.joints[0].bogus"),
     );
 
     // 6. NEGATIVE TWIN: a real missing field still reads the way it always did
@@ -176,7 +182,7 @@ export const test_mcp_input_strictness = async (): Promise<void> => {
     TestValidator.predicate(
       "a missing required field still fails at its own path, unchanged",
       missing.refused &&
-        missing.text.includes("$input.spec.model") &&
+        missing.text.includes("$input.call.input.spec.model") &&
         missing.text.includes("Please fill the"),
     );
   } finally {

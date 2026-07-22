@@ -200,7 +200,9 @@ export const test_mcp_geometry_bone_target = async (): Promise<void> => {
       .reason?.includes("does not resolve") === true,
   );
 
-  const { client, tools } = await openMcpStdio("automovie-test");
+  const { client, tools } = await openMcpStdio("automovie-test", {
+    surface: "granular",
+  });
   try {
     const getReach = tools.find((tool) => tool.name === "getReach")
       ?.inputSchema as ISchema | undefined;

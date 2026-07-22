@@ -195,7 +195,9 @@ export const test_mcp_dto_doc_parity = async (): Promise<void> => {
   TestValidator.equals("no mirrored field has lost a constraint", drift, []);
 
   // 1-2, 6. the generated schema an agent actually reads
-  const { client, tools } = await openMcpStdio("automovie-test");
+  const { client, tools } = await openMcpStdio("automovie-test", {
+    surface: "granular",
+  });
   try {
     const perform = tools.find((tool) => tool.name === "perform");
     if (perform === undefined) throw new Error("the perform tool must exist");

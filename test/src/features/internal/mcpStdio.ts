@@ -51,11 +51,19 @@ export interface IAutoMovieMcpStdioSession {
  */
 export const openMcpStdio = async (
   name: string,
+  options?: {
+    /** Select the 45-tool compatibility surface instead of the compact default. */
+    surface?: "compact" | "granular";
+  },
 ): Promise<IAutoMovieMcpStdioSession> => {
   const client = new Client({ name, version: "0.0.0" });
   const transport = new StdioClientTransport({
     command: "pnpm",
-    args: ["--filter", "@automovie/mcp", "start"],
+    args: [
+      "--filter",
+      "@automovie/mcp",
+      options?.surface === "granular" ? "start:granular" : "start",
+    ],
   });
   await client.connect(transport, { timeout: MCP_STARTUP_TIMEOUT });
   const { tools } = await client.listTools(undefined, {
@@ -74,23 +82,29 @@ export interface IAutoMovieMcpProbe {
 }
 
 /**
- * Call one tool and read the verdict the way a client sees it: refused or not,
- * plus the joined text of every content part.
+ * Call one compact-gateway operation and read the verdict the way a client
+ * sees it: refused or not, plus the joined text of every content part.
  *
- * Input validation is only observable through a real client (an in-process
- * `AutoMovieApplication` call bypasses typia entirely), so every scenario that
- * pins a boundary refusal needs this read. It lives here beside the spawn and
- * the budgets for the same reason they do: restating it per scenario is how two
- * copies of one observation drift apart.
+ * The helper wraps the operation in `execute.call`, the public compact wire
+ * shape. Input validation is only observable through a real client (an
+ * in-process `AutoMovieApplication` call bypasses typia entirely), so every
+ * scenario that pins a boundary refusal needs this read. It lives here beside
+ * the spawn and the budgets for the same reason they do: restating it per
+ * scenario is how two copies of one observation drift apart.
  */
 export const probeMcpTool = async (
   client: Client,
   name: string,
   args: Record<string, unknown>,
 ): Promise<IAutoMovieMcpProbe> => {
-  const result = await client.callTool({ name, arguments: args }, undefined, {
-    timeout: MCP_REQUEST_TIMEOUT,
-  });
+  const result = await client.callTool(
+    {
+      name: "execute",
+      arguments: { call: { operation: name, input: args } },
+    },
+    undefined,
+    { timeout: MCP_REQUEST_TIMEOUT },
+  );
   const content = (result.content ?? []) as { text?: string }[];
   return {
     refused: result.isError === true,

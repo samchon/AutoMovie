@@ -4,6 +4,7 @@ import path from "node:path";
 import typia from "typia";
 
 import { AutoMovieApplication } from "./AutoMovieApplication";
+import { AutoMovieGatewayApplication } from "./AutoMovieGatewayApplication";
 import { AutoMovieMcpFrameCapture } from "./dto";
 
 /**
@@ -18,11 +19,13 @@ const MCP_PACKAGE_VERSION = (
 ).version;
 
 /**
- * Build the AutoMovie MCP server: wrap {@link AutoMovieApplication} in a
- * `typia.llm.controller` (which derives each method's validated tool schema at
- * compile time) and hand it to `@typia/mcp`'s `createMcpServer`. Connect the
- * returned server to a transport, `StdioServerTransport` for a spawned
- * subprocess (see `bin.ts`).
+ * Build the default compact AutoMovie MCP server: wrap
+ * {@link AutoMovieGatewayApplication} in a `typia.llm.controller` and hand it
+ * to `@typia/mcp`'s `createMcpServer`. The gateway keeps the three operating
+ * entry points independent and places the other operations in one typed
+ * `execute` union, so clients receive the shared schema graph once instead of
+ * once per method. Connect the returned server to a transport,
+ * `StdioServerTransport` for a spawned subprocess (see `bin.ts`).
  *
  * A host that owns a renderer can inject a `capture` adapter so `seeFrame`
  * returns real pixels; the plain stdio binary has none and `seeFrame` reports
@@ -35,9 +38,9 @@ const MCP_PACKAGE_VERSION = (
  * @author Samchon
  */
 export const createAutoMovieMcpServer = (props?: {
-  /** Host-owned frame capture used by `seeFrame`. */
+  /** Host-owned frame capture used by the `seeFrame` operation. */
   capture?: AutoMovieMcpFrameCapture;
-  /** Project root to activate at startup (#614); tools may also openProject. */
+  /** Project root to activate at startup (#614); clients may also openProject. */
   projectRoot?: string;
 }): McpServer =>
   createMcpServer(
@@ -51,9 +54,9 @@ export const createAutoMovieMcpServer = (props?: {
     // when the caller had written `$input.forge.`. Strict input makes the blame
     // path correct by construction: the property is named where it was written,
     // before the engine runs, and every tool answers the same way.
-    typia.llm.controller<AutoMovieApplication, { equals: true }>(
+    typia.llm.controller<AutoMovieGatewayApplication, { equals: true }>(
       "automovie",
-      new AutoMovieApplication(props),
+      new AutoMovieGatewayApplication(props),
     ),
     // Ship the serialized-JSON text block beside `structuredContent` on every
     // successful result. @typia/mcp 13.1.x defaults this off (structured-only),
@@ -61,5 +64,27 @@ export const createAutoMovieMcpServer = (props?: {
     // advertises "any MCP client", so a client that reads `content` text and
     // ignores `outputSchema` must still receive the result. This restores the
     // pre-bump wire contract; the doubled payload is the cost of that reach.
+    { version: MCP_PACKAGE_VERSION, textFallback: true },
+  );
+
+/**
+ * Build the legacy fine-grained MCP surface with one advertised tool per
+ * {@link AutoMovieApplication} method. Prefer {@link createAutoMovieMcpServer}
+ * for external clients: this compatibility surface repeats the shared schema
+ * closure per tool and can exceed ordinary model context windows.
+ *
+ * @author Samchon
+ */
+export const createAutoMovieGranularMcpServer = (props?: {
+  /** Host-owned frame capture used by `seeFrame`. */
+  capture?: AutoMovieMcpFrameCapture;
+  /** Project root to activate at startup; tools may also openProject. */
+  projectRoot?: string;
+}): McpServer =>
+  createMcpServer(
+    typia.llm.controller<AutoMovieApplication, { equals: true }>(
+      "automovie",
+      new AutoMovieApplication(props),
+    ),
     { version: MCP_PACKAGE_VERSION, textFallback: true },
   );

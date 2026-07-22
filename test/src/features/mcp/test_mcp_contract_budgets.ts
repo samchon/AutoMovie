@@ -60,23 +60,18 @@ const closureChars = (schema: unknown): number => {
  * descriptions, which are budgeted separately; the raw JSON-RPC line is a few
  * tens of characters larger.
  *
- * The number is a CEILING, not a target. It was set from the measured surface
- * with less headroom than one more inlined `$defs` closure, which is the
- * property scenario 5 pins directly, so the next tool that pulls in another
- * slate-sized closure fails here instead of shipping.
+ * The number is a CEILING, not a target. It leaves measured room for additive
+ * fields in the one shared graph, but less headroom than another inlined
+ * `$defs` closure, which is the property scenario 5 pins directly.
  */
-// #1380 deliberately added the previously missing bone-target capability to
-// the geometry/reach closure. Its measured 1,364-character cost is part of the
-// public contract, not accidental closure duplication; retain a narrow margin
-// until #1337's benchmark campaign attacks the megabyte-scale startup shape.
-const SCHEMA_PAYLOAD_BUDGET = 2_745_000;
+const SCHEMA_PAYLOAD_BUDGET = 500_000;
 
 /**
- * Per-tool schema ceiling, same counting rule over one tool. `perform` is the
- * heaviest and the reason this is separate: a total-only budget lets one tool
- * absorb the whole allowance while every other tool stays small.
+ * Per-tool schema ceiling, same counting rule over one tool. `execute` owns the
+ * shared graph and is deliberately allowed most, but not all, of the total:
+ * a total-only budget could hide an accidental second large entry point.
  */
-const PER_TOOL_SCHEMA_BUDGET = 155_000;
+const PER_TOOL_SCHEMA_BUDGET = 475_000;
 
 /**
  * The MCP surface's HARD budgets, machine-enforced. Tool descriptions and the
@@ -86,18 +81,18 @@ const PER_TOOL_SCHEMA_BUDGET = 155_000;
  * before the first call, and a double-encoding artifact (mojibake) reads as
  * garbage.
  *
- * The SCHEMA half was unmeasured, and it is 160x larger (#1337). A benchmark
- * run found the advertised surface at 2.67 MB / ~747k input tokens: a
- * 200k-context client connects, reports 44 tools, and then fails every request
- * at the model API with nothing in its log implicating automovie. The per-tool
- * `$defs` inlining that multiplies a ~220 KB type universe into megabytes is
- * the MCP protocol's (there is no cross-tool `$ref` sharing), but the growth is
- * this repository's, and it had no back-pressure at all: the budget scenario
- * measured the prose, which is 0.6% of what ships.
+ * The SCHEMA half was unmeasured, and it grew 160x larger than the prose
+ * (#1337). A packaged benchmark found the 45-tool surface at 2.74 MB / about
+ * 567k client-estimated tokens: a 200k-context client connected, received all
+ * tools, and then failed every request before inference. The compact gateway
+ * now advertises the shared type graph once: three small operating entry points
+ * plus one discriminated execution tool fit in about 427 KB / 81k measured
+ * cache-creation tokens on the same client, with the granular surface retained
+ * as an explicit compatibility binary.
  *
- * These assertions are that back-pressure. They do not by themselves make the
- * surface small; they make it impossible to grow one closure at a time without
- * a deliberate decision recorded in the diff.
+ * These assertions preserve that result. The ceilings leave room for additive
+ * axes in the one shared graph, but not enough to duplicate that graph into a
+ * second coarse tool.
  *
  * Scenarios (one live stdio handshake):
  *
@@ -107,12 +102,11 @@ const PER_TOOL_SCHEMA_BUDGET = 155_000;
  *    guide-document entry point): the inverted pyramid, not a build-up.
  * 3. No tool description and no instruction carries a double-encoding artifact.
  * 4. The total advertised schema payload is within its budget, and no single tool
- *    is within its own.
- * 5. The budget's TIGHTNESS is itself asserted: its remaining headroom is smaller
- *    than one more copy of the heaviest shared `$defs` entry. A budget a
- *    regression can slip under is not a budget, and this is the mechanical form
- *    of "inline one more large closure and it fails" that does not require a
- *    hand-edited mutant to demonstrate.
+ *    exceeds its own.
+ * 5. The budget's TIGHTNESS is itself asserted: its remaining headroom is
+ *    smaller than one more inlined `$defs` closure. A second coarse tool that
+ *    repeats the type graph therefore fails without needing a hand-edited
+ *    mutant in the suite.
  * 6. The schema half is still the half that costs, so the two budgets stay pointed
  *    at the right target: schemas outweigh descriptions by more than two orders
  *    of magnitude.
