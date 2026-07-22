@@ -21,9 +21,10 @@ Create `.wiki/08-campaigns/<campaign>/` with a short filesystem-safe campaign na
 
 Keep concise, current Markdown documents for:
 
-- the campaign scope, architecture and ownership boundaries, and provenance notes;
-- experiments, reproductions, and related issue or pull-request history;
-- every raw candidate, evidence, dependencies, and final disposition; and
+- the campaign scope, architecture, validation ownership, product boundaries, and provenance notes;
+- experiments, reproductions, dogfooding, and related issue or pull-request history;
+- every raw candidate, its evidence, dependencies, and final disposition;
+- candidate combinations, splits, rejections, deferrals, and the evidence supporting each decision; and
 - the published-issue DAG, implementation order, the single cycle pull request, CI and Self-Review iterations, external blockers, campaign timing, and cleanup state when those phases apply.
 
 Record raw candidates before fact-checking. The knowledge base is the durable place to collect overlapping observations, then combine, split, rewrite, reject, or defer them without losing why.
@@ -32,13 +33,23 @@ The knowledge base supports the campaign but is not the final issue body. A publ
 
 ## Discover Issues
 
-Run the review skill's Solo Issue Discovery Rounds over the entire declared campaign scope. Audit the whole surface yourself in every round. Never divide or sample it by package, file, concern, platform, candidate class, or pass.
+Run the review skill's Solo Issue Discovery Rounds over the entire declared campaign scope.
 
-Source is only one evidence layer. Exercise real workflows: drive the MCP tools, render through the viewer with the viewer-verification skill, run the coverage gate when the phase authorizes it, and inspect relevant upstream behavior, history, consumers, fixtures, and public documentation.
+Source is only one evidence layer. Exercise real workflows: drive the MCP tools, render through the viewer with the viewer-verification skill, run the coverage gate when the phase authorizes it, and inspect relevant upstream behavior, history, consumers, fixtures, public documentation, and closed decisions.
 
-Treat the development skill's **Forbidden** section as an explicit retrospective audit contract, not only a rule for future changes. In every complete round, inspect the current implementation and its history for violations, including code that predates the campaign or passes every test at 100% coverage. A verified violation is a meaningful issue candidate. Prove the classification from purpose, control flow, consequence, and history; resemblance or stylistic preference alone is not evidence.
+Treat the development skill's [Forbidden](../development/SKILL.md#forbidden) section as an explicit retrospective audit contract, not only a rule for future changes. In every complete round, inspect the current implementation and its history for violations, including code that predates the campaign or passes every test at 100% coverage. A verified violation is a meaningful issue candidate. Prove the classification from purpose, control flow, consequence, and history; resemblance or stylistic preference alone is not evidence.
 
-After the cycle pull request merges, begin a fresh full-scope round against the integrated repository. Earlier rounds are not coverage. The campaign ends only when a complete fresh round produces no meaningful issue candidate after fact-checking and no accepted issue remains unresolved.
+Do not stop after finding enough work for a pull request. Complete the entire scope, adjudicate the full candidate pool, and publish only the surviving issues when authorized.
+
+### Every Round Is Full-Scope
+
+Every round re-audits the entire declared scope against the current integrated state. A round is never partitioned: not by package, file, concern, platform, candidate class, or validation lane, not by the areas the last cycle happened to touch, and not by splitting the scope across rounds so that each one covers a slice. A merged cycle changes the state every earlier conclusion rested on, so what an earlier round read is not coverage for this one. The [review skill's Non-Negotiable Review Law](../review/SKILL.md#non-negotiable-review-law) states the same rule for every round and review the campaign runs.
+
+### Discovery Ends Only On An Empty Round
+
+A merged cycle does not end the campaign. It produces one more round: begin a fresh full-scope round against the integrated repository. Discovery continues cycle after cycle, with no round limit, and ends only when one complete fresh round produces no meaningful issue candidate after fact-checking and no accepted issue remains unresolved.
+
+Report the campaign complete only from a round that actually came up empty. Ending after a cycle that merely felt thorough leaves the issues the next round would have found unrecorded.
 
 ## Vet And Publish Issues
 

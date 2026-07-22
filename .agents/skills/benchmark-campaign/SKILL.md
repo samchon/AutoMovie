@@ -89,10 +89,21 @@ State an interface-gap issue as a missing axis in extensibility terms (additive,
 
 When the user authorizes implementation or a standing autonomous mandate covers it, implement by the issue-campaign skill's [solo development procedure](../issue-campaign/development.md): one empty-claim pull request containing every implementation-ready issue, DAG-ordered edits, complete coverage, local and CI validation, solo Self-Review, red-CI repair in the same pull request, merge, cleanup, and renewed discovery. An author-run-and-publish-only campaign does not load it.
 
-Three of that procedure's mechanics carry benchmark-specific weight:
+Four of that procedure's mechanics carry benchmark-specific weight:
 
 - **The claim body carries no closing keyword.** A benchmark cycle is the likeliest place for an issue to narrow under implementation, because the run that motivated it measured a symptom and the fix adjudicates a cause. Let each commit's `Close #n: <issue title>` line decide what the merge closes, so an issue that ships only its durable half stays open on its own evidence instead of needing a hand-written exemption in a body written before the code existed.
-- **The per-commit pull-request comment names the run it answers.** Give each commit's ledger comment the scenario and run record behind the issue it resolves, so the before/after re-run has a per-commit anchor and the durable run ledger can cite the exact commit that changed a score.
+- **A fix the cycle reverts loses its closing line too.** A benchmark cycle reverts a fix when the evidence turns against it, and the [merge gate](../issue-campaign/development.md#merge-and-clean-up) reconciles the closing keywords against what survives at `HEAD` for exactly that case: an issue whose fix the cycle removed stays open on the shortfall that still stands.
+- **The per-commit review ledger names the run it answers.** Give each commit's ledger review the scenario and run record behind the issue it resolves, so the before/after re-run has a per-commit anchor and the durable run ledger can cite the exact commit that changed a score.
 - **The durable run-ledger issue never appears in a closing line.** It is an append-only record for the whole campaign, not a cycle deliverable, and a stray keyword would close the campaign's own log.
 
-The cycle's gate is total: the next benchmark measurement begins only after **every** issue from the current cycle is merged, not after a subset. Then re-run the affected scenarios and the whole corpus against the fixed surface, recording the before/after runs so each fix's effect is measured, and re-triage what remains. A renewed cycle extends the corpus with new reach scenarios, drives them, and repeats; earlier runs are not coverage. The campaign ends only when a full corpus run against a fully-developed surface surfaces no automovie-owned shortfall that survives main-agent fact-checking.
+### Every Cycle Re-Runs The Whole Corpus
+
+The cycle's gate is total: the next benchmark measurement begins only after **every** issue from the current cycle is merged, not after a subset.
+
+That measurement re-runs the affected scenarios and the whole corpus against the fixed surface, recording the before/after runs so each fix's effect is measured, and re-triages what remains. A measurement is never partitioned: not by the scenarios the last cycle's fixes happened to touch, not by tier, and not by splitting the corpus across cycles so that each one drives a slice. A merged fix wave changes the surface every earlier run measured, so an earlier run is not coverage for this one.
+
+### The Campaign Ends Only On A Clean Full Run
+
+A merged fix wave does not end the campaign. It produces one more measurement: extend the corpus with new reach scenarios, drive the whole corpus, and repeat. The campaign ends only when a full corpus run against a fully-developed surface surfaces no automovie-owned shortfall that survives main-agent fact-checking.
+
+Report the campaign complete only from a run that actually came up clean. Ending after a cycle whose fixes merely looked sufficient leaves the shortfalls the next run would have measured unrecorded.
