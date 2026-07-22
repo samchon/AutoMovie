@@ -5,7 +5,9 @@ import {
 } from "@automovie/engine";
 import {
   IAutoMovieActionCall,
+  IAutoMovieActionTarget,
   IAutoMovieBlockingApplication,
+  IAutoMovieVector3,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -158,7 +160,14 @@ const blockingWith = (
   duration: 2,
 });
 
-const perform = (draft: IAutoMovieActionCall[], coverage?: ICoverage[]) =>
+const perform = (
+  draft: IAutoMovieActionCall[],
+  coverage?: ICoverage[],
+  targetAt?: (
+    target: IAutoMovieActionTarget,
+    seconds: number,
+  ) => IAutoMovieVector3 | null,
+) =>
   performShot({
     script,
     staged,
@@ -173,6 +182,7 @@ const perform = (draft: IAutoMovieActionCall[], coverage?: ICoverage[]) =>
     skeleton: (node) =>
       node === "arrow" || node.startsWith("cam-") ? null : createSkeleton(),
     blocking: coverage === undefined ? undefined : blockingWith(coverage),
+    targetAt,
   });
 
 /** Every translation key of a compiled camera clip, as points. */
@@ -216,7 +226,9 @@ const keysOf = (values: readonly number[]) =>
  * 3. The same subject reached through the blocking's `coverage`: an alternate
  *    camera framing ANOTHER camera is legal, for the same reason the hero
  *    take's subject may be one, and its take degenerates identically.
- * 4. Negative twin: a `follow` on `foe`, an actor that has both a staged facing
+ * 4. A `follow` plus focus on a moving target bone use the live resolver for both
+ *    camera paths rather than freezing its rest point.
+ * 5. Negative twin: a `follow` on `foe`, an actor that has both a staged facing
  *    and root travel, still tracks. Its keys move along the marched path, so
  *    the guard flattens only the facing-less case and no legitimate follow with
  *    it.
@@ -275,7 +287,58 @@ export const test_film_perform_shot_camera_subject = (): void => {
     1,
   );
 
-  // 4. negative twin: a subject WITH a staged facing still tracks.
+  // 4. Bone subjects share the live-target callback with action synthesis. The
+  // explicit focus assertion proves the directorial intent field does not keep
+  // the old static resolver after the camera path begins following the joint.
+  const boneTarget: IAutoMovieActionTarget = {
+    kind: "bone",
+    node: "foe",
+    bone: "leftHand",
+  };
+  const boneFrame = perform(
+    [
+      {
+        verb: "frame",
+        actor: "cam-alt",
+        start: 0,
+        duration: 1,
+        framing: "medium",
+        move: "follow",
+        on: boneTarget,
+        focus: boneTarget,
+      },
+    ],
+    undefined,
+    (_target, seconds) => ({ x: 6 + seconds, y: 1.2, z: 0 }),
+  );
+  TestValidator.predicate(
+    "a moving bone drives both the follow subject and camera intent focus",
+    boneFrame.success === true &&
+      keysOf(boneFrame.shot.cameraMotion!.tracks[0]!.values).length > 1 &&
+      vclose(boneFrame.shot.cameraIntent![0]!.focus!, { x: 6, y: 1.2, z: 0 }),
+  );
+  const fallbackBoneFrame = perform(
+    [
+      {
+        verb: "frame",
+        actor: "cam-alt",
+        start: 0,
+        duration: 1,
+        framing: "medium",
+        move: "follow",
+        on: boneTarget,
+      },
+    ],
+    undefined,
+    (_target, seconds) => (seconds === 0 ? { x: 6, y: 1.2, z: 0 } : null),
+  );
+  TestValidator.equals(
+    "a missing later live sample falls back to the validated bone point",
+    fallbackBoneFrame.success,
+    true,
+  );
+
+  // 5. negative twin: a subject WITH a staged facing still tracks.
   const tracking = perform([
     {
       verb: "locomote",

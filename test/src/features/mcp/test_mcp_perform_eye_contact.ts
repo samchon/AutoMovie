@@ -84,6 +84,12 @@ const chainFlexion = (motion: IAutoMovieMcpMotion): number =>
     0,
   );
 
+const chainTwist = (motion: IAutoMovieMcpMotion, index: number): number =>
+  motion.keyframes[index]!.pose.joints.reduce(
+    (sum, entry) => sum + (entry.twist ?? 0),
+    0,
+  );
+
 const lookAt = (
   actor: string,
   to: IAutoMovieActionTarget,
@@ -127,6 +133,10 @@ const lookAt = (
  *    vanished.
  * 3. Only the aim height differs: an explicit `point` at the other's EYE point
  *    performs exactly as the node target does, shot and motions alike.
+ * 4. A bone target follows a walking actor's hand across the shot (rather than
+ *    freezing the rest-pose point), and `point`, `strike`, and `reach` compile
+ *    their arm pose at the target's changing beat time.
+ * 5. A missing rig bone is refused at `bone`.
  */
 export const test_mcp_perform_eye_contact = (): void => {
   // 1. they hold each other's gaze.
@@ -186,5 +196,104 @@ export const test_mcp_perform_eye_contact = (): void => {
     "an actor node target compiles the explicit eye point's shot",
     { shot: atTheEyes.shot, motions: atTheEyes.motions },
     { shot: atTheNode.shot, motions: atTheNode.motions },
+  );
+
+  // 4. `knightB` walks sideways while `knightA` watches its actual left hand.
+  const handTarget = performing([
+    {
+      verb: "locomote",
+      actor: "knightB",
+      start: 0,
+      duration: 2,
+      gait: "walk",
+      to: { kind: "point", point: { x: 1, y: 0, z: 0.7 } },
+    },
+    lookAt("knightA", {
+      kind: "bone",
+      node: "knightB",
+      bone: "leftHand",
+    }),
+  ]);
+  if (handTarget.success !== true)
+    throw new Error("a valid moving bone target must perform");
+  const handGaze = handTarget.motions.knightA!;
+  TestValidator.predicate(
+    "a bone-target gaze is sampled through the moving hand's beat",
+    handGaze.keyframes.length > 2 &&
+      !nclose(
+        chainTwist(handGaze, 0),
+        chainTwist(handGaze, handGaze.keyframes.length - 1),
+      ),
+  );
+
+  const movingHand: IAutoMovieActionTarget = {
+    kind: "bone",
+    node: "knightA",
+    bone: "leftHand",
+  };
+  const walkingHand = {
+    verb: "locomote" as const,
+    actor: "knightA",
+    start: 0,
+    duration: 2,
+    gait: "walk",
+    to: { kind: "point" as const, point: { x: 1, y: 0, z: 0.7 } },
+  };
+  const pointAtHand = performing([
+    walkingHand,
+    {
+      verb: "gesture",
+      actor: "knightA",
+      start: 0,
+      duration: 2,
+      kind: "point",
+      at: movingHand,
+    },
+  ]);
+  const strikeAtHand = performing([
+    walkingHand,
+    {
+      verb: "gesture",
+      actor: "knightA",
+      start: 0,
+      duration: 2,
+      kind: "strike",
+      at: movingHand,
+    },
+  ]);
+  const reachForHand = performing([
+    walkingHand,
+    {
+      verb: "reach",
+      actor: "knightA",
+      start: 0,
+      duration: 2,
+      hand: "right",
+      to: movingHand,
+    },
+  ]);
+  const dynamicArm = (result: typeof pointAtHand): boolean =>
+    result.success === true &&
+    (result.motions.knightA?.keyframes.length ?? 0) > 2;
+  TestValidator.predicate(
+    "each bone-target arm verb samples a moving target over its full span",
+    dynamicArm(pointAtHand) &&
+      dynamicArm(strikeAtHand) &&
+      dynamicArm(reachForHand),
+  );
+
+  const missingBone = performing([
+    lookAt("knightA", {
+      kind: "bone",
+      node: "knightB",
+      bone: "rightHand",
+    }),
+  ]);
+  TestValidator.predicate(
+    "a bone the target rig does not carry is refused by bone",
+    missingBone.success === false &&
+      missingBone.violations.some((violation) =>
+        violation.path.endsWith(".bone"),
+      ),
   );
 };

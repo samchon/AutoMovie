@@ -1,5 +1,6 @@
 import {
   IAutoMovieActionCall,
+  IAutoMovieActionTarget,
   IAutoMovieKeyframe,
   IAutoMovieMotion,
   IAutoMoviePose,
@@ -8,13 +9,17 @@ import {
 
 import { aimYawPitch } from "../kinematics/aimYawPitch";
 import { gazeChainJoints } from "../kinematics/gazeChain";
+import { HUMANOID_JOINT_AXES } from "../kinematics/humanoidJointAxes";
 import { reachPose } from "../kinematics/reachPose";
+import { resolvePose } from "../kinematics/resolvePose";
+import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { holdMotion } from "../motion/arrange";
 import { gaitMotion } from "../motion/gait";
 import { gestureMotion } from "../motion/gesture";
 import { locomoteMotion } from "../motion/locomote";
 import { reactMotion } from "../motion/react";
+import { sampleMotion } from "../motion/sampleMotion";
 import { timeScaleMotion } from "../motion/timeScale";
 import { IAutoMovieActorContext } from "./IAutoMovieActorContext";
 import { IAutoMovieActionSynthesizer } from "./compilePerformance";
@@ -31,6 +36,9 @@ const REACT_UNBALANCE_GAIN = 1.5;
 
 /** The chain a torso/head blow ripples down: head whips most, hips least. */
 const REACT_CHAIN = ["head", "neck", "chest", "spine"] as const;
+
+/** Keyframes per second for a target that is itself animated. */
+const BONE_TARGET_HZ = 24;
 
 const assertUniqueActorGaits = (
   actor: string,
@@ -124,6 +132,76 @@ const extendHoldClip = (
     loop: false,
     keyframes: [key(0, rest), key(duration * 0.5, pose), key(duration, pose)],
   };
+};
+
+const boneTargetTimes = (duration: number): number[] => {
+  const count = Math.max(2, Math.ceil(duration * BONE_TARGET_HZ) + 1);
+  return Array.from(
+    { length: count },
+    (_, index) => (duration * index) / (count - 1),
+  );
+};
+
+const dynamicPoseClip = (props: {
+  id: string;
+  skeleton: string;
+  duration: number;
+  poseAt: (time: number) => IAutoMoviePose | null;
+}): IAutoMovieMotion | null => {
+  const keyframes: IAutoMovieKeyframe[] = [];
+  for (const time of boneTargetTimes(props.duration)) {
+    const pose = props.poseAt(time);
+    if (pose === null) return null;
+    keyframes.push({
+      time,
+      pose,
+      expression: null,
+      easing: "linear",
+      bezier: null,
+    });
+  }
+  return {
+    id: props.id,
+    skeleton: props.skeleton,
+    duration: props.duration,
+    loop: false,
+    keyframes,
+  };
+};
+
+/** Resolve a bone target into world coordinates from a sampled actor motion. */
+export const resolveBoneTarget = (
+  target: IAutoMovieActionTarget,
+  contexts: ReadonlyMap<string, IAutoMovieActorContext>,
+  motions: Readonly<Record<string, IAutoMovieMotion>> | undefined,
+  seconds: number,
+): IAutoMovieVector3 | null => {
+  if (target.kind !== "bone") return null;
+  const context = contexts.get(target.node);
+  if (context?.rig === undefined) return null;
+  const motion = motions?.[target.node];
+  const pose =
+    motion === undefined
+      ? context.restPose
+      : sampleMotion(motion, seconds).pose;
+  const resolved = resolvePose(
+    pose,
+    context.rig,
+    HUMANOID_JOINT_AXES,
+    context.restFrames,
+  ).find((entry) => entry.bone === target.bone);
+  if (resolved === undefined) return null;
+  const facing = Quaternion.fromAxisAngle(
+    { x: 0, y: 1, z: 0 },
+    context.facingDeg,
+  );
+  return Vector3.add(
+    context.position,
+    // `resolvePose` starts its FK walk at `pose.root.translation`, so its
+    // world position already carries locomotion exactly once. Rotate that
+    // model-space point into the staged facing, then translate to the actor.
+    Quaternion.rotateVector(facing, resolved.worldPosition),
+  );
 };
 
 /** A rest → strike → rest jab: snap out to `pose` early, then retract. */
@@ -241,6 +319,10 @@ const fitDeclaredSpan = (
 export const makeActorSynthesizer = (
   contexts: Map<string, IAutoMovieActorContext>,
   nodes: Map<string, IAutoMovieVector3>,
+  boneTargetAt?: (
+    target: IAutoMovieActionTarget,
+    seconds: number,
+  ) => IAutoMovieVector3 | null,
 ): IAutoMovieActionSynthesizer => {
   for (const [actor, ctx] of contexts) assertUniqueActorGaits(actor, ctx.gaits);
   const aimPoints = aimPointsOf(contexts, nodes);
@@ -250,6 +332,14 @@ export const makeActorSynthesizer = (
   ): IAutoMovieMotion | null => {
     const ctx = contexts.get(actor);
     if (ctx === undefined) return null;
+    const resolveTarget = (
+      target: IAutoMovieActionTarget,
+      table: Map<string, IAutoMovieVector3>,
+      seconds: number,
+    ): IAutoMovieVector3 | null =>
+      target.kind === "bone"
+        ? (boneTargetAt?.(target, seconds) ?? null)
+        : resolveTargetPoint(target, table);
     if (action.verb === "locomote") {
       const gait = ctx.gaits.find((g) => g.name === action.gait);
       if (gait === undefined) return null;
@@ -260,7 +350,7 @@ export const makeActorSynthesizer = (
         GAIT_SAMPLES,
         ctx.gaitPhase ?? 0,
       );
-      const dest = resolveTargetPoint(action.to, nodes);
+      const dest = resolveTarget(action.to, nodes, action.start);
       // Every arm below is fitted to a DECLARED duration (#1366). The engine
       // sizes the walk from distance and speed, which is what `"auto"` asks
       // for; a number is the author stating the span, exactly as it does on
@@ -296,14 +386,11 @@ export const makeActorSynthesizer = (
     if (action.verb === "lookAt") {
       // The AIM table, not the placement table: a look meets the subject's
       // eyes, not the ground its feet stand on (see the aim-point note above).
-      const target = resolveTargetPoint(action.to, aimPoints);
-      if (target === null) return null; // relative target: no aim point yet
       const eye = {
         x: ctx.position.x,
         y: ctx.position.y + ctx.eyeHeight,
         z: ctx.position.z,
       };
-      const { yawDeg, pitchDeg } = aimYawPitch(eye, target, ctx.facingDeg);
       const duration = action.duration === "auto" ? 1 : action.duration;
       // Turn the gaze CHAIN: twist toward the target, flexion to tilt (up =
       // extension), spread over `neck` and `head` as the rig declares they can
@@ -311,29 +398,52 @@ export const makeActorSynthesizer = (
       // poses the rig itself forbade for any target much below eye level, and
       // the `head` region this verb drives already owns the neck, so nothing
       // downstream had to change for the second joint to survive the mask.
-      const headPose: IAutoMoviePose = {
-        skeleton: ctx.skeleton,
-        root: null,
-        joints: gazeChainJoints({
-          rig: ctx.rig ?? null,
-          flexionDeg: -pitchDeg,
-          twistDeg: yawDeg,
-        }),
+      const poseAt = (time: number): IAutoMoviePose | null => {
+        const target = resolveTarget(action.to, aimPoints, action.start + time);
+        if (target === null) return null;
+        const { yawDeg, pitchDeg } = aimYawPitch(eye, target, ctx.facingDeg);
+        return {
+          skeleton: ctx.skeleton,
+          root: null,
+          joints: gazeChainJoints({
+            rig: ctx.rig ?? null,
+            flexionDeg: -pitchDeg,
+            twistDeg: yawDeg,
+          }),
+        };
       };
-      const frame = (time: number): IAutoMovieKeyframe => ({
-        time,
-        pose: headPose,
-        expression: null,
-        easing: "linear",
-        bezier: null,
-      });
-      return {
-        id: `${actor}:lookAt`,
-        skeleton: ctx.skeleton,
-        duration,
-        loop: false,
-        keyframes: [frame(0), frame(duration)],
-      };
+      if (action.to.kind === "bone")
+        return dynamicPoseClip({
+          id: `${actor}:lookAt`,
+          skeleton: ctx.skeleton,
+          duration,
+          poseAt,
+        });
+      const pose = poseAt(0);
+      return pose === null
+        ? null
+        : {
+            id: `${actor}:lookAt`,
+            skeleton: ctx.skeleton,
+            duration,
+            loop: false,
+            keyframes: [
+              {
+                time: 0,
+                pose,
+                expression: null,
+                easing: "linear",
+                bezier: null,
+              },
+              {
+                time: duration,
+                pose,
+                expression: null,
+                easing: "linear",
+                bezier: null,
+              },
+            ],
+          };
     }
     if (action.verb === "emote") {
       // a face-region clip: only the expression, no body joints to merge
@@ -374,8 +484,31 @@ export const makeActorSynthesizer = (
       // measured datum exists.
       if (action.kind === "point" && ctx.rig !== undefined) {
         const world =
-          action.at === undefined ? null : resolveTargetPoint(action.at, nodes);
+          action.at === undefined
+            ? null
+            : resolveTarget(action.at, nodes, action.start);
         if (world === null) return null;
+        if (action.at?.kind === "bone")
+          return dynamicPoseClip({
+            id: `${actor}:point`,
+            skeleton: ctx.skeleton,
+            duration,
+            poseAt: (time) => {
+              const point = resolveTarget(
+                action.at!,
+                nodes,
+                action.start + time,
+              );
+              return point === null
+                ? null
+                : reachPose(
+                    ctx.rig!,
+                    "right",
+                    toModelSpace(point, ctx.position, ctx.facingDeg),
+                    ctx.restFrames,
+                  );
+            },
+          });
         const pose = reachPose(
           ctx.rig,
           "right",
@@ -392,8 +525,31 @@ export const makeActorSynthesizer = (
       // and the same placement-not-aim-point resolution (see above).
       if (action.kind === "strike" && ctx.rig !== undefined) {
         const world =
-          action.at === undefined ? null : resolveTargetPoint(action.at, nodes);
+          action.at === undefined
+            ? null
+            : resolveTarget(action.at, nodes, action.start);
         if (world === null) return null;
+        if (action.at?.kind === "bone")
+          return dynamicPoseClip({
+            id: `${actor}:strike`,
+            skeleton: ctx.skeleton,
+            duration,
+            poseAt: (time) => {
+              const point = resolveTarget(
+                action.at!,
+                nodes,
+                action.start + time,
+              );
+              return point === null
+                ? null
+                : reachPose(
+                    ctx.rig!,
+                    "right",
+                    toModelSpace(point, ctx.position, ctx.facingDeg),
+                    ctx.restFrames,
+                  );
+            },
+          });
         const pose = reachPose(
           ctx.rig,
           "right",
@@ -426,8 +582,26 @@ export const makeActorSynthesizer = (
       // gesture: an arm target is not an eye, and the context carries no
       // measured chest/hand height to lift by.
       if (ctx.rig === undefined) return null;
-      const world = resolveTargetPoint(action.to, nodes);
+      const world = resolveTarget(action.to, nodes, action.start);
       if (world === null) return null; // relative target: no point to reach
+      const duration = action.duration === "auto" ? 0.6 : action.duration;
+      if (action.to.kind === "bone")
+        return dynamicPoseClip({
+          id: `${actor}:reach`,
+          skeleton: ctx.skeleton,
+          duration,
+          poseAt: (time) => {
+            const point = resolveTarget(action.to, nodes, action.start + time);
+            return point === null
+              ? null
+              : reachPose(
+                  ctx.rig!,
+                  action.hand,
+                  toModelSpace(point, ctx.position, ctx.facingDeg),
+                  ctx.restFrames,
+                );
+          },
+        });
       const reach = reachPose(
         ctx.rig,
         action.hand,
@@ -435,7 +609,6 @@ export const makeActorSynthesizer = (
         ctx.restFrames,
       );
       if (reach === null) return null;
-      const duration = action.duration === "auto" ? 0.6 : action.duration;
       return extendHoldClip(`${actor}:reach`, ctx.skeleton, reach, duration);
     }
     if (action.verb === "react") {
@@ -452,7 +625,7 @@ export const makeActorSynthesizer = (
       // Decompose the blow into the actor's own frame so a front hit snaps the
       // torso back (extension, −flexion) and a side hit leans it (abduction).
       // `from` is where the blow comes from; the body recoils away from it.
-      const source = resolveTargetPoint(action.from, nodes);
+      const source = resolveTarget(action.from, nodes, action.start);
       const facing = (ctx.facingDeg * Math.PI) / 180;
       const forward = { x: Math.sin(facing), y: 0, z: Math.cos(facing) };
       // Anatomical right: facing 0 looks down +Z and the actor's LEFT is +X

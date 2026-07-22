@@ -26,6 +26,12 @@ The tool's JSON contract is tuple-free: a driven driver's ranges cross as named 
 
 A forged prop reaches the film through staging: place it with a `stage` call's `set` array (`{ node, model: <prop node id>, position, facingDeg? }`) and it becomes a static scene node the guide passes draw, the environment half of the crude-proxy bet (a room IS a few boxes). See the STAGING guide's Set section.
 
+## Driving an Articulation
+
+An articulation node is a concrete shot channel named `<placement id>/<articulation node id>`. A door placed as `doorWest` whose spec declares `hinge` is therefore driven through `{ "kind": "node", "node": "doorWest/hinge", "path": "rotation" }` in the performed shot's `objectMotions`; never animate the `doorWest` placement root to impersonate its hinge. The shot keeps the authored track, while the stored prop profile supplies the declared limit and drivers.
+
+After `commitShot`, call `getResolvedPropFrame({ beat, t })`. It lowers the placed articulation, samples the committed `objectMotions`, clamps each limited channel, runs its drivers, and returns the concrete world matrices plus every clamp. A copied leaf therefore moves in that resolved frame even though only its hinge track was authored. The query is resident-only: it deliberately reads the committed scene, shot, and stored `props/<node>.json` together, so an orphaned declaration cannot look live.
+
 ## Resident Write-Through
 
 When a resident project is active, an accepted spec also writes through as `props/<node>.json` (`stored: true` in the output). Forge once, and later sessions read it from the project. Re-forging replaces exactly that file, EXCEPT when the committed scene still places the prop: that re-forge is refused (`stored: false`, a `$slate.scene` violation) because committed shots would resolve against the stale spec: re-commit the scene without the placement first, or accept re-perform. A first forge of a not-yet-stored node always stores (it creates the spec, it does not replace one). `eraseProp` removes a stored spec (refused while the committed scene still places the prop). See the PROJECT_MEMORY guide's Props section.

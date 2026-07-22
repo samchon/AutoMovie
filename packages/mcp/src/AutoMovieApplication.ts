@@ -37,6 +37,7 @@ import {
   IAutoMovieGetNotesOutput,
   IAutoMovieGetReachOutput,
   IAutoMovieGetResolvedPoseOutput,
+  IAutoMovieGetResolvedPropFrameOutput,
   IAutoMovieGetSceneOutput,
   IAutoMovieGetScriptOutput,
   IAutoMovieGetShotEndStateOutput,
@@ -67,6 +68,7 @@ import {
   IAutoMovieValidateOutput,
 } from "./dto";
 import { nextStepsOf } from "./project/AutoMoviePrerequisite";
+import { ArticulationService } from "./services/ArticulationService";
 import { CommitService } from "./services/CommitService";
 import { GeometryService } from "./services/GeometryService";
 import { GuideService } from "./services/GuideService";
@@ -101,6 +103,7 @@ export class AutoMovieApplication {
   private readonly geometry: GeometryService;
   private readonly validation: ValidationService;
   private readonly commit: CommitService;
+  private readonly articulation: ArticulationService;
   private readonly render: RenderService;
   private readonly pipeline: PipelineService;
   private readonly guide: GuideService;
@@ -127,6 +130,7 @@ export class AutoMovieApplication {
     this.geometry = new GeometryService(this.context);
     this.validation = new ValidationService();
     this.commit = new CommitService(this.context);
+    this.articulation = new ArticulationService(this.context);
     this.render = new RenderService(this.context);
     this.pipeline = new PipelineService(this.context);
     this.guide = new GuideService();
@@ -354,6 +358,26 @@ export class AutoMovieApplication {
     target: IAutoMovieActionTarget;
   }): IAutoMovieGetReachOutput {
     return this.geometry.getReach(props);
+  }
+
+  /**
+   * Resolve one committed shot instant through every stored articulated prop's
+   * declared limits and drivers. Joint ids are `<placement>/<articulation
+   * node>`; the result reports the lowered world matrices and every clamp. This
+   * is resident-only because the forged prop specifications live in the project
+   * store beside the committed scene and shot.
+   *
+   * @param props The committed beat and optional shot-local time.
+   * @returns The resolved prop frame, or an actionable reason it is
+   *   unavailable.
+   */
+  public getResolvedPropFrame(props: {
+    /** Beat whose committed shot supplies `objectMotions`. */
+    beat: string;
+    /** Shot-local seconds (default 0). */
+    t?: number;
+  }): IAutoMovieGetResolvedPropFrameOutput {
+    return this.articulation.getResolvedPropFrame(props);
   }
 
   /**
@@ -593,7 +617,10 @@ export class AutoMovieApplication {
     slate?: IAutoMovieMcpWritableSlate;
     /** Shot artifact to commit. */
     shot: IAutoMovieShot;
-    /** Optional compiled motions keyed by actor or arbitrary ids. */
+    /**
+     * Optional compiled motions; a compact resident perform supplies them
+     * in-session.
+     */
     motions?: Record<string, IAutoMovieMcpMotion>;
   }): IAutoMovieCommitOutput {
     return this.commit.commitShot(props);
@@ -1018,7 +1045,9 @@ export class AutoMovieApplication {
    * yourself: COMPUTE the keyframes (with code, never hand-written floats) and
    * supply the motion in `clips` under the action's clip id -- the engine still
    * masks it to its region, layers it, and ROM-gates the composite. Clips are
-   * derived output, never persisted; re-supply them on each perform.
+   * derived output, never persisted; re-supply them on each perform. Resident
+   * calls default to a compact motion summary and hold clips for that session's
+   * `commitShot`; request `response: "full"` to inspect the dense clips.
    *
    * @param props The script, staged scene, performance write, actor contexts,
    *   optional enacted clips, and optional validated blocking.
@@ -1064,6 +1093,8 @@ export class AutoMovieApplication {
      * carries its own mounts; combining the two is refused.
      */
     mounts?: IAutoMovieStagedSet.IMount[];
+    /** Resident output: `compact` (default) or dense-clip `full`. */
+    response?: "compact" | "full";
   }): IAutoMoviePerformOutput {
     return this.pipeline.perform(props);
   }

@@ -250,6 +250,11 @@ export const performShot = (props: {
   restFrames?: (
     node: string,
   ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>> | undefined;
+  /** Optional live resolver for targets whose point changes during the shot. */
+  targetAt?: (
+    target: IAutoMovieActionTarget,
+    seconds: number,
+  ) => IAutoMovieVector3 | null;
   /**
    * The gait names each actor's context supplies, for validating `locomote`
    * actions: a `locomote` naming a gait this lookup does not list for the actor
@@ -273,6 +278,7 @@ export const performShot = (props: {
     synthesize,
     skeleton,
     restFrames,
+    targetAt: resolveLiveTarget,
     gaits,
     blocking,
   } = props;
@@ -322,6 +328,24 @@ export const performShot = (props: {
     }
     if (target.kind === "node") {
       validateNonEmptyId(target.node, `${path}.node`, `${label} node id`);
+      return true;
+    }
+    if (target.kind === "bone") {
+      validateNonEmptyId(target.node, `${path}.node`, `${label} bone node id`);
+      validateNonEmptyId(target.bone, `${path}.bone`, `${label} bone id`);
+      if (typeof target.node === "string" && typeof target.bone === "string") {
+        const rig = skeleton(target.node);
+        if (
+          rig === null ||
+          !rig.bones.some((bone) => bone.bone === target.bone)
+        )
+          out.push(
+            "type",
+            `${path}.bone`,
+            `bone "${target.bone}" is not carried by rigged staged actor "${target.node}"`,
+            target.bone,
+          );
+      }
       return true;
     }
     if (target.kind === "group") {
@@ -388,7 +412,9 @@ export const performShot = (props: {
     subject: string,
   ): IAutoMovieVector3 | null => {
     if (!validateTargetNodeIds(target, path, label)) return null;
-    const point = resolveTargetPoint(target, nodePositions);
+    const point =
+      resolveLiveTarget?.(target, 0) ??
+      resolveTargetPoint(target, nodePositions);
     if (point === null || point === undefined) {
       out.push(
         "type",
@@ -698,7 +724,7 @@ export const performShot = (props: {
         );
         const aimNode =
           isRecord(action.at) &&
-          action.at.kind === "node" &&
+          (action.at.kind === "node" || action.at.kind === "bone") &&
           typeof action.at.node === "string"
             ? action.at.node
             : null;
@@ -1194,7 +1220,9 @@ export const performShot = (props: {
     let targetAt: ((t: number) => IAutoMovieVector3) | undefined;
     const targetsNode = (action: IAutoMovieActionCall): boolean =>
       job.targetNode !== null && actionActors(action).includes(job.targetNode);
-    if (
+    if (job.action.at.kind === "bone" && resolveLiveTarget !== undefined)
+      targetAt = (time) => resolveLiveTarget(job.action.at, time) ?? job.target;
+    else if (
       job.targetNode !== null &&
       stageActions.some(
         (action) => action.verb === "locomote" && targetsNode(action),
@@ -1360,7 +1388,9 @@ export const performShot = (props: {
   const framedSubject = (
     on: IAutoMovieActionTarget,
   ): IAutoMovieFramedSubject => {
-    const point = resolveTargetPoint(on, nodePositions)!;
+    const point =
+      resolveLiveTarget?.(on, 0) ??
+      (resolveTargetPoint(on, nodePositions) as IAutoMovieVector3);
     const node = on.kind === "node" ? on.node : null;
     const rig = node === null ? null : skeleton(node);
     const measured = rig === null ? 0 : computeRestHeight(rig);
@@ -1372,9 +1402,11 @@ export const performShot = (props: {
       // The animated base rides the node-local root under its staged facing,
       // the same read a leading launch uses (see animatedBaseAt).
       at:
-        motion === undefined || facing === undefined
-          ? null
-          : animatedBaseAt(point, facing, motion),
+        on.kind === "bone" && resolveLiveTarget !== undefined
+          ? (seconds) => resolveLiveTarget(on, seconds) ?? point
+          : motion === undefined || facing === undefined
+            ? null
+            : animatedBaseAt(point, facing, motion),
     };
   };
   const entries: IAutoMovieCameraFrameEntry[] = frames.map(({ action }) => ({
@@ -1450,7 +1482,11 @@ export const performShot = (props: {
       focus:
         action.focus === undefined
           ? null
-          : resolveTargetPoint(action.focus, nodePositions)!,
+          : (resolveLiveTarget?.(action.focus, 0) ??
+            (resolveTargetPoint(
+              action.focus,
+              nodePositions,
+            ) as IAutoMovieVector3)),
       focalLength: action.focalLength ?? null,
     })),
     // The beat's other staged angles (#1187), compiled from the blocking's

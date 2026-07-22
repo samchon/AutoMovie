@@ -4,18 +4,18 @@ import {
 } from "@automovie/interface";
 
 /**
- * Resolve a **positional** action target (`node`, `point`, or `group`) to a
- * single world point, given the world positions of the scene's nodes:
+ * Resolve a **staged positional** action target (`node`, `point`, or `group`)
+ * to a single world point, given the world positions of the scene's nodes:
  *
  * - `node` → that node's world position (or `null` if it is not in the frame);
  * - `point` → the literal point;
  * - `group` → the centroid of its resolvable members (`null` if none resolve).
  *
- * Returns `null` for the **relative** targets (`direction`, `offscreen`): those
- * are headings / frame edges, not points, and need the actor's facing or the
- * camera to become a position, resolved elsewhere, not here. This is the
- * geometry primitive the harness's reach / distance queries and the locomote
- * traveller share.
+ * Returns `null` for the **relative** targets (`direction`, `offscreen`) and a
+ * live `bone` target: headings / frame edges need the actor's facing or the
+ * camera, while a bone needs the shot-clock motion and rig. Those resolve
+ * elsewhere, not here. This is the geometry primitive the harness's reach /
+ * distance queries and the locomote traveller share.
  *
  * @author Samchon
  */

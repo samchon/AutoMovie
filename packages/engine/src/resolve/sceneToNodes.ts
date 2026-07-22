@@ -33,12 +33,14 @@ import { lowerSkeletonNodes } from "./skeletonNodes";
  *
  * **Guards.** When either registry is supplied, every placed `model` ref must
  * resolve in their union: a lossless bridge refuses silent drops; omit both for
- * a placements-only lowering (no subtrees). An id present in BOTH registries
- * throws: the registries contradict, and a forged prop already carries its own
- * model, so it never needs a `models` entry. A skeleton-less model lowers no
- * subtree; a rigid prop (`articulation: null`) lowers none either. Duplicate
- * node ids and dangling parents are rejected downstream by `composeScene`'s
- * index guard. This bridge does not duplicate that gate.
+ * a placements-only lowering (no subtrees). A prop-frame caller may explicitly
+ * set `allowPartialModels` to omit unrelated actor/set subtrees while retaining
+ * the full placement graph. An id present in BOTH registries throws: the
+ * registries contradict, and a forged prop already carries its own model, so it
+ * never needs a `models` entry. A skeleton-less model lowers no subtree; a
+ * rigid prop (`articulation: null`) lowers none either. Duplicate node ids and
+ * dangling parents are rejected downstream by `composeScene`'s index guard.
+ * This bridge does not duplicate that gate.
  *
  * @author Samchon
  */
@@ -53,8 +55,14 @@ export const sceneToNodes = (props: {
    * placement group, the placement pass `IAutoMoviePropSpec` promises.
    */
   props?: Record<string, IAutoMoviePropSpec>;
+  /**
+   * Permit a partial registry, retaining placements but omitting unregistered
+   * model subtrees. Only resolver callers that deliberately own a subset (such
+   * as articulated-prop inspection) should use this escape hatch.
+   */
+  allowPartialModels?: boolean;
 }): IAutoMovieNode[] => {
-  const { scene, models, props: propSpecs } = props;
+  const { scene, models, props: propSpecs, allowPartialModels = false } = props;
   const nodes: IAutoMovieNode[] = [];
 
   for (const placement of scene.nodes) {
@@ -87,6 +95,7 @@ export const sceneToNodes = (props: {
         );
       continue;
     }
+    if (model === undefined && allowPartialModels) continue;
     if (model === undefined)
       throw new Error(
         `sceneToNodes scene "${scene.id}" places model "${placement.model}" at node "${placement.id}" but the registry has no such model`,
