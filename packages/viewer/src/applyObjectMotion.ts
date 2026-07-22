@@ -1,4 +1,8 @@
-import { IAutoMovieSampledChannel, sampleClip, sampleClipSequence } from "@automovie/engine";
+import {
+  IAutoMovieSampledChannel,
+  sampleClip,
+  sampleClipSequence,
+} from "@automovie/engine";
 import { IAutoMovieClip } from "@automovie/interface";
 import * as THREE from "three";
 
