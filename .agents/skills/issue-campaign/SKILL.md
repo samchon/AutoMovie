@@ -39,13 +39,19 @@ Source is only one evidence layer. Exercise real workflows: drive the MCP tools,
 
 Treat the development skill's [Forbidden](../development/SKILL.md#forbidden) section as an explicit retrospective audit contract, not only a rule for future changes. In every complete round, inspect the current implementation and its history for violations, including code that predates the campaign or passes every test at 100% coverage. A verified violation is a meaningful issue candidate. Prove the classification from purpose, control flow, consequence, and history; resemblance or stylistic preference alone is not evidence.
 
-Do not stop after finding enough work for a pull request. Complete the entire scope, adjudicate the full candidate pool, and publish only the surviving issues when authorized.
-
 ### Every Round Is Full-Scope
 
 Every round re-audits the entire declared scope against the current integrated state. A round is never partitioned: not by package, file, concern, platform, candidate class, or validation lane, not by the areas the last cycle happened to touch, and not by splitting the scope across rounds so that each one covers a slice. A merged cycle changes the state every earlier conclusion rested on, so what an earlier round read is not coverage for this one. The [review skill's Non-Negotiable Review Law](../review/SKILL.md#non-negotiable-review-law) states the same rule for every round and review the campaign runs.
 
-### Discovery Ends Only On An Empty Round
+### One Cycle Costs As Many Rounds As It Takes
+
+A productive round is followed by another full-scope round at the same repository state, not by publication. Enough work for a pull request is not a stopping condition.
+
+Adjudicate what the round produced, re-audit the whole scope, and repeat until one round adds no meaningful candidate. Only that empty round closes the discovery phase, and the cycle publishes the entire pool those rounds accumulated.
+
+Stopping at the first productive round costs more than it saves. The issues a second round would have found do not disappear; they surface a cycle later, on top of the edits the first cycle already landed, where the same cause is harder to read and its fix has to account for work that was not there when it was written. A cycle is meant to be everything the current state can yield, which is what keeps the campaign converging instead of merely continuing.
+
+### A Merged Cycle Reopens Discovery
 
 A merged cycle does not end the campaign. It produces one more round: begin a fresh full-scope round against the integrated repository. Discovery continues cycle after cycle, with no round limit, and ends only when one complete fresh round produces no meaningful issue candidate after fact-checking and no accepted issue remains unresolved.
 

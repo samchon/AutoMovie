@@ -47,9 +47,9 @@ Use these rounds only through the solo issue-campaign or benchmark-campaign skil
 2. Record every raw candidate and its evidence in the campaign knowledge base before adjudication. Do not silently discard a suspicion because it looks duplicative or inconvenient.
 3. Reopen each candidate from primary evidence, reproduce it, verify ownership and provenance, trace its complete consequence surface, and prove any claimed **Forbidden** classification from purpose, control flow, consequence, and history.
 4. Record accept, partial acceptance, rewrite, combine, split, reject, or defer. Keep the disposition and reason in the knowledge base so later passes do not rediscover a rejected premise as new.
-5. Publish only the surviving adjudicated form when the campaign is authorized to publish.
-6. If any meaningful candidate survives, finish the authorized issue and implementation flow, then begin another fresh full-scope round over the integrated state.
-7. End discovery only when one complete fresh round over the entire scope produces no meaningful candidate after fact-checking.
+5. If any meaningful candidate survived this round, return to step 1 and run another complete round over the entire scope at the same repository state. Rounds repeat until one of them adds no meaningful candidate.
+6. Publish only the adjudicated form of what survived, taken from every round the phase ran, and only when the campaign is authorized to publish.
+7. After the authorized implementation cycle merges, begin again at step 1 over the integrated state.
 
 An unresolved accepted issue, external blocker, or incomplete implementation prevents a successful campaign conclusion. Report it as blocked or active rather than treating it as a clean round.
 
