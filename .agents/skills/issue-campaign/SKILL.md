@@ -47,7 +47,7 @@ Every round re-audits the entire declared scope against the current integrated s
 
 A productive round is followed by another full-scope round at the same repository state, not by publication. Enough work for a pull request is not a stopping condition.
 
-Adjudicate what the round produced, re-audit the whole scope, and repeat until one round adds no meaningful candidate. Only that empty round closes the discovery phase, and the cycle publishes the entire pool those rounds accumulated.
+Adjudicate what the round produced, re-audit the whole scope, and repeat until one round adds no meaningful candidate. Only that empty round closes the discovery phase, and the authorized publication then covers the entire pool those rounds accumulated.
 
 Stopping at the first productive round costs more than it saves. The issues a second round would have found do not disappear; they surface a cycle later, on top of the edits the first cycle already landed, where the same cause is harder to read and its fix has to account for work that was not there when it was written. A cycle is meant to be everything the current state can yield, which is what keeps the campaign converging instead of merely continuing.
 
