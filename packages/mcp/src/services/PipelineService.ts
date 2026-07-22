@@ -14,6 +14,7 @@ import {
   isAutoMovieLightType,
   makeActorSynthesizer,
   performShot,
+  resolveActorWorldFrame,
   resolveBoneTarget,
   scenePlacements,
   stageScene,
@@ -393,10 +394,21 @@ export class PipelineService {
       seconds: number,
     ): IAutoMovieVector3 | null =>
       resolveBoneTarget(target, contexts, preliminaryState.motions, seconds);
+    const actorFrameAt = (actor: string, seconds: number) => {
+      const context = contexts.get(actor);
+      return context === undefined
+        ? null
+        : resolveActorWorldFrame(
+            context,
+            preliminaryState.motions?.[actor],
+            seconds,
+          );
+    };
     const synthesizeDefault = makeActorSynthesizer(
       contexts,
       nodes,
       boneTargetAt,
+      actorFrameAt,
     );
     const synthesisViolations = collectDefaultSynthesisViolations(
       props,

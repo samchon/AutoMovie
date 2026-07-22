@@ -4,6 +4,7 @@ import {
   IAutoMovieKeyframe,
   IAutoMovieMotion,
   IAutoMoviePose,
+  IAutoMovieQuaternion,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
@@ -52,23 +53,52 @@ const assertUniqueActorGaits = (
   }
 };
 
-/** Drop a world point into an actor's model space (undo its placement). */
-const toModelSpace = (
-  world: IAutoMovieVector3,
-  position: IAutoMovieVector3,
-  facingDeg: number,
-): IAutoMovieVector3 => {
-  const f = (facingDeg * Math.PI) / 180;
-  const cos = Math.cos(f);
-  const sin = Math.sin(f);
-  const dx = world.x - position.x;
-  const dz = world.z - position.z;
+/** The actor root's shot-local world transform at one sampled instant. */
+export interface IAutoMovieActorWorldFrame {
+  position: IAutoMovieVector3;
+  rotation: IAutoMovieQuaternion;
+  facingDeg: number;
+}
+
+const staticActorWorldFrame = (
+  context: IAutoMovieActorContext,
+): IAutoMovieActorWorldFrame => ({
+  position: context.position,
+  rotation: Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, context.facingDeg),
+  facingDeg: context.facingDeg,
+});
+
+/** Resolve a motion root on top of the actor's staged world transform. */
+export const resolveActorWorldFrame = (
+  context: IAutoMovieActorContext,
+  motion: IAutoMovieMotion | undefined,
+  seconds: number,
+): IAutoMovieActorWorldFrame | null => {
+  if (motion === undefined) return null;
+  const root = sampleMotion(motion, seconds).pose.root;
+  if (root === null) return null;
+  const staged = staticActorWorldFrame(context);
+  const rotation = Quaternion.multiply(staged.rotation, root.rotation);
+  const forward = Quaternion.rotateVector(rotation, { x: 0, y: 0, z: 1 });
   return {
-    x: dx * cos - dz * sin,
-    y: world.y - position.y,
-    z: dx * sin + dz * cos,
+    position: Vector3.add(
+      staged.position,
+      Quaternion.rotateVector(staged.rotation, root.translation),
+    ),
+    rotation,
+    facingDeg: (Math.atan2(forward.x, forward.z) * 180) / Math.PI,
   };
 };
+
+/** Drop a world point into an actor's model space (undo its live frame). */
+const toModelSpace = (
+  world: IAutoMovieVector3,
+  frame: IAutoMovieActorWorldFrame,
+): IAutoMovieVector3 =>
+  Quaternion.rotateVector(
+    Quaternion.inverse(frame.rotation),
+    Vector3.subtract(world, frame.position),
+  );
 
 /**
  * The placement table lifted to **aim** points: every id an actor context knows
@@ -323,6 +353,10 @@ export const makeActorSynthesizer = (
     target: IAutoMovieActionTarget,
     seconds: number,
   ) => IAutoMovieVector3 | null,
+  actorFrameAt?: (
+    actor: string,
+    seconds: number,
+  ) => IAutoMovieActorWorldFrame | null,
 ): IAutoMovieActionSynthesizer => {
   for (const [actor, ctx] of contexts) assertUniqueActorGaits(actor, ctx.gaits);
   const aimPoints = aimPointsOf(contexts, nodes);
@@ -332,6 +366,9 @@ export const makeActorSynthesizer = (
   ): IAutoMovieMotion | null => {
     const ctx = contexts.get(actor);
     if (ctx === undefined) return null;
+    const staticFrame = staticActorWorldFrame(ctx);
+    const frameAt = (seconds: number): IAutoMovieActorWorldFrame =>
+      actorFrameAt?.(actor, seconds) ?? staticFrame;
     const resolveTarget = (
       target: IAutoMovieActionTarget,
       table: Map<string, IAutoMovieVector3>,
@@ -361,7 +398,7 @@ export const makeActorSynthesizer = (
       // actor's model frame (under its staged facing). So aim it in model space
       // (undo the facing) and the composed render carries it to the world
       // destination; a turned actor would otherwise walk off its heading.
-      const local = toModelSpace(dest, ctx.position, ctx.facingDeg);
+      const local = toModelSpace(dest, staticFrame);
       const distance = Math.hypot(local.x, local.z);
       if (distance < 1e-6) return fitDeclaredSpan(cycle, action.duration); // already there → step in place
       return fitDeclaredSpan(
@@ -386,11 +423,6 @@ export const makeActorSynthesizer = (
     if (action.verb === "lookAt") {
       // The AIM table, not the placement table: a look meets the subject's
       // eyes, not the ground its feet stand on (see the aim-point note above).
-      const eye = {
-        x: ctx.position.x,
-        y: ctx.position.y + ctx.eyeHeight,
-        z: ctx.position.z,
-      };
       const duration = action.duration === "auto" ? 1 : action.duration;
       // Turn the gaze CHAIN: twist toward the target, flexion to tilt (up =
       // extension), spread over `neck` and `head` as the rig declares they can
@@ -399,9 +431,18 @@ export const makeActorSynthesizer = (
       // the `head` region this verb drives already owns the neck, so nothing
       // downstream had to change for the second joint to survive the mask.
       const poseAt = (time: number): IAutoMoviePose | null => {
+        const frame = frameAt(action.start + time);
+        const eye = Vector3.add(
+          frame.position,
+          Quaternion.rotateVector(frame.rotation, {
+            x: 0,
+            y: ctx.eyeHeight,
+            z: 0,
+          }),
+        );
         const target = resolveTarget(action.to, aimPoints, action.start + time);
         if (target === null) return null;
-        const { yawDeg, pitchDeg } = aimYawPitch(eye, target, ctx.facingDeg);
+        const { yawDeg, pitchDeg } = aimYawPitch(eye, target, frame.facingDeg);
         return {
           skeleton: ctx.skeleton,
           root: null,
@@ -412,7 +453,10 @@ export const makeActorSynthesizer = (
           }),
         };
       };
-      if (action.to.kind === "bone")
+      if (
+        action.to.kind === "bone" ||
+        (actorFrameAt?.(actor, action.start) ?? null) !== null
+      )
         return dynamicPoseClip({
           id: `${actor}:lookAt`,
           skeleton: ctx.skeleton,
@@ -488,7 +532,10 @@ export const makeActorSynthesizer = (
             ? null
             : resolveTarget(action.at, nodes, action.start);
         if (world === null) return null;
-        if (action.at?.kind === "bone")
+        if (
+          action.at?.kind === "bone" ||
+          (actorFrameAt?.(actor, action.start) ?? null) !== null
+        )
           return dynamicPoseClip({
             id: `${actor}:point`,
             skeleton: ctx.skeleton,
@@ -504,7 +551,7 @@ export const makeActorSynthesizer = (
                 : reachPose(
                     ctx.rig!,
                     "right",
-                    toModelSpace(point, ctx.position, ctx.facingDeg),
+                    toModelSpace(point, frameAt(action.start + time)),
                     ctx.restFrames,
                   );
             },
@@ -512,7 +559,7 @@ export const makeActorSynthesizer = (
         const pose = reachPose(
           ctx.rig,
           "right",
-          toModelSpace(world, ctx.position, ctx.facingDeg),
+          toModelSpace(world, staticFrame),
           ctx.restFrames,
         );
         return pose === null
@@ -529,7 +576,10 @@ export const makeActorSynthesizer = (
             ? null
             : resolveTarget(action.at, nodes, action.start);
         if (world === null) return null;
-        if (action.at?.kind === "bone")
+        if (
+          action.at?.kind === "bone" ||
+          (actorFrameAt?.(actor, action.start) ?? null) !== null
+        )
           return dynamicPoseClip({
             id: `${actor}:strike`,
             skeleton: ctx.skeleton,
@@ -545,7 +595,7 @@ export const makeActorSynthesizer = (
                 : reachPose(
                     ctx.rig!,
                     "right",
-                    toModelSpace(point, ctx.position, ctx.facingDeg),
+                    toModelSpace(point, frameAt(action.start + time)),
                     ctx.restFrames,
                   );
             },
@@ -553,7 +603,7 @@ export const makeActorSynthesizer = (
         const pose = reachPose(
           ctx.rig,
           "right",
-          toModelSpace(world, ctx.position, ctx.facingDeg),
+          toModelSpace(world, staticFrame),
           ctx.restFrames,
         );
         return pose === null
@@ -585,7 +635,10 @@ export const makeActorSynthesizer = (
       const world = resolveTarget(action.to, nodes, action.start);
       if (world === null) return null; // relative target: no point to reach
       const duration = action.duration === "auto" ? 0.6 : action.duration;
-      if (action.to.kind === "bone")
+      if (
+        action.to.kind === "bone" ||
+        (actorFrameAt?.(actor, action.start) ?? null) !== null
+      )
         return dynamicPoseClip({
           id: `${actor}:reach`,
           skeleton: ctx.skeleton,
@@ -597,7 +650,7 @@ export const makeActorSynthesizer = (
               : reachPose(
                   ctx.rig!,
                   action.hand,
-                  toModelSpace(point, ctx.position, ctx.facingDeg),
+                  toModelSpace(point, frameAt(action.start + time)),
                   ctx.restFrames,
                 );
           },
@@ -605,7 +658,7 @@ export const makeActorSynthesizer = (
       const reach = reachPose(
         ctx.rig,
         action.hand,
-        toModelSpace(world, ctx.position, ctx.facingDeg),
+        toModelSpace(world, staticFrame),
         ctx.restFrames,
       );
       if (reach === null) return null;

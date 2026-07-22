@@ -92,10 +92,16 @@ const chainFlexion = (motion: IAutoMovieMcpMotion): number =>
 const sameSampledJoints = (
   left: IAutoMovieMcpMotion,
   right: IAutoMovieMcpMotion,
-  time: number,
+  leftTime: number,
+  rightTime = leftTime,
+  bonePrefix?: string,
 ): boolean => {
-  const leftJoints = sampleMotion(toEngineMotion(left), time).pose.joints;
-  const rightJoints = sampleMotion(toEngineMotion(right), time).pose.joints;
+  const select = (motion: IAutoMovieMcpMotion, time: number) =>
+    sampleMotion(toEngineMotion(motion), time).pose.joints.filter(
+      (joint) => bonePrefix === undefined || joint.bone.startsWith(bonePrefix),
+    );
+  const leftJoints = select(left, leftTime);
+  const rightJoints = select(right, rightTime);
   return (
     leftJoints.length === rightJoints.length &&
     leftJoints.every((joint) => {
@@ -320,6 +326,18 @@ export const test_mcp_perform_eye_contact = (): void => {
     dynamicArm(pointAtHand) &&
       dynamicArm(strikeAtHand) &&
       dynamicArm(reachForHand),
+  );
+  if (pointAtHand.success !== true)
+    throw new Error("the self-hand point must perform");
+  TestValidator.predicate(
+    "performer translation preserves its self-target arm solution",
+    sameSampledJoints(
+      pointAtHand.motions.knightA!,
+      pointAtHand.motions.knightA!,
+      1,
+      2,
+      "right",
+    ),
   );
 
   const missingBone = performing([
