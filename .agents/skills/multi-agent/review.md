@@ -34,7 +34,8 @@ Use this mode only through the multi-agent issue or benchmark campaign procedure
 3. Each reviewer records its own evidence-backed raw candidates without seeing or negotiating a shared candidate list.
 4. The lead reopens every candidate from primary evidence, reproduces it, checks ownership and provenance, traces the consequence surface, and records accept, partial acceptance, rewrite, combine, split, reject, or defer in `.wiki`.
 5. If any meaningful candidate survived this round, return to step 1 with a fresh reviewer set over the entire scope at the same repository state. Rounds repeat until one of them adds no meaningful candidate.
-6. Take the pool that empty round closes into the authorized campaign cycle, then reopen at step 1 over the integrated state once it merges.
-7. End discovery only when every reviewer completes the whole scope and no meaningful candidate survives lead verification.
+6. Take the pool that empty round closes into the authorized campaign cycle.
+7. Reopen at step 1 over the integrated state once that cycle merges.
+8. End discovery only when every reviewer completes the whole scope and no meaningful candidate survives lead verification.
 
 An unresolved accepted issue or incomplete implementation prevents a successful campaign conclusion.

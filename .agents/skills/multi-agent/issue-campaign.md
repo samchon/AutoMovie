@@ -68,6 +68,6 @@ After every parallel implementation batch is resolved and its worktree and exter
 
 ## Completion
 
-After the selected implementation flow is resolved, reopen Parallel Discovery against the integrated repository and run its rounds to another empty one.
+After the selected implementation flow is resolved, reopen Parallel Discovery against the integrated repository and run its rounds until one comes up empty.
 
 The campaign succeeds only when every reviewer completes the whole scope, no meaningful candidate survives lead verification, no accepted issue remains unresolved, and every campaign worktree and assignment-owned temporary asset is removed. Report an external blocker as blocked, not complete.
