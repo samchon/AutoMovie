@@ -7,11 +7,11 @@ import { AutoMovieViolationKind } from "./AutoMovieViolationKind";
  * This is automovie's domain-level analogue of typia's `IValidation.IError`,
  * enriched with a {@link AutoMovieViolationKind} (so failures route to the right
  * tier/corrector) and a human-and-LLM-readable `expected` string. The engine
- * emits these from its ROM / physics / temporal verifiers; `@automovie/agent`
- * lowers them onto the offending JSON path so the model sees exactly what was
- * wrong on its own output and fixes only that field. This object _is_ how
- * "physically impossible poses are rejected" becomes an actionable signal
- * rather than a silent failure.
+ * emits these from its ROM / physics / temporal verifiers at the offending JSON
+ * path. A direct caller consumes them as data; the MCP surface carries the same
+ * objects to an external agent, so it sees exactly what was wrong on its own
+ * output and fixes only that field. This object _is_ how a rejected fact or a
+ * physics warning becomes an actionable signal rather than a silent failure.
  *
  * @author Samchon
  */
