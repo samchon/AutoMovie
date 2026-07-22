@@ -49,11 +49,10 @@ export const createAutoMovieMcpServer = (props?: {
     // authoring mistake got two opposite answers (#1340): a stray property on
     // an input-only object was accepted and silently discarded, while the same
     // stray property on an object the engine echoes into its result survived
-    // into the output, failed the OUTPUT schema, and threw -- blaming the
-    // tool's output for the caller's input, at a path prefixed `$input.forged.`
-    // when the caller had written `$input.forge.`. Strict input makes the blame
-    // path correct by construction: the property is named where it was written,
-    // before the engine runs, and every tool answers the same way.
+    // into the output, failed OUTPUT validation, and blamed the output for the
+    // caller's input. The compact gateway makes that input path
+    // `$input.call.input...`; strict input names it where it was written, before
+    // the engine runs, and every operation answers the same way.
     typia.llm.controller<AutoMovieGatewayApplication, { equals: true }>(
       "automovie",
       new AutoMovieGatewayApplication(props),
