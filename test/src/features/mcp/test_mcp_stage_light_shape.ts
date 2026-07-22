@@ -51,6 +51,8 @@ const refusedAt = (staged: IAutoMovieStagedSet, path: string): boolean =>
  *    path.
  * 5. A directional light with no `position` reaches the engine, which is the
  *    absent-and-fine arm of the same branch.
+ * 6. An unknown discriminator is refused by the transport floor at its own path
+ *    rather than being interpreted as the directional default.
  */
 export const test_mcp_stage_light_shape = (): void => {
   // 1. absent direction, and the engine accepts it
@@ -102,5 +104,14 @@ export const test_mcp_stage_light_shape = (): void => {
     stage([{ node: "sun", direction: { x: 0, y: -1, z: 0 }, intensity: 1 }])
       .success,
     true,
+  );
+
+  // 6. unknown discriminators stop at the transport boundary
+  TestValidator.predicate(
+    "an unknown light discriminator is refused at its own path",
+    refusedAt(
+      stage([{ node: "arc", type: "laser", intensity: 1 }]),
+      "$input.staging.lights[0].type",
+    ),
   );
 };

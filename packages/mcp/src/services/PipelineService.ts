@@ -1,4 +1,5 @@
 import {
+  AUTO_MOVIE_LIGHT_TYPES,
   AutoMovieGenericGesture,
   IAutoMovieActionSynthesizer,
   IAutoMovieActorContext,
@@ -9,6 +10,7 @@ import {
   cutSequence,
   forgeCast,
   forgeProp,
+  isAutoMovieLightType,
   makeActorSynthesizer,
   performShot,
   resolveBoneTarget,
@@ -1133,6 +1135,15 @@ const validateStageShape = (
         const path = `$input.staging.lights[${index}]`;
         if (!isJsonObject(light, path, "light placement", violations)) return;
         requireString(light.node, `${path}.node`, "light node", violations);
+        if (light.type !== undefined && !isAutoMovieLightType(light.type))
+          violations.push(
+            violation(
+              "type",
+              `${path}.type`,
+              `light type must be one of ${[...AUTO_MOVIE_LIGHT_TYPES].join(", ")}`,
+              light.type,
+            ),
+          );
         // Structural floor only: WHICH of these a placement must carry depends
         // on its `type` and belongs to `stageScene`, which owns the per-kind
         // contract (#1341). A point light legitimately has no `direction` and a

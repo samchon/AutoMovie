@@ -4,6 +4,20 @@ import {
   IAutoMovieLight,
 } from "@automovie/interface";
 
+/** Every runtime light discriminator, shared by every ingress gate. */
+export const AUTO_MOVIE_LIGHT_TYPES = new Set<IAutoMovieLight["type"]>([
+  "directional",
+  "point",
+  "spot",
+]);
+
+/** Whether an untyped artifact names one of the supported light kinds. */
+export const isAutoMovieLightType = (
+  value: unknown,
+): value is IAutoMovieLight["type"] =>
+  typeof value === "string" &&
+  AUTO_MOVIE_LIGHT_TYPES.has(value as IAutoMovieLight["type"]);
+
 /**
  * Light channels: which light properties a shot may animate, how a track
  * addresses one, and how a sampled value is written onto a light.

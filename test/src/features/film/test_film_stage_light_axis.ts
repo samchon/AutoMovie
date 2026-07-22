@@ -76,6 +76,8 @@ const WARM = { r: 1, g: 0.72, b: 0.36, a: null, hex: null };
  *    value, and an alpha outside `[0, 1]` is refused HERE rather than passing
  *    `stage` and being refused a rung later by `commitScene`'s color artifact
  *    check, which is the wrong-stage failure this cycle closes elsewhere.
+ * 9. An unknown runtime discriminator is refused at `type`; it cannot fall through
+ *    to the directional default and enter a committed scene.
  */
 export const test_film_stage_light_axis = (): void => {
   // 1. COMPATIBILITY: the legacy four-field shape is unchanged
@@ -463,6 +465,22 @@ export const test_film_stage_light_axis = (): void => {
       withColor({ r: 1, g: 1, b: 1, a: 5, hex: null }),
       "range",
       "$input.lights[0].color.a",
+    ),
+  );
+  TestValidator.predicate(
+    "an unknown light discriminator is refused at its source",
+    hasViolation(
+      failure(
+        stageLights([
+          {
+            node: "arc",
+            type: "laser",
+            intensity: 1,
+          } as unknown as IAutoMovieStagingApplication.ILightPlacement,
+        ]),
+      ),
+      "type",
+      "$input.lights[0].type",
     ),
   );
 };

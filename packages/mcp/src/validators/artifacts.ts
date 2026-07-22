@@ -1,5 +1,7 @@
 import {
+  AUTO_MOVIE_LIGHT_TYPES,
   asArray,
+  isAutoMovieLightType,
   isRecord,
   pushViolation,
   toValidation,
@@ -143,7 +145,17 @@ export const validateSceneArtifact = (
       "light intensity",
       violations,
     );
-    if (light.type === "point" || light.type === "spot")
+    const lightType = light.type;
+    const validLightType = isAutoMovieLightType(lightType);
+    if (!validLightType)
+      pushViolation(
+        violations,
+        "type",
+        `${path}.type`,
+        `light type must be one of ${[...AUTO_MOVIE_LIGHT_TYPES].join(", ")}`,
+        lightType,
+      );
+    if (validLightType && (lightType === "point" || lightType === "spot"))
       validateRange(
         light.range,
         `${path}.range`,
@@ -152,7 +164,7 @@ export const validateSceneArtifact = (
         "light range",
         violations,
       );
-    if (light.type === "spot")
+    if (validLightType && lightType === "spot")
       validateRange(
         light.coneAngle,
         `${path}.coneAngle`,
