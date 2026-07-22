@@ -7,6 +7,7 @@ import {
   IAutoMovieStagedSet,
   Quaternion,
   blockBeat,
+  compilePerformance,
   cutSequence,
   forgeCast,
   forgeProp,
@@ -384,14 +385,14 @@ export class PipelineService {
     // final pass samples that performance on the shot clock. The first pass
     // falls back to rest pose, breaking target cycles deterministically while
     // the second makes a gaze/IK/camera follow the target's actual motion.
-    let preliminaryMotions:
-      | IAutoMoviePerformedShot.ISuccess["motions"]
-      | undefined;
+    const preliminaryState: {
+      motions: IAutoMoviePerformedShot.ISuccess["motions"] | undefined;
+    } = { motions: undefined };
     const boneTargetAt = (
       target: IAutoMovieActionTarget,
       seconds: number,
     ): IAutoMovieVector3 | null =>
-      resolveBoneTarget(target, contexts, preliminaryMotions, seconds);
+      resolveBoneTarget(target, contexts, preliminaryState.motions, seconds);
     const synthesizeDefault = makeActorSynthesizer(
       contexts,
       nodes,
@@ -426,9 +427,15 @@ export class PipelineService {
       targetAt: boneTargetAt,
     };
     const preliminary = performShot(performInput);
-    if (preliminary.success === true) preliminaryMotions = preliminary.motions;
-    const performed =
-      preliminary.success === false ? preliminary : performShot(performInput);
+    preliminaryState.motions =
+      preliminary.success === true
+        ? preliminary.motions
+        : compileBoneTargetBootstrapMotions(props.performance, synthesize);
+    // The first pass is only a motion source for live bone targets. Its
+    // observer clips still aim at rest-pose placeholders and therefore cannot
+    // authoritatively fail ROM/content. The second pass samples the target
+    // actors' preliminary motion and owns the final verdict.
+    const performed = performShot(performInput);
     const motions =
       performed.success === true ? toMcpMotions(performed.motions) : undefined;
     const output = remapMcpPerformedShotPaths(
@@ -596,6 +603,42 @@ export class PipelineService {
     return { ...output, stored: true };
   }
 }
+
+/**
+ * Build only the motions needed to sample live bone targets when the ordinary
+ * first perform pass failed on a frozen-target observer clip.
+ *
+ * Target actors' own actions are compiled without the shot-level ROM/content
+ * verdict. Their bone-dependent actions still resolve against rest on this
+ * bootstrap, which is the deterministic fixed point for mutual/cyclic targets;
+ * the authoritative second perform pass validates the resulting live poses.
+ */
+const compileBoneTargetBootstrapMotions = (
+  performance: IAutoMoviePerformanceApplication.IWrite,
+  synthesize: IAutoMovieActionSynthesizer,
+): IAutoMoviePerformedShot.ISuccess["motions"] => {
+  const actions = performance.revise.final ?? performance.draft;
+  const targetActors = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (!isRecord(value)) return;
+    if (value.kind === "bone" && typeof value.node === "string") {
+      targetActors.add(value.node);
+      return;
+    }
+    Object.values(value).forEach(visit);
+  };
+  actions.forEach(visit);
+  const targetActions = actions.filter((action) => {
+    const actors =
+      typeof action.actor === "string" ? [action.actor] : action.actor;
+    return actors.some((actor) => targetActors.has(actor));
+  });
+  return compilePerformance(targetActions, synthesize).performances;
+};
 
 const validatePipelineRequestRoot = (
   props: unknown,
