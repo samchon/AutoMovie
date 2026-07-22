@@ -434,12 +434,19 @@ export const performShot = (props: {
     path: string,
     label: string,
     subject: string,
+    seconds = 0,
   ): IAutoMovieVector3 | null => {
     if (!validateTargetNodeIds(target, path, label)) return null;
     const point =
-      resolveLiveTarget?.(target, 0) ??
+      resolveLiveTarget?.(target, seconds) ??
       resolveTargetPoint(target, nodePositions);
-    if (point === null || point === undefined) {
+    if (
+      point === null ||
+      point === undefined ||
+      !Number.isFinite(point.x) ||
+      !Number.isFinite(point.y) ||
+      !Number.isFinite(point.z)
+    ) {
       out.push(
         "type",
         path,
@@ -712,7 +719,19 @@ export const performShot = (props: {
             );
         });
       }
-      if (action.verb === "launch") {
+      if (action.verb === "locomote") {
+        const relative =
+          isRecord(action.to) &&
+          (action.to.kind === "direction" || action.to.kind === "offscreen");
+        if (!relative)
+          resolvePositionalTarget(
+            action.to,
+            `${base}[${i}].to`,
+            "locomote target",
+            "a locomote destination",
+            action.start,
+          );
+      } else if (action.verb === "launch") {
         // The projectile is a scene object, so it must be staged (its placed
         // position is where the flight begins), and the aim must resolve to a
         // point. A node aim also names the actor the hit recoils; a point/group

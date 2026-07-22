@@ -46,8 +46,11 @@ export const positionalTargetFault = (target: unknown): string => {
             .map((node) => `"${String(node)}"`)
             .join(", ")}`;
     }
-    if (target.kind === "point")
-      return "a point target carries no point to resolve";
+    if (target.kind === "point") {
+      if (!isRecord(target.point))
+        return "a point target carries no point to resolve";
+      return "a point target must carry finite x/y/z coordinates";
+    }
     if (target.kind === "direction" || target.kind === "offscreen")
       return `a target of kind "${target.kind}" is relative (a heading or a frame edge), so it names no place`;
   }

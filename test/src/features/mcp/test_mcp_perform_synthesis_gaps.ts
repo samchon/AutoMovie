@@ -108,6 +108,9 @@ const cameraFrame = {
  * 6. A successful perform whose second actor carries a rig-less context still
  *    compiles: the `skeleton(node) => rig ?? null` accessor returns null for it
  *    without failing the shot.
+ * 7. An unresolved absolute locomote destination reaches the engine's `.to`
+ *    refusal instead of being mistaken for the legal relative in-place
+ *    fallback.
  */
 export const test_mcp_perform_synthesis_gaps = (): void => {
   const app = new AutoMovieApplication();
@@ -223,6 +226,24 @@ export const test_mcp_perform_synthesis_gaps = (): void => {
     "a lookAt toward an unplaced node fails as data (the describer yields null)",
     lookAtGhost.success,
     false,
+  );
+
+  const locomoteGhost = performDraft(
+    [
+      {
+        verb: "locomote",
+        actor: "knightA",
+        start: 0,
+        duration: 1,
+        gait: "walk",
+        to: { kind: "node", node: "ghostNode" },
+      },
+    ],
+    { knightA: context(nodePosition("knightA"), 0) },
+  );
+  TestValidator.predicate(
+    "MCP locomote reports an unresolved absolute destination at .to",
+    hasType(locomoteGhost, "$input.performance.draft[0].to"),
   );
 
   // 3b. a reach toward a RESOLVABLE node on an arm-less rig fails at `.to`.
