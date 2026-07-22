@@ -310,11 +310,12 @@ export class AutoMovieApplication {
    * Resolve an actor's world-space skeleton pose. Pass `context` for the
    * explicit stateless path, or omit it to read the resident project. Resident
    * mode uses the committed scene, optional committed beat shot, each cast
-   * actor's persisted rig (`actors/<node>.json`, so a reopened project resolves
-   * rest/ambient poses without a re-commit), and the session-only compiled
-   * motions remembered from resident commitShot. Motions are not persisted as
-   * slices, so a query that samples a specific beat's motion needs that beat's
-   * commitShot in this session (or an explicit context).
+   * actor's persisted rig and clinical rest frames (`actors/<node>.json`, so a
+   * reopened project resolves rest/ambient poses without a re-commit), and the
+   * session-only compiled motions remembered from resident commitShot. Motions
+   * are not persisted as slices, so a query that samples a specific beat's
+   * motion needs that beat's commitShot in this session (or an explicit
+   * context).
    *
    * @param props The actor id, optional explicit context or resident beat, and
    *   optional shot time.
@@ -343,7 +344,9 @@ export class AutoMovieApplication {
    * inside the shell and still be a pose the joints cannot hold. Pass `context`
    * explicitly, or omit it to use the resident project's committed scene plus
    * the session-only model skeletons remembered from commitScene. A node target
-   * may name any staged placement, an actor, a set piece, or a camera.
+   * may name any staged placement, an actor, a set piece, or a camera. The
+   * selected actor's custom clinical rest frames apply to the IK result;
+   * omission uses the canonical humanoid frame.
    *
    * @param props The actor id, target, and optional explicit context.
    * @returns The reach report, or null with a reason naming the id or the

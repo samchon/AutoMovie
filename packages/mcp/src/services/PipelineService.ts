@@ -50,7 +50,10 @@ import {
   IAutoMoviePerformOutput,
   IAutoMovieStageOutput,
 } from "../dto";
-import { isRecord } from "../validators/primitives";
+import {
+  isRecord,
+  validateActorRestFramesArtifact,
+} from "../validators/primitives";
 import { validateSpaceShape } from "../validators/space";
 import {
   isRuntimeSafeActionTarget,
@@ -2371,7 +2374,7 @@ const validateActorContextFields = (
     violations,
   );
   if (context.restFrames !== undefined)
-    validateActorRestFrames(
+    validateActorRestFramesArtifact(
       context.restFrames,
       `${path}.restFrames`,
       violations,
@@ -2493,44 +2496,6 @@ const validateActorRig = (
           entry.bone,
         ),
       );
-};
-
-const REST_FRAME_AXES = ["flexion", "abduction", "twist"] as const;
-
-const validateActorRestFrames = (
-  restFrames: unknown,
-  path: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  if (!isJsonObject(restFrames, path, "actor rest frames", violations)) return;
-  Object.entries(restFrames).forEach(([bone, frame]) => {
-    const bonePath = `${path}.${bone}`;
-    if (!isJsonObject(frame, bonePath, "actor rest frame", violations)) return;
-    for (const axis of REST_FRAME_AXES) {
-      const axisFrame = frame[axis];
-      if (axisFrame === undefined) continue;
-      const axisPath = `${bonePath}.${axis}`;
-      if (
-        !isJsonObject(axisFrame, axisPath, "actor rest frame axis", violations)
-      )
-        continue;
-      if (axisFrame.sign !== 1 && axisFrame.sign !== -1)
-        violations.push(
-          violation(
-            "type",
-            `${axisPath}.sign`,
-            "actor rest frame sign must be 1 or -1",
-            axisFrame.sign,
-          ),
-        );
-      requireFiniteNumber(
-        axisFrame.neutral,
-        `${axisPath}.neutral`,
-        "actor rest frame neutral",
-        violations,
-      );
-    }
-  });
 };
 
 const requireFiniteVector = (

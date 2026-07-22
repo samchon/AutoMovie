@@ -137,6 +137,55 @@ export const validateQuaternionArtifact = (
     );
 };
 
+/** Validate a per-bone clinical rest-frame table shared by MCP entry points. */
+export const validateActorRestFramesArtifact = (
+  restFrames: unknown,
+  path: string,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  if (
+    !validateObjectArtifact(restFrames, path, "actor rest frames", violations)
+  )
+    return;
+  Object.entries(restFrames).forEach(([bone, frame]) => {
+    const bonePath = `${path}.${bone}`;
+    if (
+      !validateObjectArtifact(frame, bonePath, "actor rest frame", violations)
+    )
+      return;
+    for (const axis of ["flexion", "abduction", "twist"] as const) {
+      const axisFrame = frame[axis];
+      if (axisFrame === undefined) continue;
+      const axisPath = `${bonePath}.${axis}`;
+      if (
+        !validateObjectArtifact(
+          axisFrame,
+          axisPath,
+          "actor rest frame axis",
+          violations,
+        )
+      )
+        continue;
+      if (axisFrame.sign !== 1 && axisFrame.sign !== -1)
+        pushViolation(
+          violations,
+          "type",
+          `${axisPath}.sign`,
+          "actor rest frame sign must be 1 or -1",
+          axisFrame.sign,
+        );
+      if (!Number.isFinite(axisFrame.neutral))
+        pushViolation(
+          violations,
+          "type",
+          `${axisPath}.neutral`,
+          "actor rest frame neutral must be a finite number",
+          axisFrame.neutral,
+        );
+    }
+  });
+};
+
 export const validateColorArtifact = (
   color: unknown,
   path: string,
