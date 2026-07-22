@@ -33,7 +33,7 @@ The knowledge base supports the campaign but is not the final issue body. A publ
 
 ## Discover Issues
 
-Run the review skill's Solo Issue Discovery Rounds over the entire declared campaign scope. Audit the whole surface yourself in every round.
+Run the review skill's Solo Issue Discovery Rounds over the entire declared campaign scope.
 
 Source is only one evidence layer. Exercise real workflows: drive the MCP tools, render through the viewer with the viewer-verification skill, run the coverage gate when the phase authorizes it, and inspect relevant upstream behavior, history, consumers, fixtures, public documentation, and closed decisions.
 

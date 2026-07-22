@@ -100,7 +100,7 @@ Four of that procedure's mechanics carry benchmark-specific weight:
 
 The cycle's gate is total: the next benchmark measurement begins only after **every** issue from the current cycle is merged, not after a subset.
 
-Then re-run the affected scenarios and the whole corpus against the fixed surface, recording the before/after runs so each fix's effect is measured, and re-triage what remains. A measurement is never partitioned: not by the scenarios the last cycle's fixes happened to touch, not by tier, and not by splitting the corpus across cycles so that each one drives a slice. A merged fix wave changes the surface every earlier run measured, so an earlier run is not coverage for this one.
+That measurement re-runs the affected scenarios and the whole corpus against the fixed surface, recording the before/after runs so each fix's effect is measured, and re-triages what remains. A measurement is never partitioned: not by the scenarios the last cycle's fixes happened to touch, not by tier, and not by splitting the corpus across cycles so that each one drives a slice. A merged fix wave changes the surface every earlier run measured, so an earlier run is not coverage for this one.
 
 ### The Campaign Ends Only On A Clean Full Run
 

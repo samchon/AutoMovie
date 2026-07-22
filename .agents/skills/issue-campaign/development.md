@@ -16,7 +16,7 @@ Four rules govern the implementation phase:
 - The main agent performs all implementation, test authoring, CI diagnosis, review, and cleanup. Spawn no subagent except the read-only [commit early-warning pass](#implement-and-write-tests).
 - Put every accepted, implementation-ready issue in the current cycle into one pull request. The issue DAG controls implementation order inside that pull request, not pull-request count.
 - Use the current checkout and one topic branch. Do not create a clone or worktree for a solo campaign or its Self-Review.
-- The pull request's ordinary CI and a clean solo Self-Review are the acceptance gates over one immutable head. Repair every red CI lane in that same pull request, even when the failure predates the campaign or is unrelated to its original issues.
+- The pull request's ordinary CI and a clean solo Self-Review are the acceptance gates, and both must land on the same immutable head. Repair every red CI lane in that same pull request, even when the failure predates the campaign or is unrelated to its original issues.
 
 ## Plan One Cycle Pull Request
 
@@ -58,7 +58,9 @@ Implement without interruption. Write each piece's tests as that piece lands ins
 
 Close each issue from the commit that earns it. End the commit message with one `Close #n: <issue title>` line per resolved issue, placed as its own paragraph before the `Co-Authored-By` trailer, so a commit that resolves several issues carries several lines. GitHub matches the keyword and the number and ignores the title tail, so the line closes the issue normally while the log stays legible without opening each number. The squash merge carries those lines into `master`, which is what makes the cycle close exactly the issues it landed.
 
-A revert inside the pull request must not carry the closing keyword forward: `git revert` quotes the original subject, so rewrite its default `Revert "Close #n: ..."` without the closing phrase. Rewriting the revert does not spare the issue by itself. The squash merge concatenates every commit message into the merge commit body, where the reverted commit's own `Close #n` line still sits, so the merge closes an issue whose fix no longer exists at `HEAD` and [the merge gate](#merge-and-clean-up) has to reopen it.
+A revert inside the pull request must not carry the closing keyword forward. `git revert` quotes the original subject, so rewrite its default `Revert "Close #n: ..."` without the closing phrase.
+
+Rewriting the revert does not spare the issue by itself. The squash merge concatenates every commit message into the merge commit body, where the reverted commit's own `Close #n` line still sits, so the merge closes an issue whose fix no longer exists at `HEAD` and [the merge gate](#merge-and-clean-up) has to reopen it.
 
 After each pushed commit, submit a formal GitHub pull-request review with the `COMMENT` event naming the commit, what it landed, and which issues it resolved. The review is the running ledger for a reader who does not read the diff, not a closing mechanism: GitHub closes an issue only from a commit message or the pull-request body. Follow the [pull-request skill](../pull-request/SKILL.md#write-the-pull-request) for inline comments, review bodies, and self-review restrictions; do not replace this ledger with ordinary issue-style pull-request comments.
 
