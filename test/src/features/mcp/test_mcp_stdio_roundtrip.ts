@@ -212,8 +212,9 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
       );
 
       const toolSchema = (name: string): IJsonSchema => {
-        const schema = granularTools.find((tool) => tool.name === name)
-          ?.inputSchema;
+        const schema = granularTools.find(
+          (tool) => tool.name === name,
+        )?.inputSchema;
         if (schema === undefined)
           throw new Error(`tool schema not found: ${name}`);
         return schema as IJsonSchema;

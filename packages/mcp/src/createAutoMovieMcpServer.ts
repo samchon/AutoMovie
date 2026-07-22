@@ -20,12 +20,12 @@ const MCP_PACKAGE_VERSION = (
 
 /**
  * Build the default compact AutoMovie MCP server: wrap
- * {@link AutoMovieGatewayApplication} in a `typia.llm.controller` and hand it
- * to `@typia/mcp`'s `createMcpServer`. The gateway keeps the three operating
- * entry points independent and places the other operations in one typed
- * `execute` union, so clients receive the shared schema graph once instead of
- * once per method. Connect the returned server to a transport,
- * `StdioServerTransport` for a spawned subprocess (see `bin.ts`).
+ * {@link AutoMovieGatewayApplication} in a `typia.llm.controller` and hand it to
+ * `@typia/mcp`'s `createMcpServer`. The gateway keeps the three operating entry
+ * points independent and places the other operations in one typed `execute`
+ * union, so clients receive the shared schema graph once instead of once per
+ * method. Connect the returned server to a transport, `StdioServerTransport`
+ * for a spawned subprocess (see `bin.ts`).
  *
  * A host that owns a renderer can inject a `capture` adapter so `seeFrame`
  * returns real pixels; the plain stdio binary has none and `seeFrame` reports

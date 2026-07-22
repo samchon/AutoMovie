@@ -68,8 +68,8 @@ const SCHEMA_PAYLOAD_BUDGET = 500_000;
 
 /**
  * Per-tool schema ceiling, same counting rule over one tool. `execute` owns the
- * shared graph and is deliberately allowed most, but not all, of the total:
- * a total-only budget could hide an accidental second large entry point.
+ * shared graph and is deliberately allowed most, but not all, of the total: a
+ * total-only budget could hide an accidental second large entry point.
  */
 const PER_TOOL_SCHEMA_BUDGET = 475_000;
 
@@ -103,10 +103,10 @@ const PER_TOOL_SCHEMA_BUDGET = 475_000;
  * 3. No tool description and no instruction carries a double-encoding artifact.
  * 4. The total advertised schema payload is within its budget, and no single tool
  *    exceeds its own.
- * 5. The budget's TIGHTNESS is itself asserted: its remaining headroom is
- *    smaller than one more inlined `$defs` closure. A second coarse tool that
- *    repeats the type graph therefore fails without needing a hand-edited
- *    mutant in the suite.
+ * 5. The budget's TIGHTNESS is itself asserted: its remaining headroom is smaller
+ *    than one more inlined `$defs` closure. A second coarse tool that repeats
+ *    the type graph therefore fails without needing a hand-edited mutant in the
+ *    suite.
  * 6. The schema half is still the half that costs, so the two budgets stay pointed
  *    at the right target: schemas outweigh descriptions by more than two orders
  *    of magnitude.

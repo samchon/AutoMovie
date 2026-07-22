@@ -40,13 +40,13 @@ export interface IAutoMovieExecuteOutput {
 }
 
 /**
- * AutoMovie's compact MCP gateway: a deterministic film engine built on
- * "engine enforces, model creates". Start with
+ * AutoMovie's compact MCP gateway: a deterministic film engine built on "engine
+ * enforces, model creates". Start with
  * `getGuideDocument({name:"AUTOMOVIE_OVERALL"})`, open resident memory with
  * `openProject`, ask `nextSteps` for the production ladder, and route every
  * other typed operation through `execute`. The coarse gateway advertises the
- * shared film type graph once, keeping the server usable in mainstream
- * context windows without weakening validation or deleting explicit mode.
+ * shared film type graph once, keeping the server usable in mainstream context
+ * windows without weakening validation or deleting explicit mode.
  *
  * @author Samchon
  */
@@ -63,8 +63,8 @@ export class AutoMovieGatewayApplication {
   }
 
   /**
-   * Fetch a film-authoring guide by exact name. Read `AUTOMOVIE_OVERALL`
-   * first, then the guide named by the current ladder stage.
+   * Fetch a film-authoring guide by exact name. Read `AUTOMOVIE_OVERALL` first,
+   * then the guide named by the current ladder stage.
    *
    * @param props Exact guide document name.
    * @returns Markdown guide content.
@@ -102,9 +102,9 @@ export class AutoMovieGatewayApplication {
   /**
    * Execute one strictly typed AutoMovie operation. Select the `operation`
    * discriminator, then supply its matching `input`; the server validates the
-   * selected branch with exact-property semantics. Results repeat the
-   * operation beside its structured output. Use `getGuideDocument`,
-   * `openProject`, and `nextSteps` directly instead of routing them here.
+   * selected branch with exact-property semantics. Results repeat the operation
+   * beside its structured output. Use `getGuideDocument`, `openProject`, and
+   * `nextSteps` directly instead of routing them here.
    *
    * @param props Discriminated operation and its matching input.
    * @returns The operation tag and that operation's structured output.

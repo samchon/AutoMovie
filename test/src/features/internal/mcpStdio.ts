@@ -82,8 +82,8 @@ export interface IAutoMovieMcpProbe {
 }
 
 /**
- * Call one compact-gateway operation and read the verdict the way a client
- * sees it: refused or not, plus the joined text of every content part.
+ * Call one compact-gateway operation and read the verdict the way a client sees
+ * it: refused or not, plus the joined text of every content part.
  *
  * The helper wraps the operation in `execute.call`, the public compact wire
  * shape. Input validation is only observable through a real client (an

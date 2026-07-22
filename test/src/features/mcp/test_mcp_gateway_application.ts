@@ -33,9 +33,9 @@ export const test_mcp_gateway_application = async (): Promise<void> => {
     );
     TestValidator.predicate(
       "the direct ladder entry point names the first resident action",
-      app.nextSteps().nextActions.some((action) =>
-        action.includes("commitScript"),
-      ),
+      app
+        .nextSteps()
+        .nextActions.some((action) => action.includes("commitScript")),
     );
 
     const executed = await app.execute({
