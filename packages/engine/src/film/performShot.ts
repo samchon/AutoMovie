@@ -237,6 +237,8 @@ export namespace IAutoMoviePerformedShot {
  *
  * @param props.skeleton Rig lookup for ROM validation; return null for a node
  *   that has no skeleton (its clip skips ROM).
+ * @param props.hasActorContext Optional actor-registry membership lookup. It
+ *   keeps a missing context distinct from a present context with no rig.
  * @param props.restFrames Optional per-node clinical rest-frame lookup. Supply
  *   the same frame table the renderer/player uses so `attachTo` objectMotions
  *   ride the visible posed bone, not raw rig-space FK.
@@ -247,6 +249,7 @@ export const performShot = (props: {
   performance: IAutoMoviePerformanceApplication.IWrite;
   synthesize: IAutoMovieActionSynthesizer;
   skeleton: (node: string) => IAutoMovieSkeleton | null;
+  hasActorContext?: (node: string) => boolean;
   restFrames?: (
     node: string,
   ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>> | undefined;
@@ -277,6 +280,7 @@ export const performShot = (props: {
     performance,
     synthesize,
     skeleton,
+    hasActorContext,
     restFrames,
     targetAt: resolveLiveTarget,
     gaits,
@@ -317,6 +321,9 @@ export const performShot = (props: {
       out.push("type", path, `${label} must be a non-empty id`, id);
   };
 
+  const nodeIds = new Set(staged.scene.nodes.map((n) => n.id));
+  const cameraIds = new Set(staged.scene.cameras.map((c) => c.id));
+
   const validateTargetNodeIds = (
     target: unknown,
     path: string,
@@ -334,17 +341,37 @@ export const performShot = (props: {
       validateNonEmptyId(target.node, `${path}.node`, `${label} bone node id`);
       validateNonEmptyId(target.bone, `${path}.bone`, `${label} bone id`);
       if (typeof target.node === "string" && typeof target.bone === "string") {
-        const rig = skeleton(target.node);
-        if (
-          rig === null ||
-          !rig.bones.some((bone) => bone.bone === target.bone)
-        )
+        if (!nodeIds.has(target.node))
           out.push(
             "type",
-            `${path}.bone`,
-            `bone "${target.bone}" is not carried by rigged staged actor "${target.node}"`,
-            target.bone,
+            `${path}.node`,
+            `bone target actor "${target.node}" must be a staged scene node`,
+            target.node,
           );
+        else if (hasActorContext !== undefined && !hasActorContext(target.node))
+          out.push(
+            "type",
+            `${path}.node`,
+            `staged bone target actor "${target.node}" has no actor context`,
+            target.node,
+          );
+        else {
+          const rig = skeleton(target.node);
+          if (rig === null)
+            out.push(
+              "type",
+              `${path}.bone`,
+              `staged bone target actor "${target.node}" has no rig`,
+              target.bone,
+            );
+          else if (!rig.bones.some((bone) => bone.bone === target.bone))
+            out.push(
+              "type",
+              `${path}.bone`,
+              `bone "${target.bone}" is not carried by rigged staged actor "${target.node}"`,
+              target.bone,
+            );
+        }
       }
       return true;
     }
@@ -393,9 +420,6 @@ export const performShot = (props: {
   const actions = performance.revise.final ?? performance.draft;
   const base =
     performance.revise.final !== null ? "$input.revise.final" : "$input.draft";
-
-  const nodeIds = new Set(staged.scene.nodes.map((n) => n.id));
-  const cameraIds = new Set(staged.scene.cameras.map((c) => c.id));
 
   // Every placed thing a target may name, cameras included (#1294): one table
   // shared with the reference synthesizer, so a target the gate accepts is a

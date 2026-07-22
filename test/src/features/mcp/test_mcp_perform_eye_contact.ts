@@ -55,7 +55,10 @@ const actors = {
   knightB: context(B_PLACEMENT, 180),
 };
 
-const performing = (draft: IAutoMovieActionCall[]) => {
+const performing = (
+  draft: IAutoMovieActionCall[],
+  actorRegistry: Record<string, IAutoMovieMcpActorContext> = actors,
+) => {
   const app = new AutoMovieApplication();
   const staged = app.stage({ script, staging }).staged;
   if (staged.success !== true) throw new Error("staging fixture must succeed");
@@ -66,7 +69,7 @@ const performing = (draft: IAutoMovieActionCall[]) => {
       draft,
       revise: { review: "unchanged.", final: null },
     }),
-    actors,
+    actors: actorRegistry,
   }).performed;
 };
 
@@ -137,6 +140,10 @@ const lookAt = (
  *    freezing the rest-pose point), and `point`, `strike`, and `reach` compile
  *    their arm pose at the target's changing beat time.
  * 5. A missing rig bone is refused at `bone`.
+ * 6. A bone target actor must be a staged scene node before its context is
+ *    consulted: an extra/stale actor and a camera id are refused at `node`.
+ * 7. After staging membership passes, a missing actor context, missing rig, and
+ *    missing bone retain distinct diagnostics.
  */
 export const test_mcp_perform_eye_contact = (): void => {
   // 1. they hold each other's gaze.
@@ -294,6 +301,90 @@ export const test_mcp_perform_eye_contact = (): void => {
     missingBone.success === false &&
       missingBone.violations.some((violation) =>
         violation.path.endsWith(".bone"),
+      ),
+  );
+
+  const ghostBone: IAutoMovieActionTarget = {
+    kind: "bone",
+    node: "ghost",
+    bone: "leftHand",
+  };
+  const extraContext = {
+    ...actors,
+    ghost: context({ x: 4, y: 0, z: 0 }, 0),
+  };
+  const ghostLook = performing([lookAt("knightA", ghostBone)], extraContext);
+  const ghostFrame = performing(
+    [
+      {
+        verb: "frame",
+        actor: "cam-main",
+        start: 0,
+        duration: 2,
+        framing: "medium",
+        move: "static",
+        on: ghostBone,
+      },
+    ],
+    extraContext,
+  );
+  TestValidator.predicate(
+    "a stale context cannot target an actor absent from the scene",
+    [ghostLook, ghostFrame].every(
+      (result) =>
+        result.success === false &&
+        result.violations.some(
+          (violation) =>
+            violation.path.endsWith(".node") &&
+            violation.expected.includes("staged scene node"),
+        ),
+    ),
+  );
+
+  const cameraBone = performing(
+    [
+      lookAt("knightA", {
+        kind: "bone",
+        node: "cam-main",
+        bone: "leftHand",
+      }),
+    ],
+    {
+      ...actors,
+      "cam-main": context({ x: 0, y: 1.6, z: 4 }, 0),
+    },
+  );
+  TestValidator.predicate(
+    "a camera id cannot masquerade as a rigged staged actor",
+    cameraBone.success === false &&
+      cameraBone.violations.some(
+        (violation) =>
+          violation.path.endsWith(".node") &&
+          violation.expected.includes("staged scene node"),
+      ),
+  );
+
+  const noContext = performing(
+    [lookAt("knightA", { kind: "bone", node: "knightB", bone: "leftHand" })],
+    { knightA: actors.knightA },
+  );
+  const noRig = performing(
+    [lookAt("knightA", { kind: "bone", node: "knightB", bone: "leftHand" })],
+    { ...actors, knightB: { ...actors.knightB, rig: undefined } },
+  );
+  TestValidator.predicate(
+    "missing context, missing rig, and missing bone stay distinct",
+    noContext.success === false &&
+      noContext.violations.some((violation) =>
+        violation.expected.includes("no actor context"),
+      ) &&
+      noRig.success === false &&
+      noRig.violations.some((violation) =>
+        violation.expected.includes("has no rig"),
+      ) &&
+      missingBone.success === false &&
+      missingBone.violations.some((violation) =>
+        violation.expected.includes("not carried by rigged staged actor"),
       ),
   );
 };

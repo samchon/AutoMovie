@@ -418,6 +418,7 @@ export class PipelineService {
       performance: props.performance,
       synthesize,
       skeleton: (node: string) => contexts.get(node)?.rig ?? null,
+      hasActorContext: (node: string) => contexts.has(node),
       restFrames: (node: string) => contexts.get(node)?.restFrames,
       gaits: (node: string) =>
         contexts.get(node)?.gaits.map((gait) => gait.name),
