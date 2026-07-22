@@ -6,6 +6,7 @@ import {
 
 import { Quaternion } from "../math/Quaternion";
 import { segmentIndex } from "../math/bisect";
+import { cubicHermiteValue } from "../math/cubicHermite";
 import {
   clipDurationFault,
   clipLoopFault,
@@ -123,20 +124,13 @@ const cubicHermite = (
   stride: number,
 ): number[] => {
   const { values, channel } = track;
-  const t2 = t * t;
-  const t3 = t2 * t;
-  const h00 = 2 * t3 - 3 * t2 + 1;
-  const h10 = t3 - 2 * t2 + t;
-  const h01 = -2 * t3 + 3 * t2;
-  const h11 = t3 - t2;
-
   const out = new Array<number>(width);
   for (let c = 0; c < width; ++c) {
     const vLo = values[lo * stride + width + c]!;
     const bLo = values[lo * stride + 2 * width + c]!;
     const vHi = values[hi * stride + width + c]!;
     const aHi = values[hi * stride + c]!;
-    out[c] = h00 * vLo + h10 * span * bLo + h01 * vHi + h11 * span * aHi;
+    out[c] = cubicHermiteValue(vLo, bLo, vHi, aHi, span, t);
   }
   return channelIsRotation(channel) ? normalizeQuatArray(out) : out;
 };
