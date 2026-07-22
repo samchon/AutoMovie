@@ -1,6 +1,4 @@
 import { resolveFrame, sceneToNodes } from "@automovie/engine";
-import { IAutoMovieClip } from "@automovie/interface";
-
 import { AutoMovieContext } from "../AutoMovieContext";
 import { toEnginePropSpec } from "../convert";
 import { IAutoMovieGetResolvedPropFrameOutput } from "../dto";
@@ -65,20 +63,9 @@ export class ArticulationService {
             nodePrefix: `${placement.id}/`,
           }));
       });
-      const tracks = shot.objectMotions.flatMap((clip) => clip.tracks);
-      const clip: IAutoMovieClip | null =
-        tracks.length === 0
-          ? null
-          : {
-              id: `prop-frame:${shot.id}`,
-              name: null,
-              duration: shot.duration,
-              loop: false,
-              tracks,
-            };
       const resolved = resolveFrame({
         nodes,
-        clip,
+        clip: shot.objectMotions,
         limits: [],
         profiles,
         seconds,

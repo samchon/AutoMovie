@@ -1,5 +1,5 @@
 import { IAutoMovieClip, IAutoMovieTrack } from "@automovie/interface";
-import { applyObjectMotion } from "@automovie/viewer";
+import { applyObjectMotion, applyObjectMotions } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
@@ -57,6 +57,12 @@ const morphMesh = (count: number): THREE.Mesh => {
  *    throwing, a mesh with FEWER influences than the track is filled as far as
  *    it goes (a clip authored against another model), and a mesh with MORE
  *    keeps its untouched tail.
+ * 6. A two-clip handoff uses the earlier translation before the later track's
+ *    first key and the later translation after it; a future-only clip writes
+ *    nothing before it starts.
+ * 7. Authority is per channel: a simultaneous scale composes with translation,
+ *    while equal-start duplicate translations choose producer append order.
+ * 8. Renaming the same clips leaves the selected values unchanged.
  */
 export const test_viewer_apply_object_motion = (): void => {
   const s = Math.SQRT1_2;
@@ -161,5 +167,105 @@ export const test_viewer_apply_object_motion = (): void => {
       nclose(long.morphTargetInfluences![0]!, 0.5) &&
       nclose(long.morphTargetInfluences![1]!, 0.25) &&
       nclose(long.morphTargetInfluences![2]!, 0.9),
+  );
+
+  const handoffA: IAutoMovieClip = {
+    id: "held",
+    name: null,
+    duration: 2,
+    loop: false,
+    tracks: [
+      {
+        channel: { kind: "node", node: "prop", path: "translation" },
+        times: [0, 1],
+        values: [0, 0, 0, 1, 0, 0],
+        interpolation: "linear",
+      },
+    ],
+  };
+  const handoffB: IAutoMovieClip = {
+    id: "flying",
+    name: null,
+    duration: 2,
+    loop: false,
+    tracks: [
+      {
+        channel: { kind: "node", node: "prop", path: "translation" },
+        times: [1, 2],
+        values: [1, 0, 0, 2, 0, 0],
+        interpolation: "linear",
+      },
+    ],
+  };
+  const authoritySink = new THREE.Object3D();
+  applyObjectMotions([handoffA, handoffB], 0.5, () => authoritySink);
+  TestValidator.predicate(
+    "a future handoff does not overwrite the current authority",
+    nclose(authoritySink.position.x, 0.5),
+  );
+  applyObjectMotions([handoffA, handoffB], 1.5, () => authoritySink);
+  TestValidator.predicate(
+    "the later handoff takes authority after its first key",
+    nclose(authoritySink.position.x, 1.5),
+  );
+  authoritySink.position.x = -3;
+  applyObjectMotions([handoffB], 0.5, () => authoritySink);
+  TestValidator.predicate(
+    "a future-only channel leaves the staged value untouched",
+    nclose(authoritySink.position.x, -3),
+  );
+
+  const simultaneousScale: IAutoMovieClip = {
+    id: "grow",
+    name: null,
+    duration: 2,
+    loop: false,
+    tracks: [
+      {
+        channel: { kind: "node", node: "prop", path: "scale" },
+        times: [0, 2],
+        values: [1, 1, 1, 2, 2, 2],
+        interpolation: "linear",
+      },
+    ],
+  };
+  applyObjectMotions(
+    [handoffA, handoffB, simultaneousScale],
+    1.5,
+    () => authoritySink,
+  );
+  TestValidator.predicate(
+    "disjoint channels compose independently",
+    nclose(authoritySink.position.x, 1.5) &&
+      nclose(authoritySink.scale.x, 1.75),
+  );
+  const tied = {
+    ...handoffB,
+    id: "replacement",
+    tracks: [
+      {
+        ...handoffB.tracks[0]!,
+        values: [10, 0, 0, 20, 0, 0],
+      },
+    ],
+  } satisfies IAutoMovieClip;
+  applyObjectMotions([handoffA, handoffB, tied], 1.5, () => authoritySink);
+  TestValidator.predicate(
+    "equal-start duplicates choose later producer order",
+    nclose(authoritySink.position.x, 15),
+  );
+
+  const renamedSink = new THREE.Object3D();
+  applyObjectMotions(
+    [
+      { ...handoffA, id: "anything" },
+      { ...handoffB, id: "unrelated-name" },
+    ],
+    1.5,
+    () => renamedSink,
+  );
+  TestValidator.predicate(
+    "clip ids do not participate in authority",
+    nclose(renamedSink.position.x, 1.5),
   );
 };

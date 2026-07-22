@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { throwsError } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 import { mcpDoorSpec } from "./test_mcp_forge_prop";
 
 const scriptWrite = makeScriptWrite();
@@ -154,6 +154,73 @@ export const test_mcp_resolved_prop_frame = (): void => {
         ) &&
         resolved.frame.world["doorWest/hinge"] !== undefined &&
         (resolved.frame.world["doorWest/handleMirror"]?.[0] ?? 1) < 0,
+    );
+
+    const handoffShot: IAutoMovieShot = {
+      ...doorShot(scene.id, scene.cameras[0]!.id),
+      objectMotions: [
+        {
+          id: "held-by-a",
+          name: null,
+          duration: 2,
+          loop: false,
+          tracks: [
+            {
+              channel: {
+                kind: "node",
+                node: "doorWest/hinge",
+                path: "translation",
+              },
+              times: [0, 1],
+              values: [0, 0, 0, 1, 0, 0],
+              interpolation: "linear",
+            },
+          ],
+        },
+        {
+          id: "held-by-b",
+          name: null,
+          duration: 2,
+          loop: false,
+          tracks: [
+            {
+              channel: {
+                kind: "node",
+                node: "doorWest/hinge",
+                path: "translation",
+              },
+              times: [1, 2],
+              values: [1, 0, 0, 2, 0, 0],
+              interpolation: "linear",
+            },
+          ],
+        },
+      ],
+    };
+    TestValidator.equals(
+      "a shot with a duplicate-channel handoff commits",
+      app.commitShot({ shot: handoffShot }).committed,
+      true,
+    );
+    const beforeHandoff = app.getResolvedPropFrame({
+      beat: "beat-1",
+      t: 0.5,
+    });
+    const afterHandoff = app.getResolvedPropFrame({
+      beat: "beat-1",
+      t: 1.5,
+    });
+    TestValidator.predicate(
+      "the prop-frame query resolves both sides of duplicate-channel authority",
+      beforeHandoff.reason === null &&
+        afterHandoff.reason === null &&
+        beforeHandoff.frame !== null &&
+        afterHandoff.frame !== null &&
+        nclose(
+          afterHandoff.frame.world["doorWest/hinge"]![12]! -
+            beforeHandoff.frame.world["doorWest/hinge"]![12]!,
+          1,
+        ),
     );
 
     const missing = app.getResolvedPropFrame({ beat: "missing" });

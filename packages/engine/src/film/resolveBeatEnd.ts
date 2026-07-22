@@ -16,7 +16,7 @@ import {
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
-import { sampleClip } from "../resolve/sampleClip";
+import { sampleClipSequence } from "../resolve/sampleClip";
 import {
   VELOCITY_DT,
   foldRoot,
@@ -24,7 +24,7 @@ import {
   plantsAtEnd,
   rootVelocityOf,
 } from "./beatEndSim";
-import { bakedTransformAt, followClipOf } from "./followClip";
+import { bakedTransformFromClipsAt } from "./followClip";
 import { IAutoMovieStagedSet } from "./stageScene";
 
 const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: 1 };
@@ -42,15 +42,20 @@ const ZERO: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
  * samples.
  */
 const bakedFollowVelocity = (
-  clip: IAutoMovieClip,
+  clips: readonly IAutoMovieClip[],
   node: string,
   t: number,
 ): IAutoMovieVector3 => {
   if (t <= 0) return ZERO;
-  const t1 = Math.min(t, clip.duration);
+  const t1 = t;
   const t0 = Math.max(0, t1 - VELOCITY_DT);
-  const p1 = sampleClip(clip, t1).get(`node:${node}:translation`)!.value;
-  const p0 = sampleClip(clip, t0).get(`node:${node}:translation`)!.value;
+  const p1 = sampleClipSequence(clips, t1).get(
+    `node:${node}:translation`,
+  )?.value;
+  const p0 = sampleClipSequence(clips, t0).get(
+    `node:${node}:translation`,
+  )?.value;
+  if (p1 === undefined || p0 === undefined) return ZERO;
   return Vector3.scale(
     {
       x: p1[0]! - p0[0]!,
@@ -232,13 +237,21 @@ const endActorOf = (
   // until release, flying after it. When the shot carries no clip driving the
   // node (never coupled, a hand-built shot, or no perform pass), it falls back
   // to the staged path below, byte-identical to the pre-#674 output.
-  const followClip = followClipOf(context.objectMotions, node.id, localTime);
+  const bakedTransform = bakedTransformFromClipsAt(
+    context.objectMotions,
+    node.id,
+    localTime,
+  );
   const world: IWorldOverride | null =
-    followClip === null
+    bakedTransform === null
       ? null
       : {
-          transform: bakedTransformAt(followClip, node.id, localTime),
-          rootVelocity: bakedFollowVelocity(followClip, node.id, localTime),
+          transform: bakedTransform,
+          rootVelocity: bakedFollowVelocity(
+            context.objectMotions,
+            node.id,
+            localTime,
+          ),
         };
 
   if (motionId === null)

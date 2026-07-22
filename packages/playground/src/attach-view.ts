@@ -20,6 +20,7 @@ import {
 import {
   AutoMoviePlayer,
   applyObjectMotion,
+  applyObjectMotions,
   buildModel,
   mountViewer,
 } from "@automovie/viewer";
@@ -276,8 +277,9 @@ const renderAt = (seconds: number): void => {
     player.update(sample.time);
   const live = shotById.get(sample.shot)!;
   // objectMotions: the blade's world-space follow clip (compileAttach).
-  for (const clip of live.objectMotions)
-    applyObjectMotion(clip, sample.time, (node) => groupsById.get(node));
+  applyObjectMotions(live.objectMotions, sample.time, (node) =>
+    groupsById.get(node),
+  );
   if (live.cameraMotion === null) applyStagedCamera();
   else applyObjectMotion(live.cameraMotion, sample.time, () => camera);
 };
