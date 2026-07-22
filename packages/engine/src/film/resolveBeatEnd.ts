@@ -33,13 +33,11 @@ const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: 1 };
 const ZERO: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
 
 /**
- * Trailing world velocity of the baked follow clip at `t`, the coupled child's
- * real end velocity as its parent moves, finite-differenced over the last
- * {@link VELOCITY_DT} and clamped into the clip. Zero exactly at the clip's
- * start (an empty window), like the pose-clip velocity rule; for any `t > 0`
- * the window `[t0, t1]` is non-empty (`VELOCITY_DT > 0`). The clip is the one
- * {@link followClipOf} matched, so its rider translation channel always
- * samples.
+ * Trailing world velocity of the baked object-authority sequence at `t`, the
+ * coupled or launched child's real end velocity finite-differenced over the
+ * last {@link VELOCITY_DT}. Each boundary independently uses the translation
+ * authority active there. Zero at `t <= 0`, or when an authority has only just
+ * begun and the earlier boundary has no translation sample.
  */
 const bakedFollowVelocity = (
   clips: readonly IAutoMovieClip[],

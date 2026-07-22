@@ -85,20 +85,10 @@ const drivingStart = (clip: IAutoMovieClip, node: string): number =>
  * The baked clip that supplies a chained coupling's parent transform for
  * `node`, or `null` when none does.
  *
- * Selected by what a clip CARRIES rather than by how its id is spelled (#1361).
- * The prefix match this used to do (`attach:<node>`, plus the `:2`, `:3`
- * handoff suffixes #989 bakes in start order) knew only the ids `compileAttach`
- * writes, so the `trajectory:<node>` clip the launch pass bakes for the SAME
- * node was invisible: a thrown stone's beat end read the attach clip that ends
- * at release and reported the stone still in the hand, contradicting the
- * committed shot it was resolved from. Two of the engine's own outputs, one
- * unable to see the other because of a naming convention only the producer
- * knew.
- *
- * The latest clip to start wins. This selector is used by a chained coupling's
- * parent path, which composes one parent clip across every keyframe rather than
- * resolving a single instant. Ties go to the later entry, the order the bakers
- * append in.
+ * `coupleObjects` already groups these clips by the child they drive. The
+ * latest clip to start wins, so a chained coupling composes through the last
+ * parent handoff without interpreting its artifact id. Ties go to the later
+ * producer entry.
  *
  * @author Samchon
  */

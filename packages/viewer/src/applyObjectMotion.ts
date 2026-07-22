@@ -45,7 +45,12 @@ export const applyObjectMotion = (
   applySampledObjectMotion(sampleClip(clip, seconds), resolve);
 };
 
-/** Apply a shot's object clips under the engine's per-channel authority rule. */
+/**
+ * Apply a shot's object clips under the engine's per-channel authority rule. A
+ * future-only channel writes nothing. As with {@link applyObjectMotion}, a
+ * stateful host must restore staged bases before each seek/frame when no active
+ * authority should leave the staged value visible.
+ */
 export const applyObjectMotions = (
   clips: readonly IAutoMovieClip[],
   seconds: number,
