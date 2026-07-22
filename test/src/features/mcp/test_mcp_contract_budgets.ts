@@ -132,14 +132,15 @@ export const test_mcp_contract_budgets = async (): Promise<void> => {
     if (instructions === undefined)
       throw new Error("the server must ship handshake instructions");
     const opening = instructions.slice(0, 512);
+    const normalizedOpening = opening.replace(/\s+/g, " ");
     TestValidator.predicate(
       "the opening names the product and its arbiter framing",
-      opening.includes("AutoMovie") &&
-        opening.includes("engine enforces, model creates"),
+      normalizedOpening.includes("AutoMovie") &&
+        normalizedOpening.includes("engine enforces, model creates"),
     );
     TestValidator.predicate(
       "the opening names the guide entry point",
-      opening.includes("AUTOMOVIE_OVERALL"),
+      normalizedOpening.includes("AUTOMOVIE_OVERALL"),
     );
 
     // 3. no mojibake in anything shipped to the client LLM
