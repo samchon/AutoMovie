@@ -145,6 +145,36 @@ export const test_mcp_validation_tools = (): void => {
     app.validateMotion({ motion, skeleton }).validation,
     { success: true },
   );
+  TestValidator.equals(
+    "valid planted-foot check",
+    app.validateFootSkate({
+      motion,
+      skeleton,
+      contacts: [
+        { bone: "leftLowerLeg", start: 0, end: 1, maxHorizontalSpeed: 100 },
+      ],
+    }).validation.success,
+    true,
+  );
+  TestValidator.predicate(
+    "ground contact returns an advisory verdict for a raised plane",
+    (() => {
+      const validation = app.validateGroundContact({
+        motion,
+        skeleton,
+        footBones: ["leftLowerLeg"],
+        groundY: 100,
+      }).validation;
+      return (
+        validation.success === true && (validation.warnings?.length ?? 0) > 0
+      );
+    })(),
+  );
+  TestValidator.equals(
+    "ground contact defaults to the engine's foot set and ground plane",
+    app.validateGroundContact({ motion, skeleton }).validation,
+    { success: true },
+  );
   TestValidator.equals("valid model", app.validateModel({ model }).validation, {
     success: true,
   });
@@ -1029,9 +1059,42 @@ export const test_mcp_validation_tools = (): void => {
     })(),
   );
 
+  TestValidator.predicate(
+    "malformed foot-contact windows return validation before engine sampling",
+    hasExpected(
+      app.validateFootSkate({
+        motion,
+        skeleton,
+        contacts: null as never,
+      }).validation,
+      "$input.contacts",
+      "array",
+    ),
+  );
+  TestValidator.predicate(
+    "malformed ground-contact settings return validation before engine sampling",
+    (() => {
+      const validation = app.validateGroundContact({
+        motion,
+        skeleton,
+        footBones: null as never,
+        groundY: "floor" as never,
+      }).validation;
+      return (
+        hasExpected(validation, "$input.footBones", "array") &&
+        hasExpected(validation, "$input.groundY", "number")
+      );
+    })(),
+  );
+
   for (const [label, validation] of [
     ["validatePose", app.validatePose(null as never).validation],
     ["validateMotion", app.validateMotion(null as never).validation],
+    ["validateFootSkate", app.validateFootSkate(null as never).validation],
+    [
+      "validateGroundContact",
+      app.validateGroundContact(null as never).validation,
+    ],
     ["validateModel", app.validateModel(null as never).validation],
     ["validateScene", app.validateScene(null as never).validation],
     ["validateShot", app.validateShot(null as never).validation],

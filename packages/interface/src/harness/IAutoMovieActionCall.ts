@@ -320,7 +320,7 @@ export interface IAutoMovieCameraAction extends IAutoMovieActionBase {
   framing: "wide" | "full" | "medium" | "close";
 
   /** How the camera behaves over this span. */
-  move: "static" | "follow" | "orbit" | "push-in" | "whip";
+  move: "static" | "follow" | "orbit" | "push-in" | "truck" | "whip";
 
   /** What it frames/tracks. */
   on: IAutoMovieActionTarget;

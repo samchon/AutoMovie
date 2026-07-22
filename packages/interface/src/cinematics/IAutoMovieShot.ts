@@ -105,7 +105,7 @@ export interface IAutoMovieCameraIntent {
   framing: "wide" | "full" | "medium" | "close";
 
   /** How the camera behaves over the span. */
-  move: "static" | "follow" | "orbit" | "push-in" | "whip";
+  move: "static" | "follow" | "orbit" | "push-in" | "truck" | "whip";
 
   /** Resolved world focus point, or `null` when the action named none. */
   focus: IAutoMovieVector3 | null;

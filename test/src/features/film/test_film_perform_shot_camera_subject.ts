@@ -367,4 +367,20 @@ export const test_film_perform_shot_camera_subject = (): void => {
     vclose(keys[0]!, keys[keys.length - 1]!),
     false,
   );
+
+  const projectile = perform([looseAtCamera, frame("cam-alt", "arrow")]);
+  TestValidator.equals(
+    "a follow on a launched prop performs",
+    projectile.success,
+    true,
+  );
+  if (projectile.success !== true) return;
+  const projectileKeys = keysOf(
+    projectile.shot.cameraMotion!.tracks[0]!.values,
+  );
+  TestValidator.predicate(
+    "the launch trajectory moves the prop-follow camera",
+    projectileKeys.length > 1 &&
+      !vclose(projectileKeys[0]!, projectileKeys[projectileKeys.length - 1]!),
+  );
 };

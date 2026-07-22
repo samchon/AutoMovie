@@ -4,7 +4,7 @@
 
 ## The Verb Vocabulary
 
-`locomote` (walk a gait to a destination) · `gesture` (bow, nod, wave, crouch, kick..., including the arm-IK kinds `point` and `strike`, aimed at the `at` target) · `reach` (arm IK toward `to`) · `lookAt` (head aim) · `attachTo` (couple an object to a parent bone frame) · `launch` (a projectile, with engine-computed hit timing and injected reactions) · `react` (a flinch decomposed into the actor's frame) · `emote` (expression) · `hold` · `enact` (play a clip you authored; see below) · `frame` (the camera move: static, push-in, orbit, follow, whip). `point`/`strike` are gesture KINDS, not verbs. Emit `{ verb: "gesture", kind: "strike", at: ... }`.
+`locomote` (walk a gait to a destination) · `gesture` (bow, nod, wave, crouch, kick..., including the arm-IK kinds `point` and `strike`, aimed at the `at` target) · `reach` (arm IK toward `to`) · `lookAt` (head aim) · `attachTo` (couple an object to a parent bone frame) · `launch` (a projectile, with engine-computed hit timing and injected reactions) · `react` (a flinch decomposed into the actor's frame) · `emote` (expression) · `hold` · `enact` (play a clip you authored; see below) · `frame` (the camera move: static, push-in, orbit, truck, follow, whip). `truck` tracks screen-left across the staged depth axis; stage the reverse side for rightward travel. `point`/`strike` are gesture KINDS, not verbs. Emit `{ verb: "gesture", kind: "strike", at: ... }`.
 
 ## Enact: Clips You Compute
 
@@ -102,13 +102,13 @@ Every positional verb resolves the same ids. WHERE on the subject each one aims 
 | `launch` | the **placement** point | the review pass measures a hit against the target's ground root, so aim and review agree |
 | `frame`, a `coverage` angle | a **measured fraction of the subject's rig height**: mid-body for `wide`/`full`, 0.72 for `medium`, 0.85 for `close` | the framing grammar owns its own aim height and measures it from the rig |
 
-Only actor ids move. A set piece, a prop, and a camera always resolve to their placement: a prop's origin is wherever staging put it, and a camera's translation is already its lens.
+Actor root motion, launched props, and attached props move. A `follow` frame reads the same effective object-motion authority the player applies, so it follows a projectile through its trajectory and into a handoff. A set piece and a camera remain at their staged placement unless their own shot track moves them.
 
 ## Motions Are Derived, Not Stored
 
 A `perform` returns a shot plus motion identities and durations; the shot itself keeps only motion **id references** (`performances[].motion`), never the clips. Those clips are the densest artifact and are purely derived (deterministically re-`perform`able from the resident script/scene/shot), so the project persists the shot, not the motion (the memory is the AST, not its regenerable output). A re-opened project re-derives motion by re-`perform`ing; it is never read back from a file.
 
-A **resident** `perform` defaults to `response: "compact"`: `motionSummary` identifies the clips and `motions` is empty, while the server holds the complete registry only for that same project's next `commitShot`. Add light/object motions to the returned shot, then commit it without repeating the derived clips. Ask for `response: "full"` when you need to inspect or pass the dense clips yourself. The compact registry disappears when the scene or active project changes, or when the server restarts, so re-perform before committing then. An explicit `perform` remains `full` by default and refuses `compact`, because it has no resident state to hand off; an explicit-slate `commitShot` remains a pure transform whose references are yours to guarantee.
+A **resident** `perform` defaults to `response: "compact"`: `motionSummary` identifies the clips and `motions` is empty, while the server holds the complete registry only for that same project's next `commitShot`. Add light/object motions to the returned shot, then commit it without repeating the derived clips. Ask for `response: "full"` when you need to inspect or pass the dense clips yourself, including to run `validateFootSkate` with planted-foot windows or `validateGroundContact` against a ground plane. The compact registry disappears when the scene or active project changes, or when the server restarts, so re-perform before committing then. An explicit `perform` remains `full` by default and refuses `compact`, because it has no resident state to hand off; an explicit-slate `commitShot` remains a pure transform whose references are yours to guarantee.
 
 ## A Shot Clip Animates Nodes
 
