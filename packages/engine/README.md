@@ -39,7 +39,7 @@ and `resolveFrame` still write node channels only.
 - `validateSelfIntersection`: 명시한 capsule proxy pair의 중심선 거리를 검사하는 물리 검증기. 반지름 합보다 가까우면 `$input.pairs[i].samples[j].distance` 경로에 `physics` 위반을 만든다.
 - `validateBalanceSupport`: 명시한 support window에서 COM proxy 본의 XZ 투영이 support hull margin 안에 있는지 검사하는 물리 검증기. 벗어나면 `$input.supports[i].samples[j].centerOfMass.supportDistance` 경로에 `physics` 위반을 만든다.
 
-현재 Tier 3 검증기는 자동 보정기가 아니라 hard rejection 신호다. 작은 수치 오차는 `tolerance`나 `margin`으로 모델링하고, root 이동·stance 변경·액션 변경은 호출자나 상위 하니스가 다시 작성한다.
+Tier 3의 물리 결과는 자동 보정이나 차단이 아니라 **plausibility warning**이다. warning만 있는 검증은 성공하며, 호출자는 제안을 적용하거나 restage하거나 의도적인 비현실성을 `physicsIntent`로 명시한다. 잘못된 sample rate나 존재하지 않는 bone처럼 검증기 입력 자체가 깨진 경우만 error다.
 
 ## Imported humanoid retargeting
 
@@ -86,10 +86,11 @@ automovie를 구동하는 길은 둘이며, 둘 다 일급이다.
 
 - **Tier 1 (range):** 값 범위. blendshape·머티리얼 계수 ∈ [0,1], 프리미티브 치수 > 0 등. (인터페이스가 러프 타입이라 엔진이 범위를 강제)
 - **Tier 2 (rom):** 관절 가동범위. flexion/abduction/twist를 본별 해부학 한계와 대조. **automovie 차별점.**
+- **Tier 3 (physics):** 자기교차·접지·균형·충돌 등 물리 plausibility를 warning으로 보고한다. malformed validator input은 error다.
 - **Tier 4 (temporal):** 시간 일관성. 키프레임 시간 단조성·duration 이내·각속도 상한.
-- Tier 3 (physics: 자기교차·접지·균형)와 Tier 5 (mesh 위상)는 후속.
+- **Tier 5 (topology):** non-manifold edge와 뒤집힌 winding 같은 mesh 구조 오류를 거부한다. 닫힌 solid가 필요한 호출자는 open boundary도 검사한다.
 
-검증기는 `IAutoMovieConstraintViolation[]`을 만들고, `IAutoMovieValidation`(success | violations)으로 묶는다. `@automovie/agent`가 이를 MicroAgentica 피드백 루프에 흘려 `// ❌`로 렌더한다.
+검증기는 `IAutoMovieConstraintViolation[]`을 만들고 `IAutoMovieValidation`으로 묶는다. 직접-link 호출자는 이 결과를 그대로 소비하고, MCP 경로는 같은 위반을 도구 응답의 JSON path에 실어 외부 에이전트의 교정 루프로 돌려준다. error가 하나라도 있으면 실패하고 warning만 있으면 성공한다.
 
 ## 좌표·각도 규약
 

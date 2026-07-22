@@ -17,10 +17,7 @@ export type AutoMovieViolationKind =
   | "range"
   /** Tier 2: joint angle outside its anatomical range of motion. */
   | "rom"
-  /**
-   * Tier 3: physically impossible (self-intersection, ground penetration,
-   * off-balance).
-   */
+  /** Tier 3: physical-plausibility warning (collision, penetration, balance). */
   | "physics"
   /**
    * Tier 4: temporal incoherence (non-monotonic time, excessive angular
