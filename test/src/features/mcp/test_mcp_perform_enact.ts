@@ -97,9 +97,9 @@ const computedKata = (
  *    door around the shield.
  * 3. A unison cast (`actor: [a, b]`) enacts one clip without id collisions. Both
  *    actors get composites carrying the content.
- * 4. Region layering: an `enact` narrowed to `upperBody` layers with a concurrent
- *    `locomote` (lowerBody): the composite claims both the gait's leg and the
- *    clip's arm at mid-shot.
+ * 4. Content layering: an `enact` narrowed to `upperBody` layers with a concurrent
+ *    legs-only `locomote` despite locomote's broad fullBody mask; the composite
+ *    claims both the gait's leg and the clip's arm at mid-shot.
  * 5. Refusal rungs, most-actionable first: no actor context; a rig-less context
  *    (an ungated dense clip would dodge the ROM gate); a clip id the registry
  *    does not supply (including when `clips` is omitted entirely); a clip
@@ -223,7 +223,7 @@ export const test_mcp_perform_enact = (): void => {
       }),
     );
 
-  // 4. an upperBody enact layers with a concurrent lowerBody locomote.
+  // 4. an upperBody enact layers with a concurrent legs-only locomote.
   const layered = app.perform({
     script,
     staged,

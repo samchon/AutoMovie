@@ -15,38 +15,14 @@ import { IAutoMovieGait, IAutoMovieProfile } from "@automovie/interface";
  * the ground longer (high `duty`); `march` throws the knees high; `sprint` is
  * all reach and little contact (low `duty`).
  *
- * Left/right limbs are a half-cycle out of phase. Feet are left to the (future)
- * ground-IK pass, so these drive **hips and knees only**, which is exactly what
- * `lowerBody` owns.
+ * Left/right limbs are a half-cycle out of phase, and each arm leads the
+ * opposite leg for contralateral counter-swing. Feet are left to the future
+ * ground-IK pass, so these drive hips, knees, and upper arms.
  *
- * **They used to counter-swing the arms, and that had to go (#1359).** The arms
- * are `upperBody`, `locomote`'s default region is `lowerBody`, and #1349 turned
- * masked content from a silent drop into a violation, so the engine's own
- * shipped gait was refused by the engine's own default region: every plain walk
- * failed to perform and the repository's flagship film page threw on load. Of
- * the three ways out, this is the one that costs no contract:
- *
- * - Widening `locomote`'s default to `fullBody` does NOT work on its own. The
- *   overlap gate refuses `fullBody` beside any partial region, and the film
- *   page's own beat runs `locomote` + `lookAt` on one actor, so the page still
- *   failed to mount when that was tried. The region label is a proxy for
- *   content in TWO places, the mask and that gate, and widening trips the
- *   second; making the gate content-aware is a larger change to a documented
- *   agent-facing rule than the defect warrants.
- * - Reporting the drop as advice instead of a violation reopens what #1349
- *   closed: a retargeted quadruped's front legs (which ride the ARM chains)
- *   would be frozen again with a note, and the benchmark measured the refusal
- *   as the thing that made an agent read the guide and fix its region.
- * - So the CONTENT changes instead: the table now authors only what the verb's
- *   default region carries, which is what "the shipped defaults must agree"
- *   means when the region model is the fixed half.
- *
- * The arm swing never reached a rendered performance either way (it was masked
- * before #1349 and refused after), so nothing that ever played is lost. Getting
- * it back is a real improvement and it needs the region model to carry it
- * first: a `locomote` whose region owns the arms, and an overlap gate that
- * compares authored bones rather than region names, so a walk can still layer
- * with a look.
+ * `locomote` carries the authored gait as `fullBody`. Layer safety is decided
+ * from the root/bones/expression the synthesized clips actually carry after
+ * masking, not from the broad region names: this counter-swing can layer with a
+ * head-only look, but correctly conflicts with a simultaneous arm gesture.
  *
  * @author Samchon
  */
@@ -74,6 +50,8 @@ export const HUMANOID_GAITS: Record<
         amplitude: 18,
         neutral: 22,
       },
+      { bone: "leftUpperArm", phase: 0.5, duty: 0.5, amplitude: 18 },
+      { bone: "rightUpperArm", phase: 0, duty: 0.5, amplitude: 18 },
     ],
   },
   run: {
@@ -108,6 +86,8 @@ export const HUMANOID_GAITS: Record<
         amplitude: 32,
         neutral: 38,
       },
+      { bone: "leftUpperArm", phase: 0.5, duty: 0.5, amplitude: 40 },
+      { bone: "rightUpperArm", phase: 0, duty: 0.5, amplitude: 40 },
     ],
   },
   sprint: {
@@ -142,6 +122,8 @@ export const HUMANOID_GAITS: Record<
         amplitude: 40,
         neutral: 45,
       },
+      { bone: "leftUpperArm", phase: 0.5, duty: 0.5, amplitude: 52 },
+      { bone: "rightUpperArm", phase: 0, duty: 0.5, amplitude: 52 },
     ],
   },
   sneak: {
@@ -170,6 +152,8 @@ export const HUMANOID_GAITS: Record<
         amplitude: 15,
         neutral: 38,
       },
+      { bone: "leftUpperArm", phase: 0.5, duty: 0.5, amplitude: 8 },
+      { bone: "rightUpperArm", phase: 0, duty: 0.5, amplitude: 8 },
     ],
   },
   march: {
@@ -198,6 +182,8 @@ export const HUMANOID_GAITS: Record<
         amplitude: 38,
         neutral: 42,
       },
+      { bone: "leftUpperArm", phase: 0.5, duty: 0.5, amplitude: 30 },
+      { bone: "rightUpperArm", phase: 0, duty: 0.5, amplitude: 30 },
     ],
   },
 };

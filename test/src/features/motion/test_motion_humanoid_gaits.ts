@@ -2,7 +2,6 @@ import {
   HUMANOID_GAITS,
   HUMANOID_PROFILE,
   bindProfileGaits,
-  bodyRegionBones,
   gaitMotion,
   validateMotion,
 } from "@automovie/engine";
@@ -12,6 +11,8 @@ import {
   IAutoMovieSkeleton,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
+
+import { nclose } from "../internal/predicates";
 
 const bone = (b: AutoMovieHumanoidBone): IAutoMovieBone => ({
   bone: b,
@@ -63,13 +64,9 @@ const ampOf = (
  *    per gait.
  * 3. The gaits are ordered by energy where it should show: sprint's hip swing
  *    exceeds run's exceeds walk's; sprint bends the knee hardest of the five;
- *    sneak is the slowest (longest period). 3b. Every gait authors ONLY bones
- *    `lowerBody` owns (#1359). The table used to counter-swing the arms, which
- *    `locomote`'s default region does not carry, so the engine's own shipped
- *    content was refused by the engine's own default region and no plain walk
- *    could perform. This pins the agreement itself rather than the walk that
- *    exercises it, so a limb row added to a region the verb does not drive
- *    fails here, at the table.
+ *    sneak is the slowest (longest period). 3b. Every gait carries visible
+ *    contralateral upper-arm swing: each arm is half a cycle from the same-side
+ *    leg and therefore leads the opposite leg.
  * 4. The humanoid profile fixture carries the same gait names and binds them into
  *    concrete clips with profile-scoped ids.
  */
@@ -116,19 +113,21 @@ export const test_motion_humanoid_gaits = (): void => {
     ),
   );
 
-  // 3b. the shipped content agrees with the shipped default region (#1359)
-  const lowerBody = new Set<AutoMovieHumanoidBone>(
-    bodyRegionBones("lowerBody"),
-  );
-  TestValidator.equals(
-    "no shipped gait authors a bone locomote's default region cannot carry",
-    NAMES.flatMap((n) =>
-      HUMANOID_GAITS[n].limbs
-        .filter((limb) => !lowerBody.has(limb.bone))
-        .map((limb) => `${n}:${limb.bone}`),
-    ),
-    [],
-  );
+  // 3b. the restored counter-swing is present on every shipped gait.
+  for (const name of NAMES) {
+    const gait = HUMANOID_GAITS[name];
+    const leftArm = gait.limbs.find((limb) => limb.bone === "leftUpperArm")!;
+    const rightArm = gait.limbs.find((limb) => limb.bone === "rightUpperArm")!;
+    const leftLeg = gait.limbs.find((limb) => limb.bone === "leftUpperLeg")!;
+    const rightLeg = gait.limbs.find((limb) => limb.bone === "rightUpperLeg")!;
+    TestValidator.predicate(
+      `${name} carries visible contralateral arm swing`,
+      leftArm.amplitude > 0 &&
+        rightArm.amplitude > 0 &&
+        nclose(leftArm.phase, rightLeg.phase) &&
+        nclose(rightArm.phase, leftLeg.phase),
+    );
+  }
 
   const bound = bindProfileGaits(HUMANOID_PROFILE, RIG.id, 24);
   TestValidator.equals(

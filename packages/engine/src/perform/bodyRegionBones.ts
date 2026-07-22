@@ -74,10 +74,10 @@ const HEAD: AutoMovieHumanoidBone[] = [
  * The humanoid bones a {@link AutoMovieBodyRegion} owns. The regions partition
  * the skeleton **disjointly and completely** (`lowerBody ∪ upperBody ∪ head` =
  * all 55 VRM bones; `face` owns no bones, being expression/morph channels;
- * `fullBody` owns every bone). This is what lets the performance compiler
- * **layer** clips on disjoint regions concurrently (a walk drives `lowerBody`
- * while a wave drives `upperBody` and a look-at drives `head`, with no bone
- * claimed twice) instead of forcing them to sequence.
+ * `fullBody` owns every bone). This is what lets the performance compiler mask
+ * clips predictably. Layering then compares the content that survives these
+ * masks: clips may run concurrently whenever no root, bone, or expression
+ * channel is claimed twice, even when one uses the broad `fullBody` mask.
  *
  * @author Samchon
  */

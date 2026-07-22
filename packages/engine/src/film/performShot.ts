@@ -23,6 +23,7 @@ import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleMotion } from "../motion/sampleMotion";
 import { actionRegion } from "../perform/actionRegion";
+import { bodyRegionBones } from "../perform/bodyRegionBones";
 import {
   IAutoMovieActionSynthesizer,
   compilePerformance,
@@ -287,6 +288,19 @@ export const performShot = (props: {
     blocking,
   } = props;
   const out = new ViolationCollector();
+  const synthesisCache = new WeakMap<
+    IAutoMovieActionCall,
+    Map<string, IAutoMovieMotion | null>
+  >();
+  const synthesizeOnce: IAutoMovieActionSynthesizer = (action, actor) => {
+    const cachedByActor = synthesisCache.get(action);
+    if (cachedByActor?.has(actor) === true) return cachedByActor.get(actor)!;
+    const motion = synthesize(action, actor);
+    const byActor = cachedByActor ?? new Map<string, IAutoMovieMotion | null>();
+    byActor.set(actor, motion);
+    synthesisCache.set(action, byActor);
+    return motion;
+  };
   const beatById = new Map<
     string,
     {
@@ -964,9 +978,10 @@ export const performShot = (props: {
       );
   }
 
-  // A body region can run only one authored action at a time. Disjoint partial
-  // regions may layer, but same-region overlaps would force arrangeMotion to
-  // drop keyframes, and fullBody owns every partial region.
+  // Overlapping actions are compatible when the content they actually carry
+  // after their region masks is disjoint. Region names are only mask policy:
+  // a fullBody gait that authors legs+arms shares nothing with a head-only
+  // lookAt, while that same gait really does collide with an arm gesture.
   const actorActions = new Map<
     string,
     { action: IAutoMovieActionCall; index: number }[]
@@ -980,6 +995,46 @@ export const performShot = (props: {
     }
   });
   for (const [actor, list] of actorActions) {
+    // Synthesis used to begin only after the complete input gate. Preserve that
+    // boundary: a malformed request must return its located violations rather
+    // than reaching a throwing content constructor during overlap inspection.
+    if (out.items.length > 0) continue;
+    const layered =
+      new Set(list.map(({ action }) => actionRegion(action))).size > 1;
+    const carried = new Map<
+      IAutoMovieActionCall,
+      {
+        bones: Set<AutoMovieHumanoidBone>;
+        expression: boolean;
+        root: boolean;
+      }
+    >();
+    const contentOf = (action: IAutoMovieActionCall) => {
+      const cached = carried.get(action);
+      if (cached !== undefined) return cached;
+      const motion = synthesizeOnce(action, actor);
+      const region = actionRegion(action);
+      const allowed = new Set(bodyRegionBones(region));
+      const content = {
+        bones: new Set<AutoMovieHumanoidBone>(),
+        expression: false,
+        root: false,
+      };
+      if (motion !== null)
+        for (const keyframe of motion.keyframes) {
+          for (const joint of keyframe.pose.joints)
+            if (allowed.has(joint.bone)) content.bones.add(joint.bone);
+          if (
+            keyframe.pose.root !== null &&
+            (!layered || region === "lowerBody" || region === "fullBody")
+          )
+            content.root = true;
+          if (keyframe.expression !== null && region === "face")
+            content.expression = true;
+        }
+      carried.set(action, content);
+      return content;
+    };
     const sorted = [...list].sort(
       (a, b) => spanOf(a.action)[0] - spanOf(b.action)[0],
     );
@@ -992,28 +1047,21 @@ export const performShot = (props: {
         const [b0, b1] = spanOf(b.action);
         if (b0 >= a1 - 1e-9) break;
         const bRegion = actionRegion(b.action);
-        const sameRegionConflict = aRegion === bRegion;
-        // `face` carries EXPRESSION only, no gesture clip authors it, so a
-        // fullBody action shares zero content with an overlapping emote and
-        // "smile while bowing" must stay legal (#1062). `head` stays in the
-        // conflict: whole-body clips may author head/neck joints.
-        const fullBodyConflict =
-          aRegion !== bRegion &&
-          (aRegion === "fullBody" || bRegion === "fullBody") &&
-          aRegion !== "face" &&
-          bRegion !== "face";
-        if (sameRegionConflict && b1 > a0 + 1e-9)
+        const aContent = contentOf(a.action);
+        const bContent = contentOf(b.action);
+        const sharedBones = [...aContent.bones]
+          .filter((bone) => bContent.bones.has(bone))
+          .sort(compareCodeUnits);
+        const shared = [
+          ...(aContent.root && bContent.root ? ["root"] : []),
+          ...sharedBones,
+          ...(aContent.expression && bContent.expression ? ["expression"] : []),
+        ];
+        if (shared.length > 0 && b1 > a0 + 1e-9)
           out.push(
             "range",
             `${base}[${b.index}].start`,
-            `${actor} has overlapping ${aRegion} actions; one body region cannot run two authored clips at the same time`,
-            b.action.start,
-          );
-        else if (fullBodyConflict && b1 > a0 + 1e-9)
-          out.push(
-            "range",
-            `${base}[${b.index}].start`,
-            `${actor} has overlapping ${aRegion} and ${bRegion} actions; fullBody cannot layer with a partial body region`,
+            `${actor} has overlapping ${aRegion} and ${bRegion} actions that both author ${shared.join(", ")} after region masking; move one action, shorten it, or author disjoint content`,
             b.action.start,
           );
       }
@@ -1281,7 +1329,7 @@ export const performShot = (props: {
         // reports every one of those drops once, at the same authoring paths.
         compilePerformance(
           stageActions.filter((action) => targetsNode(action)),
-          synthesize,
+          synthesizeOnce,
         ).performances[job.targetNode]!,
       );
     const result = compileLaunch({
@@ -1353,15 +1401,13 @@ export const performShot = (props: {
   }
   if (out.items.length > 0) return { success: false, violations: out.items };
 
-  const compiled = compilePerformance(stageActions, synthesize);
+  const compiled = compilePerformance(stageActions, synthesizeOnce);
   const motions = compiled.performances;
 
   // An authored channel the compiler does not apply is REPORTED (#1349). The
-  // region mask itself is deliberate (disjoint regions are what let a walk and
-  // a wave layer), but it used to discard content in silence: a retargeted
-  // quadruped's front legs ride the ARM chains, which `locomote`'s default
-  // `lowerBody` region excludes, so half the authored gait vanished and the
-  // shot still returned success with zero violations. The remedy is a field the
+  // region mask itself is deliberate, but it used to discard content in
+  // silence: for example, explicitly forcing a retargeted quadruped gait to
+  // `lowerBody` excludes its front-leg ARM chains. The remedy is a field the
   // author owns, so the violation points at `region` rather than at the clip.
   for (const drop of compiled.masked) {
     const path = stageActionPaths[drop.action]!;

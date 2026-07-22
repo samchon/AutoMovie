@@ -8,7 +8,7 @@ import {
 const REGION_BY_VERB: Partial<
   Record<IAutoMovieActionCall["verb"], AutoMovieBodyRegion>
 > = {
-  locomote: "lowerBody",
+  locomote: "fullBody",
   gesture: "upperBody",
   reach: "upperBody",
   lookAt: "head",

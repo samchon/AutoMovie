@@ -44,54 +44,35 @@ const walk = (
 const gaitBones = (gait: IAutoMovieGait): string[] =>
   gait.limbs.map((limb) => limb.bone);
 
-/**
- * A retargeted quadruped's shape: a gait whose content reaches the ARM chains,
- * which is the case #1349 was filed for and must keep refusing.
- */
-const ARMED_GAIT: IAutoMovieGait = {
+/** A custom gait that genuinely authors legs only. */
+const LEG_ONLY_GAIT: IAutoMovieGait = {
   ...HUMANOID_GAITS.walk,
-  limbs: [
-    ...HUMANOID_GAITS.walk.limbs,
-    { bone: "leftUpperArm", phase: 0.5, duty: 0.5, amplitude: 18 },
-  ],
+  limbs: HUMANOID_GAITS.walk.limbs.filter(
+    (limb) => !limb.bone.endsWith("UpperArm"),
+  ),
 };
 
 /**
  * The plainest film performs: one actor, one shipped gait, no `region` (#1359).
  *
- * Every perform-side fixture in this suite builds its own leg-only gait, so the
- * shipped `HUMANOID_GAITS` never met the region mask in a test even though they
- * are what a host actually drops into an actor context. They used to
- * counter-swing the arms, which `locomote`'s `lowerBody` default does not
- * carry, and since #1349 masked content is a violation, so the engine's own
- * shipped gait was refused by the engine's own default region: a lone actor
- * walking was impossible, the repository's film page threw on load, and the
- * capture pipeline stopped with it.
- *
- * The resolution changed the CONTENT, not the gate: the table now authors only
- * what the verb's default region carries. That is why this scenario asserts a
- * clean perform rather than a softened one, and why scenario 4 exists — the
- * mask still refuses content it cannot carry, exactly as #1349 wrote it.
+ * `locomote` carries the shipped counter-swing through its `fullBody` default.
+ * Overlap safety follows the synthesized root/bones/expression rather than the
+ * broad region label, so this gait layers with a head-only look but not an arm
+ * gesture.
  *
  * It runs the real synthesizer rather than a stub, so the gait content under
  * test is the shipped content.
  *
  * Scenarios:
  *
- * 1. A `region`-less `locomote` on the shipped `walk` performs with NO violations:
- *    the engine's default content and its default region agree.
- * 2. The compiled clip carries the gait's LEG rows, so the walk that performed is
- *    a real walk and not an empty success.
+ * 1. A region-less shipped walk performs with no violations.
+ * 2. The compiled clip carries every leg and arm gait row.
  * 3. Every shipped gait behaves the same way: `walk`, `run`, `sprint`, `sneak` and
  *    `march` all perform under the default region.
- * 4. The gate is untouched (#1349): the same action, with a gait that reaches the
- *    arm chains the way a retargeted quadruped's front legs do, is still
- *    REFUSED at `$input.draft[0].region`, naming the bone. The engine stopped
- *    authoring content its own default cannot carry; it did not stop reporting
- *    an author's.
- * 5. Widening still works and is still unnecessary: the shipped walk on `fullBody`
- *    performs too, and the armed gait performs there as well, which is the
- *    remedy the refusal in 4 names.
+ * 4. Locomote + lookAt layers, while locomote + wave is refused on the shared
+ *    upper arm.
+ * 5. A custom legs-only gait layers with the same wave.
+ * 6. An explicit `lowerBody` override still reports the arm rows it would mask.
  */
 export const test_film_perform_shot_shipped_gait = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -141,10 +122,8 @@ export const test_film_perform_shot_shipped_gait = (): void => {
     true,
   );
 
-  // 2. the walk that performed is a real walk: the legs are in the clip
-  const legs = gaitBones(HUMANOID_GAITS.walk).filter(
-    (bone) => bone.endsWith("UpperLeg") || bone.endsWith("LowerLeg"),
-  );
+  // 2. the walk carries every authored gait row, including both arms.
+  const gaitRows = gaitBones(HUMANOID_GAITS.walk);
   const compiled = new Set(
     plain.success === true
       ? plain.motions.knightA!.keyframes.flatMap((k) =>
@@ -153,8 +132,8 @@ export const test_film_perform_shot_shipped_gait = (): void => {
       : [],
   );
   TestValidator.predicate(
-    "the compiled clip carries the gait's leg rows",
-    legs.length > 0 && legs.every((bone) => compiled.has(bone)),
+    "the compiled clip carries every gait row",
+    gaitRows.length > 0 && gaitRows.every((bone) => compiled.has(bone)),
   );
 
   // 3. every shipped gait, under the default region
@@ -166,31 +145,54 @@ export const test_film_perform_shot_shipped_gait = (): void => {
     [],
   );
 
-  // 4. NEGATIVE TWIN: the mask still refuses content the region cannot carry
-  const armed = perform([walk(), frame], ARMED_GAIT);
+  // 4. Head-only content layers, arm content collides on the actual bone.
+  const lookAt: IAutoMovieActionCall = {
+    verb: "lookAt",
+    actor: "knightA",
+    start: 0,
+    duration: 1,
+    to: { kind: "node", node: "knightB" },
+  };
+  TestValidator.equals(
+    "a shipped walk layers with a head-only lookAt",
+    perform([walk(), lookAt, frame], HUMANOID_GAITS.walk).success,
+    true,
+  );
+  const wave: IAutoMovieActionCall = {
+    verb: "gesture",
+    actor: "knightA",
+    start: 0,
+    duration: 1,
+    kind: "wave",
+  };
+  const walkAndWave = perform([walk(), wave, frame], HUMANOID_GAITS.walk);
   TestValidator.predicate(
-    "a gait reaching the arm chains is still refused, by the bone it named",
-    armed.success === false &&
-      armed.violations.some(
+    "a shipped walk conflicts with a wave on their shared arm",
+    walkAndWave.success === false &&
+      walkAndWave.violations.some(
         (v) =>
-          v.path === "$input.draft[0].region" &&
-          v.expected.includes("leftUpperArm") &&
-          v.expected.includes("lowerBody"),
+          v.path === "$input.draft[1].start" &&
+          v.expected.includes("rightUpperArm"),
       ),
   );
 
-  // 5. widening is still the remedy that refusal names
+  // 5. Content, not the fullBody label, decides the overlap.
   TestValidator.equals(
-    "the shipped walk on fullBody performs too",
-    perform([walk("fullBody"), frame], HUMANOID_GAITS.walk).success,
+    "a custom legs-only gait layers with the same wave",
+    perform([walk(), wave, frame], LEG_ONLY_GAIT).success,
     true,
   );
-  const widenedArmed = perform([walk("fullBody"), frame], ARMED_GAIT);
+
+  // 6. An authored narrow override still cannot silently discard the arms.
+  const narrowed = perform([walk("lowerBody"), frame], HUMANOID_GAITS.walk);
   TestValidator.predicate(
-    "and the armed gait performs there, keeping the arm row",
-    widenedArmed.success === true &&
-      widenedArmed.motions
-        .knightA!.keyframes.flatMap((k) => k.pose.joints.map((j) => j.bone))
-        .includes("leftUpperArm"),
+    "an explicit lowerBody override reports the masked arm rows",
+    narrowed.success === false &&
+      narrowed.violations.some(
+        (violation) =>
+          violation.path === "$input.draft[0].region" &&
+          violation.expected.includes("leftUpperArm") &&
+          violation.expected.includes("rightUpperArm"),
+      ),
   );
 };
