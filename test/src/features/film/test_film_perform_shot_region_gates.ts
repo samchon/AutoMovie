@@ -80,6 +80,17 @@ export const test_film_perform_shot_region_gates = (): void => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
   if (staged.success !== true) throw new Error("staging must succeed");
 
+  // Both clips carry the same arm but return it to rest at their boundary, so
+  // overlap is the only fault under test; adjacent placement remains smooth.
+  const armSynth: IAutoMovieActionSynthesizer = () =>
+    makeMotion(
+      [
+        keyframe(0, makePose([joint("leftUpperArm", { flexion: 0 })])),
+        keyframe(0.5, makePose([joint("leftUpperArm", { flexion: 20 })])),
+        keyframe(1, makePose([joint("leftUpperArm", { flexion: 0 })])),
+      ],
+      1,
+    );
   const overlapping = performShot({
     script: makeScriptWrite(),
     staged,
@@ -87,16 +98,16 @@ export const test_film_perform_shot_region_gates = (): void => {
       draft: [locomote, fullBody(0.5), frame],
       revise: { review: "unchanged.", final: null },
     }),
-    synthesize: validSynthesizer,
+    synthesize: armSynth,
     skeleton: () => createSkeleton(),
   });
   TestValidator.equals(
-    "overlapping fullBody + partial fails",
+    "overlapping actions sharing an arm fail",
     overlapping.success,
     false,
   );
   TestValidator.predicate(
-    "fullBody overlap is reported on the later action start",
+    "shared-arm overlap is reported on the later action start",
     overlapping.success === false &&
       hasViolation(overlapping, "range", "$input.draft[1].start"),
   );
@@ -108,11 +119,11 @@ export const test_film_perform_shot_region_gates = (): void => {
       draft: [locomote, fullBody(1), frame],
       revise: { review: "unchanged.", final: null },
     }),
-    synthesize: validSynthesizer,
+    synthesize: armSynth,
     skeleton: () => createSkeleton(),
   });
   TestValidator.equals(
-    "adjacent fullBody + partial passes",
+    "adjacent shared-arm actions pass",
     adjacent.success,
     true,
   );
@@ -129,7 +140,9 @@ export const test_film_perform_shot_region_gates = (): void => {
     script: makeScriptWrite(),
     staged,
     performance: makePerformanceWrite({
-      draft: [lookAt(0), lookAt(0.5), frame],
+      // Three overlaps make the first action participate in two comparisons,
+      // proving content inspection reuses its carried-channel cache.
+      draft: [lookAt(0), lookAt(0.25), lookAt(0.5), frame],
       revise: { review: "unchanged.", final: null },
     }),
     synthesize: headSynth,

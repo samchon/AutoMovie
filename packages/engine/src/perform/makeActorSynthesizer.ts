@@ -221,9 +221,12 @@ const weightedArmPose = (
       ? []
       : pose.joints.map((joint) => ({
           bone: joint.bone,
-          flexion: joint.flexion === null ? null : joint.flexion * weight,
-          abduction: joint.abduction === null ? null : joint.abduction * weight,
-          twist: joint.twist === null ? null : joint.twist * weight,
+          // Every caller supplies reachPose's two clinical arm joints, whose
+          // three axes are numbers by construction. Preserve that stronger
+          // internal invariant instead of branching on impossible null axes.
+          flexion: joint.flexion! * weight,
+          abduction: joint.abduction! * weight,
+          twist: joint.twist! * weight,
         })),
 });
 

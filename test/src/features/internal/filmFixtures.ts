@@ -108,16 +108,18 @@ export const makeBlockingWrite = (
 export const FIXTURE_BONE = "leftLowerArm" as const;
 
 /**
- * Whether an action's body region carries {@link FIXTURE_BONE}. A fixture clip
- * must author content the action's own region owns: the compiler masks a clip
- * to its region, and since #1349 it reports what it dropped, so a fixture
- * leaking an arm onto a `locomote` would fail every scenario on a lie about
- * what the shot performs. The masked result was empty either way, so the
- * compiled output is unchanged.
+ * Whether this deliberately minimal fixture action carries {@link FIXTURE_BONE}.
+ * Locomotion stays joint-empty here: the film harness scenarios exercise
+ * assembly rather than gait craft, while the shipped-gait scenarios separately
+ * prove the real humanoid arm swing. Other actions must still author only
+ * content their region owns, because #1349 reports anything the compiler
+ * masks.
  */
 export const fixtureRegionDrivesBone = (
   action: IAutoMovieActionCall,
-): boolean => bodyRegionBones(actionRegion(action)).includes(FIXTURE_BONE);
+): boolean =>
+  action.verb !== "locomote" &&
+  bodyRegionBones(actionRegion(action)).includes(FIXTURE_BONE);
 
 /**
  * The content seam for film scenarios: every action whose region owns the elbow

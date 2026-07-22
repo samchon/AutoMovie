@@ -117,19 +117,19 @@ const bonesOf = (motion: IAutoMovieMotion): Set<AutoMovieHumanoidBone> =>
  * wave layer), but it used to discard whatever fell outside the action's region
  * and still return `success: true` with zero violations: a benchmark run
  * shipped a walking quadruped whose two front legs never moved, because a
- * retargeted quadruped's fore legs ride the humanoid ARM chains and `locomote`
- * defaults to `lowerBody`. The compiler holds both facts at the moment it drops
- * one, so it now states what it masked and the shot gate refuses, pointing at
- * the `region` field the author owns rather than at the compiled clip they
- * would have to diff.
+ * retargeted quadruped's fore legs ride the humanoid ARM chains and an author
+ * can explicitly narrow `locomote` to `lowerBody`. The compiler holds both
+ * facts at the moment it drops one, so it now states what it masked and the
+ * shot gate refuses, pointing at the `region` field the author owns rather than
+ * at the compiled clip they would have to diff.
  *
  * Scenarios:
  *
- * 1. Positive. A twelve-bone quadruped gait under a `region`-less `locomote`
+ * 1. Positive. A twelve-bone quadruped gait explicitly narrowed to `lowerBody`
  *    fails, with a `type` violation on `$input.draft[0].region` naming every
  *    one of the six masked fore-leg bones in code-unit order.
- * 2. Negative twin. The same gait with `region: "fullBody"` performs, and all
- *    twelve authored bones reach the compiled clip.
+ * 2. Negative twin. The same gait with the default `fullBody` region performs, and
+ *    all twelve authored bones reach the compiled clip.
  * 3. Boundary, the region's own bones. A gait confined to `hips` plus the hind
  *    chain (all inside `lowerBody`, `hips` being the member a leg chain sits
  *    next to) performs, and every one of those bones survives.
@@ -160,9 +160,9 @@ export const test_film_perform_shot_masked_channels = (): void => {
       skeleton: () => null,
     });
 
-  // 1. positive: the S-07 shape, region omitted
+  // 1. positive: an explicitly narrow region cannot carry the fore legs
   const quadruped = clip({ bones: QUADRUPED });
-  const dropped = perform([gait(), frame], () => quadruped);
+  const dropped = perform([gait("lowerBody"), frame], () => quadruped);
   TestValidator.equals(
     "a gait reaching outside its region fails the shot",
     dropped.success,
@@ -184,8 +184,8 @@ export const test_film_perform_shot_masked_channels = (): void => {
       ),
   );
 
-  // 2. negative twin: the same gait, region widened to one that owns the bones
-  const widened = perform([gait("fullBody"), frame], () => quadruped);
+  // 2. negative twin: the default full-body gait owns every authored bone
+  const widened = perform([gait(), frame], () => quadruped);
   TestValidator.equals(
     "the same gait on fullBody performs",
     widened.success,
@@ -200,7 +200,9 @@ export const test_film_perform_shot_masked_channels = (): void => {
   );
 
   // 3. boundary: hips is the lowerBody member a leg gait sits next to
-  const clean = perform([gait(), frame], () => clip({ bones: INSIDE_LOWER }));
+  const clean = perform([gait("lowerBody"), frame], () =>
+    clip({ bones: INSIDE_LOWER }),
+  );
   TestValidator.equals(
     "a gait entirely inside its region performs",
     clean.success,
@@ -217,7 +219,7 @@ export const test_film_perform_shot_masked_channels = (): void => {
   // 4. the root and expression channels, and an expression-only drop
   const rootAndFace = perform(
     [
-      gait(),
+      gait("lowerBody"),
       {
         verb: "lookAt",
         actor: "knightA",
@@ -262,6 +264,7 @@ export const test_film_perform_shot_masked_channels = (): void => {
         actor: ["knightB", "knightA"],
         start: 0,
         duration: 1,
+        region: "lowerBody",
         gait: "walk",
         to: { kind: "point", point: { x: 0, y: 0, z: 0.25 } },
       },

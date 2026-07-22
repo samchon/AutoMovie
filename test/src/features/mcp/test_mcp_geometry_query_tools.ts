@@ -689,6 +689,13 @@ export const test_mcp_geometry_query_tools = (): void => {
         residentReach.left !== null &&
         nclose(residentReach.left.gap, 0),
     );
+    TestValidator.predicate(
+      "resident reach resolves a live bone target through resident geometry",
+      resident.getReach({
+        actor: "actor",
+        target: { kind: "bone", node: "actor", bone: "leftHand" },
+      }).reach !== null,
+    );
 
     // No actor was ever performed here, so no `actors/<node>.json` rig exists
     // either: a reopened session has no rig from any source and must say so,

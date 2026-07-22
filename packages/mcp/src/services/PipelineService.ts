@@ -395,14 +395,14 @@ export class PipelineService {
     ): IAutoMovieVector3 | null =>
       resolveBoneTarget(target, contexts, preliminaryState.motions, seconds);
     const actorFrameAt = (actor: string, seconds: number) => {
-      const context = contexts.get(actor);
-      return context === undefined
-        ? null
-        : resolveActorWorldFrame(
-            context,
-            preliminaryState.motions?.[actor],
-            seconds,
-          );
+      // makeActorSynthesizer invokes this only after resolving the same actor's
+      // context; a missing actor returns before the callback is reachable.
+      const context = contexts.get(actor)!;
+      return resolveActorWorldFrame(
+        context,
+        preliminaryState.motions?.[actor],
+        seconds,
+      );
     };
     const synthesizeDefault = makeActorSynthesizer(
       contexts,
@@ -645,8 +645,9 @@ const compileBoneTargetBootstrapMotions = (
   };
   actions.forEach(visit);
   const targetActions = actions.filter((action) => {
-    const actors =
-      typeof action.actor === "string" ? [action.actor] : action.actor;
+    const actors: unknown = action.actor;
+    if (typeof actors === "string") return targetActors.has(actors);
+    if (!Array.isArray(actors)) return false;
     return actors.some((actor) => targetActors.has(actor));
   });
   return compilePerformance(targetActions, synthesize).performances;

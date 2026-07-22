@@ -369,13 +369,14 @@ export const test_mcp_shot_light_motions = (): void => {
     valueType: string,
     values: number[],
     interpolation = "step",
+    times = [0, 1.6],
   ): IAutoMovieValidation =>
     validate({
       lightMotions: [
         clip(
           "bounded",
           pointerChannel(pointer, valueType),
-          [0, 1.6],
+          times,
           values,
           interpolation,
         ),
@@ -475,6 +476,37 @@ export const test_mcp_shot_light_motions = (): void => {
       "cubicspline",
     ).success,
     true,
+  );
+  TestValidator.equals(
+    "a cubic whose derivative has a negative discriminant stays accepted",
+    boundsOn(
+      "/lights/candleGlow/intensity",
+      "scalar",
+      [0, 0, 1.25, 1.25, 1, 0],
+      "cubicspline",
+    ).success,
+    true,
+  );
+  TestValidator.equals(
+    "a cubic with one repeated stationary point stays accepted",
+    boundsOn(
+      "/lights/candleGlow/intensity",
+      "scalar",
+      [0, 0, 3, 3, 1, 0],
+      "cubicspline",
+      [0, 1],
+    ).success,
+    true,
+  );
+  TestValidator.predicate(
+    "a cubic with a decreasing clock stops at the shared track-shape gate",
+    boundsOn(
+      "/lights/candleGlow/intensity",
+      "scalar",
+      [0, 0, 0, 0, 1, 0],
+      "cubicspline",
+      [1, 0],
+    ).success === false,
   );
   // One fault, one violation: finiteness belongs to the clip gate, and the
   // bounds check must not report the same value a second time.

@@ -65,7 +65,11 @@ const closureChars = (schema: unknown): number => {
  * property scenario 5 pins directly, so the next tool that pulls in another
  * slate-sized closure fails here instead of shipping.
  */
-const SCHEMA_PAYLOAD_BUDGET = 2_740_000;
+// #1380 deliberately added the previously missing bone-target capability to
+// the geometry/reach closure. Its measured 1,364-character cost is part of the
+// public contract, not accidental closure duplication; retain a narrow margin
+// until #1337's benchmark campaign attacks the megabyte-scale startup shape.
+const SCHEMA_PAYLOAD_BUDGET = 2_745_000;
 
 /**
  * Per-tool schema ceiling, same counting rule over one tool. `perform` is the
