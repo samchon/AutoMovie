@@ -4,7 +4,8 @@
   "description": "automovie MCP server: deterministic motion-control engine as Model Context Protocol tools",
   "main": "src/index.ts",
   "bin": {
-    "automovie-mcp": "lib/bin.js"
+    "automovie-mcp": "lib/bin.js",
+    "automovie-mcp-granular": "lib/bin-granular.js"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -16,6 +17,7 @@
     "build": "pnpm run build:prompt && rimraf lib && ttsc && tsc --emitDeclarationOnly",
     "postbuild": "node ../../internals/config/assertBuild.js",
     "start": "ttsx src/bin.ts",
+    "start:granular": "ttsx src/bin-granular.ts",
     "prepack": "pnpm run build"
   },
   "keywords": [
@@ -43,7 +45,8 @@
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "bin": {
-      "automovie-mcp": "lib/bin.js"
+      "automovie-mcp": "lib/bin.js",
+      "automovie-mcp-granular": "lib/bin-granular.js"
     },
     "exports": {
       ".": {

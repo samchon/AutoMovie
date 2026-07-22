@@ -4,6 +4,19 @@ AutoMovie MCP is the deterministic gate for turning creative intent into a valid
 
 Read this guide first. Before using a stage's tools, read the matching guide: `STAGING`, `BLOCKING`, `PERFORMANCE`, `FORGE`, `PROPS`, `REVIEW`, `PROJECT_MEMORY`, `RENDER_GUIDES`.
 
+## Compact Gateway Calls
+
+The default server advertises `getGuideDocument`, `openProject`, `nextSteps`,
+and `execute`. The first three are called directly. Every other tool name in
+this guide is an `execute` operation: call
+`execute({ call: { operation: "stage", input: { script, staging } } })`, for
+example, and read the original stage output at `result.output`. The operation's
+input and output schemas are unchanged; the wrapper lets the shared film type
+graph ship once instead of once per tool. If `nextSteps` names `commitScript`,
+route it through `execute` the same way. The optional granular compatibility
+server advertises the operation names directly, but the production ladder and
+result semantics are identical.
+
 ## The Ladder
 
 1. `openProject`: activate (or create) the project folder. The folder itself is the durable state: human-readable JSON slices plus registered assets. Call this first in resident mode.

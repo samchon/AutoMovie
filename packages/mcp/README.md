@@ -11,20 +11,53 @@ that make the **engine, not the model, the arbiter of physical truth** ("engine
 enforces, model creates").
 
 Every tool's JSON schema is derived at compile time from
-[`AutoMovieApplication`](./src/AutoMovieApplication.ts)'s method signatures and
-JSDoc via `typia.llm.controller` (+ `@typia/mcp`), and calls are validated in and
-out.
+[`AutoMovieGatewayApplication`](./src/AutoMovieGatewayApplication.ts) and the
+operation signatures in
+[`AutoMovieApplication`](./src/AutoMovieApplication.ts) via
+`typia.llm.controller` (+ `@typia/mcp`), and calls are validated in and out.
 
 The MCP initialize handshake advertises `automovie` with the installed
 `@automovie/mcp` package version. The server reads that version from its sibling
 `package.json`, so client diagnostics identify the artifact actually serving
 the tools; MCP protocol-version negotiation remains a separate SDK concern.
 
-## Tools
+## Compact tools
 
-44 tools. Every stateful tool is **resident-or-explicit**: pass a `slate` for a
-pure stateless call, or omit it to read/commit the resident project opened with
-`openProject`.
+The default server advertises four tools. Keeping the operating entry points
+small and putting the shared film type graph in one `execute` schema avoids
+repeating that graph for every operation, which keeps the surface usable in a
+200k-context client.
+
+| tool | purpose |
+|------|---------|
+| `getGuideDocument` | read `AUTOMOVIE_OVERALL` first, then the current stage guide |
+| `openProject` | activate or create resident project memory |
+| `nextSteps` | read ladder status, missing prerequisites, and next operations |
+| `execute` | run one of the other 42 strictly typed operations |
+
+An execution call has one wire shape:
+
+```json
+{
+  "call": {
+    "operation": "stage",
+    "input": { "script": {}, "staging": {} }
+  }
+}
+```
+
+Its structured result is
+`{ "result": { "operation": "stage", "output": { ... } } }`. The operation's
+`input` and `output` are the same types the fine-grained application uses; the
+gateway changes only how often their shared schema graph is advertised. Exact
+input validation, explicit-slate mode, and resident mode are unchanged.
+
+## Operations
+
+Every stateful operation is **resident-or-explicit**: pass a `slate` for a pure
+stateless call, or omit it to read/commit the resident project opened with
+`openProject`. In the default server, names in this table other than the three
+compact entry points are `execute.call.operation` values.
 
 | tool | in -> out | engine |
 |------|-----------|--------|
@@ -39,6 +72,7 @@ pure stateless call, or omit it to read/commit the resident project opened with
 | `getNotes` | slate + optional beat -> review notes | `readSlateContext` |
 | `getBeatEnd` | slate + beat -> beat end-state or null | `readSlateContext` |
 | `getResolvedPose` | geometry context + actor + time -> world-space bones or null | `sampleMotion` + `resolvePose` |
+| `getResolvedPropFrame` | resident beat + time -> resolved articulated-prop matrices and clamps | `resolveFrame` |
 | `getShotEndState` | geometry context (or resident) + beat -> resumable beat end-state, or a reason | `resolveBeatEnd` |
 | `getReach` | geometry context + actor + target -> arm reach report (shell distance AND the rig's ROM verdict) or null | `reachPose` + `validatePose` |
 | `measureDistance` | scene + two targets -> distance report or null | `resolveTargetPoint` |
@@ -145,9 +179,11 @@ starter with `npx automovie start <dir>` ([`@automovie/cli`](../cli)).
 ```bash
 # dev (in-workspace, transpiled by ttsx)
 pnpm --filter @automovie/mcp start        # = ttsx src/bin.ts
+pnpm --filter @automovie/mcp start:granular # 45-tool compatibility surface
 
 # built (published): the bin runs the compiled server
 npx @automovie/mcp                        # = node lib/bin.js
+npx -p @automovie/mcp automovie-mcp-granular # compatibility binary
 ```
 
 ## Configure an MCP client
@@ -165,3 +201,9 @@ npx @automovie/mcp                        # = node lib/bin.js
 
 For an in-repo checkout, point the command at the workspace runner instead
 (`ttsx packages/mcp/src/bin.ts`).
+
+The `automovie-mcp-granular` binary and `createAutoMovieGranularMcpServer`
+retain the one-tool-per-operation surface for clients that already depend on
+those wire names. It advertises the shared schema closure 45 times and can
+exceed mainstream model context windows, so new external-client integrations
+should use the compact default.
