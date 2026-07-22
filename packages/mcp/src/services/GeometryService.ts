@@ -15,10 +15,11 @@ import {
   validatePose,
 } from "@automovie/engine";
 import {
-  IAutoMovieActionTarget,
   IAutoMovieConstraintViolation,
+  IAutoMovieDistanceTarget,
   IAutoMoviePose,
   IAutoMovieQuaternion,
+  IAutoMovieReachTarget,
   IAutoMovieScene,
   IAutoMovieShot,
   IAutoMovieSkeleton,
@@ -49,7 +50,10 @@ import {
   validateObjectArtifact,
   validateTransformArtifact,
 } from "../validators/primitives";
-import { resolveRuntimeSafeTargetPoint } from "./actionTargets";
+import {
+  isRuntimeSafeActionTarget,
+  resolveRuntimeSafeTargetPoint,
+} from "./actionTargets";
 
 /**
  * Engine geometry queries, resolved poses, reach reports, and distance
@@ -89,15 +93,15 @@ export class GeometryService {
   public getReach(props: {
     context?: IAutoMovieMcpGeometryContext;
     actor: string;
-    target: IAutoMovieActionTarget;
+    target: IAutoMovieReachTarget;
+    beat?: string;
+    t?: number;
   }): IAutoMovieGetReachOutput {
     assertGeometryRequestRoot(props);
     assertGeometryActor(props.actor);
-    const source = this.resolveGeometryContext(
-      props.context,
-      undefined,
-      "getReach",
-    );
+    const beat = resolveOptionalGeometryBeat(props.beat);
+    const t = resolveResolvedPoseTime(props.t);
+    const source = this.resolveGeometryContext(props.context, beat, "getReach");
     assertGeometryContextShape(source.context, source.root);
     const found = findActorRig(
       source.context,
@@ -109,15 +113,13 @@ export class GeometryService {
     );
     if (found.actor === null) return { reach: null, reason: found.reason };
     const actor = found.actor;
-    const target = resolveRuntimeSafeTargetPoint(
-      props.target,
-      nodePositions(source.context.scene, `${source.root}.scene`),
-    );
-    if (target === null)
+    const resolvedTarget = resolveReachTarget(props.target, source, t);
+    if (resolvedTarget.point === null)
       return {
         reach: null,
-        reason: unresolvedTargetReason(null, props.target),
+        reason: resolvedTarget.reason,
       };
+    const target = resolvedTarget.point;
     const localTarget = toModelPoint(target, actor.node.transform);
     if (localTarget === null)
       return {
@@ -208,8 +210,8 @@ export class GeometryService {
 
   public measureDistance(props: {
     scene?: IAutoMovieScene;
-    from: IAutoMovieActionTarget;
-    to: IAutoMovieActionTarget;
+    from: IAutoMovieDistanceTarget;
+    to: IAutoMovieDistanceTarget;
   }): IAutoMovieMeasureDistanceOutput {
     assertGeometryRequestRoot(props);
     const source = this.resolveScene(props.scene, "measureDistance");
@@ -337,6 +339,50 @@ type GeometryContextSource = {
 type GeometrySceneSource = {
   scene: IAutoMovieScene;
   root: string;
+};
+
+/** Resolve one getReach target, including a live bone at shot time. */
+const resolveReachTarget = (
+  target: unknown,
+  source: GeometryContextSource,
+  t: number,
+): { point: IAutoMovieVector3 | null; reason: string | null } => {
+  if (!isRuntimeSafeActionTarget(target))
+    return { point: null, reason: unresolvedTargetReason(null, target) };
+  if (target.kind !== "bone") {
+    const point = resolveRuntimeSafeTargetPoint(
+      target,
+      nodePositions(source.context.scene, `${source.root}.scene`),
+    );
+    return {
+      point,
+      reason: point === null ? unresolvedTargetReason(null, target) : null,
+    };
+  }
+
+  const geometry = resolveActorGeometry(
+    source.context,
+    target.node,
+    t,
+    source.root,
+    source.resident ? { caller: "getReach" } : undefined,
+    source.actorRigs,
+    source.actorRestFrames,
+  );
+  if (geometry.resolvedPose === null)
+    return {
+      point: null,
+      reason: `bone target "${target.node}.${target.bone}" cannot resolve: ${geometry.reason}`,
+    };
+  const bone = geometry.resolvedPose.bones.find(
+    (entry) => entry.bone === target.bone,
+  );
+  return bone === undefined
+    ? {
+        point: null,
+        reason: `bone target "${target.node}.${target.bone}" names a bone that does not resolve on that actor's skeleton`,
+      }
+    : { point: bone.worldPosition, reason: null };
 };
 
 type GeometryActor = {

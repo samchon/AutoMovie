@@ -177,7 +177,7 @@ export const test_mcp_geometry_camera_target = (): void => {
       app.getReach({
         context,
         actor: "actor",
-        target: { kind: "direction", headingDeg: 90 },
+        target: { kind: "direction", headingDeg: 90 } as never,
       }),
     ).includes('a target of kind "direction" is relative'),
   );
@@ -206,7 +206,7 @@ export const test_mcp_geometry_camera_target = (): void => {
   const both = app.measureDistance({
     scene,
     from: { kind: "node", node: "ghost" },
-    to: { kind: "offscreen", edge: "left" },
+    to: { kind: "offscreen", edge: "left" } as never,
   });
   TestValidator.predicate(
     "each unresolved side states its own fault",

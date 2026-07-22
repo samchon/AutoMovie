@@ -245,8 +245,8 @@ export const test_mcp_geometry_query_edges = (): void => {
   const bothRelative =
     app.measureDistance({
       scene,
-      from: { kind: "direction", headingDeg: 0 },
-      to: { kind: "direction", headingDeg: 90 },
+      from: { kind: "direction", headingDeg: 0 } as never,
+      to: { kind: "direction", headingDeg: 90 } as never,
     }).reason ?? "";
   TestValidator.predicate(
     "two identically-faulted sides still yield one clause each",
