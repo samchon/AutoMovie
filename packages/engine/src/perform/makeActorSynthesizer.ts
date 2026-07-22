@@ -16,6 +16,7 @@ import { resolvePose } from "../kinematics/resolvePose";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { holdMotion } from "../motion/arrange";
+import { ease } from "../motion/easing";
 import { gaitMotion } from "../motion/gait";
 import { gestureMotion } from "../motion/gesture";
 import { locomoteMotion } from "../motion/locomote";
@@ -164,12 +165,20 @@ const extendHoldClip = (
   };
 };
 
-const boneTargetTimes = (duration: number): number[] => {
+const boneTargetTimes = (
+  duration: number,
+  landmarks: readonly number[] = [],
+): number[] => {
   const count = Math.max(2, Math.ceil(duration * BONE_TARGET_HZ) + 1);
-  return Array.from(
-    { length: count },
-    (_, index) => (duration * index) / (count - 1),
-  );
+  return [
+    ...new Set([
+      ...Array.from(
+        { length: count },
+        (_, index) => (duration * index) / (count - 1),
+      ),
+      ...landmarks,
+    ]),
+  ].sort((a, b) => a - b);
 };
 
 const dynamicPoseClip = (props: {
@@ -177,9 +186,10 @@ const dynamicPoseClip = (props: {
   skeleton: string;
   duration: number;
   poseAt: (time: number) => IAutoMoviePose | null;
+  landmarks?: readonly number[];
 }): IAutoMovieMotion | null => {
   const keyframes: IAutoMovieKeyframe[] = [];
-  for (const time of boneTargetTimes(props.duration)) {
+  for (const time of boneTargetTimes(props.duration, props.landmarks)) {
     const pose = props.poseAt(time);
     if (pose === null) return null;
     keyframes.push({
@@ -197,6 +207,68 @@ const dynamicPoseClip = (props: {
     loop: false,
     keyframes,
   };
+};
+
+const weightedArmPose = (
+  skeleton: string,
+  pose: IAutoMoviePose,
+  weight: number,
+): IAutoMoviePose => ({
+  skeleton,
+  root: null,
+  joints:
+    weight === 0
+      ? []
+      : pose.joints.map((joint) => ({
+          bone: joint.bone,
+          flexion: joint.flexion === null ? null : joint.flexion * weight,
+          abduction: joint.abduction === null ? null : joint.abduction * weight,
+          twist: joint.twist === null ? null : joint.twist * weight,
+        })),
+});
+
+/** A sampled live-target version of rest -> extend -> hold. */
+const dynamicExtendHoldClip = (props: {
+  id: string;
+  skeleton: string;
+  duration: number;
+  poseAt: (time: number) => IAutoMoviePose | null;
+}): IAutoMovieMotion | null => {
+  const extendedAt = props.duration * 0.5;
+  return dynamicPoseClip({
+    ...props,
+    landmarks: [extendedAt],
+    poseAt: (time) => {
+      const pose = props.poseAt(time);
+      if (pose === null) return null;
+      const weight =
+        time >= extendedAt ? 1 : ease("easeInOut", time / extendedAt);
+      return weightedArmPose(props.skeleton, pose, weight);
+    },
+  });
+};
+
+/** A sampled live-target version of rest -> 40% strike peak -> rest. */
+const dynamicJabClip = (props: {
+  id: string;
+  skeleton: string;
+  duration: number;
+  poseAt: (time: number) => IAutoMoviePose | null;
+}): IAutoMovieMotion | null => {
+  const peakAt = props.duration * 0.4;
+  return dynamicPoseClip({
+    ...props,
+    landmarks: [peakAt],
+    poseAt: (time) => {
+      const pose = props.poseAt(time);
+      if (pose === null) return null;
+      const weight =
+        time <= peakAt
+          ? ease("easeIn", time / peakAt)
+          : 1 - ease("easeOut", (time - peakAt) / (props.duration - peakAt));
+      return weightedArmPose(props.skeleton, pose, weight);
+    },
+  });
 };
 
 /** Resolve a bone target into world coordinates from a sampled actor motion. */
@@ -536,7 +608,7 @@ export const makeActorSynthesizer = (
           action.at?.kind === "bone" ||
           (actorFrameAt?.(actor, action.start) ?? null) !== null
         )
-          return dynamicPoseClip({
+          return dynamicExtendHoldClip({
             id: `${actor}:point`,
             skeleton: ctx.skeleton,
             duration,
@@ -580,7 +652,7 @@ export const makeActorSynthesizer = (
           action.at?.kind === "bone" ||
           (actorFrameAt?.(actor, action.start) ?? null) !== null
         )
-          return dynamicPoseClip({
+          return dynamicJabClip({
             id: `${actor}:strike`,
             skeleton: ctx.skeleton,
             duration,
@@ -639,7 +711,7 @@ export const makeActorSynthesizer = (
         action.to.kind === "bone" ||
         (actorFrameAt?.(actor, action.start) ?? null) !== null
       )
-        return dynamicPoseClip({
+        return dynamicExtendHoldClip({
           id: `${actor}:reach`,
           skeleton: ctx.skeleton,
           duration,
