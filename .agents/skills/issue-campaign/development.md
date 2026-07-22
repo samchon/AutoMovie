@@ -13,7 +13,7 @@ Read this document in full when the user authorizes implementation pull requests
 
 Four rules govern the implementation phase:
 
-- The main agent performs all implementation, test authoring, CI diagnosis, review, and cleanup. Spawn no subagent except the read-only [commit early-warning pass](#implement-and-write-tests), which every pushed commit gets.
+- The main agent performs all implementation, test authoring, CI diagnosis, review, and cleanup. Spawn no subagent except the read-only [commit early-warning pass](#implement-and-write-tests), which runs on every pushed commit.
 - Put every accepted, implementation-ready issue in the current cycle into one pull request. The issue DAG controls implementation order inside that pull request, not pull-request count.
 - Use the current checkout and one topic branch. Do not create a clone or worktree for a solo campaign or its Self-Review.
 - The pull request's ordinary CI and a clean solo Self-Review are the acceptance gates, and both must land on the same immutable head. Repair every red CI lane in that same pull request, even when the failure predates the campaign or is unrelated to its original issues.
@@ -66,7 +66,7 @@ After each pushed commit, submit a formal GitHub pull-request review with the `C
 
 Every pushed commit gets its own commit early-warning pass. Spawn a fresh read-only subagent over that one commit and keep implementing while it runs. The pass reads that one commit and reports candidates. It never edits, commits, pushes, or makes an implementation decision. Its value is timing: a defect named while that code is the newest thing written costs little to correct, and nothing has been built on top of it yet.
 
-Adjudicate every reported candidate inside the same cycle. Finish the unit in progress, then accept or reject each candidate on its evidence: repair an accepted one where it stands and complete its regression coverage, and record a rejected one with its reason in the campaign ledger so a later round does not rediscover the same premise as new. Name the candidates and their dispositions in the next ledger review you submit, because the pass reports after its commit's own review has gone out, so the pull request still carries what the pass found and what the cycle did about it.
+Adjudicate every reported candidate inside the same cycle. Finish the unit in progress, then accept or reject each candidate on its evidence: repair an accepted one where it stands and complete its regression coverage, and record a rejected one with its reason in the campaign ledger so a later round does not rediscover the same premise as new. Name the candidates and their dispositions in the next ledger review you submit. A pass reports after its own commit's review has already gone out, and the pull request still has to carry what the pass found and what the cycle did about it.
 
 The pass never reduces the [Self-Review](#validate-with-ci-and-self-review) that gates the merge. A reader holding one commit cannot see what appears only across files: a helper that duplicates one the package already has, a validator whose new branch leaves the mirrored MCP DTO stale, or a wiki page claiming a verification the component it describes does not perform. The main agent's own complete round over the whole base-to-head diff is what finds those, and no number of passes substitutes for it. The [review skill](../review/SKILL.md#commit-early-warning-pass) owns that boundary and the name the pass must not take.
 
