@@ -1,12 +1,15 @@
 import {
   IResolveBeatProps,
   toValidation,
+  validateFootSkate as validateEngineFootSkate,
+  validateGroundContact as validateEngineGroundContact,
   validateModel as validateEngineModel,
   validateMotion as validateEngineMotion,
   validatePose as validateEnginePose,
   validateFilmContinuity,
 } from "@automovie/engine";
 import {
+  AutoMovieHumanoidBone,
   IAutoMovieConstraintViolation,
   IAutoMovieExpression,
   IAutoMovieModel,
@@ -89,6 +92,98 @@ export class ValidationService {
         }),
         [["$input", "$input.motion"]],
       ),
+    };
+  }
+
+  /** Validate declared planted-foot windows on one MCP-safe motion. */
+  public validateFootSkate(props: {
+    motion: IAutoMovieMcpMotion;
+    skeleton: IAutoMovieSkeleton;
+    contacts: Array<{
+      bone: AutoMovieHumanoidBone;
+      start: number;
+      end: number;
+      maxHorizontalSpeed?: number;
+    }>;
+    sampleRate?: number;
+    physicsIntent?: string;
+  }): IAutoMovieValidateOutput {
+    const requestRoot = validateValidationRequestRoot(props);
+    if (requestRoot !== null) return { validation: requestRoot };
+    const violations: IAutoMovieConstraintViolation[] = [];
+    appendMcpMotionShape(violations, props.motion, "$input.motion");
+    appendMcpSkeletonShape(violations, props.skeleton, "$input.skeleton");
+    if (
+      validateArrayArtifact(
+        props.contacts,
+        "$input.contacts",
+        "foot contact windows",
+        violations,
+      )
+    )
+      props.contacts.forEach((contact, index) =>
+        validateObjectArtifact(
+          contact,
+          `$input.contacts[${index}]`,
+          "foot contact window",
+          violations,
+        ),
+      );
+    const shape = toValidation(violations);
+    if (shape.success === false) return { validation: shape };
+    return {
+      validation: validateEngineFootSkate({
+        motion: toEngineMotion(props.motion),
+        skeleton: props.skeleton,
+        contacts: props.contacts,
+        sampleRate: props.sampleRate,
+        physicsIntent: props.physicsIntent,
+      }),
+    };
+  }
+
+  /** Validate one MCP-safe motion's feet against a scalar ground plane. */
+  public validateGroundContact(props: {
+    motion: IAutoMovieMcpMotion;
+    skeleton: IAutoMovieSkeleton;
+    footBones?: AutoMovieHumanoidBone[];
+    groundY?: number;
+    tolerance?: number;
+    sampleRate?: number;
+    physicsIntent?: string;
+  }): IAutoMovieValidateOutput {
+    const requestRoot = validateValidationRequestRoot(props);
+    if (requestRoot !== null) return { validation: requestRoot };
+    const violations: IAutoMovieConstraintViolation[] = [];
+    appendMcpMotionShape(violations, props.motion, "$input.motion");
+    appendMcpSkeletonShape(violations, props.skeleton, "$input.skeleton");
+    if (props.footBones !== undefined)
+      validateArrayArtifact(
+        props.footBones,
+        "$input.footBones",
+        "ground-contact foot bones",
+        violations,
+      );
+    if (props.groundY !== undefined && typeof props.groundY !== "number")
+      pushViolation(
+        violations,
+        "type",
+        "$input.groundY",
+        "groundY must be a number",
+        props.groundY,
+      );
+    const shape = toValidation(violations);
+    if (shape.success === false) return { validation: shape };
+    return {
+      validation: validateEngineGroundContact({
+        motion: toEngineMotion(props.motion),
+        skeleton: props.skeleton,
+        footBones: props.footBones,
+        groundY: props.groundY,
+        tolerance: props.tolerance,
+        sampleRate: props.sampleRate,
+        physicsIntent: props.physicsIntent,
+      }),
     };
   }
 

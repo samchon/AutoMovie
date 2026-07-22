@@ -106,7 +106,7 @@ export namespace IAutoMovieBlockingApplication {
     framing: "wide" | "full" | "medium" | "close";
 
     /** How the camera behaves. */
-    move: "static" | "follow" | "orbit" | "push-in" | "whip";
+    move: "static" | "follow" | "orbit" | "push-in" | "truck" | "whip";
 
     /** What it favours (a node id or a point). */
     on: IAutoMovieNodeTarget | IAutoMoviePointTarget;

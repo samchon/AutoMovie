@@ -238,7 +238,14 @@ const EVENT_SOURCES = new Set([
 const CAMERA_FRAMINGS = new Set(["wide", "full", "medium", "close"]);
 
 /** The closed move union, the same set `performShot` gates a frame action by. */
-const CAMERA_MOVES = new Set(["static", "follow", "orbit", "push-in", "whip"]);
+const CAMERA_MOVES = new Set([
+  "static",
+  "follow",
+  "orbit",
+  "push-in",
+  "truck",
+  "whip",
+]);
 
 /**
  * The three shot fields the validators used to pass ungated: `events`,

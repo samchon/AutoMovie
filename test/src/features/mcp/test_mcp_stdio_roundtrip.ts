@@ -136,7 +136,7 @@ const assemble = (shot: string): IAutoMovieAssembleApplication.IWrite => ({
  * Scenarios:
  *
  * 1. A real stdio client sees the four compact entry points, while the explicit
- *    compatibility server retains the complete 45-name inventory.
+ *    compatibility server retains the complete 47-name inventory.
  * 2. On that granular compatibility surface, render, caption, and pose-keypoint
  *    operations expose one identical nested frame-format contract with no
  *    legacy top-level dimension fields.
@@ -202,6 +202,8 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
           "setActorPerformance",
           "setPlacement",
           "stage",
+          "validateFootSkate",
+          "validateGroundContact",
           "validateModel",
           "validateMotion",
           "validatePose",

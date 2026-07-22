@@ -120,6 +120,52 @@ export const test_film_camera_move_paths = (): void => {
     [0],
   );
 
+  const truck = compileCameraMove({
+    clipId: "clip",
+    camera: CAMERA,
+    entries: [{ action: frame("truck", 0, 2), subject }],
+    shotDuration: 2,
+  })!;
+  TestValidator.equals(
+    "truck eases over 9 keys",
+    truck.tracks[0]!.times.length,
+    9,
+  );
+  TestValidator.predicate(
+    "truck finishes screen-left while holding staged depth",
+    nclose(truck.tracks[0]!.values[24]!, -1.15) &&
+      nclose(truck.tracks[0]!.values[25]!, 1) &&
+      nclose(truck.tracks[0]!.values[26]!, 1.15),
+  );
+  const movingTruck = compileCameraMove({
+    clipId: "clip",
+    camera: CAMERA,
+    entries: [{ action: frame("truck", 0, 1), subject: marching }],
+    shotDuration: 2,
+  })!;
+  TestValidator.predicate(
+    "truck keeps tracking an animated subject",
+    nclose(movingTruck.tracks[0]!.values[24]!, -0.15),
+  );
+  const verticalTruck = compileCameraMove({
+    clipId: "clip",
+    camera: {
+      ...CAMERA,
+      transform: {
+        ...CAMERA.transform,
+        translation: { x: 0, y: 3, z: 0 },
+      },
+    },
+    entries: [{ action: frame("truck", 0, 2), subject }],
+    shotDuration: 2,
+  })!;
+  TestValidator.predicate(
+    "a vertical staged bearing uses the total screen-left fallback",
+    nclose(verticalTruck.tracks[0]!.values[24]!, -1.15) &&
+      nclose(verticalTruck.tracks[0]!.values[25]!, 2.15) &&
+      nclose(verticalTruck.tracks[0]!.values[26]!, 0),
+  );
+
   const abutted = compileCameraMove({
     clipId: "clip",
     camera: CAMERA,

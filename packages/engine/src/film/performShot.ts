@@ -49,6 +49,7 @@ import {
 } from "./cameraMove";
 import { compileLaunch } from "./compileLaunch";
 import { coupleObjects } from "./coupleObjects";
+import { bakedTransformFromClipsAt } from "./followClip";
 import { IAutoMovieStagedSet } from "./stageScene";
 
 /**
@@ -120,6 +121,7 @@ const CAMERA_MOVES = new Set<IAutoMovieCameraAction["move"]>([
   "follow",
   "orbit",
   "push-in",
+  "truck",
   "whip",
 ]);
 
@@ -660,7 +662,7 @@ export const performShot = (props: {
         out.push(
           "type",
           `${base}[${i}].move`,
-          `camera move must be one of static, follow, orbit, push-in, whip, but was "${String(action.move)}"`,
+          `camera move must be one of static, follow, orbit, push-in, truck, whip, but was "${String(action.move)}"`,
           action.move,
         );
       const target = resolvePositionalTarget(
@@ -1209,7 +1211,7 @@ export const performShot = (props: {
       out.push(
         "type",
         `${path}.move`,
-        `camera move must be one of static, follow, orbit, push-in, whip, but was "${String(intent.move)}"`,
+        `camera move must be one of static, follow, orbit, push-in, truck, whip, but was "${String(intent.move)}"`,
         intent.move,
       );
     const subject = resolvePositionalTarget(
@@ -1458,8 +1460,8 @@ export const performShot = (props: {
   // Compile the live camera's move from its frame actions. Subjects resolve
   // against the staged placements; a node subject's height is measured from
   // its rig's rest pose (staging doctrine: measure, don't hope), and its
-  // animated base rides the compiled clip's root displacement so `follow`
-  // tracks a walking actor.
+  // animated base rides either a compiled actor clip or an effective object
+  // motion, so `follow` tracks a walking actor, launched prop, or handoff.
   const cameraObject = staged.scene.cameras.find((c) => c.id === liveCamera)!;
   // What a camera entry frames, resolved once for every take: the hero's frame
   // spans and each coverage angle read the SAME subject, so an alternate camera
@@ -1485,17 +1487,37 @@ export const performShot = (props: {
     const measured = rig === null ? 0 : computeRestHeight(rig);
     const motion = node === null ? undefined : motions[node];
     const facing = node === null ? undefined : nodeRotations.get(node);
+    const objectAt =
+      node === null
+        ? null
+        : (seconds: number): IAutoMovieVector3 | null =>
+            bakedTransformFromClipsAt(objectMotions, node, seconds)
+              ?.translation ?? null;
+    const hasObjectMotion =
+      node !== null &&
+      objectMotions.some((clip) =>
+        clip.tracks.some(
+          (track) =>
+            track.channel.kind === "node" &&
+            track.channel.node === node &&
+            track.channel.path === "translation",
+        ),
+      );
     return {
       base: point,
       height: measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT,
-      // The animated base rides the node-local root under its staged facing,
-      // the same read a leading launch uses (see animatedBaseAt).
+      // Actor root motion rides the staged facing. A skeleton-less prop has no
+      // actor clip/facing, so read its effective object authority instead: the
+      // same trajectory/attachment handoff the player applies. This runs after
+      // coupling, deliberately, so a camera follows a launch into a hand.
       at:
         on.kind === "bone" && resolveLiveTarget !== undefined
           ? (seconds) => resolveLiveTarget(on, seconds) ?? point
-          : motion === undefined || facing === undefined
-            ? null
-            : animatedBaseAt(point, facing, motion),
+          : motion !== undefined && facing !== undefined
+            ? animatedBaseAt(point, facing, motion)
+            : objectAt === null || !hasObjectMotion
+              ? null
+              : (seconds) => objectAt(seconds) ?? point,
     };
   };
   const entries: IAutoMovieCameraFrameEntry[] = frames.map(({ action }) => ({

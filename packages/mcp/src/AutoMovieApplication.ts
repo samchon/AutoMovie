@@ -472,6 +472,35 @@ export class AutoMovieApplication {
   }
 
   /**
+   * Check whether explicitly planted feet skate in a performed MCP-safe motion.
+   * Pass the dense motion from `perform({ response: "full" })` when the compact
+   * resident response did not return its registry; the result is advisory
+   * physics warnings with a foot, sample, and contact-window path.
+   *
+   * @param props The motion, rig, and intended planted-foot windows.
+   * @returns The validation envelope.
+   */
+  public validateFootSkate(
+    props: Parameters<ValidationService["validateFootSkate"]>[0],
+  ): IAutoMovieValidateOutput {
+    return this.validation.validateFootSkate(props);
+  }
+
+  /**
+   * Check a performed MCP-safe motion's feet against a scalar ground plane.
+   * Pass the dense motion from `perform({ response: "full" })` when needed;
+   * penetration is advisory and each warning identifies its sampled foot.
+   *
+   * @param props The motion, rig, optional feet, and ground settings.
+   * @returns The validation envelope.
+   */
+  public validateGroundContact(
+    props: Parameters<ValidationService["validateGroundContact"]>[0],
+  ): IAutoMovieValidateOutput {
+    return this.validation.validateGroundContact(props);
+  }
+
+  /**
    * Validate a model. This runs the engine's model validator over geometry,
    * materials, skeleton graph, skinning, and transform ranges.
    *

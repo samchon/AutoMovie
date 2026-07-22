@@ -78,6 +78,8 @@ compact entry points are `execute.call.operation` values.
 | `measureDistance` | scene + two targets -> distance report or null | `resolveTargetPoint` |
 | `validatePose` | pose + skeleton -> validation | `validatePose` |
 | `validateMotion` | MCP-safe motion + skeleton -> validation | `validateMotion` |
+| `validateFootSkate` | MCP-safe motion + planted-foot windows -> validation | `validateFootSkate` |
+| `validateGroundContact` | MCP-safe motion + scalar ground plane -> validation | `validateGroundContact` |
 | `validateModel` | model -> validation | `validateModel` |
 | `validateScene` | scene + model ids -> validation | MCP scene checks |
 | `validateShot` | shot + scene + optional motions -> validation | MCP shot checks |

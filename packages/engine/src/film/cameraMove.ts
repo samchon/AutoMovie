@@ -102,15 +102,19 @@ const PUSH_IN_TO = 0.8;
 /** A push-in eases in/out over this many segments (a smooth dolly, not a ramp). */
 const PUSH_IN_SEGMENTS = 8;
 
+/** A truck crosses one solved framing distance along the camera's screen-left. */
+const TRUCK_DISTANCE = 1;
+const TRUCK_SEGMENTS = 8;
+
 /** Follow moves sample the subject's animated base at this rate (Hz). */
 const FOLLOW_HZ = 4;
 
 /**
  * What a `frame` action points the camera at, resolved by the caller: the
- * subject's base (ground) point, its measured height, and, when the subject is
- * an actor with compiled motion, its animated base over shot time (base plus
- * the clip's root displacement). `at: null` means the subject holds still; a
- * `follow` move on it degenerates to a static framing.
+ * subject's base (ground) point, its measured height, and, when the subject has
+ * an actor or effective object motion, its animated base over shot time. `at:
+ * null` means the subject holds still; a `follow` move on it degenerates to a
+ * static framing.
  *
  * @author Samchon
  */
@@ -213,6 +217,14 @@ export const compileCameraMove = (props: {
       Vector3.length(toCamera) < 1e-9
         ? { x: 0, y: 0, z: 1 }
         : Vector3.normalize(toCamera);
+    // Horizontal screen-left under the staged bearing. A vertically staged
+    // camera has no horizontal side from that bearing, so keep the move total
+    // with the conventional world -X fallback.
+    const side = Vector3.cross(bearing, UP);
+    const screenLeft =
+      Vector3.length(side) < 1e-9
+        ? { x: -1, y: 0, z: 0 }
+        : Vector3.normalize(side);
 
     const framedAt = (
       base: IAutoMovieVector3,
@@ -259,6 +271,28 @@ export const compileCameraMove = (props: {
             pos,
             lookRotation(Vector3.subtract(aim0, pos)),
           );
+        }
+        break;
+      }
+      case "truck": {
+        // A lateral truck preserves the staged depth axis (movement is
+        // perpendicular to `bearing`) while its look-at rotation keeps the
+        // subject framed. "truck" is screen-left; stage the camera on the
+        // reverse side when the composition calls for rightward travel.
+        for (let k = 0; k <= TRUCK_SEGMENTS; ++k) {
+          const p = k / TRUCK_SEGMENTS;
+          const t = t0 + (t1 - t0) * p;
+          const base = subject.at?.(t) ?? subject.base;
+          const aim = aimOf(base);
+          const framed = framedAt(base, distance);
+          const pos = Vector3.add(
+            framed.pos,
+            Vector3.scale(
+              screenLeft,
+              distance * TRUCK_DISTANCE * ease("easeInOut", p),
+            ),
+          );
+          push(t, pos, lookRotation(Vector3.subtract(aim, pos)));
         }
         break;
       }

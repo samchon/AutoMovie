@@ -54,7 +54,7 @@ Never explain a violation away. Fix the owning artifact, or acknowledge it delib
 
 ## Correction Loop
 
-For each stage: submit one coherent artifact → read the violations → fix exactly what they locate → resubmit. Prerequisite errors from resident commits are thrown with a "Do this next" list. Follow it literally. Validation tools (`validatePose`, `validateMotion`, `validateModel`, `validateScene`, `validateShot`, `validateSequence`) let you check an artifact before committing anything. When the committed script carries a refinement tree, `commitShot` stamps each violation with the screenplay `node` claiming the beat. The violation names where in the screenplay the correction belongs (see `REVIEW`).
+For each stage: submit one coherent artifact → read the violations → fix exactly what they locate → resubmit. Prerequisite errors from resident commits are thrown with a "Do this next" list. Follow it literally. Validation tools (`validatePose`, `validateMotion`, `validateFootSkate`, `validateGroundContact`, `validateModel`, `validateScene`, `validateShot`, `validateSequence`) let you check an artifact before committing anything. `validateFootSkate` takes declared planted-foot windows; `validateGroundContact` checks selected feet against a scalar ground plane. Both consume the dense motion from `perform({ response: "full" })`, and return advisory physics warnings with the exact foot and sample path. When the committed script carries a refinement tree, `commitShot` stamps each violation with the screenplay `node` claiming the beat. The violation names where in the screenplay the correction belongs (see `REVIEW`).
 
 ## Surgical Corrections
 

@@ -16,7 +16,7 @@ const CAMERA_FRAMINGS = new Set<
 /** The closed move union, gated at runtime the way performShot gates it. */
 const CAMERA_MOVES = new Set<
   IAutoMovieBlockingApplication.ICameraIntent["move"]
->(["static", "follow", "orbit", "push-in", "whip"]);
+>(["static", "follow", "orbit", "push-in", "truck", "whip"]);
 
 /**
  * A validated blocking: the beat's shot plan, coherent with the script and the
@@ -222,7 +222,7 @@ export const blockBeat = (
       out.push(
         "type",
         `$input.coverage[${i}].move`,
-        `camera move must be one of static, follow, orbit, push-in, whip, but was "${String(intent.move)}"`,
+        `camera move must be one of static, follow, orbit, push-in, truck, whip, but was "${String(intent.move)}"`,
         intent.move,
       );
     if (intent.on.kind === "node" && !placedIds.has(intent.on.node))
