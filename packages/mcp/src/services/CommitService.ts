@@ -252,10 +252,11 @@ export class CommitService {
    * memory is the AST, not its regenerable output). But a resident commit that
    * kept no registry could silently store a **dangling** motion reference,
    * unresolvable on a later re-open. So a resident `commitShot` whose shot
-   * references any motion MUST pass the `motions` registry those references
-   * resolve against; without it the commit is refused, not silently accepted.
-   * An explicit-slate call stays a pure transform, its cross-slice references
-   * are the caller's to guarantee, so it is byte-compatible with before.
+   * references any motion MUST either pass the `motions` registry or follow a
+   * successful compact resident `perform` in this same session; otherwise the
+   * commit is refused, not silently accepted. An explicit-slate call stays a
+   * pure transform, its cross-slice references are the caller's to guarantee,
+   * so it is byte-compatible with before.
    */
   public commitShot(props: {
     slate?: IAutoMovieMcpWritableSlate;
@@ -302,13 +303,19 @@ export class CommitService {
       slateRoot,
       violations,
     );
+    const motions =
+      props.motions !== undefined
+        ? props.motions
+        : resident && isRecord(props.shot) && typeof props.shot.id === "string"
+          ? this.context!.performedMotions(props.shot.id)
+          : undefined;
     const shotPerformances =
       isRecord(props.shot) && Array.isArray(props.shot.performances)
         ? props.shot.performances
         : [];
     if (
       resident &&
-      props.motions === undefined &&
+      motions === undefined &&
       shotPerformances.some(
         (performance) => isRecord(performance) && performance.motion !== null,
       )
@@ -317,13 +324,13 @@ export class CommitService {
         violations,
         "type",
         "$input.motions",
-        "a resident commitShot whose shot references motions must pass the motions registry those references resolve against (motions are re-perform-derived, not persisted, so a reference with no registry would be a dangling id)",
-        props.motions,
+        "a resident commitShot whose shot references motions must either follow its compact resident perform in this session or pass the motions registry (motions are re-perform-derived, not persisted, so a reference with neither would be a dangling id)",
+        motions,
       );
     if (slate.scene !== null)
       appendValidation(
         violations,
-        validateShotArtifact(props.shot, slate.scene, props.motions),
+        validateShotArtifact(props.shot, slate.scene, motions),
       );
     // Locate this beat's feedback on the screenplay refinement graph:
     // when the script carries a tree, every violation of this commit gains the
@@ -367,10 +374,17 @@ export class CommitService {
     if (
       resident &&
       output.committed &&
-      props.motions !== undefined &&
+      motions !== undefined &&
       preconditions.beat !== null
     )
-      this.context!.rememberGeometryMotions(props.motions, preconditions.beat);
+      this.context!.rememberGeometryMotions(motions, preconditions.beat);
+    if (
+      resident &&
+      output.committed &&
+      isRecord(props.shot) &&
+      typeof props.shot.id === "string"
+    )
+      this.context!.forgetPerformedMotions(props.shot.id);
     return output;
   }
 

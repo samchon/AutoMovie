@@ -1,4 +1,5 @@
 export * from "./IAutoMovieActionCall";
+export * from "./IAutoMovieBoneTarget";
 export * from "./IAutoMovieNodeTarget";
 export * from "./IAutoMoviePointTarget";
 export * from "./IAutoMovieGroupTarget";

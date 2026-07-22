@@ -881,7 +881,14 @@ export namespace IAutoMovieMcpPerformedShot {
     /** The shot, ready for the cut. */
     shot: IAutoMovieShot;
 
-    /** The synthesized per-actor clips, keyed by scene-node id. */
+    /** Compact identity and duration for each synthesized clip. */
+    motionSummary: IAutoMovieMcpPerformedMotionSummary[];
+
+    /**
+     * The synthesized per-actor clips, keyed by scene-node id. A compact
+     * resident response returns an empty registry; its following `commitShot`
+     * reads the same-session registry instead.
+     */
     motions: Record<string, IAutoMovieMcpMotion>;
   }
 
@@ -893,6 +900,60 @@ export namespace IAutoMovieMcpPerformedShot {
     /** Every violation found, for the correction round. */
     violations: IAutoMovieConstraintViolation[];
   }
+}
+
+/** One compact entry for a synthesized motion clip. */
+export interface IAutoMovieMcpPerformedMotionSummary {
+  /** Scene node the clip animates. */
+  node: string;
+
+  /** Stable clip id the shot references. */
+  id: string;
+
+  /** Total clip duration in seconds. */
+  duration: number;
+}
+
+/** One profile-bound channel component clamped while resolving a prop frame. */
+export interface IAutoMovieMcpPropClamp {
+  /** Concrete node channel that exceeded its declared profile limit. */
+  channel: string;
+
+  /** Profile whose declared limit applied. */
+  profile: string;
+
+  /** Index within the channel value vector. */
+  component: number;
+
+  /** Whether the lower or upper limit applied. */
+  bound: "min" | "max";
+
+  /** Authored value before the clamp. */
+  actual: number;
+
+  /** Value enforced by the declared limit. */
+  limit: number;
+}
+
+/** Resolved articulated-prop state at one committed shot instant. */
+export interface IAutoMovieMcpResolvedPropFrame {
+  /** Concrete lowered node id to column-major world matrix. */
+  world: Record<string, number[]>;
+
+  /** Every declared limit that clamped this frame. */
+  clamps: IAutoMovieMcpPropClamp[];
+
+  /** Driver kinds deferred because this one-frame query cannot step them. */
+  deferredDriverTypes: string[];
+}
+
+/** Resident articulated-prop frame query result. */
+export interface IAutoMovieGetResolvedPropFrameOutput {
+  /** Resolved frame, or null when the resident scene/shot cannot resolve. */
+  frame: IAutoMovieMcpResolvedPropFrame | null;
+
+  /** Actionable absence or validation reason, null on success. */
+  reason: string | null;
 }
 
 /**

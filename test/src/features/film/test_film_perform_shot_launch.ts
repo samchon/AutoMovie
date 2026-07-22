@@ -6,7 +6,9 @@ import {
 } from "@automovie/engine";
 import {
   IAutoMovieActionCall,
+  IAutoMovieActionTarget,
   IAutoMovieTransform,
+  IAutoMovieVector3,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -97,12 +99,22 @@ const stagingOf = () =>
  * 12. A launch whose actor is also the projectile yields `type` on `.projectile`.
  * 13. A launch aimed at its own projectile node yields `type` on `.at`.
  * 14. A moving target is still led when its locomote action uses an actor list.
+ * 15. A live bone target drives the launch intercept through the same resolver the
+ *     aim and camera paths use.
+ * 16. If a live-bone sample becomes unavailable, launch retains its validated
+ *     start-point target instead of failing the shot.
  */
 export const test_film_perform_shot_launch = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
   if (staged.success !== true) throw new Error("staging must succeed");
 
-  const perform = (draft: IAutoMovieActionCall[]) =>
+  const perform = (
+    draft: IAutoMovieActionCall[],
+    targetAt?: (
+      target: IAutoMovieActionTarget,
+      seconds: number,
+    ) => IAutoMovieVector3 | null,
+  ) =>
     performShot({
       script: scriptOf(),
       staged,
@@ -117,6 +129,7 @@ export const test_film_perform_shot_launch = (): void => {
       }),
       synthesize: synth,
       skeleton: (node) => (node === "arrow" ? null : createSkeleton()),
+      targetAt,
     });
 
   // 1. a valid loose: the arrow flies and the foe is scheduled to react
@@ -642,4 +655,45 @@ export const test_film_perform_shot_launch = (): void => {
         .sort((a, b) => a.localeCompare(b)),
       ["trajectory:arrow", "trajectory:arrow:2"],
     );
+
+  const liveBone = perform(
+    [
+      {
+        verb: "launch",
+        actor: "archer",
+        start: 0.2,
+        duration: "auto",
+        projectile: "arrow",
+        at: { kind: "bone", node: "foe", bone: "leftHand" },
+        speed: 22,
+        onHit: { force: 0.6 },
+      },
+    ],
+    (_target, seconds) => ({ x: 6 - seconds, y: 1.2, z: 0 }),
+  );
+  TestValidator.predicate(
+    "a launch samples its live bone target while solving the intercept",
+    liveBone.success === true && liveBone.shot.objectMotions.length === 1,
+  );
+
+  const unavailableBone = perform(
+    [
+      {
+        verb: "launch",
+        actor: "archer",
+        start: 0.2,
+        duration: "auto",
+        projectile: "arrow",
+        at: { kind: "bone", node: "foe", bone: "leftHand" },
+        speed: 22,
+        onHit: { force: 0.6 },
+      },
+    ],
+    (_target, seconds) => (seconds === 0 ? { x: 6, y: 1.2, z: 0 } : null),
+  );
+  TestValidator.predicate(
+    "a missing live bone sample falls back to the validated target",
+    unavailableBone.success === true &&
+      unavailableBone.shot.objectMotions.length === 1,
+  );
 };

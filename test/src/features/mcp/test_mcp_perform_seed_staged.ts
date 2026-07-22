@@ -208,6 +208,7 @@ export const test_mcp_perform_seed_staged = (): void => {
     const seeded = app.perform({
       performance: walkBeat("beat-1"),
       actors: { knightA: actorContext({}), knightB: actorContext({}) },
+      response: "full",
     }).performed;
     if (seeded.success !== true)
       throw new Error(
@@ -219,6 +220,7 @@ export const test_mcp_perform_seed_staged = (): void => {
         knightA: actorContext(PLACEMENTS.knightA),
         knightB: actorContext(PLACEMENTS.knightB),
       },
+      response: "full",
     }).performed;
     if (restated.success !== true)
       throw new Error("the restated twin must perform");
@@ -242,6 +244,7 @@ export const test_mcp_perform_seed_staged = (): void => {
     const aimed = turnedApp.perform({
       performance: lookBeat(),
       actors: { knightA: actorContext({}) },
+      response: "full",
     }).performed;
     if (aimed.success !== true)
       throw new Error(
@@ -254,6 +257,7 @@ export const test_mcp_perform_seed_staged = (): void => {
     const unturned = turnedApp.perform({
       performance: lookBeat(),
       actors: { knightA: actorContext({ facingDeg: 0 }) },
+      response: "full",
     }).performed;
     if (unturned.success !== true)
       throw new Error("the explicit-facing twin must perform");
@@ -270,6 +274,7 @@ export const test_mcp_perform_seed_staged = (): void => {
         knightA: actorContext({ position: moved }),
         knightB: actorContext({}),
       },
+      response: "full",
     }).performed;
     const overriddenTwin = app.perform({
       performance: walkBeat("beat-1"),
@@ -277,6 +282,7 @@ export const test_mcp_perform_seed_staged = (): void => {
         knightA: actorContext({ position: moved, facingDeg: 0 }),
         knightB: actorContext(PLACEMENTS.knightB),
       },
+      response: "full",
     }).performed;
     if (overridden.success !== true || overriddenTwin.success !== true)
       throw new Error("the overridden perform must succeed");

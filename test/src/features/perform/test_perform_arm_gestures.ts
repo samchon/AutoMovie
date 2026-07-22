@@ -3,11 +3,13 @@ import {
   HUMANOID_REST_FRAME,
   IAutoMovieActorContext,
   makeActorSynthesizer,
+  resolveBoneTarget,
   resolvePose,
   sampleMotion,
 } from "@automovie/engine";
 import {
   AutoMovieHumanoidBone,
+  IAutoMovieActionTarget,
   IAutoMovieBone,
   IAutoMovieGestureAction,
   IAutoMovieJointPose,
@@ -108,6 +110,8 @@ const boneWorld = (
  *    renamed, because the solver elects its swivel by ROM legality judged in
  *    the declared space (#1345); the elbow's hinge angle, set by the target
  *    distance alone, is identical across both.
+ * 5. A bone target's FK point carries its pose-root travel once, then its staged
+ *    actor position once; it never doubles locomotion.
  */
 export const test_perform_arm_gestures = (): void => {
   const synth = makeActorSynthesizer(new Map([["hero", ctx]]), nodes);
@@ -179,6 +183,86 @@ export const test_perform_arm_gestures = (): void => {
   TestValidator.equals(
     "an unhandled arm gesture (guard) → null",
     synth(gesture("guard"), "hero"),
+    null,
+  );
+  const disappearingBone: IAutoMovieActionTarget = {
+    kind: "bone",
+    node: "movingTarget",
+    bone: "leftHand",
+  };
+  TestValidator.equals(
+    "the bone resolver ignores a non-bone target",
+    resolveBoneTarget(
+      { kind: "node", node: "exit" },
+      new Map([["hero", ctx]]),
+      undefined,
+      0,
+    ),
+    null,
+  );
+  TestValidator.equals(
+    "the bone resolver refuses a target actor with no rig",
+    resolveBoneTarget(
+      { ...disappearingBone, node: "rigless" },
+      new Map([["rigless", { ...ctx, rig: undefined }]]),
+      undefined,
+      0,
+    ),
+    null,
+  );
+  const rootedTarget = resolveBoneTarget(
+    disappearingBone,
+    new Map([
+      [
+        "movingTarget",
+        {
+          ...ctx,
+          position: { x: 4, y: 0, z: 0 },
+          restPose: makePose([], {
+            translation: { x: 2, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0, w: 1 },
+            scale: { x: 1, y: 1, z: 1 },
+          }),
+        },
+      ],
+    ]),
+    undefined,
+    0,
+  );
+  TestValidator.predicate(
+    "a bone target applies its FK root travel exactly once",
+    rootedTarget !== null &&
+      nclose(rootedTarget.x, 6.75) &&
+      nclose(rootedTarget.y, 1.4),
+  );
+  const dynamicThenMissing = makeActorSynthesizer(
+    new Map([["hero", ctx]]),
+    nodes,
+    (_target, seconds) => (seconds === 0 ? nodes.get("exit")! : null),
+  );
+  TestValidator.equals(
+    "a bone point refuses rather than holding a target that disappears mid-span",
+    dynamicThenMissing(gesture("point", { at: disappearingBone }), "hero"),
+    null,
+  );
+  TestValidator.equals(
+    "a bone strike refuses rather than holding a target that disappears mid-span",
+    dynamicThenMissing(gesture("strike", { at: disappearingBone }), "hero"),
+    null,
+  );
+  TestValidator.equals(
+    "a bone reach refuses rather than holding a target that disappears mid-span",
+    dynamicThenMissing(
+      {
+        verb: "reach",
+        actor: "hero",
+        start: 0,
+        duration: 1,
+        hand: "right",
+        to: disappearingBone,
+      },
+      "hero",
+    ),
     null,
   );
   // a rig whose right arm is incomplete cannot point (reachPose returns null)

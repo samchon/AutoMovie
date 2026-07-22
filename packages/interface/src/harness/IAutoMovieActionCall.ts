@@ -1,6 +1,7 @@
 import { AutoMovieExpressionPreset } from "../expression/AutoMovieExpressionPreset";
 import { AutoMovieBodyRegion } from "../skeleton/AutoMovieBodyRegion";
 import { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
+import { IAutoMovieBoneTarget } from "./IAutoMovieBoneTarget";
 import { IAutoMovieDirectionTarget } from "./IAutoMovieDirectionTarget";
 import { IAutoMovieGroupTarget } from "./IAutoMovieGroupTarget";
 import { IAutoMovieNodeTarget } from "./IAutoMovieNodeTarget";
@@ -19,6 +20,7 @@ import { IAutoMoviePointTarget } from "./IAutoMoviePointTarget";
  */
 export type IAutoMovieActionTarget =
   | IAutoMovieNodeTarget
+  | IAutoMovieBoneTarget
   | IAutoMoviePointTarget
   | IAutoMovieGroupTarget
   | IAutoMovieDirectionTarget

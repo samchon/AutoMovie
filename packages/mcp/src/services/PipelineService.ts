@@ -11,6 +11,7 @@ import {
   forgeProp,
   makeActorSynthesizer,
   performShot,
+  resolveBoneTarget,
   scenePlacements,
   stageScene,
   toValidation,
@@ -18,6 +19,7 @@ import {
 } from "@automovie/engine";
 import {
   IAutoMovieActionCall,
+  IAutoMovieActionTarget,
   IAutoMovieAssembleApplication,
   IAutoMovieBeatEndState,
   IAutoMovieBlockingApplication,
@@ -62,6 +64,7 @@ type PerformProps = {
   clips?: Record<string, IAutoMovieMcpMotion>;
   blocking?: IAutoMovieBlockingApplication.IWrite;
   mounts?: IAutoMovieStagedSet.IMount[];
+  response?: "compact" | "full";
 };
 
 /**
@@ -315,6 +318,7 @@ export class PipelineService {
     const shapeViolations = validatePerformShape(props, resident);
     if (shapeViolations.length > 0)
       return { performed: { success: false, violations: shapeViolations } };
+    const response = props.response ?? (resident ? "compact" : "full");
     // A loaded registry's faults belong to the store, not the (empty) input:
     // re-anchor them at $slate.actors so a tampered actors/<node>.json file is
     // blamed where it lives.
@@ -371,7 +375,23 @@ export class PipelineService {
     // gate and then synthesize nothing, which reads as a silently dropped
     // action rather than a refusal.
     const nodes = scenePlacements(staged!.scene);
-    const synthesizeDefault = makeActorSynthesizer(contexts, nodes);
+    // A bone target is resolved against a preliminary performance, then the
+    // final pass samples that performance on the shot clock. The first pass
+    // falls back to rest pose, breaking target cycles deterministically while
+    // the second makes a gaze/IK/camera follow the target's actual motion.
+    let preliminaryMotions:
+      | IAutoMoviePerformedShot.ISuccess["motions"]
+      | undefined;
+    const boneTargetAt = (
+      target: IAutoMovieActionTarget,
+      seconds: number,
+    ): IAutoMovieVector3 | null =>
+      resolveBoneTarget(target, contexts, preliminaryMotions, seconds);
+    const synthesizeDefault = makeActorSynthesizer(
+      contexts,
+      nodes,
+      boneTargetAt,
+    );
     const synthesisViolations = collectDefaultSynthesisViolations(
       props,
       contexts,
@@ -387,23 +407,34 @@ export class PipelineService {
       synthesizeDefault,
       props.clips ?? {},
     );
-    const performed = performShot({
+    const performInput = {
       script: script!,
       staged: staged!,
       performance: props.performance,
       synthesize,
-      skeleton: (node) => contexts.get(node)?.rig ?? null,
-      restFrames: (node) => contexts.get(node)?.restFrames,
-      gaits: (node) => contexts.get(node)?.gaits.map((gait) => gait.name),
+      skeleton: (node: string) => contexts.get(node)?.rig ?? null,
+      restFrames: (node: string) => contexts.get(node)?.restFrames,
+      gaits: (node: string) =>
+        contexts.get(node)?.gaits.map((gait) => gait.name),
       blocking: props.blocking,
-    });
-    const output = remapMcpPerformedShotPaths(toMcpPerformedShot(performed), [
-      // `$blocking` is the engine's name for this call's `blocking` argument
-      // (coverage faults, #1187); re-anchor it where the shape gate already
-      // blames the same field, so one field never speaks two path dialects.
-      ["$blocking", "$input.blocking"],
-      ["$input", "$input.performance"],
-    ]);
+      targetAt: boneTargetAt,
+    };
+    const preliminary = performShot(performInput);
+    if (preliminary.success === true) preliminaryMotions = preliminary.motions;
+    const performed =
+      preliminary.success === false ? preliminary : performShot(performInput);
+    const motions =
+      performed.success === true ? toMcpMotions(performed.motions) : undefined;
+    const output = remapMcpPerformedShotPaths(
+      toMcpPerformedShot(performed, motions, response === "full"),
+      [
+        // `$blocking` is the engine's name for this call's `blocking` argument
+        // (coverage faults, #1187); re-anchor it where the shape gate already
+        // blames the same field, so one field never speaks two path dialects.
+        ["$blocking", "$input.blocking"],
+        ["$input", "$input.performance"],
+      ],
+    );
     // Write-through (#1176, the forgeProp precedent): a successful resident
     // perform with an explicit registry stores each context's beat-invariant
     // half as actors/<node>.json, so later resident performs omit `actors`.
@@ -425,6 +456,8 @@ export class PipelineService {
             : {}),
         })),
       );
+    if (slate !== null && response === "compact" && output.success === true)
+      this.context!.rememberPerformedMotions(output.shot.id, motions!);
     return { performed: output };
   }
 
@@ -1141,6 +1174,28 @@ const validatePerformShape = (
     validateBlockingShape(props.blocking, "$input.blocking", violations);
   if (props.clips !== undefined)
     validatePerformClipsShape(props.clips, "$input.clips", violations);
+  if (
+    props.response !== undefined &&
+    props.response !== "compact" &&
+    props.response !== "full"
+  )
+    violations.push(
+      violation(
+        "type",
+        "$input.response",
+        'perform response must be "compact" or "full"',
+        props.response,
+      ),
+    );
+  if (!resident && props.response === "compact")
+    violations.push(
+      violation(
+        "type",
+        "$input.response",
+        'a compact response needs resident project state; use "full" for an explicit perform',
+        props.response,
+      ),
+    );
   return violations;
 };
 
@@ -3045,18 +3100,30 @@ const describeDefaultSynthesisGap = (
 
 const toMcpPerformedShot = (
   performed: IAutoMoviePerformedShot,
+  motions: Record<string, IAutoMovieMcpMotion> | undefined,
+  includeMotions: boolean,
 ): IAutoMovieMcpPerformedShot =>
   performed.success === false
     ? performed
     : {
         ...performed,
-        motions: Object.fromEntries(
-          Object.entries(performed.motions).map(([node, motion]) => [
-            node,
-            toMcpMotion(motion),
-          ]),
-        ),
+        motionSummary: Object.entries(motions!).map(([node, motion]) => ({
+          node,
+          id: motion.id,
+          duration: motion.duration,
+        })),
+        motions: includeMotions ? motions! : {},
       };
+
+const toMcpMotions = (
+  motions: IAutoMoviePerformedShot.ISuccess["motions"],
+): Record<string, IAutoMovieMcpMotion> =>
+  Object.fromEntries(
+    Object.entries(motions).map(([node, motion]) => [
+      node,
+      toMcpMotion(motion),
+    ]),
+  );
 
 const remapMcpPerformedShotPaths = (
   performed: IAutoMovieMcpPerformedShot,

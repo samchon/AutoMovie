@@ -66,8 +66,8 @@ const actorContext = (
  * Scenarios:
  *
  * 1. After resident commitScript/commitScene, a resident perform (performance +
- *    actors only) compiles the same shot the explicit form does: shot id, scene
- *    reference, and motion ids match.
+ *    actors only) returns compact motion identities, and its following
+ *    commitShot resolves the hidden same-session registry.
  * 2. Performing before the scene is committed refuses at `$slate.scene`.
  * 3. A mixed call (script without staged) is refused at `$input`; `mounts` on an
  *    explicit call is refused at `$input.mounts`; a malformed resident mount
@@ -135,7 +135,7 @@ export const test_mcp_perform_resident = (): void => {
       knightB: actorContext(positionOf("knightB"), 180),
     });
 
-    // 1. the resident shot matches the explicit one.
+    // 1. a resident result is compact but commits through its session registry.
     const residentShot = app.perform({
       performance: perf(),
       actors: actors(),
@@ -153,17 +153,66 @@ export const test_mcp_perform_resident = (): void => {
     if (explicitShot.success !== true)
       throw new Error("explicit perform must succeed");
     TestValidator.equals(
-      "the resident shot matches the explicit one",
+      "the compact resident shot matches the explicit one",
       [
         residentShot.shot.id,
         residentShot.shot.scene,
-        Object.keys(residentShot.motions).sort((a, b) => a.localeCompare(b)),
+        residentShot.motionSummary
+          .map((motion) => motion.id)
+          .sort((a, b) => a.localeCompare(b)),
       ],
       [
         explicitShot.shot.id,
         explicitShot.shot.scene,
-        Object.keys(explicitShot.motions).sort((a, b) => a.localeCompare(b)),
+        Object.values(explicitShot.motions)
+          .map((motion) => motion.id)
+          .sort((a, b) => a.localeCompare(b)),
       ],
+    );
+    TestValidator.equals(
+      "a resident perform omits dense clips by default",
+      residentShot.motions,
+      {},
+    );
+    TestValidator.equals(
+      "a compact resident perform hands motions to commitShot",
+      app.commitShot({ shot: residentShot.shot }).committed,
+      true,
+    );
+    const consumedCompact = app.commitShot({ shot: residentShot.shot });
+    TestValidator.predicate(
+      "a compact handoff is consumed by its successful commit",
+      consumedCompact.committed === false &&
+        consumedCompact.validation.success === false &&
+        consumedCompact.validation.violations.some(
+          (violation) => violation.path === "$input.motions",
+        ),
+    );
+
+    const fullResident = app.perform({
+      performance: perf(),
+      response: "full",
+    }).performed;
+    TestValidator.predicate(
+      "a resident caller can request dense clips",
+      fullResident.success === true &&
+        Object.keys(fullResident.motions).length ===
+          fullResident.motionSummary.length,
+    );
+    app.commitScene({
+      scene: staged.scene,
+      models: [...new Set(staged.scene.nodes.map((node) => node.model))].map(
+        (id) => ({ id, skeleton: null }),
+      ),
+    });
+    const staleCompact = app.commitShot({ shot: residentShot.shot });
+    TestValidator.predicate(
+      "a scene replacement clears the compact motion handoff",
+      staleCompact.committed === false &&
+        staleCompact.validation.success === false &&
+        staleCompact.validation.violations.some(
+          (violation) => violation.path === "$input.motions",
+        ),
     );
 
     // 3. pairing and mounts gates.
@@ -187,6 +236,30 @@ export const test_mcp_perform_resident = (): void => {
       "mounts on an explicit call is refused",
       explicitMounts.success === false &&
         hasViolation(explicitMounts, "type", "$input.mounts"),
+    );
+    const explicitCompact = app.perform({
+      script: scriptWrite,
+      staged,
+      performance: perf(),
+      actors: actors(),
+      response: "compact",
+    }).performed;
+    TestValidator.predicate(
+      "an explicit perform refuses a compact response with no state handoff",
+      explicitCompact.success === false &&
+        hasViolation(explicitCompact, "type", "$input.response"),
+    );
+    const malformedResponse = app.perform({
+      script: scriptWrite,
+      staged,
+      performance: perf(),
+      actors: actors(),
+      response: "brief" as never,
+    }).performed;
+    TestValidator.predicate(
+      "an unknown response mode is a located shape violation",
+      malformedResponse.success === false &&
+        hasViolation(malformedResponse, "type", "$input.response"),
     );
     const badMount = app.perform({
       performance: perf(),

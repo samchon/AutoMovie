@@ -24,6 +24,10 @@ export class AutoMovieContext {
     string,
     Record<string, IAutoMovieMcpMotion>
   >();
+  private performedMotionsByShot = new Map<
+    string,
+    Record<string, IAutoMovieMcpMotion>
+  >();
 
   public constructor(
     /**
@@ -73,6 +77,32 @@ export class AutoMovieContext {
       skeleton: model.skeleton,
     }));
     this.geometryMotionsByBeat.clear();
+    this.performedMotionsByShot.clear();
+  }
+
+  /**
+   * Keep one resident `perform` result available for the following
+   * `commitShot`. Compiled clips are still derived rather than persisted; this
+   * is only the compact response's same-session handoff (#1365).
+   */
+  public rememberPerformedMotions(
+    shot: string,
+    motions: Record<string, IAutoMovieMcpMotion>,
+  ): void {
+    this.performedMotionsByShot.set(shot, cloneMotions(motions));
+  }
+
+  /** The compact resident result's registry, isolated from caller mutation. */
+  public performedMotions(
+    shot: string,
+  ): Record<string, IAutoMovieMcpMotion> | undefined {
+    const motions = this.performedMotionsByShot.get(shot);
+    return motions === undefined ? undefined : cloneMotions(motions);
+  }
+
+  /** Consume a compact response's handoff after its shot commits. */
+  public forgetPerformedMotions(shot: string): void {
+    this.performedMotionsByShot.delete(shot);
   }
 
   /**
@@ -117,11 +147,13 @@ export class AutoMovieContext {
   public clearGeometryMemory(): void {
     this.geometryModels = [];
     this.geometryMotionsByBeat.clear();
+    this.performedMotionsByShot.clear();
   }
 
   /** Clear compiled clips when resident shots are invalidated. */
   public clearGeometryMotions(): void {
     this.geometryMotionsByBeat.clear();
+    this.performedMotionsByShot.clear();
   }
 
   /**
@@ -162,3 +194,8 @@ export class AutoMovieContext {
     };
   }
 }
+
+const cloneMotions = (
+  motions: Record<string, IAutoMovieMcpMotion>,
+): Record<string, IAutoMovieMcpMotion> =>
+  JSON.parse(JSON.stringify(motions)) as Record<string, IAutoMovieMcpMotion>;
