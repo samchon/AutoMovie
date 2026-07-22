@@ -25,9 +25,6 @@
     "type": "git",
     "url": "https://github.com/samchon/automovie"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
-  },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "catalog:typescript",
     "prettier": "catalog:typescript",
