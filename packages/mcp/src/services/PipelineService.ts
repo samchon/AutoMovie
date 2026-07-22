@@ -456,8 +456,14 @@ export class PipelineService {
             : {}),
         })),
       );
-    if (slate !== null && response === "compact" && output.success === true)
-      this.context!.rememberPerformedMotions(output.shot.id, motions!);
+    if (slate !== null && output.success === true) {
+      if (response === "compact")
+        this.context!.rememberPerformedMotions(output.shot.id, motions!);
+      // A full response hands its own registry to the caller. Keeping an older
+      // compact response for the same stable shot id lets commitShot validate
+      // the new shot against old clips whose ids happen to match (#1375).
+      else this.context!.forgetPerformedMotions(output.shot.id);
+    }
     return { performed: output };
   }
 
