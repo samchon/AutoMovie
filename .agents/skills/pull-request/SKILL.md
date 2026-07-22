@@ -27,7 +27,9 @@ Stage explicit paths when the worktree is mixed. Never include unrelated user ch
 
 Write the PR body at open: intent, scope, deferred items, test plan (including the coverage result). Treat it as the PR's historical intent statement. Use a file-backed body for multiline Markdown when opening through `gh`.
 
-Do not rewrite the body on every follow-up push; subsequent CI fixes and newly-found issues go in `gh pr comment` so the thread preserves chronology. The title describes the merged outcome in `<type>(<scope>)` style, not the work process.
+Do not rewrite the body on every follow-up push. Record later CI fixes, newly found issues, and Self-Review results as formal GitHub pull-request reviews with the `COMMENT` event so the thread preserves chronology. Use an inline review comment when an observation belongs to a changed line, and the review body for commit-wide or round-wide results. Never `APPROVE` or `REQUEST_CHANGES` on your own pull request.
+
+The title describes the merged outcome in `<type>(<scope>)` style, not the work process.
 
 ## Campaign Override
 
