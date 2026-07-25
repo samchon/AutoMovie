@@ -189,8 +189,8 @@ try {
   const { tools } = await granular.listTools();
   assert(
     "granular-tool-count",
-    tools.length === 45,
-    \`expected 45 granular tools, got \${tools.length}\`,
+    tools.length === 47,
+    \`expected 47 granular tools, got \${tools.length}\`,
   );
   for (const name of ["stage", "perform", "cut"])
     assert(
