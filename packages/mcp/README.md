@@ -33,7 +33,7 @@ repeating that graph for every operation, which keeps the surface usable in a
 | `getGuideDocument` | read `AUTOMOVIE_OVERALL` first, then the current stage guide |
 | `openProject` | activate or create resident project memory |
 | `nextSteps` | read ladder status, missing prerequisites, and next operations |
-| `execute` | run one of the other 42 strictly typed operations |
+| `execute` | run one of the other 44 strictly typed operations |
 
 An execution call has one wire shape:
 
@@ -181,7 +181,7 @@ starter with `npx automovie start <dir>` ([`@automovie/cli`](../cli)).
 ```bash
 # dev (in-workspace, transpiled by ttsx)
 pnpm --filter @automovie/mcp start        # = ttsx src/bin.ts
-pnpm --filter @automovie/mcp start:granular # 45-tool compatibility surface
+pnpm --filter @automovie/mcp start:granular # 47-tool compatibility surface
 
 # built (published): the bin runs the compiled server
 npx @automovie/mcp                        # = node lib/bin.js
@@ -206,6 +206,6 @@ For an in-repo checkout, point the command at the workspace runner instead
 
 The `automovie-mcp-granular` binary and `createAutoMovieGranularMcpServer`
 retain the one-tool-per-operation surface for clients that already depend on
-those wire names. It advertises the shared schema closure 45 times and can
+those wire names. It advertises the shared schema closure 47 times and can
 exceed mainstream model context windows, so new external-client integrations
 should use the compact default.

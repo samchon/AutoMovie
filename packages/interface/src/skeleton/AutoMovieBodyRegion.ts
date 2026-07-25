@@ -15,8 +15,10 @@
  * - `upperBody`: spine + both arms + hands (gestures, reaches, punches).
  * - `head`: neck + head (look-at, nods, shakes).
  * - `face`: expression/morph channels (emotes).
- * - `fullBody`: the whole rig; cannot co-occur with any other region (jumps,
- *   knockdowns, whole-body staggers).
+ * - `fullBody`: the whole rig (jumps, knockdowns, whole-body staggers, and the
+ *   shipped gaits). It co-occurs with another region only while their surviving
+ *   content stays disjoint (a full-body gait beside a head-only look-at); a
+ *   shared root, bone, or expression conflicts.
  *
  * (A finer split, `leftArm` / `rightArm` so a one-armed wave and a carry
  * compose, is a later additive when a scene needs it; `upperBody` covers the

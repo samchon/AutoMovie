@@ -4,7 +4,7 @@ import { IAutoMovieContextRequest } from "./IAutoMovieContextRequest";
 /**
  * Stage 4: **PERFORMANCE** (micro, per shot). Compile the blocked intent into
  * **action calls**: the thin verbs the engine fattens into motion. The model
- * does _not_ write keyframes; it emits `walkTo` / `gesture` / `lookAt` /
+ * does _not_ write keyframes; it emits `locomote` / `gesture` / `lookAt` /
  * `react` and the engine synthesises the dense clips (locomotion, IK, aim, ROM
  * clamp, spring, projectile, impact) and assembles the {@link IAutoMovieShot}.
  *
