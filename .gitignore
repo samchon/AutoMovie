@@ -8,11 +8,6 @@ node_modules/
 lib/
 dist/
 
-# viewer/playground build outputs
-website/.next/**
-website/out/**
-website/public/playground/**
-
 .DS_Store
 *.tsbuildinfo
 .env
