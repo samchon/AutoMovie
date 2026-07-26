@@ -182,13 +182,14 @@ const UNWATCHED = [
  * every other assertion in this file green. These pairs discriminate directly.
  *
  * The rows marked `cheat sheet` are transcribed from GitHub's own filter-
- * pattern table, which is the authority for the two readings that look like
- * they contradict: `**` is "zero or more of any character", so `**.js` reaches
- * `src/app.js` across a separator, AND a globstar-prefixed `README.md` row is
- * listed as matching a root-level `README.md` (see the rows below, which are
- * the transcription). A model with only the first rule fails the second; a
- * minimatch-style model that degrades a non-standalone `**` to `*` fails the
- * first. The implementation carries both, and these rows are why.
+ * pattern table, pattern and example both, which is the authority for the two
+ * readings that look like they contradict: `**` is "zero or more of any
+ * character", so a globstar that stands beside `.js` still reaches
+ * `src/js/app.js` across a separator, AND a globstar-prefixed `README.md` row
+ * is listed as matching a root-level `README.md`. A model with only the first
+ * rule fails the second; a minimatch-style model that degrades a non-standalone
+ * `**` to `*` fails the first. The implementation carries both, and these rows
+ * are why.
  */
 const MATCHER_ORACLE: Array<[string, string, boolean]> = [
   // `*` stays inside one segment
@@ -196,13 +197,15 @@ const MATCHER_ORACLE: Array<[string, string, boolean]> = [
   ["packages/*/*.md", "packages/viewer/docs/guide.md", false],
   ["*.yml", "pnpm-workspace.yml", true],
   ["*.yml", ".github/workflows/build.yml", false],
-  ["docs/*", "docs/mona/octocat.txt", false], // cheat sheet
+  // derived by contrasting the table's `docs/*` and `docs/**` rows: the first
+  // is documented as "all files within the root of the docs directory"
+  ["docs/*", "docs/mona/octocat.txt", false],
   // `**` crosses them
   ["packages/*/src/**", "packages/engine/src/film/cameraMove.ts", true],
   ["packages/*/src/**", "packages/engine/lib/film/cameraMove.js", false],
   ["test/**", "test/src/features/workspace/x.ts", true],
-  ["**.js", "main.js", true], // cheat sheet
-  ["**.js", "src/app.js", true], // cheat sheet
+  ["**.js", "index.js", true], // cheat sheet
+  ["**.js", "src/js/app.js", true], // cheat sheet
   // a globstar opening a segment also matches zero segments
   ["**/README.md", "README.md", true], // cheat sheet
   ["**/README.md", "js/README.md", true], // cheat sheet
@@ -319,19 +322,34 @@ const PARSER_ORACLE: Array<[string, string, string[] | string]> = [
     ["a"],
   ],
   [
+    "a commented trigger key is still the trigger",
+    probeDocument("  pull_request: # every one", "    paths:", "      - 'a'"),
+    ["a"],
+  ],
+  [
+    "a pull_request key at another depth is not the trigger",
+    probeDocument(
+      "  workflow_call:",
+      "    inputs:",
+      "      pull_request:",
+      "        default: true",
+    ),
+    "declares no pull_request trigger",
+  ],
+  [
     "a document with no pull_request trigger is refused",
     probeDocument("  push:", "    paths:", "      - 'a'"),
-    "no pull_request trigger",
+    "declares no pull_request trigger",
   ],
   [
     "a pull_request trigger with no paths list is refused",
     probeDocument("  pull_request:", "    branches:", "      - master"),
-    "no readable paths list",
+    "declares no readable paths list",
   ],
   [
     "a flow sequence is refused rather than read as empty",
     probeDocument("  pull_request:", "    paths: ['a', 'b']"),
-    "no readable paths list",
+    "declares no readable paths list",
   ],
   [
     "a paths list with no entries is refused",
@@ -341,47 +359,71 @@ const PARSER_ORACLE: Array<[string, string, string[] | string]> = [
       "    branches:",
       "      - x",
     ),
-    "an empty paths list",
+    "declares an empty paths list",
   ],
   [
     "an entry this cannot read is refused",
     probeDocument("  pull_request:", "    paths:", "      - "),
-    "an unreadable paths entry",
+    "has an unreadable paths entry",
   ],
   [
     // the row that separates refusing from silently skipping: a parser that
     // dropped the bad entry would return ["a"] and never reach a throw.
     "an unreadable entry beside a readable one is still refused",
     probeDocument("  pull_request:", "    paths:", "      - 'a'", "      - "),
-    "an unreadable paths entry",
+    "has an unreadable paths entry",
   ],
   [
     "an empty pattern is refused rather than counted",
     probeDocument("  pull_request:", "    paths:", "      - ''"),
-    "an empty pattern",
+    "declares an empty pattern",
+  ],
+  [
+    // the refusal for an unreadable entry quotes that entry back, so a cause
+    // matched anywhere in the message would let the entry name its own cause.
+    "an entry that spells another cause is still refused for its own",
+    probeDocument(
+      "  pull_request:",
+      "    paths:",
+      '      - "declares an empty paths list',
+    ),
+    "has an unreadable paths entry",
   ],
 ];
 
-/** The refusal causes {@link workflowTriggerPaths} distinguishes. */
+/**
+ * Every refusal {@link workflowTriggerPaths} can raise, as the message tail that
+ * follows the document label. Scenario 1 requires each to have a document that
+ * provokes it, which is a claim that cannot fall out of date the way a counted
+ * one does.
+ */
 const REFUSALS = [
-  "no pull_request trigger",
-  "no readable paths list",
-  "an empty paths list",
-  "an unreadable paths entry",
-  "an empty pattern",
+  "declares no pull_request trigger",
+  "declares no readable paths list",
+  "declares an empty paths list",
+  "has an unreadable paths entry",
+  "declares an empty pattern",
 ];
 
+/** The label every probe parses under, and the prefix stripped before matching. */
+const PROBE_LABEL = "probe.yml";
+
 /**
- * Parse for the oracle above, reporting a refusal as its cause. An unclassified
+ * Parse for the oracle above, reporting a refusal as its cause.
+ *
+ * The cause is matched at the START of the message tail, never anywhere in the
+ * message. One refusal quotes the offending line back, so a substring search
+ * would let a probe's own text name the cause: an entry reading `- "declares an
+ * empty paths list` would be certified as the wrong refusal. An unclassified
  * message is returned whole rather than folded into a known one, so a new
  * failure mode shows up as itself.
  */
 const parseOrRefusal = (probe: string): string[] | string => {
   try {
-    return workflowTriggerPaths("probe.yml", probe);
+    return workflowTriggerPaths(PROBE_LABEL, probe);
   } catch (exp) {
-    const message = (exp as Error).message;
-    return REFUSALS.find((cause) => message.includes(cause)) ?? message;
+    const tail = (exp as Error).message.replace(`${PROBE_LABEL} `, "");
+    return REFUSALS.find((cause) => tail.startsWith(cause)) ?? tail;
   }
 };
 
@@ -411,10 +453,14 @@ const parseOrRefusal = (probe: string): string[] | string => {
  * 1. The parser reads the trigger it claims to read and refuses what it cannot,
  *    proved on documents this repository does not contain: a sibling key ending
  *    the list, a `push:` filter on either side, bare and double-quoted entries,
- *    a same-line comment, carriage returns, a padded and a commented key, and
- *    six shapes where refusing is the only correct answer -- each asserted by
- *    its CAUSE, including an unreadable entry standing beside a readable one,
- *    which is the row a silently-skipping parser fails.
+ *    a same-line comment, carriage returns, padded and commented keys, a
+ *    `pull_request` key at another depth, and every shape where refusing is the
+ *    only correct answer. Refusals are asserted by CAUSE, and a second
+ *    assertion requires each cause the parser can raise to have a document that
+ *    provokes it -- a completeness claim that cannot fall out of date the way
+ *    counting the rows in prose did, twice. One of those documents puts an
+ *    unreadable entry beside a readable one, which is what separates refusing
+ *    from silently skipping: a skipping parser returns the readable one.
  * 2. Every declared pattern stays inside the glob subset {@link matches}
  *    implements, so no assertion below is decided by a matcher guessing at
  *    syntax it does not support.
@@ -441,6 +487,13 @@ export const test_workspace_ci_triggers = (): void => {
     "the paths parser reads its own trigger and refuses what it cannot",
     PARSER_ORACLE.map(([label, probe]) => [label, parseOrRefusal(probe)]),
     PARSER_ORACLE.map(([label, , expected]) => [label, expected]),
+  );
+  TestValidator.equals(
+    "every refusal the parser can raise has a document that provokes it",
+    REFUSALS.filter(
+      (cause) => !PARSER_ORACLE.some(([, , expected]) => expected === cause),
+    ),
+    [],
   );
 
   const build = triggerPaths("build");

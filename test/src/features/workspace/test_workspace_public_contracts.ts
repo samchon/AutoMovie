@@ -87,12 +87,17 @@ export const test_workspace_public_contracts = (): void => {
     "IAutoMovieConstraintViolation.ts",
   );
   // Every document this scenario reads, so the retired-surface sweep covers
-  // the same set the paragraph above claims for it.
+  // the same set the paragraph above claims for it. The READMEs and the harness
+  // JSDoc reach a reader through different doors, and a retired command name is
+  // equally wrong behind either.
   const publicContract = [
     rootReadme,
     engineReadme,
     interfaceReadme,
     mcpReadme,
+    performanceApplication,
+    actionCall,
+    bodyRegion,
     violationKind,
     violationContract,
   ].join("\n");
