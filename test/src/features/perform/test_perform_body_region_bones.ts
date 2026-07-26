@@ -1,10 +1,13 @@
-import { bodyRegionBones } from "@automovie/engine";
+import {
+  AUTOMOVIE_RIG_IS_PARTITIONED,
+  bodyRegionBones,
+} from "@automovie/engine";
 import { AutoMovieHumanoidBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 const disjoint = (
-  a: AutoMovieHumanoidBone[],
-  b: AutoMovieHumanoidBone[],
+  a: readonly AutoMovieHumanoidBone[],
+  b: readonly AutoMovieHumanoidBone[],
 ): boolean => {
   const set = new Set(a);
   return b.every((x) => !set.has(x));
@@ -15,12 +18,23 @@ const disjoint = (
  * skeleton into body regions, the basis for layering clips on non-overlapping
  * regions.
  *
+ * Completeness is not asserted here, and the count below is documentation
+ * rather than proof. This scenario used to claim the three regions "cover the
+ * full 55-bone VRM rig exactly" while comparing them only with each other, so a
+ * bone added to the union and to no region kept every assertion green while
+ * every mask stripped it (#1400). The claim now belongs to the compiler:
+ * `AUTOMOVIE_RIG_IS_PARTITIONED` types as `true` only while the partition
+ * covers `AutoMovieHumanoidBone`, and an escaped bone fails the build by name.
+ * What is left for run time is what a type cannot see: disjointness, the empty
+ * face region, and `fullBody` really being the three concatenated.
+ *
  * Scenarios:
  *
  * 1. Each region owns the expected bones (lower = hips+legs, upper = torso+arms+
  *    fingers, head = neck/head/eyes/jaw, face = none).
  * 2. The three bony regions are pairwise disjoint.
- * 3. They cover the full 55-bone VRM rig exactly: `fullBody` is their union.
+ * 3. `fullBody` is exactly their concatenation, element for element, and the
+ *    compiler's completeness proof is present and true.
  */
 export const test_perform_body_region_bones = (): void => {
   const lower = bodyRegionBones("lowerBody");
@@ -54,12 +68,16 @@ export const test_perform_body_region_bones = (): void => {
   TestValidator.predicate("lower ∩ head = ∅", disjoint(lower, head));
   TestValidator.predicate("upper ∩ head = ∅", disjoint(upper, head));
 
-  // 3. complete cover
-  TestValidator.equals("fullBody is the whole 55-bone rig", full.length, 55);
+  // 3. fullBody is the three regions, and the build proved they are all of them
+  TestValidator.equals(
+    "fullBody is the three regions concatenated",
+    [...full],
+    [...lower, ...upper, ...head],
+  );
   TestValidator.equals("fullBody has no duplicates", new Set(full).size, 55);
   TestValidator.equals(
-    "fullBody is the union of the three regions",
-    new Set(full).size,
-    new Set([...lower, ...upper, ...head]).size,
+    "the compiler's partition proof is wired and true",
+    AUTOMOVIE_RIG_IS_PARTITIONED,
+    true,
   );
 };
