@@ -22,7 +22,7 @@ const script = (withTree: boolean): IAutoMovieScript => ({
 
 const slate = (withTree: boolean): IAutoMovieMcpWritableSlate => ({
   script: script(withTree),
-  scene: null,
+  scenes: [],
   shots: [],
   beatEnds: [],
   notes: [],

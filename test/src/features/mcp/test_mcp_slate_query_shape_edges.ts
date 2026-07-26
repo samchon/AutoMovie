@@ -19,7 +19,7 @@ const app = new AutoMovieApplication();
 export const test_mcp_slate_query_shape_edges = (): void => {
   const nonStringId: IAutoMovieMcpStoredSlate = {
     script: null,
-    scene: null,
+    scenes: [],
     shots: [{ id: 42 } as unknown as IAutoMovieShot],
     beatEnds: [],
     notes: [],
@@ -45,7 +45,7 @@ export const test_mcp_slate_query_shape_edges = (): void => {
     app.getShot({
       slate: {
         script: null,
-        scene: null,
+        scenes: [],
         shots: [shot],
         beatEnds: [],
         notes: [],

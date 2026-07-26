@@ -57,7 +57,7 @@ const sequence: IAutoMovieSequence = {
 
 const slate: IAutoMovieMcpWritableSlate = {
   script,
-  scene,
+  scenes: [scene],
   shots: [shot],
   beatEnds: [],
   notes: [],

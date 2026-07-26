@@ -78,7 +78,7 @@ export const test_mcp_project_resident_query = (): void => {
       app.getScript({
         slate: {
           script: other,
-          scene: null,
+          scenes: [],
           shots: [],
           beatEnds: [],
           notes: [],

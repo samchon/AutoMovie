@@ -201,7 +201,7 @@ export const test_mcp_pointer_channel_refused = (): void => {
           },
         ],
       },
-      scene,
+      scenes: [scene],
       shots: [],
       beatEnds: [],
       notes: [],

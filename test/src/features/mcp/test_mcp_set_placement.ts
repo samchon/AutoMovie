@@ -139,9 +139,12 @@ export const test_mcp_set_placement = (): void => {
       knightABefore,
     );
     TestValidator.equals(
-      "scene.json carries the move (write-through)",
+      "the scene slice carries the move (write-through)",
       fs
-        .readFileSync(path.join(root, "scene.json"), "utf8")
+        .readFileSync(
+          path.join(root, "scenes", `${staged.scene.id}.json`),
+          "utf8",
+        )
         .includes('"z": 1.4'),
       true,
     );

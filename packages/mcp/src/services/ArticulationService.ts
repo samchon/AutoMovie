@@ -4,6 +4,7 @@ import { AutoMovieContext } from "../AutoMovieContext";
 import { toEnginePropSpec } from "../convert";
 import { IAutoMovieGetResolvedPropFrameOutput } from "../dto";
 import { shotIdOf } from "../project/shotKey";
+import { soleScene } from "../project/slateScenes";
 
 /** Resolve a committed articulated prop through its declared profile. */
 export class ArticulationService {
@@ -24,7 +25,7 @@ export class ArticulationService {
     if (!Number.isFinite(seconds) || seconds < 0)
       return { frame: null, reason: "t must be a finite number >= 0" };
     const slate = project.writableSlate();
-    if (slate.scene === null)
+    if (soleScene(slate) === null)
       return {
         frame: null,
         reason: "commitScene before resolving a prop frame",
@@ -40,18 +41,23 @@ export class ArticulationService {
         frame: null,
         reason: `t ${seconds} lies after shot "${shot.id}" ending at ${shot.duration}`,
       };
+    // One staged scene per slate today, so this is the scene the shot renders:
+    // `validateShotArtifact` refused any shot naming a different id at commit.
+    // Resolving by `shot.scene` belongs with multi-scene authoring, where the
+    // branch for "the slate does not hold it" is reachable and testable.
+    const scene = soleScene(slate)!;
     try {
       const specs = project.storedProps();
       const propsByModel = Object.fromEntries(
         specs.map((spec) => [spec.node, toEnginePropSpec(spec)]),
       );
       const nodes = sceneToNodes({
-        scene: slate.scene,
+        scene,
         props: propsByModel,
         allowPartialModels: true,
       });
       const placements = new Map(
-        slate.scene.nodes.map((placement) => [placement.id, placement]),
+        scene.nodes.map((placement) => [placement.id, placement]),
       );
       const profiles = specs.flatMap((spec) => {
         if (spec.articulation === null) return [];

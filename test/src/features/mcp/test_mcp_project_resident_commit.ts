@@ -29,10 +29,10 @@ const script: IAutoMovieScript = {
  * 2. CommitScript with no slate commits into the resident project: `script.json`
  *    appears and its parse equals the script.
  * 3. CommitScene with no slate reads the resident script as its base (the
- *    cross-slice precondition holds without re-sending state) and persists
- *    `scene.json`.
+ *    cross-slice precondition holds without re-sending state) and persists its
+ *    own slice under `scenes/`.
  * 4. Re-committing the script clears the downstream scene: the invalidation
- *    cascade is visible as `scene.json` disappearing.
+ *    cascade is visible as that slice disappearing.
  * 5. A commit with an EXPLICIT slate does not touch the resident files (the
  *    stateless twin), and a failed resident commit writes nothing.
  * 6. A malformed `openProject` request root rejects before reading `root`.
@@ -87,8 +87,12 @@ export const test_mcp_project_resident_commit = (): void => {
       sceneCommit.committed,
       true,
     );
-    const sceneFile = path.join(root, "scene.json");
-    TestValidator.equals("scene.json appears", fs.existsSync(sceneFile), true);
+    const sceneFile = path.join(root, "scenes", `${staged.scene.id}.json`);
+    TestValidator.equals(
+      "the scene slice appears",
+      fs.existsSync(sceneFile),
+      true,
+    );
 
     app.commitScript({ script: { ...script, theme: "second draft" } });
     TestValidator.equals(
@@ -101,7 +105,7 @@ export const test_mcp_project_resident_commit = (): void => {
     const explicit = app.commitScript({
       slate: {
         script: null,
-        scene: null,
+        scenes: [],
         shots: [],
         beatEnds: [],
         notes: [],

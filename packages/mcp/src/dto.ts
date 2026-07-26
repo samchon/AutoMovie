@@ -62,8 +62,16 @@ export interface IAutoMovieMcpStoredSlate {
   /** Committed script, or null before SCRIPT exists. */
   script: IAutoMovieScript | null;
 
-  /** Committed staged scene, or null before STAGING exists. */
-  scene: IAutoMovieScene | null;
+  /**
+   * Committed staged scenes, keyed by their own `id`, empty before STAGING.
+   *
+   * Plural because a film is not one location. The script tree already authors
+   * several `scene` nodes with their own INT/EXT and location, and every shot
+   * already names the scene it renders through {@link IAutoMovieShot.scene},
+   * which `validateShotArtifact` enforces. The slate held one scene, so the
+   * production layer collapsed a screenplay to a single set (#1171).
+   */
+  scenes: IAutoMovieScene[];
 
   /** Shots built so far. */
   shots: IAutoMovieShot[];

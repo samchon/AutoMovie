@@ -41,6 +41,7 @@ import {
   IAutoMovieMeasureDistanceOutput,
 } from "../dto";
 import { shotIdOf } from "../project/shotKey";
+import { soleScene } from "../project/slateScenes";
 import {
   appendMotionClockShape,
   pushViolation,
@@ -251,14 +252,15 @@ export class GeometryService {
     if (scene !== undefined) return { scene, root: "$input.scene" };
     const project = this.context.requireProject(caller);
     const stored = project.storedSlate();
-    if (stored.scene === null)
+    const resident = soleScene(stored);
+    if (resident === null)
       throw new Error(
         `${caller} was called without a scene, but the resident project has no committed scene. Commit a scene first or pass scene explicitly.`,
       );
     // storedSlate validates scene.json before returning the resident scene.
     // `$slate.scene` matches the commit/render services' resident addressing
     // (#995): the resident scene IS the stored slate's scene slice.
-    return { scene: stored.scene, root: "$slate.scene" };
+    return { scene: resident, root: "$slate.scene" };
   }
 
   private resolveGeometryContext(
@@ -270,7 +272,8 @@ export class GeometryService {
       return { context, resident: false, root: "$input.context" };
     const project = this.context.requireProject(caller);
     const slate = project.writableSlate();
-    if (slate.scene === null)
+    const scene = soleScene(slate);
+    if (scene === null)
       throw new Error(
         `${caller} was called without a context, but the resident project has no committed scene. Commit a scene first or pass context explicitly.`,
       );
@@ -314,7 +317,7 @@ export class GeometryService {
       // root would misaddress the memory-backed parts (#995).
       root: "$context",
       context: {
-        scene: slate.scene,
+        scene,
         models,
         motions: memory.motions,
         shot:

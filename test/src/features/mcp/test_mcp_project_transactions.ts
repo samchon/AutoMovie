@@ -18,7 +18,7 @@ const scriptOf = (logline: string): IAutoMovieScript => ({
 
 const slateOf = (logline: string): IAutoMovieMcpWritableSlate => ({
   script: scriptOf(logline),
-  scene: null,
+  scenes: [],
   shots: [],
   beatEnds: [],
   notes: [],

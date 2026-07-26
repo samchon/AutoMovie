@@ -94,7 +94,7 @@ const film: IAutoMovieSequence = {
 const slate = (over: Partial<IAutoMovieMcpWritableSlate> = {}) =>
   ({
     script,
-    scene,
+    scenes: [scene],
     shots: [shot],
     beatEnds: [],
     notes: [],
@@ -192,7 +192,7 @@ export const test_mcp_plan_pose_keypoints = (): void => {
   TestValidator.predicate(
     "a missing scene refuses",
     hasViolation(
-      plan({ slate: slate({ scene: null }) }).validation,
+      plan({ slate: slate({ scenes: [] }) }).validation,
       "type",
       ".scene",
     ),

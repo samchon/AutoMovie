@@ -61,7 +61,7 @@ const beatEnd: IAutoMovieBeatEndState = {
 
 const slate: IAutoMovieMcpStoredSlate = {
   script,
-  scene: staged.scene,
+  scenes: [staged.scene],
   shots: [shot],
   beatEnds: [beatEnd],
   notes: [noteA, noteB],
@@ -126,7 +126,7 @@ export const test_mcp_query_tools = (): void => {
   );
   TestValidator.equals(
     "absent scene",
-    app.getScene({ slate: { ...slate, scene: null } }).scene,
+    app.getScene({ slate: { ...slate, scenes: [] } }).scene,
     null,
   );
   TestValidator.predicate(

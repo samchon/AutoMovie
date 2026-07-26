@@ -41,21 +41,23 @@ const shot: IAutoMovieShot = {
 
 const slate: IAutoMovieMcpWritableSlate = {
   script,
-  scene: {
-    id: "scene-1",
-    name: null,
-    nodes: [],
-    cameras: [
-      {
-        id: "camera",
-        transform: IDENTITY_TRANSFORM,
-        fovY: 45,
-        near: 0.1,
-        far: 100,
-      },
-    ],
-    lights: [],
-  },
+  scenes: [
+    {
+      id: "scene-1",
+      name: null,
+      nodes: [],
+      cameras: [
+        {
+          id: "camera",
+          transform: IDENTITY_TRANSFORM,
+          fovY: 45,
+          near: 0.1,
+          far: 100,
+        },
+      ],
+      lights: [],
+    },
+  ],
   shots: [shot],
   beatEnds: [],
   notes: [],

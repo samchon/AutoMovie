@@ -197,7 +197,7 @@ export const test_mcp_render_resident = async (): Promise<void> => {
     // 4. an explicit slate keeps the legacy frames/<stem> defaults
     const slate: IAutoMovieMcpWritableSlate = {
       script,
-      scene,
+      scenes: [scene],
       shots: [shot],
       beatEnds: [],
       notes: [],

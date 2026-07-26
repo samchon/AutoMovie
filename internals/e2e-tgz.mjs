@@ -138,6 +138,7 @@ try {
     "models",
     "props",
     "renders",
+    "scenes",
     "shots",
   ])
     assert(

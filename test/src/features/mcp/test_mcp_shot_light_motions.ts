@@ -573,7 +573,7 @@ export const test_mcp_shot_light_motions = (): void => {
           },
         ],
       },
-      scene,
+      scenes: [scene],
       shots: [],
       beatEnds: [],
       notes: [],

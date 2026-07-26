@@ -38,7 +38,7 @@ const models = [...new Set(staged.scene.nodes.map((node) => node.model))].map(
 
 const emptySlate: IAutoMovieMcpWritableSlate = {
   script: null,
-  scene: null,
+  scenes: [],
   shots: [],
   beatEnds: [],
   notes: [],
@@ -342,7 +342,7 @@ export const test_mcp_commit_tools = (): void => {
 
   const dirtySlate: IAutoMovieMcpWritableSlate = {
     script: null,
-    scene: staged.scene,
+    scenes: [staged.scene],
     shots: [shot],
     beatEnds: [beatEnd],
     notes: [note],
@@ -352,7 +352,7 @@ export const test_mcp_commit_tools = (): void => {
   TestValidator.equals("script committed", scripted.committed, true);
   TestValidator.equals("script cascades stale slices", scripted.slate!, {
     script,
-    scene: null,
+    scenes: [],
     shots: [],
     beatEnds: [],
     notes: [],
@@ -401,7 +401,7 @@ export const test_mcp_commit_tools = (): void => {
     scene: staged.scene,
     models,
   }).slate!;
-  TestValidator.equals("scene committed", stagedSlate.scene, staged.scene);
+  TestValidator.equals("scene committed", stagedSlate.scenes, [staged.scene]);
 
   expectRefused(
     "shot before script",
@@ -605,10 +605,12 @@ export const test_mcp_commit_tools = (): void => {
   {
     const malformedSceneSlate = {
       ...revisedShotSlate,
-      scene: {
-        ...staged.scene,
-        nodes: null as unknown as typeof staged.scene.nodes,
-      },
+      scenes: [
+        {
+          ...staged.scene,
+          nodes: null as unknown as typeof staged.scene.nodes,
+        },
+      ],
     };
     expectRefused(
       "beat end malformed committed scene nodes",
