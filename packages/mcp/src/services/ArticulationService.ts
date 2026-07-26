@@ -25,7 +25,8 @@ export class ArticulationService {
     if (!Number.isFinite(seconds) || seconds < 0)
       return { frame: null, reason: "t must be a finite number >= 0" };
     const slate = project.writableSlate();
-    if (soleScene(slate) === null)
+    const sole = soleScene(slate);
+    if (sole === null)
       return {
         frame: null,
         reason: "commitScene before resolving a prop frame",
@@ -41,11 +42,12 @@ export class ArticulationService {
         frame: null,
         reason: `t ${seconds} lies after shot "${shot.id}" ending at ${shot.duration}`,
       };
-    // One staged scene per slate today, so this is the scene the shot renders:
-    // `validateShotArtifact` refused any shot naming a different id at commit.
-    // Resolving by `shot.scene` belongs with multi-scene authoring, where the
-    // branch for "the slate does not hold it" is reachable and testable.
-    const scene = soleScene(slate)!;
+    // A resident project stages one set on the paths this read serves, so the
+    // sole scene IS the one the shot renders: `validateShotArtifact` refused
+    // any shot naming another id at commit. Resolving by `shot.scene` waits
+    // for a resident flow that can stage several, where the branch for "the
+    // slate does not stage it" is reachable and can be pinned (#1171).
+    const scene = sole;
     try {
       const specs = project.storedProps();
       const propsByModel = Object.fromEntries(

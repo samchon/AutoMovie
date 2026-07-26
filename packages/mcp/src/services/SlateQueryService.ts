@@ -19,7 +19,7 @@ import {
   IAutoMovieMcpStoredSlate,
   IAutoMovieMcpWritableSlate,
 } from "../dto";
-import { soleScene } from "../project/slateScenes";
+import { sceneById, soleScene } from "../project/slateScenes";
 
 /**
  * Read-only slate queries, the stored-context reads behind the `get*` tools.
@@ -78,11 +78,29 @@ export class SlateQueryService {
   }
 
   public getScene(props: {
+    /** Slate to read; omit to read the resident project. */
     slate?: IAutoMovieMcpStoredSlate;
+    /**
+     * Which staged scene to read. Omit while one is staged; naming it is
+     * required once a film stages several, since the answer to "the scene"
+     * stops existing (#1171).
+     */
+    scene?: string;
   }): IAutoMovieGetSceneOutput {
     assertSlateQueryRequestRoot(props);
     const source = this.stored(props.slate, "getScene");
     assertStoredSlateRoot(source.slate, source.root);
+    if (props.scene !== undefined) {
+      assertRequiredQueryScene(props.scene);
+      return { scene: sceneById(source.slate, props.scene) };
+    }
+    const staged = source.slate.scenes;
+    if (staged.length > 1)
+      throw new Error(
+        `getScene must name a scene while several are staged: ${staged
+          .map((scene) => scene.id)
+          .join(", ")}`,
+      );
     return {
       scene: readSlateContext(toStoredSlate(source.slate), {
         type: "getScene",
@@ -190,6 +208,11 @@ function assertOptionalQueryBeat(
   if (beat === undefined) return;
   assertRequiredQueryBeat(beat);
 }
+
+const assertRequiredQueryScene = (scene: unknown): void => {
+  if (typeof scene === "string" && scene.trim().length !== 0) return;
+  throw new Error("scene at $input.scene must be a non-empty string");
+};
 
 const toStoredSlate = (slate: IAutoMovieMcpStoredSlate): IAutoMovieSlate => ({
   brief: "",
