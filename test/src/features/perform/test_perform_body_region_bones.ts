@@ -1,7 +1,4 @@
-import {
-  AUTOMOVIE_RIG_IS_PARTITIONED,
-  bodyRegionBones,
-} from "@automovie/engine";
+import { bodyRegionBones } from "@automovie/engine";
 import { AutoMovieHumanoidBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -33,8 +30,9 @@ const disjoint = (
  * 1. Each region owns the expected bones (lower = hips+legs, upper = torso+arms+
  *    fingers, head = neck/head/eyes/jaw, face = none).
  * 2. The three bony regions are pairwise disjoint.
- * 3. `fullBody` is exactly their concatenation, element for element, and the
- *    compiler's completeness proof is present and true.
+ * 3. `fullBody` is exactly their concatenation, element for element. Nothing here
+ *    asserts completeness: an assertion that cannot fail is not a guard, and
+ *    `AUTOMOVIE_RIG_IS_PARTITIONED` is a type, checked when the engine builds.
  */
 export const test_perform_body_region_bones = (): void => {
   const lower = bodyRegionBones("lowerBody");
@@ -75,9 +73,4 @@ export const test_perform_body_region_bones = (): void => {
     [...lower, ...upper, ...head],
   );
   TestValidator.equals("fullBody has no duplicates", new Set(full).size, 55);
-  TestValidator.equals(
-    "the compiler's partition proof is wired and true",
-    AUTOMOVIE_RIG_IS_PARTITIONED,
-    true,
-  );
 };
