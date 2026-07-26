@@ -2,7 +2,7 @@
 
 automovie의 타입 허브. 캐릭터·사물의 형상·포즈·모션·표정·머티리얼·씬을 기술하는 모든 AST 구조체의 단일 진실 공급원이다. LLM이 보는 structured-output 스키마가 곧 이 패키지의 타입이다.
 
-의존성은 `typia`(타입 레벨 `tags`)뿐이다. 런타임 코드도, `three.js`도 없다. 순수 타입 선언만 담는다.
+런타임 의존은 없다. `typia`도, `three.js`도 없다. 순수 타입 선언만 담는다. 제약은 필드 JSDoc으로 문서화하고 `@automovie/engine`의 런타임 검증기가 강제한다. 빌드 도구(`ttsc`/`typescript`/`rimraf`/`@ttsc/lint`)는 devDependency일 뿐이다.
 
 ## 좌표계 · 단위 규약
 
@@ -26,6 +26,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 
 | 폴더 | 내용 |
 |---|---|
+| `core/` | 씬그래프·애니메이션 기반: 노드(`IAutoMovieNode`, `AutoMovieNodeKind`), 트랙·클립·채널(`IAutoMovieTrack`, `IAutoMovieChannel`, 값 타입·보간·한계), 드라이버·드리븐 커브, `IAutoMovieNamedId`, `IAutoMovieProfile` |
 | `geometry/` | 3D 수학 원시 (`IAutoMovieVector3`, `IAutoMovieQuaternion`, `IAutoMovieEuler`, `IAutoMovieTransform`) |
 | `color/` | 색 (`IAutoMovieColor`) |
 | `model/` | **3D 모델**: 프리미티브/메쉬 형상(`AutoMoviePrimitiveShape`, `IAutoMovieMesh`, `IAutoMovieGeometry`), 파트(`IAutoMovieModelPart`), 모델(`IAutoMovieModel`). 스켈레톤 유무로 캐릭터/사물 통합 |
@@ -36,8 +37,10 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `motion/` | 시간 모션: 키프레임 + 이징 |
 | `material/` | PBR 머티리얼 |
 | `scene/` | 씬그래프: 모델/카메라/조명 배치 |
+| `cinematics/` | 촬영·편집: 샷·카메라 인텐트·커버리지(대체 앵글 테이크), 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스 |
+| `harness/` | LLM 함수호출 계약: 스테이지별 `IAutoMovie*Application.IWrite`, 액션 콜·타겟, 컨텍스트 요청. MCP 스키마의 소스 |
 | `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약) |
 
-> 함수호출(application) 스키마 레이어는 **하니스 단계**이므로 지금은 두지 않는다. interface는 기본 데이터 모델(특히 3D 모델·모션)이 먼저다.
+> 함수호출(application) 스키마 레이어는 `harness/`에 있다. `IAutoMovie*Application` 인터페이스 자체는 통합 표면에서 은퇴했지만(`.agents/skills/mcp`), 그 `IWrite`/`IProps` 데이터 모양이 MCP 도구 입력의 계약이다.
 
 설계 근거는 `.wiki/06-architecture/02-interface-design.md` 참조.

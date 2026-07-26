@@ -2,6 +2,12 @@ name: test
 on:
   pull_request:
     paths:
+      # BOTH workflow definitions, in both files. The suite reads and asserts
+      # on these two YAMLs (`test_workspace_ci_triggers`), so each is an input
+      # to the job that runs the suite, not only to the job it defines: a pull
+      # request editing build.yml alone must still run this suite, and one
+      # editing this file alone must still build (#1397).
+      - '.github/workflows/build.yml'
       - '.github/workflows/test.yml'
       # Matched by SHAPE, mirroring build.yml. The suite reads more than `src`:
       # the per-package lint ruleset `ttsc` enforces before a scenario runs, the
@@ -12,6 +18,10 @@ on:
       - 'packages/*/*.json'
       - 'packages/*/*.ts'
       - 'packages/*/*.html'
+      # A package's own entry document. `test_workspace_public_contracts`
+      # reads three of them and asserts on their text, so they are suite
+      # inputs the same way `src` is (#1397).
+      - 'packages/*/*.md'
       - 'packages/*/build/**'
       - 'packages/*/prompts/**'
       - 'packages/*/scaffold/**'
@@ -19,18 +29,28 @@ on:
       - 'internals/config/**'
       - 'test/**'
       # Root tooling configuration, by shape (#1335). This list is deliberately
-      # identical to build.yml's apart from the workflow filename above: the two
-      # have now drifted once each, and keeping them character-identical is what
-      # makes the next drift visible in review. GitHub cannot share a `paths:`
-      # block between workflow files, so the alternative is one workflow with
-      # two jobs, which would rename both required checks; not worth doing while
-      # Actions cannot execute a step to confirm the rename.
+      # identical to build.yml's, now with no exception at all, since #1397
+      # put both workflow filenames in both files. The two have drifted once
+      # each, and keeping them identical is what makes the next drift visible
+      # in review; `test_workspace_ci_triggers` now fails on it outright.
+      # GitHub cannot share a `paths:` block between workflow files, so the
+      # alternative is one workflow with two jobs, which would rename both
+      # required checks; not worth doing while a rename cannot be confirmed
+      # without merging it.
       - '*.js'
       - '*.json'
       - '*.yaml'
       - '*.yml'
       - '.prettier*'
       - '.gitattributes'
+      # The root entry document, read by `test_workspace_public_contracts`
+      # like the package ones above. Named rather than globbed as `*.md`
+      # because `AGENTS.md` and `CLAUDE.md` are agent instructions no job
+      # reads, and neither is `.gitignore`: none of the three belongs here.
+      # #1386 and #1387 are the failure this line closes, and it is the
+      # opposite one: a pull request whose whole diff was markdown, and
+      # neither job ran at all.
+      - 'README.md'
 jobs:
   Ubuntu:
     runs-on: ubuntu-latest

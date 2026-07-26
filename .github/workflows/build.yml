@@ -2,7 +2,13 @@ name: build
 on:
   pull_request:
     paths:
+      # BOTH workflow definitions, in both files. The suite reads and asserts
+      # on these two YAMLs (`test_workspace_ci_triggers`), so each is an input
+      # to the job that runs the suite, not only to the job it defines: a pull
+      # request editing test.yml alone must still build, and one editing this
+      # file alone must still run the suite that reads it (#1397).
       - '.github/workflows/build.yml'
+      - '.github/workflows/test.yml'
       # Every build input a package can carry, by SHAPE rather than by name.
       # The previous list named `src`, `package.json`, and `tsconfig.json`, and
       # each input added afterwards (per-package lint rules, code generators,
@@ -13,6 +19,10 @@ on:
       - 'packages/*/*.json'
       - 'packages/*/*.ts'
       - 'packages/*/*.html'
+      # A package's own entry document. `test_workspace_public_contracts`
+      # reads three of them and asserts on their text, so they are suite
+      # inputs the same way `src` is (#1397).
+      - 'packages/*/*.md'
       - 'packages/*/build/**'
       - 'packages/*/prompts/**'
       - 'packages/*/scaffold/**'
@@ -35,6 +45,14 @@ on:
       - '*.yml'
       - '.prettier*'
       - '.gitattributes'
+      # The root entry document, read by `test_workspace_public_contracts`
+      # like the package ones above. Named rather than globbed as `*.md` for
+      # the same reason `.gitignore` is left out above: `AGENTS.md` and
+      # `CLAUDE.md` are agent instructions no job reads, and a pull request
+      # carrying only those two should still run nothing. What must not happen
+      # is the reverse, which is what #1386 and #1387 did: a whole diff of
+      # markdown, and neither job ran at all.
+      - 'README.md'
 jobs:
   Ubuntu:
     runs-on: ubuntu-latest

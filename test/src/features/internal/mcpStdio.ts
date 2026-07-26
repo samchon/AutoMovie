@@ -52,7 +52,7 @@ export interface IAutoMovieMcpStdioSession {
 export const openMcpStdio = async (
   name: string,
   options?: {
-    /** Select the 45-tool compatibility surface instead of the compact default. */
+    /** Select the 47-tool compatibility surface instead of the compact default. */
     surface?: "compact" | "granular";
   },
 ): Promise<IAutoMovieMcpStdioSession> => {
