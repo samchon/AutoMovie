@@ -6,3 +6,4 @@ export * from "./createAutoMovieMcpServer";
 export * from "./dto";
 export * from "./project/AutoMovieProject";
 export * from "./project/commitLock";
+export { AUTOMOVIE_GUIDE_NAMES } from "./services/GuideService";
