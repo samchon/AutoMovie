@@ -4,7 +4,7 @@ import { AutoMovieContext } from "../AutoMovieContext";
 import { toEnginePropSpec } from "../convert";
 import { IAutoMovieGetResolvedPropFrameOutput } from "../dto";
 import { shotIdOf } from "../project/shotKey";
-import { sceneById, soleScene } from "../project/slateScenes";
+import { soleScene } from "../project/slateScenes";
 
 /** Resolve a committed articulated prop through its declared profile. */
 export class ArticulationService {
@@ -25,7 +25,8 @@ export class ArticulationService {
     if (!Number.isFinite(seconds) || seconds < 0)
       return { frame: null, reason: "t must be a finite number >= 0" };
     const slate = project.writableSlate();
-    if (soleScene(slate) === null)
+    const sole = soleScene(slate);
+    if (sole === null)
       return {
         frame: null,
         reason: "commitScene before resolving a prop frame",
@@ -41,11 +42,12 @@ export class ArticulationService {
         frame: null,
         reason: `t ${seconds} lies after shot "${shot.id}" ending at ${shot.duration}`,
       };
-    // The shot names the location it renders, and the staged one answers while
-    // a resident project holds a single set. The refusal for "the slate does
-    // not stage it" waits for the resident multi-scene path, where a project
-    // can be driven into that state and the branch is reachable (#1171).
-    const scene = sceneById(slate, shot.scene) ?? soleScene(slate)!;
+    // A resident project stages one set on the paths this read serves, so the
+    // sole scene IS the one the shot renders: `validateShotArtifact` refused
+    // any shot naming another id at commit. Resolving by `shot.scene` waits
+    // for a resident flow that can stage several, where the branch for "the
+    // slate does not stage it" is reachable and can be pinned (#1171).
+    const scene = sole;
     try {
       const specs = project.storedProps();
       const propsByModel = Object.fromEntries(

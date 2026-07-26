@@ -182,6 +182,17 @@ export const test_mcp_multi_scene_slate = (): void => {
     })(),
   );
   TestValidator.predicate(
+    "a scene id that is not a string is refused",
+    (() => {
+      try {
+        app.getScene({ slate: staged, scene: 5 as unknown as string });
+        return false;
+      } catch (exp) {
+        return (exp as Error).message.includes("$input.scene");
+      }
+    })(),
+  );
+  TestValidator.predicate(
     "an empty scene id is refused rather than read as absent",
     (() => {
       try {
@@ -196,6 +207,27 @@ export const test_mcp_multi_scene_slate = (): void => {
     "one staged location still reads without naming it",
     app.getScene({ slate: base({ scenes: [kitchen] }) }).scene,
     kitchen,
+  );
+
+  // 2b. the cascade keys beat ends by beat, and a shot id that carries none
+  //     keys by its own id rather than dropping the end state
+  const oddId = {
+    ...shotIn("kitchen", kitchen.id),
+    id: "loose-shot",
+  };
+  const odd = app.commitScene({
+    slate: base({
+      scenes: [kitchen, hallway],
+      shots: [oddId, shotIn("hallway", hallway.id)],
+      beatEnds: [{ beat: "loose-shot", shot: "loose-shot", actors: [] }],
+    }),
+    scene: hallway,
+    models: [],
+  });
+  TestValidator.equals(
+    "a beatless shot id keys its own end state through the cascade",
+    odd.slate!.beatEnds.map((end) => end.beat),
+    ["loose-shot"],
   );
 
   // 3b. a shot whose scene is not even a string falls back to the staged set

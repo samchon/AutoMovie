@@ -1537,9 +1537,8 @@ const validateShotCommitPreconditions = (
   // location that is not staged reads as no scene committed, which is the same
   // refusal an author already knows.
   validateCommittedScene(
-    typeof shot.scene === "string"
-      ? sceneById(slate, shot.scene)
-      : soleScene(slate),
+    (typeof shot.scene === "string" ? sceneById(slate, shot.scene) : null) ??
+      soleScene(slate),
     slateRoot,
     "a scene must be committed before a shot",
     violations,
