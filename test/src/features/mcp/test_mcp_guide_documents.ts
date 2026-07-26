@@ -12,7 +12,7 @@ import { throwsError } from "../internal/predicates";
 
 const app = new AutoMovieApplication();
 
-/** Repository root, three levels above `test/src/features/mcp`. */
+/** Repository root, four levels above `test/src/features/mcp`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
 /**

@@ -13,7 +13,7 @@
 - `renderAndSee`: `renderVideo` 결과에 spec, duration, frame path, sample time, ffmpeg args를 붙여 agent가 그대로 읽을 수 있는 JSON 산출물로 돌려준다.
 - `createHeadlessCaptureAdapter`: Playwright-like page를 `renderVideo`의 `captureFrame` adapter로 감싼다. route miss, seek hook miss, screenshot failure, empty frame을 구조화된 오류 코드로 구분한다.
 - `exportModelToGLB`: AutoMovie model AST를 glTF binary buffer로 직렬화한다.
-- `planChunkedRender` 계열(`IAutoMovieRenderChunk`, `IAutoMovieRenderPassManifest`, `IAutoMovieRenderReassembly`, `IAutoMovieRenderChunkPlan`): 긴 시퀀스를 청크와 패스로 쪼개고 재조립 계획을 낸다. MCP의 `planChunkedRender`가 이 표면이다.
+- `planChunkedSequenceRender`(+ `IAutoMovieRenderChunk`, `IAutoMovieRenderPassManifest`, `IAutoMovieRenderReassembly`, `IAutoMovieRenderChunkPlan`): 긴 시퀀스를 청크와 패스로 쪼개고 재조립 계획을 낸다. MCP 도구 이름은 `planChunkedRender`로 다르다.
 - 자막(`planCaptionSidecar`, `renderCaptionSidecar`, `sliceCaptionSidecar`, `IAutoMovieCaptionEntry`, `IAutoMovieCaptionSidecar`): 비트 캡션을 사이드카로 계획·직렬화하고 청크 경계로 자른다. MCP의 `planCaptions`.
 - 포즈 키포인트(`planPoseKeypointSidecar`, `renderPoseKeypointSidecar`, `IAutoMoviePoseKeypointActor`, `IAutoMoviePoseKeypointFrame`, `IAutoMoviePoseKeypointSidecar`): OpenPose 계열 사이드카를 프레임별로 계획·직렬화한다. MCP의 `planPoseKeypoints`.
 - 가이드 패스(`AUTOMOVIE_GUIDE_PASSES`, `isGuidePass`, `guidePassFrameName`, `guidePassFramePattern`): depth/mask/normal/outline 구조 패스의 이름·파일명 규약.

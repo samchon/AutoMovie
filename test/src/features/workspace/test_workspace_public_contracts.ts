@@ -229,21 +229,24 @@ export const test_workspace_public_contracts = (): void => {
   );
   TestValidator.equals(
     "the render and viewer surface tables name every module they export",
+    // The module counts ride along so the comparison cannot go vacuous: an
+    // `index.ts` written in a re-export style the extractor does not know
+    // would otherwise leave nothing to check and pass.
+    ["render", "viewer"].map((pkg) => ({
+      modules: exportedModules(pkg).length > 0,
+      unmentioned: unmentionedModules(
+        pkg,
+        readPackageFile("packages", pkg, "README.md"),
+      ),
+    })),
     [
-      unmentionedModules(
-        "render",
-        readPackageFile("packages", "render", "README.md"),
-      ),
-      unmentionedModules(
-        "viewer",
-        readPackageFile("packages", "viewer", "README.md"),
-      ),
+      { modules: true, unmentioned: [] },
+      { modules: true, unmentioned: [] },
     ],
-    [[], []],
   );
   TestValidator.equals(
     "no package entry document points into the gitignored wiki",
-    ["interface", "engine", "render", "viewer", "mcp", "cli", "forge", "ingest"]
+    directories("packages")
       .filter((pkg) =>
         readPackageFile("packages", pkg, "README.md").includes(".wiki/"),
       )
