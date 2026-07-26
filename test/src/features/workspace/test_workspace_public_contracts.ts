@@ -9,6 +9,45 @@ const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 const readPackageFile = (...segments: string[]): string =>
   fs.readFileSync(path.join(ROOT, ...segments), "utf8");
 
+/** Directory names directly under `segments`, in code-unit order. */
+const directories = (...segments: string[]): string[] =>
+  fs
+    .readdirSync(path.join(ROOT, ...segments), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort(compareCodeUnits);
+
+/** Module names one package's `src/index.ts` re-exports, in code-unit order. */
+const exportedModules = (pkg: string): string[] =>
+  [
+    ...readPackageFile("packages", pkg, "src", "index.ts").matchAll(
+      /^export \* from "\.\/([^"]+)";$/gm,
+    ),
+  ]
+    .map((line) => line[1]!)
+    .sort(compareCodeUnits);
+
+/** The names one module declares to the outside. */
+const exportedNames = (pkg: string, module: string): string[] =>
+  [
+    ...readPackageFile("packages", pkg, "src", `${module}.ts`).matchAll(
+      /^export (?:const|function|interface|type|class) ([A-Za-z_$][\w$]*)/gm,
+    ),
+  ].map((declaration) => declaration[1]!);
+
+/**
+ * Modules whose surface table names none of their exports.
+ *
+ * A table of functions cannot be compared with a list of filenames directly, so
+ * the question asked is the one a reader would ask: does this document mention
+ * anything this module exports? A module the table forgot answers no.
+ */
+const unmentionedModules = (pkg: string, document: string): string[] =>
+  exportedModules(pkg).filter(
+    (module) =>
+      !exportedNames(pkg, module).some((name) => document.includes(name)),
+  );
+
 /**
  * The public entry documents must describe the product that shipped.
  *
@@ -37,10 +76,21 @@ const readPackageFile = (...segments: string[]): string =>
  * 4. Its domain-folder table names every folder `packages/interface/src` ships,
  *    compared against the directory listing rather than against prose. `core/`
  *    was missing from the table until this comparison existed.
- * 5. The mcp README counts the current surfaces: 44 gateway operations, and 47
+ * 5. The same comparison for the three other documents that enumerate a surface
+ *    (#1398): the root package table against `packages/`, the engine module
+ *    table against `packages/engine/src`, and the render and viewer surface
+ *    tables against what their `index.ts` exports. A function table cannot be
+ *    diffed against filenames, so the question asked of those two is whether
+ *    the document mentions ANY name a module exports; a module it forgot
+ *    answers no. All three had fallen behind, the root one omitting the very
+ *    package whose binary the same file twice tells the reader to run.
+ * 6. No package entry document points into `.wiki/`, which is gitignored: it ships
+ *    in no tarball and exists in no clone, so such a pointer is dead for every
+ *    reader who is not the author on the machine that wrote it.
+ * 7. The mcp README counts the current surfaces: 44 gateway operations, and 47
  *    granular tools in both places it states that number.
- * 6. The performance stage's JSDoc names real verbs only.
- * 7. The region contract documents the `fullBody` locomote default and
+ * 8. The performance stage's JSDoc names real verbs only.
+ * 9. The region contract documents the `fullBody` locomote default and
  *    content-aware layering -- both asserted PRESENT, both with the pre-#1383
  *    sentence they replaced asserted absent. The text is flattened across
  *    whitespace AND asterisks first, because a JSDoc continuation prefix would
@@ -157,6 +207,48 @@ export const test_workspace_public_contracts = (): void => {
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort(compareCodeUnits),
+  );
+  // #1398: the same comparison, for the three other documents that enumerate a
+  // surface. Every one of them had fallen behind: the root table omitted the
+  // package whose binary the same file tells you to run, the engine table
+  // documented seven of thirteen folders including neither `film/` nor
+  // `perform/`, and the render and viewer tables missed five modules each.
+  TestValidator.equals(
+    "the root package table names every workspace package",
+    [...rootReadme.matchAll(/^\| \[`@automovie\/([a-z]+)`\]/gm)]
+      .map((row) => row[1]!)
+      .sort(compareCodeUnits),
+    directories("packages"),
+  );
+  TestValidator.equals(
+    "the engine README's module table matches the shipped folders",
+    [...engineReadme.matchAll(/^\| `([^`]+)\/` \|/gm)]
+      .map((row) => row[1]!)
+      .sort(compareCodeUnits),
+    directories("packages", "engine", "src"),
+  );
+  TestValidator.equals(
+    "the render and viewer surface tables name every module they export",
+    [
+      unmentionedModules(
+        "render",
+        readPackageFile("packages", "render", "README.md"),
+      ),
+      unmentionedModules(
+        "viewer",
+        readPackageFile("packages", "viewer", "README.md"),
+      ),
+    ],
+    [[], []],
+  );
+  TestValidator.equals(
+    "no package entry document points into the gitignored wiki",
+    ["interface", "engine", "render", "viewer", "mcp", "cli", "forge", "ingest"]
+      .filter((pkg) =>
+        readPackageFile("packages", pkg, "README.md").includes(".wiki/"),
+      )
+      .concat(rootReadme.includes(".wiki/") ? ["<root>"] : []),
+    [],
   );
   TestValidator.equals(
     "the mcp README counts the current gateway and granular surfaces",

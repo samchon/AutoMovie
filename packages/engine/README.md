@@ -47,7 +47,7 @@ Tier 3의 물리 결과는 자동 보정이나 차단이 아니라 **plausibilit
 
 Root motion은 기본적으로 `target rest height / source rest height`로 translation을 스케일한다. Facing은 v1에서 authored root rotation을 보존한다. Target ROM은 skeleton bone constraint가 있으면 그것을 우선하고, 없으면 `DEFAULT_HUMANOID_ROM`을 쓴다.
 
-각도를 그대로 복사하는 것은 비례가 같은 리그에서만 정확하다. 비례가 다르면 **접촉 보존 패스**(`contacts`, 기본 켬)가 소스에서 지면 접촉을 검출해 같은 `rootScale`로 사상하고, 작성된 키프레임 시각 그대로 대상 사지를 다시 푼다. 손은 지면 기준이 없어 `contacts.hands`로 시간창을 선언한 경우에만 핀한다. IK 결과는 target ROM으로 clamp되며, clamp된 체인이 접촉에 못 닿으면 실패가 아니라 `physics` warning으로 남는다. `contacts.enabled === false`가 v1 동작이고, `characterization.contactPolicy`가 어느 쪽이 돌았는지 기록한다. 자세한 내용은 `.wiki/07-decisions/311-retarget-contact-preservation.md`.
+각도를 그대로 복사하는 것은 비례가 같은 리그에서만 정확하다. 비례가 다르면 **접촉 보존 패스**(`contacts`, 기본 켬)가 소스에서 지면 접촉을 검출해 같은 `rootScale`로 사상하고, 작성된 키프레임 시각 그대로 대상 사지를 다시 푼다. 손은 지면 기준이 없어 `contacts.hands`로 시간창을 선언한 경우에만 핀한다. IK 결과는 target ROM으로 clamp되며, clamp된 체인이 접촉에 못 닿으면 실패가 아니라 `physics` warning으로 남는다. `contacts.enabled === false`가 v1 동작이고, `characterization.contactPolicy`가 어느 쪽이 돌았는지 기록한다.
 
 이 API는 VRM/glTF animation export/import 자체가 아니라 그 전 단계의 retarget decision record다. Exporter나 viewer runtime은 반환된 motion, boneMap, jointAxes, restFrames를 사용해 concrete node animation으로 내리면 된다.
 
@@ -80,6 +80,12 @@ automovie를 구동하는 길은 둘이며, 둘 다 일급이다.
 | `motion/` | 이징 함수, 키프레임 보간(시각 t의 포즈 샘플링) |
 | `face/` | **Dormant boundary**: 결정 001 이후 보존만 하는 face/head flatten·morph 헬퍼. 검증과 테스트는 유지하지만 현재 본진은 모션/하니스다. |
 | `geometry/` | 프리미티브 형상 → 삼각형 메쉬 테셀레이션 |
+| `perform/` | 액션 콜 → 배우별 퍼포먼스 클립: 리전 마스크(`bodyRegionBones`, `actionRegion`), 레이어링·블렌딩, 기본 신서사이저, 위치 타겟 해석 |
+| `film/` | 필름 파이프라인 stage/block/perform/cut: 씬 스테이징, 비트 블로킹, 샷 수행, 카메라 무브·프로젝션, 부착·발사 컴파일, 비트 엔드 상태, 시퀀스 컷, 리뷰 |
+| `resolve/` | 시각 t의 해석: 클립 샘플링, 드라이버·드리븐 커브, IK, 스프링, 채널 한계, 씬 합성, 조명 해석, 스켈레톤 노드화 |
+| `physics/` | 탄도·투사체, 충돌과 반응, 임팩트·반동, 질량 특성 |
+| `space/` | 공간: 지면·standable surface, affordance 접촉 |
+| `text/` | 결정적 문자열 비교(`compareCodeUnits`) |
 | `validation/` | 티어별 검증 오케스트레이터 → `IAutoMovieValidation` |
 
 ## 검증 티어 (현재 구현)

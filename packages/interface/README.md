@@ -43,4 +43,4 @@ automovie는 **glTF / VRM 규약**을 따른다.
 
 > 함수호출(application) 스키마 레이어는 `harness/`에 있다. `IAutoMovie*Application` 인터페이스 자체는 통합 표면에서 은퇴했지만(`.agents/skills/mcp`), 그 `IWrite`/`IProps` 데이터 모양이 MCP 도구 입력의 계약이다.
 
-설계 근거는 `.wiki/06-architecture/02-interface-design.md` 참조.
+타입 하나하나의 의미·단위·범위는 필드 JSDoc이 정본이다. 왜 그렇게 나뉘었는지는 위의 네이밍 컨벤션과 도메인 폴더 표가 담고 있다.
