@@ -1,4 +1,8 @@
 import { compareCodeUnits } from "@automovie/engine";
+import {
+  AutoMovieApplication,
+  AutoMovieGatewayApplication,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
@@ -8,6 +12,16 @@ const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
 const readPackageFile = (...segments: string[]): string =>
   fs.readFileSync(path.join(ROOT, ...segments), "utf8");
+
+/**
+ * How many methods a class exposes, which for these two is how many operations
+ * the MCP surface carries: the granular server advertises one tool per method,
+ * and the gateway's own methods are the direct entry points plus `execute`.
+ */
+const publicMethods = (constructor: new (...args: never[]) => object): number =>
+  Object.getOwnPropertyNames(constructor.prototype).filter(
+    (name) => name !== "constructor",
+  ).length;
 
 /** Directory names directly under `segments`, in code-unit order. */
 const directories = (...segments: string[]): string[] =>
@@ -87,8 +101,10 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  * 6. No package entry document points into `.wiki/`, which is gitignored: it ships
  *    in no tarball and exists in no clone, so such a pointer is dead for every
  *    reader who is not the author on the machine that wrote it.
- * 7. The mcp README counts the current surfaces: 44 gateway operations, and 47
- *    granular tools in both places it states that number.
+ * 7. The mcp README's two surface counts equal the surface, derived from the
+ *    application and gateway prototypes rather than restated here (#1402).
+ *    Naming the numbers in this list would put them back in a place someone has
+ *    to remember to change, which is the drift the assertion exists for.
  * 8. The performance stage's JSDoc names real verbs only.
  * 9. The region contract documents the `fullBody` locomote default and
  *    content-aware layering -- both asserted PRESENT, both with the pre-#1383
@@ -253,12 +269,20 @@ export const test_workspace_public_contracts = (): void => {
       .concat(rootReadme.includes(".wiki/") ? ["<root>"] : []),
     [],
   );
+  // Derived, not remembered. Asking whether the document contains "44" passes
+  // for a document that should say 45: #1393 and #1394 were both that drift,
+  // landing one release after #1392 added two methods, and the assertion
+  // written to catch it reported green (#1402). The granular surface is one
+  // tool per application method, and `execute` routes all of them but the
+  // gateway's own direct entry points.
+  const operations = publicMethods(AutoMovieApplication);
+  const routed = operations - (publicMethods(AutoMovieGatewayApplication) - 1);
   TestValidator.equals(
-    "the mcp README counts the current gateway and granular surfaces",
+    "the mcp README counts the surface it actually ships",
     [
-      mcpReadme.includes("44 strictly typed operations"),
-      mcpReadme.includes("47-tool compatibility surface"),
-      mcpReadme.includes("47 times"),
+      mcpReadme.includes(`${routed} strictly typed operations`),
+      mcpReadme.includes(`${operations}-tool compatibility surface`),
+      mcpReadme.includes(`${operations} times`),
     ],
     [true, true, true],
   );
