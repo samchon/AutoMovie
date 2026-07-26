@@ -36,7 +36,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `motion/` | 시간 모션: 키프레임 + 이징 |
 | `material/` | PBR 머티리얼 |
 | `scene/` | 씬그래프: 모델/카메라/조명 배치 |
-| `cinematics/` | 촬영·편집: 샷, 칼 인텐트, 인터랙션 이벤트, 시퀀스, 렌더 스펙, 포즈 키포인트 |
+| `cinematics/` | 촬영·편집: 샷·카메라 인텐트, 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스 |
 | `harness/` | LLM 함수호출 계약: 스테이지별 `IAutoMovie*Application.IWrite`, 액션 콜·타겟, 컨텍스트 요청. MCP 스키마의 소스 |
 | `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약) |
 
