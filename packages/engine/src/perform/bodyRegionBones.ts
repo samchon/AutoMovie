@@ -90,10 +90,20 @@ type RegionedBone =
  */
 type UnregionedBone = Exclude<AutoMovieHumanoidBone, RegionedBone>;
 
-/** Build-time proof that {@link bodyRegionBones} partitions the whole rig. */
-export const AUTOMOVIE_RIG_IS_PARTITIONED: UnregionedBone extends never
-  ? true
-  : UnregionedBone = true;
+/** The proof itself: `true` only while nothing escaped the partition. */
+const RIG_IS_PARTITIONED: UnregionedBone extends never ? true : UnregionedBone =
+  true;
+
+/**
+ * Build-time proof that {@link bodyRegionBones} partitions the whole rig.
+ *
+ * Declared plainly `true` rather than carrying the conditional, so the emitted
+ * declaration does not republish the three region tuples and the aliases over
+ * them. A downstream compiler would otherwise re-evaluate the proof against
+ * whichever `@automovie/interface` it resolves, and read 55 bone literals to
+ * learn the type of a constant that is `true`.
+ */
+export const AUTOMOVIE_RIG_IS_PARTITIONED: true = RIG_IS_PARTITIONED;
 
 /**
  * The humanoid bones a {@link AutoMovieBodyRegion} owns. The regions partition
