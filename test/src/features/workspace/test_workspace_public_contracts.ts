@@ -101,8 +101,10 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  * 6. No package entry document points into `.wiki/`, which is gitignored: it ships
  *    in no tarball and exists in no clone, so such a pointer is dead for every
  *    reader who is not the author on the machine that wrote it.
- * 7. The mcp README counts the current surfaces: 44 gateway operations, and 47
- *    granular tools in both places it states that number.
+ * 7. The mcp README's two surface counts equal the surface, derived from the
+ *    application and gateway prototypes rather than restated here (#1402).
+ *    Naming the numbers in this list would put them back in a place someone has
+ *    to remember to change, which is the drift the assertion exists for.
  * 8. The performance stage's JSDoc names real verbs only.
  * 9. The region contract documents the `fullBody` locomote default and
  *    content-aware layering -- both asserted PRESENT, both with the pre-#1383

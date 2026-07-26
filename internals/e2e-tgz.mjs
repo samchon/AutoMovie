@@ -190,7 +190,11 @@ try {
   // Derived from the packed package rather than compared with a number kept
   // here by hand. The granular surface is one tool per application method, so
   // that is the property to assert; a literal only records what the count was
-  // on the day someone last remembered to change it (#1393, #1402).
+  // on the day someone last remembered to change it (#1393, #1402). The trade
+  // is deliberate: a literal would also have caught a packaging step that lost
+  // methods from the built library, which this cannot, since both sides would
+  // shrink together. That case is covered in-repo by test_mcp_stdio_roundtrip,
+  // which pins the whole granular name inventory, and by assertBuild.
   const { AutoMovieApplication } = await import("@automovie/mcp");
   const operations = Object.getOwnPropertyNames(
     AutoMovieApplication.prototype,
