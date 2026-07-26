@@ -23,6 +23,45 @@ const PATHS_ITEM =
 const withoutComment = (line: string): string =>
   line.replace(/\s+#.*$/, "").trim();
 
+/** Whether a line carries a top-level key: content, unindented, not a comment. */
+const topLevel = (line: string): boolean =>
+  line.trim() !== "" && !line.trimStart().startsWith("#") && line[0] !== " ";
+
+/**
+ * Every refusal {@link workflowTriggerPaths} can raise, as the message tail that
+ * follows the document label.
+ *
+ * One literal per cause, thrown from the parser and expected by the oracle, so
+ * the two cannot name a cause differently. Scenario 1 requires a document for
+ * each, and asserts the parser raises no refusal outside this set.
+ */
+const REFUSALS = {
+  trigger: "declares no pull_request trigger",
+  list: "declares no readable paths list",
+  empty: "declares an empty paths list",
+  entry: "has an unreadable paths entry",
+  pattern: "declares an empty pattern",
+} as const;
+
+/**
+ * The lines of the top-level `on:` block, where a workflow's triggers live.
+ *
+ * Scoping the search here is what makes "the `pull_request` trigger" mean the
+ * trigger: an unscoped search for the key finds one at the same indentation
+ * anywhere, including a job that happens to be named `pull_request`. A document
+ * whose `on:` block cannot be located yields no lines, and the trigger refusal
+ * follows from that rather than from a separate cause.
+ */
+const onBlock = (lines: string[]): string[] => {
+  const start = lines.findIndex(
+    (line) => topLevel(line) && withoutComment(line) === "on:",
+  );
+  if (start === -1) return [];
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex(topLevel);
+  return end === -1 ? rest : rest.slice(0, end);
+};
+
 /**
  * Every `paths:` pattern a workflow document filters its `pull_request` trigger
  * by, in declaration order.
@@ -49,19 +88,18 @@ export const workflowTriggerPaths = (
   label: string,
   document: string,
 ): string[] => {
-  const lines = document.split(/\r?\n/);
-  const trigger = lines.findIndex(
+  const block = onBlock(document.split(/\r?\n/));
+  const trigger = block.findIndex(
     (line) =>
       line.startsWith("  pull_request:") &&
       withoutComment(line) === "pull_request:",
   );
-  if (trigger === -1)
-    throw new Error(`${label} declares no pull_request trigger`);
+  if (trigger === -1) throw new Error(`${label} ${REFUSALS.trigger}`);
 
   const patterns: string[] = [];
   let sawPaths = false;
   let inPaths = false;
-  for (const line of lines.slice(trigger + 1)) {
+  for (const line of block.slice(trigger + 1)) {
     const body = line.trimStart();
     if (body === "" || body.startsWith("#")) continue;
     const indent = line.length - body.length;
@@ -73,19 +111,17 @@ export const workflowTriggerPaths = (
     }
     if (!inPaths) continue;
     const item = PATHS_ITEM.exec(line);
-    if (item === null)
-      throw new Error(`${label} has an unreadable paths entry: ${line}`);
+    if (item === null) throw new Error(`${label} ${REFUSALS.entry}: ${line}`);
     const scalar = item[1]!;
     const pattern =
       scalar.startsWith("'") || scalar.startsWith('"')
         ? scalar.slice(1, -1)
         : scalar;
-    if (pattern === "") throw new Error(`${label} declares an empty pattern`);
+    if (pattern === "") throw new Error(`${label} ${REFUSALS.pattern}`);
     patterns.push(pattern);
   }
-  if (!sawPaths) throw new Error(`${label} declares no readable paths list`);
-  if (patterns.length === 0)
-    throw new Error(`${label} declares an empty paths list`);
+  if (!sawPaths) throw new Error(`${label} ${REFUSALS.list}`);
+  if (patterns.length === 0) throw new Error(`${label} ${REFUSALS.empty}`);
   return patterns;
 };
 
@@ -197,8 +233,9 @@ const MATCHER_ORACLE: Array<[string, string, boolean]> = [
   ["packages/*/*.md", "packages/viewer/docs/guide.md", false],
   ["*.yml", "pnpm-workspace.yml", true],
   ["*.yml", ".github/workflows/build.yml", false],
-  // derived by contrasting the table's `docs/*` and `docs/**` rows: the first
-  // is documented as "all files within the root of the docs directory"
+  // derived, not transcribed: the table documents `docs/*` as "all files
+  // within the root of the docs directory ONLY", and lists this path under
+  // `docs/**` instead
   ["docs/*", "docs/mona/octocat.txt", false],
   // `**` crosses them
   ["packages/*/src/**", "packages/engine/src/film/cameraMove.ts", true],
@@ -334,22 +371,22 @@ const PARSER_ORACLE: Array<[string, string, string[] | string]> = [
       "      pull_request:",
       "        default: true",
     ),
-    "declares no pull_request trigger",
+    REFUSALS.trigger,
   ],
   [
     "a document with no pull_request trigger is refused",
     probeDocument("  push:", "    paths:", "      - 'a'"),
-    "declares no pull_request trigger",
+    REFUSALS.trigger,
   ],
   [
     "a pull_request trigger with no paths list is refused",
     probeDocument("  pull_request:", "    branches:", "      - master"),
-    "declares no readable paths list",
+    REFUSALS.list,
   ],
   [
     "a flow sequence is refused rather than read as empty",
     probeDocument("  pull_request:", "    paths: ['a', 'b']"),
-    "declares no readable paths list",
+    REFUSALS.list,
   ],
   [
     "a paths list with no entries is refused",
@@ -359,24 +396,40 @@ const PARSER_ORACLE: Array<[string, string, string[] | string]> = [
       "    branches:",
       "      - x",
     ),
-    "declares an empty paths list",
+    REFUSALS.empty,
   ],
   [
     "an entry this cannot read is refused",
     probeDocument("  pull_request:", "    paths:", "      - "),
-    "has an unreadable paths entry",
+    REFUSALS.entry,
   ],
   [
     // the row that separates refusing from silently skipping: a parser that
     // dropped the bad entry would return ["a"] and never reach a throw.
     "an unreadable entry beside a readable one is still refused",
     probeDocument("  pull_request:", "    paths:", "      - 'a'", "      - "),
-    "has an unreadable paths entry",
+    REFUSALS.entry,
   ],
   [
     "an empty pattern is refused rather than counted",
     probeDocument("  pull_request:", "    paths:", "      - ''"),
-    "declares an empty pattern",
+    REFUSALS.pattern,
+  ],
+  [
+    "a job named like the trigger is not the trigger",
+    [
+      "name: probe",
+      "on:",
+      "  push:",
+      "    paths:",
+      "      - 'z'",
+      "jobs:",
+      "  pull_request:",
+      "    paths:",
+      "      - 'z'",
+      "",
+    ].join("\n"),
+    REFUSALS.trigger,
   ],
   [
     // the refusal for an unreadable entry quotes that entry back, so a cause
@@ -387,22 +440,8 @@ const PARSER_ORACLE: Array<[string, string, string[] | string]> = [
       "    paths:",
       '      - "declares an empty paths list',
     ),
-    "has an unreadable paths entry",
+    REFUSALS.entry,
   ],
-];
-
-/**
- * Every refusal {@link workflowTriggerPaths} can raise, as the message tail that
- * follows the document label. Scenario 1 requires each to have a document that
- * provokes it, which is a claim that cannot fall out of date the way a counted
- * one does.
- */
-const REFUSALS = [
-  "declares no pull_request trigger",
-  "declares no readable paths list",
-  "declares an empty paths list",
-  "has an unreadable paths entry",
-  "declares an empty pattern",
 ];
 
 /** The label every probe parses under, and the prefix stripped before matching. */
@@ -423,7 +462,9 @@ const parseOrRefusal = (probe: string): string[] | string => {
     return workflowTriggerPaths(PROBE_LABEL, probe);
   } catch (exp) {
     const tail = (exp as Error).message.replace(`${PROBE_LABEL} `, "");
-    return REFUSALS.find((cause) => tail.startsWith(cause)) ?? tail;
+    return (
+      Object.values(REFUSALS).find((cause) => tail.startsWith(cause)) ?? tail
+    );
   }
 };
 
@@ -454,13 +495,14 @@ const parseOrRefusal = (probe: string): string[] | string => {
  *    proved on documents this repository does not contain: a sibling key ending
  *    the list, a `push:` filter on either side, bare and double-quoted entries,
  *    a same-line comment, carriage returns, padded and commented keys, a
- *    `pull_request` key at another depth, and every shape where refusing is the
- *    only correct answer. Refusals are asserted by CAUSE, and a second
- *    assertion requires each cause the parser can raise to have a document that
- *    provokes it -- a completeness claim that cannot fall out of date the way
- *    counting the rows in prose did, twice. One of those documents puts an
- *    unreadable entry beside a readable one, which is what separates refusing
- *    from silently skipping: a skipping parser returns the readable one.
+ *    `pull_request` key at another depth, and a job named like the trigger.
+ *    Refusals are asserted by CAUSE, and two further assertions close the set
+ *    from both ends: every cause has a document that provokes it, and the
+ *    parser raises no refusal the cause list does not name. That pair is a
+ *    completeness claim the machine keeps, unlike the row count this JSDoc got
+ *    wrong twice. One document puts an unreadable entry beside a readable one,
+ *    which is what separates refusing from silently skipping: a skipping parser
+ *    returns the readable one.
  * 2. Every declared pattern stays inside the glob subset {@link matches}
  *    implements, so no assertion below is decided by a matcher guessing at
  *    syntax it does not support.
@@ -489,11 +531,19 @@ export const test_workspace_ci_triggers = (): void => {
     PARSER_ORACLE.map(([label, , expected]) => [label, expected]),
   );
   TestValidator.equals(
-    "every refusal the parser can raise has a document that provokes it",
-    REFUSALS.filter(
+    "every refusal cause has a document that provokes it",
+    Object.values(REFUSALS).filter(
       (cause) => !PARSER_ORACLE.some(([, , expected]) => expected === cause),
     ),
     [],
+  );
+  TestValidator.equals(
+    "the parser raises no refusal outside that set",
+    // The completeness above runs from the cause list to the documents. This
+    // is the other direction: a sixth `throw` added to the parser without a
+    // cause and a document would leave both the list and the oracle green.
+    (String(workflowTriggerPaths).match(/throw new Error/g) ?? []).length,
+    Object.keys(REFUSALS).length,
   );
 
   const build = triggerPaths("build");
