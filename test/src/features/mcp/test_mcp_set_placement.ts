@@ -285,6 +285,53 @@ export const test_mcp_set_placement = (): void => {
       fs.rmSync(bareRoot, { recursive: true, force: true });
     }
 
+    // 4b. A film stages several locations, so a move has to land in the one
+    //     that holds the node and leave its siblings alone (#1171).
+    const sibling = {
+      ...staged.scene,
+      id: `${staged.scene.id}-annex`,
+      nodes: [],
+      cameras: staged.scene.cameras.map((camera) => ({
+        ...camera,
+        id: `${camera.id}-annex`,
+      })),
+    };
+    const annex = app.commitScene({ scene: sibling, models: [] });
+    TestValidator.equals(
+      "a second location stages beside the first",
+      annex.committed,
+      true,
+    );
+    const across = app.setPlacement({
+      node: "knightB",
+      transform: { translation: { x: 0, y: 0, z: 2.5 }, scale: unitScale },
+      reason: "the knight steps back, with an annex staged beside the set",
+    });
+    TestValidator.equals(
+      "the move lands with a sibling location staged",
+      across.updated,
+      true,
+    );
+    TestValidator.equals(
+      "the sibling location is untouched",
+      app.getScene({ scene: sibling.id }).scene,
+      sibling,
+    );
+    TestValidator.predicate(
+      "a node no staged location holds is refused",
+      (() => {
+        const missing = app.setPlacement({
+          node: "nobody",
+          transform: { translation: { x: 0, y: 0, z: 0 }, scale: unitScale },
+          reason: "no staged location holds this node",
+        });
+        return (
+          missing.updated === false &&
+          hasViolation(missing.validation, "type", "$input.node")
+        );
+      })(),
+    );
+
     // 5. Resident-only.
     TestValidator.predicate(
       "no project throws the openProject guidance",

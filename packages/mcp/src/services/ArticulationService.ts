@@ -4,7 +4,7 @@ import { AutoMovieContext } from "../AutoMovieContext";
 import { toEnginePropSpec } from "../convert";
 import { IAutoMovieGetResolvedPropFrameOutput } from "../dto";
 import { shotIdOf } from "../project/shotKey";
-import { soleScene } from "../project/slateScenes";
+import { sceneById, soleScene } from "../project/slateScenes";
 
 /** Resolve a committed articulated prop through its declared profile. */
 export class ArticulationService {
@@ -41,11 +41,11 @@ export class ArticulationService {
         frame: null,
         reason: `t ${seconds} lies after shot "${shot.id}" ending at ${shot.duration}`,
       };
-    // One staged scene per slate today, so this is the scene the shot renders:
-    // `validateShotArtifact` refused any shot naming a different id at commit.
-    // Resolving by `shot.scene` belongs with multi-scene authoring, where the
-    // branch for "the slate does not hold it" is reachable and testable.
-    const scene = soleScene(slate)!;
+    // The shot names the location it renders, and the staged one answers while
+    // a resident project holds a single set. The refusal for "the slate does
+    // not stage it" waits for the resident multi-scene path, where a project
+    // can be driven into that state and the branch is reachable (#1171).
+    const scene = sceneById(slate, shot.scene) ?? soleScene(slate)!;
     try {
       const specs = project.storedProps();
       const propsByModel = Object.fromEntries(

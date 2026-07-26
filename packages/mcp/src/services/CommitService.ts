@@ -206,7 +206,7 @@ export class CommitService {
       violations,
     );
     if (sceneValidation.success === true && script !== null)
-      validateSceneAgainstScript(props.scene, script, violations);
+      validateSceneAgainstScript(props.scene, slate.scenes, script, violations);
     const validation = toValidation(violations);
     if (validation.success === false)
       return this.finish(
@@ -221,12 +221,25 @@ export class CommitService {
         resident,
         slate,
       );
+    // Upsert, and cascade only over what this scene owns. Staging a second
+    // location must not throw away the first one's shots: a film is several
+    // sets, and the shots of a set the author did not touch are still good
+    // (#1171). Re-staging the SAME location does invalidate its own shots,
+    // which is the rule that always held, now scoped by `shot.scene`.
+    const staged = sceneById(slate, props.scene.id) !== null;
+    const scenes = staged
+      ? slate.scenes.map((entry) =>
+          entry.id === props.scene.id ? props.scene : entry,
+        )
+      : [...slate.scenes, props.scene];
+    const kept = slate.shots.filter((shot) => shot.scene !== props.scene.id);
+    const keptBeats = new Set(kept.map((shot) => beatOf(shot.id) ?? shot.id));
     const output = this.finish(
       successfulCommit({
         ...slate,
-        scenes: [props.scene],
-        shots: [],
-        beatEnds: [],
+        scenes,
+        shots: kept,
+        beatEnds: slate.beatEnds.filter((end) => keptBeats.has(end.beat)),
         notes: [],
         film: null,
       }),
@@ -1039,31 +1052,34 @@ export class CommitService {
           props.transform.rotation,
         );
     }
-    if (soleScene(slate) === null)
+    // Which set holds the placement is the question now that a slate stages
+    // several: a node id is unique inside a scene, so the scene that carries it
+    // is the one to move it in (#1171).
+    const holding = isNonEmptyString(props.node)
+      ? (slate.scenes.find((entry) =>
+          entry.nodes.some((node) => node.id === props.node),
+        ) ?? null)
+      : null;
+    if (slate.scenes.length === 0)
       pushViolation(
         violations,
         "type",
         "$slate.scene",
         "a scene must be committed before a placement move",
-        soleScene(slate),
+        null,
       );
-    else if (
-      isNonEmptyString(props.node) &&
-      !(soleScene(slate) as IAutoMovieScene).nodes.some(
-        (node) => node.id === props.node,
-      )
-    )
+    else if (isNonEmptyString(props.node) && holding === null)
       pushViolation(
         violations,
         "type",
         "$input.node",
-        `scene has no placement "${props.node}" to move`,
+        `no staged scene has a placement "${props.node}" to move`,
         props.node,
       );
     const validation = toValidation(violations);
     if (validation.success === false)
       return { updated: false, state: digestOf(slate), validation };
-    const scene = soleScene(slate)!;
+    const scene = holding!;
     const moved = {
       ...scene,
       nodes: scene.nodes.map((node) =>
@@ -1072,11 +1088,9 @@ export class CommitService {
     };
     const next: IAutoMovieMcpWritableSlate = {
       ...slate,
-      // The slate stages one scene today, and `soleScene` above refused unless
-      // it held exactly that one, so the moved scene IS the staged set. Mapping
-      // over several belongs with multi-scene authoring, where a sibling scene
-      // exists to leave untouched and a test can prove it was.
-      scenes: [moved],
+      scenes: slate.scenes.map((entry) =>
+        entry.id === moved.id ? moved : entry,
+      ),
       shots: [],
       beatEnds: [],
       notes: [],
@@ -1411,19 +1425,34 @@ const validateScriptArtifact = (
   return toValidation(violations);
 };
 
+/**
+ * Every cast member must be placed somewhere the film stages.
+ *
+ * The rule used to be "in THIS scene", which is the same sentence while a film
+ * has one location and a wrong one the moment it has two: the actors in the
+ * hallway are not in the kitchen, and demanding the whole cast in every set is
+ * what made a second location impossible to stage (#1171). The requirement is
+ * coverage across the staged set, so a single-location film reads exactly as
+ * before, and a cast member no location places is still refused.
+ */
 const validateSceneAgainstScript = (
   scene: IAutoMovieScene,
+  staged: readonly IAutoMovieScene[],
   script: IAutoMovieScript,
   violations: IAutoMovieConstraintViolation[],
 ): void => {
-  const nodeIds = new Set(scene.nodes.map((node) => node.id));
+  const placed = new Set(
+    [scene, ...staged.filter((entry) => entry.id !== scene.id)].flatMap(
+      (entry) => entry.nodes.map((node) => node.id),
+    ),
+  );
   script.cast.forEach((member, i) => {
-    if (!nodeIds.has(member.node))
+    if (!placed.has(member.node))
       pushViolation(
         violations,
         "type",
         "$input.nodes",
-        `scene must contain cast node "${member.node}" from script cast[${i}]`,
+        `no staged scene contains cast node "${member.node}" from script cast[${i}]`,
         member.node,
       );
   });
@@ -1502,8 +1531,15 @@ const validateShotCommitPreconditions = (
     "a script must be committed before a shot",
     violations,
   );
+  // The prerequisite is the location this shot renders, not "a scene": a film
+  // stages several, and a shot for the hallway is not blocked by the kitchen
+  // being the one the slate happens to list first (#1171). A shot naming a
+  // location that is not staged reads as no scene committed, which is the same
+  // refusal an author already knows.
   validateCommittedScene(
-    soleScene(slate),
+    typeof shot.scene === "string"
+      ? sceneById(slate, shot.scene)
+      : soleScene(slate),
     slateRoot,
     "a scene must be committed before a shot",
     violations,

@@ -255,6 +255,11 @@ export class AutoMovieApplication {
   public getScene(props: {
     /** The slate to read; omit to read the resident project (#614). */
     slate?: IAutoMovieMcpStoredSlate;
+    /**
+     * Which staged scene to read, by its id. Omit while a film stages one;
+     * required once it stages several, since "the scene" stops naming one.
+     */
+    scene?: string;
   }): IAutoMovieGetSceneOutput {
     return this.slateQuery.getScene(props);
   }
