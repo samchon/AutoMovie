@@ -13,6 +13,10 @@ on:
       - 'packages/*/*.json'
       - 'packages/*/*.ts'
       - 'packages/*/*.html'
+      # A package's own entry document. `test_workspace_public_contracts`
+      # reads three of them and asserts on their text, so they are suite
+      # inputs the same way `src` is (#1397).
+      - 'packages/*/*.md'
       - 'packages/*/build/**'
       - 'packages/*/prompts/**'
       - 'packages/*/scaffold/**'
@@ -35,6 +39,13 @@ on:
       - '*.yml'
       - '.prettier*'
       - '.gitattributes'
+      # The root entry document, also pinned by the suite. Named rather than
+      # globbed as `*.md` for the same reason `.gitignore` is left out above:
+      # `AGENTS.md` and `CLAUDE.md` are agent instructions no job reads, and a
+      # pull request carrying only those two should still run nothing. What
+      # must not happen is the reverse, which is what #1386 and #1387 did: a
+      # whole diff of markdown, and neither job ran at all.
+      - 'README.md'
 jobs:
   Ubuntu:
     runs-on: ubuntu-latest
