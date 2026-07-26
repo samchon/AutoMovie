@@ -416,6 +416,47 @@ const PARSER_ORACLE: Array<[string, string, string[] | string]> = [
     REFUSALS.pattern,
   ],
   [
+    // onBlock returning [] when there is no `on:` key is the branch that keeps
+    // the scoping honest; falling back to the whole document would read the
+    // job below as the trigger again.
+    "a document with no on: block is refused, not searched whole",
+    [
+      "name: probe",
+      "jobs:",
+      "  pull_request:",
+      "    paths:",
+      "      - 'z'",
+      "",
+    ].join("\n"),
+    REFUSALS.trigger,
+  ],
+  [
+    "a column-zero comment does not end the on: block",
+    [
+      "name: probe",
+      "on:",
+      "  pull_request:",
+      "    paths:",
+      "# a note written flush left",
+      "      - 'a'",
+      "jobs:",
+      "",
+    ].join("\n"),
+    ["a"],
+  ],
+  [
+    "an on: block running to the end of the document is still read",
+    [
+      "name: probe",
+      "on:",
+      "  pull_request:",
+      "    paths:",
+      "      - 'a'",
+      "",
+    ].join("\n"),
+    ["a"],
+  ],
+  [
     "a job named like the trigger is not the trigger",
     [
       "name: probe",
@@ -540,10 +581,24 @@ export const test_workspace_ci_triggers = (): void => {
   TestValidator.equals(
     "the parser raises no refusal outside that set",
     // The completeness above runs from the cause list to the documents. This
-    // is the other direction: a sixth `throw` added to the parser without a
-    // cause and a document would leave both the list and the oracle green.
-    (String(workflowTriggerPaths).match(/throw new Error/g) ?? []).length,
-    Object.keys(REFUSALS).length,
+    // is the other direction: a refusal added to the parse path with a fresh
+    // message would leave both the list and the oracle green. Every helper on
+    // that path is read, not only the exported function -- `onBlock`'s own
+    // "cannot locate the block" case is exactly where the next one would land.
+    // Sites are not counted: two `throw`s raising one existing cause is a
+    // legitimate refactor, and what must hold is that none names a cause the
+    // list does not carry.
+    [
+      String(workflowTriggerPaths),
+      String(onBlock),
+      String(withoutComment),
+      String(topLevel),
+    ]
+      .join("\n")
+      .split("throw new Error(")
+      .slice(1)
+      .filter((raised) => !raised.slice(0, 120).includes("REFUSALS.")),
+    [],
   );
 
   const build = triggerPaths("build");
