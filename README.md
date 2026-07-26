@@ -93,6 +93,7 @@ The project is early. The most important unfinished work is completing the MCP m
 | [`@automovie/ingest`](./packages/ingest) | glTF/GLB ingestion into AutoMovie's core graph and clip data. |
 | [`@automovie/forge`](./packages/forge) | Procedural model-building experiments kept for simple generated assets. |
 | [`@automovie/mcp`](./packages/mcp) | MCP surface for external agents to drive parts of the deterministic motion engine. |
+| [`@automovie/cli`](./packages/cli) | The `automovie` binary: scaffolds a starter wired for both doors, MCP and direct linking. |
 | [`@automovie/playground`](./packages/playground) | Browser demos for inspecting motion, props, cameras, and simple characters. |
 
 ## Next Work

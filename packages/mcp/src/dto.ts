@@ -1365,9 +1365,10 @@ export interface IAutoMovieNextStepsOutput {
 
 /**
  * Every guide document the server ships. Keys match `packages/mcp/prompts/*.md`
- * filename stems exactly; the runtime content is generated from those markdown
- * files at build time. Start new work with `"AUTOMOVIE_OVERALL"`, then read the
- * guide matching the next stage.
+ * filename stems, except `README.md`, which documents the corpus for a reader
+ * of the repository and is never served. The runtime content is generated from
+ * those markdown files at build time. Start new work with
+ * `"AUTOMOVIE_OVERALL"`, then read the guide matching the next stage.
  */
 export type AutoMovieGuideName =
   | "AUTOMOVIE_OVERALL"

@@ -1,9 +1,34 @@
-import { AutoMovieApplication, AutoMovieGuideName } from "@automovie/mcp";
+import { compareCodeUnits } from "@automovie/engine";
+import {
+  AUTOMOVIE_GUIDE_NAMES,
+  AutoMovieApplication,
+  AutoMovieGuideName,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
+import fs from "node:fs";
+import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 
 const app = new AutoMovieApplication();
+
+/** Repository root, four levels above `test/src/features/mcp`. */
+const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
+
+/**
+ * The markdown file the generator refuses to serve, restated here so the
+ * exclusion is asserted rather than assumed. `packages/mcp/build/prompt.mjs`
+ * skips it because it documents the corpus itself.
+ */
+const UNSERVED = "README.md";
+
+/** Every guide stem on disk, in the order the parity assertion compares. */
+const promptStems = (): string[] =>
+  fs
+    .readdirSync(path.join(ROOT, "packages", "mcp", "prompts"))
+    .filter((file) => file.endsWith(".md") && file !== UNSERVED)
+    .map((file) => file.slice(0, -".md".length))
+    .sort(compareCodeUnits);
 
 /** Every corpus key, with a distinctive phrase its content must carry. */
 const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
@@ -137,12 +162,18 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
  *
  * Scenarios:
  *
+ * 0. The three lists are one set: the prompts directory minus the file the
+ *    generator refuses to serve, the names the server actually serves, and the
+ *    corpus this scenario exercises. They used to be three hand-kept lists with
+ *    nothing comparing them, under a sentence claiming they could not drift
+ *    (#1399). The remaining side, a declared name with no markdown behind it,
+ *    is a build error now: `GuideService` indexes the generated object with the
+ *    union key and no cast.
  * 1. Every declared guide name resolves to non-empty markdown carrying its
- *    distinctive doctrine phrase: the union, the prompts directory, and the
- *    generated constant cannot drift apart silently. Phrases match case-folded,
- *    because a pin holds doctrine, not capitalization: a corpus-wide
- *    punctuation pass (#1298's em-dash ban) re-cased two sentence-initial words
- *    and must not read as dropped doctrine.
+ *    distinctive doctrine phrase. Phrases match case-folded, because a pin
+ *    holds doctrine, not capitalization: a corpus-wide punctuation pass
+ *    (#1298's em-dash ban) re-cased two sentence-initial words and must not
+ *    read as dropped doctrine.
  * 2. An unknown name (reachable through direct API misuse) throws an error that
  *    lists every valid name, instead of returning undefined content.
  * 3. Malformed name fields reject before guide lookup so bad input is not confused
@@ -151,6 +182,32 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
  *    fields.
  */
 export const test_mcp_guide_documents = (): void => {
+  // 0. the served corpus, the directory, and this scenario's list are one set
+  const served: string[] = [...AUTOMOVIE_GUIDE_NAMES].sort(compareCodeUnits);
+  const exercised: string[] = [...new Set(CORPUS.map(([name]) => name))].sort(
+    compareCodeUnits,
+  );
+  TestValidator.equals(
+    "the served guide names are exactly the prompts the generator keeps",
+    served,
+    promptStems(),
+  );
+  TestValidator.equals(
+    "this scenario exercises every served guide",
+    exercised,
+    served,
+  );
+  TestValidator.equals(
+    "the unserved corpus document is present, and is not served",
+    [
+      fs.existsSync(path.join(ROOT, "packages", "mcp", "prompts", UNSERVED)),
+      AUTOMOVIE_GUIDE_NAMES.includes(
+        UNSERVED.slice(0, -".md".length) as AutoMovieGuideName,
+      ),
+    ],
+    [true, false],
+  );
+
   const folded = (s: string): string => s.toLowerCase();
   for (const [name, phrase] of CORPUS) {
     const output = app.getGuideDocument({ name });
