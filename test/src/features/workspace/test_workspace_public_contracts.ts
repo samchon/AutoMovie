@@ -41,9 +41,10 @@ const readPackageFile = (...segments: string[]): string =>
  *    granular tools in both places it states that number.
  * 6. The performance stage's JSDoc names real verbs only.
  * 7. The region contract documents the `fullBody` locomote default and
- *    content-aware layering, with the pre-#1383 sentences asserted absent. The
- *    text is flattened across whitespace AND asterisks first, because a JSDoc
- *    continuation prefix would otherwise land mid-sentence.
+ *    content-aware layering -- both asserted PRESENT, both with the pre-#1383
+ *    sentence they replaced asserted absent. The text is flattened across
+ *    whitespace AND asterisks first, because a JSDoc continuation prefix would
+ *    otherwise land mid-sentence.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -85,9 +86,13 @@ export const test_workspace_public_contracts = (): void => {
     "validation",
     "IAutoMovieConstraintViolation.ts",
   );
+  // Every document this scenario reads, so the retired-surface sweep covers
+  // the same set the paragraph above claims for it.
   const publicContract = [
     rootReadme,
     engineReadme,
+    interfaceReadme,
+    mcpReadme,
     violationKind,
     violationContract,
   ].join("\n");
@@ -171,9 +176,13 @@ export const test_workspace_public_contracts = (): void => {
       return [
         flatCall.includes("a `locomote` is `lowerBody`"),
         flatCall.includes("a `locomote` is `fullBody`"),
+        flatCall.includes("Overlap is judged on the content surviving those"),
         flatRegion.includes("cannot co-occur with any other region"),
+        flatRegion.includes(
+          "co-occurs with another region only while their surviving content",
+        ),
       ];
     })(),
-    [false, true, false],
+    [false, true, true, false, true],
   );
 };

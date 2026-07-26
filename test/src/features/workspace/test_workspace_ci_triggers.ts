@@ -6,8 +6,10 @@ import path from "node:path";
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
 /**
- * One `paths:` entry: a single-quoted, double-quoted, or bare scalar, with an
- * optional same-line comment after it.
+ * One `paths:` entry: a quoted or bare scalar with an optional same-line
+ * comment. This covers the scalar forms a path filter uses, not all of YAML --
+ * an escaped inner quote or a `#` with no space before it is refused loudly
+ * rather than read, which is the safe direction for a guard.
  *
  * The comment half is not decoration. A pattern read as `'**' # revert later`
  * is a string that matches no file, so a catch-all added with a note beside it
@@ -16,6 +18,10 @@ const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
  */
 const PATHS_ITEM =
   /^ {6}- ('[^']*'|"[^"]*"|[^'"#\s](?:[^#]*[^#\s])?)(?:\s+#.*)?\s*$/;
+
+/** A key line's content, with any trailing comment and whitespace removed. */
+const withoutComment = (line: string): string =>
+  line.replace(/\s+#.*$/, "").trim();
 
 /**
  * Every `paths:` pattern a workflow document filters its `pull_request` trigger
@@ -30,6 +36,11 @@ const PATHS_ITEM =
  * being guessed at, since a dropped or fabricated entry is exactly what would
  * make the equality below pass on two lists that differ.
  *
+ * Each refusal names its own cause, and the oracle asserts the cause rather
+ * than the mere fact of throwing: a missing list and an unreadable entry are
+ * different failures, and a parser that silently skipped the entry would still
+ * "throw" at the end for lack of any.
+ *
  * Exported so the scenario can hand it documents the repository does not
  * contain: a parser is the oracle for everything after it, and one that cannot
  * be shown to fail is not an oracle.
@@ -40,12 +51,15 @@ export const workflowTriggerPaths = (
 ): string[] => {
   const lines = document.split(/\r?\n/);
   const trigger = lines.findIndex(
-    (line) => line.trimEnd() === "  pull_request:",
+    (line) =>
+      line.startsWith("  pull_request:") &&
+      withoutComment(line) === "pull_request:",
   );
   if (trigger === -1)
     throw new Error(`${label} declares no pull_request trigger`);
 
   const patterns: string[] = [];
+  let sawPaths = false;
   let inPaths = false;
   for (const line of lines.slice(trigger + 1)) {
     const body = line.trimStart();
@@ -53,7 +67,8 @@ export const workflowTriggerPaths = (
     const indent = line.length - body.length;
     if (indent <= 2) break; // the pull_request block ended
     if (indent === 4) {
-      inPaths = body === "paths:"; // a sibling key: branches, types, ...
+      inPaths = withoutComment(line) === "paths:"; // else a sibling key
+      sawPaths = sawPaths || inPaths;
       continue;
     }
     if (!inPaths) continue;
@@ -61,14 +76,16 @@ export const workflowTriggerPaths = (
     if (item === null)
       throw new Error(`${label} has an unreadable paths entry: ${line}`);
     const scalar = item[1]!;
-    patterns.push(
+    const pattern =
       scalar.startsWith("'") || scalar.startsWith('"')
         ? scalar.slice(1, -1)
-        : scalar,
-    );
+        : scalar;
+    if (pattern === "") throw new Error(`${label} declares an empty pattern`);
+    patterns.push(pattern);
   }
+  if (!sawPaths) throw new Error(`${label} declares no readable paths list`);
   if (patterns.length === 0)
-    throw new Error(`${label} declares an empty paths filter`);
+    throw new Error(`${label} declares an empty paths list`);
   return patterns;
 };
 
@@ -160,9 +177,18 @@ const UNWATCHED = [
 /**
  * The matcher's own oracle: pattern, file, and what GitHub answers.
  *
- * The two segment rules are what every assertion below rests on, and neither is
+ * The segment rules are what every assertion below rests on, and none is
  * exercised by the repository's own paths -- mutating `[^/]*` to `.*` left
  * every other assertion in this file green. These pairs discriminate directly.
+ *
+ * The rows marked `cheat sheet` are transcribed from GitHub's own filter-
+ * pattern table, which is the authority for the two readings that look like
+ * they contradict: `**` is "zero or more of any character", so `**.js` reaches
+ * `src/app.js` across a separator, AND a globstar-prefixed `README.md` row is
+ * listed as matching a root-level `README.md` (see the rows below, which are
+ * the transcription). A model with only the first rule fails the second; a
+ * minimatch-style model that degrades a non-standalone `**` to `*` fails the
+ * first. The implementation carries both, and these rows are why.
  */
 const MATCHER_ORACLE: Array<[string, string, boolean]> = [
   // `*` stays inside one segment
@@ -170,14 +196,21 @@ const MATCHER_ORACLE: Array<[string, string, boolean]> = [
   ["packages/*/*.md", "packages/viewer/docs/guide.md", false],
   ["*.yml", "pnpm-workspace.yml", true],
   ["*.yml", ".github/workflows/build.yml", false],
+  ["docs/*", "docs/mona/octocat.txt", false], // cheat sheet
   // `**` crosses them
   ["packages/*/src/**", "packages/engine/src/film/cameraMove.ts", true],
   ["packages/*/src/**", "packages/engine/lib/film/cameraMove.js", false],
   ["test/**", "test/src/features/workspace/x.ts", true],
+  ["**.js", "main.js", true], // cheat sheet
+  ["**.js", "src/app.js", true], // cheat sheet
   // a globstar opening a segment also matches zero segments
+  ["**/README.md", "README.md", true], // cheat sheet
+  ["**/README.md", "js/README.md", true], // cheat sheet
+  ["**/*src/**", "my-src/code/js/app.js", true], // cheat sheet
+  ["docs/**/*.md", "docs/a/markdown/file.md", true], // cheat sheet
   ["**/*.md", "AGENTS.md", true],
   ["**/*.md", "packages/mcp/prompts/DESIGN.md", true],
-  // one that does not open a segment keeps the separator literal
+  // one that does not open a segment keeps its separator literal
   ["docs**/x", "docsx", false],
   ["docs**/x", "docs/deep/x", true],
   // and a literal is a literal
@@ -192,9 +225,14 @@ const probeDocument = (...lines: string[]): string =>
 
 /**
  * The parser's own oracle: a labelled document and the list it must yield, or
- * `"throws"` when refusing is the only correct answer.
+ * the CAUSE it must refuse for.
+ *
+ * The cause, not the mere fact of a throw, is what makes the refusal rows
+ * discriminate. Dropping an unreadable entry instead of refusing it still ends
+ * in a throw whenever that entry was the only one, so a "did it throw" oracle
+ * certifies a parser that silently vanishes what it cannot read.
  */
-const PARSER_ORACLE: Array<[string, string, string[] | "throws"]> = [
+const PARSER_ORACLE: Array<[string, string, string[] | string]> = [
   [
     "a sibling key ends the list",
     probeDocument(
@@ -276,33 +314,74 @@ const PARSER_ORACLE: Array<[string, string, string[] | "throws"]> = [
     ["a"],
   ],
   [
+    "a padded key and a commented key still open the list",
+    probeDocument("  pull_request: ", "    paths: # the filter", "      - 'a'"),
+    ["a"],
+  ],
+  [
     "a document with no pull_request trigger is refused",
     probeDocument("  push:", "    paths:", "      - 'a'"),
-    "throws",
+    "no pull_request trigger",
   ],
   [
     "a pull_request trigger with no paths list is refused",
     probeDocument("  pull_request:", "    branches:", "      - master"),
-    "throws",
+    "no readable paths list",
   ],
   [
     "a flow sequence is refused rather than read as empty",
     probeDocument("  pull_request:", "    paths: ['a', 'b']"),
-    "throws",
+    "no readable paths list",
+  ],
+  [
+    "a paths list with no entries is refused",
+    probeDocument(
+      "  pull_request:",
+      "    paths:",
+      "    branches:",
+      "      - x",
+    ),
+    "an empty paths list",
   ],
   [
     "an entry this cannot read is refused",
     probeDocument("  pull_request:", "    paths:", "      - "),
-    "throws",
+    "an unreadable paths entry",
+  ],
+  [
+    // the row that separates refusing from silently skipping: a parser that
+    // dropped the bad entry would return ["a"] and never reach a throw.
+    "an unreadable entry beside a readable one is still refused",
+    probeDocument("  pull_request:", "    paths:", "      - 'a'", "      - "),
+    "an unreadable paths entry",
+  ],
+  [
+    "an empty pattern is refused rather than counted",
+    probeDocument("  pull_request:", "    paths:", "      - ''"),
+    "an empty pattern",
   ],
 ];
 
-/** Parse for the oracle above, reporting a refusal as a value. */
-const parseOrThrow = (probe: string): string[] | "throws" => {
+/** The refusal causes {@link workflowTriggerPaths} distinguishes. */
+const REFUSALS = [
+  "no pull_request trigger",
+  "no readable paths list",
+  "an empty paths list",
+  "an unreadable paths entry",
+  "an empty pattern",
+];
+
+/**
+ * Parse for the oracle above, reporting a refusal as its cause. An unclassified
+ * message is returned whole rather than folded into a known one, so a new
+ * failure mode shows up as itself.
+ */
+const parseOrRefusal = (probe: string): string[] | string => {
   try {
     return workflowTriggerPaths("probe.yml", probe);
-  } catch {
-    return "throws";
+  } catch (exp) {
+    const message = (exp as Error).message;
+    return REFUSALS.find((cause) => message.includes(cause)) ?? message;
   }
 };
 
@@ -332,12 +411,15 @@ const parseOrThrow = (probe: string): string[] | "throws" => {
  * 1. The parser reads the trigger it claims to read and refuses what it cannot,
  *    proved on documents this repository does not contain: a sibling key ending
  *    the list, a `push:` filter on either side, bare and double-quoted entries,
- *    a same-line comment, carriage returns, and five shapes where throwing is
- *    the only correct answer.
+ *    a same-line comment, carriage returns, a padded and a commented key, and
+ *    six shapes where refusing is the only correct answer -- each asserted by
+ *    its CAUSE, including an unreadable entry standing beside a readable one,
+ *    which is the row a silently-skipping parser fails.
  * 2. Every declared pattern stays inside the glob subset {@link matches}
  *    implements, so no assertion below is decided by a matcher guessing at
  *    syntax it does not support.
- * 3. The matcher answers GitHub's semantics on a hand-written oracle: `*` held
+ * 3. The matcher answers GitHub's semantics on a hand-written oracle, anchored on
+ *    rows transcribed from GitHub's published filter-pattern table: `*` held
  *    inside one segment, `**` crossing them, a segment-opening globstar
  *    matching zero segments, a mid-segment one keeping its separator, and
  *    literals literal. A matcher is the oracle for everything after it, so it
@@ -357,7 +439,7 @@ export const test_workspace_ci_triggers = (): void => {
   // 1. the parser, on documents the repository does not contain
   TestValidator.equals(
     "the paths parser reads its own trigger and refuses what it cannot",
-    PARSER_ORACLE.map(([label, probe]) => [label, parseOrThrow(probe)]),
+    PARSER_ORACLE.map(([label, probe]) => [label, parseOrRefusal(probe)]),
     PARSER_ORACLE.map(([label, , expected]) => [label, expected]),
   );
 

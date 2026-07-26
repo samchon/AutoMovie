@@ -44,11 +44,12 @@ on:
       - '.prettier*'
       - '.gitattributes'
       # The root entry document, read by `test_workspace_public_contracts`
-      # like the package ones above. Named rather than
-      # globbed as `*.md` because `AGENTS.md` and `CLAUDE.md` are agent
-      # instructions no job reads, exactly like the `.gitignore` left out
-      # above. #1386 and #1387 are the failure this line closes: a pull
-      # request whose whole diff was markdown ran neither job.
+      # like the package ones above. Named rather than globbed as `*.md`
+      # because `AGENTS.md` and `CLAUDE.md` are agent instructions no job
+      # reads, and neither is `.gitignore`: none of the three belongs here.
+      # #1386 and #1387 are the failure this line closes, and it is the
+      # opposite one: a pull request whose whole diff was markdown, and
+      # neither job ran at all.
       - 'README.md'
 jobs:
   Ubuntu:

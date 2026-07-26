@@ -46,12 +46,12 @@ on:
       - '.prettier*'
       - '.gitattributes'
       # The root entry document, read by `test_workspace_public_contracts`
-      # like the package ones above. Named rather than
-      # globbed as `*.md` for the same reason `.gitignore` is left out above:
-      # `AGENTS.md` and `CLAUDE.md` are agent instructions no job reads, and a
-      # pull request carrying only those two should still run nothing. What
-      # must not happen is the reverse, which is what #1386 and #1387 did: a
-      # whole diff of markdown, and neither job ran at all.
+      # like the package ones above. Named rather than globbed as `*.md` for
+      # the same reason `.gitignore` is left out above: `AGENTS.md` and
+      # `CLAUDE.md` are agent instructions no job reads, and a pull request
+      # carrying only those two should still run nothing. What must not happen
+      # is the reverse, which is what #1386 and #1387 did: a whole diff of
+      # markdown, and neither job ran at all.
       - 'README.md'
 jobs:
   Ubuntu:
