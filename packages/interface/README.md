@@ -26,6 +26,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 
 | 폴더 | 내용 |
 |---|---|
+| `core/` | 씬그래프·애니메이션 기반: 노드(`IAutoMovieNode`, `AutoMovieNodeKind`), 트랙·클립·채널(`IAutoMovieTrack`, `IAutoMovieChannel`, 값 타입·보간·한계), 드라이버·드리븐 커브, `IAutoMovieNamedId`, `IAutoMovieProfile` |
 | `geometry/` | 3D 수학 원시 (`IAutoMovieVector3`, `IAutoMovieQuaternion`, `IAutoMovieEuler`, `IAutoMovieTransform`) |
 | `color/` | 색 (`IAutoMovieColor`) |
 | `model/` | **3D 모델**: 프리미티브/메쉬 형상(`AutoMoviePrimitiveShape`, `IAutoMovieMesh`, `IAutoMovieGeometry`), 파트(`IAutoMovieModelPart`), 모델(`IAutoMovieModel`). 스켈레톤 유무로 캐릭터/사물 통합 |
@@ -36,7 +37,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `motion/` | 시간 모션: 키프레임 + 이징 |
 | `material/` | PBR 머티리얼 |
 | `scene/` | 씬그래프: 모델/카메라/조명 배치 |
-| `cinematics/` | 촬영·편집: 샷·카메라 인텐트, 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스 |
+| `cinematics/` | 촬영·편집: 샷·카메라 인텐트·커버리지(대체 앵글 테이크), 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스 |
 | `harness/` | LLM 함수호출 계약: 스테이지별 `IAutoMovie*Application.IWrite`, 액션 콜·타겟, 컨텍스트 요청. MCP 스키마의 소스 |
 | `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약) |
 

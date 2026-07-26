@@ -2,7 +2,13 @@ name: build
 on:
   pull_request:
     paths:
+      # BOTH workflow definitions, in both files. The suite reads and asserts
+      # on these two YAMLs (`test_workspace_ci_triggers`), so each is an input
+      # to the job that runs the suite, not only to the job it defines: a pull
+      # request editing test.yml alone must still build, and one editing this
+      # file alone must still run the suite that reads it (#1397).
       - '.github/workflows/build.yml'
+      - '.github/workflows/test.yml'
       # Every build input a package can carry, by SHAPE rather than by name.
       # The previous list named `src`, `package.json`, and `tsconfig.json`, and
       # each input added afterwards (per-package lint rules, code generators,

@@ -1,3 +1,4 @@
+import { compareCodeUnits } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
@@ -93,6 +94,23 @@ export const test_workspace_public_contracts = (): void => {
       interfaceReadme.includes("의존성은 `typia`"),
     ],
     [true, true, true, false],
+  );
+  // The domain-folder table is a claim about the package's own layout, so read
+  // the layout instead of trusting the prose. The table omitted `harness/` and
+  // `cinematics/` until #1394, and `core/` — the node, track, and channel
+  // primitives every other fold builds on — until the follow-up.
+  TestValidator.equals(
+    "the interface README's folder table matches the shipped folders",
+    [...interfaceReadme.matchAll(/^\| `([^`]+)\/` \|/gm)]
+      .map((row) => row[1]!)
+      .sort(compareCodeUnits),
+    fs
+      .readdirSync(path.join(ROOT, "packages", "interface", "src"), {
+        withFileTypes: true,
+      })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort(compareCodeUnits),
   );
   TestValidator.equals(
     "the mcp README counts the current gateway and granular surfaces",
