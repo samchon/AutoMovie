@@ -243,6 +243,7 @@ export class AutoMovieProject {
         slate.notes.length === 0 ? null : slate.notes,
       ),
     ];
+    const stagedScenes = stageBeatSlices(scenes);
     const stagedShots = stageBeatSlices(shots);
     const stagedBeatEnds = stageBeatSlices(beatEnds);
     this.commitCycle(() => {
@@ -250,7 +251,7 @@ export class AutoMovieProject {
         if (content === null) {
           if (fs.existsSync(file)) fs.rmSync(file);
         } else writeAtomic(file, content);
-      this.flushBeatSlices("scenes", stageBeatSlices(scenes));
+      this.flushBeatSlices("scenes", stagedScenes);
       this.flushBeatSlices("shots", stagedShots);
       this.flushBeatSlices("beatEnds", stagedBeatEnds);
     });
