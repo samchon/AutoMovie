@@ -143,8 +143,8 @@ export const test_workspace_public_contracts = (): void => {
   );
   // The domain-folder table is a claim about the package's own layout, so read
   // the layout instead of trusting the prose. The table omitted `harness/` and
-  // `cinematics/` until #1394, and `core/` — the node, track, and channel
-  // primitives every other fold builds on — until the follow-up.
+  // `cinematics/` until #1394, and `core/` (the node, track, and channel
+  // primitives every other fold builds on) until the follow-up.
   TestValidator.equals(
     "the interface README's folder table matches the shipped folders",
     [...interfaceReadme.matchAll(/^\| `([^`]+)\/` \|/gm)]

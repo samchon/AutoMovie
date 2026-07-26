@@ -536,14 +536,16 @@ const parseOrRefusal = (probe: string): string[] | string => {
  *    proved on documents this repository does not contain: a sibling key ending
  *    the list, a `push:` filter on either side, bare and double-quoted entries,
  *    a same-line comment, carriage returns, padded and commented keys, a
- *    `pull_request` key at another depth, and a job named like the trigger.
- *    Refusals are asserted by CAUSE, and two further assertions close the set
- *    from both ends: every cause has a document that provokes it, and the
- *    parser raises no refusal the cause list does not name. That pair is a
- *    completeness claim the machine keeps, unlike the row count this JSDoc got
- *    wrong twice. One document puts an unreadable entry beside a readable one,
- *    which is what separates refusing from silently skipping: a skipping parser
- *    returns the readable one.
+ *    column-zero comment inside the block, a block running to the end of the
+ *    document, a `pull_request` key at another depth, a job named like the
+ *    trigger, and a document carrying no `on:` block at all. Refusals are
+ *    asserted by CAUSE, and two further assertions close the set from both
+ *    ends: every cause has a document that provokes it, and the parser raises
+ *    no refusal the cause list does not name. That pair is a completeness claim
+ *    the machine keeps, unlike the row count this JSDoc got wrong twice. One
+ *    document puts an unreadable entry beside a readable one, which is what
+ *    separates refusing from silently skipping: a skipping parser returns the
+ *    readable one.
  * 2. Every declared pattern stays inside the glob subset {@link matches}
  *    implements, so no assertion below is decided by a matcher guessing at
  *    syntax it does not support.
