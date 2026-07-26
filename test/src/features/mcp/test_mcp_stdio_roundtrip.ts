@@ -302,7 +302,7 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     }>(client, "commitScript", {
       slate: {
         script: null,
-        scene: null,
+        scenes: [],
         shots: [],
         beatEnds: [],
         notes: [],
@@ -458,7 +458,7 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
     };
     const renderSlate = {
       script: scriptArtifact,
-      scene: staged.scene,
+      scenes: [staged.scene],
       shots: [performed.shot],
       beatEnds: [],
       notes: [],

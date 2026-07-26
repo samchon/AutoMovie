@@ -93,7 +93,7 @@ export const test_mcp_erase_ladder = (): void => {
     const explicit = app.commitShot({
       slate: {
         script,
-        scene: staged.scene,
+        scenes: [staged.scene],
         shots: [],
         beatEnds: [],
         notes: [],

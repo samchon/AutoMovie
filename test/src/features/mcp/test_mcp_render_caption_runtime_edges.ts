@@ -76,7 +76,7 @@ const film: IAutoMovieSequence = {
 
 const slate: IAutoMovieMcpWritableSlate = {
   script,
-  scene,
+  scenes: [scene],
   shots: [shotFor("beat-1"), shotFor("beat-2")],
   beatEnds: [],
   notes: [],

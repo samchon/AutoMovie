@@ -333,7 +333,7 @@ export const test_mcp_project_slice_gate_parity = (): void => {
     const slate = AutoMovieProject.open(root).writableSlate();
     TestValidator.equals(
       "a supported light discriminator loads",
-      slate.scene?.lights[0]?.type,
+      slate.scenes[0]?.lights[0]?.type,
       "point",
     );
   });

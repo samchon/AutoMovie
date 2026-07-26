@@ -19,6 +19,7 @@ import {
   IAutoMovieMcpStoredSlate,
   IAutoMovieMcpWritableSlate,
 } from "../dto";
+import { soleScene } from "../project/slateScenes";
 
 /**
  * Read-only slate queries, the stored-context reads behind the `get*` tools.
@@ -193,7 +194,7 @@ function assertOptionalQueryBeat(
 const toStoredSlate = (slate: IAutoMovieMcpStoredSlate): IAutoMovieSlate => ({
   brief: "",
   script: slate.script,
-  scene: slate.scene,
+  scene: soleScene(slate),
   shots: slate.shots,
   beatEnds: slate.beatEnds,
   notes: slate.notes,

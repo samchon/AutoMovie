@@ -52,7 +52,7 @@ export const test_mcp_gateway_application = async (): Promise<void> => {
       executed.result.output.slate,
       {
         script: null,
-        scene: null,
+        scenes: [],
         shots: [],
         beatEnds: [],
         notes: [],

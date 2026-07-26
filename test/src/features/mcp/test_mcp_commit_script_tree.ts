@@ -65,7 +65,7 @@ export const test_mcp_commit_script_tree = (): void => {
   const app = new AutoMovieApplication();
   const empty = {
     script: null,
-    scene: null,
+    scenes: [],
     shots: [],
     beatEnds: [],
     notes: [],

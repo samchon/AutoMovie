@@ -37,6 +37,7 @@ import {
 } from "../project/AutoMoviePrerequisite";
 import { checkAssetPath } from "../project/AutoMovieProject";
 import { beatOf, shotIdOf } from "../project/shotKey";
+import { sceneById, soleScene } from "../project/slateScenes";
 import {
   validateSceneArtifact,
   validateSequenceArtifact,
@@ -168,7 +169,7 @@ export class CommitService {
       successfulCommit({
         ...slate,
         script: props.script,
-        scene: null,
+        scenes: [],
         shots: [],
         beatEnds: [],
         notes: [],
@@ -223,7 +224,7 @@ export class CommitService {
     const output = this.finish(
       successfulCommit({
         ...slate,
-        scene: props.scene,
+        scenes: [props.scene],
         shots: [],
         beatEnds: [],
         notes: [],
@@ -327,10 +328,19 @@ export class CommitService {
         "a resident commitShot whose shot references motions must either follow its compact resident perform in this session or pass the motions registry (motions are re-perform-derived, not persisted, so a reference with neither would be a dangling id)",
         motions,
       );
-    if (slate.scene !== null)
+    // The shot names the location it renders, so the artifact is validated
+    // against that scene when the slate holds it (#1171). The sole scene stays
+    // the fallback, which is what keeps a shot naming an absent id earning the
+    // mismatch violation instead of no validation at all. `props.shot` is
+    // still untrusted here: its own shape is validated below.
+    const named = (props.shot as { scene?: unknown } | null | undefined)?.scene;
+    const shotScene =
+      (typeof named === "string" ? sceneById(slate, named) : null) ??
+      soleScene(slate);
+    if (shotScene !== null)
       appendValidation(
         violations,
-        validateShotArtifact(props.shot, slate.scene, motions),
+        validateShotArtifact(props.shot, shotScene, motions),
       );
     // Locate this beat's feedback on the screenplay refinement graph:
     // when the script carries a tree, every violation of this commit gains the
@@ -704,7 +714,7 @@ export class CommitService {
           `prop "${props.node}" has no stored spec to erase`,
           props.node,
         );
-      const scene = project.storedSlate().scene;
+      const scene = soleScene(project.storedSlate());
       if (scene !== null && scene.nodes.some((node) => node.id === props.node))
         pushViolation(
           violations,
@@ -762,7 +772,7 @@ export class CommitService {
           `actor "${props.node}" has no stored context to erase`,
           props.node,
         );
-      const scene = project.storedSlate().scene;
+      const scene = soleScene(project.storedSlate());
       if (scene !== null && scene.nodes.some((node) => node.id === props.node))
         pushViolation(
           violations,
@@ -1029,17 +1039,19 @@ export class CommitService {
           props.transform.rotation,
         );
     }
-    if (slate.scene === null)
+    if (soleScene(slate) === null)
       pushViolation(
         violations,
         "type",
         "$slate.scene",
         "a scene must be committed before a placement move",
-        slate.scene,
+        soleScene(slate),
       );
     else if (
       isNonEmptyString(props.node) &&
-      !slate.scene.nodes.some((node) => node.id === props.node)
+      !(soleScene(slate) as IAutoMovieScene).nodes.some(
+        (node) => node.id === props.node,
+      )
     )
       pushViolation(
         violations,
@@ -1051,15 +1063,20 @@ export class CommitService {
     const validation = toValidation(violations);
     if (validation.success === false)
       return { updated: false, state: digestOf(slate), validation };
-    const scene = slate.scene!;
+    const scene = soleScene(slate)!;
+    const moved = {
+      ...scene,
+      nodes: scene.nodes.map((node) =>
+        node.id !== props.node ? node : { ...node, transform: transform! },
+      ),
+    };
     const next: IAutoMovieMcpWritableSlate = {
       ...slate,
-      scene: {
-        ...scene,
-        nodes: scene.nodes.map((node) =>
-          node.id !== props.node ? node : { ...node, transform: transform! },
-        ),
-      },
+      // The slate stages one scene today, and `soleScene` above refused unless
+      // it held exactly that one, so the moved scene IS the staged set. Mapping
+      // over several belongs with multi-scene authoring, where a sibling scene
+      // exists to leave untouched and a test can prove it was.
+      scenes: [moved],
       shots: [],
       beatEnds: [],
       notes: [],
@@ -1195,13 +1212,11 @@ const digestOf = (
   const shots = idsOf(after.shots, "id");
   const beatEnds = idsOf(after.beatEnds, "beat");
   const notes = Array.isArray(after.notes) ? after.notes.length : 0;
+  const stagedCount = (slate: { scenes?: unknown }): number =>
+    Array.isArray(slate.scenes) ? slate.scenes.length : 0;
   const cleared: string[] = [];
   if (before !== undefined) {
-    if (
-      before.scene !== null &&
-      before.scene !== undefined &&
-      (after.scene === null || after.scene === undefined)
-    )
+    if (stagedCount(before) !== 0 && stagedCount(after) === 0)
       cleared.push("scene");
     for (const id of idsOf(before.shots, "id"))
       if (!shots.includes(id)) cleared.push(id);
@@ -1218,7 +1233,7 @@ const digestOf = (
   }
   return {
     script: after.script !== null && after.script !== undefined,
-    scene: after.scene !== null && after.scene !== undefined,
+    scene: stagedCount(after) !== 0,
     shots,
     beatEnds,
     notes,
@@ -1488,7 +1503,7 @@ const validateShotCommitPreconditions = (
     violations,
   );
   validateCommittedScene(
-    slate.scene,
+    soleScene(slate),
     slateRoot,
     "a scene must be committed before a shot",
     violations,
@@ -1579,7 +1594,7 @@ const validateBeatEndArtifact = (
     );
   let nodeIds: Set<string> | null = null;
   const scene = validateCommittedScene(
-    slate.scene,
+    soleScene(slate),
     slateRoot,
     "a scene must be committed before a beat end",
     violations,
@@ -1782,7 +1797,7 @@ const validateFilmPreconditions = (
     violations,
   );
   const scene = validateCommittedScene(
-    slate.scene,
+    soleScene(slate),
     slateRoot,
     "a scene must be committed before a film",
     violations,

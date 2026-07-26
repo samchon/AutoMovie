@@ -31,7 +31,7 @@ const scene: IAutoMovieScene = {
 
 const slate: IAutoMovieMcpWritableSlate = {
   script: null,
-  scene,
+  scenes: [scene],
   shots: [
     {
       id: "shot:beat-1",

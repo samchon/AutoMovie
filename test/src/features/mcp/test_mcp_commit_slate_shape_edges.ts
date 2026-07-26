@@ -82,7 +82,7 @@ const slate = (
   over: Partial<IAutoMovieMcpWritableSlate>,
 ): IAutoMovieMcpWritableSlate => ({
   script,
-  scene,
+  scenes: [scene],
   shots: [shot],
   beatEnds: [],
   notes: [],
@@ -136,10 +136,38 @@ export const test_mcp_commit_slate_shape_edges = (): void => {
       hasViolation(nullShotEntry.validation, "type", "$input.slate.shots[0]"),
   );
 
+  // 2b. a host payload from before the slate held several scenes carries no
+  //     `scenes` at all: the digest counts none rather than throwing on it.
+  const withoutScenes = app.commitShot({
+    slate: {
+      ...slate({}),
+      scenes: undefined as unknown as IAutoMovieScene[],
+    },
+    shot,
+  });
+  TestValidator.equals(
+    "a slate with no scenes field digests as unstaged",
+    withoutScenes.state.scene,
+    false,
+  );
+
+  // 2c. a shot naming a location the slate does not stage still earns the
+  //     mismatch violation: the resolution falls back to the staged scene
+  //     rather than validating the shot against nothing.
+  const unstagedScene = app.commitShot({
+    slate: slate({}),
+    shot: { ...shot, scene: "scene-elsewhere" },
+  });
+  TestValidator.predicate(
+    "a shot naming an unstaged scene is refused, not skipped",
+    unstagedScene.committed === false &&
+      hasViolation(unstagedScene.validation, "type", "$input.shot.scene"),
+  );
+
   // 2. commitShot malformed scene / shot id
   const nonObjectScene = app.commitShot({
     slate: slate({
-      scene: "NOT_OBJECT" as unknown as IAutoMovieScene,
+      scenes: ["NOT_OBJECT" as unknown as IAutoMovieScene],
     }),
     shot,
   });

@@ -49,6 +49,7 @@ import {
   IAutoMoviePlanRenderOutput,
   IAutoMovieSeeFrameOutput,
 } from "../dto";
+import { soleScene } from "../project/slateScenes";
 import { validateSequenceArtifact } from "../validators/artifacts";
 import {
   appendMotionClockShape,
@@ -546,7 +547,7 @@ const buildPoseKeypointPlan = (props: {
     violations,
   );
 
-  const scene = props.slate.scene as unknown;
+  const scene = soleScene(props.slate) as unknown;
   if (scene === null)
     pushViolation(
       violations,
@@ -725,7 +726,7 @@ const buildPoseKeypointPlan = (props: {
     sidecar: planPoseKeypointSidecar({
       sequence: sequence!,
       shots: shots as IAutoMovieShot[],
-      scenes: [props.slate.scene as IAutoMovieScene],
+      scenes: [soleScene(props.slate) as IAutoMovieScene],
       motions: Object.values(props.motions).map(toEngineMotion),
       skeletons: props.skeletons,
       fps: props.frameFormat.fps,

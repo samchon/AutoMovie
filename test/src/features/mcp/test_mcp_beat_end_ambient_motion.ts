@@ -50,7 +50,7 @@ const slate: IAutoMovieMcpWritableSlate = {
     cast: scriptWrite.cast,
     beats: scriptWrite.beats,
   },
-  scene,
+  scenes: [scene],
   shots: [shot],
   beatEnds: [],
   notes: [],

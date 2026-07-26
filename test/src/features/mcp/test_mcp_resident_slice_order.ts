@@ -115,7 +115,7 @@ export const test_mcp_resident_slice_order = (): void => {
     const explicit = app.commitShot({
       slate: {
         script,
-        scene: staged.scene,
+        scenes: [staged.scene],
         shots: [makeShot("beat-2", staged.scene.id)],
         beatEnds: [],
         notes: [],

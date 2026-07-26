@@ -88,7 +88,7 @@ const runPipeline = (): string => {
   if (cut.success !== true) throw new Error("cut fixture must succeed");
 
   return JSON.stringify({
-    scene: staged.scene,
+    scenes: [staged.scene],
     shots: [charge.shot, aftermath.shot],
     motions: [charge.motions, aftermath.motions],
     sequence: cut.sequence,

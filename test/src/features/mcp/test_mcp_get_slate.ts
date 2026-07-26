@@ -64,7 +64,7 @@ export const test_mcp_get_slate = (): void => {
     // 2. explicit slate is echoed verbatim, resident project ignored.
     const explicit: IAutoMovieMcpWritableSlate = {
       script: { ...script, theme: "explicit" },
-      scene: null,
+      scenes: [],
       shots: [],
       beatEnds: [],
       notes: [],

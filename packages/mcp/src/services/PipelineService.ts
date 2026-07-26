@@ -52,6 +52,7 @@ import {
   IAutoMoviePerformOutput,
   IAutoMovieStageOutput,
 } from "../dto";
+import { soleScene } from "../project/slateScenes";
 import {
   isRecord,
   validateActorRestFramesArtifact,
@@ -150,13 +151,13 @@ export class PipelineService {
             slate.script,
           ),
         );
-      if (slate.scene === null)
+      if (soleScene(slate) === null)
         missing.push(
           violation(
             "type",
             "$slate.scene",
             "a scene must be committed before a resident block",
-            slate.scene,
+            soleScene(slate),
           ),
         );
       if (missing.length > 0)
@@ -165,7 +166,7 @@ export class PipelineService {
       // blockBeat reads only the staged scene's nodes; staging-level mounts
       // are not a resident slice (the getShotEndState precedent), and block
       // never consumes them.
-      staged = { success: true, scene: slate.scene!, mounts: [] };
+      staged = { success: true, scene: soleScene(slate)!, mounts: [] };
       scriptRoot = "$slate.script";
       stagedRoot = "$slate.scene";
       // Continuity-seed: when the caller carries nothing explicitly, the
@@ -265,13 +266,13 @@ export class PipelineService {
             slate.script,
           ),
         );
-      if (slate.scene === null)
+      if (soleScene(slate) === null)
         missing.push(
           violation(
             "type",
             "$slate.scene",
             "a scene must be committed before a resident perform",
-            slate.scene,
+            soleScene(slate),
           ),
         );
       missing.push(...validateMountsShape(props.mounts));
@@ -318,7 +319,7 @@ export class PipelineService {
       script = { type: "write", ...slate.script! };
       staged = {
         success: true,
-        scene: slate.scene!,
+        scene: soleScene(slate)!,
         mounts: props.mounts ?? [],
       };
     }
@@ -352,7 +353,7 @@ export class PipelineService {
         props.performance,
         slate.script!,
         slate.beatEnds,
-        slate.scene!,
+        soleScene(slate)!,
       );
       if (seeded.violations.length > 0)
         return {
@@ -594,7 +595,7 @@ export class PipelineService {
         ]),
       };
     const alreadyStored = project.storedProps().some((s) => s.node === node);
-    const scene = project.storedSlate().scene;
+    const scene = soleScene(project.storedSlate());
     const placed =
       scene !== null && scene.nodes.some((entry) => entry.id === node);
     if (alreadyStored && placed)

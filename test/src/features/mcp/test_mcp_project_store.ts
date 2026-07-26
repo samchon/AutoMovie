@@ -65,7 +65,7 @@ const slateWith = (
   partial: Partial<IAutoMovieMcpWritableSlate>,
 ): IAutoMovieMcpWritableSlate => ({
   script: null,
-  scene: null,
+  scenes: [],
   shots: [],
   beatEnds: [],
   notes: [],

@@ -198,7 +198,7 @@ export const test_mcp_commit_shot_motion_registry = (): void => {
     // 5. explicit-slate, no registry → still a pure transform, committed.
     const explicitSlate: IAutoMovieMcpWritableSlate = {
       script,
-      scene: staged.scene,
+      scenes: [staged.scene],
       shots: [],
       beatEnds: [],
       notes: [],

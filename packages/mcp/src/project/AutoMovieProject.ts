@@ -138,10 +138,7 @@ export class AutoMovieProject {
       this.slicePath("script.json"),
       validateScriptSlice,
     );
-    const scene = readValidatedJson<IAutoMovieScene>(
-      this.slicePath("scene.json"),
-      validateSceneSlice,
-    );
+    const scenes = this.readStagedScenes();
     const shots = this.readKeyedSlices<IAutoMovieShot>(
       "shots",
       {
@@ -153,7 +150,7 @@ export class AutoMovieProject {
     );
     return {
       script,
-      scene,
+      scenes,
       shots,
       beatEnds: this.readKeyedSlices<IAutoMovieBeatEndState>(
         "beatEnds",
@@ -228,6 +225,8 @@ export class AutoMovieProject {
       slate.shots.map((shot) => [beatOf(shot.id) ?? shot.id, shot]),
     );
     const beatEnds = new Map(slate.beatEnds.map((end) => [end.beat, end]));
+    const scenes = new Map(slate.scenes.map((scene) => [scene.id, scene]));
+    assertNoCaseCollisions("scenes", scenes.keys());
     assertNoCaseCollisions("shots", shots.keys());
     assertNoCaseCollisions("beatEnds", beatEnds.keys());
     // Stage EVERYTHING before the first byte touches disk: JSON.stringify is
@@ -235,7 +234,9 @@ export class AutoMovieProject {
     // and staging it here is what makes the cycle all-or-nothing.
     const staged: Array<{ file: string; content: string | null }> = [
       this.stageSlice("script.json", slate.script),
-      this.stageSlice("scene.json", slate.scene),
+      // The legacy single-scene slice is removed on every write, so a project
+      // written before #1171 migrates the first time it is committed to.
+      this.stageSlice("scene.json", null),
       this.stageSlice("film.json", slate.film),
       this.stageSlice(
         "notes.json",
@@ -249,6 +250,7 @@ export class AutoMovieProject {
         if (content === null) {
           if (fs.existsSync(file)) fs.rmSync(file);
         } else writeAtomic(file, content);
+      this.flushBeatSlices("scenes", stageBeatSlices(scenes));
       this.flushBeatSlices("shots", stagedShots);
       this.flushBeatSlices("beatEnds", stagedBeatEnds);
     });
@@ -483,7 +485,7 @@ export class AutoMovieProject {
     return {
       root: this.root,
       script: slate.script !== null,
-      scene: slate.scene !== null,
+      scene: slate.scenes.length !== 0,
       shots: slate.shots.map((shot) => shot.id),
       beatEnds: slate.beatEnds.map((end) => end.beat),
       notes: slate.notes.length,
@@ -536,6 +538,32 @@ export class AutoMovieProject {
 
   private slicePath(name: string): string {
     return path.join(this.root, name);
+  }
+
+  /**
+   * Every staged scene, read from `scenes/<id>.json`.
+   *
+   * A project written before #1171 has one `scene.json` and no directory, so
+   * that slice is read as a one-element collection rather than refused: the
+   * film it holds is still a film, and the next `saveSlate` writes it into the
+   * keyed layout and removes the legacy file.
+   */
+  private readStagedScenes(): IAutoMovieScene[] {
+    const keyed = this.readKeyedSlices<IAutoMovieScene>(
+      "scenes",
+      {
+        label: "scene id",
+        expected: (fileKey) => fileKey,
+        actual: (scene) => scene.id,
+      },
+      (file, scene) => validateProjectValue(file, scene, validateSceneSlice),
+    );
+    if (keyed.length !== 0) return keyed;
+    const legacy = readValidatedJson<IAutoMovieScene>(
+      this.slicePath("scene.json"),
+      validateSceneSlice,
+    );
+    return legacy === null ? [] : [legacy];
   }
 
   private readKeyedSlices<T>(
@@ -593,6 +621,7 @@ interface IManifest {
 }
 
 const RESERVED_DIRS = [
+  "scenes",
   "shots",
   "beatEnds",
   "props",

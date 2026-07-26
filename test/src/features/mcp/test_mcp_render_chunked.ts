@@ -314,7 +314,7 @@ export const test_mcp_render_chunked = (): void => {
     // 6. explicit slate keeps the legacy frames/<stem> defaults, byte-identical
     const slate: IAutoMovieMcpWritableSlate = {
       script,
-      scene,
+      scenes: [scene],
       shots: [shot],
       beatEnds: [],
       notes: [],

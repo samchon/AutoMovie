@@ -30,7 +30,7 @@ const walk: IAutoMovieGait = {
 
 const emptySlate: IAutoMovieMcpWritableSlate = {
   script: null,
-  scene: null,
+  scenes: [],
   shots: [],
   beatEnds: [],
   notes: [],

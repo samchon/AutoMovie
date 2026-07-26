@@ -26,7 +26,7 @@ const slate = (
   over: Partial<IAutoMovieMcpWritableSlate>,
 ): IAutoMovieMcpWritableSlate => ({
   script,
-  scene: null,
+  scenes: [],
   shots: [],
   beatEnds: [],
   notes: [],

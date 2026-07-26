@@ -134,7 +134,7 @@ const residentShot: IAutoMovieShot = {
  *    commitShot supplied the session model/motion payloads; a reopened project
  *    whose actors were never performed (so no `actors/<node>.json` rig exists
  *    either) explains every source a rig can come from.
- * 5. A resident project with parseable but invalid `scene.json` reports a
+ * 5. A resident project with a parseable but invalid scene slice reports a
  *    project-state repair error naming the file before geometry helpers run.
  * 6. Ambiguous duplicate geometry state rejects before the agent can trust the
  *    wrong node or model.
@@ -718,12 +718,12 @@ export const test_mcp_geometry_query_tools = (): void => {
       nodes: [...scene.nodes, scene.nodes[0]!],
     };
     fs.writeFileSync(
-      path.join(root, "scene.json"),
+      path.join(root, "scenes", `${scene.id}.json`),
       `${JSON.stringify(corruptScene, null, 2)}\n`,
     );
     const sceneFileError = [
       "AutoMovie project file",
-      "scene.json",
+      `${scene.id}.json`,
       "Fix or remove",
       'scene node id "actor" must be unique',
     ];

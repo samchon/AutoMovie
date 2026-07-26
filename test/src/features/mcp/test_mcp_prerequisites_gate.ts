@@ -21,7 +21,7 @@ const script: IAutoMovieScript = {
 
 const emptySlate: IAutoMovieMcpWritableSlate = {
   script: null,
-  scene: null,
+  scenes: [],
   shots: [],
   beatEnds: [],
   notes: [],
