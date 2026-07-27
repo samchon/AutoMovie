@@ -1,0 +1,889 @@
+import {
+  IAutoMovieGeneratedManifest,
+  IAutoMovieRenderBundleManifest,
+  IAutoMovieStoredReview,
+} from "@automovie/interface";
+import {
+  AutoMovieProductionCompiler,
+  AutoMovieProductionProject,
+  digestAutoMovieBytes,
+} from "@automovie/mcp";
+import { TestValidator } from "@nestia/e2e";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+import {
+  formationDesign,
+  modelRecipe,
+  productionDesign,
+  productionFixture,
+  shotContract,
+  worldDesign,
+} from "./productionFixtures";
+
+const throws = (closure: () => unknown): boolean => {
+  try {
+    closure();
+    return false;
+  } catch {
+    return true;
+  }
+};
+
+/** The resident production store enforces path, revision and ownership rules. */
+export const test_mcp_production_project = (): void => {
+  const fixture = productionFixture();
+  try {
+    const project = AutoMovieProductionProject.open(fixture.root);
+    TestValidator.predicate(
+      "manifest and summary preserve tracked identity",
+      project.manifest().formatVersion === 2 &&
+        project.summary().initialized === false &&
+        project.generatedRoot() === path.join(fixture.root, "generated") &&
+        project.renderRoot() === path.join(fixture.root, "renders"),
+    );
+    const manifestCopy = project.manifest();
+    manifestCopy.generatedRoot = "caller-mutated";
+    TestValidator.equals(
+      "manifest callers cannot mutate resident ownership state",
+      project.manifest().generatedRoot,
+      "generated",
+    );
+    TestValidator.predicate(
+      "every design target is readable",
+      project.design({ kind: "production" }) !== null &&
+        project.design({ kind: "model", id: "sentinel" }) !== null &&
+        project.design({ kind: "world" }) !== null &&
+        project.design({ kind: "formation", id: "absent" }) === null &&
+        project.design({ kind: "shot", id: "opening" }) !== null &&
+        project.design({ kind: "acceptance", id: "opening-beauty" }) !== null,
+    );
+    const stagedShot = {
+      ...shotContract(),
+      reviewFrames: [],
+    };
+    const stagedDependencyBreak = project.setShotContract(stagedShot);
+    TestValidator.predicate(
+      "one-artifact setters accept an orderable dependency migration but expose its new downstream blockers",
+      stagedDependencyBreak.accepted &&
+        stagedDependencyBreak.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "design-downstream-invalidated" &&
+            diagnostic.category === "warning" &&
+            diagnostic.target.startsWith("acceptance:"),
+        ) &&
+        new AutoMovieProductionCompiler(project).lint({ scope: "design" })
+          .success === false,
+    );
+    const unrelatedDuringMigration = project.setWorldDesign(worldDesign());
+    TestValidator.predicate(
+      "an unrelated setter does not claim a pre-existing migration blocker as its consequence",
+      unrelatedDuringMigration.accepted &&
+        unrelatedDuringMigration.diagnostics.every(
+          (diagnostic) => diagnostic.code !== "design-downstream-invalidated",
+        ),
+    );
+    TestValidator.predicate(
+      "restoring the upstream contract clears the staged dependency break",
+      project.setShotContract(shotContract()).accepted &&
+        new AutoMovieProductionCompiler(project).lint({ scope: "design" })
+          .success,
+    );
+    TestValidator.predicate(
+      "source ownership rejects absolute, external and non-TypeScript paths",
+      throws(() => project.resolveSourcePath(path.resolve("outside.ts"))) &&
+        throws(() => project.resolveSourcePath("../outside.ts")) &&
+        throws(() => project.resolveSourcePath("outside/source.ts")) &&
+        throws(() => project.resolveSourcePath("src/not-source.json")) &&
+        throws(() => project.readSource("src/missing.ts")),
+    );
+    const outsideSource = path.join(fixture.root, "outside-source");
+    const sourceJunction = path.join(fixture.root, "src/junction");
+    fs.mkdirSync(outsideSource, { recursive: true });
+    fs.writeFileSync(path.join(outsideSource, "escape.ts"), "export {};\n");
+    fs.symlinkSync(outsideSource, sourceJunction, "junction");
+    TestValidator.predicate(
+      "source realpaths cannot escape through a directory junction",
+      throws(() => project.readSource("src/junction/escape.ts")),
+    );
+
+    const invalidSchema = project.setModelRecipe(
+      {} as ReturnType<typeof modelRecipe>,
+    );
+    const invalidGraph = project.setModelRecipe({
+      ...modelRecipe(),
+      parameters: { ...modelRecipe().parameters, height: 99 },
+    });
+    const invalidReference = project.setFormationDesign({
+      ...formationDesign(),
+      id: "missing-model-formation",
+      modelRecipe: "absent",
+    });
+    TestValidator.predicate(
+      "setter rejects both schema and graph errors before writing",
+      invalidSchema.accepted === false &&
+        invalidSchema.diagnostics[0]?.code === "design-schema-invalid" &&
+        invalidGraph.accepted === false &&
+        invalidGraph.diagnostics.some(
+          (item) => item.code === "model-parameter-invalid",
+        ) &&
+        invalidReference.diagnostics.some(
+          (item) => item.code === "design-reference-missing",
+        ),
+    );
+    TestValidator.predicate(
+      "missing design erase is explicit",
+      project.eraseDesignArtifact({
+        kind: "formation",
+        id: "absent",
+      }).diagnostics[0]?.code === "design-missing",
+    );
+    TestValidator.predicate(
+      "shot acceptance references block erasure",
+      project
+        .eraseDesignArtifact({
+          kind: "shot",
+          id: "opening",
+        })
+        .diagnostics.some((item) => item.code === "design-reference-active"),
+    );
+    const filmAcceptance = {
+      id: "film-opening-beauty",
+      target: { kind: "film" as const, id: "fixture-film" },
+      criterion: {
+        kind: "frame" as const,
+        shot: "opening",
+        frame: "signal-apex",
+        pass: "beauty" as const,
+        expectation: "The film retains the opening signal frame.",
+      },
+      required: true,
+    };
+    const filmEventAcceptance = {
+      id: "film-opening-event",
+      target: { kind: "film" as const, id: "fixture-film" },
+      criterion: {
+        kind: "event" as const,
+        shot: "opening",
+        event: "signal-raised",
+        expectation: "The opening signal event remains in the film.",
+      },
+      required: true,
+    };
+    TestValidator.predicate(
+      "film-scoped criteria are real shot and production references",
+      project.setAcceptanceScenario(filmAcceptance).accepted &&
+        project.setAcceptanceScenario(filmEventAcceptance).accepted &&
+        project
+          .eraseDesignArtifact({ kind: "shot", id: "opening" })
+          .diagnostics.some((diagnostic) =>
+            diagnostic.message.includes("acceptance:film-opening-beauty"),
+          ) &&
+        project
+          .eraseDesignArtifact({ kind: "production" })
+          .diagnostics.some((diagnostic) =>
+            diagnostic.message.includes("acceptance:film-opening-beauty"),
+          ),
+    );
+    TestValidator.predicate(
+      "temporary film acceptances erase without a cascade",
+      project.eraseDesignArtifact({
+        kind: "acceptance",
+        id: filmAcceptance.id,
+      }).accepted &&
+        project.eraseDesignArtifact({
+          kind: "acceptance",
+          id: filmEventAcceptance.id,
+        }).accepted,
+    );
+    const standaloneModel = {
+      ...modelRecipe(),
+      id: "standalone",
+      lod: [
+        {
+          tier: "hero" as const,
+          maxDistance: null,
+          recipe: "standalone",
+        },
+      ],
+    };
+    TestValidator.predicate(
+      "a model's self LOD does not make the model impossible to erase",
+      project.setModelRecipe(standaloneModel).accepted &&
+        project.eraseDesignArtifact({
+          kind: "model",
+          id: standaloneModel.id,
+        }).accepted,
+    );
+    project.setFormationDesign(formationDesign());
+    const dependentModel = {
+      ...modelRecipe(),
+      id: "sentinel-variant",
+      lod: [
+        { tier: "hero" as const, maxDistance: 10, recipe: "sentinel" },
+        {
+          tier: "far" as const,
+          maxDistance: null,
+          recipe: "sentinel-variant",
+        },
+      ],
+    };
+    const dependentModelMutation = project.setModelRecipe(dependentModel);
+    const refusedModelErase = project.eraseDesignArtifact({
+      kind: "model",
+      id: "sentinel",
+    });
+    TestValidator.predicate(
+      "model consequences and erasure include dependent LOD models and formations",
+      dependentModelMutation.accepted &&
+        refusedModelErase.consequences.staleReviews.some(
+          (target) =>
+            target.kind === "design" &&
+            target.design.kind === "model" &&
+            target.design.id === "sentinel-variant",
+        ) &&
+        refusedModelErase.diagnostics.some(
+          (item) =>
+            item.message.includes("model:sentinel-variant") ||
+            item.message.includes("formation:line"),
+        ),
+    );
+    project.setShotContract({
+      ...shotContract(),
+      participants: [{ kind: "formation", id: "line" }],
+    });
+    TestValidator.predicate(
+      "formation references block erasure",
+      project
+        .eraseDesignArtifact({
+          kind: "formation",
+          id: "line",
+        })
+        .diagnostics.some((item) => item.code === "design-reference-active"),
+    );
+    const modelMutation = project.setModelRecipe(modelRecipe());
+    const worldMutation = project.setWorldDesign(worldDesign());
+    const productionMutation = project.setProductionDesign(productionDesign());
+    TestValidator.predicate(
+      "mutation consequences identify dependent shot and film",
+      modelMutation.consequences.staleRenders.includes("shot:opening") &&
+        worldMutation.consequences.staleReviews.some(
+          (target) => target.kind === "film",
+        ) &&
+        productionMutation.consequences.staleRenders.length > 0,
+    );
+    project.setShotContract(shotContract());
+    TestValidator.predicate(
+      "unreferenced formation erases",
+      project.eraseDesignArtifact({
+        kind: "formation",
+        id: "line",
+      }).accepted,
+    );
+
+    const first = AutoMovieProductionProject.open(fixture.root);
+    const stale = AutoMovieProductionProject.open(fixture.root);
+    first.setWorldDesign(worldDesign());
+    TestValidator.predicate(
+      "optimistic revision rejects stale resident writers",
+      throws(() => stale.setProductionDesign(productionDesign())),
+    );
+
+    const compiler = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.open(fixture.root),
+    );
+    const compiled = compiler.compile({ scope: "source" });
+    TestValidator.predicate("project compiler fixture", compiled.success);
+    const linkedGenerated = productionFixture();
+    const outsideGenerated = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-generated-outside-"),
+    );
+    try {
+      const linkedProject = AutoMovieProductionProject.open(
+        linkedGenerated.root,
+      );
+      const linkedCompiler = new AutoMovieProductionCompiler(linkedProject);
+      TestValidator.predicate(
+        "linked generated fixture compiles",
+        linkedCompiler.compile({ scope: "source" }).success,
+      );
+      const shotsRoot = path.join(linkedProject.generatedRoot(), "shots");
+      fs.copyFileSync(
+        path.join(shotsRoot, "opening.json"),
+        path.join(outsideGenerated, "opening.json"),
+      );
+      fs.rmSync(shotsRoot, { force: true, recursive: true });
+      fs.symlinkSync(outsideGenerated, shotsRoot, "junction");
+      const unsafeGenerated = linkedCompiler.lint({ scope: "source" });
+      TestValidator.predicate(
+        "generated reads and compiler ownership refuse a nested junction",
+        throws(() => linkedProject.readGeneratedFile("shots/opening.json")) &&
+          throws(() => linkedProject.readGeneratedFile("shots")) &&
+          throws(() => linkedProject.readGeneratedFile("contracts")) &&
+          unsafeGenerated.diagnostics.some(
+            (item) => item.code === "generated-path-outside",
+          ),
+      );
+    } finally {
+      linkedGenerated.dispose();
+      fs.rmSync(outsideGenerated, { force: true, recursive: true });
+    }
+    const linkedState = productionFixture();
+    const outsideState = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-state-outside-"),
+    );
+    try {
+      const stateProject = AutoMovieProductionProject.open(linkedState.root);
+      const modelRoot = path.join(linkedState.root, ".automovie/design/models");
+      fs.copyFileSync(
+        path.join(modelRoot, "sentinel.json"),
+        path.join(outsideState, "sentinel.json"),
+      );
+      fs.rmSync(modelRoot, { force: true, recursive: true });
+      fs.symlinkSync(outsideState, modelRoot, "junction");
+      TestValidator.predicate(
+        "tracked design reads refuse a nested state junction",
+        throws(() => stateProject.graph()),
+      );
+    } finally {
+      linkedState.dispose();
+      fs.rmSync(outsideState, { force: true, recursive: true });
+    }
+    const linkedStateFile = productionFixture();
+    const outsideStateFile = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-state-file-outside-"),
+    );
+    try {
+      const stateProject = AutoMovieProductionProject.open(
+        linkedStateFile.root,
+      );
+      fs.symlinkSync(
+        outsideStateFile,
+        path.join(linkedStateFile.root, ".automovie/design/models/unsafe.json"),
+        "junction",
+      );
+      TestValidator.predicate(
+        "tracked keyed design refuses a symbolic JSON entry",
+        throws(() => stateProject.graph()),
+      );
+    } finally {
+      linkedStateFile.dispose();
+      fs.rmSync(outsideStateFile, { force: true, recursive: true });
+    }
+    const ownerProject = AutoMovieProductionProject.open(fixture.root);
+    TestValidator.predicate(
+      "missing keyed design reads are explicit",
+      ownerProject.design({ kind: "shot", id: "absent" }) === null &&
+        ownerProject.design({ kind: "acceptance", id: "absent" }) === null,
+    );
+    const oldManifest = ownerProject.generatedManifest()!;
+    const retained = oldManifest.files.filter((entry) =>
+      entry.path.startsWith("contracts/"),
+    );
+    const retainedBytes = new Map(
+      retained.map((entry) => [
+        entry.path,
+        fs.readFileSync(path.join(ownerProject.generatedRoot(), entry.path)),
+      ]),
+    );
+    const smaller: IAutoMovieGeneratedManifest = {
+      ...oldManifest,
+      files: retained,
+    };
+    ownerProject.commitGenerated(retainedBytes, smaller);
+    TestValidator.predicate(
+      "generated commit deletes formerly declared stale files",
+      fs.existsSync(
+        path.join(ownerProject.generatedRoot(), "shots/opening.json"),
+      ) === false,
+    );
+    TestValidator.predicate(
+      "generated and render writes cannot escape owned roots",
+      throws(() =>
+        ownerProject.commitGenerated(
+          new Map([["../escape", Buffer.from("x")]]),
+          oldManifest,
+        ),
+      ) &&
+        throws(() =>
+          ownerProject.commitRenderBundle("../escape", new Map(), {
+            version: 1,
+            target: { kind: "shot", id: "opening" },
+            compileFingerprint: oldManifest.inputFingerprint,
+            renderSpec: {
+              target: "opening",
+              frameFormat: { width: 1, height: 1, fps: 1 },
+              toneMapping: "none",
+              codec: "h264",
+              pixelFormat: "yuv420p",
+              crf: 17,
+            },
+            frames: [],
+          }),
+        ),
+    );
+
+    const renderManifest: IAutoMovieRenderBundleManifest = {
+      version: 1,
+      target: { kind: "shot", id: "opening" },
+      compileFingerprint: oldManifest.inputFingerprint,
+      renderSpec: {
+        target: "opening",
+        frameFormat: { width: 1, height: 1, fps: 1 },
+        toneMapping: "none",
+        codec: "h264",
+        pixelFormat: "yuv420p",
+        crf: 17,
+      },
+      frames: [],
+    };
+    const revision = ownerProject.commitRenderBundle(
+      "manual",
+      new Map([["frame.bin", Buffer.from("frame")]]),
+      renderManifest,
+    );
+    TestValidator.predicate(
+      "render bundle commits bytes and manifest atomically",
+      revision > 0 &&
+        fs.existsSync(
+          path.join(ownerProject.renderRoot(), "manual/manifest.json"),
+        ),
+    );
+    const renderFramePath = path.join(
+      ownerProject.renderRoot(),
+      "manual/frame.bin",
+    );
+    const renderManifestPath = path.join(
+      ownerProject.renderRoot(),
+      "manual/manifest.json",
+    );
+    const frameBeforeFailure = fs.readFileSync(renderFramePath);
+    const manifestBeforeFailure = fs.readFileSync(renderManifestPath);
+    const revisionBeforeFailure = ownerProject.revision();
+    const renameSync = fs.renameSync;
+    fs.renameSync = ((oldPath, newPath) => {
+      if (String(newPath) === renderManifestPath)
+        throw new Error("injected manifest rename failure");
+      return renameSync(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    try {
+      TestValidator.predicate(
+        "multi-file commit rolls back updated and newly created files",
+        throws(() =>
+          ownerProject.commitRenderBundle(
+            "manual",
+            new Map([
+              ["frame.bin", Buffer.from("changed")],
+              ["new.bin", Buffer.from("new")],
+            ]),
+            renderManifest,
+          ),
+        ) &&
+          fs.readFileSync(renderFramePath).equals(frameBeforeFailure) &&
+          fs.readFileSync(renderManifestPath).equals(manifestBeforeFailure) &&
+          fs.existsSync(
+            path.join(ownerProject.renderRoot(), "manual/new.bin"),
+          ) === false &&
+          ownerProject.revision() === revisionBeforeFailure,
+      );
+    } finally {
+      fs.renameSync = renameSync;
+    }
+    let renameFailures = 0;
+    fs.renameSync = ((oldPath, newPath) => {
+      const target = String(newPath);
+      if (
+        (renameFailures === 0 && target === renderManifestPath) ||
+        (renameFailures === 1 && target === renderFramePath)
+      ) {
+        ++renameFailures;
+        throw new Error(`injected rename failure ${renameFailures}`);
+      }
+      return renameSync(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    try {
+      let aggregate = false;
+      try {
+        ownerProject.commitRenderBundle(
+          "manual",
+          new Map([["frame.bin", Buffer.from("changed-again")]]),
+          renderManifest,
+        );
+      } catch (error) {
+        aggregate = error instanceof AggregateError;
+      }
+      TestValidator.predicate(
+        "rollback failure is surfaced as an aggregate instead of hidden",
+        aggregate && ownerProject.revision() === revisionBeforeFailure,
+      );
+    } finally {
+      fs.renameSync = renameSync;
+      fs.writeFileSync(renderFramePath, frameBeforeFailure);
+      fs.writeFileSync(renderManifestPath, manifestBeforeFailure);
+    }
+    fs.rmSync(renderFramePath);
+    const outsideRenderTarget = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-render-target-"),
+    );
+    fs.symlinkSync(outsideRenderTarget, renderFramePath, "junction");
+    TestValidator.predicate(
+      "commit target cannot be replaced through a symlink or junction",
+      throws(() =>
+        ownerProject.commitRenderBundle(
+          "manual",
+          new Map([["frame.bin", Buffer.from("unsafe")]]),
+          renderManifest,
+        ),
+      ),
+    );
+    fs.rmdirSync(renderFramePath);
+    fs.rmSync(outsideRenderTarget, { force: true, recursive: true });
+    const lstatSync = fs.lstatSync;
+    Object.defineProperty(fs, "lstatSync", {
+      configurable: true,
+      value: ((filePath: fs.PathLike, options?: unknown) => {
+        if (String(filePath).endsWith("denied.json")) {
+          const error = new Error(
+            "injected lstat denial",
+          ) as NodeJS.ErrnoException;
+          error.code = "EACCES";
+          throw error;
+        }
+        return lstatSync(filePath, options as never);
+      }) as typeof fs.lstatSync,
+    });
+    try {
+      TestValidator.predicate(
+        "non-missing lstat errors are not hidden as absent files",
+        throws(() => ownerProject.readTrackedStateFile("denied.json")),
+      );
+    } finally {
+      Object.defineProperty(fs, "lstatSync", {
+        configurable: true,
+        value: lstatSync,
+      });
+    }
+    TestValidator.predicate(
+      "all review target paths are owned and encoded",
+      [
+        { kind: "design" as const, design: { kind: "production" as const } },
+        { kind: "design" as const, design: { kind: "world" as const } },
+        {
+          kind: "design" as const,
+          design: { kind: "formation" as const, id: "line/name" },
+        },
+        { kind: "source" as const, path: "src/shots/opening.ts" },
+        { kind: "shot" as const, id: "opening" },
+        { kind: "film" as const, id: "fixture-film" },
+      ].every((target) =>
+        ownerProject
+          .reviewPath(target)
+          .startsWith(path.join(fixture.root, ".automovie/reviews")),
+      ),
+    );
+    TestValidator.predicate(
+      "blank encoded review identity is rejected",
+      throws(() =>
+        ownerProject.reviewPath({
+          kind: "shot",
+          id: " ",
+        }),
+      ),
+    );
+    const stored: IAutoMovieStoredReview = {
+      version: 1,
+      target: { kind: "source", path: "src/shots/opening.ts" },
+      fingerprint: oldManifest.inputFingerprint,
+      observations: "stored",
+      checks: [],
+      corrections: [],
+      completionBasis: "stored",
+      complete: false,
+    };
+    ownerProject.commitReview(stored);
+    TestValidator.equals(
+      "stored review round-trip",
+      ownerProject.review(stored.target),
+      stored,
+    );
+    TestValidator.equals(
+      "missing review returns null",
+      ownerProject.review({ kind: "shot", id: "absent" }),
+      null,
+    );
+    TestValidator.predicate(
+      "digest helper remains usable for owned bytes",
+      digestAutoMovieBytes(Buffer.from("frame")).startsWith("sha256:"),
+    );
+
+    const modelDirectory = path.join(fixture.root, ".automovie/design/models");
+    const encodedDuplicate = path.join(modelDirectory, "%73entinel.json");
+    fs.writeFileSync(encodedDuplicate, JSON.stringify(modelRecipe()));
+    TestValidator.predicate(
+      "distinct filenames cannot decode to one design id",
+      throws(() => ownerProject.graph()),
+    );
+    fs.rmSync(encodedDuplicate);
+    const kelvin = { ...modelRecipe(), id: "K" };
+    const lowerK = { ...modelRecipe(), id: "k" };
+    fs.writeFileSync(
+      path.join(modelDirectory, `${encodeURIComponent(kelvin.id)}.json`),
+      JSON.stringify(kelvin),
+    );
+    fs.writeFileSync(
+      path.join(modelDirectory, `${encodeURIComponent(lowerK.id)}.json`),
+      JSON.stringify(lowerK),
+    );
+    TestValidator.predicate(
+      "case-folding collisions are rejected even with distinct filenames",
+      throws(() => ownerProject.graph()),
+    );
+    fs.rmSync(
+      path.join(modelDirectory, `${encodeURIComponent(kelvin.id)}.json`),
+    );
+    fs.rmSync(
+      path.join(modelDirectory, `${encodeURIComponent(lowerK.id)}.json`),
+    );
+    const vanished = path.join(modelDirectory, "vanished.json");
+    fs.writeFileSync(
+      vanished,
+      JSON.stringify({ ...modelRecipe(), id: "vanished" }),
+    );
+    const residentReadFileSync = fs.readFileSync;
+    fs.readFileSync = ((file: fs.PathOrFileDescriptor, ...args: unknown[]) => {
+      if (path.resolve(String(file)) === path.resolve(vanished))
+        fs.rmSync(vanished, { force: true });
+      return (residentReadFileSync as (...parameters: unknown[]) => unknown)(
+        file,
+        ...args,
+      );
+    }) as typeof fs.readFileSync;
+    try {
+      TestValidator.predicate(
+        "a design disappearing during inventory is a loud race",
+        throws(() => ownerProject.graph()),
+      );
+    } finally {
+      fs.readFileSync = residentReadFileSync;
+    }
+    const invalidTyped = path.join(modelDirectory, "invalid.json");
+    fs.writeFileSync(invalidTyped, "null");
+    TestValidator.predicate(
+      "present JSON null is invalid typed design rather than absence",
+      throws(() => ownerProject.graph()),
+    );
+    fs.rmSync(invalidTyped);
+  } finally {
+    fixture.dispose();
+  }
+
+  const invalidRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-production-root-"),
+  );
+  try {
+    const fileRoot = path.join(invalidRoot, "file");
+    fs.writeFileSync(fileRoot, "x");
+    TestValidator.predicate(
+      "project root must be a directory",
+      throws(() => AutoMovieProductionProject.open(fileRoot)),
+    );
+    const fresh = path.join(invalidRoot, "fresh");
+    const initialized = AutoMovieProductionProject.open(fresh);
+    TestValidator.predicate(
+      "fresh project initializes format and directories",
+      initialized.summary().initialized &&
+        initialized.revision() === 0 &&
+        initialized.inventory().production === false,
+    );
+    TestValidator.predicate(
+      "every absent design discriminator returns one missing mutation",
+      [
+        { kind: "production" as const },
+        { kind: "model" as const, id: "absent" },
+        { kind: "world" as const },
+        { kind: "formation" as const, id: "absent" },
+        { kind: "shot" as const, id: "absent" },
+        { kind: "acceptance" as const, id: "absent" },
+      ].every(
+        (target) =>
+          initialized.eraseDesignArtifact(target).diagnostics[0]?.code ===
+          "design-missing",
+      ),
+    );
+
+    for (const value of [
+      "{bad",
+      "null",
+      '{"formatVersion":1}',
+      '{"formatVersion":2,"projectId":"","sourceRoots":[],"generatedRoot":"g","renderRoot":"r"}',
+    ]) {
+      const root = path.join(invalidRoot, `manifest-${Math.random()}`);
+      fs.mkdirSync(path.join(root, ".automovie"), { recursive: true });
+      fs.writeFileSync(path.join(root, ".automovie/manifest.json"), value);
+      TestValidator.predicate(
+        "invalid manifest is rejected",
+        throws(() => AutoMovieProductionProject.open(root)),
+      );
+    }
+    const invalidOwnedRoot = path.join(invalidRoot, "absolute-owned");
+    fs.mkdirSync(path.join(invalidOwnedRoot, ".automovie"), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(invalidOwnedRoot, ".automovie/manifest.json"),
+      JSON.stringify({
+        formatVersion: 2,
+        projectId: "x",
+        sourceRoots: ["src"],
+        generatedRoot: path.resolve(invalidRoot, "outside"),
+        renderRoot: "renders",
+      }),
+    );
+    TestValidator.predicate(
+      "manifest-owned roots must be relative",
+      throws(() => AutoMovieProductionProject.open(invalidOwnedRoot)),
+    );
+    for (const [name, ownership] of [
+      [
+        "blank-generated",
+        { sourceRoots: ["src"], generatedRoot: "", renderRoot: "renders" },
+      ],
+      [
+        "project-root",
+        { sourceRoots: ["src"], generatedRoot: ".", renderRoot: "renders" },
+      ],
+      [
+        "reserved-state",
+        {
+          sourceRoots: ["src"],
+          generatedRoot: ".automovie/generated",
+          renderRoot: "renders",
+        },
+      ],
+      [
+        "source-generated-overlap",
+        {
+          sourceRoots: ["src"],
+          generatedRoot: "src/generated",
+          renderRoot: "renders",
+        },
+      ],
+      [
+        "source-source-overlap",
+        {
+          sourceRoots: ["src", "src/shots"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+        },
+      ],
+      [
+        "generated-render-overlap",
+        {
+          sourceRoots: ["src"],
+          generatedRoot: "output",
+          renderRoot: "output/renders",
+        },
+      ],
+    ] as const) {
+      const root = path.join(invalidRoot, `ownership-${name}`);
+      fs.mkdirSync(path.join(root, ".automovie"), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, ".automovie/manifest.json"),
+        JSON.stringify({
+          formatVersion: 2,
+          projectId: name,
+          ...ownership,
+        }),
+      );
+      TestValidator.predicate(
+        `manifest ownership layout rejects ${name}`,
+        throws(() => AutoMovieProductionProject.open(root)),
+      );
+    }
+
+    const junctionOutside = path.join(invalidRoot, "junction-outside");
+    fs.mkdirSync(junctionOutside);
+    const junctionRoot = path.join(invalidRoot, "junction-owned-root");
+    fs.mkdirSync(path.join(junctionRoot, ".automovie"), { recursive: true });
+    fs.writeFileSync(
+      path.join(junctionRoot, ".automovie/manifest.json"),
+      JSON.stringify({
+        formatVersion: 2,
+        projectId: "junction-owned-root",
+        sourceRoots: ["src"],
+        generatedRoot: "generated",
+        renderRoot: "renders",
+      }),
+    );
+    fs.symlinkSync(
+      junctionOutside,
+      path.join(junctionRoot, "generated"),
+      "junction",
+    );
+    TestValidator.predicate(
+      "compiler-owned root cannot escape through a junction",
+      throws(() => AutoMovieProductionProject.open(junctionRoot)),
+    );
+
+    const stateOutside = path.join(invalidRoot, "state-outside");
+    const stateJunctionRoot = path.join(invalidRoot, "state-junction-root");
+    fs.mkdirSync(stateOutside);
+    fs.mkdirSync(stateJunctionRoot);
+    fs.symlinkSync(
+      stateOutside,
+      path.join(stateJunctionRoot, ".automovie"),
+      "junction",
+    );
+    TestValidator.predicate(
+      "reserved state cannot escape through a junction",
+      throws(() => AutoMovieProductionProject.open(stateJunctionRoot)) &&
+        fs.readdirSync(stateOutside).length === 0,
+    );
+
+    const malformedDesign = productionFixture();
+    try {
+      fs.writeFileSync(
+        path.join(malformedDesign.root, ".automovie/design/models/%ZZ.json"),
+        JSON.stringify(modelRecipe()),
+      );
+      TestValidator.predicate(
+        "malformed encoded design filename is rejected",
+        throws(() =>
+          AutoMovieProductionProject.open(malformedDesign.root).graph(),
+        ),
+      );
+      fs.rmSync(
+        path.join(malformedDesign.root, ".automovie/design/models/%ZZ.json"),
+      );
+      fs.writeFileSync(
+        path.join(malformedDesign.root, ".automovie/design/world.json"),
+        "{bad",
+      );
+      TestValidator.predicate(
+        "invalid design JSON is rejected",
+        throws(() =>
+          AutoMovieProductionProject.open(malformedDesign.root).graph(),
+        ),
+      );
+    } finally {
+      malformedDesign.dispose();
+    }
+
+    const invalidRevision = productionFixture();
+    try {
+      fs.writeFileSync(
+        path.join(invalidRevision.root, ".automovie/revision.json"),
+        '{"revision":-1}',
+      );
+      TestValidator.predicate(
+        "revision must be a non-negative safe integer",
+        throws(() => AutoMovieProductionProject.open(invalidRevision.root)),
+      );
+    } finally {
+      invalidRevision.dispose();
+    }
+  } finally {
+    fs.rmSync(invalidRoot, { force: true, recursive: true });
+  }
+};

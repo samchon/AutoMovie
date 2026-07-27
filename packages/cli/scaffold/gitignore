@@ -1,5 +1,8 @@
 node_modules/
 lib/
 dist/
+generated/
+.automovie/generated-manifest.json
+renders/*/
 *.log
 .DS_Store

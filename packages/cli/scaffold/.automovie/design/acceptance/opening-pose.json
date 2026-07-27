@@ -1,0 +1,11 @@
+{
+  "id": "opening-pose",
+  "target": { "kind": "shot", "id": "opening" },
+  "criterion": {
+    "kind": "frame",
+    "frame": "signal-apex",
+    "pass": "pose",
+    "expectation": "The hips-to-head and raised-arm bone chains are visible in the pose pass."
+  },
+  "required": true
+}

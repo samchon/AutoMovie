@@ -1,0 +1,23 @@
+{
+  "id": "sentinel",
+  "role": "performer",
+  "archetype": "stickman",
+  "parameters": {
+    "height": 1.8,
+    "headRadius": 0.16,
+    "limbRadius": 0.06
+  },
+  "palette": {
+    "body": "#d7b56d",
+    "signal": "#b13f36"
+  },
+  "lod": [
+    {
+      "tier": "hero",
+      "maxDistance": null,
+      "recipe": "sentinel"
+    }
+  ],
+  "capabilities": ["signal"],
+  "attachments": []
+}

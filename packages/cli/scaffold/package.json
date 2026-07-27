@@ -1,22 +1,35 @@
 {
   "name": "{{name}}",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
-  "description": "An automovie project: deterministic character and object motion.",
+  "description": "An AutoMovie coding-agent production repository.",
   "scripts": {
-    "perform": "tsx src/main.ts",
-    "lint": "ttsc --noEmit -p tsconfig.json",
+    "compile": "tsx scripts/compile.ts",
+    "lint": "ttsc --noEmit -p tsconfig.json && tsx scripts/lint.ts",
+    "preview": "tsx scripts/preview.ts",
+    "review:status": "tsx scripts/review-status.ts",
+    "render": "tsx scripts/render.ts",
+    "viewer": "vite --host 127.0.0.1",
+    "test": "tsx test/opening.test.ts",
     "format": "ttsc format -p tsconfig.json"
   },
   "dependencies": {
     "@automovie/engine": "{{version:engine}}",
-    "@automovie/interface": "{{version:interface}}"
+    "@automovie/interface": "{{version:interface}}",
+    "@automovie/mcp": "{{version:mcp}}",
+    "@automovie/viewer": "{{version:viewer}}",
+    "@modelcontextprotocol/sdk": "{{version:mcpSdk}}",
+    "three": "{{version:three}}"
   },
   "devDependencies": {
     "@ttsc/lint": "{{version:ttscLint}}",
     "@types/node": "{{version:nodeTypes}}",
+    "@types/three": "{{version:threeTypes}}",
+    "playwright-core": "{{version:playwrightCore}}",
     "ttsc": "{{version:ttsc}}",
     "tsx": "^4.19.0",
-    "typescript": "{{version:typescript}}"
+    "typescript": "{{version:typescript}}",
+    "vite": "{{version:vite}}"
   }
 }

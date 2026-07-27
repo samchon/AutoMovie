@@ -11,7 +11,8 @@ Usage:
 
 Commands:
   start <directory>   Create <directory> and lay down the starter template:
-                      an MCP server config and a direct-link engine example.
+                      production MCP config, typed shot source, deterministic
+                      compiler, local viewer, capture, tests, and review gates.
 
 Options:
   --force             Scaffold into a non-empty directory.
@@ -78,8 +79,8 @@ export const run = (argv: readonly string[]): number => {
         written
           .map((file) => `  ${path.relative(targetDir, file) || "."}`)
           .join("\n") +
-        `\n\nNext:\n  cd ${dir}\n  npm install\n  npm run perform\n\n` +
-        `README.md walks the MCP server config and the direct-link engine path.\n`,
+        `\n\nNext:\n  cd ${dir}\n  npm install\n  npm run compile\n  npm run preview -- 2 opening\n\n` +
+        `README.md explains source ownership, MCP review gates, and the local viewer.\n`,
     );
     return 0;
   } catch (error) {

@@ -21,6 +21,48 @@ The MCP initialize handshake advertises `automovie` with the installed
 `package.json`, so client diagnostics identify the artifact actually serving
 the tools; MCP protocol-version negotiation remains a separate SDK concern.
 
+## Coding-agent production tools
+
+`automovie-mcp-production` is the opt-in coding-agent-first surface. It keeps
+screenplay, shot builders, motion helpers, effects, and tests in ordinary files,
+then uses MCP where structured calls are stronger than file authoring:
+validated design, deterministic compilation, geometry facts, actual-frame
+evidence, and a freshness-bound review ledger.
+
+Every tool has one exported contract pair:
+`method(props: IAutoMovieX.IProps): IAutoMovieX`. The namespace keeps input and
+result discoverable as one unit while the domain types remain reusable by the
+compiler and host adapters.
+
+| tool | pair contract | purpose |
+|------|---------------|---------|
+| `getGuideDocument` | `IAutoMovieGetGuideDocument.IProps` → `IAutoMovieGetGuideDocument` | read the overall contract and one task-specific topic |
+| `openProject` | `IAutoMovieOpenProject.IProps` → `IAutoMovieOpenProject` | open format-v2 production memory |
+| `inspectProject` | `IAutoMovieInspectProject.IProps` → `IAutoMovieInspectProject` | inspect freshness, ownership, and blockers |
+| `setProductionDesign` | `IAutoMovieSetProductionDesign.IProps` → `IAutoMovieSetProductionDesign` | record production-wide intent and deliverables |
+| `setModelRecipe` | `IAutoMovieSetModelRecipe.IProps` → `IAutoMovieSetModelRecipe` | record a bounded primitive model recipe |
+| `setWorldDesign` | `IAutoMovieSetWorldDesign.IProps` → `IAutoMovieSetWorldDesign` | record terrain and environment contracts |
+| `setFormationDesign` | `IAutoMovieSetFormationDesign.IProps` → `IAutoMovieSetFormationDesign` | record a repeated-unit formation contract |
+| `setShotContract` | `IAutoMovieSetShotContract.IProps` → `IAutoMovieSetShotContract` | bind one shot contract to TypeScript source |
+| `setAcceptanceScenario` | `IAutoMovieSetAcceptanceScenario.IProps` → `IAutoMovieSetAcceptanceScenario` | record one observable acceptance criterion |
+| `eraseDesignArtifact` | `IAutoMovieEraseDesignArtifact.IProps` → `IAutoMovieEraseDesignArtifact` | remove an artifact through dependency checks |
+| `compileProject` | `IAutoMovieCompileProject.IProps` → `IAutoMovieCompileProject` | validate and deterministically lower source |
+| `queryGeometry` | `IAutoMovieQueryGeometry.IProps` → `IAutoMovieQueryGeometry` | ask current numerical geometry questions |
+| `previewFrame` | `IAutoMoviePreviewFrame.IProps` → `Promise<IAutoMoviePreviewFrame>` | capture a fingerprint-bound actual PNG |
+| `prepareReview` | `IAutoMoviePrepareReview.IProps` → `IAutoMoviePrepareReview` | issue a current evidence worksheet |
+| `submitReview` | `IAutoMovieSubmitReview.IProps` → `IAutoMovieSubmitReview` | validate checklist coverage and completion |
+
+The coding agent owns `src`; the compiler owns `generated`. A generated
+manifest binds source hashes, design hashes, compiler version, and generated
+file hashes. A stale source, hand-edited generated file, stale render manifest,
+or review copied from another fingerprint cannot pass the final compile gate.
+The server validates the evidence and state transition; it does not call a
+second LLM or grade creative prose.
+
+This surface remains opt-in until a comparative external-agent benchmark
+demonstrates that it should replace the compact default. The compact and
+granular binaries remain compatible during that experiment.
+
 ## Compact tools
 
 The default server advertises four tools. Keeping the operating entry points
@@ -181,10 +223,13 @@ starter with `npx automovie start <dir>` ([`@automovie/cli`](../cli)).
 ```bash
 # dev (in-workspace, transpiled by ttsx)
 pnpm --filter @automovie/mcp start        # = ttsx src/bin.ts
+pnpm --filter @automovie/mcp start:production # 15-tool coding-agent surface
 pnpm --filter @automovie/mcp start:granular # 47-tool compatibility surface
 
 # built (published): the bin runs the compiled server
 npx @automovie/mcp                        # = node lib/bin.js
+npx -p @automovie/mcp automovie-mcp-production # opt-in coding-agent surface
+npx -p @automovie/mcp automovie-mcp-legacy # explicit compact compatibility name
 npx -p @automovie/mcp automovie-mcp-granular # compatibility binary
 ```
 
@@ -208,4 +253,5 @@ The `automovie-mcp-granular` binary and `createAutoMovieGranularMcpServer`
 retain the one-tool-per-operation surface for clients that already depend on
 those wire names. It advertises the shared schema closure 47 times and can
 exceed mainstream model context windows, so new external-client integrations
-should use the compact default.
+should use the compact default or join the production-surface experiment with
+`automovie-mcp-production`.

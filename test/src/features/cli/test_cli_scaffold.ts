@@ -68,23 +68,53 @@ export const test_cli_scaffold = (): void => {
   // No re-sort: the order is the guarantee. `listFiles` sorts each directory's
   // entries by code unit and recurses in place, so the emitted order is a DFS
   // pre-order over the ON-DISK names, with `gitignore` renamed to `.gitignore`
-  // on the key afterwards. Hence `README.md` leads (uppercase precedes
-  // lowercase by code unit), `.gitignore` sits where `gitignore` sorts rather
-  // than first, and `src/*` sits at `src`'s position. Re-sorting the keys here
-  // made the assertion hold for ANY order the scaffolder produced, so the
-  // cross-host guarantee `listFiles` exists to provide had no test at all.
+  // on the key afterwards. Hence `.automovie/**` leads, while `.gitignore`
+  // sits where the shipped `gitignore` asset sorts rather than at its rendered
+  // position. Re-sorting the keys here made the assertion hold for ANY order
+  // the scaffolder produced, so the cross-host guarantee `listFiles` exists to
+  // provide had no test at all.
   TestValidator.equals(
     "the starter renders its expected file set, in its guaranteed order",
     Object.keys(files),
     [
+      ".automovie/design/acceptance/opening-beauty.json",
+      ".automovie/design/acceptance/opening-pose.json",
+      ".automovie/design/models/sentinel.json",
+      ".automovie/design/production.json",
+      ".automovie/design/shots/opening.json",
+      ".automovie/design/world.json",
+      ".automovie/manifest.json",
+      ".automovie/reviews/README.md",
+      "AGENTS.md",
+      "CLAUDE.md",
       "README.md",
-      "automovie.config.jsonc",
+      "automovie.config.ts",
+      "automovie.mcp.jsonc",
+      "docs/art-direction.md",
+      "docs/historical-notes.md",
+      "docs/screenplay.md",
+      "docs/treatment.md",
       ".gitignore",
       "lint.config.ts",
       "package.json",
-      "src/main.ts",
-      "src/motion.ts",
+      "public/assets/README.md",
+      "public/audio/README.md",
+      "renders/README.md",
+      "scripts/capture.ts",
+      "scripts/compile.ts",
+      "scripts/generatedShotPlugin.ts",
+      "scripts/lint.ts",
+      "scripts/mcp.ts",
+      "scripts/preview.ts",
+      "scripts/render.ts",
+      "scripts/review-status.ts",
+      "src/film.ts",
+      "src/shots/opening.ts",
+      "test/opening.test.ts",
       "tsconfig.json",
+      "viewer/index.html",
+      "viewer/src/main.ts",
+      "vite.config.ts",
     ],
   );
   TestValidator.predicate(
@@ -100,10 +130,29 @@ export const test_cli_scaffold = (): void => {
       files["README.md"]!.startsWith("# demo-film"),
   );
   TestValidator.predicate(
-    "the engine version is the catalog-synced value",
+    "the production package versions are catalog-synced",
     pkg.includes(
       `"@automovie/engine": "${AUTOMOVIE_TEMPLATE_VERSIONS.engine}"`,
-    ),
+    ) &&
+      pkg.includes(`"@automovie/mcp": "${AUTOMOVIE_TEMPLATE_VERSIONS.mcp}"`) &&
+      pkg.includes(
+        `"@automovie/viewer": "${AUTOMOVIE_TEMPLATE_VERSIONS.viewer}"`,
+      ) &&
+      pkg.includes(
+        `"playwright-core": "${AUTOMOVIE_TEMPLATE_VERSIONS.playwrightCore}"`,
+      ),
+  );
+  TestValidator.predicate(
+    "the starter separates owned source from compiler output",
+    files["AGENTS.md"]!.includes("Never edit `generated`") &&
+      files[".gitignore"]!.includes("generated/") &&
+      files["scripts/compile.ts"]!.includes('scope: "source"'),
+  );
+  TestValidator.predicate(
+    "the local MCP host owns actual frame capture",
+    files["automovie.mcp.jsonc"]!.includes("scripts/mcp.ts") &&
+      files["scripts/mcp.ts"]!.includes("captureProductionFrame") &&
+      files["scripts/capture.ts"]!.includes('locator("#view").screenshot'),
   );
   TestValidator.predicate(
     "no placeholder token survives any payload",
@@ -157,14 +206,44 @@ export const test_cli_scaffold = (): void => {
         path.relative(target, absolute).split(path.sep).join("/"),
       ),
       [
+        ".automovie/design/acceptance/opening-beauty.json",
+        ".automovie/design/acceptance/opening-pose.json",
+        ".automovie/design/models/sentinel.json",
+        ".automovie/design/production.json",
+        ".automovie/design/shots/opening.json",
+        ".automovie/design/world.json",
+        ".automovie/manifest.json",
+        ".automovie/reviews/README.md",
         ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
         "README.md",
-        "automovie.config.jsonc",
+        "automovie.config.ts",
+        "automovie.mcp.jsonc",
+        "docs/art-direction.md",
+        "docs/historical-notes.md",
+        "docs/screenplay.md",
+        "docs/treatment.md",
         "lint.config.ts",
         "package.json",
-        "src/main.ts",
-        "src/motion.ts",
+        "public/assets/README.md",
+        "public/audio/README.md",
+        "renders/README.md",
+        "scripts/capture.ts",
+        "scripts/compile.ts",
+        "scripts/generatedShotPlugin.ts",
+        "scripts/lint.ts",
+        "scripts/mcp.ts",
+        "scripts/preview.ts",
+        "scripts/render.ts",
+        "scripts/review-status.ts",
+        "src/film.ts",
+        "src/shots/opening.ts",
+        "test/opening.test.ts",
         "tsconfig.json",
+        "viewer/index.html",
+        "viewer/src/main.ts",
+        "vite.config.ts",
       ],
     );
     TestValidator.predicate(

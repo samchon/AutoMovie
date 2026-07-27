@@ -5,6 +5,8 @@
   "main": "src/index.ts",
   "bin": {
     "automovie-mcp": "lib/bin.js",
+    "automovie-mcp-legacy": "lib/bin.js",
+    "automovie-mcp-production": "lib/bin-production.js",
     "automovie-mcp-granular": "lib/bin-granular.js"
   },
   "exports": {
@@ -17,6 +19,7 @@
     "build": "pnpm run build:prompt && rimraf lib && ttsc && tsc --emitDeclarationOnly",
     "postbuild": "node ../../internals/config/assertBuild.js",
     "start": "ttsx src/bin.ts",
+    "start:production": "ttsx src/bin-production.ts",
     "start:granular": "ttsx src/bin-granular.ts",
     "prepack": "pnpm run build"
   },
@@ -46,6 +49,8 @@
     "types": "lib/index.d.ts",
     "bin": {
       "automovie-mcp": "lib/bin.js",
+      "automovie-mcp-legacy": "lib/bin.js",
+      "automovie-mcp-production": "lib/bin-production.js",
       "automovie-mcp-granular": "lib/bin-granular.js"
     },
     "exports": {
@@ -62,10 +67,13 @@
     "@automovie/render": "workspace:^",
     "@modelcontextprotocol/sdk": "catalog:modelcontextprotocol",
     "@typia/mcp": "catalog:samchon",
-    "typia": "catalog:samchon"
+    "pngjs": "catalog:media",
+    "typia": "catalog:samchon",
+    "typescript-compiler": "npm:typescript@5.9.3"
   },
   "devDependencies": {
     "@types/node": "catalog:utils",
+    "@types/pngjs": "catalog:media",
     "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript",

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
@@ -11,5 +11,13 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src", "lint.config.ts"]
+  "include": [
+    "src",
+    "scripts",
+    "test",
+    "viewer/src",
+    "automovie.config.ts",
+    "vite.config.ts",
+    "lint.config.ts"
+  ]
 }

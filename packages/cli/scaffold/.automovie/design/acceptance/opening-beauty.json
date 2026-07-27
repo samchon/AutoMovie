@@ -1,0 +1,11 @@
+{
+  "id": "opening-beauty",
+  "target": { "kind": "shot", "id": "opening" },
+  "criterion": {
+    "kind": "frame",
+    "frame": "signal-apex",
+    "pass": "beauty",
+    "expectation": "The full sentinel and raised signal arm are visible against the background."
+  },
+  "required": true
+}

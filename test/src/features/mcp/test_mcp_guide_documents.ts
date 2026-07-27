@@ -152,6 +152,20 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["PERFORMANCE", "ARKit 52-channel overlay"],
   ["PERFORMANCE", "The `emote` verb takes preset and intensity only"],
   ["AUTOMOVIE_OVERALL", "The Face Has Two Resolutions"],
+  // Coding-agent-first production contracts. Each new bounded design, compile,
+  // oracle and evidence-review guide must remain reachable through the one
+  // guide tool; otherwise a compact MCP surface would strand its own doctrine.
+  ["PRODUCTION_DESIGN", "stores global invariants"],
+  ["MODEL_RECIPE", "stores a bounded primitive recipe"],
+  ["WORLD_DESIGN", "stores queryable space"],
+  ["FORMATION_DESIGN", "represents a unit, not thousands"],
+  ["SHOT_CONTRACT", "says what a shot must accomplish"],
+  ["ACCEPTANCE", "makes an observable contract addressable"],
+  ["SOURCE_OWNERSHIP", "The compiler alone owns `generated`"],
+  ["COMPILATION", "an atomic fence with four scopes"],
+  ["GEOMETRY", "measures the current compiled production"],
+  ["PRODUCTION_REVIEW", "The server never calls an LLM"],
+  ["PRODUCTION_RENDER", "the MCP visual oracle"],
 ];
 
 /**

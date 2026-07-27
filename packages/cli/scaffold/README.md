@@ -1,46 +1,34 @@
 # {{name}}
 
-An [automovie](https://github.com/samchon/automovie) project. automovie is a
-deterministic motion-control engine for character and object animation: you emit
-thin, legible intent (action verbs, or clips you compute in code) and the
-engine synthesizes the dense per-frame motion, ROM-checks it, compiles camera
-moves, and plans renders. **Engine enforces, model creates.**
+This is a coding-agent-first AutoMovie production repository. Write treatment,
+screenplay, shot builders, motion helpers, effects, audio integration, and tests
+as ordinary files. AutoMovie owns bounded design, deterministic generated
+output, geometry facts, actual-frame evidence, and review freshness.
 
-There are two ways to drive it, and this starter shows both.
-
-## 1. The MCP path: an agent drives the pipeline
-
-`automovie.config.jsonc` registers the `@automovie/mcp` server with your MCP
-client (Claude Desktop, Codex, Claude Code, …). Copy its `automovie` entry into
-your client's config; the server runs over stdio. Then, in a session:
-
-- `getGuideDocument({ name: "AUTOMOVIE_OVERALL" })` for the overview,
-- `openProject({ root: "." })`, then let `nextSteps()` steer the ladder:
-  `stage → block → perform → cut → forge`.
-
-Every failure comes back as field-located violations for the correction round,
-never a thrown error.
-
-## 2. The direct-link path: your code is the client
-
-Import the packages and program against the types themselves: the same
-primitives the MCP server exposes, with no protocol in between. `src/motion.ts`
-**computes** a clip (motion authoring is, at the limit, a coding activity), and
-`src/main.ts` runs it through `validateMotion` (engine enforces) and
-`sampleMotion` (engine plays):
+## First run
 
 ```bash
-npm install
-npm run perform
+pnpm install
+pnpm compile
+pnpm test
+pnpm preview -- --shot opening --time 2 --pass beauty
+pnpm review:status
 ```
 
-Bump the peak angle in `src/main.ts` past the shoulder's anatomical range and
-the engine refuses the clip. That refusal is the whole point of the split.
+The sample review queue is deliberately incomplete. Open the PNG printed by
+`preview`, read `PRODUCTION_REVIEW` through MCP, and review current evidence.
 
-## Which path?
+Register `automovie.mcp.jsonc` with your coding agent. Its first call is
+`getGuideDocument({name:"AUTOMOVIE_OVERALL"})`, then `openProject` with this
+repository root. Full render and future audio/chunk resume are CLI jobs, not
+free-form MCP shell tools.
 
-Use **MCP** for orchestrated film state, cross-session persistence, and the
-guided correction loop. Use **direct linking** for code-native motion authoring,
-custom synthesizers injected into `performShot`, and host integrations. The two
-compose: compute a clip in code, enforce it on the same engine, whichever door
-you came through.
+## Ownership
+
+- `.automovie/design`, `.automovie/reviews`: AutoMovie tracked contracts
+- `src`, `docs`, `test`, `public`: coding-agent source and assets
+- `generated`: compiler-owned; never edit
+- `renders`: content-addressed outputs; never pass an arbitrary screenshot as review evidence
+
+`pnpm lint` type-checks source and runs the production compiler in read-only
+mode. `pnpm compile` is the command that may update generated output.
