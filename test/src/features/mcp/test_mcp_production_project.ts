@@ -7,6 +7,7 @@ import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   digestAutoMovieBytes,
+  productionRenderBundleRelativePath,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -49,6 +50,10 @@ export const test_mcp_production_project = (): void => {
       "manifest callers cannot mutate resident ownership state",
       project.manifest().generatedRoot,
       "generated",
+    );
+    TestValidator.predicate(
+      "project-level erase audit reasons cannot be blank",
+      throws(() => project.eraseDesignArtifact({ kind: "world" }, " ")),
     );
     TestValidator.predicate(
       "every design target is readable",
@@ -107,6 +112,8 @@ export const test_mcp_production_project = (): void => {
       "source realpaths cannot escape through a directory junction",
       throws(() => project.readSource("src/junction/escape.ts")),
     );
+    fs.rmSync(sourceJunction);
+    fs.rmSync(outsideSource, { recursive: true });
 
     const invalidSchema = project.setModelRecipe(
       {} as ReturnType<typeof modelRecipe>,
@@ -120,6 +127,10 @@ export const test_mcp_production_project = (): void => {
       id: "missing-model-formation",
       modelRecipe: "absent",
     });
+    const caseCollision = project.setModelRecipe({
+      ...modelRecipe(),
+      id: "SENTINEL",
+    });
     TestValidator.predicate(
       "setter rejects both schema and graph errors before writing",
       invalidSchema.accepted === false &&
@@ -130,7 +141,9 @@ export const test_mcp_production_project = (): void => {
         ) &&
         invalidReference.diagnostics.some(
           (item) => item.code === "design-reference-missing",
-        ),
+        ) &&
+        caseCollision.accepted === false &&
+        caseCollision.diagnostics[0]?.code === "design-id-collision",
     );
     TestValidator.predicate(
       "missing design erase is explicit",
@@ -438,8 +451,9 @@ export const test_mcp_production_project = (): void => {
       },
       frames: [],
     };
+    const renderBundle = productionRenderBundleRelativePath(renderManifest);
     const revision = ownerProject.commitRenderBundle(
-      "manual",
+      renderBundle,
       new Map([["frame.bin", Buffer.from("frame")]]),
       renderManifest,
     );
@@ -447,16 +461,155 @@ export const test_mcp_production_project = (): void => {
       "render bundle commits bytes and manifest atomically",
       revision > 0 &&
         fs.existsSync(
-          path.join(ownerProject.renderRoot(), "manual/manifest.json"),
+          path.join(ownerProject.renderRoot(), renderBundle, "manifest.json"),
         ),
     );
     const renderFramePath = path.join(
       ownerProject.renderRoot(),
-      "manual/frame.bin",
+      renderBundle,
+      "frame.bin",
     );
     const renderManifestPath = path.join(
       ownerProject.renderRoot(),
-      "manual/manifest.json",
+      renderBundle,
+      "manifest.json",
+    );
+    TestValidator.predicate(
+      "render manifest is bound to its MCP-owned receipt",
+      ownerProject.verifiedRenderManifest(renderManifestPath) !== null,
+    );
+    const renderReceiptDirectory = path.join(
+      fixture.root,
+      ".automovie/render-receipts",
+    );
+    const renderReceiptPath = path.join(
+      renderReceiptDirectory,
+      fs.readdirSync(renderReceiptDirectory)[0]!,
+    );
+    const renderManifestBytes = fs.readFileSync(renderManifestPath);
+    const renderReceiptBytes = fs.readFileSync(renderReceiptPath);
+    const nonCanonicalManifest = path.join(
+      ownerProject.renderRoot(),
+      "non-canonical",
+      "manifest.json",
+    );
+    fs.mkdirSync(path.dirname(nonCanonicalManifest), { recursive: true });
+    fs.writeFileSync(nonCanonicalManifest, renderManifestBytes);
+    TestValidator.predicate(
+      "render verification refuses absent, non-file, external and non-canonical manifests",
+      ownerProject.verifiedRenderManifest(
+        path.join(ownerProject.renderRoot(), "absent.json"),
+      ) === null &&
+        ownerProject.verifiedRenderManifest(ownerProject.renderRoot()) ===
+          null &&
+        ownerProject.verifiedRenderManifest(
+          path.join(fixture.root, "package.json"),
+        ) === null &&
+        ownerProject.verifiedRenderManifest(nonCanonicalManifest) === null,
+    );
+    fs.writeFileSync(renderManifestPath, "{}");
+    const invalidRenderManifest =
+      ownerProject.verifiedRenderManifest(renderManifestPath);
+    fs.writeFileSync(renderManifestPath, "{bad");
+    const malformedRenderManifest =
+      ownerProject.verifiedRenderManifest(renderManifestPath);
+    fs.writeFileSync(renderManifestPath, renderManifestBytes);
+    fs.rmSync(renderReceiptPath);
+    const missingRenderReceipt =
+      ownerProject.verifiedRenderManifest(renderManifestPath);
+    for (const receipt of [
+      { version: 0, bundle: renderBundle, manifestDigest: "sha256:bad" },
+      {
+        version: 1,
+        bundle: "wrong-bundle",
+        manifestDigest: digestAutoMovieBytes(renderManifestBytes),
+      },
+      { version: 1, bundle: renderBundle, manifestDigest: "sha256:bad" },
+    ]) {
+      fs.writeFileSync(renderReceiptPath, JSON.stringify(receipt));
+      TestValidator.equals(
+        "render verification rejects a mismatched receipt field",
+        ownerProject.verifiedRenderManifest(renderManifestPath),
+        null,
+      );
+    }
+    fs.writeFileSync(renderReceiptPath, "{bad");
+    const malformedRenderReceipt =
+      ownerProject.verifiedRenderManifest(renderManifestPath);
+    fs.writeFileSync(renderReceiptPath, renderReceiptBytes);
+    TestValidator.predicate(
+      "render verification validates manifest schema, JSON and receipt ownership",
+      invalidRenderManifest === null &&
+        malformedRenderManifest === null &&
+        missingRenderReceipt === null &&
+        malformedRenderReceipt === null &&
+        ownerProject.verifiedRenderManifest(renderManifestPath) !== null,
+    );
+    TestValidator.predicate(
+      "render reads reject absent paths and directories",
+      throws(() => ownerProject.readRenderFile("absent.bin")) &&
+        throws(() => ownerProject.readRenderFile(renderBundle)),
+    );
+    const outsideRenderRead = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-render-read-"),
+    );
+    const renderReadJunction = path.join(
+      ownerProject.renderRoot(),
+      "read-junction",
+    );
+    fs.writeFileSync(path.join(outsideRenderRead, "escape.bin"), "escape");
+    fs.symlinkSync(outsideRenderRead, renderReadJunction, "junction");
+    TestValidator.predicate(
+      "render reads reject nested junction escapes",
+      throws(() => ownerProject.readRenderFile("read-junction/escape.bin")),
+    );
+    fs.rmSync(renderReadJunction);
+    fs.rmSync(outsideRenderRead, { force: true, recursive: true });
+    const deliverableFiles = ownerProject.commitProductionDeliverableFiles(
+      "feature*CON",
+      new Map([
+        ["z.bin", Buffer.from("z")],
+        ["nested/a.bin", Buffer.from("a")],
+      ]),
+    );
+    TestValidator.predicate(
+      "deliverable commits are nonempty, sorted and renderer-owned",
+      deliverableFiles.paths[0]?.endsWith("nested/a.bin") === true &&
+        deliverableFiles.paths[1]?.endsWith("z.bin") === true &&
+        deliverableFiles.paths.every((file) =>
+          fs.existsSync(path.join(ownerProject.renderRoot(), file)),
+        ) &&
+        throws(() =>
+          ownerProject.commitProductionDeliverableFiles("empty", new Map()),
+        ) &&
+        throws(() =>
+          ownerProject.commitProductionDeliverableFiles(
+            "unsafe",
+            new Map([["../escape.bin", Buffer.from("x")]]),
+          ),
+        ) &&
+        throws(() =>
+          ownerProject.commitProductionDeliverableFiles(
+            "duplicate",
+            new Map([
+              ["nested/../same.bin", Buffer.from("first")],
+              ["same.bin", Buffer.from("second")],
+            ]),
+          ),
+        ) &&
+        throws(() =>
+          ownerProject.commitProductionDeliverableFiles(
+            "case-collision",
+            new Map([
+              ["Frame.bin", Buffer.from("first")],
+              ["frame.bin", Buffer.from("second")],
+            ]),
+          ),
+        ),
+    );
+    TestValidator.predicate(
+      "aggregate render commit validates its public schema",
+      throws(() => ownerProject.commitProductionRenderManifest({} as never)),
     );
     const frameBeforeFailure = fs.readFileSync(renderFramePath);
     const manifestBeforeFailure = fs.readFileSync(renderManifestPath);
@@ -472,7 +625,7 @@ export const test_mcp_production_project = (): void => {
         "multi-file commit rolls back updated and newly created files",
         throws(() =>
           ownerProject.commitRenderBundle(
-            "manual",
+            renderBundle,
             new Map([
               ["frame.bin", Buffer.from("changed")],
               ["new.bin", Buffer.from("new")],
@@ -483,7 +636,7 @@ export const test_mcp_production_project = (): void => {
           fs.readFileSync(renderFramePath).equals(frameBeforeFailure) &&
           fs.readFileSync(renderManifestPath).equals(manifestBeforeFailure) &&
           fs.existsSync(
-            path.join(ownerProject.renderRoot(), "manual/new.bin"),
+            path.join(ownerProject.renderRoot(), renderBundle, "new.bin"),
           ) === false &&
           ownerProject.revision() === revisionBeforeFailure,
       );
@@ -506,7 +659,7 @@ export const test_mcp_production_project = (): void => {
       let aggregate = false;
       try {
         ownerProject.commitRenderBundle(
-          "manual",
+          renderBundle,
           new Map([["frame.bin", Buffer.from("changed-again")]]),
           renderManifest,
         );
@@ -531,7 +684,7 @@ export const test_mcp_production_project = (): void => {
       "commit target cannot be replaced through a symlink or junction",
       throws(() =>
         ownerProject.commitRenderBundle(
-          "manual",
+          renderBundle,
           new Map([["frame.bin", Buffer.from("unsafe")]]),
           renderManifest,
         ),
@@ -678,6 +831,168 @@ export const test_mcp_production_project = (): void => {
     fixture.dispose();
   }
 
+  const contentFixture = productionFixture();
+  try {
+    const manifestPath = path.join(
+      contentFixture.root,
+      ".automovie/manifest.json",
+    );
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    fs.writeFileSync(
+      manifestPath,
+      JSON.stringify({
+        ...manifest,
+        contentRoots: ["viewer"],
+        contentFiles: ["automovie.config.ts", "missing-content.file"],
+      }),
+    );
+    const contentProject = AutoMovieProductionProject.open(contentFixture.root);
+    const inputs = contentProject.contentInputs();
+    TestValidator.predicate(
+      "declared content roots and files enter deterministic compilation identity",
+      inputs.some(
+        (input) => input.path === "viewer/src/main.ts" && input.bytes !== null,
+      ) &&
+        inputs.some(
+          (input) =>
+            input.path === "automovie.config.ts" && input.bytes !== null,
+        ) &&
+        inputs.some(
+          (input) =>
+            input.path === "missing-content.file" && input.bytes === null,
+        ),
+    );
+    const outsideContent = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-content-junction-"),
+    );
+    const nestedContentJunction = path.join(
+      contentFixture.root,
+      "viewer",
+      "linked",
+    );
+    fs.writeFileSync(path.join(outsideContent, "escape.ts"), "export {};\n");
+    fs.symlinkSync(outsideContent, nestedContentJunction, "junction");
+    TestValidator.predicate(
+      "declared content inventory refuses nested junctions",
+      throws(() => contentProject.contentInputs()),
+    );
+    fs.rmSync(nestedContentJunction);
+    fs.rmSync(outsideContent, { force: true, recursive: true });
+  } finally {
+    contentFixture.dispose();
+  }
+
+  const nestedContentFileFixture = productionFixture();
+  const outsideContentFile = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-content-file-junction-"),
+  );
+  try {
+    fs.writeFileSync(
+      path.join(outsideContentFile, "escape.ts"),
+      "export {};\n",
+    );
+    fs.symlinkSync(
+      outsideContentFile,
+      path.join(nestedContentFileFixture.root, "linked-content-file"),
+      "junction",
+    );
+    const manifestPath = path.join(
+      nestedContentFileFixture.root,
+      ".automovie/manifest.json",
+    );
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    fs.writeFileSync(
+      manifestPath,
+      JSON.stringify({
+        ...manifest,
+        contentFiles: ["linked-content-file/escape.ts"],
+      }),
+    );
+    const contentProject = AutoMovieProductionProject.open(
+      nestedContentFileFixture.root,
+    );
+    TestValidator.predicate(
+      "declared content files cannot escape through an intermediate junction",
+      throws(() => contentProject.contentInputs()),
+    );
+  } finally {
+    nestedContentFileFixture.dispose();
+    fs.rmSync(outsideContentFile, { force: true, recursive: true });
+  }
+
+  for (const [name, contentRoots, contentFiles, prepare] of [
+    [
+      "missing-root",
+      ["missing-content"],
+      [],
+      (_root: string): void => undefined,
+    ],
+    [
+      "file-root",
+      ["automovie.config.ts"],
+      [],
+      (_root: string): void => undefined,
+    ],
+    ["directory-file", [], ["viewer"], (_root: string): void => undefined],
+    [
+      "junction-file",
+      [],
+      ["linked-content"],
+      (root: string): void => {
+        fs.symlinkSync(
+          path.join(root, "viewer"),
+          path.join(root, "linked-content"),
+          "junction",
+        );
+      },
+    ],
+  ] as const) {
+    const invalidContent = productionFixture();
+    try {
+      prepare(invalidContent.root);
+      const manifestPath = path.join(
+        invalidContent.root,
+        ".automovie/manifest.json",
+      );
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      fs.writeFileSync(
+        manifestPath,
+        JSON.stringify({ ...manifest, contentRoots, contentFiles }),
+      );
+      const contentProject = AutoMovieProductionProject.open(
+        invalidContent.root,
+      );
+      TestValidator.predicate(
+        `declared content rejects ${name}`,
+        throws(() => contentProject.contentInputs()),
+      );
+    } finally {
+      invalidContent.dispose();
+    }
+  }
+
+  const replacedOwner = productionFixture();
+  try {
+    const ownerProject = AutoMovieProductionProject.open(replacedOwner.root);
+    fs.rmSync(ownerProject.renderRoot(), { recursive: true });
+    fs.symlinkSync(
+      path.join(replacedOwner.root, "viewer"),
+      path.join(replacedOwner.root, "renders"),
+      "junction",
+    );
+    TestValidator.predicate(
+      "an owned root replaced by an internal junction cannot receive writes",
+      throws(() =>
+        ownerProject.commitProductionDeliverableFiles(
+          "unsafe-owner",
+          new Map([["frame.bin", Buffer.from("x")]]),
+        ),
+      ),
+    );
+  } finally {
+    replacedOwner.dispose();
+  }
+
   const invalidRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-production-root-"),
   );
@@ -694,7 +1009,8 @@ export const test_mcp_production_project = (): void => {
       "fresh project initializes format and directories",
       initialized.summary().initialized &&
         initialized.revision() === 0 &&
-        initialized.inventory().production === false,
+        initialized.inventory().production === false &&
+        initialized.contentInputs().length === 0,
     );
     TestValidator.predicate(
       "every absent design discriminator returns one missing mutation",
@@ -785,6 +1101,33 @@ export const test_mcp_production_project = (): void => {
           renderRoot: "output/renders",
         },
       ],
+      [
+        "content-root-project",
+        {
+          sourceRoots: ["src"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+          contentRoots: ["."],
+        },
+      ],
+      [
+        "content-root-state",
+        {
+          sourceRoots: ["src"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+          contentRoots: [".automovie/design"],
+        },
+      ],
+      [
+        "content-file-generated",
+        {
+          sourceRoots: ["src"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+          contentFiles: ["generated/output.json"],
+        },
+      ],
     ] as const) {
       const root = path.join(invalidRoot, `ownership-${name}`);
       fs.mkdirSync(path.join(root, ".automovie"), { recursive: true });
@@ -825,6 +1168,24 @@ export const test_mcp_production_project = (): void => {
       "compiler-owned root cannot escape through a junction",
       throws(() => AutoMovieProductionProject.open(junctionRoot)),
     );
+    const internalAlias = productionFixture();
+    try {
+      fs.rmSync(path.join(internalAlias.root, "generated"), {
+        force: true,
+        recursive: true,
+      });
+      fs.symlinkSync(
+        path.join(internalAlias.root, "viewer"),
+        path.join(internalAlias.root, "generated"),
+        "junction",
+      );
+      TestValidator.predicate(
+        "owned roots cannot alias another project directory through a junction",
+        throws(() => AutoMovieProductionProject.open(internalAlias.root)),
+      );
+    } finally {
+      internalAlias.dispose();
+    }
 
     const stateOutside = path.join(invalidRoot, "state-outside");
     const stateJunctionRoot = path.join(invalidRoot, "state-junction-root");

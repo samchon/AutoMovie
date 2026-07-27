@@ -120,32 +120,21 @@ export class AutoMovieProductionApplication {
     )
       .map((file) => ({
         path: normalizeSlash(path.relative(services.project.root, file)),
-        current:
-          compilation.success &&
-          generated !== null &&
-          generated.inputFingerprint ===
-            compilation.compiler.inputFingerprint &&
-          renderCompileFingerprint(file) === generated.inputFingerprint,
+        current: (() => {
+          const manifest = services.project.verifiedRenderManifest(file);
+          return (
+            compilation.success &&
+            generated !== null &&
+            generated.inputFingerprint ===
+              compilation.compiler.inputFingerprint &&
+            manifest?.compileFingerprint === generated.inputFingerprint
+          );
+        })(),
       }))
       .sort((left, right) => compareCodeUnits(left.path, right.path));
     const nextActions: IAutoMovieProductionNextAction[] = [
-      ...(generated === null && compilation.success
-        ? [
-            {
-              owner: "compile" as const,
-              action: "compileProject",
-              target: "generated-manifest",
-              reason:
-                "Current design and source pass lint but no compiler-owned output exists.",
-            },
-          ]
-        : []),
       ...diagnostics
-        .filter(
-          (diagnostic) =>
-            diagnostic.category === "error" ||
-            diagnostic.code === "generated-stale",
-        )
+        .filter((diagnostic) => diagnostic.category === "error")
         .map(diagnosticNextAction),
       ...reviews.entries
         .filter((entry) => entry.state !== "complete")
@@ -234,7 +223,7 @@ export class AutoMovieProductionApplication {
     this.context.requireGuide("PRODUCTION_DESIGN", "eraseDesignArtifact");
     return this.context
       .require("eraseDesignArtifact")
-      .project.eraseDesignArtifact(props.target);
+      .project.eraseDesignArtifact(props.target, props.reason);
   }
 
   /** Compile design and coding-agent source through the requested atomic gate. */
@@ -315,7 +304,8 @@ const diagnosticNextAction = (
   return {
     owner: "compile",
     action:
-      diagnostic.code === "generated-unowned"
+      diagnostic.code === "generated-unowned" ||
+      diagnostic.code === "generated-path-outside"
         ? "remove-unowned-generated"
         : "compileProject",
     target: diagnostic.target,
@@ -328,19 +318,3 @@ const listNamedFiles = (root: string, name: string): string[] =>
 
 const normalizeSlash = (value: string): string =>
   value.split(path.sep).join("/");
-
-const renderCompileFingerprint = (file: string): string | null => {
-  try {
-    const value = JSON.parse(fs.readFileSync(file, "utf8")) as unknown;
-    if (
-      typeof value === "object" &&
-      value !== null &&
-      "compileFingerprint" in value &&
-      typeof value.compileFingerprint === "string"
-    )
-      return value.compileFingerprint;
-  } catch {
-    // Malformed render manifests are never current.
-  }
-  return null;
-};

@@ -77,10 +77,13 @@ export const test_cli_scaffold = (): void => {
     "the starter renders its expected file set, in its guaranteed order",
     Object.keys(files),
     [
+      ".automovie/design/acceptance/answer-beauty.json",
+      ".automovie/design/acceptance/answer-pose.json",
       ".automovie/design/acceptance/opening-beauty.json",
       ".automovie/design/acceptance/opening-pose.json",
       ".automovie/design/models/sentinel.json",
       ".automovie/design/production.json",
+      ".automovie/design/shots/answer.json",
       ".automovie/design/shots/opening.json",
       ".automovie/design/world.json",
       ".automovie/manifest.json",
@@ -152,7 +155,16 @@ export const test_cli_scaffold = (): void => {
     "the local MCP host owns actual frame capture",
     files["automovie.mcp.jsonc"]!.includes("scripts/mcp.ts") &&
       files["scripts/mcp.ts"]!.includes("captureProductionFrame") &&
-      files["scripts/capture.ts"]!.includes('locator("#view").screenshot'),
+      files["scripts/capture.ts"]!.includes('locator("#view").screenshot') &&
+      files["scripts/capture.ts"]!.includes('dedupe: ["three"]') &&
+      files["vite.config.ts"]!.includes('dedupe: ["three"]') &&
+      files["viewer/index.html"]!.includes('rel="icon" href="data:,"') &&
+      files["viewer/src/main.ts"]!.includes("mountViewer") &&
+      files["viewer/src/main.ts"]!.includes("preserveDrawingBuffer: true") &&
+      files["scripts/capture.ts"]!.includes(
+        'page.locator("#status").evaluate',
+      ) &&
+      files["viewer/src/main.ts"]!.includes('from "three"') === false,
   );
   TestValidator.predicate(
     "no placeholder token survives any payload",
@@ -206,10 +218,13 @@ export const test_cli_scaffold = (): void => {
         path.relative(target, absolute).split(path.sep).join("/"),
       ),
       [
+        ".automovie/design/acceptance/answer-beauty.json",
+        ".automovie/design/acceptance/answer-pose.json",
         ".automovie/design/acceptance/opening-beauty.json",
         ".automovie/design/acceptance/opening-pose.json",
         ".automovie/design/models/sentinel.json",
         ".automovie/design/production.json",
+        ".automovie/design/shots/answer.json",
         ".automovie/design/shots/opening.json",
         ".automovie/design/world.json",
         ".automovie/manifest.json",

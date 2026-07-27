@@ -4,11 +4,15 @@ import type {
 } from "@automovie/interface";
 import {
   AutoMoviePlayer,
+  applyLightMotion,
+  applyObjectMotion,
+  applyObjectMotions,
+  applyPose,
   applyRenderMode,
   buildModel,
   buildScene,
+  mountViewer,
 } from "@automovie/viewer";
-import * as THREE from "three";
 
 interface IAutoMovieCaptureHook {
   ready: boolean;
@@ -50,7 +54,24 @@ const scene = buildScene(compiled.scene, (modelId) => {
     throw new Error(`Scene build order disagrees at model "${modelId}".`);
   return candidate.object;
 });
-scene.scene.background = new THREE.Color(0x11151b);
+const nodeObjects = new Map(
+  compiled.scene.nodes.map((node, index) => {
+    const object = scene.scene.children[index];
+    if (object === undefined)
+      throw new Error(`Scene node "${node.id}" has no built wrapper.`);
+    return [node.id, object] as const;
+  }),
+);
+const stagedNodeTransforms = new Map(
+  [...nodeObjects].map(([id, object]) => [
+    id,
+    {
+      position: object.position.clone(),
+      quaternion: object.quaternion.clone(),
+      scale: object.scale.clone(),
+    },
+  ]),
+);
 
 const players = compiled.shot.performances.flatMap((performance) => {
   if (performance.motion === null) return [];
@@ -76,13 +97,18 @@ const cameraIndex = compiled.scene.cameras.findIndex(
 );
 const camera = scene.cameras[cameraIndex < 0 ? 0 : cameraIndex];
 if (camera === undefined) throw new Error("Compiled scene has no camera.");
-const renderer = new THREE.WebGLRenderer({
-  canvas,
-  antialias: true,
-  alpha: false,
+const stagedCamera = {
+  position: camera.position.clone(),
+  quaternion: camera.quaternion.clone(),
+  scale: camera.scale.clone(),
+};
+const mounted = mountViewer(canvas, scene.scene, camera, () => true, {
+  antialias: false,
+  pixelRatio: 1,
   preserveDrawingBuffer: true,
 });
-renderer.outputColorSpace = THREE.SRGBColorSpace;
+const renderer = mounted.renderer;
+renderer.setClearColor(0x11151b, 1);
 
 const resize = (): void => {
   const width = Math.max(1, Math.round(window.innerWidth));
@@ -96,8 +122,33 @@ resize();
 window.addEventListener("resize", resize);
 
 const seek = (time: number, pass: AutoMovieGuidePass): void => {
+  for (const [id, transform] of stagedNodeTransforms) {
+    const object = nodeObjects.get(id)!;
+    object.position.copy(transform.position);
+    object.quaternion.copy(transform.quaternion);
+    object.scale.copy(transform.scale);
+  }
+  camera.position.copy(stagedCamera.position);
+  camera.quaternion.copy(stagedCamera.quaternion);
+  camera.scale.copy(stagedCamera.scale);
+  for (const item of built)
+    if (item.node.pose !== null && item.model.skeleton !== null)
+      applyPose(item.object, item.node.pose, item.model.skeleton);
   for (const item of players)
     item.player.update(Math.max(0, time - item.startOffset));
+  applyObjectMotions(compiled.shot.objectMotions, time, (node) =>
+    nodeObjects.get(node),
+  );
+  if (compiled.shot.cameraMotion !== null)
+    applyObjectMotion(compiled.shot.cameraMotion, time, (node) =>
+      node === compiled.shot.camera ? camera : undefined,
+    );
+  applyLightMotion(
+    compiled.scene.lights,
+    compiled.shot.lightMotions ?? [],
+    time,
+    (light) => scene.lights.get(light),
+  );
   const handle = applyRenderMode(scene.scene, pass);
   renderer.render(scene.scene, camera);
   handle.restore();

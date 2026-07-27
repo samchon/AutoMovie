@@ -2,6 +2,8 @@
   "formatVersion": 2,
   "projectId": "{{name}}",
   "sourceRoots": ["src"],
+  "contentRoots": ["viewer", "scripts", "public"],
+  "contentFiles": ["automovie.config.ts", "vite.config.ts", "package.json", "pnpm-lock.yaml"],
   "generatedRoot": "generated",
   "renderRoot": "renders"
 }

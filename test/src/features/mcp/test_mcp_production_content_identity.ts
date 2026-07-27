@@ -2,7 +2,9 @@ import {
   canonicalAutoMovieJsonBytes,
   canonicalizeAutoMovieJson,
   compareCodeUnits,
+  decodeAutoMoviePathSegment,
   digestAutoMovieBytes,
+  encodeAutoMoviePathSegment,
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "@automovie/mcp";
@@ -76,5 +78,24 @@ export const test_mcp_production_content_identity = (): void => {
       compareCodeUnits("a", "a"),
     ],
     [-1, 1, 0],
+  );
+  TestValidator.equals(
+    "portable path segments escape RFC 3986 filename hazards",
+    encodeAutoMoviePathSegment("a*!'()"),
+    "a%2A%21%27%28%29",
+  );
+  TestValidator.predicate(
+    "portable path segments escape Windows devices",
+    encodeAutoMoviePathSegment("CON") === "%43ON" &&
+      encodeAutoMoviePathSegment("lpt9.json") === "%6Cpt9.json" &&
+      decodeAutoMoviePathSegment("%43ON") === "CON",
+  );
+  const longId = "장편-전투-".repeat(64);
+  const longSegment = encodeAutoMoviePathSegment(longId);
+  TestValidator.predicate(
+    "long ids use stable content-addressed segments",
+    /^~sha256-[0-9a-f]{64}$/.test(longSegment) &&
+      longSegment === encodeAutoMoviePathSegment(longId) &&
+      throws(() => decodeAutoMoviePathSegment(longSegment)),
   );
 };

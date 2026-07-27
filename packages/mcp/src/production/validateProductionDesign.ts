@@ -8,7 +8,10 @@ import {
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 
-import { compareCodeUnits } from "./contentIdentity";
+import {
+  compareCodeUnits,
+  encodeAutoMoviePathSegment,
+} from "./contentIdentity";
 
 /** In-memory design graph used for cross-reference validation. */
 export interface IAutoMovieProductionDesignGraph {
@@ -25,6 +28,18 @@ export interface IAutoMovieProductionDesignGraph {
   /** Acceptance scenarios keyed by id. */
   acceptance: ReadonlyMap<string, IAutoMovieAcceptanceScenario>;
 }
+
+const SUPPORTED_MODEL_CAPABILITIES: Record<
+  IAutoMovieModelRecipe["archetype"],
+  ReadonlySet<string>
+> = {
+  stickman: new Set(["signal"]),
+  horse: new Set(),
+  artillery: new Set(),
+  flag: new Set(),
+  weapon: new Set(),
+  "primitive-prop": new Set(),
+};
 
 /** Validate graph-level production invariants after structural validation. */
 export const validateAutoMovieProductionGraph = (
@@ -120,7 +135,7 @@ export const validateAutoMovieProductionGraph = (
 
   for (const [id, model] of graph.models) {
     const target = `model:${id}`;
-    const file = `.automovie/design/models/${encodeURIComponent(id)}.json`;
+    const file = `.automovie/design/models/${encodeAutoMoviePathSegment(id)}.json`;
     text(diagnostics, model.id, target, file, "id");
     if (model.id !== id)
       invalid(
@@ -206,6 +221,16 @@ export const validateAutoMovieProductionGraph = (
       file,
       "capabilities",
     );
+    const supportedCapabilities = SUPPORTED_MODEL_CAPABILITIES[model.archetype];
+    for (const capability of model.capabilities)
+      if (supportedCapabilities.has(capability) === false)
+        invalid(
+          diagnostics,
+          "design-capability-unsupported",
+          target,
+          file,
+          `Model capability "${capability}" is not implemented for archetype "${model.archetype}". Remove the claim or implement and register its deterministic source/runtime binding before compileProject.`,
+        );
     const attachmentIds = new Set<string>();
     for (const attachment of model.attachments) {
       unique(
@@ -249,6 +274,14 @@ export const validateAutoMovieProductionGraph = (
         );
       for (const point of surface.polygon)
         finite2(diagnostics, point, "world", file, "surface.polygon");
+      if (isSimpleNonDegeneratePolygon(surface.polygon) === false)
+        invalid(
+          diagnostics,
+          "design-polygon-invalid",
+          "world",
+          file,
+          `Surface "${surface.id}" must use distinct finite vertices forming one non-self-intersecting polygon with non-zero area. Correct surface.polygon in setWorldDesign.`,
+        );
       if (surface.height.kind === "constant")
         finite(
           diagnostics,
@@ -305,6 +338,13 @@ export const validateAutoMovieProductionGraph = (
     const effectIds = new Set<string>();
     for (const zone of graph.world.effectZones) {
       unique(diagnostics, effectIds, zone.id, "world", file, "effectZones");
+      invalid(
+        diagnostics,
+        "design-capability-unsupported",
+        "world",
+        file,
+        `Effect zone "${zone.id}" kind "${zone.kind}" has no deterministic renderer binding yet. Remove it or implement the effect compiler before claiming this world complete.`,
+      );
       vector(diagnostics, zone.bounds.min, "world", file, "effect.bounds.min");
       vector(diagnostics, zone.bounds.max, "world", file, "effect.bounds.max");
       if (
@@ -333,7 +373,7 @@ export const validateAutoMovieProductionGraph = (
 
   for (const [id, formation] of graph.formations) {
     const target = `formation:${id}`;
-    const file = `.automovie/design/formations/${encodeURIComponent(id)}.json`;
+    const file = `.automovie/design/formations/${encodeAutoMoviePathSegment(id)}.json`;
     text(diagnostics, formation.id, target, file, "id");
     text(diagnostics, formation.modelRecipe, target, file, "modelRecipe");
     if (formation.id !== id)
@@ -415,7 +455,7 @@ export const validateAutoMovieProductionGraph = (
 
   for (const [id, shot] of graph.shots) {
     const target = `shot:${id}`;
-    const file = `.automovie/design/shots/${encodeURIComponent(id)}.json`;
+    const file = `.automovie/design/shots/${encodeAutoMoviePathSegment(id)}.json`;
     text(diagnostics, shot.id, target, file, "id");
     if (shot.id !== id)
       invalid(
@@ -522,6 +562,21 @@ export const validateAutoMovieProductionGraph = (
           file,
           `Review frame "${frame.id}" time is outside shot duration. Fix ${id}.reviewFrames in setShotContract.`,
         );
+      else if (
+        graph.production !== null &&
+        Math.abs(
+          frame.time * graph.production.frameFormat.fps -
+            Math.round(frame.time * graph.production.frameFormat.fps),
+        ) >
+          Number.EPSILON * 16
+      )
+        invalid(
+          diagnostics,
+          "design-frame-clock-invalid",
+          target,
+          file,
+          `Review frame "${frame.id}" is off the ${graph.production.frameFormat.fps}fps production clock. Snap its time to an exact frame in setShotContract.`,
+        );
       if (new Set(frame.passes).size !== frame.passes.length)
         invalid(
           diagnostics,
@@ -543,7 +598,7 @@ export const validateAutoMovieProductionGraph = (
 
   for (const [id, acceptance] of graph.acceptance) {
     const target = `acceptance:${id}`;
-    const file = `.automovie/design/acceptance/${encodeURIComponent(id)}.json`;
+    const file = `.automovie/design/acceptance/${encodeAutoMoviePathSegment(id)}.json`;
     text(diagnostics, acceptance.id, target, file, "id");
     text(diagnostics, acceptance.target.id, target, file, "target.id");
     if (acceptance.id !== id)
@@ -652,6 +707,91 @@ export const validateAutoMovieProductionGraph = (
   }
   return diagnostics.sort(compareDiagnostics);
 };
+
+const isSimpleNonDegeneratePolygon = (
+  polygon: ReadonlyArray<{ x: number; z: number }>,
+): boolean => {
+  if (
+    polygon.length < 3 ||
+    polygon.some(
+      (point) =>
+        Number.isFinite(point.x) === false ||
+        Number.isFinite(point.z) === false,
+    ) ||
+    new Set(polygon.map((point) => `${point.x}\0${point.z}`)).size !==
+      polygon.length
+  )
+    return false;
+  let twiceArea = 0;
+  for (let index = 0; index < polygon.length; ++index) {
+    const current = polygon[index]!;
+    const next = polygon[(index + 1) % polygon.length]!;
+    twiceArea += current.x * next.z - next.x * current.z;
+  }
+  if (Number.isFinite(twiceArea) === false || Math.abs(twiceArea) <= 1e-9)
+    return false;
+  for (let index = 0; index < polygon.length; ++index) {
+    const previous = polygon[(index + polygon.length - 1) % polygon.length]!;
+    const current = polygon[index]!;
+    const next = polygon[(index + 1) % polygon.length]!;
+    const bend = turn(previous, current, next);
+    const reverseDot =
+      (previous.x - current.x) * (next.x - current.x) +
+      (previous.z - current.z) * (next.z - current.z);
+    if (
+      Number.isFinite(bend) === false ||
+      Number.isFinite(reverseDot) === false ||
+      (Math.abs(bend) <= 1e-9 && reverseDot > 0)
+    )
+      return false;
+  }
+  for (let left = 0; left < polygon.length; ++left) {
+    const leftNext = (left + 1) % polygon.length;
+    for (let right = left + 1; right < polygon.length; ++right) {
+      const rightNext = (right + 1) % polygon.length;
+      if (left === right || leftNext === right || rightNext === left) continue;
+      if (
+        segmentsIntersect(
+          polygon[left]!,
+          polygon[leftNext]!,
+          polygon[right]!,
+          polygon[rightNext]!,
+        )
+      )
+        return false;
+    }
+  }
+  return true;
+};
+
+const segmentsIntersect = (
+  a: { x: number; z: number },
+  b: { x: number; z: number },
+  c: { x: number; z: number },
+  d: { x: number; z: number },
+): boolean => {
+  const abC = turn(a, b, c);
+  const abD = turn(a, b, d);
+  const cdA = turn(c, d, a);
+  const cdB = turn(c, d, b);
+  return (
+    [abC, abD, cdA, cdB].every(Number.isFinite) &&
+    Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x)) <=
+      Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x)) + 1e-9 &&
+    Math.max(Math.min(a.z, b.z), Math.min(c.z, d.z)) <=
+      Math.min(Math.max(a.z, b.z), Math.max(c.z, d.z)) + 1e-9 &&
+    abC * abD <= 1e-9 &&
+    cdA * cdB <= 1e-9
+  );
+};
+
+const turn = (
+  first: { x: number; z: number },
+  second: { x: number; z: number },
+  third: { x: number; z: number },
+): number =>
+  (second.x - first.x) * (third.z - first.z) -
+  (second.z - first.z) * (third.x - first.x);
 
 const validateAcceptanceCriterionAgainstShot = (
   diagnostics: IAutoMovieDiagnostic[],

@@ -276,6 +276,22 @@ export const opening: IAutoMovieShotSource = {
       gaitCycle: null,
     };
     return {
+      contract: {
+        participants: context.contract.participants.map((participant) => ({
+          kind: participant.kind,
+          id: participant.id,
+          nodes: [participant.id],
+        })),
+        openingStates: context.contract.opening.map((state) => state.id),
+        closingStates: context.contract.closing.map((state) => state.id),
+        cameraSubjects: [...context.contract.camera.requiredSubjects],
+        events: context.contract.events.map((event) => ({
+          id: event.id,
+          time: (event.window.from + event.window.to) / 2,
+          subjects: [...event.subjects],
+        })),
+        models: [{ recipe: "sentinel", model: model.id }],
+      },
       models: [model],
       scene: {
         id: "opening-scene",

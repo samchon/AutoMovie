@@ -1,6 +1,9 @@
+import { IAutoMovieRenderBundleManifest } from "@automovie/interface";
 import {
   AutoMovieProductionApplication,
+  AutoMovieProductionProject,
   createAutoMovieProductionMcpServer,
+  productionRenderBundleRelativePath,
 } from "@automovie/mcp";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -180,9 +183,27 @@ export const test_mcp_production_application = async (): Promise<void> => {
         ) &&
         refreshed.success,
     );
+    const renderManifest: IAutoMovieRenderBundleManifest = {
+      version: 1,
+      target: { kind: "shot", id: "opening" },
+      compileFingerprint: refreshed.compiler.inputFingerprint,
+      renderSpec: {
+        target: "opening",
+        frameFormat: { width: 2, height: 2, fps: 24 },
+        toneMapping: "none",
+        codec: "h264",
+        pixelFormat: "yuv420p",
+        crf: 17,
+      },
+      frames: [],
+    };
+    const renderBundle = productionRenderBundleRelativePath(renderManifest);
+    const renderProject = AutoMovieProductionProject.open(fixture.root);
+    renderProject.commitRenderBundle(renderBundle, new Map(), renderManifest);
     const currentRender = path.join(
-      fixture.root,
-      "renders/application-current/manifest.json",
+      renderProject.renderRoot(),
+      renderBundle,
+      "manifest.json",
     );
     const malformedRender = path.join(
       fixture.root,
@@ -190,11 +211,9 @@ export const test_mcp_production_application = async (): Promise<void> => {
     );
     fs.mkdirSync(path.dirname(currentRender), { recursive: true });
     fs.mkdirSync(path.dirname(malformedRender), { recursive: true });
-    fs.writeFileSync(
-      currentRender,
-      JSON.stringify({
-        compileFingerprint: refreshed.compiler.inputFingerprint,
-      }),
+    TestValidator.predicate(
+      "application test render is canonical",
+      fs.existsSync(currentRender),
     );
     fs.writeFileSync(malformedRender, "{bad");
     const renderInspection = application.inspectProject({});

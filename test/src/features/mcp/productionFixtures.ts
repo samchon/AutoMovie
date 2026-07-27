@@ -21,7 +21,25 @@ export const productionFixture = (): {
   dispose: () => void;
 } => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-production-"));
-  writeFiles(root, renderScaffold({ name: "fixture-film" }));
+  const files = renderScaffold({ name: "fixture-film" });
+  for (const file of [
+    ".automovie/design/acceptance/answer-beauty.json",
+    ".automovie/design/acceptance/answer-pose.json",
+    ".automovie/design/shots/answer.json",
+  ])
+    delete files[file];
+  files[".automovie/design/production.json"] = `${JSON.stringify(
+    oneShotProduction(
+      JSON.parse(
+        files[".automovie/design/production.json"]!,
+      ) as IAutoMovieProductionDesign,
+    ),
+    null,
+    2,
+  )}\n`;
+  files["src/film.ts"] =
+    '/** Stable ordered shot ids in finished-film order. */\nexport const film = ["opening"] as const;\n';
+  writeFiles(root, files);
   return {
     root,
     dispose: () => fs.rmSync(root, { force: true, recursive: true }),
@@ -37,12 +55,26 @@ const scaffoldJson = <T>(relative: string): T =>
 export const productionDesign = (
   overrides: Partial<IAutoMovieProductionDesign> = {},
 ): IAutoMovieProductionDesign => ({
-  ...scaffoldJson<IAutoMovieProductionDesign>(
-    ".automovie/design/production.json",
+  ...oneShotProduction(
+    scaffoldJson<IAutoMovieProductionDesign>(
+      ".automovie/design/production.json",
+    ),
   ),
   id: "fixture-film",
   title: "fixture-film",
   ...overrides,
+});
+
+const oneShotProduction = (
+  production: IAutoMovieProductionDesign,
+): IAutoMovieProductionDesign => ({
+  ...production,
+  logline: "A primitive sentinel raises a signal in one deterministic fixture.",
+  targetRuntimeSeconds: 6,
+  deliverables: production.deliverables.map((deliverable) => ({
+    ...deliverable,
+    required: false,
+  })),
 });
 
 /** Starter primitive model recipe. */

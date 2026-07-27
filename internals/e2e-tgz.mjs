@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, "..");
+const KEEP_STAGE = process.env.AUTOMOVIE_E2E_KEEP_STAGE === "1";
 
 // Interface first, CLI last: each runtime dependency packs before its consumer.
 const PACKAGES = ["interface", "engine", "render", "viewer", "mcp", "cli"];
@@ -33,7 +34,7 @@ let tracePath = null;
 
 const fail = (message) => {
   console.error(`\n✗ e2e:tgz FAILED: ${message}`);
-  process.exit(1);
+  throw new Error(message);
 };
 
 const run = (label, command, cwd, timeout = 300_000) => {
@@ -52,6 +53,42 @@ const run = (label, command, cwd, timeout = 300_000) => {
     process.stderr.write(result.stdout ?? "");
     process.stderr.write(result.stderr ?? "");
     fail(`${label} exited with ${result.status ?? "signal"}`);
+  }
+  if (tracePath !== null)
+    appendFileSync(tracePath, `${new Date().toISOString()} PASS ${label}\n`);
+  console.log(`✓ ${label}`);
+};
+
+const runExpectedFailure = (
+  label,
+  command,
+  cwd,
+  expectedOutput,
+  timeout = 300_000,
+) => {
+  console.log(`> ${label}`);
+  if (tracePath !== null)
+    appendFileSync(tracePath, `${new Date().toISOString()} START ${label}\n`);
+  const result = spawnSync(command, {
+    cwd,
+    shell: true,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout,
+  });
+  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  if (
+    result.error !== undefined ||
+    result.signal !== null ||
+    typeof result.status !== "number" ||
+    result.status === 0 ||
+    output.includes(expectedOutput) === false
+  ) {
+    process.stderr.write(output);
+    fail(
+      `${label} did not exit normally with a non-zero status and the expected "${expectedOutput}" diagnostic`,
+    );
   }
   if (tracePath !== null)
     appendFileSync(tracePath, `${new Date().toISOString()} PASS ${label}\n`);
@@ -277,12 +314,12 @@ try {
   );
   const opened = await production.callTool({
     name: "openProject",
-    arguments: { root: path.resolve("production-project") },
+    arguments: { root: path.resolve(".") },
   });
   assert(
     "production-open-project",
     opened.isError !== true &&
-      existsSync(path.resolve("production-project/.automovie/manifest.json")),
+      existsSync(path.resolve(".automovie/manifest.json")),
     (opened.content?.[0]?.text ?? "").slice(0, 300),
   );
 } finally {
@@ -291,7 +328,11 @@ try {
 `;
 
 const STARTER_VERIFY_SOURCE = `
-import { AutoMovieProductionApplication } from "@automovie/mcp";
+import {
+  AutoMovieProductionApplication,
+  AutoMovieProductionProject,
+  digestAutoMovieBytes,
+} from "@automovie/mcp";
 import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
@@ -315,6 +356,7 @@ const namedFiles = (root, name) => {
   visit(root);
   return output;
 };
+const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
 const visibleVariance = (png) => {
   if (png.data.length < 8) return false;
   const alpha = png.data[3];
@@ -336,41 +378,161 @@ const visibleVariance = (png) => {
   }
   return false;
 };
+const frameEvidence = (frame) => ({
+  kind: "frame",
+  shot: frame.shot,
+  reviewFrame: frame.reviewFrame,
+  bundle: frame.bundle,
+  frame: frame.frame,
+  time: frame.time,
+  pass: frame.pass,
+  digest: frame.digest,
+});
+const targetKey = (target) =>
+  target.kind === "design"
+    ? \`design:\${target.design.kind}:\${target.design.id ?? ""}\`
+    : target.kind === "source"
+      ? \`source:\${target.path}\`
+      : \`\${target.kind}:\${target.id}\`;
+const exactEvidence = (project, prepared) => {
+  if (prepared.target.kind === "design")
+    return {
+      kind: "design",
+      target: prepared.target.design,
+      pointer: "",
+      exactValue: project.design(prepared.target.design),
+    };
+  if (prepared.target.kind === "source") {
+    const selector = prepared.quotable.find((item) => item.kind === "source");
+    if (selector === undefined)
+      throw new Error("Current source review has no quotable line.");
+    const exactText = fs
+      .readFileSync(path.join(project.root, selector.path), "utf8")
+      .replace(/\\r\\n?/g, "\\n")
+      .split("\\n")[selector.line - 1];
+    return { ...selector, exactText };
+  }
+  if (prepared.frames.length === 0)
+    throw new Error("Current visual review has no frame evidence.");
+  return frameEvidence(prepared.frames[0]);
+};
+const requiredAcceptance = (graph, target) =>
+  [...graph.acceptance.values()]
+    .filter(
+      (scenario) =>
+        scenario.required &&
+        (target.kind === "film" ||
+          (target.kind === "shot" &&
+            ((scenario.target.kind === "shot" &&
+              scenario.target.id === target.id) ||
+              ((scenario.criterion.kind === "frame" ||
+                scenario.criterion.kind === "event") &&
+                scenario.criterion.shot === target.id)))),
+    )
+    .sort((left, right) => left.id.localeCompare(right.id));
+const worksheet = (project, prepared) => {
+  const graph = project.graph();
+  const acceptance = requiredAcceptance(graph, prepared.target);
+  const baseEvidence = exactEvidence(project, prepared);
+  return {
+    target: prepared.target,
+    observations:
+      "The packaged starter target was inspected against current exact evidence.",
+    checks: prepared.requiredCriteria.map((criterion, index) => {
+      const evidence =
+        criterion === "acceptance-scenarios"
+          ? acceptance.flatMap((scenario) => {
+              const contract = {
+                kind: "acceptance",
+                scenario: scenario.id,
+                exactValue: scenario,
+              };
+              if (scenario.criterion.kind !== "frame") return [contract];
+              const shot =
+                scenario.criterion.shot ??
+                (scenario.target.kind === "shot"
+                  ? scenario.target.id
+                  : undefined);
+              const frame = prepared.frames.find(
+                (item) =>
+                  item.shot === shot &&
+                  item.reviewFrame === scenario.criterion.frame &&
+                  item.pass === scenario.criterion.pass,
+              );
+              return frame === undefined
+                ? [contract]
+                : [frameEvidence(frame), contract];
+            })
+          : [baseEvidence];
+      return {
+        criterion,
+        verdict: "pass",
+        observation: \`\${criterion} is backed by current packaged evidence \${index}.\`,
+        evidence,
+        ...(criterion === "acceptance-scenarios"
+          ? { acceptanceScenarios: acceptance.map((item) => item.id) }
+          : {}),
+      };
+    }),
+    corrections: [],
+    completionBasis: prepared.requiredCriteria.join(", "),
+    complete: true,
+  };
+};
 
 const root = process.cwd();
-const generated = JSON.parse(
-  fs.readFileSync(path.join(root, ".automovie/generated-manifest.json"), "utf8"),
-);
+const generated = readJson(path.join(root, ".automovie/generated-manifest.json"));
+const compiled = readJson(path.join(root, "generated/manifests/compile.json"));
 const manifests = namedFiles(path.join(root, "renders"), "manifest.json");
+const renderManifests = manifests
+  .map((file) => ({ file, value: readJson(file) }))
+  .filter((entry) => Array.isArray(entry.value.frames));
 assert(
-  "starter-render-manifest-count",
-  manifests.length === 1,
-  \`expected one content-addressed bundle, got \${manifests.length}\`,
+  "starter-compiled-shot-order",
+  JSON.stringify(compiled.shots) === JSON.stringify(["answer", "opening"]),
+  \`expected both canonical compiled shots, got \${JSON.stringify(compiled.shots)}\`,
 );
-const manifest = JSON.parse(fs.readFileSync(manifests[0], "utf8"));
 assert(
-  "starter-render-current",
-  manifest.compileFingerprint === generated.inputFingerprint,
-  "render bundle is not bound to the current compiler input",
+  "starter-render-bundle-count",
+  renderManifests.length === 2,
+  \`expected one accumulated content-addressed bundle per shot, got \${renderManifests.length}\`,
+);
+const frames = renderManifests.flatMap((entry) =>
+  entry.value.frames.map((frame) => ({
+    ...frame,
+    shot: entry.value.target.id,
+    manifest: entry.value,
+    directory: path.dirname(entry.file),
+  })),
 );
 assert(
   "starter-render-frame-inventory",
-  manifest.frames.length === 2 &&
-    manifest.frames.some((frame) => frame.pass === "beauty") &&
-    manifest.frames.some((frame) => frame.pass === "pose"),
-  \`expected beauty and pose frames, got \${JSON.stringify(manifest.frames)}\`,
+  frames.length === 6 &&
+    ["answer", "opening"].every((shot) =>
+      ["beauty", "mask", "pose"].every((pass) =>
+        frames.some(
+          (frame) => frame.shot === shot && frame.pass === pass,
+        ),
+      ),
+    ),
+  \`expected beauty, mask and pose for both shots, got \${JSON.stringify(frames)}\`,
 );
 const digests = new Set();
-for (const frame of manifest.frames) {
-  const bytes = fs.readFileSync(path.join(path.dirname(manifests[0]), frame.path));
+for (const frame of frames) {
+  assert(
+    \`starter-render-current:\${frame.shot}:\${frame.pass}\`,
+    frame.manifest.compileFingerprint === generated.inputFingerprint,
+    "render bundle is not bound to the current compiler input",
+  );
+  const bytes = fs.readFileSync(path.join(frame.directory, frame.path));
   const png = PNG.sync.read(bytes);
   assert(
-    \`starter-png-size:\${frame.pass}\`,
+    \`starter-png-size:\${frame.shot}:\${frame.pass}\`,
     png.width === 1280 && png.height === 720,
     \`expected 1280x720, got \${png.width}x\${png.height}\`,
   );
   assert(
-    \`starter-png-visible-variance:\${frame.pass}\`,
+    \`starter-png-visible-variance:\${frame.shot}:\${frame.pass}\`,
     visibleVariance(png),
     "frame has no visible pixel variance",
   );
@@ -378,23 +540,107 @@ for (const frame of manifest.frames) {
 }
 assert(
   "starter-guide-pass-difference",
-  digests.size === 2,
-  "beauty and pose captured identical bytes",
+  digests.size >= 3,
+  "the six captures do not distinguish all guide-pass families",
 );
 
 const app = new AutoMovieProductionApplication({ projectRoot: root });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
+app.getGuideDocument({ name: "COMPILATION" });
 app.getGuideDocument({ name: "PRODUCTION_REVIEW" });
 app.openProject({ root });
-const prepared = app.prepareReview({
-  target: { kind: "shot", id: "opening" },
-});
-assert(
-  "starter-review-frame-inventory",
-  prepared.frames.length === 2 &&
-    prepared.diagnostics.every((item) => item.category !== "error"),
-  JSON.stringify(prepared.diagnostics),
-);
+const project = AutoMovieProductionProject.open(root);
+const graph = project.graph();
+const phase = process.argv[2];
+if (phase === "review") {
+  const before = app.inspectProject({});
+  assert(
+    "starter-review-gate-is-enforced",
+    before.reviews.entries.some((entry) => entry.state !== "complete"),
+    JSON.stringify(before.reviews),
+  );
+  for (const entry of before.reviews.entries) {
+    const prepared = app.prepareReview({ target: entry.target });
+    assert(
+      \`starter-review-prepared:\${targetKey(entry.target)}\`,
+      prepared.diagnostics.every((item) => item.category !== "error"),
+      JSON.stringify(prepared.diagnostics),
+    );
+    if (entry.target.kind === "film")
+      assert(
+        "starter-film-review-sees-every-shot",
+        prepared.frames.length === 6 &&
+          new Set(prepared.frames.map((frame) => frame.shot)).size === 2,
+        JSON.stringify(prepared.frames),
+      );
+    const submitted = app.submitReview(worksheet(project, prepared));
+    assert(
+      \`starter-review-complete:\${targetKey(entry.target)}\`,
+      submitted.accepted && submitted.state === "complete",
+      JSON.stringify(submitted.diagnostics),
+    );
+  }
+  const reviewed = app.compileProject({ scope: "review" });
+  assert(
+    "starter-review-compile-gate",
+    reviewed.success &&
+      reviewed.reviews.entries.every((entry) => entry.state === "complete"),
+    JSON.stringify(reviewed.diagnostics),
+  );
+} else if (phase === "final") {
+  const aggregatePath = path.join(root, ".automovie/render-manifest.json");
+  const aggregateBytes = fs.readFileSync(aggregatePath);
+  const aggregate = JSON.parse(aggregateBytes.toString("utf8"));
+  const receipt = readJson(
+    path.join(root, ".automovie/render-manifest-receipt.json"),
+  );
+  assert(
+    "starter-aggregate-receipt",
+    receipt.version === 1 &&
+      receipt.manifestDigest === digestAutoMovieBytes(aggregateBytes),
+    JSON.stringify(receipt),
+  );
+  assert(
+    "starter-required-deliverable-complete",
+    aggregate.compileFingerprint === generated.inputFingerprint &&
+      aggregate.deliverables.length === 1 &&
+      aggregate.deliverables[0].id === "starter-preview" &&
+      aggregate.deliverables[0].files.length === 6,
+    JSON.stringify(aggregate),
+  );
+  const final = app.compileProject({ scope: "final" });
+  assert(
+    "starter-final-compile",
+    final.success &&
+      final.reviews.entries.every((entry) => entry.state === "complete"),
+    JSON.stringify(final.diagnostics),
+  );
+
+  const first = aggregate.deliverables[0].files[0];
+  const deliverablePath = path.join(root, "renders", first.path);
+  const original = fs.readFileSync(deliverablePath);
+  const tampered = Buffer.from(original);
+  tampered[0] ^= 0xff;
+  fs.writeFileSync(deliverablePath, tampered);
+  const rejected = app.compileProject({ scope: "final" });
+  assert(
+    "starter-final-ledger-tamper-gate",
+    rejected.success === false &&
+      rejected.diagnostics.some(
+        (item) => item.code === "render-deliverable-stale",
+      ),
+    JSON.stringify(rejected.diagnostics),
+  );
+  fs.writeFileSync(deliverablePath, original);
+  const restored = app.compileProject({ scope: "final" });
+  assert(
+    "starter-final-ledger-restored",
+    restored.success,
+    JSON.stringify(restored.diagnostics),
+  );
+} else {
+  throw new Error('Expected verifier phase "review" or "final".');
+}
 `;
 
 const stage = mkdtempSync(join(tmpdir(), "automovie-e2e-tgz-"));
@@ -515,8 +761,10 @@ try {
   process.stdout.write(client.stdout ?? "");
 
   // 5. Generate and exercise the production repository using only the packed
-  // CLI and runtime tarballs. The two guide passes prove the starter reaches
-  // actual, non-blank browser pixels and exposes them to review preparation.
+  // CLI and runtime tarballs. The first render must be blocked by missing
+  // reviews after it creates evidence. An external-agent worksheet then
+  // completes every current target, the second render reaches final compile,
+  // and a byte tamper proves the delivery ledger is enforced.
   const cliBin = join(
     projectDir,
     "node_modules",
@@ -549,29 +797,36 @@ try {
   // five-minute command fence before TypeScript linting itself begins.
   run("lint packaged starter", "npm run lint", starterDir, 900_000);
   run("test packaged starter", "npm test", starterDir);
-  run(
-    "capture packaged starter beauty frame",
-    "npm run preview -- --shot opening --time 2 --pass beauty",
+  runExpectedFailure(
+    "enforce packaged starter review gate",
+    "npm run render",
     starterDir,
-  );
-  run(
-    "capture packaged starter pose frame",
-    "npm run preview -- --shot opening --time 2 --pass pose",
-    starterDir,
+    "review-",
   );
   writeFileSync(
     join(starterDir, "verify-packaged-starter.mjs"),
     STARTER_VERIFY_SOURCE,
   );
   run(
-    "verify packaged starter pixels and review inventory",
-    "node verify-packaged-starter.mjs",
+    "complete packaged starter evidence reviews",
+    "node verify-packaged-starter.mjs review",
+    starterDir,
+  );
+  run(
+    "render packaged starter through final compile",
+    "npm run render",
+    starterDir,
+  );
+  run(
+    "verify packaged starter pixels, final ledger and tamper gate",
+    "node verify-packaged-starter.mjs final",
     starterDir,
   );
 
   console.log(
-    "\n✓ e2e:tgz PASSED: packaged MCP surfaces and production scaffold verified",
+    "\n✓ e2e:tgz PASSED: packaged MCP surfaces and two-shot production scaffold verified",
   );
 } finally {
-  rmSync(stage, { recursive: true, force: true, maxRetries: 5 });
+  if (KEEP_STAGE) console.log(`\nverification stage retained at ${stage}`);
+  else rmSync(stage, { recursive: true, force: true, maxRetries: 5 });
 }

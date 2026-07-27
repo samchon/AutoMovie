@@ -6,6 +6,7 @@ import {
   reachPose,
   resolveCameraAt,
   resolvePose,
+  sampleClipSequence,
   sampleMotion,
   validatePose,
 } from "@automovie/engine";
@@ -31,16 +32,19 @@ import {
   IAutoMovieVector3,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
-import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 import typia from "typia";
 
-import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
+import {
+  AutoMovieProductionProject,
+  productionRenderBundleRelativePath,
+} from "./AutoMovieProductionProject";
 import {
   canonicalAutoMovieJsonBytes,
   compareCodeUnits,
   digestAutoMovieBytes,
+  encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 
 /** Read-only current compiler status used to refuse stale oracle answers. */
@@ -87,8 +91,26 @@ export class AutoMovieProductionOracleService {
       let result: IAutoMovieGeometryResult;
       switch (request.query) {
         case "distance": {
-          const left = resolveSelector(request.from, graph.world, shots);
-          const right = resolveSelector(request.to, graph.world, shots);
+          if (
+            request.time !== undefined &&
+            (Number.isFinite(request.time) === false || request.time < 0)
+          )
+            throw new Error(
+              `Distance sample time ${request.time} is invalid. Choose a finite non-negative shot time.`,
+            );
+          const options = { shot: request.shot, time: request.time };
+          const left = resolveSelector(
+            request.from,
+            graph.world,
+            shots,
+            options,
+          );
+          const right = resolveSelector(
+            request.to,
+            graph.world,
+            shots,
+            options,
+          );
           result = {
             kind: "distance",
             meters: distance(left, right),
@@ -169,7 +191,7 @@ export class AutoMovieProductionOracleService {
               width: dimensions.width,
               depth: dimensions.depth,
               facingDeg: formation.facingDeg,
-              state: request.state ?? "design",
+              state: "design",
             },
           };
           break;
@@ -338,27 +360,23 @@ export class AutoMovieProductionOracleService {
       Number.isInteger(height) === false ||
       width <= 0 ||
       height <= 0 ||
+      width > production.frameFormat.width ||
+      height > production.frameFormat.height ||
+      width * height > MAX_PREVIEW_PIXELS ||
       Number.isFinite(input.time) === false ||
       input.time < 0
     )
       return previewFailure(
         generated.inputFingerprint,
         "preview-input-invalid",
-        "Preview time must be non-negative and dimensions must be positive integers. Correct previewFrame input.",
+        `Preview time must be non-negative; dimensions must be positive integers no larger than the ${production.frameFormat.width}x${production.frameFormat.height} production frame and ${MAX_PREVIEW_PIXELS} total pixels. Correct previewFrame input.`,
       );
-    const duration =
-      input.target.kind === "shot"
-        ? graph.shots.get(input.target.id)?.durationSeconds
-        : input.target.id === production.id
-          ? production.targetRuntimeSeconds
-          : undefined;
-    const targetMaterialized =
-      input.target.kind === "shot"
-        ? generated.files.some(
-            (file) =>
-              file.path === `shots/${encodeURIComponent(input.target.id)}.json`,
-          )
-        : generated.files.some((file) => file.path.startsWith("shots/"));
+    const duration = graph.shots.get(input.target.id)?.durationSeconds;
+    const targetMaterialized = generated.files.some(
+      (file) =>
+        file.path ===
+        `shots/${encodeAutoMoviePathSegment(input.target.id)}.json`,
+    );
     if (duration === undefined || targetMaterialized === false)
       return previewFailure(
         generated.inputFingerprint,
@@ -377,7 +395,10 @@ export class AutoMovieProductionOracleService {
         "capture-host-unavailable",
         "This MCP host has no project-fixed frame capture. Run the scaffold preview host or configure a capture adapter.",
       );
-    const index = Math.round(input.time * fps);
+    const index = Math.min(
+      Math.round(input.time * fps),
+      Math.floor(duration * fps),
+    );
     const time = index / fps;
     let captured: Awaited<ReturnType<AutoMovieProductionFrameCapture>>;
     try {
@@ -437,17 +458,11 @@ export class AutoMovieProductionOracleService {
       pixelFormat: "yuv420p",
       crf: 17,
     };
-    const renderSpecFingerprint = digestAutoMovieBytes(
-      canonicalAutoMovieJsonBytes({
-        target: input.target,
-        renderSpec,
-      }),
-    );
-    const relativeBundle = [
-      `${input.target.kind}-${encodeURIComponent(input.target.id)}`,
-      digestSegment(generated.inputFingerprint),
-      digestSegment(renderSpecFingerprint),
-    ].join("/");
+    const relativeBundle = productionRenderBundleRelativePath({
+      target: input.target,
+      compileFingerprint: generated.inputFingerprint,
+      renderSpec,
+    });
     const suffix = pass === "beauty" ? "" : `.${pass}`;
     const relativeFrame = `preview/frame_${String(index).padStart(6, "0")}${suffix}.png`;
     const bytes = Buffer.from(captured.bytes);
@@ -456,7 +471,6 @@ export class AutoMovieProductionOracleService {
       this.project.renderRoot(),
       ...relativeBundle.split("/"),
     );
-    const existing = readBundleManifest(path.join(bundleRoot, "manifest.json"));
     const nextFrame = {
       index,
       time,
@@ -466,14 +480,19 @@ export class AutoMovieProductionOracleService {
       width,
       height,
     };
-    const frames = [
-      ...(existing?.compileFingerprint === generated.inputFingerprint
-        ? existing.frames.filter(
-            (frame) => frame.index !== index || frame.pass !== pass,
-          )
-        : []),
-      nextFrame,
-    ].sort(
+    const retained = verifiedRetainedFrames(
+      this.project,
+      bundleRoot,
+      {
+        target: input.target,
+        compileFingerprint: generated.inputFingerprint,
+        renderSpec,
+      },
+      duration,
+    ).filter(
+      (entry) => entry.frame.index !== index || entry.frame.pass !== pass,
+    );
+    const frames = [...retained.map((entry) => entry.frame), nextFrame].sort(
       (left, right) =>
         left.index - right.index || compareCodeUnits(left.pass, right.pass),
     );
@@ -486,7 +505,10 @@ export class AutoMovieProductionOracleService {
     };
     this.project.commitRenderBundle(
       relativeBundle,
-      new Map([[relativeFrame, bytes]]),
+      new Map([
+        ...retained.map((entry) => [entry.frame.path, entry.bytes] as const),
+        [relativeFrame, bytes],
+      ]),
       manifest,
     );
     return {
@@ -519,6 +541,15 @@ export class AutoMovieProductionOracleService {
   ): IAutoMovieDiagnostic | null {
     if (this.compileStatus === undefined) return null;
     const status = this.compileStatus();
+    if (status.compiler.inputFingerprint !== generated.inputFingerprint)
+      return {
+        code: "generated-stale",
+        category: "error",
+        phase: "compile",
+        target: "generated-manifest",
+        path: ".automovie/generated-manifest.json",
+        message: `Generated input ${generated.inputFingerprint} differs from current ${status.compiler.inputFingerprint}. Run compileProject before requesting oracle evidence.`,
+      };
     const error = status.diagnostics.find(
       (diagnostic) => diagnostic.category === "error",
     );
@@ -530,15 +561,6 @@ export class AutoMovieProductionOracleService {
         target: "generated-manifest",
         path: ".automovie/generated-manifest.json",
         message: `Current source does not pass the read-only compiler gate${error === undefined ? "" : `: ${error.message}`}. Correct it and run compileProject before requesting oracle evidence.`,
-      };
-    if (status.compiler.inputFingerprint !== generated.inputFingerprint)
-      return {
-        code: "generated-stale",
-        category: "error",
-        phase: "compile",
-        target: "generated-manifest",
-        path: ".automovie/generated-manifest.json",
-        message: `Generated input ${generated.inputFingerprint} differs from current ${status.compiler.inputFingerprint}. Run compileProject before requesting oracle evidence.`,
       };
     return null;
   }
@@ -555,9 +577,12 @@ const readCompiledShots = (
   for (const entry of manifest.files
     .filter((file) => file.path.startsWith("shots/"))
     .sort((left, right) => compareCodeUnits(left.path, right.path))) {
-    const raw = JSON.parse(
-      Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8"),
-    ) as unknown;
+    const bytes = project.readGeneratedFile(entry.path);
+    if (digestAutoMovieBytes(bytes) !== entry.digest)
+      throw new Error(
+        `Generated shot "${entry.path}" changed after compiler freshness validation. Run compileProject before requesting oracle evidence.`,
+      );
+    const raw = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
     const validation = typia.validateEquals<IAutoMovieCompiledShotSource>(raw);
     if (validation.success === false)
       throw new Error(
@@ -586,22 +611,19 @@ const resolveSelector = (
     return landmark.position;
   }
   const actor = findCompiledActor(shots, selector.actor, options.shot);
-  const pose = actorPoseAt(
+  const spatial = actorSpatialAt(
     actor.compiled,
     selector.actor,
     options.time ?? 0,
     actor.model.skeleton,
   );
-  if (selector.bone === undefined)
-    return pose.root === null
-      ? actor.node.transform.translation
-      : composeTransforms(actor.node.transform, pose.root).translation;
+  if (selector.bone === undefined) return spatial.transform.translation;
   if (actor.model.skeleton === null)
     throw new Error(
       `Actor "${selector.actor}" has no skeleton, so bone "${selector.bone}" cannot resolve.`,
     );
   const bone = resolvePose(
-    pose,
+    spatial.pose,
     actor.model.skeleton,
     HUMANOID_JOINT_AXES,
   ).find((item) => item.bone === selector.bone);
@@ -609,7 +631,7 @@ const resolveSelector = (
     throw new Error(
       `Actor "${selector.actor}" has no resolved bone "${selector.bone}". Correct the selector or rig.`,
     );
-  return applyTransformPoint(actor.node.transform, bone.worldPosition);
+  return applyTransformPoint(spatial.transform, bone.worldPosition);
 };
 
 interface ICompiledActor {
@@ -629,6 +651,7 @@ const findCompiledActor = (
       : [shots.get(shotId)].filter(
           (value): value is IAutoMovieCompiledShotSource => value !== undefined,
         );
+  const matches: ICompiledActor[] = [];
   for (const compiled of candidates) {
     const node = compiled.scene.nodes.find((item) => item.id === actor);
     if (node === undefined) continue;
@@ -637,8 +660,17 @@ const findCompiledActor = (
       throw new Error(
         `Actor "${actor}" references missing model "${node.model}" in shot "${compiled.shot.id}". Recompile corrected source.`,
       );
-    return { compiled, node, model };
+    matches.push({ compiled, node, model });
   }
+  if (matches.length > 1)
+    throw new Error(
+      `Actor "${actor}" appears in multiple compiled shots (${matches
+        .map((match) => match.compiled.shot.id)
+        .join(
+          ", ",
+        )}). Supply the shot id so geometry never depends on file order.`,
+    );
+  if (matches.length === 1) return matches[0]!;
   throw new Error(
     `Actor "${actor}" does not exist${shotId === undefined ? "" : ` in shot "${shotId}"`} in current compiled scenes. Compile the owning shot or correct the selector.`,
   );
@@ -650,23 +682,85 @@ const actorPoseAt = (
   time: number,
   skeleton: IAutoMovieSkeleton | null,
 ): IAutoMoviePose => {
+  if (
+    Number.isFinite(time) === false ||
+    time < 0 ||
+    time > compiled.shot.duration
+  )
+    throw new Error(
+      `Actor sample time ${time} is outside shot "${compiled.shot.id}" duration 0..${compiled.shot.duration}. Choose a current in-range time.`,
+    );
   const empty = (): IAutoMoviePose => ({
     skeleton: skeleton?.id ?? "unrigged",
     root: null,
     joints: [],
   });
+  const node = compiled.scene.nodes.find((item) => item.id === actor)!;
   const performance = compiled.shot.performances.find(
     (item) => item.node === actor,
   );
-  if (performance?.motion === null || performance === undefined) return empty();
-  const motion = compiled.motions.find(
-    (item) => item.id === performance.motion,
-  );
+  const motionId = performance === undefined ? node.motion : performance.motion;
+  if (motionId === null) return node.pose ?? empty();
+  const motion = compiled.motions.find((item) => item.id === motionId);
   if (motion === undefined)
     throw new Error(
-      `Actor "${actor}" references missing motion "${performance.motion}". Recompile the shot source.`,
+      `Actor "${actor}" references missing motion "${motionId}". Recompile the shot source.`,
     );
-  return sampleMotion(motion, Math.max(0, time - performance.startOffset)).pose;
+  return sampleMotion(
+    motion,
+    performance === undefined
+      ? time
+      : Math.max(0, time - performance.startOffset),
+  ).pose;
+};
+
+interface IActorSpatialSample {
+  pose: IAutoMoviePose;
+  transform: IAutoMovieTransform;
+}
+
+const actorSpatialAt = (
+  compiled: IAutoMovieCompiledShotSource,
+  actor: string,
+  time: number,
+  skeleton: IAutoMovieSkeleton | null,
+): IActorSpatialSample => {
+  const pose = actorPoseAt(compiled, actor, time, skeleton);
+  const node = compiled.scene.nodes.find((item) => item.id === actor)!;
+  const base =
+    pose.root === null
+      ? node.transform
+      : composeTransforms(node.transform, pose.root);
+  const sampled = sampleClipSequence(compiled.shot.objectMotions, time);
+  const translation = sampled.get(`node:${actor}:translation`)?.value;
+  const rotation = sampled.get(`node:${actor}:rotation`)?.value;
+  const scale = sampled.get(`node:${actor}:scale`)?.value;
+  return {
+    pose: { ...pose, root: null },
+    transform: {
+      translation:
+        translation === undefined
+          ? base.translation
+          : {
+              x: translation[0]!,
+              y: translation[1]!,
+              z: translation[2]!,
+            },
+      rotation:
+        rotation === undefined
+          ? base.rotation
+          : {
+              x: rotation[0]!,
+              y: rotation[1]!,
+              z: rotation[2]!,
+              w: rotation[3]!,
+            },
+      scale:
+        scale === undefined
+          ? base.scale
+          : { x: scale[0]!, y: scale[1]!, z: scale[2]! },
+    },
+  };
 };
 
 const actorTransformAt = (
@@ -679,10 +773,7 @@ const actorTransformAt = (
     actor,
     compiled.shot.id,
   );
-  const pose = actorPoseAt(compiled, actor, time, found.model.skeleton);
-  return pose.root === null
-    ? found.node.transform
-    : composeTransforms(found.node.transform, pose.root);
+  return actorSpatialAt(compiled, actor, time, found.model.skeleton).transform;
 };
 
 const sampleActorPose = (
@@ -700,10 +791,12 @@ const sampleActorPose = (
       `Actor "${actor}" has no performance in shot "${found.compiled.shot.id}". Correct the actor or shot source.`,
     );
   const pose = actorPoseAt(found.compiled, actor, time, found.model.skeleton);
-  const transform =
-    pose.root === null
-      ? found.node.transform
-      : composeTransforms(found.node.transform, pose.root);
+  const transform = actorSpatialAt(
+    found.compiled,
+    actor,
+    time,
+    found.model.skeleton,
+  ).transform;
   return {
     shot: found.compiled.shot.id,
     actor,
@@ -842,18 +935,78 @@ const formationDimensions = (
   return { width: layout.radius * 2, depth: layout.radius * 2 };
 };
 
-const readBundleManifest = (
-  file: string,
-): IAutoMovieRenderBundleManifest | null => {
-  try {
-    const value = JSON.parse(fs.readFileSync(file, "utf8")) as unknown;
-    const validation =
-      typia.validateEquals<IAutoMovieRenderBundleManifest>(value);
-    return validation.success ? validation.data : null;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-    return null;
-  }
+const verifiedRetainedFrames = (
+  project: AutoMovieProductionProject,
+  bundleRoot: string,
+  expected: Pick<
+    IAutoMovieRenderBundleManifest,
+    "target" | "compileFingerprint" | "renderSpec"
+  >,
+  duration: number,
+): Array<{
+  frame: IAutoMovieRenderBundleManifest["frames"][number];
+  bytes: Uint8Array;
+}> => {
+  const manifest = project.verifiedRenderManifest(
+    path.join(bundleRoot, "manifest.json"),
+  );
+  if (
+    manifest === null ||
+    Buffer.from(
+      canonicalAutoMovieJsonBytes({
+        target: manifest.target,
+        compileFingerprint: manifest.compileFingerprint,
+        renderSpec: manifest.renderSpec,
+      }),
+    ).equals(
+      Buffer.from(
+        canonicalAutoMovieJsonBytes({
+          target: expected.target,
+          compileFingerprint: expected.compileFingerprint,
+          renderSpec: expected.renderSpec,
+        }),
+      ),
+    ) === false
+  )
+    return [];
+  const retained: Array<{
+    frame: IAutoMovieRenderBundleManifest["frames"][number];
+    bytes: Uint8Array;
+  }> = [];
+  for (const frame of manifest.frames)
+    try {
+      if (
+        frame.index < 0 ||
+        frame.time !== frame.index / manifest.renderSpec.frameFormat.fps ||
+        frame.time > duration
+      )
+        continue;
+      const absolute = path.resolve(bundleRoot, frame.path);
+      const insideBundle = path.relative(bundleRoot, absolute);
+      if (
+        insideBundle === "" ||
+        insideBundle === ".." ||
+        insideBundle.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(insideBundle)
+      )
+        continue;
+      const relative = normalizeSlash(
+        path.relative(project.renderRoot(), absolute),
+      );
+      const bytes = project.readRenderFile(relative);
+      if (digestAutoMovieBytes(bytes) !== frame.digest) continue;
+      const png = PNG.sync.read(Buffer.from(bytes));
+      if (
+        png.width !== frame.width ||
+        png.height !== frame.height ||
+        hasVisiblePixelVariance(png) === false
+      )
+        continue;
+      retained.push({ frame, bytes });
+    } catch {
+      continue;
+    }
+  return retained;
 };
 
 const previewFailure = (
@@ -915,11 +1068,10 @@ const insidePolygon = (
   return inside;
 };
 
-const digestSegment = (digest: AutoMovieContentDigest): string =>
-  digest.slice("sha256:".length);
-
 const normalizeSlash = (value: string): string =>
   value.split(path.sep).join("/");
+
+const MAX_PREVIEW_PIXELS = 16_777_216;
 
 const hasVisiblePixelVariance = (png: PNG): boolean => {
   if (png.data.length < 8) return false;

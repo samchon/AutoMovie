@@ -5,6 +5,7 @@ import {
   AutoMovieProductionProject,
   AutoMovieProductionReviewService,
   digestAutoMovieBytes,
+  productionRenderBundleRelativePath,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -37,14 +38,21 @@ export const test_mcp_production_review_render_edges =
       );
       await oracle.preview({
         target: { kind: "shot", id: "opening" },
-        time: 0,
+        time: 2,
         width: 2,
         height: 2,
       });
       await oracle.preview({
         target: { kind: "shot", id: "opening" },
-        time: 0,
+        time: 2,
         pass: "mask",
+        width: 2,
+        height: 2,
+      });
+      await oracle.preview({
+        target: { kind: "shot", id: "opening" },
+        time: 2,
+        pass: "pose",
         width: 2,
         height: 2,
       });
@@ -69,6 +77,49 @@ export const test_mcp_production_review_render_edges =
           stalePrepared.diagnostics.some(
             (diagnostic) => diagnostic.code === "review-evidence-stale",
           ),
+      );
+      const filmManifest: IAutoMovieRenderBundleManifest = {
+        version: 1,
+        target: { kind: "film", id: "fixture-film" },
+        compileFingerprint: project.generatedManifest()!.inputFingerprint,
+        renderSpec: {
+          target: "fixture-film",
+          frameFormat: { width: 2, height: 2, fps: 24 },
+          toneMapping: "none",
+          codec: "h264",
+          pixelFormat: "yuv420p",
+          crf: 17,
+        },
+        frames: [
+          {
+            index: 48,
+            time: 2,
+            pass: "beauty",
+            path: "film.png",
+            digest: digestAutoMovieBytes(png()),
+            width: 2,
+            height: 2,
+          },
+        ],
+      };
+      const filmBundle = productionRenderBundleRelativePath(filmManifest);
+      project.commitRenderBundle(
+        filmBundle,
+        new Map([["film.png", png()]]),
+        filmManifest,
+      );
+      const filmBundlePrepared = review.prepare({
+        target: { kind: "film", id: "fixture-film" },
+      });
+      TestValidator.predicate(
+        "film review recognizes its own renderer-owned bundle",
+        filmBundlePrepared.diagnostics.every(
+          (diagnostic) =>
+            !(
+              diagnostic.code === "render-bundle-unowned" &&
+              diagnostic.path?.includes(filmBundle)
+            ),
+        ),
       );
       const aggregateManifest = path.join(
         fixture.root,
@@ -113,11 +164,52 @@ export const test_mcp_production_review_render_edges =
           "utf8",
         ),
       ) as IAutoMovieRenderBundleManifest;
-      const sourceFrame = path.join(
-        fixture.root,
-        frame.bundle,
-        baseManifest.frames[0]!.path,
+      const baseFrame = baseManifest.frames.find(
+        (entry) => entry.index === frame.frame && entry.pass === frame.pass,
+      )!;
+      const sourceFrame = path.join(fixture.root, frame.bundle, baseFrame.path);
+      const wrongClockBytes = fs.readFileSync(sourceFrame);
+      const wrongClockManifest: IAutoMovieRenderBundleManifest = {
+        ...baseManifest,
+        renderSpec: {
+          ...baseManifest.renderSpec,
+          frameFormat: {
+            ...baseManifest.renderSpec.frameFormat,
+            fps: 12,
+          },
+        },
+        frames: [
+          {
+            ...baseFrame,
+            time: baseFrame.index / 12,
+            path: "wrong-clock.png",
+            digest: digestAutoMovieBytes(wrongClockBytes),
+          },
+        ],
+      };
+      const wrongClockBundle =
+        productionRenderBundleRelativePath(wrongClockManifest);
+      project.commitRenderBundle(
+        wrongClockBundle,
+        new Map([["wrong-clock.png", wrongClockBytes]]),
+        wrongClockManifest,
       );
+      const wrongClockPrepared = review.prepare({ target });
+      TestValidator.predicate(
+        "required review frames stay on the current production frame clock",
+        wrongClockPrepared.diagnostics.some(
+          (diagnostic) => diagnostic.code === "render-frame-invalid",
+        ) &&
+          wrongClockPrepared.frames.every(
+            (preparedFrame) =>
+              preparedFrame.reviewFrame !== frame.reviewFrame ||
+              preparedFrame.time === frame.time,
+          ),
+      );
+      fs.rmSync(path.join(fixture.root, "renders", wrongClockBundle), {
+        recursive: true,
+        force: true,
+      });
 
       const malformedDirectory = path.join(
         fixture.root,
@@ -143,7 +235,7 @@ export const test_mcp_production_review_render_edges =
           path.join(directory, "manifest.json"),
           JSON.stringify({
             ...baseManifest,
-            frames: [{ ...baseManifest.frames[0]!, path: framePath }],
+            frames: [{ ...baseFrame, path: framePath }],
           }),
         );
         TestValidator.predicate(
@@ -172,7 +264,7 @@ export const test_mcp_production_review_render_edges =
         path.join(symlinkDirectory, "manifest.json"),
         JSON.stringify({
           ...baseManifest,
-          frames: [{ ...baseManifest.frames[0]!, path: "linked/frame.png" }],
+          frames: [{ ...baseFrame, path: "linked/frame.png" }],
         }),
       );
       TestValidator.predicate(
@@ -224,7 +316,7 @@ export const test_mcp_production_review_render_edges =
             ...baseManifest,
             frames: [
               mutate({
-                ...baseManifest.frames[0]!,
+                ...baseFrame,
                 path: "frame.png",
               }),
             ],
@@ -250,7 +342,7 @@ export const test_mcp_production_review_render_edges =
         path.join(invalidDirectory, "manifest.json"),
         JSON.stringify({
           ...baseManifest,
-          frames: [{ ...baseManifest.frames[0]!, path: "frame.png" }],
+          frames: [{ ...baseFrame, path: "frame.png" }],
         }),
       );
       TestValidator.predicate(
@@ -317,7 +409,7 @@ export const test_mcp_production_review_render_edges =
             },
             frames: [
               {
-                ...baseManifest.frames[0]!,
+                ...baseFrame,
                 path: "frame.png",
                 digest: digestAutoMovieBytes(blankBytes),
                 width: size,

@@ -6,7 +6,7 @@ import { createAutoMovieProductionMcpServer } from "./createAutoMovieProductionM
 /** Start the opt-in coding-agent production MCP server over stdio. */
 const main = async (): Promise<void> => {
   const server = createAutoMovieProductionMcpServer({
-    projectRoot: process.env.AUTOMOVIE_PROJECT_ROOT,
+    projectRoot: process.env.AUTOMOVIE_PROJECT_ROOT ?? process.cwd(),
   });
   await server.connect(new StdioServerTransport());
 };

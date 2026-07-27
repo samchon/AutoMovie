@@ -34,6 +34,7 @@ import {
   canonicalizeAutoMovieJson,
   compareCodeUnits,
   digestAutoMovieBytes,
+  encodeAutoMoviePathSegment,
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
@@ -70,6 +71,7 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
     "rhythm-and-runtime",
     "audio-picture-synchronization",
     "deliverable-completeness",
+    "acceptance-scenarios",
   ],
 } as const;
 
@@ -92,11 +94,18 @@ export class AutoMovieProductionReviewService {
   public prepare(
     input: IAutoMoviePrepareReviewInput,
   ): IAutoMoviePrepareReviewOutput {
-    const graph = this.project.graph();
     const compileStatus =
       input.target.kind === "shot" || input.target.kind === "film"
         ? this.compileStatus()
         : null;
+    return this.prepareWithStatus(input, compileStatus);
+  }
+
+  private prepareWithStatus(
+    input: IAutoMoviePrepareReviewInput,
+    compileStatus: IAutoMovieCompileProjectOutput | null,
+  ): IAutoMoviePrepareReviewOutput {
+    const graph = this.project.graph();
     const diagnostics: IAutoMovieDiagnostic[] = [];
     const targetValue = targetValueOf(this.project, input.target);
     if (targetValue === null)
@@ -117,7 +126,10 @@ export class AutoMovieProductionReviewService {
     );
     if (
       (input.target.kind === "shot" || input.target.kind === "film") &&
-      frames.length === 0
+      frames.length === 0 &&
+      diagnostics.some(
+        (diagnostic) => diagnostic.code === "review-evidence-missing",
+      ) === false
     )
       diagnostics.push({
         code: "review-evidence-missing",
@@ -163,7 +175,7 @@ export class AutoMovieProductionReviewService {
       ...validateWorksheet(this.project, input, prepared),
     ];
     if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
-      return refused(input.target, diagnostics);
+      return refused(this.project, input.target, diagnostics);
     const fingerprint = reviewFingerprint(
       this.project,
       input.target,
@@ -175,7 +187,7 @@ export class AutoMovieProductionReviewService {
        reachable only through a hostile getter mutating project bytes during
        validation, while commitFiles separately enforces revision races. */
     if (fingerprint !== prepared.fingerprint)
-      return refused(input.target, [
+      return refused(this.project, input.target, [
         {
           code: "review-target-raced",
           category: "error",
@@ -208,8 +220,10 @@ export class AutoMovieProductionReviewService {
   }
 
   /** Derive missing, stale, incomplete, revise and complete states. */
-  public queue(): IAutoMovieReviewQueue {
-    const compileStatus = this.compileStatus();
+  public queue(
+    currentCompileStatus: IAutoMovieCompileProjectOutput = this.compileStatus(),
+  ): IAutoMovieReviewQueue {
+    const compileStatus = currentCompileStatus;
     const entries = reviewTargets(this.project).map((target) => {
       const currentFingerprint = reviewFingerprint(
         this.project,
@@ -217,6 +231,24 @@ export class AutoMovieProductionReviewService {
         compileStatus,
       );
       const stored = this.project.review(target);
+      const prepared =
+        stored === null || stored.fingerprint !== currentFingerprint
+          ? null
+          : this.prepareWithStatus(
+              { target },
+              target.kind === "shot" || target.kind === "film"
+                ? compileStatus
+                : null,
+            );
+      const storedDiagnostics =
+        stored === null || prepared === null
+          ? []
+          : [
+              ...prepared.diagnostics.filter(
+                (diagnostic) => diagnostic.category === "error",
+              ),
+              ...validateWorksheet(this.project, stored, prepared),
+            ];
       return {
         target,
         state:
@@ -224,7 +256,11 @@ export class AutoMovieProductionReviewService {
             ? ("missing" as const)
             : stored.fingerprint !== currentFingerprint
               ? ("stale" as const)
-              : reviewState(stored),
+              : storedDiagnostics.some(
+                    (diagnostic) => diagnostic.category === "error",
+                  )
+                ? ("incomplete" as const)
+                : reviewState(stored),
         currentFingerprint,
         storedFingerprint: stored?.fingerprint ?? null,
       };
@@ -271,6 +307,14 @@ const validateWorksheet = (
     );
   const copies = new Set<string>();
   for (const check of input.checks) {
+    if (
+      check.criterion !== "acceptance-scenarios" &&
+      (check.acceptanceScenarios?.length ?? 0) !== 0
+    )
+      add(
+        "review-acceptance-coverage-misplaced",
+        `Criterion "${check.criterion}" cannot claim acceptance scenario ids. Put them only on acceptance-scenarios.`,
+      );
     if (check.observation.trim().length === 0)
       add(
         "review-observation-empty",
@@ -296,6 +340,12 @@ const validateWorksheet = (
       );
   }
   if (input.complete) {
+    for (const check of input.checks)
+      if (check.verdict !== "pass")
+        add(
+          "review-required-criterion-not-passed",
+          `Required criterion "${check.criterion}" must pass before complete can be true; not-applicable cannot discharge a required checklist entry.`,
+        );
     if (input.checks.some((check) => check.verdict === "revise"))
       add(
         "review-self-contradiction",
@@ -331,6 +381,7 @@ const validateWorksheet = (
           `High-risk criterion "${criterion}" must pass before complete can be true. Use not-applicable only on genuinely optional criteria.`,
         );
     }
+    diagnostics.push(...validateAcceptanceCoverage(project, input, prepared));
   } else if (
     input.corrections.length === 0 &&
     input.checks.some((check) => check.verdict === "revise") === false
@@ -349,6 +400,90 @@ const validateWorksheet = (
         "review-correction-empty",
         "Every correction requires target, problem, and expected state. Complete the correction before submitReview.",
       );
+  return diagnostics;
+};
+
+const validateAcceptanceCoverage = (
+  project: AutoMovieProductionProject,
+  input: IAutoMovieSubmitReviewInput,
+  prepared: IAutoMoviePrepareReviewOutput,
+): IAutoMovieDiagnostic[] => {
+  if (input.target.kind !== "shot" && input.target.kind !== "film") return [];
+  const target = input.target;
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const graph = project.graph();
+  const scenarios = [...graph.acceptance.values()]
+    .filter(
+      (scenario) =>
+        scenario.required &&
+        (target.kind === "film" ||
+          acceptanceAddressesShot(scenario, target.id)),
+    )
+    .sort((left, right) => compareCodeUnits(left.id, right.id));
+  const check = input.checks.find(
+    (item) => item.criterion === "acceptance-scenarios",
+  );
+  const actual = [...(check?.acceptanceScenarios ?? [])].sort(compareCodeUnits);
+  const expected = scenarios.map((scenario) => scenario.id);
+  const add = (scenario: string, message: string): void => {
+    diagnostics.push({
+      code: "review-acceptance-coverage-incomplete",
+      category: "error",
+      phase: "review",
+      target: reviewTargetKey(input.target),
+      path: null,
+      message: `Required acceptance "${scenario}": ${message}`,
+    });
+  };
+  if (sameStringSet(actual, expected) === false)
+    add(
+      expected.join(", ") || "(none)",
+      `the acceptance-scenarios check must list the exact current required ids: ${expected.join(", ") || "(none)"}.`,
+    );
+  for (const scenario of scenarios) {
+    if (
+      check?.evidence.some(
+        (evidence) =>
+          evidence.kind === "acceptance" &&
+          evidence.scenario === scenario.id &&
+          canonicalizeAutoMovieJson(evidence.exactValue) ===
+            canonicalizeAutoMovieJson(scenario),
+      ) !== true
+    )
+      add(
+        scenario.id,
+        "cite its exact current acceptance contract in the acceptance-scenarios check.",
+      );
+    const criterion = scenario.criterion;
+    if (criterion.kind !== "frame") continue;
+    // Graph validation requires criterion.shot for film targets, so the
+    // target id fallback is exactly the owning shot id for every valid graph.
+    const shot = criterion.shot ?? scenario.target.id;
+    if (
+      shot === undefined ||
+      check?.evidence.some(
+        (evidence) =>
+          evidence.kind === "frame" &&
+          evidence.shot === shot &&
+          evidence.reviewFrame === criterion.frame &&
+          evidence.pass === criterion.pass &&
+          prepared.frames.some(
+            (frame) =>
+              frame.shot === evidence.shot &&
+              frame.reviewFrame === evidence.reviewFrame &&
+              frame.bundle === evidence.bundle &&
+              frame.frame === evidence.frame &&
+              frame.time === evidence.time &&
+              frame.pass === evidence.pass &&
+              frame.digest === evidence.digest,
+          ),
+      ) !== true
+    )
+      add(
+        scenario.id,
+        `cite the exact current frame "${criterion.frame}" pass "${criterion.pass}" from shot "${String(shot)}".`,
+      );
+  }
   return diagnostics;
 };
 
@@ -433,6 +568,8 @@ const validateEvidence = (
   } else if (evidence.kind === "frame") {
     const frame = prepared.frames.find(
       (item) =>
+        item.shot === evidence.shot &&
+        item.reviewFrame === evidence.reviewFrame &&
         item.bundle === evidence.bundle &&
         item.frame === evidence.frame &&
         item.time === evidence.time &&
@@ -461,7 +598,7 @@ const validateEvidence = (
         "review-evidence-region-invalid",
         "frame region must be a non-empty integer rectangle inside the current image.",
       );
-  } else {
+  } else if (evidence.kind === "diagnostic") {
     const diagnostic = prepared.diagnostics.find(
       (item) =>
         item.code === evidence.code && (item.path ?? "") === evidence.path,
@@ -478,6 +615,21 @@ const validateEvidence = (
       fail(
         "review-evidence-stale",
         "diagnostic actual must exactly equal the current diagnostic message.",
+      );
+  } else {
+    const current = project.graph().acceptance.get(evidence.scenario);
+    if (
+      current === undefined ||
+      current.required === false ||
+      (target.kind === "shot" &&
+        acceptanceAddressesShot(current, target.id) === false) ||
+      (target.kind !== "shot" && target.kind !== "film") ||
+      canonicalizeAutoMovieJson(current) !==
+        canonicalizeAutoMovieJson(evidence.exactValue)
+    )
+      fail(
+        "review-evidence-stale",
+        `acceptance scenario "${evidence.scenario}" is not a current required scenario for this visual target or exactValue is stale.`,
       );
   }
   return diagnostics;
@@ -619,19 +771,14 @@ const reviewFingerprint = (
           "utf8",
         ),
       });
-      fields.push({
-        role: `shot-review:${id}`,
-        kind: project.review(shotTarget) === null ? "absent" : "digest",
-        payload: Buffer.from(
-          project.review(shotTarget)?.fingerprint ?? "",
-          "utf8",
-        ),
-      });
+      addJson(`shot-review:${id}`, project.review(shotTarget));
     }
     addJson(
       "render-manifest",
       readTrackedJsonIfPresent(project, "render-manifest.json"),
     );
+    for (const frame of currentFrames(project, target, [], compileStatus!))
+      addJson(`frame:${frame.bundle}:${frame.frame}:${frame.pass}`, frame);
   }
   return fingerprintAutoMovieFields(fields);
 };
@@ -683,8 +830,9 @@ const reviewTargets = (
     targets.push({ kind: "source", path: shot.source.module });
     targets.push({ kind: "shot", id });
   }
-  for (const id of graph.acceptance.keys())
-    targets.push({ kind: "design", design: { kind: "acceptance", id } });
+  for (const [id, acceptance] of graph.acceptance)
+    if (acceptance.required)
+      targets.push({ kind: "design", design: { kind: "acceptance", id } });
   if (graph.production !== null)
     targets.push({ kind: "film", id: graph.production.id });
   const seen = new Set<string>();
@@ -730,6 +878,9 @@ const currentFrames = (
     return [];
   }
   const frames: IAutoMovieFrameEvidenceReference[] = [];
+  const graph = project.graph();
+  const required = requiredReviewFrames(graph, target);
+  const covered = new Set<string>();
   for (const manifestPath of listNamedFiles(
     project.renderRoot(),
     "manifest.json",
@@ -751,14 +902,46 @@ const currentFrames = (
       continue;
     }
     const manifest = validation.data;
+    const addressed =
+      target.kind === "shot"
+        ? manifest.target.kind === "shot" && manifest.target.id === target.id
+        : (manifest.target.kind === "film" &&
+            manifest.target.id === target.id) ||
+          (manifest.target.kind === "shot" &&
+            graph.shots.has(manifest.target.id));
     if (
-      manifest.target.kind !== target.kind ||
-      manifest.target.id !== target.id ||
+      addressed === false ||
       manifest.compileFingerprint !== generated.inputFingerprint
     )
       continue;
     const bundleRoot = path.dirname(manifestPath);
     const bundle = normalizeSlash(path.relative(project.root, bundleRoot));
+    const owned = project.verifiedRenderManifest(manifestPath) !== null;
+    if (owned === false)
+      diagnostics.push({
+        code: "render-bundle-unowned",
+        category: "error",
+        phase: "render",
+        target: bundle,
+        path: normalizeSlash(path.relative(project.root, manifestPath)),
+        message:
+          "This manifest is not at the canonical content-addressed path or lacks the matching MCP render receipt. Recreate it through previewFrame.",
+      });
+    if (
+      manifest.renderSpec.target !== manifest.target.id ||
+      manifest.renderSpec.frameFormat.fps !== graph.production!.frameFormat.fps
+    ) {
+      diagnostics.push({
+        code: "render-frame-invalid",
+        category: "error",
+        phase: "render",
+        target: bundle,
+        path: normalizeSlash(path.relative(project.root, manifestPath)),
+        message:
+          "Render target or frame clock does not match the current shot and production FPS. Recreate this bundle through previewFrame.",
+      });
+      continue;
+    }
     for (const frame of manifest.frames) {
       let file = path.join(bundleRoot, frame.path);
       try {
@@ -776,21 +959,46 @@ const currentFrames = (
           digest !== frame.digest ||
           png.width !== frame.width ||
           png.height !== frame.height ||
+          frame.width !== manifest.renderSpec.frameFormat.width ||
+          frame.height !== manifest.renderSpec.frameFormat.height ||
           hasVisiblePixelVariance(png) === false ||
           Math.abs(frame.time - expectedTime) > Number.EPSILON * 16
         )
           throw new Error(
             "digest, dimensions, visible pixels, or frame clock do not match",
           );
-        frames.push({
-          bundle,
-          frame: frame.index,
-          time: frame.time,
-          pass: frame.pass,
-          digest,
-          width: png.width,
-          height: png.height,
-        });
+        const requirements =
+          manifest.target.kind === "shot"
+            ? required.filter(
+                (item) =>
+                  item.shot === manifest.target.id &&
+                  item.index === frame.index &&
+                  item.time === frame.time &&
+                  item.pass === frame.pass,
+              )
+            : [];
+        if (owned)
+          for (const requirement of requirements) {
+            frames.push({
+              shot: requirement.shot,
+              reviewFrame: requirement.frame,
+              bundle,
+              frame: frame.index,
+              time: frame.time,
+              pass: frame.pass,
+              digest,
+              width: png.width,
+              height: png.height,
+            });
+            covered.add(
+              reviewFrameKey(
+                requirement.shot,
+                requirement.frame,
+                frame.index,
+                frame.pass,
+              ),
+            );
+          }
       } catch (error) {
         diagnostics.push({
           code: "render-frame-invalid",
@@ -805,13 +1013,72 @@ const currentFrames = (
       }
     }
   }
+  for (const requirement of required)
+    if (
+      covered.has(
+        reviewFrameKey(
+          requirement.shot,
+          requirement.frame,
+          requirement.index,
+          requirement.pass,
+        ),
+      ) === false
+    )
+      diagnostics.push({
+        code: "review-evidence-missing",
+        category: "error",
+        phase: "review",
+        target: `${requirement.shot}:${requirement.frame}:${requirement.pass}`,
+        path: null,
+        message: `Required review frame "${requirement.frame}" for shot "${requirement.shot}" at ${requirement.time}s pass "${requirement.pass}" has no current verified PNG. Call previewFrame for that exact shot, time, and pass.`,
+      });
   return frames.sort(
     (left, right) =>
       compareCodeUnits(left.bundle, right.bundle) ||
       left.frame - right.frame ||
-      compareCodeUnits(left.pass, right.pass),
+      compareCodeUnits(left.pass, right.pass) ||
+      compareCodeUnits(left.reviewFrame, right.reviewFrame),
   );
 };
+
+interface IRequiredReviewFrame {
+  shot: string;
+  frame: string;
+  time: number;
+  index: number;
+  pass: IAutoMovieFrameEvidenceReference["pass"];
+}
+
+const requiredReviewFrames = (
+  graph: ReturnType<AutoMovieProductionProject["graph"]>,
+  target: Extract<IAutoMovieReviewTarget, { kind: "shot" | "film" }>,
+): IRequiredReviewFrame[] => {
+  // currentFrames reaches this helper only after a clean compile, whose design
+  // gate requires production metadata.
+  const fps = graph.production!.frameFormat.fps;
+  const shots =
+    target.kind === "shot"
+      ? [[target.id, graph.shots.get(target.id)] as const]
+      : [...graph.shots.entries()];
+  return shots.flatMap(([shotId, shot]) =>
+    (shot?.reviewFrames ?? []).flatMap((frame) =>
+      frame.passes.map((pass) => ({
+        shot: shotId,
+        frame: frame.id,
+        time: frame.time,
+        index: Math.round(frame.time * fps),
+        pass,
+      })),
+    ),
+  );
+};
+
+const reviewFrameKey = (
+  shot: string,
+  reviewFrame: string,
+  index: number,
+  pass: IAutoMovieFrameEvidenceReference["pass"],
+): string => `${shot}\0${reviewFrame}\0${index}\0${pass}`;
 
 const jsonPointers = (
   value: unknown,
@@ -935,15 +1202,19 @@ const reviewState = (
       : "incomplete";
 
 const refused = (
+  project: AutoMovieProductionProject,
   target: IAutoMovieReviewTarget,
   diagnostics: IAutoMovieDiagnostic[],
-): IAutoMovieSubmitReviewOutput => ({
-  accepted: false,
-  target,
-  fingerprint: null,
-  state: "missing",
-  diagnostics: diagnostics.sort(compareDiagnostics),
-});
+): IAutoMovieSubmitReviewOutput => {
+  const existing = project.review(target);
+  return {
+    accepted: false,
+    target,
+    fingerprint: null,
+    state: existing === null ? "missing" : reviewState(existing),
+    diagnostics: diagnostics.sort(compareDiagnostics),
+  };
+};
 
 const sameDesignTarget = (
   left: IAutoMovieDesignTarget,
@@ -953,6 +1224,16 @@ const sameDesignTarget = (
   ("id" in left
     ? "id" in right && left.id === right.id
     : "id" in right === false);
+
+const sameStringSet = (
+  left: readonly string[],
+  right: readonly string[],
+): boolean => {
+  if (left.length !== right.length) return false;
+  const sortedLeft = [...left].sort(compareCodeUnits);
+  const sortedRight = [...right].sort(compareCodeUnits);
+  return sortedLeft.every((value, index) => value === sortedRight[index]);
+};
 
 const reviewTargetKey = (target: IAutoMovieReviewTarget): string => {
   if (target.kind === "source") return `source:${target.path}`;
@@ -966,12 +1247,16 @@ const reviewTargetKey = (target: IAutoMovieReviewTarget): string => {
 const targetPath = (target: IAutoMovieReviewTarget): string | null => {
   if (target.kind === "source") return target.path;
   if (target.kind === "shot")
-    return `.automovie/design/shots/${encodeURIComponent(target.id)}.json`;
+    return `.automovie/design/shots/${encodeAutoMoviePathSegment(target.id)}.json`;
   if (target.kind === "film") return ".automovie/design/production.json";
   if (target.design.kind === "production")
     return ".automovie/design/production.json";
   if (target.design.kind === "world") return ".automovie/design/world.json";
-  return `.automovie/design/${target.design.kind}s/${encodeURIComponent(target.design.id)}.json`;
+  const directory =
+    target.design.kind === "acceptance"
+      ? "acceptance"
+      : `${target.design.kind}s`;
+  return `.automovie/design/${directory}/${encodeAutoMoviePathSegment(target.design.id)}.json`;
 };
 
 const readJsonIfPresent = (file: string): unknown => {

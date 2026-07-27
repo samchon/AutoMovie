@@ -1,8 +1,12 @@
-import { IAutoMovieCompiledShotSource } from "@automovie/interface";
+import {
+  IAutoMovieCompiledShotSource,
+  IAutoMovieRenderBundleManifest,
+} from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionOracleService,
   AutoMovieProductionProject,
+  digestAutoMovieBytes,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -51,6 +55,40 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         },
       }).result,
       { kind: "distance", meters: 5 },
+    );
+    TestValidator.predicate(
+      "distance and actor samples reject dishonest times",
+      [-1, Number.NaN].every(
+        (time) =>
+          oracle.query({
+            request: {
+              query: "distance",
+              from: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+              to: { kind: "point", position: { x: 1, y: 0, z: 0 } },
+              time,
+            },
+          }).result === null,
+      ) &&
+        [-1, 999].every(
+          (time) =>
+            oracle.query({
+              request: {
+                query: "pose",
+                actor: "sentinel",
+                shot: "opening",
+                time,
+              },
+            }).result === null,
+        ) &&
+        oracle.query({
+          request: {
+            query: "distance",
+            from: { kind: "actor", actor: "sentinel" },
+            to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+            shot: "opening",
+            time: 999,
+          },
+        }).result === null,
     );
     const physicalReach = oracle.query({
       request: {
@@ -255,8 +293,175 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     };
     const corrupted = (): IAutoMovieCompiledShotSource =>
       JSON.parse(generatedShotBytes) as IAutoMovieCompiledShotSource;
+
+    const generatedManifestPath = path.join(
+      fixture.root,
+      ".automovie/generated-manifest.json",
+    );
+    const generatedManifestBytes = fs.readFileSync(generatedManifestPath);
+    const generatedManifest = JSON.parse(
+      generatedManifestBytes.toString("utf8"),
+    ) as {
+      files: Array<{
+        path: string;
+        owner: "compiler";
+        digest: `sha256:${string}`;
+        sourceTargets: string[];
+      }>;
+    };
+    const writeGeneratedBytes = (bytes: Uint8Array): void => {
+      fs.writeFileSync(generatedShotPath, bytes);
+      const current = JSON.parse(
+        fs.readFileSync(generatedManifestPath, "utf8"),
+      ) as typeof generatedManifest;
+      const opening = current.files.find(
+        (entry) => entry.path === "shots/opening.json",
+      );
+      if (opening === undefined)
+        throw new Error("oracle fixture lost its generated opening entry");
+      opening.digest = digestAutoMovieBytes(bytes);
+      fs.writeFileSync(generatedManifestPath, JSON.stringify(current));
+    };
     const writeCorrupted = (value: IAutoMovieCompiledShotSource): void =>
-      fs.writeFileSync(generatedShotPath, JSON.stringify(value));
+      writeGeneratedBytes(Buffer.from(JSON.stringify(value)));
+    const recurringShot = corrupted();
+    recurringShot.shot.id = "second";
+    const recurringBytes = Buffer.from(JSON.stringify(recurringShot));
+    const recurringPath = path.join(
+      fixture.root,
+      "generated/shots/second.json",
+    );
+    fs.writeFileSync(recurringPath, recurringBytes);
+    generatedManifest.files.push({
+      ...generatedManifest.files.find(
+        (entry) => entry.path === "shots/opening.json",
+      )!,
+      path: "shots/second.json",
+      digest: digestAutoMovieBytes(recurringBytes),
+      sourceTargets: ["shot:second"],
+    });
+    fs.writeFileSync(generatedManifestPath, JSON.stringify(generatedManifest));
+    const ambiguousActor = oracle.query({
+      request: {
+        query: "distance",
+        from: { kind: "actor", actor: "sentinel" },
+        to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+      },
+    });
+    const explicitActor = oracle.query({
+      request: {
+        query: "distance",
+        from: { kind: "actor", actor: "sentinel" },
+        to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+        shot: "opening",
+      },
+    });
+    fs.writeFileSync(generatedManifestPath, generatedManifestBytes);
+    fs.rmSync(recurringPath);
+    TestValidator.predicate(
+      "recurring actors require an explicit shot selector",
+      ambiguousActor.result === null &&
+        ambiguousActor.diagnostics[0]?.message.includes(
+          "multiple compiled shots",
+        ) &&
+        explicitActor.result?.kind === "distance",
+    );
+    fs.writeFileSync(
+      generatedShotPath,
+      Buffer.concat([Buffer.from(generatedShotBytes), Buffer.from(" ")]),
+    );
+    const racedGenerated = oracle.query({
+      request: {
+        query: "distance",
+        from: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+        to: { kind: "point", position: { x: 1, y: 0, z: 0 } },
+      },
+    });
+    writeGeneratedBytes(Buffer.from(generatedShotBytes));
+    TestValidator.predicate(
+      "oracle refuses generated bytes changed after freshness validation",
+      racedGenerated.result === null &&
+        racedGenerated.diagnostics[0]?.message.includes(
+          "changed after compiler freshness validation",
+        ),
+    );
+
+    const staticPose = corrupted();
+    staticPose.shot.performances[0]!.motion = null;
+    staticPose.scene.nodes[0]!.pose = {
+      skeleton: staticPose.models[0]!.skeleton!.id,
+      root: {
+        translation: { x: 2, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        scale: { x: 1, y: 1, z: 1 },
+      },
+      joints: [],
+    };
+    writeCorrupted(staticPose);
+    const staticPoseDistance = oracle.query({
+      request: {
+        query: "distance",
+        from: { kind: "actor", actor: "sentinel" },
+        to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+        shot: "opening",
+        time: 2,
+      },
+    });
+    const objectAnimated = corrupted();
+    objectAnimated.shot.performances[0]!.motion = null;
+    objectAnimated.shot.objectMotions = [
+      {
+        id: "sentinel-object-motion",
+        name: null,
+        duration: objectAnimated.shot.duration,
+        loop: false,
+        tracks: [
+          {
+            channel: {
+              kind: "node",
+              node: "sentinel",
+              path: "translation",
+            },
+            times: [0, 2],
+            values: [0, 0, 0, 4, 5, 6],
+            interpolation: "linear",
+          },
+          {
+            channel: {
+              kind: "node",
+              node: "sentinel",
+              path: "rotation",
+            },
+            times: [0, 2],
+            values: [0, 0, 0, 1, 0, 0, 0, 1],
+            interpolation: "linear",
+          },
+          {
+            channel: { kind: "node", node: "sentinel", path: "scale" },
+            times: [0, 2],
+            values: [1, 1, 1, 2, 2, 2],
+            interpolation: "linear",
+          },
+        ],
+      },
+    ];
+    writeCorrupted(objectAnimated);
+    const objectMotionDistance = oracle.query({
+      request: {
+        query: "distance",
+        from: { kind: "actor", actor: "sentinel" },
+        to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+        shot: "opening",
+        time: 2,
+      },
+    });
+    TestValidator.predicate(
+      "static pose roots and object TRS clips affect physical queries",
+      staticPoseDistance.result?.kind === "distance" &&
+        staticPoseDistance.result.meters === 2 &&
+        objectMotionDistance.result?.kind === "distance" &&
+        Math.abs(objectMotionDistance.result.meters - Math.sqrt(77)) < 1e-9,
+    );
 
     const missingCamera = corrupted();
     missingCamera.scene.cameras = [];
@@ -421,7 +626,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
 
     writeCorrupted(generatedShot);
     generatedShot.shot.performances[0]!.motion = null;
-    fs.writeFileSync(generatedShotPath, JSON.stringify(generatedShot));
+    writeCorrupted(generatedShot);
     const heldPose = oracle.query({
       request: {
         query: "pose",
@@ -431,7 +636,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       },
     });
     generatedShot.shot.performances[0]!.node = "ghost";
-    fs.writeFileSync(generatedShotPath, JSON.stringify(generatedShot));
+    writeCorrupted(generatedShot);
     const heldWithoutNode = oracle.query({
       request: {
         query: "pose",
@@ -440,7 +645,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       },
     });
     generatedShot.shot.performances[0]!.motion = generatedShot.motions[0]!.id;
-    fs.writeFileSync(generatedShotPath, JSON.stringify(generatedShot));
+    writeCorrupted(generatedShot);
     const movingWithoutRootOrNode = oracle.query({
       request: {
         query: "pose",
@@ -454,7 +659,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         translation: { x: 7, y: 8, z: 9 },
       };
     generatedShot.shot.performances[0]!.node = "sentinel";
-    fs.writeFileSync(generatedShotPath, JSON.stringify(generatedShot));
+    writeCorrupted(generatedShot);
     const movingWithRoot = oracle.query({
       request: {
         query: "pose",
@@ -463,7 +668,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       },
     });
     generatedShot.shot.performances[0]!.motion = "absent";
-    fs.writeFileSync(generatedShotPath, JSON.stringify(generatedShot));
+    writeCorrupted(generatedShot);
     const missingMotion = oracle.query({
       request: {
         query: "pose",
@@ -473,7 +678,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       },
     });
     generatedShot.shot.performances = [];
-    fs.writeFileSync(generatedShotPath, JSON.stringify(generatedShot));
+    writeCorrupted(generatedShot);
     const missingPerformance = oracle.query({
       request: {
         query: "pose",
@@ -482,11 +687,11 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         time: 2,
       },
     });
-    fs.writeFileSync(generatedShotPath, "{}");
+    writeGeneratedBytes(Buffer.from("{}"));
     const invalidGenerated = oracle.query({
       request: { query: "ground", point: { x: 0, z: 0 } },
     });
-    fs.writeFileSync(generatedShotPath, generatedShotBytes);
+    writeGeneratedBytes(Buffer.from(generatedShotBytes));
     TestValidator.predicate(
       "pose oracle refuses unstaged actors and missing performance or motion",
       heldPose.result?.kind === "measurement" &&
@@ -675,18 +880,85 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       "preview dimensions and time are validated",
       invalidInput.diagnostics[0]?.code === "preview-input-invalid",
     );
+    const inputValidationOracle = new AutoMovieProductionOracleService(
+      project,
+      async () => ({ bytes: png(2, 2), width: 2, height: 2 }),
+    );
+    const invalidPreviewInputs = await Promise.all([
+      inputValidationOracle.preview({
+        target: { kind: "shot", id: "opening" },
+        time: 0,
+        width: 1.5,
+        height: 2,
+      }),
+      inputValidationOracle.preview({
+        target: { kind: "shot", id: "opening" },
+        time: 0,
+        width: 2,
+        height: 1.5,
+      }),
+      inputValidationOracle.preview({
+        target: { kind: "shot", id: "opening" },
+        time: 0,
+        width: 2,
+        height: 0,
+      }),
+      inputValidationOracle.preview({
+        target: { kind: "shot", id: "opening" },
+        time: 0,
+        width: productionDesign().frameFormat.width + 1,
+        height: 2,
+      }),
+      inputValidationOracle.preview({
+        target: { kind: "shot", id: "opening" },
+        time: 0,
+        width: 2,
+        height: productionDesign().frameFormat.height + 1,
+      }),
+      inputValidationOracle.preview({
+        target: { kind: "shot", id: "opening" },
+        time: Number.NaN,
+        width: 2,
+        height: 2,
+      }),
+    ]);
+    TestValidator.predicate(
+      "every preview dimension and clock branch is bounded",
+      invalidPreviewInputs.every(
+        (output) => output.diagnostics[0]?.code === "preview-input-invalid",
+      ),
+    );
+    const oversizedProduction = productionDesign({
+      frameFormat: {
+        width: 5_000,
+        height: 5_000,
+        fps: 24,
+        colorSpace: "srgb",
+      },
+    });
+    TestValidator.predicate(
+      "large production format is valid for the preview pixel-cap test",
+      project.setProductionDesign(oversizedProduction).accepted &&
+        compiler.compile({ scope: "source" }).success,
+    );
+    const oversizedPreview = await inputValidationOracle.preview({
+      target: { kind: "shot", id: "opening" },
+      time: 0,
+      width: 5_000,
+      height: 5_000,
+    });
+    project.setProductionDesign(productionDesign());
+    compiler.compile({ scope: "source" });
+    TestValidator.predicate(
+      "preview refuses a production-sized allocation above the pixel cap",
+      oversizedPreview.diagnostics[0]?.code === "preview-input-invalid",
+    );
     const absentTargetOracle = new AutoMovieProductionOracleService(
       project,
       async () => ({ bytes: png(2, 2), width: 2, height: 2 }),
     );
     const absentShot = await absentTargetOracle.preview({
       target: { kind: "shot", id: "absent" },
-      time: 0,
-      width: 2,
-      height: 2,
-    });
-    const absentFilm = await absentTargetOracle.preview({
-      target: { kind: "film", id: "absent" },
       time: 0,
       width: 2,
       height: 2,
@@ -700,7 +972,6 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     TestValidator.predicate(
       "preview target and target duration belong to current compiled output",
       absentShot.diagnostics[0]?.code === "preview-target-missing" &&
-        absentFilm.diagnostics[0]?.code === "preview-target-missing" &&
         outOfRange.diagnostics[0]?.code === "preview-input-invalid",
     );
     const failed = await new AutoMovieProductionOracleService(
@@ -850,6 +1121,173 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         mask.renderBundle === beauty.renderBundle &&
         mask.frame?.path.endsWith(".mask.png") === true,
     );
+    if (
+      beauty.renderBundle !== null &&
+      beauty.frame !== null &&
+      mask.frame !== null
+    ) {
+      const bundleRoot = path.join(fixture.root, beauty.renderBundle);
+      const relativeBundle = path
+        .relative(project.renderRoot(), bundleRoot)
+        .split(path.sep)
+        .join("/");
+      const currentManifest = project.verifiedRenderManifest(
+        path.join(bundleRoot, "manifest.json"),
+      )!;
+      const retainedFiles = new Map<string, Uint8Array>(
+        currentManifest.frames.map((frame) => [
+          frame.path,
+          project.readRenderFile(`${relativeBundle}/${frame.path}`),
+        ]),
+      );
+      const visible = png(2, 2);
+      const blank = blankPng(2, 2);
+      const goodDigest = digestAutoMovieBytes(visible);
+      const badFrames: IAutoMovieRenderBundleManifest["frames"] = [
+        {
+          index: -1,
+          time: 0,
+          pass: "beauty",
+          path: "preview/negative.png",
+          digest: goodDigest,
+          width: 2,
+          height: 2,
+        },
+        {
+          index: 3,
+          time: 0,
+          pass: "beauty",
+          path: "preview/off-clock.png",
+          digest: goodDigest,
+          width: 2,
+          height: 2,
+        },
+        {
+          index: 10_000,
+          time: 10_000 / 24,
+          pass: "beauty",
+          path: "preview/past-duration.png",
+          digest: goodDigest,
+          width: 2,
+          height: 2,
+        },
+        {
+          index: 4,
+          time: 4 / 24,
+          pass: "beauty",
+          path: "",
+          digest: goodDigest,
+          width: 2,
+          height: 2,
+        },
+        {
+          index: 5,
+          time: 5 / 24,
+          pass: "beauty",
+          path: "../escape.png",
+          digest: goodDigest,
+          width: 2,
+          height: 2,
+        },
+        {
+          index: 6,
+          time: 6 / 24,
+          pass: "beauty",
+          path: "../../escape.png",
+          digest: goodDigest,
+          width: 2,
+          height: 2,
+        },
+        {
+          index: 7,
+          time: 7 / 24,
+          pass: "beauty",
+          path: "C:/cross-drive.png",
+          digest: goodDigest,
+          width: 2,
+          height: 2,
+        },
+        {
+          index: 8,
+          time: 8 / 24,
+          pass: "beauty",
+          path: "preview/wrong-digest.png",
+          digest:
+            "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          width: 2,
+          height: 2,
+        },
+        {
+          index: 9,
+          time: 9 / 24,
+          pass: "beauty",
+          path: "preview/wrong-size.png",
+          digest: goodDigest,
+          width: 3,
+          height: 2,
+        },
+        {
+          index: 10,
+          time: 10 / 24,
+          pass: "beauty",
+          path: "preview/blank.png",
+          digest: digestAutoMovieBytes(blank),
+          width: 2,
+          height: 2,
+        },
+        {
+          index: 11,
+          time: 11 / 24,
+          pass: "beauty",
+          path: "preview/malformed.png",
+          digest: digestAutoMovieBytes(Buffer.from("not-png")),
+          width: 2,
+          height: 2,
+        },
+        {
+          index: 12,
+          time: 12 / 24,
+          pass: "beauty",
+          path: "preview/missing.png",
+          digest: goodDigest,
+          width: 2,
+          height: 2,
+        },
+      ];
+      for (const file of [
+        "negative.png",
+        "off-clock.png",
+        "past-duration.png",
+        "wrong-digest.png",
+        "wrong-size.png",
+      ])
+        retainedFiles.set(`preview/${file}`, visible);
+      retainedFiles.set("preview/blank.png", blank);
+      retainedFiles.set("preview/malformed.png", Buffer.from("not-png"));
+      project.commitRenderBundle(relativeBundle, retainedFiles, {
+        ...currentManifest,
+        frames: [...currentManifest.frames, ...badFrames],
+      });
+      const afterForgedLedger = await actual.preview({
+        target: { kind: "shot", id: "opening" },
+        time: 2 / 24,
+        width: 2,
+        height: 2,
+      });
+      const repairedManifest = project.verifiedRenderManifest(
+        path.join(bundleRoot, "manifest.json"),
+      );
+      TestValidator.predicate(
+        "preview retains only byte-exact in-range PNG evidence",
+        afterForgedLedger.captured &&
+          repairedManifest?.frames.length === 3 &&
+          repairedManifest.frames.every(
+            (frame) =>
+              frame.index === 1 ||
+              (frame.index === 2 && frame.pass === "beauty"),
+          ),
+      );
+    }
     if (beauty.renderBundle !== null) {
       fs.writeFileSync(
         path.join(fixture.root, beauty.renderBundle, "manifest.json"),

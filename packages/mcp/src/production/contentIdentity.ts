@@ -32,6 +32,46 @@ export const digestAutoMovieBytes = (
 ): AutoMovieContentDigest =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 
+/**
+ * Encode one persisted id as a portable filename segment.
+ *
+ * `encodeURIComponent` deliberately leaves `*`, `!`, `'`, `(` and `)`
+ * untouched, while `*` is illegal in a Windows filename. Windows device
+ * basenames such as `CON` remain reserved even with an extension. Escape the
+ * complete RFC 3986 reserved tail and the first character of a device name so
+ * every accepted string has one reversible cross-platform representation.
+ */
+export const encodeAutoMoviePathSegment = (value: string): string => {
+  let encoded = encodeURIComponent(value).replace(
+    /[!'()*]/g,
+    (character) =>
+      `%${character.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`,
+  );
+  if (
+    /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|conin\$|conout\$)(?:\.|$)/i.test(
+      encoded,
+    )
+  )
+    encoded = `%${encoded
+      .charCodeAt(0)
+      .toString(16)
+      .toUpperCase()
+      .padStart(2, "0")}${encoded.slice(1)}`;
+  if (Buffer.byteLength(encoded, "utf8") > 180)
+    encoded = `~sha256-${createHash("sha256")
+      .update(Buffer.from(value, "utf8"))
+      .digest("hex")}`;
+  return encoded;
+};
+
+/** Decode a segment produced by {@link encodeAutoMoviePathSegment}. */
+export const decodeAutoMoviePathSegment = (value: string): string =>
+  value.startsWith("~sha256-")
+    ? (() => {
+        throw new Error("Hashed path segments are decoded from file content.");
+      })()
+    : decodeURIComponent(value);
+
 /** Canonicalize a JSON-compatible value with lexicographically sorted keys. */
 export const canonicalizeAutoMovieJson = (value: unknown): string => {
   const encode = (current: unknown, arrayItem: boolean): string | undefined => {

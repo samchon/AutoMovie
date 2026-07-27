@@ -7,6 +7,7 @@ import {
   IAutoMovieDesignTarget,
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
+  IAutoMovieProductionDeliverable,
   IAutoMovieShotContract,
   IAutoMovieWorldDesign,
 } from "./IAutoMovieProductionDesign";
@@ -35,6 +36,13 @@ export interface IAutoMovieProductionManifest {
   projectId: string;
   /** Coding-agent-owned source roots. */
   sourceRoots: string[];
+  /**
+   * Additional project-relative directories whose exact files affect compile
+   * and render identity, such as viewer, scripts and public assets.
+   */
+  contentRoots?: string[];
+  /** Additional project-relative files whose bytes affect compile identity. */
+  contentFiles?: string[];
   /** Compiler-owned generated root. */
   generatedRoot: string;
   /** Content-addressed render root. */
@@ -77,6 +85,44 @@ export interface IAutoMovieGeneratedManifest {
   files: IAutoMovieGeneratedFile[];
 }
 
+/** One byte-exact file proving a final production deliverable. */
+export interface IAutoMovieProductionDeliverableFile {
+  /** Render-root-relative regular file path. */
+  path: string;
+  /** Exact file-byte digest. */
+  digest: AutoMovieContentDigest;
+  /** Exact non-zero file size. */
+  bytes: number;
+  /** Explicit media type, such as video/mp4 or text/vtt. */
+  mediaType: string;
+}
+
+/** One materialized production deliverable in the aggregate render ledger. */
+export interface IAutoMovieProductionRenderedDeliverable {
+  /** Exact id declared by production design. */
+  id: string;
+  /** Exact kind declared by production design. */
+  kind: IAutoMovieProductionDeliverable["kind"];
+  /** Byte-exact owned output files. */
+  files: IAutoMovieProductionDeliverableFile[];
+  /** Timeline duration, or null for a still-only deliverable. */
+  runtimeSeconds: number | null;
+  /** Rendered frame count, or null when the kind has no video frame clock. */
+  frameCount: number | null;
+  /** Actual codec name, or null for unencoded text/image artifacts. */
+  codec: string | null;
+}
+
+/** Aggregate final-delivery ledger bound to one current compile. */
+export interface IAutoMovieProductionRenderManifest {
+  /** Aggregate manifest format. */
+  version: 1;
+  /** Exact compiler input that produced every listed output. */
+  compileFingerprint: AutoMovieContentDigest;
+  /** Materialized required and optional deliverables. */
+  deliverables: IAutoMovieProductionRenderedDeliverable[];
+}
+
 /** Deterministic pure helpers exposed to a shot source builder. */
 export interface IAutoMovieSourceOracle {
   /** Euclidean distance between two points. */
@@ -107,6 +153,43 @@ export interface IAutoMovieShotBuildContext {
  * output, never tracked source truth.
  */
 export interface IAutoMovieCompiledShotSource {
+  /**
+   * Explicit contract-compliance witness checked against scene, shot, model
+   * recipes and the authoritative shot contract before output is accepted.
+   */
+  contract: {
+    /** Contract participants and the concrete scene nodes realizing them. */
+    participants: Array<{
+      /** Participant family. */
+      kind: "actor" | "formation";
+      /** Exact participant id from the shot contract. */
+      id: string;
+      /** Concrete scene nodes carrying this participant. */
+      nodes: string[];
+    }>;
+    /** Exact opening-state ids the source implements. */
+    openingStates: string[];
+    /** Exact closing-state ids the source implements. */
+    closingStates: string[];
+    /** Exact required camera-subject ids kept readable by this source. */
+    cameraSubjects: string[];
+    /** Timed realization of every semantic contract event. */
+    events: Array<{
+      /** Exact contract event id. */
+      id: string;
+      /** Shot-local realized time. */
+      time: number;
+      /** Exact semantic subjects involved. */
+      subjects: string[];
+    }>;
+    /** Recipe-to-runtime-model provenance for every placed scene model. */
+    models: Array<{
+      /** Authoritative model recipe id. */
+      recipe: string;
+      /** Compiled runtime model id. */
+      model: string;
+    }>;
+  };
   /** Models required by this shot. */
   models: IAutoMovieModel[];
   /** Scene staged for the shot. */

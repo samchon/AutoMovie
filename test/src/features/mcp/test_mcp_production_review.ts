@@ -20,6 +20,7 @@ import {
   acceptanceScenarios,
   productionDesign,
   productionFixture,
+  shotContract,
 } from "./productionFixtures";
 
 const evidenceOf = (
@@ -46,8 +47,16 @@ const evidenceOf = (
   }
   const frame = prepared.frames[0];
   if (frame === undefined) throw new Error("visual fixture has no frame");
+  return frameEvidenceOf(frame);
+};
+
+const frameEvidenceOf = (
+  frame: IAutoMoviePrepareReviewOutput["frames"][number],
+): IAutoMovieReviewEvidence => {
   return {
     kind: "frame",
+    shot: frame.shot,
+    reviewFrame: frame.reviewFrame,
     bundle: frame.bundle,
     frame: frame.frame,
     time: frame.time,
@@ -62,13 +71,68 @@ const worksheet = (
   complete = true,
 ): IAutoMovieSubmitReviewInput => {
   const evidence = evidenceOf(project, prepared);
+  const graph = project.graph();
+  const visualTarget =
+    prepared.target.kind === "shot" || prepared.target.kind === "film"
+      ? prepared.target
+      : null;
+  const requiredAcceptance =
+    visualTarget !== null
+      ? [...graph.acceptance.values()]
+          .filter(
+            (scenario) =>
+              scenario.required &&
+              (visualTarget.kind === "film" ||
+                (scenario.target.kind === "shot" &&
+                  scenario.target.id === visualTarget.id) ||
+                ((scenario.criterion.kind === "frame" ||
+                  scenario.criterion.kind === "event") &&
+                  scenario.criterion.shot === visualTarget.id)),
+          )
+          .sort((left, right) => left.id.localeCompare(right.id))
+      : [];
   const checks: IAutoMovieReviewCheck[] = prepared.requiredCriteria.map(
-    (criterion, index) => ({
-      criterion,
-      verdict: complete || index !== 0 ? "pass" : "revise",
-      observation: `${criterion} current evidence observation ${index}`,
-      evidence: [evidence],
-    }),
+    (criterion, index) => {
+      const acceptanceEvidence =
+        criterion === "acceptance-scenarios"
+          ? requiredAcceptance.flatMap((scenario) => {
+              const scenarioCriterion = scenario.criterion;
+              const contractEvidence: IAutoMovieReviewEvidence = {
+                kind: "acceptance",
+                scenario: scenario.id,
+                exactValue: scenario,
+              };
+              if (scenarioCriterion.kind !== "frame") return [contractEvidence];
+              const shot =
+                scenarioCriterion.shot ??
+                (scenario.target.kind === "shot"
+                  ? scenario.target.id
+                  : undefined);
+              const frame = prepared.frames.find(
+                (item) =>
+                  item.shot === shot &&
+                  item.reviewFrame === scenarioCriterion.frame &&
+                  item.pass === scenarioCriterion.pass,
+              );
+              return frame === undefined
+                ? [contractEvidence]
+                : [frameEvidenceOf(frame), contractEvidence];
+            })
+          : [evidence];
+      return {
+        criterion,
+        verdict: complete || index !== 0 ? "pass" : "revise",
+        observation: `${criterion} current evidence observation ${index}`,
+        evidence: acceptanceEvidence,
+        ...(criterion === "acceptance-scenarios"
+          ? {
+              acceptanceScenarios: requiredAcceptance.map(
+                (scenario) => scenario.id,
+              ),
+            }
+          : {}),
+      };
+    },
   );
   return {
     target: prepared.target,
@@ -102,6 +166,54 @@ export const test_mcp_production_review = async (): Promise<void> => {
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     const review = new AutoMovieProductionReviewService(project);
+    const optionalAcceptance = {
+      ...acceptanceScenarios()[0]!,
+      id: "optional-opening-note",
+      required: false,
+    };
+    TestValidator.predicate(
+      "optional acceptance contracts do not become mandatory review targets",
+      project.setAcceptanceScenario(optionalAcceptance).accepted &&
+        review
+          .queue()
+          .entries.every(
+            (entry) =>
+              !(
+                entry.target.kind === "design" &&
+                entry.target.design.kind === "acceptance" &&
+                entry.target.design.id === optionalAcceptance.id
+              ),
+          ) &&
+        project.eraseDesignArtifact({
+          kind: "acceptance",
+          id: optionalAcceptance.id,
+        }).accepted,
+    );
+    const eventAcceptance = {
+      id: "opening-event",
+      target: { kind: "shot" as const, id: "opening" },
+      criterion: {
+        kind: "event" as const,
+        shot: "opening",
+        event: "signal-raised",
+        expectation: "The signal raise remains present in the compiled event.",
+      },
+      required: true,
+    };
+    TestValidator.predicate(
+      "required non-frame acceptance remains reviewable without fake pixels",
+      project.setAcceptanceScenario(eventAcceptance).accepted,
+    );
+    const aliasedReviewFrameShot = shotContract();
+    aliasedReviewFrameShot.reviewFrames.push({
+      id: "signal-apex-alternate-criterion",
+      time: 2,
+      passes: ["beauty"],
+    });
+    TestValidator.predicate(
+      "one physical frame may witness two distinct semantic review-frame ids",
+      project.setShotContract(aliasedReviewFrameShot).accepted,
+    );
     const compiler = new AutoMovieProductionCompiler(project, () =>
       review.queue(),
     );
@@ -153,21 +265,35 @@ export const test_mcp_production_review = async (): Promise<void> => {
       width: 4,
       height: 4,
     }));
-    for (const target of [
-      { kind: "shot" as const, id: "opening" },
-      { kind: "film" as const, id: "fixture-film" },
-    ])
+    for (const pass of ["beauty", "mask", "pose"] as const)
       TestValidator.predicate(
-        `actual frame for ${target.kind}`,
+        `actual frame for ${pass}`,
         (
           await oracle.preview({
-            target,
+            target: { kind: "shot", id: "opening" },
             time: 2,
+            pass,
             width: 4,
             height: 4,
           })
         ).captured,
       );
+    const aliasedFrameEvidence = review.prepare({
+      target: { kind: "shot", id: "opening" },
+    });
+    TestValidator.predicate(
+      "coincident review frames retain both semantic identities",
+      aliasedFrameEvidence.diagnostics.every(
+        (diagnostic) => diagnostic.category !== "error",
+      ) &&
+        aliasedFrameEvidence.frames.filter((frame) => frame.pass === "beauty")
+          .length === 2 &&
+        new Set(
+          aliasedFrameEvidence.frames
+            .filter((frame) => frame.pass === "beauty")
+            .map((frame) => frame.reviewFrame),
+        ).size === 2,
+    );
     const acceptanceTarget = {
       kind: "design" as const,
       design: { kind: "acceptance" as const, id: "opening-beauty" },
@@ -273,6 +399,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         verdict: "pass",
         observation: " ",
         evidence: [],
+        acceptanceScenarios: ["opening-beauty"],
       },
       {
         criterion: "duplicate",
@@ -302,6 +429,9 @@ export const test_mcp_production_review = async (): Promise<void> => {
         ) &&
         malformedResult.diagnostics.some(
           (item) => item.code === "review-correction-empty",
+        ) &&
+        malformedResult.diagnostics.some(
+          (item) => item.code === "review-acceptance-coverage-misplaced",
         ),
     );
 
@@ -463,6 +593,28 @@ export const test_mcp_production_review = async (): Promise<void> => {
     )!;
     highRiskCriterion.verdict = "not-applicable";
     const highRiskNotApplicableResult = review.submit(highRiskNotApplicable);
+    const acceptanceCoverageMismatch = worksheet(project, shotPrepared);
+    const acceptanceCoverageCheck = acceptanceCoverageMismatch.checks.find(
+      (check) => check.criterion === "acceptance-scenarios",
+    )!;
+    acceptanceCoverageCheck.acceptanceScenarios = [];
+    const acceptanceCoverageResult = review.submit(acceptanceCoverageMismatch);
+    const missingAcceptanceCheck = worksheet(project, shotPrepared);
+    missingAcceptanceCheck.checks = missingAcceptanceCheck.checks.filter(
+      (check) => check.criterion !== "acceptance-scenarios",
+    );
+    const missingAcceptanceCheckResult = review.submit(missingAcceptanceCheck);
+    const staleAcceptance = worksheet(project, shotPrepared);
+    const staleAcceptanceCheck = staleAcceptance.checks.find(
+      (check) => check.criterion === "acceptance-scenarios",
+    )!;
+    const acceptanceEvidence = staleAcceptanceCheck.evidence.find(
+      (evidence) => evidence.kind === "acceptance",
+    );
+    if (acceptanceEvidence?.kind !== "acceptance")
+      throw new Error("shot worksheet has no acceptance evidence");
+    acceptanceEvidence.exactValue = { stale: true };
+    const staleAcceptanceResult = review.submit(staleAcceptance);
     TestValidator.predicate(
       "visual completion needs a frame and explicit passes for every high-risk basis",
       noVisualResult.diagnostics.some(
@@ -473,6 +625,15 @@ export const test_mcp_production_review = async (): Promise<void> => {
         ) &&
         highRiskNotApplicableResult.diagnostics.some(
           (item) => item.code === "review-high-risk-not-passed",
+        ) &&
+        acceptanceCoverageResult.diagnostics.some(
+          (item) => item.code === "review-acceptance-coverage-incomplete",
+        ) &&
+        missingAcceptanceCheckResult.diagnostics.some(
+          (item) => item.code === "review-acceptance-coverage-incomplete",
+        ) &&
+        staleAcceptanceResult.diagnostics.some(
+          (item) => item.code === "review-evidence-stale",
         ),
     );
     const badRegion = worksheet(project, shotPrepared);
@@ -480,6 +641,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
     badRegion.checks[0]!.evidence = [
       {
         kind: "frame",
+        shot: frame.shot,
+        reviewFrame: frame.reviewFrame,
         bundle: frame.bundle,
         frame: frame.frame,
         time: frame.time,
@@ -492,6 +655,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
     staleFrame.checks[0]!.evidence = [
       {
         kind: "frame",
+        shot: frame.shot,
+        reviewFrame: frame.reviewFrame,
         bundle: "renders/absent",
         frame: 0,
         time: 0,
@@ -528,6 +693,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
         sheet.checks[0]!.evidence = [
           {
             kind: "frame",
+            shot: frame.shot,
+            reviewFrame: frame.reviewFrame,
             bundle: frame.bundle,
             frame: frame.frame,
             time: frame.time,
@@ -554,6 +721,12 @@ export const test_mcp_production_review = async (): Promise<void> => {
         }),
         review.prepare({
           target: { kind: "film", id: "absent" },
+        }),
+        review.prepare({
+          target: {
+            kind: "design",
+            design: { kind: "acceptance", id: "absent" },
+          },
         }),
       ].every((prepared) =>
         prepared.diagnostics.some(
@@ -628,6 +801,87 @@ export const test_mcp_production_review = async (): Promise<void> => {
     TestValidator.predicate(
       "review compile gate passes only after the full queue",
       compiler.compile({ scope: "review" }).success,
+    );
+    const filmTarget = { kind: "film" as const, id: "fixture-film" };
+    const storedShotReview = project.review(shotTarget)!;
+    const filmBeforeChildReviewChange = review.prepare({
+      target: filmTarget,
+    }).fingerprint;
+    project.commitReview({
+      ...storedShotReview,
+      observations: `${storedShotReview.observations} Reconfirmed.`,
+    });
+    const filmAfterChildReviewChange = review.prepare({
+      target: filmTarget,
+    }).fingerprint;
+    project.commitReview(storedShotReview);
+    TestValidator.notEquals(
+      "film fingerprint tracks the complete current child-shot review",
+      filmBeforeChildReviewChange,
+      filmAfterChildReviewChange,
+    );
+    const storedSourceReview = project.review(sourceTarget)!;
+    fs.writeFileSync(
+      project.reviewPath(sourceTarget),
+      JSON.stringify({
+        ...storedSourceReview,
+        observations: "",
+        checks: [],
+        completionBasis: "",
+        complete: true,
+      }),
+    );
+    const forgedStoredState = review
+      .queue()
+      .entries.find(
+        (entry) =>
+          entry.target.kind === "source" &&
+          entry.target.path === sourceTarget.path,
+      )?.state;
+    project.commitReview(storedSourceReview);
+    TestValidator.equals(
+      "directly forged complete reviews are revalidated by the queue",
+      forgedStoredState,
+      "incomplete",
+    );
+    project.eraseDesignArtifact({ kind: "production" });
+    const noProductionFrames = review.prepare({ target: shotTarget });
+    project.setProductionDesign(productionDesign());
+    compiler.compile({ scope: "source" });
+    TestValidator.predicate(
+      "review frame requirements need current production fps",
+      noProductionFrames.frames.length === 0,
+    );
+    const requiredScenarios = [...acceptanceScenarios(), eventAcceptance];
+    for (const scenario of requiredScenarios)
+      project.setAcceptanceScenario({ ...scenario, required: false });
+    compiler.compile({ scope: "source" });
+    for (const pass of ["beauty", "mask", "pose"] as const)
+      await oracle.preview({
+        target: { kind: "shot", id: "opening" },
+        time: 2,
+        pass,
+        width: 4,
+        height: 4,
+      });
+    const noRequiredPrepared = review.prepare({ target: shotTarget });
+    const noRequiredSheet = worksheet(project, noRequiredPrepared);
+    noRequiredSheet.checks.find(
+      (check) => check.criterion === "acceptance-scenarios",
+    )!.acceptanceScenarios = ["unexpected"];
+    const noRequiredResult = review.submit(noRequiredSheet);
+    for (const scenario of requiredScenarios)
+      project.setAcceptanceScenario(scenario);
+    compiler.compile({ scope: "source" });
+    TestValidator.predicate(
+      `empty required-acceptance sets are still exact: ${noRequiredResult.diagnostics
+        .map((diagnostic) => `${diagnostic.code}:${diagnostic.message}`)
+        .join(" | ")}`,
+      noRequiredResult.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === "review-acceptance-coverage-incomplete" &&
+          diagnostic.message.includes("(none)"),
+      ),
     );
 
     project.setProductionDesign({

@@ -37,6 +37,10 @@ export type IAutoMovieReviewEvidenceSelector =
 
 /** One current frame available as visual-review evidence. */
 export interface IAutoMovieFrameEvidenceReference {
+  /** Owning shot id. */
+  shot: string;
+  /** Authoritative review-frame contract id. */
+  reviewFrame: string;
   /** Project-relative render bundle directory. */
   bundle: string;
   /** Zero-based frame index. */
@@ -78,6 +82,10 @@ export type IAutoMovieReviewEvidence =
   | {
       /** Current render-frame evidence. */
       kind: "frame";
+      /** Owning shot id. */
+      shot: string;
+      /** Authoritative review-frame contract id. */
+      reviewFrame: string;
       /** Project-relative render bundle directory. */
       bundle: string;
       /** Zero-based frame index. */
@@ -109,6 +117,14 @@ export type IAutoMovieReviewEvidence =
       path: string;
       /** Exact current value reported by the diagnostic. */
       actual: unknown;
+    }
+  | {
+      /** Current required acceptance-scenario contract. */
+      kind: "acceptance";
+      /** Exact acceptance scenario id. */
+      scenario: string;
+      /** Exact current scenario value. */
+      exactValue: unknown;
     };
 
 /** One criterion verdict with observable evidence. */
@@ -121,6 +137,13 @@ export interface IAutoMovieReviewCheck {
   observation: string;
   /** Current project evidence supporting the observation. */
   evidence: IAutoMovieReviewEvidence[];
+  /**
+   * Required acceptance scenario ids discharged by this criterion.
+   *
+   * Present only on `acceptance-scenarios`; the server requires the exact
+   * current required set before a visual review can complete.
+   */
+  acceptanceScenarios?: string[];
 }
 
 /** One actionable correction owned by a production surface. */

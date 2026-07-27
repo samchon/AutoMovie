@@ -35,6 +35,10 @@ export type AutoMovieGeometryQuery =
       from: IAutoMovieGeometrySelector;
       /** Second selector. */
       to: IAutoMovieGeometrySelector;
+      /** Optional shot that disambiguates recurring actors. */
+      shot?: string;
+      /** Optional shot-local sample time, zero by default. */
+      time?: number;
     }
   | {
       /** Reachability query. */
@@ -74,8 +78,6 @@ export type AutoMovieGeometryQuery =
       query: "formation";
       /** Formation id. */
       formation: string;
-      /** Optional named state. */
-      state?: string;
     }
   | {
       /**
@@ -142,20 +144,16 @@ export interface IAutoMovieQueryGeometryOutput {
 
 /** Request one actual current preview frame. */
 export interface IAutoMoviePreviewFrameInput {
-  /** Shot or film target. */
-  target:
-    | {
-        /** Shot target. */
-        kind: "shot";
-        /** Shot id. */
-        id: string;
-      }
-    | {
-        /** Film target. */
-        kind: "film";
-        /** Film id. */
-        id: string;
-      };
+  /**
+   * Exact shot target. Whole-film review composes the required current frames
+   * of every shot; a film id is not itself a renderable shot timeline.
+   */
+  target: {
+    /** Shot target. */
+    kind: "shot";
+    /** Shot id. */
+    id: string;
+  };
   /** Time in seconds. */
   time: number;
   /** Requested render pass, beauty by default. */

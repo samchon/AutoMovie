@@ -2,7 +2,7 @@
 
 `compileProject` is an atomic fence with four scopes.
 
-- `design`: validate manifest, design shape, ranges, identity, and references; materialize only design contracts.
+- `design`: validate manifest, design shape, ranges, identity, and references without reading source or materializing derived files.
 - `source`: additionally bind and execute shot source, validate models, scenes, motions, and shots, and enforce generated ownership.
 - `review`: additionally require every current design, source, shot, and film review to be complete and fresh.
 - `final`: additionally require current render and delivery manifests.

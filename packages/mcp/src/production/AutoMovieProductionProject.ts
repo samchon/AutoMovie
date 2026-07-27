@@ -9,6 +9,7 @@ import {
   IAutoMovieProductionDesign,
   IAutoMovieProductionDesignInventory,
   IAutoMovieProductionManifest,
+  IAutoMovieProductionRenderManifest,
   IAutoMovieRenderBundleManifest,
   IAutoMovieReviewTarget,
   IAutoMovieShotContract,
@@ -24,6 +25,7 @@ import {
   canonicalAutoMovieJsonBytes,
   compareCodeUnits,
   digestAutoMovieBytes,
+  encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 import {
   IAutoMovieProductionDesignGraph,
@@ -40,6 +42,14 @@ export interface IAutoMovieProductionProjectSummary {
   revision: number;
   /** True when this call initialized a fresh production manifest. */
   initialized: boolean;
+}
+
+/** One declared coding-agent input whose bytes enter compile identity. */
+export interface IAutoMovieProductionContentInput {
+  /** Project-relative normalized path. */
+  path: string;
+  /** Exact bytes, or null for one declared optional file that is absent. */
+  bytes: Uint8Array | null;
 }
 
 /**
@@ -66,6 +76,11 @@ export class AutoMovieProductionProject {
     this.manifestPath = path.join(this.automovieRoot, "manifest.json");
     this.revisionPath = path.join(this.automovieRoot, "revision.json");
     this.lockPath = path.join(this.automovieRoot, "revision.lock");
+    const initialStateRoot = lstatOrNull(this.automovieRoot);
+    if (initialStateRoot?.isSymbolicLink())
+      throw new Error(
+        `Reserved AutoMovie state root "${this.automovieRoot}" is a symlink or junction. Replace it with a physical project directory before opening the project.`,
+      );
     this.mkdirOwned(this.automovieRoot);
     for (const directory of DESIGN_DIRECTORIES) {
       const absolute = path.join(this.automovieRoot, directory);
@@ -75,6 +90,7 @@ export class AutoMovieProductionProject {
       const absolute = path.join(this.automovieRoot, directory);
       this.mkdirOwned(absolute);
     }
+    this.mkdirOwned(path.join(this.automovieRoot, "render-receipts"));
     const existing = readOwnedJson(this.rootReal, this.manifestPath);
     this.initialized_ = existing === undefined;
     if (existing === undefined) {
@@ -94,6 +110,12 @@ export class AutoMovieProductionProject {
       this.manifest_.renderRoot,
     ])
       this.mkdirOwned(this.resolveOwnedDirectory(directory));
+    validateRealOwnershipLayout(
+      this.rootReal,
+      this.root,
+      this.manifest_,
+      this.manifestPath,
+    );
     this.lastReadRevision_ = readRevision(this.rootReal, this.revisionPath);
   }
 
@@ -120,6 +142,66 @@ export class AutoMovieProductionProject {
   public manifest(): IAutoMovieProductionManifest {
     this.refreshRevision();
     return structuredClone(this.manifest_);
+  }
+
+  /** Enumerate declared source, viewer, script and asset inputs safely. */
+  public contentInputs(): IAutoMovieProductionContentInput[] {
+    const inputs = new Map<string, Uint8Array | null>();
+    const visit = (directory: string): void => {
+      for (const entry of fs
+        .readdirSync(directory, { withFileTypes: true })
+        .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+        const absolute = path.join(directory, entry.name);
+        const linked = fs.lstatSync(absolute);
+        if (linked.isSymbolicLink())
+          throw new Error(
+            `Declared content path "${relativeToRoot(this.root, absolute)}" is a symlink or junction. Replace it with physical project content before compileProject.`,
+          );
+        if (linked.isDirectory()) visit(absolute);
+        else if (linked.isFile())
+          inputs.set(
+            normalizeSlash(path.relative(this.root, absolute)),
+            fs.readFileSync(absolute),
+          );
+      }
+    };
+    for (const relativeRoot of [
+      ...this.manifest_.sourceRoots,
+      ...(this.manifest_.contentRoots ?? []),
+    ]) {
+      const absolute = resolveInside(this.root, relativeRoot);
+      const linked = lstatOrNull(absolute);
+      if (
+        linked === null ||
+        linked.isSymbolicLink() ||
+        linked.isDirectory() === false
+      )
+        throw new Error(
+          `Declared content root "${relativeRoot}" must be a physical project directory before compileProject.`,
+        );
+      visit(absolute);
+    }
+    for (const relativeFile of this.manifest_.contentFiles ?? []) {
+      const absolute = resolveInside(this.root, relativeFile);
+      const linked = lstatOrNull(absolute);
+      if (linked === null) {
+        inputs.set(normalizeSlash(relativeFile), null);
+        continue;
+      }
+      if (linked.isSymbolicLink() || linked.isFile() === false)
+        throw new Error(
+          `Declared content file "${relativeFile}" must be a physical regular file before compileProject.`,
+        );
+      const real = fs.realpathSync(absolute);
+      if (isInside(this.rootReal, real) === false)
+        throw new Error(
+          `Declared content file "${relativeFile}" escapes the production project through a directory junction. Move it into a physical project directory before compileProject.`,
+        );
+      inputs.set(normalizeSlash(relativeFile), fs.readFileSync(real));
+    }
+    return [...inputs]
+      .map(([inputPath, bytes]) => ({ path: inputPath, bytes }))
+      .sort((left, right) => compareCodeUnits(left.path, right.path));
   }
 
   /** Current open summary. */
@@ -159,15 +241,16 @@ export class AutoMovieProductionProject {
   }
 
   private loadGraph(): IAutoMovieProductionDesignGraph {
+    const stateRootReal = ownedRootReal(this.rootReal, this.automovieRoot);
     return {
       production: readOwnedTypedJson(
-        this.rootReal,
+        stateRootReal,
         this.designPath({ kind: "production" }),
         validateProductionDesign,
       ),
       models: this.readKeyedDesigns("design/models", validateModelRecipe),
       world: readOwnedTypedJson(
-        this.rootReal,
+        stateRootReal,
         this.designPath({ kind: "world" }),
         validateWorldDesign,
       ),
@@ -271,10 +354,17 @@ export class AutoMovieProductionProject {
   /** Remove exactly one unreferenced design artifact. */
   public eraseDesignArtifact(
     target: IAutoMovieDesignTarget,
+    reason = "direct project API erase",
   ): IAutoMovieDesignMutationOutput {
+    if (reason.trim().length === 0)
+      throw new Error("Design erase audit reason must not be blank.");
     const graph = this.loadGraph();
     const current = designFromGraph(graph, target);
-    const consequences = consequencesOf(graph, target);
+    const consequences = consequencesOf(
+      graph,
+      target,
+      this.loadGeneratedManifest()?.files.map((file) => file.path) ?? [],
+    );
     if (current === null)
       return {
         accepted: false,
@@ -310,8 +400,26 @@ export class AutoMovieProductionProject {
           message: `${reference} still references this design. Update that artifact before eraseDesignArtifact.`,
         })),
       };
+    const nextRevision = this.lastReadRevision_ + 1;
     const revision = this.commitFiles([
       { path: this.designPath(target), content: null },
+      {
+        path: path.join(
+          this.automovieRoot,
+          "audit/design-mutations",
+          `${String(nextRevision).padStart(12, "0")}-erase.json`,
+        ),
+        content: serializeJson({
+          version: 1,
+          revision: nextRevision,
+          operation: "erase-design",
+          target,
+          reason: reason.trim(),
+          previousFingerprint: digestAutoMovieBytes(
+            canonicalAutoMovieJsonBytes(current),
+          ),
+        }),
+      },
     ]);
     return {
       accepted: true,
@@ -359,8 +467,12 @@ export class AutoMovieProductionProject {
   /** Load the generated ownership manifest if one exists. */
   public generatedManifest(): IAutoMovieGeneratedManifest | null {
     this.refreshRevision();
+    return this.loadGeneratedManifest();
+  }
+
+  private loadGeneratedManifest(): IAutoMovieGeneratedManifest | null {
     return readOwnedTypedJson(
-      this.rootReal,
+      ownedRootReal(this.rootReal, this.automovieRoot),
       path.join(this.automovieRoot, "generated-manifest.json"),
       validateGeneratedManifest,
     );
@@ -370,7 +482,10 @@ export class AutoMovieProductionProject {
   public readTrackedStateFile(relativePath: string): Uint8Array | null {
     const file = resolveInside(this.automovieRoot, relativePath);
     if (lstatOrNull(file) === null) return null;
-    assertOwnedRegularFile(this.rootReal, file);
+    assertOwnedRegularFile(
+      ownedRootReal(this.rootReal, this.automovieRoot),
+      file,
+    );
     return fs.readFileSync(file);
   }
 
@@ -405,22 +520,188 @@ export class AutoMovieProductionProject {
     return this.resolveOwnedDirectory(this.manifest_.renderRoot);
   }
 
+  /** Read one render-owned regular file without following a link. */
+  public readRenderFile(relativePath: string): Uint8Array {
+    const root = this.renderRoot();
+    const file = resolveInside(root, relativePath);
+    const linked = lstatOrNull(file);
+    if (linked === null)
+      throw new Error(`Render file "${relativePath}" does not exist.`);
+    if (linked.isSymbolicLink() || linked.isFile() === false)
+      throw new Error(
+        `Render file "${relativePath}" is not a regular file. Replace the link or directory with renderer-owned bytes.`,
+      );
+    const real = fs.realpathSync(file);
+    if (isInside(fs.realpathSync(root), real) === false)
+      throw new Error(
+        `Render file "${relativePath}" escapes the render root. Re-render it inside the owned output root.`,
+      );
+    return fs.readFileSync(real);
+  }
+
   /** Atomically write verified files and manifest inside one render bundle. */
   public commitRenderBundle(
     relativeBundle: string,
     files: ReadonlyMap<string, Uint8Array>,
     manifest: IAutoMovieRenderBundleManifest,
   ): number {
+    const normalizedBundle = normalizeSlash(relativeBundle);
+    const expectedBundle = productionRenderBundleRelativePath(manifest);
+    if (normalizedBundle !== expectedBundle)
+      throw new Error(
+        `Render bundle "${relativeBundle}" is not the content-addressed path "${expectedBundle}". Use the current target, compile fingerprint, and render spec.`,
+      );
     const bundleRoot = resolveInside(this.renderRoot(), relativeBundle);
     const writes: IStagedFile[] = [...files].map(([relativePath, bytes]) => ({
       path: resolveInside(bundleRoot, relativePath),
       content: bytes,
     }));
+    const serializedManifest = serializeJson(manifest);
     writes.push({
       path: path.join(bundleRoot, "manifest.json"),
-      content: serializeJson(manifest),
+      content: serializedManifest,
+    });
+    writes.push({
+      path: this.renderReceiptPath(normalizedBundle),
+      content: serializeJson({
+        version: 1,
+        bundle: normalizedBundle,
+        manifestDigest: digestAutoMovieBytes(
+          Buffer.from(serializedManifest, "utf8"),
+        ),
+      } satisfies IAutoMovieRenderBundleReceipt),
     });
     return this.commitFiles(writes);
+  }
+
+  /**
+   * Verify that a render manifest is at its canonical content-addressed path
+   * and is byte-bound to a receipt written atomically by commitRenderBundle.
+   */
+  public verifiedRenderManifest(
+    manifestPath: string,
+  ): IAutoMovieRenderBundleManifest | null {
+    try {
+      const root = this.renderRoot();
+      const linked = lstatOrNull(manifestPath);
+      if (
+        linked === null ||
+        linked.isSymbolicLink() ||
+        linked.isFile() === false
+      )
+        return null;
+      const realRoot = fs.realpathSync(root);
+      const realManifest = fs.realpathSync(manifestPath);
+      if (isInside(realRoot, realManifest) === false) return null;
+      const bytes = fs.readFileSync(realManifest);
+      const validation = typia.validateEquals<IAutoMovieRenderBundleManifest>(
+        JSON.parse(bytes.toString("utf8")),
+      );
+      if (validation.success === false) return null;
+      const relativeBundle = normalizeSlash(
+        path.relative(root, path.dirname(manifestPath)),
+      );
+      if (
+        relativeBundle !== productionRenderBundleRelativePath(validation.data)
+      )
+        return null;
+      const receiptBytes = this.readTrackedStateFile(
+        relativeToRoot(
+          this.automovieRoot,
+          this.renderReceiptPath(relativeBundle),
+        ),
+      );
+      if (receiptBytes === null) return null;
+      const receipt = JSON.parse(
+        Buffer.from(receiptBytes).toString("utf8"),
+      ) as Partial<IAutoMovieRenderBundleReceipt>;
+      if (
+        receipt.version !== 1 ||
+        receipt.bundle !== relativeBundle ||
+        receipt.manifestDigest !== digestAutoMovieBytes(bytes)
+      )
+        return null;
+      return validation.data;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Atomically write the exact aggregate production-delivery ledger. */
+  public commitProductionRenderManifest(
+    manifest: IAutoMovieProductionRenderManifest,
+  ): number {
+    const validation =
+      typia.validateEquals<IAutoMovieProductionRenderManifest>(manifest);
+    if (validation.success === false)
+      throw new Error(
+        `Invalid aggregate render manifest: ${validation.errors
+          .map((error) => `${error.path} expects ${error.expected}`)
+          .join("; ")}.`,
+      );
+    const content = serializeJson(validation.data);
+    return this.commitFiles([
+      {
+        path: path.join(this.automovieRoot, "render-manifest.json"),
+        content,
+      },
+      {
+        path: path.join(this.automovieRoot, "render-manifest-receipt.json"),
+        content: serializeJson({
+          version: 1,
+          manifestDigest: digestAutoMovieBytes(Buffer.from(content, "utf8")),
+        }),
+      },
+    ]);
+  }
+
+  /**
+   * Atomically write renderer-owned files for one declared deliverable.
+   *
+   * Returned paths are rooted below `renders/deliverables/<encoded-id>` and can
+   * be copied verbatim into the aggregate production render manifest.
+   */
+  public commitProductionDeliverableFiles(
+    deliverableId: string,
+    files: ReadonlyMap<string, Uint8Array>,
+  ): { revision: number; paths: string[] } {
+    if (files.size === 0)
+      throw new Error(`Deliverable "${deliverableId}" has no files to commit.`);
+    const relativeRoot = `deliverables/${encodeAutoMoviePathSegment(deliverableId)}`;
+    const renderRoot = this.renderRoot();
+    const deliverableRoot = resolveInside(renderRoot, relativeRoot);
+    const portablePaths = new Set<string>();
+    const entries = [...files]
+      .map(([relativePath, content]) => {
+        const absolute = resolveInside(deliverableRoot, relativePath);
+        const normalized = normalizeSlash(
+          path.relative(deliverableRoot, absolute),
+        );
+        const portable = normalized.toLowerCase();
+        if (portablePaths.has(portable))
+          throw new Error(
+            `Deliverable "${deliverableId}" maps more than one input to "${normalized}". Use unique canonical file paths.`,
+          );
+        portablePaths.add(portable);
+        return {
+          absolute,
+          relativePath: normalized,
+          content,
+        };
+      })
+      .sort((left, right) =>
+        compareCodeUnits(left.relativePath, right.relativePath),
+      );
+    const revision = this.commitFiles(
+      entries.map((entry) => ({
+        path: entry.absolute,
+        content: entry.content,
+      })),
+    );
+    return {
+      revision,
+      paths: entries.map((entry) => `${relativeRoot}/${entry.relativePath}`),
+    };
   }
 
   /** Atomically commit a generated manifest and its already staged files. */
@@ -468,7 +749,7 @@ export class AutoMovieProductionProject {
   public review(target: IAutoMovieReviewTarget): IAutoMovieStoredReview | null {
     this.refreshRevision();
     return readOwnedTypedJson(
-      this.rootReal,
+      ownedRootReal(this.rootReal, this.automovieRoot),
       this.reviewPath(target),
       validateStoredReview,
     );
@@ -529,7 +810,11 @@ export class AutoMovieProductionProject {
     validation: IValidation<unknown>,
   ): IAutoMovieDesignMutationOutput {
     const graph = this.loadGraph();
-    const consequences = consequencesOf(graph, target);
+    const consequences = consequencesOf(
+      graph,
+      target,
+      this.loadGeneratedManifest()?.files.map((file) => file.path) ?? [],
+    );
     const previousDiagnostics = new Set(
       validateAutoMovieProductionGraph(graph).map(diagnosticIdentity),
     );
@@ -548,6 +833,25 @@ export class AutoMovieProductionProject {
           path: relativeToRoot(this.root, this.designPath(target)),
           message: `${error.path} expects ${error.expected}. Fix that field in the design setter.`,
         })),
+      };
+    const collision = caseCollidingDesignId(graph, target);
+    if (collision !== null)
+      return {
+        accepted: false,
+        revision: this.lastReadRevision_,
+        target,
+        fingerprint: null,
+        consequences,
+        diagnostics: [
+          {
+            code: "design-id-collision",
+            category: "error",
+            phase: "design",
+            target: targetKey(target),
+            path: relativeToRoot(this.root, this.designPath(target)),
+            message: `Design id "${collision.requested}" collides with existing id "${collision.existing}" on a case-insensitive filesystem. Choose a portable distinct id before committing.`,
+          },
+        ],
       };
     const next = replaceDesign(graph, target, value);
     const nextDiagnostics = validateAutoMovieProductionGraph(next);
@@ -613,11 +917,23 @@ export class AutoMovieProductionProject {
     }
   }
 
+  private renderReceiptPath(relativeBundle: string): string {
+    const digest = digestAutoMovieBytes(
+      Buffer.from(normalizeSlash(relativeBundle), "utf8"),
+    );
+    return path.join(
+      this.automovieRoot,
+      "render-receipts",
+      `${digestSegment(digest)}.json`,
+    );
+  }
+
   private readKeyedDesigns<T extends { id: string }>(
     directory: string,
     validate: (input: unknown) => IValidation<T>,
   ): ReadonlyMap<string, T> {
     const absolute = path.join(this.automovieRoot, directory);
+    const stateRootReal = ownedRootReal(this.rootReal, this.automovieRoot);
     const output = new Map<string, T>();
     for (const entry of fs
       .readdirSync(absolute, { withFileTypes: true })
@@ -627,9 +943,8 @@ export class AutoMovieProductionProject {
           item.name.endsWith(".json"),
       )
       .sort((left, right) => compareCodeUnits(left.name, right.name))) {
-      const id = decodeId(entry.name.slice(0, -5));
       const value = readOwnedTypedJson(
-        this.rootReal,
+        stateRootReal,
         path.join(absolute, entry.name),
         validate,
       );
@@ -637,13 +952,13 @@ export class AutoMovieProductionProject {
         throw new Error(
           `Design file "${entry.name}" disappeared while reading.`,
         );
-      if (output.has(id))
+      const id = value.id;
+      if (entry.name !== `${encodeId(id)}.json`)
         throw new Error(
-          `Design id "${id}" collides with another encoded filename. Rename one design artifact.`,
+          `Design file "${entry.name}" does not match its content id "${id}". Rename it to the canonical portable filename.`,
         );
       const folded = [...output.keys()].find(
-        (other) =>
-          other.toLocaleLowerCase("en-US") === id.toLocaleLowerCase("en-US"),
+        (other) => other.toLowerCase() === id.toLowerCase(),
       );
       if (folded !== undefined)
         throw new Error(
@@ -682,7 +997,11 @@ export class AutoMovieProductionProject {
             : Buffer.from(file.content),
       previous: (() => {
         resolveInside(this.root, file.path);
-        assertRealAncestorInside(this.rootReal, path.dirname(file.path));
+        const ownerRoot = this.ownerRootFor(file.path);
+        assertRealAncestorInside(
+          ownedRootReal(this.rootReal, ownerRoot),
+          path.dirname(file.path),
+        );
         const linked = lstatOrNull(file.path);
         if (linked?.isSymbolicLink())
           throw new Error(
@@ -731,11 +1050,30 @@ export class AutoMovieProductionProject {
       releaseCommitLock(this.lockPath, token);
     }
   }
+
+  private ownerRootFor(file: string): string {
+    const roots = [this.automovieRoot, this.generatedRoot(), this.renderRoot()];
+    const owner = roots.find((root) => isInside(root, file));
+    /* c8 ignore start -- every IStagedFile is constructed through an
+    owner-specific resolver before this private commit boundary. */
+    if (owner === undefined)
+      throw new Error(
+        `AutoMovie cannot write unowned path "${relativeToRoot(this.root, file)}".`,
+      );
+    /* c8 ignore stop */
+    return owner;
+  }
 }
 
 interface IStagedFile {
   path: string;
   content: string | Uint8Array | null;
+}
+
+interface IAutoMovieRenderBundleReceipt {
+  version: 1;
+  bundle: string;
+  manifestDigest: `sha256:${string}`;
 }
 
 const DESIGN_DIRECTORIES = [
@@ -853,6 +1191,16 @@ const validateManifest = (
     record.sourceRoots.some(
       (entry) => typeof entry !== "string" || entry.trim().length === 0,
     ) ||
+    (record.contentRoots !== undefined &&
+      (Array.isArray(record.contentRoots) === false ||
+        record.contentRoots.some(
+          (entry) => typeof entry !== "string" || entry.trim().length === 0,
+        ))) ||
+    (record.contentFiles !== undefined &&
+      (Array.isArray(record.contentFiles) === false ||
+        record.contentFiles.some(
+          (entry) => typeof entry !== "string" || entry.trim().length === 0,
+        ))) ||
     typeof record.generatedRoot !== "string" ||
     record.generatedRoot.trim().length === 0 ||
     typeof record.renderRoot !== "string" ||
@@ -892,6 +1240,69 @@ const validateOwnershipLayout = (
         throw new Error(
           `Invalid production manifest "${file}": ${entries[left]!.owner} "${entries[left]!.relative}" overlaps ${entries[right]!.owner} "${entries[right]!.relative}". Source, generated and render ownership roots must be disjoint.`,
         );
+  const forbidden = [
+    reserved,
+    resolveInside(root, manifest.generatedRoot),
+    resolveInside(root, manifest.renderRoot),
+  ];
+  for (const [kind, values] of [
+    ["contentRoots", manifest.contentRoots ?? []],
+    ["contentFiles", manifest.contentFiles ?? []],
+  ] as const)
+    for (const relative of values) {
+      const absolute = resolveInside(root, relative);
+      if (
+        absolute === root ||
+        forbidden.some((owner) =>
+          kind === "contentRoots"
+            ? pathsOverlap(absolute, owner)
+            : isInside(owner, absolute),
+        )
+      )
+        throw new Error(
+          `Invalid production manifest "${file}": ${kind} entry "${relative}" overlaps AutoMovie state, generated, render, or the whole project. Declare only coding-agent-owned inputs.`,
+        );
+    }
+};
+
+const validateRealOwnershipLayout = (
+  rootReal: string,
+  root: string,
+  manifest: IAutoMovieProductionManifest,
+  file: string,
+): void => {
+  assertOwnedRootDirectory(rootReal, path.join(root, ".automovie"), file);
+  for (const entry of [
+    ...manifest.sourceRoots.map((relative, index) => ({
+      owner: `sourceRoots[${index}]`,
+      relative,
+    })),
+    { owner: "generatedRoot", relative: manifest.generatedRoot },
+    { owner: "renderRoot", relative: manifest.renderRoot },
+  ]) {
+    const absolute = resolveInside(root, entry.relative);
+    assertOwnedRootDirectory(rootReal, absolute, file);
+  }
+};
+
+const caseCollidingDesignId = (
+  graph: IAutoMovieProductionDesignGraph,
+  target: IAutoMovieDesignTarget,
+): { requested: string; existing: string } | null => {
+  if (target.kind === "production" || target.kind === "world") return null;
+  const records =
+    target.kind === "model"
+      ? graph.models
+      : target.kind === "formation"
+        ? graph.formations
+        : target.kind === "shot"
+          ? graph.shots
+          : graph.acceptance;
+  const folded = target.id.toLowerCase();
+  const existing = [...records.keys()].find(
+    (id) => id !== target.id && id.toLowerCase() === folded,
+  );
+  return existing === undefined ? null : { requested: target.id, existing };
 };
 
 const replaceDesign = (
@@ -1017,6 +1428,7 @@ const referencesTo = (
 const consequencesOf = (
   graph: IAutoMovieProductionDesignGraph,
   target: IAutoMovieDesignTarget,
+  generatedPaths: readonly string[],
 ): IAutoMovieDesignMutationConsequences => {
   const staleReviews: IAutoMovieReviewTarget[] = [
     { kind: "design", design: target },
@@ -1078,8 +1490,11 @@ const consequencesOf = (
   });
   return {
     staleReviews,
-    staleRenders: [...graph.shots.keys()].map((id) => `shot:${id}`),
-    removedGenerated: [],
+    staleRenders: [
+      ...[...graph.shots.keys()].map((id) => `shot:${id}`),
+      `film:${graph.production?.id ?? "film"}`,
+    ],
+    removedGenerated: [...generatedPaths].sort(compareCodeUnits),
   };
 };
 
@@ -1183,17 +1598,7 @@ const inputDesignId = (input: unknown): string => {
 const encodeId = (id: string): string => {
   if (id.trim().length === 0)
     throw new Error("AutoMovie design and review ids must not be blank.");
-  return encodeURIComponent(id);
-};
-
-const decodeId = (id: string): string => {
-  try {
-    return decodeURIComponent(id);
-  } catch {
-    throw new Error(
-      `Encoded AutoMovie filename "${id}" is invalid. Rename or remove the malformed file.`,
-    );
-  }
+  return encodeAutoMoviePathSegment(id);
 };
 
 const resolveInside = (root: string, relative: string): string => {
@@ -1218,6 +1623,32 @@ const isInside = (root: string, candidate: string): boolean => {
 const pathsOverlap = (left: string, right: string): boolean =>
   isInside(left, right) || isInside(right, left);
 
+/** Canonical render-root-relative bundle path for one manifest identity. */
+export const productionRenderBundleRelativePath = (
+  manifest: Pick<
+    IAutoMovieRenderBundleManifest,
+    "target" | "compileFingerprint" | "renderSpec"
+  >,
+): string => {
+  const renderSpecFingerprint = digestAutoMovieBytes(
+    canonicalAutoMovieJsonBytes({
+      target: manifest.target,
+      renderSpec: manifest.renderSpec,
+    }),
+  );
+  return [
+    `${manifest.target.kind}-${encodeAutoMoviePathSegment(manifest.target.id)}`,
+    digestSegment(manifest.compileFingerprint),
+    digestSegment(renderSpecFingerprint),
+  ].join("/");
+};
+
+const digestSegment = (digest: `sha256:${string}`): string =>
+  digest.slice("sha256:".length);
+
+const normalizeSlash = (value: string): string =>
+  value.split(path.sep).join("/");
+
 const assertRealAncestorInside = (
   rootReal: string,
   candidate: string,
@@ -1229,6 +1660,43 @@ const assertRealAncestorInside = (
     throw new Error(
       `Owned path "${candidate}" escapes the production root through "${existing}". Replace the symlink or junction with a project-local directory.`,
     );
+};
+
+const assertOwnedRootDirectory = (
+  projectRootReal: string,
+  directory: string,
+  manifestPath: string,
+): void => {
+  const linked = fs.lstatSync(directory);
+  if (linked.isSymbolicLink() || linked.isDirectory() === false)
+    throw new Error(
+      `Invalid production manifest "${manifestPath}": owned root "${relativeToRoot(projectRootReal, directory)}" must be a physical project directory, not a symlink or junction.`,
+    );
+  const real = fs.realpathSync(directory);
+  /* c8 ignore start -- a physical directory cannot resolve outside its
+  project parent without being a link or mount alias rejected above. */
+  if (isInside(projectRootReal, real) === false)
+    throw new Error(
+      `Invalid production manifest "${manifestPath}": owned root "${directory}" escapes the project.`,
+    );
+  /* c8 ignore stop */
+};
+
+const ownedRootReal = (projectRootReal: string, directory: string): string => {
+  const linked = fs.lstatSync(directory);
+  if (linked.isSymbolicLink() || linked.isDirectory() === false)
+    throw new Error(
+      `Owned root "${directory}" was replaced by a symlink, junction, or non-directory. Restore its physical project directory.`,
+    );
+  const real = fs.realpathSync(directory);
+  /* c8 ignore start -- a physical owned root cannot escape without first
+  becoming a link or mount alias rejected above. */
+  if (isInside(projectRootReal, real) === false)
+    throw new Error(
+      `Owned root "${directory}" escapes the production project. Restore its physical project directory.`,
+    );
+  /* c8 ignore stop */
+  return real;
 };
 
 const relativeToRoot = (root: string, file: string): string =>

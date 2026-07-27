@@ -398,6 +398,71 @@ export const test_mcp_production_design_validation = (): void => {
       .length,
     1,
   );
+  const offClockShot = shotContract();
+  offClockShot.reviewFrames[0]!.time = 1 / 25;
+  TestValidator.predicate(
+    "review evidence times must lie on the production frame clock",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      shots: new Map([[offClockShot.id, offClockShot]]),
+    }).some((diagnostic) => diagnostic.code === "design-frame-clock-invalid"),
+  );
+  const polygonVariants = [
+    [
+      { x: 0, z: 0 },
+      { x: 1, z: 0 },
+      { x: 1, z: 0 },
+    ],
+    [
+      { x: 0, z: 0 },
+      { x: 1, z: 0 },
+      { x: 2, z: 0 },
+    ],
+    [
+      { x: 0, z: 0 },
+      { x: 3, z: 3 },
+      { x: 0, z: 3 },
+      { x: 2, z: 0 },
+    ],
+    [
+      { x: 2, z: 0 },
+      { x: 0, z: 3 },
+      { x: 3, z: 3 },
+      { x: 0, z: 0 },
+    ],
+    [
+      { x: 0, z: 0 },
+      { x: 3, z: 0 },
+      { x: 1, z: 0 },
+      { x: 3, z: 2 },
+      { x: 0, z: 2 },
+    ],
+    [
+      { x: 0, z: 0 },
+      { x: 4, z: 0 },
+      { x: 4, z: 3 },
+      { x: 1, z: 3 },
+      { x: 1, z: 0 },
+      { x: 3, z: 0 },
+    ],
+  ];
+  TestValidator.predicate(
+    "world surfaces reject duplicate, zero-area, crossing and overlapping polygons",
+    polygonVariants.every((polygon, index) => {
+      const world = worldDesign();
+      world.surfaces = [
+        {
+          ...world.surfaces[0]!,
+          id: `invalid-polygon-${index}`,
+          polygon,
+        },
+      ];
+      return validateAutoMovieProductionGraph({
+        ...valid,
+        world,
+      }).some((diagnostic) => diagnostic.code === "design-polygon-invalid");
+    }),
+  );
   const invalidLod: IAutoMovieModelRecipe = {
     ...modelRecipe(),
     id: "invalid-lod",
