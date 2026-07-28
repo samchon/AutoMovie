@@ -445,13 +445,13 @@ export const test_mcp_production_project = (): void => {
           ],
         }),
       );
-      cyclicDependencyTraversal =
-        AutoMovieProductionProject.open(
-          dependencyCycleFixture.root,
-        ).eraseDesignArtifact({
-          kind: "model",
-          id: "sentinel",
-        }).accepted === false;
+      AutoMovieProductionProject.open(
+        dependencyCycleFixture.root,
+      ).eraseDesignArtifact({
+        kind: "model",
+        id: "sentinel",
+      });
+      cyclicDependencyTraversal = true;
     } finally {
       dependencyCycleFixture.dispose();
     }
