@@ -384,14 +384,18 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       ...shotContract(),
       source: { module: "../outside.ts", export: "opening" },
     };
-    project.setShotContract(outside);
+    const outsideMutation = project.setShotContract(outside);
     TestValidator.predicate(
-      "source traversal is diagnosed",
-      diagnosticCodes(compiler.compile({ scope: "source" })).has(
-        "source-path-outside-root",
-      ),
+      "source traversal is refused before commit",
+      outsideMutation.accepted === false &&
+        outsideMutation.diagnostics.some(
+          (diagnostic) => diagnostic.code === "design-source-path-invalid",
+        ),
     );
-    project.setShotContract(shotContract());
+    TestValidator.predicate(
+      "refused source traversal leaves the current source compilable",
+      compiler.compile({ scope: "source" }).success,
+    );
 
     fs.writeFileSync(
       sourcePath,
