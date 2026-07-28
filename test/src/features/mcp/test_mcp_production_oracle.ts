@@ -1137,6 +1137,79 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       "adapter and decoded size must agree",
       mismatch.diagnostics[0]?.code === "capture-size-mismatch",
     );
+    const captureManifestBytes = fs.readFileSync(manifestPath);
+    const missingManifestCapture = await new AutoMovieProductionOracleService(
+      project,
+      async () => {
+        fs.rmSync(manifestPath);
+        return {
+          bytes: png(2, 2),
+          rendererIdentity: "test:png-v1",
+          width: 2,
+          height: 2,
+        };
+      },
+    ).preview({
+      target: { kind: "shot", id: "opening" },
+      time: 0,
+      width: 2,
+      height: 2,
+    });
+    fs.writeFileSync(manifestPath, captureManifestBytes);
+    const mismatchedManifestCapture =
+      await new AutoMovieProductionOracleService(project, async () => {
+        const manifest = JSON.parse(captureManifestBytes.toString("utf8"));
+        manifest.inputFingerprint =
+          "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+        fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+        return {
+          bytes: png(2, 2),
+          rendererIdentity: "test:png-v1",
+          width: 2,
+          height: 2,
+        };
+      }).preview({
+        target: { kind: "shot", id: "opening" },
+        time: 0,
+        width: 2,
+        height: 2,
+      });
+    fs.writeFileSync(manifestPath, captureManifestBytes);
+    const currentCaptureStatus = compiler.lint({ scope: "source" });
+    let captureStatusReads = 0;
+    const invalidatedCompileCapture =
+      await new AutoMovieProductionOracleService(
+        project,
+        async () => ({
+          bytes: png(2, 2),
+          rendererIdentity: "test:png-v1",
+          width: 2,
+          height: 2,
+        }),
+        () =>
+          captureStatusReads++ === 0
+            ? currentCaptureStatus
+            : {
+                ...currentCaptureStatus,
+                success: false,
+                diagnostics: [
+                  ...currentCaptureStatus.diagnostics,
+                  {
+                    code: "synthetic-capture-race",
+                    category: "error" as const,
+                    phase: "compile" as const,
+                    target: "generated-manifest",
+                    path: null,
+                    message: "The compile became invalid during capture.",
+                  },
+                ],
+              },
+      ).preview({
+        target: { kind: "shot", id: "opening" },
+        time: 0,
+        width: 2,
+        height: 2,
+      });
     const viewerPath = path.join(fixture.root, "viewer/index.html");
     const viewerBytes = fs.readFileSync(viewerPath);
     const racedCapture = await new AutoMovieProductionOracleService(
@@ -1158,8 +1231,19 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     });
     fs.writeFileSync(viewerPath, viewerBytes);
     TestValidator.predicate(
-      "capture refuses pixels whose declared renderer inputs raced",
-      racedCapture.captured === false &&
+      "capture refuses every manifest, compiler and renderer-input race",
+      [
+        missingManifestCapture,
+        mismatchedManifestCapture,
+        invalidatedCompileCapture,
+      ].every(
+        (output) =>
+          output.captured === false &&
+          output.renderBundle === null &&
+          output.frame === null &&
+          output.diagnostics[0]?.code === "capture-input-changed",
+      ) &&
+        racedCapture.captured === false &&
         racedCapture.renderBundle === null &&
         racedCapture.frame === null &&
         racedCapture.diagnostics[0]?.code === "capture-input-changed",

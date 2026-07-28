@@ -143,7 +143,8 @@ export const test_cli_scaffold = (): void => {
       ) &&
       pkg.includes(
         `"playwright-core": "${AUTOMOVIE_TEMPLATE_VERSIONS.playwrightCore}"`,
-      ),
+      ) &&
+      pkg.includes(`"three": "${AUTOMOVIE_TEMPLATE_VERSIONS.three}"`),
   );
   TestValidator.predicate(
     "the starter separates owned source and enforces review in read-only lint",
@@ -160,6 +161,7 @@ export const test_cli_scaffold = (): void => {
     files["automovie.mcp.jsonc"]!.includes("scripts/mcp.ts") &&
       files["scripts/mcp.ts"]!.includes("captureProductionFrame") &&
       files["scripts/capture.ts"]!.includes('locator("#view").screenshot') &&
+      pkg.includes('"three":') &&
       files["scripts/capture.ts"]!.includes('dedupe: ["three"]') &&
       files["vite.config.ts"]!.includes('dedupe: ["three"]') &&
       files["viewer/index.html"]!.includes('rel="icon" href="data:,"') &&

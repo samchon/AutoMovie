@@ -173,7 +173,7 @@ export class AutoMovieProductionProject {
       const retained = inputs.get(inputPath);
       inputs.set(inputPath, {
         bytes,
-        render: render || retained?.render === true,
+        render,
         source: source || retained?.source === true,
       });
     };
@@ -941,11 +941,9 @@ export class AutoMovieProductionProject {
     validation: IValidation<unknown>,
   ): IAutoMovieDesignMutationOutput {
     const graph = this.loadGraph();
-    const consequences = consequencesOf(
-      graph,
-      target,
-      this.loadGeneratedManifest()?.files.map((file) => file.path) ?? [],
-    );
+    const generatedPaths =
+      this.loadGeneratedManifest()?.files.map((file) => file.path) ?? [];
+    let consequences = consequencesOf(graph, target, generatedPaths);
     const previousDiagnostics = new Set(
       validateAutoMovieProductionGraph(graph).map(diagnosticIdentity),
     );
@@ -985,6 +983,7 @@ export class AutoMovieProductionProject {
         ],
       };
     const next = replaceDesign(graph, target, value);
+    consequences = consequencesOf(next, target, generatedPaths);
     const nextDiagnostics = validateAutoMovieProductionGraph(next);
     const diagnostics = nextDiagnostics.filter(
       (diagnostic) =>
@@ -1342,8 +1341,47 @@ const validateManifest = (
     throw new Error(
       `Invalid production manifest "${file}". Provide projectId, sourceRoots, generatedRoot and renderRoot.`,
     );
-  return record as IAutoMovieProductionManifest & Record<string, unknown>;
+  const manifest = record as IAutoMovieProductionManifest &
+    Record<string, unknown>;
+  const pathGroups = [
+    ["sourceRoots", manifest.sourceRoots],
+    ["contentRoots", manifest.contentRoots ?? []],
+    ["contentFiles", manifest.contentFiles ?? []],
+    ["generatedRoot", [manifest.generatedRoot]],
+    ["renderRoot", [manifest.renderRoot]],
+  ] as const;
+  const spellings = new Map<string, string>();
+  for (const [owner, values] of pathGroups) {
+    const local = new Set<string>();
+    for (const pathValue of values) {
+      if (isCanonicalManifestPath(pathValue) === false)
+        throw new Error(
+          `Invalid production manifest "${file}": ${owner} entry "${pathValue}" must be one canonical project-relative POSIX path without absolute roots, backslashes, empty segments, "." or "..".`,
+        );
+      const folded = pathValue.toLowerCase();
+      if (local.has(folded))
+        throw new Error(
+          `Invalid production manifest "${file}": ${owner} repeats portable path "${pathValue}". Keep each entry once with one case spelling.`,
+        );
+      local.add(folded);
+      const prior = spellings.get(folded);
+      if (prior !== undefined && prior !== pathValue)
+        throw new Error(
+          `Invalid production manifest "${file}": path "${pathValue}" collides with "${prior}" on a case-insensitive filesystem. Use one portable spelling.`,
+        );
+      spellings.set(folded, pathValue);
+    }
+  }
+  return manifest;
 };
+
+const isCanonicalManifestPath = (value: string): boolean =>
+  path.posix.isAbsolute(value) === false &&
+  /^[A-Za-z]:\//.test(value) === false &&
+  value.includes("\\") === false &&
+  value !== "." &&
+  path.posix.normalize(value) === value &&
+  value.split("/").every((segment) => segment.length > 0);
 
 const validateOwnershipLayout = (
   root: string,
@@ -1603,6 +1641,7 @@ const consequencesOf = (
   };
   addReview({ kind: "design", design: target });
   const affectedFormations = new Set<string>();
+  const affectedShots = new Set<string>();
   if (target.kind === "model") {
     for (const [id] of graph.models)
       if (modelRecipeDependsOn(graph, id, target.id))
@@ -1621,25 +1660,35 @@ const consequencesOf = (
   }
   if (target.kind === "formation") affectedFormations.add(target.id);
   if (target.kind === "production" || target.kind === "world")
-    for (const id of graph.shots.keys())
+    for (const id of graph.shots.keys()) {
+      affectedShots.add(id);
       addReview({
         kind: "design",
         design: { kind: "shot", id },
       });
+    }
   for (const [id, shot] of graph.shots)
     if (
-      [...affectedFormations].some((formation) =>
+      (target.kind === "model" &&
         shot.participants.some(
           (participant) =>
-            participant.kind === "formation" && participant.id === formation,
-        ),
+            participant.kind === "actor" &&
+            modelRecipeDependsOn(graph, participant.id, target.id),
+        )) ||
+      shot.participants.some(
+        (participant) =>
+          participant.kind === "formation" &&
+          affectedFormations.has(participant.id),
       )
-    )
+    ) {
+      affectedShots.add(id);
       addReview({
         kind: "design",
         design: { kind: "shot", id },
       });
+    }
   if (target.kind === "shot") {
+    affectedShots.add(target.id);
     const source = graph.shots.get(target.id)?.source.module;
     if (source !== undefined) addReview({ kind: "source", path: source });
     for (const [id, acceptance] of graph.acceptance)
@@ -1655,6 +1704,18 @@ const consequencesOf = (
           design: { kind: "acceptance", id },
         });
   }
+  if (target.kind === "acceptance") {
+    const acceptance = graph.acceptance.get(target.id);
+    if (acceptance?.target.kind === "shot")
+      affectedShots.add(acceptance.target.id);
+    if (
+      acceptance !== undefined &&
+      (acceptance.criterion.kind === "frame" ||
+        acceptance.criterion.kind === "event") &&
+      acceptance.criterion.shot !== undefined
+    )
+      affectedShots.add(acceptance.criterion.shot);
+  }
   if (target.kind === "production")
     for (const [id, acceptance] of graph.acceptance)
       if (acceptance.target.kind === "film")
@@ -1662,19 +1723,27 @@ const consequencesOf = (
           kind: "design",
           design: { kind: "acceptance", id },
         });
-  for (const id of graph.shots.keys()) addReview({ kind: "shot", id });
+  for (const id of affectedShots) addReview({ kind: "shot", id });
   addReview({
     kind: "film",
     id: graph.production?.id ?? "film",
   });
+  const staleRenders =
+    target.kind === "acceptance"
+      ? []
+      : [
+          ...[...affectedShots]
+            .sort(compareCodeUnits)
+            .map((id) => `shot:${id}`),
+          ...(affectedShots.size === 0
+            ? []
+            : [`film:${graph.production?.id ?? "film"}`]),
+        ];
   return {
     staleReviews: [...staleReviews.values()].sort((left, right) =>
       compareCodeUnits(reviewConsequenceKey(left), reviewConsequenceKey(right)),
     ),
-    staleRenders: [
-      ...[...graph.shots.keys()].map((id) => `shot:${id}`),
-      `film:${graph.production?.id ?? "film"}`,
-    ],
+    staleRenders,
     removedGenerated: [...generatedPaths].sort(compareCodeUnits),
   };
 };

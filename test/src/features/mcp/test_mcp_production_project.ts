@@ -18,6 +18,7 @@ import path from "node:path";
 import { PNG } from "pngjs";
 
 import {
+  acceptanceScenarios,
   formationDesign,
   modelRecipe,
   productionDesign,
@@ -132,14 +133,22 @@ export const test_mcp_production_project = (): void => {
       ...modelRecipe(),
       id: "SENTINEL",
     });
-    const nonCanonicalSource = project.setShotContract({
-      ...shotContract(),
-      id: "non-canonical-source",
-      source: {
-        ...shotContract().source,
-        module: "src\\shots\\opening.ts",
-      },
-    });
+    const nonCanonicalSources = [
+      "/src/shots/opening.ts",
+      "C:/src/shots/opening.ts",
+      "src\\shots\\opening.ts",
+      "src/../shots/opening.ts",
+      "src/shots/",
+    ].map((module, index) =>
+      project.setShotContract({
+        ...shotContract(),
+        id: `non-canonical-source-${index}`,
+        source: {
+          ...shotContract().source,
+          module,
+        },
+      }),
+    );
     const sourceCaseCollision = project.setShotContract({
       ...shotContract(),
       id: "source-case-collision",
@@ -161,8 +170,10 @@ export const test_mcp_production_project = (): void => {
         ) &&
         caseCollision.accepted === false &&
         caseCollision.diagnostics[0]?.code === "design-id-collision" &&
-        nonCanonicalSource.diagnostics.some(
-          (item) => item.code === "design-source-path-invalid",
+        nonCanonicalSources.every((mutation) =>
+          mutation.diagnostics.some(
+            (item) => item.code === "design-source-path-invalid",
+          ),
         ) &&
         sourceCaseCollision.diagnostics.some(
           (item) => item.code === "design-source-path-collision",
@@ -421,16 +432,45 @@ export const test_mcp_production_project = (): void => {
         })
         .diagnostics.some((item) => item.code === "design-reference-active"),
     );
+    const secondShotMutation = project.setShotContract({
+      ...shotContract(),
+      id: "second",
+      beat: "second",
+    });
+    const acceptanceMutation = project.setAcceptanceScenario(
+      acceptanceScenarios()[0]!,
+    );
+    TestValidator.predicate(
+      "mutation consequences follow target-local shot and review dependencies",
+      secondShotMutation.accepted &&
+        secondShotMutation.consequences.staleRenders.includes("shot:second") &&
+        secondShotMutation.consequences.staleRenders.includes(
+          "shot:opening",
+        ) === false &&
+        acceptanceMutation.accepted &&
+        acceptanceMutation.consequences.staleRenders.length === 0 &&
+        acceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "shot" && target.id === "opening",
+        ) &&
+        acceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "shot" && target.id === "second",
+        ) === false,
+    );
     const modelMutation = project.setModelRecipe(modelRecipe());
     const worldMutation = project.setWorldDesign(worldDesign());
     const productionMutation = project.setProductionDesign(productionDesign());
     TestValidator.predicate(
       "mutation consequences identify dependent shot and film",
       modelMutation.consequences.staleRenders.includes("shot:opening") &&
+        modelMutation.consequences.staleRenders.includes("shot:second") &&
         worldMutation.consequences.staleReviews.some(
           (target) => target.kind === "film",
         ) &&
-        productionMutation.consequences.staleRenders.length > 0,
+        productionMutation.consequences.staleRenders.length > 0 &&
+        project.eraseDesignArtifact({
+          kind: "shot",
+          id: "second",
+        }).accepted,
     );
     project.setShotContract(shotContract());
     TestValidator.predicate(
@@ -1411,6 +1451,73 @@ export const test_mcp_production_project = (): void => {
       [
         "blank-generated",
         { sourceRoots: ["src"], generatedRoot: "", renderRoot: "renders" },
+      ],
+      [
+        "absolute-source",
+        {
+          sourceRoots: ["/src"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+        },
+      ],
+      [
+        "drive-source",
+        {
+          sourceRoots: ["C:/src"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+        },
+      ],
+      [
+        "backslash-source",
+        {
+          sourceRoots: ["src\\shots"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+        },
+      ],
+      [
+        "dot-source",
+        {
+          sourceRoots: ["src/../src"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+        },
+      ],
+      [
+        "case-source",
+        {
+          sourceRoots: ["src", "SRC"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+        },
+      ],
+      [
+        "cross-case-content",
+        {
+          sourceRoots: ["src"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+          contentRoots: ["SRC"],
+        },
+      ],
+      [
+        "duplicate-content-file",
+        {
+          sourceRoots: ["src"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+          contentFiles: ["config.ts", "config.ts"],
+        },
+      ],
+      [
+        "trailing-content-file",
+        {
+          sourceRoots: ["src"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+          contentFiles: ["viewer/"],
+        },
       ],
       [
         "project-root",

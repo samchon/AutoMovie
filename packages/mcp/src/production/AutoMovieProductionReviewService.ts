@@ -902,7 +902,7 @@ const reviewFingerprint = (
           addJson(`dependency:formation:${participant.id}`, formation);
           if (formation !== null)
             addModelGraph("dependency:model", formation.modelRecipe);
-        }
+        } else addModelGraph("dependency:model", participant.id);
     }
     if (target.design.kind === "acceptance") {
       const acceptance = graph.acceptance.get(target.design.id);

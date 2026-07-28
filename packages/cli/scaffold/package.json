@@ -19,7 +19,8 @@
     "@automovie/interface": "{{version:interface}}",
     "@automovie/mcp": "{{version:mcp}}",
     "@automovie/viewer": "{{version:viewer}}",
-    "@modelcontextprotocol/sdk": "{{version:mcpSdk}}"
+    "@modelcontextprotocol/sdk": "{{version:mcpSdk}}",
+    "three": "{{version:three}}"
   },
   "devDependencies": {
     "@ttsc/lint": "{{version:ttscLint}}",
