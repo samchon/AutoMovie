@@ -397,14 +397,24 @@ export const test_mcp_production_legacy_import = (): void => {
       ".automovie/imports/legacy-v1/state.json",
     );
     const nativeLstat = fs.lstatSync;
-    fs.lstatSync = ((file: fs.PathLike): fs.Stats => {
-      if (path.resolve(file.toString()) === path.resolve(deniedPath)) {
-        const error = new Error("injected import-state lstat denial");
-        Object.assign(error, { code: "EACCES" });
-        throw error;
-      }
-      return nativeLstat(file);
-    }) as typeof fs.lstatSync;
+    Object.defineProperty(fs, "lstatSync", {
+      configurable: true,
+      value: ((
+        file: fs.PathLike,
+        ...args: unknown[]
+      ): fs.Stats | fs.BigIntStats => {
+        if (path.resolve(file.toString()) === path.resolve(deniedPath)) {
+          const error = new Error(
+            "injected import-state lstat denial",
+          ) as NodeJS.ErrnoException;
+          error.code = "EACCES";
+          throw error;
+        }
+        return Reflect.apply(nativeLstat, fs, [file, ...args]) as
+          | fs.Stats
+          | fs.BigIntStats;
+      }) as typeof fs.lstatSync,
+    });
     try {
       TestValidator.predicate(
         "an unexpected import-state lstat denial propagates through apply and rollback",
@@ -415,7 +425,10 @@ export const test_mcp_production_legacy_import = (): void => {
           ),
       );
     } finally {
-      fs.lstatSync = nativeLstat;
+      Object.defineProperty(fs, "lstatSync", {
+        configurable: true,
+        value: nativeLstat,
+      });
     }
   } finally {
     deniedImportState.dispose();
