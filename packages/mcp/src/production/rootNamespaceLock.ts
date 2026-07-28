@@ -94,13 +94,7 @@ const acquireCreationCoordinates = (
     creationCoordinates(parentReal, childName, parentIdentity),
   );
   try {
-    const linked = lstatOrNull(parentReal);
-    const current =
-      linked === null ||
-      linked.isSymbolicLink() ||
-      linked.isDirectory() === false
-        ? null
-        : fs.statSync(parentReal, { bigint: true });
+    const current = physicalDirectoryIdentityOrNull(parentReal);
     if (
       current === null ||
       current.dev !== parentIdentity.dev ||
@@ -239,11 +233,7 @@ export const acquireOrCreateProductionRootNamespace = (
 export const assertProductionRootNamespaceLease = (
   lease: IAutoMovieProductionRootNamespaceLease,
 ): void => {
-  const linked = lstatOrNull(lease.root);
-  const current =
-    linked === null || linked.isSymbolicLink() || linked.isDirectory() === false
-      ? null
-      : fs.statSync(lease.root, { bigint: true });
+  const current = physicalDirectoryIdentityOrNull(lease.root);
   const invalidLock = lease.locks.find((leaseLock) => {
     const lock = lstatOrNull(leaseLock.path);
     return (
@@ -275,11 +265,7 @@ const assertRequestedRootIdentity = (
   requestedRoot: string,
   lease: IAutoMovieProductionRootNamespaceLease,
 ): void => {
-  const linked = lstatOrNull(requestedRoot);
-  const current =
-    linked === null || linked.isSymbolicLink() || linked.isDirectory() === false
-      ? null
-      : fs.statSync(requestedRoot, { bigint: true });
+  const current = physicalDirectoryIdentityOrNull(requestedRoot);
   if (
     current === null ||
     current.dev.toString() !== lease.device ||
@@ -288,6 +274,17 @@ const assertRequestedRootIdentity = (
     throw new Error(
       `Requested production root "${requestedRoot}" changed physical identity during namespace acquisition. No project state was initialized.`,
     );
+};
+
+const physicalDirectoryIdentityOrNull = (
+  directory: string,
+): fs.BigIntStats | null => {
+  const linked = lstatOrNull(directory);
+  return linked === null ||
+    linked.isSymbolicLink() ||
+    linked.isDirectory() === false
+    ? null
+    : fs.statSync(directory, { bigint: true });
 };
 
 const lstatOrNull = (file: string): fs.Stats | null => {
