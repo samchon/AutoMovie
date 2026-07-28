@@ -678,6 +678,15 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     project.readSource = residentReadSource;
     const residentContentInputs = project.contentInputs;
+    project.contentInputs = (() => {
+      throw new Error("design scope read declared content");
+    }) as typeof project.contentInputs;
+    const contentIndependentDesign = compiler.compile({ scope: "design" });
+    TestValidator.predicate(
+      "design scope does not read declared content or derive review fingerprints",
+      contentIndependentDesign.success &&
+        contentIndependentDesign.reviews.entries.length === 0,
+    );
     for (const failure of [
       new Error("declared content junction"),
       "non-error declared content failure",

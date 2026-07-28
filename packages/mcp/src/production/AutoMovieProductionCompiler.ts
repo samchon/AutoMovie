@@ -302,11 +302,12 @@ export class AutoMovieProductionCompiler {
       reviews: { entries: [] },
       materialized: [],
     });
-    const reviews: IAutoMovieReviewQueue = diagnostics.some(
-      (diagnostic) => diagnostic.code === "content-input-unsafe",
-    )
-      ? { entries: [] }
-      : this.reviewQueue(statusForReview());
+    const reviews: IAutoMovieReviewQueue =
+      diagnostics.some(
+        (diagnostic) => diagnostic.code === "content-input-unsafe",
+      ) || input.scope === "design"
+        ? { entries: [] }
+        : this.reviewQueue(statusForReview());
     if (input.scope === "review" || input.scope === "final")
       diagnostics.push(...reviewGateDiagnostics(reviews));
     if (input.scope === "final")
