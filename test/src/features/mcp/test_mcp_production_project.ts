@@ -1499,6 +1499,12 @@ export const test_mcp_production_project = (): void => {
         initialized.inventory().production === false &&
         initialized.contentInputs().length === 0,
     );
+    const nestedFresh = path.join(invalidRoot, "missing", "nested", "project");
+    TestValidator.predicate(
+      "fresh project recursively creates a missing nested root",
+      AutoMovieProductionProject.open(nestedFresh).root === nestedFresh &&
+        fs.existsSync(path.join(nestedFresh, ".automovie/incarnation.json")),
+    );
     TestValidator.predicate(
       "every absent design discriminator returns one missing mutation",
       [
