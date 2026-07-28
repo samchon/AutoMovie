@@ -13,7 +13,7 @@ export const AUTOMOVIE_TEMPLATE_VERSIONS: Record<string, string> = {
   threeTypes: "^0.169.0",
   vite: "^5.4.10",
   nodeTypes: "^22.19.17",
-  ttsc: "^0.22.0",
-  ttscLint: "^0.22.0",
+  ttsc: "^0.23.0",
+  ttscLint: "^0.23.0",
   typescript: "^7.0.2",
 };

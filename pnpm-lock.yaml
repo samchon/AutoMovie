@@ -57,11 +57,11 @@ catalogs:
       specifier: ^5.2.2
       version: 5.2.2
     '@ttsc/lint':
-      specifier: ^0.22.0
-      version: 0.22.0
+      specifier: ^0.23.0
+      version: 0.23.0
     '@ttsc/unplugin':
-      specifier: ^0.22.0
-      version: 0.22.0
+      specifier: ^0.23.0
+      version: 0.23.0
     prettier:
       specifier: ^3.5.3
       version: 3.8.3
@@ -69,8 +69,8 @@ catalogs:
       specifier: ^1.3.2
       version: 1.8.1
     ttsc:
-      specifier: ^0.22.0
-      version: 0.22.0
+      specifier: ^0.23.0
+      version: 0.23.0
     typescript:
       specifier: ^7.0.2
       version: 7.0.2
@@ -104,7 +104,7 @@ importers:
         version: 5.2.2(prettier@3.8.3)
       '@ttsc/lint':
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       prettier:
         specifier: catalog:typescript
         version: 3.8.3
@@ -116,7 +116,7 @@ importers:
         version: 6.1.3
       ttsc:
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
@@ -125,7 +125,7 @@ importers:
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       '@types/node':
         specifier: catalog:utils
         version: 22.19.20
@@ -134,7 +134,7 @@ importers:
         version: 6.1.3
       ttsc:
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
@@ -147,13 +147,13 @@ importers:
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       rimraf:
         specifier: catalog:utils
         version: 6.1.3
       ttsc:
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
@@ -166,13 +166,13 @@ importers:
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       rimraf:
         specifier: catalog:utils
         version: 6.1.3
       ttsc:
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
@@ -188,13 +188,13 @@ importers:
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       rimraf:
         specifier: catalog:utils
         version: 6.1.3
       ttsc:
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
@@ -203,13 +203,13 @@ importers:
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       rimraf:
         specifier: catalog:utils
         version: 6.1.3
       ttsc:
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
@@ -242,11 +242,11 @@ importers:
         version: typescript@5.9.3
       typia:
         specifier: catalog:samchon
-        version: 13.2.0(@types/node@22.19.20)(ttsc@0.22.0)
+        version: 13.2.0(@types/node@22.19.20)(ttsc@0.23.0)
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       '@types/node':
         specifier: catalog:utils
         version: 22.19.20
@@ -258,7 +258,7 @@ importers:
         version: 6.1.3
       ttsc:
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
@@ -292,10 +292,10 @@ importers:
         version: 4.4.0
       '@ttsc/lint':
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       '@ttsc/unplugin':
         specifier: catalog:typescript
-        version: 0.22.0(ttsc@0.22.0)
+        version: 0.23.0(ttsc@0.23.0)
       '@types/node':
         specifier: catalog:utils
         version: 22.19.20
@@ -322,7 +322,7 @@ importers:
         version: 7.0.0
       ttsc:
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
@@ -344,13 +344,13 @@ importers:
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       rimraf:
         specifier: catalog:utils
         version: 6.1.3
       ttsc:
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
@@ -369,7 +369,7 @@ importers:
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       '@types/three':
         specifier: catalog:three
         version: 0.169.0
@@ -378,7 +378,7 @@ importers:
         version: 6.1.3
       ttsc:
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
@@ -430,7 +430,7 @@ importers:
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       '@types/node':
         specifier: catalog:utils
         version: 22.19.20
@@ -448,7 +448,7 @@ importers:
         version: 4.1.2
       ttsc:
         specifier: catalog:typescript
-        version: 0.22.0
+        version: 0.23.0
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
@@ -893,46 +893,46 @@ packages:
       svelte:
         optional: true
 
-  '@ttsc/darwin-arm64@0.22.0':
-    resolution: {integrity: sha512-UVXV6gerO3r+lK8lJbhOS1HtLKrGRTKTleean1IDKmXC7JqEiKqpbOhhRynb7qbMG2LOl/nqTLQBLjSs4sHl/A==}
+  '@ttsc/darwin-arm64@0.23.0':
+    resolution: {integrity: sha512-JNkV0/qApeccnSNN+k96xo9+UphFQp5l6nDU16PhkspTckRzFb5P7wSaeCIHTM2xZ7gBhXDOnc3dxB+wfXm+2Q==}
     cpu: [arm64]
     os: [darwin]
 
-  '@ttsc/darwin-x64@0.22.0':
-    resolution: {integrity: sha512-OZQCk0wNNmGxX39HPf8Rj9kFqC5Aax/i1SJST1XWGkCQMP6d3A4BGNSJ6TNCBoMT7pU//jCj7xMmV4Av0g4seg==}
+  '@ttsc/darwin-x64@0.23.0':
+    resolution: {integrity: sha512-OvfO8U7p+7w862Hp2B0G/PRtQJDq6jH+zGjEKM+MCF0N667fAI3xgICzKF6tlhMJOUMD15GxwPDpaiIeilqOoQ==}
     cpu: [x64]
     os: [darwin]
 
-  '@ttsc/lint@0.22.0':
-    resolution: {integrity: sha512-l83CIBEAiDYtAPrrweDEU96DTkZstR6EUw28XX7KqKfe8imYeDuuO8WpoXu8wgQibXyqhdbTkYVPtAefZF0WoQ==}
+  '@ttsc/lint@0.23.0':
+    resolution: {integrity: sha512-9cJWMoW/VIJc3Ct+yA0/IEwsrGinelPesYLUfvnyclov5brctqFQF8Kl3zEgyVPRsyNWrxIVRW99hayjOfFHNw==}
 
-  '@ttsc/linux-arm64@0.22.0':
-    resolution: {integrity: sha512-6x5UprHcy29/hC5aTqkJnkBWuXyKCV2X9a4yhhhsM94JXqqKAifWos8HgJ1roUvmGG8zaEHNJrR0LtIvbFwBdA==}
+  '@ttsc/linux-arm64@0.23.0':
+    resolution: {integrity: sha512-eFS1k1Xtk3lEf4Pp7hTSTiXp4+u7mv6DgoxtiYDTwvWZ69s91cukIPZRaA0W06EUsWMe0J+nIqoc8/uJ6JpILQ==}
     cpu: [arm64]
     os: [linux]
 
-  '@ttsc/linux-arm@0.22.0':
-    resolution: {integrity: sha512-wEG7Jq11AhuSLPOv6sE+kexSBlpDCCHoWjO5QgdN3WJ5oqhuBJyYoQoyujxXDxHGCi60a2vFpJiALk3uQU5lTw==}
+  '@ttsc/linux-arm@0.23.0':
+    resolution: {integrity: sha512-tHmejG6thGqSdQk1PUhzJ+C004cbrDgFmuGZ6bXsJj0zIuTikMnRJaw/gq8GMYI1jujtr3XV0cL+BaxS3oUz4A==}
     cpu: [arm]
     os: [linux]
 
-  '@ttsc/linux-x64@0.22.0':
-    resolution: {integrity: sha512-u1mC/ch4+Tpvmb2uNfJagHROo/OlpQt6FLXQrY7dPfPhRIgFbpoEy/rW2IgBumYIIwYBAB9hDfgUdO5ue3l9iw==}
+  '@ttsc/linux-x64@0.23.0':
+    resolution: {integrity: sha512-fcvWLP/f3vaXsaYTvwR03KPjWPhesGrJbJ0vpVSErnsbnjAYQkg7+3bdzdGhpUTILayd7TPX62weSAhG888FXA==}
     cpu: [x64]
     os: [linux]
 
-  '@ttsc/unplugin@0.22.0':
-    resolution: {integrity: sha512-dXju37iPlKSzfFzBUn08715IQUC6rLVip8DTsdGMKXjJSKwKw7YjhisU3/+OUXdyQRiHIE+QaKHtVBQZd7FfdA==}
+  '@ttsc/unplugin@0.23.0':
+    resolution: {integrity: sha512-hyLQlHHUp6eJjEOyLN1ARqqNHc2CkqBslNj+/xAUJp/yWRZ+kRBDumQde5tbywj/3VWZLU8SoeyuPlc53fbHqA==}
     peerDependencies:
-      ttsc: ^0.22.0
+      ttsc: ^0.23.0
 
-  '@ttsc/win32-arm64@0.22.0':
-    resolution: {integrity: sha512-RyZq5qgjZjm5H14Bw/5tkRqCLwSk4sXnExGjfoPj4hmv8Ia+MxsAJkh0ZQZQNq0JCZkRlxLfOxfFIMbbJJ/swQ==}
+  '@ttsc/win32-arm64@0.23.0':
+    resolution: {integrity: sha512-4a7XBrjW/vNG/TdlCnZnGI3a/YandBM6t8XN/vdZGU1FYVxADkBed2egTKSC/PTEJbCtdnqrtsosZxmf73VXeg==}
     cpu: [arm64]
     os: [win32]
 
-  '@ttsc/win32-x64@0.22.0':
-    resolution: {integrity: sha512-l0l8dVSU6aSdBKFqCT3n32Tjx6Q7QmoPP4gD7J3apZ+5pJC4H5gmQs+EJwKd9zjnmx0LPI3TVhXtJ5pcr61mrg==}
+  '@ttsc/win32-x64@0.23.0':
+    resolution: {integrity: sha512-sePUCdYny5/6fXHtxvoodumUWXv8lyGPTJleMAf6N5Dur+dW/bXEVVcEZmskTldzaHgX08KQKisKcmOLf1G5OA==}
     cpu: [x64]
     os: [win32]
 
@@ -1963,8 +1963,8 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  ttsc@0.22.0:
-    resolution: {integrity: sha512-rjxf2KqOE9ajhALXQT5MQmTLuV+yolJby76nLEWSTtXVLgdA0ZXvlmnncHSbK+axhDp0KG9jhle40+n19dlS3Q==}
+  ttsc@0.23.0:
+    resolution: {integrity: sha512-OZmG/lrpi+neKmtYVeSpyVjWiyXA7c4rGwdRNWsRLEQglJ4yNc+Vp1IQemUEtPgowf/nlsNSe5H8bJ4KutJp2w==}
     engines: {node: '>=22.15.0'}
     hasBin: true
 
@@ -2441,32 +2441,32 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@ttsc/darwin-arm64@0.22.0':
+  '@ttsc/darwin-arm64@0.23.0':
     optional: true
 
-  '@ttsc/darwin-x64@0.22.0':
+  '@ttsc/darwin-x64@0.23.0':
     optional: true
 
-  '@ttsc/lint@0.22.0': {}
+  '@ttsc/lint@0.23.0': {}
 
-  '@ttsc/linux-arm64@0.22.0':
+  '@ttsc/linux-arm64@0.23.0':
     optional: true
 
-  '@ttsc/linux-arm@0.22.0':
+  '@ttsc/linux-arm@0.23.0':
     optional: true
 
-  '@ttsc/linux-x64@0.22.0':
+  '@ttsc/linux-x64@0.23.0':
     optional: true
 
-  '@ttsc/unplugin@0.22.0(ttsc@0.22.0)':
+  '@ttsc/unplugin@0.23.0(ttsc@0.23.0)':
     dependencies:
-      ttsc: 0.22.0
+      ttsc: 0.23.0
       unplugin: 2.3.11
 
-  '@ttsc/win32-arm64@0.22.0':
+  '@ttsc/win32-arm64@0.23.0':
     optional: true
 
-  '@ttsc/win32-x64@0.22.0':
+  '@ttsc/win32-x64@0.23.0':
     optional: true
 
   '@tweenjs/tween.js@23.1.3': {}
@@ -3550,15 +3550,15 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  ttsc@0.22.0:
+  ttsc@0.23.0:
     optionalDependencies:
-      '@ttsc/darwin-arm64': 0.22.0
-      '@ttsc/darwin-x64': 0.22.0
-      '@ttsc/linux-arm': 0.22.0
-      '@ttsc/linux-arm64': 0.22.0
-      '@ttsc/linux-x64': 0.22.0
-      '@ttsc/win32-arm64': 0.22.0
-      '@ttsc/win32-x64': 0.22.0
+      '@ttsc/darwin-arm64': 0.23.0
+      '@ttsc/darwin-x64': 0.23.0
+      '@ttsc/linux-arm': 0.23.0
+      '@ttsc/linux-arm64': 0.23.0
+      '@ttsc/linux-x64': 0.23.0
+      '@ttsc/win32-arm64': 0.23.0
+      '@ttsc/win32-x64': 0.23.0
 
   type-fest@0.21.3: {}
 
@@ -3593,7 +3593,7 @@ snapshots:
       '@typescript/typescript-win32-arm64': 7.0.2
       '@typescript/typescript-win32-x64': 7.0.2
 
-  typia@13.2.0(@types/node@22.19.20)(ttsc@0.22.0):
+  typia@13.2.0(@types/node@22.19.20)(ttsc@0.23.0):
     dependencies:
       '@standard-schema/spec': 1.1.0
       '@typia/interface': 13.2.0
@@ -3603,7 +3603,7 @@ snapshots:
       randexp: 0.5.3
       tinyglobby: 0.2.17
     optionalDependencies:
-      ttsc: 0.22.0
+      ttsc: 0.23.0
     transitivePeerDependencies:
       - '@types/node'
 
