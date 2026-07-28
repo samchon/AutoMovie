@@ -117,6 +117,48 @@ export const test_mcp_production_review_render_edges =
               candidate.reviewFrame === prepared.frames[0]?.reviewFrame,
           ),
       );
+      const staleTargetBytes = png();
+      const staleTargetManifest: IAutoMovieRenderBundleManifest = {
+        version: 2,
+        target,
+        compileFingerprint: project.generatedManifest()!.inputFingerprint,
+        rendererIdentity: "test:png-v1",
+        targetFingerprint:
+          "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        renderSpec: {
+          target: target.id,
+          frameFormat: { width: 16, height: 16, fps: 24 },
+          toneMapping: "none",
+          codec: "h264",
+          pixelFormat: "yuv420p",
+          crf: 17,
+        },
+        frames: [
+          {
+            index: 48,
+            time: 2,
+            pass: "beauty",
+            path: "stale-target.png",
+            digest: digestAutoMovieBytes(staleTargetBytes),
+            width: 16,
+            height: 16,
+          },
+        ],
+      };
+      const staleTargetBundle =
+        productionRenderBundleRelativePath(staleTargetManifest);
+      project.commitRenderBundle(
+        staleTargetBundle,
+        new Map([["stale-target.png", staleTargetBytes]]),
+        staleTargetManifest,
+      );
+      const staleTargetPrepared = review.prepare({ target });
+      TestValidator.predicate(
+        "review inventory refuses a bundle bound to a stale target fingerprint",
+        staleTargetPrepared.frames.every(
+          (frame) => frame.bundle.endsWith(staleTargetBundle) === false,
+        ),
+      );
       const filmManifest: IAutoMovieRenderBundleManifest = {
         version: 2,
         target: { kind: "film", id: "fixture-film" },

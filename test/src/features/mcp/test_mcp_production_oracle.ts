@@ -1497,14 +1497,23 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           index: 10,
           time: 10 / 24,
           pass: "beauty",
+          path: "preview/wrong-height.png",
+          digest: goodDigest,
+          width: 2,
+          height: 3,
+        },
+        {
+          index: 11,
+          time: 11 / 24,
+          pass: "beauty",
           path: "preview/blank.png",
           digest: digestAutoMovieBytes(blank),
           width: 2,
           height: 2,
         },
         {
-          index: 11,
-          time: 11 / 24,
+          index: 12,
+          time: 12 / 24,
           pass: "beauty",
           path: "preview/malformed.png",
           digest: digestAutoMovieBytes(Buffer.from("not-png")),
@@ -1512,8 +1521,8 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           height: 2,
         },
         {
-          index: 12,
-          time: 12 / 24,
+          index: 13,
+          time: 13 / 24,
           pass: "beauty",
           path: "preview/missing.png",
           digest: goodDigest,
@@ -1527,6 +1536,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         "past-duration.png",
         "wrong-digest.png",
         "wrong-size.png",
+        "wrong-height.png",
       ])
         retainedFiles.set(`preview/${file}`, visible);
       retainedFiles.set("preview/blank.png", blank);
@@ -1535,12 +1545,24 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         ...currentManifest,
         frames: [...currentManifest.frames, ...badFrames],
       });
-      const afterForgedLedger = await actual.preview({
-        target: { kind: "shot", id: "opening" },
-        time: 2 / 24,
-        width: 2,
-        height: 2,
-      });
+      const residentVerifiedRenderManifestForForgery =
+        project.verifiedRenderManifest;
+      project.verifiedRenderManifest = (() => ({
+        ...currentManifest,
+        frames: badFrames,
+      })) as typeof project.verifiedRenderManifest;
+      let afterForgedLedger: Awaited<ReturnType<typeof actual.preview>>;
+      try {
+        afterForgedLedger = await actual.preview({
+          target: { kind: "shot", id: "opening" },
+          time: 2 / 24,
+          width: 2,
+          height: 2,
+        });
+      } finally {
+        project.verifiedRenderManifest =
+          residentVerifiedRenderManifestForForgery;
+      }
       const repairedManifest = project.verifiedRenderManifest(
         path.join(bundleRoot, "manifest.json"),
       );

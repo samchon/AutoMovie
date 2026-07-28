@@ -351,6 +351,36 @@ export const test_mcp_production_realization = (): void => {
       "an empty formation cannot satisfy an event subject",
       emptyFormationSubjectOutcome.realization.events[0]?.passed === false,
     );
+    const missingFormationSlotsOutcome = realizeShotContract({
+      contract,
+      production: productionDesign(),
+      world: worldDesign(),
+      formations,
+      formationSlots: {},
+      compiled: materialized,
+      collisions: [],
+    });
+    const missingFormationDesignOutcome = realizeShotContract({
+      contract,
+      production: productionDesign(),
+      world: worldDesign(),
+      formations: new Map(),
+      formationSlots: {},
+      compiled: materialized,
+      collisions: [],
+    });
+    TestValidator.predicate(
+      "formation realization reports absent slot inventories and designs",
+      missingFormationSlotsOutcome.realization.formations[0]?.count === 0 &&
+        missingFormationSlotsOutcome.realization.formations[0]?.passed ===
+          false &&
+        missingFormationDesignOutcome.realization.formations[0]?.count === 0 &&
+        missingFormationDesignOutcome.realization.formations[0]?.passed ===
+          false &&
+        missingFormationDesignOutcome.diagnostics.some((item) =>
+          item.message.includes("exactly 0 distinct compiler-owned slots"),
+        ),
+    );
     const heroModelTampered = structuredClone(materialized);
     heroModelTampered.scene.nodes.find((node) => node.id === "captain")!.model =
       staticModel.id;

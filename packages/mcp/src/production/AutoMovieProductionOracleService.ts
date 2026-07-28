@@ -1050,6 +1050,7 @@ const verifiedRetainedFrames = (
     frame: IAutoMovieRenderBundleManifest["frames"][number];
     bytes: Uint8Array;
   }> = [];
+  const bundlePrefix = `${path.resolve(bundleRoot)}${path.sep}`;
   for (const frame of manifest.frames)
     try {
       if (
@@ -1059,14 +1060,7 @@ const verifiedRetainedFrames = (
       )
         continue;
       const absolute = path.resolve(bundleRoot, frame.path);
-      const insideBundle = path.relative(bundleRoot, absolute);
-      if (
-        insideBundle === "" ||
-        insideBundle === ".." ||
-        insideBundle.startsWith(`..${path.sep}`) ||
-        path.isAbsolute(insideBundle)
-      )
-        continue;
+      if (absolute.startsWith(bundlePrefix) === false) continue;
       const relative = normalizeSlash(
         path.relative(project.renderRoot(), absolute),
       );

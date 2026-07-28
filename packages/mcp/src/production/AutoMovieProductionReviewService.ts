@@ -983,10 +983,7 @@ const reviewFingerprint = (
     fields.push(compilerField());
   } else {
     addJson("production", graph.production);
-    addJson(
-      "compile-current",
-      compileStatus?.compiler.inputFingerprint ?? null,
-    );
+    addJson("compile-current", compileStatus!.compiler.inputFingerprint);
     for (const [id, acceptance] of graph.acceptance)
       addJson(`acceptance:${id}`, acceptance);
     for (const [id] of graph.shots) {

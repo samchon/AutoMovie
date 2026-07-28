@@ -241,7 +241,7 @@ const evaluatePredicate = (
         throw new Error(
           `node "${predicate.actor}" has no bone "${predicate.bone}"`,
         );
-      const pose = actorPoseAt(props.compiled, predicate.actor, time);
+      const pose = actorPoseAt(props.compiled, node, time);
       const joint = pose.joints.find((item) => item.bone === predicate.bone);
       actual = joint?.[predicate.axis] ?? 0;
     } else if (predicate.kind === "position")
@@ -363,13 +363,11 @@ const cameraOutcome = (
 
 const actorPoseAt = (
   compiled: IAutoMovieCompiledShotSource,
-  actor: string,
+  node: IAutoMovieCompiledShotSource["scene"]["nodes"][number],
   time: number,
 ): ReturnType<typeof sampleMotion>["pose"] => {
-  const node = compiled.scene.nodes.find((candidate) => candidate.id === actor);
-  if (node === undefined) throw new Error(`node "${actor}" is absent`);
   const performance = compiled.shot.performances.find(
-    (candidate) => candidate.node === actor,
+    (candidate) => candidate.node === node.id,
   );
   const model = modelOf(compiled, node.model);
   const skeleton = model.skeleton!;
@@ -403,7 +401,7 @@ const actorTransformAt = (
   if (node === undefined) throw new Error(`node "${actor}" is absent`);
   const model = modelOf(compiled, node.model);
   const pose =
-    model.skeleton === null ? null : actorPoseAt(compiled, actor, time);
+    model.skeleton === null ? null : actorPoseAt(compiled, node, time);
   const sampled = sampleClipSequence(compiled.shot.objectMotions, time);
   const translation = sampled.get(`node:${actor}:translation`)?.value;
   const rotation = sampled.get(`node:${actor}:rotation`)?.value;
