@@ -8,6 +8,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   readAutoMovieFilmTimeline,
+  selectAutoMovieFilmReviewFrames,
 } from "@automovie/mcp";
 import path from "node:path";
 
@@ -40,15 +41,15 @@ try {
       project,
       compiled.compiler.inputFingerprint,
     );
-    const ordered = timeline.segments.map((segment) => segment.shot);
-
     const frames: IAutoMoviePreviewFrameOutput[] = [];
-    for (const shotId of ordered) {
+    for (const segment of timeline.segments) {
+      const shotId = segment.shot;
       const contract = graph.shots.get(shotId)!;
-      const requests =
-        contract.reviewFrames.length === 0
-          ? [{ id: "opening", time: 0, passes: ["beauty" as const] }]
-          : contract.reviewFrames;
+      const requests = selectAutoMovieFilmReviewFrames(
+        segment,
+        contract,
+        timeline.fps,
+      );
       for (const request of requests)
         for (const pass of request.passes)
           frames.push(

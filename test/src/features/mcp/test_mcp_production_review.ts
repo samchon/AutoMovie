@@ -543,13 +543,19 @@ export const test_mcp_production_review = async (): Promise<void> => {
         malformedEventOutcome,
         missingMetricOutcome,
         invalidMetricOutcome,
-        incompleteFilmMetricOutcome,
         ambiguousEventOutcome,
       ].every((prepared) =>
         prepared.diagnostics.some(
           (diagnostic) => diagnostic.code === "review-outcome-missing",
         ),
-      ),
+      ) &&
+        incompleteFilmMetricOutcome.outcomes.some(
+          (outcome) =>
+            outcome.kind === "metric" &&
+            outcome.scenario === "film-runtime" &&
+            outcome.actual === 6 &&
+            outcome.passed,
+        ),
     );
     const contractOnlyWorksheet = worksheet(project, aliasedFrameEvidence);
     const acceptanceCheck = contractOnlyWorksheet.checks.find(

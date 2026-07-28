@@ -45,7 +45,10 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
-import { parseAutoMovieFilmTimeline } from "./filmTimeline";
+import {
+  parseAutoMovieFilmTimeline,
+  selectAutoMovieFilmReviewFrames,
+} from "./filmTimeline";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import { isProductionFrameTime } from "./validateProductionDesign";
 
@@ -584,12 +587,26 @@ const validateAcceptanceCoverage = (
   const target = input.target;
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const graph = project.graph();
+  let filmTimeline: IAutoMovieFilmTimeline | null = null;
+  if (target.kind === "film") {
+    const generated = project.generatedManifest();
+    if (generated !== null)
+      try {
+        filmTimeline = currentFilmTimeline(project, generated.inputFingerprint);
+      } catch {}
+  }
   const scenarios = [...graph.acceptance.values()]
     .filter(
       (scenario) =>
         scenario.required &&
         (target.kind === "film" ||
           acceptanceAddressesShot(scenario, target.id)),
+    )
+    .filter(
+      (scenario) =>
+        target.kind !== "film" ||
+        filmTimeline === null ||
+        acceptanceBelongsToFilm(graph, scenario, filmTimeline),
     )
     .sort((left, right) => compareCodeUnits(left.id, right.id));
   const check = input.checks.find(
@@ -1211,6 +1228,11 @@ const currentAcceptanceOutcomes = (
   const outcomes: IAutoMovieAcceptanceOutcomeReference[] = [];
   for (const scenario of scenarios) {
     const criterion = scenario.criterion;
+    if (
+      target.kind === "film" &&
+      acceptanceBelongsToFilm(graph, scenario, readTimeline()) === false
+    )
+      continue;
     if (criterion.kind === "frame") continue;
     if (criterion.kind === "event") {
       const shot =
@@ -1222,7 +1244,7 @@ const currentAcceptanceOutcomes = (
           : readRealization(shot)?.events.find(
               (candidate) => candidate.id === criterion.event,
             );
-      if (scenario.target.kind === "film" && shot !== undefined) {
+      if (target.kind === "film" && shot !== undefined) {
         const timeline = readTimeline();
         const segment = timeline?.segments.find(
           (candidate) => candidate.shot === shot,
@@ -1308,6 +1330,49 @@ const outcomeMissingDiagnostic = (
   path: null,
   message: `Required acceptance "${scenario}": ${message}`,
 });
+
+const acceptanceBelongsToFilm = (
+  graph: ReturnType<AutoMovieProductionProject["graph"]>,
+  scenario: IAutoMovieAcceptanceScenario,
+  timeline: IAutoMovieFilmTimeline | null,
+): boolean => {
+  if (timeline === null) return true;
+  if (scenario.target.kind === "film" && scenario.criterion.kind === "metric")
+    return true;
+  const shot =
+    (scenario.criterion.kind === "frame" ||
+      scenario.criterion.kind === "event") &&
+    scenario.criterion.shot !== undefined
+      ? scenario.criterion.shot
+      : scenario.target.kind === "shot"
+        ? scenario.target.id
+        : null;
+  if (shot === null) return true;
+  const segment = timeline.segments.find(
+    (candidate) => candidate.shot === shot,
+  );
+  if (segment === undefined) return false;
+  if (scenario.criterion.kind === "frame") {
+    const frame = graph.shots
+      .get(shot)
+      ?.reviewFrames.find(
+        (candidate) => candidate.id === scenario.criterion.frame,
+      );
+    if (frame === undefined) return true;
+    const index = Math.round(frame.time * timeline.fps);
+    return index >= segment.sourceInFrame && index < segment.sourceOutFrame;
+  }
+  if (scenario.criterion.kind === "event") {
+    const event = graph.shots
+      .get(shot)
+      ?.events.find((candidate) => candidate.id === scenario.criterion.event);
+    if (event === undefined) return true;
+    const first = Math.ceil(event.window.from * timeline.fps);
+    const last = Math.floor(event.window.to * timeline.fps);
+    return last >= segment.sourceInFrame && first < segment.sourceOutFrame;
+  }
+  return true;
+};
 
 const currentFrames = (
   project: AutoMovieProductionProject,
@@ -1577,25 +1642,22 @@ const requiredReviewFrames = (
           (shot) => [shot, graph.shots.get(shot)] as const,
         );
   return shots.flatMap(([shotId, shot]) =>
-    (shot?.reviewFrames ?? []).flatMap((frame) =>
-      frame.passes.flatMap((pass) => {
-        const index = Math.round(frame.time * fps);
-        const segment = segments.get(shotId);
-        return target.kind === "film" &&
-          (segment === undefined ||
-            index < segment.sourceInFrame ||
-            index >= segment.sourceOutFrame)
-          ? []
-          : [
-              {
-                shot: shotId,
-                frame: frame.id,
-                time: frame.time,
-                index,
-                pass,
-              },
-            ];
-      }),
+    (shot === undefined
+      ? []
+      : target.kind === "film"
+        ? selectAutoMovieFilmReviewFrames(segments.get(shotId)!, shot, fps)
+        : shot.reviewFrames.map((frame) => ({
+            ...frame,
+            index: Math.round(frame.time * fps),
+          }))
+    ).flatMap((frame) =>
+      frame.passes.map((pass) => ({
+        shot: shotId,
+        frame: frame.id,
+        time: frame.time,
+        index: frame.index,
+        pass,
+      })),
     ),
   );
 };

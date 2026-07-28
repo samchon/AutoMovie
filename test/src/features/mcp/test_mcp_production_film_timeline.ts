@@ -11,15 +11,13 @@ import {
   AutoMovieProductionReviewService,
   digestAutoMovieBytes,
   parseAutoMovieFilmTimeline,
+  selectAutoMovieFilmReviewFrames,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
-import {
-  productionDesign,
-  productionFixture,
-} from "./productionFixtures";
+import { productionDesign, productionFixture } from "./productionFixtures";
 
 const editSource = (edit: unknown): string =>
   `export const film = { build() { return ${JSON.stringify(edit)}; } };\n`;
@@ -520,6 +518,46 @@ export const test_mcp_production_film_timeline = (): void => {
             fingerprint: legalOmission.compiler.inputFingerprint,
             read: () => staleTimelineBytes,
           }),
+        ),
+    );
+    project.setProductionDesign(productionDesign({ targetRuntimeSeconds: 3 }));
+    const trimmed = baseEdit();
+    trimmed.tracks.video[0]!.sourceIn = { seconds: 3 };
+    trimmed.tracks.video[0]!.sourceOut = { seconds: 6 };
+    trimmed.omissions.push({
+      shot: "answer",
+      reason: "The alternate answer remains excluded from the shorter cut.",
+    });
+    fs.writeFileSync(filmPath, editSource(trimmed));
+    const legalTrim = compiler.compile({ scope: "source" });
+    const trimTimeline = JSON.parse(
+      fs.readFileSync(timelinePath, "utf8"),
+    ) as IAutoMovieFilmTimeline;
+    const trimSelection = selectAutoMovieFilmReviewFrames(
+      trimTimeline.segments[0]!,
+      project.graph().shots.get("opening")!,
+      trimTimeline.fps,
+    );
+    const trimReview = new AutoMovieProductionReviewService(project).prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    TestValidator.predicate(
+      "a legal trim uses one deterministic in-range fallback when authored review frames are excluded",
+      legalTrim.success &&
+        trimSelection.length === 1 &&
+        trimSelection[0]?.id === "film-segment-entry" &&
+        trimSelection[0]?.index === 72 &&
+        trimSelection[0]?.time === 3 &&
+        trimSelection[0]?.passes[0] === "beauty" &&
+        trimReview.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-evidence-missing" &&
+            diagnostic.target === "opening:film-segment-entry:beauty",
+        ) &&
+        trimReview.diagnostics.every(
+          (diagnostic) =>
+            diagnostic.code !== "review-evidence-missing" ||
+            diagnostic.target.includes("signal-apex") === false,
         ),
     );
   } finally {

@@ -1,7 +1,10 @@
 import {
   AutoMovieContentDigest,
+  AutoMovieGuidePass,
   IAutoMovieFilmTimeline,
+  IAutoMovieFilmTimelineSegment,
   IAutoMovieGeneratedManifest,
+  IAutoMovieShotContract,
 } from "@automovie/interface";
 import typia from "typia";
 
@@ -17,6 +20,47 @@ export interface IAutoMovieFilmTimelineArtifact {
   /** Read one manifest-owned generated path from the same snapshot. */
   read(path: string): Uint8Array;
 }
+
+/** One shot-local frame the finished film requires as visual evidence. */
+export interface IAutoMovieFilmReviewFrame {
+  /** Authored review id or deterministic segment fallback id. */
+  id: string;
+  /** Shot-local frame-grid time. */
+  time: number;
+  /** Shot-local frame index. */
+  index: number;
+  /** Required render passes. */
+  passes: AutoMovieGuidePass[];
+}
+
+/**
+ * Select only review frames present in one edit segment.
+ *
+ * A segment whose trim excludes every authored frame receives one deterministic
+ * beauty fallback at source-in, so render and film review cannot deadlock.
+ */
+export const selectAutoMovieFilmReviewFrames = (
+  segment: IAutoMovieFilmTimelineSegment,
+  shot: IAutoMovieShotContract,
+  fps: number,
+): IAutoMovieFilmReviewFrame[] => {
+  const selected = shot.reviewFrames.flatMap((frame) => {
+    const index = Math.round(frame.time * fps);
+    return index < segment.sourceInFrame || index >= segment.sourceOutFrame
+      ? []
+      : [{ ...frame, index }];
+  });
+  return selected.length !== 0
+    ? selected
+    : [
+        {
+          id: "film-segment-entry",
+          time: segment.sourceInFrame / fps,
+          index: segment.sourceInFrame,
+          passes: ["beauty"],
+        },
+      ];
+};
 
 /** Validate manifest ownership, bytes, schema and compile identity together. */
 export const parseAutoMovieFilmTimeline = (
