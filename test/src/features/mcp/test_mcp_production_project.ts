@@ -1583,6 +1583,44 @@ export const test_mcp_production_project = (): void => {
           .readdirSync(fs.realpathSync(aliasProject))
           .every((entry) => entry.includes("automovie-root") === false),
     );
+    const alternateAliasParent = path.join(
+      invalidRoot,
+      "alternate-alias-parent",
+    );
+    fs.mkdirSync(path.join(alternateAliasParent, "aliased-project"), {
+      recursive: true,
+    });
+    const nativeWriteForRequestedSwap = fs.writeFileSync;
+    let requestedRootLocks = 0;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      Reflect.apply(nativeWriteForRequestedSwap, fs, [file, ...args]);
+      if (
+        typeof file !== "number" &&
+        path.basename(file.toString()).startsWith("root-") &&
+        ++requestedRootLocks === 2
+      ) {
+        fs.rmSync(aliasParent);
+        fs.symlinkSync(alternateAliasParent, aliasParent, "junction");
+      }
+    }) as typeof fs.writeFileSync;
+    let requestedSwapRejected = false;
+    try {
+      requestedSwapRejected = throws(
+        () => acquireProductionRootNamespace(aliasProject),
+        "changed physical identity",
+      );
+    } finally {
+      fs.writeFileSync = nativeWriteForRequestedSwap;
+      fs.rmSync(aliasParent);
+      fs.symlinkSync(physicalAliasParent, aliasParent, "junction");
+    }
+    TestValidator.predicate(
+      "a requested alias swapped after physical lock acquisition is rejected",
+      requestedSwapRejected && requestedRootLocks === 2,
+    );
     const coordinationRoot = path.dirname(aliasLockPaths[0]!);
     // A guarded commit runs the read-only compiler gate, which commits its own
     // snapshot, so one process reaches the same root coordinate twice. That is
@@ -1775,6 +1813,31 @@ export const test_mcp_production_project = (): void => {
       } finally {
         mutableFs.lstatSync = nativeCoordinationLstat;
       }
+    }
+    const deniedRoot = path.join(invalidRoot, "denied-root");
+    fs.lstatSync = ((file: fs.PathLike, ...args: unknown[]): fs.Stats => {
+      if (path.resolve(file.toString()) === deniedRoot) {
+        const error = new Error(
+          "injected project-root lstat denial",
+        ) as NodeJS.ErrnoException;
+        error.code = "EACCES";
+        throw error;
+      }
+      return Reflect.apply(nativeCoordinationLstat, fs, [
+        file,
+        ...args,
+      ]) as fs.Stats;
+    }) as typeof fs.lstatSync;
+    try {
+      TestValidator.predicate(
+        "an unexpected project-root lstat denial propagates",
+        throws(
+          () => AutoMovieProductionProject.open(deniedRoot),
+          "injected project-root lstat denial",
+        ),
+      );
+    } finally {
+      fs.lstatSync = nativeCoordinationLstat;
     }
     const nativeCoordinationChmod = fs.chmodSync;
     fs.chmodSync = ((file: fs.PathLike): void => {
