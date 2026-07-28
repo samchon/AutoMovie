@@ -7,6 +7,7 @@ import {
   IAutoMovieCompiledShotSource,
   IAutoMovieDesignTarget,
   IAutoMovieDiagnostic,
+  IAutoMovieFilmTimeline,
   IAutoMovieFrameEvidenceReference,
   IAutoMovieGeneratedManifest,
   IAutoMoviePrepareReviewInput,
@@ -44,6 +45,7 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import { parseAutoMovieFilmTimeline } from "./filmTimeline";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import { isProductionFrameTime } from "./validateProductionDesign";
 
@@ -257,7 +259,9 @@ export class AutoMovieProductionReviewService {
                 graph.shots.get(input.target.id)?.source.module,
                 diagnostics,
               )
-            : [];
+            : input.target.kind === "film"
+              ? sourceSelectors(this.project, "src/film.ts", diagnostics)
+              : [];
     diagnostics.sort(compareDiagnostics);
     return {
       target: input.target,
@@ -1143,6 +1147,20 @@ const currentAcceptanceOutcomes = (
     .sort((left, right) => compareCodeUnits(left.id, right.id));
   const compiled = new Map<string, IAutoMovieCompiledShotSource>();
   const realizations = new Map<string, IAutoMovieCompiledContractRealization>();
+  let retainedTimeline: IAutoMovieFilmTimeline | null | undefined;
+  const readTimeline = (): IAutoMovieFilmTimeline | null => {
+    if (retainedTimeline !== undefined) return retainedTimeline;
+    try {
+      retainedTimeline = currentFilmTimeline(
+        project,
+        generated.inputFingerprint,
+        context,
+      );
+    } catch {
+      retainedTimeline = null;
+    }
+    return retainedTimeline;
+  };
   const readCompiled = (shot: string): IAutoMovieCompiledShotSource | null => {
     const retained = compiled.get(shot);
     if (retained !== undefined) return retained;
@@ -1198,12 +1216,29 @@ const currentAcceptanceOutcomes = (
       const shot =
         criterion.shot ??
         (scenario.target.kind === "shot" ? scenario.target.id : undefined);
-      const event =
+      let event =
         shot === undefined
           ? undefined
           : readRealization(shot)?.events.find(
               (candidate) => candidate.id === criterion.event,
             );
+      if (scenario.target.kind === "film" && shot !== undefined) {
+        const timeline = readTimeline();
+        const segment = timeline?.segments.find(
+          (candidate) => candidate.shot === shot,
+        );
+        const eventFrame =
+          event === undefined
+            ? null
+            : Math.round(event.time * (timeline?.fps ?? 0));
+        if (
+          segment === undefined ||
+          eventFrame === null ||
+          eventFrame < segment.sourceInFrame ||
+          eventFrame >= segment.sourceOutFrame
+        )
+          event = undefined;
+      }
       if (shot === undefined || event === undefined) {
         diagnostics.push(
           outcomeMissingDiagnostic(
@@ -1226,19 +1261,11 @@ const currentAcceptanceOutcomes = (
     }
     const fps = graph.production!.frameFormat.fps;
     const filmFrames =
-      scenario.target.kind === "film"
-        ? [...graph.shots.keys()].reduce<number | null>((frames, shot) => {
-            if (frames === null) return null;
-            const value = readCompiled(shot);
-            return value === null
-              ? null
-              : frames + Math.round(value.shot.duration * fps);
-          }, 0)
-        : null;
+      scenario.target.kind === "film" ? readTimeline()?.totalFrames : null;
     const actual =
       scenario.target.kind === "shot"
         ? readCompiled(scenario.target.id)?.shot.duration
-        : filmFrames === null
+        : filmFrames === null || filmFrames === undefined
           ? null
           : filmFrames / fps;
     if (actual === undefined || actual === null) {
@@ -1309,7 +1336,31 @@ const currentFrames = (
   }
   const frames: IAutoMovieFrameEvidenceReference[] = [];
   const graph = project.graph();
-  const required = requiredReviewFrames(graph, target);
+  let timeline: IAutoMovieFilmTimeline | null = null;
+  if (target.kind === "film")
+    try {
+      timeline = currentFilmTimeline(
+        project,
+        generated.inputFingerprint,
+        context,
+      );
+    } catch (error) {
+      diagnostics.push({
+        code: "review-evidence-stale",
+        category: "error",
+        phase: "review",
+        target: reviewTargetKey(target),
+        path: "generated/film-timeline.json",
+        message: `${
+          error instanceof Error ? error.message : String(error)
+        } Recompile before preparing film review.`,
+      });
+      return [];
+    }
+  const filmShots = new Set(
+    timeline?.segments.map((segment) => segment.shot) ?? [],
+  );
+  const required = requiredReviewFrames(graph, target, timeline);
   const covered = new Set<string>();
   const inventory =
     context?.renderInventory ?? collectRenderManifestInventory(project);
@@ -1330,7 +1381,7 @@ const currentFrames = (
       : inventory.legacy.filter(
           (entry) =>
             (entry.target.kind === "film" && entry.target.id === target.id) ||
-            (entry.target.kind === "shot" && graph.shots.has(entry.target.id)),
+            (entry.target.kind === "shot" && filmShots.has(entry.target.id)),
         );
   for (const entry of legacyEntries)
     diagnostics.push({
@@ -1350,7 +1401,7 @@ const currentFrames = (
             (entry.manifest?.target.kind === "film" &&
               entry.manifest.target.id === target.id) ||
             (entry.manifest?.target.kind === "shot" &&
-              graph.shots.has(entry.manifest.target.id)),
+              filmShots.has(entry.manifest.target.id)),
         );
   for (const entry of manifestEntries) {
     const manifestPath = entry.path;
@@ -1511,23 +1562,40 @@ interface IRequiredReviewFrame {
 const requiredReviewFrames = (
   graph: ReturnType<AutoMovieProductionProject["graph"]>,
   target: Extract<IAutoMovieReviewTarget, { kind: "shot" | "film" }>,
+  timeline: IAutoMovieFilmTimeline | null,
 ): IRequiredReviewFrame[] => {
   // currentFrames reaches this helper only after a clean compile, whose design
   // gate requires production metadata.
   const fps = graph.production!.frameFormat.fps;
+  const segments = new Map(
+    timeline?.segments.map((segment) => [segment.shot, segment]) ?? [],
+  );
   const shots =
     target.kind === "shot"
       ? [[target.id, graph.shots.get(target.id)] as const]
-      : [...graph.shots.entries()];
+      : [...segments.keys()].map(
+          (shot) => [shot, graph.shots.get(shot)] as const,
+        );
   return shots.flatMap(([shotId, shot]) =>
     (shot?.reviewFrames ?? []).flatMap((frame) =>
-      frame.passes.map((pass) => ({
-        shot: shotId,
-        frame: frame.id,
-        time: frame.time,
-        index: Math.round(frame.time * fps),
-        pass,
-      })),
+      frame.passes.flatMap((pass) => {
+        const index = Math.round(frame.time * fps);
+        const segment = segments.get(shotId);
+        return target.kind === "film" &&
+          (segment === undefined ||
+            index < segment.sourceInFrame ||
+            index >= segment.sourceOutFrame)
+          ? []
+          : [
+              {
+                shot: shotId,
+                frame: frame.id,
+                time: frame.time,
+                index,
+                pass,
+              },
+            ];
+      }),
     ),
   );
 };
@@ -1856,6 +1924,17 @@ const currentGeneratedFile = (
     return project.readGeneratedFile(relativePath);
   return context.generatedFiles.get(relativePath)!;
 };
+
+const currentFilmTimeline = (
+  project: AutoMovieProductionProject,
+  fingerprint: AutoMovieContentDigest,
+  context?: IReviewReadContext,
+): IAutoMovieFilmTimeline =>
+  parseAutoMovieFilmTimeline({
+    manifest: currentGeneratedManifest(project, context),
+    fingerprint,
+    read: (file) => currentGeneratedFile(project, file, context),
+  });
 
 const listNamedFiles = (root: string, name: string): string[] => {
   const output: string[] = [];

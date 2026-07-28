@@ -18,6 +18,7 @@ export * from "./production/AutoMovieProductionProject";
 export * from "./production/AutoMovieProductionReviewService";
 export * from "./production/captureRuntimeIdentity";
 export * from "./production/contentIdentity";
+export * from "./production/filmTimeline";
 export * from "./production/materializeProduction";
 export * from "./production/probeProductionMedia";
 export * from "./production/renderIdentity";

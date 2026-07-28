@@ -1,5 +1,4 @@
 import type {
-  IAutoMovieFilmTimeline,
   IAutoMoviePreviewFrameOutput,
   IAutoMovieProductionRenderManifest,
 } from "@automovie/interface";
@@ -8,6 +7,7 @@ import {
   AutoMovieProductionProject,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  readAutoMovieFilmTimeline,
 } from "@automovie/mcp";
 import path from "node:path";
 
@@ -36,11 +36,10 @@ try {
         "Production design disappeared after source compilation.",
       );
 
-    const timeline = JSON.parse(
-      Buffer.from(project.readGeneratedFile("film-timeline.json")).toString(
-        "utf8",
-      ),
-    ) as IAutoMovieFilmTimeline;
+    const timeline = readAutoMovieFilmTimeline(
+      project,
+      compiled.compiler.inputFingerprint,
+    );
     const ordered = timeline.segments.map((segment) => segment.shot);
 
     const frames: IAutoMoviePreviewFrameOutput[] = [];

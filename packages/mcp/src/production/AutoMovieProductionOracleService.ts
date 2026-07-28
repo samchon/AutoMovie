@@ -16,7 +16,6 @@ import {
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
-  IAutoMovieFilmTimeline,
   IAutoMovieGeneratedManifest,
   IAutoMovieGeometryResult,
   IAutoMovieGeometrySelector,
@@ -48,6 +47,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import { materializeFormationSlots } from "./materializeProduction";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 
@@ -240,7 +240,7 @@ export class AutoMovieProductionOracleService {
           break;
         }
         case "film-time": {
-          const timeline = readFilmTimeline(
+          const timeline = readAutoMovieFilmTimeline(
             this.project,
             generated.inputFingerprint,
           );
@@ -707,36 +707,6 @@ export class AutoMovieProductionOracleService {
     return null;
   }
 }
-
-const readFilmTimeline = (
-  project: AutoMovieProductionProject,
-  fingerprint: AutoMovieContentDigest,
-): IAutoMovieFilmTimeline => {
-  const manifest = project.generatedManifest();
-  const entry = manifest?.files.find(
-    (file) => file.path === "film-timeline.json",
-  );
-  if (manifest?.inputFingerprint !== fingerprint || entry === undefined)
-    throw new Error(
-      "Canonical film timeline is missing or changed during geometry query. Run compileProject scope source.",
-    );
-  const bytes = project.readGeneratedFile(entry.path);
-  if (digestAutoMovieBytes(bytes) !== entry.digest)
-    throw new Error(
-      "Canonical film timeline bytes changed after freshness validation. Run compileProject scope source.",
-    );
-  const validation = typia.validateEquals<IAutoMovieFilmTimeline>(
-    JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
-  );
-  if (
-    validation.success === false ||
-    validation.data.inputFingerprint !== fingerprint
-  )
-    throw new Error(
-      "Canonical film timeline is invalid or stale. Run compileProject scope source.",
-    );
-  return validation.data;
-};
 
 const readCompiledShots = (
   project: AutoMovieProductionProject,

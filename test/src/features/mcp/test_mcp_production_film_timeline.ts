@@ -8,6 +8,9 @@ import {
   AutoMovieProductionCompiler,
   AutoMovieProductionOracleService,
   AutoMovieProductionProject,
+  AutoMovieProductionReviewService,
+  digestAutoMovieBytes,
+  parseAutoMovieFilmTimeline,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -25,6 +28,15 @@ const editSource = (edit: unknown): string =>
 const diagnosticCodes = (
   output: ReturnType<AutoMovieProductionCompiler["compile"]>,
 ): Set<string> => new Set(output.diagnostics.map((item) => item.code));
+
+const throws = (closure: () => unknown): boolean => {
+  try {
+    closure();
+    return false;
+  } catch {
+    return true;
+  }
+};
 
 const baseEdit = (): IAutoMovieFilmEdit => ({
   id: "fixture-film",
@@ -338,6 +350,17 @@ export const test_mcp_production_film_timeline = (): void => {
       productionDesign({ targetRuntimeSeconds: 11.5 }),
     );
     project.setShotContract(answer);
+    project.setAcceptanceScenario({
+      id: "film-runtime",
+      target: { kind: "film", id: "fixture-film" },
+      criterion: {
+        kind: "metric",
+        metric: "runtime-seconds",
+        operator: "==",
+        value: 11.5,
+      },
+      required: true,
+    });
     fs.writeFileSync(filmPath, editSource(twoShotEdit()));
     const twoShot = compiler.compile({ scope: "source" });
     const twoShotTimeline = JSON.parse(
@@ -360,6 +383,23 @@ export const test_mcp_production_film_timeline = (): void => {
         new AutoMovieProductionOracleService(project).query({
           request: { query: "film-time", at: { frame: 132 } },
         }).result?.values.shot === "answer",
+    );
+    const filmReview = new AutoMovieProductionReviewService(project).prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    TestValidator.predicate(
+      "film review consumes canonical overlap runtime and exposes film source evidence",
+      filmReview.outcomes.some(
+        (outcome) =>
+          outcome.kind === "metric" &&
+          outcome.scenario === "film-runtime" &&
+          outcome.actual === 11.5 &&
+          outcome.passed,
+      ) &&
+        filmReview.quotable.some(
+          (selector) =>
+            selector.kind === "source" && selector.path === "src/film.ts",
+        ),
     );
     const invalidTwoShotCases: Array<{
       code: string;
@@ -420,14 +460,69 @@ export const test_mcp_production_film_timeline = (): void => {
     });
     fs.writeFileSync(filmPath, editSource(omitted));
     const legalOmission = compiler.compile({ scope: "source" });
+    const omissionReview = new AutoMovieProductionReviewService(
+      project,
+    ).prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    const currentManifest = project.generatedManifest()!;
+    const currentTimelineBytes =
+      project.readGeneratedFile("film-timeline.json");
+    const validTimeline = parseAutoMovieFilmTimeline({
+      manifest: currentManifest,
+      fingerprint: legalOmission.compiler.inputFingerprint,
+      read: () => currentTimelineBytes,
+    });
+    const invalidTimelineBytes = Buffer.from("{}");
+    const invalidTimelineManifest = structuredClone(currentManifest);
+    invalidTimelineManifest.files.find(
+      (file) => file.path === "film-timeline.json",
+    )!.digest = digestAutoMovieBytes(invalidTimelineBytes);
+    const staleTimeline = structuredClone(validTimeline);
+    staleTimeline.inputFingerprint =
+      `sha256:${"0".repeat(64)}` as typeof staleTimeline.inputFingerprint;
+    const staleTimelineBytes = Buffer.from(JSON.stringify(staleTimeline));
+    const staleTimelineManifest = structuredClone(currentManifest);
+    staleTimelineManifest.files.find(
+      (file) => file.path === "film-timeline.json",
+    )!.digest = digestAutoMovieBytes(staleTimelineBytes);
     TestValidator.predicate(
-      "an explicit current-shot omission satisfies narrative accounting",
+      "an explicit current-shot omission controls review evidence and shared timeline validation",
       legalOmission.success &&
-        (
-          JSON.parse(
-            fs.readFileSync(timelinePath, "utf8"),
-          ) as IAutoMovieFilmTimeline
-        ).omissions[0]?.shot === "answer",
+        validTimeline.omissions[0]?.shot === "answer" &&
+        omissionReview.diagnostics.every(
+          (diagnostic) =>
+            diagnostic.code !== "review-evidence-missing" ||
+            diagnostic.target.startsWith("answer:") === false,
+        ) &&
+        throws(() =>
+          parseAutoMovieFilmTimeline({
+            manifest: null,
+            fingerprint: legalOmission.compiler.inputFingerprint,
+            read: () => currentTimelineBytes,
+          }),
+        ) &&
+        throws(() =>
+          parseAutoMovieFilmTimeline({
+            manifest: currentManifest,
+            fingerprint: legalOmission.compiler.inputFingerprint,
+            read: () => invalidTimelineBytes,
+          }),
+        ) &&
+        throws(() =>
+          parseAutoMovieFilmTimeline({
+            manifest: invalidTimelineManifest,
+            fingerprint: legalOmission.compiler.inputFingerprint,
+            read: () => invalidTimelineBytes,
+          }),
+        ) &&
+        throws(() =>
+          parseAutoMovieFilmTimeline({
+            manifest: staleTimelineManifest,
+            fingerprint: legalOmission.compiler.inputFingerprint,
+            read: () => staleTimelineBytes,
+          }),
+        ),
     );
   } finally {
     fixture.dispose();
