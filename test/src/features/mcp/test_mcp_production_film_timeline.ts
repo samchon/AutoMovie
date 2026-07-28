@@ -596,6 +596,20 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         ),
       );
     }
+    const opening = structuredClone(project.graph().shots.get("opening")!);
+    const openingWithoutClosing = structuredClone(opening);
+    openingWithoutClosing.closing = [];
+    project.setShotContract(openingWithoutClosing);
+    const trimmedOpeningBoundary = twoShotEdit();
+    trimmedOpeningBoundary.tracks.video[1]!.sourceIn = { frame: 1 };
+    fs.writeFileSync(filmPath, editSource(trimmedOpeningBoundary));
+    TestValidator.predicate(
+      "a trimmed boundary rejects a claimed current opening even without a previous closing claim",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "film-state-handoff-unverifiable",
+      ),
+    );
+    project.setShotContract(opening);
     const mismatched = structuredClone(answer);
     mismatched.opening[0]!.predicates[0]!.value = 90;
     project.setShotContract(mismatched);
