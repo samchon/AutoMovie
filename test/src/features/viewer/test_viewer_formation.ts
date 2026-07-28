@@ -75,7 +75,21 @@ export const test_viewer_formation = (): void => {
     [...runtimeModels.values()].map((model) => [model.id, model]),
   );
   const heroObjects = new Map(
-    design.heroOverrides.map((hero) => [hero.actor, new THREE.Object3D()]),
+    formation.heroes.map((hero) => {
+      const object = new THREE.Object3D();
+      object.position.set(
+        hero.transform.translation.x,
+        hero.transform.translation.y,
+        hero.transform.translation.z,
+      );
+      object.quaternion.set(
+        hero.transform.rotation.x,
+        hero.transform.rotation.y,
+        hero.transform.rotation.z,
+        hero.transform.rotation.w,
+      );
+      return [hero.actor, object] as const;
+    }),
   );
   const motion = {
     id: "army-advance",
@@ -221,6 +235,15 @@ export const test_viewer_formation = (): void => {
   const camera = new THREE.PerspectiveCamera(45, 16 / 9, 0.1, 2_000);
   camera.position.set(0, 5, 20);
   camera.lookAt(0, 0, 0);
+  heroObjects.get("marshal")!.position.add(new THREE.Vector3(1, 0, 2));
+  heroObjects
+    .get("marshal")!
+    .quaternion.multiply(
+      new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        THREE.MathUtils.degToRad(15),
+      ),
+    );
   built.update(camera, 1_080, 3);
   const firstMatrix = new THREE.Matrix4();
   meshes[0]!.getMatrixAt(0, firstMatrix);
@@ -329,7 +352,15 @@ export const test_viewer_formation = (): void => {
       sampledMotion.facingOffsetDeg === 10 &&
       sampledMotion.spacingScale.lateral === 1.1 &&
       built.object.position.z === formation.anchor.z - 3 &&
-      heroObjects.get("marshal")!.position.z === formation.anchor.z - 3 &&
+      heroObjects.get("marshal")!.position.z === formation.anchor.z - 1 &&
+      Math.abs(
+        THREE.MathUtils.radToDeg(
+          new THREE.Euler().setFromQuaternion(
+            heroObjects.get("marshal")!.quaternion,
+            "YXZ",
+          ).y,
+        ) - 25,
+      ) < 1e-9 &&
       built.stats.visible.hero > 0 &&
       built.object.scale.x === 1 &&
       Math.abs(firstTranslation.x - (firstScaled.x - formation.anchor.x)) <

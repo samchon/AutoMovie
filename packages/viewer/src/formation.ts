@@ -200,19 +200,33 @@ export const buildInstancedFormation = (input: {
       for (const hero of input.formation.heroes) {
         const object = input.heroObjects?.get(hero.actor);
         if (object === undefined) continue;
+        const sourceTranslationOffset = object.position
+          .clone()
+          .sub(vector(hero.transform.translation));
+        const sourceRotationOffset = new THREE.Quaternion()
+          .set(
+            hero.transform.rotation.x,
+            hero.transform.rotation.y,
+            hero.transform.rotation.z,
+            hero.transform.rotation.w,
+          )
+          .invert()
+          .multiply(object.quaternion);
         const position = transformFormationPoint(
           hero.transform.translation,
           input.formation.anchor,
           sampled,
           input.formation.facingDeg,
         );
-        object.position.copy(vector(position));
-        object.quaternion.setFromAxisAngle(
-          new THREE.Vector3(0, 1, 0),
-          THREE.MathUtils.degToRad(
-            input.formation.facingDeg + sampled.facingOffsetDeg,
-          ),
-        );
+        object.position.copy(vector(position).add(sourceTranslationOffset));
+        object.quaternion
+          .setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            THREE.MathUtils.degToRad(
+              input.formation.facingDeg + sampled.facingOffsetDeg,
+            ),
+          )
+          .multiply(sourceRotationOffset);
         object.updateMatrixWorld(true);
         object.visible = frustum.intersectsSphere(
           new THREE.Sphere(vector(position), selectionRadius),

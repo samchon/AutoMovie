@@ -399,7 +399,18 @@ export class AutoMovieProductionOracleService {
             camera === null || resolvedCamera === null || production === null
               ? 0
               : runtime.heroes.filter((hero) => {
-                  const point = transformPoint(hero.transform.translation);
+                  const source = actorTransformAt(
+                    compiled,
+                    hero.actor,
+                    sampledTime,
+                  );
+                  const point = Vector3.add(
+                    transformPoint(hero.transform.translation),
+                    Vector3.subtract(
+                      source.translation,
+                      hero.transform.translation,
+                    ),
+                  );
                   const projection = projectToNdc(
                     resolvedCamera,
                     point,
