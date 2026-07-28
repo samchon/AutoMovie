@@ -422,7 +422,7 @@ export const test_mcp_production_legacy_import = (): void => {
     const nativeRmdir = fs.rmdirSync;
     const nativeMkdir = fs.mkdirSync;
     const nativeWrite = fs.writeFileSync;
-    let activeNamespaceLock: string | null = null;
+    const activeNamespaceLocks: string[] = [];
     let removals = 0;
     fs.writeFileSync = ((
       file: fs.PathOrFileDescriptor,
@@ -435,14 +435,14 @@ export const test_mcp_production_legacy_import = (): void => {
           ".automovie-root-locks" &&
         path.basename(file.toString()).startsWith("root-")
       )
-        activeNamespaceLock = path.resolve(file.toString());
+        activeNamespaceLocks.push(path.resolve(file.toString()));
     }) as typeof fs.writeFileSync;
     fs.rmdirSync = ((directory: fs.PathLike): void => {
       ++removals;
       if (removals === 2) {
         if (
-          activeNamespaceLock === null ||
-          fs.existsSync(activeNamespaceLock) === false
+          activeNamespaceLocks.length !== 2 ||
+          activeNamespaceLocks.some((file) => fs.existsSync(file) === false)
         )
           throw new Error("rollback released the canonical root reservation");
         const quarantine = fs

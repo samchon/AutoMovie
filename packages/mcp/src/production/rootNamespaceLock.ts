@@ -20,7 +20,7 @@ export interface IAutoMovieProductionRootNamespaceLease {
 }
 
 const coordinatePath = (
-  kind: "create" | "root-path" | "root-id",
+  kind: "create-path" | "create-id" | "root-path" | "root-id",
   namespace: string,
 ): string => {
   ensureCoordinationRoot();
@@ -64,6 +64,27 @@ const acquireCoordinates = (
   }
 };
 
+const releaseCoordinates = (
+  leases: readonly { path: string; token: string }[],
+): void => {
+  for (const lease of [...leases].reverse())
+    releaseCommitLock(lease.path, lease.token);
+};
+
+const creationCoordinates = (
+  parentReal: string,
+  childName: string,
+): string[] => {
+  const parentIdentity = fs.statSync(parentReal, { bigint: true });
+  return [
+    coordinatePath("create-path", path.join(parentReal, childName)),
+    coordinatePath(
+      "create-id",
+      `${parentIdentity.dev}\0${parentIdentity.ino}\0${childName.toLowerCase()}`,
+    ),
+  ];
+};
+
 const ensureDirectory = (directory: string): string => {
   const linked = lstatOrNull(directory);
   if (linked !== null) {
@@ -80,8 +101,9 @@ const ensureDirectory = (directory: string): string => {
     );
   const parentReal = ensureDirectory(parent);
   const physical = path.join(parentReal, path.basename(directory));
-  const lockPath = coordinatePath("create", physical);
-  const token = acquireCommitLock(lockPath);
+  const locks = acquireCoordinates(
+    creationCoordinates(parentReal, path.basename(directory)),
+  );
   try {
     const current = lstatOrNull(physical);
     if (current === null) fs.mkdirSync(physical);
@@ -94,7 +116,7 @@ const ensureDirectory = (directory: string): string => {
       );
     return fs.realpathSync(physical);
   } finally {
-    releaseCommitLock(lockPath, token);
+    releaseCoordinates(locks);
   }
 };
 
@@ -160,8 +182,9 @@ export const acquireOrCreateProductionRootNamespace = (
   if (linked !== null) return acquireExistingRoot(root);
   const parentReal = ensureDirectory(path.dirname(root));
   const physical = path.join(parentReal, path.basename(root));
-  const lockPath = coordinatePath("create", physical);
-  const token = acquireCommitLock(lockPath);
+  const locks = acquireCoordinates(
+    creationCoordinates(parentReal, path.basename(root)),
+  );
   try {
     const current = lstatOrNull(physical);
     if (current === null) fs.mkdirSync(physical);
@@ -178,7 +201,7 @@ export const acquireOrCreateProductionRootNamespace = (
       throw error;
     }
   } finally {
-    releaseCommitLock(lockPath, token);
+    releaseCoordinates(locks);
   }
 };
 
@@ -215,8 +238,7 @@ export const assertProductionRootNamespaceLease = (
 export const releaseProductionRootNamespace = (
   lease: IAutoMovieProductionRootNamespaceLease,
 ): void => {
-  for (const lock of [...lease.locks].reverse())
-    releaseCommitLock(lock.path, lock.token);
+  releaseCoordinates(lease.locks);
 };
 
 const assertRequestedRootIdentity = (

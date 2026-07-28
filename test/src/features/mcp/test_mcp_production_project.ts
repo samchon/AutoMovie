@@ -1566,12 +1566,10 @@ export const test_mcp_production_project = (): void => {
     }
     TestValidator.predicate(
       "ancestor aliases create through the physical parent then hold the project-owned namespace",
-      aliasLockPaths.some((file) =>
-        path.basename(file).startsWith("create-"),
-      ) &&
-        aliasLockPaths.some((file) =>
-          path.basename(file).startsWith("root-"),
-        ) &&
+      aliasLockPaths.filter((file) => path.basename(file).startsWith("create-"))
+        .length === 2 &&
+        aliasLockPaths.filter((file) => path.basename(file).startsWith("root-"))
+          .length === 2 &&
         aliasLockPaths.every(
           (file) =>
             path.basename(path.dirname(file)) === ".automovie-root-locks",
