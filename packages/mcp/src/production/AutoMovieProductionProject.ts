@@ -872,6 +872,7 @@ export class AutoMovieProductionProject {
     files: ReadonlyMap<string, Uint8Array>,
     manifest: IAutoMovieGeneratedManifest,
     inputCurrent?: () => boolean,
+    expectedRevision: number = this.lastReadRevision_,
   ): number {
     const writes: IStagedFile[] = [];
     const previous = this.generatedManifest();
@@ -909,9 +910,9 @@ export class AutoMovieProductionProject {
       const token = acquireCommitLock(this.lockPath);
       try {
         const current = readRevision(this.rootReal, this.revisionPath);
-        if (current !== this.lastReadRevision_)
+        if (current !== expectedRevision)
           throw new AutoMovieProductionInputRaceError(
-            `Production revision changed from ${this.lastReadRevision_} to ${current}. Inspect the project again before retrying the mutation.`,
+            `Production revision changed from ${expectedRevision} to ${current}. Inspect the project again before retrying the mutation.`,
           );
         if (inputCurrent?.() === false)
           throw new AutoMovieProductionInputRaceError(
@@ -927,7 +928,7 @@ export class AutoMovieProductionProject {
         releaseCommitLock(this.lockPath, token);
       }
     }
-    return this.commitFiles(writes, inputCurrent);
+    return this.commitFiles(writes, inputCurrent, expectedRevision);
   }
 
   /** Read one stored review record. */
@@ -1175,6 +1176,7 @@ export class AutoMovieProductionProject {
   private commitFiles(
     files: readonly IStagedFile[],
     inputCurrent?: () => boolean,
+    expectedRevision: number = this.lastReadRevision_,
   ): number {
     const staged = files.map((file) => ({
       path: file.path,
@@ -1202,9 +1204,9 @@ export class AutoMovieProductionProject {
     const token = acquireCommitLock(this.lockPath);
     try {
       const current = readRevision(this.rootReal, this.revisionPath);
-      if (current !== this.lastReadRevision_)
+      if (current !== expectedRevision)
         throw new AutoMovieProductionInputRaceError(
-          `Production revision changed from ${this.lastReadRevision_} to ${current}. Inspect the project again before retrying the mutation.`,
+          `Production revision changed from ${expectedRevision} to ${current}. Inspect the project again before retrying the mutation.`,
         );
       let applied = 0;
       try {

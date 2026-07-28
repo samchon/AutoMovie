@@ -120,6 +120,7 @@ export class AutoMovieProductionCompiler {
     materialize: boolean,
   ): IAutoMovieCompileProjectOutput {
     const graph = this.project.graph();
+    const inputRevision = this.project.revision();
     const diagnostics: IAutoMovieDiagnostic[] = [
       ...missingDesignDiagnostics(graph),
       ...validateAutoMovieProductionGraph(graph),
@@ -300,12 +301,12 @@ export class AutoMovieProductionCompiler {
       materialized: [],
     });
     const reviewSnapshot: IAutoMovieReviewQueueSnapshot | undefined =
-      contentInputs === undefined || manifest === null || files === null
+      contentInputs === undefined
         ? undefined
         : {
             renderContentInputs: contentInputs,
-            generatedManifest: manifest,
-            generatedFiles: files,
+            generatedManifest: manifest!,
+            generatedFiles: files!,
           };
     const reviews: IAutoMovieReviewQueue =
       diagnostics.some(
@@ -333,7 +334,7 @@ export class AutoMovieProductionCompiler {
           inputFingerprint,
         },
         diagnostics,
-        reviews: { entries: [] },
+        reviews,
         materialized: [],
       };
     if (input.scope === "design")
@@ -345,7 +346,7 @@ export class AutoMovieProductionCompiler {
           inputFingerprint,
         },
         diagnostics,
-        reviews,
+        reviews: { entries: [] },
         materialized: [],
       };
 
@@ -375,6 +376,7 @@ export class AutoMovieProductionCompiler {
         () =>
           currentProductionCompilerInputFingerprint(this.project) ===
           inputFingerprint,
+        inputRevision,
       );
     } catch (error) {
       if (error instanceof AutoMovieProductionInputRaceError === false)
@@ -396,7 +398,7 @@ export class AutoMovieProductionCompiler {
           inputFingerprint,
         },
         diagnostics,
-        reviews,
+        reviews: { entries: [] },
         materialized: [],
       };
     }

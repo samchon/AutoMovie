@@ -745,18 +745,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     project.contentInputs = (() => {
       ++noWriteRaceReads;
       if (noWriteRaceReads === 1) return currentContent;
-      let changed = false;
-      return currentContent.map((content) => {
-        if (changed || content.bytes === null) return content;
-        changed = true;
-        return {
-          ...content,
-          bytes: Buffer.concat([
-            Buffer.from(content.bytes),
-            Buffer.from("\nno-write content race"),
-          ]),
-        };
-      });
+      throw new Error("no-write content inventory raced");
     }) as typeof project.contentInputs;
     const noWriteContentRace = compiler.compile({ scope: "source" });
     project.contentInputs = residentContentInputs;
@@ -770,6 +759,56 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         fs.readFileSync(generatedManifestPath, "utf8") ===
           generatedBeforeContentRace,
     );
+    let noWriteLateRaceReads = 0;
+    project.contentInputs = (() => {
+      ++noWriteLateRaceReads;
+      if (noWriteLateRaceReads < 3) return currentContent;
+      let changed = false;
+      return currentContent.map((content) => {
+        if (changed || content.bytes === null) return content;
+        changed = true;
+        return {
+          ...content,
+          bytes: Buffer.concat([
+            Buffer.from(content.bytes),
+            Buffer.from("\nlate no-write content race"),
+          ]),
+        };
+      });
+    }) as typeof project.contentInputs;
+    const noWriteLateContentRace = compiler.compile({ scope: "source" });
+    project.contentInputs = residentContentInputs;
+    TestValidator.predicate(
+      "no-write confirmation rejects changes between its two guarded reads",
+      noWriteLateContentRace.success === false &&
+        diagnosticCodes(noWriteLateContentRace).has("compile-input-changed") &&
+        noWriteLateContentRace.reviews.entries.length === 0 &&
+        noWriteLateRaceReads === 3 &&
+        project.revision() === revisionBeforeContentRace &&
+        fs.readFileSync(generatedManifestPath, "utf8") ===
+          generatedBeforeContentRace,
+    );
+    const revisionRacer = AutoMovieProductionProject.open(fixture.root);
+    let revisionRaced = false;
+    const revisionRaceCompile = new AutoMovieProductionCompiler(
+      project,
+      (status, snapshot) => {
+        const queue = review.queue(status, snapshot);
+        if (revisionRaced === false) {
+          revisionRacer.setWorldDesign(worldDesign());
+          revisionRaced = true;
+        }
+        return queue;
+      },
+    ).compile({ scope: "source" });
+    TestValidator.predicate(
+      "no-write confirmation cannot publish another process revision",
+      revisionRaceCompile.success === false &&
+        diagnosticCodes(revisionRaceCompile).has("compile-input-changed") &&
+        revisionRaceCompile.reviews.entries.length === 0 &&
+        revisionRaced,
+    );
+    const revisionAfterRace = project.revision();
     let contentRaceReads = 0;
     project.contentInputs = (() => {
       ++contentRaceReads;
@@ -797,7 +836,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         diagnosticCodes(racedContentCommit).has("compile-input-changed") &&
         racedContentCommit.reviews.entries.length === 0 &&
         contentRaceReads === 3 &&
-        project.revision() === revisionBeforeContentRace &&
+        project.revision() === revisionAfterRace &&
         fs.readFileSync(generatedManifestPath, "utf8") ===
           generatedBeforeContentRace,
     );

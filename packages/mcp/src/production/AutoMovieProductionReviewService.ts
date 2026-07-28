@@ -1806,12 +1806,7 @@ const currentGeneratedFile = (
 ): Uint8Array => {
   if (context?.generatedFiles === undefined)
     return project.readGeneratedFile(relativePath);
-  const bytes = context.generatedFiles.get(relativePath);
-  if (bytes === undefined)
-    throw new Error(
-      `Prospective generated file "${relativePath}" is absent from the compiler snapshot.`,
-    );
-  return bytes;
+  return context.generatedFiles.get(relativePath)!;
 };
 
 const listNamedFiles = (root: string, name: string): string[] => {
