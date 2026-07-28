@@ -1,4 +1,5 @@
 import type {
+  IAutoMovieFilmTimeline,
   IAutoMoviePreviewFrameOutput,
   IAutoMovieProductionRenderManifest,
 } from "@automovie/interface";
@@ -10,7 +11,6 @@ import {
 } from "@automovie/mcp";
 import path from "node:path";
 
-import { film } from "../src/film";
 import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
 
 const root = process.cwd();
@@ -36,15 +36,12 @@ try {
         "Production design disappeared after source compilation.",
       );
 
-    const ordered: readonly string[] = [...film];
-    if (
-      new Set(ordered).size !== ordered.length ||
-      ordered.some((shot) => graph.shots.has(shot) === false) ||
-      [...graph.shots.keys()].some((shot) => ordered.includes(shot) === false)
-    )
-      throw new Error(
-        "src/film.ts must list every current shot contract exactly once in finished-film order.",
-      );
+    const timeline = JSON.parse(
+      Buffer.from(project.readGeneratedFile("film-timeline.json")).toString(
+        "utf8",
+      ),
+    ) as IAutoMovieFilmTimeline;
+    const ordered = timeline.segments.map((segment) => segment.shot);
 
     const frames: IAutoMoviePreviewFrameOutput[] = [];
     for (const shotId of ordered) {

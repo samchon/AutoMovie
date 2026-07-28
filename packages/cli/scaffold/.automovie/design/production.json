@@ -2,7 +2,7 @@
   "id": "{{name}}",
   "title": "{{name}}",
   "logline": "A primitive sentinel raises and answers a signal across a deterministic two-shot film.",
-  "targetRuntimeSeconds": 12,
+  "targetRuntimeSeconds": 11.5,
   "frameFormat": {
     "width": 1280,
     "height": 720,

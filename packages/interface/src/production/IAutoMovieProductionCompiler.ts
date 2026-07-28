@@ -213,6 +213,263 @@ export interface IAutoMovieSourceOracle {
   groundHeight(point: { x: number; z: number }): number;
 }
 
+/** One non-negative film time authored as an exact frame or frame-grid second. */
+export type AutoMovieFilmTime =
+  | {
+      /** Zero-based production frame. */
+      frame: number;
+    }
+  | {
+      /** Seconds that must land exactly on the production frame clock. */
+      seconds: number;
+    };
+
+/** A cut or bounded transition at one side of a video edit. */
+export type IAutoMovieFilmTransition =
+  | {
+      /** Zero-duration hard cut. */
+      kind: "cut";
+    }
+  | {
+      /** Cross-shot overlap using declared head and tail handles. */
+      kind: "dissolve";
+      /** Exact overlap duration. */
+      duration: AutoMovieFilmTime;
+    }
+  | {
+      /** In-segment fade without cross-shot overlap. */
+      kind: "fade";
+      /** Exact fade duration. */
+      duration: AutoMovieFilmTime;
+    };
+
+/** One source-shot placement on the finished-film video track. */
+export interface IAutoMovieVideoEdit {
+  /** Current compiled shot id. */
+  shot: string;
+  /** Inclusive source frame. */
+  sourceIn: AutoMovieFilmTime;
+  /** Exclusive source frame. */
+  sourceOut: AutoMovieFilmTime;
+  /** Film-global inclusive start frame. */
+  start: AutoMovieFilmTime;
+  /** Available transition material at each side of this placement. */
+  handles: {
+    /** Available incoming frames. */
+    head: AutoMovieFilmTime;
+    /** Available outgoing frames. */
+    tail: AutoMovieFilmTime;
+  };
+  /** Transition entering this placement. */
+  transitionIn: IAutoMovieFilmTransition;
+  /** Transition leaving this placement. */
+  transitionOut: IAutoMovieFilmTransition;
+}
+
+/** One declared audio asset placement. */
+export interface IAutoMovieAudioCue {
+  /** Stable cue id. */
+  id: string;
+  /** Project-relative declared render-content asset. */
+  asset: string;
+  /** Declared source duration used for bounded trim validation. */
+  sourceDuration: AutoMovieFilmTime;
+  /** Source offset inside the asset. */
+  sourceOffset: AutoMovieFilmTime;
+  /** Film-global cue start. */
+  start: AutoMovieFilmTime;
+  /** Cue duration. */
+  duration: AutoMovieFilmTime;
+  /** Linear gain from silence through a bounded boost. */
+  gain: number;
+  /** Fade-in duration. */
+  fadeIn: AutoMovieFilmTime;
+  /** Fade-out duration. */
+  fadeOut: AutoMovieFilmTime;
+  /** Deterministic destination bus. */
+  bus: "dialogue" | "music" | "effects" | "ambience";
+}
+
+/** One plain-text caption cue from which renderers may derive WebVTT. */
+export interface IAutoMovieCaptionCue {
+  /** Stable cue id. */
+  id: string;
+  /** Non-blank plain text. */
+  text: string;
+  /** Non-blank BCP-47-style language tag. */
+  language: string;
+  /** Optional speaker id. */
+  speaker?: string;
+  /** Film-global inclusive start. */
+  start: AutoMovieFilmTime;
+  /** Film-global exclusive end. */
+  end: AutoMovieFilmTime;
+}
+
+/** One bounded reference to a registered deterministic world effect zone. */
+export interface IAutoMovieEffectCue {
+  /** Stable cue id. */
+  id: string;
+  /** Supported compiler-owned recipe family. */
+  recipe: "world-zone";
+  /** Existing world effect-zone id. */
+  zone: string;
+  /** Film-global cue start. */
+  start: AutoMovieFilmTime;
+  /** Cue duration. */
+  duration: AutoMovieFilmTime;
+  /** Bounded normalized strength. */
+  intensity: number;
+}
+
+/** Explicit narrative-shot omission disposition. */
+export interface IAutoMovieFilmOmission {
+  /** Current shot contract intentionally absent from the edit. */
+  shot: string;
+  /** Auditable non-blank reason. */
+  reason: string;
+}
+
+/** Coding-agent-authored finished-film edit before frame normalization. */
+export interface IAutoMovieFilmEdit {
+  /** Stable film id, equal to production id. */
+  id: string;
+  /** Explicit accounting for intentionally unused shot contracts. */
+  omissions: IAutoMovieFilmOmission[];
+  /** Narrow deterministic edit tracks. */
+  tracks: {
+    /** Ordered source-shot placements. */
+    video: IAutoMovieVideoEdit[];
+    /** Ordered audio cues. */
+    audio: IAutoMovieAudioCue[];
+    /** Ordered caption cues. */
+    captions: IAutoMovieCaptionCue[];
+    /** Ordered supported-effect cues. */
+    effects: IAutoMovieEffectCue[];
+  };
+}
+
+/** Frozen design and ownership facts available to the film source builder. */
+export interface IAutoMovieFilmBuildContext {
+  /** Current production design. */
+  production: IAutoMovieProductionDesign;
+  /** Current shot contracts keyed by id. */
+  shots: Readonly<Record<string, IAutoMovieShotContract>>;
+  /** Declared, present render-content paths. */
+  assets: readonly string[];
+  /** Current registered deterministic effect zones. */
+  effectZones: Readonly<IAutoMovieWorldDesign["effectZones"]>;
+}
+
+/** Coding-agent-owned deterministic film module export. */
+export interface IAutoMovieFilmSource {
+  /** Build one finished-film edit from frozen compiler context. */
+  build(context: IAutoMovieFilmBuildContext): IAutoMovieFilmEdit;
+}
+
+/** Compiler-owned envelope preserving the exact validated authored edit. */
+export interface IAutoMovieCompiledFilmEdit {
+  /** Generated edit format. */
+  version: 1;
+  /** Compiler protocol that validated the edit. */
+  compiler: string;
+  /** Exact aggregate compile input. */
+  inputFingerprint: AutoMovieContentDigest;
+  /** Film source provenance. */
+  source: {
+    /** Project-relative module path. */
+    path: string;
+    /** Named build export. */
+    export: string;
+    /** Digest of normalized TypeScript source. */
+    digest: AutoMovieContentDigest;
+  };
+  /** Strict authored edit returned by the deterministic sandbox. */
+  edit: IAutoMovieFilmEdit;
+}
+
+/** One frame-normalized video segment in the canonical film timeline. */
+export interface IAutoMovieFilmTimelineSegment {
+  /** Current compiled shot id. */
+  shot: string;
+  /** Inclusive source frame. */
+  sourceInFrame: number;
+  /** Exclusive source frame. */
+  sourceOutFrame: number;
+  /** Film-global inclusive start frame. */
+  startFrame: number;
+  /** Film-global exclusive end frame. */
+  endFrame: number;
+  /** Available incoming handle frames. */
+  headHandleFrames: number;
+  /** Available outgoing handle frames. */
+  tailHandleFrames: number;
+  /** Normalized incoming transition. */
+  transitionIn:
+    | { kind: "cut" }
+    | { kind: "dissolve" | "fade"; durationFrames: number };
+  /** Normalized outgoing transition. */
+  transitionOut:
+    | { kind: "cut" }
+    | { kind: "dissolve" | "fade"; durationFrames: number };
+}
+
+/** Canonical global timeline consumed by review, oracle and render layers. */
+export interface IAutoMovieFilmTimeline {
+  /** Generated timeline format. */
+  version: 1;
+  /** Compiler protocol that derived the timeline. */
+  compiler: string;
+  /** Exact aggregate compile input. */
+  inputFingerprint: AutoMovieContentDigest;
+  /** Digest of normalized `src/film.ts` bytes. */
+  sourceDigest: AutoMovieContentDigest;
+  /** Stable finished-film id. */
+  id: string;
+  /** Production frame rate. */
+  fps: number;
+  /** Exact target and derived timeline duration. */
+  totalFrames: number;
+  /** Ordered global-to-shot mapping. */
+  segments: IAutoMovieFilmTimelineSegment[];
+  /** Explicitly omitted current narrative shots. */
+  omissions: IAutoMovieFilmOmission[];
+  /** Frame-normalized non-video tracks. */
+  tracks: {
+    /** Ordered audio placements. */
+    audio: Array<{
+      id: string;
+      asset: string;
+      sourceDurationFrames: number;
+      sourceOffsetFrame: number;
+      startFrame: number;
+      durationFrames: number;
+      gain: number;
+      fadeInFrames: number;
+      fadeOutFrames: number;
+      bus: IAutoMovieAudioCue["bus"];
+    }>;
+    /** Ordered caption placements. */
+    captions: Array<{
+      id: string;
+      text: string;
+      language: string;
+      speaker?: string;
+      startFrame: number;
+      endFrame: number;
+    }>;
+    /** Ordered effect placements. */
+    effects: Array<{
+      id: string;
+      recipe: IAutoMovieEffectCue["recipe"];
+      zone: string;
+      startFrame: number;
+      durationFrames: number;
+      intensity: number;
+    }>;
+  };
+}
+
 /** Frozen input available to a coding-agent-owned shot source builder. */
 export interface IAutoMovieShotBuildContext {
   /** Current shot contract. */

@@ -16,6 +16,7 @@ import {
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
+  IAutoMovieFilmTimeline,
   IAutoMovieGeneratedManifest,
   IAutoMovieGeometryResult,
   IAutoMovieGeometrySelector,
@@ -234,6 +235,54 @@ export class AutoMovieProductionOracleService {
               depth: maximumZ - minimumZ,
               facingDeg: formation.facingDeg,
               state: "compiled",
+            },
+          };
+          break;
+        }
+        case "film-time": {
+          const timeline = readFilmTimeline(
+            this.project,
+            generated.inputFingerprint,
+          );
+          const raw =
+            "frame" in request.at
+              ? request.at.frame
+              : request.at.seconds * timeline.fps;
+          const globalFrame = Math.round(raw);
+          if (
+            Number.isFinite(raw) === false ||
+            Number.isSafeInteger(globalFrame) === false ||
+            globalFrame < 0 ||
+            globalFrame >= timeline.totalFrames ||
+            Math.abs(raw - globalFrame) >
+              Number.EPSILON * 64 * Math.max(1, Math.abs(raw))
+          )
+            throw new Error(
+              `Film-global time does not resolve to one current frame in 0..${timeline.totalFrames - 1}. Use an exact frame or frame-grid second.`,
+            );
+          const segment = [...timeline.segments]
+            .reverse()
+            .find(
+              (item) =>
+                item.startFrame <= globalFrame && globalFrame < item.endFrame,
+            );
+          if (segment === undefined)
+            throw new Error(
+              `Film-global frame ${globalFrame} has no owning video segment. Recompile a gap-free canonical timeline.`,
+            );
+          const sourceFrame =
+            segment.sourceInFrame + globalFrame - segment.startFrame;
+          result = {
+            kind: "measurement",
+            values: {
+              film: timeline.id,
+              globalFrame,
+              globalTime: globalFrame / timeline.fps,
+              shot: segment.shot,
+              sourceFrame,
+              shotTime: sourceFrame / timeline.fps,
+              transitionIn: segment.transitionIn.kind,
+              transitionOut: segment.transitionOut.kind,
             },
           };
           break;
@@ -658,6 +707,36 @@ export class AutoMovieProductionOracleService {
     return null;
   }
 }
+
+const readFilmTimeline = (
+  project: AutoMovieProductionProject,
+  fingerprint: AutoMovieContentDigest,
+): IAutoMovieFilmTimeline => {
+  const manifest = project.generatedManifest();
+  const entry = manifest?.files.find(
+    (file) => file.path === "film-timeline.json",
+  );
+  if (manifest?.inputFingerprint !== fingerprint || entry === undefined)
+    throw new Error(
+      "Canonical film timeline is missing or changed during geometry query. Run compileProject scope source.",
+    );
+  const bytes = project.readGeneratedFile(entry.path);
+  if (digestAutoMovieBytes(bytes) !== entry.digest)
+    throw new Error(
+      "Canonical film timeline bytes changed after freshness validation. Run compileProject scope source.",
+    );
+  const validation = typia.validateEquals<IAutoMovieFilmTimeline>(
+    JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+  );
+  if (
+    validation.success === false ||
+    validation.data.inputFingerprint !== fingerprint
+  )
+    throw new Error(
+      "Canonical film timeline is invalid or stale. Run compileProject scope source.",
+    );
+  return validation.data;
+};
 
 const readCompiledShots = (
   project: AutoMovieProductionProject,

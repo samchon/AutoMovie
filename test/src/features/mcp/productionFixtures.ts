@@ -40,7 +40,31 @@ export const productionFixture = (): {
     2,
   )}\n`;
   files["src/film.ts"] =
-    '/** Stable ordered shot ids in finished-film order. */\nexport const film = ["opening"] as const;\n';
+    `import type { IAutoMovieFilmSource } from "@automovie/interface";
+
+export const film = {
+  build(context) {
+    return {
+      id: context.production.id,
+      omissions: [],
+      tracks: {
+        video: [{
+          shot: "opening",
+          sourceIn: { frame: 0 },
+          sourceOut: { seconds: 6 },
+          start: { frame: 0 },
+          handles: { head: { frame: 0 }, tail: { frame: 0 } },
+          transitionIn: { kind: "cut" },
+          transitionOut: { kind: "cut" },
+        }],
+        audio: [],
+        captions: [],
+        effects: [],
+      },
+    };
+  },
+} satisfies IAutoMovieFilmSource;
+`;
   writeFiles(root, files);
   return {
     root,

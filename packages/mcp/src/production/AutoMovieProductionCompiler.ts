@@ -8,8 +8,12 @@ import {
   IAutoMovieCompileProjectInput,
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledContractRealization,
+  IAutoMovieCompiledFilmEdit,
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
+  IAutoMovieFilmBuildContext,
+  IAutoMovieFilmEdit,
+  IAutoMovieFilmTimeline,
   IAutoMovieGeneratedFile,
   IAutoMovieGeneratedManifest,
   IAutoMovieMaterializedFile,
@@ -25,7 +29,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import ts from "typescript-compiler";
-import typia from "typia";
+import typia, { IValidation } from "typia";
 
 import { validateSceneArtifact } from "../validators/artifacts";
 import {
@@ -54,7 +58,10 @@ import { realizeShotContract } from "./realizeShotContract";
 import { validateAutoMovieProductionGraph } from "./validateProductionDesign";
 
 /** Production compiler protocol embedded in generated manifests. */
-export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v2";
+export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v3";
+
+const FILM_SOURCE_PATH = "src/film.ts";
+const FILM_SOURCE_EXPORT = "film";
 
 /** Compiler package version. */
 export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
@@ -140,6 +147,8 @@ export class AutoMovieProductionCompiler {
     >();
     let formationInventory: ReturnType<typeof materializeFormationInventory> =
       {};
+    let filmSource: Uint8Array | null = null;
+    let filmSourceDigest: AutoMovieContentDigest | null = null;
     if (input.scope !== "design" && designReady) {
       runtimeModels = new Map(materializeProductionModels(graph.models));
       formationInventory = materializeFormationInventory(graph.formations);
@@ -214,6 +223,31 @@ export class AutoMovieProductionCompiler {
         realizations.set(id, realized.realization);
       }
     }
+    if (input.scope === "design")
+      sourceFields.push({
+        role: "source:film",
+        kind: "not-inspected",
+        payload: new Uint8Array(),
+      });
+    else
+      try {
+        filmSource = normalizeAutoMovieSource(
+          this.project.readSource(FILM_SOURCE_PATH),
+        );
+        filmSourceDigest = digestAutoMovieBytes(filmSource);
+        sourceFields.push({
+          role: "source:film",
+          kind: "typescript",
+          payload: filmSource,
+        });
+      } catch (error) {
+        diagnostics.push(filmSourcePathDiagnostic(error));
+        sourceFields.push({
+          role: "source:film",
+          kind: "absent",
+          payload: new Uint8Array(),
+        });
+      }
     const contentFields: IAutoMovieFingerprintField[] = [];
     let contentInputs: IAutoMovieProductionContentInput[] | undefined;
     if (input.scope !== "design")
@@ -235,11 +269,44 @@ export class AutoMovieProductionCompiler {
           payload: new Uint8Array(),
         });
       }
+    let compiledFilm: ICompiledFilmDraft | null = null;
+    if (
+      input.scope !== "design" &&
+      designReady &&
+      filmSource !== null &&
+      contentInputs !== undefined
+    ) {
+      const context: IAutoMovieFilmBuildContext = {
+        production: graph.production!,
+        shots: Object.fromEntries(graph.shots),
+        assets: contentInputs
+          .filter((entry) => entry.render && entry.bytes !== null)
+          .map((entry) => entry.path),
+        effectZones: graph.world!.effectZones,
+      };
+      const film = compileFilmSource({
+        source: Buffer.from(filmSource).toString("utf8"),
+        context,
+        contracts: graph.shots,
+        compiled,
+        realizations,
+      });
+      diagnostics.push(...film.diagnostics);
+      compiledFilm = film.value;
+    }
     const inputFingerprint = productionCompilerInputFingerprint(
       graph,
       sourceFields,
       contentFields,
     );
+    const filmArtifacts =
+      compiledFilm === null || filmSourceDigest === null
+        ? null
+        : materializeFilmArtifacts(
+            compiledFilm,
+            filmSourceDigest,
+            inputFingerprint,
+          );
     const inputCurrent = (): boolean =>
       `${this.project.revision()}\0${currentProductionCompilerInputFingerprint(this.project, input.scope)}\0${this.project.revision()}` ===
       `${inputRevision}\0${inputFingerprint}\0${inputRevision}`;
@@ -251,6 +318,7 @@ export class AutoMovieProductionCompiler {
             runtimeModels,
             compiled,
             realizations,
+            filmArtifacts,
             inputFingerprint,
           );
     const entries: IAutoMovieGeneratedFile[] =
@@ -570,6 +638,21 @@ interface ICompileShotSourceResult {
   diagnostics: IAutoMovieDiagnostic[];
 }
 
+interface ICompileDeterministicSourceProps<T> {
+  target: string;
+  label: string;
+  path: string;
+  exportName: string;
+  source: string;
+  context: unknown;
+  validate(input: unknown): IValidation<T>;
+}
+
+interface ICompileDeterministicSourceResult<T> {
+  value: T | null;
+  diagnostics: IAutoMovieDiagnostic[];
+}
+
 const SANDBOX_BOOTSTRAP = `
 (() => {
   "use strict";
@@ -715,8 +798,19 @@ const SOURCE_INVOCATION = `
 
 const compileShotSource = (
   props: ICompileShotSourceProps,
-): ICompileShotSourceResult => {
-  const diagnostics = inspectSource(props.id, props.path, props.source);
+): ICompileShotSourceResult =>
+  compileDeterministicSource({
+    ...props,
+    target: `shot:${props.id}`,
+    label: "compiled shot",
+    validate: (input) =>
+      typia.validateEquals<IAutoMovieShotSourceOutput>(input),
+  });
+
+const compileDeterministicSource = <T>(
+  props: ICompileDeterministicSourceProps<T>,
+): ICompileDeterministicSourceResult<T> => {
+  const diagnostics = inspectSource(props.target, props.path, props.source);
   if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
     return { value: null, diagnostics };
   const transpiled = ts.transpileModule(props.source, {
@@ -735,7 +829,7 @@ const compileShotSource = (
         code: "source-transpile-failed",
         category: "error",
         phase: "source",
-        target: `shot:${props.id}`,
+        target: props.target,
         path: props.path,
         message: `${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")} Fix ${props.path} before compileProject.`,
       });
@@ -746,7 +840,7 @@ const compileShotSource = (
     {
       codeGeneration: { strings: false, wasm: false },
       microtaskMode: "afterEvaluate",
-      name: `automovie:${props.id}`,
+      name: `automovie:${props.target}`,
     },
   );
   try {
@@ -772,7 +866,7 @@ const compileShotSource = (
             code: "source-export-missing",
             category: "error",
             phase: "source",
-            target: `shot:${props.id}`,
+            target: props.target,
             path: props.path,
             message: `Export "${props.exportName}" with a build(context) function was not found. Add that named export to ${props.path}.`,
           },
@@ -792,16 +886,16 @@ const compileShotSource = (
             code: "source-export-invalid",
             category: "error",
             phase: "source",
-            target: `shot:${props.id}`,
+            target: props.target,
             path: props.path,
-            message: `Export "${props.exportName}" returned a Promise. Return a synchronous deterministic compiled shot from ${props.path}.`,
+            message: `Export "${props.exportName}" returned a Promise. Return a synchronous deterministic ${props.label} from ${props.path}.`,
           },
         ],
       };
     const resultJson = sandbox.__automovieResultJson as unknown;
     const value =
       typeof resultJson === "string" ? JSON.parse(resultJson) : undefined;
-    const validation = typia.validateEquals<IAutoMovieShotSourceOutput>(value);
+    const validation = props.validate(value);
     if (validation.success === false)
       return {
         value: null,
@@ -812,9 +906,9 @@ const compileShotSource = (
               code: "source-export-invalid",
               category: "error",
               phase: "source",
-              target: `shot:${props.id}`,
+              target: props.target,
               path: props.path,
-              message: `${error.path} expects ${error.expected}. Fix the returned compiled shot in ${props.path}.`,
+              message: `${error.path} expects ${error.expected}. Fix the returned ${props.label} in ${props.path}.`,
             }),
           ),
         ],
@@ -835,7 +929,7 @@ const compileShotSource = (
             : "source-execution-failed",
           category: "error",
           phase: "source",
-          target: `shot:${props.id}`,
+          target: props.target,
           path: props.path,
           message: `${message} Fix the deterministic build function in ${props.path}.`,
         },
@@ -844,8 +938,643 @@ const compileShotSource = (
   }
 };
 
+interface ICompiledFilmDraft {
+  edit: IAutoMovieFilmEdit;
+  timeline: Omit<
+    IAutoMovieFilmTimeline,
+    "compiler" | "inputFingerprint" | "sourceDigest"
+  >;
+}
+
+interface ICompileFilmSourceProps {
+  source: string;
+  context: IAutoMovieFilmBuildContext;
+  contracts: ReadonlyMap<string, IAutoMovieShotContract>;
+  compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>;
+  realizations: ReadonlyMap<string, IAutoMovieCompiledContractRealization>;
+}
+
+const compileFilmSource = (
+  props: ICompileFilmSourceProps,
+): ICompileDeterministicSourceResult<ICompiledFilmDraft> => {
+  const source = compileDeterministicSource<IAutoMovieFilmEdit>({
+    target: "film",
+    label: "film edit",
+    path: FILM_SOURCE_PATH,
+    exportName: FILM_SOURCE_EXPORT,
+    source: props.source,
+    context: props.context,
+    validate: (input) => typia.validateEquals<IAutoMovieFilmEdit>(input),
+  });
+  if (source.value === null)
+    return { value: null, diagnostics: source.diagnostics };
+  const diagnostics = [...source.diagnostics];
+  const edit = source.value;
+  const fps = props.context.production.frameFormat.fps;
+  const targetFrames = frameTime(
+    { seconds: props.context.production.targetRuntimeSeconds },
+    fps,
+    "production target runtime",
+    diagnostics,
+  );
+  if (edit.id !== props.context.production.id)
+    diagnostics.push(
+      filmDiagnostic(
+        "film-id-mismatch",
+        `Film id "${edit.id}" differs from production id "${props.context.production.id}". Return the current production id from ${FILM_SOURCE_PATH}.`,
+      ),
+    );
+  const omitted = new Set<string>();
+  for (const omission of edit.omissions) {
+    if (
+      omission.shot.trim().length === 0 ||
+      omission.reason.trim().length === 0 ||
+      omitted.has(omission.shot)
+    )
+      diagnostics.push(
+        filmDiagnostic(
+          "film-shot-accounting-invalid",
+          `Omission "${omission.shot}" must name one unique current shot with a non-blank reason.`,
+        ),
+      );
+    else omitted.add(omission.shot);
+    if (props.contracts.has(omission.shot) === false)
+      diagnostics.push(
+        filmDiagnostic(
+          "film-shot-unknown",
+          `Omission "${omission.shot}" is not a current shot contract. Remove it or restore that contract.`,
+        ),
+      );
+  }
+  const used = new Set<string>();
+  const segments: IAutoMovieFilmTimeline["segments"] = [];
+  for (const placement of edit.tracks.video) {
+    const contract = props.contracts.get(placement.shot);
+    if (
+      placement.shot.trim().length === 0 ||
+      used.has(placement.shot) ||
+      omitted.has(placement.shot)
+    )
+      diagnostics.push(
+        filmDiagnostic(
+          "film-shot-accounting-invalid",
+          `Video shot "${placement.shot}" must appear once and cannot also be omitted.`,
+        ),
+      );
+    else used.add(placement.shot);
+    if (contract === undefined) {
+      diagnostics.push(
+        filmDiagnostic(
+          "film-shot-unknown",
+          `Video shot "${placement.shot}" is not a current shot contract.`,
+        ),
+      );
+      continue;
+    }
+    if (
+      props.compiled.has(placement.shot) === false ||
+      props.realizations.has(placement.shot) === false
+    )
+      diagnostics.push(
+        filmDiagnostic(
+          "film-shot-not-compiled",
+          `Shot "${placement.shot}" has no current compiled source and realization. Correct that shot before compiling the film.`,
+        ),
+      );
+    const sourceInFrame = frameTime(
+      placement.sourceIn,
+      fps,
+      `${placement.shot} sourceIn`,
+      diagnostics,
+    );
+    const sourceOutFrame = frameTime(
+      placement.sourceOut,
+      fps,
+      `${placement.shot} sourceOut`,
+      diagnostics,
+    );
+    const startFrame = frameTime(
+      placement.start,
+      fps,
+      `${placement.shot} global start`,
+      diagnostics,
+    );
+    const headHandleFrames = frameTime(
+      placement.handles.head,
+      fps,
+      `${placement.shot} head handle`,
+      diagnostics,
+    );
+    const tailHandleFrames = frameTime(
+      placement.handles.tail,
+      fps,
+      `${placement.shot} tail handle`,
+      diagnostics,
+    );
+    const transitionIn = normalizeFilmTransition(
+      placement.transitionIn,
+      fps,
+      `${placement.shot} transitionIn`,
+      diagnostics,
+    );
+    const transitionOut = normalizeFilmTransition(
+      placement.transitionOut,
+      fps,
+      `${placement.shot} transitionOut`,
+      diagnostics,
+    );
+    const shotFrames = frameTime(
+      { seconds: contract.durationSeconds },
+      fps,
+      `${placement.shot} contract duration`,
+      diagnostics,
+    );
+    if (
+      sourceInFrame === null ||
+      sourceOutFrame === null ||
+      startFrame === null ||
+      headHandleFrames === null ||
+      tailHandleFrames === null ||
+      transitionIn === null ||
+      transitionOut === null ||
+      shotFrames === null
+    )
+      continue;
+    if (
+      sourceOutFrame <= sourceInFrame ||
+      sourceOutFrame > shotFrames ||
+      headHandleFrames > sourceOutFrame - sourceInFrame ||
+      tailHandleFrames > sourceOutFrame - sourceInFrame
+    )
+      diagnostics.push(
+        filmDiagnostic(
+          "film-source-range-invalid",
+          `Shot "${placement.shot}" source range ${sourceInFrame}..${sourceOutFrame} and handles ${headHandleFrames}/${tailHandleFrames} must fit its ${shotFrames}-frame contract.`,
+        ),
+      );
+    segments.push({
+      shot: placement.shot,
+      sourceInFrame,
+      sourceOutFrame,
+      startFrame,
+      endFrame: startFrame + sourceOutFrame - sourceInFrame,
+      headHandleFrames,
+      tailHandleFrames,
+      transitionIn,
+      transitionOut,
+    });
+  }
+  for (const shot of props.contracts.keys())
+    if (used.has(shot) === false && omitted.has(shot) === false)
+      diagnostics.push(
+        filmDiagnostic(
+          "film-shot-unaccounted",
+          `Shot "${shot}" is neither placed nor explicitly omitted. Account for every current narrative shot.`,
+        ),
+      );
+  validateVideoTimeline(segments, props, fps, diagnostics);
+  const totalFrames =
+    segments.length === 0
+      ? 0
+      : Math.max(...segments.map((item) => item.endFrame));
+  if (targetFrames !== null && totalFrames !== targetFrames)
+    diagnostics.push(
+      filmDiagnostic(
+        "film-runtime-mismatch",
+        `Film timeline ends at frame ${totalFrames}, but production target runtime is frame ${targetFrames}. Correct placement timing or production runtime.`,
+      ),
+    );
+  const audio = normalizeAudioCues(
+    edit,
+    props.context.assets,
+    fps,
+    totalFrames,
+    diagnostics,
+  );
+  const captions = normalizeCaptionCues(edit, fps, totalFrames, diagnostics);
+  const effects = normalizeEffectCues(
+    edit,
+    props.context.effectZones.map((zone) => zone.id),
+    fps,
+    totalFrames,
+    diagnostics,
+  );
+  return {
+    value: diagnostics.some((diagnostic) => diagnostic.category === "error")
+      ? null
+      : {
+          edit,
+          timeline: {
+            version: 1,
+            id: edit.id,
+            fps,
+            totalFrames,
+            segments,
+            omissions: edit.omissions,
+            tracks: { audio, captions, effects },
+          },
+        },
+    diagnostics,
+  };
+};
+
+const filmDiagnostic = (
+  code: string,
+  message: string,
+): IAutoMovieDiagnostic => ({
+  code,
+  category: "error",
+  phase: "compile",
+  target: "film",
+  path: FILM_SOURCE_PATH,
+  message,
+});
+
+const frameTime = (
+  value: { frame: number } | { seconds: number },
+  fps: number,
+  label: string,
+  diagnostics: IAutoMovieDiagnostic[],
+): number | null => {
+  const raw = "frame" in value ? value.frame : value.seconds * fps;
+  const rounded = Math.round(raw);
+  if (
+    Number.isFinite(raw) === false ||
+    Number.isSafeInteger(rounded) === false ||
+    rounded < 0 ||
+    Math.abs(raw - rounded) > Number.EPSILON * 64 * Math.max(1, Math.abs(raw))
+  ) {
+    diagnostics.push(
+      filmDiagnostic(
+        "film-time-off-grid",
+        `${label} does not resolve to one non-negative safe production frame at ${fps} fps. Use an exact frame or frame-grid second.`,
+      ),
+    );
+    return null;
+  }
+  return rounded;
+};
+
+const normalizeFilmTransition = (
+  transition: IAutoMovieFilmEdit["tracks"]["video"][number]["transitionIn"],
+  fps: number,
+  label: string,
+  diagnostics: IAutoMovieDiagnostic[],
+): IAutoMovieFilmTimeline["segments"][number]["transitionIn"] | null => {
+  if (transition.kind === "cut") return { kind: "cut" };
+  const durationFrames = frameTime(
+    transition.duration,
+    fps,
+    `${label} duration`,
+    diagnostics,
+  );
+  if (durationFrames === null) return null;
+  if (durationFrames === 0) {
+    diagnostics.push(
+      filmDiagnostic(
+        "film-transition-invalid",
+        `${label} ${transition.kind} duration must be at least one frame.`,
+      ),
+    );
+    return null;
+  }
+  return { kind: transition.kind, durationFrames };
+};
+
+const transitionDuration = (
+  transition: IAutoMovieFilmTimeline["segments"][number]["transitionIn"],
+): number => ("durationFrames" in transition ? transition.durationFrames : 0);
+
+const validateVideoTimeline = (
+  segments: readonly IAutoMovieFilmTimeline["segments"][number][],
+  props: ICompileFilmSourceProps,
+  fps: number,
+  diagnostics: IAutoMovieDiagnostic[],
+): void => {
+  if (segments.length === 0) {
+    diagnostics.push(
+      filmDiagnostic(
+        "film-video-empty",
+        "The finished film must contain at least one current video placement.",
+      ),
+    );
+    return;
+  }
+  if (segments[0]!.startFrame !== 0)
+    diagnostics.push(
+      filmDiagnostic(
+        "film-global-order-invalid",
+        `The first video placement starts at frame ${segments[0]!.startFrame}; it must start at frame 0.`,
+      ),
+    );
+  for (let index = 0; index < segments.length; ++index) {
+    const segment = segments[index]!;
+    if (
+      (index === 0 && segment.transitionIn.kind === "dissolve") ||
+      (index === segments.length - 1 &&
+        segment.transitionOut.kind === "dissolve")
+    )
+      diagnostics.push(
+        filmDiagnostic(
+          "film-transition-invalid",
+          `Shot "${segment.shot}" cannot dissolve beyond the beginning or end of the film.`,
+        ),
+      );
+    for (const [side, transition, handle] of [
+      ["incoming", segment.transitionIn, segment.headHandleFrames],
+      ["outgoing", segment.transitionOut, segment.tailHandleFrames],
+    ] as const)
+      if (
+        transition.kind !== "cut" &&
+        transitionDuration(transition) >
+          (transition.kind === "dissolve"
+            ? handle
+            : segment.endFrame - segment.startFrame)
+      )
+        diagnostics.push(
+          filmDiagnostic(
+            "film-transition-handle-missing",
+            `Shot "${segment.shot}" ${side} ${transition.kind} needs ${transitionDuration(transition)} frames, but only ${handle} transition-handle frames are declared.`,
+          ),
+        );
+    if (index === 0) continue;
+    const previous = segments[index - 1]!;
+    if (
+      previous.transitionOut.kind !== segment.transitionIn.kind ||
+      transitionDuration(previous.transitionOut) !==
+        transitionDuration(segment.transitionIn)
+    )
+      diagnostics.push(
+        filmDiagnostic(
+          "film-transition-mismatch",
+          `Transition between "${previous.shot}" and "${segment.shot}" must have identical outgoing and incoming kind/duration.`,
+        ),
+      );
+    const overlap =
+      previous.transitionOut.kind === "dissolve"
+        ? transitionDuration(previous.transitionOut)
+        : 0;
+    const expectedStart = previous.endFrame - overlap;
+    if (segment.startFrame !== expectedStart)
+      diagnostics.push(
+        filmDiagnostic(
+          "film-global-order-invalid",
+          `Shot "${segment.shot}" starts at frame ${segment.startFrame}; transition law requires frame ${expectedStart}. Arbitrary gaps and overlaps are forbidden.`,
+        ),
+      );
+    validateStateContinuity(previous, segment, props, fps, diagnostics);
+  }
+};
+
+const validateStateContinuity = (
+  previous: IAutoMovieFilmTimeline["segments"][number],
+  current: IAutoMovieFilmTimeline["segments"][number],
+  props: ICompileFilmSourceProps,
+  fps: number,
+  diagnostics: IAutoMovieDiagnostic[],
+): void => {
+  const previousContract = props.contracts.get(previous.shot)!;
+  const currentContract = props.contracts.get(current.shot)!;
+  const previousFrames = Math.round(previousContract.durationSeconds * fps);
+  if (
+    previous.sourceOutFrame !== previousFrames ||
+    current.sourceInFrame !== 0
+  ) {
+    if (
+      previousContract.closing.length !== 0 ||
+      currentContract.opening.length !== 0
+    )
+      diagnostics.push(
+        filmDiagnostic(
+          "film-state-handoff-unverifiable",
+          `Trimmed boundary "${previous.shot}" -> "${current.shot}" cannot use contract edge-state continuity. Author full contract edges or remove edge-state claims.`,
+        ),
+      );
+    return;
+  }
+  const previousRealization = props.realizations.get(previous.shot);
+  const currentRealization = props.realizations.get(current.shot);
+  if (previousRealization === undefined || currentRealization === undefined)
+    return;
+  const closing = previousRealization.closing.map((state) => state.predicates);
+  const opening = currentRealization.opening.map((state) => state.predicates);
+  if (
+    Buffer.from(canonicalAutoMovieJsonBytes(closing)).equals(
+      Buffer.from(canonicalAutoMovieJsonBytes(opening)),
+    ) === false
+  )
+    diagnostics.push(
+      filmDiagnostic(
+        "film-state-handoff-mismatch",
+        `Closing state of "${previous.shot}" does not equal opening state of "${current.shot}". Correct the adjacent shot predicates or edit boundary.`,
+      ),
+    );
+};
+
+const normalizeAudioCues = (
+  edit: IAutoMovieFilmEdit,
+  assets: readonly string[],
+  fps: number,
+  totalFrames: number,
+  diagnostics: IAutoMovieDiagnostic[],
+): IAutoMovieFilmTimeline["tracks"]["audio"] => {
+  const output: IAutoMovieFilmTimeline["tracks"]["audio"] = [];
+  const ids = new Set<string>();
+  let priorStart = -1;
+  for (const cue of edit.tracks.audio) {
+    const sourceDurationFrames = frameTime(
+      cue.sourceDuration,
+      fps,
+      `${cue.id} audio source duration`,
+      diagnostics,
+    );
+    const sourceOffsetFrame = frameTime(
+      cue.sourceOffset,
+      fps,
+      `${cue.id} audio source offset`,
+      diagnostics,
+    );
+    const startFrame = frameTime(
+      cue.start,
+      fps,
+      `${cue.id} audio start`,
+      diagnostics,
+    );
+    const durationFrames = frameTime(
+      cue.duration,
+      fps,
+      `${cue.id} audio duration`,
+      diagnostics,
+    );
+    const fadeInFrames = frameTime(
+      cue.fadeIn,
+      fps,
+      `${cue.id} audio fadeIn`,
+      diagnostics,
+    );
+    const fadeOutFrames = frameTime(
+      cue.fadeOut,
+      fps,
+      `${cue.id} audio fadeOut`,
+      diagnostics,
+    );
+    if (
+      sourceDurationFrames === null ||
+      sourceOffsetFrame === null ||
+      startFrame === null ||
+      durationFrames === null ||
+      fadeInFrames === null ||
+      fadeOutFrames === null
+    )
+      continue;
+    if (
+      cue.id.trim().length === 0 ||
+      ids.has(cue.id) ||
+      assets.includes(cue.asset) === false ||
+      sourceDurationFrames === 0 ||
+      durationFrames === 0 ||
+      sourceOffsetFrame + durationFrames > sourceDurationFrames ||
+      startFrame + durationFrames > totalFrames ||
+      fadeInFrames + fadeOutFrames > durationFrames ||
+      Number.isFinite(cue.gain) === false ||
+      cue.gain < 0 ||
+      cue.gain > 4 ||
+      startFrame < priorStart
+    )
+      diagnostics.push(
+        filmDiagnostic(
+          "film-audio-cue-invalid",
+          `Audio cue "${cue.id}" must be unique, ordered, in film/source range, reference a present declared asset, use fades within duration, and set gain from 0 through 4.`,
+        ),
+      );
+    ids.add(cue.id);
+    priorStart = startFrame;
+    output.push({
+      id: cue.id,
+      asset: cue.asset,
+      sourceDurationFrames,
+      sourceOffsetFrame,
+      startFrame,
+      durationFrames,
+      gain: cue.gain,
+      fadeInFrames,
+      fadeOutFrames,
+      bus: cue.bus,
+    });
+  }
+  return output;
+};
+
+const normalizeCaptionCues = (
+  edit: IAutoMovieFilmEdit,
+  fps: number,
+  totalFrames: number,
+  diagnostics: IAutoMovieDiagnostic[],
+): IAutoMovieFilmTimeline["tracks"]["captions"] => {
+  const output: IAutoMovieFilmTimeline["tracks"]["captions"] = [];
+  const ids = new Set<string>();
+  let priorEnd = 0;
+  for (const cue of edit.tracks.captions) {
+    const startFrame = frameTime(
+      cue.start,
+      fps,
+      `${cue.id} caption start`,
+      diagnostics,
+    );
+    const endFrame = frameTime(
+      cue.end,
+      fps,
+      `${cue.id} caption end`,
+      diagnostics,
+    );
+    if (startFrame === null || endFrame === null) continue;
+    if (
+      cue.id.trim().length === 0 ||
+      ids.has(cue.id) ||
+      cue.text.trim().length === 0 ||
+      /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/u.test(cue.language) === false ||
+      cue.speaker?.trim().length === 0 ||
+      startFrame < priorEnd ||
+      endFrame <= startFrame ||
+      endFrame > totalFrames
+    )
+      diagnostics.push(
+        filmDiagnostic(
+          "film-caption-cue-invalid",
+          `Caption cue "${cue.id}" must be unique, non-overlapping, in range, plain non-blank text, and use a non-blank language/speaker identity.`,
+        ),
+      );
+    ids.add(cue.id);
+    priorEnd = endFrame;
+    output.push({
+      id: cue.id,
+      text: cue.text,
+      language: cue.language,
+      ...(cue.speaker === undefined ? {} : { speaker: cue.speaker }),
+      startFrame,
+      endFrame,
+    });
+  }
+  return output;
+};
+
+const normalizeEffectCues = (
+  edit: IAutoMovieFilmEdit,
+  zones: readonly string[],
+  fps: number,
+  totalFrames: number,
+  diagnostics: IAutoMovieDiagnostic[],
+): IAutoMovieFilmTimeline["tracks"]["effects"] => {
+  const output: IAutoMovieFilmTimeline["tracks"]["effects"] = [];
+  const ids = new Set<string>();
+  let priorStart = -1;
+  for (const cue of edit.tracks.effects) {
+    const startFrame = frameTime(
+      cue.start,
+      fps,
+      `${cue.id} effect start`,
+      diagnostics,
+    );
+    const durationFrames = frameTime(
+      cue.duration,
+      fps,
+      `${cue.id} effect duration`,
+      diagnostics,
+    );
+    if (startFrame === null || durationFrames === null) continue;
+    if (
+      cue.id.trim().length === 0 ||
+      ids.has(cue.id) ||
+      zones.includes(cue.zone) === false ||
+      durationFrames === 0 ||
+      startFrame + durationFrames > totalFrames ||
+      Number.isFinite(cue.intensity) === false ||
+      cue.intensity < 0 ||
+      cue.intensity > 1 ||
+      startFrame < priorStart
+    )
+      diagnostics.push(
+        filmDiagnostic(
+          "film-effect-cue-invalid",
+          `Effect cue "${cue.id}" must be unique, ordered, in range, reference a registered world zone, and use intensity from 0 through 1.`,
+        ),
+      );
+    ids.add(cue.id);
+    priorStart = startFrame;
+    output.push({
+      id: cue.id,
+      recipe: cue.recipe,
+      zone: cue.zone,
+      startFrame,
+      durationFrames,
+      intensity: cue.intensity,
+    });
+  }
+  return output;
+};
+
 const inspectSource = (
-  id: string,
+  target: string,
   sourcePath: string,
   source: string,
 ): IAutoMovieDiagnostic[] => {
@@ -866,7 +1595,7 @@ const inspectSource = (
       code,
       category: "error",
       phase: "source",
-      target: `shot:${id}`,
+      target,
       path: sourcePath,
       message: `${capability} is unavailable in deterministic shot source. Replace it with design input, an explicit seed, or an AutoMovie engine oracle in ${sourcePath}.`,
     });
@@ -1091,6 +1820,19 @@ const sourcePathDiagnostic = (
   };
 };
 
+const filmSourcePathDiagnostic = (error: unknown): IAutoMovieDiagnostic => ({
+  code:
+    error instanceof AutoMovieProductionSourcePathError &&
+    error.reason === "outside-root"
+      ? "source-path-outside-root"
+      : "source-path-missing",
+  category: "error",
+  phase: "source",
+  target: "film",
+  path: FILM_SOURCE_PATH,
+  message: `${errorMessage(error)} Export "${FILM_SOURCE_EXPORT}" with build(context) from ${FILM_SOURCE_PATH}.`,
+});
+
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
@@ -1162,6 +1904,28 @@ const currentProductionCompilerInputFingerprint = (
         });
       }
     }
+    if (scope === "design")
+      sourceFields.push({
+        role: "source:film",
+        kind: "not-inspected",
+        payload: new Uint8Array(),
+      });
+    else
+      try {
+        sourceFields.push({
+          role: "source:film",
+          kind: "typescript",
+          payload: normalizeAutoMovieSource(
+            project.readSource(FILM_SOURCE_PATH),
+          ),
+        });
+      } catch {
+        sourceFields.push({
+          role: "source:film",
+          kind: "absent",
+          payload: new Uint8Array(),
+        });
+      }
     const contentFields: IAutoMovieFingerprintField[] = [];
     if (scope !== "design")
       try {
@@ -1216,6 +1980,10 @@ const materializeGeneratedFiles = (
   >,
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>,
   realizations: ReadonlyMap<string, IAutoMovieCompiledContractRealization>,
+  film: {
+    edit: IAutoMovieCompiledFilmEdit;
+    timeline: IAutoMovieFilmTimeline;
+  } | null,
   inputFingerprint: AutoMovieContentDigest,
 ): ReadonlyMap<string, Uint8Array> => {
   const files = new Map<string, Uint8Array>();
@@ -1244,15 +2012,47 @@ const materializeGeneratedFiles = (
     put(`shots/${encodeAutoMoviePathSegment(id)}.json`, value);
   for (const [id, value] of realizations)
     put(`realizations/${encodeAutoMoviePathSegment(id)}.json`, value);
+  if (film !== null) {
+    put("contracts/film-edit.json", film.edit);
+    put("film-timeline.json", film.timeline);
+  }
   put("manifests/compile.json", {
     version: 1,
     compiler: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
     inputFingerprint,
     models: [...runtimeModels.keys()],
     shots: [...compiled.keys()],
+    film: film?.timeline.id ?? null,
   });
   return files;
 };
+
+const materializeFilmArtifacts = (
+  draft: ICompiledFilmDraft,
+  sourceDigest: AutoMovieContentDigest,
+  inputFingerprint: AutoMovieContentDigest,
+): {
+  edit: IAutoMovieCompiledFilmEdit;
+  timeline: IAutoMovieFilmTimeline;
+} => ({
+  edit: {
+    version: 1,
+    compiler: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
+    inputFingerprint,
+    source: {
+      path: FILM_SOURCE_PATH,
+      export: FILM_SOURCE_EXPORT,
+      digest: sourceDigest,
+    },
+    edit: draft.edit,
+  },
+  timeline: {
+    ...draft.timeline,
+    compiler: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
+    inputFingerprint,
+    sourceDigest,
+  },
+});
 
 const statusesOf = (
   project: AutoMovieProductionProject,
@@ -1285,6 +2085,8 @@ const sourceTargetsOf = (
   file: string,
   graph: ReturnType<AutoMovieProductionProject["graph"]>,
 ): string[] => {
+  if (file === "contracts/film-edit.json" || file === "film-timeline.json")
+    return ["film"];
   for (const [id] of graph.shots)
     if (
       file === `shots/${encodeAutoMoviePathSegment(id)}.json` ||

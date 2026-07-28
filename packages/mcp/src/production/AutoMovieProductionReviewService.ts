@@ -119,8 +119,10 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
   film: [
     "narrative-causality",
     "cross-shot-continuity",
+    "edit-rhythm-and-transition-purpose",
     "visual-scale-and-legibility",
-    "rhythm-and-runtime",
+    "audio-caption-synchronization",
+    "negative-path-and-absence-ownership",
     "acceptance-scenarios",
   ],
 } as const;
@@ -993,6 +995,18 @@ const reviewFingerprint = (
   } else {
     addJson("production", graph.production);
     addJson("compile-current", compileStatus!.compiler.inputFingerprint);
+    try {
+      addJson(
+        "film-timeline",
+        JSON.parse(
+          Buffer.from(
+            currentGeneratedFile(project, "film-timeline.json", context),
+          ).toString("utf8"),
+        ) as unknown,
+      );
+    } catch {
+      addJson("film-timeline", null);
+    }
     for (const [id, acceptance] of graph.acceptance)
       addJson(`acceptance:${id}`, acceptance);
     for (const [id] of graph.shots) {

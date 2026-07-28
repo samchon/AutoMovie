@@ -1,6 +1,9 @@
 import { AutoMovieGuidePass, IAutoMovieRenderSpec } from "../cinematics";
 import { IAutoMovieVector3 } from "../geometry";
-import { IAutoMovieDiagnostic } from "./IAutoMovieProductionCompiler";
+import {
+  AutoMovieFilmTime,
+  IAutoMovieDiagnostic,
+} from "./IAutoMovieProductionCompiler";
 import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
 
 /** A point, actor or named world anchor used by geometry queries. */
@@ -78,6 +81,12 @@ export type AutoMovieGeometryQuery =
       query: "formation";
       /** Formation id. */
       formation: string;
+    }
+  | {
+      /** Resolve one film-global frame through the canonical edit timeline. */
+      query: "film-time";
+      /** Exact global frame or frame-grid second. */
+      at: AutoMovieFilmTime;
     }
   | {
       /**

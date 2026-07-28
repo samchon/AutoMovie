@@ -1,4 +1,5 @@
 import {
+  AutoMovieFilmTime,
   IAutoMovieCompiledShotSource,
   IAutoMovieRenderBundleManifest,
 } from "@automovie/interface";
@@ -54,6 +55,34 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       compiler.compile({ scope: "source" }).success,
     );
     const oracle = new AutoMovieProductionOracleService(project);
+    const filmFrame = oracle.query({
+      request: { query: "film-time", at: { seconds: 2 } },
+    });
+    TestValidator.predicate(
+      "film-global time resolves through the compiler-owned timeline",
+      filmFrame.result?.kind === "measurement" &&
+        filmFrame.result.values.film === "fixture-film" &&
+        filmFrame.result.values.globalFrame === 48 &&
+        filmFrame.result.values.shot === "opening" &&
+        filmFrame.result.values.sourceFrame === 48 &&
+        filmFrame.result.values.shotTime === 2,
+    );
+    TestValidator.predicate(
+      "film-global oracle rejects off-grid and out-of-range selectors",
+      (
+        [
+          { seconds: 0.1 },
+          { frame: -1 },
+          { frame: 144 },
+          { frame: Number.NaN },
+        ] satisfies AutoMovieFilmTime[]
+      ).every(
+        (at) =>
+          oracle.query({
+            request: { query: "film-time", at },
+          }).result === null,
+      ),
+    );
     TestValidator.equals(
       "point distance",
       oracle.query({
