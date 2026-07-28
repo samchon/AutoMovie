@@ -250,8 +250,7 @@ const createPlan = (
     (sum, shot) => sum + shot.duration,
     0,
   );
-  const targetRuntimeSeconds =
-    Math.max(1, Math.round(rawRuntime * fps)) / fps;
+  const targetRuntimeSeconds = Math.max(1, Math.round(rawRuntime * fps)) / fps;
   const projectId = projectIdOf(snapshot.root);
   const productionDraft: IAutoMovieProductionDesign = {
     id: projectId,
@@ -578,8 +577,7 @@ const validateImportState = (
     record.fileDigests === null ||
     ["manifest.json", "revision.json", IMPORT_PLAN_PATH].some(
       (file) =>
-        /^sha256:[0-9a-f]{64}$/.test(record.fileDigests![file] ?? "") ===
-        false,
+        /^sha256:[0-9a-f]{64}$/.test(record.fileDigests![file] ?? "") === false,
     )
   )
     throw new Error(

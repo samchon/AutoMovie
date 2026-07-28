@@ -164,7 +164,9 @@ export const test_mcp_production_legacy_import = (): void => {
     fixture.dispose();
   }
 
-  const empty = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-empty-import-"));
+  const empty = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-empty-import-"),
+  );
   try {
     AutoMovieProject.open(empty);
     const plan = new AutoMovieLegacyImporter(empty).plan();
@@ -337,7 +339,9 @@ export const test_mcp_production_legacy_import = (): void => {
     },
   ];
   for (const malformed of malformedRoots) {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-bad-import-"));
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-bad-import-"),
+    );
     try {
       malformed.prepare(root);
       TestValidator.predicate(
