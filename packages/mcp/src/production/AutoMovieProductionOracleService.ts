@@ -435,14 +435,20 @@ export class AutoMovieProductionOracleService {
                     halfY,
                     aspect,
                   );
+                  const projectionRadius =
+                    runtime.projectionRadius *
+                    Math.max(
+                      Math.abs(formed.scale.x),
+                      Math.abs(formed.scale.y),
+                      Math.abs(formed.scale.z),
+                    );
                   const projectedRadiusY =
-                    runtime.projectionRadius /
+                    projectionRadius /
                     (halfY * Math.max(0.001, projection.depth));
                   const projectedRadiusX = projectedRadiusY / aspect;
                   return (
-                    projection.depth + runtime.projectionRadius >=
-                      camera.near &&
-                    projection.depth - runtime.projectionRadius <= camera.far &&
+                    projection.depth + projectionRadius >= camera.near &&
+                    projection.depth - projectionRadius <= camera.far &&
                     Math.abs(projection.ndcX) <= 1 + projectedRadiusX &&
                     Math.abs(projection.ndcY) <= 1 + projectedRadiusY
                   );

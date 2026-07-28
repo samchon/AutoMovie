@@ -232,12 +232,20 @@ export const buildInstancedFormation = (input: {
           transformed.scale.z,
         );
         object.updateMatrixWorld(true);
+        const visualObject = input.heroVisualObjects?.get(hero.actor) ?? object;
         const worldPosition = new THREE.Vector3();
-        (input.heroVisualObjects?.get(hero.actor) ?? object).getWorldPosition(
-          worldPosition,
-        );
+        const worldScale = new THREE.Vector3();
+        visualObject.getWorldPosition(worldPosition);
+        visualObject.getWorldScale(worldScale);
+        const worldRadius =
+          selectionRadius *
+          Math.max(
+            Math.abs(worldScale.x),
+            Math.abs(worldScale.y),
+            Math.abs(worldScale.z),
+          );
         object.visible = frustum.intersectsSphere(
-          new THREE.Sphere(worldPosition, selectionRadius),
+          new THREE.Sphere(worldPosition, worldRadius),
         );
         if (object.visible) ++stats.visible.hero;
       }

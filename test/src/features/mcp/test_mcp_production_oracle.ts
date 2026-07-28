@@ -36,7 +36,10 @@ const blankPng = (width: number, height: number): Uint8Array => {
   return PNG.sync.write(image);
 };
 
-/** Geometry queries and preview frames use current compiler-owned artifacts. */
+/**
+ * Geometry queries and preview frames use current compiler-owned artifacts,
+ * including scale-aware promoted-hero visibility at the camera boundary.
+ */
 export const test_mcp_production_oracle = async (): Promise<void> => {
   const fixture = productionFixture();
   try {
@@ -703,6 +706,18 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         time: 2,
       },
     });
+    const scaledHero = corrupted();
+    scaledHero.scene.nodes[0]!.transform.translation.x = 6;
+    scaledHero.scene.nodes[0]!.transform.scale = { x: 8, y: 8, z: 8 };
+    writeCorrupted(scaledHero);
+    const scaledHeroFormation = oracle.query({
+      request: {
+        query: "formation",
+        formation: "line",
+        shot: "opening",
+        time: 2,
+      },
+    });
     const missingHero = corrupted();
     missingHero.formations[0]!.heroes[0]!.actor = "ghost";
     writeCorrupted(missingHero);
@@ -745,6 +760,8 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         rootedActorDistance.result?.kind === "distance" &&
         rootedFormation.result?.kind === "measurement" &&
         rootedFormation.result.values.heroVisible === 0 &&
+        scaledHeroFormation.result?.kind === "measurement" &&
+        scaledHeroFormation.result.values.heroVisible === 1 &&
         missingHeroFormation.result?.kind === "measurement" &&
         missingHeroFormation.result.values.heroVisible === 0 &&
         heldActorDistance.result?.kind === "distance",

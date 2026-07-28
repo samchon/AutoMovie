@@ -45,7 +45,8 @@ const propRecipe = (id: string, size: number): IAutoMovieModelRecipe => ({
  *    fallback select stable near/far tiers; an empty LOD list fails closed.
  * 3. A sampled formation update culls whole chunks, preserves a bounded inventory,
  *    composes source hero translation/rotation without repeated-call
- *    accumulation, and culls from the posed visual root rather than the slot.
+ *    accumulation, and culls from the scaled posed visual root rather than the
+ *    unscaled slot.
  * 4. Motion sampling covers every easing, before/between/after intervals,
  *    end-exclusive handoff, unrelated formations, deterministic equal starts,
  *    spacing, and base-facing point transforms.
@@ -307,6 +308,40 @@ export const test_viewer_formation = (): void => {
     rotation: heroObjects.get("marshal")!.quaternion.clone(),
   };
   built.update(camera, 1_080, 3, collidingSources);
+  const scaledSources = new Map(collidingSources);
+  scaledSources.set("captain", {
+    ...scaledSources.get("captain")!,
+    translation: { x: 20, y: 0, z: 0 },
+    scale: { x: 12, y: 12, z: 12 },
+  });
+  built.update(camera, 1_080, 3, scaledSources);
+  camera.updateMatrixWorld(true);
+  camera.updateProjectionMatrix();
+  const scaledFrustum = new THREE.Frustum().setFromProjectionMatrix(
+    new THREE.Matrix4().multiplyMatrices(
+      camera.projectionMatrix,
+      camera.matrixWorldInverse,
+    ),
+  );
+  const scaledHeroCenter = new THREE.Vector3();
+  const scaledHeroScale = new THREE.Vector3();
+  heroVisualObjects.get("captain")!.getWorldPosition(scaledHeroCenter);
+  heroVisualObjects.get("captain")!.getWorldScale(scaledHeroScale);
+  const scaledHeroBoundary =
+    scaledFrustum.intersectsSphere(
+      new THREE.Sphere(scaledHeroCenter, formation.projectionRadius),
+    ) === false &&
+    scaledFrustum.intersectsSphere(
+      new THREE.Sphere(
+        scaledHeroCenter,
+        formation.projectionRadius *
+          Math.max(
+            Math.abs(scaledHeroScale.x),
+            Math.abs(scaledHeroScale.y),
+            Math.abs(scaledHeroScale.z),
+          ),
+      ),
+    );
   const firstMatrix = new THREE.Matrix4();
   meshes[0]!.getMatrixAt(0, firstMatrix);
   const firstTranslation = new THREE.Vector3().setFromMatrixPosition(
@@ -444,6 +479,7 @@ export const test_viewer_formation = (): void => {
       built.stats.visible.hero > 0 &&
       heroObjects.get("marshal")!.visible === false &&
       heroObjects.get("captain")!.visible === true &&
+      scaledHeroBoundary &&
       built.object.scale.x === 1 &&
       Math.abs(firstTranslation.x - (firstScaled.x - formation.anchor.x)) <
         1e-5 &&
