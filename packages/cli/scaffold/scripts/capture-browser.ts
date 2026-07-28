@@ -288,7 +288,7 @@ export const launchCaptureBrowser = async (
   let launch: NonNullable<Parameters<typeof chromium.launch>[0]>;
   if (config.source === "playwright-chromium") {
     const receipt = await packageOwnedProvenance(projectRoot);
-    product = config.product;
+    product = "chromium";
     source = "package-owned";
     revision = receipt.browser.revision;
     executableDigest = receipt.browser.executableDigest;
@@ -308,7 +308,7 @@ export const launchCaptureBrowser = async (
       throw new Error(
         `Configured capture executable "${executablePath}" is not a physical file. Correct automovie.config.ts or install that executable.`,
       );
-    product = "chromium";
+    product = config.product;
     source = "configured-executable";
     revision = null;
     executableDigest = await digestFile(executablePath);
