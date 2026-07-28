@@ -19,12 +19,14 @@ export const AUTOMOVIE_RENDER_TARGET_FINGERPRINT_PROTOCOL =
 /**
  * Fingerprint only the bytes capable of changing one render target.
  *
- * A shot depends on its compiler-owned shot payload plus every declared
- * non-source content input (viewer, capture scripts, configuration and assets).
- * It does not depend on unrelated shot source. A future film bundle depends on
- * the complete generated file set. The aggregate compile fingerprint remains
- * recorded for provenance, but this identity decides whether verified pixels
- * can survive an unrelated source edit.
+ * A shot depends on its compiler-owned shot payload plus every explicitly
+ * declared render content input (viewer, capture scripts, configuration and
+ * assets). A path may be both source and render content; an explicit content
+ * declaration wins for this purpose. The shot does not depend on unrelated
+ * source. A future film bundle depends on the complete generated file set. The
+ * aggregate compile fingerprint remains recorded for provenance, but this
+ * identity decides whether verified pixels can survive an unrelated source
+ * edit.
  */
 export const productionRenderTargetFingerprint = (
   project: AutoMovieProductionProject,
@@ -66,7 +68,7 @@ export const productionRenderTargetFingerprint = (
         payload: Buffer.from(file.digest, "utf8"),
       });
   for (const content of contentInputs)
-    if (content.source === false)
+    if (content.render)
       fields.push({
         role: `content:${content.path}`,
         kind: content.bytes === null ? "absent" : "file",

@@ -103,8 +103,13 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
   );
   const invalidWebVttCases = [
     {
-      bytes: "WEBVTT\n\nNo timed cue.\n",
+      bytes: "WEBVTT\n\n",
       message: "no timed cue",
+    },
+    {
+      bytes:
+        "WEBVTT\n\n00:00.000 --> 00:00.250\nValid.\n\nStray untimed payload.\n",
+      message: "neither a timed cue",
     },
     {
       bytes: "WEBVTT\n\n00:00:00 --> 00:00:00.100\nMalformed.\n",

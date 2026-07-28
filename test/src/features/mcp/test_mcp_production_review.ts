@@ -620,6 +620,42 @@ export const test_mcp_production_review = async (): Promise<void> => {
     project.setAcceptanceScenario(acceptanceScenarios()[0]!);
     compiler.compile({ scope: "source" });
 
+    const filmSourcePath = path.join(fixture.root, "src/film.ts");
+    const filmSourceBytes = fs.readFileSync(filmSourcePath);
+    const beforeFilmSourceChange = {
+      shot: review.prepare({
+        target: { kind: "shot", id: "opening" },
+      }).fingerprint,
+      film: review.prepare({
+        target: { kind: "film", id: "fixture-film" },
+      }).fingerprint,
+    };
+    fs.appendFileSync(
+      filmSourcePath,
+      "\n// Changed editorial source must retire the whole-film review.\n",
+    );
+    compiler.compile({ scope: "source" });
+    const afterFilmSourceChange = {
+      shot: review.prepare({
+        target: { kind: "shot", id: "opening" },
+      }).fingerprint,
+      film: review.prepare({
+        target: { kind: "film", id: "fixture-film" },
+      }).fingerprint,
+    };
+    fs.writeFileSync(filmSourcePath, filmSourceBytes);
+    compiler.compile({ scope: "source" });
+    TestValidator.equals(
+      "unrelated editorial source preserves a target-identical shot review",
+      beforeFilmSourceChange.shot,
+      afterFilmSourceChange.shot,
+    );
+    TestValidator.notEquals(
+      "aggregate editorial source change stales the whole-film review",
+      beforeFilmSourceChange.film,
+      afterFilmSourceChange.film,
+    );
+
     const sourceTarget = {
       kind: "source" as const,
       path: "src/shots/opening.ts",
@@ -733,6 +769,44 @@ export const test_mcp_production_review = async (): Promise<void> => {
       review
         .submit(whitespaceLaunderedSourceEvidence)
         .diagnostics.some((item) => item.code === "review-evidence-reused"),
+    );
+    const sourcePath = path.join(fixture.root, sourceTarget.path);
+    const sourceBytes = fs.readFileSync(sourcePath);
+    fs.writeFileSync(
+      sourcePath,
+      "export const opening = { deliberately: 'not buildable' };\n",
+    );
+    const invalidSourcePrepared = review.prepare({ target: sourceTarget });
+    const invalidSourceSubmission = review.submit(
+      worksheet(project, invalidSourcePrepared),
+    );
+    fs.writeFileSync(sourcePath, sourceBytes);
+    TestValidator.predicate(
+      "a compiler-invalid source cannot receive a complete review",
+      invalidSourcePrepared.diagnostics.some(
+        (item) => item.code === "source-export-missing",
+      ) &&
+        invalidSourceSubmission.accepted === false &&
+        invalidSourceSubmission.diagnostics.some(
+          (item) => item.code === "source-export-missing",
+        ),
+    );
+    const productionPath = path.join(
+      fixture.root,
+      ".automovie/design/production.json",
+    );
+    const productionBytes = fs.readFileSync(productionPath);
+    const oversizedProduction = JSON.parse(productionBytes.toString("utf8"));
+    oversizedProduction.frameFormat.width = 16_384;
+    oversizedProduction.frameFormat.height = 16_384;
+    fs.writeFileSync(productionPath, JSON.stringify(oversizedProduction));
+    const compileBlockedSource = review.prepare({ target: sourceTarget });
+    fs.writeFileSync(productionPath, productionBytes);
+    TestValidator.predicate(
+      "upstream design errors block a premature source completion claim",
+      compileBlockedSource.diagnostics.some(
+        (item) => item.code === "review-source-compile-blocked",
+      ),
     );
 
     const designTarget = {

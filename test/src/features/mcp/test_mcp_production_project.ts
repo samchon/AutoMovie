@@ -4,6 +4,7 @@ import {
   IAutoMovieStoredReview,
 } from "@automovie/interface";
 import {
+  AUTOMOVIE_MAX_FORMATION_MEMBERS,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   digestAutoMovieBytes,
@@ -131,6 +132,22 @@ export const test_mcp_production_project = (): void => {
       ...modelRecipe(),
       id: "SENTINEL",
     });
+    const nonCanonicalSource = project.setShotContract({
+      ...shotContract(),
+      id: "non-canonical-source",
+      source: {
+        ...shotContract().source,
+        module: "src\\shots\\opening.ts",
+      },
+    });
+    const sourceCaseCollision = project.setShotContract({
+      ...shotContract(),
+      id: "source-case-collision",
+      source: {
+        ...shotContract().source,
+        module: "SRC/shots/opening.ts",
+      },
+    });
     TestValidator.predicate(
       "setter rejects both schema and graph errors before writing",
       invalidSchema.accepted === false &&
@@ -143,7 +160,45 @@ export const test_mcp_production_project = (): void => {
           (item) => item.code === "design-reference-missing",
         ) &&
         caseCollision.accepted === false &&
-        caseCollision.diagnostics[0]?.code === "design-id-collision",
+        caseCollision.diagnostics[0]?.code === "design-id-collision" &&
+        nonCanonicalSource.diagnostics.some(
+          (item) => item.code === "design-source-path-invalid",
+        ) &&
+        sourceCaseCollision.diagnostics.some(
+          (item) => item.code === "design-source-path-collision",
+        ),
+    );
+    const boundedFormationCount =
+      Math.floor(AUTOMOVIE_MAX_FORMATION_MEMBERS / 2) + 1;
+    const boundedFormation = formationDesign({
+      kind: "line",
+      ranks: 1,
+      files: boundedFormationCount,
+      spacing: { lateral: 0.8, depth: 0.9 },
+    });
+    const firstBoundedFormation = project.setFormationDesign({
+      ...boundedFormation,
+      id: "bounded-a",
+      count: boundedFormationCount,
+    });
+    const aggregateOverflow = project.setFormationDesign({
+      ...boundedFormation,
+      id: "bounded-b",
+      count: boundedFormationCount,
+    });
+    TestValidator.predicate(
+      "formation setters hard-refuse a graph-wide explicit-slot overflow",
+      firstBoundedFormation.accepted &&
+        aggregateOverflow.accepted === false &&
+        aggregateOverflow.diagnostics.some(
+          (item) =>
+            item.code === "design-range-invalid" &&
+            item.target === "formations",
+        ) &&
+        project.eraseDesignArtifact({
+          kind: "formation",
+          id: "bounded-a",
+        }).accepted,
     );
     TestValidator.predicate(
       "missing design erase is explicit",
@@ -1025,7 +1080,7 @@ export const test_mcp_production_project = (): void => {
       manifestPath,
       JSON.stringify({
         ...manifest,
-        contentRoots: ["viewer"],
+        contentRoots: ["viewer", "src"],
         contentFiles: ["automovie.config.ts", "missing-content.file"],
       }),
     );
@@ -1043,6 +1098,12 @@ export const test_mcp_production_project = (): void => {
         inputs.some(
           (input) =>
             input.path === "missing-content.file" && input.bytes === null,
+        ) &&
+        inputs.some(
+          (input) =>
+            input.path === "src/shots/opening.ts" &&
+            input.source &&
+            input.render,
         ),
     );
     const outsideContent = fs.mkdtempSync(

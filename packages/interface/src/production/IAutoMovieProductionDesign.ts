@@ -488,7 +488,10 @@ export interface IAutoMovieShotContract {
   beat: string;
   /** Coding-agent-owned source export. */
   source: {
-    /** Project-relative TypeScript module path. */
+    /**
+     * Canonical project-relative POSIX TypeScript path. Backslashes, absolute
+     * paths, dot segments and case-variant aliases are refused.
+     */
     module: string;
     /** Named exported builder. */
     export: string;

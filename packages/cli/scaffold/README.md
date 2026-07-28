@@ -7,6 +7,11 @@ output, geometry facts, actual-frame evidence, and review freshness.
 
 ## First run
 
+Frame capture currently requires a system Google Chrome installation. The
+scaffold requests SwiftShader and records the browser version plus the WebGL
+vendor and renderer actually reported by the capture canvas. Install Chrome or
+provide a project-owned capture adapter before preview or render commands.
+
 ```bash
 pnpm install
 pnpm compile
@@ -30,5 +35,8 @@ free-form MCP shell tools.
 - `generated`: compiler-owned; never edit
 - `renders`: content-addressed outputs; never pass an arbitrary screenshot as review evidence
 
-`pnpm lint` type-checks source and runs the production compiler in read-only
-mode. `pnpm compile` is the command that may update generated output.
+`pnpm lint` type-checks source and runs the production compiler through the
+review gate in read-only mode. It deliberately fails while any design, source,
+shot, or film review is missing, stale, revising, or incomplete. `pnpm compile`
+is the narrower source gate and the only command that may update generated
+output.

@@ -8,6 +8,7 @@ import {
   IAutoMovieShotPredicate,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
+import path from "node:path";
 
 import {
   compareCodeUnits,
@@ -565,6 +566,7 @@ export const validateAutoMovieProductionGraph = (
     }
   }
 
+  const sourceModuleSpellings = new Map<string, string>();
   for (const [id, shot] of graph.shots) {
     const target = `shot:${id}`;
     const file = `.automovie/design/shots/${encodeAutoMoviePathSegment(id)}.json`;
@@ -580,6 +582,34 @@ export const validateAutoMovieProductionGraph = (
     text(diagnostics, shot.beat, target, file, "beat");
     text(diagnostics, shot.source.module, target, file, "source.module");
     text(diagnostics, shot.source.export, target, file, "source.export");
+    if (
+      path.posix.isAbsolute(shot.source.module) ||
+      /^[A-Za-z]:\//.test(shot.source.module) ||
+      shot.source.module.includes("\\") ||
+      path.posix.normalize(shot.source.module) !== shot.source.module ||
+      shot.source.module.split("/").some((segment) => segment.length === 0)
+    )
+      invalid(
+        diagnostics,
+        "design-source-path-invalid",
+        target,
+        file,
+        `Source module "${shot.source.module}" is not one canonical project-relative POSIX path. Remove absolute roots, backslashes, empty segments, "." and ".." before setShotContract.`,
+      );
+    const foldedSourceModule = shot.source.module.toLowerCase();
+    const priorSourceModule = sourceModuleSpellings.get(foldedSourceModule);
+    if (
+      priorSourceModule !== undefined &&
+      priorSourceModule !== shot.source.module
+    )
+      invalid(
+        diagnostics,
+        "design-source-path-collision",
+        target,
+        file,
+        `Source module "${shot.source.module}" collides with "${priorSourceModule}" on a case-insensitive filesystem. Use one portable spelling for every shared module binding.`,
+      );
+    else sourceModuleSpellings.set(foldedSourceModule, shot.source.module);
     positive(
       diagnostics,
       shot.durationSeconds,

@@ -120,8 +120,12 @@ export class AutoMovieProductionReviewService {
   public prepare(
     input: IAutoMoviePrepareReviewInput,
   ): IAutoMoviePrepareReviewOutput {
+    const compileBound =
+      input.target.kind === "source" ||
+      input.target.kind === "shot" ||
+      input.target.kind === "film";
+    const compileStatus = compileBound ? this.compileStatus() : null;
     const visual = input.target.kind === "shot" || input.target.kind === "film";
-    const compileStatus = visual ? this.compileStatus() : null;
     const context: IReviewReadContext | undefined = visual
       ? {
           renderInventory: collectRenderManifestInventory(this.project),
@@ -151,6 +155,39 @@ export class AutoMovieProductionReviewService {
         message:
           "The review target does not exist in current project bytes. Inspect the project and prepare a current target.",
       });
+    if (input.target.kind === "source" && compileStatus !== null) {
+      const sourcePath = input.target.path;
+      const boundShots = new Set(
+        [...graph.shots]
+          .filter(([, shot]) => shot.source.module === sourcePath)
+          .map(([id]) => `shot:${id}`),
+      );
+      diagnostics.push(
+        ...compileStatus.diagnostics.filter(
+          (diagnostic) =>
+            diagnostic.category === "error" &&
+            (diagnostic.path === sourcePath ||
+              ((diagnostic.phase === "source" ||
+                diagnostic.phase === "compile") &&
+                boundShots.has(diagnostic.target))),
+        ),
+      );
+      if (
+        compileStatus.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.category === "error" && diagnostic.phase === "design",
+        )
+      )
+        diagnostics.push({
+          code: "review-source-compile-blocked",
+          category: "error",
+          phase: "review",
+          target: reviewTargetKey(input.target),
+          path: sourcePath,
+          message:
+            "Design or model materialization errors prevented a trustworthy execution of this source. Correct the upstream compile blockers, then prepare this source review again.",
+        });
+    }
     const frames = currentFrames(
       this.project,
       input.target,
@@ -305,7 +342,9 @@ export class AutoMovieProductionReviewService {
           ? null
           : this.prepareWithStatus(
               { target },
-              target.kind === "shot" || target.kind === "film"
+              target.kind === "source" ||
+                target.kind === "shot" ||
+                target.kind === "film"
                 ? compileStatus
                 : null,
               context,
@@ -922,6 +961,10 @@ const reviewFingerprint = (
     fields.push(compilerField());
   } else {
     addJson("production", graph.production);
+    addJson(
+      "compile-current",
+      compileStatus?.compiler.inputFingerprint ?? null,
+    );
     for (const [id, acceptance] of graph.acceptance)
       addJson(`acceptance:${id}`, acceptance);
     for (const [id] of graph.shots) {

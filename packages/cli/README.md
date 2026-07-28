@@ -24,17 +24,24 @@ calls.
 ```bash
 pnpm install
 pnpm compile
-pnpm lint
 pnpm test
 pnpm preview -- --shot opening --time 2 --pass beauty
 pnpm review:status
+# Complete the current evidence-bound MCP review, then:
+pnpm lint
 ```
 
 `pnpm compile` is the only command allowed to materialize `generated` output.
-`pnpm lint` executes the same compiler checks without writing. `preview`
-captures the project-owned viewer and records a frame tied to the current
-compile fingerprint; review cannot complete against an arbitrary or stale
-screenshot.
+`pnpm lint` is stricter: it reruns compilation without writing and fails until
+every current design, source, shot, and film review is complete. `preview`
+captures the project-owned viewer and records a frame tied to target-local
+generated/viewer inputs and the renderer identity; review cannot complete
+against an arbitrary or stale screenshot.
+
+The current capture scaffold requires system Google Chrome. It requests
+SwiftShader and records both the browser version and the WebGL vendor/renderer
+actually reported by the canvas; projects without Chrome must configure a
+project-owned capture adapter.
 
 ## Usage
 

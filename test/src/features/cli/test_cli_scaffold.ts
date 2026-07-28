@@ -146,10 +146,14 @@ export const test_cli_scaffold = (): void => {
       ),
   );
   TestValidator.predicate(
-    "the starter separates owned source from compiler output",
+    "the starter separates owned source and enforces review in read-only lint",
     files["AGENTS.md"]!.includes("Never edit `generated`") &&
       files[".gitignore"]!.includes("generated/") &&
-      files["scripts/compile.ts"]!.includes('scope: "source"'),
+      files["scripts/compile.ts"]!.includes('scope: "source"') &&
+      files["scripts/lint.ts"]!.includes('scope: "review"') &&
+      files["README.md"]!.includes(
+        "fails while any design, source, shot, or film review",
+      ),
   );
   TestValidator.predicate(
     "the local MCP host owns actual frame capture",
@@ -174,7 +178,14 @@ export const test_cli_scaffold = (): void => {
         'args: ["--use-angle=swiftshader"]',
       ) &&
       files["scripts/capture.ts"]!.includes(
-        "rendererIdentity: `chrome:${session.browser.version()}",
+        "browser: `chrome:${session.browser.version()}`",
+      ) &&
+      files["scripts/capture.ts"]!.includes(
+        'context.getExtension("WEBGL_debug_renderer_info")',
+      ) &&
+      files["scripts/capture.ts"]!.includes("graphics: graphicsIdentity") &&
+      files["README.md"]!.includes(
+        "requires a system Google Chrome installation",
       ) &&
       files["scripts/render.ts"]!.includes(
         "await closeProductionFrameCapture()",

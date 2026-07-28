@@ -34,6 +34,7 @@ export const probeProductionMedia = (props: {
       .slice(1);
     const cues: Array<{ start: number; end: number }> = [];
     for (const block of blocks) {
+      if (block.trim().length === 0) continue;
       const lines = block.split("\n");
       if (/^(?:NOTE|STYLE|REGION)(?:[ \t]|$)/.test(lines[0] ?? "")) continue;
       const timingIndex = lines[0]?.includes("-->")
@@ -41,7 +42,10 @@ export const probeProductionMedia = (props: {
         : lines[1]?.includes("-->")
           ? 1
           : -1;
-      if (timingIndex < 0) continue;
+      if (timingIndex < 0)
+        throw new Error(
+          `WebVTT block "${(lines[0] ?? "").trim()}" is neither a timed cue nor NOTE, STYLE, or REGION metadata. Remove the stray block or add its cue timing.`,
+        );
       const cue = parseWebVttCue(lines[timingIndex]!);
       const payload = lines.slice(timingIndex + 1);
       if (payload.some((line) => line.includes("-->")))

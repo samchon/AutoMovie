@@ -434,6 +434,11 @@ export class AutoMovieProductionOracleService {
         "capture-host-unavailable",
         "This MCP host has no project-fixed frame capture. Run the scaffold preview host or configure a capture adapter.",
       );
+    const targetFingerprint = productionRenderTargetFingerprint(
+      this.project,
+      generated,
+      input.target,
+    );
     const index = Math.min(
       Math.round(input.time * fps),
       Math.floor(duration * fps),
@@ -458,6 +463,22 @@ export class AutoMovieProductionOracleService {
         }. Correct the preview host and retry previewFrame.`,
       );
     }
+    const capturedAgainst = this.project.generatedManifest();
+    if (
+      capturedAgainst === null ||
+      capturedAgainst.inputFingerprint !== generated.inputFingerprint ||
+      this.freshnessDiagnostic(capturedAgainst) !== null ||
+      productionRenderTargetFingerprint(
+        this.project,
+        capturedAgainst,
+        input.target,
+      ) !== targetFingerprint
+    )
+      return previewFailure(
+        generated.inputFingerprint,
+        "capture-input-changed",
+        "Production source, design, generated output, or declared renderer inputs changed while the PNG was being captured. Discard this mixed snapshot, compile the current project, and capture the frame again.",
+      );
     let png: PNG;
     try {
       if (captured.bytes.length === 0)
@@ -503,11 +524,6 @@ export class AutoMovieProductionOracleService {
       pixelFormat: "yuv420p",
       crf: 17,
     };
-    const targetFingerprint = productionRenderTargetFingerprint(
-      this.project,
-      generated,
-      input.target,
-    );
     const relativeBundle = productionRenderBundleRelativePath({
       target: input.target,
       rendererIdentity: captured.rendererIdentity,

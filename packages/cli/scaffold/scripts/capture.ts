@@ -33,11 +33,19 @@ const startSession = async (projectRoot: string): Promise<CaptureSession> => {
       typeof address === "string"
     )
       throw new Error("Vite did not expose a numeric local address.");
-    const browser = await chromium.launch({
-      channel: "chrome",
-      headless: true,
-      args: ["--use-angle=swiftshader"],
-    });
+    const browser = await chromium
+      .launch({
+        channel: "chrome",
+        headless: true,
+        args: ["--use-angle=swiftshader"],
+      })
+      .catch((error: unknown) => {
+        throw new Error(
+          `AutoMovie capture currently requires a system Google Chrome installation because the scaffold uses playwright-core with channel "chrome". Install Chrome or configure a project-owned capture adapter. ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      });
     return {
       server,
       browser,
@@ -124,9 +132,40 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
       element.style.display = "none";
     });
     const bytes = await page.locator("#view").screenshot({ type: "png" });
+    const graphicsIdentity = await page.locator("#view").evaluate((element) => {
+      const canvas = element as HTMLCanvasElement;
+      const context = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
+      if (context === null)
+        return {
+          api: "unavailable",
+          vendor: "unavailable",
+          renderer: "unavailable",
+        };
+      const debug = context.getExtension("WEBGL_debug_renderer_info");
+      return {
+        api:
+          typeof WebGL2RenderingContext !== "undefined" &&
+          context instanceof WebGL2RenderingContext
+            ? "webgl2"
+            : "webgl",
+        vendor: String(
+          context.getParameter(debug?.UNMASKED_VENDOR_WEBGL ?? context.VENDOR),
+        ),
+        renderer: String(
+          context.getParameter(
+            debug?.UNMASKED_RENDERER_WEBGL ?? context.RENDERER,
+          ),
+        ),
+      };
+    });
     return {
       bytes,
-      rendererIdentity: `chrome:${session.browser.version()};angle:swiftshader;deviceScaleFactor:1`,
+      rendererIdentity: JSON.stringify({
+        browser: `chrome:${session.browser.version()}`,
+        requestedBackend: "angle:swiftshader",
+        graphics: graphicsIdentity,
+        deviceScaleFactor: 1,
+      }),
       width: input.width!,
       height: input.height!,
     };

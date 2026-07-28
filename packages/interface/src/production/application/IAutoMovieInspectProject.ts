@@ -9,7 +9,10 @@ import {
 export interface IAutoMovieProductionRenderStatus {
   /** Project-relative bundle manifest. */
   path: string;
-  /** Whether the bundle belongs to the current compile. */
+  /**
+   * Whether the owned bundle matches the current target-local generated and
+   * declared render inputs. An unrelated source edit does not retire it.
+   */
   current: boolean;
 }
 

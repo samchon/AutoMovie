@@ -108,6 +108,9 @@ export class AutoMovieProductionCompiler {
       ...missingDesignDiagnostics(graph),
       ...validateAutoMovieProductionGraph(graph),
     ];
+    const designReady = diagnostics.every(
+      (diagnostic) => diagnostic.category !== "error",
+    );
     const sourceFields: IAutoMovieFingerprintField[] = [];
     const compiled = new Map<string, IAutoMovieCompiledShotSource>();
     const realizations = new Map<
@@ -120,7 +123,7 @@ export class AutoMovieProductionCompiler {
     >();
     let formationInventory: ReturnType<typeof materializeFormationInventory> =
       {};
-    if (input.scope !== "design")
+    if (input.scope !== "design" && designReady)
       try {
         runtimeModels = new Map(materializeProductionModels(graph.models));
         formationInventory = materializeFormationInventory(graph.formations);
@@ -163,6 +166,7 @@ export class AutoMovieProductionCompiler {
         kind: "typescript",
         payload: normalized,
       });
+      if (designReady === false) continue;
       const result = compileShotSource({
         id,
         path: contract.source.module,

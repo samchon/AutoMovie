@@ -827,7 +827,13 @@ try {
   // A fresh @ttsc/lint install builds its source plugin with Go once per
   // cache key. Cold Windows and CI caches can legitimately exceed the ordinary
   // five-minute command fence before TypeScript linting itself begins.
-  run("lint packaged starter", "npm run lint", starterDir, 900_000);
+  runExpectedFailure(
+    "enforce packaged starter lint review gate",
+    "npm run lint",
+    starterDir,
+    "review-",
+    900_000,
+  );
   run("test packaged starter", "npm test", starterDir);
   runExpectedFailure(
     "enforce packaged starter review gate",
@@ -844,6 +850,7 @@ try {
     "node verify-packaged-starter.mjs review",
     starterDir,
   );
+  run("lint reviewed packaged starter", "npm run lint", starterDir, 900_000);
   run(
     "render packaged starter through final compile",
     "npm run render",

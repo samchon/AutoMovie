@@ -1137,6 +1137,33 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       "adapter and decoded size must agree",
       mismatch.diagnostics[0]?.code === "capture-size-mismatch",
     );
+    const viewerPath = path.join(fixture.root, "viewer/index.html");
+    const viewerBytes = fs.readFileSync(viewerPath);
+    const racedCapture = await new AutoMovieProductionOracleService(
+      project,
+      async () => {
+        fs.appendFileSync(viewerPath, "\n<!-- capture race -->\n");
+        return {
+          bytes: png(2, 2),
+          rendererIdentity: "test:png-v1",
+          width: 2,
+          height: 2,
+        };
+      },
+    ).preview({
+      target: { kind: "shot", id: "opening" },
+      time: 0,
+      width: 2,
+      height: 2,
+    });
+    fs.writeFileSync(viewerPath, viewerBytes);
+    TestValidator.predicate(
+      "capture refuses pixels whose declared renderer inputs raced",
+      racedCapture.captured === false &&
+        racedCapture.renderBundle === null &&
+        racedCapture.frame === null &&
+        racedCapture.diagnostics[0]?.code === "capture-input-changed",
+    );
     TestValidator.predicate(
       "uniform captures cannot become visual review evidence",
       (

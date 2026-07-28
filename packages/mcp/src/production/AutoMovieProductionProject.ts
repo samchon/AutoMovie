@@ -56,6 +56,12 @@ export interface IAutoMovieProductionContentInput {
    * fingerprinting.
    */
   source: boolean;
+  /**
+   * Whether the file was explicitly declared through `contentRoots` or
+   * `contentFiles` as a renderer/configuration/asset input. One path may be
+   * both source and render content when declarations overlap.
+   */
+  render: boolean;
   /** Exact bytes, or null for one declared optional file that is absent. */
   bytes: Uint8Array | null;
 }
@@ -156,16 +162,18 @@ export class AutoMovieProductionProject {
   public contentInputs(): IAutoMovieProductionContentInput[] {
     const inputs = new Map<
       string,
-      { bytes: Uint8Array | null; source: boolean }
+      { bytes: Uint8Array | null; render: boolean; source: boolean }
     >();
     const setInput = (
       inputPath: string,
       bytes: Uint8Array | null,
       source: boolean,
+      render: boolean,
     ): void => {
       const retained = inputs.get(inputPath);
       inputs.set(inputPath, {
         bytes,
+        render: render || retained?.render === true,
         source: source || retained?.source === true,
       });
     };
@@ -173,6 +181,7 @@ export class AutoMovieProductionProject {
       directory: string,
       physicalRoot: string,
       source: boolean,
+      render: boolean,
     ): void => {
       const realDirectory = fs.realpathSync(directory);
       if (
@@ -191,7 +200,7 @@ export class AutoMovieProductionProject {
           throw new Error(
             `Declared content path "${relativeToRoot(this.root, absolute)}" is a symlink or junction. Replace it with physical project content before compileProject.`,
           );
-        if (linked.isDirectory()) visit(absolute, physicalRoot, source);
+        if (linked.isDirectory()) visit(absolute, physicalRoot, source, render);
         else if (linked.isFile()) {
           const real = fs.realpathSync(absolute);
           if (
@@ -205,14 +214,15 @@ export class AutoMovieProductionProject {
             normalizeSlash(path.relative(this.root, absolute)),
             fs.readFileSync(real),
             source,
+            render,
           );
         }
       }
     };
-    for (const [relativeRoot, source] of [
-      ...this.manifest_.sourceRoots.map((root) => [root, true] as const),
+    for (const [relativeRoot, source, render] of [
+      ...this.manifest_.sourceRoots.map((root) => [root, true, false] as const),
       ...(this.manifest_.contentRoots ?? []).map(
-        (root) => [root, false] as const,
+        (root) => [root, false, true] as const,
       ),
     ]) {
       const absolute = resolveInside(this.root, relativeRoot);
@@ -230,13 +240,13 @@ export class AutoMovieProductionProject {
         throw new Error(
           `Declared content root "${relativeRoot}" escapes the production project through a directory junction. Move it into a physical project directory before compileProject.`,
         );
-      visit(absolute, physicalRoot, source);
+      visit(absolute, physicalRoot, source, render);
     }
     for (const relativeFile of this.manifest_.contentFiles ?? []) {
       const absolute = resolveInside(this.root, relativeFile);
       const linked = lstatOrNull(absolute);
       if (linked === null) {
-        setInput(normalizeSlash(relativeFile), null, false);
+        setInput(normalizeSlash(relativeFile), null, false, true);
         continue;
       }
       if (linked.isSymbolicLink() || linked.isFile() === false)
@@ -248,7 +258,12 @@ export class AutoMovieProductionProject {
         throw new Error(
           `Declared content file "${relativeFile}" escapes the production project through a directory junction. Move it into a physical project directory before compileProject.`,
         );
-      setInput(normalizeSlash(relativeFile), fs.readFileSync(real), false);
+      setInput(
+        normalizeSlash(relativeFile),
+        fs.readFileSync(real),
+        false,
+        true,
+      );
     }
     return [...inputs]
       .map(([inputPath, input]) => ({ path: inputPath, ...input }))
@@ -655,6 +670,7 @@ export class AutoMovieProductionProject {
         JSON.parse(bytes.toString("utf8")),
       );
       if (validation.success === false) return null;
+      if (validation.data.rendererIdentity.trim().length === 0) return null;
       const relativeBundle = normalizeSlash(
         path.relative(root, path.dirname(manifestPath)),
       );
@@ -971,7 +987,9 @@ export class AutoMovieProductionProject {
     const next = replaceDesign(graph, target, value);
     const nextDiagnostics = validateAutoMovieProductionGraph(next);
     const diagnostics = nextDiagnostics.filter(
-      (diagnostic) => diagnostic.target === targetKey(target),
+      (diagnostic) =>
+        diagnostic.target === targetKey(target) ||
+        (target.kind === "formation" && diagnostic.target === "formations"),
     );
     if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
       return {

@@ -100,10 +100,35 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const failedMaterialization = compiler.compile({ scope: "source" });
     fs.writeFileSync(recipeFile, recipeBytes);
     TestValidator.predicate(
-      "invalid recipe bytes cannot crash compiler-owned model materialization",
-      diagnosticCodes(failedMaterialization).has(
-        "model-materialization-failed",
-      ),
+      "invalid design is refused before compiler-owned model materialization",
+      diagnosticCodes(failedMaterialization).has("design-collection-empty") &&
+        diagnosticCodes(failedMaterialization).has(
+          "model-materialization-failed",
+        ) === false,
+    );
+    project.setFormationDesign(formationDesign());
+    const formationFile = path.join(
+      fixture.root,
+      ".automovie/design/formations/line.json",
+    );
+    const formationBytes = fs.readFileSync(formationFile);
+    const oversizedFormation = formationDesign();
+    oversizedFormation.count = Number.MAX_SAFE_INTEGER;
+    oversizedFormation.layout = {
+      kind: "line",
+      ranks: Number.MAX_SAFE_INTEGER,
+      files: 1,
+      spacing: { lateral: 1, depth: 1 },
+    };
+    fs.writeFileSync(formationFile, JSON.stringify(oversizedFormation));
+    const oversizedDesign = compiler.lint({ scope: "source" });
+    fs.writeFileSync(formationFile, formationBytes);
+    TestValidator.predicate(
+      "invalid huge formation is diagnosed before allocating explicit slots",
+      oversizedDesign.success === false &&
+        diagnosticCodes(oversizedDesign).has("design-range-invalid") &&
+        diagnosticCodes(oversizedDesign).has("model-materialization-failed") ===
+          false,
     );
     const generatedManifestPath = path.join(
       fixture.root,
