@@ -1566,15 +1566,44 @@ export const test_mcp_production_project = (): void => {
     }
     TestValidator.predicate(
       "ancestor aliases create through the physical parent then hold the project-owned namespace",
-      aliasLockPaths.includes(
-        path.join(
-          fs.realpathSync(physicalAliasParent),
-          ".aliased-project.automovie-root-create.lock",
-        ),
+      aliasLockPaths.some((file) =>
+        path.basename(file).startsWith("create-"),
       ) &&
-        aliasLockPaths.includes(
-          path.join(fs.realpathSync(aliasProject), ".automovie-root.lock"),
-        ),
+        aliasLockPaths.some((file) =>
+          path.basename(file).startsWith("root-"),
+        ) &&
+        aliasLockPaths.every((file) =>
+          path.basename(path.dirname(file)).startsWith("automovie-root-locks-"),
+        ) &&
+        fs
+          .readdirSync(fs.realpathSync(physicalAliasParent))
+          .every((entry) => entry.includes("automovie-root") === false) &&
+        fs
+          .readdirSync(fs.realpathSync(aliasProject))
+          .every((entry) => entry.includes("automovie-root") === false),
+    );
+    const staleRoot = path.join(invalidRoot, "stale-physical-root");
+    const staleProject = AutoMovieProductionProject.open(staleRoot);
+    const parkedStaleRoot = `${staleRoot}-parked`;
+    fs.renameSync(staleRoot, parkedStaleRoot);
+    fs.cpSync(parkedStaleRoot, staleRoot, { recursive: true });
+    TestValidator.predicate(
+      "a byte-identical physical root replacement invalidates every stale handle operation",
+      throws(() => staleProject.manifest(), "root identity changed") &&
+        throws(
+          () =>
+            staleProject.commitProductionDeliverableFiles(
+              "stale-root-write",
+              new Map([["frame.bin", Buffer.from("unsafe")]]),
+            ),
+          "root identity changed",
+        ) &&
+        fs.existsSync(
+          path.join(
+            staleRoot,
+            "renders/deliverables/stale-root-write/frame.bin",
+          ),
+        ) === false,
     );
     TestValidator.predicate(
       "every absent design discriminator returns one missing mutation",

@@ -26,6 +26,7 @@ import {
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 import {
+  IAutoMovieProductionRootNamespaceLease,
   acquireProductionRootNamespace,
   assertProductionRootNamespaceLease,
   releaseProductionRootNamespace,
@@ -98,8 +99,16 @@ export class AutoMovieLegacyImporter {
 
   /** Inspect and validate a legacy project without mutating its directory. */
   public plan(): IAutoMovieLegacyImportPlan {
-    const snapshot = readLegacySnapshot(this.rootDirectory);
-    return planFromSnapshot(snapshot);
+    const root = validateLegacyRoot(this.rootDirectory);
+    const lease = acquireProductionRootNamespace(root);
+    try {
+      assertProductionRootNamespaceLease(lease);
+      const output = planFromSnapshot(readLegacySnapshot(lease.root));
+      assertProductionRootNamespaceLease(lease);
+      return output;
+    } finally {
+      releaseProductionRootNamespace(lease);
+    }
   }
 
   /** Persist one immutable import plan and v2 provenance atomically. */
@@ -111,11 +120,12 @@ export class AutoMovieLegacyImporter {
       const lockPath = path.join(lease.root, "revision.lock");
       const token = acquireCommitLock(lockPath);
       try {
-        const output = this.applyLocked(lease.root, token);
+        assertProductionRootNamespaceLease(lease);
+        const output = this.applyLocked(lease, token);
         assertProductionRootNamespaceLease(lease);
         return output;
       } finally {
-        releaseCommitLock(lockPath, token);
+        releaseResidentLockIfCurrent(lease, lockPath, token);
       }
     } finally {
       releaseProductionRootNamespace(lease);
@@ -123,9 +133,10 @@ export class AutoMovieLegacyImporter {
   }
 
   private applyLocked(
-    root: string,
+    lease: IAutoMovieProductionRootNamespaceLease,
     lockToken: string,
   ): IAutoMovieLegacyImportApplyOutput {
+    const root = lease.root;
     const stateRoot = path.join(root, ".automovie");
     const existing = lstatOrNull(stateRoot);
     if (existing !== null) {
@@ -153,6 +164,7 @@ export class AutoMovieLegacyImporter {
       incarnation: randomUUID(),
     };
     const files = appliedImportFiles(root, plan, state);
+    assertProductionRootNamespaceLease(lease);
     const staging = fs.mkdtempSync(path.join(root, ".automovie-import-"));
     try {
       for (const directory of PRODUCTION_STATE_DIRECTORIES)
@@ -162,9 +174,18 @@ export class AutoMovieLegacyImporter {
         fs.mkdirSync(path.dirname(file), { recursive: true });
         fs.writeFileSync(file, bytes);
       }
+      assertProductionRootNamespaceLease(lease);
       fs.renameSync(staging, stateRoot);
+      assertProductionRootNamespaceLease(lease);
     } finally {
-      if (fs.existsSync(staging))
+      let leaseCurrent = true;
+      try {
+        assertProductionRootNamespaceLease(lease);
+      } catch {
+        leaseCurrent = false;
+      }
+      // A replaced root must not receive cleanup intended for the lease root.
+      if (leaseCurrent && fs.existsSync(staging))
         fs.rmSync(staging, { force: true, recursive: true });
     }
     return { status: "applied", plan };
@@ -188,12 +209,8 @@ export class AutoMovieLegacyImporter {
         );
       const lockPath = path.join(stateRoot, "revision.lock");
       const token = acquireCommitLock(lockPath);
-      const output = this.rollbackLocked(
-        lease.root,
-        stateRoot,
-        lockPath,
-        token,
-      );
+      assertProductionRootNamespaceLease(lease);
+      const output = this.rollbackLocked(lease, stateRoot, lockPath, token);
       assertProductionRootNamespaceLease(lease);
       return output;
     } finally {
@@ -202,11 +219,12 @@ export class AutoMovieLegacyImporter {
   }
 
   private rollbackLocked(
-    root: string,
+    lease: IAutoMovieProductionRootNamespaceLease,
     stateRoot: string,
     lockPath: string,
     token: string,
   ): IAutoMovieLegacyImportRollbackOutput {
+    const root = lease.root;
     try {
       const plan = readJson<IAutoMovieLegacyImportPlan>(
         path.join(stateRoot, IMPORT_PLAN_PATH),
@@ -227,18 +245,32 @@ export class AutoMovieLegacyImporter {
         `.automovie-rollback-${process.pid}-${Date.now()}`,
       );
       const removed: string[] = [];
+      assertProductionRootNamespaceLease(lease);
       fs.renameSync(stateRoot, quarantine);
+      assertProductionRootNamespaceLease(lease);
       try {
         for (const baseline of plan.rollbackBaseline)
           if (baseline.existed === false) {
             const directory = path.join(root, baseline.path);
             if (fs.existsSync(directory)) {
+              assertProductionRootNamespaceLease(lease);
               fs.rmdirSync(directory);
+              assertProductionRootNamespaceLease(lease);
               removed.push(directory);
             }
           }
+        assertProductionRootNamespaceLease(lease);
         fs.rmSync(quarantine, { recursive: true });
+        assertProductionRootNamespaceLease(lease);
       } catch (error) {
+        try {
+          assertProductionRootNamespaceLease(lease);
+        } catch (identityError) {
+          throw new AggregateError(
+            [error, identityError],
+            `Legacy import rollback stopped because project root "${root}" changed physical identity. No restoration was attempted in the replacement root.`,
+          );
+        }
         const restorationErrors: unknown[] = [];
         if (fs.existsSync(stateRoot) === false) {
           try {
@@ -283,11 +315,24 @@ export class AutoMovieLegacyImporter {
       }
       return { status: "rolled-back", fingerprint: plan.fingerprint };
     } catch (error) {
-      releaseCommitLock(lockPath, token);
+      releaseResidentLockIfCurrent(lease, lockPath, token);
       throw error;
     }
   }
 }
+
+const releaseResidentLockIfCurrent = (
+  lease: IAutoMovieProductionRootNamespaceLease,
+  lockPath: string,
+  token: string,
+): void => {
+  try {
+    assertProductionRootNamespaceLease(lease);
+    releaseCommitLock(lockPath, token);
+  } catch {
+    // Fail closed: never follow a stale resident path into a replacement root.
+  }
+};
 
 const planFromSnapshot = (
   snapshot: ILegacySnapshot,

@@ -1,4 +1,5 @@
 import {
+  IAutoMovieLegacyImportPlan,
   IAutoMovieScript,
   IAutoMovieSequence,
   IAutoMovieShot,
@@ -67,9 +68,6 @@ const throws = (task: () => unknown, fragment?: string): boolean => {
   }
 };
 
-const rootNamespaceLockPath = (root: string): string =>
-  path.join(fs.realpathSync(root), ".automovie-root.lock");
-
 const createLegacy = (): {
   root: string;
   dispose: () => void;
@@ -119,11 +117,34 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     const before = legacyFiles(fixture.root);
     const importer = new AutoMovieLegacyImporter(fixture.root);
-    const plan = importer.plan();
+    const nativePlanWrite = fs.writeFileSync;
+    const planLockPaths: string[] = [];
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      Reflect.apply(nativePlanWrite, fs, [file, ...args]);
+      if (
+        typeof file !== "number" &&
+        path
+          .basename(path.dirname(file.toString()))
+          .startsWith("automovie-root-locks-") &&
+        path.basename(file.toString()).startsWith("root-")
+      )
+        planLockPaths.push(path.resolve(file.toString()));
+    }) as typeof fs.writeFileSync;
+    let plan: IAutoMovieLegacyImportPlan;
+    try {
+      plan = importer.plan();
+    } finally {
+      fs.writeFileSync = nativePlanWrite;
+    }
     TestValidator.predicate(
       "planning is read-only and captures drafts, source gaps, and exact bytes",
       equalFiles(before, legacyFiles(fixture.root)) &&
         fs.existsSync(path.join(fixture.root, ".automovie")) === false &&
+        planLockPaths.length === 1 &&
+        fs.existsSync(planLockPaths[0]!) === false &&
         plan.legacyRevision === 2 &&
         plan.productionDraft.frameFormat.fps === 24 &&
         plan.shotContractDrafts[0]?.id === shot.id &&
@@ -560,7 +581,7 @@ export const test_mcp_production_legacy_import = (): void => {
   );
   const parkedRoot = `${replacedDuringAcquire.root}-parked`;
   try {
-    const namespaceLock = rootNamespaceLockPath(replacedDuringAcquire.root);
+    let namespaceLock: string | null = null;
     const nativeWrite = fs.writeFileSync;
     let replaced = false;
     fs.writeFileSync = ((
@@ -571,8 +592,12 @@ export const test_mcp_production_legacy_import = (): void => {
       if (
         replaced === false &&
         typeof file !== "number" &&
-        path.resolve(file.toString()) === namespaceLock
+        path
+          .basename(path.dirname(file.toString()))
+          .startsWith("automovie-root-locks-") &&
+        path.basename(file.toString()).startsWith("root-")
       ) {
+        namespaceLock = path.resolve(file.toString());
         replaced = true;
         fs.renameSync(replacedDuringAcquire.root, parkedRoot);
         fs.symlinkSync(
@@ -591,6 +616,7 @@ export const test_mcp_production_legacy_import = (): void => {
         ) &&
           fs.existsSync(path.join(replacementTarget, "revision.lock")) ===
             false &&
+          namespaceLock !== null &&
           fs.existsSync(namespaceLock) === false,
       );
     } finally {
@@ -598,9 +624,6 @@ export const test_mcp_production_legacy_import = (): void => {
       if (fs.lstatSync(replacedDuringAcquire.root).isSymbolicLink())
         fs.rmSync(replacedDuringAcquire.root);
       if (fs.existsSync(parkedRoot)) {
-        fs.rmSync(path.join(parkedRoot, ".automovie-root.lock"), {
-          force: true,
-        });
         fs.renameSync(parkedRoot, replacedDuringAcquire.root);
       }
     }

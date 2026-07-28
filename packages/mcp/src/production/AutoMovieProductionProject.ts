@@ -32,7 +32,9 @@ import {
 } from "./contentIdentity";
 import { probeProductionMedia } from "./probeProductionMedia";
 import {
+  IAutoMovieProductionRootNamespaceLease,
   acquireOrCreateProductionRootNamespace,
+  acquireProductionRootNamespace,
   assertProductionRootNamespaceLease,
   releaseProductionRootNamespace,
 } from "./rootNamespaceLock";
@@ -96,7 +98,8 @@ export class AutoMovieProductionSourcePathError extends Error {
  */
 export class AutoMovieProductionProject {
   private readonly rootReal: string;
-  private readonly rootLockPath: string;
+  private readonly rootDevice: number;
+  private readonly rootInode: number;
   private readonly automovieRoot: string;
   private readonly incarnationPath: string;
   private readonly manifestPath: string;
@@ -109,10 +112,14 @@ export class AutoMovieProductionProject {
 
   private constructor(
     public readonly root: string,
-    rootLockPath: string,
+    rootIdentity: Pick<
+      IAutoMovieProductionRootNamespaceLease,
+      "device" | "inode"
+    >,
   ) {
     this.rootReal = fs.realpathSync(root);
-    this.rootLockPath = rootLockPath;
+    this.rootDevice = rootIdentity.device;
+    this.rootInode = rootIdentity.inode;
     this.automovieRoot = path.join(root, ".automovie");
     this.incarnationPath = path.join(this.automovieRoot, "incarnation.json");
     this.manifestPath = path.join(this.automovieRoot, "manifest.json");
@@ -136,7 +143,7 @@ export class AutoMovieProductionProject {
     const incarnation = readOwnedJson(this.rootReal, this.incarnationPath);
     if (incarnation === undefined) {
       this.incarnation_ = randomUUID();
-      writeJsonAtomic(this.incarnationPath, {
+      this.writeOwnedJsonAtomic(this.incarnationPath, {
         version: 1,
         id: this.incarnation_,
       });
@@ -155,7 +162,7 @@ export class AutoMovieProductionProject {
         generatedRoot: "generated",
         renderRoot: "renders",
       };
-      writeJsonAtomic(this.manifestPath, this.manifest_);
+      this.writeOwnedJsonAtomic(this.manifestPath, this.manifest_);
     } else this.manifest_ = validateManifest(existing, this.manifestPath);
     validateOwnershipLayout(this.root, this.manifest_, this.manifestPath);
     for (const directory of [
@@ -174,11 +181,19 @@ export class AutoMovieProductionProject {
   }
 
   private mkdirOwned(directory: string): void {
+    this.assertProjectRootIdentity();
     assertRealAncestorInside(this.rootReal, directory);
     fs.mkdirSync(directory, {
       recursive: true,
     });
     assertRealAncestorInside(this.rootReal, directory);
+    this.assertProjectRootIdentity();
+  }
+
+  private writeOwnedJsonAtomic(file: string, value: unknown): void {
+    this.assertProjectRootIdentity();
+    writeJsonAtomic(file, value);
+    this.assertProjectRootIdentity();
   }
 
   /** Open or initialize a production repository. */
@@ -191,10 +206,7 @@ export class AutoMovieProductionProject {
     const lease = acquireOrCreateProductionRootNamespace(root);
     try {
       assertProductionRootNamespaceLease(lease);
-      const project = new AutoMovieProductionProject(
-        lease.root,
-        lease.lockPath,
-      );
+      const project = new AutoMovieProductionProject(lease.root, lease);
       assertProductionRootNamespaceLease(lease);
       return project;
     } finally {
@@ -210,6 +222,7 @@ export class AutoMovieProductionProject {
 
   /** Enumerate declared source, viewer, script and asset inputs safely. */
   public contentInputs(): IAutoMovieProductionContentInput[] {
+    this.assertProjectRootIdentity();
     const inputs = new Map<
       string,
       { bytes: Uint8Array | null; render: boolean; source: boolean }
@@ -357,6 +370,7 @@ export class AutoMovieProductionProject {
   }
 
   private loadGraph(): IAutoMovieProductionDesignGraph {
+    this.assertProjectRootIdentity();
     const stateRootReal = ownedRootReal(this.rootReal, this.automovieRoot);
     return {
       production: readOwnedTypedJson(
@@ -566,6 +580,7 @@ export class AutoMovieProductionProject {
 
   /** Resolve a project-relative source path and enforce source-root ownership. */
   public resolveSourcePath(relativePath: string): string {
+    this.assertProjectRootIdentity();
     if (path.isAbsolute(relativePath))
       throw new AutoMovieProductionSourcePathError(
         "outside-root",
@@ -596,6 +611,7 @@ export class AutoMovieProductionProject {
   }
 
   private loadGeneratedManifest(): IAutoMovieGeneratedManifest | null {
+    this.assertProjectRootIdentity();
     return readOwnedTypedJson(
       ownedRootReal(this.rootReal, this.automovieRoot),
       path.join(this.automovieRoot, "generated-manifest.json"),
@@ -605,6 +621,7 @@ export class AutoMovieProductionProject {
 
   /** Read one MCP-owned state file without following an escaping link. */
   public readTrackedStateFile(relativePath: string): Uint8Array | null {
+    this.assertProjectRootIdentity();
     const file = resolveInside(this.automovieRoot, relativePath);
     if (lstatOrNull(file) === null) return null;
     assertOwnedRegularFile(
@@ -1209,14 +1226,34 @@ export class AutoMovieProductionProject {
   }
 
   private resolveOwnedDirectory(relativePath: string): string {
+    this.assertProjectRootIdentity();
     const resolved = resolveInside(this.root, relativePath);
     assertRealAncestorInside(this.rootReal, resolved);
     return resolved;
   }
 
   private refreshRevision(): void {
+    this.assertProjectRootIdentity();
     this.assertIncarnation();
     this.lastReadRevision_ = readRevision(this.rootReal, this.revisionPath);
+  }
+
+  private assertProjectRootIdentity(): void {
+    const linked = lstatOrNull(this.root);
+    const current =
+      linked === null ||
+      linked.isSymbolicLink() ||
+      linked.isDirectory() === false
+        ? null
+        : fs.statSync(this.root);
+    if (
+      current === null ||
+      current.dev !== this.rootDevice ||
+      current.ino !== this.rootInode
+    )
+      throw new AutoMovieProductionInputRaceError(
+        "Production project root identity changed. Discard this project handle and open the physical project again before reading or mutating it.",
+      );
   }
 
   private assertIncarnation(): void {
@@ -1262,11 +1299,20 @@ export class AutoMovieProductionProject {
         })(),
       }));
     const lazy = typeof files === "function" ? files : null;
-    const eager = lazy === null ? stage(files as readonly IStagedFile[]) : null;
-    const rootToken = acquireCommitLock(this.rootLockPath);
+    const eager = lazy === null ? (files as readonly IStagedFile[]) : null;
+    const rootLease = acquireProductionRootNamespace(this.root);
     try {
+      if (
+        rootLease.device !== this.rootDevice ||
+        rootLease.inode !== this.rootInode
+      )
+        throw new AutoMovieProductionInputRaceError(
+          "Production project root identity changed. Discard this project handle and open the physical project again before mutating it.",
+        );
+      assertProductionRootNamespaceLease(rootLease);
       const token = acquireCommitLock(this.lockPath);
       try {
+        assertProductionRootNamespaceLease(rootLease);
         this.assertIncarnation();
         const current = readRevision(this.rootReal, this.revisionPath);
         if (current !== expectedRevision)
@@ -1277,12 +1323,14 @@ export class AutoMovieProductionProject {
           throw new AutoMovieProductionInputRaceError(
             "Production inputs changed before the guarded commit began.",
           );
-        const staged = eager ?? stage(lazy!());
+        const staged = stage(eager ?? lazy!());
         let applied = 0;
         try {
           for (const file of staged) {
+            assertProductionRootNamespaceLease(rootLease);
             if (file.content === null) fs.rmSync(file.path, { force: true });
             else writeAtomic(file.path, file.content);
+            assertProductionRootNamespaceLease(rootLease);
             ++applied;
           }
           if (inputCurrent?.() === false)
@@ -1295,9 +1343,11 @@ export class AutoMovieProductionProject {
             return current;
           }
           const nextRevision = current + 1;
+          assertProductionRootNamespaceLease(rootLease);
           writeJsonAtomic(this.revisionPath, {
             revision: nextRevision,
           });
+          assertProductionRootNamespaceLease(rootLease);
           this.lastReadRevision_ = nextRevision;
           return nextRevision;
         } catch (error) {
@@ -1320,7 +1370,7 @@ export class AutoMovieProductionProject {
         releaseCommitLock(this.lockPath, token);
       }
     } finally {
-      releaseCommitLock(this.rootLockPath, rootToken);
+      releaseProductionRootNamespace(rootLease);
     }
   }
 

@@ -1,9 +1,20 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
 
-const ROOT_LOCK_NAME = ".automovie-root.lock";
+const currentUser = os.userInfo();
+const userCoordinate = crypto
+  .createHash("sha256")
+  .update(`${currentUser.username}\0${currentUser.uid}`)
+  .digest("hex")
+  .slice(0, 16);
+const COORDINATION_ROOT = path.join(
+  os.tmpdir(),
+  `automovie-root-locks-${userCoordinate}`,
+);
 
 /** Held namespace reservation for one physical production project root. */
 export interface IAutoMovieProductionRootNamespaceLease {
@@ -14,8 +25,31 @@ export interface IAutoMovieProductionRootNamespaceLease {
   inode: number;
 }
 
-const creationLockPath = (parentReal: string, name: string): string =>
-  path.join(parentReal, `.${name}.automovie-root-create.lock`);
+const coordinatePath = (kind: "create" | "root", namespace: string): string => {
+  ensureCoordinationRoot();
+  // Case-folding can only over-coordinate distinct POSIX paths; it also makes
+  // aliases of one case-insensitive Windows namespace share the same fence.
+  const canonical = path.normalize(namespace).toLowerCase();
+  const digest = crypto
+    .createHash("sha256")
+    .update(`${kind}\0${canonical}`)
+    .digest("hex");
+  return path.join(COORDINATION_ROOT, `${kind}-${digest}.lock`);
+};
+
+const ensureCoordinationRoot = (): void => {
+  try {
+    fs.mkdirSync(COORDINATION_ROOT, { mode: 0o700 });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+  }
+  const linked = fs.lstatSync(COORDINATION_ROOT);
+  if (linked.isSymbolicLink() || linked.isDirectory() === false)
+    throw new Error(
+      `AutoMovie root-lock coordination path "${COORDINATION_ROOT}" is not a physical directory.`,
+    );
+  fs.chmodSync(COORDINATION_ROOT, 0o700);
+};
 
 const ensureDirectory = (directory: string): string => {
   const linked = lstatOrNull(directory);
@@ -33,7 +67,7 @@ const ensureDirectory = (directory: string): string => {
     );
   const parentReal = ensureDirectory(parent);
   const physical = path.join(parentReal, path.basename(directory));
-  const lockPath = creationLockPath(parentReal, path.basename(directory));
+  const lockPath = coordinatePath("create", physical);
   const token = acquireCommitLock(lockPath);
   try {
     const current = lstatOrNull(physical);
@@ -65,7 +99,7 @@ const acquireExistingRoot = (
     );
   const root = fs.realpathSync(rootDirectory);
   const identity = fs.statSync(root);
-  const lockPath = path.join(root, ROOT_LOCK_NAME);
+  const lockPath = coordinatePath("root", root);
   const token = acquireCommitLock(lockPath);
   const lease: IAutoMovieProductionRootNamespaceLease = {
     root,
@@ -110,7 +144,7 @@ export const acquireOrCreateProductionRootNamespace = (
   if (linked !== null) return acquireExistingRoot(root);
   const parentReal = ensureDirectory(path.dirname(root));
   const physical = path.join(parentReal, path.basename(root));
-  const lockPath = creationLockPath(parentReal, path.basename(root));
+  const lockPath = coordinatePath("create", physical);
   const token = acquireCommitLock(lockPath);
   try {
     const current = lstatOrNull(physical);
