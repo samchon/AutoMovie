@@ -699,7 +699,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
             diagnostic.message.includes(
               String(failure instanceof Error ? failure.message : failure),
             ),
-        ),
+        ) && unsafeContent.reviews.entries.length === 0,
       );
     }
     project.contentInputs = residentContentInputs;
