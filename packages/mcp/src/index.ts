@@ -1,7 +1,7 @@
+export { AutoMovieLegacyApplication } from "./AutoMovieLegacyApplication";
 export * from "./AutoMovieApplication";
 export * from "./AutoMovieContext";
 export * from "./AutoMovieGatewayApplication";
-export * from "./AutoMovieLegacyApplication";
 export * from "./AutoMovieLegacyGatewayApplication";
 export * from "./AutoMovieProductionApplication";
 export * from "./convert";

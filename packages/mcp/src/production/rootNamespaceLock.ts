@@ -53,7 +53,9 @@ const acquireCoordinates = (
 ): Array<{ path: string; token: string }> => {
   const leases: Array<{ path: string; token: string }> = [];
   try {
-    for (const lockPath of [...new Set(paths)].sort()) {
+    for (const lockPath of [...new Set(paths)].sort((left, right) =>
+      left < right ? -1 : left > right ? 1 : 0,
+    )) {
       leases.push({ path: lockPath, token: acquireCommitLock(lockPath) });
     }
     return leases;

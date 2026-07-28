@@ -1244,7 +1244,7 @@ const currentAcceptanceOutcomes = (
       const shot =
         criterion.shot ??
         (scenario.target.kind === "shot" ? scenario.target.id : undefined);
-      let event =
+      const event =
         shot === undefined
           ? undefined
           : readRealization(shot)?.events.find(
