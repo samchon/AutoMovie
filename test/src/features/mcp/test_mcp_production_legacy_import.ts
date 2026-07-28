@@ -422,12 +422,29 @@ export const test_mcp_production_legacy_import = (): void => {
     AutoMovieProductionProject.open(rollbackFailure.root);
     const nativeRmdir = fs.rmdirSync;
     const nativeMkdir = fs.mkdirSync;
+    const nativeWrite = fs.writeFileSync;
+    let activeNamespaceLock: string | null = null;
     let removals = 0;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      Reflect.apply(nativeWrite, fs, [file, ...args]);
+      if (
+        typeof file !== "number" &&
+        path
+          .basename(path.dirname(file.toString()))
+          .startsWith("automovie-root-locks-") &&
+        path.basename(file.toString()).startsWith("root-")
+      )
+        activeNamespaceLock = path.resolve(file.toString());
+    }) as typeof fs.writeFileSync;
     fs.rmdirSync = ((directory: fs.PathLike): void => {
       ++removals;
       if (removals === 2) {
         if (
-          fs.existsSync(rootNamespaceLockPath(rollbackFailure.root)) === false
+          activeNamespaceLock === null ||
+          fs.existsSync(activeNamespaceLock) === false
         )
           throw new Error("rollback released the canonical root reservation");
         const quarantine = fs
@@ -467,6 +484,7 @@ export const test_mcp_production_legacy_import = (): void => {
     } finally {
       fs.rmdirSync = nativeRmdir;
       fs.mkdirSync = nativeMkdir;
+      fs.writeFileSync = nativeWrite;
     }
     TestValidator.predicate(
       "a restored import remains safely roll-backable",
