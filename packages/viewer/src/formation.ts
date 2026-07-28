@@ -2,7 +2,6 @@ import {
   composeFormationHeroTransform,
   sampleFormationMotion,
   selectFormationLod,
-  transformFormationPoint,
 } from "@automovie/engine";
 import {
   IAutoMovieCompiledFormation,
@@ -159,13 +158,13 @@ export const buildInstancedFormation = (input: {
   return {
     object: root,
     stats,
-    update(camera, viewportHeight, time = 0, heroSources): void {
+    update(camera, viewportHeight, time, heroSources): void {
       stats.visible = { hero: 0, near: 0, far: 0 };
       stats.culled = 0;
       const sampled = sampleFormationMotion(
         input.motions ?? [],
         input.formation.id,
-        time,
+        time ?? 0,
       );
       root.position.set(
         input.formation.anchor.x + sampled.translation.x,
@@ -211,8 +210,8 @@ export const buildInstancedFormation = (input: {
       for (const hero of input.formation.heroes) {
         const object = input.heroObjects?.get(hero.actor);
         if (object === undefined) continue;
-        const source =
-          heroSources?.get(hero.actor) ?? initialHeroSources.get(hero.actor)!;
+        const source = (heroSources?.get(hero.actor) ??
+          initialHeroSources.get(hero.actor))!;
         const transformed = composeFormationHeroTransform(
           hero.transform,
           source,
