@@ -447,6 +447,21 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
           mediaType: "audio/mp4",
           bytes: video,
         }),
+      "video tracks; none are allowed",
+    ),
+  );
+  const trackless = Buffer.from(audio);
+  const audioHandler = boxTypeOffset(trackless, "hdlr");
+  trackless.write("meta", audioHandler + 12, "ascii");
+  TestValidator.predicate(
+    "an audio mix requires exactly one audio track",
+    refused(
+      () =>
+        probeProductionMedia({
+          kind: "audio-mix",
+          mediaType: "audio/mp4",
+          bytes: trackless,
+        }),
       "0 audio tracks",
     ),
   );

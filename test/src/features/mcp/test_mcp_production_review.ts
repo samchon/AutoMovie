@@ -26,17 +26,30 @@ import {
 const evidenceOf = (
   project: AutoMovieProductionProject,
   prepared: IAutoMoviePrepareReviewOutput,
+  selectorIndex = 0,
 ): IAutoMovieReviewEvidence => {
   const target = prepared.target;
-  if (target.kind === "design")
+  if (target.kind === "design") {
+    const selectors = prepared.quotable.filter(
+      (item) => item.kind === "design",
+    );
+    const selector = selectors[selectorIndex % selectors.length];
+    if (selector?.kind !== "design")
+      throw new Error("design fixture has no quotable pointer");
+    const resolved = resolveReviewPointer(
+      project.design(target.design),
+      selector.pointer,
+    );
     return {
-      kind: "design",
-      target: target.design,
-      pointer: "",
-      exactValue: project.design(target.design),
+      ...selector,
+      exactValue: resolved,
     };
+  }
   if (target.kind === "source") {
-    const selector = prepared.quotable.find((item) => item.kind === "source");
+    const selectors = prepared.quotable.filter(
+      (item) => item.kind === "source",
+    );
+    const selector = selectors[selectorIndex % selectors.length];
     if (selector?.kind !== "source")
       throw new Error("source fixture has no quotable line");
     const exactText = fs
@@ -48,6 +61,16 @@ const evidenceOf = (
   const frame = prepared.frames[0];
   if (frame === undefined) throw new Error("visual fixture has no frame");
   return frameEvidenceOf(frame);
+};
+
+const resolveReviewPointer = (root: unknown, pointer: string): unknown => {
+  if (pointer === "") return root;
+  let current = root;
+  for (const encoded of pointer.slice(1).split("/")) {
+    const key = encoded.replace(/~1/g, "/").replace(/~0/g, "~");
+    current = (current as Record<string, unknown>)[key];
+  }
+  return current;
 };
 
 const frameEvidenceOf = (
@@ -70,7 +93,6 @@ const worksheet = (
   prepared: IAutoMoviePrepareReviewOutput,
   complete = true,
 ): IAutoMovieSubmitReviewInput => {
-  const evidence = evidenceOf(project, prepared);
   const graph = project.graph();
   const visualTarget =
     prepared.target.kind === "shot" || prepared.target.kind === "film"
@@ -132,7 +154,7 @@ const worksheet = (
                 ? [contractEvidence]
                 : [frameEvidenceOf(frame), contractEvidence];
             })
-          : [evidence];
+          : [evidenceOf(project, prepared, index)];
       return {
         criterion,
         verdict: complete || index !== 0 ? "pass" : "revise",
@@ -682,6 +704,15 @@ export const test_mcp_production_review = async (): Promise<void> => {
           (item) => item.code === "review-acceptance-coverage-misplaced",
         ),
     );
+    const reusedSourceEvidence = worksheet(project, sourcePrepared);
+    reusedSourceEvidence.checks[1]!.evidence =
+      reusedSourceEvidence.checks[0]!.evidence;
+    TestValidator.predicate(
+      "distinct source criteria cannot launder one convenient line",
+      review
+        .submit(reusedSourceEvidence)
+        .diagnostics.some((item) => item.code === "review-evidence-reused"),
+    );
 
     const designTarget = {
       kind: "design" as const,
@@ -1157,6 +1188,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     TestValidator.predicate(
       "dependent reviews become stale after a mutation",
       review.queue().entries.some((entry) => entry.state === "stale") &&
+        staleWorksheetResult.state === "stale" &&
         staleWorksheetResult.diagnostics.some(
           (item) => item.code === "review-worksheet-stale",
         ) &&

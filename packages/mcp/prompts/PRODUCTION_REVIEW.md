@@ -11,4 +11,6 @@ The external coding agent reviews; AutoMovie verifies evidence and freshness. Th
 
 Every required criterion appears exactly once in canonical order. Evidence-free pass, copied observation/evidence, blank quote, stale digest, out-of-bounds region, failed or missing event/metric outcome, revise-with-complete, and corrections-with-complete are refused. `not-applicable` still needs concrete current evidence and a reason.
 
+Design and source checks must cite a distinct current selector for each criterion; repeating one convenient line or JSON value across the checklist is refused. The source checklist covers binding, determinism, engine enforcement, and boundary behavior. Repository test execution remains the coding agent and CI's job. Film review covers current narrative, continuity, visual scale, rhythm, and required acceptance evidence; audio parsing and deliverable completeness belong to the later `final` compile gate until synchronized playback evidence exists.
+
 Mutation never deletes old reviews. Their fingerprints stop matching and `inspectProject` reports `stale`, preserving the audit trail while making review/final compile fail until the target is re-examined.

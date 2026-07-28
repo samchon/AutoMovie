@@ -23,7 +23,10 @@ export interface IAutoMovieProductionDesign {
   title: string;
   /** Non-blank one-sentence narrative promise. */
   logline: string;
-  /** Finite intended finished runtime in seconds, strictly above zero. */
+  /**
+   * Finite intended finished runtime in seconds, strictly above zero and on the
+   * production frame clock.
+   */
   targetRuntimeSeconds: number;
   /** Deterministic frame clock and raster format. */
   frameFormat: {
@@ -233,7 +236,12 @@ export interface IAutoMovieWorldDesign {
   effectZones: IAutoMovieWorldEffectZone[];
 }
 
-/** A supported formation behavior. */
+/**
+ * Review-facing formation behavior vocabulary.
+ *
+ * The compiler does not infer or restrict source motion from these labels.
+ * Observable shot predicates and review evidence remain authoritative.
+ */
 export type AutoMovieFormationCapability =
   | "hold"
   | "advance"
@@ -307,7 +315,12 @@ export interface IAutoMovieFormationDesign {
   facingDeg: number;
   /** Integer deterministic seed from zero through `MAX_SAFE_INTEGER`. */
   seed: number;
-  /** Unique permitted formation behaviors. */
+  /**
+   * Unique intended formation behaviors for source/review coordination.
+   *
+   * These labels are not a compiler permission boundary and do not prove that
+   * source implemented or avoided a motion.
+   */
   capabilities: AutoMovieFormationCapability[];
   /** Slots promoted to named hero actors. */
   heroOverrides: Array<{
@@ -455,7 +468,10 @@ export interface IAutoMovieShotContract {
     /** Named exported builder. */
     export: string;
   };
-  /** Finite shot runtime in seconds, strictly above zero. */
+  /**
+   * Finite shot runtime in seconds, strictly above zero and on the production
+   * frame clock.
+   */
   durationSeconds: number;
   /** Unique required actor and formation ids; formations must already exist. */
   participants: IAutoMovieShotParticipant[];
@@ -469,7 +485,13 @@ export interface IAutoMovieShotContract {
     intent: string;
     /** Non-empty unique compiled scene-node ids that must remain readable. */
     requiredSubjects: string[];
-    /** Finite maximum allowed occlusion ratio, inclusive from zero to one. */
+    /**
+     * Finite maximum allowed pixel-occlusion ratio, inclusive from zero to one.
+     *
+     * The compiler projects subject root points but does not measure this
+     * ratio. The external reviewer must compare current mask, depth, outline or
+     * beauty frames against it.
+     */
     maxOcclusionRatio: number;
   };
   /** Timed semantic events. */

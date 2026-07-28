@@ -70,6 +70,10 @@ export const probeProductionMedia = (props: {
     throw new Error(
       `Audio-mix output declares "${props.mediaType}", but the current deterministic probe requires audio/mp4 bytes.`,
     );
+  if (movie.videoTracks.length !== 0)
+    throw new Error(
+      `Audio-mix MP4 contains ${movie.videoTracks.length} video tracks; none are allowed.`,
+    );
   if (movie.audioTracks.length !== 1)
     throw new Error(
       `MP4 contains ${movie.audioTracks.length} audio tracks; exactly one is required.`,

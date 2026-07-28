@@ -394,16 +394,32 @@ const targetKey = (target) =>
     : target.kind === "source"
       ? \`source:\${target.path}\`
       : \`\${target.kind}:\${target.id}\`;
-const exactEvidence = (project, prepared) => {
-  if (prepared.target.kind === "design")
+const pointerValue = (root, pointer) => {
+  if (pointer === "") return root;
+  let current = root;
+  for (const encoded of pointer.slice(1).split("/")) {
+    const key = encoded.replace(/~1/g, "/").replace(/~0/g, "~");
+    current = current[key];
+  }
+  return current;
+};
+const exactEvidence = (project, prepared, selectorIndex) => {
+  if (prepared.target.kind === "design") {
+    const selectors = prepared.quotable.filter((item) => item.kind === "design");
+    const selector = selectors[selectorIndex % selectors.length];
+    if (selector === undefined)
+      throw new Error("Current design review has no quotable value.");
     return {
-      kind: "design",
-      target: prepared.target.design,
-      pointer: "",
-      exactValue: project.design(prepared.target.design),
+      ...selector,
+      exactValue: pointerValue(
+        project.design(prepared.target.design),
+        selector.pointer,
+      ),
     };
+  }
   if (prepared.target.kind === "source") {
-    const selector = prepared.quotable.find((item) => item.kind === "source");
+    const selectors = prepared.quotable.filter((item) => item.kind === "source");
+    const selector = selectors[selectorIndex % selectors.length];
     if (selector === undefined)
       throw new Error("Current source review has no quotable line.");
     const exactText = fs
@@ -433,7 +449,6 @@ const requiredAcceptance = (graph, target) =>
 const worksheet = (project, prepared) => {
   const graph = project.graph();
   const acceptance = requiredAcceptance(graph, prepared.target);
-  const baseEvidence = exactEvidence(project, prepared);
   return {
     target: prepared.target,
     preparedFingerprint: prepared.fingerprint,
@@ -464,7 +479,7 @@ const worksheet = (project, prepared) => {
                 ? [contract]
                 : [frameEvidence(frame), contract];
             })
-          : [baseEvidence];
+          : [exactEvidence(project, prepared, index)];
       return {
         criterion,
         verdict: "pass",

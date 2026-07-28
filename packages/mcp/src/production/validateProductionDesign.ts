@@ -100,6 +100,23 @@ export const validateAutoMovieProductionGraph = (
       file,
       "frameFormat.fps",
     );
+    if (
+      Number.isFinite(graph.production.targetRuntimeSeconds) &&
+      graph.production.targetRuntimeSeconds > 0 &&
+      Number.isFinite(graph.production.frameFormat.fps) &&
+      graph.production.frameFormat.fps > 0 &&
+      isProductionFrameTime(
+        graph.production.targetRuntimeSeconds,
+        graph.production.frameFormat.fps,
+      ) === false
+    )
+      invalid(
+        diagnostics,
+        "design-frame-clock-invalid",
+        target,
+        file,
+        `targetRuntimeSeconds must land on the ${graph.production.frameFormat.fps}fps production clock. Choose an exact integer frame count divided by fps in setProductionDesign.`,
+      );
     if (graph.production.artDirection.palette.length === 0)
       invalid(
         diagnostics,
@@ -524,6 +541,22 @@ export const validateAutoMovieProductionGraph = (
       file,
       "durationSeconds",
     );
+    if (
+      graph.production !== null &&
+      Number.isFinite(shot.durationSeconds) &&
+      shot.durationSeconds > 0 &&
+      isProductionFrameTime(
+        shot.durationSeconds,
+        graph.production.frameFormat.fps,
+      ) === false
+    )
+      invalid(
+        diagnostics,
+        "design-frame-clock-invalid",
+        target,
+        file,
+        `Shot "${id}" durationSeconds is off the ${graph.production.frameFormat.fps}fps production clock. Choose an exact integer frame count divided by fps in setShotContract.`,
+      );
     const participantIds = new Set<string>();
     for (const participant of shot.participants) {
       text(diagnostics, participant.id, target, file, "participants.id");
@@ -968,7 +1001,6 @@ const MODEL_PARAMETERS: Record<
     height: ["number", 0.001, 100],
     depth: ["number", 0.001, 100],
     radius: ["number", 0.001, 50],
-    rigged: ["boolean"],
   },
 };
 
@@ -1037,11 +1069,7 @@ const validateModelParameters = (
     primitiveShape === null ||
     PRIMITIVE_PROP_DIMENSIONS[primitiveShape] === undefined
       ? null
-      : new Set([
-          "shape",
-          "rigged",
-          ...PRIMITIVE_PROP_DIMENSIONS[primitiveShape],
-        ]);
+      : new Set(["shape", ...PRIMITIVE_PROP_DIMENSIONS[primitiveShape]]);
   for (const [key, value] of Object.entries(model.parameters)) {
     const rule = schema[key];
     if (

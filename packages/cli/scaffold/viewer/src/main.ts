@@ -73,20 +73,26 @@ const stagedNodeTransforms = new Map(
   ]),
 );
 
-const players = compiled.shot.performances.flatMap((performance) => {
-  if (performance.motion === null) return [];
-  const target = built.find((item) => item.node.id === performance.node);
-  const motion = compiled.motions.find(
-    (item) => item.id === performance.motion,
-  );
+const performanceByNode = new Map(
+  compiled.shot.performances.map((performance) => [
+    performance.node,
+    performance,
+  ]),
+);
+const players = compiled.scene.nodes.flatMap((node) => {
+  const performance = performanceByNode.get(node.id);
+  const motionId = performance === undefined ? node.motion : performance.motion;
+  if (motionId === null) return [];
+  const target = built.find((item) => item.node.id === node.id);
+  const motion = compiled.motions.find((item) => item.id === motionId);
   if (target === undefined || motion === undefined)
-    throw new Error(`Performance "${performance.node}" cannot be resolved.`);
+    throw new Error(`Motion for scene node "${node.id}" cannot be resolved.`);
   const skeleton = target.model.skeleton;
   if (skeleton === null)
     throw new Error(`Animated model "${target.model.id}" has no skeleton.`);
   return [
     {
-      startOffset: performance.startOffset,
+      startOffset: performance?.startOffset ?? 0,
       player: new AutoMoviePlayer(target.object, skeleton, motion),
     },
   ];

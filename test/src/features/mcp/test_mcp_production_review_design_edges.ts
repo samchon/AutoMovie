@@ -62,6 +62,41 @@ export const test_mcp_production_review_design_edges = (): void => {
           })
           .fingerprint.startsWith("sha256:"),
     );
+    const cyclicSentinel = {
+      ...modelRecipe(),
+      lod: [
+        {
+          tier: "hero" as const,
+          maxDistance: null,
+          recipe: dependentModel.id,
+        },
+      ],
+    };
+    const cyclicDependent = {
+      ...dependentModel,
+      lod: [
+        {
+          tier: "hero" as const,
+          maxDistance: null,
+          recipe: cyclicSentinel.id,
+        },
+      ],
+    };
+    TestValidator.predicate(
+      "cyclic LOD references have a finite review identity",
+      project.setModelRecipe(cyclicDependent).accepted &&
+        project.setModelRecipe(cyclicSentinel).accepted &&
+        review
+          .prepare({
+            target: {
+              kind: "design",
+              design: { kind: "model", id: cyclicSentinel.id },
+            },
+          })
+          .fingerprint.startsWith("sha256:"),
+    );
+    project.setModelRecipe(modelRecipe());
+    project.setModelRecipe(dependentModel);
     const dependentModelFile = path.join(
       fixture.root,
       ".automovie/design/models/review-model.json",
@@ -115,6 +150,32 @@ export const test_mcp_production_review_design_edges = (): void => {
             },
           })
           .fingerprint.startsWith("sha256:"),
+    );
+    const shotDesignTarget = {
+      kind: "design" as const,
+      design: { kind: "shot" as const, id: "opening" },
+    };
+    const baselineShotFingerprint = review.prepare({
+      target: shotDesignTarget,
+    }).fingerprint;
+    const changedWorld = worldDesign();
+    changedWorld.landmarks[0]!.meaning += " Changed.";
+    project.setWorldDesign(changedWorld);
+    const worldChangedFingerprint = review.prepare({
+      target: shotDesignTarget,
+    }).fingerprint;
+    project.setWorldDesign(worldDesign());
+    const changedFormationModel = modelRecipe();
+    changedFormationModel.palette.body = "#123456";
+    project.setModelRecipe(changedFormationModel);
+    const modelChangedFingerprint = review.prepare({
+      target: shotDesignTarget,
+    }).fingerprint;
+    project.setModelRecipe(modelRecipe());
+    TestValidator.predicate(
+      "shot-design review identity includes world and transitive formation-model dependencies",
+      baselineShotFingerprint !== worldChangedFingerprint &&
+        baselineShotFingerprint !== modelChangedFingerprint,
     );
     const filmAcceptance = {
       id: "film-opening-beauty",

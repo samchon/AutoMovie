@@ -62,7 +62,6 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
     "determinism",
     "engine-enforcement",
     "error-and-boundary-paths",
-    "test-coverage",
   ],
   shot: [
     "key-action-readability",
@@ -78,8 +77,6 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
     "cross-shot-continuity",
     "visual-scale-and-legibility",
     "rhythm-and-runtime",
-    "audio-picture-synchronization",
-    "deliverable-completeness",
     "acceptance-scenarios",
   ],
 } as const;
@@ -185,7 +182,7 @@ export class AutoMovieProductionReviewService {
   ): IAutoMovieSubmitReviewOutput {
     const prepared = this.prepare({ target: input.target });
     if (input.preparedFingerprint !== prepared.fingerprint)
-      return refused(this.project, input.target, [
+      return refused(this.project, input.target, prepared.fingerprint, [
         {
           code: "review-worksheet-stale",
           category: "error",
@@ -202,7 +199,12 @@ export class AutoMovieProductionReviewService {
       ...validateWorksheet(this.project, input, prepared),
     ];
     if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
-      return refused(this.project, input.target, diagnostics);
+      return refused(
+        this.project,
+        input.target,
+        prepared.fingerprint,
+        diagnostics,
+      );
     const fingerprint = reviewFingerprint(
       this.project,
       input.target,
@@ -214,7 +216,7 @@ export class AutoMovieProductionReviewService {
        reachable only through a hostile getter mutating project bytes during
        validation, while commitFiles separately enforces revision races. */
     if (fingerprint !== prepared.fingerprint)
-      return refused(this.project, input.target, [
+      return refused(this.project, input.target, fingerprint, [
         {
           code: "review-target-raced",
           category: "error",
@@ -333,6 +335,7 @@ const validateWorksheet = (
       `Criteria must appear exactly once in canonical order: ${expected.join(", ")}. Rewrite checks before submitReview.`,
     );
   const copies = new Set<string>();
+  const reusedEvidence = new Set<string>();
   for (const check of input.checks) {
     if (
       check.criterion !== "acceptance-scenarios" &&
@@ -361,10 +364,21 @@ const validateWorksheet = (
         `Criterion "${check.criterion}" duplicates another observation and evidence set. Record what this criterion independently establishes.`,
       );
     copies.add(copyKey);
-    for (const evidence of check.evidence)
+    for (const evidence of check.evidence) {
+      const evidenceKey = canonicalizeAutoMovieJson(evidence);
+      if (
+        (input.target.kind === "design" || input.target.kind === "source") &&
+        reusedEvidence.has(evidenceKey)
+      )
+        add(
+          "review-evidence-reused",
+          `Criterion "${check.criterion}" reuses the same evidence item as another criterion. Inspect and cite a distinct current selector for each design or source concern.`,
+        );
+      reusedEvidence.add(evidenceKey);
       diagnostics.push(
         ...validateEvidence(project, input.target, evidence, prepared, check),
       );
+    }
   }
   if (input.complete) {
     for (const check of input.checks)
@@ -760,28 +774,37 @@ const reviewFingerprint = (
   const graph = project.graph();
   if (target.kind === "design") {
     addJson("design", project.design(target.design));
-    if (target.design.kind === "model")
+    const addModelGraph = (
+      role: string,
+      modelId: string,
+      seen: Set<string> = new Set(),
+    ): void => {
+      if (seen.has(modelId)) return;
+      seen.add(modelId);
+      const model = graph.models.get(modelId) ?? null;
+      addJson(`${role}:${modelId}`, model);
+      if (model !== null)
+        for (const lod of model.lod)
+          if (lod.recipe !== modelId) addModelGraph(role, lod.recipe, seen);
+    };
+    if (target.design.kind === "model") {
       for (const lod of graph.models.get(target.design.id)?.lod ?? [])
         if (lod.recipe !== target.design.id)
-          addJson(
-            `dependency:model:${lod.recipe}`,
-            graph.models.get(lod.recipe) ?? null,
-          );
-    if (target.design.kind === "formation")
-      addJson(
-        "dependency:model",
-        graph.models.get(
-          graph.formations.get(target.design.id)?.modelRecipe ?? "",
-        ) ?? null,
-      );
-    if (target.design.kind === "shot") {
+          addModelGraph("dependency:model", lod.recipe);
+    } else if (target.design.kind === "formation") {
+      const formation = graph.formations.get(target.design.id);
+      addModelGraph("dependency:model", formation?.modelRecipe ?? "");
+    } else if (target.design.kind === "shot") {
       const shot = graph.shots.get(target.design.id);
+      addJson("dependency:production", graph.production);
+      addJson("dependency:world", graph.world);
       for (const participant of shot?.participants ?? [])
-        if (participant.kind === "formation")
-          addJson(
-            `dependency:formation:${participant.id}`,
-            graph.formations.get(participant.id) ?? null,
-          );
+        if (participant.kind === "formation") {
+          const formation = graph.formations.get(participant.id) ?? null;
+          addJson(`dependency:formation:${participant.id}`, formation);
+          if (formation !== null)
+            addModelGraph("dependency:model", formation.modelRecipe);
+        }
     }
     if (target.design.kind === "acceptance") {
       const acceptance = graph.acceptance.get(target.design.id);
@@ -1427,7 +1450,7 @@ const highRiskCriteria = (target: IAutoMovieReviewTarget): string[] => {
     case "shot":
       return ["motion-and-grounding", "camera-and-occlusion"];
     case "film":
-      return ["cross-shot-continuity", "deliverable-completeness"];
+      return ["cross-shot-continuity", "visual-scale-and-legibility"];
   }
 };
 
@@ -1443,6 +1466,7 @@ const reviewState = (
 const refused = (
   project: AutoMovieProductionProject,
   target: IAutoMovieReviewTarget,
+  currentFingerprint: AutoMovieContentDigest,
   diagnostics: IAutoMovieDiagnostic[],
 ): IAutoMovieSubmitReviewOutput => {
   const existing = project.review(target);
@@ -1450,7 +1474,12 @@ const refused = (
     accepted: false,
     target,
     fingerprint: null,
-    state: existing === null ? "missing" : reviewState(existing),
+    state:
+      existing === null
+        ? "missing"
+        : existing.fingerprint !== currentFingerprint
+          ? "stale"
+          : reviewState(existing),
     diagnostics: diagnostics.sort(compareDiagnostics),
   };
 };

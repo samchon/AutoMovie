@@ -141,7 +141,7 @@ export const test_mcp_contract_budgets = async (): Promise<void> => {
         GATEWAY_DESCRIPTION_SIGNALS[
           tool.name as keyof typeof GATEWAY_DESCRIPTION_SIGNALS
         ];
-      const description = tool.description!.toLowerCase();
+      const description = tool.description!.replace(/\s+/g, " ").toLowerCase();
       TestValidator.predicate(
         `tool description states responsibility and correction boundary: ${tool.name}`,
         signals !== undefined &&

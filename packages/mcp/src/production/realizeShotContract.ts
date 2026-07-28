@@ -90,11 +90,15 @@ export const realizeShotContract = (props: {
   const events = props.contract.events.map((event) => {
     const sample = samples.get(event.id);
     const time = sample?.time ?? event.window.from;
+    const subjectsResolved = event.subjects.every((subject) =>
+      eventSubjectResolves(props, subject),
+    );
     const predicates = event.predicates.map((predicate) =>
       evaluatePredicate(props, predicate, time),
     );
     const passed =
       sample !== undefined &&
+      subjectsResolved &&
       Number.isFinite(time) &&
       time >= event.window.from &&
       time <= event.window.to &&
@@ -102,7 +106,7 @@ export const realizeShotContract = (props: {
     if (passed === false)
       fail(
         `event "${event.id}"`,
-        `must have one finite source sample inside ${event.window.from}..${event.window.to}s whose typed predicates all pass`,
+        `must resolve every declared subject and have one finite source sample inside ${event.window.from}..${event.window.to}s whose typed predicates all pass`,
       );
     return { id: event.id, time, predicates, passed };
   });
@@ -196,6 +200,25 @@ export const realizeShotContract = (props: {
   };
 };
 
+const eventSubjectResolves = (
+  props: Parameters<typeof realizeShotContract>[0],
+  subject: string,
+): boolean => {
+  if (props.compiled.scene.nodes.some((candidate) => candidate.id === subject))
+    return true;
+  const slots = props.formationSlots[subject];
+  if (slots !== undefined)
+    return (
+      slots.length > 0 &&
+      slots.every((slot) =>
+        props.compiled.scene.nodes.some(
+          (candidate) => candidate.id === slot.node,
+        ),
+      )
+    );
+  return false;
+};
+
 const evaluatePredicate = (
   props: Parameters<typeof realizeShotContract>[0],
   predicate: IAutoMovieShotPredicate,
@@ -204,6 +227,19 @@ const evaluatePredicate = (
   let actual: number | null = null;
   try {
     if (predicate.kind === "joint-angle") {
+      const node = props.compiled.scene.nodes.find(
+        (candidate) => candidate.id === predicate.actor,
+      );
+      if (node === undefined)
+        throw new Error(`node "${predicate.actor}" is absent`);
+      const skeleton = modelOf(props.compiled, node.model).skeleton;
+      if (
+        skeleton === null ||
+        skeleton.bones.some((bone) => bone.bone === predicate.bone) === false
+      )
+        throw new Error(
+          `node "${predicate.actor}" has no bone "${predicate.bone}"`,
+        );
       const pose = actorPoseAt(props.compiled, predicate.actor, time);
       const joint = pose.joints.find((item) => item.bone === predicate.bone);
       actual = joint?.[predicate.axis] ?? 0;

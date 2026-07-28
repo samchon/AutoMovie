@@ -162,7 +162,7 @@ export const test_mcp_production_realization = (): void => {
             {
               kind: "joint-angle",
               actor: "sentinel",
-              bone: "rightFoot",
+              bone: "leftHand",
               axis: "twist",
               operator: "==",
               value: 0,
@@ -202,6 +202,7 @@ export const test_mcp_production_realization = (): void => {
       events: [
         {
           ...shotContract().events[0]!,
+          subjects: [formation.id],
           predicates: [
             ...shotContract().events[0]!.predicates,
             {
@@ -310,6 +311,37 @@ export const test_mcp_production_realization = (): void => {
         measured.realization.events[0]?.passed === true &&
         measured.realization.formations[0]?.count === formation.count &&
         measured.realization.formations[0]?.passed === true,
+    );
+    const ghostSubjectContract = structuredClone(contract);
+    ghostSubjectContract.events[0]!.subjects = ["ghost"];
+    const ghostSubjectOutcome = realizeShotContract({
+      contract: ghostSubjectContract,
+      production: productionDesign(),
+      world: worldDesign(),
+      formations,
+      formationSlots,
+      compiled: materialized,
+      collisions: [],
+    });
+    TestValidator.predicate(
+      "an event cannot pass while a declared subject is absent",
+      ghostSubjectOutcome.realization.events[0]?.passed === false &&
+        ghostSubjectOutcome.diagnostics.some((item) =>
+          item.message.includes("resolve every declared subject"),
+        ),
+    );
+    const emptyFormationSubjectOutcome = realizeShotContract({
+      contract,
+      production: productionDesign(),
+      world: worldDesign(),
+      formations,
+      formationSlots: { [formation.id]: [] },
+      compiled: materialized,
+      collisions: [],
+    });
+    TestValidator.predicate(
+      "an empty formation cannot satisfy an event subject",
+      emptyFormationSubjectOutcome.realization.events[0]?.passed === false,
     );
     const heroModelTampered = structuredClone(materialized);
     heroModelTampered.scene.nodes.find((node) => node.id === "captain")!.model =
@@ -454,6 +486,15 @@ export const test_mcp_production_realization = (): void => {
               tolerance: 0,
             },
             {
+              kind: "joint-angle",
+              actor: "absent-actor",
+              bone: "leftUpperArm",
+              axis: "abduction",
+              operator: "==",
+              value: 0,
+              tolerance: 0,
+            },
+            {
               kind: "position",
               subject: { kind: "node", id: "missing-model" },
               axis: "x",
@@ -466,6 +507,15 @@ export const test_mcp_production_realization = (): void => {
               actor: "prop",
               bone: "leftUpperArm",
               axis: "abduction",
+              operator: "==",
+              value: 0,
+              tolerance: 0,
+            },
+            {
+              kind: "joint-angle",
+              actor: "sentinel",
+              bone: "rightFoot",
+              axis: "twist",
               operator: "==",
               value: 0,
               tolerance: 0,

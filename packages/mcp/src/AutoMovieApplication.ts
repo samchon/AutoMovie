@@ -32,8 +32,8 @@ import { compareCodeUnits } from "./production/contentIdentity";
  * records, deterministic compilation, geometry and frame oracles, and
  * evidence-gated review. Begin with
  * `getGuideDocument({name:"AUTOMOVIE_OVERALL"})`, then `openProject`. The
- * server never runs an internal LLM and never asks the model to copy generated
- * geometry, ownership manifests or review fingerprints by hand.
+ * server never runs an internal LLM and never asks the model to invent or
+ * recompute generated geometry, ownership manifests or review fingerprints.
  *
  * Use ordinary code for narrative and shot construction. Call MCP where the
  * answer must be derived from current repository bytes, engine constraints or
@@ -138,7 +138,7 @@ export class AutoMovieApplication {
       .filter((file) => owned.has(file) === false);
     const compilation = services.compileStatus();
     const diagnostics = compilation.diagnostics;
-    const reviews = services.review.queue();
+    const reviews = services.review.queue(compilation);
     const renders = listNamedFiles(
       services.project.renderRoot(),
       "manifest.json",
@@ -183,9 +183,9 @@ export class AutoMovieApplication {
 
   /**
    * Validate and atomically replace the singleton production design: film
-   * identity, global format, source roots, required deliverables and review
-   * policy. Read `PRODUCTION_DESIGN` first and send the complete object, not a
-   * patch. This MCP mutation is retained because these invariants define
+   * identity, target runtime, frame format, art direction and required
+   * deliverables. Read `PRODUCTION_DESIGN` first and send the complete object,
+   * not a patch. This MCP mutation is retained because these invariants define
    * ownership and every downstream fingerprint; accepting an unvalidated file
    * edit would let compilation and review disagree about the production being
    * made. Rejection leaves tracked state unchanged and returns diagnostics and
@@ -207,8 +207,8 @@ export class AutoMovieApplication {
    * the runtime model and owns its generated identity. This narrow MCP call
    * keeps numeric bounds, references, invalidation and correction local to one
    * model instead of forcing a giant production rewrite. Send the complete
-   * recipe for its id. Rejection changes nothing, and this tool never imports
-   * arbitrary meshes or writes compiler-owned model artifacts.
+   * recipe for its id. This tool never imports arbitrary meshes. Rejection
+   * changes nothing and writes no compiler-owned model artifact.
    */
   public setModelRecipe(
     props: IAutoMovieSetModelRecipe.IProps,

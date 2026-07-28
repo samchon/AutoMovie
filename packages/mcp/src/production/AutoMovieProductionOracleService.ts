@@ -46,7 +46,6 @@ import {
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 import { materializeFormationSlots } from "./materializeProduction";
-import { AUTOMOVIE_MAX_FRAME_PIXELS } from "./validateProductionDesign";
 
 /** Read-only current compiler status used to refuse stale oracle answers. */
 export type AutoMovieCompileStatusProvider =
@@ -396,14 +395,13 @@ export class AutoMovieProductionOracleService {
       height <= 0 ||
       width > production.frameFormat.width ||
       height > production.frameFormat.height ||
-      width * height > AUTOMOVIE_MAX_FRAME_PIXELS ||
       Number.isFinite(input.time) === false ||
       input.time < 0
     )
       return previewFailure(
         generated.inputFingerprint,
         "preview-input-invalid",
-        `Preview time must be non-negative; dimensions must be positive integers no larger than the ${production.frameFormat.width}x${production.frameFormat.height} production frame and ${AUTOMOVIE_MAX_FRAME_PIXELS} total pixels. Correct previewFrame input.`,
+        `Preview time must be non-negative; dimensions must be positive integers no larger than the validated ${production.frameFormat.width}x${production.frameFormat.height} production frame. Correct previewFrame input.`,
       );
     const duration = graph.shots.get(input.target.id)?.durationSeconds;
     const targetMaterialized = generated.files.some(

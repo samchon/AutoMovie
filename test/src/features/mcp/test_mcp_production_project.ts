@@ -65,10 +65,8 @@ export const test_mcp_production_project = (): void => {
         project.design({ kind: "shot", id: "opening" }) !== null &&
         project.design({ kind: "acceptance", id: "opening-beauty" }) !== null,
     );
-    const stagedShot = {
-      ...shotContract(),
-      reviewFrames: [],
-    };
+    const stagedShot = shotContract();
+    stagedShot.reviewFrames[0]!.id = "replacement-apex";
     const stagedDependencyBreak = project.setShotContract(stagedShot);
     TestValidator.predicate(
       "one-artifact setters accept an orderable dependency migration but expose its new downstream blockers",

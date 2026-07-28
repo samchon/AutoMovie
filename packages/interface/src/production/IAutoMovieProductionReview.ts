@@ -292,8 +292,11 @@ export interface IAutoMovieSubmitReviewOutput {
   target: IAutoMovieReviewTarget;
   /** Stored current fingerprint, or null when refused. */
   fingerprint: AutoMovieContentDigest | null;
-  /** Resulting review queue state. */
-  state: "missing" | "incomplete" | "revise" | "complete";
+  /**
+   * Resulting review queue state. A refused worksheet reports `stale` when an
+   * older stored review no longer matches the current target.
+   */
+  state: "missing" | "stale" | "incomplete" | "revise" | "complete";
   /** Exact refusal diagnostics and corrections, empty after accepted storage. */
   diagnostics: IAutoMovieDiagnostic[];
 }

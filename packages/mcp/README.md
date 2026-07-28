@@ -10,11 +10,13 @@ deterministic result and returns it, including the placement / ROM violations
 that make the **engine, not the model, the arbiter of physical truth** ("engine
 enforces, model creates").
 
-Every tool's JSON schema is derived at compile time from
-[`AutoMovieGatewayApplication`](./src/AutoMovieGatewayApplication.ts) and the
-operation signatures in
-[`AutoMovieApplication`](./src/AutoMovieApplication.ts) via
+Every tool's JSON schema is derived at compile time via
 `typia.llm.controller` (+ `@typia/mcp`), and calls are validated in and out.
+The default compact server derives its execute union from
+[`AutoMovieLegacyApplication`](./src/AutoMovieLegacyApplication.ts) through
+[`AutoMovieGatewayApplication`](./src/AutoMovieGatewayApplication.ts); the
+coding-agent production server derives its 15 direct tools from canonical
+[`AutoMovieApplication`](./src/AutoMovieApplication.ts).
 
 The MCP initialize handshake advertises `automovie` with the installed
 `@automovie/mcp` package version. The server reads that version from its sibling

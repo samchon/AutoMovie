@@ -88,8 +88,10 @@ import { ValidationService } from "./services/ValidationService";
  * `nextSteps` steer, and walk the ladder:
  * `stage`/`block`/`perform`/`cut`/`forge` compute, commit tools persist slices
  * (stale downstream erased), query/validate tools read and check, render tools
- * plan frames, chunks, captions, and previews. Every failure returns
- * field-located violations for the correction round, not a thrown error.
+ * plan frames, chunks, captions, and previews. Engine validation verdicts
+ * return field-located violations for the correction round; activation,
+ * prerequisite and programmer-input guards may instead throw an actionable MCP
+ * error.
  *
  * `perform` keeps the MCP contract JSON-only by accepting per-actor motion
  * contexts and assembling the engine's default synthesizer inside the server.

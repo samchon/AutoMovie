@@ -1047,6 +1047,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const edgeProduction = {
       ...productionDesign(),
       targetRuntimeSeconds: edgeAudioProbe.runtimeSeconds,
+      frameFormat: {
+        ...productionDesign().frameFormat,
+        fps: edgeAudioProbe.sampleRate,
+      },
     };
     edgeProduction.deliverables = [
       { id: "feature-runtime", kind: "feature", required: true },

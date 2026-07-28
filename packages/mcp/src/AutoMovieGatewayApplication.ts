@@ -101,13 +101,13 @@ export class AutoMovieGatewayApplication {
   }
 
   /**
-   * Ask the active resident project for its current ladder status and the
-   * ordered concrete calls that advance the film. This is the authoritative
-   * recovery path after a prerequisite refusal: follow its missing rungs in
-   * order instead of guessing state from prior chat. The call is read-only and
-   * does not create, repair, validate or commit the returned artifacts. Route
-   * every returned operation name other than the three direct entry points
-   * through `execute`, preserving the exact input branch it names.
+   * Ask the active resident project for its current ladder status and ordered
+   * concrete calls. This is the authoritative recovery path after a
+   * prerequisite refusal: follow its missing rungs in order instead of guessing
+   * state from prior chat. The call is read-only and does not create, repair,
+   * validate or commit the returned artifacts. Route every returned operation
+   * name other than the three direct entry points through `execute`, preserving
+   * the exact input branch it names.
    *
    * @returns Missing prerequisites and next actions.
    */
@@ -122,10 +122,10 @@ export class AutoMovieGatewayApplication {
    * beside its structured output so a client cannot confuse two union branches.
    * Use it for the operation explicitly chosen from the guide and current
    * ladder, inspect violations instead of retrying unchanged, and keep
-   * code-native dense motion in ordinary code or direct engine linking. This
-   * gateway changes schema advertisement, not engine behavior: it does not skip
-   * validation, prerequisites, resident writes or downstream invalidation. Use
-   * `getGuideDocument`, `openProject`, and `nextSteps` directly.
+   * code-native dense motion in ordinary code or direct engine linking. The
+   * gateway does not skip validation, prerequisites, resident writes or
+   * downstream invalidation; it changes schema advertisement, not engine
+   * behavior. Use `getGuideDocument`, `openProject`, and `nextSteps` directly.
    *
    * @param props Discriminated operation and its matching input.
    * @returns The operation tag and that operation's structured output.

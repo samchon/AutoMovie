@@ -79,7 +79,7 @@ export const run = (argv: readonly string[]): number => {
         written
           .map((file) => `  ${path.relative(targetDir, file) || "."}`)
           .join("\n") +
-        `\n\nNext:\n  cd ${dir}\n  npm install\n  npm run compile\n  npm run preview -- 2 opening\n\n` +
+        `\n\nNext:\n  cd ${dir}\n  pnpm install\n  pnpm run compile\n  pnpm run preview -- 2 opening\n\n` +
         `README.md explains source ownership, MCP review gates, and the local viewer.\n`,
     );
     return 0;

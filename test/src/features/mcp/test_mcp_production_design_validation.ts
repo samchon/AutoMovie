@@ -454,6 +454,32 @@ export const test_mcp_production_design_validation = (): void => {
       shots: new Map([[offClockShot.id, offClockShot]]),
     }).some((diagnostic) => diagnostic.code === "design-frame-clock-invalid"),
   );
+  const offClockProduction = {
+    ...productionDesign(),
+    targetRuntimeSeconds: 6.01,
+  };
+  const offClockDuration = shotContract();
+  offClockDuration.durationSeconds = 6.01;
+  TestValidator.predicate(
+    "production and shot runtimes must be exactly renderable on the frame clock",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      production: offClockProduction,
+    }).some(
+      (diagnostic) =>
+        diagnostic.code === "design-frame-clock-invalid" &&
+        diagnostic.target === "production",
+    ) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        shots: new Map([[offClockDuration.id, offClockDuration]]),
+        acceptance: new Map(),
+      }).some(
+        (diagnostic) =>
+          diagnostic.code === "design-frame-clock-invalid" &&
+          diagnostic.target === "shot:opening",
+      ),
+  );
   const longClockShot = shotContract();
   longClockShot.durationSeconds = 50_000;
   longClockShot.reviewFrames[0]!.time = 1_000_000 / 24;
@@ -540,6 +566,7 @@ export const test_mcp_production_design_validation = (): void => {
       width: 1,
       height: 1,
       radius: 1,
+      rigged: true,
     },
     palette: {},
     lod: [],
@@ -614,6 +641,14 @@ export const test_mcp_production_design_validation = (): void => {
       "design-attachment-unsupported",
       "design-collection-empty",
     ].every((code) => modelContractCodes.has(code)),
+  );
+  TestValidator.predicate(
+    "primitive props cannot silently claim an unimplemented rig",
+    modelContractDiagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "model-parameter-unsupported" &&
+        diagnostic.message.includes('"rigged"'),
+    ),
   );
   const validFilmFrame: IAutoMovieAcceptanceScenario = {
     ...acceptanceScenarios()[0]!,

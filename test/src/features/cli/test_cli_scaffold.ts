@@ -161,6 +161,9 @@ export const test_cli_scaffold = (): void => {
       files["viewer/index.html"]!.includes('rel="icon" href="data:,"') &&
       files["viewer/src/main.ts"]!.includes("mountViewer") &&
       files["viewer/src/main.ts"]!.includes("preserveDrawingBuffer: true") &&
+      files["viewer/src/main.ts"]!.includes(
+        "performance === undefined ? node.motion : performance.motion",
+      ) &&
       files["scripts/capture.ts"]!.includes(
         'page.locator("#status").evaluate',
       ) &&

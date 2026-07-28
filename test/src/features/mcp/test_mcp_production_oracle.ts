@@ -971,31 +971,6 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         (output) => output.diagnostics[0]?.code === "preview-input-invalid",
       ),
     );
-    const oversizedProduction = productionDesign({
-      frameFormat: {
-        width: 5_000,
-        height: 5_000,
-        fps: 24,
-        colorSpace: "srgb",
-      },
-    });
-    TestValidator.predicate(
-      "large production format is valid for the preview pixel-cap test",
-      project.setProductionDesign(oversizedProduction).accepted &&
-        compiler.compile({ scope: "source" }).success,
-    );
-    const oversizedPreview = await inputValidationOracle.preview({
-      target: { kind: "shot", id: "opening" },
-      time: 0,
-      width: 5_000,
-      height: 5_000,
-    });
-    project.setProductionDesign(productionDesign());
-    compiler.compile({ scope: "source" });
-    TestValidator.predicate(
-      "preview refuses a production-sized allocation above the pixel cap",
-      oversizedPreview.diagnostics[0]?.code === "preview-input-invalid",
-    );
     const absentTargetOracle = new AutoMovieProductionOracleService(
       project,
       async () => ({ bytes: png(2, 2), width: 2, height: 2 }),

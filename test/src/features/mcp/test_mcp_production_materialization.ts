@@ -266,7 +266,7 @@ export const test_mcp_production_materialization = (): void => {
       materialized.value.scene.nodes.find((node) => node.id === "captain")
         ?.transform.translation.x === formationSlots.line![0]!.position.x &&
         materialized.value.scene.nodes.find((node) => node.id === "captain")
-          ?.model === productionRuntimeModelId("stick") &&
+          ?.model === productionRuntimeModelId(formation.modelRecipe) &&
         materialized.value.models.every(
           (model) => model.id !== "source-only-model",
         ) &&

@@ -2,7 +2,9 @@
 
 `setFormationDesign` represents a unit, not thousands of actor nodes.
 
-The identity of an ordinary member is `formation id + deterministic slot index`. Count, compact layout, spacing, anchor, facing, and seed derive every slot. `line` and `column` capacity must cover count; wedge depth and arc/scatter radius must be positive. Capabilities are the only formation actions source may assume.
+The identity of an ordinary member is `formation id + deterministic slot index`. Count, compact layout, spacing, anchor, facing, and seed derive every slot. `line` and `column` capacity must cover count; wedge depth and arc/scatter radius must be positive.
+
+`capabilities` is a small review-facing vocabulary for intended unit behavior. It is not a compiler permission system: the foundation compiler neither infers an action from a label nor proves that source avoided an undeclared action. Source authors choreography in code; typed shot predicates, compiled event realization, and frame review establish what actually happened.
 
 Use `heroOverrides` sparingly when a slot needs a persistent named actor, close camera, unique prop, or individual performance. A hero changes only the node identity: the compiler still enforces the formation's model recipe and base transform before source choreography runs. Do not promote every soldier.
 

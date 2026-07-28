@@ -546,7 +546,8 @@ export const test_mcp_production_application = async (): Promise<void> => {
           PRODUCTION_TOOL_DESCRIPTION_SIGNALS[
             tool.name as keyof typeof PRODUCTION_TOOL_DESCRIPTION_SIGNALS
           ];
-        const description = tool.description?.toLowerCase() ?? "";
+        const description =
+          tool.description?.replace(/\s+/g, " ").toLowerCase() ?? "";
         TestValidator.predicate(
           `tool description carries responsibility and correction boundaries: ${tool.name}`,
           signals !== undefined &&
