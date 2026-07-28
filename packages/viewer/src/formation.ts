@@ -44,6 +44,8 @@ export interface IAutoMovieFormationViewerObject {
     camera: THREE.PerspectiveCamera,
     viewportHeight: number,
     time?: number,
+    /** Source node/object-motion TRS captured before formation writes. */
+    heroSources?: ReadonlyMap<string, IAutoMovieTransform>,
   ): void;
 }
 
@@ -53,12 +55,6 @@ interface IChunkObject {
   slots: IAutoMovieFormationSlot[];
   tiers: Map<IAutoMovieCompiledFormationLod["tier"], THREE.InstancedMesh>;
   selected: IAutoMovieCompiledFormationLod["tier"] | null;
-}
-
-interface IHeroCompositionState {
-  source: IAutoMovieTransform;
-  outputPosition: THREE.Vector3;
-  outputRotation: THREE.Quaternion;
 }
 
 /**
@@ -150,7 +146,11 @@ export const buildInstancedFormation = (input: {
     };
   });
   let spacing = { lateral: 1, depth: 1 };
-  const heroStates = new Map<string, IHeroCompositionState>();
+  const initialHeroSources = new Map(
+    [...(input.heroObjects ?? [])].map(
+      ([actor, object]) => [actor, objectTransform(object)] as const,
+    ),
+  );
   const stats: IAutoMovieFormationViewerStats = {
     visible: { hero: 0, near: 0, far: 0 },
     culled: 0,
@@ -159,7 +159,7 @@ export const buildInstancedFormation = (input: {
   return {
     object: root,
     stats,
-    update(camera, viewportHeight, time = 0): void {
+    update(camera, viewportHeight, time = 0, heroSources): void {
       stats.visible = { hero: 0, near: 0, far: 0 };
       stats.culled = 0;
       const sampled = sampleFormationMotion(
@@ -211,28 +211,11 @@ export const buildInstancedFormation = (input: {
       for (const hero of input.formation.heroes) {
         const object = input.heroObjects?.get(hero.actor);
         if (object === undefined) continue;
-        let composition = heroStates.get(hero.actor);
-        if (
-          composition === undefined ||
-          object.position.equals(composition.outputPosition) === false ||
-          Math.abs(object.quaternion.dot(composition.outputRotation)) <
-            1 - 1e-12
-        ) {
-          composition = {
-            source: {
-              translation: point(object.position),
-              rotation: quaternion(object.quaternion),
-              scale: point(object.scale),
-            },
-            outputPosition: new THREE.Vector3(),
-            outputRotation: new THREE.Quaternion(),
-          };
-          heroStates.set(hero.actor, composition);
-        }
-        composition.source.scale = point(object.scale);
+        const source =
+          heroSources?.get(hero.actor) ?? initialHeroSources.get(hero.actor)!;
         const transformed = composeFormationHeroTransform(
           hero.transform,
-          composition.source,
+          source,
           input.formation.anchor,
           sampled,
           input.formation.facingDeg,
@@ -244,8 +227,11 @@ export const buildInstancedFormation = (input: {
           transformed.rotation.z,
           transformed.rotation.w,
         );
-        composition.outputPosition.copy(object.position);
-        composition.outputRotation.copy(object.quaternion);
+        object.scale.set(
+          transformed.scale.x,
+          transformed.scale.y,
+          transformed.scale.z,
+        );
         object.updateMatrixWorld(true);
         const worldPosition = new THREE.Vector3();
         (input.heroVisualObjects?.get(hero.actor) ?? object).getWorldPosition(
@@ -438,6 +424,12 @@ const quaternion = (value: { x: number; y: number; z: number; w: number }) => ({
   y: value.y,
   z: value.z,
   w: value.w,
+});
+
+const objectTransform = (object: THREE.Object3D): IAutoMovieTransform => ({
+  translation: point(object.position),
+  rotation: quaternion(object.quaternion),
+  scale: point(object.scale),
 });
 
 const seededValue = (...values: number[]): number => {

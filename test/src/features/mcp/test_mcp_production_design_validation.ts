@@ -21,7 +21,33 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
-/** Every bounded design family emits actionable graph diagnostics. */
+/**
+ * Every bounded production-design family emits actionable graph diagnostics
+ * while a complete starter-shaped graph remains valid.
+ *
+ * Scenarios:
+ *
+ * 1. Production raster, runtime, palette, deliverable, and aggregate collection
+ *    budgets accept their exact limits and reject empty, duplicate, off-clock,
+ *    non-finite, and oversized inputs.
+ * 2. Model recipes validate identity, archetype parameters, palette, LOD order,
+ *    runtime references, capabilities, attachments, and cumulative payload
+ *    limits.
+ * 3. World landmarks, surfaces, routes, effect recipes, and effect zones reject
+ *    malformed geometry, missing references, duplicate identities, and unsafe
+ *    numeric ranges.
+ * 4. Formations validate bounded layouts, slots, heroes, LOD memory, source
+ *    identity, and exact per-production payload constraints.
+ * 5. Shot participants, source modules, durations, states, events, camera
+ *    subjects, and review frames reject missing, duplicate, off-clock, or
+ *    unmeasurable contracts.
+ * 6. One shot rejects a hero actor owned by two participating formations, while
+ *    the same actor may belong to different formations in different shots.
+ * 7. Acceptance frame/event/metric criteria resolve exact targets and reject
+ *    missing evidence addresses, invalid operators, and target mismatches.
+ * 8. Portable case-folding and source-path rules catch cross-artifact identity
+ *    collisions without rejecting deliberate shared canonical source modules.
+ */
 export const test_mcp_production_design_validation = (): void => {
   const valid: IAutoMovieProductionDesignGraph = {
     production: productionDesign(),
@@ -181,6 +207,77 @@ export const test_mcp_production_design_validation = (): void => {
         diagnostic.code === "design-collection-empty" &&
         diagnostic.target === "shot:opening",
     ),
+  );
+  const firstHeroFormation = {
+    ...formationDesign(),
+    id: "first-heroes",
+    heroOverrides: [{ slot: 0, actor: "shared-hero" }],
+  };
+  const secondHeroFormation = {
+    ...formationDesign(),
+    id: "second-heroes",
+    heroOverrides: [{ slot: 1, actor: "shared-hero" }],
+  };
+  const sharedHeroShot = {
+    ...shotContract(),
+    participants: [
+      { kind: "formation" as const, id: firstHeroFormation.id },
+      { kind: "formation" as const, id: secondHeroFormation.id },
+    ],
+  };
+  const crossFormationMessage = "belongs to participating formations";
+  TestValidator.predicate(
+    "one shot cannot assign the same hero actor to two formations",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      formations: new Map([
+        [firstHeroFormation.id, firstHeroFormation],
+        [secondHeroFormation.id, secondHeroFormation],
+      ]),
+      shots: new Map([[sharedHeroShot.id, sharedHeroShot]]),
+      acceptance: new Map(),
+    }).some(
+      (diagnostic) =>
+        diagnostic.code === "design-duplicate-id" &&
+        diagnostic.message.includes(crossFormationMessage),
+    ) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        formations: new Map([
+          [firstHeroFormation.id, firstHeroFormation],
+          [secondHeroFormation.id, secondHeroFormation],
+        ]),
+        shots: new Map([
+          [
+            "first-shot",
+            {
+              ...shotContract(),
+              id: "first-shot",
+              participants: [
+                { kind: "formation" as const, id: firstHeroFormation.id },
+              ],
+            },
+          ],
+          [
+            "second-shot",
+            {
+              ...shotContract(),
+              id: "second-shot",
+              source: {
+                ...shotContract().source,
+                module: "src/shots/second.ts",
+              },
+              participants: [
+                { kind: "formation" as const, id: secondHeroFormation.id },
+              ],
+            },
+          ],
+        ]),
+        acceptance: new Map(),
+      }).every(
+        (diagnostic) =>
+          diagnostic.message.includes(crossFormationMessage) === false,
+      ),
   );
   const maximumRaster = {
     ...productionDesign(),

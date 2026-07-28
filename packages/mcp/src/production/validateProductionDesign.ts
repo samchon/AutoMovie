@@ -947,6 +947,24 @@ export const validateAutoMovieProductionGraph = (
           `setFormationDesign for "${participant.id}" or remove it from ${id}.participants`,
         );
     }
+    const formationHeroOwners = new Map<string, string>();
+    for (const participant of shot.participants) {
+      if (participant.kind !== "formation") continue;
+      const formation = graph.formations.get(participant.id);
+      if (formation === undefined) continue;
+      for (const hero of formation.heroOverrides) {
+        const owner = formationHeroOwners.get(hero.actor);
+        if (owner !== undefined && owner !== formation.id)
+          invalid(
+            diagnostics,
+            "design-duplicate-id",
+            target,
+            file,
+            `Hero actor "${hero.actor}" belongs to participating formations "${owner}" and "${formation.id}" in the same shot. Keep one formation owner per hero actor in ${id}.participants.`,
+          );
+        else formationHeroOwners.set(hero.actor, formation.id);
+      }
+    }
     validateNamedStates(
       diagnostics,
       graph,

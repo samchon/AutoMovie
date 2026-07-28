@@ -172,8 +172,39 @@ const seek = (time: number, pass: AutoMovieGuidePass): void => {
     time,
     (light) => scene.lights.get(light),
   );
+  const heroSources = new Map(
+    [...nodeObjects].map(
+      ([id, object]) =>
+        [
+          id,
+          {
+            translation: {
+              x: object.position.x,
+              y: object.position.y,
+              z: object.position.z,
+            },
+            rotation: {
+              x: object.quaternion.x,
+              y: object.quaternion.y,
+              z: object.quaternion.z,
+              w: object.quaternion.w,
+            },
+            scale: {
+              x: object.scale.x,
+              y: object.scale.y,
+              z: object.scale.z,
+            },
+          },
+        ] as const,
+    ),
+  );
   for (const formation of formationObjects)
-    formation.update(camera, Math.max(1, renderer.domElement.height), time);
+    formation.update(
+      camera,
+      Math.max(1, renderer.domElement.height),
+      time,
+      heroSources,
+    );
   for (const effect of effectObjects) effect.update(camera, time);
   formationObjects.forEach(({ stats }, index) => {
     const runtime = compiled.formations[index]!;

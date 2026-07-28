@@ -191,8 +191,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         formationMeasurement.values.designCount === 6 &&
         formationMeasurement.values.materializedCount === 6 &&
         formationMeasurement.values.participatingShots === 1 &&
-        Number(formationMeasurement.values.heroVisible) <=
-          Number(formationMeasurement.values.heroCount) &&
+        formationMeasurement.values.heroVisible === 1 &&
         oracle.query({
           request: {
             query: "formation",
@@ -685,7 +684,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     for (const keyframe of rooted.motions[0]!.keyframes)
       keyframe.pose.root = {
         ...rooted.scene.nodes[0]!.transform,
-        translation: { x: 1, y: 0, z: 0 },
+        translation: { x: 10_000, y: 0, z: 0 },
       };
     writeCorrupted(rooted);
     const rootedReach = oracle.query({ request: reachRequest });
@@ -745,6 +744,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         rootedReach.result?.kind === "measurement" &&
         rootedActorDistance.result?.kind === "distance" &&
         rootedFormation.result?.kind === "measurement" &&
+        rootedFormation.result.values.heroVisible === 0 &&
         missingHeroFormation.result?.kind === "measurement" &&
         missingHeroFormation.result.values.heroVisible === 0 &&
         heldActorDistance.result?.kind === "distance",

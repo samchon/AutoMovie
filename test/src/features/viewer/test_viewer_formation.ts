@@ -270,12 +270,43 @@ export const test_viewer_formation = (): void => {
       ),
     );
   heroVisualObjects.get("marshal")!.position.x = 100;
-  built.update(camera, 1_080, 3);
+  const sourceTransforms = new Map(
+    [...heroObjects].map(
+      ([actor, object]) =>
+        [
+          actor,
+          {
+            translation: point(object.position),
+            rotation: rotation(object.quaternion),
+            scale: point(object.scale),
+          },
+        ] as const,
+    ),
+  );
+  built.update(camera, 1_080, 3, sourceTransforms);
   const firstHeroUpdate = {
     position: heroObjects.get("marshal")!.position.clone(),
     rotation: heroObjects.get("marshal")!.quaternion.clone(),
   };
-  built.update(camera, 1_080, 3);
+  built.update(camera, 1_080, 3, sourceTransforms);
+  const sameSourceStable =
+    heroObjects.get("marshal")!.position.equals(firstHeroUpdate.position) &&
+    Math.abs(
+      heroObjects.get("marshal")!.quaternion.dot(firstHeroUpdate.rotation),
+    ) >
+      1 - 1e-12;
+  const collidingSources = new Map(sourceTransforms);
+  collidingSources.set("marshal", {
+    translation: point(firstHeroUpdate.position),
+    rotation: rotation(firstHeroUpdate.rotation),
+    scale: point(heroObjects.get("marshal")!.scale),
+  });
+  built.update(camera, 1_080, 3, collidingSources);
+  const collidingSourceUpdate = {
+    position: heroObjects.get("marshal")!.position.clone(),
+    rotation: heroObjects.get("marshal")!.quaternion.clone(),
+  };
+  built.update(camera, 1_080, 3, collidingSources);
   const firstMatrix = new THREE.Matrix4();
   meshes[0]!.getMatrixAt(0, firstMatrix);
   const firstTranslation = new THREE.Vector3().setFromMatrixPosition(
@@ -383,18 +414,31 @@ export const test_viewer_formation = (): void => {
       sampledMotion.facingOffsetDeg === 10 &&
       sampledMotion.spacingScale.lateral === 1.1 &&
       built.object.position.z === formation.anchor.z - 3 &&
-      heroObjects.get("marshal")!.position.z === formation.anchor.z - 1 &&
+      firstHeroUpdate.position.z === formation.anchor.z - 1 &&
+      Math.abs(
+        THREE.MathUtils.radToDeg(
+          new THREE.Euler().setFromQuaternion(firstHeroUpdate.rotation, "YXZ")
+            .y,
+        ) - 25,
+      ) < 1e-9 &&
+      sameSourceStable &&
+      heroObjects.get("marshal")!.position.z ===
+        firstHeroUpdate.position.z - 3 &&
       Math.abs(
         THREE.MathUtils.radToDeg(
           new THREE.Euler().setFromQuaternion(
             heroObjects.get("marshal")!.quaternion,
             "YXZ",
           ).y,
-        ) - 25,
+        ) - 35,
       ) < 1e-9 &&
-      heroObjects.get("marshal")!.position.equals(firstHeroUpdate.position) &&
+      heroObjects
+        .get("marshal")!
+        .position.equals(collidingSourceUpdate.position) &&
       Math.abs(
-        heroObjects.get("marshal")!.quaternion.dot(firstHeroUpdate.rotation),
+        heroObjects
+          .get("marshal")!
+          .quaternion.dot(collidingSourceUpdate.rotation),
       ) >
         1 - 1e-12 &&
       built.stats.visible.hero > 0 &&
@@ -454,3 +498,16 @@ export const test_viewer_formation = (): void => {
       .length === 0,
   );
 };
+
+const point = (value: { x: number; y: number; z: number }) => ({
+  x: value.x,
+  y: value.y,
+  z: value.z,
+});
+
+const rotation = (value: { x: number; y: number; z: number; w: number }) => ({
+  x: value.x,
+  y: value.y,
+  z: value.z,
+  w: value.w,
+});
