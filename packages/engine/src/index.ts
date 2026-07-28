@@ -10,5 +10,6 @@ export * from "./physics";
 export * from "./resolve";
 export * from "./geometry";
 export * from "./formation";
+export * from "./effect";
 export * from "./space";
 export * from "./validation";

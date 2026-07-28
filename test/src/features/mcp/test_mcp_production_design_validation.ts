@@ -81,6 +81,30 @@ export const test_mcp_production_design_validation = (): void => {
       actor: `hero-${slot}`,
     })),
   };
+  const unboundedFormation = {
+    ...formationDesign(),
+    id: "unbounded",
+    anchor: { x: 1_000_000_001, y: 0, z: 0 },
+    facingDeg: 360_001,
+    layout: {
+      kind: "line" as const,
+      ranks: 2,
+      files: 3,
+      spacing: { lateral: 10_001, depth: 1 },
+    },
+  };
+  const identityHeavyFormation = {
+    ...formationDesign(),
+    id: "identity-heavy",
+    count: 1,
+    layout: {
+      kind: "line" as const,
+      ranks: 1,
+      files: 1,
+      spacing: { lateral: 1, depth: 1 },
+    },
+    heroOverrides: [{ slot: 0, actor: "hero".repeat(40_000) }],
+  };
   TestValidator.predicate(
     "explicit formation nodes stay inside one honest per-production bound",
     validateAutoMovieProductionGraph({
@@ -117,6 +141,26 @@ export const test_mcp_production_design_validation = (): void => {
         ...valid,
         formations: new Map([
           [runtimeHeavyFormation.id, runtimeHeavyFormation],
+        ]),
+        shots: new Map(),
+        acceptance: new Map(),
+      }).some((diagnostic) =>
+        diagnostic.message.includes("generated payload budget"),
+      ) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        formations: new Map([[unboundedFormation.id, unboundedFormation]]),
+        shots: new Map(),
+        acceptance: new Map(),
+      }).filter(
+        (diagnostic) =>
+          diagnostic.target === `formation:${unboundedFormation.id}` &&
+          diagnostic.code === "design-range-invalid",
+      ).length >= 3 &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        formations: new Map([
+          [identityHeavyFormation.id, identityHeavyFormation],
         ]),
         shots: new Map(),
         acceptance: new Map(),
@@ -279,10 +323,40 @@ export const test_mcp_production_design_validation = (): void => {
         allowedFormationWidth: 1,
       },
     ],
+    effectRecipes: [
+      {
+        ...worldDesign().effectRecipes[0]!,
+        id: "",
+        seed: -1,
+        emission: { rate: Number.NaN, burst: -1, duration: 0 },
+        particle: {
+          lifetime: { min: 31, max: 1 },
+          size: { min: 21, max: 0 },
+          color: "invalid",
+          opacity: { min: 2, max: -1 },
+        },
+        motion: {
+          wind: { x: Number.NaN, y: Number.NaN, z: Number.NaN },
+          rise: 51,
+          turbulence: -1,
+        },
+        budget: { maxParticles: 0, lodDistance: 0 },
+      },
+      {
+        ...worldDesign().effectRecipes[0]!,
+        id: "",
+        emission: { rate: 100, burst: 100, duration: 1 },
+        particle: {
+          ...worldDesign().effectRecipes[0]!.particle,
+          lifetime: { min: 10, max: 10 },
+        },
+        budget: { maxParticles: 1, lodDistance: 10 },
+      },
+    ],
     effectZones: [
       {
         id: "",
-        kind: "fog" as const,
+        recipe: "absent",
         bounds: {
           min: { x: Number.NaN, y: Number.NaN, z: Number.NaN },
           max: { x: 0, y: 0, z: 0 },
@@ -291,7 +365,7 @@ export const test_mcp_production_design_validation = (): void => {
       },
       {
         id: "",
-        kind: "dust" as const,
+        recipe: "absent",
         bounds: {
           min: { x: 1, y: 1, z: 1 },
           max: { x: 0, y: 0, z: 0 },
@@ -509,6 +583,54 @@ export const test_mcp_production_design_validation = (): void => {
         "model-parameter-unsupported",
         "model-parameter-invalid",
       ].every((code) => codes.has(code)),
+  );
+  const expensiveEffectRecipe = {
+    ...worldDesign().effectRecipes[0]!,
+    id: "expensive-effect",
+    emission: { rate: 0, burst: 4_096, duration: 1 },
+    budget: { maxParticles: 4_096, lodDistance: 100 },
+  };
+  TestValidator.predicate(
+    "production-wide effect instance budget refuses excessive zone reservation",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      world: {
+        ...worldDesign(),
+        effectRecipes: [expensiveEffectRecipe],
+        effectZones: Array.from({ length: 5 }, (_, index) => ({
+          id: `effect-zone-${index}`,
+          recipe: expensiveEffectRecipe.id,
+          bounds: {
+            min: { x: index * 2, y: 0, z: 0 },
+            max: { x: index * 2 + 1, y: 1, z: 1 },
+          },
+          seed: index,
+        })),
+      },
+    }).some(
+      (diagnostic) =>
+        diagnostic.code === "design-budget-exceeded" &&
+        diagnostic.message.includes("above the production budget"),
+    ),
+  );
+  TestValidator.predicate(
+    "world effect declarations remain structurally bounded",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      world: {
+        ...worldDesign(),
+        effectRecipes: Array.from(
+          { length: 257 },
+          (_, index) =>
+            ({
+              ...worldDesign().effectRecipes[0]!,
+              id: `effect-recipe-${index}`,
+            }) as typeof expensiveEffectRecipe,
+        ),
+      },
+    }).some((diagnostic) =>
+      diagnostic.message.includes("within 256 recipes and 256 zones"),
+    ),
   );
   const emptyCollections = validateAutoMovieProductionGraph({
     ...valid,

@@ -175,6 +175,20 @@ const buildSignal = (
           },
         ]
       : [],
+    effectCues: context.world.effectZones.some(
+      (zone) => zone.id === "signal-smoke",
+    )
+      ? [
+          {
+            id: `${context.contract.id}-signal-smoke`,
+            zone: "signal-smoke",
+            start: 1,
+            end: 4,
+            intensity: { from: 0.35, to: 0.8 },
+            event: "signal-raised",
+          },
+        ]
+      : [],
     shot: {
       id: context.contract.id,
       name: "The signal",

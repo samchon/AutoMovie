@@ -159,7 +159,7 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["MODEL_RECIPE", "stores a bounded primitive recipe"],
   ["MODEL_RECIPE", "only `stickman` accepts `signal`"],
   ["WORLD_DESIGN", "stores queryable space"],
-  ["WORLD_DESIGN", "Keep it empty today"],
+  ["WORLD_DESIGN", "bounded deterministic fog, smoke, or dust billboards"],
   ["FORMATION_DESIGN", "represents a unit, not thousands"],
   ["SHOT_CONTRACT", "says what a shot must accomplish"],
   ["ACCEPTANCE", "makes an observable contract addressable"],

@@ -84,7 +84,7 @@ export const sampleFormationMotion = (
   let retained = cues[0]!.from;
   for (const cue of cues) {
     if (time < cue.start) return retained;
-    if (time <= cue.end) {
+    if (time < cue.end) {
       const progress = easingProgress(
         cue.easing,
         Math.max(0, Math.min(1, (time - cue.start) / (cue.end - cue.start))),
@@ -146,7 +146,7 @@ export const transformFormationPoint = (
 };
 
 const lerp = (from: number, to: number, progress: number): number =>
-  from + (to - from) * progress;
+  from * (1 - progress) + to * progress;
 
 const easingProgress = (
   easing: IAutoMovieFormationMotion["easing"],

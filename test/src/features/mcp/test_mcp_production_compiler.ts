@@ -1253,6 +1253,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       ),
     ) as {
       scene: { nodes: Array<{ id: string }> };
+      formations: Array<{
+        id: string;
+        count: number;
+        anonymousCount: number;
+      }>;
     };
     const formationRealization = JSON.parse(
       fs.readFileSync(
@@ -1263,13 +1268,19 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       formations: Array<{ id: string; count: number; passed: boolean }>;
     };
     TestValidator.predicate(
-      "formation count, hero identity and realization come from compiler-owned slots",
+      "formation count, compact anonymous runtime, hero identity and realization come from the compiler",
       materializedFormation.success &&
         formationShot.scene.nodes.some((node) => node.id === "captain") &&
         formationShot.scene.nodes.filter(
           (node) =>
             node.id === "captain" || node.id.startsWith("formation:line:slot:"),
-        ).length === 6 &&
+        ).length === 1 &&
+        formationShot.formations.some(
+          (formation) =>
+            formation.id === "line" &&
+            formation.count === 6 &&
+            formation.anonymousCount === 5,
+        ) &&
         formationRealization.formations.some(
           (formation) =>
             formation.id === "line" &&

@@ -5,7 +5,7 @@
     "kind": "frame",
     "frame": "signal-apex",
     "pass": "beauty",
-    "expectation": "The full sentinel and raised signal arm are visible against the background."
+    "expectation": "The full sentinel, raised signal arm, promoted formation heroes, and bounded signal smoke remain readable against the background."
   },
   "required": true
 }

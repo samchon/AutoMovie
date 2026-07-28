@@ -82,6 +82,14 @@ const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
  */
 export const test_viewer_render_modes = (): void => {
   const { scene } = buildTwoNodeScene();
+  const instances = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial(),
+    2,
+  );
+  instances.setMatrixAt(0, new THREE.Matrix4().makeTranslation(-2, 0, 0));
+  instances.setMatrixAt(1, new THREE.Matrix4().makeTranslation(2, 0, 0));
+  scene.add(instances);
   const meshes = meshesOf(scene);
   const originals = meshes.map((mesh) => mesh.material);
 
@@ -101,7 +109,8 @@ export const test_viewer_render_modes = (): void => {
         mesh.material instanceof THREE.ShaderMaterial &&
         mesh.material.uniforms.depthRange!.value ===
           DEPTH_NORMALIZATION_RANGE &&
-        mesh.material.fragmentShader.includes("vViewZ / depthRange"),
+        mesh.material.fragmentShader.includes("vViewZ / depthRange") &&
+        mesh.material.vertexShader.includes("instanceMatrix"),
     ),
   );
   TestValidator.predicate(
@@ -169,7 +178,8 @@ export const test_viewer_render_modes = (): void => {
         shell.material instanceof THREE.ShaderMaterial &&
         shell.material.side === THREE.BackSide &&
         shell.material.uniforms.edgeWidth!.value === EDGE_WIDTH &&
-        shell.material.vertexShader.includes("skinning_vertex"),
+        shell.material.vertexShader.includes("skinning_vertex") &&
+        shell.material.vertexShader.includes("instanceMatrix"),
     ),
   );
   TestValidator.predicate(

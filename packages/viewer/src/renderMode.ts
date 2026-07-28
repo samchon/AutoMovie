@@ -190,7 +190,11 @@ const makeNormalizedDepthMaterial = (range: number): THREE.ShaderMaterial =>
         #include <skinbase_vertex>
         #include <begin_vertex>
         #include <skinning_vertex>
-        vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
+        vec4 worldPosition = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          worldPosition = instanceMatrix * worldPosition;
+        #endif
+        vec4 mvPosition = modelViewMatrix * worldPosition;
         vViewZ = -mvPosition.z;
         gl_Position = projectionMatrix * mvPosition;
       }`,
@@ -257,7 +261,11 @@ const makeEdgeShellMaterial = (edgeWidth: number): THREE.ShaderMaterial =>
         #include <begin_vertex>
         #include <skinning_vertex>
         transformed += normalize(objectNormal) * edgeWidth;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+        vec4 worldPosition = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          worldPosition = instanceMatrix * worldPosition;
+        #endif
+        gl_Position = projectionMatrix * modelViewMatrix * worldPosition;
       }`,
     fragmentShader: `
       void main() {

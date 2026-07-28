@@ -7,6 +7,7 @@ import {
   resolveCameraAt,
   resolvePose,
   sampleClipSequence,
+  sampleCompiledEffect,
   sampleFormationMotion,
   sampleMotion,
   selectFormationLod,
@@ -230,8 +231,17 @@ export class AutoMovieProductionOracleService {
           const compiled =
             selectedShot === null ? undefined : shots.get(selectedShot);
           const sampledTime = request.time ?? 0;
+          if (
+            compiled === undefined ||
+            Number.isFinite(sampledTime) === false ||
+            sampledTime < 0 ||
+            sampledTime > compiled.shot.duration
+          )
+            throw new Error(
+              `Formation sample time ${sampledTime} is outside current shot "${selectedShot ?? "(none)"}". Choose a finite time from 0 through ${compiled?.shot.duration ?? 0}.`,
+            );
           const sampledMotion = sampleFormationMotion(
-            compiled?.formationMotions ?? [],
+            compiled.formationMotions,
             formation.id,
             sampledTime,
           );
@@ -335,19 +345,19 @@ export class AutoMovieProductionOracleService {
                       ),
                     ) + runtime.projectionRadius;
                   const distance = Math.hypot(
-                    center.x - resolvedCamera.translation.x,
-                    center.y - resolvedCamera.translation.y,
-                    center.z - resolvedCamera.translation.z,
+                    center.x - resolvedCamera.position.x,
+                    center.y - resolvedCamera.position.y,
+                    center.z - resolvedCamera.position.z,
                   );
-                  const projectedPixels =
-                    (runtime.projectionRadius * production.frameFormat.height) /
-                    (halfY * Math.max(0.001, distance));
                   const projection = projectToNdc(
                     resolvedCamera,
                     center,
                     halfY,
                     aspect,
                   );
+                  const projectedPixels =
+                    (runtime.projectionRadius * production.frameFormat.height) /
+                    (halfY * Math.max(0.001, projection.depth));
                   const projectedRadiusY =
                     radius / (halfY * Math.max(0.001, projection.depth));
                   const projectedRadiusX = projectedRadiusY / aspect;
@@ -385,6 +395,29 @@ export class AutoMovieProductionOracleService {
             }).lod;
             tierCounts[lod.tier] += chunk.anonymousCount;
           });
+          const heroVisible =
+            camera === null || resolvedCamera === null || production === null
+              ? 0
+              : runtime.heroes.filter((hero) => {
+                  const point = transformPoint(hero.transform.translation);
+                  const projection = projectToNdc(
+                    resolvedCamera,
+                    point,
+                    halfY,
+                    aspect,
+                  );
+                  const projectedRadiusY =
+                    runtime.projectionRadius /
+                    (halfY * Math.max(0.001, projection.depth));
+                  const projectedRadiusX = projectedRadiusY / aspect;
+                  return (
+                    projection.depth + runtime.projectionRadius >=
+                      camera.near &&
+                    projection.depth - runtime.projectionRadius <= camera.far &&
+                    Math.abs(projection.ndcX) <= 1 + projectedRadiusX &&
+                    Math.abs(projection.ndcY) <= 1 + projectedRadiusY
+                  );
+                }).length;
           result = {
             kind: "measurement",
             values: {
@@ -418,12 +451,125 @@ export class AutoMovieProductionOracleService {
                 projectedPixels.length === 0 ? 0 : Math.min(...projectedPixels),
               maximumProjectedPixels:
                 projectedPixels.length === 0 ? 0 : Math.max(...projectedPixels),
-              heroVisible: runtime.heroes.length,
+              heroVisible,
               nearVisible: tierCounts.near,
               farVisible: tierCounts.far,
               culled,
               compiledDigest: runtime.digest,
               state: "compiled",
+            },
+          };
+          break;
+        }
+        case "effect": {
+          if (Number.isFinite(request.time) === false || request.time < 0)
+            throw new Error(
+              `Effect sample time ${request.time} is invalid. Choose a finite non-negative shot time.`,
+            );
+          const compiled = shots.get(request.shot);
+          if (compiled === undefined)
+            throw new Error(
+              `Shot "${request.shot}" has no current compiled source. Recompile it before effect measurement.`,
+            );
+          if (request.time > compiled.shot.duration)
+            throw new Error(
+              `Effect sample time ${request.time} exceeds shot "${request.shot}" duration ${compiled.shot.duration}.`,
+            );
+          const zoneEffects = compiled.effects.filter(
+            (candidate) => candidate.zone === request.zone,
+          );
+          const effect =
+            zoneEffects.find(
+              (candidate) =>
+                request.time >= candidate.start && request.time < candidate.end,
+            ) ?? (zoneEffects.length === 1 ? zoneEffects[0] : undefined);
+          if (effect === undefined)
+            throw new Error(
+              zoneEffects.length === 0
+                ? `Shot "${request.shot}" has no compiled effect cue for zone "${request.zone}".`
+                : `Shot "${request.shot}" has no unambiguous effect cue for zone "${request.zone}" at ${request.time}s.`,
+            );
+          const camera = compiled.scene.cameras.find(
+            (candidate) => candidate.id === compiled.shot.camera,
+          );
+          if (camera === undefined)
+            throw new Error(
+              `Shot "${request.shot}" has no current compiled camera "${compiled.shot.camera}".`,
+            );
+          const cameraTransform = resolveCameraAt(
+            camera.transform,
+            compiled.shot.cameraMotion,
+            camera.id,
+            request.time,
+          );
+          const center = {
+            x: (effect.bounds.min.x + effect.bounds.max.x) / 2,
+            y: (effect.bounds.min.y + effect.bounds.max.y) / 2,
+            z: (effect.bounds.min.z + effect.bounds.max.z) / 2,
+          };
+          const cameraDistance = distance(cameraTransform.position, center);
+          const sample = sampleCompiledEffect(
+            effect,
+            request.time,
+            cameraDistance,
+          );
+          const volume =
+            (effect.bounds.max.x - effect.bounds.min.x) *
+            (effect.bounds.max.y - effect.bounds.min.y) *
+            (effect.bounds.max.z - effect.bounds.min.z);
+          const direction = Quaternion.rotateVector(cameraTransform.rotation, {
+            x: 0,
+            y: 0,
+            z: -1,
+          });
+          const intersectionLength = rayBoundsIntersectionLength(
+            cameraTransform.position,
+            direction,
+            effect.bounds,
+            camera.far,
+          );
+          const subjects = request.subjects ?? [];
+          if (
+            subjects.length > 256 ||
+            new Set(subjects).size !== subjects.length
+          )
+            throw new Error(
+              "Effect subjects must contain at most 256 unique compiled scene-node ids.",
+            );
+          const insideSubjects = subjects.filter((subject) =>
+            pointInsideBounds(
+              actorTransformAt(compiled, subject, request.time).translation,
+              effect.bounds,
+            ),
+          ).length;
+          const density = sample.particles.length / volume;
+          const maximumOpacity =
+            effect.recipe.particle.opacity.max * sample.intensity;
+          const visibilityRisk = Math.min(
+            1,
+            density * intersectionLength * maximumOpacity,
+          );
+          result = {
+            kind: "measurement",
+            values: {
+              active: sample.active,
+              sampledTime: sample.time,
+              particleCount: sample.particles.length,
+              particleCap: effect.recipe.budget.maxParticles,
+              intensity: sample.intensity,
+              density,
+              minimumOpacity:
+                effect.recipe.particle.opacity.min * sample.intensity,
+              maximumOpacity,
+              cameraDistance,
+              cameraIntersectionLength: intersectionLength,
+              subjectCount: subjects.length,
+              subjectsInside: insideSubjects,
+              visibilityRisk,
+              representativeFrame: Math.round(
+                sample.time * (graph.production?.frameFormat.fps ?? 24),
+              ),
+              effectDigest: effect.digest,
             },
           };
           break;
@@ -1350,6 +1496,41 @@ const transformFormationBounds = (
       z: Math.max(...corners.map((point) => point.z)),
     },
   };
+};
+
+const pointInsideBounds = (
+  point: IAutoMovieVector3,
+  bounds: IAutoMovieCompiledShotSource["effects"][number]["bounds"],
+): boolean =>
+  point.x >= bounds.min.x &&
+  point.x <= bounds.max.x &&
+  point.y >= bounds.min.y &&
+  point.y <= bounds.max.y &&
+  point.z >= bounds.min.z &&
+  point.z <= bounds.max.z;
+
+const rayBoundsIntersectionLength = (
+  origin: IAutoMovieVector3,
+  direction: IAutoMovieVector3,
+  bounds: IAutoMovieCompiledShotSource["effects"][number]["bounds"],
+  maximumDistance: number,
+): number => {
+  let enter = 0;
+  let exit = maximumDistance;
+  for (const axis of ["x", "y", "z"] as const) {
+    const component = direction[axis];
+    if (Math.abs(component) < 1e-12) {
+      if (origin[axis] < bounds.min[axis] || origin[axis] > bounds.max[axis])
+        return 0;
+      continue;
+    }
+    const first = (bounds.min[axis] - origin[axis]) / component;
+    const second = (bounds.max[axis] - origin[axis]) / component;
+    enter = Math.max(enter, Math.min(first, second));
+    exit = Math.min(exit, Math.max(first, second));
+    if (enter >= exit) return 0;
+  }
+  return Math.max(0, exit - enter);
 };
 
 const previewFailure = (

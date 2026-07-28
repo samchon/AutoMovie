@@ -74,6 +74,9 @@ export const test_viewer_formation = (): void => {
   const models = new Map(
     [...runtimeModels.values()].map((model) => [model.id, model]),
   );
+  const heroObjects = new Map(
+    design.heroOverrides.map((hero) => [hero.actor, new THREE.Object3D()]),
+  );
   const motion = {
     id: "army-advance",
     formation: formation.id,
@@ -96,6 +99,7 @@ export const test_viewer_formation = (): void => {
     formation,
     models,
     motions: [motion],
+    heroObjects,
   });
   const meshes = built.object.children.filter(
     (object): object is THREE.InstancedMesh =>
@@ -264,6 +268,19 @@ export const test_viewer_formation = (): void => {
     formation.id,
     11,
   );
+  const touchingMotion = {
+    ...delayedMotion,
+    start: motion.end,
+    from: {
+      ...motion.to,
+      translation: { x: 0, y: 0, z: -8 },
+    },
+  };
+  const atExclusiveBoundary = sampleFormationMotion(
+    [motion, touchingMotion],
+    formation.id,
+    motion.end,
+  );
   const unrelatedMotion = sampleFormationMotion([motion], "other", 3);
   const sameStartA = {
     ...motion,
@@ -312,6 +329,8 @@ export const test_viewer_formation = (): void => {
       sampledMotion.facingOffsetDeg === 10 &&
       sampledMotion.spacingScale.lateral === 1.1 &&
       built.object.position.z === formation.anchor.z - 3 &&
+      heroObjects.get("marshal")!.position.z === formation.anchor.z - 3 &&
+      built.stats.visible.hero > 0 &&
       built.object.scale.x === 1 &&
       Math.abs(firstTranslation.x - (firstScaled.x - formation.anchor.x)) <
         1e-5 &&
@@ -321,6 +340,7 @@ export const test_viewer_formation = (): void => {
       beforeMotion.translation.z === 0 &&
       betweenMotions.translation.z === -6 &&
       afterMotions.translation.z === -10 &&
+      atExclusiveBoundary.translation.z === -8 &&
       unrelatedMotion.translation.z === 0 &&
       sameStartSamples.every((sample) => sample.translation.z === -1) &&
       Math.abs(transformed.x - 3) < 1e-12 &&

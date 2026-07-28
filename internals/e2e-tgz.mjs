@@ -636,6 +636,32 @@ assert(
     ),
   JSON.stringify(formationSummary),
 );
+const effectSummary = app.queryGeometry({
+  request: {
+    query: "effect",
+    zone: "signal-smoke",
+    shot: "opening",
+    time: 2,
+    subjects: ["sentinel"],
+  },
+});
+assert(
+  "starter-effect-beauty-mask-frame",
+  effectSummary.result?.kind === "measurement" &&
+    effectSummary.result.values.active === true &&
+    effectSummary.result.values.particleCount > 0 &&
+    effectSummary.result.values.particleCount <=
+      effectSummary.result.values.particleCap &&
+    ["beauty", "mask"].every((pass) =>
+      frames.some(
+        (frame) =>
+          frame.shot === "opening" &&
+          frame.pass === pass &&
+          frame.time === 2,
+      ),
+    ),
+  JSON.stringify(effectSummary),
+);
 const phase = process.argv[2];
 if (phase === "review") {
   const before = app.inspectProject({});

@@ -9,6 +9,7 @@ import {
   applyObjectMotions,
   applyPose,
   applyRenderMode,
+  buildInstancedEffect,
   buildInstancedFormation,
   buildModel,
   buildScene,
@@ -55,14 +56,6 @@ const scene = buildScene(compiled.scene, (modelId) => {
     throw new Error(`Scene build order disagrees at model "${modelId}".`);
   return candidate.object;
 });
-const formationObjects = compiled.formations.map((formation) =>
-  buildInstancedFormation({
-    formation,
-    models,
-    motions: compiled.formationMotions,
-  }),
-);
-for (const formation of formationObjects) scene.scene.add(formation.object);
 const nodeObjects = new Map(
   compiled.scene.nodes.map((node, index) => {
     const object = scene.scene.children[index];
@@ -71,6 +64,17 @@ const nodeObjects = new Map(
     return [node.id, object] as const;
   }),
 );
+const formationObjects = compiled.formations.map((formation) =>
+  buildInstancedFormation({
+    formation,
+    models,
+    motions: compiled.formationMotions,
+    heroObjects: nodeObjects,
+  }),
+);
+for (const formation of formationObjects) scene.scene.add(formation.object);
+const effectObjects = compiled.effects.map(buildInstancedEffect);
+for (const effect of effectObjects) scene.scene.add(effect.object);
 const stagedNodeTransforms = new Map(
   [...nodeObjects].map(([id, object]) => [
     id,
@@ -166,6 +170,28 @@ const seek = (time: number, pass: AutoMovieGuidePass): void => {
   );
   for (const formation of formationObjects)
     formation.update(camera, Math.max(1, renderer.domElement.height), time);
+  for (const effect of effectObjects) effect.update(camera, time);
+  formationObjects.forEach(({ stats }, index) => {
+    const runtime = compiled.formations[index]!;
+    if (
+      stats.visible.near + stats.visible.far + stats.culled !==
+        runtime.anonymousCount ||
+      stats.heroes !== runtime.heroes.length
+    )
+      throw new Error(
+        `Formation viewer inventory diverged for "${runtime.id}".`,
+      );
+  });
+  effectObjects.forEach(({ stats }, index) => {
+    const runtime = compiled.effects[index]!;
+    const expectedActive = time >= runtime.start && time < runtime.end;
+    if (
+      stats.active !== expectedActive ||
+      stats.particles < 0 ||
+      stats.particles > stats.cap
+    )
+      throw new Error(`Effect viewer inventory diverged for "${runtime.id}".`);
+  });
   const handle = applyRenderMode(scene.scene, pass);
   renderer.render(scene.scene, camera);
   handle.restore();
@@ -175,9 +201,17 @@ const seek = (time: number, pass: AutoMovieGuidePass): void => {
         `H${stats.heroes}/N${stats.visible.near}/F${stats.visible.far}/C${stats.culled}`,
     )
     .join(" ");
+  const effectStatus = effectObjects
+    .map(
+      ({ stats }) => `E${stats.active ? 1 : 0}/${stats.particles}/${stats.cap}`,
+    )
+    .join(" ");
+  const runtimeStatus = [formationStatus, effectStatus]
+    .filter((value) => value.length !== 0)
+    .join(" ");
   status.textContent =
     `${compiled.shot.id}  t=${time.toFixed(3)}s  ${pass}` +
-    (formationStatus.length === 0 ? "" : `  ${formationStatus}`);
+    (runtimeStatus.length === 0 ? "" : `  ${runtimeStatus}`);
 };
 
 window.__automovieCapture = { ready: true, seek };

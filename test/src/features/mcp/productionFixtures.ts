@@ -42,6 +42,20 @@ export const productionFixture = (): {
   );
   files[".automovie/design/shots/opening.json"] =
     `${JSON.stringify(opening, null, 2)}\n`;
+  const world = JSON.parse(
+    files[".automovie/design/world.json"]!,
+  ) as IAutoMovieWorldDesign;
+  world.effectRecipes = [];
+  world.effectZones = [];
+  files[".automovie/design/world.json"] = `${JSON.stringify(world, null, 2)}\n`;
+  const openingBeauty = JSON.parse(
+    files[".automovie/design/acceptance/opening-beauty.json"]!,
+  ) as IAutoMovieAcceptanceScenario;
+  if (openingBeauty.criterion.kind === "frame")
+    openingBeauty.criterion.expectation =
+      "The full sentinel and raised signal arm remain readable.";
+  files[".automovie/design/acceptance/opening-beauty.json"] =
+    `${JSON.stringify(openingBeauty, null, 2)}\n`;
   files[".automovie/design/production.json"] = `${JSON.stringify(
     oneShotProduction(
       JSON.parse(

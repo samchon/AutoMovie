@@ -87,6 +87,18 @@ export type AutoMovieGeometryQuery =
       time?: number;
     }
   | {
+      /** Bounded deterministic effect activity and visibility-risk query. */
+      query: "effect";
+      /** Existing world effect-zone id. */
+      zone: string;
+      /** Participating compiled shot id. */
+      shot: string;
+      /** Shot-local sample time. */
+      time: number;
+      /** Optional compiled scene-node ids tested against the zone. */
+      subjects?: string[];
+    }
+  | {
       /** Resolve one film-global frame through the canonical edit timeline. */
       query: "film-time";
       /** Exact global frame or frame-grid second. */

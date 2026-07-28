@@ -377,6 +377,17 @@ export const test_mcp_production_materialization = (): void => {
             translation: { ...cueState.translation, x: Number.NaN },
           },
         },
+        {
+          ...validCue,
+          id: "unbounded-state",
+          start: 2,
+          end: 3,
+          to: {
+            ...cueState,
+            translation: { ...cueState.translation, x: 1_000_000_001 },
+            facingOffsetDeg: 360_001,
+          },
+        },
       ]),
       ...[Number.NaN, 0.1, 5].flatMap((lateral, index) =>
         cueDiagnostics([
@@ -399,7 +410,7 @@ export const test_mcp_production_materialization = (): void => {
           "unique inside the shot",
           "participating compiled formation",
           "positive interval",
-          "finite translation",
+          "translation inside +/-1000000000m",
           "0.25..4",
           "must not overlap",
         ].every((message) =>

@@ -188,6 +188,24 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         formationMeasurement.values.designCount === 6 &&
         formationMeasurement.values.materializedCount === 6 &&
         formationMeasurement.values.participatingShots === 1 &&
+        Number(formationMeasurement.values.heroVisible) <=
+          Number(formationMeasurement.values.heroCount) &&
+        oracle.query({
+          request: {
+            query: "formation",
+            formation: "line",
+            shot: "opening",
+            time: -1,
+          },
+        }).result === null &&
+        oracle.query({
+          request: {
+            query: "formation",
+            formation: "line",
+            shot: "opening",
+            time: 7,
+          },
+        }).result === null &&
         oracle.query({
           request: {
             query: "pose",
@@ -367,8 +385,8 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const writeCorrupted = (value: IAutoMovieCompiledShotSource): void =>
       writeGeneratedBytes(Buffer.from(JSON.stringify(value)));
     const partialFormation = corrupted();
-    partialFormation.scene.nodes = partialFormation.scene.nodes.filter(
-      (node) => node.id !== "formation:line:slot:000001",
+    partialFormation.formations = partialFormation.formations.filter(
+      (formation) => formation.id !== "line",
     );
     writeCorrupted(partialFormation);
     const partialFormationResult = oracle.query({

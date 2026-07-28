@@ -7,6 +7,7 @@ import {
   AutoMovieContentDigest,
   AutoMovieFormationCapability,
   IAutoMovieDesignTarget,
+  IAutoMovieEffectRecipe,
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
   IAutoMovieProductionDeliverable,
@@ -641,6 +642,57 @@ export interface IAutoMovieFormationMotion {
   easing: "linear" | "easeIn" | "easeOut" | "easeInOut" | "step";
 }
 
+/** One source-authored shot-local effect activation. */
+export interface IAutoMovieShotEffectCue {
+  /** Stable cue id, unique inside one shot. */
+  id: string;
+  /** Existing world effect-zone id. */
+  zone: string;
+  /** Inclusive shot-local start in seconds. */
+  start: number;
+  /** Exclusive shot-local end in seconds. */
+  end: number;
+  /** Bounded intensity envelope. */
+  intensity: {
+    /** Intensity at cue start. */
+    from: number;
+    /** Intensity at cue end. */
+    to: number;
+  };
+  /** Optional authoritative shot event that must realize inside this cue. */
+  event?: string;
+}
+
+/** Compiler-owned deterministic effect runtime consumed by viewer and oracle. */
+export interface IAutoMovieCompiledEffect {
+  /** Generated effect format. */
+  version: 1;
+  /** Stable source cue id. */
+  id: string;
+  /** Existing world zone id. */
+  zone: string;
+  /** Supported primitive effect family. */
+  kind: IAutoMovieEffectRecipe["kind"];
+  /** Exact world-space emitter bounds. */
+  bounds: IAutoMovieWorldDesign["effectZones"][number]["bounds"];
+  /** Domain-separated deterministic stream seed. */
+  seed: number;
+  /** Exact current recipe. */
+  recipe: IAutoMovieEffectRecipe;
+  /** Inclusive shot-local cue start. */
+  start: number;
+  /** Exclusive shot-local cue end. */
+  end: number;
+  /** Bounded cue intensity envelope. */
+  intensity: IAutoMovieShotEffectCue["intensity"];
+  /** Bound authoritative event, when present. */
+  event?: string;
+  /** Production frame-clock simulation step. */
+  fixedStepSeconds: number;
+  /** Digest of every field above except this digest. */
+  digest: AutoMovieContentDigest;
+}
+
 /** Coding-agent output before compiler-owned models and formations are added. */
 export interface IAutoMovieShotSourceOutput {
   /** Event sample times selected inside authoritative event windows. */
@@ -659,6 +711,8 @@ export interface IAutoMovieShotSourceOutput {
    * list when omitted; source never emits arbitrary per-member curves.
    */
   formationMotions?: IAutoMovieFormationMotion[];
+  /** Optional bounded shot-local deterministic effect cues. */
+  effectCues?: IAutoMovieShotEffectCue[];
   /** Compiled shot choreography. */
   shot: IAutoMovieShot;
 }
@@ -671,6 +725,8 @@ export interface IAutoMovieCompiledShotSource extends IAutoMovieShotSourceOutput
   formations: IAutoMovieCompiledFormation[];
   /** Validated compact formation-level cues, empty when source omitted them. */
   formationMotions: IAutoMovieFormationMotion[];
+  /** Compiler-owned deterministic effect runtimes. */
+  effects: IAutoMovieCompiledEffect[];
 }
 
 /** One scalar predicate and the value measured by the compiler. */

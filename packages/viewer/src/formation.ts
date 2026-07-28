@@ -1,4 +1,8 @@
-import { sampleFormationMotion, selectFormationLod } from "@automovie/engine";
+import {
+  sampleFormationMotion,
+  selectFormationLod,
+  transformFormationPoint,
+} from "@automovie/engine";
 import {
   IAutoMovieCompiledFormation,
   IAutoMovieCompiledFormationLod,
@@ -60,6 +64,8 @@ export const buildInstancedFormation = (input: {
   formation: IAutoMovieCompiledFormation;
   models: ReadonlyMap<string, IAutoMovieModel>;
   motions?: readonly IAutoMovieFormationMotion[];
+  /** Explicit scene wrappers keyed by promoted hero actor id. */
+  heroObjects?: ReadonlyMap<string, THREE.Object3D>;
 }): IAutoMovieFormationViewerObject => {
   const root = new THREE.Group();
   root.name = `formation:${input.formation.id}`;
@@ -191,6 +197,28 @@ export const buildInstancedFormation = (input: {
       const cameraPosition = new THREE.Vector3();
       camera.getWorldPosition(cameraPosition);
       const halfY = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+      for (const hero of input.formation.heroes) {
+        const object = input.heroObjects?.get(hero.actor);
+        if (object === undefined) continue;
+        const position = transformFormationPoint(
+          hero.transform.translation,
+          input.formation.anchor,
+          sampled,
+          input.formation.facingDeg,
+        );
+        object.position.copy(vector(position));
+        object.quaternion.setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          THREE.MathUtils.degToRad(
+            input.formation.facingDeg + sampled.facingOffsetDeg,
+          ),
+        );
+        object.updateMatrixWorld(true);
+        object.visible = frustum.intersectsSphere(
+          new THREE.Sphere(vector(position), selectionRadius),
+        );
+        if (object.visible) ++stats.visible.hero;
+      }
       for (const chunk of chunks) {
         const localCenter = formationSpacingOffset(
           chunk.runtime.centroid,
@@ -211,8 +239,12 @@ export const buildInstancedFormation = (input: {
           continue;
         }
         const distance = Math.max(0.001, cameraPosition.distanceTo(center));
+        const cameraDepth = Math.max(
+          0.001,
+          -center.clone().applyMatrix4(camera.matrixWorldInverse).z,
+        );
         const projectedPixels =
-          (selectionRadius * viewportHeight) / (halfY * distance);
+          (selectionRadius * viewportHeight) / (halfY * cameraDepth);
         const selected = selectFormationLod({
           lod: input.formation.lod,
           distance,

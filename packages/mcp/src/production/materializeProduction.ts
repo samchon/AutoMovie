@@ -1,5 +1,6 @@
 import { Quaternion } from "@automovie/engine";
 import {
+  IAutoMovieCompiledEffect,
   IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
   IAutoMovieFormationDesign,
@@ -10,6 +11,7 @@ import {
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
   IAutoMovieTransform,
+  IAutoMovieWorldDesign,
 } from "@automovie/interface";
 
 import {
@@ -214,12 +216,20 @@ export const materializeCompiledShot = (props: {
   formationRuntime?: Readonly<Record<string, IAutoMovieCompiledFormation>>;
   modelRecipes?: ReadonlyMap<string, IAutoMovieModelRecipe>;
   runtimeModels: ReadonlyMap<string, IAutoMovieModel>;
+  world?: IAutoMovieWorldDesign;
+  fps?: number;
   source: IAutoMovieShotSourceOutput;
 }): {
   value: IAutoMovieCompiledShotSource;
   collisions: string[];
 } => {
   const source = structuredClone(props.source);
+  const effects = materializeCompiledEffects({
+    contract: props.contract,
+    world: props.world,
+    fps: props.fps,
+    cues: source.effectCues ?? [],
+  });
   const nodes = new Map(source.scene.nodes.map((node) => [node.id, node]));
   const collisions: string[] = [];
   const formations: IAutoMovieCompiledFormation[] = [];
@@ -285,11 +295,62 @@ export const materializeCompiledShot = (props: {
     value: {
       ...source,
       formationMotions: source.formationMotions ?? [],
+      effects,
       models,
       formations,
     },
     collisions,
   };
+};
+
+/** Materialize shot-local cues into compiler-owned deterministic streams. */
+export const materializeCompiledEffects = (props: {
+  contract: IAutoMovieShotContract;
+  world?: IAutoMovieWorldDesign;
+  fps?: number;
+  cues: NonNullable<IAutoMovieShotSourceOutput["effectCues"]>;
+}): IAutoMovieCompiledEffect[] => {
+  if (props.world === undefined) return [];
+  const recipes = new Map(
+    props.world.effectRecipes.map((recipe) => [recipe.id, recipe]),
+  );
+  const zones = new Map(props.world.effectZones.map((zone) => [zone.id, zone]));
+  return [...props.cues]
+    .sort((left, right) => compareCodeUnits(left.id, right.id))
+    .flatMap((cue): IAutoMovieCompiledEffect[] => {
+      const zone = zones.get(cue.zone);
+      const recipe = zone === undefined ? undefined : recipes.get(zone.recipe);
+      if (zone === undefined || recipe === undefined) return [];
+      const seedDigest = digestAutoMovieBytes(
+        canonicalAutoMovieJsonBytes({
+          protocol: "automovie.effect-stream.v1",
+          shot: props.contract.id,
+          cue: cue.id,
+          recipeSeed: recipe.seed,
+          zoneSeed: zone.seed,
+        }),
+      );
+      const core = {
+        version: 1 as const,
+        id: cue.id,
+        zone: zone.id,
+        kind: recipe.kind,
+        bounds: structuredClone(zone.bounds),
+        seed: Number.parseInt(seedDigest.slice(7, 20), 16),
+        recipe: structuredClone(recipe),
+        start: cue.start,
+        end: cue.end,
+        intensity: structuredClone(cue.intensity),
+        ...(cue.event === undefined ? {} : { event: cue.event }),
+        fixedStepSeconds: 1 / (props.fps ?? 24),
+      };
+      return [
+        {
+          ...core,
+          digest: digestAutoMovieBytes(canonicalAutoMovieJsonBytes(core)),
+        },
+      ];
+    });
 };
 
 const slotTransform = (slot: IAutoMovieFormationSlot): IAutoMovieTransform => ({
@@ -362,7 +423,7 @@ const summarizeFormationRange = (
     y: Number.NEGATIVE_INFINITY,
     z: Number.NEGATIVE_INFINITY,
   };
-  const sum = { x: 0, y: 0, z: 0 };
+  const centroid = { x: 0, y: 0, z: 0 };
   for (let slot = start; slot < start + count; ++slot) {
     const point = materializeFormationSlot(formation, slot).position;
     min.x = Math.min(min.x, point.x);
@@ -371,19 +432,19 @@ const summarizeFormationRange = (
     max.x = Math.max(max.x, point.x);
     max.y = Math.max(max.y, point.y);
     max.z = Math.max(max.z, point.z);
-    sum.x += point.x;
-    sum.y += point.y;
-    sum.z += point.z;
+    const seen = slot - start + 1;
+    centroid.x = stableMeanStep(centroid.x, point.x, seen);
+    centroid.y = stableMeanStep(centroid.y, point.y, seen);
+    centroid.z = stableMeanStep(centroid.z, point.z, seen);
   }
   return {
     bounds: { min, max },
-    centroid: {
-      x: sum.x / count,
-      y: sum.y / count,
-      z: sum.z / count,
-    },
+    centroid,
   };
 };
+
+const stableMeanStep = (mean: number, value: number, count: number): number =>
+  mean * ((count - 1) / count) + value / count;
 
 const seededValue = (...values: number[]): number => {
   let state = 0x9e3779b9;

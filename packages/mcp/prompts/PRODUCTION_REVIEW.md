@@ -4,7 +4,7 @@ The external coding agent reviews; AutoMovie verifies evidence and freshness. Th
 
 1. Call `prepareReview` for exactly one design, source, shot, or film target.
 2. Inspect the returned required criteria, current selectors, frames, and compiler-derived outcomes.
-3. For visual targets, actually open the returned PNG frames. Required evidence must be captured at the exact production width, height, FPS, and review time; smaller thumbnails help iteration but cannot discharge review. Capture missing passes with `previewFrame`.
+3. For visual targets, actually open the returned PNG frames. Required evidence must be captured at the exact production width, height, FPS, and review time; smaller thumbnails help iteration but cannot discharge review. Formation and fog/smoke/dust claims need current beauty plus the structural pass named by the criterion, not an oracle summary alone. Capture missing passes with `previewFrame`.
 4. Write criterion-specific observations and quote current design pointer, source line, frame digest/region, diagnostic, or exact outcome.
 5. List actionable corrections before setting `complete`.
 6. Submit. Fix rejected selectors or contradictions and repeat.
