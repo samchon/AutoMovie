@@ -140,20 +140,10 @@ export class AutoMovieProductionCompiler {
     >();
     let formationInventory: ReturnType<typeof materializeFormationInventory> =
       {};
-    if (input.scope !== "design" && designReady)
-      try {
-        runtimeModels = new Map(materializeProductionModels(graph.models));
-        formationInventory = materializeFormationInventory(graph.formations);
-      } catch (error) {
-        diagnostics.push({
-          code: "model-materialization-failed",
-          category: "error",
-          phase: "compile",
-          target: "model-recipes",
-          path: null,
-          message: `${errorMessage(error)} Correct model and formation design before source compilation.`,
-        });
-      }
+    if (input.scope !== "design" && designReady) {
+      runtimeModels = new Map(materializeProductionModels(graph.models));
+      formationInventory = materializeFormationInventory(graph.formations);
+    }
     for (const [id, contract] of graph.shots) {
       if (input.scope === "design") {
         sourceFields.push({
@@ -192,7 +182,7 @@ export class AutoMovieProductionCompiler {
         context: {
           contract,
           models: Object.fromEntries(graph.models),
-          world: graph.world ?? emptyWorld(),
+          world: graph.world!,
           formations: Object.fromEntries(graph.formations),
           runtimeModels: Object.fromEntries(runtimeModels),
           formationSlots: formationInventory,
@@ -1769,15 +1759,6 @@ const renderDeliverableDiagnostic = (
   target,
   path: renderPath,
   message,
-});
-
-const emptyWorld = (): IAutoMovieWorldDesign => ({
-  id: "missing-world",
-  units: "meter",
-  landmarks: [],
-  surfaces: [],
-  routes: [],
-  effectZones: [],
 });
 
 const listFiles = (root: string): string[] => {

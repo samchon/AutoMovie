@@ -77,6 +77,22 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       lastCueSeconds: 0.1,
     },
   );
+  TestValidator.equals(
+    "WebVTT metadata blocks are ignored before observable cues are counted",
+    probeProductionMedia({
+      kind: "captions",
+      mediaType: "text/vtt",
+      bytes: Buffer.from(
+        "WEBVTT\n\nNOTE production metadata\nnot a cue\n\n00:00:00.000 --> 00:00:00.100\nVisible.\n",
+      ),
+    }),
+    {
+      kind: "webvtt",
+      cueCount: 1,
+      firstCueSeconds: 0,
+      lastCueSeconds: 0.1,
+    },
+  );
   TestValidator.predicate(
     "captions cannot relabel WebVTT bytes",
     refused(

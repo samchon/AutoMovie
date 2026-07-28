@@ -372,15 +372,12 @@ const actorPoseAt = (
     (candidate) => candidate.node === actor,
   );
   const model = modelOf(compiled, node.model);
-  if (model.skeleton === null)
-    throw new Error(
-      `node "${actor}" uses unrigged model "${node.model}" and has no joint angles`,
-    );
+  const skeleton = model.skeleton!;
   const motionId = performance === undefined ? node.motion : performance.motion;
   if (motionId === null)
     return (
       node.pose ?? {
-        skeleton: model.skeleton.id,
+        skeleton: skeleton.id,
         root: null,
         joints: [],
       }

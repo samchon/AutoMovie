@@ -36,15 +36,16 @@ export const probeProductionMedia = (props: {
     for (const block of blocks) {
       if (block.trim().length === 0) continue;
       const lines = block.split("\n");
-      if (/^(?:NOTE|STYLE|REGION)(?:[ \t]|$)/.test(lines[0] ?? "")) continue;
-      const timingIndex = lines[0]?.includes("-->")
+      const firstLine = lines[0]!;
+      if (/^(?:NOTE|STYLE|REGION)(?:[ \t]|$)/.test(firstLine)) continue;
+      const timingIndex = firstLine.includes("-->")
         ? 0
         : lines[1]?.includes("-->")
           ? 1
           : -1;
       if (timingIndex < 0)
         throw new Error(
-          `WebVTT block "${(lines[0] ?? "").trim()}" is neither a timed cue nor NOTE, STYLE, or REGION metadata. Remove the stray block or add its cue timing.`,
+          `WebVTT block "${firstLine.trim()}" is neither a timed cue nor NOTE, STYLE, or REGION metadata. Remove the stray block or add its cue timing.`,
         );
       const cue = parseWebVttCue(lines[timingIndex]!);
       const payload = lines.slice(timingIndex + 1);

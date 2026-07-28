@@ -53,13 +53,19 @@ type AutoMovieReviewWorksheet = Omit<
 
 interface IRenderManifestInventoryEntry {
   path: string;
-  manifest: IAutoMovieRenderBundleManifest | null;
-  error: string | null;
+  manifest: IAutoMovieRenderBundleManifest;
+  error: null;
+}
+
+interface IInvalidRenderManifestInventoryEntry {
+  path: string;
+  manifest: null;
+  error: string;
 }
 
 interface IReviewReadContext {
   renderInventory: {
-    invalid: IRenderManifestInventoryEntry[];
+    invalid: IInvalidRenderManifestInventoryEntry[];
     all: IRenderManifestInventoryEntry[];
     byTarget: Map<string, IRenderManifestInventoryEntry[]>;
   };
@@ -1309,19 +1315,6 @@ const currentFrames = (
   for (const entry of manifestEntries) {
     const manifestPath = entry.path;
     const manifest = entry.manifest;
-    if (manifest === null) {
-      /* c8 ignore next -- invalid entries are separated above. */
-      diagnostics.push({
-        code: "render-bundle-invalid",
-        category: "error",
-        phase: "render",
-        target: normalizeSlash(path.relative(project.root, manifestPath)),
-        path: normalizeSlash(path.relative(project.root, manifestPath)),
-        message:
-          "Render bundle manifest is invalid. Recreate the bundle through previewFrame.",
-      });
-      continue;
-    }
     if (
       manifest.targetFingerprint !==
       currentRenderTargetFingerprint(
@@ -1728,7 +1721,7 @@ const readTrackedJsonIfPresent = (
 const collectRenderManifestInventory = (
   project: AutoMovieProductionProject,
 ): IReviewReadContext["renderInventory"] => {
-  const invalid: IRenderManifestInventoryEntry[] = [];
+  const invalid: IInvalidRenderManifestInventoryEntry[] = [];
   const all: IRenderManifestInventoryEntry[] = [];
   const byTarget = new Map<string, IRenderManifestInventoryEntry[]>();
   for (const manifestPath of listNamedFiles(

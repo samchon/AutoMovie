@@ -1551,6 +1551,37 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           repairedManifest.frames[0]?.index === 2 &&
           repairedManifest.frames[0].pass === "beauty",
       );
+      const retainedRaceManifest = project.verifiedRenderManifest(
+        path.join(bundleRoot, "manifest.json"),
+      )!;
+      const residentVerifiedRenderManifest = project.verifiedRenderManifest;
+      const residentReadRenderFile = project.readRenderFile;
+      project.verifiedRenderManifest = (() =>
+        retainedRaceManifest) as typeof project.verifiedRenderManifest;
+      project.readRenderFile = (() => {
+        throw new Error("retained frame disappeared after verification");
+      }) as typeof project.readRenderFile;
+      let retainedReadRace: Awaited<ReturnType<typeof actual.preview>>;
+      try {
+        retainedReadRace = await actual.preview({
+          target: { kind: "shot", id: "opening" },
+          time: 3 / 24,
+          width: 2,
+          height: 2,
+        });
+      } finally {
+        project.verifiedRenderManifest = residentVerifiedRenderManifest;
+        project.readRenderFile = residentReadRenderFile;
+      }
+      const retainedRaceResult = project.verifiedRenderManifest(
+        path.join(bundleRoot, "manifest.json"),
+      );
+      TestValidator.predicate(
+        "a retained frame read race discards stale evidence without aborting the new capture",
+        retainedReadRace.captured &&
+          retainedRaceResult?.frames.length === 1 &&
+          retainedRaceResult.frames[0]?.index === 3,
+      );
     }
     if (beauty.renderBundle !== null) {
       fs.writeFileSync(

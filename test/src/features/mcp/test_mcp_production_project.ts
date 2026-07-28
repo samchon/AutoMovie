@@ -396,13 +396,73 @@ export const test_mcp_production_project = (): void => {
     const transitiveDependentMutation = project.setModelRecipe(
       transitiveDependentModel,
     );
+    const dependencyCycleFixture = productionFixture();
+    let cyclicDependencyTraversal = false;
+    try {
+      const modelRoot = path.join(
+        dependencyCycleFixture.root,
+        ".automovie/design/models",
+      );
+      fs.writeFileSync(
+        path.join(modelRoot, "cycle-a.json"),
+        JSON.stringify({
+          ...modelRecipe(),
+          id: "cycle-a",
+          lod: [
+            {
+              tier: "hero",
+              maxDistance: null,
+              recipe: "cycle-b",
+            },
+          ],
+        }),
+      );
+      fs.writeFileSync(
+        path.join(modelRoot, "cycle-b.json"),
+        JSON.stringify({
+          ...modelRecipe(),
+          id: "cycle-b",
+          lod: [
+            {
+              tier: "hero",
+              maxDistance: null,
+              recipe: "cycle-a",
+            },
+          ],
+        }),
+      );
+      fs.writeFileSync(
+        path.join(modelRoot, "missing-lod.json"),
+        JSON.stringify({
+          ...modelRecipe(),
+          id: "missing-lod",
+          lod: [
+            {
+              tier: "hero",
+              maxDistance: null,
+              recipe: "absent",
+            },
+          ],
+        }),
+      );
+      cyclicDependencyTraversal =
+        AutoMovieProductionProject.open(
+          dependencyCycleFixture.root,
+        ).eraseDesignArtifact({
+          kind: "model",
+          id: "sentinel",
+        }).accepted === false;
+    } finally {
+      dependencyCycleFixture.dispose();
+    }
     const refusedModelErase = project.eraseDesignArtifact({
       kind: "model",
       id: "sentinel",
     });
     TestValidator.predicate(
       "model consequences and erasure include dependent LOD models and formations",
-      dependentModelMutation.accepted &&
+      cyclicDependencyTraversal &&
+        dependentModelMutation.accepted &&
         transitiveDependentMutation.accepted &&
         refusedModelErase.consequences.staleReviews.some(
           (target) =>
@@ -769,6 +829,12 @@ export const test_mcp_production_project = (): void => {
     };
     writeOwnedRenderManifest({
       ...renderManifest,
+      rendererIdentity: " ",
+    });
+    const blankOwnedRenderer =
+      ownerProject.verifiedRenderManifest(renderManifestPath);
+    writeOwnedRenderManifest({
+      ...renderManifest,
       frames: [renderManifest.frames[0]!, renderManifest.frames[0]!],
     });
     const duplicateRenderFrame =
@@ -789,7 +855,8 @@ export const test_mcp_production_project = (): void => {
     fs.writeFileSync(renderReceiptPath, renderReceiptBytes);
     TestValidator.predicate(
       "render verification rejects duplicate frame ownership and false raster metadata",
-      duplicateRenderFrame === null &&
+      blankOwnedRenderer === null &&
+        duplicateRenderFrame === null &&
         mismatchedRenderWidth === null &&
         mismatchedRenderHeight === null,
     );
