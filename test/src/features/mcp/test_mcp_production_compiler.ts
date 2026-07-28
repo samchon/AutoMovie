@@ -308,21 +308,27 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const designRevisionRacer = AutoMovieProductionProject.open(fixture.root);
     const residentRevision = project.revision;
-    let designRevisionReads = 0;
-    project.revision = (() => {
-      ++designRevisionReads;
-      if (designRevisionReads === 2)
+    const designConfirmCurrentSnapshot = project.confirmCurrentSnapshot;
+    let designRevisionRaced = false;
+    project.confirmCurrentSnapshot = ((inputCurrent, expectedRevision) => {
+      if (designRevisionRaced === false) {
         designRevisionRacer.setWorldDesign(worldDesign());
-      return residentRevision.call(project);
-    }) as typeof project.revision;
+        designRevisionRaced = true;
+      }
+      return designConfirmCurrentSnapshot.call(
+        project,
+        inputCurrent,
+        expectedRevision,
+      );
+    }) as typeof project.confirmCurrentSnapshot;
     const racedDesignOnly = compiler.compile({ scope: "design" });
-    project.revision = residentRevision;
+    project.confirmCurrentSnapshot = designConfirmCurrentSnapshot;
     TestValidator.predicate(
       "design-only success cannot cross a concurrent design revision",
       racedDesignOnly.success === false &&
         diagnosticCodes(racedDesignOnly).has("compile-input-changed") &&
         racedDesignOnly.reviews.entries.length === 0 &&
-        designRevisionReads >= 3,
+        designRevisionRaced,
     );
     let postFenceDesignReads = 0;
     let postFenceDesignMutation = false;
