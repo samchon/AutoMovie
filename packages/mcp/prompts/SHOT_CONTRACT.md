@@ -10,4 +10,4 @@ The coding agent writes the build function in `src`. It may use loops, helpers i
 
 IDs, duration, camera, motion references, model wiring, ROM, predicate outcomes, and temporal rules are engine-validated. The compiler samples opening predicates at zero, closing predicates at shot duration, event predicates at declared samples, and required camera subjects at review times. A failed measurement blocks compilation even when source prose claims success.
 
-Review frames are deliberate evidence points: contact, reveal, formation transition, or a continuity boundary. Request the guide passes needed to judge the criterion; beauty alone cannot prove depth, masking, pose, or outline facts.
+Every shot declares at least one review frame so visual review has a reachable exact evidence target. Review frames are deliberate evidence points: contact, reveal, formation transition, or a continuity boundary. Request the guide passes needed to judge the criterion; beauty alone cannot prove depth, masking, pose, or outline facts.

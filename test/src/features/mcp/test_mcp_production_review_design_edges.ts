@@ -327,7 +327,7 @@ export const test_mcp_production_review_design_edges = (): void => {
       target: { kind: "design", design: { kind: "world" } },
     });
     project.setWorldDesign(worldDesign());
-    project.eraseDesignArtifact({ kind: "production" });
+    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
     const missingProduction = review.prepare({
       target: { kind: "design", design: { kind: "production" } },
     });

@@ -148,8 +148,7 @@ export const realizeShotContract = (props: {
           vectorClose(node.transform.translation, slot.position) &&
           quaternionClose(node.transform.rotation, expectedRotation) &&
           vectorClose(node.transform.scale, { x: 1, y: 1, z: 1 }) &&
-          (slot.actor !== null ||
-            node.model === productionRuntimeModelId(slot.modelRecipe))
+          node.model === productionRuntimeModelId(slot.modelRecipe)
         );
       });
     if (passed === false)
@@ -340,7 +339,7 @@ const actorPoseAt = (
     throw new Error(
       `node "${actor}" uses unrigged model "${node.model}" and has no joint angles`,
     );
-  const motionId = performance?.motion ?? node.motion;
+  const motionId = performance === undefined ? node.motion : performance.motion;
   if (motionId === null)
     return (
       node.pose ?? {

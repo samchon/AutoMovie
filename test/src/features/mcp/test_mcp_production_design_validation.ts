@@ -5,6 +5,7 @@ import {
   IAutoMovieShotContract,
 } from "@automovie/interface";
 import {
+  AUTOMOVIE_MAX_FRAME_PIXELS,
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
 } from "@automovie/mcp";
@@ -33,6 +34,49 @@ export const test_mcp_production_design_validation = (): void => {
     "valid starter graph",
     validateAutoMovieProductionGraph(valid),
     [],
+  );
+  const noReviewFrames = shotContract();
+  noReviewFrames.reviewFrames = [];
+  TestValidator.predicate(
+    "every shot requires at least one observable review frame",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      shots: new Map([[noReviewFrames.id, noReviewFrames]]),
+      acceptance: new Map(),
+    }).some(
+      (diagnostic) =>
+        diagnostic.code === "design-collection-empty" &&
+        diagnostic.target === "shot:opening",
+    ),
+  );
+  const maximumRaster = {
+    ...productionDesign(),
+    frameFormat: {
+      ...productionDesign().frameFormat,
+      width: 4_096,
+      height: 4_096,
+    },
+  };
+  const oversizedRaster = {
+    ...maximumRaster,
+    frameFormat: { ...maximumRaster.frameFormat, width: 4_097 },
+  };
+  TestValidator.predicate(
+    "the shared preview pixel budget accepts its boundary and rejects one pixel column beyond it",
+    maximumRaster.frameFormat.width * maximumRaster.frameFormat.height ===
+      AUTOMOVIE_MAX_FRAME_PIXELS &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        production: maximumRaster,
+      }).every((diagnostic) => diagnostic.code !== "design-range-invalid") &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        production: oversizedRaster,
+      }).some(
+        (diagnostic) =>
+          diagnostic.code === "design-range-invalid" &&
+          diagnostic.message.includes("width times height"),
+      ),
   );
   const missingShotMembers = {
     ...valid,

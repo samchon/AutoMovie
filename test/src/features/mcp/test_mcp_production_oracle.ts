@@ -824,7 +824,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         absentWorld.result.surface === null,
     );
 
-    project.eraseDesignArtifact({ kind: "production" });
+    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
     const noProductionPreview = await new AutoMovieProductionOracleService(
       project,
     )

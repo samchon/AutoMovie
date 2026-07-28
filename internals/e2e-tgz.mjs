@@ -436,6 +436,7 @@ const worksheet = (project, prepared) => {
   const baseEvidence = exactEvidence(project, prepared);
   return {
     target: prepared.target,
+    preparedFingerprint: prepared.fingerprint,
     observations:
       "The packaged starter target was inspected against current exact evidence.",
     checks: prepared.requiredCriteria.map((criterion, index) => {

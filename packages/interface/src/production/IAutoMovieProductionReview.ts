@@ -250,6 +250,12 @@ export interface IAutoMovieSubmitReviewInput {
    * dependency fingerprint is recomputed during submission.
    */
   target: IAutoMovieReviewTarget;
+  /**
+   * Exact fingerprint returned by the `prepareReview` call whose worksheet is
+   * being submitted. A changed target must be prepared and reviewed again; the
+   * server never upgrades an older worksheet to a newer fingerprint.
+   */
+  preparedFingerprint: AutoMovieContentDigest;
   /** Non-blank overall findings about the exact current target. */
   observations: string;
   /**
@@ -292,8 +298,11 @@ export interface IAutoMovieSubmitReviewOutput {
   diagnostics: IAutoMovieDiagnostic[];
 }
 
-/** Versioned review record stored in the project. */
-export interface IAutoMovieStoredReview extends IAutoMovieSubmitReviewInput {
+/** Versioned review record stored after the preparation fingerprint is consumed. */
+export interface IAutoMovieStoredReview extends Omit<
+  IAutoMovieSubmitReviewInput,
+  "preparedFingerprint"
+> {
   /** Stored-review format. */
   version: 1;
   /** Server-computed target fingerprint. */

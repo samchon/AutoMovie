@@ -388,12 +388,14 @@ export class AutoMovieApplication {
    * Validate and atomically store one external coding-agent review worksheet
    * after `PRODUCTION_REVIEW` is read. Every required criterion must be
    * covered; quotations, frame references and acceptance outcomes must resolve
-   * against the freshly prepared fingerprint; observations, corrections and
-   * completion basis must be self-consistent. This MCP gate cannot decide
-   * taste, but it can prevent unsupported or stale claims from becoming
-   * `complete: true`. Refusal returns exact diagnostics and stores no false
-   * completion. The tool never edits source, design or pixels; apply
-   * corrections in their owner and prepare a new review.
+   * against the freshly prepared fingerprint. Copy `prepareReview.fingerprint`
+   * unchanged into `preparedFingerprint`; the server refuses a worksheet after
+   * any relevant state change. Observations, corrections and completion basis
+   * must be self-consistent. This MCP gate cannot decide taste, but it can
+   * prevent unsupported or stale claims from becoming `complete: true`. Refusal
+   * returns exact diagnostics and stores no false completion. The tool never
+   * edits source, design or pixels; apply corrections in their owner and
+   * prepare a new review.
    */
   public submitReview(
     props: IAutoMovieSubmitReview.IProps,

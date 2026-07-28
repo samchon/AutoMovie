@@ -210,6 +210,7 @@ export const test_mcp_production_materialization = (): void => {
     heroSource.scene.nodes.push({
       ...heroSource.scene.nodes[0]!,
       id: "captain",
+      model: "source-only-model",
       transform: {
         ...heroSource.scene.nodes[0]!.transform,
         translation: { x: 99, y: 99, z: 99 },
@@ -264,6 +265,8 @@ export const test_mcp_production_materialization = (): void => {
       "compiler owns slot insertion, hero placement and collision reporting",
       materialized.value.scene.nodes.find((node) => node.id === "captain")
         ?.transform.translation.x === formationSlots.line![0]!.position.x &&
+        materialized.value.scene.nodes.find((node) => node.id === "captain")
+          ?.model === productionRuntimeModelId("stick") &&
         materialized.value.models.every(
           (model) => model.id !== "source-only-model",
         ) &&

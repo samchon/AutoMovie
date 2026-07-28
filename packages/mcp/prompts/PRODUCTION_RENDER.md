@@ -6,7 +6,7 @@ A successful preview requires a current source compile, a project-fixed capture 
 
 Preview paths include target, compile fingerprint, and render-spec fingerprint. The manifest records every frame index, rational time, guide pass, path, digest, and dimensions. A source, design, compile, frame, or manifest change makes old visual review stale.
 
-The full render command must atomically commit `.automovie/render-manifest.json` and its renderer-owned v2 receipt after probing the actual outputs. Final compile reopens every file and independently decodes or parses it; filenames, MIME strings, declared codecs, hashes, and receipt metadata cannot substitute for current media bytes.
+The full render command must atomically commit `.automovie/render-manifest.json` and its renderer-owned v2 receipt after probing the actual outputs. Final compile reopens every file and independently decodes or parses it; filenames, MIME strings, declared codecs, hashes, and receipt metadata cannot substitute for current media bytes. Required WebVTT must contain ordered, syntactically valid, non-empty cues whose end times stay inside the production runtime.
 
 Use beauty for appearance, depth for spatial separation, mask for identity and occlusion, normal for surface direction, pose for skeleton readability, and outline for silhouette. Capture the passes named by the shot contract and acceptance scenarios.
 

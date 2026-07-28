@@ -27,9 +27,15 @@ export interface IAutoMovieProductionDesign {
   targetRuntimeSeconds: number;
   /** Deterministic frame clock and raster format. */
   frameFormat: {
-    /** Integer pixel width from 16 through 16,384. */
+    /**
+     * Integer pixel width from 16 through 16,384. Width times height may not
+     * exceed 16,777,216 pixels, the exact-frame review capture ceiling.
+     */
     width: number;
-    /** Integer pixel height from 16 through 16,384. */
+    /**
+     * Integer pixel height from 16 through 16,384. Width times height may not
+     * exceed 16,777,216 pixels, the exact-frame review capture ceiling.
+     */
     height: number;
     /** Finite frames per second, strictly above zero. */
     fps: number;
@@ -51,7 +57,13 @@ export interface IAutoMovieProductionDesign {
   deliverables: IAutoMovieProductionDeliverable[];
 }
 
-/** One distance-specific representation used by a model recipe. */
+/**
+ * One distance-specific recipe reference emitted as authoring/runtime metadata.
+ *
+ * The foundation compiler materializes every referenced recipe, but the current
+ * scaffold viewer does not automatically switch tiers by camera distance.
+ * Source or a future renderer must select a tier explicitly.
+ */
 export interface IAutoMovieModelLodRecipe {
   /** Detail tier. */
   tier: "hero" | "near" | "far";
@@ -92,13 +104,16 @@ export interface IAutoMovieModelRecipe {
    */
   lod: IAutoMovieModelLodRecipe[];
   /**
-   * Implemented runtime abilities only. Currently `stickman` may declare
-   * `signal`; every other archetype must use an empty list.
+   * Supported semantic abilities visible to source and review. Currently only
+   * `stickman` may declare `signal`; source still authors the actual signaling
+   * motion, and every other archetype must use an empty list.
    */
   capabilities: string[];
   /**
-   * Unique named bone sockets. Currently only `stickman` has a compiler-owned
-   * humanoid skeleton and may declare attachments.
+   * Unique semantic bone sockets. Currently only `stickman` has a
+   * compiler-owned humanoid skeleton and may declare attachments; the
+   * foundation materializer does not create attached scene nodes
+   * automatically.
    */
   attachments: Array<{
     /** Non-blank attachment id, unique within the recipe. */
@@ -273,7 +288,7 @@ export type IAutoMovieFormationLayout =
 export interface IAutoMovieFormationDesign {
   /** Non-blank stable formation id, unique under portable case folding. */
   id: string;
-  /** Existing model recipe id used by every ordinary derived slot. */
+  /** Existing model recipe id enforced on every derived slot, including heroes. */
   modelRecipe: string;
   /** Integer number of derived slots from 1 through 1,000,000. */
   count: number;
@@ -459,7 +474,7 @@ export interface IAutoMovieShotContract {
   };
   /** Timed semantic events. */
   events: IAutoMovieShotEventContract[];
-  /** Required visual-review frames. */
+  /** At least one required visual-review frame. */
   reviewFrames: IAutoMovieShotReviewFrame[];
 }
 

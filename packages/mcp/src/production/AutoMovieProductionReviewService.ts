@@ -43,6 +43,11 @@ import {
 } from "./contentIdentity";
 import { isProductionFrameTime } from "./validateProductionDesign";
 
+type AutoMovieReviewWorksheet = Omit<
+  IAutoMovieSubmitReviewInput,
+  "preparedFingerprint"
+>;
+
 /** Required review criteria in their canonical submission order. */
 export const AUTOMOVIE_REVIEW_CRITERIA = {
   design: [
@@ -179,6 +184,17 @@ export class AutoMovieProductionReviewService {
     input: IAutoMovieSubmitReviewInput,
   ): IAutoMovieSubmitReviewOutput {
     const prepared = this.prepare({ target: input.target });
+    if (input.preparedFingerprint !== prepared.fingerprint)
+      return refused(this.project, input.target, [
+        {
+          code: "review-worksheet-stale",
+          category: "error",
+          phase: "review",
+          target: reviewTargetKey(input.target),
+          path: targetPath(input.target),
+          message: `Submitted worksheet fingerprint ${input.preparedFingerprint} differs from current ${prepared.fingerprint}. Run prepareReview again and review the current evidence before submitReview.`,
+        },
+      ]);
     const diagnostics = [
       ...prepared.diagnostics.filter(
         (diagnostic) => diagnostic.category === "error",
@@ -282,7 +298,7 @@ export class AutoMovieProductionReviewService {
 
 const validateWorksheet = (
   project: AutoMovieProductionProject,
-  input: IAutoMovieSubmitReviewInput,
+  input: AutoMovieReviewWorksheet,
   prepared: IAutoMoviePrepareReviewOutput,
 ): IAutoMovieDiagnostic[] => {
   const diagnostics: IAutoMovieDiagnostic[] = [];
@@ -416,7 +432,7 @@ const validateWorksheet = (
 
 const validateAcceptanceCoverage = (
   project: AutoMovieProductionProject,
-  input: IAutoMovieSubmitReviewInput,
+  input: AutoMovieReviewWorksheet,
   prepared: IAutoMoviePrepareReviewOutput,
 ): IAutoMovieDiagnostic[] => {
   if (input.target.kind !== "shot" && input.target.kind !== "film") return [];
@@ -1149,12 +1165,12 @@ const currentFrames = (
     ) {
       diagnostics.push({
         code: "render-frame-invalid",
-        category: "error",
+        category: "warning",
         phase: "render",
         target: bundle,
         path: normalizeSlash(path.relative(project.root, manifestPath)),
         message:
-          "Required review evidence must match the current shot, production FPS, and exact production raster. Small preview thumbnails remain usable for iteration but cannot discharge review. Recreate this required frame through previewFrame without width/height overrides.",
+          "This iteration frame does not match the current shot, production FPS, and exact production raster, so it cannot discharge review. Small preview thumbnails remain usable for diagnosis; capture each required frame again without width/height overrides before submitReview.",
       });
       continue;
     }

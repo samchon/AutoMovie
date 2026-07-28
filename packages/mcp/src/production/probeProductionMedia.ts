@@ -27,10 +27,30 @@ export const probeProductionMedia = (props: {
     const text = Buffer.from(props.bytes).toString("utf8");
     if (/^\uFEFF?WEBVTT(?:[ \t].*)?(?:\r?\n|$)/.test(text) === false)
       throw new Error("Caption bytes do not contain a valid WebVTT header.");
+    const cues = text
+      .split(/\r?\n/)
+      .filter((line) => line.includes("-->"))
+      .map(parseWebVttCue);
+    if (cues.length === 0)
+      throw new Error(
+        "WebVTT captions contain no timed cue. Add at least one observable cue or do not declare this deliverable required.",
+      );
+    for (let index = 0; index < cues.length; ++index) {
+      const cue = cues[index]!;
+      if (cue.start >= cue.end)
+        throw new Error(
+          `WebVTT cue ${index + 1} must end after it starts. Correct the cue timing.`,
+        );
+      if (index > 0 && cue.start < cues[index - 1]!.start)
+        throw new Error(
+          `WebVTT cue ${index + 1} starts before the preceding cue. Keep deterministic cue order.`,
+        );
+    }
     return {
       kind: "webvtt",
-      cueCount: text.split(/\r?\n/).filter((line) => line.includes("-->"))
-        .length,
+      cueCount: cues.length,
+      firstCueSeconds: cues[0]!.start,
+      lastCueSeconds: Math.max(...cues.map((cue) => cue.end)),
     };
   }
   const parsed = parseMp4(props.bytes);
@@ -74,6 +94,29 @@ export const probeProductionMedia = (props: {
     channels: audio.channel_count,
     sampleRate: audio.sample_rate,
   };
+};
+
+const parseWebVttCue = (line: string): { start: number; end: number } => {
+  const match =
+    /^\s*((?:\d{2,}:)?[0-5]\d:[0-5]\d\.\d{3})\s+-->\s+((?:\d{2,}:)?[0-5]\d:[0-5]\d\.\d{3})(?:[ \t]+.*)?$/.exec(
+      line,
+    );
+  if (match === null)
+    throw new Error(
+      `WebVTT cue timing "${line.trim()}" is malformed. Use HH:MM:SS.mmm --> HH:MM:SS.mmm.`,
+    );
+  return {
+    start: webVttTimestampSeconds(match[1]!),
+    end: webVttTimestampSeconds(match[2]!),
+  };
+};
+
+const webVttTimestampSeconds = (value: string): number => {
+  const parts = value.split(":");
+  const seconds = Number(parts.pop()!);
+  const minutes = Number(parts.pop()!);
+  const hours = parts.length === 0 ? 0 : Number(parts.pop()!);
+  return hours * 3_600 + minutes * 60 + seconds;
 };
 
 const parseMp4 = (

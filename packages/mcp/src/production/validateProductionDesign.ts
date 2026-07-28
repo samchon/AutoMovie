@@ -42,6 +42,9 @@ const SUPPORTED_MODEL_CAPABILITIES: Record<
   "primitive-prop": new Set(),
 };
 
+/** Maximum exact production raster accepted by design and frame review. */
+export const AUTOMOVIE_MAX_FRAME_PIXELS = 16_777_216;
+
 /** Validate graph-level production invariants after structural validation. */
 export const validateAutoMovieProductionGraph = (
   graph: IAutoMovieProductionDesignGraph,
@@ -79,6 +82,17 @@ export const validateAutoMovieProductionGraph = (
       file,
       "frameFormat.height",
     );
+    if (
+      graph.production.frameFormat.width * graph.production.frameFormat.height >
+      AUTOMOVIE_MAX_FRAME_PIXELS
+    )
+      invalid(
+        diagnostics,
+        "design-range-invalid",
+        target,
+        file,
+        `frameFormat width times height exceeds ${AUTOMOVIE_MAX_FRAME_PIXELS} pixels. Reduce the exact production raster so previewFrame can capture required review evidence.`,
+      );
     positive(
       diagnostics,
       graph.production.frameFormat.fps,
@@ -621,6 +635,14 @@ export const validateAutoMovieProductionGraph = (
         );
     }
     const frames = new Set<string>();
+    if (shot.reviewFrames.length === 0)
+      invalid(
+        diagnostics,
+        "design-collection-empty",
+        target,
+        file,
+        `Shot "${id}" must declare at least one exact review frame and pass. Add reviewFrames in setShotContract so visual review has a reachable evidence target.`,
+      );
     for (const frame of shot.reviewFrames) {
       unique(diagnostics, frames, frame.id, target, file, "reviewFrames");
       if (

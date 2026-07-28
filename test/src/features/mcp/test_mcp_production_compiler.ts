@@ -215,6 +215,22 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
             file.path === "shots/opening.json" && file.status === "created",
         ),
     );
+    fs.rmSync(generatedManifestPath);
+    const missingOwnershipManifest = compiler.lint({ scope: "source" });
+    const repairedOwnershipManifest = compiler.compile({ scope: "source" });
+    TestValidator.predicate(
+      "lint rejects a missing ownership manifest and compile recreates it",
+      diagnosticCodes(missingOwnershipManifest).has(
+        "generated-manifest-missing",
+      ) &&
+        repairedOwnershipManifest.success &&
+        repairedOwnershipManifest.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "generated-manifest-missing" &&
+            diagnostic.category === "warning",
+        ) &&
+        fs.existsSync(generatedManifestPath),
+    );
     const unowned = path.join(fixture.root, "generated/hand-edited.json");
     fs.writeFileSync(unowned, "{}\n");
     TestValidator.predicate(
@@ -1287,6 +1303,15 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const currentCaptionFailure = finalCompiler.compile({ scope: "final" });
     fs.writeFileSync(captionFailurePath, captionFailureBytes);
     restoreEdgeLedger();
+    fs.writeFileSync(
+      captionFailurePath,
+      `WEBVTT\n\n00:00:00.000 --> 00:00:${String(
+        Math.ceil(edgeProduction.targetRuntimeSeconds) + 1,
+      ).padStart(2, "0")}.000\nOutside runtime.\n`,
+    );
+    const outOfRuntimeCaption = finalCompiler.compile({ scope: "final" });
+    fs.writeFileSync(captionFailurePath, captionFailureBytes);
+    restoreEdgeLedger();
     const writeDirectLedger = (
       manifest: IAutoMovieProductionRenderManifest,
     ): void => {
@@ -1362,6 +1387,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
               'Caption deliverable "captions-invalid"',
             ),
         ) &&
+        outOfRuntimeCaption.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "render-deliverable-media-mismatch" &&
+            diagnostic.message.includes("production timeline"),
+        ) &&
         diagnosticCodes(duplicateOwnedRender).has(
           "render-deliverable-invalid",
         ) &&
@@ -1377,7 +1407,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
             diagnostic.message.includes("non-error render read failure"),
         ),
     );
-    project.eraseDesignArtifact({ kind: "production" });
+    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
     TestValidator.predicate(
       "final diagnostics tolerate an absent production while design owns error",
       diagnosticCodes(finalCompiler.compile({ scope: "final" })).has(

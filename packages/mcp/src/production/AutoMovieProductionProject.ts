@@ -601,6 +601,8 @@ export class AutoMovieProductionProject {
   /**
    * Verify that a render manifest is at its canonical content-addressed path
    * and is byte-bound to a receipt written atomically by commitRenderBundle.
+   * Every declared PNG must also remain inside that bundle and match its
+   * recorded digest and raster before the manifest is considered current.
    */
   public verifiedRenderManifest(
     manifestPath: string,
@@ -645,6 +647,27 @@ export class AutoMovieProductionProject {
         receipt.manifestDigest !== digestAutoMovieBytes(bytes)
       )
         return null;
+      const framePaths = new Set<string>();
+      for (const frame of validation.data.frames) {
+        const normalizedFrame = normalizeSlash(frame.path).toLowerCase();
+        if (framePaths.has(normalizedFrame)) return null;
+        framePaths.add(normalizedFrame);
+        const absoluteFrame = resolveInside(
+          path.dirname(realManifest),
+          frame.path,
+        );
+        const frameBytes = this.readRenderFile(
+          normalizeSlash(path.relative(root, absoluteFrame)),
+        );
+        if (digestAutoMovieBytes(frameBytes) !== frame.digest) return null;
+        const probe = probeProductionMedia({
+          kind: "preview",
+          mediaType: "image/png",
+          bytes: frameBytes,
+        }) as Extract<ReturnType<typeof probeProductionMedia>, { kind: "png" }>;
+        if (probe.width !== frame.width || probe.height !== frame.height)
+          return null;
+      }
       return validation.data;
     } catch {
       return null;
@@ -1469,7 +1492,12 @@ const referencesTo = (
   target: IAutoMovieDesignTarget,
 ): string[] => {
   const references: string[] = [];
-  if (target.kind === "model") {
+  if (target.kind === "production") {
+    for (const id of graph.shots.keys()) references.push(`shot:${id}`);
+    for (const [id, acceptance] of graph.acceptance)
+      if (acceptance.target.kind === "film")
+        references.push(`acceptance:${id}`);
+  } else if (target.kind === "model") {
     for (const [id, model] of graph.models)
       if (id !== target.id && model.lod.some((lod) => lod.recipe === target.id))
         references.push(`model:${id}`);
@@ -1495,13 +1523,25 @@ const referencesTo = (
           acceptance.criterion.shot === target.id)
       )
         references.push(`acceptance:${id}`);
-  } else if (target.kind === "production") {
-    for (const [id, acceptance] of graph.acceptance)
-      if (acceptance.target.kind === "film")
-        references.push(`acceptance:${id}`);
+  } else if (target.kind === "world") {
+    for (const [id, shot] of graph.shots)
+      if (shotUsesLandmark(shot)) references.push(`shot:${id}`);
   }
   return references.sort(compareCodeUnits);
 };
+
+const shotUsesLandmark = (shot: IAutoMovieShotContract): boolean =>
+  [
+    ...shot.opening.flatMap((state) => state.predicates),
+    ...shot.closing.flatMap((state) => state.predicates),
+    ...shot.events.flatMap((event) => event.predicates),
+  ].some((predicate) =>
+    predicate.kind === "position"
+      ? predicate.subject.kind === "landmark"
+      : predicate.kind === "distance" &&
+        (predicate.from.kind === "landmark" ||
+          predicate.to.kind === "landmark"),
+  );
 
 const consequencesOf = (
   graph: IAutoMovieProductionDesignGraph,

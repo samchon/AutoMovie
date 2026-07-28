@@ -13,6 +13,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { PNG } from "pngjs";
 
 import {
   formationDesign,
@@ -210,6 +211,71 @@ export const test_mcp_production_project = (): void => {
           id: filmEventAcceptance.id,
         }).accepted,
     );
+    TestValidator.predicate(
+      "shot frame clocks retain the singleton production design",
+      project
+        .eraseDesignArtifact({ kind: "production" })
+        .diagnostics.some((diagnostic) =>
+          diagnostic.message.includes("shot:opening"),
+        ),
+    );
+    const landmarkShot = shotContract();
+    landmarkShot.opening[0]!.predicates.push({
+      kind: "position",
+      subject: { kind: "landmark", id: "signal-ground" },
+      axis: "x",
+      operator: "==",
+      value: 0,
+      tolerance: 0,
+    });
+    project.setShotContract(landmarkShot);
+    TestValidator.predicate(
+      "shot predicates retain the world that owns their landmark selectors",
+      project
+        .eraseDesignArtifact({ kind: "world" })
+        .diagnostics.some((diagnostic) =>
+          diagnostic.message.includes("shot:opening"),
+        ),
+    );
+    landmarkShot.opening[0]!.predicates = [
+      {
+        kind: "position",
+        subject: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+        axis: "x",
+        operator: "==",
+        value: 0,
+        tolerance: 0,
+      },
+      {
+        kind: "distance",
+        from: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+        to: { kind: "landmark", id: "signal-ground" },
+        operator: "==",
+        value: 0,
+        tolerance: 0,
+      },
+    ];
+    project.setShotContract(landmarkShot);
+    const landmarkAsDistanceDestination = project.eraseDesignArtifact({
+      kind: "world",
+    });
+    landmarkShot.opening[0]!.predicates = [
+      {
+        kind: "distance",
+        from: { kind: "landmark", id: "signal-ground" },
+        to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+        operator: "==",
+        value: 0,
+        tolerance: 0,
+      },
+    ];
+    project.setShotContract(landmarkShot);
+    TestValidator.predicate(
+      "both distance operands preserve their referenced landmark world",
+      landmarkAsDistanceDestination.accepted === false &&
+        project.eraseDesignArtifact({ kind: "world" }).accepted === false,
+    );
+    project.setShotContract(shotContract());
     const standaloneModel = {
       ...modelRecipe(),
       id: "standalone",
@@ -437,6 +503,9 @@ export const test_mcp_production_project = (): void => {
         ),
     );
 
+    const renderImage = new PNG({ width: 1, height: 1 });
+    renderImage.data.fill(200);
+    const renderImageBytes = PNG.sync.write(renderImage);
     const renderManifest: IAutoMovieRenderBundleManifest = {
       version: 1,
       target: { kind: "shot", id: "opening" },
@@ -449,12 +518,25 @@ export const test_mcp_production_project = (): void => {
         pixelFormat: "yuv420p",
         crf: 17,
       },
-      frames: [],
+      frames: [
+        {
+          index: 0,
+          time: 0,
+          pass: "beauty",
+          path: "frame.png",
+          digest: digestAutoMovieBytes(renderImageBytes),
+          width: 1,
+          height: 1,
+        },
+      ],
     };
     const renderBundle = productionRenderBundleRelativePath(renderManifest);
     const revision = ownerProject.commitRenderBundle(
       renderBundle,
-      new Map([["frame.bin", Buffer.from("frame")]]),
+      new Map([
+        ["frame.bin", Buffer.from("frame")],
+        ["frame.png", renderImageBytes],
+      ]),
       renderManifest,
     );
     TestValidator.predicate(
@@ -478,6 +560,23 @@ export const test_mcp_production_project = (): void => {
       "render manifest is bound to its MCP-owned receipt",
       ownerProject.verifiedRenderManifest(renderManifestPath) !== null,
     );
+    const renderImagePath = path.join(
+      ownerProject.renderRoot(),
+      renderBundle,
+      "frame.png",
+    );
+    fs.writeFileSync(renderImagePath, Buffer.from("tampered"));
+    const tamperedRenderFrame =
+      ownerProject.verifiedRenderManifest(renderManifestPath);
+    fs.writeFileSync(renderImagePath, renderImageBytes);
+    fs.rmSync(renderImagePath);
+    const missingRenderFrame =
+      ownerProject.verifiedRenderManifest(renderManifestPath);
+    fs.writeFileSync(renderImagePath, renderImageBytes);
+    TestValidator.predicate(
+      "manifest ownership includes every declared frame's current PNG bytes",
+      tamperedRenderFrame === null && missingRenderFrame === null,
+    );
     const renderReceiptDirectory = path.join(
       fixture.root,
       ".automovie/render-receipts",
@@ -488,6 +587,46 @@ export const test_mcp_production_project = (): void => {
     );
     const renderManifestBytes = fs.readFileSync(renderManifestPath);
     const renderReceiptBytes = fs.readFileSync(renderReceiptPath);
+    const writeOwnedRenderManifest = (
+      manifest: IAutoMovieRenderBundleManifest,
+    ): void => {
+      const serialized = Buffer.from(`${JSON.stringify(manifest)}\n`);
+      fs.writeFileSync(renderManifestPath, serialized);
+      fs.writeFileSync(
+        renderReceiptPath,
+        `${JSON.stringify({
+          version: 1,
+          bundle: renderBundle,
+          manifestDigest: digestAutoMovieBytes(serialized),
+        })}\n`,
+      );
+    };
+    writeOwnedRenderManifest({
+      ...renderManifest,
+      frames: [renderManifest.frames[0]!, renderManifest.frames[0]!],
+    });
+    const duplicateRenderFrame =
+      ownerProject.verifiedRenderManifest(renderManifestPath);
+    writeOwnedRenderManifest({
+      ...renderManifest,
+      frames: [{ ...renderManifest.frames[0]!, width: 2 }],
+    });
+    const mismatchedRenderWidth =
+      ownerProject.verifiedRenderManifest(renderManifestPath);
+    writeOwnedRenderManifest({
+      ...renderManifest,
+      frames: [{ ...renderManifest.frames[0]!, height: 2 }],
+    });
+    const mismatchedRenderHeight =
+      ownerProject.verifiedRenderManifest(renderManifestPath);
+    fs.writeFileSync(renderManifestPath, renderManifestBytes);
+    fs.writeFileSync(renderReceiptPath, renderReceiptBytes);
+    TestValidator.predicate(
+      "render verification rejects duplicate frame ownership and false raster metadata",
+      duplicateRenderFrame === null &&
+        mismatchedRenderWidth === null &&
+        mismatchedRenderHeight === null,
+    );
     const nonCanonicalManifest = path.join(
       ownerProject.renderRoot(),
       "non-canonical",

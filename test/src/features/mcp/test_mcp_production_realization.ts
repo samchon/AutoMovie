@@ -72,6 +72,24 @@ export const test_mcp_production_realization = (): void => {
         baseOutcome.realization.events.every((item) => item.passed) &&
         baseOutcome.realization.camera.every((item) => item.passed),
     );
+    const held = structuredClone(base);
+    held.shot.performances = [
+      { node: "sentinel", motion: null, startOffset: 0 },
+    ];
+    const heldOutcome = realizeShotContract({
+      contract: shotContract(),
+      production: productionDesign(),
+      world: worldDesign(),
+      formations: new Map(),
+      formationSlots: {},
+      compiled: held,
+      collisions: [],
+    });
+    TestValidator.predicate(
+      "an explicit null performance holds instead of falling back to the node motion",
+      heldOutcome.realization.opening.every((item) => item.passed) &&
+        heldOutcome.realization.closing.some((item) => item.passed === false),
+    );
 
     const formation = formationDesign();
     const formations = new Map([[formation.id, formation]]);
@@ -292,6 +310,24 @@ export const test_mcp_production_realization = (): void => {
         measured.realization.events[0]?.passed === true &&
         measured.realization.formations[0]?.count === formation.count &&
         measured.realization.formations[0]?.passed === true,
+    );
+    const heroModelTampered = structuredClone(materialized);
+    heroModelTampered.scene.nodes.find((node) => node.id === "captain")!.model =
+      staticModel.id;
+    const heroModelOutcome = realizeShotContract({
+      contract,
+      production: productionDesign(),
+      world: worldDesign(),
+      formations,
+      formationSlots,
+      compiled: heroModelTampered,
+      collisions: [],
+    });
+    TestValidator.predicate(
+      "named heroes cannot replace the compiler-owned formation model",
+      heroModelOutcome.realization.formations.some(
+        (item) => item.id === formation.id && item.passed === false,
+      ),
     );
 
     const unreadable = structuredClone(base);

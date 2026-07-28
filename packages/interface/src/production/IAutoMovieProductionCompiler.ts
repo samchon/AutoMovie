@@ -176,8 +176,12 @@ export type IAutoMovieProductionMediaProbe =
   | {
       /** Parsed WebVTT text. */
       kind: "webvtt";
-      /** Number of non-empty cue timing lines. */
+      /** Number of syntactically valid, non-empty cue timing lines. */
       cueCount: number;
+      /** Earliest parsed cue start in seconds. */
+      firstCueSeconds: number;
+      /** Latest parsed cue end in seconds. */
+      lastCueSeconds: number;
     };
 
 /** One file record independently derived by the renderer-owned receipt gate. */

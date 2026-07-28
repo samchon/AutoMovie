@@ -70,7 +70,12 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       mediaType: "text/vtt",
       bytes: vtt,
     }),
-    { kind: "webvtt", cueCount: 2 },
+    {
+      kind: "webvtt",
+      cueCount: 2,
+      firstCueSeconds: 0,
+      lastCueSeconds: 0.1,
+    },
   );
   TestValidator.predicate(
     "captions cannot relabel WebVTT bytes",
@@ -95,6 +100,55 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
         }),
       "valid WebVTT header",
     ),
+  );
+  const invalidWebVttCases = [
+    {
+      bytes: "WEBVTT\n\nNo timed cue.\n",
+      message: "no timed cue",
+    },
+    {
+      bytes: "WEBVTT\n\n00:00:00 --> 00:00:00.100\nMalformed.\n",
+      message: "malformed",
+    },
+    {
+      bytes: "WEBVTT\n\n00:00:00.100 --> 00:00:00.100\nZero.\n",
+      message: "must end after",
+    },
+    {
+      bytes:
+        "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nLater.\n\n00:00.500 --> 00:00.750\nEarlier.\n",
+      message: "starts before",
+    },
+  ];
+  TestValidator.predicate(
+    "WebVTT cues must be non-empty, syntactically valid, positive and ordered",
+    invalidWebVttCases.every((item) =>
+      refused(
+        () =>
+          probeProductionMedia({
+            kind: "captions",
+            mediaType: "text/vtt",
+            bytes: Buffer.from(item.bytes),
+          }),
+        item.message,
+      ),
+    ),
+  );
+  TestValidator.equals(
+    "WebVTT accepts the standard timestamp form without an hour field",
+    probeProductionMedia({
+      kind: "captions",
+      mediaType: "text/vtt",
+      bytes: Buffer.from(
+        "WEBVTT\n\n00:00.000 --> 00:00.250\nShort timestamp.\n",
+      ),
+    }),
+    {
+      kind: "webvtt",
+      cueCount: 1,
+      firstCueSeconds: 0,
+      lastCueSeconds: 0.25,
+    },
   );
 
   const video = await productionH264Mp4({

@@ -383,6 +383,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
     });
     const refused = application.submitReview({
       target: prepared.target,
+      preparedFingerprint: prepared.fingerprint,
       observations: "",
       checks: [],
       corrections: [],

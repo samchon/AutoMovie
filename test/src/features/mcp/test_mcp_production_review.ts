@@ -150,6 +150,7 @@ const worksheet = (
   );
   return {
     target: prepared.target,
+    preparedFingerprint: prepared.fingerprint,
     observations: "The current target was inspected against exact evidence.",
     checks,
     corrections: complete
@@ -167,8 +168,8 @@ const worksheet = (
   };
 };
 
-const captureBytes = (): Uint8Array => {
-  const png = new PNG({ width: 16, height: 16 });
+const captureBytes = (width = 16, height = 16): Uint8Array => {
+  const png = new PNG({ width, height });
   png.data.fill(200);
   png.data[0] = 0;
   return PNG.sync.write(png);
@@ -308,6 +309,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     )!;
     review.submit({
       target: { kind: "shot", id: "opening" },
+      preparedFingerprint: missingVisual.fingerprint,
       observations: "No current visual evidence exists.",
       checks: missingVisual.requiredCriteria.map((criterion, index) => ({
         criterion,
@@ -333,11 +335,29 @@ export const test_mcp_production_review = async (): Promise<void> => {
       completionBasis: "Visual evidence is missing.",
       complete: false,
     });
-    const oracle = new AutoMovieProductionOracleService(project, async () => ({
-      bytes: captureBytes(),
-      width: 16,
-      height: 16,
-    }));
+    const oracle = new AutoMovieProductionOracleService(
+      project,
+      async (input) => {
+        const width = input.width ?? 16;
+        const height = input.height ?? 16;
+        return {
+          bytes: captureBytes(width, height),
+          width,
+          height,
+        };
+      },
+    );
+    const thumbnail = await oracle.preview({
+      target: { kind: "shot", id: "opening" },
+      time: 2,
+      pass: "beauty",
+      width: 8,
+      height: 8,
+    });
+    TestValidator.predicate(
+      "a small diagnostic thumbnail remains capturable without becoming exact review evidence",
+      thumbnail.captured,
+    );
     for (const pass of ["beauty", "mask", "pose"] as const)
       TestValidator.predicate(
         `actual frame for ${pass}`,
@@ -971,6 +991,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const diagnostic = missingPrepared.diagnostics[0]!;
     const diagnosticSheet: IAutoMovieSubmitReviewInput = {
       target: missingTarget,
+      preparedFingerprint: missingPrepared.fingerprint,
       observations: "The requested target is absent.",
       checks: missingPrepared.requiredCriteria.map((criterion, index) => ({
         criterion,
@@ -1076,7 +1097,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
       kind: "acceptance",
       id: filmMetricAcceptance.id,
     });
-    project.eraseDesignArtifact({ kind: "production" });
+    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
     const noProductionFrames = review.prepare({ target: shotTarget });
     project.setProductionDesign(productionDesign());
     project.setAcceptanceScenario(filmMetricAcceptance);
@@ -1130,9 +1151,15 @@ export const test_mcp_production_review = async (): Promise<void> => {
       ...productionDesign(),
       title: "changed after review",
     });
+    const staleWorksheetResult = review.submit(
+      worksheet(project, noRequiredPrepared),
+    );
     TestValidator.predicate(
       "dependent reviews become stale after a mutation",
       review.queue().entries.some((entry) => entry.state === "stale") &&
+        staleWorksheetResult.diagnostics.some(
+          (item) => item.code === "review-worksheet-stale",
+        ) &&
         compiler
           .compile({ scope: "review" })
           .diagnostics.some((item) => item.code === "review-stale"),

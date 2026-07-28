@@ -105,6 +105,7 @@ export const materializeCompiledShot = (props: {
           collisions.push(slot.node);
           continue;
         }
+        existing.model = runtimeModel.id;
         existing.transform = expected;
         continue;
       }
