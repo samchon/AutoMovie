@@ -40,6 +40,7 @@ import {
   AutoMovieProductionProject,
   productionRenderBundleRelativePath,
 } from "./AutoMovieProductionProject";
+import { canonicalAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
   canonicalAutoMovieJsonBytes,
   compareCodeUnits,
@@ -497,12 +498,18 @@ export class AutoMovieProductionOracleService {
         }. The preview host must return a decodable PNG.`,
       );
     }
-    if (captured.rendererIdentity.trim().length === 0)
+    let rendererIdentity: string;
+    try {
+      rendererIdentity = canonicalAutoMovieCaptureRuntimeIdentity(
+        captured.runtimeIdentity,
+      );
+    } catch (error) {
       return previewFailure(
         generated.inputFingerprint,
         "capture-renderer-identity-invalid",
-        "The capture adapter returned a blank renderer identity. Report the browser and graphics backend before these pixels can enter a render bundle.",
+        `${String(error)} Correct the capture adapter or run pnpm capture:install and pnpm capture:doctor before these pixels enter a render bundle.`,
       );
+    }
     if (
       captured.width !== width ||
       captured.height !== height ||
@@ -530,7 +537,7 @@ export class AutoMovieProductionOracleService {
     };
     const relativeBundle = productionRenderBundleRelativePath({
       target: input.target,
-      rendererIdentity: captured.rendererIdentity,
+      rendererIdentity,
       targetFingerprint,
       renderSpec,
     });
@@ -557,7 +564,7 @@ export class AutoMovieProductionOracleService {
       {
         target: input.target,
         compileFingerprint: generated.inputFingerprint,
-        rendererIdentity: captured.rendererIdentity,
+        rendererIdentity,
         targetFingerprint,
         renderSpec,
       },
@@ -570,10 +577,10 @@ export class AutoMovieProductionOracleService {
         left.index - right.index || compareCodeUnits(left.pass, right.pass),
     );
     const manifest: IAutoMovieRenderBundleManifest = {
-      version: 2,
+      version: 3,
       target: input.target,
       compileFingerprint: generated.inputFingerprint,
-      rendererIdentity: captured.rendererIdentity,
+      rendererIdentity,
       targetFingerprint,
       renderSpec,
       frames,

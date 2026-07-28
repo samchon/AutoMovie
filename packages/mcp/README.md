@@ -70,6 +70,12 @@ manifest, metadata-only media claim, or review copied from another fingerprint
 cannot pass the final compile gate. The server validates the evidence and state
 transition; it does not call a second LLM or grade creative prose.
 
+Render bundle v3 stores a canonical structured capture-runtime identity:
+Playwright package, browser product/version/revision/source, executable digest
+when available, platform, headless scale, requested backend, and actual WebGL
+vendor/renderer. Arbitrary strings and legacy v2 manifests are not current
+review evidence; the host must recapture them.
+
 The binary remains opt-in until a comparative external-agent benchmark
 demonstrates that it should replace the compact default. The former
 47-operation class is explicitly `AutoMovieLegacyApplication`; the compact and

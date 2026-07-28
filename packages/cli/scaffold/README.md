@@ -7,18 +7,41 @@ output, geometry facts, actual-frame evidence, and review freshness.
 
 ## First run
 
-Frame capture currently requires a system Google Chrome installation. The
-scaffold requests SwiftShader and records the browser version plus the WebGL
-vendor and renderer actually reported by the capture canvas. Install Chrome or
-provide a project-owned capture adapter before preview or render commands.
+Frame capture defaults to the Chromium build pinned to this project's Playwright
+version. Installation is explicit rather than a hidden dependency
+postinstall. The ignored receipt binds the package version, browser revision,
+executable path, and executable digest; the doctor launches that exact binary,
+requires WebGL, captures a canvas, and decodes the PNG.
 
 ```bash
 pnpm install
+pnpm capture:install
+pnpm capture:doctor
 pnpm compile
 pnpm test
 pnpm preview -- --shot opening --time 2 --pass beauty
 pnpm review:status
 ```
+
+Playwright's standard `HTTPS_PROXY`, `PLAYWRIGHT_DOWNLOAD_HOST`, and
+`PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST` variables support proxies and offline
+mirrors. The default `PLAYWRIGHT_BROWSERS_PATH=0` keeps the binary
+package-local; set that variable to an explicit path for a configured shared
+cache. To use a system browser deliberately, edit `automovie.config.ts`:
+
+```ts
+capture: {
+  browser: { source: "system-channel", channel: "chrome" },
+}
+```
+
+A `configured-executable` choice must declare both its product and path. Its
+exact executable digest is then recorded in every render identity.
+
+Render evidence records structured Playwright, browser, executable, platform,
+headless/raster, backend, and actual WebGL identity. A browser/runtime change
+therefore produces a different content-addressed bundle; legacy v2 evidence
+must be recaptured.
 
 The sample review queue is deliberately incomplete. Open the PNG printed by
 `preview`, read `PRODUCTION_REVIEW` through MCP, and review current evidence.

@@ -365,8 +365,8 @@ export class AutoMovieApplication {
    * diagnosis and review evidence, not as the full-film rendering workflow. MCP
    * is necessary because the review gate must cite pixels actually captured
    * from current artifacts rather than imagined by the model. A missing
-   * adapter, stale compile, blank renderer identity, unsafe path or malformed
-   * PNG is refused without fabricated evidence.
+   * adapter, stale compile, invalid capture runtime identity, unsafe path or
+   * malformed PNG is refused without fabricated evidence.
    */
   public async previewFrame(
     props: IAutoMoviePreviewFrame.IProps,

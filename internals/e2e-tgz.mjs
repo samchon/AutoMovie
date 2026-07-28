@@ -17,6 +17,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -362,6 +363,7 @@ import {
   AutoMovieApplication,
   AutoMovieProductionProject,
   digestAutoMovieBytes,
+  parseAutoMovieCaptureRuntimeIdentity,
 } from "@automovie/mcp";
 import fs from "node:fs";
 import path from "node:path";
@@ -533,6 +535,21 @@ const manifests = namedFiles(path.join(root, "renders"), "manifest.json");
 const renderManifests = manifests
   .map((file) => ({ file, value: readJson(file) }))
   .filter((entry) => Array.isArray(entry.value.frames));
+for (const entry of renderManifests) {
+  const runtime = parseAutoMovieCaptureRuntimeIdentity(
+    entry.value.rendererIdentity,
+  );
+  assert(
+    \`starter-render-runtime:\${path.basename(path.dirname(entry.file))}\`,
+    entry.value.version === 3 &&
+      runtime.browser.source === "package-owned" &&
+      runtime.browser.revision !== null &&
+      runtime.browser.executableDigest?.startsWith("sha256:") === true &&
+      runtime.graphics.vendor.trim().length > 0 &&
+      runtime.graphics.renderer.trim().length > 0,
+    JSON.stringify(entry.value),
+  );
+}
 assert(
   "starter-compiled-shot-order",
   JSON.stringify(compiled.shots) === JSON.stringify(["answer", "opening"]),
@@ -899,6 +916,72 @@ try {
     `npm install --prefer-offline --no-audit --no-fund ${runtimeTarballs
       .map((file) => `"${join(tarballDir, file)}"`)
       .join(" ")}`,
+    starterDir,
+  );
+  if (process.env.CI === "true" && process.platform === "linux")
+    run(
+      "install packaged Chromium system dependencies",
+      "npx playwright install-deps chromium",
+      starterDir,
+      900_000,
+    );
+  run(
+    "install packaged starter Chromium",
+    "npm run capture:install",
+    starterDir,
+    900_000,
+  );
+  const captureReceiptPath = join(
+    starterDir,
+    ".automovie",
+    "capture",
+    "install-receipt.json",
+  );
+  const captureReceiptText = readFileSync(captureReceiptPath, "utf8");
+  const captureReceipt = JSON.parse(captureReceiptText);
+  writeFileSync(captureReceiptPath, "{bad");
+  runExpectedFailure(
+    "reject malformed packaged capture receipt",
+    "npm run capture:doctor",
+    starterDir,
+    "not valid JSON",
+  );
+  writeFileSync(
+    captureReceiptPath,
+    `${JSON.stringify(
+      {
+        ...captureReceipt,
+        playwright: {
+          ...captureReceipt.playwright,
+          version: "0.0.0-stale",
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  runExpectedFailure(
+    "reject stale packaged capture receipt",
+    "npm run capture:doctor",
+    starterDir,
+    "does not match the current Playwright",
+  );
+  writeFileSync(captureReceiptPath, captureReceiptText);
+  const parkedCaptureExecutable = `${captureReceipt.browser.executablePath}.automovie-missing`;
+  renameSync(captureReceipt.browser.executablePath, parkedCaptureExecutable);
+  try {
+    runExpectedFailure(
+      "diagnose missing packaged capture executable",
+      "npm run capture:doctor",
+      starterDir,
+      "is missing or differs",
+    );
+  } finally {
+    renameSync(parkedCaptureExecutable, captureReceipt.browser.executablePath);
+  }
+  run(
+    "doctor packaged starter capture runtime",
+    "npm run capture:doctor",
     starterDir,
   );
   run("compile packaged starter", "npm run compile", starterDir);

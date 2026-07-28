@@ -5,12 +5,14 @@ import {
 } from "@automovie/cli";
 import {
   IAutoMovieAcceptanceScenario,
+  IAutoMovieCaptureRuntimeIdentity,
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
   IAutoMovieProductionDesign,
   IAutoMovieShotContract,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
+import { canonicalAutoMovieCaptureRuntimeIdentity } from "@automovie/mcp";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -119,3 +121,43 @@ export const formationDesign = (
   capabilities: ["hold", "advance"],
   heroOverrides: [{ slot: 0, actor: "captain" }],
 });
+
+/** Stable structured capture-runtime identity for production test fixtures. */
+export const testCaptureRuntimeIdentity = (
+  browserVersion = "148.0.7778.96",
+): IAutoMovieCaptureRuntimeIdentity => ({
+  protocolVersion: "automovie.capture-runtime.v1",
+  playwright: {
+    package: "playwright",
+    version: "1.60.0",
+  },
+  browser: {
+    product: "chromium",
+    version: browserVersion,
+    revision: "1223",
+    source: "package-owned",
+    executableDigest: `sha256:${"1".repeat(64)}` as `sha256:${string}`,
+  },
+  platform: {
+    os: "test",
+    arch: "test",
+  },
+  mode: {
+    headless: "chromium",
+    deviceScaleFactor: 1,
+  },
+  graphics: {
+    requestedBackend: "angle:swiftshader",
+    api: "webgl2",
+    vendor: "AutoMovie Test Vendor",
+    renderer: "AutoMovie Test Renderer",
+  },
+});
+
+/** Canonical manifest encoding of the stable capture fixture identity. */
+export const testRendererIdentity = (
+  browserVersion = "148.0.7778.96",
+): string =>
+  canonicalAutoMovieCaptureRuntimeIdentity(
+    testCaptureRuntimeIdentity(browserVersion),
+  );

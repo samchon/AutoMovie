@@ -18,6 +18,7 @@ import {
   productionDesign,
   productionFixture,
   shotContract,
+  testCaptureRuntimeIdentity,
   worldDesign,
 } from "./productionFixtures";
 
@@ -865,7 +866,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       }),
@@ -939,7 +940,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       }),
@@ -957,7 +958,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       }),
@@ -1010,7 +1011,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       }),
@@ -1071,7 +1072,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         project,
         async () => ({
           bytes,
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
         }),
@@ -1088,12 +1089,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     }
     const exceptionalBytes = {
       bytes: new Uint8Array(),
-      rendererIdentity: "test:png-v1",
+      runtimeIdentity: testCaptureRuntimeIdentity(),
       width: 2,
       height: 2,
     } as {
       bytes: Uint8Array;
-      rendererIdentity: string;
+      runtimeIdentity: ReturnType<typeof testCaptureRuntimeIdentity>;
       width: number;
       height: number;
     };
@@ -1123,7 +1124,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(1, 1),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 3,
         height: 3,
       }),
@@ -1144,7 +1145,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         fs.rmSync(manifestPath);
         return {
           bytes: png(2, 2),
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
         };
@@ -1164,7 +1165,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         fs.writeFileSync(manifestPath, JSON.stringify(manifest));
         return {
           bytes: png(2, 2),
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
         };
@@ -1182,7 +1183,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         project,
         async () => ({
           bytes: png(2, 2),
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
         }),
@@ -1218,7 +1219,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         fs.appendFileSync(viewerPath, "\n<!-- capture race -->\n");
         return {
           bytes: png(2, 2),
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
         };
@@ -1241,7 +1242,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       }),
@@ -1260,7 +1261,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     try {
       await new AutoMovieProductionOracleService(project, async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       })).preview({
@@ -1306,7 +1307,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           [1, 2].map((size) =>
             new AutoMovieProductionOracleService(project, async () => ({
               bytes: blankPng(size, size),
-              rendererIdentity: "test:png-v1",
+              runtimeIdentity: testCaptureRuntimeIdentity(),
               width: size,
               height: size,
             })).preview({
@@ -1324,7 +1325,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async (input) => ({
         bytes: png(input.width!, input.height!),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: input.width!,
         height: input.height!,
       }),
@@ -1350,7 +1351,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async (input) => ({
         bytes: png(input.width!, input.height!),
-        rendererIdentity: "test:png-v2",
+        runtimeIdentity: testCaptureRuntimeIdentity("148.0.7778.97"),
         width: input.width!,
         height: input.height!,
       }),
@@ -1364,7 +1365,13 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async (input) => ({
         bytes: png(input.width!, input.height!),
-        rendererIdentity: " ",
+        runtimeIdentity: {
+          ...testCaptureRuntimeIdentity(),
+          graphics: {
+            ...testCaptureRuntimeIdentity().graphics,
+            renderer: " ",
+          },
+        },
         width: input.width!,
         height: input.height!,
       }),

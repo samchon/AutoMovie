@@ -1,14 +1,22 @@
 import type { AutoMovieProductionFrameCapture } from "@automovie/interface";
 import path from "node:path";
-import { chromium } from "playwright-core";
 import { createServer } from "vite";
 
 import config from "../automovie.config";
+import type {
+  AutoMovieCaptureBrowserConfig,
+  IAutoMovieCaptureBrowserSession,
+} from "./capture-browser";
+import {
+  inspectCaptureGraphics,
+  launchCaptureBrowser,
+} from "./capture-browser";
 import { generatedShotPlugin } from "./generatedShotPlugin";
 
 interface CaptureSession {
   server: Awaited<ReturnType<typeof createServer>>;
-  browser: Awaited<ReturnType<typeof chromium.launch>>;
+  browser: IAutoMovieCaptureBrowserSession["browser"];
+  runtime: IAutoMovieCaptureBrowserSession["runtime"];
   origin: string;
 }
 
@@ -33,22 +41,14 @@ const startSession = async (projectRoot: string): Promise<CaptureSession> => {
       typeof address === "string"
     )
       throw new Error("Vite did not expose a numeric local address.");
-    const browser = await chromium
-      .launch({
-        channel: "chrome",
-        headless: true,
-        args: ["--use-angle=swiftshader"],
-      })
-      .catch((error: unknown) => {
-        throw new Error(
-          `AutoMovie capture currently requires a system Google Chrome installation because the scaffold uses playwright-core with channel "chrome". Install Chrome or configure a project-owned capture adapter. ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
-      });
+    const launched = await launchCaptureBrowser(
+      projectRoot,
+      config.capture.browser as AutoMovieCaptureBrowserConfig,
+    );
     return {
       server,
-      browser,
+      browser: launched.browser,
+      runtime: launched.runtime,
       origin: `http://${config.viewer.host}:${address.port}`,
     };
   } catch (error) {
@@ -98,7 +98,7 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
   const session = await captureSession(input.projectRoot);
   const page = await session.browser.newPage({
     viewport: { width: input.width!, height: input.height! },
-    deviceScaleFactor: 1,
+    deviceScaleFactor: session.runtime.mode.deviceScaleFactor,
   });
   try {
     const browserDiagnostics: string[] = [];
@@ -132,40 +132,10 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
       element.style.display = "none";
     });
     const bytes = await page.locator("#view").screenshot({ type: "png" });
-    const graphicsIdentity = await page.locator("#view").evaluate((element) => {
-      const canvas = element as HTMLCanvasElement;
-      const context = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
-      if (context === null)
-        return {
-          api: "unavailable",
-          vendor: "unavailable",
-          renderer: "unavailable",
-        };
-      const debug = context.getExtension("WEBGL_debug_renderer_info");
-      return {
-        api:
-          typeof WebGL2RenderingContext !== "undefined" &&
-          context instanceof WebGL2RenderingContext
-            ? "webgl2"
-            : "webgl",
-        vendor: String(
-          context.getParameter(debug?.UNMASKED_VENDOR_WEBGL ?? context.VENDOR),
-        ),
-        renderer: String(
-          context.getParameter(
-            debug?.UNMASKED_RENDERER_WEBGL ?? context.RENDERER,
-          ),
-        ),
-      };
-    });
+    const graphics = await inspectCaptureGraphics(page);
     return {
       bytes,
-      rendererIdentity: JSON.stringify({
-        browser: `chrome:${session.browser.version()}`,
-        requestedBackend: "angle:swiftshader",
-        graphics: graphicsIdentity,
-        deviceScaleFactor: 1,
-      }),
+      runtimeIdentity: { ...session.runtime, graphics },
       width: input.width!,
       height: input.height!,
     };

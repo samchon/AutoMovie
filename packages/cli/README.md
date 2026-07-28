@@ -25,6 +25,8 @@ calls.
 
 ```bash
 pnpm install
+pnpm capture:install
+pnpm capture:doctor
 pnpm compile
 pnpm test
 pnpm preview -- --shot opening --time 2 --pass beauty
@@ -40,10 +42,34 @@ captures the project-owned viewer and records a frame tied to target-local
 generated/viewer inputs and the renderer identity; review cannot complete
 against an arbitrary or stale screenshot.
 
-The current capture scaffold requires system Google Chrome. It requests
-SwiftShader and records both the browser version and the WebGL vendor/renderer
-actually reported by the canvas; projects without Chrome must configure a
-project-owned capture adapter.
+The default capture runtime is the Chromium build pinned to the starter's
+Playwright package. `capture:install` downloads it explicitly into
+Playwright's project-local browser path and writes an ignored receipt containing
+the package version, browser revision, executable path, and executable digest.
+`capture:doctor` launches that exact executable, requires WebGL, captures a
+canvas, and decodes the PNG. Proxy and offline mirror settings use Playwright's
+standard `HTTPS_PROXY`, `PLAYWRIGHT_DOWNLOAD_HOST`, and
+`PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST` environment variables. The default
+`PLAYWRIGHT_BROWSERS_PATH=0` keeps the binary package-local; set that variable
+to an explicit path to use a configured shared cache.
+
+System Chrome or Edge remains an explicit compatibility choice in
+`automovie.config.ts`:
+
+```ts
+capture: {
+  browser: { source: "system-channel", channel: "chrome" },
+}
+```
+
+A configured executable must likewise declare its product and path; its exact
+binary digest, rather than a guessed machine identity, enters render evidence.
+
+Each render bundle stores canonical structured identity for Playwright, browser
+revision/source, executable digest when available, platform, headless/raster
+mode, requested backend, and actual WebGL vendor/renderer. Existing v2 bundle
+manifests remain on disk but require recapture before they can serve as current
+review evidence.
 
 ## Usage
 

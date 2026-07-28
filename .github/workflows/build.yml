@@ -28,6 +28,7 @@ on:
       - 'packages/*/scaffold/**'
       - 'packages/*/scripts/**'
       - 'internals/config/**'
+      - 'internals/*.mjs'
       - 'test/**'
       # Root tooling configuration, by shape for the same reason (#1335). The
       # root half was outside the enumeration #1333 re-derived, so a pull
@@ -74,3 +75,9 @@ jobs:
 
       - name: Build Packages
         run: pnpm run build
+
+      # The capture runtime belongs to the published starter, not this
+      # checkout. Pack/install the real tarballs, explicitly provision the
+      # pinned Chromium, run its WebGL/PNG doctor, then exercise preview/render.
+      - name: Verify Packaged Capture and Production Flow
+        run: pnpm run e2e:tgz

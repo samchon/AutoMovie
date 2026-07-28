@@ -22,6 +22,9 @@ catalogs:
     mp4box:
       specifier: ^2.4.1
       version: 2.4.1
+    playwright:
+      specifier: ^1.60.0
+      version: 1.60.0
     playwright-core:
       specifier: ^1.60.0
       version: 1.60.0

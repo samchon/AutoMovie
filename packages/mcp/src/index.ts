@@ -16,6 +16,7 @@ export * from "./production/AutoMovieProductionContext";
 export * from "./production/AutoMovieProductionOracleService";
 export * from "./production/AutoMovieProductionProject";
 export * from "./production/AutoMovieProductionReviewService";
+export * from "./production/captureRuntimeIdentity";
 export * from "./production/contentIdentity";
 export * from "./production/materializeProduction";
 export * from "./production/probeProductionMedia";

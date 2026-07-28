@@ -13,7 +13,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 
-import { productionFixture, worldDesign } from "./productionFixtures";
+import {
+  productionFixture,
+  testCaptureRuntimeIdentity,
+  testRendererIdentity,
+  worldDesign,
+} from "./productionFixtures";
 
 const png = (width = 16, height = 16): Uint8Array => {
   const image = new PNG({ width, height });
@@ -40,7 +45,7 @@ export const test_mcp_production_review_render_edges =
           const height = request.height ?? 16;
           return {
             bytes: png(width, height),
-            rendererIdentity: "test:png-v1",
+            runtimeIdentity: testCaptureRuntimeIdentity(),
             width,
             height,
           };
@@ -119,10 +124,10 @@ export const test_mcp_production_review_render_edges =
       );
       const staleTargetBytes = png();
       const staleTargetManifest: IAutoMovieRenderBundleManifest = {
-        version: 2,
+        version: 3,
         target,
         compileFingerprint: project.generatedManifest()!.inputFingerprint,
-        rendererIdentity: "test:png-v1",
+        rendererIdentity: testRendererIdentity(),
         targetFingerprint:
           "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
         renderSpec: {
@@ -160,10 +165,10 @@ export const test_mcp_production_review_render_edges =
         ),
       );
       const filmManifest: IAutoMovieRenderBundleManifest = {
-        version: 2,
+        version: 3,
         target: { kind: "film", id: "fixture-film" },
         compileFingerprint: project.generatedManifest()!.inputFingerprint,
-        rendererIdentity: "test:png-v1",
+        rendererIdentity: testRendererIdentity(),
         targetFingerprint: productionRenderTargetFingerprint(
           project,
           project.generatedManifest()!,
@@ -494,13 +499,27 @@ export const test_mcp_production_review_render_edges =
         JSON.stringify({ ...baseManifest, rendererIdentity: " " }),
       );
       TestValidator.predicate(
-        "blank renderer identity cannot enter review inventory",
+        "unparseable renderer identity cannot enter review inventory",
         review
           .prepare({ target })
           .diagnostics.some(
             (item) =>
               item.code === "render-bundle-invalid" &&
-              item.message.includes("rendererIdentity"),
+              item.message.includes("Capture runtime identity"),
+          ),
+      );
+      fs.writeFileSync(
+        path.join(invalidDirectory, "manifest.json"),
+        JSON.stringify({ ...baseManifest, version: 2 }),
+      );
+      TestValidator.predicate(
+        "v2 render evidence requires an honest v3 recapture",
+        review
+          .prepare({ target })
+          .diagnostics.some(
+            (item) =>
+              item.code === "render-bundle-invalid" &&
+              item.message.includes("version"),
           ),
       );
       fs.writeFileSync(

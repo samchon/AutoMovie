@@ -30,6 +30,7 @@ catalogs:
     gifenc: ^1.0.3
     h264-mp4-encoder: ^1.0.12
     mp4box: ^2.4.1
+    playwright: ^1.60.0
     playwright-core: ^1.60.0
     pngjs: ^7.0.0
     "@types/pngjs": ^6.0.5

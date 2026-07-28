@@ -32,6 +32,7 @@ import {
   IAutoMovieReviewQueueSnapshot,
 } from "./AutoMovieProductionCompiler";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
+import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
   AUTOMOVIE_REVIEW_FINGERPRINT_PROTOCOL,
   IAutoMovieFingerprintField,
@@ -1733,11 +1734,13 @@ const collectRenderManifestInventory = (
       });
       continue;
     }
-    if (validation.data.rendererIdentity.trim().length === 0) {
+    try {
+      parseAutoMovieCaptureRuntimeIdentity(validation.data.rendererIdentity);
+    } catch (error) {
       invalid.push({
         path: manifestPath,
         manifest: null,
-        error: "$input.rendererIdentity expects a non-blank string",
+        error: String(error),
       });
       continue;
     }

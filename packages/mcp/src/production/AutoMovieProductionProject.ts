@@ -23,6 +23,7 @@ import path from "node:path";
 import typia, { IValidation } from "typia";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
+import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
   canonicalAutoMovieJsonBytes,
   compareCodeUnits,
@@ -677,10 +678,7 @@ export class AutoMovieProductionProject {
     manifest: IAutoMovieRenderBundleManifest,
     inputCurrent?: () => boolean,
   ): number {
-    if (manifest.rendererIdentity.trim().length === 0)
-      throw new Error(
-        "Render bundle rendererIdentity must be non-blank. Record the browser and graphics backend that produced these pixels.",
-      );
+    parseAutoMovieCaptureRuntimeIdentity(manifest.rendererIdentity);
     const normalizedBundle = normalizeSlash(relativeBundle);
     const expectedBundle = productionRenderBundleRelativePath(manifest);
     if (normalizedBundle !== expectedBundle)
@@ -736,7 +734,11 @@ export class AutoMovieProductionProject {
         JSON.parse(bytes.toString("utf8")),
       );
       if (validation.success === false) return null;
-      if (validation.data.rendererIdentity.trim().length === 0) return null;
+      try {
+        parseAutoMovieCaptureRuntimeIdentity(validation.data.rendererIdentity);
+      } catch {
+        return null;
+      }
       const relativeBundle = normalizeSlash(
         path.relative(root, path.dirname(manifestPath)),
       );

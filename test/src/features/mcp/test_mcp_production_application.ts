@@ -37,6 +37,7 @@ import {
   productionDesign,
   productionFixture,
   shotContract,
+  testRendererIdentity,
   worldDesign,
 } from "./productionFixtures";
 
@@ -302,10 +303,10 @@ export const test_mcp_production_application = async (): Promise<void> => {
     );
     const renderProject = AutoMovieProductionProject.open(fixture.root);
     const renderManifest: IAutoMovieRenderBundleManifest = {
-      version: 2,
+      version: 3,
       target: { kind: "shot", id: "opening" },
       compileFingerprint: refreshed.compiler.inputFingerprint,
-      rendererIdentity: "test:png-v1",
+      rendererIdentity: testRendererIdentity(),
       targetFingerprint: productionRenderTargetFingerprint(
         renderProject,
         renderProject.generatedManifest()!,

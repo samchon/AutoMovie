@@ -27,6 +27,7 @@ on:
       - 'packages/*/scaffold/**'
       - 'packages/*/scripts/**'
       - 'internals/config/**'
+      - 'internals/*.mjs'
       - 'test/**'
       # Root tooling configuration, by shape (#1335). This list is deliberately
       # identical to build.yml's, now with no exception at all, since #1397

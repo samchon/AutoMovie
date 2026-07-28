@@ -24,6 +24,7 @@ import {
   productionDesign,
   productionFixture,
   shotContract,
+  testRendererIdentity,
   worldDesign,
 } from "./productionFixtures";
 
@@ -673,10 +674,10 @@ export const test_mcp_production_project = (): void => {
       ) &&
         throws(() =>
           ownerProject.commitRenderBundle("../escape", new Map(), {
-            version: 2,
+            version: 3,
             target: { kind: "shot", id: "opening" },
             compileFingerprint: oldManifest.inputFingerprint,
-            rendererIdentity: "test:png-v1",
+            rendererIdentity: testRendererIdentity(),
             targetFingerprint: productionRenderTargetFingerprint(
               ownerProject,
               oldManifest,
@@ -699,10 +700,10 @@ export const test_mcp_production_project = (): void => {
     renderImage.data.fill(200);
     const renderImageBytes = PNG.sync.write(renderImage);
     const renderManifest: IAutoMovieRenderBundleManifest = {
-      version: 2,
+      version: 3,
       target: { kind: "shot", id: "opening" },
       compileFingerprint: oldManifest.inputFingerprint,
-      rendererIdentity: "test:png-v1",
+      rendererIdentity: testRendererIdentity(),
       targetFingerprint: productionRenderTargetFingerprint(
         ownerProject,
         oldManifest,

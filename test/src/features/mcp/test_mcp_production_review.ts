@@ -21,6 +21,7 @@ import {
   productionDesign,
   productionFixture,
   shotContract,
+  testCaptureRuntimeIdentity,
 } from "./productionFixtures";
 
 const evidenceOf = (
@@ -365,7 +366,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         const height = input.height ?? 16;
         return {
           bytes: captureBytes(width, height),
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width,
           height,
         };
