@@ -8,6 +8,7 @@ import {
   IAutoMovieDesignTarget,
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
+  IAutoMovieProductionDesign,
   IAutoMovieProductionDeliverable,
   IAutoMovieShotContract,
   IAutoMovieShotPredicate,

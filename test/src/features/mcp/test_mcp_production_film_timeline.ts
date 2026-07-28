@@ -19,7 +19,6 @@ import path from "node:path";
 import {
   productionDesign,
   productionFixture,
-  shotContract,
 } from "./productionFixtures";
 
 const editSource = (edit: unknown): string =>
@@ -366,6 +365,9 @@ export const test_mcp_production_film_timeline = (): void => {
     const twoShotTimeline = JSON.parse(
       fs.readFileSync(timelinePath, "utf8"),
     ) as IAutoMovieFilmTimeline;
+    const overlapFrame = new AutoMovieProductionOracleService(project).query({
+      request: { query: "film-time", at: { frame: 132 } },
+    });
     TestValidator.predicate(
       "cut, dissolve and fade law materializes an overlap without changing total frames",
       twoShot.success &&
@@ -377,12 +379,8 @@ export const test_mcp_production_film_timeline = (): void => {
         twoShotTimeline.segments[1]?.startFrame === 132 &&
         twoShotTimeline.tracks.audio.length === 1 &&
         twoShotTimeline.tracks.captions.length === 1 &&
-        new AutoMovieProductionOracleService(project).query({
-          request: { query: "film-time", at: { frame: 132 } },
-        }).result?.kind === "measurement" &&
-        new AutoMovieProductionOracleService(project).query({
-          request: { query: "film-time", at: { frame: 132 } },
-        }).result?.values.shot === "answer",
+        overlapFrame.result?.kind === "measurement" &&
+        overlapFrame.result.values.shot === "answer",
     );
     const filmReview = new AutoMovieProductionReviewService(project).prepare({
       target: { kind: "film", id: "fixture-film" },
