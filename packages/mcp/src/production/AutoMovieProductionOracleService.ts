@@ -3,6 +3,7 @@ import {
   Quaternion,
   Vector3,
   composeFormationHeroTransform,
+  intersectsPerspectiveFrustumSphere,
   projectToNdc,
   reachPose,
   resolveCameraAt,
@@ -429,12 +430,6 @@ export class AutoMovieProductionOracleService {
                           ...source.poseRoot,
                           scale: { x: 1, y: 1, z: 1 },
                         }).translation;
-                  const projection = projectToNdc(
-                    resolvedCamera,
-                    point,
-                    halfY,
-                    aspect,
-                  );
                   const projectionRadius =
                     runtime.projectionRadius *
                     Math.max(
@@ -442,16 +437,15 @@ export class AutoMovieProductionOracleService {
                       Math.abs(formed.scale.y),
                       Math.abs(formed.scale.z),
                     );
-                  const projectedRadiusY =
-                    projectionRadius /
-                    (halfY * Math.max(0.001, projection.depth));
-                  const projectedRadiusX = projectedRadiusY / aspect;
-                  return (
-                    projection.depth + projectionRadius >= camera.near &&
-                    projection.depth - projectionRadius <= camera.far &&
-                    Math.abs(projection.ndcX) <= 1 + projectedRadiusX &&
-                    Math.abs(projection.ndcY) <= 1 + projectedRadiusY
-                  );
+                  return intersectsPerspectiveFrustumSphere({
+                    camera: resolvedCamera,
+                    center: point,
+                    radius: projectionRadius,
+                    near: camera.near,
+                    far: camera.far,
+                    halfY,
+                    aspect,
+                  });
                 }).length;
           result = {
             kind: "measurement",

@@ -320,6 +320,10 @@ export const test_viewer_formation = (): void => {
   const authoredRadius = formation.projectionRadius * 12;
   const decomposedRadius =
     formation.projectionRadius * Math.hypot(12, 1) * Math.SQRT1_2;
+  const horizontalPlaneNormalization = Math.hypot(
+    1,
+    Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect,
+  );
   const scaledSources = new Map(collidingSources);
   scaledSources.set("captain", {
     ...scaledSources.get("captain")!,
@@ -328,7 +332,8 @@ export const test_viewer_formation = (): void => {
       x:
         scaledSources.get("captain")!.translation.x +
         halfWidthAtHero +
-        (authoredRadius + decomposedRadius) / 2 -
+        ((authoredRadius + decomposedRadius) / 2) *
+          horizontalPlaneNormalization -
         unscaledHeroCenter.x,
     },
     scale: { x: 12, y: 1, z: 1 },

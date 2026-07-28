@@ -1,5 +1,6 @@
 import {
   composeFormationHeroTransform,
+  intersectsPerspectiveFrustumSphere,
   sampleFormationMotion,
   selectFormationLod,
 } from "@automovie/engine";
@@ -205,7 +206,9 @@ export const buildInstancedFormation = (input: {
       );
       const frustum = new THREE.Frustum().setFromProjectionMatrix(projection);
       const cameraPosition = new THREE.Vector3();
+      const cameraRotation = new THREE.Quaternion();
       camera.getWorldPosition(cameraPosition);
+      camera.getWorldQuaternion(cameraRotation);
       const halfY = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
       for (const hero of input.formation.heroes) {
         const object = input.heroObjects?.get(hero.actor);
@@ -242,9 +245,31 @@ export const buildInstancedFormation = (input: {
             Math.abs(transformed.scale.y),
             Math.abs(transformed.scale.z),
           );
-        object.visible = frustum.intersectsSphere(
-          new THREE.Sphere(worldPosition, worldRadius),
-        );
+        object.visible = intersectsPerspectiveFrustumSphere({
+          camera: {
+            position: {
+              x: cameraPosition.x,
+              y: cameraPosition.y,
+              z: cameraPosition.z,
+            },
+            rotation: {
+              x: cameraRotation.x,
+              y: cameraRotation.y,
+              z: cameraRotation.z,
+              w: cameraRotation.w,
+            },
+          },
+          center: {
+            x: worldPosition.x,
+            y: worldPosition.y,
+            z: worldPosition.z,
+          },
+          radius: worldRadius,
+          near: camera.near,
+          far: camera.far,
+          halfY,
+          aspect: camera.aspect,
+        });
         if (object.visible) ++stats.visible.hero;
       }
       for (const chunk of chunks) {
