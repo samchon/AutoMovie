@@ -74,7 +74,9 @@ Render bundle v3 stores a canonical structured capture-runtime identity:
 Playwright package, browser product/version/revision/source, executable digest
 when available, platform, headless scale, requested backend, and actual WebGL
 vendor/renderer. Arbitrary strings and legacy v2 manifests are not current
-review evidence; the host must recapture them.
+review evidence; the host must recapture them. Retained v2 history is a
+target-scoped warning rather than a global error once current v3 evidence
+exists.
 
 The binary remains opt-in until a comparative external-agent benchmark
 demonstrates that it should replace the compact default. The former

@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import { PNG } from "pngjs";
 
 import config from "../automovie.config";
-import type { AutoMovieCaptureBrowserConfig } from "./capture-browser";
 import {
   inspectCaptureGraphics,
   launchCaptureBrowser,
@@ -11,7 +10,7 @@ import {
 
 const session = await launchCaptureBrowser(
   process.cwd(),
-  config.capture.browser as AutoMovieCaptureBrowserConfig,
+  config.capture.browser,
 );
 try {
   const page = await session.browser.newPage({

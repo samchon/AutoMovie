@@ -510,16 +510,35 @@ export const test_mcp_production_review_render_edges =
       );
       fs.writeFileSync(
         path.join(invalidDirectory, "manifest.json"),
-        JSON.stringify({ ...baseManifest, version: 2 }),
+        JSON.stringify({
+          ...baseManifest,
+          version: 2,
+          rendererIdentity: " ",
+        }),
       );
       TestValidator.predicate(
-        "v2 render evidence requires an honest v3 recapture",
+        "malformed v2 renderer provenance remains invalid",
         review
           .prepare({ target })
           .diagnostics.some(
             (item) =>
               item.code === "render-bundle-invalid" &&
-              item.message.includes("version"),
+              item.path?.includes("review-invalid-frame"),
+          ),
+      );
+      fs.writeFileSync(
+        path.join(invalidDirectory, "manifest.json"),
+        JSON.stringify({ ...baseManifest, version: 2 }),
+      );
+      const legacyPrepared = review.prepare({ target });
+      TestValidator.predicate(
+        "v2 render evidence remains historical without blocking current v3 frames",
+        legacyPrepared.frames.length !== 0 &&
+          legacyPrepared.diagnostics.some(
+            (item) =>
+              item.code === "render-bundle-legacy" &&
+              item.category === "warning" &&
+              item.message.includes("Recapture"),
           ),
       );
       fs.writeFileSync(

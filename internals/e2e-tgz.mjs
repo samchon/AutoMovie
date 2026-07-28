@@ -912,8 +912,8 @@ try {
     (file) => file.startsWith("automovie-cli-") === false,
   );
   run(
-    "install packaged starter dependencies",
-    `npm install --prefer-offline --no-audit --no-fund ${runtimeTarballs
+    "install packaged starter dependencies with strict pnpm layout",
+    `pnpm add --ignore-workspace --prefer-offline --config.strict-peer-dependencies=false ${runtimeTarballs
       .map((file) => `"${join(tarballDir, file)}"`)
       .join(" ")}`,
     starterDir,
@@ -927,7 +927,7 @@ try {
     );
   run(
     "install packaged starter Chromium",
-    "npm run capture:install",
+    "pnpm capture:install",
     starterDir,
     900_000,
   );
@@ -942,7 +942,7 @@ try {
   writeFileSync(captureReceiptPath, "{bad");
   runExpectedFailure(
     "reject malformed packaged capture receipt",
-    "npm run capture:doctor",
+    "pnpm capture:doctor",
     starterDir,
     "not valid JSON",
   );
@@ -962,7 +962,7 @@ try {
   );
   runExpectedFailure(
     "reject stale packaged capture receipt",
-    "npm run capture:doctor",
+    "pnpm capture:doctor",
     starterDir,
     "does not match the current Playwright",
   );
@@ -972,7 +972,7 @@ try {
   try {
     runExpectedFailure(
       "diagnose missing packaged capture executable",
-      "npm run capture:doctor",
+      "pnpm capture:doctor",
       starterDir,
       "is missing or differs",
     );
@@ -981,24 +981,43 @@ try {
   }
   run(
     "doctor packaged starter capture runtime",
-    "npm run capture:doctor",
+    "pnpm capture:doctor",
     starterDir,
   );
-  run("compile packaged starter", "npm run compile", starterDir);
+  const captureConfigPath = join(starterDir, "automovie.config.ts");
+  const captureConfigText = readFileSync(captureConfigPath, "utf8");
+  writeFileSync(
+    captureConfigPath,
+    captureConfigText.replace(
+      'source: "playwright-chromium"',
+      'source: "system-channel", channel: "firefox"',
+    ),
+  );
+  try {
+    runExpectedFailure(
+      "reject invalid packaged capture config",
+      "pnpm capture:doctor",
+      starterDir,
+      "Invalid capture browser config",
+    );
+  } finally {
+    writeFileSync(captureConfigPath, captureConfigText);
+  }
+  run("compile packaged starter", "pnpm compile", starterDir);
   // A fresh @ttsc/lint install builds its source plugin with Go once per
   // cache key. Cold Windows and CI caches can legitimately exceed the ordinary
   // five-minute command fence before TypeScript linting itself begins.
   runExpectedFailure(
     "enforce packaged starter lint review gate",
-    "npm run lint",
+    "pnpm lint",
     starterDir,
     "review-",
     900_000,
   );
-  run("test packaged starter", "npm test", starterDir);
+  run("test packaged starter", "pnpm test", starterDir);
   runExpectedFailure(
     "enforce packaged starter review gate",
-    "npm run render",
+    "pnpm render",
     starterDir,
     "review-",
   );
@@ -1011,10 +1030,10 @@ try {
     "node verify-packaged-starter.mjs review",
     starterDir,
   );
-  run("lint reviewed packaged starter", "npm run lint", starterDir, 900_000);
+  run("lint reviewed packaged starter", "pnpm lint", starterDir, 900_000);
   run(
     "render packaged starter through final compile",
-    "npm run render",
+    "pnpm render",
     starterDir,
   );
   run(

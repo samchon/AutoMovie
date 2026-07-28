@@ -3,10 +3,7 @@ import path from "node:path";
 import { createServer } from "vite";
 
 import config from "../automovie.config";
-import type {
-  AutoMovieCaptureBrowserConfig,
-  IAutoMovieCaptureBrowserSession,
-} from "./capture-browser";
+import type { IAutoMovieCaptureBrowserSession } from "./capture-browser";
 import {
   inspectCaptureGraphics,
   launchCaptureBrowser,
@@ -43,7 +40,7 @@ const startSession = async (projectRoot: string): Promise<CaptureSession> => {
       throw new Error("Vite did not expose a numeric local address.");
     const launched = await launchCaptureBrowser(
       projectRoot,
-      config.capture.browser as AutoMovieCaptureBrowserConfig,
+      config.capture.browser,
     );
     return {
       server,

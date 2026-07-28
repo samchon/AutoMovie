@@ -200,6 +200,12 @@ export const test_cli_scaffold = (): void => {
       files["scripts/capture-browser.ts"]!.includes("paths: [packageRoot]") &&
       files["scripts/capture-browser.ts"]!.includes('"--no-shell"') &&
       files["scripts/capture-browser.ts"]!.includes(
+        'stdio: ["ignore", "pipe", "pipe"]',
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        'installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"',
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
         'args: ["--use-angle=swiftshader"]',
       ) &&
       files["scripts/capture-browser.ts"]!.includes(
@@ -214,6 +220,12 @@ export const test_cli_scaffold = (): void => {
       files["scripts/capture-browser.ts"]!.includes(
         'source = "configured-executable"',
       ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "parseCaptureBrowserConfig",
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "Invalid capture browser config",
+      ) &&
       files["scripts/capture-doctor.ts"]!.includes("PNG.sync.read") &&
       files["scripts/capture-doctor.ts"]!.includes(
         "canonicalAutoMovieCaptureRuntimeIdentity",
@@ -223,6 +235,9 @@ export const test_cli_scaffold = (): void => {
         "installPackageOwnedChromium",
       ) &&
       files["automovie.config.ts"]!.includes('source: "playwright-chromium"') &&
+      files["automovie.config.ts"]!.includes(
+        "satisfies AutoMovieCaptureBrowserConfig",
+      ) &&
       files[".gitignore"]!.includes(".automovie/capture/") &&
       files["README.md"]!.includes("pnpm capture:install") &&
       files["README.md"]!.includes("PLAYWRIGHT_BROWSERS_PATH=0") &&

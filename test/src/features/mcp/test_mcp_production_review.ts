@@ -1189,6 +1189,45 @@ export const test_mcp_production_review = async (): Promise<void> => {
         .diagnostics.some((item) => item.code === "review-evidence-stale"),
     );
 
+    const legacyBundleDirectory = path.join(
+      fixture.root,
+      "renders",
+      "retained-v2-history",
+    );
+    const currentBundleManifest = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          fixture.root,
+          aliasedFrameEvidence.frames[0]!.bundle,
+          "manifest.json",
+        ),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    fs.mkdirSync(legacyBundleDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(legacyBundleDirectory, "manifest.json"),
+      JSON.stringify({
+        ...currentBundleManifest,
+        version: 2,
+        rendererIdentity: "legacy-capture-runtime",
+      }),
+    );
+    const preparedBesideLegacyV2 = review.prepare({ target: shotTarget });
+    TestValidator.predicate(
+      "retained v2 history is a warning beside current v3 evidence",
+      preparedBesideLegacyV2.frames.length !== 0 &&
+        preparedBesideLegacyV2.diagnostics.some(
+          (item) =>
+            item.code === "render-bundle-legacy" && item.category === "warning",
+        ) &&
+        preparedBesideLegacyV2.diagnostics.every(
+          (item) =>
+            item.code !== "render-bundle-invalid" ||
+            item.path?.includes("retained-v2-history") === false,
+        ),
+    );
+
     for (const entry of review.queue().entries) {
       const prepared = review.prepare({ target: entry.target });
       const result = review.submit(worksheet(project, prepared));

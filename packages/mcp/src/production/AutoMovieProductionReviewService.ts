@@ -64,9 +64,22 @@ interface IInvalidRenderManifestInventoryEntry {
   error: string;
 }
 
+type AutoMovieRenderBundleManifestV2 = Omit<
+  IAutoMovieRenderBundleManifest,
+  "version"
+> & {
+  version: 2;
+};
+
+interface ILegacyRenderManifestInventoryEntry {
+  path: string;
+  target: IAutoMovieRenderBundleManifest["target"];
+}
+
 interface IReviewReadContext {
   renderInventory: {
     invalid: IInvalidRenderManifestInventoryEntry[];
+    legacy: ILegacyRenderManifestInventoryEntry[];
     all: IRenderManifestInventoryEntry[];
     byTarget: Map<string, IRenderManifestInventoryEntry[]>;
   };
@@ -1295,6 +1308,26 @@ const currentFrames = (
       path: normalizeSlash(path.relative(project.root, entry.path)),
       message: `Render bundle manifest is invalid: ${entry.error}. Recreate the bundle through previewFrame.`,
     });
+  const legacyEntries =
+    target.kind === "shot"
+      ? inventory.legacy.filter(
+          (entry) => reviewTargetKey(entry.target) === reviewTargetKey(target),
+        )
+      : inventory.legacy.filter(
+          (entry) =>
+            (entry.target.kind === "film" && entry.target.id === target.id) ||
+            (entry.target.kind === "shot" && graph.shots.has(entry.target.id)),
+        );
+  for (const entry of legacyEntries)
+    diagnostics.push({
+      code: "render-bundle-legacy",
+      category: "warning",
+      phase: "render",
+      target: normalizeSlash(path.relative(project.root, entry.path)),
+      path: normalizeSlash(path.relative(project.root, entry.path)),
+      message:
+        "This legacy v2 render bundle is retained as historical output but is not current review evidence. Recapture required frames through previewFrame; a current v3 bundle supersedes this warning without deleting history.",
+    });
   const manifestEntries =
     target.kind === "shot"
       ? (inventory.byTarget.get(reviewTargetKey(target)) ?? [])
@@ -1715,15 +1748,28 @@ const collectRenderManifestInventory = (
   project: AutoMovieProductionProject,
 ): IReviewReadContext["renderInventory"] => {
   const invalid: IInvalidRenderManifestInventoryEntry[] = [];
+  const legacy: ILegacyRenderManifestInventoryEntry[] = [];
   const all: IRenderManifestInventoryEntry[] = [];
   const byTarget = new Map<string, IRenderManifestInventoryEntry[]>();
   for (const manifestPath of listNamedFiles(
     project.renderRoot(),
     "manifest.json",
   )) {
-    const validation = typia.validateEquals<IAutoMovieRenderBundleManifest>(
-      readJsonIfPresent(manifestPath),
-    );
+    const value = readJsonIfPresent(manifestPath);
+    const legacyValidation =
+      typia.validateEquals<AutoMovieRenderBundleManifestV2>(value);
+    if (
+      legacyValidation.success &&
+      legacyValidation.data.rendererIdentity.trim().length !== 0
+    ) {
+      legacy.push({
+        path: manifestPath,
+        target: legacyValidation.data.target,
+      });
+      continue;
+    }
+    const validation =
+      typia.validateEquals<IAutoMovieRenderBundleManifest>(value);
     if (validation.success === false) {
       invalid.push({
         path: manifestPath,
@@ -1755,7 +1801,7 @@ const collectRenderManifestInventory = (
     entries.push(entry);
     byTarget.set(key, entries);
   }
-  return { invalid, all, byTarget };
+  return { invalid, legacy, all, byTarget };
 };
 
 /** Reuse common renderer content and each target digest within one read cycle. */

@@ -36,7 +36,10 @@ export interface IAutoMovieCaptureInstallReceipt {
     executablePath: string;
     executableDigest: `sha256:${string}`;
   };
-  installSource: string;
+  installSource:
+    | "playwright-cdn"
+    | "PLAYWRIGHT_DOWNLOAD_HOST"
+    | "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST";
 }
 
 interface IPlaywrightBrowserRecord {
@@ -55,6 +58,51 @@ export interface IAutoMovieCaptureBrowserSession {
   browser: Browser;
   runtime: Omit<IAutoMovieCaptureRuntimeIdentity, "graphics">;
 }
+
+const configError = (): Error =>
+  new Error(
+    'Invalid capture browser config. In automovie.config.ts choose exactly { source: "playwright-chromium" }, { source: "system-channel", channel: "chrome" | "msedge" }, or { source: "configured-executable", product: "chromium" | "chrome" | "msedge", executablePath: "<non-blank project-relative or absolute path>" }.',
+  );
+
+const exactKeys = (
+  value: Record<string, unknown>,
+  expected: readonly string[],
+): boolean =>
+  Object.keys(value).sort().join("\u0000") ===
+  [...expected].sort().join("\u0000");
+
+export const parseCaptureBrowserConfig = (
+  value: unknown,
+): AutoMovieCaptureBrowserConfig => {
+  if (typeof value !== "object" || value === null) throw configError();
+  const config = value as Record<string, unknown>;
+  if (config.source === "playwright-chromium" && exactKeys(config, ["source"]))
+    return { source: "playwright-chromium" };
+  if (
+    config.source === "system-channel" &&
+    (config.channel === "chrome" || config.channel === "msedge") &&
+    exactKeys(config, ["source", "channel"])
+  )
+    return {
+      source: "system-channel",
+      channel: config.channel,
+    };
+  if (
+    config.source === "configured-executable" &&
+    (config.product === "chromium" ||
+      config.product === "chrome" ||
+      config.product === "msedge") &&
+    typeof config.executablePath === "string" &&
+    config.executablePath.trim().length !== 0 &&
+    exactKeys(config, ["source", "product", "executablePath"])
+  )
+    return {
+      source: "configured-executable",
+      product: config.product,
+      executablePath: config.executablePath,
+    };
+  throw configError();
+};
 
 const require = createRequire(import.meta.url);
 const CAPTURE_PROTOCOL = "automovie.capture-runtime.v1";
@@ -155,8 +203,9 @@ const parseReceipt = (
     receipt.browser.executablePath.trim().length === 0 ||
     typeof receipt.browser.executableDigest !== "string" ||
     /^sha256:[0-9a-f]{64}$/.test(receipt.browser.executableDigest) === false ||
-    typeof receipt.installSource !== "string" ||
-    receipt.installSource.trim().length === 0
+    (receipt.installSource !== "playwright-cdn" &&
+      receipt.installSource !== "PLAYWRIGHT_DOWNLOAD_HOST" &&
+      receipt.installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST")
   )
     throw new Error(
       `Capture install receipt "${file}" is malformed. Run pnpm capture:install to replace it.`,
@@ -204,6 +253,9 @@ export const installPackageOwnedChromium = async (
 ): Promise<IAutoMovieCaptureInstallReceipt> => {
   const metadata = playwrightMetadata();
   const { spawnSync } = await import("node:child_process");
+  process.stderr.write(
+    `Installing Playwright Chromium revision ${metadata.browser.revision} into the configured browser store...\n`,
+  );
   const installed = spawnSync(
     process.execPath,
     [metadata.cliPath, "install", BROWSER_NAME, "--no-shell"],
@@ -211,7 +263,7 @@ export const installPackageOwnedChromium = async (
       cwd: projectRoot,
       env: localBrowserEnvironment(projectRoot),
       encoding: "utf8",
-      stdio: ["ignore", "inherit", "inherit"],
+      stdio: ["ignore", "pipe", "pipe"],
     },
   );
   if (installed.status !== 0)
@@ -281,8 +333,9 @@ const packageOwnedProvenance = async (
 
 export const launchCaptureBrowser = async (
   projectRoot: string,
-  config: AutoMovieCaptureBrowserConfig,
+  inputConfig: unknown,
 ): Promise<IAutoMovieCaptureBrowserSession> => {
+  const config = parseCaptureBrowserConfig(inputConfig);
   const metadata = playwrightMetadata();
   const { chromium } = await loadPlaywright(projectRoot);
   let product: IAutoMovieCaptureRuntimeIdentity["browser"]["product"];

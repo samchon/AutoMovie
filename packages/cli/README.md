@@ -69,7 +69,8 @@ Each render bundle stores canonical structured identity for Playwright, browser
 revision/source, executable digest when available, platform, headless/raster
 mode, requested backend, and actual WebGL vendor/renderer. Existing v2 bundle
 manifests remain on disk but require recapture before they can serve as current
-review evidence.
+review evidence; they remain target-scoped history warnings and do not block a
+current valid v3 bundle.
 
 ## Usage
 
