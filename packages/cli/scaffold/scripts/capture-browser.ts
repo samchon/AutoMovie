@@ -74,6 +74,9 @@ const localBrowserEnvironment = (projectRoot: string): NodeJS.ProcessEnv => ({
   PLAYWRIGHT_BROWSERS_PATH: browserStoragePath(projectRoot),
 });
 
+const hasEnvironment = (name: string): boolean =>
+  (process.env[name]?.trim().length ?? 0) !== 0;
+
 const loadPlaywright = async (
   projectRoot: string,
 ): Promise<typeof import("playwright")> => {
@@ -239,12 +242,11 @@ export const installPackageOwnedChromium = async (
       executablePath: path.resolve(executablePath),
       executableDigest: await digestFile(executablePath),
     },
-    installSource:
-      [
-        process.env.PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST,
-        process.env.PLAYWRIGHT_DOWNLOAD_HOST,
-      ].find((value) => value !== undefined && value.trim().length !== 0) ??
-      "playwright-cdn",
+    installSource: hasEnvironment("PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST")
+      ? "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"
+      : hasEnvironment("PLAYWRIGHT_DOWNLOAD_HOST")
+        ? "PLAYWRIGHT_DOWNLOAD_HOST"
+        : "playwright-cdn",
   };
   writeReceipt(projectRoot, receipt);
   return receipt;
