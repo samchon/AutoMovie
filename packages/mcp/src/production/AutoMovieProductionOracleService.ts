@@ -2,6 +2,7 @@ import {
   HUMANOID_JOINT_AXES,
   Quaternion,
   Vector3,
+  composeFormationHeroTransform,
   projectToNdc,
   reachPose,
   resolveCameraAt,
@@ -399,18 +400,35 @@ export class AutoMovieProductionOracleService {
             camera === null || resolvedCamera === null || production === null
               ? 0
               : runtime.heroes.filter((hero) => {
-                  const source = actorTransformAt(
+                  const node = compiled.scene.nodes.find(
+                    (candidate) => candidate.id === hero.actor,
+                  );
+                  if (node === undefined) return false;
+                  const found = findCompiledActor(
+                    new Map([[compiled.shot.id, compiled]]),
+                    hero.actor,
+                    compiled.shot.id,
+                  );
+                  const source = actorSpatialAt(
                     compiled,
                     hero.actor,
                     sampledTime,
+                    found.model.skeleton,
                   );
-                  const point = Vector3.add(
-                    transformPoint(hero.transform.translation),
-                    Vector3.subtract(
-                      source.translation,
-                      hero.transform.translation,
-                    ),
+                  const formed = composeFormationHeroTransform(
+                    hero.transform,
+                    source.nodeTransform,
+                    runtime.anchor,
+                    sampledMotion,
+                    runtime.facingDeg,
                   );
+                  const point =
+                    source.poseRoot === null
+                      ? formed.translation
+                      : composeTransforms(formed, {
+                          ...source.poseRoot,
+                          scale: { x: 1, y: 1, z: 1 },
+                        }).translation;
                   const projection = projectToNdc(
                     resolvedCamera,
                     point,
@@ -1205,6 +1223,8 @@ const actorPoseAt = (
 interface IActorSpatialSample {
   pose: IAutoMoviePose;
   transform: IAutoMovieTransform;
+  nodeTransform: IAutoMovieTransform;
+  poseRoot: IAutoMovieTransform | null;
 }
 
 const actorSpatialAt = (
@@ -1244,6 +1264,8 @@ const actorSpatialAt = (
   };
   return {
     pose: { ...pose, root: null },
+    nodeTransform,
+    poseRoot: pose.root,
     transform:
       pose.root === null
         ? nodeTransform

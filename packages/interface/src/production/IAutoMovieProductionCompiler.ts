@@ -1,5 +1,5 @@
 import { IAutoMovieShot } from "../cinematics";
-import { IAutoMovieVector3 } from "../geometry";
+import { IAutoMovieTransform, IAutoMovieVector3 } from "../geometry";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
 import { IAutoMovieScene } from "../scene";

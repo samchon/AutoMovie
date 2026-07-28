@@ -2,8 +2,12 @@ import {
   IAutoMovieCompiledFormationLod,
   IAutoMovieFormationMotion,
   IAutoMovieFormationMotionState,
+  IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
+
+import { Quaternion } from "./math/Quaternion";
+import { Vector3 } from "./math/Vector3";
 
 /** Inputs to the deterministic automatic formation LOD selector. */
 export interface IAutoMovieFormationLodInput {
@@ -144,6 +148,36 @@ export const transformFormationPoint = (
     z: anchor.z + motion.translation.z - localX * sine + localZ * cosine,
   };
 };
+
+/**
+ * Compose a promoted hero's source-authored node transform with formation
+ * placement and motion.
+ *
+ * Translation keeps authored node/object-motion displacement relative to the
+ * compiler-owned hero slot. Rotation applies the current formation facing
+ * before the authored rotation relative to that slot, while scale remains
+ * source-owned.
+ */
+export const composeFormationHeroTransform = (
+  base: IAutoMovieTransform,
+  source: IAutoMovieTransform,
+  anchor: IAutoMovieVector3,
+  motion: IAutoMovieFormationMotionState,
+  baseFacingDeg = 0,
+): IAutoMovieTransform => ({
+  translation: Vector3.add(
+    transformFormationPoint(base.translation, anchor, motion, baseFacingDeg),
+    Vector3.subtract(source.translation, base.translation),
+  ),
+  rotation: Quaternion.multiply(
+    Quaternion.fromAxisAngle(
+      { x: 0, y: 1, z: 0 },
+      baseFacingDeg + motion.facingOffsetDeg,
+    ),
+    Quaternion.multiply(Quaternion.inverse(base.rotation), source.rotation),
+  ),
+  scale: { ...source.scale },
+});
 
 const lerp = (from: number, to: number, progress: number): number =>
   from * (1 - progress) + to * progress;

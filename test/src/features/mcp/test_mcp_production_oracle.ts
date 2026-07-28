@@ -41,7 +41,10 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
-    project.setFormationDesign(formationDesign());
+    project.setFormationDesign({
+      ...formationDesign(),
+      heroOverrides: [{ slot: 0, actor: "sentinel" }],
+    });
     project.setShotContract({
       ...shotContract(),
       participants: [
@@ -693,6 +696,25 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
       },
     });
+    const rootedFormation = oracle.query({
+      request: {
+        query: "formation",
+        formation: "line",
+        shot: "opening",
+        time: 2,
+      },
+    });
+    const missingHero = corrupted();
+    missingHero.formations[0]!.heroes[0]!.actor = "ghost";
+    writeCorrupted(missingHero);
+    const missingHeroFormation = oracle.query({
+      request: {
+        query: "formation",
+        formation: "line",
+        shot: "opening",
+        time: 2,
+      },
+    });
 
     const noPerformanceForSelector = corrupted();
     noPerformanceForSelector.shot.performances = [];
@@ -722,6 +744,9 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         leftOnlyReach.result.values.rightMeasurable === false &&
         rootedReach.result?.kind === "measurement" &&
         rootedActorDistance.result?.kind === "distance" &&
+        rootedFormation.result?.kind === "measurement" &&
+        missingHeroFormation.result?.kind === "measurement" &&
+        missingHeroFormation.result.values.heroVisible === 0 &&
         heldActorDistance.result?.kind === "distance",
     );
 

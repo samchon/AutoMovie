@@ -645,6 +645,7 @@ const effectSummary = app.queryGeometry({
     subjects: ["sentinel"],
   },
 });
+const effectAcceptance = graph.acceptance.get("opening-effect-mask");
 assert(
   "starter-effect-beauty-mask-frame",
   effectSummary.result?.kind === "measurement" &&
@@ -659,7 +660,11 @@ assert(
           frame.pass === pass &&
           frame.time === 2,
       ),
-    ),
+    ) &&
+    effectAcceptance?.required === true &&
+    effectAcceptance.criterion.kind === "frame" &&
+    effectAcceptance.criterion.frame === "signal-apex" &&
+    effectAcceptance.criterion.pass === "mask",
   JSON.stringify(effectSummary),
 );
 const phase = process.argv[2];

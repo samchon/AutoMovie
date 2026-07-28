@@ -487,6 +487,11 @@ export const test_mcp_production_materialization = (): void => {
       highCount,
       new Map([[modelRecipe().id, modelRecipe()]]),
     );
+    const firstRegeneratedSlot = materializeFormationSlot(highCount, 0);
+    const repeatedRegeneratedSlot = materializeFormationSlot(
+      { ...highCount },
+      0,
+    );
     TestValidator.predicate(
       "high counts stay compact across stable chunk boundaries and exact slot regeneration",
       compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
@@ -500,8 +505,8 @@ export const test_mcp_production_materialization = (): void => {
         compact.digest === compactAgain.digest &&
         materializeFormationSlot(highCount, AUTOMOVIE_FORMATION_CHUNK_SIZE)
           .actor === "boundary-hero" &&
-        materializeFormationSlot(highCount, 0).motionPhase ===
-          materializeFormationSlot(highCount, 0).motionPhase &&
+        firstRegeneratedSlot.motionPhase ===
+          repeatedRegeneratedSlot.motionPhase &&
         (() => {
           try {
             materializeFormationSlot(highCount, highCount.count);

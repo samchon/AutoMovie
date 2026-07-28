@@ -33,7 +33,24 @@ const propRecipe = (id: string, size: number): IAutoMovieModelRecipe => ({
 
 /**
  * Compact formations regenerate exact slots and render through bounded LOD
- * batches.
+ * batches. Promoted heroes remain explicit scene objects whose authored motion
+ * composes with the same formation law used by the geometry oracle.
+ *
+ * Scenarios:
+ *
+ * 1. Chunk batches exclude promoted heroes, preserve compiler slot regeneration,
+ *    carry phase attributes, and change digest when a referenced LOD recipe
+ *    changes.
+ * 2. Distance, projected size, default/explicit hysteresis, and the unbounded
+ *    fallback select stable near/far tiers; an empty LOD list fails closed.
+ * 3. A sampled formation update culls whole chunks, preserves a bounded inventory,
+ *    composes source hero translation/rotation without repeated-call
+ *    accumulation, and culls from the posed visual root rather than the slot.
+ * 4. Motion sampling covers every easing, before/between/after intervals,
+ *    end-exclusive handoff, unrelated formations, deterministic equal starts,
+ *    spacing, and base-facing point transforms.
+ * 5. Missing runtime LOD models throw, while an all-hero chunk emits no zero-count
+ *    instance mesh.
  */
 export const test_viewer_formation = (): void => {
   const hero = propRecipe("army-hero", 0.6);
@@ -91,6 +108,13 @@ export const test_viewer_formation = (): void => {
       return [hero.actor, object] as const;
     }),
   );
+  const heroVisualObjects = new Map(
+    [...heroObjects].map(([actor, object]) => {
+      const visual = new THREE.Object3D();
+      object.add(visual);
+      return [actor, visual] as const;
+    }),
+  );
   const motion = {
     id: "army-advance",
     formation: formation.id,
@@ -114,6 +138,7 @@ export const test_viewer_formation = (): void => {
     models,
     motions: [motion],
     heroObjects,
+    heroVisualObjects,
   });
   const meshes = built.object.children.filter(
     (object): object is THREE.InstancedMesh =>
@@ -244,6 +269,12 @@ export const test_viewer_formation = (): void => {
         THREE.MathUtils.degToRad(15),
       ),
     );
+  heroVisualObjects.get("marshal")!.position.x = 100;
+  built.update(camera, 1_080, 3);
+  const firstHeroUpdate = {
+    position: heroObjects.get("marshal")!.position.clone(),
+    rotation: heroObjects.get("marshal")!.quaternion.clone(),
+  };
   built.update(camera, 1_080, 3);
   const firstMatrix = new THREE.Matrix4();
   meshes[0]!.getMatrixAt(0, firstMatrix);
@@ -361,7 +392,14 @@ export const test_viewer_formation = (): void => {
           ).y,
         ) - 25,
       ) < 1e-9 &&
+      heroObjects.get("marshal")!.position.equals(firstHeroUpdate.position) &&
+      Math.abs(
+        heroObjects.get("marshal")!.quaternion.dot(firstHeroUpdate.rotation),
+      ) >
+        1 - 1e-12 &&
       built.stats.visible.hero > 0 &&
+      heroObjects.get("marshal")!.visible === false &&
+      heroObjects.get("captain")!.visible === true &&
       built.object.scale.x === 1 &&
       Math.abs(firstTranslation.x - (firstScaled.x - formation.anchor.x)) <
         1e-5 &&

@@ -1,4 +1,5 @@
 import {
+  composeFormationHeroTransform,
   sampleFormationMotion,
   selectFormationLod,
   transformFormationPoint,
@@ -9,6 +10,7 @@ import {
   IAutoMovieFormationMotion,
   IAutoMovieFormationSlot,
   IAutoMovieModel,
+  IAutoMovieTransform,
 } from "@automovie/interface";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -53,6 +55,12 @@ interface IChunkObject {
   selected: IAutoMovieCompiledFormationLod["tier"] | null;
 }
 
+interface IHeroCompositionState {
+  source: IAutoMovieTransform;
+  outputPosition: THREE.Vector3;
+  outputRotation: THREE.Quaternion;
+}
+
 /**
  * Build one compact formation as chunked instance batches.
  *
@@ -66,6 +74,8 @@ export const buildInstancedFormation = (input: {
   motions?: readonly IAutoMovieFormationMotion[];
   /** Explicit scene wrappers keyed by promoted hero actor id. */
   heroObjects?: ReadonlyMap<string, THREE.Object3D>;
+  /** Pose-root objects whose actual world positions drive hero culling. */
+  heroVisualObjects?: ReadonlyMap<string, THREE.Object3D>;
 }): IAutoMovieFormationViewerObject => {
   const root = new THREE.Group();
   root.name = `formation:${input.formation.id}`;
@@ -140,6 +150,7 @@ export const buildInstancedFormation = (input: {
     };
   });
   let spacing = { lateral: 1, depth: 1 };
+  const heroStates = new Map<string, IHeroCompositionState>();
   const stats: IAutoMovieFormationViewerStats = {
     visible: { hero: 0, near: 0, far: 0 },
     culled: 0,
@@ -200,36 +211,48 @@ export const buildInstancedFormation = (input: {
       for (const hero of input.formation.heroes) {
         const object = input.heroObjects?.get(hero.actor);
         if (object === undefined) continue;
-        const sourceTranslationOffset = object.position
-          .clone()
-          .sub(vector(hero.transform.translation));
-        const sourceRotationOffset = new THREE.Quaternion()
-          .set(
-            hero.transform.rotation.x,
-            hero.transform.rotation.y,
-            hero.transform.rotation.z,
-            hero.transform.rotation.w,
-          )
-          .invert()
-          .multiply(object.quaternion);
-        const position = transformFormationPoint(
-          hero.transform.translation,
+        let composition = heroStates.get(hero.actor);
+        if (
+          composition === undefined ||
+          object.position.equals(composition.outputPosition) === false ||
+          Math.abs(object.quaternion.dot(composition.outputRotation)) <
+            1 - 1e-12
+        ) {
+          composition = {
+            source: {
+              translation: point(object.position),
+              rotation: quaternion(object.quaternion),
+              scale: point(object.scale),
+            },
+            outputPosition: new THREE.Vector3(),
+            outputRotation: new THREE.Quaternion(),
+          };
+          heroStates.set(hero.actor, composition);
+        }
+        composition.source.scale = point(object.scale);
+        const transformed = composeFormationHeroTransform(
+          hero.transform,
+          composition.source,
           input.formation.anchor,
           sampled,
           input.formation.facingDeg,
         );
-        object.position.copy(vector(position).add(sourceTranslationOffset));
-        object.quaternion
-          .setFromAxisAngle(
-            new THREE.Vector3(0, 1, 0),
-            THREE.MathUtils.degToRad(
-              input.formation.facingDeg + sampled.facingOffsetDeg,
-            ),
-          )
-          .multiply(sourceRotationOffset);
+        object.position.copy(vector(transformed.translation));
+        object.quaternion.set(
+          transformed.rotation.x,
+          transformed.rotation.y,
+          transformed.rotation.z,
+          transformed.rotation.w,
+        );
+        composition.outputPosition.copy(object.position);
+        composition.outputRotation.copy(object.quaternion);
         object.updateMatrixWorld(true);
+        const worldPosition = new THREE.Vector3();
+        (input.heroVisualObjects?.get(hero.actor) ?? object).getWorldPosition(
+          worldPosition,
+        );
         object.visible = frustum.intersectsSphere(
-          new THREE.Sphere(vector(position), selectionRadius),
+          new THREE.Sphere(worldPosition, selectionRadius),
         );
         if (object.visible) ++stats.visible.hero;
       }
@@ -403,6 +426,19 @@ const formationSpacingOffset = (
 
 const vector = (value: { x: number; y: number; z: number }): THREE.Vector3 =>
   new THREE.Vector3(value.x, value.y, value.z);
+
+const point = (value: { x: number; y: number; z: number }) => ({
+  x: value.x,
+  y: value.y,
+  z: value.z,
+});
+
+const quaternion = (value: { x: number; y: number; z: number; w: number }) => ({
+  x: value.x,
+  y: value.y,
+  z: value.z,
+  w: value.w,
+});
 
 const seededValue = (...values: number[]): number => {
   let state = 0x9e3779b9;

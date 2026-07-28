@@ -20,7 +20,24 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
-/** Effect cues compile into seeded streams and bounded oracle evidence. */
+/**
+ * Effect source compilation, validation, and oracle queries must share one
+ * bounded compiler-owned stream. The test exercises the same current generated
+ * shot through both the happy path and the corruption/ambiguity guards.
+ *
+ * Scenarios:
+ *
+ * 1. A valid smoke cue compiles with its semantic event and the oracle reports an
+ *    active, digest-bound, capped particle summary at an in-range time.
+ * 2. End-exclusive sampling reports inactive, while duplicate subject ids and a
+ *    missing effect zone fail closed with actionable diagnostics.
+ * 3. Validation accepts the current cue and rejects excessive/duplicate ids,
+ *    absent zones, invalid intervals/intensity/events, overlaps, and every
+ *    cue-to-compiled-stream cardinality mismatch.
+ * 4. Materialization without a compiler-owned world recipe emits no stream.
+ * 5. A digest-consistent but ambiguous generated shot with two streams for one
+ *    zone is rejected instead of selecting an arbitrary inactive gap.
+ */
 export const test_mcp_production_effect = (): void => {
   const fixture = productionFixture();
   try {

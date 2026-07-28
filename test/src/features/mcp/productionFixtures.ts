@@ -27,6 +27,7 @@ export const productionFixture = (): {
   for (const file of [
     ".automovie/design/acceptance/answer-beauty.json",
     ".automovie/design/acceptance/answer-pose.json",
+    ".automovie/design/acceptance/opening-effect-mask.json",
     ".automovie/design/formations/army.json",
     ".automovie/design/models/army-far.json",
     ".automovie/design/models/army-hero.json",

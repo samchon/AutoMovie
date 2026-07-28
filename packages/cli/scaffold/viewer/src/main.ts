@@ -64,12 +64,16 @@ const nodeObjects = new Map(
     return [node.id, object] as const;
   }),
 );
+const nodeVisualObjects = new Map(
+  built.map((item) => [item.node.id, item.object.object] as const),
+);
 const formationObjects = compiled.formations.map((formation) =>
   buildInstancedFormation({
     formation,
     models,
     motions: compiled.formationMotions,
     heroObjects: nodeObjects,
+    heroVisualObjects: nodeVisualObjects,
   }),
 );
 for (const formation of formationObjects) scene.scene.add(formation.object);
