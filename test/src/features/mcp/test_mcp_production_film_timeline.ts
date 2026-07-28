@@ -358,6 +358,18 @@ export const test_mcp_production_film_timeline = (): void => {
       },
       required: true,
     });
+    project.setAcceptanceScenario({
+      id: "film-opening-event",
+      target: { kind: "film", id: "fixture-film" },
+      criterion: {
+        kind: "event",
+        shot: "opening",
+        event: "signal-raised",
+        expectation:
+          "The actual compiled signal sample remains inside the finished edit.",
+      },
+      required: true,
+    });
     fs.writeFileSync(filmPath, editSource(twoShotEdit()));
     const twoShot = compiler.compile({ scope: "source" });
     const twoShotTimeline = JSON.parse(
@@ -556,8 +568,10 @@ export const test_mcp_production_film_timeline = (): void => {
         ) &&
         trimReview.diagnostics.every(
           (diagnostic) =>
-            diagnostic.code !== "review-evidence-missing" ||
-            diagnostic.target.includes("signal-apex") === false,
+            (diagnostic.code !== "review-evidence-missing" ||
+              diagnostic.target.includes("signal-apex") === false) &&
+            (diagnostic.code !== "review-outcome-missing" ||
+              diagnostic.message.includes("film-opening-event") === false),
         ),
     );
   } finally {

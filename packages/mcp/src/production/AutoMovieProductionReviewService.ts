@@ -606,7 +606,12 @@ const validateAcceptanceCoverage = (
       (scenario) =>
         target.kind !== "film" ||
         filmTimeline === null ||
-        acceptanceBelongsToFilm(graph, scenario, filmTimeline),
+        acceptanceBelongsToFilm(
+          graph,
+          scenario,
+          filmTimeline,
+          currentAcceptanceEventTime(project, scenario),
+        ),
     )
     .sort((left, right) => compareCodeUnits(left.id, right.id));
   const check = input.checks.find(
@@ -1230,6 +1235,7 @@ const currentAcceptanceOutcomes = (
     const criterion = scenario.criterion;
     if (
       target.kind === "film" &&
+      criterion.kind !== "event" &&
       acceptanceBelongsToFilm(graph, scenario, readTimeline()) === false
     )
       continue;
@@ -1244,23 +1250,16 @@ const currentAcceptanceOutcomes = (
           : readRealization(shot)?.events.find(
               (candidate) => candidate.id === criterion.event,
             );
-      if (target.kind === "film" && shot !== undefined) {
-        const timeline = readTimeline();
-        const segment = timeline?.segments.find(
-          (candidate) => candidate.shot === shot,
-        );
-        const eventFrame =
-          event === undefined
-            ? null
-            : Math.round(event.time * (timeline?.fps ?? 0));
-        if (
-          segment === undefined ||
-          eventFrame === null ||
-          eventFrame < segment.sourceInFrame ||
-          eventFrame >= segment.sourceOutFrame
-        )
-          event = undefined;
-      }
+      if (
+        target.kind === "film" &&
+        acceptanceBelongsToFilm(
+          graph,
+          scenario,
+          readTimeline(),
+          event?.time,
+        ) === false
+      )
+        continue;
       if (shot === undefined || event === undefined) {
         diagnostics.push(
           outcomeMissingDiagnostic(
@@ -1335,6 +1334,7 @@ const acceptanceBelongsToFilm = (
   graph: ReturnType<AutoMovieProductionProject["graph"]>,
   scenario: IAutoMovieAcceptanceScenario,
   timeline: IAutoMovieFilmTimeline | null,
+  eventTime?: number,
 ): boolean => {
   if (timeline === null) return true;
   if (scenario.target.kind === "film" && scenario.criterion.kind === "metric")
@@ -1363,15 +1363,40 @@ const acceptanceBelongsToFilm = (
     return index >= segment.sourceInFrame && index < segment.sourceOutFrame;
   }
   if (scenario.criterion.kind === "event") {
-    const event = graph.shots
-      .get(shot)
-      ?.events.find((candidate) => candidate.id === scenario.criterion.event);
-    if (event === undefined) return true;
-    const first = Math.ceil(event.window.from * timeline.fps);
-    const last = Math.floor(event.window.to * timeline.fps);
-    return last >= segment.sourceInFrame && first < segment.sourceOutFrame;
+    if (eventTime === undefined) return true;
+    const frame = Math.round(eventTime * timeline.fps);
+    return frame >= segment.sourceInFrame && frame < segment.sourceOutFrame;
   }
   return true;
+};
+
+const currentAcceptanceEventTime = (
+  project: AutoMovieProductionProject,
+  scenario: IAutoMovieAcceptanceScenario,
+): number | undefined => {
+  if (scenario.criterion.kind !== "event") return undefined;
+  const shot =
+    scenario.criterion.shot ??
+    (scenario.target.kind === "shot" ? scenario.target.id : undefined);
+  if (shot === undefined) return undefined;
+  const eventId = scenario.criterion.event;
+  try {
+    const validation =
+      typia.validateEquals<IAutoMovieCompiledContractRealization>(
+        JSON.parse(
+          Buffer.from(
+            project.readGeneratedFile(
+              `realizations/${encodeAutoMoviePathSegment(shot)}.json`,
+            ),
+          ).toString("utf8"),
+        ) as unknown,
+      );
+    return validation.success
+      ? validation.data.events.find((event) => event.id === eventId)?.time
+      : undefined;
+  } catch {
+    return undefined;
+  }
 };
 
 const currentFrames = (
