@@ -1,0 +1,32 @@
+{
+  "id": "army-hero",
+  "role": "performer",
+  "archetype": "stickman",
+  "parameters": {
+    "height": 1.7,
+    "headRadius": 0.14,
+    "limbRadius": 0.05
+  },
+  "palette": {
+    "body": "#8f9d74"
+  },
+  "lod": [
+    {
+      "tier": "hero",
+      "maxDistance": 5,
+      "recipe": "army-hero"
+    },
+    {
+      "tier": "near",
+      "maxDistance": 12,
+      "recipe": "army-near"
+    },
+    {
+      "tier": "far",
+      "maxDistance": null,
+      "recipe": "army-far"
+    }
+  ],
+  "capabilities": ["signal"],
+  "attachments": []
+}

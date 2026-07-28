@@ -77,10 +77,14 @@ export type AutoMovieGeometryQuery =
       };
     }
   | {
-      /** Formation bounds and slot query. */
+      /** Compact formation bounds, budget, representative and LOD query. */
       query: "formation";
       /** Formation id. */
       formation: string;
+      /** Optional participating shot used for camera-distance LOD summary. */
+      shot?: string;
+      /** Optional shot-local sample time, zero by default. */
+      time?: number;
     }
   | {
       /** Resolve one film-global frame through the canonical edit timeline. */

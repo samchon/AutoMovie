@@ -9,6 +9,7 @@ import {
   applyObjectMotions,
   applyPose,
   applyRenderMode,
+  buildInstancedFormation,
   buildModel,
   buildScene,
   mountViewer,
@@ -54,6 +55,14 @@ const scene = buildScene(compiled.scene, (modelId) => {
     throw new Error(`Scene build order disagrees at model "${modelId}".`);
   return candidate.object;
 });
+const formationObjects = compiled.formations.map((formation) =>
+  buildInstancedFormation({
+    formation,
+    models,
+    motions: compiled.formationMotions,
+  }),
+);
+for (const formation of formationObjects) scene.scene.add(formation.object);
 const nodeObjects = new Map(
   compiled.scene.nodes.map((node, index) => {
     const object = scene.scene.children[index];
@@ -155,10 +164,20 @@ const seek = (time: number, pass: AutoMovieGuidePass): void => {
     time,
     (light) => scene.lights.get(light),
   );
+  for (const formation of formationObjects)
+    formation.update(camera, Math.max(1, renderer.domElement.height), time);
   const handle = applyRenderMode(scene.scene, pass);
   renderer.render(scene.scene, camera);
   handle.restore();
-  status.textContent = `${compiled.shot.id}  t=${time.toFixed(3)}s  ${pass}`;
+  const formationStatus = formationObjects
+    .map(
+      ({ stats }) =>
+        `H${stats.heroes}/N${stats.visible.near}/F${stats.visible.far}/C${stats.culled}`,
+    )
+    .join(" ");
+  status.textContent =
+    `${compiled.shot.id}  t=${time.toFixed(3)}s  ${pass}` +
+    (formationStatus.length === 0 ? "" : `  ${formationStatus}`);
 };
 
 window.__automovieCapture = { ready: true, seek };

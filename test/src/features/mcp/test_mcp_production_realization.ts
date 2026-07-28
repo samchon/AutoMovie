@@ -9,7 +9,6 @@ import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   materializeCompiledShot,
-  materializeFormationInventory,
   materializeProductionModels,
   realizeShotContract,
 } from "@automovie/mcp";
@@ -60,7 +59,6 @@ export const test_mcp_production_realization = (): void => {
       production: productionDesign(),
       world: worldDesign(),
       formations: new Map(),
-      formationSlots: {},
       compiled: base,
       collisions: [],
     });
@@ -81,7 +79,6 @@ export const test_mcp_production_realization = (): void => {
       production: productionDesign(),
       world: worldDesign(),
       formations: new Map(),
-      formationSlots: {},
       compiled: held,
       collisions: [],
     });
@@ -93,11 +90,14 @@ export const test_mcp_production_realization = (): void => {
 
     const formation = formationDesign();
     const formations = new Map([[formation.id, formation]]);
-    const formationSlots = materializeFormationInventory(formations);
     const runtimeModels = materializeProductionModels(
       new Map([[modelRecipe().id, modelRecipe()]]),
     );
-    const { models: _baseModels, ...sourceValue } = structuredClone(base);
+    const {
+      models: _baseModels,
+      formations: _baseFormations,
+      ...sourceValue
+    } = structuredClone(base);
     const source = sourceValue as IAutoMovieShotSourceOutput;
     const contract: IAutoMovieShotContract = {
       ...shotContract(),
@@ -228,7 +228,6 @@ export const test_mcp_production_realization = (): void => {
     const materialized = materializeCompiledShot({
       contract,
       formations,
-      formationSlots,
       runtimeModels,
       source,
     }).value;
@@ -300,7 +299,6 @@ export const test_mcp_production_realization = (): void => {
       production: productionDesign(),
       world: worldDesign(),
       formations,
-      formationSlots,
       compiled: materialized,
       collisions: [],
     });
@@ -327,7 +325,6 @@ export const test_mcp_production_realization = (): void => {
       production: productionDesign(),
       world: worldDesign(),
       formations,
-      formationSlots,
       compiled: materialized,
       collisions: [],
     });
@@ -343,21 +340,19 @@ export const test_mcp_production_realization = (): void => {
       production: productionDesign(),
       world: worldDesign(),
       formations,
-      formationSlots: { [formation.id]: [] },
-      compiled: materialized,
+      compiled: { ...materialized, formations: [] },
       collisions: [],
     });
     TestValidator.predicate(
       "an empty formation cannot satisfy an event subject",
       emptyFormationSubjectOutcome.realization.events[0]?.passed === false,
     );
-    const missingFormationSlotsOutcome = realizeShotContract({
+    const missingFormationRuntimeOutcome = realizeShotContract({
       contract,
       production: productionDesign(),
       world: worldDesign(),
       formations,
-      formationSlots: {},
-      compiled: materialized,
+      compiled: { ...materialized, formations: [] },
       collisions: [],
     });
     const missingFormationDesignOutcome = realizeShotContract({
@@ -365,20 +360,20 @@ export const test_mcp_production_realization = (): void => {
       production: productionDesign(),
       world: worldDesign(),
       formations: new Map(),
-      formationSlots: {},
       compiled: materialized,
       collisions: [],
     });
     TestValidator.predicate(
-      "formation realization reports absent slot inventories and designs",
-      missingFormationSlotsOutcome.realization.formations[0]?.count === 0 &&
-        missingFormationSlotsOutcome.realization.formations[0]?.passed ===
+      "formation realization reports absent compact runtimes and designs",
+      missingFormationRuntimeOutcome.realization.formations[0]?.count === 0 &&
+        missingFormationRuntimeOutcome.realization.formations[0]?.passed ===
           false &&
-        missingFormationDesignOutcome.realization.formations[0]?.count === 0 &&
+        missingFormationDesignOutcome.realization.formations[0]?.count ===
+          formation.count &&
         missingFormationDesignOutcome.realization.formations[0]?.passed ===
           false &&
         missingFormationDesignOutcome.diagnostics.some((item) =>
-          item.message.includes("exactly 0 distinct compiler-owned slots"),
+          item.message.includes("compact 0-slot runtime"),
         ),
     );
     const heroModelTampered = structuredClone(materialized);
@@ -389,7 +384,6 @@ export const test_mcp_production_realization = (): void => {
       production: productionDesign(),
       world: worldDesign(),
       formations,
-      formationSlots,
       compiled: heroModelTampered,
       collisions: [],
     });
@@ -409,7 +403,6 @@ export const test_mcp_production_realization = (): void => {
       production: productionDesign(),
       world: worldDesign(),
       formations: new Map(),
-      formationSlots: {},
       compiled: unreadable,
       collisions: [],
     });
@@ -424,7 +417,6 @@ export const test_mcp_production_realization = (): void => {
       production: null,
       world: null,
       formations: new Map([[formation.id, formation]]),
-      formationSlots,
       compiled: {
         ...structuredClone(base),
         eventSamples: [
@@ -567,7 +559,6 @@ export const test_mcp_production_realization = (): void => {
       production: productionDesign(),
       world: worldDesign(),
       formations: new Map(),
-      formationSlots: {},
       compiled: brokenCompiled,
       collisions: [],
     });

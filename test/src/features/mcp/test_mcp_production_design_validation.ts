@@ -50,6 +50,37 @@ export const test_mcp_production_design_validation = (): void => {
   };
   const firstCumulativeFormation = structuredClone(cumulativeFormation);
   firstCumulativeFormation.id = "first-line";
+  const twoTierModel = structuredClone(modelRecipe());
+  twoTierModel.lod = [
+    { tier: "hero", maxDistance: 5, recipe: twoTierModel.id },
+    { tier: "near", maxDistance: 20, recipe: twoTierModel.id },
+    { tier: "far", maxDistance: null, recipe: twoTierModel.id },
+  ];
+  const matrixHeavyFormation = {
+    ...formationDesign(),
+    count: 70_000,
+    layout: {
+      kind: "line" as const,
+      ranks: 70_000,
+      files: 1,
+      spacing: { lateral: 0.8, depth: 0.9 },
+    },
+    heroOverrides: [],
+  };
+  const runtimeHeavyFormation = {
+    ...formationDesign(),
+    count: 256,
+    layout: {
+      kind: "line" as const,
+      ranks: 256,
+      files: 1,
+      spacing: { lateral: 0.8, depth: 0.9 },
+    },
+    heroOverrides: Array.from({ length: 256 }, (_, slot) => ({
+      slot,
+      actor: `hero-${slot}`,
+    })),
+  };
   TestValidator.predicate(
     "explicit formation nodes stay inside one honest per-production bound",
     validateAutoMovieProductionGraph({
@@ -74,6 +105,23 @@ export const test_mcp_production_design_validation = (): void => {
         (diagnostic) =>
           diagnostic.code === "design-range-invalid" &&
           diagnostic.target === "formations",
+      ) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        models: new Map([[twoTierModel.id, twoTierModel]]),
+        formations: new Map([[matrixHeavyFormation.id, matrixHeavyFormation]]),
+        shots: new Map(),
+        acceptance: new Map(),
+      }).some((diagnostic) => diagnostic.message.includes("viewer budget")) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        formations: new Map([
+          [runtimeHeavyFormation.id, runtimeHeavyFormation],
+        ]),
+        shots: new Map(),
+        acceptance: new Map(),
+      }).some((diagnostic) =>
+        diagnostic.message.includes("generated payload budget"),
       ),
   );
   const noReviewFrames = shotContract();

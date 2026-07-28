@@ -614,6 +614,28 @@ app.getGuideDocument({ name: "PRODUCTION_REVIEW" });
 app.openProject({ root });
 const project = AutoMovieProductionProject.open(root);
 const graph = project.graph();
+const formationSummary = app.queryGeometry({
+  request: {
+    query: "formation",
+    formation: "army",
+    shot: "opening",
+    time: 2,
+  },
+});
+assert(
+  "starter-formation-hero-near-far-frame",
+  formationSummary.result?.kind === "measurement" &&
+    formationSummary.result.values.heroVisible === 2 &&
+    formationSummary.result.values.nearVisible > 0 &&
+    formationSummary.result.values.farVisible > 0 &&
+    frames.some(
+      (frame) =>
+        frame.shot === "opening" &&
+        frame.pass === "beauty" &&
+        frame.time === 2,
+    ),
+  JSON.stringify(formationSummary),
+);
 const phase = process.argv[2];
 if (phase === "review") {
   const before = app.inspectProject({});

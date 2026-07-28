@@ -7,13 +7,17 @@ import {
   resolveCameraAt,
   resolvePose,
   sampleClipSequence,
+  sampleFormationMotion,
   sampleMotion,
+  selectFormationLod,
+  transformFormationPoint,
   validatePose,
 } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
   AutoMovieProductionFrameCapture,
   IAutoMovieCompileProjectOutput,
+  IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
   IAutoMovieGeneratedManifest,
@@ -48,7 +52,7 @@ import {
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
-import { materializeFormationSlots } from "./materializeProduction";
+import { materializeFormationSlot } from "./materializeProduction";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 
 /** Read-only current compiler status used to refuse stale oracle answers. */
@@ -187,7 +191,6 @@ export class AutoMovieProductionOracleService {
             throw new Error(
               `Formation "${request.formation}" does not exist. Inspect current formation ids.`,
             );
-          const slots = materializeFormationSlots(formation);
           const participatingShots = [...graph.shots]
             .filter(([, contract]) =>
               contract.participants.some(
@@ -197,43 +200,229 @@ export class AutoMovieProductionOracleService {
               ),
             )
             .map(([id]) => id);
-          let materializedCount = 0;
-          let minimumX = Number.POSITIVE_INFINITY;
-          let maximumX = Number.NEGATIVE_INFINITY;
-          let minimumZ = Number.POSITIVE_INFINITY;
-          let maximumZ = Number.NEGATIVE_INFINITY;
-          for (const id of participatingShots) {
-            const compiled = shots.get(id);
-            if (compiled === undefined) continue;
-            const nodes = new Map(
-              compiled.scene.nodes.map((node) => [node.id, node]),
-            );
-            for (const slot of slots) {
-              const point = nodes.get(slot.node)?.transform.translation;
-              if (point === undefined) continue;
-              ++materializedCount;
-              minimumX = Math.min(minimumX, point.x);
-              maximumX = Math.max(maximumX, point.x);
-              minimumZ = Math.min(minimumZ, point.z);
-              maximumZ = Math.max(maximumZ, point.z);
-            }
-          }
+          const runtimes = participatingShots.flatMap((id) => {
+            const runtime = shots
+              .get(id)
+              ?.formations.find((candidate) => candidate.id === formation.id);
+            return runtime === undefined ? [] : [runtime];
+          });
           if (
             participatingShots.length === 0 ||
-            materializedCount !== participatingShots.length * formation.count
+            runtimes.length !== participatingShots.length ||
+            runtimes.some(
+              (runtime) =>
+                runtime.count !== formation.count ||
+                runtime.digest !== runtimes[0]?.digest,
+            )
           )
             throw new Error(
               `Formation "${request.formation}" is not fully materialized in every current participating shot. Recompile its source and compiler-owned slots.`,
             );
+          const runtime = runtimes[0]!;
+          if (
+            request.shot !== undefined &&
+            participatingShots.includes(request.shot) === false
+          )
+            throw new Error(
+              `Shot "${request.shot}" does not participate in formation "${request.formation}". Select one of ${participatingShots.join(", ")}.`,
+            );
+          const selectedShot = request.shot ?? participatingShots[0] ?? null;
+          const compiled =
+            selectedShot === null ? undefined : shots.get(selectedShot);
+          const sampledTime = request.time ?? 0;
+          const sampledMotion = sampleFormationMotion(
+            compiled?.formationMotions ?? [],
+            formation.id,
+            sampledTime,
+          );
+          const transformPoint = (
+            point: IAutoMovieVector3,
+          ): IAutoMovieVector3 =>
+            transformFormationPoint(
+              point,
+              runtime.anchor,
+              sampledMotion,
+              runtime.facingDeg,
+            );
+          const representative = [
+            ...new Set(
+              runtime.chunks.flatMap((chunk) => [
+                chunk.start,
+                chunk.start + Math.floor((chunk.count - 1) / 2),
+                chunk.start + chunk.count - 1,
+              ]),
+            ),
+          ];
+          const groundViolations = representative.filter((slot) => {
+            const point = transformPoint(
+              materializeFormationSlot(formation, slot).position,
+            );
+            const sample = groundSample(graph.world, point);
+            return (
+              sample.walkable === false ||
+              Math.abs(sample.height - point.y) > 1e-6
+            );
+          });
+          const bounds = transformFormationBounds(
+            runtime.bounds,
+            runtime.anchor,
+            sampledMotion,
+            runtime.facingDeg,
+          );
+          const centroid = transformPoint(runtime.centroid);
+          const width = bounds.max.x - bounds.min.x;
+          const depth = bounds.max.z - bounds.min.z;
+          const routes = graph.world?.routes ?? [];
+          const routeClearance =
+            routes.length === 0
+              ? 0
+              : Math.min(
+                  ...routes.map((route) => route.allowedFormationWidth - width),
+                );
+          const camera =
+            compiled?.scene.cameras.find(
+              (candidate) => candidate.id === compiled.shot.camera,
+            ) ?? null;
+          const resolvedCamera =
+            camera === null || compiled === undefined
+              ? null
+              : resolveCameraAt(
+                  camera.transform,
+                  compiled.shot.cameraMotion,
+                  camera.id,
+                  request.time ?? 0,
+                );
+          const halfY =
+            camera === null ? 0 : Math.tan((camera.fovY * Math.PI) / 360);
+          const production = graph.production;
+          const aspect =
+            production === null
+              ? 1
+              : production.frameFormat.width / production.frameFormat.height;
+          const chunkMeasurements =
+            camera === null || resolvedCamera === null || production === null
+              ? []
+              : runtime.chunks.map((chunk) => {
+                  const center = transformPoint(chunk.centroid);
+                  const transformedBounds = transformFormationBounds(
+                    chunk.bounds,
+                    runtime.anchor,
+                    sampledMotion,
+                    runtime.facingDeg,
+                  );
+                  const radius =
+                    Math.max(
+                      0.01,
+                      ...[
+                        transformedBounds.min.x,
+                        transformedBounds.max.x,
+                      ].flatMap((x) =>
+                        [
+                          transformedBounds.min.y,
+                          transformedBounds.max.y,
+                        ].flatMap((y) =>
+                          [
+                            transformedBounds.min.z,
+                            transformedBounds.max.z,
+                          ].map((z) =>
+                            Math.hypot(
+                              x - center.x,
+                              y - center.y,
+                              z - center.z,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ) + runtime.projectionRadius;
+                  const distance = Math.hypot(
+                    center.x - resolvedCamera.translation.x,
+                    center.y - resolvedCamera.translation.y,
+                    center.z - resolvedCamera.translation.z,
+                  );
+                  const projectedPixels =
+                    (runtime.projectionRadius * production.frameFormat.height) /
+                    (halfY * Math.max(0.001, distance));
+                  const projection = projectToNdc(
+                    resolvedCamera,
+                    center,
+                    halfY,
+                    aspect,
+                  );
+                  const projectedRadiusY =
+                    radius / (halfY * Math.max(0.001, projection.depth));
+                  const projectedRadiusX = projectedRadiusY / aspect;
+                  const visible =
+                    projection.depth + radius >= camera.near &&
+                    projection.depth - radius <= camera.far &&
+                    Math.abs(projection.ndcX) <= 1 + projectedRadiusX &&
+                    Math.abs(projection.ndcY) <= 1 + projectedRadiusY;
+                  return {
+                    distance,
+                    projectedPixels,
+                    visible,
+                  };
+                });
+          const distances = chunkMeasurements.map(
+            (measurement) => measurement.distance,
+          );
+          const projectedPixels = chunkMeasurements.map(
+            (measurement) => measurement.projectedPixels,
+          );
+          const tierCounts = { hero: 0, near: 0, far: 0 };
+          let culled = 0;
+          runtime.chunks.forEach((chunk, index) => {
+            const measurement = chunkMeasurements[index];
+            if (measurement === undefined) return;
+            if (measurement.visible === false) {
+              culled += chunk.anonymousCount;
+              return;
+            }
+            const lod = selectFormationLod({
+              lod: runtime.lod,
+              distance: measurement.distance,
+              projectedPixels: measurement.projectedPixels,
+              previous: null,
+            }).lod;
+            tierCounts[lod.tier] += chunk.anonymousCount;
+          });
           result = {
             kind: "measurement",
             values: {
               designCount: formation.count,
-              materializedCount: materializedCount / participatingShots.length,
+              materializedCount: runtime.count,
+              anonymousCount: runtime.anonymousCount,
+              heroCount: runtime.heroes.length,
+              chunkCount: runtime.chunks.length,
               participatingShots: participatingShots.length,
-              width: maximumX - minimumX,
-              depth: maximumZ - minimumZ,
+              width,
+              depth,
+              centroidX: centroid.x,
+              centroidY: centroid.y,
+              centroidZ: centroid.z,
               facingDeg: formation.facingDeg,
+              sampledTime,
+              motionOffsetX: sampledMotion.translation.x,
+              motionOffsetY: sampledMotion.translation.y,
+              motionOffsetZ: sampledMotion.translation.z,
+              motionFacingOffsetDeg: sampledMotion.facingOffsetDeg,
+              lateralSpacingScale: sampledMotion.spacingScale.lateral,
+              depthSpacingScale: sampledMotion.spacingScale.depth,
+              routeClearance,
+              representativeSlots: representative.length,
+              groundViolations: groundViolations.length,
+              nearestDistance:
+                distances.length === 0 ? 0 : Math.min(...distances),
+              farthestDistance:
+                distances.length === 0 ? 0 : Math.max(...distances),
+              minimumProjectedPixels:
+                projectedPixels.length === 0 ? 0 : Math.min(...projectedPixels),
+              maximumProjectedPixels:
+                projectedPixels.length === 0 ? 0 : Math.max(...projectedPixels),
+              heroVisible: runtime.heroes.length,
+              nearVisible: tierCounts.near,
+              farVisible: tierCounts.far,
+              culled,
+              compiledDigest: runtime.digest,
               state: "compiled",
             },
           };
@@ -1134,6 +1323,33 @@ const verifiedRetainedFrames = (
       continue;
     }
   return retained;
+};
+
+const transformFormationBounds = (
+  bounds: IAutoMovieCompiledFormation["bounds"],
+  anchor: IAutoMovieVector3,
+  motion: ReturnType<typeof sampleFormationMotion>,
+  baseFacingDeg: number,
+): IAutoMovieCompiledFormation["bounds"] => {
+  const corners = [bounds.min.x, bounds.max.x].flatMap((x) =>
+    [bounds.min.y, bounds.max.y].flatMap((y) =>
+      [bounds.min.z, bounds.max.z].map((z) =>
+        transformFormationPoint({ x, y, z }, anchor, motion, baseFacingDeg),
+      ),
+    ),
+  );
+  return {
+    min: {
+      x: Math.min(...corners.map((point) => point.x)),
+      y: Math.min(...corners.map((point) => point.y)),
+      z: Math.min(...corners.map((point) => point.z)),
+    },
+    max: {
+      x: Math.max(...corners.map((point) => point.x)),
+      y: Math.max(...corners.map((point) => point.y)),
+      z: Math.max(...corners.map((point) => point.z)),
+    },
+  };
 };
 
 const previewFailure = (

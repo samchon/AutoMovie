@@ -27,9 +27,21 @@ export const productionFixture = (): {
   for (const file of [
     ".automovie/design/acceptance/answer-beauty.json",
     ".automovie/design/acceptance/answer-pose.json",
+    ".automovie/design/formations/army.json",
+    ".automovie/design/models/army-far.json",
+    ".automovie/design/models/army-hero.json",
+    ".automovie/design/models/army-near.json",
     ".automovie/design/shots/answer.json",
   ])
     delete files[file];
+  const opening = JSON.parse(
+    files[".automovie/design/shots/opening.json"]!,
+  ) as IAutoMovieShotContract;
+  opening.participants = opening.participants.filter(
+    (participant) => participant.kind !== "formation",
+  );
+  files[".automovie/design/shots/opening.json"] =
+    `${JSON.stringify(opening, null, 2)}\n`;
   files[".automovie/design/production.json"] = `${JSON.stringify(
     oneShotProduction(
       JSON.parse(

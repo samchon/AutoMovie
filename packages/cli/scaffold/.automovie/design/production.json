@@ -1,7 +1,7 @@
 {
   "id": "{{name}}",
   "title": "{{name}}",
-  "logline": "A primitive sentinel raises and answers a signal across a deterministic two-shot film.",
+  "logline": "A primitive sentinel raises and answers a signal before a deterministic instanced army.",
   "targetRuntimeSeconds": 11.5,
   "frameFormat": {
     "width": 1280,
@@ -13,7 +13,7 @@
     "style": "primitive-3d",
     "palette": ["#182235", "#d7b56d", "#b13f36"],
     "silhouettePriority": "The sentinel and raised arm remain distinct from the ground and background.",
-    "scaleGrammar": "One hero primitive across two shots establishes compile, preview, guide-pass, aggregate render, and film-review wiring."
+    "scaleGrammar": "A named sentinel and promoted formation heroes remain readable against simultaneous near and far anonymous ranks."
   },
   "deliverables": [
     {

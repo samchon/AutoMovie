@@ -323,9 +323,9 @@ export interface IAutoMovieFormationDesign {
   /** Existing model recipe id enforced on every derived slot, including heroes. */
   modelRecipe: string;
   /**
-   * Integer number of derived slots from 1 through 10,000. The foundation
-   * expands slots into explicit deterministic nodes; larger crowds require a
-   * future instanced representation rather than pretending this path is cheap.
+   * Integer number of derived slots from 1 through 100,000. Generated output
+   * stores bounded chunks and hero exceptions; anonymous slots are regenerated
+   * from index and seed and rendered through instancing.
    */
   count: number;
   /**

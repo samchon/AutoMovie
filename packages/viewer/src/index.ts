@@ -13,3 +13,4 @@ export * from "./mount";
 export * from "./captureSize";
 export * from "./renderMode";
 export * from "./snapshot";
+export * from "./formation";

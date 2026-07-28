@@ -49,8 +49,8 @@ import {
   normalizeAutoMovieSource,
 } from "./contentIdentity";
 import {
+  materializeCompiledFormationInventory,
   materializeCompiledShot,
-  materializeFormationInventory,
   materializeProductionModels,
 } from "./materializeProduction";
 import { probeProductionMedia } from "./probeProductionMedia";
@@ -58,7 +58,7 @@ import { realizeShotContract } from "./realizeShotContract";
 import { validateAutoMovieProductionGraph } from "./validateProductionDesign";
 
 /** Production compiler protocol embedded in generated manifests. */
-export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v3";
+export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v4";
 
 const FILM_SOURCE_PATH = "src/film.ts";
 const FILM_SOURCE_EXPORT = "film";
@@ -145,13 +145,17 @@ export class AutoMovieProductionCompiler {
       string,
       IAutoMovieCompiledShotSource["models"][number]
     >();
-    let formationInventory: ReturnType<typeof materializeFormationInventory> =
-      {};
+    let formationRuntime: ReturnType<
+      typeof materializeCompiledFormationInventory
+    > = {};
     let filmSource: Uint8Array | null = null;
     let filmSourceDigest: AutoMovieContentDigest | null = null;
     if (input.scope !== "design" && designReady) {
       runtimeModels = new Map(materializeProductionModels(graph.models));
-      formationInventory = materializeFormationInventory(graph.formations);
+      formationRuntime = materializeCompiledFormationInventory(
+        graph.formations,
+        graph.models,
+      );
     }
     for (const [id, contract] of graph.shots) {
       if (input.scope === "design") {
@@ -194,7 +198,7 @@ export class AutoMovieProductionCompiler {
           world: graph.world!,
           formations: Object.fromEntries(graph.formations),
           runtimeModels: Object.fromEntries(runtimeModels),
-          formationSlots: formationInventory,
+          formationRuntime,
         },
       });
       diagnostics.push(...result.diagnostics);
@@ -202,7 +206,8 @@ export class AutoMovieProductionCompiler {
         const materialized = materializeCompiledShot({
           contract,
           formations: graph.formations,
-          formationSlots: formationInventory,
+          formationRuntime,
+          modelRecipes: graph.models,
           runtimeModels,
           source: result.value,
         });
@@ -211,7 +216,6 @@ export class AutoMovieProductionCompiler {
           production: graph.production,
           world: graph.world,
           formations: graph.formations,
-          formationSlots: formationInventory,
           compiled: materialized.value,
           collisions: materialized.collisions,
         });
@@ -629,7 +633,7 @@ interface ICompileShotSourceProps {
     world: IAutoMovieWorldDesign;
     formations: Readonly<Record<string, unknown>>;
     runtimeModels: Readonly<Record<string, unknown>>;
-    formationSlots: Readonly<Record<string, unknown>>;
+    formationRuntime: Readonly<Record<string, unknown>>;
   };
 }
 
@@ -724,6 +728,93 @@ const SANDBOX_BOOTSTRAP = `
     return value;
   };
   const hypot = Math.hypot;
+  const mixSeed = (seed, salt) => {
+    const integer = Math.trunc(seed);
+    const low = integer >>> 0;
+    const high = Math.floor(integer / 4294967296) >>> 0;
+    let value = (salt ^ low) >>> 0;
+    value = Math.imul(value ^ (value >>> 16), 0x7feb352d);
+    value = Math.imul(value ^ (value >>> 15) ^ high, 0x846ca68b);
+    return (value ^ (value >>> 16)) >>> 0;
+  };
+  const seededValue = (...items) => {
+    let state = 0x9e3779b9;
+    for (const item of items) state = mixSeed(item, state);
+    state = (state + 0x6d2b79f5) >>> 0;
+    let output = state;
+    output = Math.imul(output ^ (output >>> 15), output | 1);
+    output ^= output + Math.imul(output ^ (output >>> 7), output | 61);
+    return ((output ^ (output >>> 14)) >>> 0) / 4294967296;
+  };
+  const formationSlot = (data, formationId, slot) => {
+    const formation = data.formationRuntime[formationId];
+    if (
+      formation === undefined ||
+      Number.isSafeInteger(slot) === false ||
+      slot < 0 ||
+      slot >= formation.count
+    )
+      throw new RangeError(
+        'Formation "' + formationId + '" slot ' + slot + " is unavailable.",
+      );
+    const layout = formation.layout;
+    let x;
+    let z;
+    if (layout.kind === "line" || layout.kind === "column") {
+      const rank =
+        layout.kind === "line"
+          ? Math.floor(slot / layout.files)
+          : slot % layout.ranks;
+      const file =
+        layout.kind === "line"
+          ? slot % layout.files
+          : Math.floor(slot / layout.ranks);
+      x = (file - (layout.files - 1) / 2) * layout.spacing.lateral;
+      z = rank * layout.spacing.depth;
+    } else if (layout.kind === "wedge") {
+      const row = Math.floor(Math.sqrt(slot));
+      x = (slot - row * row - row) * layout.spacing.lateral;
+      z = row * layout.spacing.depth;
+    } else if (layout.kind === "arc") {
+      const ratio =
+        formation.count === 1 ? 0.5 : slot / (formation.count - 1);
+      const radians =
+        (((ratio - 0.5) * layout.arcDegrees) / 180) * Math.PI;
+      x = Math.sin(radians) * layout.radius;
+      z = Math.cos(radians) * layout.radius;
+    } else {
+      const radius =
+        Math.sqrt(
+          seededValue(formation.seed, layout.seed, slot, 0),
+        ) * layout.radius;
+      const angle =
+        seededValue(formation.seed, layout.seed, slot, 1) * Math.PI * 2;
+      x = Math.cos(angle) * radius;
+      z = Math.sin(angle) * radius;
+    }
+    const radians = (formation.facingDeg * Math.PI) / 180;
+    const cosine = Math.cos(radians);
+    const sine = Math.sin(radians);
+    const hero = formation.heroes.find((item) => item.slot === slot);
+    return freeze({
+      slot,
+      node:
+        hero?.actor ??
+        "formation:" +
+          formation.id +
+          ":slot:" +
+          String(slot).padStart(6, "0"),
+      actor: hero?.actor ?? null,
+      modelRecipe: formation.modelRecipe,
+      position: {
+        x: formation.anchor.x + x * cosine + z * sine,
+        y: formation.anchor.y,
+        z: formation.anchor.z - x * sine + z * cosine,
+      },
+      facingDeg: formation.facingDeg,
+      motionPhase: seededValue(formation.seed, slot, 0x70686173),
+    });
+  };
   const insidePolygon = (point, polygon) => {
     let inside = false;
     for (
@@ -759,6 +850,8 @@ const SANDBOX_BOOTSTRAP = `
                   surface.height.slopeZ * point.z;
         return 0;
       },
+      formationSlot: (formation, slot) =>
+        formationSlot(data, formation, slot),
     });
     const context = freeze({ ...data, engine });
     const result = automovieModule.exports[exportName].build(context);
@@ -1710,6 +1803,7 @@ const validateCompiledShot = (
     id,
     validateShotArtifact(value.shot, value.scene, motionIds),
   );
+  diagnostics.push(...validateAutoMovieFormationMotions(contract, value));
   for (const model of value.models)
     appendValidation(diagnostics, id, validateModel({ model }));
   const skeletons = new Map(
@@ -1731,6 +1825,100 @@ const validateCompiledShot = (
       );
     else
       appendValidation(diagnostics, id, validateMotion({ motion, skeleton }));
+  }
+  return diagnostics;
+};
+
+/** Validate bounded source-authored formation cues against one compiled shot. */
+export const validateAutoMovieFormationMotions = (
+  contract: IAutoMovieShotContract,
+  value: IAutoMovieCompiledShotSource,
+): IAutoMovieDiagnostic[] => {
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const fail = (field: string, expectation: string): void => {
+    diagnostics.push(engineDiagnostic(contract.id, field, expectation));
+  };
+  if (value.formationMotions.length > 256)
+    fail(
+      "formationMotions",
+      "must contain at most 256 compact cues rather than per-member curves",
+    );
+  const ids = new Set<string>();
+  const participating = new Set(
+    contract.participants.flatMap((participant) =>
+      participant.kind === "formation" ? [participant.id] : [],
+    ),
+  );
+  const priorByFormation = new Map<
+    string,
+    IAutoMovieCompiledShotSource["formationMotions"][number]
+  >();
+  for (const cue of [...value.formationMotions].sort(
+    (left, right) =>
+      compareCodeUnits(left.formation, right.formation) ||
+      left.start - right.start ||
+      compareCodeUnits(left.id, right.id),
+  )) {
+    if (cue.id.trim().length === 0 || ids.has(cue.id))
+      fail(
+        `formationMotion:${cue.id || "(blank)"}`,
+        "must have one non-blank id unique inside the shot",
+      );
+    ids.add(cue.id);
+    if (
+      participating.has(cue.formation) === false ||
+      value.formations.some((formation) => formation.id === cue.formation) ===
+        false
+    )
+      fail(
+        `formationMotion:${cue.id}.formation`,
+        `must reference participating compiled formation "${cue.formation}"`,
+      );
+    if (
+      Number.isFinite(cue.start) === false ||
+      Number.isFinite(cue.end) === false ||
+      cue.start < 0 ||
+      cue.end <= cue.start ||
+      cue.end > contract.durationSeconds
+    )
+      fail(
+        `formationMotion:${cue.id}.time`,
+        `must be one positive interval inside 0..${contract.durationSeconds}s`,
+      );
+    for (const [name, state] of [
+      ["from", cue.from],
+      ["to", cue.to],
+    ] as const) {
+      if (
+        [
+          state.translation.x,
+          state.translation.y,
+          state.translation.z,
+          state.facingOffsetDeg,
+        ].some((number) => Number.isFinite(number) === false)
+      )
+        fail(
+          `formationMotion:${cue.id}.${name}`,
+          "must contain finite translation and facing values",
+        );
+      if (
+        [state.spacingScale.lateral, state.spacingScale.depth].some(
+          (number) =>
+            Number.isFinite(number) === false || number < 0.25 || number > 4,
+        )
+      )
+        fail(
+          `formationMotion:${cue.id}.${name}.spacingScale`,
+          "must stay inside the bounded 0.25..4 envelope",
+        );
+    }
+    const prior = priorByFormation.get(cue.formation);
+    if (prior !== undefined && cue.start < prior.end)
+      fail(
+        `formationMotion:${cue.id}.start`,
+        `must not overlap prior cue "${prior.id}" ending at ${prior.end}s`,
+      );
+    priorByFormation.set(cue.formation, cue);
   }
   return diagnostics;
 };

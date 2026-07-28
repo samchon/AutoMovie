@@ -62,13 +62,17 @@ const SUPPORTED_STICKMAN_ATTACHMENT_BONES = new Set([
 /** Maximum exact production raster accepted by design and frame review. */
 export const AUTOMOVIE_MAX_FRAME_PIXELS = 16_777_216;
 
-/**
- * Maximum explicit formation slots in one foundation production.
- *
- * The current compiler emits one deterministic scene node per slot. Larger
- * armies require an instanced representation before the public bound can grow.
- */
-export const AUTOMOVIE_MAX_FORMATION_MEMBERS = 10_000;
+/** Maximum compact formation slots in one production. */
+export const AUTOMOVIE_MAX_FORMATION_MEMBERS = 100_000;
+/** Named rigged exceptions remain explicit nodes and source performances. */
+export const AUTOMOVIE_MAX_FORMATION_HEROES = 256;
+/** One 4x4 transform plus one deterministic phase scalar per LOD instance. */
+export const AUTOMOVIE_FORMATION_INSTANCE_BYTES =
+  16 * Float32Array.BYTES_PER_ELEMENT + Float32Array.BYTES_PER_ELEMENT;
+/** Maximum aggregate anonymous instance storage across all declared LOD tiers. */
+export const AUTOMOVIE_FORMATION_INSTANCE_BUFFER_BUDGET_BYTES = 8 * 1024 * 1024;
+/** Conservative generated compact-runtime envelope. */
+export const AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES = 128 * 1024;
 
 /** Validate graph-level production invariants after structural validation. */
 export const validateAutoMovieProductionGraph = (
@@ -477,7 +481,51 @@ export const validateAutoMovieProductionGraph = (
       "design-range-invalid",
       "formations",
       ".automovie/design/formations",
-      `The production declares ${formationMemberCount} formation members, above the explicit-node foundation limit ${AUTOMOVIE_MAX_FORMATION_MEMBERS}. Reduce the total or implement an instanced compiler/viewer representation before raising the bound.`,
+      `The production declares ${formationMemberCount} formation members, above the compact-runtime limit ${AUTOMOVIE_MAX_FORMATION_MEMBERS}. Reduce the total; unlimited crowds are not supported.`,
+    );
+  const formationInstanceBytes = [...graph.formations.values()].reduce(
+    (bytes, formation) => {
+      const anonymousTiers =
+        graph.models
+          .get(formation.modelRecipe)
+          ?.lod.filter((lod) => lod.tier !== "hero").length ?? 0;
+      return (
+        bytes +
+        (formation.count - formation.heroOverrides.length) *
+          Math.max(1, anonymousTiers) *
+          AUTOMOVIE_FORMATION_INSTANCE_BYTES
+      );
+    },
+    0,
+  );
+  if (
+    Number.isSafeInteger(formationInstanceBytes) === false ||
+    formationInstanceBytes > AUTOMOVIE_FORMATION_INSTANCE_BUFFER_BUDGET_BYTES
+  )
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      "formations",
+      ".automovie/design/formations",
+      `Formation LOD matrices and phase attributes require ${formationInstanceBytes} bytes, above the ${AUTOMOVIE_FORMATION_INSTANCE_BUFFER_BUDGET_BYTES}-byte viewer budget. Reduce count or LOD tiers.`,
+    );
+  const formationRuntimeBytes = [...graph.formations.values()].reduce(
+    (bytes, formation) =>
+      bytes +
+      Math.ceil(formation.count / 1_024) * 512 +
+      formation.heroOverrides.length * 512,
+    0,
+  );
+  if (
+    Number.isSafeInteger(formationRuntimeBytes) === false ||
+    formationRuntimeBytes > AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES
+  )
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      "formations",
+      ".automovie/design/formations",
+      `Estimated compact formation runtime is ${formationRuntimeBytes} bytes, above the ${AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES}-byte generated payload budget. Reduce count or hero overrides.`,
     );
 
   for (const [id, formation] of graph.formations) {
@@ -531,6 +579,14 @@ export const validateAutoMovieProductionGraph = (
     );
     const slots = new Set<number>();
     const actors = new Set<string>();
+    if (formation.heroOverrides.length > AUTOMOVIE_MAX_FORMATION_HEROES)
+      invalid(
+        diagnostics,
+        "design-range-invalid",
+        target,
+        file,
+        `Formation "${id}" promotes ${formation.heroOverrides.length} heroes, above the explicit-node limit ${AUTOMOVIE_MAX_FORMATION_HEROES}. Keep the anonymous army instanced.`,
+      );
     for (const hero of formation.heroOverrides) {
       if (
         Number.isInteger(hero.slot) === false ||

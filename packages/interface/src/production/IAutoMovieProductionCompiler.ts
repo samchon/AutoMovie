@@ -5,11 +5,12 @@ import { IAutoMovieMotion } from "../motion";
 import { IAutoMovieScene } from "../scene";
 import {
   AutoMovieContentDigest,
+  AutoMovieFormationCapability,
   IAutoMovieDesignTarget,
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
-  IAutoMovieProductionDesign,
   IAutoMovieProductionDeliverable,
+  IAutoMovieProductionDesign,
   IAutoMovieShotContract,
   IAutoMovieShotPredicate,
   IAutoMovieWorldDesign,
@@ -212,6 +213,8 @@ export interface IAutoMovieSourceOracle {
   ): number;
   /** Height of the first matching world surface, or zero. */
   groundHeight(point: { x: number; z: number }): number;
+  /** Regenerate one exact compiler-owned formation slot without expanding it. */
+  formationSlot(formation: string, slot: number): IAutoMovieFormationSlot;
 }
 
 /** One non-negative film time authored as an exact frame or frame-grid second. */
@@ -483,8 +486,8 @@ export interface IAutoMovieShotBuildContext {
   formations: Readonly<Record<string, IAutoMovieFormationDesign>>;
   /** Compiler-generated primitive runtime models keyed by recipe id. */
   runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
-  /** Compiler-derived formation slots keyed by formation id. */
-  formationSlots: Readonly<Record<string, readonly IAutoMovieFormationSlot[]>>;
+  /** Compact compiler-derived formation runtimes keyed by formation id. */
+  formationRuntime: Readonly<Record<string, IAutoMovieCompiledFormation>>;
   /** Deterministic geometry helpers. */
   engine: IAutoMovieSourceOracle;
 }
@@ -503,6 +506,139 @@ export interface IAutoMovieFormationSlot {
   position: IAutoMovieVector3;
   /** Compiler-derived world-space heading in degrees. */
   facingDeg: number;
+  /** Stable normalized phase used by bounded instance motion. */
+  motionPhase: number;
+}
+
+/** Axis-aligned world-space bounds of a compact formation range. */
+export interface IAutoMovieFormationBounds {
+  /** Minimum world-space corner. */
+  min: IAutoMovieVector3;
+  /** Maximum world-space corner. */
+  max: IAutoMovieVector3;
+}
+
+/** One bounded slot range regenerated independently by viewer workers. */
+export interface IAutoMovieFormationChunk {
+  /** Zero-based stable chunk index. */
+  index: number;
+  /** Inclusive first slot. */
+  start: number;
+  /** Number of slots in this chunk. */
+  count: number;
+  /** Anonymous slots rendered through instancing after hero exclusion. */
+  anonymousCount: number;
+  /** Exact world-space range bounds. */
+  bounds: IAutoMovieFormationBounds;
+  /** Exact arithmetic centroid of the range. */
+  centroid: IAutoMovieVector3;
+}
+
+/** One slot promoted out of anonymous batches into an explicit scene node. */
+export interface IAutoMovieCompiledFormationHero {
+  /** Exact promoted slot. */
+  slot: number;
+  /** Named explicit scene-node id. */
+  actor: string;
+  /** Compiler-owned base transform before source-authored performance. */
+  transform: IAutoMovieTransform;
+}
+
+/** One camera-selected runtime representation for anonymous formation slots. */
+export interface IAutoMovieCompiledFormationLod {
+  /** Semantic near-to-far tier. */
+  tier: "hero" | "near" | "far";
+  /** Positive maximum distance, or null only for the final tier. */
+  maxDistance: number | null;
+  /** Design recipe id. */
+  recipe: string;
+  /** Exact current recipe digest, including geometry and palette parameters. */
+  recipeDigest: AutoMovieContentDigest;
+  /** Compiler-owned runtime model id. */
+  model: string;
+}
+
+/** Compact generated formation runtime; it never stores every anonymous slot. */
+export interface IAutoMovieCompiledFormation {
+  /** Generated formation format. */
+  version: 1;
+  /** Stable formation design id. */
+  id: string;
+  /** Exact designed slot count. */
+  count: number;
+  /** Count remaining in instance batches after hero exclusion. */
+  anonymousCount: number;
+  /** Base design recipe. */
+  modelRecipe: string;
+  /** Exact compact layout algorithm and parameters. */
+  layout: IAutoMovieFormationDesign["layout"];
+  /** World-space origin. */
+  anchor: IAutoMovieVector3;
+  /** World-space base heading in degrees. */
+  facingDeg: number;
+  /** Full safe-integer design seed. */
+  seed: number;
+  /** Exact bounds of all slots. */
+  bounds: IAutoMovieFormationBounds;
+  /** Exact arithmetic centroid of all slots. */
+  centroid: IAutoMovieVector3;
+  /** Compiler-derived representative member radius used by LOD projection. */
+  projectionRadius: number;
+  /** Bounded independently regenerable slot ranges. */
+  chunks: IAutoMovieFormationChunk[];
+  /** Explicit hero promotions, ordered by slot. */
+  heroes: IAutoMovieCompiledFormationHero[];
+  /** Ordered automatic LOD representations. */
+  lod: IAutoMovieCompiledFormationLod[];
+  /** Deterministic per-slot phase generator contract. */
+  phase: {
+    /** Domain-separated safe-integer seed. */
+    seed: number;
+    /** Positive cycle length used by bounded formation animation. */
+    periodSeconds: number;
+  };
+  /** Digest of every field above except this digest. */
+  digest: AutoMovieContentDigest;
+}
+
+/** One compact formation-level transform state relative to its designed base. */
+export interface IAutoMovieFormationMotionState {
+  /** World-space translation added to the designed formation anchor. */
+  translation: IAutoMovieVector3;
+  /** Heading offset added around the designed anchor, in degrees. */
+  facingOffsetDeg: number;
+  /** Positive lateral and depth scale for bounded density deformation. */
+  spacingScale: {
+    /** Left-to-right spacing multiplier. */
+    lateral: number;
+    /** Front-to-back spacing multiplier. */
+    depth: number;
+  };
+}
+
+/**
+ * One source-authored compact formation cue.
+ *
+ * Capability labels do not grant this motion. The source explicitly authors
+ * each cue, while arbitrary per-slot curves remain outside the public shape.
+ */
+export interface IAutoMovieFormationMotion {
+  /** Stable cue id, unique inside one shot. */
+  id: string;
+  /** Participating compiled formation id. */
+  formation: string;
+  /** Review-facing action expressed by this exact cue. */
+  action: AutoMovieFormationCapability;
+  /** Inclusive shot-local cue start. */
+  start: number;
+  /** Exclusive shot-local cue end. */
+  end: number;
+  /** State at cue start. */
+  from: IAutoMovieFormationMotionState;
+  /** State at cue end. */
+  to: IAutoMovieFormationMotionState;
+  /** Deterministic interpolation curve. */
+  easing: "linear" | "easeIn" | "easeOut" | "easeInOut" | "step";
 }
 
 /** Coding-agent output before compiler-owned models and formations are added. */
@@ -518,6 +654,11 @@ export interface IAutoMovieShotSourceOutput {
   scene: IAutoMovieScene;
   /** Sparse deterministic motions referenced by the shot. */
   motions: IAutoMovieMotion[];
+  /**
+   * Optional compact formation-level cues. The compiler materializes an empty
+   * list when omitted; source never emits arbitrary per-member curves.
+   */
+  formationMotions?: IAutoMovieFormationMotion[];
   /** Compiled shot choreography. */
   shot: IAutoMovieShot;
 }
@@ -526,6 +667,10 @@ export interface IAutoMovieShotSourceOutput {
 export interface IAutoMovieCompiledShotSource extends IAutoMovieShotSourceOutput {
   /** Models required by this shot. */
   models: IAutoMovieModel[];
+  /** Compact formation runtimes required by this shot. */
+  formations: IAutoMovieCompiledFormation[];
+  /** Validated compact formation-level cues, empty when source omitted them. */
+  formationMotions: IAutoMovieFormationMotion[];
 }
 
 /** One scalar predicate and the value measured by the compiler. */

@@ -246,11 +246,12 @@ export class AutoMovieApplication {
    * `FORMATION_DESIGN` is read. Describe one bounded layout, orientation and
    * model assignment; line/column/wedge layouts own explicit spacing, while
    * arc/scatter layouts derive separation from radius, angle and count. The
-   * compiler expands at most 10,000 explicit deterministic slots per production
-   * so a coding agent need not emit each transform. This is an MCP tool because
-   * slot identity, bounds, references and invalidation must be reproducible
-   * across compilation and review. It does not animate troops or choose
-   * tactics; a rejected complete replacement leaves prior state intact.
+   * compiler stores at most 100,000 deterministic slots as compact chunks and
+   * promotes named heroes, so a coding agent need not emit each transform. This
+   * is an MCP tool because slot identity, bounds, references and invalidation
+   * must be reproducible across compilation and review. It does not animate
+   * troops or choose tactics; a rejected complete replacement leaves prior
+   * state intact.
    */
   public setFormationDesign(
     props: IAutoMovieSetFormationDesign.IProps,

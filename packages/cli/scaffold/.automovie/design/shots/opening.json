@@ -7,7 +7,8 @@
   },
   "durationSeconds": 6,
   "participants": [
-    { "kind": "actor", "id": "sentinel" }
+    { "kind": "actor", "id": "sentinel" },
+    { "kind": "formation", "id": "army" }
   ],
   "opening": [
     {
