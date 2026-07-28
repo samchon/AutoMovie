@@ -1624,6 +1624,51 @@ export const test_mcp_production_project = (): void => {
         swapLockPaths.length === 2 &&
         swapLockPaths.every((file) => fs.existsSync(file) === false),
     );
+    for (const replacement of ["absent", "file"] as const) {
+      const parent = path.join(invalidRoot, `${replacement}-parent`);
+      const archived = path.join(invalidRoot, `${replacement}-parent-original`);
+      fs.mkdirSync(parent);
+      const projectPath = path.join(parent, "project");
+      const lockPaths: string[] = [];
+      const nativeWriteForReplacement = fs.writeFileSync;
+      fs.writeFileSync = ((
+        file: fs.PathOrFileDescriptor,
+        ...args: unknown[]
+      ): void => {
+        Reflect.apply(nativeWriteForReplacement, fs, [file, ...args]);
+        if (
+          typeof file !== "number" &&
+          path.basename(file.toString()).startsWith("create-")
+        ) {
+          lockPaths.push(path.resolve(file.toString()));
+          if (lockPaths.length === 2) {
+            fs.renameSync(parent, archived);
+            if (replacement === "file")
+              Reflect.apply(nativeWriteForReplacement, fs, [
+                parent,
+                "replacement",
+              ]);
+          }
+        }
+      }) as typeof fs.writeFileSync;
+      let rejected = false;
+      try {
+        rejected = throws(
+          () => AutoMovieProductionProject.open(projectPath),
+          "changed physical identity",
+        );
+      } finally {
+        fs.writeFileSync = nativeWriteForReplacement;
+      }
+      TestValidator.predicate(
+        `a ${replacement} creation parent fails closed and releases both coordinates`,
+        rejected &&
+          fs.existsSync(projectPath) === false &&
+          fs.existsSync(path.join(archived, "project")) === false &&
+          lockPaths.length === 2 &&
+          lockPaths.every((file) => fs.existsSync(file) === false),
+      );
+    }
     const nativeCoordinationMkdir = fs.mkdirSync;
     fs.mkdirSync = ((directory: fs.PathLike, ...args: unknown[]): unknown => {
       if (path.resolve(directory.toString()) === coordinationRoot) {
