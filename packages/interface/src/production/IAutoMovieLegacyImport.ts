@@ -29,6 +29,16 @@ export interface IAutoMovieLegacySourceTodo {
   reason: string;
 }
 
+/** Exact pre-import state of one production-owned directory. */
+export interface IAutoMovieLegacyOwnedDirectoryBaseline {
+  /** Production-owned project-relative directory. */
+  path: "src" | "generated" | "renders";
+  /** Whether the directory existed when the import plan was captured. */
+  existed: boolean;
+  /** Exact recursive file inventory at capture time. */
+  files: IAutoMovieLegacyImportInventoryEntry[];
+}
+
 /**
  * Immutable, non-destructive interpretation of one resident legacy project.
  *
@@ -45,6 +55,8 @@ export interface IAutoMovieLegacyImportPlan {
   legacyRevision: number;
   /** Exact deterministic legacy byte inventory. */
   inventory: IAutoMovieLegacyImportInventoryEntry[];
+  /** Trusted rollback fence for production-owned directories. */
+  rollbackBaseline: IAutoMovieLegacyOwnedDirectoryBaseline[];
   /** Conservative production design draft with explicit default warnings. */
   productionDraft: IAutoMovieProductionDesign;
   /** Conservative shot contract drafts; their source modules remain TODOs. */

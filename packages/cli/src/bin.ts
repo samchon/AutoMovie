@@ -108,4 +108,4 @@ export const run = (argv: readonly string[]): number => {
   }
 };
 
-if (require.main === module) process.exit(run(process.argv));
+if (require.main === module) process.exitCode = run(process.argv);

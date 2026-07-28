@@ -141,11 +141,14 @@ export const test_mcp_production_legacy_import = (): void => {
     const applied = importer.apply();
     const repeated = importer.apply();
     const production = AutoMovieProductionProject.open(fixture.root);
+    const repeatedAfterOpen = importer.apply();
     TestValidator.predicate(
       "apply is atomic, idempotent, and production provenance reopens",
       applied.status === "applied" &&
         repeated.status === "unchanged" &&
+        repeatedAfterOpen.status === "unchanged" &&
         repeated.plan.fingerprint === plan.fingerprint &&
+        repeatedAfterOpen.plan.fingerprint === plan.fingerprint &&
         production.manifest().importedLegacy?.revision === 2 &&
         production.manifest().importedLegacy?.sourceRoot === "." &&
         equalFiles(before, legacyFiles(fixture.root)),
@@ -266,6 +269,31 @@ export const test_mcp_production_legacy_import = (): void => {
     tampered.dispose();
   }
 
+  const tamperedState = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(tamperedState.root);
+    importer.apply();
+    const statePath = path.join(
+      tamperedState.root,
+      ".automovie/imports/legacy-v1/state.json",
+    );
+    const state = JSON.parse(fs.readFileSync(statePath, "utf8")) as {
+      fingerprint: string;
+      version: number;
+    };
+    fs.writeFileSync(
+      statePath,
+      `${JSON.stringify({ ...state, unexpected: true }, null, 2)}\n`,
+    );
+    TestValidator.predicate(
+      "a changed import marker refuses idempotent apply and rollback",
+      throws(() => importer.apply(), "different or incomplete import") &&
+        throws(() => importer.rollback(), "changed after import"),
+    );
+  } finally {
+    tamperedState.dispose();
+  }
+
   const productionWork = createLegacy();
   try {
     const importer = new AutoMovieLegacyImporter(productionWork.root);
@@ -278,6 +306,68 @@ export const test_mcp_production_legacy_import = (): void => {
     );
   } finally {
     productionWork.dispose();
+  }
+
+  const preexistingSource = createLegacy();
+  try {
+    const sourceRoot = path.join(preexistingSource.root, "src");
+    const sourceFile = path.join(sourceRoot, "preserved.ts");
+    fs.mkdirSync(sourceRoot);
+    fs.writeFileSync(sourceFile, "export const preserved = true;\n");
+    const importer = new AutoMovieLegacyImporter(preexistingSource.root);
+    const plan = importer.plan();
+    importer.apply();
+    fs.writeFileSync(path.join(sourceRoot, "new-work.ts"), "new work");
+    TestValidator.predicate(
+      "a changed pre-existing source baseline refuses rollback",
+      plan.rollbackBaseline[0]?.existed === true &&
+        plan.rollbackBaseline[0].files.some(
+          (entry) => entry.path === "src/preserved.ts",
+        ) &&
+        throws(() => importer.rollback(), "changed after import"),
+    );
+    fs.rmSync(path.join(sourceRoot, "new-work.ts"));
+    importer.rollback();
+    TestValidator.predicate(
+      "an unchanged pre-existing source baseline survives rollback",
+      fs.readFileSync(sourceFile, "utf8") ===
+        "export const preserved = true;\n" && fs.existsSync(sourceRoot),
+    );
+  } finally {
+    preexistingSource.dispose();
+  }
+
+  const rollbackFailure = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(rollbackFailure.root);
+    importer.apply();
+    AutoMovieProductionProject.open(rollbackFailure.root);
+    const nativeRmdir = fs.rmdirSync;
+    let injected = false;
+    fs.rmdirSync = ((directory: fs.PathLike): void => {
+      if (injected === false) {
+        injected = true;
+        throw new Error("injected owned-directory removal failure");
+      }
+      nativeRmdir(directory);
+    }) as typeof fs.rmdirSync;
+    try {
+      TestValidator.predicate(
+        "a partial rollback failure restores the complete applied state",
+        throws(() => importer.rollback(), "state was restored") &&
+          fs.existsSync(path.join(rollbackFailure.root, ".automovie")) &&
+          importer.apply().status === "unchanged",
+      );
+    } finally {
+      fs.rmdirSync = nativeRmdir;
+    }
+    TestValidator.predicate(
+      "a restored import remains safely roll-backable",
+      importer.rollback().status === "rolled-back" &&
+        fs.existsSync(path.join(rollbackFailure.root, ".automovie")) === false,
+    );
+  } finally {
+    rollbackFailure.dispose();
   }
 
   const extraState = createLegacy();
@@ -294,6 +384,60 @@ export const test_mcp_production_legacy_import = (): void => {
     );
   } finally {
     extraState.dispose();
+  }
+
+  const activeCommit = createLegacy();
+  try {
+    const lockPath = path.join(activeCommit.root, "revision.lock");
+    fs.writeFileSync(lockPath, "external-owner");
+    TestValidator.predicate(
+      "planning refuses an active resident commit",
+      throws(
+        () => new AutoMovieLegacyImporter(activeCommit.root).plan(),
+        "is active",
+      ),
+    );
+    fs.rmSync(lockPath);
+  } finally {
+    activeCommit.dispose();
+  }
+
+  const revisionRace = createLegacy();
+  try {
+    const revisionPath = path.join(revisionRace.root, "revision.json");
+    const nativeRead = fs.readFileSync;
+    let changed = false;
+    fs.readFileSync = ((file: fs.PathOrFileDescriptor, ...args: unknown[]) => {
+      const output = Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
+      if (
+        changed === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === revisionPath
+      ) {
+        changed = true;
+        const revision = JSON.parse(
+          Buffer.from(output as Uint8Array).toString("utf8"),
+        ) as { revision: number };
+        fs.writeFileSync(
+          revisionPath,
+          `${JSON.stringify({ revision: revision.revision + 1 }, null, 2)}\n`,
+        );
+      }
+      return output;
+    }) as typeof fs.readFileSync;
+    try {
+      TestValidator.predicate(
+        "a changing resident revision cannot produce a mixed import plan",
+        throws(
+          () => new AutoMovieLegacyImporter(revisionRace.root).plan(),
+          "revision changed",
+        ),
+      );
+    } finally {
+      fs.readFileSync = nativeRead;
+    }
+  } finally {
+    revisionRace.dispose();
   }
 
   const malformedRoots = [

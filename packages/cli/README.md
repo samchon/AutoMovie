@@ -62,7 +62,9 @@ the immutable byte inventory, production and shot drafts, source TODOs, and
 warnings without touching the project. Plain `migrate` atomically adds only
 tracked `.automovie` provenance; it never rewrites legacy files or guesses the
 missing creative TypeScript. `--rollback` removes that state only while no
-production work has changed it.
+production work has changed it. The import plan fingerprints the pre-import
+`src`, `generated`, and `renders` baselines, and rollback restores the complete
+applied state if removing any newly created empty directory fails.
 
 ## API
 

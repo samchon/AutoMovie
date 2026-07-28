@@ -98,6 +98,36 @@ const runExpectedFailure = (
 // The stdio client written into the fresh project. Kept as a template string
 // so the whole harness stays one file; assertions print the failing name so
 // a red run states exactly which packaging guarantee broke.
+const runJson = (label, executable, args, cwd) => {
+  console.log(`> ${label}`);
+  if (tracePath !== null)
+    appendFileSync(tracePath, `${new Date().toISOString()} START ${label}\n`);
+  const result = spawnSync(executable, args, {
+    cwd,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 300_000,
+  });
+  if (result.status !== 0) {
+    process.stderr.write(result.stdout ?? "");
+    process.stderr.write(result.stderr ?? "");
+    fail(`${label} exited with ${result.status ?? "signal"}`);
+  }
+  let output;
+  try {
+    output = JSON.parse(result.stdout);
+  } catch (error) {
+    process.stderr.write(result.stdout ?? "");
+    process.stderr.write(result.stderr ?? "");
+    fail(`${label} did not print one complete JSON document: ${error}`);
+  }
+  if (tracePath !== null)
+    appendFileSync(tracePath, `${new Date().toISOString()} PASS ${label}\n`);
+  console.log(`PASS ${label}`);
+  return output;
+};
+
 const CLIENT_SOURCE = `
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -807,6 +837,54 @@ try {
   );
   if (!existsSync(cliBin))
     fail(`packed artifact is missing the CLI bin target: ${cliBin}`);
+  const legacyDir = join(projectDir, "legacy-import");
+  mkdirSync(legacyDir);
+  writeFileSync(
+    join(legacyDir, "automovie.json"),
+    `${JSON.stringify({ version: 1, assets: [] }, null, 2)}\n`,
+  );
+  const dryImport = runJson(
+    "dry-run packaged legacy import",
+    process.execPath,
+    [cliBin, "migrate", legacyDir, "--dry-run"],
+    projectDir,
+  );
+  if (
+    dryImport.version !== 1 ||
+    typeof dryImport.fingerprint !== "string" ||
+    existsSync(join(legacyDir, ".automovie"))
+  )
+    fail("packaged legacy dry-run did not remain read-only");
+  const appliedImport = runJson(
+    "apply packaged legacy import",
+    process.execPath,
+    [cliBin, "migrate", legacyDir],
+    projectDir,
+  );
+  if (
+    appliedImport.status !== "applied" ||
+    !existsSync(join(legacyDir, ".automovie", "manifest.json"))
+  )
+    fail("packaged legacy import did not publish production provenance");
+  const repeatedImport = runJson(
+    "repeat packaged legacy import",
+    process.execPath,
+    [cliBin, "migrate", legacyDir],
+    projectDir,
+  );
+  if (repeatedImport.status !== "unchanged")
+    fail("packaged legacy import was not idempotent");
+  const rolledBackImport = runJson(
+    "rollback packaged legacy import",
+    process.execPath,
+    [cliBin, "migrate", legacyDir, "--rollback"],
+    projectDir,
+  );
+  if (
+    rolledBackImport.status !== "rolled-back" ||
+    existsSync(join(legacyDir, ".automovie"))
+  )
+    fail("packaged legacy rollback did not restore the legacy-only tree");
   const starterDir = join(projectDir, "production-starter");
   run(
     "scaffold packaged production starter",
