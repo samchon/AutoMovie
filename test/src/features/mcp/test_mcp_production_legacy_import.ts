@@ -67,6 +67,9 @@ const throws = (task: () => unknown, fragment?: string): boolean => {
   }
 };
 
+const rootNamespaceLockPath = (root: string): string =>
+  path.join(path.dirname(root), `.${path.basename(root)}.automovie-root.lock`);
+
 const createLegacy = (): {
   root: string;
   dispose: () => void;
@@ -369,25 +372,70 @@ export const test_mcp_production_legacy_import = (): void => {
     emptyDirectoryTopology.dispose();
   }
 
+  const sortedEmptyDirectoryTopology = createLegacy();
+  try {
+    fs.mkdirSync(path.join(sortedEmptyDirectoryTopology.root, "src/a/z"), {
+      recursive: true,
+    });
+    fs.mkdirSync(path.join(sortedEmptyDirectoryTopology.root, "src/a-"));
+    const importer = new AutoMovieLegacyImporter(
+      sortedEmptyDirectoryTopology.root,
+    );
+    const plan = importer.plan();
+    const directories = plan.rollbackBaseline[0]?.directories ?? [];
+    TestValidator.predicate(
+      "nested empty directories use one global canonical order",
+      directories.join("|") === "src/a|src/a-|src/a/z" &&
+        importer.apply().status === "applied" &&
+        importer.apply().status === "unchanged" &&
+        importer.rollback().status === "rolled-back",
+    );
+  } finally {
+    sortedEmptyDirectoryTopology.dispose();
+  }
+
   const rollbackFailure = createLegacy();
   try {
     const importer = new AutoMovieLegacyImporter(rollbackFailure.root);
     importer.apply();
     AutoMovieProductionProject.open(rollbackFailure.root);
     const nativeRmdir = fs.rmdirSync;
-    let injected = false;
+    const nativeMkdir = fs.mkdirSync;
+    let removals = 0;
     fs.rmdirSync = ((directory: fs.PathLike): void => {
-      if (injected === false) {
-        injected = true;
+      ++removals;
+      if (removals === 2) {
         if (
-          fs.existsSync(path.join(rollbackFailure.root, "revision.lock")) ===
-          false
+          fs.existsSync(rootNamespaceLockPath(rollbackFailure.root)) === false
         )
           throw new Error("rollback released the canonical root reservation");
+        const quarantine = fs
+          .readdirSync(rollbackFailure.root)
+          .find((entry) => entry.startsWith(".automovie-rollback-"));
+        if (quarantine === undefined)
+          throw new Error("rollback quarantine was not published");
+        fs.writeFileSync(
+          path.join(rollbackFailure.root, quarantine, "incarnation.json"),
+          "{}",
+        );
         throw new Error("injected owned-directory removal failure");
       }
       nativeRmdir(directory);
     }) as typeof fs.rmdirSync;
+    fs.mkdirSync = ((directory: fs.PathLike, ...args: unknown[]) => {
+      if (
+        ["src", "generated", "renders"].some(
+          (relative) =>
+            path.resolve(directory.toString()) ===
+            path.join(rollbackFailure.root, relative),
+        ) &&
+        fs.existsSync(path.join(rollbackFailure.root, ".automovie")) === false
+      )
+        throw new Error(
+          "owned directory restoration ran before canonical state restoration",
+        );
+      return Reflect.apply(nativeMkdir, fs, [directory, ...args]) as unknown;
+    }) as typeof fs.mkdirSync;
     try {
       TestValidator.predicate(
         "a partial rollback failure restores the complete applied state",
@@ -397,6 +445,7 @@ export const test_mcp_production_legacy_import = (): void => {
       );
     } finally {
       fs.rmdirSync = nativeRmdir;
+      fs.mkdirSync = nativeMkdir;
     }
     TestValidator.predicate(
       "a restored import remains safely roll-backable",
@@ -405,6 +454,33 @@ export const test_mcp_production_legacy_import = (): void => {
     );
   } finally {
     rollbackFailure.dispose();
+  }
+
+  const incarnationRace = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(incarnationRace.root);
+    importer.apply();
+    const stale = AutoMovieProductionProject.open(incarnationRace.root);
+    importer.rollback();
+    importer.apply();
+    AutoMovieProductionProject.open(incarnationRace.root);
+    TestValidator.predicate(
+      "a stale production handle cannot cross rollback and re-apply ABA",
+      throws(() => stale.manifest(), "incarnation changed") &&
+        throws(
+          () =>
+            stale.commitProductionDeliverableFiles(
+              "stale",
+              new Map([["frame.bin", Buffer.from("stale")]]),
+            ),
+          "incarnation changed",
+        ) &&
+        fs.existsSync(
+          path.join(incarnationRace.root, "renders/deliverables/stale"),
+        ) === false,
+    );
+  } finally {
+    incarnationRace.dispose();
   }
 
   const extraState = createLegacy();
@@ -421,6 +497,26 @@ export const test_mcp_production_legacy_import = (): void => {
     );
   } finally {
     extraState.dispose();
+  }
+
+  const malformedAppliedState = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(malformedAppliedState.root);
+    importer.apply();
+    fs.writeFileSync(
+      path.join(
+        malformedAppliedState.root,
+        ".automovie/imports/legacy-v1/state.json",
+      ),
+      "{bad",
+    );
+    TestValidator.predicate(
+      "malformed applied state is treated as an incomplete import",
+      throws(() => importer.apply(), "different or incomplete") &&
+        throws(() => importer.rollback(), "changed after import"),
+    );
+  } finally {
+    malformedAppliedState.dispose();
   }
 
   const activeCommit = createLegacy();
@@ -456,6 +552,59 @@ export const test_mcp_production_legacy_import = (): void => {
   } finally {
     linkedRoot.dispose();
     fs.rmSync(linkedParent, { force: true, recursive: true });
+  }
+
+  const replacedDuringAcquire = createLegacy();
+  const replacementTarget = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-import-root-race-target-"),
+  );
+  const parkedRoot = `${replacedDuringAcquire.root}-parked`;
+  try {
+    const namespaceLock = rootNamespaceLockPath(replacedDuringAcquire.root);
+    const nativeWrite = fs.writeFileSync;
+    let replaced = false;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      Reflect.apply(nativeWrite, fs, [file, ...args]);
+      if (
+        replaced === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === namespaceLock
+      ) {
+        replaced = true;
+        fs.renameSync(replacedDuringAcquire.root, parkedRoot);
+        fs.symlinkSync(
+          replacementTarget,
+          replacedDuringAcquire.root,
+          "junction",
+        );
+      }
+    }) as typeof fs.writeFileSync;
+    try {
+      TestValidator.predicate(
+        "root validation is fenced by a stable parent namespace lock",
+        throws(
+          () => new AutoMovieLegacyImporter(replacedDuringAcquire.root).apply(),
+          "physical, dedicated",
+        ) &&
+          fs.existsSync(path.join(replacementTarget, "revision.lock")) ===
+            false &&
+          fs.existsSync(namespaceLock) === false,
+      );
+    } finally {
+      fs.writeFileSync = nativeWrite;
+      if (fs.lstatSync(replacedDuringAcquire.root).isSymbolicLink())
+        fs.rmSync(replacedDuringAcquire.root);
+      if (fs.existsSync(parkedRoot))
+        fs.renameSync(parkedRoot, replacedDuringAcquire.root);
+    }
+  } finally {
+    replacedDuringAcquire.dispose();
+    fs.rmSync(replacementTarget, { force: true, recursive: true });
+    if (fs.existsSync(parkedRoot))
+      fs.rmSync(parkedRoot, { force: true, recursive: true });
   }
 
   const revisionRace = createLegacy();

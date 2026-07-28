@@ -11,6 +11,7 @@ import {
   IAutoMovieProductionManifest,
   IAutoMovieShotContract,
 } from "@automovie/interface";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -24,6 +25,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { productionRootNamespaceLockPath } from "./rootNamespaceLock";
 
 const LEGACY_IMPORT_PROTOCOL = "automovie.legacy-import.v1";
 const IMPORT_PLAN_PATH = "imports/legacy-v1/plan.json";
@@ -74,6 +76,7 @@ interface ILegacySnapshot {
 interface IAppliedImportState {
   version: 1;
   fingerprint: AutoMovieContentDigest;
+  incarnation: string;
 }
 
 /**
@@ -97,11 +100,11 @@ export class AutoMovieLegacyImporter {
 
   /** Persist one immutable import plan and v2 provenance atomically. */
   public apply(): IAutoMovieLegacyImportApplyOutput {
-    const root = validateLegacyRoot(this.rootDirectory);
-    const lockPath = path.join(root, "revision.lock");
+    const root = path.resolve(this.rootDirectory);
+    const lockPath = productionRootNamespaceLockPath(root);
     const token = acquireCommitLock(lockPath);
     try {
-      return this.applyLocked(root, token);
+      return this.applyLocked(validateLegacyRoot(root), token);
     } finally {
       releaseCommitLock(lockPath, token);
     }
@@ -135,6 +138,7 @@ export class AutoMovieLegacyImporter {
     const state: IAppliedImportState = {
       version: 1,
       fingerprint: plan.fingerprint,
+      incarnation: randomUUID(),
     };
     const files = appliedImportFiles(root, plan, state);
     const staging = fs.mkdtempSync(path.join(root, ".automovie-import-"));
@@ -156,10 +160,11 @@ export class AutoMovieLegacyImporter {
 
   /** Remove one still-untouched applied import, preserving all legacy bytes. */
   public rollback(): IAutoMovieLegacyImportRollbackOutput {
-    const root = validateLegacyRoot(this.rootDirectory);
-    const rootLockPath = path.join(root, "revision.lock");
+    const root = path.resolve(this.rootDirectory);
+    const rootLockPath = productionRootNamespaceLockPath(root);
     const rootToken = acquireCommitLock(rootLockPath);
     try {
+      validateLegacyRoot(root);
       const stateRoot = path.join(root, ".automovie");
       const linked = lstatOrNull(stateRoot);
       if (
@@ -188,9 +193,11 @@ export class AutoMovieLegacyImporter {
       const plan = readJson<IAutoMovieLegacyImportPlan>(
         path.join(stateRoot, IMPORT_PLAN_PATH),
       );
+      const appliedState = readAppliedImportState(stateRoot, plan);
       if (
         plan === null ||
-        verifyAppliedImport(stateRoot, root, plan, {
+        appliedState === null ||
+        verifyAppliedImport(stateRoot, root, plan, appliedState, {
           path: "revision.lock",
           bytes: Buffer.from(token, "utf8"),
         }) === false
@@ -214,25 +221,44 @@ export class AutoMovieLegacyImporter {
           }
         fs.rmSync(quarantine, { recursive: true });
       } catch (error) {
-        for (const directory of removed) fs.mkdirSync(directory);
+        const restorationErrors: unknown[] = [];
         if (fs.existsSync(stateRoot) === false) {
-          if (
-            fs.existsSync(quarantine) &&
-            verifyAppliedImport(quarantine, root, plan, {
-              path: "revision.lock",
-              bytes: Buffer.from(token, "utf8"),
-            })
-          )
-            fs.renameSync(quarantine, stateRoot);
-          else {
-            restoreAppliedImport(stateRoot, root, plan, token);
-            try {
-              fs.rmSync(quarantine, { force: true, recursive: true });
-            } catch {
-              // The authoritative applied state is restored at `.automovie`.
+          try {
+            if (
+              fs.existsSync(quarantine) &&
+              verifyAppliedImport(quarantine, root, plan, appliedState, {
+                path: "revision.lock",
+                bytes: Buffer.from(token, "utf8"),
+              })
+            )
+              fs.renameSync(quarantine, stateRoot);
+            else {
+              restoreAppliedImport(stateRoot, root, plan, appliedState, token);
+              try {
+                fs.rmSync(quarantine, { force: true, recursive: true });
+              } catch {
+                // The authoritative applied state is restored at `.automovie`.
+              }
             }
+          } catch (restorationError) {
+            restorationErrors.push(restorationError);
           }
         }
+        for (const directory of removed)
+          try {
+            fs.mkdirSync(directory);
+          } catch (restorationError) {
+            restorationErrors.push(restorationError);
+          }
+        if (restorationErrors.length !== 0)
+          throw new AggregateError(
+            [error, ...restorationErrors],
+            `Legacy import rollback failed and restoration was incomplete. Preserve "${quarantine}" and repair the reported paths before retrying.`,
+          );
+        if (fs.existsSync(stateRoot) === false)
+          throw new Error(
+            `Legacy import rollback failed and the applied state remains preserved at "${quarantine}": ${String(error)}`,
+          );
         throw new Error(
           `Legacy import rollback could not complete and the applied state was restored: ${String(error)}`,
         );
@@ -437,6 +463,7 @@ const captureRollbackBaseline = (
     const files = new Map<string, Uint8Array | null>();
     const directories: string[] = [];
     collectDirectory(root, relative, files, directories);
+    directories.sort(compareCodeUnits);
     return {
       path: relative,
       existed: true,
@@ -768,13 +795,11 @@ const productionManifestOf = (
 const appliedImportFiles = (
   root: string,
   plan: IAutoMovieLegacyImportPlan,
-  state: IAppliedImportState = {
-    version: 1,
-    fingerprint: plan.fingerprint,
-  },
+  state: IAppliedImportState,
 ): ReadonlyMap<string, Uint8Array> =>
   new Map<string, Uint8Array>([
     ["manifest.json", serializeJson(productionManifestOf(root, plan))],
+    ["incarnation.json", serializeJson({ version: 1, id: state.incarnation })],
     ["revision.json", serializeJson({ revision: 0 })],
     [IMPORT_PLAN_PATH, serializeJson(plan)],
     [IMPORT_STATE_PATH, serializeJson(state)],
@@ -827,11 +852,17 @@ const verifyAppliedImport = (
   stateRoot: string,
   root: string,
   planValue: unknown,
+  appliedState?: IAppliedImportState | null,
   toleratedFile?: { path: string; bytes: Uint8Array },
 ): boolean => {
   try {
-    if (validatePlan(planValue) === false) return false;
-    const expected = appliedImportFiles(root, planValue);
+    const currentState =
+      appliedState === undefined
+        ? readAppliedImportState(stateRoot, planValue)
+        : appliedState;
+    if (validatePlan(planValue) === false || currentState === null)
+      return false;
+    const expected = appliedImportFiles(root, planValue, currentState);
     const expectedFiles = [...expected.keys()];
     if (toleratedFile !== undefined) expectedFiles.push(toleratedFile.path);
     expectedFiles.sort(compareCodeUnits);
@@ -909,6 +940,7 @@ const assertRollbackBaseline = (
     const files = new Map<string, Uint8Array | null>();
     const directories: string[] = [];
     collectDirectory(root, baseline.path, files, directories);
+    directories.sort(compareCodeUnits);
     if (
       equalStrings(baseline.directories, directories) === false ||
       sameInventory(baseline.files, inventoryEntries(files, [])) === false
@@ -923,13 +955,14 @@ const restoreAppliedImport = (
   stateRoot: string,
   root: string,
   plan: IAutoMovieLegacyImportPlan,
+  state: IAppliedImportState,
   lockToken: string,
 ): void => {
   const staging = fs.mkdtempSync(path.join(root, ".automovie-restore-"));
   try {
     for (const directory of PRODUCTION_STATE_DIRECTORIES)
       fs.mkdirSync(path.join(staging, directory), { recursive: true });
-    for (const [relative, bytes] of appliedImportFiles(root, plan)) {
+    for (const [relative, bytes] of appliedImportFiles(root, plan, state)) {
       const file = path.join(staging, ...relative.split("/"));
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, bytes);
@@ -942,6 +975,28 @@ const restoreAppliedImport = (
   } finally {
     if (fs.existsSync(staging))
       fs.rmSync(staging, { force: true, recursive: true });
+  }
+};
+
+const readAppliedImportState = (
+  stateRoot: string,
+  planValue: unknown,
+): IAppliedImportState | null => {
+  try {
+    if (validatePlan(planValue) === false) return null;
+    const value = readJson<unknown>(path.join(stateRoot, IMPORT_STATE_PATH));
+    const validation = typia.validateEquals<IAppliedImportState>(value);
+    if (
+      validation.success === false ||
+      validation.data.fingerprint !== planValue.fingerprint ||
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(
+        validation.data.incarnation,
+      ) === false
+    )
+      return null;
+    return validation.data;
+  } catch {
+    return null;
   }
 };
 

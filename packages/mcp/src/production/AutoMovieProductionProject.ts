@@ -17,6 +17,7 @@ import {
   IAutoMovieStoredReview,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import typia, { IValidation } from "typia";
@@ -29,6 +30,7 @@ import {
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 import { probeProductionMedia } from "./probeProductionMedia";
+import { productionRootNamespaceLockPath } from "./rootNamespaceLock";
 import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
@@ -89,17 +91,22 @@ export class AutoMovieProductionSourcePathError extends Error {
  */
 export class AutoMovieProductionProject {
   private readonly rootReal: string;
+  private readonly rootLockPath: string;
   private readonly automovieRoot: string;
+  private readonly incarnationPath: string;
   private readonly manifestPath: string;
   private readonly revisionPath: string;
   private readonly lockPath: string;
   private readonly initialized_: boolean;
+  private readonly incarnation_: string;
   private manifest_: IAutoMovieProductionManifest & Record<string, unknown>;
   private lastReadRevision_: number;
 
   private constructor(public readonly root: string) {
     this.rootReal = fs.realpathSync(root);
+    this.rootLockPath = productionRootNamespaceLockPath(root);
     this.automovieRoot = path.join(root, ".automovie");
+    this.incarnationPath = path.join(this.automovieRoot, "incarnation.json");
     this.manifestPath = path.join(this.automovieRoot, "manifest.json");
     this.revisionPath = path.join(this.automovieRoot, "revision.json");
     this.lockPath = path.join(this.automovieRoot, "revision.lock");
@@ -118,6 +125,18 @@ export class AutoMovieProductionProject {
       this.mkdirOwned(absolute);
     }
     this.mkdirOwned(path.join(this.automovieRoot, "render-receipts"));
+    const incarnation = readOwnedJson(this.rootReal, this.incarnationPath);
+    if (incarnation === undefined) {
+      this.incarnation_ = randomUUID();
+      writeJsonAtomic(this.incarnationPath, {
+        version: 1,
+        id: this.incarnation_,
+      });
+    } else
+      this.incarnation_ = validateIncarnation(
+        incarnation,
+        this.incarnationPath,
+      );
     const existing = readOwnedJson(this.rootReal, this.manifestPath);
     this.initialized_ = existing === undefined;
     if (existing === undefined) {
@@ -161,14 +180,18 @@ export class AutoMovieProductionProject {
       throw new Error(
         `AutoMovie production root "${root}" is a filesystem root. Choose a dedicated project directory in openProject.`,
       );
-    if (fs.existsSync(root) && fs.statSync(root).isDirectory() === false)
-      throw new Error(
-        `AutoMovie production root "${root}" is not a directory. Choose a project directory in openProject.`,
-      );
-    fs.mkdirSync(root, { recursive: true });
-    const lockPath = path.join(root, "revision.lock");
+    const lockPath = productionRootNamespaceLockPath(root);
     const token = acquireCommitLock(lockPath);
     try {
+      const linked = lstatOrNull(root);
+      if (
+        linked !== null &&
+        (linked.isSymbolicLink() || linked.isDirectory() === false)
+      )
+        throw new Error(
+          `AutoMovie production root "${root}" is not a physical directory. Choose a dedicated project directory in openProject.`,
+        );
+      fs.mkdirSync(root, { recursive: true });
       return new AutoMovieProductionProject(root);
     } finally {
       releaseCommitLock(lockPath, token);
@@ -1187,7 +1210,19 @@ export class AutoMovieProductionProject {
   }
 
   private refreshRevision(): void {
+    this.assertIncarnation();
     this.lastReadRevision_ = readRevision(this.rootReal, this.revisionPath);
+  }
+
+  private assertIncarnation(): void {
+    const current = validateIncarnation(
+      readOwnedJson(this.rootReal, this.incarnationPath),
+      this.incarnationPath,
+    );
+    if (current !== this.incarnation_)
+      throw new AutoMovieProductionInputRaceError(
+        "Production state incarnation changed. Discard this project handle and open the project again before reading or mutating it.",
+      );
   }
 
   private commitFiles(
@@ -1223,58 +1258,64 @@ export class AutoMovieProductionProject {
       }));
     const lazy = typeof files === "function" ? files : null;
     const eager = lazy === null ? stage(files as readonly IStagedFile[]) : null;
-    const token = acquireCommitLock(this.lockPath);
+    const rootToken = acquireCommitLock(this.rootLockPath);
     try {
-      const current = readRevision(this.rootReal, this.revisionPath);
-      if (current !== expectedRevision)
-        throw new AutoMovieProductionInputRaceError(
-          `Production revision changed from ${expectedRevision} to ${current}. Inspect the project again before retrying the mutation.`,
-        );
-      if (inputCurrent?.() === false)
-        throw new AutoMovieProductionInputRaceError(
-          "Production inputs changed before the guarded commit began.",
-        );
-      const staged = eager ?? stage(lazy!());
-      let applied = 0;
+      const token = acquireCommitLock(this.lockPath);
       try {
-        for (const file of staged) {
-          if (file.content === null) fs.rmSync(file.path, { force: true });
-          else writeAtomic(file.path, file.content);
-          ++applied;
-        }
+        this.assertIncarnation();
+        const current = readRevision(this.rootReal, this.revisionPath);
+        if (current !== expectedRevision)
+          throw new AutoMovieProductionInputRaceError(
+            `Production revision changed from ${expectedRevision} to ${current}. Inspect the project again before retrying the mutation.`,
+          );
         if (inputCurrent?.() === false)
           throw new AutoMovieProductionInputRaceError(
-            "Production inputs changed while the guarded commit was being applied.",
+            "Production inputs changed before the guarded commit began.",
           );
-        outputCurrent?.();
-        if (staged.length === 0 && publishEmptyRevision === false) {
-          this.lastReadRevision_ = current;
-          return current;
-        }
-        const nextRevision = current + 1;
-        writeJsonAtomic(this.revisionPath, {
-          revision: nextRevision,
-        });
-        this.lastReadRevision_ = nextRevision;
-        return nextRevision;
-      } catch (error) {
-        const rollbackErrors: unknown[] = [];
-        for (const file of staged.slice(0, applied).reverse())
-          try {
-            if (file.previous === null) fs.rmSync(file.path, { force: true });
-            else writeAtomic(file.path, file.previous);
-          } catch (rollbackError) {
-            rollbackErrors.push(rollbackError);
+        const staged = eager ?? stage(lazy!());
+        let applied = 0;
+        try {
+          for (const file of staged) {
+            if (file.content === null) fs.rmSync(file.path, { force: true });
+            else writeAtomic(file.path, file.content);
+            ++applied;
           }
-        if (rollbackErrors.length !== 0)
-          throw new AggregateError(
-            [error, ...rollbackErrors],
-            "Production mutation failed and rollback was incomplete. Restore the listed owned files before retrying.",
-          );
-        throw error;
+          if (inputCurrent?.() === false)
+            throw new AutoMovieProductionInputRaceError(
+              "Production inputs changed while the guarded commit was being applied.",
+            );
+          outputCurrent?.();
+          if (staged.length === 0 && publishEmptyRevision === false) {
+            this.lastReadRevision_ = current;
+            return current;
+          }
+          const nextRevision = current + 1;
+          writeJsonAtomic(this.revisionPath, {
+            revision: nextRevision,
+          });
+          this.lastReadRevision_ = nextRevision;
+          return nextRevision;
+        } catch (error) {
+          const rollbackErrors: unknown[] = [];
+          for (const file of staged.slice(0, applied).reverse())
+            try {
+              if (file.previous === null) fs.rmSync(file.path, { force: true });
+              else writeAtomic(file.path, file.previous);
+            } catch (rollbackError) {
+              rollbackErrors.push(rollbackError);
+            }
+          if (rollbackErrors.length !== 0)
+            throw new AggregateError(
+              [error, ...rollbackErrors],
+              "Production mutation failed and rollback was incomplete. Restore the listed owned files before retrying.",
+            );
+          throw error;
+        }
+      } finally {
+        releaseCommitLock(this.lockPath, token);
       }
     } finally {
-      releaseCommitLock(this.lockPath, token);
+      releaseCommitLock(this.rootLockPath, rootToken);
     }
   }
 
@@ -1980,6 +2021,25 @@ const readRevision = (rootReal: string, file: string): number => {
       `Invalid production revision "${file}". Restore a non-negative safe integer revision.`,
     );
   return revision;
+};
+
+const validateIncarnation = (value: unknown, file: string): string => {
+  const version = (
+    value as { version?: unknown; id?: unknown } | null | undefined
+  )?.version;
+  const id = (value as { version?: unknown; id?: unknown } | null | undefined)
+    ?.id;
+  if (
+    version !== 1 ||
+    typeof id !== "string" ||
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(
+      id,
+    ) === false
+  )
+    throw new Error(
+      `Invalid production state incarnation "${file}". Reopen a complete, physical AutoMovie project state.`,
+    );
+  return id;
 };
 
 const projectIdOf = (root: string): string => path.basename(root).trim();

@@ -1772,6 +1772,30 @@ export const test_mcp_production_project = (): void => {
         fs.readdirSync(stateOutside).length === 0,
     );
 
+    const invalidIncarnationRoot = path.join(
+      invalidRoot,
+      "invalid-incarnation",
+    );
+    AutoMovieProductionProject.open(invalidIncarnationRoot);
+    const incarnationPath = path.join(
+      invalidIncarnationRoot,
+      ".automovie/incarnation.json",
+    );
+    for (const value of [
+      { version: 2, id: "7b2e2389-a246-4df2-94fb-f48e9bb90d51" },
+      { version: 1, id: 42 },
+      { version: 1, id: "not-a-uuid" },
+    ]) {
+      fs.writeFileSync(incarnationPath, JSON.stringify(value));
+      TestValidator.predicate(
+        "invalid production incarnation is rejected",
+        throws(
+          () => AutoMovieProductionProject.open(invalidIncarnationRoot),
+          "Invalid production state incarnation",
+        ),
+      );
+    }
+
     const malformedDesign = productionFixture();
     try {
       fs.writeFileSync(
