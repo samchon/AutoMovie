@@ -1815,19 +1815,24 @@ export const test_mcp_production_project = (): void => {
       }
     }
     const deniedRoot = path.join(invalidRoot, "denied-root");
-    fs.lstatSync = ((file: fs.PathLike, ...args: unknown[]): fs.Stats => {
-      if (path.resolve(file.toString()) === deniedRoot) {
-        const error = new Error(
-          "injected project-root lstat denial",
-        ) as NodeJS.ErrnoException;
-        error.code = "EACCES";
-        throw error;
-      }
-      return Reflect.apply(nativeCoordinationLstat, fs, [
-        file,
-        ...args,
-      ]) as fs.Stats;
-    }) as typeof fs.lstatSync;
+    Object.defineProperty(fs, "lstatSync", {
+      configurable: true,
+      value: ((
+        file: fs.PathLike,
+        ...args: unknown[]
+      ): fs.Stats | fs.BigIntStats => {
+        if (path.resolve(file.toString()) === deniedRoot) {
+          const error = new Error(
+            "injected project-root lstat denial",
+          ) as NodeJS.ErrnoException;
+          error.code = "EACCES";
+          throw error;
+        }
+        return Reflect.apply(nativeCoordinationLstat, fs, [file, ...args]) as
+          | fs.Stats
+          | fs.BigIntStats;
+      }) as typeof fs.lstatSync,
+    });
     try {
       TestValidator.predicate(
         "an unexpected project-root lstat denial propagates",
@@ -1837,7 +1842,10 @@ export const test_mcp_production_project = (): void => {
         ),
       );
     } finally {
-      fs.lstatSync = nativeCoordinationLstat;
+      Object.defineProperty(fs, "lstatSync", {
+        configurable: true,
+        value: nativeCoordinationLstat,
+      });
     }
     const nativeCoordinationChmod = fs.chmodSync;
     fs.chmodSync = ((file: fs.PathLike): void => {
