@@ -147,12 +147,26 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           generatedBeforeDesignGate &&
         fs.existsSync(path.join(fixture.root, "generated/shots/opening.json")),
     );
+    const reopenedWithFormation = new AutoMovieProductionCompiler(
+      AutoMovieProductionProject.open(fixture.root),
+    ).compile({ scope: "source" });
+    TestValidator.predicate(
+      "a restored valid formation changes identity and materializes its contract",
+      reopenedWithFormation.compiler.inputFingerprint !==
+        first.compiler.inputFingerprint &&
+        reopenedWithFormation.materialized.some(
+          (file) =>
+            file.path === "contracts/formations/line.json" &&
+            file.status === "created",
+        ),
+    );
     const reopened = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
     ).compile({ scope: "source" });
     TestValidator.predicate(
-      "reopen preserves identity and unchanged status",
-      reopened.compiler.inputFingerprint === first.compiler.inputFingerprint &&
+      "reopen preserves the expanded identity and unchanged status",
+      reopened.compiler.inputFingerprint ===
+        reopenedWithFormation.compiler.inputFingerprint &&
         reopened.materialized.every((file) => file.status === "unchanged"),
     );
     const canonicalShotBytes = fs.readFileSync(
@@ -180,7 +194,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     TestValidator.predicate(
       "bound TypeScript BOM and EOL changes do not re-enter through source-root content identity",
       normalizedSourceStatus.compiler.inputFingerprint ===
-        first.compiler.inputFingerprint && normalizedSourceStatus.success,
+        reopened.compiler.inputFingerprint && normalizedSourceStatus.success,
     );
     const statusReadGenerated = project.readGeneratedFile;
     project.readGeneratedFile = ((relativePath: string) => {
@@ -211,10 +225,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     TestValidator.predicate(
       "declared viewer and runtime content participates in compile identity",
       changedContent.compiler.inputFingerprint !==
-        first.compiler.inputFingerprint &&
+        reopened.compiler.inputFingerprint &&
         diagnosticCodes(changedContent).has("generated-stale") &&
         restoredContent.compiler.inputFingerprint ===
-          first.compiler.inputFingerprint,
+          reopened.compiler.inputFingerprint,
     );
 
     const generatedShot = path.join(

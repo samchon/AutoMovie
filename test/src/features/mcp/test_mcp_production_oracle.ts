@@ -1545,14 +1545,11 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         path.join(bundleRoot, "manifest.json"),
       );
       TestValidator.predicate(
-        "preview retains only byte-exact in-range PNG evidence",
+        "preview replaces a bundle whose manifest contains unverified evidence",
         afterForgedLedger.captured &&
-          repairedManifest?.frames.length === 3 &&
-          repairedManifest.frames.every(
-            (frame) =>
-              frame.index === 1 ||
-              (frame.index === 2 && frame.pass === "beauty"),
-          ),
+          repairedManifest?.frames.length === 1 &&
+          repairedManifest.frames[0]?.index === 2 &&
+          repairedManifest.frames[0].pass === "beauty",
       );
     }
     if (beauty.renderBundle !== null) {

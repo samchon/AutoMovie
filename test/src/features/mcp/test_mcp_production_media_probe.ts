@@ -495,8 +495,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     ),
   );
   const trackless = Buffer.from(audio);
-  const audioHandler = boxTypeOffset(trackless, "hdlr");
-  trackless.write("meta", audioHandler + 12, "ascii");
+  trackless.write("free", boxTypeOffset(trackless, "trak"), "ascii");
   TestValidator.predicate(
     "an audio mix requires exactly one audio track",
     refused(

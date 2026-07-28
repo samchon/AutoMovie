@@ -152,8 +152,9 @@ export const test_cli_scaffold = (): void => {
       files[".gitignore"]!.includes("generated/") &&
       files["scripts/compile.ts"]!.includes('scope: "source"') &&
       files["scripts/lint.ts"]!.includes('scope: "review"') &&
+      files["README.md"]!.includes("fails while any design, source,") &&
       files["README.md"]!.includes(
-        "fails while any design, source, shot, or film review",
+        "shot, or film review is missing, stale, revising, or incomplete",
       ),
   );
   TestValidator.predicate(
