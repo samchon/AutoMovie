@@ -234,15 +234,13 @@ export const buildInstancedFormation = (input: {
         object.updateMatrixWorld(true);
         const visualObject = input.heroVisualObjects?.get(hero.actor) ?? object;
         const worldPosition = new THREE.Vector3();
-        const worldScale = new THREE.Vector3();
         visualObject.getWorldPosition(worldPosition);
-        visualObject.getWorldScale(worldScale);
         const worldRadius =
           selectionRadius *
           Math.max(
-            Math.abs(worldScale.x),
-            Math.abs(worldScale.y),
-            Math.abs(worldScale.z),
+            Math.abs(transformed.scale.x),
+            Math.abs(transformed.scale.y),
+            Math.abs(transformed.scale.z),
           );
         object.visible = frustum.intersectsSphere(
           new THREE.Sphere(worldPosition, worldRadius),

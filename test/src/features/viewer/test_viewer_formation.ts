@@ -308,12 +308,37 @@ export const test_viewer_formation = (): void => {
     rotation: heroObjects.get("marshal")!.quaternion.clone(),
   };
   built.update(camera, 1_080, 3, collidingSources);
+  const unscaledHeroCenter = new THREE.Vector3();
+  heroVisualObjects.get("captain")!.getWorldPosition(unscaledHeroCenter);
+  const cameraSpaceHero = unscaledHeroCenter
+    .clone()
+    .applyMatrix4(camera.matrixWorldInverse);
+  const halfWidthAtHero =
+    Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) *
+    -cameraSpaceHero.z *
+    camera.aspect;
+  const authoredRadius = formation.projectionRadius * 12;
+  const decomposedRadius =
+    formation.projectionRadius * Math.hypot(12, 1) * Math.SQRT1_2;
   const scaledSources = new Map(collidingSources);
   scaledSources.set("captain", {
     ...scaledSources.get("captain")!,
-    translation: { x: 20, y: 0, z: 0 },
-    scale: { x: 12, y: 12, z: 12 },
+    translation: {
+      ...scaledSources.get("captain")!.translation,
+      x:
+        scaledSources.get("captain")!.translation.x +
+        halfWidthAtHero +
+        (authoredRadius + decomposedRadius) / 2 -
+        unscaledHeroCenter.x,
+    },
+    scale: { x: 12, y: 1, z: 1 },
   });
+  heroVisualObjects
+    .get("captain")!
+    .quaternion.setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      THREE.MathUtils.degToRad(45),
+    );
   built.update(camera, 1_080, 3, scaledSources);
   camera.updateMatrixWorld(true);
   camera.updateProjectionMatrix();
@@ -329,9 +354,6 @@ export const test_viewer_formation = (): void => {
   heroVisualObjects.get("captain")!.getWorldScale(scaledHeroScale);
   const scaledHeroBoundary =
     scaledFrustum.intersectsSphere(
-      new THREE.Sphere(scaledHeroCenter, formation.projectionRadius),
-    ) === false &&
-    scaledFrustum.intersectsSphere(
       new THREE.Sphere(
         scaledHeroCenter,
         formation.projectionRadius *
@@ -339,6 +361,17 @@ export const test_viewer_formation = (): void => {
             Math.abs(scaledHeroScale.x),
             Math.abs(scaledHeroScale.y),
             Math.abs(scaledHeroScale.z),
+          ),
+      ),
+    ) === false &&
+    scaledFrustum.intersectsSphere(
+      new THREE.Sphere(
+        scaledHeroCenter,
+        formation.projectionRadius *
+          Math.max(
+            Math.abs(scaledSources.get("captain")!.scale.x),
+            Math.abs(scaledSources.get("captain")!.scale.y),
+            Math.abs(scaledSources.get("captain")!.scale.z),
           ),
       ),
     );
