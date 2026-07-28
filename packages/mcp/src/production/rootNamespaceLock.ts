@@ -74,8 +74,8 @@ const releaseCoordinates = (
 const creationCoordinates = (
   parentReal: string,
   childName: string,
+  parentIdentity: fs.BigIntStats,
 ): string[] => {
-  const parentIdentity = fs.statSync(parentReal, { bigint: true });
   return [
     coordinatePath("create-path", path.join(parentReal, childName)),
     coordinatePath(
@@ -83,6 +83,37 @@ const creationCoordinates = (
       `${parentIdentity.dev}\0${parentIdentity.ino}\0${childName.toLowerCase()}`,
     ),
   ];
+};
+
+const acquireCreationCoordinates = (
+  parentReal: string,
+  childName: string,
+): Array<{ path: string; token: string }> => {
+  const parentIdentity = fs.statSync(parentReal, { bigint: true });
+  const locks = acquireCoordinates(
+    creationCoordinates(parentReal, childName, parentIdentity),
+  );
+  try {
+    const linked = lstatOrNull(parentReal);
+    const current =
+      linked === null ||
+      linked.isSymbolicLink() ||
+      linked.isDirectory() === false
+        ? null
+        : fs.statSync(parentReal, { bigint: true });
+    if (
+      current === null ||
+      current.dev !== parentIdentity.dev ||
+      current.ino !== parentIdentity.ino
+    )
+      throw new Error(
+        `Production project parent "${parentReal}" changed physical identity during namespace acquisition. No child was created.`,
+      );
+    return locks;
+  } catch (error) {
+    releaseCoordinates(locks);
+    throw error;
+  }
 };
 
 const ensureDirectory = (directory: string): string => {
@@ -101,8 +132,9 @@ const ensureDirectory = (directory: string): string => {
     );
   const parentReal = ensureDirectory(parent);
   const physical = path.join(parentReal, path.basename(directory));
-  const locks = acquireCoordinates(
-    creationCoordinates(parentReal, path.basename(directory)),
+  const locks = acquireCreationCoordinates(
+    parentReal,
+    path.basename(directory),
   );
   try {
     const current = lstatOrNull(physical);
@@ -182,9 +214,7 @@ export const acquireOrCreateProductionRootNamespace = (
   if (linked !== null) return acquireExistingRoot(root);
   const parentReal = ensureDirectory(path.dirname(root));
   const physical = path.join(parentReal, path.basename(root));
-  const locks = acquireCoordinates(
-    creationCoordinates(parentReal, path.basename(root)),
-  );
+  const locks = acquireCreationCoordinates(parentReal, path.basename(root));
   try {
     const current = lstatOrNull(physical);
     if (current === null) fs.mkdirSync(physical);

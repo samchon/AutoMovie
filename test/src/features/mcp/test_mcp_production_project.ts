@@ -1582,6 +1582,48 @@ export const test_mcp_production_project = (): void => {
           .every((entry) => entry.includes("automovie-root") === false),
     );
     const coordinationRoot = path.dirname(aliasLockPaths[0]!);
+    const swappedParent = path.join(invalidRoot, "swapped-parent");
+    const originalParent = path.join(invalidRoot, "original-parent");
+    fs.mkdirSync(swappedParent);
+    const swappedProject = path.join(swappedParent, "project");
+    const swapLockPaths: string[] = [];
+    let parentSwapped = false;
+    const nativeWriteForParentSwap = fs.writeFileSync;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      Reflect.apply(nativeWriteForParentSwap, fs, [file, ...args]);
+      if (
+        parentSwapped === false &&
+        typeof file !== "number" &&
+        path.basename(file.toString()).startsWith("create-")
+      ) {
+        swapLockPaths.push(path.resolve(file.toString()));
+        if (swapLockPaths.length === 2) {
+          parentSwapped = true;
+          fs.renameSync(swappedParent, originalParent);
+          fs.mkdirSync(swappedParent);
+        }
+      }
+    }) as typeof fs.writeFileSync;
+    let parentSwapRejected = false;
+    try {
+      parentSwapRejected = throws(
+        () => AutoMovieProductionProject.open(swappedProject),
+        "changed physical identity",
+      );
+    } finally {
+      fs.writeFileSync = nativeWriteForParentSwap;
+    }
+    TestValidator.predicate(
+      "a parent replaced while creation fences are acquired is rejected before either tree receives a child",
+      parentSwapRejected &&
+        fs.existsSync(swappedProject) === false &&
+        fs.existsSync(path.join(originalParent, "project")) === false &&
+        swapLockPaths.length === 2 &&
+        swapLockPaths.every((file) => fs.existsSync(file) === false),
+    );
     const nativeCoordinationMkdir = fs.mkdirSync;
     fs.mkdirSync = ((directory: fs.PathLike, ...args: unknown[]): unknown => {
       if (path.resolve(directory.toString()) === coordinationRoot) {
