@@ -84,7 +84,9 @@ const loadPlaywright = async (
 const playwrightMetadata = (): IPlaywrightMetadata => {
   const packagePath = require.resolve("playwright/package.json");
   const packageRoot = path.dirname(packagePath);
-  const corePackagePath = require.resolve("playwright-core/package.json");
+  const corePackagePath = require.resolve("playwright-core/package.json", {
+    paths: [packageRoot],
+  });
   const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as {
     version?: unknown;
   };

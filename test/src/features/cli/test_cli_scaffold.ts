@@ -197,6 +197,7 @@ export const test_cli_scaffold = (): void => {
       files["scripts/capture-browser.ts"]!.includes(
         'return import("playwright")',
       ) &&
+      files["scripts/capture-browser.ts"]!.includes("paths: [packageRoot]") &&
       files["scripts/capture-browser.ts"]!.includes('"--no-shell"') &&
       files["scripts/capture-browser.ts"]!.includes(
         'args: ["--use-angle=swiftshader"]',
