@@ -8,6 +8,7 @@ import {
   IAutoMovieDesignTarget,
   IAutoMovieDiagnostic,
   IAutoMovieFrameEvidenceReference,
+  IAutoMovieGeneratedManifest,
   IAutoMoviePrepareReviewInput,
   IAutoMoviePrepareReviewOutput,
   IAutoMovieRenderBundleManifest,
@@ -66,6 +67,8 @@ interface IReviewReadContext {
   renderContentInputs:
     | ReturnType<AutoMovieProductionProject["contentInputs"]>
     | undefined;
+  generatedManifest: IAutoMovieGeneratedManifest | undefined;
+  generatedFiles: ReadonlyMap<string, Uint8Array> | undefined;
   renderTargetFingerprints: Map<string, AutoMovieContentDigest>;
 }
 
@@ -132,6 +135,8 @@ export class AutoMovieProductionReviewService {
           renderInventory: collectRenderManifestInventory(this.project),
           fingerprints: new Map(),
           renderContentInputs: undefined,
+          generatedManifest: undefined,
+          generatedFiles: undefined,
           renderTargetFingerprints: new Map(),
         }
       : undefined;
@@ -201,6 +206,7 @@ export class AutoMovieProductionReviewService {
       input.target,
       diagnostics,
       compileStatus!,
+      context,
     );
     if (
       (input.target.kind === "shot" || input.target.kind === "film") &&
@@ -334,6 +340,8 @@ export class AutoMovieProductionReviewService {
       renderInventory: collectRenderManifestInventory(this.project),
       fingerprints: new Map(),
       renderContentInputs: snapshot?.renderContentInputs,
+      generatedManifest: snapshot?.generatedManifest,
+      generatedFiles: snapshot?.generatedFiles,
       renderTargetFingerprints: new Map(),
     };
     const entries = reviewTargets(this.project).map((target) => {
@@ -943,7 +951,7 @@ const reviewFingerprint = (
     for (const [id, acceptance] of graph.acceptance)
       if (acceptanceAddressesShot(acceptance, target.id))
         addJson(`acceptance:${id}`, acceptance);
-    const generated = project.generatedManifest();
+    const generated = currentGeneratedManifest(project, context);
     addJson(
       "render-target",
       generated === null
@@ -963,6 +971,7 @@ const reviewFingerprint = (
       target,
       [],
       compileStatus!,
+      context,
     ))
       addJson(`outcome:${outcome.scenario}`, outcome);
     fields.push(compilerField());
@@ -1003,6 +1012,7 @@ const reviewFingerprint = (
       target,
       [],
       compileStatus!,
+      context,
     ))
       addJson(`outcome:${outcome.scenario}`, outcome);
   }
@@ -1086,9 +1096,10 @@ const currentAcceptanceOutcomes = (
   target: IAutoMovieReviewTarget,
   diagnostics: IAutoMovieDiagnostic[],
   compileStatus: IAutoMovieCompileProjectOutput,
+  context?: IReviewReadContext,
 ): IAutoMovieAcceptanceOutcomeReference[] => {
   if (target.kind !== "shot" && target.kind !== "film") return [];
-  const generated = project.generatedManifest();
+  const generated = currentGeneratedManifest(project, context);
   if (
     generated === null ||
     compileStatus.success === false ||
@@ -1113,8 +1124,10 @@ const currentAcceptanceOutcomes = (
       const validation = typia.validateEquals<IAutoMovieCompiledShotSource>(
         JSON.parse(
           Buffer.from(
-            project.readGeneratedFile(
+            currentGeneratedFile(
+              project,
               `shots/${encodeAutoMoviePathSegment(shot)}.json`,
+              context,
             ),
           ).toString("utf8"),
         ) as unknown,
@@ -1136,8 +1149,10 @@ const currentAcceptanceOutcomes = (
         typia.validateEquals<IAutoMovieCompiledContractRealization>(
           JSON.parse(
             Buffer.from(
-              project.readGeneratedFile(
+              currentGeneratedFile(
+                project,
                 `realizations/${encodeAutoMoviePathSegment(shot)}.json`,
+                context,
               ),
             ).toString("utf8"),
           ) as unknown,
@@ -1249,7 +1264,7 @@ const currentFrames = (
   context?: IReviewReadContext,
 ): IAutoMovieFrameEvidenceReference[] => {
   if (target.kind !== "shot" && target.kind !== "film") return [];
-  const generated = project.generatedManifest();
+  const generated = currentGeneratedManifest(project, context);
   if (generated === null) return [];
   if (
     compileStatus.success === false ||
@@ -1776,6 +1791,27 @@ const currentRenderTargetFingerprint = (
   );
   context.renderTargetFingerprints.set(key, fingerprint);
   return fingerprint;
+};
+
+const currentGeneratedManifest = (
+  project: AutoMovieProductionProject,
+  context?: IReviewReadContext,
+): IAutoMovieGeneratedManifest | null =>
+  context?.generatedManifest ?? project.generatedManifest();
+
+const currentGeneratedFile = (
+  project: AutoMovieProductionProject,
+  relativePath: string,
+  context?: IReviewReadContext,
+): Uint8Array => {
+  if (context?.generatedFiles === undefined)
+    return project.readGeneratedFile(relativePath);
+  const bytes = context.generatedFiles.get(relativePath);
+  if (bytes === undefined)
+    throw new Error(
+      `Prospective generated file "${relativePath}" is absent from the compiler snapshot.`,
+    );
+  return bytes;
 };
 
 const listNamedFiles = (root: string, name: string): string[] => {

@@ -67,6 +67,10 @@ export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
 export interface IAutoMovieReviewQueueSnapshot {
   /** Exact content inventory already used by the compiler fingerprint. */
   renderContentInputs: IAutoMovieProductionContentInput[];
+  /** Prospective compiler ownership manifest used by this compile. */
+  generatedManifest: IAutoMovieGeneratedManifest;
+  /** Prospective compiler-owned bytes keyed by generated-root-relative path. */
+  generatedFiles: ReadonlyMap<string, Uint8Array>;
 }
 
 /** Current review queue provider shared with the review service. */
@@ -296,10 +300,12 @@ export class AutoMovieProductionCompiler {
       materialized: [],
     });
     const reviewSnapshot: IAutoMovieReviewQueueSnapshot | undefined =
-      contentInputs === undefined
+      contentInputs === undefined || manifest === null || files === null
         ? undefined
         : {
             renderContentInputs: contentInputs,
+            generatedManifest: manifest,
+            generatedFiles: files,
           };
     const reviews: IAutoMovieReviewQueue =
       diagnostics.some(
@@ -327,7 +333,7 @@ export class AutoMovieProductionCompiler {
           inputFingerprint,
         },
         diagnostics,
-        reviews,
+        reviews: { entries: [] },
         materialized: [],
       };
     if (input.scope === "design")
@@ -402,14 +408,7 @@ export class AutoMovieProductionCompiler {
         inputFingerprint,
       },
       diagnostics,
-      reviews: this.reviewQueue(
-        {
-          ...statusForReview(),
-          success: true,
-          revision,
-        },
-        reviewSnapshot,
-      ),
+      reviews,
       materialized,
     };
   }

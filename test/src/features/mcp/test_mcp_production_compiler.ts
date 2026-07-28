@@ -98,6 +98,20 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           (entry) => entry.currentFingerprint !== null,
         ),
     );
+    let singleQueueCalls = 0;
+    const singleQueueCompile = new AutoMovieProductionCompiler(
+      project,
+      (status, snapshot) => {
+        ++singleQueueCalls;
+        if (singleQueueCalls > 1)
+          throw new Error("review queue was called after generated commit");
+        return review.queue(status, snapshot);
+      },
+    ).compile({ scope: "source" });
+    TestValidator.predicate(
+      "successful compile derives its response queue exactly once before commit",
+      singleQueueCompile.success && singleQueueCalls === 1,
+    );
     const recipeFile = path.join(
       fixture.root,
       ".automovie/design/models/sentinel.json",
@@ -727,6 +741,35 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const revisionBeforeContentRace = project.revision();
     const currentContent = residentContentInputs.call(project);
+    let noWriteRaceReads = 0;
+    project.contentInputs = (() => {
+      ++noWriteRaceReads;
+      if (noWriteRaceReads === 1) return currentContent;
+      let changed = false;
+      return currentContent.map((content) => {
+        if (changed || content.bytes === null) return content;
+        changed = true;
+        return {
+          ...content,
+          bytes: Buffer.concat([
+            Buffer.from(content.bytes),
+            Buffer.from("\nno-write content race"),
+          ]),
+        };
+      });
+    }) as typeof project.contentInputs;
+    const noWriteContentRace = compiler.compile({ scope: "source" });
+    project.contentInputs = residentContentInputs;
+    TestValidator.predicate(
+      "no-write compile confirms current inputs under the commit lock",
+      noWriteContentRace.success === false &&
+        diagnosticCodes(noWriteContentRace).has("compile-input-changed") &&
+        noWriteContentRace.reviews.entries.length === 0 &&
+        noWriteRaceReads === 2 &&
+        project.revision() === revisionBeforeContentRace &&
+        fs.readFileSync(generatedManifestPath, "utf8") ===
+          generatedBeforeContentRace,
+    );
     let contentRaceReads = 0;
     project.contentInputs = (() => {
       ++contentRaceReads;
@@ -752,10 +795,28 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       "late content races roll generated output back before revision publication",
       racedContentCommit.success === false &&
         diagnosticCodes(racedContentCommit).has("compile-input-changed") &&
+        racedContentCommit.reviews.entries.length === 0 &&
         contentRaceReads === 3 &&
         project.revision() === revisionBeforeContentRace &&
         fs.readFileSync(generatedManifestPath, "utf8") ===
           generatedBeforeContentRace,
+    );
+    const residentCommitGenerated = project.commitGenerated;
+    project.commitGenerated = (() => {
+      throw new Error("generic generated commit failure");
+    }) as typeof project.commitGenerated;
+    let genericCommitFailure = "";
+    try {
+      compiler.compile({ scope: "source" });
+    } catch (error) {
+      genericCommitFailure =
+        error instanceof Error ? error.message : String(error);
+    }
+    project.commitGenerated = residentCommitGenerated;
+    TestValidator.equals(
+      "non-race generated commit failures remain loud",
+      genericCommitFailure,
+      "generic generated commit failure",
     );
     const residentReadGenerated = project.readGeneratedFile;
     project.readGeneratedFile = (() => {

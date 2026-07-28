@@ -906,11 +906,26 @@ export class AutoMovieProductionProject {
         content: serializedManifest,
       });
     if (writes.length === 0) {
-      if (inputCurrent?.() === false)
-        throw new AutoMovieProductionInputRaceError(
-          "Production inputs changed before generated output was confirmed current.",
-        );
-      return this.revision();
+      const token = acquireCommitLock(this.lockPath);
+      try {
+        const current = readRevision(this.rootReal, this.revisionPath);
+        if (current !== this.lastReadRevision_)
+          throw new AutoMovieProductionInputRaceError(
+            `Production revision changed from ${this.lastReadRevision_} to ${current}. Inspect the project again before retrying the mutation.`,
+          );
+        if (inputCurrent?.() === false)
+          throw new AutoMovieProductionInputRaceError(
+            "Production inputs changed before generated output was confirmed current.",
+          );
+        if (inputCurrent?.() === false)
+          throw new AutoMovieProductionInputRaceError(
+            "Production inputs changed while generated output was being confirmed current.",
+          );
+        this.lastReadRevision_ = current;
+        return current;
+      } finally {
+        releaseCommitLock(this.lockPath, token);
+      }
     }
     return this.commitFiles(writes, inputCurrent);
   }
@@ -1188,7 +1203,7 @@ export class AutoMovieProductionProject {
     try {
       const current = readRevision(this.rootReal, this.revisionPath);
       if (current !== this.lastReadRevision_)
-        throw new Error(
+        throw new AutoMovieProductionInputRaceError(
           `Production revision changed from ${this.lastReadRevision_} to ${current}. Inspect the project again before retrying the mutation.`,
         );
       let applied = 0;
