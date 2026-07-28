@@ -250,6 +250,9 @@ export class AutoMovieProductionCompiler {
       sourceFields,
       contentFields,
     );
+    const inputCurrent = (): boolean =>
+      `${this.project.revision()}\0${currentProductionCompilerInputFingerprint(this.project, input.scope)}\0${this.project.revision()}` ===
+      `${inputRevision}\0${inputFingerprint}\0${inputRevision}`;
     const files =
       input.scope === "design"
         ? null
@@ -325,7 +328,18 @@ export class AutoMovieProductionCompiler {
         ),
       );
     diagnostics.sort(compareDiagnostics);
-    if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
+    const inputRaceFailure = (
+      message: string,
+    ): IAutoMovieCompileProjectOutput => {
+      diagnostics.push({
+        code: "compile-input-changed",
+        category: "error",
+        phase: "compile",
+        target: "compiler-input",
+        path: null,
+        message: `${message} Re-run compileProject against the current design, source and declared content snapshot.`,
+      });
+      diagnostics.sort(compareDiagnostics);
       return {
         success: false,
         revision: this.project.revision(),
@@ -334,9 +348,27 @@ export class AutoMovieProductionCompiler {
           inputFingerprint,
         },
         diagnostics,
-        reviews,
+        reviews: { entries: [] },
         materialized: [],
       };
+    };
+    if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
+      if (inputCurrent() === false)
+        return inputRaceFailure(
+          "Production inputs or revision changed while compiler diagnostics and review requirements were being derived.",
+        );
+      else
+        return {
+          success: false,
+          revision: this.project.revision(),
+          compiler: {
+            version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+            inputFingerprint,
+          },
+          diagnostics,
+          reviews,
+          materialized: [],
+        };
     if (input.scope === "design")
       return {
         success: true,
@@ -357,50 +389,33 @@ export class AutoMovieProductionCompiler {
     /* c8 ignore stop */
     const materialized = statusesOf(this.project, entries);
     if (materialize === false)
-      return {
-        success: true,
-        revision: this.project.revision(),
-        compiler: {
-          version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
-          inputFingerprint,
-        },
-        diagnostics,
-        reviews,
-        materialized: [],
-      };
+      return inputCurrent()
+        ? {
+            success: true,
+            revision: this.project.revision(),
+            compiler: {
+              version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+              inputFingerprint,
+            },
+            diagnostics,
+            reviews,
+            materialized: [],
+          }
+        : inputRaceFailure(
+            "Production inputs or revision changed while the read-only compile result was being derived.",
+          );
     let revision: number;
     try {
       revision = this.project.commitGenerated(
         files,
         manifest,
-        () =>
-          currentProductionCompilerInputFingerprint(this.project) ===
-          inputFingerprint,
+        inputCurrent,
         inputRevision,
       );
     } catch (error) {
       if (error instanceof AutoMovieProductionInputRaceError === false)
         throw error;
-      diagnostics.push({
-        code: "compile-input-changed",
-        category: "error",
-        phase: "compile",
-        target: "compiler-input",
-        path: null,
-        message: `${error.message} Re-run compileProject against the current design, source and declared content snapshot.`,
-      });
-      diagnostics.sort(compareDiagnostics);
-      return {
-        success: false,
-        revision: this.project.revision(),
-        compiler: {
-          version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
-          inputFingerprint,
-        },
-        diagnostics,
-        reviews: { entries: [] },
-        materialized: [],
-      };
+      return inputRaceFailure(error.message);
     }
     return {
       success: true,
@@ -1140,22 +1155,53 @@ const productionCompilerInputFingerprint = (
 
 const currentProductionCompilerInputFingerprint = (
   project: AutoMovieProductionProject,
+  scope: IAutoMovieCompileProjectInput["scope"],
 ): AutoMovieContentDigest | null => {
   try {
     const graph = project.graph();
     const sourceFields: IAutoMovieFingerprintField[] = [];
-    for (const [id, contract] of graph.shots)
-      sourceFields.push({
-        role: `source:${id}`,
-        kind: "typescript",
-        payload: normalizeAutoMovieSource(
-          project.readSource(contract.source.module),
-        ),
-      });
+    for (const [id, contract] of graph.shots) {
+      if (scope === "design") {
+        sourceFields.push({
+          role: `source:${id}`,
+          kind: "not-inspected",
+          payload: new Uint8Array(),
+        });
+        continue;
+      }
+      try {
+        sourceFields.push({
+          role: `source:${id}`,
+          kind: "typescript",
+          payload: normalizeAutoMovieSource(
+            project.readSource(contract.source.module),
+          ),
+        });
+      } catch {
+        sourceFields.push({
+          role: `source:${id}`,
+          kind: "absent",
+          payload: new Uint8Array(),
+        });
+      }
+    }
+    const contentFields: IAutoMovieFingerprintField[] = [];
+    if (scope !== "design")
+      try {
+        contentFields.push(
+          ...contentFingerprintFields(project.contentInputs()),
+        );
+      } catch {
+        contentFields.push({
+          role: "content:inventory",
+          kind: "unsafe",
+          payload: new Uint8Array(),
+        });
+      }
     return productionCompilerInputFingerprint(
       graph,
       sourceFields,
-      contentFingerprintFields(project.contentInputs()),
+      contentFields,
     );
   } catch {
     return null;

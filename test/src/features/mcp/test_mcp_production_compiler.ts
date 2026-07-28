@@ -112,6 +112,56 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       "successful compile derives its response queue exactly once before commit",
       singleQueueCompile.success && singleQueueCalls === 1,
     );
+    fs.writeFileSync(
+      sourcePath,
+      `${original}\nexport const compilerDiagnostic = ;\n`,
+    );
+    const ordinaryDiagnostic = compiler.compile({ scope: "source" });
+    TestValidator.predicate(
+      "ordinary compiler diagnostics preserve the current review queue",
+      ordinaryDiagnostic.success === false &&
+        diagnosticCodes(ordinaryDiagnostic).has("compile-input-changed") ===
+          false &&
+        ordinaryDiagnostic.reviews.entries.length !== 0,
+    );
+    const diagnosticRevisionRacer = AutoMovieProductionProject.open(
+      fixture.root,
+    );
+    let diagnosticRevisionRaced = false;
+    const racedDiagnostic = new AutoMovieProductionCompiler(
+      project,
+      (status, snapshot) => {
+        const queue = review.queue(status, snapshot);
+        diagnosticRevisionRacer.setWorldDesign(worldDesign());
+        diagnosticRevisionRaced = true;
+        return queue;
+      },
+    ).compile({ scope: "source" });
+    fs.writeFileSync(sourcePath, original);
+    TestValidator.predicate(
+      "diagnostic responses discard a review queue derived across an input race",
+      racedDiagnostic.success === false &&
+        diagnosticCodes(racedDiagnostic).has("compile-input-changed") &&
+        racedDiagnostic.reviews.entries.length === 0 &&
+        diagnosticRevisionRaced,
+    );
+    let lintRevisionRaced = false;
+    const racedLint = new AutoMovieProductionCompiler(
+      project,
+      (status, snapshot) => {
+        const queue = review.queue(status, snapshot);
+        diagnosticRevisionRacer.setWorldDesign(worldDesign());
+        lintRevisionRaced = true;
+        return queue;
+      },
+    ).lint({ scope: "source" });
+    TestValidator.predicate(
+      "read-only compile responses are fenced after review derivation",
+      racedLint.success === false &&
+        diagnosticCodes(racedLint).has("compile-input-changed") &&
+        racedLint.reviews.entries.length === 0 &&
+        lintRevisionRaced,
+    );
     const recipeFile = path.join(
       fixture.root,
       ".automovie/design/models/sentinel.json",
@@ -787,6 +837,88 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         project.revision() === revisionBeforeContentRace &&
         fs.readFileSync(generatedManifestPath, "utf8") ===
           generatedBeforeContentRace,
+    );
+    const generatedShotBeforeOutputRace = fs.readFileSync(generatedShot);
+    let noWriteFileRaceReads = 0;
+    project.contentInputs = (() => {
+      ++noWriteFileRaceReads;
+      if (noWriteFileRaceReads === 3) fs.writeFileSync(generatedShot, "{}\n");
+      return currentContent;
+    }) as typeof project.contentInputs;
+    const noWriteFileRace = compiler.compile({ scope: "source" });
+    project.contentInputs = residentContentInputs;
+    fs.writeFileSync(generatedShot, generatedShotBeforeOutputRace);
+    TestValidator.predicate(
+      "no-write publication rejects raw generated file tampering after its plan",
+      noWriteFileRace.success === false &&
+        diagnosticCodes(noWriteFileRace).has("compile-input-changed") &&
+        noWriteFileRace.reviews.entries.length === 0 &&
+        noWriteFileRaceReads === 3 &&
+        project.revision() === revisionBeforeContentRace,
+    );
+    let noWriteManifestRaceReads = 0;
+    project.contentInputs = (() => {
+      ++noWriteManifestRaceReads;
+      if (noWriteManifestRaceReads === 3)
+        fs.writeFileSync(
+          generatedManifestPath,
+          `${generatedBeforeContentRace}\n`,
+        );
+      return currentContent;
+    }) as typeof project.contentInputs;
+    const noWriteManifestRace = compiler.compile({ scope: "source" });
+    project.contentInputs = residentContentInputs;
+    fs.writeFileSync(generatedManifestPath, generatedBeforeContentRace);
+    TestValidator.predicate(
+      "no-write publication rejects raw generated manifest tampering after its plan",
+      noWriteManifestRace.success === false &&
+        diagnosticCodes(noWriteManifestRace).has("compile-input-changed") &&
+        noWriteManifestRace.reviews.entries.length === 0 &&
+        noWriteManifestRaceReads === 3 &&
+        project.revision() === revisionBeforeContentRace,
+    );
+    const rawGeneratedIntruder = path.join(
+      fixture.root,
+      "generated/raw-race.txt",
+    );
+    let noWriteInventoryRaceReads = 0;
+    project.contentInputs = (() => {
+      ++noWriteInventoryRaceReads;
+      if (noWriteInventoryRaceReads === 3)
+        fs.writeFileSync(rawGeneratedIntruder, "raw race");
+      return currentContent;
+    }) as typeof project.contentInputs;
+    const noWriteInventoryRace = compiler.compile({ scope: "source" });
+    project.contentInputs = residentContentInputs;
+    fs.rmSync(rawGeneratedIntruder);
+    TestValidator.predicate(
+      "no-write publication rejects raw generated inventory growth after its plan",
+      noWriteInventoryRace.success === false &&
+        diagnosticCodes(noWriteInventoryRace).has("compile-input-changed") &&
+        noWriteInventoryRace.reviews.entries.length === 0 &&
+        noWriteInventoryRaceReads === 3 &&
+        project.revision() === revisionBeforeContentRace,
+    );
+    let writeOutputRaceReads = 0;
+    project.contentInputs = (() => {
+      ++writeOutputRaceReads;
+      if (writeOutputRaceReads === 3) fs.writeFileSync(generatedShot, "{}\n");
+      return currentContent;
+    }) as typeof project.contentInputs;
+    fs.writeFileSync(sourcePath, `${original}\n// guarded output race\n`);
+    const writeOutputRace = compiler.compile({ scope: "source" });
+    project.contentInputs = residentContentInputs;
+    fs.writeFileSync(sourcePath, original);
+    TestValidator.predicate(
+      "write publication rolls back when generated bytes change during its final guard",
+      writeOutputRace.success === false &&
+        diagnosticCodes(writeOutputRace).has("compile-input-changed") &&
+        writeOutputRace.reviews.entries.length === 0 &&
+        writeOutputRaceReads === 3 &&
+        project.revision() === revisionBeforeContentRace &&
+        fs.readFileSync(generatedManifestPath, "utf8") ===
+          generatedBeforeContentRace &&
+        fs.readFileSync(generatedShot).equals(generatedShotBeforeOutputRace),
     );
     const revisionRacer = AutoMovieProductionProject.open(fixture.root);
     let revisionRaced = false;

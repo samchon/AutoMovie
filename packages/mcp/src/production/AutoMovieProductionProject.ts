@@ -874,61 +874,48 @@ export class AutoMovieProductionProject {
     inputCurrent?: () => boolean,
     expectedRevision: number = this.lastReadRevision_,
   ): number {
-    const writes: IStagedFile[] = [];
-    const previous = this.generatedManifest();
-    const nextPaths = new Set(files.keys());
-    for (const entry of previous?.files ?? [])
-      if (nextPaths.has(entry.path) === false)
-        writes.push({
-          path: resolveInside(this.generatedRoot(), entry.path),
-          content: null,
-        });
-    for (const [relativePath, bytes] of files) {
-      const absolute = resolveInside(this.generatedRoot(), relativePath);
-      const content = Buffer.from(bytes);
-      if (
-        fs.existsSync(absolute) === false ||
-        Buffer.from(this.readGeneratedFile(relativePath)).equals(content) ===
-          false
-      )
-        writes.push({ path: absolute, content });
-    }
-    const manifestPath = path.join(
-      this.automovieRoot,
-      "generated-manifest.json",
-    );
     const serializedManifest = serializeJson(manifest);
-    if (
-      fs.existsSync(manifestPath) === false ||
-      fs.readFileSync(manifestPath, "utf8") !== serializedManifest
-    )
-      writes.push({
-        path: manifestPath,
-        content: serializedManifest,
-      });
-    if (writes.length === 0) {
-      const token = acquireCommitLock(this.lockPath);
-      try {
-        const current = readRevision(this.rootReal, this.revisionPath);
-        if (current !== expectedRevision)
-          throw new AutoMovieProductionInputRaceError(
-            `Production revision changed from ${expectedRevision} to ${current}. Inspect the project again before retrying the mutation.`,
-          );
-        if (inputCurrent?.() === false)
-          throw new AutoMovieProductionInputRaceError(
-            "Production inputs changed before generated output was confirmed current.",
-          );
-        if (inputCurrent?.() === false)
-          throw new AutoMovieProductionInputRaceError(
-            "Production inputs changed while generated output was being confirmed current.",
-          );
-        this.lastReadRevision_ = current;
-        return current;
-      } finally {
-        releaseCommitLock(this.lockPath, token);
-      }
-    }
-    return this.commitFiles(writes, inputCurrent, expectedRevision);
+    return this.commitFiles(
+      () => {
+        const writes: IStagedFile[] = [];
+        const previous = this.generatedManifest();
+        const nextPaths = new Set(files.keys());
+        for (const entry of previous?.files ?? [])
+          if (nextPaths.has(entry.path) === false)
+            writes.push({
+              path: resolveInside(this.generatedRoot(), entry.path),
+              content: null,
+            });
+        for (const [relativePath, bytes] of files) {
+          const absolute = resolveInside(this.generatedRoot(), relativePath);
+          const content = Buffer.from(bytes);
+          if (
+            fs.existsSync(absolute) === false ||
+            Buffer.from(this.readGeneratedFile(relativePath)).equals(
+              content,
+            ) === false
+          )
+            writes.push({ path: absolute, content });
+        }
+        const manifestPath = path.join(
+          this.automovieRoot,
+          "generated-manifest.json",
+        );
+        if (
+          fs.existsSync(manifestPath) === false ||
+          fs.readFileSync(manifestPath, "utf8") !== serializedManifest
+        )
+          writes.push({
+            path: manifestPath,
+            content: serializedManifest,
+          });
+        return writes;
+      },
+      inputCurrent,
+      expectedRevision,
+      () => this.assertGeneratedOutputCurrent(files, serializedManifest),
+      false,
+    );
   }
 
   /** Read one stored review record. */
@@ -1174,33 +1161,38 @@ export class AutoMovieProductionProject {
   }
 
   private commitFiles(
-    files: readonly IStagedFile[],
+    files: readonly IStagedFile[] | (() => readonly IStagedFile[]),
     inputCurrent?: () => boolean,
     expectedRevision: number = this.lastReadRevision_,
+    outputCurrent?: () => void,
+    publishEmptyRevision: boolean = true,
   ): number {
-    const staged = files.map((file) => ({
-      path: file.path,
-      content:
-        file.content === null
-          ? null
-          : typeof file.content === "string"
-            ? Buffer.from(file.content, "utf8")
-            : Buffer.from(file.content),
-      previous: (() => {
-        resolveInside(this.root, file.path);
-        const ownerRoot = this.ownerRootFor(file.path);
-        assertRealAncestorInside(
-          ownedRootReal(this.rootReal, ownerRoot),
-          path.dirname(file.path),
-        );
-        const linked = lstatOrNull(file.path);
-        if (linked?.isSymbolicLink())
-          throw new Error(
-            `Owned target "${relativeToRoot(this.root, file.path)}" is a symlink or junction. Remove it before retrying the mutation.`,
+    const stage = (pending: readonly IStagedFile[]) =>
+      pending.map((file) => ({
+        path: file.path,
+        content:
+          file.content === null
+            ? null
+            : typeof file.content === "string"
+              ? Buffer.from(file.content, "utf8")
+              : Buffer.from(file.content),
+        previous: (() => {
+          resolveInside(this.root, file.path);
+          const ownerRoot = this.ownerRootFor(file.path);
+          assertRealAncestorInside(
+            ownedRootReal(this.rootReal, ownerRoot),
+            path.dirname(file.path),
           );
-        return linked === null ? null : fs.readFileSync(file.path);
-      })(),
-    }));
+          const linked = lstatOrNull(file.path);
+          if (linked?.isSymbolicLink())
+            throw new Error(
+              `Owned target "${relativeToRoot(this.root, file.path)}" is a symlink or junction. Remove it before retrying the mutation.`,
+            );
+          return linked === null ? null : fs.readFileSync(file.path);
+        })(),
+      }));
+    const lazy = typeof files === "function" ? files : null;
+    const eager = lazy === null ? stage(files as readonly IStagedFile[]) : null;
     const token = acquireCommitLock(this.lockPath);
     try {
       const current = readRevision(this.rootReal, this.revisionPath);
@@ -1208,12 +1200,13 @@ export class AutoMovieProductionProject {
         throw new AutoMovieProductionInputRaceError(
           `Production revision changed from ${expectedRevision} to ${current}. Inspect the project again before retrying the mutation.`,
         );
+      if (inputCurrent?.() === false)
+        throw new AutoMovieProductionInputRaceError(
+          "Production inputs changed before the guarded commit began.",
+        );
+      const staged = eager ?? stage(lazy!());
       let applied = 0;
       try {
-        if (inputCurrent?.() === false)
-          throw new AutoMovieProductionInputRaceError(
-            "Production inputs changed before the guarded commit began.",
-          );
         for (const file of staged) {
           if (file.content === null) fs.rmSync(file.path, { force: true });
           else writeAtomic(file.path, file.content);
@@ -1223,6 +1216,11 @@ export class AutoMovieProductionProject {
           throw new AutoMovieProductionInputRaceError(
             "Production inputs changed while the guarded commit was being applied.",
           );
+        outputCurrent?.();
+        if (staged.length === 0 && publishEmptyRevision === false) {
+          this.lastReadRevision_ = current;
+          return current;
+        }
         const nextRevision = current + 1;
         writeJsonAtomic(this.revisionPath, {
           revision: nextRevision,
@@ -1247,6 +1245,59 @@ export class AutoMovieProductionProject {
       }
     } finally {
       releaseCommitLock(this.lockPath, token);
+    }
+  }
+
+  private assertGeneratedOutputCurrent(
+    files: ReadonlyMap<string, Uint8Array>,
+    serializedManifest: string,
+  ): void {
+    try {
+      const root = this.generatedRoot();
+      const actualPaths: string[] = [];
+      const visit = (directory: string): void => {
+        for (const entry of fs
+          .readdirSync(directory, { withFileTypes: true })
+          .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+          const absolute = path.join(directory, entry.name);
+          const status = fs.lstatSync(absolute);
+          if (status.isDirectory()) visit(absolute);
+          else actualPaths.push(normalizeSlash(path.relative(root, absolute)));
+        }
+      };
+      visit(root);
+      const expectedPaths = [...files.keys()].sort(compareCodeUnits);
+      if (actualPaths.join("\0") !== expectedPaths.join("\0"))
+        throw new AutoMovieProductionInputRaceError(
+          "Compiler-owned generated inventory changed while output was being published.",
+        );
+      for (const [relativePath, expected] of files)
+        if (
+          Buffer.from(this.readGeneratedFile(relativePath)).equals(
+            Buffer.from(expected),
+          ) === false
+        )
+          throw new AutoMovieProductionInputRaceError(
+            `Compiler-owned generated file "${relativePath}" changed while output was being published.`,
+          );
+      if (
+        fs.readFileSync(
+          path.join(this.automovieRoot, "generated-manifest.json"),
+          "utf8",
+        ) !== serializedManifest
+      )
+        throw new AutoMovieProductionInputRaceError(
+          "Compiler-owned generated manifest changed while output was being published.",
+        );
+    } catch (error) {
+      /* c8 ignore start -- deterministic tests cover explicit inventory,
+      byte and manifest mismatches. This fallback only handles a path becoming
+      unreadable during the verification syscall sequence itself. */
+      if (error instanceof AutoMovieProductionInputRaceError) throw error;
+      throw new AutoMovieProductionInputRaceError(
+        `Compiler-owned generated output became unreadable while it was being published: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      /* c8 ignore stop */
     }
   }
 
