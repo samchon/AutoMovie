@@ -181,6 +181,73 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         unavailableGraphRecheck.reviews.entries.length === 0 &&
         graphRecheckCalls === 2,
     );
+    const residentConfirmCurrentSnapshot = project.confirmCurrentSnapshot;
+    project.confirmCurrentSnapshot = (() => {
+      throw new Error("generic snapshot confirmation failure");
+    }) as typeof project.confirmCurrentSnapshot;
+    let genericSnapshotFailure = "";
+    try {
+      new AutoMovieProductionCompiler(project, () => ({
+        entries: [],
+      })).lint({ scope: "source" });
+    } catch (error) {
+      genericSnapshotFailure =
+        error instanceof Error ? error.message : String(error);
+    }
+    project.confirmCurrentSnapshot = residentConfirmCurrentSnapshot;
+    TestValidator.equals(
+      "non-race snapshot confirmation failures remain loud",
+      genericSnapshotFailure,
+      "generic snapshot confirmation failure",
+    );
+    const postFenceRevision = project.revision;
+    let postFenceLintReads = 0;
+    let postFenceLintMutation = false;
+    project.revision = (() => {
+      ++postFenceLintReads;
+      if (postFenceLintReads === 7) {
+        diagnosticRevisionRacer.setWorldDesign(worldDesign());
+        postFenceLintMutation = true;
+      }
+      return postFenceRevision.call(project);
+    }) as typeof project.revision;
+    const stableLint = new AutoMovieProductionCompiler(project, () => ({
+      entries: [],
+    })).lint({ scope: "source" });
+    project.revision = postFenceRevision;
+    TestValidator.predicate(
+      "read-only success returns the fenced revision without a later read",
+      stableLint.success &&
+        postFenceLintReads === 6 &&
+        postFenceLintMutation === false,
+    );
+    fs.writeFileSync(
+      sourcePath,
+      `${original}\nexport const postFenceDiagnostic = ;\n`,
+    );
+    let postFenceDiagnosticReads = 0;
+    let postFenceDiagnosticMutation = false;
+    project.revision = (() => {
+      ++postFenceDiagnosticReads;
+      if (postFenceDiagnosticReads === 7) {
+        diagnosticRevisionRacer.setWorldDesign(worldDesign());
+        postFenceDiagnosticMutation = true;
+      }
+      return postFenceRevision.call(project);
+    }) as typeof project.revision;
+    const stableDiagnostic = new AutoMovieProductionCompiler(project, () => ({
+      entries: [],
+    })).compile({ scope: "source" });
+    project.revision = postFenceRevision;
+    fs.writeFileSync(sourcePath, original);
+    TestValidator.predicate(
+      "ordinary diagnostics return the fenced revision without a later read",
+      stableDiagnostic.success === false &&
+        diagnosticCodes(stableDiagnostic).has("compile-input-changed") ===
+          false &&
+        postFenceDiagnosticReads === 6 &&
+        postFenceDiagnosticMutation === false,
+    );
     const recipeFile = path.join(
       fixture.root,
       ".automovie/design/models/sentinel.json",
@@ -256,6 +323,24 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         diagnosticCodes(racedDesignOnly).has("compile-input-changed") &&
         racedDesignOnly.reviews.entries.length === 0 &&
         designRevisionReads >= 3,
+    );
+    let postFenceDesignReads = 0;
+    let postFenceDesignMutation = false;
+    project.revision = (() => {
+      ++postFenceDesignReads;
+      if (postFenceDesignReads === 6) {
+        designRevisionRacer.setWorldDesign(worldDesign());
+        postFenceDesignMutation = true;
+      }
+      return residentRevision.call(project);
+    }) as typeof project.revision;
+    const stableDesignOnly = compiler.compile({ scope: "design" });
+    project.revision = residentRevision;
+    TestValidator.predicate(
+      "design-only success returns the fenced revision without a later read",
+      stableDesignOnly.success &&
+        postFenceDesignReads === 5 &&
+        postFenceDesignMutation === false,
     );
     const reopenedWithFormation = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
@@ -934,6 +1019,30 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         diagnosticCodes(noWriteInventoryRace).has("compile-input-changed") &&
         noWriteInventoryRace.reviews.entries.length === 0 &&
         noWriteInventoryRaceReads === 3 &&
+        project.revision() === revisionBeforeContentRace,
+    );
+    const outputVerificationReadGenerated = project.readGeneratedFile;
+    project.readGeneratedFile = ((relativePath: string) => {
+      if (
+        new Error("output verification stack").stack?.includes(
+          "assertGeneratedOutputCurrent",
+        )
+      )
+        throw new Error("generated output verification read raced");
+      return outputVerificationReadGenerated.call(project, relativePath);
+    }) as typeof project.readGeneratedFile;
+    const unreadableOutputRace = compiler.compile({ scope: "source" });
+    project.readGeneratedFile = outputVerificationReadGenerated;
+    TestValidator.predicate(
+      "unreadable final generated verification becomes a structured input race",
+      unreadableOutputRace.success === false &&
+        diagnosticCodes(unreadableOutputRace).has("compile-input-changed") &&
+        unreadableOutputRace.reviews.entries.length === 0 &&
+        unreadableOutputRace.diagnostics.some((diagnostic) =>
+          diagnostic.message.includes(
+            "generated output verification read raced",
+          ),
+        ) &&
         project.revision() === revisionBeforeContentRace,
     );
     let writeOutputRaceReads = 0;

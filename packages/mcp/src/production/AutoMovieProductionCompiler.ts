@@ -352,15 +352,21 @@ export class AutoMovieProductionCompiler {
         materialized: [],
       };
     };
+    const confirmInputSnapshot = (): IAutoMovieCompileProjectOutput | null => {
+      try {
+        this.project.confirmCurrentSnapshot(inputCurrent, inputRevision);
+        return null;
+      } catch (error) {
+        if (error instanceof AutoMovieProductionInputRaceError === false)
+          throw error;
+        return inputRaceFailure(error.message);
+      }
+    };
     if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
-      if (inputCurrent() === false)
-        return inputRaceFailure(
-          "Production inputs or revision changed while compiler diagnostics and review requirements were being derived.",
-        );
-      else
-        return {
+      return (
+        confirmInputSnapshot() ?? {
           success: false,
-          revision: this.project.revision(),
+          revision: inputRevision,
           compiler: {
             version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
             inputFingerprint,
@@ -368,51 +374,45 @@ export class AutoMovieProductionCompiler {
           diagnostics,
           reviews,
           materialized: [],
-        };
+        }
+      );
     if (input.scope === "design")
-      return inputCurrent()
-        ? {
-            success: true,
-            revision: this.project.revision(),
-            compiler: {
-              version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
-              inputFingerprint,
-            },
-            diagnostics,
-            reviews: { entries: [] },
-            materialized: [],
-          }
-        : inputRaceFailure(
-            "Production design or revision changed while the design-only result was being derived.",
-          );
+      return (
+        confirmInputSnapshot() ?? {
+          success: true,
+          revision: inputRevision,
+          compiler: {
+            version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+            inputFingerprint,
+          },
+          diagnostics,
+          reviews: { entries: [] },
+          materialized: [],
+        }
+      );
 
-    /* c8 ignore start -- design scope returns above; every remaining scope
-    derives both source files and their manifest together. */
-    if (files === null || manifest === null)
-      throw new Error("Source compilation did not derive generated output.");
-    /* c8 ignore stop */
+    const sourceFiles = files!;
+    const sourceManifest = manifest!;
     const materialized = statusesOf(this.project, entries);
     if (materialize === false)
-      return inputCurrent()
-        ? {
-            success: true,
-            revision: this.project.revision(),
-            compiler: {
-              version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
-              inputFingerprint,
-            },
-            diagnostics,
-            reviews,
-            materialized: [],
-          }
-        : inputRaceFailure(
-            "Production inputs or revision changed while the read-only compile result was being derived.",
-          );
+      return (
+        confirmInputSnapshot() ?? {
+          success: true,
+          revision: inputRevision,
+          compiler: {
+            version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+            inputFingerprint,
+          },
+          diagnostics,
+          reviews,
+          materialized: [],
+        }
+      );
     let revision: number;
     try {
       revision = this.project.commitGenerated(
-        files,
-        manifest,
+        sourceFiles,
+        sourceManifest,
         inputCurrent,
         inputRevision,
       );

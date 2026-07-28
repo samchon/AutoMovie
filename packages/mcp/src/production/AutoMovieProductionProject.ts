@@ -918,6 +918,26 @@ export class AutoMovieProductionProject {
     );
   }
 
+  /**
+   * Confirm one read-only compiler snapshot under the production commit lock.
+   *
+   * The guard runs twice so a coding-agent input cannot change while a
+   * non-materializing diagnostic, design or lint response is being published.
+   * No file or revision is written.
+   */
+  public confirmCurrentSnapshot(
+    inputCurrent: () => boolean,
+    expectedRevision: number = this.lastReadRevision_,
+  ): number {
+    return this.commitFiles(
+      () => [],
+      inputCurrent,
+      expectedRevision,
+      undefined,
+      false,
+    );
+  }
+
   /** Read one stored review record. */
   public review(target: IAutoMovieReviewTarget): IAutoMovieStoredReview | null {
     this.refreshRevision();
@@ -1290,14 +1310,10 @@ export class AutoMovieProductionProject {
           "Compiler-owned generated manifest changed while output was being published.",
         );
     } catch (error) {
-      /* c8 ignore start -- deterministic tests cover explicit inventory,
-      byte and manifest mismatches. This fallback only handles a path becoming
-      unreadable during the verification syscall sequence itself. */
       if (error instanceof AutoMovieProductionInputRaceError) throw error;
       throw new AutoMovieProductionInputRaceError(
-        `Compiler-owned generated output became unreadable while it was being published: ${error instanceof Error ? error.message : String(error)}`,
+        `Compiler-owned generated output became unreadable while it was being published: ${String(error)}`,
       );
-      /* c8 ignore stop */
     }
   }
 
