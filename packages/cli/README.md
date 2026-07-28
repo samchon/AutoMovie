@@ -64,7 +64,9 @@ tracked `.automovie` provenance; it never rewrites legacy files or guesses the
 missing creative TypeScript. `--rollback` removes that state only while no
 production work has changed it. The import plan fingerprints the pre-import
 `src`, `generated`, and `renders` baselines, and rollback restores the complete
-applied state if removing any newly created empty directory fails.
+applied state if removing any newly created empty directory fails. Baselines
+include empty subdirectory topology as well as file bytes, and the project root
+stays locked until rollback either completes or restores `.automovie`.
 
 ## API
 

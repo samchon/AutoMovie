@@ -203,7 +203,9 @@ that plan and provenance under `.automovie`; `rollback()` removes it only while
 the imported state and any newly owned source/output directories remain
 untouched. Planning refuses an active resident commit, applying holds the
 resident revision lock across capture and publish, and rollback is
-all-or-nothing. The CLI exposes the same contract through `automovie migrate`.
+all-or-nothing while reserving both the project root and production state
+namespace. Empty-directory topology is part of the rollback baseline. The CLI
+exposes the same contract through `automovie migrate`.
 
 Render/see tools plan deterministic output, and `seeFrame` can also use a
 host-injected capture adapter. `planRender` resolves a committed shot or film

@@ -166,7 +166,13 @@ export class AutoMovieProductionProject {
         `AutoMovie production root "${root}" is not a directory. Choose a project directory in openProject.`,
       );
     fs.mkdirSync(root, { recursive: true });
-    return new AutoMovieProductionProject(root);
+    const lockPath = path.join(root, "revision.lock");
+    const token = acquireCommitLock(lockPath);
+    try {
+      return new AutoMovieProductionProject(root);
+    } finally {
+      releaseCommitLock(lockPath, token);
+    }
   }
 
   /** Current manifest with unknown future fields preserved. */

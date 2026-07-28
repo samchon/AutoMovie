@@ -97,7 +97,7 @@ export class AutoMovieLegacyImporter {
 
   /** Persist one immutable import plan and v2 provenance atomically. */
   public apply(): IAutoMovieLegacyImportApplyOutput {
-    const root = path.resolve(this.rootDirectory);
+    const root = validateLegacyRoot(this.rootDirectory);
     const lockPath = path.join(root, "revision.lock");
     const token = acquireCommitLock(lockPath);
     try {
@@ -156,20 +156,26 @@ export class AutoMovieLegacyImporter {
 
   /** Remove one still-untouched applied import, preserving all legacy bytes. */
   public rollback(): IAutoMovieLegacyImportRollbackOutput {
-    const root = path.resolve(this.rootDirectory);
-    const stateRoot = path.join(root, ".automovie");
-    const linked = lstatOrNull(stateRoot);
-    if (
-      linked === null ||
-      linked.isSymbolicLink() ||
-      linked.isDirectory() === false
-    )
-      throw new Error(
-        `No physical applied legacy import exists at "${stateRoot}". Nothing was rolled back.`,
-      );
-    const lockPath = path.join(stateRoot, "revision.lock");
-    const token = acquireCommitLock(lockPath);
-    return this.rollbackLocked(root, stateRoot, lockPath, token);
+    const root = validateLegacyRoot(this.rootDirectory);
+    const rootLockPath = path.join(root, "revision.lock");
+    const rootToken = acquireCommitLock(rootLockPath);
+    try {
+      const stateRoot = path.join(root, ".automovie");
+      const linked = lstatOrNull(stateRoot);
+      if (
+        linked === null ||
+        linked.isSymbolicLink() ||
+        linked.isDirectory() === false
+      )
+        throw new Error(
+          `No physical applied legacy import exists at "${stateRoot}". Nothing was rolled back.`,
+        );
+      const lockPath = path.join(stateRoot, "revision.lock");
+      const token = acquireCommitLock(lockPath);
+      return this.rollbackLocked(root, stateRoot, lockPath, token);
+    } finally {
+      releaseCommitLock(rootLockPath, rootToken);
+    }
   }
 
   private rollbackLocked(
@@ -197,7 +203,6 @@ export class AutoMovieLegacyImporter {
       );
       const removed: string[] = [];
       fs.renameSync(stateRoot, quarantine);
-      releaseCommitLock(path.join(quarantine, "revision.lock"), token);
       try {
         for (const baseline of plan.rollbackBaseline)
           if (baseline.existed === false) {
@@ -213,11 +218,14 @@ export class AutoMovieLegacyImporter {
         if (fs.existsSync(stateRoot) === false) {
           if (
             fs.existsSync(quarantine) &&
-            verifyAppliedImport(quarantine, root, plan)
+            verifyAppliedImport(quarantine, root, plan, {
+              path: "revision.lock",
+              bytes: Buffer.from(token, "utf8"),
+            })
           )
             fs.renameSync(quarantine, stateRoot);
           else {
-            restoreAppliedImport(stateRoot, root, plan);
+            restoreAppliedImport(stateRoot, root, plan, token);
             try {
               fs.rmSync(quarantine, { force: true, recursive: true });
             } catch {
@@ -415,24 +423,29 @@ const captureRollbackBaseline = (
   (["src", "generated", "renders"] as const).map((relative) => {
     const absolute = path.join(root, relative);
     const status = lstatOrNull(absolute);
-    if (status === null) return { path: relative, existed: false, files: [] };
+    if (status === null)
+      return {
+        path: relative,
+        existed: false,
+        directories: [],
+        files: [],
+      };
     if (status.isSymbolicLink() || status.isDirectory() === false)
       throw new Error(
         `Production-owned rollback baseline "${absolute}" must be a physical directory.`,
       );
     const files = new Map<string, Uint8Array | null>();
-    collectDirectory(root, relative, files);
+    const directories: string[] = [];
+    collectDirectory(root, relative, files, directories);
     return {
       path: relative,
       existed: true,
+      directories,
       files: inventoryEntries(files, []),
     };
   });
 
-const readLegacySnapshot = (
-  rootDirectory: string,
-  lockToken?: string,
-): ILegacySnapshot => {
+const validateLegacyRoot = (rootDirectory: string): string => {
   const root = path.resolve(rootDirectory);
   const status = lstatOrNull(root);
   if (
@@ -444,6 +457,14 @@ const readLegacySnapshot = (
     throw new Error(
       `Legacy project root "${root}" must be one physical, dedicated project directory.`,
     );
+  return root;
+};
+
+const readLegacySnapshot = (
+  rootDirectory: string,
+  lockToken?: string,
+): ILegacySnapshot => {
+  const root = validateLegacyRoot(rootDirectory);
   assertLegacyLock(root, lockToken);
   const revisionBefore = readLegacyRevisionSnapshot(root);
   const manifestBytes = readPhysicalFile(root, "automovie.json", true);
@@ -565,6 +586,7 @@ const collectDirectory = (
   root: string,
   relative: string,
   files: Map<string, Uint8Array | null>,
+  directories?: string[],
 ): void => {
   const absolute = path.join(root, ...relative.split("/"));
   const status = lstatOrNull(absolute);
@@ -581,8 +603,10 @@ const collectDirectory = (
       throw new Error(
         `Legacy inventory path "${child}" is a symlink or junction. Replace it with physical project content before import.`,
       );
-    if (entry.isDirectory()) collectDirectory(root, child, files);
-    else if (entry.isFile())
+    if (entry.isDirectory()) {
+      directories?.push(child);
+      collectDirectory(root, child, files, directories);
+    } else if (entry.isFile())
       files.set(child, fs.readFileSync(path.join(root, ...child.split("/"))));
     else
       throw new Error(
@@ -671,9 +695,20 @@ const isCanonicalBaseline = (
 ): boolean => {
   if (
     baseline.path !== expectedPath ||
-    (baseline.existed === false && baseline.files.length !== 0)
+    (baseline.existed === false &&
+      (baseline.directories.length !== 0 || baseline.files.length !== 0))
   )
     return false;
+  let previousDirectory: string | null = null;
+  for (const directory of baseline.directories) {
+    if (
+      isCanonicalBaselinePath(directory, expectedPath) === false ||
+      (previousDirectory !== null &&
+        compareCodeUnits(previousDirectory, directory) >= 0)
+    )
+      return false;
+    previousDirectory = directory;
+  }
   let previous: string | null = null;
   for (const file of baseline.files) {
     if (
@@ -681,14 +716,7 @@ const isCanonicalBaseline = (
       file.digest === null ||
       file.bytes < 0 ||
       Number.isSafeInteger(file.bytes) === false ||
-      file.path.startsWith(`${expectedPath}/`) === false ||
-      file.path.includes("\\") ||
-      file.path
-        .split("/")
-        .some(
-          (segment) =>
-            segment.length === 0 || segment === "." || segment === "..",
-        ) ||
+      isCanonicalBaselinePath(file.path, expectedPath) === false ||
       (previous !== null && compareCodeUnits(previous, file.path) >= 0)
     )
       return false;
@@ -696,6 +724,18 @@ const isCanonicalBaseline = (
   }
   return true;
 };
+
+const isCanonicalBaselinePath = (
+  value: string,
+  expectedPath: IAutoMovieLegacyOwnedDirectoryBaseline["path"],
+): boolean =>
+  value.startsWith(`${expectedPath}/`) &&
+  value.includes("\\") === false &&
+  value
+    .split("/")
+    .every(
+      (segment) => segment.length !== 0 && segment !== "." && segment !== "..",
+    );
 
 const validatePlan = (value: unknown): value is IAutoMovieLegacyImportPlan => {
   const validation = typia.validateEquals<IAutoMovieLegacyImportPlan>(value);
@@ -867,8 +907,12 @@ const assertRollbackBaseline = (
         `Production-owned directory "${directory}" changed after import. Restore its pre-import contents before rollback.`,
       );
     const files = new Map<string, Uint8Array | null>();
-    collectDirectory(root, baseline.path, files);
-    if (sameInventory(baseline.files, inventoryEntries(files, [])) === false)
+    const directories: string[] = [];
+    collectDirectory(root, baseline.path, files, directories);
+    if (
+      equalStrings(baseline.directories, directories) === false ||
+      sameInventory(baseline.files, inventoryEntries(files, [])) === false
+    )
       throw new Error(
         `Production-owned directory "${directory}" changed after import. Preserve current work; rollback refused.`,
       );
@@ -879,6 +923,7 @@ const restoreAppliedImport = (
   stateRoot: string,
   root: string,
   plan: IAutoMovieLegacyImportPlan,
+  lockToken: string,
 ): void => {
   const staging = fs.mkdtempSync(path.join(root, ".automovie-restore-"));
   try {
@@ -889,6 +934,10 @@ const restoreAppliedImport = (
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, bytes);
     }
+    fs.writeFileSync(
+      path.join(staging, "revision.lock"),
+      Buffer.from(lockToken, "utf8"),
+    );
     fs.renameSync(staging, stateRoot);
   } finally {
     if (fs.existsSync(staging))

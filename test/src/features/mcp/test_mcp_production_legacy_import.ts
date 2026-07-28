@@ -337,6 +337,38 @@ export const test_mcp_production_legacy_import = (): void => {
     preexistingSource.dispose();
   }
 
+  const emptyDirectoryTopology = createLegacy();
+  try {
+    const original = path.join(
+      emptyDirectoryTopology.root,
+      "src/original-empty",
+    );
+    const replacement = path.join(
+      emptyDirectoryTopology.root,
+      "src/replacement-empty",
+    );
+    fs.mkdirSync(original, { recursive: true });
+    const importer = new AutoMovieLegacyImporter(emptyDirectoryTopology.root);
+    const plan = importer.plan();
+    importer.apply();
+    fs.rmdirSync(original);
+    fs.mkdirSync(replacement);
+    TestValidator.predicate(
+      "changed empty-directory topology refuses rollback",
+      plan.rollbackBaseline[0]?.directories.includes("src/original-empty") ===
+        true && throws(() => importer.rollback(), "changed after import"),
+    );
+    fs.rmdirSync(replacement);
+    fs.mkdirSync(original);
+    importer.rollback();
+    TestValidator.predicate(
+      "unchanged empty-directory topology survives rollback",
+      fs.existsSync(original),
+    );
+  } finally {
+    emptyDirectoryTopology.dispose();
+  }
+
   const rollbackFailure = createLegacy();
   try {
     const importer = new AutoMovieLegacyImporter(rollbackFailure.root);
@@ -347,6 +379,11 @@ export const test_mcp_production_legacy_import = (): void => {
     fs.rmdirSync = ((directory: fs.PathLike): void => {
       if (injected === false) {
         injected = true;
+        if (
+          fs.existsSync(path.join(rollbackFailure.root, "revision.lock")) ===
+          false
+        )
+          throw new Error("rollback released the canonical root reservation");
         throw new Error("injected owned-directory removal failure");
       }
       nativeRmdir(directory);
@@ -400,6 +437,25 @@ export const test_mcp_production_legacy_import = (): void => {
     fs.rmSync(lockPath);
   } finally {
     activeCommit.dispose();
+  }
+
+  const linkedRoot = createLegacy();
+  const linkedParent = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-linked-import-root-"),
+  );
+  try {
+    const link = path.join(linkedParent, "project");
+    fs.symlinkSync(linkedRoot.root, link, "junction");
+    TestValidator.predicate(
+      "apply validates a physical root before creating its resident lock",
+      throws(
+        () => new AutoMovieLegacyImporter(link).apply(),
+        "physical, dedicated",
+      ) && fs.existsSync(path.join(linkedRoot.root, "revision.lock")) === false,
+    );
+  } finally {
+    linkedRoot.dispose();
+    fs.rmSync(linkedParent, { force: true, recursive: true });
   }
 
   const revisionRace = createLegacy();
