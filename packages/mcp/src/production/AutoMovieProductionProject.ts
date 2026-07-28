@@ -2048,7 +2048,7 @@ const normalizeSlash = (value: string): string =>
 const assertRealAncestorInside = (
   rootReal: string,
   candidate: string,
-): void => {
+): string => {
   let existing = candidate;
   while (fs.existsSync(existing) === false) existing = path.dirname(existing);
   const real = fs.realpathSync(existing);
@@ -2056,6 +2056,7 @@ const assertRealAncestorInside = (
     throw new Error(
       `Owned path "${candidate}" escapes the production root through "${existing}". Replace the symlink or junction with a project-local directory.`,
     );
+  return real;
 };
 
 const assertOwnedRootDirectory = (
@@ -2077,8 +2078,7 @@ const ownedRootReal = (projectRootReal: string, directory: string): string => {
     throw new Error(
       `Owned root "${directory}" was replaced by a symlink, junction, or non-directory. Restore its physical project directory.`,
     );
-  assertRealAncestorInside(projectRootReal, directory);
-  return fs.realpathSync(directory);
+  return assertRealAncestorInside(projectRootReal, directory);
 };
 
 const relativeToRoot = (root: string, file: string): string =>

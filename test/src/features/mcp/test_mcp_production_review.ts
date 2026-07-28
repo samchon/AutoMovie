@@ -953,9 +953,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         fs.appendFileSync(sourceFile, "\n// concurrent review edit\n");
       return new AutoMovieProductionCompiler(project).lint({ scope: "source" });
     });
-    let racedSubmission: ReturnType<
-      AutoMovieProductionReviewService["submit"]
-    >;
+    let racedSubmission: ReturnType<AutoMovieProductionReviewService["submit"]>;
     try {
       const racedPrepared = racingReview.prepare({ target: shotTarget });
       racedSubmission = racingReview.submit(worksheet(project, racedPrepared));
