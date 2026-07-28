@@ -2,7 +2,10 @@ import { scaffoldAssetDirectory } from "@automovie/cli";
 import {
   IAutoMovieFilmEdit,
   IAutoMovieFilmTimeline,
+  IAutoMoviePrepareReviewOutput,
+  IAutoMovieReviewEvidence,
   IAutoMovieShotContract,
+  IAutoMovieSubmitReviewInput,
 } from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
@@ -16,8 +19,13 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
+import { PNG } from "pngjs";
 
-import { productionDesign, productionFixture } from "./productionFixtures";
+import {
+  productionDesign,
+  productionFixture,
+  testCaptureRuntimeIdentity,
+} from "./productionFixtures";
 
 const editSource = (edit: unknown): string =>
   `export const film = { build() { return ${JSON.stringify(edit)}; } };\n`;
@@ -33,6 +41,113 @@ const throws = (closure: () => unknown): boolean => {
   } catch {
     return true;
   }
+};
+
+const captureBytes = (): Uint8Array => {
+  const png = new PNG({ width: 16, height: 16 });
+  png.data.fill(200);
+  png.data[0] = 0;
+  return PNG.sync.write(png);
+};
+
+const filmWorksheet = (
+  project: AutoMovieProductionProject,
+  prepared: IAutoMoviePrepareReviewOutput,
+): IAutoMovieSubmitReviewInput => {
+  const scenarios = [...project.graph().acceptance.values()]
+    .filter((scenario) => {
+      if (scenario.required === false) return false;
+      if (prepared.outcomes.some((outcome) => outcome.scenario === scenario.id))
+        return true;
+      const criterion = scenario.criterion;
+      if (criterion.kind !== "frame") return false;
+      const shot =
+        criterion.shot ??
+        (scenario.target.kind === "shot" ? scenario.target.id : undefined);
+      return prepared.frames.some(
+        (frame) =>
+          frame.shot === shot &&
+          frame.reviewFrame === criterion.frame &&
+          frame.pass === criterion.pass,
+      );
+    })
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const frame = prepared.frames[0]!;
+  const frameEvidence = {
+    kind: "frame" as const,
+    shot: frame.shot,
+    reviewFrame: frame.reviewFrame,
+    bundle: frame.bundle,
+    frame: frame.frame,
+    time: frame.time,
+    pass: frame.pass,
+    digest: frame.digest,
+  };
+  return {
+    target: prepared.target,
+    preparedFingerprint: prepared.fingerprint,
+    observations:
+      "The exact canonical film cut and its current frame were inspected.",
+    checks: prepared.requiredCriteria.map((criterion, index) => ({
+      criterion,
+      verdict: "pass",
+      observation: `${criterion} is established by current film evidence ${index}.`,
+      evidence:
+        criterion === "acceptance-scenarios"
+          ? scenarios.flatMap((scenario) => {
+              const contractEvidence: IAutoMovieReviewEvidence = {
+                kind: "acceptance",
+                scenario: scenario.id,
+                exactValue: scenario,
+              };
+              const scenarioCriterion = scenario.criterion;
+              if (scenarioCriterion.kind === "frame") {
+                const shot =
+                  scenarioCriterion.shot ??
+                  (scenario.target.kind === "shot"
+                    ? scenario.target.id
+                    : undefined);
+                const evidence = prepared.frames.find(
+                  (candidate) =>
+                    candidate.shot === shot &&
+                    candidate.reviewFrame === scenarioCriterion.frame &&
+                    candidate.pass === scenarioCriterion.pass,
+                )!;
+                return [
+                  contractEvidence,
+                  {
+                    kind: "frame" as const,
+                    shot: evidence.shot,
+                    reviewFrame: evidence.reviewFrame,
+                    bundle: evidence.bundle,
+                    frame: evidence.frame,
+                    time: evidence.time,
+                    pass: evidence.pass,
+                    digest: evidence.digest,
+                  },
+                ];
+              }
+              const outcome = prepared.outcomes.find(
+                (candidate) => candidate.scenario === scenario.id,
+              )!;
+              return [
+                contractEvidence,
+                {
+                  kind: "outcome" as const,
+                  scenario: scenario.id,
+                  exactValue: outcome,
+                },
+              ];
+            })
+          : [frameEvidence],
+      ...(criterion === "acceptance-scenarios"
+        ? { acceptanceScenarios: scenarios.map((scenario) => scenario.id) }
+        : {}),
+    })),
+    corrections: [],
+    completionBasis: prepared.requiredCriteria.join(", "),
+    complete: true,
+  };
 };
 
 const baseEdit = (): IAutoMovieFilmEdit => ({
@@ -95,7 +210,7 @@ const twoShotEdit = (): IAutoMovieFilmEdit => {
 };
 
 /** Film source compiles into one frame-exact artifact shared downstream. */
-export const test_mcp_production_film_timeline = (): void => {
+export const test_mcp_production_film_timeline = async (): Promise<void> => {
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -532,10 +647,60 @@ export const test_mcp_production_film_timeline = (): void => {
           }),
         ),
     );
-    project.setProductionDesign(productionDesign({ targetRuntimeSeconds: 3 }));
+    const openingWithBoundaryEvents = structuredClone(
+      project.graph().shots.get("opening")!,
+    );
+    const signalEvent = openingWithBoundaryEvents.events[0]!;
+    openingWithBoundaryEvents.events.push(
+      {
+        ...structuredClone(signalEvent),
+        id: "source-in-boundary",
+        window: { from: 2, to: 4 },
+      },
+      {
+        ...structuredClone(signalEvent),
+        id: "source-out-boundary",
+        window: { from: 4, to: 6 },
+      },
+    );
+    project.setShotContract(openingWithBoundaryEvents);
+    project.setProductionDesign(productionDesign({ targetRuntimeSeconds: 2 }));
+    project.setAcceptanceScenario({
+      id: "film-runtime",
+      target: { kind: "film", id: "fixture-film" },
+      criterion: {
+        kind: "metric",
+        metric: "runtime-seconds",
+        operator: "==",
+        value: 2,
+      },
+      required: true,
+    });
+    project.setAcceptanceScenario({
+      id: "film-source-in-event",
+      target: { kind: "film", id: "fixture-film" },
+      criterion: {
+        kind: "event",
+        shot: "opening",
+        event: "source-in-boundary",
+        expectation: "An event exactly on sourceIn belongs to the film.",
+      },
+      required: true,
+    });
+    project.setAcceptanceScenario({
+      id: "film-source-out-event",
+      target: { kind: "film", id: "fixture-film" },
+      criterion: {
+        kind: "event",
+        shot: "opening",
+        event: "source-out-boundary",
+        expectation: "An event exactly on sourceOut is outside the film.",
+      },
+      required: true,
+    });
     const trimmed = baseEdit();
     trimmed.tracks.video[0]!.sourceIn = { seconds: 3 };
-    trimmed.tracks.video[0]!.sourceOut = { seconds: 6 };
+    trimmed.tracks.video[0]!.sourceOut = { seconds: 5 };
     trimmed.omissions.push({
       shot: "answer",
       reason: "The alternate answer remains excluded from the shorter cut.",
@@ -553,8 +718,36 @@ export const test_mcp_production_film_timeline = (): void => {
     const trimReview = new AutoMovieProductionReviewService(project).prepare({
       target: { kind: "film", id: "fixture-film" },
     });
+    const captureOracle = new AutoMovieProductionOracleService(
+      project,
+      async () => ({
+        bytes: captureBytes(),
+        runtimeIdentity: testCaptureRuntimeIdentity(),
+        width: 16,
+        height: 16,
+      }),
+    );
+    const capturedTrimEntry = await captureOracle.preview({
+      target: { kind: "shot", id: "opening" },
+      time: 3,
+      pass: "beauty",
+      width: 16,
+      height: 16,
+    });
+    const completeTrimReview = new AutoMovieProductionReviewService(
+      project,
+    ).prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    const trimWorksheet = filmWorksheet(project, completeTrimReview);
+    const trimSubmission = new AutoMovieProductionReviewService(project).submit(
+      trimWorksheet,
+    );
+    const submittedAcceptance = trimWorksheet.checks.find(
+      (check) => check.criterion === "acceptance-scenarios",
+    )?.acceptanceScenarios;
     TestValidator.predicate(
-      "a legal trim uses one deterministic in-range fallback when authored review frames are excluded",
+      "a legal trim uses one in-range fallback and submits exact half-open event coverage",
       legalTrim.success &&
         trimSelection.length === 1 &&
         trimSelection[0]?.id === "film-segment-entry" &&
@@ -572,8 +765,91 @@ export const test_mcp_production_film_timeline = (): void => {
               diagnostic.target.includes("signal-apex") === false) &&
             (diagnostic.code !== "review-outcome-missing" ||
               diagnostic.message.includes("film-opening-event") === false),
-        ),
+        ) &&
+        capturedTrimEntry.captured &&
+        completeTrimReview.outcomes.some(
+          (outcome) => outcome.scenario === "film-source-in-event",
+        ) &&
+        completeTrimReview.outcomes.every(
+          (outcome) =>
+            outcome.scenario !== "film-opening-event" &&
+            outcome.scenario !== "film-source-out-event",
+        ) &&
+        submittedAcceptance?.join(",") ===
+          "film-runtime,film-source-in-event" &&
+        trimSubmission.accepted &&
+        trimSubmission.state === "complete",
     );
+    const realizationPath = path.join(
+      fixture.root,
+      "generated/realizations/opening.json",
+    );
+    const realizationBytes = fs.readFileSync(realizationPath);
+    const realization = JSON.parse(realizationBytes.toString("utf8")) as {
+      events: Array<{ id: string }>;
+    };
+    const corruptions: Array<{ name: string; bytes: Uint8Array }> = [
+      {
+        name: "valid realization missing the event",
+        bytes: Buffer.from(
+          JSON.stringify({
+            ...realization,
+            events: realization.events.filter(
+              (event) => event.id !== "source-in-boundary",
+            ),
+          }),
+        ),
+      },
+      { name: "schema-invalid realization", bytes: Buffer.from("{}") },
+      { name: "malformed realization", bytes: Buffer.from("{") },
+    ];
+    for (const corruption of corruptions) {
+      fs.writeFileSync(realizationPath, corruption.bytes);
+      const corruptReviewService = new AutoMovieProductionReviewService(
+        project,
+      );
+      const refused = corruptReviewService.prepare({
+        target: { kind: "film", id: "fixture-film" },
+      });
+      const corruptWorksheet: IAutoMovieSubmitReviewInput = {
+        ...trimWorksheet,
+        preparedFingerprint: refused.fingerprint,
+        checks: trimWorksheet.checks.map((check) =>
+          check.criterion !== "acceptance-scenarios"
+            ? check
+            : {
+                ...check,
+                acceptanceScenarios: check.acceptanceScenarios?.filter(
+                  (scenario) => scenario !== "film-source-in-event",
+                ),
+                evidence: check.evidence.filter(
+                  (evidence) =>
+                    !(
+                      (evidence.kind === "acceptance" ||
+                        evidence.kind === "outcome") &&
+                      evidence.scenario === "film-source-in-event"
+                    ),
+                ),
+              },
+        ),
+      };
+      const corruptSubmission = corruptReviewService.submit(corruptWorksheet);
+      TestValidator.predicate(
+        `${corruption.name} retains required event coverage and refuses review`,
+        refused.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-outcome-missing" &&
+            diagnostic.message.includes("film-source-in-event"),
+        ) &&
+          corruptSubmission.accepted === false &&
+          corruptSubmission.diagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === "review-acceptance-coverage-incomplete" &&
+              diagnostic.message.includes("film-source-in-event"),
+          ),
+      );
+    }
+    fs.writeFileSync(realizationPath, realizationBytes);
   } finally {
     fixture.dispose();
   }
