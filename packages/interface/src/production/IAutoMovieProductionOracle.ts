@@ -217,7 +217,7 @@ export interface IAutoMoviePreviewFrameOutput {
 /** Content-addressed manifest for preview and production frames. */
 export interface IAutoMovieRenderBundleManifest {
   /** Bundle manifest format. */
-  version: 1;
+  version: 2;
   /** Shot or film render target. */
   target:
     | {
@@ -234,6 +234,18 @@ export interface IAutoMovieRenderBundleManifest {
       };
   /** Compile fingerprint whose bytes were rendered. */
   compileFingerprint: AutoMovieContentDigest;
+  /**
+   * Non-blank host-declared browser and graphics-backend identity used for
+   * every frame in this bundle.
+   */
+  rendererIdentity: string;
+  /**
+   * Target-local render identity. Unlike the aggregate compile fingerprint,
+   * this changes only when this target's compiled bytes or declared viewer,
+   * capture, configuration, or asset inputs change. `rendererIdentity`
+   * separately distinguishes the browser and graphics backend.
+   */
+  targetFingerprint: AutoMovieContentDigest;
   /** Deterministic render specification. */
   renderSpec: IAutoMovieRenderSpec;
   /** Verified PNG frames in the bundle. */
@@ -266,6 +278,11 @@ export type AutoMovieProductionFrameCapture = (
 ) => Promise<{
   /** Raw PNG bytes. */
   bytes: Uint8Array;
+  /**
+   * Non-blank browser and graphics-backend identity. A host must change this
+   * when either implementation can change pixel output.
+   */
+  rendererIdentity: string;
   /** Pixel width. */
   width: number;
   /** Pixel height. */

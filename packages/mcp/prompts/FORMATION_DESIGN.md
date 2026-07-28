@@ -1,8 +1,8 @@
 # Formation Design
 
-`setFormationDesign` represents a unit, not thousands of actor nodes.
+`setFormationDesign` represents a unit, not thousands of caller-authored actor nodes. The current foundation compiler expands at most 10,000 total formation members in one production into explicit nodes; a larger bound would be dishonest until compiler and viewer instancing replace that representation.
 
-The identity of an ordinary member is `formation id + deterministic slot index`. Count, compact layout, spacing, anchor, facing, and seed derive every slot. `line` and `column` capacity must cover count; wedge depth and arc/scatter radius must be positive.
+The identity of an ordinary member is `formation id + deterministic slot index`. Count, compact layout, anchor, facing, and seed derive every slot. `line`, `column`, and `wedge` put positive lateral/depth `spacing` inside the layout because their algorithms consume it. `arc` separation is determined only by radius, covered angle, and count; `scatter` density is determined only by radius, seed, and count. Do not send a common spacing field that those layouts would silently ignore. Line and column capacity must cover count; wedge depth squared must cover count; arc/scatter radius must be positive.
 
 `capabilities` is a small review-facing vocabulary for intended unit behavior. It is not a compiler permission system: the foundation compiler neither infers an action from a label nor proves that source avoided an undeclared action. Source authors choreography in code; typed shot predicates, compiled event realization, and frame review establish what actually happened.
 

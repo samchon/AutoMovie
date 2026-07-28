@@ -139,6 +139,24 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       canonicalShotBytes,
       `${canonicalizeAutoMovieJson(JSON.parse(canonicalShotBytes))}\n`,
     );
+    const boundSourcePath = path.join(fixture.root, "src/shots/opening.ts");
+    const boundSourceBytes = fs.readFileSync(boundSourcePath);
+    fs.writeFileSync(
+      boundSourcePath,
+      Buffer.from(
+        `\uFEFF${boundSourceBytes
+          .toString("utf8")
+          .replace(/\r\n|\r|\n/g, "\r\n")}`,
+        "utf8",
+      ),
+    );
+    const normalizedSourceStatus = compiler.lint({ scope: "source" });
+    fs.writeFileSync(boundSourcePath, boundSourceBytes);
+    TestValidator.predicate(
+      "bound TypeScript BOM and EOL changes do not re-enter through source-root content identity",
+      normalizedSourceStatus.compiler.inputFingerprint ===
+        first.compiler.inputFingerprint && normalizedSourceStatus.success,
+    );
     const statusReadGenerated = project.readGeneratedFile;
     project.readGeneratedFile = ((relativePath: string) => {
       if (new Error("status race").stack?.includes("statusesOf"))
@@ -832,6 +850,15 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         "review-revise",
         "review-incomplete",
       ].every((code) => reviewCodes.has(code)),
+    );
+
+    const optionalFinalWithoutLedger = compiler.compile({ scope: "final" });
+    TestValidator.predicate(
+      "final scope requires an aggregate byte ledger even when every deliverable is optional",
+      optionalFinalWithoutLedger.success === false &&
+        diagnosticCodes(optionalFinalWithoutLedger).has(
+          "render-deliverable-missing",
+        ),
     );
 
     const requiredProduction = {

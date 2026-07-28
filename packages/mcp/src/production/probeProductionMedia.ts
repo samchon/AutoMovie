@@ -27,10 +27,33 @@ export const probeProductionMedia = (props: {
     const text = Buffer.from(props.bytes).toString("utf8");
     if (/^\uFEFF?WEBVTT(?:[ \t].*)?(?:\r?\n|$)/.test(text) === false)
       throw new Error("Caption bytes do not contain a valid WebVTT header.");
-    const cues = text
-      .split(/\r?\n/)
-      .filter((line) => line.includes("-->"))
-      .map(parseWebVttCue);
+    const blocks = text
+      .replace(/^\uFEFF/, "")
+      .replace(/\r\n?|\n/g, "\n")
+      .split(/\n[ \t]*\n/)
+      .slice(1);
+    const cues: Array<{ start: number; end: number }> = [];
+    for (const block of blocks) {
+      const lines = block.split("\n");
+      if (/^(?:NOTE|STYLE|REGION)(?:[ \t]|$)/.test(lines[0] ?? "")) continue;
+      const timingIndex = lines[0]?.includes("-->")
+        ? 0
+        : lines[1]?.includes("-->")
+          ? 1
+          : -1;
+      if (timingIndex < 0) continue;
+      const cue = parseWebVttCue(lines[timingIndex]!);
+      const payload = lines.slice(timingIndex + 1);
+      if (payload.some((line) => line.includes("-->")))
+        throw new Error(
+          `WebVTT cue ${cues.length + 1} contains another timing line without a blank separator. Separate every cue block.`,
+        );
+      if (payload.some((line) => line.trim().length > 0) === false)
+        throw new Error(
+          `WebVTT cue ${cues.length + 1} has no non-empty payload. Add observable caption text after its timing line.`,
+        );
+      cues.push(cue);
+    }
     if (cues.length === 0)
       throw new Error(
         "WebVTT captions contain no timed cue. Add at least one observable cue or do not declare this deliverable required.",
@@ -50,7 +73,10 @@ export const probeProductionMedia = (props: {
       kind: "webvtt",
       cueCount: cues.length,
       firstCueSeconds: cues[0]!.start,
-      lastCueSeconds: Math.max(...cues.map((cue) => cue.end)),
+      lastCueSeconds: cues.reduce(
+        (latest, cue) => Math.max(latest, cue.end),
+        0,
+      ),
     };
   }
   const parsed = parseMp4(props.bytes);

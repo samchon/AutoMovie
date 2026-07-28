@@ -21,6 +21,7 @@ import {
   AutoMovieProductionProject,
   createAutoMovieProductionMcpServer,
   productionRenderBundleRelativePath,
+  productionRenderTargetFingerprint,
 } from "@automovie/mcp";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -299,10 +300,17 @@ export const test_mcp_production_application = async (): Promise<void> => {
         ) &&
         refreshed.success,
     );
+    const renderProject = AutoMovieProductionProject.open(fixture.root);
     const renderManifest: IAutoMovieRenderBundleManifest = {
-      version: 1,
+      version: 2,
       target: { kind: "shot", id: "opening" },
       compileFingerprint: refreshed.compiler.inputFingerprint,
+      rendererIdentity: "test:png-v1",
+      targetFingerprint: productionRenderTargetFingerprint(
+        renderProject,
+        renderProject.generatedManifest()!,
+        { kind: "shot", id: "opening" },
+      ),
       renderSpec: {
         target: "opening",
         frameFormat: { width: 2, height: 2, fps: 24 },
@@ -314,7 +322,6 @@ export const test_mcp_production_application = async (): Promise<void> => {
       frames: [],
     };
     const renderBundle = productionRenderBundleRelativePath(renderManifest);
-    const renderProject = AutoMovieProductionProject.open(fixture.root);
     renderProject.commitRenderBundle(renderBundle, new Map(), renderManifest);
     const currentRender = path.join(
       renderProject.renderRoot(),
@@ -337,6 +344,20 @@ export const test_mcp_production_application = async (): Promise<void> => {
       "inspection parses render identity instead of substring matching",
       renderInspection.renders.some((render) => render.current) &&
         renderInspection.renders.some((render) => render.current === false),
+    );
+    const unrelatedSource = path.join(fixture.root, "src/unrelated.ts");
+    fs.writeFileSync(
+      unrelatedSource,
+      "export const unrelated = 'does not alter opening pixels';\n",
+    );
+    const unrelatedCompile = application.compileProject({ scope: "source" });
+    const unrelatedInspection = application.inspectProject({});
+    fs.rmSync(unrelatedSource);
+    application.compileProject({ scope: "source" });
+    TestValidator.predicate(
+      "inspection preserves a target-local bundle across unrelated source identity",
+      unrelatedCompile.success &&
+        unrelatedInspection.renders.some((render) => render.current),
     );
     const newerWorld = worldDesign();
     newerWorld.landmarks[0]!.meaning += " Newer.";

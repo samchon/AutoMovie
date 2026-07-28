@@ -8,8 +8,7 @@
     "limbRadius": 0.06
   },
   "palette": {
-    "body": "#d7b56d",
-    "signal": "#b13f36"
+    "body": "#d7b56d"
   },
   "lod": [
     {

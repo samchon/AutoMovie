@@ -42,8 +42,32 @@ const SUPPORTED_MODEL_CAPABILITIES: Record<
   "primitive-prop": new Set(),
 };
 
+const SUPPORTED_STICKMAN_ATTACHMENT_BONES = new Set([
+  "hips",
+  "spine",
+  "head",
+  "leftUpperArm",
+  "leftLowerArm",
+  "leftHand",
+  "rightUpperArm",
+  "rightLowerArm",
+  "rightHand",
+  "leftUpperLeg",
+  "leftLowerLeg",
+  "rightUpperLeg",
+  "rightLowerLeg",
+]);
+
 /** Maximum exact production raster accepted by design and frame review. */
 export const AUTOMOVIE_MAX_FRAME_PIXELS = 16_777_216;
+
+/**
+ * Maximum explicit formation slots in one foundation production.
+ *
+ * The current compiler emits one deterministic scene node per slot. Larger
+ * armies require an instanced representation before the public bound can grow.
+ */
+export const AUTOMOVIE_MAX_FORMATION_MEMBERS = 10_000;
 
 /** Validate graph-level production invariants after structural validation. */
 export const validateAutoMovieProductionGraph = (
@@ -178,13 +202,22 @@ export const validateAutoMovieProductionGraph = (
         `Model file identity is "${id}" but value id is "${model.id}". Rewrite the model with setModelRecipe using one matching id.`,
       );
     validateModelParameters(diagnostics, model, target, file);
-    if (Object.keys(model.palette).length === 0)
+    const paletteSize = Object.keys(model.palette).length;
+    if (paletteSize === 0)
       invalid(
         diagnostics,
         "design-collection-empty",
         target,
         file,
-        "palette must contain at least one named material color. Add it in setModelRecipe.",
+        "palette must contain one named #RRGGBB material color. Add it in setModelRecipe.",
+      );
+    else if (paletteSize > 1)
+      invalid(
+        diagnostics,
+        "design-collection-cardinality-invalid",
+        target,
+        file,
+        "palette must contain exactly one material color in the foundation compiler. Split visually distinct materials into separate recipes until semantic part-role binding is implemented.",
       );
     const lodTiers = new Set<string>();
     if (model.lod.length === 0)
@@ -254,14 +287,6 @@ export const validateAutoMovieProductionGraph = (
           `Palette color "${color}" is not a six-digit hexadecimal sRGB color. Use #RRGGBB in setModelRecipe.`,
         );
     }
-    if (Object.keys(model.palette).length === 0)
-      invalid(
-        diagnostics,
-        "design-collection-empty",
-        target,
-        file,
-        "Model palette must contain at least one named #RRGGBB material color. Add one in setModelRecipe.",
-      );
     uniqueTextValues(
       diagnostics,
       model.capabilities,
@@ -290,6 +315,17 @@ export const validateAutoMovieProductionGraph = (
         "attachments",
       );
       text(diagnostics, attachment.bone, target, file, "attachments.bone");
+      if (
+        model.archetype === "stickman" &&
+        SUPPORTED_STICKMAN_ATTACHMENT_BONES.has(attachment.bone) === false
+      )
+        invalid(
+          diagnostics,
+          "design-attachment-unsupported",
+          target,
+          file,
+          `Stickman attachment "${attachment.id}" names bone "${attachment.bone}", which the compiler-owned foundation skeleton does not materialize. Use one of ${[...SUPPORTED_STICKMAN_ATTACHMENT_BONES].join(", ")} or remove the attachment.`,
+        );
     }
     if (model.archetype !== "stickman" && model.attachments.length !== 0)
       invalid(
@@ -427,6 +463,22 @@ export const validateAutoMovieProductionGraph = (
     }
   }
 
+  const formationMemberCount = [...graph.formations.values()].reduce(
+    (sum, formation) => sum + formation.count,
+    0,
+  );
+  if (
+    Number.isSafeInteger(formationMemberCount) === false ||
+    formationMemberCount > AUTOMOVIE_MAX_FORMATION_MEMBERS
+  )
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      "formations",
+      ".automovie/design/formations",
+      `The production declares ${formationMemberCount} formation members, above the explicit-node foundation limit ${AUTOMOVIE_MAX_FORMATION_MEMBERS}. Reduce the total or implement an instanced compiler/viewer representation before raising the bound.`,
+    );
+
   for (const [id, formation] of graph.formations) {
     const target = `formation:${id}`;
     const file = `.automovie/design/formations/${encodeAutoMoviePathSegment(id)}.json`;
@@ -448,20 +500,14 @@ export const validateAutoMovieProductionGraph = (
         `model recipe "${formation.modelRecipe}"`,
         `setModelRecipe for "${formation.modelRecipe}" or change ${id}.modelRecipe`,
       );
-    integer(diagnostics, formation.count, 1, 1_000_000, target, file, "count");
-    positive(
+    integer(
       diagnostics,
-      formation.spacing.lateral,
+      formation.count,
+      1,
+      AUTOMOVIE_MAX_FORMATION_MEMBERS,
       target,
       file,
-      "spacing.lateral",
-    );
-    positive(
-      diagnostics,
-      formation.spacing.depth,
-      target,
-      file,
-      "spacing.depth",
+      "count",
     );
     vector(diagnostics, formation.anchor, target, file, "anchor");
     finite(diagnostics, formation.facingDeg, target, file, "facingDeg");
@@ -1119,6 +1165,20 @@ const validateFormationLayout = (
 ): void => {
   const layout = formation.layout;
   if (layout.kind === "line" || layout.kind === "column") {
+    positive(
+      diagnostics,
+      layout.spacing.lateral,
+      target,
+      file,
+      "layout.spacing.lateral",
+    );
+    positive(
+      diagnostics,
+      layout.spacing.depth,
+      target,
+      file,
+      "layout.spacing.depth",
+    );
     integer(
       diagnostics,
       layout.ranks,
@@ -1146,6 +1206,20 @@ const validateFormationLayout = (
         `Layout capacity ${layout.ranks * layout.files} is below count ${formation.count}. Fix layout in setFormationDesign.`,
       );
   } else if (layout.kind === "wedge") {
+    positive(
+      diagnostics,
+      layout.spacing.lateral,
+      target,
+      file,
+      "layout.spacing.lateral",
+    );
+    positive(
+      diagnostics,
+      layout.spacing.depth,
+      target,
+      file,
+      "layout.spacing.depth",
+    );
     integer(
       diagnostics,
       layout.depth,

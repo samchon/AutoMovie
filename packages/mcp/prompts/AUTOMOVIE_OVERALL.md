@@ -2,7 +2,7 @@
 
 AutoMovie MCP is the deterministic gate for turning creative intent into a validated, renderable film. The engine computes and validates (poses, motion, physics plausibility, staging coherence), but it never decides what the film should be. You, the coding agent, are the orchestrator: you author intent, the engine enforces reality ("engine enforces, model creates"). The server blocks wrong order and names the next step, but it does not drive the loop for you.
 
-Read this guide first. Before using a stage's tools, read the matching guide: `STAGING`, `BLOCKING`, `PERFORMANCE`, `FORGE`, `PROPS`, `REVIEW`, `PROJECT_MEMORY`, `RENDER_GUIDES`.
+Read this guide first, then identify the advertised surface below. Do not request a guide until that surface's schema says the guide name exists.
 
 ## Choose the Surface You Actually Have
 
@@ -11,6 +11,8 @@ AutoMovie is migrating to a coding-agent-first production coordinator. Inspect t
 - If `inspectProject`, `setProductionDesign`, `compileProject`, `previewFrame`, `prepareReview`, and `submitReview` are present, source code is the authoring surface. Read `PRODUCTION_DESIGN`, `MODEL_RECIPE`, `WORLD_DESIGN`, `FORMATION_DESIGN`, `SHOT_CONTRACT`, `ACCEPTANCE`, `SOURCE_OWNERSHIP`, `COMPILATION`, `GEOMETRY`, `PRODUCTION_REVIEW`, and `PRODUCTION_RENDER`. Write screenplay, shot builders, motions, effects, audio integration, tests, and refactors as ordinary repository files. Use MCP only for bounded design truth, deterministic compile/oracles, actual-frame capture, and evidence-bound review.
 - If only `openProject`, `nextSteps`, and `execute` accompany this guide, you are on the compact legacy surface described below. It remains available during the measured migration and uses the stage/block/perform/cut ladder.
 - If stage names are advertised directly, you are on the granular compatibility surface. Its semantics match the compact legacy path but its schema payload is much larger.
+
+On either legacy surface, read the stage guide that matches the next operation: `STAGING`, `BLOCKING`, `PERFORMANCE`, `FORGE`, `PROPS`, `REVIEW`, `PROJECT_MEMORY`, or `RENDER_GUIDES`. Those names do not exist on the coding-agent production surface.
 
 Never translate ordinary coding work into giant JSON calls merely because a tool exists. Never claim a visual pass without an actual current PNG. Never edit compiler-owned `generated` output to make a source failure appear fixed.
 

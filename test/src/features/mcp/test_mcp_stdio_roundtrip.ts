@@ -212,6 +212,15 @@ export const test_mcp_stdio_roundtrip = async (): Promise<void> => {
           "validateShot",
         ],
       );
+      TestValidator.predicate(
+        "every granular compatibility description is substantial and fits the MCP hard cap",
+        granularTools.every(
+          (tool) =>
+            typeof tool.description === "string" &&
+            tool.description.trim().length >= 400 &&
+            tool.description.length <= 1_023,
+        ),
+      );
 
       const toolSchema = (name: string): IJsonSchema => {
         const schema = granularTools.find(

@@ -167,6 +167,21 @@ export const test_cli_scaffold = (): void => {
       files["scripts/capture.ts"]!.includes(
         'page.locator("#status").evaluate',
       ) &&
+      files["scripts/capture.ts"]!.includes(
+        "let sessionPromise: Promise<CaptureSession> | null",
+      ) &&
+      files["scripts/capture.ts"]!.includes(
+        'args: ["--use-angle=swiftshader"]',
+      ) &&
+      files["scripts/capture.ts"]!.includes(
+        "rendererIdentity: `chrome:${session.browser.version()}",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "await closeProductionFrameCapture()",
+      ) &&
+      files["scripts/generatedShotPlugin.ts"]!.includes(
+        'shotId.includes("/")',
+      ) === false &&
       files["viewer/src/main.ts"]!.includes('from "three"') === false,
   );
   TestValidator.predicate(

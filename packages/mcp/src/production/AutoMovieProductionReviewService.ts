@@ -41,12 +41,32 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import { productionRenderTargetFingerprint } from "./renderIdentity";
 import { isProductionFrameTime } from "./validateProductionDesign";
 
 type AutoMovieReviewWorksheet = Omit<
   IAutoMovieSubmitReviewInput,
   "preparedFingerprint"
 >;
+
+interface IRenderManifestInventoryEntry {
+  path: string;
+  manifest: IAutoMovieRenderBundleManifest | null;
+  error: string | null;
+}
+
+interface IReviewReadContext {
+  renderInventory: {
+    invalid: IRenderManifestInventoryEntry[];
+    all: IRenderManifestInventoryEntry[];
+    byTarget: Map<string, IRenderManifestInventoryEntry[]>;
+  };
+  fingerprints: Map<string, AutoMovieContentDigest>;
+  renderContentInputs:
+    | ReturnType<AutoMovieProductionProject["contentInputs"]>
+    | undefined;
+  renderTargetFingerprints: Map<string, AutoMovieContentDigest>;
+}
 
 /** Required review criteria in their canonical submission order. */
 export const AUTOMOVIE_REVIEW_CRITERIA = {
@@ -100,16 +120,23 @@ export class AutoMovieProductionReviewService {
   public prepare(
     input: IAutoMoviePrepareReviewInput,
   ): IAutoMoviePrepareReviewOutput {
-    const compileStatus =
-      input.target.kind === "shot" || input.target.kind === "film"
-        ? this.compileStatus()
-        : null;
-    return this.prepareWithStatus(input, compileStatus);
+    const visual = input.target.kind === "shot" || input.target.kind === "film";
+    const compileStatus = visual ? this.compileStatus() : null;
+    const context: IReviewReadContext | undefined = visual
+      ? {
+          renderInventory: collectRenderManifestInventory(this.project),
+          fingerprints: new Map(),
+          renderContentInputs: undefined,
+          renderTargetFingerprints: new Map(),
+        }
+      : undefined;
+    return this.prepareWithStatus(input, compileStatus, context);
   }
 
   private prepareWithStatus(
     input: IAutoMoviePrepareReviewInput,
     compileStatus: IAutoMovieCompileProjectOutput | null,
+    context?: IReviewReadContext,
   ): IAutoMoviePrepareReviewOutput {
     const graph = this.project.graph();
     const diagnostics: IAutoMovieDiagnostic[] = [];
@@ -129,6 +156,7 @@ export class AutoMovieProductionReviewService {
       input.target,
       diagnostics,
       compileStatus!,
+      context,
     );
     const outcomes = currentAcceptanceOutcomes(
       this.project,
@@ -167,7 +195,12 @@ export class AutoMovieProductionReviewService {
     diagnostics.sort(compareDiagnostics);
     return {
       target: input.target,
-      fingerprint: reviewFingerprint(this.project, input.target, compileStatus),
+      fingerprint: reviewFingerprint(
+        this.project,
+        input.target,
+        compileStatus,
+        context,
+      ),
       requiredCriteria: [...criteriaOf(input.target)],
       quotable,
       frames,
@@ -253,11 +286,18 @@ export class AutoMovieProductionReviewService {
     currentCompileStatus: IAutoMovieCompileProjectOutput = this.compileStatus(),
   ): IAutoMovieReviewQueue {
     const compileStatus = currentCompileStatus;
+    const context: IReviewReadContext = {
+      renderInventory: collectRenderManifestInventory(this.project),
+      fingerprints: new Map(),
+      renderContentInputs: undefined,
+      renderTargetFingerprints: new Map(),
+    };
     const entries = reviewTargets(this.project).map((target) => {
       const currentFingerprint = reviewFingerprint(
         this.project,
         target,
         compileStatus,
+        context,
       );
       const stored = this.project.review(target);
       const prepared =
@@ -268,6 +308,7 @@ export class AutoMovieProductionReviewService {
               target.kind === "shot" || target.kind === "film"
                 ? compileStatus
                 : null,
+              context,
             );
       const storedDiagnostics =
         stored === null || prepared === null
@@ -365,7 +406,7 @@ const validateWorksheet = (
       );
     copies.add(copyKey);
     for (const evidence of check.evidence) {
-      const evidenceKey = canonicalizeAutoMovieJson(evidence);
+      const evidenceKey = reviewEvidenceIdentity(evidence);
       if (
         (input.target.kind === "design" || input.target.kind === "source") &&
         reusedEvidence.has(evidenceKey)
@@ -442,6 +483,20 @@ const validateWorksheet = (
         "Every correction requires target, problem, and expected state. Complete the correction before submitReview.",
       );
   return diagnostics;
+};
+
+/**
+ * Identity of one submitted evidence selector after its value-normalization
+ * rules are applied. In particular, source truth is line-addressed and trimmed
+ * during validation, so cosmetic whitespace in `exactText` cannot manufacture a
+ * second selector for another criterion.
+ */
+const reviewEvidenceIdentity = (evidence: IAutoMovieReviewEvidence): string => {
+  if (evidence.kind === "source")
+    return `source\0${evidence.path}\0${evidence.line}`;
+  if (evidence.kind === "design")
+    return `design\0${canonicalizeAutoMovieJson(evidence.target)}\0${evidence.pointer}`;
+  return canonicalizeAutoMovieJson(evidence);
 };
 
 const validateAcceptanceCoverage = (
@@ -750,7 +805,11 @@ const reviewFingerprint = (
   project: AutoMovieProductionProject,
   target: IAutoMovieReviewTarget,
   compileStatus: IAutoMovieCompileProjectOutput | null,
+  context?: IReviewReadContext,
 ): AutoMovieContentDigest => {
+  const targetKey = reviewTargetKey(target);
+  const retained = context?.fingerprints.get(targetKey);
+  if (retained !== undefined) return retained;
   const fields: IAutoMovieFingerprintField[] = [
     {
       role: "protocol",
@@ -838,8 +897,20 @@ const reviewFingerprint = (
     for (const [id, acceptance] of graph.acceptance)
       if (acceptanceAddressesShot(acceptance, target.id))
         addJson(`acceptance:${id}`, acceptance);
-    addJson("generated-manifest", project.generatedManifest());
-    for (const frame of currentFrames(project, target, [], compileStatus!))
+    const generated = project.generatedManifest();
+    addJson(
+      "render-target",
+      generated === null
+        ? null
+        : currentRenderTargetFingerprint(project, generated, target, context),
+    );
+    for (const frame of currentFrames(
+      project,
+      target,
+      [],
+      compileStatus!,
+      context,
+    ))
       addJson(`frame:${frame.bundle}:${frame.frame}:${frame.pass}`, frame);
     for (const outcome of currentAcceptanceOutcomes(
       project,
@@ -859,7 +930,7 @@ const reviewFingerprint = (
         role: `shot-current:${id}`,
         kind: "digest",
         payload: Buffer.from(
-          reviewFingerprint(project, shotTarget, compileStatus!),
+          reviewFingerprint(project, shotTarget, compileStatus!, context),
           "utf8",
         ),
       });
@@ -869,7 +940,13 @@ const reviewFingerprint = (
       "render-manifest",
       readTrackedJsonIfPresent(project, "render-manifest.json"),
     );
-    for (const frame of currentFrames(project, target, [], compileStatus!))
+    for (const frame of currentFrames(
+      project,
+      target,
+      [],
+      compileStatus!,
+      context,
+    ))
       addJson(`frame:${frame.bundle}:${frame.frame}:${frame.pass}`, frame);
     for (const outcome of currentAcceptanceOutcomes(
       project,
@@ -879,7 +956,9 @@ const reviewFingerprint = (
     ))
       addJson(`outcome:${outcome.scenario}`, outcome);
   }
-  return fingerprintAutoMovieFields(fields);
+  const fingerprint = fingerprintAutoMovieFields(fields);
+  context?.fingerprints.set(targetKey, fingerprint);
+  return fingerprint;
 };
 
 const addSourceField = (
@@ -1054,14 +1133,23 @@ const currentAcceptanceOutcomes = (
       });
       continue;
     }
+    const fps = graph.production!.frameFormat.fps;
+    const filmFrames =
+      scenario.target.kind === "film"
+        ? [...graph.shots.keys()].reduce<number | null>((frames, shot) => {
+            if (frames === null) return null;
+            const value = readCompiled(shot);
+            return value === null
+              ? null
+              : frames + Math.round(value.shot.duration * fps);
+          }, 0)
+        : null;
     const actual =
       scenario.target.kind === "shot"
         ? readCompiled(scenario.target.id)?.shot.duration
-        : [...graph.shots.keys()].reduce<number | null>((sum, shot) => {
-            if (sum === null) return null;
-            const value = readCompiled(shot);
-            return value === null ? null : sum + value.shot.duration;
-          }, 0);
+        : filmFrames === null
+          ? null
+          : filmFrames / fps;
     if (actual === undefined || actual === null) {
       diagnostics.push(
         outcomeMissingDiagnostic(
@@ -1081,7 +1169,7 @@ const currentAcceptanceOutcomes = (
       expected: criterion.value,
       passed:
         criterion.operator === "=="
-          ? actual === criterion.value
+          ? frameClockClose(actual, criterion.value)
           : criterion.operator === "<="
             ? actual <= criterion.value
             : actual >= criterion.value,
@@ -1108,6 +1196,7 @@ const currentFrames = (
   target: IAutoMovieReviewTarget,
   diagnostics: IAutoMovieDiagnostic[],
   compileStatus: IAutoMovieCompileProjectOutput,
+  context?: IReviewReadContext,
 ): IAutoMovieFrameEvidenceReference[] => {
   if (target.kind !== "shot" && target.kind !== "film") return [];
   const generated = project.generatedManifest();
@@ -1131,37 +1220,51 @@ const currentFrames = (
   const graph = project.graph();
   const required = requiredReviewFrames(graph, target);
   const covered = new Set<string>();
-  for (const manifestPath of listNamedFiles(
-    project.renderRoot(),
-    "manifest.json",
-  )) {
-    const raw = readJsonIfPresent(manifestPath);
-    const validation =
-      typia.validateEquals<IAutoMovieRenderBundleManifest>(raw);
-    if (validation.success === false) {
+  const inventory =
+    context?.renderInventory ?? collectRenderManifestInventory(project);
+  for (const entry of inventory.invalid)
+    diagnostics.push({
+      code: "render-bundle-invalid",
+      category: "error",
+      phase: "render",
+      target: normalizeSlash(path.relative(project.root, entry.path)),
+      path: normalizeSlash(path.relative(project.root, entry.path)),
+      message: `Render bundle manifest is invalid: ${entry.error}. Recreate the bundle through previewFrame.`,
+    });
+  const manifestEntries =
+    target.kind === "shot"
+      ? (inventory.byTarget.get(reviewTargetKey(target)) ?? [])
+      : inventory.all.filter(
+          (entry) =>
+            (entry.manifest?.target.kind === "film" &&
+              entry.manifest.target.id === target.id) ||
+            (entry.manifest?.target.kind === "shot" &&
+              graph.shots.has(entry.manifest.target.id)),
+        );
+  for (const entry of manifestEntries) {
+    const manifestPath = entry.path;
+    const manifest = entry.manifest;
+    if (manifest === null) {
+      /* c8 ignore next -- invalid entries are separated above. */
       diagnostics.push({
         code: "render-bundle-invalid",
         category: "error",
         phase: "render",
         target: normalizeSlash(path.relative(project.root, manifestPath)),
         path: normalizeSlash(path.relative(project.root, manifestPath)),
-        message: `Render bundle manifest is invalid: ${validation.errors
-          .map((error) => `${error.path} expects ${error.expected}`)
-          .join("; ")}. Recreate the bundle through previewFrame.`,
+        message:
+          "Render bundle manifest is invalid. Recreate the bundle through previewFrame.",
       });
       continue;
     }
-    const manifest = validation.data;
-    const addressed =
-      target.kind === "shot"
-        ? manifest.target.kind === "shot" && manifest.target.id === target.id
-        : (manifest.target.kind === "film" &&
-            manifest.target.id === target.id) ||
-          (manifest.target.kind === "shot" &&
-            graph.shots.has(manifest.target.id));
     if (
-      addressed === false ||
-      manifest.compileFingerprint !== generated.inputFingerprint
+      manifest.targetFingerprint !==
+      currentRenderTargetFingerprint(
+        project,
+        generated,
+        manifest.target,
+        context,
+      )
     )
       continue;
     const bundleRoot = path.dirname(manifestPath);
@@ -1548,6 +1651,81 @@ const readTrackedJsonIfPresent = (
   } catch (error) {
     return { invalidJson: String(error) };
   }
+};
+
+/**
+ * Read and validate every render manifest once for one review queue cycle.
+ *
+ * Valid manifests are indexed by target, so N shots no longer rescan and
+ * reparse the complete render tree N times. Invalid manifests remain global
+ * diagnostics because their target cannot be trusted.
+ */
+const collectRenderManifestInventory = (
+  project: AutoMovieProductionProject,
+): IReviewReadContext["renderInventory"] => {
+  const invalid: IRenderManifestInventoryEntry[] = [];
+  const all: IRenderManifestInventoryEntry[] = [];
+  const byTarget = new Map<string, IRenderManifestInventoryEntry[]>();
+  for (const manifestPath of listNamedFiles(
+    project.renderRoot(),
+    "manifest.json",
+  )) {
+    const validation = typia.validateEquals<IAutoMovieRenderBundleManifest>(
+      readJsonIfPresent(manifestPath),
+    );
+    if (validation.success === false) {
+      invalid.push({
+        path: manifestPath,
+        manifest: null,
+        error: validation.errors
+          .map((error) => `${error.path} expects ${error.expected}`)
+          .join("; "),
+      });
+      continue;
+    }
+    if (validation.data.rendererIdentity.trim().length === 0) {
+      invalid.push({
+        path: manifestPath,
+        manifest: null,
+        error: "$input.rendererIdentity expects a non-blank string",
+      });
+      continue;
+    }
+    const entry: IRenderManifestInventoryEntry = {
+      path: manifestPath,
+      manifest: validation.data,
+      error: null,
+    };
+    all.push(entry);
+    const key = reviewTargetKey(validation.data.target);
+    const entries = byTarget.get(key) ?? [];
+    entries.push(entry);
+    byTarget.set(key, entries);
+  }
+  return { invalid, all, byTarget };
+};
+
+/** Reuse common renderer content and each target digest within one read cycle. */
+const currentRenderTargetFingerprint = (
+  project: AutoMovieProductionProject,
+  generated: Parameters<typeof productionRenderTargetFingerprint>[1],
+  target: IAutoMovieRenderBundleManifest["target"],
+  context?: IReviewReadContext,
+): AutoMovieContentDigest => {
+  if (context === undefined)
+    return productionRenderTargetFingerprint(project, generated, target);
+  const key = reviewTargetKey(target);
+  const retained = context.renderTargetFingerprints.get(key);
+  if (retained !== undefined) return retained;
+  context.renderContentInputs ??= project.contentInputs();
+  const fingerprint = productionRenderTargetFingerprint(
+    project,
+    generated,
+    target,
+    context.renderContentInputs,
+  );
+  context.renderTargetFingerprints.set(key, fingerprint);
+  return fingerprint;
 };
 
 const listNamedFiles = (root: string, name: string): string[] => {

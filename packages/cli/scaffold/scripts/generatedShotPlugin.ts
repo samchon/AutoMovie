@@ -22,12 +22,7 @@ export const generatedShotPlugin = (projectRoot: string): Plugin => ({
       }
       try {
         const shotId = decodeURIComponent(match[1]!);
-        if (
-          shotId.trim().length === 0 ||
-          shotId.includes("/") ||
-          shotId.includes("\\")
-        )
-          throw new Error("invalid shot id");
+        if (shotId.trim().length === 0) throw new Error("invalid shot id");
         const manifest = JSON.parse(
           fs.readFileSync(
             path.join(projectRoot, ".automovie", "manifest.json"),

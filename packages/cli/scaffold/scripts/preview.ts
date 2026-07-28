@@ -1,7 +1,7 @@
 import type { AutoMovieGuidePass } from "@automovie/interface";
 import { AutoMovieApplication } from "@automovie/mcp";
 
-import { captureProductionFrame } from "./capture";
+import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
 
 const args = process.argv.slice(2);
 const options = new Map<string, string>();
@@ -46,12 +46,16 @@ const app = new AutoMovieApplication({
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
 app.getGuideDocument({ name: "PRODUCTION_RENDER" });
 app.openProject({ root: process.cwd() });
-const output = await app.previewFrame({
-  target: { kind: "shot", id: shot },
-  time,
-  pass,
-  width,
-  height,
-});
-process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-if (output.captured === false) process.exitCode = 1;
+try {
+  const output = await app.previewFrame({
+    target: { kind: "shot", id: shot },
+    time,
+    pass,
+    width,
+    height,
+  });
+  process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+  if (output.captured === false) process.exitCode = 1;
+} finally {
+  await closeProductionFrameCapture();
+}

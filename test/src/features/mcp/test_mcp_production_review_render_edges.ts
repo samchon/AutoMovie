@@ -6,6 +6,7 @@ import {
   AutoMovieProductionReviewService,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
+  productionRenderTargetFingerprint,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -39,6 +40,7 @@ export const test_mcp_production_review_render_edges =
           const height = request.height ?? 16;
           return {
             bytes: png(width, height),
+            rendererIdentity: "test:png-v1",
             width,
             height,
           };
@@ -97,18 +99,34 @@ export const test_mcp_production_review_render_edges =
       project.setWorldDesign(staleWorld);
       const stalePrepared = review.prepare({ target });
       project.setWorldDesign(worldDesign());
+      fs.appendFileSync(
+        path.join(fixture.root, "src/shots/answer.ts"),
+        "\n// Unrelated source edit must not retire opening pixels.\n",
+      );
       compiler.compile({ scope: "source" });
+      const restoredPrepared = review.prepare({ target });
       TestValidator.predicate(
-        "review inventory refuses frames from a stale generated compile",
+        "review inventory refuses stale output but preserves target-identical frames after recompile",
         stalePrepared.frames.length === 0 &&
           stalePrepared.diagnostics.some(
             (diagnostic) => diagnostic.code === "review-evidence-stale",
+          ) &&
+          restoredPrepared.frames.some(
+            (candidate) =>
+              candidate.digest === prepared.frames[0]?.digest &&
+              candidate.reviewFrame === prepared.frames[0]?.reviewFrame,
           ),
       );
       const filmManifest: IAutoMovieRenderBundleManifest = {
-        version: 1,
+        version: 2,
         target: { kind: "film", id: "fixture-film" },
         compileFingerprint: project.generatedManifest()!.inputFingerprint,
+        rendererIdentity: "test:png-v1",
+        targetFingerprint: productionRenderTargetFingerprint(
+          project,
+          project.generatedManifest()!,
+          { kind: "film", id: "fixture-film" },
+        ),
         renderSpec: {
           target: "fixture-film",
           frameFormat: { width: 16, height: 16, fps: 24 },
@@ -429,6 +447,20 @@ export const test_mcp_production_review_render_edges =
       const invalidFrame = path.join(invalidDirectory, "frame.png");
       fs.mkdirSync(invalidDirectory, { recursive: true });
       fs.writeFileSync(invalidFrame, new Uint8Array());
+      fs.writeFileSync(
+        path.join(invalidDirectory, "manifest.json"),
+        JSON.stringify({ ...baseManifest, rendererIdentity: " " }),
+      );
+      TestValidator.predicate(
+        "blank renderer identity cannot enter review inventory",
+        review
+          .prepare({ target })
+          .diagnostics.some(
+            (item) =>
+              item.code === "render-bundle-invalid" &&
+              item.message.includes("rendererIdentity"),
+          ),
+      );
       fs.writeFileSync(
         path.join(invalidDirectory, "manifest.json"),
         JSON.stringify({

@@ -115,6 +115,15 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       message: "must end after",
     },
     {
+      bytes: "WEBVTT\n\n00:00:00.000 --> 00:00:00.100\n\n",
+      message: "no non-empty payload",
+    },
+    {
+      bytes:
+        "WEBVTT\n\n00:00.000 --> 00:00.250\nFirst.\n00:00.250 --> 00:00.500\nSecond.\n",
+      message: "without a blank separator",
+    },
+    {
       bytes:
         "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nLater.\n\n00:00.500 --> 00:00.750\nEarlier.\n",
       message: "starts before",
@@ -142,6 +151,36 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       bytes: Buffer.from(
         "WEBVTT\n\n00:00.000 --> 00:00.250\nShort timestamp.\n",
       ),
+    }),
+    {
+      kind: "webvtt",
+      cueCount: 1,
+      firstCueSeconds: 0,
+      lastCueSeconds: 0.25,
+    },
+  );
+  TestValidator.equals(
+    "WebVTT accepts one cue identifier before observable payload",
+    probeProductionMedia({
+      kind: "captions",
+      mediaType: "text/vtt",
+      bytes: Buffer.from(
+        "WEBVTT\n\nopening-line\n00:00.000 --> 00:00.250\nSignal.\n",
+      ),
+    }),
+    {
+      kind: "webvtt",
+      cueCount: 1,
+      firstCueSeconds: 0,
+      lastCueSeconds: 0.25,
+    },
+  );
+  TestValidator.equals(
+    "WebVTT treats a whitespace-only separator as a cue boundary",
+    probeProductionMedia({
+      kind: "captions",
+      mediaType: "text/vtt",
+      bytes: Buffer.from("WEBVTT\n \n00:00.000 --> 00:00.250\nSignal.\n"),
     }),
     {
       kind: "webvtt",

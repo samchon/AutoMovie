@@ -210,7 +210,12 @@ export class AutoMovieProductionCompiler {
           contentFields.push({
             role: `content:${content.path}`,
             kind: content.bytes === null ? "absent" : "file",
-            payload: content.bytes ?? new Uint8Array(),
+            payload:
+              content.bytes === null
+                ? new Uint8Array()
+                : content.source && isTypeScriptSourcePath(content.path)
+                  ? normalizeAutoMovieSource(content.bytes)
+                  : content.bytes,
           });
       } catch (error) {
         diagnostics.push({
@@ -1049,6 +1054,9 @@ const sourcePathDiagnostic = (
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+const isTypeScriptSourcePath = (file: string): boolean =>
+  [".ts", ".tsx", ".mts", ".cts"].includes(path.extname(file).toLowerCase());
+
 const designFingerprintFields = (
   graph: ReturnType<AutoMovieProductionProject["graph"]>,
 ): IAutoMovieFingerprintField[] => {
@@ -1207,11 +1215,7 @@ const finalDeliverableDiagnostics = (
   production: ReturnType<AutoMovieProductionProject["graph"]>["production"],
   inputFingerprint: AutoMovieContentDigest,
 ): IAutoMovieDiagnostic[] => {
-  if (
-    production === null ||
-    production.deliverables.some((item) => item.required) === false
-  )
-    return [];
+  if (production === null) return [];
   let bytes: Uint8Array | null;
   try {
     bytes = project.readTrackedStateFile("render-manifest.json");

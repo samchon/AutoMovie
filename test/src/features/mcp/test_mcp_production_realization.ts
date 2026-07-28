@@ -181,7 +181,15 @@ export const test_mcp_production_realization = (): void => {
               subject: { kind: "node", id: "sentinel" },
               axis: "x",
               operator: "==",
-              value: 0.25,
+              value: 0,
+              tolerance: 1e-9,
+            },
+            {
+              kind: "position",
+              subject: { kind: "node", id: "sentinel" },
+              axis: "z",
+              operator: "==",
+              value: -0.5,
               tolerance: 1e-9,
             },
             {

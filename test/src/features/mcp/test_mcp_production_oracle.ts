@@ -452,6 +452,16 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     });
     const objectAnimated = corrupted();
     objectAnimated.shot.performances[0]!.motion = null;
+    objectAnimated.scene.nodes[0]!.pose = {
+      skeleton: objectAnimated.models[0]!.skeleton!.id,
+      root: {
+        translation: { x: 1, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        // Pose-root scale is intentionally ignored by engine FK and viewer.
+        scale: { x: 7, y: 7, z: 7 },
+      },
+      joints: [],
+    };
     objectAnimated.shot.objectMotions = [
       {
         id: "sentinel-object-motion",
@@ -499,11 +509,11 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       },
     });
     TestValidator.predicate(
-      "static pose roots and object TRS clips affect physical queries",
+      "pose roots compose beneath object TRS exactly as the viewer renders them",
       staticPoseDistance.result?.kind === "distance" &&
         staticPoseDistance.result.meters === 2 &&
         objectMotionDistance.result?.kind === "distance" &&
-        Math.abs(objectMotionDistance.result.meters - Math.sqrt(77)) < 1e-9,
+        Math.abs(objectMotionDistance.result.meters - Math.sqrt(97)) < 1e-9,
     );
 
     const missingCamera = corrupted();
@@ -736,7 +746,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     });
     writeGeneratedBytes(Buffer.from(generatedShotBytes));
     TestValidator.predicate(
-      "pose oracle refuses unstaged actors and missing performance or motion",
+      "pose oracle refuses unstaged actors and missing motion but uses scene-node fallback",
       heldPose.result?.kind === "measurement" &&
         heldPose.result.values.held === true &&
         heldWithoutNode.result === null &&
@@ -744,7 +754,8 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         movingWithRoot.result?.kind === "measurement" &&
         movingWithRoot.result.values.rootX === 7 &&
         missingMotion.result === null &&
-        missingPerformance.result === null &&
+        missingPerformance.result?.kind === "measurement" &&
+        missingPerformance.result.values.held === false &&
         invalidGenerated.result === null,
     );
 
@@ -778,8 +789,17 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     );
 
     for (const layout of [
-      { kind: "column" as const, ranks: 2, files: 3 },
-      { kind: "wedge" as const, depth: 3 },
+      {
+        kind: "column" as const,
+        ranks: 2,
+        files: 3,
+        spacing: { lateral: 0.8, depth: 0.9 },
+      },
+      {
+        kind: "wedge" as const,
+        depth: 3,
+        spacing: { lateral: 0.8, depth: 0.9 },
+      },
       { kind: "arc" as const, radius: 4, arcDegrees: 120 },
       { kind: "scatter" as const, radius: 5, seed: 9 },
     ]) {
@@ -843,7 +863,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const currentStatus = compiler.lint({ scope: "source" });
     const staleOracle = new AutoMovieProductionOracleService(
       project,
-      async () => ({ bytes: png(2, 2), width: 2, height: 2 }),
+      async () => ({
+        bytes: png(2, 2),
+        rendererIdentity: "test:png-v1",
+        width: 2,
+        height: 2,
+      }),
       () => ({
         ...currentStatus,
         compiler: {
@@ -912,7 +937,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     );
     const invalidInput = await new AutoMovieProductionOracleService(
       project,
-      async () => ({ bytes: png(2, 2), width: 2, height: 2 }),
+      async () => ({
+        bytes: png(2, 2),
+        rendererIdentity: "test:png-v1",
+        width: 2,
+        height: 2,
+      }),
     ).preview({
       target: { kind: "shot", id: "opening" },
       time: -1,
@@ -925,7 +955,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     );
     const inputValidationOracle = new AutoMovieProductionOracleService(
       project,
-      async () => ({ bytes: png(2, 2), width: 2, height: 2 }),
+      async () => ({
+        bytes: png(2, 2),
+        rendererIdentity: "test:png-v1",
+        width: 2,
+        height: 2,
+      }),
     );
     const invalidPreviewInputs = await Promise.all([
       inputValidationOracle.preview({
@@ -973,7 +1008,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     );
     const absentTargetOracle = new AutoMovieProductionOracleService(
       project,
-      async () => ({ bytes: png(2, 2), width: 2, height: 2 }),
+      async () => ({
+        bytes: png(2, 2),
+        rendererIdentity: "test:png-v1",
+        width: 2,
+        height: 2,
+      }),
     );
     const absentShot = await absentTargetOracle.preview({
       target: { kind: "shot", id: "absent" },
@@ -1029,7 +1069,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     for (const bytes of [new Uint8Array(), Buffer.from("not-png")]) {
       const malformed = await new AutoMovieProductionOracleService(
         project,
-        async () => ({ bytes, width: 2, height: 2 }),
+        async () => ({
+          bytes,
+          rendererIdentity: "test:png-v1",
+          width: 2,
+          height: 2,
+        }),
       ).preview({
         target: { kind: "shot", id: "opening" },
         time: 0,
@@ -1042,10 +1087,13 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       );
     }
     const exceptionalBytes = {
+      bytes: new Uint8Array(),
+      rendererIdentity: "test:png-v1",
       width: 2,
       height: 2,
     } as {
       bytes: Uint8Array;
+      rendererIdentity: string;
       width: number;
       height: number;
     };
@@ -1073,7 +1121,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     );
     const mismatch = await new AutoMovieProductionOracleService(
       project,
-      async () => ({ bytes: png(1, 1), width: 3, height: 3 }),
+      async () => ({
+        bytes: png(1, 1),
+        rendererIdentity: "test:png-v1",
+        width: 3,
+        height: 3,
+      }),
     ).preview({
       target: { kind: "shot", id: "opening" },
       time: 0,
@@ -1091,6 +1144,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           [1, 2].map((size) =>
             new AutoMovieProductionOracleService(project, async () => ({
               bytes: blankPng(size, size),
+              rendererIdentity: "test:png-v1",
               width: size,
               height: size,
             })).preview({
@@ -1108,6 +1162,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async (input) => ({
         bytes: png(input.width!, input.height!),
+        rendererIdentity: "test:png-v1",
         width: input.width!,
         height: input.height!,
       }),
@@ -1129,15 +1184,47 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       width: 2,
       height: 2,
     });
+    const alternateRenderer = await new AutoMovieProductionOracleService(
+      project,
+      async (input) => ({
+        bytes: png(input.width!, input.height!),
+        rendererIdentity: "test:png-v2",
+        width: input.width!,
+        height: input.height!,
+      }),
+    ).preview({
+      target: { kind: "shot", id: "opening" },
+      time: 1 / 48,
+      width: 2,
+      height: 2,
+    });
+    const blankRenderer = await new AutoMovieProductionOracleService(
+      project,
+      async (input) => ({
+        bytes: png(input.width!, input.height!),
+        rendererIdentity: " ",
+        width: input.width!,
+        height: input.height!,
+      }),
+    ).preview({
+      target: { kind: "shot", id: "opening" },
+      time: 1 / 48,
+      width: 2,
+      height: 2,
+    });
     TestValidator.predicate(
-      "verified frames are content addressed and frame-snapped",
+      "verified frames are target-, renderer-, and frame-addressed",
       defaultSized.captured &&
         beauty.captured &&
         beauty.frame?.time === 1 / 24 &&
         fs.existsSync(path.join(fixture.root, beauty.frame.path)) &&
         mask.captured &&
         mask.renderBundle === beauty.renderBundle &&
-        mask.frame?.path.endsWith(".mask.png") === true,
+        mask.frame?.path.endsWith(".mask.png") === true &&
+        alternateRenderer.captured &&
+        alternateRenderer.renderBundle !== beauty.renderBundle &&
+        blankRenderer.diagnostics[0]?.code ===
+          "capture-renderer-identity-invalid",
     );
     if (
       beauty.renderBundle !== null &&

@@ -8,6 +8,7 @@ import {
   AutoMovieProductionProject,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
+  productionRenderTargetFingerprint,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -307,6 +308,25 @@ export const test_mcp_production_project = (): void => {
       ],
     };
     const dependentModelMutation = project.setModelRecipe(dependentModel);
+    const transitiveDependentModel = {
+      ...modelRecipe(),
+      id: "sentinel-variant-far",
+      lod: [
+        {
+          tier: "hero" as const,
+          maxDistance: 10,
+          recipe: "sentinel-variant",
+        },
+        {
+          tier: "far" as const,
+          maxDistance: null,
+          recipe: "sentinel-variant-far",
+        },
+      ],
+    };
+    const transitiveDependentMutation = project.setModelRecipe(
+      transitiveDependentModel,
+    );
     const refusedModelErase = project.eraseDesignArtifact({
       kind: "model",
       id: "sentinel",
@@ -314,11 +334,18 @@ export const test_mcp_production_project = (): void => {
     TestValidator.predicate(
       "model consequences and erasure include dependent LOD models and formations",
       dependentModelMutation.accepted &&
+        transitiveDependentMutation.accepted &&
         refusedModelErase.consequences.staleReviews.some(
           (target) =>
             target.kind === "design" &&
             target.design.kind === "model" &&
             target.design.id === "sentinel-variant",
+        ) &&
+        refusedModelErase.consequences.staleReviews.some(
+          (target) =>
+            target.kind === "design" &&
+            target.design.kind === "model" &&
+            target.design.id === "sentinel-variant-far",
         ) &&
         refusedModelErase.diagnostics.some(
           (item) =>
@@ -485,9 +512,15 @@ export const test_mcp_production_project = (): void => {
       ) &&
         throws(() =>
           ownerProject.commitRenderBundle("../escape", new Map(), {
-            version: 1,
+            version: 2,
             target: { kind: "shot", id: "opening" },
             compileFingerprint: oldManifest.inputFingerprint,
+            rendererIdentity: "test:png-v1",
+            targetFingerprint: productionRenderTargetFingerprint(
+              ownerProject,
+              oldManifest,
+              { kind: "shot", id: "opening" },
+            ),
             renderSpec: {
               target: "opening",
               frameFormat: { width: 1, height: 1, fps: 1 },
@@ -505,9 +538,15 @@ export const test_mcp_production_project = (): void => {
     renderImage.data.fill(200);
     const renderImageBytes = PNG.sync.write(renderImage);
     const renderManifest: IAutoMovieRenderBundleManifest = {
-      version: 1,
+      version: 2,
       target: { kind: "shot", id: "opening" },
       compileFingerprint: oldManifest.inputFingerprint,
+      rendererIdentity: "test:png-v1",
+      targetFingerprint: productionRenderTargetFingerprint(
+        ownerProject,
+        oldManifest,
+        { kind: "shot", id: "opening" },
+      ),
       renderSpec: {
         target: "opening",
         frameFormat: { width: 1, height: 1, fps: 1 },
@@ -529,6 +568,12 @@ export const test_mcp_production_project = (): void => {
       ],
     };
     const renderBundle = productionRenderBundleRelativePath(renderManifest);
+    const blankRendererRefused = throws(() =>
+      ownerProject.commitRenderBundle(renderBundle, new Map(), {
+        ...renderManifest,
+        rendererIdentity: " ",
+      }),
+    );
     const revision = ownerProject.commitRenderBundle(
       renderBundle,
       new Map([
@@ -539,7 +584,8 @@ export const test_mcp_production_project = (): void => {
     );
     TestValidator.predicate(
       "render bundle commits bytes and manifest atomically",
-      revision > 0 &&
+      blankRendererRefused &&
+        revision > 0 &&
         fs.existsSync(
           path.join(ownerProject.renderRoot(), renderBundle, "manifest.json"),
         ),

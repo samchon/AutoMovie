@@ -99,7 +99,11 @@ export interface IAutoMovieModelRecipe {
    * refused.
    */
   parameters: Record<string, number | string | boolean>;
-  /** Non-empty named material colors, each encoded as six-digit `#RRGGBB`. */
+  /**
+   * Exactly one named six-digit `#RRGGBB` material color in the foundation
+   * compiler. Multiple semantic part materials remain unsupported and are
+   * refused instead of silently discarded.
+   */
   palette: Record<string, string>;
   /**
    * Non-empty unique tiers ordered `hero`, `near`, `far`, with increasing
@@ -113,10 +117,9 @@ export interface IAutoMovieModelRecipe {
    */
   capabilities: string[];
   /**
-   * Unique semantic bone sockets. Currently only `stickman` has a
-   * compiler-owned humanoid skeleton and may declare attachments; the
-   * foundation materializer does not create attached scene nodes
-   * automatically.
+   * Unique semantic bone sockets. Only `stickman` may declare a bone that
+   * actually exists on its compiler-owned foundation skeleton; the materializer
+   * does not create attached scene nodes automatically.
    */
   attachments: Array<{
     /** Non-blank attachment id, unique within the recipe. */
@@ -260,6 +263,13 @@ export type IAutoMovieFormationLayout =
       ranks: number;
       /** Integer files from 1 through count; ranks times files covers count. */
       files: number;
+      /** Finite inter-slot spacing in meters, strictly above zero. */
+      spacing: {
+        /** Left-to-right spacing between files. */
+        lateral: number;
+        /** Front-to-back spacing between ranks. */
+        depth: number;
+      };
     }
   | {
       /** March column. */
@@ -268,12 +278,26 @@ export type IAutoMovieFormationLayout =
       ranks: number;
       /** Integer files from 1 through count; ranks times files covers count. */
       files: number;
+      /** Finite inter-slot spacing in meters, strictly above zero. */
+      spacing: {
+        /** Left-to-right spacing between files. */
+        lateral: number;
+        /** Front-to-back spacing between ranks. */
+        depth: number;
+      };
     }
   | {
       /** Wedge layout. */
       kind: "wedge";
       /** Integer rows from 1 through count; depth squared must cover count. */
       depth: number;
+      /** Finite inter-slot spacing in meters, strictly above zero. */
+      spacing: {
+        /** Left-to-right spacing between members in one row. */
+        lateral: number;
+        /** Front-to-back spacing between rows. */
+        depth: number;
+      };
     }
   | {
       /** Arc layout. */
@@ -298,17 +322,18 @@ export interface IAutoMovieFormationDesign {
   id: string;
   /** Existing model recipe id enforced on every derived slot, including heroes. */
   modelRecipe: string;
-  /** Integer number of derived slots from 1 through 1,000,000. */
+  /**
+   * Integer number of derived slots from 1 through 10,000. The foundation
+   * expands slots into explicit deterministic nodes; larger crowds require a
+   * future instanced representation rather than pretending this path is cheap.
+   */
   count: number;
-  /** Compact layout. */
+  /**
+   * Compact layout with only the parameters its algorithm consumes. Line,
+   * column and wedge own explicit spacing; arc separation follows radius and
+   * angle, while scatter density follows count and radius.
+   */
   layout: IAutoMovieFormationLayout;
-  /** Inter-slot spacing in meters. */
-  spacing: {
-    /** Finite lateral spacing in meters, strictly above zero. */
-    lateral: number;
-    /** Finite front-to-back spacing in meters, strictly above zero. */
-    depth: number;
-  };
   /** Formation origin in world space. */
   anchor: IAutoMovieVector3;
   /** Finite world-space heading in degrees. */

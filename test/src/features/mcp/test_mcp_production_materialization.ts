@@ -39,7 +39,7 @@ const recipe = (
         : "prop",
   archetype,
   parameters,
-  palette: { zed: "#112233", amber: "#445566" },
+  palette: { body: "#445566" },
   lod: [{ tier: "hero", maxDistance: null, recipe: id }],
   capabilities: archetype === "stickman" ? ["signal"] : [],
   attachments: [],
@@ -143,12 +143,29 @@ export const test_mcp_production_materialization = (): void => {
   );
 
   const layouts = [
-    formationDesign({ kind: "line", ranks: 2, files: 3 }),
+    formationDesign({
+      kind: "line",
+      ranks: 2,
+      files: 3,
+      spacing: { lateral: 0.8, depth: 0.9 },
+    }),
     {
-      ...formationDesign({ kind: "column", ranks: 2, files: 3 }),
+      ...formationDesign({
+        kind: "column",
+        ranks: 2,
+        files: 3,
+        spacing: { lateral: 0.8, depth: 0.9 },
+      }),
       id: "column",
     },
-    { ...formationDesign({ kind: "wedge", depth: 3 }), id: "wedge" },
+    {
+      ...formationDesign({
+        kind: "wedge",
+        depth: 3,
+        spacing: { lateral: 0.8, depth: 0.9 },
+      }),
+      id: "wedge",
+    },
     {
       ...formationDesign({ kind: "arc", radius: 4, arcDegrees: 120 }),
       id: "arc-one",
@@ -163,6 +180,15 @@ export const test_mcp_production_materialization = (): void => {
   ];
   const slotSets = layouts.map(materializeFormationSlots);
   const repeatedScatter = materializeFormationSlots(layouts[4]!);
+  const swappedScatter = materializeFormationSlots({
+    ...layouts[4]!,
+    seed: 9,
+    layout: { kind: "scatter", radius: 5, seed: 7 },
+  });
+  const highWordScatter = materializeFormationSlots({
+    ...layouts[4]!,
+    seed: layouts[4]!.seed + 4_294_967_296,
+  });
   const inventory = materializeFormationInventory(
     new Map(layouts.map((item) => [item.id, item])),
   );
@@ -174,6 +200,8 @@ export const test_mcp_production_materialization = (): void => {
       Math.abs(slotSets[3]![0]!.position.x - 4) < 1e-12 &&
       Math.abs(slotSets[3]![0]!.position.z) < 1e-12 &&
       JSON.stringify(slotSets[4]) === JSON.stringify(repeatedScatter) &&
+      JSON.stringify(slotSets[4]) !== JSON.stringify(swappedScatter) &&
+      JSON.stringify(slotSets[4]) !== JSON.stringify(highWordScatter) &&
       Object.keys(inventory).length === layouts.length,
   );
 

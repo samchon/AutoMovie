@@ -364,6 +364,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         const height = input.height ?? 16;
         return {
           bytes: captureBytes(width, height),
+          rendererIdentity: "test:png-v1",
           width,
           height,
         };
@@ -711,6 +712,26 @@ export const test_mcp_production_review = async (): Promise<void> => {
       "distinct source criteria cannot launder one convenient line",
       review
         .submit(reusedSourceEvidence)
+        .diagnostics.some((item) => item.code === "review-evidence-reused"),
+    );
+    const whitespaceLaunderedSourceEvidence = worksheet(
+      project,
+      sourcePrepared,
+    );
+    const firstSourceEvidence =
+      whitespaceLaunderedSourceEvidence.checks[0]!.evidence[0]!;
+    if (firstSourceEvidence.kind !== "source")
+      throw new Error("Expected source evidence for source review fixture.");
+    whitespaceLaunderedSourceEvidence.checks[1]!.evidence = [
+      {
+        ...firstSourceEvidence,
+        exactText: ` ${firstSourceEvidence.exactText} `,
+      },
+    ];
+    TestValidator.predicate(
+      "cosmetic exactText whitespace cannot manufacture a distinct source selector",
+      review
+        .submit(whitespaceLaunderedSourceEvidence)
         .diagnostics.some((item) => item.code === "review-evidence-reused"),
     );
 

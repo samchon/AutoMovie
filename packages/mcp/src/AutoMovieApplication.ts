@@ -24,6 +24,7 @@ import path from "node:path";
 import { AutoMovieProductionContext } from "./production/AutoMovieProductionContext";
 import { AutoMovieProductionGuideService } from "./production/AutoMovieProductionGuideService";
 import { compareCodeUnits } from "./production/contentIdentity";
+import { productionRenderTargetFingerprint } from "./production/renderIdentity";
 
 /**
  * AutoMovie is the production-control MCP for coding agents. The agent authors
@@ -152,7 +153,13 @@ export class AutoMovieApplication {
             generated !== null &&
             generated.inputFingerprint ===
               compilation.compiler.inputFingerprint &&
-            manifest?.compileFingerprint === generated.inputFingerprint
+            manifest !== null &&
+            manifest.targetFingerprint ===
+              productionRenderTargetFingerprint(
+                services.project,
+                generated,
+                manifest.target,
+              )
           );
         })(),
       }))
@@ -236,13 +243,14 @@ export class AutoMovieApplication {
 
   /**
    * Validate and atomically upsert one compact deterministic formation after
-   * `FORMATION_DESIGN` is read. Describe ranks, spacing, orientation and model
-   * assignment once; the compiler expands deterministic slots and nodes so a
-   * coding agent can direct a large crowd without emitting thousands of
-   * transforms. This is an MCP tool because slot identity, bounds, references
-   * and invalidation must be reproducible and queryable across compilation and
-   * review. Send one complete formation. It does not animate troops or choose
-   * tactics, and a rejected mutation leaves the prior artifact intact.
+   * `FORMATION_DESIGN` is read. Describe one bounded layout, orientation and
+   * model assignment; line/column/wedge layouts own explicit spacing, while
+   * arc/scatter layouts derive separation from radius, angle and count. The
+   * compiler expands at most 10,000 explicit deterministic slots per production
+   * so a coding agent need not emit each transform. This is an MCP tool because
+   * slot identity, bounds, references and invalidation must be reproducible
+   * across compilation and review. It does not animate troops or choose
+   * tactics; a rejected complete replacement leaves prior state intact.
    */
   public setFormationDesign(
     props: IAutoMovieSetFormationDesign.IProps,
@@ -352,13 +360,13 @@ export class AutoMovieApplication {
   /**
    * Request one actual PNG frame from the host capture adapter after
    * `PRODUCTION_RENDER` is read, verify its dimensions and bytes, and commit it
-   * into a content-addressed bundle bound to the current compile fingerprint.
-   * Use this bounded oracle for visual diagnosis and review evidence, not as
-   * the full-film rendering workflow. MCP is necessary here because the review
-   * gate must cite pixels that were actually captured from current artifacts
-   * rather than a model's imagined description. A missing adapter, stale
-   * compile, unsafe path or malformed PNG is refused without fabricated
-   * evidence.
+   * into a content-addressed bundle bound to target-local inputs and the
+   * host-declared renderer identity. Use this bounded oracle for visual
+   * diagnosis and review evidence, not as the full-film rendering workflow. MCP
+   * is necessary because the review gate must cite pixels actually captured
+   * from current artifacts rather than imagined by the model. A missing
+   * adapter, stale compile, blank renderer identity, unsafe path or malformed
+   * PNG is refused without fabricated evidence.
    */
   public async previewFrame(
     props: IAutoMoviePreviewFrame.IProps,

@@ -5,6 +5,7 @@ import {
   IAutoMovieShotContract,
 } from "@automovie/interface";
 import {
+  AUTOMOVIE_MAX_FORMATION_MEMBERS,
   AUTOMOVIE_MAX_FRAME_PIXELS,
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
@@ -34,6 +35,46 @@ export const test_mcp_production_design_validation = (): void => {
     "valid starter graph",
     validateAutoMovieProductionGraph(valid),
     [],
+  );
+  const oversizedFormation = formationDesign();
+  oversizedFormation.count = AUTOMOVIE_MAX_FORMATION_MEMBERS + 1;
+  const cumulativeFormation = formationDesign();
+  cumulativeFormation.id = "second-line";
+  cumulativeFormation.count =
+    Math.floor(AUTOMOVIE_MAX_FORMATION_MEMBERS / 2) + 1;
+  cumulativeFormation.layout = {
+    kind: "line",
+    ranks: cumulativeFormation.count,
+    files: 1,
+    spacing: { lateral: 0.8, depth: 0.9 },
+  };
+  const firstCumulativeFormation = structuredClone(cumulativeFormation);
+  firstCumulativeFormation.id = "first-line";
+  TestValidator.predicate(
+    "explicit formation nodes stay inside one honest per-production bound",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      formations: new Map([[oversizedFormation.id, oversizedFormation]]),
+      shots: new Map(),
+      acceptance: new Map(),
+    }).some(
+      (diagnostic) =>
+        diagnostic.code === "design-range-invalid" &&
+        diagnostic.target === `formation:${oversizedFormation.id}`,
+    ) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        formations: new Map([
+          [firstCumulativeFormation.id, firstCumulativeFormation],
+          [cumulativeFormation.id, cumulativeFormation],
+        ]),
+        shots: new Map(),
+        acceptance: new Map(),
+      }).some(
+        (diagnostic) =>
+          diagnostic.code === "design-range-invalid" &&
+          diagnostic.target === "formations",
+      ),
   );
   const noReviewFrames = shotContract();
   noReviewFrames.reviewFrames = [];
@@ -216,8 +257,12 @@ export const test_mcp_production_design_validation = (): void => {
     id: "",
     modelRecipe: "",
     count: 0,
-    layout: { kind: "line", ranks: 0, files: 0 },
-    spacing: { lateral: 0, depth: Number.NaN },
+    layout: {
+      kind: "line",
+      ranks: 0,
+      files: 0,
+      spacing: { lateral: 0, depth: Number.NaN },
+    },
     anchor: { x: Number.NaN, y: Number.NaN, z: Number.NaN },
     facingDeg: Number.NaN,
     seed: -1,
@@ -354,14 +399,23 @@ export const test_mcp_production_design_validation = (): void => {
       [
         "column",
         {
-          ...formationDesign({ kind: "column", ranks: 1, files: 1 }),
+          ...formationDesign({
+            kind: "column",
+            ranks: 1,
+            files: 1,
+            spacing: { lateral: 1, depth: 1 },
+          }),
           id: "column",
         },
       ],
       [
         "wedge",
         {
-          ...formationDesign({ kind: "wedge", depth: 0 }),
+          ...formationDesign({
+            kind: "wedge",
+            depth: 0,
+            spacing: { lateral: 1, depth: 1 },
+          }),
           id: "wedge",
         },
       ],
@@ -615,6 +669,30 @@ export const test_mcp_production_design_validation = (): void => {
     ],
     attachments: [{ id: "saddle", bone: "hips" }],
   };
+  const unsupportedStickmanAttachment: IAutoMovieModelRecipe = {
+    ...modelRecipe(),
+    id: "unsupported-stickman-attachment",
+    lod: [
+      {
+        tier: "hero",
+        maxDistance: null,
+        recipe: "unsupported-stickman-attachment",
+      },
+    ],
+    attachments: [{ id: "boot", bone: "rightFoot" }],
+  };
+  const multiplePaletteMaterials: IAutoMovieModelRecipe = {
+    ...modelRecipe(),
+    id: "multiple-palette-materials",
+    palette: { uniform: "#123456", skin: "#abcdef" },
+    lod: [
+      {
+        tier: "hero",
+        maxDistance: null,
+        recipe: "multiple-palette-materials",
+      },
+    ],
+  };
   const modelContractDiagnostics = validateAutoMovieProductionGraph({
     ...valid,
     models: new Map([
@@ -623,6 +701,8 @@ export const test_mcp_production_design_validation = (): void => {
       [unknownPrimitive.id, unknownPrimitive],
       [missingPrimitive.id, missingPrimitive],
       [attachedHorse.id, attachedHorse],
+      [unsupportedStickmanAttachment.id, unsupportedStickmanAttachment],
+      [multiplePaletteMaterials.id, multiplePaletteMaterials],
     ]),
     formations: new Map(),
     shots: new Map(),
@@ -640,6 +720,7 @@ export const test_mcp_production_design_validation = (): void => {
       "model-lod-order-invalid",
       "design-attachment-unsupported",
       "design-collection-empty",
+      "design-collection-cardinality-invalid",
     ].every((code) => modelContractCodes.has(code)),
   );
   TestValidator.predicate(
@@ -649,6 +730,19 @@ export const test_mcp_production_design_validation = (): void => {
         diagnostic.code === "model-parameter-unsupported" &&
         diagnostic.message.includes('"rigged"'),
     ),
+  );
+  TestValidator.predicate(
+    "stickman sockets and palette entries cannot claim discarded runtime data",
+    modelContractDiagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "design-attachment-unsupported" &&
+        diagnostic.message.includes("rightFoot"),
+    ) &&
+      modelContractDiagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === "design-collection-cardinality-invalid" &&
+          diagnostic.target === "model:multiple-palette-materials",
+      ),
   );
   const validFilmFrame: IAutoMovieAcceptanceScenario = {
     ...acceptanceScenarios()[0]!,

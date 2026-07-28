@@ -5,7 +5,7 @@
 - `design`: validate manifest, design shape, ranges, identity, and references without reading source or materializing derived files.
 - `source`: additionally materialize primitive models and formation slots, bind and execute shot source, validate scenes, motions, and shots, derive contract realizations, and enforce generated ownership.
 - `review`: additionally require every current design, source, shot, and film review to be complete and fresh.
-- `final`: additionally require current render and delivery manifests.
+- `final`: additionally require a current aggregate render manifest and matching byte/media receipt. The ledger is mandatory even when every listed deliverable is optional; `required` controls which declared ids must be present, not whether final delivery needs provenance.
 
 Any error returns `success:false` and materializes nothing. Warnings are explicit but do not block. Diagnostics name a stable code, phase, target, owning path, and exact correction.
 

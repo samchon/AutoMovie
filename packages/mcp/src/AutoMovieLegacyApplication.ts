@@ -166,7 +166,10 @@ export class AutoMovieLegacyApplication {
    * current status, the unmet prerequisites, and the ordered concrete tool
    * calls that advance the film -- the same computation the resident commit
    * gate throws as an actionable prompt, exposed as data so an agent can ask
-   * before trying. Requires an active project (call openProject first).
+   * before trying. Requires an active project (call openProject first). This is
+   * a read-only projection, not an autonomous planner: it neither executes the
+   * suggested calls nor waives validation. If a suggested write is refused,
+   * correct its named prerequisite and query again instead of skipping ahead.
    *
    * @returns The ladder status, missing prerequisites, and next actions.
    */
@@ -201,7 +204,11 @@ export class AutoMovieLegacyApplication {
    * the commit ladder), then read the guide matching the next stage: `FORGE`,
    * `STAGING`, `BLOCKING`, `PERFORMANCE`, `REVIEW`, `PROPS`, `PROJECT_MEMORY`,
    * or `RENDER_GUIDES`. Guides teach the method; tool returns decide
-   * correctness.
+   * correctness. This read-only call neither opens a project nor satisfies any
+   * production gate by itself. Unknown names are refused rather than mapped to
+   * a guessed document. Read the returned versioned text, then use the tool and
+   * correction path it names instead of treating prompt memory as current
+   * engine truth.
    *
    * @param props Exact guide document name.
    * @returns Markdown guide content.
@@ -235,7 +242,11 @@ export class AutoMovieLegacyApplication {
   /**
    * Read the script slice from a slate. It returns `null` until the SCRIPT
    * stage has committed a script, so agents can ask for context without
-   * inventing it.
+   * inventing it. Omit `slate` only after `openProject`; otherwise pass the
+   * explicit stored slate being inspected. This call is read-only and does not
+   * validate, synthesize, or commit a replacement. A null result means
+   * `commitScript` is the missing prerequisite, not that the caller should
+   * fabricate downstream scene or shot state.
    *
    * @param props The slate to query.
    * @returns The script slice, or null when absent.
@@ -249,7 +260,12 @@ export class AutoMovieLegacyApplication {
 
   /**
    * Read the staged scene slice from a slate. It returns `null` until STAGING
-   * has committed a scene, letting later tools gate on real state.
+   * has committed a scene, letting later tools gate on real state. Omit `slate`
+   * only for an active resident project. When several scene ids exist, supply
+   * `scene`; ambiguity is refused instead of selecting an arbitrary set. This
+   * read neither restages nor validates the scene. Use the returned
+   * compiler-accepted state as input to geometry, blocking, performance, and
+   * validation rather than reconstructing transforms from prose.
    *
    * @param props The slate to query.
    * @returns The staged scene slice, or null when absent.
@@ -268,7 +284,11 @@ export class AutoMovieLegacyApplication {
 
   /**
    * Read the shot built for one beat. Missing shots return `null`; duplicate
-   * shot ids throw as an ambiguous slate state.
+   * shot ids throw as an ambiguous slate state. The beat id is the stable
+   * screenplay address, not the rendered shot id. Omit `slate` only after
+   * `openProject`; the call is read-only and never performs or commits a shot.
+   * Null means the beat still needs `perform` followed by `commitShot`, while
+   * an ambiguity means the stored slate must be repaired before continuing.
    *
    * @param props The slate and beat id to query.
    * @returns The matching shot, or null when absent.
@@ -284,7 +304,11 @@ export class AutoMovieLegacyApplication {
 
   /**
    * Read review notes from a slate. Omitting `beat` returns the full open
-   * backlog; providing it scopes the notes to one beat.
+   * backlog; providing it scopes the notes to one beat. Omit `slate` only for
+   * the active resident project. The returned array is the committed backlog,
+   * not an automatic critique and not proof that a shot passed review. This
+   * call never clears notes or changes film eligibility; revise the complete
+   * list and use `commitNotes` when the review state truly changes.
    *
    * @param props The slate and optional beat filter to query.
    * @returns The matching review notes.
@@ -300,7 +324,11 @@ export class AutoMovieLegacyApplication {
 
   /**
    * Read the resolved end-state for one beat. Missing entries return `null`;
-   * duplicates throw as an ambiguous slate state.
+   * duplicates throw as an ambiguous slate state. This is the continuity
+   * handoff produced after a performed shot: actor positions, facing, pose and
+   * mounts seed the next resident block/performance. Omit `slate` only after
+   * `openProject`. Null means the beat needs `getShotEndState` and
+   * `commitBeatEnd`; it is not permission to silently reset the next beat.
    *
    * @param props The slate and beat id to query.
    * @returns The matching beat end state, or null when absent.
@@ -343,20 +371,15 @@ export class AutoMovieLegacyApplication {
   }
 
   /**
-   * Measure whether an actor's arms can reach a positional target. `reachable`
-   * is the DISTANCE verdict: the target lies inside the arm's shell. Whether
-   * the reach also survives `perform` is a second, separate answer per arm:
-   * `poseWithinRom` says whether the returned IK pose satisfies the rig's range
-   * of motion, and `romViolations` names the exact joint axes that break it, at
-   * the same paths `perform` reports (#1338). Read both: a reach can be well
-   * inside the shell and still be a pose the joints cannot hold. Pass `context`
-   * explicitly, or omit it to use the resident project's committed scene plus
-   * the session-only model skeletons remembered from commitScene. A node target
-   * may name any staged placement, an actor, a set piece, or a camera. A bone
-   * target samples that actor's resolved rig at `t`; in resident mode `beat`
-   * selects its committed shot. The selected reaching actor's custom clinical
-   * rest frames apply to the IK result; omission uses the canonical humanoid
-   * frame.
+   * Test an actor's arm against a node, bone, point, or group target before
+   * authoring a reach action. Read both verdicts: `reachable` checks distance
+   * against the arm shell, while each arm's `poseWithinRom` and `romViolations`
+   * say whether `perform` can hold the returned IK pose. A target can pass
+   * distance and fail joint limits. Pass an explicit geometry context, or omit
+   * it after `openProject` to use the committed scene and remembered rigs. A
+   * bone target samples its resolved actor at shot time; resident calls use
+   * `beat` to select the committed motion. Null output names the unresolved id
+   * or unsolvable arm rather than inventing a pose.
    *
    * @param props The actor id, target, and optional explicit context.
    * @returns The reach report, or null with a reason naming the id or the
@@ -382,7 +405,11 @@ export class AutoMovieLegacyApplication {
    * declared limits and drivers. Joint ids are `<placement>/<articulation
    * node>`; the result reports the lowered world matrices and every clamp. This
    * is resident-only because the forged prop specifications live in the project
-   * store beside the committed scene and shot.
+   * store beside the committed scene and shot. The query is read-only: it does
+   * not move the prop, rewrite a driver, persist a sampled frame, or certify
+   * contact. Missing scene, shot, spec, or joint identity returns an actionable
+   * reason rather than a guessed matrix. Correct the owning committed artifact
+   * and query the exact beat/time again.
    *
    * @param props The committed beat and optional shot-local time.
    * @returns The resolved prop frame, or an actionable reason it is
@@ -428,7 +455,11 @@ export class AutoMovieLegacyApplication {
    * `scene` explicitly, or omit it to use the resident committed scene. A node
    * target may name any staged placement, an actor, a set piece, or a camera.
    * Bone and relative targets are deliberately absent: this scene-only query
-   * has neither a rig clock nor a unique point for a direction.
+   * has neither a rig clock nor a unique point for a direction. The result is a
+   * deterministic geometric measurement, not path length, reachability,
+   * collision clearance, or artistic staging judgment. The call is read-only
+   * and never moves either endpoint. If one side cannot resolve, correct its
+   * scene id or use the pose/reach oracle that owns the missing semantics.
    *
    * @param props The two targets and optional explicit scene.
    * @returns The resolved endpoints and distance, or null with a per-side
@@ -447,7 +478,11 @@ export class AutoMovieLegacyApplication {
 
   /**
    * Validate a pose against a skeleton. Returns ROM, duplicate-joint, skeleton
-   * mismatch, and root-transform diagnostics with field paths.
+   * mismatch, and root-transform diagnostics with field paths. This is a pure
+   * preflight: it neither repairs the pose nor commits project state. Treat an
+   * empty violation list as structural and range validity only, not an
+   * aesthetic review. On failure, change the exact joint/root path named by the
+   * diagnostic and resubmit before using the pose in a motion or shot.
    *
    * @param props The pose and target skeleton.
    * @returns The validation envelope.
@@ -464,7 +499,12 @@ export class AutoMovieLegacyApplication {
   /**
    * Validate an MCP-safe motion against a skeleton. Bezier controls are
    * converted back to the engine tuple shape before temporal and ROM checks
-   * run.
+   * run. The validator checks ids, target skeleton, track/keyframe shape,
+   * clocks, interpolation and sampled joint limits; it does not synthesize
+   * missing motion or persist anything. Use the returned field paths to repair
+   * the authored clip, then revalidate before `perform`/`commitShot`. Passing
+   * here establishes mechanical validity, not camera readability or dramatic
+   * quality.
    *
    * @param props The motion and target skeleton.
    * @returns The validation envelope.
@@ -481,8 +521,12 @@ export class AutoMovieLegacyApplication {
   /**
    * Check whether explicitly planted feet skate in a performed MCP-safe motion.
    * Pass the dense motion from `perform({ response: "full" })` when the compact
-   * resident response did not return its registry; the result is advisory
-   * physics warnings with a foot, sample, and contact-window path.
+   * resident response did not return its registry. The pure validator samples
+   * only the declared plant windows and reports advisory physics warnings with
+   * a foot, sample, and contact-window path; it does not infer missing
+   * contacts, rewrite keys, or persist the motion. A clean result means planted
+   * feet stayed within the configured tolerance, not that the gait or shot
+   * looks natural.
    *
    * @param props The motion, rig, and intended planted-foot windows.
    * @returns The validation envelope.
@@ -496,7 +540,11 @@ export class AutoMovieLegacyApplication {
   /**
    * Check a performed MCP-safe motion's feet against a scalar ground plane.
    * Pass the dense motion from `perform({ response: "full" })` when needed;
-   * penetration is advisory and each warning identifies its sampled foot.
+   * penetration is advisory and each warning identifies its sampled foot and
+   * time. This pure oracle neither resolves arbitrary scene terrain nor edits
+   * root motion. Supply the actual rig and intended ground height, correct the
+   * reported motion/root keys, and separately review foot planting and terrain
+   * contact in a current frame.
    *
    * @param props The motion, rig, optional feet, and ground settings.
    * @returns The validation envelope.
@@ -509,7 +557,11 @@ export class AutoMovieLegacyApplication {
 
   /**
    * Validate a model. This runs the engine's model validator over geometry,
-   * materials, skeleton graph, skinning, and transform ranges.
+   * materials, skeleton graph, skinning, and transform ranges. It is a pure
+   * boundary check: no mesh is generated, imported, repaired, registered, or
+   * committed. Each violation names the malformed model path; correct all of
+   * them before staging. A clean result proves engine consumability, not visual
+   * likeness, art direction, or attachment behavior in a composed scene.
    *
    * @param props The model to validate.
    * @returns The validation envelope.
@@ -526,7 +578,11 @@ export class AutoMovieLegacyApplication {
    * transforms, camera clip planes, light ranges, and -- when the scene
    * declares one -- its `space`'s surfaces (convex footprints, ramp axes,
    * walkable ids). A space surface needs no model: it is the ground's meaning,
-   * drawn from its own footprint, never a registry entry.
+   * drawn from its own footprint, never a registry entry. This pure check does
+   * not stage, repair, commit, or render. A clean result proves structural
+   * engine validity only; framing, lighting readability, contact, and dramatic
+   * composition still require current-frame review. Fix the exact field path
+   * returned before blocking or performance.
    *
    * @param props The scene and available model ids.
    * @returns The validation envelope.
@@ -542,7 +598,12 @@ export class AutoMovieLegacyApplication {
 
   /**
    * Validate a shot against its scene and optional motion table. The result
-   * names missing scene/camera/node/motion refs and invalid clip timing.
+   * names missing scene/camera/node/motion refs and invalid clip timing. Supply
+   * every referenced derived motion when checking an explicit shot; resident
+   * session memory is not consulted by this pure validator. It neither performs
+   * actions nor commits the shot. Repair the exact reference or time path it
+   * reports, then separately review frame readability, continuity, contact and
+   * acceptance evidence.
    *
    * @param props The shot, scene, and optional motions to validate against.
    * @returns The validation envelope.
@@ -560,7 +621,12 @@ export class AutoMovieLegacyApplication {
 
   /**
    * Validate an editorial sequence against the shots it references. It checks
-   * fps, shot refs, trim spans, transition placement, and duplicate ids.
+   * fps, shot refs, trim spans, transition placement, and duplicate ids. Pass
+   * the exact shot artifacts the sequence cuts; this pure call does not read or
+   * mutate resident state. A clean result proves the cut is mechanically
+   * renderable, not that pacing, narrative causality, continuity or runtime
+   * intent is good. Perform that review before `commitFilm`, then correct any
+   * field-located sequence violation rather than retrying unchanged.
    *
    * @param props The sequence and available shots.
    * @returns The validation envelope.
@@ -613,6 +679,11 @@ export class AutoMovieLegacyApplication {
   /**
    * Commit a verified script into the slate. Replacing the script clears every
    * downstream slice because staging, shots, notes, and film depend on it.
+   * Resident calls require `openProject`; explicit calls return a transformed
+   * slate without writing the project. The commit gate validates the script and
+   * current revision atomically. On refusal the slate is unchanged: correct the
+   * named script field or resynchronize through `getSlate`, then retry rather
+   * than attempting staging against stale memory.
    *
    * @param props The slate and script artifact to commit.
    * @returns The slate digest (and, for explicit calls, the transformed slate),
@@ -629,7 +700,12 @@ export class AutoMovieLegacyApplication {
 
   /**
    * Commit a staged scene after script and model-reference checks. A new scene
-   * invalidates shots, beat ends, notes, and film.
+   * invalidates shots, beat ends, notes, and film because all downstream
+   * transforms and continuity derive from it. Resident calls write atomically
+   * after `openProject`; explicit calls transform the supplied slate. The
+   * `models` registry must cover every scene-node model. Refusal leaves state
+   * unchanged, so repair the reported scene/model reference or revision race
+   * before rebuilding shots.
    *
    * @param props The slate, scene, and available model ids.
    * @returns The slate digest (and, for explicit calls, the transformed slate),
@@ -677,7 +753,12 @@ export class AutoMovieLegacyApplication {
    * Commit the resolved end-state for a beat. It must point at a committed shot
    * and only name actors present in the committed scene. Re-committing the same
    * beat replaces exactly that beat's end-state (the upsert rule) and nulls the
-   * committed film, continuity data changed under the cut.
+   * committed film, continuity data changed under the cut. Use the
+   * engine-derived `getShotEndState` result rather than hand-authoring a
+   * convenient reset. Resident mode checks the current revision and writes
+   * atomically; explicit mode transforms only the supplied slate. A refusal
+   * changes nothing, so repair the missing shot, actor, or stale revision
+   * before blocking the next beat.
    *
    * @param props The slate and beat-end state to commit.
    * @returns The slate digest (and, for explicit calls, the transformed slate),
@@ -696,6 +777,11 @@ export class AutoMovieLegacyApplication {
    * Commit the current review backlog. Notes require a committed script and
    * built shots so review cannot point at imaginary beats. Committing notes
    * nulls the committed film: an open backlog means the cut is under review.
+   * Send the complete current backlog, not a patch; an empty list is the
+   * explicit claim that all noted corrections were applied. Resident mode
+   * validates the current revision atomically, while explicit mode transforms
+   * only the supplied slate. Refusal leaves prior notes and film state
+   * unchanged.
    *
    * @param props The slate and complete note backlog.
    * @returns The slate digest (and, for explicit calls, the transformed slate),
@@ -713,7 +799,12 @@ export class AutoMovieLegacyApplication {
   /**
    * Commit the assembled film after sequence and backlog checks. Open review
    * notes or missing beat shots keep the slate unchanged. `review` comes first:
-   * state your pacing/continuity self-check before the cut-list it judges.
+   * state your pacing/continuity self-check before the cut-list it judges. The
+   * gate validates references, timing and an empty note backlog, but cannot
+   * prove that the prose review is honest or the edit is artistically
+   * effective. Resident mode commits atomically at the current revision;
+   * explicit mode returns a transformed slate. Correct every refusal before
+   * claiming a final cut.
    *
    * @param props The pre-commit review, the slate, and the sequence artifact.
    * @returns The slate digest (and, for explicit calls, the transformed slate),
@@ -760,7 +851,11 @@ export class AutoMovieLegacyApplication {
    * ids; the beat is their identity anchor, so per-beat is the erase
    * granularity. Requires an active project, a non-empty reason, and existing
    * notes for the beat, erasing nothing is reported as a violation. The
-   * assembled film is cleared (any notes change invalidates it).
+   * assembled film is cleared because any notes change invalidates its review
+   * basis. This is an audited targeted correction, not “mark all fixed” and not
+   * a cascade into shots or design. The commit is atomic; refusal preserves the
+   * backlog. Apply the noted corrections first, record the concrete reason,
+   * then re-review and recommit the film.
    *
    * @param props The beat whose notes to erase and the reason (evidence).
    * @returns The slate digest after the erase, or violations when refused.
@@ -933,6 +1028,11 @@ export class AutoMovieLegacyApplication {
    * regenerated one window at a time (#609/#644). The target must be the
    * committed film; frame-atomic boundaries mean concatenating the chunks
    * reproduces the whole render. Omit `slate` to plan the resident project.
+   * This pure call writes no frames, checkpoint, media, or completion claim;
+   * the host executes and records each chunk. It refuses a missing film,
+   * invalid frame clock, or non-positive chunk size rather than inventing
+   * boundaries. Correct the owning film/spec, then resume only the failed
+   * planned windows.
    *
    * @param props The slate (omit for resident), render spec, frames per chunk,
    *   optional guide passes, and paths.
@@ -961,7 +1061,11 @@ export class AutoMovieLegacyApplication {
    * reads beside the guide frames (#607), from the committed script and film.
    * Pass `chunkFrames` to also get one chunk-local sidecar per render chunk,
    * aligned with `planChunkedRender`. Omit `slate` to plan the resident
-   * project.
+   * project. This pure planner computes frame-aligned caption records but
+   * writes no WebVTT, prompts, frames, or media. It refuses missing script/film
+   * or an incompatible clock instead of guessing. Inspect the returned
+   * diagnostics, correct the owning slate or frame format, and let the host
+   * persist the resulting sidecar.
    *
    * @param props The slate (omit for resident), shared render frame format, and
    *   optional frames per chunk.
@@ -1016,20 +1120,15 @@ export class AutoMovieLegacyApplication {
   }
 
   /**
-   * Stage a scene -- the first deterministic step. Place the script's cast on
-   * the set per the staging plan, resolve every actor/camera/light to a
-   * concrete world transform (measured against the staged rigs), and validate
-   * persistent mounts. The environment comes in two halves (#1173): `set`
-   * pieces are geometry -- skeleton-less models (a forged prop's primitives),
-   * each optionally resized by `scale`, so one box serves as wall, step, and
-   * table top -- while `space` is the ground's meaning, the walkable surfaces
-   * copied onto the scene and drawn as real meshes. Together they keep the
-   * guide passes describing a world rather than actors floating in a void. A
-   * light states its physics: `type` picks directional (aimed, no falloff),
-   * point (`position`, optional `range`), or spot (both, plus `coneAngle`), and
-   * `color` makes a candle warm; a parameter its kind cannot use is refused,
-   * not ignored. On failure nothing is composed and the violations name the
-   * offending placement to repair.
+   * Turn a script and staging plan into the deterministic scene that later
+   * blocking and performance consume. It resolves cast, cameras, lights, set
+   * pieces, mounts, and walkable space to concrete world transforms. Set pieces
+   * are skeleton-less geometry and may be scaled; space defines the ground and
+   * surfaces rendered in guide passes. Directional, point, and spot lights each
+   * accept only their physical parameters, so a mismatched range, target, or
+   * cone is refused rather than ignored. Failure returns field-located
+   * placement violations and no partial scene; correct those inputs before
+   * calling `block`.
    *
    * @param props The script (cast + beats) and the staging plan (placements).
    * @returns The staged scene on success, or the staging violations to fix.
@@ -1049,8 +1148,12 @@ export class AutoMovieLegacyApplication {
   /**
    * Block a beat -- plan the coarse movement (who goes where, in what order,
    * with what timing anchors) over an already-{@link stage staged} scene, before
-   * the fine performance. Returns the blocked beat, or the violations if a
-   * block contradicts the staging or the beat.
+   * the fine performance. Explicit mode supplies script and staged set
+   * together; resident mode reads both and may seed the preceding committed
+   * end-state. Mixed ownership is refused. The result is intent and timing, not
+   * animation: it neither synthesizes clips nor commits a shot. Repair
+   * contradictory actor, route, timing, or continuity fields before calling
+   * `perform`.
    *
    * @param props The script, the successfully staged scene, and the blocking.
    * @returns The blocked beat on success, or the violations to fix.
@@ -1082,19 +1185,15 @@ export class AutoMovieLegacyApplication {
   }
 
   /**
-   * Perform a shot -- compile one beat's action calls into camera/object tracks
-   * and per-actor clips over a successfully staged scene. The server builds the
-   * default deterministic synthesizer from the provided actor contexts, so MCP
-   * clients pass only JSON: gait/profile data, optional rigs, and optional rest
-   * frames. The MCP gait shape omits cubic-bezier tuple fields because the LLM
-   * schema cannot express tuples. Supplying validated blocking arms the
-   * intent-realization gates. An `enact` action plays a clip you authored
-   * yourself: COMPUTE the keyframes (with code, never hand-written floats) and
-   * supply the motion in `clips` under the action's clip id -- the engine still
-   * masks it to its region, layers it, and ROM-gates the composite. Clips are
-   * derived output, never persisted; re-supply them on each perform. Resident
-   * calls default to a compact motion summary and hold clips for that session's
-   * `commitShot`; request `response: "full"` to inspect the dense clips.
+   * Compile one beat's action plan into deterministic actor clips plus camera,
+   * object, and light tracks over a staged scene. Actor contexts provide the
+   * rigs, rest frames, gait, and profiles used by the server synthesizer;
+   * validated blocking enables intent-realization checks. An `enact` action
+   * references a caller-computed clip from `clips`; the engine still applies
+   * region masks, layering, and ROM gates. Explicit calls re-supply derived
+   * clips. Resident calls may reuse stored actors, retain clips for
+   * `commitShot`, and return a compact summary; request `response: "full"` for
+   * dense-motion or physics inspection. Fix violations before committing.
    *
    * @param props The script, staged scene, performance write, actor contexts,
    *   optional enacted clips, and optional validated blocking.
@@ -1149,8 +1248,11 @@ export class AutoMovieLegacyApplication {
   /**
    * Cut shots into a film -- assemble a sequence of performed shots on the
    * output clock, applying trims and transitions (a cross-dissolve overlaps the
-   * tail). Returns the cut with its runtime, or the violations if a trim or
-   * transition does not fit its shot.
+   * tail). This pure transform checks shot references, clocks, trims and
+   * transition capacity, then returns the computed sequence and runtime. It
+   * neither reads resident state nor commits the film; `commitFilm` owns that
+   * gate. A clean cut is mechanically valid, not proof of pacing or continuity,
+   * so review those qualities and correct any field-located violation first.
    *
    * @param props The assemble plan (the ordered entries) and the shots to cut.
    * @returns The cut film on success, or the violations to fix.
@@ -1166,8 +1268,12 @@ export class AutoMovieLegacyApplication {
 
   /**
    * Forge a cast's models -- build the parametric head/body meshes the script's
-   * cast needs from the forge specification, ready to rig and render. Returns
-   * the forged cast, or the violations if a specification is out of range.
+   * cast needs from the forge specification, ready to rig and render. The
+   * deterministic generator validates parameter ranges and returns either the
+   * complete forged registry or all violations; it does not import arbitrary
+   * meshes, register binary assets, stage actors, or commit project state. A
+   * successful model remains subject to scene-scale, silhouette, likeness and
+   * current-frame review. Correct the rejected cast/spec path and retry.
    *
    * @param props The script (whose cast is forged) and the forge specification.
    * @returns The forged cast on success, or the violations to fix.

@@ -46,6 +46,7 @@ import {
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 import { materializeFormationSlots } from "./materializeProduction";
+import { productionRenderTargetFingerprint } from "./renderIdentity";
 
 /** Read-only current compiler status used to refuse stale oracle answers. */
 export type AutoMovieCompileStatusProvider =
@@ -193,33 +194,39 @@ export class AutoMovieProductionOracleService {
               ),
             )
             .map(([id]) => id);
-          const points = participatingShots.flatMap((id) => {
+          let materializedCount = 0;
+          let minimumX = Number.POSITIVE_INFINITY;
+          let maximumX = Number.NEGATIVE_INFINITY;
+          let minimumZ = Number.POSITIVE_INFINITY;
+          let maximumZ = Number.NEGATIVE_INFINITY;
+          for (const id of participatingShots) {
             const compiled = shots.get(id);
-            return compiled === undefined
-              ? []
-              : slots.flatMap((slot) => {
-                  const node = compiled.scene.nodes.find(
-                    (candidate) => candidate.id === slot.node,
-                  );
-                  return node === undefined ? [] : [node.transform.translation];
-                });
-          });
+            if (compiled === undefined) continue;
+            const nodes = new Map(
+              compiled.scene.nodes.map((node) => [node.id, node]),
+            );
+            for (const slot of slots) {
+              const point = nodes.get(slot.node)?.transform.translation;
+              if (point === undefined) continue;
+              ++materializedCount;
+              minimumX = Math.min(minimumX, point.x);
+              maximumX = Math.max(maximumX, point.x);
+              minimumZ = Math.min(minimumZ, point.z);
+              maximumZ = Math.max(maximumZ, point.z);
+            }
+          }
           if (
             participatingShots.length === 0 ||
-            points.length !== participatingShots.length * formation.count
+            materializedCount !== participatingShots.length * formation.count
           )
             throw new Error(
               `Formation "${request.formation}" is not fully materialized in every current participating shot. Recompile its source and compiler-owned slots.`,
             );
-          const minimumX = Math.min(...points.map((point) => point.x));
-          const maximumX = Math.max(...points.map((point) => point.x));
-          const minimumZ = Math.min(...points.map((point) => point.z));
-          const maximumZ = Math.max(...points.map((point) => point.z));
           result = {
             kind: "measurement",
             values: {
               designCount: formation.count,
-              materializedCount: points.length / participatingShots.length,
+              materializedCount: materializedCount / participatingShots.length,
               participatingShots: participatingShots.length,
               width: maximumX - minimumX,
               depth: maximumZ - minimumZ,
@@ -465,6 +472,12 @@ export class AutoMovieProductionOracleService {
         }. The preview host must return a decodable PNG.`,
       );
     }
+    if (captured.rendererIdentity.trim().length === 0)
+      return previewFailure(
+        generated.inputFingerprint,
+        "capture-renderer-identity-invalid",
+        "The capture adapter returned a blank renderer identity. Report the browser and graphics backend before these pixels can enter a render bundle.",
+      );
     if (
       captured.width !== width ||
       captured.height !== height ||
@@ -490,9 +503,15 @@ export class AutoMovieProductionOracleService {
       pixelFormat: "yuv420p",
       crf: 17,
     };
+    const targetFingerprint = productionRenderTargetFingerprint(
+      this.project,
+      generated,
+      input.target,
+    );
     const relativeBundle = productionRenderBundleRelativePath({
       target: input.target,
-      compileFingerprint: generated.inputFingerprint,
+      rendererIdentity: captured.rendererIdentity,
+      targetFingerprint,
       renderSpec,
     });
     const suffix = pass === "beauty" ? "" : `.${pass}`;
@@ -518,6 +537,8 @@ export class AutoMovieProductionOracleService {
       {
         target: input.target,
         compileFingerprint: generated.inputFingerprint,
+        rendererIdentity: captured.rendererIdentity,
+        targetFingerprint,
         renderSpec,
       },
       duration,
@@ -529,9 +550,11 @@ export class AutoMovieProductionOracleService {
         left.index - right.index || compareCodeUnits(left.pass, right.pass),
     );
     const manifest: IAutoMovieRenderBundleManifest = {
-      version: 1,
+      version: 2,
       target: input.target,
       compileFingerprint: generated.inputFingerprint,
+      rendererIdentity: captured.rendererIdentity,
+      targetFingerprint,
       renderSpec,
       frames,
     };
@@ -759,39 +782,43 @@ const actorSpatialAt = (
 ): IActorSpatialSample => {
   const pose = actorPoseAt(compiled, actor, time, skeleton);
   const node = compiled.scene.nodes.find((item) => item.id === actor)!;
-  const base =
-    pose.root === null
-      ? node.transform
-      : composeTransforms(node.transform, pose.root);
   const sampled = sampleClipSequence(compiled.shot.objectMotions, time);
   const translation = sampled.get(`node:${actor}:translation`)?.value;
   const rotation = sampled.get(`node:${actor}:rotation`)?.value;
   const scale = sampled.get(`node:${actor}:scale`)?.value;
+  const nodeTransform: IAutoMovieTransform = {
+    translation:
+      translation === undefined
+        ? node.transform.translation
+        : {
+            x: translation[0]!,
+            y: translation[1]!,
+            z: translation[2]!,
+          },
+    rotation:
+      rotation === undefined
+        ? node.transform.rotation
+        : {
+            x: rotation[0]!,
+            y: rotation[1]!,
+            z: rotation[2]!,
+            w: rotation[3]!,
+          },
+    scale:
+      scale === undefined
+        ? node.transform.scale
+        : { x: scale[0]!, y: scale[1]!, z: scale[2]! },
+  };
   return {
     pose: { ...pose, root: null },
-    transform: {
-      translation:
-        translation === undefined
-          ? base.translation
-          : {
-              x: translation[0]!,
-              y: translation[1]!,
-              z: translation[2]!,
-            },
-      rotation:
-        rotation === undefined
-          ? base.rotation
-          : {
-              x: rotation[0]!,
-              y: rotation[1]!,
-              z: rotation[2]!,
-              w: rotation[3]!,
-            },
-      scale:
-        scale === undefined
-          ? base.scale
-          : { x: scale[0]!, y: scale[1]!, z: scale[2]! },
-    },
+    transform:
+      pose.root === null
+        ? nodeTransform
+        : composeTransforms(nodeTransform, {
+            ...pose.root,
+            // Engine FK and the viewer both treat pose-root scale as identity.
+            scale: { x: 1, y: 1, z: 1 },
+          }),
   };
 };
 
@@ -818,10 +845,6 @@ const sampleActorPose = (
   const performance = found.compiled.shot.performances.find(
     (item) => item.node === actor,
   );
-  if (performance === undefined)
-    throw new Error(
-      `Actor "${actor}" has no performance in shot "${found.compiled.shot.id}". Correct the actor or shot source.`,
-    );
   const pose = actorPoseAt(found.compiled, actor, time, found.model.skeleton);
   const transform = actorSpatialAt(
     found.compiled,
@@ -832,7 +855,9 @@ const sampleActorPose = (
   return {
     shot: found.compiled.shot.id,
     actor,
-    held: performance.motion === null,
+    held:
+      (performance === undefined ? found.node.motion : performance.motion) ===
+      null,
     rootX: transform.translation.x,
     rootY: transform.translation.y,
     rootZ: transform.translation.z,
@@ -955,7 +980,11 @@ const verifiedRetainedFrames = (
   bundleRoot: string,
   expected: Pick<
     IAutoMovieRenderBundleManifest,
-    "target" | "compileFingerprint" | "renderSpec"
+    | "target"
+    | "compileFingerprint"
+    | "rendererIdentity"
+    | "targetFingerprint"
+    | "renderSpec"
   >,
   duration: number,
 ): Array<{
@@ -970,14 +999,16 @@ const verifiedRetainedFrames = (
     Buffer.from(
       canonicalAutoMovieJsonBytes({
         target: manifest.target,
-        compileFingerprint: manifest.compileFingerprint,
+        rendererIdentity: manifest.rendererIdentity,
+        targetFingerprint: manifest.targetFingerprint,
         renderSpec: manifest.renderSpec,
       }),
     ).equals(
       Buffer.from(
         canonicalAutoMovieJsonBytes({
           target: expected.target,
-          compileFingerprint: expected.compileFingerprint,
+          rendererIdentity: expected.rendererIdentity,
+          targetFingerprint: expected.targetFingerprint,
           renderSpec: expected.renderSpec,
         }),
       ),

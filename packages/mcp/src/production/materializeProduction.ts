@@ -154,8 +154,8 @@ const localFormationPoints = (
           ? slot % layout.files
           : Math.floor(slot / layout.ranks);
       points.push({
-        x: (file - (layout.files - 1) / 2) * formation.spacing.lateral,
-        z: rank * formation.spacing.depth,
+        x: (file - (layout.files - 1) / 2) * layout.spacing.lateral,
+        z: rank * layout.spacing.depth,
       });
     }
     return points;
@@ -169,8 +169,8 @@ const localFormationPoints = (
         ++column
       )
         points.push({
-          x: column * formation.spacing.lateral,
-          z: row * formation.spacing.depth,
+          x: column * layout.spacing.lateral,
+          z: row * layout.spacing.depth,
         });
     return points;
   }
@@ -199,8 +199,8 @@ const seededRandom = (
   formationSeed: number,
   layoutSeed: number,
 ): (() => number) => {
-  let state =
-    (Math.trunc(formationSeed) ^ Math.trunc(layoutSeed) ^ 0x9e3779b9) >>> 0;
+  let state = mixSeed(formationSeed, 0x9e3779b9);
+  state = mixSeed(layoutSeed, state ^ 0x85ebca6b);
   return () => {
     state = (state + 0x6d2b79f5) >>> 0;
     let value = state;
@@ -208,6 +208,23 @@ const seededRandom = (
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
     return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
   };
+};
+
+/**
+ * Fold one full safe-integer seed into a 32-bit PRNG state.
+ *
+ * Low and high words are mixed in sequence, with a caller-supplied salt, so
+ * swapped seed roles and values separated by 2^32 no longer collapse by
+ * construction under JavaScript bitwise XOR.
+ */
+const mixSeed = (seed: number, salt: number): number => {
+  const integer = Math.trunc(seed);
+  const low = integer >>> 0;
+  const high = Math.floor(integer / 4_294_967_296) >>> 0;
+  let value = (salt ^ low) >>> 0;
+  value = Math.imul(value ^ (value >>> 16), 0x7feb352d);
+  value = Math.imul(value ^ (value >>> 15) ^ high, 0x846ca68b);
+  return (value ^ (value >>> 16)) >>> 0;
 };
 
 const materializeModel = (recipe: IAutoMovieModelRecipe): IAutoMovieModel => {

@@ -130,10 +130,11 @@ export const realizeShotContract = (props: {
     if (participant.kind !== "formation") return [];
     const design = props.formations.get(participant.id);
     const slots = props.formationSlots[participant.id] ?? [];
+    const nodes = new Map(
+      props.compiled.scene.nodes.map((node) => [node.id, node]),
+    );
     const actual = slots.flatMap((slot) => {
-      const node = props.compiled.scene.nodes.find(
-        (candidate) => candidate.id === slot.node,
-      );
+      const node = nodes.get(slot.node);
       return node === undefined ? [] : [{ slot, node }];
     });
     const points = actual.map(({ node }) => node.transform.translation);
@@ -406,18 +407,14 @@ const actorTransformAt = (
   const model = modelOf(compiled, node.model);
   const pose =
     model.skeleton === null ? null : actorPoseAt(compiled, actor, time);
-  const base =
-    pose?.root === null || pose === null
-      ? node.transform
-      : composeTransforms(node.transform, pose.root);
   const sampled = sampleClipSequence(compiled.shot.objectMotions, time);
   const translation = sampled.get(`node:${actor}:translation`)?.value;
   const rotation = sampled.get(`node:${actor}:rotation`)?.value;
   const scale = sampled.get(`node:${actor}:scale`)?.value;
-  return {
+  const nodeTransform: IAutoMovieTransform = {
     translation:
       translation === undefined
-        ? base.translation
+        ? node.transform.translation
         : {
             x: translation[0]!,
             y: translation[1]!,
@@ -425,7 +422,7 @@ const actorTransformAt = (
           },
     rotation:
       rotation === undefined
-        ? base.rotation
+        ? node.transform.rotation
         : {
             x: rotation[0]!,
             y: rotation[1]!,
@@ -434,9 +431,16 @@ const actorTransformAt = (
           },
     scale:
       scale === undefined
-        ? base.scale
+        ? node.transform.scale
         : { x: scale[0]!, y: scale[1]!, z: scale[2]! },
   };
+  return pose?.root === null || pose === null
+    ? nodeTransform
+    : composeTransforms(nodeTransform, {
+        ...pose.root,
+        // Engine FK and the viewer both treat pose-root scale as identity.
+        scale: { x: 1, y: 1, z: 1 },
+      });
 };
 
 const modelOf = (
@@ -474,15 +478,18 @@ const composeTransforms = (
 
 const bounds = (
   points: readonly IAutoMovieVector3[],
-  select: (...values: number[]) => number,
+  select: (left: number, right: number) => number,
 ): IAutoMovieVector3 =>
   points.length === 0
     ? { x: 0, y: 0, z: 0 }
-    : {
-        x: select(...points.map((point) => point.x)),
-        y: select(...points.map((point) => point.y)),
-        z: select(...points.map((point) => point.z)),
-      };
+    : points.slice(1).reduce<IAutoMovieVector3>(
+        (result, point) => ({
+          x: select(result.x, point.x),
+          y: select(result.y, point.y),
+          z: select(result.z, point.z),
+        }),
+        { ...points[0]! },
+      );
 
 const vectorClose = (
   left: IAutoMovieVector3,

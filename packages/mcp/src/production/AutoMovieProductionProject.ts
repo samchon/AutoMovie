@@ -50,6 +50,12 @@ export interface IAutoMovieProductionProjectSummary {
 export interface IAutoMovieProductionContentInput {
   /** Project-relative normalized path. */
   path: string;
+  /**
+   * Whether the file belongs to a coding-agent source root. Source text uses
+   * the same BOM/EOL normalization as a bound shot module before
+   * fingerprinting.
+   */
+  source: boolean;
   /** Exact bytes, or null for one declared optional file that is absent. */
   bytes: Uint8Array | null;
 }
@@ -148,8 +154,26 @@ export class AutoMovieProductionProject {
 
   /** Enumerate declared source, viewer, script and asset inputs safely. */
   public contentInputs(): IAutoMovieProductionContentInput[] {
-    const inputs = new Map<string, Uint8Array | null>();
-    const visit = (directory: string, physicalRoot: string): void => {
+    const inputs = new Map<
+      string,
+      { bytes: Uint8Array | null; source: boolean }
+    >();
+    const setInput = (
+      inputPath: string,
+      bytes: Uint8Array | null,
+      source: boolean,
+    ): void => {
+      const retained = inputs.get(inputPath);
+      inputs.set(inputPath, {
+        bytes,
+        source: source || retained?.source === true,
+      });
+    };
+    const visit = (
+      directory: string,
+      physicalRoot: string,
+      source: boolean,
+    ): void => {
       const realDirectory = fs.realpathSync(directory);
       if (
         isInside(this.rootReal, realDirectory) === false ||
@@ -167,7 +191,7 @@ export class AutoMovieProductionProject {
           throw new Error(
             `Declared content path "${relativeToRoot(this.root, absolute)}" is a symlink or junction. Replace it with physical project content before compileProject.`,
           );
-        if (linked.isDirectory()) visit(absolute, physicalRoot);
+        if (linked.isDirectory()) visit(absolute, physicalRoot, source);
         else if (linked.isFile()) {
           const real = fs.realpathSync(absolute);
           if (
@@ -177,16 +201,19 @@ export class AutoMovieProductionProject {
             throw new Error(
               `Declared content file "${relativeToRoot(this.root, absolute)}" escapes its verified physical project root. Replace the junction with a physical file.`,
             );
-          inputs.set(
+          setInput(
             normalizeSlash(path.relative(this.root, absolute)),
             fs.readFileSync(real),
+            source,
           );
         }
       }
     };
-    for (const relativeRoot of [
-      ...this.manifest_.sourceRoots,
-      ...(this.manifest_.contentRoots ?? []),
+    for (const [relativeRoot, source] of [
+      ...this.manifest_.sourceRoots.map((root) => [root, true] as const),
+      ...(this.manifest_.contentRoots ?? []).map(
+        (root) => [root, false] as const,
+      ),
     ]) {
       const absolute = resolveInside(this.root, relativeRoot);
       const linked = lstatOrNull(absolute);
@@ -203,13 +230,13 @@ export class AutoMovieProductionProject {
         throw new Error(
           `Declared content root "${relativeRoot}" escapes the production project through a directory junction. Move it into a physical project directory before compileProject.`,
         );
-      visit(absolute, physicalRoot);
+      visit(absolute, physicalRoot, source);
     }
     for (const relativeFile of this.manifest_.contentFiles ?? []) {
       const absolute = resolveInside(this.root, relativeFile);
       const linked = lstatOrNull(absolute);
       if (linked === null) {
-        inputs.set(normalizeSlash(relativeFile), null);
+        setInput(normalizeSlash(relativeFile), null, false);
         continue;
       }
       if (linked.isSymbolicLink() || linked.isFile() === false)
@@ -221,10 +248,10 @@ export class AutoMovieProductionProject {
         throw new Error(
           `Declared content file "${relativeFile}" escapes the production project through a directory junction. Move it into a physical project directory before compileProject.`,
         );
-      inputs.set(normalizeSlash(relativeFile), fs.readFileSync(real));
+      setInput(normalizeSlash(relativeFile), fs.readFileSync(real), false);
     }
     return [...inputs]
-      .map(([inputPath, bytes]) => ({ path: inputPath, bytes }))
+      .map(([inputPath, input]) => ({ path: inputPath, ...input }))
       .sort((left, right) => compareCodeUnits(left.path, right.path));
   }
 
@@ -569,11 +596,15 @@ export class AutoMovieProductionProject {
     files: ReadonlyMap<string, Uint8Array>,
     manifest: IAutoMovieRenderBundleManifest,
   ): number {
+    if (manifest.rendererIdentity.trim().length === 0)
+      throw new Error(
+        "Render bundle rendererIdentity must be non-blank. Record the browser and graphics backend that produced these pixels.",
+      );
     const normalizedBundle = normalizeSlash(relativeBundle);
     const expectedBundle = productionRenderBundleRelativePath(manifest);
     if (normalizedBundle !== expectedBundle)
       throw new Error(
-        `Render bundle "${relativeBundle}" is not the content-addressed path "${expectedBundle}". Use the current target, compile fingerprint, and render spec.`,
+        `Render bundle "${relativeBundle}" is not the content-addressed path "${expectedBundle}". Use the current target-local fingerprint and render spec.`,
       );
     const bundleRoot = resolveInside(this.renderRoot(), relativeBundle);
     const writes: IStagedFile[] = [...files].map(([relativePath, bytes]) => ({
@@ -1548,39 +1579,51 @@ const consequencesOf = (
   target: IAutoMovieDesignTarget,
   generatedPaths: readonly string[],
 ): IAutoMovieDesignMutationConsequences => {
-  const staleReviews: IAutoMovieReviewTarget[] = [
-    { kind: "design", design: target },
-  ];
-  if (target.kind === "model")
-    for (const [id, model] of graph.models)
-      if (id !== target.id && model.lod.some((lod) => lod.recipe === target.id))
-        staleReviews.push({
+  const staleReviews = new Map<string, IAutoMovieReviewTarget>();
+  const addReview = (review: IAutoMovieReviewTarget): void => {
+    staleReviews.set(reviewConsequenceKey(review), review);
+  };
+  addReview({ kind: "design", design: target });
+  const affectedFormations = new Set<string>();
+  if (target.kind === "model") {
+    for (const [id] of graph.models)
+      if (modelRecipeDependsOn(graph, id, target.id))
+        addReview({
           kind: "design",
           design: { kind: "model", id },
         });
-  if (target.kind === "model")
     for (const [id, formation] of graph.formations)
-      if (formation.modelRecipe === target.id)
-        staleReviews.push({
+      if (modelRecipeDependsOn(graph, formation.modelRecipe, target.id)) {
+        affectedFormations.add(id);
+        addReview({
           kind: "design",
           design: { kind: "formation", id },
         });
-  if (target.kind === "formation")
-    for (const [id, shot] of graph.shots)
-      if (
+      }
+  }
+  if (target.kind === "formation") affectedFormations.add(target.id);
+  if (target.kind === "production" || target.kind === "world")
+    for (const id of graph.shots.keys())
+      addReview({
+        kind: "design",
+        design: { kind: "shot", id },
+      });
+  for (const [id, shot] of graph.shots)
+    if (
+      [...affectedFormations].some((formation) =>
         shot.participants.some(
           (participant) =>
-            participant.kind === "formation" && participant.id === target.id,
-        )
+            participant.kind === "formation" && participant.id === formation,
+        ),
       )
-        staleReviews.push({
-          kind: "design",
-          design: { kind: "shot", id },
-        });
+    )
+      addReview({
+        kind: "design",
+        design: { kind: "shot", id },
+      });
   if (target.kind === "shot") {
     const source = graph.shots.get(target.id)?.source.module;
-    if (source !== undefined)
-      staleReviews.push({ kind: "source", path: source });
+    if (source !== undefined) addReview({ kind: "source", path: source });
     for (const [id, acceptance] of graph.acceptance)
       if (
         (acceptance.target.kind === "shot" &&
@@ -1589,7 +1632,7 @@ const consequencesOf = (
           acceptance.criterion.kind === "event") &&
           acceptance.criterion.shot === target.id)
       )
-        staleReviews.push({
+        addReview({
           kind: "design",
           design: { kind: "acceptance", id },
         });
@@ -1597,23 +1640,47 @@ const consequencesOf = (
   if (target.kind === "production")
     for (const [id, acceptance] of graph.acceptance)
       if (acceptance.target.kind === "film")
-        staleReviews.push({
+        addReview({
           kind: "design",
           design: { kind: "acceptance", id },
         });
-  for (const id of graph.shots.keys()) staleReviews.push({ kind: "shot", id });
-  staleReviews.push({
+  for (const id of graph.shots.keys()) addReview({ kind: "shot", id });
+  addReview({
     kind: "film",
     id: graph.production?.id ?? "film",
   });
   return {
-    staleReviews,
+    staleReviews: [...staleReviews.values()].sort((left, right) =>
+      compareCodeUnits(reviewConsequenceKey(left), reviewConsequenceKey(right)),
+    ),
     staleRenders: [
       ...[...graph.shots.keys()].map((id) => `shot:${id}`),
       `film:${graph.production?.id ?? "film"}`,
     ],
     removedGenerated: [...generatedPaths].sort(compareCodeUnits),
   };
+};
+
+const modelRecipeDependsOn = (
+  graph: IAutoMovieProductionDesignGraph,
+  model: string,
+  dependency: string,
+  visited: Set<string> = new Set(),
+): boolean => {
+  if (model === dependency) return true;
+  if (visited.has(model)) return false;
+  const branch = new Set(visited).add(model);
+  return (graph.models.get(model)?.lod ?? []).some(
+    (lod) =>
+      lod.recipe !== model &&
+      modelRecipeDependsOn(graph, lod.recipe, dependency, branch),
+  );
+};
+
+const reviewConsequenceKey = (target: IAutoMovieReviewTarget): string => {
+  if (target.kind === "design") return `design:${targetKey(target.design)}`;
+  if (target.kind === "source") return `source:${target.path}`;
+  return `${target.kind}:${target.id}`;
 };
 
 const targetKey = (target: IAutoMovieDesignTarget): string =>
@@ -1745,18 +1812,19 @@ const pathsOverlap = (left: string, right: string): boolean =>
 export const productionRenderBundleRelativePath = (
   manifest: Pick<
     IAutoMovieRenderBundleManifest,
-    "target" | "compileFingerprint" | "renderSpec"
+    "target" | "rendererIdentity" | "targetFingerprint" | "renderSpec"
   >,
 ): string => {
   const renderSpecFingerprint = digestAutoMovieBytes(
     canonicalAutoMovieJsonBytes({
       target: manifest.target,
+      rendererIdentity: manifest.rendererIdentity,
       renderSpec: manifest.renderSpec,
     }),
   );
   return [
     `${manifest.target.kind}-${encodeAutoMoviePathSegment(manifest.target.id)}`,
-    digestSegment(manifest.compileFingerprint),
+    digestSegment(manifest.targetFingerprint),
     digestSegment(renderSpecFingerprint),
   ].join("/");
 };
