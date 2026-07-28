@@ -295,9 +295,6 @@ export class AutoMovieProductionReviewService {
         ? this.compileStatus()
         : null,
     );
-    /* c8 ignore start -- submit is synchronous; this defensive branch is
-       reachable only through a hostile getter mutating project bytes during
-       validation, while commitFiles separately enforces revision races. */
     if (fingerprint !== prepared.fingerprint)
       return refused(this.project, input.target, fingerprint, [
         {
@@ -310,7 +307,6 @@ export class AutoMovieProductionReviewService {
             "Target bytes changed while review evidence was validated. Run prepareReview again against the current target.",
         },
       ]);
-    /* c8 ignore stop */
     const stored: IAutoMovieStoredReview = {
       version: 1,
       target: input.target,
@@ -835,7 +831,6 @@ const currentSourceLine = (
     const source = Buffer.from(
       normalizeAutoMovieSource(project.readSource(sourcePath)),
     ).toString("utf8");
-    /* c8 ignore next -- prepared line selectors are synchronous and in range. */
     return source.split("\n")[line - 1] ?? "";
   } catch {
     return "";

@@ -1484,6 +1484,12 @@ export const test_mcp_production_project = (): void => {
       "project root must be a directory",
       throws(() => AutoMovieProductionProject.open(fileRoot)),
     );
+    TestValidator.predicate(
+      "project root must not be a filesystem root",
+      throws(() =>
+        AutoMovieProductionProject.open(path.parse(invalidRoot).root),
+      ),
+    );
     const fresh = path.join(invalidRoot, "fresh");
     const initialized = AutoMovieProductionProject.open(fresh);
     TestValidator.predicate(

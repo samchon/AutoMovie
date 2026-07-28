@@ -944,6 +944,30 @@ export const test_mcp_production_review = async (): Promise<void> => {
 
     const shotTarget = { kind: "shot" as const, id: "opening" };
     const shotPrepared = review.prepare({ target: shotTarget });
+    const sourceFile = path.join(project.root, sourceTarget.path);
+    const sourceBeforeRace = fs.readFileSync(sourceFile);
+    let compileCalls = 0;
+    const racingReview = new AutoMovieProductionReviewService(project, () => {
+      ++compileCalls;
+      if (compileCalls === 3)
+        fs.appendFileSync(sourceFile, "\n// concurrent review edit\n");
+      return new AutoMovieProductionCompiler(project).lint({ scope: "source" });
+    });
+    let racedSubmission: ReturnType<
+      AutoMovieProductionReviewService["submit"]
+    >;
+    try {
+      const racedPrepared = racingReview.prepare({ target: shotTarget });
+      racedSubmission = racingReview.submit(worksheet(project, racedPrepared));
+    } finally {
+      fs.writeFileSync(sourceFile, sourceBeforeRace);
+    }
+    TestValidator.predicate(
+      "a target mutation during worksheet validation is refused",
+      racedSubmission.diagnostics.some(
+        (item) => item.code === "review-target-raced",
+      ),
+    );
     const sourceSelector = shotPrepared.quotable.find(
       (item) => item.kind === "source",
     );

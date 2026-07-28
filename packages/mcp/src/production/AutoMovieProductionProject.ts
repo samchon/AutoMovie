@@ -157,6 +157,10 @@ export class AutoMovieProductionProject {
   /** Open or initialize a production repository. */
   public static open(rootDirectory: string): AutoMovieProductionProject {
     const root = path.resolve(rootDirectory);
+    if (path.parse(root).root === root)
+      throw new Error(
+        `AutoMovie production root "${root}" is a filesystem root. Choose a dedicated project directory in openProject.`,
+      );
     if (fs.existsSync(root) && fs.statSync(root).isDirectory() === false)
       throw new Error(
         `AutoMovie production root "${root}" is not a directory. Choose a project directory in openProject.`,
@@ -1319,15 +1323,7 @@ export class AutoMovieProductionProject {
 
   private ownerRootFor(file: string): string {
     const roots = [this.automovieRoot, this.generatedRoot(), this.renderRoot()];
-    const owner = roots.find((root) => isInside(root, file));
-    /* c8 ignore start -- every IStagedFile is constructed through an
-    owner-specific resolver before this private commit boundary. */
-    if (owner === undefined)
-      throw new Error(
-        `AutoMovie cannot write unowned path "${relativeToRoot(this.root, file)}".`,
-      );
-    /* c8 ignore stop */
-    return owner;
+    return roots.find((root) => isInside(root, file))!;
   }
 }
 
@@ -1426,11 +1422,8 @@ const readJson = (file: string): unknown => {
     return JSON.parse(fs.readFileSync(file, "utf8")) as unknown;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
-    /* c8 ignore next 3 -- Node JSON and filesystem failures are Error objects. */
     throw new Error(
-      `Invalid AutoMovie JSON "${file}": ${
-        error instanceof Error ? error.message : String(error)
-      }. Correct the file before continuing.`,
+      `Invalid AutoMovie JSON "${file}": ${String(error)}. Correct the file before continuing.`,
     );
   }
 };
@@ -1983,11 +1976,7 @@ const readRevision = (rootReal: string, file: string): number => {
   return revision;
 };
 
-const projectIdOf = (root: string): string => {
-  const basename = path.basename(root).trim();
-  /* c8 ignore next -- path.resolve roots have a basename except a volume root. */
-  return basename.length === 0 ? "automovie-project" : basename;
-};
+const projectIdOf = (root: string): string => path.basename(root).trim();
 
 const inputDesignId = (input: unknown): string => {
   if (
@@ -2079,14 +2068,7 @@ const assertOwnedRootDirectory = (
     throw new Error(
       `Invalid production manifest "${manifestPath}": owned root "${relativeToRoot(projectRootReal, directory)}" must be a physical project directory, not a symlink or junction.`,
     );
-  const real = fs.realpathSync(directory);
-  /* c8 ignore start -- a physical directory cannot resolve outside its
-  project parent without being a link or mount alias rejected above. */
-  if (isInside(projectRootReal, real) === false)
-    throw new Error(
-      `Invalid production manifest "${manifestPath}": owned root "${directory}" escapes the project.`,
-    );
-  /* c8 ignore stop */
+  assertRealAncestorInside(projectRootReal, directory);
 };
 
 const ownedRootReal = (projectRootReal: string, directory: string): string => {
@@ -2095,15 +2077,8 @@ const ownedRootReal = (projectRootReal: string, directory: string): string => {
     throw new Error(
       `Owned root "${directory}" was replaced by a symlink, junction, or non-directory. Restore its physical project directory.`,
     );
-  const real = fs.realpathSync(directory);
-  /* c8 ignore start -- a physical owned root cannot escape without first
-  becoming a link or mount alias rejected above. */
-  if (isInside(projectRootReal, real) === false)
-    throw new Error(
-      `Owned root "${directory}" escapes the production project. Restore its physical project directory.`,
-    );
-  /* c8 ignore stop */
-  return real;
+  assertRealAncestorInside(projectRootReal, directory);
+  return fs.realpathSync(directory);
 };
 
 const relativeToRoot = (root: string, file: string): string =>

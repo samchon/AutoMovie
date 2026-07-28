@@ -91,6 +91,4 @@ export const run = (argv: readonly string[]): number => {
   }
 };
 
-/* c8 ignore start -- the process entry: run() carries the tested logic. */
 if (require.main === module) process.exit(run(process.argv));
-/* c8 ignore stop */

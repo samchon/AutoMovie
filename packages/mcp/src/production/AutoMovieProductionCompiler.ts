@@ -729,8 +729,7 @@ const compileShotSource = (
     fileName: props.path,
     reportDiagnostics: true,
   });
-  /* c8 ignore next -- reportDiagnostics:true always returns an array. */
-  for (const diagnostic of transpiled.diagnostics ?? [])
+  for (const diagnostic of transpiled.diagnostics!)
     if (diagnostic.category === ts.DiagnosticCategory.Error)
       diagnostics.push({
         code: "source-transpile-failed",
@@ -939,11 +938,7 @@ const importDeclarationHasRuntimeBinding = (
   if (clause === undefined) return true;
   if (clause.isTypeOnly) return false;
   if (clause.name !== undefined) return true;
-  const bindings = clause.namedBindings;
-  /* c8 ignore start -- TypeScript grammar requires a binding when an import
-  clause has no default name. Reject a synthetic malformed AST conservatively. */
-  if (bindings === undefined) return true;
-  /* c8 ignore stop */
+  const bindings = clause.namedBindings!;
   if (ts.isNamespaceImport(bindings)) return true;
   return bindings.elements.some((element) => element.isTypeOnly === false);
 };
@@ -1016,19 +1011,7 @@ const appendValidation = (
   id: string,
   validation: ReturnType<typeof validateModel>,
 ): void => {
-  if (validation.success) {
-    /* c8 ignore next 10 -- current engine validators emit warnings only in
-       simulation passes that compiled-shot validation does not call. */
-    for (const warning of validation.warnings ?? [])
-      diagnostics.push({
-        code: "engine-validation-warning",
-        category: "warning",
-        phase: "compile",
-        target: `shot:${id}`,
-        path: null,
-        message: `${warning.path}: ${warning.expected}. Correct the source if the warning conflicts with the shot contract.`,
-      });
-  } else
+  if (validation.success === false)
     for (const violation of validation.violations)
       diagnostics.push({
         code: "engine-validation-failed",
