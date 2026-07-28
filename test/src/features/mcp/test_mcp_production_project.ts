@@ -1693,6 +1693,7 @@ export const test_mcp_production_project = (): void => {
       fs.mkdirSync = nativeCoordinationMkdir;
     }
     const nativeCoordinationLstat = fs.lstatSync;
+    const mutableFs = fs as { lstatSync: typeof fs.lstatSync };
     for (const [name, linked] of [
       ["symlink", { isSymbolicLink: () => true, isDirectory: () => false }],
       [
@@ -1700,7 +1701,10 @@ export const test_mcp_production_project = (): void => {
         { isSymbolicLink: () => false, isDirectory: () => false },
       ],
     ] as const) {
-      fs.lstatSync = ((file: fs.PathLike, ...args: unknown[]): fs.Stats => {
+      mutableFs.lstatSync = ((
+        file: fs.PathLike,
+        ...args: unknown[]
+      ): fs.Stats => {
         if (path.resolve(file.toString()) === coordinationRoot)
           return linked as fs.Stats;
         return Reflect.apply(nativeCoordinationLstat, fs, [
@@ -1717,7 +1721,7 @@ export const test_mcp_production_project = (): void => {
           ),
         );
       } finally {
-        fs.lstatSync = nativeCoordinationLstat;
+        mutableFs.lstatSync = nativeCoordinationLstat;
       }
     }
     const nativeCoordinationChmod = fs.chmodSync;
