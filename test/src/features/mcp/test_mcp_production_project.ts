@@ -1507,6 +1507,34 @@ export const test_mcp_production_project = (): void => {
         initialized.inventory().production === false &&
         initialized.contentInputs().length === 0,
     );
+    const nativeWriteForExistingRoot = fs.writeFileSync;
+    let attemptedParentSiblingLock = false;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      if (
+        typeof file !== "number" &&
+        path.dirname(path.resolve(file.toString())) ===
+          fs.realpathSync(invalidRoot) &&
+        path.basename(file.toString()).includes("fresh.automovie-root")
+      ) {
+        attemptedParentSiblingLock = true;
+        const error = new Error("parent is intentionally not writable");
+        Object.assign(error, { code: "EACCES" });
+        throw error;
+      }
+      Reflect.apply(nativeWriteForExistingRoot, fs, [file, ...args]);
+    }) as typeof fs.writeFileSync;
+    try {
+      TestValidator.predicate(
+        "an existing writable project does not require writable parent access",
+        AutoMovieProductionProject.open(fresh).root ===
+          fs.realpathSync(fresh) && attemptedParentSiblingLock === false,
+      );
+    } finally {
+      fs.writeFileSync = nativeWriteForExistingRoot;
+    }
     const nestedFresh = path.join(invalidRoot, "missing", "nested", "project");
     TestValidator.predicate(
       "fresh project recursively creates a missing nested root",
@@ -1519,7 +1547,7 @@ export const test_mcp_production_project = (): void => {
     fs.symlinkSync(physicalAliasParent, aliasParent, "junction");
     const aliasProject = path.join(aliasParent, "aliased-project");
     const nativeWriteForAlias = fs.writeFileSync;
-    let aliasLockPath: string | null = null;
+    const aliasLockPaths: string[] = [];
     fs.writeFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
@@ -1527,9 +1555,9 @@ export const test_mcp_production_project = (): void => {
       Reflect.apply(nativeWriteForAlias, fs, [file, ...args]);
       if (
         typeof file !== "number" &&
-        file.toString().endsWith(".aliased-project.automovie-root.lock")
+        file.toString().includes("automovie-root")
       )
-        aliasLockPath = path.resolve(file.toString());
+        aliasLockPaths.push(path.resolve(file.toString()));
     }) as typeof fs.writeFileSync;
     try {
       AutoMovieProductionProject.open(aliasProject);
@@ -1537,11 +1565,15 @@ export const test_mcp_production_project = (): void => {
       fs.writeFileSync = nativeWriteForAlias;
     }
     TestValidator.predicate(
-      "ancestor aliases share the physical parent namespace lock",
-      aliasLockPath ===
+      "ancestor aliases create through the physical parent then hold the project-owned namespace",
+      aliasLockPaths.includes(
         path.join(
           fs.realpathSync(physicalAliasParent),
-          ".aliased-project.automovie-root.lock",
+          ".aliased-project.automovie-root-create.lock",
+        ),
+      ) &&
+        aliasLockPaths.includes(
+          path.join(fs.realpathSync(aliasProject), ".automovie-root.lock"),
         ),
     );
     TestValidator.predicate(

@@ -32,8 +32,9 @@ import {
 } from "./contentIdentity";
 import { probeProductionMedia } from "./probeProductionMedia";
 import {
-  ensureProductionRootParent,
-  productionRootNamespaceLockPath,
+  acquireOrCreateProductionRootNamespace,
+  assertProductionRootNamespaceLease,
+  releaseProductionRootNamespace,
 } from "./rootNamespaceLock";
 import {
   IAutoMovieProductionDesignGraph,
@@ -106,9 +107,12 @@ export class AutoMovieProductionProject {
   private manifest_: IAutoMovieProductionManifest & Record<string, unknown>;
   private lastReadRevision_: number;
 
-  private constructor(public readonly root: string) {
+  private constructor(
+    public readonly root: string,
+    rootLockPath: string,
+  ) {
     this.rootReal = fs.realpathSync(root);
-    this.rootLockPath = productionRootNamespaceLockPath(root);
+    this.rootLockPath = rootLockPath;
     this.automovieRoot = path.join(root, ".automovie");
     this.incarnationPath = path.join(this.automovieRoot, "incarnation.json");
     this.manifestPath = path.join(this.automovieRoot, "manifest.json");
@@ -184,22 +188,17 @@ export class AutoMovieProductionProject {
       throw new Error(
         `AutoMovie production root "${root}" is a filesystem root. Choose a dedicated project directory in openProject.`,
       );
-    ensureProductionRootParent(root);
-    const lockPath = productionRootNamespaceLockPath(root);
-    const token = acquireCommitLock(lockPath);
+    const lease = acquireOrCreateProductionRootNamespace(root);
     try {
-      const linked = lstatOrNull(root);
-      if (
-        linked !== null &&
-        (linked.isSymbolicLink() || linked.isDirectory() === false)
-      )
-        throw new Error(
-          `AutoMovie production root "${root}" is not a physical directory. Choose a dedicated project directory in openProject.`,
-        );
-      fs.mkdirSync(root, { recursive: true });
-      return new AutoMovieProductionProject(root);
+      assertProductionRootNamespaceLease(lease);
+      const project = new AutoMovieProductionProject(
+        lease.root,
+        lease.lockPath,
+      );
+      assertProductionRootNamespaceLease(lease);
+      return project;
     } finally {
-      releaseCommitLock(lockPath, token);
+      releaseProductionRootNamespace(lease);
     }
   }
 

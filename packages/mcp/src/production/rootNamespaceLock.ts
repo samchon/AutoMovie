@@ -3,8 +3,19 @@ import path from "node:path";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
 
-const siblingLockPath = (parentReal: string, name: string): string =>
-  path.join(parentReal, `.${name}.automovie-root.lock`);
+const ROOT_LOCK_NAME = ".automovie-root.lock";
+
+/** Held namespace reservation for one physical production project root. */
+export interface IAutoMovieProductionRootNamespaceLease {
+  root: string;
+  lockPath: string;
+  token: string;
+  device: number;
+  inode: number;
+}
+
+const creationLockPath = (parentReal: string, name: string): string =>
+  path.join(parentReal, `.${name}.automovie-root-create.lock`);
 
 const ensureDirectory = (directory: string): string => {
   const linked = lstatOrNull(directory);
@@ -21,52 +32,154 @@ const ensureDirectory = (directory: string): string => {
       `Production project parent "${directory}" does not exist as a physical directory.`,
     );
   const parentReal = ensureDirectory(parent);
-  const lockPath = siblingLockPath(parentReal, path.basename(directory));
+  const physical = path.join(parentReal, path.basename(directory));
+  const lockPath = creationLockPath(parentReal, path.basename(directory));
   const token = acquireCommitLock(lockPath);
   try {
-    const current = lstatOrNull(directory);
-    if (current === null) fs.mkdirSync(directory);
+    const current = lstatOrNull(physical);
+    if (current === null) fs.mkdirSync(physical);
     else if (
       current.isSymbolicLink() ||
-      fs.statSync(directory).isDirectory() === false
+      fs.statSync(physical).isDirectory() === false
     )
       throw new Error(
         `Production project parent "${directory}" is not a physical directory.`,
       );
-    return fs.realpathSync(directory);
+    return fs.realpathSync(physical);
   } finally {
     releaseCommitLock(lockPath, token);
   }
 };
 
-/**
- * Create missing project parents one physical directory at a time.
- *
- * Each step is protected by a sibling lock in its already-existing physical
- * parent, so concurrent recursive opens cannot publish different path kinds.
- */
-export const ensureProductionRootParent = (rootDirectory: string): void => {
-  const root = path.resolve(rootDirectory);
-  ensureDirectory(path.dirname(root));
+const acquireExistingRoot = (
+  rootDirectory: string,
+): IAutoMovieProductionRootNamespaceLease => {
+  const linked = lstatOrNull(rootDirectory);
+  if (
+    linked === null ||
+    linked.isSymbolicLink() ||
+    linked.isDirectory() === false
+  )
+    throw new Error(
+      `Production project root "${rootDirectory}" is not a physical directory.`,
+    );
+  const root = fs.realpathSync(rootDirectory);
+  const identity = fs.statSync(root);
+  const lockPath = path.join(root, ROOT_LOCK_NAME);
+  const token = acquireCommitLock(lockPath);
+  const lease: IAutoMovieProductionRootNamespaceLease = {
+    root,
+    lockPath,
+    token,
+    device: identity.dev,
+    inode: identity.ino,
+  };
+  try {
+    assertProductionRootNamespaceLease(lease);
+    assertRequestedRootIdentity(rootDirectory, lease);
+    return lease;
+  } catch (error) {
+    releaseCommitLock(lockPath, token);
+    throw error;
+  }
 };
 
 /**
- * Stable lock path outside the mutable project root.
+ * Reserve one existing physical project root.
  *
- * Resolving the immediate parent collapses ancestor junction and symlink
- * aliases. The sibling filename retains native filesystem case semantics and
- * remains the same before and after the project root itself is created.
+ * The durable namespace lock lives inside the project, so a writable project
+ * never requires write access to its parent.
  */
-export const productionRootNamespaceLockPath = (
+export const acquireProductionRootNamespace = (
   rootDirectory: string,
-): string => {
+): IAutoMovieProductionRootNamespaceLease =>
+  acquireExistingRoot(path.resolve(rootDirectory));
+
+/**
+ * Reserve one physical project root, creating it when it is still absent.
+ *
+ * Missing parents and the root itself are created through already-resolved
+ * physical parents under short sibling creation locks before the project-owned
+ * namespace reservation takes over.
+ */
+export const acquireOrCreateProductionRootNamespace = (
+  rootDirectory: string,
+): IAutoMovieProductionRootNamespaceLease => {
   const root = path.resolve(rootDirectory);
   const linked = lstatOrNull(root);
-  const name =
-    linked !== null && linked.isSymbolicLink() === false
-      ? path.basename(fs.realpathSync(root))
-      : path.basename(root);
-  return siblingLockPath(fs.realpathSync(path.dirname(root)), name);
+  if (linked !== null) return acquireExistingRoot(root);
+  const parentReal = ensureDirectory(path.dirname(root));
+  const physical = path.join(parentReal, path.basename(root));
+  const lockPath = creationLockPath(parentReal, path.basename(root));
+  const token = acquireCommitLock(lockPath);
+  try {
+    const current = lstatOrNull(physical);
+    if (current === null) fs.mkdirSync(physical);
+    else if (current.isSymbolicLink() || current.isDirectory() === false)
+      throw new Error(
+        `Production project root "${root}" is not a physical directory.`,
+      );
+    const lease = acquireExistingRoot(physical);
+    try {
+      assertRequestedRootIdentity(root, lease);
+      return lease;
+    } catch (error) {
+      releaseProductionRootNamespace(lease);
+      throw error;
+    }
+  } finally {
+    releaseCommitLock(lockPath, token);
+  }
+};
+
+/** Verify that a held lease still names the same directory and lock token. */
+export const assertProductionRootNamespaceLease = (
+  lease: IAutoMovieProductionRootNamespaceLease,
+): void => {
+  const linked = lstatOrNull(lease.root);
+  const current =
+    linked === null || linked.isSymbolicLink() || linked.isDirectory() === false
+      ? null
+      : fs.statSync(lease.root);
+  const lock = lstatOrNull(lease.lockPath);
+  if (
+    current === null ||
+    current.dev !== lease.device ||
+    current.ino !== lease.inode ||
+    lock === null ||
+    lock.isSymbolicLink() ||
+    lock.isFile() === false ||
+    fs.readFileSync(lease.lockPath, "utf8") !== lease.token
+  )
+    throw new Error(
+      `Production project root identity changed while "${lease.lockPath}" was held. No unfenced project mutation is allowed.`,
+    );
+};
+
+/** Release one held physical-root namespace reservation. */
+export const releaseProductionRootNamespace = (
+  lease: IAutoMovieProductionRootNamespaceLease,
+): void => {
+  releaseCommitLock(lease.lockPath, lease.token);
+};
+
+const assertRequestedRootIdentity = (
+  requestedRoot: string,
+  lease: IAutoMovieProductionRootNamespaceLease,
+): void => {
+  const linked = lstatOrNull(requestedRoot);
+  const current =
+    linked === null || linked.isSymbolicLink() || linked.isDirectory() === false
+      ? null
+      : fs.statSync(requestedRoot);
+  if (
+    current === null ||
+    current.dev !== lease.device ||
+    current.ino !== lease.inode
+  )
+    throw new Error(
+      `Requested production root "${requestedRoot}" changed physical identity during namespace acquisition. No project state was initialized.`,
+    );
 };
 
 const lstatOrNull = (file: string): fs.Stats | null => {

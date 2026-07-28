@@ -25,7 +25,11 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
-import { productionRootNamespaceLockPath } from "./rootNamespaceLock";
+import {
+  acquireProductionRootNamespace,
+  assertProductionRootNamespaceLease,
+  releaseProductionRootNamespace,
+} from "./rootNamespaceLock";
 
 const LEGACY_IMPORT_PROTOCOL = "automovie.legacy-import.v1";
 const IMPORT_PLAN_PATH = "imports/legacy-v1/plan.json";
@@ -100,13 +104,21 @@ export class AutoMovieLegacyImporter {
 
   /** Persist one immutable import plan and v2 provenance atomically. */
   public apply(): IAutoMovieLegacyImportApplyOutput {
-    const root = path.resolve(this.rootDirectory);
-    const lockPath = productionRootNamespaceLockPath(root);
-    const token = acquireCommitLock(lockPath);
+    const root = validateLegacyRoot(this.rootDirectory);
+    const lease = acquireProductionRootNamespace(root);
     try {
-      return this.applyLocked(validateLegacyRoot(root), token);
+      assertProductionRootNamespaceLease(lease);
+      const lockPath = path.join(lease.root, "revision.lock");
+      const token = acquireCommitLock(lockPath);
+      try {
+        const output = this.applyLocked(lease.root, token);
+        assertProductionRootNamespaceLease(lease);
+        return output;
+      } finally {
+        releaseCommitLock(lockPath, token);
+      }
     } finally {
-      releaseCommitLock(lockPath, token);
+      releaseProductionRootNamespace(lease);
     }
   }
 
@@ -160,12 +172,11 @@ export class AutoMovieLegacyImporter {
 
   /** Remove one still-untouched applied import, preserving all legacy bytes. */
   public rollback(): IAutoMovieLegacyImportRollbackOutput {
-    const root = path.resolve(this.rootDirectory);
-    const rootLockPath = productionRootNamespaceLockPath(root);
-    const rootToken = acquireCommitLock(rootLockPath);
+    const root = validateLegacyRoot(this.rootDirectory);
+    const lease = acquireProductionRootNamespace(root);
     try {
-      validateLegacyRoot(root);
-      const stateRoot = path.join(root, ".automovie");
+      assertProductionRootNamespaceLease(lease);
+      const stateRoot = path.join(lease.root, ".automovie");
       const linked = lstatOrNull(stateRoot);
       if (
         linked === null ||
@@ -177,9 +188,16 @@ export class AutoMovieLegacyImporter {
         );
       const lockPath = path.join(stateRoot, "revision.lock");
       const token = acquireCommitLock(lockPath);
-      return this.rollbackLocked(root, stateRoot, lockPath, token);
+      const output = this.rollbackLocked(
+        lease.root,
+        stateRoot,
+        lockPath,
+        token,
+      );
+      assertProductionRootNamespaceLease(lease);
+      return output;
     } finally {
-      releaseCommitLock(rootLockPath, rootToken);
+      releaseProductionRootNamespace(lease);
     }
   }
 
@@ -484,7 +502,7 @@ const validateLegacyRoot = (rootDirectory: string): string => {
     throw new Error(
       `Legacy project root "${root}" must be one physical, dedicated project directory.`,
     );
-  return root;
+  return fs.realpathSync(root);
 };
 
 const readLegacySnapshot = (

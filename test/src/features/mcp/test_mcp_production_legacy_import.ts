@@ -68,10 +68,7 @@ const throws = (task: () => unknown, fragment?: string): boolean => {
 };
 
 const rootNamespaceLockPath = (root: string): string =>
-  path.join(
-    fs.realpathSync(path.dirname(root)),
-    `.${path.basename(root)}.automovie-root.lock`,
-  );
+  path.join(fs.realpathSync(root), ".automovie-root.lock");
 
 const createLegacy = (): {
   root: string;
@@ -587,10 +584,10 @@ export const test_mcp_production_legacy_import = (): void => {
     }) as typeof fs.writeFileSync;
     try {
       TestValidator.predicate(
-        "root validation is fenced by a stable parent namespace lock",
+        "root replacement after namespace acquisition is detected before import",
         throws(
           () => new AutoMovieLegacyImporter(replacedDuringAcquire.root).apply(),
-          "physical, dedicated",
+          "identity changed",
         ) &&
           fs.existsSync(path.join(replacementTarget, "revision.lock")) ===
             false &&
@@ -600,8 +597,12 @@ export const test_mcp_production_legacy_import = (): void => {
       fs.writeFileSync = nativeWrite;
       if (fs.lstatSync(replacedDuringAcquire.root).isSymbolicLink())
         fs.rmSync(replacedDuringAcquire.root);
-      if (fs.existsSync(parkedRoot))
+      if (fs.existsSync(parkedRoot)) {
+        fs.rmSync(path.join(parkedRoot, ".automovie-root.lock"), {
+          force: true,
+        });
         fs.renameSync(parkedRoot, replacedDuringAcquire.root);
+      }
     }
   } finally {
     replacedDuringAcquire.dispose();
