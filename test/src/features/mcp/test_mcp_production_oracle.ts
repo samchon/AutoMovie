@@ -1230,6 +1230,52 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       height: 2,
     });
     fs.writeFileSync(viewerPath, viewerBytes);
+    const residentCommitRenderBundle = project.commitRenderBundle;
+    project.commitRenderBundle = ((
+      ...args: Parameters<typeof project.commitRenderBundle>
+    ) => {
+      fs.appendFileSync(viewerPath, "\n<!-- pre-commit race -->\n");
+      return residentCommitRenderBundle.call(project, ...args);
+    }) as typeof project.commitRenderBundle;
+    const lateRacedCapture = await new AutoMovieProductionOracleService(
+      project,
+      async () => ({
+        bytes: png(2, 2),
+        rendererIdentity: "test:png-v1",
+        width: 2,
+        height: 2,
+      }),
+    ).preview({
+      target: { kind: "shot", id: "opening" },
+      time: 0,
+      width: 2,
+      height: 2,
+    });
+    project.commitRenderBundle = residentCommitRenderBundle;
+    fs.writeFileSync(viewerPath, viewerBytes);
+    let genericCommitRejected = false;
+    project.commitRenderBundle = (() => {
+      throw new Error("injected generic render commit failure");
+    }) as typeof project.commitRenderBundle;
+    try {
+      await new AutoMovieProductionOracleService(project, async () => ({
+        bytes: png(2, 2),
+        rendererIdentity: "test:png-v1",
+        width: 2,
+        height: 2,
+      })).preview({
+        target: { kind: "shot", id: "opening" },
+        time: 0,
+        width: 2,
+        height: 2,
+      });
+    } catch (error) {
+      genericCommitRejected =
+        error instanceof Error &&
+        error.message === "injected generic render commit failure";
+    } finally {
+      project.commitRenderBundle = residentCommitRenderBundle;
+    }
     TestValidator.predicate(
       "capture refuses every manifest, compiler and renderer-input race",
       [
@@ -1246,7 +1292,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         racedCapture.captured === false &&
         racedCapture.renderBundle === null &&
         racedCapture.frame === null &&
-        racedCapture.diagnostics[0]?.code === "capture-input-changed",
+        racedCapture.diagnostics[0]?.code === "capture-input-changed" &&
+        lateRacedCapture.captured === false &&
+        lateRacedCapture.renderBundle === null &&
+        lateRacedCapture.frame === null &&
+        lateRacedCapture.diagnostics[0]?.code === "capture-input-changed" &&
+        genericCommitRejected,
     );
     TestValidator.predicate(
       "uniform captures cannot become visual review evidence",

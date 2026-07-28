@@ -584,17 +584,22 @@ export const validateAutoMovieProductionGraph = (
     text(diagnostics, shot.source.export, target, file, "source.export");
     if (
       path.posix.isAbsolute(shot.source.module) ||
-      /^[A-Za-z]:\//.test(shot.source.module) ||
+      /^[A-Za-z]:/.test(shot.source.module) ||
       shot.source.module.includes("\\") ||
       path.posix.normalize(shot.source.module) !== shot.source.module ||
-      shot.source.module.split("/").some((segment) => segment.length === 0)
+      shot.source.module
+        .split("/")
+        .some((segment) => segment.length === 0 || segment === "..") ||
+      [".ts", ".tsx", ".mts", ".cts"].includes(
+        path.posix.extname(shot.source.module),
+      ) === false
     )
       invalid(
         diagnostics,
         "design-source-path-invalid",
         target,
         file,
-        `Source module "${shot.source.module}" is not one canonical project-relative POSIX path. Remove absolute roots, backslashes, empty segments, "." and ".." before setShotContract.`,
+        `Source module "${shot.source.module}" is not one canonical project-relative POSIX TypeScript path. Remove absolute or drive roots, backslashes, empty or dot segments, and use a .ts, .tsx, .mts, or .cts extension before setShotContract.`,
       );
     const foldedSourceModule = shot.source.module.toLowerCase();
     const priorSourceModule = sourceModuleSpellings.get(foldedSourceModule);

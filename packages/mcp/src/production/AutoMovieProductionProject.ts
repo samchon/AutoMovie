@@ -66,6 +66,9 @@ export interface IAutoMovieProductionContentInput {
   bytes: Uint8Array | null;
 }
 
+/** A guarded production commit no longer matches its input snapshot. */
+export class AutoMovieProductionInputRaceError extends Error {}
+
 /**
  * Tracked production repository for the coding-agent-first application.
  *
@@ -605,11 +608,18 @@ export class AutoMovieProductionProject {
     return fs.readFileSync(real);
   }
 
-  /** Atomically write verified files and manifest inside one render bundle. */
+  /**
+   * Atomically write verified files and manifest inside one render bundle.
+   *
+   * A capture caller may supply `inputCurrent`; the commit lock invokes it
+   * immediately before and after applying files and rolls back when either
+   * observation no longer matches the captured production snapshot.
+   */
   public commitRenderBundle(
     relativeBundle: string,
     files: ReadonlyMap<string, Uint8Array>,
     manifest: IAutoMovieRenderBundleManifest,
+    inputCurrent?: () => boolean,
   ): number {
     if (manifest.rendererIdentity.trim().length === 0)
       throw new Error(
@@ -641,7 +651,7 @@ export class AutoMovieProductionProject {
         ),
       } satisfies IAutoMovieRenderBundleReceipt),
     });
-    return this.commitFiles(writes);
+    return this.commitFiles(writes, inputCurrent);
   }
 
   /**
@@ -1118,7 +1128,10 @@ export class AutoMovieProductionProject {
     this.lastReadRevision_ = readRevision(this.rootReal, this.revisionPath);
   }
 
-  private commitFiles(files: readonly IStagedFile[]): number {
+  private commitFiles(
+    files: readonly IStagedFile[],
+    inputCurrent?: () => boolean,
+  ): number {
     const staged = files.map((file) => ({
       path: file.path,
       content:
@@ -1151,11 +1164,19 @@ export class AutoMovieProductionProject {
         );
       let applied = 0;
       try {
+        if (inputCurrent?.() === false)
+          throw new AutoMovieProductionInputRaceError(
+            "Production inputs changed before the guarded commit began.",
+          );
         for (const file of staged) {
           if (file.content === null) fs.rmSync(file.path, { force: true });
           else writeAtomic(file.path, file.content);
           ++applied;
         }
+        if (inputCurrent?.() === false)
+          throw new AutoMovieProductionInputRaceError(
+            "Production inputs changed while the guarded commit was being applied.",
+          );
         const nextRevision = current + 1;
         writeJsonAtomic(this.revisionPath, {
           revision: nextRevision,
@@ -1377,11 +1398,11 @@ const validateManifest = (
 
 const isCanonicalManifestPath = (value: string): boolean =>
   path.posix.isAbsolute(value) === false &&
-  /^[A-Za-z]:\//.test(value) === false &&
+  /^[A-Za-z]:/.test(value) === false &&
   value.includes("\\") === false &&
   value !== "." &&
   path.posix.normalize(value) === value &&
-  value.split("/").every((segment) => segment.length > 0);
+  value.split("/").every((segment) => segment.length > 0 && segment !== "..");
 
 const validateOwnershipLayout = (
   root: string,

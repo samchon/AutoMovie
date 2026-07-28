@@ -138,7 +138,10 @@ export const test_mcp_production_project = (): void => {
       "C:/src/shots/opening.ts",
       "src\\shots\\opening.ts",
       "src/../shots/opening.ts",
+      "../outside.ts",
+      "C:src/shots/opening.ts",
       "src/shots/",
+      "src/shots/opening.js",
     ].map((module, index) =>
       project.setShotContract({
         ...shotContract(),
@@ -684,6 +687,30 @@ export const test_mcp_production_project = (): void => {
         fs.existsSync(
           path.join(ownerProject.renderRoot(), renderBundle, "manifest.json"),
         ),
+    );
+    let inputGuardReads = 0;
+    const guardedRevision = ownerProject.revision();
+    const guardedCommitRefused = throws(() =>
+      ownerProject.commitRenderBundle(
+        renderBundle,
+        new Map([
+          ["frame.bin", Buffer.from("guarded-change")],
+          ["frame.png", renderImageBytes],
+        ]),
+        renderManifest,
+        () => inputGuardReads++ === 0,
+      ),
+    );
+    TestValidator.predicate(
+      "guarded render commit rolls back when inputs change during apply",
+      guardedCommitRefused &&
+        inputGuardReads === 2 &&
+        ownerProject.revision() === guardedRevision &&
+        fs
+          .readFileSync(
+            path.join(ownerProject.renderRoot(), renderBundle, "frame.bin"),
+          )
+          .equals(Buffer.from("frame")),
     );
     const renderFramePath = path.join(
       ownerProject.renderRoot(),
@@ -1464,6 +1491,22 @@ export const test_mcp_production_project = (): void => {
         "drive-source",
         {
           sourceRoots: ["C:/src"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+        },
+      ],
+      [
+        "drive-relative-source",
+        {
+          sourceRoots: ["C:src"],
+          generatedRoot: "generated",
+          renderRoot: "renders",
+        },
+      ],
+      [
+        "parent-source",
+        {
+          sourceRoots: ["../src"],
           generatedRoot: "generated",
           renderRoot: "renders",
         },

@@ -36,6 +36,7 @@ import { PNG } from "pngjs";
 import typia from "typia";
 
 import {
+  AutoMovieProductionInputRaceError,
   AutoMovieProductionProject,
   productionRenderBundleRelativePath,
 } from "./AutoMovieProductionProject";
@@ -463,17 +464,20 @@ export class AutoMovieProductionOracleService {
         }. Correct the preview host and retry previewFrame.`,
       );
     }
-    const capturedAgainst = this.project.generatedManifest();
-    if (
-      capturedAgainst === null ||
-      capturedAgainst.inputFingerprint !== generated.inputFingerprint ||
-      this.freshnessDiagnostic(capturedAgainst) !== null ||
-      productionRenderTargetFingerprint(
-        this.project,
-        capturedAgainst,
-        input.target,
-      ) !== targetFingerprint
-    )
+    const captureInputsCurrent = (): boolean => {
+      const current = this.project.generatedManifest();
+      return (
+        current !== null &&
+        current.inputFingerprint === generated.inputFingerprint &&
+        this.freshnessDiagnostic(current) === null &&
+        productionRenderTargetFingerprint(
+          this.project,
+          current,
+          input.target,
+        ) === targetFingerprint
+      );
+    };
+    if (captureInputsCurrent() === false)
       return previewFailure(
         generated.inputFingerprint,
         "capture-input-changed",
@@ -574,14 +578,25 @@ export class AutoMovieProductionOracleService {
       renderSpec,
       frames,
     };
-    this.project.commitRenderBundle(
-      relativeBundle,
-      new Map([
-        ...retained.map((entry) => [entry.frame.path, entry.bytes] as const),
-        [relativeFrame, bytes],
-      ]),
-      manifest,
-    );
+    try {
+      this.project.commitRenderBundle(
+        relativeBundle,
+        new Map([
+          ...retained.map((entry) => [entry.frame.path, entry.bytes] as const),
+          [relativeFrame, bytes],
+        ]),
+        manifest,
+        captureInputsCurrent,
+      );
+    } catch (error) {
+      if (error instanceof AutoMovieProductionInputRaceError)
+        return previewFailure(
+          generated.inputFingerprint,
+          "capture-input-changed",
+          `${error.message} Discard this mixed snapshot, compile the current project, and capture the frame again.`,
+        );
+      throw error;
+    }
     return {
       captured: true,
       compileFingerprint: generated.inputFingerprint,

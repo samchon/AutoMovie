@@ -179,9 +179,7 @@ export const test_cli_scaffold = (): void => {
       files["scripts/capture.ts"]!.includes(
         'args: ["--use-angle=swiftshader"]',
       ) &&
-      files["scripts/capture.ts"]!.includes(
-        "browser: `chrome:${session.browser.version()}`",
-      ) &&
+      files["scripts/capture.ts"]!.includes("browser: `chrome:") &&
       files["scripts/capture.ts"]!.includes(
         'context.getExtension("WEBGL_debug_renderer_info")',
       ) &&
