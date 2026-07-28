@@ -1,6 +1,6 @@
 import { IAutoMovieGait, IAutoMovieVector3 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -105,7 +105,7 @@ const riglessContext = (
  *     iterable` TypeError, while omitting blocking stays valid.
  */
 export const test_mcp_perform_tool = (): void => {
-  const app = new AutoMovieApplication();
+  const app = new AutoMovieLegacyApplication();
   const script = makeScriptWrite();
   const staged = app.stage({ script, staging: makeStagingWrite() }).staged;
   if (staged.success !== true) throw new Error("staging must succeed");
@@ -285,7 +285,7 @@ export const test_mcp_perform_tool = (): void => {
 
   const gaitProbe = (
     gaits: unknown,
-  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+  ): ReturnType<AutoMovieLegacyApplication["perform"]>["performed"] =>
     app.perform({
       script,
       staged,
@@ -299,7 +299,7 @@ export const test_mcp_perform_tool = (): void => {
       },
     }).performed;
   const hasGaitViolation = (
-    performed: ReturnType<AutoMovieApplication["perform"]>["performed"],
+    performed: ReturnType<AutoMovieLegacyApplication["perform"]>["performed"],
     kind: "type" | "range",
     path: string,
   ): boolean =>
@@ -504,7 +504,7 @@ export const test_mcp_perform_tool = (): void => {
 
   const contextProbe = (
     overrides: Record<string, unknown>,
-  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+  ): ReturnType<AutoMovieLegacyApplication["perform"]>["performed"] =>
     app.perform({
       script,
       staged,
@@ -628,7 +628,7 @@ export const test_mcp_perform_tool = (): void => {
   ): Record<string, unknown> => ({ bone, parent, rest, constraint: null });
   const rigProbe = (
     bones: unknown[],
-  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+  ): ReturnType<AutoMovieLegacyApplication["perform"]>["performed"] =>
     contextProbe({ rig: { id: "skeleton-1", bones } });
   TestValidator.predicate(
     "a null rig fails at its root",
@@ -702,7 +702,7 @@ export const test_mcp_perform_tool = (): void => {
   } as const;
   const timingProbe = (
     action: Record<string, unknown>,
-  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+  ): ReturnType<AutoMovieLegacyApplication["perform"]>["performed"] =>
     app.perform({
       script,
       staged,
@@ -716,7 +716,7 @@ export const test_mcp_perform_tool = (): void => {
       },
     }).performed;
   const hasTimingViolation = (
-    performed: ReturnType<AutoMovieApplication["perform"]>["performed"],
+    performed: ReturnType<AutoMovieLegacyApplication["perform"]>["performed"],
     path: string,
   ): boolean =>
     performed.success === false &&
@@ -779,7 +779,7 @@ export const test_mcp_perform_tool = (): void => {
 
   const stagedProbe = (
     override: Partial<typeof staged>,
-  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+  ): ReturnType<AutoMovieLegacyApplication["perform"]>["performed"] =>
     app.perform({
       script,
       staged: { ...staged, ...override } as typeof staged,

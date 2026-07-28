@@ -17,6 +17,7 @@ import {
   formationDesign,
   productionDesign,
   productionFixture,
+  shotContract,
   worldDesign,
 } from "./productionFixtures";
 
@@ -39,6 +40,13 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     project.setFormationDesign(formationDesign());
+    project.setShotContract({
+      ...shotContract(),
+      participants: [
+        { kind: "actor", id: "sentinel" },
+        { kind: "formation", id: "line" },
+      ],
+    });
     const compiler = new AutoMovieProductionCompiler(project);
     TestValidator.predicate(
       "oracle fixture compiles",
@@ -141,11 +149,15 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       }).result,
       { kind: "ground", height: 0, surface: null, walkable: false },
     );
+    const formationMeasurement = oracle.query({
+      request: { query: "formation", formation: "line" },
+    }).result;
     TestValidator.predicate(
-      "formation and sampled pose measurements",
-      oracle.query({
-        request: { query: "formation", formation: "line" },
-      }).result?.kind === "measurement" &&
+      "formation and sampled pose measurements use compiler-owned slots",
+      formationMeasurement?.kind === "measurement" &&
+        formationMeasurement.values.designCount === 6 &&
+        formationMeasurement.values.materializedCount === 6 &&
+        formationMeasurement.values.participatingShots === 1 &&
         oracle.query({
           request: {
             query: "pose",
@@ -324,6 +336,37 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     };
     const writeCorrupted = (value: IAutoMovieCompiledShotSource): void =>
       writeGeneratedBytes(Buffer.from(JSON.stringify(value)));
+    const partialFormation = corrupted();
+    partialFormation.scene.nodes = partialFormation.scene.nodes.filter(
+      (node) => node.id !== "formation:line:slot:000001",
+    );
+    writeCorrupted(partialFormation);
+    const partialFormationResult = oracle.query({
+      request: { query: "formation", formation: "line" },
+    });
+    writeGeneratedBytes(Buffer.from(generatedShotBytes));
+    const manifestWithoutShots = JSON.parse(
+      generatedManifestBytes.toString("utf8"),
+    ) as typeof generatedManifest;
+    manifestWithoutShots.files = manifestWithoutShots.files.filter(
+      (entry) => entry.path.startsWith("shots/") === false,
+    );
+    fs.writeFileSync(
+      generatedManifestPath,
+      JSON.stringify(manifestWithoutShots),
+    );
+    const missingCompiledFormationResult = oracle.query({
+      request: { query: "formation", formation: "line" },
+    });
+    fs.writeFileSync(generatedManifestPath, generatedManifestBytes);
+    TestValidator.predicate(
+      "formation measurement refuses partial slots and missing compiled shots",
+      [partialFormationResult, missingCompiledFormationResult].every(
+        (output) =>
+          output.result === null &&
+          output.diagnostics[0]?.message.includes("not fully materialized"),
+      ),
+    );
     const recurringShot = corrupted();
     recurringShot.shot.id = "second";
     const recurringBytes = Buffer.from(JSON.stringify(recurringShot));

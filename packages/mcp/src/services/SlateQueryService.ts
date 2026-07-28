@@ -24,7 +24,7 @@ import { sceneById, soleScene } from "../project/slateScenes";
 /**
  * Read-only slate queries, the stored-context reads behind the `get*` tools.
  * The MCP contract (names, schemas, tool descriptions) lives on the
- * {@link AutoMovieApplication} facade; this service owns the execution.
+ * {@link AutoMovieLegacyApplication} facade; this service owns the execution.
  */
 export class SlateQueryService {
   public constructor(private readonly context?: AutoMovieContext) {}

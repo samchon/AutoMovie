@@ -1,4 +1,4 @@
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -28,7 +28,7 @@ import { hasViolation, throwsError } from "../internal/predicates";
 export const test_mcp_register_asset = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-regasset-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
 
     const malformedRequest = app.registerAsset(null as never);
@@ -120,7 +120,7 @@ export const test_mcp_register_asset = (): void => {
     TestValidator.predicate(
       "no active project throws the openProject prompt",
       throwsError(
-        () => new AutoMovieApplication().registerAsset({ path: "a.glb" }),
+        () => new AutoMovieLegacyApplication().registerAsset({ path: "a.glb" }),
         "openProject",
       ),
     );

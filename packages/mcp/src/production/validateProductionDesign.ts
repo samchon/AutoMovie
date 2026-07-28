@@ -5,6 +5,7 @@ import {
   IAutoMovieModelRecipe,
   IAutoMovieProductionDesign,
   IAutoMovieShotContract,
+  IAutoMovieShotPredicate,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 
@@ -213,7 +214,23 @@ export const validateAutoMovieProductionGraph = (
     for (const [name, color] of Object.entries(model.palette)) {
       text(diagnostics, name, target, file, "palette.name");
       text(diagnostics, color, target, file, `palette.${name}`);
+      if (/^#[0-9a-f]{6}$/i.test(color) === false)
+        invalid(
+          diagnostics,
+          "design-color-invalid",
+          target,
+          file,
+          `Palette color "${color}" is not a six-digit hexadecimal sRGB color. Use #RRGGBB in setModelRecipe.`,
+        );
     }
+    if (Object.keys(model.palette).length === 0)
+      invalid(
+        diagnostics,
+        "design-collection-empty",
+        target,
+        file,
+        "Model palette must contain at least one named #RRGGBB material color. Add one in setModelRecipe.",
+      );
     uniqueTextValues(
       diagnostics,
       model.capabilities,
@@ -243,6 +260,14 @@ export const validateAutoMovieProductionGraph = (
       );
       text(diagnostics, attachment.bone, target, file, "attachments.bone");
     }
+    if (model.archetype !== "stickman" && model.attachments.length !== 0)
+      invalid(
+        diagnostics,
+        "design-attachment-unsupported",
+        target,
+        file,
+        `Archetype "${model.archetype}" has no compiler-owned humanoid skeleton for bone attachments. Remove attachments or use a stickman recipe.`,
+      );
   }
 
   if (graph.world !== null) {
@@ -427,6 +452,7 @@ export const validateAutoMovieProductionGraph = (
       "capabilities",
     );
     const slots = new Set<number>();
+    const actors = new Set<string>();
     for (const hero of formation.heroOverrides) {
       if (
         Number.isInteger(hero.slot) === false ||
@@ -450,6 +476,15 @@ export const validateAutoMovieProductionGraph = (
         );
       slots.add(hero.slot);
       text(diagnostics, hero.actor, target, file, "heroOverrides.actor");
+      if (actors.has(hero.actor))
+        invalid(
+          diagnostics,
+          "design-duplicate-id",
+          target,
+          file,
+          `Hero actor "${hero.actor}" is assigned to more than one slot. Keep each actor identity once in setFormationDesign.`,
+        );
+      actors.add(hero.actor);
     }
   }
 
@@ -500,8 +535,22 @@ export const validateAutoMovieProductionGraph = (
           `setFormationDesign for "${participant.id}" or remove it from ${id}.participants`,
         );
     }
-    validateNamedStates(diagnostics, shot.opening, target, file, "opening");
-    validateNamedStates(diagnostics, shot.closing, target, file, "closing");
+    validateNamedStates(
+      diagnostics,
+      graph,
+      shot.opening,
+      target,
+      file,
+      "opening",
+    );
+    validateNamedStates(
+      diagnostics,
+      graph,
+      shot.closing,
+      target,
+      file,
+      "closing",
+    );
     text(diagnostics, shot.camera.intent, target, file, "camera.intent");
     uniqueTextValues(
       diagnostics,
@@ -510,6 +559,14 @@ export const validateAutoMovieProductionGraph = (
       file,
       "camera.requiredSubjects",
     );
+    if (shot.camera.requiredSubjects.length === 0)
+      invalid(
+        diagnostics,
+        "design-collection-empty",
+        target,
+        file,
+        `Shot "${id}" must name at least one required camera subject. Add one in setShotContract.`,
+      );
     if (
       Number.isFinite(shot.camera.maxOcclusionRatio) === false ||
       shot.camera.maxOcclusionRatio < 0 ||
@@ -531,6 +588,22 @@ export const validateAutoMovieProductionGraph = (
         target,
         file,
         `events.${event.id}.subjects`,
+      );
+      if (event.subjects.length === 0)
+        invalid(
+          diagnostics,
+          "design-collection-empty",
+          target,
+          file,
+          `Event "${event.id}" must name at least one subject. Add one in setShotContract.`,
+        );
+      validatePredicates(
+        diagnostics,
+        graph,
+        event.predicates,
+        target,
+        file,
+        `events.${event.id}.predicates`,
       );
       if (
         Number.isFinite(event.window.from) === false ||
@@ -564,11 +637,8 @@ export const validateAutoMovieProductionGraph = (
         );
       else if (
         graph.production !== null &&
-        Math.abs(
-          frame.time * graph.production.frameFormat.fps -
-            Math.round(frame.time * graph.production.frameFormat.fps),
-        ) >
-          Number.EPSILON * 16
+        isProductionFrameTime(frame.time, graph.production.frameFormat.fps) ===
+          false
       )
         invalid(
           diagnostics,
@@ -1025,7 +1095,7 @@ const validateFormationLayout = (
         file,
         `Layout capacity ${layout.ranks * layout.files} is below count ${formation.count}. Fix layout in setFormationDesign.`,
       );
-  } else if (layout.kind === "wedge")
+  } else if (layout.kind === "wedge") {
     integer(
       diagnostics,
       layout.depth,
@@ -1035,7 +1105,15 @@ const validateFormationLayout = (
       file,
       "layout.depth",
     );
-  else {
+    if (layout.depth * layout.depth < formation.count)
+      invalid(
+        diagnostics,
+        "design-range-invalid",
+        target,
+        file,
+        `Wedge depth ${layout.depth} materializes ${layout.depth * layout.depth} slots, below count ${formation.count}. Increase layout.depth in setFormationDesign.`,
+      );
+  } else {
     positive(diagnostics, layout.radius, target, file, "layout.radius");
     if (
       layout.kind === "arc" &&
@@ -1139,7 +1217,12 @@ const uniqueTextValues = (
 
 const validateNamedStates = (
   diagnostics: IAutoMovieDiagnostic[],
-  states: readonly { id: string; description: string }[],
+  graph: IAutoMovieProductionDesignGraph,
+  states: readonly {
+    id: string;
+    description: string;
+    predicates: IAutoMovieShotPredicate[];
+  }[],
   target: string,
   file: string,
   field: string,
@@ -1148,7 +1231,98 @@ const validateNamedStates = (
   for (const state of states) {
     unique(diagnostics, seen, state.id, target, file, field);
     text(diagnostics, state.description, target, file, `${field}.description`);
+    validatePredicates(
+      diagnostics,
+      graph,
+      state.predicates,
+      target,
+      file,
+      `${field}.${state.id}.predicates`,
+    );
   }
+};
+
+const validatePredicates = (
+  diagnostics: IAutoMovieDiagnostic[],
+  graph: IAutoMovieProductionDesignGraph,
+  predicates: readonly IAutoMovieShotPredicate[],
+  target: string,
+  file: string,
+  field: string,
+): void => {
+  if (predicates.length === 0)
+    invalid(
+      diagnostics,
+      "design-collection-empty",
+      target,
+      file,
+      `${field} must contain at least one machine-checkable predicate. Descriptive prose cannot prove compiled realization.`,
+    );
+  const selector = (
+    value:
+      | Extract<IAutoMovieShotPredicate, { kind: "position" }>["subject"]
+      | Extract<IAutoMovieShotPredicate, { kind: "distance" }>["from"],
+    path: string,
+  ): void => {
+    if (value.kind === "point")
+      vector(diagnostics, value.position, target, file, path);
+    else {
+      text(diagnostics, value.id, target, file, `${path}.id`);
+      if (
+        value.kind === "formation" &&
+        graph.formations.has(value.id) === false
+      )
+        missing(
+          diagnostics,
+          target,
+          file,
+          `formation "${value.id}"`,
+          `setFormationDesign for "${value.id}" or correct ${path}`,
+        );
+      if (
+        value.kind === "landmark" &&
+        graph.world?.landmarks.some((landmark) => landmark.id === value.id) !==
+          true
+      )
+        missing(
+          diagnostics,
+          target,
+          file,
+          `landmark "${value.id}"`,
+          `add that landmark with setWorldDesign or correct ${path}`,
+        );
+    }
+  };
+  for (const predicate of predicates) {
+    finite(diagnostics, predicate.value, target, file, `${field}.value`);
+    if (
+      Number.isFinite(predicate.tolerance) === false ||
+      predicate.tolerance < 0
+    )
+      invalid(
+        diagnostics,
+        "design-range-invalid",
+        target,
+        file,
+        `${field}.tolerance must be a finite non-negative value. Correct the predicate.`,
+      );
+    if (predicate.kind === "joint-angle")
+      text(diagnostics, predicate.actor, target, file, `${field}.actor`);
+    else if (predicate.kind === "position")
+      selector(predicate.subject, `${field}.subject`);
+    else {
+      selector(predicate.from, `${field}.from`);
+      selector(predicate.to, `${field}.to`);
+    }
+  }
+};
+
+/** Whether a time is numerically equivalent to one integer production frame. */
+export const isProductionFrameTime = (time: number, fps: number): boolean => {
+  const frame = time * fps;
+  const tolerance =
+    Number.EPSILON * 64 * Math.max(1, Math.abs(frame), Math.abs(time), fps);
+  return Math.abs(frame - Math.round(frame)) <= tolerance;
 };
 
 const text = (

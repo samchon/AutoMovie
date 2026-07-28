@@ -690,7 +690,7 @@ export const test_mcp_production_project = (): void => {
         ),
       ),
     );
-    fs.rmdirSync(renderFramePath);
+    fs.rmSync(renderFramePath, { force: true, recursive: true });
     fs.rmSync(outsideRenderTarget, { force: true, recursive: true });
     const lstatSync = fs.lstatSync;
     Object.defineProperty(fs, "lstatSync", {
@@ -878,6 +878,74 @@ export const test_mcp_production_project = (): void => {
     );
     fs.rmSync(nestedContentJunction);
     fs.rmSync(outsideContent, { force: true, recursive: true });
+    const racedOutside = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-content-race-"),
+    );
+    const racedOutsideFile = path.join(racedOutside, "outside.ts");
+    fs.writeFileSync(racedOutsideFile, "export {};\n");
+    const viewerRoot = path.join(contentFixture.root, "viewer");
+    const viewerFile = path.join(viewerRoot, "src/main.ts");
+    const residentRealpathSync = fs.realpathSync;
+    const withRacedRealpath = (
+      select: (absolute: string, occurrence: number) => string | null,
+    ): boolean => {
+      const occurrences = new Map<string, number>();
+      Reflect.set(
+        fs,
+        "realpathSync",
+        (candidate: fs.PathLike, ...args: unknown[]) => {
+          const absolute = path.resolve(String(candidate));
+          const occurrence = (occurrences.get(absolute) ?? 0) + 1;
+          occurrences.set(absolute, occurrence);
+          const replacement = select(absolute, occurrence);
+          return replacement === null
+            ? (
+                residentRealpathSync as (
+                  file: fs.PathLike,
+                  ...options: unknown[]
+                ) => unknown
+              )(candidate, ...args)
+            : replacement;
+        },
+      );
+      try {
+        return throws(() => contentProject.contentInputs());
+      } finally {
+        Reflect.set(fs, "realpathSync", residentRealpathSync);
+      }
+    };
+    try {
+      TestValidator.predicate(
+        "a content root cannot race its physical-root realpath outside the project",
+        withRacedRealpath((absolute, occurrence) =>
+          absolute === path.resolve(viewerRoot) && occurrence === 1
+            ? racedOutside
+            : null,
+        ),
+      );
+      TestValidator.predicate(
+        "a traversed content directory cannot race from its verified physical root",
+        withRacedRealpath((absolute, occurrence) =>
+          absolute === path.resolve(viewerRoot) && occurrence === 2
+            ? racedOutside
+            : null,
+        ),
+      );
+      TestValidator.predicate(
+        "a content file cannot race its lstat into an external realpath",
+        withRacedRealpath((absolute) =>
+          absolute === path.resolve(viewerFile) ? racedOutsideFile : null,
+        ),
+      );
+      fs.rmSync(viewerRoot, { recursive: true });
+      fs.writeFileSync(viewerRoot, "not a directory");
+      TestValidator.predicate(
+        "a declared content root replaced after project open is refused",
+        throws(() => contentProject.contentInputs()),
+      );
+    } finally {
+      fs.rmSync(racedOutside, { force: true, recursive: true });
+    }
   } finally {
     contentFixture.dispose();
   }
@@ -920,6 +988,42 @@ export const test_mcp_production_project = (): void => {
     fs.rmSync(outsideContentFile, { force: true, recursive: true });
   }
 
+  const parentJunctionFixture = productionFixture();
+  const outsideContentRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-content-root-junction-"),
+  );
+  try {
+    fs.mkdirSync(path.join(outsideContentRoot, "viewer"));
+    fs.writeFileSync(
+      path.join(outsideContentRoot, "viewer", "escape.ts"),
+      "export {};\n",
+    );
+    fs.symlinkSync(
+      outsideContentRoot,
+      path.join(parentJunctionFixture.root, "linked-content-root"),
+      "junction",
+    );
+    const manifestPath = path.join(
+      parentJunctionFixture.root,
+      ".automovie/manifest.json",
+    );
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    fs.writeFileSync(
+      manifestPath,
+      JSON.stringify({
+        ...manifest,
+        contentRoots: ["linked-content-root/viewer"],
+      }),
+    );
+    TestValidator.predicate(
+      "a declared content root cannot escape through a parent junction",
+      throws(() => AutoMovieProductionProject.open(parentJunctionFixture.root)),
+    );
+  } finally {
+    parentJunctionFixture.dispose();
+    fs.rmSync(outsideContentRoot, { force: true, recursive: true });
+  }
+
   for (const [name, contentRoots, contentFiles, prepare] of [
     [
       "missing-root",
@@ -959,12 +1063,11 @@ export const test_mcp_production_project = (): void => {
         manifestPath,
         JSON.stringify({ ...manifest, contentRoots, contentFiles }),
       );
-      const contentProject = AutoMovieProductionProject.open(
-        invalidContent.root,
-      );
       TestValidator.predicate(
         `declared content rejects ${name}`,
-        throws(() => contentProject.contentInputs()),
+        throws(() =>
+          AutoMovieProductionProject.open(invalidContent.root).contentInputs(),
+        ),
       );
     } finally {
       invalidContent.dispose();

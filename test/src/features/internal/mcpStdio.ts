@@ -87,10 +87,10 @@ export interface IAutoMovieMcpProbe {
  *
  * The helper wraps the operation in `execute.call`, the public compact wire
  * shape. Input validation is only observable through a real client (an
- * in-process `AutoMovieApplication` call bypasses typia entirely), so every
- * scenario that pins a boundary refusal needs this read. It lives here beside
- * the spawn and the budgets for the same reason they do: restating it per
- * scenario is how two copies of one observation drift apart.
+ * in-process `AutoMovieLegacyApplication` call bypasses typia entirely), so
+ * every scenario that pins a boundary refusal needs this read. It lives here
+ * beside the spawn and the budgets for the same reason they do: restating it
+ * per scenario is how two copies of one observation drift apart.
  */
 export const probeMcpTool = async (
   client: Client,

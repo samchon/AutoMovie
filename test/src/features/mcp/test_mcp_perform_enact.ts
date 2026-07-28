@@ -1,7 +1,7 @@
 import { sampleMotion } from "@automovie/engine";
 import { IAutoMovieVector3 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpMotion,
   toEngineMotion,
@@ -109,7 +109,7 @@ const computedKata = (
  *    lowering.
  */
 export const test_mcp_perform_enact = (): void => {
-  const app = new AutoMovieApplication();
+  const app = new AutoMovieLegacyApplication();
   const script = makeScriptWrite();
   const staged = app.stage({ script, staging: makeStagingWrite() }).staged;
   if (staged.success !== true) throw new Error("staging must succeed");
@@ -270,7 +270,7 @@ export const test_mcp_perform_enact = (): void => {
     actors: Record<string, IAutoMovieMcpActorContext>;
     clips?: Record<string, IAutoMovieMcpMotion>;
     clip?: string;
-  }): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+  }): ReturnType<AutoMovieLegacyApplication["perform"]>["performed"] =>
     app.perform({
       script,
       staged,
@@ -291,7 +291,7 @@ export const test_mcp_perform_enact = (): void => {
       ...(props.clips !== undefined ? { clips: props.clips } : {}),
     }).performed;
   const refusalAt = (
-    performed: ReturnType<AutoMovieApplication["perform"]>["performed"],
+    performed: ReturnType<AutoMovieLegacyApplication["perform"]>["performed"],
     path: string,
     marker: string,
   ): boolean =>

@@ -68,7 +68,7 @@ const isNonEmptyString = (value: unknown): value is string =>
  * downstream slice, together with the resident-only project mutations built on
  * the same refusal ledger: targeted `erase*`/`set*` (#617/#654) and manifest
  * asset registration (#670). The MCP contract lives on the
- * {@link AutoMovieApplication} facade; this service owns the execution.
+ * {@link AutoMovieLegacyApplication} facade; this service owns the execution.
  */
 export class CommitService {
   public constructor(private readonly context?: AutoMovieContext) {}

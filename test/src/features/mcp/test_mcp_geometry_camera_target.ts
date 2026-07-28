@@ -4,7 +4,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpGeometryContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -12,7 +12,7 @@ import { TestValidator } from "@nestia/e2e";
 import { createSkeleton } from "../internal/fixtures";
 import { nclose, throwsError, vclose } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const skeleton = createSkeleton();
 
 const at = (translation: IAutoMovieVector3): IAutoMovieTransform => ({

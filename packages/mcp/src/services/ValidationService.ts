@@ -48,7 +48,7 @@ const JOINT_CONSTRAINT_AXES = ["flexion", "abduction", "twist"] as const;
 /**
  * The standalone `validate*` tools, thin dispatch onto the engine validators
  * and the shared MCP artifact validators. The MCP contract lives on the
- * {@link AutoMovieApplication} facade; this service owns the execution.
+ * {@link AutoMovieLegacyApplication} facade; this service owns the execution.
  */
 export class ValidationService {
   public validatePose(props: {

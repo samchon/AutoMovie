@@ -1,6 +1,23 @@
-import { IAutoMovieRenderBundleManifest } from "@automovie/interface";
 import {
-  AutoMovieProductionApplication,
+  IAutoMovieCompileProject,
+  IAutoMovieEraseDesignArtifact,
+  IAutoMovieGetGuideDocument,
+  IAutoMovieInspectProject,
+  IAutoMovieOpenProject,
+  IAutoMoviePrepareReview,
+  IAutoMoviePreviewFrame,
+  IAutoMovieQueryGeometry,
+  IAutoMovieRenderBundleManifest,
+  IAutoMovieSetAcceptanceScenario,
+  IAutoMovieSetFormationDesign,
+  IAutoMovieSetModelRecipe,
+  IAutoMovieSetProductionDesign,
+  IAutoMovieSetShotContract,
+  IAutoMovieSetWorldDesign,
+  IAutoMovieSubmitReview,
+} from "@automovie/interface";
+import {
+  AutoMovieApplication,
   AutoMovieProductionProject,
   createAutoMovieProductionMcpServer,
   productionRenderBundleRelativePath,
@@ -31,7 +48,101 @@ const throws = (closure: () => unknown): boolean => {
   }
 };
 
-/** The 15-tool production coordinator enforces guides and schema ceilings. */
+/**
+ * The public production facade is one closed map of AutoBe-style tool pairs.
+ *
+ * The runtime tool inventory below rejects an extra or missing method while
+ * this structural assignment rejects a method whose named `IProps` and result
+ * no longer form the advertised pair. Together they prevent a future inline
+ * object parameter or detached `Input`/`Output` signature from silently joining
+ * the MCP surface.
+ */
+interface IProductionToolContract {
+  getGuideDocument(
+    props: IAutoMovieGetGuideDocument.IProps,
+  ): IAutoMovieGetGuideDocument;
+  openProject(props: IAutoMovieOpenProject.IProps): IAutoMovieOpenProject;
+  inspectProject(
+    props: IAutoMovieInspectProject.IProps,
+  ): IAutoMovieInspectProject;
+  setProductionDesign(
+    props: IAutoMovieSetProductionDesign.IProps,
+  ): IAutoMovieSetProductionDesign;
+  setModelRecipe(
+    props: IAutoMovieSetModelRecipe.IProps,
+  ): IAutoMovieSetModelRecipe;
+  setWorldDesign(
+    props: IAutoMovieSetWorldDesign.IProps,
+  ): IAutoMovieSetWorldDesign;
+  setFormationDesign(
+    props: IAutoMovieSetFormationDesign.IProps,
+  ): IAutoMovieSetFormationDesign;
+  setShotContract(
+    props: IAutoMovieSetShotContract.IProps,
+  ): IAutoMovieSetShotContract;
+  setAcceptanceScenario(
+    props: IAutoMovieSetAcceptanceScenario.IProps,
+  ): IAutoMovieSetAcceptanceScenario;
+  eraseDesignArtifact(
+    props: IAutoMovieEraseDesignArtifact.IProps,
+  ): IAutoMovieEraseDesignArtifact;
+  compileProject(
+    props: IAutoMovieCompileProject.IProps,
+  ): IAutoMovieCompileProject;
+  queryGeometry(props: IAutoMovieQueryGeometry.IProps): IAutoMovieQueryGeometry;
+  previewFrame(
+    props: IAutoMoviePreviewFrame.IProps,
+  ): Promise<IAutoMoviePreviewFrame>;
+  prepareReview(props: IAutoMoviePrepareReview.IProps): IAutoMoviePrepareReview;
+  submitReview(props: IAutoMovieSubmitReview.IProps): IAutoMovieSubmitReview;
+}
+
+/**
+ * Minimum semantic signals that keep each production tool from degenerating
+ * into a signature paraphrase.
+ *
+ * The exact prose may improve, but every description must continue to explain
+ * its trust boundary, refusal or non-goal. Length alone cannot distinguish
+ * useful context from repetition, so this table pins one positive
+ * responsibility and one correction boundary per tool.
+ */
+const PRODUCTION_TOOL_DESCRIPTION_SIGNALS = {
+  getGuideDocument: ["real precondition", "unknown name"],
+  openProject: ["durable shared memory", "does not author shots"],
+  inspectProject: ["authoritative status projection", "never repairs"],
+  setProductionDesign: ["complete object", "downstream fingerprint"],
+  setModelRecipe: ["compiler", "never imports arbitrary meshes"],
+  setWorldDesign: ["geometry queries", "complete world"],
+  setFormationDesign: ["compiler expands", "does not animate troops"],
+  setShotContract: ["ordinary code", "independent"],
+  setAcceptanceScenario: ["fingerprinted evidence", "does not implement tests"],
+  eraseDesignArtifact: ["never cascades silently", "generated files"],
+  compileProject: ["no-i/o", "partial generation"],
+  queryGeometry: ["stale compilation", "read-only"],
+  previewFrame: ["actual png", "full-film rendering"],
+  prepareReview: ["fingerprint", "does not perform aesthetic judgment"],
+  submitReview: ["false completion", "apply corrections"],
+} as const;
+
+/**
+ * The canonical 15-tool production coordinator preserves its AutoBe-style
+ * `IProps -> result` pairs, guide and resident-state gates, ownership and
+ * freshness semantics, actual-frame evidence, and review compliance surface.
+ *
+ * Scenarios:
+ *
+ * 1. Project activation requires the overall guide, respects a host-fixed root,
+ *    and reports initialization only once.
+ * 2. Every named props/result pair and the exact 15-tool inventory remain
+ *    structurally closed.
+ * 3. Design setters, erasure, compilation, geometry, preview and review calls
+ *    preserve their positive, refusal, stale and recovery paths.
+ * 4. Inspection reports missing source, invalid design, unowned output, stale
+ *    renders and unsafe links without following or repairing them.
+ * 5. A live generated controller serves the guide, carries decision-ready
+ *    instructions in the first 512 characters, and gives every tool substantial
+ *    boundary context below the 1023-character hard cap.
+ */
 export const test_mcp_production_application = async (): Promise<void> => {
   const fixture = productionFixture();
   try {
@@ -39,7 +150,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
       path.join(os.tmpdir(), "automovie-production-deferred-"),
     );
     try {
-      const deferred = new AutoMovieProductionApplication({
+      const deferred = new AutoMovieApplication({
         projectRoot: deferredRoot,
       });
       TestValidator.predicate(
@@ -59,9 +170,14 @@ export const test_mcp_production_application = async (): Promise<void> => {
     } finally {
       fs.rmSync(deferredRoot, { force: true, recursive: true });
     }
-    const application = new AutoMovieProductionApplication({
+    const application = new AutoMovieApplication({
       projectRoot: fixture.root,
     });
+    const pairedApplication: IProductionToolContract = application;
+    TestValidator.predicate(
+      "the facade implements every named props and result pair",
+      pairedApplication === application,
+    );
     TestValidator.predicate(
       "overall guide is a real prerequisite",
       throws(() => application.openProject({ root: fixture.root })),
@@ -347,7 +463,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
       fs.rmSync(outsideRender, { force: true, recursive: true });
     }
 
-    const inactive = new AutoMovieProductionApplication();
+    const inactive = new AutoMovieApplication();
     inactive.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
     TestValidator.predicate(
       "resident operations require an active project",
@@ -410,9 +526,45 @@ export const test_mcp_production_application = async (): Promise<void> => {
             (tool) =>
               JSON.stringify(tool.inputSchema).length +
                 JSON.stringify(tool.outputSchema ?? {}).length <=
-                45_000 && (tool.description?.length ?? 0) <= 1_023,
+                45_000 &&
+              (tool.description?.length ?? 0) >= 450 &&
+              (tool.description?.length ?? 0) <= 1_023,
           ),
       );
+      const instructions = client.getInstructions();
+      const instructionLead = instructions?.slice(0, 512).toLowerCase() ?? "";
+      TestValidator.predicate(
+        "server instruction lead states ownership, entry point, and no internal LLM",
+        instructionLead.includes("production-control mcp") &&
+          instructionLead.includes("agent authors") &&
+          instructionLead.includes("automovie_overall") &&
+          instructionLead.includes("never runs an internal llm"),
+      );
+      for (const tool of tools) {
+        const signals =
+          PRODUCTION_TOOL_DESCRIPTION_SIGNALS[
+            tool.name as keyof typeof PRODUCTION_TOOL_DESCRIPTION_SIGNALS
+          ];
+        const description = tool.description?.toLowerCase() ?? "";
+        TestValidator.predicate(
+          `tool description carries responsibility and correction boundaries: ${tool.name}`,
+          signals !== undefined &&
+            signals.every((signal) => description.includes(signal)),
+        );
+        for (const [property, schema] of Object.entries(
+          tool.inputSchema.properties ?? {},
+        ))
+          TestValidator.predicate(
+            `top-level input property is documented: ${tool.name}.${property}`,
+            typeof (schema as { description?: unknown }).description ===
+              "string" &&
+              (
+                schema as {
+                  description: string;
+                }
+              ).description.trim().length > 0,
+          );
+      }
       const guide = await client.callTool({
         name: "getGuideDocument",
         arguments: { name: "AUTOMOVIE_OVERALL" },

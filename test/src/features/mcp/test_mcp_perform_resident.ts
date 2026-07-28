@@ -1,6 +1,6 @@
 import { IAutoMovieGait, IAutoMovieVector3 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -78,7 +78,7 @@ const actorContext = (
 export const test_mcp_perform_resident = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-perfres-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
 
     // 2a. a fresh project refuses at BOTH missing slices in one round.
@@ -369,7 +369,7 @@ export const test_mcp_perform_resident = (): void => {
     "a resident perform without a project throws the openProject prompt",
     throwsError(
       () =>
-        new AutoMovieApplication().perform({
+        new AutoMovieLegacyApplication().perform({
           performance: perf(),
           actors: {},
         }),

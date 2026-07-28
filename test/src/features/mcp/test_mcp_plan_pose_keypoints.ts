@@ -7,7 +7,7 @@ import {
   IAutoMovieTransform,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpMotion,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
@@ -21,7 +21,7 @@ import {
 } from "../internal/fixtures";
 import { hasViolation, nclose, throwsError } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 const IDENTITY_Q = { x: 0, y: 0, z: 0, w: 1 };
 const t3 = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -476,7 +476,7 @@ export const test_mcp_plan_pose_keypoints = (): void => {
     "omitting the slate without a project throws the openProject prompt",
     throwsError(
       () =>
-        new AutoMovieApplication().planPoseKeypoints({
+        new AutoMovieLegacyApplication().planPoseKeypoints({
           frameFormat: { fps: 2, width: 1920, height: 1080 },
           motions: { m1: still },
           skeletons: [skeleton],

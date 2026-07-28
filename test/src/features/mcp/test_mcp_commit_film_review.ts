@@ -4,7 +4,7 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -12,7 +12,7 @@ import { TestValidator } from "@nestia/e2e";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 const script: IAutoMovieScript = {
   logline: "one beat, one cut",

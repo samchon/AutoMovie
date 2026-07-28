@@ -3,17 +3,45 @@
   "beat": "answer",
   "source": {
     "module": "src/shots/opening.ts",
-    "export": "opening"
+    "export": "answer"
   },
   "durationSeconds": 6,
   "participants": [
     { "kind": "actor", "id": "sentinel" }
   ],
   "opening": [
-    { "id": "signal-seen", "description": "The answering shot begins from the established raised signal." }
+    {
+      "id": "signal-seen",
+      "description": "The answering shot begins from the established raised signal.",
+      "predicates": [
+        {
+          "kind": "joint-angle",
+          "actor": "sentinel",
+          "bone": "leftUpperArm",
+          "axis": "abduction",
+          "operator": ">=",
+          "value": 100,
+          "tolerance": 0.001
+        }
+      ]
+    }
   ],
   "closing": [
-    { "id": "answer-held", "description": "The signal remains legible through the second shot." }
+    {
+      "id": "answer-held",
+      "description": "The signal remains legible through the second shot.",
+      "predicates": [
+        {
+          "kind": "joint-angle",
+          "actor": "sentinel",
+          "bone": "leftUpperArm",
+          "axis": "abduction",
+          "operator": ">=",
+          "value": 100,
+          "tolerance": 0.001
+        }
+      ]
+    }
   ],
   "camera": {
     "intent": "A second full-body view proves that film rendering and review cannot stop after the opening shot.",
@@ -25,7 +53,18 @@
       "id": "signal-answered",
       "kind": "reveal",
       "window": { "from": 3, "to": 5 },
-      "subjects": ["sentinel"]
+      "subjects": ["sentinel"],
+      "predicates": [
+        {
+          "kind": "joint-angle",
+          "actor": "sentinel",
+          "bone": "leftUpperArm",
+          "axis": "abduction",
+          "operator": ">=",
+          "value": 100,
+          "tolerance": 0.001
+        }
+      ]
     }
   ],
   "reviewFrames": [

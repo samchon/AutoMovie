@@ -5,7 +5,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpGeometryContext,
   IAutoMovieMcpMotion,
 } from "@automovie/mcp";
@@ -22,7 +22,7 @@ import {
 } from "../internal/fixtures";
 import { nclose, throwsError, vclose } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const skeleton = createSkeleton();
 
 const transform = (translation: IAutoMovieVector3) => ({
@@ -649,7 +649,7 @@ export const test_mcp_geometry_query_tools = (): void => {
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-geometry-"));
   try {
-    const resident = new AutoMovieApplication();
+    const resident = new AutoMovieLegacyApplication();
     resident.openProject({ root });
     resident.commitScript({ script });
     resident.commitScene({ scene, models: context.models });
@@ -700,7 +700,7 @@ export const test_mcp_geometry_query_tools = (): void => {
     // No actor was ever performed here, so no `actors/<node>.json` rig exists
     // either: a reopened session has no rig from any source and must say so,
     // naming the rig-persisting path (`perform`) as well as the alternatives.
-    const reopened = new AutoMovieApplication({ projectRoot: root });
+    const reopened = new AutoMovieLegacyApplication({ projectRoot: root });
     TestValidator.predicate(
       "reopened rig query with no persisted rig explains every source",
       throwsError(

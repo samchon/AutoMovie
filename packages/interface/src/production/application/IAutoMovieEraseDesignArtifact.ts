@@ -7,9 +7,12 @@ export interface IAutoMovieEraseDesignArtifact extends IAutoMovieDesignMutationO
 export namespace IAutoMovieEraseDesignArtifact {
   /** Exact target and non-empty audit reason for one erasure. */
   export interface IProps {
-    /** Exact design target. */
+    /**
+     * Exact current design artifact to remove. It must exist and have no active
+     * references; the server never cascades to dependants.
+     */
     target: IAutoMovieDesignTarget;
-    /** Non-empty audit reason. */
+    /** Non-blank reason stored in the tracked mutation audit record. */
     reason: string;
   }
 }

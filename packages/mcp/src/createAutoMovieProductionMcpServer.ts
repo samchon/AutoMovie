@@ -4,7 +4,7 @@ import { createMcpServer } from "@typia/mcp";
 import path from "node:path";
 import typia from "typia";
 
-import { AutoMovieProductionApplication } from "./AutoMovieProductionApplication";
+import { AutoMovieApplication } from "./AutoMovieApplication";
 
 /** Installed MCP package version. */
 const MCP_PACKAGE_VERSION = (
@@ -24,9 +24,9 @@ export const createAutoMovieProductionMcpServer = (props?: {
   projectRoot?: string;
 }): McpServer =>
   createMcpServer(
-    typia.llm.controller<AutoMovieProductionApplication, { equals: true }>(
+    typia.llm.controller<AutoMovieApplication, { equals: true }>(
       "automovie-production",
-      new AutoMovieProductionApplication(props),
+      new AutoMovieApplication(props),
     ),
     { version: MCP_PACKAGE_VERSION, textFallback: true },
   );

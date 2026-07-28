@@ -3,12 +3,12 @@ import {
   IAutoMovieScriptApplication,
   IAutoMovieStagingApplication,
 } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const script: IAutoMovieScriptApplication.IWrite = makeScriptWrite();
 
 /** Stage through the MCP tool with `lights` replaced. */

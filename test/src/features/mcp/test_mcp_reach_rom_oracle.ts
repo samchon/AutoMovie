@@ -6,7 +6,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpGeometryContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -14,7 +14,7 @@ import { TestValidator } from "@nestia/e2e";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 const restAt = (x: number, y: number, z: number): IAutoMovieBone["rest"] => ({
   ...IDENTITY_TRANSFORM,

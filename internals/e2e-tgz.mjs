@@ -249,9 +249,9 @@ try {
   // methods from the built library, which this cannot, since both sides would
   // shrink together. That case is covered in-repo by test_mcp_stdio_roundtrip,
   // which pins the whole granular name inventory, and by assertBuild.
-  const { AutoMovieApplication } = await import("@automovie/mcp");
+  const { AutoMovieLegacyApplication } = await import("@automovie/mcp");
   const operations = Object.getOwnPropertyNames(
-    AutoMovieApplication.prototype,
+    AutoMovieLegacyApplication.prototype,
   ).filter((name) => name !== "constructor");
   assert(
     "granular-tool-count",
@@ -329,7 +329,7 @@ try {
 
 const STARTER_VERIFY_SOURCE = `
 import {
-  AutoMovieProductionApplication,
+  AutoMovieApplication,
   AutoMovieProductionProject,
   digestAutoMovieBytes,
 } from "@automovie/mcp";
@@ -544,7 +544,7 @@ assert(
   "the six captures do not distinguish all guide-pass families",
 );
 
-const app = new AutoMovieProductionApplication({ projectRoot: root });
+const app = new AutoMovieApplication({ projectRoot: root });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
 app.getGuideDocument({ name: "COMPILATION" });
 app.getGuideDocument({ name: "PRODUCTION_REVIEW" });
@@ -596,8 +596,24 @@ if (phase === "review") {
   );
   assert(
     "starter-aggregate-receipt",
-    receipt.version === 1 &&
-      receipt.manifestDigest === digestAutoMovieBytes(aggregateBytes),
+    receipt.version === 2 &&
+      receipt.manifestDigest === digestAutoMovieBytes(aggregateBytes) &&
+      Array.isArray(receipt.files) &&
+      receipt.files.length === 6 &&
+      receipt.files.every(
+        (file) =>
+          file.deliverable === "starter-preview" &&
+          file.probe?.kind === "png" &&
+          file.probe.width === 1280 &&
+          file.probe.height === 720 &&
+          aggregate.deliverables?.[0]?.files?.some(
+            (owned) =>
+              owned.path === file.path &&
+              owned.digest === file.digest &&
+              owned.bytes === file.bytes &&
+              owned.mediaType === file.mediaType,
+          ) === true,
+      ),
     JSON.stringify(receipt),
   );
   assert(

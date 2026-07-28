@@ -7,16 +7,18 @@ import {
   AutoMovieContentDigest,
   IAutoMovieCompileProjectInput,
   IAutoMovieCompileProjectOutput,
+  IAutoMovieCompiledContractRealization,
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
-  IAutoMovieFormationDesign,
   IAutoMovieGeneratedFile,
   IAutoMovieGeneratedManifest,
   IAutoMovieMaterializedFile,
-  IAutoMovieModelRecipe,
+  IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
+  IAutoMovieProductionRenderReceipt,
   IAutoMovieReviewQueue,
   IAutoMovieShotContract,
+  IAutoMovieShotSourceOutput,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import fs from "node:fs";
@@ -37,10 +39,17 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import {
+  materializeCompiledShot,
+  materializeFormationInventory,
+  materializeProductionModels,
+} from "./materializeProduction";
+import { probeProductionMedia } from "./probeProductionMedia";
+import { realizeShotContract } from "./realizeShotContract";
 import { validateAutoMovieProductionGraph } from "./validateProductionDesign";
 
 /** Production compiler protocol embedded in generated manifests. */
-export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v1";
+export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v2";
 
 /** Compiler package version. */
 export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
@@ -101,6 +110,30 @@ export class AutoMovieProductionCompiler {
     ];
     const sourceFields: IAutoMovieFingerprintField[] = [];
     const compiled = new Map<string, IAutoMovieCompiledShotSource>();
+    const realizations = new Map<
+      string,
+      IAutoMovieCompiledContractRealization
+    >();
+    let runtimeModels = new Map<
+      string,
+      IAutoMovieCompiledShotSource["models"][number]
+    >();
+    let formationInventory: ReturnType<typeof materializeFormationInventory> =
+      {};
+    if (input.scope !== "design")
+      try {
+        runtimeModels = new Map(materializeProductionModels(graph.models));
+        formationInventory = materializeFormationInventory(graph.formations);
+      } catch (error) {
+        diagnostics.push({
+          code: "model-materialization-failed",
+          category: "error",
+          phase: "compile",
+          target: "model-recipes",
+          path: null,
+          message: `${errorMessage(error)} Correct model and formation design before source compilation.`,
+        });
+      }
     for (const [id, contract] of graph.shots) {
       if (input.scope === "design") {
         sourceFields.push({
@@ -140,19 +173,34 @@ export class AutoMovieProductionCompiler {
           models: Object.fromEntries(graph.models),
           world: graph.world ?? emptyWorld(),
           formations: Object.fromEntries(graph.formations),
+          runtimeModels: Object.fromEntries(runtimeModels),
+          formationSlots: formationInventory,
         },
       });
       diagnostics.push(...result.diagnostics);
       if (result.value !== null) {
+        const materialized = materializeCompiledShot({
+          contract,
+          formations: graph.formations,
+          formationSlots: formationInventory,
+          runtimeModels,
+          source: result.value,
+        });
+        const realized = realizeShotContract({
+          contract,
+          production: graph.production,
+          world: graph.world,
+          formations: graph.formations,
+          formationSlots: formationInventory,
+          compiled: materialized.value,
+          collisions: materialized.collisions,
+        });
         diagnostics.push(
-          ...validateCompiledShot(
-            contract,
-            graph.models,
-            graph.formations,
-            result.value,
-          ),
+          ...validateCompiledShot(contract, materialized.value),
+          ...realized.diagnostics,
         );
-        compiled.set(id, result.value);
+        compiled.set(id, materialized.value);
+        realizations.set(id, realized.realization);
       }
     }
     const contentFields: IAutoMovieFingerprintField[] = [];
@@ -171,9 +219,7 @@ export class AutoMovieProductionCompiler {
           phase: "source",
           target: "declared-content",
           path: ".automovie/manifest.json",
-          message: `${
-            error instanceof Error ? error.message : String(error)
-          } Correct contentRoots/contentFiles ownership before compileProject.`,
+          message: `${errorMessage(error)} Correct contentRoots/contentFiles ownership before compileProject.`,
         });
         contentFields.push({
           role: "content:inventory",
@@ -197,7 +243,13 @@ export class AutoMovieProductionCompiler {
     const files =
       input.scope === "design"
         ? null
-        : materializeGeneratedFiles(graph, compiled, inputFingerprint);
+        : materializeGeneratedFiles(
+            graph,
+            runtimeModels,
+            compiled,
+            realizations,
+            inputFingerprint,
+          );
     const entries: IAutoMovieGeneratedFile[] =
       files === null
         ? []
@@ -436,11 +488,13 @@ interface ICompileShotSourceProps {
     models: Readonly<Record<string, unknown>>;
     world: IAutoMovieWorldDesign;
     formations: Readonly<Record<string, unknown>>;
+    runtimeModels: Readonly<Record<string, unknown>>;
+    formationSlots: Readonly<Record<string, unknown>>;
   };
 }
 
 interface ICompileShotSourceResult {
-  value: IAutoMovieCompiledShotSource | null;
+  value: IAutoMovieShotSourceOutput | null;
   diagnostics: IAutoMovieDiagnostic[];
 }
 
@@ -676,8 +730,7 @@ const compileShotSource = (
     const resultJson = sandbox.__automovieResultJson as unknown;
     const value =
       typeof resultJson === "string" ? JSON.parse(resultJson) : undefined;
-    const validation =
-      typia.validateEquals<IAutoMovieCompiledShotSource>(value);
+    const validation = typia.validateEquals<IAutoMovieShotSourceOutput>(value);
     if (validation.success === false)
       return {
         value: null,
@@ -834,8 +887,6 @@ const LOCALE_SENSITIVE_SOURCE_MEMBERS = new Set([
 
 const validateCompiledShot = (
   contract: IAutoMovieShotContract,
-  modelRecipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
-  formationDesigns: ReadonlyMap<string, IAutoMovieFormationDesign>,
   value: IAutoMovieCompiledShotSource,
 ): IAutoMovieDiagnostic[] => {
   const id = contract.id;
@@ -852,14 +903,6 @@ const validateCompiledShot = (
         `must equal contract duration ${contract.durationSeconds}`,
       ),
     );
-  diagnostics.push(
-    ...compiledContractDiagnostics(
-      contract,
-      modelRecipes,
-      formationDesigns,
-      value,
-    ),
-  );
   appendValidation(
     diagnostics,
     id,
@@ -894,185 +937,6 @@ const validateCompiledShot = (
       appendValidation(diagnostics, id, validateMotion({ motion, skeleton }));
   }
   return diagnostics;
-};
-
-const compiledContractDiagnostics = (
-  contract: IAutoMovieShotContract,
-  modelRecipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
-  formationDesigns: ReadonlyMap<string, IAutoMovieFormationDesign>,
-  value: IAutoMovieCompiledShotSource,
-): IAutoMovieDiagnostic[] => {
-  const diagnostics: IAutoMovieDiagnostic[] = [];
-  const nodeIds = new Set(value.scene.nodes.map((node) => node.id));
-  const performanceNodes = new Set(
-    value.shot.performances.map((performance) => performance.node),
-  );
-  const runtimeModels = new Set(value.models.map((model) => model.id));
-  const sceneModelByNode = new Map(
-    value.scene.nodes.map((node) => [node.id, node.model]),
-  );
-  const modelWitness = new Map(
-    value.contract.models.map((entry) => [entry.model, entry.recipe]),
-  );
-  const fail = (field: string, expectation: string): void => {
-    diagnostics.push({
-      code: "contract-realization-failed",
-      category: "error",
-      phase: "compile",
-      target: `shot:${contract.id}`,
-      path: null,
-      message: `${field} ${expectation}. Correct the explicit compiled contract witness and the scene/shot it references.`,
-    });
-  };
-
-  const witnessParticipants = new Map(
-    value.contract.participants.map((participant) => [
-      `${participant.kind}:${participant.id}`,
-      participant,
-    ]),
-  );
-  if (
-    witnessParticipants.size !== value.contract.participants.length ||
-    witnessParticipants.size !== contract.participants.length
-  )
-    fail(
-      "contract.participants",
-      "must contain every authoritative participant exactly once",
-    );
-  for (const participant of contract.participants) {
-    const key = `${participant.kind}:${participant.id}`;
-    const witness = witnessParticipants.get(key);
-    if (witness === undefined) {
-      fail(
-        `contract.participants[${key}]`,
-        "is missing from the compiled witness",
-      );
-      continue;
-    }
-    if (
-      witness.nodes.length === 0 ||
-      new Set(witness.nodes).size !== witness.nodes.length ||
-      witness.nodes.some((node) => nodeIds.has(node) === false)
-    )
-      fail(
-        `contract.participants[${key}].nodes`,
-        "must be a non-empty unique list of current scene nodes",
-      );
-    if (
-      participant.kind === "actor" &&
-      (witness.nodes.includes(participant.id) === false ||
-        performanceNodes.has(participant.id) === false)
-    )
-      fail(
-        `contract.participants[${key}]`,
-        `must realize actor "${participant.id}" as a performed scene node`,
-      );
-    if (participant.kind === "formation") {
-      const formation = formationDesigns.get(participant.id);
-      if (
-        formation === undefined ||
-        witness.nodes.some((node) => {
-          const model = sceneModelByNode.get(node);
-          return (
-            model === undefined ||
-            modelWitness.get(model) !== formation.modelRecipe
-          );
-        })
-      )
-        fail(
-          `contract.participants[${key}]`,
-          `must realize formation "${participant.id}" only through scene nodes whose runtime models witness recipe "${formation?.modelRecipe ?? "(missing formation)"}"`,
-        );
-    }
-  }
-  if (
-    sameStringSet(
-      value.contract.openingStates,
-      contract.opening.map((state) => state.id),
-    ) === false
-  )
-    fail(
-      "contract.openingStates",
-      "must exactly name every authoritative opening state",
-    );
-  if (
-    sameStringSet(
-      value.contract.closingStates,
-      contract.closing.map((state) => state.id),
-    ) === false
-  )
-    fail(
-      "contract.closingStates",
-      "must exactly name every authoritative closing state",
-    );
-  if (
-    sameStringSet(
-      value.contract.cameraSubjects,
-      contract.camera.requiredSubjects,
-    ) === false ||
-    value.contract.cameraSubjects.some(
-      (subject) => nodeIds.has(subject) === false,
-    )
-  )
-    fail(
-      "contract.cameraSubjects",
-      "must exactly name current scene nodes required by the camera contract",
-    );
-
-  const witnessEvents = new Map(
-    value.contract.events.map((event) => [event.id, event]),
-  );
-  if (
-    witnessEvents.size !== value.contract.events.length ||
-    witnessEvents.size !== contract.events.length
-  )
-    fail(
-      "contract.events",
-      "must contain every authoritative semantic event exactly once",
-    );
-  for (const event of contract.events) {
-    const witness = witnessEvents.get(event.id);
-    if (witness === undefined) {
-      fail(`contract.events[${event.id}]`, "is missing");
-      continue;
-    }
-    if (
-      witness.time < event.window.from ||
-      witness.time > event.window.to ||
-      sameStringSet(witness.subjects, event.subjects) === false
-    )
-      fail(
-        `contract.events[${event.id}]`,
-        `must occur inside ${event.window.from}..${event.window.to}s with the exact declared subjects`,
-      );
-  }
-
-  const placedModels = new Set(value.scene.nodes.map((node) => node.model));
-  if (
-    modelWitness.size !== value.contract.models.length ||
-    sameStringSet([...modelWitness.keys()], [...placedModels]) === false
-  )
-    fail("contract.models", "must map every placed runtime model exactly once");
-  for (const [model, recipe] of modelWitness)
-    if (
-      runtimeModels.has(model) === false ||
-      modelRecipes.has(recipe) === false
-    )
-      fail(
-        `contract.models[${model}]`,
-        `must reference a returned runtime model and current recipe, but recipe "${recipe}" is unavailable`,
-      );
-  return diagnostics;
-};
-
-const sameStringSet = (
-  left: readonly string[],
-  right: readonly string[],
-): boolean => {
-  if (left.length !== right.length) return false;
-  const sortedLeft = [...left].sort(compareCodeUnits);
-  const sortedRight = [...right].sort(compareCodeUnits);
-  return sortedLeft.every((value, index) => value === sortedRight[index]);
 };
 
 const appendValidation = (
@@ -1157,7 +1021,7 @@ const sourcePathDiagnostic = (
   sourcePath: string,
   error: unknown,
 ): IAutoMovieDiagnostic => {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorMessage(error);
   return {
     code:
       message.includes("outside") || message.includes("escapes")
@@ -1170,6 +1034,9 @@ const sourcePathDiagnostic = (
     message,
   };
 };
+
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 const designFingerprintFields = (
   graph: ReturnType<AutoMovieProductionProject["graph"]>,
@@ -1196,7 +1063,12 @@ const designFingerprintFields = (
 
 const materializeGeneratedFiles = (
   graph: ReturnType<AutoMovieProductionProject["graph"]>,
+  runtimeModels: ReadonlyMap<
+    string,
+    IAutoMovieCompiledShotSource["models"][number]
+  >,
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>,
+  realizations: ReadonlyMap<string, IAutoMovieCompiledContractRealization>,
   inputFingerprint: AutoMovieContentDigest,
 ): ReadonlyMap<string, Uint8Array> => {
   const files = new Map<string, Uint8Array>();
@@ -1219,12 +1091,17 @@ const materializeGeneratedFiles = (
     put(`contracts/shots/${encodeAutoMoviePathSegment(id)}.json`, value);
   for (const [id, value] of graph.acceptance)
     put(`contracts/acceptance/${encodeAutoMoviePathSegment(id)}.json`, value);
+  for (const [id, value] of runtimeModels)
+    put(`models/${encodeAutoMoviePathSegment(id)}.json`, value);
   for (const [id, value] of compiled)
     put(`shots/${encodeAutoMoviePathSegment(id)}.json`, value);
+  for (const [id, value] of realizations)
+    put(`realizations/${encodeAutoMoviePathSegment(id)}.json`, value);
   put("manifests/compile.json", {
     version: 1,
     compiler: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
     inputFingerprint,
+    models: [...runtimeModels.keys()],
     shots: [...compiled.keys()],
   });
   return files;
@@ -1264,11 +1141,15 @@ const sourceTargetsOf = (
   for (const [id] of graph.shots)
     if (
       file === `shots/${encodeAutoMoviePathSegment(id)}.json` ||
+      file === `realizations/${encodeAutoMoviePathSegment(id)}.json` ||
       file === `contracts/shots/${encodeAutoMoviePathSegment(id)}.json`
     )
       return [`shot:${id}`];
   for (const [id] of graph.models)
-    if (file === `contracts/models/${encodeAutoMoviePathSegment(id)}.json`)
+    if (
+      file === `models/${encodeAutoMoviePathSegment(id)}.json` ||
+      file === `contracts/models/${encodeAutoMoviePathSegment(id)}.json`
+    )
       return [`model:${id}`];
   for (const [id] of graph.formations)
     if (file === `contracts/formations/${encodeAutoMoviePathSegment(id)}.json`)
@@ -1339,23 +1220,25 @@ const finalDeliverableDiagnostics = (
       },
     ];
   const manifestDigest = digestAutoMovieBytes(bytes);
-  let receipt: unknown = null;
+  let receipt: IAutoMovieProductionRenderReceipt | null = null;
   try {
     const receiptBytes = project.readTrackedStateFile(
       "render-manifest-receipt.json",
     );
-    receipt =
-      receiptBytes === null
-        ? null
-        : (JSON.parse(Buffer.from(receiptBytes).toString("utf8")) as unknown);
+    if (receiptBytes !== null) {
+      const validation =
+        typia.validateEquals<IAutoMovieProductionRenderReceipt>(
+          JSON.parse(Buffer.from(receiptBytes).toString("utf8")) as unknown,
+        );
+      if (validation.success) receipt = validation.data;
+    }
   } catch {
     receipt = null;
   }
   if (
-    typeof receipt !== "object" ||
     receipt === null ||
-    (receipt as { version?: unknown }).version !== 1 ||
-    (receipt as { manifestDigest?: unknown }).manifestDigest !== manifestDigest
+    receipt.version !== 2 ||
+    receipt.manifestDigest !== manifestDigest
   )
     return [
       renderDeliverableDiagnostic(
@@ -1406,6 +1289,21 @@ const finalDeliverableDiagnostics = (
     IAutoMovieProductionRenderManifest["deliverables"][number]
   >();
   const filePaths = new Set<string>();
+  const receiptByPath = new Map(
+    receipt.files.map((file) => [
+      normalizeSlash(file.path).toLowerCase(),
+      file,
+    ]),
+  );
+  if (receiptByPath.size !== receipt.files.length)
+    diagnostics.push(
+      renderDeliverableDiagnostic(
+        "render-deliverable-unowned",
+        production.id,
+        "The renderer-owned receipt repeats a physical file path. Recreate it through the production render command.",
+      ),
+    );
+  const witnessedReceiptPaths = new Set<string>();
   for (const deliverable of manifest.deliverables) {
     if (resident.has(deliverable.id))
       diagnostics.push(
@@ -1433,6 +1331,7 @@ const finalDeliverableDiagnostics = (
           `Deliverable "${deliverable.id}" has no output file. Render at least one owned byte artifact and record its digest and size.`,
         ),
       );
+    const probes: IAutoMovieProductionMediaProbe[] = [];
     for (const file of deliverable.files) {
       const portablePath = normalizeSlash(file.path).toLowerCase();
       if (filePaths.has(portablePath))
@@ -1445,6 +1344,7 @@ const finalDeliverableDiagnostics = (
           ),
         );
       filePaths.add(portablePath);
+      witnessedReceiptPaths.add(portablePath);
       if (
         Number.isInteger(file.bytes) === false ||
         file.bytes <= 0 ||
@@ -1474,21 +1374,83 @@ const finalDeliverableDiagnostics = (
               file.path,
             ),
           );
+        const receiptFile = receiptByPath.get(portablePath);
+        if (
+          receiptFile === undefined ||
+          receiptFile.deliverable !== deliverable.id ||
+          receiptFile.digest !== file.digest ||
+          receiptFile.bytes !== file.bytes ||
+          receiptFile.mediaType !== file.mediaType
+        )
+          diagnostics.push(
+            renderDeliverableDiagnostic(
+              "render-deliverable-unowned",
+              deliverable.id,
+              `Render file "${file.path}" lacks one exact renderer-owned byte and media-probe receipt. Recreate the aggregate manifest through the production render command.`,
+              file.path,
+            ),
+          );
+        else {
+          let probe: IAutoMovieProductionMediaProbe;
+          try {
+            probe = probeProductionMedia({
+              kind: deliverable.kind,
+              mediaType: file.mediaType,
+              bytes: actual,
+            });
+          } catch (error) {
+            diagnostics.push(
+              renderDeliverableDiagnostic(
+                "render-deliverable-invalid",
+                deliverable.id,
+                `Render file "${file.path}" failed current media probing: ${errorMessage(error)} Re-render a valid declared medium.`,
+                file.path,
+              ),
+            );
+            continue;
+          }
+          if (canonicalizeProbe(probe) !== canonicalizeProbe(receiptFile.probe))
+            diagnostics.push(
+              renderDeliverableDiagnostic(
+                "render-deliverable-unowned",
+                deliverable.id,
+                `Render file "${file.path}" current media facts differ from its renderer-owned receipt. Recreate the aggregate manifest.`,
+                file.path,
+              ),
+            );
+          else probes.push(probe);
+        }
       } catch (error) {
         diagnostics.push(
           renderDeliverableDiagnostic(
             "render-deliverable-missing",
             deliverable.id,
-            `${
-              error instanceof Error ? error.message : String(error)
-            } Re-render the missing owned output.`,
+            `${errorMessage(error)} Re-render the missing owned output.`,
             file.path,
           ),
         );
       }
     }
-    appendDeliverableTimelineDiagnostics(diagnostics, production, deliverable);
+    appendDeliverableTimelineDiagnostics(
+      diagnostics,
+      production,
+      deliverable,
+      probes,
+    );
   }
+  for (const file of receipt.files)
+    if (
+      witnessedReceiptPaths.has(normalizeSlash(file.path).toLowerCase()) ===
+      false
+    )
+      diagnostics.push(
+        renderDeliverableDiagnostic(
+          "render-deliverable-unowned",
+          file.deliverable,
+          `Renderer receipt file "${file.path}" is not owned by the current aggregate manifest. Recreate the manifest and receipt together.`,
+          file.path,
+        ),
+      );
   for (const deliverable of production.deliverables)
     if (deliverable.required && resident.has(deliverable.id) === false)
       diagnostics.push(
@@ -1507,6 +1469,7 @@ const appendDeliverableTimelineDiagnostics = (
     ReturnType<AutoMovieProductionProject["graph"]>["production"]
   >,
   deliverable: IAutoMovieProductionRenderManifest["deliverables"][number],
+  probes: readonly IAutoMovieProductionMediaProbe[],
 ): void => {
   const timed = ["feature", "guide-pass", "captions", "audio-mix"].includes(
     deliverable.kind,
@@ -1544,7 +1507,81 @@ const appendDeliverableTimelineDiagnostics = (
         `Deliverable "${deliverable.id}" has incomplete runtime, frame-count, or codec evidence for kind "${deliverable.kind}". Match the ${production.targetRuntimeSeconds}s production clock and ${expectedFrames} frames where applicable.`,
       ),
     );
+  if (deliverable.kind === "feature" || deliverable.kind === "guide-pass") {
+    const video = probes.length === 1 ? probes[0] : null;
+    if (
+      video?.kind !== "video" ||
+      video.width !== production.frameFormat.width ||
+      video.height !== production.frameFormat.height ||
+      video.frameCount !== expectedFrames ||
+      frameClockClose(video.fps, production.frameFormat.fps) === false ||
+      frameClockClose(video.runtimeSeconds, production.targetRuntimeSeconds) ===
+        false ||
+      deliverable.codec?.toLowerCase() !== video.codec ||
+      deliverable.frameCount !== video.frameCount ||
+      deliverable.runtimeSeconds !== video.runtimeSeconds
+    )
+      diagnostics.push(
+        renderDeliverableDiagnostic(
+          "render-deliverable-media-mismatch",
+          deliverable.id,
+          `Deliverable "${deliverable.id}" must be one parsed ${production.frameFormat.width}x${production.frameFormat.height} H.264 MP4 at ${production.frameFormat.fps}fps with ${expectedFrames} resident samples and ${production.targetRuntimeSeconds}s runtime. Manifest strings cannot substitute for parser-derived media facts.`,
+        ),
+      );
+  } else if (deliverable.kind === "preview") {
+    if (
+      probes.length !== deliverable.files.length ||
+      probes.some(
+        (probe) =>
+          probe.kind !== "png" ||
+          probe.width !== production.frameFormat.width ||
+          probe.height !== production.frameFormat.height,
+      )
+    )
+      diagnostics.push(
+        renderDeliverableDiagnostic(
+          "render-deliverable-media-mismatch",
+          deliverable.id,
+          `Preview deliverable "${deliverable.id}" must contain decoded PNGs at the exact ${production.frameFormat.width}x${production.frameFormat.height} production raster.`,
+        ),
+      );
+  } else if (deliverable.kind === "captions") {
+    if (
+      probes.length !== deliverable.files.length ||
+      probes.some((probe) => probe.kind !== "webvtt")
+    )
+      diagnostics.push(
+        renderDeliverableDiagnostic(
+          "render-deliverable-media-mismatch",
+          deliverable.id,
+          `Caption deliverable "${deliverable.id}" must contain parser-verified WebVTT files.`,
+        ),
+      );
+  } else {
+    const audio = probes.length === 1 ? probes[0] : null;
+    if (
+      audio?.kind !== "audio" ||
+      frameClockClose(audio.runtimeSeconds, production.targetRuntimeSeconds) ===
+        false ||
+      deliverable.codec !== audio.codec ||
+      deliverable.runtimeSeconds !== audio.runtimeSeconds
+    )
+      diagnostics.push(
+        renderDeliverableDiagnostic(
+          "render-deliverable-media-mismatch",
+          deliverable.id,
+          `Audio deliverable "${deliverable.id}" must be one parsed audio/mp4 track with current production runtime and matching codec metadata.`,
+        ),
+      );
+  }
 };
+
+const canonicalizeProbe = (probe: IAutoMovieProductionMediaProbe): string =>
+  Buffer.from(canonicalAutoMovieJsonBytes(probe)).toString("utf8");
+
+const frameClockClose = (left: number, right: number): boolean =>
+  Math.abs(left - right) <=
+  Number.EPSILON * 64 * Math.max(1, Math.abs(left), Math.abs(right));
 
 const renderDeliverableDiagnostic = (
   code: string,

@@ -102,7 +102,21 @@ const worksheet = (
                 scenario: scenario.id,
                 exactValue: scenario,
               };
-              if (scenarioCriterion.kind !== "frame") return [contractEvidence];
+              if (scenarioCriterion.kind !== "frame") {
+                const outcome = prepared.outcomes.find(
+                  (item) => item.scenario === scenario.id,
+                );
+                return outcome === undefined
+                  ? [contractEvidence]
+                  : [
+                      contractEvidence,
+                      {
+                        kind: "outcome" as const,
+                        scenario: scenario.id,
+                        exactValue: outcome,
+                      },
+                    ];
+              }
               const shot =
                 scenarioCriterion.shot ??
                 (scenario.target.kind === "shot"
@@ -154,7 +168,7 @@ const worksheet = (
 };
 
 const captureBytes = (): Uint8Array => {
-  const png = new PNG({ width: 4, height: 4 });
+  const png = new PNG({ width: 16, height: 16 });
   png.data.fill(200);
   png.data[0] = 0;
   return PNG.sync.write(png);
@@ -204,6 +218,67 @@ export const test_mcp_production_review = async (): Promise<void> => {
       "required non-frame acceptance remains reviewable without fake pixels",
       project.setAcceptanceScenario(eventAcceptance).accepted,
     );
+    const metricAcceptance = {
+      id: "opening-runtime",
+      target: { kind: "shot" as const, id: "opening" },
+      criterion: {
+        kind: "metric" as const,
+        metric: "runtime-seconds" as const,
+        operator: "==" as const,
+        value: 6,
+      },
+      required: true,
+    };
+    TestValidator.predicate(
+      "runtime acceptance is stored as a measured contract",
+      project.setAcceptanceScenario(metricAcceptance).accepted,
+    );
+    const metricMaximumAcceptance = {
+      ...metricAcceptance,
+      id: "opening-runtime-maximum",
+      criterion: {
+        ...metricAcceptance.criterion,
+        operator: "<=" as const,
+      },
+    };
+    const metricMinimumAcceptance = {
+      ...metricAcceptance,
+      id: "opening-runtime-minimum",
+      criterion: {
+        ...metricAcceptance.criterion,
+        operator: ">=" as const,
+      },
+    };
+    const filmMetricAcceptance = {
+      ...metricAcceptance,
+      id: "film-runtime",
+      target: { kind: "film" as const, id: "fixture-film" },
+    };
+    const repeatedEventAcceptance = {
+      ...eventAcceptance,
+      id: "opening-event-repeated",
+    };
+    const implicitShotEventAcceptance = {
+      id: "opening-event-implicit-shot",
+      target: { kind: "shot" as const, id: "opening" },
+      criterion: {
+        kind: "event" as const,
+        event: "signal-raised",
+        expectation:
+          "A shot-scoped event resolves its owner from the review target.",
+      },
+      required: true,
+    };
+    TestValidator.predicate(
+      "all metric operators, film sums and repeated event reads are resident contracts",
+      [
+        metricMaximumAcceptance,
+        metricMinimumAcceptance,
+        filmMetricAcceptance,
+        repeatedEventAcceptance,
+        implicitShotEventAcceptance,
+      ].every((scenario) => project.setAcceptanceScenario(scenario).accepted),
+    );
     const aliasedReviewFrameShot = shotContract();
     aliasedReviewFrameShot.reviewFrames.push({
       id: "signal-apex-alternate-criterion",
@@ -217,10 +292,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const compiler = new AutoMovieProductionCompiler(project, () =>
       review.queue(),
     );
-    TestValidator.predicate(
-      "review fixture compiles",
-      compiler.compile({ scope: "source" }).success,
-    );
+    const compiledStatus = compiler.compile({ scope: "source" });
+    TestValidator.predicate("review fixture compiles", compiledStatus.success);
     const missingVisual = review.prepare({
       target: { kind: "shot", id: "opening" },
     });
@@ -262,8 +335,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
     });
     const oracle = new AutoMovieProductionOracleService(project, async () => ({
       bytes: captureBytes(),
-      width: 4,
-      height: 4,
+      width: 16,
+      height: 16,
     }));
     for (const pass of ["beauty", "mask", "pose"] as const)
       TestValidator.predicate(
@@ -273,8 +346,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
             target: { kind: "shot", id: "opening" },
             time: 2,
             pass,
-            width: 4,
-            height: 4,
+            width: 16,
+            height: 16,
           })
         ).captured,
       );
@@ -293,6 +366,161 @@ export const test_mcp_production_review = async (): Promise<void> => {
             .filter((frame) => frame.pass === "beauty")
             .map((frame) => frame.reviewFrame),
         ).size === 2,
+    );
+    TestValidator.predicate(
+      "event and runtime outcomes are compiler-derived and currently passing",
+      [
+        eventAcceptance.id,
+        repeatedEventAcceptance.id,
+        implicitShotEventAcceptance.id,
+        metricAcceptance.id,
+        metricMaximumAcceptance.id,
+        metricMinimumAcceptance.id,
+      ].every((scenario) =>
+        aliasedFrameEvidence.outcomes.some(
+          (outcome) => outcome.scenario === scenario && outcome.passed,
+        ),
+      ),
+    );
+    const staleOutcomeWorksheet = worksheet(project, aliasedFrameEvidence);
+    const outcomeEvidence = staleOutcomeWorksheet.checks
+      .find((check) => check.criterion === "acceptance-scenarios")!
+      .evidence.find((evidence) => evidence.kind === "outcome");
+    if (outcomeEvidence?.kind !== "outcome")
+      throw new Error("shot worksheet has no compiler-derived outcome");
+    outcomeEvidence.exactValue = {
+      ...outcomeEvidence.exactValue,
+      passed: !outcomeEvidence.exactValue.passed,
+    };
+    TestValidator.predicate(
+      "submitted outcome evidence must still equal current compiler facts",
+      review
+        .submit(staleOutcomeWorksheet)
+        .diagnostics.some((item) => item.code === "review-evidence-stale"),
+    );
+    const residentReadGenerated = project.readGeneratedFile;
+    const reviewWithFixedStatus = new AutoMovieProductionReviewService(
+      project,
+      () => compiledStatus,
+    );
+    project.readGeneratedFile = ((relativePath: string) => {
+      if (
+        relativePath.startsWith("realizations/") &&
+        new Error("realization outcome stack").stack?.includes(
+          "readRealization",
+        )
+      )
+        return Buffer.from("{}");
+      return residentReadGenerated.call(project, relativePath);
+    }) as typeof project.readGeneratedFile;
+    const missingEventOutcome = reviewWithFixedStatus.prepare({
+      target: { kind: "shot", id: "opening" },
+    });
+    project.readGeneratedFile = ((relativePath: string) => {
+      if (
+        relativePath.startsWith("realizations/") &&
+        new Error("realization outcome stack").stack?.includes(
+          "readRealization",
+        )
+      )
+        return Buffer.from("{bad");
+      return residentReadGenerated.call(project, relativePath);
+    }) as typeof project.readGeneratedFile;
+    const malformedEventOutcome = reviewWithFixedStatus.prepare({
+      target: { kind: "shot", id: "opening" },
+    });
+    project.readGeneratedFile = ((relativePath: string) => {
+      if (
+        relativePath.startsWith("shots/") &&
+        new Error("compiled outcome stack").stack?.includes("readCompiled")
+      )
+        return Buffer.from("{bad");
+      return residentReadGenerated.call(project, relativePath);
+    }) as typeof project.readGeneratedFile;
+    const missingMetricOutcome = reviewWithFixedStatus.prepare({
+      target: { kind: "shot", id: "opening" },
+    });
+    project.readGeneratedFile = ((relativePath: string) => {
+      if (
+        relativePath.startsWith("shots/") &&
+        new Error("compiled outcome stack").stack?.includes("readCompiled")
+      )
+        return Buffer.from("{}");
+      return residentReadGenerated.call(project, relativePath);
+    }) as typeof project.readGeneratedFile;
+    const invalidMetricOutcome = reviewWithFixedStatus.prepare({
+      target: { kind: "shot", id: "opening" },
+    });
+    project.readGeneratedFile = residentReadGenerated;
+    const residentGraph = project.graph;
+    const currentGraph = residentGraph.call(project);
+    const openingContract = currentGraph.shots.get("opening")!;
+    const graphWithMissingFirst = {
+      ...currentGraph,
+      shots: new Map([
+        [
+          "review-missing-shot",
+          { ...openingContract, id: "review-missing-shot" },
+        ],
+        ...currentGraph.shots,
+      ]),
+    };
+    project.graph = (() => graphWithMissingFirst) as typeof project.graph;
+    const incompleteFilmMetricOutcome = reviewWithFixedStatus.prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    project.graph = residentGraph;
+    const ambiguousEventFile = path.join(
+      fixture.root,
+      ".automovie/design/acceptance/ambiguous-film-event.json",
+    );
+    fs.writeFileSync(
+      ambiguousEventFile,
+      JSON.stringify({
+        id: "ambiguous-film-event",
+        target: { kind: "film", id: "fixture-film" },
+        criterion: {
+          kind: "event",
+          event: "signal-raised",
+          expectation: "An owning shot is deliberately absent.",
+        },
+        required: true,
+      }),
+    );
+    const ambiguousEventOutcome = reviewWithFixedStatus.prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    fs.rmSync(ambiguousEventFile);
+    TestValidator.predicate(
+      "missing, malformed and unscoped compiler outcomes fail review preparation",
+      [
+        missingEventOutcome,
+        malformedEventOutcome,
+        missingMetricOutcome,
+        invalidMetricOutcome,
+        incompleteFilmMetricOutcome,
+        ambiguousEventOutcome,
+      ].every((prepared) =>
+        prepared.diagnostics.some(
+          (diagnostic) => diagnostic.code === "review-outcome-missing",
+        ),
+      ),
+    );
+    const contractOnlyWorksheet = worksheet(project, aliasedFrameEvidence);
+    const acceptanceCheck = contractOnlyWorksheet.checks.find(
+      (check) => check.criterion === "acceptance-scenarios",
+    )!;
+    acceptanceCheck.evidence = acceptanceCheck.evidence.filter(
+      (evidence) => evidence.kind !== "outcome",
+    );
+    const contractOnlyResult = review.submit(contractOnlyWorksheet);
+    TestValidator.predicate(
+      "event and metric contracts cannot replace passing measured outcomes",
+      contractOnlyResult.accepted === false &&
+        contractOnlyResult.diagnostics.filter(
+          (diagnostic) =>
+            diagnostic.code === "review-acceptance-coverage-incomplete",
+        ).length >= 2,
     );
     const acceptanceTarget = {
       kind: "design" as const,
@@ -844,15 +1072,29 @@ export const test_mcp_production_review = async (): Promise<void> => {
       forgedStoredState,
       "incomplete",
     );
+    project.eraseDesignArtifact({
+      kind: "acceptance",
+      id: filmMetricAcceptance.id,
+    });
     project.eraseDesignArtifact({ kind: "production" });
     const noProductionFrames = review.prepare({ target: shotTarget });
     project.setProductionDesign(productionDesign());
+    project.setAcceptanceScenario(filmMetricAcceptance);
     compiler.compile({ scope: "source" });
     TestValidator.predicate(
       "review frame requirements need current production fps",
       noProductionFrames.frames.length === 0,
     );
-    const requiredScenarios = [...acceptanceScenarios(), eventAcceptance];
+    const requiredScenarios = [
+      ...acceptanceScenarios(),
+      eventAcceptance,
+      repeatedEventAcceptance,
+      implicitShotEventAcceptance,
+      metricAcceptance,
+      metricMaximumAcceptance,
+      metricMinimumAcceptance,
+      filmMetricAcceptance,
+    ];
     for (const scenario of requiredScenarios)
       project.setAcceptanceScenario({ ...scenario, required: false });
     compiler.compile({ scope: "source" });
@@ -861,8 +1103,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
         target: { kind: "shot", id: "opening" },
         time: 2,
         pass,
-        width: 4,
-        height: 4,
+        width: 16,
+        height: 16,
       });
     const noRequiredPrepared = review.prepare({ target: shotTarget });
     const noRequiredSheet = worksheet(project, noRequiredPrepared);

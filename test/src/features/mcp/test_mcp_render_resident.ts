@@ -6,7 +6,7 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -75,7 +75,7 @@ const spec: IAutoMovieRenderSpec = {
 };
 
 /** Commit the full film ladder into the resident project (slate omitted). */
-const commitResident = (app: AutoMovieApplication): void => {
+const commitResident = (app: AutoMovieLegacyApplication): void => {
   TestValidator.equals(
     "resident script committed",
     app.commitScript({ script }).committed,
@@ -122,7 +122,7 @@ const commitResident = (app: AutoMovieApplication): void => {
 export const test_mcp_render_resident = async (): Promise<void> => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-render-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     commitResident(app);
 
@@ -220,7 +220,7 @@ export const test_mcp_render_resident = async (): Promise<void> => {
   }
 
   // 5. no project + no slate throws the actionable openProject prompt
-  const bare = new AutoMovieApplication();
+  const bare = new AutoMovieLegacyApplication();
   TestValidator.predicate(
     "planRender without project or slate throws openProject prompt",
     throwsError(

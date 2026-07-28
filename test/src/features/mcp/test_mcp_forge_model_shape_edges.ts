@@ -1,12 +1,12 @@
 import { IAutoMovieForgeApplication } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import { forgeEntry, makeScriptWrite } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const script = makeScriptWrite();
 const rest = createSkeleton().bones[0]!.rest;
 
@@ -14,7 +14,7 @@ type ForgeModel = IAutoMovieForgeApplication.IEntry["model"];
 
 const forgeModel = (
   model: Record<string, unknown>,
-): ReturnType<AutoMovieApplication["forge"]>["forged"] =>
+): ReturnType<AutoMovieLegacyApplication["forge"]>["forged"] =>
   app.forge({
     script,
     forge: {

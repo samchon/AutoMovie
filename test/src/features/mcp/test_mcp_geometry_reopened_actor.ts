@@ -1,6 +1,6 @@
 import { IAutoMovieGait, IAutoMovieVector3 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpActorSpec,
 } from "@automovie/mcp";
@@ -84,7 +84,10 @@ const actorContext = (
 });
 
 /** The resolved hips height: the value that tells the two rigs apart. */
-const hipsYOf = (app: AutoMovieApplication, actor: string): number | null =>
+const hipsYOf = (
+  app: AutoMovieLegacyApplication,
+  actor: string,
+): number | null =>
   app
     .getResolvedPose({ actor, beat: scriptWrite.beats[0]!.id })
     .resolvedPose?.bones.find((b) => b.bone === "hips")?.worldPosition.y ??
@@ -135,7 +138,7 @@ export const test_mcp_geometry_reopened_actor = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-georeopen-"));
   try {
     // ── Session A: commit the scene and perform, writing actors/<node>.json.
-    const sessionA = new AutoMovieApplication();
+    const sessionA = new AutoMovieLegacyApplication();
     sessionA.openProject({ root });
     sessionA.commitScript({
       script: {
@@ -223,7 +226,7 @@ export const test_mcp_geometry_reopened_actor = (): void => {
     });
 
     // ── Session B: a fresh application with no geometry memory whatsoever.
-    const sessionB = new AutoMovieApplication();
+    const sessionB = new AutoMovieLegacyApplication();
     sessionB.openProject({ root });
 
     // 1. the reopened session resolves the cast rest pose from the persisted rig
@@ -248,7 +251,7 @@ export const test_mcp_geometry_reopened_actor = (): void => {
 
     // 3. a session model carrying a REAL skeleton still overrides the persisted
     // rig for that model: session memory is authoritative when it has a rig.
-    const sessionOverride = new AutoMovieApplication();
+    const sessionOverride = new AutoMovieLegacyApplication();
     sessionOverride.openProject({ root });
     sessionOverride.commitScene({
       scene: staged.scene,
@@ -265,7 +268,7 @@ export const test_mcp_geometry_reopened_actor = (): void => {
     // 4. an actor with no rig anywhere throws guidance naming the rig-persisting
     // path (`perform`), not only the destructive commitScene the fix removed.
     fs.rmSync(path.join(root, "actors", "knightA.json"));
-    const sessionC = new AutoMovieApplication();
+    const sessionC = new AutoMovieLegacyApplication();
     sessionC.openProject({ root });
     TestValidator.predicate(
       "an actor with no rig anywhere throws guidance naming perform",

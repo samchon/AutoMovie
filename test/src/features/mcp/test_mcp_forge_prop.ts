@@ -1,11 +1,14 @@
 import { resolveFrame } from "@automovie/engine";
-import { AutoMovieApplication, IAutoMovieMcpPropSpec } from "@automovie/mcp";
+import {
+  AutoMovieLegacyApplication,
+  IAutoMovieMcpPropSpec,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import { createDoorPropSpec } from "../film/test_film_forge_prop";
 import { hasViolation } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 /** The engine door spec re-expressed as the MCP boundary accepts it. */
 export const mcpDoorSpec = (): IAutoMovieMcpPropSpec => {

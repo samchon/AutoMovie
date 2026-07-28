@@ -23,7 +23,8 @@ the tools; MCP protocol-version negotiation remains a separate SDK concern.
 
 ## Coding-agent production tools
 
-`automovie-mcp-production` is the opt-in coding-agent-first surface. It keeps
+`AutoMovieApplication` is the canonical coding-agent-first class, and
+`automovie-mcp-production` is its opt-in comparison binary. It keeps
 screenplay, shot builders, motion helpers, effects, and tests in ordinary files,
 then uses MCP where structured calls are stronger than file authoring:
 validated design, deterministic compilation, geometry facts, actual-frame
@@ -52,15 +53,24 @@ compiler and host adapters.
 | `prepareReview` | `IAutoMoviePrepareReview.IProps` → `IAutoMoviePrepareReview` | issue a current evidence worksheet |
 | `submitReview` | `IAutoMovieSubmitReview.IProps` → `IAutoMovieSubmitReview` | validate checklist coverage and completion |
 
-The coding agent owns `src`; the compiler owns `generated`. A generated
-manifest binds source hashes, design hashes, compiler version, and generated
-file hashes. A stale source, hand-edited generated file, stale render manifest,
-or review copied from another fingerprint cannot pass the final compile gate.
-The server validates the evidence and state transition; it does not call a
-second LLM or grade creative prose.
+The coding agent owns `src`; the compiler owns `generated`. The agent returns
+authored scene, sparse motion, shot choreography, and event sample times. The
+compiler materializes primitive models and formation slots, then derives named
+state, event, camera, and formation outcomes from current compiled data instead
+of accepting a source-authored compliance witness.
 
-This surface remains opt-in until a comparative external-agent benchmark
-demonstrates that it should replace the compact default. The compact and
+A generated manifest binds source hashes, design hashes, compiler protocol and
+version, and generated file hashes. Required review uses exact production-raster
+frames and passing compiler-derived event or metric outcomes. Final delivery
+requires a renderer-owned receipt and independently re-parses current PNG,
+WebVTT, and MP4 bytes. A stale source, hand-edited generated file, stale render
+manifest, metadata-only media claim, or review copied from another fingerprint
+cannot pass the final compile gate. The server validates the evidence and state
+transition; it does not call a second LLM or grade creative prose.
+
+The binary remains opt-in until a comparative external-agent benchmark
+demonstrates that it should replace the compact default. The former
+47-operation class is explicitly `AutoMovieLegacyApplication`; the compact and
 granular binaries remain compatible during that experiment.
 
 ## Compact tools

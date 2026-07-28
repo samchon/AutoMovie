@@ -1,4 +1,5 @@
 import { IAutoMovieShot } from "../cinematics";
+import { IAutoMovieVector3 } from "../geometry";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
 import { IAutoMovieScene } from "../scene";
@@ -9,6 +10,7 @@ import {
   IAutoMovieModelRecipe,
   IAutoMovieProductionDeliverable,
   IAutoMovieShotContract,
+  IAutoMovieShotPredicate,
   IAutoMovieWorldDesign,
 } from "./IAutoMovieProductionDesign";
 
@@ -24,7 +26,10 @@ export interface IAutoMovieDiagnostic {
   target: string;
   /** Project-relative file or null when no one file owns it. */
   path: string | null;
-  /** Human-readable explanation ending with a concrete correction. */
+  /**
+   * Human-readable cause followed by the concrete correction owned by this
+   * phase. Do not discard it and retry unchanged.
+   */
   message: string;
 }
 
@@ -34,7 +39,10 @@ export interface IAutoMovieProductionManifest {
   formatVersion: 2;
   /** Repository-local project identity, excluded from content fingerprints. */
   projectId: string;
-  /** Coding-agent-owned source roots. */
+  /**
+   * Project-relative coding-agent-owned source directories. Shot modules must
+   * resolve as real TypeScript files inside one of these roots.
+   */
   sourceRoots: string[];
   /**
    * Additional project-relative directories whose exact files affect compile
@@ -123,6 +131,73 @@ export interface IAutoMovieProductionRenderManifest {
   deliverables: IAutoMovieProductionRenderedDeliverable[];
 }
 
+/** Parser-derived metadata for one renderer-owned output file. */
+export type IAutoMovieProductionMediaProbe =
+  | {
+      /** Decoded PNG raster. */
+      kind: "png";
+      /** Actual pixel width. */
+      width: number;
+      /** Actual pixel height. */
+      height: number;
+    }
+  | {
+      /** Parsed ISO base-media video track. */
+      kind: "video";
+      /** Actual container family. */
+      container: "mp4";
+      /** Actual video codec family. */
+      codec: "h264";
+      /** Actual coded width. */
+      width: number;
+      /** Actual coded height. */
+      height: number;
+      /** Actual track duration in seconds. */
+      runtimeSeconds: number;
+      /** Actual video sample count. */
+      frameCount: number;
+      /** Actual constant frame rate. */
+      fps: number;
+    }
+  | {
+      /** Parsed ISO base-media audio track. */
+      kind: "audio";
+      /** Actual container family. */
+      container: "mp4";
+      /** Actual codec string reported by the container. */
+      codec: string;
+      /** Actual track duration in seconds. */
+      runtimeSeconds: number;
+      /** Actual audio channel count. */
+      channels: number;
+      /** Actual audio sample rate. */
+      sampleRate: number;
+    }
+  | {
+      /** Parsed WebVTT text. */
+      kind: "webvtt";
+      /** Number of non-empty cue timing lines. */
+      cueCount: number;
+    };
+
+/** One file record independently derived by the renderer-owned receipt gate. */
+export interface IAutoMovieProductionRenderReceiptFile extends IAutoMovieProductionDeliverableFile {
+  /** Deliverable that exclusively owns this path. */
+  deliverable: string;
+  /** Parser-derived media facts. */
+  probe: IAutoMovieProductionMediaProbe;
+}
+
+/** Renderer-owned aggregate receipt bound to current output bytes. */
+export interface IAutoMovieProductionRenderReceipt {
+  /** Receipt format. */
+  version: 2;
+  /** Exact digest of `.automovie/render-manifest.json`. */
+  manifestDigest: AutoMovieContentDigest;
+  /** Exact byte and media probes in canonical path order. */
+  files: IAutoMovieProductionRenderReceiptFile[];
+}
+
 /** Deterministic pure helpers exposed to a shot source builder. */
 export interface IAutoMovieSourceOracle {
   /** Euclidean distance between two points. */
@@ -144,66 +219,130 @@ export interface IAutoMovieShotBuildContext {
   world: IAutoMovieWorldDesign;
   /** Current formations keyed by id. */
   formations: Readonly<Record<string, IAutoMovieFormationDesign>>;
+  /** Compiler-generated primitive runtime models keyed by recipe id. */
+  runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
+  /** Compiler-derived formation slots keyed by formation id. */
+  formationSlots: Readonly<Record<string, readonly IAutoMovieFormationSlot[]>>;
   /** Deterministic geometry helpers. */
   engine: IAutoMovieSourceOracle;
 }
 
-/**
- * Derived runtime artifacts returned by one shot source. They are generated
- * output, never tracked source truth.
- */
-export interface IAutoMovieCompiledShotSource {
-  /**
-   * Explicit contract-compliance witness checked against scene, shot, model
-   * recipes and the authoritative shot contract before output is accepted.
-   */
-  contract: {
-    /** Contract participants and the concrete scene nodes realizing them. */
-    participants: Array<{
-      /** Participant family. */
-      kind: "actor" | "formation";
-      /** Exact participant id from the shot contract. */
-      id: string;
-      /** Concrete scene nodes carrying this participant. */
-      nodes: string[];
-    }>;
-    /** Exact opening-state ids the source implements. */
-    openingStates: string[];
-    /** Exact closing-state ids the source implements. */
-    closingStates: string[];
-    /** Exact required camera-subject ids kept readable by this source. */
-    cameraSubjects: string[];
-    /** Timed realization of every semantic contract event. */
-    events: Array<{
-      /** Exact contract event id. */
-      id: string;
-      /** Shot-local realized time. */
-      time: number;
-      /** Exact semantic subjects involved. */
-      subjects: string[];
-    }>;
-    /** Recipe-to-runtime-model provenance for every placed scene model. */
-    models: Array<{
-      /** Authoritative model recipe id. */
-      recipe: string;
-      /** Compiled runtime model id. */
-      model: string;
-    }>;
-  };
-  /** Models required by this shot. */
-  models: IAutoMovieModel[];
-  /** Scene staged for the shot. */
+/** One deterministic formation member materialized from compact design. */
+export interface IAutoMovieFormationSlot {
+  /** Zero-based deterministic slot index. */
+  slot: number;
+  /** Compiler-owned scene-node id. */
+  node: string;
+  /** Named hero actor at this slot, or null. */
+  actor: string | null;
+  /** Runtime model recipe id. */
+  modelRecipe: string;
+  /** Compiler-derived world position in meters. */
+  position: IAutoMovieVector3;
+  /** Compiler-derived world-space heading in degrees. */
+  facingDeg: number;
+}
+
+/** Coding-agent output before compiler-owned models and formations are added. */
+export interface IAutoMovieShotSourceOutput {
+  /** Event sample times selected inside authoritative event windows. */
+  eventSamples: Array<{
+    /** Exact event-contract id. */
+    id: string;
+    /** Shot-local time at which the compiler evaluates its predicates. */
+    time: number;
+  }>;
+  /** Scene authored around compiler-owned runtime model ids. */
   scene: IAutoMovieScene;
   /** Sparse deterministic motions referenced by the shot. */
   motions: IAutoMovieMotion[];
-  /** Compiled shot. */
+  /** Compiled shot choreography. */
   shot: IAutoMovieShot;
+}
+
+/** Fully compiler-owned shot artifact consumed by render and oracle services. */
+export interface IAutoMovieCompiledShotSource extends IAutoMovieShotSourceOutput {
+  /** Models required by this shot. */
+  models: IAutoMovieModel[];
+}
+
+/** One scalar predicate and the value measured by the compiler. */
+export interface IAutoMovieCompiledPredicateResult {
+  /** Exact authoritative predicate. */
+  predicate: IAutoMovieShotPredicate;
+  /** Actual sampled value, or null when the operand could not be resolved. */
+  actual: number | null;
+  /** Whether the authoritative comparison passed. */
+  passed: boolean;
+}
+
+/** Compiler-derived realization of one shot contract. */
+export interface IAutoMovieCompiledContractRealization {
+  /** Realization format. */
+  version: 1;
+  /** Exact compiled shot id. */
+  shot: string;
+  /** Opening-state outcomes sampled at time zero. */
+  opening: Array<{
+    /** Exact state id. */
+    id: string;
+    /** Compiler-owned predicate results. */
+    predicates: IAutoMovieCompiledPredicateResult[];
+    /** Whether every predicate passed. */
+    passed: boolean;
+  }>;
+  /** Closing-state outcomes sampled at the shot duration. */
+  closing: Array<{
+    /** Exact state id. */
+    id: string;
+    /** Compiler-owned predicate results. */
+    predicates: IAutoMovieCompiledPredicateResult[];
+    /** Whether every predicate passed. */
+    passed: boolean;
+  }>;
+  /** Semantic event outcomes sampled inside their declared windows. */
+  events: Array<{
+    /** Exact event id. */
+    id: string;
+    /** Compiler-checked event sample time. */
+    time: number;
+    /** Compiler-owned predicate results. */
+    predicates: IAutoMovieCompiledPredicateResult[];
+    /** Whether timing and every predicate passed. */
+    passed: boolean;
+  }>;
+  /** Camera root-projection checks at authoritative review times. */
+  camera: Array<{
+    /** Shot-local sample time. */
+    time: number;
+    /** Number of required subjects. */
+    requiredSubjects: number;
+    /** Number resolved in current compiled output. */
+    resolvedSubjects: number;
+    /** Number whose root point is inside depth and frame bounds. */
+    readableSubjects: number;
+    /** Whether every required root point is readable. */
+    passed: boolean;
+  }>;
+  /** Compiler-materialized formation summaries. */
+  formations: Array<{
+    /** Exact formation id. */
+    id: string;
+    /** Exact materialized slot count. */
+    count: number;
+    /** World-space minimum bound. */
+    min: IAutoMovieVector3;
+    /** World-space maximum bound. */
+    max: IAutoMovieVector3;
+    /** Whether count, slots, hero ids and placement passed. */
+    passed: boolean;
+  }>;
 }
 
 /** Coding-agent-owned module export compiled in a deterministic sandbox. */
 export interface IAutoMovieShotSource {
   /** Build derived shot data from the frozen design context. */
-  build(context: IAutoMovieShotBuildContext): IAutoMovieCompiledShotSource;
+  build(context: IAutoMovieShotBuildContext): IAutoMovieShotSourceOutput;
 }
 
 /** Compact inventory returned by project inspection. */
@@ -226,7 +365,7 @@ export interface IAutoMovieProductionDesignInventory {
 export interface IAutoMovieProductionNextAction {
   /** Owning surface. */
   owner: "design" | "source" | "compile" | "review" | "render";
-  /** Method or command to run. */
+  /** Exact MCP method or coding-agent command to run. */
   action: string;
   /** Exact target or artifact to correct. */
   target: string;
@@ -246,7 +385,7 @@ export interface IAutoMovieDesignMutationConsequences {
 
 /** Result shared by the one-artifact design setters and eraser. */
 export interface IAutoMovieDesignMutationOutput {
-  /** Whether the mutation was committed. */
+  /** Whether the complete mutation was atomically committed. */
   accepted: boolean;
   /** Current monotonic project revision. */
   revision: number;
@@ -254,9 +393,15 @@ export interface IAutoMovieDesignMutationOutput {
   target: IAutoMovieDesignTarget;
   /** Current target digest, or null when refused or erased. */
   fingerprint: AutoMovieContentDigest | null;
-  /** Downstream invalidation. */
+  /**
+   * Downstream review, render and generated artifacts made stale or removed by
+   * the accepted mutation, or predicted for a refused mutation.
+   */
   consequences: IAutoMovieDesignMutationConsequences;
-  /** Validation and reference diagnostics. */
+  /**
+   * Validation, reference and downstream diagnostics. A refused mutation never
+   * changes tracked state; accepted warnings must be corrected before compile.
+   */
   diagnostics: IAutoMovieDiagnostic[];
 }
 
@@ -268,13 +413,22 @@ export interface IAutoMovieMaterializedFile extends IAutoMovieGeneratedFile {
 
 /** A compile request with progressively stricter gates. */
 export interface IAutoMovieCompileProjectInput {
-  /** Highest gate to enforce. */
+  /**
+   * Highest atomic gate to enforce. `design` validates the tracked graph only;
+   * `source` additionally compiles sandboxed TypeScript and materializes owned
+   * generated artifacts; `review` additionally requires every current review
+   * target complete; `final` additionally verifies required renderer-owned
+   * deliverables, byte receipts and parsed media facts.
+   */
   scope: "design" | "source" | "review" | "final";
 }
 
 /** Result of an atomic production compile. */
 export interface IAutoMovieCompileProjectOutput {
-  /** Whether every error-level gate passed. */
+  /**
+   * Whether every error-level check through the requested scope passed. False
+   * means no partial generated publication occurred.
+   */
   success: boolean;
   /** Current project revision. */
   revision: number;
@@ -289,7 +443,10 @@ export interface IAutoMovieCompileProjectOutput {
   diagnostics: IAutoMovieDiagnostic[];
   /** Current review queue. */
   reviews: IAutoMovieReviewQueue;
-  /** Files materialized only after every requested gate passed. */
+  /**
+   * Compiler-owned files created, updated or already current. Empty for design
+   * scope and for every refused atomic compile.
+   */
   materialized: IAutoMovieMaterializedFile[];
 }
 

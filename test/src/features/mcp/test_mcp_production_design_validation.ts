@@ -2,6 +2,7 @@ import {
   IAutoMovieAcceptanceScenario,
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
+  IAutoMovieShotContract,
 } from "@automovie/interface";
 import {
   IAutoMovieProductionDesignGraph,
@@ -86,7 +87,7 @@ export const test_mcp_production_design_validation = (): void => {
     ],
     capabilities: ["", ""],
     attachments: [
-      { id: "", bone: "" },
+      { id: "", bone: "" as never },
       { id: "", bone: "head" },
     ],
   };
@@ -178,7 +179,7 @@ export const test_mcp_production_design_validation = (): void => {
     seed: -1,
     capabilities: ["hold", "hold"],
     heroOverrides: [
-      { slot: -1, actor: "" },
+      { slot: -1, actor: "duplicate" },
       { slot: -1, actor: "duplicate" },
     ],
   };
@@ -194,17 +195,17 @@ export const test_mcp_production_design_validation = (): void => {
       { kind: "actor" as const, id: "" },
     ],
     opening: [
-      { id: "", description: "" },
-      { id: "", description: "duplicate" },
+      { id: "", description: "", predicates: [] },
+      { id: "", description: "duplicate", predicates: [] },
     ],
     closing: [
-      { id: "", description: "" },
-      { id: "", description: "duplicate" },
+      { id: "", description: "", predicates: [] },
+      { id: "", description: "duplicate", predicates: [] },
     ],
     camera: {
       ...shotContract().camera,
       intent: "",
-      requiredSubjects: ["", ""],
+      requiredSubjects: [],
       maxOcclusionRatio: Number.NaN,
     },
     events: [
@@ -213,12 +214,14 @@ export const test_mcp_production_design_validation = (): void => {
         kind: "reveal" as const,
         window: { from: 2, to: 1 },
         subjects: ["", ""],
+        predicates: [],
       },
       {
         id: "",
         kind: "contact" as const,
         window: { from: -1, to: 99 },
         subjects: [],
+        predicates: [],
       },
     ],
     reviewFrames: [
@@ -407,6 +410,16 @@ export const test_mcp_production_design_validation = (): void => {
       shots: new Map([[offClockShot.id, offClockShot]]),
     }).some((diagnostic) => diagnostic.code === "design-frame-clock-invalid"),
   );
+  const longClockShot = shotContract();
+  longClockShot.durationSeconds = 50_000;
+  longClockShot.reviewFrames[0]!.time = 1_000_000 / 24;
+  TestValidator.predicate(
+    "large valid frame indices survive floating-point scale",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      shots: new Map([[longClockShot.id, longClockShot]]),
+    }).every((diagnostic) => diagnostic.code !== "design-frame-clock-invalid"),
+  );
   const polygonVariants = [
     [
       { x: 0, z: 0 },
@@ -512,6 +525,25 @@ export const test_mcp_production_design_validation = (): void => {
       },
     ],
   };
+  const attachedHorse: IAutoMovieModelRecipe = {
+    ...modelRecipe(),
+    id: "attached-horse",
+    role: "mount",
+    archetype: "horse",
+    parameters: {
+      length: 2.2,
+      height: 1.7,
+      legLength: 0.9,
+    },
+    lod: [
+      {
+        tier: "hero",
+        maxDistance: null,
+        recipe: "attached-horse",
+      },
+    ],
+    attachments: [{ id: "saddle", bone: "hips" }],
+  };
   const modelContractDiagnostics = validateAutoMovieProductionGraph({
     ...valid,
     models: new Map([
@@ -519,6 +551,7 @@ export const test_mcp_production_design_validation = (): void => {
       [invalidPrimitive.id, invalidPrimitive],
       [unknownPrimitive.id, unknownPrimitive],
       [missingPrimitive.id, missingPrimitive],
+      [attachedHorse.id, attachedHorse],
     ]),
     formations: new Map(),
     shots: new Map(),
@@ -534,6 +567,7 @@ export const test_mcp_production_design_validation = (): void => {
       "model-parameter-invalid",
       "model-parameter-unsupported",
       "model-lod-order-invalid",
+      "design-attachment-unsupported",
       "design-collection-empty",
     ].every((code) => modelContractCodes.has(code)),
   );
@@ -603,6 +637,69 @@ export const test_mcp_production_design_validation = (): void => {
       (diagnostic) => diagnostic.code === "design-reference-missing",
     ).length === 3 &&
       scopedCriteriaDiagnostics.some(
+        (diagnostic) => diagnostic.code === "design-text-empty",
+      ),
+  );
+  const predicateShot: IAutoMovieShotContract = {
+    ...shotContract(),
+    opening: [
+      {
+        id: "invalid-spatial-predicates",
+        description: "These operands deliberately fail graph validation.",
+        predicates: [
+          {
+            kind: "position",
+            subject: {
+              kind: "point",
+              position: { x: Number.NaN, y: 0, z: 0 },
+            },
+            axis: "x",
+            operator: "==",
+            value: Number.NaN,
+            tolerance: -1,
+          },
+          {
+            kind: "position",
+            subject: { kind: "formation", id: "absent-formation" },
+            axis: "x",
+            operator: ">=",
+            value: 0,
+            tolerance: Number.NaN,
+          },
+          {
+            kind: "distance",
+            from: { kind: "landmark", id: "absent-landmark" },
+            to: { kind: "node", id: "" },
+            operator: "<=",
+            value: 1,
+            tolerance: 0,
+          },
+          {
+            kind: "joint-angle",
+            actor: "",
+            bone: "hips",
+            axis: "twist",
+            operator: "==",
+            value: 0,
+            tolerance: 0,
+          },
+        ],
+      },
+    ],
+  };
+  const predicateDiagnostics = validateAutoMovieProductionGraph({
+    ...valid,
+    shots: new Map([[predicateShot.id, predicateShot]]),
+  });
+  TestValidator.predicate(
+    "typed predicates validate point vectors, graph selectors, scalar bounds and actor text",
+    predicateDiagnostics.filter(
+      (diagnostic) => diagnostic.code === "design-reference-missing",
+    ).length === 2 &&
+      predicateDiagnostics.some(
+        (diagnostic) => diagnostic.code === "design-range-invalid",
+      ) &&
+      predicateDiagnostics.some(
         (diagnostic) => diagnostic.code === "design-text-empty",
       ),
   );

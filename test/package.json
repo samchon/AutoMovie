@@ -21,6 +21,7 @@
     "@automovie/render": "workspace:^",
     "@automovie/viewer": "workspace:^",
     "@modelcontextprotocol/sdk": "catalog:modelcontextprotocol",
+    "h264-mp4-encoder": "catalog:media",
     "pngjs": "catalog:media",
     "@gltf-transform/core": "catalog:gltf",
     "three": "catalog:three",

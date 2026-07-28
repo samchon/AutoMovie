@@ -6,7 +6,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpMotion,
   toEngineMotion,
@@ -61,7 +61,7 @@ const performing = (
   actorRegistry: Record<string, IAutoMovieMcpActorContext> = actors,
   stagingWrite = staging,
 ) => {
-  const app = new AutoMovieApplication();
+  const app = new AutoMovieLegacyApplication();
   const staged = app.stage({ script, staging: stagingWrite }).staged;
   if (staged.success !== true) throw new Error("staging fixture must succeed");
   return app.perform({

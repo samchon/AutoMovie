@@ -1,8 +1,11 @@
 import { IAutoMovieShot } from "@automovie/interface";
-import { AutoMovieApplication, IAutoMovieMcpStoredSlate } from "@automovie/mcp";
+import {
+  AutoMovieLegacyApplication,
+  IAutoMovieMcpStoredSlate,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 /**
  * SlateQueryService uniqueness guard tolerance (#1040 coverage): the shot

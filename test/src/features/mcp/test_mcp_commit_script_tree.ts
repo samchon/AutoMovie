@@ -1,5 +1,5 @@
 import { IAutoMovieScript, IAutoMovieScriptNode } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -62,7 +62,7 @@ const script = (withTree: boolean): IAutoMovieScript => ({
  *    disk carries the tree verbatim.
  */
 export const test_mcp_commit_script_tree = (): void => {
-  const app = new AutoMovieApplication();
+  const app = new AutoMovieLegacyApplication();
   const empty = {
     script: null,
     scenes: [],
@@ -113,7 +113,7 @@ export const test_mcp_commit_script_tree = (): void => {
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-tree-"));
   try {
-    const resident = new AutoMovieApplication();
+    const resident = new AutoMovieLegacyApplication();
     resident.openProject({ root });
     const wrote = resident.commitScript({ script: script(true) });
     TestValidator.equals("resident commit succeeds", wrote.committed, true);

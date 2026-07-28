@@ -1,15 +1,20 @@
-import { IAutoMovieProductionRenderManifest } from "@automovie/interface";
+import {
+  IAutoMovieProductionRenderManifest,
+  IAutoMovieProductionRenderReceipt,
+} from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   AutoMovieProductionReviewService,
   canonicalizeAutoMovieJson,
   digestAutoMovieBytes,
+  probeProductionMedia,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { PNG } from "pngjs";
 
 import {
   formationDesign,
@@ -19,26 +24,35 @@ import {
   shotContract,
   worldDesign,
 } from "./productionFixtures";
+import {
+  productionAudioMp4,
+  productionH264Mp4,
+} from "./productionMediaFixtures";
 
 const diagnosticCodes = (
   output: ReturnType<AutoMovieProductionCompiler["compile"]>,
 ): Set<string> => new Set(output.diagnostics.map((item) => item.code));
 
 /** Source compilation is sandboxed, recoverable and stable after reopen. */
-export const test_mcp_production_compiler = (): void => {
+export const test_mcp_production_compiler = async (): Promise<void> => {
   const fixture = productionFixture();
   const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
   const original = fs.readFileSync(sourcePath, "utf8");
-  const mutateCompiledOutput = (mutation: string): string =>
+  const mutateSourceOutput = (mutation: string): string =>
     original
       .replace(
-        "    return {\n      contract:",
-        "    const output = {\n      contract:",
+        "  return {\n    eventSamples:",
+        "  const output = {\n    eventSamples:",
       )
       .replace(
-        "\n    };\n  },\n};\n",
-        `\n    };\n${mutation}\n    return output;\n  },\n};\n`,
+        "\n  };\n};\n\n/** Opening",
+        `\n  };\n${mutation}\n  return output;\n};\n\n/** Opening`,
       );
+  const injectBuildSignal = (...statements: string[]): string =>
+    original.replace(
+      "): IAutoMovieShotSourceOutput => {",
+      ["): IAutoMovieShotSourceOutput => {", ...statements].join("\n"),
+    );
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     const review = new AutoMovieProductionReviewService(project);
@@ -74,6 +88,22 @@ export const test_mcp_production_compiler = (): void => {
         first.reviews.entries.every(
           (entry) => entry.currentFingerprint !== null,
         ),
+    );
+    const recipeFile = path.join(
+      fixture.root,
+      ".automovie/design/models/sentinel.json",
+    );
+    const recipeBytes = fs.readFileSync(recipeFile);
+    const recipeWithoutMaterial = JSON.parse(recipeBytes.toString("utf8"));
+    recipeWithoutMaterial.palette = {};
+    fs.writeFileSync(recipeFile, JSON.stringify(recipeWithoutMaterial));
+    const failedMaterialization = compiler.compile({ scope: "source" });
+    fs.writeFileSync(recipeFile, recipeBytes);
+    TestValidator.predicate(
+      "invalid recipe bytes cannot crash compiler-owned model materialization",
+      diagnosticCodes(failedMaterialization).has(
+        "model-materialization-failed",
+      ),
     );
     const generatedManifestPath = path.join(
       fixture.root,
@@ -334,12 +364,8 @@ export const test_mcp_production_compiler = (): void => {
     );
     fs.writeFileSync(
       sourcePath,
-      original.replace(
-        "build: (context) => {",
-        [
-          "build: (context) => {",
-          '    context.engine.distance.constructor("return process")();',
-        ].join("\n"),
+      injectBuildSignal(
+        '  context.engine.distance.constructor("return process")();',
       ),
     );
     TestValidator.predicate(
@@ -378,13 +404,7 @@ export const test_mcp_production_compiler = (): void => {
     );
     fs.writeFileSync(
       sourcePath,
-      original.replace(
-        "build: (context) => {",
-        [
-          "build: (context) => {",
-          "    Promise.resolve().then(() => { while (true) {} });",
-        ].join("\n"),
-      ),
+      injectBuildSignal("  Promise.resolve().then(() => { while (true) {} });"),
     );
     TestValidator.predicate(
       "Promise microtasks are rejected before VM execution",
@@ -446,25 +466,13 @@ export const test_mcp_production_compiler = (): void => {
         "source-execution-timeout",
       ),
     );
-    const getterSource = original
-      .replace(
-        "    return {\n      contract:",
-        "    const output = {\n      contract:",
-      )
-      .replace(
-        "\n    };\n  },\n};\n",
-        [
-          "",
-          "    };",
-          '    Object.defineProperty(output, "shot", {',
-          "      get() { while (true) {} },",
-          "    });",
-          "    return output;",
-          "  },",
-          "};",
-          "",
-        ].join("\n"),
-      );
+    const getterSource = mutateSourceOutput(
+      [
+        '  Object.defineProperty(output, "shot", {',
+        "    get() { while (true) {} },",
+        "  });",
+      ].join("\n"),
+    );
     fs.writeFileSync(sourcePath, getterSource);
     TestValidator.predicate(
       "returned getters are snapshotted inside the VM timeout",
@@ -490,17 +498,13 @@ export const test_mcp_production_compiler = (): void => {
       ),
     );
 
-    const instrumented = original.replace(
-      "build: (context) => {",
-      [
-        "build: (context) => {",
-        "    console.log(context.engine.distance(",
-        "      { x: 0, y: 0, z: 0 },",
-        "      { x: 3, y: 4, z: 0 },",
-        "    ));",
-        "    console.warn(context.engine.groundHeight({ x: 1, z: 1 }));",
-        "    console.error(context.engine.groundHeight({ x: 99, z: 99 }));",
-      ].join("\n"),
+    const instrumented = injectBuildSignal(
+      "  console.log(context.engine.distance(",
+      "    { x: 0, y: 0, z: 0 },",
+      "    { x: 3, y: 4, z: 0 },",
+      "  ));",
+      "  console.warn(context.engine.groundHeight({ x: 1, z: 1 }));",
+      "  console.error(context.engine.groundHeight({ x: 99, z: 99 }));",
     );
     fs.writeFileSync(sourcePath, instrumented);
     TestValidator.predicate(
@@ -532,8 +536,8 @@ export const test_mcp_production_compiler = (): void => {
     fs.writeFileSync(
       sourcePath,
       original.replace(
-        "skeleton: skeleton.id,\n      duration:",
-        'skeleton: "missing-skeleton",\n      duration:',
+        "    skeleton: model.skeleton.id,\n    duration:",
+        '    skeleton: "missing-skeleton",\n    duration:',
       ),
     );
     TestValidator.predicate(
@@ -545,19 +549,6 @@ export const test_mcp_production_compiler = (): void => {
             item.code === "engine-validation-failed" &&
             item.message.includes("missing skeleton"),
         ),
-    );
-    fs.writeFileSync(
-      sourcePath,
-      original.replace(
-        "skeleton,\n      body:",
-        "skeleton: null,\n      body:",
-      ),
-    );
-    TestValidator.predicate(
-      "skeleton-free compiled models still traverse engine validation",
-      diagnosticCodes(compiler.compile({ scope: "source" })).has(
-        "engine-validation-failed",
-      ),
     );
     fs.writeFileSync(sourcePath, original);
 
@@ -643,46 +634,33 @@ export const test_mcp_production_compiler = (): void => {
     );
     for (const [name, mutation] of [
       [
-        "duplicate-invalid-participant",
+        "duplicate-invalid-event-sample",
         [
-          "    output.contract.participants[0].nodes = ['absent', 'absent'];",
-          "    output.contract.participants.push({ ...output.contract.participants[0] });",
+          "  output.eventSamples[0]!.time = 999;",
+          "  output.eventSamples.push({ ...output.eventSamples[0]! });",
         ].join("\n"),
       ],
-      ["missing-participant", "    output.contract.participants = [];"],
+      ["missing-event-sample", "  output.eventSamples = [];"],
       [
-        "opening-closing-camera",
-        [
-          "    output.contract.openingStates = [];",
-          "    output.contract.closingStates = [];",
-          "    output.contract.cameraSubjects = ['absent'];",
-        ].join("\n"),
+        "false-opening-state",
+        "  output.motions[0]!.keyframes[0]!.pose.joints[0]!.abduction = 50;",
       ],
       [
-        "duplicate-invalid-event",
-        [
-          "    output.contract.events[0].time = 999;",
-          "    output.contract.events[0].subjects = [];",
-          "    output.contract.events.push({ ...output.contract.events[0] });",
-        ].join("\n"),
-      ],
-      ["missing-event", "    output.contract.events = [];"],
-      [
-        "duplicate-model-witness",
-        "    output.contract.models.push({ ...output.contract.models[0] });",
+        "false-closing-state",
+        "  output.motions[0]!.keyframes[output.motions[0]!.keyframes.length - 1]!.pose.joints[0]!.abduction = 0;",
       ],
       [
-        "invalid-model-witness",
-        "    output.contract.models = [{ model: 'absent-model', recipe: 'absent-recipe' }];",
+        "unreadable-camera",
+        "  output.scene.cameras[0]!.transform.translation.x = 100;",
       ],
     ] as const) {
-      fs.writeFileSync(sourcePath, mutateCompiledOutput(mutation));
-      const witnessOutput = compiler.compile({ scope: "source" });
+      fs.writeFileSync(sourcePath, mutateSourceOutput(mutation));
+      const realizationOutput = compiler.compile({ scope: "source" });
       TestValidator.predicate(
-        `compiled contract witness rejects ${name}: ${witnessOutput.diagnostics
+        `compiler-derived contract realization rejects ${name}: ${realizationOutput.diagnostics
           .map((diagnostic) => diagnostic.code)
           .join(",")}`,
-        diagnosticCodes(witnessOutput).has("contract-realization-failed"),
+        diagnosticCodes(realizationOutput).has("contract-realization-failed"),
       );
     }
     fs.writeFileSync(sourcePath, original);
@@ -692,6 +670,11 @@ export const test_mcp_production_compiler = (): void => {
       project.setModelRecipe({
         ...modelRecipe(),
         id: "formation-sentinel",
+        role: "prop",
+        archetype: "primitive-prop",
+        parameters: { shape: "sphere", radius: 0.25 },
+        capabilities: [],
+        attachments: [],
       }).accepted &&
         project.setFormationDesign({
           ...formationDesign(),
@@ -705,14 +688,51 @@ export const test_mcp_production_compiler = (): void => {
           ],
         }).accepted,
     );
+    const materializedFormation = compiler.compile({ scope: "source" });
+    const formationShot = JSON.parse(
+      fs.readFileSync(
+        path.join(fixture.root, "generated/shots/opening.json"),
+        "utf8",
+      ),
+    ) as {
+      scene: { nodes: Array<{ id: string }> };
+    };
+    const formationRealization = JSON.parse(
+      fs.readFileSync(
+        path.join(fixture.root, "generated/realizations/opening.json"),
+        "utf8",
+      ),
+    ) as {
+      formations: Array<{ id: string; count: number; passed: boolean }>;
+    };
+    TestValidator.predicate(
+      "formation count, hero identity and realization come from compiler-owned slots",
+      materializedFormation.success &&
+        formationShot.scene.nodes.some((node) => node.id === "captain") &&
+        formationShot.scene.nodes.filter(
+          (node) =>
+            node.id === "captain" || node.id.startsWith("formation:line:slot:"),
+        ).length === 6 &&
+        formationRealization.formations.some(
+          (formation) =>
+            formation.id === "line" &&
+            formation.count === 6 &&
+            formation.passed,
+        ),
+    );
     fs.writeFileSync(
       sourcePath,
-      mutateCompiledOutput(
-        "    output.contract.participants.find((item) => item.kind === 'formation').nodes = ['sentinel'];",
+      mutateSourceOutput(
+        [
+          "  output.scene.nodes.push({",
+          "    ...output.scene.nodes[0]!,",
+          '    id: "formation:line:slot:000001",',
+          "  });",
+        ].join("\n"),
       ),
     );
     TestValidator.predicate(
-      "formation witnesses must use nodes bound to the formation recipe",
+      "coding-agent source cannot replace an ordinary compiler-owned formation slot",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
         "contract-realization-failed",
       ),
@@ -722,14 +742,10 @@ export const test_mcp_production_compiler = (): void => {
       path.join(fixture.root, ".automovie/design/formations/line.json"),
     );
     TestValidator.predicate(
-      "formation witnesses diagnose a physically missing formation design",
-      compiler
-        .compile({ scope: "source" })
-        .diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "contract-realization-failed" &&
-            diagnostic.message.includes("(missing formation)"),
-        ),
+      "a physically missing formation design is a reference-graph failure",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "design-reference-missing",
+      ),
     );
     project.setFormationDesign({
       ...formationDesign(),
@@ -828,8 +844,9 @@ export const test_mcp_production_compiler = (): void => {
     fs.writeFileSync(
       renderReceiptPath,
       JSON.stringify({
-        version: 1,
+        version: 2,
         manifestDigest: digestAutoMovieBytes(Buffer.from("{}")),
+        files: [],
       }),
     );
     const invalidRender = finalCompiler.compile({ scope: "final" });
@@ -837,8 +854,9 @@ export const test_mcp_production_compiler = (): void => {
     fs.writeFileSync(
       renderReceiptPath,
       JSON.stringify({
-        version: 1,
+        version: 2,
         manifestDigest: digestAutoMovieBytes(Buffer.from("{bad")),
+        files: [],
       }),
     );
     const malformedRender = finalCompiler.compile({ scope: "final" });
@@ -847,13 +865,28 @@ export const test_mcp_production_compiler = (): void => {
     const unsafeRender = finalCompiler.compile({ scope: "final" });
     fs.rmdirSync(renderManifestPath);
     const featurePath = "deliverables/required-feature.mp4";
-    const featureBytes = Buffer.from("deterministic-feature-bytes");
+    const featureFrameCount = Math.round(
+      requiredProduction.targetRuntimeSeconds *
+        requiredProduction.frameFormat.fps,
+    );
+    const featureBytes = await productionH264Mp4({
+      width: requiredProduction.frameFormat.width,
+      height: requiredProduction.frameFormat.height,
+      fps: requiredProduction.frameFormat.fps,
+      frameCount: featureFrameCount,
+    });
     fs.mkdirSync(path.join(fixture.root, "renders/deliverables"), {
       recursive: true,
     });
     fs.writeFileSync(
       path.join(fixture.root, "renders", featurePath),
       featureBytes,
+    );
+    const fakeFeaturePath = "deliverables/fake-feature.mp4";
+    const fakeFeatureBytes = Buffer.from("this is not an MP4 container");
+    fs.writeFileSync(
+      path.join(fixture.root, "renders", fakeFeaturePath),
+      fakeFeatureBytes,
     );
     const currentFingerprint = unsafeRender.compiler.inputFingerprint;
     const completeRenderManifest = {
@@ -872,14 +905,34 @@ export const test_mcp_production_compiler = (): void => {
             },
           ],
           runtimeSeconds: requiredProduction.targetRuntimeSeconds,
-          frameCount: Math.round(
-            requiredProduction.targetRuntimeSeconds *
-              requiredProduction.frameFormat.fps,
-          ),
+          frameCount: featureFrameCount,
           codec: "h264",
         },
       ],
     };
+    const fakeMediaCommitRefused = (() => {
+      try {
+        project.commitProductionRenderManifest({
+          ...completeRenderManifest,
+          deliverables: completeRenderManifest.deliverables.map(
+            (deliverable) => ({
+              ...deliverable,
+              files: [
+                {
+                  path: fakeFeaturePath,
+                  digest: digestAutoMovieBytes(fakeFeatureBytes),
+                  bytes: fakeFeatureBytes.length,
+                  mediaType: "video/mp4",
+                },
+              ],
+            }),
+          ),
+        });
+        return false;
+      } catch {
+        return true;
+      }
+    })();
     project.commitProductionRenderManifest(completeRenderManifest);
     fs.writeFileSync(renderReceiptPath, "{bad");
     const malformedReceipt = finalCompiler.compile({ scope: "final" });
@@ -894,18 +947,36 @@ export const test_mcp_production_compiler = (): void => {
       deliverables: [],
     });
     const incompleteRender = finalCompiler.compile({ scope: "final" });
-    project.commitProductionRenderManifest({
-      ...completeRenderManifest,
-      deliverables: completeRenderManifest.deliverables.map((deliverable) => ({
-        ...deliverable,
-        files: deliverable.files.map((file) => ({
-          ...file,
-          digest:
-            "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-        })),
-      })),
-    });
+    const mismatchedCommitRefused = (() => {
+      try {
+        project.commitProductionRenderManifest({
+          ...completeRenderManifest,
+          deliverables: completeRenderManifest.deliverables.map(
+            (deliverable) => ({
+              ...deliverable,
+              files: deliverable.files.map((file) => ({
+                ...file,
+                digest:
+                  "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              })),
+            }),
+          ),
+        });
+        return false;
+      } catch {
+        return true;
+      }
+    })();
+    project.commitProductionRenderManifest(completeRenderManifest);
+    fs.appendFileSync(
+      path.join(fixture.root, "renders", featurePath),
+      Buffer.from([0]),
+    );
     const mismatchedRender = finalCompiler.compile({ scope: "final" });
+    fs.writeFileSync(
+      path.join(fixture.root, "renders", featurePath),
+      featureBytes,
+    );
     project.commitProductionRenderManifest(completeRenderManifest);
     TestValidator.predicate(
       "final compile requires an aggregate deliverable manifest",
@@ -940,22 +1011,39 @@ export const test_mcp_production_compiler = (): void => {
       diagnosticCodes(incompleteRender).has("render-deliverable-missing"),
     );
     TestValidator.predicate(
-      "final compile rejects byte-mismatched aggregate deliverables",
-      diagnosticCodes(mismatchedRender).has("render-deliverable-stale"),
+      "renderer commit and final compile both reject byte-mismatched deliverables",
+      mismatchedCommitRefused &&
+        diagnosticCodes(mismatchedRender).has("render-deliverable-stale"),
     );
     TestValidator.predicate(
       "final compile accepts complete byte-exact aggregate deliverables",
-      finalCompiler.compile({ scope: "final" }).success,
+      fakeMediaCommitRefused &&
+        finalCompiler.compile({ scope: "final" }).success,
     );
-    const edgeProduction = productionDesign();
+    const edgeAudioBytes = productionAudioMp4();
+    const edgeAudioProbe = probeProductionMedia({
+      kind: "audio-mix",
+      mediaType: "audio/mp4",
+      bytes: edgeAudioBytes,
+    });
+    if (edgeAudioProbe.kind !== "audio")
+      throw new Error("The compiler edge fixture requires parsed AAC audio.");
+    const edgeProduction = {
+      ...productionDesign(),
+      targetRuntimeSeconds: edgeAudioProbe.runtimeSeconds,
+    };
     edgeProduction.deliverables = [
       { id: "feature-runtime", kind: "feature", required: true },
       { id: "preview-runtime", kind: "preview", required: false },
       { id: "feature-frame", kind: "feature", required: false },
       { id: "captions-frame", kind: "captions", required: false },
+      { id: "captions-invalid", kind: "captions", required: false },
       { id: "feature-codec", kind: "feature", required: false },
       { id: "guide-codec", kind: "guide-pass", required: false },
       { id: "audio-codec", kind: "audio-mix", required: false },
+      { id: "audio-runtime", kind: "audio-mix", required: false },
+      { id: "audio-valid", kind: "audio-mix", required: false },
+      { id: "audio-missing", kind: "audio-mix", required: false },
       { id: "preview-codec", kind: "preview", required: false },
       { id: "invalid-file", kind: "preview", required: false },
       { id: "empty-files", kind: "preview", required: false },
@@ -972,17 +1060,51 @@ export const test_mcp_production_compiler = (): void => {
       .inputFingerprint;
     type RenderedDeliverable =
       IAutoMovieProductionRenderManifest["deliverables"][number];
-    const edgeBytes = Buffer.from("edge-deliverable");
-    const edgeFile = (id: string) => {
-      const relative = `deliverables/final-edges/${id}.bin`;
+    const previewImage = new PNG({
+      width: edgeProduction.frameFormat.width,
+      height: edgeProduction.frameFormat.height,
+    });
+    previewImage.data.fill(180);
+    previewImage.data[0] = 0;
+    const previewBytes = PNG.sync.write(previewImage);
+    const captionBytes = Buffer.from(
+      "WEBVTT\n\n00:00:00.000 --> 00:00:06.000\nSignal raised.\n",
+      "utf8",
+    );
+    const edgeFile = (id: string, kind: RenderedDeliverable["kind"]) => {
+      const medium =
+        kind === "feature" || kind === "guide-pass"
+          ? {
+              extension: "mp4",
+              bytes: featureBytes,
+              mediaType: "video/mp4",
+            }
+          : kind === "audio-mix"
+            ? {
+                extension: "m4a",
+                bytes: edgeAudioBytes,
+                mediaType: "audio/mp4",
+              }
+            : kind === "captions"
+              ? {
+                  extension: "vtt",
+                  bytes: captionBytes,
+                  mediaType: "text/vtt",
+                }
+              : {
+                  extension: "png",
+                  bytes: previewBytes,
+                  mediaType: "image/png",
+                };
+      const relative = `deliverables/final-edges/${id}.${medium.extension}`;
       const absolute = path.join(fixture.root, "renders", relative);
       fs.mkdirSync(path.dirname(absolute), { recursive: true });
-      fs.writeFileSync(absolute, edgeBytes);
+      fs.writeFileSync(absolute, medium.bytes);
       return {
         path: relative,
-        digest: digestAutoMovieBytes(edgeBytes),
-        bytes: edgeBytes.length,
-        mediaType: "application/octet-stream",
+        digest: digestAutoMovieBytes(medium.bytes),
+        bytes: medium.bytes.length,
+        mediaType: medium.mediaType,
       };
     };
     const validRendered = (
@@ -998,7 +1120,7 @@ export const test_mcp_production_compiler = (): void => {
       return {
         id,
         kind,
-        files: [edgeFile(id)],
+        files: [edgeFile(id, kind)],
         runtimeSeconds: timed ? edgeProduction.targetRuntimeSeconds : null,
         frameCount: framed
           ? Math.round(
@@ -1006,7 +1128,12 @@ export const test_mcp_production_compiler = (): void => {
                 edgeProduction.frameFormat.fps,
             )
           : null,
-        codec: encoded ? "edge-codec" : null,
+        codec:
+          kind === "audio-mix"
+            ? edgeAudioProbe.codec
+            : encoded
+              ? "edge-codec"
+              : null,
       };
     };
     const invalidDeliverables = edgeProduction.deliverables.map((contract) =>
@@ -1015,28 +1142,72 @@ export const test_mcp_production_compiler = (): void => {
     const edge = (id: string): RenderedDeliverable =>
       invalidDeliverables.find((deliverable) => deliverable.id === id)!;
     edge("feature-runtime").runtimeSeconds =
-      edgeProduction.targetRuntimeSeconds - 1;
+      edgeProduction.targetRuntimeSeconds / 2;
     edge("preview-runtime").runtimeSeconds = 0;
     edge("feature-frame").frameCount = 0;
     edge("captions-frame").frameCount = 0;
     edge("feature-codec").codec = null;
     edge("guide-codec").codec = null;
     edge("audio-codec").codec = null;
+    edge("audio-runtime").runtimeSeconds =
+      edgeProduction.targetRuntimeSeconds / 2;
+    edge("audio-missing").files = [];
     edge("preview-codec").codec = "";
-    edge("invalid-file").files[0]!.bytes = 0;
-    edge("invalid-file").files[0]!.mediaType = "";
     edge("empty-files").files = [];
-    edge("duplicate-file-owner").files = [
-      {
-        ...edge("invalid-file").files[0]!,
-        path: edge("invalid-file").files[0]!.path.toUpperCase(),
-        bytes: edgeBytes.length,
-      },
-    ];
-    edge("missing-file").files[0]!.path =
-      "deliverables/final-edges/missing.bin";
     edge("kind-mismatch").kind = "preview";
-    const duplicateDeliverable = structuredClone(edge("feature-runtime"));
+    edge("kind-mismatch").files = [];
+    const duplicateFileManifest: IAutoMovieProductionRenderManifest = {
+      version: 1,
+      compileFingerprint: edgeFingerprint,
+      deliverables: [
+        structuredClone(edge("invalid-file")),
+        {
+          ...structuredClone(edge("duplicate-file-owner")),
+          files: [
+            {
+              ...edge("invalid-file").files[0]!,
+              path: edge("invalid-file").files[0]!.path.toUpperCase(),
+            },
+          ],
+        },
+      ],
+    };
+    const duplicateFileCommitRefused = (() => {
+      try {
+        project.commitProductionRenderManifest(duplicateFileManifest);
+        return false;
+      } catch {
+        return true;
+      }
+    })();
+    const invalidFileManifest: IAutoMovieProductionRenderManifest = {
+      version: 1,
+      compileFingerprint: edgeFingerprint,
+      deliverables: [
+        {
+          ...structuredClone(edge("invalid-file")),
+          files: [
+            {
+              ...edge("invalid-file").files[0]!,
+              bytes: 0,
+              mediaType: "",
+            },
+          ],
+        },
+      ],
+    };
+    const invalidFileCommitRefused = (() => {
+      try {
+        project.commitProductionRenderManifest(invalidFileManifest);
+        return false;
+      } catch {
+        return true;
+      }
+    })();
+    const duplicateDeliverable = {
+      ...structuredClone(edge("feature-runtime")),
+      files: [],
+    };
     const edgeManifest: IAutoMovieProductionRenderManifest = {
       version: 1,
       compileFingerprint: edgeFingerprint,
@@ -1047,10 +1218,114 @@ export const test_mcp_production_compiler = (): void => {
       ],
     };
     project.commitProductionRenderManifest(edgeManifest);
+    const edgeReceipt = JSON.parse(
+      fs.readFileSync(renderReceiptPath, "utf8"),
+    ) as IAutoMovieProductionRenderReceipt;
+    const writeReceipt = (receipt: IAutoMovieProductionRenderReceipt): void => {
+      fs.writeFileSync(renderReceiptPath, JSON.stringify(receipt));
+    };
+    const restoreEdgeLedger = (): void => {
+      project.commitProductionRenderManifest(edgeManifest);
+    };
+    writeReceipt({
+      ...edgeReceipt,
+      files: [...edgeReceipt.files, structuredClone(edgeReceipt.files[0]!)],
+    });
+    const duplicateReceiptRender = finalCompiler.compile({ scope: "final" });
+    restoreEdgeLedger();
+    writeReceipt({
+      ...edgeReceipt,
+      files: edgeReceipt.files.map((file, index) =>
+        index === 0 ? { ...file, deliverable: "wrong-owner" } : file,
+      ),
+    });
+    const mismatchedReceiptRender = finalCompiler.compile({ scope: "final" });
+    restoreEdgeLedger();
+    writeReceipt({
+      ...edgeReceipt,
+      files: edgeReceipt.files.map((file) => ({
+        ...file,
+        probe:
+          file.probe.kind === "video" || file.probe.kind === "png"
+            ? { ...file.probe, width: file.probe.width + 1 }
+            : file.probe,
+      })),
+    });
+    const staleProbeRender = finalCompiler.compile({ scope: "final" });
+    restoreEdgeLedger();
+    writeReceipt({
+      ...edgeReceipt,
+      files: [
+        ...edgeReceipt.files,
+        {
+          ...structuredClone(edgeReceipt.files[0]!),
+          path: "deliverables/final-edges/receipt-only.png",
+        },
+      ],
+    });
+    const receiptOnlyRender = finalCompiler.compile({ scope: "final" });
+    restoreEdgeLedger();
+    const probeFailureFile = edge("invalid-file").files[0]!;
+    const probeFailurePath = path.join(
+      fixture.root,
+      "renders",
+      probeFailureFile.path,
+    );
+    const probeFailureBytes = fs.readFileSync(probeFailurePath);
+    fs.writeFileSync(probeFailurePath, "not a PNG");
+    const currentProbeFailure = finalCompiler.compile({ scope: "final" });
+    fs.writeFileSync(probeFailurePath, probeFailureBytes);
+    restoreEdgeLedger();
+    const captionFailureFile = edge("captions-invalid").files[0]!;
+    const captionFailurePath = path.join(
+      fixture.root,
+      "renders",
+      captionFailureFile.path,
+    );
+    const captionFailureBytes = fs.readFileSync(captionFailurePath);
+    fs.writeFileSync(captionFailurePath, "not WebVTT");
+    const currentCaptionFailure = finalCompiler.compile({ scope: "final" });
+    fs.writeFileSync(captionFailurePath, captionFailureBytes);
+    restoreEdgeLedger();
+    const writeDirectLedger = (
+      manifest: IAutoMovieProductionRenderManifest,
+    ): void => {
+      const manifestBytes = Buffer.from(`${JSON.stringify(manifest)}\n`);
+      fs.writeFileSync(renderManifestPath, manifestBytes);
+      writeReceipt({
+        ...edgeReceipt,
+        manifestDigest: digestAutoMovieBytes(manifestBytes),
+      });
+    };
+    const duplicateOwnedManifest = structuredClone(edgeManifest);
+    const duplicateOwner = duplicateOwnedManifest.deliverables.find(
+      (deliverable) => deliverable.id === "duplicate-file-owner",
+    )!;
+    duplicateOwner.files = [
+      {
+        ...edge("invalid-file").files[0]!,
+        path: edge("invalid-file").files[0]!.path.toUpperCase(),
+      },
+    ];
+    writeDirectLedger(duplicateOwnedManifest);
+    const duplicateOwnedRender = finalCompiler.compile({ scope: "final" });
+    restoreEdgeLedger();
+    const invalidEntryManifest = structuredClone(edgeManifest);
+    const invalidEntry = invalidEntryManifest.deliverables.find(
+      (deliverable) => deliverable.id === "invalid-file",
+    )!.files[0]!;
+    invalidEntry.bytes = 0;
+    invalidEntry.mediaType = "";
+    writeDirectLedger(invalidEntryManifest);
+    const invalidEntryRender = finalCompiler.compile({ scope: "final" });
+    restoreEdgeLedger();
+    fs.rmSync(
+      path.join(fixture.root, "renders", edge("missing-file").files[0]!.path),
+    );
     const semanticRender = finalCompiler.compile({ scope: "final" });
     const residentRenderRead = project.readRenderFile;
     project.readRenderFile = ((relativePath: string) => {
-      if (relativePath.endsWith("/missing.bin")) {
+      if (relativePath.endsWith("/missing-file.png")) {
         const iterator = (function* (): Generator<void> {
           yield;
         })();
@@ -1062,12 +1337,40 @@ export const test_mcp_production_compiler = (): void => {
     const nonErrorRenderRead = finalCompiler.compile({ scope: "final" });
     project.readRenderFile = residentRenderRead;
     TestValidator.predicate(
-      "final ledger rejects duplicate, undeclared, incomplete and unreadable outputs",
-      [
-        "render-deliverable-invalid",
-        "render-deliverable-incomplete",
-        "render-deliverable-missing",
-      ].every((code) => diagnosticCodes(semanticRender).has(code)) &&
+      `final ledger rejects duplicate, undeclared, incomplete and unreadable outputs: duplicate=${duplicateFileCommitRefused}, invalid=${invalidFileCommitRefused}, duplicateReceipt=${[...diagnosticCodes(duplicateReceiptRender)]}, mismatchedReceipt=${[...diagnosticCodes(mismatchedReceiptRender)]}, staleProbe=${[...diagnosticCodes(staleProbeRender)]}, receiptOnly=${[...diagnosticCodes(receiptOnlyRender)]}, probeFailure=${[...diagnosticCodes(currentProbeFailure)]}, duplicateOwned=${[...diagnosticCodes(duplicateOwnedRender)]}, invalidEntry=${[...diagnosticCodes(invalidEntryRender)]}, semantic=${semanticRender.diagnostics
+        .map((diagnostic) => diagnostic.code)
+        .join(",")}, nonError=${nonErrorRenderRead.diagnostics
+        .map((diagnostic) => `${diagnostic.code}:${diagnostic.message}`)
+        .join("|")}`,
+      duplicateFileCommitRefused &&
+        invalidFileCommitRefused &&
+        diagnosticCodes(duplicateReceiptRender).has(
+          "render-deliverable-unowned",
+        ) &&
+        diagnosticCodes(mismatchedReceiptRender).has(
+          "render-deliverable-unowned",
+        ) &&
+        diagnosticCodes(staleProbeRender).has("render-deliverable-unowned") &&
+        diagnosticCodes(receiptOnlyRender).has("render-deliverable-unowned") &&
+        diagnosticCodes(currentProbeFailure).has(
+          "render-deliverable-invalid",
+        ) &&
+        currentCaptionFailure.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "render-deliverable-media-mismatch" &&
+            diagnostic.message.includes(
+              'Caption deliverable "captions-invalid"',
+            ),
+        ) &&
+        diagnosticCodes(duplicateOwnedRender).has(
+          "render-deliverable-invalid",
+        ) &&
+        diagnosticCodes(invalidEntryRender).has("render-deliverable-invalid") &&
+        [
+          "render-deliverable-invalid",
+          "render-deliverable-incomplete",
+          "render-deliverable-missing",
+        ].every((code) => diagnosticCodes(semanticRender).has(code)) &&
         nonErrorRenderRead.diagnostics.some(
           (diagnostic) =>
             diagnostic.code === "render-deliverable-missing" &&

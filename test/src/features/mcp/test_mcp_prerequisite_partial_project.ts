@@ -1,5 +1,5 @@
 import { IAutoMovieScene } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -58,7 +58,7 @@ export const test_mcp_prerequisite_partial_project = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-partial-"));
   try {
     // Scaffold the project tree and manifest.
-    new AutoMovieApplication().openProject({ root });
+    new AutoMovieLegacyApplication().openProject({ root });
 
     // A committed shot for beat-1 and a film that references it, but no script.
     write(root, "shots/beat-1.json", {
@@ -78,7 +78,7 @@ export const test_mcp_prerequisite_partial_project = (): void => {
       shots: [{ shot: "shot:beat-1", trim: null, transition: null }],
     });
 
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     TestValidator.predicate(
       "the prompt reports the committed film beside the missing script rung",

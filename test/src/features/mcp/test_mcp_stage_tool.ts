@@ -2,13 +2,13 @@ import {
   IAutoMovieScriptApplication,
   IAutoMovieStagingApplication,
 } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const script = makeScriptWrite();
 const staging = makeStagingWrite();
 

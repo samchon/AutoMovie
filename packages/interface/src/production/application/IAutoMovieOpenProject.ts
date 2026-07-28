@@ -16,7 +16,11 @@ export interface IAutoMovieOpenProject {
 export namespace IAutoMovieOpenProject {
   /** Activate one resident production repository. */
   export interface IProps {
-    /** Project root, created when absent. */
+    /**
+     * Repository directory used as durable resident memory, initialized when
+     * its production manifest is absent. A host-fixed server refuses another
+     * root instead of switching projects.
+     */
     root: string;
   }
 }

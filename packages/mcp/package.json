@@ -67,6 +67,7 @@
     "@automovie/render": "workspace:^",
     "@modelcontextprotocol/sdk": "catalog:modelcontextprotocol",
     "@typia/mcp": "catalog:samchon",
+    "mp4box": "catalog:media",
     "pngjs": "catalog:media",
     "typia": "catalog:samchon",
     "typescript-compiler": "npm:typescript@5.9.3"

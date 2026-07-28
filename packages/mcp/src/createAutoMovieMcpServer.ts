@@ -3,8 +3,8 @@ import { createMcpServer } from "@typia/mcp";
 import path from "node:path";
 import typia from "typia";
 
-import { AutoMovieApplication } from "./AutoMovieApplication";
 import { AutoMovieGatewayApplication } from "./AutoMovieGatewayApplication";
+import { AutoMovieLegacyApplication } from "./AutoMovieLegacyApplication";
 import { AutoMovieMcpFrameCapture } from "./dto";
 
 /**
@@ -68,9 +68,10 @@ export const createAutoMovieMcpServer = (props?: {
 
 /**
  * Build the legacy fine-grained MCP surface with one advertised tool per
- * {@link AutoMovieApplication} method. Prefer {@link createAutoMovieMcpServer}
- * for external clients: this compatibility surface repeats the shared schema
- * closure per tool and can exceed ordinary model context windows.
+ * {@link AutoMovieLegacyApplication} method. Prefer
+ * {@link createAutoMovieMcpServer} for external clients: this compatibility
+ * surface repeats the shared schema closure per tool and can exceed ordinary
+ * model context windows.
  *
  * @author Samchon
  */
@@ -81,9 +82,9 @@ export const createAutoMovieGranularMcpServer = (props?: {
   projectRoot?: string;
 }): McpServer =>
   createMcpServer(
-    typia.llm.controller<AutoMovieApplication, { equals: true }>(
+    typia.llm.controller<AutoMovieLegacyApplication, { equals: true }>(
       "automovie",
-      new AutoMovieApplication(props),
+      new AutoMovieLegacyApplication(props),
     ),
     { version: MCP_PACKAGE_VERSION, textFallback: true },
   );

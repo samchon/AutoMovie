@@ -1,6 +1,6 @@
 import { IAutoMovieGait, IAutoMovieVector3 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
@@ -74,7 +74,7 @@ const script = {
 export const test_mcp_commit_shot_motion_registry = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-motionref-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     app.commitScript({ script });
 

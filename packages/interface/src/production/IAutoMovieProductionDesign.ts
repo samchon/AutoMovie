@@ -1,12 +1,13 @@
 import { AutoMovieGuidePass } from "../cinematics";
 import { IAutoMovieVector3 } from "../geometry";
+import { AutoMovieHumanoidBone } from "../skeleton";
 
 /** A SHA-256 value computed by AutoMovie from authoritative project bytes. */
 export type AutoMovieContentDigest = `sha256:${string}`;
 
 /** One deliverable the production must eventually materialize. */
 export interface IAutoMovieProductionDeliverable {
-  /** Stable deliverable id. */
+  /** Non-blank id, unique within this production. */
   id: string;
   /** Output class. */
   kind: "preview" | "feature" | "guide-pass" | "captions" | "audio-mix";
@@ -16,21 +17,21 @@ export interface IAutoMovieProductionDeliverable {
 
 /** Global frame and art-direction invariants for one production. */
 export interface IAutoMovieProductionDesign {
-  /** Stable production id. */
+  /** Non-blank stable production id; film-level acceptance targets use it. */
   id: string;
-  /** Human-facing title. */
+  /** Non-blank human-facing title. */
   title: string;
-  /** One-sentence narrative promise. */
+  /** Non-blank one-sentence narrative promise. */
   logline: string;
-  /** Intended finished runtime in seconds. */
+  /** Finite intended finished runtime in seconds, strictly above zero. */
   targetRuntimeSeconds: number;
   /** Deterministic frame clock and raster format. */
   frameFormat: {
-    /** Pixel width. */
+    /** Integer pixel width from 16 through 16,384. */
     width: number;
-    /** Pixel height. */
+    /** Integer pixel height from 16 through 16,384. */
     height: number;
-    /** Frames per second. */
+    /** Finite frames per second, strictly above zero. */
     fps: number;
     /** Output color space. */
     colorSpace: "srgb";
@@ -39,14 +40,14 @@ export interface IAutoMovieProductionDesign {
   artDirection: {
     /** Foundation visual style. */
     style: "primitive-3d";
-    /** CSS-compatible palette colors. */
+    /** Non-empty unique CSS-compatible palette colors. */
     palette: string[];
-    /** Rules that keep important silhouettes legible. */
+    /** Non-blank rules that keep important silhouettes legible. */
     silhouettePriority: string;
-    /** Rules for conveying scale with primitive geometry. */
+    /** Non-blank rules for conveying scale with primitive geometry. */
     scaleGrammar: string;
   };
-  /** Required and optional production outputs. */
+  /** At least one output, with every deliverable id unique. */
   deliverables: IAutoMovieProductionDeliverable[];
 }
 
@@ -54,15 +55,18 @@ export interface IAutoMovieProductionDesign {
 export interface IAutoMovieModelLodRecipe {
   /** Detail tier. */
   tier: "hero" | "near" | "far";
-  /** Maximum viewing distance, or null for an unbounded final tier. */
+  /**
+   * Positive maximum viewing distance in meters, strictly increasing between
+   * tiers, or null only on the final unbounded tier.
+   */
   maxDistance: number | null;
-  /** Recipe id used at this tier. */
+  /** Existing recipe id used at this tier; self-reference is allowed. */
   recipe: string;
 }
 
 /** A bounded primitive model recipe compiled into deterministic model data. */
 export interface IAutoMovieModelRecipe {
-  /** Stable recipe id. */
+  /** Non-blank stable recipe id, unique under portable case folding. */
   id: string;
   /** Production role. */
   role: "performer" | "mount" | "prop" | "set";
@@ -74,20 +78,33 @@ export interface IAutoMovieModelRecipe {
     | "flag"
     | "weapon"
     | "primitive-prop";
-  /** Archetype-specific scalar parameters validated by the compiler. */
+  /**
+   * Exact archetype-specific parameter map. Read `MODEL_RECIPE`: required keys,
+   * value kinds and ranges vary by archetype, and unsupported keys are
+   * refused.
+   */
   parameters: Record<string, number | string | boolean>;
-  /** Named material colors. */
+  /** Non-empty named material colors, each encoded as six-digit `#RRGGBB`. */
   palette: Record<string, string>;
-  /** Near-to-far representations. */
+  /**
+   * Non-empty unique tiers ordered `hero`, `near`, `far`, with increasing
+   * positive distances and an optional unbounded tier only at the end.
+   */
   lod: IAutoMovieModelLodRecipe[];
-  /** Named runtime abilities provided by the compiled model. */
+  /**
+   * Implemented runtime abilities only. Currently `stickman` may declare
+   * `signal`; every other archetype must use an empty list.
+   */
   capabilities: string[];
-  /** Named attachment sockets and their bones. */
+  /**
+   * Unique named bone sockets. Currently only `stickman` has a compiler-owned
+   * humanoid skeleton and may declare attachments.
+   */
   attachments: Array<{
-    /** Stable attachment id. */
+    /** Non-blank attachment id, unique within the recipe. */
     id: string;
     /** Bone id used as the attachment parent. */
-    bone: string;
+    bone: AutoMovieHumanoidBone;
   }>;
 }
 
@@ -97,9 +114,9 @@ export interface IAutoMovieWorldLandmark {
   id: string;
   /** Center in meters. */
   position: IAutoMovieVector3;
-  /** Selection and clearance radius in meters. */
+  /** Finite selection and clearance radius in meters, strictly above zero. */
   radius: number;
-  /** Narrative or tactical meaning. */
+  /** Non-blank narrative or tactical meaning. */
   meaning: string;
 }
 
@@ -126,7 +143,10 @@ export type IAutoMovieHeightRule =
 export interface IAutoMovieWorldSurface {
   /** Stable surface id. */
   id: string;
-  /** Polygon vertices in world XZ coordinates. */
+  /**
+   * At least three distinct finite XZ vertices forming a simple,
+   * non-self-intersecting polygon with non-zero area.
+   */
   polygon: Array<{
     /** World X in meters. */
     x: number;
@@ -143,14 +163,14 @@ export interface IAutoMovieWorldSurface {
 export interface IAutoMovieWorldRoute {
   /** Stable route id. */
   id: string;
-  /** Ordered centerline points in world XZ coordinates. */
+  /** At least two finite ordered centerline points in world XZ coordinates. */
   waypoints: Array<{
     /** World X in meters. */
     x: number;
     /** World Z in meters. */
     z: number;
   }>;
-  /** Maximum formation width in meters. */
+  /** Finite maximum formation width in meters, strictly above zero. */
   allowedFormationWidth: number;
 }
 
@@ -162,7 +182,12 @@ export interface IAutoMovieWorldBounds {
   max: IAutoMovieVector3;
 }
 
-/** A deterministic environmental-effect region. */
+/**
+ * A reserved environmental-effect region shape.
+ *
+ * No deterministic renderer binding exists yet, so current world validation
+ * refuses every effect zone instead of accepting an unrenderable claim.
+ */
 export interface IAutoMovieWorldEffectZone {
   /** Stable zone id. */
   id: string;
@@ -176,7 +201,7 @@ export interface IAutoMovieWorldEffectZone {
 
 /** Named spatial constraints and semantic anchors for a production. */
 export interface IAutoMovieWorldDesign {
-  /** Stable world id. */
+  /** Non-blank stable world id. */
   id: string;
   /** World unit. */
   units: "meter";
@@ -186,7 +211,10 @@ export interface IAutoMovieWorldDesign {
   surfaces: IAutoMovieWorldSurface[];
   /** Named formation routes. */
   routes: IAutoMovieWorldRoute[];
-  /** Deterministic effect regions. */
+  /**
+   * Reserved deterministic effect regions. Keep this empty until AutoMovie
+   * implements and registers the corresponding compiler and renderer binding.
+   */
   effectZones: IAutoMovieWorldEffectZone[];
 }
 
@@ -205,72 +233,72 @@ export type IAutoMovieFormationLayout =
   | {
       /** Rectangular line. */
       kind: "line";
-      /** Number of ranks. */
+      /** Integer ranks from 1 through count. */
       ranks: number;
-      /** Number of files. */
+      /** Integer files from 1 through count; ranks times files covers count. */
       files: number;
     }
   | {
       /** March column. */
       kind: "column";
-      /** Number of ranks. */
+      /** Integer ranks from 1 through count. */
       ranks: number;
-      /** Number of files. */
+      /** Integer files from 1 through count; ranks times files covers count. */
       files: number;
     }
   | {
       /** Wedge layout. */
       kind: "wedge";
-      /** Number of rows from point to base. */
+      /** Integer rows from 1 through count; depth squared must cover count. */
       depth: number;
     }
   | {
       /** Arc layout. */
       kind: "arc";
-      /** Arc radius in meters. */
+      /** Finite arc radius in meters, strictly above zero. */
       radius: number;
-      /** Covered angle in degrees. */
+      /** Finite covered angle, strictly above zero and at most 360 degrees. */
       arcDegrees: number;
     }
   | {
       /** Seeded scatter layout. */
       kind: "scatter";
-      /** Scatter radius in meters. */
+      /** Finite scatter radius in meters, strictly above zero. */
       radius: number;
-      /** Layout-specific seed. */
+      /** Integer layout-specific seed from zero through `MAX_SAFE_INTEGER`. */
       seed: number;
     };
 
 /** A unit-level formation whose members are deterministic derived slots. */
 export interface IAutoMovieFormationDesign {
-  /** Stable formation id. */
+  /** Non-blank stable formation id, unique under portable case folding. */
   id: string;
-  /** Model recipe used by ordinary slots. */
+  /** Existing model recipe id used by every ordinary derived slot. */
   modelRecipe: string;
-  /** Number of derived slots. */
+  /** Integer number of derived slots from 1 through 1,000,000. */
   count: number;
   /** Compact layout. */
   layout: IAutoMovieFormationLayout;
   /** Inter-slot spacing in meters. */
   spacing: {
-    /** Lateral spacing. */
+    /** Finite lateral spacing in meters, strictly above zero. */
     lateral: number;
-    /** Front-to-back spacing. */
+    /** Finite front-to-back spacing in meters, strictly above zero. */
     depth: number;
   };
   /** Formation origin in world space. */
   anchor: IAutoMovieVector3;
-  /** Heading in degrees. */
+  /** Finite world-space heading in degrees. */
   facingDeg: number;
-  /** Explicit deterministic seed. */
+  /** Integer deterministic seed from zero through `MAX_SAFE_INTEGER`. */
   seed: number;
-  /** Permitted formation behaviors. */
+  /** Unique permitted formation behaviors. */
   capabilities: AutoMovieFormationCapability[];
   /** Slots promoted to named hero actors. */
   heroOverrides: Array<{
-    /** Zero-based deterministic slot. */
+    /** Unique zero-based slot strictly below this formation's count. */
     slot: number;
-    /** Named actor id. */
+    /** Non-blank actor id, unique among this formation's hero overrides. */
     actor: string;
   }>;
 }
@@ -279,9 +307,81 @@ export interface IAutoMovieFormationDesign {
 export interface IAutoMovieNamedState {
   /** Stable state id. */
   id: string;
-  /** Human-readable state contract. */
+  /** Non-blank human-readable state contract; it is never proof by itself. */
   description: string;
+  /**
+   * Machine-checkable facts sampled from compiled pose and transform output.
+   *
+   * Descriptive prose never discharges a state contract by itself.
+   */
+  predicates: IAutoMovieShotPredicate[];
 }
+
+/** A spatial operand measured from one compiled shot. */
+export type IAutoMovieShotSpatialSelector =
+  | {
+      /** One compiled scene node. */
+      kind: "node";
+      /** Exact scene-node id. */
+      id: string;
+    }
+  | {
+      /** Centroid of every compiler-materialized formation slot. */
+      kind: "formation";
+      /** Exact formation design id. */
+      id: string;
+    }
+  | {
+      /** One named production-world landmark. */
+      kind: "landmark";
+      /** Exact landmark id. */
+      id: string;
+    }
+  | {
+      /** One literal world-space point. */
+      kind: "point";
+      /** Exact point in meters. */
+      position: IAutoMovieVector3;
+    };
+
+/** A scalar comparison evaluated by the deterministic compiler. */
+export interface IAutoMovieScalarPredicate {
+  /** Numeric comparison. */
+  operator: "<=" | ">=" | "==";
+  /** Finite expected value in the unit implied by the selected predicate. */
+  value: number;
+  /** Finite non-negative absolute comparison tolerance. */
+  tolerance: number;
+}
+
+/** One compiler-evaluable state or event fact. */
+export type IAutoMovieShotPredicate =
+  | (IAutoMovieScalarPredicate & {
+      /** Sample one articulated joint angle. */
+      kind: "joint-angle";
+      /** Performed scene-node id. */
+      actor: string;
+      /** Normalized humanoid bone. */
+      bone: AutoMovieHumanoidBone;
+      /** Semantic pose axis. */
+      axis: "flexion" | "abduction" | "twist";
+    })
+  | (IAutoMovieScalarPredicate & {
+      /** Sample one world-space coordinate. */
+      kind: "position";
+      /** Compiled spatial subject. */
+      subject: IAutoMovieShotSpatialSelector;
+      /** World-space coordinate axis. */
+      axis: "x" | "y" | "z";
+    })
+  | (IAutoMovieScalarPredicate & {
+      /** Measure Euclidean distance between two compiled spatial operands. */
+      kind: "distance";
+      /** First spatial operand. */
+      from: IAutoMovieShotSpatialSelector;
+      /** Second spatial operand. */
+      to: IAutoMovieShotSpatialSelector;
+    });
 
 /** An actor or formation required by a shot. */
 export type IAutoMovieShotParticipant =
@@ -304,32 +404,34 @@ export interface IAutoMovieShotEventContract {
   id: string;
   /** Event family. */
   kind: "contact" | "arrival" | "volley" | "break" | "reveal" | "transition";
-  /** Inclusive event time window in seconds. */
+  /** Inclusive finite event window inside the owning shot's duration. */
   window: {
     /** Earliest valid time. */
     from: number;
     /** Latest valid time. */
     to: number;
   };
-  /** Actor, formation or object ids involved. */
+  /** Non-empty unique actor, formation or object ids involved. */
   subjects: string[];
+  /** Non-empty machine-checkable facts required at the realized event time. */
+  predicates: IAutoMovieShotPredicate[];
 }
 
 /** A frame time and guide passes required for shot review. */
 export interface IAutoMovieShotReviewFrame {
   /** Stable frame-contract id. */
   id: string;
-  /** Time in seconds. */
+  /** Time inside the owning shot, snapped exactly to the production frame clock. */
   time: number;
-  /** Passes that must be captured. */
+  /** Non-empty unique passes that must be captured. */
   passes: AutoMovieGuidePass[];
 }
 
 /** A code-bound shot contract, not a dense keyframe list. */
 export interface IAutoMovieShotContract {
-  /** Stable shot id. */
+  /** Non-blank stable shot id, unique under portable case folding. */
   id: string;
-  /** Narrative beat id. */
+  /** Non-blank narrative beat id owned by the coding-agent treatment. */
   beat: string;
   /** Coding-agent-owned source export. */
   source: {
@@ -338,9 +440,9 @@ export interface IAutoMovieShotContract {
     /** Named exported builder. */
     export: string;
   };
-  /** Shot runtime in seconds. */
+  /** Finite shot runtime in seconds, strictly above zero. */
   durationSeconds: number;
-  /** Required actor and formation ids. */
+  /** Unique required actor and formation ids; formations must already exist. */
   participants: IAutoMovieShotParticipant[];
   /** Required opening states. */
   opening: IAutoMovieNamedState[];
@@ -348,11 +450,11 @@ export interface IAutoMovieShotContract {
   closing: IAutoMovieNamedState[];
   /** Camera readability constraints. */
   camera: {
-    /** Creative camera intent. */
+    /** Non-blank creative camera intent. */
     intent: string;
-    /** Subjects that must remain readable. */
+    /** Non-empty unique compiled scene-node ids that must remain readable. */
     requiredSubjects: string[];
-    /** Maximum allowed occlusion ratio from zero to one. */
+    /** Finite maximum allowed occlusion ratio, inclusive from zero to one. */
     maxOcclusionRatio: number;
   };
   /** Timed semantic events. */
@@ -372,7 +474,7 @@ export type IAutoMovieAcceptanceCriterion =
       frame: string;
       /** Render pass to inspect. */
       pass: AutoMovieGuidePass;
-      /** Observable expectation. */
+      /** Non-blank observable expectation for the cited current frame. */
       expectation: string;
     }
   | {
@@ -382,28 +484,28 @@ export type IAutoMovieAcceptanceCriterion =
       shot?: string;
       /** Event id in the target shot or film. */
       event: string;
-      /** Observable expectation. */
+      /** Non-blank observable expectation for the cited compiled event. */
       expectation: string;
     }
   | {
       /** Numeric metric criterion. */
       kind: "metric";
-      /** Supported metric. */
-      metric:
-        | "runtime-seconds"
-        | "ground-penetration"
-        | "foot-skate"
-        | "occlusion-ratio"
-        | "continuity-gap";
+      /**
+       * Supported compiler-owned metric.
+       *
+       * Physics and occlusion metrics remain geometry/frame review concerns
+       * until their operands and measurement protocols are explicit.
+       */
+      metric: "runtime-seconds";
       /** Numeric comparison. */
       operator: "<=" | ">=" | "==";
-      /** Threshold value. */
+      /** Finite threshold value, in seconds for `runtime-seconds`. */
       value: number;
     };
 
 /** A required or optional acceptance scenario for a shot or film. */
 export interface IAutoMovieAcceptanceScenario {
-  /** Stable scenario id. */
+  /** Non-blank stable scenario id, unique under portable case folding. */
   id: string;
   /** Scenario target. */
   target:
@@ -419,9 +521,15 @@ export interface IAutoMovieAcceptanceScenario {
         /** Film id. */
         id: string;
       };
-  /** Observable criterion. */
+  /**
+   * Observable frame, compiled event or runtime metric criterion. Film-level
+   * frame and event criteria also name their owning shot.
+   */
   criterion: IAutoMovieAcceptanceCriterion;
-  /** Whether review and final compilation require it. */
+  /**
+   * Whether current review and final compilation require exact passing evidence
+   * for this scenario.
+   */
   required: boolean;
 }
 

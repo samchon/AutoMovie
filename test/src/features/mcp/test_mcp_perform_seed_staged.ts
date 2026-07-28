@@ -4,7 +4,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpMotion,
   IAutoMovieMcpPerformedShot,
@@ -148,8 +148,8 @@ const aimOf = (
 const openStaged = (
   root: string,
   placement: typeof staging,
-): AutoMovieApplication => {
-  const app = new AutoMovieApplication();
+): AutoMovieLegacyApplication => {
+  const app = new AutoMovieLegacyApplication();
   app.openProject({ root });
   app.commitScript({
     script: {

@@ -2,12 +2,12 @@ import {
   IAutoMovieAssembleApplication,
   IAutoMovieShot,
 } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import { hasViolation } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const shot: IAutoMovieShot = {
   id: "shot:beat-1",
   name: null,

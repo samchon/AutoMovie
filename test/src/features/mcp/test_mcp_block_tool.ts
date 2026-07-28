@@ -2,7 +2,7 @@ import {
   IAutoMovieBlockingApplication,
   IAutoMovieScriptApplication,
 } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -12,7 +12,7 @@ import {
 } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const script = makeScriptWrite();
 const staged = app.stage({ script, staging: makeStagingWrite() }).staged;
 if (staged.success !== true) throw new Error("stage fixture must succeed");

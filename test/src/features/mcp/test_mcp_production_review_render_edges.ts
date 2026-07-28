@@ -14,8 +14,8 @@ import { PNG } from "pngjs";
 
 import { productionFixture, worldDesign } from "./productionFixtures";
 
-const png = (): Uint8Array => {
-  const image = new PNG({ width: 2, height: 2 });
+const png = (width = 16, height = 16): Uint8Array => {
+  const image = new PNG({ width, height });
   image.data.fill(180);
   image.data[0] = 0;
   return PNG.sync.write(image);
@@ -34,36 +34,63 @@ export const test_mcp_production_review_render_edges =
       );
       const oracle = new AutoMovieProductionOracleService(
         project,
-        async () => ({ bytes: png(), width: 2, height: 2 }),
+        async (request) => {
+          const width = request.width ?? 16;
+          const height = request.height ?? 16;
+          return {
+            bytes: png(width, height),
+            width,
+            height,
+          };
+        },
       );
-      await oracle.preview({
-        target: { kind: "shot", id: "opening" },
+      const review = new AutoMovieProductionReviewService(project);
+      const target = { kind: "shot" as const, id: "opening" };
+      const smallPreview = await oracle.preview({
+        target,
         time: 2,
         width: 2,
         height: 2,
+      });
+      const smallPrepared = review.prepare({ target });
+      TestValidator.predicate(
+        "a decodable thumbnail remains previewable but cannot satisfy production review",
+        smallPreview.captured &&
+          smallPrepared.frames.length === 0 &&
+          smallPrepared.diagnostics.some(
+            (diagnostic) => diagnostic.code === "render-frame-invalid",
+          ),
+      );
+      fs.rmSync(path.join(fixture.root, smallPreview.renderBundle!), {
+        recursive: true,
+        force: true,
+      });
+      await oracle.preview({
+        target: { kind: "shot", id: "opening" },
+        time: 2,
+        width: 16,
+        height: 16,
       });
       await oracle.preview({
         target: { kind: "shot", id: "opening" },
         time: 2,
         pass: "mask",
-        width: 2,
-        height: 2,
+        width: 16,
+        height: 16,
       });
       await oracle.preview({
         target: { kind: "shot", id: "opening" },
         time: 2,
         pass: "pose",
-        width: 2,
-        height: 2,
+        width: 16,
+        height: 16,
       });
       await oracle.preview({
         target: { kind: "shot", id: "opening" },
         time: 1 / 24,
-        width: 2,
-        height: 2,
+        width: 16,
+        height: 16,
       });
-      const review = new AutoMovieProductionReviewService(project);
-      const target = { kind: "shot" as const, id: "opening" };
       const prepared = review.prepare({ target });
       const staleWorld = worldDesign();
       staleWorld.landmarks[0]!.meaning += " Stale.";
@@ -84,7 +111,7 @@ export const test_mcp_production_review_render_edges =
         compileFingerprint: project.generatedManifest()!.inputFingerprint,
         renderSpec: {
           target: "fixture-film",
-          frameFormat: { width: 2, height: 2, fps: 24 },
+          frameFormat: { width: 16, height: 16, fps: 24 },
           toneMapping: "none",
           codec: "h264",
           pixelFormat: "yuv420p",
@@ -97,8 +124,8 @@ export const test_mcp_production_review_render_edges =
             pass: "beauty",
             path: "film.png",
             digest: digestAutoMovieBytes(png()),
-            width: 2,
-            height: 2,
+            width: 16,
+            height: 16,
           },
         ],
       };
@@ -331,6 +358,70 @@ export const test_mcp_production_review_render_edges =
         fs.rmSync(directory, { recursive: true, force: true });
       }
 
+      for (const [channel, bytes] of [
+        [
+          "green",
+          (() => {
+            const image = new PNG({ width: 16, height: 16 });
+            for (let offset = 0; offset < image.data.length; offset += 4) {
+              image.data[offset] = 10;
+              image.data[offset + 1] = 20;
+              image.data[offset + 2] = 30;
+              image.data[offset + 3] = 255;
+            }
+            image.data[5] = 21;
+            return PNG.sync.write(image);
+          })(),
+        ],
+        [
+          "blue",
+          (() => {
+            const image = new PNG({ width: 16, height: 16 });
+            for (let offset = 0; offset < image.data.length; offset += 4) {
+              image.data[offset] = 10;
+              image.data[offset + 1] = 20;
+              image.data[offset + 2] = 30;
+              image.data[offset + 3] = 255;
+            }
+            image.data[6] = 31;
+            return PNG.sync.write(image);
+          })(),
+        ],
+        [
+          "alpha",
+          (() => {
+            const image = new PNG({ width: 16, height: 16 });
+            image.data.fill(0);
+            image.data[7] = 255;
+            return PNG.sync.write(image);
+          })(),
+        ],
+      ] as const) {
+        const digest = digestAutoMovieBytes(bytes);
+        const manifest: IAutoMovieRenderBundleManifest = {
+          ...baseManifest,
+          frames: [
+            {
+              ...baseFrame,
+              path: `${channel}.png`,
+              digest,
+            },
+          ],
+        };
+        const bundle = productionRenderBundleRelativePath(manifest);
+        project.commitRenderBundle(
+          bundle,
+          new Map([[`${channel}.png`, bytes]]),
+          manifest,
+        );
+        TestValidator.predicate(
+          `${channel}-only visible variance remains admissible evidence`,
+          review
+            .prepare({ target })
+            .frames.some((candidate) => candidate.digest === digest),
+        );
+      }
+
       const invalidDirectory = path.join(
         fixture.root,
         "renders/review-invalid-frame",
@@ -384,7 +475,7 @@ export const test_mcp_production_review_render_edges =
       }
       fs.rmSync(invalidDirectory, { recursive: true, force: true });
 
-      for (const size of [1, 2]) {
+      for (const size of [1, 2, 16]) {
         const blankDirectory = path.join(
           fixture.root,
           `renders/review-blank-${size}`,

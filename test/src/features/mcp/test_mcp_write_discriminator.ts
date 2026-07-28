@@ -28,8 +28,8 @@ const withoutType = (value: object): Record<string, unknown> => {
  * and only a WRONG literal is still refused.
  *
  * This scenario must drive the real stdio transport: an in-process
- * `AutoMovieApplication` call bypasses typia entirely, so input validation is
- * only observable through a client.
+ * `AutoMovieLegacyApplication` call bypasses typia entirely, so input
+ * validation is only observable through a client.
  *
  * Scenarios (one live stdio handshake):
  *

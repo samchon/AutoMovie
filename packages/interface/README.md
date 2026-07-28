@@ -18,7 +18,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 
 - 인터페이스: `IAutoMovie*` (예: `IAutoMoviePose`).
 - 열거형·이름공간: `AutoMovie*` (예: `AutoMovieHumanoidBone`, `AutoMovieEasing`).
-- production MCP 도구: `IAutoMovieX.IProps` 입력과 `IAutoMovieX` 결과를 한 계약 쌍으로 둔다. `AutoMovieProductionApplication`의 공개 메서드는 이 쌍만 노출한다.
+- production MCP 도구: `IAutoMovieX.IProps` 입력과 `IAutoMovieX` 결과를 한 계약 쌍으로 둔다. canonical `AutoMovieApplication`의 공개 메서드는 이 쌍만 노출한다.
 - discriminated union 판별자 필드에는 `/** Discriminator. */`.
 - optional `T?` 대신 `T | null` + JSDoc으로 null 의미 명시.
 - **타입은 러프하게.** 원시값은 `string`/`number`를 **그대로** 쓴다. `AutoMovieUuid = string`, `AutoMovieNormalized = number` 같은 **원시 래퍼 별칭을 만들지 않는다.** 수치 범위·배열 최소길이·ID 포맷 같은 제약도 타입에 박지 않는다(typia `tags` 미사용). 인터페이스는 데이터의 **모양**만 정하고, 의미·범위·단위는 필드 JSDoc으로 문서화한다. 실제 제약 강제와 `// ❌` 피드백은 `@automovie/engine`의 런타임 검증기가 책임진다(이게 automovie의 차별점인 ROM 검증이 사는 곳). 닫힌 union(본명·표정 preset·이징 등 `AutoMovie*` 열거형)만이 "잘못된 값이 구조적으로 불가능"을 보장한다. 이건 래퍼가 아니라 허용값 집합 정의라서 유지한다.

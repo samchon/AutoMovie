@@ -71,6 +71,11 @@ const oneShotProduction = (
   ...production,
   logline: "A primitive sentinel raises a signal in one deterministic fixture.",
   targetRuntimeSeconds: 6,
+  frameFormat: {
+    ...production.frameFormat,
+    width: 16,
+    height: 16,
+  },
   deliverables: production.deliverables.map((deliverable) => ({
     ...deliverable,
     required: false,

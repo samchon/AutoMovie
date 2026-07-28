@@ -5,7 +5,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpGeometryContext,
   IAutoMovieMcpMotion,
 } from "@automovie/mcp";
@@ -138,7 +138,7 @@ export const test_mcp_geometry_bone_target = async (): Promise<void> => {
     motions: { mover: motion },
     shot,
   };
-  const app = new AutoMovieApplication();
+  const app = new AutoMovieLegacyApplication();
   const boneTarget = {
     kind: "bone" as const,
     node: "mover",

@@ -1,8 +1,8 @@
 import { compareCodeUnits } from "@automovie/engine";
 import {
   AUTOMOVIE_GUIDE_NAMES,
-  AutoMovieApplication,
   AutoMovieGuideName,
+  AutoMovieLegacyApplication,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -10,7 +10,7 @@ import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 /** Repository root, four levels above `test/src/features/mcp`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
@@ -157,7 +157,9 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   // guide tool; otherwise a compact MCP surface would strand its own doctrine.
   ["PRODUCTION_DESIGN", "stores global invariants"],
   ["MODEL_RECIPE", "stores a bounded primitive recipe"],
+  ["MODEL_RECIPE", "only `stickman` implements capability `signal`"],
   ["WORLD_DESIGN", "stores queryable space"],
+  ["WORLD_DESIGN", "Keep it empty today"],
   ["FORMATION_DESIGN", "represents a unit, not thousands"],
   ["SHOT_CONTRACT", "says what a shot must accomplish"],
   ["ACCEPTANCE", "makes an observable contract addressable"],

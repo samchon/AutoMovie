@@ -16,7 +16,6 @@ import {
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
-  IAutoMovieFormationDesign,
   IAutoMovieGeneratedManifest,
   IAutoMovieGeometryResult,
   IAutoMovieGeometrySelector,
@@ -46,6 +45,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { materializeFormationSlots } from "./materializeProduction";
 
 /** Read-only current compiler status used to refuse stale oracle answers. */
 export type AutoMovieCompileStatusProvider =
@@ -183,15 +183,48 @@ export class AutoMovieProductionOracleService {
             throw new Error(
               `Formation "${request.formation}" does not exist. Inspect current formation ids.`,
             );
-          const dimensions = formationDimensions(formation);
+          const slots = materializeFormationSlots(formation);
+          const participatingShots = [...graph.shots]
+            .filter(([, contract]) =>
+              contract.participants.some(
+                (participant) =>
+                  participant.kind === "formation" &&
+                  participant.id === request.formation,
+              ),
+            )
+            .map(([id]) => id);
+          const points = participatingShots.flatMap((id) => {
+            const compiled = shots.get(id);
+            return compiled === undefined
+              ? []
+              : slots.flatMap((slot) => {
+                  const node = compiled.scene.nodes.find(
+                    (candidate) => candidate.id === slot.node,
+                  );
+                  return node === undefined ? [] : [node.transform.translation];
+                });
+          });
+          if (
+            participatingShots.length === 0 ||
+            points.length !== participatingShots.length * formation.count
+          )
+            throw new Error(
+              `Formation "${request.formation}" is not fully materialized in every current participating shot. Recompile its source and compiler-owned slots.`,
+            );
+          const minimumX = Math.min(...points.map((point) => point.x));
+          const maximumX = Math.max(...points.map((point) => point.x));
+          const minimumZ = Math.min(...points.map((point) => point.z));
+          const maximumZ = Math.max(...points.map((point) => point.z));
           result = {
             kind: "measurement",
             values: {
-              count: formation.count,
-              width: dimensions.width,
-              depth: dimensions.depth,
+              designCount: formation.count,
+              materializedCount: points.length / participatingShots.length,
+              participatingShots: participatingShots.length,
+              width: maximumX - minimumX,
+              depth: maximumZ - minimumZ,
               facingDeg: formation.facingDeg,
-              state: "design",
+              state: "compiled",
             },
           };
           break;
@@ -916,23 +949,6 @@ const groundSample = (
         walkable: surface.walkable,
       };
   return { height: 0, surface: null, walkable: false };
-};
-
-const formationDimensions = (
-  formation: IAutoMovieFormationDesign,
-): { width: number; depth: number } => {
-  const layout = formation.layout;
-  if (layout.kind === "line" || layout.kind === "column")
-    return {
-      width: Math.max(0, layout.files - 1) * formation.spacing.lateral,
-      depth: Math.max(0, layout.ranks - 1) * formation.spacing.depth,
-    };
-  if (layout.kind === "wedge")
-    return {
-      width: Math.max(0, layout.depth - 1) * formation.spacing.lateral * 2,
-      depth: Math.max(0, layout.depth - 1) * formation.spacing.depth,
-    };
-  return { width: layout.radius * 2, depth: layout.radius * 2 };
 };
 
 const verifiedRetainedFrames = (

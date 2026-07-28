@@ -1,7 +1,10 @@
 import {
   AutoMovieContentDigest,
+  IAutoMovieAcceptanceOutcomeReference,
   IAutoMovieAcceptanceScenario,
   IAutoMovieCompileProjectOutput,
+  IAutoMovieCompiledContractRealization,
+  IAutoMovieCompiledShotSource,
   IAutoMovieDesignTarget,
   IAutoMovieDiagnostic,
   IAutoMovieFrameEvidenceReference,
@@ -38,6 +41,7 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import { isProductionFrameTime } from "./validateProductionDesign";
 
 /** Required review criteria in their canonical submission order. */
 export const AUTOMOVIE_REVIEW_CRITERIA = {
@@ -124,6 +128,12 @@ export class AutoMovieProductionReviewService {
       diagnostics,
       compileStatus!,
     );
+    const outcomes = currentAcceptanceOutcomes(
+      this.project,
+      input.target,
+      diagnostics,
+      compileStatus!,
+    );
     if (
       (input.target.kind === "shot" || input.target.kind === "film") &&
       frames.length === 0 &&
@@ -159,6 +169,7 @@ export class AutoMovieProductionReviewService {
       requiredCriteria: [...criteriaOf(input.target)],
       quotable,
       frames,
+      outcomes,
       diagnostics,
     };
   }
@@ -455,34 +466,56 @@ const validateAcceptanceCoverage = (
         "cite its exact current acceptance contract in the acceptance-scenarios check.",
       );
     const criterion = scenario.criterion;
-    if (criterion.kind !== "frame") continue;
-    // Graph validation requires criterion.shot for film targets, so the
-    // target id fallback is exactly the owning shot id for every valid graph.
-    const shot = criterion.shot ?? scenario.target.id;
-    if (
-      shot === undefined ||
-      check?.evidence.some(
-        (evidence) =>
-          evidence.kind === "frame" &&
-          evidence.shot === shot &&
-          evidence.reviewFrame === criterion.frame &&
-          evidence.pass === criterion.pass &&
-          prepared.frames.some(
-            (frame) =>
-              frame.shot === evidence.shot &&
-              frame.reviewFrame === evidence.reviewFrame &&
-              frame.bundle === evidence.bundle &&
-              frame.frame === evidence.frame &&
-              frame.time === evidence.time &&
-              frame.pass === evidence.pass &&
-              frame.digest === evidence.digest,
-          ),
-      ) !== true
-    )
-      add(
-        scenario.id,
-        `cite the exact current frame "${criterion.frame}" pass "${criterion.pass}" from shot "${String(shot)}".`,
+    if (criterion.kind === "frame") {
+      // Graph validation requires criterion.shot for film targets, so the
+      // target id fallback is exactly the owning shot id for every valid graph.
+      const shot = criterion.shot ?? scenario.target.id;
+      if (
+        shot === undefined ||
+        check?.evidence.some(
+          (evidence) =>
+            evidence.kind === "frame" &&
+            evidence.shot === shot &&
+            evidence.reviewFrame === criterion.frame &&
+            evidence.pass === criterion.pass &&
+            prepared.frames.some(
+              (frame) =>
+                frame.shot === evidence.shot &&
+                frame.reviewFrame === evidence.reviewFrame &&
+                frame.bundle === evidence.bundle &&
+                frame.frame === evidence.frame &&
+                frame.time === evidence.time &&
+                frame.pass === evidence.pass &&
+                frame.digest === evidence.digest,
+            ),
+        ) !== true
+      )
+        add(
+          scenario.id,
+          `cite the exact current frame "${criterion.frame}" pass "${criterion.pass}" from shot "${String(shot)}".`,
+        );
+    } else {
+      const outcome = prepared.outcomes.find(
+        (candidate) => candidate.scenario === scenario.id,
       );
+      if (
+        outcome === undefined ||
+        outcome.passed === false ||
+        check?.evidence.some(
+          (evidence) =>
+            evidence.kind === "outcome" &&
+            evidence.scenario === scenario.id &&
+            canonicalizeAutoMovieJson(evidence.exactValue) ===
+              canonicalizeAutoMovieJson(outcome),
+        ) !== true
+      )
+        add(
+          scenario.id,
+          criterion.kind === "event"
+            ? `cite the passing compiler-derived outcome for event "${criterion.event}". The acceptance contract itself is not event evidence.`
+            : `cite the passing compiler-derived "${criterion.metric}" outcome. The acceptance threshold itself is not a measured result.`,
+        );
+    }
   }
   return diagnostics;
 };
@@ -615,6 +648,19 @@ const validateEvidence = (
       fail(
         "review-evidence-stale",
         "diagnostic actual must exactly equal the current diagnostic message.",
+      );
+  } else if (evidence.kind === "outcome") {
+    const current = prepared.outcomes.find(
+      (outcome) => outcome.scenario === evidence.scenario,
+    );
+    if (
+      current === undefined ||
+      canonicalizeAutoMovieJson(current) !==
+        canonicalizeAutoMovieJson(evidence.exactValue)
+    )
+      fail(
+        "review-evidence-stale",
+        `acceptance outcome "${evidence.scenario}" is absent or no longer equals exactValue. Prepare the current compiler/oracle outcome again.`,
       );
   } else {
     const current = project.graph().acceptance.get(evidence.scenario);
@@ -756,6 +802,13 @@ const reviewFingerprint = (
     addJson("generated-manifest", project.generatedManifest());
     for (const frame of currentFrames(project, target, [], compileStatus!))
       addJson(`frame:${frame.bundle}:${frame.frame}:${frame.pass}`, frame);
+    for (const outcome of currentAcceptanceOutcomes(
+      project,
+      target,
+      [],
+      compileStatus!,
+    ))
+      addJson(`outcome:${outcome.scenario}`, outcome);
     fields.push(compilerField());
   } else {
     addJson("production", graph.production);
@@ -779,6 +832,13 @@ const reviewFingerprint = (
     );
     for (const frame of currentFrames(project, target, [], compileStatus!))
       addJson(`frame:${frame.bundle}:${frame.frame}:${frame.pass}`, frame);
+    for (const outcome of currentAcceptanceOutcomes(
+      project,
+      target,
+      [],
+      compileStatus!,
+    ))
+      addJson(`outcome:${outcome.scenario}`, outcome);
   }
   return fingerprintAutoMovieFields(fields);
 };
@@ -852,6 +912,157 @@ const acceptanceAddressesShot = (
   ((acceptance.criterion.kind === "frame" ||
     acceptance.criterion.kind === "event") &&
     acceptance.criterion.shot === shot);
+
+const currentAcceptanceOutcomes = (
+  project: AutoMovieProductionProject,
+  target: IAutoMovieReviewTarget,
+  diagnostics: IAutoMovieDiagnostic[],
+  compileStatus: IAutoMovieCompileProjectOutput,
+): IAutoMovieAcceptanceOutcomeReference[] => {
+  if (target.kind !== "shot" && target.kind !== "film") return [];
+  const generated = project.generatedManifest();
+  if (
+    generated === null ||
+    compileStatus.success === false ||
+    compileStatus.compiler.inputFingerprint !== generated.inputFingerprint
+  )
+    return [];
+  const graph = project.graph();
+  const scenarios = [...graph.acceptance.values()]
+    .filter(
+      (scenario) =>
+        scenario.required &&
+        (target.kind === "film" ||
+          acceptanceAddressesShot(scenario, target.id)),
+    )
+    .sort((left, right) => compareCodeUnits(left.id, right.id));
+  const compiled = new Map<string, IAutoMovieCompiledShotSource>();
+  const realizations = new Map<string, IAutoMovieCompiledContractRealization>();
+  const readCompiled = (shot: string): IAutoMovieCompiledShotSource | null => {
+    const retained = compiled.get(shot);
+    if (retained !== undefined) return retained;
+    try {
+      const validation = typia.validateEquals<IAutoMovieCompiledShotSource>(
+        JSON.parse(
+          Buffer.from(
+            project.readGeneratedFile(
+              `shots/${encodeAutoMoviePathSegment(shot)}.json`,
+            ),
+          ).toString("utf8"),
+        ) as unknown,
+      );
+      if (validation.success === false) return null;
+      compiled.set(shot, validation.data);
+      return validation.data;
+    } catch {
+      return null;
+    }
+  };
+  const readRealization = (
+    shot: string,
+  ): IAutoMovieCompiledContractRealization | null => {
+    const retained = realizations.get(shot);
+    if (retained !== undefined) return retained;
+    try {
+      const validation =
+        typia.validateEquals<IAutoMovieCompiledContractRealization>(
+          JSON.parse(
+            Buffer.from(
+              project.readGeneratedFile(
+                `realizations/${encodeAutoMoviePathSegment(shot)}.json`,
+              ),
+            ).toString("utf8"),
+          ) as unknown,
+        );
+      if (validation.success === false) return null;
+      realizations.set(shot, validation.data);
+      return validation.data;
+    } catch {
+      return null;
+    }
+  };
+  const outcomes: IAutoMovieAcceptanceOutcomeReference[] = [];
+  for (const scenario of scenarios) {
+    const criterion = scenario.criterion;
+    if (criterion.kind === "frame") continue;
+    if (criterion.kind === "event") {
+      const shot =
+        criterion.shot ??
+        (scenario.target.kind === "shot" ? scenario.target.id : undefined);
+      const event =
+        shot === undefined
+          ? undefined
+          : readRealization(shot)?.events.find(
+              (candidate) => candidate.id === criterion.event,
+            );
+      if (shot === undefined || event === undefined) {
+        diagnostics.push(
+          outcomeMissingDiagnostic(
+            target,
+            scenario.id,
+            `Compiler-derived event "${criterion.event}" is absent. Recompile the owning shot before review.`,
+          ),
+        );
+        continue;
+      }
+      outcomes.push({
+        kind: "event",
+        scenario: scenario.id,
+        shot,
+        event: criterion.event,
+        realization: event,
+        passed: event.passed,
+      });
+      continue;
+    }
+    const actual =
+      scenario.target.kind === "shot"
+        ? readCompiled(scenario.target.id)?.shot.duration
+        : [...graph.shots.keys()].reduce<number | null>((sum, shot) => {
+            if (sum === null) return null;
+            const value = readCompiled(shot);
+            return value === null ? null : sum + value.shot.duration;
+          }, 0);
+    if (actual === undefined || actual === null) {
+      diagnostics.push(
+        outcomeMissingDiagnostic(
+          target,
+          scenario.id,
+          "Compiler-derived runtime is unavailable. Recompile every addressed shot before review.",
+        ),
+      );
+      continue;
+    }
+    outcomes.push({
+      kind: "metric",
+      scenario: scenario.id,
+      metric: criterion.metric,
+      actual,
+      operator: criterion.operator,
+      expected: criterion.value,
+      passed:
+        criterion.operator === "=="
+          ? actual === criterion.value
+          : criterion.operator === "<="
+            ? actual <= criterion.value
+            : actual >= criterion.value,
+    });
+  }
+  return outcomes;
+};
+
+const outcomeMissingDiagnostic = (
+  target: IAutoMovieReviewTarget,
+  scenario: string,
+  message: string,
+): IAutoMovieDiagnostic => ({
+  code: "review-outcome-missing",
+  category: "error",
+  phase: "review",
+  target: reviewTargetKey(target),
+  path: null,
+  message: `Required acceptance "${scenario}": ${message}`,
+});
 
 const currentFrames = (
   project: AutoMovieProductionProject,
@@ -929,7 +1140,12 @@ const currentFrames = (
       });
     if (
       manifest.renderSpec.target !== manifest.target.id ||
-      manifest.renderSpec.frameFormat.fps !== graph.production!.frameFormat.fps
+      manifest.renderSpec.frameFormat.fps !==
+        graph.production!.frameFormat.fps ||
+      manifest.renderSpec.frameFormat.width !==
+        graph.production!.frameFormat.width ||
+      manifest.renderSpec.frameFormat.height !==
+        graph.production!.frameFormat.height
     ) {
       diagnostics.push({
         code: "render-frame-invalid",
@@ -938,7 +1154,7 @@ const currentFrames = (
         target: bundle,
         path: normalizeSlash(path.relative(project.root, manifestPath)),
         message:
-          "Render target or frame clock does not match the current shot and production FPS. Recreate this bundle through previewFrame.",
+          "Required review evidence must match the current shot, production FPS, and exact production raster. Small preview thumbnails remain usable for iteration but cannot discharge review. Recreate this required frame through previewFrame without width/height overrides.",
       });
       continue;
     }
@@ -962,7 +1178,11 @@ const currentFrames = (
           frame.width !== manifest.renderSpec.frameFormat.width ||
           frame.height !== manifest.renderSpec.frameFormat.height ||
           hasVisiblePixelVariance(png) === false ||
-          Math.abs(frame.time - expectedTime) > Number.EPSILON * 16
+          isProductionFrameTime(
+            frame.time,
+            manifest.renderSpec.frameFormat.fps,
+          ) === false ||
+          frameClockClose(frame.time, expectedTime) === false
         )
           throw new Error(
             "digest, dimensions, visible pixels, or frame clock do not match",
@@ -973,7 +1193,6 @@ const currentFrames = (
                 (item) =>
                   item.shot === manifest.target.id &&
                   item.index === frame.index &&
-                  item.time === frame.time &&
                   item.pass === frame.pass,
               )
             : [];
@@ -1079,6 +1298,10 @@ const reviewFrameKey = (
   index: number,
   pass: IAutoMovieFrameEvidenceReference["pass"],
 ): string => `${shot}\0${reviewFrame}\0${index}\0${pass}`;
+
+const frameClockClose = (left: number, right: number): boolean =>
+  Math.abs(left - right) <=
+  Number.EPSILON * 64 * Math.max(1, Math.abs(left), Math.abs(right));
 
 const jsonPointers = (
   value: unknown,
@@ -1324,7 +1547,6 @@ const isInside = (root: string, candidate: string): boolean => {
 };
 
 const hasVisiblePixelVariance = (png: PNG): boolean => {
-  if (png.data.length < 8) return false;
   const alpha = png.data[3]!;
   const first = [
     png.data[0]! * alpha,

@@ -1,5 +1,5 @@
 import type { AutoMovieGuidePass } from "@automovie/interface";
-import { AutoMovieProductionApplication } from "@automovie/mcp";
+import { AutoMovieApplication } from "@automovie/mcp";
 
 import { captureProductionFrame } from "./capture";
 
@@ -39,7 +39,7 @@ const height =
   options.get("--height") === undefined
     ? undefined
     : Number(options.get("--height"));
-const app = new AutoMovieProductionApplication({
+const app = new AutoMovieApplication({
   projectRoot: process.cwd(),
   capture: captureProductionFrame,
 });

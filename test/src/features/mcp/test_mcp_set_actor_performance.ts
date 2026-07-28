@@ -4,7 +4,10 @@ import {
   IAutoMovieShot,
   IAutoMovieShotPerformance,
 } from "@automovie/interface";
-import { AutoMovieApplication, IAutoMovieMcpMotion } from "@automovie/mcp";
+import {
+  AutoMovieLegacyApplication,
+  IAutoMovieMcpMotion,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -103,7 +106,7 @@ const motionsFor = (beat: string) => ({
 export const test_mcp_set_actor_performance = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-setperf-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     app.commitScript({ script });
 
@@ -415,7 +418,7 @@ export const test_mcp_set_actor_performance = (): void => {
       "no project throws the openProject guidance",
       throwsError(
         () =>
-          new AutoMovieApplication().setActorPerformance({
+          new AutoMovieLegacyApplication().setActorPerformance({
             beat: "beat-1",
             performance: {
               node: "knightB",

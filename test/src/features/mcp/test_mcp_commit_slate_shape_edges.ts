@@ -7,7 +7,7 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -18,7 +18,7 @@ import path from "node:path";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 const script: IAutoMovieScript = {
   logline: "a committed slate with malformed sibling slices",
@@ -299,7 +299,7 @@ export const test_mcp_commit_slate_shape_edges = (): void => {
   // 6. a resident setActorPerformance with an empty beat resolves no shot
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-set-perf-"));
   try {
-    const resident = new AutoMovieApplication();
+    const resident = new AutoMovieLegacyApplication();
     resident.openProject({ root });
     const updated = resident.setActorPerformance({
       beat: "",

@@ -3,7 +3,7 @@ import type {
   IAutoMovieProductionRenderManifest,
 } from "@automovie/interface";
 import {
-  AutoMovieProductionApplication,
+  AutoMovieApplication,
   AutoMovieProductionProject,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
@@ -14,7 +14,7 @@ import { film } from "../src/film";
 import { captureProductionFrame } from "./capture";
 
 const root = process.cwd();
-const app = new AutoMovieProductionApplication({
+const app = new AutoMovieApplication({
   projectRoot: root,
   capture: captureProductionFrame,
 });
@@ -118,7 +118,7 @@ if (compiled.success === false) {
   }
   outputProject.commitProductionRenderManifest(renderManifest);
 
-  const finalApp = new AutoMovieProductionApplication({
+  const finalApp = new AutoMovieApplication({
     projectRoot: root,
     capture: captureProductionFrame,
   });

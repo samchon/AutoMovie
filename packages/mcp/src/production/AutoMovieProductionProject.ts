@@ -10,6 +10,7 @@ import {
   IAutoMovieProductionDesignInventory,
   IAutoMovieProductionManifest,
   IAutoMovieProductionRenderManifest,
+  IAutoMovieProductionRenderReceipt,
   IAutoMovieRenderBundleManifest,
   IAutoMovieReviewTarget,
   IAutoMovieShotContract,
@@ -27,6 +28,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { probeProductionMedia } from "./probeProductionMedia";
 import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
@@ -147,7 +149,15 @@ export class AutoMovieProductionProject {
   /** Enumerate declared source, viewer, script and asset inputs safely. */
   public contentInputs(): IAutoMovieProductionContentInput[] {
     const inputs = new Map<string, Uint8Array | null>();
-    const visit = (directory: string): void => {
+    const visit = (directory: string, physicalRoot: string): void => {
+      const realDirectory = fs.realpathSync(directory);
+      if (
+        isInside(this.rootReal, realDirectory) === false ||
+        isInside(physicalRoot, realDirectory) === false
+      )
+        throw new Error(
+          `Declared content directory "${relativeToRoot(this.root, directory)}" escapes its verified physical project root. Replace the junction with physical project content.`,
+        );
       for (const entry of fs
         .readdirSync(directory, { withFileTypes: true })
         .sort((left, right) => compareCodeUnits(left.name, right.name))) {
@@ -157,12 +167,21 @@ export class AutoMovieProductionProject {
           throw new Error(
             `Declared content path "${relativeToRoot(this.root, absolute)}" is a symlink or junction. Replace it with physical project content before compileProject.`,
           );
-        if (linked.isDirectory()) visit(absolute);
-        else if (linked.isFile())
+        if (linked.isDirectory()) visit(absolute, physicalRoot);
+        else if (linked.isFile()) {
+          const real = fs.realpathSync(absolute);
+          if (
+            isInside(this.rootReal, real) === false ||
+            isInside(physicalRoot, real) === false
+          )
+            throw new Error(
+              `Declared content file "${relativeToRoot(this.root, absolute)}" escapes its verified physical project root. Replace the junction with a physical file.`,
+            );
           inputs.set(
             normalizeSlash(path.relative(this.root, absolute)),
-            fs.readFileSync(absolute),
+            fs.readFileSync(real),
           );
+        }
       }
     };
     for (const relativeRoot of [
@@ -179,7 +198,12 @@ export class AutoMovieProductionProject {
         throw new Error(
           `Declared content root "${relativeRoot}" must be a physical project directory before compileProject.`,
         );
-      visit(absolute);
+      const physicalRoot = fs.realpathSync(absolute);
+      if (isInside(this.rootReal, physicalRoot) === false)
+        throw new Error(
+          `Declared content root "${relativeRoot}" escapes the production project through a directory junction. Move it into a physical project directory before compileProject.`,
+        );
+      visit(absolute, physicalRoot);
     }
     for (const relativeFile of this.manifest_.contentFiles ?? []) {
       const absolute = resolveInside(this.root, relativeFile);
@@ -640,6 +664,46 @@ export class AutoMovieProductionProject {
           .join("; ")}.`,
       );
     const content = serializeJson(validation.data);
+    const paths = new Set<string>();
+    const receiptFiles: IAutoMovieProductionRenderReceipt["files"] = [];
+    for (const deliverable of validation.data.deliverables)
+      for (const file of deliverable.files) {
+        const portable = normalizeSlash(file.path).toLowerCase();
+        if (paths.has(portable))
+          throw new Error(
+            `Render file "${file.path}" is claimed more than once. Give it one deliverable owner before committing the aggregate manifest.`,
+          );
+        paths.add(portable);
+        const bytes = this.readRenderFile(file.path);
+        const digest = digestAutoMovieBytes(bytes);
+        if (bytes.length !== file.bytes || digest !== file.digest)
+          throw new Error(
+            `Render file "${file.path}" does not match its declared byte size and digest. Rebuild the deliverable ledger from current bytes.`,
+          );
+        let probe: IAutoMovieProductionRenderReceipt["files"][number]["probe"];
+        try {
+          probe = probeProductionMedia({
+            kind: deliverable.kind,
+            mediaType: file.mediaType,
+            bytes,
+          });
+        } catch (error) {
+          throw new Error(
+            `Render file "${file.path}" failed media probing: ${String(error)}`,
+          );
+        }
+        receiptFiles.push({
+          deliverable: deliverable.id,
+          ...file,
+          probe,
+        });
+      }
+    receiptFiles.sort((left, right) => compareCodeUnits(left.path, right.path));
+    const receipt: IAutoMovieProductionRenderReceipt = {
+      version: 2,
+      manifestDigest: digestAutoMovieBytes(Buffer.from(content, "utf8")),
+      files: receiptFiles,
+    };
     return this.commitFiles([
       {
         path: path.join(this.automovieRoot, "render-manifest.json"),
@@ -647,10 +711,7 @@ export class AutoMovieProductionProject {
       },
       {
         path: path.join(this.automovieRoot, "render-manifest-receipt.json"),
-        content: serializeJson({
-          version: 1,
-          manifestDigest: digestAutoMovieBytes(Buffer.from(content, "utf8")),
-        }),
+        content: serializeJson(receipt),
       },
     ]);
   }
@@ -1282,6 +1343,23 @@ const validateRealOwnershipLayout = (
   ]) {
     const absolute = resolveInside(root, entry.relative);
     assertOwnedRootDirectory(rootReal, absolute, file);
+  }
+  for (const [index, relative] of (manifest.contentRoots ?? []).entries()) {
+    const absolute = resolveInside(root, relative);
+    const linked = lstatOrNull(absolute);
+    if (
+      linked === null ||
+      linked.isSymbolicLink() ||
+      linked.isDirectory() === false
+    )
+      throw new Error(
+        `Invalid production manifest "${file}": contentRoots[${index}] "${relative}" must be an existing physical project directory.`,
+      );
+    const real = fs.realpathSync(absolute);
+    if (isInside(rootReal, real) === false)
+      throw new Error(
+        `Invalid production manifest "${file}": contentRoots[${index}] "${relative}" escapes the project through a directory junction.`,
+      );
   }
 };
 

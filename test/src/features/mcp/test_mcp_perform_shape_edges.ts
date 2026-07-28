@@ -1,6 +1,6 @@
 import { IAutoMovieVector3 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -60,7 +60,7 @@ const rest = createSkeleton().bones[0]!.rest;
  *    whose bone name is not a string each fail at their rig paths.
  */
 export const test_mcp_perform_shape_edges = (): void => {
-  const app = new AutoMovieApplication();
+  const app = new AutoMovieLegacyApplication();
   const script = makeScriptWrite();
   const staged = app.stage({ script, staging: makeStagingWrite() }).staged;
   if (staged.success !== true) throw new Error("staging must succeed");
@@ -94,7 +94,7 @@ export const test_mcp_perform_shape_edges = (): void => {
     performance?: unknown;
     clips?: unknown;
     actors?: Record<string, IAutoMovieMcpActorContext>;
-  }): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+  }): ReturnType<AutoMovieLegacyApplication["perform"]>["performed"] =>
     app.perform({
       script: (props.script ?? script) as never,
       staged: (props.staged ?? staged) as never,
@@ -176,7 +176,7 @@ export const test_mcp_perform_shape_edges = (): void => {
 
   const rigProbe = (
     rig: unknown,
-  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+  ): ReturnType<AutoMovieLegacyApplication["perform"]>["performed"] =>
     perform({
       actors: {
         knightA: {

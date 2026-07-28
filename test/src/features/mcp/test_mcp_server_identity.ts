@@ -3,6 +3,7 @@ import {
   AutoMovieGatewayApplication,
   AutoMovieLegacyApplication,
   AutoMovieLegacyGatewayApplication,
+  AutoMovieProductionApplication,
   createAutoMovieMcpServer,
 } from "@automovie/mcp";
 import packageJson from "@automovie/mcp/package.json";
@@ -24,8 +25,9 @@ import { TestValidator } from "@nestia/e2e";
  */
 export const test_mcp_server_identity = async (): Promise<void> => {
   TestValidator.predicate(
-    "legacy application aliases remain explicit compatibility constructors",
-    new AutoMovieLegacyApplication() instanceof AutoMovieApplication &&
+    "canonical and compatibility application names remain unambiguous",
+    new AutoMovieProductionApplication() instanceof AutoMovieApplication &&
+      !(new AutoMovieLegacyApplication() instanceof AutoMovieApplication) &&
       new AutoMovieLegacyGatewayApplication() instanceof
         AutoMovieGatewayApplication,
   );

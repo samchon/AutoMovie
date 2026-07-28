@@ -6,7 +6,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
@@ -20,7 +20,7 @@ import {
 } from "../internal/filmFixtures";
 import { createSkeleton, makePose } from "../internal/fixtures";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 const walk: IAutoMovieGait = {
   name: "walk",

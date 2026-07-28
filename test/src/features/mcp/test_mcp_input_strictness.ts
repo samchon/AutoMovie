@@ -55,8 +55,8 @@ const propModel = (): IAutoMovieModel => ({
  * written, before the engine runs, for every tool alike.
  *
  * This scenario must drive the real stdio transport. An in-process
- * `AutoMovieApplication` call bypasses typia entirely, so the strictness is
- * only observable through a client.
+ * `AutoMovieLegacyApplication` call bypasses typia entirely, so the strictness
+ * is only observable through a client.
  *
  * Scenarios (one live stdio handshake):
  *

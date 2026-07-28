@@ -6,7 +6,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -20,7 +20,7 @@ import {
 import { createSkeleton, makePose } from "../internal/fixtures";
 import { vclose } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 const walk: IAutoMovieGait = {
   name: "walk",

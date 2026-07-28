@@ -101,7 +101,11 @@ export type AutoMovieGeometryQuery =
  * into optional properties.
  */
 export interface IAutoMovieQueryGeometryInput {
-  /** Exact compact geometry query. */
+  /**
+   * Exact compact query over the current source compile. Selectors refer to
+   * compiled node, formation or world identities, not caller-supplied
+   * geometry.
+   */
   request: AutoMovieGeometryQuery;
 }
 
@@ -136,9 +140,12 @@ export interface IAutoMovieQueryGeometryOutput {
   query: AutoMovieGeometryQuery["query"];
   /** Current compile fingerprint or null before a successful compile. */
   compileFingerprint: AutoMovieContentDigest | null;
-  /** Query result or null when diagnostics prevent measurement. */
+  /**
+   * Engine-derived result, or null when compilation is missing or stale, a
+   * selector is ambiguous, or the requested fact cannot be measured.
+   */
   result: IAutoMovieGeometryResult | null;
-  /** Exact query diagnostics. */
+  /** Exact refusal diagnostics and the correction required before retrying. */
   diagnostics: IAutoMovieDiagnostic[];
 }
 
@@ -154,23 +161,35 @@ export interface IAutoMoviePreviewFrameInput {
     /** Shot id. */
     id: string;
   };
-  /** Time in seconds. */
+  /**
+   * Finite non-negative shot-local time no later than shot duration. The oracle
+   * snaps it to the nearest current production frame.
+   */
   time: number;
   /** Requested render pass, beauty by default. */
   pass?: AutoMovieGuidePass;
-  /** Optional output width. */
+  /**
+   * Optional positive integer width, no larger than production width. Width
+   * times height may not exceed 16,777,216 pixels.
+   */
   width?: number;
-  /** Optional output height. */
+  /**
+   * Optional positive integer height, no larger than production height. Width
+   * times height may not exceed 16,777,216 pixels.
+   */
   height?: number;
 }
 
 /** An actual PNG frame bound to a compile and render bundle. */
 export interface IAutoMoviePreviewFrameOutput {
-  /** True only after current non-empty PNG bytes are verified. */
+  /**
+   * True only after current decodable, dimension-matching PNG bytes with
+   * visible pixel variance are verified and committed to a render bundle.
+   */
   captured: boolean;
   /** Current compile fingerprint. */
   compileFingerprint: AutoMovieContentDigest;
-  /** Project-relative render bundle or null on refusal. */
+  /** Project-relative content-addressed render bundle, or null on any refusal. */
   renderBundle: string | null;
   /** Verified frame metadata or null on refusal. */
   frame: {
@@ -191,7 +210,7 @@ export interface IAutoMoviePreviewFrameOutput {
     /** Pixel height. */
     height: number;
   } | null;
-  /** Exact capture diagnostics. */
+  /** Exact capture refusal diagnostics and correction, empty on success. */
   diagnostics: IAutoMovieDiagnostic[];
 }
 

@@ -1,6 +1,6 @@
-import { AutoMovieProductionApplication } from "@automovie/mcp";
+import { AutoMovieApplication } from "@automovie/mcp";
 
-const app = new AutoMovieProductionApplication({
+const app = new AutoMovieApplication({
   projectRoot: process.cwd(),
 });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
