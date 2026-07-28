@@ -370,17 +370,21 @@ export class AutoMovieProductionCompiler {
           materialized: [],
         };
     if (input.scope === "design")
-      return {
-        success: true,
-        revision: this.project.revision(),
-        compiler: {
-          version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
-          inputFingerprint,
-        },
-        diagnostics,
-        reviews: { entries: [] },
-        materialized: [],
-      };
+      return inputCurrent()
+        ? {
+            success: true,
+            revision: this.project.revision(),
+            compiler: {
+              version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+              inputFingerprint,
+            },
+            diagnostics,
+            reviews: { entries: [] },
+            materialized: [],
+          }
+        : inputRaceFailure(
+            "Production design or revision changed while the design-only result was being derived.",
+          );
 
     /* c8 ignore start -- design scope returns above; every remaining scope
     derives both source files and their manifest together. */

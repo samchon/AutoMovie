@@ -162,6 +162,25 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         racedLint.reviews.entries.length === 0 &&
         lintRevisionRaced,
     );
+    const residentGraph = project.graph;
+    let graphRecheckCalls = 0;
+    project.graph = (() => {
+      ++graphRecheckCalls;
+      if (graphRecheckCalls === 1) return residentGraph.call(project);
+      throw new Error("compiler graph became unreadable");
+    }) as typeof project.graph;
+    const unavailableGraphRecheck = new AutoMovieProductionCompiler(
+      project,
+      () => ({ entries: [] }),
+    ).lint({ scope: "source" });
+    project.graph = residentGraph;
+    TestValidator.predicate(
+      "an unreadable current graph invalidates a read-only compiler response",
+      unavailableGraphRecheck.success === false &&
+        diagnosticCodes(unavailableGraphRecheck).has("compile-input-changed") &&
+        unavailableGraphRecheck.reviews.entries.length === 0 &&
+        graphRecheckCalls === 2,
+    );
     const recipeFile = path.join(
       fixture.root,
       ".automovie/design/models/sentinel.json",
@@ -219,6 +238,24 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         fs.readFileSync(generatedManifestPath, "utf8") ===
           generatedBeforeDesignGate &&
         fs.existsSync(path.join(fixture.root, "generated/shots/opening.json")),
+    );
+    const designRevisionRacer = AutoMovieProductionProject.open(fixture.root);
+    const residentRevision = project.revision;
+    let designRevisionReads = 0;
+    project.revision = (() => {
+      ++designRevisionReads;
+      if (designRevisionReads === 2)
+        designRevisionRacer.setWorldDesign(worldDesign());
+      return residentRevision.call(project);
+    }) as typeof project.revision;
+    const racedDesignOnly = compiler.compile({ scope: "design" });
+    project.revision = residentRevision;
+    TestValidator.predicate(
+      "design-only success cannot cross a concurrent design revision",
+      racedDesignOnly.success === false &&
+        diagnosticCodes(racedDesignOnly).has("compile-input-changed") &&
+        racedDesignOnly.reviews.entries.length === 0 &&
+        designRevisionReads >= 3,
     );
     const reopenedWithFormation = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
