@@ -28,7 +28,10 @@ import ts from "typescript-compiler";
 import typia from "typia";
 
 import { validateSceneArtifact } from "../validators/artifacts";
-import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
+import {
+  AutoMovieProductionProject,
+  AutoMovieProductionSourcePathError,
+} from "./AutoMovieProductionProject";
 import {
   AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL,
   IAutoMovieFingerprintField,
@@ -1044,7 +1047,8 @@ const sourcePathDiagnostic = (
   const message = errorMessage(error);
   return {
     code:
-      message.includes("outside") || message.includes("escapes")
+      error instanceof AutoMovieProductionSourcePathError &&
+      error.reason === "outside-root"
         ? "source-path-outside-root"
         : "source-path-missing",
     category: "error",

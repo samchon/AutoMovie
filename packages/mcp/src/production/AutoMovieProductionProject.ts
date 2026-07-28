@@ -69,6 +69,16 @@ export interface IAutoMovieProductionContentInput {
 /** A guarded production commit no longer matches its input snapshot. */
 export class AutoMovieProductionInputRaceError extends Error {}
 
+/** Structured source-read failure used by the compiler diagnostic boundary. */
+export class AutoMovieProductionSourcePathError extends Error {
+  public constructor(
+    public readonly reason: "missing" | "outside-root",
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 /**
  * Tracked production repository for the coding-agent-first application.
  *
@@ -504,12 +514,14 @@ export class AutoMovieProductionProject {
   public readSource(relativePath: string): Uint8Array {
     const file = this.resolveSourcePath(relativePath);
     if (fs.existsSync(file) === false)
-      throw new Error(
+      throw new AutoMovieProductionSourcePathError(
+        "missing",
         `Source "${relativePath}" does not exist. Create it under a configured source root before compileProject.`,
       );
     const real = fs.realpathSync(file);
     if (this.isInSourceRoot(real) === false)
-      throw new Error(
+      throw new AutoMovieProductionSourcePathError(
+        "outside-root",
         `Source "${relativePath}" escapes its configured source root through a symlink. Move it inside a source root.`,
       );
     return fs.readFileSync(real);
@@ -518,12 +530,19 @@ export class AutoMovieProductionProject {
   /** Resolve a project-relative source path and enforce source-root ownership. */
   public resolveSourcePath(relativePath: string): string {
     if (path.isAbsolute(relativePath))
-      throw new Error(
+      throw new AutoMovieProductionSourcePathError(
+        "outside-root",
         `Source path "${relativePath}" is absolute. Use a project-relative module path.`,
       );
-    const resolved = resolveInside(this.root, relativePath);
+    const resolved = path.resolve(this.root, relativePath);
+    if (isInside(this.root, resolved) === false)
+      throw new AutoMovieProductionSourcePathError(
+        "outside-root",
+        `Source path "${relativePath}" escapes project root "${this.root}". Use a project-relative path inside the repository.`,
+      );
     if (this.isInSourceRoot(resolved) === false)
-      throw new Error(
+      throw new AutoMovieProductionSourcePathError(
+        "outside-root",
         `Source path "${relativePath}" is outside configured source roots. Move it under ${this.manifest_.sourceRoots.join(", ")}.`,
       );
     if (![".ts", ".tsx", ".mts", ".cts"].includes(path.extname(resolved)))

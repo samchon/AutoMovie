@@ -380,6 +380,24 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       ),
     );
     fs.writeFileSync(sourcePath, original);
+    const missingOutsideNamed = {
+      ...shotContract(),
+      source: { module: "src/outside.ts", export: "opening" },
+    };
+    const missingOutsideNamedMutation =
+      project.setShotContract(missingOutsideNamed);
+    const missingOutsideNamedCompile = compiler.compile({ scope: "source" });
+    TestValidator.predicate(
+      "missing source names cannot impersonate an outside-root failure",
+      missingOutsideNamedMutation.accepted &&
+        diagnosticCodes(missingOutsideNamedCompile).has(
+          "source-path-missing",
+        ) &&
+        diagnosticCodes(missingOutsideNamedCompile).has(
+          "source-path-outside-root",
+        ) === false,
+    );
+    project.setShotContract(shotContract());
     const outsideRoot = {
       ...shotContract(),
       source: { module: "outside/source.ts", export: "opening" },
