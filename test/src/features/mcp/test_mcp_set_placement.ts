@@ -1,5 +1,8 @@
 import { IAutoMovieScript, IAutoMovieShot } from "@automovie/interface";
-import { AutoMovieApplication, IAutoMovieMcpTransform } from "@automovie/mcp";
+import {
+  AutoMovieLegacyApplication,
+  IAutoMovieMcpTransform,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -57,7 +60,7 @@ const unitScale = { x: 1, y: 1, z: 1 };
 export const test_mcp_set_placement = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-setplace-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     app.commitScript({ script });
 
@@ -261,7 +264,7 @@ export const test_mcp_set_placement = (): void => {
       hasViolation(badEuler.validation, "type", "$input.transform.rotation"),
     );
 
-    const bare = new AutoMovieApplication();
+    const bare = new AutoMovieLegacyApplication();
     const bareRoot = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-setplace-bare-"),
     );
@@ -337,7 +340,7 @@ export const test_mcp_set_placement = (): void => {
       "no project throws the openProject guidance",
       throwsError(
         () =>
-          new AutoMovieApplication().setPlacement({
+          new AutoMovieLegacyApplication().setPlacement({
             node: "knightB",
             transform: {
               translation: { x: 0, y: 0, z: 0 },

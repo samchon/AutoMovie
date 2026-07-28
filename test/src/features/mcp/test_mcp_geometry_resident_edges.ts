@@ -3,7 +3,7 @@ import {
   IAutoMovieScript,
   IAutoMovieVector3,
 } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -97,7 +97,7 @@ const withProject = (run: (root: string) => void): void => {
 export const test_mcp_geometry_resident_edges = (): void => {
   // 1. measureDistance with no committed scene
   withProject((root) => {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     TestValidator.predicate(
       "resident measureDistance without a scene throws scene guidance",
@@ -114,7 +114,7 @@ export const test_mcp_geometry_resident_edges = (): void => {
 
   // 2. getReach with no committed scene
   withProject((root) => {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     TestValidator.predicate(
       "resident getReach without a scene throws context guidance",
@@ -131,7 +131,7 @@ export const test_mcp_geometry_resident_edges = (): void => {
 
   // 3. a beat with no committed shot resolves the ambient node motion
   withProject((root) => {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     app.commitScript({ script });
     app.commitScene({ scene: sceneWith(null), models });
@@ -149,7 +149,7 @@ export const test_mcp_geometry_resident_edges = (): void => {
 
   // 4. a dangling ambient motion id explains that clips are not persisted
   withProject((root) => {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     app.commitScript({ script });
     app.commitScene({ scene: sceneWith("ambient-motion"), models });
@@ -164,7 +164,7 @@ export const test_mcp_geometry_resident_edges = (): void => {
 
   // 5. a stored prop's model merges into the geometry model registry
   withProject((root) => {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     app.commitScript({ script });
     app.commitScene({ scene: sceneWith(null), models });

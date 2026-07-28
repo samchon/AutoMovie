@@ -7,7 +7,7 @@ import {
   IAutoMovieValidation,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -18,7 +18,7 @@ import path from "node:path";
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const scriptWrite = makeScriptWrite();
 const script: IAutoMovieScript = {
   logline: scriptWrite.logline,
@@ -95,7 +95,7 @@ const hasPath = (validation: IAutoMovieValidation, path: string): boolean =>
 
 const expectRefused = (
   title: string,
-  output: ReturnType<AutoMovieApplication["commitScript"]>,
+  output: ReturnType<AutoMovieLegacyApplication["commitScript"]>,
   path: string,
   slate: IAutoMovieMcpWritableSlate,
 ): void => {
@@ -107,12 +107,12 @@ const expectRefused = (
 const expectResidentMalformedRequestRoot = (
   title: string,
   call: (
-    app: AutoMovieApplication,
-  ) => ReturnType<AutoMovieApplication["commitScript"]>,
+    app: AutoMovieLegacyApplication,
+  ) => ReturnType<AutoMovieLegacyApplication["commitScript"]>,
 ): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-commit-root-"));
   try {
-    const resident = new AutoMovieApplication();
+    const resident = new AutoMovieLegacyApplication();
     resident.openProject({ root });
     const output = call(resident);
     TestValidator.equals(`${title} not committed`, output.committed, false);
@@ -181,7 +181,7 @@ export const test_mcp_commit_tools = (): void => {
       path.join(os.tmpdir(), "automovie-commit-resident-slate-"),
     );
     try {
-      const resident = new AutoMovieApplication();
+      const resident = new AutoMovieLegacyApplication();
       resident.openProject({ root });
       resident.commitScript({ script });
       resident.commitScene({ scene: staged.scene, models });
@@ -498,7 +498,7 @@ export const test_mcp_commit_tools = (): void => {
       const root = fs.mkdtempSync(
         path.join(os.tmpdir(), "automovie-commit-shot-shape-"),
       );
-      const resident = new AutoMovieApplication();
+      const resident = new AutoMovieLegacyApplication();
       resident.openProject({ root });
       resident.commitScript({ script });
       resident.commitScene({ scene: staged.scene, models });

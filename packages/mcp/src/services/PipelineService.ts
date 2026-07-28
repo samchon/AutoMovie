@@ -79,7 +79,7 @@ type PerformProps = {
  * The film pipeline compute, the stage/block/perform/cut/forge ladder over the
  * engine's deterministic consumers. `perform` assembles the default synthesizer
  * from JSON actor contexts so the MCP contract stays tuple-free. The MCP
- * contract lives on the {@link AutoMovieApplication} facade.
+ * contract lives on the {@link AutoMovieLegacyApplication} facade.
  */
 export class PipelineService {
   public constructor(private readonly context?: AutoMovieContext) {}

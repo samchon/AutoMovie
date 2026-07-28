@@ -1,4 +1,11 @@
-import { createAutoMovieMcpServer } from "@automovie/mcp";
+import {
+  AutoMovieApplication,
+  AutoMovieGatewayApplication,
+  AutoMovieLegacyApplication,
+  AutoMovieLegacyGatewayApplication,
+  AutoMovieProductionApplication,
+  createAutoMovieMcpServer,
+} from "@automovie/mcp";
 import packageJson from "@automovie/mcp/package.json";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -17,6 +24,13 @@ import { TestValidator } from "@nestia/e2e";
  * 3. Assert the public server identity matches the exported package manifest.
  */
 export const test_mcp_server_identity = async (): Promise<void> => {
+  TestValidator.predicate(
+    "canonical and compatibility application names remain unambiguous",
+    new AutoMovieProductionApplication() instanceof AutoMovieApplication &&
+      !(new AutoMovieLegacyApplication() instanceof AutoMovieApplication) &&
+      new AutoMovieLegacyGatewayApplication() instanceof
+        AutoMovieGatewayApplication,
+  );
   const server: McpServer = createAutoMovieMcpServer();
   const client: Client = new Client({
     name: "automovie-identity-test",

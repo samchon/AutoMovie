@@ -1,10 +1,10 @@
 import { IAutoMovieScene } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 const scene: IAutoMovieScene = {
   id: "scene-1",

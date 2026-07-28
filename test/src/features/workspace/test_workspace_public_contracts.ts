@@ -1,7 +1,7 @@
 import { compareCodeUnits } from "@automovie/engine";
 import {
-  AutoMovieApplication,
   AutoMovieGatewayApplication,
+  AutoMovieLegacyApplication,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -275,7 +275,7 @@ export const test_workspace_public_contracts = (): void => {
   // written to catch it reported green (#1402). The granular surface is one
   // tool per application method, and `execute` routes all of them but the
   // gateway's own direct entry points.
-  const operations = publicMethods(AutoMovieApplication);
+  const operations = publicMethods(AutoMovieLegacyApplication);
   const routed = operations - (publicMethods(AutoMovieGatewayApplication) - 1);
   TestValidator.equals(
     "the mcp README counts the surface it actually ships",

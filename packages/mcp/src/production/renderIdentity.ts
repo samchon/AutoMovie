@@ -1,0 +1,78 @@
+import {
+  AutoMovieContentDigest,
+  IAutoMovieGeneratedManifest,
+  IAutoMovieRenderBundleManifest,
+} from "@automovie/interface";
+
+import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
+import {
+  IAutoMovieFingerprintField,
+  canonicalAutoMovieJsonBytes,
+  encodeAutoMoviePathSegment,
+  fingerprintAutoMovieFields,
+} from "./contentIdentity";
+
+/** Versioned identity protocol for target-local deterministic render inputs. */
+export const AUTOMOVIE_RENDER_TARGET_FINGERPRINT_PROTOCOL =
+  "automovie.render.target.v1";
+
+/**
+ * Fingerprint only the bytes capable of changing one render target.
+ *
+ * A shot depends on its compiler-owned shot payload plus every explicitly
+ * declared render content input (viewer, capture scripts, configuration and
+ * assets). A path may be both source and render content; an explicit content
+ * declaration wins for this purpose. The shot does not depend on unrelated
+ * source. A future film bundle depends on the complete generated file set. The
+ * aggregate compile fingerprint remains recorded for provenance, but this
+ * identity decides whether verified pixels can survive an unrelated source
+ * edit.
+ */
+export const productionRenderTargetFingerprint = (
+  project: AutoMovieProductionProject,
+  generated: IAutoMovieGeneratedManifest,
+  target: IAutoMovieRenderBundleManifest["target"],
+  contentInputs: ReturnType<
+    AutoMovieProductionProject["contentInputs"]
+  > = project.contentInputs(),
+): AutoMovieContentDigest => {
+  const fields: IAutoMovieFingerprintField[] = [
+    {
+      role: "protocol",
+      kind: "render-target",
+      payload: Buffer.from(
+        AUTOMOVIE_RENDER_TARGET_FINGERPRINT_PROTOCOL,
+        "utf8",
+      ),
+    },
+    {
+      role: "target",
+      kind: target.kind,
+      payload: canonicalAutoMovieJsonBytes(target),
+    },
+    {
+      role: "compiler",
+      kind: "identity",
+      payload: canonicalAutoMovieJsonBytes(generated.compiler),
+    },
+  ];
+  const targetPath =
+    target.kind === "shot"
+      ? `shots/${encodeAutoMoviePathSegment(target.id)}.json`
+      : null;
+  for (const file of generated.files)
+    if (targetPath === null || file.path === targetPath)
+      fields.push({
+        role: `generated:${file.path}`,
+        kind: "digest",
+        payload: Buffer.from(file.digest, "utf8"),
+      });
+  for (const content of contentInputs)
+    if (content.render)
+      fields.push({
+        role: `content:${content.path}`,
+        kind: content.bytes === null ? "absent" : "file",
+        payload: content.bytes ?? new Uint8Array(),
+      });
+  return fingerprintAutoMovieFields(fields);
+};

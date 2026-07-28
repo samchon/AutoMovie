@@ -5,7 +5,7 @@ import {
   IAutoMovieSkeleton,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpGeometryContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -25,7 +25,7 @@ import {
 } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 const shot: IAutoMovieShot = {
   id: "shot:beat-1",
@@ -144,7 +144,7 @@ export const test_mcp_validator_engine_parity = (): void => {
   // 2. a "." segment cannot alias an existing manifest entry
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-dotseg-"));
   try {
-    const resident = new AutoMovieApplication();
+    const resident = new AutoMovieLegacyApplication();
     resident.openProject({ root });
     const plain = resident.registerAsset({ path: "assets/x.png" });
     TestValidator.equals("the plain path registers", plain.registered, true);

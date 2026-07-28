@@ -7,7 +7,7 @@ import {
   IAutoMovieValidation,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -15,7 +15,7 @@ import { TestValidator } from "@nestia/e2e";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 import { hasViolation, nclose } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 const scene: IAutoMovieScene = {
   id: "scene-1",

@@ -5,7 +5,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpGeometryContext,
   IAutoMovieMcpMotion,
 } from "@automovie/mcp";
@@ -19,7 +19,7 @@ import {
 } from "../internal/fixtures";
 import { throwsError } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const skeleton = createSkeleton();
 
 const transform = (

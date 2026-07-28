@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>AutoMovie production viewer</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #11151b;
+      }
+
+      #view {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      #status {
+        position: fixed;
+        left: 16px;
+        bottom: 14px;
+        color: #e8edf2;
+        font: 12px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+        text-shadow: 0 1px 3px #000;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="status">loading current compiler output…</div>
+    <script type="module" src="/viewer/src/main.ts"></script>
+  </body>
+</html>

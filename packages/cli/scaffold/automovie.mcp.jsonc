@@ -1,0 +1,12 @@
+{
+  // Copy this entry into Claude Code, Codex, Claude Desktop, or another MCP
+  // client. The local host fixes the server to this repository and supplies
+  // actual browser PNG capture; arbitrary URLs and shell commands are not MCP
+  // inputs.
+  "mcpServers": {
+    "automovie": {
+      "command": "pnpm",
+      "args": ["exec", "tsx", "scripts/mcp.ts"]
+    }
+  }
+}

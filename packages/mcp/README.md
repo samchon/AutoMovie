@@ -10,16 +10,70 @@ deterministic result and returns it, including the placement / ROM violations
 that make the **engine, not the model, the arbiter of physical truth** ("engine
 enforces, model creates").
 
-Every tool's JSON schema is derived at compile time from
-[`AutoMovieGatewayApplication`](./src/AutoMovieGatewayApplication.ts) and the
-operation signatures in
-[`AutoMovieApplication`](./src/AutoMovieApplication.ts) via
+Every tool's JSON schema is derived at compile time via
 `typia.llm.controller` (+ `@typia/mcp`), and calls are validated in and out.
+The default compact server derives its execute union from
+[`AutoMovieLegacyApplication`](./src/AutoMovieLegacyApplication.ts) through
+[`AutoMovieGatewayApplication`](./src/AutoMovieGatewayApplication.ts); the
+coding-agent production server derives its 15 direct tools from canonical
+[`AutoMovieApplication`](./src/AutoMovieApplication.ts).
 
 The MCP initialize handshake advertises `automovie` with the installed
 `@automovie/mcp` package version. The server reads that version from its sibling
 `package.json`, so client diagnostics identify the artifact actually serving
 the tools; MCP protocol-version negotiation remains a separate SDK concern.
+
+## Coding-agent production tools
+
+`AutoMovieApplication` is the canonical coding-agent-first class, and
+`automovie-mcp-production` is its opt-in comparison binary. It keeps
+screenplay, shot builders, motion helpers, effects, and tests in ordinary files,
+then uses MCP where structured calls are stronger than file authoring:
+validated design, deterministic compilation, geometry facts, actual-frame
+evidence, and a freshness-bound review ledger.
+
+Every tool has one exported contract pair:
+`method(props: IAutoMovieX.IProps): IAutoMovieX`. The namespace keeps input and
+result discoverable as one unit while the domain types remain reusable by the
+compiler and host adapters.
+
+| tool | pair contract | purpose |
+|------|---------------|---------|
+| `getGuideDocument` | `IAutoMovieGetGuideDocument.IProps` → `IAutoMovieGetGuideDocument` | read the overall contract and one task-specific topic |
+| `openProject` | `IAutoMovieOpenProject.IProps` → `IAutoMovieOpenProject` | open format-v2 production memory |
+| `inspectProject` | `IAutoMovieInspectProject.IProps` → `IAutoMovieInspectProject` | inspect freshness, ownership, and blockers |
+| `setProductionDesign` | `IAutoMovieSetProductionDesign.IProps` → `IAutoMovieSetProductionDesign` | record production-wide intent and deliverables |
+| `setModelRecipe` | `IAutoMovieSetModelRecipe.IProps` → `IAutoMovieSetModelRecipe` | record a bounded primitive model recipe |
+| `setWorldDesign` | `IAutoMovieSetWorldDesign.IProps` → `IAutoMovieSetWorldDesign` | record terrain and environment contracts |
+| `setFormationDesign` | `IAutoMovieSetFormationDesign.IProps` → `IAutoMovieSetFormationDesign` | record a repeated-unit formation contract |
+| `setShotContract` | `IAutoMovieSetShotContract.IProps` → `IAutoMovieSetShotContract` | bind one shot contract to TypeScript source |
+| `setAcceptanceScenario` | `IAutoMovieSetAcceptanceScenario.IProps` → `IAutoMovieSetAcceptanceScenario` | record one observable acceptance criterion |
+| `eraseDesignArtifact` | `IAutoMovieEraseDesignArtifact.IProps` → `IAutoMovieEraseDesignArtifact` | remove an artifact through dependency checks |
+| `compileProject` | `IAutoMovieCompileProject.IProps` → `IAutoMovieCompileProject` | validate and deterministically lower source |
+| `queryGeometry` | `IAutoMovieQueryGeometry.IProps` → `IAutoMovieQueryGeometry` | ask current numerical geometry questions |
+| `previewFrame` | `IAutoMoviePreviewFrame.IProps` → `Promise<IAutoMoviePreviewFrame>` | capture a fingerprint-bound actual PNG |
+| `prepareReview` | `IAutoMoviePrepareReview.IProps` → `IAutoMoviePrepareReview` | issue a current evidence worksheet |
+| `submitReview` | `IAutoMovieSubmitReview.IProps` → `IAutoMovieSubmitReview` | validate checklist coverage and completion |
+
+The coding agent owns `src`; the compiler owns `generated`. The agent returns
+authored scene, sparse motion, shot choreography, and event sample times. The
+compiler materializes primitive models and formation slots, then derives named
+state, event, camera, and formation outcomes from current compiled data instead
+of accepting a source-authored compliance witness.
+
+A generated manifest binds source hashes, design hashes, compiler protocol and
+version, and generated file hashes. Required review uses exact production-raster
+frames and passing compiler-derived event or metric outcomes. Final delivery
+requires a renderer-owned receipt and independently re-parses current PNG,
+WebVTT, and MP4 bytes. A stale source, hand-edited generated file, stale render
+manifest, metadata-only media claim, or review copied from another fingerprint
+cannot pass the final compile gate. The server validates the evidence and state
+transition; it does not call a second LLM or grade creative prose.
+
+The binary remains opt-in until a comparative external-agent benchmark
+demonstrates that it should replace the compact default. The former
+47-operation class is explicitly `AutoMovieLegacyApplication`; the compact and
+granular binaries remain compatible during that experiment.
 
 ## Compact tools
 
@@ -181,10 +235,13 @@ starter with `npx automovie start <dir>` ([`@automovie/cli`](../cli)).
 ```bash
 # dev (in-workspace, transpiled by ttsx)
 pnpm --filter @automovie/mcp start        # = ttsx src/bin.ts
+pnpm --filter @automovie/mcp start:production # 15-tool coding-agent surface
 pnpm --filter @automovie/mcp start:granular # 47-tool compatibility surface
 
 # built (published): the bin runs the compiled server
 npx @automovie/mcp                        # = node lib/bin.js
+npx -p @automovie/mcp automovie-mcp-production # opt-in coding-agent surface
+npx -p @automovie/mcp automovie-mcp-legacy # explicit compact compatibility name
 npx -p @automovie/mcp automovie-mcp-granular # compatibility binary
 ```
 
@@ -208,4 +265,5 @@ The `automovie-mcp-granular` binary and `createAutoMovieGranularMcpServer`
 retain the one-tool-per-operation surface for clients that already depend on
 those wire names. It advertises the shared schema closure 47 times and can
 exceed mainstream model context windows, so new external-client integrations
-should use the compact default.
+should use the compact default or join the production-surface experiment with
+`automovie-mcp-production`.

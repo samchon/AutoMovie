@@ -1,0 +1,505 @@
+import {
+  Quaternion,
+  projectToNdc,
+  resolveCameraAt,
+  sampleClipSequence,
+  sampleMotion,
+} from "@automovie/engine";
+import {
+  IAutoMovieCompiledContractRealization,
+  IAutoMovieCompiledPredicateResult,
+  IAutoMovieCompiledShotSource,
+  IAutoMovieDiagnostic,
+  IAutoMovieFormationDesign,
+  IAutoMovieFormationSlot,
+  IAutoMovieModel,
+  IAutoMovieProductionDesign,
+  IAutoMovieShotContract,
+  IAutoMovieShotPredicate,
+  IAutoMovieShotSpatialSelector,
+  IAutoMovieTransform,
+  IAutoMovieVector3,
+  IAutoMovieWorldDesign,
+} from "@automovie/interface";
+
+import { productionRuntimeModelId } from "./materializeProduction";
+
+/** Derive and validate contract outcomes from actual compiled artifacts. */
+export const realizeShotContract = (props: {
+  contract: IAutoMovieShotContract;
+  production: IAutoMovieProductionDesign | null;
+  world: IAutoMovieWorldDesign | null;
+  formations: ReadonlyMap<string, IAutoMovieFormationDesign>;
+  formationSlots: Readonly<Record<string, readonly IAutoMovieFormationSlot[]>>;
+  compiled: IAutoMovieCompiledShotSource;
+  collisions: readonly string[];
+}): {
+  realization: IAutoMovieCompiledContractRealization;
+  diagnostics: IAutoMovieDiagnostic[];
+} => {
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const fail = (field: string, expectation: string): void => {
+    diagnostics.push({
+      code: "contract-realization-failed",
+      category: "error",
+      phase: "compile",
+      target: `shot:${props.contract.id}`,
+      path: null,
+      message: `${field} ${expectation}. Correct the actual scene, motion, camera, or source event sample; contract prose and echoed ids are not evidence.`,
+    });
+  };
+  for (const node of props.collisions)
+    fail(
+      `formation slot "${node}"`,
+      "collides with a coding-agent scene node; ordinary formation slots are compiler-owned",
+    );
+
+  const opening = props.contract.opening.map((state) => {
+    const predicates = state.predicates.map((predicate) =>
+      evaluatePredicate(props, predicate, 0),
+    );
+    const passed = predicates.every((predicate) => predicate.passed);
+    if (passed === false)
+      fail(
+        `opening state "${state.id}"`,
+        "must satisfy every typed predicate at time 0",
+      );
+    return { id: state.id, predicates, passed };
+  });
+  const closing = props.contract.closing.map((state) => {
+    const predicates = state.predicates.map((predicate) =>
+      evaluatePredicate(props, predicate, props.contract.durationSeconds),
+    );
+    const passed = predicates.every((predicate) => predicate.passed);
+    if (passed === false)
+      fail(
+        `closing state "${state.id}"`,
+        `must satisfy every typed predicate at ${props.contract.durationSeconds}s`,
+      );
+    return { id: state.id, predicates, passed };
+  });
+
+  const samples = new Map(
+    props.compiled.eventSamples.map((sample) => [sample.id, sample]),
+  );
+  if (
+    samples.size !== props.compiled.eventSamples.length ||
+    samples.size !== props.contract.events.length
+  )
+    fail("eventSamples", "must name every authoritative event exactly once");
+  const events = props.contract.events.map((event) => {
+    const sample = samples.get(event.id);
+    const time = sample?.time ?? event.window.from;
+    const subjectsResolved = event.subjects.every((subject) =>
+      eventSubjectResolves(props, subject),
+    );
+    const predicates = event.predicates.map((predicate) =>
+      evaluatePredicate(props, predicate, time),
+    );
+    const passed =
+      sample !== undefined &&
+      subjectsResolved &&
+      Number.isFinite(time) &&
+      time >= event.window.from &&
+      time <= event.window.to &&
+      predicates.every((predicate) => predicate.passed);
+    if (passed === false)
+      fail(
+        `event "${event.id}"`,
+        `must resolve every declared subject and have one finite source sample inside ${event.window.from}..${event.window.to}s whose typed predicates all pass`,
+      );
+    return { id: event.id, time, predicates, passed };
+  });
+
+  const cameraTimes = [
+    0,
+    ...props.contract.reviewFrames.map((frame) => frame.time),
+    props.contract.durationSeconds,
+  ]
+    .filter((time, index, values) => values.indexOf(time) === index)
+    .sort((left, right) => left - right);
+  const camera = cameraTimes.map((time) => cameraOutcome(props, time));
+  for (const outcome of camera)
+    if (outcome.passed === false)
+      fail(
+        `camera at ${outcome.time}s`,
+        "must resolve and project every required subject root inside current camera depth and frame bounds",
+      );
+
+  const formations = props.contract.participants.flatMap((participant) => {
+    if (participant.kind !== "formation") return [];
+    const design = props.formations.get(participant.id);
+    const slots = props.formationSlots[participant.id] ?? [];
+    const nodes = new Map(
+      props.compiled.scene.nodes.map((node) => [node.id, node]),
+    );
+    const actual = slots.flatMap((slot) => {
+      const node = nodes.get(slot.node);
+      return node === undefined ? [] : [{ slot, node }];
+    });
+    const points = actual.map(({ node }) => node.transform.translation);
+    const min = bounds(points, Math.min);
+    const max = bounds(points, Math.max);
+    const passed =
+      design !== undefined &&
+      slots.length === design.count &&
+      actual.length === design.count &&
+      actual.every(({ slot, node }) => {
+        const expectedRotation = Quaternion.fromAxisAngle(
+          { x: 0, y: 1, z: 0 },
+          slot.facingDeg,
+        );
+        return (
+          vectorClose(node.transform.translation, slot.position) &&
+          quaternionClose(node.transform.rotation, expectedRotation) &&
+          vectorClose(node.transform.scale, { x: 1, y: 1, z: 1 }) &&
+          node.model === productionRuntimeModelId(slot.modelRecipe)
+        );
+      });
+    if (passed === false)
+      fail(
+        `formation "${participant.id}"`,
+        `must materialize exactly ${design?.count ?? 0} distinct compiler-owned slots with designed layout, anchor, facing, model recipe, and hero ids`,
+      );
+    return [
+      {
+        id: participant.id,
+        count: actual.length,
+        min,
+        max,
+        passed,
+      },
+    ];
+  });
+
+  for (const participant of props.contract.participants)
+    if (participant.kind === "actor") {
+      const node = props.compiled.scene.nodes.find(
+        (candidate) => candidate.id === participant.id,
+      );
+      const performance = props.compiled.shot.performances.find(
+        (candidate) => candidate.node === participant.id,
+      );
+      if (node === undefined || performance === undefined)
+        fail(
+          `actor "${participant.id}"`,
+          "must be a current performed scene node",
+        );
+    }
+
+  return {
+    realization: {
+      version: 1,
+      shot: props.contract.id,
+      opening,
+      closing,
+      events,
+      camera,
+      formations,
+    },
+    diagnostics,
+  };
+};
+
+const eventSubjectResolves = (
+  props: Parameters<typeof realizeShotContract>[0],
+  subject: string,
+): boolean => {
+  if (props.compiled.scene.nodes.some((candidate) => candidate.id === subject))
+    return true;
+  const slots = props.formationSlots[subject];
+  if (slots !== undefined)
+    return (
+      slots.length > 0 &&
+      slots.every((slot) =>
+        props.compiled.scene.nodes.some(
+          (candidate) => candidate.id === slot.node,
+        ),
+      )
+    );
+  return false;
+};
+
+const evaluatePredicate = (
+  props: Parameters<typeof realizeShotContract>[0],
+  predicate: IAutoMovieShotPredicate,
+  time: number,
+): IAutoMovieCompiledPredicateResult => {
+  let actual: number | null = null;
+  try {
+    if (predicate.kind === "joint-angle") {
+      const node = props.compiled.scene.nodes.find(
+        (candidate) => candidate.id === predicate.actor,
+      );
+      if (node === undefined)
+        throw new Error(`node "${predicate.actor}" is absent`);
+      const skeleton = modelOf(props.compiled, node.model).skeleton;
+      if (
+        skeleton === null ||
+        skeleton.bones.some((bone) => bone.bone === predicate.bone) === false
+      )
+        throw new Error(
+          `node "${predicate.actor}" has no bone "${predicate.bone}"`,
+        );
+      const pose = actorPoseAt(props.compiled, node, time);
+      const joint = pose.joints.find((item) => item.bone === predicate.bone);
+      actual = joint?.[predicate.axis] ?? 0;
+    } else if (predicate.kind === "position")
+      actual = resolveSpatial(props, predicate.subject, time)[predicate.axis];
+    else {
+      const from = resolveSpatial(props, predicate.from, time);
+      const to = resolveSpatial(props, predicate.to, time);
+      actual = Math.hypot(from.x - to.x, from.y - to.y, from.z - to.z);
+    }
+  } catch {
+    actual = null;
+  }
+  return {
+    predicate,
+    actual,
+    passed:
+      actual !== null &&
+      scalarPass(
+        actual,
+        predicate.operator,
+        predicate.value,
+        predicate.tolerance,
+      ),
+  };
+};
+
+const scalarPass = (
+  actual: number,
+  operator: "<=" | ">=" | "==",
+  expected: number,
+  tolerance: number,
+): boolean =>
+  operator === "=="
+    ? Math.abs(actual - expected) <= tolerance
+    : operator === "<="
+      ? actual <= expected + tolerance
+      : actual >= expected - tolerance;
+
+const resolveSpatial = (
+  props: Parameters<typeof realizeShotContract>[0],
+  selector: IAutoMovieShotSpatialSelector,
+  time: number,
+): IAutoMovieVector3 => {
+  if (selector.kind === "point") return selector.position;
+  if (selector.kind === "landmark") {
+    const landmark = props.world?.landmarks.find(
+      (candidate) => candidate.id === selector.id,
+    );
+    if (landmark === undefined)
+      throw new Error(`landmark "${selector.id}" is absent`);
+    return landmark.position;
+  }
+  if (selector.kind === "node")
+    return actorTransformAt(props.compiled, selector.id, time).translation;
+  const slots = props.formationSlots[selector.id] ?? [];
+  if (slots.length === 0)
+    throw new Error(`formation "${selector.id}" has no slots`);
+  const points = slots.map(
+    (slot) => actorTransformAt(props.compiled, slot.node, time).translation,
+  );
+  return {
+    x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+    y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
+    z: points.reduce((sum, point) => sum + point.z, 0) / points.length,
+  };
+};
+
+const cameraOutcome = (
+  props: Parameters<typeof realizeShotContract>[0],
+  time: number,
+): IAutoMovieCompiledContractRealization["camera"][number] => {
+  const camera = props.compiled.scene.cameras.find(
+    (candidate) => candidate.id === props.compiled.shot.camera,
+  );
+  if (camera === undefined || props.production === null)
+    return {
+      time,
+      requiredSubjects: props.contract.camera.requiredSubjects.length,
+      resolvedSubjects: 0,
+      readableSubjects: 0,
+      passed: false,
+    };
+  const resolvedCamera = resolveCameraAt(
+    camera.transform,
+    props.compiled.shot.cameraMotion,
+    camera.id,
+    time,
+  );
+  const halfY = Math.tan((camera.fovY * Math.PI) / 360);
+  const aspect =
+    props.production.frameFormat.width / props.production.frameFormat.height;
+  let resolvedSubjects = 0;
+  let readableSubjects = 0;
+  for (const subject of props.contract.camera.requiredSubjects)
+    try {
+      const point = props.formations.has(subject)
+        ? resolveSpatial(props, { kind: "formation", id: subject }, time)
+        : resolveSpatial(props, { kind: "node", id: subject }, time);
+      ++resolvedSubjects;
+      const projection = projectToNdc(resolvedCamera, point, halfY, aspect);
+      if (
+        projection.depth >= camera.near &&
+        projection.depth <= camera.far &&
+        Math.abs(projection.ndcX) <= 1 &&
+        Math.abs(projection.ndcY) <= 1
+      )
+        ++readableSubjects;
+    } catch {}
+  return {
+    time,
+    requiredSubjects: props.contract.camera.requiredSubjects.length,
+    resolvedSubjects,
+    readableSubjects,
+    passed:
+      resolvedSubjects === props.contract.camera.requiredSubjects.length &&
+      readableSubjects === props.contract.camera.requiredSubjects.length,
+  };
+};
+
+const actorPoseAt = (
+  compiled: IAutoMovieCompiledShotSource,
+  node: IAutoMovieCompiledShotSource["scene"]["nodes"][number],
+  time: number,
+): ReturnType<typeof sampleMotion>["pose"] => {
+  const performance = compiled.shot.performances.find(
+    (candidate) => candidate.node === node.id,
+  );
+  const model = modelOf(compiled, node.model);
+  const skeleton = model.skeleton!;
+  const motionId = performance === undefined ? node.motion : performance.motion;
+  if (motionId === null)
+    return (
+      node.pose ?? {
+        skeleton: skeleton.id,
+        root: null,
+        joints: [],
+      }
+    );
+  const motion = compiled.motions.find(
+    (candidate) => candidate.id === motionId,
+  );
+  if (motion === undefined) throw new Error(`motion "${motionId}" is absent`);
+  return sampleMotion(
+    motion,
+    performance === undefined
+      ? time
+      : Math.max(0, time - performance.startOffset),
+  ).pose;
+};
+
+const actorTransformAt = (
+  compiled: IAutoMovieCompiledShotSource,
+  actor: string,
+  time: number,
+): IAutoMovieTransform => {
+  const node = compiled.scene.nodes.find((candidate) => candidate.id === actor);
+  if (node === undefined) throw new Error(`node "${actor}" is absent`);
+  const model = modelOf(compiled, node.model);
+  const pose =
+    model.skeleton === null ? null : actorPoseAt(compiled, node, time);
+  const sampled = sampleClipSequence(compiled.shot.objectMotions, time);
+  const translation = sampled.get(`node:${actor}:translation`)?.value;
+  const rotation = sampled.get(`node:${actor}:rotation`)?.value;
+  const scale = sampled.get(`node:${actor}:scale`)?.value;
+  const nodeTransform: IAutoMovieTransform = {
+    translation:
+      translation === undefined
+        ? node.transform.translation
+        : {
+            x: translation[0]!,
+            y: translation[1]!,
+            z: translation[2]!,
+          },
+    rotation:
+      rotation === undefined
+        ? node.transform.rotation
+        : {
+            x: rotation[0]!,
+            y: rotation[1]!,
+            z: rotation[2]!,
+            w: rotation[3]!,
+          },
+    scale:
+      scale === undefined
+        ? node.transform.scale
+        : { x: scale[0]!, y: scale[1]!, z: scale[2]! },
+  };
+  return pose?.root === null || pose === null
+    ? nodeTransform
+    : composeTransforms(nodeTransform, {
+        ...pose.root,
+        // Engine FK and the viewer both treat pose-root scale as identity.
+        scale: { x: 1, y: 1, z: 1 },
+      });
+};
+
+const modelOf = (
+  compiled: IAutoMovieCompiledShotSource,
+  id: string,
+): IAutoMovieModel => {
+  const model = compiled.models.find((candidate) => candidate.id === id);
+  if (model === undefined) throw new Error(`model "${id}" is absent`);
+  return model;
+};
+
+const composeTransforms = (
+  parent: IAutoMovieTransform,
+  child: IAutoMovieTransform,
+): IAutoMovieTransform => {
+  const rotated = Quaternion.rotateVector(parent.rotation, {
+    x: child.translation.x * parent.scale.x,
+    y: child.translation.y * parent.scale.y,
+    z: child.translation.z * parent.scale.z,
+  });
+  return {
+    translation: {
+      x: parent.translation.x + rotated.x,
+      y: parent.translation.y + rotated.y,
+      z: parent.translation.z + rotated.z,
+    },
+    rotation: Quaternion.multiply(parent.rotation, child.rotation),
+    scale: {
+      x: parent.scale.x * child.scale.x,
+      y: parent.scale.y * child.scale.y,
+      z: parent.scale.z * child.scale.z,
+    },
+  };
+};
+
+const bounds = (
+  points: readonly IAutoMovieVector3[],
+  select: (left: number, right: number) => number,
+): IAutoMovieVector3 =>
+  points.length === 0
+    ? { x: 0, y: 0, z: 0 }
+    : points.slice(1).reduce<IAutoMovieVector3>(
+        (result, point) => ({
+          x: select(result.x, point.x),
+          y: select(result.y, point.y),
+          z: select(result.z, point.z),
+        }),
+        { ...points[0]! },
+      );
+
+const vectorClose = (
+  left: IAutoMovieVector3,
+  right: IAutoMovieVector3,
+): boolean =>
+  Math.abs(left.x - right.x) <= 1e-9 &&
+  Math.abs(left.y - right.y) <= 1e-9 &&
+  Math.abs(left.z - right.z) <= 1e-9;
+
+const quaternionClose = (
+  left: IAutoMovieTransform["rotation"],
+  right: IAutoMovieTransform["rotation"],
+): boolean =>
+  Math.abs(
+    Math.abs(
+      left.x * right.x + left.y * right.y + left.z * right.z + left.w * right.w,
+    ) - 1,
+  ) <= 1e-9;

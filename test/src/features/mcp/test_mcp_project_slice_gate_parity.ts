@@ -1,5 +1,5 @@
 import { IAutoMovieScene, IAutoMovieShot } from "@automovie/interface";
-import { AutoMovieApplication, AutoMovieProject } from "@automovie/mcp";
+import { AutoMovieLegacyApplication, AutoMovieProject } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { hasViolation, throwsError } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 /** Write a crafted slice file into an already-opened project. */
 const writeSlice = (root: string, rel: string, value: unknown): void =>

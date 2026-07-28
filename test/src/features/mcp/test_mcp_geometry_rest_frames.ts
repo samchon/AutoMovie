@@ -12,7 +12,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpGeometryContext,
 } from "@automovie/mcp";
@@ -56,7 +56,7 @@ const offset = (
  */
 export const test_mcp_geometry_rest_frames = (): void => {
   const scriptWrite = makeScriptWrite();
-  const stagedResult = new AutoMovieApplication().stage({
+  const stagedResult = new AutoMovieLegacyApplication().stage({
     script: scriptWrite,
     staging: makeStagingWrite(),
   }).staged;
@@ -89,7 +89,7 @@ export const test_mcp_geometry_rest_frames = (): void => {
   });
   const pointTarget = { kind: "point" as const, point: target };
 
-  const explicit = new AutoMovieApplication();
+  const explicit = new AutoMovieLegacyApplication();
   const explicitPose = explicit.getResolvedPose({
     context: explicitContext,
     actor: actorNode.id,
@@ -149,7 +149,7 @@ export const test_mcp_geometry_rest_frames = (): void => {
     path.join(os.tmpdir(), "automovie-geometry-frames-"),
   );
   try {
-    const resident = new AutoMovieApplication({ projectRoot: root });
+    const resident = new AutoMovieLegacyApplication({ projectRoot: root });
     resident.commitScript({
       script: {
         logline: scriptWrite.logline,
@@ -184,7 +184,7 @@ export const test_mcp_geometry_rest_frames = (): void => {
       true,
     );
 
-    const reopened = new AutoMovieApplication({ projectRoot: root });
+    const reopened = new AutoMovieLegacyApplication({ projectRoot: root });
     TestValidator.equals(
       "reopened FK matches the explicit custom-frame context",
       reopened.getResolvedPose({ actor: actorNode.id }).resolvedPose,

@@ -21,7 +21,7 @@ This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.w
 - `packages/ingest` (`@automovie/ingest`): glTF/model ingestion via `@gltf-transform/core`.
 - `packages/viewer` (`@automovie/viewer`): the render/playback surface over `three.js` (the only package that imports `three`). A viewer, not an editor.
 - `packages/playground`: Vite demo pages exercising the pipeline end to end; capture-verified via headless Chrome (see `.agents/skills/viewer-verification/SKILL.md`).
-- `packages/mcp` (`@automovie/mcp`): the deterministic engine exposed as an MCP server. `AutoMovieApplication`'s methods (`stage`/`block`/`cut`/`forge`) become validated MCP tools via `typia.llm.controller` + `@typia/mcp`, for an external agent (Codex, Claude) to drive instead of an in-repo LLM workflow.
+- `packages/mcp` (`@automovie/mcp`): coding-agent production control over the deterministic engine. Canonical `AutoMovieApplication` exposes 15 bounded design/compiler/oracle/review tools; `AutoMovieLegacyApplication` preserves the old stage/block/perform/cut/forge facade, and `AutoMovieGatewayApplication` keeps its compact execute wrapper. All are driven by an external agent through `typia.llm.controller` + `@typia/mcp`; the repository hosts no internal LLM.
 - `test/` (`@automovie/test`): the `@nestia/e2e` `DynamicExecutor` program; one scenario per file under `test/src/features/<domain>/`, builders under `features/internal/`.
 - `internals/config`: shared base `tsconfig.json` and `assertBuild.js`.
 - `.wiki/` (gitignored): the working knowledge base (research, design, decisions, worklog). The first thing to read at session start.

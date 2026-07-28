@@ -1,6 +1,6 @@
 import { IAutoMovieVector3 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -113,7 +113,7 @@ const cameraFrame = {
  *    fallback.
  */
 export const test_mcp_perform_synthesis_gaps = (): void => {
-  const app = new AutoMovieApplication();
+  const app = new AutoMovieLegacyApplication();
   const script = makeScriptWrite();
   const staged = app.stage({ script, staging: makeStagingWrite() }).staged;
   if (staged.success !== true) throw new Error("staging must succeed");
@@ -127,7 +127,7 @@ export const test_mcp_perform_synthesis_gaps = (): void => {
   const performDraft = (
     draft: Record<string, unknown>[],
     actors: Record<string, IAutoMovieMcpActorContext>,
-  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+  ): ReturnType<AutoMovieLegacyApplication["perform"]>["performed"] =>
     app.perform({
       script,
       staged,
@@ -140,7 +140,7 @@ export const test_mcp_perform_synthesis_gaps = (): void => {
     }).performed;
 
   const hasType = (
-    performed: ReturnType<AutoMovieApplication["perform"]>["performed"],
+    performed: ReturnType<AutoMovieLegacyApplication["perform"]>["performed"],
     path: string,
   ): boolean =>
     performed.success === false &&
@@ -151,7 +151,7 @@ export const test_mcp_perform_synthesis_gaps = (): void => {
   // 1. launch onHit gaps: the target node lacks a context, then a rig.
   const launchAt = (
     onHitTargetActors: Record<string, IAutoMovieMcpActorContext>,
-  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+  ): ReturnType<AutoMovieLegacyApplication["perform"]>["performed"] =>
     performDraft(
       [
         {

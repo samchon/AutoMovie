@@ -1,10 +1,13 @@
-import { AutoMovieApplication, IAutoMovieMcpPropSpec } from "@automovie/mcp";
+import {
+  AutoMovieLegacyApplication,
+  IAutoMovieMcpPropSpec,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import { hasViolation } from "../internal/predicates";
 import { mcpDoorSpec } from "./test_mcp_forge_prop";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 type PropArticulation = NonNullable<IAutoMovieMcpPropSpec["articulation"]>;
 

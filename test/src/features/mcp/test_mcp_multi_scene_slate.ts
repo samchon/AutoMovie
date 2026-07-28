@@ -4,12 +4,12 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 const script: IAutoMovieScript = {
   logline: "two rooms, one night",

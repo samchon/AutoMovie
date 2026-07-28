@@ -1,6 +1,6 @@
 import { IAutoMovieScript, IAutoMovieSequence } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -43,7 +43,7 @@ const film: IAutoMovieSequence = {
 export const test_mcp_get_slate = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-getslate-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     app.commitScript({ script });
 
@@ -82,6 +82,9 @@ export const test_mcp_get_slate = (): void => {
   // 3. no project + no slate → actionable throw, not a silent empty slate.
   TestValidator.predicate(
     "getSlate without a project throws the openProject prompt",
-    throwsError(() => new AutoMovieApplication().getSlate({}), ["openProject"]),
+    throwsError(
+      () => new AutoMovieLegacyApplication().getSlate({}),
+      ["openProject"],
+    ),
   );
 };

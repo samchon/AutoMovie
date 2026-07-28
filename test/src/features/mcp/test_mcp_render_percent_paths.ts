@@ -6,7 +6,7 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -88,7 +88,7 @@ const spec: IAutoMovieRenderSpec = {
  *    manifest verbatim.
  */
 export const test_mcp_render_percent_paths = (): void => {
-  const app = new AutoMovieApplication();
+  const app = new AutoMovieLegacyApplication();
 
   // 1. percent overrides refuse at their located paths
   const percentFrameDir = app.planRender({

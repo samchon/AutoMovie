@@ -3,7 +3,7 @@ import {
   IAutoMovieScript,
   IAutoMovieShot,
 } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -57,7 +57,7 @@ const beatEnd: IAutoMovieBeatEndState = {
 export const test_mcp_project_resident_query = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-query-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     app.commitScript({ script });
 
@@ -126,7 +126,7 @@ export const test_mcp_project_resident_query = (): void => {
       ),
     );
 
-    const bare = new AutoMovieApplication();
+    const bare = new AutoMovieLegacyApplication();
     TestValidator.predicate(
       "no project + no slate is an actionable error",
       throwsError(() => bare.getScript({}), "openProject"),

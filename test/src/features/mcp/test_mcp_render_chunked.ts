@@ -7,7 +7,7 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -76,7 +76,7 @@ const filmSpec: IAutoMovieRenderSpec = {
   crf: 20,
 };
 
-const commitResident = (app: AutoMovieApplication): void => {
+const commitResident = (app: AutoMovieLegacyApplication): void => {
   app.commitScript({ script });
   app.commitScene({ scene, models: [] });
   app.commitShot({ shot });
@@ -112,7 +112,7 @@ const commitResident = (app: AutoMovieApplication): void => {
 export const test_mcp_render_chunked = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-chunk-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     const emptyCaptions = app.planCaptions({
       frameFormat: filmSpec.frameFormat,
@@ -425,7 +425,7 @@ export const test_mcp_render_chunked = (): void => {
   }
 
   // 7. no project + no slate throws the actionable openProject prompt
-  const bare = new AutoMovieApplication();
+  const bare = new AutoMovieLegacyApplication();
   TestValidator.predicate(
     "planChunkedRender without project or slate throws openProject prompt",
     throwsError(

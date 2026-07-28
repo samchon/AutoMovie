@@ -1,0 +1,11 @@
+{
+  "id": "answer-pose",
+  "target": { "kind": "shot", "id": "answer" },
+  "criterion": {
+    "kind": "frame",
+    "frame": "signal-answer",
+    "pass": "pose",
+    "expectation": "The second shot carries its own current hips-to-head and raised-arm pose evidence."
+  },
+  "required": true
+}

@@ -1,5 +1,13 @@
 node_modules/
 lib/
 dist/
+generated/
+.automovie/generated-manifest.json
+.automovie/revision.json
+.automovie/revision.lock
+.automovie/render-manifest.json
+.automovie/render-manifest-receipt.json
+.automovie/render-receipts/
+renders/*/
 *.log
 .DS_Store

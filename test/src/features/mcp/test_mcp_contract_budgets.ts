@@ -74,6 +74,17 @@ const SCHEMA_PAYLOAD_BUDGET = 500_000;
 const PER_TOOL_SCHEMA_BUDGET = 475_000;
 
 /**
+ * Semantic responsibilities that the compact gateway must expose without
+ * forcing a client to infer them from its large shared schema.
+ */
+const GATEWAY_DESCRIPTION_SIGNALS = {
+  getGuideDocument: ["unknown name", "direct entry point"],
+  openProject: ["durable memory", "does not stage"],
+  nextSteps: ["authoritative recovery path", "read-only"],
+  execute: ["exact-property semantics", "does not skip validation"],
+} as const;
+
+/**
  * The MCP surface's HARD budgets, machine-enforced. Tool descriptions and the
  * server instruction ship verbatim to client LLMs (#1129): a description past
  * the 1023-character cap truncates silently, an opening that buries the
@@ -96,7 +107,8 @@ const PER_TOOL_SCHEMA_BUDGET = 475_000;
  *
  * Scenarios (one live stdio handshake):
  *
- * 1. Every tool carries a non-empty description within the 1023-character cap.
+ * 1. Every tool carries substantial responsibility and correction context within
+ *    the 1023-character cap.
  * 2. The server instruction exists and its first 512 characters already state what
  *    the server is and how to start (the engine-enforces framing, the
  *    guide-document entry point): the inverted pyramid, not a build-up.
@@ -119,11 +131,21 @@ export const test_mcp_contract_budgets = async (): Promise<void> => {
       TestValidator.predicate(
         `tool description present: ${tool.name}`,
         typeof tool.description === "string" &&
-          tool.description.trim().length > 0,
+          tool.description.trim().length >= 400,
       );
       TestValidator.predicate(
         `tool description within 1023 chars: ${tool.name} (${tool.description!.length})`,
         tool.description!.length <= 1023,
+      );
+      const signals =
+        GATEWAY_DESCRIPTION_SIGNALS[
+          tool.name as keyof typeof GATEWAY_DESCRIPTION_SIGNALS
+        ];
+      const description = tool.description!.replace(/\s+/g, " ").toLowerCase();
+      TestValidator.predicate(
+        `tool description states responsibility and correction boundary: ${tool.name}`,
+        signals !== undefined &&
+          signals.every((signal) => description.includes(signal)),
       );
     }
 

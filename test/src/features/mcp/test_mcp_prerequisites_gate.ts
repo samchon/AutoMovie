@@ -1,6 +1,6 @@
 import { IAutoMovieScript } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -53,7 +53,7 @@ const emptySlate: IAutoMovieMcpWritableSlate = {
 export const test_mcp_prerequisites_gate = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-prereq-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
 
     TestValidator.predicate(
@@ -114,7 +114,7 @@ export const test_mcp_prerequisites_gate = (): void => {
       false,
     );
 
-    const orphan = new AutoMovieApplication();
+    const orphan = new AutoMovieLegacyApplication();
     TestValidator.predicate(
       "no project → the openProject guidance fires first",
       throwsError(

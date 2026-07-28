@@ -59,11 +59,19 @@ export const mountViewer = (
      * device-pixel-ratio.
      */
     pixelRatio?: number;
+
+    /**
+     * Keep the last drawn framebuffer available to a deterministic capture host
+     * after its explicit render call. Defaults to `false` for live playback;
+     * screenshot and readback hosts opt in.
+     */
+    preserveDrawingBuffer?: boolean;
   },
 ): IAutoMovieViewerHandle => {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: options?.antialias ?? true,
+    preserveDrawingBuffer: options?.preserveDrawingBuffer ?? false,
   });
   if (options?.pixelRatio !== undefined)
     renderer.setPixelRatio(options.pixelRatio);

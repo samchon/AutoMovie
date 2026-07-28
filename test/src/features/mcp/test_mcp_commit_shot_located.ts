@@ -1,6 +1,6 @@
 import { IAutoMovieScript, IAutoMovieShot } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -10,7 +10,7 @@ import {
   treeBeats,
 } from "../validation/test_validation_script_tree";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 
 const script = (withTree: boolean): IAutoMovieScript => ({
   logline: "A hunter becomes the hunted.",

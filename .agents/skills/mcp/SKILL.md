@@ -11,7 +11,7 @@ Each class (a `typia.llm.controller`) is one MCP server; each public method is o
 
 ## Server/tool arrangement is not settled
 
-How many servers, and how tools group across them, is a **standing design question, not a one-time decision**. Today `AutoMovieApplication` holds the five wired stages (`stage`/`block`/`perform`/`cut`/`forge`) in one class. `perform` keeps its MCP contract JSON-only by taking per-actor motion contexts and building the engine's default synthesizer inside the server. Whenever this surface changes:
+How many servers, and how tools group across them, is a **standing design question, not a one-time decision**. Today canonical `AutoMovieApplication` is the 15-tool coding-agent surface: bounded design records, deterministic compilation, geometry/frame oracles, and evidence-gated review. Ordinary screenplay, shot implementation, motion, tests, and render orchestration stay in repository code. `AutoMovieLegacyApplication` retains the former 47-operation stage/block/perform/cut/forge facade, while `AutoMovieGatewayApplication` advertises its compact execute union. The production surface still ships through the opt-in `automovie-mcp-production` binary while campaigns measure it against the legacy default. Whenever this surface changes:
 
 - Think deeply about the split before coding -- one server vs. several, one tool per engine call vs. coarser/finer groupings -- and write down the reasoning (a `.wiki/07-decisions/` entry or PR description).
 - Then **experiment**: build it, verify with a live MCP client handshake (see `packages/mcp/README.md`), and keep iterating. Do not treat the current shape as final; revisit it as more of the pipeline (review, multi-shot orchestration) gets wired.

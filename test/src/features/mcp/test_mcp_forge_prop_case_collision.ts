@@ -1,4 +1,7 @@
-import { AutoMovieApplication, IAutoMovieMcpPropSpec } from "@automovie/mcp";
+import {
+  AutoMovieLegacyApplication,
+  IAutoMovieMcpPropSpec,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -36,7 +39,7 @@ const caseVariant = (node: string): IAutoMovieMcpPropSpec => {
 export const test_mcp_forge_prop_case_collision = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-propcase-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
 
     const stored = app.forgeProp({ spec: caseVariant("Door") });

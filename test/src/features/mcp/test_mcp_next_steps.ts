@@ -1,5 +1,5 @@
 import { IAutoMovieScript, IAutoMovieShot } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -36,7 +36,7 @@ const script: IAutoMovieScript = {
  *    coarse rungs satisfied).
  */
 export const test_mcp_next_steps = (): void => {
-  const orphan = new AutoMovieApplication();
+  const orphan = new AutoMovieLegacyApplication();
   TestValidator.predicate(
     "no project → openProject guidance",
     throwsError(() => orphan.nextSteps(), "Call openProject"),
@@ -44,7 +44,7 @@ export const test_mcp_next_steps = (): void => {
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-next-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
 
     const fresh = app.nextSteps();

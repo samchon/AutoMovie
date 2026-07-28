@@ -1,5 +1,5 @@
 import { IAutoMovieScript, IAutoMovieShot } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -60,7 +60,7 @@ const makeShot = (beat: string, scene: string): IAutoMovieShot => ({
 export const test_mcp_resident_slice_order = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-order-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     app.commitScript({ script });
 

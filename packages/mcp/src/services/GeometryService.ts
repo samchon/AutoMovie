@@ -59,7 +59,7 @@ import {
 /**
  * Engine geometry queries, resolved poses, reach reports, and distance
  * measurements over the narrow geometry context. The MCP contract lives on the
- * {@link AutoMovieApplication} facade; this service owns the execution.
+ * {@link AutoMovieLegacyApplication} facade; this service owns the execution.
  */
 export class GeometryService {
   public constructor(private readonly context: AutoMovieContext) {}

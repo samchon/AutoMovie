@@ -4,7 +4,7 @@ import {
   IAutoMovieGait,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
   IAutoMovieMcpActorSpec,
 } from "@automovie/mcp";
@@ -116,7 +116,7 @@ const endActor = (node: keyof typeof ENDINGS): IAutoMovieBeatEndActorState => {
 export const test_mcp_actor_slice = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-actors-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     app.commitScript({
       script: {
@@ -433,7 +433,8 @@ export const test_mcp_actor_slice = (): void => {
   TestValidator.predicate(
     "eraseActor without a project throws the openProject prompt",
     throwsError(
-      () => new AutoMovieApplication().eraseActor({ node: "x", reason: "y" }),
+      () =>
+        new AutoMovieLegacyApplication().eraseActor({ node: "x", reason: "y" }),
       ["openProject"],
     ),
   );

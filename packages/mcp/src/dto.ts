@@ -1387,7 +1387,18 @@ export type AutoMovieGuideName =
   | "REVIEW"
   | "PROPS"
   | "PROJECT_MEMORY"
-  | "RENDER_GUIDES";
+  | "RENDER_GUIDES"
+  | "PRODUCTION_DESIGN"
+  | "MODEL_RECIPE"
+  | "WORLD_DESIGN"
+  | "FORMATION_DESIGN"
+  | "SHOT_CONTRACT"
+  | "ACCEPTANCE"
+  | "SOURCE_OWNERSHIP"
+  | "COMPILATION"
+  | "GEOMETRY"
+  | "PRODUCTION_REVIEW"
+  | "PRODUCTION_RENDER";
 
 /** The `getGuideDocument` tool's result. */
 export interface IAutoMovieGuideDocumentOutput {

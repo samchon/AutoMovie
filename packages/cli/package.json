@@ -1,7 +1,7 @@
 {
   "name": "@automovie/cli",
   "version": "0.1.0",
-  "description": "Scaffold an automovie project: an MCP server config and a direct-link engine starter.",
+  "description": "Scaffold a coding-agent-first AutoMovie production repository.",
   "main": "src/index.ts",
   "bin": {
     "automovie": "lib/bin.js"

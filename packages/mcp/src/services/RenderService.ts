@@ -71,7 +71,7 @@ import {
  * The render/see loop, deterministic render planning and the host-adapter frame
  * capture (#608). Pixels never flow through the server: the service plans the
  * frame and hands the context's capture adapter the request. The MCP contract
- * lives on the {@link AutoMovieApplication} facade.
+ * lives on the {@link AutoMovieLegacyApplication} facade.
  *
  * Like every stateful tool (#614), render is **resident-or-explicit**: omit
  * `slate` and it reads the resident project's `writableSlate()`, so a long

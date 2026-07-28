@@ -1,5 +1,5 @@
 import { IAutoMovieScript } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -42,7 +42,7 @@ export const test_mcp_project_resident_commit = (): void => {
   TestValidator.predicate(
     "malformed openProject request root rejects",
     throwsError(
-      () => new AutoMovieApplication().openProject(null as never),
+      () => new AutoMovieLegacyApplication().openProject(null as never),
       ["$input", "JSON object"],
     ),
   );
@@ -50,7 +50,7 @@ export const test_mcp_project_resident_commit = (): void => {
     "malformed openProject root field rejects",
     throwsError(
       () =>
-        new AutoMovieApplication().openProject({
+        new AutoMovieLegacyApplication().openProject({
           root: null as unknown as string,
         }),
       ["$input.root", "non-empty string"],
@@ -59,7 +59,7 @@ export const test_mcp_project_resident_commit = (): void => {
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-resident-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     const opened = app.openProject({ root });
     TestValidator.equals("fresh project empty", opened.project.script, false);
 

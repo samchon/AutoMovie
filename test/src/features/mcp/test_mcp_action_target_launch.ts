@@ -1,6 +1,6 @@
 import { IAutoMovieVector3 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -61,7 +61,7 @@ const cameraFrame = {
  *    describer short-circuits and reports no gap either.
  */
 export const test_mcp_action_target_launch = (): void => {
-  const app = new AutoMovieApplication();
+  const app = new AutoMovieLegacyApplication();
   const script = makeScriptWrite();
   const staged = app.stage({ script, staging: makeStagingWrite() }).staged;
   if (staged.success !== true) throw new Error("staging must succeed");
@@ -74,7 +74,7 @@ export const test_mcp_action_target_launch = (): void => {
 
   const performLaunch = (
     at: Record<string, unknown>,
-  ): ReturnType<AutoMovieApplication["perform"]>["performed"] =>
+  ): ReturnType<AutoMovieLegacyApplication["perform"]>["performed"] =>
     app.perform({
       script,
       staged,
@@ -102,7 +102,7 @@ export const test_mcp_action_target_launch = (): void => {
     }).performed;
 
   const noOnHitGap = (
-    performed: ReturnType<AutoMovieApplication["perform"]>["performed"],
+    performed: ReturnType<AutoMovieLegacyApplication["perform"]>["performed"],
   ): boolean =>
     performed.success === true ||
     (performed.success === false &&

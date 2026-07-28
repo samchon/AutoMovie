@@ -2,7 +2,7 @@ import {
   IAutoMovieBeatEndActorState,
   IAutoMovieBeatEndState,
 } from "@automovie/interface";
-import { AutoMovieApplication } from "@automovie/mcp";
+import { AutoMovieLegacyApplication } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -64,7 +64,7 @@ const beatEnd = (beat: string): IAutoMovieBeatEndState => ({
 export const test_mcp_block_resident = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-blockres-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
 
     // 3a. a fresh project refuses at BOTH missing slices, in one round.
@@ -196,7 +196,10 @@ export const test_mcp_block_resident = (): void => {
   TestValidator.predicate(
     "a resident block without a project throws the openProject prompt",
     throwsError(
-      () => new AutoMovieApplication().block({ blocking: makeBlockingWrite() }),
+      () =>
+        new AutoMovieLegacyApplication().block({
+          blocking: makeBlockingWrite(),
+        }),
       ["openProject"],
     ),
   );

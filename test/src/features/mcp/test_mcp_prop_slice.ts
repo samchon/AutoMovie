@@ -1,5 +1,8 @@
 import { IAutoMovieScript } from "@automovie/interface";
-import { AutoMovieApplication, IAutoMovieMcpPropSpec } from "@automovie/mcp";
+import {
+  AutoMovieLegacyApplication,
+  IAutoMovieMcpPropSpec,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
@@ -64,7 +67,7 @@ const crateSpec = (): IAutoMovieMcpPropSpec => ({
 export const test_mcp_prop_slice = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-props-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
 
     const door = app.forgeProp({ spec: mcpDoorSpec() });
@@ -277,7 +280,9 @@ export const test_mcp_prop_slice = (): void => {
       true,
     );
 
-    const pure = new AutoMovieApplication().forgeProp({ spec: mcpDoorSpec() });
+    const pure = new AutoMovieLegacyApplication().forgeProp({
+      spec: mcpDoorSpec(),
+    });
     TestValidator.equals(
       "pure forge output carries no stored key",
       "stored" in pure,
@@ -287,7 +292,10 @@ export const test_mcp_prop_slice = (): void => {
       "no active project throws the openProject prompt",
       throwsError(
         () =>
-          new AutoMovieApplication().eraseProp({ node: "door", reason: "x" }),
+          new AutoMovieLegacyApplication().eraseProp({
+            node: "door",
+            reason: "x",
+          }),
         "openProject",
       ),
     );

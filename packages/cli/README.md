@@ -8,11 +8,40 @@ npx automovie start my-film
 
 Lays down a starter with both ways to drive the engine:
 
-- an **MCP** server config (`automovie.config.jsonc`) for agent-driven film
-  production, and
-- a **direct-link** engine example (`src/motion.ts` + `src/main.ts`) that
-  computes a clip in code and runs it through the engine's `validateMotion` /
-  `sampleMotion` primitives.
+- ordinary TypeScript source for treatment, shot, motion, effects, and tests;
+- an **MCP** server config (`automovie.mcp.jsonc`) for deterministic compile,
+  geometry queries, actual-frame evidence, and review gates; and
+- a local viewer and Playwright capture path that render compiler-owned output.
+
+The coding agent owns `src`, `docs`, `test`, and `public`. AutoMovie owns bounded
+design documents, the `generated` directory, compile fingerprints, and the
+review ledger. The starter intentionally keeps long-form authoring in files
+instead of asking the model to serialize dense motion graphs through tool
+calls.
+
+## Starter workflow
+
+```bash
+pnpm install
+pnpm compile
+pnpm test
+pnpm preview -- --shot opening --time 2 --pass beauty
+pnpm review:status
+# Complete the current evidence-bound MCP review, then:
+pnpm lint
+```
+
+`pnpm compile` is the only command allowed to materialize `generated` output.
+`pnpm lint` is stricter: it reruns compilation without writing and fails until
+every current design, source, shot, and film review is complete. `preview`
+captures the project-owned viewer and records a frame tied to target-local
+generated/viewer inputs and the renderer identity; review cannot complete
+against an arbitrary or stale screenshot.
+
+The current capture scaffold requires system Google Chrome. It requests
+SwiftShader and records both the browser version and the WebGL vendor/renderer
+actually reported by the canvas; projects without Chrome must configure a
+project-owned capture adapter.
 
 ## Usage
 

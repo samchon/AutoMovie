@@ -8,8 +8,8 @@ import {
 import { AutoMovieProject } from "./project/AutoMovieProject";
 
 /**
- * Runtime context shared by the {@link AutoMovieApplication} facade and its
- * services, the deterministic infrastructure the tools run on, never LLM
+ * Runtime context shared by the {@link AutoMovieLegacyApplication} facade and
+ * its services, the deterministic infrastructure the tools run on, never LLM
  * orchestration.
  *
  * It carries the host-injected frame-capture adapter (#608) and the resident

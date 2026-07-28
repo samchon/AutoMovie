@@ -4,7 +4,7 @@ import {
   IAutoMovieScene,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpCaptureRequest,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
@@ -77,7 +77,7 @@ const spec: IAutoMovieRenderSpec = {
  */
 export const test_mcp_see_frame_capture = async (): Promise<void> => {
   const requests: IAutoMovieMcpCaptureRequest[] = [];
-  const app = new AutoMovieApplication({
+  const app = new AutoMovieLegacyApplication({
     capture: async (request) => {
       requests.push(request);
       return {
@@ -120,7 +120,7 @@ export const test_mcp_see_frame_capture = async (): Promise<void> => {
     1,
   );
 
-  const failing = new AutoMovieApplication({
+  const failing = new AutoMovieLegacyApplication({
     capture: async () => {
       throw new Error("browser lost");
     },

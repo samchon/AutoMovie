@@ -6,7 +6,7 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -96,7 +96,7 @@ const spec = (fps: number): IAutoMovieRenderSpec => ({
  *    `chunkFrames: 2`).
  */
 export const test_mcp_render_chunked_zero_frame = (): void => {
-  const app = new AutoMovieApplication();
+  const app = new AutoMovieLegacyApplication();
 
   // 1. zero output frames → violation, not a thrown engine error
   const chunked = app.planChunkedRender({

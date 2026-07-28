@@ -1,0 +1,290 @@
+import { AutoMovieGuidePass, IAutoMovieRenderSpec } from "../cinematics";
+import { IAutoMovieVector3 } from "../geometry";
+import { IAutoMovieDiagnostic } from "./IAutoMovieProductionCompiler";
+import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
+
+/** A point, actor or named world anchor used by geometry queries. */
+export type IAutoMovieGeometrySelector =
+  | {
+      /** Explicit world-space point. */
+      kind: "point";
+      /** Position in meters. */
+      position: IAutoMovieVector3;
+    }
+  | {
+      /** Named actor root or bone. */
+      kind: "actor";
+      /** Actor id. */
+      actor: string;
+      /** Optional bone id. */
+      bone?: string;
+    }
+  | {
+      /** Named world landmark. */
+      kind: "landmark";
+      /** Landmark id. */
+      landmark: string;
+    };
+
+/** One compact query over the current compiled production. */
+export type AutoMovieGeometryQuery =
+  | {
+      /** Distance query. */
+      query: "distance";
+      /** First selector. */
+      from: IAutoMovieGeometrySelector;
+      /** Second selector. */
+      to: IAutoMovieGeometrySelector;
+      /** Optional shot that disambiguates recurring actors. */
+      shot?: string;
+      /** Optional shot-local sample time, zero by default. */
+      time?: number;
+    }
+  | {
+      /** Reachability query. */
+      query: "reach";
+      /** Actor id. */
+      actor: string;
+      /** Optional shot that disambiguates actors appearing more than once. */
+      shot?: string;
+      /** Target selector. */
+      target: IAutoMovieGeometrySelector;
+      /** Optional shot time in seconds. */
+      time?: number;
+    }
+  | {
+      /** Resolved pose query. */
+      query: "pose";
+      /** Actor id. */
+      actor: string;
+      /** Optional shot id. */
+      shot?: string;
+      /** Time in seconds. */
+      time: number;
+    }
+  | {
+      /** World-ground query. */
+      query: "ground";
+      /** Horizontal world point. */
+      point: {
+        /** World X in meters. */
+        x: number;
+        /** World Z in meters. */
+        z: number;
+      };
+    }
+  | {
+      /** Formation bounds and slot query. */
+      query: "formation";
+      /** Formation id. */
+      formation: string;
+    }
+  | {
+      /**
+       * Camera root-point projection query; pixel occlusion remains a
+       * frame-review concern.
+       */
+      query: "camera";
+      /** Shot id. */
+      shot: string;
+      /** Time in seconds. */
+      time: number;
+      /** Unique compiled scene-node ids whose animated roots are projected. */
+      subjects: string[];
+    };
+
+/**
+ * Tool-compatible wrapper around the exact geometry-query union.
+ *
+ * MCP controllers require one non-union object parameter; the nested request
+ * preserves discriminator validation without widening mutually exclusive fields
+ * into optional properties.
+ */
+export interface IAutoMovieQueryGeometryInput {
+  /**
+   * Exact compact query over the current source compile. Selectors refer to
+   * compiled node, formation or world identities, not caller-supplied
+   * geometry.
+   */
+  request: AutoMovieGeometryQuery;
+}
+
+/** Geometry result intentionally remains compact and query-specific. */
+export type IAutoMovieGeometryResult =
+  | {
+      /** Distance in meters. */
+      kind: "distance";
+      /** Measured value. */
+      meters: number;
+    }
+  | {
+      /** Ground sample. */
+      kind: "ground";
+      /** Surface height in meters. */
+      height: number;
+      /** Matching surface id, or null. */
+      surface: string | null;
+      /** Whether the surface is walkable. */
+      walkable: boolean;
+    }
+  | {
+      /** Generic current-compile measurement. */
+      kind: "measurement";
+      /** Machine-readable metric names and scalar or text values. */
+      values: Record<string, number | string | boolean>;
+    };
+
+/** Result of one geometry query. */
+export interface IAutoMovieQueryGeometryOutput {
+  /** Echoed query family. */
+  query: AutoMovieGeometryQuery["query"];
+  /** Current compile fingerprint or null before a successful compile. */
+  compileFingerprint: AutoMovieContentDigest | null;
+  /**
+   * Engine-derived result, or null when compilation is missing or stale, a
+   * selector is ambiguous, or the requested fact cannot be measured.
+   */
+  result: IAutoMovieGeometryResult | null;
+  /** Exact refusal diagnostics and the correction required before retrying. */
+  diagnostics: IAutoMovieDiagnostic[];
+}
+
+/** Request one actual current preview frame. */
+export interface IAutoMoviePreviewFrameInput {
+  /**
+   * Exact shot target. Whole-film review composes the required current frames
+   * of every shot; a film id is not itself a renderable shot timeline.
+   */
+  target: {
+    /** Shot target. */
+    kind: "shot";
+    /** Shot id. */
+    id: string;
+  };
+  /**
+   * Finite non-negative shot-local time no later than shot duration. The oracle
+   * snaps it to the nearest current production frame.
+   */
+  time: number;
+  /** Requested render pass, beauty by default. */
+  pass?: AutoMovieGuidePass;
+  /**
+   * Optional positive integer width, no larger than production width. Width
+   * times height may not exceed 16,777,216 pixels.
+   */
+  width?: number;
+  /**
+   * Optional positive integer height, no larger than production height. Width
+   * times height may not exceed 16,777,216 pixels.
+   */
+  height?: number;
+}
+
+/** An actual PNG frame bound to a compile and render bundle. */
+export interface IAutoMoviePreviewFrameOutput {
+  /**
+   * True only after current decodable, dimension-matching PNG bytes with
+   * visible pixel variance are verified and committed to a render bundle.
+   */
+  captured: boolean;
+  /** Current compile fingerprint. */
+  compileFingerprint: AutoMovieContentDigest;
+  /** Project-relative content-addressed render bundle, or null on any refusal. */
+  renderBundle: string | null;
+  /** Verified frame metadata or null on refusal. */
+  frame: {
+    /** Zero-based frame index. */
+    index: number;
+    /** Frame time in seconds. */
+    time: number;
+    /** Render pass. */
+    pass: AutoMovieGuidePass;
+    /** Project-relative PNG path. */
+    path: string;
+    /** Raster media type. */
+    mime: "image/png";
+    /** Raw PNG digest. */
+    digest: AutoMovieContentDigest;
+    /** Pixel width. */
+    width: number;
+    /** Pixel height. */
+    height: number;
+  } | null;
+  /** Exact capture refusal diagnostics and correction, empty on success. */
+  diagnostics: IAutoMovieDiagnostic[];
+}
+
+/** Content-addressed manifest for preview and production frames. */
+export interface IAutoMovieRenderBundleManifest {
+  /** Bundle manifest format. */
+  version: 2;
+  /** Shot or film render target. */
+  target:
+    | {
+        /** Shot target. */
+        kind: "shot";
+        /** Shot id. */
+        id: string;
+      }
+    | {
+        /** Film target. */
+        kind: "film";
+        /** Film id. */
+        id: string;
+      };
+  /** Compile fingerprint whose bytes were rendered. */
+  compileFingerprint: AutoMovieContentDigest;
+  /**
+   * Non-blank host-declared browser and graphics-backend identity used for
+   * every frame in this bundle.
+   */
+  rendererIdentity: string;
+  /**
+   * Target-local render identity. Unlike the aggregate compile fingerprint,
+   * this changes only when this target's compiled bytes or declared viewer,
+   * capture, configuration, or asset inputs change. `rendererIdentity`
+   * separately distinguishes the browser and graphics backend.
+   */
+  targetFingerprint: AutoMovieContentDigest;
+  /** Deterministic render specification. */
+  renderSpec: IAutoMovieRenderSpec;
+  /** Verified PNG frames in the bundle. */
+  frames: Array<{
+    /** Zero-based frame index. */
+    index: number;
+    /** Frame time in seconds. */
+    time: number;
+    /** Render pass. */
+    pass: AutoMovieGuidePass;
+    /** Bundle-relative PNG path. */
+    path: string;
+    /** Raw PNG digest. */
+    digest: AutoMovieContentDigest;
+    /** Pixel width. */
+    width: number;
+    /** Pixel height. */
+    height: number;
+  }>;
+}
+
+/** Host-owned adapter that captures a current compiled production frame. */
+export type AutoMovieProductionFrameCapture = (
+  input: IAutoMoviePreviewFrameInput & {
+    /** Active project root. */
+    projectRoot: string;
+    /** Current compile fingerprint. */
+    compileFingerprint: AutoMovieContentDigest;
+  },
+) => Promise<{
+  /** Raw PNG bytes. */
+  bytes: Uint8Array;
+  /**
+   * Non-blank browser and graphics-backend identity. A host must change this
+   * when either implementation can change pixel output.
+   */
+  rendererIdentity: string;
+  /** Pixel width. */
+  width: number;
+  /** Pixel height. */
+  height: number;
+}>;

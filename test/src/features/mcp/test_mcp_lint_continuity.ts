@@ -4,7 +4,10 @@ import {
   IAutoMovieShot,
   IAutoMovieValidation,
 } from "@automovie/interface";
-import { AutoMovieApplication, IAutoMovieMcpMotion } from "@automovie/mcp";
+import {
+  AutoMovieLegacyApplication,
+  IAutoMovieMcpMotion,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -18,7 +21,7 @@ import {
 } from "../internal/fixtures";
 import { hasWarning, warningCount } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const skeleton = createSkeleton();
 const model = createModel(skeleton);
 

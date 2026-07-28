@@ -4,7 +4,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -20,7 +20,7 @@ import { hasViolation } from "../internal/predicates";
 
 type ICoverage = IAutoMovieBlockingApplication.ICoverageIntent;
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const script = makeScriptWrite();
 const staged = app.stage({
   script,

@@ -4,7 +4,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -109,7 +109,7 @@ const lookAt = (to: IAutoMovieActionCall) =>
  *    reachable for the case to test the table rather than the neck's ROM.
  */
 export const test_mcp_perform_camera_target = (): void => {
-  const app = new AutoMovieApplication();
+  const app = new AutoMovieLegacyApplication();
   const staged = app.stage({ script, staging }).staged;
   if (staged.success !== true) throw new Error("staging fixture must succeed");
 

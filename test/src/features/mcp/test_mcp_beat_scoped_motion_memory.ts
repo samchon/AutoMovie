@@ -1,6 +1,6 @@
 import { IAutoMovieGait, IAutoMovieVector3 } from "@automovie/interface";
 import {
-  AutoMovieApplication,
+  AutoMovieLegacyApplication,
   IAutoMovieMcpActorContext,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -57,7 +57,7 @@ const actorContext = (
 export const test_mcp_beat_scoped_motion_memory = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-beatmem-"));
   try {
-    const app = new AutoMovieApplication();
+    const app = new AutoMovieLegacyApplication();
     app.openProject({ root });
     const scriptWrite = makeScriptWrite({
       beats: [

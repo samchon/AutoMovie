@@ -3,14 +3,17 @@ import {
   IAutoMovieReviewNote,
   IAutoMovieShot,
 } from "@automovie/interface";
-import { AutoMovieApplication, IAutoMovieMcpStoredSlate } from "@automovie/mcp";
+import {
+  AutoMovieLegacyApplication,
+  IAutoMovieMcpStoredSlate,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 import { throwsError } from "../internal/predicates";
 
-const app = new AutoMovieApplication();
+const app = new AutoMovieLegacyApplication();
 const script = makeScriptWrite();
 const staged = app.stage({ script, staging: makeStagingWrite() }).staged;
 if (staged.success !== true) throw new Error("staging fixture must succeed");

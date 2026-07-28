@@ -1,0 +1,77 @@
+{
+  "id": "opening",
+  "beat": "signal",
+  "source": {
+    "module": "src/shots/opening.ts",
+    "export": "opening"
+  },
+  "durationSeconds": 6,
+  "participants": [
+    { "kind": "actor", "id": "sentinel" }
+  ],
+  "opening": [
+    {
+      "id": "arm-lowered",
+      "description": "The sentinel begins in a readable neutral stance.",
+      "predicates": [
+        {
+          "kind": "joint-angle",
+          "actor": "sentinel",
+          "bone": "leftUpperArm",
+          "axis": "abduction",
+          "operator": "==",
+          "value": 0,
+          "tolerance": 0.001
+        }
+      ]
+    }
+  ],
+  "closing": [
+    {
+      "id": "signal-held",
+      "description": "The raised arm holds the signal at the final frame.",
+      "predicates": [
+        {
+          "kind": "joint-angle",
+          "actor": "sentinel",
+          "bone": "leftUpperArm",
+          "axis": "abduction",
+          "operator": ">=",
+          "value": 100,
+          "tolerance": 0.001
+        }
+      ]
+    }
+  ],
+  "camera": {
+    "intent": "A full-body three-quarter view proves silhouette and pose-pass wiring.",
+    "requiredSubjects": ["sentinel"],
+    "maxOcclusionRatio": 0.05
+  },
+  "events": [
+    {
+      "id": "signal-raised",
+      "kind": "reveal",
+      "window": { "from": 1.5, "to": 3 },
+      "subjects": ["sentinel"],
+      "predicates": [
+        {
+          "kind": "joint-angle",
+          "actor": "sentinel",
+          "bone": "leftUpperArm",
+          "axis": "abduction",
+          "operator": ">=",
+          "value": 100,
+          "tolerance": 0.001
+        }
+      ]
+    }
+  ],
+  "reviewFrames": [
+    {
+      "id": "signal-apex",
+      "time": 2,
+      "passes": ["beauty", "mask", "pose"]
+    }
+  ]
+}
