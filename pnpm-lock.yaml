@@ -122,6 +122,10 @@ importers:
         version: 7.0.2
 
   packages/cli:
+    dependencies:
+      '@automovie/mcp':
+        specifier: workspace:^
+        version: link:../mcp
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript

@@ -195,6 +195,14 @@ data. The surgical tools (`eraseShot`/`eraseNotes`/`eraseProp`/`eraseActor`,
 `setActorPerformance`/`setPlacement`) exist only in resident mode and demand a
 `reason`. See the `PROJECT_MEMORY` guide for the write-through rules.
 
+`AutoMovieLegacyImporter` is the explicit bridge from this resident v1 layout
+to format-v2 production memory. `plan()` validates a temporary byte copy and
+returns exact inventory, conservative design drafts, unrecoverable source TODOs,
+and diagnostics without mutating the legacy root. `apply()` atomically records
+that plan and provenance under `.automovie`; `rollback()` removes it only while
+the imported state and any newly owned source/output directories remain
+untouched. The CLI exposes the same contract through `automovie migrate`.
+
 Render/see tools plan deterministic output, and `seeFrame` can also use a
 host-injected capture adapter. `planRender` resolves a committed shot or film
 into deterministic frame times, frame paths, guide-pass paths, and ffmpeg args.

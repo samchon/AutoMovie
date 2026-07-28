@@ -54,6 +54,9 @@
       "./package.json": "./package.json"
     }
   },
+  "dependencies": {
+    "@automovie/mcp": "workspace:^"
+  },
   "devDependencies": {
     "@types/node": "catalog:utils",
     "rimraf": "catalog:utils",

@@ -4,6 +4,8 @@ Scaffold an [automovie](https://github.com/samchon/automovie) project.
 
 ```bash
 npx automovie start my-film
+npx automovie migrate legacy-film --dry-run
+npx automovie migrate legacy-film
 ```
 
 Lays down a starter with both ways to drive the engine:
@@ -47,12 +49,20 @@ project-owned capture adapter.
 
 ```
 npx automovie start <directory> [--force]
+npx automovie migrate <directory> [--dry-run | --rollback]
 ```
 
 `start` refuses a non-empty directory unless `--force`. The scaffolded project's
 `@automovie/*` dependency versions are baked in at build time from this repo's
 own catalog (`build/sync-versions.mjs`), so a starter never drifts from the
 engine it targets.
+
+`migrate --dry-run` validates legacy v1 storage from a temporary copy and prints
+the immutable byte inventory, production and shot drafts, source TODOs, and
+warnings without touching the project. Plain `migrate` atomically adds only
+tracked `.automovie` provenance; it never rewrites legacy files or guesses the
+missing creative TypeScript. `--rollback` removes that state only while no
+production work has changed it.
 
 ## API
 

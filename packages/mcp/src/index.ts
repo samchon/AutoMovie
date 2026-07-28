@@ -10,6 +10,7 @@ export * from "./createAutoMovieProductionMcpServer";
 export * from "./dto";
 export * from "./project/AutoMovieProject";
 export * from "./project/commitLock";
+export * from "./production/AutoMovieLegacyImporter";
 export * from "./production/AutoMovieProductionCompiler";
 export * from "./production/AutoMovieProductionContext";
 export * from "./production/AutoMovieProductionOracleService";
