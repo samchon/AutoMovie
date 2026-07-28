@@ -902,7 +902,10 @@ try {
     existsSync(join(legacyDir, ".automovie"))
   )
     fail("packaged legacy rollback did not restore the legacy-only tree");
-  const starterDir = join(projectDir, "production-starter");
+  // Keep the strict-layout probe outside the npm-hoisted fixture project.
+  // Otherwise Node can climb to projectDir/node_modules and hide a missing
+  // production dependency from the pnpm-installed scaffold.
+  const starterDir = join(stage, "production-starter");
   run(
     "scaffold packaged production starter",
     `node "${cliBin}" start "${starterDir}"`,
