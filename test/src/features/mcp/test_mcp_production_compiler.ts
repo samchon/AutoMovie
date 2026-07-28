@@ -380,6 +380,19 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       ),
     );
     fs.writeFileSync(sourcePath, original);
+    const outsideRoot = {
+      ...shotContract(),
+      source: { module: "outside/source.ts", export: "opening" },
+    };
+    const outsideRootMutation = project.setShotContract(outsideRoot);
+    TestValidator.predicate(
+      "canonical source outside configured roots reaches the compiler boundary",
+      outsideRootMutation.accepted &&
+        diagnosticCodes(compiler.compile({ scope: "source" })).has(
+          "source-path-outside-root",
+        ),
+    );
+    project.setShotContract(shotContract());
     const outside = {
       ...shotContract(),
       source: { module: "../outside.ts", export: "opening" },
