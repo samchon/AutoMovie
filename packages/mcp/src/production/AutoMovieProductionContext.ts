@@ -76,8 +76,9 @@ export class AutoMovieProductionContext {
     const review = new AutoMovieProductionReviewService(project, () =>
       statusCompiler.lint({ scope: "source" }),
     );
-    const compiler = new AutoMovieProductionCompiler(project, (status) =>
-      review.queue(status),
+    const compiler = new AutoMovieProductionCompiler(
+      project,
+      (status, snapshot) => review.queue(status, snapshot),
     );
     this.active = {
       project,

@@ -56,8 +56,9 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     const review = new AutoMovieProductionReviewService(project);
-    const compiler = new AutoMovieProductionCompiler(project, () =>
-      review.queue(),
+    const compiler = new AutoMovieProductionCompiler(
+      project,
+      (status, snapshot) => review.queue(status, snapshot),
     );
 
     const designOnly = compiler.lint({ scope: "design" });
@@ -77,10 +78,18 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       ),
     );
     fs.rmSync(preexistingGenerated);
+    const firstContentInputs = project.contentInputs;
+    let firstContentReads = 0;
+    project.contentInputs = (() => {
+      ++firstContentReads;
+      return firstContentInputs.call(project);
+    }) as typeof project.contentInputs;
     const first = compiler.compile({ scope: "source" });
+    project.contentInputs = firstContentInputs;
     TestValidator.predicate(
-      "starter source compiles",
+      "starter source compiles from one shared snapshot and two commit guards",
       first.success &&
+        firstContentReads === 3 &&
         first.materialized.some(
           (file) =>
             file.path === "shots/opening.json" && file.status === "created",
@@ -712,6 +721,42 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       );
     }
     project.contentInputs = residentContentInputs;
+    const generatedBeforeContentRace = fs.readFileSync(
+      generatedManifestPath,
+      "utf8",
+    );
+    const revisionBeforeContentRace = project.revision();
+    const currentContent = residentContentInputs.call(project);
+    let contentRaceReads = 0;
+    project.contentInputs = (() => {
+      ++contentRaceReads;
+      if (contentRaceReads < 3) return currentContent;
+      let changed = false;
+      return currentContent.map((content) => {
+        if (changed || content.bytes === null) return content;
+        changed = true;
+        return {
+          ...content,
+          bytes: Buffer.concat([
+            Buffer.from(content.bytes),
+            Buffer.from("\ncontent race"),
+          ]),
+        };
+      });
+    }) as typeof project.contentInputs;
+    fs.writeFileSync(sourcePath, `${original}\n// guarded content race\n`);
+    const racedContentCommit = compiler.compile({ scope: "source" });
+    project.contentInputs = residentContentInputs;
+    fs.writeFileSync(sourcePath, original);
+    TestValidator.predicate(
+      "late content races roll generated output back before revision publication",
+      racedContentCommit.success === false &&
+        diagnosticCodes(racedContentCommit).has("compile-input-changed") &&
+        contentRaceReads === 3 &&
+        project.revision() === revisionBeforeContentRace &&
+        fs.readFileSync(generatedManifestPath, "utf8") ===
+          generatedBeforeContentRace,
+    );
     const residentReadGenerated = project.readGeneratedFile;
     project.readGeneratedFile = (() => {
       const iterator = (function* (): Generator<void> {

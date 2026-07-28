@@ -312,8 +312,9 @@ export const test_mcp_production_review = async (): Promise<void> => {
       "one physical frame may witness two distinct semantic review-frame ids",
       project.setShotContract(aliasedReviewFrameShot).accepted,
     );
-    const compiler = new AutoMovieProductionCompiler(project, () =>
-      review.queue(),
+    const compiler = new AutoMovieProductionCompiler(
+      project,
+      (status, snapshot) => review.queue(status, snapshot),
     );
     const compiledStatus = compiler.compile({ scope: "source" });
     TestValidator.predicate("review fixture compiles", compiledStatus.success);

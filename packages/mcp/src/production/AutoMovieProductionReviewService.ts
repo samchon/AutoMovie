@@ -28,6 +28,7 @@ import {
   AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
   AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
   AutoMovieProductionCompiler,
+  IAutoMovieReviewQueueSnapshot,
 } from "./AutoMovieProductionCompiler";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
 import {
@@ -318,15 +319,21 @@ export class AutoMovieProductionReviewService {
     };
   }
 
-  /** Derive missing, stale, incomplete, revise and complete states. */
+  /**
+   * Derive missing, stale, incomplete, revise and complete states.
+   *
+   * A compiler-provided snapshot reuses the exact declared content bytes that
+   * formed its input fingerprint instead of opening a second filesystem scan.
+   */
   public queue(
     currentCompileStatus: IAutoMovieCompileProjectOutput = this.compileStatus(),
+    snapshot?: IAutoMovieReviewQueueSnapshot,
   ): IAutoMovieReviewQueue {
     const compileStatus = currentCompileStatus;
     const context: IReviewReadContext = {
       renderInventory: collectRenderManifestInventory(this.project),
       fingerprints: new Map(),
-      renderContentInputs: undefined,
+      renderContentInputs: snapshot?.renderContentInputs,
       renderTargetFingerprints: new Map(),
     };
     const entries = reviewTargets(this.project).map((target) => {

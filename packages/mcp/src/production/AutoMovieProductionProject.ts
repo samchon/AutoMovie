@@ -864,10 +864,14 @@ export class AutoMovieProductionProject {
     };
   }
 
-  /** Atomically commit a generated manifest and its already staged files. */
+  /**
+   * Atomically commit generated files while an optional compiler input guard
+   * remains current before and after every staged write.
+   */
   public commitGenerated(
     files: ReadonlyMap<string, Uint8Array>,
     manifest: IAutoMovieGeneratedManifest,
+    inputCurrent?: () => boolean,
   ): number {
     const writes: IStagedFile[] = [];
     const previous = this.generatedManifest();
@@ -901,8 +905,14 @@ export class AutoMovieProductionProject {
         path: manifestPath,
         content: serializedManifest,
       });
-    if (writes.length === 0) return this.revision();
-    return this.commitFiles(writes);
+    if (writes.length === 0) {
+      if (inputCurrent?.() === false)
+        throw new AutoMovieProductionInputRaceError(
+          "Production inputs changed before generated output was confirmed current.",
+        );
+      return this.revision();
+    }
+    return this.commitFiles(writes, inputCurrent);
   }
 
   /** Read one stored review record. */

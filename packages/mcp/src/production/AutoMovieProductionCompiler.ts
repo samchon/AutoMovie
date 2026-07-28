@@ -29,8 +29,10 @@ import typia from "typia";
 
 import { validateSceneArtifact } from "../validators/artifacts";
 import {
+  AutoMovieProductionInputRaceError,
   AutoMovieProductionProject,
   AutoMovieProductionSourcePathError,
+  IAutoMovieProductionContentInput,
 } from "./AutoMovieProductionProject";
 import {
   AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL,
@@ -62,8 +64,15 @@ export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
 ).version;
 
 /** Current review queue provider shared with the review service. */
+export interface IAutoMovieReviewQueueSnapshot {
+  /** Exact content inventory already used by the compiler fingerprint. */
+  renderContentInputs: IAutoMovieProductionContentInput[];
+}
+
+/** Current review queue provider shared with the review service. */
 export type AutoMovieReviewQueueProvider = (
   compileStatus: IAutoMovieCompileProjectOutput,
+  snapshot?: IAutoMovieReviewQueueSnapshot,
 ) => IAutoMovieReviewQueue;
 
 /**
@@ -211,19 +220,11 @@ export class AutoMovieProductionCompiler {
       }
     }
     const contentFields: IAutoMovieFingerprintField[] = [];
+    let contentInputs: IAutoMovieProductionContentInput[] | undefined;
     if (input.scope !== "design")
       try {
-        for (const content of this.project.contentInputs())
-          contentFields.push({
-            role: `content:${content.path}`,
-            kind: content.bytes === null ? "absent" : "file",
-            payload:
-              content.bytes === null
-                ? new Uint8Array()
-                : content.source && isTypeScriptSourcePath(content.path)
-                  ? normalizeAutoMovieSource(content.bytes)
-                  : content.bytes,
-          });
+        contentInputs = this.project.contentInputs();
+        contentFields.push(...contentFingerprintFields(contentInputs));
       } catch (error) {
         diagnostics.push({
           code: "content-input-unsafe",
@@ -239,19 +240,11 @@ export class AutoMovieProductionCompiler {
           payload: new Uint8Array(),
         });
       }
-    const inputFingerprint = fingerprintAutoMovieFields([
-      {
-        role: "protocol",
-        kind: "compile-input",
-        payload: Buffer.from(
-          `${AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL}\0${AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL}\0${AUTOMOVIE_PRODUCTION_COMPILER_VERSION}`,
-          "utf8",
-        ),
-      },
-      ...designFingerprintFields(graph),
-      ...sourceFields,
-      ...contentFields,
-    ]);
+    const inputFingerprint = productionCompilerInputFingerprint(
+      graph,
+      sourceFields,
+      contentFields,
+    );
     const files =
       input.scope === "design"
         ? null
@@ -302,12 +295,18 @@ export class AutoMovieProductionCompiler {
       reviews: { entries: [] },
       materialized: [],
     });
+    const reviewSnapshot: IAutoMovieReviewQueueSnapshot | undefined =
+      contentInputs === undefined
+        ? undefined
+        : {
+            renderContentInputs: contentInputs,
+          };
     const reviews: IAutoMovieReviewQueue =
       diagnostics.some(
         (diagnostic) => diagnostic.code === "content-input-unsafe",
       ) || input.scope === "design"
         ? { entries: [] }
-        : this.reviewQueue(statusForReview());
+        : this.reviewQueue(statusForReview(), reviewSnapshot);
     if (input.scope === "review" || input.scope === "final")
       diagnostics.push(...reviewGateDiagnostics(reviews));
     if (input.scope === "final")
@@ -362,7 +361,39 @@ export class AutoMovieProductionCompiler {
         reviews,
         materialized: [],
       };
-    const revision = this.project.commitGenerated(files, manifest);
+    let revision: number;
+    try {
+      revision = this.project.commitGenerated(
+        files,
+        manifest,
+        () =>
+          currentProductionCompilerInputFingerprint(this.project) ===
+          inputFingerprint,
+      );
+    } catch (error) {
+      if (error instanceof AutoMovieProductionInputRaceError === false)
+        throw error;
+      diagnostics.push({
+        code: "compile-input-changed",
+        category: "error",
+        phase: "compile",
+        target: "compiler-input",
+        path: null,
+        message: `${error.message} Re-run compileProject against the current design, source and declared content snapshot.`,
+      });
+      diagnostics.sort(compareDiagnostics);
+      return {
+        success: false,
+        revision: this.project.revision(),
+        compiler: {
+          version: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+          inputFingerprint,
+        },
+        diagnostics,
+        reviews,
+        materialized: [],
+      };
+    }
     return {
       success: true,
       revision,
@@ -371,11 +402,14 @@ export class AutoMovieProductionCompiler {
         inputFingerprint,
       },
       diagnostics,
-      reviews: this.reviewQueue({
-        ...statusForReview(),
-        success: true,
-        revision,
-      }),
+      reviews: this.reviewQueue(
+        {
+          ...statusForReview(),
+          success: true,
+          revision,
+        },
+        reviewSnapshot,
+      ),
       materialized,
     };
   }
@@ -1069,6 +1103,63 @@ const errorMessage = (error: unknown): string =>
 
 const isTypeScriptSourcePath = (file: string): boolean =>
   [".ts", ".tsx", ".mts", ".cts"].includes(path.extname(file).toLowerCase());
+
+const contentFingerprintFields = (
+  inputs: readonly IAutoMovieProductionContentInput[],
+): IAutoMovieFingerprintField[] =>
+  inputs.map((content) => ({
+    role: `content:${content.path}`,
+    kind: content.bytes === null ? "absent" : "file",
+    payload:
+      content.bytes === null
+        ? new Uint8Array()
+        : content.source && isTypeScriptSourcePath(content.path)
+          ? normalizeAutoMovieSource(content.bytes)
+          : content.bytes,
+  }));
+
+const productionCompilerInputFingerprint = (
+  graph: ReturnType<AutoMovieProductionProject["graph"]>,
+  sourceFields: readonly IAutoMovieFingerprintField[],
+  contentFields: readonly IAutoMovieFingerprintField[],
+): AutoMovieContentDigest =>
+  fingerprintAutoMovieFields([
+    {
+      role: "protocol",
+      kind: "compile-input",
+      payload: Buffer.from(
+        `${AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL}\0${AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL}\0${AUTOMOVIE_PRODUCTION_COMPILER_VERSION}`,
+        "utf8",
+      ),
+    },
+    ...designFingerprintFields(graph),
+    ...sourceFields,
+    ...contentFields,
+  ]);
+
+const currentProductionCompilerInputFingerprint = (
+  project: AutoMovieProductionProject,
+): AutoMovieContentDigest | null => {
+  try {
+    const graph = project.graph();
+    const sourceFields: IAutoMovieFingerprintField[] = [];
+    for (const [id, contract] of graph.shots)
+      sourceFields.push({
+        role: `source:${id}`,
+        kind: "typescript",
+        payload: normalizeAutoMovieSource(
+          project.readSource(contract.source.module),
+        ),
+      });
+    return productionCompilerInputFingerprint(
+      graph,
+      sourceFields,
+      contentFingerprintFields(project.contentInputs()),
+    );
+  } catch {
+    return null;
+  }
+};
 
 const designFingerprintFields = (
   graph: ReturnType<AutoMovieProductionProject["graph"]>,
