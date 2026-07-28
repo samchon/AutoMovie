@@ -94,7 +94,7 @@ const filmWorksheet = (
       observation: `${criterion} is established by current film evidence ${index}.`,
       evidence:
         criterion === "acceptance-scenarios"
-          ? scenarios.flatMap((scenario) => {
+          ? scenarios.flatMap((scenario): IAutoMovieReviewEvidence[] => {
               const contractEvidence: IAutoMovieReviewEvidence = {
                 kind: "acceptance",
                 scenario: scenario.id,
