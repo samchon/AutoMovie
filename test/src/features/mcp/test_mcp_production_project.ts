@@ -27,12 +27,15 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
-const throws = (closure: () => unknown): boolean => {
+const throws = (closure: () => unknown, fragment?: string): boolean => {
   try {
     closure();
     return false;
-  } catch {
-    return true;
+  } catch (error) {
+    return (
+      fragment === undefined ||
+      (error instanceof Error && error.message.includes(fragment))
+    );
   }
 };
 
@@ -1482,7 +1485,11 @@ export const test_mcp_production_project = (): void => {
     fs.writeFileSync(fileRoot, "x");
     TestValidator.predicate(
       "project root must be a directory",
-      throws(() => AutoMovieProductionProject.open(fileRoot)),
+      throws(() => AutoMovieProductionProject.open(fileRoot)) &&
+        throws(
+          () => AutoMovieProductionProject.open(path.join(fileRoot, "child")),
+          "parent",
+        ),
     );
     TestValidator.predicate(
       "project root must not be a filesystem root",
@@ -1504,6 +1511,37 @@ export const test_mcp_production_project = (): void => {
       "fresh project recursively creates a missing nested root",
       AutoMovieProductionProject.open(nestedFresh).root === nestedFresh &&
         fs.existsSync(path.join(nestedFresh, ".automovie/incarnation.json")),
+    );
+    const physicalAliasParent = path.join(invalidRoot, "physical-alias-parent");
+    const aliasParent = path.join(invalidRoot, "alias-parent");
+    fs.mkdirSync(physicalAliasParent);
+    fs.symlinkSync(physicalAliasParent, aliasParent, "junction");
+    const aliasProject = path.join(aliasParent, "aliased-project");
+    const nativeWriteForAlias = fs.writeFileSync;
+    let aliasLockPath: string | null = null;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      Reflect.apply(nativeWriteForAlias, fs, [file, ...args]);
+      if (
+        typeof file !== "number" &&
+        file.toString().endsWith(".aliased-project.automovie-root.lock")
+      )
+        aliasLockPath = path.resolve(file.toString());
+    }) as typeof fs.writeFileSync;
+    try {
+      AutoMovieProductionProject.open(aliasProject);
+    } finally {
+      fs.writeFileSync = nativeWriteForAlias;
+    }
+    TestValidator.predicate(
+      "ancestor aliases share the physical parent namespace lock",
+      aliasLockPath ===
+        path.join(
+          fs.realpathSync(physicalAliasParent),
+          ".aliased-project.automovie-root.lock",
+        ),
     );
     TestValidator.predicate(
       "every absent design discriminator returns one missing mutation",

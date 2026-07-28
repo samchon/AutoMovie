@@ -10,7 +10,6 @@ import {
   IAutoMovieMcpWritableSlate,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -70,11 +69,8 @@ const throws = (task: () => unknown, fragment?: string): boolean => {
 
 const rootNamespaceLockPath = (root: string): string =>
   path.join(
-    os.tmpdir(),
-    "automovie-root-locks",
-    `${createHash("sha256")
-      .update(path.resolve(root).toLowerCase())
-      .digest("hex")}.lock`,
+    fs.realpathSync(path.dirname(root)),
+    `.${path.basename(root)}.automovie-root.lock`,
   );
 
 const createLegacy = (): {

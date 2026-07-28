@@ -30,7 +30,10 @@ import {
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 import { probeProductionMedia } from "./probeProductionMedia";
-import { productionRootNamespaceLockPath } from "./rootNamespaceLock";
+import {
+  ensureProductionRootParent,
+  productionRootNamespaceLockPath,
+} from "./rootNamespaceLock";
 import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
@@ -180,6 +183,7 @@ export class AutoMovieProductionProject {
       throw new Error(
         `AutoMovie production root "${root}" is a filesystem root. Choose a dedicated project directory in openProject.`,
       );
+    ensureProductionRootParent(root);
     const lockPath = productionRootNamespaceLockPath(root);
     const token = acquireCommitLock(lockPath);
     try {
