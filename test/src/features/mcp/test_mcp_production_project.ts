@@ -1572,8 +1572,9 @@ export const test_mcp_production_project = (): void => {
         aliasLockPaths.some((file) =>
           path.basename(file).startsWith("root-"),
         ) &&
-        aliasLockPaths.every((file) =>
-          path.basename(path.dirname(file)).startsWith("automovie-root-locks-"),
+        aliasLockPaths.every(
+          (file) =>
+            path.basename(path.dirname(file)) === ".automovie-root-locks",
         ) &&
         fs
           .readdirSync(fs.realpathSync(physicalAliasParent))
@@ -1582,6 +1583,110 @@ export const test_mcp_production_project = (): void => {
           .readdirSync(fs.realpathSync(aliasProject))
           .every((entry) => entry.includes("automovie-root") === false),
     );
+    const coordinationRoot = path.dirname(aliasLockPaths[0]!);
+    const nativeCoordinationMkdir = fs.mkdirSync;
+    fs.mkdirSync = ((directory: fs.PathLike, ...args: unknown[]): unknown => {
+      if (path.resolve(directory.toString()) === coordinationRoot) {
+        const error = new Error("coordination mkdir denied");
+        Object.assign(error, { code: "EACCES" });
+        throw error;
+      }
+      return Reflect.apply(nativeCoordinationMkdir, fs, [
+        directory,
+        ...args,
+      ]) as unknown;
+    }) as typeof fs.mkdirSync;
+    try {
+      TestValidator.predicate(
+        "a root coordination directory creation failure is fail-closed",
+        throws(
+          () => AutoMovieProductionProject.open(fresh),
+          "coordination mkdir denied",
+        ),
+      );
+    } finally {
+      fs.mkdirSync = nativeCoordinationMkdir;
+    }
+    const nativeCoordinationLstat = fs.lstatSync;
+    for (const [name, linked] of [
+      ["symlink", { isSymbolicLink: () => true, isDirectory: () => false }],
+      [
+        "non-directory",
+        { isSymbolicLink: () => false, isDirectory: () => false },
+      ],
+    ] as const) {
+      fs.lstatSync = ((file: fs.PathLike, ...args: unknown[]): fs.Stats => {
+        if (path.resolve(file.toString()) === coordinationRoot)
+          return linked as fs.Stats;
+        return Reflect.apply(nativeCoordinationLstat, fs, [
+          file,
+          ...args,
+        ]) as fs.Stats;
+      }) as typeof fs.lstatSync;
+      try {
+        TestValidator.predicate(
+          `a ${name} root coordination collision is rejected`,
+          throws(
+            () => AutoMovieProductionProject.open(fresh),
+            "is not a physical directory",
+          ),
+        );
+      } finally {
+        fs.lstatSync = nativeCoordinationLstat;
+      }
+    }
+    const nativeCoordinationChmod = fs.chmodSync;
+    fs.chmodSync = ((file: fs.PathLike): void => {
+      if (path.resolve(file.toString()) === coordinationRoot)
+        throw new Error("coordination chmod denied");
+      nativeCoordinationChmod(file, 0o700);
+    }) as typeof fs.chmodSync;
+    try {
+      TestValidator.predicate(
+        "an insecure coordination permission failure is fail-closed",
+        throws(
+          () => AutoMovieProductionProject.open(fresh),
+          "coordination chmod denied",
+        ),
+      );
+    } finally {
+      fs.chmodSync = nativeCoordinationChmod;
+    }
+    const nativeCoordinateWrite = fs.writeFileSync;
+    const partiallyHeldCoordinates: string[] = [];
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      if (
+        typeof file !== "number" &&
+        path.dirname(path.resolve(file.toString())) === coordinationRoot &&
+        path.basename(file.toString()).startsWith("root-path-")
+      )
+        throw new Error("second root coordinate denied");
+      Reflect.apply(nativeCoordinateWrite, fs, [file, ...args]);
+      if (
+        typeof file !== "number" &&
+        path.dirname(path.resolve(file.toString())) === coordinationRoot &&
+        path.basename(file.toString()).startsWith("root-id-")
+      )
+        partiallyHeldCoordinates.push(path.resolve(file.toString()));
+    }) as typeof fs.writeFileSync;
+    try {
+      TestValidator.predicate(
+        "partial dual-coordinate acquisition releases the physical identity fence",
+        throws(
+          () => AutoMovieProductionProject.open(fresh),
+          "second root coordinate denied",
+        ) &&
+          partiallyHeldCoordinates.length === 1 &&
+          partiallyHeldCoordinates.every(
+            (file) => fs.existsSync(file) === false,
+          ),
+      );
+    } finally {
+      fs.writeFileSync = nativeCoordinateWrite;
+    }
     const staleRoot = path.join(invalidRoot, "stale-physical-root");
     const staleProject = AutoMovieProductionProject.open(staleRoot);
     const parkedStaleRoot = `${staleRoot}-parked`;

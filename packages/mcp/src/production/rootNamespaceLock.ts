@@ -6,26 +6,23 @@ import path from "node:path";
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
 
 const currentUser = os.userInfo();
-const userCoordinate = crypto
-  .createHash("sha256")
-  .update(`${currentUser.username}\0${currentUser.uid}`)
-  .digest("hex")
-  .slice(0, 16);
 const COORDINATION_ROOT = path.join(
-  os.tmpdir(),
-  `automovie-root-locks-${userCoordinate}`,
+  currentUser.homedir,
+  ".automovie-root-locks",
 );
 
 /** Held namespace reservation for one physical production project root. */
 export interface IAutoMovieProductionRootNamespaceLease {
   root: string;
-  lockPath: string;
-  token: string;
-  device: number;
-  inode: number;
+  locks: ReadonlyArray<{ path: string; token: string }>;
+  device: string;
+  inode: string;
 }
 
-const coordinatePath = (kind: "create" | "root", namespace: string): string => {
+const coordinatePath = (
+  kind: "create" | "root-path" | "root-id",
+  namespace: string,
+): string => {
   ensureCoordinationRoot();
   // Case-folding can only over-coordinate distinct POSIX paths; it also makes
   // aliases of one case-insensitive Windows namespace share the same fence.
@@ -49,6 +46,22 @@ const ensureCoordinationRoot = (): void => {
       `AutoMovie root-lock coordination path "${COORDINATION_ROOT}" is not a physical directory.`,
     );
   fs.chmodSync(COORDINATION_ROOT, 0o700);
+};
+
+const acquireCoordinates = (
+  paths: readonly string[],
+): Array<{ path: string; token: string }> => {
+  const leases: Array<{ path: string; token: string }> = [];
+  try {
+    for (const lockPath of [...new Set(paths)].sort()) {
+      leases.push({ path: lockPath, token: acquireCommitLock(lockPath) });
+    }
+    return leases;
+  } catch (error) {
+    for (const lease of leases.reverse())
+      releaseCommitLock(lease.path, lease.token);
+    throw error;
+  }
 };
 
 const ensureDirectory = (directory: string): string => {
@@ -98,22 +111,25 @@ const acquireExistingRoot = (
       `Production project root "${rootDirectory}" is not a physical directory.`,
     );
   const root = fs.realpathSync(rootDirectory);
-  const identity = fs.statSync(root);
-  const lockPath = coordinatePath("root", root);
-  const token = acquireCommitLock(lockPath);
+  const identity = fs.statSync(root, { bigint: true });
+  const device = identity.dev.toString();
+  const inode = identity.ino.toString();
+  const locks = acquireCoordinates([
+    coordinatePath("root-path", root),
+    coordinatePath("root-id", `${device}\0${inode}`),
+  ]);
   const lease: IAutoMovieProductionRootNamespaceLease = {
     root,
-    lockPath,
-    token,
-    device: identity.dev,
-    inode: identity.ino,
+    locks,
+    device,
+    inode,
   };
   try {
     assertProductionRootNamespaceLease(lease);
     assertRequestedRootIdentity(rootDirectory, lease);
     return lease;
   } catch (error) {
-    releaseCommitLock(lockPath, token);
+    releaseProductionRootNamespace(lease);
     throw error;
   }
 };
@@ -121,8 +137,8 @@ const acquireExistingRoot = (
 /**
  * Reserve one existing physical project root.
  *
- * The durable namespace lock lives inside the project, so a writable project
- * never requires write access to its parent.
+ * Path and physical-identity locks live in a current-user coordination
+ * directory, so neither the project nor its parent owns transient lock bytes.
  */
 export const acquireProductionRootNamespace = (
   rootDirectory: string,
@@ -133,8 +149,8 @@ export const acquireProductionRootNamespace = (
  * Reserve one physical project root, creating it when it is still absent.
  *
  * Missing parents and the root itself are created through already-resolved
- * physical parents under short sibling creation locks before the project-owned
- * namespace reservation takes over.
+ * physical parents under short external creation locks before the stable path
+ * and physical-identity reservations take over.
  */
 export const acquireOrCreateProductionRootNamespace = (
   rootDirectory: string,
@@ -174,19 +190,24 @@ export const assertProductionRootNamespaceLease = (
   const current =
     linked === null || linked.isSymbolicLink() || linked.isDirectory() === false
       ? null
-      : fs.statSync(lease.root);
-  const lock = lstatOrNull(lease.lockPath);
+      : fs.statSync(lease.root, { bigint: true });
+  const invalidLock = lease.locks.find((leaseLock) => {
+    const lock = lstatOrNull(leaseLock.path);
+    return (
+      lock === null ||
+      lock.isSymbolicLink() ||
+      lock.isFile() === false ||
+      fs.readFileSync(leaseLock.path, "utf8") !== leaseLock.token
+    );
+  });
   if (
     current === null ||
-    current.dev !== lease.device ||
-    current.ino !== lease.inode ||
-    lock === null ||
-    lock.isSymbolicLink() ||
-    lock.isFile() === false ||
-    fs.readFileSync(lease.lockPath, "utf8") !== lease.token
+    current.dev.toString() !== lease.device ||
+    current.ino.toString() !== lease.inode ||
+    invalidLock !== undefined
   )
     throw new Error(
-      `Production project root identity changed while "${lease.lockPath}" was held. No unfenced project mutation is allowed.`,
+      `Production project root identity or namespace fence changed while "${lease.root}" was held. No unfenced project mutation is allowed.`,
     );
 };
 
@@ -194,7 +215,8 @@ export const assertProductionRootNamespaceLease = (
 export const releaseProductionRootNamespace = (
   lease: IAutoMovieProductionRootNamespaceLease,
 ): void => {
-  releaseCommitLock(lease.lockPath, lease.token);
+  for (const lock of [...lease.locks].reverse())
+    releaseCommitLock(lock.path, lock.token);
 };
 
 const assertRequestedRootIdentity = (
@@ -205,11 +227,11 @@ const assertRequestedRootIdentity = (
   const current =
     linked === null || linked.isSymbolicLink() || linked.isDirectory() === false
       ? null
-      : fs.statSync(requestedRoot);
+      : fs.statSync(requestedRoot, { bigint: true });
   if (
     current === null ||
-    current.dev !== lease.device ||
-    current.ino !== lease.inode
+    current.dev.toString() !== lease.device ||
+    current.ino.toString() !== lease.inode
   )
     throw new Error(
       `Requested production root "${requestedRoot}" changed physical identity during namespace acquisition. No project state was initialized.`,

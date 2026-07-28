@@ -98,8 +98,8 @@ export class AutoMovieProductionSourcePathError extends Error {
  */
 export class AutoMovieProductionProject {
   private readonly rootReal: string;
-  private readonly rootDevice: number;
-  private readonly rootInode: number;
+  private readonly rootDevice: string;
+  private readonly rootInode: string;
   private readonly automovieRoot: string;
   private readonly incarnationPath: string;
   private readonly manifestPath: string;
@@ -1245,11 +1245,11 @@ export class AutoMovieProductionProject {
       linked.isSymbolicLink() ||
       linked.isDirectory() === false
         ? null
-        : fs.statSync(this.root);
+        : fs.statSync(this.root, { bigint: true });
     if (
       current === null ||
-      current.dev !== this.rootDevice ||
-      current.ino !== this.rootInode
+      current.dev.toString() !== this.rootDevice ||
+      current.ino.toString() !== this.rootInode
     )
       throw new AutoMovieProductionInputRaceError(
         "Production project root identity changed. Discard this project handle and open the physical project again before reading or mutating it.",
@@ -1351,11 +1351,21 @@ export class AutoMovieProductionProject {
           this.lastReadRevision_ = nextRevision;
           return nextRevision;
         } catch (error) {
+          try {
+            assertProductionRootNamespaceLease(rootLease);
+          } catch (identityError) {
+            throw new AggregateError(
+              [error, identityError],
+              "Production mutation stopped because the physical root or namespace fence changed. No stale-path rollback was attempted in the replacement root.",
+            );
+          }
           const rollbackErrors: unknown[] = [];
           for (const file of staged.slice(0, applied).reverse())
             try {
+              assertProductionRootNamespaceLease(rootLease);
               if (file.previous === null) fs.rmSync(file.path, { force: true });
               else writeAtomic(file.path, file.previous);
+              assertProductionRootNamespaceLease(rootLease);
             } catch (rollbackError) {
               rollbackErrors.push(rollbackError);
             }
@@ -1367,7 +1377,12 @@ export class AutoMovieProductionProject {
           throw error;
         }
       } finally {
-        releaseCommitLock(this.lockPath, token);
+        try {
+          assertProductionRootNamespaceLease(rootLease);
+          releaseCommitLock(this.lockPath, token);
+        } catch {
+          // Fail closed: never follow a stale revision-lock path into a replacement.
+        }
       }
     } finally {
       releaseProductionRootNamespace(rootLease);
