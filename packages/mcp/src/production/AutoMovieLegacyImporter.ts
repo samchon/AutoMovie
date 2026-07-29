@@ -1058,8 +1058,9 @@ const readAppliedImportState = (
     )
       return null;
     return validation.data;
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof InvalidLegacyImportJsonError) return null;
+    throw error;
   }
 };
 
@@ -1089,9 +1090,13 @@ const parseJson = (bytes: Uint8Array, file: string): unknown => {
   try {
     return JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
   } catch (error) {
-    throw new Error(`Invalid JSON "${file}": ${String(error)}`);
+    throw new InvalidLegacyImportJsonError(
+      `Invalid JSON "${file}": ${String(error)}`,
+    );
   }
 };
+
+class InvalidLegacyImportJsonError extends Error {}
 
 const readJson = <T>(file: string): T | null => {
   const status = lstatOrNull(file);
