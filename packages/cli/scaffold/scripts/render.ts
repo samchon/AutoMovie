@@ -18,6 +18,7 @@ import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderRuntimeIdentity,
   canonicalAutoMovieCaptureRuntimeIdentity,
+  canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   planProductionRenderJob,
@@ -31,7 +32,7 @@ import {
 } from "@automovie/mcp";
 import * as HME from "h264-mp4-encoder";
 import { createFile } from "mp4box";
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -1065,19 +1066,40 @@ const productionApplication = (): AutoMovieApplication => {
 };
 
 const projectSnapshot = (project: AutoMovieProductionProject): string => {
-  const hash = createHash("sha256");
-  for (const input of project.contentInputs()) {
-    hash.update(input.path);
-    hash.update(input.source ? "s" : "");
-    hash.update(input.render ? "r" : "");
-    hash.update(input.bytes ?? Buffer.from("missing"));
-  }
   const reviews = path.join(root, ".automovie", "reviews");
-  for (const file of listFiles(reviews)) {
-    hash.update(path.relative(reviews, file).split(path.sep).join("/"));
-    hash.update(fs.readFileSync(file));
-  }
-  return hash.digest("hex");
+  const generated = project.generatedRoot();
+  const inventory = (directory: string) =>
+    listFiles(directory).map((file) => {
+      const linked = fs.lstatSync(file);
+      if (linked.isFile() === false || linked.isSymbolicLink())
+        throw new Error(
+          `Terminal publication snapshot refuses non-regular file "${path
+            .relative(root, file)
+            .split(path.sep)
+            .join("/")}".`,
+        );
+      return {
+        path: path.relative(directory, file).split(path.sep).join("/"),
+        digest: digestAutoMovieBytes(fs.readFileSync(file)),
+      };
+    });
+  return digestAutoMovieBytes(
+    canonicalAutoMovieJsonBytes({
+      protocol: "automovie.terminal-publication-snapshot.v1",
+      revision: project.revision(),
+      content: project.contentInputs().map((input) => ({
+        path: input.path,
+        source: input.source,
+        render: input.render,
+        digest: input.bytes === null ? null : digestAutoMovieBytes(input.bytes),
+      })),
+      generated: {
+        manifest: project.generatedManifest(),
+        files: inventory(generated),
+      },
+      reviews: inventory(reviews),
+    }),
+  );
 };
 
 const readPlan = (): IAutoMovieProductionRenderJobPlan => {

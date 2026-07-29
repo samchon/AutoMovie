@@ -257,6 +257,16 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes("runProductionRenderJob") &&
       files["scripts/render.ts"]!.includes("commitProductionPublication") &&
       files["scripts/render.ts"]!.includes("probeProductionMedia") &&
+      files["scripts/render.ts"]!.includes("canonicalAutoMovieJsonBytes") &&
+      files["scripts/render.ts"]!.includes(
+        '"automovie.terminal-publication-snapshot.v1"',
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "manifest: project.generatedManifest()",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "const generated = project.generatedRoot()",
+      ) &&
       files[".gitignore"]!.includes(".automovie/render-job/") &&
       files[".automovie/design/production.json"]!.includes(
         '"id": "starter-feature"',
