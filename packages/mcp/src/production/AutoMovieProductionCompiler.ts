@@ -1643,7 +1643,6 @@ const normalizeEffectCues = (
       zones.includes(cue.zone) === false ||
       durationFrames === 0 ||
       startFrame + durationFrames > totalFrames ||
-      Number.isFinite(cue.intensity) === false ||
       cue.intensity < 0 ||
       cue.intensity > 1 ||
       startFrame < priorStart

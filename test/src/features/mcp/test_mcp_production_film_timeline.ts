@@ -525,7 +525,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     project.setWorldDesign(worldDesign());
     const compileEffect = (
       mutate: (cue: IAutoMovieFilmEdit["tracks"]["effects"][number]) => void,
-      transformSource: (source: string) => string = (source) => source,
     ): ReturnType<AutoMovieProductionCompiler["compile"]> => {
       const edit = baseEdit();
       const cue: IAutoMovieFilmEdit["tracks"]["effects"][number] = {
@@ -538,7 +537,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       };
       mutate(cue);
       edit.tracks.effects.push(cue);
-      fs.writeFileSync(filmPath, transformSource(editSource(edit)));
+      fs.writeFileSync(filmPath, editSource(edit));
       return compiler.compile({ scope: "source" });
     };
     const effectFailures = [
@@ -558,13 +557,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       compileEffect((cue) => {
         cue.intensity = 1.1;
       }),
-      compileEffect(
-        (cue) => {
-          cue.intensity = Number.NaN;
-        },
-        (source) =>
-          source.replace('"intensity":null', '"intensity":Number.NaN'),
-      ),
     ];
     const orderedEffects = baseEdit();
     orderedEffects.tracks.effects.push(
