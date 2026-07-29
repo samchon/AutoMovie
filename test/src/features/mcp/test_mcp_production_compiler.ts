@@ -201,11 +201,31 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       "generic snapshot confirmation failure",
     );
     const postFenceRevision = project.revision;
+    // The claim is that a settled response takes its fence and never reads the
+    // revision again, so the injection point must sit exactly one read past
+    // whatever the current fence costs. Measuring that cost keeps the claim
+    // about the fence; a written-down count would instead fail whenever an
+    // unrelated read is added or removed.
+    const countRevisionReads = (run: () => unknown): number => {
+      let reads = 0;
+      project.revision = (() => {
+        ++reads;
+        return postFenceRevision.call(project);
+      }) as typeof project.revision;
+      run();
+      project.revision = postFenceRevision;
+      return reads;
+    };
+    const readOnlyLint = (): unknown =>
+      new AutoMovieProductionCompiler(project, () => ({ entries: [] })).lint({
+        scope: "source",
+      });
+    const lintReadBudget = countRevisionReads(readOnlyLint);
     let postFenceLintReads = 0;
     let postFenceLintMutation = false;
     project.revision = (() => {
       ++postFenceLintReads;
-      if (postFenceLintReads === 7) {
+      if (postFenceLintReads === lintReadBudget + 1) {
         diagnosticRevisionRacer.setWorldDesign(worldDesign());
         postFenceLintMutation = true;
       }
@@ -218,18 +238,24 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     TestValidator.predicate(
       "read-only success returns the fenced revision without a later read",
       stableLint.success &&
-        postFenceLintReads === 6 &&
+        lintReadBudget > 0 &&
+        postFenceLintReads === lintReadBudget &&
         postFenceLintMutation === false,
     );
     fs.writeFileSync(
       sourcePath,
       `${original}\nexport const postFenceDiagnostic = ;\n`,
     );
+    const diagnosticCompile = (): unknown =>
+      new AutoMovieProductionCompiler(project, () => ({
+        entries: [],
+      })).compile({ scope: "source" });
+    const diagnosticReadBudget = countRevisionReads(diagnosticCompile);
     let postFenceDiagnosticReads = 0;
     let postFenceDiagnosticMutation = false;
     project.revision = (() => {
       ++postFenceDiagnosticReads;
-      if (postFenceDiagnosticReads === 7) {
+      if (postFenceDiagnosticReads === diagnosticReadBudget + 1) {
         diagnosticRevisionRacer.setWorldDesign(worldDesign());
         postFenceDiagnosticMutation = true;
       }
@@ -245,7 +271,8 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       stableDiagnostic.success === false &&
         diagnosticCodes(stableDiagnostic).has("compile-input-changed") ===
           false &&
-        postFenceDiagnosticReads === 6 &&
+        diagnosticReadBudget > 0 &&
+        postFenceDiagnosticReads === diagnosticReadBudget &&
         postFenceDiagnosticMutation === false,
     );
     const recipeFile = path.join(

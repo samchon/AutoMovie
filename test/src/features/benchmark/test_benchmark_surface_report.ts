@@ -174,9 +174,19 @@ export const test_benchmark_surface_report = (): void => {
     "-0.1000",
   );
   TestValidator.equals(
-    "an unscored verdict settles nothing, so every assertion moved",
-    diffAutoMovieBenchmarkVerdicts(productionVerdict, excluded).assertionChanges
-      .length,
+    "an unscored verdict settles nothing, so every assertion left",
+    diffAutoMovieBenchmarkVerdicts(
+      productionVerdict,
+      excluded,
+    ).assertionChanges.filter((change) => change.to === null).length,
+    12,
+  );
+  TestValidator.equals(
+    "read the other way around, the same twelve assertions arrive",
+    diffAutoMovieBenchmarkVerdicts(
+      excluded,
+      productionVerdict,
+    ).assertionChanges.filter((change) => change.from === null).length,
     12,
   );
 };

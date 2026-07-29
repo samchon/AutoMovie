@@ -2,6 +2,7 @@ import { AutoMovieContentDigest } from "@automovie/interface";
 
 import {
   AutoMovieBenchmarkAssertionOutcome,
+  IAutoMovieBenchmarkInfraExcludedVerdict,
   IAutoMovieBenchmarkVerdict,
 } from "./judge";
 import {
@@ -130,7 +131,12 @@ export const reportAutoMovieBenchmark = (
     surfaces: surfaces.map((surface) => {
       const owned = verdicts.filter((verdict) => verdict.surface === surface);
       const counted = owned.filter(
-        (verdict) => verdict.outcome !== "infra-excluded",
+        (
+          verdict,
+        ): verdict is Exclude<
+          IAutoMovieBenchmarkVerdict,
+          IAutoMovieBenchmarkInfraExcludedVerdict
+        > => verdict.outcome !== "infra-excluded",
       );
       return {
         surface,
@@ -141,7 +147,7 @@ export const reportAutoMovieBenchmark = (
           (verdict) => verdict.outcome === "infra-excluded",
         ).length,
         denominator: counted.length,
-        meanFilmScore: mean(counted.map((verdict) => verdict.filmScore ?? 0)),
+        meanFilmScore: mean(counted.map((verdict) => verdict.filmScore)),
         meanCostUsd: mean(counted.map((verdict) => verdict.generation.costUsd)),
         meanElapsedSeconds: mean(
           counted.map((verdict) => verdict.generation.elapsedSeconds),

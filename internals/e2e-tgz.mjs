@@ -1009,14 +1009,34 @@ try {
     starterProductionPath,
     `${JSON.stringify(starterProduction, null, 2)}\n`,
   );
+  // Override every published `@automovie/*` range with its own tarball before
+  // installing. `pnpm add <tarball>` resolves the manifest it already has
+  // first, so the starter's registry ranges 404 outside the workspace before
+  // any tarball spec replaces them, and a transitive range (mcp's own
+  // dependency on render) is never replaced at all. An override covers direct
+  // and transitive alike, which keeps the probe offline and installs exactly
+  // the bytes this commit packed.
   const runtimeTarballs = tarballs.filter(
     (file) => file.startsWith("automovie-cli-") === false,
   );
+  const starterManifestPath = join(starterDir, "package.json");
+  const starterManifest = JSON.parse(readFileSync(starterManifestPath, "utf8"));
+  starterManifest.pnpm = {
+    ...starterManifest.pnpm,
+    overrides: Object.fromEntries(
+      runtimeTarballs.map((file) => [
+        `@automovie/${PACKAGES.find((name) => file.startsWith(`automovie-${name}-`))}`,
+        `file:${join(tarballDir, file).replaceAll("\\", "/")}`,
+      ]),
+    ),
+  };
+  writeFileSync(
+    starterManifestPath,
+    `${JSON.stringify(starterManifest, null, 2)}\n`,
+  );
   run(
     "install packaged starter dependencies with strict pnpm layout",
-    `pnpm add --ignore-workspace --prefer-offline --config.strict-peer-dependencies=false ${runtimeTarballs
-      .map((file) => `"${join(tarballDir, file)}"`)
-      .join(" ")}`,
+    "pnpm install --ignore-workspace --prefer-offline --config.strict-peer-dependencies=false",
     starterDir,
   );
   if (process.env.CI === "true" && process.platform === "linux")

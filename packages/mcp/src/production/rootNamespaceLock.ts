@@ -293,7 +293,13 @@ const lstatOrNull = (file: string): fs.Stats | null => {
   try {
     return fs.lstatSync(file);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    // `ENOENT` is an absent name; `ENOTDIR` is an absent path, because some
+    // ancestor is a file. Both mean nothing is here, and both have to reach
+    // the parent walk that names which ancestor is wrong. Surfacing the raw
+    // errno instead would answer "not a directory" about a path the caller
+    // never named.
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return null;
     throw error;
   }
 };

@@ -181,10 +181,12 @@ export const replayAutoMovieBenchmarkTrace = (
           finishFlush: constants.Z_SYNC_FLUSH,
         }).toString("utf8")
       : buffer.toString("utf8");
+  // `split` always yields at least one element, and the last one is whatever
+  // followed the final newline: empty for an archive its writer closed, a
+  // partial line for one a killed writer left behind.
   const lines = text.split("\n");
-  const trailing = lines.pop() ?? "";
-  const truncated = trailing.length !== 0;
-  const events = lines.map((line, index) => {
+  const truncated = lines[lines.length - 1] !== "";
+  const events = lines.slice(0, -1).map((line, index) => {
     let parsed: unknown;
     try {
       parsed = JSON.parse(line) as unknown;

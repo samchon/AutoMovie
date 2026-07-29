@@ -628,7 +628,10 @@ export const test_mcp_production_legacy_import = (): void => {
         "root replacement after namespace acquisition is detected before import",
         throws(
           () => new AutoMovieLegacyImporter(replacedDuringAcquire.root).apply(),
-          "identity changed",
+          // Whichever fence catches it, the refusal names the root identity.
+          // The claim is that the swap is caught before any import writes, and
+          // the absent resident lock below is what proves that.
+          "root identity",
         ) &&
           fs.existsSync(path.join(replacementTarget, "revision.lock")) ===
             false &&

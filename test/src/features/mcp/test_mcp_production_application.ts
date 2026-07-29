@@ -115,7 +115,7 @@ const PRODUCTION_TOOL_DESCRIPTION_SIGNALS = {
   setProductionDesign: ["complete object", "downstream fingerprint"],
   setModelRecipe: ["compiler", "never imports arbitrary meshes"],
   setWorldDesign: ["geometry queries", "complete world"],
-  setFormationDesign: ["compiler expands", "does not animate troops"],
+  setFormationDesign: ["compiler stores", "does not animate troops"],
   setShotContract: ["ordinary code", "independent"],
   setAcceptanceScenario: ["fingerprinted evidence", "does not implement tests"],
   eraseDesignArtifact: ["never cascades silently", "generated files"],
