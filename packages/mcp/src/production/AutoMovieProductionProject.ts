@@ -871,6 +871,155 @@ export class AutoMovieProductionProject {
   }
 
   /**
+   * Atomically publish every deliverable byte, aggregate manifest, and parser
+   * receipt under one revision/input fence.
+   *
+   * The file map is render-root-relative and must exactly equal the manifest's
+   * claimed file inventory. Probing happens before staging, the input guard
+   * runs before and after all writes and once more after `publicationCurrent`
+   * runs the read-only final compiler gate against staged bytes. commitFiles
+   * restores the previous valid publication if any write, guard, final gate, or
+   * post-commit byte assertion fails.
+   */
+  public commitProductionPublication(props: {
+    files: ReadonlyMap<string, Uint8Array>;
+    manifest: IAutoMovieProductionRenderManifest;
+    inputCurrent?: () => boolean;
+    publicationCurrent?: () => void;
+    expectedRevision?: number;
+  }): number {
+    const validation = typia.validateEquals<IAutoMovieProductionRenderManifest>(
+      props.manifest,
+    );
+    if (validation.success === false)
+      throw new Error(
+        `Invalid aggregate render manifest: ${validation.errors
+          .map((error) => `${error.path} expects ${error.expected}`)
+          .join("; ")}.`,
+      );
+    if (
+      this.generatedManifest()?.inputFingerprint !==
+      validation.data.compileFingerprint
+    )
+      throw new AutoMovieProductionInputRaceError(
+        "The terminal publication does not target the current compiler input. Replan and rerender before finalizing.",
+      );
+    const files = new Map<string, Buffer>();
+    for (const [relativePath, content] of props.files) {
+      const absolute = resolveInside(this.renderRoot(), relativePath);
+      const normalized = normalizeSlash(
+        path.relative(this.renderRoot(), absolute),
+      );
+      if (files.has(normalized.toLowerCase()))
+        throw new Error(
+          `Terminal publication maps more than one byte source to "${normalized}". Keep one canonical render path.`,
+        );
+      files.set(normalized.toLowerCase(), Buffer.from(content));
+    }
+    const receiptFiles: IAutoMovieProductionRenderReceipt["files"] = [];
+    const claimed = new Set<string>();
+    for (const deliverable of validation.data.deliverables)
+      for (const file of deliverable.files) {
+        const normalized = normalizeSlash(file.path).toLowerCase();
+        if (claimed.has(normalized))
+          throw new Error(
+            `Render file "${file.path}" is claimed more than once. Give it one deliverable owner.`,
+          );
+        claimed.add(normalized);
+        const bytes = files.get(normalized);
+        if (bytes === undefined)
+          throw new Error(
+            `Terminal publication is missing claimed file "${file.path}".`,
+          );
+        const digest = digestAutoMovieBytes(bytes);
+        if (bytes.length !== file.bytes || digest !== file.digest)
+          throw new Error(
+            `Terminal publication file "${file.path}" differs from its manifest byte facts.`,
+          );
+        receiptFiles.push({
+          deliverable: deliverable.id,
+          ...file,
+          probe: probeProductionMedia({
+            kind: deliverable.kind,
+            mediaType: file.mediaType,
+            bytes,
+          }),
+        });
+      }
+    if (files.size !== claimed.size)
+      throw new Error(
+        `Terminal publication supplied ${files.size} files but the manifest claims ${claimed.size}. Remove unclaimed bytes.`,
+      );
+    receiptFiles.sort((left, right) => compareCodeUnits(left.path, right.path));
+    const manifestContent = serializeJson(validation.data);
+    const receiptContent = serializeJson({
+      version: 2,
+      manifestDigest: digestAutoMovieBytes(
+        Buffer.from(manifestContent, "utf8"),
+      ),
+      files: receiptFiles,
+    } satisfies IAutoMovieProductionRenderReceipt);
+    const writes: IStagedFile[] = [
+      ...validation.data.deliverables.flatMap((deliverable) =>
+        deliverable.files.map((file) => ({
+          path: resolveInside(this.renderRoot(), file.path),
+          content: files.get(normalizeSlash(file.path).toLowerCase())!,
+        })),
+      ),
+      {
+        path: path.join(this.automovieRoot, "render-manifest.json"),
+        content: manifestContent,
+      },
+      {
+        path: path.join(this.automovieRoot, "render-manifest-receipt.json"),
+        content: receiptContent,
+      },
+    ];
+    return this.commitFiles(
+      writes,
+      props.inputCurrent,
+      props.expectedRevision ?? this.lastReadRevision_,
+      () => {
+        for (const deliverable of validation.data.deliverables)
+          for (const file of deliverable.files) {
+            const bytes = this.readRenderFile(file.path);
+            if (
+              bytes.length !== file.bytes ||
+              digestAutoMovieBytes(bytes) !== file.digest
+            )
+              throw new Error(
+                `Committed terminal file "${file.path}" failed its post-publication byte check.`,
+              );
+          }
+        const residentManifest = this.readTrackedStateFile(
+          "render-manifest.json",
+        );
+        const residentReceipt = this.readTrackedStateFile(
+          "render-manifest-receipt.json",
+        );
+        if (
+          residentManifest === null ||
+          residentReceipt === null ||
+          Buffer.from(residentManifest).equals(
+            Buffer.from(manifestContent, "utf8"),
+          ) === false ||
+          Buffer.from(residentReceipt).equals(
+            Buffer.from(receiptContent, "utf8"),
+          ) === false
+        )
+          throw new Error(
+            "Terminal render manifest or receipt changed after publication.",
+          );
+        props.publicationCurrent?.();
+        if (props.inputCurrent?.() === false)
+          throw new AutoMovieProductionInputRaceError(
+            "Production inputs changed during the staged terminal publication final gate.",
+          );
+      },
+    );
+  }
+
+  /**
    * Atomically write renderer-owned files for one declared deliverable.
    *
    * Returned paths are rooted below `renders/deliverables/<encoded-id>` and can

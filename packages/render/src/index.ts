@@ -8,6 +8,7 @@ export * from "./headlessCapture";
 export * from "./plan";
 export * from "./poseKeypointPlan";
 export * from "./poseKeypointSidecar";
+export * from "./productionRenderJob";
 export * from "./renderAndSee";
 export * from "./renderVideo";
 export * from "./screenplay";

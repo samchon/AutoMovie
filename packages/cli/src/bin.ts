@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { AutoMovieLegacyImporter } from "@automovie/mcp";
+import { spawnSync } from "node:child_process";
+import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { renderScaffold } from "./renderScaffold";
@@ -10,12 +12,14 @@ const USAGE = `automovie: scaffold an automovie project
 Usage:
   npx automovie start <directory> [--force]
   npx automovie migrate <directory> [--dry-run | --rollback]
+  npx automovie render <plan|run|status|verify|finalize> [options]
 
 Commands:
   start <directory>   Create <directory> and lay down the starter template:
                       production MCP config, typed shot source, deterministic
                       compiler, local viewer, capture, tests, and review gates.
   migrate <directory> Plan or apply a non-destructive legacy v1 import.
+  render <action>     Run the current project's resumable render job.
 
 Options:
   --force             Scaffold into a non-empty directory.
@@ -62,6 +66,7 @@ export const run = (argv: readonly string[]): number => {
   }
 
   const [command, ...rest] = args;
+  if (command === "render") return runProjectRender(rest);
   if (command !== "start" && command !== "migrate") {
     process.stderr.write(`unknown command "${command}"\n\n${USAGE}`);
     return 1;
@@ -106,6 +111,36 @@ export const run = (argv: readonly string[]): number => {
     );
     return 1;
   }
+};
+
+const runProjectRender = (args: readonly string[]): number => {
+  const action = args[0];
+  if (
+    action !== "plan" &&
+    action !== "run" &&
+    action !== "status" &&
+    action !== "verify" &&
+    action !== "finalize"
+  ) {
+    process.stderr.write(
+      `render needs one of plan, run, status, verify, or finalize\n\n${USAGE}`,
+    );
+    return 1;
+  }
+  const root = process.cwd();
+  const script = path.join(root, "scripts", "render.ts");
+  const tsx = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
+  if (fs.existsSync(script) === false || fs.existsSync(tsx) === false) {
+    process.stderr.write(
+      "The current project has no installed scripts/render.ts + tsx runtime. Run this command from a scaffolded project after pnpm install.\n",
+    );
+    return 1;
+  }
+  const child = spawnSync(process.execPath, [tsx, script, ...args], {
+    cwd: root,
+    stdio: "inherit",
+  });
+  return child.status ?? 1;
 };
 
 if (require.main === module) process.exitCode = run(process.argv);

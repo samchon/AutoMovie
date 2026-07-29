@@ -148,8 +148,15 @@ export const test_cli_scaffold = (): void => {
     ) &&
       pkg.includes(`"@automovie/mcp": "${AUTOMOVIE_TEMPLATE_VERSIONS.mcp}"`) &&
       pkg.includes(
+        `"@automovie/render": "${AUTOMOVIE_TEMPLATE_VERSIONS.render}"`,
+      ) &&
+      pkg.includes(
         `"@automovie/viewer": "${AUTOMOVIE_TEMPLATE_VERSIONS.viewer}"`,
       ) &&
+      pkg.includes(
+        `"h264-mp4-encoder": "${AUTOMOVIE_TEMPLATE_VERSIONS.h264Mp4Encoder}"`,
+      ) &&
+      pkg.includes(`"mp4box": "${AUTOMOVIE_TEMPLATE_VERSIONS.mp4box}"`) &&
       pkg.includes(
         `"playwright": "${AUTOMOVIE_TEMPLATE_VERSIONS.playwright}"`,
       ) &&
@@ -250,6 +257,26 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes(
         "await closeProductionFrameCapture()",
       ) &&
+      files["scripts/render.ts"]!.includes("runProductionRenderJob") &&
+      files["scripts/render.ts"]!.includes("commitProductionPublication") &&
+      files["scripts/render.ts"]!.includes("probeProductionMedia") &&
+      files[".gitignore"]!.includes(".automovie/render-job/") &&
+      files[".automovie/design/production.json"]!.includes(
+        '"id": "starter-feature"',
+      ) &&
+      files[".automovie/design/production.json"]!.includes(
+        '"id": "starter-pose-guide"',
+      ) &&
+      files[".automovie/design/production.json"]!.includes(
+        '"id": "starter-captions"',
+      ) &&
+      files[".automovie/design/production.json"]!.includes(
+        '"id": "starter-audio"',
+      ) &&
+      files["public/audio/starter-tone.json"]!.includes(
+        '"sampleRate": 48000',
+      ) &&
+      files["public/audio/starter-tone.json"]!.includes('"channels": 2') &&
       files["scripts/generatedShotPlugin.ts"]!.includes(
         'shotId.includes("/")',
       ) === false &&

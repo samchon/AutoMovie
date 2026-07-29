@@ -1,5 +1,7 @@
 {
   "kind": "placeholder-audio-stem",
   "durationSeconds": 11.5,
+  "sampleRate": 48000,
+  "channels": 2,
   "description": "Replace this silent guide asset with a renderer-supported audio stem."
 }

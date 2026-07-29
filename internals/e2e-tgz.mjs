@@ -591,8 +591,8 @@ for (const frame of frames) {
   const png = PNG.sync.read(bytes);
   assert(
     \`starter-png-size:\${frame.shot}:\${frame.pass}\`,
-    png.width === 1280 && png.height === 720,
-    \`expected 1280x720, got \${png.width}x\${png.height}\`,
+    png.width === 16 && png.height === 16,
+    \`expected 16x16 packaged-short raster, got \${png.width}x\${png.height}\`,
   );
   assert(
     \`starter-png-visible-variance:\${frame.shot}:\${frame.pass}\`,
@@ -715,29 +715,55 @@ if (phase === "review") {
     receipt.version === 2 &&
       receipt.manifestDigest === digestAutoMovieBytes(aggregateBytes) &&
       Array.isArray(receipt.files) &&
-      receipt.files.length === 6 &&
+      receipt.files.length === 5 &&
       receipt.files.every(
         (file) =>
-          file.deliverable === "starter-preview" &&
-          file.probe?.kind === "png" &&
-          file.probe.width === 1280 &&
-          file.probe.height === 720 &&
-          aggregate.deliverables?.[0]?.files?.some(
-            (owned) =>
-              owned.path === file.path &&
-              owned.digest === file.digest &&
-              owned.bytes === file.bytes &&
-              owned.mediaType === file.mediaType,
-          ) === true,
+          aggregate.deliverables
+            ?.find((deliverable) => deliverable.id === file.deliverable)
+            ?.files?.some(
+              (owned) =>
+                owned.path === file.path &&
+                owned.digest === file.digest &&
+                owned.bytes === file.bytes &&
+                owned.mediaType === file.mediaType,
+            ) === true,
       ),
     JSON.stringify(receipt),
   );
+  const receiptByDeliverable = new Map(
+    receipt.files.map((file) => [file.deliverable, file]),
+  );
   assert(
-    "starter-required-deliverable-complete",
+    "starter-required-deliverables-parser-complete",
     aggregate.compileFingerprint === generated.inputFingerprint &&
-      aggregate.deliverables.length === 1 &&
-      aggregate.deliverables[0].id === "starter-preview" &&
-      aggregate.deliverables[0].files.length === 6,
+      aggregate.deliverables.length === 5 &&
+      [
+        "starter-preview",
+        "starter-feature",
+        "starter-pose-guide",
+        "starter-captions",
+        "starter-audio",
+      ].every((id) =>
+        aggregate.deliverables.some(
+          (deliverable) =>
+            deliverable.id === id && deliverable.files.length === 1,
+        ),
+      ) &&
+      receiptByDeliverable.get("starter-preview")?.probe?.kind === "png" &&
+      receiptByDeliverable.get("starter-preview")?.probe?.width === 16 &&
+      receiptByDeliverable.get("starter-feature")?.probe?.kind === "video" &&
+      receiptByDeliverable.get("starter-feature")?.probe?.frameCount === 23 &&
+      receiptByDeliverable.get("starter-feature")?.probe?.width === 16 &&
+      receiptByDeliverable.get("starter-pose-guide")?.probe?.kind ===
+        "video" &&
+      receiptByDeliverable.get("starter-pose-guide")?.probe?.frameCount ===
+        23 &&
+      receiptByDeliverable.get("starter-captions")?.probe?.kind ===
+        "webvtt" &&
+      receiptByDeliverable.get("starter-captions")?.probe?.cueCount === 1 &&
+      receiptByDeliverable.get("starter-audio")?.probe?.kind === "audio" &&
+      receiptByDeliverable.get("starter-audio")?.probe?.runtimeSeconds ===
+        11.5,
     JSON.stringify(aggregate),
   );
   const final = app.compileProject({ scope: "final" });
@@ -964,6 +990,25 @@ try {
     `node "${cliBin}" start "${starterDir}"`,
     projectDir,
   );
+  const starterProductionPath = join(
+    starterDir,
+    ".automovie",
+    "design",
+    "production.json",
+  );
+  const starterProduction = JSON.parse(
+    readFileSync(starterProductionPath, "utf8"),
+  );
+  starterProduction.frameFormat = {
+    ...starterProduction.frameFormat,
+    width: 16,
+    height: 16,
+    fps: 2,
+  };
+  writeFileSync(
+    starterProductionPath,
+    `${JSON.stringify(starterProduction, null, 2)}\n`,
+  );
   const runtimeTarballs = tarballs.filter(
     (file) => file.startsWith("automovie-cli-") === false,
   );
@@ -1087,11 +1132,74 @@ try {
     starterDir,
   );
   run("lint reviewed packaged starter", "pnpm lint", starterDir, 900_000);
+  const renderStateRoot = join(starterDir, ".automovie", "render-job");
+  const renderPlan = JSON.parse(
+    readFileSync(join(renderStateRoot, "plan.json"), "utf8"),
+  );
+  const damagedChunk = renderPlan.chunks[0];
+  const retainedChunk = renderPlan.chunks[1];
+  if (damagedChunk === undefined || retainedChunk === undefined)
+    fail("packaged render did not produce multiple resumable chunks");
+  const damagedDirectory = join(
+    renderStateRoot,
+    "chunks",
+    damagedChunk.id.slice(7),
+  );
+  const damagedReceipt = JSON.parse(
+    readFileSync(join(damagedDirectory, "receipt.json"), "utf8"),
+  );
+  writeFileSync(
+    join(damagedDirectory, damagedReceipt.frames[0].path),
+    Buffer.alloc(0),
+  );
+  const retainedMarker = join(
+    renderStateRoot,
+    "chunks",
+    retainedChunk.id.slice(7),
+    "reuse-proof.marker",
+  );
+  writeFileSync(retainedMarker, "must survive fresh-process reuse\n");
+  const abandonedPid = 2_147_483_647;
+  const abandonedTemporary = join(
+    renderStateRoot,
+    "tmp",
+    `interrupted.${abandonedPid}`,
+  );
+  mkdirSync(abandonedTemporary, { recursive: true });
+  writeFileSync(join(abandonedTemporary, "partial.png"), Buffer.alloc(0));
+  const slotSegment = encodeURIComponent(damagedChunk.slot);
+  mkdirSync(join(renderStateRoot, "locks"), { recursive: true });
+  writeFileSync(
+    join(renderStateRoot, "locks", `${slotSegment}.lock`),
+    `${JSON.stringify({ chunk: damagedChunk.id, pid: abandonedPid })}\n`,
+  );
+  mkdirSync(join(renderStateRoot, "attempts"), { recursive: true });
+  writeFileSync(
+    join(renderStateRoot, "attempts", `${slotSegment}.json`),
+    `${JSON.stringify({
+      slot: damagedChunk.slot,
+      chunk: damagedChunk.id,
+      state: "running",
+      correction: "",
+      pid: abandonedPid,
+    })}\n`,
+  );
   run(
-    "render packaged starter through final compile",
+    "resume interrupted packaged render through final compile",
     "pnpm render",
     starterDir,
   );
+  const quarantine = readdirSync(join(renderStateRoot, "quarantine"));
+  if (
+    existsSync(retainedMarker) === false ||
+    existsSync(join(renderStateRoot, "attempts", `${slotSegment}.json`)) ||
+    quarantine.some((entry) => entry.includes("abandoned-partial")) === false ||
+    quarantine.some((entry) => entry.includes("abandoned-lock")) === false ||
+    quarantine.some((entry) => entry.includes("replaced")) === false
+  )
+    fail(
+      "packaged render did not reuse the current chunk and recover interrupted/corrupt state selectively",
+    );
   run(
     "verify packaged starter pixels, final ledger and tamper gate",
     "node verify-packaged-starter.mjs final",

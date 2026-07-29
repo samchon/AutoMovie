@@ -20,6 +20,26 @@
       "id": "starter-preview",
       "kind": "preview",
       "required": true
+    },
+    {
+      "id": "starter-feature",
+      "kind": "feature",
+      "required": true
+    },
+    {
+      "id": "starter-pose-guide",
+      "kind": "guide-pass",
+      "required": true
+    },
+    {
+      "id": "starter-captions",
+      "kind": "captions",
+      "required": true
+    },
+    {
+      "id": "starter-audio",
+      "kind": "audio-mix",
+      "required": true
     }
   ]
 }

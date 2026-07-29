@@ -2,7 +2,8 @@
   "extends": "../../internals/config/tsconfig.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "lib"
+    "outDir": "lib",
+    "types": ["node"]
   },
   "include": [
     "src"

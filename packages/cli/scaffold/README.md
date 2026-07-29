@@ -48,8 +48,20 @@ The sample review queue is deliberately incomplete. Open the PNG printed by
 
 Register `automovie.mcp.jsonc` with your coding agent. Its first call is
 `getGuideDocument({name:"AUTOMOVIE_OVERALL"})`, then `openProject` with this
-repository root. Full render and future audio/chunk resume are CLI jobs, not
-free-form MCP shell tools.
+repository root. Full render, chunk resume, encode, and final publication are
+project CLI jobs, not free-form MCP shell tools:
+
+```sh
+npx automovie render plan
+npx automovie render status
+npx automovie render run --workers 2
+npx automovie render verify
+npx automovie render finalize
+```
+
+`pnpm render` is the convenience sequence: it captures current review evidence,
+reuses or renders current chunks, then attempts final publication. Finalize
+still fails closed until every current review is complete.
 
 ## Ownership
 
