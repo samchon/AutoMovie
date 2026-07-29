@@ -610,6 +610,7 @@ assert(
 const app = new AutoMovieApplication({ projectRoot: root });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
 app.getGuideDocument({ name: "COMPILATION" });
+app.getGuideDocument({ name: "GEOMETRY" });
 app.getGuideDocument({ name: "PRODUCTION_REVIEW" });
 app.openProject({ root });
 const project = AutoMovieProductionProject.open(root);

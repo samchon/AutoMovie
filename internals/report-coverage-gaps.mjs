@@ -24,6 +24,12 @@ for (const [file, data] of Object.entries(coverage).sort(([left], [right]) =>
   const statements = Object.entries(data.s)
     .filter(([, hits]) => hits === 0)
     .map(([id]) => location(data.statementMap[id]));
+  const functions = Object.entries(data.f)
+    .filter(([, hits]) => hits === 0)
+    .map(([id]) => {
+      const definition = data.fnMap[id];
+      return `${definition.name}@${location(definition.loc)}`;
+    });
   const branches = [];
   for (const [id, hits] of Object.entries(data.b))
     hits.forEach((count, index) => {
@@ -32,10 +38,17 @@ for (const [file, data] of Object.entries(coverage).sort(([left], [right]) =>
           `${data.branchMap[id].type}@${location(data.branchMap[id].locations[index])}`,
         );
     });
-  if (statements.length === 0 && branches.length === 0) continue;
+  if (
+    statements.length === 0 &&
+    functions.length === 0 &&
+    branches.length === 0
+  )
+    continue;
   console.log(`::group::${relative(file)}`);
   if (statements.length !== 0)
     console.log(`uncovered statements: ${statements.join(", ")}`);
+  if (functions.length !== 0)
+    console.log(`uncovered functions: ${functions.join(", ")}`);
   if (branches.length !== 0)
     console.log(`uncovered branches: ${branches.join(", ")}`);
   console.log("::endgroup::");
