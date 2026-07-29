@@ -313,6 +313,10 @@ export class AutoMovieLegacyImporter {
           `Legacy import rollback could not complete and the applied state was restored: ${String(error)}`,
         );
       }
+      // The successful rollback removed the resident lock with the quarantined
+      // state root. Clear only this process's ownership so a later import at
+      // the same path must create and acquire a fresh physical lock.
+      releaseCommitLock(lockPath, token, { unlink: false });
       return { status: "rolled-back", fingerprint: plan.fingerprint };
     } catch (error) {
       releaseResidentLockIfCurrent(lease, lockPath, token);

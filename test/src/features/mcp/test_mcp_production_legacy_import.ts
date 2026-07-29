@@ -577,10 +577,20 @@ export const test_mcp_production_legacy_import = (): void => {
     const stale = AutoMovieProductionProject.open(incarnationRace.root);
     importer.rollback();
     importer.apply();
+    const reappliedLock = path.join(
+      incarnationRace.root,
+      ".automovie/revision.lock",
+    );
+    const reappliedToken = acquireCommitLock(reappliedLock);
+    const freshReappliedLock =
+      fs.existsSync(reappliedLock) &&
+      fs.readFileSync(reappliedLock, "utf8") === reappliedToken;
+    releaseCommitLock(reappliedLock, reappliedToken);
     AutoMovieProductionProject.open(incarnationRace.root);
     TestValidator.predicate(
       "a stale production handle cannot cross rollback and re-apply ABA",
-      throws(() => stale.manifest(), "incarnation changed") &&
+      freshReappliedLock &&
+        throws(() => stale.manifest(), "incarnation changed") &&
         throws(
           () =>
             stale.commitProductionDeliverableFiles(
