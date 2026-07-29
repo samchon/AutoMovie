@@ -15,10 +15,10 @@ import path from "node:path";
 import { PNG } from "pngjs";
 
 import {
+  fixtureWorldDesign,
   productionFixture,
   testCaptureRuntimeIdentity,
   testRendererIdentity,
-  worldDesign,
 } from "./productionFixtures";
 
 const png = (width = 16, height = 16): Uint8Array => {
@@ -100,16 +100,17 @@ export const test_mcp_production_review_render_edges =
         height: 16,
       });
       const prepared = review.prepare({ target });
-      const staleWorld = worldDesign();
+      const staleWorld = fixtureWorldDesign();
       staleWorld.landmarks[0]!.meaning += " Stale.";
       project.setWorldDesign(staleWorld);
       const stalePrepared = review.prepare({ target });
-      project.setWorldDesign(worldDesign());
-      // Restoring the design and recompiling has to bring the same pixels back:
-      // the frames were retired because the world design they depend on moved,
-      // not because they were rewritten. Render evidence is still fingerprinted
-      // by the whole compile input, so an edit to any other source module
-      // retires them too; that is a separate freshness question from this one.
+      // Put back what the fixture actually wrote. The full starter world is a
+      // different design, and every bundle bound to the fixture slice would
+      // stop matching for good rather than coming back.
+      project.setWorldDesign(fixtureWorldDesign());
+      // Restoring the design and recompiling brings the same pixels back: the
+      // frames were retired because the design they answer to moved, not
+      // because they were rewritten.
       compiler.compile({ scope: "source" });
       const restoredPrepared = review.prepare({ target });
       TestValidator.equals(

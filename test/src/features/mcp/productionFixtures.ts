@@ -37,12 +37,8 @@ export const productionFixture = (): {
     delete files[file];
   files[".automovie/design/shots/opening.json"] =
     `${JSON.stringify(shotContract(), null, 2)}\n`;
-  const world = JSON.parse(
-    files[".automovie/design/world.json"]!,
-  ) as IAutoMovieWorldDesign;
-  world.effectRecipes = [];
-  world.effectZones = [];
-  files[".automovie/design/world.json"] = `${JSON.stringify(world, null, 2)}\n`;
+  files[".automovie/design/world.json"] =
+    `${JSON.stringify(fixtureWorldDesign(), null, 2)}\n`;
   const openingBeauty = JSON.parse(
     files[".automovie/design/acceptance/opening-beauty.json"]!,
   ) as IAutoMovieAcceptanceScenario;
@@ -136,6 +132,21 @@ export const modelRecipe = (): IAutoMovieModelRecipe =>
 /** Starter world design. */
 export const worldDesign = (): IAutoMovieWorldDesign =>
   scaffoldJson(".automovie/design/world.json");
+
+/**
+ * Starter world restricted to the slice `productionFixture` writes.
+ *
+ * The disposable root drops the effect recipes and zones so the services under
+ * test read a small deterministic graph. A test that rewrites the world and
+ * means to put it back has to restore this slice: installing the full starter
+ * world instead changes the design, and every render bundle bound to the old
+ * one stops matching for good.
+ */
+export const fixtureWorldDesign = (): IAutoMovieWorldDesign => ({
+  ...worldDesign(),
+  effectRecipes: [],
+  effectZones: [],
+});
 
 /**
  * Starter shot contract restricted to its named actor.
