@@ -11,6 +11,7 @@ import {
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
   productionRenderTargetFingerprint,
+  releaseCommitLock,
   releaseProductionRootNamespace,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -1957,13 +1958,21 @@ export const test_mcp_production_project = (): void => {
       fs.renameSync = nativeRenameForMutationSwap;
     }
     const replacementUntouched = fs.existsSync(mutationFrame) === false;
+    let abandonedLockReleased = false;
     if (mutationRootSwapped) {
       fs.rmSync(mutationRoot, { force: true, recursive: true });
       fs.renameSync(parkedMutationRoot, mutationRoot);
+      const abandonedLock = path.join(mutationRoot, ".automovie/revision.lock");
+      const abandonedToken = fs.readFileSync(abandonedLock, "utf8");
+      releaseCommitLock(abandonedLock, abandonedToken);
+      abandonedLockReleased = fs.existsSync(abandonedLock) === false;
     }
     TestValidator.predicate(
       "a root swapped during publication refuses rollback and stale lock release in the replacement",
-      mutationRootSwapped && mutationSwapRejected && replacementUntouched,
+      mutationRootSwapped &&
+        mutationSwapRejected &&
+        replacementUntouched &&
+        abandonedLockReleased,
     );
     TestValidator.predicate(
       "every absent design discriminator returns one missing mutation",
