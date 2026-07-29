@@ -196,7 +196,8 @@ const judgeFrame = (
         canonicalBenchmarkJson(right),
       ),
     );
-  if (frames.length === 0)
+  const first = frames[0];
+  if (first === undefined)
     return {
       id: assertion.id,
       axis: "frame",
@@ -212,7 +213,7 @@ const judgeFrame = (
       frame.height === assertion.height &&
       frame.bytes >= assertion.minBytes,
   );
-  const observed = passing ?? frames[0]!;
+  const observed = passing ?? first;
   return {
     id: assertion.id,
     axis: "frame",
