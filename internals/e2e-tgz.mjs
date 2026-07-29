@@ -1165,32 +1165,13 @@ try {
   writeFileSync(
     encoderFailureHookPath,
     `
-const Module = require("node:module");
-const originalLoad = Module._load;
-let wrappedEncoderModule;
-Module._load = function (request, parent, isMain) {
-  const loaded = originalLoad.apply(this, arguments);
-  if (
-    loaded !== null &&
-    typeof loaded === "object" &&
-    typeof loaded.createH264MP4Encoder === "function"
-  ) {
-    if (wrappedEncoderModule !== undefined) return wrappedEncoderModule;
-    const originalCreate = loaded.createH264MP4Encoder;
-    wrappedEncoderModule = Object.create(loaded);
-    Object.defineProperty(wrappedEncoderModule, "createH264MP4Encoder", {
-      enumerable: true,
-      value: async (...args) => {
-        const encoder = await originalCreate(...args);
-        encoder.addFrameRgba = () => {
-          throw new Error("automovie-encoder-consumer-sentinel");
-        };
-        return encoder;
-      },
-    });
-    return wrappedEncoderModule;
-  }
-  return loaded;
+const { PNG } = require("pngjs");
+const originalRead = PNG.sync.read;
+PNG.sync.read = function (input) {
+  const caller = new Error().stack?.split("\\n")[2] ?? "";
+  if (/[\\\\/]scripts[\\\\/]render\\.ts:\\d+:\\d+/.test(caller))
+    throw new Error("automovie-encoder-consumer-sentinel");
+  return originalRead.apply(this, arguments);
 };
 `,
   );
