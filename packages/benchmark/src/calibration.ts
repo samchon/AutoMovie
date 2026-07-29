@@ -6,6 +6,7 @@ import { IAutoMovieBenchmarkSubmission } from "./submission";
 import {
   IAutoMovieBenchmarkBand,
   IAutoMovieBenchmarkTask,
+  canonicalBenchmarkJson,
   compareBenchmarkCodeUnits,
 } from "./task";
 
@@ -60,7 +61,7 @@ export const calibrateAutoMovieBenchmark = (
   const supplied = anchors.mutants
     .map((mutant) => mutant.id)
     .sort(compareBenchmarkCodeUnits);
-  if (declared.join("\n") !== supplied.join("\n"))
+  if (canonicalBenchmarkJson(declared) !== canonicalBenchmarkJson(supplied))
     throw new Error(
       `Benchmark task "${task.taskId}" declares mutants [${declared.join(", ")}] but the anchors supply [${supplied.join(", ")}]. Every declared mutant needs a fixed submission.`,
     );

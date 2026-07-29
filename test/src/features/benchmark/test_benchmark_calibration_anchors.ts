@@ -144,6 +144,32 @@ export const test_benchmark_calibration_anchors = (): void => {
       "Every declared mutant needs a fixed submission",
     ),
   );
+  const separatorTask: IAutoMovieBenchmarkTask = {
+    ...task,
+    calibration: {
+      ...task.calibration,
+      mutants: [
+        {
+          ...task.calibration.mutants[0]!,
+          id: "ids\njoined",
+        },
+      ],
+    },
+  };
+  TestValidator.predicate(
+    "mutant ids containing the old join separator cannot disguise another set",
+    throws(
+      () =>
+        calibrateAutoMovieBenchmark(separatorTask, {
+          ...anchors,
+          mutants: [
+            { ...anchors.mutants[0]!, id: "ids" },
+            { ...anchors.mutants[1]!, id: "joined" },
+          ],
+        }),
+      "Every declared mutant needs a fixed submission",
+    ),
+  );
 
   const displacedEmptyTask: IAutoMovieBenchmarkTask = {
     ...task,
