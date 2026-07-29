@@ -45,7 +45,7 @@ const stateRoot = path.join(root, ".automovie", "render-job");
 const planPath = path.join(stateRoot, "plan.json");
 const action = process.argv[2] ?? "all";
 const require = createRequire(import.meta.url);
-const heldChunkLocks = new Map<string, string>();
+const heldChunkLocks = new Map<string, { path: string; token: string }>();
 
 interface IRenderChunkLockOwner {
   chunk: AutoMovieContentDigest;
@@ -424,47 +424,67 @@ const currentReceipt = async (
 const acquireChunk = async (
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<boolean> => {
-  const file = lockPath(chunk);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const attempt = (): boolean => {
-    const token = randomUUID();
-    const candidate = `${file}.${process.pid}.${token}.candidate`;
-    try {
-      fs.writeFileSync(
-        candidate,
-        `${JSON.stringify({ chunk: chunk.id, pid: process.pid, token })}\n`,
-        { flag: "wx" },
-      );
-      try {
-        // Publish a fully written owner record in one namespace operation. An
-        // interrupted candidate is never mistaken for the authoritative lock.
-        fs.linkSync(candidate, file);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
-        throw error;
-      }
-      heldChunkLocks.set(file, token);
-      return true;
-    } finally {
-      fs.rmSync(candidate, { force: true });
-    }
-  };
-  if (attempt()) return true;
-  let owner: IRenderChunkLockOwner;
+  const directory = chunkLockDirectory(chunk);
+  fs.mkdirSync(directory, { recursive: true });
+  const token = randomUUID();
+  const claim = path.join(directory, `claim.${process.pid}.${token}.lock`);
+  const candidate = `${claim}.candidate`;
   try {
-    owner = readJson<IRenderChunkLockOwner>(file);
-  } catch (error) {
-    throw new Error(
-      `Chunk lock "${file}" has no readable owner identity. Verify that no render worker owns it, then quarantine it before retrying: ${String(error)}`,
+    fs.writeFileSync(
+      candidate,
+      `${JSON.stringify({ chunk: chunk.id, pid: process.pid, token })}\n`,
+      { flag: "wx" },
     );
+    // Publish a fully written owner record in one namespace operation. The
+    // unique claim path is never reused by another worker, so dead-owner
+    // recovery cannot rename or unlink a later owner's lock.
+    fs.linkSync(candidate, claim);
+  } finally {
+    fs.rmSync(candidate, { force: true });
   }
-  if (Number.isSafeInteger(owner.pid) === false || owner.pid <= 0)
-    throw new Error(
-      `Chunk lock "${file}" has an invalid owner process. Verify that no render worker owns it, then quarantine it before retrying.`,
-    );
-  if (processAlive(owner.pid)) return false;
-  quarantine(file, "abandoned-lock");
-  return attempt();
+  try {
+    for (const file of chunkLockClaims(chunk)) {
+      let owner: IRenderChunkLockOwner;
+      try {
+        owner = readJson<IRenderChunkLockOwner>(file);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+        throw new Error(
+          `Chunk lock "${file}" has no readable owner identity. Verify that no render worker owns it, then quarantine it before retrying: ${String(error)}`,
+        );
+      }
+      if (Number.isSafeInteger(owner.pid) === false || owner.pid <= 0)
+        throw new Error(
+          `Chunk lock "${file}" has an invalid owner process. Verify that no render worker owns it, then quarantine it before retrying.`,
+        );
+      if (processAlive(owner.pid)) {
+        if (file !== claim) {
+          releaseOwnedChunkClaim(chunk, claim, token);
+          return false;
+        }
+        continue;
+      }
+      try {
+        quarantine(file, "abandoned-lock");
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+    }
+    const owner = readJson<IRenderChunkLockOwner>(claim);
+    if (
+      owner.chunk !== chunk.id ||
+      owner.pid !== process.pid ||
+      owner.token !== token
+    )
+      throw new Error(
+        `Chunk lock claim "${claim}" changed before rendering began.`,
+      );
+    heldChunkLocks.set(chunk.slot, { path: claim, token });
+    return true;
+  } catch (error) {
+    releaseOwnedChunkClaim(chunk, claim, token);
+    throw error;
+  }
 };
 
 const renderChunk = async (
@@ -604,10 +624,17 @@ const failChunk = async (
 const releaseChunk = async (
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<void> => {
-  const file = lockPath(chunk);
-  const token = heldChunkLocks.get(file);
-  if (token === undefined) return;
-  heldChunkLocks.delete(file);
+  const held = heldChunkLocks.get(chunk.slot);
+  if (held === undefined) return;
+  heldChunkLocks.delete(chunk.slot);
+  releaseOwnedChunkClaim(chunk, held.path, held.token);
+};
+
+const releaseOwnedChunkClaim = (
+  chunk: IAutoMovieProductionRenderChunk,
+  file: string,
+  token: string,
+): void => {
   try {
     const owner = readJson<IRenderChunkLockOwner>(file);
     if (
@@ -617,7 +644,7 @@ const releaseChunk = async (
     )
       fs.rmSync(file, { force: true });
   } catch {
-    // A missing, unreadable, or replaced lock is not proven to be ours.
+    // A missing, unreadable, or replaced claim is not proven to be ours.
   }
 };
 
@@ -1157,21 +1184,27 @@ const chunkDirectory = (digest: AutoMovieContentDigest): string =>
 const recoverAbandonedTemporaryDirectories = (): void => {
   const locks = path.join(stateRoot, "locks");
   if (fs.existsSync(locks))
-    for (const entry of fs
+    for (const slot of fs
       .readdirSync(locks, { withFileTypes: true })
-      .filter((candidate) => candidate.name.endsWith(".candidate"))
-      .sort((left, right) => compareCodeUnits(left.name, right.name))) {
-      const target = path.join(locks, entry.name);
-      const match = /\.lock\.(\d+)\.[^.]+\.candidate$/u.exec(entry.name);
-      const pid = Number(match?.[1]);
-      if (
-        entry.isFile() === false ||
-        Number.isSafeInteger(pid) === false ||
-        pid <= 0 ||
-        processAlive(pid) === false
-      )
-        quarantine(target, "abandoned-lock-candidate");
-    }
+      .filter((entry) => entry.isDirectory())
+      .sort((left, right) => compareCodeUnits(left.name, right.name)))
+      for (const entry of fs
+        .readdirSync(path.join(locks, slot.name), { withFileTypes: true })
+        .filter((candidate) => candidate.name.endsWith(".candidate"))
+        .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+        const target = path.join(locks, slot.name, entry.name);
+        const match = /^claim\.(\d+)\.[^.]+\.lock\.candidate$/u.exec(
+          entry.name,
+        );
+        const pid = Number(match?.[1]);
+        if (
+          entry.isFile() === false ||
+          Number.isSafeInteger(pid) === false ||
+          pid <= 0 ||
+          processAlive(pid) === false
+        )
+          quarantine(target, "abandoned-lock-candidate");
+      }
   const directory = path.join(stateRoot, "tmp");
   if (fs.existsSync(directory) === false) return;
   for (const entry of fs
@@ -1219,12 +1252,28 @@ const attemptPath = (chunk: IAutoMovieProductionRenderChunk): string =>
     `${encodeAutoMoviePathSegment(chunk.slot)}.json`,
   );
 
-const lockPath = (chunk: IAutoMovieProductionRenderChunk): string =>
+const legacyLockPath = (chunk: IAutoMovieProductionRenderChunk): string =>
   path.join(
     stateRoot,
     "locks",
     `${encodeAutoMoviePathSegment(chunk.slot)}.lock`,
   );
+
+const chunkLockDirectory = (chunk: IAutoMovieProductionRenderChunk): string =>
+  path.join(stateRoot, "locks", encodeAutoMoviePathSegment(chunk.slot));
+
+const chunkLockClaims = (chunk: IAutoMovieProductionRenderChunk): string[] => {
+  const directory = chunkLockDirectory(chunk);
+  const claims = fs.existsSync(directory)
+    ? fs
+        .readdirSync(directory, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".lock"))
+        .map((entry) => path.join(directory, entry.name))
+    : [];
+  const legacy = legacyLockPath(chunk);
+  if (fs.existsSync(legacy)) claims.push(legacy);
+  return claims.sort(compareCodeUnits);
+};
 
 const readAllJson = <T>(directory: string, suffix: string): T[] =>
   fs.existsSync(directory)

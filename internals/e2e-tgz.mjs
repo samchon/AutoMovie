@@ -1208,11 +1208,13 @@ try {
   writeFileSync(join(abandonedTemporary, "partial.png"), Buffer.alloc(0));
   const slotSegment = encodeURIComponent(damagedChunk.slot);
   mkdirSync(join(renderStateRoot, "locks"), { recursive: true });
+  mkdirSync(join(renderStateRoot, "locks", slotSegment), { recursive: true });
   writeFileSync(
     join(
       renderStateRoot,
       "locks",
-      `${slotSegment}.lock.${abandonedPid}.interrupted.candidate`,
+      slotSegment,
+      `claim.${abandonedPid}.interrupted.lock.candidate`,
     ),
     Buffer.alloc(0),
   );
