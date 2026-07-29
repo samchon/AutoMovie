@@ -225,8 +225,9 @@ const throws = (closure: () => unknown): boolean => {
  * 6. Receipts require exact identity, ordered global frames, raster, positive
  *    safe-integer byte counts, and SHA-256 facts.
  * 7. The worker scheduler reuses current chunks, skips busy locks, commits valid
- *    renders, records failures, releases every acquired lock, and rejects
- *    invalid worker/deliverable requests.
+ *    renders, records failures, releases every acquired lock, rejects invalid
+ *    requests, and drains in-flight peers before propagating a fatal adapter
+ *    failure.
  * 8. Invalid chunk sizes, clock mismatches, out-of-range/gap frames, a first
  *    dissolve, invalid guide passes, and non-finite runtime identity fail
  *    closed.
@@ -655,6 +656,56 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       acquired.length === 3 &&
       released.length === 2 &&
       failed[0]?.endsWith(":encoder failed") === true,
+  );
+  const drainingPlan = {
+    ...renderPlan,
+    chunks: renderPlan.chunks.slice(0, 2),
+  };
+  let resumeInFlight = (): void => undefined;
+  const inFlight = new Promise<void>((resolve) => {
+    resumeInFlight = resolve;
+  });
+  let peerDrained = false;
+  const draining = runProductionRenderJob({
+    plan: drainingPlan,
+    workers: 2,
+    adapters: {
+      current: async (chunk) => {
+        if (chunk.slot === drainingPlan.chunks[0]!.slot)
+          throw NON_ERROR_FAILURE;
+        await inFlight;
+        peerDrained = true;
+        return receipt(drainingPlan, 1);
+      },
+      acquire: async () => false,
+      render: async () => receipt(drainingPlan, 0),
+      fail: async () => undefined,
+      release: async () => undefined,
+    },
+  });
+  let schedulerSettled = false;
+  void draining.then(
+    () => {
+      schedulerSettled = true;
+    },
+    () => {
+      schedulerSettled = true;
+    },
+  );
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const settledBeforeDrain = schedulerSettled;
+  resumeInFlight();
+  let fatalReason: unknown;
+  try {
+    await draining;
+  } catch (error) {
+    fatalReason = error;
+  }
+  TestValidator.predicate(
+    "scheduler drains in-flight peers before preserving fatal failures",
+    settledBeforeDrain === false &&
+      peerDrained &&
+      fatalReason === NON_ERROR_FAILURE,
   );
   TestValidator.predicate(
     "scheduler rejects invalid workers and missing deliverables",

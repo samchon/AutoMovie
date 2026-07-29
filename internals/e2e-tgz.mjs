@@ -1185,7 +1185,7 @@ PNG.sync.read = function (input) {
       ...process.env,
       NODE_OPTIONS: [
         process.env.NODE_OPTIONS,
-        `--require=${encoderFailureHookPath}`,
+        "--require=./fail-packaged-encoder.cjs",
       ]
         .filter(Boolean)
         .join(" "),

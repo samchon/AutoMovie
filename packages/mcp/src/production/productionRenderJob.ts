@@ -581,39 +581,44 @@ export const runProductionRenderJob = async (props: {
     failed: [] as Array<{ slot: string; correction: string }>,
   };
   let cursor = 0;
+  const fatalFailures: unknown[] = [];
   const worker = async (): Promise<void> => {
-    while (cursor < queue.length) {
-      const chunk = queue[cursor++]!;
-      const current = await props.adapters.current(chunk);
-      if (current !== null) {
-        verifyProductionRenderChunkReceipt({
-          plan: props.plan,
-          chunk,
-          receipt: current,
-        });
-        output.complete.push(chunk.slot);
-        continue;
+    try {
+      while (fatalFailures.length === 0 && cursor < queue.length) {
+        const chunk = queue[cursor++]!;
+        const current = await props.adapters.current(chunk);
+        if (current !== null) {
+          verifyProductionRenderChunkReceipt({
+            plan: props.plan,
+            chunk,
+            receipt: current,
+          });
+          output.complete.push(chunk.slot);
+          continue;
+        }
+        if ((await props.adapters.acquire(chunk)) === false) {
+          output.busy.push(chunk.slot);
+          continue;
+        }
+        try {
+          const receipt = await props.adapters.render(chunk);
+          verifyProductionRenderChunkReceipt({
+            plan: props.plan,
+            chunk,
+            receipt,
+          });
+          output.rendered.push(chunk.slot);
+        } catch (error) {
+          const correction =
+            error instanceof Error ? error.message : String(error);
+          await props.adapters.fail(chunk, correction);
+          output.failed.push({ slot: chunk.slot, correction });
+        } finally {
+          await props.adapters.release(chunk);
+        }
       }
-      if ((await props.adapters.acquire(chunk)) === false) {
-        output.busy.push(chunk.slot);
-        continue;
-      }
-      try {
-        const receipt = await props.adapters.render(chunk);
-        verifyProductionRenderChunkReceipt({
-          plan: props.plan,
-          chunk,
-          receipt,
-        });
-        output.rendered.push(chunk.slot);
-      } catch (error) {
-        const correction =
-          error instanceof Error ? error.message : String(error);
-        await props.adapters.fail(chunk, correction);
-        output.failed.push({ slot: chunk.slot, correction });
-      } finally {
-        await props.adapters.release(chunk);
-      }
+    } catch (error) {
+      fatalFailures.push(error);
     }
   };
   await Promise.all(
@@ -622,6 +627,7 @@ export const runProductionRenderJob = async (props: {
       worker,
     ),
   );
+  if (fatalFailures.length !== 0) throw fatalFailures[0];
   const order = new Map(queue.map((chunk, index) => [chunk.slot, index]));
   output.complete.sort((left, right) => order.get(left)! - order.get(right)!);
   output.rendered.sort((left, right) => order.get(left)! - order.get(right)!);
