@@ -77,6 +77,11 @@ graphics, declared render-source, and package-owned encoder identity preflight.
 They can launch Chromium and mark every stored chunk stale when that structured
 runtime identity changes.
 
+Chunk locks publish a complete owner record before becoming visible and are
+removed only by the matching process-local token. A killed worker leaves either
+a recoverable owned lock or a non-authoritative candidate that the next run
+quarantines.
+
 ## Usage
 
 ```

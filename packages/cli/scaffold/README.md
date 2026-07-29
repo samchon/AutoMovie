@@ -64,6 +64,10 @@ graphics, declared render-source, and encoder identity preflight. They may
 launch Chromium; any identity change marks the stored chunks stale instead of
 mixing or misattributing output from two runtimes.
 
+Chunk workers publish a complete owner record atomically before rendering and
+remove a lock only when its process-local token still owns that exact path.
+Interrupted pre-publication candidates are quarantined on the next run.
+
 `pnpm render` is the convenience sequence: it captures current review evidence,
 reuses or renders current chunks, then attempts final publication. Finalize
 still fails closed until every current review is complete.

@@ -31,7 +31,7 @@ import {
 } from "@automovie/mcp";
 import * as HME from "h264-mp4-encoder";
 import { createFile } from "mp4box";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -45,6 +45,14 @@ const stateRoot = path.join(root, ".automovie", "render-job");
 const planPath = path.join(stateRoot, "plan.json");
 const action = process.argv[2] ?? "all";
 const require = createRequire(import.meta.url);
+const heldChunkLocks = new Map<string, string>();
+
+interface IRenderChunkLockOwner {
+  chunk: AutoMovieContentDigest;
+  pid: number;
+  /** Absent only on an older lock written before owner-checked release. */
+  token?: string;
+}
 
 const main = async (): Promise<void> => {
   if (
@@ -419,21 +427,41 @@ const acquireChunk = async (
   const file = lockPath(chunk);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const attempt = (): boolean => {
+    const token = randomUUID();
+    const candidate = `${file}.${process.pid}.${token}.candidate`;
     try {
-      const descriptor = fs.openSync(file, "wx");
       fs.writeFileSync(
-        descriptor,
-        `${JSON.stringify({ chunk: chunk.id, pid: process.pid })}\n`,
+        candidate,
+        `${JSON.stringify({ chunk: chunk.id, pid: process.pid, token })}\n`,
+        { flag: "wx" },
       );
-      fs.closeSync(descriptor);
+      try {
+        // Publish a fully written owner record in one namespace operation. An
+        // interrupted candidate is never mistaken for the authoritative lock.
+        fs.linkSync(candidate, file);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
+        throw error;
+      }
+      heldChunkLocks.set(file, token);
       return true;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      return false;
+    } finally {
+      fs.rmSync(candidate, { force: true });
     }
   };
   if (attempt()) return true;
-  const owner = readJson<{ pid: number }>(file);
+  let owner: IRenderChunkLockOwner;
+  try {
+    owner = readJson<IRenderChunkLockOwner>(file);
+  } catch (error) {
+    throw new Error(
+      `Chunk lock "${file}" has no readable owner identity. Verify that no render worker owns it, then quarantine it before retrying: ${String(error)}`,
+    );
+  }
+  if (Number.isSafeInteger(owner.pid) === false || owner.pid <= 0)
+    throw new Error(
+      `Chunk lock "${file}" has an invalid owner process. Verify that no render worker owns it, then quarantine it before retrying.`,
+    );
   if (processAlive(owner.pid)) return false;
   quarantine(file, "abandoned-lock");
   return attempt();
@@ -576,7 +604,21 @@ const failChunk = async (
 const releaseChunk = async (
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<void> => {
-  fs.rmSync(lockPath(chunk), { force: true });
+  const file = lockPath(chunk);
+  const token = heldChunkLocks.get(file);
+  if (token === undefined) return;
+  heldChunkLocks.delete(file);
+  try {
+    const owner = readJson<IRenderChunkLockOwner>(file);
+    if (
+      owner.chunk === chunk.id &&
+      owner.pid === process.pid &&
+      owner.token === token
+    )
+      fs.rmSync(file, { force: true });
+  } catch {
+    // A missing, unreadable, or replaced lock is not proven to be ours.
+  }
 };
 
 const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
@@ -1113,6 +1155,23 @@ const chunkDirectory = (digest: AutoMovieContentDigest): string =>
   path.join(stateRoot, "chunks", digest.slice(7));
 
 const recoverAbandonedTemporaryDirectories = (): void => {
+  const locks = path.join(stateRoot, "locks");
+  if (fs.existsSync(locks))
+    for (const entry of fs
+      .readdirSync(locks, { withFileTypes: true })
+      .filter((candidate) => candidate.name.endsWith(".candidate"))
+      .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+      const target = path.join(locks, entry.name);
+      const match = /\.lock\.(\d+)\.[^.]+\.candidate$/u.exec(entry.name);
+      const pid = Number(match?.[1]);
+      if (
+        entry.isFile() === false ||
+        Number.isSafeInteger(pid) === false ||
+        pid <= 0 ||
+        processAlive(pid) === false
+      )
+        quarantine(target, "abandoned-lock-candidate");
+    }
   const directory = path.join(stateRoot, "tmp");
   if (fs.existsSync(directory) === false) return;
   for (const entry of fs
@@ -1225,8 +1284,8 @@ const processAlive = (pid: number): boolean => {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
   }
 };
 

@@ -1209,6 +1209,14 @@ try {
   const slotSegment = encodeURIComponent(damagedChunk.slot);
   mkdirSync(join(renderStateRoot, "locks"), { recursive: true });
   writeFileSync(
+    join(
+      renderStateRoot,
+      "locks",
+      `${slotSegment}.lock.${abandonedPid}.interrupted.candidate`,
+    ),
+    Buffer.alloc(0),
+  );
+  writeFileSync(
     join(renderStateRoot, "locks", `${slotSegment}.lock`),
     `${JSON.stringify({ chunk: damagedChunk.id, pid: abandonedPid })}\n`,
   );
@@ -1233,6 +1241,8 @@ try {
     existsSync(retainedMarker) === false ||
     existsSync(join(renderStateRoot, "attempts", `${slotSegment}.json`)) ||
     quarantine.some((entry) => entry.includes("abandoned-partial")) === false ||
+    quarantine.some((entry) => entry.includes("abandoned-lock-candidate")) ===
+      false ||
     quarantine.some((entry) => entry.includes("abandoned-lock")) === false ||
     quarantine.some((entry) => entry.includes("replaced")) === false
   )
