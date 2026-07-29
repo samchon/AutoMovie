@@ -880,7 +880,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         movingWithRootKind: movingWithRoot.result?.kind ?? null,
         movingRootX:
           movingWithRoot.result?.kind === "measurement"
-            ? movingWithRoot.result.values.rootX
+            ? Number(movingWithRoot.result.values.rootX).toFixed(9)
             : null,
         missingMotion: missingMotion.result?.kind ?? null,
         missingPerformanceKind: missingPerformance.result?.kind ?? null,
@@ -896,7 +896,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         heldWithoutNode: null,
         movingWithoutRootOrNode: null,
         movingWithRootKind: "measurement",
-        movingRootX: 7,
+        // The sentinel node is this formation's promoted hero slot, so an
+        // authored pose root of 7 lands at the slot plus 7, exactly as the
+        // viewer composes it.
+        movingRootX: (
+          generatedShot.scene.nodes[0]!.transform.translation.x + 7
+        ).toFixed(9),
         missingMotion: null,
         missingPerformanceKind: "measurement",
         missingPerformanceHeld: false,

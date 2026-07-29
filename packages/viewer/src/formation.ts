@@ -25,7 +25,15 @@ export type {
 
 /** Per-frame bounded debug summary for one formation. */
 export interface IAutoMovieFormationViewerStats {
-  /** Anonymous slots selected per tier after chunk culling. */
+  /**
+   * Slots currently drawn per tier after chunk culling.
+   *
+   * `near` and `far` count anonymous instance slots. `hero` counts promoted
+   * hero objects still inside the frustum instead, because an anonymous slot
+   * can never select that tier: the compiler drops the hero tier from the
+   * anonymous LOD list. Anonymous accounting is therefore `near + far +
+   * culled`, and the hero count belongs beside it rather than inside it.
+   */
   visible: Record<IAutoMovieCompiledFormationLod["tier"], number>;
   /** Anonymous slots rejected by camera-frustum chunk culling. */
   culled: number;

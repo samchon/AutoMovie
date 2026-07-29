@@ -1675,10 +1675,29 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       { id: "missing-file", kind: "preview", required: false },
       { id: "kind-mismatch", kind: "captions", required: false },
     ];
-    TestValidator.predicate(
+    const edgeDesign = project.setProductionDesign(edgeProduction);
+    const edgeCompile = finalCompiler.compile({ scope: "source" });
+    TestValidator.equals(
       "final semantic edge production compiles",
-      project.setProductionDesign(edgeProduction).accepted &&
-        finalCompiler.compile({ scope: "source" }).success,
+      {
+        accepted: edgeDesign.accepted,
+        designCodes: [
+          ...new Set(
+            edgeDesign.diagnostics
+              .filter((diagnostic) => diagnostic.category === "error")
+              .map((diagnostic) => diagnostic.code),
+          ),
+        ].sort(compareCodeUnits),
+        compiled: edgeCompile.success,
+        compileCodes: [
+          ...new Set(
+            edgeCompile.diagnostics
+              .filter((diagnostic) => diagnostic.category === "error")
+              .map((diagnostic) => diagnostic.code),
+          ),
+        ].sort(compareCodeUnits),
+      },
+      { accepted: true, designCodes: [], compiled: true, compileCodes: [] },
     );
     const edgeFingerprint = finalCompiler.lint({ scope: "source" }).compiler
       .inputFingerprint;

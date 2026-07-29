@@ -390,7 +390,9 @@ export const test_viewer_formation = (): void => {
   const firstTranslation = new THREE.Vector3().setFromMatrixPosition(
     firstMatrix,
   );
-  const firstAnonymous = regenerateFormationSlot(formation, 1);
+  // Instance 0 of the first chunk is slot 0: the promoted heroes sit at 511
+  // and 1535, so no hero displaces the head of the chunk.
+  const firstAnonymous = regenerateFormationSlot(formation, 0);
   const firstScaled = transformFormationPoint(
     firstAnonymous.position,
     formation.anchor,
@@ -479,10 +481,9 @@ export const test_viewer_formation = (): void => {
     },
     90,
   );
-  const visible =
-    built.stats.visible.hero +
-    built.stats.visible.near +
-    built.stats.visible.far;
+  // Anonymous accounting is near + far + culled. The `hero` key counts
+  // promoted hero objects inside the frustum, which are not instance slots.
+  const visibleAnonymous = built.stats.visible.near + built.stats.visible.far;
   const yawDegrees = (rotation: THREE.Quaternion): number =>
     THREE.MathUtils.radToDeg(
       new THREE.Euler().setFromQuaternion(rotation, "YXZ").y,
@@ -506,7 +507,7 @@ export const test_viewer_formation = (): void => {
   TestValidator.equals(
     "camera update culls whole chunks and reports a bounded visible inventory",
     {
-      accountedAnonymous: visible + built.stats.culled,
+      accountedAnonymous: visibleAnonymous + built.stats.culled,
       heroes: built.stats.heroes,
       visibleMeshesWithinChunks:
         meshes.filter((mesh) => mesh.visible).length <= formation.chunks.length,
@@ -523,7 +524,7 @@ export const test_viewer_formation = (): void => {
         marshal.position.equals(collidingSourceUpdate.position) &&
         Math.abs(marshal.quaternion.dot(collidingSourceUpdate.rotation)) >
           1 - 1e-12,
-      someHeroVisible: built.stats.visible.hero > 0,
+      visibleHeroes: built.stats.visible.hero,
       marshalVisible: marshal.visible,
       captainVisible: heroObjects.get("captain")!.visible,
       shearedHeroBoundsStayVisible: scaledHeroBoundary,
@@ -569,7 +570,7 @@ export const test_viewer_formation = (): void => {
       ),
       marshalYaw: true,
       marshalTracksCollidingSource: true,
-      someHeroVisible: true,
+      visibleHeroes: 1,
       marshalVisible: false,
       captainVisible: true,
       shearedHeroBoundsStayVisible: true,
