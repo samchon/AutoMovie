@@ -731,6 +731,33 @@ export const test_mcp_production_design_validation = (): void => {
         diagnostic.message.includes("above the production budget"),
     ),
   );
+  const shortEmissionRecipe = {
+    ...worldDesign().effectRecipes[0]!,
+    id: "short-emission",
+    emission: { rate: 100, burst: 0, duration: 0.1 },
+    particle: {
+      ...worldDesign().effectRecipes[0]!.particle,
+      lifetime: { min: 10, max: 10 },
+    },
+    budget: { maxParticles: 10, lodDistance: 100 },
+  };
+  TestValidator.equals(
+    "effect live budget stops adding particles when emission ends",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      world: {
+        ...worldDesign(),
+        effectRecipes: [shortEmissionRecipe],
+        effectZones: [
+          {
+            ...worldDesign().effectZones[0]!,
+            recipe: shortEmissionRecipe.id,
+          },
+        ],
+      },
+    }),
+    [],
+  );
   TestValidator.predicate(
     "world effect declarations remain structurally bounded",
     validateAutoMovieProductionGraph({

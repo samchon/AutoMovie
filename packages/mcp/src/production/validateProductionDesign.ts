@@ -581,14 +581,17 @@ export const validateAutoMovieProductionGraph = (
       );
       const liveUpperBound =
         recipe.emission.burst +
-        Math.ceil(recipe.emission.rate * recipe.particle.lifetime.max);
+        Math.ceil(
+          recipe.emission.rate *
+            Math.min(recipe.emission.duration, recipe.particle.lifetime.max),
+        );
       if (liveUpperBound > recipe.budget.maxParticles)
         invalid(
           diagnostics,
           "design-budget-exceeded",
           target,
           file,
-          `Effect recipe "${recipe.id}" can keep ${liveUpperBound} particles live, above its ${recipe.budget.maxParticles} cap. Reduce burst, rate, or lifetime.`,
+          `Effect recipe "${recipe.id}" can keep ${liveUpperBound} particles live, above its ${recipe.budget.maxParticles} cap. Reduce burst, rate, emission duration, or lifetime.`,
         );
     }
     const effectIds = new Set<string>();
