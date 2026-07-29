@@ -214,6 +214,9 @@ resident revision lock across capture and publish, and rollback is
 all-or-nothing while reserving both the project root and production state
 namespace. Empty-directory topology is part of the rollback baseline. The CLI
 exposes the same contract through `automovie migrate`.
+If a legacy shot names no performing scene node, its draft does not pretend
+that the camera is a readable scene subject; the plan leaves that subject list
+unresolved and reports the exact reconstruction required before submission.
 
 Long-running production delivery lives outside the request surface.
 `planProductionRenderJob` turns the compiler-owned film timeline into

@@ -436,6 +436,16 @@ const createPlan = (
         todo.reason,
       ),
     ),
+    ...legacy.slate.shots
+      .filter((shot) => shot.performances.length === 0)
+      .map((shot) =>
+        importWarning(
+          "legacy-camera-subject-reconstruction-required",
+          `shot:${shot.id}`,
+          `src/shots/${encodeAutoMoviePathSegment(shot.id)}.ts`,
+          `Legacy shot "${shot.id}" names no performing scene node, so its readable camera subject cannot be inferred. Choose at least one compiled scene-node or formation id before submitting the production shot contract.`,
+        ),
+      ),
     ...[...snapshot.files]
       .filter(([, bytes]) => bytes === null)
       .map(([relative]) =>
@@ -506,7 +516,7 @@ const draftShotContract = (
     closing: [],
     camera: {
       intent: `Reconstruct legacy camera "${shot.camera}" from scene and shot evidence.`,
-      requiredSubjects: actors.length === 0 ? [shot.camera] : actors,
+      requiredSubjects: actors,
       maxOcclusionRatio: 1,
     },
     events: [],

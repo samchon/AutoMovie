@@ -149,8 +149,9 @@ const rejectsTamperedRollbackBaseline = (
  * 3. A pre-existing owned directory that disappears after import must be restored
  *    before rollback, while an unexpected filesystem denial propagates instead
  *    of being misclassified as absence.
- * 4. Actorless shots retain their camera subject, and canonical rollback plans
- *    reject wrong roots, escaping directories, and duplicate file entries.
+ * 4. Actorless shots report that their readable subject needs reconstruction, and
+ *    canonical rollback plans reject wrong roots, escaping directories, and
+ *    duplicate file entries.
  */
 export const test_mcp_production_legacy_import = (): void => {
   const fixture = createLegacy();
@@ -236,11 +237,15 @@ export const test_mcp_production_legacy_import = (): void => {
       ...slate,
       shots: [{ ...shot, performances: [] }],
     });
-    TestValidator.equals(
-      "an actorless legacy shot keeps its camera as the required subject",
-      new AutoMovieLegacyImporter(actorless.root).plan().shotContractDrafts[0]
-        ?.camera.requiredSubjects,
-      [shot.camera],
+    const actorlessPlan = new AutoMovieLegacyImporter(actorless.root).plan();
+    TestValidator.predicate(
+      "an actorless legacy shot does not misrepresent its camera as a scene subject",
+      actorlessPlan.shotContractDrafts[0]?.camera.requiredSubjects.length ===
+        0 &&
+        actorlessPlan.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "legacy-camera-subject-reconstruction-required",
+        ),
     );
   } finally {
     actorless.dispose();

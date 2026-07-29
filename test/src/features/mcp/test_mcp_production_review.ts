@@ -558,6 +558,17 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const unknownFrameFilmReview = reviewWithFixedStatus.prepare({
       target: { kind: "film", id: "fixture-film" },
     });
+    const unknownFrameWorksheet = worksheet(project, unknownFrameFilmReview);
+    const unknownFrameAcceptanceCheck = unknownFrameWorksheet.checks.find(
+      (check) => check.criterion === "acceptance-scenarios",
+    )!;
+    unknownFrameAcceptanceCheck.acceptanceScenarios =
+      unknownFrameAcceptanceCheck.acceptanceScenarios?.filter(
+        (id) => id !== unknownFrameAcceptance.id,
+      );
+    const unknownFrameSubmission = reviewWithFixedStatus.submit(
+      unknownFrameWorksheet,
+    );
     const graphWithoutTimelineShot = {
       ...currentGraph,
       shots: new Map(
@@ -616,7 +627,12 @@ export const test_mcp_production_review = async (): Promise<void> => {
         outsideTimelineFilmReview.outcomes.every(
           (outcome) => outcome.scenario !== outsideTimelineAcceptance.id,
         ) &&
-        unknownFrameFilmReview.fingerprint.startsWith("sha256:") &&
+        unknownFrameSubmission.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-acceptance-coverage-incomplete" &&
+            diagnostic.message.includes(unknownFrameAcceptance.id) &&
+            diagnostic.message.includes("exact current required ids"),
+        ) &&
         missingTimelineShotReview.outcomes.every(
           (outcome) =>
             outcome.scenario !== "opening-beauty" &&
