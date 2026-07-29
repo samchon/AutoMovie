@@ -417,7 +417,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     sidePlaneRuntime.anchor = { x: 0, y: 0, z: 0 };
     sidePlaneRuntime.facingDeg = 0;
     sidePlaneRuntime.projectionRadius = 1;
-    sidePlaneChunk.centroid = { x: 19.2, y: 0, z: -10 };
+    sidePlaneChunk.centroid = { x: 11.2, y: 0, z: -10 };
     sidePlaneChunk.bounds = {
       min: { ...sidePlaneChunk.centroid },
       max: { ...sidePlaneChunk.centroid },
