@@ -348,14 +348,15 @@ export class AutoMovieProductionOracleService {
             const projectedPixels =
               (runtime.projectionRadius * production.frameFormat.height) /
               (halfY * Math.max(0.001, projection.depth));
-            const projectedRadiusY =
-              radius / (halfY * Math.max(0.001, projection.depth));
-            const projectedRadiusX = projectedRadiusY / aspect;
-            const visible =
-              projection.depth + radius >= camera.near &&
-              projection.depth - radius <= camera.far &&
-              Math.abs(projection.ndcX) <= 1 + projectedRadiusX &&
-              Math.abs(projection.ndcY) <= 1 + projectedRadiusY;
+            const visible = intersectsPerspectiveFrustumSphere({
+              camera: resolvedCamera,
+              center,
+              radius,
+              near: camera.near,
+              far: camera.far,
+              halfY,
+              aspect,
+            });
             return {
               distance,
               projectedPixels,

@@ -411,6 +411,49 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     };
     const writeCorrupted = (value: IAutoMovieCompiledShotSource): void =>
       writeGeneratedBytes(Buffer.from(JSON.stringify(value)));
+    const sidePlaneFormation = corrupted();
+    const sidePlaneRuntime = sidePlaneFormation.formations[0]!;
+    const sidePlaneChunk = sidePlaneRuntime.chunks[0]!;
+    sidePlaneRuntime.anchor = { x: 0, y: 0, z: 0 };
+    sidePlaneRuntime.facingDeg = 0;
+    sidePlaneRuntime.projectionRadius = 1;
+    sidePlaneChunk.centroid = { x: 19.2, y: 0, z: -10 };
+    sidePlaneChunk.bounds = {
+      min: { ...sidePlaneChunk.centroid },
+      max: { ...sidePlaneChunk.centroid },
+    };
+    const sidePlaneCamera = sidePlaneFormation.scene.cameras.find(
+      (camera) => camera.id === sidePlaneFormation.shot.camera,
+    )!;
+    sidePlaneCamera.transform = {
+      translation: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      scale: { x: 1, y: 1, z: 1 },
+    };
+    sidePlaneCamera.fovY = 90;
+    sidePlaneFormation.shot.cameraMotion = null;
+    sidePlaneFormation.formationMotions = [];
+    writeCorrupted(sidePlaneFormation);
+    const sidePlaneFormationResult = oracle.query({
+      request: { query: "formation", formation: "line" },
+    });
+    TestValidator.equals(
+      "formation chunk visibility uses normalized frustum-plane distance",
+      sidePlaneFormationResult.result?.kind === "measurement"
+        ? {
+            anonymous: sidePlaneFormationResult.result.values.anonymousCount,
+            visible:
+              Number(sidePlaneFormationResult.result.values.nearVisible) +
+              Number(sidePlaneFormationResult.result.values.farVisible),
+            culled: sidePlaneFormationResult.result.values.culled,
+          }
+        : null,
+      {
+        anonymous: sidePlaneRuntime.anonymousCount,
+        visible: sidePlaneChunk.anonymousCount,
+        culled: 0,
+      },
+    );
     const partialFormation = corrupted();
     partialFormation.formations = partialFormation.formations.filter(
       (formation) => formation.id !== "line",
