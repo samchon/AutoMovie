@@ -1,0 +1,201 @@
+import { AutoMovieContentDigest } from "@automovie/interface";
+
+import {
+  AutoMovieBenchmarkAssertionOutcome,
+  IAutoMovieBenchmarkVerdict,
+} from "./judge";
+import {
+  AutoMovieBenchmarkSurface,
+  benchmarkVersionDrift,
+  compareBenchmarkCodeUnits,
+} from "./task";
+
+/**
+ * One reviewed axis a machine cannot settle.
+ *
+ * A rubric verdict is kept in its own shape on purpose. It never enters the
+ * film score, and it must name the exact frames and source addresses it was
+ * formed from, so a reader can tell a judged opinion from a measured fact
+ * without reading the harness.
+ */
+export interface IAutoMovieBenchmarkRubricVerdict {
+  /** Run the rubric verdict was formed about. */
+  runId: AutoMovieContentDigest;
+  /** Reviewed axis. */
+  axis: "aesthetic" | "narrative" | "historical-reading";
+  /** Reviewer identity, human or agent. */
+  reviewer: string;
+  /** Fixed-rubric score in `[0, 1]`. */
+  score: number;
+  /** Why the reviewer scored it that way. */
+  rationale: string;
+  /** Exact frame and source addresses the reviewer read. */
+  evidence: string[];
+}
+
+/** Aggregate outcome for one surface. */
+export interface IAutoMovieBenchmarkSurfaceReport {
+  /** Surface the runs drove. */
+  surface: AutoMovieBenchmarkSurface;
+  /** Runs measured against the law. */
+  scored: number;
+  /** Runs the candidate could not carry past a lifecycle gate. */
+  gateFailed: number;
+  /** Runs infrastructure removed from the denominator. */
+  infraExcluded: number;
+  /** Runs that count: scored plus gate-failed. */
+  denominator: number;
+  /** Mean film score over the denominator, or `null` when it is empty. */
+  meanFilmScore: number | null;
+  /** Mean candidate cost in US dollars over the denominator. */
+  meanCostUsd: number | null;
+  /** Mean wall-clock run time in seconds over the denominator. */
+  meanElapsedSeconds: number | null;
+  /** Mean correction rounds over the denominator. */
+  meanCorrections: number | null;
+}
+
+/** One benchmark report: measured film outcomes beside generation health. */
+export interface IAutoMovieBenchmarkReport {
+  /** Per-surface aggregates in code-unit surface order. */
+  surfaces: IAutoMovieBenchmarkSurfaceReport[];
+  /** Reviewed axes, carried beside the measured ones and never inside them. */
+  rubric: IAutoMovieBenchmarkRubricVerdict[];
+}
+
+/** Change in one assertion between two verdicts for the same run. */
+export interface IAutoMovieBenchmarkAssertionChange {
+  /** Assertion id. */
+  id: string;
+  /** Outcome the earlier verdict settled, or `null` when it had none. */
+  from: AutoMovieBenchmarkAssertionOutcome | null;
+  /** Outcome the later verdict settled, or `null` when it has none. */
+  to: AutoMovieBenchmarkAssertionOutcome | null;
+}
+
+/** Difference between two verdicts, drift first. */
+export interface IAutoMovieBenchmarkVerdictDiff {
+  /** Version fields that moved between the two verdicts. */
+  versionDrift: string[];
+  /** Whether the two verdicts answer the same question at all. */
+  comparable: boolean;
+  /** Film-score change, or `null` when the verdicts are not comparable. */
+  filmScoreDelta: number | null;
+  /** Assertions whose outcome moved, in code-unit id order. */
+  assertionChanges: IAutoMovieBenchmarkAssertionChange[];
+}
+
+/**
+ * Refuse a rubric verdict that reads like a measurement.
+ *
+ * A reviewed axis without an evidence address is an opinion presented as a
+ * result, which is exactly the shape a deterministic score has. Requiring the
+ * addresses is what keeps the two kinds of claim separable in a report.
+ */
+export const assertAutoMovieBenchmarkRubric = (
+  rubric: IAutoMovieBenchmarkRubricVerdict,
+): void => {
+  if (rubric.evidence.length === 0)
+    throw new Error(
+      `Rubric verdict on ${rubric.runId} carries no evidence address. A reviewed axis names the frames and sources it read.`,
+    );
+  if (rubric.score < 0 || rubric.score > 1)
+    throw new Error(
+      `Rubric verdict on ${rubric.runId} scores ${rubric.score}, outside the 0..1 rubric range.`,
+    );
+};
+
+/** Mean of a non-empty sample, or `null` for an empty one. */
+const mean = (values: readonly number[]): number | null =>
+  values.length === 0
+    ? null
+    : values.reduce((sum, value) => sum + value, 0) / values.length;
+
+/**
+ * Aggregate verdicts per surface, with infrastructure out of the denominator.
+ *
+ * Excluding infrastructure is what makes the leaderboard about the product: a
+ * rate-limited runner is not a worse film, and counting it as one would make
+ * the score depend on the day the run happened.
+ */
+export const reportAutoMovieBenchmark = (
+  verdicts: readonly IAutoMovieBenchmarkVerdict[],
+  rubric: readonly IAutoMovieBenchmarkRubricVerdict[] = [],
+): IAutoMovieBenchmarkReport => {
+  for (const item of rubric) assertAutoMovieBenchmarkRubric(item);
+  const surfaces = [
+    ...new Set(verdicts.map((verdict) => verdict.surface)),
+  ].sort(compareBenchmarkCodeUnits);
+  return {
+    surfaces: surfaces.map((surface) => {
+      const owned = verdicts.filter((verdict) => verdict.surface === surface);
+      const counted = owned.filter(
+        (verdict) => verdict.outcome !== "infra-excluded",
+      );
+      return {
+        surface,
+        scored: owned.filter((verdict) => verdict.outcome === "scored").length,
+        gateFailed: owned.filter((verdict) => verdict.outcome === "gate-failed")
+          .length,
+        infraExcluded: owned.filter(
+          (verdict) => verdict.outcome === "infra-excluded",
+        ).length,
+        denominator: counted.length,
+        meanFilmScore: mean(counted.map((verdict) => verdict.filmScore ?? 0)),
+        meanCostUsd: mean(counted.map((verdict) => verdict.generation.costUsd)),
+        meanElapsedSeconds: mean(
+          counted.map((verdict) => verdict.generation.elapsedSeconds),
+        ),
+        meanCorrections: mean(
+          counted.map((verdict) => verdict.generation.corrections),
+        ),
+      };
+    }),
+    rubric: [...rubric],
+  };
+};
+
+/** Settled outcomes of one verdict, keyed by assertion id. */
+const outcomesOf = (
+  verdict: IAutoMovieBenchmarkVerdict,
+): Map<string, AutoMovieBenchmarkAssertionOutcome> =>
+  new Map(
+    verdict.outcome === "scored"
+      ? verdict.assertions.map((result) => [result.id, result.outcome])
+      : [],
+  );
+
+/**
+ * Diff two verdicts for the same run, reporting law drift before any score.
+ *
+ * A score that moved under a changed harness, task, reference, or helper
+ * revision is not a product change, so the delta is withheld entirely rather
+ * than reported with a caveat a reader can skip.
+ */
+export const diffAutoMovieBenchmarkVerdicts = (
+  before: IAutoMovieBenchmarkVerdict,
+  after: IAutoMovieBenchmarkVerdict,
+): IAutoMovieBenchmarkVerdictDiff => {
+  const versionDrift = benchmarkVersionDrift(before.versions, after.versions);
+  const left = outcomesOf(before);
+  const right = outcomesOf(after);
+  const comparable = versionDrift.length === 0;
+  return {
+    versionDrift,
+    comparable,
+    filmScoreDelta:
+      comparable === false ||
+      before.filmScore === null ||
+      after.filmScore === null
+        ? null
+        : after.filmScore - before.filmScore,
+    assertionChanges: [...new Set([...left.keys(), ...right.keys()])]
+      .sort(compareBenchmarkCodeUnits)
+      .filter((id) => left.get(id) !== right.get(id))
+      .map((id) => ({
+        id,
+        from: left.get(id) ?? null,
+        to: right.get(id) ?? null,
+      })),
+  };
+};
