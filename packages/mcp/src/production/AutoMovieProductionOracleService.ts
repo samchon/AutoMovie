@@ -215,7 +215,8 @@ export class AutoMovieProductionOracleService {
             runtimes.some(
               (runtime) =>
                 runtime.count !== formation.count ||
-                runtime.digest !== runtimes[0]?.digest,
+                runtime.digest !== runtimes[0]!.digest ||
+                runtime.chunks.length === 0,
             )
           )
             throw new Error(
@@ -229,18 +230,16 @@ export class AutoMovieProductionOracleService {
             throw new Error(
               `Shot "${request.shot}" does not participate in formation "${request.formation}". Select one of ${participatingShots.join(", ")}.`,
             );
-          const selectedShot = request.shot ?? participatingShots[0] ?? null;
-          const compiled =
-            selectedShot === null ? undefined : shots.get(selectedShot);
+          const selectedShot = request.shot ?? participatingShots[0]!;
+          const compiled = shots.get(selectedShot)!;
           const sampledTime = request.time ?? 0;
           if (
-            compiled === undefined ||
             Number.isFinite(sampledTime) === false ||
             sampledTime < 0 ||
             sampledTime > compiled.shot.duration
           )
             throw new Error(
-              `Formation sample time ${sampledTime} is outside current shot "${selectedShot ?? "(none)"}". Choose a finite time from 0 through ${compiled?.shot.duration ?? 0}.`,
+              `Formation sample time ${sampledTime} is outside current shot "${selectedShot}". Choose a finite time from 0 through ${compiled.shot.duration}.`,
             );
           const sampledMotion = sampleFormationMotion(
             compiled.formationMotions,
@@ -284,96 +283,84 @@ export class AutoMovieProductionOracleService {
           const centroid = transformPoint(runtime.centroid);
           const width = bounds.max.x - bounds.min.x;
           const depth = bounds.max.z - bounds.min.z;
-          const routes = graph.world?.routes ?? [];
+          const routes = graph.world!.routes;
           const routeClearance =
             routes.length === 0
               ? 0
               : Math.min(
                   ...routes.map((route) => route.allowedFormationWidth - width),
                 );
-          const camera =
-            compiled?.scene.cameras.find(
-              (candidate) => candidate.id === compiled.shot.camera,
-            ) ?? null;
-          const resolvedCamera =
-            camera === null || compiled === undefined
-              ? null
-              : resolveCameraAt(
-                  camera.transform,
-                  compiled.shot.cameraMotion,
-                  camera.id,
-                  request.time ?? 0,
-                );
-          const halfY =
-            camera === null ? 0 : Math.tan((camera.fovY * Math.PI) / 360);
-          const production = graph.production;
+          const camera = compiled.scene.cameras.find(
+            (candidate) => candidate.id === compiled.shot.camera,
+          );
+          if (camera === undefined)
+            throw new Error(
+              `Shot "${selectedShot}" has no current compiled camera "${compiled.shot.camera}".`,
+            );
+          const resolvedCamera = resolveCameraAt(
+            camera.transform,
+            compiled.shot.cameraMotion,
+            camera.id,
+            request.time ?? 0,
+          );
+          const halfY = Math.tan((camera.fovY * Math.PI) / 360);
+          const production = graph.production!;
           const aspect =
-            production === null
-              ? 1
-              : production.frameFormat.width / production.frameFormat.height;
-          const chunkMeasurements =
-            camera === null || resolvedCamera === null || production === null
-              ? []
-              : runtime.chunks.map((chunk) => {
-                  const center = transformPoint(chunk.centroid);
-                  const transformedBounds = transformFormationBounds(
-                    chunk.bounds,
-                    runtime.anchor,
-                    sampledMotion,
-                    runtime.facingDeg,
-                  );
-                  const radius =
-                    Math.max(
-                      0.01,
-                      ...[
-                        transformedBounds.min.x,
-                        transformedBounds.max.x,
-                      ].flatMap((x) =>
-                        [
-                          transformedBounds.min.y,
-                          transformedBounds.max.y,
-                        ].flatMap((y) =>
-                          [
-                            transformedBounds.min.z,
-                            transformedBounds.max.z,
-                          ].map((z) =>
+            production.frameFormat.width / production.frameFormat.height;
+          const chunkMeasurements = runtime.chunks.map((chunk) => {
+            const center = transformPoint(chunk.centroid);
+            const transformedBounds = transformFormationBounds(
+              chunk.bounds,
+              runtime.anchor,
+              sampledMotion,
+              runtime.facingDeg,
+            );
+            const radius =
+              Math.max(
+                0.01,
+                ...[transformedBounds.min.x, transformedBounds.max.x].flatMap(
+                  (x) =>
+                    [transformedBounds.min.y, transformedBounds.max.y].flatMap(
+                      (y) =>
+                        [transformedBounds.min.z, transformedBounds.max.z].map(
+                          (z) =>
                             Math.hypot(
                               x - center.x,
                               y - center.y,
                               z - center.z,
                             ),
-                          ),
                         ),
-                      ),
-                    ) + runtime.projectionRadius;
-                  const distance = Math.hypot(
-                    center.x - resolvedCamera.position.x,
-                    center.y - resolvedCamera.position.y,
-                    center.z - resolvedCamera.position.z,
-                  );
-                  const projection = projectToNdc(
-                    resolvedCamera,
-                    center,
-                    halfY,
-                    aspect,
-                  );
-                  const projectedPixels =
-                    (runtime.projectionRadius * production.frameFormat.height) /
-                    (halfY * Math.max(0.001, projection.depth));
-                  const projectedRadiusY =
-                    radius / (halfY * Math.max(0.001, projection.depth));
-                  const projectedRadiusX = projectedRadiusY / aspect;
-                  const visible =
-                    projection.depth + radius >= camera.near &&
-                    projection.depth - radius <= camera.far &&
-                    Math.abs(projection.ndcX) <= 1 + projectedRadiusX &&
-                    Math.abs(projection.ndcY) <= 1 + projectedRadiusY;
-                  return {
-                    distance,
-                    projectedPixels,
-                    visible,
-                  };
-                });
+                    ),
+                ),
+              ) + runtime.projectionRadius;
+            const distance = Math.hypot(
+              center.x - resolvedCamera.position.x,
+              center.y - resolvedCamera.position.y,
+              center.z - resolvedCamera.position.z,
+            );
+            const projection = projectToNdc(
+              resolvedCamera,
+              center,
+              halfY,
+              aspect,
+            );
+            const projectedPixels =
+              (runtime.projectionRadius * production.frameFormat.height) /
+              (halfY * Math.max(0.001, projection.depth));
+            const projectedRadiusY =
+              radius / (halfY * Math.max(0.001, projection.depth));
+            const projectedRadiusX = projectedRadiusY / aspect;
+            const visible =
+              projection.depth + radius >= camera.near &&
+              projection.depth - radius <= camera.far &&
+              Math.abs(projection.ndcX) <= 1 + projectedRadiusX &&
+              Math.abs(projection.ndcY) <= 1 + projectedRadiusY;
+            return {
+              distance,
+              projectedPixels,
+              visible,
+            };
+          });
           const distances = chunkMeasurements.map(
             (measurement) => measurement.distance,
           );
@@ -383,8 +370,7 @@ export class AutoMovieProductionOracleService {
           const tierCounts = { hero: 0, near: 0, far: 0 };
           let culled = 0;
           runtime.chunks.forEach((chunk, index) => {
-            const measurement = chunkMeasurements[index];
-            if (measurement === undefined) return;
+            const measurement = chunkMeasurements[index]!;
             if (measurement.visible === false) {
               culled += chunk.anonymousCount;
               return;
@@ -397,56 +383,53 @@ export class AutoMovieProductionOracleService {
             }).lod;
             tierCounts[lod.tier] += chunk.anonymousCount;
           });
-          const heroVisible =
-            camera === null || resolvedCamera === null || production === null
-              ? 0
-              : runtime.heroes.filter((hero) => {
-                  const node = compiled.scene.nodes.find(
-                    (candidate) => candidate.id === hero.actor,
-                  );
-                  if (node === undefined) return false;
-                  const found = findCompiledActor(
-                    new Map([[compiled.shot.id, compiled]]),
-                    hero.actor,
-                    compiled.shot.id,
-                  );
-                  const source = actorSpatialAt(
-                    compiled,
-                    hero.actor,
-                    sampledTime,
-                    found.model.skeleton,
-                  );
-                  const formed = composeFormationHeroTransform(
-                    hero.transform,
-                    source.nodeTransform,
-                    runtime.anchor,
-                    sampledMotion,
-                    runtime.facingDeg,
-                  );
-                  const point =
-                    source.poseRoot === null
-                      ? formed.translation
-                      : composeTransforms(formed, {
-                          ...source.poseRoot,
-                          scale: { x: 1, y: 1, z: 1 },
-                        }).translation;
-                  const projectionRadius =
-                    runtime.projectionRadius *
-                    Math.max(
-                      Math.abs(formed.scale.x),
-                      Math.abs(formed.scale.y),
-                      Math.abs(formed.scale.z),
-                    );
-                  return intersectsPerspectiveFrustumSphere({
-                    camera: resolvedCamera,
-                    center: point,
-                    radius: projectionRadius,
-                    near: camera.near,
-                    far: camera.far,
-                    halfY,
-                    aspect,
-                  });
-                }).length;
+          const heroVisible = runtime.heroes.filter((hero) => {
+            const node = compiled.scene.nodes.find(
+              (candidate) => candidate.id === hero.actor,
+            );
+            if (node === undefined) return false;
+            const found = findCompiledActor(
+              new Map([[compiled.shot.id, compiled]]),
+              hero.actor,
+              compiled.shot.id,
+            );
+            const source = actorSpatialAt(
+              compiled,
+              hero.actor,
+              sampledTime,
+              found.model.skeleton,
+            );
+            const formed = composeFormationHeroTransform(
+              hero.transform,
+              source.nodeTransform,
+              runtime.anchor,
+              sampledMotion,
+              runtime.facingDeg,
+            );
+            const point =
+              source.poseRoot === null
+                ? formed.translation
+                : composeTransforms(formed, {
+                    ...source.poseRoot,
+                    scale: { x: 1, y: 1, z: 1 },
+                  }).translation;
+            const projectionRadius =
+              runtime.projectionRadius *
+              Math.max(
+                Math.abs(formed.scale.x),
+                Math.abs(formed.scale.y),
+                Math.abs(formed.scale.z),
+              );
+            return intersectsPerspectiveFrustumSphere({
+              camera: resolvedCamera,
+              center: point,
+              radius: projectionRadius,
+              near: camera.near,
+              far: camera.far,
+              halfY,
+              aspect,
+            });
+          }).length;
           result = {
             kind: "measurement",
             values: {
@@ -472,14 +455,10 @@ export class AutoMovieProductionOracleService {
               routeClearance,
               representativeSlots: representative.length,
               groundViolations: groundViolations.length,
-              nearestDistance:
-                distances.length === 0 ? 0 : Math.min(...distances),
-              farthestDistance:
-                distances.length === 0 ? 0 : Math.max(...distances),
-              minimumProjectedPixels:
-                projectedPixels.length === 0 ? 0 : Math.min(...projectedPixels),
-              maximumProjectedPixels:
-                projectedPixels.length === 0 ? 0 : Math.max(...projectedPixels),
+              nearestDistance: Math.min(...distances),
+              farthestDistance: Math.max(...distances),
+              minimumProjectedPixels: Math.min(...projectedPixels),
+              maximumProjectedPixels: Math.max(...projectedPixels),
               heroVisible,
               nearVisible: tierCounts.near,
               farVisible: tierCounts.far,
@@ -596,7 +575,7 @@ export class AutoMovieProductionOracleService {
               subjectsInside: insideSubjects,
               visibilityRisk,
               representativeFrame: Math.round(
-                sample.time * (graph.production?.frameFormat.fps ?? 24),
+                sample.time * graph.production!.frameFormat.fps,
               ),
               effectDigest: effect.digest,
             },

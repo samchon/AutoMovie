@@ -289,6 +289,43 @@ export const test_mcp_production_legacy_import = (): void => {
     renameFailure.dispose();
   }
 
+  const publishRootSwap = createLegacy();
+  const parkedPublishRoot = `${publishRootSwap.root}-parked`;
+  try {
+    const stateRoot = path.join(publishRootSwap.root, ".automovie");
+    const nativeRename = fs.renameSync;
+    let swapped = false;
+    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+      nativeRename(oldPath, newPath);
+      if (swapped === false && path.resolve(newPath.toString()) === stateRoot) {
+        swapped = true;
+        nativeRename(publishRootSwap.root, parkedPublishRoot);
+        fs.mkdirSync(publishRootSwap.root);
+      }
+    }) as typeof fs.renameSync;
+    try {
+      TestValidator.predicate(
+        "a root replaced immediately after import publication receives no stale cleanup",
+        throws(
+          () => new AutoMovieLegacyImporter(publishRootSwap.root).apply(),
+          "root identity",
+        ) &&
+          swapped &&
+          fs.readdirSync(publishRootSwap.root).length === 0,
+      );
+    } finally {
+      fs.renameSync = nativeRename;
+      if (swapped) {
+        fs.rmSync(publishRootSwap.root, { force: true, recursive: true });
+        nativeRename(parkedPublishRoot, publishRootSwap.root);
+      }
+    }
+  } finally {
+    publishRootSwap.dispose();
+    if (fs.existsSync(parkedPublishRoot))
+      fs.rmSync(parkedPublishRoot, { force: true, recursive: true });
+  }
+
   const tampered = createLegacy();
   try {
     const importer = new AutoMovieLegacyImporter(tampered.root);
@@ -499,8 +536,10 @@ export const test_mcp_production_legacy_import = (): void => {
     const nativeRmdir = fs.rmdirSync;
     const nativeMkdir = fs.mkdirSync;
     const nativeWrite = fs.writeFileSync;
+    const nativeRm = fs.rmSync;
     const activeNamespaceLocks: string[] = [];
     let removals = 0;
+    let quarantineCleanupDenied = false;
     fs.writeFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
@@ -549,17 +588,30 @@ export const test_mcp_production_legacy_import = (): void => {
         );
       return Reflect.apply(nativeMkdir, fs, [directory, ...args]) as unknown;
     }) as typeof fs.mkdirSync;
+    fs.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
+      if (
+        quarantineCleanupDenied === false &&
+        path.basename(target.toString()).startsWith(".automovie-rollback-") &&
+        fs.existsSync(path.join(rollbackFailure.root, ".automovie"))
+      ) {
+        quarantineCleanupDenied = true;
+        throw new Error("injected obsolete quarantine cleanup failure");
+      }
+      Reflect.apply(nativeRm, fs, [target, ...args]);
+    }) as typeof fs.rmSync;
     try {
       TestValidator.predicate(
         "a partial rollback failure restores the complete applied state",
         throws(() => importer.rollback(), "state was restored") &&
           fs.existsSync(path.join(rollbackFailure.root, ".automovie")) &&
-          importer.apply().status === "unchanged",
+          importer.apply().status === "unchanged" &&
+          quarantineCleanupDenied,
       );
     } finally {
       fs.rmdirSync = nativeRmdir;
       fs.mkdirSync = nativeMkdir;
       fs.writeFileSync = nativeWrite;
+      fs.rmSync = nativeRm;
     }
     TestValidator.predicate(
       "a restored import remains safely roll-backable",
@@ -568,6 +620,137 @@ export const test_mcp_production_legacy_import = (): void => {
     );
   } finally {
     rollbackFailure.dispose();
+  }
+
+  const rollbackRootSwap = createLegacy();
+  const parkedRollbackRoot = `${rollbackRootSwap.root}-parked`;
+  try {
+    const importer = new AutoMovieLegacyImporter(rollbackRootSwap.root);
+    importer.apply();
+    AutoMovieProductionProject.open(rollbackRootSwap.root);
+    const nativeRmdir = fs.rmdirSync;
+    let swapped = false;
+    fs.rmdirSync = ((directory: fs.PathLike): void => {
+      nativeRmdir(directory);
+      if (swapped === false) {
+        swapped = true;
+        fs.renameSync(rollbackRootSwap.root, parkedRollbackRoot);
+        fs.mkdirSync(rollbackRootSwap.root);
+        throw new Error("injected rollback root replacement");
+      }
+    }) as typeof fs.rmdirSync;
+    try {
+      TestValidator.predicate(
+        "rollback abandons restoration when the physical root changes",
+        throws(() => importer.rollback(), "changed physical identity") &&
+          swapped &&
+          fs.readdirSync(rollbackRootSwap.root).length === 0,
+      );
+    } finally {
+      fs.rmdirSync = nativeRmdir;
+      if (swapped) {
+        fs.rmSync(rollbackRootSwap.root, { force: true, recursive: true });
+        fs.renameSync(parkedRollbackRoot, rollbackRootSwap.root);
+      }
+    }
+  } finally {
+    rollbackRootSwap.dispose();
+    if (fs.existsSync(parkedRollbackRoot))
+      fs.rmSync(parkedRollbackRoot, { force: true, recursive: true });
+  }
+
+  const incompleteRestoration = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(incompleteRestoration.root);
+    importer.apply();
+    AutoMovieProductionProject.open(incompleteRestoration.root);
+    const stateRoot = path.join(incompleteRestoration.root, ".automovie");
+    const nativeRmdir = fs.rmdirSync;
+    const nativeRename = fs.renameSync;
+    const nativeMkdir = fs.mkdirSync;
+    let removals = 0;
+    let removedDirectory: string | null = null;
+    fs.rmdirSync = ((directory: fs.PathLike): void => {
+      ++removals;
+      if (removals === 1) {
+        removedDirectory = path.resolve(directory.toString());
+        nativeRmdir(directory);
+        return;
+      }
+      const quarantine = fs
+        .readdirSync(incompleteRestoration.root)
+        .find((entry) => entry.startsWith(".automovie-rollback-"));
+      if (quarantine === undefined)
+        throw new Error("rollback quarantine was not published");
+      fs.writeFileSync(
+        path.join(incompleteRestoration.root, quarantine, "incarnation.json"),
+        "{}",
+      );
+      throw new Error("injected rollback removal failure");
+    }) as typeof fs.rmdirSync;
+    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+      if (
+        path.basename(oldPath.toString()).startsWith(".automovie-restore-") &&
+        path.resolve(newPath.toString()) === stateRoot
+      )
+        throw new Error("injected applied-state restoration failure");
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    fs.mkdirSync = ((directory: fs.PathLike, ...args: unknown[]) => {
+      if (
+        removedDirectory !== null &&
+        path.resolve(directory.toString()) === removedDirectory
+      )
+        throw new Error("injected owned-directory restoration failure");
+      return Reflect.apply(nativeMkdir, fs, [directory, ...args]) as unknown;
+    }) as typeof fs.mkdirSync;
+    try {
+      TestValidator.predicate(
+        "rollback reports every failed state and owned-directory restoration",
+        throws(() => importer.rollback(), "restoration was incomplete"),
+      );
+    } finally {
+      fs.rmdirSync = nativeRmdir;
+      fs.renameSync = nativeRename;
+      fs.mkdirSync = nativeMkdir;
+    }
+  } finally {
+    incompleteRestoration.dispose();
+  }
+
+  const preservedQuarantine = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(preservedQuarantine.root);
+    importer.apply();
+    AutoMovieProductionProject.open(preservedQuarantine.root);
+    const stateRoot = path.join(preservedQuarantine.root, ".automovie");
+    const nativeRmdir = fs.rmdirSync;
+    const nativeRename = fs.renameSync;
+    let removals = 0;
+    fs.rmdirSync = ((directory: fs.PathLike): void => {
+      if (++removals === 2)
+        throw new Error("injected rollback removal failure");
+      nativeRmdir(directory);
+    }) as typeof fs.rmdirSync;
+    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+      if (
+        path.basename(oldPath.toString()).startsWith(".automovie-rollback-") &&
+        path.resolve(newPath.toString()) === stateRoot
+      )
+        return;
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    try {
+      TestValidator.predicate(
+        "rollback reports an authoritative quarantine when restoration cannot publish",
+        throws(() => importer.rollback(), "remains preserved"),
+      );
+    } finally {
+      fs.rmdirSync = nativeRmdir;
+      fs.renameSync = nativeRename;
+    }
+  } finally {
+    preservedQuarantine.dispose();
   }
 
   const incarnationRace = createLegacy();
@@ -861,6 +1044,216 @@ export const test_mcp_production_legacy_import = (): void => {
     }
   } finally {
     revisionRace.dispose();
+  }
+
+  const invalidRollbackBaseline = createLegacy();
+  try {
+    fs.writeFileSync(path.join(invalidRollbackBaseline.root, "src"), "file");
+    TestValidator.predicate(
+      "a production-owned rollback baseline must be a physical directory",
+      throws(
+        () => new AutoMovieLegacyImporter(invalidRollbackBaseline.root).plan(),
+        "rollback baseline",
+      ),
+    );
+  } finally {
+    invalidRollbackBaseline.dispose();
+  }
+
+  const collidingCase = createLegacy();
+  try {
+    fs.writeFileSync(path.join(collidingCase.root, "actors/Officer.txt"), "A");
+    fs.writeFileSync(path.join(collidingCase.root, "actors/officer.txt"), "B");
+    TestValidator.predicate(
+      "portable legacy inventory refuses case-colliding paths",
+      throws(
+        () => new AutoMovieLegacyImporter(collidingCase.root).plan(),
+        "collide by case",
+      ),
+    );
+  } finally {
+    collidingCase.dispose();
+  }
+
+  const inventoryRootFile = createLegacy();
+  try {
+    fs.rmSync(path.join(inventoryRootFile.root, "actors"), {
+      recursive: true,
+    });
+    fs.writeFileSync(path.join(inventoryRootFile.root, "actors"), "file");
+    TestValidator.predicate(
+      "a legacy inventory root must remain a physical directory",
+      throws(
+        () => new AutoMovieLegacyImporter(inventoryRootFile.root).plan(),
+        "inventory directory",
+      ),
+    );
+  } finally {
+    inventoryRootFile.dispose();
+  }
+
+  const specialInventoryEntry = createLegacy();
+  try {
+    const nativeReaddir = fs.readdirSync;
+    fs.readdirSync = ((
+      directory: fs.PathLike,
+      options?: { withFileTypes?: boolean },
+    ): fs.Dirent[] => {
+      const entries = Reflect.apply(nativeReaddir, fs, [
+        directory,
+        options,
+      ]) as fs.Dirent[];
+      if (
+        path.resolve(directory.toString()) ===
+          path.join(specialInventoryEntry.root, "actors") &&
+        options?.withFileTypes === true
+      )
+        return [
+          ...entries,
+          {
+            name: "special-device",
+            isSymbolicLink: () => false,
+            isDirectory: () => false,
+            isFile: () => false,
+          } as fs.Dirent,
+        ];
+      return entries;
+    }) as typeof fs.readdirSync;
+    try {
+      TestValidator.predicate(
+        "special filesystem entries cannot enter legacy inventory",
+        throws(
+          () => new AutoMovieLegacyImporter(specialInventoryEntry.root).plan(),
+          "not a regular file or directory",
+        ),
+      );
+    } finally {
+      fs.readdirSync = nativeReaddir;
+    }
+  } finally {
+    specialInventoryEntry.dispose();
+  }
+
+  const linkedRevision = createLegacy();
+  const linkedRevisionTarget = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-linked-revision-"),
+  );
+  try {
+    const revisionPath = path.join(linkedRevision.root, "revision.json");
+    fs.writeFileSync(
+      path.join(linkedRevisionTarget, "revision.json"),
+      '{"revision":2}',
+    );
+    fs.rmSync(revisionPath);
+    fs.symlinkSync(
+      path.join(linkedRevisionTarget, "revision.json"),
+      revisionPath,
+    );
+    TestValidator.predicate(
+      "legacy project files cannot be read through symlinks",
+      throws(
+        () => new AutoMovieLegacyImporter(linkedRevision.root).plan(),
+        "symlink or junction",
+      ),
+    );
+  } finally {
+    linkedRevision.dispose();
+    fs.rmSync(linkedRevisionTarget, { force: true, recursive: true });
+  }
+
+  for (const lockMutation of [
+    "missing",
+    "symlink",
+    "directory",
+    "foreign-token",
+  ] as const) {
+    const changingLock = createLegacy();
+    const outsideLock = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-changing-lock-"),
+    );
+    try {
+      const manifestPath = path.join(changingLock.root, "automovie.json");
+      const lockPath = path.join(changingLock.root, "revision.lock");
+      const outsideLockPath = path.join(outsideLock, "revision.lock");
+      fs.writeFileSync(outsideLockPath, "external-owner");
+      const nativeRead = fs.readFileSync;
+      let changed = false;
+      fs.readFileSync = ((
+        file: fs.PathOrFileDescriptor,
+        ...args: unknown[]
+      ): unknown => {
+        const output = Reflect.apply(nativeRead, fs, [file, ...args]);
+        if (
+          changed === false &&
+          typeof file !== "number" &&
+          path.resolve(file.toString()) === manifestPath
+        ) {
+          changed = true;
+          fs.rmSync(lockPath, { force: true });
+          if (lockMutation === "symlink")
+            fs.symlinkSync(outsideLockPath, lockPath);
+          else if (lockMutation === "directory") fs.mkdirSync(lockPath);
+          else if (lockMutation === "foreign-token")
+            fs.writeFileSync(lockPath, "external-owner");
+        }
+        return output;
+      }) as typeof fs.readFileSync;
+      try {
+        TestValidator.predicate(
+          `resident lock mutation ${lockMutation} aborts legacy apply`,
+          throws(
+            () => new AutoMovieLegacyImporter(changingLock.root).apply(),
+            "changed during import apply",
+          ),
+        );
+      } finally {
+        fs.readFileSync = nativeRead;
+      }
+    } finally {
+      changingLock.dispose();
+      fs.rmSync(outsideLock, { force: true, recursive: true });
+    }
+  }
+
+  const specialAppliedState = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(specialAppliedState.root);
+    importer.apply();
+    const stateRoot = path.join(specialAppliedState.root, ".automovie");
+    const nativeReaddir = fs.readdirSync;
+    fs.readdirSync = ((
+      directory: fs.PathLike,
+      options?: { withFileTypes?: boolean },
+    ): fs.Dirent[] => {
+      const entries = Reflect.apply(nativeReaddir, fs, [
+        directory,
+        options,
+      ]) as fs.Dirent[];
+      if (
+        path.resolve(directory.toString()) === stateRoot &&
+        options?.withFileTypes === true
+      )
+        return [
+          ...entries,
+          {
+            name: "special-device",
+            isSymbolicLink: () => false,
+            isDirectory: () => false,
+            isFile: () => false,
+          } as fs.Dirent,
+        ];
+      return entries;
+    }) as typeof fs.readdirSync;
+    try {
+      TestValidator.predicate(
+        "special applied-state entries invalidate rollback verification",
+        throws(() => importer.rollback(), "changed after import"),
+      );
+    } finally {
+      fs.readdirSync = nativeReaddir;
+    }
+  } finally {
+    specialAppliedState.dispose();
   }
 
   const malformedRoots = [

@@ -2133,7 +2133,7 @@ export const test_mcp_production_project = (): void => {
             "pre-lease",
             new Map([["frame.bin", Buffer.from("after")]]),
           ),
-        "root identity changed",
+        "root or namespace fence changed",
       );
     } finally {
       fs.readFileSync = nativeReadForPreLease;
@@ -2145,7 +2145,7 @@ export const test_mcp_production_project = (): void => {
       fs.renameSync(parkedPreLeaseRoot, preLeaseRoot);
     }
     TestValidator.predicate(
-      "a root replaced after staging but before namespace reservation is refused without mutation",
+      "a root replaced while staging under the namespace lease is refused without mutation",
       preLeaseSwapped && preLeaseRejected && preLeaseReplacementUntouched,
     );
     const mutationRoot = path.join(invalidRoot, "mutation-root");

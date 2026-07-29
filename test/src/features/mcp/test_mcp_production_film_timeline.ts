@@ -859,12 +859,37 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       generatedManifestPath,
       JSON.stringify(invalidTimelineManifest),
     );
-    const invalidTimelineReview = new AutoMovieProductionReviewService(
+    const invalidTimelineReviewService = new AutoMovieProductionReviewService(
       project,
       () => legalOmission,
-    ).prepare({
+    );
+    const invalidTimelineReview = invalidTimelineReviewService.prepare({
       target: { kind: "film", id: validTimeline.id },
     });
+    const invalidTimelineSubmission = invalidTimelineReviewService.submit({
+      target: { kind: "film", id: validTimeline.id },
+      preparedFingerprint: invalidTimelineReview.fingerprint,
+      observations: "The current film timeline is invalid.",
+      checks: [],
+      corrections: [],
+      completionBasis: "Timeline validation blocks completion.",
+      complete: true,
+    });
+    const residentReadGenerated = project.readGeneratedFile;
+    const nonErrorTimelineReview = (() => {
+      project.readGeneratedFile = ((relativePath: string) => {
+        if (relativePath === "film-timeline.json")
+          throw "non-error timeline read failure";
+        return residentReadGenerated.call(project, relativePath);
+      }) as typeof project.readGeneratedFile;
+      try {
+        return invalidTimelineReviewService.prepare({
+          target: { kind: "film", id: validTimeline.id },
+        });
+      } finally {
+        project.readGeneratedFile = residentReadGenerated;
+      }
+    })();
     fs.writeFileSync(timelineFilePath, currentTimelineBytes);
     fs.writeFileSync(generatedManifestPath, JSON.stringify(currentManifest));
     TestValidator.predicate(
@@ -876,6 +901,15 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         invalidTimelineReview.frames.length === 0 &&
         invalidTimelineReview.diagnostics.some(
           (diagnostic) => diagnostic.code === "review-evidence-stale",
+        ) &&
+        invalidTimelineSubmission.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-acceptance-coverage-incomplete",
+        ) &&
+        nonErrorTimelineReview.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-evidence-stale" &&
+            diagnostic.message.includes("non-error timeline read failure"),
         ) &&
         omissionReview.diagnostics.every(
           (diagnostic) =>

@@ -873,7 +873,7 @@ const currentSourceLine = (
     const source = Buffer.from(
       normalizeAutoMovieSource(project.readSource(sourcePath)),
     ).toString("utf8");
-    return source.split("\n")[line - 1] ?? "";
+    return source.split("\n")[line - 1]!;
   } catch {
     return "";
   }
@@ -1371,9 +1371,11 @@ const acceptanceBelongsToFilm = (
   if (segment === undefined) return false;
   if (scenario.criterion.kind === "frame") {
     const criterion = scenario.criterion;
-    const frame = graph.shots
-      .get(shot)
-      ?.reviewFrames.find((candidate) => candidate.id === criterion.frame);
+    const residentShot = graph.shots.get(shot);
+    if (residentShot === undefined) return false;
+    const frame = residentShot.reviewFrames.find(
+      (candidate) => candidate.id === criterion.frame,
+    );
     if (frame === undefined) return true;
     const index = Math.round(frame.time * timeline.fps);
     return index >= segment.sourceInFrame && index < segment.sourceOutFrame;

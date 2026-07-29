@@ -514,6 +514,39 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const incompleteFilmMetricOutcome = reviewWithFixedStatus.prepare({
       target: { kind: "film", id: "fixture-film" },
     });
+    const outsideTimelineAcceptance = structuredClone(
+      acceptanceScenarios()[0]!,
+    );
+    outsideTimelineAcceptance.id = "outside-timeline-frame";
+    outsideTimelineAcceptance.target = {
+      kind: "film",
+      id: "fixture-film",
+    };
+    if (outsideTimelineAcceptance.criterion.kind !== "frame")
+      throw new Error("opening beauty fixture is not a frame criterion");
+    outsideTimelineAcceptance.criterion.shot = "review-missing-shot";
+    const graphWithOutsideTimelineAcceptance = {
+      ...graphWithMissingFirst,
+      acceptance: new Map([
+        ...graphWithMissingFirst.acceptance,
+        [outsideTimelineAcceptance.id, outsideTimelineAcceptance] as const,
+      ]),
+    };
+    project.graph = (() =>
+      graphWithOutsideTimelineAcceptance) as typeof project.graph;
+    const outsideTimelineFilmReview = reviewWithFixedStatus.prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    const graphWithoutTimelineShot = {
+      ...currentGraph,
+      shots: new Map(
+        [...currentGraph.shots].filter(([id]) => id !== "opening"),
+      ),
+    };
+    project.graph = (() => graphWithoutTimelineShot) as typeof project.graph;
+    const missingTimelineShotReview = reviewWithFixedStatus.prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
     project.graph = residentGraph;
     const ambiguousEventFile = path.join(
       fixture.root,
@@ -555,6 +588,14 @@ export const test_mcp_production_review = async (): Promise<void> => {
             outcome.scenario === "film-runtime" &&
             outcome.actual === 6 &&
             outcome.passed,
+        ) &&
+        outsideTimelineFilmReview.outcomes.every(
+          (outcome) => outcome.scenario !== outsideTimelineAcceptance.id,
+        ) &&
+        missingTimelineShotReview.outcomes.every(
+          (outcome) =>
+            outcome.scenario !== "opening-beauty" &&
+            outcome.scenario !== "opening-pose",
         ),
     );
     const contractOnlyWorksheet = worksheet(project, aliasedFrameEvidence);
@@ -1219,7 +1260,25 @@ export const test_mcp_production_review = async (): Promise<void> => {
         rendererIdentity: "legacy-capture-runtime",
       }),
     );
+    const legacyFilmBundleDirectory = path.join(
+      fixture.root,
+      "renders",
+      "retained-v2-film-history",
+    );
+    fs.mkdirSync(legacyFilmBundleDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(legacyFilmBundleDirectory, "manifest.json"),
+      JSON.stringify({
+        ...currentBundleManifest,
+        version: 2,
+        target: { kind: "film", id: "fixture-film" },
+        rendererIdentity: "legacy-capture-runtime",
+      }),
+    );
     const preparedBesideLegacyV2 = review.prepare({ target: shotTarget });
+    const filmPreparedBesideLegacyV2 = review.prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
     TestValidator.predicate(
       "retained v2 history is a warning beside current v3 evidence",
       preparedBesideLegacyV2.frames.length !== 0 &&
@@ -1231,6 +1290,11 @@ export const test_mcp_production_review = async (): Promise<void> => {
           (item) =>
             item.code !== "render-bundle-invalid" ||
             item.path?.includes("retained-v2-history") === false,
+        ) &&
+        filmPreparedBesideLegacyV2.diagnostics.some(
+          (item) =>
+            item.code === "render-bundle-legacy" &&
+            item.path?.includes("retained-v2-film-history"),
         ),
     );
 

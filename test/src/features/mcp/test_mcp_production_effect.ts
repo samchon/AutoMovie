@@ -217,14 +217,18 @@ export const test_mcp_production_effect = (): void => {
       { ...compiled!.effects[0]!, id: "first", start: 1, end: 2 },
       { ...compiled!.effects[0]!, id: "second", start: 3, end: 4 },
     ];
-    const ambiguousBytes = Buffer.from(JSON.stringify(ambiguous));
-    fs.writeFileSync(shotPath, ambiguousBytes);
     const manifest = JSON.parse(originalManifest.toString("utf8")) as {
       files: Array<{ path: string; digest: `sha256:${string}` }>;
     };
-    manifest.files.find((file) => file.path === "shots/opening.json")!.digest =
-      digestAutoMovieBytes(ambiguousBytes);
-    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+    const writeCurrentShot = (shot: IAutoMovieCompiledShotSource): void => {
+      const bytes = Buffer.from(JSON.stringify(shot));
+      fs.writeFileSync(shotPath, bytes);
+      manifest.files.find(
+        (file) => file.path === "shots/opening.json",
+      )!.digest = digestAutoMovieBytes(bytes);
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+    };
+    writeCurrentShot(ambiguous);
     const ambiguousSummary = new AutoMovieProductionOracleService(
       project,
     ).query({
@@ -239,12 +243,86 @@ export const test_mcp_production_effect = (): void => {
     missingCamera.scene.cameras = missingCamera.scene.cameras.filter(
       (camera) => camera.id !== missingCamera.shot.camera,
     );
-    const missingCameraBytes = Buffer.from(JSON.stringify(missingCamera));
-    fs.writeFileSync(shotPath, missingCameraBytes);
-    manifest.files.find((file) => file.path === "shots/opening.json")!.digest =
-      digestAutoMovieBytes(missingCameraBytes);
-    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+    writeCurrentShot(missingCamera);
     const missingCameraSummary = new AutoMovieProductionOracleService(
+      project,
+    ).query({
+      request: {
+        query: "effect",
+        zone: "signal-smoke",
+        shot: "opening",
+        time: 2,
+      },
+    });
+    const bounds = compiled!.effects[0]!.bounds;
+    const center = {
+      x: (bounds.min.x + bounds.max.x) / 2,
+      y: (bounds.min.y + bounds.max.y) / 2,
+      z: (bounds.min.z + bounds.max.z) / 2,
+    };
+    const subjectPositions = [
+      { ...center, x: bounds.min.x - 1 },
+      { ...center, x: bounds.max.x + 1 },
+      { ...center, y: bounds.max.y + 1 },
+      { ...center, z: bounds.min.z - 1 },
+      { ...center, z: bounds.max.z + 1 },
+      center,
+    ];
+    const subjectInsideCounts = subjectPositions.map((translation) => {
+      const positioned = structuredClone(compiled!);
+      positioned.shot.performances = [];
+      positioned.scene.nodes.find(
+        (node) => node.id === "sentinel",
+      )!.transform.translation = translation;
+      writeCurrentShot(positioned);
+      const output = new AutoMovieProductionOracleService(project).query({
+        request: {
+          query: "effect",
+          zone: "signal-smoke",
+          shot: "opening",
+          time: 2,
+          subjects: ["sentinel"],
+        },
+      });
+      return output.result?.kind === "measurement"
+        ? output.result.values.subjectsInside
+        : null;
+    });
+    const parallelOutside = structuredClone(compiled!);
+    const parallelCamera = parallelOutside.scene.cameras.find(
+      (camera) => camera.id === parallelOutside.shot.camera,
+    )!;
+    parallelOutside.shot.cameraMotion = null;
+    parallelCamera.transform.translation = {
+      x: bounds.max.x + 10,
+      y: center.y,
+      z: bounds.max.z + 10,
+    };
+    parallelCamera.transform.rotation = { x: 0, y: 0, z: 0, w: 1 };
+    writeCurrentShot(parallelOutside);
+    const parallelOutsideSummary = new AutoMovieProductionOracleService(
+      project,
+    ).query({
+      request: {
+        query: "effect",
+        zone: "signal-smoke",
+        shot: "opening",
+        time: 2,
+      },
+    });
+    const facingAway = structuredClone(compiled!);
+    const facingAwayCamera = facingAway.scene.cameras.find(
+      (camera) => camera.id === facingAway.shot.camera,
+    )!;
+    facingAway.shot.cameraMotion = null;
+    facingAwayCamera.transform.translation = {
+      x: center.x,
+      y: center.y,
+      z: bounds.max.z + 10,
+    };
+    facingAwayCamera.transform.rotation = { x: 0, y: 1, z: 0, w: 0 };
+    writeCurrentShot(facingAway);
+    const facingAwaySummary = new AutoMovieProductionOracleService(
       project,
     ).query({
       request: {
@@ -257,13 +335,19 @@ export const test_mcp_production_effect = (): void => {
     fs.writeFileSync(shotPath, originalShot);
     fs.writeFileSync(manifestPath, originalManifest);
     TestValidator.predicate(
-      "effect oracle refuses ambiguous streams and a missing compiled camera",
+      "effect oracle refuses ambiguous streams and a missing compiled camera while bounding subjects and camera rays",
       ambiguousSummary.result === null &&
         ambiguousSummary.diagnostics[0]?.message.includes("unambiguous") &&
         missingCameraSummary.result === null &&
         missingCameraSummary.diagnostics[0]?.message.includes(
           "no current compiled camera",
-        ),
+        ) &&
+        JSON.stringify(subjectInsideCounts) ===
+          JSON.stringify([0, 0, 0, 0, 0, 1]) &&
+        parallelOutsideSummary.result?.kind === "measurement" &&
+        parallelOutsideSummary.result.values.cameraIntersectionLength === 0 &&
+        facingAwaySummary.result?.kind === "measurement" &&
+        facingAwaySummary.result.values.cameraIntersectionLength === 0,
     );
   } finally {
     fixture.dispose();

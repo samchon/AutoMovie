@@ -419,6 +419,21 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const partialFormationResult = oracle.query({
       request: { query: "formation", formation: "line" },
     });
+    const emptyFormationChunks = corrupted();
+    emptyFormationChunks.formations[0]!.chunks = [];
+    writeCorrupted(emptyFormationChunks);
+    const emptyFormationChunksResult = oracle.query({
+      request: { query: "formation", formation: "line" },
+    });
+    const missingFormationCamera = corrupted();
+    missingFormationCamera.scene.cameras =
+      missingFormationCamera.scene.cameras.filter(
+        (camera) => camera.id !== missingFormationCamera.shot.camera,
+      );
+    writeCorrupted(missingFormationCamera);
+    const missingFormationCameraResult = oracle.query({
+      request: { query: "formation", formation: "line" },
+    });
     writeGeneratedBytes(Buffer.from(generatedShotBytes));
     const manifestWithoutShots = JSON.parse(
       generatedManifestBytes.toString("utf8"),
@@ -435,12 +450,20 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     });
     fs.writeFileSync(generatedManifestPath, generatedManifestBytes);
     TestValidator.predicate(
-      "formation measurement refuses partial slots and missing compiled shots",
-      [partialFormationResult, missingCompiledFormationResult].every(
+      "formation measurement refuses partial slots, missing chunks, and missing compiled shots",
+      [
+        partialFormationResult,
+        emptyFormationChunksResult,
+        missingCompiledFormationResult,
+      ].every(
         (output) =>
           output.result === null &&
           output.diagnostics[0]?.message.includes("not fully materialized"),
-      ),
+      ) &&
+        missingFormationCameraResult.result === null &&
+        missingFormationCameraResult.diagnostics[0]?.message.includes(
+          "no current compiled camera",
+        ),
     );
     const recurringShot = corrupted();
     recurringShot.shot.id = "second";
