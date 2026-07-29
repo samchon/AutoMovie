@@ -71,3 +71,7 @@ jobs:
       - name: Run Tests with 100% Coverage Gate
         run: pnpm coverage
         working-directory: test
+
+      - name: Report Exact Coverage Gaps
+        if: failure()
+        run: node internals/report-coverage-gaps.mjs
