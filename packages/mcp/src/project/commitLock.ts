@@ -76,7 +76,8 @@ export const acquireCommitLock = (lockPath: string): string => {
  * only this process's re-entrant ownership without following the resident path
  * into a replacement root. Pass `retire: true` only when the owning operation
  * removed the complete lock namespace; this invalidates every matching nesting
- * level because none can still own the deleted physical lock.
+ * level and always returns without resident-path I/O because none can still own
+ * the deleted physical lock.
  */
 export const releaseCommitLock = (
   lockPath: string,
@@ -88,7 +89,7 @@ export const releaseCommitLock = (
     if (options.retire !== true && --current.depth !== 0) return;
     held.delete(lockPath);
   }
-  if (options.unlink === false) return;
+  if (options.retire === true || options.unlink === false) return;
   try {
     if (fs.readFileSync(lockPath, "utf8") === token)
       fs.rmSync(lockPath, { force: true });

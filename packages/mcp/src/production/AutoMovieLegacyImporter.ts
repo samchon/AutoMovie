@@ -317,7 +317,7 @@ export class AutoMovieLegacyImporter {
       // state root. Retire every matching process-local nesting level so an
       // outer holder cannot re-enter a lock whose physical namespace vanished.
       // Never follow the removed path into a concurrently recreated root.
-      releaseCommitLock(lockPath, token, { unlink: false, retire: true });
+      releaseCommitLock(lockPath, token, { retire: true });
       return { status: "rolled-back", fingerprint: plan.fingerprint };
     } catch (error) {
       releaseResidentLockIfCurrent(lease, lockPath, token);
