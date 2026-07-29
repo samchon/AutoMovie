@@ -1160,9 +1160,21 @@ try {
   );
   run("lint reviewed packaged starter", "pnpm lint", starterDir, 900_000);
   const renderStateRoot = join(starterDir, ".automovie", "render-job");
-  const renderPlan = JSON.parse(
-    readFileSync(join(renderStateRoot, "plan.json"), "utf8"),
-  );
+  const renderPlanPath = join(renderStateRoot, "plan.json");
+  const renderPlanText = readFileSync(renderPlanPath, "utf8");
+  const renderPlan = JSON.parse(renderPlanText);
+  renderPlan.runtimeIdentity.encoder.version = "0.0.0-stale";
+  writeFileSync(renderPlanPath, `${JSON.stringify(renderPlan, null, 2)}\n`);
+  try {
+    runExpectedFailure(
+      "reject stale packaged render runtime identity",
+      "pnpm render -- verify",
+      starterDir,
+      "render runtime identity changed",
+    );
+  } finally {
+    writeFileSync(renderPlanPath, renderPlanText);
+  }
   const damagedChunk = renderPlan.chunks[0];
   const retainedChunk = renderPlan.chunks[1];
   if (damagedChunk === undefined || retainedChunk === undefined)

@@ -72,6 +72,11 @@ manifests remain on disk but require recapture before they can serve as current
 review evidence; they remain target-scoped history warnings and do not block a
 current valid v3 bundle.
 
+Chunk render `status`, `verify`, and `finalize` re-run the capture, actual
+graphics, declared render-source, and package-owned encoder identity preflight.
+They can launch Chromium and mark every stored chunk stale when that structured
+runtime identity changes.
+
 ## Usage
 
 ```

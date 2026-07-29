@@ -12,9 +12,11 @@ import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   type IAutoMovieProductionAudioAssetIdentity,
+  type IAutoMovieProductionEncoderIdentity,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderJobPlan,
+  type IAutoMovieProductionRenderRuntimeIdentity,
   canonicalAutoMovieCaptureRuntimeIdentity,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
@@ -33,6 +35,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { PNG } from "pngjs";
 
 import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
@@ -57,21 +60,28 @@ const main = async (): Promise<void> => {
     );
   if (action === "status") {
     const plan = readPlan();
-    output(
-      sourceFingerprint() === plan.compileFingerprint
-        ? await renderStatus(plan)
-        : plan.chunks.map((chunk) => ({
-            slot: chunk.slot,
-            chunk: chunk.id,
-            status: "stale" as const,
-            correction:
-              "Source/design input changed. Run automovie render plan, then rerender only the new chunk identities.",
-          })),
-    );
+    if (sourceFingerprint() !== plan.compileFingerprint)
+      output(
+        stalePlanRows(
+          plan,
+          "Source/design input changed. Run automovie render plan, then rerender only the new chunk identities.",
+        ),
+      );
+    else {
+      const runtimeIdentity = await currentRenderRuntimeIdentity(plan);
+      output(
+        isDeepStrictEqual(runtimeIdentity, plan.runtimeIdentity)
+          ? await renderStatus(plan)
+          : stalePlanRows(
+              plan,
+              "Capture, graphics, render-source, or encoder identity changed. Run automovie render plan, then rerender only the new chunk identities.",
+            ),
+      );
+    }
     return;
   }
   if (action === "verify") {
-    const current = currentStoredPlan();
+    const current = await currentStoredPlan();
     const status = await renderStatus(current);
     if (status.some((item) => item.status !== "complete"))
       throw new Error(
@@ -81,7 +91,7 @@ const main = async (): Promise<void> => {
     return;
   }
   if (action === "finalize") {
-    output(await finalize(currentStoredPlan()));
+    output(await finalize(await currentStoredPlan()));
     return;
   }
   const current = await currentPlan();
@@ -207,39 +217,19 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
     compiled.compiler.inputFingerprint,
   );
   const first = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
-  const preflight = await captureProductionFrame({
-    projectRoot: root,
+  const runtimeIdentity = await renderRuntimeIdentity({
+    project,
     compileFingerprint: compiled.compiler.inputFingerprint,
-    target: { kind: "shot", id: first.shot },
-    time: first.sourceFrame / timeline.fps,
-    pass: "beauty",
+    timeline,
+    first,
     width: graph.production.frameFormat.width,
     height: graph.production.frameFormat.height,
   });
-  const encoderEntry = require.resolve("h264-mp4-encoder");
-  const encoderPackage = JSON.parse(
-    fs.readFileSync(require.resolve("h264-mp4-encoder/package.json"), "utf8"),
-  ) as { version: string };
   const planned = planProductionRenderJob({
     timeline,
     production: graph.production,
     audioAssets: productionAudioAssets(project, timeline),
-    runtimeIdentity: {
-      protocolVersion: "automovie.production-render-runtime.v1",
-      sourceDigest: renderSourceDigest(project, timeline),
-      capture: preflight.runtimeIdentity,
-      encoder: {
-        package: "h264-mp4-encoder",
-        version: encoderPackage.version,
-        entryDigest: digestAutoMovieBytes(fs.readFileSync(encoderEntry)),
-        codec: "h264",
-        arguments: {
-          quantizationParameter: 24,
-          speed: 10,
-          groupOfPictures: graph.production.frameFormat.fps,
-        },
-      },
-    },
+    runtimeIdentity,
     sourceFingerprints: renderShotFingerprints(project, timeline),
     chunkFrames: integerOption("--chunk-frames", 48),
   });
@@ -821,6 +811,15 @@ const encodePngFrames = async (
   files: string[],
   plan: IAutoMovieProductionRenderJobPlan,
 ): Promise<Uint8Array> => {
+  if (
+    isDeepStrictEqual(
+      productionEncoderIdentity(plan.frameFormat.fps),
+      plan.runtimeIdentity.encoder,
+    ) === false
+  )
+    throw new Error(
+      "The installed production encoder identity changed after render planning. Replan before encoding or finalizing.",
+    );
   // `h264-mp4-encoder` ships CommonJS, and this script runs as ESM: depending
   // on the loader its factory arrives on the namespace or on `default`. Read
   // whichever one is callable instead of assuming the interop shape.
@@ -1018,13 +1017,96 @@ const readPlan = (): IAutoMovieProductionRenderJobPlan => {
   return readJson<IAutoMovieProductionRenderJobPlan>(planPath);
 };
 
-const currentStoredPlan = (): IAutoMovieProductionRenderJobPlan => {
-  const plan = readPlan();
-  if (sourceFingerprint() !== plan.compileFingerprint)
-    throw new Error(
-      "The stored render plan is stale. Run automovie render plan, then rerender only changed chunk identities.",
-    );
-  return plan;
+const currentStoredPlan =
+  async (): Promise<IAutoMovieProductionRenderJobPlan> => {
+    const plan = readPlan();
+    if (sourceFingerprint() !== plan.compileFingerprint)
+      throw new Error(
+        "The stored render plan is stale. Run automovie render plan, then rerender only changed chunk identities.",
+      );
+    const runtimeIdentity = await currentRenderRuntimeIdentity(plan);
+    if (isDeepStrictEqual(runtimeIdentity, plan.runtimeIdentity) === false)
+      throw new Error(
+        "The stored render runtime identity changed. Run automovie render plan, then rerender only changed chunk identities.",
+      );
+    return plan;
+  };
+
+const stalePlanRows = (
+  plan: IAutoMovieProductionRenderJobPlan,
+  correction: string,
+) =>
+  plan.chunks.map((chunk) => ({
+    slot: chunk.slot,
+    chunk: chunk.id,
+    status: "stale" as const,
+    correction,
+  }));
+
+const currentRenderRuntimeIdentity = async (
+  plan: IAutoMovieProductionRenderJobPlan,
+): Promise<IAutoMovieProductionRenderRuntimeIdentity> => {
+  const project = AutoMovieProductionProject.open(root);
+  const graph = project.graph();
+  if (graph.production === null)
+    throw new Error("Render runtime preflight requires a production design.");
+  const timeline = readAutoMovieFilmTimeline(project, plan.compileFingerprint);
+  const first = sampleProductionRenderFrame(timeline, 0).layers.at(-1);
+  if (first === undefined)
+    throw new Error("Render runtime preflight requires one film video frame.");
+  return renderRuntimeIdentity({
+    project,
+    compileFingerprint: plan.compileFingerprint,
+    timeline,
+    first,
+    width: graph.production.frameFormat.width,
+    height: graph.production.frameFormat.height,
+  });
+};
+
+const renderRuntimeIdentity = async (props: {
+  project: AutoMovieProductionProject;
+  compileFingerprint: AutoMovieContentDigest;
+  timeline: ReturnType<typeof readAutoMovieFilmTimeline>;
+  first: { shot: string; sourceFrame: number };
+  width: number;
+  height: number;
+}): Promise<IAutoMovieProductionRenderRuntimeIdentity> => {
+  const preflight = await captureProductionFrame({
+    projectRoot: root,
+    compileFingerprint: props.compileFingerprint,
+    target: { kind: "shot", id: props.first.shot },
+    time: props.first.sourceFrame / props.timeline.fps,
+    pass: "beauty",
+    width: props.width,
+    height: props.height,
+  });
+  return {
+    protocolVersion: "automovie.production-render-runtime.v1",
+    sourceDigest: renderSourceDigest(props.project, props.timeline),
+    capture: preflight.runtimeIdentity,
+    encoder: productionEncoderIdentity(props.timeline.fps),
+  };
+};
+
+const productionEncoderIdentity = (
+  fps: number,
+): IAutoMovieProductionEncoderIdentity => {
+  const encoderEntry = require.resolve("h264-mp4-encoder");
+  const encoderPackage = JSON.parse(
+    fs.readFileSync(require.resolve("h264-mp4-encoder/package.json"), "utf8"),
+  ) as { version: string };
+  return {
+    package: "h264-mp4-encoder",
+    version: encoderPackage.version,
+    entryDigest: digestAutoMovieBytes(fs.readFileSync(encoderEntry)),
+    codec: "h264",
+    arguments: {
+      quantizationParameter: 24,
+      speed: 10,
+      groupOfPictures: fps,
+    },
+  };
 };
 
 const chunkDirectory = (digest: AutoMovieContentDigest): string =>

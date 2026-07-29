@@ -553,7 +553,10 @@ export interface IAutoMovieShotContract {
   camera: {
     /** Non-blank creative camera intent. */
     intent: string;
-    /** Non-empty unique compiled scene-node ids that must remain readable. */
+    /**
+     * Non-empty unique compiled scene-node or formation ids that must remain
+     * readable.
+     */
     requiredSubjects: string[];
     /**
      * Finite maximum allowed pixel-occlusion ratio, inclusive from zero to one.
