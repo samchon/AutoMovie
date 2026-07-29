@@ -1213,6 +1213,22 @@ Module._load = function (request, parent, isMain) {
   const renderStateRoot = join(starterDir, ".automovie", "render-job");
   const renderPlanPath = join(renderStateRoot, "plan.json");
   const renderPlanText = readFileSync(renderPlanPath, "utf8");
+  const tamperedRenderPlan = JSON.parse(renderPlanText);
+  tamperedRenderPlan.tracks.captions += "\nNOTE tampered\n";
+  writeFileSync(
+    renderPlanPath,
+    `${JSON.stringify(tamperedRenderPlan, null, 2)}\n`,
+  );
+  try {
+    runExpectedFailure(
+      "reject tampered packaged render plan",
+      "pnpm render verify",
+      starterDir,
+      "Stored render plan differs",
+    );
+  } finally {
+    writeFileSync(renderPlanPath, renderPlanText);
+  }
   const renderPlan = JSON.parse(renderPlanText);
   renderPlan.runtimeIdentity.encoder.version = "0.0.0-stale";
   writeFileSync(renderPlanPath, `${JSON.stringify(renderPlan, null, 2)}\n`);

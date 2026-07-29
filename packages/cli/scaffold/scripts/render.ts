@@ -31,6 +31,7 @@ import {
   sampleProductionRenderFrame,
   selectAutoMovieFilmReviewFrames,
   verifyProductionRenderChunkReceipt,
+  verifyProductionRenderJobPlan,
 } from "@automovie/mcp";
 import * as HME from "h264-mp4-encoder";
 import { createFile } from "mp4box";
@@ -79,15 +80,30 @@ const main = async (): Promise<void> => {
         ),
       );
     else {
-      const runtimeIdentity = await currentRenderRuntimeIdentity(plan);
-      output(
-        isDeepStrictEqual(runtimeIdentity, plan.runtimeIdentity)
-          ? await renderStatus(plan)
-          : stalePlanRows(
+      const inputs = await currentRenderPlanInputs(plan);
+      if (
+        isDeepStrictEqual(inputs.runtimeIdentity, plan.runtimeIdentity) ===
+        false
+      )
+        output(
+          stalePlanRows(
+            plan,
+            "Capture, graphics, render-source, or encoder identity changed. Run automovie render plan, then rerender only the new chunk identities.",
+          ),
+        );
+      else {
+        try {
+          verifyProductionRenderJobPlan({ plan, ...inputs });
+          output(await renderStatus(plan));
+        } catch {
+          output(
+            stalePlanRows(
               plan,
-              "Capture, graphics, render-source, or encoder identity changed. Run automovie render plan, then rerender only the new chunk identities.",
+              "Stored render plan differs from current compiler-owned inputs. Run automovie render plan, then rerender only the new chunk identities.",
             ),
-      );
+          );
+        }
+      }
     }
     return;
   }
@@ -1118,11 +1134,14 @@ const currentStoredPlan =
       throw new Error(
         "The stored render plan is stale. Run automovie render plan, then rerender only changed chunk identities.",
       );
-    const runtimeIdentity = await currentRenderRuntimeIdentity(plan);
-    if (isDeepStrictEqual(runtimeIdentity, plan.runtimeIdentity) === false)
+    const inputs = await currentRenderPlanInputs(plan);
+    if (
+      isDeepStrictEqual(inputs.runtimeIdentity, plan.runtimeIdentity) === false
+    )
       throw new Error(
         "The stored render runtime identity changed. Run automovie render plan, then rerender only changed chunk identities.",
       );
+    verifyProductionRenderJobPlan({ plan, ...inputs });
     return plan;
   };
 
@@ -1137,25 +1156,33 @@ const stalePlanRows = (
     correction,
   }));
 
-const currentRenderRuntimeIdentity = async (
+const currentRenderPlanInputs = async (
   plan: IAutoMovieProductionRenderJobPlan,
-): Promise<IAutoMovieProductionRenderRuntimeIdentity> => {
+) => {
   const project = AutoMovieProductionProject.open(root);
   const graph = project.graph();
-  if (graph.production === null)
+  const production = graph.production;
+  if (production === null)
     throw new Error("Render runtime preflight requires a production design.");
   const timeline = readAutoMovieFilmTimeline(project, plan.compileFingerprint);
   const first = sampleProductionRenderFrame(timeline, 0).layers.at(-1);
   if (first === undefined)
     throw new Error("Render runtime preflight requires one film video frame.");
-  return renderRuntimeIdentity({
+  const runtimeIdentity = await renderRuntimeIdentity({
     project,
     compileFingerprint: plan.compileFingerprint,
     timeline,
     first,
-    width: graph.production.frameFormat.width,
-    height: graph.production.frameFormat.height,
+    width: production.frameFormat.width,
+    height: production.frameFormat.height,
   });
+  return {
+    timeline,
+    production,
+    runtimeIdentity,
+    sourceFingerprints: renderShotFingerprints(project, timeline),
+    audioAssets: productionAudioAssets(project, timeline),
+  };
 };
 
 const renderRuntimeIdentity = async (props: {

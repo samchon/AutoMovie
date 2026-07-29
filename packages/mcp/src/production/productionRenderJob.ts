@@ -328,6 +328,31 @@ export const planProductionRenderJob = (props: {
   };
 };
 
+/** Prove a persisted plan is exactly reproducible from current compiler inputs. */
+export const verifyProductionRenderJobPlan = (props: {
+  plan: IAutoMovieProductionRenderJobPlan;
+  timeline: IAutoMovieFilmTimeline;
+  production: IAutoMovieProductionDesign;
+  runtimeIdentity: IAutoMovieProductionRenderRuntimeIdentity;
+  sourceFingerprints: Readonly<Record<string, AutoMovieContentDigest>>;
+  audioAssets: readonly IAutoMovieProductionAudioAssetIdentity[];
+  guidePasses?: readonly Exclude<AutoMovieGuidePass, "beauty">[];
+}): void => {
+  const expected = planProductionRenderJob({
+    timeline: props.timeline,
+    production: props.production,
+    runtimeIdentity: props.runtimeIdentity,
+    sourceFingerprints: props.sourceFingerprints,
+    audioAssets: props.audioAssets,
+    chunkFrames: props.plan.chunkFrames,
+    guidePasses: props.guidePasses,
+  });
+  if (canonicalJson(props.plan) !== canonicalJson(expected))
+    throw new Error(
+      "Stored render plan differs from the current compiler-owned timeline and render inputs. Run automovie render plan, then rerender only changed chunk identities.",
+    );
+};
+
 /** Resolve one global frame, including exact dissolve and fade weights. */
 export const sampleProductionRenderFrame = (
   timeline: IAutoMovieFilmTimeline,
@@ -763,7 +788,9 @@ const webVttPlainText = (value: string): string =>
     .replaceAll(">", "&gt;");
 
 const validByteFact = (fact: { digest: string; bytes: number }): boolean =>
-  fact.bytes > 0 && validDigest(fact.digest);
+  Number.isSafeInteger(fact.bytes) &&
+  fact.bytes > 0 &&
+  validDigest(fact.digest);
 
 const validDigest = (value: string): boolean =>
   /^sha256:[0-9a-f]{64}$/.test(value);

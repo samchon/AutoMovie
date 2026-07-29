@@ -13,6 +13,7 @@ import {
   runProductionRenderJob,
   sampleProductionRenderFrame,
   verifyProductionRenderChunkReceipt,
+  verifyProductionRenderJobPlan,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -220,15 +221,16 @@ const throws = (closure: () => unknown): boolean => {
  *    speaker tag.
  * 4. Planned, running, failed, stale, and complete status rows retain one slot
  *    while content ids change.
- * 5. Receipts require exact identity, ordered global frames, raster, non-empty
- *    byte counts, and SHA-256 facts.
- * 6. The worker scheduler reuses current chunks, skips busy locks, commits valid
+ * 5. A stored plan must reproduce exactly from current compiler-owned inputs.
+ * 6. Receipts require exact identity, ordered global frames, raster, positive
+ *    safe-integer byte counts, and SHA-256 facts.
+ * 7. The worker scheduler reuses current chunks, skips busy locks, commits valid
  *    renders, records failures, releases every acquired lock, and rejects
  *    invalid worker/deliverable requests.
- * 7. Invalid chunk sizes, clock mismatches, out-of-range/gap frames, a first
+ * 8. Invalid chunk sizes, clock mismatches, out-of-range/gap frames, a first
  *    dissolve, invalid guide passes, and non-finite runtime identity fail
  *    closed.
- * 8. Render-state reads accept only stable physical descendants: traversal, linked
+ * 9. Render-state reads accept only stable physical descendants: traversal, linked
  *    ancestors/files, non-files, and replacement races fail closed.
  */
 export const test_mcp_production_render_job = async (): Promise<void> => {
@@ -522,6 +524,42 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       statuses[5]?.status === "planned",
   );
 
+  const production = {
+    ...productionDesign({
+      id: "render-film",
+      targetRuntimeSeconds: 3,
+      frameFormat: {
+        width: 16,
+        height: 16,
+        fps: 2,
+        colorSpace: "srgb",
+      },
+    }),
+    deliverables: [
+      { id: "feature", kind: "feature" as const, required: true },
+      { id: "guides", kind: "guide-pass" as const, required: true },
+    ],
+  };
+  const currentPlanInputs = {
+    timeline: timeline(),
+    production,
+    runtimeIdentity: renderPlan.runtimeIdentity,
+    sourceFingerprints: sourceFingerprints(),
+    audioAssets: audioAssets(),
+  };
+  verifyProductionRenderJobPlan({ plan: renderPlan, ...currentPlanInputs });
+  const tamperedPlan = structuredClone(renderPlan);
+  tamperedPlan.tracks.captions += "\nNOTE tampered\n";
+  TestValidator.predicate(
+    "stored plan verification rejects compiler-derived field tampering",
+    throws(() =>
+      verifyProductionRenderJobPlan({
+        plan: tamperedPlan,
+        ...currentPlanInputs,
+      }),
+    ),
+  );
+
   verifyProductionRenderChunkReceipt({
     plan: renderPlan,
     chunk: renderPlan.chunks[0]!,
@@ -541,8 +579,12 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   badFrameDigest.frames[0]!.digest = "sha256:no" as AutoMovieContentDigest;
   const badFrameBytes = structuredClone(complete);
   badFrameBytes.frames[0]!.bytes = 0;
+  const badFrameFractionalBytes = structuredClone(complete);
+  badFrameFractionalBytes.frames[0]!.bytes = 1.5;
   const badEncoded = structuredClone(complete);
   badEncoded.encoded.bytes = 0;
+  const badEncodedUnsafeBytes = structuredClone(complete);
+  badEncodedUnsafeBytes.encoded.bytes = Number.MAX_SAFE_INTEGER + 1;
   const badEncodedDigest = structuredClone(complete);
   badEncodedDigest.encoded.digest = "sha256:no" as AutoMovieContentDigest;
   TestValidator.predicate(
@@ -557,7 +599,9 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       badHeight,
       badFrameDigest,
       badFrameBytes,
+      badFrameFractionalBytes,
       badEncoded,
+      badEncodedUnsafeBytes,
       badEncodedDigest,
     ].every((candidate) =>
       throws(() =>
