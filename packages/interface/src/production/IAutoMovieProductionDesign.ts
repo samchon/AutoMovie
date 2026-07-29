@@ -63,9 +63,10 @@ export interface IAutoMovieProductionDesign {
 /**
  * One distance-specific recipe reference emitted as authoring/runtime metadata.
  *
- * The foundation compiler materializes every referenced recipe, but the current
- * scaffold viewer does not automatically switch tiers by camera distance.
- * Source or a future renderer must select a tier explicitly.
+ * The foundation compiler materializes every referenced recipe. The scaffold
+ * viewer automatically selects anonymous formation tiers from distance and
+ * projected contribution with hysteresis; ordinary scene nodes do not yet
+ * switch model tiers automatically.
  */
 export interface IAutoMovieModelLodRecipe {
   /** Detail tier. */
