@@ -4,6 +4,7 @@ import {
   austerlitzSignalDryRun,
   austerlitzSignalTask,
   diffAutoMovieBenchmarkVerdicts,
+  digestBenchmarkValue,
   judgeAutoMovieBenchmarkSubmission,
   reportAutoMovieBenchmark,
   sealAutoMovieBenchmarkSubmission,
@@ -148,6 +149,15 @@ export const test_benchmark_surface_report = (): void => {
         { id: "production/column-strength", from: "pass", to: "fail" },
       ],
     },
+  );
+  const changedTaskDigest = digestBenchmarkValue("changed-task-law");
+  TestValidator.equals(
+    "a diff across changed task law names the digest drift",
+    diffAutoMovieBenchmarkVerdicts(productionVerdict, {
+      ...legacyVerdict,
+      taskDigest: changedTaskDigest,
+    }).versionDrift,
+    [`taskDigest: ${productionVerdict.taskDigest} -> ${changedTaskDigest}`],
   );
   const sameLaw = diffAutoMovieBenchmarkVerdicts(
     productionVerdict,

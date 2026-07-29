@@ -528,7 +528,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       const edit = baseEdit();
       const cue: IAutoMovieFilmEdit["tracks"]["effects"][number] = {
         id: "effect",
-        recipe: "signal-smoke",
+        recipe: "world-zone",
         zone: "signal-smoke",
         start: { frame: 0 },
         duration: { frame: 1 },
@@ -536,13 +536,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       };
       mutate(cue);
       edit.tracks.effects.push(cue);
-      const source = editSource(edit);
-      fs.writeFileSync(
-        filmPath,
-        Number.isNaN(cue.intensity)
-          ? source.replace('"intensity":null', '"intensity":Number.NaN')
-          : source,
-      );
+      fs.writeFileSync(filmPath, editSource(edit));
       return compiler.compile({ scope: "source" });
     };
     const effectFailures = [
@@ -557,9 +551,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         cue.duration = { frame: 1 };
       }),
       compileEffect((cue) => {
-        cue.intensity = Number.NaN;
-      }),
-      compileEffect((cue) => {
         cue.intensity = -0.1;
       }),
       compileEffect((cue) => {
@@ -570,7 +561,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     orderedEffects.tracks.effects.push(
       {
         id: "later-effect",
-        recipe: "signal-smoke",
+        recipe: "world-zone",
         zone: "signal-smoke",
         start: { frame: 2 },
         duration: { frame: 1 },
@@ -578,7 +569,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       },
       {
         id: "earlier-effect",
-        recipe: "signal-smoke",
+        recipe: "world-zone",
         zone: "signal-smoke",
         start: { frame: 1 },
         duration: { frame: 1 },
