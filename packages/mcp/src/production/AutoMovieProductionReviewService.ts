@@ -31,6 +31,7 @@ import {
   AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
   AutoMovieProductionCompiler,
   IAutoMovieReviewQueueSnapshot,
+  currentAutoMovieProductionCompilerInputFingerprint,
 } from "./AutoMovieProductionCompiler";
 import {
   AutoMovieProductionInputRaceError,
@@ -349,8 +350,18 @@ export class AutoMovieProductionReviewService {
       this.project.commitReview(
         stored,
         () =>
-          reviewFingerprint(this.project, input.target, finalCompileStatus) ===
-          fingerprint,
+          reviewFingerprint(
+            this.project,
+            input.target,
+            finalCompileStatus,
+            undefined,
+            input.target.kind === "film"
+              ? currentAutoMovieProductionCompilerInputFingerprint(
+                  this.project,
+                  "source",
+                )
+              : undefined,
+          ) === fingerprint,
       );
     } catch (error) {
       if (error instanceof AutoMovieProductionInputRaceError === false)
@@ -929,6 +940,7 @@ const reviewFingerprint = (
   target: IAutoMovieReviewTarget,
   compileStatus: IAutoMovieCompileProjectOutput | null,
   context?: IReviewReadContext,
+  currentCompileInput?: AutoMovieContentDigest | null,
 ): AutoMovieContentDigest => {
   const targetKey = reviewTargetKey(target);
   const retained = context?.fingerprints.get(targetKey);
@@ -1046,7 +1058,12 @@ const reviewFingerprint = (
     fields.push(compilerField());
   } else {
     addJson("production", graph.production);
-    addJson("compile-current", compileStatus!.compiler.inputFingerprint);
+    addJson(
+      "compile-current",
+      currentCompileInput === undefined
+        ? compileStatus!.compiler.inputFingerprint
+        : currentCompileInput,
+    );
     try {
       addJson(
         "film-timeline",

@@ -314,7 +314,7 @@ export class AutoMovieProductionCompiler {
             inputFingerprint,
           );
     const inputCurrent = (): boolean =>
-      `${this.project.revision()}\0${currentProductionCompilerInputFingerprint(this.project, input.scope)}\0${this.project.revision()}` ===
+      `${this.project.revision()}\0${currentAutoMovieProductionCompilerInputFingerprint(this.project, input.scope)}\0${this.project.revision()}` ===
       `${inputRevision}\0${inputFingerprint}\0${inputRevision}`;
     const files =
       input.scope === "design"
@@ -2150,7 +2150,14 @@ const productionCompilerInputFingerprint = (
     ...contentFields,
   ]);
 
-const currentProductionCompilerInputFingerprint = (
+/**
+ * Re-derive the current compiler-input identity without compiling or writing.
+ *
+ * Guarded publications use this inside the commit lock to prove that the
+ * design, source, and declared-content bytes still match the snapshot they
+ * intend to publish.
+ */
+export const currentAutoMovieProductionCompilerInputFingerprint = (
   project: AutoMovieProductionProject,
   scope: IAutoMovieCompileProjectInput["scope"],
 ): AutoMovieContentDigest | null => {

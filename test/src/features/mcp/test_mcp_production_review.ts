@@ -1456,6 +1456,41 @@ export const test_mcp_production_review = async (): Promise<void> => {
       filmBeforeChildReviewChange,
       filmAfterChildReviewChange,
     );
+    const filmCommitPrepared = review.prepare({ target: filmTarget });
+    const filmReviewPath = project.reviewPath(filmTarget);
+    const filmReviewBeforeRace = fs.readFileSync(filmReviewPath);
+    const filmSourceFile = path.join(project.root, "src/film.ts");
+    const filmSourceBeforeRace = fs.readFileSync(filmSourceFile);
+    const revisionBeforeFilmCommitRace = project.revision();
+    const residentFilmCommitReview = project.commitReview;
+    let filmCommitGuardReads = 0;
+    project.commitReview = ((stored, inputCurrent) =>
+      residentFilmCommitReview.call(project, stored, () => {
+        ++filmCommitGuardReads;
+        if (filmCommitGuardReads === 2)
+          fs.appendFileSync(filmSourceFile, "\n// film commit-boundary edit\n");
+        return inputCurrent?.() ?? true;
+      })) as typeof project.commitReview;
+    let filmCommitSubmission: ReturnType<
+      AutoMovieProductionReviewService["submit"]
+    >;
+    try {
+      filmCommitSubmission = review.submit(
+        worksheet(project, filmCommitPrepared),
+      );
+    } finally {
+      project.commitReview = residentFilmCommitReview;
+      fs.writeFileSync(filmSourceFile, filmSourceBeforeRace);
+    }
+    TestValidator.predicate(
+      "a film-source mutation during review commit rolls back the stale ledger",
+      filmCommitGuardReads === 2 &&
+        filmCommitSubmission.diagnostics.some(
+          (item) => item.code === "review-target-raced",
+        ) &&
+        project.revision() === revisionBeforeFilmCommitRace &&
+        fs.readFileSync(filmReviewPath).equals(filmReviewBeforeRace),
+    );
     const storedSourceReview = project.review(sourceTarget)!;
     fs.writeFileSync(
       project.reviewPath(sourceTarget),
