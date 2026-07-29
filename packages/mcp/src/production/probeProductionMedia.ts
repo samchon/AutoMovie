@@ -25,7 +25,7 @@ export const probeProductionMedia = (props: {
         `Caption output declares "${props.mediaType}", but caption deliverables require text/vtt bytes.`,
       );
     const text = Buffer.from(props.bytes).toString("utf8");
-    if (/^\uFEFF?WEBVTT(?:[ \t][^\r\n]*)?(?:\r?\n|$)/.test(text) === false)
+    if (/^\uFEFF?WEBVTT(?:[ \t][^\r\n]*)?(?:\r\n?|\n|$)/.test(text) === false)
       throw new Error("Caption bytes do not contain a valid WebVTT header.");
     const blocks = text
       .replace(/^\uFEFF/, "")

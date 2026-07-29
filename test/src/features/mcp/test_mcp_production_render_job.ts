@@ -452,6 +452,11 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     mediaType: "text/vtt",
     bytes: Buffer.from(escapedCaptions, "utf8"),
   });
+  const crOnlyProbe = probeProductionMedia({
+    kind: "captions",
+    mediaType: "text/vtt",
+    bytes: Buffer.from(escapedCaptions.replaceAll("\n", "\r"), "utf8"),
+  });
   TestValidator.predicate(
     "caption track becomes canonical WebVTT",
     captions.startsWith("WEBVTT render-film\n\n") &&
@@ -469,7 +474,9 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
         "<lang en><v sentinel&gt; voice>A &amp; &lt;B&gt; --&gt; C  D</v></lang>",
       ) &&
       escapedProbe.kind === "webvtt" &&
-      escapedProbe.cueCount === 1,
+      escapedProbe.cueCount === 1 &&
+      crOnlyProbe.kind === "webvtt" &&
+      crOnlyProbe.cueCount === 1,
   );
 
   const complete = receipt(renderPlan, 0);
