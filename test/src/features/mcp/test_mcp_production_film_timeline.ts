@@ -641,10 +641,51 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     staleTimelineManifest.files.find(
       (file) => file.path === "film-timeline.json",
     )!.digest = digestAutoMovieBytes(staleTimelineBytes);
+    const timelineFilePath = path.join(
+      fixture.root,
+      "generated/film-timeline.json",
+    );
+    const generatedManifestPath = path.join(
+      fixture.root,
+      ".automovie/generated-manifest.json",
+    );
+    const gapTimeline = structuredClone(validTimeline);
+    gapTimeline.segments[0]!.startFrame = 1;
+    const gapTimelineBytes = Buffer.from(JSON.stringify(gapTimeline));
+    const gapManifest = structuredClone(currentManifest);
+    gapManifest.files.find(
+      (file) => file.path === "film-timeline.json",
+    )!.digest = digestAutoMovieBytes(gapTimelineBytes);
+    fs.writeFileSync(timelineFilePath, gapTimelineBytes);
+    fs.writeFileSync(generatedManifestPath, JSON.stringify(gapManifest));
+    const gapFrame = new AutoMovieProductionOracleService(project).query({
+      request: {
+        query: "film-time",
+        at: { frame: 0 },
+      },
+    });
+    fs.writeFileSync(timelineFilePath, invalidTimelineBytes);
+    fs.writeFileSync(
+      generatedManifestPath,
+      JSON.stringify(invalidTimelineManifest),
+    );
+    const invalidTimelineReview = new AutoMovieProductionReviewService(
+      project,
+    ).prepare({
+      target: { kind: "film", id: validTimeline.id },
+    });
+    fs.writeFileSync(timelineFilePath, currentTimelineBytes);
+    fs.writeFileSync(generatedManifestPath, JSON.stringify(currentManifest));
     TestValidator.predicate(
       "an explicit current-shot omission controls review evidence and shared timeline validation",
       legalOmission.success &&
         validTimeline.omissions[0]?.shot === "answer" &&
+        gapFrame.result === null &&
+        gapFrame.diagnostics[0]?.message.includes("no owning video segment") &&
+        invalidTimelineReview.frames.length === 0 &&
+        invalidTimelineReview.diagnostics.some(
+          (diagnostic) => diagnostic.code === "review-evidence-stale",
+        ) &&
         omissionReview.diagnostics.every(
           (diagnostic) =>
             diagnostic.code !== "review-evidence-missing" ||

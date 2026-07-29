@@ -111,7 +111,19 @@ const equalFiles = (
     Buffer.from(right.get(file) ?? []).equals(Buffer.from(bytes)),
   );
 
-/** Legacy import plans, applies, reopens, and rolls back without byte loss. */
+/**
+ * Legacy import plans, applies, reopens, and rolls back without byte loss.
+ *
+ * Scenarios:
+ *
+ * 1. Planning and applying preserve legacy bytes, publish bounded production
+ *    drafts, reopen provenance, remain idempotent, and roll back exactly.
+ * 2. Collisions, tamper, concurrent work, namespace replacement, and injected
+ *    publication or restoration failures refuse destructive progress.
+ * 3. A pre-existing owned directory that disappears after import must be restored
+ *    before rollback, while an unexpected filesystem denial propagates instead
+ *    of being misclassified as absence.
+ */
 export const test_mcp_production_legacy_import = (): void => {
   const fixture = createLegacy();
   try {
@@ -358,6 +370,51 @@ export const test_mcp_production_legacy_import = (): void => {
     );
   } finally {
     preexistingSource.dispose();
+  }
+
+  const missingPreexistingSource = createLegacy();
+  try {
+    const sourceRoot = path.join(missingPreexistingSource.root, "src");
+    fs.mkdirSync(sourceRoot);
+    fs.writeFileSync(path.join(sourceRoot, "preserved.ts"), "preserved");
+    const importer = new AutoMovieLegacyImporter(missingPreexistingSource.root);
+    importer.apply();
+    fs.rmSync(sourceRoot, { recursive: true });
+    TestValidator.predicate(
+      "a disappeared pre-import owned directory refuses rollback",
+      throws(() => importer.rollback(), "Restore its pre-import contents"),
+    );
+  } finally {
+    missingPreexistingSource.dispose();
+  }
+
+  const deniedImportState = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(deniedImportState.root);
+    importer.apply();
+    const deniedPath = path.join(
+      deniedImportState.root,
+      ".automovie/imports/legacy-v1/state.json",
+    );
+    const nativeLstat = fs.lstatSync;
+    fs.lstatSync = ((file: fs.PathLike): fs.Stats => {
+      if (path.resolve(file.toString()) === path.resolve(deniedPath)) {
+        const error = new Error("injected import-state lstat denial");
+        Object.assign(error, { code: "EACCES" });
+        throw error;
+      }
+      return nativeLstat(file);
+    }) as typeof fs.lstatSync;
+    try {
+      TestValidator.predicate(
+        "an unexpected import-state lstat denial propagates",
+        throws(() => importer.rollback(), "injected import-state lstat denial"),
+      );
+    } finally {
+      fs.lstatSync = nativeLstat;
+    }
+  } finally {
+    deniedImportState.dispose();
   }
 
   const emptyDirectoryTopology = createLegacy();
