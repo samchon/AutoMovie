@@ -39,9 +39,9 @@ const score = (
  *    an uncaptured frame, and an unpublished deliverable kind are all silence,
  *    while a captured-but-wrong frame and a probe-invalid file are failures.
  *    Neither ever reads as a pass.
- * 6. Correction attempts may archive invalid and valid captures under the same
- *    frame address; their order cannot change whether the required frame
- *    exists.
+ * 6. Correction attempts may archive multiple captures under the same frame
+ *    address; their order cannot change whether the required frame exists or
+ *    which failed capture supplies its deterministic diagnostic.
  * 7. An axis a task declares no assertion for scores zero and contributes nothing,
  *    so an unweighted empty axis cannot cap a score.
  */
@@ -274,6 +274,38 @@ export const test_benchmark_judge_verdicts = (): void => {
         : null,
     ),
     ["pass", "pass"],
+  );
+
+  const secondInvalidMask = {
+    ...invalidMask,
+    bytes: 2,
+  };
+  const invalidRetries = [
+    [secondInvalidMask, invalidMask, ...otherFrames],
+    [invalidMask, secondInvalidMask, ...otherFrames],
+  ].map((frames) =>
+    judgeAutoMovieBenchmarkSubmission(
+      task,
+      sealAutoMovieBenchmarkSubmission({ ...draft, frames }),
+    ),
+  );
+  TestValidator.equals(
+    "failed retries select the same canonical diagnostic in either archive order",
+    invalidRetries.map((verdict) => {
+      const assertion =
+        verdict.outcome === "scored"
+          ? verdict.assertions.find(
+              (result) => result.id === "frame/signal-apex-mask",
+            )
+          : undefined;
+      return assertion === undefined
+        ? null
+        : [assertion.outcome, assertion.observed];
+    }),
+    [
+      ["fail", 1],
+      ["fail", 1],
+    ],
   );
 
   TestValidator.equals(
