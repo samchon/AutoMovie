@@ -82,7 +82,7 @@ export interface IAutoMovieBenchmarkObservationAssertion {
   operator: AutoMovieBenchmarkOperator;
   /** Finite comparand. */
   value: number;
-  /** Non-negative slack applied to equality comparisons. */
+  /** Non-negative slack applied to the selected comparison operator. */
   tolerance: number;
 }
 
