@@ -961,6 +961,10 @@ const encodePngFrames = async (
       "The installed h264-mp4-encoder package exposes no createH264MP4Encoder factory. Reinstall the pinned encoder before rendering.",
     );
   const encoder = await createEncoder();
+  let initialized = false;
+  let finalizeAttempted = false;
+  let failure: { error: unknown } | undefined;
+  let output = new Uint8Array();
   try {
     encoder.width = plan.frameFormat.width;
     encoder.height = plan.frameFormat.height;
@@ -971,15 +975,33 @@ const encodePngFrames = async (
     encoder.groupOfPictures =
       plan.runtimeIdentity.encoder.arguments.groupOfPictures;
     encoder.initialize();
+    initialized = true;
     await produceFrames((frame) => {
       const png = PNG.sync.read(Buffer.from(frame));
       encoder.addFrameRgba(new Uint8Array(png.data));
     });
+    finalizeAttempted = true;
     encoder.finalize();
-    return Uint8Array.from(encoder.FS.readFile(encoder.outputFilename));
-  } finally {
-    encoder.delete();
+    output = Uint8Array.from(encoder.FS.readFile(encoder.outputFilename));
+  } catch (error) {
+    failure = { error };
   }
+  let cleanupFailure: { error: unknown } | undefined;
+  if (initialized && finalizeAttempted === false)
+    try {
+      finalizeAttempted = true;
+      encoder.finalize();
+    } catch (error) {
+      cleanupFailure = { error };
+    }
+  try {
+    encoder.delete();
+  } catch (error) {
+    cleanupFailure ??= { error };
+  }
+  if (failure !== undefined) throw failure.error;
+  if (cleanupFailure !== undefined) throw cleanupFailure.error;
+  return output;
 };
 
 const deterministicSilentAudio = (
