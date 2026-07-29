@@ -819,7 +819,21 @@ const encodePngFrames = async (
   files: string[],
   plan: IAutoMovieProductionRenderJobPlan,
 ): Promise<Uint8Array> => {
-  const encoder = await HME.createH264MP4Encoder();
+  // `h264-mp4-encoder` ships CommonJS, and this script runs as ESM: depending
+  // on the loader its factory arrives on the namespace or on `default`. Read
+  // whichever one is callable instead of assuming the interop shape.
+  const encoderModule = HME as typeof HME & {
+    default?: Pick<typeof HME, "createH264MP4Encoder">;
+  };
+  const createEncoder =
+    typeof encoderModule.createH264MP4Encoder === "function"
+      ? encoderModule.createH264MP4Encoder
+      : encoderModule.default?.createH264MP4Encoder;
+  if (createEncoder === undefined)
+    throw new Error(
+      "The installed h264-mp4-encoder package exposes no createH264MP4Encoder factory. Reinstall the pinned encoder before rendering.",
+    );
+  const encoder = await createEncoder();
   try {
     encoder.width = plan.frameFormat.width;
     encoder.height = plan.frameFormat.height;
