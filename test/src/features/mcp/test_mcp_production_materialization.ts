@@ -64,6 +64,8 @@ const recipe = (
  * 3. Shot materialization adds missing slots, repositions an existing hero,
  *    reports ordinary-slot collisions, and remains safe when a referenced
  *    formation, inventory, model, or source-only model is absent.
+ * 4. A source omitting both optional cue arrays materializes empty effect and
+ *    formation-motion streams instead of leaking undefined into compiled data.
  */
 export const test_mcp_production_materialization = (): void => {
   const recipes = [
