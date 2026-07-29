@@ -1008,12 +1008,17 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     });
     project.setWorldDesign(worldDesign());
     compiler.compile({ scope: "source" });
+    const unroutedFormation = oracle.query({
+      request: { query: "formation", formation: "line" },
+    });
     TestValidator.predicate(
       "ground oracle handles planes and an absent bounded world",
       slopedGround.result?.kind === "ground" &&
         slopedGround.result.height === 2.5 &&
         absentWorld.result?.kind === "ground" &&
-        absentWorld.result.surface === null,
+        absentWorld.result.surface === null &&
+        unroutedFormation.result?.kind === "measurement" &&
+        unroutedFormation.result.values.routeClearance === 0,
     );
 
     fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
