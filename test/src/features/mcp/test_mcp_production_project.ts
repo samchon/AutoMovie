@@ -7,6 +7,7 @@ import {
   AUTOMOVIE_MAX_FORMATION_MEMBERS,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  acquireCommitLock,
   acquireProductionRootNamespace,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
@@ -1622,6 +1623,159 @@ export const test_mcp_production_project = (): void => {
       "a requested alias swapped after physical lock acquisition is rejected",
       requestedSwapRejected && requestedRootLocks === 2,
     );
+    const filesystemRoot = path.parse(invalidRoot).root;
+    const nativeLstatForMissingBase = fs.lstatSync;
+    fs.lstatSync = ((
+      file: fs.PathLike,
+      ...args: unknown[]
+    ): fs.Stats | fs.BigIntStats => {
+      if (path.resolve(file.toString()) === path.resolve(filesystemRoot)) {
+        const error = new Error(
+          "injected absent filesystem base",
+        ) as NodeJS.ErrnoException;
+        error.code = "ENOENT";
+        throw error;
+      }
+      return Reflect.apply(nativeLstatForMissingBase, fs, [file, ...args]) as
+        | fs.Stats
+        | fs.BigIntStats;
+    }) as typeof fs.lstatSync;
+    try {
+      TestValidator.predicate(
+        "a recursively absent filesystem base is rejected without unbounded parent walking",
+        throws(
+          () =>
+            AutoMovieProductionProject.open(
+              path.join(filesystemRoot, "automovie-absent-base", "project"),
+            ),
+          "does not exist as a physical directory",
+        ),
+      );
+    } finally {
+      fs.lstatSync = nativeLstatForMissingBase;
+    }
+    const collidingParent = path.join(invalidRoot, "colliding-parent");
+    const collidingParentProject = path.join(collidingParent, "project");
+    const nativeWriteForParentCollision = fs.writeFileSync;
+    let parentCollisionLocks = 0;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      Reflect.apply(nativeWriteForParentCollision, fs, [file, ...args]);
+      if (
+        typeof file !== "number" &&
+        path.basename(file.toString()).startsWith("create-") &&
+        ++parentCollisionLocks === 2
+      )
+        Reflect.apply(nativeWriteForParentCollision, fs, [
+          collidingParent,
+          "collision",
+        ]);
+    }) as typeof fs.writeFileSync;
+    let parentCollisionRejected = false;
+    try {
+      parentCollisionRejected = throws(
+        () => AutoMovieProductionProject.open(collidingParentProject),
+        "parent",
+      );
+    } finally {
+      fs.writeFileSync = nativeWriteForParentCollision;
+    }
+    TestValidator.predicate(
+      "a missing parent replaced by a file while creation locks are held is rejected",
+      parentCollisionRejected &&
+        parentCollisionLocks === 2 &&
+        fs.existsSync(collidingParentProject) === false,
+    );
+    fs.rmSync(collidingParent, { force: true });
+    const collidingRoot = path.join(invalidRoot, "colliding-root");
+    const nativeWriteForRootCollision = fs.writeFileSync;
+    let rootCollisionLocks = 0;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      Reflect.apply(nativeWriteForRootCollision, fs, [file, ...args]);
+      if (
+        typeof file !== "number" &&
+        path.basename(file.toString()).startsWith("create-") &&
+        ++rootCollisionLocks === 2
+      )
+        Reflect.apply(nativeWriteForRootCollision, fs, [
+          collidingRoot,
+          "collision",
+        ]);
+    }) as typeof fs.writeFileSync;
+    let rootCollisionRejected = false;
+    try {
+      rootCollisionRejected = throws(
+        () => AutoMovieProductionProject.open(collidingRoot),
+        "root",
+      );
+    } finally {
+      fs.writeFileSync = nativeWriteForRootCollision;
+    }
+    TestValidator.predicate(
+      "a missing project root replaced by a file while creation locks are held is rejected",
+      rootCollisionRejected &&
+        rootCollisionLocks === 2 &&
+        fs.readFileSync(collidingRoot, "utf8") === "collision",
+    );
+    fs.rmSync(collidingRoot, { force: true });
+    const createdPhysicalParent = path.join(
+      invalidRoot,
+      "created-physical-parent",
+    );
+    const createdAlternateParent = path.join(
+      invalidRoot,
+      "created-alternate-parent",
+    );
+    const createdAliasParent = path.join(invalidRoot, "created-alias-parent");
+    fs.mkdirSync(createdPhysicalParent);
+    fs.mkdirSync(createdAlternateParent);
+    fs.symlinkSync(createdPhysicalParent, createdAliasParent, "junction");
+    const createdAliasProject = path.join(createdAliasParent, "project");
+    const nativeWriteForCreatedAlias = fs.writeFileSync;
+    const createdAliasLocks: string[] = [];
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      Reflect.apply(nativeWriteForCreatedAlias, fs, [file, ...args]);
+      if (
+        typeof file !== "number" &&
+        path.basename(file.toString()).startsWith("root-")
+      ) {
+        createdAliasLocks.push(path.resolve(file.toString()));
+        if (createdAliasLocks.length === 2) {
+          fs.rmSync(createdAliasParent);
+          fs.symlinkSync(
+            createdAlternateParent,
+            createdAliasParent,
+            "junction",
+          );
+        }
+      }
+    }) as typeof fs.writeFileSync;
+    let createdAliasRejected = false;
+    try {
+      createdAliasRejected = throws(
+        () => AutoMovieProductionProject.open(createdAliasProject),
+        "changed physical identity",
+      );
+    } finally {
+      fs.writeFileSync = nativeWriteForCreatedAlias;
+      fs.rmSync(createdAliasParent);
+      fs.symlinkSync(createdPhysicalParent, createdAliasParent, "junction");
+    }
+    TestValidator.predicate(
+      "a newly created physical root releases its lease when the requested alias changes afterward",
+      createdAliasRejected &&
+        createdAliasLocks.length === 2 &&
+        createdAliasLocks.every((file) => fs.existsSync(file) === false) &&
+        fs.existsSync(path.join(createdAlternateParent, "project")) === false,
+    );
     const coordinationRoot = path.dirname(aliasLockPaths[0]!);
     // A guarded commit runs the read-only compiler gate, which commits its own
     // snapshot, so one process reaches the same root coordinate twice. That is
@@ -1924,6 +2078,75 @@ export const test_mcp_production_project = (): void => {
           ),
         ) === false,
     );
+    const missingIdentityRoot = path.join(invalidRoot, "missing-identity-root");
+    const missingIdentityProject =
+      AutoMovieProductionProject.open(missingIdentityRoot);
+    const parkedMissingIdentityRoot = `${missingIdentityRoot}-parked`;
+    fs.renameSync(missingIdentityRoot, parkedMissingIdentityRoot);
+    try {
+      TestValidator.predicate(
+        "an absent physical root invalidates a stale handle before any read",
+        throws(
+          () => missingIdentityProject.manifest(),
+          "root identity changed",
+        ),
+      );
+    } finally {
+      fs.renameSync(parkedMissingIdentityRoot, missingIdentityRoot);
+    }
+    const preLeaseRoot = path.join(invalidRoot, "pre-lease-root-race");
+    const preLeaseProject = AutoMovieProductionProject.open(preLeaseRoot);
+    const preLeaseBytes = Buffer.from("before");
+    preLeaseProject.commitProductionDeliverableFiles(
+      "pre-lease",
+      new Map([["frame.bin", preLeaseBytes]]),
+    );
+    const preLeaseTarget = path.join(
+      preLeaseRoot,
+      "renders/deliverables/pre-lease/frame.bin",
+    );
+    const parkedPreLeaseRoot = `${preLeaseRoot}-parked`;
+    const nativeReadForPreLease = fs.readFileSync;
+    let preLeaseSwapped = false;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const output = Reflect.apply(nativeReadForPreLease, fs, [file, ...args]);
+      if (
+        preLeaseSwapped === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === preLeaseTarget
+      ) {
+        preLeaseSwapped = true;
+        fs.renameSync(preLeaseRoot, parkedPreLeaseRoot);
+        fs.cpSync(parkedPreLeaseRoot, preLeaseRoot, { recursive: true });
+      }
+      return output;
+    }) as typeof fs.readFileSync;
+    let preLeaseRejected = false;
+    try {
+      preLeaseRejected = throws(
+        () =>
+          preLeaseProject.commitProductionDeliverableFiles(
+            "pre-lease",
+            new Map([["frame.bin", Buffer.from("after")]]),
+          ),
+        "root identity changed",
+      );
+    } finally {
+      fs.readFileSync = nativeReadForPreLease;
+    }
+    const preLeaseReplacementUntouched =
+      fs.readFileSync(preLeaseTarget, "utf8") === "before";
+    if (preLeaseSwapped) {
+      fs.rmSync(preLeaseRoot, { force: true, recursive: true });
+      fs.renameSync(parkedPreLeaseRoot, preLeaseRoot);
+    }
+    TestValidator.predicate(
+      "a root replaced after staging but before namespace reservation is refused without mutation",
+      preLeaseSwapped && preLeaseRejected && preLeaseReplacementUntouched,
+    );
     const mutationRoot = path.join(invalidRoot, "mutation-root");
     const mutationProject = AutoMovieProductionProject.open(mutationRoot);
     const mutationFrame = path.join(
@@ -1959,19 +2182,40 @@ export const test_mcp_production_project = (): void => {
     }
     const replacementUntouched = fs.existsSync(mutationFrame) === false;
     let abandonedLockReleased = false;
+    let processOwnershipReleased = false;
     if (mutationRootSwapped) {
+      const abandonedLock = path.join(
+        parkedMutationRoot,
+        ".automovie/revision.lock",
+      );
+      const abandonedToken = fs.readFileSync(abandonedLock, "utf8");
+      fs.mkdirSync(path.join(mutationRoot, ".automovie"), {
+        recursive: true,
+      });
+      const replacementLock = path.join(
+        mutationRoot,
+        ".automovie/revision.lock",
+      );
+      const replacementToken = acquireCommitLock(replacementLock);
+      try {
+        processOwnershipReleased =
+          replacementToken !== abandonedToken &&
+          fs.readFileSync(replacementLock, "utf8") === replacementToken;
+      } finally {
+        releaseCommitLock(replacementLock, replacementToken);
+      }
       fs.rmSync(mutationRoot, { force: true, recursive: true });
       fs.renameSync(parkedMutationRoot, mutationRoot);
-      const abandonedLock = path.join(mutationRoot, ".automovie/revision.lock");
-      const abandonedToken = fs.readFileSync(abandonedLock, "utf8");
-      releaseCommitLock(abandonedLock, abandonedToken);
-      abandonedLockReleased = fs.existsSync(abandonedLock) === false;
+      const restoredLock = path.join(mutationRoot, ".automovie/revision.lock");
+      releaseCommitLock(restoredLock, abandonedToken);
+      abandonedLockReleased = fs.existsSync(restoredLock) === false;
     }
     TestValidator.predicate(
       "a root swapped during publication refuses rollback and stale lock release in the replacement",
       mutationRootSwapped &&
         mutationSwapRejected &&
         replacementUntouched &&
+        processOwnershipReleased &&
         abandonedLockReleased,
     );
     TestValidator.predicate(

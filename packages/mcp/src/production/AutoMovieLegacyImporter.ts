@@ -328,10 +328,13 @@ const releaseResidentLockIfCurrent = (
 ): void => {
   try {
     assertProductionRootNamespaceLease(lease);
-    releaseCommitLock(lockPath, token);
   } catch {
-    // Fail closed: never follow a stale resident path into a replacement root.
+    // Release only process-local ownership: never follow a stale resident path
+    // into a replacement root.
+    releaseCommitLock(lockPath, token, { unlink: false });
+    return;
   }
+  releaseCommitLock(lockPath, token);
 };
 
 const planFromSnapshot = (

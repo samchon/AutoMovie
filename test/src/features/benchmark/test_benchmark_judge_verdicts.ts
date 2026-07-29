@@ -6,6 +6,7 @@ import {
   austerlitzSignalTask,
   judgeAutoMovieBenchmarkSubmission,
   sealAutoMovieBenchmarkSubmission,
+  validateAutoMovieBenchmarkTask,
 } from "@automovie/benchmark";
 import { TestValidator } from "@nestia/e2e";
 
@@ -15,7 +16,10 @@ const score = (
 ): string | undefined =>
   judgeAutoMovieBenchmarkSubmission(
     task,
-    sealAutoMovieBenchmarkSubmission(draft),
+    sealAutoMovieBenchmarkSubmission({
+      ...draft,
+      taskDigest: validateAutoMovieBenchmarkTask(task),
+    }),
   ).filmScore?.toFixed(4);
 
 /**
@@ -162,7 +166,10 @@ export const test_benchmark_judge_verdicts = (): void => {
   };
   const operators = judgeAutoMovieBenchmarkSubmission(
     operatorTask,
-    sealAutoMovieBenchmarkSubmission(draft),
+    sealAutoMovieBenchmarkSubmission({
+      ...draft,
+      taskDigest: validateAutoMovieBenchmarkTask(operatorTask),
+    }),
   );
   TestValidator.equals(
     "each comparison operator settles on its own terms",

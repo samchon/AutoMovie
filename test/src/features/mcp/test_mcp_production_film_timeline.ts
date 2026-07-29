@@ -19,6 +19,7 @@ import {
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { PNG } from "pngjs";
 
@@ -627,6 +628,25 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       ),
     );
     fs.writeFileSync(filmPath, originalSource);
+    const outsideFilmRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-film-source-outside-"),
+    );
+    try {
+      const outsideFilm = path.join(outsideFilmRoot, "film.ts");
+      fs.writeFileSync(outsideFilm, originalSource);
+      fs.rmSync(filmPath);
+      fs.symlinkSync(outsideFilm, filmPath);
+      TestValidator.predicate(
+        "film source cannot escape its declared source root through a symlink",
+        diagnosticCodes(compiler.compile({ scope: "source" })).has(
+          "source-path-outside-root",
+        ),
+      );
+    } finally {
+      fs.rmSync(filmPath, { force: true });
+      fs.writeFileSync(filmPath, originalSource);
+      fs.rmSync(outsideFilmRoot, { force: true, recursive: true });
+    }
 
     const answer = JSON.parse(
       fs.readFileSync(
@@ -685,6 +705,15 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         twoShotTimeline.tracks.captions.length === 1 &&
         overlapFrame.result?.kind === "measurement" &&
         overlapFrame.result.values.shot === "answer",
+    );
+    const answerSourcePath = path.join(fixture.root, answer.source.module);
+    const answerSourceBytes = fs.readFileSync(answerSourcePath);
+    fs.rmSync(answerSourcePath);
+    const missingAnswerSource = compiler.compile({ scope: "source" });
+    fs.writeFileSync(answerSourcePath, answerSourceBytes);
+    TestValidator.predicate(
+      "film continuity tolerates one absent compiled realization while source diagnostics retain ownership",
+      diagnosticCodes(missingAnswerSource).has("source-path-missing"),
     );
     const filmReview = new AutoMovieProductionReviewService(project).prepare({
       target: { kind: "film", id: "fixture-film" },

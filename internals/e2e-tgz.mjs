@@ -765,6 +765,9 @@ if (phase === "review") {
       receiptByDeliverable.get("starter-captions")?.probe?.kind ===
         "webvtt" &&
       receiptByDeliverable.get("starter-captions")?.probe?.cueCount === 1 &&
+      aggregate.deliverables.find(
+        (deliverable) => deliverable.id === "starter-captions",
+      )?.runtimeSeconds === 11.5 &&
       receiptByDeliverable.get("starter-audio")?.probe?.kind === "audio" &&
       receiptByDeliverable.get("starter-audio")?.probe?.runtimeSeconds ===
         11.5,

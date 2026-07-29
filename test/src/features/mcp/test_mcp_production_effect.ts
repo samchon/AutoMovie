@@ -154,6 +154,10 @@ export const test_mcp_production_effect = (): void => {
       ...validate([cue, { ...cue, id: "overlap", start: cue.start + 0.25 }]),
       ...validate([cue], []),
       ...validate([], compiled!.effects),
+      ...validateAutoMovieEffects(shotContract(), {
+        ...compiled!,
+        effectCues: undefined,
+      }),
     ];
     TestValidator.predicate(
       "effect validation rejects every unsafe cue and compiler-stream mismatch",

@@ -268,6 +268,51 @@ export const test_mcp_production_atomic_publication = (): void => {
         fs.readFileSync(manifestPath).equals(manifestBytes) &&
         fs.readFileSync(receiptPath).equals(receiptBytes),
     );
+    const readRenderFile = project.readRenderFile;
+    project.readRenderFile = ((candidate: string): Uint8Array =>
+      candidate === relative
+        ? Buffer.from("post-publication byte race")
+        : readRenderFile.call(
+            project,
+            candidate,
+          )) as typeof project.readRenderFile;
+    const postPublicationByteRace = throws(
+      () =>
+        project.commitProductionPublication({
+          files: new Map([[relative, second]]),
+          manifest: replacement,
+          expectedRevision: revision,
+        }),
+      "post-publication byte check",
+    );
+    project.readRenderFile = readRenderFile;
+    const readTrackedStateFile = project.readTrackedStateFile;
+    project.readTrackedStateFile = ((candidate: string): Uint8Array | null =>
+      candidate === "render-manifest.json"
+        ? Buffer.from("{}")
+        : readTrackedStateFile.call(
+            project,
+            candidate,
+          )) as typeof project.readTrackedStateFile;
+    const postPublicationLedgerRace = throws(
+      () =>
+        project.commitProductionPublication({
+          files: new Map([[relative, second]]),
+          manifest: replacement,
+          expectedRevision: revision,
+        }),
+      "manifest or receipt changed",
+    );
+    project.readTrackedStateFile = readTrackedStateFile;
+    TestValidator.predicate(
+      "post-publication byte and ledger races restore the prior valid publication",
+      postPublicationByteRace &&
+        postPublicationLedgerRace &&
+        project.revision() === revision &&
+        fs.readFileSync(outputPath).equals(first) &&
+        fs.readFileSync(manifestPath).equals(manifestBytes) &&
+        fs.readFileSync(receiptPath).equals(receiptBytes),
+    );
     let terminalObservations = 0;
     TestValidator.predicate(
       "input race after the staged final gate restores prior publication",

@@ -1530,7 +1530,9 @@ export class AutoMovieProductionProject {
           assertProductionRootNamespaceLease(rootLease);
           releaseCommitLock(this.lockPath, token);
         } catch {
-          // Fail closed: never follow a stale revision-lock path into a replacement.
+          // Release only process-local ownership: never follow a stale
+          // revision-lock path into a replacement root.
+          releaseCommitLock(this.lockPath, token, { unlink: false });
         }
       }
     } finally {

@@ -1,10 +1,14 @@
 import {
+  IAutoMovieBenchmarkAnchors,
+  IAutoMovieBenchmarkSubmission,
+  IAutoMovieBenchmarkTask,
   assertAutoMovieBenchmarkCalibrated,
   austerlitzSignalAnchors,
   austerlitzSignalDraft,
   austerlitzSignalTask,
   calibrateAutoMovieBenchmark,
   sealAutoMovieBenchmarkSubmission,
+  validateAutoMovieBenchmarkTask,
 } from "@automovie/benchmark";
 import { TestValidator } from "@nestia/e2e";
 
@@ -16,6 +20,30 @@ const throws = (task: () => unknown, fragment: string): boolean => {
     return error instanceof Error && error.message.includes(fragment);
   }
 };
+
+const bindSubmission = (
+  task: IAutoMovieBenchmarkTask,
+  submission: IAutoMovieBenchmarkSubmission,
+): IAutoMovieBenchmarkSubmission => {
+  const { runId: _runId, ...draft } = submission;
+  void _runId;
+  return sealAutoMovieBenchmarkSubmission({
+    ...draft,
+    taskDigest: validateAutoMovieBenchmarkTask(task),
+  });
+};
+
+const bindAnchors = (
+  task: IAutoMovieBenchmarkTask,
+  anchors: IAutoMovieBenchmarkAnchors,
+): IAutoMovieBenchmarkAnchors => ({
+  reference: bindSubmission(task, anchors.reference),
+  empty: bindSubmission(task, anchors.empty),
+  mutants: anchors.mutants.map((mutant) => ({
+    id: mutant.id,
+    submission: bindSubmission(task, mutant.submission),
+  })),
+});
 
 /**
  * Calibration measures the judge rather than any candidate, so both endpoints
@@ -52,23 +80,24 @@ export const test_benchmark_calibration_anchors = (): void => {
     ],
   );
 
+  const promotedTask: IAutoMovieBenchmarkTask = {
+    ...task,
+    calibration: {
+      ...task.calibration,
+      mutants: task.calibration.mutants.map((mutant) =>
+        mutant.id === "stale-frame"
+          ? { ...mutant, band: { min: 0.99, max: 1 } }
+          : mutant,
+      ),
+    },
+  };
   TestValidator.predicate(
     "a judge that promotes a known-broken submission is refused",
     throws(
       () =>
         assertAutoMovieBenchmarkCalibrated(
-          {
-            ...task,
-            calibration: {
-              ...task.calibration,
-              mutants: task.calibration.mutants.map((mutant) =>
-                mutant.id === "stale-frame"
-                  ? { ...mutant, band: { min: 0.99, max: 1 } }
-                  : mutant,
-              ),
-            },
-          },
-          anchors,
+          promotedTask,
+          bindAnchors(promotedTask, anchors),
         ),
       "mutant:stale-frame scored 0.8750 outside 0.99..1",
     ),
@@ -116,14 +145,15 @@ export const test_benchmark_calibration_anchors = (): void => {
     ),
   );
 
+  const displacedEmptyTask: IAutoMovieBenchmarkTask = {
+    ...task,
+    calibration: { ...task.calibration, empty: { min: 0.5, max: 1 } },
+  };
   TestValidator.predicate(
     "an anchor outside its band is reported without throwing",
     calibrateAutoMovieBenchmark(
-      {
-        ...task,
-        calibration: { ...task.calibration, empty: { min: 0.5, max: 1 } },
-      },
-      anchors,
+      displacedEmptyTask,
+      bindAnchors(displacedEmptyTask, anchors),
     )[1]!.inside === false,
   );
 };

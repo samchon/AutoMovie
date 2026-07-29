@@ -69,14 +69,21 @@ export const acquireCommitLock = (lockPath: string): string => {
 /**
  * Release the commit lock, but only if it still holds `token`. Deleting a
  * foreign token would delete another session's lock (#1257). A vanished lock is
- * a no-op.
+ * a no-op. Pass `unlink: false` after a namespace-identity failure to release
+ * only this process's re-entrant ownership without following the resident path
+ * into a replacement root.
  */
-export const releaseCommitLock = (lockPath: string, token: string): void => {
+export const releaseCommitLock = (
+  lockPath: string,
+  token: string,
+  options: { unlink?: boolean } = {},
+): void => {
   const current = held.get(lockPath);
   if (current !== undefined && current.token === token) {
     if (--current.depth !== 0) return;
     held.delete(lockPath);
   }
+  if (options.unlink === false) return;
   try {
     if (fs.readFileSync(lockPath, "utf8") === token)
       fs.rmSync(lockPath, { force: true });

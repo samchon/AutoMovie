@@ -753,11 +753,13 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       kind: deliverable.kind,
       files: files.map(({ probe: _probe, ...file }) => file),
       runtimeSeconds:
-        video?.kind === "video"
-          ? video.runtimeSeconds
-          : audio?.kind === "audio"
-            ? audio.runtimeSeconds
-            : null,
+        deliverable.kind === "captions"
+          ? plan.totalFrames / plan.frameFormat.fps
+          : video?.kind === "video"
+            ? video.runtimeSeconds
+            : audio?.kind === "audio"
+              ? audio.runtimeSeconds
+              : null,
       frameCount: video?.kind === "video" ? video.frameCount : null,
       codec:
         video?.kind === "video"
