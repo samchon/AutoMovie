@@ -1168,7 +1168,7 @@ try {
   try {
     runExpectedFailure(
       "reject stale packaged render runtime identity",
-      "pnpm render -- verify",
+      "pnpm render verify",
       starterDir,
       "render runtime identity changed",
     );
