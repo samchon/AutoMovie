@@ -14,6 +14,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
+import { nclose } from "../internal/predicates";
 import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
 
 const propRecipe = (id: string, size: number): IAutoMovieModelRecipe => ({
@@ -478,63 +479,95 @@ export const test_viewer_formation = (): void => {
     built.stats.visible.hero +
     built.stats.visible.near +
     built.stats.visible.far;
-  TestValidator.predicate(
+  const yawDegrees = (rotation: THREE.Quaternion): number =>
+    THREE.MathUtils.radToDeg(
+      new THREE.Euler().setFromQuaternion(rotation, "YXZ").y,
+    );
+  const marshal = heroObjects.get("marshal")!;
+  // Named rather than folded into one conjunction: this scenario pins thirty
+  // separate facts, and a bare predicate reports only that one of them broke.
+  TestValidator.equals(
     "camera update culls whole chunks and reports a bounded visible inventory",
-    visible + built.stats.culled === formation.anonymousCount &&
-      built.stats.heroes === formation.heroes.length &&
-      meshes.filter((mesh) => mesh.visible).length <= formation.chunks.length &&
-      sampledMotion.translation.z === -3 &&
-      sampledMotion.facingOffsetDeg === 10 &&
-      sampledMotion.spacingScale.lateral === 1.1 &&
-      built.object.position.z === formation.anchor.z - 3 &&
-      firstHeroUpdate.position.z === formation.anchor.z - 1 &&
-      Math.abs(
-        THREE.MathUtils.radToDeg(
-          new THREE.Euler().setFromQuaternion(firstHeroUpdate.rotation, "YXZ")
-            .y,
-        ) - 25,
-      ) < 1e-9 &&
-      sameSourceStable &&
-      heroObjects.get("marshal")!.position.z ===
-        firstHeroUpdate.position.z - 3 &&
-      Math.abs(
-        THREE.MathUtils.radToDeg(
-          new THREE.Euler().setFromQuaternion(
-            heroObjects.get("marshal")!.quaternion,
-            "YXZ",
-          ).y,
-        ) - 35,
-      ) < 1e-9 &&
-      heroObjects
-        .get("marshal")!
-        .position.equals(collidingSourceUpdate.position) &&
-      Math.abs(
-        heroObjects
-          .get("marshal")!
-          .quaternion.dot(collidingSourceUpdate.rotation),
-      ) >
-        1 - 1e-12 &&
-      built.stats.visible.hero > 0 &&
-      heroObjects.get("marshal")!.visible === false &&
-      heroObjects.get("captain")!.visible === true &&
-      scaledHeroBoundary &&
-      built.object.scale.x === 1 &&
-      Math.abs(firstTranslation.x - (firstScaled.x - formation.anchor.x)) <
-        1e-5 &&
-      easingSamples.map((sample) => sample.translation.z).join(",") ===
-        "-3,-1.5,-4.5,-3,0" &&
-      easeInOutQuarter.translation.z === -0.75 &&
-      beforeMotion.translation.z === 0 &&
-      betweenMotions.translation.z === -6 &&
-      afterMotions.translation.z === -10 &&
-      atExclusiveBoundary.translation.z === -8 &&
-      unrelatedMotion.translation.z === 0 &&
-      sameStartSamples.every((sample) => sample.translation.z === -1) &&
-      Math.abs(transformed.x - 3) < 1e-12 &&
-      transformed.y === 6 &&
-      transformed.z === 3 &&
-      Math.abs(baseFacingTransformed.x) < 1e-12 &&
-      baseFacingTransformed.z === -2,
+    {
+      accountedAnonymous: visible + built.stats.culled,
+      heroes: built.stats.heroes,
+      visibleMeshesWithinChunks:
+        meshes.filter((mesh) => mesh.visible).length <= formation.chunks.length,
+      motionTranslationZ: sampledMotion.translation.z,
+      motionFacingOffsetDeg: sampledMotion.facingOffsetDeg,
+      motionLateralScale: sampledMotion.spacingScale.lateral,
+      rootPositionZ: built.object.position.z,
+      firstHeroPositionZ: firstHeroUpdate.position.z,
+      firstHeroYaw: nclose(yawDegrees(firstHeroUpdate.rotation), 25, 1e-9),
+      repeatedUpdatesKeepSource: sameSourceStable,
+      marshalPositionZ: marshal.position.z,
+      marshalYaw: nclose(yawDegrees(marshal.quaternion), 35, 1e-9),
+      marshalTracksCollidingSource:
+        marshal.position.equals(collidingSourceUpdate.position) &&
+        Math.abs(marshal.quaternion.dot(collidingSourceUpdate.rotation)) >
+          1 - 1e-12,
+      someHeroVisible: built.stats.visible.hero > 0,
+      marshalVisible: marshal.visible,
+      captainVisible: heroObjects.get("captain")!.visible,
+      shearedHeroBoundsStayVisible: scaledHeroBoundary,
+      rootScaleX: built.object.scale.x,
+      scaledSlotMatchesTranslation: nclose(
+        firstTranslation.x,
+        firstScaled.x - formation.anchor.x,
+        1e-5,
+      ),
+      easingTrack: easingSamples
+        .map((sample) => sample.translation.z)
+        .join(","),
+      easeInOutQuarterZ: easeInOutQuarter.translation.z,
+      beforeMotionZ: beforeMotion.translation.z,
+      betweenMotionsZ: betweenMotions.translation.z,
+      afterMotionsZ: afterMotions.translation.z,
+      exclusiveBoundaryZ: atExclusiveBoundary.translation.z,
+      unrelatedMotionZ: unrelatedMotion.translation.z,
+      sameStartResolvesOnce: sameStartSamples.every(
+        (sample) => sample.translation.z === -1,
+      ),
+      transformedX: nclose(transformed.x, 3, 1e-12),
+      transformedY: transformed.y,
+      transformedZ: transformed.z,
+      baseFacingX: nclose(baseFacingTransformed.x, 0, 1e-12),
+      baseFacingZ: baseFacingTransformed.z,
+    },
+    {
+      accountedAnonymous: formation.anonymousCount,
+      heroes: formation.heroes.length,
+      visibleMeshesWithinChunks: true,
+      motionTranslationZ: -3,
+      motionFacingOffsetDeg: 10,
+      motionLateralScale: 1.1,
+      rootPositionZ: formation.anchor.z - 3,
+      firstHeroPositionZ: formation.anchor.z - 1,
+      firstHeroYaw: true,
+      repeatedUpdatesKeepSource: true,
+      marshalPositionZ: firstHeroUpdate.position.z - 3,
+      marshalYaw: true,
+      marshalTracksCollidingSource: true,
+      someHeroVisible: true,
+      marshalVisible: false,
+      captainVisible: true,
+      shearedHeroBoundsStayVisible: true,
+      rootScaleX: 1,
+      scaledSlotMatchesTranslation: true,
+      easingTrack: "-3,-1.5,-4.5,-3,0",
+      easeInOutQuarterZ: -0.75,
+      beforeMotionZ: 0,
+      betweenMotionsZ: -6,
+      afterMotionsZ: -10,
+      exclusiveBoundaryZ: -8,
+      unrelatedMotionZ: 0,
+      sameStartResolvesOnce: true,
+      transformedX: true,
+      transformedY: 6,
+      transformedZ: 3,
+      baseFacingX: true,
+      baseFacingZ: -2,
+    },
   );
 
   TestValidator.predicate(

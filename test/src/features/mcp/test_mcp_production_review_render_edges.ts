@@ -110,17 +110,24 @@ export const test_mcp_production_review_render_edges =
       );
       compiler.compile({ scope: "source" });
       const restoredPrepared = review.prepare({ target });
-      TestValidator.predicate(
+      TestValidator.equals(
         "review inventory refuses stale output but preserves target-identical frames after recompile",
-        stalePrepared.frames.length === 0 &&
-          stalePrepared.diagnostics.some(
+        {
+          staleFrames: stalePrepared.frames.length,
+          reportsStale: stalePrepared.diagnostics.some(
             (diagnostic) => diagnostic.code === "review-evidence-stale",
-          ) &&
-          restoredPrepared.frames.some(
+          ),
+          preservesTargetIdenticalFrame: restoredPrepared.frames.some(
             (candidate) =>
               candidate.digest === prepared.frames[0]?.digest &&
               candidate.reviewFrame === prepared.frames[0]?.reviewFrame,
           ),
+        },
+        {
+          staleFrames: 0,
+          reportsStale: true,
+          preservesTargetIdenticalFrame: true,
+        },
       );
       const staleTargetBytes = png();
       const staleTargetManifest: IAutoMovieRenderBundleManifest = {

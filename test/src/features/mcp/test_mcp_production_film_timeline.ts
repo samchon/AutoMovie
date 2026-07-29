@@ -834,19 +834,26 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         ),
       };
       const corruptSubmission = corruptReviewService.submit(corruptWorksheet);
-      TestValidator.predicate(
+      TestValidator.equals(
         `${corruption.name} retains required event coverage and refuses review`,
-        refused.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "review-outcome-missing" &&
-            diagnostic.message.includes("film-source-in-event"),
-        ) &&
-          corruptSubmission.accepted === false &&
-          corruptSubmission.diagnostics.some(
+        {
+          reportsMissingOutcome: refused.diagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === "review-outcome-missing" &&
+              diagnostic.message.includes("film-source-in-event"),
+          ),
+          accepted: corruptSubmission.accepted,
+          reportsIncompleteCoverage: corruptSubmission.diagnostics.some(
             (diagnostic) =>
               diagnostic.code === "review-acceptance-coverage-incomplete" &&
               diagnostic.message.includes("film-source-in-event"),
           ),
+        },
+        {
+          reportsMissingOutcome: true,
+          accepted: false,
+          reportsIncompleteCoverage: true,
+        },
       );
     }
     fs.writeFileSync(realizationPath, realizationBytes);

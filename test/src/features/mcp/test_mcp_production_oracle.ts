@@ -561,12 +561,26 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         time: 2,
       },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "pose roots compose beneath object TRS exactly as the viewer renders them",
-      staticPoseDistance.result?.kind === "distance" &&
-        staticPoseDistance.result.meters === 2 &&
-        objectMotionDistance.result?.kind === "distance" &&
-        Math.abs(objectMotionDistance.result.meters - Math.sqrt(97)) < 1e-9,
+      {
+        staticKind: staticPoseDistance.result?.kind ?? null,
+        staticMeters:
+          staticPoseDistance.result?.kind === "distance"
+            ? staticPoseDistance.result.meters
+            : null,
+        animatedKind: objectMotionDistance.result?.kind ?? null,
+        animatedMeters:
+          objectMotionDistance.result?.kind === "distance"
+            ? objectMotionDistance.result.meters.toFixed(9)
+            : null,
+      },
+      {
+        staticKind: "distance",
+        staticMeters: 2,
+        animatedKind: "distance",
+        animatedMeters: Math.sqrt(97).toFixed(9),
+      },
     );
 
     const missingCamera = corrupted();
