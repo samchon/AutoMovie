@@ -227,9 +227,12 @@ the film edit, and the exact capture/encoder identity;
 from byte and parser receipts alone, and
 `AutoMovieProductionProject.commitProductionPublication` publishes every
 deliverable byte, the aggregate manifest and its parser receipt under one
-revision/input fence. Actual capture, encoding and muxing stay with the
-adapters the host injects; the project CLI drives the whole sequence through
-`automovie render plan|run|status|verify|finalize`.
+revision/input fence. `productionPublicationInputFingerprint` supplies the
+terminal adapter with a canonical fence over compiler input, production
+manifest and incarnation, compiler-owned bytes, and current review records.
+Actual capture, encoding and muxing stay with the adapters the host injects;
+the project CLI drives the whole sequence through `automovie render
+plan|run|status|verify|finalize`.
 
 Render/see tools plan deterministic output, and `seeFrame` can also use a
 host-injected capture adapter. `planRender` resolves a committed shot or film

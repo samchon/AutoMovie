@@ -73,8 +73,9 @@ next run.
 reuses or renders current chunks, then attempts final publication. Finalize
 still fails closed until every current review is complete. Its terminal commit
 also fingerprints the revision, declared content, review ledger, generated
-manifest, and complete compiler-owned tree with canonical structured fields;
-any change during the staged final compiler gate rolls the publication back.
+manifest and bytes, production manifest, exact design graph, and state
+incarnation with canonical structured fields; any change during the staged
+final compiler gate rolls the publication back.
 
 ## Ownership
 
