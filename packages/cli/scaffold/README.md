@@ -67,7 +67,8 @@ mixing or misattributing output from two runtimes.
 Chunk workers publish complete UUID claims atomically inside a slot-specific
 lock namespace. A worker yields to every other live claim and removes only its
 own exact path. Interrupted pre-publication candidates are quarantined on the
-next run.
+next run. Receipt reuse rejects linked state ancestors and files, and final
+encoding consumes the exact PNG bytes authenticated by that physical-path read.
 
 `pnpm render` is the convenience sequence: it captures current review evidence,
 reuses or renders current chunks, then attempts final publication. Finalize

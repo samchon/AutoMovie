@@ -9,11 +9,15 @@ import {
   planProductionRenderJob,
   probeProductionMedia,
   productionRenderChunkStatuses,
+  readAutoMovieProductionOwnedFile,
   runProductionRenderJob,
   sampleProductionRenderFrame,
   verifyProductionRenderChunkReceipt,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   productionDesign,
@@ -224,6 +228,8 @@ const throws = (closure: () => unknown): boolean => {
  * 7. Invalid chunk sizes, clock mismatches, out-of-range/gap frames, a first
  *    dissolve, invalid guide passes, and non-finite runtime identity fail
  *    closed.
+ * 8. Render-state reads accept only stable physical descendants: traversal, linked
+ *    ancestors/files, non-files, and replacement races fail closed.
  */
 export const test_mcp_production_render_job = async (): Promise<void> => {
   const renderPlan = plan();
@@ -1020,4 +1026,105 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
         }),
       ),
   );
+
+  const ownedRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-render-owned-"),
+  );
+  const outsideRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-render-outside-"),
+  );
+  try {
+    const chunk = path.join(ownedRoot, "chunk");
+    const frames = path.join(chunk, "frames");
+    const direct = path.join(ownedRoot, "direct.json");
+    const resident = path.join(frames, "resident.png");
+    const outside = path.join(outsideRoot, "outside.png");
+    fs.mkdirSync(frames, { recursive: true });
+    fs.writeFileSync(direct, "direct");
+    fs.writeFileSync(resident, "resident");
+    fs.writeFileSync(outside, "outside");
+
+    const directBytes = readAutoMovieProductionOwnedFile({
+      root: ownedRoot,
+      directory: ownedRoot,
+      relative: "direct.json",
+    });
+    const residentBytes = readAutoMovieProductionOwnedFile({
+      root: ownedRoot,
+      directory: chunk,
+      relative: "frames/resident.png",
+    });
+    const linkedDirectory = path.join(chunk, "linked");
+    const linkedFile = path.join(chunk, "linked.png");
+    const blockingFile = path.join(chunk, "blocking");
+    fs.symlinkSync(outsideRoot, linkedDirectory, "junction");
+    fs.symlinkSync(outside, linkedFile, "file");
+    fs.writeFileSync(blockingFile, "not a directory");
+    TestValidator.predicate(
+      "render-state reads stay inside stable physical files",
+      Buffer.from(directBytes).toString("utf8") === "direct" &&
+        Buffer.from(residentBytes).toString("utf8") === "resident" &&
+        [
+          {
+            root: ownedRoot,
+            directory: outsideRoot,
+            relative: "outside.png",
+          },
+          { root: ownedRoot, directory: chunk, relative: "../direct.json" },
+          { root: ownedRoot, directory: chunk, relative: "." },
+          {
+            root: ownedRoot,
+            directory: chunk,
+            relative: "linked/outside.png",
+          },
+          { root: ownedRoot, directory: chunk, relative: "linked.png" },
+          { root: ownedRoot, directory: chunk, relative: "frames" },
+          {
+            root: ownedRoot,
+            directory: chunk,
+            relative: "blocking/resident.png",
+          },
+        ].every((candidate) =>
+          throws(() => readAutoMovieProductionOwnedFile(candidate)),
+        ),
+    );
+
+    const replacement = path.join(frames, "replacement.png");
+    fs.writeFileSync(replacement, "replacement");
+    const nativeRead = fs.readFileSync;
+    let replaced = false;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const bytes = Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
+      if (
+        replaced === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === resident
+      ) {
+        replaced = true;
+        fs.rmSync(resident);
+        fs.renameSync(replacement, resident);
+      }
+      return bytes;
+    }) as typeof fs.readFileSync;
+    try {
+      TestValidator.predicate(
+        "render-state reads reject a physical file replacement after read",
+        throws(() =>
+          readAutoMovieProductionOwnedFile({
+            root: ownedRoot,
+            directory: chunk,
+            relative: "frames/resident.png",
+          }),
+        ) && replaced,
+      );
+    } finally {
+      fs.readFileSync = nativeRead;
+    }
+  } finally {
+    fs.rmSync(ownedRoot, { force: true, recursive: true });
+    fs.rmSync(outsideRoot, { force: true, recursive: true });
+  }
 };

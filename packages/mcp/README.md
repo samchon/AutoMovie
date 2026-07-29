@@ -217,10 +217,12 @@ unresolved and reports the exact reconstruction required before submission.
 Long-running production delivery lives outside the request surface.
 `planProductionRenderJob` turns the compiler-owned film timeline into
 content-addressed feature and guide-pass chunks fenced by the compile input,
-the film edit, and the exact capture/encoder identity;
+the film edit, and the exact capture/encoder identity.
 `productionRenderChunkStatuses`, `verifyProductionRenderChunkReceipt` and
 `runProductionRenderJob` resume, quarantine, or rerender one slot at a time
-from byte and parser receipts alone, and
+from byte and parser receipts alone. Host adapters can use
+`readAutoMovieProductionOwnedFile` to reject traversal, linked ancestry, and
+physical replacement while reading those resident bytes.
 `AutoMovieProductionProject.commitProductionPublication` publishes every
 deliverable byte, the aggregate manifest and its parser receipt under one
 revision/input fence. `productionPublicationInputFingerprint` supplies the

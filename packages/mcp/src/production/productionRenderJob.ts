@@ -6,6 +6,8 @@ import {
   IAutoMovieProductionDesign,
 } from "@automovie/interface";
 import { createHash } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 /** Package-owned encoder identity fenced into every chunk. */
 export interface IAutoMovieProductionEncoderIdentity {
@@ -605,6 +607,67 @@ export const runProductionRenderJob = async (props: {
   return output;
 };
 
+/**
+ * Read one render-state file without following a link in its owned namespace.
+ *
+ * The returned bytes come from one regular file whose complete ancestry is a
+ * physical descendant of `root`. Every directory and the file are identified
+ * before the read and rechecked afterwards, so a replacement cannot turn a
+ * verified content-addressed path into different resident bytes.
+ */
+export const readAutoMovieProductionOwnedFile = (props: {
+  /** Physical render-state ownership root. */
+  root: string;
+  /** Physical directory that owns the relative file. */
+  directory: string;
+  /** Strict descendant path below `directory`. */
+  relative: string;
+}): Uint8Array => {
+  const root = path.resolve(props.root);
+  const directory = path.resolve(props.directory);
+  const target = path.resolve(directory, props.relative);
+  if (
+    `${directory}${path.sep}`.startsWith(`${root}${path.sep}`) === false ||
+    target.startsWith(`${directory}${path.sep}`) === false
+  )
+    throw new Error(
+      `Render-state path "${props.relative}" escapes its owned directory.`,
+    );
+
+  const relativeParent = path.relative(root, path.dirname(target));
+  const components =
+    relativeParent.length === 0 ? [] : relativeParent.split(path.sep);
+  const directories = [root];
+  for (const component of components)
+    directories.push(path.join(directories.at(-1)!, component));
+
+  const identities: IProductionOwnedPathIdentity[] = directories.map(
+    (file) => ({
+      file,
+      directory: true,
+      identity: productionOwnedDirectoryIdentity(file),
+    }),
+  );
+  identities.push({
+    file: target,
+    directory: false,
+    identity: productionOwnedFileIdentity(target),
+  });
+  const bytes = fs.readFileSync(target);
+  const changed = identities.find(
+    (expected) =>
+      expected.identity !==
+      (expected.directory
+        ? productionOwnedDirectoryIdentity(expected.file)
+        : productionOwnedFileIdentity(expected.file)),
+  );
+  if (changed !== undefined)
+    throw new Error(
+      `Render-state path "${changed.file}" changed physical identity while it was read.`,
+    );
+  return bytes;
+};
+
 const frame = (
   timeline: IAutoMovieFilmTimeline,
   globalFrame: number,
@@ -733,3 +796,25 @@ const canonicalJson = (value: unknown): string => {
 
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
+
+interface IProductionOwnedPathIdentity {
+  file: string;
+  directory: boolean;
+  identity: string;
+}
+
+const productionOwnedDirectoryIdentity = (directory: string): string => {
+  const linked = fs.lstatSync(directory, { bigint: true });
+  if (linked.isSymbolicLink() || linked.isDirectory() === false)
+    throw new Error(
+      `Render-state directory "${directory}" is not a physical directory.`,
+    );
+  return `${linked.dev}\0${linked.ino}`;
+};
+
+const productionOwnedFileIdentity = (file: string): string => {
+  const linked = fs.lstatSync(file, { bigint: true });
+  if (linked.isSymbolicLink() || linked.isFile() === false)
+    throw new Error(`Render-state path "${file}" is not a physical file.`);
+  return `${linked.dev}\0${linked.ino}`;
+};

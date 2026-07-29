@@ -26,6 +26,7 @@ import {
   productionPublicationInputFingerprint,
   productionRenderChunkStatuses,
   readAutoMovieFilmTimeline,
+  readAutoMovieProductionOwnedFile,
   runProductionRenderJob,
   sampleProductionRenderFrame,
   selectAutoMovieFilmReviewFrames,
@@ -54,6 +55,11 @@ interface IRenderChunkLockOwner {
   pid: number;
   /** Absent only on an older lock written before owner-checked release. */
   token?: string;
+}
+
+interface ICurrentRenderChunk {
+  receipt: IAutoMovieProductionRenderChunkReceipt;
+  frames: Uint8Array[];
 }
 
 const main = async (): Promise<void> => {
@@ -376,7 +382,12 @@ const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
 
 const currentReceipt = async (
   chunk: IAutoMovieProductionRenderChunk,
-): Promise<IAutoMovieProductionRenderChunkReceipt | null> => {
+): Promise<IAutoMovieProductionRenderChunkReceipt | null> =>
+  (await currentChunk(chunk))?.receipt ?? null;
+
+const currentChunk = async (
+  chunk: IAutoMovieProductionRenderChunk,
+): Promise<ICurrentRenderChunk | null> => {
   const directory = chunkDirectory(chunk.id);
   const receiptFile = path.join(directory, "receipt.json");
   if (fs.existsSync(receiptFile) === false) return null;
@@ -385,6 +396,7 @@ const currentReceipt = async (
     const receipt =
       readJson<IAutoMovieProductionRenderChunkReceipt>(receiptFile);
     verifyProductionRenderChunkReceipt({ plan, chunk, receipt });
+    const frames: Uint8Array[] = [];
     for (const frame of receipt.frames) {
       const bytes = readRegularInside(directory, frame.path);
       const probe = probeProductionMedia({
@@ -400,6 +412,7 @@ const currentReceipt = async (
         probe.height !== frame.height
       )
         return null;
+      frames.push(bytes);
     }
     const encoded = readRegularInside(directory, receipt.encoded.path);
     const video = probeProductionMedia({
@@ -417,7 +430,7 @@ const currentReceipt = async (
       Math.abs(video.fps - plan.frameFormat.fps) > 1e-9
     )
       return null;
-    return receipt;
+    return { receipt, frames };
   } catch {
     return null;
   }
@@ -509,6 +522,7 @@ const renderChunk = async (
     pid: process.pid,
   });
   const frameReceipts: IAutoMovieProductionRenderChunkReceipt["frames"] = [];
+  const frameBytes: Uint8Array[] = [];
   for (const sample of chunk.frames) {
     const images: Array<{ image: PNG; weight: number }> = [];
     for (const layer of sample.layers) {
@@ -561,6 +575,7 @@ const renderChunk = async (
     });
     if (probe.kind !== "png")
       throw new Error(`Frame ${sample.globalFrame} did not decode as PNG.`);
+    frameBytes.push(bytes);
     frameReceipts.push({
       globalFrame: sample.globalFrame,
       path: relative,
@@ -570,10 +585,7 @@ const renderChunk = async (
       height: probe.height,
     });
   }
-  const encodedBytes = await encodePngFrames(
-    frameReceipts.map((frame) => path.join(temporary, frame.path)),
-    plan,
-  );
+  const encodedBytes = await encodePngFrames(frameBytes, plan);
   const encodedPath = "chunk.mp4";
   writeFileAtomic(path.join(temporary, encodedPath), encodedBytes);
   const encodedProbe = probeProductionMedia({
@@ -872,23 +884,26 @@ const encodeChunkFrames = async (
   chunks: IAutoMovieProductionRenderChunk[],
 ): Promise<Uint8Array> => {
   if (chunks.length === 0) throw new Error("No current chunks to encode.");
-  const paths: string[] = [];
+  const frames: Uint8Array[] = [];
   for (const chunk of chunks.sort(
     (left, right) => left.frameStart - right.frameStart,
   )) {
-    const receipt = (await currentReceipt(chunk))!;
-    for (const frame of receipt.frames)
-      paths.push(path.join(chunkDirectory(chunk.id), frame.path));
+    const current = await currentChunk(chunk);
+    if (current === null)
+      throw new Error(
+        `Chunk "${chunk.slot}" changed after final status verification. Reverify or rerender it before finalizing.`,
+      );
+    frames.push(...current.frames);
   }
-  if (paths.length !== plan.totalFrames)
+  if (frames.length !== plan.totalFrames)
     throw new Error(
-      `Final encode has ${paths.length} frames; expected ${plan.totalFrames}.`,
+      `Final encode has ${frames.length} frames; expected ${plan.totalFrames}.`,
     );
-  return encodePngFrames(paths, plan);
+  return encodePngFrames(frames, plan);
 };
 
 const encodePngFrames = async (
-  files: string[],
+  frames: Uint8Array[],
   plan: IAutoMovieProductionRenderJobPlan,
 ): Promise<Uint8Array> => {
   if (
@@ -925,8 +940,8 @@ const encodePngFrames = async (
     encoder.groupOfPictures =
       plan.runtimeIdentity.encoder.arguments.groupOfPictures;
     encoder.initialize();
-    for (const file of files) {
-      const png = PNG.sync.read(fs.readFileSync(file));
+    for (const frame of frames) {
+      const png = PNG.sync.read(Buffer.from(frame));
       encoder.addFrameRgba(new Uint8Array(png.data));
     }
     encoder.finalize();
@@ -1293,17 +1308,11 @@ const listFiles = (directory: string): string[] =>
     });
 
 const readRegularInside = (directory: string, relative: string): Uint8Array => {
-  const absolute = path.resolve(directory, relative);
-  const prefix = `${path.resolve(directory)}${path.sep}`;
-  if (
-    absolute.startsWith(prefix) === false ||
-    fs.lstatSync(absolute).isFile() === false ||
-    fs.lstatSync(absolute).isSymbolicLink()
-  )
-    throw new Error(
-      `Chunk path "${relative}" is not a contained regular file.`,
-    );
-  return fs.readFileSync(absolute);
+  return readAutoMovieProductionOwnedFile({
+    root: stateRoot,
+    directory,
+    relative,
+  });
 };
 
 const quarantine = (target: string, reason: string): void => {
@@ -1348,7 +1357,11 @@ const writeJsonAtomic = (file: string, value: unknown): void =>
   writeFileAtomic(file, Buffer.from(`${JSON.stringify(value, null, 2)}\n`));
 
 const readJson = <T>(file: string): T =>
-  JSON.parse(fs.readFileSync(file, "utf8")) as T;
+  JSON.parse(
+    Buffer.from(
+      readRegularInside(path.dirname(file), path.basename(file)),
+    ).toString("utf8"),
+  ) as T;
 
 const integerOption = (name: string, fallback: number): number => {
   const raw = stringOption(name);
