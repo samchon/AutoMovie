@@ -15,7 +15,10 @@ import path from "node:path";
  * Scenarios:
  *
  * 1. Acquiring an unheld lock writes this session's token and returns it.
- * 2. A second acquire on a live (fresh) lock is refused after the bounded wait.
+ * 2. A nested acquire inside one process shares the owner token and survives its
+ *    inner release, because a guarded commit runs the compiler's own snapshot
+ *    commit and that is the same holder rather than a second session. A lock
+ *    another session holds is still refused after the bounded wait.
  * 3. A lock older than 10 s is still refused and remains byte-identical. After an
  *    operator explicitly removes it, acquisition succeeds normally.
  * 4. Release deletes the lock ONLY when it still holds our token; a foreign
@@ -38,11 +41,29 @@ export const test_mcp_commit_lock = (): void => {
       token,
     );
 
-    // 2. a second acquire on the live lock is refused after the bounded wait
+    // 2. a nested acquire inside one process is the same holder, not a second
+    //    session: it shares the owner token, and the file survives every
+    //    release but the outermost one.
+    const nested = acquireCommitLock(lockPath);
+    TestValidator.equals(
+      "a nested acquire shares the owner token",
+      nested,
+      token,
+    );
+    releaseCommitLock(lockPath, nested);
+    TestValidator.equals(
+      "an inner release leaves the lock held",
+      fs.readFileSync(lockPath, "utf8"),
+      token,
+    );
+
+    // 2b. a lock another session holds is refused after the bounded wait
+    const foreignPath = path.join(dir, "foreign.lock");
+    fs.writeFileSync(foreignPath, "another-session-token", { flag: "wx" });
     TestValidator.predicate(
-      "a live lock is refused with the retry prompt",
+      "a live foreign lock is refused with the retry prompt",
       throws(
-        () => acquireCommitLock(lockPath),
+        () => acquireCommitLock(foreignPath),
         ["held by another session", "retry"],
       ),
     );
