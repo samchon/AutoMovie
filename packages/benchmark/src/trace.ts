@@ -220,18 +220,29 @@ export const replayAutoMovieBenchmarkTrace = (
   bytes: Uint8Array,
 ): IAutoMovieBenchmarkTraceReplay => {
   const buffer = Buffer.from(bytes);
-  const text =
+  const resident =
     buffer.length >= GZIP_MAGIC.length &&
     GZIP_MAGIC.every((byte, index) => buffer[index] === byte)
       ? gunzipSync(buffer, {
           finishFlush: constants.Z_SYNC_FLUSH,
-        }).toString("utf8")
-      : buffer.toString("utf8");
-  // `split` always yields at least one element, and the last one is whatever
-  // followed the final newline: empty for an archive its writer closed, a
-  // partial line for one a killed writer left behind.
+        })
+      : buffer;
+  const finalNewline = resident.lastIndexOf(0x0a);
+  const truncated = finalNewline !== resident.length - 1;
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(
+      resident.subarray(0, finalNewline + 1),
+    );
+  } catch {
+    throw new Error(
+      "Benchmark trace bytes are not valid UTF-8. The archive is corrupt, not truncated.",
+    );
+  }
+  // Only the prefix through the final newline is decoded. Any following bytes
+  // belong to the killed writer's partial line and are reported as truncation
+  // without letting an incomplete UTF-8 code point poison the complete prefix.
   const lines = text.split("\n");
-  const truncated = lines[lines.length - 1] !== "";
   let previousAtMs = Number.NEGATIVE_INFINITY;
   const events = lines.slice(0, -1).map((line, index) => {
     let parsed: unknown;

@@ -77,9 +77,9 @@ const throws = (task: () => unknown, fragment: string): boolean => {
  *    before the cut and reports the truncation.
  * 3. An empty archive replays to nothing without reporting truncation.
  * 4. Uncompressed JSONL replays through the same reader.
- * 5. A complete line that is not JSON, is not an observed event, carries a
- *    sequence gap, moves time backwards, or claims an impossible number is
- *    refused as corruption rather than read as truncation.
+ * 5. A complete line with malformed UTF-8, invalid JSON, an invalid event,
+ *    sequence gap, backwards clock, or impossible number is refused as
+ *    corruption rather than read as truncation.
  * 6. Verdict scores are finite and inside `0..1`, with `null` reserved exactly for
  *    infrastructure exclusion and exact zero required for gate failure.
  * 7. The archived event kinds are reported in code-unit order.
@@ -144,13 +144,27 @@ export const test_benchmark_oracle_trace = (): void => {
     replayAutoMovieBenchmarkTrace(plain).events.length,
     all.length,
   );
+  TestValidator.equals(
+    "an incomplete UTF-8 tail remains ordinary writer truncation",
+    replayAutoMovieBenchmarkTrace(Buffer.concat([plain, Buffer.from([0xe2])])),
+    { events: all, truncated: true },
+  );
+  const malformedUtf8 = Buffer.from(
+    `${canonicalBenchmarkJson(all[0]!)}\n`,
+    "utf8",
+  );
+  const malformedOffset = malformedUtf8.indexOf("austerlitz");
+  if (malformedOffset < 0)
+    throw new Error("benchmark trace UTF-8 fixture marker changed");
+  malformedUtf8[malformedOffset] = 0xff;
 
   TestValidator.predicate(
     "corruption is refused instead of read as truncation",
-    throws(
-      () => replayAutoMovieBenchmarkTrace(Buffer.from("{not json\n", "utf8")),
-      "not JSON",
-    ) &&
+    throws(() => replayAutoMovieBenchmarkTrace(malformedUtf8), "valid UTF-8") &&
+      throws(
+        () => replayAutoMovieBenchmarkTrace(Buffer.from("{not json\n", "utf8")),
+        "not JSON",
+      ) &&
       throws(
         () =>
           replayAutoMovieBenchmarkTrace(
