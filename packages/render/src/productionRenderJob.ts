@@ -252,12 +252,13 @@ export const planProductionRenderJob = (props: {
   );
   const chunks: IAutoMovieProductionRenderChunk[] = [];
   for (const deliverable of props.production.deliverables) {
+    // Only the two moving-image kinds carry chunks. Narrowing here rather than
+    // resolving an empty pass list keeps the chunk's own `kind` exact, so a
+    // caption or audio deliverable cannot reach a video parser probe.
+    if (deliverable.kind !== "feature" && deliverable.kind !== "guide-pass")
+      continue;
     const passes: readonly AutoMovieGuidePass[] =
-      deliverable.kind === "feature"
-        ? ["beauty"]
-        : deliverable.kind === "guide-pass"
-          ? guidePasses
-          : [];
+      deliverable.kind === "feature" ? ["beauty"] : guidePasses;
     for (const pass of passes)
       for (
         let frameStart = 0, index = 0;

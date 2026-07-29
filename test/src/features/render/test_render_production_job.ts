@@ -22,6 +22,22 @@ import {
 const digest = (digit: string): AutoMovieContentDigest =>
   `sha256:${digit.repeat(64)}`;
 
+/** Whether one scheduler call refused its arguments instead of running. */
+const rejects = async (task: Promise<unknown>): Promise<boolean> => {
+  try {
+    await task;
+    return false;
+  } catch {
+    return true;
+  }
+};
+
+/**
+ * A host adapter may reject with anything, so the non-Error path needs a
+ * witness the compiler cannot narrow back to `Error`.
+ */
+const NON_ERROR_FAILURE: unknown = "string failure";
+
 const audioAssets = () => [
   {
     path: "public/audio/silent.json",
@@ -559,48 +575,45 @@ export const test_render_production_job = async (): Promise<void> => {
     "scheduler rejects invalid workers and missing deliverables",
     (
       await Promise.all([
-        runProductionRenderJob({
-          plan: renderPlan,
-          workers: 0,
-          adapters: {
-            current: async () => null,
-            acquire: async () => false,
-            render: async () => complete,
-            fail: async () => undefined,
-            release: async () => undefined,
-          },
-        }).then(
-          () => false,
-          () => true,
+        rejects(
+          runProductionRenderJob({
+            plan: renderPlan,
+            workers: 0,
+            adapters: {
+              current: async () => null,
+              acquire: async () => false,
+              render: async () => complete,
+              fail: async () => undefined,
+              release: async () => undefined,
+            },
+          }),
         ),
-        runProductionRenderJob({
-          plan: renderPlan,
-          workers: 1.5,
-          adapters: {
-            current: async () => null,
-            acquire: async () => false,
-            render: async () => complete,
-            fail: async () => undefined,
-            release: async () => undefined,
-          },
-        }).then(
-          () => false,
-          () => true,
+        rejects(
+          runProductionRenderJob({
+            plan: renderPlan,
+            workers: 1.5,
+            adapters: {
+              current: async () => null,
+              acquire: async () => false,
+              render: async () => complete,
+              fail: async () => undefined,
+              release: async () => undefined,
+            },
+          }),
         ),
-        runProductionRenderJob({
-          plan: renderPlan,
-          workers: 1,
-          deliverable: "absent",
-          adapters: {
-            current: async () => null,
-            acquire: async () => false,
-            render: async () => complete,
-            fail: async () => undefined,
-            release: async () => undefined,
-          },
-        }).then(
-          () => false,
-          () => true,
+        rejects(
+          runProductionRenderJob({
+            plan: renderPlan,
+            workers: 1,
+            deliverable: "absent",
+            adapters: {
+              current: async () => null,
+              acquire: async () => false,
+              render: async () => complete,
+              fail: async () => undefined,
+              release: async () => undefined,
+            },
+          }),
         ),
       ])
     ).every(Boolean),
@@ -626,7 +639,9 @@ export const test_render_production_job = async (): Promise<void> => {
     adapters: {
       current: async () => null,
       acquire: async () => true,
-      render: async () => Promise.reject("string failure"),
+      render: async () => {
+        throw NON_ERROR_FAILURE;
+      },
       fail: async () => undefined,
       release: async () => undefined,
     },
