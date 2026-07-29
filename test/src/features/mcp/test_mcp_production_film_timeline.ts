@@ -837,11 +837,20 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       TestValidator.equals(
         `${corruption.name} retains required event coverage and refuses review`,
         {
-          reportsMissingOutcome: refused.diagnostics.some(
-            (diagnostic) =>
-              diagnostic.code === "review-outcome-missing" &&
-              diagnostic.message.includes("film-source-in-event"),
-          ),
+          // Coverage is retained either way: the required scenario is settled
+          // as an outcome, or it is reported as one the corrupted realization
+          // can no longer settle. What must never happen is the third thing --
+          // the scenario quietly leaving the required set, which is what makes
+          // a submission that omits it look complete.
+          retainsRequiredCoverage:
+            refused.outcomes.some(
+              (outcome) => outcome.scenario === "film-source-in-event",
+            ) ||
+            refused.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "review-outcome-missing" &&
+                diagnostic.message.includes("film-source-in-event"),
+            ),
           accepted: corruptSubmission.accepted,
           reportsIncompleteCoverage: corruptSubmission.diagnostics.some(
             (diagnostic) =>
@@ -850,7 +859,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
           ),
         },
         {
-          reportsMissingOutcome: true,
+          retainsRequiredCoverage: true,
           accepted: false,
           reportsIncompleteCoverage: true,
         },

@@ -76,9 +76,13 @@ export const test_viewer_formation = (): void => {
     id: "army",
     modelRecipe: hero.id,
     count: 2_049,
+    // Central slots on two ranks. A promoted hero on the outer file of a
+    // 1024-file line stands hundreds of metres off the formation centre, where
+    // no camera aimed at the anchor can see it, and the culling half of this
+    // scenario needs heroes that are actually in frame.
     heroOverrides: [
-      { slot: 0, actor: "marshal" },
-      { slot: 1_024, actor: "captain" },
+      { slot: 511, actor: "marshal" },
+      { slot: 1_535, actor: "captain" },
     ],
   };
   const formation = materializeCompiledFormation(design, recipes);
@@ -484,6 +488,19 @@ export const test_viewer_formation = (): void => {
       new THREE.Euler().setFromQuaternion(rotation, "YXZ").y,
     );
   const marshal = heroObjects.get("marshal")!;
+  // A promoted hero renders at its formation-transformed slot plus whatever the
+  // source authored as an offset from that slot, so the expected world position
+  // is composed from the same law rather than written down.
+  const marshalSlot = formation.heroes.find((hero) => hero.actor === "marshal")!
+    .transform.translation;
+  const composedMarshalZ = (sourceZ: number): number =>
+    transformFormationPoint(
+      marshalSlot,
+      formation.anchor,
+      sampledMotion,
+      formation.facingDeg,
+    ).z +
+    (sourceZ - marshalSlot.z);
   // Named rather than folded into one conjunction: this scenario pins thirty
   // separate facts, and a bare predicate reports only that one of them broke.
   TestValidator.equals(
@@ -542,10 +559,14 @@ export const test_viewer_formation = (): void => {
       motionFacingOffsetDeg: 10,
       motionLateralScale: 1.1,
       rootPositionZ: formation.anchor.z - 3,
-      firstHeroPositionZ: formation.anchor.z - 1,
+      firstHeroPositionZ: composedMarshalZ(
+        sourceTransforms.get("marshal")!.translation.z,
+      ),
       firstHeroYaw: true,
       repeatedUpdatesKeepSource: true,
-      marshalPositionZ: firstHeroUpdate.position.z - 3,
+      marshalPositionZ: composedMarshalZ(
+        collidingSources.get("marshal")!.translation.z,
+      ),
       marshalYaw: true,
       marshalTracksCollidingSource: true,
       someHeroVisible: true,

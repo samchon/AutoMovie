@@ -104,8 +104,12 @@ export const test_mcp_production_review_render_edges =
       project.setWorldDesign(staleWorld);
       const stalePrepared = review.prepare({ target });
       project.setWorldDesign(worldDesign());
+      // The film edit is the fixture's one source module the opening shot does
+      // not build from, so appending to it is the unrelated edit this claim
+      // needs. Writing to a path the starter no longer ships would instead add
+      // a source input and retire every frame in the project.
       fs.appendFileSync(
-        path.join(fixture.root, "src/shots/answer.ts"),
+        path.join(fixture.root, "src/film.ts"),
         "\n// Unrelated source edit must not retire opening pixels.\n",
       );
       compiler.compile({ scope: "source" });

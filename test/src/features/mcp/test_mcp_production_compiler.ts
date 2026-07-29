@@ -7,6 +7,7 @@ import {
   AutoMovieProductionProject,
   AutoMovieProductionReviewService,
   canonicalizeAutoMovieJson,
+  compareCodeUnits,
   digestAutoMovieBytes,
   probeProductionMedia,
 } from "@automovie/mcp";
@@ -235,12 +236,22 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       entries: [],
     })).lint({ scope: "source" });
     project.revision = postFenceRevision;
-    TestValidator.predicate(
+    TestValidator.equals(
       "read-only success returns the fenced revision without a later read",
-      stableLint.success &&
-        lintReadBudget > 0 &&
-        postFenceLintReads === lintReadBudget &&
-        postFenceLintMutation === false,
+      {
+        success: stableLint.success,
+        codes: [...diagnosticCodes(stableLint)].sort(compareCodeUnits),
+        budgetIsPositive: lintReadBudget > 0,
+        readsMatchBudget: postFenceLintReads === lintReadBudget,
+        mutated: postFenceLintMutation,
+      },
+      {
+        success: true,
+        codes: [],
+        budgetIsPositive: true,
+        readsMatchBudget: true,
+        mutated: false,
+      },
     );
     fs.writeFileSync(
       sourcePath,

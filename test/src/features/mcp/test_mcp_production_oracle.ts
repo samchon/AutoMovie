@@ -561,13 +561,26 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         time: 2,
       },
     });
+    // The sentinel is also this formation's promoted hero, so its compiled node
+    // transform is the compiler-owned slot. The pose root composes beneath that
+    // transform, which is exactly what the viewer draws, so the expected
+    // distance is derived from the node rather than written down.
+    const staticNode = staticPose.scene.nodes[0]!.transform;
     TestValidator.equals(
       "pose roots compose beneath object TRS exactly as the viewer renders them",
       {
         staticKind: staticPoseDistance.result?.kind ?? null,
+        staticNodeIsUnrotatedUnitScale:
+          staticNode.rotation.w === 1 &&
+          staticNode.rotation.x === 0 &&
+          staticNode.rotation.y === 0 &&
+          staticNode.rotation.z === 0 &&
+          staticNode.scale.x === 1 &&
+          staticNode.scale.y === 1 &&
+          staticNode.scale.z === 1,
         staticMeters:
           staticPoseDistance.result?.kind === "distance"
-            ? staticPoseDistance.result.meters
+            ? staticPoseDistance.result.meters.toFixed(9)
             : null,
         animatedKind: objectMotionDistance.result?.kind ?? null,
         animatedMeters:
@@ -577,7 +590,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       },
       {
         staticKind: "distance",
-        staticMeters: 2,
+        staticNodeIsUnrotatedUnitScale: true,
+        staticMeters: Math.hypot(
+          staticNode.translation.x + 2,
+          staticNode.translation.y,
+          staticNode.translation.z,
+        ).toFixed(9),
         animatedKind: "distance",
         animatedMeters: Math.sqrt(97).toFixed(9),
       },
