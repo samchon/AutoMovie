@@ -97,6 +97,183 @@ export const test_benchmark_task_law = (): void => {
     task.brief.digest.startsWith("sha256:"),
     true,
   );
+  const observationTask = (
+    patch: Partial<(typeof task.historicalLaw)[number]>,
+  ): IAutoMovieBenchmarkTask => ({
+    ...task,
+    historicalLaw: [
+      { ...task.historicalLaw[0]!, ...patch },
+      ...task.historicalLaw.slice(1),
+    ],
+  });
+  const frameTask = (
+    patch: Partial<(typeof task.requiredFrames)[number]>,
+  ): IAutoMovieBenchmarkTask => ({
+    ...task,
+    requiredFrames: [
+      { ...task.requiredFrames[0]!, ...patch },
+      ...task.requiredFrames.slice(1),
+    ],
+  });
+  TestValidator.equals(
+    "every numeric task-law domain is validated before a leaderboard opens",
+    [
+      refusal(
+        {
+          ...task,
+          versions: { ...task.versions, scenarioHelper: 0.5 },
+        },
+        "scenario-helper revision",
+      ),
+      refusal(
+        {
+          ...task,
+          versions: { ...task.versions, scenarioHelper: -1 },
+        },
+        "scenario-helper revision",
+      ),
+      refusal(observationTask({ value: Number.NaN }), "non-finite comparand"),
+      refusal(
+        observationTask({ tolerance: Number.NaN }),
+        "non-finite tolerance",
+      ),
+      refusal(observationTask({ tolerance: -1 }), "negative"),
+      refusal(frameTask({ timeSeconds: Number.NaN }), "invalid sample time"),
+      refusal(frameTask({ timeSeconds: -1 }), "invalid sample time"),
+      refusal(frameTask({ width: 0.5 }), "positive safe-integer"),
+      refusal(frameTask({ width: 0 }), "positive safe-integer"),
+      refusal(
+        {
+          ...task,
+          weights: { ...task.weights, historical: Number.NaN },
+        },
+        "non-finite axis weight",
+      ),
+      refusal(
+        {
+          ...task,
+          delivery: {
+            ...task.delivery,
+            minRuntimeSeconds: Number.NaN,
+          },
+        },
+        "runtime window",
+      ),
+      refusal(
+        {
+          ...task,
+          delivery: {
+            ...task.delivery,
+            maxRuntimeSeconds: Number.NaN,
+          },
+        },
+        "runtime window",
+      ),
+      refusal(
+        {
+          ...task,
+          delivery: { ...task.delivery, minRuntimeSeconds: -1 },
+        },
+        "runtime window",
+      ),
+      refusal(
+        {
+          ...task,
+          delivery: { ...task.delivery, maxRuntimeSeconds: 0 },
+        },
+        "runtime window",
+      ),
+      refusal(
+        {
+          ...task,
+          calibration: {
+            ...task.calibration,
+            reference: {
+              ...task.calibration.reference,
+              min: Number.NaN,
+            },
+          },
+        },
+        "out-of-range reference",
+      ),
+      refusal(
+        {
+          ...task,
+          calibration: {
+            ...task.calibration,
+            reference: {
+              ...task.calibration.reference,
+              max: Number.NaN,
+            },
+          },
+        },
+        "out-of-range reference",
+      ),
+      refusal(
+        {
+          ...task,
+          calibration: {
+            ...task.calibration,
+            reference: { ...task.calibration.reference, min: -0.1 },
+          },
+        },
+        "out-of-range reference",
+      ),
+      refusal(
+        {
+          ...task,
+          calibration: {
+            ...task.calibration,
+            reference: { ...task.calibration.reference, max: 1.1 },
+          },
+        },
+        "out-of-range reference",
+      ),
+      refusal(
+        {
+          ...task,
+          sandbox: { ...task.sandbox, maxElapsedSeconds: Number.NaN },
+        },
+        "sandbox budget",
+      ),
+      refusal(
+        {
+          ...task,
+          sandbox: { ...task.sandbox, maxElapsedSeconds: 0 },
+        },
+        "sandbox budget",
+      ),
+      refusal(
+        {
+          ...task,
+          sandbox: { ...task.sandbox, maxCostUsd: Number.NaN },
+        },
+        "sandbox budget",
+      ),
+      refusal(
+        {
+          ...task,
+          sandbox: { ...task.sandbox, maxCostUsd: -1 },
+        },
+        "sandbox budget",
+      ),
+      refusal(
+        {
+          ...task,
+          sandbox: { ...task.sandbox, maxCorrections: 0.5 },
+        },
+        "sandbox budget",
+      ),
+      refusal(
+        {
+          ...task,
+          sandbox: { ...task.sandbox, maxCorrections: -1 },
+        },
+        "sandbox budget",
+      ),
+    ],
+    Array.from({ length: 24 }, () => true),
+  );
 
   const emptyLaw: IAutoMovieBenchmarkTask = {
     ...task,

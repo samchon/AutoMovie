@@ -293,6 +293,13 @@ export const validateAutoMovieBenchmarkTask = (
     throw new Error(
       `Benchmark task "${task.taskId}" declares harness ${task.versions.harness}, but this harness is ${AUTOMOVIE_BENCHMARK_HARNESS_VERSION}. Raise the task version instead of rescoring old verdicts.`,
     );
+  if (
+    Number.isSafeInteger(task.versions.scenarioHelper) === false ||
+    task.versions.scenarioHelper < 0
+  )
+    throw new Error(
+      `Benchmark task "${task.taskId}" declares an invalid scenario-helper revision. Use a non-negative safe integer.`,
+    );
   const ids = benchmarkTaskAssertionIds(task);
   if (new Set(ids).size !== ids.length)
     throw new Error(
@@ -306,7 +313,42 @@ export const validateAutoMovieBenchmarkTask = (
     throw new Error(
       `Benchmark task "${task.taskId}" declares an assertion under the reserved "${AUTOMOVIE_BENCHMARK_DELIVERY_PREFIX}" prefix.`,
     );
+  for (const assertion of [
+    ...task.historicalLaw,
+    ...task.productionLaw,
+    ...task.physicalInvariants,
+  ]) {
+    if (Number.isFinite(assertion.value) === false)
+      throw new Error(
+        `Benchmark task "${task.taskId}" assertion "${assertion.id}" has a non-finite comparand.`,
+      );
+    if (
+      Number.isFinite(assertion.tolerance) === false ||
+      assertion.tolerance < 0
+    )
+      throw new Error(
+        `Benchmark task "${task.taskId}" assertion "${assertion.id}" has a negative or non-finite tolerance.`,
+      );
+  }
+  for (const frame of task.requiredFrames) {
+    if (Number.isFinite(frame.timeSeconds) === false || frame.timeSeconds < 0)
+      throw new Error(
+        `Benchmark task "${task.taskId}" frame "${frame.id}" has an invalid sample time.`,
+      );
+    if (
+      [frame.width, frame.height, frame.minBytes].some(
+        (value) => Number.isSafeInteger(value) === false || value <= 0,
+      )
+    )
+      throw new Error(
+        `Benchmark task "${task.taskId}" frame "${frame.id}" requires positive safe-integer width, height, and minBytes.`,
+      );
+  }
   const weights = Object.values(task.weights);
+  if (weights.some((weight) => Number.isFinite(weight) === false))
+    throw new Error(
+      `Benchmark task "${task.taskId}" declares a non-finite axis weight.`,
+    );
   if (weights.some((weight) => weight < 0))
     throw new Error(
       `Benchmark task "${task.taskId}" declares a negative axis weight.`,
@@ -336,6 +378,15 @@ export const validateAutoMovieBenchmarkTask = (
     throw new Error(
       `Benchmark task "${task.taskId}" repeats a required deliverable kind.`,
     );
+  if (
+    Number.isFinite(task.delivery.minRuntimeSeconds) === false ||
+    Number.isFinite(task.delivery.maxRuntimeSeconds) === false ||
+    task.delivery.minRuntimeSeconds < 0 ||
+    task.delivery.maxRuntimeSeconds <= 0
+  )
+    throw new Error(
+      `Benchmark task "${task.taskId}" declares a non-finite or negative runtime window.`,
+    );
   if (task.delivery.minRuntimeSeconds > task.delivery.maxRuntimeSeconds)
     throw new Error(
       `Benchmark task "${task.taskId}" declares an inverted runtime window.`,
@@ -347,7 +398,16 @@ export const validateAutoMovieBenchmarkTask = (
       (mutant) => [`mutant ${mutant.id}`, mutant.band] as const,
     ),
   ])
-    if (band.min > band.max)
+    if (
+      Number.isFinite(band.min) === false ||
+      Number.isFinite(band.max) === false ||
+      band.min < 0 ||
+      band.max > 1
+    )
+      throw new Error(
+        `Benchmark task "${task.taskId}" declares an out-of-range ${label} calibration band. Film-score bands stay inside 0..1.`,
+      );
+    else if (band.min > band.max)
       throw new Error(
         `Benchmark task "${task.taskId}" declares an inverted ${label} calibration band.`,
       );
@@ -355,6 +415,17 @@ export const validateAutoMovieBenchmarkTask = (
   if (new Set(mutantIds).size !== mutantIds.length)
     throw new Error(
       `Benchmark task "${task.taskId}" repeats a calibration mutant id.`,
+    );
+  if (
+    Number.isFinite(task.sandbox.maxElapsedSeconds) === false ||
+    task.sandbox.maxElapsedSeconds <= 0 ||
+    Number.isFinite(task.sandbox.maxCostUsd) === false ||
+    task.sandbox.maxCostUsd < 0 ||
+    Number.isSafeInteger(task.sandbox.maxCorrections) === false ||
+    task.sandbox.maxCorrections < 0
+  )
+    throw new Error(
+      `Benchmark task "${task.taskId}" declares an invalid sandbox budget. Elapsed time must be positive; cost and safe-integer corrections must be non-negative.`,
     );
   return digestBenchmarkValue(task);
 };

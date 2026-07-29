@@ -100,7 +100,11 @@ export const assertAutoMovieBenchmarkRubric = (
     throw new Error(
       `Rubric verdict on ${rubric.runId} carries no evidence address. A reviewed axis names the frames and sources it read.`,
     );
-  if (rubric.score < 0 || rubric.score > 1)
+  if (
+    Number.isFinite(rubric.score) === false ||
+    rubric.score < 0 ||
+    rubric.score > 1
+  )
     throw new Error(
       `Rubric verdict on ${rubric.runId} scores ${rubric.score}, outside the 0..1 rubric range.`,
     );

@@ -127,6 +127,22 @@ export const test_benchmark_surface_report = (): void => {
             [{ ...rubric, score: 2 }],
           ),
         "outside the 0..1 rubric range",
+      ) &&
+      throws(
+        () =>
+          reportAutoMovieBenchmark(
+            [productionVerdict],
+            [{ ...rubric, score: -0.1 }],
+          ),
+        "outside the 0..1 rubric range",
+      ) &&
+      throws(
+        () =>
+          reportAutoMovieBenchmark(
+            [productionVerdict],
+            [{ ...rubric, score: Number.NaN }],
+          ),
+        "outside the 0..1 rubric range",
       ),
   );
   TestValidator.equals(
