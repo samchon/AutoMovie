@@ -1,4 +1,5 @@
 import {
+  IAutoMovieBenchmarkSubmission,
   IAutoMovieBenchmarkSubmissionDraft,
   assertAutoMovieBenchmarkBinding,
   austerlitzSignalDraft,
@@ -34,9 +35,12 @@ const throws = (task: () => unknown, fragment: string): boolean => {
  *    scorer that edits it fails instead of rescoring its own edit.
  * 4. A malformed draft and every physically impossible numeric claim are refused
  *    before they can enter scoring or aggregate generation health.
- * 5. Binding refuses a submission produced for another task, exact task law,
+ * 5. Every public scoring boundary revalidates serialized archive shape, physical
+ *    claims, canonical lifecycle order, and the content-addressed run id
+ *    instead of trusting an in-memory freeze that serialization removes.
+ * 6. Binding refuses a submission produced for another task, exact task law,
  *    brief, or version tuple, and accepts the matching one.
- * 6. A production and a legacy submission of one dry evaluation differ only in the
+ * 7. A production and a legacy submission of one dry evaluation differ only in the
  *    surface they drove; comparing a surface with itself is refused, and a
  *    changed controlled condition is named field by field.
  */
@@ -195,7 +199,57 @@ export const test_benchmark_submission_seal = (): void => {
       ),
   );
 
-  assertAutoMovieBenchmarkBinding(task, reference);
+  const reloaded = JSON.parse(
+    JSON.stringify(reference),
+  ) as IAutoMovieBenchmarkSubmission;
+  assertAutoMovieBenchmarkBinding(task, reloaded);
+  const forgedObservation = {
+    ...reloaded,
+    observations: {
+      ...reloaded.observations,
+      "production:fps": reloaded.observations["production:fps"]! + 1,
+    },
+  };
+  const nonCanonicalLifecycle = {
+    ...reloaded,
+    lifecycle: [...reloaded.lifecycle].reverse(),
+  };
+  TestValidator.predicate(
+    "public scoring revalidates serialized archive integrity",
+    Object.isFrozen(reloaded) === false &&
+      throws(
+        () =>
+          assertAutoMovieBenchmarkBinding(
+            task,
+            {} as IAutoMovieBenchmarkSubmission,
+          ),
+        "Invalid sealed AutoMovie benchmark submission",
+      ) &&
+      throws(
+        () =>
+          assertAutoMovieBenchmarkBinding(task, {
+            ...reloaded,
+            generation: { ...reloaded.generation, costUsd: -1 },
+          }),
+        "generation cost",
+      ) &&
+      throws(
+        () => assertAutoMovieBenchmarkBinding(task, nonCanonicalLifecycle),
+        "canonical lifecycle order",
+      ) &&
+      throws(
+        () => assertAutoMovieBenchmarkBinding(task, forgedObservation),
+        "does not match its archived evidence digest",
+      ) &&
+      throws(
+        () => benchmarkComparisonDrift(forgedObservation, reloaded),
+        "does not match its archived evidence digest",
+      ) &&
+      throws(
+        () => benchmarkComparisonDrift(reloaded, forgedObservation),
+        "does not match its archived evidence digest",
+      ),
+  );
   TestValidator.predicate(
     "binding refuses evidence produced under another law",
     throws(

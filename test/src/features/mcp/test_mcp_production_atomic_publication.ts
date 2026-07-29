@@ -76,6 +76,12 @@ const deliverable = (
  *    staged gate rolls back.
  * 7. Replacing the production state incarnation during the final gate refuses
  *    stale-path rollback into the replacement namespace.
+ * 8. A state-root swap during resident lock acquisition removes the exact lock
+ *    token this failed attempt created in the replacement namespace.
+ * 9. A state-root swap after rollback staging cannot publish previous ledger bytes
+ *    into the replacement namespace.
+ * 10. An opened state root that disappears before mutation is rejected before
+ *     resident lock acquisition.
  */
 export const test_mcp_production_atomic_publication = (): void => {
   const fixture = productionFixture();
@@ -562,6 +568,173 @@ export const test_mcp_production_atomic_publication = (): void => {
         fs
           .readFileSync(path.join(stateRoot, "render-manifest-receipt.json"))
           .equals(replacementReceipt),
+    );
+
+    const lockRaceProject = AutoMovieProductionProject.open(fixture.root);
+    const lockRaceParked = path.join(
+      fixture.root,
+      ".automovie-lock-race-parked",
+    );
+    const lockRaceReplacement = path.join(
+      fixture.root,
+      ".automovie-lock-race-replacement",
+    );
+    fs.cpSync(stateRoot, lockRaceReplacement, { recursive: true });
+    fs.writeFileSync(
+      path.join(lockRaceReplacement, "incarnation.json"),
+      `${JSON.stringify({ version: 1, id: randomUUID() }, null, 2)}\n`,
+    );
+    const residentWriteFileSync = fs.writeFileSync;
+    let lockRootSwapped = false;
+    Reflect.set(
+      fs,
+      "writeFileSync",
+      (
+        file: fs.PathOrFileDescriptor,
+        data: string | NodeJS.ArrayBufferView,
+        ...args: unknown[]
+      ) => {
+        if (
+          lockRootSwapped === false &&
+          path.resolve(String(file)) ===
+            path.resolve(path.join(stateRoot, "revision.lock"))
+        ) {
+          fs.renameSync(stateRoot, lockRaceParked);
+          fs.renameSync(lockRaceReplacement, stateRoot);
+          lockRootSwapped = true;
+        }
+        return (
+          residentWriteFileSync as (
+            target: fs.PathOrFileDescriptor,
+            content: string | NodeJS.ArrayBufferView,
+            ...options: unknown[]
+          ) => void
+        )(file, data, ...args);
+      },
+    );
+    let lockRaceRejected = false;
+    try {
+      lockRaceRejected = throws(
+        () =>
+          lockRaceProject.commitProductionPublication({
+            files: new Map([[relative, second]]),
+            manifest: replacement,
+            expectedRevision: lockRaceProject.revision(),
+          }),
+        "state root identity changed",
+      );
+    } finally {
+      Reflect.set(fs, "writeFileSync", residentWriteFileSync);
+    }
+    TestValidator.predicate(
+      "state replacement during lock acquisition does not retain this attempt's lock",
+      lockRootSwapped &&
+        lockRaceRejected &&
+        fs.existsSync(path.join(stateRoot, "revision.lock")) === false,
+    );
+
+    const missingStateProject = AutoMovieProductionProject.open(fixture.root);
+    const missingStateParked = path.join(
+      fixture.root,
+      ".automovie-missing-race-parked",
+    );
+    fs.renameSync(stateRoot, missingStateParked);
+    const missingStateRejected = throws(
+      () =>
+        missingStateProject.commitProductionDeliverableFiles(
+          "missing-state",
+          new Map([["frame.bin", Buffer.from("unpublished")]]),
+        ),
+      "state root identity changed",
+    );
+    fs.renameSync(missingStateParked, stateRoot);
+    TestValidator.predicate(
+      "an absent opened state root is rejected before lock acquisition",
+      missingStateRejected &&
+        fs.existsSync(path.join(stateRoot, "revision.lock")) === false,
+    );
+
+    const rollbackRaceProject = AutoMovieProductionProject.open(fixture.root);
+    const rollbackRevision = rollbackRaceProject.commitProductionPublication({
+      files: new Map([[relative, first]]),
+      manifest,
+      expectedRevision: rollbackRaceProject.revision(),
+    });
+    const rollbackRaceParked = path.join(
+      fixture.root,
+      ".automovie-rollback-race-parked",
+    );
+    const rollbackRaceReplacement = path.join(
+      fixture.root,
+      ".automovie-rollback-race-replacement",
+    );
+    fs.cpSync(stateRoot, rollbackRaceReplacement, { recursive: true });
+    fs.writeFileSync(
+      path.join(rollbackRaceReplacement, "incarnation.json"),
+      `${JSON.stringify({ version: 1, id: randomUUID() }, null, 2)}\n`,
+    );
+    fs.writeFileSync(
+      path.join(rollbackRaceReplacement, "render-manifest.json"),
+      replacementManifest,
+    );
+    fs.writeFileSync(
+      path.join(rollbackRaceReplacement, "render-manifest-receipt.json"),
+      replacementReceipt,
+    );
+    const residentMkdirSync = fs.mkdirSync;
+    let rollbackStarted = false;
+    let rollbackRootSwapped = false;
+    Reflect.set(
+      fs,
+      "mkdirSync",
+      (directory: fs.PathLike, ...args: unknown[]) => {
+        const output = (
+          residentMkdirSync as (
+            target: fs.PathLike,
+            ...options: unknown[]
+          ) => string | undefined
+        )(directory, ...args);
+        if (
+          rollbackStarted &&
+          rollbackRootSwapped === false &&
+          path.resolve(String(directory)) === path.resolve(stateRoot)
+        ) {
+          fs.renameSync(stateRoot, rollbackRaceParked);
+          fs.renameSync(rollbackRaceReplacement, stateRoot);
+          rollbackRootSwapped = true;
+        }
+        return output;
+      },
+    );
+    let rollbackRaceRejected = false;
+    try {
+      rollbackRaceRejected = throws(
+        () =>
+          rollbackRaceProject.commitProductionPublication({
+            files: new Map([[relative, second]]),
+            manifest: replacement,
+            expectedRevision: rollbackRevision,
+            publicationCurrent: () => {
+              rollbackStarted = true;
+              throw new Error("injected rollback staging race");
+            },
+          }),
+        "rollback was incomplete",
+      );
+    } finally {
+      Reflect.set(fs, "mkdirSync", residentMkdirSync);
+    }
+    TestValidator.predicate(
+      "rollback staging cannot publish into a replacement state root",
+      rollbackRootSwapped &&
+        rollbackRaceRejected &&
+        fs
+          .readFileSync(path.join(stateRoot, "render-manifest.json"))
+          .equals(replacementManifest) &&
+        fs
+          .readFileSync(path.join(stateRoot, "render-manifest-receipt.json"))
+          .equals(replacementReceipt) &&
+        fs.existsSync(path.join(stateRoot, "revision.lock")) === false,
     );
   } finally {
     fixture.dispose();

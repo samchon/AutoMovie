@@ -340,6 +340,44 @@ export const sealAutoMovieBenchmarkSubmission = (
 };
 
 /**
+ * Revalidate a serialized archive before any public scorer consumes it.
+ *
+ * Object freezing protects the in-memory value returned by sealing, but an
+ * archive necessarily loses that runtime property when serialized. Shape,
+ * physical numeric claims, canonical lifecycle order, and the content-addressed
+ * run id therefore have to be proven again at every scoring boundary.
+ */
+const assertAutoMovieBenchmarkSubmissionIntegrity = (
+  submission: IAutoMovieBenchmarkSubmission,
+): void => {
+  const validation =
+    typia.validateEquals<IAutoMovieBenchmarkSubmission>(submission);
+  if (validation.success === false)
+    throw new Error(
+      `Invalid sealed AutoMovie benchmark submission: ${validation.errors
+        .map((error) => `${error.path} expects ${error.expected}`)
+        .join("; ")}.`,
+    );
+  const { runId, ...draft } = validation.data;
+  assertNumericClaims(draft);
+  const canonicalLifecycle = resolveAutoMovieBenchmarkLifecycle(
+    draft.lifecycle,
+  );
+  if (
+    digestBenchmarkValue(canonicalLifecycle) !==
+    digestBenchmarkValue(draft.lifecycle)
+  )
+    throw new Error(
+      `Submission ${runId} does not carry the canonical lifecycle order. Seal the original archive again instead of rescoring edited evidence.`,
+    );
+  const expected = digestBenchmarkValue(draft);
+  if (runId !== expected)
+    throw new Error(
+      `Submission ${runId} does not match its archived evidence digest ${expected}. Restore the sealed archive or rerun the task.`,
+    );
+};
+
+/**
  * Refuse a submission that was not produced under the given task law.
  *
  * A verdict that reads one law against evidence produced under another is not a
@@ -350,6 +388,7 @@ export const assertAutoMovieBenchmarkBinding = (
   task: IAutoMovieBenchmarkTask,
   submission: IAutoMovieBenchmarkSubmission,
 ): void => {
+  assertAutoMovieBenchmarkSubmissionIntegrity(submission);
   if (submission.taskId !== task.taskId)
     throw new Error(
       `Submission ${submission.runId} was produced for task "${submission.taskId}", not "${task.taskId}".`,
@@ -397,6 +436,8 @@ export const benchmarkComparisonDrift = (
   left: IAutoMovieBenchmarkSubmission,
   right: IAutoMovieBenchmarkSubmission,
 ): string[] => {
+  assertAutoMovieBenchmarkSubmissionIntegrity(left);
+  assertAutoMovieBenchmarkSubmissionIntegrity(right);
   const fields = (
     [
       ["taskId", left.taskId, right.taskId],

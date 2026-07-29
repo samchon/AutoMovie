@@ -28,7 +28,10 @@ const png = (width = 16, height = 16): Uint8Array => {
   return PNG.sync.write(image);
 };
 
-/** Review frame inventory rejects malformed, escaping and raced evidence. */
+/**
+ * Review frame inventory rejects malformed, escaping and raced evidence,
+ * including a physical bundle replaced after discovery but before consumption.
+ */
 export const test_mcp_production_review_render_edges =
   async (): Promise<void> => {
     const fixture = productionFixture();
@@ -753,19 +756,15 @@ export const test_mcp_production_review_render_edges =
       );
       fs.mkdirSync(disappearingDirectory, { recursive: true });
       fs.writeFileSync(disappearingManifest, JSON.stringify(baseManifest));
-      const stableReadFileSync = fs.readFileSync;
-      Reflect.set(
-        fs,
-        "readFileSync",
-        (file: fs.PathOrFileDescriptor, ...args: unknown[]) => {
-          if (path.resolve(String(file)) === path.resolve(disappearingManifest))
-            fs.rmSync(disappearingManifest, { force: true });
-          return (stableReadFileSync as (...parameters: unknown[]) => unknown)(
-            file,
-            ...args,
-          );
-        },
-      );
+      const stableOpenSync = fs.openSync;
+      Reflect.set(fs, "openSync", (file: fs.PathLike, ...args: unknown[]) => {
+        if (path.resolve(String(file)) === path.resolve(disappearingManifest))
+          fs.rmSync(disappearingManifest, { force: true });
+        return (stableOpenSync as (...parameters: unknown[]) => number)(
+          file,
+          ...args,
+        );
+      });
       try {
         TestValidator.predicate(
           "a disappearing manifest is invalid rather than absent",
@@ -774,7 +773,7 @@ export const test_mcp_production_review_render_edges =
             .diagnostics.some((item) => item.code === "render-bundle-invalid"),
         );
       } finally {
-        Reflect.set(fs, "readFileSync", stableReadFileSync);
+        Reflect.set(fs, "openSync", stableOpenSync);
       }
 
       const inventoryRaceFixture = (name: string) => {
@@ -899,6 +898,76 @@ export const test_mcp_production_review_render_edges =
         lstatToRealpathRace(1, "Render inventory path") &&
           lstatToRealpathRace(2, "Render inventory directory"),
       );
+
+      const lateImage = new PNG({ width: 16, height: 16 });
+      lateImage.data.fill(180);
+      lateImage.data[0] = 1;
+      lateImage.data[1] = 2;
+      const lateBytes = PNG.sync.write(lateImage);
+      const lateDigest = digestAutoMovieBytes(lateBytes);
+      const lateManifest: IAutoMovieRenderBundleManifest = {
+        ...baseManifest,
+        renderSpec: {
+          ...baseManifest.renderSpec,
+          crf: 49,
+        },
+        frames: [
+          {
+            ...baseFrame,
+            path: "late.png",
+            digest: lateDigest,
+          },
+        ],
+      };
+      const lateBundle = productionRenderBundleRelativePath(lateManifest);
+      project.commitRenderBundle(
+        lateBundle,
+        new Map([["late.png", lateBytes]]),
+        lateManifest,
+      );
+      const lateRoot = path.join(project.renderRoot(), lateBundle);
+      const lateManifestPath = path.join(lateRoot, "manifest.json");
+      const lateParked = `${lateRoot}-parked`;
+      const lateSource = path.join(
+        project.renderRoot(),
+        "review-post-inventory-source",
+      );
+      fs.cpSync(lateRoot, lateSource, { recursive: true });
+      const residentVerifiedManifest =
+        project.verifiedRenderManifest.bind(project);
+      let lateSwapped = false;
+      project.verifiedRenderManifest = ((manifestPath: string) => {
+        if (
+          lateSwapped === false &&
+          path.resolve(manifestPath) === path.resolve(lateManifestPath)
+        ) {
+          fs.renameSync(lateRoot, lateParked);
+          fs.symlinkSync(lateSource, lateRoot, "junction");
+          lateSwapped = true;
+        }
+        return residentVerifiedManifest(manifestPath);
+      }) as typeof project.verifiedRenderManifest;
+      try {
+        const prepared = review.prepare({ target });
+        TestValidator.predicate(
+          "a bundle replaced after inventory cannot become review evidence",
+          lateSwapped &&
+            prepared.frames.every((frame) => frame.digest !== lateDigest) &&
+            prepared.diagnostics.some(
+              (item) =>
+                item.code === "render-bundle-unowned" &&
+                path.resolve(fixture.root, item.path ?? "") ===
+                  path.resolve(lateManifestPath),
+            ),
+        );
+      } finally {
+        project.verifiedRenderManifest =
+          residentVerifiedManifest as typeof project.verifiedRenderManifest;
+        if (lateSwapped) fs.unlinkSync(lateRoot);
+        fs.rmSync(lateSource, { recursive: true, force: true });
+        if (fs.existsSync(lateParked)) fs.renameSync(lateParked, lateRoot);
+        fs.rmSync(lateRoot, { recursive: true, force: true });
+      }
     } finally {
       fixture.dispose();
     }

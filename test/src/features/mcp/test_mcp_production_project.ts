@@ -944,6 +944,201 @@ export const test_mcp_production_project = (): void => {
       throws(() => ownerProject.readRenderFile("read-junction/escape.bin")),
     );
     fs.rmSync(renderReadJunction);
+    const renderFileLink = path.join(
+      ownerProject.renderRoot(),
+      "read-file-link.bin",
+    );
+    fs.symlinkSync(
+      path.join(outsideRenderRead, "escape.bin"),
+      renderFileLink,
+      "file",
+    );
+    const renderParentFile = path.join(
+      ownerProject.renderRoot(),
+      "read-parent-file",
+    );
+    fs.writeFileSync(renderParentFile, "not a directory");
+    TestValidator.predicate(
+      "render reads reject linked files and non-directory ancestry",
+      throws(() => ownerProject.readRenderFile("read-file-link.bin")) &&
+        throws(() =>
+          ownerProject.readRenderFile("read-parent-file/escape.bin"),
+        ),
+    );
+    fs.unlinkSync(renderFileLink);
+    fs.rmSync(renderParentFile);
+
+    const descriptorRace = (
+      replacement: "directory" | "regular" | "symlink",
+    ): boolean => {
+      const directory = path.join(
+        ownerProject.renderRoot(),
+        `read-descriptor-${replacement}`,
+      );
+      const file = path.join(directory, "frame.bin");
+      const parked = `${file}.parked`;
+      fs.mkdirSync(directory);
+      fs.writeFileSync(file, "resident");
+      const nativeOpen = fs.openSync;
+      let swapped = false;
+      fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
+        const descriptor = Reflect.apply(nativeOpen, fs, [target, ...args]);
+        if (
+          swapped === false &&
+          path.resolve(target.toString()) === path.resolve(file)
+        ) {
+          fs.renameSync(file, parked);
+          if (replacement === "directory") fs.mkdirSync(file);
+          else if (replacement === "regular")
+            fs.writeFileSync(file, "replacement");
+          else
+            fs.symlinkSync(
+              path.join(outsideRenderRead, "escape.bin"),
+              file,
+              "file",
+            );
+          swapped = true;
+        }
+        return descriptor;
+      }) as typeof fs.openSync;
+      let rejected = false;
+      try {
+        rejected = throws(() =>
+          ownerProject.readRenderFile(
+            path.relative(ownerProject.renderRoot(), file),
+          ),
+        );
+      } finally {
+        fs.openSync = nativeOpen;
+        if (fs.lstatSync(file).isSymbolicLink()) fs.unlinkSync(file);
+        else fs.rmSync(file, { recursive: true, force: true });
+        fs.renameSync(parked, file);
+        fs.rmSync(directory, { recursive: true, force: true });
+      }
+      return swapped && rejected;
+    };
+    TestValidator.predicate(
+      "an opened descriptor cannot bless a replaced render filename",
+      descriptorRace("symlink") &&
+        descriptorRace("directory") &&
+        descriptorRace("regular"),
+    );
+
+    const ancestryRace = (
+      replacement: "directory" | "junction" | "missing",
+    ): boolean => {
+      const directory = path.join(
+        ownerProject.renderRoot(),
+        `read-ancestry-${replacement}`,
+      );
+      const parked = `${directory}.parked`;
+      const file = path.join(directory, "frame.bin");
+      fs.mkdirSync(directory);
+      fs.writeFileSync(file, "resident");
+      const nativeOpen = fs.openSync;
+      let swapped = false;
+      fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
+        const descriptor = Reflect.apply(nativeOpen, fs, [target, ...args]);
+        if (
+          swapped === false &&
+          path.resolve(target.toString()) === path.resolve(file)
+        ) {
+          fs.renameSync(directory, parked);
+          if (replacement === "directory") {
+            fs.mkdirSync(directory);
+            fs.writeFileSync(file, "replacement");
+          } else if (replacement === "junction")
+            fs.symlinkSync(outsideRenderRead, directory, "junction");
+          swapped = true;
+        }
+        return descriptor;
+      }) as typeof fs.openSync;
+      let rejected = false;
+      try {
+        rejected = throws(() =>
+          ownerProject.readRenderFile(
+            path.relative(ownerProject.renderRoot(), file),
+          ),
+        );
+      } finally {
+        fs.openSync = nativeOpen;
+        if (fs.existsSync(directory)) {
+          if (fs.lstatSync(directory).isSymbolicLink())
+            fs.unlinkSync(directory);
+          else fs.rmSync(directory, { recursive: true, force: true });
+        }
+        fs.renameSync(parked, directory);
+        fs.rmSync(directory, { recursive: true, force: true });
+      }
+      return swapped && rejected;
+    };
+    TestValidator.predicate(
+      "render reads retain exact physical ancestry after opening",
+      ancestryRace("missing") &&
+        ancestryRace("junction") &&
+        ancestryRace("directory"),
+    );
+
+    const afterReadDirectory = path.join(
+      ownerProject.renderRoot(),
+      "read-after-descriptor",
+    );
+    const afterReadFile = path.join(afterReadDirectory, "frame.bin");
+    const afterReadParked = `${afterReadFile}.parked`;
+    fs.mkdirSync(afterReadDirectory);
+    fs.writeFileSync(afterReadFile, "resident");
+    const nativeDescriptorRead = fs.readFileSync;
+    let swappedAfterRead = false;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const bytes = Reflect.apply(nativeDescriptorRead, fs, [target, ...args]);
+      if (swappedAfterRead === false && typeof target === "number") {
+        fs.renameSync(afterReadFile, afterReadParked);
+        fs.writeFileSync(afterReadFile, "replacement");
+        swappedAfterRead = true;
+      }
+      return bytes;
+    }) as typeof fs.readFileSync;
+    let afterReadRejected = false;
+    try {
+      afterReadRejected = throws(() =>
+        ownerProject.readRenderFile("read-after-descriptor/frame.bin"),
+      );
+    } finally {
+      fs.readFileSync = nativeDescriptorRead;
+      fs.rmSync(afterReadFile);
+      fs.renameSync(afterReadParked, afterReadFile);
+      fs.rmSync(afterReadDirectory, { recursive: true, force: true });
+    }
+    const deniedOpenFile = path.join(
+      ownerProject.renderRoot(),
+      "read-open-denied.bin",
+    );
+    fs.writeFileSync(deniedOpenFile, "resident");
+    const nativeDeniedOpen = fs.openSync;
+    fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
+      if (path.resolve(target.toString()) === path.resolve(deniedOpenFile)) {
+        const error = new Error("injected render open denial");
+        Object.assign(error, { code: "EACCES" });
+        throw error;
+      }
+      return Reflect.apply(nativeDeniedOpen, fs, [target, ...args]);
+    }) as typeof fs.openSync;
+    let deniedOpenRejected = false;
+    try {
+      deniedOpenRejected = throws(() =>
+        ownerProject.readRenderFile("read-open-denied.bin"),
+      );
+    } finally {
+      fs.openSync = nativeDeniedOpen;
+      fs.rmSync(deniedOpenFile);
+    }
+    TestValidator.predicate(
+      "render reads revalidate after descriptor I/O and preserve non-absence errors",
+      swappedAfterRead && afterReadRejected && deniedOpenRejected,
+    );
     fs.rmSync(outsideRenderRead, { force: true, recursive: true });
     const deliverableFiles = ownerProject.commitProductionDeliverableFiles(
       "feature*CON",

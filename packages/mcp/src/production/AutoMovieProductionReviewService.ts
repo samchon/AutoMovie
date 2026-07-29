@@ -1574,7 +1574,7 @@ const currentFrames = (
           throw new Error(
             "frame bytes changed after renderer ownership verification",
           );
-        const png = PNG.sync.read(bytes);
+        const png = PNG.sync.read(Buffer.from(bytes));
         const expectedTime = frame.index / manifest.renderSpec.frameFormat.fps;
         if (
           frame.width !== manifest.renderSpec.frameFormat.width ||

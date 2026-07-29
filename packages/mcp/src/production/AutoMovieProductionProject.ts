@@ -101,6 +101,7 @@ export class AutoMovieProductionProject {
   private readonly rootDevice: string;
   private readonly rootInode: string;
   private readonly automovieRoot: string;
+  private readonly automovieIdentity: string;
   private readonly incarnationPath: string;
   private readonly manifestPath: string;
   private readonly revisionPath: string;
@@ -131,6 +132,8 @@ export class AutoMovieProductionProject {
         `Reserved AutoMovie state root "${this.automovieRoot}" is a symlink or junction. Replace it with a physical project directory before opening the project.`,
       );
     this.mkdirOwned(this.automovieRoot);
+    const stateIdentity = fs.statSync(this.automovieRoot, { bigint: true });
+    this.automovieIdentity = fileIdentityKey(stateIdentity);
     for (const directory of DESIGN_DIRECTORIES) {
       const absolute = path.join(this.automovieRoot, directory);
       this.mkdirOwned(absolute);
@@ -666,6 +669,7 @@ export class AutoMovieProductionProject {
   public readRenderFile(relativePath: string): Uint8Array {
     const root = this.renderRoot();
     const file = resolveInside(root, relativePath);
+    const ancestry = acquirePhysicalDirectoryAncestry(root, path.dirname(file));
     const linked = lstatOrNull(file);
     if (linked === null)
       throw new Error(`Render file "${relativePath}" does not exist.`);
@@ -673,12 +677,37 @@ export class AutoMovieProductionProject {
       throw new Error(
         `Render file "${relativePath}" is not a regular file. Replace the link or directory with renderer-owned bytes.`,
       );
-    const real = fs.realpathSync(file);
-    if (isInside(fs.realpathSync(root), real) === false)
-      throw new Error(
-        `Render file "${relativePath}" escapes the render root. Re-render it inside the owned output root.`,
-      );
-    return fs.readFileSync(real);
+    let descriptor: number;
+    try {
+      descriptor = fs.openSync(file, "r");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT")
+        throw new Error(`Render file "${relativePath}" does not exist.`);
+      throw error;
+    }
+    try {
+      const opened = fs.fstatSync(descriptor, { bigint: true });
+      const assertResidentFile = (): void => {
+        assertPhysicalDirectoryAncestry(ancestry);
+        const currentLink = fs.lstatSync(file);
+        if (currentLink.isSymbolicLink() || currentLink.isFile() === false)
+          throw new Error(
+            `Render file "${relativePath}" changed into a link or non-file while it was read.`,
+          );
+        const real = fs.realpathSync(file);
+        const resident = fs.statSync(real, { bigint: true });
+        if (fileIdentityKey(resident) !== fileIdentityKey(opened))
+          throw new Error(
+            `Render file "${relativePath}" changed physical identity inside the render root. Re-render it inside the owned output root.`,
+          );
+      };
+      assertResidentFile();
+      const bytes = fs.readFileSync(descriptor);
+      assertResidentFile();
+      return bytes;
+    } finally {
+      fs.closeSync(descriptor);
+    }
   }
 
   /**
@@ -735,17 +764,10 @@ export class AutoMovieProductionProject {
   ): IAutoMovieRenderBundleManifest | null {
     try {
       const root = this.renderRoot();
-      const linked = lstatOrNull(manifestPath);
-      if (
-        linked === null ||
-        linked.isSymbolicLink() ||
-        linked.isFile() === false
-      )
-        return null;
-      const realRoot = fs.realpathSync(root);
-      const realManifest = fs.realpathSync(manifestPath);
-      if (isInside(realRoot, realManifest) === false) return null;
-      const bytes = fs.readFileSync(realManifest);
+      const relativeManifest = normalizeSlash(
+        path.relative(root, manifestPath),
+      );
+      const bytes = Buffer.from(this.readRenderFile(relativeManifest));
       const validation = typia.validateEquals<IAutoMovieRenderBundleManifest>(
         JSON.parse(bytes.toString("utf8")),
       );
@@ -784,7 +806,7 @@ export class AutoMovieProductionProject {
         if (framePaths.has(normalizedFrame)) return null;
         framePaths.add(normalizedFrame);
         const absoluteFrame = resolveInside(
-          path.dirname(realManifest),
+          path.dirname(manifestPath),
           frame.path,
         );
         const frameBytes = this.readRenderFile(
@@ -1407,13 +1429,26 @@ export class AutoMovieProductionProject {
   }
 
   private assertIncarnation(): void {
+    this.assertStateRootIdentity();
     const current = validateIncarnation(
       readOwnedJson(this.rootReal, this.incarnationPath),
       this.incarnationPath,
     );
+    this.assertStateRootIdentity();
     if (current !== this.incarnation_)
       throw new AutoMovieProductionInputRaceError(
         "Production state incarnation changed. Discard this project handle and open the project again before reading or mutating it.",
+      );
+  }
+
+  private assertStateRootIdentity(): void {
+    const current = physicalDirectoryIdentityOrNull(this.automovieRoot);
+    if (
+      current === null ||
+      directoryIdentityKey(current) !== this.automovieIdentity
+    )
+      throw new AutoMovieProductionInputRaceError(
+        "Production state root identity changed. Discard this project handle and open the physical project state again before reading or mutating it.",
       );
   }
 
@@ -1460,10 +1495,13 @@ export class AutoMovieProductionProject {
           "Production project root identity changed. Discard this project handle and open the physical project again before mutating it.",
         );
       assertProductionRootNamespaceLease(rootLease);
+      this.assertIncarnation();
       const token = acquireCommitLock(this.lockPath);
+      let lockBoundToIncarnation = false;
       try {
         assertProductionRootNamespaceLease(rootLease);
         this.assertIncarnation();
+        lockBoundToIncarnation = true;
         const current = readRevision(this.rootReal, this.revisionPath);
         if (current !== expectedRevision)
           throw new AutoMovieProductionInputRaceError(
@@ -1483,8 +1521,13 @@ export class AutoMovieProductionProject {
           for (const file of staged) {
             assertProductionRootNamespaceLease(rootLease);
             this.assertIncarnation();
-            if (file.content === null) fs.rmSync(file.path, { force: true });
-            else writeAtomic(file.path, file.content);
+            const assertMutationNamespace = (): void => {
+              assertProductionRootNamespaceLease(rootLease);
+              this.assertIncarnation();
+            };
+            if (file.content === null)
+              removeAtomic(file.path, assertMutationNamespace);
+            else writeAtomic(file.path, file.content, assertMutationNamespace);
             assertProductionRootNamespaceLease(rootLease);
             this.assertIncarnation();
             ++applied;
@@ -1505,9 +1548,16 @@ export class AutoMovieProductionProject {
           const nextRevision = current + 1;
           assertProductionRootNamespaceLease(rootLease);
           this.assertIncarnation();
-          writeJsonAtomic(this.revisionPath, {
-            revision: nextRevision,
-          });
+          writeJsonAtomic(
+            this.revisionPath,
+            {
+              revision: nextRevision,
+            },
+            () => {
+              assertProductionRootNamespaceLease(rootLease);
+              this.assertIncarnation();
+            },
+          );
           assertProductionRootNamespaceLease(rootLease);
           this.assertIncarnation();
           this.lastReadRevision_ = nextRevision;
@@ -1527,8 +1577,14 @@ export class AutoMovieProductionProject {
             try {
               assertProductionRootNamespaceLease(rootLease);
               this.assertIncarnation();
-              if (file.previous === null) fs.rmSync(file.path, { force: true });
-              else writeAtomic(file.path, file.previous);
+              const assertRollbackNamespace = (): void => {
+                assertProductionRootNamespaceLease(rootLease);
+                this.assertIncarnation();
+              };
+              if (file.previous === null)
+                removeAtomic(file.path, assertRollbackNamespace);
+              else
+                writeAtomic(file.path, file.previous, assertRollbackNamespace);
               assertProductionRootNamespaceLease(rootLease);
               this.assertIncarnation();
             } catch (rollbackError) {
@@ -1542,15 +1598,21 @@ export class AutoMovieProductionProject {
           throw error;
         }
       } finally {
-        try {
-          assertProductionRootNamespaceLease(rootLease);
-          this.assertIncarnation();
+        if (lockBoundToIncarnation === false)
+          // Acquisition itself reached a replacement state root. The exact
+          // owner token makes this resident cleanup safe; otherwise the new
+          // namespace would inherit a permanent lock created by this attempt.
           releaseCommitLock(this.lockPath, token);
-        } catch {
-          // Release only process-local ownership: never follow a stale
-          // revision-lock path into a replacement root or state incarnation.
-          releaseCommitLock(this.lockPath, token, { unlink: false });
-        }
+        else
+          try {
+            assertProductionRootNamespaceLease(rootLease);
+            this.assertIncarnation();
+            releaseCommitLock(this.lockPath, token);
+          } catch {
+            // Release only process-local ownership: never follow a stale
+            // revision-lock path into a replacement root or state incarnation.
+            releaseCommitLock(this.lockPath, token, { unlink: false });
+          }
       }
     } finally {
       releaseProductionRootNamespace(rootLease);
@@ -2200,20 +2262,48 @@ const diagnosticIdentity = (
 const serializeJson = (value: unknown): string =>
   `${JSON.stringify(value, null, 2)}\n`;
 
-let temporaryNonce = 0;
-const writeAtomic = (file: string, content: Uint8Array): void => {
+const temporaryPath = (file: string, operation: "tmp" | "delete"): string =>
+  `${file}.${operation}.${process.pid}.${randomUUID()}`;
+
+const writeAtomic = (
+  file: string,
+  content: Uint8Array,
+  beforePublish: () => void = () => undefined,
+): void => {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const temporary = `${file}.tmp.${process.pid}.${temporaryNonce++}`;
+  const temporary = temporaryPath(file, "tmp");
   try {
     fs.writeFileSync(temporary, content);
+    beforePublish();
     fs.renameSync(temporary, file);
   } finally {
     fs.rmSync(temporary, { force: true });
   }
 };
 
-const writeJsonAtomic = (file: string, value: unknown): void =>
-  writeAtomic(file, Buffer.from(serializeJson(value), "utf8"));
+const removeAtomic = (file: string, afterQuarantine: () => void): void => {
+  if (lstatOrNull(file) === null) {
+    afterQuarantine();
+    return;
+  }
+  const quarantine = temporaryPath(file, "delete");
+  fs.renameSync(file, quarantine);
+  try {
+    afterQuarantine();
+    fs.rmSync(quarantine, { force: true });
+  } catch (error) {
+    if (lstatOrNull(quarantine) !== null && lstatOrNull(file) === null)
+      fs.renameSync(quarantine, file);
+    throw error;
+  }
+};
+
+const writeJsonAtomic = (
+  file: string,
+  value: unknown,
+  beforePublish?: () => void,
+): void =>
+  writeAtomic(file, Buffer.from(serializeJson(value), "utf8"), beforePublish);
 
 const lstatOrNull = (file: string): fs.Stats | null => {
   try {
@@ -2229,6 +2319,89 @@ const lstatOrNull = (file: string): fs.Stats | null => {
     throw error;
   }
 };
+
+interface IPhysicalDirectoryIdentity {
+  device: string;
+  inode: string;
+}
+
+interface IPhysicalDirectoryAncestry {
+  directories: ReadonlyArray<
+    IPhysicalDirectoryIdentity & {
+      path: string;
+    }
+  >;
+}
+
+const physicalDirectoryIdentityOrNull = (
+  directory: string,
+): IPhysicalDirectoryIdentity | null => {
+  const linked = lstatOrNull(directory);
+  if (
+    linked === null ||
+    linked.isSymbolicLink() ||
+    linked.isDirectory() === false
+  )
+    return null;
+  const status = fs.statSync(directory, { bigint: true });
+  return {
+    device: status.dev.toString(),
+    inode: status.ino.toString(),
+  };
+};
+
+const acquirePhysicalDirectoryAncestry = (
+  root: string,
+  directory: string,
+): IPhysicalDirectoryAncestry => {
+  const rootPath = path.resolve(root);
+  const candidate = path.resolve(directory);
+  const relative = path.relative(rootPath, candidate);
+  const directories: Array<
+    IPhysicalDirectoryIdentity & {
+      path: string;
+    }
+  > = [];
+  let current = rootPath;
+  for (const segment of [
+    "",
+    ...(relative === "" ? [] : relative.split(path.sep)),
+  ]) {
+    if (segment !== "") current = path.join(current, segment);
+    const identity = physicalDirectoryIdentityOrNull(current);
+    if (identity === null)
+      throw new Error(
+        `Render directory "${current}" is not a physical directory.`,
+      );
+    directories.push({
+      path: current,
+      ...identity,
+    });
+  }
+  return { directories };
+};
+
+const assertPhysicalDirectoryAncestry = (
+  ancestry: IPhysicalDirectoryAncestry,
+): void => {
+  const changed = ancestry.directories.find((expected) => {
+    const current = physicalDirectoryIdentityOrNull(expected.path);
+    return (
+      current === null ||
+      directoryIdentityKey(current) !== directoryIdentityKey(expected)
+    );
+  });
+  if (changed !== undefined)
+    throw new Error(
+      `Render directory "${changed.path}" changed physical identity while evidence was read.`,
+    );
+};
+
+const fileIdentityKey = (status: fs.BigIntStats): string =>
+  `${status.dev}\0${status.ino}`;
+
+const directoryIdentityKey = (identity: IPhysicalDirectoryIdentity): string =>
+  `${identity.device}\0${identity.inode}`;
 
 const assertOwnedRegularFile = (rootReal: string, file: string): void => {
   const linked = lstatOrNull(file);
