@@ -21,6 +21,9 @@ import fs from "node:fs";
  *   process waits out its own timeout and reports itself as the contender. The
  *   cross-session law is untouched: a foreign token is still never stolen, and
  *   the file is removed only when the outermost release runs.
+ * - **Namespace retirement is explicit.** An owner that atomically removes the
+ *   namespace containing its lock may retire every matching process-local
+ *   nesting level without following the now-stale resident path.
  */
 
 let lockNonce = 0;
@@ -71,16 +74,18 @@ export const acquireCommitLock = (lockPath: string): string => {
  * foreign token would delete another session's lock (#1257). A vanished lock is
  * a no-op. Pass `unlink: false` after a namespace-identity failure to release
  * only this process's re-entrant ownership without following the resident path
- * into a replacement root.
+ * into a replacement root. Pass `retire: true` only when the owning operation
+ * removed the complete lock namespace; this invalidates every matching nesting
+ * level because none can still own the deleted physical lock.
  */
 export const releaseCommitLock = (
   lockPath: string,
   token: string,
-  options: { unlink?: boolean } = {},
+  options: { unlink?: boolean; retire?: boolean } = {},
 ): void => {
   const current = held.get(lockPath);
   if (current !== undefined && current.token === token) {
-    if (--current.depth !== 0) return;
+    if (options.retire !== true && --current.depth !== 0) return;
     held.delete(lockPath);
   }
   if (options.unlink === false) return;
