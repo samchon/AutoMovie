@@ -1648,6 +1648,38 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     });
     if (edgeAudioProbe.kind !== "audio")
       throw new Error("The compiler edge fixture requires parsed AAC audio.");
+    // Every edge deliverable below is measured against the production runtime,
+    // and that runtime is the parsed audio's so the valid audio-mix case can
+    // match its own bytes. The compiled film now answers to the same target, so
+    // the edit has to end there too: the shot is longer, and the segment trims.
+    fs.writeFileSync(
+      path.join(fixture.root, "src/film.ts"),
+      `import type { IAutoMovieFilmSource } from "@automovie/interface";
+
+export const film = {
+  build(context) {
+    return {
+      id: context.production.id,
+      omissions: [],
+      tracks: {
+        video: [{
+          shot: "opening",
+          sourceIn: { frame: 0 },
+          sourceOut: { seconds: ${edgeAudioProbe.runtimeSeconds} },
+          start: { frame: 0 },
+          handles: { head: { frame: 0 }, tail: { frame: 0 } },
+          transitionIn: { kind: "cut" },
+          transitionOut: { kind: "cut" },
+        }],
+        audio: [],
+        captions: [],
+        effects: [],
+      },
+    };
+  },
+} satisfies IAutoMovieFilmSource;
+`,
+    );
     const edgeProduction = {
       ...productionDesign(),
       targetRuntimeSeconds: edgeAudioProbe.runtimeSeconds,

@@ -4,6 +4,7 @@ import {
   AutoMovieProductionOracleService,
   AutoMovieProductionProject,
   AutoMovieProductionReviewService,
+  compareCodeUnits,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
   productionRenderTargetFingerprint,
@@ -114,10 +115,15 @@ export const test_mcp_production_review_render_edges =
       TestValidator.equals(
         "review inventory refuses stale output but preserves target-identical frames after recompile",
         {
+          preparedHasFrames: prepared.frames.length > 0,
           staleFrames: stalePrepared.frames.length,
           reportsStale: stalePrepared.diagnostics.some(
             (diagnostic) => diagnostic.code === "review-evidence-stale",
           ),
+          restoredHasFrames: restoredPrepared.frames.length > 0,
+          restoredCodes: [
+            ...new Set(restoredPrepared.diagnostics.map((item) => item.code)),
+          ].sort(compareCodeUnits),
           preservesTargetIdenticalFrame: restoredPrepared.frames.some(
             (candidate) =>
               candidate.digest === prepared.frames[0]?.digest &&
@@ -125,8 +131,11 @@ export const test_mcp_production_review_render_edges =
           ),
         },
         {
+          preparedHasFrames: true,
           staleFrames: 0,
           reportsStale: true,
+          restoredHasFrames: true,
+          restoredCodes: [],
           preservesTargetIdenticalFrame: true,
         },
       );
