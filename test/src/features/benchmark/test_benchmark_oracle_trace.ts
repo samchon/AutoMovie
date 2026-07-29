@@ -81,7 +81,7 @@ const throws = (task: () => unknown, fragment: string): boolean => {
  *    sequence gap, moves time backwards, or claims an impossible number is
  *    refused as corruption rather than read as truncation.
  * 6. Verdict scores are finite and inside `0..1`, with `null` reserved exactly for
- *    infrastructure exclusion.
+ *    infrastructure exclusion and exact zero required for gate failure.
  * 7. The archived event kinds are reported in code-unit order.
  */
 export const test_benchmark_oracle_trace = (): void => {
@@ -256,6 +256,17 @@ export const test_benchmark_oracle_trace = (): void => {
             { ...all[4]!, filmScore: 1.1 },
           ]),
         "inside 0..1",
+      ) &&
+      throws(
+        () =>
+          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+            {
+              ...all[4]!,
+              outcome: "gate-failed",
+              filmScore: 0.7,
+            },
+          ]),
+        "must have filmScore 0",
       ),
   );
 

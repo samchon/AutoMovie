@@ -127,7 +127,7 @@ export type IAutoMovieBenchmarkTraceEvent = IAutoMovieBenchmarkTraceHeader &
         kind: "verdict";
         /** Verdict taxonomy outcome. */
         outcome: "scored" | "gate-failed" | "infra-excluded";
-        /** Film score, or `null` when the run was excluded. */
+        /** Scored value, exact zero for gate failure, or `null` when excluded. */
         filmScore: number | null;
       }
   );
@@ -179,6 +179,10 @@ const assertAutoMovieBenchmarkTraceNumbers = (
     )
       throw new Error(
         "Benchmark trace filmScore must be a finite number inside 0..1.",
+      );
+    if (event.outcome === "gate-failed" && event.filmScore !== 0)
+      throw new Error(
+        "Benchmark trace gate-failed verdicts must have filmScore 0.",
       );
   }
 };

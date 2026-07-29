@@ -537,6 +537,27 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const outsideTimelineFilmReview = reviewWithFixedStatus.prepare({
       target: { kind: "film", id: "fixture-film" },
     });
+    const unknownFrameAcceptance = structuredClone(acceptanceScenarios()[0]!);
+    unknownFrameAcceptance.id = "unknown-resident-frame";
+    unknownFrameAcceptance.target = {
+      kind: "film",
+      id: "fixture-film",
+    };
+    if (unknownFrameAcceptance.criterion.kind !== "frame")
+      throw new Error("opening beauty fixture is not a frame criterion");
+    unknownFrameAcceptance.criterion.frame = "absent-review-frame";
+    const graphWithUnknownFrameAcceptance = {
+      ...currentGraph,
+      acceptance: new Map([
+        ...currentGraph.acceptance,
+        [unknownFrameAcceptance.id, unknownFrameAcceptance] as const,
+      ]),
+    };
+    project.graph = (() =>
+      graphWithUnknownFrameAcceptance) as typeof project.graph;
+    const unknownFrameFilmReview = reviewWithFixedStatus.prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
     const graphWithoutTimelineShot = {
       ...currentGraph,
       shots: new Map(
@@ -568,6 +589,9 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const ambiguousEventOutcome = reviewWithFixedStatus.prepare({
       target: { kind: "film", id: "fixture-film" },
     });
+    const ambiguousEventSubmission = reviewWithFixedStatus.submit(
+      worksheet(project, ambiguousEventOutcome),
+    );
     fs.rmSync(ambiguousEventFile);
     TestValidator.predicate(
       "missing, malformed and unscoped compiler outcomes fail review preparation",
@@ -592,10 +616,14 @@ export const test_mcp_production_review = async (): Promise<void> => {
         outsideTimelineFilmReview.outcomes.every(
           (outcome) => outcome.scenario !== outsideTimelineAcceptance.id,
         ) &&
+        unknownFrameFilmReview.fingerprint.startsWith("sha256:") &&
         missingTimelineShotReview.outcomes.every(
           (outcome) =>
             outcome.scenario !== "opening-beauty" &&
             outcome.scenario !== "opening-pose",
+        ) &&
+        ambiguousEventSubmission.diagnostics.some(
+          (diagnostic) => diagnostic.code === "review-outcome-missing",
         ),
     );
     const contractOnlyWorksheet = worksheet(project, aliasedFrameEvidence);

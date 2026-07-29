@@ -2095,6 +2095,54 @@ export const test_mcp_production_project = (): void => {
     } finally {
       fs.renameSync(parkedMissingIdentityRoot, missingIdentityRoot);
     }
+    const acquiredReplacementRoot = path.join(
+      invalidRoot,
+      "acquired-replacement-root",
+    );
+    const acquiredReplacementProject = AutoMovieProductionProject.open(
+      acquiredReplacementRoot,
+    );
+    const parkedAcquiredReplacementRoot = `${acquiredReplacementRoot}-parked`;
+    let acquiredReplacementSwapped = false;
+    const racingFiles = new Map([
+      ["frame.bin", Buffer.from("unsafe")] as const,
+    ]);
+    const residentFileIterator = racingFiles[Symbol.iterator].bind(racingFiles);
+    racingFiles[Symbol.iterator] = () => {
+      if (acquiredReplacementSwapped === false) {
+        acquiredReplacementSwapped = true;
+        fs.renameSync(acquiredReplacementRoot, parkedAcquiredReplacementRoot);
+        fs.cpSync(parkedAcquiredReplacementRoot, acquiredReplacementRoot, {
+          recursive: true,
+        });
+      }
+      return residentFileIterator();
+    };
+    const acquiredReplacementRejected = throws(
+      () =>
+        acquiredReplacementProject.commitProductionDeliverableFiles(
+          "acquired-replacement",
+          racingFiles,
+        ),
+      "root identity changed",
+    );
+    const acquiredReplacementUntouched =
+      fs.existsSync(
+        path.join(
+          acquiredReplacementRoot,
+          "renders/deliverables/acquired-replacement/frame.bin",
+        ),
+      ) === false;
+    if (acquiredReplacementSwapped) {
+      fs.rmSync(acquiredReplacementRoot, { force: true, recursive: true });
+      fs.renameSync(parkedAcquiredReplacementRoot, acquiredReplacementRoot);
+    }
+    TestValidator.predicate(
+      "a replacement acquired after argument staging is rejected against the open handle identity",
+      acquiredReplacementSwapped &&
+        acquiredReplacementRejected &&
+        acquiredReplacementUntouched,
+    );
     const preLeaseRoot = path.join(invalidRoot, "pre-lease-root-race");
     const preLeaseProject = AutoMovieProductionProject.open(preLeaseRoot);
     const preLeaseBytes = Buffer.from("before");

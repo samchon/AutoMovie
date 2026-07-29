@@ -113,6 +113,30 @@ const equalFiles = (
     Buffer.from(right.get(file) ?? []).equals(Buffer.from(bytes)),
   );
 
+const rejectsTamperedRollbackBaseline = (
+  prepare: (root: string) => void,
+  mutate: (plan: IAutoMovieLegacyImportPlan) => void,
+): boolean => {
+  const fixture = createLegacy();
+  try {
+    prepare(fixture.root);
+    const importer = new AutoMovieLegacyImporter(fixture.root);
+    importer.apply();
+    const planPath = path.join(
+      fixture.root,
+      ".automovie/imports/legacy-v1/plan.json",
+    );
+    const plan = JSON.parse(
+      fs.readFileSync(planPath, "utf8"),
+    ) as IAutoMovieLegacyImportPlan;
+    mutate(plan);
+    fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`);
+    return throws(() => importer.rollback(), "changed after import");
+  } finally {
+    fixture.dispose();
+  }
+};
+
 /**
  * Legacy import plans, applies, reopens, and rolls back without byte loss.
  *
@@ -125,6 +149,8 @@ const equalFiles = (
  * 3. A pre-existing owned directory that disappears after import must be restored
  *    before rollback, while an unexpected filesystem denial propagates instead
  *    of being misclassified as absence.
+ * 4. Actorless shots retain their camera subject, and canonical rollback plans
+ *    reject wrong roots, escaping directories, and duplicate file entries.
  */
 export const test_mcp_production_legacy_import = (): void => {
   const fixture = createLegacy();
@@ -202,6 +228,22 @@ export const test_mcp_production_legacy_import = (): void => {
     );
   } finally {
     fixture.dispose();
+  }
+
+  const actorless = createLegacy();
+  try {
+    AutoMovieProject.open(actorless.root).saveSlate({
+      ...slate,
+      shots: [{ ...shot, performances: [] }],
+    });
+    TestValidator.equals(
+      "an actorless legacy shot keeps its camera as the required subject",
+      new AutoMovieLegacyImporter(actorless.root).plan().shotContractDrafts[0]
+        ?.camera.requiredSubjects,
+      [shot.camera],
+    );
+  } finally {
+    actorless.dispose();
   }
 
   const empty = fs.mkdtempSync(
@@ -342,6 +384,40 @@ export const test_mcp_production_legacy_import = (): void => {
   } finally {
     tampered.dispose();
   }
+
+  TestValidator.predicate(
+    "rollback plans reject a baseline in the wrong canonical slot",
+    rejectsTamperedRollbackBaseline(
+      () => {},
+      (plan) => {
+        plan.rollbackBaseline[0]!.path = "generated";
+      },
+    ),
+  );
+  TestValidator.predicate(
+    "rollback plans reject an escaping baseline directory",
+    rejectsTamperedRollbackBaseline(
+      (root) => {
+        fs.mkdirSync(path.join(root, "src/nested"), { recursive: true });
+      },
+      (plan) => {
+        plan.rollbackBaseline[0]!.directories[0] = "src/../escape";
+      },
+    ),
+  );
+  TestValidator.predicate(
+    "rollback plans reject duplicate baseline files",
+    rejectsTamperedRollbackBaseline(
+      (root) => {
+        fs.mkdirSync(path.join(root, "src"));
+        fs.writeFileSync(path.join(root, "src/baseline.ts"), "export {};\n");
+      },
+      (plan) => {
+        const file = plan.rollbackBaseline[0]!.files[0]!;
+        plan.rollbackBaseline[0]!.files = [file, file];
+      },
+    ),
+  );
 
   const tamperedState = createLegacy();
   try {
@@ -1060,6 +1136,25 @@ export const test_mcp_production_legacy_import = (): void => {
     invalidRollbackBaseline.dispose();
   }
 
+  const requiredLegacyDirectory = createLegacy();
+  try {
+    const manifestPath = path.join(
+      requiredLegacyDirectory.root,
+      "automovie.json",
+    );
+    fs.rmSync(manifestPath);
+    fs.mkdirSync(manifestPath);
+    TestValidator.predicate(
+      "a required legacy project file must remain a regular file",
+      throws(
+        () => new AutoMovieLegacyImporter(requiredLegacyDirectory.root).plan(),
+        "not a regular file",
+      ),
+    );
+  } finally {
+    requiredLegacyDirectory.dispose();
+  }
+
   const collidingCase = createLegacy();
   try {
     fs.writeFileSync(path.join(collidingCase.root, "actors/Officer.txt"), "A");
@@ -1213,6 +1308,75 @@ export const test_mcp_production_legacy_import = (): void => {
       changingLock.dispose();
       fs.rmSync(outsideLock, { force: true, recursive: true });
     }
+  }
+
+  const mismatchedRollbackLock = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(mismatchedRollbackLock.root);
+    importer.apply();
+    const lockPath = path.join(
+      mismatchedRollbackLock.root,
+      ".automovie/revision.lock",
+    );
+    const nativeRead = fs.readFileSync;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown =>
+      typeof file !== "number" && path.resolve(file.toString()) === lockPath
+        ? Buffer.from("foreign-owner")
+        : Reflect.apply(nativeRead, fs, [
+            file,
+            ...args,
+          ])) as typeof fs.readFileSync;
+    try {
+      TestValidator.predicate(
+        "rollback verifies the exact resident lock token",
+        throws(() => importer.rollback(), "changed after import"),
+      );
+    } finally {
+      fs.readFileSync = nativeRead;
+    }
+  } finally {
+    mismatchedRollbackLock.dispose();
+  }
+
+  const linkedAppliedState = createLegacy();
+  const linkedAppliedStateTarget = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-linked-applied-state-"),
+  );
+  try {
+    const importer = new AutoMovieLegacyImporter(linkedAppliedState.root);
+    importer.apply();
+    const linkedPath = path.join(linkedAppliedState.root, ".automovie/linked");
+    const target = path.join(linkedAppliedStateTarget, "outside.txt");
+    fs.writeFileSync(target, "outside");
+    fs.symlinkSync(target, linkedPath);
+    TestValidator.predicate(
+      "symbolic links cannot enter an applied import state tree",
+      throws(() => importer.rollback(), "changed after import"),
+    );
+  } finally {
+    linkedAppliedState.dispose();
+    fs.rmSync(linkedAppliedStateTarget, { force: true, recursive: true });
+  }
+
+  const directoryImportPlan = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(directoryImportPlan.root);
+    importer.apply();
+    const planPath = path.join(
+      directoryImportPlan.root,
+      ".automovie/imports/legacy-v1/plan.json",
+    );
+    fs.rmSync(planPath);
+    fs.mkdirSync(planPath);
+    TestValidator.predicate(
+      "import metadata must remain a physical regular file",
+      throws(() => importer.rollback(), "not a physical file"),
+    );
+  } finally {
+    directoryImportPlan.dispose();
   }
 
   const specialAppliedState = createLegacy();
