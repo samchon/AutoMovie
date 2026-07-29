@@ -226,13 +226,13 @@ export class AutoMovieApplication {
 
   /**
    * Validate and atomically replace the singleton named production world after
-   * `WORLD_DESIGN` is read. The world gives terrain, surfaces, landmarks and
-   * other spatial facts stable identifiers that source code and geometry
-   * queries can share. It remains an MCP-owned record because later ground,
-   * distance and camera answers must come from one validated world rather than
-   * coordinates independently invented in prose and code. Send the complete
-   * world, not a patch. Rejection preserves current state; this tool does not
-   * stage actors, author action or render scenery.
+   * `WORLD_DESIGN` is read. The world gives terrain, surfaces, landmarks,
+   * routes, and bounded effect recipes and zones stable identifiers that source
+   * code and geometry queries can share. It remains an MCP-owned record because
+   * later ground, distance, camera, and effect answers must come from one
+   * validated world rather than coordinates independently invented in prose and
+   * code. Send the complete world, not a patch. Rejection preserves current
+   * state; this tool does not stage actors, author action or render scenery.
    */
   public setWorldDesign(
     props: IAutoMovieSetWorldDesign.IProps,
@@ -327,12 +327,13 @@ export class AutoMovieApplication {
    * Compile current validated design and coding-agent TypeScript through the
    * requested atomic gate after `COMPILATION` is read. Source runs in the
    * deterministic no-I/O compiler boundary; AutoMovie materializes primitive
-   * models, formation slots, shots and contract realization, validates them
-   * with engine rules, and owns the generated manifest and fingerprints. This
-   * must be an MCP tool because only the engine can authoritatively bind
-   * current repository bytes to generated identity. A failed gate returns
-   * diagnostics without publishing a partial generation. It does not render the
-   * movie or write the agent's source.
+   * models, compact formation runtimes, promoted heroes, bounded effect
+   * streams, shots and contract realization, validates them with engine rules,
+   * and owns the generated manifest and fingerprints. This must be an MCP tool
+   * because only the engine can authoritatively bind current repository bytes
+   * to generated identity. A failed gate returns diagnostics without publishing
+   * a partial generation. It does not render the movie or write the agent's
+   * source.
    */
   public compileProject(
     props: IAutoMovieCompileProject.IProps,
@@ -342,14 +343,14 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Answer one bounded distance, reach, resolved-pose, ground, formation or
-   * camera question from the current compiled production after `GEOMETRY` is
-   * read. Use it when physics or spatial feedback is materially safer than
-   * estimating coordinates in source. The result is derived from engine math,
-   * semantic selectors and the active generated fingerprint, which is why this
-   * oracle belongs in MCP. Missing or stale compilation returns diagnostics and
-   * no guessed result. It is read-only: it does not move actors, rewrite a
-   * shot, persist a pose or certify artistic quality.
+   * Answer one bounded distance, reach, resolved-pose, ground, formation,
+   * effect, or camera question from the current compiled production after
+   * `GEOMETRY` is read. Use it when physics or spatial feedback is materially
+   * safer than estimating coordinates in source. The result is derived from
+   * engine math, semantic selectors and the active generated fingerprint, which
+   * is why this oracle belongs in MCP. Missing or stale compilation returns
+   * diagnostics and no guessed result. It is read-only: it does not move
+   * actors, rewrite a shot, persist a pose or certify artistic quality.
    */
   public queryGeometry(
     props: IAutoMovieQueryGeometry.IProps,

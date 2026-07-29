@@ -158,6 +158,7 @@ const CORPUS: ReadonlyArray<readonly [AutoMovieGuideName, string]> = [
   ["PRODUCTION_DESIGN", "stores global invariants"],
   ["MODEL_RECIPE", "stores a bounded primitive recipe"],
   ["MODEL_RECIPE", "only `stickman` accepts `signal`"],
+  ["MODEL_RECIPE", "automatically selects anonymous formation"],
   ["WORLD_DESIGN", "stores queryable space"],
   ["WORLD_DESIGN", "bounded deterministic fog, smoke, or dust billboards"],
   ["FORMATION_DESIGN", "represents a unit, not thousands"],
