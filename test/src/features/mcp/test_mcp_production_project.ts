@@ -1923,6 +1923,48 @@ export const test_mcp_production_project = (): void => {
           ),
         ) === false,
     );
+    const mutationRoot = path.join(invalidRoot, "mutation-root");
+    const mutationProject = AutoMovieProductionProject.open(mutationRoot);
+    const mutationFrame = path.join(
+      mutationRoot,
+      "renders/deliverables/root-swap/frame.bin",
+    );
+    const parkedMutationRoot = `${mutationRoot}-parked`;
+    const nativeRenameForMutationSwap = fs.renameSync;
+    let mutationRootSwapped = false;
+    fs.renameSync = ((oldPath, newPath) => {
+      if (
+        mutationRootSwapped === false &&
+        path.resolve(newPath.toString()) === path.resolve(mutationFrame)
+      ) {
+        mutationRootSwapped = true;
+        nativeRenameForMutationSwap(mutationRoot, parkedMutationRoot);
+        fs.mkdirSync(mutationRoot);
+      }
+      return nativeRenameForMutationSwap(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let mutationSwapRejected = false;
+    try {
+      mutationProject.commitProductionDeliverableFiles(
+        "root-swap",
+        new Map([["frame.bin", Buffer.from("unsafe")]]),
+      );
+    } catch (error) {
+      mutationSwapRejected =
+        error instanceof AggregateError &&
+        error.message.includes("No stale-path rollback was attempted");
+    } finally {
+      fs.renameSync = nativeRenameForMutationSwap;
+    }
+    const replacementUntouched = fs.existsSync(mutationFrame) === false;
+    if (mutationRootSwapped) {
+      fs.rmSync(mutationRoot, { force: true, recursive: true });
+      fs.renameSync(parkedMutationRoot, mutationRoot);
+    }
+    TestValidator.predicate(
+      "a root swapped during publication refuses rollback and stale lock release in the replacement",
+      mutationRootSwapped && mutationSwapRejected && replacementUntouched,
+    );
     TestValidator.predicate(
       "every absent design discriminator returns one missing mutation",
       [
