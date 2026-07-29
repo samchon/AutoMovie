@@ -1915,7 +1915,6 @@ const readJsonIfPresent = (
       ).toString("utf8"),
     ) as unknown;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     return { invalidJson: String(error) };
   }
 };

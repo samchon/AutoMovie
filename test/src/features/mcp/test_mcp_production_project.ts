@@ -2376,7 +2376,7 @@ export const test_mcp_production_project = (): void => {
             "pre-lease",
             new Map([["frame.bin", Buffer.from("after")]]),
           ),
-        "root or namespace fence changed",
+        "namespace fence changed",
       );
     } finally {
       fs.readFileSync = nativeReadForPreLease;
@@ -2390,6 +2390,69 @@ export const test_mcp_production_project = (): void => {
     TestValidator.predicate(
       "a root replaced while staging under the namespace lease is refused without mutation",
       preLeaseSwapped && preLeaseRejected && preLeaseReplacementUntouched,
+    );
+    const atomicDeleteModel = {
+      ...modelRecipe(),
+      id: "atomic-delete-recovery",
+    };
+    TestValidator.predicate(
+      "atomic delete recovery fixture is accepted",
+      initialized.setModelRecipe(atomicDeleteModel).accepted,
+    );
+    const atomicDeleteTarget = path.join(
+      fresh,
+      ".automovie/design/models/atomic-delete-recovery.json",
+    );
+    const atomicDeleteBytes = fs.readFileSync(atomicDeleteTarget);
+    const atomicDeleteRevision = initialized.revision();
+    const nativeRmForAtomicDelete = fs.rmSync;
+    let quarantineDeleteDenied = false;
+    Reflect.set(fs, "rmSync", (file: fs.PathLike, ...args: unknown[]) => {
+      if (
+        quarantineDeleteDenied === false &&
+        path
+          .resolve(String(file))
+          .startsWith(`${path.resolve(atomicDeleteTarget)}.delete.`)
+      ) {
+        quarantineDeleteDenied = true;
+        throw new Error("injected quarantine delete denial");
+      }
+      return (nativeRmForAtomicDelete as (...parameters: unknown[]) => void)(
+        file,
+        ...args,
+      );
+    });
+    let atomicDeleteRejected = false;
+    try {
+      atomicDeleteRejected = throws(
+        () =>
+          initialized.eraseDesignArtifact({
+            kind: "model",
+            id: atomicDeleteModel.id,
+          }),
+        "injected quarantine delete denial",
+      );
+    } finally {
+      Reflect.set(fs, "rmSync", nativeRmForAtomicDelete);
+    }
+    TestValidator.predicate(
+      "a failed quarantine cleanup restores the exact deleted file and revision",
+      quarantineDeleteDenied &&
+        atomicDeleteRejected &&
+        fs.readFileSync(atomicDeleteTarget).equals(atomicDeleteBytes) &&
+        initialized.revision() === atomicDeleteRevision &&
+        fs
+          .readdirSync(path.dirname(atomicDeleteTarget))
+          .every(
+            (entry) =>
+              entry.startsWith(
+                `${path.basename(atomicDeleteTarget)}.delete.`,
+              ) === false,
+          ) &&
+        initialized.eraseDesignArtifact({
+          kind: "model",
+          id: atomicDeleteModel.id,
+        }).accepted,
     );
     const mutationRoot = path.join(invalidRoot, "mutation-root");
     const mutationProject = AutoMovieProductionProject.open(mutationRoot);

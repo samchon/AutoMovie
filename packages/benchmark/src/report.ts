@@ -127,6 +127,45 @@ const mean = (values: readonly number[]): number | null =>
     : values.reduce((sum, value) => sum + value, 0) / values.length;
 
 /**
+ * Refuse duplicate runs and verdicts produced under different laws.
+ *
+ * A surface mean has one denominator and one evaluation law. Counting the same
+ * content-addressed run twice inflates that denominator, while averaging scores
+ * across task or harness versions turns two different questions into one
+ * leaderboard number.
+ */
+const assertAutoMovieBenchmarkReportCohort = (
+  verdicts: readonly IAutoMovieBenchmarkVerdict[],
+): void => {
+  const duplicate = verdicts.find(
+    (verdict, index) =>
+      verdicts.findIndex((candidate) => candidate.runId === verdict.runId) !==
+      index,
+  );
+  if (duplicate !== undefined)
+    throw new Error(
+      `Benchmark report repeats run ${duplicate.runId}. One archived run enters the denominator once.`,
+    );
+  const reference = verdicts[0];
+  if (reference === undefined) return;
+  for (const verdict of verdicts.slice(1)) {
+    const drift = [
+      ...(reference.taskId === verdict.taskId
+        ? []
+        : [`taskId: ${reference.taskId} -> ${verdict.taskId}`]),
+      ...(reference.taskDigest === verdict.taskDigest
+        ? []
+        : [`taskDigest: ${reference.taskDigest} -> ${verdict.taskDigest}`]),
+      ...benchmarkVersionDrift(reference.versions, verdict.versions),
+    ];
+    if (drift.length !== 0)
+      throw new Error(
+        `Benchmark report mixes incomparable run ${verdict.runId} with ${reference.runId}: ${drift.join("; ")}. Build one report per task law and harness.`,
+      );
+  }
+};
+
+/**
  * Aggregate verdicts per surface, with infrastructure out of the denominator.
  *
  * Excluding infrastructure is what makes the leaderboard about the product: a
@@ -137,6 +176,7 @@ export const reportAutoMovieBenchmark = (
   verdicts: readonly IAutoMovieBenchmarkVerdict[],
   rubric: readonly IAutoMovieBenchmarkRubricVerdict[] = [],
 ): IAutoMovieBenchmarkReport => {
+  assertAutoMovieBenchmarkReportCohort(verdicts);
   const runIds = new Set(verdicts.map((verdict) => verdict.runId));
   for (const item of rubric) {
     assertAutoMovieBenchmarkRubric(item);

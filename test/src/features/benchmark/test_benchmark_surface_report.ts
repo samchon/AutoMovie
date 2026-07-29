@@ -34,10 +34,12 @@ const throws = (task: () => unknown, fragment: string): boolean => {
  *    lowers nor raises the surface it belonged to.
  * 3. A surface whose every run was excluded reports an empty denominator and no
  *    means at all rather than zeros.
- * 4. A rubric verdict without concrete evidence, reviewer, rationale, a measured
+ * 4. A report refuses a duplicate run or verdicts produced under different task
+ *    laws and harness versions instead of inflating or mixing its denominator.
+ * 5. A rubric verdict without concrete evidence, reviewer, rationale, a measured
  *    run, or a score inside the rubric range is refused; a complete one rides
  *    beside the measured axes.
- * 5. A diff across drifted versions withholds the score delta entirely, while a
+ * 6. A diff across drifted versions withholds the score delta entirely, while a
  *    diff under one law reports every assertion whose outcome moved, including
  *    assertions only one of the two verdicts settled.
  */
@@ -101,6 +103,50 @@ export const test_benchmark_surface_report = (): void => {
       onlyExcluded.surfaces[0]!.meanCorrections,
     ],
     [0, null, null, null, null],
+  );
+  TestValidator.equals(
+    "an empty cohort produces an empty report",
+    reportAutoMovieBenchmark([]),
+    { surfaces: [], rubric: [] },
+  );
+  TestValidator.predicate(
+    "one archived run enters a report denominator only once",
+    throws(
+      () => reportAutoMovieBenchmark([productionVerdict, productionVerdict]),
+      "repeats run",
+    ),
+  );
+  TestValidator.predicate(
+    "one report cannot average verdicts produced under different laws",
+    throws(
+      () =>
+        reportAutoMovieBenchmark([
+          productionVerdict,
+          {
+            ...legacyVerdict,
+            taskId: "short/other",
+            taskDigest: digestBenchmarkValue("other-task-law"),
+            versions: {
+              task: "2.0.0",
+              harness: "2.0.0",
+              reference: "2.0.0",
+              scenarioHelper: 2,
+            },
+          },
+        ]),
+      "taskId: short/austerlitz-signal -> short/other",
+    ) &&
+      throws(
+        () =>
+          reportAutoMovieBenchmark([
+            productionVerdict,
+            {
+              ...legacyVerdict,
+              taskDigest: digestBenchmarkValue("other-task-law"),
+            },
+          ]),
+        "taskDigest:",
+      ),
   );
 
   const rubric: IAutoMovieBenchmarkRubricVerdict = {

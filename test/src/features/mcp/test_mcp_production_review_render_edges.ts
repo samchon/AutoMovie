@@ -698,6 +698,52 @@ export const test_mcp_production_review_render_edges =
         project.readRenderFile =
           residentReadRenderFile as typeof project.readRenderFile;
       }
+      const racedBundleRoot = path.join(project.renderRoot(), racedBundle);
+      const outsideRacedFrame = path.join(
+        fixture.root,
+        "review-outside-frame.png",
+      );
+      const linkedRacedFrame = path.join(racedBundleRoot, "linked.png");
+      fs.copyFileSync(sourceFrame, outsideRacedFrame);
+      fs.symlinkSync(outsideRacedFrame, linkedRacedFrame, "file");
+      let injectedFramePath = "";
+      project.verifiedRenderManifest = ((manifestPath: string) => {
+        const manifest = residentVerifiedRenderManifest(manifestPath);
+        return manifest === null ||
+          path.resolve(manifestPath) !== path.resolve(racedManifestPath)
+          ? manifest
+          : {
+              ...manifest,
+              frames: manifest.frames.map((frame, index) =>
+                index === 0 ? { ...frame, path: injectedFramePath } : frame,
+              ),
+            };
+      }) as typeof project.verifiedRenderManifest;
+      try {
+        TestValidator.equals(
+          "verified frame paths cannot escape their content-addressed bundle",
+          [
+            [path.resolve(outsideRacedFrame), "must be bundle-relative"],
+            ["../outside.png", "escapes its bundle"],
+            ["linked.png", "frame escapes its bundle through a symlink"],
+          ].map(([framePath, message]) => {
+            injectedFramePath = framePath!;
+            return review
+              .prepare({ target })
+              .diagnostics.some(
+                (item) =>
+                  item.code === "render-frame-invalid" &&
+                  item.message.includes(message!),
+              );
+          }),
+          [true, true, true],
+        );
+      } finally {
+        project.verifiedRenderManifest =
+          residentVerifiedRenderManifest as typeof project.verifiedRenderManifest;
+        fs.unlinkSync(linkedRacedFrame);
+        fs.rmSync(outsideRacedFrame);
+      }
       fs.rmSync(path.join(project.renderRoot(), racedBundle), {
         recursive: true,
         force: true,
