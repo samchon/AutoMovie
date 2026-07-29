@@ -35,14 +35,8 @@ export const productionFixture = (): {
     ".automovie/design/shots/answer.json",
   ])
     delete files[file];
-  const opening = JSON.parse(
-    files[".automovie/design/shots/opening.json"]!,
-  ) as IAutoMovieShotContract;
-  opening.participants = opening.participants.filter(
-    (participant) => participant.kind !== "formation",
-  );
   files[".automovie/design/shots/opening.json"] =
-    `${JSON.stringify(opening, null, 2)}\n`;
+    `${JSON.stringify(shotContract(), null, 2)}\n`;
   const world = JSON.parse(
     files[".automovie/design/world.json"]!,
   ) as IAutoMovieWorldDesign;
@@ -143,9 +137,27 @@ export const modelRecipe = (): IAutoMovieModelRecipe =>
 export const worldDesign = (): IAutoMovieWorldDesign =>
   scaffoldJson(".automovie/design/world.json");
 
-/** Starter shot contract. */
-export const shotContract = (): IAutoMovieShotContract =>
-  scaffoldJson(".automovie/design/shots/opening.json");
+/**
+ * Starter shot contract restricted to its named actor.
+ *
+ * `productionFixture` renders the one-actor slice of the starter: the army
+ * formation, its LOD recipes and its effect-mask acceptance stay out so the
+ * production services under test have a small deterministic graph. The
+ * in-memory contract has to describe that same slice, or every consumer that
+ * pairs it with a fixture project resolves a formation the project does not
+ * own. Tests that want the shipped instanced army drive the scaffold directly.
+ */
+export const shotContract = (): IAutoMovieShotContract => {
+  const contract = scaffoldJson<IAutoMovieShotContract>(
+    ".automovie/design/shots/opening.json",
+  );
+  return {
+    ...contract,
+    participants: contract.participants.filter(
+      (participant) => participant.kind !== "formation",
+    ),
+  };
+};
 
 /** Starter acceptance scenarios. */
 export const acceptanceScenarios = (): IAutoMovieAcceptanceScenario[] => [

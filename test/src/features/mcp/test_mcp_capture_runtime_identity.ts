@@ -20,10 +20,21 @@ const throws = (task: () => unknown, fragment: string): boolean => {
 export const test_mcp_capture_runtime_identity = (): void => {
   const identity = testCaptureRuntimeIdentity();
   const canonical = canonicalAutoMovieCaptureRuntimeIdentity(identity);
-  TestValidator.predicate(
+  // Canonical encoding sorts keys, so the round trip is a content identity
+  // rather than a byte identity: comparing serialized text would only restate
+  // the sort. Re-encoding the parsed value pins that the canonical bytes are
+  // the fixed point the manifest stores.
+  TestValidator.equals(
     "structured capture identity round-trips through canonical JSON",
-    JSON.stringify(parseAutoMovieCaptureRuntimeIdentity(canonical)) ===
-      JSON.stringify(identity),
+    parseAutoMovieCaptureRuntimeIdentity(canonical),
+    identity,
+  );
+  TestValidator.equals(
+    "canonical capture identity is its own re-encoding",
+    canonicalAutoMovieCaptureRuntimeIdentity(
+      parseAutoMovieCaptureRuntimeIdentity(canonical),
+    ),
+    canonical,
   );
   TestValidator.predicate(
     "capture identity rejects schema and canonical encoding drift",

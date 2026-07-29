@@ -1,5 +1,6 @@
 import { Quaternion } from "@automovie/engine";
 import {
+  AutoMovieContentDigest,
   IAutoMovieCompiledEffect,
   IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
@@ -151,14 +152,7 @@ export const materializeCompiledFormation = (
       : anonymousLod
   ).map((item) => ({
     ...item,
-    recipeDigest: digestAutoMovieBytes(
-      canonicalAutoMovieJsonBytes(
-        recipes.get(item.recipe) ?? {
-          id: item.recipe,
-          missing: true,
-        },
-      ),
-    ),
+    recipeDigest: lodRecipeDigest(recipes, item.recipe),
     model: productionRuntimeModelId(item.recipe),
   }));
   const core = {
@@ -471,6 +465,34 @@ const mixSeed = (seed: number, salt: number): number => {
   value = Math.imul(value ^ (value >>> 16), 0x7feb352d);
   value = Math.imul(value ^ (value >>> 15) ^ high, 0x846ca68b);
   return (value ^ (value >>> 16)) >>> 0;
+};
+
+/**
+ * Content digest for one LOD tier's model-recipe reference.
+ *
+ * The design gate refuses an absent recipe and a non-finite parameter alike, so
+ * neither reaches a compiled production through `setModelRecipe`. The
+ * materializer still answers for both the bounded way it answers a malformed
+ * projection proxy: a reference that cannot be canonically encoded digests a
+ * marker naming what the tier pointed at, instead of letting a canonical-JSON
+ * `TypeError` escape and discard the whole compiled formation.
+ */
+const lodRecipeDigest = (
+  recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
+  id: string,
+): AutoMovieContentDigest => {
+  const recipe = recipes.get(id);
+  if (recipe === undefined)
+    return digestAutoMovieBytes(
+      canonicalAutoMovieJsonBytes({ id, missing: true }),
+    );
+  try {
+    return digestAutoMovieBytes(canonicalAutoMovieJsonBytes(recipe));
+  } catch {
+    return digestAutoMovieBytes(
+      canonicalAutoMovieJsonBytes({ id, unencodable: true }),
+    );
+  }
 };
 
 const recipeProjectionRadius = (
