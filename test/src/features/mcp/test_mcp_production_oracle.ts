@@ -1661,6 +1661,15 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       const goodDigest = digestAutoMovieBytes(visible);
       const badFrames: IAutoMovieRenderBundleManifest["frames"] = [
         {
+          index: 0.5,
+          time: 0.5 / 24,
+          pass: "beauty",
+          path: "preview/fractional.png",
+          digest: goodDigest,
+          width: 2,
+          height: 2,
+        },
+        {
           index: -1,
           time: 0,
           pass: "beauty",
@@ -1780,6 +1789,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         },
       ];
       for (const file of [
+        "fractional.png",
         "negative.png",
         "off-clock.png",
         "past-duration.png",

@@ -1459,6 +1459,7 @@ const verifiedRetainedFrames = (
   for (const frame of manifest.frames)
     try {
       if (
+        Number.isSafeInteger(frame.index) === false ||
         frame.index < 0 ||
         frame.time !== frame.index / manifest.renderSpec.frameFormat.fps ||
         frame.time > duration
