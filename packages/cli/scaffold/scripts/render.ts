@@ -57,11 +57,6 @@ interface IRenderChunkLockOwner {
   token?: string;
 }
 
-interface ICurrentRenderChunk {
-  receipt: IAutoMovieProductionRenderChunkReceipt;
-  frames: Uint8Array[];
-}
-
 const main = async (): Promise<void> => {
   if (
     action !== "all" &&
@@ -383,11 +378,12 @@ const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
 const currentReceipt = async (
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<IAutoMovieProductionRenderChunkReceipt | null> =>
-  (await currentChunk(chunk))?.receipt ?? null;
+  currentChunk(chunk);
 
 const currentChunk = async (
   chunk: IAutoMovieProductionRenderChunk,
-): Promise<ICurrentRenderChunk | null> => {
+  consumeFrame?: (frame: Uint8Array) => void,
+): Promise<IAutoMovieProductionRenderChunkReceipt | null> => {
   const directory = chunkDirectory(chunk.id);
   const receiptFile = path.join(directory, "receipt.json");
   if (fs.existsSync(receiptFile) === false) return null;
@@ -396,7 +392,6 @@ const currentChunk = async (
     const receipt =
       readJson<IAutoMovieProductionRenderChunkReceipt>(receiptFile);
     verifyProductionRenderChunkReceipt({ plan, chunk, receipt });
-    const frames: Uint8Array[] = [];
     for (const frame of receipt.frames) {
       const bytes = readRegularInside(directory, frame.path);
       const probe = probeProductionMedia({
@@ -412,7 +407,7 @@ const currentChunk = async (
         probe.height !== frame.height
       )
         return null;
-      frames.push(bytes);
+      consumeFrame?.(bytes);
     }
     const encoded = readRegularInside(directory, receipt.encoded.path);
     const video = probeProductionMedia({
@@ -430,7 +425,7 @@ const currentChunk = async (
       Math.abs(video.fps - plan.frameFormat.fps) > 1e-9
     )
       return null;
-    return { receipt, frames };
+    return receipt;
   } catch {
     return null;
   }
@@ -585,7 +580,9 @@ const renderChunk = async (
       height: probe.height,
     });
   }
-  const encodedBytes = await encodePngFrames(frameBytes, plan);
+  const encodedBytes = await encodePngFrames((consumeFrame) => {
+    for (const frame of frameBytes) consumeFrame(frame);
+  }, plan);
   const encodedPath = "chunk.mp4";
   writeFileAtomic(path.join(temporary, encodedPath), encodedBytes);
   const encodedProbe = probeProductionMedia({
@@ -884,26 +881,31 @@ const encodeChunkFrames = async (
   chunks: IAutoMovieProductionRenderChunk[],
 ): Promise<Uint8Array> => {
   if (chunks.length === 0) throw new Error("No current chunks to encode.");
-  const frames: Uint8Array[] = [];
-  for (const chunk of chunks.sort(
-    (left, right) => left.frameStart - right.frameStart,
-  )) {
-    const current = await currentChunk(chunk);
-    if (current === null)
+  return encodePngFrames(async (consumeFrame) => {
+    let frameCount = 0;
+    for (const chunk of chunks.sort(
+      (left, right) => left.frameStart - right.frameStart,
+    )) {
+      const receipt = await currentChunk(chunk, (frame) => {
+        consumeFrame(frame);
+        frameCount += 1;
+      });
+      if (receipt === null)
+        throw new Error(
+          `Chunk "${chunk.slot}" changed after final status verification. Reverify or rerender it before finalizing.`,
+        );
+    }
+    if (frameCount !== plan.totalFrames)
       throw new Error(
-        `Chunk "${chunk.slot}" changed after final status verification. Reverify or rerender it before finalizing.`,
+        `Final encode has ${frameCount} frames; expected ${plan.totalFrames}.`,
       );
-    frames.push(...current.frames);
-  }
-  if (frames.length !== plan.totalFrames)
-    throw new Error(
-      `Final encode has ${frames.length} frames; expected ${plan.totalFrames}.`,
-    );
-  return encodePngFrames(frames, plan);
+  }, plan);
 };
 
 const encodePngFrames = async (
-  frames: Uint8Array[],
+  produceFrames: (
+    consumeFrame: (frame: Uint8Array) => void,
+  ) => void | Promise<void>,
   plan: IAutoMovieProductionRenderJobPlan,
 ): Promise<Uint8Array> => {
   if (
@@ -940,10 +942,10 @@ const encodePngFrames = async (
     encoder.groupOfPictures =
       plan.runtimeIdentity.encoder.arguments.groupOfPictures;
     encoder.initialize();
-    for (const frame of frames) {
+    await produceFrames((frame) => {
       const png = PNG.sync.read(Buffer.from(frame));
       encoder.addFrameRgba(new Uint8Array(png.data));
-    }
+    });
     encoder.finalize();
     return Uint8Array.from(encoder.FS.readFile(encoder.outputFilename));
   } finally {
