@@ -659,53 +659,106 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   );
   const drainingPlan = {
     ...renderPlan,
-    chunks: renderPlan.chunks.slice(0, 2),
+    chunks: renderPlan.chunks.slice(0, 3),
   };
-  let resumeInFlight = (): void => undefined;
-  const inFlight = new Promise<void>((resolve) => {
-    resumeInFlight = resolve;
+  let resumePeer = (): void => undefined;
+  const peerBarrier = new Promise<undefined>((resolve) => {
+    resumePeer = () => {
+      resolve(undefined);
+    };
   });
+  let resumeRelease = (): void => undefined;
+  const releaseBarrier = new Promise<undefined>((resolve) => {
+    resumeRelease = () => {
+      resolve(undefined);
+    };
+  });
+  const waitOneTurn = (): Promise<undefined> =>
+    new Promise<undefined>((resolve) => {
+      setImmediate(() => {
+        resolve(undefined);
+      });
+    });
   let peerDrained = false;
+  const currentCalls: string[] = [];
+  const RELEASE_FAILURE: unknown = "release failure";
   const draining = runProductionRenderJob({
     plan: drainingPlan,
     workers: 2,
     adapters: {
       current: async (chunk) => {
-        if (chunk.slot === drainingPlan.chunks[0]!.slot)
-          throw NON_ERROR_FAILURE;
-        await inFlight;
-        peerDrained = true;
-        return receipt(drainingPlan, 1);
+        currentCalls.push(chunk.slot);
+        const index = drainingPlan.chunks.indexOf(chunk);
+        if (index === 0) return null;
+        if (index === 1) {
+          await peerBarrier;
+          peerDrained = true;
+        }
+        return receipt(drainingPlan, index);
       },
-      acquire: async () => false,
-      render: async () => receipt(drainingPlan, 0),
-      fail: async () => undefined,
-      release: async () => undefined,
+      acquire: async () => true,
+      render: async () => {
+        throw new Error("encoder failure");
+      },
+      fail: async () => {
+        throw NON_ERROR_FAILURE;
+      },
+      release: async () => {
+        await releaseBarrier;
+        throw RELEASE_FAILURE;
+      },
     },
   });
   let schedulerSettled = false;
-  void draining.then(
-    () => {
+  void draining
+    .then(() => {
       schedulerSettled = true;
-    },
-    () => {
+    })
+    .catch(() => {
       schedulerSettled = true;
-    },
-  );
-  await new Promise<void>((resolve) => setImmediate(resolve));
+    });
+  await waitOneTurn();
   const settledBeforeDrain = schedulerSettled;
-  resumeInFlight();
+  resumePeer();
+  await waitOneTurn();
+  const thirdStartedBeforeRelease = currentCalls.includes(
+    drainingPlan.chunks[2]!.slot,
+  );
+  resumeRelease();
   let fatalReason: unknown;
   try {
     await draining;
   } catch (error) {
     fatalReason = error;
   }
+  let currentFatalReason: unknown;
+  try {
+    await runProductionRenderJob({
+      plan: {
+        ...drainingPlan,
+        chunks: drainingPlan.chunks.slice(0, 1),
+      },
+      workers: 1,
+      adapters: {
+        current: async () => {
+          throw NON_ERROR_FAILURE;
+        },
+        acquire: async () => false,
+        render: async () => receipt(drainingPlan, 0),
+        fail: async () => undefined,
+        release: async () => undefined,
+      },
+    });
+  } catch (error) {
+    currentFatalReason = error;
+  }
   TestValidator.predicate(
     "scheduler drains in-flight peers before preserving fatal failures",
     settledBeforeDrain === false &&
       peerDrained &&
-      fatalReason === NON_ERROR_FAILURE,
+      thirdStartedBeforeRelease === false &&
+      fatalReason === NON_ERROR_FAILURE &&
+      currentFatalReason === NON_ERROR_FAILURE,
   );
   TestValidator.predicate(
     "scheduler rejects invalid workers and missing deliverables",

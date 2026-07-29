@@ -582,6 +582,9 @@ export const runProductionRenderJob = async (props: {
   };
   let cursor = 0;
   const fatalFailures: unknown[] = [];
+  const recordFatalFailure = (error: unknown): void => {
+    if (fatalFailures.length === 0) fatalFailures.push(error);
+  };
   const worker = async (): Promise<void> => {
     try {
       while (fatalFailures.length === 0 && cursor < queue.length) {
@@ -611,14 +614,22 @@ export const runProductionRenderJob = async (props: {
         } catch (error) {
           const correction =
             error instanceof Error ? error.message : String(error);
-          await props.adapters.fail(chunk, correction);
-          output.failed.push({ slot: chunk.slot, correction });
+          try {
+            await props.adapters.fail(chunk, correction);
+            output.failed.push({ slot: chunk.slot, correction });
+          } catch (failure) {
+            recordFatalFailure(failure);
+          }
         } finally {
-          await props.adapters.release(chunk);
+          try {
+            await props.adapters.release(chunk);
+          } catch (failure) {
+            recordFatalFailure(failure);
+          }
         }
       }
     } catch (error) {
-      fatalFailures.push(error);
+      recordFatalFailure(error);
     }
   };
   await Promise.all(
