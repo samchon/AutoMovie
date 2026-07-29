@@ -175,20 +175,25 @@ const buildSignal = (
           },
         ]
       : [],
-    effectCues: context.world.effectZones.some(
-      (zone) => zone.id === "signal-smoke",
-    )
-      ? [
-          {
-            id: `${context.contract.id}-signal-smoke`,
-            zone: "signal-smoke",
-            start: 1,
-            end: 4,
-            intensity: { from: 0.35, to: 0.8 },
-            event: "signal-raised",
-          },
-        ]
-      : [],
+    // Both shots share this builder, so the smoke cue is emitted only where
+    // both halves it names exist: the world zone, and this contract's own
+    // `signal-raised` event. The answering shot declares `signal-answered`
+    // instead, and a cue naming an event its shot never realizes fails the
+    // compile rather than fading quietly.
+    effectCues:
+      context.world.effectZones.some((zone) => zone.id === "signal-smoke") &&
+      context.contract.events.some((event) => event.id === "signal-raised")
+        ? [
+            {
+              id: `${context.contract.id}-signal-smoke`,
+              zone: "signal-smoke",
+              start: 1,
+              end: 4,
+              intensity: { from: 0.35, to: 0.8 },
+              event: "signal-raised",
+            },
+          ]
+        : [],
     shot: {
       id: context.contract.id,
       name: "The signal",
