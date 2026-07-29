@@ -39,7 +39,10 @@ const score = (
  *    an uncaptured frame, and an unpublished deliverable kind are all silence,
  *    while a captured-but-wrong frame and a probe-invalid file are failures.
  *    Neither ever reads as a pass.
- * 6. An axis a task declares no assertion for scores zero and contributes nothing,
+ * 6. Correction attempts may archive invalid and valid captures under the same
+ *    frame address; their order cannot change whether the required frame
+ *    exists.
+ * 7. An axis a task declares no assertion for scores zero and contributes nothing,
  *    so an unweighted empty axis cannot cap a score.
  */
 export const test_benchmark_judge_verdicts = (): void => {
@@ -242,6 +245,35 @@ export const test_benchmark_judge_verdicts = (): void => {
       "delivery:captions:fail",
       "delivery:runtime:fail",
     ],
+  );
+
+  const mask = draft.frames.find((frame) => frame.pass === "mask")!;
+  const otherFrames = draft.frames.filter((frame) => frame !== mask);
+  const invalidMask = {
+    ...mask,
+    width: 640,
+    bytes: 1,
+    probeValid: false,
+  };
+  const retriedFrames = [
+    [invalidMask, mask, ...otherFrames],
+    [mask, invalidMask, ...otherFrames],
+  ].map((frames) =>
+    judgeAutoMovieBenchmarkSubmission(
+      task,
+      sealAutoMovieBenchmarkSubmission({ ...draft, frames }),
+    ),
+  );
+  TestValidator.equals(
+    "a valid retry satisfies the frame law in either archive order",
+    retriedFrames.map((verdict) =>
+      verdict.outcome === "scored"
+        ? verdict.assertions.find(
+            (result) => result.id === "frame/signal-apex-mask",
+          )?.outcome
+        : null,
+    ),
+    ["pass", "pass"],
   );
 
   TestValidator.equals(

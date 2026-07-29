@@ -1167,23 +1167,28 @@ try {
     `
 const Module = require("node:module");
 const originalLoad = Module._load;
+let wrappedEncoderModule;
 Module._load = function (request, parent, isMain) {
   const loaded = originalLoad.apply(this, arguments);
   if (
     loaded !== null &&
     typeof loaded === "object" &&
-    typeof loaded.createH264MP4Encoder === "function" &&
-    loaded.__automovieFailureHook !== true
+    typeof loaded.createH264MP4Encoder === "function"
   ) {
+    if (wrappedEncoderModule !== undefined) return wrappedEncoderModule;
     const originalCreate = loaded.createH264MP4Encoder;
-    loaded.createH264MP4Encoder = async (...args) => {
-      const encoder = await originalCreate(...args);
-      encoder.addFrameRgba = () => {
-        throw new Error("automovie-encoder-consumer-sentinel");
-      };
-      return encoder;
-    };
-    Object.defineProperty(loaded, "__automovieFailureHook", { value: true });
+    wrappedEncoderModule = Object.create(loaded);
+    Object.defineProperty(wrappedEncoderModule, "createH264MP4Encoder", {
+      enumerable: true,
+      value: async (...args) => {
+        const encoder = await originalCreate(...args);
+        encoder.addFrameRgba = () => {
+          throw new Error("automovie-encoder-consumer-sentinel");
+        };
+        return encoder;
+      },
+    });
+    return wrappedEncoderModule;
   }
   return loaded;
 };

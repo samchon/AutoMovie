@@ -20,6 +20,8 @@ import {
   IAutoMovieBenchmarkObservationAssertion,
   IAutoMovieBenchmarkTask,
   IAutoMovieBenchmarkVersions,
+  canonicalBenchmarkJson,
+  compareBenchmarkCodeUnits,
 } from "./task";
 
 /** Verdict schema every judged run carries. */
@@ -181,13 +183,20 @@ const judgeFrame = (
   submission: IAutoMovieBenchmarkSubmission,
 ): IAutoMovieBenchmarkAssertionResult => {
   const evidence = `frame:${assertion.shot}@${assertion.timeSeconds}:${assertion.pass}`;
-  const frame = submission.frames.find(
-    (candidate) =>
-      candidate.shot === assertion.shot &&
-      candidate.pass === assertion.pass &&
-      Math.abs(candidate.timeSeconds - assertion.timeSeconds) < 1e-9,
-  );
-  if (frame === undefined)
+  const frames = submission.frames
+    .filter(
+      (candidate) =>
+        candidate.shot === assertion.shot &&
+        candidate.pass === assertion.pass &&
+        Math.abs(candidate.timeSeconds - assertion.timeSeconds) < 1e-9,
+    )
+    .sort((left, right) =>
+      compareBenchmarkCodeUnits(
+        canonicalBenchmarkJson(left),
+        canonicalBenchmarkJson(right),
+      ),
+    );
+  if (frames.length === 0)
     return {
       id: assertion.id,
       axis: "frame",
@@ -196,19 +205,21 @@ const judgeFrame = (
       evidence,
       observed: null,
     };
+  const passing = frames.find(
+    (frame) =>
+      frame.probeValid &&
+      frame.width === assertion.width &&
+      frame.height === assertion.height &&
+      frame.bytes >= assertion.minBytes,
+  );
+  const observed = passing ?? frames[0]!;
   return {
     id: assertion.id,
     axis: "frame",
     statement: assertion.statement,
-    outcome:
-      frame.probeValid &&
-      frame.width === assertion.width &&
-      frame.height === assertion.height &&
-      frame.bytes >= assertion.minBytes
-        ? "pass"
-        : "fail",
+    outcome: passing === undefined ? "fail" : "pass",
     evidence,
-    observed: frame.bytes,
+    observed: observed.bytes,
   };
 };
 
