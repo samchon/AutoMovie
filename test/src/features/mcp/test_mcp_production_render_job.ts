@@ -680,6 +680,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       });
     });
   let peerDrained = false;
+  let releaseStarted = false;
   const currentCalls: string[] = [];
   const RELEASE_FAILURE: unknown = "release failure";
   const draining = runProductionRenderJob({
@@ -704,6 +705,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
         throw NON_ERROR_FAILURE;
       },
       release: async () => {
+        releaseStarted = true;
         await releaseBarrier;
         throw RELEASE_FAILURE;
       },
@@ -724,6 +726,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   const thirdStartedBeforeRelease = currentCalls.includes(
     drainingPlan.chunks[2]!.slot,
   );
+  const settledBeforeRelease = schedulerSettled;
   resumeRelease();
   let fatalReason: unknown;
   try {
@@ -757,6 +760,8 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     settledBeforeDrain === false &&
       peerDrained &&
       thirdStartedBeforeRelease === false &&
+      releaseStarted &&
+      settledBeforeRelease === false &&
       fatalReason === NON_ERROR_FAILURE &&
       currentFatalReason === NON_ERROR_FAILURE,
   );
