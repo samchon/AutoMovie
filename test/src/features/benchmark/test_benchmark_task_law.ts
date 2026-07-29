@@ -28,8 +28,8 @@ const refusal = (task: IAutoMovieBenchmarkTask, fragment: string): boolean => {
  * Scenarios:
  *
  * 1. Canonical JSON sorts keys, drops undefined members, encodes every JSON
- *    scalar, and refuses a non-finite number that has no JSON form; the digest
- *    of two structurally equal values is therefore the same.
+ *    scalar, and refuses non-finite or non-JSON values; the digest of two
+ *    structurally equal values is therefore the same.
  * 2. The shipped short-tier corpus task validates and digests stably across
  *    independent constructions.
  * 3. Schema drift, harness drift, a repeated assertion id, an empty law, a
@@ -64,18 +64,23 @@ export const test_benchmark_task_law = (): void => {
     0,
   );
   TestValidator.predicate(
-    "canonical JSON refuses a non-finite number",
-    (() => {
+    "canonical JSON refuses values with no JSON identity",
+    [
+      [{ broken: Number.POSITIVE_INFINITY }, "non-finite numbers"],
+      [1n, "JSON-compatible"],
+      [Symbol("unsupported"), "JSON-compatible"],
+      [() => undefined, "JSON-compatible"],
+    ].every(([value, fragment]) => {
       try {
-        canonicalBenchmarkJson({ broken: Number.POSITIVE_INFINITY });
+        canonicalBenchmarkJson(value);
         return false;
       } catch (error) {
         return (
           error instanceof TypeError &&
-          error.message.includes("non-finite numbers")
+          error.message.includes(fragment as string)
         );
       }
-    })(),
+    }),
   );
   TestValidator.equals(
     "structurally equal values digest identically regardless of key order",

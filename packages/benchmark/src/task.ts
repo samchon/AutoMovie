@@ -229,8 +229,8 @@ export const compareBenchmarkCodeUnits = (
  *
  * Run and law identity are digests of this text, so two structurally equal
  * values must produce the same bytes no matter which key an author typed first.
- * A non-finite number has no JSON form, so it is refused rather than silently
- * written as `null`.
+ * Non-finite numbers and values outside the JSON data model are refused rather
+ * than silently collapsed onto another value's identity.
  */
 export const canonicalBenchmarkJson = (value: unknown): string => {
   const encode = (current: unknown): string => {
@@ -246,12 +246,17 @@ export const canonicalBenchmarkJson = (value: unknown): string => {
     }
     if (Array.isArray(current))
       return `[${current.map((item) => encode(item)).join(",")}]`;
-    const record = current as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .sort(compareBenchmarkCodeUnits)
-      .filter((key) => record[key] !== undefined)
-      .map((key) => `${JSON.stringify(key)}:${encode(record[key])}`)
-      .join(",")}}`;
+    if (typeof current === "object") {
+      const record = current as Record<string, unknown>;
+      return `{${Object.keys(record)
+        .sort(compareBenchmarkCodeUnits)
+        .filter((key) => record[key] !== undefined)
+        .map((key) => `${JSON.stringify(key)}:${encode(record[key])}`)
+        .join(",")}}`;
+    }
+    throw new TypeError(
+      "Benchmark canonical JSON requires JSON-compatible values.",
+    );
   };
   return encode(value);
 };
