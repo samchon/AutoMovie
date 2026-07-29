@@ -1089,6 +1089,95 @@ export const test_mcp_production_legacy_import = (): void => {
       fs.rmSync(parkedResidentRoot, { force: true, recursive: true });
   }
 
+  const replacedAfterRollbackLock = createLegacy();
+  const rollbackReplacement = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-rollback-resident-race-target-"),
+  );
+  const parkedRollbackResidentRoot = `${replacedAfterRollbackLock.root}-parked`;
+  try {
+    const importer = new AutoMovieLegacyImporter(
+      replacedAfterRollbackLock.root,
+    );
+    importer.apply();
+    fs.mkdirSync(path.join(rollbackReplacement, ".automovie"));
+    const residentLock = path.join(
+      replacedAfterRollbackLock.root,
+      ".automovie/revision.lock",
+    );
+    const nativeWrite = fs.writeFileSync;
+    let replaced = false;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      Reflect.apply(nativeWrite, fs, [file, ...args]);
+      if (
+        replaced === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === residentLock
+      ) {
+        replaced = true;
+        fs.renameSync(
+          replacedAfterRollbackLock.root,
+          parkedRollbackResidentRoot,
+        );
+        fs.symlinkSync(
+          rollbackReplacement,
+          replacedAfterRollbackLock.root,
+          "junction",
+        );
+      }
+    }) as typeof fs.writeFileSync;
+    try {
+      TestValidator.predicate(
+        "root replacement after rollback lock acquisition abandons only process-local ownership",
+        throws(() => importer.rollback(), "root identity"),
+      );
+    } finally {
+      fs.writeFileSync = nativeWrite;
+    }
+    const parkedToken = fs.readFileSync(
+      path.join(parkedRollbackResidentRoot, ".automovie/revision.lock"),
+      "utf8",
+    );
+    const replacementLock = path.join(
+      rollbackReplacement,
+      ".automovie/revision.lock",
+    );
+    const retryToken = acquireCommitLock(residentLock);
+    try {
+      TestValidator.predicate(
+        "the rollback replacement namespace receives a fresh resident lock instead of a poisoned re-entrant token",
+        retryToken !== parkedToken &&
+          fs.readFileSync(replacementLock, "utf8") === retryToken,
+      );
+    } finally {
+      releaseCommitLock(residentLock, retryToken);
+    }
+  } finally {
+    if (
+      fs.existsSync(replacedAfterRollbackLock.root) &&
+      fs.lstatSync(replacedAfterRollbackLock.root).isSymbolicLink()
+    )
+      fs.rmSync(replacedAfterRollbackLock.root);
+    if (fs.existsSync(parkedRollbackResidentRoot)) {
+      fs.renameSync(parkedRollbackResidentRoot, replacedAfterRollbackLock.root);
+      const parkedLock = path.join(
+        replacedAfterRollbackLock.root,
+        ".automovie/revision.lock",
+      );
+      if (fs.existsSync(parkedLock))
+        releaseCommitLock(parkedLock, fs.readFileSync(parkedLock, "utf8"));
+    }
+    replacedAfterRollbackLock.dispose();
+    fs.rmSync(rollbackReplacement, { force: true, recursive: true });
+    if (fs.existsSync(parkedRollbackResidentRoot))
+      fs.rmSync(parkedRollbackResidentRoot, {
+        force: true,
+        recursive: true,
+      });
+  }
+
   const revisionRace = createLegacy();
   try {
     const revisionPath = path.join(revisionRace.root, "revision.json");

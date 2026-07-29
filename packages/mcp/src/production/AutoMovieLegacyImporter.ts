@@ -209,7 +209,6 @@ export class AutoMovieLegacyImporter {
         );
       const lockPath = path.join(stateRoot, "revision.lock");
       const token = acquireCommitLock(lockPath);
-      assertProductionRootNamespaceLease(lease);
       const output = this.rollbackLocked(lease, stateRoot, lockPath, token);
       assertProductionRootNamespaceLease(lease);
       return output;
@@ -226,6 +225,7 @@ export class AutoMovieLegacyImporter {
   ): IAutoMovieLegacyImportRollbackOutput {
     const root = lease.root;
     try {
+      assertProductionRootNamespaceLease(lease);
       const plan = readJson<IAutoMovieLegacyImportPlan>(
         path.join(stateRoot, IMPORT_PLAN_PATH),
       );

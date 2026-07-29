@@ -498,7 +498,11 @@ export const test_mcp_production_review = async (): Promise<void> => {
     });
     project.readGeneratedFile = residentReadGenerated;
     const residentGraph = project.graph;
+    const residentGeneratedManifest = project.generatedManifest;
     const currentGraph = residentGraph.call(project);
+    const currentGeneratedManifest = residentGeneratedManifest.call(project);
+    if (currentGeneratedManifest === null)
+      throw new Error("review fixture has no current generated manifest");
     const openingContract = currentGraph.shots.get("opening")!;
     const graphWithMissingFirst = {
       ...currentGraph,
@@ -555,6 +559,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
     };
     project.graph = (() =>
       graphWithUnknownFrameAcceptance) as typeof project.graph;
+    project.generatedManifest = (() =>
+      currentGeneratedManifest) as typeof project.generatedManifest;
     const unknownFrameFilmReview = reviewWithFixedStatus.prepare({
       target: { kind: "film", id: "fixture-film" },
     });
@@ -569,6 +575,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const unknownFrameSubmission = reviewWithFixedStatus.submit(
       unknownFrameWorksheet,
     );
+    project.generatedManifest = residentGeneratedManifest;
     const graphWithoutTimelineShot = {
       ...currentGraph,
       shots: new Map(
