@@ -1085,6 +1085,63 @@ export const test_mcp_production_review = async (): Promise<void> => {
         (item) => item.code === "review-target-raced",
       ),
     );
+    const commitBoundaryPrepared = review.prepare({ target: shotTarget });
+    const reviewPath = project.reviewPath(shotTarget);
+    const reviewBeforeCommitRace = fs.existsSync(reviewPath)
+      ? fs.readFileSync(reviewPath)
+      : null;
+    const revisionBeforeCommitRace = project.revision();
+    const residentCommitReview = project.commitReview;
+    let commitGuardReads = 0;
+    project.commitReview = ((stored, inputCurrent) =>
+      residentCommitReview.call(project, stored, () => {
+        ++commitGuardReads;
+        if (commitGuardReads === 2)
+          fs.appendFileSync(sourceFile, "\n// commit-boundary edit\n");
+        return inputCurrent?.() ?? true;
+      })) as typeof project.commitReview;
+    let commitBoundarySubmission: ReturnType<
+      AutoMovieProductionReviewService["submit"]
+    >;
+    try {
+      commitBoundarySubmission = review.submit(
+        worksheet(project, commitBoundaryPrepared),
+      );
+    } finally {
+      project.commitReview = residentCommitReview;
+      fs.writeFileSync(sourceFile, sourceBeforeRace);
+    }
+    const reviewAfterCommitRace = fs.existsSync(reviewPath)
+      ? fs.readFileSync(reviewPath)
+      : null;
+    TestValidator.predicate(
+      "a target mutation during review commit rolls back the stale ledger",
+      commitGuardReads === 2 &&
+        commitBoundarySubmission.diagnostics.some(
+          (item) => item.code === "review-target-raced",
+        ) &&
+        project.revision() === revisionBeforeCommitRace &&
+        (reviewBeforeCommitRace === null
+          ? reviewAfterCommitRace === null
+          : reviewAfterCommitRace?.equals(reviewBeforeCommitRace) === true),
+    );
+    const commitFailure = new Error("review storage failed");
+    project.commitReview = (() => {
+      throw commitFailure;
+    }) as typeof project.commitReview;
+    let propagatedCommitFailure: unknown;
+    try {
+      review.submit(worksheet(project, commitBoundaryPrepared));
+    } catch (error) {
+      propagatedCommitFailure = error;
+    } finally {
+      project.commitReview = residentCommitReview;
+    }
+    TestValidator.equals(
+      "a non-race review storage failure remains actionable",
+      propagatedCommitFailure,
+      commitFailure,
+    );
     const sourceSelector = shotPrepared.quotable.find(
       (item) => item.kind === "source",
     );

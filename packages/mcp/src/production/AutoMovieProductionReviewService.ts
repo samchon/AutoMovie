@@ -32,7 +32,10 @@ import {
   AutoMovieProductionCompiler,
   IAutoMovieReviewQueueSnapshot,
 } from "./AutoMovieProductionCompiler";
-import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
+import {
+  AutoMovieProductionInputRaceError,
+  AutoMovieProductionProject,
+} from "./AutoMovieProductionProject";
 import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
   AUTOMOVIE_REVIEW_FINGERPRINT_PROTOCOL,
@@ -311,12 +314,14 @@ export class AutoMovieProductionReviewService {
         prepared.fingerprint,
         diagnostics,
       );
+    const finalCompileStatus =
+      input.target.kind === "shot" || input.target.kind === "film"
+        ? this.compileStatus()
+        : null;
     const fingerprint = reviewFingerprint(
       this.project,
       input.target,
-      input.target.kind === "shot" || input.target.kind === "film"
-        ? this.compileStatus()
-        : null,
+      finalCompileStatus,
     );
     if (fingerprint !== prepared.fingerprint)
       return refused(this.project, input.target, fingerprint, [
@@ -340,7 +345,28 @@ export class AutoMovieProductionReviewService {
       completionBasis: input.completionBasis,
       complete: input.complete,
     };
-    this.project.commitReview(stored);
+    try {
+      this.project.commitReview(
+        stored,
+        () =>
+          reviewFingerprint(this.project, input.target, finalCompileStatus) ===
+          fingerprint,
+      );
+    } catch (error) {
+      if (error instanceof AutoMovieProductionInputRaceError === false)
+        throw error;
+      const current = this.prepare({ target: input.target }).fingerprint;
+      return refused(this.project, input.target, current, [
+        {
+          code: "review-target-raced",
+          category: "error",
+          phase: "review",
+          target: reviewTargetKey(input.target),
+          path: targetPath(input.target),
+          message: `${error.message} Run prepareReview again against the current target and evidence before submitReview.`,
+        },
+      ]);
+    }
     return {
       accepted: true,
       target: input.target,

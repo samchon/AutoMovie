@@ -1175,14 +1175,20 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Store one already validated review record. */
-  public commitReview(review: IAutoMovieStoredReview): number {
-    return this.commitFiles([
-      {
-        path: this.reviewPath(review.target),
-        content: serializeJson(review),
-      },
-    ]);
+  /** Store one already validated review record under an optional input fence. */
+  public commitReview(
+    review: IAutoMovieStoredReview,
+    inputCurrent?: () => boolean,
+  ): number {
+    return this.commitFiles(
+      [
+        {
+          path: this.reviewPath(review.target),
+          content: serializeJson(review),
+        },
+      ],
+      inputCurrent,
+    );
   }
 
   /** Absolute path for a current review target. */
