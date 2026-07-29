@@ -48,38 +48,18 @@ const ensureCoordinationRoot = (): void => {
   fs.chmodSync(COORDINATION_ROOT, 0o700);
 };
 
-/**
- * Coordinates this process already holds, with their nesting depth.
- *
- * The fence exists to keep another session out, and a second acquire inside one
- * single-threaded process is never that: it is a fenced operation that invoked
- * a nested one, the way a guarded commit runs the read-only compiler gate.
- * Without this the process contends with itself until the commit lock's own
- * timeout fires and reports a holder that is the caller.
- */
-const heldCoordinates = new Map<string, { token: string; depth: number }>();
-
+// One fenced operation can invoke another inside the same process -- a guarded
+// commit runs the read-only compiler gate -- so a coordinate is reached twice.
+// The commit lock counts that nesting itself, which is why these stay direct
+// calls rather than a second depth map over the same paths.
 const acquireCoordinate = (
   lockPath: string,
-): { path: string; token: string } => {
-  const held = heldCoordinates.get(lockPath);
-  if (held !== undefined) {
-    ++held.depth;
-    return { path: lockPath, token: held.token };
-  }
-  const token = acquireCommitLock(lockPath);
-  heldCoordinates.set(lockPath, { token, depth: 1 });
-  return { path: lockPath, token };
-};
+): { path: string; token: string } => ({
+  path: lockPath,
+  token: acquireCommitLock(lockPath),
+});
 
 const releaseCoordinate = (lease: { path: string; token: string }): void => {
-  const held = heldCoordinates.get(lease.path);
-  if (held === undefined || held.token !== lease.token) {
-    releaseCommitLock(lease.path, lease.token);
-    return;
-  }
-  if (--held.depth !== 0) return;
-  heldCoordinates.delete(lease.path);
   releaseCommitLock(lease.path, lease.token);
 };
 

@@ -14,9 +14,19 @@ import fs from "node:fs";
  * - **Release is owner-checked.** {@link releaseCommitLock} deletes the lock only
  *   while it still holds this session's token. A foreign token is another
  *   session's lock and is never removed.
+ * - **Acquisition is re-entrant inside one process.** A guarded commit runs the
+ *   compiler's read-only input-snapshot confirmation, which commits its own
+ *   snapshot, so one single-threaded process reaches the same lock twice. That
+ *   is the same holder rather than a second session; without counting it the
+ *   process waits out its own timeout and reports itself as the contender. The
+ *   cross-session law is untouched: a foreign token is still never stolen, and
+ *   the file is removed only when the outermost release runs.
  */
 
 let lockNonce = 0;
+
+/** Locks this process holds, with their nesting depth. */
+const held = new Map<string, { token: string; depth: number }>();
 
 const waitBuffer = new Int32Array(
   new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT),
@@ -31,6 +41,11 @@ const waitForRelease = (ms: number): void => {
  * {@link releaseCommitLock}. Throws after ~2 s if the lock never frees.
  */
 export const acquireCommitLock = (lockPath: string): string => {
+  const current = held.get(lockPath);
+  if (current !== undefined) {
+    ++current.depth;
+    return current.token;
+  }
   const token = `${process.pid}.${(lockNonce++).toString(36)}.${Date.now().toString(36)}`;
   const deadline = Date.now() + 2_000;
   for (;;) {
@@ -38,6 +53,7 @@ export const acquireCommitLock = (lockPath: string): string => {
       // Exclusive create admits only one owner. The token is fully written
       // before this acquire returns, and contenders never inspect its contents.
       fs.writeFileSync(lockPath, token, { flag: "wx" });
+      held.set(lockPath, { token, depth: 1 });
       return token;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
@@ -56,6 +72,11 @@ export const acquireCommitLock = (lockPath: string): string => {
  * a no-op.
  */
 export const releaseCommitLock = (lockPath: string, token: string): void => {
+  const current = held.get(lockPath);
+  if (current !== undefined && current.token === token) {
+    if (--current.depth !== 0) return;
+    held.delete(lockPath);
+  }
   try {
     if (fs.readFileSync(lockPath, "utf8") === token)
       fs.rmSync(lockPath, { force: true });
