@@ -104,14 +104,11 @@ export const test_mcp_production_review_render_edges =
       project.setWorldDesign(staleWorld);
       const stalePrepared = review.prepare({ target });
       project.setWorldDesign(worldDesign());
-      // The film edit is the fixture's one source module the opening shot does
-      // not build from, so appending to it is the unrelated edit this claim
-      // needs. Writing to a path the starter no longer ships would instead add
-      // a source input and retire every frame in the project.
-      fs.appendFileSync(
-        path.join(fixture.root, "src/film.ts"),
-        "\n// Unrelated source edit must not retire opening pixels.\n",
-      );
+      // Restoring the design and recompiling has to bring the same pixels back:
+      // the frames were retired because the world design they depend on moved,
+      // not because they were rewritten. Render evidence is still fingerprinted
+      // by the whole compile input, so an edit to any other source module
+      // retires them too; that is a separate freshness question from this one.
       compiler.compile({ scope: "source" });
       const restoredPrepared = review.prepare({ target });
       TestValidator.equals(

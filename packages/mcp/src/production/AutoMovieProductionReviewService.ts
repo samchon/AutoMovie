@@ -1152,12 +1152,6 @@ const currentAcceptanceOutcomes = (
 ): IAutoMovieAcceptanceOutcomeReference[] => {
   if (target.kind !== "shot" && target.kind !== "film") return [];
   const generated = currentGeneratedManifest(project, context);
-  if (
-    generated === null ||
-    compileStatus.success === false ||
-    compileStatus.compiler.inputFingerprint !== generated.inputFingerprint
-  )
-    return [];
   const graph = project.graph();
   const scenarios = [...graph.acceptance.values()]
     .filter(
@@ -1167,6 +1161,26 @@ const currentAcceptanceOutcomes = (
           acceptanceAddressesShot(scenario, target.id)),
     )
     .sort((left, right) => compareCodeUnits(left.id, right.id));
+  // Absent, stale or tampered compiler output cannot settle any acceptance
+  // scenario. Returning an empty list alone would remove every required
+  // scenario from the prepared review without saying so, which is the shape a
+  // submission carrying no acceptance evidence needs to look complete. Report
+  // each one instead.
+  if (
+    generated === null ||
+    compileStatus.success === false ||
+    compileStatus.compiler.inputFingerprint !== generated.inputFingerprint
+  ) {
+    for (const scenario of scenarios)
+      diagnostics.push(
+        outcomeMissingDiagnostic(
+          target,
+          scenario.id,
+          "Compiler-owned output is absent or not current, so no acceptance outcome can be derived. Compile the project, then prepare this review again.",
+        ),
+      );
+    return [];
+  }
   const compiled = new Map<string, IAutoMovieCompiledShotSource>();
   const realizations = new Map<string, IAutoMovieCompiledContractRealization>();
   let retainedTimeline: IAutoMovieFilmTimeline | null | undefined;
