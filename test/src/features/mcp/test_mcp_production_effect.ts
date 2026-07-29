@@ -90,6 +90,26 @@ export const test_mcp_production_effect = (): void => {
         time: 2,
       },
     });
+    const invalidTimes = [Number.NaN, -1, 7].map((time) =>
+      new AutoMovieProductionOracleService(project).query({
+        request: {
+          query: "effect",
+          zone: "signal-smoke",
+          shot: "opening",
+          time,
+        },
+      }),
+    );
+    const missingCompiledShot = new AutoMovieProductionOracleService(
+      project,
+    ).query({
+      request: {
+        query: "effect",
+        zone: "signal-smoke",
+        shot: "absent",
+        time: 2,
+      },
+    });
     TestValidator.predicate(
       "source cue becomes one current deterministic effect stream and oracle summary",
       compile.success &&
@@ -107,7 +127,12 @@ export const test_mcp_production_effect = (): void => {
         inactive.result.values.active === false &&
         unsafeSubjects.result === null &&
         unsafeSubjects.diagnostics[0]?.message.includes("256 unique") &&
-        missingZone.result === null,
+        missingZone.result === null &&
+        invalidTimes.every((output) => output.result === null) &&
+        missingCompiledShot.result === null &&
+        missingCompiledShot.diagnostics[0]?.message.includes(
+          "no current compiled source",
+        ),
     );
 
     const cue = compiled!.effectCues![0]!;

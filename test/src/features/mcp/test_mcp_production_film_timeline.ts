@@ -861,6 +861,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     );
     const invalidTimelineReview = new AutoMovieProductionReviewService(
       project,
+      () => legalOmission,
     ).prepare({
       target: { kind: "film", id: validTimeline.id },
     });

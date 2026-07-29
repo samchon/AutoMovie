@@ -1625,7 +1625,8 @@ export const test_mcp_production_project = (): void => {
     );
     const filesystemRoot = path.parse(invalidRoot).root;
     const nativeLstatForMissingBase = fs.lstatSync;
-    fs.lstatSync = ((
+    const mutableLstatFs = fs as { lstatSync: typeof fs.lstatSync };
+    mutableLstatFs.lstatSync = ((
       file: fs.PathLike,
       ...args: unknown[]
     ): fs.Stats | fs.BigIntStats => {
@@ -1652,7 +1653,7 @@ export const test_mcp_production_project = (): void => {
         ),
       );
     } finally {
-      fs.lstatSync = nativeLstatForMissingBase;
+      mutableLstatFs.lstatSync = nativeLstatForMissingBase;
     }
     const collidingParent = path.join(invalidRoot, "colliding-parent");
     const collidingParentProject = path.join(collidingParent, "project");

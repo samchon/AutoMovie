@@ -44,6 +44,16 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
+    const routedWorld = structuredClone(project.graph().world!);
+    routedWorld.routes.push({
+      id: "formation-clearance",
+      waypoints: [
+        { x: -5, z: 0 },
+        { x: 5, z: 0 },
+      ],
+      allowedFormationWidth: 10,
+    });
+    project.setWorldDesign(routedWorld);
     project.setFormationDesign({
       ...formationDesign(),
       heroOverrides: [{ slot: 0, actor: "sentinel" }],
@@ -188,13 +198,25 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const formationMeasurement = oracle.query({
       request: { query: "formation", formation: "line" },
     }).result;
+    const nonParticipatingFormationShot = oracle.query({
+      request: {
+        query: "formation",
+        formation: "line",
+        shot: "absent",
+      },
+    });
     TestValidator.predicate(
       "formation and sampled pose measurements use compiler-owned slots",
       formationMeasurement?.kind === "measurement" &&
         formationMeasurement.values.designCount === 6 &&
         formationMeasurement.values.materializedCount === 6 &&
         formationMeasurement.values.participatingShots === 1 &&
+        Number(formationMeasurement.values.routeClearance) > 0 &&
         formationMeasurement.values.heroVisible === 1 &&
+        nonParticipatingFormationShot.result === null &&
+        nonParticipatingFormationShot.diagnostics[0]?.message.includes(
+          "does not participate",
+        ) &&
         oracle.query({
           request: {
             query: "formation",
