@@ -435,7 +435,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   ];
   const longCaptions = canonicalProductionWebVtt(longCaptionTimeline);
   const escapedCaptionTimeline = timeline();
-  escapedCaptionTimeline.id = "unsafe\nfilm -->";
+  escapedCaptionTimeline.id = "unsafe\nfilm\u2028\u2029-->";
   escapedCaptionTimeline.tracks.captions = [
     {
       id: "unsafe\nid -->",
@@ -462,7 +462,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       tiedCaptions.indexOf("\na\n") < tiedCaptions.indexOf("\nb\n") &&
       tiedCaptions.indexOf("\nb\n") < tiedCaptions.indexOf("\nc\n") &&
       longCaptions.includes("01:00:00.000 --> 01:00:01.000") &&
-      escapedCaptions.startsWith("WEBVTT unsafe film --&gt;\n\n") &&
+      escapedCaptions.startsWith("WEBVTT unsafe film\u2028\u2029--&gt;\n\n") &&
       escapedCaptions.match(/-->/gu)?.length === 1 &&
       escapedCaptions.includes("\nunsafe id --&gt;\n") &&
       escapedCaptions.includes(
