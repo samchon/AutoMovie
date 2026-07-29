@@ -209,8 +209,9 @@ export class AutoMovieProductionOracleService {
               ?.formations.find((candidate) => candidate.id === formation.id);
             return runtime === undefined ? [] : [runtime];
           });
+          const firstParticipatingShot = participatingShots[0];
           if (
-            participatingShots.length === 0 ||
+            firstParticipatingShot === undefined ||
             runtimes.length !== participatingShots.length ||
             runtimes.some(
               (runtime) =>
@@ -230,7 +231,7 @@ export class AutoMovieProductionOracleService {
             throw new Error(
               `Shot "${request.shot}" does not participate in formation "${request.formation}". Select one of ${participatingShots.join(", ")}.`,
             );
-          const selectedShot = request.shot ?? participatingShots[0]!;
+          const selectedShot = request.shot ?? firstParticipatingShot;
           const compiled = shots.get(selectedShot)!;
           const sampledTime = request.time ?? 0;
           if (

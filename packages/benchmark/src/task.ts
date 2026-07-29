@@ -353,7 +353,7 @@ export const validateAutoMovieBenchmarkTask = (
     throw new Error(
       `Benchmark task "${task.taskId}" declares a negative axis weight.`,
     );
-  if (Math.abs(weights.reduce((sum, weight) => sum + weight, 0) - 1) > 1e-9)
+  if (weights.reduce((sum, weight) => sum + weight, 0) !== 1)
     throw new Error(
       `Benchmark task "${task.taskId}" axis weights must sum to 1.`,
     );
@@ -385,7 +385,7 @@ export const validateAutoMovieBenchmarkTask = (
     task.delivery.maxRuntimeSeconds <= 0
   )
     throw new Error(
-      `Benchmark task "${task.taskId}" declares a non-finite or negative runtime window.`,
+      `Benchmark task "${task.taskId}" declares an invalid runtime window. The minimum must be finite and non-negative; the maximum must be finite and positive.`,
     );
   if (task.delivery.minRuntimeSeconds > task.delivery.maxRuntimeSeconds)
     throw new Error(

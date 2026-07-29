@@ -28,7 +28,7 @@ export interface IAutoMovieBenchmarkArtifact {
   name: string;
   /** Digest of the exact installed tarball. */
   digest: AutoMovieContentDigest;
-  /** Positive tarball byte count. */
+  /** Positive safe-integer tarball byte count. */
   bytes: number;
 }
 
@@ -52,7 +52,7 @@ export interface IAutoMovieBenchmarkClient {
   model: string;
   /** Reasoning-effort setting. */
   effort: string;
-  /** Integer seed handed to the client. */
+  /** Safe-integer seed handed to the client. */
   seed: number;
   /** Digest of the complete client configuration. */
   configDigest: AutoMovieContentDigest;
@@ -62,9 +62,9 @@ export interface IAutoMovieBenchmarkClient {
 export interface IAutoMovieBenchmarkToolInventory {
   /** Advertised tool name. */
   name: string;
-  /** Byte length of the advertised description. */
+  /** Non-negative safe-integer byte length of the advertised description. */
   descriptionBytes: number;
-  /** Byte length of the advertised input schema. */
+  /** Non-negative safe-integer byte length of the advertised input schema. */
   schemaBytes: number;
 }
 
@@ -94,15 +94,15 @@ export interface IAutoMovieBenchmarkSourceEdit {
 export interface IAutoMovieBenchmarkCapturedFrame {
   /** Compiler-owned shot id. */
   shot: string;
-  /** Exact shot-local capture time in seconds. */
+  /** Non-negative finite shot-local capture time in seconds. */
   timeSeconds: number;
   /** Pass the frame was captured through. */
   pass: AutoMovieGuidePass;
-  /** Exact captured raster width. */
+  /** Non-negative safe-integer captured raster width. */
   width: number;
-  /** Exact captured raster height. */
+  /** Non-negative safe-integer captured raster height. */
   height: number;
-  /** Resident PNG byte count. */
+  /** Non-negative safe-integer resident PNG byte count. */
   bytes: number;
   /** Digest of the resident PNG bytes. */
   digest: AutoMovieContentDigest;
@@ -118,11 +118,11 @@ export interface IAutoMovieBenchmarkDeliveredFile {
   kind: IAutoMovieProductionDeliverable["kind"];
   /** Published media type. */
   mediaType: string;
-  /** Resident byte count. */
+  /** Non-negative safe-integer resident byte count. */
   bytes: number;
   /** Digest of the resident bytes. */
   digest: AutoMovieContentDigest;
-  /** Parsed runtime in seconds, or `null` for a still or text deliverable. */
+  /** Non-negative finite runtime, or `null` for a still or text deliverable. */
   durationSeconds: number | null;
   /** Whether the media parser accepted the resident bytes. */
   probeValid: boolean;
@@ -130,17 +130,17 @@ export interface IAutoMovieBenchmarkDeliveredFile {
 
 /** Candidate generation health, never blended into the film score. */
 export interface IAutoMovieBenchmarkGenerationHealth {
-  /** Tool calls the candidate issued. */
+  /** Non-negative safe-integer tool calls the candidate issued. */
   toolCalls: number;
-  /** Correction rounds the candidate spent on its own output. */
+  /** Non-negative safe-integer correction rounds spent on its own output. */
   corrections: number;
-  /** Candidate cost in US dollars. */
+  /** Non-negative finite candidate cost in US dollars. */
   costUsd: number;
-  /** Wall-clock run time in seconds. */
+  /** Non-negative finite wall-clock run time in seconds. */
   elapsedSeconds: number;
-  /** Input tokens consumed. */
+  /** Non-negative safe-integer input tokens consumed. */
   inputTokens: number;
-  /** Output tokens produced. */
+  /** Non-negative safe-integer output tokens produced. */
   outputTokens: number;
 }
 
@@ -184,13 +184,13 @@ export interface IAutoMovieBenchmarkSubmissionDraft {
   treeDigest: AutoMovieContentDigest;
   /** Reported lifecycle gates, in any order. */
   lifecycle: IAutoMovieBenchmarkGateResult[];
-  /** Direct numeric observations keyed by the task law's observation names. */
+  /** Direct finite observations keyed by the task law's observation names. */
   observations: Record<string, number>;
   /** Every actual captured frame. */
   frames: IAutoMovieBenchmarkCapturedFrame[];
   /** Every published deliverable file. */
   deliverables: IAutoMovieBenchmarkDeliveredFile[];
-  /** Parsed finished runtime, or `null` when no feature was published. */
+  /** Non-negative finite runtime, or `null` when no feature was published. */
   finishedRuntimeSeconds: number | null;
   /** Candidate generation health. */
   generation: IAutoMovieBenchmarkGenerationHealth;
@@ -214,6 +214,100 @@ const freezeDeep = <T>(value: T): T => {
   return Object.freeze(value);
 };
 
+/** One named numeric claim extracted from an otherwise valid archive shape. */
+type AutoMovieBenchmarkNumericClaim = readonly [label: string, value: number];
+
+/** Refuse the first numeric claim outside the physical domain it describes. */
+const assertNumericClaims = (
+  draft: IAutoMovieBenchmarkSubmissionDraft,
+): void => {
+  const assertClaims = (
+    claims: readonly AutoMovieBenchmarkNumericClaim[],
+    valid: (value: number) => boolean,
+    expected: string,
+  ): void => {
+    const invalid = claims.find(([, value]) => valid(value) === false);
+    if (invalid !== undefined)
+      throw new Error(
+        `Invalid AutoMovie benchmark submission: ${invalid[0]} is ${String(invalid[1])}; expected ${expected}.`,
+      );
+  };
+  assertClaims(
+    [["client seed", draft.client.seed]],
+    Number.isSafeInteger,
+    "a safe integer",
+  );
+  assertClaims(
+    draft.repository.artifacts.map(
+      (artifact) =>
+        [`artifact "${artifact.name}" byte count`, artifact.bytes] as const,
+    ),
+    (value) => Number.isSafeInteger(value) && value > 0,
+    "a positive safe integer",
+  );
+  assertClaims(
+    [
+      ...draft.mcp.tools.flatMap((tool) => [
+        [
+          `MCP tool "${tool.name}" description byte count`,
+          tool.descriptionBytes,
+        ] as const,
+        [
+          `MCP tool "${tool.name}" schema byte count`,
+          tool.schemaBytes,
+        ] as const,
+      ]),
+      ...draft.frames.flatMap((frame) => [
+        [`frame "${frame.shot}" width`, frame.width] as const,
+        [`frame "${frame.shot}" height`, frame.height] as const,
+        [`frame "${frame.shot}" byte count`, frame.bytes] as const,
+      ]),
+      ...draft.deliverables.map(
+        (file) =>
+          [`deliverable "${file.deliverable}" byte count`, file.bytes] as const,
+      ),
+      ["generation tool-call count", draft.generation.toolCalls] as const,
+      ["generation correction count", draft.generation.corrections] as const,
+      ["generation input-token count", draft.generation.inputTokens] as const,
+      ["generation output-token count", draft.generation.outputTokens] as const,
+    ],
+    (value) => Number.isSafeInteger(value) && value >= 0,
+    "a non-negative safe integer",
+  );
+  assertClaims(
+    Object.entries(draft.observations).map(
+      ([observation, value]) =>
+        [`observation "${observation}"`, value] as const,
+    ),
+    Number.isFinite,
+    "a finite number",
+  );
+  assertClaims(
+    [
+      ...draft.frames.map(
+        (frame) =>
+          [`frame "${frame.shot}" sample time`, frame.timeSeconds] as const,
+      ),
+      ...draft.deliverables
+        .filter((file) => file.durationSeconds !== null)
+        .map(
+          (file) =>
+            [
+              `deliverable "${file.deliverable}" duration`,
+              file.durationSeconds!,
+            ] as const,
+        ),
+      ...(draft.finishedRuntimeSeconds === null
+        ? []
+        : ([["finished runtime", draft.finishedRuntimeSeconds]] as const)),
+      ["generation cost", draft.generation.costUsd] as const,
+      ["generation elapsed time", draft.generation.elapsedSeconds] as const,
+    ],
+    (value) => Number.isFinite(value) && value >= 0,
+    "a non-negative finite number",
+  );
+};
+
 /**
  * Validate one archived run, resolve its lifecycle, and seal it.
  *
@@ -233,6 +327,7 @@ export const sealAutoMovieBenchmarkSubmission = (
         .map((error) => `${error.path} expects ${error.expected}`)
         .join("; ")}.`,
     );
+  assertNumericClaims(draft);
   const sealed: IAutoMovieBenchmarkSubmissionDraft = {
     ...draft,
     lifecycle: resolveAutoMovieBenchmarkLifecycle(draft.lifecycle),

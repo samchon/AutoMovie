@@ -12,12 +12,12 @@
 | `canonicalBenchmarkJson` / `digestBenchmarkValue` / `digestAutoMovieBenchmarkText` | key를 정렬한 canonical JSON과 SHA-256 digest. run identity와 law identity가 모두 여기서 나온다. |
 | `benchmarkVersionDrift` | task·harness·reference·scenarioHelper 중 어긋난 필드를 이름으로 보고한다. |
 | `AUTOMOVIE_BENCHMARK_GATES` / `resolveAutoMovieBenchmarkLifecycle` / `blockingAutoMovieBenchmarkGate` | 고정된 9개 lifecycle gate. 앞 gate가 통과하지 못하면 뒤 gate는 runner가 뭐라 보고했든 `not-run`이 된다. |
-| `IAutoMovieBenchmarkSubmissionDraft` / `sealAutoMovieBenchmarkSubmission` | run 산출물을 검증·정렬하고 내용 주소 `runId`를 붙여 **깊게 freeze**한다. scorer가 archive를 고치면 조용히 재채점되는 대신 실패한다. |
+| `IAutoMovieBenchmarkSubmissionDraft` / `sealAutoMovieBenchmarkSubmission` | run 산출물의 구조와 물리적 숫자 정의역을 검증·정렬하고 내용 주소 `runId`를 붙여 **깊게 freeze**한다. scorer가 archive를 고치면 조용히 재채점되는 대신 실패한다. |
 | `assertAutoMovieBenchmarkBinding` / `benchmarkComparisonDrift` | 다른 법·다른 brief로 만든 증거를 채점하는 것을 막고, production·legacy 비교에서 surface 외에 달라진 조건을 열거한다. |
 | `appendAutoMovieBenchmarkTrace` / `replayAutoMovieBenchmarkTrace` / `benchmarkTraceKinds` | 한 줄 = 한 gzip member인 append-only oracle trace. 프로세스가 죽어 잘린 스트림은 마지막 온전한 줄까지 복원하고(`truncated`), 완결된 줄이 깨졌거나 sequence가 비면 거부한다. |
 | `judgeAutoMovieBenchmarkSubmission` | `infra-excluded` → `gate-failed` → `scored` 순으로 판정한다. assertion마다 `pass`/`fail`/`unknown`과 증거 주소를 남기고, 축별 통과율에 가중치를 곱해 film score를 만든다. |
 | `calibrateAutoMovieBenchmark` / `assertAutoMovieBenchmarkCalibrated` | reference·empty·mutant anchor가 각자의 band 안에 있는지 확인한다. judge refactor가 알려진 결함을 올리거나 정상 reference를 떨어뜨리면 여기서 실패한다. |
-| `reportAutoMovieBenchmark` / `diffAutoMovieBenchmarkVerdicts` / `assertAutoMovieBenchmarkRubric` | surface별 집계에서 infra 실패를 분모에서 빼고, 두 verdict를 비교할 때 **점수보다 version drift를 먼저** 보고한다. rubric verdict는 증거 주소가 없거나 score가 유한한 `0..1` 범위를 벗어나면 거부한다. |
+| `reportAutoMovieBenchmark` / `diffAutoMovieBenchmarkVerdicts` / `assertAutoMovieBenchmarkRubric` | surface별 집계에서 infra 실패를 분모에서 빼고, 두 verdict를 비교할 때 **점수보다 version drift를 먼저** 보고한다. rubric verdict는 비어 있지 않은 reviewer·rationale·증거 주소, 유한한 `0..1` score, 같은 보고서에 속한 run을 요구한다. |
 | `austerlitzSignalTask` / `austerlitzSignalAnchors` / `austerlitzSignalDryRun` | short tier corpus 한 시나리오: 고정된 brief bytes, anchor 세 종류, 그리고 같은 법 아래의 production·legacy dry evaluation. |
 
 ## 두 점수를 섞지 않는다

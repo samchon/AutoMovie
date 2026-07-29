@@ -32,7 +32,8 @@ const throws = (task: () => unknown, fragment: string): boolean => {
  * 2. Sealing resolves the reported lifecycle into the canonical ordered one.
  * 3. The sealed archive is frozen through every nested object and array, so a
  *    scorer that edits it fails instead of rescoring its own edit.
- * 4. A malformed draft is refused with the failing path named.
+ * 4. A malformed draft and every physically impossible numeric claim are refused
+ *    before they can enter scoring or aggregate generation health.
  * 5. Binding refuses a submission produced for another task, exact task law,
  *    brief, or version tuple, and accepts the matching one.
  * 6. A production and a legacy submission of one dry evaluation differ only in the
@@ -88,6 +89,94 @@ export const test_benchmark_submission_seal = (): void => {
         ),
       "Invalid AutoMovie benchmark submission",
     ),
+  );
+  TestValidator.predicate(
+    "physically impossible archive numbers are refused before sealing",
+    throws(
+      () =>
+        sealAutoMovieBenchmarkSubmission({
+          ...draft,
+          client: { ...draft.client, seed: 0.5 },
+        }),
+      "client seed",
+    ) &&
+      throws(
+        () =>
+          sealAutoMovieBenchmarkSubmission({
+            ...draft,
+            repository: {
+              ...draft.repository,
+              artifacts: [
+                { ...draft.repository.artifacts[0]!, bytes: 0.5 },
+                ...draft.repository.artifacts.slice(1),
+              ],
+            },
+          }),
+        "positive safe integer",
+      ) &&
+      throws(
+        () =>
+          sealAutoMovieBenchmarkSubmission({
+            ...draft,
+            repository: {
+              ...draft.repository,
+              artifacts: [
+                { ...draft.repository.artifacts[0]!, bytes: 0 },
+                ...draft.repository.artifacts.slice(1),
+              ],
+            },
+          }),
+        "positive safe integer",
+      ) &&
+      throws(
+        () =>
+          sealAutoMovieBenchmarkSubmission({
+            ...draft,
+            generation: { ...draft.generation, toolCalls: 0.5 },
+          }),
+        "non-negative safe integer",
+      ) &&
+      throws(
+        () =>
+          sealAutoMovieBenchmarkSubmission({
+            ...draft,
+            generation: { ...draft.generation, corrections: -1 },
+          }),
+        "non-negative safe integer",
+      ) &&
+      throws(
+        () =>
+          sealAutoMovieBenchmarkSubmission({
+            ...draft,
+            observations: {
+              ...draft.observations,
+              "production:fps": Number.NaN,
+            },
+          }),
+        "finite number",
+      ) &&
+      throws(
+        () =>
+          sealAutoMovieBenchmarkSubmission({
+            ...draft,
+            frames: [
+              { ...draft.frames[0]!, timeSeconds: Number.NaN },
+              ...draft.frames.slice(1),
+            ],
+          }),
+        "non-negative finite number",
+      ) &&
+      throws(
+        () =>
+          sealAutoMovieBenchmarkSubmission({
+            ...draft,
+            frames: [
+              { ...draft.frames[0]!, timeSeconds: -1 },
+              ...draft.frames.slice(1),
+            ],
+          }),
+        "non-negative finite number",
+      ),
   );
 
   assertAutoMovieBenchmarkBinding(task, reference);

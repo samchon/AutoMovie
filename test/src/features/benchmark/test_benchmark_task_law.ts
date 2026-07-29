@@ -37,7 +37,9 @@ const refusal = (task: IAutoMovieBenchmarkTask, fragment: string): boolean => {
  *    one, a weighted empty axis, an empty or repeated deliverable inventory, an
  *    inverted runtime window, an inverted calibration band, and a repeated
  *    mutant id are each refused with the reason named.
- * 4. Version drift is reported field by field, and an identical version tuple
+ * 4. Every task-law number is finite and stays inside its declared integer,
+ *    non-negative, positive, runtime, calibration, and sandbox domain.
+ * 5. Version drift is reported field by field, and an identical version tuple
  *    reports nothing.
  */
 export const test_benchmark_task_law = (): void => {
@@ -148,6 +150,19 @@ export const test_benchmark_task_law = (): void => {
           weights: { ...task.weights, historical: Number.NaN },
         },
         "non-finite axis weight",
+      ),
+      refusal(
+        {
+          ...task,
+          weights: {
+            historical: 1.000_000_000_5,
+            production: 0,
+            frame: 0,
+            invariant: 0,
+            delivery: 0,
+          },
+        },
+        "sum to 1",
       ),
       refusal(
         {
@@ -272,7 +287,7 @@ export const test_benchmark_task_law = (): void => {
         "sandbox budget",
       ),
     ],
-    Array.from({ length: 24 }, () => true),
+    Array.from({ length: 25 }, () => true),
   );
 
   const emptyLaw: IAutoMovieBenchmarkTask = {

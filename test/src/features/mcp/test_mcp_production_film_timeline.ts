@@ -878,8 +878,13 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const residentReadGenerated = project.readGeneratedFile;
     const nonErrorTimelineReview = (() => {
       project.readGeneratedFile = ((relativePath: string) => {
-        if (relativePath === "film-timeline.json")
-          throw "non-error timeline read failure";
+        if (relativePath === "film-timeline.json") {
+          const iterator = (function* (): Generator<void> {
+            yield;
+          })();
+          iterator.next();
+          return iterator.throw("non-error timeline read failure") as never;
+        }
         return residentReadGenerated.call(project, relativePath);
       }) as typeof project.readGeneratedFile;
       try {

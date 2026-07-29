@@ -34,8 +34,9 @@ const throws = (task: () => unknown, fragment: string): boolean => {
  *    lowers nor raises the surface it belonged to.
  * 3. A surface whose every run was excluded reports an empty denominator and no
  *    means at all rather than zeros.
- * 4. A rubric verdict without an evidence address, or outside the rubric range, is
- *    refused; a complete one rides beside the measured axes.
+ * 4. A rubric verdict without concrete evidence, reviewer, rationale, a measured
+ *    run, or a score inside the rubric range is refused; a complete one rides
+ *    beside the measured axes.
  * 5. A diff across drifted versions withholds the score delta entirely, while a
  *    diff under one law reports every assertion whose outcome moved, including
  *    assertions only one of the two verdicts settled.
@@ -124,6 +125,30 @@ export const test_benchmark_surface_report = (): void => {
         () =>
           reportAutoMovieBenchmark(
             [productionVerdict],
+            [{ ...rubric, evidence: [" "] }],
+          ),
+        "carries no evidence address",
+      ) &&
+      throws(
+        () =>
+          reportAutoMovieBenchmark(
+            [productionVerdict],
+            [{ ...rubric, reviewer: " " }],
+          ),
+        "reviewer and rationale",
+      ) &&
+      throws(
+        () =>
+          reportAutoMovieBenchmark(
+            [productionVerdict],
+            [{ ...rubric, rationale: " " }],
+          ),
+        "reviewer and rationale",
+      ) &&
+      throws(
+        () =>
+          reportAutoMovieBenchmark(
+            [productionVerdict],
             [{ ...rubric, score: 2 }],
           ),
         "outside the 0..1 rubric range",
@@ -143,6 +168,19 @@ export const test_benchmark_surface_report = (): void => {
             [{ ...rubric, score: Number.NaN }],
           ),
         "outside the 0..1 rubric range",
+      ) &&
+      throws(
+        () =>
+          reportAutoMovieBenchmark(
+            [productionVerdict],
+            [
+              {
+                ...rubric,
+                runId: digestBenchmarkValue("orphan-rubric-run"),
+              },
+            ],
+          ),
+        "has no measured verdict",
       ),
   );
   TestValidator.equals(

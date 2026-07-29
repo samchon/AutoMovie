@@ -24,13 +24,13 @@ export interface IAutoMovieBenchmarkRubricVerdict {
   runId: AutoMovieContentDigest;
   /** Reviewed axis. */
   axis: "aesthetic" | "narrative" | "historical-reading";
-  /** Reviewer identity, human or agent. */
+  /** Non-blank reviewer identity, human or agent. */
   reviewer: string;
   /** Fixed-rubric score in `[0, 1]`. */
   score: number;
-  /** Why the reviewer scored it that way. */
+  /** Non-blank reason the reviewer scored it that way. */
   rationale: string;
-  /** Exact frame and source addresses the reviewer read. */
+  /** Non-blank exact frame and source addresses the reviewer read. */
   evidence: string[];
 }
 
@@ -96,9 +96,19 @@ export interface IAutoMovieBenchmarkVerdictDiff {
 export const assertAutoMovieBenchmarkRubric = (
   rubric: IAutoMovieBenchmarkRubricVerdict,
 ): void => {
-  if (rubric.evidence.length === 0)
+  if (
+    rubric.evidence.length === 0 ||
+    rubric.evidence.some((address) => address.trim().length === 0)
+  )
     throw new Error(
       `Rubric verdict on ${rubric.runId} carries no evidence address. A reviewed axis names the frames and sources it read.`,
+    );
+  if (
+    rubric.reviewer.trim().length === 0 ||
+    rubric.rationale.trim().length === 0
+  )
+    throw new Error(
+      `Rubric verdict on ${rubric.runId} must name its reviewer and rationale.`,
     );
   if (
     Number.isFinite(rubric.score) === false ||
@@ -127,7 +137,14 @@ export const reportAutoMovieBenchmark = (
   verdicts: readonly IAutoMovieBenchmarkVerdict[],
   rubric: readonly IAutoMovieBenchmarkRubricVerdict[] = [],
 ): IAutoMovieBenchmarkReport => {
-  for (const item of rubric) assertAutoMovieBenchmarkRubric(item);
+  const runIds = new Set(verdicts.map((verdict) => verdict.runId));
+  for (const item of rubric) {
+    assertAutoMovieBenchmarkRubric(item);
+    if (runIds.has(item.runId) === false)
+      throw new Error(
+        `Rubric verdict on ${item.runId} has no measured verdict in this report.`,
+      );
+  }
   const surfaces = [
     ...new Set(verdicts.map((verdict) => verdict.surface)),
   ].sort(compareBenchmarkCodeUnits);
