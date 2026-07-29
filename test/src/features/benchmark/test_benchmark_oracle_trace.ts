@@ -86,6 +86,10 @@ const throws = (task: () => unknown, fragment: string): boolean => {
  */
 export const test_benchmark_oracle_trace = (): void => {
   const all = events();
+  const capture = all[3]!;
+  const verdict = all[4]!;
+  if (capture.kind !== "capture" || verdict.kind !== "verdict")
+    throw new Error("benchmark trace fixture ordering changed");
   const oneShot = appendAutoMovieBenchmarkTrace(new Uint8Array(), all);
   const batched = appendAutoMovieBenchmarkTrace(
     appendAutoMovieBenchmarkTrace(new Uint8Array(), all.slice(0, 2)),
@@ -187,7 +191,7 @@ export const test_benchmark_oracle_trace = (): void => {
       throws(
         () =>
           appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...all[3]!, bytes: -1 },
+            { ...capture, bytes: -1 },
           ]),
         "non-negative safe integer",
       ) &&
@@ -201,7 +205,7 @@ export const test_benchmark_oracle_trace = (): void => {
       throws(
         () =>
           appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...all[3]!, timeSeconds: -1 },
+            { ...capture, timeSeconds: -1 },
           ]),
         "non-negative finite number",
       ),
@@ -211,7 +215,7 @@ export const test_benchmark_oracle_trace = (): void => {
     replayAutoMovieBenchmarkTrace(
       appendAutoMovieBenchmarkTrace(new Uint8Array(), [
         {
-          ...all[4]!,
+          ...verdict,
           sequence: 0,
           outcome: "infra-excluded",
           filmScore: null,
@@ -222,7 +226,7 @@ export const test_benchmark_oracle_trace = (): void => {
         () =>
           appendAutoMovieBenchmarkTrace(new Uint8Array(), [
             {
-              ...all[4]!,
+              ...verdict,
               outcome: "infra-excluded",
               filmScore: 0,
             },
@@ -232,28 +236,28 @@ export const test_benchmark_oracle_trace = (): void => {
       throws(
         () =>
           appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...all[4]!, filmScore: null },
+            { ...verdict, filmScore: null },
           ]),
         "null exactly",
       ) &&
       throws(
         () =>
           appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...all[4]!, filmScore: Number.NaN },
+            { ...verdict, filmScore: Number.NaN },
           ]),
         "inside 0..1",
       ) &&
       throws(
         () =>
           appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...all[4]!, filmScore: -0.1 },
+            { ...verdict, filmScore: -0.1 },
           ]),
         "inside 0..1",
       ) &&
       throws(
         () =>
           appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...all[4]!, filmScore: 1.1 },
+            { ...verdict, filmScore: 1.1 },
           ]),
         "inside 0..1",
       ) &&
@@ -261,7 +265,7 @@ export const test_benchmark_oracle_trace = (): void => {
         () =>
           appendAutoMovieBenchmarkTrace(new Uint8Array(), [
             {
-              ...all[4]!,
+              ...verdict,
               outcome: "gate-failed",
               filmScore: 0.7,
             },
