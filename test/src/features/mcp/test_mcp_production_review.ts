@@ -989,6 +989,25 @@ export const test_mcp_production_review = async (): Promise<void> => {
         (item) => item.code === "review-evidence-stale",
       ),
     );
+    let shortenedSource: ReturnType<AutoMovieProductionReviewService["submit"]>;
+    project.readSource = ((sourcePath: string) =>
+      new Error("source evidence stack").stack?.includes("currentSourceLine")
+        ? Buffer.alloc(0)
+        : residentReadSource.call(
+            project,
+            sourcePath,
+          )) as typeof project.readSource;
+    try {
+      shortenedSource = review.submit(worksheet(project, sourcePrepared));
+    } finally {
+      project.readSource = residentReadSource;
+    }
+    TestValidator.predicate(
+      "a source line-removal race becomes stale evidence",
+      shortenedSource.diagnostics.some(
+        (item) => item.code === "review-evidence-stale",
+      ),
+    );
 
     const shotTarget = { kind: "shot" as const, id: "opening" };
     const shotPrepared = review.prepare({ target: shotTarget });

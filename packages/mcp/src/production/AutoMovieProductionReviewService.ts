@@ -873,7 +873,7 @@ const currentSourceLine = (
     const source = Buffer.from(
       normalizeAutoMovieSource(project.readSource(sourcePath)),
     ).toString("utf8");
-    return source.split("\n")[line - 1]!;
+    return source.split("\n")[line - 1] ?? "";
   } catch {
     return "";
   }
