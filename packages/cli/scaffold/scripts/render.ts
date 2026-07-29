@@ -387,13 +387,19 @@ const currentChunk = async (
   const directory = chunkDirectory(chunk.id);
   const receiptFile = path.join(directory, "receipt.json");
   if (fs.existsSync(receiptFile) === false) return null;
+  let plan: IAutoMovieProductionRenderJobPlan;
+  let receipt: IAutoMovieProductionRenderChunkReceipt;
   try {
-    const plan = readPlan();
-    const receipt =
-      readJson<IAutoMovieProductionRenderChunkReceipt>(receiptFile);
+    plan = readPlan();
+    receipt = readJson<IAutoMovieProductionRenderChunkReceipt>(receiptFile);
     verifyProductionRenderChunkReceipt({ plan, chunk, receipt });
-    for (const frame of receipt.frames) {
-      const bytes = readRegularInside(directory, frame.path);
+  } catch {
+    return null;
+  }
+  for (const frame of receipt.frames) {
+    let bytes: Uint8Array;
+    try {
+      bytes = readRegularInside(directory, frame.path);
       const probe = probeProductionMedia({
         kind: "preview",
         mediaType: "image/png",
@@ -407,8 +413,15 @@ const currentChunk = async (
         probe.height !== frame.height
       )
         return null;
-      consumeFrame?.(bytes);
+    } catch {
+      return null;
     }
+    // Consumer failures belong to the decoder/encoder, not chunk validity.
+    // Keep this call outside every validation catch so its exact diagnostic
+    // survives and rerender advice is reserved for actual receipt drift.
+    consumeFrame?.(bytes);
+  }
+  try {
     const encoded = readRegularInside(directory, receipt.encoded.path);
     const video = probeProductionMedia({
       kind: chunk.kind,

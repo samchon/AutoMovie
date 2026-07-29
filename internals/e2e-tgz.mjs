@@ -66,6 +66,7 @@ const runExpectedFailure = (
   cwd,
   expectedOutput,
   timeout = 300_000,
+  env = process.env,
 ) => {
   console.log(`> ${label}`);
   if (tracePath !== null)
@@ -77,6 +78,7 @@ const runExpectedFailure = (
     maxBuffer: 64 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"],
     timeout,
+    env,
   });
   const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
   if (
@@ -1159,6 +1161,50 @@ try {
     starterDir,
   );
   run("lint reviewed packaged starter", "pnpm lint", starterDir, 900_000);
+  const encoderFailureHookPath = join(starterDir, "fail-packaged-encoder.cjs");
+  writeFileSync(
+    encoderFailureHookPath,
+    `
+const Module = require("node:module");
+const originalLoad = Module._load;
+Module._load = function (request, parent, isMain) {
+  const loaded = originalLoad.apply(this, arguments);
+  if (
+    loaded !== null &&
+    typeof loaded === "object" &&
+    typeof loaded.createH264MP4Encoder === "function" &&
+    loaded.__automovieFailureHook !== true
+  ) {
+    const originalCreate = loaded.createH264MP4Encoder;
+    loaded.createH264MP4Encoder = async (...args) => {
+      const encoder = await originalCreate(...args);
+      encoder.addFrameRgba = () => {
+        throw new Error("automovie-encoder-consumer-sentinel");
+      };
+      return encoder;
+    };
+    Object.defineProperty(loaded, "__automovieFailureHook", { value: true });
+  }
+  return loaded;
+};
+`,
+  );
+  runExpectedFailure(
+    "preserve packaged encoder consumer diagnostics",
+    "pnpm render finalize",
+    starterDir,
+    "automovie-encoder-consumer-sentinel",
+    300_000,
+    {
+      ...process.env,
+      NODE_OPTIONS: [
+        process.env.NODE_OPTIONS,
+        `--require=${encoderFailureHookPath}`,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    },
+  );
   const renderStateRoot = join(starterDir, ".automovie", "render-job");
   const renderPlanPath = join(renderStateRoot, "plan.json");
   const renderPlanText = readFileSync(renderPlanPath, "utf8");
