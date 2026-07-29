@@ -245,8 +245,13 @@ export const canonicalBenchmarkJson = (value: unknown): string => {
       return JSON.stringify(current);
     }
     if (Array.isArray(current))
-      return `[${current.map((item) => encode(item)).join(",")}]`;
+      return `[${Array.from(current, (item) => encode(item)).join(",")}]`;
     if (typeof current === "object") {
+      const prototype = Object.getPrototypeOf(current);
+      if (prototype !== Object.prototype && prototype !== null)
+        throw new TypeError(
+          "Benchmark canonical JSON requires plain JSON objects.",
+        );
       const record = current as Record<string, unknown>;
       return `{${Object.keys(record)
         .sort(compareBenchmarkCodeUnits)

@@ -63,6 +63,13 @@ export const test_benchmark_task_law = (): void => {
     compareBenchmarkCodeUnits("same", "same"),
     0,
   );
+  TestValidator.equals(
+    "canonical JSON accepts a null-prototype JSON object",
+    canonicalBenchmarkJson(
+      Object.assign(Object.create(null), { zulu: 2, alpha: 1 }),
+    ),
+    '{"alpha":1,"zulu":2}',
+  );
   TestValidator.predicate(
     "canonical JSON refuses values with no JSON identity",
     [
@@ -70,6 +77,9 @@ export const test_benchmark_task_law = (): void => {
       [1n, "JSON-compatible"],
       [Symbol("unsupported"), "JSON-compatible"],
       [() => undefined, "JSON-compatible"],
+      [Array(1), "JSON-compatible"],
+      [new Map([["unsupported", true]]), "plain JSON objects"],
+      [new Date(0), "plain JSON objects"],
     ].every(([value, fragment]) => {
       try {
         canonicalBenchmarkJson(value);
