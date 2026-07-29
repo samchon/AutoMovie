@@ -405,7 +405,7 @@ export const canonicalProductionWebVtt = (
       compareCodeUnits(left.id, right.id),
   );
   return [
-    `WEBVTT ${timeline.id}`,
+    `WEBVTT ${webVttPlainText(timeline.id)}`,
     "",
     ...cues.flatMap((cue) => [
       webVttPlainText(cue.id),
