@@ -64,7 +64,7 @@ export interface IAutoMovieBenchmarkReport {
   rubric: IAutoMovieBenchmarkRubricVerdict[];
 }
 
-/** Change in one assertion between two verdicts for the same run. */
+/** Change in one assertion between two comparable verdicts. */
 export interface IAutoMovieBenchmarkAssertionChange {
   /** Assertion id. */
   id: string;
@@ -233,11 +233,12 @@ const outcomesOf = (
   );
 
 /**
- * Diff two verdicts for the same run, reporting law drift before any score.
+ * Diff two verdicts under one task law, reporting law drift before any score.
  *
- * A score that moved under a changed harness, task, reference, or helper
- * revision is not a product change, so the delta is withheld entirely rather
- * than reported with a caveat a reader can skip.
+ * The verdicts may come from different surfaces and therefore carry different
+ * run ids. A score that moved under a changed harness, task, reference, or
+ * helper revision is not a product change, so the delta is withheld entirely
+ * rather than reported with a caveat a reader can skip.
  */
 export const diffAutoMovieBenchmarkVerdicts = (
   before: IAutoMovieBenchmarkVerdict,
