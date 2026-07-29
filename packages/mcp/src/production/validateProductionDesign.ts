@@ -579,12 +579,23 @@ export const validateAutoMovieProductionGraph = (
         file,
         "budget.lodDistance",
       );
-      const liveUpperBound =
-        recipe.emission.burst +
-        Math.ceil(
-          recipe.emission.rate *
-            Math.min(recipe.emission.duration, recipe.particle.lifetime.max),
-        );
+      const totalRegular = Math.floor(
+        recipe.emission.rate * recipe.emission.duration + 1e-9,
+      );
+      const lifetimeRegular = Math.ceil(
+        recipe.emission.rate * recipe.particle.lifetime.max,
+      );
+      const regularPeak = Math.min(totalRegular, lifetimeRegular);
+      // Regular particles spawn at n / rate and expire at age >= lifetime, so
+      // an exact lifetime boundary does not overlap the initial burst.
+      const regularBeforeBurstExpiry = Math.min(
+        totalRegular,
+        Math.max(0, lifetimeRegular - 1),
+      );
+      const liveUpperBound = Math.max(
+        regularPeak,
+        recipe.emission.burst + regularBeforeBurstExpiry,
+      );
       if (liveUpperBound > recipe.budget.maxParticles)
         invalid(
           diagnostics,

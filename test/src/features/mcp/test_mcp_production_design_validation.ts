@@ -734,12 +734,12 @@ export const test_mcp_production_design_validation = (): void => {
   const shortEmissionRecipe = {
     ...worldDesign().effectRecipes[0]!,
     id: "short-emission",
-    emission: { rate: 100, burst: 0, duration: 0.1 },
+    emission: { rate: 0.5, burst: 1, duration: 1 },
     particle: {
       ...worldDesign().effectRecipes[0]!.particle,
       lifetime: { min: 10, max: 10 },
     },
-    budget: { maxParticles: 10, lodDistance: 100 },
+    budget: { maxParticles: 1, lodDistance: 100 },
   };
   TestValidator.equals(
     "effect live budget stops adding particles when emission ends",
@@ -752,6 +752,32 @@ export const test_mcp_production_design_validation = (): void => {
           {
             ...worldDesign().effectZones[0]!,
             recipe: shortEmissionRecipe.id,
+          },
+        ],
+      },
+    }),
+    [],
+  );
+  const exactExpiryRecipe = {
+    ...shortEmissionRecipe,
+    id: "exact-expiry",
+    emission: { rate: 1, burst: 1, duration: 10 },
+    particle: {
+      ...shortEmissionRecipe.particle,
+      lifetime: { min: 1, max: 1 },
+    },
+  };
+  TestValidator.equals(
+    "effect burst expires when the first regular particle spawns",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      world: {
+        ...worldDesign(),
+        effectRecipes: [exactExpiryRecipe],
+        effectZones: [
+          {
+            ...worldDesign().effectZones[0]!,
+            recipe: exactExpiryRecipe.id,
           },
         ],
       },

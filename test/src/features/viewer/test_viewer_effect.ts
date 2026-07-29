@@ -61,12 +61,14 @@ const effectWorld = (
  *    kinds retain their identity.
  * 2. Distance LOD reduces the far sample, particle lifetimes stay bounded, a
  *    one-particle budget caps output, and times outside the cue are inactive.
- * 3. Missing zones or recipes materialize no effect, and omitted fps/event use the
+ * 3. Fractional duration emits no invented regular particle, and a burst expires
+ *    before the regular particle whose spawn time equals its lifetime.
+ * 4. Missing zones or recipes materialize no effect, and omitted fps/event use the
  *    deterministic default clock without inventing an event.
- * 4. The active viewer exposes a bounded billboard instance batch, per-particle
+ * 5. The active viewer exposes a bounded billboard instance batch, per-particle
  *    opacity storage, no implicit frustum culling, and its compiled debug
  *    digest.
- * 5. Updating the same viewer before cue start hides the batch, clears its
+ * 6. Updating the same viewer before cue start hides the batch, clears its
  *    instance count, and reports inactive state.
  */
 export const test_viewer_effect = (): void => {
@@ -107,6 +109,38 @@ export const test_viewer_effect = (): void => {
     },
     2,
   );
+  const fractionalDuration = sampleCompiledEffect(
+    {
+      ...effect!,
+      start: 0,
+      end: 3,
+      recipe: {
+        ...effect!.recipe,
+        emission: { rate: 0.5, burst: 1, duration: 1 },
+        particle: {
+          ...effect!.recipe.particle,
+          lifetime: { min: 10, max: 10 },
+        },
+      },
+    },
+    2,
+  );
+  const exactBurstExpiry = sampleCompiledEffect(
+    {
+      ...effect!,
+      start: 0,
+      end: 3,
+      recipe: {
+        ...effect!.recipe,
+        emission: { rate: 1, burst: 1, duration: 3 },
+        particle: {
+          ...effect!.recipe.particle,
+          lifetime: { min: 1, max: 1 },
+        },
+      },
+    },
+    1,
+  );
   const defaultClock = materializeCompiledEffects({
     contract,
     world: effectWorld(),
@@ -140,6 +174,10 @@ export const test_viewer_effect = (): void => {
       capped.particles.length === 1 &&
       before.active === false &&
       after.active === false &&
+      fractionalDuration.particles.length === 1 &&
+      fractionalDuration.particles[0]?.index === 0 &&
+      exactBurstExpiry.particles.length === 1 &&
+      exactBurstExpiry.particles[0]?.index === 1 &&
       defaultClock.fixedStepSeconds === 1 / 24 &&
       defaultClock.event === undefined &&
       effect!.digest !== differentSeed.digest &&
