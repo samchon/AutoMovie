@@ -132,6 +132,22 @@ export const test_benchmark_submission_seal = (): void => {
         () =>
           sealAutoMovieBenchmarkSubmission({
             ...draft,
+            versions: { ...draft.versions, scenarioHelper: 0.5 },
+          }),
+        "scenario-helper revision",
+      ) &&
+      throws(
+        () =>
+          sealAutoMovieBenchmarkSubmission({
+            ...draft,
+            versions: { ...draft.versions, scenarioHelper: -1 },
+          }),
+        "scenario-helper revision",
+      ) &&
+      throws(
+        () =>
+          sealAutoMovieBenchmarkSubmission({
+            ...draft,
             generation: { ...draft.generation, toolCalls: 0.5 },
           }),
         "non-negative safe integer",

@@ -143,6 +143,46 @@ export interface IAutoMovieBenchmarkTraceReplay {
 /** First two bytes of a gzip member. */
 const GZIP_MAGIC = [0x1f, 0x8b];
 
+/** Refuse numeric trace claims that cannot describe an observed run. */
+const assertAutoMovieBenchmarkTraceNumbers = (
+  event: IAutoMovieBenchmarkTraceEvent,
+): void => {
+  const record = event as unknown as Record<string, unknown>;
+  for (const field of ["sequence", "errors", "warnings", "bytes"]) {
+    const value = record[field] as number | undefined;
+    if (
+      value !== undefined &&
+      (Number.isSafeInteger(value) === false || value < 0)
+    )
+      throw new Error(
+        `Benchmark trace ${field} must be a non-negative safe integer.`,
+      );
+  }
+  for (const field of ["atMs", "timeSeconds"]) {
+    const value = record[field] as number | undefined;
+    if (value !== undefined && (Number.isFinite(value) === false || value < 0))
+      throw new Error(
+        `Benchmark trace ${field} must be a non-negative finite number.`,
+      );
+  }
+  if (event.kind === "verdict") {
+    const excluded = event.outcome === "infra-excluded";
+    if ((event.filmScore === null) !== excluded)
+      throw new Error(
+        "Benchmark trace filmScore must be null exactly when infrastructure excluded the run.",
+      );
+    if (
+      event.filmScore !== null &&
+      (Number.isFinite(event.filmScore) === false ||
+        event.filmScore < 0 ||
+        event.filmScore > 1)
+    )
+      throw new Error(
+        "Benchmark trace filmScore must be a finite number inside 0..1.",
+      );
+  }
+};
+
 /**
  * Append events to an archived trace as independent gzip members.
  *
@@ -154,13 +194,15 @@ const GZIP_MAGIC = [0x1f, 0x8b];
 export const appendAutoMovieBenchmarkTrace = (
   existing: Uint8Array,
   events: readonly IAutoMovieBenchmarkTraceEvent[],
-): Uint8Array =>
-  Buffer.concat([
+): Uint8Array => {
+  for (const event of events) assertAutoMovieBenchmarkTraceNumbers(event);
+  return Buffer.concat([
     Buffer.from(existing),
     ...events.map((event) =>
       gzipSync(Buffer.from(`${canonicalBenchmarkJson(event)}\n`, "utf8")),
     ),
   ]);
+};
 
 /**
  * Replay one archived trace, tolerating a stream that was cut mid-line.
@@ -186,6 +228,7 @@ export const replayAutoMovieBenchmarkTrace = (
   // partial line for one a killed writer left behind.
   const lines = text.split("\n");
   const truncated = lines[lines.length - 1] !== "";
+  let previousAtMs = Number.NEGATIVE_INFINITY;
   const events = lines.slice(0, -1).map((line, index) => {
     let parsed: unknown;
     try {
@@ -207,6 +250,12 @@ export const replayAutoMovieBenchmarkTrace = (
       throw new Error(
         `Benchmark trace line ${index} carries sequence ${validation.data.sequence}. An append-only trace has no gaps.`,
       );
+    assertAutoMovieBenchmarkTraceNumbers(validation.data);
+    if (validation.data.atMs < previousAtMs)
+      throw new Error(
+        `Benchmark trace line ${index} moves its monotonic clock backwards from ${previousAtMs} to ${validation.data.atMs}.`,
+      );
+    previousAtMs = validation.data.atMs;
     return validation.data;
   });
   return { events, truncated };

@@ -266,6 +266,7 @@ const assertNumericClaims = (
         (file) =>
           [`deliverable "${file.deliverable}" byte count`, file.bytes] as const,
       ),
+      ["scenario-helper revision", draft.versions.scenarioHelper] as const,
       ["generation tool-call count", draft.generation.toolCalls] as const,
       ["generation correction count", draft.generation.corrections] as const,
       ["generation input-token count", draft.generation.inputTokens] as const,

@@ -77,9 +77,12 @@ const throws = (task: () => unknown, fragment: string): boolean => {
  *    before the cut and reports the truncation.
  * 3. An empty archive replays to nothing without reporting truncation.
  * 4. Uncompressed JSONL replays through the same reader.
- * 5. A complete line that is not JSON, is not an observed event, or carries a
- *    sequence gap is refused as corruption rather than read as truncation.
- * 6. The archived event kinds are reported in code-unit order.
+ * 5. A complete line that is not JSON, is not an observed event, carries a
+ *    sequence gap, moves time backwards, or claims an impossible number is
+ *    refused as corruption rather than read as truncation.
+ * 6. Verdict scores are finite and inside `0..1`, with `null` reserved exactly for
+ *    infrastructure exclusion.
+ * 7. The archived event kinds are reported in code-unit order.
  */
 export const test_benchmark_oracle_trace = (): void => {
   const all = events();
@@ -160,6 +163,99 @@ export const test_benchmark_oracle_trace = (): void => {
             ]),
           ),
         "has no gaps",
+      ) &&
+      throws(
+        () =>
+          replayAutoMovieBenchmarkTrace(
+            appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+              { ...all[0]!, atMs: 1_200 },
+              { ...all[1]!, sequence: 1, atMs: 600 },
+            ]),
+          ),
+        "monotonic clock backwards",
+      ),
+  );
+  TestValidator.predicate(
+    "trace numbers stay inside their physical domains",
+    throws(
+      () =>
+        appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+          { ...all[0]!, sequence: 0.5 },
+        ]),
+      "non-negative safe integer",
+    ) &&
+      throws(
+        () =>
+          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+            { ...all[3]!, bytes: -1 },
+          ]),
+        "non-negative safe integer",
+      ) &&
+      throws(
+        () =>
+          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+            { ...all[0]!, atMs: Number.NaN },
+          ]),
+        "non-negative finite number",
+      ) &&
+      throws(
+        () =>
+          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+            { ...all[3]!, timeSeconds: -1 },
+          ]),
+        "non-negative finite number",
+      ),
+  );
+  TestValidator.predicate(
+    "trace verdict scores preserve their taxonomy and range",
+    replayAutoMovieBenchmarkTrace(
+      appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+        {
+          ...all[4]!,
+          sequence: 0,
+          outcome: "infra-excluded",
+          filmScore: null,
+        },
+      ]),
+    ).events.length === 1 &&
+      throws(
+        () =>
+          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+            {
+              ...all[4]!,
+              outcome: "infra-excluded",
+              filmScore: 0,
+            },
+          ]),
+        "null exactly",
+      ) &&
+      throws(
+        () =>
+          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+            { ...all[4]!, filmScore: null },
+          ]),
+        "null exactly",
+      ) &&
+      throws(
+        () =>
+          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+            { ...all[4]!, filmScore: Number.NaN },
+          ]),
+        "inside 0..1",
+      ) &&
+      throws(
+        () =>
+          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+            { ...all[4]!, filmScore: -0.1 },
+          ]),
+        "inside 0..1",
+      ) &&
+      throws(
+        () =>
+          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+            { ...all[4]!, filmScore: 1.1 },
+          ]),
+        "inside 0..1",
       ),
   );
 
