@@ -1,10 +1,8 @@
-import {
-  AutoMovieContentDigest,
-  IAutoMovieReviewTarget,
-} from "@automovie/interface";
+import { AutoMovieContentDigest } from "@automovie/interface";
 
 import { AutoMovieProductionCompiler } from "./AutoMovieProductionCompiler";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
+import { AutoMovieProductionReviewService } from "./AutoMovieProductionReviewService";
 import {
   canonicalAutoMovieJsonBytes,
   digestAutoMovieBytes,
@@ -16,11 +14,10 @@ import {
  * The compiler pass binds source, design, declared content, generated ownership
  * and unowned-output diagnostics. The explicit state fields close the remaining
  * adapter boundary: cached manifest semantics, exact manifest and incarnation
- * bytes, compiler-owned bytes, and stored review records.
+ * bytes, compiler-owned bytes, and the live evidence-bound review queue.
  */
 export const productionPublicationInputFingerprint = (
   project: AutoMovieProductionProject,
-  reviewTargets: readonly IAutoMovieReviewTarget[],
 ): AutoMovieContentDigest => {
   const generated = project.generatedManifest();
   if (generated === null)
@@ -55,17 +52,21 @@ export const productionPublicationInputFingerprint = (
         digest: digestAutoMovieBytes(project.readGeneratedFile(file.path)),
       })),
     },
-    reviews: reviewTargets.map((target) => ({
-      target,
-      value: project.review(target),
-    })),
   };
   const compiler = new AutoMovieProductionCompiler(project).lint({
     scope: "source",
   });
+  const reviews = new AutoMovieProductionReviewService(
+    project,
+    () => compiler,
+  ).queue(compiler);
   return digestAutoMovieBytes(
     canonicalAutoMovieJsonBytes({
       ...snapshot,
+      reviews: reviews.entries.map((entry) => ({
+        ...entry,
+        value: project.review(entry.target),
+      })),
       compiler: {
         success: compiler.success,
         inputFingerprint: compiler.compiler.inputFingerprint,

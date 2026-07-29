@@ -11,6 +11,7 @@ import {
   AutoMovieApplication,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  AutoMovieProductionReviewService,
   type IAutoMovieProductionAudioAssetIdentity,
   type IAutoMovieProductionEncoderIdentity,
   type IAutoMovieProductionRenderChunk,
@@ -829,23 +830,25 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
             : null,
     });
   }
-  const reviewTargets = inspection.reviews.entries.map((entry) => entry.target);
-  const snapshot = productionPublicationInputFingerprint(
-    project,
-    reviewTargets,
-  );
+  const snapshot = productionPublicationInputFingerprint(project);
   const revision = project.commitProductionPublication({
     files: publication,
     manifest,
     inputCurrent: () =>
       productionPublicationInputFingerprint(
         AutoMovieProductionProject.open(root),
-        reviewTargets,
       ) === snapshot,
     publicationCurrent: () => {
+      const stagedProject = AutoMovieProductionProject.open(root);
+      const statusCompiler = new AutoMovieProductionCompiler(stagedProject);
+      const stagedReview = new AutoMovieProductionReviewService(
+        stagedProject,
+        () => statusCompiler.lint({ scope: "source" }),
+      );
       const staged = new AutoMovieProductionCompiler(
-        AutoMovieProductionProject.open(root),
-        () => inspection.reviews,
+        stagedProject,
+        (status, compilerSnapshot) =>
+          stagedReview.queue(status, compilerSnapshot),
       ).lint({ scope: "final" });
       if (staged.success === false)
         throw new Error(

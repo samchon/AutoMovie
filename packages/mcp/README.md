@@ -229,7 +229,8 @@ from byte and parser receipts alone, and
 deliverable byte, the aggregate manifest and its parser receipt under one
 revision/input fence. `productionPublicationInputFingerprint` supplies the
 terminal adapter with a canonical fence over compiler input, production
-manifest and incarnation, compiler-owned bytes, and current review records.
+manifest and incarnation, compiler-owned bytes, and the live evidence-bound
+review queue plus its current records.
 Actual capture, encoding and muxing stay with the adapters the host injects;
 the project CLI drives the whole sequence through `automovie render
 plan|run|status|verify|finalize`.

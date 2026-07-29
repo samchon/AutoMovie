@@ -1,19 +1,22 @@
 import {
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderedDeliverable,
+  IAutoMovieRenderBundleManifest,
 } from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   digestAutoMovieBytes,
   productionPublicationInputFingerprint,
+  productionRenderBundleRelativePath,
+  productionRenderTargetFingerprint,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 
-import { productionFixture } from "./productionFixtures";
+import { productionFixture, testRendererIdentity } from "./productionFixtures";
 
 const image = (red: number): Uint8Array => {
   const png = new PNG({ width: 16, height: 16 });
@@ -67,8 +70,9 @@ const deliverable = (
  * 4. An input guard failing after writes rolls every file and ledger back to the
  *    prior valid publication without advancing revision.
  * 5. A staged read-only final-gate failure has the same rollback guarantee.
- * 6. The canonical terminal snapshot binds direct manifest, design, generated, and
- *    review state; a direct design race after the staged gate rolls back.
+ * 6. The canonical terminal snapshot binds direct manifest, design, generated,
+ *    live render evidence, and review state; a direct design race after the
+ *    staged gate rolls back.
  */
 export const test_mcp_production_atomic_publication = (): void => {
   const fixture = productionFixture();
@@ -77,7 +81,7 @@ export const test_mcp_production_atomic_publication = (): void => {
     TestValidator.predicate(
       "terminal snapshot refuses absent compiler-owned output",
       throws(
-        () => productionPublicationInputFingerprint(project, []),
+        () => productionPublicationInputFingerprint(project),
         "requires current compiler-owned output",
       ),
     );
@@ -89,16 +93,7 @@ export const test_mcp_production_atomic_publication = (): void => {
       compiled.success,
     );
     const compileFingerprint = compiled.compiler.inputFingerprint;
-    const reviewTargets = [
-      {
-        kind: "design" as const,
-        design: { kind: "production" as const },
-      },
-    ];
-    const publicationSnapshot = productionPublicationInputFingerprint(
-      project,
-      reviewTargets,
-    );
+    const publicationSnapshot = productionPublicationInputFingerprint(project);
     const projectManifestPath = path.join(
       fixture.root,
       ".automovie/manifest.json",
@@ -118,7 +113,6 @@ export const test_mcp_production_atomic_publication = (): void => {
     const manifestSnapshotChanged =
       productionPublicationInputFingerprint(
         AutoMovieProductionProject.open(fixture.root),
-        reviewTargets,
       ) !== publicationSnapshot;
     fs.writeFileSync(projectManifestPath, projectManifestBytes);
     const productionPath = path.join(
@@ -141,7 +135,6 @@ export const test_mcp_production_atomic_publication = (): void => {
     const designSnapshotChanged =
       productionPublicationInputFingerprint(
         AutoMovieProductionProject.open(fixture.root),
-        reviewTargets,
       ) !== publicationSnapshot;
     fs.writeFileSync(productionPath, productionBytes);
     const generated = project.generatedManifest()!;
@@ -156,14 +149,64 @@ export const test_mcp_production_atomic_publication = (): void => {
     const generatedSnapshotChanged =
       productionPublicationInputFingerprint(
         AutoMovieProductionProject.open(fixture.root),
-        reviewTargets,
       ) !== publicationSnapshot;
     fs.writeFileSync(generatedFile, generatedBytes);
+    const reviewTarget = { kind: "shot" as const, id: "opening" };
+    const reviewFrame = image(32);
+    const reviewManifest: IAutoMovieRenderBundleManifest = {
+      version: 3,
+      target: reviewTarget,
+      compileFingerprint,
+      rendererIdentity: testRendererIdentity(),
+      targetFingerprint: productionRenderTargetFingerprint(
+        project,
+        project.generatedManifest()!,
+        reviewTarget,
+      ),
+      renderSpec: {
+        target: reviewTarget.id,
+        frameFormat: { width: 16, height: 16, fps: 24 },
+        toneMapping: "none",
+        codec: "h264",
+        pixelFormat: "yuv420p",
+        crf: 17,
+      },
+      frames: [
+        {
+          index: 48,
+          time: 2,
+          pass: "beauty",
+          path: "publication-evidence.png",
+          digest: digestAutoMovieBytes(reviewFrame),
+          width: 16,
+          height: 16,
+        },
+      ],
+    };
+    const reviewBundle = productionRenderBundleRelativePath(reviewManifest);
+    project.commitRenderBundle(
+      reviewBundle,
+      new Map([["publication-evidence.png", reviewFrame]]),
+      reviewManifest,
+    );
+    const evidenceSnapshot = productionPublicationInputFingerprint(project);
+    const reviewFramePath = path.join(
+      project.renderRoot(),
+      ...reviewBundle.split("/"),
+      "publication-evidence.png",
+    );
+    fs.writeFileSync(reviewFramePath, image(96));
+    const evidenceSnapshotChanged =
+      productionPublicationInputFingerprint(
+        AutoMovieProductionProject.open(fixture.root),
+      ) !== evidenceSnapshot;
+    fs.writeFileSync(reviewFramePath, reviewFrame);
     TestValidator.predicate(
-      "terminal snapshot binds manifest, design, and safe generated bytes",
+      "terminal snapshot binds manifest, design, generated bytes, and current render evidence",
       manifestSnapshotChanged &&
         designSnapshotChanged &&
-        generatedSnapshotChanged,
+        generatedSnapshotChanged &&
+        evidenceSnapshotChanged,
     );
     const relative = "deliverables/atomic/preview.png";
     const first = image(0);
@@ -317,10 +360,8 @@ export const test_mcp_production_atomic_publication = (): void => {
       ...manifest,
       deliverables: [deliverable(relative, second)],
     };
-    const guardedPublicationSnapshot = productionPublicationInputFingerprint(
-      project,
-      reviewTargets,
-    );
+    const guardedPublicationSnapshot =
+      productionPublicationInputFingerprint(project);
     let directDesignRace = false;
     try {
       directDesignRace = throws(
@@ -332,7 +373,6 @@ export const test_mcp_production_atomic_publication = (): void => {
             inputCurrent: () =>
               productionPublicationInputFingerprint(
                 AutoMovieProductionProject.open(fixture.root),
-                reviewTargets,
               ) === guardedPublicationSnapshot,
             publicationCurrent: () => {
               fs.writeFileSync(

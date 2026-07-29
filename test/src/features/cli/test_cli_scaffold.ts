@@ -261,7 +261,10 @@ export const test_cli_scaffold = (): void => {
         "productionPublicationInputFingerprint",
       ) &&
       files["scripts/render.ts"]!.includes(
-        "const reviewTargets = inspection.reviews.entries.map",
+        "const stagedReview = new AutoMovieProductionReviewService",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "stagedReview.queue(status, compilerSnapshot)",
       ) &&
       files[".gitignore"]!.includes(".automovie/render-job/") &&
       files[".automovie/design/production.json"]!.includes(

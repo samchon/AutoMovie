@@ -72,10 +72,11 @@ next run.
 `pnpm render` is the convenience sequence: it captures current review evidence,
 reuses or renders current chunks, then attempts final publication. Finalize
 still fails closed until every current review is complete. Its terminal commit
-also fingerprints the revision, declared content, review ledger, generated
-manifest and bytes, production manifest, exact design graph, and state
-incarnation with canonical structured fields; any change during the staged
-final compiler gate rolls the publication back.
+also fingerprints the revision, declared content, live evidence-bound review
+queue and records, generated manifest and bytes, production manifest, exact
+design graph, and state incarnation with canonical structured fields. The
+staged final compiler gate recomputes that review queue from current render
+evidence; any change during the gate rolls the publication back.
 
 ## Ownership
 
