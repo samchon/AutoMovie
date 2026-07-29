@@ -549,6 +549,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     };
     if (unknownFrameAcceptance.criterion.kind !== "frame")
       throw new Error("opening beauty fixture is not a frame criterion");
+    unknownFrameAcceptance.criterion.shot = "opening";
     unknownFrameAcceptance.criterion.frame = "absent-review-frame";
     const graphWithUnknownFrameAcceptance = {
       ...currentGraph,
