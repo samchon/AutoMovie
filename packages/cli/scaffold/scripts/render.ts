@@ -5,6 +5,7 @@ import type {
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
+  IAutoMovieReviewTarget,
 } from "@automovie/interface";
 import {
   AutoMovieApplication,
@@ -208,6 +209,7 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
   const first = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
   const preflight = await captureProductionFrame({
     projectRoot: root,
+    compileFingerprint: compiled.compiler.inputFingerprint,
     target: { kind: "shot", id: first.shot },
     time: first.sourceFrame / timeline.fps,
     pass: "beauty",
@@ -472,6 +474,7 @@ const renderChunk = async (
     for (const layer of sample.layers) {
       const captured = await captureProductionFrame({
         projectRoot: root,
+        compileFingerprint: plan.compileFingerprint,
         target: { kind: "shot", id: layer.shot },
         time: layer.sourceFrame / plan.frameFormat.fps,
         pass: chunk.pass,
@@ -595,9 +598,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
   if (incompleteReviews.length !== 0)
     throw new Error(
       `Final publication is review-blocked by ${incompleteReviews
-        .map(
-          (entry) => `${entry.target.kind}:${entry.target.id}:${entry.state}`,
-        )
+        .map((entry) => `${reviewTargetLabel(entry.target)}:${entry.state}`)
         .join(", ")}. Run review:status and submit current evidence first.`,
     );
   const status = await renderStatus(plan);
@@ -685,6 +686,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       const frame = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
       const captured = await captureProductionFrame({
         projectRoot: root,
+        compileFingerprint: plan.compileFingerprint,
         target: { kind: "shot", id: frame.shot },
         time: frame.sourceFrame / timeline.fps,
         pass: "beauty",
@@ -1168,8 +1170,17 @@ const stringOption = (name: string): string | undefined => {
 const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
 
-const output = (value: unknown): void =>
+/** One review target as a stable operator-facing label. */
+const reviewTargetLabel = (target: IAutoMovieReviewTarget): string =>
+  target.kind === "design"
+    ? `design:${target.design.kind}`
+    : target.kind === "source"
+      ? `source:${target.path}`
+      : `${target.kind}:${target.id}`;
+
+const output = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+};
 
 try {
   await main();

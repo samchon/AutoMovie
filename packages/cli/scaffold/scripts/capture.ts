@@ -3,8 +3,8 @@ import path from "node:path";
 import { createServer } from "vite";
 
 import config from "../automovie.config";
-import type { IAutoMovieCaptureBrowserSession } from "./capture-browser";
 import {
+  type IAutoMovieCaptureBrowserSession,
   inspectCaptureGraphics,
   launchCaptureBrowser,
 } from "./capture-browser";
