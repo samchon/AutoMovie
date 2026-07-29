@@ -952,7 +952,10 @@ const verifyAppliedImport = (
         return false;
     }
     return true;
-  } catch {
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== undefined && code !== "ENOENT" && code !== "ENOTDIR")
+      throw error;
     return false;
   }
 };

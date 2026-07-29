@@ -407,8 +407,12 @@ export const test_mcp_production_legacy_import = (): void => {
     }) as typeof fs.lstatSync;
     try {
       TestValidator.predicate(
-        "an unexpected import-state lstat denial propagates",
-        throws(() => importer.rollback(), "injected import-state lstat denial"),
+        "an unexpected import-state lstat denial propagates through apply and rollback",
+        throws(() => importer.apply(), "injected import-state lstat denial") &&
+          throws(
+            () => importer.rollback(),
+            "injected import-state lstat denial",
+          ),
       );
     } finally {
       fs.lstatSync = nativeLstat;
