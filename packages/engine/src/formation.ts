@@ -198,6 +198,9 @@ const easingProgress = (
         ? 2 * progress * progress
         : 1 - Math.pow(-2 * progress + 2, 2) / 2;
     case "step":
-      return progress < 1 ? 0 : 1;
+      // `sampleFormationMotion` applies a cue's exact `to` state before
+      // interpolation once time reaches `end`, so interpolation only observes
+      // progress below one.
+      return 0;
   }
 };

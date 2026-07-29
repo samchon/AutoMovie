@@ -16,6 +16,7 @@ import {
   IAutoMovieBenchmarkTask,
   IAutoMovieBenchmarkVersions,
   digestAutoMovieBenchmarkText,
+  validateAutoMovieBenchmarkTask,
 } from "../task";
 
 /**
@@ -213,6 +214,7 @@ export const austerlitzSignalDraft = (
 ): IAutoMovieBenchmarkSubmissionDraft => ({
   protocolVersion: AUTOMOVIE_BENCHMARK_SUBMISSION_PROTOCOL,
   taskId: "short/austerlitz-signal",
+  taskDigest: validateAutoMovieBenchmarkTask(austerlitzSignalTask()),
   versions: { ...VERSIONS },
   briefDigest: digestAutoMovieBenchmarkText(AUSTERLITZ_SIGNAL_BRIEF),
   surface,

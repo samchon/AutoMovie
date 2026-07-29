@@ -74,6 +74,8 @@ export interface IAutoMovieBenchmarkVerdictBase {
   runId: AutoMovieContentDigest;
   /** Task law the run was judged under. */
   taskId: string;
+  /** Digest of the exact task law the run was judged under. */
+  taskDigest: AutoMovieContentDigest;
   /** Surface the candidate drove. */
   surface: AutoMovieBenchmarkSurface;
   /** Every version the verdict is comparable within. */
@@ -296,6 +298,7 @@ export const judgeAutoMovieBenchmarkSubmission = (
     protocolVersion: AUTOMOVIE_BENCHMARK_VERDICT_PROTOCOL,
     runId: submission.runId,
     taskId: submission.taskId,
+    taskDigest: submission.taskDigest,
     surface: submission.surface,
     versions: submission.versions,
     lifecycle: submission.lifecycle,

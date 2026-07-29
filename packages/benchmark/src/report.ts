@@ -182,7 +182,12 @@ export const diffAutoMovieBenchmarkVerdicts = (
   before: IAutoMovieBenchmarkVerdict,
   after: IAutoMovieBenchmarkVerdict,
 ): IAutoMovieBenchmarkVerdictDiff => {
-  const versionDrift = benchmarkVersionDrift(before.versions, after.versions);
+  const versionDrift = [
+    ...(before.taskDigest === after.taskDigest
+      ? []
+      : [`taskDigest: ${before.taskDigest} -> ${after.taskDigest}`]),
+    ...benchmarkVersionDrift(before.versions, after.versions),
+  ];
   const left = outcomesOf(before);
   const right = outcomesOf(after);
   const comparable = versionDrift.length === 0;

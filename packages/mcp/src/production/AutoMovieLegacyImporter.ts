@@ -1086,8 +1086,7 @@ const importWarning = (
   message,
 });
 
-const projectIdOf = (root: string): string =>
-  path.basename(root).trim() || "legacy-project";
+const projectIdOf = (root: string): string => path.basename(root).trim();
 
 const parseJson = (bytes: Uint8Array, file: string): unknown => {
   try {

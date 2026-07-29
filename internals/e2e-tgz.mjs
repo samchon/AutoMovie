@@ -624,11 +624,14 @@ const formationSummary = app.queryGeometry({
   },
 });
 assert(
-  "starter-formation-hero-near-far-frame",
+  "starter-formation-hero-and-anonymous-frame",
   formationSummary.result?.kind === "measurement" &&
     formationSummary.result.values.heroVisible === 2 &&
-    formationSummary.result.values.nearVisible > 0 &&
     formationSummary.result.values.farVisible > 0 &&
+    formationSummary.result.values.nearVisible +
+      formationSummary.result.values.farVisible +
+      formationSummary.result.values.culled ===
+      formationSummary.result.values.anonymousCount &&
     frames.some(
       (frame) =>
         frame.shot === "opening" &&

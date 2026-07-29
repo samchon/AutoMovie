@@ -23,9 +23,11 @@ import path from "node:path";
 import { PNG } from "pngjs";
 
 import {
+  fixtureWorldDesign,
   productionDesign,
   productionFixture,
   testCaptureRuntimeIdentity,
+  worldDesign,
 } from "./productionFixtures";
 
 const editSource = (edit: unknown): string =>
@@ -307,6 +309,24 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         },
       },
       {
+        name: "blank omission",
+        code: "film-shot-accounting-invalid",
+        mutate: (edit) => {
+          edit.tracks.video = [];
+          edit.omissions.push({ shot: "opening", reason: " " });
+        },
+      },
+      {
+        name: "unknown omission",
+        code: "film-shot-unknown",
+        mutate: (edit) => {
+          edit.omissions.push({
+            shot: "missing",
+            reason: "This shot is not present.",
+          });
+        },
+      },
+      {
         name: "unaccounted shot",
         code: "film-shot-unaccounted",
         mutate: (edit) => {
@@ -355,6 +375,16 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         },
       },
       {
+        name: "off-grid transition",
+        code: "film-time-off-grid",
+        mutate: (edit) => {
+          edit.tracks.video[0]!.transitionIn = {
+            kind: "fade",
+            duration: { seconds: 0.1 },
+          };
+        },
+      },
+      {
         name: "transition handle",
         code: "film-transition-handle-missing",
         mutate: (edit) => {
@@ -383,6 +413,24 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         },
       },
       {
+        name: "off-grid audio fade",
+        code: "film-time-off-grid",
+        mutate: (edit) => {
+          edit.tracks.audio.push({
+            id: "off-grid-audio",
+            asset: "public/audio/starter-tone.json",
+            sourceDuration: { seconds: 6 },
+            sourceOffset: { frame: 0 },
+            start: { frame: 0 },
+            duration: { seconds: 1 },
+            gain: 1,
+            fadeIn: { frame: 0 },
+            fadeOut: { seconds: 0.1 },
+            bus: "dialogue",
+          });
+        },
+      },
+      {
         name: "caption range",
         code: "film-caption-cue-invalid",
         mutate: (edit) => {
@@ -393,6 +441,19 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
             speaker: " ",
             start: { seconds: 5 },
             end: { seconds: 4 },
+          });
+        },
+      },
+      {
+        name: "off-grid caption end",
+        code: "film-time-off-grid",
+        mutate: (edit) => {
+          edit.tracks.captions.push({
+            id: "off-grid-caption",
+            text: "Signal.",
+            language: "en",
+            start: { frame: 0 },
+            end: { seconds: 0.1 },
           });
         },
       },
@@ -444,6 +505,101 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
           fs.readFileSync(timelinePath).equals(firstTimelineBytes),
       );
     }
+
+    const captioned = baseEdit();
+    captioned.tracks.captions.push({
+      id: "spoken-caption",
+      text: "Signal.",
+      language: "en",
+      speaker: "sentinel",
+      start: { frame: 0 },
+      end: { frame: 1 },
+    });
+    fs.writeFileSync(filmPath, editSource(captioned));
+    TestValidator.predicate(
+      "a present non-blank caption speaker remains valid",
+      compiler.compile({ scope: "source" }).success,
+    );
+
+    project.setWorldDesign(worldDesign());
+    const compileEffect = (
+      mutate: (cue: IAutoMovieFilmEdit["tracks"]["effects"][number]) => void,
+    ): ReturnType<AutoMovieProductionCompiler["compile"]> => {
+      const edit = baseEdit();
+      const cue: IAutoMovieFilmEdit["tracks"]["effects"][number] = {
+        id: "effect",
+        recipe: "signal-smoke",
+        zone: "signal-smoke",
+        start: { frame: 0 },
+        duration: { frame: 1 },
+        intensity: 0.5,
+      };
+      mutate(cue);
+      edit.tracks.effects.push(cue);
+      const source = editSource(edit);
+      fs.writeFileSync(
+        filmPath,
+        Number.isNaN(cue.intensity)
+          ? source.replace('"intensity":null', '"intensity":Number.NaN')
+          : source,
+      );
+      return compiler.compile({ scope: "source" });
+    };
+    const effectFailures = [
+      compileEffect((cue) => {
+        cue.duration = { seconds: 0.1 };
+      }),
+      compileEffect((cue) => {
+        cue.duration = { frame: 0 };
+      }),
+      compileEffect((cue) => {
+        cue.start = { seconds: 6 };
+        cue.duration = { frame: 1 };
+      }),
+      compileEffect((cue) => {
+        cue.intensity = Number.NaN;
+      }),
+      compileEffect((cue) => {
+        cue.intensity = -0.1;
+      }),
+      compileEffect((cue) => {
+        cue.intensity = 1.1;
+      }),
+    ];
+    const orderedEffects = baseEdit();
+    orderedEffects.tracks.effects.push(
+      {
+        id: "later-effect",
+        recipe: "signal-smoke",
+        zone: "signal-smoke",
+        start: { frame: 2 },
+        duration: { frame: 1 },
+        intensity: 0.5,
+      },
+      {
+        id: "earlier-effect",
+        recipe: "signal-smoke",
+        zone: "signal-smoke",
+        start: { frame: 1 },
+        duration: { frame: 1 },
+        intensity: 0.5,
+      },
+    );
+    fs.writeFileSync(filmPath, editSource(orderedEffects));
+    effectFailures.push(compiler.compile({ scope: "source" }));
+    TestValidator.predicate(
+      "every effect time, duration, intensity and ordering boundary is refused",
+      effectFailures.every((output) =>
+        diagnosticCodes(output).has(
+          output.diagnostics.some(
+            (diagnostic) => diagnostic.code === "film-time-off-grid",
+          )
+            ? "film-time-off-grid"
+            : "film-effect-cue-invalid",
+        ),
+      ),
+    );
+    project.setWorldDesign(fixtureWorldDesign());
 
     fs.writeFileSync(filmPath, "export const wrong = {};\n");
     TestValidator.predicate(

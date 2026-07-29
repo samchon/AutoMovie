@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
+import { compareCodeUnits } from "./contentIdentity";
 
 const currentUser = os.userInfo();
 const COORDINATION_ROOT = path.join(
@@ -68,9 +69,7 @@ const acquireCoordinates = (
 ): Array<{ path: string; token: string }> => {
   const leases: Array<{ path: string; token: string }> = [];
   try {
-    for (const lockPath of [...new Set(paths)].sort((left, right) =>
-      left < right ? -1 : left > right ? 1 : 0,
-    )) {
+    for (const lockPath of [...new Set(paths)].sort(compareCodeUnits)) {
       leases.push(acquireCoordinate(lockPath));
     }
     return leases;

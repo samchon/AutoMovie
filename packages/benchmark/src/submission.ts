@@ -15,6 +15,7 @@ import {
   IAutoMovieBenchmarkTask,
   IAutoMovieBenchmarkVersions,
   digestBenchmarkValue,
+  validateAutoMovieBenchmarkTask,
 } from "./task";
 
 /** Submission schema every archived run carries. */
@@ -161,6 +162,8 @@ export interface IAutoMovieBenchmarkSubmissionDraft {
   protocolVersion: typeof AUTOMOVIE_BENCHMARK_SUBMISSION_PROTOCOL;
   /** Task law the run was produced under. */
   taskId: string;
+  /** Digest of the exact validated task law the run was produced under. */
+  taskDigest: AutoMovieContentDigest;
   /** Every version the run is comparable within. */
   versions: IAutoMovieBenchmarkVersions;
   /** Digest of the exact brief bytes the candidate received. */
@@ -280,6 +283,11 @@ export const assertAutoMovieBenchmarkBinding = (
         )
         .join("; ")}. Rerun under the current task law instead of rescoring.`,
     );
+  const taskDigest = validateAutoMovieBenchmarkTask(task);
+  if (submission.taskDigest !== taskDigest)
+    throw new Error(
+      `Submission ${submission.runId} was produced under task law ${submission.taskDigest}, but task "${task.taskId}" validates as ${taskDigest}. Raise the task version and rerun instead of rescoring old evidence.`,
+    );
 };
 
 /**
@@ -296,13 +304,33 @@ export const benchmarkComparisonDrift = (
   const fields = (
     [
       ["taskId", left.taskId, right.taskId],
+      ["taskDigest", left.taskDigest, right.taskDigest],
+      ["taskVersion", left.versions.task, right.versions.task],
+      ["harnessVersion", left.versions.harness, right.versions.harness],
+      ["referenceVersion", left.versions.reference, right.versions.reference],
+      [
+        "scenarioHelper",
+        left.versions.scenarioHelper,
+        right.versions.scenarioHelper,
+      ],
       ["briefDigest", left.briefDigest, right.briefDigest],
       ["commit", left.repository.commit, right.repository.commit],
+      ["dirty", left.repository.dirty, right.repository.dirty],
+      [
+        "artifacts",
+        digestBenchmarkValue(left.repository.artifacts),
+        digestBenchmarkValue(right.repository.artifacts),
+      ],
       ["client", left.client.client, right.client.client],
+      ["agent", left.client.agent, right.client.agent],
       ["model", left.client.model, right.client.model],
       ["effort", left.client.effort, right.client.effort],
       ["seed", left.client.seed, right.client.seed],
       ["configDigest", left.client.configDigest, right.client.configDigest],
+      ["runtimeOs", left.runtime.os, right.runtime.os],
+      ["runtimeArch", left.runtime.arch, right.runtime.arch],
+      ["toolchain", left.runtime.toolchain, right.runtime.toolchain],
+      ["captureRuntime", left.runtime.capture, right.runtime.capture],
     ] as const
   )
     .filter(([, from, to]) => from !== to)
