@@ -1815,8 +1815,12 @@ export const test_mcp_production_project = (): void => {
       }
     }
     const deniedRoot = path.join(invalidRoot, "denied-root");
+    const nativeRootLstatDescriptor = Object.getOwnPropertyDescriptor(
+      fs,
+      "lstatSync",
+    )!;
     Object.defineProperty(fs, "lstatSync", {
-      configurable: true,
+      ...nativeRootLstatDescriptor,
       value: ((
         file: fs.PathLike,
         ...args: unknown[]
@@ -1842,10 +1846,7 @@ export const test_mcp_production_project = (): void => {
         ),
       );
     } finally {
-      Object.defineProperty(fs, "lstatSync", {
-        configurable: true,
-        value: nativeCoordinationLstat,
-      });
+      Object.defineProperty(fs, "lstatSync", nativeRootLstatDescriptor);
     }
     const nativeCoordinationChmod = fs.chmodSync;
     fs.chmodSync = ((file: fs.PathLike): void => {

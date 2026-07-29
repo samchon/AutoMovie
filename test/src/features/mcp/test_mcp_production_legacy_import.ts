@@ -397,8 +397,12 @@ export const test_mcp_production_legacy_import = (): void => {
       ".automovie/imports/legacy-v1/state.json",
     );
     const nativeLstat = fs.lstatSync;
+    const nativeLstatDescriptor = Object.getOwnPropertyDescriptor(
+      fs,
+      "lstatSync",
+    )!;
     Object.defineProperty(fs, "lstatSync", {
-      configurable: true,
+      ...nativeLstatDescriptor,
       value: ((
         file: fs.PathLike,
         ...args: unknown[]
@@ -425,10 +429,7 @@ export const test_mcp_production_legacy_import = (): void => {
           ),
       );
     } finally {
-      Object.defineProperty(fs, "lstatSync", {
-        configurable: true,
-        value: nativeLstat,
-      });
+      Object.defineProperty(fs, "lstatSync", nativeLstatDescriptor);
     }
   } finally {
     deniedImportState.dispose();
