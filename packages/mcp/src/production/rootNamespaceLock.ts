@@ -48,6 +48,41 @@ const ensureCoordinationRoot = (): void => {
   fs.chmodSync(COORDINATION_ROOT, 0o700);
 };
 
+/**
+ * Coordinates this process already holds, with their nesting depth.
+ *
+ * The fence exists to keep another session out, and a second acquire inside one
+ * single-threaded process is never that: it is a fenced operation that invoked
+ * a nested one, the way a guarded commit runs the read-only compiler gate.
+ * Without this the process contends with itself until the commit lock's own
+ * timeout fires and reports a holder that is the caller.
+ */
+const heldCoordinates = new Map<string, { token: string; depth: number }>();
+
+const acquireCoordinate = (
+  lockPath: string,
+): { path: string; token: string } => {
+  const held = heldCoordinates.get(lockPath);
+  if (held !== undefined) {
+    ++held.depth;
+    return { path: lockPath, token: held.token };
+  }
+  const token = acquireCommitLock(lockPath);
+  heldCoordinates.set(lockPath, { token, depth: 1 });
+  return { path: lockPath, token };
+};
+
+const releaseCoordinate = (lease: { path: string; token: string }): void => {
+  const held = heldCoordinates.get(lease.path);
+  if (held === undefined || held.token !== lease.token) {
+    releaseCommitLock(lease.path, lease.token);
+    return;
+  }
+  if (--held.depth !== 0) return;
+  heldCoordinates.delete(lease.path);
+  releaseCommitLock(lease.path, lease.token);
+};
+
 const acquireCoordinates = (
   paths: readonly string[],
 ): Array<{ path: string; token: string }> => {
@@ -56,12 +91,11 @@ const acquireCoordinates = (
     for (const lockPath of [...new Set(paths)].sort((left, right) =>
       left < right ? -1 : left > right ? 1 : 0,
     )) {
-      leases.push({ path: lockPath, token: acquireCommitLock(lockPath) });
+      leases.push(acquireCoordinate(lockPath));
     }
     return leases;
   } catch (error) {
-    for (const lease of leases.reverse())
-      releaseCommitLock(lease.path, lease.token);
+    for (const lease of leases.reverse()) releaseCoordinate(lease);
     throw error;
   }
 };
@@ -69,8 +103,7 @@ const acquireCoordinates = (
 const releaseCoordinates = (
   leases: readonly { path: string; token: string }[],
 ): void => {
-  for (const lease of [...leases].reverse())
-    releaseCommitLock(lease.path, lease.token);
+  for (const lease of [...leases].reverse()) releaseCoordinate(lease);
 };
 
 const creationCoordinates = (

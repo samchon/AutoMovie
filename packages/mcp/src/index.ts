@@ -23,6 +23,7 @@ export * from "./production/materializeProduction";
 export * from "./production/probeProductionMedia";
 export * from "./production/productionRenderJob";
 export * from "./production/renderIdentity";
+export * from "./production/rootNamespaceLock";
 export * from "./production/realizeShotContract";
 export * from "./production/validateProductionDesign";
 export { AUTOMOVIE_GUIDE_NAMES } from "./services/GuideService";

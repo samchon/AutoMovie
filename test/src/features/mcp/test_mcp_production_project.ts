@@ -7,9 +7,11 @@ import {
   AUTOMOVIE_MAX_FORMATION_MEMBERS,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  acquireProductionRootNamespace,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
   productionRenderTargetFingerprint,
+  releaseProductionRootNamespace,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -1582,6 +1584,56 @@ export const test_mcp_production_project = (): void => {
           .every((entry) => entry.includes("automovie-root") === false),
     );
     const coordinationRoot = path.dirname(aliasLockPaths[0]!);
+    // A guarded commit runs the read-only compiler gate, which commits its own
+    // snapshot, so one process reaches the same root coordinate twice. That is
+    // a nested operation rather than a second session, and blocking it makes
+    // the process time out against itself.
+    const reentrantLocks: string[] = [];
+    const nativeWriteForReentrancy = fs.writeFileSync;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      Reflect.apply(nativeWriteForReentrancy, fs, [file, ...args]);
+      if (
+        typeof file !== "number" &&
+        path.dirname(file.toString()) === coordinationRoot &&
+        path.basename(file.toString()).startsWith("root-")
+      )
+        reentrantLocks.push(path.resolve(file.toString()));
+    }) as typeof fs.writeFileSync;
+    let outerLease: ReturnType<typeof acquireProductionRootNamespace>;
+    let innerLease: ReturnType<typeof acquireProductionRootNamespace>;
+    try {
+      outerLease = acquireProductionRootNamespace(aliasProject);
+      innerLease = acquireProductionRootNamespace(aliasProject);
+    } finally {
+      fs.writeFileSync = nativeWriteForReentrancy;
+    }
+    const heldAfterInnerRelease = ((): boolean => {
+      releaseProductionRootNamespace(innerLease);
+      return reentrantLocks.every((file) => fs.existsSync(file));
+    })();
+    releaseProductionRootNamespace(outerLease);
+    TestValidator.equals(
+      "one process reaches the same root coordinate twice without deadlocking",
+      {
+        coordinates: reentrantLocks.length,
+        sharedTokens: outerLease.locks.every(
+          (lock, index) => lock.token === innerLease.locks[index]?.token,
+        ),
+        heldAfterInnerRelease,
+        releasedAfterOuterRelease: reentrantLocks.every(
+          (file) => fs.existsSync(file) === false,
+        ),
+      },
+      {
+        coordinates: 2,
+        sharedTokens: true,
+        heldAfterInnerRelease: true,
+        releasedAfterOuterRelease: true,
+      },
+    );
     const swappedParent = path.join(invalidRoot, "swapped-parent");
     const originalParent = path.join(invalidRoot, "original-parent");
     fs.mkdirSync(swappedParent);
