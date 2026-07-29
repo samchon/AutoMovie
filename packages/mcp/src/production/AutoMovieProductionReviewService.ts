@@ -1047,10 +1047,13 @@ const reviewFingerprint = (
       });
       addJson(`shot-review:${id}`, project.review(shotTarget));
     }
-    addJson(
-      "render-manifest",
-      readTrackedJsonIfPresent(project, "render-manifest.json"),
-    );
+    // Terminal deliverable bytes, manifest and parser receipt are published
+    // after the review snapshot under one final compiler fence. They are
+    // compiler-owned delivery evidence, not human/agent review input; binding
+    // the film fingerprint to that later publication makes the required
+    // review-current -> publish ordering invalidate itself. Film review remains
+    // bound to the exact timeline, shot reviews, PNG frames and acceptance
+    // outcomes below, while final compilation validates terminal media.
     for (const frame of currentFrames(
       project,
       target,
@@ -1901,20 +1904,6 @@ const readJsonIfPresent = (file: string): unknown => {
     return JSON.parse(fs.readFileSync(file, "utf8")) as unknown;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-    return { invalidJson: String(error) };
-  }
-};
-
-const readTrackedJsonIfPresent = (
-  project: AutoMovieProductionProject,
-  relative: string,
-): unknown => {
-  try {
-    const bytes = project.readTrackedStateFile(relative);
-    return bytes === null
-      ? null
-      : (JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown);
-  } catch (error) {
     return { invalidJson: String(error) };
   }
 };

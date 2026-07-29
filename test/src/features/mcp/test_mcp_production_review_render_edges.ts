@@ -235,6 +235,9 @@ export const test_mcp_production_review_render_edges =
         fixture.root,
         ".automovie/render-manifest.json",
       );
+      const beforeAggregate = review.prepare({
+        target: { kind: "film", id: "fixture-film" },
+      });
       fs.writeFileSync(
         aggregateManifest,
         JSON.stringify({ compileFingerprint: "current-test" }),
@@ -261,9 +264,10 @@ export const test_mcp_production_review_render_edges =
         target: { kind: "film", id: "fixture-film" },
       });
       TestValidator.predicate(
-        "film review fingerprints malformed and linked tracked manifests without following external bytes",
-        validAggregate.fingerprint !== malformedAggregate.fingerprint &&
-          malformedAggregate.fingerprint !== linkedAggregate.fingerprint,
+        "terminal publication stays outside human review identity and never follows linked aggregate bytes",
+        beforeAggregate.fingerprint === validAggregate.fingerprint &&
+          validAggregate.fingerprint === malformedAggregate.fingerprint &&
+          malformedAggregate.fingerprint === linkedAggregate.fingerprint,
       );
       fs.rmSync(aggregateManifest, { force: true, recursive: true });
       fs.rmSync(outsideAggregate, { force: true, recursive: true });
