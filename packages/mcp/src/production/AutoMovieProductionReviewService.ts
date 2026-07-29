@@ -1513,7 +1513,21 @@ const currentFrames = (
         );
   for (const entry of manifestEntries) {
     const manifestPath = entry.path;
-    const manifest = entry.manifest;
+    const manifest = project.verifiedRenderManifest(manifestPath);
+    const bundleRoot = path.dirname(manifestPath);
+    const bundle = normalizeSlash(path.relative(project.root, bundleRoot));
+    if (manifest === null) {
+      diagnostics.push({
+        code: "render-bundle-unowned",
+        category: "error",
+        phase: "render",
+        target: bundle,
+        path: normalizeSlash(path.relative(project.root, manifestPath)),
+        message:
+          "This manifest is not at the canonical content-addressed path or lacks the matching MCP render receipt. Recreate it through previewFrame.",
+      });
+      continue;
+    }
     if (
       manifest.targetFingerprint !==
       currentRenderTargetFingerprint(
@@ -1524,19 +1538,6 @@ const currentFrames = (
       )
     )
       continue;
-    const bundleRoot = path.dirname(manifestPath);
-    const bundle = normalizeSlash(path.relative(project.root, bundleRoot));
-    const owned = project.verifiedRenderManifest(manifestPath) !== null;
-    if (owned === false)
-      diagnostics.push({
-        code: "render-bundle-unowned",
-        category: "error",
-        phase: "render",
-        target: bundle,
-        path: normalizeSlash(path.relative(project.root, manifestPath)),
-        message:
-          "This manifest is not at the canonical content-addressed path or lacks the matching MCP render receipt. Recreate it through previewFrame.",
-      });
     if (
       manifest.renderSpec.target !== manifest.target.id ||
       manifest.renderSpec.frameFormat.fps !==
@@ -1565,15 +1566,17 @@ const currentFrames = (
         const realFile = fs.realpathSync(file);
         if (isInside(realBundleRoot, realFile) === false)
           throw new Error("frame escapes its bundle through a symlink");
-        const bytes = fs.readFileSync(realFile);
-        const png = PNG.sync.read(bytes);
+        const bytes = project.readRenderFile(
+          normalizeSlash(path.relative(project.renderRoot(), file)),
+        );
         const digest = digestAutoMovieBytes(bytes);
+        if (digest !== frame.digest)
+          throw new Error(
+            "frame bytes changed after renderer ownership verification",
+          );
+        const png = PNG.sync.read(bytes);
         const expectedTime = frame.index / manifest.renderSpec.frameFormat.fps;
         if (
-          bytes.length === 0 ||
-          digest !== frame.digest ||
-          png.width !== frame.width ||
-          png.height !== frame.height ||
           frame.width !== manifest.renderSpec.frameFormat.width ||
           frame.height !== manifest.renderSpec.frameFormat.height ||
           hasVisiblePixelVariance(png) === false ||
@@ -1584,7 +1587,7 @@ const currentFrames = (
           frameClockClose(frame.time, expectedTime) === false
         )
           throw new Error(
-            "digest, dimensions, visible pixels, or frame clock do not match",
+            "production dimensions, visible pixels, or frame clock do not match",
           );
         const requirements =
           manifest.target.kind === "shot"
@@ -1595,28 +1598,27 @@ const currentFrames = (
                   item.pass === frame.pass,
               )
             : [];
-        if (owned)
-          for (const requirement of requirements) {
-            frames.push({
-              shot: requirement.shot,
-              reviewFrame: requirement.frame,
-              bundle,
-              frame: frame.index,
-              time: frame.time,
-              pass: frame.pass,
-              digest,
-              width: png.width,
-              height: png.height,
-            });
-            covered.add(
-              reviewFrameKey(
-                requirement.shot,
-                requirement.frame,
-                frame.index,
-                frame.pass,
-              ),
-            );
-          }
+        for (const requirement of requirements) {
+          frames.push({
+            shot: requirement.shot,
+            reviewFrame: requirement.frame,
+            bundle,
+            frame: frame.index,
+            time: frame.time,
+            pass: frame.pass,
+            digest,
+            width: png.width,
+            height: png.height,
+          });
+          covered.add(
+            reviewFrameKey(
+              requirement.shot,
+              requirement.frame,
+              frame.index,
+              frame.pass,
+            ),
+          );
+        }
       } catch (error) {
         diagnostics.push({
           code: "render-frame-invalid",
@@ -1901,9 +1903,17 @@ const targetPath = (target: IAutoMovieReviewTarget): string | null => {
   return `.automovie/design/${directory}/${encodeAutoMoviePathSegment(target.design.id)}.json`;
 };
 
-const readJsonIfPresent = (file: string): unknown => {
+const readJsonIfPresent = (
+  project: AutoMovieProductionProject,
+  renderRoot: string,
+  file: string,
+): unknown => {
   try {
-    return JSON.parse(fs.readFileSync(file, "utf8")) as unknown;
+    return JSON.parse(
+      Buffer.from(
+        project.readRenderFile(normalizeSlash(path.relative(renderRoot, file))),
+      ).toString("utf8"),
+    ) as unknown;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     return { invalidJson: String(error) };
@@ -1915,7 +1925,8 @@ const readJsonIfPresent = (file: string): unknown => {
  *
  * Valid manifests are indexed by target, so N shots no longer rescan and
  * reparse the complete render tree N times. Invalid manifests remain global
- * diagnostics because their target cannot be trusted.
+ * diagnostics because their target cannot be trusted. Discovery fences every
+ * physical directory identity, and manifest bytes use the render-root reader.
  */
 const collectRenderManifestInventory = (
   project: AutoMovieProductionProject,
@@ -1924,11 +1935,9 @@ const collectRenderManifestInventory = (
   const legacy: ILegacyRenderManifestInventoryEntry[] = [];
   const all: IRenderManifestInventoryEntry[] = [];
   const byTarget = new Map<string, IRenderManifestInventoryEntry[]>();
-  for (const manifestPath of listNamedFiles(
-    project.renderRoot(),
-    "manifest.json",
-  )) {
-    const value = readJsonIfPresent(manifestPath);
+  const renderRoot = project.renderRoot();
+  for (const manifestPath of listNamedFiles(renderRoot, "manifest.json")) {
+    const value = readJsonIfPresent(project, renderRoot, manifestPath);
     const legacyValidation =
       typia.validateEquals<AutoMovieRenderBundleManifestV2>(value);
     if (
@@ -2027,18 +2036,73 @@ const currentFilmTimeline = (
     read: (file) => currentGeneratedFile(project, file, context),
   });
 
+interface IRenderDirectoryIdentity {
+  key: string;
+}
+
+const renderDirectoryIdentity = (
+  rootReal: string,
+  directory: string,
+): IRenderDirectoryIdentity => {
+  const linked = fs.lstatSync(directory);
+  if (linked.isSymbolicLink())
+    throw new Error(
+      `Render inventory directory "${directory}" is not a physical directory.`,
+    );
+  if (linked.isDirectory() === false)
+    throw new Error(
+      `Render inventory directory "${directory}" is not a directory.`,
+    );
+  const real = fs.realpathSync(directory);
+  if (isInside(rootReal, real) === false)
+    throw new Error(
+      `Render inventory directory "${directory}" escapes the render root.`,
+    );
+  const status = fs.statSync(real, { bigint: true });
+  return {
+    key: [real, status.dev.toString(), status.ino.toString()].join("\0"),
+  };
+};
+
+const assertRenderDirectoryIdentity = (
+  rootReal: string,
+  directory: string,
+  expected: IRenderDirectoryIdentity,
+): void => {
+  const current = renderDirectoryIdentity(rootReal, directory);
+  if (current.key !== expected.key)
+    throw new Error(
+      `Render inventory directory "${directory}" changed physical identity during review evidence discovery.`,
+    );
+};
+
 const listNamedFiles = (root: string, name: string): string[] => {
   const output: string[] = [];
+  const rootReal = fs.realpathSync(root);
   const visit = (directory: string): void => {
-    for (const entry of fs
+    const identity = renderDirectoryIdentity(rootReal, directory);
+    const entries = fs
       .readdirSync(directory, { withFileTypes: true })
-      .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+      .sort((left, right) => compareCodeUnits(left.name, right.name));
+    assertRenderDirectoryIdentity(rootReal, directory, identity);
+    for (const entry of entries) {
+      assertRenderDirectoryIdentity(rootReal, directory, identity);
       const child = path.join(directory, entry.name);
       const status = fs.lstatSync(child);
-      if (status.isSymbolicLink()) continue;
+      if (status.isSymbolicLink()) {
+        assertRenderDirectoryIdentity(rootReal, directory, identity);
+        continue;
+      }
+      const realChild = fs.realpathSync(child);
+      if (isInside(rootReal, realChild) === false)
+        throw new Error(
+          `Render inventory path "${child}" escapes the render root.`,
+        );
       if (status.isDirectory()) visit(child);
       else if (status.isFile() && entry.name === name) output.push(child);
+      assertRenderDirectoryIdentity(rootReal, directory, identity);
     }
+    assertRenderDirectoryIdentity(rootReal, directory, identity);
   };
   visit(root);
   return output;

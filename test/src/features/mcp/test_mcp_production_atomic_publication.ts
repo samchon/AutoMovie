@@ -12,6 +12,7 @@ import {
   productionRenderTargetFingerprint,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
@@ -73,6 +74,8 @@ const deliverable = (
  * 6. The canonical terminal snapshot binds direct manifest, design, generated,
  *    live render evidence, and review state; a direct design race after the
  *    staged gate rolls back.
+ * 7. Replacing the production state incarnation during the final gate refuses
+ *    stale-path rollback into the replacement namespace.
  */
 export const test_mcp_production_atomic_publication = (): void => {
   const fixture = productionFixture();
@@ -502,6 +505,63 @@ export const test_mcp_production_atomic_publication = (): void => {
         fs.readFileSync(outputPath).equals(first) &&
         fs.readFileSync(manifestPath).equals(manifestBytes) &&
         fs.readFileSync(receiptPath).equals(receiptBytes),
+    );
+
+    const stateRoot = path.join(fixture.root, ".automovie");
+    const parkedStateRoot = path.join(fixture.root, ".automovie-parked");
+    const replacementStateRoot = path.join(
+      fixture.root,
+      ".automovie-replacement",
+    );
+    fs.cpSync(stateRoot, replacementStateRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(replacementStateRoot, "incarnation.json"),
+      `${JSON.stringify({ version: 1, id: randomUUID() }, null, 2)}\n`,
+    );
+    const replacementManifest = Buffer.from(
+      `${JSON.stringify({ replacement: "manifest" }, null, 2)}\n`,
+    );
+    const replacementReceipt = Buffer.from(
+      `${JSON.stringify({ replacement: "receipt" }, null, 2)}\n`,
+    );
+    fs.writeFileSync(
+      path.join(replacementStateRoot, "render-manifest.json"),
+      replacementManifest,
+    );
+    fs.writeFileSync(
+      path.join(replacementStateRoot, "render-manifest-receipt.json"),
+      replacementReceipt,
+    );
+    const incarnationSnapshot = productionPublicationInputFingerprint(project);
+    let incarnationSwapped = false;
+    const incarnationSwapRejected = throws(
+      () =>
+        project.commitProductionPublication({
+          files: new Map([[relative, second]]),
+          manifest: replacement,
+          expectedRevision: revision,
+          inputCurrent: () =>
+            productionPublicationInputFingerprint(
+              AutoMovieProductionProject.open(fixture.root),
+            ) === incarnationSnapshot,
+          publicationCurrent: () => {
+            fs.renameSync(stateRoot, parkedStateRoot);
+            fs.renameSync(replacementStateRoot, stateRoot);
+            incarnationSwapped = true;
+          },
+        }),
+      "production state incarnation changed",
+    );
+    TestValidator.predicate(
+      "state incarnation replacement refuses stale ledger rollback",
+      incarnationSwapped &&
+        incarnationSwapRejected &&
+        fs
+          .readFileSync(path.join(stateRoot, "render-manifest.json"))
+          .equals(replacementManifest) &&
+        fs
+          .readFileSync(path.join(stateRoot, "render-manifest-receipt.json"))
+          .equals(replacementReceipt),
     );
   } finally {
     fixture.dispose();

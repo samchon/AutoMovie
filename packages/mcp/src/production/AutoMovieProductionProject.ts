@@ -879,7 +879,8 @@ export class AutoMovieProductionProject {
    * runs before and after all writes and once more after `publicationCurrent`
    * runs the read-only final compiler gate against staged bytes. commitFiles
    * restores the previous valid publication if any write, guard, final gate, or
-   * post-commit byte assertion fails.
+   * post-commit byte assertion fails. A replaced physical root or state
+   * incarnation is the exception: stale paths are abandoned without rollback.
    */
   public commitProductionPublication(props: {
     files: ReadonlyMap<string, Uint8Array>;
@@ -1472,49 +1473,64 @@ export class AutoMovieProductionProject {
           throw new AutoMovieProductionInputRaceError(
             "Production inputs changed before the guarded commit began.",
           );
+        assertProductionRootNamespaceLease(rootLease);
+        this.assertIncarnation();
         const staged = stage(eager ?? lazy!());
+        assertProductionRootNamespaceLease(rootLease);
+        this.assertIncarnation();
         let applied = 0;
         try {
           for (const file of staged) {
             assertProductionRootNamespaceLease(rootLease);
+            this.assertIncarnation();
             if (file.content === null) fs.rmSync(file.path, { force: true });
             else writeAtomic(file.path, file.content);
             assertProductionRootNamespaceLease(rootLease);
+            this.assertIncarnation();
             ++applied;
           }
           if (inputCurrent?.() === false)
             throw new AutoMovieProductionInputRaceError(
               "Production inputs changed while the guarded commit was being applied.",
             );
+          assertProductionRootNamespaceLease(rootLease);
+          this.assertIncarnation();
           outputCurrent?.();
+          assertProductionRootNamespaceLease(rootLease);
+          this.assertIncarnation();
           if (staged.length === 0 && publishEmptyRevision === false) {
             this.lastReadRevision_ = current;
             return current;
           }
           const nextRevision = current + 1;
           assertProductionRootNamespaceLease(rootLease);
+          this.assertIncarnation();
           writeJsonAtomic(this.revisionPath, {
             revision: nextRevision,
           });
           assertProductionRootNamespaceLease(rootLease);
+          this.assertIncarnation();
           this.lastReadRevision_ = nextRevision;
           return nextRevision;
         } catch (error) {
           try {
             assertProductionRootNamespaceLease(rootLease);
+            this.assertIncarnation();
           } catch (identityError) {
             throw new AggregateError(
               [error, identityError],
-              "Production mutation stopped because the physical root or namespace fence changed. No stale-path rollback was attempted in the replacement root.",
+              "Production mutation stopped because the physical root or namespace fence changed, or the production state incarnation changed. No stale-path rollback was attempted in the replacement namespace.",
             );
           }
           const rollbackErrors: unknown[] = [];
           for (const file of staged.slice(0, applied).reverse())
             try {
               assertProductionRootNamespaceLease(rootLease);
+              this.assertIncarnation();
               if (file.previous === null) fs.rmSync(file.path, { force: true });
               else writeAtomic(file.path, file.previous);
               assertProductionRootNamespaceLease(rootLease);
+              this.assertIncarnation();
             } catch (rollbackError) {
               rollbackErrors.push(rollbackError);
             }
@@ -1528,10 +1544,11 @@ export class AutoMovieProductionProject {
       } finally {
         try {
           assertProductionRootNamespaceLease(rootLease);
+          this.assertIncarnation();
           releaseCommitLock(this.lockPath, token);
         } catch {
           // Release only process-local ownership: never follow a stale
-          // revision-lock path into a replacement root.
+          // revision-lock path into a replacement root or state incarnation.
           releaseCommitLock(this.lockPath, token, { unlink: false });
         }
       }
