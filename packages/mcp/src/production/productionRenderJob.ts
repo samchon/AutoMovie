@@ -408,11 +408,17 @@ export const canonicalProductionWebVtt = (
     `WEBVTT ${timeline.id}`,
     "",
     ...cues.flatMap((cue) => [
-      cue.id,
+      webVttPlainText(cue.id),
       `${webVttTime(cue.startFrame / timeline.fps)} --> ${webVttTime(
         cue.endFrame / timeline.fps,
       )}`,
-      `${cue.speaker === undefined ? "" : `<v ${cue.speaker}>`}${cue.text}`,
+      `<lang ${webVttPlainText(cue.language)}>${
+        cue.speaker === undefined
+          ? webVttPlainText(cue.text)
+          : `<v ${webVttPlainText(cue.speaker)}>${webVttPlainText(
+              cue.text,
+            )}</v>`
+      }</lang>`,
       "",
     ]),
   ].join("\n");
@@ -684,6 +690,14 @@ const webVttTime = (seconds: number): string => {
     "0",
   )}`;
 };
+
+/** Escape one authored plain-text field into a single WebVTT content line. */
+const webVttPlainText = (value: string): string =>
+  value
+    .replace(/[\u0000-\u001f\u007f]/gu, " ")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 
 const validByteFact = (fact: { digest: string; bytes: number }): boolean =>
   fact.bytes > 0 && validDigest(fact.digest);

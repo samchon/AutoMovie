@@ -7,6 +7,7 @@ import {
   IAutoMovieProductionRenderJobPlan,
   canonicalProductionWebVtt,
   planProductionRenderJob,
+  probeProductionMedia,
   productionRenderChunkStatuses,
   runProductionRenderJob,
   sampleProductionRenderFrame,
@@ -210,8 +211,9 @@ const throws = (closure: () => unknown): boolean => {
  *    2-frame chunks; preview/caption/audio-only designs produce zero chunks.
  * 2. Hard frames, fade weights, and a dissolve crossing a chunk boundary map to
  *    exact shot-local source frames without duplication or gaps.
- * 3. Caption placements canonicalize by frame/id into deterministic WebVTT with
- *    and without speaker tags.
+ * 3. Caption placements canonicalize by frame/id into deterministic WebVTT,
+ *    preserving language and escaping authored plain text with or without a
+ *    speaker tag.
  * 4. Planned, running, failed, stale, and complete status rows retain one slot
  *    while content ids change.
  * 5. Receipts require exact identity, ordered global frames, raster, non-empty
@@ -432,16 +434,40 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     },
   ];
   const longCaptions = canonicalProductionWebVtt(longCaptionTimeline);
+  const escapedCaptionTimeline = timeline();
+  escapedCaptionTimeline.tracks.captions = [
+    {
+      id: "unsafe\nid -->",
+      text: "A & <B> --> C\n\nD",
+      language: "en",
+      speaker: "sentinel>\nvoice",
+      startFrame: 0,
+      endFrame: 2,
+    },
+  ];
+  const escapedCaptions = canonicalProductionWebVtt(escapedCaptionTimeline);
+  const escapedProbe = probeProductionMedia({
+    kind: "captions",
+    mediaType: "text/vtt",
+    bytes: Buffer.from(escapedCaptions, "utf8"),
+  });
   TestValidator.predicate(
     "caption track becomes canonical WebVTT",
     captions.startsWith("WEBVTT render-film\n\n") &&
       captions.indexOf("earlier") < captions.indexOf("later") &&
       captions.includes("00:00:00.000 --> 00:00:01.000") &&
-      captions.includes("<v sentinel>First.") &&
-      captions.includes("\nSecond.\n") &&
+      captions.includes("<lang en><v sentinel>First.</v></lang>") &&
+      captions.includes("\n<lang en>Second.</lang>\n") &&
       tiedCaptions.indexOf("\na\n") < tiedCaptions.indexOf("\nb\n") &&
       tiedCaptions.indexOf("\nb\n") < tiedCaptions.indexOf("\nc\n") &&
-      longCaptions.includes("01:00:00.000 --> 01:00:01.000"),
+      longCaptions.includes("01:00:00.000 --> 01:00:01.000") &&
+      escapedCaptions.match(/-->/gu)?.length === 1 &&
+      escapedCaptions.includes("\nunsafe id --&gt;\n") &&
+      escapedCaptions.includes(
+        "<lang en><v sentinel&gt; voice>A &amp; &lt;B&gt; --&gt; C  D</v></lang>",
+      ) &&
+      escapedProbe.kind === "webvtt" &&
+      escapedProbe.cueCount === 1,
   );
 
   const complete = receipt(renderPlan, 0);
