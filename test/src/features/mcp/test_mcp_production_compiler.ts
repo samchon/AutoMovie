@@ -201,6 +201,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       genericSnapshotFailure,
       "generic snapshot confirmation failure",
     );
+    // The sabotage above left the generated snapshot stale on purpose. The
+    // fence claim below is about a settled read-only response, so restore a
+    // current compilation first rather than measuring the fence through an
+    // unrelated staleness failure.
+    new AutoMovieProductionCompiler(project).compile({ scope: "source" });
     const postFenceRevision = project.revision;
     // The claim is that a settled response takes its fence and never reads the
     // revision again, so the injection point must sit exactly one read past

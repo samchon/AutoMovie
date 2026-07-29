@@ -867,18 +867,41 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       request: { query: "ground", point: { x: 0, z: 0 } },
     });
     writeGeneratedBytes(Buffer.from(generatedShotBytes));
-    TestValidator.predicate(
+    TestValidator.equals(
       "pose oracle refuses unstaged actors and missing motion but uses scene-node fallback",
-      heldPose.result?.kind === "measurement" &&
-        heldPose.result.values.held === true &&
-        heldWithoutNode.result === null &&
-        movingWithoutRootOrNode.result === null &&
-        movingWithRoot.result?.kind === "measurement" &&
-        movingWithRoot.result.values.rootX === 7 &&
-        missingMotion.result === null &&
-        missingPerformance.result?.kind === "measurement" &&
-        missingPerformance.result.values.held === false &&
-        invalidGenerated.result === null,
+      {
+        heldKind: heldPose.result?.kind ?? null,
+        held:
+          heldPose.result?.kind === "measurement"
+            ? heldPose.result.values.held
+            : null,
+        heldWithoutNode: heldWithoutNode.result?.kind ?? null,
+        movingWithoutRootOrNode: movingWithoutRootOrNode.result?.kind ?? null,
+        movingWithRootKind: movingWithRoot.result?.kind ?? null,
+        movingRootX:
+          movingWithRoot.result?.kind === "measurement"
+            ? movingWithRoot.result.values.rootX
+            : null,
+        missingMotion: missingMotion.result?.kind ?? null,
+        missingPerformanceKind: missingPerformance.result?.kind ?? null,
+        missingPerformanceHeld:
+          missingPerformance.result?.kind === "measurement"
+            ? missingPerformance.result.values.held
+            : null,
+        invalidGenerated: invalidGenerated.result?.kind ?? null,
+      },
+      {
+        heldKind: "measurement",
+        held: true,
+        heldWithoutNode: null,
+        movingWithoutRootOrNode: null,
+        movingWithRootKind: "measurement",
+        movingRootX: 7,
+        missingMotion: null,
+        missingPerformanceKind: "measurement",
+        missingPerformanceHeld: false,
+        invalidGenerated: null,
+      },
     );
 
     const manifestPath = path.join(
