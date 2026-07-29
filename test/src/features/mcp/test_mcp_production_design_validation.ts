@@ -107,6 +107,19 @@ export const test_mcp_production_design_validation = (): void => {
       actor: `hero-${slot}`,
     })),
   };
+  const heroLimitFormation = {
+    ...runtimeHeavyFormation,
+    id: "hero-limit",
+    count: 257,
+    layout: {
+      ...runtimeHeavyFormation.layout,
+      ranks: 257,
+    },
+    heroOverrides: Array.from({ length: 257 }, (_, slot) => ({
+      slot,
+      actor: `limit-hero-${slot}`,
+    })),
+  };
   const unboundedFormation = {
     ...formationDesign(),
     id: "unbounded",
@@ -172,6 +185,14 @@ export const test_mcp_production_design_validation = (): void => {
         acceptance: new Map(),
       }).some((diagnostic) =>
         diagnostic.message.includes("generated payload budget"),
+      ) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        formations: new Map([[heroLimitFormation.id, heroLimitFormation]]),
+        shots: new Map(),
+        acceptance: new Map(),
+      }).some((diagnostic) =>
+        diagnostic.message.includes("above the explicit-node limit"),
       ) &&
       validateAutoMovieProductionGraph({
         ...valid,

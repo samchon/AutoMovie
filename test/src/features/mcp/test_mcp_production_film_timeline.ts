@@ -328,6 +328,13 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         },
       },
       {
+        name: "nonzero first placement",
+        code: "film-global-order-invalid",
+        mutate: (edit) => {
+          edit.tracks.video[0]!.start = { frame: 1 };
+        },
+      },
+      {
         name: "terminal dissolve",
         code: "film-transition-invalid",
         mutate: (edit) => {
@@ -401,6 +408,30 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
             duration: { seconds: 7 },
             intensity: 2,
           });
+        },
+      },
+      {
+        name: "effect ordering",
+        code: "film-effect-cue-invalid",
+        mutate: (edit) => {
+          edit.tracks.effects.push(
+            {
+              id: "later-effect",
+              recipe: "world-zone",
+              zone: "signal-smoke",
+              start: { frame: 2 },
+              duration: { frame: 1 },
+              intensity: 0.5,
+            },
+            {
+              id: "earlier-effect",
+              recipe: "world-zone",
+              zone: "signal-smoke",
+              start: { frame: 1 },
+              duration: { frame: 1 },
+              intensity: 0.5,
+            },
+          );
         },
       },
     ];

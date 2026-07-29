@@ -387,11 +387,26 @@ export const test_mcp_production_realization = (): void => {
       compiled: heroModelTampered,
       collisions: [],
     });
+    const missingHeroNode = structuredClone(materialized);
+    missingHeroNode.scene.nodes = missingHeroNode.scene.nodes.filter(
+      (node) => node.id !== "captain",
+    );
+    const missingHeroNodeOutcome = realizeShotContract({
+      contract,
+      production: productionDesign(),
+      world: worldDesign(),
+      formations,
+      compiled: missingHeroNode,
+      collisions: [],
+    });
     TestValidator.predicate(
-      "named heroes cannot replace the compiler-owned formation model",
+      "named heroes must retain their compiler-owned model and scene node",
       heroModelOutcome.realization.formations.some(
         (item) => item.id === formation.id && item.passed === false,
-      ),
+      ) &&
+        missingHeroNodeOutcome.realization.formations.some(
+          (item) => item.id === formation.id && item.passed === false,
+        ),
     );
 
     const unreadable = structuredClone(base);

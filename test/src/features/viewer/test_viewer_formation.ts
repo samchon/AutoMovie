@@ -409,6 +409,11 @@ export const test_viewer_formation = (): void => {
   ).map((easing) =>
     sampleFormationMotion([{ ...motion, easing }], formation.id, 3),
   );
+  const stepAtEnd = sampleFormationMotion(
+    [{ ...motion, easing: "step" }],
+    formation.id,
+    motion.end,
+  );
   const easeInOutQuarter = sampleFormationMotion(
     [{ ...motion, easing: "easeInOut" }],
     formation.id,
@@ -537,6 +542,7 @@ export const test_viewer_formation = (): void => {
       easingTrack: easingSamples
         .map((sample) => sample.translation.z)
         .join(","),
+      stepAtEndZ: stepAtEnd.translation.z,
       easeInOutQuarterZ: easeInOutQuarter.translation.z,
       beforeMotionZ: beforeMotion.translation.z,
       betweenMotionsZ: betweenMotions.translation.z,
@@ -577,6 +583,7 @@ export const test_viewer_formation = (): void => {
       rootScaleX: 1,
       scaledSlotMatchesTranslation: true,
       easingTrack: "-3,-1.5,-4.5,-3,0",
+      stepAtEndZ: -6,
       easeInOutQuarterZ: -0.75,
       beforeMotionZ: 0,
       betweenMotionsZ: -6,

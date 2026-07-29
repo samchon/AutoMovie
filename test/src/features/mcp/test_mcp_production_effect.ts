@@ -37,6 +37,8 @@ import {
  * 4. Materialization without a compiler-owned world recipe emits no stream.
  * 5. A digest-consistent but ambiguous generated shot with two streams for one
  *    zone is rejected instead of selecting an arbitrary inactive gap.
+ * 6. A digest-consistent shot whose selected camera is absent is rejected before
+ *    an effect measurement can claim geometry.
  */
 export const test_mcp_production_effect = (): void => {
   const fixture = productionFixture();
@@ -204,12 +206,35 @@ export const test_mcp_production_effect = (): void => {
         time: 2.5,
       },
     });
+    const missingCamera = structuredClone(compiled!);
+    missingCamera.scene.cameras = missingCamera.scene.cameras.filter(
+      (camera) => camera.id !== missingCamera.shot.camera,
+    );
+    const missingCameraBytes = Buffer.from(JSON.stringify(missingCamera));
+    fs.writeFileSync(shotPath, missingCameraBytes);
+    manifest.files.find((file) => file.path === "shots/opening.json")!.digest =
+      digestAutoMovieBytes(missingCameraBytes);
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+    const missingCameraSummary = new AutoMovieProductionOracleService(
+      project,
+    ).query({
+      request: {
+        query: "effect",
+        zone: "signal-smoke",
+        shot: "opening",
+        time: 2,
+      },
+    });
     fs.writeFileSync(shotPath, originalShot);
     fs.writeFileSync(manifestPath, originalManifest);
     TestValidator.predicate(
-      "effect oracle refuses an ambiguous inactive gap between repeated zone cues",
+      "effect oracle refuses ambiguous streams and a missing compiled camera",
       ambiguousSummary.result === null &&
-        ambiguousSummary.diagnostics[0]?.message.includes("unambiguous"),
+        ambiguousSummary.diagnostics[0]?.message.includes("unambiguous") &&
+        missingCameraSummary.result === null &&
+        missingCameraSummary.diagnostics[0]?.message.includes(
+          "no current compiled camera",
+        ),
     );
   } finally {
     fixture.dispose();

@@ -445,6 +445,15 @@ export const test_mcp_production_materialization = (): void => {
       runtimeModels: new Map(),
       source,
     });
+    const optionalCueSource = structuredClone(source);
+    delete optionalCueSource.effectCues;
+    delete optionalCueSource.formationMotions;
+    const defaultedCues = materializeCompiledShot({
+      contract,
+      formations: new Map(),
+      runtimeModels,
+      source: optionalCueSource,
+    });
     TestValidator.predicate(
       "compiler owns compact anonymous batches, hero placement and collision reporting",
       materialized.value.scene.nodes.find((node) => node.id === "captain")
@@ -462,7 +471,9 @@ export const test_mcp_production_materialization = (): void => {
         collision.collisions.includes("formation:line:slot:000001") &&
         absentFormation.value.scene.nodes.length ===
           source.scene.nodes.length &&
-        absentModel.value.scene.nodes.length === source.scene.nodes.length,
+        absentModel.value.scene.nodes.length === source.scene.nodes.length &&
+        defaultedCues.value.effects.length === 0 &&
+        defaultedCues.value.formationMotions.length === 0,
     );
 
     const highCount = {
