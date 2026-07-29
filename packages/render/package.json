@@ -43,7 +43,6 @@
     "@gltf-transform/core": "catalog:gltf"
   },
   "devDependencies": {
-    "@types/node": "catalog:utils",
     "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript",

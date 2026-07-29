@@ -21,6 +21,7 @@ export * from "./production/contentIdentity";
 export * from "./production/filmTimeline";
 export * from "./production/materializeProduction";
 export * from "./production/probeProductionMedia";
+export * from "./production/productionRenderJob";
 export * from "./production/renderIdentity";
 export * from "./production/realizeShotContract";
 export * from "./production/validateProductionDesign";

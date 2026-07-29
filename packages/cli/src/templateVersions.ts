@@ -6,7 +6,6 @@ export const AUTOMOVIE_TEMPLATE_VERSIONS: Record<string, string> = {
   engine: "^0.1.0",
   interface: "^0.1.0",
   mcp: "^0.1.0",
-  render: "^0.1.0",
   viewer: "^0.1.0",
   h264Mp4Encoder: "^1.0.12",
   mp4box: "^2.4.1",

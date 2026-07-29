@@ -201,8 +201,14 @@ const completeLifecycle = (): IAutoMovieBenchmarkGateResult[] => [
   { gate: "final-compile", status: "pass", detail: "Publication committed." },
 ];
 
-/** One delivered short-tier run that satisfies the whole law. */
-const referenceDraft = (
+/**
+ * One delivered short-tier run that satisfies the whole law.
+ *
+ * Exported because a sealed submission cannot be spread back into a draft: the
+ * seal adds a run id that strict validation refuses as a surplus field, so a
+ * variant is built from this draft rather than from a sealed archive.
+ */
+export const austerlitzSignalDraft = (
   surface: AutoMovieBenchmarkSurface,
 ): IAutoMovieBenchmarkSubmissionDraft => ({
   protocolVersion: AUTOMOVIE_BENCHMARK_SUBMISSION_PROTOCOL,
@@ -326,12 +332,12 @@ const referenceDraft = (
 export const austerlitzSignalReference = (
   surface: AutoMovieBenchmarkSurface = "production",
 ): IAutoMovieBenchmarkSubmission =>
-  sealAutoMovieBenchmarkSubmission(referenceDraft(surface));
+  sealAutoMovieBenchmarkSubmission(austerlitzSignalDraft(surface));
 
 /** A bootstrap-only run that never compiled the film it was asked for. */
 export const austerlitzSignalEmpty = (): IAutoMovieBenchmarkSubmission =>
   sealAutoMovieBenchmarkSubmission({
-    ...referenceDraft("production"),
+    ...austerlitzSignalDraft("production"),
     lifecycle: [
       ...completeLifecycle().slice(0, 3),
       {
@@ -360,8 +366,8 @@ export const austerlitzSignalMutants =
     {
       id: "stale-frame",
       submission: sealAutoMovieBenchmarkSubmission({
-        ...referenceDraft("production"),
-        frames: referenceDraft("production").frames.map((frame) =>
+        ...austerlitzSignalDraft("production"),
+        frames: austerlitzSignalDraft("production").frames.map((frame) =>
           frame.pass === "beauty" ? { ...frame, probeValid: false } : frame,
         ),
       }),
@@ -369,9 +375,9 @@ export const austerlitzSignalMutants =
     {
       id: "missing-formation",
       submission: sealAutoMovieBenchmarkSubmission({
-        ...referenceDraft("production"),
+        ...austerlitzSignalDraft("production"),
         observations: {
-          ...referenceDraft("production").observations,
+          ...austerlitzSignalDraft("production").observations,
           "formation:allied-column:count": 0,
         },
       }),
@@ -379,10 +385,11 @@ export const austerlitzSignalMutants =
     {
       id: "broken-runtime",
       submission: sealAutoMovieBenchmarkSubmission({
-        ...referenceDraft("production"),
+        ...austerlitzSignalDraft("production"),
         finishedRuntimeSeconds: 20,
-        deliverables: referenceDraft("production").deliverables.map((file) =>
-          file.kind === "feature" ? { ...file, durationSeconds: 20 } : file,
+        deliverables: austerlitzSignalDraft("production").deliverables.map(
+          (file) =>
+            file.kind === "feature" ? { ...file, durationSeconds: 20 } : file,
         ),
       }),
     },
@@ -406,7 +413,7 @@ export const austerlitzSignalAnchors = (): IAutoMovieBenchmarkAnchors => ({
 export const austerlitzSignalDryRun = (): IAutoMovieBenchmarkSubmission[] => [
   austerlitzSignalReference("production"),
   sealAutoMovieBenchmarkSubmission({
-    ...referenceDraft("legacy-compact"),
+    ...austerlitzSignalDraft("legacy-compact"),
     mcp: {
       protocolVersion: "2025-06-18",
       serverName: "automovie-legacy",
@@ -416,7 +423,7 @@ export const austerlitzSignalDryRun = (): IAutoMovieBenchmarkSubmission[] => [
       ],
     },
     observations: {
-      ...referenceDraft("legacy-compact").observations,
+      ...austerlitzSignalDraft("legacy-compact").observations,
       "formation:allied-column:count": 128,
     },
     generation: {

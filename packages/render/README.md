@@ -18,7 +18,6 @@
 - 포즈 키포인트(`planPoseKeypointSidecar`, `renderPoseKeypointSidecar`, `IAutoMoviePoseKeypointActor`, `IAutoMoviePoseKeypointFrame`, `IAutoMoviePoseKeypointSidecar`): OpenPose 계열 사이드카를 프레임별로 계획·직렬화한다. MCP의 `planPoseKeypoints`.
 - 가이드 패스(`AUTOMOVIE_GUIDE_PASSES`, `isGuidePass`, `guidePassFrameName`, `guidePassFramePattern`): depth/mask/normal/outline 구조 패스의 이름·파일명 규약.
 - `renderScreenplay` / `beatCaptions`: 커밋된 스크립트를 스크린플레이 텍스트와 비트 캡션으로 낸다.
-- production 렌더 잡(`planProductionRenderJob`, `sampleProductionRenderFrame`, `canonicalProductionWebVtt`, `productionRenderChunkStatuses`, `verifyProductionRenderChunkReceipt`, `runProductionRenderJob`): 컴파일러가 소유한 film timeline을 content-addressed 청크 계획으로 바꾸고, 청크 단위로 재개·검증·완료 영수증을 만든다. 실제 캡처·인코딩·먹싱은 host가 주입한 adapter가 수행한다.
 
 ## 경계
 

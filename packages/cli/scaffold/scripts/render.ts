@@ -10,24 +10,22 @@ import {
   AutoMovieApplication,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
-  canonicalAutoMovieCaptureRuntimeIdentity,
-  digestAutoMovieBytes,
-  encodeAutoMoviePathSegment,
-  probeProductionMedia,
-  readAutoMovieFilmTimeline,
-  selectAutoMovieFilmReviewFrames,
-} from "@automovie/mcp";
-import {
   type IAutoMovieProductionAudioAssetIdentity,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   type IAutoMovieProductionRenderJobPlan,
+  canonicalAutoMovieCaptureRuntimeIdentity,
+  digestAutoMovieBytes,
+  encodeAutoMoviePathSegment,
   planProductionRenderJob,
+  probeProductionMedia,
   productionRenderChunkStatuses,
+  readAutoMovieFilmTimeline,
   runProductionRenderJob,
   sampleProductionRenderFrame,
+  selectAutoMovieFilmReviewFrames,
   verifyProductionRenderChunkReceipt,
-} from "@automovie/render";
+} from "@automovie/mcp";
 import * as HME from "h264-mp4-encoder";
 import { createFile } from "mp4box";
 import { createHash } from "node:crypto";

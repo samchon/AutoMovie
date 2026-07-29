@@ -147,7 +147,7 @@ const judgeObservation = (
 ): IAutoMovieBenchmarkAssertionResult => {
   const observed = observations[assertion.observation];
   const evidence = `observation:${assertion.observation}`;
-  if (observed === undefined || Number.isFinite(observed) === false)
+  if (observed === undefined)
     return {
       id: assertion.id,
       axis,

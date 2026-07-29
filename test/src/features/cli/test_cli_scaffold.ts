@@ -148,9 +148,6 @@ export const test_cli_scaffold = (): void => {
     ) &&
       pkg.includes(`"@automovie/mcp": "${AUTOMOVIE_TEMPLATE_VERSIONS.mcp}"`) &&
       pkg.includes(
-        `"@automovie/render": "${AUTOMOVIE_TEMPLATE_VERSIONS.render}"`,
-      ) &&
-      pkg.includes(
         `"@automovie/viewer": "${AUTOMOVIE_TEMPLATE_VERSIONS.viewer}"`,
       ) &&
       pkg.includes(

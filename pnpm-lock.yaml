@@ -374,9 +374,6 @@ importers:
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.23.0
-      '@types/node':
-        specifier: catalog:utils
-        version: 22.19.20
       rimraf:
         specifier: catalog:utils
         version: 6.1.3

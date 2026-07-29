@@ -11,13 +11,13 @@ import {
   runProductionRenderJob,
   sampleProductionRenderFrame,
   verifyProductionRenderChunkReceipt,
-} from "@automovie/render";
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import {
   productionDesign,
   testCaptureRuntimeIdentity,
-} from "../mcp/productionFixtures";
+} from "./productionFixtures";
 
 const digest = (digit: string): AutoMovieContentDigest =>
   `sha256:${digit.repeat(64)}`;
@@ -223,7 +223,7 @@ const throws = (closure: () => unknown): boolean => {
  *    dissolve, invalid guide passes, and non-finite runtime identity fail
  *    closed.
  */
-export const test_render_production_job = async (): Promise<void> => {
+export const test_mcp_production_render_job = async (): Promise<void> => {
   const renderPlan = plan();
   const selectivelyChanged = plan({
     ...sourceFingerprints(),

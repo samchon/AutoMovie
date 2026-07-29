@@ -215,6 +215,19 @@ all-or-nothing while reserving both the project root and production state
 namespace. Empty-directory topology is part of the rollback baseline. The CLI
 exposes the same contract through `automovie migrate`.
 
+Long-running production delivery lives outside the request surface.
+`planProductionRenderJob` turns the compiler-owned film timeline into
+content-addressed feature and guide-pass chunks fenced by the compile input,
+the film edit, and the exact capture/encoder identity;
+`productionRenderChunkStatuses`, `verifyProductionRenderChunkReceipt` and
+`runProductionRenderJob` resume, quarantine, or rerender one slot at a time
+from byte and parser receipts alone, and
+`AutoMovieProductionProject.commitProductionPublication` publishes every
+deliverable byte, the aggregate manifest and its parser receipt under one
+revision/input fence. Actual capture, encoding and muxing stay with the
+adapters the host injects; the project CLI drives the whole sequence through
+`automovie render plan|run|status|verify|finalize`.
+
 Render/see tools plan deterministic output, and `seeFrame` can also use a
 host-injected capture adapter. `planRender` resolves a committed shot or film
 into deterministic frame times, frame paths, guide-pass paths, and ffmpeg args.
