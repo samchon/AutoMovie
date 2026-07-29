@@ -430,7 +430,7 @@ export const austerlitzSignalDryRun = (): IAutoMovieBenchmarkSubmission[] => [
     },
     generation: {
       toolCalls: 118,
-      corrections: 9,
+      corrections: 8,
       costUsd: 19.4,
       elapsedSeconds: 3_102,
       inputTokens: 2_411_008,

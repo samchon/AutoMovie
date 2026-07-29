@@ -77,7 +77,7 @@ export const test_benchmark_task_law = (): void => {
       [1n, "JSON-compatible"],
       [Symbol("unsupported"), "JSON-compatible"],
       [() => undefined, "JSON-compatible"],
-      [Array(1), "JSON-compatible"],
+      [new Array(1), "JSON-compatible"],
       [new Map([["unsupported", true]]), "plain JSON objects"],
       [new Date(0), "plain JSON objects"],
     ].every(([value, fragment]) => {

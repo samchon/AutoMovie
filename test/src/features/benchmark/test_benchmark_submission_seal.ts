@@ -300,6 +300,44 @@ export const test_benchmark_submission_seal = (): void => {
         "task 1.0.0 against 2.0.0; scenarioHelper 1 against 4",
       ),
   );
+  const overBudget = (
+    generation: Partial<IAutoMovieBenchmarkSubmissionDraft["generation"]>,
+  ): IAutoMovieBenchmarkSubmission =>
+    sealAutoMovieBenchmarkSubmission({
+      ...austerlitzSignalDraft("production"),
+      generation: {
+        ...austerlitzSignalDraft("production").generation,
+        ...generation,
+      },
+    });
+  TestValidator.predicate(
+    "binding refuses every task sandbox budget overrun",
+    [
+      {
+        submission: overBudget({
+          elapsedSeconds: task.sandbox.maxElapsedSeconds + 0.001,
+        }),
+        field: "elapsedSeconds",
+      },
+      {
+        submission: overBudget({
+          costUsd: task.sandbox.maxCostUsd + 0.001,
+        }),
+        field: "costUsd",
+      },
+      {
+        submission: overBudget({
+          corrections: task.sandbox.maxCorrections + 1,
+        }),
+        field: "corrections",
+      },
+    ].every(({ submission, field }) =>
+      throws(
+        () => assertAutoMovieBenchmarkBinding(task, submission),
+        `${field} `,
+      ),
+    ),
+  );
 
   const [production, legacy] = austerlitzSignalDryRun();
   TestValidator.equals(

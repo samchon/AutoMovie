@@ -143,7 +143,7 @@ export const probeProductionMedia = (props: {
 };
 
 const parseWebVttCue = (line: string): { start: number; end: number } => {
-  const delimiterCount = line.match(/-->/gu)?.length ?? 0;
+  const delimiterCount = line.split("-->").length - 1;
   const match =
     delimiterCount === 1
       ? /^[ \t]*((?:\d{2,}:)?[0-5]\d:[0-5]\d\.\d{3})[ \t]+-->[ \t]+((?:\d{2,}:)?[0-5]\d:[0-5]\d\.\d{3})(?:[ \t]+[^\r\n]*)?$/.exec(

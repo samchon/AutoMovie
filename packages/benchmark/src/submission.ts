@@ -423,6 +423,30 @@ export const assertAutoMovieBenchmarkBinding = (
     throw new Error(
       `Submission ${submission.runId} was produced under task law ${submission.taskDigest}, but task "${task.taskId}" validates as ${taskDigest}. Raise the task version and rerun instead of rescoring old evidence.`,
     );
+  const exceeded = (
+    [
+      [
+        "elapsedSeconds",
+        submission.generation.elapsedSeconds,
+        task.sandbox.maxElapsedSeconds,
+      ],
+      ["costUsd", submission.generation.costUsd, task.sandbox.maxCostUsd],
+      [
+        "corrections",
+        submission.generation.corrections,
+        task.sandbox.maxCorrections,
+      ],
+    ] as const
+  ).filter(([, observed, maximum]) => observed > maximum);
+  if (exceeded.length !== 0)
+    throw new Error(
+      `Submission ${submission.runId} exceeds task "${task.taskId}" sandbox budget: ${exceeded
+        .map(
+          ([field, observed, maximum]) =>
+            `${field} ${observed} is above ${maximum}`,
+        )
+        .join("; ")}.`,
+    );
 };
 
 /**

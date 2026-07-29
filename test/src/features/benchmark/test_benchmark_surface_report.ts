@@ -84,7 +84,7 @@ export const test_benchmark_surface_report = (): void => {
       report.surfaces[1]!.meanFilmScore?.toFixed(4),
       report.surfaces[1]!.meanCorrections,
     ],
-    ["0.9000", 9, "1.0000", 2],
+    ["0.9000", 8, "1.0000", 2],
   );
   TestValidator.equals(
     "the excluded run changes neither the score nor the friction it left",
