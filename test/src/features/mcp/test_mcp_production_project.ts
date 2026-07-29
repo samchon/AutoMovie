@@ -2391,9 +2391,14 @@ export const test_mcp_production_project = (): void => {
       "a root replaced while staging under the namespace lease is refused without mutation",
       preLeaseSwapped && preLeaseRejected && preLeaseReplacementUntouched,
     );
+    const atomicDeleteBase = modelRecipe();
     const atomicDeleteModel = {
-      ...modelRecipe(),
+      ...atomicDeleteBase,
       id: "atomic-delete-recovery",
+      lod: atomicDeleteBase.lod.map((lod) => ({
+        ...lod,
+        recipe: "atomic-delete-recovery",
+      })),
     };
     TestValidator.predicate(
       "atomic delete recovery fixture is accepted",
