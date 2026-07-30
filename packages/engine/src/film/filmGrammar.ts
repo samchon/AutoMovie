@@ -30,8 +30,23 @@ export interface IAutoMovieGrammarSubjectObservation {
   end: IAutoMovieVector3;
   /** Positive world-space subject height in metres. */
   height: number;
-  /** Subject this actor looks toward, when authored. */
-  eyelineTarget?: string;
+  /** Resolved gaze target over the shot, or null when it is not observed. */
+  eyeline: {
+    /** Stable semantic target id, even when that target is outside the frame. */
+    target: string;
+    /** World gaze target at the opening frame. */
+    start: IAutoMovieVector3;
+    /** World gaze target at the closing frame. */
+    end: IAutoMovieVector3;
+  } | null;
+}
+
+/** One perspective camera sample at a shot boundary. */
+export interface IAutoMovieGrammarCameraObservation extends IAutoMovieResolvedCamera {
+  /** Vertical field of view in degrees. */
+  fovY: number;
+  /** Render width divided by height. */
+  aspect: number;
 }
 
 /** The geometric and editorial facts required to inspect one ordered shot. */
@@ -40,12 +55,12 @@ export interface IAutoMovieGrammarShotObservation {
   id: string;
   /** Positive edited duration in seconds. */
   duration: number;
-  /** Resolved camera plus its perspective projection. */
-  camera: IAutoMovieResolvedCamera & {
-    /** Vertical field of view in degrees. */
-    fovY: number;
-    /** Render width divided by height. */
-    aspect: number;
+  /** Resolved camera at both edited shot boundaries. */
+  camera: {
+    /** Opening-frame camera. */
+    start: IAutoMovieGrammarCameraObservation;
+    /** Closing-frame camera. */
+    end: IAutoMovieGrammarCameraObservation;
   };
   /** Subjects observed in this shot; input order has no meaning. */
   subjects: IAutoMovieGrammarSubjectObservation[];
@@ -55,11 +70,6 @@ export interface IAutoMovieGrammarShotObservation {
   declaredShotSize: IAutoMovieCameraIntent["framing"] | null;
   /** Two subjects defining the line of action, or null when unavailable. */
   actionAxis: readonly [string, string] | null;
-  /**
-   * Whether the shot visibly carries the camera across its action axis instead
-   * of hiding the crossing in a cut.
-   */
-  onScreenAxisCrossing: boolean;
   /** Deliberate exceptions copied from the shot contract. */
   styleIntent?: AutoMovieGrammarStyleIntent[];
 }
@@ -155,6 +165,10 @@ export const analyzeFilmGrammar = (props: {
     });
   }
   return diagnostics.filter((diagnostic) => {
+    if (diagnostic.code === "grammar-pacing")
+      return shots.some((shot) => shot.styleIntent.includes("rhythmic-pacing"))
+        ? false
+        : true;
     const shot = shots.find((candidate) => candidate.id === diagnostic.shot)!;
     return (shot.styleIntent ?? []).some(
       (intent) => GRAMMAR_STYLE_SUPPRESSION[intent] === diagnostic.code,
@@ -211,14 +225,19 @@ const normalizeShot = (
 ): NormalizedShot => {
   nonBlank(input.id, "shot.id");
   positive(input.duration, `${input.id}.duration`);
-  positive(input.camera.fovY, `${input.id}.camera.fovY`);
-  if (input.camera.fovY >= 180)
-    throw new Error(`${input.id}.camera.fovY must be below 180.`);
-  positive(input.camera.aspect, `${input.id}.camera.aspect`);
-  finiteVector(input.camera.position, `${input.id}.camera.position`);
-  for (const [key, value] of Object.entries(input.camera.rotation))
-    if (Number.isFinite(value) === false)
-      throw new Error(`${input.id}.camera.rotation.${key} must be finite.`);
+  for (const boundary of ["start", "end"] as const) {
+    const camera = input.camera[boundary];
+    positive(camera.fovY, `${input.id}.camera.${boundary}.fovY`);
+    if (camera.fovY >= 180)
+      throw new Error(`${input.id}.camera.${boundary}.fovY must be below 180.`);
+    positive(camera.aspect, `${input.id}.camera.${boundary}.aspect`);
+    finiteVector(camera.position, `${input.id}.camera.${boundary}.position`);
+    for (const [key, value] of Object.entries(camera.rotation))
+      if (Number.isFinite(value) === false)
+        throw new Error(
+          `${input.id}.camera.${boundary}.rotation.${key} must be finite.`,
+        );
+  }
 
   const subjects = [...input.subjects].sort((a, b) =>
     compareCodeUnits(a.id, b.id),
@@ -234,11 +253,20 @@ const normalizeShot = (
     finiteVector(subject.start, `${input.id}.${subject.id}.start`);
     finiteVector(subject.end, `${input.id}.${subject.id}.end`);
     positive(subject.height, `${input.id}.${subject.id}.height`);
-    if (subject.eyelineTarget !== undefined)
+    if (subject.eyeline !== null) {
       nonBlank(
-        subject.eyelineTarget,
-        `${input.id}.${subject.id}.eyelineTarget`,
+        subject.eyeline.target,
+        `${input.id}.${subject.id}.eyeline.target`,
       );
+      finiteVector(
+        subject.eyeline.start,
+        `${input.id}.${subject.id}.eyeline.start`,
+      );
+      finiteVector(
+        subject.eyeline.end,
+        `${input.id}.${subject.id}.eyeline.end`,
+      );
+    }
   }
   if (
     input.primarySubject !== null &&
@@ -270,14 +298,22 @@ const inspectShotSize = (
   shot: NormalizedShot,
 ): void => {
   if (shot.primarySubject === null || shot.declaredShotSize === null) return;
-  const measured = measuredShotSize(shot);
-  if (measured === null || measured === shot.declaredShotSize) return;
+  const start = measuredShotSize(shot, "start");
+  const end = measuredShotSize(shot, "end");
+  const measured = [start, end].filter(
+    (value): value is IAutoMovieCameraIntent["framing"] => value !== null,
+  );
+  if (
+    measured.length === 0 ||
+    measured.every((value) => value === shot.declaredShotSize)
+  )
+    return;
   diagnostics.push({
     code: "grammar-shot-size",
     severity: "warning",
     shot: shot.id,
     previousShot: null,
-    fact: `shot "${shot.id}" declares ${shot.declaredShotSize} framing but projects "${shot.primarySubject}" as ${measured}`,
+    fact: `shot "${shot.id}" declares ${shot.declaredShotSize} framing but projects "${shot.primarySubject}" as ${start ?? "unmeasurable"} -> ${end ?? "unmeasurable"}`,
     impact:
       "the rendered subject scale does not deliver the authored shot-size hierarchy",
     recovery: `move camera "${shot.id}" to measure as ${shot.declaredShotSize}, change its lens, or correct the declared framing`,
@@ -294,6 +330,13 @@ const inspectCut = (
   inspectAxis(diagnostics, previous, incoming);
   const previousSubjects = byId(previous.subjects);
   const incomingSubjects = byId(incoming.subjects);
+  inspectEyeline(
+    diagnostics,
+    previous,
+    incoming,
+    previousSubjects,
+    incomingSubjects,
+  );
   if (
     previous.primarySubject !== null &&
     previous.primarySubject === incoming.primarySubject
@@ -301,12 +344,13 @@ const inspectCut = (
     const subjectId = previous.primarySubject;
     const outgoing = previousSubjects.get(subjectId)!;
     const arriving = incomingSubjects.get(subjectId)!;
-    const previousSize = measuredShotSize(previous);
-    const incomingSize = measuredShotSize(incoming);
+    const previousSize = measuredShotSize(previous, "end");
+    const incomingSize = measuredShotSize(incoming, "start");
     const cutAngle = cameraBearingAngleDegrees(
       outgoing.end,
-      previous.camera.position,
-      incoming.camera.position,
+      arriving.start,
+      previous.camera.end.position,
+      incoming.camera.start.position,
     );
     if (
       previousSize !== null &&
@@ -341,17 +385,9 @@ const inspectCut = (
           "the audience loses the subject's new spatial relation without a wide orientation view",
         recovery: `make "${incoming.id}" wide, insert a neutral establishing shot before it, or mark tight-reestablish`,
       });
-    inspectEyeline(
-      diagnostics,
-      previous,
-      incoming,
-      outgoing,
-      previousSubjects,
-      incomingSubjects,
-    );
     inspectScreenDirection(diagnostics, previous, incoming, outgoing, arriving);
   }
-  const incomingSize = measuredShotSize(incoming);
+  const incomingSize = measuredShotSize(incoming, "start");
   const entrant = incoming.subjects.find(
     (subject) => previousSubjects.has(subject.id) === false,
   );
@@ -387,8 +423,8 @@ const inspectAxis = (
     incoming.actionAxis === null ||
     previous.actionAxis[0] !== incoming.actionAxis[0] ||
     previous.actionAxis[1] !== incoming.actionAxis[1] ||
-    previous.onScreenAxisCrossing ||
-    incoming.onScreenAxisCrossing
+    crossesActionAxisOnScreen(previous) ||
+    crossesActionAxisOnScreen(incoming)
   )
     return;
   const previousSide = actionAxisSide(previous, "end");
@@ -412,38 +448,43 @@ const inspectEyeline = (
   diagnostics: IAutoMovieGrammarDiagnostic[],
   previous: NormalizedShot,
   incoming: NormalizedShot,
-  outgoing: IAutoMovieGrammarSubjectObservation,
   previousSubjects: ReadonlyMap<string, IAutoMovieGrammarSubjectObservation>,
   incomingSubjects: ReadonlyMap<string, IAutoMovieGrammarSubjectObservation>,
 ): void => {
-  const targetId = outgoing.eyelineTarget;
-  if (targetId === undefined) return;
-  const previousTarget = previousSubjects.get(targetId);
-  const incomingSubject = incomingSubjects.get(outgoing.id);
-  const incomingTarget = incomingSubjects.get(targetId);
-  if (
-    previousTarget === undefined ||
-    incomingSubject === undefined ||
-    incomingTarget === undefined
-  )
+  if (previous.primarySubject === null || incoming.primarySubject === null)
     return;
+  const outgoing = previousSubjects.get(previous.primarySubject)!;
+  if (outgoing.eyeline === null) return;
+  const targetId = outgoing.eyeline.target;
+  const incomingLooker = incomingSubjects.get(incoming.primarySubject);
+  if (incomingLooker === undefined || incomingLooker.eyeline === null) return;
+  const incomingTargetId = incomingLooker.eyeline.target;
+  const reverse =
+    incomingLooker.id === targetId && incomingTargetId === outgoing.id;
+  const continuation =
+    incomingLooker.id === outgoing.id && incomingTargetId === targetId;
+  if (reverse === false && continuation === false) return;
   const outgoingSide = relativeScreenDirection(
-    previous,
+    previous.camera.end,
     outgoing.end,
-    previousTarget.end,
+    outgoing.eyeline.end,
   );
   const incomingSide = relativeScreenDirection(
-    incoming,
-    incomingSubject.start,
-    incomingTarget.start,
+    incoming.camera.start,
+    incomingLooker.start,
+    incomingLooker.eyeline.start,
   );
+  const expectedMultiplier = reverse ? -1 : 1;
+  const matches = (
+    outgoingValue: -1 | 0 | 1,
+    incomingValue: -1 | 0 | 1,
+  ): boolean =>
+    outgoingValue === 0 ||
+    incomingValue === 0 ||
+    incomingValue === outgoingValue * expectedMultiplier;
   if (
-    (outgoingSide.horizontal === 0 || incomingSide.horizontal === 0
-      ? true
-      : outgoingSide.horizontal === incomingSide.horizontal) &&
-    (outgoingSide.vertical === 0 || incomingSide.vertical === 0
-      ? true
-      : outgoingSide.vertical === incomingSide.vertical)
+    matches(outgoingSide.horizontal, incomingSide.horizontal) &&
+    matches(outgoingSide.vertical, incomingSide.vertical)
   )
     return;
   diagnostics.push({
@@ -451,7 +492,7 @@ const inspectEyeline = (
     severity: "warning",
     shot: incoming.id,
     previousShot: previous.id,
-    fact: `"${targetId}" changes from ${screenRelation(outgoingSide)} to ${screenRelation(incomingSide)} of "${outgoing.id}" across the cut`,
+    fact: `eyeline "${outgoing.id}" -> "${targetId}" reads ${screenRelation(outgoingSide)}, but incoming "${incomingLooker.id}" -> "${incomingTargetId}" reads ${screenRelation(incomingSide)} instead of the ${reverse ? "opposite" : "same"} screen relation`,
     impact:
       "the reverse relative screen position breaks the established eyeline match",
     recovery: `place camera "${incoming.id}" on the prior eyeline half-plane, insert a neutral look shot, or mark eyeline-break`,
@@ -493,27 +534,37 @@ const actionAxisSide = (
   const first = subjects.get(shot.actionAxis![0])!;
   const second = subjects.get(shot.actionAxis![1])!;
   const axis = Vector3.subtract(second[boundary], first[boundary]);
-  const camera = Vector3.subtract(shot.camera.position, first[boundary]);
+  const camera = Vector3.subtract(
+    shot.camera[boundary].position,
+    first[boundary],
+  );
   return sign(axis.x * camera.z - axis.z * camera.x);
+};
+
+const crossesActionAxisOnScreen = (shot: NormalizedShot): boolean => {
+  if (shot.actionAxis === null) return false;
+  const start = actionAxisSide(shot, "start");
+  const end = actionAxisSide(shot, "end");
+  return start !== 0 && end !== 0 && start !== end;
 };
 
 const measuredShotSize = (
   shot: NormalizedShot,
+  boundary: "start" | "end",
 ): IAutoMovieCameraIntent["framing"] | null => {
   if (shot.primarySubject === null) return null;
   const subject = byId(shot.subjects).get(shot.primarySubject)!;
-  const halfY = Math.tan((shot.camera.fovY * Math.PI) / 360);
-  const base = projectToNdc(
-    shot.camera,
-    subject.start,
-    halfY,
-    shot.camera.aspect,
-  );
+  const camera = shot.camera[boundary];
+  const halfY = Math.tan((camera.fovY * Math.PI) / 360);
+  const base = projectToNdc(camera, subject[boundary], halfY, camera.aspect);
   const top = projectToNdc(
-    shot.camera,
-    { ...subject.start, y: subject.start.y + subject.height },
+    camera,
+    {
+      ...subject[boundary],
+      y: subject[boundary].y + subject.height,
+    },
     halfY,
-    shot.camera.aspect,
+    camera.aspect,
   );
   if (base.depth <= EPSILON || top.depth <= EPSILON) return null;
   const occupancy = Math.abs(top.ndcY - base.ndcY) / 2;
@@ -521,23 +572,13 @@ const measuredShotSize = (
 };
 
 const relativeScreenDirection = (
-  shot: NormalizedShot,
+  camera: IAutoMovieGrammarCameraObservation,
   subject: IAutoMovieVector3,
   target: IAutoMovieVector3,
 ): { horizontal: -1 | 0 | 1; vertical: -1 | 0 | 1 } => {
-  const halfY = Math.tan((shot.camera.fovY * Math.PI) / 360);
-  const subjectProjection = projectToNdc(
-    shot.camera,
-    subject,
-    halfY,
-    shot.camera.aspect,
-  );
-  const targetProjection = projectToNdc(
-    shot.camera,
-    target,
-    halfY,
-    shot.camera.aspect,
-  );
+  const halfY = Math.tan((camera.fovY * Math.PI) / 360);
+  const subjectProjection = projectToNdc(camera, subject, halfY, camera.aspect);
+  const targetProjection = projectToNdc(camera, target, halfY, camera.aspect);
   if (subjectProjection.depth <= EPSILON || targetProjection.depth <= EPSILON)
     return { horizontal: 0, vertical: 0 };
   return {
@@ -550,32 +591,37 @@ const screenMotionDirection = (
   shot: NormalizedShot,
   subject: IAutoMovieGrammarSubjectObservation,
 ): -1 | 0 | 1 => {
-  const halfY = Math.tan((shot.camera.fovY * Math.PI) / 360);
+  const startHalfY = Math.tan((shot.camera.start.fovY * Math.PI) / 360);
+  const endHalfY = Math.tan((shot.camera.end.fovY * Math.PI) / 360);
   const start = projectToNdc(
-    shot.camera,
+    shot.camera.start,
     subject.start,
-    halfY,
-    shot.camera.aspect,
+    startHalfY,
+    shot.camera.start.aspect,
   );
-  const end = projectToNdc(shot.camera, subject.end, halfY, shot.camera.aspect);
+  const end = projectToNdc(
+    shot.camera.end,
+    subject.end,
+    endHalfY,
+    shot.camera.end.aspect,
+  );
   if (start.depth <= EPSILON || end.depth <= EPSILON) return 0;
   return sign(end.ndcX - start.ndcX);
 };
 
 const cameraBearingAngleDegrees = (
-  subject: IAutoMovieVector3,
+  previousSubject: IAutoMovieVector3,
+  incomingSubject: IAutoMovieVector3,
   previousCamera: IAutoMovieVector3,
   incomingCamera: IAutoMovieVector3,
 ): number => {
-  const previous = Vector3.subtract(previousCamera, subject);
-  const incoming = Vector3.subtract(incomingCamera, subject);
-  const previousXZ = { x: previous.x, y: 0, z: previous.z };
-  const incomingXZ = { x: incoming.x, y: 0, z: incoming.z };
-  const lengths = Vector3.length(previousXZ) * Vector3.length(incomingXZ);
+  const previous = Vector3.subtract(previousCamera, previousSubject);
+  const incoming = Vector3.subtract(incomingCamera, incomingSubject);
+  const lengths = Vector3.length(previous) * Vector3.length(incoming);
   if (lengths <= EPSILON) return 180;
   const cosine = Math.max(
     -1,
-    Math.min(1, Vector3.dot(previousXZ, incomingXZ) / lengths),
+    Math.min(1, Vector3.dot(previous, incoming) / lengths),
   );
   return (Math.acos(cosine) * 180) / Math.PI;
 };

@@ -62,6 +62,25 @@ export const test_mcp_production_design_validation = (): void => {
     validateAutoMovieProductionGraph(valid),
     [],
   );
+  TestValidator.predicate(
+    "duplicate shot style intent is diagnosed at its own field",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      shots: new Map([
+        [
+          "opening",
+          {
+            ...shotContract(),
+            styleIntent: ["jump-cut", "jump-cut"],
+          },
+        ],
+      ]),
+    }).some(
+      (diagnostic) =>
+        diagnostic.code === "design-duplicate-id" &&
+        diagnostic.message.includes("styleIntent"),
+    ),
+  );
   const oversizedFormation = formationDesign();
   oversizedFormation.count = AUTOMOVIE_MAX_FORMATION_MEMBERS + 1;
   const cumulativeFormation = formationDesign();

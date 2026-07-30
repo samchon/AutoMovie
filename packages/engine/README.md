@@ -5,9 +5,10 @@
 `analyzeFilmGrammar` consumes shots in edited order and reports axis crossings,
 jump cuts, eyeline mismatches, screen-direction reversals, measured shot-size
 mismatches, missing re-establishment, and pacing statistics. It sorts subjects
-by stable id, uses only camera/subject geometry and durations, and returns each
-finding as fact, editorial impact, and recovery. A neutral action-axis shot
-breaks an otherwise hidden crossing.
+by stable id, uses opening/closing camera, subject, and resolved gaze-target
+geometry plus durations, and returns each finding as fact, editorial impact,
+and recovery. A neutral action-axis shot or a camera that visibly changes
+half-plane inside a shot breaks an otherwise hidden crossing.
 
 `IAutoMovieShotContract.styleIntent` records deliberate grammar exceptions.
 Each marker suppresses exactly one matching diagnostic; for example,

@@ -5,10 +5,11 @@ The EDL work in issue 1429 will supply the edited order; this issue deliberately
 does not invent another timeline representation.
 
 The analyzer measures seven families: action-axis crossing, jump cut, eyeline,
-screen direction, shot size, re-establishment, and pacing. Subject collections
-are sorted by stable id before analysis. Geometry, durations, and explicit
-observations are the only inputs, so seed and collection order cannot affect the
-result.
+screen direction, shot size, re-establishment, and pacing. Opening and closing
+camera placements, subject roots, and resolved gaze-target points preserve
+moving-camera and off-screen-look geometry. Subject collections are sorted by
+stable id before analysis. Geometry, durations, and explicit observations are
+the only inputs, so seed and collection order cannot affect the result.
 
 `styleIntent` is a narrow exception record on the shot contract. Its mapping is
 one-to-one: `jump-cut` suppresses only `grammar-jump-cut`, for example. Every
