@@ -53,8 +53,11 @@ export const test_mcp_production_project = (): void => {
       "manifest and summary preserve tracked identity",
       project.manifest().formatVersion === 2 &&
         project.summary().initialized === false &&
-        project.generatedRoot() === path.join(fixture.root, "generated") &&
-        project.renderRoot() === path.join(fixture.root, "renders"),
+        project.productionId === "fixture-film" &&
+        project.generatedRoot() ===
+          path.join(fixture.root, "generated", "fixture-film") &&
+        project.renderRoot() ===
+          path.join(fixture.root, "renders", "fixture-film"),
     );
     const manifestCopy = project.manifest();
     manifestCopy.generatedRoot = "caller-mutated";
@@ -605,7 +608,10 @@ export const test_mcp_production_project = (): void => {
     );
     try {
       const stateProject = AutoMovieProductionProject.open(linkedState.root);
-      const modelRoot = path.join(linkedState.root, ".automovie/design/models");
+      const modelRoot = path.join(
+        linkedState.root,
+        ".automovie/design/shared/models",
+      );
       fs.copyFileSync(
         path.join(modelRoot, "sentinel.json"),
         path.join(outsideState, "sentinel.json"),
@@ -630,7 +636,10 @@ export const test_mcp_production_project = (): void => {
       );
       fs.symlinkSync(
         outsideStateFile,
-        path.join(linkedStateFile.root, ".automovie/design/models/unsafe.json"),
+        path.join(
+          linkedStateFile.root,
+          ".automovie/design/shared/models/unsafe.json",
+        ),
         "junction",
       );
       TestValidator.predicate(
@@ -813,7 +822,7 @@ export const test_mcp_production_project = (): void => {
     );
     const renderReceiptDirectory = path.join(
       fixture.root,
-      ".automovie/render-receipts",
+      ".automovie/productions/fixture-film/render-receipts",
     );
     const renderReceiptPath = path.join(
       renderReceiptDirectory,
@@ -1345,7 +1354,10 @@ export const test_mcp_production_project = (): void => {
       digestAutoMovieBytes(Buffer.from("frame")).startsWith("sha256:"),
     );
 
-    const modelDirectory = path.join(fixture.root, ".automovie/design/models");
+    const modelDirectory = path.join(
+      fixture.root,
+      ".automovie/design/shared/models",
+    );
     const encodedDuplicate = path.join(modelDirectory, "%73entinel.json");
     fs.writeFileSync(encodedDuplicate, JSON.stringify(modelRecipe()));
     TestValidator.predicate(
@@ -1661,7 +1673,7 @@ export const test_mcp_production_project = (): void => {
     fs.rmSync(ownerProject.renderRoot(), { recursive: true });
     fs.symlinkSync(
       path.join(replacedOwner.root, "viewer"),
-      path.join(replacedOwner.root, "renders"),
+      ownerProject.renderRoot(),
       "junction",
     );
     TestValidator.predicate(
@@ -2269,8 +2281,8 @@ export const test_mcp_production_project = (): void => {
         ) &&
         fs.existsSync(
           path.join(
-            staleRoot,
-            "renders/deliverables/stale-root-write/frame.bin",
+            staleProject.renderRoot(),
+            "deliverables/stale-root-write/frame.bin",
           ),
         ) === false,
     );
@@ -2324,8 +2336,8 @@ export const test_mcp_production_project = (): void => {
     const acquiredReplacementUntouched =
       fs.existsSync(
         path.join(
-          acquiredReplacementRoot,
-          "renders/deliverables/acquired-replacement/frame.bin",
+          acquiredReplacementProject.renderRoot(),
+          "deliverables/acquired-replacement/frame.bin",
         ),
       ) === false;
     if (acquiredReplacementSwapped) {
@@ -2346,8 +2358,8 @@ export const test_mcp_production_project = (): void => {
       new Map([["frame.bin", preLeaseBytes]]),
     );
     const preLeaseTarget = path.join(
-      preLeaseRoot,
-      "renders/deliverables/pre-lease/frame.bin",
+      preLeaseProject.renderRoot(),
+      "deliverables/pre-lease/frame.bin",
     );
     const parkedPreLeaseRoot = `${preLeaseRoot}-parked`;
     const nativeReadForPreLease = fs.readFileSync;
@@ -2406,7 +2418,7 @@ export const test_mcp_production_project = (): void => {
     );
     const atomicDeleteTarget = path.join(
       fresh,
-      ".automovie/design/models/atomic-delete-recovery.json",
+      ".automovie/design/shared/models/atomic-delete-recovery.json",
     );
     const atomicDeleteBytes = fs.readFileSync(atomicDeleteTarget);
     const atomicDeleteRevision = initialized.revision();
@@ -2462,8 +2474,8 @@ export const test_mcp_production_project = (): void => {
     const mutationRoot = path.join(invalidRoot, "mutation-root");
     const mutationProject = AutoMovieProductionProject.open(mutationRoot);
     const mutationFrame = path.join(
-      mutationRoot,
-      "renders/deliverables/root-swap/frame.bin",
+      mutationProject.renderRoot(),
+      "deliverables/root-swap/frame.bin",
     );
     const parkedMutationRoot = `${mutationRoot}-parked`;
     const nativeRenameForMutationSwap = fs.renameSync;
@@ -2498,15 +2510,18 @@ export const test_mcp_production_project = (): void => {
     if (mutationRootSwapped) {
       const abandonedLock = path.join(
         parkedMutationRoot,
-        ".automovie/revision.lock",
+        ".automovie/productions/mutation-root/revision.lock",
       );
       const abandonedToken = fs.readFileSync(abandonedLock, "utf8");
-      fs.mkdirSync(path.join(mutationRoot, ".automovie"), {
-        recursive: true,
-      });
+      fs.mkdirSync(
+        path.join(mutationRoot, ".automovie/productions/mutation-root"),
+        {
+          recursive: true,
+        },
+      );
       const replacementLock = path.join(
         mutationRoot,
-        ".automovie/revision.lock",
+        ".automovie/productions/mutation-root/revision.lock",
       );
       const replacementToken = acquireCommitLock(replacementLock);
       try {
@@ -2518,7 +2533,10 @@ export const test_mcp_production_project = (): void => {
       }
       fs.rmSync(mutationRoot, { force: true, recursive: true });
       fs.renameSync(parkedMutationRoot, mutationRoot);
-      const restoredLock = path.join(mutationRoot, ".automovie/revision.lock");
+      const restoredLock = path.join(
+        mutationRoot,
+        ".automovie/productions/mutation-root/revision.lock",
+      );
       releaseCommitLock(restoredLock, abandonedToken);
       abandonedLockReleased = fs.existsSync(restoredLock) === false;
     }
@@ -2840,10 +2858,13 @@ export const test_mcp_production_project = (): void => {
         ),
       );
       fs.rmSync(
-        path.join(malformedDesign.root, ".automovie/design/models/%ZZ.json"),
+        path.join(
+          malformedDesign.root,
+          ".automovie/design/shared/models/%ZZ.json",
+        ),
       );
       fs.writeFileSync(
-        path.join(malformedDesign.root, ".automovie/design/world.json"),
+        path.join(malformedDesign.root, ".automovie/design/shared/world.json"),
         "{bad",
       );
       TestValidator.predicate(

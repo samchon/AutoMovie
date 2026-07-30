@@ -331,7 +331,12 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   });
   TestValidator.predicate(
     "film edit becomes deterministic feature and guide chunks",
-    renderPlan.totalFrames === 6 &&
+    renderPlan.version === 2 &&
+      renderPlan.productionId === "render-film" &&
+      renderPlan.chunks.every((chunk) =>
+        chunk.slot.startsWith("render-film:"),
+      ) &&
+      renderPlan.totalFrames === 6 &&
       renderPlan.chunks.length === 6 &&
       renderPlan.chunks[0]?.frameStart === 0 &&
       renderPlan.chunks[0]?.frameEndExclusive === 2 &&

@@ -24,7 +24,10 @@ export interface IAutoMovieProductionServices {
   compileStatus: () => IAutoMovieCompileProjectOutput;
 }
 
-/** One root activation and whether this exact call initialized its manifest. */
+/**
+ * One production activation and whether this exact call initialized its
+ * manifest.
+ */
 export interface IAutoMovieProductionActivation {
   /** Active resident services. */
   services: IAutoMovieProductionServices;
@@ -62,16 +65,25 @@ export class AutoMovieProductionContext {
     );
   }
 
-  /** Activate or reopen one production root. */
-  public activate(rootInput: string): IAutoMovieProductionActivation {
+  /** Activate or reopen one production inside a project root. */
+  public activate(
+    rootInput: string,
+    productionId?: string,
+  ): IAutoMovieProductionActivation {
     const root = path.resolve(rootInput);
     if (this.fixedRoot !== null && path.relative(this.fixedRoot, root) !== "")
       throw new Error(
         `This MCP host is fixed to "${this.fixedRoot}". Open that root instead of model-controlled path "${root}".`,
       );
-    if (this.active !== null && this.active.project.root === root)
+    if (
+      this.active !== null &&
+      this.active.project.root === root &&
+      (this.active.project.productionId === productionId ||
+        (productionId === undefined &&
+          this.active.project.productionIds().length === 1))
+    )
       return { services: this.active, initialized: false };
-    const project = AutoMovieProductionProject.open(root);
+    const project = AutoMovieProductionProject.open(root, productionId);
     const statusCompiler = new AutoMovieProductionCompiler(project);
     const review = new AutoMovieProductionReviewService(project, () =>
       statusCompiler.lint({ scope: "source" }),

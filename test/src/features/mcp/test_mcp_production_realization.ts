@@ -50,7 +50,7 @@ export const test_mcp_production_realization = (): void => {
     );
     const base = JSON.parse(
       fs.readFileSync(
-        path.join(fixture.root, "generated/shots/opening.json"),
+        path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
         "utf8",
       ),
     ) as IAutoMovieCompiledShotSource;

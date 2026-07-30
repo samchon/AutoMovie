@@ -266,7 +266,7 @@ export const test_mcp_production_materialization = (): void => {
     );
     const compiled = JSON.parse(
       fs.readFileSync(
-        path.join(fixture.root, "generated/shots/opening.json"),
+        path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
         "utf8",
       ),
     ) as IAutoMovieCompiledShotSource;
@@ -552,7 +552,10 @@ export const test_mcp_production_materialization = (): void => {
     const highCountShot = highCountCompile.success
       ? (JSON.parse(
           fs.readFileSync(
-            path.join(fixture.root, "generated/shots/opening.json"),
+            path.join(
+              fixture.root,
+              "generated/fixture-film/shots/opening.json",
+            ),
             "utf8",
           ),
         ) as IAutoMovieCompiledShotSource)

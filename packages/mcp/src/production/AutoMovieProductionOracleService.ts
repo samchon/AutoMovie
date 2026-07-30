@@ -83,13 +83,19 @@ export class AutoMovieProductionOracleService {
   ): IAutoMovieQueryGeometryOutput {
     const request = input.request;
     const generated = this.project.generatedManifest();
+    const generatedManifestPath = normalizeSlash(
+      path.relative(
+        this.project.root,
+        this.project.trackedStatePath("generated-manifest.json"),
+      ),
+    );
     if (generated === null)
       return queryFailure(request.query, null, {
         code: "compile-missing",
         category: "error",
         phase: "compile",
         target: request.query,
-        path: ".automovie/generated-manifest.json",
+        path: generatedManifestPath,
         message:
           "No current compile exists. Run compileProject scope source before queryGeometry.",
       });
@@ -1026,6 +1032,12 @@ export class AutoMovieProductionOracleService {
   private freshnessDiagnostic(
     generated: IAutoMovieGeneratedManifest,
   ): IAutoMovieDiagnostic | null {
+    const generatedManifestPath = normalizeSlash(
+      path.relative(
+        this.project.root,
+        this.project.trackedStatePath("generated-manifest.json"),
+      ),
+    );
     if (this.compileStatus === undefined) return null;
     const status = this.compileStatus();
     if (status.compiler.inputFingerprint !== generated.inputFingerprint)
@@ -1034,7 +1046,7 @@ export class AutoMovieProductionOracleService {
         category: "error",
         phase: "compile",
         target: "generated-manifest",
-        path: ".automovie/generated-manifest.json",
+        path: generatedManifestPath,
         message: `Generated input ${generated.inputFingerprint} differs from current ${status.compiler.inputFingerprint}. Run compileProject before requesting oracle evidence.`,
       };
     const error = status.diagnostics.find(
@@ -1046,7 +1058,7 @@ export class AutoMovieProductionOracleService {
         category: "error",
         phase: "compile",
         target: "generated-manifest",
-        path: ".automovie/generated-manifest.json",
+        path: generatedManifestPath,
         message: `Current source does not pass the read-only compiler gate${error === undefined ? "" : `: ${error.message}`}. Correct it and run compileProject before requesting oracle evidence.`,
       };
     return null;

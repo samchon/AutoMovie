@@ -14,7 +14,7 @@ import {
 
 /** Versioned identity protocol for target-local deterministic render inputs. */
 export const AUTOMOVIE_RENDER_TARGET_FINGERPRINT_PROTOCOL =
-  "automovie.render.target.v1";
+  "automovie.render.target.v2";
 
 /**
  * Fingerprint only the bytes capable of changing one render target.
@@ -49,6 +49,11 @@ export const productionRenderTargetFingerprint = (
       role: "target",
       kind: target.kind,
       payload: canonicalAutoMovieJsonBytes(target),
+    },
+    {
+      role: "production",
+      kind: "namespace",
+      payload: Buffer.from(project.productionId, "utf8"),
     },
     {
       role: "compiler",

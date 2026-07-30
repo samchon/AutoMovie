@@ -1,6 +1,7 @@
 import type { AutoMovieGuidePass } from "@automovie/interface";
 import { AutoMovieApplication } from "@automovie/mcp";
 
+import config from "../automovie.config";
 import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
 
 const args = process.argv.slice(2);
@@ -45,7 +46,10 @@ const app = new AutoMovieApplication({
 });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
 app.getGuideDocument({ name: "PRODUCTION_RENDER" });
-app.openProject({ root: process.cwd() });
+app.openProject({
+  root: process.cwd(),
+  productionId: config.productionId,
+});
 try {
   const output = await app.previewFrame({
     target: { kind: "shot", id: shot },

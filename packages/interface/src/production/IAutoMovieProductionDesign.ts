@@ -647,7 +647,7 @@ export interface IAutoMovieAcceptanceScenario {
 /** An addressable design artifact. */
 export type IAutoMovieDesignTarget =
   | {
-      /** Singleton production design. */
+      /** Active production design. */
       kind: "production";
     }
   | {
@@ -657,7 +657,7 @@ export type IAutoMovieDesignTarget =
       id: string;
     }
   | {
-      /** Singleton world design. */
+      /** Project-shared world design. */
       kind: "world";
     }
   | {

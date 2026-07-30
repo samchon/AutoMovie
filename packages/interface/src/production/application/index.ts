@@ -1,5 +1,6 @@
 export * from "./IAutoMovieCompileProject";
 export * from "./IAutoMovieEraseDesignArtifact";
+export * from "./IAutoMovieEraseProduction";
 export * from "./IAutoMovieGetGuideDocument";
 export * from "./IAutoMovieInspectProject";
 export * from "./IAutoMovieOpenProject";

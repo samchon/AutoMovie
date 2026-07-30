@@ -5,6 +5,8 @@ import type { AutoMovieCaptureBrowserConfig } from "./scripts/capture-browser";
  * authoritative `.automovie/manifest.json` read by the compiler and plugin.
  */
 export default {
+  /** Stable production namespace selected by project scripts. */
+  productionId: "{{name}}",
   capture: {
     browser: {
       source: "playwright-chromium",

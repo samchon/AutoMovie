@@ -42,10 +42,18 @@ import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { PNG } from "pngjs";
 
+import config from "../automovie.config";
 import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
 
 const root = process.cwd();
-const stateRoot = path.join(root, ".automovie", "render-job");
+const productionId = config.productionId;
+const stateRoot = path.join(
+  root,
+  ".automovie",
+  "productions",
+  encodeAutoMoviePathSegment(productionId),
+  "render-job",
+);
 const planPath = path.join(stateRoot, "plan.json");
 const action = process.argv[2] ?? "all";
 const require = createRequire(import.meta.url);
@@ -158,7 +166,7 @@ const main = async (): Promise<void> => {
 
 const sourceFingerprint = (): AutoMovieContentDigest => {
   const checked = new AutoMovieProductionCompiler(
-    AutoMovieProductionProject.open(root),
+    AutoMovieProductionProject.open(root, productionId),
   ).lint({ scope: "source" });
   if (checked.success === false)
     throw new Error(
@@ -180,7 +188,7 @@ const captureReviewEvidence = async (): Promise<
         compiled.diagnostics,
       )}`,
     );
-  const project = AutoMovieProductionProject.open(root);
+  const project = AutoMovieProductionProject.open(root, productionId);
   const graph = project.graph();
   if (graph.production === null)
     throw new Error("Review capture requires a production design.");
@@ -228,7 +236,7 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
         compiled.diagnostics,
       )}`,
     );
-  const project = AutoMovieProductionProject.open(root);
+  const project = AutoMovieProductionProject.open(root, productionId);
   const graph = project.graph();
   if (graph.production === null)
     throw new Error("Render planning requires a production design.");
@@ -701,7 +709,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
         .join(", ")}. Run review:status and submit current evidence first.`,
     );
   const status = await renderStatus(plan);
-  const project = AutoMovieProductionProject.open(root);
+  const project = AutoMovieProductionProject.open(root, productionId);
   const graph = project.graph();
   if (graph.production === null)
     throw new Error("Production design disappeared before final publication.");
@@ -874,10 +882,10 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     manifest,
     inputCurrent: () =>
       productionPublicationInputFingerprint(
-        AutoMovieProductionProject.open(root),
+        AutoMovieProductionProject.open(root, productionId),
       ) === snapshot,
     publicationCurrent: () => {
-      const stagedProject = AutoMovieProductionProject.open(root);
+      const stagedProject = AutoMovieProductionProject.open(root, productionId);
       const statusCompiler = new AutoMovieProductionCompiler(stagedProject);
       const stagedReview = new AutoMovieProductionReviewService(
         stagedProject,
@@ -1139,7 +1147,7 @@ const productionApplication = (): AutoMovieApplication => {
   app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
   app.getGuideDocument({ name: "COMPILATION" });
   app.getGuideDocument({ name: "PRODUCTION_RENDER" });
-  app.openProject({ root });
+  app.openProject({ root, productionId });
   return app;
 };
 
@@ -1181,7 +1189,7 @@ const stalePlanRows = (
 const currentRenderPlanInputs = async (
   plan: IAutoMovieProductionRenderJobPlan,
 ) => {
-  const project = AutoMovieProductionProject.open(root);
+  const project = AutoMovieProductionProject.open(root, productionId);
   const graph = project.graph();
   const production = graph.production;
   if (production === null)

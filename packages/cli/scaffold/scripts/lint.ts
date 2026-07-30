@@ -4,7 +4,12 @@ import {
   AutoMovieProductionReviewService,
 } from "@automovie/mcp";
 
-const project = AutoMovieProductionProject.open(process.cwd());
+import config from "../automovie.config";
+
+const project = AutoMovieProductionProject.open(
+  process.cwd(),
+  config.productionId,
+);
 const review = new AutoMovieProductionReviewService(project);
 const output = new AutoMovieProductionCompiler(project, (status, snapshot) =>
   review.queue(status, snapshot),

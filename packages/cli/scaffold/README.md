@@ -81,7 +81,11 @@ evidence; any change during the gate rolls the publication back.
 
 ## Ownership
 
-- `.automovie/design`, `.automovie/reviews`: AutoMovie tracked contracts
+- `.automovie/design/shared`: project-shared model, world and formation design
+- `.automovie/design/<production>`, `.automovie/reviews/<production>`:
+  production-scoped tracked contracts
+- `.automovie/productions/<production>`: production-scoped compiler, render-job,
+  receipt and revision state
 - `src`, `docs`, `test`, `public`: coding-agent source and assets
 - `generated`: compiler-owned; never edit
 - `renders`: content-addressed outputs; never pass an arbitrary screenshot as review evidence

@@ -21,7 +21,13 @@ export interface IAutoMovieProductionRootNamespaceLease {
 }
 
 const coordinatePath = (
-  kind: "create-path" | "create-id" | "root-path" | "root-id",
+  kind:
+    | "create-path"
+    | "create-id"
+    | "root-path"
+    | "root-id"
+    | "production-path"
+    | "production-id",
   namespace: string,
 ): string => {
   ensureCoordinationRoot();
@@ -162,6 +168,7 @@ const ensureDirectory = (directory: string): string => {
 
 const acquireExistingRoot = (
   rootDirectory: string,
+  productionId?: string,
 ): IAutoMovieProductionRootNamespaceLease => {
   const linked = lstatOrNull(rootDirectory);
   if (
@@ -176,10 +183,19 @@ const acquireExistingRoot = (
   const identity = fs.statSync(root, { bigint: true });
   const device = identity.dev.toString();
   const inode = identity.ino.toString();
-  const locks = acquireCoordinates([
-    coordinatePath("root-path", root),
-    coordinatePath("root-id", `${device}\0${inode}`),
-  ]);
+  const locks =
+    productionId === undefined
+      ? acquireCoordinates([
+          coordinatePath("root-path", root),
+          coordinatePath("root-id", `${device}\0${inode}`),
+        ])
+      : acquireCoordinates([
+          coordinatePath("production-path", `${root}\0${productionId}`),
+          coordinatePath(
+            "production-id",
+            `${device}\0${inode}\0${productionId}`,
+          ),
+        ]);
   const lease: IAutoMovieProductionRootNamespaceLease = {
     root,
     locks,
@@ -204,8 +220,9 @@ const acquireExistingRoot = (
  */
 export const acquireProductionRootNamespace = (
   rootDirectory: string,
+  productionId?: string,
 ): IAutoMovieProductionRootNamespaceLease =>
-  acquireExistingRoot(path.resolve(rootDirectory));
+  acquireExistingRoot(path.resolve(rootDirectory), productionId);
 
 /**
  * Reserve one physical project root, creating it when it is still absent.

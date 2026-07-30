@@ -9,7 +9,10 @@ import type { Plugin } from "vite";
  * This middleware gives compiler-owned output an explicit no-cache route and
  * exposes one bounded artifact family without opening arbitrary project files.
  */
-export const generatedShotPlugin = (projectRoot: string): Plugin => ({
+export const generatedShotPlugin = (
+  projectRoot: string,
+  productionId: string,
+): Plugin => ({
   name: "automovie-generated-shot",
   configureServer: (server) => {
     server.middlewares.use((request, response, next) => {
@@ -35,7 +38,16 @@ export const generatedShotPlugin = (projectRoot: string): Plugin => ({
         )
           throw new Error("invalid generated root");
         const projectReal = fs.realpathSync(projectRoot);
-        const generatedRoot = path.resolve(projectRoot, manifest.generatedRoot);
+        if (
+          productionId.trim().length === 0 ||
+          productionId.trim() !== productionId
+        )
+          throw new Error("invalid production id");
+        const generatedRoot = path.resolve(
+          projectRoot,
+          manifest.generatedRoot,
+          encodePathSegment(productionId),
+        );
         const relativeRoot = path.relative(
           path.resolve(projectRoot),
           generatedRoot,

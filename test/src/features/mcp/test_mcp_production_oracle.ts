@@ -362,7 +362,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
 
     const generatedShotPath = path.join(
       fixture.root,
-      "generated/shots/opening.json",
+      "generated/fixture-film/shots/opening.json",
     );
     const generatedShotBytes = fs.readFileSync(generatedShotPath, "utf8");
     const generatedShot = JSON.parse(
@@ -383,7 +383,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
 
     const generatedManifestPath = path.join(
       fixture.root,
-      ".automovie/generated-manifest.json",
+      ".automovie/productions/fixture-film/generated-manifest.json",
     );
     const generatedManifestBytes = fs.readFileSync(generatedManifestPath);
     const generatedManifest = JSON.parse(
@@ -513,7 +513,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const recurringBytes = Buffer.from(JSON.stringify(recurringShot));
     const recurringPath = path.join(
       fixture.root,
-      "generated/shots/second.json",
+      "generated/fixture-film/shots/second.json",
     );
     fs.writeFileSync(recurringPath, recurringBytes);
     generatedManifest.files.push({
@@ -703,7 +703,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     writeCorrupted(corrupted());
     const productionPath = path.join(
       fixture.root,
-      ".automovie/design/production.json",
+      ".automovie/design/fixture-film/production.json",
     );
     const productionBytes = fs.readFileSync(productionPath);
     fs.rmSync(productionPath);
@@ -999,7 +999,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
 
     const manifestPath = path.join(
       fixture.root,
-      ".automovie/generated-manifest.json",
+      ".automovie/productions/fixture-film/generated-manifest.json",
     );
     const manifestBytes = fs.readFileSync(manifestPath, "utf8");
     const racingOracle = new AutoMovieProductionOracleService(
@@ -1087,7 +1087,9 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         unroutedFormation.result.values.routeClearance === 0,
     );
 
-    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
+    fs.rmSync(
+      path.join(fixture.root, ".automovie/design/fixture-film/production.json"),
+    );
     const noProductionPreview = await new AutoMovieProductionOracleService(
       project,
     )
@@ -1900,10 +1902,9 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const emptyRoot = productionFixture();
     try {
       const emptyProject = AutoMovieProductionProject.open(emptyRoot.root);
-      fs.rmSync(
-        path.join(emptyRoot.root, ".automovie/generated-manifest.json"),
-        { force: true },
-      );
+      fs.rmSync(emptyProject.trackedStatePath("generated-manifest.json"), {
+        force: true,
+      });
       TestValidator.predicate(
         "queries and preview refuse a missing compile",
         new AutoMovieProductionOracleService(emptyProject).query({

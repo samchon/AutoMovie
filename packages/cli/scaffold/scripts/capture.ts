@@ -25,7 +25,7 @@ const startSession = async (projectRoot: string): Promise<CaptureSession> => {
     root: projectRoot,
     configFile: false,
     logLevel: "silent",
-    plugins: [generatedShotPlugin(projectRoot)],
+    plugins: [generatedShotPlugin(projectRoot, config.productionId)],
     resolve: { dedupe: ["three"] },
     server: { host: config.viewer.host, port: 0, strictPort: false },
   });

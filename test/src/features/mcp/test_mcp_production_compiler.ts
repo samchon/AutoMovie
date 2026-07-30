@@ -69,7 +69,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const preexistingGenerated = path.join(
       fixture.root,
-      "generated/intruder.txt",
+      "generated/fixture-film/intruder.txt",
     );
     fs.writeFileSync(preexistingGenerated, "unowned");
     TestValidator.predicate(
@@ -293,7 +293,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const recipeFile = path.join(
       fixture.root,
-      ".automovie/design/models/sentinel.json",
+      ".automovie/design/shared/models/sentinel.json",
     );
     const recipeBytes = fs.readFileSync(recipeFile);
     const recipeWithoutMaterial = JSON.parse(recipeBytes.toString("utf8"));
@@ -311,7 +311,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     project.setFormationDesign(formationDesign());
     const formationFile = path.join(
       fixture.root,
-      ".automovie/design/formations/line.json",
+      ".automovie/design/shared/formations/line.json",
     );
     const formationBytes = fs.readFileSync(formationFile);
     const oversizedFormation = formationDesign();
@@ -334,7 +334,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const generatedManifestPath = path.join(
       fixture.root,
-      ".automovie/generated-manifest.json",
+      ".automovie/productions/fixture-film/generated-manifest.json",
     );
     const generatedBeforeDesignGate = fs.readFileSync(
       generatedManifestPath,
@@ -347,7 +347,9 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         compileDesignOnly.materialized.length === 0 &&
         fs.readFileSync(generatedManifestPath, "utf8") ===
           generatedBeforeDesignGate &&
-        fs.existsSync(path.join(fixture.root, "generated/shots/opening.json")),
+        fs.existsSync(
+          path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
+        ),
     );
     const designRevisionRacer = AutoMovieProductionProject.open(fixture.root);
     const residentRevision = project.revision;
@@ -414,7 +416,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         reopened.materialized.every((file) => file.status === "unchanged"),
     );
     const canonicalShotBytes = fs.readFileSync(
-      path.join(fixture.root, "generated/shots/opening.json"),
+      path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
       "utf8",
     );
     TestValidator.equals(
@@ -477,7 +479,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
 
     const generatedShot = path.join(
       fixture.root,
-      "generated/shots/opening.json",
+      "generated/fixture-film/shots/opening.json",
     );
     fs.writeFileSync(generatedShot, "{}\n");
     const tamperedLint = compiler.lint({ scope: "source" });
@@ -532,7 +534,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         ) &&
         fs.existsSync(generatedManifestPath),
     );
-    const unowned = path.join(fixture.root, "generated/hand-edited.json");
+    const unowned = path.join(
+      fixture.root,
+      "generated/fixture-film/hand-edited.json",
+    );
     fs.writeFileSync(unowned, "{}\n");
     TestValidator.predicate(
       "unowned generated output blocks compilation",
@@ -565,7 +570,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         diagnosticCodes(forgedOwnership).has("generated-manifest-stale") &&
         compiler.compile({ scope: "source" }).success,
     );
-    const stalePath = path.join(fixture.root, "generated/stale-output.json");
+    const stalePath = path.join(
+      fixture.root,
+      "generated/fixture-film/stale-output.json",
+    );
     const staleBytes = Buffer.from('{"stale":true}\n');
     const withStale = JSON.parse(
       fs.readFileSync(generatedManifestPath, "utf8"),
@@ -1050,7 +1058,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const rawGeneratedIntruder = path.join(
       fixture.root,
-      "generated/raw-race.txt",
+      "generated/fixture-film/raw-race.txt",
     );
     let noWriteInventoryRaceReads = 0;
     project.contentInputs = (() => {
@@ -1291,7 +1299,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const materializedFormation = compiler.compile({ scope: "source" });
     const formationShot = JSON.parse(
       fs.readFileSync(
-        path.join(fixture.root, "generated/shots/opening.json"),
+        path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
         "utf8",
       ),
     ) as {
@@ -1304,7 +1312,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     };
     const formationRealization = JSON.parse(
       fs.readFileSync(
-        path.join(fixture.root, "generated/realizations/opening.json"),
+        path.join(
+          fixture.root,
+          "generated/fixture-film/realizations/opening.json",
+        ),
         "utf8",
       ),
     ) as {
@@ -1350,7 +1361,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(sourcePath, original);
     fs.rmSync(
-      path.join(fixture.root, ".automovie/design/formations/line.json"),
+      path.join(fixture.root, ".automovie/design/shared/formations/line.json"),
     );
     TestValidator.predicate(
       "a physically missing formation design is a reference-graph failure",
@@ -1453,11 +1464,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const missingRender = finalCompiler.compile({ scope: "final" });
     const renderManifestPath = path.join(
       fixture.root,
-      ".automovie/render-manifest.json",
+      ".automovie/productions/fixture-film/render-manifest.json",
     );
     const renderReceiptPath = path.join(
       fixture.root,
-      ".automovie/render-manifest-receipt.json",
+      ".automovie/productions/fixture-film/render-manifest-receipt.json",
     );
     fs.writeFileSync(renderManifestPath, "{}");
     const unownedRender = finalCompiler.compile({ scope: "final" });
@@ -1495,17 +1506,17 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       fps: requiredProduction.frameFormat.fps,
       frameCount: featureFrameCount,
     });
-    fs.mkdirSync(path.join(fixture.root, "renders/deliverables"), {
+    fs.mkdirSync(path.join(fixture.root, "renders/fixture-film/deliverables"), {
       recursive: true,
     });
     fs.writeFileSync(
-      path.join(fixture.root, "renders", featurePath),
+      path.join(fixture.root, "renders", "fixture-film", featurePath),
       featureBytes,
     );
     const fakeFeaturePath = "deliverables/fake-feature.mp4";
     const fakeFeatureBytes = Buffer.from("this is not an MP4 container");
     fs.writeFileSync(
-      path.join(fixture.root, "renders", fakeFeaturePath),
+      path.join(fixture.root, "renders", "fixture-film", fakeFeaturePath),
       fakeFeatureBytes,
     );
     const currentFingerprint = unsafeRender.compiler.inputFingerprint;
@@ -1589,12 +1600,12 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     })();
     project.commitProductionRenderManifest(completeRenderManifest);
     fs.appendFileSync(
-      path.join(fixture.root, "renders", featurePath),
+      path.join(fixture.root, "renders", "fixture-film", featurePath),
       Buffer.from([0]),
     );
     const mismatchedRender = finalCompiler.compile({ scope: "final" });
     fs.writeFileSync(
-      path.join(fixture.root, "renders", featurePath),
+      path.join(fixture.root, "renders", "fixture-film", featurePath),
       featureBytes,
     );
     project.commitProductionRenderManifest(completeRenderManifest);
@@ -1772,7 +1783,12 @@ export const film = {
                   mediaType: "image/png",
                 };
       const relative = `deliverables/final-edges/${id}.${medium.extension}`;
-      const absolute = path.join(fixture.root, "renders", relative);
+      const absolute = path.join(
+        fixture.root,
+        "renders",
+        "fixture-film",
+        relative,
+      );
       fs.mkdirSync(path.dirname(absolute), { recursive: true });
       fs.writeFileSync(absolute, medium.bytes);
       return {
@@ -1944,6 +1960,7 @@ export const film = {
     const probeFailurePath = path.join(
       fixture.root,
       "renders",
+      "fixture-film",
       probeFailureFile.path,
     );
     const probeFailureBytes = fs.readFileSync(probeFailurePath);
@@ -1955,6 +1972,7 @@ export const film = {
     const captionFailurePath = path.join(
       fixture.root,
       "renders",
+      "fixture-film",
       captionFailureFile.path,
     );
     const captionFailureBytes = fs.readFileSync(captionFailurePath);
@@ -2004,7 +2022,12 @@ export const film = {
     const invalidEntryRender = finalCompiler.compile({ scope: "final" });
     restoreEdgeLedger();
     fs.rmSync(
-      path.join(fixture.root, "renders", edge("missing-file").files[0]!.path),
+      path.join(
+        fixture.root,
+        "renders",
+        "fixture-film",
+        edge("missing-file").files[0]!.path,
+      ),
     );
     const semanticRender = finalCompiler.compile({ scope: "final" });
     const residentRenderRead = project.readRenderFile;
@@ -2066,7 +2089,9 @@ export const film = {
             diagnostic.message.includes("non-error render read failure"),
         ),
     );
-    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
+    fs.rmSync(
+      path.join(fixture.root, ".automovie/design/fixture-film/production.json"),
+    );
     TestValidator.predicate(
       "final diagnostics tolerate an absent production while design owns error",
       diagnosticCodes(finalCompiler.compile({ scope: "final" })).has(

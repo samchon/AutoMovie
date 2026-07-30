@@ -590,7 +590,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     project.graph = residentGraph;
     const ambiguousEventFile = path.join(
       fixture.root,
-      ".automovie/design/acceptance/ambiguous-film-event.json",
+      ".automovie/design/fixture-film/acceptance/ambiguous-film-event.json",
     );
     fs.writeFileSync(
       ambiguousEventFile,
@@ -894,7 +894,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     );
     const productionPath = path.join(
       fixture.root,
-      ".automovie/design/production.json",
+      ".automovie/design/fixture-film/production.json",
     );
     const productionBytes = fs.readFileSync(productionPath);
     const oversizedProduction = JSON.parse(productionBytes.toString("utf8"));
@@ -1519,7 +1519,9 @@ export const test_mcp_production_review = async (): Promise<void> => {
       kind: "acceptance",
       id: filmMetricAcceptance.id,
     });
-    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
+    fs.rmSync(
+      path.join(fixture.root, ".automovie/design/fixture-film/production.json"),
+    );
     const noProductionFrames = review.prepare({ target: shotTarget });
     project.setProductionDesign(productionDesign());
     project.setAcceptanceScenario(filmMetricAcceptance);

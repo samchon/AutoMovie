@@ -99,7 +99,7 @@ export const test_mcp_production_review_design_edges = (): void => {
     project.setModelRecipe(dependentModel);
     const dependentModelFile = path.join(
       fixture.root,
-      ".automovie/design/models/review-model.json",
+      ".automovie/design/shared/models/review-model.json",
     );
     const dependentModelBytes = fs.readFileSync(dependentModelFile);
     fs.writeFileSync(
@@ -255,7 +255,7 @@ export const test_mcp_production_review_design_edges = (): void => {
 
     const formationFile = path.join(
       fixture.root,
-      ".automovie/design/formations/line.json",
+      ".automovie/design/shared/formations/line.json",
     );
     const formationBytes = fs.readFileSync(formationFile);
     fs.writeFileSync(
@@ -274,7 +274,7 @@ export const test_mcp_production_review_design_edges = (): void => {
     fs.writeFileSync(formationFile, formationBytes);
     const shotFile = path.join(
       fixture.root,
-      ".automovie/design/shots/opening.json",
+      ".automovie/design/fixture-film/shots/opening.json",
     );
     const shotBytes = fs.readFileSync(shotFile);
     fs.writeFileSync(
@@ -293,7 +293,7 @@ export const test_mcp_production_review_design_edges = (): void => {
     fs.writeFileSync(shotFile, shotBytes);
     const acceptanceFile = path.join(
       fixture.root,
-      ".automovie/design/acceptance/opening-beauty.json",
+      ".automovie/design/fixture-film/acceptance/opening-beauty.json",
     );
     const acceptanceBytes = fs.readFileSync(acceptanceFile);
     fs.writeFileSync(
@@ -388,7 +388,9 @@ export const test_mcp_production_review_design_edges = (): void => {
       target: { kind: "design", design: { kind: "world" } },
     });
     project.setWorldDesign(worldDesign());
-    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
+    fs.rmSync(
+      path.join(fixture.root, ".automovie/design/fixture-film/production.json"),
+    );
     const missingProduction = review.prepare({
       target: { kind: "design", design: { kind: "production" } },
     });

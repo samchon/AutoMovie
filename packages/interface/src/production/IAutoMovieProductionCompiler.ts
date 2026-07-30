@@ -199,7 +199,7 @@ export interface IAutoMovieProductionRenderReceiptFile extends IAutoMovieProduct
 export interface IAutoMovieProductionRenderReceipt {
   /** Receipt format. */
   version: 2;
-  /** Exact digest of `.automovie/render-manifest.json`. */
+  /** Exact digest of the active production's tracked render manifest. */
   manifestDigest: AutoMovieContentDigest;
   /** Exact byte and media probes in canonical path order. */
   files: IAutoMovieProductionRenderReceiptFile[];
@@ -810,11 +810,11 @@ export interface IAutoMovieShotSource {
 
 /** Compact inventory returned by project inspection. */
 export interface IAutoMovieProductionDesignInventory {
-  /** Whether the singleton production design exists. */
+  /** Whether the active production design exists. */
   production: boolean;
   /** Model recipe ids. */
   models: string[];
-  /** Whether the singleton world design exists. */
+  /** Whether the project-shared world design exists. */
   world: boolean;
   /** Formation ids. */
   formations: string[];

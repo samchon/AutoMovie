@@ -1,6 +1,7 @@
 import {
   IAutoMovieCompileProject,
   IAutoMovieEraseDesignArtifact,
+  IAutoMovieEraseProduction,
   IAutoMovieGetGuideDocument,
   IAutoMovieInspectProject,
   IAutoMovieOpenProject,
@@ -88,6 +89,9 @@ interface IProductionToolContract {
   eraseDesignArtifact(
     props: IAutoMovieEraseDesignArtifact.IProps,
   ): IAutoMovieEraseDesignArtifact;
+  eraseProduction(
+    props: IAutoMovieEraseProduction.IProps,
+  ): IAutoMovieEraseProduction;
   compileProject(
     props: IAutoMovieCompileProject.IProps,
   ): IAutoMovieCompileProject;
@@ -119,6 +123,7 @@ const PRODUCTION_TOOL_DESCRIPTION_SIGNALS = {
   setShotContract: ["ordinary code", "independent"],
   setAcceptanceScenario: ["fingerprinted evidence", "does not implement tests"],
   eraseDesignArtifact: ["never cascades silently", "generated files"],
+  eraseProduction: ["never deletes shared assets", "stale review"],
   compileProject: ["bounded effect streams", "partial generation"],
   queryGeometry: ["effect", "read-only"],
   previewFrame: ["actual png", "full-film rendering"],
@@ -127,7 +132,7 @@ const PRODUCTION_TOOL_DESCRIPTION_SIGNALS = {
 } as const;
 
 /**
- * The canonical 15-tool production coordinator preserves its AutoBe-style
+ * The canonical 16-tool production coordinator preserves its AutoBe-style
  * `IProps -> result` pairs, guide and resident-state gates, ownership and
  * freshness semantics, actual-frame evidence, and review compliance surface.
  *
@@ -135,7 +140,7 @@ const PRODUCTION_TOOL_DESCRIPTION_SIGNALS = {
  *
  * 1. Project activation requires the overall guide, respects a host-fixed root,
  *    and reports initialization only once.
- * 2. Every named props/result pair and the exact 15-tool inventory remain
+ * 2. Every named props/result pair and the exact 16-tool inventory remain
  *    structurally closed.
  * 3. Design setters, erasure, compilation, geometry, preview and review calls
  *    preserve their positive, refusal, stale and recovery paths.
@@ -377,7 +382,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
     fs.writeFileSync(sourceFile, sourceBytes);
     const modelFile = path.join(
       fixture.root,
-      ".automovie/design/models/sentinel.json",
+      ".automovie/design/shared/models/sentinel.json",
     );
     const modelBytes = fs.readFileSync(modelFile);
     const invalidModel = JSON.parse(modelBytes.toString("utf8"));
@@ -535,6 +540,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
           "setShotContract",
           "setAcceptanceScenario",
           "eraseDesignArtifact",
+          "eraseProduction",
           "compileProject",
           "queryGeometry",
           "previewFrame",

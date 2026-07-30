@@ -126,7 +126,7 @@ export const test_mcp_production_atomic_publication = (): void => {
     fs.writeFileSync(projectManifestPath, projectManifestBytes);
     const productionPath = path.join(
       fixture.root,
-      ".automovie/design/production.json",
+      ".automovie/design/fixture-film/production.json",
     );
     const productionBytes = fs.readFileSync(productionPath);
     const production = JSON.parse(productionBytes.toString("utf8")) as Record<
@@ -237,11 +237,11 @@ export const test_mcp_production_atomic_publication = (): void => {
     });
     const manifestPath = path.join(
       fixture.root,
-      ".automovie/render-manifest.json",
+      ".automovie/productions/fixture-film/render-manifest.json",
     );
     const receiptPath = path.join(
       fixture.root,
-      ".automovie/render-manifest-receipt.json",
+      ".automovie/productions/fixture-film/render-manifest-receipt.json",
     );
     const outputPath = path.join(project.renderRoot(), relative);
     const manifestBytes = fs.readFileSync(manifestPath);

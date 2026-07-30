@@ -188,7 +188,7 @@ export class AutoMovieProductionReviewService {
         category: "error",
         phase: "review",
         target: reviewTargetKey(input.target),
-        path: targetPath(input.target),
+        path: targetPath(this.project, input.target),
         message:
           "The review target does not exist in current project bytes. Inspect the project and prepare a current target.",
       });
@@ -298,7 +298,7 @@ export class AutoMovieProductionReviewService {
           category: "error",
           phase: "review",
           target: reviewTargetKey(input.target),
-          path: targetPath(input.target),
+          path: targetPath(this.project, input.target),
           message: `Submitted worksheet fingerprint ${input.preparedFingerprint} differs from current ${prepared.fingerprint}. Run prepareReview again and review the current evidence before submitReview.`,
         },
       ]);
@@ -331,7 +331,7 @@ export class AutoMovieProductionReviewService {
           category: "error",
           phase: "review",
           target: reviewTargetKey(input.target),
-          path: targetPath(input.target),
+          path: targetPath(this.project, input.target),
           message:
             "Target bytes changed while review evidence was validated. Run prepareReview again against the current target.",
         },
@@ -373,7 +373,7 @@ export class AutoMovieProductionReviewService {
           category: "error",
           phase: "review",
           target: reviewTargetKey(input.target),
-          path: targetPath(input.target),
+          path: targetPath(this.project, input.target),
           message: `${error.message} Run prepareReview again against the current target and evidence before submitReview.`,
         },
       ]);
@@ -952,6 +952,11 @@ const reviewFingerprint = (
       payload: Buffer.from(AUTOMOVIE_REVIEW_FINGERPRINT_PROTOCOL, "utf8"),
     },
     {
+      role: "production",
+      kind: "namespace",
+      payload: Buffer.from(project.productionId, "utf8"),
+    },
+    {
       role: "target",
       kind: target.kind,
       payload: Buffer.from(reviewTargetKey(target), "utf8"),
@@ -1474,12 +1479,18 @@ const currentFrames = (
     compileStatus.success === false ||
     compileStatus.compiler.inputFingerprint !== generated.inputFingerprint
   ) {
+    const generatedManifestPath = normalizeSlash(
+      path.relative(
+        project.root,
+        project.trackedStatePath("generated-manifest.json"),
+      ),
+    );
     diagnostics.push({
       code: "review-evidence-stale",
       category: "error",
       phase: "review",
       target: reviewTargetKey(target),
-      path: ".automovie/generated-manifest.json",
+      path: generatedManifestPath,
       message:
         "Generated output is not a clean compile of current design and source. Run compileProject before using any frame as review evidence.",
     });
@@ -1501,7 +1512,12 @@ const currentFrames = (
         category: "error",
         phase: "review",
         target: reviewTargetKey(target),
-        path: "generated/film-timeline.json",
+        path: normalizeSlash(
+          path.relative(
+            project.root,
+            path.join(project.generatedRoot(), "film-timeline.json"),
+          ),
+        ),
         message: `${
           error instanceof Error ? error.message : String(error)
         } Recompile before preparing film review.`,
@@ -1931,19 +1947,29 @@ const reviewTargetKey = (target: IAutoMovieReviewTarget): string => {
     : `design:${target.design.kind}:${target.design.id}`;
 };
 
-const targetPath = (target: IAutoMovieReviewTarget): string | null => {
+const targetPath = (
+  project: AutoMovieProductionProject,
+  target: IAutoMovieReviewTarget,
+): string | null => {
+  const production = encodeAutoMoviePathSegment(project.productionId);
   if (target.kind === "source") return target.path;
   if (target.kind === "shot")
-    return `.automovie/design/shots/${encodeAutoMoviePathSegment(target.id)}.json`;
-  if (target.kind === "film") return ".automovie/design/production.json";
+    return `.automovie/design/${production}/shots/${encodeAutoMoviePathSegment(target.id)}.json`;
+  if (target.kind === "film")
+    return `.automovie/design/${production}/production.json`;
   if (target.design.kind === "production")
-    return ".automovie/design/production.json";
-  if (target.design.kind === "world") return ".automovie/design/world.json";
+    return `.automovie/design/${production}/production.json`;
+  if (target.design.kind === "world")
+    return ".automovie/design/shared/world.json";
   const directory =
     target.design.kind === "acceptance"
       ? "acceptance"
       : `${target.design.kind}s`;
-  return `.automovie/design/${directory}/${encodeAutoMoviePathSegment(target.design.id)}.json`;
+  const scope =
+    target.design.kind === "model" || target.design.kind === "formation"
+      ? "shared"
+      : production;
+  return `.automovie/design/${scope}/${directory}/${encodeAutoMoviePathSegment(target.design.id)}.json`;
 };
 
 const readJsonIfPresent = (

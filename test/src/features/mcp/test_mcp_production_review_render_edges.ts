@@ -236,7 +236,7 @@ export const test_mcp_production_review_render_edges =
       );
       const aggregateManifest = path.join(
         fixture.root,
-        ".automovie/render-manifest.json",
+        ".automovie/productions/fixture-film/render-manifest.json",
       );
       const beforeAggregate = review.prepare({
         target: { kind: "film", id: "fixture-film" },
@@ -323,14 +323,17 @@ export const test_mcp_production_review_render_edges =
               preparedFrame.time === frame.time,
           ),
       );
-      fs.rmSync(path.join(fixture.root, "renders", wrongClockBundle), {
-        recursive: true,
-        force: true,
-      });
+      fs.rmSync(
+        path.join(fixture.root, "renders", "fixture-film", wrongClockBundle),
+        {
+          recursive: true,
+          force: true,
+        },
+      );
 
       const malformedDirectory = path.join(
         fixture.root,
-        "renders/review-malformed",
+        "renders/fixture-film/review-malformed",
       );
       fs.mkdirSync(malformedDirectory, { recursive: true });
       fs.writeFileSync(path.join(malformedDirectory, "manifest.json"), "{bad");
@@ -346,7 +349,10 @@ export const test_mcp_production_review_render_edges =
         ["absolute", path.resolve(fixture.root, "outside.png")],
         ["escape", "../outside.png"],
       ]) {
-        const directory = path.join(fixture.root, `renders/review-${name}`);
+        const directory = path.join(
+          fixture.root,
+          `renders/fixture-film/review-${name}`,
+        );
         fs.mkdirSync(directory, { recursive: true });
         fs.writeFileSync(
           path.join(directory, "manifest.json"),
@@ -366,7 +372,7 @@ export const test_mcp_production_review_render_edges =
 
       const symlinkDirectory = path.join(
         fixture.root,
-        "renders/review-symlink",
+        "renders/fixture-film/review-symlink",
       );
       const externalFrames = path.join(fixture.root, "external-frames");
       fs.mkdirSync(symlinkDirectory, { recursive: true });
@@ -417,7 +423,10 @@ export const test_mcp_production_review_render_edges =
           }),
         ],
       ] as const) {
-        const directory = path.join(fixture.root, `renders/review-${name}`);
+        const directory = path.join(
+          fixture.root,
+          `renders/fixture-film/review-${name}`,
+        );
         fs.mkdirSync(directory, { recursive: true });
         fs.copyFileSync(sourceFrame, path.join(directory, "frame.png"));
         fs.writeFileSync(
@@ -545,7 +554,7 @@ export const test_mcp_production_review_render_edges =
 
       const invalidDirectory = path.join(
         fixture.root,
-        "renders/review-invalid-frame",
+        "renders/fixture-film/review-invalid-frame",
       );
       const invalidFrame = path.join(invalidDirectory, "frame.png");
       fs.mkdirSync(invalidDirectory, { recursive: true });
@@ -794,7 +803,7 @@ export const test_mcp_production_review_render_edges =
 
       const disappearingDirectory = path.join(
         fixture.root,
-        "renders/review-disappearing",
+        "renders/fixture-film/review-disappearing",
       );
       const disappearingManifest = path.join(
         disappearingDirectory,
@@ -826,6 +835,7 @@ export const test_mcp_production_review_render_edges =
         const directory = path.join(
           fixture.root,
           "renders",
+          "fixture-film",
           `review-inventory-${name}`,
         );
         const parked = `${directory}-parked`;

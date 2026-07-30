@@ -869,7 +869,10 @@ export const test_mcp_production_legacy_import = (): void => {
           "incarnation changed",
         ) &&
         fs.existsSync(
-          path.join(incarnationRace.root, "renders/deliverables/stale"),
+          path.join(
+            incarnationRace.root,
+            "renders/fixture-film/deliverables/stale",
+          ),
         ) === false,
     );
   } finally {

@@ -17,11 +17,11 @@ import {
 
 /** In-memory design graph used for cross-reference validation. */
 export interface IAutoMovieProductionDesignGraph {
-  /** Singleton production design. */
+  /** Active production design. */
   production: IAutoMovieProductionDesign | null;
   /** Model recipes keyed by id. */
   models: ReadonlyMap<string, IAutoMovieModelRecipe>;
-  /** Singleton world design. */
+  /** Project-shared world design. */
   world: IAutoMovieWorldDesign | null;
   /** Formations keyed by id. */
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>;
@@ -85,12 +85,17 @@ export const AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES = 128 * 1024;
 /** Validate graph-level production invariants after structural validation. */
 export const validateAutoMovieProductionGraph = (
   graph: IAutoMovieProductionDesignGraph,
+  productionId: string = graph.production?.id ?? "unbound-production",
 ): IAutoMovieDiagnostic[] => {
   const diagnostics: IAutoMovieDiagnostic[] = [];
+  const productionRoot = `.automovie/design/${encodeAutoMoviePathSegment(
+    productionId,
+  )}`;
+  const sharedRoot = ".automovie/design/shared";
   const seenDeliverables = new Set<string>();
   if (graph.production !== null) {
     const target = "production";
-    const file = ".automovie/design/production.json";
+    const file = `${productionRoot}/production.json`;
     text(diagnostics, graph.production.id, target, file, "id");
     text(diagnostics, graph.production.title, target, file, "title");
     text(diagnostics, graph.production.logline, target, file, "logline");
@@ -204,7 +209,7 @@ export const validateAutoMovieProductionGraph = (
 
   for (const [id, model] of graph.models) {
     const target = `model:${id}`;
-    const file = `.automovie/design/models/${encodeAutoMoviePathSegment(id)}.json`;
+    const file = `${sharedRoot}/models/${encodeAutoMoviePathSegment(id)}.json`;
     text(diagnostics, model.id, target, file, "id");
     if (model.id !== id)
       invalid(
@@ -351,7 +356,7 @@ export const validateAutoMovieProductionGraph = (
   }
 
   if (graph.world !== null) {
-    const file = ".automovie/design/world.json";
+    const file = `${sharedRoot}/world.json`;
     if (
       graph.world.effectRecipes.length > AUTOMOVIE_EFFECT_DECLARATION_LIMIT ||
       graph.world.effectZones.length > AUTOMOVIE_EFFECT_DECLARATION_LIMIT
@@ -686,7 +691,7 @@ export const validateAutoMovieProductionGraph = (
       diagnostics,
       "design-range-invalid",
       "formations",
-      ".automovie/design/formations",
+      `${sharedRoot}/formations`,
       `The production declares ${formationMemberCount} formation members, above the compact-runtime limit ${AUTOMOVIE_MAX_FORMATION_MEMBERS}. Reduce the total; unlimited crowds are not supported.`,
     );
   const formationInstanceBytes = [...graph.formations.values()].reduce(
@@ -712,7 +717,7 @@ export const validateAutoMovieProductionGraph = (
       diagnostics,
       "design-range-invalid",
       "formations",
-      ".automovie/design/formations",
+      `${sharedRoot}/formations`,
       `Formation LOD matrices and phase attributes require ${formationInstanceBytes} bytes, above the ${AUTOMOVIE_FORMATION_INSTANCE_BUFFER_BUDGET_BYTES}-byte viewer budget. Reduce count or LOD tiers.`,
     );
   const formationRuntimeBytes = [...graph.formations.values()].reduce(
@@ -750,13 +755,13 @@ export const validateAutoMovieProductionGraph = (
       diagnostics,
       "design-range-invalid",
       "formations",
-      ".automovie/design/formations",
+      `${sharedRoot}/formations`,
       `Estimated compact formation runtime is ${formationRuntimeBytes} bytes, above the ${AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES}-byte generated payload budget. Reduce count or hero overrides.`,
     );
 
   for (const [id, formation] of graph.formations) {
     const target = `formation:${id}`;
-    const file = `.automovie/design/formations/${encodeAutoMoviePathSegment(id)}.json`;
+    const file = `${sharedRoot}/formations/${encodeAutoMoviePathSegment(id)}.json`;
     text(diagnostics, formation.id, target, file, "id");
     text(diagnostics, formation.modelRecipe, target, file, "modelRecipe");
     if (formation.id !== id)
@@ -867,7 +872,7 @@ export const validateAutoMovieProductionGraph = (
   const sourceModuleSpellings = new Map<string, string>();
   for (const [id, shot] of graph.shots) {
     const target = `shot:${id}`;
-    const file = `.automovie/design/shots/${encodeAutoMoviePathSegment(id)}.json`;
+    const file = `${productionRoot}/shots/${encodeAutoMoviePathSegment(id)}.json`;
     text(diagnostics, shot.id, target, file, "id");
     if (shot.id !== id)
       invalid(
@@ -1120,7 +1125,7 @@ export const validateAutoMovieProductionGraph = (
 
   for (const [id, acceptance] of graph.acceptance) {
     const target = `acceptance:${id}`;
-    const file = `.automovie/design/acceptance/${encodeAutoMoviePathSegment(id)}.json`;
+    const file = `${productionRoot}/acceptance/${encodeAutoMoviePathSegment(id)}.json`;
     text(diagnostics, acceptance.id, target, file, "id");
     text(diagnostics, acceptance.target.id, target, file, "target.id");
     if (acceptance.id !== id)

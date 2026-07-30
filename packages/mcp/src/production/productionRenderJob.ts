@@ -85,7 +85,9 @@ export interface IAutoMovieProductionRenderChunk {
 /** Persisted plan reopened by every `automovie render` subcommand. */
 export interface IAutoMovieProductionRenderJobPlan {
   /** Plan schema. */
-  version: 1;
+  version: 2;
+  /** Exact production namespace that owns every slot and output. */
+  productionId: string;
   /** Compiler source-input fingerprint used by all captures. */
   compileFingerprint: AutoMovieContentDigest;
   /** Digest of the compiler-owned film edit. */
@@ -286,9 +288,10 @@ export const planProductionRenderJob = (props: {
               );
             return { shot, digest };
           });
-        const slot = `${deliverable.id}:${pass}:${index}`;
+        const slot = `${props.production.id}:${deliverable.id}:${pass}:${index}`;
         const identity = {
-          protocol: "automovie.production-render-chunk.v1",
+          protocol: "automovie.production-render-chunk.v2",
+          production: props.production.id,
           deliverable: deliverable.id,
           kind: deliverable.kind,
           editFingerprint,
@@ -312,7 +315,8 @@ export const planProductionRenderJob = (props: {
       }
   }
   return {
-    version: 1,
+    version: 2,
+    productionId: props.production.id,
     compileFingerprint: props.timeline.inputFingerprint,
     editFingerprint,
     runtimeIdentity: props.runtimeIdentity,

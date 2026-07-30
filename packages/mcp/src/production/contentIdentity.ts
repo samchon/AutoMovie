@@ -3,11 +3,11 @@ import { createHash } from "node:crypto";
 
 /** Versioned review-fingerprint protocol. */
 export const AUTOMOVIE_REVIEW_FINGERPRINT_PROTOCOL =
-  "automovie.review.fingerprint.v1";
+  "automovie.review.fingerprint.v2";
 
 /** Versioned production-compiler input protocol. */
 export const AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL =
-  "automovie.compile.input.v1";
+  "automovie.compile.input.v2";
 
 /** One domain-separated field in a content fingerprint. */
 export interface IAutoMovieFingerprintField {

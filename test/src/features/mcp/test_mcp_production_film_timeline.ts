@@ -224,11 +224,11 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const first = compiler.compile({ scope: "source" });
     const timelinePath = path.join(
       fixture.root,
-      "generated/film-timeline.json",
+      "generated/fixture-film/film-timeline.json",
     );
     const editPath = path.join(
       fixture.root,
-      "generated/contracts/film-edit.json",
+      "generated/fixture-film/contracts/film-edit.json",
     );
     const firstTimelineBytes = fs.readFileSync(timelinePath);
     const firstTimelineMtime = fs.statSync(timelinePath).mtimeMs;
@@ -652,7 +652,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       fs.readFileSync(
         path.join(
           scaffoldAssetDirectory(),
-          ".automovie/design/shots/answer.json",
+          ".automovie/design/fixture-film/shots/answer.json",
         ),
         "utf8",
       ),
@@ -833,11 +833,11 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     )!.digest = digestAutoMovieBytes(staleTimelineBytes);
     const timelineFilePath = path.join(
       fixture.root,
-      "generated/film-timeline.json",
+      "generated/fixture-film/film-timeline.json",
     );
     const generatedManifestPath = path.join(
       fixture.root,
-      ".automovie/generated-manifest.json",
+      ".automovie/productions/fixture-film/generated-manifest.json",
     );
     const gapTimeline = structuredClone(validTimeline);
     gapTimeline.segments[0]!.startFrame = 1;
@@ -1085,7 +1085,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     );
     const realizationPath = path.join(
       fixture.root,
-      "generated/realizations/opening.json",
+      "generated/fixture-film/realizations/opening.json",
     );
     const realizationBytes = fs.readFileSync(realizationPath);
     const realization = JSON.parse(realizationBytes.toString("utf8")) as {

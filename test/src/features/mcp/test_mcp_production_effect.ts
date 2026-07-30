@@ -51,7 +51,10 @@ export const test_mcp_production_effect = (): void => {
     const compiled = compile.success
       ? (JSON.parse(
           fs.readFileSync(
-            path.join(fixture.root, "generated/shots/opening.json"),
+            path.join(
+              fixture.root,
+              "generated/fixture-film/shots/opening.json",
+            ),
             "utf8",
           ),
         ) as IAutoMovieCompiledShotSource)
@@ -205,10 +208,13 @@ export const test_mcp_production_effect = (): void => {
         }).length === 0,
     );
 
-    const shotPath = path.join(fixture.root, "generated/shots/opening.json");
+    const shotPath = path.join(
+      fixture.root,
+      "generated/fixture-film/shots/opening.json",
+    );
     const manifestPath = path.join(
       fixture.root,
-      ".automovie/generated-manifest.json",
+      ".automovie/productions/fixture-film/generated-manifest.json",
     );
     const originalShot = fs.readFileSync(shotPath);
     const originalManifest = fs.readFileSync(manifestPath);

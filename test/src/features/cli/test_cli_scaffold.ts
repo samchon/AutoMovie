@@ -269,7 +269,7 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes(
         "stagedReview.queue(status, compilerSnapshot)",
       ) &&
-      files[".gitignore"]!.includes(".automovie/render-job/") &&
+      files[".gitignore"]!.includes(".automovie/productions/") &&
       files[".automovie/design/production.json"]!.includes(
         '"id": "starter-feature"',
       ) &&
