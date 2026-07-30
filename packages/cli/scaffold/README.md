@@ -5,6 +5,13 @@ screenplay, shot builders, motion helpers, effects, audio integration, and tests
 as ordinary files. AutoMovie owns bounded design, deterministic generated
 output, geometry facts, actual-frame evidence, and review freshness.
 
+Treatment and screenplay prose are under `docs/{{name}}`. Keep their exact
+beat and `SCN-*` identities aligned with
+`.automovie/design/screenplay/index.json`; once shots exist, retain locked
+numbers, use `OMITTED` tombstones for deletions, and alpha ids for insertions.
+`pnpm lint` checks those joins and requires compiled realization plus completed
+acceptance evidence before an active scene leaves the coverage ledger.
+
 ## First run
 
 Frame capture defaults to the Chromium build pinned to this project's Playwright

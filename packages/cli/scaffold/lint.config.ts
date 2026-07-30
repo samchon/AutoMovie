@@ -52,6 +52,55 @@ const config = {
     automovie,
   },
   rules: {
+    "automovie/screenplay-contract": [
+      "error",
+      {
+        indexes: [
+          ".automovie/design/screenplay/index.json",
+          ".automovie/design/*/screenplay/index.json",
+        ],
+        documents: ["docs/**/*.md"],
+        shots: [
+          ".automovie/design/shots/*.json",
+          ".automovie/design/*/shots/*.json",
+        ],
+        acceptance: [
+          ".automovie/design/acceptance/*.json",
+          ".automovie/design/*/acceptance/*.json",
+        ],
+        realizations: [
+          "generated/realizations/*.json",
+          "generated/*/realizations/*.json",
+        ],
+        reviews: [
+          ".automovie/reviews/design/acceptances/*.json",
+          ".automovie/reviews/*/design/acceptances/*.json",
+        ],
+      },
+    ],
+    "automovie/state-presence": [
+      "error",
+      {
+        slots: [
+          {
+            name: "screenplay-index",
+            files: [
+              ".automovie/design/screenplay/index.json",
+              ".automovie/design/*/screenplay/index.json",
+            ],
+            requires: [],
+          },
+          {
+            name: "shot-contracts",
+            files: [
+              ".automovie/design/shots/*.json",
+              ".automovie/design/*/shots/*.json",
+            ],
+            requires: ["screenplay-index"],
+          },
+        ],
+      },
+    ],
     "automovie/template-sentinel": "error",
     eqeqeq: "error",
     "no-debugger": "error",

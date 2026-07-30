@@ -68,6 +68,10 @@ export const test_mcp_production_namespaces = (): void => {
 
   const fixture = productionFixture();
   try {
+    const legacyScreenplay = path.join(
+      fixture.root,
+      ".automovie/design/screenplay/index.json",
+    );
     const legacyGenerated = path.join(
       fixture.root,
       "generated/legacy-generated.bin",
@@ -77,9 +81,11 @@ export const test_mcp_production_namespaces = (): void => {
       "generated/fixture-film/legacy-child.bin",
     );
     const legacyRender = path.join(fixture.root, "renders/legacy-render.bin");
+    fs.mkdirSync(path.dirname(legacyScreenplay), { recursive: true });
     fs.mkdirSync(path.dirname(legacyGenerated), { recursive: true });
     fs.mkdirSync(path.dirname(sameNamedLegacyChild), { recursive: true });
     fs.mkdirSync(path.dirname(legacyRender), { recursive: true });
+    fs.writeFileSync(legacyScreenplay, '{"version":1}');
     fs.writeFileSync(legacyGenerated, "generated");
     fs.writeFileSync(sameNamedLegacyChild, "same-name-child");
     fs.writeFileSync(legacyRender, "render");
@@ -97,7 +103,14 @@ export const test_mcp_production_namespaces = (): void => {
         fs.readFileSync(
           path.join(alpha.renderRoot(), "legacy-render.bin"),
           "utf8",
-        ) === "render",
+        ) === "render" &&
+        fs.readFileSync(
+          path.join(
+            fixture.root,
+            ".automovie/design/fixture-film/screenplay/index.json",
+          ),
+          "utf8",
+        ) === '{"version":1}',
     );
     fs.rmSync(path.join(alpha.generatedRoot(), "legacy-generated.bin"));
     fs.rmSync(path.join(alpha.renderRoot(), "legacy-render.bin"));

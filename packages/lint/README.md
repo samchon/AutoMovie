@@ -13,6 +13,32 @@ export default {
   plugins: { automovie },
   rules: {
     "automovie/template-sentinel": "error",
+    "automovie/screenplay-contract": [
+      "error",
+      {
+        indexes: [
+          ".automovie/design/screenplay/index.json",
+          ".automovie/design/*/screenplay/index.json",
+        ],
+        documents: ["docs/**/*.md"],
+        shots: [
+          ".automovie/design/shots/*.json",
+          ".automovie/design/*/shots/*.json",
+        ],
+        acceptance: [
+          ".automovie/design/acceptance/*.json",
+          ".automovie/design/*/acceptance/*.json",
+        ],
+        realizations: [
+          "generated/realizations/*.json",
+          "generated/*/realizations/*.json",
+        ],
+        reviews: [
+          ".automovie/reviews/design/acceptances/*.json",
+          ".automovie/reviews/*/design/acceptances/*.json",
+        ],
+      },
+    ],
     "automovie/state-presence": [
       "error",
       {
@@ -48,6 +74,23 @@ export default {
 설정된 downstream 슬롯의 파일이 하나라도 존재하는데 필요한 upstream 슬롯이 하나도 존재하지 않으면 실패한다.
 파일 내용이나 배열 길이는 읽지 않으므로 유효한 빈 레코드도 resident다.
 레코드가 전혀 없는 프로젝트에서는 침묵하고, 읽을 수 없는 경로는 그 경로가 숨길 수 있는 의무만 stand-down한다.
+
+### `automovie/screenplay-contract`
+
+`IAutoMovieScreenplayIndex`와 사람이 쓰는 treatment/screenplay Markdown을
+대조한다. treatment 비트의 exact prose가 active scene `covers`에 없거나,
+SCN heading이 누락·중복·미등록이거나, active heading 아래 본문이 없으면
+index 옆에서 진단한다.
+
+shot/acceptance의 `{ reason, scene, claim? }` 인용, 인물·세력·장소
+카탈로그, continuity claim의 단일 verification owner도 같은 원장에서
+검사한다. scene coverage는 shot 선언만으로 닫히지 않는다. passing
+`generated/*/realizations/*.json`과 완료된 acceptance review가 있어야 하며,
+disposition과 실현이 동시에 존재하면 모순으로 진단한다.
+
+lock 뒤 기존 숫자는 `sceneIds` 원장에 남아야 한다. 삭제는 `OMITTED`
+tombstone으로 보존하고 새 장면은 `SCN-A11` 같은 alpha insertion id만
+허용한다. index가 없으면 rule은 조용하다.
 
 ## Rule 품질 원칙
 

@@ -1,5 +1,12 @@
 {
   "id": "opening-pose",
+  "evidence": [
+    {
+      "reason": "The pose frame is the owning visual proof for the raised-arm continuity claim.",
+      "scene": "SCN-001",
+      "claim": "signal-arm-readable"
+    }
+  ],
   "target": { "kind": "shot", "id": "opening" },
   "criterion": {
     "kind": "frame",

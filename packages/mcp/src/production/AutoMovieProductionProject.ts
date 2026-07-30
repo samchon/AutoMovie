@@ -368,7 +368,7 @@ export class AutoMovieProductionProject {
       source: path.join(this.automovieRoot, "design", "production.json"),
       destination: path.join(this.productionDesignRoot, "production.json"),
     });
-    for (const directory of ["shots", "acceptance"])
+    for (const directory of ["shots", "acceptance", "screenplay"])
       moves.push({
         source: path.join(this.automovieRoot, "design", directory),
         destination: path.join(this.productionDesignRoot, directory),
@@ -2484,7 +2484,11 @@ interface IAutoMovieProductionRegistry {
 
 const SHARED_DESIGN_DIRECTORIES = ["models", "formations"] as const;
 
-const PRODUCTION_DESIGN_DIRECTORIES = ["shots", "acceptance"] as const;
+const PRODUCTION_DESIGN_DIRECTORIES = [
+  "shots",
+  "acceptance",
+  "screenplay",
+] as const;
 
 const REVIEW_DIRECTORIES = [
   "design/models",

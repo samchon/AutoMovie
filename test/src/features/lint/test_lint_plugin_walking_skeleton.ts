@@ -295,6 +295,170 @@ const presenceConfigWithFiles = (files: readonly string[]): string =>
     "",
   ].join("\n");
 
+const screenplayConfig = [
+  'import { automovie } from "@automovie/lint";',
+  "",
+  "export default {",
+  "  plugins: { automovie },",
+  "  rules: {",
+  '    "automovie/screenplay-contract": [',
+  '      "error",',
+  "      {",
+  '        indexes: [".automovie/design/*/screenplay/index.json"],',
+  '        documents: ["docs/**/*.md"],',
+  '        shots: [".automovie/design/*/shots/*.json"],',
+  '        acceptance: [".automovie/design/*/acceptance/*.json"],',
+  '        realizations: ["generated/*/realizations/*.json"],',
+  '        reviews: [".automovie/reviews/*/design/acceptances/*.json"],',
+  "      },",
+  "    ],",
+  "  },",
+  "};",
+  "",
+].join("\n");
+
+const screenplayFiles = (
+  variant:
+    | "valid"
+    | "dangling-scene"
+    | "disposition-conflict"
+    | "intent-only"
+    | "missing-heading"
+    | "removed-locked-scene"
+    | "uncovered-beat",
+): Record<string, string> => {
+  const beat =
+    "The signal changes the formation before the answering movement begins.";
+  const index = {
+    version: 1,
+    production: "film",
+    treatment: {
+      path: "docs/film/treatment.md",
+      sequences: [
+        {
+          id: "SEQ-1",
+          title: "Signal and answer",
+          beats: [{ id: "BEAT-1", text: beat }],
+        },
+      ],
+    },
+    screenplay: {
+      path: "docs/film/screenplay.md",
+      lock: {
+        activatedBy: "agent-before-first-shot",
+        reason: "A shot contract already cites the stable scene ledger.",
+        sceneIds: ["SCN-001", "SCN-002"],
+      },
+      scenes: [
+        {
+          id: "SCN-001",
+          title: "The Signal",
+          status: "active",
+          covers: [
+            {
+              reason: "The opening scene realizes the treatment promise.",
+              beat,
+            },
+          ],
+          location: "field",
+          disposition: null as null | { phase: string; reason: string },
+        },
+        {
+          id: "SCN-002",
+          title: "OMITTED",
+          status: "OMITTED",
+          covers: [],
+          location: null,
+          disposition: null,
+        },
+      ],
+    },
+    catalog: {
+      characters: [],
+      factions: [],
+      locations: [
+        {
+          id: "field",
+          name: "Signal Field",
+          evidence: [
+            {
+              reason: "The scene prose establishes the field.",
+              scene: "SCN-001",
+            },
+          ],
+        },
+      ],
+    },
+    continuity: [],
+  };
+  if (variant === "uncovered-beat") index.screenplay.scenes[0]!.covers = [];
+  if (variant === "removed-locked-scene") index.screenplay.scenes.splice(1, 1);
+  if (variant === "disposition-conflict")
+    index.screenplay.scenes[0]!.disposition = {
+      phase: "production",
+      reason: "This scene was intentionally exempted.",
+    };
+
+  const citedScene = variant === "dangling-scene" ? "SCN-999" : "SCN-001";
+  const files: Record<string, string> = {
+    ".automovie/design/film/screenplay/index.json": JSON.stringify(index),
+    ".automovie/design/film/shots/shot-1.json": JSON.stringify({
+      id: "shot-1",
+      evidence: [
+        {
+          reason: "The shot realizes the authored signal.",
+          scene: citedScene,
+        },
+      ],
+      participants: [],
+    }),
+    ".automovie/design/film/acceptance/accept-1.json": JSON.stringify({
+      id: "accept-1",
+      evidence: [
+        {
+          reason: "The frame review observes the authored signal.",
+          scene: "SCN-001",
+        },
+      ],
+      criterion: { kind: "frame" },
+    }),
+    ".automovie/reviews/film/design/acceptances/accept-1.json": JSON.stringify({
+      complete: true,
+      target: {
+        kind: "design",
+        design: { kind: "acceptance", id: "accept-1" },
+      },
+    }),
+    "docs/film/treatment.md": `# Treatment\n\n${beat}\n`,
+    "docs/film/screenplay.md":
+      variant === "missing-heading"
+        ? "# Screenplay\n\nThe signal occurs without its indexed heading.\n"
+        : [
+            "# Screenplay",
+            "",
+            "## SCN-001 — The Signal",
+            "",
+            "On the field, the sentinel signals and the formation answers.",
+            "",
+            "## SCN-002 — OMITTED",
+            "",
+          ].join("\n"),
+    "generated/film/realizations/shot-1.json": JSON.stringify({
+      version: 1,
+      shot: "shot-1",
+      opening: [],
+      closing: [],
+      events: [],
+      camera: [{ passed: true }],
+      formations: [],
+    }),
+    "src/index.ts": "export {};\n",
+  };
+  if (variant === "intent-only")
+    delete files["generated/film/realizations/shot-1.json"];
+  return files;
+};
+
 const assertSucceeded = (result: IRunResult, because: string): void => {
   if (result.status === 0) return;
   throw new Error(
@@ -331,6 +495,9 @@ const assertFailedWith = (
  *    continuations remain silent.
  * 4. State residency is silent before records exist, rejects one orphan, and
  *    accepts valid empty upstream and downstream records.
+ * 5. The screenplay project rule accepts a grounded locked ledger and diagnoses
+ *    uncovered prose, missing headings, removed lock ids and dangling evidence,
+ *    intent-only coverage and disposition/realization contradictions.
  */
 export function test_lint_plugin_walking_skeleton(): void {
   const scaffold = runScaffoldLint({ name: "clean" });
@@ -445,6 +612,82 @@ export function test_lint_plugin_walking_skeleton(): void {
   assertSucceeded(
     noRecords,
     "A project with no resident state slots must stay silent.",
+  );
+
+  const validScreenplay = runFixture({
+    name: "screenplay-valid",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("valid"),
+  });
+  assertSucceeded(
+    validScreenplay,
+    "A grounded scene, passing compiled realization, completed acceptance and retained OMITTED tombstone must satisfy the screenplay ledger.",
+  );
+
+  const uncoveredBeat = runFixture({
+    name: "screenplay-uncovered-beat",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("uncovered-beat"),
+  });
+  assertFailedWith(
+    uncoveredBeat,
+    "treatment beat 'BEAT-1' is not covered verbatim",
+    "A treatment promise without a covering active scene must fail at build-time lint.",
+  );
+
+  const missingHeading = runFixture({
+    name: "screenplay-missing-heading",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("missing-heading"),
+  });
+  assertFailedWith(
+    missingHeading,
+    "no exact SCN heading exists",
+    "Direct prose edits that remove an indexed scene heading must leave a loud dangling ledger.",
+  );
+
+  const removedLockedScene = runFixture({
+    name: "screenplay-removed-locked-scene",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("removed-locked-scene"),
+  });
+  assertFailedWith(
+    removedLockedScene,
+    "lock ledger retains scene id 'SCN-002'",
+    "A locked scene id must remain as an OMITTED tombstone instead of disappearing.",
+  );
+
+  const danglingScene = runFixture({
+    name: "screenplay-dangling-scene",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("dangling-scene"),
+  });
+  assertFailedWith(
+    danglingScene,
+    "cites unknown scene 'SCN-999'",
+    "A downstream shot citation must resolve through its production screenplay index.",
+  );
+
+  const intentOnly = runFixture({
+    name: "screenplay-intent-only",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("intent-only"),
+  });
+  assertFailedWith(
+    intentOnly,
+    "Shot intent alone cannot drain scene coverage.",
+    "A declared shot without a passing compiler-owned realization must leave its scene uncovered.",
+  );
+
+  const dispositionConflict = runFixture({
+    name: "screenplay-disposition-conflict",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("disposition-conflict"),
+  });
+  assertFailedWith(
+    dispositionConflict,
+    "Intentional omission and realized work contradict each other.",
+    "A phase-local disposition must not coexist with evidence that the scene was realized and accepted.",
   );
 
   const orphan = runFixture({

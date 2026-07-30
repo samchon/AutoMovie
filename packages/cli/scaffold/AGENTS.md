@@ -15,6 +15,12 @@ Never edit `generated`; correct its owning source or design and compile. Never
 mark visual review complete without opening current bundle frames. A design,
 source, generated, or frame change makes dependent review stale by design.
 
+Write treatment and screenplay prose in `docs/{{name}}`. Keep exact treatment
+beats, `SCN-*` headings, catalogs, continuity claims, and downstream
+`{ reason, scene, claim? }` evidence synchronized with the screenplay index.
+Activate its soft lock before the first shot; after lock preserve deleted
+numbers as `OMITTED` and use alpha insertion ids instead of renumbering.
+
 Keep time in seconds, space in right-handed Y-up meters, and randomness in
 explicit design seeds. Do not use wall clock, network, process, filesystem, or
 unseeded randomness inside shot build functions.

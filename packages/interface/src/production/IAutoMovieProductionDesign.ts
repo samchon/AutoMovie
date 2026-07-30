@@ -1,6 +1,7 @@
 import { AutoMovieGuidePass } from "../cinematics";
 import { IAutoMovieVector3 } from "../geometry";
 import { AutoMovieHumanoidBone } from "../skeleton";
+import { IAutoMovieSceneEvidence } from "./IAutoMovieScreenplayIndex";
 
 /** A SHA-256 value computed by AutoMovie from authoritative project bytes. */
 export type AutoMovieContentDigest = `sha256:${string}`;
@@ -540,6 +541,12 @@ export interface IAutoMovieShotContract {
     export: string;
   };
   /**
+   * Screenplay scenes and optional canon claims this shot intends to realize.
+   *
+   * Project lint requires this field once a screenplay index is resident.
+   */
+  evidence?: IAutoMovieSceneEvidence[];
+  /**
    * Finite shot runtime in seconds, strictly above zero and on the production
    * frame clock.
    */
@@ -618,6 +625,13 @@ export type IAutoMovieAcceptanceCriterion =
 export interface IAutoMovieAcceptanceScenario {
   /** Non-blank stable scenario id, unique under portable case folding. */
   id: string;
+  /**
+   * Screenplay scenes and optional canon claims this observable check verifies.
+   *
+   * Traceability is valid for every claim, but only a matching claim
+   * verification owner can discharge that claim.
+   */
+  evidence?: IAutoMovieSceneEvidence[];
   /** Scenario target. */
   target:
     | {

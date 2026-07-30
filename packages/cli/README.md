@@ -21,6 +21,13 @@ review ledger. The starter intentionally keeps long-form authoring in files
 instead of asking the model to serialize dense motion graphs through tool
 calls.
 
+Treatment and screenplay prose live under `docs/<production>/`. Their machine
+index lives at `.automovie/design/screenplay/index.json` before the first open
+and migrates into the selected production namespace. `pnpm lint` checks exact
+beat coverage, SCN headings and bodies, the permanent soft-lock ledger,
+catalog/continuity references, and realized scene coverage without replacing
+the prose with JSON.
+
 ## Starter workflow
 
 ```bash

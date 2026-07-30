@@ -88,6 +88,7 @@ export const test_cli_scaffold = (): void => {
       ".automovie/design/models/army-near.json",
       ".automovie/design/models/sentinel.json",
       ".automovie/design/production.json",
+      ".automovie/design/screenplay/index.json",
       ".automovie/design/shots/answer.json",
       ".automovie/design/shots/opening.json",
       ".automovie/design/world.json",
@@ -100,8 +101,8 @@ export const test_cli_scaffold = (): void => {
       "automovie.mcp.jsonc",
       "docs/art-direction.md",
       "docs/historical-notes.md",
-      "docs/screenplay.md",
-      "docs/treatment.md",
+      "docs/demo-film/screenplay.md",
+      "docs/demo-film/treatment.md",
       ".gitignore",
       "lint.config.ts",
       "package.json",
@@ -292,8 +293,23 @@ export const test_cli_scaffold = (): void => {
       files["viewer/src/main.ts"]!.includes('from "three"') === false,
   );
   TestValidator.predicate(
-    "no placeholder token survives any payload",
-    Object.values(files).every((content) => !content.includes("{{")),
+    "no placeholder token survives any rendered path or payload",
+    Object.entries(files).every(
+      ([key, content]) => !key.includes("{{") && !content.includes("{{"),
+    ),
+  );
+  TestValidator.predicate(
+    "the starter owns prose and its machine index per production",
+    files[".automovie/design/screenplay/index.json"]!.includes(
+      '"production": "demo-film"',
+    ) &&
+      files[".automovie/design/screenplay/index.json"]!.includes(
+        '"path": "docs/demo-film/screenplay.md"',
+      ) &&
+      files["docs/demo-film/screenplay.md"]!.includes("SCN-001") &&
+      files["docs/demo-film/treatment.md"]!.includes(
+        "A lone sentinel raises a signal",
+      ),
   );
   TestValidator.predicate(
     "the starter ships the correctness lint ruleset",
@@ -303,7 +319,8 @@ export const test_cli_scaffold = (): void => {
       files["lint.config.ts"]!.includes('"typescript/no-explicit-any"') &&
       files["lint.config.ts"]!.includes(
         '"automovie/template-sentinel": "error"',
-      ),
+      ) &&
+      files["lint.config.ts"]!.includes('"automovie/screenplay-contract": ['),
   );
   TestValidator.predicate(
     "no payload carries a CRLF",
@@ -322,6 +339,11 @@ export const test_cli_scaffold = (): void => {
   TestValidator.predicate(
     "renderScaffold throws on a blank name",
     throws(() => renderScaffold({ name: "   " })),
+  );
+  TestValidator.predicate(
+    "renderScaffold refuses a path-bearing production name",
+    throws(() => renderScaffold({ name: "../escape" })) &&
+      throws(() => renderScaffold({ name: "film/name" })),
   );
 
   // 4. write half: materialize, non-empty guard, traversal guard.
@@ -358,6 +380,7 @@ export const test_cli_scaffold = (): void => {
         ".automovie/design/models/army-near.json",
         ".automovie/design/models/sentinel.json",
         ".automovie/design/production.json",
+        ".automovie/design/screenplay/index.json",
         ".automovie/design/shots/answer.json",
         ".automovie/design/shots/opening.json",
         ".automovie/design/world.json",
@@ -370,9 +393,9 @@ export const test_cli_scaffold = (): void => {
         "automovie.config.ts",
         "automovie.mcp.jsonc",
         "docs/art-direction.md",
+        "docs/demo-film/screenplay.md",
+        "docs/demo-film/treatment.md",
         "docs/historical-notes.md",
-        "docs/screenplay.md",
-        "docs/treatment.md",
         "lint.config.ts",
         "package.json",
         "public/assets/README.md",

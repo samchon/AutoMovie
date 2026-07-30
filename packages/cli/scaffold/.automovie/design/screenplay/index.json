@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "production": "{{name}}",
+  "treatment": {
+    "path": "docs/{{name}}/treatment.md",
+    "sequences": [
+      {
+        "id": "SEQ-SIGNAL",
+        "title": "The call",
+        "beats": [
+          {
+            "id": "BEAT-SIGNAL",
+            "text": "A lone sentinel raises a signal while an ordered army remains visibly under the same command."
+          }
+        ]
+      },
+      {
+        "id": "SEQ-ANSWER",
+        "title": "The reply",
+        "beats": [
+          {
+            "id": "BEAT-ANSWER",
+            "text": "The answering gesture proves the signal changed the field rather than ending as an isolated pose."
+          }
+        ]
+      }
+    ]
+  },
+  "screenplay": {
+    "path": "docs/{{name}}/screenplay.md",
+    "lock": {
+      "activatedBy": "agent-before-first-shot",
+      "reason": "The starter already registers opening and answer shot contracts, so their scene joins require stable numbering.",
+      "sceneIds": ["SCN-001", "SCN-002"]
+    },
+    "scenes": [
+      {
+        "id": "SCN-001",
+        "title": "The signal",
+        "status": "active",
+        "covers": [
+          {
+            "reason": "The opening shot must establish the authored call and its commanded formation.",
+            "beat": "A lone sentinel raises a signal while an ordered army remains visibly under the same command."
+          }
+        ],
+        "location": "signal-field",
+        "disposition": null
+      },
+      {
+        "id": "SCN-002",
+        "title": "The answer",
+        "status": "active",
+        "covers": [
+          {
+            "reason": "The second shot must show a consequence and reply to the opening signal.",
+            "beat": "The answering gesture proves the signal changed the field rather than ending as an isolated pose."
+          }
+        ],
+        "location": "signal-field",
+        "disposition": null
+      }
+    ]
+  },
+  "catalog": {
+    "characters": [
+      {
+        "id": "sentinel",
+        "name": "The Sentinel",
+        "evidence": [
+          {
+            "reason": "The screenplay explicitly gives the sentinel the signal action.",
+            "scene": "SCN-001"
+          }
+        ]
+      }
+    ],
+    "factions": [
+      {
+        "id": "army",
+        "name": "The Ordered Army",
+        "evidence": [
+          {
+            "reason": "The ranks are a story force visibly commanded by the signal.",
+            "scene": "SCN-001"
+          }
+        ]
+      }
+    ],
+    "locations": [
+      {
+        "id": "signal-field",
+        "name": "Signal Field",
+        "evidence": [
+          {
+            "reason": "Both screenplay scenes explicitly occur on the same field.",
+            "scene": "SCN-001"
+          }
+        ]
+      }
+    ]
+  },
+  "continuity": [
+    {
+      "id": "signal-arm-readable",
+      "text": "The sentinel's raised signal arm remains readable.",
+      "verification": "frame-review",
+      "evidence": [
+        {
+          "reason": "The opening scene establishes the raised arm as the signal.",
+          "scene": "SCN-001"
+        }
+      ]
+    }
+  ]
+}

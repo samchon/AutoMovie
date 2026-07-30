@@ -29,11 +29,22 @@ const normalizeLineEndings = (content: string): string =>
 /** POSIX-slash a path so map keys are host-independent. */
 const toPosix = (value: string): string => value.split(path.sep).join("/");
 
-/** The rendered key for one scaffold-relative path (applies {@link RENAME}). */
-const renderKey = (relative: string): string => {
+/**
+ * The rendered key for one scaffold-relative path.
+ *
+ * Production-owned prose uses `docs/{{name}}`, so path tokens receive the same
+ * strict substitution and unknown-token failure as file payloads.
+ */
+const renderKey = (
+  relative: string,
+  variables: Readonly<Record<string, string>>,
+): string => {
   const dir = path.dirname(relative);
   const base = RENAME[path.basename(relative)] ?? path.basename(relative);
-  return toPosix(dir === "." ? base : path.join(dir, base));
+  return renderTemplate(
+    toPosix(dir === "." ? base : path.join(dir, base)),
+    variables,
+  );
 };
 
 /** Every file under `root`, root-relative, in deterministic sorted order. */
@@ -84,6 +95,17 @@ export const renderScaffold = (
 ): Record<string, string> => {
   const name = props.name.trim();
   if (name.length === 0) throw new Error("scaffold requires a project name");
+  if (
+    name === "." ||
+    name === ".." ||
+    name.endsWith(".") ||
+    name.endsWith(" ") ||
+    /[<>:"/\\|?*\u0000-\u001f]/u.test(name) ||
+    /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/iu.test(name)
+  )
+    throw new Error(
+      `scaffold project name "${name}" must be one portable directory segment`,
+    );
   const variables: Record<string, string> = { name };
   for (const [key, value] of Object.entries(AUTOMOVIE_TEMPLATE_VERSIONS))
     variables[`version:${key}`] = value;
@@ -91,7 +113,7 @@ export const renderScaffold = (
   const root = scaffoldAssetDirectory();
   const files: Record<string, string> = {};
   for (const relative of listFiles(root))
-    files[renderKey(relative)] = renderTemplate(
+    files[renderKey(relative, variables)] = renderTemplate(
       normalizeLineEndings(fs.readFileSync(path.join(root, relative), "utf8")),
       variables,
     );
