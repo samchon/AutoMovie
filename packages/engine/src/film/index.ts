@@ -4,6 +4,7 @@ export * from "./compileAttach";
 export * from "./compileLaunch";
 export * from "./cutSequence";
 export * from "./defineShot";
+export * from "./filmGrammar";
 export * from "./forgeCast";
 export * from "./forgeProp";
 export * from "./scriptGraph";

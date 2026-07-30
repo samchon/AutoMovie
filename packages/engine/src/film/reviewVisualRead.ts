@@ -16,6 +16,10 @@ import {
   projectToNdc,
   resolveCameraAt,
 } from "./cameraProjection";
+import {
+  IAutoMovieGrammarDiagnostic,
+  grammarDiagnosticsToReviewNotes,
+} from "./filmGrammar";
 
 /** Assumed render aspect (width/height), the scene camera carries no aspect. */
 const DEFAULT_ASPECT = 16 / 9;
@@ -79,10 +83,21 @@ export const reviewVisualRead = (props: {
 
   /** Silhouette half-width (m) for the merge check. Defaults to 0.35. */
   silhouetteRadius?: number;
+
+  /**
+   * Mechanical film-grammar findings for this shot or its incoming cut.
+   *
+   * The sequence/EDL analyzer owns their calculation; this visual-read socket
+   * only files them beside the existing framing, contact and silhouette notes.
+   */
+  grammarDiagnostics?: readonly IAutoMovieGrammarDiagnostic[];
 }): IAutoMovieReviewNote[] => {
   const motionById = new Map(props.motions.map((m) => [m.id, m]));
   const nodeById = new Map(props.scene.nodes.map((n) => [n.id, n]));
-  const notes: IAutoMovieReviewNote[] = [];
+  const notes: IAutoMovieReviewNote[] = grammarDiagnosticsToReviewNotes({
+    beat: props.beat,
+    diagnostics: props.grammarDiagnostics ?? [],
+  });
 
   // A performed actor's world root at shot-time `t`, startOffset-aware: the clip
   // has advanced `max(0, t − startOffset)` at shot time t (the resolveBeatEnd

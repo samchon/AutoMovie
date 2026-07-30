@@ -1,5 +1,12 @@
 # `@automovie/interface`
 
+## Film-grammar intent
+
+`IAutoMovieShotContract.styleIntent` is a unique list of deliberate editorial
+exceptions such as `jump-cut` or `eyeline-break`. It does not disable visual
+review wholesale: the engine maps every marker to exactly one diagnostic, so
+unrelated geometry and continuity findings remain visible.
+
 ## Typed object capabilities and instances
 
 `IAutoMovieProfile.traits` carries closed `locomotor`, `shooter`, `mountable`,

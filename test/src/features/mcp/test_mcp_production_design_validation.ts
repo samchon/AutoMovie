@@ -518,6 +518,7 @@ export const test_mcp_production_design_validation = (): void => {
     beat: "",
     source: { module: "", export: "" },
     durationSeconds: 0,
+    styleIntent: ["jump-cut" as const, "jump-cut" as const],
     participants: [
       { kind: "formation" as const, id: "absent" },
       { kind: "formation" as const, id: "absent" },

@@ -183,6 +183,7 @@ const silhouette = (
  * 8. Actors stacked on the camera line merge into one blob; actors spread across
  *    the frame do not; a large silhouette radius merges the spread pair; an
  *    actor inside the near plane is a framing note, not a silhouette merge.
+ * 9. Precomputed film-grammar diagnostics enter this same visual-note backlog.
  */
 export const test_film_review_visual_read = (): void => {
   TestValidator.equals(
@@ -438,5 +439,30 @@ export const test_film_review_visual_read = (): void => {
     nearGuard.length === 1 &&
       nearGuard[0]!.issue.includes("leaves the camera frame") &&
       !nearGuard.some((n) => n.issue.includes("silhouette")),
+  );
+  const grammar = reviewVisualRead({
+    beat: "b1",
+    scene: scene(camera()),
+    shot: shot({ camera: "nope", performances: [] }),
+    motions: [],
+    grammarDiagnostics: [
+      {
+        code: "grammar-jump-cut",
+        severity: "warning",
+        shot: "shot",
+        previousShot: "previous",
+        fact: "the cut changes camera bearing by 10 degrees",
+        impact: "the shallow same-size cut can read as an accidental jump",
+        recovery: "change the angle by at least 30 degrees",
+      },
+    ],
+  });
+  TestValidator.predicate(
+    "grammar diagnostics share the visual review-note socket",
+    grammar.length === 1 &&
+      grammar[0]!.beat === "b1" &&
+      grammar[0]!.tier === "visual" &&
+      grammar[0]!.issue.startsWith("grammar-jump-cut:") &&
+      grammar[0]!.suggestion.includes("30 degrees"),
   );
 };

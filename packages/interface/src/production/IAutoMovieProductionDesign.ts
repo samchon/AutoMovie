@@ -606,6 +606,18 @@ export interface IAutoMovieShotReviewFrame {
   passes: AutoMovieGuidePass[];
 }
 
+/**
+ * Deliberate grammar breaks that suppress only their matching heuristic.
+ *
+ * Pure geometric facts remain measurable; this marker records why a director
+ * chose to keep one otherwise questionable edit.
+ */
+export type AutoMovieGrammarStyleIntent =
+  | "jump-cut"
+  | "eyeline-break"
+  | "tight-reestablish"
+  | "rhythmic-pacing";
+
 /** A code-bound shot contract, not a dense keyframe list. */
 export interface IAutoMovieShotContract {
   /** Non-blank stable shot id, unique under portable case folding. */
@@ -633,6 +645,11 @@ export interface IAutoMovieShotContract {
    * frame clock.
    */
   durationSeconds: number;
+  /**
+   * Unique deliberate film-grammar exceptions. Each value suppresses only its
+   * corresponding heuristic diagnostic; unrelated facts remain visible.
+   */
+  styleIntent?: AutoMovieGrammarStyleIntent[];
   /** Unique required actor and formation ids; formations must already exist. */
   participants: IAutoMovieShotParticipant[];
   /** Required opening states. */

@@ -954,6 +954,13 @@ export const validateAutoMovieProductionGraph = (
       file,
       "durationSeconds",
     );
+    uniqueTextValues(
+      diagnostics,
+      shot.styleIntent ?? [],
+      target,
+      file,
+      "styleIntent",
+    );
     if (
       graph.production !== null &&
       Number.isFinite(shot.durationSeconds) &&
