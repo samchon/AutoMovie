@@ -391,8 +391,8 @@ const inspectAxis = (
     incoming.onScreenAxisCrossing
   )
     return;
-  const previousSide = actionAxisSide(previous);
-  const incomingSide = actionAxisSide(incoming);
+  const previousSide = actionAxisSide(previous, "end");
+  const incomingSide = actionAxisSide(incoming, "start");
   if (previousSide === 0 || incomingSide === 0 || previousSide === incomingSide)
     return;
   const halfPlane = previousSide > 0 ? "positive" : "negative";
@@ -485,12 +485,15 @@ const inspectScreenDirection = (
   });
 };
 
-const actionAxisSide = (shot: NormalizedShot): -1 | 0 | 1 => {
+const actionAxisSide = (
+  shot: NormalizedShot,
+  boundary: "start" | "end",
+): -1 | 0 | 1 => {
   const subjects = byId(shot.subjects);
   const first = subjects.get(shot.actionAxis![0])!;
   const second = subjects.get(shot.actionAxis![1])!;
-  const axis = Vector3.subtract(second.start, first.start);
-  const camera = Vector3.subtract(shot.camera.position, first.start);
+  const axis = Vector3.subtract(second[boundary], first[boundary]);
+  const camera = Vector3.subtract(shot.camera.position, first[boundary]);
   return sign(axis.x * camera.z - axis.z * camera.x);
 };
 

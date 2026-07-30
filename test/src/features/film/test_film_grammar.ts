@@ -104,6 +104,29 @@ export const test_film_grammar = (): void => {
     codes([positive, neutral, negative]).includes("grammar-axis-crossed") ===
       false,
   );
+  const rotatingAxis = shot("rotating-axis", {
+    camera: camera(point(5, 1, 5)),
+    subjects: [
+      subject("alpha", point(-1, 0, 0), point(0, 0, -1)),
+      subject("bravo", point(1, 0, 0), point(0, 0, 1)),
+    ],
+    primarySubject: null,
+    actionAxis: ["alpha", "bravo"],
+  });
+  const afterRotation = shot("after-rotation", {
+    camera: camera(point(5, 1, 5)),
+    subjects: [
+      subject("alpha", point(0, 0, -1)),
+      subject("bravo", point(0, 0, 1)),
+    ],
+    primarySubject: null,
+    actionAxis: ["alpha", "bravo"],
+  });
+  TestValidator.predicate(
+    "outgoing end axis and incoming start axis define the cut boundary",
+    codes([rotatingAxis, afterRotation]).includes("grammar-axis-crossed") ===
+      false,
+  );
   TestValidator.equals(
     "subject and action-axis collection spelling normalize deterministically",
     analyzeFilmGrammar({ shots: [positive, negative] }),
