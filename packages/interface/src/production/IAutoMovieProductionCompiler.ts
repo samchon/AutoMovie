@@ -1016,6 +1016,12 @@ export interface IAutoMovieCompileProjectOutput {
  */
 export type IAutoMovieReviewTarget =
   | {
+      /** Consumed compiled model asset. */
+      kind: "asset";
+      /** Model-recipe id. */
+      id: string;
+    }
+  | {
       /** Typed design target. */
       kind: "design";
       /** Exact design artifact. */
@@ -1031,6 +1037,12 @@ export type IAutoMovieReviewTarget =
       /** Compiled shot. */
       kind: "shot";
       /** Shot id. */
+      id: string;
+    }
+  | {
+      /** Authored treatment sequence. */
+      kind: "sequence";
+      /** Stable sequence id. */
       id: string;
     }
   | {

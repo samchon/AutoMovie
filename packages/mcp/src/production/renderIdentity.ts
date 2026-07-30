@@ -14,7 +14,7 @@ import {
 
 /** Versioned identity protocol for target-local deterministic render inputs. */
 export const AUTOMOVIE_RENDER_TARGET_FINGERPRINT_PROTOCOL =
-  "automovie.render.target.v2";
+  "automovie.render.target.v3";
 
 /**
  * Fingerprint only the bytes capable of changing one render target.
@@ -64,7 +64,9 @@ export const productionRenderTargetFingerprint = (
   const targetPath =
     target.kind === "shot"
       ? `shots/${encodeAutoMoviePathSegment(target.id)}.json`
-      : null;
+      : target.kind === "asset"
+        ? `models/${encodeAutoMoviePathSegment(target.id)}.json`
+        : null;
   for (const file of generated.files)
     if (targetPath === null || file.path === targetPath)
       fields.push({

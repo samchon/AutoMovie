@@ -2929,18 +2929,23 @@ const reviewGateDiagnostics = (
       : [
           {
             code:
-              entry.state === "missing"
-                ? "review-missing"
-                : entry.state === "stale"
-                  ? "review-stale"
-                  : entry.state === "revise"
-                    ? "review-revise"
-                    : "review-incomplete",
+              entry.target.kind === "asset"
+                ? `asset-review-${entry.state}`
+                : entry.state === "missing"
+                  ? "review-missing"
+                  : entry.state === "stale"
+                    ? "review-stale"
+                    : entry.state === "revise"
+                      ? "review-revise"
+                      : "review-incomplete",
             category: "error",
-            phase: "review",
+            phase: entry.target.kind === "asset" ? "source" : "review",
             target: reviewTargetKey(entry.target),
             path: null,
-            message: `Review state is ${entry.state}. Run prepareReview, correct the target, and submitReview before this compile scope.`,
+            message:
+              entry.target.kind === "asset"
+                ? `Consumed model asset "${entry.target.id}" review state is ${entry.state}. Capture its current isolated turntable, run prepareReview, and submitReview before any shot may import it. Correction feedback does not authorize deleting the artifact.`
+                : `Review state is ${entry.state}. Run prepareReview, correct the target, and submitReview before this compile scope. Correction feedback does not authorize deleting the artifact.`,
           },
         ],
   );
@@ -3385,7 +3390,12 @@ const reviewTargetKey = (
   target: IAutoMovieReviewQueue["entries"][number]["target"],
 ): string => {
   if (target.kind === "source") return `source:${target.path}`;
-  if (target.kind === "shot" || target.kind === "film")
+  if (
+    target.kind === "asset" ||
+    target.kind === "shot" ||
+    target.kind === "sequence" ||
+    target.kind === "film"
+  )
     return `${target.kind}:${target.id}`;
   return target.design.kind === "production" || target.design.kind === "world"
     ? `design:${target.design.kind}`

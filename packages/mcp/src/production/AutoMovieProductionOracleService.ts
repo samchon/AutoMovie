@@ -26,6 +26,7 @@ import {
   IAutoMovieGeneratedManifest,
   IAutoMovieGeometryResult,
   IAutoMovieGeometrySelector,
+  IAutoMovieModel,
   IAutoMoviePose,
   IAutoMoviePreviewFrameInput,
   IAutoMoviePreviewFrameOutput,
@@ -812,23 +813,66 @@ export class AutoMovieProductionOracleService {
         "preview-input-invalid",
         `Preview time must be non-negative; dimensions must be positive integers no larger than the validated ${production.frameFormat.width}x${production.frameFormat.height} production frame. Correct previewFrame input.`,
       );
-    const duration = graph.shots.get(input.target.id)?.durationSeconds;
+    let duration: number | undefined;
+    let requestedTime = input.time;
+    const targetPath =
+      input.target.kind === "shot"
+        ? `shots/${encodeAutoMoviePathSegment(input.target.id)}.json`
+        : `models/${encodeAutoMoviePathSegment(input.target.id)}.json`;
     const targetMaterialized = generated.files.some(
-      (file) =>
-        file.path ===
-        `shots/${encodeAutoMoviePathSegment(input.target.id)}.json`,
+      (file) => file.path === targetPath,
     );
+    if (input.target.kind === "shot")
+      duration = graph.shots.get(input.target.id)?.durationSeconds;
+    else {
+      if (
+        graph.models.has(input.target.id) === false ||
+        Number.isFinite(input.target.angleDeg) === false ||
+        input.target.angleDeg < 0 ||
+        input.target.angleDeg >= 360 ||
+        Number.isFinite(input.target.elevationDeg) === false ||
+        input.target.elevationDeg < -85 ||
+        input.target.elevationDeg > 85
+      )
+        return previewFailure(
+          generated.inputFingerprint,
+          "preview-input-invalid",
+          "Asset preview requires a current model, angleDeg in [0, 360), and elevationDeg in [-85, 85]. Correct the isolated turntable target.",
+        );
+      duration = 12;
+      requestedTime = input.target.angleDeg / 30;
+      if (input.target.pose === "rom-extremes")
+        try {
+          const validation = typia.validateEquals<IAutoMovieModel>(
+            JSON.parse(
+              Buffer.from(this.project.readGeneratedFile(targetPath)).toString(
+                "utf8",
+              ),
+            ) as unknown,
+          );
+          if (validation.success === false || validation.data.skeleton === null)
+            throw new Error("the compiled model has no humanoid skeleton");
+        } catch (error) {
+          return previewFailure(
+            generated.inputFingerprint,
+            "preview-input-invalid",
+            `Asset ROM-extremes capture is unavailable because ${
+              error instanceof Error ? error.message : String(error)
+            }. Use rest pose for props or compile a valid rig.`,
+          );
+        }
+    }
     if (duration === undefined || targetMaterialized === false)
       return previewFailure(
         generated.inputFingerprint,
         "preview-target-missing",
         `Target "${input.target.kind}:${input.target.id}" is absent from current compiler-owned output. Correct the target or compile its source before previewFrame.`,
       );
-    if (input.time > duration)
+    if (requestedTime > duration)
       return previewFailure(
         generated.inputFingerprint,
         "preview-input-invalid",
-        `Preview time ${input.time} exceeds target duration ${duration}. Choose a current in-range frame time.`,
+        `Preview time ${requestedTime} exceeds target duration ${duration}. Choose a current in-range frame time.`,
       );
     if (this.capture === undefined)
       return previewFailure(
@@ -842,7 +886,7 @@ export class AutoMovieProductionOracleService {
       input.target,
     );
     const index = Math.min(
-      Math.round(input.time * fps),
+      Math.round(requestedTime * fps),
       Math.floor(duration * fps),
     );
     const time = index / fps;

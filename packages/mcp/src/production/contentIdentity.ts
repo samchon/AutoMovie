@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 
 /** Versioned review-fingerprint protocol. */
 export const AUTOMOVIE_REVIEW_FINGERPRINT_PROTOCOL =
-  "automovie.review.fingerprint.v2";
+  "automovie.review.fingerprint.v3";
 
 /** Versioned production-compiler input protocol. */
 export const AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL =

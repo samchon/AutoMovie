@@ -99,7 +99,8 @@ const filmWorksheet = (
         (scenario.target.kind === "shot" ? scenario.target.id : undefined);
       return prepared.frames.some(
         (frame) =>
-          frame.shot === shot &&
+          frame.target.kind === "shot" &&
+          frame.target.id === shot &&
           frame.reviewFrame === criterion.frame &&
           frame.pass === criterion.pass,
       );
@@ -108,7 +109,7 @@ const filmWorksheet = (
   const frame = prepared.frames[0]!;
   const frameEvidence = {
     kind: "frame" as const,
-    shot: frame.shot,
+    target: frame.target,
     reviewFrame: frame.reviewFrame,
     bundle: frame.bundle,
     frame: frame.frame,
@@ -150,7 +151,7 @@ const filmWorksheet = (
                   contractEvidence,
                   {
                     kind: "frame" as const,
-                    shot: evidence.shot,
+                    target: evidence.target,
                     reviewFrame: evidence.reviewFrame,
                     bundle: evidence.bundle,
                     frame: evidence.frame,

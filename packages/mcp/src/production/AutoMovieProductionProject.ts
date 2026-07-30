@@ -13,6 +13,7 @@ import {
   IAutoMovieProductionRenderReceipt,
   IAutoMovieRenderBundleManifest,
   IAutoMovieReviewTarget,
+  IAutoMovieScreenplayIndex,
   IAutoMovieShotContract,
   IAutoMovieStoredReview,
   IAutoMovieWorldDesign,
@@ -552,8 +553,7 @@ export class AutoMovieProductionProject {
     } finally {
       try {
         assertPhysicalDirectoryAncestry(temporaryAncestry);
-        if (fs.readdirSync(temporary).length === 0)
-          fs.rmdirSync(temporary);
+        if (fs.readdirSync(temporary).length === 0) fs.rmdirSync(temporary);
       } catch {
         // A replacement temporary root is not ours to inspect or remove.
       }
@@ -1906,6 +1906,18 @@ export class AutoMovieProductionProject {
     );
   }
 
+  /** Read the current production's optional screenplay/treatment index. */
+  public screenplayIndex(): IAutoMovieScreenplayIndex | null {
+    this.refreshRevision();
+    const file = path.join(this.productionDesignRoot, "screenplay/index.json");
+    if (lstatOrNull(file) === null) return null;
+    return readOwnedTypedJson(
+      ownedRootReal(this.rootReal, this.automovieRoot),
+      file,
+      validateScreenplayIndex,
+    );
+  }
+
   /** Store one already validated review record under an optional input fence. */
   public commitReview(
     review: IAutoMovieStoredReview,
@@ -1926,6 +1938,12 @@ export class AutoMovieProductionProject {
   public reviewPath(target: IAutoMovieReviewTarget): string {
     this.assertIncarnation();
     switch (target.kind) {
+      case "asset":
+        return path.join(
+          this.reviewRoot,
+          "assets",
+          `${encodeId(target.id)}.json`,
+        );
       case "design": {
         const design = target.design;
         if (design.kind === "production")
@@ -1948,6 +1966,12 @@ export class AutoMovieProductionProject {
         return path.join(
           this.reviewRoot,
           "shots",
+          `${encodeId(target.id)}.json`,
+        );
+      case "sequence":
+        return path.join(
+          this.reviewRoot,
+          "sequences",
           `${encodeId(target.id)}.json`,
         );
       case "film":
@@ -2515,12 +2539,14 @@ const PRODUCTION_DESIGN_DIRECTORIES = [
 ] as const;
 
 const REVIEW_DIRECTORIES = [
+  "assets",
   "design/models",
   "design/formations",
   "design/shots",
   "design/acceptances",
   "source",
   "shots",
+  "sequences",
   "film",
 ] as const;
 
@@ -2556,6 +2582,10 @@ const validateStoredReview = (
   input: unknown,
 ): IValidation<IAutoMovieStoredReview> =>
   typia.validateEquals<IAutoMovieStoredReview>(input);
+const validateScreenplayIndex = (
+  input: unknown,
+): IValidation<IAutoMovieScreenplayIndex> =>
+  typia.validateEquals<IAutoMovieScreenplayIndex>(input);
 
 const readTypedJson = <T>(
   file: string,
@@ -3045,12 +3075,15 @@ const consequencesOf = (
   const affectedFormations = new Set<string>();
   const affectedShots = new Set<string>();
   if (target.kind === "model") {
+    addReview({ kind: "asset", id: target.id });
     for (const [id] of graph.models)
-      if (modelRecipeDependsOn(graph, id, target.id))
+      if (modelRecipeDependsOn(graph, id, target.id)) {
         addReview({
           kind: "design",
           design: { kind: "model", id },
         });
+        addReview({ kind: "asset", id });
+      }
     for (const [id, formation] of graph.formations)
       if (modelRecipeDependsOn(graph, formation.modelRecipe, target.id)) {
         affectedFormations.add(id);

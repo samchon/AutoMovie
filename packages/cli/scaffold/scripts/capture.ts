@@ -113,14 +113,34 @@ const capturePage = (
   session: CaptureSession,
   input: Parameters<AutoMovieProductionFrameCapture>[0],
 ): Promise<CapturePage> => {
+  const subject = capturePageSubject(input);
   const key = JSON.stringify({
-    target: input.target,
+    subject,
+    compileFingerprint: input.compileFingerprint,
     width: input.width,
     height: input.height,
   });
   const existing = session.pages.get(key);
   if (existing !== undefined) return existing;
   const pending = (async (): Promise<CapturePage> => {
+    for (const [candidateKey, candidate] of session.pages)
+      if (candidateKey !== key) {
+        const parsed = JSON.parse(candidateKey) as {
+          subject: unknown;
+          width: number;
+          height: number;
+        };
+        if (
+          JSON.stringify(parsed.subject) === JSON.stringify(subject) &&
+          parsed.width === input.width &&
+          parsed.height === input.height
+        ) {
+          session.pages.delete(candidateKey);
+          const previous = await candidate;
+          await previous.queue;
+          await previous.page.close();
+        }
+      }
     const page = await session.browser.newPage({
       viewport: { width: input.width!, height: input.height! },
       deviceScaleFactor: session.runtime.mode.deviceScaleFactor,
@@ -134,7 +154,13 @@ const capturePage = (
       diagnostics.push(`pageerror: ${error.message}`),
     );
     const url = new URL(config.viewer.basePath, session.origin);
-    url.searchParams.set("shot", input.target.id);
+    if (input.target.kind === "shot")
+      url.searchParams.set("shot", input.target.id);
+    else {
+      url.searchParams.set("asset", input.target.id);
+      url.searchParams.set("elevation", String(input.target.elevationDeg));
+      url.searchParams.set("pose", input.target.pose);
+    }
     try {
       ++captureMetrics.navigations;
       await page.goto(url.href, { waitUntil: "networkidle" });
@@ -225,11 +251,6 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
       height: input.height!,
     };
   } catch (error) {
-    const key = JSON.stringify({
-      target: input.target,
-      width: input.width,
-      height: input.height,
-    });
     session.pages.delete(key);
     await resident.page.close();
     throw error;
@@ -237,3 +258,15 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
     release();
   }
 };
+
+const capturePageSubject = (
+  input: Parameters<AutoMovieProductionFrameCapture>[0],
+): unknown =>
+  input.target.kind === "shot"
+    ? input.target
+    : {
+        kind: input.target.kind,
+        id: input.target.id,
+        elevationDeg: input.target.elevationDeg,
+        pose: input.target.pose,
+      };

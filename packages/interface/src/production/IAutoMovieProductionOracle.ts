@@ -177,18 +177,35 @@ export interface IAutoMovieQueryGeometryOutput {
 /** Request one actual current preview frame. */
 export interface IAutoMoviePreviewFrameInput {
   /**
-   * Exact shot target. Whole-film review composes the required current frames
-   * of every shot; a film id is not itself a renderable shot timeline.
+   * Exact shot or isolated compiled-model target.
+   *
+   * Whole-film and sequence review compose current shot frames. Asset review
+   * supplies the server-required turntable view so the capture receipt proves
+   * which angle and pose was inspected.
    */
-  target: {
-    /** Shot target. */
-    kind: "shot";
-    /** Shot id. */
-    id: string;
-  };
+  target:
+    | {
+        /** Shot target. */
+        kind: "shot";
+        /** Shot id. */
+        id: string;
+      }
+    | {
+        /** Isolated compiled model turntable target. */
+        kind: "asset";
+        /** Model-recipe id. */
+        id: string;
+        /** Finite turntable azimuth in degrees. */
+        angleDeg: number;
+        /** Finite camera elevation in degrees. */
+        elevationDeg: number;
+        /** Rest or required extreme-range rig pose. */
+        pose: "rest" | "rom-extremes";
+      };
   /**
    * Finite non-negative shot-local time no later than shot duration. The oracle
-   * snaps it to the nearest current production frame.
+   * snaps it to the nearest current production frame. Asset targets derive the
+   * canonical turntable time from `angleDeg`, so this field is ignored there.
    */
   time: number;
   /** Requested render pass, beauty by default. */
@@ -294,12 +311,30 @@ export interface IAutoMovieCaptureRuntimeIdentity {
 export interface IAutoMovieRenderBundleManifest {
   /** Bundle manifest format. */
   version: 3;
-  /** Shot or film render target. */
+  /** Asset, shot, sequence, or film render target. */
   target:
+    | {
+        /** Isolated compiled model turntable. */
+        kind: "asset";
+        /** Model-recipe id. */
+        id: string;
+        /** Finite turntable azimuth in degrees. */
+        angleDeg: number;
+        /** Finite camera elevation in degrees. */
+        elevationDeg: number;
+        /** Rest or required extreme-range rig pose. */
+        pose: "rest" | "rom-extremes";
+      }
     | {
         /** Shot target. */
         kind: "shot";
         /** Shot id. */
+        id: string;
+      }
+    | {
+        /** Authored treatment sequence. */
+        kind: "sequence";
+        /** Stable treatment-sequence id. */
         id: string;
       }
     | {

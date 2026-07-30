@@ -548,6 +548,26 @@ export const test_mcp_production_application = async (): Promise<void> => {
           "submitReview",
         ],
       );
+      const submitReview = tools.find((tool) => tool.name === "submitReview")!;
+      TestValidator.equals(
+        "submitReview reflected worksheet keeps selectors and axes before verdict-last",
+        Object.keys(
+          (
+            submitReview.inputSchema as {
+              properties: Record<string, unknown>;
+            }
+          ).properties,
+        ),
+        [
+          "target",
+          "preparedFingerprint",
+          "observations",
+          "checks",
+          "corrections",
+          "completionBasis",
+          "complete",
+        ],
+      );
       TestValidator.predicate(
         "schema and description ceilings",
         schemaChars <= 150_000 &&

@@ -8,6 +8,7 @@ import {
   AutoMovieContentDigest,
   IAutoMovieDesignTarget,
 } from "./IAutoMovieProductionDesign";
+import type { IAutoMovieRenderBundleManifest } from "./IAutoMovieProductionOracle";
 
 /** A design or source selector that may be quoted in a review. */
 export type IAutoMovieReviewEvidenceSelector =
@@ -38,8 +39,8 @@ export type IAutoMovieReviewEvidenceSelector =
 
 /** One current frame available as visual-review evidence. */
 export interface IAutoMovieFrameEvidenceReference {
-  /** Owning shot id. */
-  shot: string;
+  /** Exact rendered subject, including an asset's required view. */
+  target: IAutoMovieRenderBundleManifest["target"];
   /** Authoritative review-frame contract id. */
   reviewFrame: string;
   /** Project-relative render bundle directory. */
@@ -116,8 +117,8 @@ export type IAutoMovieReviewEvidence =
   | {
       /** Current render-frame evidence. */
       kind: "frame";
-      /** Owning shot id. */
-      shot: string;
+      /** Exact rendered subject, including an asset's required view. */
+      target: IAutoMovieRenderBundleManifest["target"];
       /** Authoritative review-frame contract id. */
       reviewFrame: string;
       /** Project-relative render bundle directory. */

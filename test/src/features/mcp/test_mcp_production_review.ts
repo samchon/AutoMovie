@@ -18,6 +18,7 @@ import { PNG } from "pngjs";
 
 import {
   acceptanceScenarios,
+  modelRecipe,
   productionDesign,
   productionFixture,
   shotContract,
@@ -79,7 +80,7 @@ const frameEvidenceOf = (
 ): IAutoMovieReviewEvidence => {
   return {
     kind: "frame",
-    shot: frame.shot,
+    target: frame.target,
     reviewFrame: frame.reviewFrame,
     bundle: frame.bundle,
     frame: frame.frame,
@@ -96,7 +97,9 @@ const worksheet = (
 ): IAutoMovieSubmitReviewInput => {
   const graph = project.graph();
   const visualTarget =
-    prepared.target.kind === "shot" || prepared.target.kind === "film"
+    prepared.target.kind === "shot" ||
+    prepared.target.kind === "sequence" ||
+    prepared.target.kind === "film"
       ? prepared.target
       : null;
   const requiredAcceptance =
@@ -106,7 +109,8 @@ const worksheet = (
             (scenario) =>
               scenario.required &&
               (visualTarget.kind === "film" ||
-                (scenario.target.kind === "shot" &&
+                (visualTarget.kind !== "sequence" &&
+                  scenario.target.kind === "shot" &&
                   scenario.target.id === visualTarget.id) ||
                 ((scenario.criterion.kind === "frame" ||
                   scenario.criterion.kind === "event") &&
@@ -147,7 +151,8 @@ const worksheet = (
                   : undefined);
               const frame = prepared.frames.find(
                 (item) =>
-                  item.shot === shot &&
+                  item.target.kind === "shot" &&
+                  item.target.id === shot &&
                   item.reviewFrame === scenarioCriterion.frame &&
                   item.pass === scenarioCriterion.pass,
               );
@@ -197,6 +202,45 @@ const captureBytes = (width = 16, height = 16): Uint8Array => {
   png.data[0] = 0;
   return PNG.sync.write(png);
 };
+
+const assetReviewViews = [
+  {
+    angleDeg: 0,
+    elevationDeg: 15,
+    pose: "rest" as const,
+    pass: "beauty" as const,
+  },
+  {
+    angleDeg: 90,
+    elevationDeg: 15,
+    pose: "rest" as const,
+    pass: "beauty" as const,
+  },
+  {
+    angleDeg: 180,
+    elevationDeg: 15,
+    pose: "rest" as const,
+    pass: "beauty" as const,
+  },
+  {
+    angleDeg: 270,
+    elevationDeg: 15,
+    pose: "rest" as const,
+    pass: "beauty" as const,
+  },
+  {
+    angleDeg: 0,
+    elevationDeg: 65,
+    pose: "rest" as const,
+    pass: "outline" as const,
+  },
+  {
+    angleDeg: 0,
+    elevationDeg: 15,
+    pose: "rom-extremes" as const,
+    pass: "beauty" as const,
+  },
+] as const;
 
 /** Review records require current exact design, source and actual PNG evidence. */
 export const test_mcp_production_review = async (): Promise<void> => {
@@ -371,6 +415,124 @@ export const test_mcp_production_review = async (): Promise<void> => {
           height,
         };
       },
+    );
+    for (const view of assetReviewViews)
+      TestValidator.predicate(
+        `current asset turntable ${view.pose}/${view.angleDeg}/${view.pass}`,
+        (
+          await oracle.preview({
+            target: { kind: "asset", id: "sentinel", ...view },
+            time: 0,
+            pass: view.pass,
+            width: 16,
+            height: 16,
+          })
+        ).captured,
+      );
+    const assetPrepared = review.prepare({
+      target: { kind: "asset", id: "sentinel" },
+    });
+    const assetSubmitted = review.submit(worksheet(project, assetPrepared));
+    TestValidator.predicate(
+      "a consumed asset requires every isolated current view and can then discharge its production-local gate",
+      assetPrepared.frames.length === 6 &&
+        assetPrepared.diagnostics.every(
+          (diagnostic) => diagnostic.category !== "error",
+        ) &&
+        assetSubmitted.accepted &&
+        assetSubmitted.state === "complete" &&
+        review
+          .queue(compiledStatus)
+          .entries.some(
+            (entry) =>
+              entry.target.kind === "asset" &&
+              entry.target.id === "sentinel" &&
+              entry.state === "complete",
+          ),
+    );
+    const secondProject = AutoMovieProductionProject.open(
+      fixture.root,
+      "second-film",
+    );
+    TestValidator.predicate(
+      "a second production can bind the same shared model independently",
+      secondProject.setProductionDesign(
+        productionDesign({ id: "second-film", title: "second-film" }),
+      ).accepted && secondProject.setShotContract(shotContract()).accepted,
+    );
+    const secondReview = new AutoMovieProductionReviewService(secondProject);
+    const secondCompiler = new AutoMovieProductionCompiler(
+      secondProject,
+      (status, snapshot) => secondReview.queue(status, snapshot),
+    );
+    TestValidator.predicate(
+      "the second production materializes its own consumer",
+      secondCompiler.compile({ scope: "source" }).success,
+    );
+    const secondOracle = new AutoMovieProductionOracleService(
+      secondProject,
+      async (input) => {
+        const width = input.width ?? 16;
+        const height = input.height ?? 16;
+        return {
+          bytes: captureBytes(width, height),
+          runtimeIdentity: testCaptureRuntimeIdentity(),
+          width,
+          height,
+        };
+      },
+    );
+    for (const view of assetReviewViews)
+      TestValidator.predicate(
+        `second-production asset turntable ${view.pose}/${view.angleDeg}/${view.pass}`,
+        (
+          await secondOracle.preview({
+            target: { kind: "asset", id: "sentinel", ...view },
+            time: 0,
+            pass: view.pass,
+            width: 16,
+            height: 16,
+          })
+        ).captured,
+      );
+    const secondAssetPrepared = secondReview.prepare({
+      target: { kind: "asset", id: "sentinel" },
+    });
+    const secondAssetSubmitted = secondReview.submit(
+      worksheet(secondProject, secondAssetPrepared),
+    );
+    TestValidator.predicate(
+      "two productions keep independent asset review addresses and fingerprints",
+      secondAssetSubmitted.accepted &&
+        secondAssetSubmitted.state === "complete" &&
+        assetSubmitted.fingerprint !== secondAssetSubmitted.fingerprint &&
+        project.reviewPath(assetPrepared.target) !==
+          secondProject.reviewPath(secondAssetPrepared.target) &&
+        project.review(assetPrepared.target)?.complete === true &&
+        secondProject.review(secondAssetPrepared.target)?.complete === true,
+    );
+    const originalModel = modelRecipe();
+    TestValidator.predicate(
+      "modifying a consumed model makes its completed asset review stale",
+      project.setModelRecipe({
+        ...originalModel,
+        palette: { body: "#d6b46c" },
+      }).accepted &&
+        review
+          .queue()
+          .entries.some(
+            (entry) =>
+              entry.target.kind === "asset" &&
+              entry.target.id === "sentinel" &&
+              entry.state === "stale",
+          ) &&
+        compiler
+          .lint({ scope: "review" })
+          .diagnostics.some(
+            (diagnostic) => diagnostic.code === "asset-review-stale",
+          ) &&
+        project.setModelRecipe(originalModel).accepted &&
+        compiler.compile({ scope: "source" }).success,
     );
     const thumbnail = await oracle.preview({
       target: { kind: "shot", id: "opening" },
@@ -773,8 +935,17 @@ export const test_mcp_production_review = async (): Promise<void> => {
     });
     const incomplete = review.submit(incompleteSheet);
     TestValidator.predicate(
-      "an actionable unfinished worksheet has an incomplete state",
-      incomplete.accepted && incomplete.state === "incomplete",
+      "an actionable false verdict is stored and remains in the queue",
+      incomplete.accepted &&
+        incomplete.state === "incomplete" &&
+        review
+          .queue()
+          .entries.some(
+            (entry) =>
+              entry.target.kind === "source" &&
+              entry.target.path === sourceTarget.path &&
+              entry.state === "incomplete",
+          ),
     );
     const contradictory = worksheet(project, sourcePrepared);
     contradictory.checks[0]!.verdict = "revise";
@@ -1214,7 +1385,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     badRegion.checks[0]!.evidence = [
       {
         kind: "frame",
-        shot: frame.shot,
+        target: frame.target,
         reviewFrame: frame.reviewFrame,
         bundle: frame.bundle,
         frame: frame.frame,
@@ -1228,7 +1399,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     staleFrame.checks[0]!.evidence = [
       {
         kind: "frame",
-        shot: frame.shot,
+        target: frame.target,
         reviewFrame: frame.reviewFrame,
         bundle: "renders/absent",
         frame: 0,
@@ -1266,7 +1437,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         sheet.checks[0]!.evidence = [
           {
             kind: "frame",
-            shot: frame.shot,
+            target: frame.target,
             reviewFrame: frame.reviewFrame,
             bundle: frame.bundle,
             frame: frame.frame,
