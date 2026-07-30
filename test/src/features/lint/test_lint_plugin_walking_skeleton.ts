@@ -388,8 +388,8 @@ export function test_lint_plugin_walking_skeleton(): void {
         "export const AUTOMOVIE_IMPLEMENT_ME゜ = 10;",
         "export const \\u{61}AUTOMOVIE_IMPLEMENT_ME = 11;",
         "export const AUTOMOVIE_IMPLEMENT_ME\\u{61} = 12;",
-        "export const ፪AUTOMOVIE_IMPLEMENT_ME = 13;",
-        "export const AUTOMOVIE_IMPLEMENT_ME፰ = 14;",
+        "export const a፩AUTOMOVIE_IMPLEMENT_ME = 13;",
+        "export const AUTOMOVIE_IMPLEMENT_ME፱ = 14;",
         "",
       ].join("\n"),
     },
@@ -397,6 +397,23 @@ export function test_lint_plugin_walking_skeleton(): void {
   assertSucceeded(
     identifiers,
     "A sentinel substring inside a valid TypeScript identifier is not the exact placeholder token.",
+  );
+
+  const identifierRangeOutside = runFixture({
+    name: "sentinel-identifier-range-outside",
+    lintConfig: sentinelConfig,
+    files: {
+      "src/index.ts": [
+        'export const before = "፨AUTOMOVIE_IMPLEMENT_ME";',
+        'export const after = "AUTOMOVIE_IMPLEMENT_ME፲";',
+        "",
+      ].join("\n"),
+    },
+  });
+  assertFailedWith(
+    identifierRangeOutside,
+    "Template sentinel 'AUTOMOVIE_IMPLEMENT_ME' remains in compiled source.",
+    "Code points immediately outside Other_ID_Continue must not hide the exact sentinel.",
   );
 
   const sentinel = runFixture({
@@ -522,24 +539,43 @@ export function test_lint_plugin_walking_skeleton(): void {
     "A good project-owned witness must prove presence before a later bad linked witness is inspected.",
   );
 
+  let recursiveCaseInsensitive = false;
   const recursiveGlob = runFixture({
     name: "state-recursive-glob",
-    lintConfig: presenceConfigWithFiles([".automovie/**/screenplay/*.json"]),
+    lintConfig: presenceConfigWithFiles([".automovie/**/SCREENPLAY/*.json"]),
     files: {
       ".automovie/nested/screenplay/index.json": "[]\n",
       ".automovie/shots/shot-1.json": "[]\n",
       "src/index.ts": "export {};\n",
     },
+    mutate: (directory) => {
+      recursiveCaseInsensitive = fs.existsSync(
+        path.join(
+          directory,
+          ".automovie",
+          "nested",
+          "SCREENPLAY",
+          "index.json",
+        ),
+      );
+    },
   });
-  assertSucceeded(
-    recursiveGlob,
-    "A recursive glob must retain the real nested parent while proving its complete resident path spelling.",
-  );
+  if (recursiveCaseInsensitive)
+    assertSucceeded(
+      recursiveGlob,
+      "A recursive glob must use the real nested parent when its complete alternate spelling resolves there.",
+    );
+  else
+    assertFailedWith(
+      recursiveGlob,
+      "State slot 'shot-contracts' is present while required upstream slot 'screenplay-index' is absent.",
+      "A recursive glob must retain the real case-sensitive nested parent while checking its next segment.",
+    );
 
   let hardLinkCaseInsensitive = false;
   const completeSpelling = runFixture({
     name: "state-complete-case-spelling",
-    lintConfig: presenceConfigWithFiles([".automovie/screenplay/B*B.json"]),
+    lintConfig: presenceConfigWithFiles([".automovie/screenplay/A*A.json"]),
     files: {
       ".automovie/screenplay/aa.json": "[]\n",
       ".automovie/shots/shot-1.json": "[]\n",
@@ -548,10 +584,10 @@ export function test_lint_plugin_walking_skeleton(): void {
     mutate: (directory) => {
       const screenplay = path.join(directory, ".automovie", "screenplay");
       const resident = path.join(screenplay, "aa.json");
-      hardLinkCaseInsensitive = fs.existsSync(path.join(screenplay, "BB.json"));
+      hardLinkCaseInsensitive = fs.existsSync(path.join(screenplay, "AA.json"));
       if (hardLinkCaseInsensitive === false) {
-        fs.linkSync(resident, path.join(screenplay, "Ba.json"));
-        fs.linkSync(resident, path.join(screenplay, "aB.json"));
+        fs.linkSync(resident, path.join(screenplay, "Aa.json"));
+        fs.linkSync(resident, path.join(screenplay, "aA.json"));
       }
     },
   });
