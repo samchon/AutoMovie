@@ -15,6 +15,13 @@ leaves the coverage ledger. Catalog entries bind explicitly to shared model,
 formation, and world-landmark ids; continuity claims name the exact passing
 outcome or acceptance scenario that proves them.
 
+Every distributable file matched by the asset lint configuration belongs in
+`.automovie/assets.json`. Record its source URL, license, original/current
+SHA-256, processing chain, and reasoned use before referencing it. External
+glTF, GLB, and VRM entries also require explicit ingest, LOD, collision, and
+measurement-proxy decisions. Changed or unregistered bytes fail lint and
+compilation; ingestion itself remains a pure fixed-byte conversion.
+
 ## First run
 
 Frame capture defaults to the Chromium build pinned to this project's Playwright

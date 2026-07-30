@@ -21,6 +21,11 @@ beats, `SCN-*` headings, catalogs, continuity claims, and downstream
 Activate its soft lock before the first shot; after lock preserve deleted
 numbers as `OMITTED` and use alpha insertion ids instead of renumbering.
 
+Register every distributable asset in `.automovie/assets.json` before use.
+Preserve its source, license, original/current digest, processing chain, and
+reasoned consumer; external models also declare ingest, LOD, collision, and
+measurement-proxy decisions. Never invent provenance or license terms.
+
 Keep time in seconds, space in right-handed Y-up meters, and randomness in
 explicit design seeds. Do not use wall clock, network, process, filesystem, or
 unseeded randomness inside shot build functions.

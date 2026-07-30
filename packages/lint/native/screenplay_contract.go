@@ -245,23 +245,52 @@ func (screenplayContractRule) Check(ctx *rule.ProjectContext) {
 		)
 		return
 	}
-	indexes, indexProblems := screenplayProjectFiles(root, options.Indexes)
+	indexes, indexProblems := automovieProjectFiles(
+		root,
+		options.Indexes,
+		"Screenplay-contract",
+	)
 	for _, problem := range indexProblems {
 		ctx.Report(problem)
 	}
 	if len(indexes) == 0 {
 		return
 	}
-	shots, shotProblems := screenplayProjectFiles(root, options.Shots)
-	acceptance, acceptanceProblems := screenplayProjectFiles(root, options.Acceptance)
-	models, modelProblems := screenplayProjectFiles(root, options.Models)
-	formations, formationProblems := screenplayProjectFiles(
+	shots, shotProblems := automovieProjectFiles(
+		root,
+		options.Shots,
+		"Screenplay-contract",
+	)
+	acceptance, acceptanceProblems := automovieProjectFiles(
+		root,
+		options.Acceptance,
+		"Screenplay-contract",
+	)
+	models, modelProblems := automovieProjectFiles(
+		root,
+		options.Models,
+		"Screenplay-contract",
+	)
+	formations, formationProblems := automovieProjectFiles(
 		root,
 		options.Formations,
+		"Screenplay-contract",
 	)
-	worlds, worldProblems := screenplayProjectFiles(root, options.Worlds)
-	realizations, realizationProblems := screenplayProjectFiles(root, options.Realizations)
-	reviews, reviewProblems := screenplayProjectFiles(root, options.Reviews)
+	worlds, worldProblems := automovieProjectFiles(
+		root,
+		options.Worlds,
+		"Screenplay-contract",
+	)
+	realizations, realizationProblems := automovieProjectFiles(
+		root,
+		options.Realizations,
+		"Screenplay-contract",
+	)
+	reviews, reviewProblems := automovieProjectFiles(
+		root,
+		options.Reviews,
+		"Screenplay-contract",
+	)
 	for _, problems := range [][]string{
 		shotProblems,
 		acceptanceProblems,
@@ -339,13 +368,13 @@ func checkScreenplayIndex(
 	var index screenplayContractIndex
 	if problem := readScreenplayJSON(indexFile, &index); problem != "" {
 		ctx.Report(
-			"Screenplay index '" + screenplayRelative(root, indexFile) +
+			"Screenplay index '" + automovieRelative(root, indexFile) +
 				"' could not be decoded: " + problem +
 				". Scene, lock and coverage facts are unknown, so downstream certification must stand down. Restore one valid IAutoMovieScreenplayIndex and run lint again.",
 		)
 		return
 	}
-	anchor := "Screenplay index '" + screenplayRelative(root, indexFile) + "'"
+	anchor := "Screenplay index '" + automovieRelative(root, indexFile) + "'"
 	if index.Version != 1 || strings.TrimSpace(index.Production) == "" {
 		ctx.Report(
 			anchor +
@@ -354,7 +383,7 @@ func checkScreenplayIndex(
 		return
 	}
 	owner := strings.TrimSuffix(
-		filepath.ToSlash(screenplayRelative(root, indexFile)),
+		filepath.ToSlash(automovieRelative(root, indexFile)),
 		"/screenplay/index.json",
 	)
 	var production screenplayIDRecord
@@ -859,7 +888,7 @@ func validateScreenplayDownstream(
 		if problem := readScreenplayJSON(file, &shot); problem != "" {
 			ctx.Report(
 				anchor + " cannot decode shot contract '" +
-					screenplayRelative(root, file) + "': " + problem +
+					automovieRelative(root, file) + "': " + problem +
 					". Scene intent is unknown and cannot drain coverage. Restore valid JSON and run lint again.",
 			)
 			continue
@@ -919,7 +948,7 @@ func validateScreenplayDownstream(
 		if problem := readScreenplayJSON(file, &scenario); problem != "" {
 			ctx.Report(
 				anchor + " cannot decode acceptance scenario '" +
-					screenplayRelative(root, file) + "': " + problem +
+					automovieRelative(root, file) + "': " + problem +
 					". Observable screenplay verification is unknown. Restore valid JSON and run lint again.",
 			)
 			continue
@@ -1051,7 +1080,7 @@ func screenplayDesignIDs(
 		if problem := readScreenplayJSON(file, &record); problem != "" {
 			ctx.Report(
 				anchor + " cannot decode " + kind + " design '" +
-					screenplayRelative(root, file) + "': " + problem +
+					automovieRelative(root, file) + "': " + problem +
 					". Catalog bindings to this design family are unknown. Restore valid JSON and run lint again.",
 			)
 			continue
@@ -1075,7 +1104,7 @@ func screenplayWorldLandmarks(
 		if problem := readScreenplayJSON(file, &world); problem != "" {
 			ctx.Report(
 				anchor + " cannot decode world design '" +
-					screenplayRelative(root, file) + "': " + problem +
+					automovieRelative(root, file) + "': " + problem +
 					". Location bindings cannot be grounded. Restore valid JSON and run lint again.",
 			)
 			continue
@@ -1427,7 +1456,7 @@ func readScreenplayDocument(
 		)
 		return "", false
 	}
-	if !screenplayMatchesAnyPattern(root, relative, allowed) {
+	if !automovieMatchesAnyPattern(root, relative, allowed) {
 		ctx.Report(
 			anchor + " names " + kind + " document '" + relative +
 				"', but it is outside the configured document inputs. Edits would not invalidate lint. Add the path to screenplay-contract documents and run lint again.",
@@ -1532,9 +1561,10 @@ func readScreenplayJSON(file string, output any) string {
 	return ""
 }
 
-func screenplayProjectFiles(
+func automovieProjectFiles(
 	root string,
 	patterns []string,
+	label string,
 ) ([]string, []string) {
 	files := map[string]bool{}
 	problems := []string{}
@@ -1550,7 +1580,7 @@ func screenplayProjectFiles(
 			if ancestryProblem != "" {
 				problems = append(
 					problems,
-					"Screenplay-contract path '"+pattern+"' could not be inspected: "+
+					label+" path '"+pattern+"' could not be inspected: "+
 						ancestryProblem+
 						". Its evidence stands down until the path is physical.",
 				)
@@ -1567,7 +1597,7 @@ func screenplayProjectFiles(
 			} else {
 				problems = append(
 					problems,
-					"Screenplay-contract path '"+pattern+
+					label+" path '"+pattern+
 						"' is not one project-owned regular file. Replace the link or special entry and run lint again.",
 				)
 			}
@@ -1616,7 +1646,7 @@ func screenplayProjectFiles(
 				if matched {
 					problems = append(
 						problems,
-						"Screenplay-contract glob '"+pattern+
+						label+" glob '"+pattern+
 							"' encountered symbolic link '"+candidate+
 							"'. Replace it with project-owned files and run lint again.",
 					)
@@ -1657,7 +1687,7 @@ func screenplayProjectFiles(
 	return out, problems
 }
 
-func screenplayMatchesAnyPattern(
+func automovieMatchesAnyPattern(
 	root string,
 	relative string,
 	patterns []string,
@@ -1691,7 +1721,7 @@ func screenplayOwnedFiles(
 ) []string {
 	out := []string{}
 	for _, file := range files {
-		relative := filepath.ToSlash(screenplayRelative(root, file))
+		relative := filepath.ToSlash(automovieRelative(root, file))
 		if strings.HasPrefix(relative, prefix) {
 			out = append(out, file)
 		}
@@ -1710,7 +1740,7 @@ func screenplayExactFiles(
 	}
 	out := []string{}
 	for _, file := range files {
-		relative := filepath.ToSlash(screenplayRelative(root, file))
+		relative := filepath.ToSlash(automovieRelative(root, file))
 		if allowed[relative] {
 			out = append(out, file)
 		}
@@ -1718,7 +1748,7 @@ func screenplayExactFiles(
 	return out
 }
 
-func screenplayRelative(root string, file string) string {
+func automovieRelative(root string, file string) string {
 	relative, err := filepath.Rel(root, file)
 	if err != nil {
 		return file

@@ -15,7 +15,7 @@ import {
   buildHairShell,
   buildHairTails,
   buildSkullShell,
-} from "@automovie/forge";
+} from "@automovie/face";
 import {
   AutoMovieFaceParameterName,
   IAutoMovieFace,

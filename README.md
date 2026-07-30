@@ -91,8 +91,8 @@ The project is early. The most important unfinished work is completing the MCP m
 | [`@automovie/viewer`](./packages/viewer) | Three.js viewer for drawing engine output. It is a viewer, not an editor. |
 | [`@automovie/render`](./packages/render) | Headless render planning, model export, and video export helpers. |
 | [`@automovie/ingest`](./packages/ingest) | glTF/GLB ingestion into AutoMovie's core graph and clip data. |
-| [`@automovie/forge`](./packages/forge) | Procedural model-building experiments kept for simple generated assets. |
-| [`@automovie/lint`](./packages/lint) | Compiler-integrated project-contract rules for record ordering and unresolved scaffold sentinels. |
+| [`@automovie/face`](./packages/face) | Parametric face, head, hair, and fitting geometry retained behind an explicit dormant boundary. |
+| [`@automovie/lint`](./packages/lint) | Compiler-integrated contracts for asset provenance, screenplay evidence, state residency, and scaffold sentinels. |
 | [`@automovie/mcp`](./packages/mcp) | MCP surface for external agents to drive parts of the deterministic motion engine. |
 | [`@automovie/cli`](./packages/cli) | The `automovie` binary: scaffolds a starter wired for both doors, MCP and direct linking. |
 | [`@automovie/playground`](./packages/playground) | Browser demos for inspecting motion, props, cameras, and simple characters. |

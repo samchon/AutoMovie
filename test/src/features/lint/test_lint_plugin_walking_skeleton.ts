@@ -1,5 +1,6 @@
 import { renderScaffold, writeFiles } from "@automovie/cli";
 import { type SpawnSyncReturns, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -294,6 +295,99 @@ const presenceConfigWithFiles = (files: readonly string[]): string =>
     "};",
     "",
   ].join("\n");
+
+const assetProvenanceConfig = [
+  'import { automovie } from "@automovie/lint";',
+  "",
+  "export default {",
+  "  plugins: { automovie },",
+  "  rules: {",
+  '    "automovie/asset-provenance": [',
+  '      "error",',
+  "      {",
+  '        manifests: [".automovie/assets.json"],',
+  '        assets: ["public/assets/*.bin", "public/assets/*.glb"],',
+  "      },",
+  "    ],",
+  "  },",
+  "};",
+  "",
+].join("\n");
+
+const assetProvenanceFiles = (
+  variant:
+    | "valid"
+    | "blank-license"
+    | "digest-drift"
+    | "missing-entry"
+    | "missing-manifest"
+    | "model-decisions-missing",
+): Record<string, string> => {
+  const bytes =
+    variant === "digest-drift" ? "substituted asset\n" : "licensed asset\n";
+  const recordedBytes = "licensed asset\n";
+  const digest = (value: string): string =>
+    `sha256:${createHash("sha256").update(value).digest("hex")}`;
+  const assets: Array<Record<string, unknown>> = [
+    {
+      path: "public/assets/tone.bin",
+      digest: digest(recordedBytes),
+      original: {
+        url: "https://example.com/tone.bin",
+        digest: digest(recordedBytes),
+      },
+      license: {
+        identifier: variant === "blank-license" ? "" : "CC0-1.0",
+        url: "https://creativecommons.org/publicdomain/zero/1.0/",
+      },
+      processing: [],
+      uses: [
+        {
+          kind: "audio",
+          target: "shot-1",
+          reason: "The shot requires this licensed tone.",
+        },
+      ],
+    },
+  ];
+  const files: Record<string, string> = {
+    ".automovie/assets.json": JSON.stringify({ version: 1, assets }),
+    "public/assets/tone.bin": bytes,
+    "src/index.ts": "export {};\n",
+  };
+  if (variant === "missing-manifest") delete files[".automovie/assets.json"];
+  if (variant === "missing-entry")
+    files["public/assets/unrecorded.bin"] = "unrecorded\n";
+  if (variant === "model-decisions-missing") {
+    const modelBytes = "external model\n";
+    assets.push({
+      path: "public/assets/actor.glb",
+      digest: digest(modelBytes),
+      original: {
+        url: "https://example.com/actor.glb",
+        digest: digest(modelBytes),
+      },
+      license: {
+        identifier: "CC0-1.0",
+        url: "https://creativecommons.org/publicdomain/zero/1.0/",
+      },
+      processing: [],
+      uses: [
+        {
+          kind: "model",
+          target: "actor",
+          reason: "The production casts this external model.",
+        },
+      ],
+    });
+    assets.sort((left, right) =>
+      String(left.path) < String(right.path) ? -1 : 1,
+    );
+    files[".automovie/assets.json"] = JSON.stringify({ version: 1, assets });
+    files["public/assets/actor.glb"] = modelBytes;
+  }
+  return files;
+};
 
 const screenplayConfig = [
   'import { automovie } from "@automovie/lint";',
@@ -631,7 +725,10 @@ const assertFailedWith = (
  *    continuations remain silent.
  * 4. State residency is silent before records exist, rejects one orphan, and
  *    accepts valid empty upstream and downstream records.
- * 5. The screenplay project rule accepts a grounded locked ledger and diagnoses
+ * 5. Asset provenance accepts one byte-exact licensed ledger and rejects a missing
+ *    ledger, digest drift, blank license, missing entries and model records
+ *    without ingest/LOD/proxy decisions.
+ * 6. The screenplay project rule accepts a grounded locked ledger and diagnoses
  *    uncovered prose, missing headings, removed lock ids and dangling evidence,
  *    intent-only coverage, production-isolated proof, exact continuity proof,
  *    explicit design bindings and disposition/realization contradictions.
@@ -750,6 +847,51 @@ export function test_lint_plugin_walking_skeleton(): void {
     noRecords,
     "A project with no resident state slots must stay silent.",
   );
+
+  const validAssetProvenance = runFixture({
+    name: "asset-provenance-valid",
+    lintConfig: assetProvenanceConfig,
+    files: assetProvenanceFiles("valid"),
+  });
+  assertSucceeded(
+    validAssetProvenance,
+    "One byte-exact asset with source, license and production use must satisfy the provenance ledger.",
+  );
+
+  for (const [variant, expected, because] of [
+    [
+      "missing-manifest",
+      "but no physical asset manifest",
+      "Distributable bytes without a provenance manifest must fail lint.",
+    ],
+    [
+      "digest-drift",
+      "but current bytes are",
+      "Replacing licensed bytes without updating verified provenance must fail lint.",
+    ],
+    [
+      "blank-license",
+      "license identity/URL",
+      "A blank distribution license must fail lint.",
+    ],
+    [
+      "missing-entry",
+      "has no entry for distributable asset",
+      "Every configured distributable asset must have one manifest entry.",
+    ],
+    [
+      "model-decisions-missing",
+      "without ingest profile, explicit LOD, collision proxy or measurement proxy",
+      "An external model must record its ingest, LOD and proxy decisions.",
+    ],
+  ] as const) {
+    const result = runFixture({
+      name: `asset-provenance-${variant}`,
+      lintConfig: assetProvenanceConfig,
+      files: assetProvenanceFiles(variant),
+    });
+    assertFailedWith(result, expected, because);
+  }
 
   const validScreenplay = runFixture({
     name: "screenplay-valid",

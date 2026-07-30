@@ -3,7 +3,13 @@
   "projectId": "{{name}}",
   "sourceRoots": ["src"],
   "contentRoots": ["viewer", "scripts", "public"],
-  "contentFiles": ["automovie.config.ts", "vite.config.ts", "package.json", "pnpm-lock.yaml"],
+  "contentFiles": [
+    "automovie.config.ts",
+    "vite.config.ts",
+    "package.json",
+    "pnpm-lock.yaml"
+  ],
+  "assetManifest": ".automovie/assets.json",
   "generatedRoot": "generated",
   "renderRoot": "renders"
 }

@@ -52,6 +52,36 @@ const config = {
     automovie,
   },
   rules: {
+    "automovie/asset-provenance": [
+      "error",
+      {
+        manifests: [".automovie/assets.json"],
+        assets: [
+          "public/**/*.bin",
+          "public/**/*.exr",
+          "public/**/*.flac",
+          "public/**/*.glb",
+          "public/**/*.gltf",
+          "public/**/*.hdr",
+          "public/**/*.jpeg",
+          "public/**/*.jpg",
+          "public/**/*.json",
+          "public/**/*.ktx",
+          "public/**/*.ktx2",
+          "public/**/*.mp3",
+          "public/**/*.ogg",
+          "public/**/*.otf",
+          "public/**/*.png",
+          "public/**/*.svg",
+          "public/**/*.ttf",
+          "public/**/*.vrm",
+          "public/**/*.wav",
+          "public/**/*.webp",
+          "public/**/*.woff",
+          "public/**/*.woff2",
+        ],
+      },
+    ],
     "automovie/screenplay-contract": [
       "error",
       {

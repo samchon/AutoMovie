@@ -6,6 +6,7 @@ import {
 } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
+  IAutoMovieAssetManifest,
   IAutoMovieCompileProjectInput,
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledContractRealization,
@@ -18,6 +19,7 @@ import {
   IAutoMovieGeneratedFile,
   IAutoMovieGeneratedManifest,
   IAutoMovieMaterializedFile,
+  IAutoMovieProductionManifest,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderReceipt,
@@ -128,6 +130,7 @@ export class AutoMovieProductionCompiler {
   ): IAutoMovieCompileProjectOutput {
     const graph = this.project.graph();
     const inputRevision = this.project.revision();
+    const projectManifest = this.project.manifest();
     const diagnostics: IAutoMovieDiagnostic[] = [
       ...missingDesignDiagnostics(this.project, graph),
       ...validateAutoMovieProductionGraph(graph, this.project.productionId),
@@ -256,10 +259,17 @@ export class AutoMovieProductionCompiler {
       }
     const contentFields: IAutoMovieFingerprintField[] = [];
     let contentInputs: IAutoMovieProductionContentInput[] | undefined;
+    let declaredAssets: string[] = [];
     if (input.scope !== "design")
       try {
         contentInputs = this.project.contentInputs();
         contentFields.push(...contentFingerprintFields(contentInputs));
+        const assetInventory = compilerAssetInventory(
+          projectManifest.assetManifest,
+          contentInputs,
+        );
+        diagnostics.push(...assetInventory.diagnostics);
+        declaredAssets = assetInventory.assets;
       } catch (error) {
         diagnostics.push({
           code: "content-input-unsafe",
@@ -285,9 +295,7 @@ export class AutoMovieProductionCompiler {
       const context: IAutoMovieFilmBuildContext = {
         production: graph.production!,
         shots: Object.fromEntries(graph.shots),
-        assets: contentInputs
-          .filter((entry) => entry.render && entry.bytes !== null)
-          .map((entry) => entry.path),
+        assets: declaredAssets,
         effectZones: graph.world!.effectZones,
       };
       const film = compileFilmSource({
@@ -2161,6 +2169,172 @@ const errorMessage = (error: unknown): string =>
 
 const isTypeScriptSourcePath = (file: string): boolean =>
   [".ts", ".tsx", ".mts", ".cts"].includes(path.extname(file).toLowerCase());
+
+const compilerAssetInventory = (
+  manifestPath: IAutoMovieProductionManifest["assetManifest"],
+  inputs: readonly IAutoMovieProductionContentInput[],
+): { assets: string[]; diagnostics: IAutoMovieDiagnostic[] } => {
+  if (manifestPath === undefined) return { assets: [], diagnostics: [] };
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const diagnostic = (code: string, target: string, message: string): void => {
+    diagnostics.push({
+      code,
+      category: "error",
+      phase: "project",
+      target,
+      path: manifestPath,
+      message,
+    });
+  };
+  const manifestInput = inputs.find((entry) => entry.path === manifestPath);
+  if (manifestInput?.bytes === null || manifestInput === undefined) {
+    diagnostic(
+      "asset-manifest-missing",
+      "asset-manifest",
+      `Production manifest declares "${manifestPath}", but that physical provenance ledger is absent. Restore it before compiling asset references.`,
+    );
+    return { assets: [], diagnostics };
+  }
+
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(Buffer.from(manifestInput.bytes).toString("utf8"));
+  } catch (error) {
+    diagnostic(
+      "asset-manifest-invalid",
+      "asset-manifest",
+      `Asset manifest is not valid JSON: ${errorMessage(error)}. Restore one IAutoMovieAssetManifest before compiling.`,
+    );
+    return { assets: [], diagnostics };
+  }
+  const validation = typia.validateEquals<IAutoMovieAssetManifest>(decoded);
+  if (validation.success === false) {
+    diagnostic(
+      "asset-manifest-invalid",
+      "asset-manifest",
+      `Asset manifest does not satisfy IAutoMovieAssetManifest: ${validation.errors
+        .map((error) => `${error.path}: ${error.expected}`)
+        .join("; ")}. Correct the typed provenance ledger before compiling.`,
+    );
+    return { assets: [], diagnostics };
+  }
+
+  const content = new Map(inputs.map((entry) => [entry.path, entry]));
+  const paths = new Map<string, string>();
+  const assets = validation.data.assets.map((asset) => asset.path);
+  if (
+    assets.some(
+      (asset, index) =>
+        index !== 0 && compareCodeUnits(assets[index - 1]!, asset) >= 0,
+    )
+  )
+    diagnostic(
+      "asset-manifest-order",
+      "asset-manifest",
+      "Asset entries must be in unique canonical path order. Sort them by code unit and remove duplicates before compiling.",
+    );
+  for (const asset of validation.data.assets) {
+    const folded = asset.path.toLowerCase();
+    const prior = paths.get(folded);
+    if (
+      isCanonicalAssetPath(asset.path) === false ||
+      (prior !== undefined && prior !== asset.path)
+    )
+      diagnostic(
+        "asset-path-invalid",
+        asset.path,
+        `Asset path "${asset.path}" is not one canonical, portable project-relative identity. Keep one spelling inside declared content roots.`,
+      );
+    paths.set(folded, asset.path);
+    const input = content.get(asset.path);
+    if (input?.bytes === null || input === undefined || input.render === false)
+      diagnostic(
+        "asset-bytes-missing",
+        asset.path,
+        `Manifest asset "${asset.path}" is not a physical file inside contentRoots/contentFiles. Restore and declare the exact bytes before compiling.`,
+      );
+    else if (asset.digest !== digestAutoMovieBytes(input.bytes))
+      diagnostic(
+        "asset-digest-mismatch",
+        asset.path,
+        `Manifest digest ${asset.digest} does not match current bytes ${digestAutoMovieBytes(input.bytes)}. Restore the licensed bytes or update provenance from the verified source.`,
+      );
+    if (
+      isSha256Digest(asset.digest) === false ||
+      isSha256Digest(asset.original.digest) === false ||
+      isHttpUrl(asset.original.url) === false ||
+      asset.license.identifier.trim().length === 0 ||
+      isHttpUrl(asset.license.url) === false ||
+      asset.uses.length === 0 ||
+      asset.uses.some(
+        (use) =>
+          use.target.trim().length === 0 || use.reason.trim().length === 0,
+      ) ||
+      asset.processing.some(
+        (step) =>
+          step.tool.trim().length === 0 || step.command.trim().length === 0,
+      )
+    )
+      diagnostic(
+        "asset-provenance-incomplete",
+        asset.path,
+        `Asset "${asset.path}" lacks a full source URL, original/current SHA-256, license, processing identity, or reasoned use. Complete the distribution ledger before compiling.`,
+      );
+    if (asset.processing.length === 0 && asset.digest !== asset.original.digest)
+      diagnostic(
+        "asset-processing-missing",
+        asset.path,
+        `Asset "${asset.path}" differs from its original digest but records no processing steps. Record the reproducible transformation chain before compiling.`,
+      );
+    if (
+      isExternalModelAsset(asset.path) &&
+      (asset.model === undefined ||
+        asset.model.ingestProfile.trim().length === 0 ||
+        asset.model.lod.length === 0 ||
+        asset.model.collisionProxy.trim().length === 0 ||
+        asset.model.measurementProxy.trim().length === 0)
+    )
+      diagnostic(
+        "asset-model-provenance-missing",
+        asset.path,
+        `External model "${asset.path}" must declare its ingest profile, explicit LOD ledger, collision proxy and measurement proxy before compiling.`,
+      );
+  }
+  for (const asset of validation.data.assets)
+    for (const lod of asset.model?.lod ?? [])
+      if (
+        lod.level.trim().length === 0 ||
+        paths.has(lod.asset.toLowerCase()) === false
+      )
+        diagnostic(
+          "asset-model-lod-dangling",
+          asset.path,
+          `Model asset "${asset.path}" has LOD "${lod.level}" pointing to unknown manifest asset "${lod.asset}". Ground every LOD in the same byte ledger.`,
+        );
+  return { assets, diagnostics };
+};
+
+const isCanonicalAssetPath = (value: string): boolean =>
+  path.posix.isAbsolute(value) === false &&
+  /^[A-Za-z]:/.test(value) === false &&
+  value.includes("\\") === false &&
+  value !== "." &&
+  path.posix.normalize(value) === value &&
+  value.split("/").every((segment) => segment.length > 0 && segment !== "..");
+
+const isSha256Digest = (value: string): boolean =>
+  /^sha256:[0-9a-f]{64}$/.test(value);
+
+const isHttpUrl = (value: string): boolean => {
+  try {
+    return ["http:", "https:"].includes(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+};
+
+const isExternalModelAsset = (value: string): boolean =>
+  [".gltf", ".glb", ".vrm"].includes(path.extname(value).toLowerCase());
 
 const contentFingerprintFields = (
   inputs: readonly IAutoMovieProductionContentInput[],

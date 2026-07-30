@@ -190,7 +190,7 @@ importers:
         specifier: catalog:typescript
         version: 7.0.2
 
-  packages/forge:
+  packages/face:
     dependencies:
       '@automovie/interface':
         specifier: workspace:^
@@ -318,9 +318,9 @@ importers:
       '@automovie/engine':
         specifier: workspace:^
         version: link:../engine
-      '@automovie/forge':
+      '@automovie/face':
         specifier: workspace:^
-        version: link:../forge
+        version: link:../face
       '@automovie/interface':
         specifier: workspace:^
         version: link:../interface
@@ -444,9 +444,9 @@ importers:
       '@automovie/engine':
         specifier: workspace:^
         version: link:../packages/engine
-      '@automovie/forge':
+      '@automovie/face':
         specifier: workspace:^
-        version: link:../packages/forge
+        version: link:../packages/face
       '@automovie/ingest':
         specifier: workspace:^
         version: link:../packages/ingest

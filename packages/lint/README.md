@@ -13,6 +13,13 @@ export default {
   plugins: { automovie },
   rules: {
     "automovie/template-sentinel": "error",
+    "automovie/asset-provenance": [
+      "error",
+      {
+        manifests: [".automovie/assets.json"],
+        assets: ["public/**/*.glb", "public/**/*.png", "public/**/*.wav"],
+      },
+    ],
     "automovie/screenplay-contract": [
       "error",
       {
@@ -110,6 +117,18 @@ realized shot을 관찰한 shot/film review의 `acceptance-scenarios` pass가 �
 lock 뒤 기존 숫자는 `sceneIds` 원장에 남아야 한다. 삭제는 `OMITTED`
 tombstone으로 보존하고 새 장면은 `SCN-A11` 같은 alpha insertion id만
 허용한다. index가 없으면 rule은 조용하다.
+
+### `automovie/asset-provenance`
+
+설정된 distributable asset 파일마다 `.automovie/assets.json`의 유일한 항목을
+요구하고 현재 바이트의 SHA-256을 원장과 대조한다. source URL, original
+SHA-256, license 식별자/URL, 재현 가능한 processing chain, reasoned use가
+비어 있으면 실패한다. 원장 없이 asset 파일이 존재하거나 원장 밖 파일이
+생겨도 실패하므로 교체된 바이트와 미등록 배포물을 build-time에 차단한다.
+
+외부 `.gltf`, `.glb`, `.vrm`은 ingest profile, 명시적 LOD manifest 항목,
+collision proxy, measurement proxy를 추가로 기록한다. 이 rule은 파일 계층을
+검증하며 `@automovie/ingest`의 고정 바이트 순수 변환 계약에는 관여하지 않는다.
 
 ## Rule 품질 원칙
 

@@ -711,6 +711,30 @@ export class AutoMovieProductionProject {
         true,
       );
     }
+    if (this.manifest_.assetManifest !== undefined) {
+      const relativeFile = this.manifest_.assetManifest;
+      const absolute = resolveInside(this.root, relativeFile);
+      const linked = lstatOrNull(absolute);
+      if (linked === null)
+        setInput(normalizeSlash(relativeFile), null, false, false);
+      else {
+        if (linked.isSymbolicLink() || linked.isFile() === false)
+          throw new Error(
+            `Declared asset manifest "${relativeFile}" must be a physical regular file before compileProject.`,
+          );
+        const real = fs.realpathSync(absolute);
+        if (isInside(this.rootReal, real) === false)
+          throw new Error(
+            `Declared asset manifest "${relativeFile}" escapes the production project through a junction. Move it into the physical .automovie directory before compileProject.`,
+          );
+        setInput(
+          normalizeSlash(relativeFile),
+          fs.readFileSync(real),
+          false,
+          false,
+        );
+      }
+    }
     return [...inputs]
       .map(([inputPath, input]) => ({ path: inputPath, ...input }))
       .sort((left, right) => compareCodeUnits(left.path, right.path));
@@ -2605,13 +2629,15 @@ const validateManifest = (
         record.contentFiles.some(
           (entry) => typeof entry !== "string" || entry.trim().length === 0,
         ))) ||
+    (record.assetManifest !== undefined &&
+      record.assetManifest !== ".automovie/assets.json") ||
     typeof record.generatedRoot !== "string" ||
     record.generatedRoot.trim().length === 0 ||
     typeof record.renderRoot !== "string" ||
     record.renderRoot.trim().length === 0
   )
     throw new Error(
-      `Invalid production manifest "${file}". Provide projectId, sourceRoots, generatedRoot and renderRoot.`,
+      `Invalid production manifest "${file}". Provide projectId, sourceRoots, generatedRoot and renderRoot; when present, assetManifest must be ".automovie/assets.json".`,
     );
   const manifest = record as IAutoMovieProductionManifest &
     Record<string, unknown>;

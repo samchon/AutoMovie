@@ -7,9 +7,9 @@
  * target PER SIDE (`R`/`L` suffixes for the subject's right/left) so a shared
  * document value drives both targets and a `left`/`right` override adjusts one:
  * asymmetry is data, not extra geometry. The engine's `flattenFace` performs
- * the projection. The forge bakes one morph target per name into the canonical
- * face template (MediaPipe 468-vertex topology), each turning one nameable
- * trait so identity stays put while a single trait moves. The set is
+ * the projection. `@automovie/face` bakes one morph target per name into the
+ * canonical face template (MediaPipe 468-vertex topology), each turning one
+ * nameable trait so identity stays put while a single trait moves. The set is
  * deliberately low-dimensional and human-readable, the same design bet as
  * {@link AutoMovieArkitChannel} for expression, applied to face _shape_.
  *

@@ -54,6 +54,13 @@ export interface IAutoMovieProductionManifest {
   contentRoots?: string[];
   /** Additional project-relative files whose bytes affect compile identity. */
   contentFiles?: string[];
+  /**
+   * Project-global asset provenance ledger.
+   *
+   * When declared, compiler asset references are restricted to the byte-exact
+   * paths in this manifest.
+   */
+  assetManifest?: ".automovie/assets.json";
   /** Compiler-owned generated root. */
   generatedRoot: string;
   /** Content-addressed render root. */

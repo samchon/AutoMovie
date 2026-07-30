@@ -63,6 +63,13 @@ formation runtimes, promoted hero nodes, and shots, then derives named-state,
 event, camera, and formation outcomes from current compiled data instead of
 accepting a source-authored compliance witness.
 
+A declared `.automovie/assets.json` joins every distributable asset to its
+current/original SHA-256, source, license, processing, and production use. The
+compiler exposes only manifest-owned byte-exact paths to film source; referenced
+assets without that ledger, changed bytes, incomplete rights, and external
+models without ingest/LOD/collision/measurement decisions fail compilation.
+`@automovie/ingest` remains a pure fixed-byte conversion layer.
+
 A generated manifest binds source hashes, design hashes, compiler protocol and
 version, and generated file hashes. Required review uses exact production-raster
 frames and passing compiler-derived event or metric outcomes. Final delivery

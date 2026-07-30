@@ -77,6 +77,7 @@ export const test_cli_scaffold = (): void => {
     "the starter renders its expected file set, in its guaranteed order",
     Object.keys(files),
     [
+      ".automovie/assets.json",
       ".automovie/design/acceptance/answer-beauty.json",
       ".automovie/design/acceptance/answer-pose.json",
       ".automovie/design/acceptance/opening-beauty.json",
@@ -320,6 +321,16 @@ export const test_cli_scaffold = (): void => {
       files["lint.config.ts"]!.includes(
         '"automovie/template-sentinel": "error"',
       ) &&
+      files["lint.config.ts"]!.includes('"automovie/asset-provenance": [') &&
+      files[".automovie/manifest.json"]!.includes(
+        '"assetManifest": ".automovie/assets.json"',
+      ) &&
+      files[".automovie/assets.json"]!.includes(
+        '"path": "public/audio/starter-tone.json"',
+      ) &&
+      files[".automovie/assets.json"]!.includes(
+        '"digest": "sha256:f7c7178b601f4b029ba3c56ab05f2bb5ab57f9d0da21fa35cd9292656c2c48aa"',
+      ) &&
       files["lint.config.ts"]!.includes('"automovie/screenplay-contract": ['),
   );
   TestValidator.predicate(
@@ -369,6 +380,7 @@ export const test_cli_scaffold = (): void => {
         path.relative(target, absolute).split(path.sep).join("/"),
       ),
       [
+        ".automovie/assets.json",
         ".automovie/design/acceptance/answer-beauty.json",
         ".automovie/design/acceptance/answer-pose.json",
         ".automovie/design/acceptance/opening-beauty.json",

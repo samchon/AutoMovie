@@ -1,4 +1,5 @@
 import {
+  IAutoMovieAssetManifest,
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderReceipt,
 } from "@automovie/interface";
@@ -99,6 +100,192 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           (entry) => entry.currentFingerprint !== null,
         ),
     );
+
+    const assetManifestPath = path.join(fixture.root, ".automovie/assets.json");
+    const assetPath = path.join(fixture.root, "public/audio/starter-tone.json");
+    const originalAssetManifest = fs.readFileSync(assetManifestPath, "utf8");
+    const originalAssetBytes = fs.readFileSync(assetPath);
+    const assetManifest = JSON.parse(
+      originalAssetManifest,
+    ) as IAutoMovieAssetManifest;
+    const assetCodes = (value: unknown): Set<string> => {
+      fs.writeFileSync(
+        assetManifestPath,
+        typeof value === "string" ? value : JSON.stringify(value),
+      );
+      return diagnosticCodes(compiler.lint({ scope: "source" }));
+    };
+
+    fs.appendFileSync(assetPath, "drift");
+    const driftedAsset = diagnosticCodes(compiler.lint({ scope: "source" }));
+    fs.writeFileSync(assetPath, originalAssetBytes);
+    fs.rmSync(assetManifestPath);
+    const missingAssetManifest = diagnosticCodes(
+      compiler.lint({ scope: "source" }),
+    );
+    fs.writeFileSync(assetManifestPath, originalAssetManifest);
+    const malformedAssetManifest = assetCodes("{bad");
+    const invalidAssetManifest = assetCodes({});
+    const incompleteAssetManifest = assetCodes({
+      ...assetManifest,
+      assets: assetManifest.assets.map((asset) => ({
+        ...asset,
+        original: { ...asset.original, url: "not a URL" },
+        license: { ...asset.license, identifier: "", url: "ftp://license" },
+        uses: [{ ...asset.uses[0]!, target: "", reason: "" }],
+        processing: [{ tool: "", command: "", parameters: {} }],
+      })),
+    });
+    const missingProcessing = assetCodes({
+      ...assetManifest,
+      assets: assetManifest.assets.map((asset) => ({
+        ...asset,
+        original: {
+          ...asset.original,
+          digest: `sha256:${"f".repeat(64)}`,
+        },
+      })),
+    });
+    const nonCanonicalAsset = assetCodes({
+      ...assetManifest,
+      assets: [
+        ...assetManifest.assets,
+        { ...assetManifest.assets[0]! },
+        {
+          ...assetManifest.assets[0]!,
+          path: "public\\audio\\starter-tone.json",
+        },
+      ],
+    });
+    fs.rmSync(assetPath);
+    const missingAssetBytes = assetCodes(assetManifest);
+    fs.writeFileSync(assetPath, originalAssetBytes);
+
+    const modelPath = path.join(fixture.root, "public/models/actor.glb");
+    const modelBytes = Buffer.from("external model");
+    fs.mkdirSync(path.dirname(modelPath), { recursive: true });
+    fs.writeFileSync(modelPath, modelBytes);
+    const modelDigest = digestAutoMovieBytes(modelBytes);
+    const modelAsset = {
+      path: "public/models/actor.glb",
+      digest: modelDigest,
+      original: {
+        url: "https://example.com/actor.glb",
+        digest: modelDigest,
+      },
+      license: {
+        identifier: "CC0-1.0",
+        url: "https://creativecommons.org/publicdomain/zero/1.0/",
+      },
+      processing: [],
+      uses: [
+        {
+          kind: "model" as const,
+          target: "actor",
+          reason: "The fixture casts this external model.",
+        },
+      ],
+      model: {
+        ingestProfile: "vrm-humanoid-v1",
+        lod: [{ level: "hero", asset: "public/models/actor.glb" }],
+        collisionProxy: "capsule-v1",
+        measurementProxy: "humanoid-landmarks-v1",
+      },
+    };
+    const validModelManifest = {
+      ...assetManifest,
+      assets: [...assetManifest.assets, modelAsset],
+    } satisfies IAutoMovieAssetManifest;
+    const validModelAsset = assetCodes(validModelManifest);
+    const missingModelProvenance = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path ? { ...asset, model: undefined } : asset,
+      ),
+    });
+    const danglingModelLod = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                lod: [{ level: "", asset: "public/models/missing.glb" }],
+              },
+            }
+          : asset,
+      ),
+    });
+    fs.rmSync(modelPath);
+    fs.rmdirSync(path.dirname(modelPath));
+    fs.writeFileSync(assetManifestPath, originalAssetManifest);
+
+    TestValidator.predicate(
+      "compiler binds asset references to a byte-exact licensed manifest",
+      driftedAsset.has("asset-digest-mismatch") &&
+        missingAssetManifest.has("asset-manifest-missing") &&
+        malformedAssetManifest.has("asset-manifest-invalid") &&
+        invalidAssetManifest.has("asset-manifest-invalid") &&
+        incompleteAssetManifest.has("asset-provenance-incomplete") &&
+        missingProcessing.has("asset-processing-missing") &&
+        nonCanonicalAsset.has("asset-path-invalid") &&
+        nonCanonicalAsset.has("asset-manifest-order") &&
+        missingAssetBytes.has("asset-bytes-missing") &&
+        [...validModelAsset].every((code) => !code.startsWith("asset-")) &&
+        missingModelProvenance.has("asset-model-provenance-missing") &&
+        danglingModelLod.has("asset-model-lod-dangling"),
+    );
+
+    const unmanifestedFixture = productionFixture();
+    try {
+      const ownershipPath = path.join(
+        unmanifestedFixture.root,
+        ".automovie/manifest.json",
+      );
+      const ownership = JSON.parse(
+        fs.readFileSync(ownershipPath, "utf8"),
+      ) as Record<string, unknown>;
+      delete ownership.assetManifest;
+      fs.writeFileSync(ownershipPath, JSON.stringify(ownership));
+      const unmanifestedFilmPath = path.join(
+        unmanifestedFixture.root,
+        "src/film.ts",
+      );
+      fs.writeFileSync(
+        unmanifestedFilmPath,
+        fs.readFileSync(unmanifestedFilmPath, "utf8").replace(
+          "audio: []",
+          `audio: [{
+          id: "unmanifested",
+          asset: "public/audio/starter-tone.json",
+          sourceDuration: { seconds: 6 },
+          sourceOffset: { frame: 0 },
+          start: { frame: 0 },
+          duration: { seconds: 6 },
+          gain: 0,
+          fadeIn: { frame: 0 },
+          fadeOut: { frame: 0 },
+          bus: "ambience",
+        }]`,
+        ),
+      );
+      const unmanifestedProject = AutoMovieProductionProject.open(
+        unmanifestedFixture.root,
+      );
+      const unmanifested = new AutoMovieProductionCompiler(
+        unmanifestedProject,
+        () => ({ entries: [] }),
+      ).lint({ scope: "source" });
+      TestValidator.predicate(
+        "a referenced content file cannot become a film asset without a provenance manifest",
+        unmanifested.success === false &&
+          diagnosticCodes(unmanifested).has("film-audio-cue-invalid"),
+      );
+    } finally {
+      unmanifestedFixture.dispose();
+    }
+
     let singleQueueCalls = 0;
     const singleQueueCompile = new AutoMovieProductionCompiler(
       project,

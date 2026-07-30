@@ -1450,6 +1450,13 @@ export const test_mcp_production_project = (): void => {
         ) &&
         inputs.some(
           (input) =>
+            input.path === ".automovie/assets.json" &&
+            input.bytes !== null &&
+            input.source === false &&
+            input.render === false,
+        ) &&
+        inputs.some(
+          (input) =>
             input.path === "src/shots/opening.ts" &&
             input.source &&
             input.render,
@@ -1541,6 +1548,47 @@ export const test_mcp_production_project = (): void => {
     }
   } finally {
     contentFixture.dispose();
+  }
+
+  for (const [name, replace, expected] of [
+    [
+      "missing",
+      (assetManifestPath: string): void => fs.rmSync(assetManifestPath),
+      (inputs: ReturnType<AutoMovieProductionProject["contentInputs"]>) =>
+        inputs.some(
+          (input) =>
+            input.path === ".automovie/assets.json" && input.bytes === null,
+        ),
+    ],
+    [
+      "directory",
+      (assetManifestPath: string): void => {
+        fs.rmSync(assetManifestPath);
+        fs.mkdirSync(assetManifestPath);
+      },
+      (_inputs: ReturnType<AutoMovieProductionProject["contentInputs"]>) =>
+        false,
+    ],
+  ] as const) {
+    const assetManifestFixture = productionFixture();
+    try {
+      const assetManifestPath = path.join(
+        assetManifestFixture.root,
+        ".automovie/assets.json",
+      );
+      replace(assetManifestPath);
+      const assetManifestProject = AutoMovieProductionProject.open(
+        assetManifestFixture.root,
+      );
+      TestValidator.predicate(
+        `declared asset manifest reports ${name} physical state`,
+        name === "directory"
+          ? throws(() => assetManifestProject.contentInputs())
+          : expected(assetManifestProject.contentInputs()),
+      );
+    } finally {
+      assetManifestFixture.dispose();
+    }
   }
 
   const nestedContentFileFixture = productionFixture();
@@ -2569,6 +2617,7 @@ export const test_mcp_production_project = (): void => {
       "null",
       '{"formatVersion":1}',
       '{"formatVersion":2,"projectId":"","sourceRoots":[],"generatedRoot":"g","renderRoot":"r"}',
+      '{"formatVersion":2,"projectId":"x","sourceRoots":[],"assetManifest":"assets.json","generatedRoot":"g","renderRoot":"r"}',
     ]) {
       const root = path.join(invalidRoot, `manifest-${Math.random()}`);
       fs.mkdirSync(path.join(root, ".automovie"), { recursive: true });

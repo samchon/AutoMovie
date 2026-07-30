@@ -21,7 +21,8 @@ import { IAutoMovieFaceNose } from "./IAutoMovieFaceNose";
  * caricature. **Omitted fields and groups mean neutral**: emit only the traits
  * you intend to change. Magnitudes are enforced at runtime by the engine
  * validator; each leaf projects onto one glTF morph target
- * ({@link AutoMovieFaceParameterName}) the forge bakes into the template.
+ * ({@link AutoMovieFaceParameterName}) the face package bakes into the
+ * template.
  *
  * Identity (whose face this is) and skin texture are asset concerns living in
  * the template, not here: this document stays a pure, portable trait vector, so

@@ -1,7 +1,7 @@
 /**
  * The closed set of **morph names** for the parametric head built on the clean
  * MakeHuman-derived base: the flat vocabulary that {@link IAutoMovieHead}
- * projects onto and the forge `morphHead` applies.
+ * projects onto and the `@automovie/face` `morphHead` applies.
  *
  * These are the comprehensive identity/shape controls (not expression): head
  * silhouette and proportion, brow, eyes (incl. the East-Asian epicanthus and
