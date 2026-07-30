@@ -96,6 +96,12 @@ export interface IAutoMovieModelRecipe {
     | "weapon"
     | "primitive-prop";
   /**
+   * Registered external appearance asset, or omitted for compiler-generated
+   * primitive geometry. The active production asset ledger must carry one
+   * matching `model-recipe` use for this exact recipe id.
+   */
+  asset?: string;
+  /**
    * Exact archetype-specific parameter map. Read `MODEL_RECIPE`: required keys,
    * value kinds and ranges vary by archetype, and unsupported keys are
    * refused.

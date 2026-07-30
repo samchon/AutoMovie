@@ -3,6 +3,7 @@ package automovie
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"math"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -42,8 +43,11 @@ type assetProvenanceRecord struct {
 		Parameters map[string]any `json:"parameters"`
 	} `json:"processing"`
 	Uses []struct {
-		Kind   string `json:"kind"`
-		Target string `json:"target"`
+		Production string `json:"production"`
+		Consumer   struct {
+			Kind string `json:"kind"`
+			ID   string `json:"id"`
+		} `json:"consumer"`
 		Reason string `json:"reason"`
 	} `json:"uses"`
 	Model *struct {
@@ -52,9 +56,16 @@ type assetProvenanceRecord struct {
 			Level string `json:"level"`
 			Asset string `json:"asset"`
 		} `json:"lod"`
-		CollisionProxy   string `json:"collisionProxy"`
-		MeasurementProxy string `json:"measurementProxy"`
+		CollisionProxy   assetModelProxy `json:"collisionProxy"`
+		MeasurementProxy assetModelProxy `json:"measurementProxy"`
 	} `json:"model"`
+}
+
+type assetModelProxy struct {
+	Kind       string             `json:"kind"`
+	Asset      string             `json:"asset"`
+	Recipe     string             `json:"recipe"`
+	Parameters map[string]float64 `json:"parameters"`
 }
 
 type assetProvenanceRule struct{}
@@ -268,14 +279,41 @@ func checkAssetProvenanceManifest(
 		}
 	}
 	for _, asset := range manifest.Assets {
+		levels := map[string]bool{}
+		previousLevel := -1
 		for _, lod := range asset.ModelLOD() {
-			if _, exists := entries[strings.ToLower(lod.Asset)]; !exists {
+			level := assetModelLODLevel[lod.Level]
+			target, exists := entries[strings.ToLower(lod.Asset)]
+			if levels[lod.Level] ||
+				level <= previousLevel ||
+				!exists ||
+				!assetModelPath(target.Path) {
 				ctx.Report(
 					anchor + " model asset '" + asset.Path + "' LOD '" +
-						lod.Level + "' cites unknown manifest asset '" +
+						lod.Level + "' is duplicate/out of order or cites non-model manifest asset '" +
 						lod.Asset +
-						"'. Ground every level in the same byte ledger and run lint again.",
+						"'. Keep unique hero/near/far levels in order and ground each in model bytes.",
 				)
+			}
+			levels[lod.Level] = true
+			if level > previousLevel {
+				previousLevel = level
+			}
+		}
+		if asset.Model != nil {
+			for name, proxy := range map[string]assetModelProxy{
+				"collision":   asset.Model.CollisionProxy,
+				"measurement": asset.Model.MeasurementProxy,
+			} {
+				if proxy.Kind == "asset" {
+					if _, exists := entries[strings.ToLower(proxy.Asset)]; !exists {
+						ctx.Report(
+							anchor + " model asset '" + asset.Path + "' " +
+								name + " proxy cites unknown manifest asset '" +
+								proxy.Asset + "'. Ground the proxy in the byte ledger.",
+						)
+					}
+				}
 			}
 		}
 	}
@@ -313,31 +351,41 @@ func validateAssetProvenanceRecord(
 		)
 	}
 	for index, use := range asset.Uses {
-		if !assetUseKind[use.Kind] ||
-			strings.TrimSpace(use.Target) == "" ||
+		if strings.TrimSpace(use.Production) == "" ||
+			!assetConsumerKind[use.Consumer.Kind] ||
+			strings.TrimSpace(use.Consumer.ID) == "" ||
 			strings.TrimSpace(use.Reason) == "" {
 			ctx.Report(
 				owner + " use[" + itoa(index) +
-					"] lacks a supported kind, target or reason. The asset has no auditable production purpose. Correct the use ledger and run lint again.",
+					"] lacks production, typed consumer id or reason. The asset has no auditable production purpose. Correct the use ledger and run lint again.",
 			)
 		}
 	}
 	if assetModelPath(asset.Path) {
 		if asset.Model == nil ||
 			strings.TrimSpace(asset.Model.IngestProfile) == "" ||
-			len(asset.Model.LOD) == 0 ||
-			strings.TrimSpace(asset.Model.CollisionProxy) == "" ||
-			strings.TrimSpace(asset.Model.MeasurementProxy) == "" {
+			len(asset.Model.LOD) == 0 {
 			ctx.Report(
 				owner + " is an external model without ingest profile, explicit LOD, collision proxy or measurement proxy. Record all four model decisions and run lint again.",
 			)
 		} else {
 			for index, lod := range asset.Model.LOD {
-				if strings.TrimSpace(lod.Level) == "" ||
+				if _, exists := assetModelLODLevel[lod.Level]; !exists ||
 					strings.TrimSpace(lod.Asset) == "" {
 					ctx.Report(
 						owner + " model.lod[" + itoa(index) +
-							"] lacks level or manifest asset identity. Make every LOD explicit and run lint again.",
+							"] lacks a supported hero/near/far level or manifest asset identity. Make every LOD explicit and run lint again.",
+					)
+				}
+			}
+			for name, proxy := range map[string]assetModelProxy{
+				"collision":   asset.Model.CollisionProxy,
+				"measurement": asset.Model.MeasurementProxy,
+			} {
+				if !validAssetModelProxy(proxy) {
+					ctx.Report(
+						owner + " " + name +
+							" proxy is neither a manifest asset nor a supported generated recipe with finite parameters. Correct the explicit proxy decision and run lint again.",
 					)
 				}
 			}
@@ -357,12 +405,38 @@ func (asset assetProvenanceRecord) ModelLOD() []struct {
 
 var assetDigestPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 
-var assetUseKind = map[string]bool{
-	"audio":   true,
-	"model":   true,
-	"texture": true,
-	"font":    true,
-	"other":   true,
+var assetConsumerKind = map[string]bool{
+	"audio-cue":    true,
+	"model-recipe": true,
+}
+
+var assetModelLODLevel = map[string]int{
+	"hero": 0,
+	"near": 1,
+	"far":  2,
+}
+
+var assetGeneratedProxyRecipe = map[string]bool{
+	"capsule-v1":            true,
+	"box-v1":                true,
+	"humanoid-landmarks-v1": true,
+}
+
+func validAssetModelProxy(proxy assetModelProxy) bool {
+	if proxy.Kind == "asset" {
+		return strings.TrimSpace(proxy.Asset) != ""
+	}
+	if proxy.Kind != "generated" ||
+		!assetGeneratedProxyRecipe[proxy.Recipe] ||
+		proxy.Parameters == nil {
+		return false
+	}
+	for _, value := range proxy.Parameters {
+		if math.IsNaN(value) || math.IsInf(value, 0) {
+			return false
+		}
+	}
+	return true
 }
 
 func assetHTTPURL(value string) bool {

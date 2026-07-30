@@ -17,7 +17,8 @@ This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.w
 
 - `packages/interface` (`@automovie/interface`): the type hub, the AST the LLM emits against (geometry, skeleton/rig, pose, expression, motion, material, model, scene, validation). Pure types with no runtime dependency; ranges and units live in field JSDoc, enforced by `engine` validators.
 - `packages/engine` (`@automovie/engine`): the deterministic engine. Math, kinematics (FK), ROM and other constraint validators, motion sampling, tessellation, the film pipeline (stage/block/perform/cut). Pure TypeScript, no `three.js`.
-- `packages/forge` (`@automovie/forge`): parametric model building (head/body meshes, hair, morphs) from forge specs.
+- `packages/face` (`@automovie/face`): dormant parametric face/head/hair geometry retained for compatibility.
+  `forge` remains the engine/MCP stand-in authoring stage and is intentionally free as a future package name.
 - `packages/ingest` (`@automovie/ingest`): glTF/model ingestion via `@gltf-transform/core`.
 - `packages/viewer` (`@automovie/viewer`): the render/playback surface over `three.js` (the only package that imports `three`). A viewer, not an editor.
 - `packages/playground`: Vite demo pages exercising the pipeline end to end; capture-verified via headless Chrome (see `.agents/skills/viewer-verification/SKILL.md`).

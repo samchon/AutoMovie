@@ -20,15 +20,47 @@ export interface IAutoMovieAssetProcessingStep {
   parameters: Record<string, string | number | boolean | null>;
 }
 
-/** One downstream purpose that makes an asset part of the production. */
+/** One typed consumer that can own an asset use in a production graph. */
+export type IAutoMovieAssetConsumer =
+  | {
+      /** Film audio cue whose `asset` field names this path. */
+      kind: "audio-cue";
+      /** Exact audio cue id. */
+      id: string;
+    }
+  | {
+      /** Model recipe whose registered appearance consumes this model asset. */
+      kind: "model-recipe";
+      /** Exact model recipe id. */
+      id: string;
+    };
+
+/** One downstream purpose that makes an asset part of one production. */
 export interface IAutoMovieAssetUse {
-  /** Consumer family. */
-  kind: "audio" | "model" | "texture" | "font" | "other";
-  /** Stable shot, timeline cue, recipe, surface, or deliverable identity. */
-  target: string;
+  /** Exact production id; project-global assets repeat uses when shared. */
+  production: string;
+  /** Typed, addressable consumer inside that production. */
+  consumer: IAutoMovieAssetConsumer;
   /** Why this production needs the asset. */
   reason: string;
 }
+
+/** A deterministic proxy reference with no inferred fallback. */
+export type IAutoMovieModelProxyReference =
+  | {
+      /** Manifest-owned proxy bytes. */
+      kind: "asset";
+      /** Exact path of another asset entry in this manifest. */
+      asset: string;
+    }
+  | {
+      /** Compiler-owned deterministic proxy recipe. */
+      kind: "generated";
+      /** Closed supported recipe identity. */
+      recipe: "capsule-v1" | "box-v1" | "humanoid-landmarks-v1";
+      /** Explicit finite inputs to the selected recipe. */
+      parameters: Record<string, number>;
+    };
 
 /** Explicit ingest and proxy choices for an external 3D model. */
 export interface IAutoMovieExternalModelProvenance {
@@ -36,15 +68,15 @@ export interface IAutoMovieExternalModelProvenance {
   ingestProfile: string;
   /** Explicit LOD members rather than an inferred filename convention. */
   lod: Array<{
-    /** Stable level identity such as hero, near, or far. */
-    level: string;
+    /** Closed near-to-far level identity. */
+    level: "hero" | "near" | "far";
     /** Manifest-owned asset path providing this level. */
     asset: string;
   }>;
-  /** Chosen collision-proxy asset or deterministic generation recipe id. */
-  collisionProxy: string;
-  /** Chosen measurement-proxy asset or deterministic generation recipe id. */
-  measurementProxy: string;
+  /** Chosen collision proxy; absence never falls back to mesh inference. */
+  collisionProxy: IAutoMovieModelProxyReference;
+  /** Chosen measurement proxy; absence never falls back to mesh inference. */
+  measurementProxy: IAutoMovieModelProxyReference;
 }
 
 /** Byte-exact provenance record for one project-owned distributable asset. */

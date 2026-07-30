@@ -1,5 +1,6 @@
 import { scaffoldAssetDirectory } from "@automovie/cli";
 import {
+  IAutoMovieAssetManifest,
   IAutoMovieFilmEdit,
   IAutoMovieFilmTimeline,
   IAutoMoviePrepareReviewOutput,
@@ -33,6 +34,34 @@ import {
 
 const editSource = (edit: unknown): string =>
   `export const film = { build() { return ${JSON.stringify(edit)}; } };\n`;
+
+const writeEditSource = (
+  root: string,
+  filmPath: string,
+  edit: IAutoMovieFilmEdit,
+): void => {
+  const manifestPath = path.join(root, ".automovie/assets.json");
+  const manifest = JSON.parse(
+    fs.readFileSync(manifestPath, "utf8"),
+  ) as IAutoMovieAssetManifest;
+  for (const asset of manifest.assets) {
+    const retained = asset.uses.filter(
+      (use) => use.production !== "fixture-film",
+    );
+    asset.uses = [
+      ...retained,
+      ...edit.tracks.audio
+        .filter((cue) => cue.asset === asset.path)
+        .map((cue) => ({
+          production: "fixture-film",
+          consumer: { kind: "audio-cue" as const, id: cue.id },
+          reason: `The film timeline consumes ${asset.path} through ${cue.id}.`,
+        })),
+    ];
+  }
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+  fs.writeFileSync(filmPath, editSource(edit));
+};
 
 const diagnosticCodes = (
   output: ReturnType<AutoMovieProductionCompiler["compile"]>,
@@ -266,7 +295,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     ): ReturnType<AutoMovieProductionCompiler["compile"]> => {
       const edit = baseEdit();
       mutate(edit);
-      fs.writeFileSync(filmPath, editSource(edit));
+      writeEditSource(fixture.root, filmPath, edit);
       return compiler.compile({ scope: "source" });
     };
     const cases: Array<{
@@ -516,7 +545,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       start: { frame: 0 },
       end: { frame: 1 },
     });
-    fs.writeFileSync(filmPath, editSource(captioned));
+    writeEditSource(fixture.root, filmPath, captioned);
     TestValidator.predicate(
       "a present non-blank caption speaker remains valid",
       compiler.compile({ scope: "source" }).success,
@@ -537,7 +566,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       };
       mutate(cue);
       edit.tracks.effects.push(cue);
-      fs.writeFileSync(filmPath, editSource(edit));
+      writeEditSource(fixture.root, filmPath, edit);
       return compiler.compile({ scope: "source" });
     };
     const effectFailures = [
@@ -577,7 +606,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         intensity: 0.5,
       },
     );
-    fs.writeFileSync(filmPath, editSource(orderedEffects));
+    writeEditSource(fixture.root, filmPath, orderedEffects);
     effectFailures.push(compiler.compile({ scope: "source" }));
     TestValidator.predicate(
       "every effect time, duration, intensity and ordering boundary is refused",
@@ -684,7 +713,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       },
       required: true,
     });
-    fs.writeFileSync(filmPath, editSource(twoShotEdit()));
+    writeEditSource(fixture.root, filmPath, twoShotEdit());
     const twoShot = compiler.compile({ scope: "source" });
     const twoShotTimeline = JSON.parse(
       fs.readFileSync(timelinePath, "utf8"),
@@ -764,7 +793,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     for (const testCase of invalidTwoShotCases) {
       const edit = twoShotEdit();
       testCase.mutate(edit);
-      fs.writeFileSync(filmPath, editSource(edit));
+      writeEditSource(fixture.root, filmPath, edit);
       TestValidator.predicate(
         `${testCase.code} blocks two-shot publication`,
         diagnosticCodes(compiler.compile({ scope: "source" })).has(
@@ -778,7 +807,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     project.setShotContract(openingWithoutClosing);
     const trimmedOpeningBoundary = twoShotEdit();
     trimmedOpeningBoundary.tracks.video[1]!.sourceIn = { frame: 1 };
-    fs.writeFileSync(filmPath, editSource(trimmedOpeningBoundary));
+    writeEditSource(fixture.root, filmPath, trimmedOpeningBoundary);
     TestValidator.predicate(
       "a trimmed boundary rejects a claimed current opening even without a previous closing claim",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
@@ -789,7 +818,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const mismatched = structuredClone(answer);
     mismatched.opening[0]!.predicates[0]!.value = 90;
     project.setShotContract(mismatched);
-    fs.writeFileSync(filmPath, editSource(twoShotEdit()));
+    writeEditSource(fixture.root, filmPath, twoShotEdit());
     TestValidator.predicate(
       "adjacent compiled opening and closing state predicates must match",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
@@ -803,7 +832,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       shot: "answer",
       reason: "The alternate answer is intentionally excluded.",
     });
-    fs.writeFileSync(filmPath, editSource(omitted));
+    writeEditSource(fixture.root, filmPath, omitted);
     const legalOmission = compiler.compile({ scope: "source" });
     const omissionReview = new AutoMovieProductionReviewService(
       project,
@@ -1008,7 +1037,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       shot: "answer",
       reason: "The alternate answer remains excluded from the shorter cut.",
     });
-    fs.writeFileSync(filmPath, editSource(trimmed));
+    writeEditSource(fixture.root, filmPath, trimmed);
     const legalTrim = compiler.compile({ scope: "source" });
     const trimTimeline = JSON.parse(
       fs.readFileSync(timelinePath, "utf8"),

@@ -122,8 +122,10 @@ tombstone으로 보존하고 새 장면은 `SCN-A11` 같은 alpha insertion id�
 
 설정된 distributable asset 파일마다 `.automovie/assets.json`의 유일한 항목을
 요구하고 현재 바이트의 SHA-256을 원장과 대조한다. source URL, original
-SHA-256, license 식별자/URL, 재현 가능한 processing chain, reasoned use가
-비어 있으면 실패한다. 원장 없이 asset 파일이 존재하거나 원장 밖 파일이
+SHA-256, license 식별자/URL, 재현 가능한 processing chain, production 주소와
+typed consumer를 가진 reasoned use가 비어 있으면 실패한다. 외부 모델의 LOD는
+유일한 hero/near/far 순서와 실제 model asset을, proxy는 원장 asset 또는 닫힌
+generated recipe를 요구한다. 원장 없이 asset 파일이 존재하거나 원장 밖 파일이
 생겨도 실패하므로 교체된 바이트와 미등록 배포물을 build-time에 차단한다.
 
 외부 `.gltf`, `.glb`, `.vrm`은 ingest profile, 명시적 LOD manifest 항목,

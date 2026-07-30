@@ -5,6 +5,7 @@ import {
 } from "@automovie/cli";
 import {
   IAutoMovieAcceptanceScenario,
+  IAutoMovieAssetManifest,
   IAutoMovieCaptureRuntimeIdentity,
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
@@ -24,6 +25,13 @@ export const productionFixture = (): {
 } => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-production-"));
   const files = renderScaffold({ name: "fixture-film" });
+  const assetManifest = JSON.parse(
+    files[".automovie/assets.json"]!,
+  ) as IAutoMovieAssetManifest;
+  for (const asset of assetManifest.assets)
+    for (const use of asset.uses) use.production = "fixture-library";
+  files[".automovie/assets.json"] =
+    `${JSON.stringify(assetManifest, null, 2)}\n`;
   for (const file of [
     ".automovie/design/acceptance/answer-beauty.json",
     ".automovie/design/acceptance/answer-pose.json",

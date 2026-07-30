@@ -321,7 +321,10 @@ const assetProvenanceFiles = (
     | "digest-drift"
     | "missing-entry"
     | "missing-manifest"
-    | "model-decisions-missing",
+    | "model-decisions-missing"
+    | "model-valid"
+    | "model-lod-invalid"
+    | "model-proxy-invalid",
 ): Record<string, string> => {
   const bytes =
     variant === "digest-drift" ? "substituted asset\n" : "licensed asset\n";
@@ -343,8 +346,8 @@ const assetProvenanceFiles = (
       processing: [],
       uses: [
         {
-          kind: "audio",
-          target: "shot-1",
+          production: "fixture",
+          consumer: { kind: "audio-cue", id: "shot-1" },
           reason: "The shot requires this licensed tone.",
         },
       ],
@@ -358,9 +361,9 @@ const assetProvenanceFiles = (
   if (variant === "missing-manifest") delete files[".automovie/assets.json"];
   if (variant === "missing-entry")
     files["public/assets/unrecorded.bin"] = "unrecorded\n";
-  if (variant === "model-decisions-missing") {
+  if (variant.startsWith("model-")) {
     const modelBytes = "external model\n";
-    assets.push({
+    const model: Record<string, unknown> = {
       path: "public/assets/actor.glb",
       digest: digest(modelBytes),
       original: {
@@ -374,12 +377,43 @@ const assetProvenanceFiles = (
       processing: [],
       uses: [
         {
-          kind: "model",
-          target: "actor",
+          production: "fixture",
+          consumer: { kind: "model-recipe", id: "actor" },
           reason: "The production casts this external model.",
         },
       ],
-    });
+      ...(variant === "model-decisions-missing"
+        ? {}
+        : {
+            model: {
+              ingestProfile: "vrm-humanoid-v1",
+              lod:
+                variant === "model-lod-invalid"
+                  ? [
+                      { level: "hero", asset: "public/assets/actor.glb" },
+                      { level: "hero", asset: "public/assets/actor.glb" },
+                    ]
+                  : [{ level: "hero", asset: "public/assets/actor.glb" }],
+              collisionProxy:
+                variant === "model-proxy-invalid"
+                  ? {
+                      kind: "asset",
+                      asset: "public/assets/missing-proxy.bin",
+                    }
+                  : {
+                      kind: "generated",
+                      recipe: "capsule-v1",
+                      parameters: { radius: 0.3, height: 1.8 },
+                    },
+              measurementProxy: {
+                kind: "generated",
+                recipe: "humanoid-landmarks-v1",
+                parameters: { height: 1.8 },
+              },
+            },
+          }),
+    };
+    assets.push(model);
     assets.sort((left, right) =>
       String(left.path) < String(right.path) ? -1 : 1,
     );
@@ -857,6 +891,14 @@ export function test_lint_plugin_walking_skeleton(): void {
     validAssetProvenance,
     "One byte-exact asset with source, license and production use must satisfy the provenance ledger.",
   );
+  assertSucceeded(
+    runFixture({
+      name: "asset-provenance-model-valid",
+      lintConfig: assetProvenanceConfig,
+      files: assetProvenanceFiles("model-valid"),
+    }),
+    "A model with ordered model-byte LOD and closed generated proxies must satisfy the provenance ledger.",
+  );
 
   for (const [variant, expected, because] of [
     [
@@ -883,6 +925,16 @@ export function test_lint_plugin_walking_skeleton(): void {
       "model-decisions-missing",
       "without ingest profile, explicit LOD, collision proxy or measurement proxy",
       "An external model must record its ingest, LOD and proxy decisions.",
+    ],
+    [
+      "model-lod-invalid",
+      "duplicate/out of order",
+      "A model LOD ledger must keep unique hero/near/far levels in order.",
+    ],
+    [
+      "model-proxy-invalid",
+      "proxy cites unknown manifest asset",
+      "A model proxy must resolve to manifest bytes or a closed generated recipe.",
     ],
   ] as const) {
     const result = runFixture({

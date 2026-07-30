@@ -219,6 +219,8 @@ export const validateAutoMovieProductionGraph = (
         file,
         `Model file identity is "${id}" but value id is "${model.id}". Rewrite the model with setModelRecipe using one matching id.`,
       );
+    if (model.asset !== undefined)
+      text(diagnostics, model.asset, target, file, "asset");
     validateModelParameters(diagnostics, model, target, file);
     const paletteSize = Object.keys(model.palette).length;
     if (paletteSize === 0)

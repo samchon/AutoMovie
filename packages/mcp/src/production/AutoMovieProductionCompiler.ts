@@ -7,6 +7,7 @@ import {
 import {
   AutoMovieContentDigest,
   IAutoMovieAssetManifest,
+  IAutoMovieAssetProvenance,
   IAutoMovieCompileProjectInput,
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledContractRealization,
@@ -57,7 +58,10 @@ import {
   materializeProductionModels,
 } from "./materializeProduction";
 import { probeProductionMedia } from "./probeProductionMedia";
-import { validateAutoMovieProductionGraph } from "./validateProductionDesign";
+import {
+  IAutoMovieProductionDesignGraph,
+  validateAutoMovieProductionGraph,
+} from "./validateProductionDesign";
 
 /** Production compiler protocol embedded in generated manifests. */
 export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v5";
@@ -260,6 +264,7 @@ export class AutoMovieProductionCompiler {
     const contentFields: IAutoMovieFingerprintField[] = [];
     let contentInputs: IAutoMovieProductionContentInput[] | undefined;
     let declaredAssets: string[] = [];
+    let assetRecords: IAutoMovieAssetProvenance[] = [];
     if (input.scope !== "design")
       try {
         contentInputs = this.project.contentInputs();
@@ -267,9 +272,12 @@ export class AutoMovieProductionCompiler {
         const assetInventory = compilerAssetInventory(
           projectManifest.assetManifest,
           contentInputs,
+          graph.production?.id ?? this.project.productionId,
+          graph,
         );
         diagnostics.push(...assetInventory.diagnostics);
         declaredAssets = assetInventory.assets;
+        assetRecords = assetInventory.records;
       } catch (error) {
         diagnostics.push({
           code: "content-input-unsafe",
@@ -306,7 +314,15 @@ export class AutoMovieProductionCompiler {
         realizations,
       });
       diagnostics.push(...film.diagnostics);
-      compiledFilm = film.value;
+      if (film.value !== null) {
+        const useDiagnostics = validateCompiledAssetUses(
+          graph.production!.id,
+          assetRecords,
+          film.value.edit,
+        );
+        diagnostics.push(...useDiagnostics);
+        if (useDiagnostics.length === 0) compiledFilm = film.value;
+      }
     }
     const inputFingerprint = productionCompilerInputFingerprint(
       this.project.productionId,
@@ -2173,8 +2189,15 @@ const isTypeScriptSourcePath = (file: string): boolean =>
 const compilerAssetInventory = (
   manifestPath: IAutoMovieProductionManifest["assetManifest"],
   inputs: readonly IAutoMovieProductionContentInput[],
-): { assets: string[]; diagnostics: IAutoMovieDiagnostic[] } => {
-  if (manifestPath === undefined) return { assets: [], diagnostics: [] };
+  productionId: string,
+  graph: IAutoMovieProductionDesignGraph,
+): {
+  assets: string[];
+  records: IAutoMovieAssetProvenance[];
+  diagnostics: IAutoMovieDiagnostic[];
+} => {
+  if (manifestPath === undefined)
+    return { assets: [], records: [], diagnostics: [] };
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const diagnostic = (code: string, target: string, message: string): void => {
     diagnostics.push({
@@ -2193,7 +2216,7 @@ const compilerAssetInventory = (
       "asset-manifest",
       `Production manifest declares "${manifestPath}", but that physical provenance ledger is absent. Restore it before compiling asset references.`,
     );
-    return { assets: [], diagnostics };
+    return { assets: [], records: [], diagnostics };
   }
 
   let decoded: unknown;
@@ -2205,7 +2228,7 @@ const compilerAssetInventory = (
       "asset-manifest",
       `Asset manifest is not valid JSON: ${errorMessage(error)}. Restore one IAutoMovieAssetManifest before compiling.`,
     );
-    return { assets: [], diagnostics };
+    return { assets: [], records: [], diagnostics };
   }
   const validation = typia.validateEquals<IAutoMovieAssetManifest>(decoded);
   if (validation.success === false) {
@@ -2216,16 +2239,21 @@ const compilerAssetInventory = (
         .map((error) => `${error.path}: ${error.expected}`)
         .join("; ")}. Correct the typed provenance ledger before compiling.`,
     );
-    return { assets: [], diagnostics };
+    return { assets: [], records: [], diagnostics };
   }
 
   const content = new Map(inputs.map((entry) => [entry.path, entry]));
   const paths = new Map<string, string>();
-  const assets = validation.data.assets.map((asset) => asset.path);
+  const assets = validation.data.assets
+    .filter((asset) =>
+      asset.uses.some((use) => use.production === productionId),
+    )
+    .map((asset) => asset.path);
+  const orderedPaths = validation.data.assets.map((asset) => asset.path);
   if (
-    assets.some(
+    orderedPaths.some(
       (asset, index) =>
-        index !== 0 && compareCodeUnits(assets[index - 1]!, asset) >= 0,
+        index !== 0 && compareCodeUnits(orderedPaths[index - 1]!, asset) >= 0,
     )
   )
     diagnostic(
@@ -2233,6 +2261,7 @@ const compilerAssetInventory = (
       "asset-manifest",
       "Asset entries must be in unique canonical path order. Sort them by code unit and remove duplicates before compiling.",
     );
+  const activeConsumerAssets = new Map<string, string>();
   for (const asset of validation.data.assets) {
     const folded = asset.path.toLowerCase();
     const prior = paths.get(folded);
@@ -2266,14 +2295,8 @@ const compilerAssetInventory = (
       asset.license.identifier.trim().length === 0 ||
       isHttpUrl(asset.license.url) === false ||
       asset.uses.length === 0 ||
-      asset.uses.some(
-        (use) =>
-          use.target.trim().length === 0 || use.reason.trim().length === 0,
-      ) ||
-      asset.processing.some(
-        (step) =>
-          step.tool.trim().length === 0 || step.command.trim().length === 0,
-      )
+      asset.uses.some(assetUseIncomplete) ||
+      asset.processing.some(assetProcessingStepIncomplete)
     )
       diagnostic(
         "asset-provenance-incomplete",
@@ -2290,9 +2313,7 @@ const compilerAssetInventory = (
       isExternalModelAsset(asset.path) &&
       (asset.model === undefined ||
         asset.model.ingestProfile.trim().length === 0 ||
-        asset.model.lod.length === 0 ||
-        asset.model.collisionProxy.trim().length === 0 ||
-        asset.model.measurementProxy.trim().length === 0)
+        asset.model.lod.length === 0)
     )
       diagnostic(
         "asset-model-provenance-missing",
@@ -2300,18 +2321,144 @@ const compilerAssetInventory = (
         `External model "${asset.path}" must declare its ingest profile, explicit LOD ledger, collision proxy and measurement proxy before compiling.`,
       );
   }
-  for (const asset of validation.data.assets)
-    for (const lod of asset.model?.lod ?? [])
+  for (const asset of validation.data.assets) {
+    const activeUses = asset.uses.filter(
+      (use) => use.production === productionId,
+    );
+    const seenUses = new Set<string>();
+    for (const use of activeUses) {
+      const key = `${use.consumer.kind}\0${use.consumer.id}`;
+      const priorAsset = activeConsumerAssets.get(key);
+      if (seenUses.has(key) || priorAsset !== undefined)
+        diagnostic(
+          "asset-use-duplicate",
+          asset.path,
+          `Asset "${asset.path}" repeats active consumer ${use.consumer.kind} "${use.consumer.id}"${priorAsset === undefined ? "" : ` already owned by "${priorAsset}"`}. Keep one reasoned use per production consumer.`,
+        );
+      seenUses.add(key);
+      activeConsumerAssets.set(key, asset.path);
+      if (assetConsumerExists(graph, asset.path, use.consumer) === false)
+        diagnostic(
+          "asset-use-dangling",
+          asset.path,
+          `Asset "${asset.path}" cites missing ${use.consumer.kind} "${use.consumer.id}" in production "${productionId}". Correct the typed consumer or remove the stale use.`,
+        );
+    }
+    if (asset.model === undefined) continue;
+    let priorLevel = -1;
+    const levels = new Set<string>();
+    for (const lod of asset.model.lod) {
+      const order = ["hero", "near", "far"].indexOf(lod.level);
+      const target = paths.get(lod.asset.toLowerCase());
       if (
-        lod.level.trim().length === 0 ||
-        paths.has(lod.asset.toLowerCase()) === false
+        levels.has(lod.level) ||
+        order <= priorLevel ||
+        target === undefined ||
+        isExternalModelAsset(target) === false
       )
         diagnostic(
           "asset-model-lod-dangling",
           asset.path,
-          `Model asset "${asset.path}" has LOD "${lod.level}" pointing to unknown manifest asset "${lod.asset}". Ground every LOD in the same byte ledger.`,
+          `Model asset "${asset.path}" has duplicate/out-of-order LOD "${lod.level}" or points to non-model manifest asset "${lod.asset}". Keep unique hero/near/far levels in order and ground each in model bytes.`,
         );
-  return { assets, diagnostics };
+      levels.add(lod.level);
+      priorLevel = Math.max(priorLevel, order);
+    }
+    for (const [name, proxy] of [
+      ["collision", asset.model.collisionProxy],
+      ["measurement", asset.model.measurementProxy],
+    ] as const)
+      if (
+        proxy.kind === "asset"
+          ? paths.has(proxy.asset.toLowerCase()) === false
+          : Object.values(proxy.parameters).some(
+              (value) => Number.isFinite(value) === false,
+            )
+      )
+        diagnostic(
+          "asset-model-proxy-dangling",
+          asset.path,
+          `Model asset "${asset.path}" has a ${name} proxy that is not grounded in manifest bytes or finite generated-recipe parameters. Record an existing asset or a closed generated recipe.`,
+        );
+  }
+  for (const [id, model] of graph.models) {
+    if (model.asset === undefined) continue;
+    const record = validation.data.assets.find(
+      (asset) => asset.path === model.asset,
+    );
+    if (
+      isExternalModelAsset(model.asset) === false ||
+      record === undefined ||
+      record.model === undefined ||
+      record.uses.some(
+        (use) =>
+          use.production === productionId &&
+          use.consumer.kind === "model-recipe" &&
+          use.consumer.id === id,
+      ) === false
+    )
+      diagnostic(
+        "asset-use-missing",
+        model.asset,
+        `Model recipe "${id}" consumes "${model.asset}" without external-model provenance and one matching typed use for production "${productionId}". Register the exact model bytes, model decisions and model-recipe use.`,
+      );
+  }
+  return { assets, records: validation.data.assets, diagnostics };
+};
+
+const assetUseIncomplete = (
+  use: IAutoMovieAssetProvenance["uses"][number],
+): boolean =>
+  use.production.trim().length === 0 ||
+  use.consumer.id.trim().length === 0 ||
+  use.reason.trim().length === 0;
+
+const assetProcessingStepIncomplete = (
+  step: IAutoMovieAssetProvenance["processing"][number],
+): boolean => step.tool.trim().length === 0 || step.command.trim().length === 0;
+
+const assetConsumerExists = (
+  graph: IAutoMovieProductionDesignGraph,
+  assetPath: string,
+  consumer: IAutoMovieAssetProvenance["uses"][number]["consumer"],
+): boolean => {
+  switch (consumer.kind) {
+    case "audio-cue":
+      return true;
+    case "model-recipe":
+      return graph.models.get(consumer.id)?.asset === assetPath;
+  }
+};
+
+const validateCompiledAssetUses = (
+  productionId: string,
+  records: readonly IAutoMovieAssetProvenance[],
+  edit: IAutoMovieFilmEdit,
+): IAutoMovieDiagnostic[] => {
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const audioByConsumer = new Map<string, string>();
+  for (const asset of records)
+    for (const use of asset.uses)
+      if (use.production === productionId && use.consumer.kind === "audio-cue")
+        audioByConsumer.set(use.consumer.id, asset.path);
+  const actual = new Map(edit.tracks.audio.map((cue) => [cue.id, cue.asset]));
+  for (const [id, asset] of audioByConsumer)
+    if (actual.get(id) !== asset)
+      diagnostics.push(
+        filmDiagnostic(
+          "asset-use-stale",
+          `Asset ledger assigns "${asset}" to audio cue "${id}", but the active film does not contain that exact reference. Correct the production use or film cue.`,
+        ),
+      );
+  for (const [id, asset] of actual)
+    if (audioByConsumer.get(id) !== asset)
+      diagnostics.push(
+        filmDiagnostic(
+          "asset-use-missing",
+          `Audio cue "${id}" consumes "${asset}" without one matching typed use for production "${productionId}". Add the exact production/audio-cue ledger entry.`,
+        ),
+      );
+  return diagnostics;
 };
 
 const isCanonicalAssetPath = (value: string): boolean =>

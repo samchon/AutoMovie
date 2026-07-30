@@ -132,10 +132,127 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         ...asset,
         original: { ...asset.original, url: "not a URL" },
         license: { ...asset.license, identifier: "", url: "ftp://license" },
-        uses: [{ ...asset.uses[0]!, target: "", reason: "" }],
+        uses: [
+          {
+            ...asset.uses[0]!,
+            consumer: { ...asset.uses[0]!.consumer, id: "" },
+            reason: "",
+          },
+        ],
         processing: [{ tool: "", command: "", parameters: {} }],
       })),
     });
+    const provenanceFieldFailures = [
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          digest: "sha256:not-hex",
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          original: { ...asset.original, digest: "sha256:not-hex" },
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          original: { ...asset.original, url: "not-a-url" },
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          original: { ...asset.original, url: "ftp://example.com/asset" },
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          license: { ...asset.license, identifier: "" },
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          license: { ...asset.license, url: "ftp://example.com/license" },
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          uses: [],
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          uses: [
+            {
+              ...asset.uses[0]!,
+              production: "",
+              consumer: { ...asset.uses[0]!.consumer, id: "consumer" },
+              reason: "reason",
+            },
+          ],
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          uses: [
+            {
+              ...asset.uses[0]!,
+              production: "fixture-library",
+              consumer: { ...asset.uses[0]!.consumer, id: "" },
+              reason: "reason",
+            },
+          ],
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          uses: [
+            {
+              ...asset.uses[0]!,
+              production: "fixture-library",
+              consumer: { ...asset.uses[0]!.consumer, id: "consumer" },
+              reason: "",
+            },
+          ],
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          processing: [
+            { tool: "", command: "copy", parameters: { stable: true } },
+          ],
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          processing: [
+            { tool: "fixture", command: "", parameters: { stable: true } },
+          ],
+        })),
+      },
+    ].map(assetCodes);
     const missingProcessing = assetCodes({
       ...assetManifest,
       assets: assetManifest.assets.map((asset) => ({
@@ -157,6 +274,70 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         },
       ],
     });
+    const invalidPathCodes = [
+      "/absolute.bin",
+      "C:/drive.bin",
+      ".",
+      "public/../escape.bin",
+      "../escape.bin",
+      "",
+    ].map((invalidPath) =>
+      assetCodes({
+        ...assetManifest,
+        assets: [
+          {
+            ...assetManifest.assets[0]!,
+            path: invalidPath,
+          },
+        ],
+      }),
+    );
+    const caseCollision = assetCodes({
+      ...assetManifest,
+      assets: [
+        {
+          ...assetManifest.assets[0]!,
+          path: "PUBLIC/AUDIO/STARTER-TONE.JSON",
+        },
+        assetManifest.assets[0]!,
+      ],
+    });
+    const sourceAssetPath = path.join(fixture.root, "src/shots/opening.ts");
+    const sourceAssetBytes = fs.readFileSync(sourceAssetPath);
+    const nonRenderAsset = assetCodes({
+      version: 1,
+      assets: [
+        {
+          ...assetManifest.assets[0]!,
+          path: "src/shots/opening.ts",
+          digest: digestAutoMovieBytes(sourceAssetBytes),
+          original: {
+            ...assetManifest.assets[0]!.original,
+            digest: digestAutoMovieBytes(sourceAssetBytes),
+          },
+        },
+      ],
+    });
+    const originalContentInputs = project.contentInputs;
+    project.contentInputs = (() => [
+      ...originalContentInputs.call(project),
+      {
+        path: "public/audio/declared-missing.json",
+        bytes: null,
+        source: false,
+        render: true,
+      },
+    ]) as typeof project.contentInputs;
+    const nullAssetBytes = assetCodes({
+      version: 1,
+      assets: [
+        {
+          ...assetManifest.assets[0]!,
+          path: "public/audio/declared-missing.json",
+        },
+      ],
+    });
+    project.contentInputs = originalContentInputs;
     fs.rmSync(assetPath);
     const missingAssetBytes = assetCodes(assetManifest);
     fs.writeFileSync(assetPath, originalAssetBytes);
@@ -180,16 +361,29 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       processing: [],
       uses: [
         {
-          kind: "model" as const,
-          target: "actor",
+          production: "fixture-library",
+          consumer: { kind: "model-recipe" as const, id: "sentinel" },
           reason: "The fixture casts this external model.",
         },
       ],
       model: {
         ingestProfile: "vrm-humanoid-v1",
-        lod: [{ level: "hero", asset: "public/models/actor.glb" }],
-        collisionProxy: "capsule-v1",
-        measurementProxy: "humanoid-landmarks-v1",
+        lod: [
+          {
+            level: "hero" as const,
+            asset: "public/models/actor.glb",
+          },
+        ],
+        collisionProxy: {
+          kind: "generated" as const,
+          recipe: "capsule-v1" as const,
+          parameters: { radius: 0.3, height: 1.8 },
+        },
+        measurementProxy: {
+          kind: "generated" as const,
+          recipe: "humanoid-landmarks-v1" as const,
+          parameters: { height: 1.8 },
+        },
       },
     };
     const validModelManifest = {
@@ -203,6 +397,30 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         asset.path === modelAsset.path ? { ...asset, model: undefined } : asset,
       ),
     });
+    const incompleteModelDecisions = [
+      {
+        ...validModelManifest,
+        assets: validModelManifest.assets.map((asset) =>
+          asset.path === modelAsset.path
+            ? {
+                ...asset,
+                model: { ...modelAsset.model, ingestProfile: "" },
+              }
+            : asset,
+        ),
+      },
+      {
+        ...validModelManifest,
+        assets: validModelManifest.assets.map((asset) =>
+          asset.path === modelAsset.path
+            ? {
+                ...asset,
+                model: { ...modelAsset.model, lod: [] },
+              }
+            : asset,
+        ),
+      },
+    ].map(assetCodes);
     const danglingModelLod = assetCodes({
       ...validModelManifest,
       assets: validModelManifest.assets.map((asset) =>
@@ -211,12 +429,210 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
               ...asset,
               model: {
                 ...modelAsset.model,
-                lod: [{ level: "", asset: "public/models/missing.glb" }],
+                lod: [
+                  {
+                    level: "hero" as const,
+                    asset: "public/models/missing.glb",
+                  },
+                ],
               },
             }
           : asset,
       ),
     });
+    const wrongTypeModelLod = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                lod: [
+                  {
+                    level: "hero" as const,
+                    asset: "public/audio/starter-tone.json",
+                  },
+                ],
+              },
+            }
+          : asset,
+      ),
+    });
+    const duplicateModelLod = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                lod: [...modelAsset.model.lod, ...modelAsset.model.lod],
+              },
+            }
+          : asset,
+      ),
+    });
+    const outOfOrderModelLod = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                lod: [
+                  {
+                    level: "far" as const,
+                    asset: modelAsset.path,
+                  },
+                  {
+                    level: "near" as const,
+                    asset: modelAsset.path,
+                  },
+                ],
+              },
+            }
+          : asset,
+      ),
+    });
+    const danglingModelProxy = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                collisionProxy: {
+                  kind: "asset" as const,
+                  asset: "public/models/missing-proxy.glb",
+                },
+              },
+            }
+          : asset,
+      ),
+    });
+    const danglingMeasurementProxy = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                measurementProxy: {
+                  kind: "asset" as const,
+                  asset: "public/models/missing-measurement.json",
+                },
+              },
+            }
+          : asset,
+      ),
+    });
+    const filmPath = path.join(fixture.root, "src/film.ts");
+    const originalFilmSource = fs.readFileSync(filmPath, "utf8");
+    fs.writeFileSync(
+      filmPath,
+      originalFilmSource.replace(
+        "audio: []",
+        `audio: [{
+          id: "bound-audio",
+          asset: "public/audio/starter-tone.json",
+          sourceDuration: { seconds: 6 },
+          sourceOffset: { frame: 0 },
+          start: { frame: 0 },
+          duration: { seconds: 6 },
+          gain: 0,
+          fadeIn: { frame: 0 },
+          fadeOut: { frame: 0 },
+          bus: "ambience",
+        }]`,
+      ),
+    );
+    const boundModel = project.graph().models.values().next().value!;
+    project.setModelRecipe({ ...boundModel, asset: " " });
+    const blankModelAsset = diagnosticCodes(compiler.lint({ scope: "design" }));
+    project.setModelRecipe({ ...boundModel, asset: modelAsset.path });
+    const activeAudioManifest = {
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) => ({
+        ...asset,
+        uses:
+          asset.path === modelAsset.path
+            ? [
+                {
+                  production: "fixture-film",
+                  consumer: {
+                    kind: "model-recipe" as const,
+                    id: boundModel.id,
+                  },
+                  reason: "The fixture binds the registered model appearance.",
+                },
+              ]
+            : [
+                {
+                  production: "fixture-film",
+                  consumer: {
+                    kind: "audio-cue" as const,
+                    id: "bound-audio",
+                  },
+                  reason: "The fixture binds the exact film audio cue.",
+                },
+              ],
+      })),
+    } satisfies IAutoMovieAssetManifest;
+    const exactActiveUse = assetCodes(activeAudioManifest);
+    const wrongProductionUse = assetCodes({
+      ...activeAudioManifest,
+      assets: activeAudioManifest.assets.map((asset) => ({
+        ...asset,
+        uses: asset.uses.map((use) => ({
+          ...use,
+          production: "another-production",
+        })),
+      })),
+    });
+    const wrongAudioConsumer = assetCodes({
+      ...activeAudioManifest,
+      assets: activeAudioManifest.assets.map((asset) => ({
+        ...asset,
+        uses: asset.uses.map((use) =>
+          use.consumer.kind === "audio-cue"
+            ? {
+                ...use,
+                consumer: { kind: "audio-cue" as const, id: "stale-audio" },
+              }
+            : use,
+        ),
+      })),
+    });
+    const duplicateActiveUse = assetCodes({
+      ...activeAudioManifest,
+      assets: activeAudioManifest.assets.map((asset) => ({
+        ...asset,
+        uses: [...asset.uses, asset.uses[0]!],
+      })),
+    });
+    const danglingModelConsumer = assetCodes({
+      ...activeAudioManifest,
+      assets: activeAudioManifest.assets.map((asset) => ({
+        ...asset,
+        uses: asset.uses.map((use) =>
+          use.consumer.kind === "model-recipe"
+            ? {
+                ...use,
+                consumer: {
+                  kind: "model-recipe" as const,
+                  id: "missing-consumer",
+                },
+              }
+            : use,
+        ),
+      })),
+    });
+    project.setModelRecipe(boundModel);
+    fs.writeFileSync(filmPath, originalFilmSource);
     fs.rmSync(modelPath);
     fs.rmdirSync(path.dirname(modelPath));
     fs.writeFileSync(assetManifestPath, originalAssetManifest);
@@ -228,13 +644,35 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         malformedAssetManifest.has("asset-manifest-invalid") &&
         invalidAssetManifest.has("asset-manifest-invalid") &&
         incompleteAssetManifest.has("asset-provenance-incomplete") &&
+        provenanceFieldFailures.every((codes) =>
+          codes.has("asset-provenance-incomplete"),
+        ) &&
         missingProcessing.has("asset-processing-missing") &&
         nonCanonicalAsset.has("asset-path-invalid") &&
         nonCanonicalAsset.has("asset-manifest-order") &&
+        invalidPathCodes.every((codes) => codes.has("asset-path-invalid")) &&
+        caseCollision.has("asset-path-invalid") &&
+        nonRenderAsset.has("asset-bytes-missing") &&
+        nullAssetBytes.has("asset-bytes-missing") &&
         missingAssetBytes.has("asset-bytes-missing") &&
         [...validModelAsset].every((code) => !code.startsWith("asset-")) &&
         missingModelProvenance.has("asset-model-provenance-missing") &&
-        danglingModelLod.has("asset-model-lod-dangling"),
+        incompleteModelDecisions.every((codes) =>
+          codes.has("asset-model-provenance-missing"),
+        ) &&
+        danglingModelLod.has("asset-model-lod-dangling") &&
+        wrongTypeModelLod.has("asset-model-lod-dangling") &&
+        duplicateModelLod.has("asset-model-lod-dangling") &&
+        outOfOrderModelLod.has("asset-model-lod-dangling") &&
+        danglingModelProxy.has("asset-model-proxy-dangling") &&
+        danglingMeasurementProxy.has("asset-model-proxy-dangling") &&
+        blankModelAsset.has("design-text-empty") &&
+        [...exactActiveUse].every((code) => !code.startsWith("asset-")) &&
+        wrongProductionUse.has("film-audio-cue-invalid") &&
+        wrongAudioConsumer.has("asset-use-stale") &&
+        wrongAudioConsumer.has("asset-use-missing") &&
+        duplicateActiveUse.has("asset-use-duplicate") &&
+        danglingModelConsumer.has("asset-use-dangling"),
     );
 
     const unmanifestedFixture = productionFixture();
