@@ -99,7 +99,7 @@ simple-tiled WFC는 각 cell을 모든 허용 tile의 후보 집합으로 초기
 4. 후보가 0개인 cell이 생기면 contradiction이다. 성공한 것처럼 새 랜덤 seed로 무한 재시작하지 않는다. 마지막 decision snapshot으로 bounded backtrack하거나, 설정된 최대 backtrack을 넘으면 seed·decision path·빈 cell·제약 id를 포함해 실패한다.
 5. 모든 cell의 후보가 하나면, route 연결성·문/창 충돌·지면 접촉 같은 전역 검증을 별도로 실행한다. WFC의 국소 인접 성공은 이 사실들을 증명하지 않는다.
 
-overlapping WFC를 쓸 때는 입력의 `N×N` pattern과 빈도, 회전·반사 허용을 매니페스트에 기록한다. simple-tiled 모델은 tile별 방향 adjacency를 직접 기록한다. 어느 쪽도 입력 샘플 밖의 국소 패턴을 몰래 합성하지 않는다.
+overlapping WFC를 쓸 때는 입력의 `N×N` pattern과 빈도, 회전·반사 허용을 매니페스트에 기록한다. 이 모델은 입력에 없던 `N×N` pattern을 만들지 않는다. simple-tiled 모델은 tile별 방향 adjacency를 직접 기록하고 그 표에 없는 방향쌍을 만들지 않지만, 더 큰 국소 배열까지 입력 샘플과 같다고 보장하지 않는다. 두 모델 모두 route 연결성 같은 전역 속성은 별도 검증한다.
 
 출처: [Parish and Müller, Procedural Modeling of Cities, pp. 2–3](https://people.eecs.berkeley.edu/~sequin/CS285/PAPERS/Parish_Muller01.pdf), [WaveFunctionCollapse reference algorithm](https://github.com/mxgmn/WaveFunctionCollapse), [Merrell and Manocha, Model Synthesis](https://paulmerrell.org/model-synthesis/).
 
