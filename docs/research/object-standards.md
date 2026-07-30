@@ -79,6 +79,30 @@ Unreal의 ISM/HISM 문서는 반복 static mesh가 개별 actor 복제보다 효
 
 출처: [Parish and Müller, Procedural Modeling of Cities](https://people.eecs.berkeley.edu/~sequin/CS285/PAPERS/Parish_Muller01.pdf), [Müller et al., Procedural Modeling of Buildings](https://doi.org/10.1145/1179352.1141931), [Paul Merrell, Model Synthesis](https://paulmerrell.org/model-synthesis/).
 
+## <a id="procedural-world-algorithms"></a>L-system과 WFC의 실행 계약
+
+도시 L-system은 `alphabet`, 시작 `axiom`, parameter가 있는 production rule, 반복 횟수로 정의한다. 한 iteration에서는 현재 문자열의 모든 module을 병렬 치환하며, 그 iteration 도중 생긴 module을 다시 즉시 치환하지 않는다. Parish와 Müller의 도로 생성기는 이 순서에 두 함수를 삽입한다.
+
+1. production rule이 아직 값이 없는 이상적 successor를 만든다.
+2. `globalGoals`가 도로 패턴·인구 밀도에서 길이, 각도, 분기 지연을 정한다.
+3. `localConstraints`가 물·공원 경계, 고도, 기존 도로 교차를 검사하고 parameter를 보정한다.
+4. 보정할 합법 parameter가 없으면 module을 `FAILED`로 표시하고 다음 치환에서 삭제한다.
+5. 고정된 iteration budget 또는 더 이상 확장할 module이 없을 때 멈춘다.
+
+이 분리 덕분에 새 지형 제약이 production 자체를 다시 쓰지 않는다. AutoMovie route generator도 rule, global field, local constraint를 별도 데이터로 저장하고, 각 실패 module의 rule id·iteration·constraint를 진단한다.
+
+simple-tiled WFC는 각 cell을 모든 허용 tile의 후보 집합으로 초기화하되 landmark·출입구·route가 선점한 cell은 먼저 제한한다. 그 뒤 다음 cycle을 반복한다.
+
+1. 후보가 둘 이상인 cell 중 가중 Shannon entropy가 가장 낮은 cell을 고른다. 동률은 seed에서 파생한 안정 순서로 푼다.
+2. 등록 빈도 weight와 seed로 tile 하나를 선택해 후보를 collapse한다.
+3. adjacency table을 따라 이웃에서 호환되지 않는 tile을 제거하고, 변경된 이웃을 queue에 넣어 더 이상 제거가 없을 때까지 constraint propagation한다.
+4. 후보가 0개인 cell이 생기면 contradiction이다. 성공한 것처럼 새 랜덤 seed로 무한 재시작하지 않는다. 마지막 decision snapshot으로 bounded backtrack하거나, 설정된 최대 backtrack을 넘으면 seed·decision path·빈 cell·제약 id를 포함해 실패한다.
+5. 모든 cell의 후보가 하나면, route 연결성·문/창 충돌·지면 접촉 같은 전역 검증을 별도로 실행한다. WFC의 국소 인접 성공은 이 사실들을 증명하지 않는다.
+
+overlapping WFC를 쓸 때는 입력의 `N×N` pattern과 빈도, 회전·반사 허용을 매니페스트에 기록한다. simple-tiled 모델은 tile별 방향 adjacency를 직접 기록한다. 어느 쪽도 입력 샘플 밖의 국소 패턴을 몰래 합성하지 않는다.
+
+출처: [Parish and Müller, Procedural Modeling of Cities, pp. 2–3](https://people.eecs.berkeley.edu/~sequin/CS285/PAPERS/Parish_Muller01.pdf), [WaveFunctionCollapse reference algorithm](https://github.com/mxgmn/WaveFunctionCollapse), [Merrell and Manocha, Model Synthesis](https://paulmerrell.org/model-synthesis/).
+
 ## <a id="crowd-agent-boundary"></a>군중 에이전트는 상태와 규칙을 소유한다
 
 군중을 하나의 미리 구운 클립으로 취급하면 장애물·위협·대형 붕괴에 반응할 수 없고, 매 프레임 전체 개체를 직접 저작하면 재현성과 규모를 잃는다. AutoMovie는 개체별 정체성 seed, compact state, 감지 가능한 이웃·장애물, 유한한 행동 규칙을 분리한다. 엔진은 입력과 seed에서 같은 이벤트를 만들고, 에이전트 코드는 전술적 정책을 작성한다.
