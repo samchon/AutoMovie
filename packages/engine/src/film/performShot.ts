@@ -2,16 +2,17 @@ import {
   AutoMovieHumanoidBone,
   IAutoMovieActionCall,
   IAutoMovieActionTarget,
-  IAutoMovieBlockingApplication,
+  IAutoMovieBlocking,
+  IAutoMovieBlockingCoverage,
   IAutoMovieCamera,
   IAutoMovieCameraAction,
   IAutoMovieClip,
   IAutoMovieConstraintViolation,
   IAutoMovieInteractionEvent,
   IAutoMovieMotion,
-  IAutoMoviePerformanceApplication,
+  IAutoMoviePerformance,
   IAutoMovieQuaternion,
-  IAutoMovieScriptApplication,
+  IAutoMovieScript,
   IAutoMovieShot,
   IAutoMovieShotCoverage,
   IAutoMovieSkeleton,
@@ -247,9 +248,9 @@ export namespace IAutoMoviePerformedShot {
  *   ride the visible posed bone, not raw rig-space FK.
  */
 export const performShot = (props: {
-  script: IAutoMovieScriptApplication.IWrite;
+  script: IAutoMovieScript;
   staged: IAutoMovieStagedSet.ISuccess;
-  performance: IAutoMoviePerformanceApplication.IWrite;
+  performance: IAutoMoviePerformance;
   synthesize: IAutoMovieActionSynthesizer;
   skeleton: (node: string) => IAutoMovieSkeleton | null;
   hasActorContext?: (node: string) => boolean;
@@ -275,7 +276,12 @@ export const performShot = (props: {
    * and realization: matching beat and duration, every timing anchor covered by
    * an action of its actor, and the camera intent honoured.
    */
-  blocking?: IAutoMovieBlockingApplication.IWrite;
+  blocking?: IAutoMovieBlocking;
+  /**
+   * Registered source identity for direct code authoring. Omit on the legacy
+   * beat ladder to retain its `shot:${beat}` identity.
+   */
+  shotId?: string;
 }): IAutoMoviePerformedShot => {
   const {
     script,
@@ -289,6 +295,8 @@ export const performShot = (props: {
     gaits,
     blocking,
   } = props;
+  const shotId = props.shotId ?? `shot:${performance.beat}`;
+  const cameraClipScope = props.shotId ?? performance.beat;
   const out = new ViolationCollector();
   const synthesisCache = new WeakMap<
     IAutoMovieActionCall,
@@ -306,7 +314,7 @@ export const performShot = (props: {
   const beatById = new Map<
     string,
     {
-      beat: IAutoMovieScriptApplication.IWrite["beats"][number];
+      beat: IAutoMovieScript["beats"][number];
       index: number;
     }
   >();
@@ -1167,7 +1175,7 @@ export const performShot = (props: {
   // something that resolves to a point. The election itself is untouched: a
   // coverage camera never becomes a second live `frame`.
   const coverageJobs: {
-    intent: IAutoMovieBlockingApplication.ICoverageIntent;
+    intent: IAutoMovieBlockingCoverage;
     camera: IAutoMovieCamera;
   }[] = [];
   const coveredCameras = new Map<string, number>();
@@ -1525,7 +1533,7 @@ export const performShot = (props: {
     subject: framedSubject(action.on),
   }));
   const cameraMotion = compileCameraMove({
-    clipId: `cam:${performance.beat}`,
+    clipId: `cam:${cameraClipScope}`,
     camera: cameraObject,
     entries,
     shotDuration: performance.duration,
@@ -1541,7 +1549,7 @@ export const performShot = (props: {
     ({ intent, camera }) =>
       compileCameraCoverage({
         camera,
-        clipId: `cam:${performance.beat}:${camera.id}`,
+        clipId: `cam:${cameraClipScope}:${camera.id}`,
         entries: [
           {
             action: {
@@ -1571,7 +1579,7 @@ export const performShot = (props: {
   );
 
   const shot: IAutoMovieShot = {
-    id: `shot:${performance.beat}`,
+    id: shotId,
     name: beat!.name,
     scene: staged.scene.id,
     camera: liveCamera!,

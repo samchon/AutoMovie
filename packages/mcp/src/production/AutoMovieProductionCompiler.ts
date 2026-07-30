@@ -1,4 +1,5 @@
 import {
+  realizeShotContract,
   validateModel,
   validateMotion,
   validateShotArtifact,
@@ -54,7 +55,6 @@ import {
   materializeProductionModels,
 } from "./materializeProduction";
 import { probeProductionMedia } from "./probeProductionMedia";
-import { realizeShotContract } from "./realizeShotContract";
 import { validateAutoMovieProductionGraph } from "./validateProductionDesign";
 
 /** Production compiler protocol embedded in generated manifests. */
@@ -658,6 +658,8 @@ interface ICompileDeterministicSourceProps<T> {
   exportName: string;
   source: string;
   context: unknown;
+  /** Expected defineShot registration id, when compiling one shot module. */
+  registrationId?: string;
   validate(input: unknown): IValidation<T>;
 }
 
@@ -905,6 +907,7 @@ const compileShotSource = (
     ...props,
     target: `shot:${props.id}`,
     label: "compiled shot",
+    registrationId: props.id,
     validate: (input) =>
       typia.validateEquals<IAutoMovieShotSourceOutput>(input),
   });
@@ -974,6 +977,36 @@ const compileDeterministicSource = <T>(
           },
         ],
       };
+    if (props.registrationId !== undefined) {
+      sandbox.__automovieExportName = props.exportName;
+      new vm.Script(
+        `globalThis.__automovieRegistrationId =
+          typeof module.exports[__automovieExportName]?.id === "string"
+            ? module.exports[__automovieExportName].id
+            : null;
+         delete globalThis.__automovieExportName;`,
+        { filename: `${props.path}#registration` },
+      ).runInContext(sandbox, { timeout: 1_000 });
+      const registrationId = sandbox.__automovieRegistrationId as unknown;
+      if (
+        typeof registrationId === "string" &&
+        registrationId !== props.registrationId
+      )
+        return {
+          value: null,
+          diagnostics: [
+            ...diagnostics,
+            {
+              code: "source-registration-mismatch",
+              category: "error",
+              phase: "source",
+              target: props.target,
+              path: props.path,
+              message: `Contract id "${props.registrationId}" points to export "${props.exportName}" in ${props.path}, but defineShot registered "${registrationId}". Change the contract pointer or registration so module path, named export and id identify one artifact.`,
+            },
+          ],
+        };
+    }
     sandbox.__automovieContextJson = JSON.stringify(props.context);
     sandbox.__automovieExportName = props.exportName;
     new vm.Script(SOURCE_INVOCATION, {
@@ -1033,7 +1066,7 @@ const compileDeterministicSource = <T>(
           phase: "source",
           target: props.target,
           path: props.path,
-          message: `${message} Fix the deterministic build function in ${props.path}.`,
+          message: `Source export "${props.exportName}" in ${props.path} failed while building ${props.label}: ${message}. No generated artifact was published. Correct the operation or precondition named by this fact, then rerun the same compile scope.`,
         },
       ],
     };

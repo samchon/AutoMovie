@@ -1,13 +1,4 @@
 import {
-  Quaternion,
-  projectToNdc,
-  resolveCameraAt,
-  sampleClipSequence,
-  sampleFormationMotion,
-  sampleMotion,
-  transformFormationPoint,
-} from "@automovie/engine";
-import {
   IAutoMovieCompiledContractRealization,
   IAutoMovieCompiledPredicateResult,
   IAutoMovieCompiledShotSource,
@@ -23,7 +14,12 @@ import {
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 
-import { productionRuntimeModelId } from "./materializeProduction";
+import { sampleFormationMotion, transformFormationPoint } from "../formation";
+import { Quaternion } from "../math/Quaternion";
+import { sampleMotion } from "../motion/sampleMotion";
+import { sampleClipSequence } from "../resolve/sampleClip";
+import { productionRuntimeModelId } from "../productionIdentity";
+import { projectToNdc, resolveCameraAt } from "./cameraProjection";
 
 /** Derive and validate contract outcomes from actual compiled artifacts. */
 export const realizeShotContract = (props: {

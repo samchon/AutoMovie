@@ -1,3 +1,4 @@
+import { realizeShotContract } from "@automovie/engine";
 import {
   IAutoMovieCompiledShotSource,
   IAutoMovieModel,
@@ -10,7 +11,6 @@ import {
   AutoMovieProductionProject,
   materializeCompiledShot,
   materializeProductionModels,
-  realizeShotContract,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";

@@ -1,4 +1,8 @@
-import { Quaternion } from "@automovie/engine";
+import {
+  Quaternion,
+  productionRuntimeModelId,
+  productionRuntimeSkeletonId,
+} from "@automovie/engine";
 import {
   AutoMovieContentDigest,
   IAutoMovieCompiledEffect,
@@ -28,13 +32,7 @@ export const AUTOMOVIE_FORMATION_CHUNK_SIZE = 1_024;
 export const AUTOMOVIE_FORMATION_MATRIX_BYTES =
   16 * Float32Array.BYTES_PER_ELEMENT;
 
-/** Compiler-owned runtime identity for one model recipe. */
-export const productionRuntimeModelId = (recipe: string): string =>
-  `automovie:model:${recipe}`;
-
-/** Compiler-owned skeleton identity for one rigged model recipe. */
-export const productionRuntimeSkeletonId = (recipe: string): string =>
-  `automovie:skeleton:${recipe}`;
+export { productionRuntimeModelId, productionRuntimeSkeletonId };
 
 /** Materialize every bounded model recipe into deterministic primitive data. */
 export const materializeProductionModels = (

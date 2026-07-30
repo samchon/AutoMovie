@@ -1,5 +1,20 @@
 # `@automovie/engine`
 
+## Registered shot authoring
+
+`defineShot(id, { scene, contract, build })` is the code-authoring boundary for
+one registered shot. `compileDefinedShot` runs the authored
+stage → block → perform pipeline directly in the engine, so a source module
+does not need an MCP application wrapper to produce a deterministic shot
+artifact.
+
+The returned runtime keeps the stage, blocking, performance, artifact,
+opening/closing continuity, ROM warnings, and D010 physics advice together.
+Physics advice is decision data: callers explicitly accept, modify, or reject
+it instead of the compiler silently applying it. `realizeShotContract` is also
+owned here so compiler and direct-link consumers lower the same production
+contract through the same engine path.
+
 ## Interaction events
 
 `performShot` emits `shot.events` for engine-visible interactions on the

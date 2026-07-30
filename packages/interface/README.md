@@ -33,6 +33,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `model/` | **3D 모델**: 프리미티브/메쉬 형상(`AutoMoviePrimitiveShape`, `IAutoMovieMesh`, `IAutoMovieGeometry`), 파트(`IAutoMovieModelPart`), 모델(`IAutoMovieModel`). 스켈레톤 유무로 캐릭터/사물 통합 |
 | `skeleton/` | 휴머노이드 본 열거형, 스켈레톤·본·관절 제약(ROM) 타입 |
 | `pose/` | 정적 포즈: 휴머노이드 의미 각도 |
+| `authoring/` | 코드 저작 정본: stage, blocking, performance, forge/review/edit 계획과 하나의 등록된 shot program |
 | `production/` | 코딩 에이전트 제작 계약: `application/`의 16개 MCP 입력·결과 쌍, 설계, 컴파일 소유권, 기하 질의, 증거 기반 리뷰, 렌더 번들 |
 | `expression/` | 표정: ARKit 52 채널, VRM expression preset |
 | `face/` | **Dormant boundary**: 결정 001 이후 보존만 하는 face/head 파라미터 문서. 현재 motion-first 하니스의 주 저작 표면은 아니며, face editor 재개 시 호환 자산으로 쓴다. |
@@ -40,9 +41,9 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `material/` | PBR 머티리얼 |
 | `scene/` | 씬그래프: 모델/카메라/조명 배치 |
 | `cinematics/` | 촬영·편집: 샷·카메라 인텐트·커버리지(대체 앵글 테이크), 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스 |
-| `harness/` | LLM 함수호출 계약: 스테이지별 `IAutoMovie*Application.IWrite`, 액션 콜·타겟, 컨텍스트 요청. MCP 스키마의 소스 |
+| `harness/` | 전환기 함수호출 호환 타입: 액션 콜·타겟과 기존 application write 모양. #1428에서 남은 3단 MCP 표면과 함께 제거 |
 | `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약) |
 
-> 함수호출(application) 스키마 레이어는 `harness/`에 있다. `IAutoMovie*Application` 인터페이스 자체는 통합 표면에서 은퇴했지만(`.agents/skills/mcp`), 그 `IWrite`/`IProps` 데이터 모양이 MCP 도구 입력의 계약이다.
+> 코드 저작의 정본은 `authoring/`이며 `@automovie/engine`의 `defineShot`이 이를 실행한다. 남은 `harness/` application write 모양은 #1428의 3단 MCP 전환이 끝날 때 삭제할 호환 표면이다.
 
 타입 하나하나의 의미·단위·범위는 필드 JSDoc이 정본이다. 왜 그렇게 나뉘었는지는 위의 네이밍 컨벤션과 도메인 폴더 표가 담고 있다.

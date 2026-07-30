@@ -4,8 +4,9 @@ import {
   IAutoMovieMountBinding,
   IAutoMovieScene,
   IAutoMovieSceneNode,
-  IAutoMovieScriptApplication,
-  IAutoMovieStagingApplication,
+  IAutoMovieScript,
+  IAutoMovieStage,
+  IAutoMovieStageLight,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
@@ -56,7 +57,7 @@ const setPieceScale = (
 
 /** A light placement's kind, defaulting to the sun-like parallel source. */
 const lightTypeOf = (
-  light: IAutoMovieStagingApplication.ILightPlacement,
+  light: IAutoMovieStageLight,
 ): IAutoMovieLight["type"] | null => {
   const type = (light as unknown as { type?: unknown }).type;
   if (type === undefined) return "directional";
@@ -89,7 +90,7 @@ const DEFAULT_CONE_ANGLE = 45;
  * only rung between the model and the scene.
  */
 const validateLightPlacementShape = (
-  light: IAutoMovieStagingApplication.ILightPlacement,
+  light: IAutoMovieStageLight,
   path: string,
   out: ViolationCollector,
 ): void => {
@@ -276,9 +277,7 @@ const unitComponent = (
  * Omitted color is neutral white with `a: null`, the light-slot convention
  * {@link IAutoMovieColor} documents.
  */
-const lowerLightPlacement = (
-  light: IAutoMovieStagingApplication.ILightPlacement,
-): IAutoMovieLight => {
+const lowerLightPlacement = (light: IAutoMovieStageLight): IAutoMovieLight => {
   const type = lightTypeOf(light)!;
   const base = {
     id: light.node,
@@ -386,14 +385,14 @@ export namespace IAutoMovieStagedSet {
  * composes `space: null`, the scalar ground plane the engine assumed before.
  */
 export const stageScene = (
-  script: IAutoMovieScriptApplication.IWrite,
-  staging: IAutoMovieStagingApplication.IWrite,
+  script: IAutoMovieScript,
+  staging: IAutoMovieStage,
 ): IAutoMovieStagedSet => {
   const out = new ViolationCollector();
   const cast = new Map<
     string,
     {
-      member: IAutoMovieScriptApplication.IWrite["cast"][number];
+      member: IAutoMovieScript["cast"][number];
       index: number;
     }
   >();

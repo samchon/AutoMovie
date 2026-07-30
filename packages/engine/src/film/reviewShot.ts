@@ -1,8 +1,8 @@
 import {
   IAutoMovieConstraintViolation,
-  IAutoMovieReviewApplication,
   IAutoMovieReviewNote,
-  IAutoMovieScriptApplication,
+  IAutoMovieScript,
+  IAutoMovieShotReviewWrite,
 } from "@automovie/interface";
 
 import { ViolationCollector } from "../validation/violation";
@@ -55,8 +55,8 @@ export namespace IAutoMovieShotReview {
  * pass and silently starve the right one.
  */
 export const reviewShot = (
-  script: IAutoMovieScriptApplication.IWrite,
-  review: IAutoMovieReviewApplication.IWrite,
+  script: IAutoMovieScript,
+  review: IAutoMovieShotReviewWrite,
 ): IAutoMovieShotReview => {
   const out = new ViolationCollector();
   const beatById = new Map<string, number>();

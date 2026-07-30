@@ -70,7 +70,7 @@ export type AutoMovieGestureKind =
  * "walk to the door", "look at her", "get knocked back"); the engine's
  * primitives (locomotion bakers, two-bone IK, aim, ROM clamp, spring,
  * projectile, impact) synthesise the per-frame {@link IAutoMovieMotion}. This is
- * the harness's leverage: a legible schema, rich movement.
+ * the authoring standard library's leverage: a legible schema, rich movement.
  *
  * Discriminated on `verb`. Every action carries an actor and a placement on the
  * shot's local timeline (`start`, and a `duration` or `"auto"` to let the

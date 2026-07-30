@@ -786,6 +786,19 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }
     fs.writeFileSync(
       sourcePath,
+      original.replace(
+        "export const opening: IAutoMovieShotSource = {",
+        'export const opening = { id: "another-shot",',
+      ),
+    );
+    TestValidator.predicate(
+      "registered export id is bound to contract module and export",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "source-registration-mismatch",
+      ),
+    );
+    fs.writeFileSync(
+      sourcePath,
       'export const opening = { build() { throw "boom"; } };\n',
     );
     TestValidator.predicate(

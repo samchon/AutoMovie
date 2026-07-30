@@ -25,6 +25,5 @@ export * from "./production/productionPublicationSnapshot";
 export * from "./production/productionRenderJob";
 export * from "./production/renderIdentity";
 export * from "./production/rootNamespaceLock";
-export * from "./production/realizeShotContract";
 export * from "./production/validateProductionDesign";
 export { AUTOMOVIE_GUIDE_NAMES } from "./services/GuideService";

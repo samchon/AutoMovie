@@ -1,17 +1,18 @@
 import { AutoMovieViolationKind } from "./AutoMovieViolationKind";
 
 /**
- * One deterministic constraint violation: the unit of feedback the harness
- * turns into a `// ❌` correction comment.
+ * One deterministic constraint violation: the unit of feedback a direct
+ * authoring caller or build boundary turns into a located correction.
  *
  * This is automovie's domain-level analogue of typia's `IValidation.IError`,
  * enriched with a {@link AutoMovieViolationKind} (so failures route to the right
  * tier/corrector) and a human-and-LLM-readable `expected` string. The engine
  * emits these from its ROM / physics / temporal verifiers at the offending JSON
  * path. A direct caller consumes them as data; the MCP surface carries the same
- * objects to an external agent, so it sees exactly what was wrong on its own
- * output and fixes only that field. This object _is_ how a rejected fact or a
- * physics warning becomes an actionable signal rather than a silent failure.
+ * objects to an external agent when MCP owns the evidence exchange, so both
+ * direct and remote callers see exactly what was wrong and fix only that field.
+ * This object _is_ how a rejected fact or a physics warning becomes an
+ * actionable signal rather than a silent failure.
  *
  * @author Samchon
  */
@@ -26,7 +27,7 @@ export interface IAutoMovieConstraintViolation {
    * physical-plausibility advice (a body that would topple, an unsupported mass
    * that would fall): recommended, not forbidden, because a film may be
    * deliberately unphysical. A `"warning"` never fails validation on its own;
-   * it rides the same envelope so the harness can surface it and the author (or
+   * it rides the same envelope so the build can surface it and the author (or
    * an action's `physicsIntent` marker) can accept or dismiss it. `"warning"`
    * is the compiler's word for this level, not "advisory".
    */
