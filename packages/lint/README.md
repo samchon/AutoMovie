@@ -29,13 +29,30 @@ export default {
           ".automovie/design/acceptance/*.json",
           ".automovie/design/*/acceptance/*.json",
         ],
+        models: [
+          ".automovie/design/models/*.json",
+          ".automovie/design/*/models/*.json",
+          ".automovie/design/shared/models/*.json",
+        ],
+        formations: [
+          ".automovie/design/formations/*.json",
+          ".automovie/design/*/formations/*.json",
+          ".automovie/design/shared/formations/*.json",
+        ],
+        worlds: [
+          ".automovie/design/world.json",
+          ".automovie/design/*/world.json",
+          ".automovie/design/shared/world.json",
+        ],
         realizations: [
           "generated/realizations/*.json",
           "generated/*/realizations/*.json",
         ],
         reviews: [
-          ".automovie/reviews/design/acceptances/*.json",
-          ".automovie/reviews/*/design/acceptances/*.json",
+          ".automovie/reviews/shots/*.json",
+          ".automovie/reviews/films/*.json",
+          ".automovie/reviews/*/shots/*.json",
+          ".automovie/reviews/*/films/*.json",
         ],
       },
     ],
@@ -83,10 +100,12 @@ SCN heading이 누락·중복·미등록이거나, active heading 아래 본문�
 index 옆에서 진단한다.
 
 shot/acceptance의 `{ reason, scene, claim? }` 인용, 인물·세력·장소
-카탈로그, continuity claim의 단일 verification owner도 같은 원장에서
-검사한다. scene coverage는 shot 선언만으로 닫히지 않는다. passing
-`generated/*/realizations/*.json`과 완료된 acceptance review가 있어야 하며,
-disposition과 실현이 동시에 존재하면 모순으로 진단한다.
+카탈로그에서 model/formation/world landmark로 향하는 명시적 binding,
+continuity claim의 단일 verification owner와 정확한 proof selector도 같은
+원장에서 검사한다. scene coverage는 shot 선언이나 design review만으로 닫히지
+않는다. 같은 프로덕션의 passing `generated/*/realizations/*.json`과 같은
+realized shot을 관찰한 shot/film review의 `acceptance-scenarios` pass가 함께
+있어야 하며, disposition과 실현이 동시에 존재하면 모순으로 진단한다.
 
 lock 뒤 기존 숫자는 `sceneIds` 원장에 남아야 한다. 삭제는 `OMITTED`
 tombstone으로 보존하고 새 장면은 `SCN-A11` 같은 alpha insertion id만

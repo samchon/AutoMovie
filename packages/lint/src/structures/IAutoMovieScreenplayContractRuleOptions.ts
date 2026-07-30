@@ -8,6 +8,12 @@ export interface IAutoMovieScreenplayContractRuleOptions {
   shots: string[];
   /** Legacy and namespaced acceptance-scenario records. */
   acceptance: string[];
+  /** Shared and legacy model-recipe records cited by character bindings. */
+  models: string[];
+  /** Shared and legacy formation records cited by faction bindings. */
+  formations: string[];
+  /** Shared and legacy world records cited by location bindings. */
+  worlds: string[];
   /** Compiler-owned shot-realization records. */
   realizations: string[];
   /** Evidence-bound acceptance review records. */

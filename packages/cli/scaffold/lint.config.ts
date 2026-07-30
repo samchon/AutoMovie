@@ -68,13 +68,30 @@ const config = {
           ".automovie/design/acceptance/*.json",
           ".automovie/design/*/acceptance/*.json",
         ],
+        models: [
+          ".automovie/design/models/*.json",
+          ".automovie/design/*/models/*.json",
+          ".automovie/design/shared/models/*.json",
+        ],
+        formations: [
+          ".automovie/design/formations/*.json",
+          ".automovie/design/*/formations/*.json",
+          ".automovie/design/shared/formations/*.json",
+        ],
+        worlds: [
+          ".automovie/design/world.json",
+          ".automovie/design/*/world.json",
+          ".automovie/design/shared/world.json",
+        ],
         realizations: [
           "generated/realizations/*.json",
           "generated/*/realizations/*.json",
         ],
         reviews: [
-          ".automovie/reviews/design/acceptances/*.json",
-          ".automovie/reviews/*/design/acceptances/*.json",
+          ".automovie/reviews/shots/*.json",
+          ".automovie/reviews/films/*.json",
+          ".automovie/reviews/*/shots/*.json",
+          ".automovie/reviews/*/films/*.json",
         ],
       },
     ],

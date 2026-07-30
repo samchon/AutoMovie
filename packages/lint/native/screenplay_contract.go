@@ -19,6 +19,9 @@ type screenplayContractOptions struct {
 	Documents    []string `json:"documents"`
 	Shots        []string `json:"shots"`
 	Acceptance   []string `json:"acceptance"`
+	Models       []string `json:"models"`
+	Formations   []string `json:"formations"`
+	Worlds       []string `json:"worlds"`
 	Realizations []string `json:"realizations"`
 	Reviews      []string `json:"reviews"`
 }
@@ -89,12 +92,25 @@ type screenplayCatalogEntry struct {
 	ID       string               `json:"id"`
 	Name     string               `json:"name"`
 	Evidence []screenplayEvidence `json:"evidence"`
+	Bindings []struct {
+		Kind string `json:"kind"`
+		ID   string `json:"id"`
+	} `json:"bindings"`
 }
 
 type screenplayContinuityClaim struct {
 	ID           string               `json:"id"`
 	Text         string               `json:"text"`
 	Verification string               `json:"verification"`
+	Proof        struct {
+		Owner    string `json:"owner"`
+		Shot     string `json:"shot"`
+		Scenario string `json:"scenario"`
+		Outcome  struct {
+			Kind string `json:"kind"`
+			ID   string `json:"id"`
+		} `json:"outcome"`
+	} `json:"proof"`
 	Evidence     []screenplayEvidence `json:"evidence"`
 }
 
@@ -110,30 +126,50 @@ type screenplayShotRecord struct {
 type screenplayAcceptanceRecord struct {
 	ID       string               `json:"id"`
 	Evidence []screenplayEvidence `json:"evidence"`
+	Target   struct {
+		Kind string `json:"kind"`
+		ID   string `json:"id"`
+	} `json:"target"`
 	Criterion struct {
 		Kind string `json:"kind"`
+		Shot string `json:"shot"`
 	} `json:"criterion"`
+}
+
+type screenplayRealizationOutcome struct {
+	ID     string `json:"id"`
+	Passed bool   `json:"passed"`
 }
 
 type screenplayRealizationRecord struct {
 	Version    int    `json:"version"`
 	Shot       string `json:"shot"`
-	Opening    []struct{ Passed bool `json:"passed"` } `json:"opening"`
-	Closing    []struct{ Passed bool `json:"passed"` } `json:"closing"`
-	Events     []struct{ Passed bool `json:"passed"` } `json:"events"`
-	Camera     []struct{ Passed bool `json:"passed"` } `json:"camera"`
-	Formations []struct{ Passed bool `json:"passed"` } `json:"formations"`
+	Opening    []screenplayRealizationOutcome `json:"opening"`
+	Closing    []screenplayRealizationOutcome `json:"closing"`
+	Events     []screenplayRealizationOutcome `json:"events"`
+	Camera     []screenplayRealizationOutcome `json:"camera"`
+	Formations []screenplayRealizationOutcome `json:"formations"`
 }
 
 type screenplayReviewRecord struct {
 	Complete bool `json:"complete"`
 	Target   struct {
-		Kind   string `json:"kind"`
-		Design struct {
-			Kind string `json:"kind"`
-			ID   string `json:"id"`
-		} `json:"design"`
+		Kind string `json:"kind"`
+		ID   string `json:"id"`
 	} `json:"target"`
+	Checks []struct {
+		Criterion           string   `json:"criterion"`
+		Verdict             string   `json:"verdict"`
+		AcceptanceScenarios []string `json:"acceptanceScenarios"`
+	} `json:"checks"`
+}
+
+type screenplayIDRecord struct {
+	ID string `json:"id"`
+}
+
+type screenplayWorldRecord struct {
+	Landmarks []screenplayIDRecord `json:"landmarks"`
 }
 
 type screenplayMarkdownScene struct {
@@ -164,6 +200,9 @@ func (screenplayContractRule) ProjectInputs(
 	patterns = append(patterns, options.Documents...)
 	patterns = append(patterns, options.Shots...)
 	patterns = append(patterns, options.Acceptance...)
+	patterns = append(patterns, options.Models...)
+	patterns = append(patterns, options.Formations...)
+	patterns = append(patterns, options.Worlds...)
 	patterns = append(patterns, options.Realizations...)
 	patterns = append(patterns, options.Reviews...)
 	inputs := make([]rule.ProjectInput, 0, len(patterns))
@@ -215,11 +254,20 @@ func (screenplayContractRule) Check(ctx *rule.ProjectContext) {
 	}
 	shots, shotProblems := screenplayProjectFiles(root, options.Shots)
 	acceptance, acceptanceProblems := screenplayProjectFiles(root, options.Acceptance)
+	models, modelProblems := screenplayProjectFiles(root, options.Models)
+	formations, formationProblems := screenplayProjectFiles(
+		root,
+		options.Formations,
+	)
+	worlds, worldProblems := screenplayProjectFiles(root, options.Worlds)
 	realizations, realizationProblems := screenplayProjectFiles(root, options.Realizations)
 	reviews, reviewProblems := screenplayProjectFiles(root, options.Reviews)
 	for _, problems := range [][]string{
 		shotProblems,
 		acceptanceProblems,
+		modelProblems,
+		formationProblems,
+		worldProblems,
 		realizationProblems,
 		reviewProblems,
 	} {
@@ -235,6 +283,9 @@ func (screenplayContractRule) Check(ctx *rule.ProjectContext) {
 			options,
 			shots,
 			acceptance,
+			models,
+			formations,
+			worlds,
 			realizations,
 			reviews,
 		)
@@ -250,6 +301,9 @@ func validateScreenplayContractOptions(options screenplayContractOptions) string
 		{"documents", options.Documents},
 		{"shots", options.Shots},
 		{"acceptance", options.Acceptance},
+		{"models", options.Models},
+		{"formations", options.Formations},
+		{"worlds", options.Worlds},
 		{"realizations", options.Realizations},
 		{"reviews", options.Reviews},
 	}
@@ -276,6 +330,9 @@ func checkScreenplayIndex(
 	options screenplayContractOptions,
 	shotFiles []string,
 	acceptanceFiles []string,
+	modelFiles []string,
+	formationFiles []string,
+	worldFiles []string,
 	realizationFiles []string,
 	reviewFiles []string,
 ) {
@@ -300,12 +357,24 @@ func checkScreenplayIndex(
 		filepath.ToSlash(screenplayRelative(root, indexFile)),
 		"/screenplay/index.json",
 	)
-	namespace := strings.TrimPrefix(owner, ".automovie/design/")
-	if owner != ".automovie/design" && namespace != index.Production {
+	var production screenplayIDRecord
+	productionFile := filepath.Join(
+		root,
+		filepath.FromSlash(owner),
+		"production.json",
+	)
+	if problem := readScreenplayJSON(productionFile, &production); problem != "" {
+		ctx.Report(
+			anchor + " cannot read its namespace production design: " +
+				problem +
+				". The encoded physical segment cannot prove which raw production id owns this story. Restore production.json and run lint again.",
+		)
+	} else if production.ID != index.Production {
 		ctx.Report(
 			anchor + " declares production '" + index.Production +
-				"' while its physical namespace belongs to '" + namespace +
-				"'. Story prose and downstream design would be joined across productions. Move the index or correct production, then run lint again.",
+				"' while namespace production.json declares '" +
+				production.ID +
+				"'. Story prose and downstream design would be joined across productions. Correct the index or move it to the owning namespace, then run lint again.",
 		)
 	}
 	expectedDocumentRoot := "docs/" + index.Production + "/"
@@ -333,6 +402,57 @@ func checkScreenplayIndex(
 		root,
 		owner+"/acceptance/",
 		acceptanceFiles,
+	)
+	ownedModels := append(
+		screenplayOwnedFiles(root, owner+"/models/", modelFiles),
+		screenplayOwnedFiles(
+			root,
+			".automovie/design/shared/models/",
+			modelFiles,
+		)...,
+	)
+	ownedFormations := append(
+		screenplayOwnedFiles(root, owner+"/formations/", formationFiles),
+		screenplayOwnedFiles(
+			root,
+			".automovie/design/shared/formations/",
+			formationFiles,
+		)...,
+	)
+	ownedWorlds := screenplayExactFiles(
+		root,
+		[]string{
+			owner + "/world.json",
+			".automovie/design/shared/world.json",
+		},
+		worldFiles,
+	)
+	realizationPrefix := "generated/realizations/"
+	ownedReviews := append(
+		screenplayOwnedFiles(
+			root,
+			".automovie/reviews/shots/",
+			reviewFiles,
+		),
+		screenplayOwnedFiles(
+			root,
+			".automovie/reviews/films/",
+			reviewFiles,
+		)...,
+	)
+	if owner != ".automovie/design" {
+		segment := strings.TrimPrefix(owner, ".automovie/design/")
+		realizationPrefix = "generated/" + segment + "/realizations/"
+		ownedReviews = screenplayOwnedFiles(
+			root,
+			".automovie/reviews/"+segment+"/",
+			reviewFiles,
+		)
+	}
+	ownedRealizations := screenplayOwnedFiles(
+		root,
+		realizationPrefix,
+		realizationFiles,
 	)
 
 	treatmentText, treatmentReady := readScreenplayDocument(
@@ -559,8 +679,11 @@ func checkScreenplayIndex(
 		scenes,
 		ownedShots,
 		ownedAcceptance,
-		realizationFiles,
-		reviewFiles,
+		ownedModels,
+		ownedFormations,
+		ownedWorlds,
+		ownedRealizations,
+		ownedReviews,
 	)
 }
 
@@ -624,9 +747,26 @@ func validateScreenplayDownstream(
 	scenes map[string]screenplayScene,
 	shotFiles []string,
 	acceptanceFiles []string,
+	modelFiles []string,
+	formationFiles []string,
+	worldFiles []string,
 	realizationFiles []string,
 	reviewFiles []string,
 ) {
+	models := screenplayDesignIDs(ctx, root, anchor, "model", modelFiles)
+	formations := screenplayDesignIDs(
+		ctx,
+		root,
+		anchor,
+		"formation",
+		formationFiles,
+	)
+	landmarks := screenplayWorldLandmarks(
+		ctx,
+		root,
+		anchor,
+		worldFiles,
+	)
 	characters := screenplayCatalog(
 		ctx,
 		anchor,
@@ -634,6 +774,8 @@ func validateScreenplayDownstream(
 		index.Catalog.Characters,
 		scenes,
 		index.Continuity,
+		"model",
+		models,
 	)
 	factions := screenplayCatalog(
 		ctx,
@@ -642,6 +784,8 @@ func validateScreenplayDownstream(
 		index.Catalog.Factions,
 		scenes,
 		index.Continuity,
+		"formation",
+		formations,
 	)
 	locations := screenplayCatalog(
 		ctx,
@@ -650,6 +794,8 @@ func validateScreenplayDownstream(
 		index.Catalog.Locations,
 		scenes,
 		index.Continuity,
+		"world-landmark",
+		landmarks,
 	)
 	claims := map[string]screenplayContinuityClaim{}
 	for _, claim := range index.Continuity {
@@ -672,6 +818,23 @@ func validateScreenplayDownstream(
 					"'. Give the canon fact one stable id and one supported owner, then run lint again.",
 			)
 		}
+		if claim.Proof.Owner != claim.Verification ||
+			(claim.Verification == "geometry" &&
+				(strings.TrimSpace(claim.Proof.Shot) == "" ||
+					strings.TrimSpace(claim.Proof.Outcome.ID) == "" ||
+					(claim.Proof.Outcome.Kind != "opening" &&
+						claim.Proof.Outcome.Kind != "closing" &&
+						claim.Proof.Outcome.Kind != "event" &&
+						claim.Proof.Outcome.Kind != "formation"))) ||
+			(claim.Verification != "geometry" &&
+				strings.TrimSpace(claim.Proof.Scenario) == "") {
+			ctx.Report(
+				anchor + " continuity claim '" + claim.ID +
+					"' has an invalid exact proof selector for owner '" +
+					claim.Verification +
+					"'. Geometry must name one shot outcome; frame-review or acceptance must name one scenario, and proof.owner must match verification. Correct the selector and run lint again.",
+			)
+		}
 		claims[claim.ID] = claim
 	}
 	for _, id := range screenplaySortedKeys(scenes) {
@@ -679,7 +842,7 @@ func validateScreenplayDownstream(
 		if scene.Status != "active" || scene.Location == nil {
 			continue
 		}
-		if !locations[*scene.Location] {
+		if !locations.Entries[*scene.Location] {
 			ctx.Report(
 				anchor + " scene '" + scene.ID + "' cites unknown location '" +
 					*scene.Location +
@@ -729,18 +892,20 @@ func validateScreenplayDownstream(
 			}
 		}
 		for _, participant := range shot.Participants {
-			if participant.Kind == "actor" && !characters[participant.ID] {
+			if participant.Kind == "actor" &&
+				!characters.Bindings[participant.ID] {
 				ctx.Report(
 					anchor + " shot '" + shot.ID + "' actor participant '" +
 						participant.ID +
-						"' is absent from the grounded character catalog. Discover the character in scene evidence or correct the participant and run lint again.",
+						"' is not bound by the grounded character catalog. Bind that shared model to a production character or correct the participant and run lint again.",
 				)
 			}
-			if participant.Kind == "formation" && !factions[participant.ID] {
+			if participant.Kind == "formation" &&
+				!factions.Bindings[participant.ID] {
 				ctx.Report(
 					anchor + " shot '" + shot.ID +
 						"' formation participant '" + participant.ID +
-						"' is absent from the grounded faction catalog. Add the story force or correct the participant and run lint again.",
+						"' is not bound by the grounded faction catalog. Bind that formation to a production faction or correct the participant and run lint again.",
 				)
 			}
 		}
@@ -789,21 +954,27 @@ func validateScreenplayDownstream(
 	}
 
 	realized := screenplayPassingRealizations(realizationFiles)
-	completed := screenplayCompletedAcceptance(reviewFiles)
+	passedReviews := screenplayPassedAcceptanceReviews(reviewFiles)
 	for _, id := range screenplaySortedKeys(scenes) {
 		scene := scenes[id]
+		sceneRealizations := screenplayRealizedShots(shotScenes[id], realized)
+		hasRealization := len(sceneRealizations) != 0
+		hasAcceptance := screenplayHasPassedAcceptance(
+			index.Production,
+			acceptanceScenes[id],
+			acceptance,
+			passedReviews,
+			sceneRealizations,
+		)
 		if scene.Status == "OMITTED" {
-			if anyScreenplayMember(shotScenes[id], realized) ||
-				anyScreenplayMember(acceptanceScenes[id], completed) {
+			if hasRealization || hasAcceptance {
 				ctx.Report(
 					anchor + " scene '" + id +
-						"' is an OMITTED tombstone but still has passing realization or completed acceptance evidence. The ledger asserts both absence and realization. Remove the downstream contradiction or reactivate the scene, then run lint again.",
+						"' is an OMITTED tombstone but still has passing realization or passed visual acceptance evidence. The ledger asserts both absence and realization. Remove the downstream contradiction or reactivate the scene, then run lint again.",
 				)
 			}
 			continue
 		}
-		hasRealization := anyScreenplayMember(shotScenes[id], realized)
-		hasAcceptance := anyScreenplayMember(acceptanceScenes[id], completed)
 		if scene.Disposition != nil {
 			if strings.TrimSpace(scene.Disposition.Reason) == "" {
 				ctx.Report(
@@ -828,7 +999,7 @@ func validateScreenplayDownstream(
 		if !hasAcceptance {
 			ctx.Report(
 				anchor + " active scene '" + id +
-					"' has no citing acceptance scenario with a completed evidence review. Generated motion without passed observation cannot drain scene coverage. Complete a current citing acceptance review or record a phase-local disposition, then run lint again.",
+					"' has no citing acceptance scenario passed by a shot/film review for the same realized shot. A completed design review is not observation. Pass current acceptance evidence or record a phase-local disposition, then run lint again.",
 			)
 		}
 	}
@@ -843,30 +1014,79 @@ func validateScreenplayDownstream(
 				claims,
 			)
 		}
-		proven := false
-		if claim.Verification == "geometry" {
-			proven = anyScreenplayMember(shotClaims[claim.ID], realized)
-		} else {
-			for _, acceptanceID := range acceptanceClaims[claim.ID] {
-				scenario, exists := acceptance[acceptanceID]
-				if !exists || !completed[acceptanceID] {
-					continue
-				}
-				if claim.Verification == "acceptance" ||
-					scenario.Criterion.Kind == "frame" {
-					proven = true
-					break
-				}
-			}
-		}
+		proven := screenplayContinuityProven(
+			index.Production,
+			claim,
+			shotClaims[claim.ID],
+			acceptanceClaims[claim.ID],
+			acceptance,
+			realized,
+			passedReviews,
+		)
 		if !proven {
 			ctx.Report(
 				anchor + " continuity claim '" + claim.ID +
 					"' has verification owner '" + claim.Verification +
-					"' but no current citing evidence from that owner. Other citations remain traceability, not proof. Produce and pass the owning evidence family, then run lint again.",
+					"' but its exact proof selector has no passing citing evidence from that owner. Generic shot or design-review success is only traceability. Produce and pass the named outcome or acceptance and run lint again.",
 			)
 		}
 	}
+}
+
+type screenplayCatalogResult struct {
+	Entries  map[string]bool
+	Bindings map[string]bool
+}
+
+func screenplayDesignIDs(
+	ctx *rule.ProjectContext,
+	root string,
+	anchor string,
+	kind string,
+	files []string,
+) map[string]bool {
+	out := map[string]bool{}
+	for _, file := range files {
+		var record screenplayIDRecord
+		if problem := readScreenplayJSON(file, &record); problem != "" {
+			ctx.Report(
+				anchor + " cannot decode " + kind + " design '" +
+					screenplayRelative(root, file) + "': " + problem +
+					". Catalog bindings to this design family are unknown. Restore valid JSON and run lint again.",
+			)
+			continue
+		}
+		if strings.TrimSpace(record.ID) != "" {
+			out[record.ID] = true
+		}
+	}
+	return out
+}
+
+func screenplayWorldLandmarks(
+	ctx *rule.ProjectContext,
+	root string,
+	anchor string,
+	files []string,
+) map[string]bool {
+	out := map[string]bool{}
+	for _, file := range files {
+		var world screenplayWorldRecord
+		if problem := readScreenplayJSON(file, &world); problem != "" {
+			ctx.Report(
+				anchor + " cannot decode world design '" +
+					screenplayRelative(root, file) + "': " + problem +
+					". Location bindings cannot be grounded. Restore valid JSON and run lint again.",
+			)
+			continue
+		}
+		for _, landmark := range world.Landmarks {
+			if strings.TrimSpace(landmark.ID) != "" {
+				out[landmark.ID] = true
+			}
+		}
+	}
+	return out
 }
 
 func screenplayCatalog(
@@ -876,14 +1096,19 @@ func screenplayCatalog(
 	entries []screenplayCatalogEntry,
 	scenes map[string]screenplayScene,
 	claims []screenplayContinuityClaim,
-) map[string]bool {
+	bindingKind string,
+	available map[string]bool,
+) screenplayCatalogResult {
 	claimMap := map[string]screenplayContinuityClaim{}
 	for _, claim := range claims {
 		claimMap[claim.ID] = claim
 	}
-	out := map[string]bool{}
+	out := screenplayCatalogResult{
+		Entries:  map[string]bool{},
+		Bindings: map[string]bool{},
+	}
 	for _, entry := range entries {
-		if out[entry.ID] {
+		if out.Entries[entry.ID] {
 			ctx.Report(
 				anchor + " repeats " + kind + " catalog id '" + entry.ID +
 					"'. Downstream identity is ambiguous. Keep one grounded catalog record and run lint again.",
@@ -891,13 +1116,14 @@ func screenplayCatalog(
 		}
 		if strings.TrimSpace(entry.ID) == "" ||
 			strings.TrimSpace(entry.Name) == "" ||
-			len(entry.Evidence) == 0 {
+			len(entry.Evidence) == 0 ||
+			len(entry.Bindings) == 0 {
 			ctx.Report(
 				anchor + " contains a " + kind +
-					" catalog entry without id, name or scene evidence. Story identity must be discovered in authored prose, not invented for modeling convenience. Ground the entry and run lint again.",
+					" catalog entry without id, name, scene evidence or downstream binding. Story identity must be discovered in authored prose and joined explicitly to shared design. Ground the entry and run lint again.",
 			)
 		}
-		out[entry.ID] = true
+		out.Entries[entry.ID] = true
 		for _, evidence := range entry.Evidence {
 			validateScreenplayEvidence(
 				ctx,
@@ -906,6 +1132,29 @@ func screenplayCatalog(
 				scenes,
 				claimMap,
 			)
+		}
+		for _, binding := range entry.Bindings {
+			if binding.Kind != bindingKind ||
+				strings.TrimSpace(binding.ID) == "" ||
+				!available[binding.ID] {
+				ctx.Report(
+					anchor + " " + kind + " '" + entry.ID +
+						"' binding {" + binding.Kind + ", " +
+						binding.ID + "} does not resolve to an existing " +
+						bindingKind +
+						". Correct the production-scoped cast/catalog join and run lint again.",
+				)
+				continue
+			}
+			if out.Bindings[binding.ID] {
+				ctx.Report(
+					anchor + " binds " + bindingKind + " '" +
+						binding.ID +
+						"' to more than one " + kind +
+						". One downstream identity cannot play two story identities in the same production. Keep one binding and run lint again.",
+				)
+			}
+			out.Bindings[binding.ID] = true
 		}
 	}
 	return out
@@ -945,8 +1194,10 @@ func validateScreenplayEvidence(
 	return valid
 }
 
-func screenplayPassingRealizations(files []string) map[string]bool {
-	out := map[string]bool{}
+func screenplayPassingRealizations(
+	files []string,
+) map[string]screenplayRealizationRecord {
+	out := map[string]screenplayRealizationRecord{}
 	for _, file := range files {
 		var realization screenplayRealizationRecord
 		if readScreenplayJSON(file, &realization) != "" ||
@@ -956,7 +1207,7 @@ func screenplayPassingRealizations(files []string) map[string]bool {
 			continue
 		}
 		passed := true
-		for _, group := range [][]struct{ Passed bool `json:"passed"` }{
+		for _, group := range [][]screenplayRealizationOutcome{
 			realization.Opening,
 			realization.Closing,
 			realization.Events,
@@ -970,31 +1221,175 @@ func screenplayPassingRealizations(files []string) map[string]bool {
 			}
 		}
 		if passed {
-			out[realization.Shot] = true
+			out[realization.Shot] = realization
 		}
 	}
 	return out
 }
 
-func screenplayCompletedAcceptance(files []string) map[string]bool {
-	out := map[string]bool{}
+type screenplayReviewTarget struct {
+	Kind string
+	ID   string
+}
+
+func screenplayPassedAcceptanceReviews(
+	files []string,
+) map[string][]screenplayReviewTarget {
+	out := map[string][]screenplayReviewTarget{}
 	for _, file := range files {
 		var review screenplayReviewRecord
 		if readScreenplayJSON(file, &review) != "" ||
 			!review.Complete ||
-			review.Target.Kind != "design" ||
-			review.Target.Design.Kind != "acceptance" ||
-			strings.TrimSpace(review.Target.Design.ID) == "" {
+			(review.Target.Kind != "shot" && review.Target.Kind != "film") ||
+			strings.TrimSpace(review.Target.ID) == "" {
 			continue
 		}
-		out[review.Target.Design.ID] = true
+		for _, check := range review.Checks {
+			if check.Criterion != "acceptance-scenarios" ||
+				check.Verdict != "pass" {
+				continue
+			}
+			for _, scenario := range check.AcceptanceScenarios {
+				out[scenario] = append(
+					out[scenario],
+					screenplayReviewTarget{
+						Kind: review.Target.Kind,
+						ID:   review.Target.ID,
+					},
+				)
+			}
+		}
 	}
 	return out
 }
 
-func anyScreenplayMember(values []string, present map[string]bool) bool {
+func screenplayAcceptanceShot(
+	production string,
+	scenario screenplayAcceptanceRecord,
+) string {
+	if scenario.Target.Kind == "shot" {
+		if strings.TrimSpace(scenario.Target.ID) == "" ||
+			(strings.TrimSpace(scenario.Criterion.Shot) != "" &&
+				scenario.Criterion.Shot != scenario.Target.ID) {
+			return ""
+		}
+		return scenario.Target.ID
+	}
+	if scenario.Target.Kind == "film" &&
+		scenario.Target.ID == production &&
+		strings.TrimSpace(scenario.Criterion.Shot) != "" {
+		return scenario.Criterion.Shot
+	}
+	return ""
+}
+
+func screenplayRealizedShots(
+	shots []string,
+	realized map[string]screenplayRealizationRecord,
+) map[string]bool {
+	out := map[string]bool{}
+	for _, shot := range shots {
+		if _, exists := realized[shot]; exists {
+			out[shot] = true
+		}
+	}
+	return out
+}
+
+func screenplayHasPassedAcceptance(
+	production string,
+	scenarios []string,
+	acceptance map[string]screenplayAcceptanceRecord,
+	reviews map[string][]screenplayReviewTarget,
+	realizedShots map[string]bool,
+) bool {
+	for _, scenarioID := range scenarios {
+		scenario, exists := acceptance[scenarioID]
+		if !exists {
+			continue
+		}
+		shot := screenplayAcceptanceShot(production, scenario)
+		if shot == "" || !realizedShots[shot] {
+			continue
+		}
+		for _, target := range reviews[scenarioID] {
+			if (target.Kind == "film" && target.ID == production) ||
+				(target.Kind == "shot" && target.ID == shot) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func screenplayContinuityProven(
+	production string,
+	claim screenplayContinuityClaim,
+	citingShots []string,
+	citingAcceptance []string,
+	acceptance map[string]screenplayAcceptanceRecord,
+	realized map[string]screenplayRealizationRecord,
+	reviews map[string][]screenplayReviewTarget,
+) bool {
+	if claim.Proof.Owner != claim.Verification {
+		return false
+	}
+	if claim.Verification == "geometry" {
+		if !screenplayStringMember(citingShots, claim.Proof.Shot) {
+			return false
+		}
+		realization, exists := realized[claim.Proof.Shot]
+		if !exists {
+			return false
+		}
+		var outcomes []screenplayRealizationOutcome
+		switch claim.Proof.Outcome.Kind {
+		case "opening":
+			outcomes = realization.Opening
+		case "closing":
+			outcomes = realization.Closing
+		case "event":
+			outcomes = realization.Events
+		case "formation":
+			outcomes = realization.Formations
+		default:
+			return false
+		}
+		for _, outcome := range outcomes {
+			if outcome.ID == claim.Proof.Outcome.ID && outcome.Passed {
+				return true
+			}
+		}
+		return false
+	}
+	if !screenplayStringMember(
+		citingAcceptance,
+		claim.Proof.Scenario,
+	) {
+		return false
+	}
+	scenario, exists := acceptance[claim.Proof.Scenario]
+	if !exists ||
+		(claim.Verification == "frame-review" &&
+			scenario.Criterion.Kind != "frame") {
+		return false
+	}
+	allRealized := map[string]bool{}
+	for shot := range realized {
+		allRealized[shot] = true
+	}
+	return screenplayHasPassedAcceptance(
+		production,
+		[]string{claim.Proof.Scenario},
+		acceptance,
+		reviews,
+		allRealized,
+	)
+}
+
+func screenplayStringMember(values []string, expected string) bool {
 	for _, value := range values {
-		if present[value] {
+		if value == expected {
 			return true
 		}
 	}
@@ -1072,6 +1467,8 @@ var screenplayHeadingPattern = regexp.MustCompile(
 func parseScreenplayMarkdown(content string) map[string][]screenplayMarkdownScene {
 	out := map[string][]screenplayMarkdownScene{}
 	var current *screenplayMarkdownScene
+	var fence byte
+	fenceLength := 0
 	flush := func() {
 		if current == nil {
 			return
@@ -1079,14 +1476,34 @@ func parseScreenplayMarkdown(content string) map[string][]screenplayMarkdownScen
 		out[current.ID] = append(out[current.ID], *current)
 	}
 	for _, line := range strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n") {
-		match := screenplayHeadingPattern.FindStringSubmatch(line)
-		if match != nil {
-			flush()
-			current = &screenplayMarkdownScene{
-				ID:    match[1],
-				Title: strings.TrimSpace(match[3]),
+		trimmed := strings.TrimLeft(line, " \t")
+		if len(line)-len(trimmed) <= 3 && len(trimmed) >= 3 &&
+			(trimmed[0] == '`' || trimmed[0] == '~') {
+			marker := trimmed[0]
+			length := 0
+			for length < len(trimmed) && trimmed[length] == marker {
+				length++
 			}
-			continue
+			if fence == 0 && length >= 3 {
+				fence = marker
+				fenceLength = length
+			} else if marker == fence &&
+				length >= fenceLength &&
+				strings.TrimSpace(trimmed[length:]) == "" {
+				fence = 0
+				fenceLength = 0
+			}
+		}
+		if fence == 0 {
+			match := screenplayHeadingPattern.FindStringSubmatch(line)
+			if match != nil {
+				flush()
+				current = &screenplayMarkdownScene{
+					ID:    match[1],
+					Title: strings.TrimSpace(match[3]),
+				}
+				continue
+			}
 		}
 		if current != nil {
 			current.Body += line + "\n"
@@ -1276,6 +1693,25 @@ func screenplayOwnedFiles(
 	for _, file := range files {
 		relative := filepath.ToSlash(screenplayRelative(root, file))
 		if strings.HasPrefix(relative, prefix) {
+			out = append(out, file)
+		}
+	}
+	return out
+}
+
+func screenplayExactFiles(
+	root string,
+	expected []string,
+	files []string,
+) []string {
+	allowed := map[string]bool{}
+	for _, relative := range expected {
+		allowed[relative] = true
+	}
+	out := []string{}
+	for _, file := range files {
+		relative := filepath.ToSlash(screenplayRelative(root, file))
+		if allowed[relative] {
 			out = append(out, file)
 		}
 	}

@@ -98,7 +98,49 @@ export interface IAutoMovieScreenplayCatalogEntry {
   name: string;
   /** At least one authored scene proving this subject exists in the film. */
   evidence: IAutoMovieSceneEvidence[];
+  /**
+   * Production-scoped joins to shared downstream design.
+   *
+   * Character entries bind model recipes, faction entries bind formations, and
+   * location entries bind world landmarks. Keeping these joins in the
+   * screenplay index lets two productions cast the same shared design
+   * differently.
+   */
+  bindings: Array<{
+    /** Downstream design family allowed by this catalog section. */
+    kind: "model" | "formation" | "world-landmark";
+    /** Existing shared design identity. */
+    id: string;
+  }>;
 }
+
+/** Exact evidence owner and selector that alone may prove a continuity claim. */
+export type IAutoMovieContinuityProof =
+  | {
+      /** Compiler-measured named contract outcome. */
+      owner: "geometry";
+      /** Exact shot carrying the named outcome. */
+      shot: string;
+      /** Claim-specific realization selector. */
+      outcome: {
+        /** Compiler realization family with stable ids. */
+        kind: "opening" | "closing" | "event" | "formation";
+        /** Exact state, event, or formation id. */
+        id: string;
+      };
+    }
+  | {
+      /** Actual-frame acceptance observed by a current shot/film review. */
+      owner: "frame-review";
+      /** Exact frame acceptance scenario. */
+      scenario: string;
+    }
+  | {
+      /** Current required acceptance outcome observed by shot/film review. */
+      owner: "acceptance";
+      /** Exact acceptance scenario. */
+      scenario: string;
+    };
 
 /** One canon fact and the only evidence family allowed to prove it. */
 export interface IAutoMovieContinuityClaim {
@@ -108,6 +150,8 @@ export interface IAutoMovieContinuityClaim {
   text: string;
   /** Evidence family that alone can discharge this claim. */
   verification: "frame-review" | "geometry" | "acceptance";
+  /** Exact claim-specific evidence selected inside that family. */
+  proof: IAutoMovieContinuityProof;
   /** Authored scenes in which the canon fact must hold. */
   evidence: IAutoMovieSceneEvidence[];
 }

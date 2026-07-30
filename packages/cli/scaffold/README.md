@@ -10,7 +10,10 @@ beat and `SCN-*` identities aligned with
 `.automovie/design/screenplay/index.json`; once shots exist, retain locked
 numbers, use `OMITTED` tombstones for deletions, and alpha ids for insertions.
 `pnpm lint` checks those joins and requires compiled realization plus completed
-acceptance evidence before an active scene leaves the coverage ledger.
+shot/film acceptance evidence for the same realized shot before an active scene
+leaves the coverage ledger. Catalog entries bind explicitly to shared model,
+formation, and world-landmark ids; continuity claims name the exact passing
+outcome or acceptance scenario that proves them.
 
 ## First run
 

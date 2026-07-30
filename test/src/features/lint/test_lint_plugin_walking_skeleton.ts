@@ -308,8 +308,11 @@ const screenplayConfig = [
   '        documents: ["docs/**/*.md"],',
   '        shots: [".automovie/design/*/shots/*.json"],',
   '        acceptance: [".automovie/design/*/acceptance/*.json"],',
+  '        models: [".automovie/design/*/models/*.json"],',
+  '        formations: [".automovie/design/*/formations/*.json"],',
+  '        worlds: [".automovie/design/*/world.json"],',
   '        realizations: ["generated/*/realizations/*.json"],',
-  '        reviews: [".automovie/reviews/*/design/acceptances/*.json"],',
+  '        reviews: [".automovie/reviews/*/shots/*.json"],',
   "      },",
   "    ],",
   "  },",
@@ -321,19 +324,28 @@ const screenplayFiles = (
   variant:
     | "valid"
     | "dangling-scene"
+    | "design-review-only"
     | "disposition-conflict"
+    | "encoded-namespace"
+    | "fenced-heading"
     | "intent-only"
+    | "misbound-proof"
     | "missing-heading"
+    | "missing-model-binding"
     | "removed-locked-scene"
+    | "sibling-evidence"
     | "uncovered-beat",
 ): Record<string, string> => {
   const beat =
     "The signal changes the formation before the answering movement begins.";
+  const production = variant === "encoded-namespace" ? "film one" : "film";
+  const namespace = encodeURIComponent(production);
+  const documentRoot = `docs/${production}`;
   const index = {
     version: 1,
-    production: "film",
+    production,
     treatment: {
-      path: "docs/film/treatment.md",
+      path: `${documentRoot}/treatment.md`,
       sequences: [
         {
           id: "SEQ-1",
@@ -343,7 +355,7 @@ const screenplayFiles = (
       ],
     },
     screenplay: {
-      path: "docs/film/screenplay.md",
+      path: `${documentRoot}/screenplay.md`,
       lock: {
         activatedBy: "agent-before-first-shot",
         reason: "A shot contract already cites the stable scene ledger.",
@@ -374,8 +386,32 @@ const screenplayFiles = (
       ],
     },
     catalog: {
-      characters: [],
-      factions: [],
+      characters: [
+        {
+          id: "sentinel",
+          name: "The Sentinel",
+          evidence: [
+            {
+              reason: "The scene prose establishes the sentinel.",
+              scene: "SCN-001",
+            },
+          ],
+          bindings: [{ kind: "model", id: "sentinel-model" }],
+        },
+      ],
+      factions: [
+        {
+          id: "formation",
+          name: "The Answering Formation",
+          evidence: [
+            {
+              reason: "The scene prose establishes the formation.",
+              scene: "SCN-001",
+            },
+          ],
+          bindings: [{ kind: "formation", id: "answering-formation" }],
+        },
+      ],
       locations: [
         {
           id: "field",
@@ -386,6 +422,7 @@ const screenplayFiles = (
               scene: "SCN-001",
             },
           ],
+          bindings: [{ kind: "world-landmark", id: "signal-ground" }],
         },
       ],
     },
@@ -398,39 +435,94 @@ const screenplayFiles = (
       phase: "production",
       reason: "This scene was intentionally exempted.",
     };
+  if (variant === "missing-model-binding")
+    index.catalog.characters[0]!.bindings = [];
+  if (variant === "misbound-proof")
+    (
+      index.continuity as Array<{
+        evidence: Array<{ reason: string; scene: string }>;
+        id: string;
+        proof: {
+          outcome: { id: string; kind: string };
+          owner: string;
+          shot: string;
+        };
+        text: string;
+        verification: string;
+      }>
+    ).push({
+      id: "signal-readable",
+      text: "The signal remains readable.",
+      verification: "geometry",
+      proof: {
+        owner: "geometry",
+        shot: "shot-1",
+        outcome: { kind: "opening", id: "raised-signal" },
+      },
+      evidence: [
+        {
+          reason: "The opening scene establishes the signal.",
+          scene: "SCN-001",
+        },
+      ],
+    });
 
   const citedScene = variant === "dangling-scene" ? "SCN-999" : "SCN-001";
   const files: Record<string, string> = {
-    ".automovie/design/film/screenplay/index.json": JSON.stringify(index),
-    ".automovie/design/film/shots/shot-1.json": JSON.stringify({
+    [`.automovie/design/${namespace}/screenplay/index.json`]:
+      JSON.stringify(index),
+    [`.automovie/design/${namespace}/production.json`]: JSON.stringify({
+      id: production,
+    }),
+    [`.automovie/design/${namespace}/models/sentinel.json`]: JSON.stringify({
+      id: "sentinel-model",
+    }),
+    [`.automovie/design/${namespace}/formations/answer.json`]: JSON.stringify({
+      id: "answering-formation",
+    }),
+    [`.automovie/design/${namespace}/world.json`]: JSON.stringify({
+      landmarks: [{ id: "signal-ground" }],
+    }),
+    [`.automovie/design/${namespace}/shots/shot-1.json`]: JSON.stringify({
       id: "shot-1",
       evidence: [
         {
           reason: "The shot realizes the authored signal.",
           scene: citedScene,
+          claim: variant === "misbound-proof" ? "signal-readable" : undefined,
         },
       ],
-      participants: [],
-    }),
-    ".automovie/design/film/acceptance/accept-1.json": JSON.stringify({
-      id: "accept-1",
-      evidence: [
-        {
-          reason: "The frame review observes the authored signal.",
-          scene: "SCN-001",
-        },
+      participants: [
+        { kind: "actor", id: "sentinel-model" },
+        { kind: "formation", id: "answering-formation" },
       ],
-      criterion: { kind: "frame" },
     }),
-    ".automovie/reviews/film/design/acceptances/accept-1.json": JSON.stringify({
-      complete: true,
-      target: {
-        kind: "design",
-        design: { kind: "acceptance", id: "accept-1" },
+    [`.automovie/design/${namespace}/acceptance/accept-1.json`]: JSON.stringify(
+      {
+        id: "accept-1",
+        evidence: [
+          {
+            reason: "The frame review observes the authored signal.",
+            scene: "SCN-001",
+          },
+        ],
+        target: { kind: "shot", id: "shot-1" },
+        criterion: { kind: "frame", shot: "shot-1" },
       },
+    ),
+    [`.automovie/reviews/${namespace}/shots/shot-1.json`]: JSON.stringify({
+      complete: true,
+      target: { kind: "shot", id: "shot-1" },
+      checks: [
+        {
+          criterion: "acceptance-scenarios",
+          verdict: "pass",
+          acceptanceScenarios: ["accept-1"],
+        },
+      ],
     }),
-    "docs/film/treatment.md": `# Treatment\n\n${beat}\n`,
-    "docs/film/screenplay.md":
+    [`${documentRoot}/treatment.md`]: `# Treatment\n\n${beat}\n`,
+    [`${documentRoot}/screenplay.md`]:
       variant === "missing-heading"
         ? "# Screenplay\n\nThe signal occurs without its indexed heading.\n"
         : [
@@ -443,7 +535,7 @@ const screenplayFiles = (
             "## SCN-002 — OMITTED",
             "",
           ].join("\n"),
-    "generated/film/realizations/shot-1.json": JSON.stringify({
+    [`generated/${namespace}/realizations/shot-1.json`]: JSON.stringify({
       version: 1,
       shot: "shot-1",
       opening: [],
@@ -455,7 +547,51 @@ const screenplayFiles = (
     "src/index.ts": "export {};\n",
   };
   if (variant === "intent-only")
-    delete files["generated/film/realizations/shot-1.json"];
+    delete files[`generated/${namespace}/realizations/shot-1.json`];
+  if (variant === "design-review-only") {
+    delete files[`.automovie/reviews/${namespace}/shots/shot-1.json`];
+    files[`.automovie/reviews/${namespace}/design/acceptances/accept-1.json`] =
+      JSON.stringify({
+        complete: true,
+        target: {
+          kind: "design",
+          design: { kind: "acceptance", id: "accept-1" },
+        },
+      });
+  }
+  if (variant === "sibling-evidence") {
+    delete files[`generated/${namespace}/realizations/shot-1.json`];
+    delete files[`.automovie/reviews/${namespace}/shots/shot-1.json`];
+    files["generated/sibling/realizations/shot-1.json"] = JSON.stringify({
+      version: 1,
+      shot: "shot-1",
+      camera: [{ passed: true }],
+    });
+    files[".automovie/reviews/sibling/shots/shot-1.json"] = JSON.stringify({
+      complete: true,
+      target: { kind: "shot", id: "shot-1" },
+      checks: [
+        {
+          criterion: "acceptance-scenarios",
+          verdict: "pass",
+          acceptanceScenarios: ["accept-1"],
+        },
+      ],
+    });
+  }
+  if (variant === "fenced-heading")
+    files[`${documentRoot}/screenplay.md`] = [
+      "# Screenplay",
+      "",
+      "```md",
+      "## SCN-001 — The Signal",
+      "```",
+      "",
+      "The signal occurs without its indexed heading.",
+      "",
+      "## SCN-002 — OMITTED",
+      "",
+    ].join("\n");
   return files;
 };
 
@@ -497,7 +633,8 @@ const assertFailedWith = (
  *    accepts valid empty upstream and downstream records.
  * 5. The screenplay project rule accepts a grounded locked ledger and diagnoses
  *    uncovered prose, missing headings, removed lock ids and dangling evidence,
- *    intent-only coverage and disposition/realization contradictions.
+ *    intent-only coverage, production-isolated proof, exact continuity proof,
+ *    explicit design bindings and disposition/realization contradictions.
  */
 export function test_lint_plugin_walking_skeleton(): void {
   const scaffold = runScaffoldLint({ name: "clean" });
@@ -646,6 +783,17 @@ export function test_lint_plugin_walking_skeleton(): void {
     "Direct prose edits that remove an indexed scene heading must leave a loud dangling ledger.",
   );
 
+  const fencedHeading = runFixture({
+    name: "screenplay-fenced-heading",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("fenced-heading"),
+  });
+  assertFailedWith(
+    fencedHeading,
+    "no exact SCN heading exists",
+    "A heading-shaped example inside a Markdown code fence must not masquerade as an authored scene.",
+  );
+
   const removedLockedScene = runFixture({
     name: "screenplay-removed-locked-scene",
     lintConfig: screenplayConfig,
@@ -677,6 +825,60 @@ export function test_lint_plugin_walking_skeleton(): void {
     intentOnly,
     "Shot intent alone cannot drain scene coverage.",
     "A declared shot without a passing compiler-owned realization must leave its scene uncovered.",
+  );
+
+  const designReviewOnly = runFixture({
+    name: "screenplay-design-review-only",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("design-review-only"),
+  });
+  assertFailedWith(
+    designReviewOnly,
+    "A completed design review is not observation.",
+    "Completing an acceptance design review must not stand in for an observed shot or film acceptance pass.",
+  );
+
+  const siblingEvidence = runFixture({
+    name: "screenplay-sibling-evidence",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("sibling-evidence"),
+  });
+  assertFailedWith(
+    siblingEvidence,
+    "Shot intent alone cannot drain scene coverage.",
+    "A sibling production's same-named realization and review must not drain this production's screenplay coverage.",
+  );
+
+  const missingModelBinding = runFixture({
+    name: "screenplay-missing-model-binding",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("missing-model-binding"),
+  });
+  assertFailedWith(
+    missingModelBinding,
+    "is not bound by the grounded character catalog",
+    "A shot actor must join through an explicit production character-to-model binding instead of implicit id equality.",
+  );
+
+  const misboundProof = runFixture({
+    name: "screenplay-misbound-proof",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("misbound-proof"),
+  });
+  assertFailedWith(
+    misboundProof,
+    "its exact proof selector has no passing citing evidence",
+    "A continuity claim must cite the exact passing geometry outcome rather than any generic successful realization.",
+  );
+
+  const encodedNamespace = runFixture({
+    name: "screenplay-encoded-namespace",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("encoded-namespace"),
+  });
+  assertSucceeded(
+    encodedNamespace,
+    "A URL-encoded physical namespace must resolve ownership through production.json's raw production id.",
   );
 
   const dispositionConflict = runFixture({

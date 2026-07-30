@@ -72,7 +72,8 @@
             "reason": "The screenplay explicitly gives the sentinel the signal action.",
             "scene": "SCN-001"
           }
-        ]
+        ],
+        "bindings": [{ "kind": "model", "id": "sentinel" }]
       }
     ],
     "factions": [
@@ -84,7 +85,8 @@
             "reason": "The ranks are a story force visibly commanded by the signal.",
             "scene": "SCN-001"
           }
-        ]
+        ],
+        "bindings": [{ "kind": "formation", "id": "army" }]
       }
     ],
     "locations": [
@@ -96,7 +98,8 @@
             "reason": "Both screenplay scenes explicitly occur on the same field.",
             "scene": "SCN-001"
           }
-        ]
+        ],
+        "bindings": [{ "kind": "world-landmark", "id": "signal-ground" }]
       }
     ]
   },
@@ -105,6 +108,10 @@
       "id": "signal-arm-readable",
       "text": "The sentinel's raised signal arm remains readable.",
       "verification": "frame-review",
+      "proof": {
+        "owner": "frame-review",
+        "scenario": "opening-pose"
+      },
       "evidence": [
         {
           "reason": "The opening scene establishes the raised arm as the signal.",
