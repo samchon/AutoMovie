@@ -80,7 +80,12 @@ export const test_cli_scaffold = (): void => {
       ".automovie/design/acceptance/answer-beauty.json",
       ".automovie/design/acceptance/answer-pose.json",
       ".automovie/design/acceptance/opening-beauty.json",
+      ".automovie/design/acceptance/opening-effect-mask.json",
       ".automovie/design/acceptance/opening-pose.json",
+      ".automovie/design/formations/army.json",
+      ".automovie/design/models/army-far.json",
+      ".automovie/design/models/army-hero.json",
+      ".automovie/design/models/army-near.json",
       ".automovie/design/models/sentinel.json",
       ".automovie/design/production.json",
       ".automovie/design/shots/answer.json",
@@ -102,7 +107,11 @@ export const test_cli_scaffold = (): void => {
       "package.json",
       "public/assets/README.md",
       "public/audio/README.md",
+      "public/audio/starter-tone.json",
       "renders/README.md",
+      "scripts/capture-browser.ts",
+      "scripts/capture-doctor.ts",
+      "scripts/capture-install.ts",
       "scripts/capture.ts",
       "scripts/compile.ts",
       "scripts/generatedShotPlugin.ts",
@@ -142,7 +151,15 @@ export const test_cli_scaffold = (): void => {
         `"@automovie/viewer": "${AUTOMOVIE_TEMPLATE_VERSIONS.viewer}"`,
       ) &&
       pkg.includes(
-        `"playwright-core": "${AUTOMOVIE_TEMPLATE_VERSIONS.playwrightCore}"`,
+        `"h264-mp4-encoder": "${AUTOMOVIE_TEMPLATE_VERSIONS.h264Mp4Encoder}"`,
+      ) &&
+      pkg.includes(`"mp4box": "${AUTOMOVIE_TEMPLATE_VERSIONS.mp4box}"`) &&
+      pkg.includes(
+        `"playwright": "${AUTOMOVIE_TEMPLATE_VERSIONS.playwright}"`,
+      ) &&
+      pkg.includes(`"pngjs": "${AUTOMOVIE_TEMPLATE_VERSIONS.pngjs}"`) &&
+      pkg.includes(
+        `"@types/pngjs": "${AUTOMOVIE_TEMPLATE_VERSIONS.pngjsTypes}"`,
       ) &&
       pkg.includes(`"three": "${AUTOMOVIE_TEMPLATE_VERSIONS.three}"`),
   );
@@ -177,20 +194,95 @@ export const test_cli_scaffold = (): void => {
       files["scripts/capture.ts"]!.includes(
         "let sessionPromise: Promise<CaptureSession> | null",
       ) &&
-      files["scripts/capture.ts"]!.includes(
+      files["scripts/capture-browser.ts"]!.includes(
+        "PLAYWRIGHT_BROWSERS_PATH: browserStoragePath(projectRoot)",
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes("...process.env") &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "PLAYWRIGHT_DOWNLOAD_HOST",
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        'return import("playwright")',
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes("paths: [packageRoot]") &&
+      files["scripts/capture-browser.ts"]!.includes('"--no-shell"') &&
+      files["scripts/capture-browser.ts"]!.includes(
+        'stdio: ["ignore", "pipe", "pipe"]',
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        'installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"',
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
         'args: ["--use-angle=swiftshader"]',
       ) &&
-      files["scripts/capture.ts"]!.includes("browser: `chrome:") &&
-      files["scripts/capture.ts"]!.includes(
+      files["scripts/capture-browser.ts"]!.includes(
         'context.getExtension("WEBGL_debug_renderer_info")',
       ) &&
-      files["scripts/capture.ts"]!.includes("graphics: graphicsIdentity") &&
-      files["README.md"]!.includes(
-        "requires a system Google Chrome installation",
+      files["scripts/capture-browser.ts"]!.includes(
+        "executableDigest: await digestFile",
       ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        'config.source === "system-channel"',
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        'source = "configured-executable"',
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "parseCaptureBrowserConfig",
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "Invalid capture browser config",
+      ) &&
+      files["scripts/capture-doctor.ts"]!.includes("PNG.sync.read") &&
+      files["scripts/capture-doctor.ts"]!.includes(
+        "canonicalAutoMovieCaptureRuntimeIdentity",
+      ) &&
+      files["scripts/capture-doctor.ts"]!.includes("visiblePixel") &&
+      files["scripts/capture-install.ts"]!.includes(
+        "installPackageOwnedChromium",
+      ) &&
+      files["automovie.config.ts"]!.includes('source: "playwright-chromium"') &&
+      files["automovie.config.ts"]!.includes(
+        "satisfies AutoMovieCaptureBrowserConfig",
+      ) &&
+      files[".gitignore"]!.includes(".automovie/capture/") &&
+      files["README.md"]!.includes("pnpm capture:install") &&
+      files["README.md"]!.includes("PLAYWRIGHT_BROWSERS_PATH=0") &&
       files["scripts/render.ts"]!.includes(
         "await closeProductionFrameCapture()",
       ) &&
+      files["scripts/render.ts"]!.includes("runProductionRenderJob") &&
+      files["scripts/render.ts"]!.includes("commitProductionPublication") &&
+      files["scripts/render.ts"]!.includes("probeProductionMedia") &&
+      files["scripts/render.ts"]!.includes(
+        "productionPublicationInputFingerprint",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "const stagedReview = new AutoMovieProductionReviewService",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "stagedReview.queue(status, compilerSnapshot)",
+      ) &&
+      files[".gitignore"]!.includes(".automovie/render-job/") &&
+      files[".automovie/design/production.json"]!.includes(
+        '"id": "starter-feature"',
+      ) &&
+      files[".automovie/design/production.json"]!.includes(
+        '"id": "starter-pose-guide"',
+      ) &&
+      files[".automovie/design/production.json"]!.includes(
+        '"id": "starter-captions"',
+      ) &&
+      files[".automovie/design/production.json"]!.includes(
+        '"id": "starter-audio"',
+      ) &&
+      files["public/audio/starter-tone.json"]!.includes(
+        '"sampleRate": 48000',
+      ) &&
+      files["public/audio/starter-tone.json"]!.includes('"channels": 2') &&
       files["scripts/generatedShotPlugin.ts"]!.includes(
         'shotId.includes("/")',
       ) === false &&
@@ -251,7 +343,12 @@ export const test_cli_scaffold = (): void => {
         ".automovie/design/acceptance/answer-beauty.json",
         ".automovie/design/acceptance/answer-pose.json",
         ".automovie/design/acceptance/opening-beauty.json",
+        ".automovie/design/acceptance/opening-effect-mask.json",
         ".automovie/design/acceptance/opening-pose.json",
+        ".automovie/design/formations/army.json",
+        ".automovie/design/models/army-far.json",
+        ".automovie/design/models/army-hero.json",
+        ".automovie/design/models/army-near.json",
         ".automovie/design/models/sentinel.json",
         ".automovie/design/production.json",
         ".automovie/design/shots/answer.json",
@@ -273,7 +370,11 @@ export const test_cli_scaffold = (): void => {
         "package.json",
         "public/assets/README.md",
         "public/audio/README.md",
+        "public/audio/starter-tone.json",
         "renders/README.md",
+        "scripts/capture-browser.ts",
+        "scripts/capture-doctor.ts",
+        "scripts/capture-install.ts",
         "scripts/capture.ts",
         "scripts/compile.ts",
         "scripts/generatedShotPlugin.ts",

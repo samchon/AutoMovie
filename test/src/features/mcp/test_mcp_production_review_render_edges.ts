@@ -4,6 +4,7 @@ import {
   AutoMovieProductionOracleService,
   AutoMovieProductionProject,
   AutoMovieProductionReviewService,
+  compareCodeUnits,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
   productionRenderTargetFingerprint,
@@ -13,7 +14,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 
-import { productionFixture, worldDesign } from "./productionFixtures";
+import {
+  fixtureWorldDesign,
+  productionFixture,
+  testCaptureRuntimeIdentity,
+  testRendererIdentity,
+} from "./productionFixtures";
 
 const png = (width = 16, height = 16): Uint8Array => {
   const image = new PNG({ width, height });
@@ -22,7 +28,10 @@ const png = (width = 16, height = 16): Uint8Array => {
   return PNG.sync.write(image);
 };
 
-/** Review frame inventory rejects malformed, escaping and raced evidence. */
+/**
+ * Review frame inventory rejects malformed, escaping and raced evidence,
+ * including a physical bundle replaced after discovery but before consumption.
+ */
 export const test_mcp_production_review_render_edges =
   async (): Promise<void> => {
     const fixture = productionFixture();
@@ -40,7 +49,7 @@ export const test_mcp_production_review_render_edges =
           const height = request.height ?? 16;
           return {
             bytes: png(width, height),
-            rendererIdentity: "test:png-v1",
+            runtimeIdentity: testCaptureRuntimeIdentity(),
             width,
             height,
           };
@@ -94,35 +103,52 @@ export const test_mcp_production_review_render_edges =
         height: 16,
       });
       const prepared = review.prepare({ target });
-      const staleWorld = worldDesign();
+      const staleWorld = fixtureWorldDesign();
       staleWorld.landmarks[0]!.meaning += " Stale.";
       project.setWorldDesign(staleWorld);
       const stalePrepared = review.prepare({ target });
-      project.setWorldDesign(worldDesign());
-      fs.appendFileSync(
-        path.join(fixture.root, "src/shots/answer.ts"),
-        "\n// Unrelated source edit must not retire opening pixels.\n",
-      );
+      // Put back what the fixture actually wrote. The full starter world is a
+      // different design, and every bundle bound to the fixture slice would
+      // stop matching for good rather than coming back.
+      project.setWorldDesign(fixtureWorldDesign());
+      // Restoring the design and recompiling brings the same pixels back: the
+      // frames were retired because the design they answer to moved, not
+      // because they were rewritten.
       compiler.compile({ scope: "source" });
       const restoredPrepared = review.prepare({ target });
-      TestValidator.predicate(
+      TestValidator.equals(
         "review inventory refuses stale output but preserves target-identical frames after recompile",
-        stalePrepared.frames.length === 0 &&
-          stalePrepared.diagnostics.some(
+        {
+          preparedHasFrames: prepared.frames.length > 0,
+          staleFrames: stalePrepared.frames.length,
+          reportsStale: stalePrepared.diagnostics.some(
             (diagnostic) => diagnostic.code === "review-evidence-stale",
-          ) &&
-          restoredPrepared.frames.some(
+          ),
+          restoredHasFrames: restoredPrepared.frames.length > 0,
+          restoredCodes: [
+            ...new Set(restoredPrepared.diagnostics.map((item) => item.code)),
+          ].sort(compareCodeUnits),
+          preservesTargetIdenticalFrame: restoredPrepared.frames.some(
             (candidate) =>
               candidate.digest === prepared.frames[0]?.digest &&
               candidate.reviewFrame === prepared.frames[0]?.reviewFrame,
           ),
+        },
+        {
+          preparedHasFrames: true,
+          staleFrames: 0,
+          reportsStale: true,
+          restoredHasFrames: true,
+          restoredCodes: [],
+          preservesTargetIdenticalFrame: true,
+        },
       );
       const staleTargetBytes = png();
       const staleTargetManifest: IAutoMovieRenderBundleManifest = {
-        version: 2,
+        version: 3,
         target,
         compileFingerprint: project.generatedManifest()!.inputFingerprint,
-        rendererIdentity: "test:png-v1",
+        rendererIdentity: testRendererIdentity(),
         targetFingerprint:
           "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
         renderSpec: {
@@ -160,10 +186,10 @@ export const test_mcp_production_review_render_edges =
         ),
       );
       const filmManifest: IAutoMovieRenderBundleManifest = {
-        version: 2,
+        version: 3,
         target: { kind: "film", id: "fixture-film" },
         compileFingerprint: project.generatedManifest()!.inputFingerprint,
-        rendererIdentity: "test:png-v1",
+        rendererIdentity: testRendererIdentity(),
         targetFingerprint: productionRenderTargetFingerprint(
           project,
           project.generatedManifest()!,
@@ -212,6 +238,9 @@ export const test_mcp_production_review_render_edges =
         fixture.root,
         ".automovie/render-manifest.json",
       );
+      const beforeAggregate = review.prepare({
+        target: { kind: "film", id: "fixture-film" },
+      });
       fs.writeFileSync(
         aggregateManifest,
         JSON.stringify({ compileFingerprint: "current-test" }),
@@ -238,9 +267,10 @@ export const test_mcp_production_review_render_edges =
         target: { kind: "film", id: "fixture-film" },
       });
       TestValidator.predicate(
-        "film review fingerprints malformed and linked tracked manifests without following external bytes",
-        validAggregate.fingerprint !== malformedAggregate.fingerprint &&
-          malformedAggregate.fingerprint !== linkedAggregate.fingerprint,
+        "terminal publication stays outside human review identity and never follows linked aggregate bytes",
+        beforeAggregate.fingerprint === validAggregate.fingerprint &&
+          validAggregate.fingerprint === malformedAggregate.fingerprint &&
+          malformedAggregate.fingerprint === linkedAggregate.fingerprint,
       );
       fs.rmSync(aggregateManifest, { force: true, recursive: true });
       fs.rmSync(outsideAggregate, { force: true, recursive: true });
@@ -326,10 +356,10 @@ export const test_mcp_production_review_render_edges =
           }),
         );
         TestValidator.predicate(
-          `render frame ${name} paths stay bundle-relative`,
+          `unreceipted render frame ${name} paths never reach PNG reads`,
           review
             .prepare({ target })
-            .diagnostics.some((item) => item.code === "render-frame-invalid"),
+            .diagnostics.some((item) => item.code === "render-bundle-unowned"),
         );
         fs.rmSync(directory, { recursive: true, force: true });
       }
@@ -355,10 +385,10 @@ export const test_mcp_production_review_render_edges =
         }),
       );
       TestValidator.predicate(
-        "render frame cannot escape through a directory junction",
+        "unreceipted render frame cannot escape through a directory junction",
         review
           .prepare({ target })
-          .diagnostics.some((item) => item.code === "render-frame-invalid"),
+          .diagnostics.some((item) => item.code === "render-bundle-unowned"),
       );
       fs.rmSync(symlinkDirectory, { recursive: true, force: true });
       fs.rmSync(externalFrames, { recursive: true, force: true });
@@ -386,13 +416,6 @@ export const test_mcp_production_review_render_edges =
             height: entry.height + 1,
           }),
         ],
-        [
-          "clock",
-          (entry: IAutoMovieRenderBundleManifest["frames"][number]) => ({
-            ...entry,
-            time: entry.time + 0.25,
-          }),
-        ],
       ] as const) {
         const directory = path.join(fixture.root, `renders/review-${name}`);
         fs.mkdirSync(directory, { recursive: true });
@@ -410,12 +433,50 @@ export const test_mcp_production_review_render_edges =
           }),
         );
         TestValidator.predicate(
-          `render frame ${name} metadata is verified`,
+          `unreceipted render frame ${name} metadata never reaches PNG reads`,
+          review
+            .prepare({ target })
+            .diagnostics.some((item) => item.code === "render-bundle-unowned"),
+        );
+        fs.rmSync(directory, { recursive: true, force: true });
+      }
+
+      for (const [name, time, crf] of [
+        ["subframe", baseFrame.time + 0.01, 18],
+        ["wrong-index", baseFrame.time + 0.25, 19],
+      ] as const) {
+        const bytes = fs.readFileSync(sourceFrame);
+        const manifest: IAutoMovieRenderBundleManifest = {
+          ...baseManifest,
+          renderSpec: {
+            ...baseManifest.renderSpec,
+            crf,
+          },
+          frames: [
+            {
+              ...baseFrame,
+              path: `${name}.png`,
+              time,
+              digest: digestAutoMovieBytes(bytes),
+            },
+          ],
+        };
+        const bundle = productionRenderBundleRelativePath(manifest);
+        project.commitRenderBundle(
+          bundle,
+          new Map([[`${name}.png`, bytes]]),
+          manifest,
+        );
+        TestValidator.predicate(
+          `renderer-owned ${name} frame clock is rejected`,
           review
             .prepare({ target })
             .diagnostics.some((item) => item.code === "render-frame-invalid"),
         );
-        fs.rmSync(directory, { recursive: true, force: true });
+        fs.rmSync(path.join(project.renderRoot(), bundle), {
+          recursive: true,
+          force: true,
+        });
       }
 
       for (const [channel, bytes] of [
@@ -494,13 +555,46 @@ export const test_mcp_production_review_render_edges =
         JSON.stringify({ ...baseManifest, rendererIdentity: " " }),
       );
       TestValidator.predicate(
-        "blank renderer identity cannot enter review inventory",
+        "unparseable renderer identity cannot enter review inventory",
         review
           .prepare({ target })
           .diagnostics.some(
             (item) =>
               item.code === "render-bundle-invalid" &&
-              item.message.includes("rendererIdentity"),
+              item.message.includes("Capture runtime identity"),
+          ),
+      );
+      fs.writeFileSync(
+        path.join(invalidDirectory, "manifest.json"),
+        JSON.stringify({
+          ...baseManifest,
+          version: 2,
+          rendererIdentity: " ",
+        }),
+      );
+      TestValidator.predicate(
+        "malformed v2 renderer provenance remains invalid",
+        review
+          .prepare({ target })
+          .diagnostics.some(
+            (item) =>
+              item.code === "render-bundle-invalid" &&
+              item.path?.includes("review-invalid-frame"),
+          ),
+      );
+      fs.writeFileSync(
+        path.join(invalidDirectory, "manifest.json"),
+        JSON.stringify({ ...baseManifest, version: 2 }),
+      );
+      const legacyPrepared = review.prepare({ target });
+      TestValidator.predicate(
+        "v2 render evidence remains historical without blocking current v3 frames",
+        legacyPrepared.frames.length !== 0 &&
+          legacyPrepared.diagnostics.some(
+            (item) =>
+              item.code === "render-bundle-legacy" &&
+              item.category === "warning" &&
+              item.message.includes("Recapture"),
           ),
       );
       fs.writeFileSync(
@@ -514,28 +608,82 @@ export const test_mcp_production_review_render_edges =
         "empty frame bytes are rejected",
         review
           .prepare({ target })
-          .diagnostics.some((item) => item.code === "render-frame-invalid"),
+          .diagnostics.some((item) => item.code === "render-bundle-unowned"),
       );
-      const residentReadFileSync = fs.readFileSync;
-      Reflect.set(
-        fs,
-        "readFileSync",
-        (file: fs.PathOrFileDescriptor, ...args: unknown[]) => {
-          if (path.resolve(String(file)) === path.resolve(invalidFrame)) {
-            const iterator = (function* (): Generator<void> {
-              yield;
-            })();
-            iterator.next();
-            return iterator.throw("non-error frame read") as never;
-          }
-          return (
-            residentReadFileSync as (...parameters: unknown[]) => unknown
-          )(file, ...args);
+      fs.rmSync(invalidDirectory, { recursive: true, force: true });
+
+      const racedBytes = png();
+      const racedManifest: IAutoMovieRenderBundleManifest = {
+        ...baseManifest,
+        renderSpec: {
+          ...baseManifest.renderSpec,
+          crf: 20,
         },
+        frames: [
+          {
+            ...baseFrame,
+            path: "raced.png",
+            digest: digestAutoMovieBytes(racedBytes),
+          },
+        ],
+      };
+      const racedBundle = productionRenderBundleRelativePath(racedManifest);
+      project.commitRenderBundle(
+        racedBundle,
+        new Map([["raced.png", racedBytes]]),
+        racedManifest,
       );
+      const racedManifestPath = path.join(
+        project.renderRoot(),
+        racedBundle,
+        "manifest.json",
+      );
+      const residentVerifiedRenderManifest =
+        project.verifiedRenderManifest.bind(project);
+      const residentReadRenderFile = project.readRenderFile.bind(project);
+      let ownershipVerified = false;
+      let postVerificationFailure: "digest" | "non-error" = "digest";
+      project.verifiedRenderManifest = ((manifestPath: string) => {
+        const manifest = residentVerifiedRenderManifest(manifestPath);
+        if (
+          path.resolve(manifestPath) === path.resolve(racedManifestPath) &&
+          manifest !== null
+        )
+          ownershipVerified = true;
+        return manifest;
+      }) as typeof project.verifiedRenderManifest;
+      project.readRenderFile = ((relativePath: string): Uint8Array => {
+        if (
+          ownershipVerified &&
+          relativePath ===
+            path.join(racedBundle, "raced.png").split(path.sep).join("/")
+        ) {
+          if (postVerificationFailure === "digest") return png(15, 16);
+          const iterator = (function* (): Generator<void> {
+            yield;
+          })();
+          iterator.next();
+          return iterator.throw("non-error frame read") as never;
+        }
+        return residentReadRenderFile(relativePath);
+      }) as typeof project.readRenderFile;
       try {
         TestValidator.predicate(
-          "non-Error frame failures remain actionable",
+          "post-verification byte changes remain actionable",
+          review
+            .prepare({ target })
+            .diagnostics.some(
+              (item) =>
+                item.code === "render-frame-invalid" &&
+                item.message.includes(
+                  "frame bytes changed after renderer ownership verification",
+                ),
+            ),
+        );
+        ownershipVerified = false;
+        postVerificationFailure = "non-error";
+        TestValidator.predicate(
+          "post-verification non-Error frame failures remain actionable",
           review
             .prepare({ target })
             .diagnostics.some(
@@ -545,43 +693,92 @@ export const test_mcp_production_review_render_edges =
             ),
         );
       } finally {
-        Reflect.set(fs, "readFileSync", residentReadFileSync);
+        project.verifiedRenderManifest =
+          residentVerifiedRenderManifest as typeof project.verifiedRenderManifest;
+        project.readRenderFile =
+          residentReadRenderFile as typeof project.readRenderFile;
       }
-      fs.rmSync(invalidDirectory, { recursive: true, force: true });
+      const racedBundleRoot = path.join(project.renderRoot(), racedBundle);
+      const outsideRacedFrame = path.join(
+        fixture.root,
+        "review-outside-frame.png",
+      );
+      const linkedRacedFrame = path.join(racedBundleRoot, "linked.png");
+      fs.copyFileSync(sourceFrame, outsideRacedFrame);
+      fs.symlinkSync(outsideRacedFrame, linkedRacedFrame, "file");
+      let injectedFramePath = "";
+      project.verifiedRenderManifest = ((manifestPath: string) => {
+        const manifest = residentVerifiedRenderManifest(manifestPath);
+        return manifest === null ||
+          path.resolve(manifestPath) !== path.resolve(racedManifestPath)
+          ? manifest
+          : {
+              ...manifest,
+              frames: manifest.frames.map((frame, index) =>
+                index === 0 ? { ...frame, path: injectedFramePath } : frame,
+              ),
+            };
+      }) as typeof project.verifiedRenderManifest;
+      try {
+        TestValidator.equals(
+          "verified frame paths cannot escape their content-addressed bundle",
+          [
+            [path.resolve(outsideRacedFrame), "must be bundle-relative"],
+            ["../outside.png", "escapes its bundle"],
+            ["linked.png", "frame escapes its bundle through a symlink"],
+          ].map(([framePath, message]) => {
+            injectedFramePath = framePath!;
+            return review
+              .prepare({ target })
+              .diagnostics.some(
+                (item) =>
+                  item.code === "render-frame-invalid" &&
+                  item.message.includes(message!),
+              );
+          }),
+          [true, true, true],
+        );
+      } finally {
+        project.verifiedRenderManifest =
+          residentVerifiedRenderManifest as typeof project.verifiedRenderManifest;
+        fs.unlinkSync(linkedRacedFrame);
+        fs.rmSync(outsideRacedFrame);
+      }
+      fs.rmSync(path.join(project.renderRoot(), racedBundle), {
+        recursive: true,
+        force: true,
+      });
 
       for (const size of [1, 2, 16]) {
-        const blankDirectory = path.join(
-          fixture.root,
-          `renders/review-blank-${size}`,
-        );
-        const blankFrame = path.join(blankDirectory, "frame.png");
         const blankImage = new PNG({ width: size, height: size });
         blankImage.data.fill(180);
         const blankBytes = PNG.sync.write(blankImage);
-        fs.mkdirSync(blankDirectory, { recursive: true });
-        fs.writeFileSync(blankFrame, blankBytes);
-        fs.writeFileSync(
-          path.join(blankDirectory, "manifest.json"),
-          JSON.stringify({
-            ...baseManifest,
-            renderSpec: {
-              ...baseManifest.renderSpec,
-              frameFormat: {
-                ...baseManifest.renderSpec.frameFormat,
-                width: size,
-                height: size,
-              },
+        const blankManifest: IAutoMovieRenderBundleManifest = {
+          ...baseManifest,
+          renderSpec: {
+            ...baseManifest.renderSpec,
+            crf: 20 + size,
+            frameFormat: {
+              ...baseManifest.renderSpec.frameFormat,
+              width: size,
+              height: size,
             },
-            frames: [
-              {
-                ...baseFrame,
-                path: "frame.png",
-                digest: digestAutoMovieBytes(blankBytes),
-                width: size,
-                height: size,
-              },
-            ],
-          }),
+          },
+          frames: [
+            {
+              ...baseFrame,
+              path: "frame.png",
+              digest: digestAutoMovieBytes(blankBytes),
+              width: size,
+              height: size,
+            },
+          ],
+        };
+        const blankBundle = productionRenderBundleRelativePath(blankManifest);
+        project.commitRenderBundle(
+          blankBundle,
+          new Map([["frame.png", blankBytes]]),
+          blankManifest,
         );
         TestValidator.predicate(
           `uniform ${size}x${size} review frame is rejected`,
@@ -589,7 +786,10 @@ export const test_mcp_production_review_render_edges =
             .prepare({ target })
             .diagnostics.some((item) => item.code === "render-frame-invalid"),
         );
-        fs.rmSync(blankDirectory, { recursive: true, force: true });
+        fs.rmSync(path.join(project.renderRoot(), blankBundle), {
+          recursive: true,
+          force: true,
+        });
       }
 
       const disappearingDirectory = path.join(
@@ -602,19 +802,15 @@ export const test_mcp_production_review_render_edges =
       );
       fs.mkdirSync(disappearingDirectory, { recursive: true });
       fs.writeFileSync(disappearingManifest, JSON.stringify(baseManifest));
-      const stableReadFileSync = fs.readFileSync;
-      Reflect.set(
-        fs,
-        "readFileSync",
-        (file: fs.PathOrFileDescriptor, ...args: unknown[]) => {
-          if (path.resolve(String(file)) === path.resolve(disappearingManifest))
-            fs.rmSync(disappearingManifest, { force: true });
-          return (stableReadFileSync as (...parameters: unknown[]) => unknown)(
-            file,
-            ...args,
-          );
-        },
-      );
+      const stableOpenSync = fs.openSync;
+      Reflect.set(fs, "openSync", (file: fs.PathLike, ...args: unknown[]) => {
+        if (path.resolve(String(file)) === path.resolve(disappearingManifest))
+          fs.rmSync(disappearingManifest, { force: true });
+        return (stableOpenSync as (...parameters: unknown[]) => number)(
+          file,
+          ...args,
+        );
+      });
       try {
         TestValidator.predicate(
           "a disappearing manifest is invalid rather than absent",
@@ -623,7 +819,200 @@ export const test_mcp_production_review_render_edges =
             .diagnostics.some((item) => item.code === "render-bundle-invalid"),
         );
       } finally {
-        Reflect.set(fs, "readFileSync", stableReadFileSync);
+        Reflect.set(fs, "openSync", stableOpenSync);
+      }
+
+      const inventoryRaceFixture = (name: string) => {
+        const directory = path.join(
+          fixture.root,
+          "renders",
+          `review-inventory-${name}`,
+        );
+        const parked = `${directory}-parked`;
+        const external = path.join(
+          fixture.root,
+          `external-review-inventory-${name}`,
+        );
+        fs.mkdirSync(directory, { recursive: true });
+        fs.mkdirSync(external, { recursive: true });
+        for (const root of [directory, external]) {
+          fs.copyFileSync(sourceFrame, path.join(root, "frame.png"));
+          fs.writeFileSync(
+            path.join(root, "manifest.json"),
+            JSON.stringify({
+              ...baseManifest,
+              frames: [{ ...baseFrame, path: "frame.png" }],
+            }),
+          );
+        }
+        return { directory, parked, external };
+      };
+      const disposeInventoryRaceFixture = (race: {
+        directory: string;
+        parked: string;
+        external: string;
+      }): void => {
+        fs.rmSync(race.directory, { recursive: true, force: true });
+        fs.rmSync(race.parked, { recursive: true, force: true });
+        fs.rmSync(race.external, { recursive: true, force: true });
+      };
+      const postReadDirectoryRace = (
+        replacement: "directory" | "file" | "junction",
+      ): boolean => {
+        const race = inventoryRaceFixture(`post-read-${replacement}`);
+        const residentReaddirSync = fs.readdirSync;
+        let swapped = false;
+        let rejected = false;
+        Reflect.set(
+          fs,
+          "readdirSync",
+          (directory: fs.PathLike, ...args: unknown[]) => {
+            const entries = (
+              residentReaddirSync as (...parameters: unknown[]) => unknown
+            )(directory, ...args);
+            if (
+              swapped === false &&
+              path.resolve(String(directory)) === path.resolve(race.directory)
+            ) {
+              fs.renameSync(race.directory, race.parked);
+              if (replacement === "directory") fs.mkdirSync(race.directory);
+              else if (replacement === "file")
+                fs.writeFileSync(race.directory, "replacement");
+              else fs.symlinkSync(race.external, race.directory, "junction");
+              swapped = true;
+            }
+            return entries;
+          },
+        );
+        try {
+          try {
+            review.prepare({ target });
+          } catch (error) {
+            rejected =
+              error instanceof Error &&
+              error.message.includes("Render inventory directory");
+          }
+        } finally {
+          Reflect.set(fs, "readdirSync", residentReaddirSync);
+          disposeInventoryRaceFixture(race);
+        }
+        return swapped && rejected;
+      };
+      TestValidator.predicate(
+        "render inventory rejects every post-read directory replacement",
+        postReadDirectoryRace("junction") &&
+          postReadDirectoryRace("file") &&
+          postReadDirectoryRace("directory"),
+      );
+
+      const lstatToRealpathRace = (
+        observation: 1 | 2,
+        fragment: string,
+      ): boolean => {
+        const race = inventoryRaceFixture(`lstat-${observation}`);
+        const residentLstatSync = fs.lstatSync;
+        let observed = 0;
+        let swapped = false;
+        let rejected = false;
+        Reflect.set(fs, "lstatSync", (file: fs.PathLike) => {
+          const status = residentLstatSync(file);
+          if (
+            path.resolve(String(file)) === path.resolve(race.directory) &&
+            ++observed === observation
+          ) {
+            fs.renameSync(race.directory, race.parked);
+            fs.symlinkSync(race.external, race.directory, "junction");
+            swapped = true;
+          }
+          return status;
+        });
+        try {
+          try {
+            review.prepare({ target });
+          } catch (error) {
+            rejected =
+              error instanceof Error && error.message.includes(fragment);
+          }
+        } finally {
+          Reflect.set(fs, "lstatSync", residentLstatSync);
+          disposeInventoryRaceFixture(race);
+        }
+        return swapped && rejected;
+      };
+      TestValidator.predicate(
+        "render inventory refuses ancestry swaps between lstat and realpath",
+        lstatToRealpathRace(1, "Render inventory path") &&
+          lstatToRealpathRace(2, "Render inventory directory"),
+      );
+
+      const lateImage = new PNG({ width: 16, height: 16 });
+      lateImage.data.fill(180);
+      lateImage.data[0] = 1;
+      lateImage.data[1] = 2;
+      const lateBytes = PNG.sync.write(lateImage);
+      const lateDigest = digestAutoMovieBytes(lateBytes);
+      const lateManifest: IAutoMovieRenderBundleManifest = {
+        ...baseManifest,
+        renderSpec: {
+          ...baseManifest.renderSpec,
+          crf: 49,
+        },
+        frames: [
+          {
+            ...baseFrame,
+            path: "late.png",
+            digest: lateDigest,
+          },
+        ],
+      };
+      const lateBundle = productionRenderBundleRelativePath(lateManifest);
+      project.commitRenderBundle(
+        lateBundle,
+        new Map([["late.png", lateBytes]]),
+        lateManifest,
+      );
+      const lateRoot = path.join(project.renderRoot(), lateBundle);
+      const lateManifestPath = path.join(lateRoot, "manifest.json");
+      const lateParked = `${lateRoot}-parked`;
+      const lateSource = path.join(
+        project.renderRoot(),
+        "review-post-inventory-source",
+      );
+      fs.cpSync(lateRoot, lateSource, { recursive: true });
+      const residentVerifiedManifest =
+        project.verifiedRenderManifest.bind(project);
+      let lateSwapped = false;
+      project.verifiedRenderManifest = ((manifestPath: string) => {
+        if (
+          lateSwapped === false &&
+          path.resolve(manifestPath) === path.resolve(lateManifestPath)
+        ) {
+          fs.renameSync(lateRoot, lateParked);
+          fs.symlinkSync(lateSource, lateRoot, "junction");
+          lateSwapped = true;
+        }
+        return residentVerifiedManifest(manifestPath);
+      }) as typeof project.verifiedRenderManifest;
+      try {
+        const prepared = review.prepare({ target });
+        TestValidator.predicate(
+          "a bundle replaced after inventory cannot become review evidence",
+          lateSwapped &&
+            prepared.frames.every((frame) => frame.digest !== lateDigest) &&
+            prepared.diagnostics.some(
+              (item) =>
+                item.code === "render-bundle-unowned" &&
+                path.resolve(fixture.root, item.path ?? "") ===
+                  path.resolve(lateManifestPath),
+            ),
+        );
+      } finally {
+        project.verifiedRenderManifest =
+          residentVerifiedManifest as typeof project.verifiedRenderManifest;
+        if (lateSwapped) fs.unlinkSync(lateRoot);
+        fs.rmSync(lateSource, { recursive: true, force: true });
+        if (fs.existsSync(lateParked)) fs.renameSync(lateParked, lateRoot);
+        fs.rmSync(lateRoot, { recursive: true, force: true });
       }
     } finally {
       fixture.dispose();

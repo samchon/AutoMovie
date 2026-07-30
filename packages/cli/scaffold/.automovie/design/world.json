@@ -23,5 +23,36 @@
     }
   ],
   "routes": [],
-  "effectZones": []
+  "effectRecipes": [
+    {
+      "id": "battle-smoke",
+      "kind": "smoke",
+      "seed": 1416,
+      "emission": { "rate": 40, "burst": 64, "duration": 4 },
+      "particle": {
+        "lifetime": { "min": 2, "max": 4 },
+        "size": { "min": 0.25, "max": 0.8 },
+        "color": "#89918a",
+        "opacity": { "min": 0.12, "max": 0.38 }
+      },
+      "motion": {
+        "wind": { "x": 0.18, "y": 0, "z": -0.08 },
+        "rise": 0.2,
+        "turbulence": 0.15
+      },
+      "budget": { "maxParticles": 256, "lodDistance": 25 },
+      "blend": "alpha"
+    }
+  ],
+  "effectZones": [
+    {
+      "id": "signal-smoke",
+      "recipe": "battle-smoke",
+      "bounds": {
+        "min": { "x": -4, "y": 0.05, "z": -8 },
+        "max": { "x": 4, "y": 1.2, "z": -2 }
+      },
+      "seed": 7
+    }
+  ]
 }

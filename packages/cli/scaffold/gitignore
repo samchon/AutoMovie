@@ -8,6 +8,8 @@ generated/
 .automovie/render-manifest.json
 .automovie/render-manifest-receipt.json
 .automovie/render-receipts/
+.automovie/capture/
+.automovie/render-job/
 renders/*/
 *.log
 .DS_Store

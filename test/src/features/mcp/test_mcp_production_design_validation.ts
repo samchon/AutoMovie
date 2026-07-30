@@ -21,7 +21,33 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
-/** Every bounded design family emits actionable graph diagnostics. */
+/**
+ * Every bounded production-design family emits actionable graph diagnostics
+ * while a complete starter-shaped graph remains valid.
+ *
+ * Scenarios:
+ *
+ * 1. Production raster, runtime, palette, deliverable, and aggregate collection
+ *    budgets accept their exact limits and reject empty, duplicate, off-clock,
+ *    non-finite, and oversized inputs.
+ * 2. Model recipes validate identity, archetype parameters, palette, LOD order,
+ *    runtime references, capabilities, attachments, and cumulative payload
+ *    limits.
+ * 3. World landmarks, surfaces, routes, effect recipes, and effect zones reject
+ *    malformed geometry, missing references, duplicate identities, and unsafe
+ *    numeric ranges.
+ * 4. Formations validate bounded layouts, slots, heroes, LOD memory, source
+ *    identity, and exact per-production payload constraints.
+ * 5. Shot participants, source modules, durations, states, events, camera
+ *    subjects, and review frames reject missing, duplicate, off-clock, or
+ *    unmeasurable contracts.
+ * 6. One shot rejects a hero actor owned by two participating formations, while
+ *    the same actor may belong to different formations in different shots.
+ * 7. Acceptance frame/event/metric criteria resolve exact targets and reject
+ *    missing evidence addresses, invalid operators, and target mismatches.
+ * 8. Portable case-folding and source-path rules catch cross-artifact identity
+ *    collisions without rejecting deliberate shared canonical source modules.
+ */
 export const test_mcp_production_design_validation = (): void => {
   const valid: IAutoMovieProductionDesignGraph = {
     production: productionDesign(),
@@ -50,6 +76,74 @@ export const test_mcp_production_design_validation = (): void => {
   };
   const firstCumulativeFormation = structuredClone(cumulativeFormation);
   firstCumulativeFormation.id = "first-line";
+  const twoTierModel = structuredClone(modelRecipe());
+  twoTierModel.lod = [
+    { tier: "hero", maxDistance: 5, recipe: twoTierModel.id },
+    { tier: "near", maxDistance: 20, recipe: twoTierModel.id },
+    { tier: "far", maxDistance: null, recipe: twoTierModel.id },
+  ];
+  const matrixHeavyFormation = {
+    ...formationDesign(),
+    count: 70_000,
+    layout: {
+      kind: "line" as const,
+      ranks: 70_000,
+      files: 1,
+      spacing: { lateral: 0.8, depth: 0.9 },
+    },
+    heroOverrides: [],
+  };
+  const runtimeHeavyFormation = {
+    ...formationDesign(),
+    count: 256,
+    layout: {
+      kind: "line" as const,
+      ranks: 256,
+      files: 1,
+      spacing: { lateral: 0.8, depth: 0.9 },
+    },
+    heroOverrides: Array.from({ length: 256 }, (_, slot) => ({
+      slot,
+      actor: `hero-${slot}`,
+    })),
+  };
+  const heroLimitFormation = {
+    ...runtimeHeavyFormation,
+    id: "hero-limit",
+    count: 257,
+    layout: {
+      ...runtimeHeavyFormation.layout,
+      ranks: 257,
+    },
+    heroOverrides: Array.from({ length: 257 }, (_, slot) => ({
+      slot,
+      actor: `limit-hero-${slot}`,
+    })),
+  };
+  const unboundedFormation = {
+    ...formationDesign(),
+    id: "unbounded",
+    anchor: { x: 1_000_000_001, y: 0, z: 0 },
+    facingDeg: 360_001,
+    layout: {
+      kind: "line" as const,
+      ranks: 2,
+      files: 3,
+      spacing: { lateral: 10_001, depth: 1 },
+    },
+  };
+  const identityHeavyFormation = {
+    ...formationDesign(),
+    id: "identity-heavy",
+    count: 1,
+    layout: {
+      kind: "line" as const,
+      ranks: 1,
+      files: 1,
+      spacing: { lateral: 1, depth: 1 },
+    },
+    heroOverrides: [{ slot: 0, actor: "hero".repeat(40_000) }],
+  };
   TestValidator.predicate(
     "explicit formation nodes stay inside one honest per-production bound",
     validateAutoMovieProductionGraph({
@@ -74,6 +168,51 @@ export const test_mcp_production_design_validation = (): void => {
         (diagnostic) =>
           diagnostic.code === "design-range-invalid" &&
           diagnostic.target === "formations",
+      ) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        models: new Map([[twoTierModel.id, twoTierModel]]),
+        formations: new Map([[matrixHeavyFormation.id, matrixHeavyFormation]]),
+        shots: new Map(),
+        acceptance: new Map(),
+      }).some((diagnostic) => diagnostic.message.includes("viewer budget")) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        formations: new Map([
+          [runtimeHeavyFormation.id, runtimeHeavyFormation],
+        ]),
+        shots: new Map(),
+        acceptance: new Map(),
+      }).some((diagnostic) =>
+        diagnostic.message.includes("generated payload budget"),
+      ) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        formations: new Map([[heroLimitFormation.id, heroLimitFormation]]),
+        shots: new Map(),
+        acceptance: new Map(),
+      }).some((diagnostic) =>
+        diagnostic.message.includes("above the explicit-node limit"),
+      ) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        formations: new Map([[unboundedFormation.id, unboundedFormation]]),
+        shots: new Map(),
+        acceptance: new Map(),
+      }).filter(
+        (diagnostic) =>
+          diagnostic.target === `formation:${unboundedFormation.id}` &&
+          diagnostic.code === "design-range-invalid",
+      ).length >= 3 &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        formations: new Map([
+          [identityHeavyFormation.id, identityHeavyFormation],
+        ]),
+        shots: new Map(),
+        acceptance: new Map(),
+      }).some((diagnostic) =>
+        diagnostic.message.includes("generated payload budget"),
       ),
   );
   const noReviewFrames = shotContract();
@@ -89,6 +228,77 @@ export const test_mcp_production_design_validation = (): void => {
         diagnostic.code === "design-collection-empty" &&
         diagnostic.target === "shot:opening",
     ),
+  );
+  const firstHeroFormation = {
+    ...formationDesign(),
+    id: "first-heroes",
+    heroOverrides: [{ slot: 0, actor: "shared-hero" }],
+  };
+  const secondHeroFormation = {
+    ...formationDesign(),
+    id: "second-heroes",
+    heroOverrides: [{ slot: 1, actor: "shared-hero" }],
+  };
+  const sharedHeroShot = {
+    ...shotContract(),
+    participants: [
+      { kind: "formation" as const, id: firstHeroFormation.id },
+      { kind: "formation" as const, id: secondHeroFormation.id },
+    ],
+  };
+  const crossFormationMessage = "belongs to participating formations";
+  TestValidator.predicate(
+    "one shot cannot assign the same hero actor to two formations",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      formations: new Map([
+        [firstHeroFormation.id, firstHeroFormation],
+        [secondHeroFormation.id, secondHeroFormation],
+      ]),
+      shots: new Map([[sharedHeroShot.id, sharedHeroShot]]),
+      acceptance: new Map(),
+    }).some(
+      (diagnostic) =>
+        diagnostic.code === "design-duplicate-id" &&
+        diagnostic.message.includes(crossFormationMessage),
+    ) &&
+      validateAutoMovieProductionGraph({
+        ...valid,
+        formations: new Map([
+          [firstHeroFormation.id, firstHeroFormation],
+          [secondHeroFormation.id, secondHeroFormation],
+        ]),
+        shots: new Map([
+          [
+            "first-shot",
+            {
+              ...shotContract(),
+              id: "first-shot",
+              participants: [
+                { kind: "formation" as const, id: firstHeroFormation.id },
+              ],
+            },
+          ],
+          [
+            "second-shot",
+            {
+              ...shotContract(),
+              id: "second-shot",
+              source: {
+                ...shotContract().source,
+                module: "src/shots/second.ts",
+              },
+              participants: [
+                { kind: "formation" as const, id: secondHeroFormation.id },
+              ],
+            },
+          ],
+        ]),
+        acceptance: new Map(),
+      }).every(
+        (diagnostic) =>
+          diagnostic.message.includes(crossFormationMessage) === false,
+      ),
   );
   const maximumRaster = {
     ...productionDesign(),
@@ -231,10 +441,40 @@ export const test_mcp_production_design_validation = (): void => {
         allowedFormationWidth: 1,
       },
     ],
+    effectRecipes: [
+      {
+        ...worldDesign().effectRecipes[0]!,
+        id: "",
+        seed: -1,
+        emission: { rate: Number.NaN, burst: -1, duration: 0 },
+        particle: {
+          lifetime: { min: 31, max: 1 },
+          size: { min: 21, max: 0 },
+          color: "invalid",
+          opacity: { min: 2, max: -1 },
+        },
+        motion: {
+          wind: { x: Number.NaN, y: Number.NaN, z: Number.NaN },
+          rise: 51,
+          turbulence: -1,
+        },
+        budget: { maxParticles: 0, lodDistance: 0 },
+      },
+      {
+        ...worldDesign().effectRecipes[0]!,
+        id: "",
+        emission: { rate: 100, burst: 100, duration: 1 },
+        particle: {
+          ...worldDesign().effectRecipes[0]!.particle,
+          lifetime: { min: 10, max: 10 },
+        },
+        budget: { maxParticles: 1, lodDistance: 10 },
+      },
+    ],
     effectZones: [
       {
         id: "",
-        kind: "fog" as const,
+        recipe: "absent",
         bounds: {
           min: { x: Number.NaN, y: Number.NaN, z: Number.NaN },
           max: { x: 0, y: 0, z: 0 },
@@ -243,7 +483,7 @@ export const test_mcp_production_design_validation = (): void => {
       },
       {
         id: "",
-        kind: "dust" as const,
+        recipe: "absent",
         bounds: {
           min: { x: 1, y: 1, z: 1 },
           max: { x: 0, y: 0, z: 0 },
@@ -461,6 +701,107 @@ export const test_mcp_production_design_validation = (): void => {
         "model-parameter-unsupported",
         "model-parameter-invalid",
       ].every((code) => codes.has(code)),
+  );
+  const expensiveEffectRecipe = {
+    ...worldDesign().effectRecipes[0]!,
+    id: "expensive-effect",
+    emission: { rate: 0, burst: 4_096, duration: 1 },
+    budget: { maxParticles: 4_096, lodDistance: 100 },
+  };
+  TestValidator.predicate(
+    "production-wide effect instance budget refuses excessive zone reservation",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      world: {
+        ...worldDesign(),
+        effectRecipes: [expensiveEffectRecipe],
+        effectZones: Array.from({ length: 5 }, (_, index) => ({
+          id: `effect-zone-${index}`,
+          recipe: expensiveEffectRecipe.id,
+          bounds: {
+            min: { x: index * 2, y: 0, z: 0 },
+            max: { x: index * 2 + 1, y: 1, z: 1 },
+          },
+          seed: index,
+        })),
+      },
+    }).some(
+      (diagnostic) =>
+        diagnostic.code === "design-budget-exceeded" &&
+        diagnostic.message.includes("above the production budget"),
+    ),
+  );
+  const shortEmissionRecipe = {
+    ...worldDesign().effectRecipes[0]!,
+    id: "short-emission",
+    emission: { rate: 0.5, burst: 1, duration: 1 },
+    particle: {
+      ...worldDesign().effectRecipes[0]!.particle,
+      lifetime: { min: 10, max: 10 },
+    },
+    budget: { maxParticles: 1, lodDistance: 100 },
+  };
+  TestValidator.equals(
+    "effect live budget stops adding particles when emission ends",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      world: {
+        ...worldDesign(),
+        effectRecipes: [shortEmissionRecipe],
+        effectZones: [
+          {
+            ...worldDesign().effectZones[0]!,
+            recipe: shortEmissionRecipe.id,
+          },
+        ],
+      },
+    }),
+    [],
+  );
+  const exactExpiryRecipe = {
+    ...shortEmissionRecipe,
+    id: "exact-expiry",
+    emission: { rate: 1, burst: 1, duration: 10 },
+    particle: {
+      ...shortEmissionRecipe.particle,
+      lifetime: { min: 1, max: 1 },
+    },
+  };
+  TestValidator.equals(
+    "effect burst expires when the first regular particle spawns",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      world: {
+        ...worldDesign(),
+        effectRecipes: [exactExpiryRecipe],
+        effectZones: [
+          {
+            ...worldDesign().effectZones[0]!,
+            recipe: exactExpiryRecipe.id,
+          },
+        ],
+      },
+    }),
+    [],
+  );
+  TestValidator.predicate(
+    "world effect declarations remain structurally bounded",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      world: {
+        ...worldDesign(),
+        effectRecipes: Array.from(
+          { length: 257 },
+          (_, index) =>
+            ({
+              ...worldDesign().effectRecipes[0]!,
+              id: `effect-recipe-${index}`,
+            }) as typeof expensiveEffectRecipe,
+        ),
+      },
+    }).some((diagnostic) =>
+      diagnostic.message.includes("within 256 recipes and 256 zones"),
+    ),
   );
   const emptyCollections = validateAutoMovieProductionGraph({
     ...valid,

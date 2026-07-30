@@ -21,6 +21,8 @@ AI가 만든 `@automovie/interface` 모델, 포즈, 모션, 표정을 화면에 
 | `renderCrossDissolve` / `disposeCrossDissolve` | 두 샷을 겹쳐 그리는 크로스 디졸브 패스를 만들고 자원을 되돌린다. |
 | `applyCaptureCanvasSize` | 캡처용 캔버스 크기를 렌더러·카메라와 함께 맞춘다. |
 | `applyRenderMode` / `maskColor` / `IAutoMovieRenderModeHandle` | depth/mask/normal/outline 구조 가이드 패스로 씬을 전환하고 되돌린다. |
+| `buildInstancedFormation` / `regenerateFormationSlot` | 컴파일된 formation 청크를 LOD tier별 `InstancedMesh`로 올리고, 카메라 갱신마다 청크 컬링·LOD 히스테리시스를 적용한다. hero 슬롯은 인스턴스 버퍼에서 빠지고 host가 넘긴 pre-formation 소스 스냅샷 위에 formation 모션을 합성한다. |
+| `buildInstancedEffect` | 컴파일된 fog/smoke/dust 볼륨을 고정 스텝으로 샘플링해 인스턴스 파티클로 그리고, 파티클 상한과 LOD 거리 컬링을 강제한다. |
 | `mountViewer(canvas, scene, camera, onFrame)` | 브라우저 RAF와 `WebGLRenderer`를 붙인다. |
 | `captureViewerSnapshot(renderer, scene, camera)` | headless-friendly renderer 표면으로 한 프레임을 data URL로 읽는다. |
 

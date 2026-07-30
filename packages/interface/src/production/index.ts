@@ -1,3 +1,4 @@
+export * from "./IAutoMovieLegacyImport";
 export * from "./IAutoMovieProductionCompiler";
 export * from "./IAutoMovieProductionDesign";
 export * from "./IAutoMovieProductionOracle";

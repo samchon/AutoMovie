@@ -77,3 +77,37 @@ export const projectToNdc = (
     depth,
   };
 };
+
+/**
+ * Whether a world-space sphere intersects an exact perspective-camera frustum.
+ * Side-plane distances include plane normalization, so callers must not
+ * approximate the radius by padding projected NDC coordinates.
+ */
+export const intersectsPerspectiveFrustumSphere = (props: {
+  camera: IAutoMovieResolvedCamera;
+  center: IAutoMovieVector3;
+  radius: number;
+  near: number;
+  far: number;
+  halfY: number;
+  aspect: number;
+}): boolean => {
+  const local = Quaternion.rotateVector(
+    Quaternion.inverse(props.camera.rotation),
+    Vector3.subtract(props.center, props.camera.position),
+  );
+  const depth = -local.z;
+  if (
+    Number.isFinite(props.radius) === false ||
+    props.radius < 0 ||
+    depth + props.radius < props.near ||
+    depth - props.radius > props.far
+  )
+    return false;
+  const halfX = props.halfY * props.aspect;
+  return (
+    Math.abs(local.x) <= depth * halfX + props.radius * Math.hypot(1, halfX) &&
+    Math.abs(local.y) <=
+      depth * props.halfY + props.radius * Math.hypot(1, props.halfY)
+  );
+};

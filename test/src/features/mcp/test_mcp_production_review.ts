@@ -21,6 +21,7 @@ import {
   productionDesign,
   productionFixture,
   shotContract,
+  testCaptureRuntimeIdentity,
 } from "./productionFixtures";
 
 const evidenceOf = (
@@ -365,7 +366,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         const height = input.height ?? 16;
         return {
           bytes: captureBytes(width, height),
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width,
           height,
         };
@@ -497,7 +498,11 @@ export const test_mcp_production_review = async (): Promise<void> => {
     });
     project.readGeneratedFile = residentReadGenerated;
     const residentGraph = project.graph;
+    const residentGeneratedManifest = project.generatedManifest;
     const currentGraph = residentGraph.call(project);
+    const currentGeneratedManifest = residentGeneratedManifest.call(project);
+    if (currentGeneratedManifest === null)
+      throw new Error("review fixture has no current generated manifest");
     const openingContract = currentGraph.shots.get("opening")!;
     const graphWithMissingFirst = {
       ...currentGraph,
@@ -511,6 +516,75 @@ export const test_mcp_production_review = async (): Promise<void> => {
     };
     project.graph = (() => graphWithMissingFirst) as typeof project.graph;
     const incompleteFilmMetricOutcome = reviewWithFixedStatus.prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    const outsideTimelineAcceptance = structuredClone(
+      acceptanceScenarios()[0]!,
+    );
+    outsideTimelineAcceptance.id = "outside-timeline-frame";
+    outsideTimelineAcceptance.target = {
+      kind: "film",
+      id: "fixture-film",
+    };
+    if (outsideTimelineAcceptance.criterion.kind !== "frame")
+      throw new Error("opening beauty fixture is not a frame criterion");
+    outsideTimelineAcceptance.criterion.shot = "review-missing-shot";
+    const graphWithOutsideTimelineAcceptance = {
+      ...graphWithMissingFirst,
+      acceptance: new Map([
+        ...graphWithMissingFirst.acceptance,
+        [outsideTimelineAcceptance.id, outsideTimelineAcceptance] as const,
+      ]),
+    };
+    project.graph = (() =>
+      graphWithOutsideTimelineAcceptance) as typeof project.graph;
+    const outsideTimelineFilmReview = reviewWithFixedStatus.prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    const unknownFrameAcceptance = structuredClone(acceptanceScenarios()[0]!);
+    unknownFrameAcceptance.id = "unknown-resident-frame";
+    unknownFrameAcceptance.target = {
+      kind: "film",
+      id: "fixture-film",
+    };
+    if (unknownFrameAcceptance.criterion.kind !== "frame")
+      throw new Error("opening beauty fixture is not a frame criterion");
+    unknownFrameAcceptance.criterion.shot = "opening";
+    unknownFrameAcceptance.criterion.frame = "absent-review-frame";
+    const graphWithUnknownFrameAcceptance = {
+      ...currentGraph,
+      acceptance: new Map([
+        ...currentGraph.acceptance,
+        [unknownFrameAcceptance.id, unknownFrameAcceptance] as const,
+      ]),
+    };
+    project.graph = (() =>
+      graphWithUnknownFrameAcceptance) as typeof project.graph;
+    project.generatedManifest = (() =>
+      currentGeneratedManifest) as typeof project.generatedManifest;
+    const unknownFrameFilmReview = reviewWithFixedStatus.prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    const unknownFrameWorksheet = worksheet(project, unknownFrameFilmReview);
+    const unknownFrameAcceptanceCheck = unknownFrameWorksheet.checks.find(
+      (check) => check.criterion === "acceptance-scenarios",
+    )!;
+    unknownFrameAcceptanceCheck.acceptanceScenarios =
+      unknownFrameAcceptanceCheck.acceptanceScenarios?.filter(
+        (id) => id !== unknownFrameAcceptance.id,
+      );
+    const unknownFrameSubmission = reviewWithFixedStatus.submit(
+      unknownFrameWorksheet,
+    );
+    project.generatedManifest = residentGeneratedManifest;
+    const graphWithoutTimelineShot = {
+      ...currentGraph,
+      shots: new Map(
+        [...currentGraph.shots].filter(([id]) => id !== "opening"),
+      ),
+    };
+    project.graph = (() => graphWithoutTimelineShot) as typeof project.graph;
+    const missingTimelineShotReview = reviewWithFixedStatus.prepare({
       target: { kind: "film", id: "fixture-film" },
     });
     project.graph = residentGraph;
@@ -534,6 +608,9 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const ambiguousEventOutcome = reviewWithFixedStatus.prepare({
       target: { kind: "film", id: "fixture-film" },
     });
+    const ambiguousEventSubmission = reviewWithFixedStatus.submit(
+      worksheet(project, ambiguousEventOutcome),
+    );
     fs.rmSync(ambiguousEventFile);
     TestValidator.predicate(
       "missing, malformed and unscoped compiler outcomes fail review preparation",
@@ -542,13 +619,36 @@ export const test_mcp_production_review = async (): Promise<void> => {
         malformedEventOutcome,
         missingMetricOutcome,
         invalidMetricOutcome,
-        incompleteFilmMetricOutcome,
         ambiguousEventOutcome,
       ].every((prepared) =>
         prepared.diagnostics.some(
           (diagnostic) => diagnostic.code === "review-outcome-missing",
         ),
-      ),
+      ) &&
+        incompleteFilmMetricOutcome.outcomes.some(
+          (outcome) =>
+            outcome.kind === "metric" &&
+            outcome.scenario === "film-runtime" &&
+            outcome.actual === 6 &&
+            outcome.passed,
+        ) &&
+        outsideTimelineFilmReview.outcomes.every(
+          (outcome) => outcome.scenario !== outsideTimelineAcceptance.id,
+        ) &&
+        unknownFrameSubmission.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-acceptance-coverage-incomplete" &&
+            diagnostic.message.includes(unknownFrameAcceptance.id) &&
+            diagnostic.message.includes("exact current required ids"),
+        ) &&
+        missingTimelineShotReview.outcomes.every(
+          (outcome) =>
+            outcome.scenario !== "opening-beauty" &&
+            outcome.scenario !== "opening-pose",
+        ) &&
+        ambiguousEventSubmission.diagnostics.some(
+          (diagnostic) => diagnostic.code === "review-outcome-missing",
+        ),
     );
     const contractOnlyWorksheet = worksheet(project, aliasedFrameEvidence);
     const acceptanceCheck = contractOnlyWorksheet.checks.find(
@@ -941,9 +1041,107 @@ export const test_mcp_production_review = async (): Promise<void> => {
         (item) => item.code === "review-evidence-stale",
       ),
     );
+    let shortenedSource: ReturnType<AutoMovieProductionReviewService["submit"]>;
+    project.readSource = ((sourcePath: string) =>
+      new Error("source evidence stack").stack?.includes("currentSourceLine")
+        ? Buffer.alloc(0)
+        : residentReadSource.call(
+            project,
+            sourcePath,
+          )) as typeof project.readSource;
+    try {
+      shortenedSource = review.submit(worksheet(project, sourcePrepared));
+    } finally {
+      project.readSource = residentReadSource;
+    }
+    TestValidator.predicate(
+      "a source line-removal race becomes stale evidence",
+      shortenedSource.diagnostics.some(
+        (item) => item.code === "review-evidence-stale",
+      ),
+    );
 
     const shotTarget = { kind: "shot" as const, id: "opening" };
     const shotPrepared = review.prepare({ target: shotTarget });
+    const sourceFile = path.join(project.root, sourceTarget.path);
+    const sourceBeforeRace = fs.readFileSync(sourceFile);
+    let compileCalls = 0;
+    const racingReview = new AutoMovieProductionReviewService(project, () => {
+      ++compileCalls;
+      if (compileCalls === 3)
+        fs.appendFileSync(sourceFile, "\n// concurrent review edit\n");
+      return new AutoMovieProductionCompiler(project).lint({ scope: "source" });
+    });
+    let racedSubmission: ReturnType<AutoMovieProductionReviewService["submit"]>;
+    try {
+      const racedPrepared = racingReview.prepare({ target: shotTarget });
+      racedSubmission = racingReview.submit(worksheet(project, racedPrepared));
+    } finally {
+      fs.writeFileSync(sourceFile, sourceBeforeRace);
+    }
+    TestValidator.predicate(
+      "a target mutation during worksheet validation is refused",
+      racedSubmission.diagnostics.some(
+        (item) => item.code === "review-target-raced",
+      ),
+    );
+    const commitBoundaryPrepared = review.prepare({ target: shotTarget });
+    const reviewPath = project.reviewPath(shotTarget);
+    const reviewBeforeCommitRace = fs.existsSync(reviewPath)
+      ? fs.readFileSync(reviewPath)
+      : null;
+    const revisionBeforeCommitRace = project.revision();
+    const residentCommitReview = project.commitReview;
+    let commitGuardReads = 0;
+    project.commitReview = ((stored, inputCurrent) =>
+      residentCommitReview.call(project, stored, () => {
+        ++commitGuardReads;
+        if (commitGuardReads === 2)
+          fs.appendFileSync(sourceFile, "\n// commit-boundary edit\n");
+        return inputCurrent?.() ?? true;
+      })) as typeof project.commitReview;
+    let commitBoundarySubmission: ReturnType<
+      AutoMovieProductionReviewService["submit"]
+    >;
+    try {
+      commitBoundarySubmission = review.submit(
+        worksheet(project, commitBoundaryPrepared),
+      );
+    } finally {
+      project.commitReview = residentCommitReview;
+      fs.writeFileSync(sourceFile, sourceBeforeRace);
+    }
+    const reviewAfterCommitRace = fs.existsSync(reviewPath)
+      ? fs.readFileSync(reviewPath)
+      : null;
+    TestValidator.predicate(
+      "a target mutation during review commit rolls back the stale ledger",
+      commitGuardReads === 2 &&
+        commitBoundarySubmission.diagnostics.some(
+          (item) => item.code === "review-target-raced",
+        ) &&
+        project.revision() === revisionBeforeCommitRace &&
+        (reviewBeforeCommitRace === null
+          ? reviewAfterCommitRace === null
+          : reviewAfterCommitRace?.equals(reviewBeforeCommitRace) === true),
+    );
+    const commitFailure = new Error("review storage failed");
+    project.commitReview = (() => {
+      throw commitFailure;
+    }) as typeof project.commitReview;
+    let propagatedCommitFailure: unknown;
+    try {
+      review.submit(worksheet(project, commitBoundaryPrepared));
+    } catch (error) {
+      propagatedCommitFailure = error;
+    } finally {
+      project.commitReview = residentCommitReview;
+    }
+    TestValidator.equals(
+      "a non-race review storage failure remains actionable",
+      propagatedCommitFailure,
+      commitFailure,
+    );
     const sourceSelector = shotPrepared.quotable.find(
       (item) => item.kind === "source",
     );
@@ -1166,6 +1364,68 @@ export const test_mcp_production_review = async (): Promise<void> => {
         .diagnostics.some((item) => item.code === "review-evidence-stale"),
     );
 
+    const legacyBundleDirectory = path.join(
+      fixture.root,
+      "renders",
+      "retained-v2-history",
+    );
+    const currentBundleManifest = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          fixture.root,
+          aliasedFrameEvidence.frames[0]!.bundle,
+          "manifest.json",
+        ),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    fs.mkdirSync(legacyBundleDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(legacyBundleDirectory, "manifest.json"),
+      JSON.stringify({
+        ...currentBundleManifest,
+        version: 2,
+        rendererIdentity: "legacy-capture-runtime",
+      }),
+    );
+    const legacyFilmBundleDirectory = path.join(
+      fixture.root,
+      "renders",
+      "retained-v2-film-history",
+    );
+    fs.mkdirSync(legacyFilmBundleDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(legacyFilmBundleDirectory, "manifest.json"),
+      JSON.stringify({
+        ...currentBundleManifest,
+        version: 2,
+        target: { kind: "film", id: "fixture-film" },
+        rendererIdentity: "legacy-capture-runtime",
+      }),
+    );
+    const preparedBesideLegacyV2 = review.prepare({ target: shotTarget });
+    const filmPreparedBesideLegacyV2 = review.prepare({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    TestValidator.predicate(
+      "retained v2 history is a warning beside current v3 evidence",
+      preparedBesideLegacyV2.frames.length !== 0 &&
+        preparedBesideLegacyV2.diagnostics.some(
+          (item) =>
+            item.code === "render-bundle-legacy" && item.category === "warning",
+        ) &&
+        preparedBesideLegacyV2.diagnostics.every(
+          (item) =>
+            item.code !== "render-bundle-invalid" ||
+            item.path?.includes("retained-v2-history") === false,
+        ) &&
+        filmPreparedBesideLegacyV2.diagnostics.some(
+          (item) =>
+            item.code === "render-bundle-legacy" &&
+            item.path?.includes("retained-v2-film-history"),
+        ),
+    );
+
     for (const entry of review.queue().entries) {
       const prepared = review.prepare({ target: entry.target });
       const result = review.submit(worksheet(project, prepared));
@@ -1195,6 +1455,41 @@ export const test_mcp_production_review = async (): Promise<void> => {
       "film fingerprint tracks the complete current child-shot review",
       filmBeforeChildReviewChange,
       filmAfterChildReviewChange,
+    );
+    const filmCommitPrepared = review.prepare({ target: filmTarget });
+    const filmReviewPath = project.reviewPath(filmTarget);
+    const filmReviewBeforeRace = fs.readFileSync(filmReviewPath);
+    const filmSourceFile = path.join(project.root, "src/film.ts");
+    const filmSourceBeforeRace = fs.readFileSync(filmSourceFile);
+    const revisionBeforeFilmCommitRace = project.revision();
+    const residentFilmCommitReview = project.commitReview;
+    let filmCommitGuardReads = 0;
+    project.commitReview = ((stored, inputCurrent) =>
+      residentFilmCommitReview.call(project, stored, () => {
+        ++filmCommitGuardReads;
+        if (filmCommitGuardReads === 2)
+          fs.appendFileSync(filmSourceFile, "\n// film commit-boundary edit\n");
+        return inputCurrent?.() ?? true;
+      })) as typeof project.commitReview;
+    let filmCommitSubmission: ReturnType<
+      AutoMovieProductionReviewService["submit"]
+    >;
+    try {
+      filmCommitSubmission = review.submit(
+        worksheet(project, filmCommitPrepared),
+      );
+    } finally {
+      project.commitReview = residentFilmCommitReview;
+      fs.writeFileSync(filmSourceFile, filmSourceBeforeRace);
+    }
+    TestValidator.predicate(
+      "a film-source mutation during review commit rolls back the stale ledger",
+      filmCommitGuardReads === 2 &&
+        filmCommitSubmission.diagnostics.some(
+          (item) => item.code === "review-target-raced",
+        ) &&
+        project.revision() === revisionBeforeFilmCommitRace &&
+        fs.readFileSync(filmReviewPath).equals(filmReviewBeforeRace),
     );
     const storedSourceReview = project.review(sourceTarget)!;
     fs.writeFileSync(

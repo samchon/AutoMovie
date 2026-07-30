@@ -7,6 +7,7 @@ import {
   AutoMovieProductionProject,
   AutoMovieProductionReviewService,
   canonicalizeAutoMovieJson,
+  compareCodeUnits,
   digestAutoMovieBytes,
   probeProductionMedia,
 } from "@automovie/mcp";
@@ -200,12 +201,37 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       genericSnapshotFailure,
       "generic snapshot confirmation failure",
     );
+    // The sabotage above left the generated snapshot stale on purpose. The
+    // fence claim below is about a settled read-only response, so restore a
+    // current compilation first rather than measuring the fence through an
+    // unrelated staleness failure.
+    new AutoMovieProductionCompiler(project).compile({ scope: "source" });
     const postFenceRevision = project.revision;
+    // The claim is that a settled response takes its fence and never reads the
+    // revision again, so the injection point must sit exactly one read past
+    // whatever the current fence costs. Measuring that cost keeps the claim
+    // about the fence; a written-down count would instead fail whenever an
+    // unrelated read is added or removed.
+    const countRevisionReads = (run: () => unknown): number => {
+      let reads = 0;
+      project.revision = (() => {
+        ++reads;
+        return postFenceRevision.call(project);
+      }) as typeof project.revision;
+      run();
+      project.revision = postFenceRevision;
+      return reads;
+    };
+    const readOnlyLint = (): unknown =>
+      new AutoMovieProductionCompiler(project, () => ({ entries: [] })).lint({
+        scope: "source",
+      });
+    const lintReadBudget = countRevisionReads(readOnlyLint);
     let postFenceLintReads = 0;
     let postFenceLintMutation = false;
     project.revision = (() => {
       ++postFenceLintReads;
-      if (postFenceLintReads === 7) {
+      if (postFenceLintReads === lintReadBudget + 1) {
         diagnosticRevisionRacer.setWorldDesign(worldDesign());
         postFenceLintMutation = true;
       }
@@ -215,21 +241,37 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       entries: [],
     })).lint({ scope: "source" });
     project.revision = postFenceRevision;
-    TestValidator.predicate(
+    TestValidator.equals(
       "read-only success returns the fenced revision without a later read",
-      stableLint.success &&
-        postFenceLintReads === 6 &&
-        postFenceLintMutation === false,
+      {
+        success: stableLint.success,
+        codes: [...diagnosticCodes(stableLint)].sort(compareCodeUnits),
+        budgetIsPositive: lintReadBudget > 0,
+        readsMatchBudget: postFenceLintReads === lintReadBudget,
+        mutated: postFenceLintMutation,
+      },
+      {
+        success: true,
+        codes: [],
+        budgetIsPositive: true,
+        readsMatchBudget: true,
+        mutated: false,
+      },
     );
     fs.writeFileSync(
       sourcePath,
       `${original}\nexport const postFenceDiagnostic = ;\n`,
     );
+    const diagnosticCompile = (): unknown =>
+      new AutoMovieProductionCompiler(project, () => ({
+        entries: [],
+      })).compile({ scope: "source" });
+    const diagnosticReadBudget = countRevisionReads(diagnosticCompile);
     let postFenceDiagnosticReads = 0;
     let postFenceDiagnosticMutation = false;
     project.revision = (() => {
       ++postFenceDiagnosticReads;
-      if (postFenceDiagnosticReads === 7) {
+      if (postFenceDiagnosticReads === diagnosticReadBudget + 1) {
         diagnosticRevisionRacer.setWorldDesign(worldDesign());
         postFenceDiagnosticMutation = true;
       }
@@ -245,7 +287,8 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       stableDiagnostic.success === false &&
         diagnosticCodes(stableDiagnostic).has("compile-input-changed") ===
           false &&
-        postFenceDiagnosticReads === 6 &&
+        diagnosticReadBudget > 0 &&
+        postFenceDiagnosticReads === diagnosticReadBudget &&
         postFenceDiagnosticMutation === false,
     );
     const recipeFile = path.join(
@@ -1253,6 +1296,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       ),
     ) as {
       scene: { nodes: Array<{ id: string }> };
+      formations: Array<{
+        id: string;
+        count: number;
+        anonymousCount: number;
+      }>;
     };
     const formationRealization = JSON.parse(
       fs.readFileSync(
@@ -1263,13 +1311,19 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       formations: Array<{ id: string; count: number; passed: boolean }>;
     };
     TestValidator.predicate(
-      "formation count, hero identity and realization come from compiler-owned slots",
+      "formation count, compact anonymous runtime, hero identity and realization come from the compiler",
       materializedFormation.success &&
         formationShot.scene.nodes.some((node) => node.id === "captain") &&
         formationShot.scene.nodes.filter(
           (node) =>
             node.id === "captain" || node.id.startsWith("formation:line:slot:"),
-        ).length === 6 &&
+        ).length === 1 &&
+        formationShot.formations.some(
+          (formation) =>
+            formation.id === "line" &&
+            formation.count === 6 &&
+            formation.anonymousCount === 5,
+        ) &&
         formationRealization.formations.some(
           (formation) =>
             formation.id === "line" &&
@@ -1594,6 +1648,38 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     });
     if (edgeAudioProbe.kind !== "audio")
       throw new Error("The compiler edge fixture requires parsed AAC audio.");
+    // Every edge deliverable below is measured against the production runtime,
+    // and that runtime is the parsed audio's so the valid audio-mix case can
+    // match its own bytes. The compiled film now answers to the same target, so
+    // the edit has to end there too: the shot is longer, and the segment trims.
+    fs.writeFileSync(
+      path.join(fixture.root, "src/film.ts"),
+      `import type { IAutoMovieFilmSource } from "@automovie/interface";
+
+export const film = {
+  build(context) {
+    return {
+      id: context.production.id,
+      omissions: [],
+      tracks: {
+        video: [{
+          shot: "opening",
+          sourceIn: { frame: 0 },
+          sourceOut: { seconds: ${edgeAudioProbe.runtimeSeconds} },
+          start: { frame: 0 },
+          handles: { head: { frame: 0 }, tail: { frame: 0 } },
+          transitionIn: { kind: "cut" },
+          transitionOut: { kind: "cut" },
+        }],
+        audio: [],
+        captions: [],
+        effects: [],
+      },
+    };
+  },
+} satisfies IAutoMovieFilmSource;
+`,
+    );
     const edgeProduction = {
       ...productionDesign(),
       targetRuntimeSeconds: edgeAudioProbe.runtimeSeconds,
@@ -1621,10 +1707,29 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       { id: "missing-file", kind: "preview", required: false },
       { id: "kind-mismatch", kind: "captions", required: false },
     ];
-    TestValidator.predicate(
+    const edgeDesign = project.setProductionDesign(edgeProduction);
+    const edgeCompile = finalCompiler.compile({ scope: "source" });
+    TestValidator.equals(
       "final semantic edge production compiles",
-      project.setProductionDesign(edgeProduction).accepted &&
-        finalCompiler.compile({ scope: "source" }).success,
+      {
+        accepted: edgeDesign.accepted,
+        designCodes: [
+          ...new Set(
+            edgeDesign.diagnostics
+              .filter((diagnostic) => diagnostic.category === "error")
+              .map((diagnostic) => diagnostic.code),
+          ),
+        ].sort(compareCodeUnits),
+        compiled: edgeCompile.success,
+        compileCodes: [
+          ...new Set(
+            edgeCompile.diagnostics
+              .filter((diagnostic) => diagnostic.category === "error")
+              .map((diagnostic) => diagnostic.code),
+          ),
+        ].sort(compareCodeUnits),
+      },
+      { accepted: true, designCodes: [], compiled: true, compileCodes: [] },
     );
     const edgeFingerprint = finalCompiler.lint({ scope: "source" }).compiler
       .inputFingerprint;

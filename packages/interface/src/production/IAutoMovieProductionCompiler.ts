@@ -1,14 +1,17 @@
 import { IAutoMovieShot } from "../cinematics";
-import { IAutoMovieVector3 } from "../geometry";
+import { IAutoMovieTransform, IAutoMovieVector3 } from "../geometry";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
 import { IAutoMovieScene } from "../scene";
 import {
   AutoMovieContentDigest,
+  AutoMovieFormationCapability,
   IAutoMovieDesignTarget,
+  IAutoMovieEffectRecipe,
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
   IAutoMovieProductionDeliverable,
+  IAutoMovieProductionDesign,
   IAutoMovieShotContract,
   IAutoMovieShotPredicate,
   IAutoMovieWorldDesign,
@@ -211,6 +214,265 @@ export interface IAutoMovieSourceOracle {
   ): number;
   /** Height of the first matching world surface, or zero. */
   groundHeight(point: { x: number; z: number }): number;
+  /** Regenerate one exact compiler-owned formation slot without expanding it. */
+  formationSlot(formation: string, slot: number): IAutoMovieFormationSlot;
+}
+
+/** One non-negative film time authored as an exact frame or frame-grid second. */
+export type AutoMovieFilmTime =
+  | {
+      /** Zero-based production frame. */
+      frame: number;
+    }
+  | {
+      /** Seconds that must land exactly on the production frame clock. */
+      seconds: number;
+    };
+
+/** A cut or bounded transition at one side of a video edit. */
+export type IAutoMovieFilmTransition =
+  | {
+      /** Zero-duration hard cut. */
+      kind: "cut";
+    }
+  | {
+      /** Cross-shot overlap using declared head and tail handles. */
+      kind: "dissolve";
+      /** Exact overlap duration. */
+      duration: AutoMovieFilmTime;
+    }
+  | {
+      /** In-segment fade without cross-shot overlap. */
+      kind: "fade";
+      /** Exact fade duration. */
+      duration: AutoMovieFilmTime;
+    };
+
+/** One source-shot placement on the finished-film video track. */
+export interface IAutoMovieVideoEdit {
+  /** Current compiled shot id. */
+  shot: string;
+  /** Inclusive source frame. */
+  sourceIn: AutoMovieFilmTime;
+  /** Exclusive source frame. */
+  sourceOut: AutoMovieFilmTime;
+  /** Film-global inclusive start frame. */
+  start: AutoMovieFilmTime;
+  /** Available transition material at each side of this placement. */
+  handles: {
+    /** Available incoming frames. */
+    head: AutoMovieFilmTime;
+    /** Available outgoing frames. */
+    tail: AutoMovieFilmTime;
+  };
+  /** Transition entering this placement. */
+  transitionIn: IAutoMovieFilmTransition;
+  /** Transition leaving this placement. */
+  transitionOut: IAutoMovieFilmTransition;
+}
+
+/** One declared audio asset placement. */
+export interface IAutoMovieAudioCue {
+  /** Stable cue id. */
+  id: string;
+  /** Project-relative declared render-content asset. */
+  asset: string;
+  /** Declared source duration used for bounded trim validation. */
+  sourceDuration: AutoMovieFilmTime;
+  /** Source offset inside the asset. */
+  sourceOffset: AutoMovieFilmTime;
+  /** Film-global cue start. */
+  start: AutoMovieFilmTime;
+  /** Cue duration. */
+  duration: AutoMovieFilmTime;
+  /** Linear gain from silence through a bounded boost. */
+  gain: number;
+  /** Fade-in duration. */
+  fadeIn: AutoMovieFilmTime;
+  /** Fade-out duration. */
+  fadeOut: AutoMovieFilmTime;
+  /** Deterministic destination bus. */
+  bus: "dialogue" | "music" | "effects" | "ambience";
+}
+
+/** One plain-text caption cue from which renderers may derive WebVTT. */
+export interface IAutoMovieCaptionCue {
+  /** Stable cue id. */
+  id: string;
+  /** Non-blank plain text. */
+  text: string;
+  /** Non-blank BCP-47-style language tag. */
+  language: string;
+  /** Optional speaker id. */
+  speaker?: string;
+  /** Film-global inclusive start. */
+  start: AutoMovieFilmTime;
+  /** Film-global exclusive end. */
+  end: AutoMovieFilmTime;
+}
+
+/** One bounded reference to a registered deterministic world effect zone. */
+export interface IAutoMovieEffectCue {
+  /** Stable cue id. */
+  id: string;
+  /** Supported compiler-owned recipe family. */
+  recipe: "world-zone";
+  /** Existing world effect-zone id. */
+  zone: string;
+  /** Film-global cue start. */
+  start: AutoMovieFilmTime;
+  /** Cue duration. */
+  duration: AutoMovieFilmTime;
+  /** Bounded normalized strength. */
+  intensity: number;
+}
+
+/** Explicit narrative-shot omission disposition. */
+export interface IAutoMovieFilmOmission {
+  /** Current shot contract intentionally absent from the edit. */
+  shot: string;
+  /** Auditable non-blank reason. */
+  reason: string;
+}
+
+/** Coding-agent-authored finished-film edit before frame normalization. */
+export interface IAutoMovieFilmEdit {
+  /** Stable film id, equal to production id. */
+  id: string;
+  /** Explicit accounting for intentionally unused shot contracts. */
+  omissions: IAutoMovieFilmOmission[];
+  /** Narrow deterministic edit tracks. */
+  tracks: {
+    /** Ordered source-shot placements. */
+    video: IAutoMovieVideoEdit[];
+    /** Ordered audio cues. */
+    audio: IAutoMovieAudioCue[];
+    /** Ordered caption cues. */
+    captions: IAutoMovieCaptionCue[];
+    /** Ordered supported-effect cues. */
+    effects: IAutoMovieEffectCue[];
+  };
+}
+
+/** Frozen design and ownership facts available to the film source builder. */
+export interface IAutoMovieFilmBuildContext {
+  /** Current production design. */
+  production: IAutoMovieProductionDesign;
+  /** Current shot contracts keyed by id. */
+  shots: Readonly<Record<string, IAutoMovieShotContract>>;
+  /** Declared, present render-content paths. */
+  assets: readonly string[];
+  /** Current registered deterministic effect zones. */
+  effectZones: Readonly<IAutoMovieWorldDesign["effectZones"]>;
+}
+
+/** Coding-agent-owned deterministic film module export. */
+export interface IAutoMovieFilmSource {
+  /** Build one finished-film edit from frozen compiler context. */
+  build(context: IAutoMovieFilmBuildContext): IAutoMovieFilmEdit;
+}
+
+/** Compiler-owned envelope preserving the exact validated authored edit. */
+export interface IAutoMovieCompiledFilmEdit {
+  /** Generated edit format. */
+  version: 1;
+  /** Compiler protocol that validated the edit. */
+  compiler: string;
+  /** Exact aggregate compile input. */
+  inputFingerprint: AutoMovieContentDigest;
+  /** Film source provenance. */
+  source: {
+    /** Project-relative module path. */
+    path: string;
+    /** Named build export. */
+    export: string;
+    /** Digest of normalized TypeScript source. */
+    digest: AutoMovieContentDigest;
+  };
+  /** Strict authored edit returned by the deterministic sandbox. */
+  edit: IAutoMovieFilmEdit;
+}
+
+/** One frame-normalized video segment in the canonical film timeline. */
+export interface IAutoMovieFilmTimelineSegment {
+  /** Current compiled shot id. */
+  shot: string;
+  /** Inclusive source frame. */
+  sourceInFrame: number;
+  /** Exclusive source frame. */
+  sourceOutFrame: number;
+  /** Film-global inclusive start frame. */
+  startFrame: number;
+  /** Film-global exclusive end frame. */
+  endFrame: number;
+  /** Available incoming handle frames. */
+  headHandleFrames: number;
+  /** Available outgoing handle frames. */
+  tailHandleFrames: number;
+  /** Normalized incoming transition. */
+  transitionIn:
+    | { kind: "cut" }
+    | { kind: "dissolve" | "fade"; durationFrames: number };
+  /** Normalized outgoing transition. */
+  transitionOut:
+    | { kind: "cut" }
+    | { kind: "dissolve" | "fade"; durationFrames: number };
+}
+
+/** Canonical global timeline consumed by review, oracle and render layers. */
+export interface IAutoMovieFilmTimeline {
+  /** Generated timeline format. */
+  version: 1;
+  /** Compiler protocol that derived the timeline. */
+  compiler: string;
+  /** Exact aggregate compile input. */
+  inputFingerprint: AutoMovieContentDigest;
+  /** Digest of normalized `src/film.ts` bytes. */
+  sourceDigest: AutoMovieContentDigest;
+  /** Stable finished-film id. */
+  id: string;
+  /** Production frame rate. */
+  fps: number;
+  /** Exact target and derived timeline duration. */
+  totalFrames: number;
+  /** Ordered global-to-shot mapping. */
+  segments: IAutoMovieFilmTimelineSegment[];
+  /** Explicitly omitted current narrative shots. */
+  omissions: IAutoMovieFilmOmission[];
+  /** Frame-normalized non-video tracks. */
+  tracks: {
+    /** Ordered audio placements. */
+    audio: Array<{
+      id: string;
+      asset: string;
+      sourceDurationFrames: number;
+      sourceOffsetFrame: number;
+      startFrame: number;
+      durationFrames: number;
+      gain: number;
+      fadeInFrames: number;
+      fadeOutFrames: number;
+      bus: IAutoMovieAudioCue["bus"];
+    }>;
+    /** Ordered caption placements. */
+    captions: Array<{
+      id: string;
+      text: string;
+      language: string;
+      speaker?: string;
+      startFrame: number;
+      endFrame: number;
+    }>;
+    /** Ordered effect placements. */
+    effects: Array<{
+      id: string;
+      recipe: IAutoMovieEffectCue["recipe"];
+      zone: string;
+      startFrame: number;
+      durationFrames: number;
+      intensity: number;
+    }>;
+  };
 }
 
 /** Frozen input available to a coding-agent-owned shot source builder. */
@@ -225,8 +487,8 @@ export interface IAutoMovieShotBuildContext {
   formations: Readonly<Record<string, IAutoMovieFormationDesign>>;
   /** Compiler-generated primitive runtime models keyed by recipe id. */
   runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
-  /** Compiler-derived formation slots keyed by formation id. */
-  formationSlots: Readonly<Record<string, readonly IAutoMovieFormationSlot[]>>;
+  /** Compact compiler-derived formation runtimes keyed by formation id. */
+  formationRuntime: Readonly<Record<string, IAutoMovieCompiledFormation>>;
   /** Deterministic geometry helpers. */
   engine: IAutoMovieSourceOracle;
 }
@@ -245,6 +507,190 @@ export interface IAutoMovieFormationSlot {
   position: IAutoMovieVector3;
   /** Compiler-derived world-space heading in degrees. */
   facingDeg: number;
+  /** Stable normalized phase used by bounded instance motion. */
+  motionPhase: number;
+}
+
+/** Axis-aligned world-space bounds of a compact formation range. */
+export interface IAutoMovieFormationBounds {
+  /** Minimum world-space corner. */
+  min: IAutoMovieVector3;
+  /** Maximum world-space corner. */
+  max: IAutoMovieVector3;
+}
+
+/** One bounded slot range regenerated independently by viewer workers. */
+export interface IAutoMovieFormationChunk {
+  /** Zero-based stable chunk index. */
+  index: number;
+  /** Inclusive first slot. */
+  start: number;
+  /** Number of slots in this chunk. */
+  count: number;
+  /** Anonymous slots rendered through instancing after hero exclusion. */
+  anonymousCount: number;
+  /** Exact world-space range bounds. */
+  bounds: IAutoMovieFormationBounds;
+  /** Exact arithmetic centroid of the range. */
+  centroid: IAutoMovieVector3;
+}
+
+/** One slot promoted out of anonymous batches into an explicit scene node. */
+export interface IAutoMovieCompiledFormationHero {
+  /** Exact promoted slot. */
+  slot: number;
+  /** Named explicit scene-node id. */
+  actor: string;
+  /** Compiler-owned base transform before source-authored performance. */
+  transform: IAutoMovieTransform;
+}
+
+/** One camera-selected runtime representation for anonymous formation slots. */
+export interface IAutoMovieCompiledFormationLod {
+  /** Semantic near-to-far tier. */
+  tier: "hero" | "near" | "far";
+  /** Positive maximum distance, or null only for the final tier. */
+  maxDistance: number | null;
+  /** Design recipe id. */
+  recipe: string;
+  /** Exact current recipe digest, including geometry and palette parameters. */
+  recipeDigest: AutoMovieContentDigest;
+  /** Compiler-owned runtime model id. */
+  model: string;
+}
+
+/** Compact generated formation runtime; it never stores every anonymous slot. */
+export interface IAutoMovieCompiledFormation {
+  /** Generated formation format. */
+  version: 1;
+  /** Stable formation design id. */
+  id: string;
+  /** Exact designed slot count. */
+  count: number;
+  /** Count remaining in instance batches after hero exclusion. */
+  anonymousCount: number;
+  /** Base design recipe. */
+  modelRecipe: string;
+  /** Exact compact layout algorithm and parameters. */
+  layout: IAutoMovieFormationDesign["layout"];
+  /** World-space origin. */
+  anchor: IAutoMovieVector3;
+  /** World-space base heading in degrees. */
+  facingDeg: number;
+  /** Full safe-integer design seed. */
+  seed: number;
+  /** Exact bounds of all slots. */
+  bounds: IAutoMovieFormationBounds;
+  /** Exact arithmetic centroid of all slots. */
+  centroid: IAutoMovieVector3;
+  /** Compiler-derived representative member radius used by LOD projection. */
+  projectionRadius: number;
+  /** Bounded independently regenerable slot ranges. */
+  chunks: IAutoMovieFormationChunk[];
+  /** Explicit hero promotions, ordered by slot. */
+  heroes: IAutoMovieCompiledFormationHero[];
+  /** Ordered automatic LOD representations. */
+  lod: IAutoMovieCompiledFormationLod[];
+  /** Deterministic per-slot phase generator contract. */
+  phase: {
+    /** Domain-separated safe-integer seed. */
+    seed: number;
+    /** Positive cycle length used by bounded formation animation. */
+    periodSeconds: number;
+  };
+  /** Digest of every field above except this digest. */
+  digest: AutoMovieContentDigest;
+}
+
+/** One compact formation-level transform state relative to its designed base. */
+export interface IAutoMovieFormationMotionState {
+  /** World-space translation added to the designed formation anchor. */
+  translation: IAutoMovieVector3;
+  /** Heading offset added around the designed anchor, in degrees. */
+  facingOffsetDeg: number;
+  /** Positive lateral and depth scale for bounded density deformation. */
+  spacingScale: {
+    /** Left-to-right spacing multiplier. */
+    lateral: number;
+    /** Front-to-back spacing multiplier. */
+    depth: number;
+  };
+}
+
+/**
+ * One source-authored compact formation cue.
+ *
+ * Capability labels do not grant this motion. The source explicitly authors
+ * each cue, while arbitrary per-slot curves remain outside the public shape.
+ */
+export interface IAutoMovieFormationMotion {
+  /** Stable cue id, unique inside one shot. */
+  id: string;
+  /** Participating compiled formation id. */
+  formation: string;
+  /** Review-facing action expressed by this exact cue. */
+  action: AutoMovieFormationCapability;
+  /** Inclusive shot-local cue start. */
+  start: number;
+  /** Exclusive shot-local cue end. */
+  end: number;
+  /** State at cue start. */
+  from: IAutoMovieFormationMotionState;
+  /** State at cue end. */
+  to: IAutoMovieFormationMotionState;
+  /** Deterministic interpolation curve. */
+  easing: "linear" | "easeIn" | "easeOut" | "easeInOut" | "step";
+}
+
+/** One source-authored shot-local effect activation. */
+export interface IAutoMovieShotEffectCue {
+  /** Stable cue id, unique inside one shot. */
+  id: string;
+  /** Existing world effect-zone id. */
+  zone: string;
+  /** Inclusive shot-local start in seconds. */
+  start: number;
+  /** Exclusive shot-local end in seconds. */
+  end: number;
+  /** Bounded intensity envelope. */
+  intensity: {
+    /** Intensity at cue start. */
+    from: number;
+    /** Intensity at cue end. */
+    to: number;
+  };
+  /** Optional authoritative shot event that must realize inside this cue. */
+  event?: string;
+}
+
+/** Compiler-owned deterministic effect runtime consumed by viewer and oracle. */
+export interface IAutoMovieCompiledEffect {
+  /** Generated effect format. */
+  version: 1;
+  /** Stable source cue id. */
+  id: string;
+  /** Existing world zone id. */
+  zone: string;
+  /** Supported primitive effect family. */
+  kind: IAutoMovieEffectRecipe["kind"];
+  /** Exact world-space emitter bounds. */
+  bounds: IAutoMovieWorldDesign["effectZones"][number]["bounds"];
+  /** Domain-separated deterministic stream seed. */
+  seed: number;
+  /** Exact current recipe. */
+  recipe: IAutoMovieEffectRecipe;
+  /** Inclusive shot-local cue start. */
+  start: number;
+  /** Exclusive shot-local cue end. */
+  end: number;
+  /** Bounded cue intensity envelope. */
+  intensity: IAutoMovieShotEffectCue["intensity"];
+  /** Bound authoritative event, when present. */
+  event?: string;
+  /** Production frame-clock simulation step. */
+  fixedStepSeconds: number;
+  /** Digest of every field above except this digest. */
+  digest: AutoMovieContentDigest;
 }
 
 /** Coding-agent output before compiler-owned models and formations are added. */
@@ -260,6 +706,13 @@ export interface IAutoMovieShotSourceOutput {
   scene: IAutoMovieScene;
   /** Sparse deterministic motions referenced by the shot. */
   motions: IAutoMovieMotion[];
+  /**
+   * Optional compact formation-level cues. The compiler materializes an empty
+   * list when omitted; source never emits arbitrary per-member curves.
+   */
+  formationMotions?: IAutoMovieFormationMotion[];
+  /** Optional bounded shot-local deterministic effect cues. */
+  effectCues?: IAutoMovieShotEffectCue[];
   /** Compiled shot choreography. */
   shot: IAutoMovieShot;
 }
@@ -268,6 +721,12 @@ export interface IAutoMovieShotSourceOutput {
 export interface IAutoMovieCompiledShotSource extends IAutoMovieShotSourceOutput {
   /** Models required by this shot. */
   models: IAutoMovieModel[];
+  /** Compact formation runtimes required by this shot. */
+  formations: IAutoMovieCompiledFormation[];
+  /** Validated compact formation-level cues, empty when source omitted them. */
+  formationMotions: IAutoMovieFormationMotion[];
+  /** Compiler-owned deterministic effect runtimes. */
+  effects: IAutoMovieCompiledEffect[];
 }
 
 /** One scalar predicate and the value measured by the compiler. */

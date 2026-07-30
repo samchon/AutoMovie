@@ -50,9 +50,23 @@ Record every run in the knowledge base: agent and model id, the brief, the compl
 
 The engine is deterministic; the driving LLM is not. Reproduce a failure (re-run the scenario with a comparable agent) before it becomes evidence. A single flaky miss is not yet a defect, and the reproduction is part of the record.
 
+## The Executable Contracts
+
+`@automovie/benchmark` owns the parts of this procedure a machine settles, so a rubric sentence never stands in for a measurement. Read `packages/benchmark/README.md` for the surface; the campaign uses it like this:
+
+- **Task law.** `austerlitzSignalTask` is the shipped short-tier scenario; a new one is another `IAutoMovieBenchmarkTask` fixed by `validateAutoMovieBenchmarkTask` before its first valid run. A stricter rubric raises `versions.task`; it never rewrites a law past verdicts were produced under.
+- **Submission.** Seal each run with `sealAutoMovieBenchmarkSubmission`. The returned archive is frozen and identified by content, which is what makes the knowledge base's run record and the durable ledger's row the same object.
+- **Lifecycle.** Report gates as observed and let `resolveAutoMovieBenchmarkLifecycle` decide the rest: a gate after a non-passing one is `not-run`, whatever the runner claimed.
+- **Trace.** Append observations with `appendAutoMovieBenchmarkTrace` as they happen. A killed run still yields every complete line through `replayAutoMovieBenchmarkTrace`, which is the difference between an aborted attempt and a lost one.
+- **Judge.** `judgeAutoMovieBenchmarkSubmission` separates `infra-excluded` from `gate-failed` from `scored`, and settles every assertion to `pass`, `fail`, or `unknown` with the evidence address it read. It never scores an aesthetic axis.
+- **Calibration.** `assertAutoMovieBenchmarkCalibrated` is the lane that measures the judge. Run it whenever the judge, the law, or the reference changes, before any leaderboard is read.
+- **Report.** `reportAutoMovieBenchmark` keeps generation health beside the film score, and `diffAutoMovieBenchmarkVerdicts` withholds a score delta across drifted versions rather than reporting one with a caveat.
+
+The package is contract only. Installing the packaged tarballs, driving the external agent, capturing frames, and writing `.benchmarks/<campaign>/<run-id>/` remain the runner's work, and the main agent's own observation is still what fills the observations a task law reads.
+
 ## Score And Triage
 
-Score each run against its scenario's expected result on a stable rubric recorded in the knowledge base: validity (the engine accepts the input), renderability, fidelity to intent (viewer-verified), controllability, and friction (tool-call count, retries, dead-ends).
+Score each run against its scenario's expected result on a stable rubric recorded in the knowledge base: validity (the engine accepts the input), renderability, fidelity to intent (viewer-verified), controllability, and friction (tool-call count, retries, dead-ends). Whatever a deterministic assertion can settle belongs in the task law rather than in that rubric; the rubric keeps the axes `judgeAutoMovieBenchmarkSubmission` deliberately refuses to score.
 
 Triage every shortfall by attribution before it can become an issue:
 

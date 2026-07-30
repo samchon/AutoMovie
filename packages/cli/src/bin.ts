@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { AutoMovieLegacyImporter } from "@automovie/mcp";
+import { spawnSync } from "node:child_process";
+import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { renderScaffold } from "./renderScaffold";
@@ -8,14 +11,20 @@ const USAGE = `automovie: scaffold an automovie project
 
 Usage:
   npx automovie start <directory> [--force]
+  npx automovie migrate <directory> [--dry-run | --rollback]
+  npx automovie render <plan|run|status|verify|finalize> [options]
 
 Commands:
   start <directory>   Create <directory> and lay down the starter template:
                       production MCP config, typed shot source, deterministic
                       compiler, local viewer, capture, tests, and review gates.
+  migrate <directory> Plan or apply a non-destructive legacy v1 import.
+  render <action>     Run the current project's resumable render job.
 
 Options:
   --force             Scaffold into a non-empty directory.
+  --dry-run           Print the immutable legacy import plan without writing.
+  --rollback          Remove one still-untouched applied legacy import.
   -h, --help          Show this help.
   -v, --version       Print the version.
 `;
@@ -57,19 +66,32 @@ export const run = (argv: readonly string[]): number => {
   }
 
   const [command, ...rest] = args;
-  if (command !== "start") {
+  if (command === "render") return runProjectRender(rest);
+  if (command !== "start" && command !== "migrate") {
     process.stderr.write(`unknown command "${command}"\n\n${USAGE}`);
     return 1;
   }
 
   const dir = rest.find((arg) => !arg.startsWith("-"));
   if (dir === undefined) {
-    process.stderr.write(`start needs a target directory\n\n${USAGE}`);
+    process.stderr.write(`${command} needs a target directory\n\n${USAGE}`);
     return 1;
   }
 
   const targetDir = path.resolve(process.cwd(), dir);
   try {
+    if (command === "migrate") {
+      if (rest.includes("--dry-run") && rest.includes("--rollback"))
+        throw new Error("migrate accepts only one of --dry-run or --rollback.");
+      const importer = new AutoMovieLegacyImporter(targetDir);
+      const output = rest.includes("--rollback")
+        ? importer.rollback()
+        : rest.includes("--dry-run")
+          ? importer.plan()
+          : importer.apply();
+      process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+      return 0;
+    }
     const files = renderScaffold({ name: projectNameOf(targetDir) });
     const written = writeFiles(targetDir, files, {
       force: rest.includes("--force"),
@@ -91,6 +113,34 @@ export const run = (argv: readonly string[]): number => {
   }
 };
 
-/* c8 ignore start -- the process entry: run() carries the tested logic. */
-if (require.main === module) process.exit(run(process.argv));
-/* c8 ignore stop */
+const runProjectRender = (args: readonly string[]): number => {
+  const action = args[0];
+  if (
+    action !== "plan" &&
+    action !== "run" &&
+    action !== "status" &&
+    action !== "verify" &&
+    action !== "finalize"
+  ) {
+    process.stderr.write(
+      `render needs one of plan, run, status, verify, or finalize\n\n${USAGE}`,
+    );
+    return 1;
+  }
+  const root = process.cwd();
+  const script = path.join(root, "scripts", "render.ts");
+  const tsx = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
+  if (fs.existsSync(script) === false || fs.existsSync(tsx) === false) {
+    process.stderr.write(
+      "The current project has no installed scripts/render.ts + tsx runtime. Run this command from a scaffolded project after pnpm install.\n",
+    );
+    return 1;
+  }
+  const child = spawnSync(process.execPath, [tsx, script, ...args], {
+    cwd: root,
+    stdio: "inherit",
+  });
+  return child.status ?? 1;
+};
+
+if (require.main === module) process.exitCode = run(process.argv);

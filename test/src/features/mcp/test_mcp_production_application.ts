@@ -37,6 +37,7 @@ import {
   productionDesign,
   productionFixture,
   shotContract,
+  testRendererIdentity,
   worldDesign,
 } from "./productionFixtures";
 
@@ -113,13 +114,13 @@ const PRODUCTION_TOOL_DESCRIPTION_SIGNALS = {
   inspectProject: ["authoritative status projection", "never repairs"],
   setProductionDesign: ["complete object", "downstream fingerprint"],
   setModelRecipe: ["compiler", "never imports arbitrary meshes"],
-  setWorldDesign: ["geometry queries", "complete world"],
-  setFormationDesign: ["compiler expands", "does not animate troops"],
+  setWorldDesign: ["bounded effect recipes", "complete world"],
+  setFormationDesign: ["compiler stores", "does not animate troops"],
   setShotContract: ["ordinary code", "independent"],
   setAcceptanceScenario: ["fingerprinted evidence", "does not implement tests"],
   eraseDesignArtifact: ["never cascades silently", "generated files"],
-  compileProject: ["no-i/o", "partial generation"],
-  queryGeometry: ["stale compilation", "read-only"],
+  compileProject: ["bounded effect streams", "partial generation"],
+  queryGeometry: ["effect", "read-only"],
   previewFrame: ["actual png", "full-film rendering"],
   prepareReview: ["fingerprint", "does not perform aesthetic judgment"],
   submitReview: ["false completion", "apply corrections"],
@@ -302,10 +303,10 @@ export const test_mcp_production_application = async (): Promise<void> => {
     );
     const renderProject = AutoMovieProductionProject.open(fixture.root);
     const renderManifest: IAutoMovieRenderBundleManifest = {
-      version: 2,
+      version: 3,
       target: { kind: "shot", id: "opening" },
       compileFingerprint: refreshed.compiler.inputFingerprint,
-      rendererIdentity: "test:png-v1",
+      rendererIdentity: testRendererIdentity(),
       targetFingerprint: productionRenderTargetFingerprint(
         renderProject,
         renderProject.generatedManifest()!,

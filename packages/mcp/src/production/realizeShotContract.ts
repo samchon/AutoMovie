@@ -3,7 +3,9 @@ import {
   projectToNdc,
   resolveCameraAt,
   sampleClipSequence,
+  sampleFormationMotion,
   sampleMotion,
+  transformFormationPoint,
 } from "@automovie/engine";
 import {
   IAutoMovieCompiledContractRealization,
@@ -11,7 +13,6 @@ import {
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
   IAutoMovieFormationDesign,
-  IAutoMovieFormationSlot,
   IAutoMovieModel,
   IAutoMovieProductionDesign,
   IAutoMovieShotContract,
@@ -30,7 +31,6 @@ export const realizeShotContract = (props: {
   production: IAutoMovieProductionDesign | null;
   world: IAutoMovieWorldDesign | null;
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>;
-  formationSlots: Readonly<Record<string, readonly IAutoMovieFormationSlot[]>>;
   compiled: IAutoMovieCompiledShotSource;
   collisions: readonly string[];
 }): {
@@ -129,44 +129,52 @@ export const realizeShotContract = (props: {
   const formations = props.contract.participants.flatMap((participant) => {
     if (participant.kind !== "formation") return [];
     const design = props.formations.get(participant.id);
-    const slots = props.formationSlots[participant.id] ?? [];
+    const formation = props.compiled.formations.find(
+      (candidate) => candidate.id === participant.id,
+    );
     const nodes = new Map(
       props.compiled.scene.nodes.map((node) => [node.id, node]),
     );
-    const actual = slots.flatMap((slot) => {
-      const node = nodes.get(slot.node);
-      return node === undefined ? [] : [{ slot, node }];
-    });
-    const points = actual.map(({ node }) => node.transform.translation);
-    const min = bounds(points, Math.min);
-    const max = bounds(points, Math.max);
+    const heroes =
+      formation?.heroes.flatMap((hero) => {
+        const node = nodes.get(hero.actor);
+        return node === undefined ? [] : [{ hero, node }];
+      }) ?? [];
     const passed =
       design !== undefined &&
-      slots.length === design.count &&
-      actual.length === design.count &&
-      actual.every(({ slot, node }) => {
-        const expectedRotation = Quaternion.fromAxisAngle(
-          { x: 0, y: 1, z: 0 },
-          slot.facingDeg,
-        );
+      formation !== undefined &&
+      formation.count === design.count &&
+      formation.anonymousCount + formation.heroes.length === design.count &&
+      formation.chunks.reduce((sum, chunk) => sum + chunk.count, 0) ===
+        design.count &&
+      formation.chunks.every(
+        (chunk, index) =>
+          chunk.index === index &&
+          chunk.start ===
+            formation.chunks
+              .slice(0, index)
+              .reduce((sum, previous) => sum + previous.count, 0),
+      ) &&
+      heroes.length === formation.heroes.length &&
+      heroes.every(({ hero, node }) => {
         return (
-          vectorClose(node.transform.translation, slot.position) &&
-          quaternionClose(node.transform.rotation, expectedRotation) &&
-          vectorClose(node.transform.scale, { x: 1, y: 1, z: 1 }) &&
-          node.model === productionRuntimeModelId(slot.modelRecipe)
+          vectorClose(node.transform.translation, hero.transform.translation) &&
+          quaternionClose(node.transform.rotation, hero.transform.rotation) &&
+          vectorClose(node.transform.scale, hero.transform.scale) &&
+          node.model === productionRuntimeModelId(design.modelRecipe)
         );
       });
     if (passed === false)
       fail(
         `formation "${participant.id}"`,
-        `must materialize exactly ${design?.count ?? 0} distinct compiler-owned slots with designed layout, anchor, facing, model recipe, and hero ids`,
+        `must materialize one compact ${design?.count ?? 0}-slot runtime with contiguous chunks, designed bounds, and exact promoted hero nodes`,
       );
     return [
       {
         id: participant.id,
-        count: actual.length,
-        min,
-        max,
+        count: formation?.count ?? 0,
+        min: formation?.bounds.min ?? { x: 0, y: 0, z: 0 },
+        max: formation?.bounds.max ?? { x: 0, y: 0, z: 0 },
         passed,
       },
     ];
@@ -207,16 +215,8 @@ const eventSubjectResolves = (
 ): boolean => {
   if (props.compiled.scene.nodes.some((candidate) => candidate.id === subject))
     return true;
-  const slots = props.formationSlots[subject];
-  if (slots !== undefined)
-    return (
-      slots.length > 0 &&
-      slots.every((slot) =>
-        props.compiled.scene.nodes.some(
-          (candidate) => candidate.id === slot.node,
-        ),
-      )
-    );
+  if (props.compiled.formations.some((formation) => formation.id === subject))
+    return true;
   return false;
 };
 
@@ -296,17 +296,17 @@ const resolveSpatial = (
   }
   if (selector.kind === "node")
     return actorTransformAt(props.compiled, selector.id, time).translation;
-  const slots = props.formationSlots[selector.id] ?? [];
-  if (slots.length === 0)
-    throw new Error(`formation "${selector.id}" has no slots`);
-  const points = slots.map(
-    (slot) => actorTransformAt(props.compiled, slot.node, time).translation,
+  const formation = props.compiled.formations.find(
+    (candidate) => candidate.id === selector.id,
   );
-  return {
-    x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
-    y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
-    z: points.reduce((sum, point) => sum + point.z, 0) / points.length,
-  };
+  if (formation === undefined)
+    throw new Error(`formation "${selector.id}" has no slots`);
+  return transformFormationPoint(
+    formation.centroid,
+    formation.anchor,
+    sampleFormationMotion(props.compiled.formationMotions, formation.id, time),
+    formation.facingDeg,
+  );
 };
 
 const cameraOutcome = (
@@ -470,21 +470,6 @@ const composeTransforms = (
     },
   };
 };
-
-const bounds = (
-  points: readonly IAutoMovieVector3[],
-  select: (left: number, right: number) => number,
-): IAutoMovieVector3 =>
-  points.length === 0
-    ? { x: 0, y: 0, z: 0 }
-    : points.slice(1).reduce<IAutoMovieVector3>(
-        (result, point) => ({
-          x: select(result.x, point.x),
-          y: select(result.y, point.y),
-          z: select(result.z, point.z),
-        }),
-        { ...points[0]! },
-      );
 
 const vectorClose = (
   left: IAutoMovieVector3,

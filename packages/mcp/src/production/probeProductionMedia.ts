@@ -3,6 +3,7 @@ import {
   IAutoMovieProductionMediaProbe,
 } from "@automovie/interface";
 import { MP4BoxBuffer, Movie, Track, createFile } from "mp4box";
+import { TextDecoder } from "node:util";
 import { PNG } from "pngjs";
 
 /** Parse renderer-owned bytes instead of trusting manifest media claims. */
@@ -24,25 +25,35 @@ export const probeProductionMedia = (props: {
       throw new Error(
         `Caption output declares "${props.mediaType}", but caption deliverables require text/vtt bytes.`,
       );
-    const text = Buffer.from(props.bytes).toString("utf8");
-    if (/^\uFEFF?WEBVTT(?:[ \t].*)?(?:\r?\n|$)/.test(text) === false)
+    let text: string;
+    try {
+      text = new TextDecoder("utf-8", { fatal: true }).decode(props.bytes);
+    } catch {
+      throw new Error("Caption bytes are not valid UTF-8.");
+    }
+    if (/^\uFEFF?WEBVTT(?:[ \t][^\r\n]*)?(?:\r\n?|\n|$)/.test(text) === false)
       throw new Error("Caption bytes do not contain a valid WebVTT header.");
     const blocks = text
       .replace(/^\uFEFF/, "")
       .replace(/\r\n?|\n/g, "\n")
-      .split(/\n[ \t]*\n/)
+      .replace(/^([^\n]*\n)[ \t]+\n/u, "$1\n")
+      .split(/\n{2,}/u)
       .slice(1);
     const cues: Array<{ start: number; end: number }> = [];
     for (const block of blocks) {
       if (block.trim().length === 0) continue;
       const lines = block.split("\n");
       const firstLine = lines[0]!;
-      if (/^(?:NOTE|STYLE|REGION)(?:[ \t]|$)/.test(firstLine)) continue;
       const timingIndex = firstLine.includes("-->")
         ? 0
         : lines[1]?.includes("-->")
           ? 1
           : -1;
+      if (
+        timingIndex < 0 &&
+        /^(?:NOTE|STYLE|REGION)(?:[ \t]|$)/.test(firstLine)
+      )
+        continue;
       if (timingIndex < 0)
         throw new Error(
           `WebVTT block "${firstLine.trim()}" is neither a timed cue nor NOTE, STYLE, or REGION metadata. Remove the stray block or add its cue timing.`,
@@ -132,10 +143,13 @@ export const probeProductionMedia = (props: {
 };
 
 const parseWebVttCue = (line: string): { start: number; end: number } => {
+  const delimiterCount = line.split("-->").length - 1;
   const match =
-    /^\s*((?:\d{2,}:)?[0-5]\d:[0-5]\d\.\d{3})\s+-->\s+((?:\d{2,}:)?[0-5]\d:[0-5]\d\.\d{3})(?:[ \t]+.*)?$/.exec(
-      line,
-    );
+    delimiterCount === 1
+      ? /^[ \t]*((?:\d{2,}:)?[0-5]\d:[0-5]\d\.\d{3})[ \t]+-->[ \t]+((?:\d{2,}:)?[0-5]\d:[0-5]\d\.\d{3})(?:[ \t]+[^\r\n]*)?$/.exec(
+          line,
+        )
+      : null;
   if (match === null)
     throw new Error(
       `WebVTT cue timing "${line.trim()}" is malformed. Use HH:MM:SS.mmm --> HH:MM:SS.mmm.`,

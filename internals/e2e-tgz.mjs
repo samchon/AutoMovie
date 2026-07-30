@@ -17,6 +17,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -65,6 +66,7 @@ const runExpectedFailure = (
   cwd,
   expectedOutput,
   timeout = 300_000,
+  env = process.env,
 ) => {
   console.log(`> ${label}`);
   if (tracePath !== null)
@@ -76,6 +78,7 @@ const runExpectedFailure = (
     maxBuffer: 64 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"],
     timeout,
+    env,
   });
   const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
   if (
@@ -98,6 +101,36 @@ const runExpectedFailure = (
 // The stdio client written into the fresh project. Kept as a template string
 // so the whole harness stays one file; assertions print the failing name so
 // a red run states exactly which packaging guarantee broke.
+const runJson = (label, executable, args, cwd) => {
+  console.log(`> ${label}`);
+  if (tracePath !== null)
+    appendFileSync(tracePath, `${new Date().toISOString()} START ${label}\n`);
+  const result = spawnSync(executable, args, {
+    cwd,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 300_000,
+  });
+  if (result.status !== 0) {
+    process.stderr.write(result.stdout ?? "");
+    process.stderr.write(result.stderr ?? "");
+    fail(`${label} exited with ${result.status ?? "signal"}`);
+  }
+  let output;
+  try {
+    output = JSON.parse(result.stdout);
+  } catch (error) {
+    process.stderr.write(result.stdout ?? "");
+    process.stderr.write(result.stderr ?? "");
+    fail(`${label} did not print one complete JSON document: ${error}`);
+  }
+  if (tracePath !== null)
+    appendFileSync(tracePath, `${new Date().toISOString()} PASS ${label}\n`);
+  console.log(`PASS ${label}`);
+  return output;
+};
+
 const CLIENT_SOURCE = `
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -332,6 +365,7 @@ import {
   AutoMovieApplication,
   AutoMovieProductionProject,
   digestAutoMovieBytes,
+  parseAutoMovieCaptureRuntimeIdentity,
 } from "@automovie/mcp";
 import fs from "node:fs";
 import path from "node:path";
@@ -503,6 +537,21 @@ const manifests = namedFiles(path.join(root, "renders"), "manifest.json");
 const renderManifests = manifests
   .map((file) => ({ file, value: readJson(file) }))
   .filter((entry) => Array.isArray(entry.value.frames));
+for (const entry of renderManifests) {
+  const runtime = parseAutoMovieCaptureRuntimeIdentity(
+    entry.value.rendererIdentity,
+  );
+  assert(
+    \`starter-render-runtime:\${path.basename(path.dirname(entry.file))}\`,
+    entry.value.version === 3 &&
+      runtime.browser.source === "package-owned" &&
+      runtime.browser.revision !== null &&
+      runtime.browser.executableDigest?.startsWith("sha256:") === true &&
+      runtime.graphics.vendor.trim().length > 0 &&
+      runtime.graphics.renderer.trim().length > 0,
+    JSON.stringify(entry.value),
+  );
+}
 assert(
   "starter-compiled-shot-order",
   JSON.stringify(compiled.shots) === JSON.stringify(["answer", "opening"]),
@@ -544,8 +593,8 @@ for (const frame of frames) {
   const png = PNG.sync.read(bytes);
   assert(
     \`starter-png-size:\${frame.shot}:\${frame.pass}\`,
-    png.width === 1280 && png.height === 720,
-    \`expected 1280x720, got \${png.width}x\${png.height}\`,
+    png.width === 16 && png.height === 16,
+    \`expected 16x16 packaged-short raster, got \${png.width}x\${png.height}\`,
   );
   assert(
     \`starter-png-visible-variance:\${frame.shot}:\${frame.pass}\`,
@@ -563,10 +612,67 @@ assert(
 const app = new AutoMovieApplication({ projectRoot: root });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
 app.getGuideDocument({ name: "COMPILATION" });
+app.getGuideDocument({ name: "GEOMETRY" });
 app.getGuideDocument({ name: "PRODUCTION_REVIEW" });
 app.openProject({ root });
 const project = AutoMovieProductionProject.open(root);
 const graph = project.graph();
+const formationSummary = app.queryGeometry({
+  request: {
+    query: "formation",
+    formation: "army",
+    shot: "opening",
+    time: 2,
+  },
+});
+assert(
+  "starter-formation-hero-and-anonymous-frame",
+  formationSummary.result?.kind === "measurement" &&
+    formationSummary.result.values.heroVisible === 2 &&
+    formationSummary.result.values.farVisible > 0 &&
+    formationSummary.result.values.nearVisible +
+      formationSummary.result.values.farVisible +
+      formationSummary.result.values.culled ===
+      formationSummary.result.values.anonymousCount &&
+    frames.some(
+      (frame) =>
+        frame.shot === "opening" &&
+        frame.pass === "beauty" &&
+        frame.time === 2,
+    ),
+  JSON.stringify(formationSummary),
+);
+const effectSummary = app.queryGeometry({
+  request: {
+    query: "effect",
+    zone: "signal-smoke",
+    shot: "opening",
+    time: 2,
+    subjects: ["sentinel"],
+  },
+});
+const effectAcceptance = graph.acceptance.get("opening-effect-mask");
+assert(
+  "starter-effect-beauty-mask-frame",
+  effectSummary.result?.kind === "measurement" &&
+    effectSummary.result.values.active === true &&
+    effectSummary.result.values.particleCount > 0 &&
+    effectSummary.result.values.particleCount <=
+      effectSummary.result.values.particleCap &&
+    ["beauty", "mask"].every((pass) =>
+      frames.some(
+        (frame) =>
+          frame.shot === "opening" &&
+          frame.pass === pass &&
+          frame.time === 2,
+      ),
+    ) &&
+    effectAcceptance?.required === true &&
+    effectAcceptance.criterion.kind === "frame" &&
+    effectAcceptance.criterion.frame === "signal-apex" &&
+    effectAcceptance.criterion.pass === "mask",
+  JSON.stringify(effectSummary),
+);
 const phase = process.argv[2];
 if (phase === "review") {
   const before = app.inspectProject({});
@@ -615,29 +721,58 @@ if (phase === "review") {
     receipt.version === 2 &&
       receipt.manifestDigest === digestAutoMovieBytes(aggregateBytes) &&
       Array.isArray(receipt.files) &&
-      receipt.files.length === 6 &&
+      receipt.files.length === 5 &&
       receipt.files.every(
         (file) =>
-          file.deliverable === "starter-preview" &&
-          file.probe?.kind === "png" &&
-          file.probe.width === 1280 &&
-          file.probe.height === 720 &&
-          aggregate.deliverables?.[0]?.files?.some(
-            (owned) =>
-              owned.path === file.path &&
-              owned.digest === file.digest &&
-              owned.bytes === file.bytes &&
-              owned.mediaType === file.mediaType,
-          ) === true,
+          aggregate.deliverables
+            ?.find((deliverable) => deliverable.id === file.deliverable)
+            ?.files?.some(
+              (owned) =>
+                owned.path === file.path &&
+                owned.digest === file.digest &&
+                owned.bytes === file.bytes &&
+                owned.mediaType === file.mediaType,
+            ) === true,
       ),
     JSON.stringify(receipt),
   );
+  const receiptByDeliverable = new Map(
+    receipt.files.map((file) => [file.deliverable, file]),
+  );
   assert(
-    "starter-required-deliverable-complete",
+    "starter-required-deliverables-parser-complete",
     aggregate.compileFingerprint === generated.inputFingerprint &&
-      aggregate.deliverables.length === 1 &&
-      aggregate.deliverables[0].id === "starter-preview" &&
-      aggregate.deliverables[0].files.length === 6,
+      aggregate.deliverables.length === 5 &&
+      [
+        "starter-preview",
+        "starter-feature",
+        "starter-pose-guide",
+        "starter-captions",
+        "starter-audio",
+      ].every((id) =>
+        aggregate.deliverables.some(
+          (deliverable) =>
+            deliverable.id === id && deliverable.files.length === 1,
+        ),
+      ) &&
+      receiptByDeliverable.get("starter-preview")?.probe?.kind === "png" &&
+      receiptByDeliverable.get("starter-preview")?.probe?.width === 16 &&
+      receiptByDeliverable.get("starter-feature")?.probe?.kind === "video" &&
+      receiptByDeliverable.get("starter-feature")?.probe?.frameCount === 23 &&
+      receiptByDeliverable.get("starter-feature")?.probe?.width === 16 &&
+      receiptByDeliverable.get("starter-pose-guide")?.probe?.kind ===
+        "video" &&
+      receiptByDeliverable.get("starter-pose-guide")?.probe?.frameCount ===
+        23 &&
+      receiptByDeliverable.get("starter-captions")?.probe?.kind ===
+        "webvtt" &&
+      receiptByDeliverable.get("starter-captions")?.probe?.cueCount === 1 &&
+      aggregate.deliverables.find(
+        (deliverable) => deliverable.id === "starter-captions",
+      )?.runtimeSeconds === 11.5 &&
+      receiptByDeliverable.get("starter-audio")?.probe?.kind === "audio" &&
+      receiptByDeliverable.get("starter-audio")?.probe?.runtimeSeconds ===
+        11.5,
     JSON.stringify(aggregate),
   );
   const final = app.compileProject({ scope: "final" });
@@ -807,37 +942,212 @@ try {
   );
   if (!existsSync(cliBin))
     fail(`packed artifact is missing the CLI bin target: ${cliBin}`);
-  const starterDir = join(projectDir, "production-starter");
+  const legacyDir = join(projectDir, "legacy-import");
+  mkdirSync(legacyDir);
+  writeFileSync(
+    join(legacyDir, "automovie.json"),
+    `${JSON.stringify({ version: 1, assets: [] }, null, 2)}\n`,
+  );
+  const dryImport = runJson(
+    "dry-run packaged legacy import",
+    process.execPath,
+    [cliBin, "migrate", legacyDir, "--dry-run"],
+    projectDir,
+  );
+  if (
+    dryImport.version !== 1 ||
+    typeof dryImport.fingerprint !== "string" ||
+    existsSync(join(legacyDir, ".automovie"))
+  )
+    fail("packaged legacy dry-run did not remain read-only");
+  const appliedImport = runJson(
+    "apply packaged legacy import",
+    process.execPath,
+    [cliBin, "migrate", legacyDir],
+    projectDir,
+  );
+  if (
+    appliedImport.status !== "applied" ||
+    !existsSync(join(legacyDir, ".automovie", "manifest.json"))
+  )
+    fail("packaged legacy import did not publish production provenance");
+  const repeatedImport = runJson(
+    "repeat packaged legacy import",
+    process.execPath,
+    [cliBin, "migrate", legacyDir],
+    projectDir,
+  );
+  if (repeatedImport.status !== "unchanged")
+    fail("packaged legacy import was not idempotent");
+  const rolledBackImport = runJson(
+    "rollback packaged legacy import",
+    process.execPath,
+    [cliBin, "migrate", legacyDir, "--rollback"],
+    projectDir,
+  );
+  if (
+    rolledBackImport.status !== "rolled-back" ||
+    existsSync(join(legacyDir, ".automovie"))
+  )
+    fail("packaged legacy rollback did not restore the legacy-only tree");
+  // Keep the strict-layout probe outside the npm-hoisted fixture project.
+  // Otherwise Node can climb to projectDir/node_modules and hide a missing
+  // production dependency from the pnpm-installed scaffold.
+  const starterDir = join(stage, "production-starter");
   run(
     "scaffold packaged production starter",
     `node "${cliBin}" start "${starterDir}"`,
     projectDir,
   );
+  const starterProductionPath = join(
+    starterDir,
+    ".automovie",
+    "design",
+    "production.json",
+  );
+  const starterProduction = JSON.parse(
+    readFileSync(starterProductionPath, "utf8"),
+  );
+  starterProduction.frameFormat = {
+    ...starterProduction.frameFormat,
+    width: 16,
+    height: 16,
+    fps: 2,
+  };
+  writeFileSync(
+    starterProductionPath,
+    `${JSON.stringify(starterProduction, null, 2)}\n`,
+  );
+  // Override every published `@automovie/*` range with its own tarball before
+  // installing. `pnpm add <tarball>` resolves the manifest it already has
+  // first, so the starter's registry ranges 404 outside the workspace before
+  // any tarball spec replaces them, and a transitive range (mcp's own
+  // dependency on render) is never replaced at all. An override covers direct
+  // and transitive alike, which keeps the probe offline and installs exactly
+  // the bytes this commit packed.
   const runtimeTarballs = tarballs.filter(
     (file) => file.startsWith("automovie-cli-") === false,
   );
+  const starterManifestPath = join(starterDir, "package.json");
+  const starterManifest = JSON.parse(readFileSync(starterManifestPath, "utf8"));
+  starterManifest.pnpm = {
+    ...starterManifest.pnpm,
+    overrides: Object.fromEntries(
+      runtimeTarballs.map((file) => [
+        `@automovie/${PACKAGES.find((name) => file.startsWith(`automovie-${name}-`))}`,
+        `file:${join(tarballDir, file).replaceAll("\\", "/")}`,
+      ]),
+    ),
+  };
+  writeFileSync(
+    starterManifestPath,
+    `${JSON.stringify(starterManifest, null, 2)}\n`,
+  );
   run(
-    "install packaged starter dependencies",
-    `npm install --prefer-offline --no-audit --no-fund ${runtimeTarballs
-      .map((file) => `"${join(tarballDir, file)}"`)
-      .join(" ")}`,
+    "install packaged starter dependencies with strict pnpm layout",
+    "pnpm install --ignore-workspace --prefer-offline --config.strict-peer-dependencies=false",
     starterDir,
   );
-  run("compile packaged starter", "npm run compile", starterDir);
+  if (process.env.CI === "true" && process.platform === "linux")
+    run(
+      "install packaged Chromium system dependencies",
+      "npx playwright install-deps chromium",
+      starterDir,
+      900_000,
+    );
+  run(
+    "install packaged starter Chromium",
+    "pnpm capture:install",
+    starterDir,
+    900_000,
+  );
+  const captureReceiptPath = join(
+    starterDir,
+    ".automovie",
+    "capture",
+    "install-receipt.json",
+  );
+  const captureReceiptText = readFileSync(captureReceiptPath, "utf8");
+  const captureReceipt = JSON.parse(captureReceiptText);
+  writeFileSync(captureReceiptPath, "{bad");
+  runExpectedFailure(
+    "reject malformed packaged capture receipt",
+    "pnpm capture:doctor",
+    starterDir,
+    "not valid JSON",
+  );
+  writeFileSync(
+    captureReceiptPath,
+    `${JSON.stringify(
+      {
+        ...captureReceipt,
+        playwright: {
+          ...captureReceipt.playwright,
+          version: "0.0.0-stale",
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  runExpectedFailure(
+    "reject stale packaged capture receipt",
+    "pnpm capture:doctor",
+    starterDir,
+    "does not match the current Playwright",
+  );
+  writeFileSync(captureReceiptPath, captureReceiptText);
+  const parkedCaptureExecutable = `${captureReceipt.browser.executablePath}.automovie-missing`;
+  renameSync(captureReceipt.browser.executablePath, parkedCaptureExecutable);
+  try {
+    runExpectedFailure(
+      "diagnose missing packaged capture executable",
+      "pnpm capture:doctor",
+      starterDir,
+      "is missing or differs",
+    );
+  } finally {
+    renameSync(parkedCaptureExecutable, captureReceipt.browser.executablePath);
+  }
+  run(
+    "doctor packaged starter capture runtime",
+    "pnpm capture:doctor",
+    starterDir,
+  );
+  const captureConfigPath = join(starterDir, "automovie.config.ts");
+  const captureConfigText = readFileSync(captureConfigPath, "utf8");
+  writeFileSync(
+    captureConfigPath,
+    captureConfigText.replace(
+      'source: "playwright-chromium"',
+      'source: "system-channel", channel: "firefox"',
+    ),
+  );
+  try {
+    runExpectedFailure(
+      "reject invalid packaged capture config",
+      "pnpm capture:doctor",
+      starterDir,
+      "Invalid capture browser config",
+    );
+  } finally {
+    writeFileSync(captureConfigPath, captureConfigText);
+  }
+  run("compile packaged starter", "pnpm compile", starterDir);
   // A fresh @ttsc/lint install builds its source plugin with Go once per
   // cache key. Cold Windows and CI caches can legitimately exceed the ordinary
   // five-minute command fence before TypeScript linting itself begins.
   runExpectedFailure(
     "enforce packaged starter lint review gate",
-    "npm run lint",
+    "pnpm lint",
     starterDir,
     "review-",
     900_000,
   );
-  run("test packaged starter", "npm test", starterDir);
+  run("test packaged starter", "pnpm test", starterDir);
   runExpectedFailure(
     "enforce packaged starter review gate",
-    "npm run render",
+    "pnpm render",
     starterDir,
     "review-",
   );
@@ -850,12 +1160,145 @@ try {
     "node verify-packaged-starter.mjs review",
     starterDir,
   );
-  run("lint reviewed packaged starter", "npm run lint", starterDir, 900_000);
+  run("lint reviewed packaged starter", "pnpm lint", starterDir, 900_000);
+  const encoderFailureHookPath = join(starterDir, "fail-packaged-encoder.cjs");
+  writeFileSync(
+    encoderFailureHookPath,
+    `
+const { PNG } = require("pngjs");
+const originalRead = PNG.sync.read;
+PNG.sync.read = function (input) {
+  const caller = new Error().stack?.split("\\n")[2] ?? "";
+  if (/[\\\\/]scripts[\\\\/]render\\.ts:\\d+:\\d+/.test(caller))
+    throw new Error("automovie-encoder-consumer-sentinel");
+  return originalRead.apply(this, arguments);
+};
+`,
+  );
+  runExpectedFailure(
+    "preserve packaged encoder consumer diagnostics",
+    "pnpm render finalize",
+    starterDir,
+    "automovie-encoder-consumer-sentinel",
+    300_000,
+    {
+      ...process.env,
+      NODE_OPTIONS: [
+        process.env.NODE_OPTIONS,
+        "--require=./fail-packaged-encoder.cjs",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    },
+  );
+  const renderStateRoot = join(starterDir, ".automovie", "render-job");
+  const renderPlanPath = join(renderStateRoot, "plan.json");
+  const renderPlanText = readFileSync(renderPlanPath, "utf8");
+  const tamperedRenderPlan = JSON.parse(renderPlanText);
+  tamperedRenderPlan.tracks.captions += "\nNOTE tampered\n";
+  writeFileSync(
+    renderPlanPath,
+    `${JSON.stringify(tamperedRenderPlan, null, 2)}\n`,
+  );
+  try {
+    runExpectedFailure(
+      "reject tampered packaged render plan",
+      "pnpm render verify",
+      starterDir,
+      "Stored render plan differs",
+    );
+  } finally {
+    writeFileSync(renderPlanPath, renderPlanText);
+  }
+  const renderPlan = JSON.parse(renderPlanText);
+  renderPlan.runtimeIdentity.encoder.version = "0.0.0-stale";
+  writeFileSync(renderPlanPath, `${JSON.stringify(renderPlan, null, 2)}\n`);
+  try {
+    runExpectedFailure(
+      "reject stale packaged render runtime identity",
+      "pnpm render verify",
+      starterDir,
+      "render runtime identity changed",
+    );
+  } finally {
+    writeFileSync(renderPlanPath, renderPlanText);
+  }
+  const damagedChunk = renderPlan.chunks[0];
+  const retainedChunk = renderPlan.chunks[1];
+  if (damagedChunk === undefined || retainedChunk === undefined)
+    fail("packaged render did not produce multiple resumable chunks");
+  const damagedDirectory = join(
+    renderStateRoot,
+    "chunks",
+    damagedChunk.id.slice(7),
+  );
+  const damagedReceipt = JSON.parse(
+    readFileSync(join(damagedDirectory, "receipt.json"), "utf8"),
+  );
+  writeFileSync(
+    join(damagedDirectory, damagedReceipt.frames[0].path),
+    Buffer.alloc(0),
+  );
+  const retainedMarker = join(
+    renderStateRoot,
+    "chunks",
+    retainedChunk.id.slice(7),
+    "reuse-proof.marker",
+  );
+  writeFileSync(retainedMarker, "must survive fresh-process reuse\n");
+  const abandonedPid = 2_147_483_647;
+  const abandonedTemporary = join(
+    renderStateRoot,
+    "tmp",
+    `interrupted.${abandonedPid}`,
+  );
+  mkdirSync(abandonedTemporary, { recursive: true });
+  writeFileSync(join(abandonedTemporary, "partial.png"), Buffer.alloc(0));
+  const slotSegment = encodeURIComponent(damagedChunk.slot);
+  mkdirSync(join(renderStateRoot, "locks"), { recursive: true });
+  mkdirSync(join(renderStateRoot, "locks", slotSegment), { recursive: true });
+  writeFileSync(
+    join(
+      renderStateRoot,
+      "locks",
+      slotSegment,
+      `claim.${abandonedPid}.interrupted.lock.candidate`,
+    ),
+    Buffer.alloc(0),
+  );
+  writeFileSync(
+    join(renderStateRoot, "locks", `${slotSegment}.lock`),
+    `${JSON.stringify({ chunk: damagedChunk.id, pid: abandonedPid })}\n`,
+  );
+  mkdirSync(join(renderStateRoot, "attempts"), { recursive: true });
+  writeFileSync(
+    join(renderStateRoot, "attempts", `${slotSegment}.json`),
+    `${JSON.stringify({
+      slot: damagedChunk.slot,
+      chunk: damagedChunk.id,
+      state: "running",
+      correction: "",
+      pid: abandonedPid,
+    })}\n`,
+  );
   run(
-    "render packaged starter through final compile",
-    "npm run render",
+    "resume interrupted packaged render through final compile",
+    "pnpm render",
     starterDir,
   );
+  const quarantine = readdirSync(join(renderStateRoot, "quarantine"));
+  if (
+    existsSync(retainedMarker) === false ||
+    existsSync(join(renderStateRoot, "attempts", `${slotSegment}.json`)) ||
+    quarantine.some((entry) => entry.includes("abandoned-partial")) === false ||
+    quarantine.some((entry) => entry.includes("abandoned-lock-candidate")) ===
+      false ||
+    quarantine.some((entry) => entry.includes("abandoned-lock")) === false ||
+    quarantine.some((entry) => entry.includes("replaced")) === false
+  )
+    fail(
+      "packaged render did not reuse the current chunk and recover interrupted/corrupt state selectively",
+    );
   run(
     "verify packaged starter pixels, final ledger and tamper gate",
     "node verify-packaged-starter.mjs final",

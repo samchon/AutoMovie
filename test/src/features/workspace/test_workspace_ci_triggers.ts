@@ -192,6 +192,8 @@ const SUITE_INPUTS = [
   // test_workspace_pnpm_policy
   "package.json",
   "pnpm-workspace.yaml",
+  // packaged capture and production verification
+  "internals/e2e-tgz.mjs",
   // this scenario
   ".github/workflows/build.yml",
   ".github/workflows/test.yml",
@@ -199,15 +201,13 @@ const SUITE_INPUTS = [
 
 /**
  * Files present in the checkout that no job reads, kept unmatched on purpose:
- * the agent instructions, the ignore list, and the packaging probe that runs by
- * hand outside CI.
+ * the agent instructions and the ignore list.
  */
 const UNWATCHED = [
   "AGENTS.md",
   "CLAUDE.md",
   ".gitignore",
   ".agents/skills/review/SKILL.md",
-  "internals/e2e-tgz.mjs",
 ];
 
 /**

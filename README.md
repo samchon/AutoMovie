@@ -95,6 +95,7 @@ The project is early. The most important unfinished work is completing the MCP m
 | [`@automovie/mcp`](./packages/mcp) | MCP surface for external agents to drive parts of the deterministic motion engine. |
 | [`@automovie/cli`](./packages/cli) | The `automovie` binary: scaffolds a starter wired for both doors, MCP and direct linking. |
 | [`@automovie/playground`](./packages/playground) | Browser demos for inspecting motion, props, cameras, and simple characters. |
+| [`@automovie/benchmark`](./packages/benchmark) | Versioned movie task law, immutable run submissions, and the deterministic oracle judge that scores them. |
 
 ## Next Work
 

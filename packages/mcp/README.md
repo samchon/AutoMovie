@@ -55,11 +55,7 @@ compiler and host adapters.
 | `prepareReview` | `IAutoMoviePrepareReview.IProps` → `IAutoMoviePrepareReview` | issue a current evidence worksheet |
 | `submitReview` | `IAutoMovieSubmitReview.IProps` → `IAutoMovieSubmitReview` | validate checklist coverage and completion |
 
-The coding agent owns `src`; the compiler owns `generated`. The agent returns
-authored scene, sparse motion, shot choreography, and event sample times. The
-compiler materializes primitive models and formation slots, then derives named
-state, event, camera, and formation outcomes from current compiled data instead
-of accepting a source-authored compliance witness.
+The coding agent owns `src`; the compiler owns `generated`. The agent returns authored scene, sparse motion, shot choreography, and event sample times. The compiler materializes primitive models, compact formation runtimes, promoted hero nodes, and shots, then derives named-state, event, camera, and formation outcomes from current compiled data instead of accepting a source-authored compliance witness.
 
 A generated manifest binds source hashes, design hashes, compiler protocol and
 version, and generated file hashes. Required review uses exact production-raster
@@ -69,6 +65,14 @@ WebVTT, and MP4 bytes. A stale source, hand-edited generated file, stale render
 manifest, metadata-only media claim, or review copied from another fingerprint
 cannot pass the final compile gate. The server validates the evidence and state
 transition; it does not call a second LLM or grade creative prose.
+
+Render bundle v3 stores a canonical structured capture-runtime identity:
+Playwright package, browser product/version/revision/source, executable digest
+when available, platform, headless scale, requested backend, and actual WebGL
+vendor/renderer. Arbitrary strings and legacy v2 manifests are not current
+review evidence; the host must recapture them. Retained v2 history is a
+target-scoped warning rather than a global error once current v3 evidence
+exists.
 
 The binary remains opt-in until a comparative external-agent benchmark
 demonstrates that it should replace the compact default. The former
@@ -194,6 +198,40 @@ naming the missing rungs, and `nextSteps` returns the same computation as
 data. The surgical tools (`eraseShot`/`eraseNotes`/`eraseProp`/`eraseActor`,
 `setActorPerformance`/`setPlacement`) exist only in resident mode and demand a
 `reason`. See the `PROJECT_MEMORY` guide for the write-through rules.
+
+`AutoMovieLegacyImporter` is the explicit bridge from this resident v1 layout
+to format-v2 production memory. `plan()` validates a temporary byte copy and
+returns exact inventory, conservative design drafts, unrecoverable source TODOs,
+and diagnostics without mutating the legacy root. `apply()` atomically records
+that plan and provenance under `.automovie`; `rollback()` removes it only while
+the imported state and any newly owned source/output directories remain
+untouched. Planning refuses an active resident commit, applying holds the
+resident revision lock across capture and publish, and rollback is
+all-or-nothing while reserving both the project root and production state
+namespace. Empty-directory topology is part of the rollback baseline. The CLI
+exposes the same contract through `automovie migrate`.
+If a legacy shot names no performing scene node, its draft does not pretend
+that the camera is a readable scene subject; the plan leaves that subject list
+unresolved and reports the exact reconstruction required before submission.
+
+Long-running production delivery lives outside the request surface.
+`planProductionRenderJob` turns the compiler-owned film timeline into
+content-addressed feature and guide-pass chunks fenced by the compile input,
+the film edit, and the exact capture/encoder identity.
+`productionRenderChunkStatuses`, `verifyProductionRenderChunkReceipt` and
+`runProductionRenderJob` resume, quarantine, or rerender one slot at a time
+from byte and parser receipts alone. Host adapters can use
+`readAutoMovieProductionOwnedFile` to reject traversal, linked ancestry, and
+physical replacement while reading those resident bytes.
+`AutoMovieProductionProject.commitProductionPublication` publishes every
+deliverable byte, the aggregate manifest and its parser receipt under one
+revision/input fence. `productionPublicationInputFingerprint` supplies the
+terminal adapter with a canonical fence over compiler input, production
+manifest and incarnation, compiler-owned bytes, and the live evidence-bound
+review queue plus its current records.
+Actual capture, encoding and muxing stay with the adapters the host injects;
+the project CLI drives the whole sequence through `automovie render
+plan|run|status|verify|finalize`.
 
 Render/see tools plan deterministic output, and `seeFrame` can also use a
 host-injected capture adapter. `planRender` resolves a committed shot or film

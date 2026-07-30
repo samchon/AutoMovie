@@ -63,9 +63,10 @@ export interface IAutoMovieProductionDesign {
 /**
  * One distance-specific recipe reference emitted as authoring/runtime metadata.
  *
- * The foundation compiler materializes every referenced recipe, but the current
- * scaffold viewer does not automatically switch tiers by camera distance.
- * Source or a future renderer must select a tier explicitly.
+ * The foundation compiler materializes every referenced recipe. The scaffold
+ * viewer automatically selects anonymous formation tiers from distance and
+ * projected contribution with hysteresis; ordinary scene nodes do not yet
+ * switch model tiers automatically.
  */
 export interface IAutoMovieModelLodRecipe {
   /** Detail tier. */
@@ -203,20 +204,63 @@ export interface IAutoMovieWorldBounds {
   max: IAutoMovieVector3;
 }
 
-/**
- * A reserved environmental-effect region shape.
- *
- * No deterministic renderer binding exists yet, so current world validation
- * refuses every effect zone instead of accepting an unrenderable claim.
- */
+/** One bounded deterministic environmental-effect emitter recipe. */
+export interface IAutoMovieEffectRecipe {
+  /** Stable recipe id. */
+  id: string;
+  /** Supported primitive effect family. */
+  kind: "fog" | "smoke" | "dust";
+  /** Explicit deterministic recipe seed. */
+  seed: number;
+  /** Bounded deterministic emission. */
+  emission: {
+    /** Particles emitted per second. */
+    rate: number;
+    /** Particles emitted at cue start. */
+    burst: number;
+    /** Maximum emitting duration in seconds. */
+    duration: number;
+  };
+  /** Bounded billboard appearance. */
+  particle: {
+    /** Inclusive lifetime range in seconds. */
+    lifetime: { min: number; max: number };
+    /** Inclusive world-size range in meters. */
+    size: { min: number; max: number };
+    /** Exact opaque hexadecimal RGB color. */
+    color: string;
+    /** Inclusive alpha range from zero through one. */
+    opacity: { min: number; max: number };
+  };
+  /** Bounded deterministic transport. */
+  motion: {
+    /** World-space meters per second. */
+    wind: IAutoMovieVector3;
+    /** Additional upward meters per second. */
+    rise: number;
+    /** Maximum seeded lateral velocity deviation. */
+    turbulence: number;
+  };
+  /** Hard runtime and LOD budgets. */
+  budget: {
+    /** Maximum live billboard instances. */
+    maxParticles: number;
+    /** Distance beyond which deterministic thinning applies. */
+    lodDistance: number;
+  };
+  /** Only supported transparency law. */
+  blend: "alpha";
+}
+
+/** An axis-aligned world-space effect volume. */
 export interface IAutoMovieWorldEffectZone {
   /** Stable zone id. */
   id: string;
-  /** Effect family. */
-  kind: "fog" | "smoke" | "dust";
+  /** Existing deterministic effect recipe id. */
+  recipe: string;
   /** World-space volume. */
   bounds: IAutoMovieWorldBounds;
-  /** Explicit deterministic seed. */
+  /** Explicit deterministic zone seed. */
   seed: number;
 }
 
@@ -232,10 +276,9 @@ export interface IAutoMovieWorldDesign {
   surfaces: IAutoMovieWorldSurface[];
   /** Named formation routes. */
   routes: IAutoMovieWorldRoute[];
-  /**
-   * Reserved deterministic effect regions. Keep this empty until AutoMovie
-   * implements and registers the corresponding compiler and renderer binding.
-   */
+  /** Bounded deterministic environmental-effect recipes. */
+  effectRecipes: IAutoMovieEffectRecipe[];
+  /** Deterministic effect regions bound to recipes. */
   effectZones: IAutoMovieWorldEffectZone[];
 }
 
@@ -323,9 +366,9 @@ export interface IAutoMovieFormationDesign {
   /** Existing model recipe id enforced on every derived slot, including heroes. */
   modelRecipe: string;
   /**
-   * Integer number of derived slots from 1 through 10,000. The foundation
-   * expands slots into explicit deterministic nodes; larger crowds require a
-   * future instanced representation rather than pretending this path is cheap.
+   * Integer number of derived slots from 1 through 100,000. Generated output
+   * stores bounded chunks and hero exceptions; anonymous slots are regenerated
+   * from index and seed and rendered through instancing.
    */
   count: number;
   /**
@@ -511,7 +554,10 @@ export interface IAutoMovieShotContract {
   camera: {
     /** Non-blank creative camera intent. */
     intent: string;
-    /** Non-empty unique compiled scene-node ids that must remain readable. */
+    /**
+     * Non-empty unique compiled scene-node or formation ids that must remain
+     * readable.
+     */
     requiredSubjects: string[];
     /**
      * Finite maximum allowed pixel-occlusion ratio, inclusive from zero to one.

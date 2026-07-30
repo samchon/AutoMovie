@@ -107,10 +107,6 @@ export const canonicalizeAutoMovieJson = (value: unknown): string => {
         });
       return `{${entries.join(",")}}`;
     }
-    /* c8 ignore next 3 -- JavaScript typeof cases above are exhaustive. */
-    throw new TypeError(
-      "AutoMovie canonical JSON received an unsupported value.",
-    );
   };
   const encoded = encode(value, false);
   if (encoded === undefined)

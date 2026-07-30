@@ -132,6 +132,14 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       message: "malformed",
     },
     {
+      bytes: "WEBVTT\n\n00:00.000\u2028-->\u202900:00.250\nMalformed.\n",
+      message: "malformed",
+    },
+    {
+      bytes: "WEBVTT\n\n00:00.000 --> 00:00.250 --> invalid\nMalformed.\n",
+      message: "malformed",
+    },
+    {
       bytes: "WEBVTT\n\n00:00:00.100 --> 00:00:00.100\nZero.\n",
       message: "must end after",
     },
@@ -164,6 +172,22 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       ),
     ),
   );
+  TestValidator.predicate(
+    "WebVTT bytes must be valid UTF-8",
+    refused(
+      () =>
+        probeProductionMedia({
+          kind: "captions",
+          mediaType: "text/vtt",
+          bytes: Buffer.concat([
+            Buffer.from("WEBVTT\n\n00:00.000 --> 00:00.250\nInvalid byte: "),
+            Buffer.from([0xc3]),
+            Buffer.from("\n"),
+          ]),
+        }),
+      "valid UTF-8",
+    ),
+  );
   TestValidator.equals(
     "WebVTT accepts the standard timestamp form without an hour field",
     probeProductionMedia({
@@ -194,6 +218,54 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       cueCount: 1,
       firstCueSeconds: 0,
       lastCueSeconds: 0.25,
+    },
+  );
+  TestValidator.equals(
+    "WebVTT settings preserve legal Unicode line-separator characters",
+    probeProductionMedia({
+      kind: "captions",
+      mediaType: "text/vtt",
+      bytes: Buffer.from(
+        "WEBVTT\n\n00:00.000 --> 00:00.250 region:zone\u2028\u2029\nSignal.\n",
+      ),
+    }),
+    {
+      kind: "webvtt",
+      cueCount: 1,
+      firstCueSeconds: 0,
+      lastCueSeconds: 0.25,
+    },
+  );
+  TestValidator.equals(
+    "WebVTT preserves whitespace-only payload lines inside one cue",
+    probeProductionMedia({
+      kind: "captions",
+      mediaType: "text/vtt",
+      bytes: Buffer.from(
+        "WEBVTT\n\n00:00.000 --> 00:00.250\nFirst.\n \nSecond.\n",
+      ),
+    }),
+    {
+      kind: "webvtt",
+      cueCount: 1,
+      firstCueSeconds: 0,
+      lastCueSeconds: 0.25,
+    },
+  );
+  TestValidator.equals(
+    "WebVTT metadata tokens remain legal timed cue identifiers",
+    probeProductionMedia({
+      kind: "captions",
+      mediaType: "text/vtt",
+      bytes: Buffer.from(
+        "WEBVTT\n\nNOTE\n00:00.000 --> 00:00.100\nFirst.\n\nSTYLE intro\n00:00.100 --> 00:00.200\nSecond.\n\nREGION intro\n00:00.200 --> 00:00.300\nThird.\n",
+      ),
+    }),
+    {
+      kind: "webvtt",
+      cueCount: 3,
+      firstCueSeconds: 0,
+      lastCueSeconds: 0.3,
     },
   );
   TestValidator.equals(

@@ -61,14 +61,26 @@ const SUPPORTED_STICKMAN_ATTACHMENT_BONES = new Set([
 
 /** Maximum exact production raster accepted by design and frame review. */
 export const AUTOMOVIE_MAX_FRAME_PIXELS = 16_777_216;
+/** Maximum live billboards reserved by one effect recipe. */
+export const AUTOMOVIE_MAX_EFFECT_PARTICLES = 4_096;
+/** Maximum aggregate live billboards across declared effect zones. */
+export const AUTOMOVIE_EFFECT_PARTICLE_BUDGET = 16_384;
+/** Maximum declared effect recipes and placed zones in one world. */
+export const AUTOMOVIE_EFFECT_DECLARATION_LIMIT = 256;
+/** Largest supported absolute metric coordinate in deterministic runtimes. */
+export const AUTOMOVIE_WORLD_COORDINATE_LIMIT = 1_000_000_000;
 
-/**
- * Maximum explicit formation slots in one foundation production.
- *
- * The current compiler emits one deterministic scene node per slot. Larger
- * armies require an instanced representation before the public bound can grow.
- */
-export const AUTOMOVIE_MAX_FORMATION_MEMBERS = 10_000;
+/** Maximum compact formation slots in one production. */
+export const AUTOMOVIE_MAX_FORMATION_MEMBERS = 100_000;
+/** Named rigged exceptions remain explicit nodes and source performances. */
+export const AUTOMOVIE_MAX_FORMATION_HEROES = 256;
+/** One 4x4 transform plus one deterministic phase scalar per LOD instance. */
+export const AUTOMOVIE_FORMATION_INSTANCE_BYTES =
+  16 * Float32Array.BYTES_PER_ELEMENT + Float32Array.BYTES_PER_ELEMENT;
+/** Maximum aggregate anonymous instance storage across all declared LOD tiers. */
+export const AUTOMOVIE_FORMATION_INSTANCE_BUFFER_BUDGET_BYTES = 8 * 1024 * 1024;
+/** Conservative generated compact-runtime envelope. */
+export const AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES = 128 * 1024;
 
 /** Validate graph-level production invariants after structural validation. */
 export const validateAutoMovieProductionGraph = (
@@ -340,6 +352,17 @@ export const validateAutoMovieProductionGraph = (
 
   if (graph.world !== null) {
     const file = ".automovie/design/world.json";
+    if (
+      graph.world.effectRecipes.length > AUTOMOVIE_EFFECT_DECLARATION_LIMIT ||
+      graph.world.effectZones.length > AUTOMOVIE_EFFECT_DECLARATION_LIMIT
+    )
+      invalid(
+        diagnostics,
+        "design-range-invalid",
+        "world",
+        file,
+        `World effects must stay within ${AUTOMOVIE_EFFECT_DECLARATION_LIMIT} recipes and ${AUTOMOVIE_EFFECT_DECLARATION_LIMIT} zones. Reduce the declared effect graph.`,
+      );
     text(diagnostics, graph.world.id, "world", file, "id");
     const ids = new Set<string>();
     for (const landmark of graph.world.landmarks) {
@@ -428,18 +451,190 @@ export const validateAutoMovieProductionGraph = (
       for (const point of route.waypoints)
         finite2(diagnostics, point, "world", file, "route.waypoints");
     }
+    const effectRecipeIds = new Set<string>();
+    for (const recipe of graph.world.effectRecipes) {
+      const target = `effect-recipe:${recipe.id}`;
+      unique(
+        diagnostics,
+        effectRecipeIds,
+        recipe.id,
+        "world",
+        file,
+        "effectRecipes",
+      );
+      text(diagnostics, recipe.id, target, file, "id");
+      integer(
+        diagnostics,
+        recipe.seed,
+        0,
+        Number.MAX_SAFE_INTEGER,
+        target,
+        file,
+        "seed",
+      );
+      bounded(
+        diagnostics,
+        recipe.emission.rate,
+        0,
+        1_024,
+        target,
+        file,
+        "emission.rate",
+      );
+      integer(
+        diagnostics,
+        recipe.emission.burst,
+        0,
+        AUTOMOVIE_MAX_EFFECT_PARTICLES,
+        target,
+        file,
+        "emission.burst",
+      );
+      bounded(
+        diagnostics,
+        recipe.emission.duration,
+        1 / 240,
+        60,
+        target,
+        file,
+        "emission.duration",
+      );
+      boundedRange(
+        diagnostics,
+        recipe.particle.lifetime,
+        1 / 240,
+        30,
+        target,
+        file,
+        "particle.lifetime",
+      );
+      boundedRange(
+        diagnostics,
+        recipe.particle.size,
+        0.01,
+        20,
+        target,
+        file,
+        "particle.size",
+      );
+      boundedRange(
+        diagnostics,
+        recipe.particle.opacity,
+        0,
+        1,
+        target,
+        file,
+        "particle.opacity",
+      );
+      if (/^#[0-9a-f]{6}$/i.test(recipe.particle.color) === false)
+        invalid(
+          diagnostics,
+          "design-color-invalid",
+          target,
+          file,
+          `Effect color "${recipe.particle.color}" must be one opaque #RRGGBB value.`,
+        );
+      boundedVector(
+        diagnostics,
+        recipe.motion.wind,
+        -50,
+        50,
+        target,
+        file,
+        "motion.wind",
+      );
+      bounded(
+        diagnostics,
+        recipe.motion.rise,
+        -50,
+        50,
+        target,
+        file,
+        "motion.rise",
+      );
+      bounded(
+        diagnostics,
+        recipe.motion.turbulence,
+        0,
+        50,
+        target,
+        file,
+        "motion.turbulence",
+      );
+      integer(
+        diagnostics,
+        recipe.budget.maxParticles,
+        1,
+        AUTOMOVIE_MAX_EFFECT_PARTICLES,
+        target,
+        file,
+        "budget.maxParticles",
+      );
+      bounded(
+        diagnostics,
+        recipe.budget.lodDistance,
+        0.1,
+        2_000,
+        target,
+        file,
+        "budget.lodDistance",
+      );
+      const totalRegular = Math.floor(
+        recipe.emission.rate * recipe.emission.duration + 1e-9,
+      );
+      const lifetimeRegular = Math.ceil(
+        recipe.emission.rate * recipe.particle.lifetime.max,
+      );
+      const regularPeak = Math.min(totalRegular, lifetimeRegular);
+      // Regular particles spawn at n / rate and expire at age >= lifetime, so
+      // an exact lifetime boundary does not overlap the initial burst.
+      const regularBeforeBurstExpiry = Math.min(
+        totalRegular,
+        Math.max(0, lifetimeRegular - 1),
+      );
+      const liveUpperBound = Math.max(
+        regularPeak,
+        recipe.emission.burst + regularBeforeBurstExpiry,
+      );
+      if (liveUpperBound > recipe.budget.maxParticles)
+        invalid(
+          diagnostics,
+          "design-budget-exceeded",
+          target,
+          file,
+          `Effect recipe "${recipe.id}" can keep ${liveUpperBound} particles live, above its ${recipe.budget.maxParticles} cap. Reduce burst, rate, emission duration, or lifetime.`,
+        );
+    }
     const effectIds = new Set<string>();
     for (const zone of graph.world.effectZones) {
       unique(diagnostics, effectIds, zone.id, "world", file, "effectZones");
-      invalid(
+      text(diagnostics, zone.recipe, "world", file, "effect.recipe");
+      if (effectRecipeIds.has(zone.recipe) === false)
+        missing(
+          diagnostics,
+          "world",
+          file,
+          `effect recipe "${zone.recipe}"`,
+          `add it to effectRecipes or change zone "${zone.id}".recipe`,
+        );
+      boundedVector(
         diagnostics,
-        "design-capability-unsupported",
+        zone.bounds.min,
+        -AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+        AUTOMOVIE_WORLD_COORDINATE_LIMIT,
         "world",
         file,
-        `Effect zone "${zone.id}" kind "${zone.kind}" has no deterministic renderer binding yet. Remove it or implement the effect compiler before claiming this world complete.`,
+        "effect.bounds.min",
       );
-      vector(diagnostics, zone.bounds.min, "world", file, "effect.bounds.min");
-      vector(diagnostics, zone.bounds.max, "world", file, "effect.bounds.max");
+      boundedVector(
+        diagnostics,
+        zone.bounds.max,
+        -AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+        AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+        "world",
+        file,
+        "effect.bounds.max",
+      );
       if (
         zone.bounds.min.x >= zone.bounds.max.x ||
         zone.bounds.min.y >= zone.bounds.max.y ||
@@ -462,6 +657,21 @@ export const validateAutoMovieProductionGraph = (
         "effect.seed",
       );
     }
+    const particleBudget = graph.world.effectZones.reduce(
+      (sum, zone) =>
+        sum +
+        (graph.world!.effectRecipes.find((recipe) => recipe.id === zone.recipe)
+          ?.budget.maxParticles ?? 0),
+      0,
+    );
+    if (particleBudget > AUTOMOVIE_EFFECT_PARTICLE_BUDGET)
+      invalid(
+        diagnostics,
+        "design-budget-exceeded",
+        "world",
+        file,
+        `Effect zones reserve ${particleBudget} live particles, above the production budget ${AUTOMOVIE_EFFECT_PARTICLE_BUDGET}. Reduce zone count or recipe caps.`,
+      );
   }
 
   const formationMemberCount = [...graph.formations.values()].reduce(
@@ -477,7 +687,71 @@ export const validateAutoMovieProductionGraph = (
       "design-range-invalid",
       "formations",
       ".automovie/design/formations",
-      `The production declares ${formationMemberCount} formation members, above the explicit-node foundation limit ${AUTOMOVIE_MAX_FORMATION_MEMBERS}. Reduce the total or implement an instanced compiler/viewer representation before raising the bound.`,
+      `The production declares ${formationMemberCount} formation members, above the compact-runtime limit ${AUTOMOVIE_MAX_FORMATION_MEMBERS}. Reduce the total; unlimited crowds are not supported.`,
+    );
+  const formationInstanceBytes = [...graph.formations.values()].reduce(
+    (bytes, formation) => {
+      const anonymousTiers =
+        graph.models
+          .get(formation.modelRecipe)
+          ?.lod.filter((lod) => lod.tier !== "hero").length ?? 0;
+      return (
+        bytes +
+        (formation.count - formation.heroOverrides.length) *
+          Math.max(1, anonymousTiers) *
+          AUTOMOVIE_FORMATION_INSTANCE_BYTES
+      );
+    },
+    0,
+  );
+  if (
+    Number.isSafeInteger(formationInstanceBytes) === false ||
+    formationInstanceBytes > AUTOMOVIE_FORMATION_INSTANCE_BUFFER_BUDGET_BYTES
+  )
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      "formations",
+      ".automovie/design/formations",
+      `Formation LOD matrices and phase attributes require ${formationInstanceBytes} bytes, above the ${AUTOMOVIE_FORMATION_INSTANCE_BUFFER_BUDGET_BYTES}-byte viewer budget. Reduce count or LOD tiers.`,
+    );
+  const formationRuntimeBytes = [...graph.formations.values()].reduce(
+    (bytes, formation) => {
+      const occurrences = [...graph.shots.values()].filter((shot) =>
+        shot.participants.some(
+          (participant) =>
+            participant.kind === "formation" && participant.id === formation.id,
+        ),
+      ).length;
+      const variableBytes = Buffer.byteLength(
+        JSON.stringify({
+          id: formation.id,
+          modelRecipe: formation.modelRecipe,
+          layout: formation.layout,
+          heroes: formation.heroOverrides,
+          lod: graph.models.get(formation.modelRecipe)?.lod ?? [],
+        }),
+        "utf8",
+      );
+      const runtimeBytes =
+        4_096 +
+        variableBytes +
+        Math.ceil(formation.count / 1_024) * 1_024 +
+        formation.heroOverrides.length * 1_024;
+      return bytes + runtimeBytes * Math.max(1, occurrences);
+    },
+    0,
+  );
+  if (
+    Number.isSafeInteger(formationRuntimeBytes) === false ||
+    formationRuntimeBytes > AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES
+  )
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      "formations",
+      ".automovie/design/formations",
+      `Estimated compact formation runtime is ${formationRuntimeBytes} bytes, above the ${AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES}-byte generated payload budget. Reduce count or hero overrides.`,
     );
 
   for (const [id, formation] of graph.formations) {
@@ -510,8 +784,24 @@ export const validateAutoMovieProductionGraph = (
       file,
       "count",
     );
-    vector(diagnostics, formation.anchor, target, file, "anchor");
-    finite(diagnostics, formation.facingDeg, target, file, "facingDeg");
+    boundedVector(
+      diagnostics,
+      formation.anchor,
+      -AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+      AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+      target,
+      file,
+      "anchor",
+    );
+    bounded(
+      diagnostics,
+      formation.facingDeg,
+      -360_000,
+      360_000,
+      target,
+      file,
+      "facingDeg",
+    );
     integer(
       diagnostics,
       formation.seed,
@@ -531,6 +821,14 @@ export const validateAutoMovieProductionGraph = (
     );
     const slots = new Set<number>();
     const actors = new Set<string>();
+    if (formation.heroOverrides.length > AUTOMOVIE_MAX_FORMATION_HEROES)
+      invalid(
+        diagnostics,
+        "design-range-invalid",
+        target,
+        file,
+        `Formation "${id}" promotes ${formation.heroOverrides.length} heroes, above the explicit-node limit ${AUTOMOVIE_MAX_FORMATION_HEROES}. Keep the anonymous army instanced.`,
+      );
     for (const hero of formation.heroOverrides) {
       if (
         Number.isInteger(hero.slot) === false ||
@@ -662,6 +960,24 @@ export const validateAutoMovieProductionGraph = (
           `formation "${participant.id}"`,
           `setFormationDesign for "${participant.id}" or remove it from ${id}.participants`,
         );
+    }
+    const formationHeroOwners = new Map<string, string>();
+    for (const participant of shot.participants) {
+      if (participant.kind !== "formation") continue;
+      const formation = graph.formations.get(participant.id);
+      if (formation === undefined) continue;
+      for (const hero of formation.heroOverrides) {
+        const owner = formationHeroOwners.get(hero.actor);
+        if (owner !== undefined && owner !== formation.id)
+          invalid(
+            diagnostics,
+            "design-duplicate-id",
+            target,
+            file,
+            `Hero actor "${hero.actor}" belongs to participating formations "${owner}" and "${formation.id}" in the same shot. Keep one formation owner per hero actor in ${id}.participants.`,
+          );
+        else formationHeroOwners.set(hero.actor, formation.id);
+      }
     }
     validateNamedStates(
       diagnostics,
@@ -1200,16 +1516,20 @@ const validateFormationLayout = (
 ): void => {
   const layout = formation.layout;
   if (layout.kind === "line" || layout.kind === "column") {
-    positive(
+    bounded(
       diagnostics,
       layout.spacing.lateral,
+      Number.EPSILON,
+      10_000,
       target,
       file,
       "layout.spacing.lateral",
     );
-    positive(
+    bounded(
       diagnostics,
       layout.spacing.depth,
+      Number.EPSILON,
+      10_000,
       target,
       file,
       "layout.spacing.depth",
@@ -1241,16 +1561,20 @@ const validateFormationLayout = (
         `Layout capacity ${layout.ranks * layout.files} is below count ${formation.count}. Fix layout in setFormationDesign.`,
       );
   } else if (layout.kind === "wedge") {
-    positive(
+    bounded(
       diagnostics,
       layout.spacing.lateral,
+      Number.EPSILON,
+      10_000,
       target,
       file,
       "layout.spacing.lateral",
     );
-    positive(
+    bounded(
       diagnostics,
       layout.spacing.depth,
+      Number.EPSILON,
+      10_000,
       target,
       file,
       "layout.spacing.depth",
@@ -1273,7 +1597,15 @@ const validateFormationLayout = (
         `Wedge depth ${layout.depth} materializes ${layout.depth * layout.depth} slots, below count ${formation.count}. Increase layout.depth in setFormationDesign.`,
       );
   } else {
-    positive(diagnostics, layout.radius, target, file, "layout.radius");
+    bounded(
+      diagnostics,
+      layout.radius,
+      Number.EPSILON,
+      AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+      target,
+      file,
+      "layout.radius",
+    );
     if (
       layout.kind === "arc" &&
       (Number.isFinite(layout.arcDegrees) === false ||
@@ -1518,6 +1850,50 @@ const positive = (
     );
 };
 
+const bounded = (
+  diagnostics: IAutoMovieDiagnostic[],
+  value: number,
+  min: number,
+  max: number,
+  target: string,
+  file: string,
+  field: string,
+): void => {
+  if (Number.isFinite(value) === false || value < min || value > max)
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      target,
+      file,
+      `${field} must be a finite value from ${min} through ${max}. Fix ${field} in its design setter.`,
+    );
+};
+
+const boundedRange = (
+  diagnostics: IAutoMovieDiagnostic[],
+  value: { min: number; max: number },
+  min: number,
+  max: number,
+  target: string,
+  file: string,
+  field: string,
+): void => {
+  bounded(diagnostics, value.min, min, max, target, file, `${field}.min`);
+  bounded(diagnostics, value.max, min, max, target, file, `${field}.max`);
+  if (
+    Number.isFinite(value.min) &&
+    Number.isFinite(value.max) &&
+    value.min > value.max
+  )
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      target,
+      file,
+      `${field}.min must not exceed ${field}.max. Fix the range in its design setter.`,
+    );
+};
+
 const integer = (
   diagnostics: IAutoMovieDiagnostic[],
   value: number,
@@ -1564,6 +1940,20 @@ const vector = (
   finite(diagnostics, value.x, target, file, `${field}.x`);
   finite(diagnostics, value.y, target, file, `${field}.y`);
   finite(diagnostics, value.z, target, file, `${field}.z`);
+};
+
+const boundedVector = (
+  diagnostics: IAutoMovieDiagnostic[],
+  value: { x: number; y: number; z: number },
+  min: number,
+  max: number,
+  target: string,
+  file: string,
+  field: string,
+): void => {
+  bounded(diagnostics, value.x, min, max, target, file, `${field}.x`);
+  bounded(diagnostics, value.y, min, max, target, file, `${field}.y`);
+  bounded(diagnostics, value.z, min, max, target, file, `${field}.z`);
 };
 
 const finite2 = (

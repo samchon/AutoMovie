@@ -1,4 +1,5 @@
 import {
+  AutoMovieFilmTime,
   IAutoMovieCompiledShotSource,
   IAutoMovieRenderBundleManifest,
 } from "@automovie/interface";
@@ -18,6 +19,7 @@ import {
   productionDesign,
   productionFixture,
   shotContract,
+  testCaptureRuntimeIdentity,
   worldDesign,
 } from "./productionFixtures";
 
@@ -34,12 +36,28 @@ const blankPng = (width: number, height: number): Uint8Array => {
   return PNG.sync.write(image);
 };
 
-/** Geometry queries and preview frames use current compiler-owned artifacts. */
+/**
+ * Geometry queries and preview frames use current compiler-owned artifacts,
+ * including scale-aware promoted-hero visibility at the camera boundary.
+ */
 export const test_mcp_production_oracle = async (): Promise<void> => {
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
-    project.setFormationDesign(formationDesign());
+    const routedWorld = structuredClone(project.graph().world!);
+    routedWorld.routes.push({
+      id: "formation-clearance",
+      waypoints: [
+        { x: -5, z: 0 },
+        { x: 5, z: 0 },
+      ],
+      allowedFormationWidth: 10,
+    });
+    project.setWorldDesign(routedWorld);
+    project.setFormationDesign({
+      ...formationDesign(),
+      heroOverrides: [{ slot: 0, actor: "sentinel" }],
+    });
     project.setShotContract({
       ...shotContract(),
       participants: [
@@ -53,6 +71,34 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       compiler.compile({ scope: "source" }).success,
     );
     const oracle = new AutoMovieProductionOracleService(project);
+    const filmFrame = oracle.query({
+      request: { query: "film-time", at: { seconds: 2 } },
+    });
+    TestValidator.predicate(
+      "film-global time resolves through the compiler-owned timeline",
+      filmFrame.result?.kind === "measurement" &&
+        filmFrame.result.values.film === "fixture-film" &&
+        filmFrame.result.values.globalFrame === 48 &&
+        filmFrame.result.values.shot === "opening" &&
+        filmFrame.result.values.sourceFrame === 48 &&
+        filmFrame.result.values.shotTime === 2,
+    );
+    TestValidator.predicate(
+      "film-global oracle rejects off-grid and out-of-range selectors",
+      (
+        [
+          { seconds: 0.1 },
+          { frame: -1 },
+          { frame: 144 },
+          { frame: Number.NaN },
+        ] satisfies AutoMovieFilmTime[]
+      ).every(
+        (at) =>
+          oracle.query({
+            request: { query: "film-time", at },
+          }).result === null,
+      ),
+    );
     TestValidator.equals(
       "point distance",
       oracle.query({
@@ -152,12 +198,41 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const formationMeasurement = oracle.query({
       request: { query: "formation", formation: "line" },
     }).result;
+    const nonParticipatingFormationShot = oracle.query({
+      request: {
+        query: "formation",
+        formation: "line",
+        shot: "absent",
+      },
+    });
     TestValidator.predicate(
       "formation and sampled pose measurements use compiler-owned slots",
       formationMeasurement?.kind === "measurement" &&
         formationMeasurement.values.designCount === 6 &&
         formationMeasurement.values.materializedCount === 6 &&
         formationMeasurement.values.participatingShots === 1 &&
+        Number(formationMeasurement.values.routeClearance) > 0 &&
+        formationMeasurement.values.heroVisible === 1 &&
+        nonParticipatingFormationShot.result === null &&
+        nonParticipatingFormationShot.diagnostics[0]?.message.includes(
+          "does not participate",
+        ) &&
+        oracle.query({
+          request: {
+            query: "formation",
+            formation: "line",
+            shot: "opening",
+            time: -1,
+          },
+        }).result === null &&
+        oracle.query({
+          request: {
+            query: "formation",
+            formation: "line",
+            shot: "opening",
+            time: 7,
+          },
+        }).result === null &&
         oracle.query({
           request: {
             query: "pose",
@@ -336,12 +411,70 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     };
     const writeCorrupted = (value: IAutoMovieCompiledShotSource): void =>
       writeGeneratedBytes(Buffer.from(JSON.stringify(value)));
+    const sidePlaneFormation = corrupted();
+    const sidePlaneRuntime = sidePlaneFormation.formations[0]!;
+    const sidePlaneChunk = sidePlaneRuntime.chunks[0]!;
+    sidePlaneRuntime.anchor = { x: 0, y: 0, z: 0 };
+    sidePlaneRuntime.facingDeg = 0;
+    sidePlaneRuntime.projectionRadius = 1;
+    sidePlaneChunk.centroid = { x: 11.2, y: 0, z: -10 };
+    sidePlaneChunk.bounds = {
+      min: { ...sidePlaneChunk.centroid },
+      max: { ...sidePlaneChunk.centroid },
+    };
+    const sidePlaneCamera = sidePlaneFormation.scene.cameras.find(
+      (camera) => camera.id === sidePlaneFormation.shot.camera,
+    )!;
+    sidePlaneCamera.transform = {
+      translation: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      scale: { x: 1, y: 1, z: 1 },
+    };
+    sidePlaneCamera.fovY = 90;
+    sidePlaneFormation.shot.cameraMotion = null;
+    sidePlaneFormation.formationMotions = [];
+    writeCorrupted(sidePlaneFormation);
+    const sidePlaneFormationResult = oracle.query({
+      request: { query: "formation", formation: "line" },
+    });
+    TestValidator.equals(
+      "formation chunk visibility uses normalized frustum-plane distance",
+      sidePlaneFormationResult.result?.kind === "measurement"
+        ? {
+            anonymous: sidePlaneFormationResult.result.values.anonymousCount,
+            visible:
+              Number(sidePlaneFormationResult.result.values.nearVisible) +
+              Number(sidePlaneFormationResult.result.values.farVisible),
+            culled: sidePlaneFormationResult.result.values.culled,
+          }
+        : null,
+      {
+        anonymous: sidePlaneRuntime.anonymousCount,
+        visible: sidePlaneChunk.anonymousCount,
+        culled: 0,
+      },
+    );
     const partialFormation = corrupted();
-    partialFormation.scene.nodes = partialFormation.scene.nodes.filter(
-      (node) => node.id !== "formation:line:slot:000001",
+    partialFormation.formations = partialFormation.formations.filter(
+      (formation) => formation.id !== "line",
     );
     writeCorrupted(partialFormation);
     const partialFormationResult = oracle.query({
+      request: { query: "formation", formation: "line" },
+    });
+    const emptyFormationChunks = corrupted();
+    emptyFormationChunks.formations[0]!.chunks = [];
+    writeCorrupted(emptyFormationChunks);
+    const emptyFormationChunksResult = oracle.query({
+      request: { query: "formation", formation: "line" },
+    });
+    const missingFormationCamera = corrupted();
+    missingFormationCamera.scene.cameras =
+      missingFormationCamera.scene.cameras.filter(
+        (camera) => camera.id !== missingFormationCamera.shot.camera,
+      );
+    writeCorrupted(missingFormationCamera);
+    const missingFormationCameraResult = oracle.query({
       request: { query: "formation", formation: "line" },
     });
     writeGeneratedBytes(Buffer.from(generatedShotBytes));
@@ -360,12 +493,20 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     });
     fs.writeFileSync(generatedManifestPath, generatedManifestBytes);
     TestValidator.predicate(
-      "formation measurement refuses partial slots and missing compiled shots",
-      [partialFormationResult, missingCompiledFormationResult].every(
+      "formation measurement refuses partial slots, missing chunks, and missing compiled shots",
+      [
+        partialFormationResult,
+        emptyFormationChunksResult,
+        missingCompiledFormationResult,
+      ].every(
         (output) =>
           output.result === null &&
           output.diagnostics[0]?.message.includes("not fully materialized"),
-      ),
+      ) &&
+        missingFormationCameraResult.result === null &&
+        missingFormationCameraResult.diagnostics[0]?.message.includes(
+          "no current compiled camera",
+        ),
     );
     const recurringShot = corrupted();
     recurringShot.shot.id = "second";
@@ -508,12 +649,44 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         time: 2,
       },
     });
-    TestValidator.predicate(
+    // The sentinel is also this formation's promoted hero, so its compiled node
+    // transform is the compiler-owned slot. The pose root composes beneath that
+    // transform, which is exactly what the viewer draws, so the expected
+    // distance is derived from the node rather than written down.
+    const staticNode = staticPose.scene.nodes[0]!.transform;
+    TestValidator.equals(
       "pose roots compose beneath object TRS exactly as the viewer renders them",
-      staticPoseDistance.result?.kind === "distance" &&
-        staticPoseDistance.result.meters === 2 &&
-        objectMotionDistance.result?.kind === "distance" &&
-        Math.abs(objectMotionDistance.result.meters - Math.sqrt(97)) < 1e-9,
+      {
+        staticKind: staticPoseDistance.result?.kind ?? null,
+        staticNodeIsUnrotatedUnitScale:
+          staticNode.rotation.w === 1 &&
+          staticNode.rotation.x === 0 &&
+          staticNode.rotation.y === 0 &&
+          staticNode.rotation.z === 0 &&
+          staticNode.scale.x === 1 &&
+          staticNode.scale.y === 1 &&
+          staticNode.scale.z === 1,
+        staticMeters:
+          staticPoseDistance.result?.kind === "distance"
+            ? staticPoseDistance.result.meters.toFixed(9)
+            : null,
+        animatedKind: objectMotionDistance.result?.kind ?? null,
+        animatedMeters:
+          objectMotionDistance.result?.kind === "distance"
+            ? objectMotionDistance.result.meters.toFixed(9)
+            : null,
+      },
+      {
+        staticKind: "distance",
+        staticNodeIsUnrotatedUnitScale: true,
+        staticMeters: Math.hypot(
+          staticNode.translation.x + 2,
+          staticNode.translation.y,
+          staticNode.translation.z,
+        ).toFixed(9),
+        animatedKind: "distance",
+        animatedMeters: Math.sqrt(97).toFixed(9),
+      },
     );
 
     const missingCamera = corrupted();
@@ -634,7 +807,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     for (const keyframe of rooted.motions[0]!.keyframes)
       keyframe.pose.root = {
         ...rooted.scene.nodes[0]!.transform,
-        translation: { x: 1, y: 0, z: 0 },
+        translation: { x: 10_000, y: 0, z: 0 },
       };
     writeCorrupted(rooted);
     const rootedReach = oracle.query({ request: reachRequest });
@@ -643,6 +816,37 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         query: "distance",
         from: { kind: "actor", actor: "sentinel" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+      },
+    });
+    const rootedFormation = oracle.query({
+      request: {
+        query: "formation",
+        formation: "line",
+        shot: "opening",
+        time: 2,
+      },
+    });
+    const scaledHero = corrupted();
+    scaledHero.scene.nodes[0]!.transform.translation.x = 6;
+    scaledHero.scene.nodes[0]!.transform.scale = { x: 8, y: 8, z: 8 };
+    writeCorrupted(scaledHero);
+    const scaledHeroFormation = oracle.query({
+      request: {
+        query: "formation",
+        formation: "line",
+        shot: "opening",
+        time: 2,
+      },
+    });
+    const missingHero = corrupted();
+    missingHero.formations[0]!.heroes[0]!.actor = "ghost";
+    writeCorrupted(missingHero);
+    const missingHeroFormation = oracle.query({
+      request: {
+        query: "formation",
+        formation: "line",
+        shot: "opening",
+        time: 2,
       },
     });
 
@@ -674,6 +878,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         leftOnlyReach.result.values.rightMeasurable === false &&
         rootedReach.result?.kind === "measurement" &&
         rootedActorDistance.result?.kind === "distance" &&
+        rootedFormation.result?.kind === "measurement" &&
+        rootedFormation.result.values.heroVisible === 0 &&
+        scaledHeroFormation.result?.kind === "measurement" &&
+        scaledHeroFormation.result.values.heroVisible === 1 &&
+        missingHeroFormation.result?.kind === "measurement" &&
+        missingHeroFormation.result.values.heroVisible === 0 &&
         heldActorDistance.result?.kind === "distance",
     );
 
@@ -745,18 +955,46 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       request: { query: "ground", point: { x: 0, z: 0 } },
     });
     writeGeneratedBytes(Buffer.from(generatedShotBytes));
-    TestValidator.predicate(
+    TestValidator.equals(
       "pose oracle refuses unstaged actors and missing motion but uses scene-node fallback",
-      heldPose.result?.kind === "measurement" &&
-        heldPose.result.values.held === true &&
-        heldWithoutNode.result === null &&
-        movingWithoutRootOrNode.result === null &&
-        movingWithRoot.result?.kind === "measurement" &&
-        movingWithRoot.result.values.rootX === 7 &&
-        missingMotion.result === null &&
-        missingPerformance.result?.kind === "measurement" &&
-        missingPerformance.result.values.held === false &&
-        invalidGenerated.result === null,
+      {
+        heldKind: heldPose.result?.kind ?? null,
+        held:
+          heldPose.result?.kind === "measurement"
+            ? heldPose.result.values.held
+            : null,
+        heldWithoutNode: heldWithoutNode.result?.kind ?? null,
+        movingWithoutRootOrNode: movingWithoutRootOrNode.result?.kind ?? null,
+        movingWithRootKind: movingWithRoot.result?.kind ?? null,
+        movingRootX:
+          movingWithRoot.result?.kind === "measurement"
+            ? Number(movingWithRoot.result.values.rootX).toFixed(9)
+            : null,
+        missingMotion: missingMotion.result?.kind ?? null,
+        missingPerformanceKind: missingPerformance.result?.kind ?? null,
+        missingPerformanceHeld:
+          missingPerformance.result?.kind === "measurement"
+            ? missingPerformance.result.values.held
+            : null,
+        invalidGenerated: invalidGenerated.result?.kind ?? null,
+      },
+      {
+        heldKind: "measurement",
+        held: true,
+        heldWithoutNode: null,
+        movingWithoutRootOrNode: null,
+        movingWithRootKind: "measurement",
+        // The sentinel node is this formation's promoted hero slot, so an
+        // authored pose root of 7 lands at the slot plus 7, exactly as the
+        // viewer composes it.
+        movingRootX: (
+          generatedShot.scene.nodes[0]!.transform.translation.x + 7
+        ).toFixed(9),
+        missingMotion: null,
+        missingPerformanceKind: "measurement",
+        missingPerformanceHeld: false,
+        invalidGenerated: null,
+      },
     );
 
     const manifestPath = path.join(
@@ -836,12 +1074,17 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     });
     project.setWorldDesign(worldDesign());
     compiler.compile({ scope: "source" });
+    const unroutedFormation = oracle.query({
+      request: { query: "formation", formation: "line" },
+    });
     TestValidator.predicate(
       "ground oracle handles planes and an absent bounded world",
       slopedGround.result?.kind === "ground" &&
         slopedGround.result.height === 2.5 &&
         absentWorld.result?.kind === "ground" &&
-        absentWorld.result.surface === null,
+        absentWorld.result.surface === null &&
+        unroutedFormation.result?.kind === "measurement" &&
+        unroutedFormation.result.values.routeClearance === 0,
     );
 
     fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
@@ -865,7 +1108,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       }),
@@ -939,7 +1182,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       }),
@@ -957,7 +1200,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       }),
@@ -1010,7 +1253,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       }),
@@ -1071,7 +1314,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         project,
         async () => ({
           bytes,
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
         }),
@@ -1088,12 +1331,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     }
     const exceptionalBytes = {
       bytes: new Uint8Array(),
-      rendererIdentity: "test:png-v1",
+      runtimeIdentity: testCaptureRuntimeIdentity(),
       width: 2,
       height: 2,
     } as {
       bytes: Uint8Array;
-      rendererIdentity: string;
+      runtimeIdentity: ReturnType<typeof testCaptureRuntimeIdentity>;
       width: number;
       height: number;
     };
@@ -1123,7 +1366,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(1, 1),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 3,
         height: 3,
       }),
@@ -1144,7 +1387,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         fs.rmSync(manifestPath);
         return {
           bytes: png(2, 2),
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
         };
@@ -1164,7 +1407,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         fs.writeFileSync(manifestPath, JSON.stringify(manifest));
         return {
           bytes: png(2, 2),
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
         };
@@ -1182,7 +1425,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         project,
         async () => ({
           bytes: png(2, 2),
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
         }),
@@ -1218,7 +1461,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         fs.appendFileSync(viewerPath, "\n<!-- capture race -->\n");
         return {
           bytes: png(2, 2),
-          rendererIdentity: "test:png-v1",
+          runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
         };
@@ -1241,7 +1484,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       }),
@@ -1260,7 +1503,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     try {
       await new AutoMovieProductionOracleService(project, async () => ({
         bytes: png(2, 2),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
       })).preview({
@@ -1306,7 +1549,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           [1, 2].map((size) =>
             new AutoMovieProductionOracleService(project, async () => ({
               bytes: blankPng(size, size),
-              rendererIdentity: "test:png-v1",
+              runtimeIdentity: testCaptureRuntimeIdentity(),
               width: size,
               height: size,
             })).preview({
@@ -1324,7 +1567,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async (input) => ({
         bytes: png(input.width!, input.height!),
-        rendererIdentity: "test:png-v1",
+        runtimeIdentity: testCaptureRuntimeIdentity(),
         width: input.width!,
         height: input.height!,
       }),
@@ -1350,7 +1593,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async (input) => ({
         bytes: png(input.width!, input.height!),
-        rendererIdentity: "test:png-v2",
+        runtimeIdentity: testCaptureRuntimeIdentity("148.0.7778.97"),
         width: input.width!,
         height: input.height!,
       }),
@@ -1364,7 +1607,13 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       project,
       async (input) => ({
         bytes: png(input.width!, input.height!),
-        rendererIdentity: " ",
+        runtimeIdentity: {
+          ...testCaptureRuntimeIdentity(),
+          graphics: {
+            ...testCaptureRuntimeIdentity().graphics,
+            renderer: " ",
+          },
+        },
         width: input.width!,
         height: input.height!,
       }),
@@ -1411,6 +1660,15 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       const blank = blankPng(2, 2);
       const goodDigest = digestAutoMovieBytes(visible);
       const badFrames: IAutoMovieRenderBundleManifest["frames"] = [
+        {
+          index: 0.5,
+          time: 0.5 / 24,
+          pass: "beauty",
+          path: "preview/fractional.png",
+          digest: goodDigest,
+          width: 2,
+          height: 2,
+        },
         {
           index: -1,
           time: 0,
@@ -1531,6 +1789,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         },
       ];
       for (const file of [
+        "fractional.png",
         "negative.png",
         "off-clock.png",
         "past-duration.png",

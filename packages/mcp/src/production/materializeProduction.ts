@@ -1,5 +1,9 @@
 import { Quaternion } from "@automovie/engine";
 import {
+  AutoMovieContentDigest,
+  IAutoMovieCompiledEffect,
+  IAutoMovieCompiledFormation,
+  IAutoMovieCompiledShotSource,
   IAutoMovieFormationDesign,
   IAutoMovieFormationSlot,
   IAutoMovieModel,
@@ -8,9 +12,21 @@ import {
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
   IAutoMovieTransform,
+  IAutoMovieWorldDesign,
 } from "@automovie/interface";
 
-import { compareCodeUnits } from "./contentIdentity";
+import {
+  canonicalAutoMovieJsonBytes,
+  compareCodeUnits,
+  digestAutoMovieBytes,
+} from "./contentIdentity";
+
+/** Slots per independently regenerated and culled runtime chunk. */
+export const AUTOMOVIE_FORMATION_CHUNK_SIZE = 1_024;
+
+/** Matrix bytes reserved by one slot in one LOD instance buffer. */
+export const AUTOMOVIE_FORMATION_MATRIX_BYTES =
+  16 * Float32Array.BYTES_PER_ELEMENT;
 
 /** Compiler-owned runtime identity for one model recipe. */
 export const productionRuntimeModelId = (recipe: string): string =>
@@ -33,31 +49,45 @@ export const materializeProductionModels = (
 /** Materialize one compact formation into ordered world-space slots. */
 export const materializeFormationSlots = (
   formation: IAutoMovieFormationDesign,
-): IAutoMovieFormationSlot[] => {
-  const local = localFormationPoints(formation);
+): IAutoMovieFormationSlot[] =>
+  Array.from({ length: formation.count }, (_, slot) =>
+    materializeFormationSlot(formation, slot),
+  );
+
+/** Regenerate one exact formation slot in constant memory. */
+export const materializeFormationSlot = (
+  formation: IAutoMovieFormationDesign,
+  slot: number,
+): IAutoMovieFormationSlot => {
+  if (
+    Number.isSafeInteger(slot) === false ||
+    slot < 0 ||
+    slot >= formation.count
+  )
+    throw new RangeError(
+      `Formation "${formation.id}" slot ${slot} is outside 0..${formation.count - 1}.`,
+    );
+  const point = localFormationPoint(formation, slot);
   const radians = (formation.facingDeg * Math.PI) / 180;
   const cosine = Math.cos(radians);
   const sine = Math.sin(radians);
-  const heroes = new Map(
-    formation.heroOverrides.map((hero) => [hero.slot, hero.actor]),
-  );
-  return local.map((point, slot) => {
-    const actor = heroes.get(slot) ?? null;
-    return {
-      slot,
-      node:
-        actor ??
-        `formation:${formation.id}:slot:${String(slot).padStart(6, "0")}`,
-      actor,
-      modelRecipe: formation.modelRecipe,
-      position: {
-        x: formation.anchor.x + point.x * cosine + point.z * sine,
-        y: formation.anchor.y,
-        z: formation.anchor.z - point.x * sine + point.z * cosine,
-      },
-      facingDeg: formation.facingDeg,
-    };
-  });
+  const actor =
+    formation.heroOverrides.find((hero) => hero.slot === slot)?.actor ?? null;
+  return {
+    slot,
+    node:
+      actor ??
+      `formation:${formation.id}:slot:${String(slot).padStart(6, "0")}`,
+    actor,
+    modelRecipe: formation.modelRecipe,
+    position: {
+      x: formation.anchor.x + point.x * cosine + point.z * sine,
+      y: formation.anchor.y,
+      z: formation.anchor.z - point.x * sine + point.z * cosine,
+    },
+    facingDeg: formation.facingDeg,
+    motionPhase: seededValue(formation.seed, slot, 0x70686173),
+  };
 };
 
 /** Compiler-owned formation inventory passed to deterministic shot source. */
@@ -70,49 +100,168 @@ export const materializeFormationInventory = (
       .map(([id, formation]) => [id, materializeFormationSlots(formation)]),
   );
 
+/** Compile every formation into bounded chunks rather than anonymous nodes. */
+export const materializeCompiledFormationInventory = (
+  formations: ReadonlyMap<string, IAutoMovieFormationDesign>,
+  recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
+): Readonly<Record<string, IAutoMovieCompiledFormation>> =>
+  Object.fromEntries(
+    [...formations]
+      .sort(([left], [right]) => compareCodeUnits(left, right))
+      .map(([id, formation]) => [
+        id,
+        materializeCompiledFormation(formation, recipes),
+      ]),
+  );
+
+/** Compile one formation into independently regenerable chunk metadata. */
+export const materializeCompiledFormation = (
+  formation: IAutoMovieFormationDesign,
+  recipes: ReadonlyMap<string, IAutoMovieModelRecipe> = new Map(),
+): IAutoMovieCompiledFormation => {
+  const heroes = new Set(formation.heroOverrides.map((hero) => hero.slot));
+  const chunks = Array.from(
+    {
+      length: Math.ceil(formation.count / AUTOMOVIE_FORMATION_CHUNK_SIZE),
+    },
+    (_, index) => {
+      const start = index * AUTOMOVIE_FORMATION_CHUNK_SIZE;
+      const count = Math.min(
+        AUTOMOVIE_FORMATION_CHUNK_SIZE,
+        formation.count - start,
+      );
+      const summary = summarizeFormationRange(formation, start, count);
+      let anonymousCount = count;
+      for (const slot of heroes)
+        if (slot >= start && slot < start + count) --anonymousCount;
+      return { index, start, count, anonymousCount, ...summary };
+    },
+  );
+  const summary = summarizeFormationRange(formation, 0, formation.count);
+  const recipe = recipes.get(formation.modelRecipe);
+  const anonymousLod = recipe?.lod.filter((item) => item.tier !== "hero") ?? [];
+  const lod = (
+    anonymousLod.length === 0
+      ? [
+          {
+            tier: "near" as const,
+            maxDistance: null,
+            recipe: formation.modelRecipe,
+          },
+        ]
+      : anonymousLod
+  ).map((item) => ({
+    ...item,
+    recipeDigest: lodRecipeDigest(recipes, item.recipe),
+    model: productionRuntimeModelId(item.recipe),
+  }));
+  const core = {
+    version: 1 as const,
+    id: formation.id,
+    count: formation.count,
+    anonymousCount: formation.count - formation.heroOverrides.length,
+    modelRecipe: formation.modelRecipe,
+    layout: structuredClone(formation.layout),
+    anchor: structuredClone(formation.anchor),
+    facingDeg: formation.facingDeg,
+    seed: formation.seed,
+    ...summary,
+    projectionRadius: Math.max(
+      0.01,
+      ...lod.map(
+        (item) =>
+          recipeProjectionRadius(recipes.get(item.recipe)) ??
+          recipeProjectionRadius(recipe) ??
+          0.5,
+      ),
+    ),
+    chunks,
+    heroes: [...formation.heroOverrides]
+      .sort((left, right) => left.slot - right.slot)
+      .map((hero) => {
+        const slot = materializeFormationSlot(formation, hero.slot);
+        return {
+          slot: hero.slot,
+          actor: hero.actor,
+          transform: slotTransform(slot),
+        };
+      }),
+    lod,
+    phase: {
+      seed: mixSeed(formation.seed, 0x70686173),
+      periodSeconds: 0.8 + seededValue(formation.seed, 0x70657269) * 0.8,
+    },
+  };
+  return {
+    ...core,
+    digest: digestAutoMovieBytes(canonicalAutoMovieJsonBytes(core)),
+  };
+};
+
 /**
- * Add compiler-owned models and exact formation slots to source choreography.
+ * Add compiler-owned models, hero nodes and compact formations to choreography.
  *
- * A source may animate the deterministic slot ids supplied in its build
- * context, but it cannot choose their count, base placement, model, or hero
- * id.
+ * Anonymous identities remain derived from formation id and slot index and
+ * never become a large scene-node array.
  */
 export const materializeCompiledShot = (props: {
   contract: IAutoMovieShotContract;
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>;
-  formationSlots: Readonly<Record<string, readonly IAutoMovieFormationSlot[]>>;
+  formationRuntime?: Readonly<Record<string, IAutoMovieCompiledFormation>>;
+  modelRecipes?: ReadonlyMap<string, IAutoMovieModelRecipe>;
   runtimeModels: ReadonlyMap<string, IAutoMovieModel>;
+  world?: IAutoMovieWorldDesign;
+  fps?: number;
   source: IAutoMovieShotSourceOutput;
 }): {
-  value: IAutoMovieShotSourceOutput & { models: IAutoMovieModel[] };
+  value: IAutoMovieCompiledShotSource;
   collisions: string[];
 } => {
   const source = structuredClone(props.source);
+  const effects = materializeCompiledEffects({
+    contract: props.contract,
+    world: props.world,
+    fps: props.fps,
+    cues: source.effectCues ?? [],
+  });
   const nodes = new Map(source.scene.nodes.map((node) => [node.id, node]));
   const collisions: string[] = [];
+  const formations: IAutoMovieCompiledFormation[] = [];
   for (const participant of props.contract.participants) {
     if (participant.kind !== "formation") continue;
     const formation = props.formations.get(participant.id);
-    const slots = props.formationSlots[participant.id];
-    if (formation === undefined || slots === undefined) continue;
+    if (formation === undefined) continue;
+    const compiled =
+      props.formationRuntime?.[participant.id] ??
+      materializeCompiledFormation(formation, props.modelRecipes);
     const runtimeModel = props.runtimeModels.get(formation.modelRecipe);
     if (runtimeModel === undefined) continue;
-    for (const slot of slots) {
-      const expected = slotTransform(slot);
-      const existing = nodes.get(slot.node);
+    formations.push(compiled);
+    const ordinaryPrefix = `formation:${formation.id}:slot:`;
+    for (const node of source.scene.nodes) {
+      if (node.id.startsWith(ordinaryPrefix) === false) continue;
+      const suffix = node.id.slice(ordinaryPrefix.length);
+      const slot = Number(suffix);
+      if (
+        /^\d{6}$/.test(suffix) &&
+        Number.isSafeInteger(slot) &&
+        slot >= 0 &&
+        slot < formation.count &&
+        formation.heroOverrides.some((hero) => hero.slot === slot) === false
+      )
+        collisions.push(node.id);
+    }
+    for (const hero of compiled.heroes) {
+      const existing = nodes.get(hero.actor);
       if (existing !== undefined) {
-        if (slot.actor === null) {
-          collisions.push(slot.node);
-          continue;
-        }
         existing.model = runtimeModel.id;
-        existing.transform = expected;
+        existing.transform = hero.transform;
         continue;
       }
       const node = {
-        id: slot.node,
+        id: hero.actor,
         model: runtimeModel.id,
-        transform: expected,
+        transform: hero.transform,
         motion: null,
         pose: null,
       };
@@ -123,13 +272,79 @@ export const materializeCompiledShot = (props: {
   const modelByRuntimeId = new Map(
     [...props.runtimeModels.values()].map((model) => [model.id, model]),
   );
-  const models = [...new Set(source.scene.nodes.map((node) => node.model))]
+  const models = [
+    ...new Set([
+      ...source.scene.nodes.map((node) => node.model),
+      ...formations.flatMap((formation) =>
+        formation.lod.map((lod) => lod.model),
+      ),
+    ]),
+  ]
     .sort(compareCodeUnits)
     .flatMap((id) => {
       const model = modelByRuntimeId.get(id);
       return model === undefined ? [] : [model];
     });
-  return { value: { ...source, models }, collisions };
+  return {
+    value: {
+      ...source,
+      formationMotions: source.formationMotions ?? [],
+      effects,
+      models,
+      formations,
+    },
+    collisions,
+  };
+};
+
+/** Materialize shot-local cues into compiler-owned deterministic streams. */
+export const materializeCompiledEffects = (props: {
+  contract: IAutoMovieShotContract;
+  world?: IAutoMovieWorldDesign;
+  fps?: number;
+  cues: NonNullable<IAutoMovieShotSourceOutput["effectCues"]>;
+}): IAutoMovieCompiledEffect[] => {
+  if (props.world === undefined) return [];
+  const recipes = new Map(
+    props.world.effectRecipes.map((recipe) => [recipe.id, recipe]),
+  );
+  const zones = new Map(props.world.effectZones.map((zone) => [zone.id, zone]));
+  return [...props.cues]
+    .sort((left, right) => compareCodeUnits(left.id, right.id))
+    .flatMap((cue): IAutoMovieCompiledEffect[] => {
+      const zone = zones.get(cue.zone);
+      const recipe = zone === undefined ? undefined : recipes.get(zone.recipe);
+      if (zone === undefined || recipe === undefined) return [];
+      const seedDigest = digestAutoMovieBytes(
+        canonicalAutoMovieJsonBytes({
+          protocol: "automovie.effect-stream.v1",
+          shot: props.contract.id,
+          cue: cue.id,
+          recipeSeed: recipe.seed,
+          zoneSeed: zone.seed,
+        }),
+      );
+      const core = {
+        version: 1 as const,
+        id: cue.id,
+        zone: zone.id,
+        kind: recipe.kind,
+        bounds: structuredClone(zone.bounds),
+        seed: Number.parseInt(seedDigest.slice(7, 20), 16),
+        recipe: structuredClone(recipe),
+        start: cue.start,
+        end: cue.end,
+        intensity: structuredClone(cue.intensity),
+        ...(cue.event === undefined ? {} : { event: cue.event }),
+        fixedStepSeconds: 1 / (props.fps ?? 24),
+      };
+      return [
+        {
+          ...core,
+          digest: digestAutoMovieBytes(canonicalAutoMovieJsonBytes(core)),
+        },
+      ];
+    });
 };
 
 const slotTransform = (slot: IAutoMovieFormationSlot): IAutoMovieTransform => ({
@@ -138,76 +353,101 @@ const slotTransform = (slot: IAutoMovieFormationSlot): IAutoMovieTransform => ({
   scale: { x: 1, y: 1, z: 1 },
 });
 
-const localFormationPoints = (
+const localFormationPoint = (
   formation: IAutoMovieFormationDesign,
-): Array<{ x: number; z: number }> => {
+  slot: number,
+): { x: number; z: number } => {
   const layout = formation.layout;
   if (layout.kind === "line" || layout.kind === "column") {
-    const points: Array<{ x: number; z: number }> = [];
-    for (let slot = 0; slot < formation.count; ++slot) {
-      const rank =
-        layout.kind === "line"
-          ? Math.floor(slot / layout.files)
-          : slot % layout.ranks;
-      const file =
-        layout.kind === "line"
-          ? slot % layout.files
-          : Math.floor(slot / layout.ranks);
-      points.push({
-        x: (file - (layout.files - 1) / 2) * layout.spacing.lateral,
-        z: rank * layout.spacing.depth,
-      });
-    }
-    return points;
+    const rank =
+      layout.kind === "line"
+        ? Math.floor(slot / layout.files)
+        : slot % layout.ranks;
+    const file =
+      layout.kind === "line"
+        ? slot % layout.files
+        : Math.floor(slot / layout.ranks);
+    return {
+      x: (file - (layout.files - 1) / 2) * layout.spacing.lateral,
+      z: rank * layout.spacing.depth,
+    };
   }
   if (layout.kind === "wedge") {
-    const points: Array<{ x: number; z: number }> = [];
-    for (let row = 0; points.length < formation.count; ++row)
-      for (
-        let column = -row;
-        column <= row && points.length < formation.count;
-        ++column
-      )
-        points.push({
-          x: column * layout.spacing.lateral,
-          z: row * layout.spacing.depth,
-        });
-    return points;
-  }
-  if (layout.kind === "arc")
-    return Array.from({ length: formation.count }, (_, slot) => {
-      const ratio = formation.count === 1 ? 0.5 : slot / (formation.count - 1);
-      const degrees = (ratio - 0.5) * layout.arcDegrees;
-      const radians = (degrees * Math.PI) / 180;
-      return {
-        x: Math.sin(radians) * layout.radius,
-        z: Math.cos(radians) * layout.radius,
-      };
-    });
-  const random = seededRandom(formation.seed, layout.seed);
-  return Array.from({ length: formation.count }, () => {
-    const radius = Math.sqrt(random()) * layout.radius;
-    const angle = random() * Math.PI * 2;
+    const row = Math.floor(Math.sqrt(slot));
+    const column = slot - row * row - row;
     return {
-      x: Math.cos(angle) * radius,
-      z: Math.sin(angle) * radius,
+      x: column * layout.spacing.lateral,
+      z: row * layout.spacing.depth,
     };
-  });
+  }
+  if (layout.kind === "arc") {
+    const ratio = formation.count === 1 ? 0.5 : slot / (formation.count - 1);
+    const degrees = (ratio - 0.5) * layout.arcDegrees;
+    const radians = (degrees * Math.PI) / 180;
+    return {
+      x: Math.sin(radians) * layout.radius,
+      z: Math.cos(radians) * layout.radius,
+    };
+  }
+  const radius =
+    Math.sqrt(seededValue(formation.seed, layout.seed, slot, 0)) *
+    layout.radius;
+  const angle = seededValue(formation.seed, layout.seed, slot, 1) * Math.PI * 2;
+  return {
+    x: Math.cos(angle) * radius,
+    z: Math.sin(angle) * radius,
+  };
 };
 
-const seededRandom = (
-  formationSeed: number,
-  layoutSeed: number,
-): (() => number) => {
-  let state = mixSeed(formationSeed, 0x9e3779b9);
-  state = mixSeed(layoutSeed, state ^ 0x85ebca6b);
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let value = state;
-    value = Math.imul(value ^ (value >>> 15), value | 1);
-    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-    return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
+const summarizeFormationRange = (
+  formation: IAutoMovieFormationDesign,
+  start: number,
+  count: number,
+): {
+  bounds: IAutoMovieCompiledFormation["bounds"];
+  centroid: IAutoMovieCompiledFormation["centroid"];
+} => {
+  const min = {
+    x: Number.POSITIVE_INFINITY,
+    y: Number.POSITIVE_INFINITY,
+    z: Number.POSITIVE_INFINITY,
   };
+  const max = {
+    x: Number.NEGATIVE_INFINITY,
+    y: Number.NEGATIVE_INFINITY,
+    z: Number.NEGATIVE_INFINITY,
+  };
+  const centroid = { x: 0, y: 0, z: 0 };
+  for (let slot = start; slot < start + count; ++slot) {
+    const point = materializeFormationSlot(formation, slot).position;
+    min.x = Math.min(min.x, point.x);
+    min.y = Math.min(min.y, point.y);
+    min.z = Math.min(min.z, point.z);
+    max.x = Math.max(max.x, point.x);
+    max.y = Math.max(max.y, point.y);
+    max.z = Math.max(max.z, point.z);
+    const seen = slot - start + 1;
+    centroid.x = stableMeanStep(centroid.x, point.x, seen);
+    centroid.y = stableMeanStep(centroid.y, point.y, seen);
+    centroid.z = stableMeanStep(centroid.z, point.z, seen);
+  }
+  return {
+    bounds: { min, max },
+    centroid,
+  };
+};
+
+const stableMeanStep = (mean: number, value: number, count: number): number =>
+  mean * ((count - 1) / count) + value / count;
+
+const seededValue = (...values: number[]): number => {
+  let state = 0x9e3779b9;
+  for (const value of values) state = mixSeed(value, state);
+  state = (state + 0x6d2b79f5) >>> 0;
+  let output = state;
+  output = Math.imul(output ^ (output >>> 15), output | 1);
+  output ^= output + Math.imul(output ^ (output >>> 7), output | 61);
+  return ((output ^ (output >>> 14)) >>> 0) / 4_294_967_296;
 };
 
 /**
@@ -225,6 +465,74 @@ const mixSeed = (seed: number, salt: number): number => {
   value = Math.imul(value ^ (value >>> 16), 0x7feb352d);
   value = Math.imul(value ^ (value >>> 15) ^ high, 0x846ca68b);
   return (value ^ (value >>> 16)) >>> 0;
+};
+
+/**
+ * Content digest for one LOD tier's model-recipe reference.
+ *
+ * The design gate refuses an absent recipe and a non-finite parameter alike, so
+ * neither reaches a compiled production through `setModelRecipe`. The
+ * materializer still answers for both the bounded way it answers a malformed
+ * projection proxy: a reference that cannot be canonically encoded digests a
+ * marker naming what the tier pointed at, instead of letting a canonical-JSON
+ * `TypeError` escape and discard the whole compiled formation.
+ */
+const lodRecipeDigest = (
+  recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
+  id: string,
+): AutoMovieContentDigest => {
+  const recipe = recipes.get(id);
+  if (recipe === undefined)
+    return digestAutoMovieBytes(
+      canonicalAutoMovieJsonBytes({ id, missing: true }),
+    );
+  try {
+    return digestAutoMovieBytes(canonicalAutoMovieJsonBytes(recipe));
+  } catch {
+    return digestAutoMovieBytes(
+      canonicalAutoMovieJsonBytes({ id, unencodable: true }),
+    );
+  }
+};
+
+const recipeProjectionRadius = (
+  recipe: IAutoMovieModelRecipe | undefined,
+): number | null => {
+  if (recipe === undefined) return null;
+  const number = (key: string): number => {
+    const value = recipe.parameters[key];
+    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+  };
+  switch (recipe.archetype) {
+    case "stickman":
+      return number("height") / 2;
+    case "horse":
+      return Math.hypot(number("length"), number("height")) / 2;
+    case "artillery":
+      return (
+        Math.hypot(
+          number("barrelLength"),
+          number("wheelRadius") * 2,
+          number("gauge"),
+        ) / 2
+      );
+    case "flag":
+      return (
+        Math.hypot(number("width"), number("height"), number("poleHeight")) / 2
+      );
+    case "weapon":
+      return number("length") / 2;
+    case "primitive-prop": {
+      const shape = recipe.parameters.shape;
+      if (shape === "sphere") return number("radius");
+      if (shape === "capsule") return number("radius") + number("height") / 2;
+      if (shape === "cylinder" || shape === "cone")
+        return Math.hypot(number("radius"), number("height") / 2);
+      if (shape === "plane")
+        return Math.hypot(number("width"), number("depth")) / 2;
+      return Math.hypot(number("width"), number("height"), number("depth")) / 2;
+    }
+  }
 };
 
 const materializeModel = (recipe: IAutoMovieModelRecipe): IAutoMovieModel => {

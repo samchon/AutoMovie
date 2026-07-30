@@ -1,6 +1,9 @@
 import { AutoMovieGuidePass, IAutoMovieRenderSpec } from "../cinematics";
 import { IAutoMovieVector3 } from "../geometry";
-import { IAutoMovieDiagnostic } from "./IAutoMovieProductionCompiler";
+import {
+  AutoMovieFilmTime,
+  IAutoMovieDiagnostic,
+} from "./IAutoMovieProductionCompiler";
 import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
 
 /** A point, actor or named world anchor used by geometry queries. */
@@ -74,10 +77,32 @@ export type AutoMovieGeometryQuery =
       };
     }
   | {
-      /** Formation bounds and slot query. */
+      /** Compact formation bounds, budget, representative and LOD query. */
       query: "formation";
       /** Formation id. */
       formation: string;
+      /** Optional participating shot used for camera-distance LOD summary. */
+      shot?: string;
+      /** Optional shot-local sample time, zero by default. */
+      time?: number;
+    }
+  | {
+      /** Bounded deterministic effect activity and visibility-risk query. */
+      query: "effect";
+      /** Existing world effect-zone id. */
+      zone: string;
+      /** Participating compiled shot id. */
+      shot: string;
+      /** Shot-local sample time. */
+      time: number;
+      /** Optional compiled scene-node ids tested against the zone. */
+      subjects?: string[];
+    }
+  | {
+      /** Resolve one film-global frame through the canonical edit timeline. */
+      query: "film-time";
+      /** Exact global frame or frame-grid second. */
+      at: AutoMovieFilmTime;
     }
   | {
       /**
@@ -214,10 +239,61 @@ export interface IAutoMoviePreviewFrameOutput {
   diagnostics: IAutoMovieDiagnostic[];
 }
 
+/** Versioned, comparable identity of the host capture runtime. */
+export interface IAutoMovieCaptureRuntimeIdentity {
+  /** Capture identity schema and semantics. */
+  protocolVersion: "automovie.capture-runtime.v1";
+  /** Exact Playwright package that selected and launched the browser. */
+  playwright: {
+    /** Package name. */
+    package: "playwright";
+    /** Installed package version. */
+    version: string;
+  };
+  /** Exact browser executable provenance. */
+  browser: {
+    /** Browser product family. */
+    product: "chromium" | "chrome" | "msedge";
+    /** Runtime-reported browser version. */
+    version: string;
+    /** Playwright browser revision, unavailable for a system channel. */
+    revision: string | null;
+    /** How the executable was selected. */
+    source: "package-owned" | "system-channel" | "configured-executable";
+    /** SHA-256 of the executable, unavailable only for a system channel. */
+    executableDigest: AutoMovieContentDigest | null;
+  };
+  /** Host operating-system boundary. */
+  platform: {
+    /** Node platform name. */
+    os: string;
+    /** Node architecture name. */
+    arch: string;
+  };
+  /** Browser launch and raster mode. */
+  mode: {
+    /** Explicit headless implementation. */
+    headless: "chromium";
+    /** Exact viewport scale. */
+    deviceScaleFactor: number;
+  };
+  /** Requested and actual WebGL identity. */
+  graphics: {
+    /** Requested ANGLE/backend selection. */
+    requestedBackend: string;
+    /** Actual canvas graphics API. */
+    api: "webgl" | "webgl2";
+    /** Runtime-reported WebGL vendor. */
+    vendor: string;
+    /** Runtime-reported WebGL renderer. */
+    renderer: string;
+  };
+}
+
 /** Content-addressed manifest for preview and production frames. */
 export interface IAutoMovieRenderBundleManifest {
   /** Bundle manifest format. */
-  version: 2;
+  version: 3;
   /** Shot or film render target. */
   target:
     | {
@@ -234,10 +310,7 @@ export interface IAutoMovieRenderBundleManifest {
       };
   /** Compile fingerprint whose bytes were rendered. */
   compileFingerprint: AutoMovieContentDigest;
-  /**
-   * Non-blank host-declared browser and graphics-backend identity used for
-   * every frame in this bundle.
-   */
+  /** Canonical JSON encoding of one validated capture runtime identity. */
   rendererIdentity: string;
   /**
    * Target-local render identity. Unlike the aggregate compile fingerprint,
@@ -278,11 +351,8 @@ export type AutoMovieProductionFrameCapture = (
 ) => Promise<{
   /** Raw PNG bytes. */
   bytes: Uint8Array;
-  /**
-   * Non-blank browser and graphics-backend identity. A host must change this
-   * when either implementation can change pixel output.
-   */
-  rendererIdentity: string;
+  /** Structured browser, executable, mode, platform, and graphics identity. */
+  runtimeIdentity: IAutoMovieCaptureRuntimeIdentity;
   /** Pixel width. */
   width: number;
   /** Pixel height. */

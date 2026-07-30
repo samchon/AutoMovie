@@ -5,6 +5,8 @@
   "version": "0.1.0",
   "description": "An AutoMovie coding-agent production repository.",
   "scripts": {
+    "capture:doctor": "tsx scripts/capture-doctor.ts",
+    "capture:install": "tsx scripts/capture-install.ts",
     "compile": "tsx scripts/compile.ts",
     "lint": "ttsc --noEmit -p tsconfig.json && tsx scripts/lint.ts",
     "preview": "tsx scripts/preview.ts",
@@ -20,13 +22,17 @@
     "@automovie/mcp": "{{version:mcp}}",
     "@automovie/viewer": "{{version:viewer}}",
     "@modelcontextprotocol/sdk": "{{version:mcpSdk}}",
+    "h264-mp4-encoder": "{{version:h264Mp4Encoder}}",
+    "mp4box": "{{version:mp4box}}",
+    "pngjs": "{{version:pngjs}}",
     "three": "{{version:three}}"
   },
   "devDependencies": {
     "@ttsc/lint": "{{version:ttscLint}}",
     "@types/node": "{{version:nodeTypes}}",
+    "@types/pngjs": "{{version:pngjsTypes}}",
     "@types/three": "{{version:threeTypes}}",
-    "playwright-core": "{{version:playwrightCore}}",
+    "playwright": "{{version:playwright}}",
     "ttsc": "{{version:ttsc}}",
     "tsx": "^4.19.0",
     "typescript": "{{version:typescript}}",

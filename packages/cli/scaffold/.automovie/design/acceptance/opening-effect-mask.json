@@ -1,0 +1,11 @@
+{
+  "id": "opening-effect-mask",
+  "target": { "kind": "shot", "id": "opening" },
+  "criterion": {
+    "kind": "frame",
+    "frame": "signal-apex",
+    "pass": "mask",
+    "expectation": "The active signal smoke has visible bounded structural coverage without obscuring the sentinel or promoted formation heroes."
+  },
+  "required": true
+}
