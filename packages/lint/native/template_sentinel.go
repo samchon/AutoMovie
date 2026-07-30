@@ -61,8 +61,10 @@ func (templateSentinelRule) Check(ctx *rule.Context, node *shimast.Node) {
 func isSentinelBoundary(content string, start int, end int) bool {
 	before, _ := utf8.DecodeLastRuneInString(content[:start])
 	after, _ := utf8.DecodeRuneInString(content[end:])
-	return (start == 0 || !isIdentifierContinue(before)) &&
-		(end == len(content) || !isIdentifierContinue(after))
+	return (start == 0 ||
+		!isIdentifierContinue(before) && !identifierEscapeEndsAt(content, start)) &&
+		(end == len(content) ||
+			!isIdentifierContinue(after) && !identifierEscapeStartsAt(content, end))
 }
 
 func isIdentifierContinue(value rune) bool {
@@ -73,7 +75,55 @@ func isIdentifierContinue(value rune) bool {
 		unicode.IsLetter(value) ||
 		unicode.IsDigit(value) ||
 		unicode.IsMark(value) ||
-		unicode.Is(unicode.Pc, value)
+		unicode.Is(unicode.Pc, value) ||
+		value == '\u00b7' ||
+		value == '\u0387' ||
+		value == '\u1369' ||
+		value == '\u19da'
+}
+
+func identifierEscapeStartsAt(content string, start int) bool {
+	if start+6 <= len(content) &&
+		content[start] == '\\' &&
+		content[start+1] == 'u' &&
+		isHex(content[start+2:start+6]) {
+		return true
+	}
+	if start+4 > len(content) ||
+		content[start:start+3] != "\\u{" {
+		return false
+	}
+	close := strings.IndexByte(content[start+3:], '}')
+	return close >= 1 && close <= 6 &&
+		isHex(content[start+3:start+3+close])
+}
+
+func identifierEscapeEndsAt(content string, end int) bool {
+	if end >= 6 &&
+		content[end-6:end-4] == "\\u" &&
+		isHex(content[end-4:end]) {
+		return true
+	}
+	if end < 5 || content[end-1] != '}' {
+		return false
+	}
+	open := strings.LastIndex(content[:end-1], "\\u{")
+	return open >= 0 && end-open >= 5 && end-open <= 10 &&
+		isHex(content[open+3:end-1])
+}
+
+func isHex(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, digit := range value {
+		if !(digit >= '0' && digit <= '9' ||
+			digit >= 'a' && digit <= 'f' ||
+			digit >= 'A' && digit <= 'F') {
+			return false
+		}
+	}
+	return true
 }
 
 func init() { rule.Register(templateSentinelRule{}) }

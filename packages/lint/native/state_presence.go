@@ -5,7 +5,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"unicode"
 
 	"github.com/samchon/ttsc/packages/lint/rule"
 )
@@ -192,6 +194,14 @@ func slotPresent(root string, patterns []string) (bool, string) {
 		}
 		if !isProjectGlob(pattern) {
 			location := filepath.Join(root, filepath.FromSlash(pattern))
+			missing, ancestryProblem := inspectPhysicalProjectPath(root, location)
+			if ancestryProblem != "" {
+				problems = append(problems, ancestryProblem)
+				continue
+			}
+			if missing {
+				continue
+			}
 			info, err := os.Lstat(location)
 			if err == nil && info.Mode().IsRegular() {
 				return true, ""
@@ -243,6 +253,13 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 	if len(prefix) != 0 {
 		base = filepath.Join(root, filepath.FromSlash(strings.Join(prefix, "/")))
 	}
+	missing, ancestryProblem := inspectPhysicalProjectPath(root, base)
+	if ancestryProblem != "" {
+		return false, ancestryProblem
+	}
+	if missing {
+		return false, ""
+	}
 	baseInfo, err := os.Lstat(base)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -259,12 +276,27 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 		return false, ""
 	}
 	found := false
+	problems := make([]string, 0)
 	err = filepath.WalkDir(base, func(location string, entry fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			relative, relativeError := filepath.Rel(root, location)
+			if relativeError != nil {
+				problems = append(problems, relativeError.Error())
+				return nil
+			}
+			candidateSegments := strings.Split(filepath.ToSlash(relative), "/")
+			patternSegments := strings.Split(pattern, "/")
+			if matchProjectGlob(patternSegments, candidateSegments) ||
+				matchProjectGlobPrefix(patternSegments, candidateSegments) {
+				problems = append(problems, err.Error())
+			}
+			if entry != nil && entry.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
 		}
 		if found {
-			return nil
+			return fs.SkipAll
 		}
 		relative, relativeError := filepath.Rel(root, location)
 		if relativeError != nil {
@@ -276,7 +308,10 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 			candidateSegments := strings.Split(candidate, "/")
 			if matchProjectGlob(patternSegments, candidateSegments) ||
 				matchProjectGlobPrefix(patternSegments, candidateSegments) {
-				return &symlinkPresenceError{path: candidate}
+				problems = append(
+					problems,
+					(&symlinkPresenceError{path: candidate}).Error(),
+				)
 			}
 			return nil
 		}
@@ -285,20 +320,30 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 		}
 		info, infoError := entry.Info()
 		if infoError != nil {
-			return infoError
+			if matchProjectGlob(
+				strings.Split(pattern, "/"),
+				strings.Split(candidate, "/"),
+			) {
+				problems = append(problems, infoError.Error())
+			}
+			return nil
 		}
 		if !info.Mode().IsRegular() {
 			return nil
 		}
 		if matchProjectGlob(strings.Split(pattern, "/"), strings.Split(candidate, "/")) {
 			found = true
+			return fs.SkipAll
 		}
 		return nil
 	})
-	if err != nil {
+	if err != nil && err != fs.SkipAll {
 		return false, err.Error()
 	}
-	return found, ""
+	if found {
+		return true, ""
+	}
+	return false, strings.Join(problems, "; ")
 }
 
 type symlinkPresenceError struct {
@@ -312,6 +357,39 @@ func (error *symlinkPresenceError) Error() string {
 
 func isProjectGlob(pattern string) bool {
 	return strings.ContainsAny(pattern, "*?")
+}
+
+func inspectPhysicalProjectPath(root string, location string) (bool, string) {
+	relative, err := filepath.Rel(root, location)
+	if err != nil || relative == ".." ||
+		strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return false, "path escapes the physical TypeScript project root"
+	}
+	current := root
+	segments := []string{}
+	if relative != "." {
+		segments = strings.Split(relative, string(filepath.Separator))
+	}
+	for _, segment := range segments {
+		current = filepath.Join(current, segment)
+		info, pathError := os.Lstat(current)
+		if pathError != nil {
+			if os.IsNotExist(pathError) {
+				return true, ""
+			}
+			return false, pathError.Error()
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return false, "path '" + filepath.ToSlash(relative) +
+				"' crosses symbolic link '" +
+				filepath.ToSlash(strings.TrimPrefix(
+					current,
+					root+string(filepath.Separator),
+				)) +
+				"' rather than staying in project-owned files"
+		}
+	}
+	return false, ""
 }
 
 func hasWindowsDrivePrefix(value string) bool {
@@ -362,8 +440,16 @@ func matchProjectSegment(pattern []rune, candidate []rune) bool {
 	if len(candidate) == 0 {
 		return false
 	}
-	return (pattern[0] == '?' || pattern[0] == candidate[0]) &&
+	return (pattern[0] == '?' ||
+		equalProjectPathRune(pattern[0], candidate[0])) &&
 		matchProjectSegment(pattern[1:], candidate[1:])
+}
+
+func equalProjectPathRune(left rune, right rune) bool {
+	if runtime.GOOS != "windows" {
+		return left == right
+	}
+	return unicode.ToLower(left) == unicode.ToLower(right)
 }
 
 func init() {
