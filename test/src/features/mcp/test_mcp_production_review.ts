@@ -96,25 +96,40 @@ const worksheet = (
   complete = true,
 ): IAutoMovieSubmitReviewInput => {
   const graph = project.graph();
+  const preparedShotIds = new Set(
+    prepared.frames.flatMap((frame) =>
+      frame.target.kind === "shot" ? [frame.target.id] : [],
+    ),
+  );
   const visualTarget =
     prepared.target.kind === "shot" ||
     prepared.target.kind === "sequence" ||
     prepared.target.kind === "film"
       ? prepared.target
       : null;
+  const acceptanceAddressesVisualTarget = (
+    scenario: ReturnType<typeof acceptanceScenarios>[number],
+  ): boolean => {
+    if (visualTarget === null) return false;
+    if (visualTarget.kind === "film") return true;
+    const addressedShots = new Set([
+      ...(scenario.target.kind === "shot" ? [scenario.target.id] : []),
+      ...((scenario.criterion.kind === "frame" ||
+        scenario.criterion.kind === "event") &&
+      scenario.criterion.shot !== undefined
+        ? [scenario.criterion.shot]
+        : []),
+    ]);
+    return visualTarget.kind === "sequence"
+      ? [...addressedShots].some((shot) => preparedShotIds.has(shot))
+      : addressedShots.has(visualTarget.id);
+  };
   const requiredAcceptance =
     visualTarget !== null
       ? [...graph.acceptance.values()]
           .filter(
             (scenario) =>
-              scenario.required &&
-              (visualTarget.kind === "film" ||
-                (visualTarget.kind !== "sequence" &&
-                  scenario.target.kind === "shot" &&
-                  scenario.target.id === visualTarget.id) ||
-                ((scenario.criterion.kind === "frame" ||
-                  scenario.criterion.kind === "event") &&
-                  scenario.criterion.shot === visualTarget.id)),
+              scenario.required && acceptanceAddressesVisualTarget(scenario),
           )
           .sort((left, right) => left.id.localeCompare(right.id))
       : [];
