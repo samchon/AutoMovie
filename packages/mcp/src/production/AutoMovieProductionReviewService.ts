@@ -590,6 +590,27 @@ const validateWorksheet = (
         "review-evidence-missing",
         "A visual target cannot complete without a verified current frame. Capture and cite one required frame.",
       );
+    if (input.target.kind === "asset") {
+      const cited = new Set(
+        input.checks.flatMap((check) =>
+          check.evidence.flatMap((evidence) =>
+            evidence.kind === "frame" &&
+            evidence.target.kind === "asset" &&
+            evidence.target.id === input.target.id
+              ? [evidence.reviewFrame]
+              : [],
+          ),
+        ),
+      );
+      const missing = prepared.frames
+        .map((frame) => frame.reviewFrame)
+        .filter((reviewFrame) => cited.has(reviewFrame) === false);
+      if (missing.length !== 0)
+        add(
+          "review-asset-view-coverage-incomplete",
+          `A completed asset review must cite every required current view digest. Missing: ${missing.join(", ")}.`,
+        );
+    }
     for (const criterion of highRiskCriteria(input.target)) {
       if (input.completionBasis.includes(criterion) === false)
         add(
@@ -1289,8 +1310,6 @@ const reviewTargets = (
       kind: "design",
       design: { kind: "production" },
     });
-  for (const id of graph.models.keys())
-    targets.push({ kind: "design", design: { kind: "model", id } });
   for (const id of consumedModelIds(project, context))
     targets.push({ kind: "asset", id });
   if (graph.world !== null)
@@ -2566,7 +2585,7 @@ const currentRenderTargetFingerprint = (
 ): AutoMovieContentDigest => {
   if (context === undefined)
     return productionRenderTargetFingerprint(project, generated, target);
-  const key = reviewTargetKey(target);
+  const key = canonicalizeAutoMovieJson(target);
   const retained = context.renderTargetFingerprints.get(key);
   if (retained !== undefined) return retained;
   context.renderContentInputs ??= project.contentInputs();

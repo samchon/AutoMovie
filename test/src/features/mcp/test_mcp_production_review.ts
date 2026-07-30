@@ -175,7 +175,9 @@ const worksheet = (
                 ? [contractEvidence]
                 : [frameEvidenceOf(frame), contractEvidence];
             })
-          : [evidenceOf(project, prepared, index)];
+          : prepared.target.kind === "asset" && index === 0
+            ? prepared.frames.map(frameEvidenceOf)
+            : [evidenceOf(project, prepared, index)];
       return {
         criterion,
         verdict: complete || index !== 0 ? "pass" : "revise",
@@ -447,6 +449,22 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const assetPrepared = review.prepare({
       target: { kind: "asset", id: "sentinel" },
     });
+    const missingAssetView = worksheet(project, assetPrepared);
+    for (const check of missingAssetView.checks)
+      check.evidence = check.evidence.filter(
+        (evidence) =>
+          evidence.kind !== "frame" ||
+          evidence.reviewFrame !== "rig-rom-extremes",
+      );
+    TestValidator.predicate(
+      "asset completion refuses a worksheet that omits one required view digest",
+      review
+        .submit(missingAssetView)
+        .diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-asset-view-coverage-incomplete",
+        ),
+    );
     const assetSubmitted = review.submit(worksheet(project, assetPrepared));
     TestValidator.predicate(
       "a consumed asset requires every isolated current view and can then discharge its production-local gate",
@@ -1626,6 +1644,39 @@ export const test_mcp_production_review = async (): Promise<void> => {
     );
     const filmTarget = { kind: "film" as const, id: "fixture-film" };
     const storedShotReview = project.review(shotTarget)!;
+    const legacyShotReview = JSON.parse(
+      JSON.stringify(storedShotReview),
+    ) as Record<string, unknown> & {
+      checks: Array<{ evidence: Array<Record<string, unknown>> }>;
+    };
+    for (const check of legacyShotReview.checks)
+      for (const evidence of check.evidence)
+        if (
+          evidence.kind === "frame" &&
+          typeof evidence.target === "object" &&
+          evidence.target !== null &&
+          (evidence.target as Record<string, unknown>).kind === "shot"
+        ) {
+          evidence.shot = (evidence.target as Record<string, unknown>).id;
+          delete evidence.target;
+        }
+    fs.writeFileSync(
+      project.reviewPath(shotTarget),
+      `${JSON.stringify(legacyShotReview, null, 2)}\n`,
+    );
+    const normalizedLegacyShotReview = project.review(shotTarget);
+    TestValidator.predicate(
+      "legacy v1 shot-frame evidence is normalized before current schema validation",
+      normalizedLegacyShotReview?.checks.some((check) =>
+        check.evidence.some(
+          (evidence) =>
+            evidence.kind === "frame" &&
+            evidence.target.kind === "shot" &&
+            evidence.target.id === shotTarget.id,
+        ),
+      ) === true,
+    );
+    project.commitReview(storedShotReview);
     const filmBeforeChildReviewChange = review.prepare({
       target: filmTarget,
     }).fingerprint;

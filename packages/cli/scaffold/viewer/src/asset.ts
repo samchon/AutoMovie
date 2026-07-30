@@ -1,5 +1,16 @@
+import {
+  HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
+  clampPose,
+  getConstraint,
+} from "@automovie/engine";
 import type { AutoMovieGuidePass, IAutoMovieModel } from "@automovie/interface";
-import { applyRenderMode, buildModel, mountViewer } from "@automovie/viewer";
+import {
+  applyPose,
+  applyRenderMode,
+  buildModel,
+  mountViewer,
+} from "@automovie/viewer";
 import * as THREE from "three";
 
 import { viewerDocument } from "./viewerDocument";
@@ -26,7 +37,7 @@ if (pose === "rom-extremes") {
     throw new Error(
       `Compiled model "${assetId}" has no skeleton for a ROM-extremes view.`,
     );
-  applyRomExtremes(built.bones);
+  applyRomExtremes(model, built);
 }
 const scene = new THREE.Scene();
 scene.add(built.object);
@@ -80,19 +91,41 @@ function finiteParameter(name: string): number | null {
 }
 
 function applyRomExtremes(
-  bones: ReadonlyMap<
-    import("@automovie/interface").AutoMovieHumanoidBone,
-    THREE.Object3D
-  >,
+  source: IAutoMovieModel,
+  target: ReturnType<typeof buildModel>,
 ): void {
-  bones.get("leftUpperArm")?.rotateZ(Math.PI * 0.58);
-  bones.get("rightUpperArm")?.rotateZ(-Math.PI * 0.58);
-  bones.get("leftLowerArm")?.rotateY(-Math.PI * 0.42);
-  bones.get("rightLowerArm")?.rotateY(Math.PI * 0.42);
-  bones.get("leftUpperLeg")?.rotateX(-Math.PI * 0.38);
-  bones.get("rightUpperLeg")?.rotateX(Math.PI * 0.28);
-  bones.get("leftLowerLeg")?.rotateX(Math.PI * 0.52);
-  bones.get("rightLowerLeg")?.rotateX(Math.PI * 0.34);
-  bones.get("spine")?.rotateY(Math.PI * 0.18);
-  built.object.updateMatrixWorld(true);
+  if (source.skeleton === null)
+    throw new Error(`Compiled model "${source.id}" has no skeleton.`);
+  const pose = clampPose(
+    {
+      skeleton: source.skeleton.id,
+      root: null,
+      joints: source.skeleton.bones.flatMap((bone) => {
+        const constraint = getConstraint(bone.bone, bone.constraint);
+        return constraint === null
+          ? []
+          : [
+              {
+                bone: bone.bone,
+                flexion: constraint.flexion?.max ?? null,
+                abduction: constraint.abduction?.max ?? null,
+                twist: constraint.twist?.max ?? null,
+              },
+            ];
+      }),
+    },
+    source.skeleton,
+  );
+  const skipped = applyPose(
+    target,
+    pose,
+    source.skeleton,
+    HUMANOID_JOINT_AXES,
+    HUMANOID_REST_FRAME,
+  );
+  if (skipped.length !== 0)
+    throw new Error(
+      `Compiled model "${source.id}" did not map ROM bones: ${skipped.join(", ")}.`,
+    );
+  target.object.updateMatrixWorld(true);
 }

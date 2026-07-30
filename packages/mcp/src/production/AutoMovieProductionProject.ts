@@ -2581,7 +2581,41 @@ const validateGeneratedManifest = (
 const validateStoredReview = (
   input: unknown,
 ): IValidation<IAutoMovieStoredReview> =>
-  typia.validateEquals<IAutoMovieStoredReview>(input);
+  typia.validateEquals<IAutoMovieStoredReview>(
+    normalizeLegacyStoredReview(input),
+  );
+
+const normalizeLegacyStoredReview = (input: unknown): unknown => {
+  if (typeof input !== "object" || input === null) return input;
+  const source = input as Record<string, unknown>;
+  if (source.version !== 1 || Array.isArray(source.checks) === false)
+    return input;
+  let changed = false;
+  const checks = source.checks.map((check) => {
+    if (typeof check !== "object" || check === null) return check;
+    const record = check as Record<string, unknown>;
+    if (Array.isArray(record.evidence) === false) return check;
+    const evidence = record.evidence.map((item) => {
+      if (
+        typeof item !== "object" ||
+        item === null ||
+        (item as Record<string, unknown>).kind !== "frame"
+      )
+        return item;
+      const frame = item as Record<string, unknown>;
+      if (frame.target !== undefined || typeof frame.shot !== "string")
+        return item;
+      changed = true;
+      const { shot, ...current } = frame;
+      return {
+        ...current,
+        target: { kind: "shot", id: shot },
+      };
+    });
+    return { ...record, evidence };
+  });
+  return changed ? { ...source, checks } : input;
+};
 const validateScreenplayIndex = (
   input: unknown,
 ): IValidation<IAutoMovieScreenplayIndex> =>
