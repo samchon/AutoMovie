@@ -15,7 +15,7 @@ Every tool's JSON schema is derived at compile time via
 The default compact server derives its execute union from
 [`AutoMovieLegacyApplication`](./src/AutoMovieLegacyApplication.ts) through
 [`AutoMovieGatewayApplication`](./src/AutoMovieGatewayApplication.ts); the
-coding-agent production server derives its 15 direct tools from canonical
+coding-agent production server derives its 16 direct tools from canonical
 [`AutoMovieApplication`](./src/AutoMovieApplication.ts).
 
 The MCP initialize handshake advertises `automovie` with the installed
@@ -273,7 +273,7 @@ starter with `npx automovie start <dir>` ([`@automovie/cli`](../cli)).
 ```bash
 # dev (in-workspace, transpiled by ttsx)
 pnpm --filter @automovie/mcp start        # = ttsx src/bin.ts
-pnpm --filter @automovie/mcp start:production # 15-tool coding-agent surface
+pnpm --filter @automovie/mcp start:production # 16-tool coding-agent surface
 pnpm --filter @automovie/mcp start:granular # 47-tool compatibility surface
 
 # built (published): the bin runs the compiled server

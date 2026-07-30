@@ -14,7 +14,7 @@ const MCP_PACKAGE_VERSION = (
 /**
  * Build the opt-in coding-agent production MCP surface. It is measured beside
  * the current compact gateway before becoming the default. The server exposes
- * 15 narrow design/compiler/oracle/review tools directly, with no giant execute
+ * 16 narrow design/compiler/oracle/review tools directly, with no giant execute
  * union and no internal LLM.
  */
 export const createAutoMovieProductionMcpServer = (props?: {

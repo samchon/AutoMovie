@@ -33,7 +33,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `model/` | **3D 모델**: 프리미티브/메쉬 형상(`AutoMoviePrimitiveShape`, `IAutoMovieMesh`, `IAutoMovieGeometry`), 파트(`IAutoMovieModelPart`), 모델(`IAutoMovieModel`). 스켈레톤 유무로 캐릭터/사물 통합 |
 | `skeleton/` | 휴머노이드 본 열거형, 스켈레톤·본·관절 제약(ROM) 타입 |
 | `pose/` | 정적 포즈: 휴머노이드 의미 각도 |
-| `production/` | 코딩 에이전트 제작 계약: `application/`의 15개 MCP 입력·결과 쌍, 설계, 컴파일 소유권, 기하 질의, 증거 기반 리뷰, 렌더 번들 |
+| `production/` | 코딩 에이전트 제작 계약: `application/`의 16개 MCP 입력·결과 쌍, 설계, 컴파일 소유권, 기하 질의, 증거 기반 리뷰, 렌더 번들 |
 | `expression/` | 표정: ARKit 52 채널, VRM expression preset |
 | `face/` | **Dormant boundary**: 결정 001 이후 보존만 하는 face/head 파라미터 문서. 현재 motion-first 하니스의 주 저작 표면은 아니며, face editor 재개 시 호환 자산으로 쓴다. |
 | `motion/` | 시간 모션: 키프레임 + 이징 |

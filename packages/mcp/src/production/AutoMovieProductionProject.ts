@@ -123,6 +123,7 @@ export class AutoMovieProductionProject {
   private readonly sharedLockPath: string;
   private readonly initialized_: boolean;
   private readonly incarnation_: string;
+  private readonly productionIncarnation_: string;
   private manifest_: IAutoMovieProductionManifest & Record<string, unknown>;
   private lastReadRevision_: number;
   private deleted_ = false;
@@ -177,6 +178,7 @@ export class AutoMovieProductionProject {
     validateOwnershipLayout(this.root, this.manifest_, this.manifestPath);
     const registration = this.activateProduction(requestedProductionId);
     this.productionId = registration.productionId;
+    this.productionIncarnation_ = registration.incarnation;
     this.productionSegment = encodeId(this.productionId);
     this.productionStateRoot = path.join(
       this.automovieRoot,
@@ -224,21 +226,26 @@ export class AutoMovieProductionProject {
 
   private mkdirOwned(directory: string): void {
     this.assertProjectRootIdentity();
-    assertRealAncestorInside(this.rootReal, directory);
+    assertPhysicalDirectoryAncestors(this.rootReal, directory, true);
     fs.mkdirSync(directory, {
       recursive: true,
     });
-    assertRealAncestorInside(this.rootReal, directory);
+    assertPhysicalDirectoryAncestors(this.rootReal, directory, false);
     this.assertProjectRootIdentity();
   }
 
   private writeOwnedJsonAtomic(file: string, value: unknown): void {
     this.assertProjectRootIdentity();
+    assertPhysicalDirectoryAncestors(this.rootReal, path.dirname(file), false);
+    assertOwnedRegularFile(this.rootReal, file);
     writeJsonAtomic(file, value);
+    assertPhysicalDirectoryAncestors(this.rootReal, path.dirname(file), false);
+    assertOwnedRegularFile(this.rootReal, file);
     this.assertProjectRootIdentity();
   }
 
   private activateProduction(requestedProductionId?: string): {
+    incarnation: string;
     legacy: boolean;
     productionId: string;
   } {
@@ -249,6 +256,7 @@ export class AutoMovieProductionProject {
             version: 1 as const,
             layoutVersion: 0,
             productions: [] as string[],
+            incarnations: {} as Record<string, string>,
           }
         : validateProductionRegistry(stored, this.registryPath);
     const legacyId = legacyProductionId(this.rootReal, this.automovieRoot);
@@ -260,6 +268,7 @@ export class AutoMovieProductionProject {
       throw new Error(
         "openProject productionId must be a trimmed non-empty stable id.",
       );
+    if (productionId !== undefined) validateProductionId(productionId);
     if (
       registry.layoutVersion === 0 &&
       legacyId !== null &&
@@ -278,68 +287,78 @@ export class AutoMovieProductionProject {
         );
       else productionId = legacyId ?? this.manifest_.projectId;
     }
-    encodeId(productionId);
+    validateProductionId(productionId);
     if (productionId.toLowerCase() === "shared")
       throw new Error(
         'Production id "shared" is reserved for project-level design assets. Choose another stable id.',
       );
+    const productionKey = portableProductionKey(productionId);
     const collision = registry.productions.find(
       (candidate) =>
-        candidate.toLowerCase() === productionId.toLowerCase() &&
+        portableProductionKey(candidate) === productionKey &&
         candidate !== productionId,
     );
     if (collision !== undefined)
       throw new Error(
         `Production id "${productionId}" collides with registered production "${collision}" on a case-insensitive filesystem. Choose one portable spelling.`,
       );
-    if (registry.productions.includes(productionId) === false)
+    this.preflightProductionNamespace(productionId);
+    if (registry.productions.includes(productionId) === false) {
       registry.productions.push(productionId);
+      registry.incarnations[productionId] = randomUUID();
+    } else if (registry.incarnations[productionId] === undefined)
+      registry.incarnations[productionId] = randomUUID();
     registry.productions.sort(compareCodeUnits);
     const legacy = registry.layoutVersion !== 1;
     this.writeOwnedJsonAtomic(this.registryPath, registry);
-    return { legacy, productionId };
+    return {
+      incarnation: registry.incarnations[productionId]!,
+      legacy,
+      productionId,
+    };
+  }
+
+  private preflightProductionNamespace(productionId: string): void {
+    const segment = encodeId(productionId);
+    for (const directory of [
+      path.join(this.automovieRoot, "design", "shared"),
+      path.join(this.automovieRoot, "design", segment),
+      path.join(this.automovieRoot, "reviews", segment),
+      path.join(this.automovieRoot, "productions", segment),
+      path.join(
+        this.resolveOwnedDirectory(this.manifest_.generatedRoot),
+        segment,
+      ),
+      path.join(this.resolveOwnedDirectory(this.manifest_.renderRoot), segment),
+    ])
+      assertPhysicalDirectoryAncestors(this.rootReal, directory, true);
   }
 
   private migrateLegacyProductionLayout(): void {
-    const move = (source: string, destination: string): void => {
-      const sourceState = lstatOrNull(source);
-      const destinationState = lstatOrNull(destination);
-      if (sourceState === null) return;
-      if (sourceState.isSymbolicLink())
-        throw new Error(
-          `Legacy production path "${source}" is a symlink or junction. Replace it with project-owned files before migration.`,
-        );
-      if (destinationState !== null)
-        throw new Error(
-          `Legacy production path "${source}" and namespaced destination "${destination}" both exist. Keep one authoritative copy before reopening the project.`,
-        );
-      this.mkdirOwned(path.dirname(destination));
-      fs.renameSync(source, destination);
-      this.assertProjectRootIdentity();
-    };
+    const moves: Array<{ source: string; destination: string }> = [];
     for (const directory of ["models", "formations"])
-      move(
-        path.join(this.automovieRoot, "design", directory),
-        path.join(this.sharedDesignRoot, directory),
-      );
-    move(
-      path.join(this.automovieRoot, "design", "world.json"),
-      path.join(this.sharedDesignRoot, "world.json"),
-    );
-    move(
-      path.join(this.automovieRoot, "design", "production.json"),
-      path.join(this.productionDesignRoot, "production.json"),
-    );
+      moves.push({
+        source: path.join(this.automovieRoot, "design", directory),
+        destination: path.join(this.sharedDesignRoot, directory),
+      });
+    moves.push({
+      source: path.join(this.automovieRoot, "design", "world.json"),
+      destination: path.join(this.sharedDesignRoot, "world.json"),
+    });
+    moves.push({
+      source: path.join(this.automovieRoot, "design", "production.json"),
+      destination: path.join(this.productionDesignRoot, "production.json"),
+    });
     for (const directory of ["shots", "acceptance"])
-      move(
-        path.join(this.automovieRoot, "design", directory),
-        path.join(this.productionDesignRoot, directory),
-      );
+      moves.push({
+        source: path.join(this.automovieRoot, "design", directory),
+        destination: path.join(this.productionDesignRoot, directory),
+      });
     for (const directory of ["design", "source", "shots", "film"])
-      move(
-        path.join(this.automovieRoot, "reviews", directory),
-        path.join(this.reviewRoot, directory),
-      );
+      moves.push({
+        source: path.join(this.automovieRoot, "reviews", directory),
+        destination: path.join(this.reviewRoot, directory),
+      });
     for (const entry of [
       "revision.json",
       "generated-manifest.json",
@@ -348,47 +367,88 @@ export class AutoMovieProductionProject {
       "render-receipts",
       "audit",
     ])
-      move(
-        path.join(this.automovieRoot, entry),
-        path.join(this.productionStateRoot, entry),
-      );
-    this.migrateLegacyOwnedOutputRoot(this.manifest_.generatedRoot);
-    this.migrateLegacyOwnedOutputRoot(this.manifest_.renderRoot);
-    const registry = validateProductionRegistry(
-      readOwnedJson(this.rootReal, this.registryPath),
-      this.registryPath,
-    );
-    registry.layoutVersion = 1;
-    this.writeOwnedJsonAtomic(this.registryPath, registry);
-  }
+      moves.push({
+        source: path.join(this.automovieRoot, entry),
+        destination: path.join(this.productionStateRoot, entry),
+      });
+    for (const relativeRoot of [
+      this.manifest_.generatedRoot,
+      this.manifest_.renderRoot,
+    ]) {
+      const outputRoot = this.resolveOwnedDirectory(relativeRoot);
+      moves.push({
+        source: outputRoot,
+        destination: path.join(outputRoot, this.productionSegment),
+      });
+    }
 
-  private migrateLegacyOwnedOutputRoot(relativeRoot: string): void {
-    const root = this.resolveOwnedDirectory(relativeRoot);
-    const current = lstatOrNull(root);
-    if (current === null) return;
-    if (current.isSymbolicLink() || current.isDirectory() === false)
-      throw new Error(
-        `Legacy owned output root "${root}" is not one physical directory. Correct it before migration.`,
-      );
-    const destination = path.join(root, this.productionSegment);
-    if (lstatOrNull(destination) !== null) return;
     const temporary = path.join(
       this.automovieRoot,
-      `migration-${path.basename(root)}-${randomUUID()}`,
+      `.layout-migration-${randomUUID()}`,
     );
-    fs.renameSync(root, temporary);
+    this.mkdirOwned(temporary);
+    const staged: Array<{
+      source: string;
+      destination: string;
+      temporary: string;
+    }> = [];
+    const published: typeof staged = [];
     try {
-      this.mkdirOwned(root);
-      fs.renameSync(temporary, destination);
+      for (const [index, move] of moves.entries()) {
+        const state = lstatOrNull(move.source);
+        if (state === null) continue;
+        if (state.isSymbolicLink())
+          throw new Error(
+            `Legacy production path "${move.source}" is a symlink or junction. Replace it with project-owned files before migration.`,
+          );
+        const stagedPath = path.join(temporary, String(index).padStart(2, "0"));
+        fs.renameSync(move.source, stagedPath);
+        staged.push({ ...move, temporary: stagedPath });
+      }
+      for (const move of staged) {
+        if (lstatOrNull(move.destination) !== null)
+          throw new Error(
+            `Legacy production path "${move.source}" conflicts with namespaced destination "${move.destination}". Keep one authoritative copy before reopening the project.`,
+          );
+        this.mkdirOwned(path.dirname(move.destination));
+        fs.renameSync(move.temporary, move.destination);
+        published.push(move);
+      }
+      const registry = validateProductionRegistry(
+        readOwnedJson(this.rootReal, this.registryPath),
+        this.registryPath,
+      );
+      registry.layoutVersion = 1;
+      this.writeOwnedJsonAtomic(this.registryPath, registry);
     } catch (error) {
-      if (
-        lstatOrNull(root)?.isDirectory() === true &&
-        fs.readdirSync(root).length === 0
-      )
-        fs.rmdirSync(root);
-      if (lstatOrNull(root) === null && lstatOrNull(temporary) !== null)
-        fs.renameSync(temporary, root);
+      for (const move of [...published].reverse())
+        if (
+          lstatOrNull(move.destination) !== null &&
+          lstatOrNull(move.temporary) === null
+        )
+          fs.renameSync(move.destination, move.temporary);
+      for (const move of [...staged].reverse()) {
+        const existing = lstatOrNull(move.source);
+        if (
+          existing?.isDirectory() === true &&
+          fs.readdirSync(move.source).length === 0
+        )
+          fs.rmdirSync(move.source);
+        if (
+          lstatOrNull(move.source) === null &&
+          lstatOrNull(move.temporary) !== null
+        ) {
+          fs.mkdirSync(path.dirname(move.source), { recursive: true });
+          fs.renameSync(move.temporary, move.source);
+        }
+      }
       throw error;
+    } finally {
+      if (
+        lstatOrNull(temporary)?.isDirectory() === true &&
+        fs.readdirSync(temporary).length === 0
+      )
+        fs.rmdirSync(temporary);
     }
     this.assertProjectRootIdentity();
   }
@@ -896,6 +956,7 @@ export class AutoMovieProductionProject {
       remaining = registry.productions.filter(
         (production) => production !== this.productionId,
       );
+      this.mkdirOwned(path.dirname(auditPath));
       this.writeOwnedJsonAtomic(auditPath, {
         version: 1,
         productionId: this.productionId,
@@ -904,6 +965,11 @@ export class AutoMovieProductionProject {
       this.writeOwnedJsonAtomic(this.registryPath, {
         ...registry,
         productions: remaining,
+        incarnations: Object.fromEntries(
+          Object.entries(registry.incarnations).filter(
+            ([production]) => production !== this.productionId,
+          ),
+        ),
       });
       erased = true;
       this.deleted_ = true;
@@ -1857,6 +1923,17 @@ export class AutoMovieProductionProject {
       throw new AutoMovieProductionInputRaceError(
         "Production state incarnation changed. Discard this project handle and open the project again before reading or mutating it.",
       );
+    const registry = validateProductionRegistry(
+      readOwnedJson(this.rootReal, this.registryPath),
+      this.registryPath,
+    );
+    if (
+      registry.productions.includes(this.productionId) === false ||
+      registry.incarnations[this.productionId] !== this.productionIncarnation_
+    )
+      throw new AutoMovieProductionInputRaceError(
+        `Production "${this.productionId}" was deleted or recreated. Discard this stale handle and open the current production namespace before reading or mutating it.`,
+      );
   }
 
   private assertStateRootIdentity(): void {
@@ -2131,6 +2208,7 @@ interface IAutoMovieProductionRegistry {
   version: 1;
   layoutVersion: number;
   productions: string[];
+  incarnations: Record<string, string>;
 }
 
 const SHARED_DESIGN_DIRECTORIES = ["models", "formations"] as const;
@@ -2317,8 +2395,8 @@ const validateProductionRegistry = (
     );
   const spellings = new Map<string, string>();
   for (const production of record.productions) {
-    encodeId(production);
-    const folded = production.toLowerCase();
+    validateProductionId(production);
+    const folded = portableProductionKey(production);
     const previous = spellings.get(folded);
     if (previous !== undefined)
       throw new Error(
@@ -2326,10 +2404,26 @@ const validateProductionRegistry = (
       );
     spellings.set(folded, production);
   }
+  const incarnationRecord =
+    record.incarnations === undefined ? {} : record.incarnations;
+  if (
+    typeof incarnationRecord !== "object" ||
+    incarnationRecord === null ||
+    Array.isArray(incarnationRecord) ||
+    Object.entries(incarnationRecord).some(
+      ([production, incarnation]) =>
+        record.productions!.includes(production) === false ||
+        isUuid(incarnation) === false,
+    )
+  )
+    throw new Error(
+      `Invalid production registry "${file}". Production incarnations must be UUIDs keyed only by registered production ids.`,
+    );
   return {
     version: 1,
     layoutVersion: record.layoutVersion,
     productions: [...record.productions].sort(compareCodeUnits),
+    incarnations: { ...incarnationRecord },
   };
 };
 
@@ -2952,18 +3046,18 @@ const validateIncarnation = (value: unknown, file: string): string => {
   )?.version;
   const id = (value as { version?: unknown; id?: unknown } | null | undefined)
     ?.id;
-  if (
-    version !== 1 ||
-    typeof id !== "string" ||
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(
-      id,
-    ) === false
-  )
+  if (version !== 1 || isUuid(id) === false)
     throw new Error(
       `Invalid production state incarnation "${file}". Reopen a complete, physical AutoMovie project state.`,
     );
   return id;
 };
+
+const isUuid = (value: unknown): value is string =>
+  typeof value === "string" &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(
+    value,
+  );
 
 const projectIdOf = (root: string): string => path.basename(root).trim();
 
@@ -2989,6 +3083,23 @@ const encodeId = (id: string): string => {
     throw new Error("AutoMovie design and review ids must not be blank.");
   return encodeAutoMoviePathSegment(id);
 };
+
+const validateProductionId = (id: string): void => {
+  if (
+    id.trim().length === 0 ||
+    id.trim() !== id ||
+    id === "." ||
+    id === ".." ||
+    id.endsWith(".")
+  )
+    throw new Error(
+      `Production id "${id}" must be trimmed, non-empty, and must not be ".", "..", or end in a dot. Choose one portable directory identity.`,
+    );
+  encodeId(id);
+};
+
+const portableProductionKey = (id: string): string =>
+  encodeId(id).toLowerCase();
 
 const resolveInside = (root: string, relative: string): string => {
   const resolved = path.resolve(root, relative);
@@ -3051,6 +3162,39 @@ const assertRealAncestorInside = (
       `Owned path "${candidate}" escapes the production root through "${existing}". Replace the symlink or junction with a project-local directory.`,
     );
   return real;
+};
+
+/**
+ * Reject every existing link in an owned directory chain.
+ *
+ * A realpath-inside check alone accepts an internal alias such as `design/beta
+ * -> design/alpha`; walking lstat identities keeps logical production leaves
+ * physically disjoint even when both targets are in-project.
+ */
+const assertPhysicalDirectoryAncestors = (
+  projectRootReal: string,
+  directory: string,
+  allowMissingTail: boolean,
+): void => {
+  const resolved = path.resolve(directory);
+  if (isInside(projectRootReal, resolved) === false)
+    throw new Error(
+      `Owned directory "${directory}" escapes the physical project root.`,
+    );
+  const relative = path.relative(projectRootReal, resolved);
+  let current = projectRootReal;
+  for (const segment of relative === "" ? [] : relative.split(path.sep)) {
+    current = path.join(current, segment);
+    const linked = lstatOrNull(current);
+    if (linked === null) {
+      if (allowMissingTail) return;
+      throw new Error(`Owned directory "${current}" does not exist.`);
+    }
+    if (linked.isSymbolicLink() || linked.isDirectory() === false)
+      throw new Error(
+        `Owned directory "${current}" is not a physical directory. Replace every symlink or junction with a project-owned directory.`,
+      );
+  }
 };
 
 const assertOwnedRootDirectory = (

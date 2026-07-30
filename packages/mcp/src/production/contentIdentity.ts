@@ -47,6 +47,11 @@ export const encodeAutoMoviePathSegment = (value: string): string => {
     (character) =>
       `%${character.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`,
   );
+  // Windows strips trailing dots from path components, while "." and ".."
+  // retain traversal meaning on every supported filesystem. Percent-escape
+  // those spellings so two logical ids never resolve to one physical leaf.
+  if (encoded === "." || encoded === ".." || encoded.endsWith("."))
+    encoded = `${encoded.slice(0, -1)}%2E`;
   if (
     /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|conin\$|conout\$)(?:\.|$)/i.test(
       encoded,

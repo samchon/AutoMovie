@@ -40,6 +40,19 @@ const throws = (closure: () => unknown, signal?: string): boolean => {
  *    first production and shared assets byte-present.
  */
 export const test_mcp_production_namespaces = (): void => {
+  const unsafeIds = productionFixture();
+  try {
+    for (const productionId of [".", "..", "shared.", "film."])
+      TestValidator.predicate(
+        `unsafe production id ${productionId}`,
+        throws(() =>
+          AutoMovieProductionProject.open(unsafeIds.root, productionId),
+        ),
+      );
+  } finally {
+    unsafeIds.dispose();
+  }
+
   const mismatchedLegacy = productionFixture();
   try {
     TestValidator.predicate(
@@ -59,10 +72,16 @@ export const test_mcp_production_namespaces = (): void => {
       fixture.root,
       "generated/legacy-generated.bin",
     );
+    const sameNamedLegacyChild = path.join(
+      fixture.root,
+      "generated/fixture-film/legacy-child.bin",
+    );
     const legacyRender = path.join(fixture.root, "renders/legacy-render.bin");
     fs.mkdirSync(path.dirname(legacyGenerated), { recursive: true });
+    fs.mkdirSync(path.dirname(sameNamedLegacyChild), { recursive: true });
     fs.mkdirSync(path.dirname(legacyRender), { recursive: true });
     fs.writeFileSync(legacyGenerated, "generated");
+    fs.writeFileSync(sameNamedLegacyChild, "same-name-child");
     fs.writeFileSync(legacyRender, "render");
     const alpha = AutoMovieProductionProject.open(fixture.root);
     TestValidator.predicate(
@@ -71,6 +90,10 @@ export const test_mcp_production_namespaces = (): void => {
         path.join(alpha.generatedRoot(), "legacy-generated.bin"),
         "utf8",
       ) === "generated" &&
+        fs.readFileSync(
+          path.join(alpha.generatedRoot(), "fixture-film/legacy-child.bin"),
+          "utf8",
+        ) === "same-name-child" &&
         fs.readFileSync(
           path.join(alpha.renderRoot(), "legacy-render.bin"),
           "utf8",
@@ -257,5 +280,79 @@ export const test_mcp_production_namespaces = (): void => {
     );
   } finally {
     fixture.dispose();
+  }
+
+  const aliasFixture = productionFixture();
+  try {
+    AutoMovieProductionProject.open(aliasFixture.root);
+    const alphaDesignRoot = path.join(
+      aliasFixture.root,
+      ".automovie/design/fixture-film",
+    );
+    const betaDesignRoot = path.join(
+      aliasFixture.root,
+      ".automovie/design/beta",
+    );
+    fs.symlinkSync(
+      alphaDesignRoot,
+      betaDesignRoot,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    TestValidator.predicate(
+      "an internal namespace alias is refused before registration",
+      throws(
+        () => AutoMovieProductionProject.open(aliasFixture.root, "beta"),
+        "not a physical directory",
+      ) &&
+        AutoMovieProductionProject.open(aliasFixture.root, "fixture-film")
+          .productionIds()
+          .includes("beta") === false,
+    );
+  } finally {
+    aliasFixture.dispose();
+  }
+
+  const incarnationFixture = productionFixture();
+  try {
+    const erasing = AutoMovieProductionProject.open(incarnationFixture.root);
+    const stale = AutoMovieProductionProject.open(
+      incarnationFixture.root,
+      "fixture-film",
+    );
+    erasing.eraseProduction("exercise production incarnation fencing");
+    const recreated = AutoMovieProductionProject.open(
+      incarnationFixture.root,
+      "fixture-film",
+    );
+    TestValidator.predicate(
+      "a stale handle cannot cross delete and same-id recreation",
+      recreated.summary().productionId === "fixture-film" &&
+        throws(() => stale.summary(), "deleted or recreated"),
+    );
+  } finally {
+    incarnationFixture.dispose();
+  }
+
+  const auditFixture = productionFixture();
+  const externalAudit = fs.mkdtempSync(
+    path.join(path.dirname(auditFixture.root), "automovie-external-audit-"),
+  );
+  try {
+    const project = AutoMovieProductionProject.open(auditFixture.root);
+    const auditRoot = path.join(auditFixture.root, ".automovie/audit");
+    fs.symlinkSync(
+      externalAudit,
+      auditRoot,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    TestValidator.predicate(
+      "production erase refuses an aliased global audit directory",
+      throws(() => project.eraseProduction("must not escape"), "physical") &&
+        fs.readdirSync(externalAudit).length === 0 &&
+        project.summary().productionId === "fixture-film",
+    );
+  } finally {
+    auditFixture.dispose();
+    fs.rmSync(externalAudit, { force: true, recursive: true });
   }
 };
