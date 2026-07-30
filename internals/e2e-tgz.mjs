@@ -6,7 +6,7 @@
 //
 // Run: pnpm run e2e:tgz
 //
-// Deliberately OUTSIDE the c8 coverage gate: it is slow (six prepack
+// Deliberately OUTSIDE the c8 coverage gate: it is slow (seven prepack
 // builds plus an npm install) and needs registry network for third-party
 // dependencies such as @modelcontextprotocol/sdk.
 import { spawnSync } from "node:child_process";
@@ -30,7 +30,15 @@ const REPO_ROOT = resolve(HERE, "..");
 const KEEP_STAGE = process.env.AUTOMOVIE_E2E_KEEP_STAGE === "1";
 
 // Interface first, CLI last: each runtime dependency packs before its consumer.
-const PACKAGES = ["interface", "engine", "render", "viewer", "mcp", "cli"];
+const PACKAGES = [
+  "interface",
+  "engine",
+  "render",
+  "viewer",
+  "mcp",
+  "lint",
+  "cli",
+];
 let tracePath = null;
 
 const fail = (message) => {
