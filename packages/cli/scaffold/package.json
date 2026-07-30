@@ -28,6 +28,7 @@
     "three": "{{version:three}}"
   },
   "devDependencies": {
+    "@automovie/lint": "{{version:lint}}",
     "@ttsc/lint": "{{version:ttscLint}}",
     "@types/node": "{{version:nodeTypes}}",
     "@types/pngjs": "{{version:pngjsTypes}}",

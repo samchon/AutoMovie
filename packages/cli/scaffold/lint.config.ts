@@ -1,3 +1,4 @@
+import { automovie } from "@automovie/lint";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
 /**
@@ -47,7 +48,11 @@ const config = {
     },
     jsDoc: true,
   },
+  plugins: {
+    automovie,
+  },
   rules: {
+    "automovie/template-sentinel": "error",
     eqeqeq: "error",
     "no-debugger": "error",
     "no-duplicate-imports": "error",

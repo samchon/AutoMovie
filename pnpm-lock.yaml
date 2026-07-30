@@ -243,6 +243,24 @@ importers:
         specifier: catalog:typescript
         version: 7.0.2
 
+  packages/lint:
+    devDependencies:
+      '@ttsc/lint':
+        specifier: catalog:typescript
+        version: 0.23.0
+      '@types/node':
+        specifier: catalog:utils
+        version: 22.19.20
+      rimraf:
+        specifier: catalog:utils
+        version: 6.1.3
+      ttsc:
+        specifier: catalog:typescript
+        version: 0.23.0
+      typescript:
+        specifier: catalog:typescript
+        version: 7.0.2
+
   packages/mcp:
     dependencies:
       '@automovie/engine':
@@ -432,6 +450,9 @@ importers:
       '@automovie/interface':
         specifier: workspace:^
         version: link:../packages/interface
+      '@automovie/lint':
+        specifier: workspace:^
+        version: link:../packages/lint
       '@automovie/mcp':
         specifier: workspace:^
         version: link:../packages/mcp

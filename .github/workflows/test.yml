@@ -23,6 +23,9 @@ on:
       # inputs the same way `src` is (#1397).
       - 'packages/*/*.md'
       - 'packages/*/build/**'
+      - 'packages/*/native/**'
+      - 'packages/*/go.mod'
+      - 'packages/*/go.sum'
       - 'packages/*/prompts/**'
       - 'packages/*/scaffold/**'
       - 'packages/*/scripts/**'

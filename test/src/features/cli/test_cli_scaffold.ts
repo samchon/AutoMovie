@@ -146,6 +146,9 @@ export const test_cli_scaffold = (): void => {
     pkg.includes(
       `"@automovie/engine": "${AUTOMOVIE_TEMPLATE_VERSIONS.engine}"`,
     ) &&
+      pkg.includes(
+        `"@automovie/lint": "${AUTOMOVIE_TEMPLATE_VERSIONS.lint}"`,
+      ) &&
       pkg.includes(`"@automovie/mcp": "${AUTOMOVIE_TEMPLATE_VERSIONS.mcp}"`) &&
       pkg.includes(
         `"@automovie/viewer": "${AUTOMOVIE_TEMPLATE_VERSIONS.viewer}"`,
@@ -296,7 +299,11 @@ export const test_cli_scaffold = (): void => {
     "the starter ships the correctness lint ruleset",
     files["lint.config.ts"]!.includes(
       '"typescript/switch-exhaustiveness-check": "error"',
-    ) && files["lint.config.ts"]!.includes('"typescript/no-explicit-any"'),
+    ) &&
+      files["lint.config.ts"]!.includes('"typescript/no-explicit-any"') &&
+      files["lint.config.ts"]!.includes(
+        '"automovie/template-sentinel": "error"',
+      ),
   );
   TestValidator.predicate(
     "no payload carries a CRLF",

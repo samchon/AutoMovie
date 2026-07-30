@@ -65,6 +65,7 @@ const catalogVersion = (catalog, dep) => {
 const versions = {
   engine: packageVersion("packages/engine"),
   interface: packageVersion("packages/interface"),
+  lint: packageVersion("packages/lint"),
   mcp: packageVersion("packages/mcp"),
   viewer: packageVersion("packages/viewer"),
   h264Mp4Encoder: catalogVersion("media", "h264-mp4-encoder"),
