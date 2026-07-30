@@ -804,6 +804,14 @@ export interface IAutoMovieCompiledContractRealization {
 
 /** Coding-agent-owned module export compiled in a deterministic sandbox. */
 export interface IAutoMovieShotSource {
+  /**
+   * Exact shot registration id.
+   *
+   * The compiler compares this value with the design contract selected by the
+   * module path and named export, so source code cannot accidentally build a
+   * different shot under a valid pointer.
+   */
+  id: string;
   /** Build derived shot data from the frozen design context. */
   build(context: IAutoMovieShotBuildContext): IAutoMovieShotSourceOutput;
 }

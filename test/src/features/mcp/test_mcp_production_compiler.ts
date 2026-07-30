@@ -687,7 +687,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         'import fs from "node:fs";',
         'import * as runtimeNamespace from "runtime-namespace";',
         'import { type TypeOnly, runtimeName } from "mixed-runtime";',
-        "export const opening = { build() {",
+        'export const opening = { id: "opening", build() {',
         "async function delayed() { return 1; } void delayed;",
         'void import("node:path");',
         "Math.random(); Math.random(); Date.now(); performance.now(); crypto.randomUUID(); Intl.Collator();",
@@ -744,7 +744,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      "export const opening = { build() { return Promise.resolve({}); } };\n",
+      'export const opening = { id: "opening", build() { return Promise.resolve({}); } };\n',
     );
     TestValidator.predicate(
       "async source is rejected",
@@ -754,7 +754,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      "export const opening = { build() { return { then() {} }; } };\n",
+      'export const opening = { id: "opening", build() { return { then() {} }; } };\n',
     );
     TestValidator.predicate(
       "thenable source results are rejected even without the Promise global",
@@ -775,7 +775,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     for (const expression of ["{}", "undefined"]) {
       fs.writeFileSync(
         sourcePath,
-        `export const opening = { build() { return ${expression}; } };\n`,
+        `export const opening = { id: "opening", build() { return ${expression}; } };\n`,
       );
       TestValidator.predicate(
         `structurally invalid source result ${expression} is rejected`,
@@ -786,10 +786,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }
     fs.writeFileSync(
       sourcePath,
-      original.replace(
-        "export const opening: IAutoMovieShotSource = {",
-        'export const opening = { id: "another-shot",',
-      ),
+      original.replace('id: "opening"', 'id: "another-shot"'),
     );
     TestValidator.predicate(
       "registered export id is bound to contract module and export",
@@ -797,9 +794,16 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         "source-registration-mismatch",
       ),
     );
+    fs.writeFileSync(sourcePath, original.replace('  id: "opening",', ""));
+    TestValidator.predicate(
+      "registered source export requires an explicit string id",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "source-registration-mismatch",
+      ),
+    );
     fs.writeFileSync(
       sourcePath,
-      'export const opening = { build() { throw "boom"; } };\n',
+      'export const opening = { id: "opening", build() { throw "boom"; } };\n',
     );
     TestValidator.predicate(
       "source exceptions are isolated",
@@ -809,7 +813,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      'export const opening = { build() { throw { message: "object boom" }; } };\n',
+      'export const opening = { id: "opening", build() { throw { message: "object boom" }; } };\n',
     );
     TestValidator.predicate(
       "object-shaped source exceptions retain their message",
@@ -820,7 +824,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     for (const expression of ["null", "{}"]) {
       fs.writeFileSync(
         sourcePath,
-        `export const opening = { build() { throw ${expression}; } };\n`,
+        `export const opening = { id: "opening", build() { throw ${expression}; } };\n`,
       );
       TestValidator.predicate(
         `source exception ${expression} is stringified`,
@@ -831,7 +835,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }
     fs.writeFileSync(
       sourcePath,
-      "export const opening = { build() { while (true) {} } };\n",
+      'export const opening = { id: "opening", build() { while (true) {} } };\n',
     );
     TestValidator.predicate(
       "source execution has a hard timeout",

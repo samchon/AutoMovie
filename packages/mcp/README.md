@@ -55,7 +55,13 @@ compiler and host adapters.
 | `prepareReview` | `IAutoMoviePrepareReview.IProps` → `IAutoMoviePrepareReview` | issue a current evidence worksheet |
 | `submitReview` | `IAutoMovieSubmitReview.IProps` → `IAutoMovieSubmitReview` | validate checklist coverage and completion |
 
-The coding agent owns `src`; the compiler owns `generated`. The agent returns authored scene, sparse motion, shot choreography, and event sample times. The compiler materializes primitive models, compact formation runtimes, promoted hero nodes, and shots, then derives named-state, event, camera, and formation outcomes from current compiled data instead of accepting a source-authored compliance witness.
+The coding agent owns `src`; the compiler owns `generated`. Every shot export
+declares an `id` equal to the contract selected by its module path and named
+export. The agent returns authored scene, sparse motion, shot choreography, and
+event sample times. The compiler materializes primitive models, compact
+formation runtimes, promoted hero nodes, and shots, then derives named-state,
+event, camera, and formation outcomes from current compiled data instead of
+accepting a source-authored compliance witness.
 
 A generated manifest binds source hashes, design hashes, compiler protocol and
 version, and generated file hashes. Required review uses exact production-raster

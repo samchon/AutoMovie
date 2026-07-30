@@ -9,7 +9,10 @@ does not need an MCP application wrapper to produce a deterministic shot
 artifact.
 
 The returned runtime keeps the stage, blocking, performance, artifact,
-opening/closing continuity, ROM warnings, and D010 physics advice together.
+opening/closing continuity, independently measured participant/state/event/
+camera contract outcomes, ROM warnings, and D010 physics advice together. The
+host supplies current rig lookup and frame dimensions; a builder cannot pass by
+echoing its own contract ids.
 Physics advice is decision data: callers explicitly accept, modify, or reject
 it instead of the compiler silently applying it. `realizeShotContract` is also
 owned here so compiler and direct-link consumers lower the same production

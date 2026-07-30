@@ -77,6 +77,7 @@ export const test_film_defined_shot = (): void => {
     runtime: {
       synthesize: validSynthesizer,
       skeleton: () => createSkeleton(),
+      frameFormat: { width: 1920, height: 1080 },
       advice: [
         {
           id: "duel-contact",
@@ -94,6 +95,7 @@ export const test_film_defined_shot = (): void => {
       compiled.source.shot.scene === "scene-duel" &&
       compiled.continuity.opening.shot === "SB-012" &&
       compiled.continuity.closing.shot === "SB-012" &&
+      compiled.realization.camera.every((outcome) => outcome.passed) &&
       compiled.continuity.closing.actors.every(
         (actor) =>
           "gaitPhase" in actor &&
@@ -120,6 +122,7 @@ export const test_film_defined_shot = (): void => {
     runtime: {
       synthesize: validSynthesizer,
       skeleton: () => createSkeleton(),
+      frameFormat: { width: 1920, height: 1080 },
     },
   });
   TestValidator.predicate(
@@ -130,6 +133,102 @@ export const test_film_defined_shot = (): void => {
           diagnostic.code === "contract-mismatch" &&
           diagnostic.path === "$program.stage.scene.id" &&
           diagnostic.recovery.includes("defineShot"),
+      ),
+  );
+
+  const unrealized = compileDefinedShot({
+    shot: defineShot("SB-014", {
+      scene: "scene-duel",
+      contract: {
+        ...shot.contract,
+        participants: [
+          ...shot.contract.participants,
+          { kind: "actor", id: "ghost" },
+        ],
+        opening: [
+          {
+            id: "impossible-opening",
+            description: "The authored actor must be far outside this scene.",
+            predicates: [
+              {
+                kind: "position",
+                subject: { kind: "node", id: "knightA" },
+                axis: "x",
+                operator: ">=",
+                value: 99,
+                tolerance: 0,
+              },
+            ],
+          },
+        ],
+      },
+      build: program,
+    }),
+    context: undefined,
+    runtime: {
+      synthesize: validSynthesizer,
+      skeleton: () => createSkeleton(),
+      frameFormat: { width: 1920, height: 1080 },
+    },
+  });
+  TestValidator.predicate(
+    "source output cannot self-certify an unrealized state contract",
+    unrealized.success === false &&
+      unrealized.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === "contract-realization-failed" &&
+          diagnostic.fact.includes("impossible-opening"),
+      ) &&
+      unrealized.diagnostics.some((diagnostic) =>
+        diagnostic.fact.includes('actor "ghost"'),
+      ),
+  );
+
+  const runtimeFailure = compileDefinedShot({
+    shot,
+    context: undefined,
+    runtime: {
+      synthesize: () => {
+        throw new Error("synthesizer fixture failed");
+      },
+      skeleton: () => createSkeleton(),
+      frameFormat: { width: 1920, height: 1080 },
+    },
+  });
+  TestValidator.predicate(
+    "runtime exceptions remain structured at the public authoring boundary",
+    runtimeFailure.success === false &&
+      runtimeFailure.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === "pipeline-failed" &&
+          diagnostic.phase === "performance" &&
+          diagnostic.fact.includes("synthesizer fixture failed") &&
+          diagnostic.impact.length !== 0 &&
+          diagnostic.recovery.length !== 0,
+      ),
+  );
+
+  const continuityFailure = compileDefinedShot({
+    shot,
+    context: undefined,
+    runtime: {
+      synthesize: validSynthesizer,
+      skeleton: () => createSkeleton(),
+      frameFormat: { width: 1920, height: 1080 },
+      plants: [
+        { node: "knightA", plants: [] },
+        { node: "knightA", plants: [] },
+      ],
+    },
+  });
+  TestValidator.predicate(
+    "continuity exceptions remain structured at the public boundary",
+    continuityFailure.success === false &&
+      continuityFailure.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === "pipeline-failed" &&
+          diagnostic.phase === "continuity" &&
+          diagnostic.fact.includes("duplicated"),
       ),
   );
 };

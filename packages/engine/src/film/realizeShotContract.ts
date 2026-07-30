@@ -4,11 +4,12 @@ import {
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
   IAutoMovieFormationDesign,
-  IAutoMovieModel,
   IAutoMovieProductionDesign,
   IAutoMovieShotContract,
   IAutoMovieShotPredicate,
+  IAutoMovieShotSourceOutput,
   IAutoMovieShotSpatialSelector,
+  IAutoMovieSkeleton,
   IAutoMovieTransform,
   IAutoMovieVector3,
   IAutoMovieWorldDesign,
@@ -17,17 +18,27 @@ import {
 import { sampleFormationMotion, transformFormationPoint } from "../formation";
 import { Quaternion } from "../math/Quaternion";
 import { sampleMotion } from "../motion/sampleMotion";
-import { sampleClipSequence } from "../resolve/sampleClip";
 import { productionRuntimeModelId } from "../productionIdentity";
+import { sampleClipSequence } from "../resolve/sampleClip";
 import { projectToNdc, resolveCameraAt } from "./cameraProjection";
 
 /** Derive and validate contract outcomes from actual compiled artifacts. */
 export const realizeShotContract = (props: {
   contract: IAutoMovieShotContract;
   production: IAutoMovieProductionDesign | null;
+  /** Direct authoring raster when no production design object exists. */
+  frameFormat?: Pick<
+    IAutoMovieProductionDesign["frameFormat"],
+    "width" | "height"
+  >;
   world: IAutoMovieWorldDesign | null;
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>;
-  compiled: IAutoMovieCompiledShotSource;
+  compiled: IAutoMovieShotSourceOutput &
+    Partial<
+      Pick<IAutoMovieCompiledShotSource, "models" | "formations" | "effects">
+    >;
+  /** Direct authoring rig lookup when compiler-owned models are not attached. */
+  skeleton?: (node: string) => IAutoMovieSkeleton | null;
   collisions: readonly string[];
 }): {
   realization: IAutoMovieCompiledContractRealization;
@@ -125,7 +136,7 @@ export const realizeShotContract = (props: {
   const formations = props.contract.participants.flatMap((participant) => {
     if (participant.kind !== "formation") return [];
     const design = props.formations.get(participant.id);
-    const formation = props.compiled.formations.find(
+    const formation = (props.compiled.formations ?? []).find(
       (candidate) => candidate.id === participant.id,
     );
     const nodes = new Map(
@@ -211,7 +222,11 @@ const eventSubjectResolves = (
 ): boolean => {
   if (props.compiled.scene.nodes.some((candidate) => candidate.id === subject))
     return true;
-  if (props.compiled.formations.some((formation) => formation.id === subject))
+  if (
+    (props.compiled.formations ?? []).some(
+      (formation) => formation.id === subject,
+    )
+  )
     return true;
   return false;
 };
@@ -229,7 +244,7 @@ const evaluatePredicate = (
       );
       if (node === undefined)
         throw new Error(`node "${predicate.actor}" is absent`);
-      const skeleton = modelOf(props.compiled, node.model).skeleton;
+      const skeleton = skeletonOf(props, node);
       if (
         skeleton === null ||
         skeleton.bones.some((bone) => bone.bone === predicate.bone) === false
@@ -237,7 +252,7 @@ const evaluatePredicate = (
         throw new Error(
           `node "${predicate.actor}" has no bone "${predicate.bone}"`,
         );
-      const pose = actorPoseAt(props.compiled, node, time);
+      const pose = actorPoseAt(props, node, time);
       const joint = pose.joints.find((item) => item.bone === predicate.bone);
       actual = joint?.[predicate.axis] ?? 0;
     } else if (predicate.kind === "position")
@@ -291,8 +306,8 @@ const resolveSpatial = (
     return landmark.position;
   }
   if (selector.kind === "node")
-    return actorTransformAt(props.compiled, selector.id, time).translation;
-  const formation = props.compiled.formations.find(
+    return actorTransformAt(props, selector.id, time).translation;
+  const formation = (props.compiled.formations ?? []).find(
     (candidate) => candidate.id === selector.id,
   );
   if (formation === undefined)
@@ -300,7 +315,11 @@ const resolveSpatial = (
   return transformFormationPoint(
     formation.centroid,
     formation.anchor,
-    sampleFormationMotion(props.compiled.formationMotions, formation.id, time),
+    sampleFormationMotion(
+      props.compiled.formationMotions ?? [],
+      formation.id,
+      time,
+    ),
     formation.facingDeg,
   );
 };
@@ -312,7 +331,8 @@ const cameraOutcome = (
   const camera = props.compiled.scene.cameras.find(
     (candidate) => candidate.id === props.compiled.shot.camera,
   );
-  if (camera === undefined || props.production === null)
+  const frameFormat = props.production?.frameFormat ?? props.frameFormat;
+  if (camera === undefined || frameFormat === undefined)
     return {
       time,
       requiredSubjects: props.contract.camera.requiredSubjects.length,
@@ -327,8 +347,7 @@ const cameraOutcome = (
     time,
   );
   const halfY = Math.tan((camera.fovY * Math.PI) / 360);
-  const aspect =
-    props.production.frameFormat.width / props.production.frameFormat.height;
+  const aspect = frameFormat.width / frameFormat.height;
   let resolvedSubjects = 0;
   let readableSubjects = 0;
   for (const subject of props.contract.camera.requiredSubjects)
@@ -358,15 +377,16 @@ const cameraOutcome = (
 };
 
 const actorPoseAt = (
-  compiled: IAutoMovieCompiledShotSource,
-  node: IAutoMovieCompiledShotSource["scene"]["nodes"][number],
+  props: Parameters<typeof realizeShotContract>[0],
+  node: IAutoMovieShotSourceOutput["scene"]["nodes"][number],
   time: number,
 ): ReturnType<typeof sampleMotion>["pose"] => {
+  const compiled = props.compiled;
   const performance = compiled.shot.performances.find(
     (candidate) => candidate.node === node.id,
   );
-  const model = modelOf(compiled, node.model);
-  const skeleton = model.skeleton!;
+  const skeleton = skeletonOf(props, node);
+  if (skeleton === null) throw new Error(`node "${node.id}" has no skeleton`);
   const motionId = performance === undefined ? node.motion : performance.motion;
   if (motionId === null)
     return (
@@ -389,15 +409,15 @@ const actorPoseAt = (
 };
 
 const actorTransformAt = (
-  compiled: IAutoMovieCompiledShotSource,
+  props: Parameters<typeof realizeShotContract>[0],
   actor: string,
   time: number,
 ): IAutoMovieTransform => {
+  const compiled = props.compiled;
   const node = compiled.scene.nodes.find((candidate) => candidate.id === actor);
   if (node === undefined) throw new Error(`node "${actor}" is absent`);
-  const model = modelOf(compiled, node.model);
-  const pose =
-    model.skeleton === null ? null : actorPoseAt(compiled, node, time);
+  const skeleton = skeletonOf(props, node);
+  const pose = skeleton === null ? null : actorPoseAt(props, node, time);
   const sampled = sampleClipSequence(compiled.shot.objectMotions, time);
   const translation = sampled.get(`node:${actor}:translation`)?.value;
   const rotation = sampled.get(`node:${actor}:rotation`)?.value;
@@ -434,13 +454,16 @@ const actorTransformAt = (
       });
 };
 
-const modelOf = (
-  compiled: IAutoMovieCompiledShotSource,
-  id: string,
-): IAutoMovieModel => {
-  const model = compiled.models.find((candidate) => candidate.id === id);
-  if (model === undefined) throw new Error(`model "${id}" is absent`);
-  return model;
+const skeletonOf = (
+  props: Parameters<typeof realizeShotContract>[0],
+  node: IAutoMovieShotSourceOutput["scene"]["nodes"][number],
+): IAutoMovieSkeleton | null => {
+  const model = (props.compiled.models ?? []).find(
+    (candidate) => candidate.id === node.model,
+  );
+  return model === undefined
+    ? (props.skeleton?.(node.id) ?? null)
+    : model.skeleton;
 };
 
 const composeTransforms = (

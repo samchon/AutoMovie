@@ -1,12 +1,18 @@
 import {
   IAutoMovieBeatEndFootPlant,
   IAutoMovieBeatEndState,
+  IAutoMovieCompiledContractRealization,
+  IAutoMovieCompiledFormation,
   IAutoMovieConstraintViolation,
+  IAutoMovieFormationDesign,
+  IAutoMovieModel,
+  IAutoMovieProductionDesign,
   IAutoMovieShotContract,
   IAutoMovieShotProgram,
   IAutoMovieShotSourceOutput,
   IAutoMovieSkeleton,
   IAutoMovieVector3,
+  IAutoMovieWorldDesign,
 } from "@automovie/interface";
 
 import { IAutoMovieActionSynthesizer } from "../perform/compilePerformance";
@@ -14,6 +20,7 @@ import { IAutoMovieCollisionResponse } from "../physics/collisionResponse";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { blockBeat } from "./blockBeat";
 import { performShot } from "./performShot";
+import { realizeShotContract } from "./realizeShotContract";
 import { resolveBeatEnd, resolveBeatOpening } from "./resolveBeatEnd";
 import { stageScene } from "./stageScene";
 
@@ -88,17 +95,37 @@ export interface IAutoMovieShotRuntime {
   synthesize: IAutoMovieActionSynthesizer;
   /** Rig lookup for every staged actor. */
   skeleton(node: string): IAutoMovieSkeleton | null;
+  /**
+   * Raster dimensions used to project required camera subjects at opening,
+   * review-frame and closing times.
+   */
+  frameFormat: Pick<
+    IAutoMovieProductionDesign["frameFormat"],
+    "width" | "height"
+  >;
+  /** Optional world landmarks cited by contract predicates. */
+  world?: IAutoMovieWorldDesign | null;
+  /** Formation designs cited by the registered participant contract. */
+  formationDesigns?: ReadonlyMap<string, IAutoMovieFormationDesign>;
+  /** Compiler-owned compact formation runtimes present in this shot. */
+  formations?: readonly IAutoMovieCompiledFormation[];
+  /** Optional full models when predicates need model-owned rig evidence. */
+  models?: readonly IAutoMovieModel[];
+  /** Formation-slot collisions found while materializing this shot. */
+  collisions?: readonly string[];
   /** Optional distinction between missing actor context and a rig-less actor. */
   hasActorContext?(node: string): boolean;
   /** Optional clinical rest frames used by attachment baking. */
   restFrames?(
     node: string,
-  ): Partial<
-    Record<
-      import("@automovie/interface").AutoMovieHumanoidBone,
-      IAutoMovieRestFrame
-    >
-  > | undefined;
+  ):
+    | Partial<
+        Record<
+          import("@automovie/interface").AutoMovieHumanoidBone,
+          IAutoMovieRestFrame
+        >
+      >
+    | undefined;
   /** Optional live point resolver for moving targets. */
   targetAt?(
     target: import("@automovie/interface").IAutoMovieActionTarget,
@@ -126,11 +153,20 @@ export interface IAutoMovieAuthoringDiagnostic {
     | "registration-invalid"
     | "builder-failed"
     | "contract-mismatch"
+    | "contract-realization-failed"
     | "stage-invalid"
     | "blocking-invalid"
-    | "performance-invalid";
+    | "performance-invalid"
+    | "pipeline-failed";
   /** Pipeline phase that owns the correction. */
-  phase: "registration" | "build" | "stage" | "blocking" | "performance";
+  phase:
+    | "registration"
+    | "build"
+    | "stage"
+    | "blocking"
+    | "performance"
+    | "contract"
+    | "continuity";
   /** Exact source or generated field that failed. */
   path: string;
   /** What was observed, including the offending identity or value. */
@@ -157,6 +193,8 @@ export type IAutoMovieCompiledDefinedShot =
         /** State at the exclusive shot end. */
         closing: IAutoMovieBeatEndState;
       };
+      /** Independent outcomes measured from current scene, motion and camera. */
+      realization: IAutoMovieCompiledContractRealization;
       /** D010 suggestions, preserved as decisions rather than imposed motion. */
       advice: readonly IAutoMovieShotPhysicsAdvice[];
     }
@@ -184,7 +222,26 @@ export const compileDefinedShot = <Context>(props: {
   /** Host motion and rig capabilities. */
   runtime: IAutoMovieShotRuntime;
 }): IAutoMovieCompiledDefinedShot => {
-  const registration = validateRegistration(props.shot);
+  let registration: IAutoMovieAuthoringDiagnostic[];
+  try {
+    registration = validateRegistration(props.shot);
+  } catch (error) {
+    return {
+      success: false,
+      diagnostics: [
+        {
+          code: "pipeline-failed",
+          phase: "registration",
+          path: "$shot",
+          fact: `The registration boundary threw ${errorText(error)}.`,
+          impact:
+            "No stable shot identity or contract can be selected for compilation.",
+          recovery:
+            "Pass one defineShot export with a non-blank id, scene and contract beat, then compile that same value again.",
+        },
+      ],
+    };
+  }
   if (registration.length !== 0)
     return { success: false, diagnostics: registration };
 
@@ -209,76 +266,138 @@ export const compileDefinedShot = <Context>(props: {
     };
   }
 
-  const contract = validateProgramContract(props.shot, program);
-  if (contract.length !== 0) return { success: false, diagnostics: contract };
+  let phase: IAutoMovieAuthoringDiagnostic["phase"] = "build";
+  try {
+    const contract = validateProgramContract(props.shot, program);
+    if (contract.length !== 0) return { success: false, diagnostics: contract };
 
-  const staged = stageScene(program.script, program.stage);
-  if (staged.success === false)
-    return {
-      success: false,
-      diagnostics: staged.violations.map((violation) =>
-        fromViolation("stage", "stage-invalid", violation),
-      ),
-    };
+    phase = "stage";
+    const staged = stageScene(program.script, program.stage);
+    if (staged.success === false)
+      return {
+        success: false,
+        diagnostics: staged.violations.map((violation) =>
+          fromViolation("stage", "stage-invalid", violation),
+        ),
+      };
 
-  const blocked = blockBeat(
-    program.script,
-    staged,
-    program.blocking,
-    props.runtime.previous,
-  );
-  if (blocked.success === false)
-    return {
-      success: false,
-      diagnostics: blocked.violations.map((violation) =>
-        fromViolation("blocking", "blocking-invalid", violation),
-      ),
-    };
+    phase = "blocking";
+    const blocked = blockBeat(
+      program.script,
+      staged,
+      program.blocking,
+      props.runtime.previous,
+    );
+    if (blocked.success === false)
+      return {
+        success: false,
+        diagnostics: blocked.violations.map((violation) =>
+          fromViolation("blocking", "blocking-invalid", violation),
+        ),
+      };
 
-  const performed = performShot({
-    script: program.script,
-    staged,
-    performance: program.performance,
-    synthesize: props.runtime.synthesize,
-    skeleton: props.runtime.skeleton,
-    hasActorContext: props.runtime.hasActorContext,
-    restFrames: props.runtime.restFrames,
-    targetAt: props.runtime.targetAt,
-    gaits: props.runtime.gaits,
-    blocking: blocked.blocking,
-    shotId: props.shot.id,
-  });
-  if (performed.success === false)
-    return {
-      success: false,
-      diagnostics: performed.violations.map((violation) =>
-        fromViolation("performance", "performance-invalid", violation),
-      ),
-    };
+    phase = "performance";
+    const performed = performShot({
+      script: program.script,
+      staged,
+      performance: program.performance,
+      synthesize: props.runtime.synthesize,
+      skeleton: props.runtime.skeleton,
+      hasActorContext: props.runtime.hasActorContext,
+      restFrames: props.runtime.restFrames,
+      targetAt: props.runtime.targetAt,
+      gaits: props.runtime.gaits,
+      blocking: blocked.blocking,
+      shotId: props.shot.id,
+    });
+    if (performed.success === false)
+      return {
+        success: false,
+        diagnostics: performed.violations.map((violation) =>
+          fromViolation("performance", "performance-invalid", violation),
+        ),
+      };
 
-  const motions = Object.values(performed.motions);
-  const continuityProps = {
-    beat: props.shot.contract.beat,
-    scene: staged.scene,
-    shot: performed.shot,
-    motions,
-    mounts: staged.mounts,
-    plants: props.runtime.plants,
-  };
-  return {
-    success: true,
-    source: {
+    const motions = Object.values(performed.motions);
+    const source: IAutoMovieShotSourceOutput = {
       eventSamples: structuredClone(program.eventSamples),
       scene: staged.scene,
       motions,
       shot: performed.shot,
-    },
-    continuity: {
-      opening: resolveBeatOpening(continuityProps),
-      closing: resolveBeatEnd(continuityProps),
-    },
-    advice: structuredClone(props.runtime.advice ?? []),
-  };
+    };
+    phase = "contract";
+    const measured = realizeShotContract({
+      contract: {
+        ...props.shot.contract,
+        id: props.shot.id,
+        source: {
+          module: `<defineShot:${props.shot.id}>`,
+          export: props.shot.id,
+        },
+      },
+      production: null,
+      frameFormat: props.runtime.frameFormat,
+      world: props.runtime.world ?? null,
+      formations: props.runtime.formationDesigns ?? new Map(),
+      compiled: {
+        ...source,
+        models: [...(props.runtime.models ?? [])],
+        formations: [...(props.runtime.formations ?? [])],
+      },
+      skeleton: props.runtime.skeleton,
+      collisions: props.runtime.collisions ?? [],
+    });
+    if (measured.diagnostics.length !== 0)
+      return {
+        success: false,
+        diagnostics: measured.diagnostics.map((diagnostic) => ({
+          code: "contract-realization-failed",
+          phase: "contract",
+          path: diagnostic.path ?? "$shot.contract",
+          fact: diagnostic.message,
+          impact:
+            "Independent scene, motion, event, or camera evidence does not realize the registered shot contract.",
+          recovery:
+            "Correct the authored stage, performance, event sample, or camera named by the fact; do not change contract prose to echo the current output.",
+        })),
+      };
+
+    phase = "continuity";
+    const continuityProps = {
+      beat: props.shot.contract.beat,
+      scene: staged.scene,
+      shot: performed.shot,
+      motions,
+      mounts: staged.mounts,
+      plants: props.runtime.plants,
+    };
+    return {
+      success: true,
+      source,
+      continuity: {
+        opening: resolveBeatOpening(continuityProps),
+        closing: resolveBeatEnd(continuityProps),
+      },
+      realization: measured.realization,
+      advice: structuredClone(props.runtime.advice ?? []),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      diagnostics: [
+        {
+          code: "pipeline-failed",
+          phase,
+          path: `$${phase}`,
+          fact: `The ${phase} pipeline threw ${errorText(error)}.`,
+          impact:
+            "The public authoring boundary cannot publish a partially measured or partially validated shot.",
+          recovery:
+            "Correct the runtime capability, authored value, or duplicate continuity input named by the fact, then compile the same registered export again.",
+        },
+      ],
+    };
+  }
 };
 
 const validateRegistration = <Context>(
@@ -422,6 +541,4 @@ const fromViolation = (
 });
 
 const errorText = (error: unknown): string =>
-  error instanceof Error
-    ? `${error.name}: ${error.message}`
-    : String(error);
+  error instanceof Error ? `${error.name}: ${error.message}` : String(error);

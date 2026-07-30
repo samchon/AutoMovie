@@ -213,10 +213,12 @@ const buildSignal = (
 
 /** Opening source proves a neutral-to-raised transition. */
 export const opening: IAutoMovieShotSource = {
+  id: "opening",
   build: (context) => buildSignal(context, 0),
 };
 
 /** Answer source begins from the raised state established by the first shot. */
 export const answer: IAutoMovieShotSource = {
+  id: "answer",
   build: (context) => buildSignal(context, 110),
 };

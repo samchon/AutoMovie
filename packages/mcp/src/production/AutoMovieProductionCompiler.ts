@@ -980,16 +980,16 @@ const compileDeterministicSource = <T>(
     if (props.registrationId !== undefined) {
       sandbox.__automovieExportName = props.exportName;
       new vm.Script(
-        `globalThis.__automovieRegistrationId =
-          typeof module.exports[__automovieExportName]?.id === "string"
-            ? module.exports[__automovieExportName].id
-            : null;
+        `globalThis.__automovieRegistrationId = (() => {
+           const candidate = module.exports[__automovieExportName]?.id;
+           return typeof candidate === "string" ? candidate : null;
+         })();
          delete globalThis.__automovieExportName;`,
         { filename: `${props.path}#registration` },
       ).runInContext(sandbox, { timeout: 1_000 });
       const registrationId = sandbox.__automovieRegistrationId as unknown;
       if (
-        typeof registrationId === "string" &&
+        typeof registrationId !== "string" ||
         registrationId !== props.registrationId
       )
         return {
@@ -1002,7 +1002,10 @@ const compileDeterministicSource = <T>(
               phase: "source",
               target: props.target,
               path: props.path,
-              message: `Contract id "${props.registrationId}" points to export "${props.exportName}" in ${props.path}, but defineShot registered "${registrationId}". Change the contract pointer or registration so module path, named export and id identify one artifact.`,
+              message:
+                typeof registrationId === "string"
+                  ? `Contract id "${props.registrationId}" points to export "${props.exportName}" in ${props.path}, but the source registered "${registrationId}". Change the contract pointer or registration so module path, named export and id identify one artifact.`
+                  : `Contract id "${props.registrationId}" points to export "${props.exportName}" in ${props.path}, but that export has no string id. Add id: "${props.registrationId}" to the exported IAutoMovieShotSource so module path, named export and id identify one artifact.`,
             },
           ],
         };
