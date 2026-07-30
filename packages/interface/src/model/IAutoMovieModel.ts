@@ -1,3 +1,4 @@
+import { IAutoMovieProfile } from "../core/IAutoMovieProfile";
 import { IAutoMovieMaterial } from "../material/IAutoMovieMaterial";
 import { IAutoMovieSkeleton } from "../skeleton/IAutoMovieSkeleton";
 import { AutoMovieAssetOrigin } from "./AutoMovieAssetOrigin";
@@ -69,4 +70,13 @@ export interface IAutoMovieModel {
    * `parts` (a generated model).
    */
   asset: string | null;
+
+  /**
+   * Declarative profiles bound to this runtime model.
+   *
+   * Omitted means the model proves no semantic engine capability. Imported
+   * appearance does not inherit traits unless its registered deterministic
+   * proxy supplies them.
+   */
+  profiles?: IAutoMovieProfile[];
 }

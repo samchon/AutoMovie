@@ -11,6 +11,7 @@ import {
   applyRenderMode,
   buildInstancedEffect,
   buildInstancedFormation,
+  buildInstancedInstanceSet,
   buildModel,
   buildScene,
   mountViewer,
@@ -77,6 +78,11 @@ const formationObjects = compiled.formations.map((formation) =>
   }),
 );
 for (const formation of formationObjects) scene.scene.add(formation.object);
+const instanceSetObjects = compiled.instanceSets.map((instanceSet) =>
+  buildInstancedInstanceSet({ instanceSet, models }),
+);
+for (const instanceSet of instanceSetObjects)
+  scene.scene.add(instanceSet.object);
 const effectObjects = compiled.effects.map(buildInstancedEffect);
 for (const effect of effectObjects) scene.scene.add(effect.object);
 const stagedNodeTransforms = new Map(
@@ -205,6 +211,8 @@ const seek = (time: number, pass: AutoMovieGuidePass): void => {
       time,
       heroSources,
     );
+  for (const instanceSet of instanceSetObjects)
+    instanceSet.update(camera, Math.max(1, renderer.domElement.height));
   for (const effect of effectObjects) effect.update(camera, time);
   formationObjects.forEach(({ stats }, index) => {
     const runtime = compiled.formations[index]!;
@@ -227,6 +235,19 @@ const seek = (time: number, pass: AutoMovieGuidePass): void => {
     )
       throw new Error(`Effect viewer inventory diverged for "${runtime.id}".`);
   });
+  instanceSetObjects.forEach(({ stats }, index) => {
+    const runtime = compiled.instanceSets[index]!;
+    if (
+      stats.visible.hero +
+        stats.visible.near +
+        stats.visible.far +
+        stats.culled !==
+      runtime.count
+    )
+      throw new Error(
+        `Instance-set viewer inventory diverged for "${runtime.id}".`,
+      );
+  });
   const handle = applyRenderMode(scene.scene, pass);
   renderer.render(scene.scene, camera);
   handle.restore();
@@ -241,7 +262,13 @@ const seek = (time: number, pass: AutoMovieGuidePass): void => {
       ({ stats }) => `E${stats.active ? 1 : 0}/${stats.particles}/${stats.cap}`,
     )
     .join(" ");
-  const runtimeStatus = [formationStatus, effectStatus]
+  const instanceStatus = instanceSetObjects
+    .map(
+      ({ stats }) =>
+        `I${stats.visible.hero + stats.visible.near + stats.visible.far}/C${stats.culled}`,
+    )
+    .join(" ");
+  const runtimeStatus = [formationStatus, instanceStatus, effectStatus]
     .filter((value) => value.length !== 0)
     .join(" ");
   status.textContent =

@@ -1,4 +1,5 @@
 import { AutoMovieGuidePass } from "../cinematics";
+import { IAutoMovieProfile } from "../core";
 import { IAutoMovieVector3 } from "../geometry";
 import { AutoMovieHumanoidBone } from "../skeleton";
 import { IAutoMovieSceneEvidence } from "./IAutoMovieScreenplayIndex";
@@ -135,6 +136,75 @@ export interface IAutoMovieModelRecipe {
     /** Bone id used as the attachment parent. */
     bone: AutoMovieHumanoidBone;
   }>;
+  /**
+   * Declarative capability profiles copied onto the compiler-owned runtime
+   * model. Omitted means that engine verbs such as shooting are unavailable.
+   */
+  profiles?: IAutoMovieProfile[];
+}
+
+/** Compact deterministic placement algorithm for a general instance set. */
+export type IAutoMovieInstanceSetLayout =
+  | {
+      /** Rectangular grid. */
+      kind: "grid";
+      /** Positive integer rows. */
+      rows: number;
+      /** Positive integer columns; rows times columns must cover count. */
+      columns: number;
+      /** Positive center-to-center spacing in meters. */
+      spacing: { x: number; z: number };
+    }
+  | {
+      /** Uniform seeded disk scatter. */
+      kind: "scatter";
+      /** Positive disk radius in meters. */
+      radius: number;
+    }
+  | {
+      /** Seeded placement along one named world route. */
+      kind: "along-route";
+      /** Existing route id. */
+      route: string;
+      /** Maximum lateral offset from the route centerline in meters. */
+      lateralJitter: number;
+    };
+
+/** Seed-derived per-instance visual and semantic variation. */
+export interface IAutoMovieInstanceVariation {
+  /** Inclusive uniform scale range, both strictly above zero. */
+  scale: { min: number; max: number };
+  /** Non-empty exact `#RRGGBB` palette choices applied per instance. */
+  palette: string[];
+  /** Named bounded numeric traits regenerated from seed and slot. */
+  traits: Array<{
+    /** Stable trait name unique in this set. */
+    name: string;
+    /** Inclusive minimum. */
+    min: number;
+    /** Inclusive maximum. */
+    max: number;
+  }>;
+}
+
+/** A compact non-formation crowd, vegetation, prop, or debris set. */
+export interface IAutoMovieInstanceSetDesign {
+  /** Stable id unique within the world. */
+  id: string;
+  /** Existing model recipe rendered by every member. */
+  modelRecipe: string;
+  /** Integer slot count from one through 100,000. */
+  count: number;
+  /** Compact deterministic placement law. */
+  layout: IAutoMovieInstanceSetLayout;
+  /** World-space origin for grid and scatter layouts. */
+  anchor: IAutoMovieVector3;
+  /** Finite base heading in degrees. */
+  facingDeg: number;
+  /** Full non-negative safe-integer seed. */
+  seed: number;
+  /** Seed-derived per-slot differences. */
+  variation: IAutoMovieInstanceVariation;
 }
 
 /** A named point in the production world. */
@@ -287,6 +357,12 @@ export interface IAutoMovieWorldDesign {
   effectRecipes: IAutoMovieEffectRecipe[];
   /** Deterministic effect regions bound to recipes. */
   effectZones: IAutoMovieWorldEffectZone[];
+  /**
+   * Compact non-formation instance sets such as civilians, trees, or debris.
+   *
+   * Omitted is equivalent to an empty list for backwards compatibility.
+   */
+  instanceSets?: IAutoMovieInstanceSetDesign[];
 }
 
 /**

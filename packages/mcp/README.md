@@ -1,5 +1,11 @@
 # `@automovie/mcp`
 
+World-level `instanceSets` generalize the compact formation path for civilians,
+vegetation, props, and debris. Compiler protocol v6 snapshots route geometry,
+emits bounded regenerable chunks, exposes `context.engine.instanceSlot`, and
+ships the same scale/palette/trait stream the viewer regenerates. Design lint
+also validates typed model-profile traits and weapon data before source runs.
+
 AutoMovie's deterministic motion-control engine, exposed as **Model Context
 Protocol (MCP)** tools.
 

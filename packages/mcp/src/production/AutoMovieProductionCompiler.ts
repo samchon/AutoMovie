@@ -54,6 +54,7 @@ import {
 } from "./contentIdentity";
 import {
   materializeCompiledFormationInventory,
+  materializeCompiledInstanceSetInventory,
   materializeCompiledShot,
   materializeProductionModels,
 } from "./materializeProduction";
@@ -64,7 +65,7 @@ import {
 } from "./validateProductionDesign";
 
 /** Production compiler protocol embedded in generated manifests. */
-export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v5";
+export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v6";
 
 const FILM_SOURCE_PATH = "src/film.ts";
 const FILM_SOURCE_EXPORT = "film";
@@ -155,12 +156,19 @@ export class AutoMovieProductionCompiler {
     let formationRuntime: ReturnType<
       typeof materializeCompiledFormationInventory
     > = {};
+    let instanceSetRuntime: ReturnType<
+      typeof materializeCompiledInstanceSetInventory
+    > = {};
     let filmSource: Uint8Array | null = null;
     let filmSourceDigest: AutoMovieContentDigest | null = null;
     if (input.scope !== "design" && designReady) {
       runtimeModels = new Map(materializeProductionModels(graph.models));
       formationRuntime = materializeCompiledFormationInventory(
         graph.formations,
+        graph.models,
+      );
+      instanceSetRuntime = materializeCompiledInstanceSetInventory(
+        graph.world!,
         graph.models,
       );
     }
@@ -206,6 +214,7 @@ export class AutoMovieProductionCompiler {
           formations: Object.fromEntries(graph.formations),
           runtimeModels: Object.fromEntries(runtimeModels),
           formationRuntime,
+          instanceSetRuntime,
         },
       });
       diagnostics.push(...result.diagnostics);
@@ -214,6 +223,7 @@ export class AutoMovieProductionCompiler {
           contract,
           formations: graph.formations,
           formationRuntime,
+          instanceSetRuntime,
           modelRecipes: graph.models,
           runtimeModels,
           world: graph.world!,
@@ -667,6 +677,7 @@ interface ICompileShotSourceProps {
     formations: Readonly<Record<string, unknown>>;
     runtimeModels: Readonly<Record<string, unknown>>;
     formationRuntime: Readonly<Record<string, unknown>>;
+    instanceSetRuntime: Readonly<Record<string, unknown>>;
   };
 }
 
@@ -850,6 +861,129 @@ const SANDBOX_BOOTSTRAP = `
       motionPhase: seededValue(formation.seed, slot, 0x70686173),
     });
   };
+  const instanceSlot = (data, instanceSetId, slot) => {
+    const instanceSet = data.instanceSetRuntime[instanceSetId];
+    if (
+      instanceSet === undefined ||
+      Number.isSafeInteger(slot) === false ||
+      slot < 0 ||
+      slot >= instanceSet.count
+    )
+      throw new RangeError(
+        'Instance set "' +
+          instanceSetId +
+          '" slot ' +
+          slot +
+          " is unavailable.",
+      );
+    const layout = instanceSet.layout;
+    let x;
+    let z;
+    if (layout.kind === "grid") {
+      const row = Math.floor(slot / layout.columns);
+      const column = slot % layout.columns;
+      x = (column - (layout.columns - 1) / 2) * layout.spacing.x;
+      z = row * layout.spacing.z;
+    } else if (layout.kind === "scatter") {
+      const radius =
+        Math.sqrt(seededValue(instanceSet.seed, slot, 0x72616469)) *
+        layout.radius;
+      const angle =
+        seededValue(instanceSet.seed, slot, 0x616e676c) * Math.PI * 2;
+      x = Math.cos(angle) * radius;
+      z = Math.sin(angle) * radius;
+    } else {
+      const route = instanceSet.route;
+      if (route === null || route.waypoints.length < 2)
+        throw new Error(
+          'Instance set "' +
+            instanceSetId +
+            '" route "' +
+            layout.route +
+            '" is unavailable.',
+        );
+      const segments = route.waypoints.slice(1).map((right, index) => {
+        const left = route.waypoints[index];
+        return {
+          left,
+          right,
+          length: hypot(right.x - left.x, right.z - left.z),
+        };
+      });
+      const total = segments.reduce(
+        (sum, segment) => sum + segment.length,
+        0,
+      );
+      let remaining = ((slot + 0.5) / instanceSet.count) * total;
+      let segment = segments[segments.length - 1];
+      for (const candidate of segments) {
+        segment = candidate;
+        if (remaining <= candidate.length) break;
+        remaining -= candidate.length;
+      }
+      const ratio =
+        segment.length === 0
+          ? 0
+          : Math.min(1, remaining / segment.length);
+      const tangentX = segment.right.x - segment.left.x;
+      const tangentZ = segment.right.z - segment.left.z;
+      const tangentLength = hypot(tangentX, tangentZ);
+      const jitter =
+        (seededValue(instanceSet.seed, slot, 0x6a697474) * 2 - 1) *
+        layout.lateralJitter;
+      x =
+        segment.left.x +
+        tangentX * ratio -
+        (tangentLength === 0 ? 0 : (tangentZ / tangentLength) * jitter);
+      z =
+        segment.left.z +
+        tangentZ * ratio +
+        (tangentLength === 0 ? 0 : (tangentX / tangentLength) * jitter);
+    }
+    const radians = (instanceSet.facingDeg * Math.PI) / 180;
+    const cosine = Math.cos(radians);
+    const sine = Math.sin(radians);
+    const scale =
+      instanceSet.variation.scale.min +
+      (instanceSet.variation.scale.max -
+        instanceSet.variation.scale.min) *
+        seededValue(instanceSet.seed, slot, 0x7363616c);
+    const paletteIndex = Math.min(
+      instanceSet.variation.palette.length - 1,
+      Math.floor(
+        seededValue(instanceSet.seed, slot, 0x70616c65) *
+          instanceSet.variation.palette.length,
+      ),
+    );
+    const traits = {};
+    instanceSet.variation.traits.forEach((trait, index) => {
+      traits[trait.name] =
+        trait.min +
+        (trait.max - trait.min) *
+          seededValue(instanceSet.seed, slot, index, 0x74726169);
+    });
+    return freeze({
+      slot,
+      node:
+        "instance:" +
+        instanceSet.id +
+        ":slot:" +
+        String(slot).padStart(6, "0"),
+      modelRecipe: instanceSet.modelRecipe,
+      position:
+        layout.kind === "along-route"
+          ? { x, y: instanceSet.anchor.y, z }
+          : {
+              x: instanceSet.anchor.x + x * cosine + z * sine,
+              y: instanceSet.anchor.y,
+              z: instanceSet.anchor.z - x * sine + z * cosine,
+            },
+      facingDeg: instanceSet.facingDeg,
+      scale,
+      palette: instanceSet.variation.palette[paletteIndex],
+      traits,
+    });
+  };
   const insidePolygon = (point, polygon) => {
     let inside = false;
     for (
@@ -887,6 +1021,8 @@ const SANDBOX_BOOTSTRAP = `
       },
       formationSlot: (formation, slot) =>
         formationSlot(data, formation, slot),
+      instanceSlot: (instanceSet, slot) =>
+        instanceSlot(data, instanceSet, slot),
     });
     const context = freeze({ ...data, engine });
     const result = automovieModule.exports[exportName].build(context);

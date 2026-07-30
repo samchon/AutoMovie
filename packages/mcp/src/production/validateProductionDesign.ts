@@ -4,6 +4,7 @@ import {
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
   IAutoMovieProductionDesign,
+  IAutoMovieProfile,
   IAutoMovieShotContract,
   IAutoMovieShotPredicate,
   IAutoMovieWorldDesign,
@@ -81,6 +82,10 @@ export const AUTOMOVIE_FORMATION_INSTANCE_BYTES =
 export const AUTOMOVIE_FORMATION_INSTANCE_BUFFER_BUDGET_BYTES = 8 * 1024 * 1024;
 /** Conservative generated compact-runtime envelope. */
 export const AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES = 128 * 1024;
+/** Maximum general instances retained as compact deterministic world data. */
+export const AUTOMOVIE_MAX_GENERAL_INSTANCES = 250_000;
+/** Maximum per-instance matrix, color, and declared trait storage. */
+export const AUTOMOVIE_GENERAL_INSTANCE_BUFFER_BUDGET_BYTES = 32 * 1024 * 1024;
 
 /** Validate graph-level production invariants after structural validation. */
 export const validateAutoMovieProductionGraph = (
@@ -221,6 +226,7 @@ export const validateAutoMovieProductionGraph = (
       );
     if (model.asset !== undefined)
       text(diagnostics, model.asset, target, file, "asset");
+    validateModelProfiles(diagnostics, model.profiles ?? [], target, file);
     validateModelParameters(diagnostics, model, target, file);
     const paletteSize = Object.keys(model.palette).length;
     if (paletteSize === 0)
@@ -457,7 +463,28 @@ export const validateAutoMovieProductionGraph = (
       );
       for (const point of route.waypoints)
         finite2(diagnostics, point, "world", file, "route.waypoints");
+      if (
+        route.waypoints
+          .slice(1)
+          .reduce(
+            (length, point, index) =>
+              length +
+              Math.hypot(
+                point.x - route.waypoints[index]!.x,
+                point.z - route.waypoints[index]!.z,
+              ),
+            0,
+          ) <= 0
+      )
+        invalid(
+          diagnostics,
+          "design-route-invalid",
+          "world",
+          file,
+          `Route "${route.id}" must contain at least one non-zero segment. Correct its waypoints in setWorldDesign.`,
+        );
     }
+    validateInstanceSets(diagnostics, graph, routeIds, file);
     const effectRecipeIds = new Set<string>();
     for (const recipe of graph.world.effectRecipes) {
       const target = `effect-recipe:${recipe.id}`;
@@ -1513,6 +1540,474 @@ const validateModelParameters = (
         `Parameter "${key}" is outside its supported range. Fix it in setModelRecipe.`,
       );
   }
+};
+
+const validateModelProfiles = (
+  diagnostics: IAutoMovieDiagnostic[],
+  profiles: readonly IAutoMovieProfile[],
+  target: string,
+  file: string,
+): void => {
+  const profileIds = new Set<string>();
+  for (const profile of profiles) {
+    unique(diagnostics, profileIds, profile.id, target, file, "profiles");
+    text(diagnostics, profile.name, target, file, "profiles.name");
+    const traitKinds = new Set<string>();
+    for (const trait of profile.traits ?? []) {
+      if (traitKinds.has(trait.kind))
+        invalid(
+          diagnostics,
+          "design-capability-duplicate",
+          target,
+          file,
+          `Profile "${profile.id}" repeats ${trait.kind}. Keep one typed trait of each kind.`,
+        );
+      traitKinds.add(trait.kind);
+      if (trait.kind === "locomotor") {
+        if ((profile.gaits ?? []).length === 0)
+          invalid(
+            diagnostics,
+            "design-capability-invalid",
+            target,
+            file,
+            `Profile "${profile.id}" claims locomotor without a declared gait. Add profile.gaits or remove the trait.`,
+          );
+        continue;
+      }
+      if (trait.kind === "mountable") {
+        integer(
+          diagnostics,
+          trait.seats,
+          1,
+          1_024,
+          target,
+          file,
+          `profiles.${profile.id}.mountable.seats`,
+        );
+        positive(
+          diagnostics,
+          trait.payloadMass,
+          target,
+          file,
+          `profiles.${profile.id}.mountable.payloadMass`,
+        );
+        continue;
+      }
+      if (trait.kind === "destructible") {
+        positive(
+          diagnostics,
+          trait.durability,
+          target,
+          file,
+          `profiles.${profile.id}.destructible.durability`,
+        );
+        positive(
+          diagnostics,
+          trait.impactBody.mass,
+          target,
+          file,
+          `profiles.${profile.id}.destructible.impactBody.mass`,
+        );
+        bounded(
+          diagnostics,
+          trait.impactBody.restitution,
+          0,
+          1,
+          target,
+          file,
+          `profiles.${profile.id}.destructible.impactBody.restitution`,
+        );
+        positive(
+          diagnostics,
+          trait.impactBody.hardness,
+          target,
+          file,
+          `profiles.${profile.id}.destructible.impactBody.hardness`,
+        );
+        positive(
+          diagnostics,
+          trait.impactBody.penetrability,
+          target,
+          file,
+          `profiles.${profile.id}.destructible.impactBody.penetrability`,
+        );
+        continue;
+      }
+      if (trait.weapons.length === 0)
+        invalid(
+          diagnostics,
+          "design-capability-invalid",
+          target,
+          file,
+          `Profile "${profile.id}" shooter must declare at least one typed weapon.`,
+        );
+      const weaponIds = new Set<string>();
+      for (const weapon of trait.weapons) {
+        unique(
+          diagnostics,
+          weaponIds,
+          weapon.id,
+          target,
+          file,
+          `profiles.${profile.id}.shooter.weapons`,
+        );
+        if (weapon.kind === "melee") {
+          positive(
+            diagnostics,
+            weapon.reach,
+            target,
+            file,
+            `profiles.${profile.id}.${weapon.id}.reach`,
+          );
+          positive(
+            diagnostics,
+            weapon.recoverySeconds,
+            target,
+            file,
+            `profiles.${profile.id}.${weapon.id}.recoverySeconds`,
+          );
+          positive(
+            diagnostics,
+            weapon.impact,
+            target,
+            file,
+            `profiles.${profile.id}.${weapon.id}.impact`,
+          );
+          continue;
+        }
+        positive(
+          diagnostics,
+          weapon.reloadSeconds,
+          target,
+          file,
+          `profiles.${profile.id}.${weapon.id}.reloadSeconds`,
+        );
+        positive(
+          diagnostics,
+          weapon.effectiveRange,
+          target,
+          file,
+          `profiles.${profile.id}.${weapon.id}.effectiveRange`,
+        );
+        positive(
+          diagnostics,
+          weapon.muzzleVelocity,
+          target,
+          file,
+          `profiles.${profile.id}.${weapon.id}.muzzleVelocity`,
+        );
+        if (weapon.kind === "firearm") {
+          bounded(
+            diagnostics,
+            weapon.misfireProbability,
+            0,
+            1,
+            target,
+            file,
+            `profiles.${profile.id}.${weapon.id}.misfireProbability`,
+          );
+          if (weapon.accuracy.length === 0)
+            invalid(
+              diagnostics,
+              "design-capability-invalid",
+              target,
+              file,
+              `Firearm "${weapon.id}" requires at least one distance/accuracy point.`,
+            );
+          let priorDistance = -1;
+          for (const point of weapon.accuracy) {
+            if (
+              Number.isFinite(point.distance) === false ||
+              point.distance < 0 ||
+              point.distance <= priorDistance
+            )
+              invalid(
+                diagnostics,
+                "design-capability-invalid",
+                target,
+                file,
+                `Firearm "${weapon.id}" accuracy distances must be finite, non-negative, and strictly increasing.`,
+              );
+            bounded(
+              diagnostics,
+              point.probability,
+              0,
+              1,
+              target,
+              file,
+              `profiles.${profile.id}.${weapon.id}.accuracy.probability`,
+            );
+            priorDistance = point.distance;
+          }
+          continue;
+        }
+        if (weapon.ammunition.length === 0)
+          invalid(
+            diagnostics,
+            "design-capability-invalid",
+            target,
+            file,
+            `Cannon "${weapon.id}" requires at least one typed ammunition payload.`,
+          );
+        const ammunitionKinds = new Set<string>();
+        for (const ammunition of weapon.ammunition) {
+          if (ammunitionKinds.has(ammunition.kind))
+            invalid(
+              diagnostics,
+              "design-capability-duplicate",
+              target,
+              file,
+              `Cannon "${weapon.id}" repeats ${ammunition.kind}. Keep one explicit payload of each kind.`,
+            );
+          ammunitionKinds.add(ammunition.kind);
+          if (ammunition.kind === "round-shot") {
+            positive(
+              diagnostics,
+              ammunition.mass,
+              target,
+              file,
+              `profiles.${profile.id}.${weapon.id}.roundShot.mass`,
+            );
+            integer(
+              diagnostics,
+              ammunition.maxRicochets,
+              0,
+              64,
+              target,
+              file,
+              `profiles.${profile.id}.${weapon.id}.roundShot.maxRicochets`,
+            );
+            bounded(
+              diagnostics,
+              ammunition.ricochetRetention,
+              0,
+              1,
+              target,
+              file,
+              `profiles.${profile.id}.${weapon.id}.roundShot.ricochetRetention`,
+            );
+          } else {
+            integer(
+              diagnostics,
+              ammunition.pellets,
+              1,
+              100_000,
+              target,
+              file,
+              `profiles.${profile.id}.${weapon.id}.canister.pellets`,
+            );
+            bounded(
+              diagnostics,
+              ammunition.spreadDegrees,
+              Number.EPSILON,
+              180,
+              target,
+              file,
+              `profiles.${profile.id}.${weapon.id}.canister.spreadDegrees`,
+            );
+            positive(
+              diagnostics,
+              ammunition.pelletMass,
+              target,
+              file,
+              `profiles.${profile.id}.${weapon.id}.canister.pelletMass`,
+            );
+          }
+        }
+      }
+    }
+  }
+};
+
+const validateInstanceSets = (
+  diagnostics: IAutoMovieDiagnostic[],
+  graph: IAutoMovieProductionDesignGraph,
+  routeIds: ReadonlySet<string>,
+  file: string,
+): void => {
+  const instanceSets = graph.world?.instanceSets ?? [];
+  const ids = new Set<string>();
+  let total = 0;
+  let bufferBytes = 0;
+  for (const instanceSet of instanceSets) {
+    const target = `instance-set:${instanceSet.id}`;
+    unique(diagnostics, ids, instanceSet.id, target, file, "instanceSets");
+    text(diagnostics, instanceSet.modelRecipe, target, file, "modelRecipe");
+    const model = graph.models.get(instanceSet.modelRecipe);
+    if (model === undefined)
+      missing(
+        diagnostics,
+        target,
+        file,
+        `model recipe "${instanceSet.modelRecipe}"`,
+        `setModelRecipe for "${instanceSet.modelRecipe}" or change ${instanceSet.id}.modelRecipe`,
+      );
+    integer(
+      diagnostics,
+      instanceSet.count,
+      1,
+      AUTOMOVIE_MAX_FORMATION_MEMBERS,
+      target,
+      file,
+      "count",
+    );
+    total += instanceSet.count;
+    boundedVector(
+      diagnostics,
+      instanceSet.anchor,
+      -AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+      AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+      target,
+      file,
+      "anchor",
+    );
+    finite(diagnostics, instanceSet.facingDeg, target, file, "facingDeg");
+    integer(
+      diagnostics,
+      instanceSet.seed,
+      0,
+      Number.MAX_SAFE_INTEGER,
+      target,
+      file,
+      "seed",
+    );
+    const layout = instanceSet.layout;
+    if (layout.kind === "grid") {
+      integer(
+        diagnostics,
+        layout.rows,
+        1,
+        instanceSet.count,
+        target,
+        file,
+        "layout.rows",
+      );
+      integer(
+        diagnostics,
+        layout.columns,
+        1,
+        instanceSet.count,
+        target,
+        file,
+        "layout.columns",
+      );
+      positive(diagnostics, layout.spacing.x, target, file, "layout.spacing.x");
+      positive(diagnostics, layout.spacing.z, target, file, "layout.spacing.z");
+      if (layout.rows * layout.columns < instanceSet.count)
+        invalid(
+          diagnostics,
+          "design-range-invalid",
+          target,
+          file,
+          `Instance grid capacity ${layout.rows * layout.columns} is below count ${instanceSet.count}. Increase rows or columns.`,
+        );
+    } else if (layout.kind === "scatter")
+      positive(diagnostics, layout.radius, target, file, "layout.radius");
+    else {
+      text(diagnostics, layout.route, target, file, "layout.route");
+      if (routeIds.has(layout.route) === false)
+        missing(
+          diagnostics,
+          target,
+          file,
+          `route "${layout.route}"`,
+          `add it to world.routes or change ${instanceSet.id}.layout.route`,
+        );
+      bounded(
+        diagnostics,
+        layout.lateralJitter,
+        0,
+        AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+        target,
+        file,
+        "layout.lateralJitter",
+      );
+    }
+    boundedRange(
+      diagnostics,
+      instanceSet.variation.scale,
+      Number.EPSILON,
+      1_000,
+      target,
+      file,
+      "variation.scale",
+    );
+    if (instanceSet.variation.palette.length === 0)
+      invalid(
+        diagnostics,
+        "design-collection-empty",
+        target,
+        file,
+        "Instance variation palette must contain at least one #RRGGBB color.",
+      );
+    uniqueTextValues(
+      diagnostics,
+      instanceSet.variation.palette,
+      target,
+      file,
+      "variation.palette",
+    );
+    for (const color of instanceSet.variation.palette)
+      if (/^#[0-9a-f]{6}$/i.test(color) === false)
+        invalid(
+          diagnostics,
+          "design-color-invalid",
+          target,
+          file,
+          `Instance palette color "${color}" must be one opaque #RRGGBB value.`,
+        );
+    const traitNames = new Set<string>();
+    for (const trait of instanceSet.variation.traits) {
+      unique(
+        diagnostics,
+        traitNames,
+        trait.name,
+        target,
+        file,
+        "variation.traits",
+      );
+      finite(diagnostics, trait.min, target, file, `${trait.name}.min`);
+      finite(diagnostics, trait.max, target, file, `${trait.name}.max`);
+      if (trait.min > trait.max)
+        invalid(
+          diagnostics,
+          "design-range-invalid",
+          target,
+          file,
+          `Instance trait "${trait.name}" min must not exceed max.`,
+        );
+    }
+    const lodCount = Math.max(1, model?.lod.length ?? 0);
+    bufferBytes +=
+      instanceSet.count *
+      lodCount *
+      (16 * Float32Array.BYTES_PER_ELEMENT +
+        3 * Float32Array.BYTES_PER_ELEMENT +
+        Float32Array.BYTES_PER_ELEMENT *
+          (1 + instanceSet.variation.traits.length));
+  }
+  if (
+    Number.isSafeInteger(total) === false ||
+    total > AUTOMOVIE_MAX_GENERAL_INSTANCES
+  )
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      "instance-sets",
+      file,
+      `The world declares ${total} general instances, above the compact-runtime limit ${AUTOMOVIE_MAX_GENERAL_INSTANCES}. Reduce the total.`,
+    );
+  if (
+    Number.isSafeInteger(bufferBytes) === false ||
+    bufferBytes > AUTOMOVIE_GENERAL_INSTANCE_BUFFER_BUDGET_BYTES
+  )
+    invalid(
+      diagnostics,
+      "design-budget-exceeded",
+      "instance-sets",
+      file,
+      `General instance matrices, colors, scales, and traits require ${bufferBytes} bytes, above the ${AUTOMOVIE_GENERAL_INSTANCE_BUFFER_BUDGET_BYTES}-byte viewer budget.`,
+    );
 };
 
 const validateFormationLayout = (

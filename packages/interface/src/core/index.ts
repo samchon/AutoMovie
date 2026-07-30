@@ -9,3 +9,4 @@ export * from "./IAutoMovieDrivenCurve";
 export * from "./IAutoMovieDriver";
 export * from "./IAutoMovieNamedId";
 export * from "./IAutoMovieProfile";
+export * from "./IAutoMovieCapability";

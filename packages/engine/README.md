@@ -1,5 +1,18 @@
 # `@automovie/engine`
 
+## Capability-gated combat and world kit
+
+`resolveFirearmVolley` requires an exact model profile, `shooter` trait, and
+typed firearm before it returns one deterministic event per shooter. Reload,
+misfire, accuracy interpolation, effective range, and seeded hit sampling stay
+separate so agent-owned behavior code can react to returned data.
+
+`seededValue` and `mixSeed` are the shared domain-separated PRNG primitives for
+effects, combat, formations, and general instances. The world kit constructs
+terrain/ramp surfaces, visible wall/building box proxies, and grid/scatter/
+route instance designs. `assertWorldPlacements` throws on overlapping or
+floating blocks, blocked routes, and unreachable landmarks.
+
 ## Registered shot authoring
 
 `defineShot(id, { scene, contract, build })` is the code-authoring boundary for

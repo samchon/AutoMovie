@@ -9,6 +9,7 @@ import {
   IAutoMovieDesignTarget,
   IAutoMovieEffectRecipe,
   IAutoMovieFormationDesign,
+  IAutoMovieInstanceSetDesign,
   IAutoMovieModelRecipe,
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionDesign,
@@ -223,6 +224,8 @@ export interface IAutoMovieSourceOracle {
   groundHeight(point: { x: number; z: number }): number;
   /** Regenerate one exact compiler-owned formation slot without expanding it. */
   formationSlot(formation: string, slot: number): IAutoMovieFormationSlot;
+  /** Regenerate one exact compiler-owned general instance without expanding it. */
+  instanceSlot(instanceSet: string, slot: number): IAutoMovieInstanceSlot;
 }
 
 /** One non-negative film time authored as an exact frame or frame-grid second. */
@@ -496,6 +499,8 @@ export interface IAutoMovieShotBuildContext {
   runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
   /** Compact compiler-derived formation runtimes keyed by formation id. */
   formationRuntime: Readonly<Record<string, IAutoMovieCompiledFormation>>;
+  /** Compact compiler-derived general instance runtimes keyed by set id. */
+  instanceSetRuntime: Readonly<Record<string, IAutoMovieCompiledInstanceSet>>;
   /** Deterministic geometry helpers. */
   engine: IAutoMovieSourceOracle;
 }
@@ -605,6 +610,81 @@ export interface IAutoMovieCompiledFormation {
     /** Positive cycle length used by bounded formation animation. */
     periodSeconds: number;
   };
+  /** Digest of every field above except this digest. */
+  digest: AutoMovieContentDigest;
+}
+
+/** One exactly regenerated member of a non-formation instance set. */
+export interface IAutoMovieInstanceSlot {
+  /** Zero-based deterministic slot index. */
+  slot: number;
+  /** Compiler-owned stable instance id. */
+  node: string;
+  /** Runtime model recipe id. */
+  modelRecipe: string;
+  /** Compiler-derived world position in meters. */
+  position: IAutoMovieVector3;
+  /** Compiler-derived world-space heading in degrees. */
+  facingDeg: number;
+  /** Positive uniform scale. */
+  scale: number;
+  /** Selected exact sRGB palette value. */
+  palette: string;
+  /** Seed-derived numeric traits keyed by declared name. */
+  traits: Record<string, number>;
+}
+
+/** One independently regenerable range of a general instance set. */
+export interface IAutoMovieInstanceChunk {
+  /** Zero-based stable chunk index. */
+  index: number;
+  /** Inclusive first slot. */
+  start: number;
+  /** Number of slots in this chunk. */
+  count: number;
+  /** Exact world-space range bounds. */
+  bounds: IAutoMovieFormationBounds;
+  /** Exact arithmetic centroid of the range. */
+  centroid: IAutoMovieVector3;
+}
+
+/** Compact generated runtime for a non-formation instance set. */
+export interface IAutoMovieCompiledInstanceSet {
+  /** Generated instance-set format. */
+  version: 1;
+  /** Stable world-design id. */
+  id: string;
+  /** Exact designed slot count. */
+  count: number;
+  /** Base design recipe. */
+  modelRecipe: string;
+  /** Exact compact placement law. */
+  layout: IAutoMovieInstanceSetDesign["layout"];
+  /**
+   * Resolved route geometry for `along-route`, or null for local layouts.
+   *
+   * The viewer and source oracle regenerate slots from this snapshot without
+   * consulting mutable world design.
+   */
+  route: IAutoMovieWorldDesign["routes"][number] | null;
+  /** World-space origin for local layouts. */
+  anchor: IAutoMovieVector3;
+  /** World-space base heading in degrees. */
+  facingDeg: number;
+  /** Full safe-integer design seed. */
+  seed: number;
+  /** Exact seed-derived visual and semantic variation law. */
+  variation: IAutoMovieInstanceSetDesign["variation"];
+  /** Exact bounds of all generated slots. */
+  bounds: IAutoMovieFormationBounds;
+  /** Exact arithmetic centroid of all generated slots. */
+  centroid: IAutoMovieVector3;
+  /** Compiler-derived representative radius used by viewer culling. */
+  projectionRadius: number;
+  /** Bounded independently regenerable slot ranges. */
+  chunks: IAutoMovieInstanceChunk[];
+  /** Ordered automatic LOD representations. */
+  lod: IAutoMovieCompiledFormationLod[];
   /** Digest of every field above except this digest. */
   digest: AutoMovieContentDigest;
 }
@@ -730,6 +810,8 @@ export interface IAutoMovieCompiledShotSource extends IAutoMovieShotSourceOutput
   models: IAutoMovieModel[];
   /** Compact formation runtimes required by this shot. */
   formations: IAutoMovieCompiledFormation[];
+  /** Compact general instance runtimes placed by the production world. */
+  instanceSets: IAutoMovieCompiledInstanceSet[];
   /** Validated compact formation-level cues, empty when source omitted them. */
   formationMotions: IAutoMovieFormationMotion[];
   /** Compiler-owned deterministic effect runtimes. */

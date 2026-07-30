@@ -1,15 +1,20 @@
 import {
   Quaternion,
+  mixSeed,
   productionRuntimeModelId,
   productionRuntimeSkeletonId,
+  seededValue,
 } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
   IAutoMovieCompiledEffect,
   IAutoMovieCompiledFormation,
+  IAutoMovieCompiledInstanceSet,
   IAutoMovieCompiledShotSource,
   IAutoMovieFormationDesign,
   IAutoMovieFormationSlot,
+  IAutoMovieInstanceSetDesign,
+  IAutoMovieInstanceSlot,
   IAutoMovieModel,
   IAutoMovieModelPart,
   IAutoMovieModelRecipe,
@@ -27,6 +32,9 @@ import {
 
 /** Slots per independently regenerated and culled runtime chunk. */
 export const AUTOMOVIE_FORMATION_CHUNK_SIZE = 1_024;
+
+/** Slots per independently regenerated general-instance chunk. */
+export const AUTOMOVIE_INSTANCE_CHUNK_SIZE = 1_024;
 
 /** Matrix bytes reserved by one slot in one LOD instance buffer. */
 export const AUTOMOVIE_FORMATION_MATRIX_BYTES =
@@ -196,6 +204,173 @@ export const materializeCompiledFormation = (
   };
 };
 
+/** Regenerate one exact non-formation instance in constant memory. */
+export const materializeInstanceSlot = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  world: Pick<IAutoMovieWorldDesign, "routes">,
+  slot: number,
+): IAutoMovieInstanceSlot => {
+  if (
+    Number.isSafeInteger(slot) === false ||
+    slot < 0 ||
+    slot >= instanceSet.count
+  )
+    throw new RangeError(
+      `Instance set "${instanceSet.id}" slot ${slot} is outside 0..${instanceSet.count - 1}.`,
+    );
+  const point = localInstancePoint(instanceSet, world, slot);
+  const radians = (instanceSet.facingDeg * Math.PI) / 180;
+  const cosine = Math.cos(radians);
+  const sine = Math.sin(radians);
+  const scaleSample = seededValue(instanceSet.seed, slot, 0x7363616c);
+  const scale =
+    instanceSet.variation.scale.min +
+    (instanceSet.variation.scale.max - instanceSet.variation.scale.min) *
+      scaleSample;
+  const paletteIndex = Math.min(
+    instanceSet.variation.palette.length - 1,
+    Math.floor(
+      seededValue(instanceSet.seed, slot, 0x70616c65) *
+        instanceSet.variation.palette.length,
+    ),
+  );
+  return {
+    slot,
+    node: `instance:${instanceSet.id}:slot:${String(slot).padStart(6, "0")}`,
+    modelRecipe: instanceSet.modelRecipe,
+    position:
+      instanceSet.layout.kind === "along-route"
+        ? {
+            x: point.x,
+            y: instanceSet.anchor.y,
+            z: point.z,
+          }
+        : {
+            x: instanceSet.anchor.x + point.x * cosine + point.z * sine,
+            y: instanceSet.anchor.y,
+            z: instanceSet.anchor.z - point.x * sine + point.z * cosine,
+          },
+    facingDeg: instanceSet.facingDeg,
+    scale,
+    palette: instanceSet.variation.palette[paletteIndex]!,
+    traits: Object.fromEntries(
+      instanceSet.variation.traits.map((trait, index) => [
+        trait.name,
+        trait.min +
+          (trait.max - trait.min) *
+            seededValue(instanceSet.seed, slot, index, 0x74726169),
+      ]),
+    ),
+  };
+};
+
+/** Materialize one general instance set for direct inspection. */
+export const materializeInstanceSlots = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  world: Pick<IAutoMovieWorldDesign, "routes">,
+): IAutoMovieInstanceSlot[] =>
+  Array.from({ length: instanceSet.count }, (_, slot) =>
+    materializeInstanceSlot(instanceSet, world, slot),
+  );
+
+/** Compile every world instance set into bounded regenerable chunks. */
+export const materializeCompiledInstanceSetInventory = (
+  world: IAutoMovieWorldDesign,
+  recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
+): Readonly<Record<string, IAutoMovieCompiledInstanceSet>> =>
+  Object.fromEntries(
+    [...(world.instanceSets ?? [])]
+      .sort((left, right) => compareCodeUnits(left.id, right.id))
+      .map((instanceSet) => [
+        instanceSet.id,
+        materializeCompiledInstanceSet(instanceSet, world, recipes),
+      ]),
+  );
+
+/** Compile one world instance set without expanding its full slot inventory. */
+export const materializeCompiledInstanceSet = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  world: IAutoMovieWorldDesign,
+  recipes: ReadonlyMap<string, IAutoMovieModelRecipe> = new Map(),
+): IAutoMovieCompiledInstanceSet => {
+  const chunks = Array.from(
+    {
+      length: Math.ceil(instanceSet.count / AUTOMOVIE_INSTANCE_CHUNK_SIZE),
+    },
+    (_, index) => {
+      const start = index * AUTOMOVIE_INSTANCE_CHUNK_SIZE;
+      const count = Math.min(
+        AUTOMOVIE_INSTANCE_CHUNK_SIZE,
+        instanceSet.count - start,
+      );
+      return {
+        index,
+        start,
+        count,
+        ...summarizeInstanceRange(instanceSet, world, start, count),
+      };
+    },
+  );
+  const summary = summarizeInstanceRange(
+    instanceSet,
+    world,
+    0,
+    instanceSet.count,
+  );
+  const recipe = recipes.get(instanceSet.modelRecipe);
+  const sourceLod = recipe?.lod ?? [];
+  const lod = (
+    sourceLod.length === 0
+      ? [
+          {
+            tier: "near" as const,
+            maxDistance: null,
+            recipe: instanceSet.modelRecipe,
+          },
+        ]
+      : sourceLod
+  ).map((item) => ({
+    ...item,
+    recipeDigest: lodRecipeDigest(recipes, item.recipe),
+    model: productionRuntimeModelId(item.recipe),
+  }));
+  const core = {
+    version: 1 as const,
+    id: instanceSet.id,
+    count: instanceSet.count,
+    modelRecipe: instanceSet.modelRecipe,
+    layout: structuredClone(instanceSet.layout),
+    route:
+      instanceSet.layout.kind === "along-route"
+        ? structuredClone(
+            world.routes.find(
+              (route) => route.id === instanceSet.layout.route,
+            ) ?? null,
+          )
+        : null,
+    anchor: structuredClone(instanceSet.anchor),
+    facingDeg: instanceSet.facingDeg,
+    seed: instanceSet.seed,
+    variation: structuredClone(instanceSet.variation),
+    ...summary,
+    projectionRadius: Math.max(
+      0.01,
+      ...lod.map(
+        (item) =>
+          recipeProjectionRadius(recipes.get(item.recipe)) ??
+          recipeProjectionRadius(recipe) ??
+          0.5,
+      ),
+    ),
+    chunks,
+    lod,
+  };
+  return {
+    ...core,
+    digest: digestAutoMovieBytes(canonicalAutoMovieJsonBytes(core)),
+  };
+};
+
 /**
  * Add compiler-owned models, hero nodes and compact formations to choreography.
  *
@@ -206,6 +381,7 @@ export const materializeCompiledShot = (props: {
   contract: IAutoMovieShotContract;
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>;
   formationRuntime?: Readonly<Record<string, IAutoMovieCompiledFormation>>;
+  instanceSetRuntime?: Readonly<Record<string, IAutoMovieCompiledInstanceSet>>;
   modelRecipes?: ReadonlyMap<string, IAutoMovieModelRecipe>;
   runtimeModels: ReadonlyMap<string, IAutoMovieModel>;
   world?: IAutoMovieWorldDesign;
@@ -276,6 +452,9 @@ export const materializeCompiledShot = (props: {
       ...formations.flatMap((formation) =>
         formation.lod.map((lod) => lod.model),
       ),
+      ...Object.values(props.instanceSetRuntime ?? {}).flatMap((instanceSet) =>
+        instanceSet.lod.map((lod) => lod.model),
+      ),
     ]),
   ]
     .sort(compareCodeUnits)
@@ -290,6 +469,9 @@ export const materializeCompiledShot = (props: {
       effects,
       models,
       formations,
+      instanceSets: Object.values(props.instanceSetRuntime ?? {}).sort(
+        (left, right) => compareCodeUnits(left.id, right.id),
+      ),
     },
     collisions,
   };
@@ -435,35 +617,111 @@ const summarizeFormationRange = (
   };
 };
 
+const localInstancePoint = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  world: Pick<IAutoMovieWorldDesign, "routes">,
+  slot: number,
+): { x: number; z: number } => {
+  const layout = instanceSet.layout;
+  if (layout.kind === "grid") {
+    const row = Math.floor(slot / layout.columns);
+    const column = slot % layout.columns;
+    return {
+      x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
+      z: row * layout.spacing.z,
+    };
+  }
+  if (layout.kind === "scatter") {
+    const radius =
+      Math.sqrt(seededValue(instanceSet.seed, slot, 0x72616469)) *
+      layout.radius;
+    const angle = seededValue(instanceSet.seed, slot, 0x616e676c) * Math.PI * 2;
+    return {
+      x: Math.cos(angle) * radius,
+      z: Math.sin(angle) * radius,
+    };
+  }
+  const route = world.routes.find((candidate) => candidate.id === layout.route);
+  if (route === undefined || route.waypoints.length < 2)
+    throw new Error(
+      `Instance set "${instanceSet.id}" references unavailable route "${layout.route}".`,
+    );
+  const segments = route.waypoints.slice(1).map((right, index) => {
+    const left = route.waypoints[index]!;
+    return {
+      left,
+      right,
+      length: Math.hypot(right.x - left.x, right.z - left.z),
+    };
+  });
+  const total = segments.reduce((sum, segment) => sum + segment.length, 0);
+  let remaining = ((slot + 0.5) / instanceSet.count) * total;
+  const segment =
+    segments.find((candidate) => {
+      if (remaining <= candidate.length) return true;
+      remaining -= candidate.length;
+      return false;
+    }) ?? segments.at(-1)!;
+  const ratio =
+    segment.length === 0 ? 0 : Math.min(1, remaining / segment.length);
+  const tangent = {
+    x: segment.right.x - segment.left.x,
+    z: segment.right.z - segment.left.z,
+  };
+  const tangentLength = Math.hypot(tangent.x, tangent.z);
+  const jitter =
+    (seededValue(instanceSet.seed, slot, 0x6a697474) * 2 - 1) *
+    layout.lateralJitter;
+  return {
+    x:
+      segment.left.x +
+      tangent.x * ratio -
+      (tangentLength === 0 ? 0 : (tangent.z / tangentLength) * jitter),
+    z:
+      segment.left.z +
+      tangent.z * ratio +
+      (tangentLength === 0 ? 0 : (tangent.x / tangentLength) * jitter),
+  };
+};
+
+const summarizeInstanceRange = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  world: Pick<IAutoMovieWorldDesign, "routes">,
+  start: number,
+  count: number,
+): {
+  bounds: IAutoMovieCompiledInstanceSet["bounds"];
+  centroid: IAutoMovieCompiledInstanceSet["centroid"];
+} => {
+  const min = {
+    x: Number.POSITIVE_INFINITY,
+    y: Number.POSITIVE_INFINITY,
+    z: Number.POSITIVE_INFINITY,
+  };
+  const max = {
+    x: Number.NEGATIVE_INFINITY,
+    y: Number.NEGATIVE_INFINITY,
+    z: Number.NEGATIVE_INFINITY,
+  };
+  const centroid = { x: 0, y: 0, z: 0 };
+  for (let slot = start; slot < start + count; ++slot) {
+    const point = materializeInstanceSlot(instanceSet, world, slot).position;
+    min.x = Math.min(min.x, point.x);
+    min.y = Math.min(min.y, point.y);
+    min.z = Math.min(min.z, point.z);
+    max.x = Math.max(max.x, point.x);
+    max.y = Math.max(max.y, point.y);
+    max.z = Math.max(max.z, point.z);
+    const seen = slot - start + 1;
+    centroid.x = stableMeanStep(centroid.x, point.x, seen);
+    centroid.y = stableMeanStep(centroid.y, point.y, seen);
+    centroid.z = stableMeanStep(centroid.z, point.z, seen);
+  }
+  return { bounds: { min, max }, centroid };
+};
+
 const stableMeanStep = (mean: number, value: number, count: number): number =>
   mean * ((count - 1) / count) + value / count;
-
-const seededValue = (...values: number[]): number => {
-  let state = 0x9e3779b9;
-  for (const value of values) state = mixSeed(value, state);
-  state = (state + 0x6d2b79f5) >>> 0;
-  let output = state;
-  output = Math.imul(output ^ (output >>> 15), output | 1);
-  output ^= output + Math.imul(output ^ (output >>> 7), output | 61);
-  return ((output ^ (output >>> 14)) >>> 0) / 4_294_967_296;
-};
-
-/**
- * Fold one full safe-integer seed into a 32-bit PRNG state.
- *
- * Low and high words are mixed in sequence, with a caller-supplied salt, so
- * swapped seed roles and values separated by 2^32 no longer collapse by
- * construction under JavaScript bitwise XOR.
- */
-const mixSeed = (seed: number, salt: number): number => {
-  const integer = Math.trunc(seed);
-  const low = integer >>> 0;
-  const high = Math.floor(integer / 4_294_967_296) >>> 0;
-  let value = (salt ^ low) >>> 0;
-  value = Math.imul(value ^ (value >>> 16), 0x7feb352d);
-  value = Math.imul(value ^ (value >>> 15) ^ high, 0x846ca68b);
-  return (value ^ (value >>> 16)) >>> 0;
-};
 
 /**
  * Content digest for one LOD tier's model-recipe reference.
@@ -543,6 +801,7 @@ const materializeModel = (recipe: IAutoMovieModelRecipe): IAutoMovieModel => {
     affordances: null,
     materials: [material],
     asset: null,
+    profiles: structuredClone(recipe.profiles ?? []),
   };
   if (recipe.archetype === "stickman") {
     const height = numberParameter(recipe, "height");

@@ -1,5 +1,17 @@
 # `@automovie/interface`
 
+## Typed object capabilities and instances
+
+`IAutoMovieProfile.traits` carries closed `locomotor`, `shooter`, `mountable`,
+and `destructible` data. Firearm, cannon, melee, ammunition, and impact-body
+facts are typed; names and legacy free-form capability labels do not authorize
+engine verbs.
+
+`IAutoMovieWorldDesign.instanceSets` owns compact non-formation crowds,
+vegetation, props, and debris. Grid, disk-scatter, and route layouts retain
+only count, seed, model reference, and bounded variation law. Compiled slots
+derive stable scale, palette, and numeric traits without expanding scene nodes.
+
 automovie의 타입 허브. 캐릭터·사물의 형상·포즈·모션·표정·머티리얼·씬을 기술하는 모든 AST 구조체의 단일 진실 공급원이다. LLM이 보는 structured-output 스키마가 곧 이 패키지의 타입이다.
 
 런타임 의존은 없다. `typia`도, `three.js`도 없다. 순수 타입 선언만 담는다. 제약은 필드 JSDoc으로 문서화하고 `@automovie/engine`의 런타임 검증기가 강제한다. 빌드 도구(`ttsc`/`typescript`/`rimraf`/`@ttsc/lint`)는 devDependency일 뿐이다.

@@ -1,4 +1,5 @@
 import { IAutoMovieGait } from "../motion/IAutoMovieGait";
+import { IAutoMovieProfileTrait } from "./IAutoMovieCapability";
 import { IAutoMovieChannel } from "./IAutoMovieChannel";
 import { IAutoMovieChannelLimit } from "./IAutoMovieChannelLimit";
 import { IAutoMovieDriver } from "./IAutoMovieDriver";
@@ -38,6 +39,15 @@ export interface IAutoMovieProfile {
 
   /** Standard value constraints (the profile's default ROM / limits). */
   limits: IAutoMovieChannelLimit[];
+
+  /**
+   * Typed semantic capabilities this profile proves.
+   *
+   * Omitted is equivalent to an empty list. An engine verb must find the
+   * matching trait here; model names and free-form capability labels never
+   * grant permission.
+   */
+  traits?: IAutoMovieProfileTrait[];
 
   /**
    * The characteristic gaits this profile's body performs
