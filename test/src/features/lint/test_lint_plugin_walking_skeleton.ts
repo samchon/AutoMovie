@@ -131,6 +131,10 @@ const createScaffoldFixture = (name: string): IFixture => {
   );
   const files = renderScaffold({ name: `lint-${name}` });
   writeFiles(directory, files);
+  fs.rmSync(path.join(directory, ".automovie", "design"), {
+    force: true,
+    recursive: true,
+  });
   const manifest = JSON.parse(files["package.json"]!) as {
     dependencies: Record<string, string>;
     devDependencies: Record<string, string>;
@@ -189,7 +193,11 @@ const runScaffoldLint = (props: {
         encoding: "utf8",
         env: {
           ...process.env,
-          PATH: `${path.join(repositoryRoot, "node_modules", ".bin")}${path.delimiter}${process.env.PATH ?? ""}`,
+          PATH: [
+            path.join(repositoryRoot, "test", "node_modules", ".bin"),
+            path.join(repositoryRoot, "node_modules", ".bin"),
+            process.env.PATH ?? "",
+          ].join(path.delimiter),
           TTSC_CACHE_DIR: pluginCache,
         },
         maxBuffer: 16 * 1024 * 1024,
@@ -282,10 +290,16 @@ const assertFailedWith = (
 /**
  * Drives the installed plugin through the real `ttsc check` command.
  *
- * The warm-up success proves the toolchain returned normally, and each one-line
- * failing twin must then produce its rule-specific message. A missing plugin
- * cannot masquerade as "zero diagnostics" because the failing twins would
- * remain green.
+ * Scenarios:
+ *
+ * 1. The rendered CLI scaffold runs its ordinary `pnpm lint` command both without
+ *    resident design and with one exact sentinel.
+ * 2. A direct toolchain warm-up distinguishes zero diagnostics from a linker or
+ *    compiler failure.
+ * 3. Exact sentinel boundaries fire while `$` and Unicode TypeScript identifier
+ *    continuations remain silent.
+ * 4. State residency is silent before records exist, rejects one orphan, and
+ *    accepts valid empty upstream and downstream records.
  */
 export function test_lint_plugin_walking_skeleton(): void {
   const scaffold = runScaffoldLint({ name: "clean" });
@@ -325,6 +339,23 @@ export function test_lint_plugin_walking_skeleton(): void {
     files: { "src/index.ts": 'export const status = "ready";\n' },
   });
   assertSucceeded(clean, "The implemented sentinel twin must stay silent.");
+
+  const identifiers = runFixture({
+    name: "sentinel-identifiers",
+    lintConfig: sentinelConfig,
+    files: {
+      "src/index.ts": [
+        "export const $AUTOMOVIE_IMPLEMENT_ME = 1;",
+        "export const AUTOMOVIE_IMPLEMENT_ME$ = 2;",
+        "export const éAUTOMOVIE_IMPLEMENT_ME = 3;",
+        "",
+      ].join("\n"),
+    },
+  });
+  assertSucceeded(
+    identifiers,
+    "A sentinel substring inside a valid TypeScript identifier is not the exact placeholder token.",
+  );
 
   const sentinel = runFixture({
     name: "sentinel-resident",

@@ -35,8 +35,12 @@
     "@types/three": "catalog:three",
     "c8": "catalog:utils",
     "chalk": "catalog:utils",
+    "mp4box": "catalog:media",
+    "playwright": "catalog:media",
     "ttsc": "catalog:typescript",
+    "tsx": "^4.19.0",
     "typescript": "catalog:typescript",
-    "@ttsc/lint": "catalog:typescript"
+    "@ttsc/lint": "catalog:typescript",
+    "vite": "catalog:vite"
   }
 }

@@ -52,7 +52,7 @@ func (statePresenceRule) ProjectInputs(
 			}
 			seen[pattern] = true
 			kind := rule.ProjectInputFile
-			if strings.ContainsAny(pattern, "*?") {
+			if isProjectGlob(pattern) {
 				kind = rule.ProjectInputGlob
 			}
 			inputs = append(inputs, rule.ProjectInput{
@@ -183,28 +183,49 @@ func normalizeProjectPattern(raw string) (string, string) {
 }
 
 func slotPresent(root string, patterns []string) (bool, string) {
+	problems := make([]string, 0)
 	for _, raw := range patterns {
 		pattern, problem := normalizeProjectPattern(raw)
 		if problem != "" {
-			return false, problem
+			problems = append(problems, problem)
+			continue
 		}
-		if !strings.ContainsAny(pattern, "*?") {
-			info, err := os.Stat(filepath.Join(root, filepath.FromSlash(pattern)))
-			if err == nil && !info.IsDir() {
+		if !isProjectGlob(pattern) {
+			location := filepath.Join(root, filepath.FromSlash(pattern))
+			info, err := os.Lstat(location)
+			if err == nil && info.Mode().IsRegular() {
 				return true, ""
 			}
+			if err == nil && info.Mode()&os.ModeSymlink != 0 {
+				problems = append(
+					problems,
+					"path '"+pattern+"' is a symbolic link rather than one project-owned regular file",
+				)
+				continue
+			}
+			if err == nil && !info.IsDir() {
+				problems = append(
+					problems,
+					"path '"+pattern+"' is not one project-owned regular file",
+				)
+				continue
+			}
 			if err != nil && !os.IsNotExist(err) {
-				return false, err.Error()
+				problems = append(problems, err.Error())
 			}
 			continue
 		}
 		found, globProblem := projectGlobPresent(root, pattern)
 		if globProblem != "" {
-			return false, globProblem
+			problems = append(problems, globProblem)
+			continue
 		}
 		if found {
 			return true, ""
 		}
+	}
+	if len(problems) != 0 {
+		return false, strings.Join(problems, "; ")
 	}
 	return false, ""
 }
@@ -213,7 +234,7 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 	segments := strings.Split(pattern, "/")
 	prefix := make([]string, 0, len(segments))
 	for _, segment := range segments {
-		if strings.ContainsAny(segment, "*?") {
+		if isProjectGlob(segment) {
 			break
 		}
 		prefix = append(prefix, segment)
@@ -222,18 +243,27 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 	if len(prefix) != 0 {
 		base = filepath.Join(root, filepath.FromSlash(strings.Join(prefix, "/")))
 	}
-	if _, err := os.Stat(base); err != nil {
+	baseInfo, err := os.Lstat(base)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return false, ""
 		}
 		return false, err.Error()
 	}
+	if baseInfo.Mode()&os.ModeSymlink != 0 {
+		return false, "glob prefix '" +
+			filepath.ToSlash(strings.TrimPrefix(base, root+string(filepath.Separator))) +
+			"' is a symbolic link rather than a project-owned directory"
+	}
+	if !baseInfo.IsDir() {
+		return false, ""
+	}
 	found := false
-	err := filepath.WalkDir(base, func(location string, entry fs.DirEntry, err error) error {
+	err = filepath.WalkDir(base, func(location string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if found || entry.IsDir() {
+		if found {
 			return nil
 		}
 		relative, relativeError := filepath.Rel(root, location)
@@ -241,6 +271,25 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 			return relativeError
 		}
 		candidate := filepath.ToSlash(relative)
+		if entry.Type()&os.ModeSymlink != 0 {
+			patternSegments := strings.Split(pattern, "/")
+			candidateSegments := strings.Split(candidate, "/")
+			if matchProjectGlob(patternSegments, candidateSegments) ||
+				matchProjectGlobPrefix(patternSegments, candidateSegments) {
+				return &symlinkPresenceError{path: candidate}
+			}
+			return nil
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		info, infoError := entry.Info()
+		if infoError != nil {
+			return infoError
+		}
+		if !info.Mode().IsRegular() {
+			return nil
+		}
 		if matchProjectGlob(strings.Split(pattern, "/"), strings.Split(candidate, "/")) {
 			found = true
 		}
@@ -250,6 +299,19 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 		return false, err.Error()
 	}
 	return found, ""
+}
+
+type symlinkPresenceError struct {
+	path string
+}
+
+func (error *symlinkPresenceError) Error() string {
+	return "glob encountered symbolic link '" + error.path +
+		"'; replace it with project-owned files before evaluating state presence"
+}
+
+func isProjectGlob(pattern string) bool {
+	return strings.ContainsAny(pattern, "*?")
 }
 
 func hasWindowsDrivePrefix(value string) bool {
@@ -270,9 +332,38 @@ func matchProjectGlob(pattern []string, candidate []string) bool {
 	if len(candidate) == 0 {
 		return false
 	}
-	matched, err := path.Match(pattern[0], candidate[0])
-	return err == nil && matched &&
+	return matchProjectSegment([]rune(pattern[0]), []rune(candidate[0])) &&
 		matchProjectGlob(pattern[1:], candidate[1:])
+}
+
+func matchProjectGlobPrefix(pattern []string, candidate []string) bool {
+	if len(candidate) == 0 {
+		return len(pattern) != 0
+	}
+	if len(pattern) == 0 {
+		return false
+	}
+	if pattern[0] == "**" {
+		return matchProjectGlobPrefix(pattern[1:], candidate) ||
+			matchProjectGlobPrefix(pattern, candidate[1:])
+	}
+	return matchProjectSegment([]rune(pattern[0]), []rune(candidate[0])) &&
+		matchProjectGlobPrefix(pattern[1:], candidate[1:])
+}
+
+func matchProjectSegment(pattern []rune, candidate []rune) bool {
+	if len(pattern) == 0 {
+		return len(candidate) == 0
+	}
+	if pattern[0] == '*' {
+		return matchProjectSegment(pattern[1:], candidate) ||
+			len(candidate) != 0 && matchProjectSegment(pattern, candidate[1:])
+	}
+	if len(candidate) == 0 {
+		return false
+	}
+	return (pattern[0] == '?' || pattern[0] == candidate[0]) &&
+		matchProjectSegment(pattern[1:], candidate[1:])
 }
 
 func init() {

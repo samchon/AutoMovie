@@ -2,6 +2,8 @@ package automovie
 
 import (
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	shimast "github.com/microsoft/typescript-go/shim/ast"
 
@@ -57,15 +59,21 @@ func (templateSentinelRule) Check(ctx *rule.Context, node *shimast.Node) {
 }
 
 func isSentinelBoundary(content string, start int, end int) bool {
-	return (start == 0 || !isIdentifierByte(content[start-1])) &&
-		(end == len(content) || !isIdentifierByte(content[end]))
+	before, _ := utf8.DecodeLastRuneInString(content[:start])
+	after, _ := utf8.DecodeRuneInString(content[end:])
+	return (start == 0 || !isIdentifierContinue(before)) &&
+		(end == len(content) || !isIdentifierContinue(after))
 }
 
-func isIdentifierByte(value byte) bool {
-	return value == '_' ||
-		value >= '0' && value <= '9' ||
-		value >= 'A' && value <= 'Z' ||
-		value >= 'a' && value <= 'z'
+func isIdentifierContinue(value rune) bool {
+	return value == '$' ||
+		value == '_' ||
+		value == '\u200c' ||
+		value == '\u200d' ||
+		unicode.IsLetter(value) ||
+		unicode.IsDigit(value) ||
+		unicode.IsMark(value) ||
+		unicode.Is(unicode.Pc, value)
 }
 
 func init() { rule.Register(templateSentinelRule{}) }

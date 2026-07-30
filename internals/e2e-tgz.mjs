@@ -1142,6 +1142,74 @@ try {
     writeFileSync(captureConfigPath, captureConfigText);
   }
   run("compile packaged starter", "pnpm compile", starterDir);
+  const packagedLintConfigPath = join(starterDir, "lint.config.ts");
+  const packagedLintConfig = readFileSync(packagedLintConfigPath, "utf8");
+  const packagedSentinelPath = join(
+    starterDir,
+    "src",
+    "packaged-lint-sentinel.ts",
+  );
+  writeFileSync(
+    packagedSentinelPath,
+    'export const status = "AUTOMOVIE_IMPLEMENT_ME";\n',
+  );
+  try {
+    runExpectedFailure(
+      "fire packaged template-sentinel contributor",
+      "pnpm exec ttsc --noEmit -p tsconfig.json",
+      starterDir,
+      "Template sentinel 'AUTOMOVIE_IMPLEMENT_ME' remains in compiled source.",
+      900_000,
+    );
+  } finally {
+    rmSync(packagedSentinelPath, { force: true });
+  }
+  const packagedPresenceRoot = join(starterDir, ".automovie", "lint-probe");
+  mkdirSync(packagedPresenceRoot);
+  writeFileSync(join(packagedPresenceRoot, "downstream.json"), "[]\n");
+  writeFileSync(
+    packagedLintConfigPath,
+    packagedLintConfig.replace(
+      '"automovie/template-sentinel": "error",',
+      `"automovie/template-sentinel": "error",
+    "automovie/state-presence": [
+      "error",
+      {
+        slots: [
+          {
+            name: "upstream",
+            files: [".automovie/lint-probe/upstream.json"],
+            requires: [],
+          },
+          {
+            name: "downstream",
+            files: [".automovie/lint-probe/downstream.json"],
+            requires: ["upstream"],
+          },
+        ],
+      },
+    ],`,
+    ),
+  );
+  try {
+    runExpectedFailure(
+      "fire packaged state-presence contributor",
+      "pnpm exec ttsc --noEmit -p tsconfig.json",
+      starterDir,
+      "State slot 'downstream' is present while required upstream slot 'upstream' is absent.",
+      900_000,
+    );
+    writeFileSync(join(packagedPresenceRoot, "upstream.json"), "[]\n");
+    run(
+      "silence packaged state-presence contributor with resident upstream",
+      "pnpm exec ttsc --noEmit -p tsconfig.json",
+      starterDir,
+      900_000,
+    );
+  } finally {
+    writeFileSync(packagedLintConfigPath, packagedLintConfig);
+    rmSync(packagedPresenceRoot, { force: true, recursive: true });
+  }
   // A fresh @ttsc/lint install builds its source plugin with Go once per
   // cache key. Cold Windows and CI caches can legitimately exceed the ordinary
   // five-minute command fence before TypeScript linting itself begins.
