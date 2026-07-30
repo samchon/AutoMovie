@@ -1,11 +1,7 @@
 import * as THREE from "three";
 
 /**
- * A **cross-dissolve** between two shots of the same scene: the render side of
- * `resolveSequencePlayback`'s `blend`. The engine says "at this instant the
- * incoming shot is at weight `alpha`, the outgoing tail rides along"; this
- * draws both and cross-fades them so a cut can dissolve instead of
- * hard-switching.
+ * A GPU **cross-dissolve** between two render callbacks.
  *
  * One pass renders the **outgoing** shot to an offscreen target, a second
  * renders the **incoming** shot to the screen, and a full-screen quad
@@ -18,10 +14,9 @@ import * as THREE from "three";
  * {@link disposeCrossDissolve} when the renderer goes away, the same lifecycle
  * contract the render-mode handles carry (#645).
  *
- * `poseOutgoing` / `poseIncoming` each pose `scene` and aim `camera` for their
- * shot at its local time; this helper owns only the render orchestration, so
- * the demo keeps its posing logic. Call it from the viewer's frame hook and
- * return `true` so the mount loop skips its own single-pass render.
+ * The callbacks may own different scenes and cameras. Call this from a viewer's
+ * frame hook and return `true` so the mount loop skips its own single-pass
+ * render.
  *
  * @author Samchon
  */
@@ -35,22 +30,14 @@ interface IDissolveState {
 
 const states = new WeakMap<THREE.WebGLRenderer, IDissolveState>();
 
-export const renderCrossDissolve = (
+export const renderCrossDissolveFrames = (
   renderer: THREE.WebGLRenderer,
-  scene: THREE.Scene,
-  camera: THREE.Camera,
-  poseOutgoing: () => void,
-  poseIncoming: () => void,
+  renderOutgoing: () => void,
+  renderIncoming: () => void,
   alpha: number,
-  /**
-   * Wraps each half's render (#1250). A multi-pass guide capture supplies a
-   * wrapper that applies the pass override (freshly per half, so the `pose`
-   * overlay reflects each shot's own pose) around `render()`; the composite is
-   * then a cross-fade of two guide-pass renders, the guide-space analogue of
-   * the beauty cross-fade. Omitted for a plain render.
-   */
-  renderHalf: (render: () => void) => void = (render) => render(),
 ): void => {
+  if (Number.isFinite(alpha) === false || alpha < 0 || alpha > 1)
+    throw new Error("Cross-dissolve alpha must be finite and inside [0, 1].");
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
   let state = states.get(renderer);
   if (state === undefined) {
@@ -88,23 +75,59 @@ export const renderCrossDissolve = (
   } else if (state.target.width !== size.x || state.target.height !== size.y)
     state.target.setSize(size.x, size.y);
 
-  // outgoing → offscreen target (autoClear wipes it first)
-  poseOutgoing();
-  renderer.setRenderTarget(state.target);
-  renderHalf(() => renderer.render(scene, camera));
-  renderer.setRenderTarget(null);
+  const previousTarget = renderer.getRenderTarget?.() ?? null;
+  const previousAutoClear = renderer.autoClear;
+  let screenSelected = false;
+  try {
+    // outgoing → offscreen target (autoClear wipes it first)
+    renderer.setRenderTarget(state.target);
+    renderOutgoing();
+    renderer.setRenderTarget(null);
+    screenSelected = true;
 
-  // incoming → screen
-  poseIncoming();
-  renderHalf(() => renderer.render(scene, camera));
+    // incoming → screen
+    renderIncoming();
 
-  // composite the outgoing over the incoming at opacity (1 − alpha)
-  state.quadMaterial.opacity = 1 - alpha;
-  const prevAutoClear = renderer.autoClear;
-  renderer.autoClear = false;
-  renderer.render(state.quadScene, state.quadCamera);
-  renderer.autoClear = prevAutoClear;
+    // composite the outgoing over the incoming at opacity (1 − alpha)
+    state.quadMaterial.opacity = 1 - alpha;
+    renderer.autoClear = false;
+    renderer.render(state.quadScene, state.quadCamera);
+  } finally {
+    renderer.autoClear = previousAutoClear;
+    if (screenSelected === false || previousTarget !== null)
+      renderer.setRenderTarget(previousTarget);
+  }
 };
+
+/** Cross-dissolve two poses of one scene, optionally wrapping each guide pass. */
+export const renderCrossDissolve = (
+  renderer: THREE.WebGLRenderer,
+  scene: THREE.Scene,
+  camera: THREE.Camera,
+  poseOutgoing: () => void,
+  poseIncoming: () => void,
+  alpha: number,
+  /**
+   * Wraps each half's render (#1250). A multi-pass guide capture supplies a
+   * wrapper that applies the pass override (freshly per half, so the `pose`
+   * overlay reflects each shot's own pose) around `render()`; the composite is
+   * then a cross-fade of two guide-pass renders, the guide-space analogue of
+   * the beauty cross-fade. Omitted for a plain render.
+   */
+  renderHalf: (render: () => void) => void = (render) => render(),
+): void =>
+  renderCrossDissolveFrames(
+    renderer,
+    () => {
+      poseOutgoing();
+      renderHalf(() => renderer.render(scene, camera));
+    },
+    () => {
+      poseIncoming();
+      renderHalf(() => renderer.render(scene, camera));
+    },
+    alpha,
+  );
 
 /**
  * Dispose the dissolve GPU state created for `renderer` (render target, quad

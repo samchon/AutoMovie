@@ -2349,6 +2349,7 @@ export const film = {
       { id: "captions-invalid", kind: "captions", required: false },
       { id: "feature-codec", kind: "feature", required: false },
       { id: "guide-codec", kind: "guide-pass", required: false },
+      { id: "guide-controls", kind: "guide-pass", required: false },
       { id: "audio-codec", kind: "audio-mix", required: false },
       { id: "audio-runtime", kind: "audio-mix", required: false },
       { id: "audio-valid", kind: "audio-mix", required: false },
@@ -2474,6 +2475,9 @@ export const film = {
     );
     const edge = (id: string): RenderedDeliverable =>
       invalidDeliverables.find((deliverable) => deliverable.id === id)!;
+    edge("guide-controls").files.push(
+      edgeFile("guide-controls-frame", "preview"),
+    );
     edge("feature-runtime").runtimeSeconds =
       edgeProduction.targetRuntimeSeconds / 2;
     edge("preview-runtime").runtimeSeconds = 0;
@@ -2725,6 +2729,11 @@ export const film = {
           "render-deliverable-incomplete",
           "render-deliverable-missing",
         ].every((code) => diagnosticCodes(semanticRender).has(code)) &&
+        semanticRender.diagnostics.every(
+          (diagnostic) =>
+            diagnostic.target !== "guide-controls" ||
+            diagnostic.code !== "render-deliverable-media-mismatch",
+        ) &&
         nonErrorRenderRead.diagnostics.some(
           (diagnostic) =>
             diagnostic.code === "render-deliverable-missing" &&

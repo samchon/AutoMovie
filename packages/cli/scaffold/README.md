@@ -81,6 +81,26 @@ npx automovie render verify
 npx automovie render finalize
 ```
 
+Use `--tier proxy` for a half-raster, stepped-frame review render and
+`--tier final` (the default) for delivery. Both tiers reopen the same compiled
+film timeline and publish under separate content-addressed paths, so a proxy
+approval never overwrites the final bundle:
+
+```sh
+npx automovie render all --tier proxy
+npx automovie render all --tier final
+npx automovie render gc
+npx automovie render gc --apply
+```
+
+`render gc` is a dry run unless `--apply` is explicit. It marks the current
+proxy and final plans, stored review-evidence bundles, and every file named by
+the current publication manifest, then reports unreferenced chunks, quarantine
+entries, and stale publication bytes. Active lock and attempt records are
+never sweep candidates.
+Guide-pass publication includes both its MP4 and authenticated
+`frames/<pass>/frame_XXXXXXXX.png` control images.
+
 `status`, `verify`, and `finalize` re-run the package-owned capture, actual
 graphics, declared render-source, and encoder identity preflight. They may
 launch Chromium; any identity change marks the stored chunks stale instead of
@@ -100,6 +120,13 @@ queue and records, generated manifest and bytes, production manifest, exact
 design graph, and state incarnation with canonical structured fields. The
 staged final compiler gate recomputes that review queue from current render
 evidence; any change during the gate rolls the publication back.
+
+The production viewer accepts `?film=1` for GPU cut/dissolve playback of the
+compiler-owned EDL, `?shot=<id>` for one shot, and
+`?asset=<model-id>&angle=<degrees>&elevation=<degrees>` for an isolated model
+turntable. The reusable capture session opens each target/raster page once and
+seeks subsequent frames in place; render output reports page, navigation,
+seek, and capture counts so throughput improvements remain measurable.
 
 ## Ownership
 

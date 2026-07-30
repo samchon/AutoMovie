@@ -42,6 +42,16 @@ export interface IAutoMovieProductionRenderRuntimeIdentity {
   encoder: IAutoMovieProductionEncoderIdentity;
 }
 
+/** Explicit cost/quality tier sharing one compiler-owned edit. */
+export interface IAutoMovieProductionRenderTier {
+  /** Stable tier identity used in slots, chunks, and publication paths. */
+  kind: "proxy" | "final";
+  /** Output raster multiplier in `(0, 1]`; final is exactly one. */
+  resolutionScale: number;
+  /** Keep every Nth source frame; final is exactly one. */
+  frameStep: number;
+}
+
 /** One source image participating in a film-global output frame. */
 export interface IAutoMovieProductionRenderLayer {
   /** Compiler-owned shot id. */
@@ -54,8 +64,10 @@ export interface IAutoMovieProductionRenderLayer {
 
 /** One exact film-global frame with transitions already resolved. */
 export interface IAutoMovieProductionRenderFrame {
-  /** Exact zero-based film frame. */
+  /** Exact zero-based output frame in this render tier. */
   globalFrame: number;
+  /** Exact frame on the compiler-owned full-rate film timeline. */
+  timelineFrame: number;
   /** Derived film time, never an accumulated clock. */
   timeSeconds: number;
   /** One hard-cut/fade layer or two dissolve layers, back to front. */
@@ -85,7 +97,7 @@ export interface IAutoMovieProductionRenderChunk {
 /** Persisted plan reopened by every `automovie render` subcommand. */
 export interface IAutoMovieProductionRenderJobPlan {
   /** Plan schema. */
-  version: 2;
+  version: 3;
   /** Exact production namespace that owns every slot and output. */
   productionId: string;
   /** Compiler source-input fingerprint used by all captures. */
@@ -94,6 +106,10 @@ export interface IAutoMovieProductionRenderJobPlan {
   editFingerprint: AutoMovieContentDigest;
   /** Homogeneous capture and encoder identity. */
   runtimeIdentity: IAutoMovieProductionRenderRuntimeIdentity;
+  /** Proxy/final cost policy; both retain the same edit fingerprint. */
+  tier: IAutoMovieProductionRenderTier;
+  /** Compiler-owned full-quality clock and raster before tier sampling. */
+  sourceFrameFormat: IAutoMovieProductionDesign["frameFormat"];
   /** Exact production raster and frame clock. */
   frameFormat: IAutoMovieProductionDesign["frameFormat"];
   /** Exact total film frame count. */
@@ -197,6 +213,8 @@ export const planProductionRenderJob = (props: {
   audioAssets: readonly IAutoMovieProductionAudioAssetIdentity[];
   chunkFrames: number;
   guidePasses?: readonly Exclude<AutoMovieGuidePass, "beauty">[];
+  /** Explicit proxy/final policy; omitted is the exact final tier. */
+  tier?: IAutoMovieProductionRenderTier;
 }): IAutoMovieProductionRenderJobPlan => {
   if (
     Number.isSafeInteger(props.chunkFrames) === false ||
@@ -209,10 +227,12 @@ export const planProductionRenderJob = (props: {
     throw new Error(
       "Render runtime sourceDigest must be one current SHA-256 content identity.",
     );
-  if (
-    props.production.frameFormat.width % 2 !== 0 ||
-    props.production.frameFormat.height % 2 !== 0
-  )
+  const tier = normalizeRenderTier(props.tier);
+  const frameFormat = resolveProductionRenderTierFrameFormat(
+    props.production.frameFormat,
+    tier,
+  );
+  if (frameFormat.width % 2 !== 0 || frameFormat.height % 2 !== 0)
     throw new Error(
       "The production H.264 render adapter requires even width and height.",
     );
@@ -227,6 +247,10 @@ export const planProductionRenderJob = (props: {
   )
     throw new Error(
       "The film edit differs from the production identity, frame clock, or runtime. Recompile before planning.",
+    );
+  if (props.timeline.totalFrames % tier.frameStep !== 0)
+    throw new Error(
+      `Render tier "${tier.kind}" frameStep ${tier.frameStep} does not divide the ${props.timeline.totalFrames}-frame edit. Choose a divisor so proxy and final have the same exact runtime.`,
     );
   const audioAssets = normalizeAudioAssets(props.audioAssets);
   for (const cue of props.timeline.tracks.audio) {
@@ -251,8 +275,16 @@ export const planProductionRenderJob = (props: {
     tracks: props.timeline.tracks,
   });
   const frames = Array.from(
-    { length: props.timeline.totalFrames },
-    (_, frame) => sampleProductionRenderFrame(props.timeline, frame),
+    { length: props.timeline.totalFrames / tier.frameStep },
+    (_, outputFrame) => {
+      const timelineFrame = outputFrame * tier.frameStep;
+      return {
+        ...sampleProductionRenderFrame(props.timeline, timelineFrame),
+        globalFrame: outputFrame,
+        timelineFrame,
+        timeSeconds: outputFrame / frameFormat.fps,
+      };
+    },
   );
   const chunks: IAutoMovieProductionRenderChunk[] = [];
   for (const deliverable of props.production.deliverables) {
@@ -288,14 +320,16 @@ export const planProductionRenderJob = (props: {
               );
             return { shot, digest };
           });
-        const slot = `${props.production.id}:${deliverable.id}:${pass}:${index}`;
+        const slot = `${props.production.id}:${tier.kind}:${deliverable.id}:${pass}:${index}`;
         const identity = {
-          protocol: "automovie.production-render-chunk.v2",
+          protocol: "automovie.production-render-chunk.v3",
           production: props.production.id,
+          tier,
           deliverable: deliverable.id,
           kind: deliverable.kind,
           editFingerprint,
-          frameFormat: props.production.frameFormat,
+          sourceFrameFormat: props.production.frameFormat,
+          frameFormat,
           frameStart,
           frameEndExclusive,
           pass,
@@ -315,13 +349,15 @@ export const planProductionRenderJob = (props: {
       }
   }
   return {
-    version: 2,
+    version: 3,
     productionId: props.production.id,
     compileFingerprint: props.timeline.inputFingerprint,
     editFingerprint,
     runtimeIdentity: props.runtimeIdentity,
-    frameFormat: props.production.frameFormat,
-    totalFrames: props.timeline.totalFrames,
+    tier,
+    sourceFrameFormat: structuredClone(props.production.frameFormat),
+    frameFormat,
+    totalFrames: frames.length,
     chunkFrames: props.chunkFrames,
     chunks,
     tracks: {
@@ -350,6 +386,7 @@ export const verifyProductionRenderJobPlan = (props: {
     audioAssets: props.audioAssets,
     chunkFrames: props.plan.chunkFrames,
     guidePasses: props.guidePasses,
+    tier: props.plan.tier,
   });
   if (canonicalJson(props.plan) !== canonicalJson(expected))
     throw new Error(
@@ -423,6 +460,29 @@ export const sampleProductionRenderFrame = (
   return frame(timeline, globalFrame, [
     { ...incoming, weight: Math.min(fadeIn, fadeOut) },
   ]);
+};
+
+/**
+ * Resolve pass-specific transition inputs.
+ *
+ * Beauty is alpha composited. Structural guide passes are classifications or
+ * geometric fields, so linearly blending their pixels invents invalid values;
+ * they select the dominant shot layer instead (incoming wins an exact tie).
+ */
+export const productionRenderLayersForPass = (
+  frame: IAutoMovieProductionRenderFrame,
+  pass: AutoMovieGuidePass,
+): IAutoMovieProductionRenderLayer[] => {
+  if (pass === "beauty") return structuredClone(frame.layers);
+  const selected = frame.layers.reduce((selected, candidate) =>
+    candidate.weight >= selected.weight ? candidate : selected,
+  );
+  return [
+    {
+      ...structuredClone(selected),
+      weight: 1,
+    },
+  ];
 };
 
 /** Canonical WebVTT derived only from compiled caption placements. */
@@ -720,9 +780,55 @@ const frame = (
   layers: IAutoMovieProductionRenderLayer[],
 ): IAutoMovieProductionRenderFrame => ({
   globalFrame,
+  timelineFrame: globalFrame,
   timeSeconds: globalFrame / timeline.fps,
   layers,
 });
+
+const normalizeRenderTier = (
+  tier: IAutoMovieProductionRenderTier | undefined,
+): IAutoMovieProductionRenderTier => {
+  const value = tier ?? {
+    kind: "final",
+    resolutionScale: 1,
+    frameStep: 1,
+  };
+  if (
+    (value.kind !== "proxy" && value.kind !== "final") ||
+    Number.isFinite(value.resolutionScale) === false ||
+    value.resolutionScale <= 0 ||
+    value.resolutionScale > 1 ||
+    Number.isSafeInteger(value.frameStep) === false ||
+    value.frameStep <= 0 ||
+    value.frameStep > 16 ||
+    (value.kind === "final" &&
+      (value.resolutionScale !== 1 || value.frameStep !== 1)) ||
+    (value.kind === "proxy" &&
+      value.resolutionScale === 1 &&
+      value.frameStep === 1)
+  )
+    throw new Error(
+      "Render tier must be exact final (scale 1, step 1) or a bounded cheaper proxy (scale in (0, 1], integer step 1..16, with at least one reduction).",
+    );
+  return structuredClone(value);
+};
+
+/** Derive the exact even raster and frame clock for one render tier. */
+export const resolveProductionRenderTierFrameFormat = (
+  source: IAutoMovieProductionDesign["frameFormat"],
+  tier: IAutoMovieProductionRenderTier,
+): IAutoMovieProductionDesign["frameFormat"] => {
+  const normalized = normalizeRenderTier(tier);
+  if (normalized.kind === "final") return structuredClone(source);
+  const even = (value: number): number =>
+    Math.max(2, Math.floor((value * normalized.resolutionScale) / 2) * 2);
+  return {
+    width: even(source.width),
+    height: even(source.height),
+    fps: source.fps / normalized.frameStep,
+    colorSpace: source.colorSpace,
+  };
+};
 
 const status = (
   chunk: IAutoMovieProductionRenderChunk,

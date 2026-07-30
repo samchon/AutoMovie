@@ -128,7 +128,12 @@ export const test_cli_scaffold = (): void => {
       "test/opening.test.ts",
       "tsconfig.json",
       "viewer/index.html",
+      "viewer/src/asset.ts",
+      "viewer/src/film.ts",
       "viewer/src/main.ts",
+      "viewer/src/shot.ts",
+      "viewer/src/shotRuntime.ts",
+      "viewer/src/viewerDocument.ts",
       "vite.config.ts",
     ],
   );
@@ -189,9 +194,9 @@ export const test_cli_scaffold = (): void => {
       files["scripts/capture.ts"]!.includes('dedupe: ["three"]') &&
       files["vite.config.ts"]!.includes('dedupe: ["three"]') &&
       files["viewer/index.html"]!.includes('rel="icon" href="data:,"') &&
-      files["viewer/src/main.ts"]!.includes("mountViewer") &&
-      files["viewer/src/main.ts"]!.includes("preserveDrawingBuffer: true") &&
-      files["viewer/src/main.ts"]!.includes(
+      files["viewer/src/shot.ts"]!.includes("mountViewer") &&
+      files["viewer/src/shot.ts"]!.includes("preserveDrawingBuffer: true") &&
+      files["viewer/src/shotRuntime.ts"]!.includes(
         "performance === undefined ? node.motion : performance.motion",
       ) &&
       files["scripts/capture.ts"]!.includes(
@@ -200,6 +205,11 @@ export const test_cli_scaffold = (): void => {
       files["scripts/capture.ts"]!.includes(
         "let sessionPromise: Promise<CaptureSession> | null",
       ) &&
+      files["scripts/capture.ts"]!.includes(
+        "pages: Map<string, Promise<CapturePage>>",
+      ) &&
+      files["scripts/capture.ts"]!.includes("productionFrameCaptureMetrics") &&
+      files["scripts/capture.ts"]!.includes("avoidedPageReloads") &&
       files["scripts/capture-browser.ts"]!.includes(
         "PLAYWRIGHT_BROWSERS_PATH: browserStoragePath(projectRoot)",
       ) &&
@@ -263,6 +273,13 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes("runProductionRenderJob") &&
       files["scripts/render.ts"]!.includes("commitProductionPublication") &&
       files["scripts/render.ts"]!.includes("probeProductionMedia") &&
+      files["scripts/render.ts"]!.includes('process.argv.indexOf("--tier")') &&
+      files["scripts/render.ts"]!.includes("productionRenderLayersForPass") &&
+      files["scripts/render.ts"]!.includes("renderGarbageCollection") &&
+      files["scripts/render.ts"]!.includes("project.review(entry.target)") &&
+      files["scripts/render.ts"]!.includes("frames/${passes[0]}/frame_") &&
+      files["automovie.config.ts"]!.includes('kind: "proxy"') &&
+      files["automovie.config.ts"]!.includes('kind: "final"') &&
       files["scripts/render.ts"]!.includes(
         "productionPublicationInputFingerprint",
       ) &&
@@ -289,9 +306,15 @@ export const test_cli_scaffold = (): void => {
         '"sampleRate": 48000',
       ) &&
       files["public/audio/starter-tone.json"]!.includes('"channels": 2') &&
+      files["scripts/generatedShotPlugin.ts"]!.includes('id.includes("/")') ===
+        false &&
       files["scripts/generatedShotPlugin.ts"]!.includes(
-        'shotId.includes("/")',
-      ) === false &&
+        'pathname === "/__automovie/film.json"',
+      ) &&
+      files["viewer/src/main.ts"]!.includes('await import("./film")') &&
+      files["viewer/src/film.ts"]!.includes("renderCrossDissolveFrames") &&
+      files["viewer/src/film.ts"]!.includes('pass !== "beauty"') &&
+      files["viewer/src/asset.ts"]!.includes('finiteParameter("angle")') &&
       files["viewer/src/main.ts"]!.includes('from "three"') === false,
   );
   TestValidator.predicate(
@@ -432,7 +455,12 @@ export const test_cli_scaffold = (): void => {
         "test/opening.test.ts",
         "tsconfig.json",
         "viewer/index.html",
+        "viewer/src/asset.ts",
+        "viewer/src/film.ts",
         "viewer/src/main.ts",
+        "viewer/src/shot.ts",
+        "viewer/src/shotRuntime.ts",
+        "viewer/src/viewerDocument.ts",
         "vite.config.ts",
       ],
     );

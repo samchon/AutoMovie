@@ -23,6 +23,7 @@ export * from "./production/materializeProduction";
 export * from "./production/probeProductionMedia";
 export * from "./production/productionPublicationSnapshot";
 export * from "./production/productionRenderJob";
+export * from "./production/productionRenderGc";
 export * from "./production/renderIdentity";
 export * from "./production/rootNamespaceLock";
 export * from "./production/validateProductionDesign";

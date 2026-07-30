@@ -4,10 +4,11 @@ import path from "node:path";
 import type { Plugin } from "vite";
 
 /**
- * Serve only compiler-owned shot JSON through an explicit local route.
+ * Serve bounded compiler-owned viewer JSON through explicit local routes.
  *
  * This middleware gives compiler-owned output an explicit no-cache route and
- * exposes one bounded artifact family without opening arbitrary project files.
+ * exposes only shots, models, and the film timeline without opening arbitrary
+ * project files.
  */
 export const generatedShotPlugin = (
   projectRoot: string,
@@ -16,16 +17,20 @@ export const generatedShotPlugin = (
   name: "automovie-generated-shot",
   configureServer: (server) => {
     server.middlewares.use((request, response, next) => {
-      const match = request.url?.match(
-        /^\/__automovie\/shots\/([^/?]+)\.json(?:\?.*)?$/u,
-      );
-      if (match === null || match === undefined) {
+      let route: string[] | null;
+      try {
+        route = viewerArtifactRoute(request.url);
+      } catch {
+        response.statusCode = 400;
+        response.setHeader("Content-Type", "text/plain; charset=utf-8");
+        response.end("invalid compiled viewer artifact request");
+        return;
+      }
+      if (route === null) {
         next();
         return;
       }
       try {
-        const shotId = decodeURIComponent(match[1]!);
-        if (shotId.trim().length === 0) throw new Error("invalid shot id");
         const manifest = JSON.parse(
           fs.readFileSync(
             path.join(projectRoot, ".automovie", "manifest.json"),
@@ -67,11 +72,7 @@ export const generatedShotPlugin = (
           isInside(projectReal, generatedReal) === false
         )
           throw new Error("generated root is not a physical project directory");
-        const file = path.join(
-          generatedReal,
-          "shots",
-          `${encodePathSegment(shotId)}.json`,
-        );
+        const file = path.join(generatedReal, ...route);
         const fileStatus = fs.lstatSync(file);
         const fileReal = fs.realpathSync(file);
         if (
@@ -79,7 +80,7 @@ export const generatedShotPlugin = (
           fileStatus.isFile() === false ||
           isInside(generatedReal, fileReal) === false
         )
-          throw new Error("generated shot is not a physical owned file");
+          throw new Error("generated artifact is not a physical owned file");
         const bytes = fs.readFileSync(fileReal);
         response.statusCode = 200;
         response.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -90,12 +91,27 @@ export const generatedShotPlugin = (
         response.statusCode = missing ? 404 : 400;
         response.setHeader("Content-Type", "text/plain; charset=utf-8");
         response.end(
-          missing ? "compiled shot not found" : "invalid compiled shot request",
+          missing
+            ? "compiled viewer artifact not found"
+            : "invalid compiled viewer artifact request",
         );
       }
     });
   },
 });
+
+const viewerArtifactRoute = (url: string | undefined): string[] | null => {
+  const pathname = url?.split("?", 1)[0];
+  if (pathname === "/__automovie/film.json") return ["film-timeline.json"];
+  const match = pathname?.match(
+    /^\/__automovie\/(shots|models)\/([^/]+)\.json$/u,
+  );
+  if (match === null || match === undefined) return null;
+  const id = decodeURIComponent(match[2]!);
+  if (id.trim().length === 0 || id !== id.trim())
+    throw new Error("invalid viewer artifact id");
+  return [match[1]!, `${encodePathSegment(id)}.json`];
+};
 
 const encodePathSegment = (value: string): string => {
   let encoded = encodeURIComponent(value).replace(

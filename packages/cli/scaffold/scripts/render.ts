@@ -16,17 +16,22 @@ import {
   type IAutoMovieProductionEncoderIdentity,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
+  type IAutoMovieProductionRenderGcCandidate,
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderRuntimeIdentity,
+  type IAutoMovieProductionRenderTier,
   canonicalAutoMovieCaptureRuntimeIdentity,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  planProductionRenderGc,
   planProductionRenderJob,
   probeProductionMedia,
   productionPublicationInputFingerprint,
   productionRenderChunkStatuses,
+  productionRenderLayersForPass,
   readAutoMovieFilmTimeline,
   readAutoMovieProductionOwnedFile,
+  resolveProductionRenderTierFrameFormat,
   runProductionRenderJob,
   sampleProductionRenderFrame,
   selectAutoMovieFilmReviewFrames,
@@ -43,17 +48,31 @@ import { isDeepStrictEqual } from "node:util";
 import { PNG } from "pngjs";
 
 import config from "../automovie.config";
-import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
+import {
+  captureProductionFrame,
+  closeProductionFrameCapture,
+  productionFrameCaptureMetrics,
+} from "./capture";
 
 const root = process.cwd();
 const productionId = config.productionId;
-const stateRoot = path.join(
+const tierName = (() => {
+  const index = process.argv.indexOf("--tier");
+  const value = index < 0 ? "final" : process.argv[index + 1];
+  if (value !== "proxy" && value !== "final")
+    throw new Error('--tier must be either "proxy" or "final".');
+  return value;
+})();
+const renderTier: IAutoMovieProductionRenderTier =
+  tierName === "proxy" ? config.render.proxy : config.render.final;
+const productionStateRoot = path.join(
   root,
   ".automovie",
   "productions",
   encodeAutoMoviePathSegment(productionId),
-  "render-job",
 );
+const renderJobRoot = path.join(productionStateRoot, "render-job");
+const stateRoot = path.join(renderJobRoot, renderTier.kind);
 const planPath = path.join(stateRoot, "plan.json");
 const action = process.argv[2] ?? "all";
 const require = createRequire(import.meta.url);
@@ -73,11 +92,16 @@ const main = async (): Promise<void> => {
     action !== "run" &&
     action !== "status" &&
     action !== "verify" &&
-    action !== "finalize"
+    action !== "finalize" &&
+    action !== "gc"
   )
     throw new Error(
-      `Unknown render action "${action}". Use plan, run, status, verify, or finalize.`,
+      `Unknown render action "${action}". Use plan, run, status, verify, finalize, or gc.`,
     );
+  if (action === "gc") {
+    output(renderGarbageCollection(process.argv.includes("--apply")));
+    return;
+  }
   if (action === "status") {
     const plan = readPlan();
     if (sourceFingerprint() !== plan.compileFingerprint)
@@ -153,7 +177,9 @@ const main = async (): Promise<void> => {
       plan: {
         compileFingerprint: current.compileFingerprint,
         editFingerprint: current.editFingerprint,
+        tier: current.tier,
       },
+      capture: productionFrameCaptureMetrics(),
       result,
       chunks: await renderStatus(current),
     });
@@ -251,14 +277,19 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
     project,
     compiled.compiler.inputFingerprint,
   );
+  const frameFormat = resolveProductionRenderTierFrameFormat(
+    graph.production.frameFormat,
+    renderTier,
+  );
   const first = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
   const runtimeIdentity = await renderRuntimeIdentity({
     project,
     compileFingerprint: compiled.compiler.inputFingerprint,
     timeline,
     first,
-    width: graph.production.frameFormat.width,
-    height: graph.production.frameFormat.height,
+    width: frameFormat.width,
+    height: frameFormat.height,
+    fps: frameFormat.fps,
   });
   const planned = planProductionRenderJob({
     timeline,
@@ -267,6 +298,7 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
     runtimeIdentity,
     sourceFingerprints: renderShotFingerprints(project, timeline),
     chunkFrames: integerOption("--chunk-frames", 48),
+    tier: renderTier,
   });
   writeJsonAtomic(planPath, planned);
   return planned;
@@ -557,12 +589,12 @@ const renderChunk = async (
   const frameBytes: Uint8Array[] = [];
   for (const sample of chunk.frames) {
     const images: Array<{ image: PNG; weight: number }> = [];
-    for (const layer of sample.layers) {
+    for (const layer of productionRenderLayersForPass(sample, chunk.pass)) {
       const captured = await captureProductionFrame({
         projectRoot: root,
         compileFingerprint: plan.compileFingerprint,
         target: { kind: "shot", id: layer.shot },
-        time: layer.sourceFrame / plan.frameFormat.fps,
+        time: layer.sourceFrame / plan.sourceFrameFormat.fps,
         pass: chunk.pass,
         width: plan.frameFormat.width,
         height: plan.frameFormat.height,
@@ -702,7 +734,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
   const incompleteReviews = inspection.reviews.entries.filter(
     (entry) => entry.state !== "complete",
   );
-  if (incompleteReviews.length !== 0)
+  if (plan.tier.kind === "final" && incompleteReviews.length !== 0)
     throw new Error(
       `Final publication is review-blocked by ${incompleteReviews
         .map((entry) => `${reviewTargetLabel(entry.target)}:${entry.state}`)
@@ -773,6 +805,23 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
         `${passes[0]}.mp4`,
         await encodeChunkFrames(plan, deliverableChunks),
       );
+      for (const chunk of [...deliverableChunks].sort(
+        (left, right) => left.frameStart - right.frameStart,
+      )) {
+        const receipt = await currentChunk(chunk);
+        if (receipt === null)
+          throw new Error(
+            `Guide-pass chunk "${chunk.slot}" changed before control-frame publication.`,
+          );
+        for (const frame of receipt.frames)
+          owned.set(
+            `frames/${passes[0]}/frame_${String(frame.globalFrame).padStart(
+              8,
+              "0",
+            )}.png`,
+            readRegularInside(chunkDirectory(chunk.id), frame.path),
+          );
+      }
     } else if (deliverable.kind === "captions") {
       if (plan.tracks.captions.split("-->").length < 2) {
         if (deliverable.required)
@@ -826,14 +875,15 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     for (const [name, bytes] of owned) {
       const relative = [
         "deliverables",
-        encodeAutoMoviePathSegment(deliverable.id),
+        plan.tier.kind,
         plan.editFingerprint.slice(7),
+        encodeAutoMoviePathSegment(deliverable.id),
         name,
       ].join("/");
       const mediaType =
         deliverable.kind === "captions"
           ? "text/vtt"
-          : deliverable.kind === "preview"
+          : deliverable.kind === "preview" || name.endsWith(".png")
             ? "image/png"
             : deliverable.kind === "audio-mix"
               ? "audio/mp4"
@@ -876,6 +926,8 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
             : null,
     });
   }
+  if (plan.tier.kind === "proxy")
+    return publishProxyTierBundle(plan, publication, manifest, project);
   const snapshot = productionPublicationInputFingerprint(project);
   const revision = project.commitProductionPublication({
     files: publication,
@@ -911,6 +963,135 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       `Parser-verified publication committed at revision ${revision}, but final compilation rejected it: ${JSON.stringify(final.diagnostics)}`,
     );
   return { revision, manifest, final };
+};
+
+const publishProxyTierBundle = (
+  plan: IAutoMovieProductionRenderJobPlan,
+  publication: ReadonlyMap<string, Uint8Array>,
+  manifest: IAutoMovieProductionRenderManifest,
+  project: AutoMovieProductionProject,
+) => {
+  const renderRoot = project.renderRoot();
+  const bundle = ["deliverables", "proxy", plan.editFingerprint.slice(7)].join(
+    "/",
+  );
+  const parent = ensurePhysicalDirectory(renderRoot, "deliverables/proxy");
+  const target = path.join(parent, plan.editFingerprint.slice(7));
+  const manifestBytes = Buffer.from(
+    `${JSON.stringify(
+      {
+        version: 1,
+        tier: plan.tier,
+        compileFingerprint: plan.compileFingerprint,
+        editFingerprint: plan.editFingerprint,
+        frameFormat: plan.frameFormat,
+        totalFrames: plan.totalFrames,
+        manifest,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  const files = new Map<string, Uint8Array>([["manifest.json", manifestBytes]]);
+  for (const [relative, bytes] of publication) {
+    if (relative.startsWith(`${bundle}/`) === false)
+      throw new Error(
+        `Proxy publication path "${relative}" escapes current bundle "${bundle}".`,
+      );
+    files.set(relative.slice(bundle.length + 1), bytes);
+  }
+  if (fs.existsSync(target)) {
+    assertPublishedProxyBundle(target, files);
+    return { published: true, reused: true, bundle, manifest };
+  }
+  const candidate = path.join(
+    parent,
+    `.${plan.editFingerprint.slice(7)}.${randomUUID()}.candidate`,
+  );
+  fs.mkdirSync(candidate);
+  try {
+    for (const [relative, bytes] of files) {
+      const destination = path.resolve(candidate, relative);
+      if (
+        destination.startsWith(`${path.resolve(candidate)}${path.sep}`) ===
+        false
+      )
+        throw new Error(
+          `Proxy bundle file "${relative}" escapes its candidate.`,
+        );
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.writeFileSync(destination, bytes);
+    }
+    fs.renameSync(candidate, target);
+  } catch (error) {
+    if (fs.existsSync(target)) {
+      assertPublishedProxyBundle(target, files);
+      return { published: true, reused: true, bundle, manifest };
+    }
+    throw error;
+  } finally {
+    fs.rmSync(candidate, { force: true, recursive: true });
+  }
+  assertPublishedProxyBundle(target, files);
+  return { published: true, reused: false, bundle, manifest };
+};
+
+const assertPublishedProxyBundle = (
+  target: string,
+  expected: ReadonlyMap<string, Uint8Array>,
+): void => {
+  const linked = fs.lstatSync(target);
+  if (linked.isSymbolicLink() || linked.isDirectory() === false)
+    throw new Error(`Proxy bundle "${target}" is not a physical directory.`);
+  const actual = physicalFiles(target).map((file) =>
+    normalizeSlash(path.relative(target, file)),
+  );
+  if (
+    actual.length !== expected.size ||
+    actual.some((file) => expected.has(file) === false)
+  )
+    throw new Error(
+      `Proxy bundle "${target}" has an unexpected file inventory.`,
+    );
+  for (const [relative, bytes] of expected) {
+    const resident = fs.readFileSync(path.join(target, relative));
+    if (
+      resident.length !== bytes.length ||
+      digestAutoMovieBytes(resident) !== digestAutoMovieBytes(bytes)
+    )
+      throw new Error(
+        `Proxy bundle file "${relative}" changed resident bytes.`,
+      );
+  }
+};
+
+const ensurePhysicalDirectory = (root: string, relative: string): string => {
+  const rootStatus = fs.lstatSync(root);
+  if (rootStatus.isSymbolicLink() || rootStatus.isDirectory() === false)
+    throw new Error(`Render root "${root}" is not a physical directory.`);
+  const physicalRoot = fs.realpathSync(root);
+  let current = root;
+  for (const segment of relative.split("/")) {
+    current = path.join(current, segment);
+    if (fs.existsSync(current) === false) fs.mkdirSync(current);
+    const linked = fs.lstatSync(current);
+    const physicalRelative = path.relative(
+      physicalRoot,
+      fs.realpathSync(current),
+    );
+    if (
+      linked.isSymbolicLink() ||
+      linked.isDirectory() === false ||
+      physicalRelative === ".." ||
+      physicalRelative.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(physicalRelative)
+    )
+      throw new Error(
+        `Proxy publication directory "${current}" is not a physical render descendant.`,
+      );
+  }
+  return current;
 };
 
 const encodeChunkFrames = async (
@@ -1059,6 +1240,16 @@ const assertDeliverableProbe = (
 ): void => {
   const runtimeSeconds = plan.totalFrames / plan.frameFormat.fps;
   if (kind === "feature" || kind === "guide-pass") {
+    if (kind === "guide-pass" && probe.kind === "png") {
+      if (
+        probe.width !== plan.frameFormat.width ||
+        probe.height !== plan.frameFormat.height
+      )
+        throw new Error(
+          "Published guide frame does not match the tier raster.",
+        );
+      return;
+    }
     if (
       probe.kind !== "video" ||
       probe.width !== plan.frameFormat.width ||
@@ -1203,8 +1394,9 @@ const currentRenderPlanInputs = async (
     compileFingerprint: plan.compileFingerprint,
     timeline,
     first,
-    width: production.frameFormat.width,
-    height: production.frameFormat.height,
+    width: plan.frameFormat.width,
+    height: plan.frameFormat.height,
+    fps: plan.frameFormat.fps,
   });
   return {
     timeline,
@@ -1222,6 +1414,7 @@ const renderRuntimeIdentity = async (props: {
   first: { shot: string; sourceFrame: number };
   width: number;
   height: number;
+  fps: number;
 }): Promise<IAutoMovieProductionRenderRuntimeIdentity> => {
   const preflight = await captureProductionFrame({
     projectRoot: root,
@@ -1236,7 +1429,7 @@ const renderRuntimeIdentity = async (props: {
     protocolVersion: "automovie.production-render-runtime.v1",
     sourceDigest: renderSourceDigest(props.project, props.timeline),
     capture: preflight.runtimeIdentity,
-    encoder: productionEncoderIdentity(props.timeline.fps),
+    encoder: productionEncoderIdentity(props.fps),
   };
 };
 
@@ -1262,6 +1455,166 @@ const productionEncoderIdentity = (
 
 const chunkDirectory = (digest: AutoMovieContentDigest): string =>
   path.join(stateRoot, "chunks", digest.slice(7));
+
+const renderGarbageCollection = (apply: boolean) => {
+  const plans = (["proxy", "final"] as const).flatMap((tier) => {
+    const file = path.join(renderJobRoot, tier, "plan.json");
+    return fs.existsSync(file)
+      ? [
+          readRendererJson<IAutoMovieProductionRenderJobPlan>(
+            renderJobRoot,
+            file,
+          ),
+        ]
+      : [];
+  });
+  const project = AutoMovieProductionProject.open(root, productionId);
+  const renderRoot = project.renderRoot();
+  const reviewBundles = new Set(
+    productionApplication()
+      .inspectProject({})
+      .reviews.entries.flatMap((entry) => {
+        const review = project.review(entry.target);
+        return (
+          review?.checks.flatMap((check) =>
+            check.evidence.flatMap((evidence) =>
+              evidence.kind === "frame" ? [evidence.bundle] : [],
+            ),
+          ) ?? []
+        );
+      }),
+  );
+  const manifestPath = path.join(productionStateRoot, "render-manifest.json");
+  const publicationPaths = new Set(
+    fs.existsSync(manifestPath)
+      ? (
+          readRendererJson<{
+            deliverables: Array<{ files: Array<{ path: string }> }>;
+          }>(productionStateRoot, manifestPath).deliverables ?? []
+        ).flatMap((deliverable) =>
+          deliverable.files.map((file) => `publication/${file.path}`),
+        )
+      : [],
+  );
+  const candidates: IAutoMovieProductionRenderGcCandidate[] = [];
+  for (const tier of ["proxy", "final"] as const) {
+    const chunks = path.join(renderJobRoot, tier, "chunks");
+    if (fs.existsSync(chunks))
+      for (const entry of fs
+        .readdirSync(chunks, { withFileTypes: true })
+        .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+        if (
+          entry.isDirectory() === false ||
+          /^[0-9a-f]{64}$/u.test(entry.name) === false
+        )
+          continue;
+        const target = path.join(chunks, entry.name);
+        candidates.push({
+          path: `${tier}/chunks/${entry.name}`,
+          kind: "chunk",
+          digest: `sha256:${entry.name}`,
+          bytes: physicalBytes(target),
+        });
+      }
+    const quarantineRoot = path.join(renderJobRoot, tier, "quarantine");
+    if (fs.existsSync(quarantineRoot))
+      for (const entry of fs
+        .readdirSync(quarantineRoot, { withFileTypes: true })
+        .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+        if (entry.isSymbolicLink()) continue;
+        const target = path.join(quarantineRoot, entry.name);
+        candidates.push({
+          path: `${tier}/quarantine/${entry.name}`,
+          kind: "quarantine",
+          digest: null,
+          bytes: physicalBytes(target),
+        });
+      }
+  }
+  if (fs.existsSync(renderRoot))
+    for (const file of physicalFiles(renderRoot)) {
+      const relative = normalizeSlash(path.relative(renderRoot, file));
+      if (
+        [...reviewBundles].some(
+          (bundle) => relative === bundle || relative.startsWith(`${bundle}/`),
+        ) ||
+        plans.some((plan) => {
+          const segments = relative.split("/");
+          return (
+            segments[0] === "deliverables" &&
+            segments[1] === plan.tier.kind &&
+            segments[2] === plan.editFingerprint.slice(7)
+          );
+        })
+      )
+        publicationPaths.add(`publication/${relative}`);
+      candidates.push({
+        path: `publication/${relative}`,
+        kind: "publication",
+        digest: null,
+        bytes: fs.statSync(file).size,
+      });
+    }
+  const plan = planProductionRenderGc({
+    plans,
+    publicationPaths: [...publicationPaths],
+    candidates,
+  });
+  if (apply)
+    for (const candidate of plan.remove) {
+      const target =
+        candidate.kind === "publication"
+          ? path.resolve(
+              renderRoot,
+              candidate.path.slice("publication/".length),
+            )
+          : path.resolve(renderJobRoot, candidate.path);
+      const base =
+        candidate.kind === "publication"
+          ? path.resolve(renderRoot)
+          : path.resolve(renderJobRoot);
+      if (target.startsWith(`${base}${path.sep}`) === false)
+        throw new Error(`GC target "${target}" escapes renderer ownership.`);
+      const linked = fs.lstatSync(target);
+      if (linked.isSymbolicLink())
+        throw new Error(`GC refuses linked target "${target}".`);
+      fs.rmSync(target, { force: true, recursive: linked.isDirectory() });
+    }
+  return { applied: apply, ...plan };
+};
+
+const physicalBytes = (target: string): number => {
+  const linked = fs.lstatSync(target);
+  if (linked.isSymbolicLink())
+    throw new Error(`Render GC refuses linked inventory "${target}".`);
+  if (linked.isFile()) return linked.size;
+  if (linked.isDirectory() === false)
+    throw new Error(
+      `Render GC inventory "${target}" is not a file or directory.`,
+    );
+  return fs
+    .readdirSync(target)
+    .reduce(
+      (total, child) => total + physicalBytes(path.join(target, child)),
+      0,
+    );
+};
+
+const physicalFiles = (directory: string): string[] => {
+  const output: string[] = [];
+  for (const entry of fs
+    .readdirSync(directory, { withFileTypes: true })
+    .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+    const target = path.join(directory, entry.name);
+    if (entry.isSymbolicLink())
+      throw new Error(`Render GC refuses linked publication "${target}".`);
+    if (entry.isDirectory()) output.push(...physicalFiles(target));
+    else if (entry.isFile()) output.push(target);
+  }
+  return output;
+};
+
+const normalizeSlash = (value: string): string => value.replaceAll("\\", "/");
 
 const recoverAbandonedTemporaryDirectories = (): void => {
   const locks = path.join(stateRoot, "locks");
@@ -1432,6 +1785,17 @@ const readJson = <T>(file: string): T =>
   JSON.parse(
     Buffer.from(
       readRegularInside(path.dirname(file), path.basename(file)),
+    ).toString("utf8"),
+  ) as T;
+
+const readRendererJson = <T>(ownershipRoot: string, file: string): T =>
+  JSON.parse(
+    Buffer.from(
+      readAutoMovieProductionOwnedFile({
+        root: ownershipRoot,
+        directory: path.dirname(file),
+        relative: path.basename(file),
+      }),
     ).toString("utf8"),
   ) as T;
 

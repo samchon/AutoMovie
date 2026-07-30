@@ -6,10 +6,13 @@ import {
   IAutoMovieProductionRenderChunkReceipt,
   IAutoMovieProductionRenderJobPlan,
   canonicalProductionWebVtt,
+  planProductionRenderGc,
   planProductionRenderJob,
   probeProductionMedia,
   productionRenderChunkStatuses,
+  productionRenderLayersForPass,
   readAutoMovieProductionOwnedFile,
+  resolveProductionRenderTierFrameFormat,
   runProductionRenderJob,
   sampleProductionRenderFrame,
   verifyProductionRenderChunkReceipt,
@@ -132,6 +135,7 @@ const plan = (
   sources: Readonly<
     Record<string, AutoMovieContentDigest>
   > = sourceFingerprints(),
+  tier?: Parameters<typeof planProductionRenderJob>[0]["tier"],
 ): IAutoMovieProductionRenderJobPlan =>
   planProductionRenderJob({
     timeline: timeline(),
@@ -170,6 +174,7 @@ const plan = (
       },
     },
     chunkFrames: 2,
+    tier,
   });
 
 const receipt = (
@@ -236,6 +241,30 @@ const throws = (closure: () => unknown): boolean => {
  */
 export const test_mcp_production_render_job = async (): Promise<void> => {
   const renderPlan = plan();
+  const proxyPlan = planProductionRenderJob({
+    timeline: timeline(),
+    audioAssets: audioAssets(),
+    sourceFingerprints: sourceFingerprints(),
+    production: {
+      ...productionDesign({
+        id: "render-film",
+        targetRuntimeSeconds: 3,
+        frameFormat: {
+          width: 16,
+          height: 16,
+          fps: 2,
+          colorSpace: "srgb",
+        },
+      }),
+      deliverables: [
+        { id: "feature", kind: "feature", required: true },
+        { id: "guides", kind: "guide-pass", required: true },
+      ],
+    },
+    runtimeIdentity: renderPlan.runtimeIdentity,
+    chunkFrames: 2,
+    tier: { kind: "proxy", resolutionScale: 0.5, frameStep: 2 },
+  });
   const selectivelyChanged = plan({
     ...sourceFingerprints(),
     outgoing: digest("9"),
@@ -331,11 +360,13 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   });
   TestValidator.predicate(
     "film edit becomes deterministic feature and guide chunks",
-    renderPlan.version === 2 &&
+    renderPlan.version === 3 &&
       renderPlan.productionId === "render-film" &&
       renderPlan.chunks.every((chunk) =>
-        chunk.slot.startsWith("render-film:"),
+        chunk.slot.startsWith("render-film:final:"),
       ) &&
+      renderPlan.tier.kind === "final" &&
+      renderPlan.sourceFrameFormat.fps === 2 &&
       renderPlan.totalFrames === 6 &&
       renderPlan.chunks.length === 6 &&
       renderPlan.chunks[0]?.frameStart === 0 &&
@@ -382,6 +413,55 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       booleanIdentityPlan.chunks.length === 1,
   );
   TestValidator.predicate(
+    "proxy and final tiers preserve one edit while owning distinct clocks and chunks",
+    proxyPlan.editFingerprint === renderPlan.editFingerprint &&
+      proxyPlan.tier.kind === "proxy" &&
+      proxyPlan.frameFormat.width === 8 &&
+      proxyPlan.frameFormat.height === 8 &&
+      proxyPlan.frameFormat.fps === 1 &&
+      proxyPlan.totalFrames === 3 &&
+      proxyPlan.chunks.every((chunk) =>
+        chunk.slot.startsWith("render-film:proxy:"),
+      ) &&
+      proxyPlan.chunks[0]?.id !== renderPlan.chunks[0]?.id &&
+      proxyPlan.chunks[0]?.frames[0]?.timelineFrame === 0 &&
+      proxyPlan.chunks[0]?.frames[1]?.timelineFrame === 2 &&
+      proxyPlan.chunks[1]?.frames[0]?.timelineFrame === 4 &&
+      proxyPlan.chunks[1]?.frames[0]?.timeSeconds === 2 &&
+      resolveProductionRenderTierFrameFormat(
+        renderPlan.sourceFrameFormat,
+        proxyPlan.tier,
+      ).fps === 1,
+  );
+  TestValidator.predicate(
+    "render tiers reject ambiguous quality policies and inexact proxy clocks",
+    [
+      { kind: "invalid", resolutionScale: 0.5, frameStep: 2 },
+      { kind: "final", resolutionScale: 0.5, frameStep: 1 },
+      { kind: "proxy", resolutionScale: 1, frameStep: 1 },
+      { kind: "proxy", resolutionScale: 0, frameStep: 2 },
+      { kind: "proxy", resolutionScale: 2, frameStep: 2 },
+      { kind: "proxy", resolutionScale: Number.NaN, frameStep: 2 },
+      { kind: "proxy", resolutionScale: 0.5, frameStep: 0 },
+      { kind: "proxy", resolutionScale: 0.5, frameStep: 1.5 },
+      { kind: "proxy", resolutionScale: 0.5, frameStep: 17 },
+    ].every((tier) =>
+      throws(() =>
+        resolveProductionRenderTierFrameFormat(
+          renderPlan.sourceFrameFormat,
+          tier as Parameters<typeof resolveProductionRenderTierFrameFormat>[1],
+        ),
+      ),
+    ) &&
+      throws(() =>
+        plan(sourceFingerprints(), {
+          kind: "proxy",
+          resolutionScale: 0.5,
+          frameStep: 4,
+        }),
+      ),
+  );
+  TestValidator.predicate(
     "shot source identity invalidates only ranges that sample that shot",
     selectivelyChanged.chunks[0]?.id !== renderPlan.chunks[0]?.id &&
       selectivelyChanged.chunks[1]?.id !== renderPlan.chunks[1]?.id &&
@@ -409,6 +489,154 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       dissolveMiddle.layers[0]?.weight === 0.5 &&
       dissolveMiddle.layers[1]?.weight === 0.5 &&
       fadedOut.layers[0]?.weight === 0.5,
+  );
+  TestValidator.predicate(
+    "structural passes select one semantic dissolve layer while beauty blends",
+    productionRenderLayersForPass(dissolveMiddle, "beauty").length === 2 &&
+      productionRenderLayersForPass(dissolveMiddle, "depth").length === 1 &&
+      productionRenderLayersForPass(dissolveMiddle, "normal")[0]?.shot ===
+        "incoming" &&
+      productionRenderLayersForPass(dissolveMiddle, "normal")[0]?.weight ===
+        1 &&
+      productionRenderLayersForPass(dissolveStart, "pose")[0]?.shot ===
+        "outgoing" &&
+      productionRenderLayersForPass(fadedOut, "mask")[0]?.weight === 1,
+  );
+
+  const garbageCollection = planProductionRenderGc({
+    plans: [renderPlan, proxyPlan],
+    publicationPaths: ["publication/deliverables/final/current.mp4"],
+    candidates: [
+      {
+        path: `final/chunks/${renderPlan.chunks[0]!.id.slice(7)}`,
+        kind: "chunk",
+        digest: renderPlan.chunks[0]!.id,
+        bytes: 10,
+      },
+      {
+        path: `proxy/chunks/${proxyPlan.chunks[0]!.id.slice(7)}`,
+        kind: "chunk",
+        digest: proxyPlan.chunks[0]!.id,
+        bytes: 20,
+      },
+      {
+        path: `final/chunks/${digest("0").slice(7)}`,
+        kind: "chunk",
+        digest: digest("0"),
+        bytes: 30,
+      },
+      {
+        path: "proxy/quarantine/old",
+        kind: "quarantine",
+        digest: null,
+        bytes: 40,
+      },
+      {
+        path: "publication/deliverables/final/current.mp4",
+        kind: "publication",
+        digest: null,
+        bytes: 50,
+      },
+      {
+        path: "publication/deliverables/proxy/stale.mp4",
+        kind: "publication",
+        digest: null,
+        bytes: 60,
+      },
+    ],
+  });
+  const rejectsGcCandidates = (
+    candidates: Parameters<typeof planProductionRenderGc>[0]["candidates"],
+  ): boolean =>
+    throws(() =>
+      planProductionRenderGc({
+        plans: [renderPlan],
+        publicationPaths: [],
+        candidates,
+      }),
+    );
+  const validChunk = {
+    path: `final/chunks/${renderPlan.chunks[0]!.id.slice(7)}`,
+    kind: "chunk" as const,
+    digest: renderPlan.chunks[0]!.id,
+    bytes: 1,
+  };
+  TestValidator.predicate(
+    "render GC marks both current tiers and sweeps only unreferenced bytes",
+    garbageCollection.keep.length === 3 &&
+      garbageCollection.remove.map((candidate) => candidate.bytes).join() ===
+        "30,40,60" &&
+      garbageCollection.reclaimableBytes === 130 &&
+      [
+        [{ ...validChunk }, { ...validChunk }],
+        [{ ...validChunk, bytes: -1 }],
+        [{ ...validChunk, bytes: 1.5 }],
+        [{ ...validChunk, digest: null }],
+        [{ ...validChunk, digest: digest("f") }],
+        [{ ...validChunk, path: "final/chunks/not-a-digest" }],
+        [
+          {
+            path: "final/quarantine/nested/old",
+            kind: "quarantine" as const,
+            digest: null,
+            bytes: 1,
+          },
+        ],
+        [
+          {
+            path: "final/quarantine/old",
+            kind: "quarantine" as const,
+            digest: digest("f"),
+            bytes: 1,
+          },
+        ],
+        [
+          {
+            path: "deliverables/stale.mp4",
+            kind: "publication" as const,
+            digest: null,
+            bytes: 1,
+          },
+        ],
+        [
+          {
+            path: "publication/stale.mp4",
+            kind: "publication" as const,
+            digest: digest("f"),
+            bytes: 1,
+          },
+        ],
+        ...[
+          "",
+          "../escape",
+          "a\\b",
+          "/absolute",
+          "C:/drive",
+          "a//b",
+          "a/./b",
+        ].map((path) => [
+          {
+            path,
+            kind: "publication" as const,
+            digest: null,
+            bytes: 1,
+          },
+        ]),
+        [
+          {
+            path: "publication/a",
+            kind: "publication" as const,
+            digest: null,
+            bytes: Number.MAX_SAFE_INTEGER,
+          },
+          {
+            path: "publication/b",
+            kind: "publication" as const,
+            digest: null,
+            bytes: 1,
+          },
+        ],
+      ].every(rejectsGcCandidates),
   );
 
   const captions = canonicalProductionWebVtt(timeline());

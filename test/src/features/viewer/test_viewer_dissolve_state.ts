@@ -1,15 +1,22 @@
-import { disposeCrossDissolve, renderCrossDissolve } from "@automovie/viewer";
+import {
+  disposeCrossDissolve,
+  renderCrossDissolve,
+  renderCrossDissolveFrames,
+} from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 const makeFakeRenderer = (width: number, height: number) => {
   const targets: Array<THREE.WebGLRenderTarget | null> = [];
   const size = new THREE.Vector2(width, height);
+  let target: THREE.WebGLRenderTarget | null = null;
   const renderer = {
     autoClear: true,
     getDrawingBufferSize: (v: THREE.Vector2) => v.copy(size),
     getContextAttributes: () => ({ antialias: true }),
+    getRenderTarget: () => target,
     setRenderTarget: (t: THREE.WebGLRenderTarget | null) => {
+      target = t;
       targets.push(t);
     },
     render: () => {},
@@ -89,4 +96,48 @@ export const test_viewer_dissolve_state = (): void => {
     "the next dissolve re-initializes a fresh target",
     fresh instanceof THREE.WebGLRenderTarget && fresh !== aTarget,
   );
+
+  let halves = "";
+  renderCrossDissolveFrames(
+    b.renderer,
+    () => {
+      halves += "out";
+    },
+    () => {
+      halves += "-in";
+    },
+    0.25,
+  );
+  const prior = new THREE.WebGLRenderTarget(1, 1);
+  b.renderer.setRenderTarget(prior);
+  renderCrossDissolveFrames(b.renderer, noop, noop, 0.5);
+  const errorTargets = makeFakeRenderer(8, 8);
+  let failedClosed = false;
+  try {
+    renderCrossDissolveFrames(
+      errorTargets.renderer,
+      () => {
+        throw new Error("outgoing failed");
+      },
+      noop,
+      0.5,
+    );
+  } catch {
+    failedClosed = true;
+  }
+  let invalidAlpha = false;
+  try {
+    renderCrossDissolveFrames(errorTargets.renderer, noop, noop, 2);
+  } catch {
+    invalidAlpha = true;
+  }
+  TestValidator.predicate(
+    "generic dissolve renders both halves and restores GPU state on every exit",
+    halves === "out-in" &&
+      b.targets.at(-1) === prior &&
+      failedClosed &&
+      errorTargets.targets.at(-1) === null &&
+      invalidAlpha,
+  );
+  prior.dispose();
 };

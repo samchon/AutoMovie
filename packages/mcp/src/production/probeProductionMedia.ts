@@ -12,10 +12,13 @@ export const probeProductionMedia = (props: {
   mediaType: string;
   bytes: Uint8Array;
 }): IAutoMovieProductionMediaProbe => {
-  if (props.kind === "preview") {
+  if (
+    props.kind === "preview" ||
+    (props.kind === "guide-pass" && props.mediaType === "image/png")
+  ) {
     if (props.mediaType !== "image/png")
       throw new Error(
-        `Preview output declares "${props.mediaType}", but preview deliverables require image/png bytes.`,
+        `${props.kind} output declares "${props.mediaType}", but this image requires image/png bytes.`,
       );
     const png = PNG.sync.read(Buffer.from(props.bytes));
     return { kind: "png", width: png.width, height: png.height };

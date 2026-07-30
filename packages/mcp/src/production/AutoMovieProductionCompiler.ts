@@ -3258,9 +3258,22 @@ const appendDeliverableTimelineDiagnostics = (
       ),
     );
   if (deliverable.kind === "feature" || deliverable.kind === "guide-pass") {
-    const video = probes.length === 1 ? probes[0] : null;
+    const videos = probes.filter((probe) => probe.kind === "video");
+    const video = videos.length === 1 ? videos[0] : null;
+    const controls =
+      deliverable.kind === "guide-pass"
+        ? probes.filter((probe) => probe.kind === "png")
+        : [];
     if (
       video?.kind !== "video" ||
+      (deliverable.kind === "feature" && probes.length !== 1) ||
+      (deliverable.kind === "guide-pass" &&
+        (controls.length !== probes.length - 1 ||
+          controls.some(
+            (probe) =>
+              probe.width !== production.frameFormat.width ||
+              probe.height !== production.frameFormat.height,
+          ))) ||
       video.width !== production.frameFormat.width ||
       video.height !== production.frameFormat.height ||
       video.frameCount !== expectedFrames ||
@@ -3275,7 +3288,7 @@ const appendDeliverableTimelineDiagnostics = (
         renderDeliverableDiagnostic(
           "render-deliverable-media-mismatch",
           deliverable.id,
-          `Deliverable "${deliverable.id}" must be one parsed ${production.frameFormat.width}x${production.frameFormat.height} H.264 MP4 at ${production.frameFormat.fps}fps with ${expectedFrames} resident samples and ${production.targetRuntimeSeconds}s runtime. Manifest strings cannot substitute for parser-derived media facts.`,
+          `Deliverable "${deliverable.id}" must own one parsed ${production.frameFormat.width}x${production.frameFormat.height} H.264 MP4 at ${production.frameFormat.fps}fps with ${expectedFrames} resident samples and ${production.targetRuntimeSeconds}s runtime${deliverable.kind === "guide-pass" ? ", plus only same-raster PNG control frames" : ""}. Manifest strings cannot substitute for parser-derived media facts.`,
         ),
       );
   } else if (deliverable.kind === "preview") {
